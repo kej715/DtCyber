@@ -1,0 +1,97 @@
+#--------------------------------------------------------------------------
+#
+#   Copyright (c) 2003-2011, Tom Hunter
+#
+#   Name: Makefile
+#
+#   Description:
+#       Build 32-bit Solaris version of Desktop Cyber emulation.
+#
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License version 3 as
+#   published by the Free Software Foundation.
+#   
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License version 3 for more details.
+#   
+#   You should have received a copy of the GNU General Public License
+#   version 3 along with this program in file "license-gpl-3.0.txt".
+#   If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
+#
+#--------------------------------------------------------------------------
+
+MODE	= -m32
+LIBS    = -lm -lX11 -lpthread -lsocket -lnsl
+LDFLAGS = -s -L/usr/X11R6/lib $(MODE)
+INCL    = -I/usr/X11R6/include
+
+CFLAGS  = -O2 -I. $(INCL) $(MODE)
+
+HDRS	=   const.h		    \
+            cyber_channel_linux.h   \
+	    npu.h		    \
+	    proto.h		    \
+	    types.h
+
+OBJS    =   cdcnet.o                \
+            channel.o               \
+            charset.o               \
+            console.o               \
+            cp3446.o                \
+            cpu.o                   \
+            cr3447.o                \
+            cr405.o                 \
+            dcc6681.o               \
+            dd6603.o                \
+            dd885-42.o              \
+            dd8xx.o                 \
+            ddp.o                   \
+            deadstart.o             \
+            device.o                \
+            dump.o                  \
+            float.o                 \
+            init.o                  \
+            interlock_channel.o     \
+            log.o                   \
+            lp1612.o                \
+            lp3000.o                \
+            main.o                  \
+            maintenance_channel.o   \
+            mdi.o                   \
+            mt362x.o                \
+            mt607.o                 \
+            mt669.o                 \
+            mt679.o                 \
+            mux6676.o               \
+            npu_async.o             \
+            npu_bip.o               \
+            npu_hasp.o              \
+            npu_hip.o               \
+            npu_lip.o               \
+            npu_net.o               \
+            npu_nje.o               \
+            npu_svm.o               \
+            npu_tip.o               \
+            operator.o              \
+            pp.o                    \
+            rtc.o                   \
+            scr_channel.o           \
+            shift.o                 \
+            tpmux.o                 \
+            trace.o                 \
+            window_x11.o            
+ 
+dtcyber: $(OBJS)
+	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+
+all: clean dtcyber
+
+clean:
+	rm -f *.o
+
+%.o : %.c $(HDRS)
+	$(CC) $(CFLAGS) -c $<
+
+#---------------------------  End Of File  --------------------------------
