@@ -1417,19 +1417,6 @@ static u8 *npuNjeCollectBlock(Pcb *pcbp, u8 *dp, u8 *limit, bool *isComplete, in
             {
             *isComplete = TRUE;
             }
-        else
-            {
-            /*
-            **  The block was an empty one. It represents a "ping"
-            **  from the peer. If no output is queued for the peer,
-            **  queue a "pong".
-            */
-            tcbp = npuNjeFindTcb(pcbp);
-            if (tcbp != NULL && npuBipQueueNotEmpty(&tcbp->outputQ) == FALSE)
-                {
-                npuNetSend(tcbp, EmptyBlock, sizeof(EmptyBlock));
-                }
-            }
         }
     return dp;
     }
