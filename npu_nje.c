@@ -1219,7 +1219,7 @@ static int npuNjeAppendRecords(Pcb *pcbp, u8 *bp, int len, u8 blockType)
         **  new one.
         **/
         blockLen = dp - (pcbp->controls.nje.ttrp + TtrLength);
-        if (blockLen + maxBytesNeeded + 1 > pcbp->controls.nje.maxRecordSize)
+        if (blockLen + maxBytesNeeded + 8 > pcbp->controls.nje.maxRecordSize)
             {
             dp = npuNjeCloseDownlineBlock(pcbp, dp);
             }
