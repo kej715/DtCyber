@@ -106,10 +106,10 @@ u8   npuNetMaxCN      = 0;
 **  Private Variables
 **  -----------------
 */
-static char connectingMsg[] = "\r\nConnecting to host - please wait ...\r\n";
-static char connectedMsg[] = "\r\nConnected\r\n\n";
+static char connectingMsg[] = "\r\nConnecting to host - please wait ...";
+static char connectedMsg[] = "\r\nConnected\r\n";
 static char abortMsg[] = "\r\nConnection aborted\r\n";
-static char networkDownMsg[] = "Network going down - connection aborted\r\n";
+static char networkDownMsg[] = "\r\nNetwork going down - connection aborted\r\n";
 static char notReadyMsg[] = "\r\nHost not ready to accept connections - please try again later.\r\n";
 static char noPortsAvailMsg[] = "\r\nNo free ports available - please try again later.\r\n";
 
@@ -339,6 +339,7 @@ void npuNetCloseConnection(Pcb *pcbp)
             if (pcbp->connFd == ncbp->connFd || ncbp->state == StConnBusy)
                 {
                 ncbp->state = StConnInit;
+                ncbp->nextConnectionAttempt = time(NULL) + (time_t)ConnectionRetryInterval;
                 }
             resetPcb[ncbp->connType](pcbp);
             }

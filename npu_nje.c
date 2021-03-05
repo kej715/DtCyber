@@ -81,6 +81,7 @@
 #define MaxRetries              8
 #define MaxUplineBlockSize      640
 #define MaxWaitTime             15
+#define PingInterval            600
 
 /*
 **  Special ASCII characters used by NAM protocol
@@ -248,6 +249,7 @@ static void npuNjeAsciiToEbcdic(u8 *ascii, u8 *ebcdic, int len);
 static void npuNjeCloseConnection(Pcb *pcbp);
 static u8  *npuNjeCloseDownlineBlock(Pcb *pcbp, u8 *dp);
 static u8  *npuNjeCollectBlock(Pcb *pcbp, u8 *dp, u8 *limit, bool *isComplete, int *status);
+static bool npuNjeConnectTerminal(Pcb *pcbp);
 static void npuNjeEbcdicToAscii(u8 *ebcdic, u8 *ascii, int len);
 static Pcb *npuNjeFindPcbForCr(char *rhost, u32 rip, char *ohost, u32 oip);
 static Tcb *npuNjeFindTcb(Pcb *pcbp);
@@ -371,7 +373,7 @@ void npuNjeTryOutput(Pcb *pcbp)
     case StNjeRcvAck:
     case StNjeRcvSignon:
     case StNjeRcvResponseSignon:
-        if (currentTime > pcbp->controls.nje.deadline)
+        if (currentTime - pcbp->controls.nje.lastReception > MaxWaitTime)
             {
 #if DEBUG
             fprintf(npuNjeLog, "Port %02x: timeout in state %d\n", pcbp->claPort, pcbp->controls.nje.state);
@@ -381,21 +383,21 @@ void npuNjeTryOutput(Pcb *pcbp)
             }
         break;
     case StNjeExchangeData:
-        if (currentTime > pcbp->controls.nje.deadline)
+        if (currentTime - pcbp->controls.nje.lastReception > PingInterval)
             {
             if (tcbp != NULL && npuBipQueueNotEmpty(&tcbp->outputQ) == FALSE)
                 {
                 npuNetSend(tcbp, EmptyBlock, sizeof(EmptyBlock));
                 }
-            pcbp->controls.nje.deadline = currentTime + (time_t)(MaxWaitTime * 2);
             }
+        pcbp->controls.nje.lastReception = currentTime;
         break;
     case StNjeSndOpen:
         if (npuNjeSendControlRecord(pcbp, CrTypeOpen, npuNetHostID, pcbp->controls.nje.localIP,
                                     pcbp->ncbp->hostName, pcbp->controls.nje.remoteIP, 0))
             {
             pcbp->controls.nje.state = StNjeRcvAck;
-            pcbp->controls.nje.deadline = currentTime + (time_t)MaxWaitTime;
+            pcbp->controls.nje.lastReception = currentTime;
             }
         break;
         }
@@ -526,6 +528,8 @@ void npuNjeProcessUplineData(Pcb *pcbp)
     int status;
     Tcb *tcbp;
 
+    pcbp->controls.nje.lastReception = time(NULL);
+
 #if DEBUG
     if (pcbp->controls.nje.state > StNjeRcvOpen)
         {
@@ -543,7 +547,6 @@ void npuNjeProcessUplineData(Pcb *pcbp)
 
     dp = pcbp->inputData;
     limit = dp + pcbp->inputCount;
-    pcbp->controls.nje.deadline = time(NULL) + (time_t)MaxWaitTime;
 
     while (dp < limit)
         {
@@ -582,6 +585,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                         npuNjeResetPcb(pcbp2);
                         pcbp2->connFd = pcbp->connFd;
                         pcbp2->controls.nje.isPassive = pcbp->controls.nje.isPassive;
+                        pcbp2->controls.nje.lastReception = pcbp->controls.nje.lastReception;
                         pcbp->connFd = 0;
                         pcbp->controls.nje.state = StNjeDisconnected;
                         pcbp = pcbp2;
@@ -597,15 +601,19 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                     }
                 if (r == 0)
                     {
-                    if (npuSvmConnectTerminal(pcbp))
-                        {
 #if DEBUG
-                        fprintf(npuNjeLog, "Port %02x: send upline request to connect terminal\n", pcbp->claPort);
+                    fprintf(npuNjeLog, "Port %02x: send upline request to connect terminal\n", pcbp->claPort);
 #endif
+                    if (npuNjeConnectTerminal(pcbp))
+                        {
                         pcbp->controls.nje.state = StNjeRcvSOH_ENQ;
                         }
                     else
                         {
+#if DEBUG
+                        fprintf(npuNjeLog, "Port %02x: failed to issue terminal connection request\n",
+                            pcbp->claPort);
+#endif
                         r = CrNakTemporaryFailure;
                         }
                     }
@@ -649,11 +657,12 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                     case NjeStatusSYN_NAK:
                         if (npuNjeSend(pcbp, SOH_ENQ, sizeof(SOH_ENQ)) == sizeof(SOH_ENQ))
                             {
-                            if (npuSvmConnectTerminal(pcbp))
-                                {
 #if DEBUG
-                                fprintf(npuNjeLog, "Port %02x: send upline request to connect terminal\n", pcbp->claPort);
+                            fprintf(npuNjeLog, "Port %02x: send upline request to connect terminal\n",
+                                pcbp->claPort);
 #endif
+                            if (npuNjeConnectTerminal(pcbp))
+                                {
                                 /*
                                 **  The terminal connection request should cause the terminal to be
                                 **  connected to NJF, and NJF should respond by sending an initial
@@ -665,7 +674,8 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                             else
                                 {
 #if DEBUG
-                                fprintf(npuNjeLog, "Port %02x: failed to issue SVM connect terminal request\n", pcbp->claPort);
+                                fprintf(npuNjeLog, "Port %02x: failed to issue terminal connection request\n",
+                                    pcbp->claPort);
 #endif
                                 npuNjeCloseConnection(pcbp);
                                 }
@@ -702,11 +712,11 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                 {
                 if (npuNjeSend(pcbp, SOH_ENQ, sizeof(SOH_ENQ)) == sizeof(SOH_ENQ))
                     {
-                    if (npuSvmConnectTerminal(pcbp))
-                        {
 #if DEBUG
-                        fprintf(npuNjeLog, "Port %02x: send upline request to connect terminal\n", pcbp->claPort);
+                    fprintf(npuNjeLog, "Port %02x: send upline request to connect terminal\n", pcbp->claPort);
 #endif
+                    if (npuNjeConnectTerminal(pcbp))
+                        {
                         /*
                         **  The terminal connection request should cause the terminal to be
                         **  connected to NJF, and NJF should respond by sending an initial
@@ -718,7 +728,8 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                     else
                         {
 #if DEBUG
-                        fprintf(npuNjeLog, "Port %02x: failed to issue SVM connect terminal request\n", pcbp->claPort);
+                        fprintf(npuNjeLog, "Port %02x: failed to issue terminal connection request\n",
+                            pcbp->claPort);
 #endif
                         npuNjeCloseConnection(pcbp);
                         }
@@ -923,6 +934,7 @@ bool npuNjeNotifyNetConnect(Pcb *pcbp, bool isPassive)
             }
         pcbp->controls.nje.state = StNjeSndOpen;
         }
+    pcbp->controls.nje.lastReception = time(NULL);
     return TRUE;
     }
 
@@ -1034,20 +1046,19 @@ void npuNjePresetPcb(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 void npuNjeResetPcb(Pcb *pcbp)
     {
-    Ncb *ncbp;
     NpuBuffer *bp;
     Tcb *tcbp;
 
     pcbp->controls.nje.state = StNjeDisconnected;
     pcbp->controls.nje.tp = (Tcb *)NULL;
     pcbp->controls.nje.isPassive = FALSE;
-    pcbp->controls.nje.downlineBSN = 0;
+    pcbp->controls.nje.downlineBSN = 0xff;
     pcbp->controls.nje.uplineBSN = 0x0f;
     pcbp->controls.nje.uplineBlockLimit = DefaultUplineBlockLimit;
     pcbp->controls.nje.lastDownlineRCB = 0;
     pcbp->controls.nje.lastDownlineSRCB = 0;
     pcbp->controls.nje.retries = 0;
-    pcbp->controls.nje.deadline = (time_t)0;
+    pcbp->controls.nje.lastReception = (time_t)0;
     pcbp->controls.nje.inputBufPtr = pcbp->controls.nje.inputBuf;
     pcbp->controls.nje.outputBufPtr = pcbp->controls.nje.outputBuf;
     pcbp->controls.nje.ttrp = NULL;
@@ -1064,10 +1075,6 @@ void npuNjeResetPcb(Pcb *pcbp)
             npuBipBufRelease(bp);
             }
         }
-
-    ncbp = pcbp->ncbp;
-    ncbp->state = StConnInit;
-    ncbp->nextConnectionAttempt = time(NULL) + (time_t)ConnectionRetryInterval;
 #if DEBUG
     fprintf(npuNjeLog, "Port %02x: reset PCB\n", pcbp->claPort);
 #endif
@@ -1095,8 +1102,16 @@ static u8 *npuNjeAppendLeader(Pcb *pcbp, u8 *bp)
     {
     *bp++ = DLE;
     *bp++ = STX;
-    *bp++ = 0x80 | pcbp->controls.nje.downlineBSN; // BCB
-    pcbp->controls.nje.downlineBSN = (pcbp->controls.nje.downlineBSN + 1) & 0x0f;
+    if (pcbp->controls.nje.downlineBSN == 0xff)
+        {
+        *bp++ = 0xa0; // Reset block sequence number
+        pcbp->controls.nje.downlineBSN = 0;
+        }
+    else
+        {
+        *bp++ = 0x80 | pcbp->controls.nje.downlineBSN; // BCB
+        pcbp->controls.nje.downlineBSN = (pcbp->controls.nje.downlineBSN + 1) & 0x0f;
+        }
     *bp++ = 0x8f; // FCS
     *bp++ = 0xcf; // FCS
     return bp;
@@ -1419,6 +1434,33 @@ static u8 *npuNjeCollectBlock(Pcb *pcbp, u8 *dp, u8 *limit, bool *isComplete, in
             }
         }
     return dp;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Start host connection sequence.
+**
+**  Parameters:     Name        Description.
+**                  pcbp        PCB pointer
+**
+**  Returns:        TRUE if sequence started, FALSE otherwise.
+**
+**------------------------------------------------------------------------*/
+static bool npuNjeConnectTerminal(Pcb *pcbp)
+    {
+    Tcb *tcbp;
+
+    tcbp = npuNjeFindTcb(pcbp);
+    if (tcbp == NULL)
+        {
+        return npuSvmConnectTerminal(pcbp);
+        }
+    else
+        {
+#if DEBUG
+        fprintf(npuNjeLog, "Port %02x: already associated with a TCB\n", pcbp->claPort);
+#endif
+        return FALSE;
+        }
     }
 
 /*--------------------------------------------------------------------------

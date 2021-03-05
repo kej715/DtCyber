@@ -171,8 +171,7 @@ bool npuLipNotifyNetConnect(Pcb *pcbp, bool isPassive)
 **------------------------------------------------------------------------*/
 void npuLipNotifyNetDisconnect(Pcb *pcbp)
     {
-    if (pcbp->ncbp->claPort != 0  // it's not the LIP listening port
-        && pcbp->controls.lip.state >= StTrunkRcvBlockLengthHi)
+    if (pcbp->controls.lip.state >= StTrunkRcvBlockLengthHi)
         {
         npuLipDeactivateTrunk(pcbp);
         }
@@ -356,8 +355,8 @@ void npuLipProcessUplineData(Pcb *pcbp)
 void npuLipResetPcb(Pcb *pcbp)
     {
     NpuBuffer *bp;
-    Ncb *ncbp;
 
+    pcbp->controls.lip.state = StTrunkDisconnected;
     pcbp->controls.lip.lastExchange = 0;
     pcbp->controls.lip.blockLength = 0;
     pcbp->controls.lip.inputIndex = 0;
@@ -365,17 +364,6 @@ void npuLipResetPcb(Pcb *pcbp)
     while ((bp = npuBipQueueExtract(&pcbp->controls.lip.outputQ)) != NULL)
         {
         npuBipBufRelease(bp);
-        }
-    ncbp = pcbp->ncbp;
-    if (ncbp->lstnFd > 0) // it's a LIP listening NCB
-        {
-        pcbp->controls.lip.state = StTrunkRcvConnReq;
-        }
-    else
-        {
-        ncbp->nextConnectionAttempt = time(NULL) + (time_t)ConnectionRetryInterval;
-        ncbp->state = StConnInit;
-        pcbp->controls.lip.state = StTrunkDisconnected;
         }
 #if DEBUG
     fprintf(npuLipLog, "Port %02x: trunk PCB reset\n", pcbp->claPort);

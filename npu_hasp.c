@@ -2000,7 +2000,7 @@ void npuHaspNotifyTermDisconnect(Tcb *tp)
     pcbp = tp->pcbp;
 
     tp2 = pcbp->controls.hasp.consoleStream.tp;
-    if (tp2 != NULL && tp2->state == StTermHostConnected)
+    if (tp2 != NULL)
         {
 #if DEBUG
         fprintf(npuHaspLog, "Port %02x: disconnect stream %d (%.7s)\n", pcbp->claPort,
@@ -2012,7 +2012,7 @@ void npuHaspNotifyTermDisconnect(Tcb *tp)
     for (i = 0; i < MaxHaspStreams; ++i)
         {
         tp2 = pcbp->controls.hasp.readerStreams[i].tp;
-        if (tp2 != NULL && tp2->state == StTermHostConnected)
+        if (tp2 != NULL)
             {
 #if DEBUG
             fprintf(npuHaspLog, "Port %02x: disconnect stream %d (%.7s)\n", pcbp->claPort,
@@ -2021,7 +2021,7 @@ void npuHaspNotifyTermDisconnect(Tcb *tp)
             npuSvmSendDiscRequest(tp2);
             }
         tp2 = pcbp->controls.hasp.printStreams[i].tp;
-        if (tp2 != NULL && tp2->state == StTermHostConnected)
+        if (tp2 != NULL)
             {
 #if DEBUG
             fprintf(npuHaspLog, "Port %02x: disconnect stream %d (%.7s)\n", pcbp->claPort,
@@ -2030,7 +2030,7 @@ void npuHaspNotifyTermDisconnect(Tcb *tp)
             npuSvmSendDiscRequest(tp2);
             }
         tp2 = pcbp->controls.hasp.punchStreams[i].tp;
-        if (tp2 != NULL && tp2->state == StTermHostConnected)
+        if (tp2 != NULL)
             {
 #if DEBUG
             fprintf(npuHaspLog, "Port %02x: disconnect stream %d (%.7s)\n", pcbp->claPort,
@@ -2214,10 +2214,8 @@ void npuHaspResetPcb(Pcb *pcbp)
     {
     NpuBuffer *bp;
     int i;
-    Ncb *ncbp;
     Scb *scbp;
 
-    ncbp = pcbp->ncbp;
     pcbp->controls.hasp.majorState = StHaspMajorInit;
     pcbp->controls.hasp.minorState = StHaspMinorNIL;
     pcbp->controls.hasp.lastRecvTime = 0;
@@ -2282,12 +2280,6 @@ void npuHaspResetPcb(Pcb *pcbp)
                 }
             }
         memset(scbp, 0, sizeof(Scb));
-        }
-    ncbp = pcbp->ncbp;
-    if (ncbp->connType == ConnTypeRevHasp)
-        {
-        ncbp->nextConnectionAttempt = time(NULL) + (time_t)ConnectionRetryInterval;
-        ncbp->state = StConnInit;
         }
     }
 

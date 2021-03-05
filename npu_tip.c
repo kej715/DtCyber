@@ -161,7 +161,7 @@ static u8 ackInitBt[] =
     {
     0,                  // DN
     0,                  // SN
-    1,                  // CN
+    0,                  // CN
     (0 << BlkShiftBSN) | BtHTBACK, // BT/BSN/PRIO
     };
 
@@ -169,7 +169,7 @@ static u8 respondToInitBt[] =
     {
     0,                  // DN
     0,                  // SN
-    1,                  // CN
+    0,                  // CN
     (0 << BlkShiftBSN) | BtHTNINIT, // BT/BSN/PRIO
     };
 
@@ -177,7 +177,7 @@ static u8 requestInitBt[] =
     {
     0,                  // DN
     0,                  // SN
-    1,                  // CN
+    0,                  // CN
     (0 << BlkShiftBSN) | BtHTRINIT, // BT/BSN/PRIO
     };
 
@@ -185,23 +185,15 @@ static u8 blockAck[] =
     {
     0,                  // DN
     0,                  // SN
-    1,                  // CN
+    0,                  // CN
     BtHTBACK,           // BT/BSN/PRIO
-    };
-
-static u8 blockTerm[] =
-    {
-    0,                  // DN
-    0,                  // SN
-    1,                  // CN
-    BtHTTERM,           // BT/BSN/PRIO
     };
 
 static u8 intrRsp[4] =
     {
     0,                  // DN
     0,                  // SN
-    1,                  // CN
+    0,                  // CN
     BtHTICMR,           // BT/BSN/PRIO
     };
 
@@ -265,9 +257,6 @@ void npuTipInit(void)
 
     blockAck[BlkOffDN] = npuSvmCouplerNode;
     blockAck[BlkOffSN] = npuSvmNpuNode;
-
-    blockTerm[BlkOffDN] = npuSvmCouplerNode;
-    blockTerm[BlkOffSN] = npuSvmNpuNode;
 
     intrRsp[BlkOffDN] = npuSvmCouplerNode;
     intrRsp[BlkOffSN] = npuSvmNpuNode;
@@ -560,26 +549,25 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
         break;
 
     case BtHTTERM:
-        if (tp->state == StTermHostDisconnect)
+        if (tp->state == StTermRequestTerminate)
             {
             /*
-            **  Host has echoed our TERM block now send the TCN/TA/N to host.
+            **  Host has echoed our TERM block, now send the TCN/TA/N to host.
             */
             npuSvmDiscReplyTerminal(tp);
-
+            tp->state = StTermIdle;
             /*
             **  Finally disconnect the network.
             */
-            tp->state = StTermIdle;
             npuNetDisconnected(tp);
             }
-        else if (tp->state == StTermNpuDisconnect)
+        else if (tp->state == StTermRequestDisconnect)
             {
             /*
             **  Echo TERM block.
             */
-            blockTerm[BlkOffCN] = block[BlkOffCN];
-            npuBipRequestUplineCanned(blockTerm, sizeof(blockTerm));
+            npuSvmSendTermBlock(tp);
+            tp->state = StTermIdle;
             }
 #if DEBUG
         else
@@ -626,28 +614,6 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
     **  Release downline buffer.
     */
     npuBipBufRelease(bp);
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Process terminate connection message from host.
-**
-**  Parameters:     Name        Description.
-**                  tp          pointer to TCB
-**                  bsn         block sequence number
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-void npuTipTerminateConnection(Tcb *tp)
-    {
-    npuSvmDiscRequestTerminal(tp);
-    tp->state = StTermHostDisconnect;
-
-    /*
-    **  Send an initial TERM block which will be echoed by the host.
-    */
-    blockTerm[BlkOffCN] = tp->cn;
-    npuBipRequestUplineCanned(blockTerm, sizeof(blockTerm));
     }
 
 /*--------------------------------------------------------------------------

@@ -146,7 +146,7 @@ static u8 linkRegulation[] =
     0,                  // DN
     0,                  // SN
     0,                  // CN
-    4,                  // BT=CMD
+    BtHTCMD,            // BT=CMD
     PfcREG,             // PFC
     SfcLL,              // SFC
     0x0F,               // NS=1, CS=1, Regulation level=3
@@ -159,7 +159,7 @@ static u8 requestSupervision[] =
     0,                  // DN
     0,                  // SN
     0,                  // CN
-    4,                  // BT=CMD
+    BtHTCMD,            // BT=CMD
     PfcSUP,             // PFC
     SfcIN,              // SFC
     0,                  // PS
@@ -181,7 +181,7 @@ static u8 responseNpuStatus[] =
     0,                  // DN
     0,                  // SN
     0,                  // CN
-    4,                  // BT=CMD
+    BtHTCMD,            // BT=CMD
     PfcNPS,             // PFC
     SfcNP | SfcResp,    // SFC
     };
@@ -191,7 +191,7 @@ static u8 responseTerminateConnection[] =
     0,                  // DN
     0,                  // SN
     0,                  // CN
-    4,                  // BT=CMD
+    BtHTCMD,            // BT=CMD
     PfcTCN,             // PFC
     SfcTA | SfcResp,    // SFC
     0,                  // CN
@@ -202,10 +202,18 @@ static u8 requestTerminateConnection[] =
     0,                  // DN
     0,                  // SN
     0,                  // CN
-    4,                  // BT=CMD
+    BtHTCMD,            // BT=CMD
     PfcTCN,             // PFC
     SfcTA,              // SFC
     0,                  // CN
+    };
+
+static u8 blockTerminateConnection[] =
+    {
+    0,                  // DN
+    0,                  // SN
+    0,                  // CN
+    BtHTTERM,           // BT/BSN/PRIO
     };
 
 static enum
@@ -286,6 +294,9 @@ void npuSvmInit(void)
 
     requestTerminateConnection[BlkOffDN] = npuSvmCouplerNode;
     requestTerminateConnection[BlkOffSN] = npuSvmNpuNode;
+
+    blockTerminateConnection[BlkOffDN] = npuSvmCouplerNode;
+    blockTerminateConnection[BlkOffSN] = npuSvmNpuNode;
     }
 
 /*--------------------------------------------------------------------------
@@ -345,7 +356,6 @@ bool npuSvmConnectTerminal(Pcb *pcbp)
         {
         return(TRUE);
         }
-
     return(FALSE);
     }
 
@@ -506,6 +516,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
                 if (npuSvmRequestTerminalConnection(tp))
                     {
                     tp->state = StTermRequestConnection;
+                    npuNetSetMaxCN(tp->cn);
                     }
                 else
                     {
@@ -528,7 +539,8 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             }
         else
             {
-            npuLogMessage("SVM: Unexpected message %02X/%02X with port %u", block[BlkOffPfc], block[BlkOffSfc], claPort);
+            npuLogMessage("SVM: Unexpected message %02X/%02X with port %u",
+                block[BlkOffPfc], block[BlkOffSfc], claPort);
             npuNetCloseConnection(npuNetFindPcb(claPort));
             }
         break;
@@ -566,11 +578,15 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             /*
             **  Terminate connection from host.
             */
-            npuTipTerminateConnection(tp);
+            npuSvmDiscRequestTerminal(tp);
+            /*
+            **  Send an initial TERM block which will be echoed by the host.
+            */
+            npuSvmSendTermBlock(tp);
             }
         else if (block[BlkOffSfc] == (SfcTA | SfcResp))
             {
-            if (tp->state == StTermNpuDisconnect)
+            if (tp->state == StTermRequestDisconnect)
                 {
                 /*
                 **  If this is a HASP or Reverse HASP connection, reset the
@@ -616,17 +632,36 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
 **------------------------------------------------------------------------*/
 void npuSvmSendDiscRequest(Tcb *tp)
     {
-    /*
-    **  Clean up flow control state and discard any pending output.
-    */
-    tp->xoff = FALSE;
-    npuTipDiscardOutputQ(tp);
-    /*
-    **  Send TCN/TA/R message to request termination of connection.
-    */
-    requestTerminateConnection[BlkOffP3] = tp->cn;
-    npuBipRequestUplineCanned(requestTerminateConnection, sizeof(requestTerminateConnection));
-    tp->state = StTermNpuDisconnect;
+    switch (tp->state)
+        {
+    case StTermRequestConnection: // indicates awaiting response to terminal connection request
+        fprintf(stderr, "SVM: Warning - disconnect request issued for %.7s in state %d\n",
+            tp->termName, tp->state);
+        // fall through
+    case StTermHostConnected:     // terminal is connected
+        /*
+        **  Clean up flow control state and discard any pending output.
+        */
+        tp->xoff = FALSE;
+        npuTipDiscardOutputQ(tp);
+        /*
+        **  Send TCN/TA/R message to request termination of connection.
+        */
+        requestTerminateConnection[BlkOffP3] = tp->cn;
+        npuBipRequestUplineCanned(requestTerminateConnection, sizeof(requestTerminateConnection));
+        tp->state = StTermRequestDisconnect;
+        break;
+    case StTermIdle:              // terminal is not yet configured or connected
+    case StTermRequestDisconnect: // terminal disconnection has been requested
+    case StTermRequestTerminate:  // connection termination has been requested
+        fprintf(stderr, "SVM: Warning - disconnect request ignored for %.7s in state %d\n",
+            tp->termName, tp->state);
+        break;
+    default:
+        fprintf(stderr, "SVM: Unrecognized state %d during %.7s disconnect request\n",
+            tp->state, tp->termName);
+        break;
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -640,18 +675,7 @@ void npuSvmSendDiscRequest(Tcb *tp)
 **------------------------------------------------------------------------*/
 void npuSvmDiscRequestTerminal(Tcb *tp)
     {
-    if (tp->state > StTermIdle && tp->state <= StTermHostConnected)
-        {
-        notifyTermDisconnect[tp->pcbp->ncbp->connType](tp);
-        }
-    else
-        {
-        /*
-        **  Just reset the state to idle.
-        */
-        tp->state = StTermIdle;
-        npuNetSetMaxCN(tp->cn);
-        }
+    notifyTermDisconnect[tp->pcbp->ncbp->connType](tp);
     }
 
 /*--------------------------------------------------------------------------
@@ -681,6 +705,22 @@ void npuSvmDiscReplyTerminal(Tcb *tp)
 bool npuSvmIsReady(void)
     {
     return(svmState == StReady);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Send a connection termination block to the host.
+**
+**  Parameters:     Name        Description.
+**                  tp          TCB pointer
+**
+**  Returns:        Nothing
+**
+**------------------------------------------------------------------------*/
+void npuSvmSendTermBlock(Tcb *tp)
+    {
+    blockTerminateConnection[BlkOffCN] = tp->cn;
+    npuBipRequestUplineCanned(blockTerminateConnection, sizeof(blockTerminateConnection));
+    tp->state = StTermRequestTerminate;
     }
 
 /*
@@ -722,7 +762,7 @@ static bool npuSvmRequestTerminalConfig(Pcb *pcbp)
     *mp++ = 4;                  // BT=CMD
     *mp++ = PfcCNF;             // PFC
     *mp++ = SfcTE;              // SFC
-    *mp++ = pcbp->claPort;   // non-zero port number from "PORT=" parameter in NDL source
+    *mp++ = pcbp->claPort;      // non-zero port number from "PORT=" parameter in NDL source
     *mp++ = 0;                  // sub-port number (always 0 for async ports)
     switch (pcbp->ncbp->connType)
         {
@@ -785,20 +825,20 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
     pcbp = npuNetFindPcb(claPort);
     if (pcbp == NULL)
         {
-        npuLogMessage("SVM: PCB not found for port %u", claPort);
+        npuLogMessage("SVM: PCB not found for port 0x%02x", claPort);
         return NULL;
         }
 
     if (pcbp->connFd <= 0)
         {
-        npuLogMessage("SVM: TCB not allocated for port %u because network connection is closed", claPort);
+        npuLogMessage("SVM: TCB not allocated for port 0x%02x because network connection is closed", claPort);
         return NULL;
         }
 
     tp = npuTipFindFreeTcb();
     if (tp == NULL)
         {
-        fprintf(stderr, "SVM: No free TCB available for port %u\n", claPort);
+        fprintf(stderr, "SVM: No free TCB available for port 0x%02x\n", claPort);
         return NULL;
         }
 
@@ -886,9 +926,14 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
     tp->owningConsole = npuSvmFindOwningConsole(tp);
     if (tp->owningConsole == NULL)
         {
-        npuLogMessage("SVM: Failed to find owning console for port %u (%.7s)", claPort, tp->termName);
+        npuLogMessage("SVM: Failed to find owning console for %.7s, port 0x%02x", tp->termName, claPort);
         return NULL;
         }
+    if (tp->owningConsole->state > StTermHostConnected) // owning console is disconnecting
+        {
+        return NULL;
+        }
+
     /*
     **  Setup default operating parameters for the specified terminal class.
     */
@@ -912,7 +957,6 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
     /*
     **  Update maximum active connection number
     */
-    tp->state = StTermConfigure;
     npuNetSetMaxCN(tp->cn);
 
     return tp;

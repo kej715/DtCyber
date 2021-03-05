@@ -539,7 +539,7 @@ typedef struct njecb
     u8   lastDownlineRCB;  // last downline RCB processed
     u8   lastDownlineSRCB; // last downline SRCB processed
     int  retries;          // count of upline block retransmission attempts
-    time_t deadline;       // deadline for response from peer
+    time_t lastReception;  // timestamp of last data received from peer
     u8  *inputBuf;         // NJE/TCP block input buffer
     u8  *inputBufPtr;      // pointer to next storage location
     u8  *outputBuf;        // NJE/TCP block output buffer
@@ -671,12 +671,11 @@ typedef struct tipParams
 */
 typedef enum
     {
-    StTermIdle = 0,
-    StTermConfigure,
-    StTermRequestConnection,
-    StTermHostConnected,
-    StTermNpuDisconnect,
-    StTermHostDisconnect,
+    StTermIdle = 0,            // not configured or connected
+    StTermRequestConnection,   // connection request sent
+    StTermHostConnected,       // configured and connected
+    StTermRequestDisconnect,   // disconnect request sent
+    StTermRequestTerminate     // connection terminate block sent
     } TermConnState;
 
 /*
@@ -786,6 +785,7 @@ void npuSvmDiscRequestTerminal(Tcb *tp);
 void npuSvmDiscReplyTerminal(Tcb *tp);
 bool npuSvmIsReady(void);
 void npuSvmSendDiscRequest(Tcb *tp);
+void npuSvmSendTermBlock(Tcb *tp);
 
 /*
 **  npu_tip.c
@@ -801,7 +801,6 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority);
 void npuTipReset(void);
 void npuTipSetupTerminalClass(Tcb *tp, u8 tc);
 void npuTipSendUserBreak(Tcb *tp, u8 bt);
-void npuTipTerminateConnection(Tcb *tp);
 
 /*
 **  npu_net.c
