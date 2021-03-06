@@ -275,6 +275,7 @@
 #define ConnectionRetryInterval 30
 #define DefaultHaspBlockSize    640
 #define DefaultNjeBlockSize     8192
+#define DefaultNjePingInterval  600
 #define DefaultRevHaspBlockSize 640
 #define HostIdSize              9
 #define MaxBuffer               2048
@@ -539,7 +540,8 @@ typedef struct njecb
     u8   lastDownlineRCB;  // last downline RCB processed
     u8   lastDownlineSRCB; // last downline SRCB processed
     int  retries;          // count of upline block retransmission attempts
-    time_t lastReception;  // timestamp of last data received from peer
+    time_t lastXmit;       // timestamp of last data transmission to peer
+    int  pingInterval;     // interval in seconds between pings during idle periods
     u8  *inputBuf;         // NJE/TCP block input buffer
     u8  *inputBufPtr;      // pointer to next storage location
     u8  *outputBuf;        // NJE/TCP block output buffer

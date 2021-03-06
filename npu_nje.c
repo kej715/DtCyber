@@ -81,7 +81,6 @@
 #define MaxRetries              8
 #define MaxUplineBlockSize      640
 #define MaxWaitTime             15
-#define PingInterval            600
 
 /*
 **  Special ASCII characters used by NAM protocol
@@ -373,7 +372,7 @@ void npuNjeTryOutput(Pcb *pcbp)
     case StNjeRcvAck:
     case StNjeRcvSignon:
     case StNjeRcvResponseSignon:
-        if (currentTime - pcbp->controls.nje.lastReception > MaxWaitTime)
+        if (currentTime - pcbp->controls.nje.lastXmit > MaxWaitTime)
             {
 #if DEBUG
             fprintf(npuNjeLog, "Port %02x: timeout in state %d\n", pcbp->claPort, pcbp->controls.nje.state);
@@ -383,21 +382,20 @@ void npuNjeTryOutput(Pcb *pcbp)
             }
         break;
     case StNjeExchangeData:
-        if (currentTime - pcbp->controls.nje.lastReception > PingInterval)
+        if (currentTime - pcbp->controls.nje.lastXmit > pcbp->controls.nje.pingInterval
+            && pcbp->controls.nje.pingInterval > 0)
             {
             if (tcbp != NULL && npuBipQueueNotEmpty(&tcbp->outputQ) == FALSE)
                 {
                 npuNetSend(tcbp, EmptyBlock, sizeof(EmptyBlock));
                 }
             }
-        pcbp->controls.nje.lastReception = currentTime;
         break;
     case StNjeSndOpen:
         if (npuNjeSendControlRecord(pcbp, CrTypeOpen, npuNetHostID, pcbp->controls.nje.localIP,
                                     pcbp->ncbp->hostName, pcbp->controls.nje.remoteIP, 0))
             {
             pcbp->controls.nje.state = StNjeRcvAck;
-            pcbp->controls.nje.lastReception = currentTime;
             }
         break;
         }
@@ -528,8 +526,6 @@ void npuNjeProcessUplineData(Pcb *pcbp)
     int status;
     Tcb *tcbp;
 
-    pcbp->controls.nje.lastReception = time(NULL);
-
 #if DEBUG
     if (pcbp->controls.nje.state > StNjeRcvOpen)
         {
@@ -571,33 +567,34 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                     {
                     r = CrNakNoSuchLink;
                     }
-                else if (pcbp2 != pcbp)
-                    {
-                    if (pcbp2->connFd > 0)
-                        {
-                        r = CrNakLinkActive;
-                        }
-                    else
-                        {
-#if DEBUG
-                        fprintf(npuNjeLog, "Port %02x: connection reassigned to port %02x\n", pcbp->claPort, pcbp2->claPort);
-#endif
-                        npuNjeResetPcb(pcbp2);
-                        pcbp2->connFd = pcbp->connFd;
-                        pcbp2->controls.nje.isPassive = pcbp->controls.nje.isPassive;
-                        pcbp2->controls.nje.lastReception = pcbp->controls.nje.lastReception;
-                        pcbp->connFd = 0;
-                        pcbp->controls.nje.state = StNjeDisconnected;
-                        pcbp = pcbp2;
-                        }
-                    }
-                else 
+                else if (pcbp2->claPort == pcbp->claPort)
                     {
                     tcbp = npuNjeFindTcb(pcbp);
                     if (tcbp != NULL && tcbp->state != StTermIdle)
                         {
                         r = CrNakAttemptingActiveOpen;
                         }
+                    }
+                else if (pcbp2->connFd > 0)
+                    {
+#if DEBUG
+                    fprintf(npuNjeLog, "Port %02x: close connection due to active link conflict\n", pcbp2->claPort);
+#endif
+                    r = CrNakLinkActive;
+                    npuNetCloseConnection(pcbp2);
+                    }
+                else
+                    {
+#if DEBUG
+                    fprintf(npuNjeLog, "Port %02x: connection reassigned to port %02x\n", pcbp->claPort, pcbp2->claPort);
+#endif
+                    npuNjeResetPcb(pcbp2);
+                    pcbp2->connFd = pcbp->connFd;
+                    pcbp2->controls.nje.isPassive = pcbp->controls.nje.isPassive;
+                    pcbp2->controls.nje.lastXmit = pcbp->controls.nje.lastXmit;
+                    pcbp->connFd = 0;
+                    pcbp->controls.nje.state = StNjeDisconnected;
+                    pcbp = pcbp2;
                     }
                 if (r == 0)
                     {
@@ -617,7 +614,8 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                         r = CrNakTemporaryFailure;
                         }
                     }
-                if (npuNjeSendControlRecord(pcbp, (r == 0) ? CrTypeAck : CrTypeNak, ohost, oip, rhost, rip, r) == FALSE)
+                if (npuNjeSendControlRecord(pcbp, (r == 0) ? CrTypeAck : CrTypeNak, ohost, oip, rhost, rip, r) == FALSE
+                    || r != 0)
                     {
                     npuNjeCloseConnection(pcbp);
                     }
@@ -782,6 +780,10 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                         **  stream-related blocks.
                         */
                         pcbp->controls.nje.state = StNjeExchangeData;
+#if DEBUG
+                        fprintf(npuNjeLog, "Port %02x: enter data exchange state with ping interval %d secs\n",
+                            pcbp->claPort, pcbp->controls.nje.pingInterval);
+#endif
                         }
                     else if (status != NjeStatusNothingUploaded && status != NjeStatusDLE_ACK0)
                         {
@@ -815,6 +817,10 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                         {
                         npuNetSend(npuNjeFindTcb(pcbp), DLE_ACK0, sizeof(DLE_ACK0));
                         pcbp->controls.nje.state = StNjeExchangeData;
+#if DEBUG
+                        fprintf(npuNjeLog, "Port %02x: enter data exchange state with ping interval %d secs\n",
+                            pcbp->claPort, pcbp->controls.nje.pingInterval);
+#endif
                         }
                     else if (status != NjeStatusNothingUploaded && status != NjeStatusDLE_ACK0)
                         {
@@ -934,7 +940,7 @@ bool npuNjeNotifyNetConnect(Pcb *pcbp, bool isPassive)
             }
         pcbp->controls.nje.state = StNjeSndOpen;
         }
-    pcbp->controls.nje.lastReception = time(NULL);
+    pcbp->controls.nje.lastXmit = time(NULL);
     return TRUE;
     }
 
@@ -1058,7 +1064,7 @@ void npuNjeResetPcb(Pcb *pcbp)
     pcbp->controls.nje.lastDownlineRCB = 0;
     pcbp->controls.nje.lastDownlineSRCB = 0;
     pcbp->controls.nje.retries = 0;
-    pcbp->controls.nje.lastReception = (time_t)0;
+    pcbp->controls.nje.lastXmit = (time_t)0;
     pcbp->controls.nje.inputBufPtr = pcbp->controls.nje.inputBuf;
     pcbp->controls.nje.outputBufPtr = pcbp->controls.nje.outputBuf;
     pcbp->controls.nje.ttrp = NULL;
@@ -1505,7 +1511,8 @@ static Pcb *npuNjeFindPcbForCr(char *rhost, u32 rip, char *ohost, u32 oip)
     for (claPort = 0; claPort <= npuNetMaxClaPort; claPort++)
         {
         pcbp = npuNetFindPcb(claPort);
-        if (pcbp->ncbp != NULL && pcbp->ncbp->connType == ConnTypeNje
+        if (pcbp->ncbp != NULL
+            && pcbp->ncbp->connType == ConnTypeNje
             && strcasecmp(pcbp->ncbp->hostName, rhost) == 0
             && strcasecmp(npuNetHostID, ohost) == 0
             && pcbp->controls.nje.remoteIP == rip
@@ -1674,6 +1681,7 @@ static int npuNjeSend(Pcb *pcbp, u8 *dp, int len)
     int n;
 
     n = send(pcbp->connFd, dp, len, 0);
+    pcbp->controls.nje.lastXmit = time(NULL);
 #if DEBUG
     if (n > 0)
         {

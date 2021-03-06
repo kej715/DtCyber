@@ -532,6 +532,7 @@ static void initNpuConnections(void)
     u32 localHostIP;
     long networkValue;
     Pcb *pcbp;
+    long pingInterval;
     struct hostent *remoteHost;
     char strValue[256];
 
@@ -648,12 +649,12 @@ static void initNpuConnections(void)
             /*
             ** Parse terminals definition.  Syntax is:
             **
-            **   terminals=<local-port>,<cla-port>,<connections>,hasp[,<block-size>]
+            **   terminals=<local-port>,<cla-port>,<connections>,hasp[,B<block-size>]
             **   terminals=<local-port>,<cla-port>,<connections>,nje,<remote-ip>:<remote-port>,<remote-name> ...
-            **       [,<local-ip>][,<block-size>]
+            **       [,<local-ip>][,B<block-size>][,P<ping-interval>]
             **   terminals=<local-port>,<cla-port>,<connections>,pterm
             **   terminals=<local-port>,<cla-port>,<connections>,raw
-            **   terminals=<local-port>,<cla-port>,<connections>,rhasp,<remote-ip>:<remote-port>[,<block-size>]
+            **   terminals=<local-port>,<cla-port>,<connections>,rhasp,<remote-ip>:<remote-port>[,B<block-size>]
             **   terminals=<local-port>,<cla-port>,<connections>,rs232
             **   terminals=<local-port>,<cla-port>,<connections>,stream
             **   terminals=<local-port>,<cla-port>,<connections>,telnet
@@ -670,15 +671,18 @@ static void initNpuConnections(void)
             **       telnet A TCP connection supporting full Telnet protocol
             **       trunk  A TCP connection supporting LIP protocol (a trunk between DtCyber systems)
             **
-            **     <local-port>   Local TCP port number on which to listen for connections (0 for no listening port, e.g., rhasp)
-            **     <cla-port>     Starting CLA port number on NPU, in hexadecimal, must match NDL definition
-            **     <connections>  Maximum number of concurrent connections to accept for port
-            **     <remote-ip>    IP address of host to which to connect for Reverse HASP, LIP, and NJE (must be specified in addition to host-name>)
-            **     <remote-port>  TCP port number to which Reverse HASP, NJE, or LIP will connect
-            **     <remote-name>  Name of node to which to connect for LIP and NJE
-            **     <local-ip>     IP address to use in NJE connections for local host (value of hostIP config entry used by default)
-            **     <block-size>   Maximum block size to send on HASP, Reverse HASP, and NJE connections
-            **     <coupler-node> Coupler node number of DtCyber host at other end of trunk
+            **     <block-size>    Maximum block size to send on HASP, Reverse HASP, and NJE connections
+            **     <cla-port>      Starting CLA port number on NPU, in hexadecimal, must match NDL definition
+            **     <coupler-node>  Coupler node number of DtCyber host at other end of trunk
+            **     <connections>   Maximum number of concurrent connections to accept for port
+            **     <local-ip>      IP address to use in NJE connections for local host (value of hostIP
+            **                     config entry used by default)
+            **     <local-port>    Local TCP port number on which to listen for connections (0 for no listening
+            **                     port, e.g., rhasp)
+            **     <ping-interval> Interval in seconds between pings during idle periods of NJE connection
+            **     <remote-ip>     IP address of host to which to connect for Reverse HASP, LIP, and NJE
+            **     <remote-name>   Name of node to which to connect for LIP and NJE
+            **     <remote-port>   TCP port number to which Reverse HASP, NJE, or LIP will connect
             */
             token = strtok(NULL, ",");
             if (token == NULL || !isdigit(token[0]))
@@ -776,12 +780,21 @@ static void initNpuConnections(void)
                 token = strtok(NULL, " ");
                 if (token != NULL)
                     {
-                    blockSize = strtol(token, NULL, 10);
-                    if (blockSize < MinBlockSize || blockSize > MaxBlockSize)
+                    if (*token == 'B' || *token == 'b')
                         {
-                        fprintf(stderr, "Invalid block size %ld in section [%s] of %s, relative line %d\n",
-                            blockSize, npuConnections, startupFile, lineNo);
-                        fprintf(stderr, "Block size must be between %d and %d\n", MinBlockSize, MaxBlockSize);
+                        blockSize = strtol(token + 1, NULL, 10);
+                        if (blockSize < MinBlockSize || blockSize > MaxBlockSize)
+                            {
+                            fprintf(stderr, "Invalid block size %ld in section [%s] of %s, relative line %d\n",
+                                blockSize, npuConnections, startupFile, lineNo);
+                            fprintf(stderr, "Block size must be between %d and %d\n", MinBlockSize, MaxBlockSize);
+                            exit(1);
+                            }
+                        }
+                    else
+                        {
+                        fprintf(stderr, "Invalid HASP block size specification '%s' in section [%s] of %s, relative line %d\n",
+                            token, npuConnections, startupFile, lineNo);
                         exit(1);
                         }
                     }
@@ -802,13 +815,13 @@ static void initNpuConnections(void)
                 destHostAddr = token;
                 if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
                     {
-                    fprintf(stderr, "Invalid Reverse HASP address %s in section [%s] of %s, relative line %d\n",
+                    fprintf(stderr, "Invalid Reverse HASP address '%s' in section [%s] of %s, relative line %d\n",
                         destHostAddr, npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 if (destHostPort == 0)
                     {
-                    fprintf(stderr, "Missing port number on Reverse HASP address %s in section [%s] of %s, relative line %d\n",
+                    fprintf(stderr, "Missing port number on Reverse HASP address '%s' in section [%s] of %s, relative line %d\n",
                         destHostAddr, npuConnections, startupFile, lineNo);
                     exit(1);
                     }
@@ -817,12 +830,21 @@ static void initNpuConnections(void)
                 token = strtok(NULL, " ");
                 if (token != NULL)
                     {
-                    blockSize = strtol(token, NULL, 10);
-                    if (blockSize < MinBlockSize || blockSize > MaxBlockSize)
+                    if (*token == 'B' || *token == 'b')
                         {
-                        fprintf(stderr, "Invalid block size %ld in section [%s] of %s, relative line %d\n",
-                            blockSize, npuConnections, startupFile, lineNo);
-                        fprintf(stderr, "Block size must be between %d and %d\n", MinBlockSize, MaxBlockSize);
+                        blockSize = strtol(token + 1, NULL, 10);
+                        if (blockSize < MinBlockSize || blockSize > MaxBlockSize)
+                            {
+                            fprintf(stderr, "Invalid block size %ld in section [%s] of %s, relative line %d\n",
+                                blockSize, npuConnections, startupFile, lineNo);
+                            fprintf(stderr, "Block size must be between %d and %d\n", MinBlockSize, MaxBlockSize);
+                            exit(1);
+                            }
+                        }
+                    else
+                        {
+                        fprintf(stderr, "Invalid Reverse HASP block size specification '%s' in section [%s] of %s, relative line %d\n",
+                            token, npuConnections, startupFile, lineNo);
                         exit(1);
                         }
                     }
@@ -865,20 +887,13 @@ static void initNpuConnections(void)
                 initToUpperCase(destHostName);
                 localHostIP = npuNetHostIP;
                 blockSize = DefaultNjeBlockSize;
+                pingInterval = DefaultNjePingInterval;
                 token = strtok(NULL, ", ");
-                if (token != NULL)
+                while (token != NULL)
                     {
-                    localHostAddr = token;
-                    token = strtok(NULL, " ");
-                    if (token != NULL)
+                    if (*token == 'B' || *token == 'b')
                         {
-                        if (initParseIpAddress(localHostAddr, &localHostIP, NULL) == FALSE)
-                            {
-                            fprintf(stderr, "Invalid local NJE node address %s in section [%s] of %s, relative line %d\n",
-                                localHostAddr, npuConnections, startupFile, lineNo);
-                            exit(1);
-                            }
-                        blockSize = strtol(token, NULL, 10);
+                        blockSize = strtol(token + 1, NULL, 10);
                         if (blockSize < MinNjeBlockSize)
                             {
                             fprintf(stderr, "Invalid block size %ld in section [%s] of %s, relative line %d\n",
@@ -887,17 +902,23 @@ static void initNpuConnections(void)
                             exit(1);
                             }
                         }
-                    else if (initParseIpAddress(localHostAddr, &localHostIP, NULL) == FALSE)
+                    else if (*token == 'P' || *token == 'p')
                         {
-                        blockSize = strtol(localHostAddr, NULL, 10);
-                        if (blockSize < MinNjeBlockSize)
+                        pingInterval = strtol(token + 1, NULL, 10);
+                        if (pingInterval < 0)
                             {
-                            fprintf(stderr, "Invalid block size %ld in section [%s] of %s, relative line %d\n",
-                                blockSize, npuConnections, startupFile, lineNo);
-                            fprintf(stderr, "Block size must be at least %d\n", MinNjeBlockSize);
+                            fprintf(stderr, "Invalid ping interval %ld in section [%s] of %s, relative line %d\n",
+                                pingInterval, npuConnections, startupFile, lineNo);
                             exit(1);
                             }
                         }
+                    else if (initParseIpAddress(token, &localHostIP, NULL) == FALSE)
+                        {
+                        fprintf(stderr, "Invalid local NJE node address %s in section [%s] of %s, relative line %d\n",
+                            token, npuConnections, startupFile, lineNo);
+                        exit(1);
+                        }
+                    token = strtok(NULL, ", ");
                     }
                 }
             else if (strcmp(token, "trunk") == 0)
@@ -984,10 +1005,11 @@ static void initNpuConnections(void)
                     if (connType == ConnTypeNje)
                         {
                         pcbp = npuNetFindPcb(claPort);
-                        pcbp->controls.nje.blockSize = blockSize;
-                        pcbp->controls.nje.localIP   = localHostIP;
-                        pcbp->controls.nje.remoteIP  = destHostIP;
-                        pcbp->controls.nje.inputBuf = (u8 *)malloc(pcbp->controls.nje.blockSize);
+                        pcbp->controls.nje.blockSize    = (int)blockSize;
+                        pcbp->controls.nje.pingInterval = (int)pingInterval;
+                        pcbp->controls.nje.localIP      = localHostIP;
+                        pcbp->controls.nje.remoteIP     = destHostIP;
+                        pcbp->controls.nje.inputBuf     = (u8 *)malloc(pcbp->controls.nje.blockSize);
                         if (pcbp->controls.nje.inputBuf == NULL)
                             {
                             fputs("Out of memory, failed to allocate input buffer for NJE\n", stderr);
