@@ -98,6 +98,7 @@
 #define DtMt362x                24
 #define DtMdi                   25
 #define DtDd885_42              26
+#define DtMt5744                27
 
 /*
 **  Special channels.

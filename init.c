@@ -607,17 +607,26 @@ static void initNpuConnections(void)
     cdcnetNode = (u8)networkValue;
 
     /*
-    **  Get optional privileged TCP port offset for CDCNet TCP/IP passive connections. If not specified,
+    **  Get optional privileged TCP and UDP port offsets for CDCNet TCP/IP passive connections. If not specified,
     **  use default value of 6600.
     */
-    initGetInteger("cdcnetPrivilegedPortOffset", 6600, &networkValue);
-    if (networkValue > 64000)
+    initGetInteger("cdcnetPrivilegedTcpPortOffset", 6600, &networkValue);
+    if (networkValue < 0 || networkValue > 64000)
         {
-        fprintf(stderr, "Invalid 'cdcnetPrivilegedPortOffset' value %ld in section [%s] of %s - correct values are 0..64000\n",
+        fprintf(stderr, "Invalid 'cdcnetPrivilegedTcpPortOffset' value %ld in section [%s] of %s - correct values are 0..64000\n",
             networkValue, npuConnections, startupFile);
         exit(1);
         }
-    cdcnetPrivilegedPortOffset = (u16)networkValue;
+    cdcnetPrivilegedTcpPortOffset = (u16)networkValue;
+
+    initGetInteger("cdcnetPrivilegedUdpPortOffset", 6600, &networkValue);
+    if (networkValue < 0 || networkValue > 64000)
+        {
+        fprintf(stderr, "Invalid 'cdcnetPrivilegedUdpPortOffset' value %ld in section [%s] of %s - correct values are 0..64000\n",
+            networkValue, npuConnections, startupFile);
+        exit(1);
+        }
+    cdcnetPrivilegedUdpPortOffset = (u16)networkValue;
 
     /*
     **  Process all equipment entries.

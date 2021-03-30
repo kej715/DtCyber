@@ -759,6 +759,7 @@ static void opCmdShowTape(bool help, char *cmdParams)
     mt669ShowTapeStatus();
     mt679ShowTapeStatus();
     mt362xShowTapeStatus();
+    mt5744ShowTapeStatus();
     }
 
 static void opHelpShowTape(void)

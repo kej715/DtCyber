@@ -63,6 +63,7 @@ OBJS    =   cdcnet.o                \
             maintenance_channel.o   \
             mdi.o                   \
             mt362x.o                \
+            mt5744.o                \
             mt607.o                 \
             mt669.o                 \
             mt679.o                 \

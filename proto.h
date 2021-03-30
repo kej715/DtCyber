@@ -123,6 +123,12 @@ void mt679UnloadTape(char *params);
 void mt679ShowTapeStatus(void);
 
 /*
+**  mt5744.c
+*/
+void mt5744Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void mt5744ShowTapeStatus(void);
+
+/*
 **  cr405.c
 */
 void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);

@@ -1,0 +1,7 @@
+{
+"MAILER":
+  {
+  "path":"tapes/massmail.tap",
+  "writeEnabled":false
+  }
+}
