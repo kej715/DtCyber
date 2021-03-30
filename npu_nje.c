@@ -101,11 +101,6 @@
 #define EbcdicBlank        0x40
 
 /*
-**  NJE block leader length (<DLE>+<STX>+BCB+FCS)
-*/
-#define NjeLeaderLen       5
-
-/*
 **  NJE Record Control Block (RCB) codes
 */
 #define RCB_RTI            0x90
@@ -1028,11 +1023,11 @@ void npuNjePresetPcb(Pcb *pcbp)
         npuNjeLog = fopen("njelog.txt", "wt");
         if (npuNjeLog == NULL)
             {
-            fprintf(stderr, "hasplog.txt - aborting\n");
+            fprintf(stderr, "njelog.txt - aborting\n");
             exit(1);
             }
-        }
         npuNjeLogFlush();    // initialize log buffer
+        }
 #endif
     pcbp->controls.nje.maxRecordSize = 1024; // renegotiated during signon
     pcbp->controls.nje.uplineQ.first = NULL;
