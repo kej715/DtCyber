@@ -26,9 +26,6 @@
 **--------------------------------------------------------------------------
 */
 
-/*
-**  If this is set to 1, the DEBUG flags in mdi.c and npu_hip.c must also be set to 1.
-*/
 #define DEBUG 0
 
 /*
@@ -59,6 +56,10 @@
 #include <signal.h>
 #endif
 
+#if defined(__APPLE__)
+#include <execinfo.h>
+#endif
+
 /*
 **  -----------------
 **  Private Constants
@@ -67,117 +68,118 @@
 #define cdcnetInitUpline   0x01
 #define cdcnetInitDownline 0x02
 
-/* --- Gateway header types --- */
-#define cdcnetGwHTIndication  0
-#define cdcnetGwHTRequest     0
-#define cdcnetGwHTResponse    1
+/* --- TCP Gateway header types --- */
+#define cdcnetTcpHTIndication  0
+#define cdcnetTcpHTRequest     0
+#define cdcnetTcpHTResponse    1
 
 /* --- Gateway TCP version --- */
-#define cdcnetGwTcpVersion   0x10
+#define cdcnetTcpVersion    0x10
+#define cdcnetUdpVersion    0x02
 
-/* --- Offsets common to all gateway commands and responses --- */
-#define BlkOffGwCmdName       5
-#define BlkOffGwHeaderType   12
-#define BlkOffGwHeaderLen    13
-#define BlkOffGwDataLen      15
-#define BlkOffGwStatus       17
-#define BlkOffGwTcpVersion   19
+/* --- Offsets common to all TCP gateway commands and responses --- */
+#define BlkOffTcpCmdName       5
+#define BlkOffTcpHeaderType   12
+#define BlkOffTcpHeaderLen    13
+#define BlkOffTcpDataLen      15
+#define BlkOffTcpStatus       17
+#define BlkOffTcpTcpVersion   19
 
-/* --- Offsets to fields in Open SAP command --- */
-#define BlkOffGwOSUserSapId  20
-#define BlkOffGwOSTcpIpGwVer 24
-#define BlkOffGwOSTcpSapId   28
+/* --- Offsets to fields in TCP Open SAP command --- */
+#define BlkOffTcpOSUserSapId  20
+#define BlkOffTcpOSTcpIpGwVer 24
+#define BlkOffTcpOSTcpSapId   28
 
-/* --- Offsets to fields in Close SAP command --- */
-#define BlkOffGwCSTcpSapId   20
+/* --- Offsets to fields in TCP Close SAP command --- */
+#define BlkOffTcpCSTcpSapId   20
 
-/* --- Offsets to fields in Active Connect command --- */
-#define BlkOffGwACTcpSapId   20
-#define BlkOffGwACUserCepId  28
-#define BlkOffGwACTcpCepId   35
-#define BlkOffGwACSrcAddr    50
-#define BlkOffGwACDstAddr    80
-#define BlkOffGwACAllocation 110
-#define BlkOffGwACIpHeader   125
-#define BlkOffGwACIpOptions  155
-#define BlkOffGwACUlpTimeout 485
-#define BlkOffGwACPushFlag   500
-#define BlkOffGwACUrgentFlag 500
+/* --- Offsets to fields in TCP Active Connect command --- */
+#define BlkOffTcpACTcpSapId   20
+#define BlkOffTcpACUserCepId  28
+#define BlkOffTcpACTcpCepId   35
+#define BlkOffTcpACSrcAddr    50
+#define BlkOffTcpACDstAddr    80
+#define BlkOffTcpACAllocation 110
+#define BlkOffTcpACIpHeader   125
+#define BlkOffTcpACIpOptions  155
+#define BlkOffTcpACUlpTimeout 485
+#define BlkOffTcpACPushFlag   500
+#define BlkOffTcpACUrgentFlag 500
 
-/* --- Offsets to fields in Passive Connect command --- */
-#define BlkOffGwPCTcpSapId   20
-#define BlkOffGwPCUserCepId  28
-#define BlkOffGwPCTcpCepId   35
-#define BlkOffGwPCSrcAddr    50
-#define BlkOffGwPCDstAddr    80
-#define BlkOffGwPCAllocation 110
-#define BlkOffGwPCIpHeader   125
-#define BlkOffGwPCIpOptions  155
-#define BlkOffGwPCUlpTimeout 485
-#define BlkOffGwPCPushFlag   500
-#define BlkOffGwPCUrgentFlag 500
+/* --- Offsets to fields in TCP Passive Connect command --- */
+#define BlkOffTcpPCTcpSapId   20
+#define BlkOffTcpPCUserCepId  28
+#define BlkOffTcpPCTcpCepId   35
+#define BlkOffTcpPCSrcAddr    50
+#define BlkOffTcpPCDstAddr    80
+#define BlkOffTcpPCAllocation 110
+#define BlkOffTcpPCIpHeader   125
+#define BlkOffTcpPCIpOptions  155
+#define BlkOffTcpPCUlpTimeout 485
+#define BlkOffTcpPCPushFlag   500
+#define BlkOffTcpPCUrgentFlag 500
 
-/* --- Offsets to fields in Allocation command --- */
-#define BlkOffGwATcpCepId    20
-#define BlkOffGwASize        28
+/* --- Offsets to fields in TCP Allocation command --- */
+#define BlkOffTcpATcpCepId    20
+#define BlkOffTcpASize        28
 
-/* --- Offsets to fields in Status command --- */
-#define BlkOffGwSTcpCepId    20
-#define BlkOffGwSUserCepId   28
-#define BlkOffGwSTcpSapId    35
-#define BlkOffGwSUserSapId   43
-#define BlkOffGwSSrcAddr     50
-#define BlkOffGwSDstAddr     80
-#define BlkOffGwSIpHeader    110
-#define BlkOffGwSIpOptions   140
-#define BlkOffGwSUlpTimeout  470
-#define BlkOffGwSTcpStatRec  485
+/* --- Offsets to fields in TCP Status command --- */
+#define BlkOffTcpSTcpCepId    20
+#define BlkOffTcpSUserCepId   28
+#define BlkOffTcpSTcpSapId    35
+#define BlkOffTcpSUserSapId   43
+#define BlkOffTcpSSrcAddr     50
+#define BlkOffTcpSDstAddr     80
+#define BlkOffTcpSIpHeader    110
+#define BlkOffTcpSIpOptions   140
+#define BlkOffTcpSUlpTimeout  470
+#define BlkOffTcpSTcpStatRec  485
 
-/* --- Offsets to fields in Disconnect command --- */
-#define BlkOffGwDTcpCepId    20
+/* --- Offsets to fields in TCP Disconnect command --- */
+#define BlkOffTcpDTcpCepId    20
 
-/* --- Offsets to fields in Abort Current Connection command --- */
-#define BlkOffGwACCTcpCepId  20
+/* --- Offsets to fields in TCP Abort Current Connection command --- */
+#define BlkOffTcpACCTcpCepId  20
 
 /* --- Offsets to fields in Send Data command --- */
-#define BlkOffGwSDTcpCepId   20
-#define BlkOffGwSDPushFlag   24
-#define BlkOffGwSDUrgent     24
-#define BlkOffGwSDUlpTimeout 35
+#define BlkOffTcpSDTcpCepId   20
+#define BlkOffTcpSDPushFlag   24
+#define BlkOffTcpSDUrgent     24
+#define BlkOffTcpSDUlpTimeout 35
 
-/* --- Offsets to fields in Connection Indication --- */
-#define BlkOffGwCIUserCepId  20
-#define BlkOffGwCISrcAddr    35
-#define BlkOffGwCIDstAddr    65
-#define BlkOffGwCIIpHeader   95
-#define BlkOffGwCIIpOptions  125
-#define BlkOffGwCIUlpTimeout 455
-#define cdcnetGwCILength     (470 - BlkOffGwCmdName)
+/* --- Offsets to fields in TCP Connection Indication --- */
+#define BlkOffTcpCIUserCepId  20
+#define BlkOffTcpCISrcAddr    35
+#define BlkOffTcpCIDstAddr    65
+#define BlkOffTcpCIIpHeader   95
+#define BlkOffTcpCIIpOptions  125
+#define BlkOffTcpCIUlpTimeout 455
+#define cdcnetTcpCILength     (470 - BlkOffTcpCmdName)
 
-/* --- Offsets to fields in Receive indication --- */
-#define BlkOffGwRUserCepId   20
-#define BlkOffGwRUrgent      24
-#define cdcnetGwRLength      (35 - BlkOffGwCmdName)
+/* --- Offsets to fields in TCP Receive indication --- */
+#define BlkOffTcpRUserCepId   20
+#define BlkOffTcpRUrgent      24
+#define cdcnetTcpRLength      (35 - BlkOffTcpCmdName)
 
-/* --- Offsets to fields in Close SAP Indication --- */
-#define BlkOffGwCSIUserSapId 20
-#define cdcnetGwCSILength    (35 - BlkOffGwCmdName)
+/* --- Offsets to fields in TCP Close SAP Indication --- */
+#define BlkOffTcpCSIUserSapId 20
+#define cdcnetTcpCSILength    (35 - BlkOffTcpCmdName)
 
-/* --- Offsets to fields in Abort Indication --- */
-#define BlkOffGwABIUserCepId 20
-#define cdcnetGwABILength    (35 - BlkOffGwCmdName)
+/* --- Offsets to fields in TCP Abort Indication --- */
+#define BlkOffTcpABIUserCepId 20
+#define cdcnetTcpABILength    (35 - BlkOffTcpCmdName)
 
-/* --- Offsets to fields in Disconnect Confirmation --- */
-#define BlkOffGwDCUserCepId  20
-#define cdcnetGwDCLength     (35 - BlkOffGwCmdName)
+/* --- Offsets to fields in TCP Disconnect Confirmation --- */
+#define BlkOffTcpDCUserCepId  20
+#define cdcnetTcpDCLength     (35 - BlkOffTcpCmdName)
 
-/* --- Offsets to fields in Disconnect Indication --- */
-#define BlkOffGwDIUserCepId  20
-#define cdcnetGwDILength     (35 - BlkOffGwCmdName)
+/* --- Offsets to fields in TCP Disconnect Indication --- */
+#define BlkOffTcpDIUserCepId  20
+#define cdcnetTcpDILength     (35 - BlkOffTcpCmdName)
 
-/* --- Offsets to fields in Error Indication --- */
-#define BlkOffGwEIUserCepId  20
-#define cdcnetGwEILength     (35 - BlkOffGwCmdName)
+/* --- Offsets to fields in TCP Error Indication --- */
+#define BlkOffTcpEIUserCepId  20
+#define cdcnetTcpEILength     (35 - BlkOffTcpCmdName)
 
 /* --- IP address fields in use indicators --- */
 #define cdcnetIpAddrFieldsNone     0
@@ -185,35 +187,89 @@
 #define cdcnetIpAddrFieldsHost     2
 #define cdcnetIpAddrFieldsBoth     3
 
-/* --- Relative offsets in TCP address structures --- */
-#define RelOffGwIpAddress          0
-#define RelOffGwIpAddrFieldsInUse  0
-#define RelOffGwIpAddressNetwork   1
-#define RelOffGwIpAddressHost      4
-#define RelOffGwPortInUse         15
-#define RelOffGwPort              16
-#define cdcnetGwTcpAddressLength  30
+/* --- Relative offsets in TCP IP address structures --- */
+#define RelOffTcpIpAddress         0
+#define RelOffTcpIpAddrFieldsInUse 0
+#define RelOffTcpIpAddressNetwork  1
+#define RelOffTcpIpAddressHost     4
+#define cdcnetTcpIpAddressLength   7
+
+/* --- Relative offsets in TCP IP address structures --- */
+#define RelOffTcpPortInUse        15
+#define RelOffTcpPort             16
+#define cdcnetTcpAddressLength    30
 
 /* --- Relative offsets in ULP timeout structure --- */
 #define RelOffGwUlpTimeout         0
 #define RelOffGwUlpTimeoutAbort    4
 
 /* --- Offsets to attributes in NAM A-A connection request --- */
-#define BlkOffDwnBlkLimit    12
-#define BlkOffDwnBlkSize     13
-#define BlkOffUplBlkLimit    16
-#define BlkOffUplBlkSize     17
-#define BlkOffAppName        29
+#define BlkOffDwnBlkLimit         12
+#define BlkOffDwnBlkSize          13
+#define BlkOffUplBlkLimit         16
+#define BlkOffUplBlkSize          17
+#define BlkOffAppName             29
 
 /* --- Reason codes for NAM A-A connection failure --- */
-#define cdcnetErrAppMaxConns 20
-#define cdcnetErrAppNotAvail 22
+#define cdcnetErrAppMaxConns      20
+#define cdcnetErrAppNotAvail      22
+
+/* --- UDP gateway request primitives --- */
+#define cdcnetUdpCallRequest      0x10
+#define cdcnetUdpDataRequest      0x11
+#define cdcnetUdpDataRequestDest  0x12
+#define cdcnetUdpDataIndication   0x13
+#define cdcnetUdpCallResponse     0x14
+
+/* --- UDP gateway error codes --- */
+#define cdcnetUdpHostUnreachable  0x3f
+#define cdcnetUdpNetUnreachable   0x4f
+#define cdcnetUdpProtoUnreachable 0x5f
+#define cdcnetUdpPortUnreachable  0x6f
+#define cdcnetUdpRouteFailed      0x7f
+#define cdcnetUdpPortInUse        0x8f
+#define cdcnetUdpNoResources      0x9f
+#define cdcnetUdpSapNotOpen       0xcf
+#define cdcnetUdpSapAlreadyOpen   0xdf
+
+/* --- Relative offsets in UDP address structures --- */
+#define RelOffUdpIpAddress         0
+#define RelOffUdpIpAddrFieldsInUse 0
+#define RelOffUdpIpAddressNetwork  1
+#define RelOffUdpIpAddressHost     5
+#define RelOffUdpPortInUse         9
+#define RelOffUdpPort             10
+#define cdcnetUdpAddressLength    13
+
+/* --- UDP gateway common header offsets --- */
+#define BlkOffUdpHeader            5
+#define BlkOffUdpRequestType       5
+#define BlkOffUdpVersion           6
+
+/* --- UDP gateway Open SAP request offsets --- */
+#define BlkOffUdpOpenSapUnused     7
+#define BlkOffUdpOpenSapSrcAddr    8
+#define BlkOffUdpOpenSapDstAddr   21
+
+/* --- UDP gateway Data Indication offsets --- */
+#define BlkOffUdpDataIndUnused     7
+#define BlkOffUdpDataIndSrcAddr    8
+#define BlkOffUdpDataIndData      21
+
+/* --- UDP gateway Data Request offsets --- */
+#define BlkOffUdpDataReqDstAddr   10
+#define BlkOffUdpDataReqData      23
 
 /*
 **  -----------------------
 **  Private Macro Functions
 **  -----------------------
 */
+#if DEBUG
+#define HexColumn(x) (3 * (x) + 4)
+#define AsciiColumn(x) (HexColumn(16) + 2 + (x))
+#define LogLineLength (AsciiColumn(16))
+#endif
 
 /*
 **  -----------------------------------------
@@ -245,88 +301,90 @@ typedef enum tcpGwStatus // from CDCNet source file
     tcp_not_configured        // TCP has not been defined.
     } TcpGwStatus;
 
-typedef enum cdcnetGwConnState
+typedef enum gwConnState
     {
-    StCdcnetGwIdle,
-    StCdcnetGwStartingInit,
-    StCdcnetGwInitializing,
-    StCdcnetGwConnected,
-    StCdcnetGwInitiateTermination,
-    StCdcnetGwTerminating,
-    StCdcnetGwAwaitTermBlock,
-    StCdcnetGwError
-    } CdcnetGwConnState;
+    StGwIdle,
+    StGwStartingInit,
+    StGwInitializing,
+    StGwConnected,
+    StGwInitiateTermination,
+    StGwTerminating,
+    StGwAwaitTermBlock,
+    StGwError
+    } GwConnState;
 
-typedef enum tcpConnState
+typedef enum tcpUdpConnState
     {
-    StTcpIdle,
+    StTcpUdpIdle,
     StTcpConnecting,
     StTcpIndicatingConnection,
     StTcpListening,
     StTcpConnected,
-    StTcpDisconnecting
-    } TcpConnState;
+    StTcpDisconnecting,
+    StUdpBound
+    } TcpUdpConnState;
 
-typedef enum tcpConnType
+typedef enum gwConnType
     {
-    TypeActive,
-    TypePassive
-    } TcpConnType;
+    TypeTcpActive,
+    TypeTcpPassive,
+    TypeUdp
+    } GwConnType;
 
-typedef struct tcpGcb // TCP Gateway Control Block
+typedef struct gcb // Gateway Control Block
     {
-    u16               ordinal;
-    CdcnetGwConnState gwState;
-    TcpConnState      tcpState;
-    TcpConnType       connType;
-    u8                initStatus;
-    u8                cn;
-    u8                bsn;
-    u8                unackedBlocks;
-    u16               maxUplineBlockSize;
-    u32               tcpSapId;
-    u32               tcpCepId;
-    u32               userSapId;
-    u32               userCepId;
-    u8                reasonCode;
-    u8                tcpSrcAddress[cdcnetGwTcpAddressLength];
-    u8                tcpDstAddress[cdcnetGwTcpAddressLength];
-    char              SrcIpAddress[20];
-    u16               SrcTcpPort;
-    char              DstIpAddress[20];
-    u16               DstTcpPort;
+    u16             ordinal;
+    GwConnState     gwState;
+    TcpUdpConnState tcpUdpState;
+    GwConnType      connType;
+    u8              initStatus;
+    u8              cn;
+    u8              bsn;
+    u8              unackedBlocks;
+    u16             maxUplineBlockSize;
+    u32             tcpSapId;
+    u32             tcpCepId;
+    u32             userSapId;
+    u32             userCepId;
+    u8              reasonCode;
+    u8              tcpSrcAddress[cdcnetTcpAddressLength];
+    u8              tcpDstAddress[cdcnetTcpAddressLength];
+    char            srcIpAddress[20];
+    u16             srcPort;
+    char            dstIpAddress[20];
+    u16             dstPort;
 #if defined(_WIN32)
-    SOCKET            connFd;
+    SOCKET          connFd;
 #else
-    int               connFd;
+    int             connFd;
 #endif
-    u32               localAddr;
-    u16               localPort;
-    u32               peerAddr;
-    u16               peerPort;
-    time_t            deadline;
-    NpuQueue          downlineQueue;
-    NpuQueue          outputQueue;
-    } TcpGcb;
+    u32             localAddr;
+    u16             localPort;
+    u32             peerAddr;
+    u16             peerPort;
+    time_t          deadline;
+    NpuQueue        downlineQueue;
+    NpuQueue        outputQueue;
+    } Gcb;
 
 typedef struct pccb // Passive Connection Control Block
     {
-    u16               ordinal;
-    u16               tcpGcbOrdinal;
-    u16               SrcTcpPort;
-    u16               DstTcpPort;
+    u16             ordinal;
+    u16             tcpGcbOrdinal;
+    u16             srcPort;
+    u16             dstPort;
 #if defined(_WIN32)
-    SOCKET            connFd;
+    SOCKET          connFd;
 #else
-    int               connFd;
+    int             connFd;
 #endif
-    time_t            deadline;
+    time_t          deadline;
     } Pccb;
 
 typedef struct tcpGwCommand
     {
     char *command;
-    bool (*handler)(TcpGcb *tp, NpuBuffer *bp);
+    bool (*handler)(Gcb *gp, NpuBuffer *bp);
     } TcpGwCommand;
 
 /*
@@ -334,50 +392,62 @@ typedef struct tcpGwCommand
 **  Private Function Prototypes
 **  ---------------------------
 */
-static Pccb   *cdcnetAddPccb();
-static TcpGcb *cdcnetAddTcpGcb();
-static void    cdcnetCloseConnection(TcpGcb *tp);
+static Pccb *cdcnetAddPccb();
+static Gcb  *cdcnetAddGcb();
+static void  cdcnetCloseConnection(Gcb *gp);
 #if defined(_WIN32)
-static SOCKET  cdcnetCreateSocket();
+static SOCKET cdcnetCreateTcpSocket();
 #else
-static int     cdcnetCreateSocket();
+static int   cdcnetCreateTcpSocket();
 #endif
-static Pccb   *cdcnetFindPccb(u16 port);
-static TcpGcb *cdcnetFindTcpGcb(u8 cn);
-static u32     cdcnetGetIdFromMessage(u8 *ip);
-static u32     cdcnetGetIpAddress(u8 *ap);
-static Pccb   *cdcnetGetPccb();
+static Pccb *cdcnetFindPccb(u16 port);
+static Gcb  *cdcnetFindGcb(u8 cn);
+static u32   cdcnetGetIdFromMessage(u8 *ip);
+static Pccb *cdcnetGetPccb();
 #if defined(_WIN32)
-static bool    cdcnetGetEndpoints(SOCKET sd, u32 *localAddr, u16 *localPort,
+static bool  cdcnetGetEndpoints(SOCKET sd, u32 *localAddr, u16 *localPort,
                                              u32 *peerAddr,  u16 *peerPort);
 #else
-static bool    cdcnetGetEndpoints(int sd, u32 *localAddr, u16 *localPort,
+static bool  cdcnetGetEndpoints(int sd, u32 *localAddr, u16 *localPort,
                                           u32 *peerAddr,  u16 *peerPort);
 #endif
-static TcpGcb *cdcnetGetTcpGcb();
-static u16     cdcnetGetTcpPort(u8 *ap);
-static void    cdcnetPutIdToMessage(u32 id, u8 *mp);
-static void    cdcnetPutU32ToMessage(u32 value, u8 *mp);
-static void    cdcnetSendBack(TcpGcb *tp, NpuBuffer *bp, u8 bsn);
-static bool    cdcnetSendInitializeConnectionRequest(TcpGcb *tp);
-static void    cdcnetSendInitializeConnectionResponse(NpuBuffer *bp, TcpGcb *tp);
-static void    cdcnetSendInitiateConnectionResponse(NpuBuffer *bp, u8 cn, u8 rc);
-static void    cdcnetSendTerminateConnectionBlock(NpuBuffer *bp, u8 cn);
-static void    cdcnetSendTerminateConnectionRequest(NpuBuffer *bp, u8 cn);
-static void    cdcnetSendTerminateConnectionResponse(NpuBuffer *bp, u8 cn);
-static void    cdcnetSetIpAddress(u8 *ap, u32 ipAddr);
-static void    cdcnetSetTcpPort(u8 *ap, u16 port);
-static bool    cdcnetTcpGwAbortCurrentConnectionHandler(TcpGcb *tp, NpuBuffer *bp);
-static bool    cdcnetTcpGwActiveConnectHandler(TcpGcb *tp, NpuBuffer *bp);
-static bool    cdcnetTcpGwAllocateHandler(TcpGcb *tp, NpuBuffer *bp);
-static bool    cdcnetTcpGwCloseSAPHandler(TcpGcb *tp, NpuBuffer *bp);
-static bool    cdcnetTcpGwDisconnectHandler(TcpGcb *tp, NpuBuffer *bp);
-static bool    cdcnetTcpGwOpenSAPHandler(TcpGcb *tp, NpuBuffer *bp);
-static bool    cdcnetTcpGwPassiveConnectHandler(TcpGcb *tp, NpuBuffer *bp);
-static bool    cdcnetTcpGwSendConnectionIndication(TcpGcb *tp);
-static bool    cdcnetTcpGwSendErrorIndication(TcpGcb *tp);
-static void    cdcnetTcpGwSendDataIndication(TcpGcb *tp);
-static void    cdcnetGwRequestUplineTransfer(TcpGcb *tp, NpuBuffer *bp, u8 blockType, u8 headerType, TcpGwStatus status);
+static Gcb  *cdcnetGetGcb();
+static void  cdcnetPutIdToMessage(u32 id, u8 *mp);
+static void  cdcnetPutU32ToMessage(u32 value, u8 *mp);
+static void  cdcnetSendBack(Gcb *gp, NpuBuffer *bp, u8 bsn);
+static bool  cdcnetSendInitializeConnectionRequest(Gcb *gp);
+static void  cdcnetSendInitializeConnectionResponse(NpuBuffer *bp, Gcb *gp);
+static void  cdcnetSendInitiateConnectionResponse(NpuBuffer *bp, u8 cn, u8 rc);
+static void  cdcnetSendTerminateConnectionBlock(NpuBuffer *bp, u8 cn);
+static void  cdcnetSendTerminateConnectionRequest(NpuBuffer *bp, u8 cn);
+static void  cdcnetSendTerminateConnectionResponse(NpuBuffer *bp, u8 cn);
+static bool  cdcnetTcpAbortCurrentConnectionHandler(Gcb *gp, NpuBuffer *bp);
+static bool  cdcnetTcpActiveConnectHandler(Gcb *gp, NpuBuffer *bp);
+static bool  cdcnetTcpAllocateHandler(Gcb *gp, NpuBuffer *bp);
+static bool  cdcnetTcpCloseSAPHandler(Gcb *gp, NpuBuffer *bp);
+static bool  cdcnetTcpDisconnectHandler(Gcb *gp, NpuBuffer *bp);
+static u32   cdcnetTcpGetIpAddress(u8 *ap);
+static u16   cdcnetTcpGetPort(u8 *ap);
+static bool  cdcnetTcpOpenSAPHandler(Gcb *gp, NpuBuffer *bp);
+static bool  cdcnetTcpPassiveConnectHandler(Gcb *gp, NpuBuffer *bp);
+static void  cdcnetTcpRequestUplineTransfer(Gcb *gp, NpuBuffer *bp, u8 blockType, u8 headerType, TcpGwStatus status);
+static bool  cdcnetTcpSendConnectionIndication(Gcb *gp);
+static void  cdcnetTcpSendDataIndication(Gcb *gp);
+static bool  cdcnetTcpSendErrorIndication(Gcb *gp);
+static void  cdcnetTcpSetIpAddress(u8 *ap, u32 ipAddr);
+static void  cdcnetTcpSetPort(u8 *ap, u16 port);
+static bool  cdcnetUdpBindAddress(Gcb *gp, NpuBuffer *bp);
+static u32   cdcnetUdpGetIpAddress(u8 *ap);
+static u16   cdcnetUdpGetPort(u8 *ap);
+static bool  cdcnetUdpSendDownlineData(Gcb *gp, NpuBuffer *bp);
+static void  cdcnetUdpSendUplineData(Gcb *gp);
+static void cdcnetUdpSetAddress(u8 *dp, u32 ipAddress, u16 port);
+
+#if DEBUG
+static void  cdcnetLogBytes(u8 *bytes, int len);
+static void  cdcnetLogFlush(void);
+static void  cdcnetPrintStackTrace(FILE *fp);
+#endif
 
 /*
 **  ----------------
@@ -385,38 +455,45 @@ static void    cdcnetGwRequestUplineTransfer(TcpGcb *tp, NpuBuffer *bp, u8 block
 **  ----------------
 */
 u8  cdcnetNode = 255;
-u16 cdcnetPrivilegedPortOffset = 6600;
+u16 cdcnetPrivilegedTcpPortOffset = 6600;
+u16 cdcnetPrivilegedUdpPortOffset = 6600;
 
 /*
 **  -----------------
 **  Private Variables
 **  -----------------
 */
-static u16     cdcnetPassivePort = 7600;
-static Pccb   *cdcnetPccbs       = (Pccb *)NULL;
-static u8      cdcnetPccbCount   = 0;
-static TcpGcb *cdcnetTcpGcbs     = (TcpGcb *)NULL;
-static u8      cdcnetTcpGcbCount = 0;
+static u16   cdcnetPassivePort = 7600;
+static Pccb *cdcnetPccbs       = (Pccb *)NULL;
+static u8    cdcnetPccbCount   = 0;
+static Gcb  *cdcnetGcbs        = (Gcb *)NULL;
+static u8    cdcnetGcbCount    = 0;
 
 static TcpGwCommand tcpGwCommands [] =
     {
-        {"TCPA   ", cdcnetTcpGwAllocateHandler},
-        {"TCPAC  ", cdcnetTcpGwActiveConnectHandler},
-        {"TCPACC ", cdcnetTcpGwAbortCurrentConnectionHandler},
-        {"TCPCS  ", cdcnetTcpGwCloseSAPHandler},
-        {"TCPD   ", cdcnetTcpGwDisconnectHandler},
-        {"TCPOS  ", cdcnetTcpGwOpenSAPHandler},
-        {"TCPPC  ", cdcnetTcpGwPassiveConnectHandler},
+        {"TCPA   ", cdcnetTcpAllocateHandler},
+        {"TCPAC  ", cdcnetTcpActiveConnectHandler},
+        {"TCPACC ", cdcnetTcpAbortCurrentConnectionHandler},
+        {"TCPCS  ", cdcnetTcpCloseSAPHandler},
+        {"TCPD   ", cdcnetTcpDisconnectHandler},
+        {"TCPOS  ", cdcnetTcpOpenSAPHandler},
+        {"TCPPC  ", cdcnetTcpPassiveConnectHandler},
 /*
-        {"TCPS   ", cdcnetTcpGwStatusHandler},
-        {"TCPSD  ", cdcnetTcpGwSendDataHandler},
-        {"TCPCSI ", cdcnetTcpGwCloseSAPIndicationHandler},
-        {"TCPABI ", cdcnetTcpGwAbortIndicationHandler},
-        {"TCPDC  ", cdcnetTcpGwDisconnectConfirmationHandler},
-        {"TCPDI  ", cdcnetTcpGwDisconnectIndicationHandler},
+        {"TCPS   ", cdcnetTcpStatusHandler},
+        {"TCPSD  ", cdcnetTcpSendDataHandler},
+        {"TCPCSI ", cdcnetTcpCloseSAPIndicationHandler},
+        {"TCPABI ", cdcnetTcpAbortIndicationHandler},
+        {"TCPDC  ", cdcnetTcpDisconnectConfirmationHandler},
+        {"TCPDI  ", cdcnetTcpDisconnectIndicationHandler},
 */
         {NULL, NULL}
     };
+
+#if DEBUG
+static FILE *cdcnetLog = NULL;
+static char  cdcnetLogBuf[LogLineLength + 1];
+static int   cdcnetLogBytesCol = 0;
+#endif
 
 /*
 **--------------------------------------------------------------------------
@@ -438,20 +515,22 @@ void cdcnetReset(void)
     {
     int i;
     Pccb *pp;
-    TcpGcb *tp;
+    Gcb *gp;
 
-    if (cdcnetTcpGcbCount < 1) return;
+    if (cdcnetGcbCount < 1) return;
 
-    npuLogMessage("CDCNet: Reset gateway");
+#if DEBUG
+    fputs("Reset gateway\n", cdcnetLog);
+#endif
 
     /*
-    **  Iterate through all TcpGcbs.
+    **  Iterate through all Gcbs.
     */
-    for (i = 0, tp = cdcnetTcpGcbs; i < cdcnetTcpGcbCount; i++, tp++)
+    for (i = 0, gp = cdcnetGcbs; i < cdcnetGcbCount; i++, gp++)
         {
-        if (tp->gwState != StCdcnetGwIdle)
+        if (gp->gwState != StGwIdle)
             {
-            cdcnetCloseConnection(tp);
+            cdcnetCloseConnection(gp);
             }
         }
 
@@ -468,7 +547,7 @@ void cdcnetReset(void)
                 close(pp->connFd);
             #endif
             pp->connFd = 0;
-            pp->DstTcpPort = 0;
+            pp->dstPort = 0;
             pp->tcpGcbOrdinal = 0;
             }
         }
@@ -492,12 +571,25 @@ void cdcnetProcessDownlineData(NpuBuffer *bp)
     u8 pfc;
     u8 rc;
     u8 sfc;
-    TcpGcb *tp;
+    Gcb *gp;
 
-    if (bp == NULL)
+    if (bp == NULL) return;
+
+#if DEBUG
+    if (cdcnetLog == NULL)
         {
-        return;
+        cdcnetLog = fopen("cdcnetlog.txt", "wt");
+        if (cdcnetLog == NULL)
+            {
+            fprintf(stderr, "cdcnetlog.txt - aborting\n");
+            exit(1);
+            }
+        cdcnetLogFlush();    // initialize log buffer
         }
+    fprintf(cdcnetLog, "Process downline block (%d bytes)\n", bp->numBytes);
+    cdcnetLogBytes(bp->data, bp->numBytes);
+    cdcnetLogFlush();
+#endif
 
     blockType = bp->data[BlkOffBTBSN] & BlkMaskBT;
     cn = bp->data[BlkOffCN];
@@ -506,22 +598,24 @@ void cdcnetProcessDownlineData(NpuBuffer *bp)
         {
     case BtHTBLK:
     case BtHTMSG:
-        tp = cdcnetFindTcpGcb(cn);
-        if (tp != NULL)
+        gp = cdcnetFindGcb(cn);
+        if (gp != NULL)
             {
             bp->blockSeqNo = (bp->data[BlkOffBTBSN] >> BlkShiftBSN) & BlkMaskBSN;
-            npuBipQueueAppend(bp, &tp->downlineQueue);
+            npuBipQueueAppend(bp, &gp->downlineQueue);
             }
         else
             {
-            npuLogMessage("CDCNet: Connection not found: %02X", cn);
+#if DEBUG
+            fprintf(cdcnetLog, "Connection not found: %02X\n", cn);
+#endif
             npuBipBufRelease(bp);
             }
         break;
 
     case BtHTBACK:
-        tp = cdcnetFindTcpGcb(cn);
-        if (tp != NULL && tp->unackedBlocks > 0) tp->unackedBlocks--;
+        gp = cdcnetFindGcb(cn);
+        if (gp != NULL && gp->unackedBlocks > 0) gp->unackedBlocks--;
         npuBipBufRelease(bp);
         break;
 
@@ -538,33 +632,39 @@ void cdcnetProcessDownlineData(NpuBuffer *bp)
                 cn = bp->data[BlkOffP3];
                 appName = (char *)bp->data + BlkOffAppName;
                 nameLen = bp->numBytes - BlkOffAppName;
-                tp = cdcnetGetTcpGcb();
+                gp = cdcnetGetGcb();
 
                 if (nameLen < 9 || strncmp(appName, "GW_TCPIP_", 9) != 0)
                     {
-                    npuLogMessage("CDCNet: Application name does not match GW_TCPIP_ ...");
+#if DEBUG
+                    fprintf(cdcnetLog, "Application name '%.9s' does not match GW_TCPIP_ ...\n", appName);
+#endif
                     rc = cdcnetErrAppNotAvail;
                     }
-                else if (tp == NULL)
+                else if (gp == NULL)
                     {
-                    npuLogMessage("CDCNet: Unable to allocate TCP/IP control block for %*s (CN=%02X)",
-                                  nameLen, appName, cn);
+#if DEBUG
+                    fprintf(cdcnetLog, "Unable to allocate TCP/IP control block for %*s (CN=%02X)\n",
+                        nameLen, appName, cn);
+#endif
                     rc = cdcnetErrAppMaxConns;
                     }
                 else
                     {
-                    tp->cn = cn;
-                    tp->unackedBlocks = 0;
-                    tp->maxUplineBlockSize = *(bp->data + BlkOffUplBlkSize) * 100;
-                    tp->gwState = StCdcnetGwStartingInit;
-                    tp->initStatus = 0;
+                    gp->cn = cn;
+                    gp->unackedBlocks = 0;
+                    gp->maxUplineBlockSize = *(bp->data + BlkOffUplBlkSize) * 100;
+                    gp->gwState = StGwStartingInit;
+                    gp->initStatus = 0;
                     }
 
                 cdcnetSendInitiateConnectionResponse(bp, cn, rc);
                 }
             else
                 {
-                npuLogMessage("CDCNet: Received unexpected command type: %02X/%02X", pfc, sfc);
+#if DEBUG
+                fprintf(cdcnetLog, "Received unexpected command type: %02X/%02X\n", pfc, sfc);
+#endif
                 npuBipBufRelease(bp);
                 }
             break;
@@ -573,35 +673,41 @@ void cdcnetProcessDownlineData(NpuBuffer *bp)
             if (sfc == 0x08 || sfc == (0x08|SfcResp)) // terminate connection request or response
                 {
                 cn = bp->data[BlkOffP3];
-                tp = cdcnetFindTcpGcb(cn);
-                if (tp != NULL)
+                gp = cdcnetFindGcb(cn);
+                if (gp != NULL)
                     {
                     if (sfc == 0x08) // terminate connection request
                         {
                         cdcnetSendTerminateConnectionBlock(bp, cn);
-                        tp->gwState = StCdcnetGwTerminating;
+                        gp->gwState = StGwTerminating;
                         }
                     else            // terminate connection response
                         {
-                        cdcnetCloseConnection(tp);
+                        cdcnetCloseConnection(gp);
                         npuBipBufRelease(bp);
                         }
                     }
                 else
                     {
-                    npuLogMessage("CDCNet: Connection not found: %02X", cn);
+#if DEBUG
+                    fprintf(cdcnetLog, "Connection not found: %02X\n", cn);
+#endif
                     npuBipBufRelease(bp);
                     }
                 }
             else
                 {
-                npuLogMessage("CDCNet: Received unexpected command type: %02X/%02X", pfc, sfc);
+#if DEBUG
+                fprintf(cdcnetLog, "Received unexpected command type: %02X/%02X\n", pfc, sfc);
+#endif
                 npuBipBufRelease(bp);
                 }
             break;
 
         default:
-            npuLogMessage("CDCNet: Received unexpected command type: %02X/%02X", pfc, sfc);
+#if DEBUG
+            fprintf(cdcnetLog, "Received unexpected command type: %02X/%02X\n", pfc, sfc);
+#endif
             npuBipBufRelease(bp);
             break;
             }
@@ -609,89 +715,101 @@ void cdcnetProcessDownlineData(NpuBuffer *bp)
 
     case BtHTQBLK:
     case BtHTQMSG:
-        tp = cdcnetFindTcpGcb(cn);
-        if (tp != NULL)
+        gp = cdcnetFindGcb(cn);
+        if (gp != NULL)
             {
             bp->blockSeqNo = (bp->data[BlkOffBTBSN] >> BlkShiftBSN) & BlkMaskBSN;
-            npuBipQueueAppend(bp, &tp->downlineQueue);
+            npuBipQueueAppend(bp, &gp->downlineQueue);
             }
         else
             {
-            npuLogMessage("CDCNet: Connection not found: %02X", cn);
+#if DEBUG
+            fprintf(cdcnetLog, "Connection not found: %02X\n", cn);
+#endif
             npuBipBufRelease(bp);
             }
         break;
 
     case BtHTRINIT:
-        tp = cdcnetFindTcpGcb(cn);
-        if (tp != NULL)
+        gp = cdcnetFindGcb(cn);
+        if (gp != NULL)
             {
-            cdcnetSendInitializeConnectionResponse(bp, tp);
-            tp->initStatus |= cdcnetInitDownline;
-            if (tp->initStatus == (cdcnetInitDownline | cdcnetInitUpline))
+            cdcnetSendInitializeConnectionResponse(bp, gp);
+            gp->initStatus |= cdcnetInitDownline;
+            if (gp->initStatus == (cdcnetInitDownline | cdcnetInitUpline))
                 {
-                tp->gwState = StCdcnetGwConnected;
-                #if DEBUG
-                    npuLogMessage("CDCNet: TCP/IP gateway connection established, CN=%02X", cn);
-                #endif
+                gp->gwState = StGwConnected;
+#if DEBUG
+                fprintf(cdcnetLog, "Gateway connection established, CN=%02X\n", cn);
+#endif
                 }
             }
         else
             {
-            npuLogMessage("CDCNet: Connection not found: %02X", cn);
+#if DEBUG
+            fprintf(cdcnetLog, "Connection not found: %02X\n", cn);
+#endif
             npuBipBufRelease(bp);
             }
         break;
 
     case BtHTNINIT:
-        tp = cdcnetFindTcpGcb(cn);
-        if (tp != NULL)
+        gp = cdcnetFindGcb(cn);
+        if (gp != NULL)
             {
-            tp->initStatus |= cdcnetInitUpline;
-            if (tp->initStatus == (cdcnetInitDownline | cdcnetInitUpline))
+            gp->initStatus |= cdcnetInitUpline;
+            if (gp->initStatus == (cdcnetInitDownline | cdcnetInitUpline))
                 {
-                tp->gwState = StCdcnetGwConnected;
-                #if DEBUG
-                    npuLogMessage("CDCNet: TCP/IP gateway connection established, CN=%02X", cn);
-                #endif
+                gp->gwState = StGwConnected;
+#if DEBUG
+                fprintf(cdcnetLog, "Gateway connection established, CN=%02X\n", cn);
+#endif
                 }
             }
+#if DEBUG
         else
             {
-            npuLogMessage("CDCNet: Connection not found: %02X", cn);
+            fprintf(cdcnetLog, "Connection not found: %02X\n", cn);
             }
+#endif
         npuBipBufRelease(bp);
         break;
 
     case BtHTTERM:
-        tp = cdcnetFindTcpGcb(cn);
-        if (tp != NULL)
+        gp = cdcnetFindGcb(cn);
+        if (gp != NULL)
             {
-            if (tp->gwState == StCdcnetGwAwaitTermBlock)
+            if (gp->gwState == StGwAwaitTermBlock)
                 {
                 cdcnetSendTerminateConnectionBlock(bp, cn); // echo TERM block
-                tp->gwState = StCdcnetGwIdle;
+                gp->gwState = StGwIdle;
                 }
-            else if (tp->gwState == StCdcnetGwTerminating)
+            else if (gp->gwState == StGwTerminating)
                 {
                 cdcnetSendTerminateConnectionResponse(bp, cn);
-                cdcnetCloseConnection(tp);
+                cdcnetCloseConnection(gp);
                 }
             else
                 {
-                npuLogMessage("CDCNet: Invalid state %d on reception of TERM block: %02X", tp->gwState, cn);
+#if DEBUG
+                fprintf(cdcnetLog, "Invalid state %d on reception of TERM block: CN=%02X\n", gp->gwState, cn);
+#endif
                 npuBipBufRelease(bp);
                 }
             }
         else
             {
-            npuLogMessage("CDCNet: Connection not found: %02X", cn);
+#if DEBUG
+            fprintf(cdcnetLog, "Connection not found: %02X\n", cn);
+#endif
             npuBipBufRelease(bp);
             }
         break;
 
     default:
-        npuLogMessage("CDCNet: Received unexpected block type: %02X, CN=%02X", blockType, cn);
+#if DEBUG
+        fprintf(cdcnetLog, "Received unexpected block type: %02X, CN=%02X\n", blockType, cn);
+#endif
         npuBipBufRelease(bp);
         break;
         }
@@ -707,6 +825,7 @@ void cdcnetProcessDownlineData(NpuBuffer *bp)
 **------------------------------------------------------------------------*/
 void cdcnetCheckStatus(void)
     {
+    u8 b;
     u8 blockType;
     NpuBuffer *bp;
     NpuBuffer *bp2;
@@ -726,7 +845,7 @@ void cdcnetCheckStatus(void)
     int rc;
     int readySockets;
     struct timeval timeout;
-    TcpGcb *tp;
+    Gcb *gp;
     fd_set writeFds;
 #if defined(_WIN32)
     SOCKET fd;
@@ -739,10 +858,6 @@ void cdcnetCheckStatus(void)
     socklen_t fromLen;
     int maxFd;
     socklen_t optLen;
-#endif
-
-#if DEBUG
-    validateDataStructures();
 #endif
 
     FD_ZERO(&readFds);
@@ -761,51 +876,55 @@ void cdcnetCheckStatus(void)
                 }
             else if (currentTime >= pp->deadline)
                 {
-                npuLogMessage("CDCNet: Unassigned listen port timeout, port=%d", pp->DstTcpPort);
+#if DEBUG
+                fprintf(cdcnetLog, "Unassigned listen port timeout, port=%d\n", pp->dstPort);
+#endif
                 #if defined(_WIN32)
                     closesocket(pp->connFd);
                 #else
                     close(pp->connFd);
                 #endif
-                pp->DstTcpPort = 0;
+                pp->dstPort = 0;
                 pp->connFd = 0;
                 }
             }
         }
 
-    for (i = 0, tp = cdcnetTcpGcbs; i < cdcnetTcpGcbCount; i++, tp++)
+    for (i = 0, gp = cdcnetGcbs; i < cdcnetGcbCount; i++, gp++)
         {
-        switch (tp->gwState)
+        switch (gp->gwState)
             {
-        case StCdcnetGwStartingInit:
-            if (cdcnetSendInitializeConnectionRequest(tp))
+        case StGwStartingInit:
+            if (cdcnetSendInitializeConnectionRequest(gp))
                 {
-                tp->gwState = StCdcnetGwInitializing;
-                tp->deadline = currentTime + 10;
+                gp->gwState = StGwInitializing;
+                gp->deadline = currentTime + 10;
                 }
             break;
 
-        case StCdcnetGwInitializing:
-            if (tp->deadline < currentTime)
+        case StGwInitializing:
+            if (gp->deadline < currentTime)
                 {
-                npuLogMessage("CDCNet: Connection initialization timed out, CN=%02X", tp->cn);
-                cdcnetCloseConnection(tp);
+#if DEBUG
+                fprintf(cdcnetLog, "Connection initialization timed out, CN=%02X\n", gp->cn);
+#endif
+                cdcnetCloseConnection(gp);
                 }
             break;
 
-        case StCdcnetGwInitiateTermination:
+        case StGwInitiateTermination:
             bp = npuBipBufGet();
             if (bp != NULL)
                 {
-                cdcnetCloseConnection(tp);
-                cdcnetSendTerminateConnectionRequest(bp, tp->cn);
-                tp->gwState = StCdcnetGwAwaitTermBlock;
+                cdcnetCloseConnection(gp);
+                cdcnetSendTerminateConnectionRequest(bp, gp->cn);
+                gp->gwState = StGwAwaitTermBlock;
                 }
             break;
 
-        case StCdcnetGwConnected:
+        case StGwConnected:
 
-            bp = npuBipQueueExtract(&tp->downlineQueue);
+            bp = npuBipQueueExtract(&gp->downlineQueue);
 
             if (bp != NULL)
                 {
@@ -816,7 +935,7 @@ void cdcnetCheckStatus(void)
                 case BtHTBLK:
                 case BtHTMSG:
                     bp->offset = BlkOffDbc + 1;
-                    npuBipQueueAppend(bp, &tp->outputQueue);
+                    npuBipQueueAppend(bp, &gp->outputQueue);
                     break;
 
                 case BtHTQBLK:
@@ -826,61 +945,89 @@ void cdcnetCheckStatus(void)
                         bp2 = npuBipBufGet();
                         if (bp2 == NULL)
                             {
-                            npuBipQueuePrepend(bp, &tp->downlineQueue);
+                            npuBipQueuePrepend(bp, &gp->downlineQueue);
                             break;
                             }
-                        cdcnetSendBack(tp, bp2, bp->blockSeqNo);
+                        cdcnetSendBack(gp, bp2, bp->blockSeqNo);
                         bp->blockSeqNo = 0;
                         }
                     for (gcp = tcpGwCommands; gcp->command; gcp++)
                         {
-                        if (strncmp(gcp->command, (char *)bp->data + BlkOffGwCmdName, 7) == 0)
+                        if (strncmp(gcp->command, (char *)bp->data + BlkOffTcpCmdName, 7) == 0)
                             {
-                            if (!(*gcp->handler)(tp, bp))
+                            if (!(*gcp->handler)(gp, bp))
                                 {
-                                npuBipQueuePrepend(bp, &tp->downlineQueue);
+                                npuBipQueuePrepend(bp, &gp->downlineQueue);
                                 }
                             break;
                             }
                         }
                     if (!gcp->command)
                         {
-                        npuLogMessage("CDCNet: Unrecognized TCP gateway command: %7s", (char *)bp->data + BlkOffGwCmdName);
-                        npuBipBufRelease(bp);
+                        /*
+                        **  If the message does not have a recognized TCP gateway command,
+                        **  check for a UDP gateway primitive.
+                        */
+                        b = *(bp->data + BlkOffUdpRequestType);
+                        if (b >= cdcnetUdpCallRequest && b <= cdcnetUdpDataRequestDest
+                            && *(bp->data + BlkOffUdpVersion) == cdcnetUdpVersion)
+                            {
+                            if (b == cdcnetUdpCallRequest)
+                                {
+                                if (!cdcnetUdpBindAddress(gp, bp))
+                                    {
+                                    npuBipQueuePrepend(bp, &gp->downlineQueue);
+                                    }
+                                }
+                            else if (!cdcnetUdpSendDownlineData(gp, bp))
+                                {
+                                npuBipQueuePrepend(bp, &gp->downlineQueue);
+                                }
+                            }
+                        else
+                            {
+#if DEBUG
+                            fprintf(cdcnetLog, "Unrecognized TCP gateway command: %7s\n", (char *)bp->data + BlkOffTcpCmdName);
+#endif
+                            npuBipBufRelease(bp);
+                            }
                         }
                     break;
 
                 default:
-                    npuLogMessage("CDCNet: Unexpected block type in cdcnetCheckStatus: %d", blockType);
+#if DEBUG
+                    fprintf(cdcnetLog, "Unexpected block type in cdcnetCheckStatus: %d\n", blockType);
+#endif
                     npuBipBufRelease(bp);
                     break;
                     }
                 }
 
-            switch (tp->tcpState)
+            switch (gp->tcpUdpState)
                 {
             case StTcpConnecting:
-                FD_SET(tp->connFd, &writeFds);
-                if (tp->connFd > maxFd) maxFd = tp->connFd;
+                FD_SET(gp->connFd, &writeFds);
+                if (gp->connFd > maxFd) maxFd = gp->connFd;
                 break;
 
             case StTcpIndicatingConnection:
-                if (cdcnetTcpGwSendConnectionIndication(tp))
+                if (cdcnetTcpSendConnectionIndication(gp))
                     {
-                    tp->tcpState = StTcpConnected;
+                    gp->tcpUdpState = StTcpConnected;
                     }
                 break;
 
             case StTcpConnected:
-                if (tp->unackedBlocks < 7)
+            case StUdpBound:
+                if (gp->unackedBlocks < 7)
                     {
-                    FD_SET(tp->connFd, &readFds);
-                    if (tp->connFd > maxFd) maxFd = tp->connFd;
+                    FD_SET(gp->connFd, &readFds);
+                    if (gp->connFd > maxFd) maxFd = gp->connFd;
                     }
-                if (tp->outputQueue.first != NULL)
+                if (gp->outputQueue.first != NULL)
                     {
-                    FD_SET(tp->connFd, &writeFds);
-                    if (tp->connFd > maxFd) maxFd = tp->connFd;
+                    FD_SET(gp->connFd, &writeFds);
+                    if (gp->connFd > maxFd) maxFd = gp->connFd;
                     }
                 break;
 
@@ -890,10 +1037,10 @@ void cdcnetCheckStatus(void)
 
             break;
 
-        case StCdcnetGwError:
-            if (cdcnetTcpGwSendErrorIndication(tp))
+        case StGwError:
+            if (cdcnetTcpSendErrorIndication(gp))
                 {
-                tp->gwState = StCdcnetGwConnected;
+                gp->gwState = StGwConnected;
                 }
             break;
             }
@@ -945,167 +1092,182 @@ void cdcnetCheckStatus(void)
                 **  port (e.g., an FTP data connection), close the listening port and
                 **  make the passive connection control block available for re-use.
                 */
-                tp = cdcnetTcpGcbs + (pp->tcpGcbOrdinal - 1);
-                if (pp->SrcTcpPort != 0)
+                gp = cdcnetGcbs + (pp->tcpGcbOrdinal - 1);
+                if (pp->srcPort != 0)
                     {
-                    npuLogMessage("CDCNet: Close listening socket, port=%d, CN=%02X", pp->DstTcpPort, tp->cn);
+#if DEBUG
+                    fprintf(cdcnetLog, "Close listening socket, port=%d, CN=%02X\n", pp->dstPort, gp->cn);
+#endif
                     #if defined(_WIN32)
                         closesocket(pp->connFd);
                     #else
                         close(pp->connFd);
                     #endif
-                    pp->DstTcpPort = 0;
-                    pp->SrcTcpPort = 0;
+                    pp->dstPort = 0;
+                    pp->srcPort = 0;
                     pp->connFd = 0;
                     }
                 else
                     {
-                    npuLogMessage("CDCNet: Leave listening socket open, port=%d, CN=%02X", pp->DstTcpPort, tp->cn);
+#if DEBUG
+                    fprintf(cdcnetLog, "Leave listening socket open, port=%d, CN=%02X\n", pp->dstPort, gp->cn);
+#endif
                     pp->deadline = currentTime + 10;
                     }
                 pp->tcpGcbOrdinal = 0;
-                tp->connFd = fd;
-                tp->localAddr = localAddr;
-                tp->localPort = localPort;
-                tp->peerAddr = peerAddr;
-                tp->peerPort = peerPort;
-                sprintf(tp->SrcIpAddress, "%d.%d.%d.%d",
+                gp->connFd = fd;
+                gp->localAddr = localAddr;
+                gp->localPort = localPort;
+                gp->peerAddr = peerAddr;
+                gp->peerPort = peerPort;
+                sprintf(gp->srcIpAddress, "%d.%d.%d.%d",
                         (peerAddr >> 24) & 0xff,
                         (peerAddr >> 16) & 0xff,
                         (peerAddr >>  8) & 0xff,
                         peerAddr & 0xff);
-                tp->SrcTcpPort = peerPort;
-                npuLogMessage("CDCNet: Accepted connection, source addr=%s:%u, dest addr=%s:%u, CN=%02X",
-                              tp->SrcIpAddress, tp->SrcTcpPort, tp->DstIpAddress, tp->DstTcpPort, tp->cn);
-                if (cdcnetTcpGwSendConnectionIndication(tp))
+                gp->srcPort = peerPort;
+#if DEBUG
+                fprintf(cdcnetLog, "Accepted connection, source addr=%s:%u, dest addr=%s:%u, CN=%02X\n",
+                    gp->srcIpAddress, gp->srcPort, gp->dstIpAddress, gp->dstPort, gp->cn);
+#endif
+                if (cdcnetTcpSendConnectionIndication(gp))
                     {
-                    tp->tcpState = StTcpConnected;
+                    gp->tcpUdpState = StTcpConnected;
                     }
                 else
                     {
-                    tp->tcpState = StTcpIndicatingConnection;
+                    gp->tcpUdpState = StTcpIndicatingConnection;
                     }
                 }
+#if DEBUG
             else
                 {
-                npuLogMessage("CDCNet: Accept of new connection failed on port %d, CN=%02X",
-                              tp->DstTcpPort, tp->cn);
+                fprintf(cdcnetLog, "Accept of new connection failed on port %d, CN=%02X\n",
+                    gp->dstPort, gp->cn);
                 }
+#endif
             }
         }
 
-    for (i = 0, tp = cdcnetTcpGcbs; i < cdcnetTcpGcbCount; i++, tp++)
+    for (i = 0, gp = cdcnetGcbs; i < cdcnetGcbCount; i++, gp++)
         {
-        if (tp->gwState != StCdcnetGwConnected) continue;
+        if (gp->gwState != StGwConnected) continue;
 
-        switch (tp->tcpState)
+        switch (gp->tcpUdpState)
             {
         case StTcpConnecting:
-            if (FD_ISSET(tp->connFd, &writeFds))
+            if (FD_ISSET(gp->connFd, &writeFds))
                 {
                 #if defined(_WIN32)
                     optLen = sizeof(optVal);
-                    rc = getsockopt(tp->connFd, SOL_SOCKET, SO_ERROR, (char *)&optVal, &optLen);
+                    rc = getsockopt(gp->connFd, SOL_SOCKET, SO_ERROR, (char *)&optVal, &optLen);
                 #else
                     optLen = (socklen_t)sizeof(optVal);
-                    rc = getsockopt(tp->connFd, SOL_SOCKET, SO_ERROR, &optVal, &optLen);
+                    rc = getsockopt(gp->connFd, SOL_SOCKET, SO_ERROR, &optVal, &optLen);
                 #endif
                 if (rc < 0)
                     {
-                    npuLogMessage("CDCNet: Failed to get socket status for %s:%u, CN=%02X",
-                                  tp->DstIpAddress, tp->DstTcpPort, tp->cn);
+#if DEBUG
+                    fprintf(cdcnetLog, "Failed to get socket status for %s:%u, CN=%02X\n",
+                                  gp->dstIpAddress, gp->dstPort, gp->cn);
+#endif
                     #if defined(_WIN32)
-                        closesocket(tp->connFd);
+                        closesocket(gp->connFd);
                     #else
-                        close(tp->connFd);
+                        close(gp->connFd);
                     #endif
-                    tp->connFd = 0;
-                    tp->tcpState = StTcpIdle;
-                    tp->reasonCode = tcp_internal_error;
-                    tp->gwState = StCdcnetGwError;
+                    gp->connFd = 0;
+                    gp->tcpUdpState = StTcpUdpIdle;
+                    gp->reasonCode = tcp_internal_error;
+                    gp->gwState = StGwError;
                     }
                 else if (optVal != 0) // connection failed
                     {
-                    npuLogMessage("CDCNet: Failed to connect to %s:%u, CN=%02X",
-                                  tp->DstIpAddress, tp->DstTcpPort, tp->cn);
+#if DEBUG
+                    fprintf(cdcnetLog, "Failed to connect to %s:%u, CN=%02X\n",
+                        gp->dstIpAddress, gp->dstPort, gp->cn);
+#endif
                     #if defined(_WIN32)
-                        closesocket(tp->connFd);
+                        closesocket(gp->connFd);
                     #else
-                        close(tp->connFd);
+                        close(gp->connFd);
                     #endif
-                    tp->connFd = 0;
-                    tp->tcpState = StTcpIdle;
-                    tp->reasonCode = tcp_host_unreachable;
-                    tp->gwState = StCdcnetGwError;
+                    gp->connFd = 0;
+                    gp->tcpUdpState = StTcpUdpIdle;
+                    gp->reasonCode = tcp_host_unreachable;
+                    gp->gwState = StGwError;
                     }
-                else if (cdcnetGetEndpoints(tp->connFd, &localAddr, &localPort, &peerAddr, &peerPort))
+                else if (cdcnetGetEndpoints(gp->connFd, &localAddr, &localPort, &peerAddr, &peerPort))
                     {
-                    npuLogMessage("CDCNet: Connected to %s:%u, CN=%02X", tp->DstIpAddress, tp->DstTcpPort, tp->cn);
-                    tp->localAddr = localAddr;
-                    tp->localPort = localPort;
-                    tp->peerAddr = peerAddr;
-                    tp->peerPort = peerPort;
-                    if (cdcnetTcpGwSendConnectionIndication(tp))
+#if DEBUG
+                    fprintf(cdcnetLog, "Connected to %s:%u, CN=%02X\n", gp->dstIpAddress, gp->dstPort, gp->cn);
+#endif
+                    gp->localAddr = localAddr;
+                    gp->localPort = localPort;
+                    gp->peerAddr = peerAddr;
+                    gp->peerPort = peerPort;
+                    if (cdcnetTcpSendConnectionIndication(gp))
                         {
-                        tp->tcpState = StTcpConnected;
+                        gp->tcpUdpState = StTcpConnected;
                         }
                     else
                         {
-                        tp->tcpState = StTcpIndicatingConnection;
+                        gp->tcpUdpState = StTcpIndicatingConnection;
                         }
                     }
                 else
                     {
                     #if defined(_WIN32)
-                        closesocket(tp->connFd);
+                        closesocket(gp->connFd);
                     #else
-                        close(tp->connFd);
+                        close(gp->connFd);
                     #endif
-                    tp->connFd = 0;
-                    tp->tcpState = StTcpIdle;
-                    tp->reasonCode = tcp_host_unreachable;
-                    tp->gwState = StCdcnetGwError;
+                    gp->connFd = 0;
+                    gp->tcpUdpState = StTcpUdpIdle;
+                    gp->reasonCode = tcp_host_unreachable;
+                    gp->gwState = StGwError;
                     }
                 }
-            else if (currentTime >= tp->deadline)
+            else if (currentTime >= gp->deadline)
                 {
-                npuLogMessage("CDCNet: Connect to %s:%u timed out, CN=%02X", tp->DstIpAddress, tp->DstTcpPort, tp->cn);
+#if DEBUG
+                fprintf(cdcnetLog, "Connect to %s:%u timed out, CN=%02X\n", gp->dstIpAddress, gp->dstPort, gp->cn);
+#endif
                 #if defined(_WIN32)
-                    closesocket(tp->connFd);
+                    closesocket(gp->connFd);
                 #else
-                    close(tp->connFd);
+                    close(gp->connFd);
                 #endif
-                tp->connFd = 0;
-                tp->tcpState = StTcpIdle;
-                tp->reasonCode = tcp_host_unreachable;
-                tp->gwState = StCdcnetGwError;
+                gp->connFd = 0;
+                gp->tcpUdpState = StTcpUdpIdle;
+                gp->reasonCode = tcp_host_unreachable;
+                gp->gwState = StGwError;
                 }
             break;
 
         case StTcpConnected:
-            if (FD_ISSET(tp->connFd, &readFds))
+            if (FD_ISSET(gp->connFd, &readFds))
                 {
-                cdcnetTcpGwSendDataIndication(tp);
+                cdcnetTcpSendDataIndication(gp);
                 }
-            if (FD_ISSET(tp->connFd, &writeFds))
+            if (FD_ISSET(gp->connFd, &writeFds))
                 {
-                bp = npuBipQueueExtract(&tp->outputQueue);
+                bp = npuBipQueueExtract(&gp->outputQueue);
 
                 if (bp != NULL)
                     {
-                    n = send(tp->connFd, bp->data + bp->offset, bp->numBytes - bp->offset, 0);
+                    n = send(gp->connFd, bp->data + bp->offset, bp->numBytes - bp->offset, 0);
                     if (n >= 0)
                         {
-                        #if DEBUG
-                            npuLogMessage("CDCNet: Sent %d bytes to %s:%u, CN=%02X",
-                                          n, tp->DstIpAddress, tp->DstTcpPort, tp->cn);
-                        #endif
+#if DEBUG
+                        fprintf(cdcnetLog, "Sent %d bytes to %s:%u, CN=%02X\n", n, gp->dstIpAddress, gp->dstPort, gp->cn);
+#endif
                         bp->offset += n;
                         if (bp->offset >= bp->numBytes)
                             {
                             if (bp->blockSeqNo)
                                 {
-                                cdcnetSendBack(tp, bp, bp->blockSeqNo);
+                                cdcnetSendBack(gp, bp, bp->blockSeqNo);
                                 }
                             else
                                 {
@@ -1114,22 +1276,31 @@ void cdcnetCheckStatus(void)
                             }
                         else
                             {
-                            npuBipQueuePrepend(bp, &tp->outputQueue);
+                            npuBipQueuePrepend(bp, &gp->outputQueue);
                             }
                         }
                     else
                         {
-                        npuLogMessage("CDCNet: Failed to write to %s:%u, %s, CN=%02X",
-                                      tp->DstIpAddress, tp->DstTcpPort, strerror(errno), tp->cn);
+#if DEBUG
+                        fprintf(cdcnetLog, "Failed to write to %s:%u, %s, CN=%02X\n",
+                                      gp->dstIpAddress, gp->dstPort, strerror(errno), gp->cn);
+#endif
                         npuBipBufRelease(bp);
-                        while ((bp = npuBipQueueExtract(&tp->outputQueue)) != NULL)
+                        while ((bp = npuBipQueueExtract(&gp->outputQueue)) != NULL)
                             {
                             npuBipBufRelease(bp);
                             }
-                        tp->reasonCode = tcp_remote_abort;
-                        tp->gwState = StCdcnetGwError;
+                        gp->reasonCode = tcp_remote_abort;
+                        gp->gwState = StGwError;
                         }
                     }
+                }
+            break;
+
+        case StUdpBound:
+            if (FD_ISSET(gp->connFd, &readFds))
+                {
+                cdcnetUdpSendUplineData(gp);
                 }
             break;
 
@@ -1148,89 +1319,89 @@ void cdcnetCheckStatus(void)
 */
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Add a TCP/IP gateway control block.
+**  Purpose:        Add a gateway control block.
 **
 **  Parameters:     Name        Description.
 **
-**  Returns:        Pointer to new TcpGcb
+**  Returns:        Pointer to new Gcb
 **                  NULL if insufficient resources
 **
 **------------------------------------------------------------------------*/
-static TcpGcb *cdcnetAddTcpGcb()
+static Gcb *cdcnetAddGcb()
     {
-    TcpGcb *tp;
+    Gcb *gp;
 
-    tp = (TcpGcb *)realloc(cdcnetTcpGcbs, (cdcnetTcpGcbCount + 1) * sizeof(TcpGcb));
-    if (tp == (TcpGcb *)NULL)
+    gp = (Gcb *)realloc(cdcnetGcbs, (cdcnetGcbCount + 1) * sizeof(Gcb));
+    if (gp == (Gcb *)NULL)
         {
-        return((TcpGcb *)NULL);
+        return((Gcb *)NULL);
         }
 
-    cdcnetTcpGcbs = tp;
-    tp = tp + cdcnetTcpGcbCount++;
-    tp->ordinal = cdcnetTcpGcbCount;
-    tp->gwState = StCdcnetGwIdle;
-    tp->tcpState = StTcpIdle;
-    tp->tcpSapId = 0;
-    tp->connFd = 0;
-    tp->deadline = (time_t)0;
-    tp->cn = 0;
-    tp->bsn = 1;
-    tp->unackedBlocks = 0;
-    tp->maxUplineBlockSize = 1000;
-    tp->downlineQueue.first = NULL;
-    tp->downlineQueue.last = NULL;
-    tp->outputQueue.first = NULL;
-    tp->outputQueue.last = NULL;
+    cdcnetGcbs = gp;
+    gp = gp + cdcnetGcbCount++;
+    gp->ordinal = cdcnetGcbCount;
+    gp->gwState = StGwIdle;
+    gp->tcpUdpState = StTcpUdpIdle;
+    gp->tcpSapId = 0;
+    gp->connFd = 0;
+    gp->deadline = (time_t)0;
+    gp->cn = 0;
+    gp->bsn = 1;
+    gp->unackedBlocks = 0;
+    gp->maxUplineBlockSize = 1000;
+    gp->downlineQueue.first = NULL;
+    gp->downlineQueue.last = NULL;
+    gp->outputQueue.first = NULL;
+    gp->outputQueue.last = NULL;
 
-    return(tp);
+    return(gp);
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Get a free TCP/IP gateway control block.
+**  Purpose:        Get a free gateway control block.
 **
 **  Parameters:     Name        Description.
 **
-**  Returns:        Pointer to free TcpGcb
+**  Returns:        Pointer to free Gcb
 **                  NULL if insufficient resources
 **
 **------------------------------------------------------------------------*/
-static TcpGcb *cdcnetGetTcpGcb()
+static Gcb *cdcnetGetGcb()
     {
     int i;
-    TcpGcb *tp;
+    Gcb *gp;
 
-    for (i = 0, tp = cdcnetTcpGcbs; i < cdcnetTcpGcbCount; i++, tp++)
+    for (i = 0, gp = cdcnetGcbs; i < cdcnetGcbCount; i++, gp++)
         {
-        if (tp->gwState == StCdcnetGwIdle)
+        if (gp->gwState == StGwIdle)
             {
-            return(tp);
+            return(gp);
             }
         }
 
-    return cdcnetAddTcpGcb();
+    return cdcnetAddGcb();
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Find a TCP/IP gateway control block by connection number.
+**  Purpose:        Find a gateway control block by connection number.
 **
 **  Parameters:     Name        Description.
 **                  cn          connection number
 **
-**  Returns:        Pointer to TcpGcb
+**  Returns:        Pointer to Gcb
 **                  NULL if control block not found
 **
 **------------------------------------------------------------------------*/
-static TcpGcb *cdcnetFindTcpGcb(u8 cn)
+static Gcb *cdcnetFindGcb(u8 cn)
     {
     int i;
-    TcpGcb *tp;
+    Gcb *gp;
 
-    for (i = 0, tp = cdcnetTcpGcbs; i < cdcnetTcpGcbCount; i++, tp++)
+    for (i = 0, gp = cdcnetGcbs; i < cdcnetGcbCount; i++, gp++)
         {
-        if (tp->gwState != StCdcnetGwIdle && cn == tp->cn)
+        if (gp->gwState != StGwIdle && cn == gp->cn)
             {
-            return(tp);
+            return(gp);
             }
         }
 
@@ -1260,8 +1431,8 @@ static Pccb *cdcnetAddPccb()
     pp = pp + cdcnetPccbCount++;
     pp->ordinal = cdcnetPccbCount;
     pp->connFd = 0;
-    pp->SrcTcpPort = 0;
-    pp->DstTcpPort = 0;
+    pp->srcPort = 0;
+    pp->dstPort = 0;
     pp->tcpGcbOrdinal = 0;
     pp->deadline = (time_t)0;
 
@@ -1284,7 +1455,7 @@ static Pccb *cdcnetGetPccb()
 
     for (i = 0, pp = cdcnetPccbs; i < cdcnetPccbCount; i++, pp++)
         {
-        if (pp->DstTcpPort == 0)
+        if (pp->dstPort == 0)
             {
             return(pp);
             }
@@ -1310,7 +1481,7 @@ static Pccb *cdcnetFindPccb(u16 port)
 
     for (i = 0, pp = cdcnetPccbs; i < cdcnetPccbCount; i++, pp++)
         {
-        if (port == pp->DstTcpPort)
+        if (port == pp->dstPort)
             {
             return(pp);
             }
@@ -1375,61 +1546,65 @@ static bool cdcnetGetEndpoints(int sd, u32 *localAddr, u16 *localPort,
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Close a TCP/IP gateway connection.
+**  Purpose:        Close a gateway connection.
 **
 **  Parameters:     Name        Description.
-**                  tp          TcpGcb pointer
+**                  gp          Gcb pointer
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cdcnetCloseConnection(TcpGcb *tp)
+static void cdcnetCloseConnection(Gcb *gp)
     {
     NpuBuffer *bp;
     Pccb *pp;
 
-    if (tp->connFd != 0)
+    if (gp->connFd != 0)
         {
         #if defined(_WIN32)
-            closesocket(tp->connFd);
+            closesocket(gp->connFd);
         #else
-            close(tp->connFd);
+            close(gp->connFd);
         #endif
-        tp->connFd = 0;
+        gp->connFd = 0;
         }
 
-    pp = cdcnetFindPccb(tp->DstTcpPort);
-    if (pp != NULL && pp->tcpGcbOrdinal == tp->ordinal)
+    pp = cdcnetFindPccb(gp->dstPort);
+    if (pp != NULL && pp->tcpGcbOrdinal == gp->ordinal)
         {
-        if (pp->SrcTcpPort != 0)
+        if (pp->srcPort != 0)
             {
-            npuLogMessage("CDCNet: Close listening socket, port=%d, CN=%02X", pp->DstTcpPort, tp->cn);
+#if DEBUG
+            fprintf(cdcnetLog, "Close listening socket, port=%d, CN=%02X\n", pp->dstPort, gp->cn);
+#endif
             #if defined(_WIN32)
                 closesocket(pp->connFd);
             #else
                 close(pp->connFd);
             #endif
-            pp->DstTcpPort = 0;
+            pp->dstPort = 0;
             pp->connFd = 0;
             }
         else if (pp->connFd > 0)
             {
             pp->deadline = time(NULL) + 10;
-            npuLogMessage("CDCNet: Leave listening socket open, port=%d, CN=%02X", pp->DstTcpPort, tp->cn);
+#if DEBUG
+            fprintf(cdcnetLog, "Leave listening socket open, port=%d, CN=%02X\n", pp->dstPort, gp->cn);
+#endif
             }
         pp->tcpGcbOrdinal = 0;
         }
 
-    tp->gwState = StCdcnetGwIdle;
-    tp->tcpState = StTcpIdle;
-    tp->initStatus = 0;
-    tp->tcpSapId = 0;
+    gp->gwState = StGwIdle;
+    gp->tcpUdpState = StTcpUdpIdle;
+    gp->initStatus = 0;
+    gp->tcpSapId = 0;
 
-    while ((bp = npuBipQueueExtract(&tp->downlineQueue)) != NULL)
+    while ((bp = npuBipQueueExtract(&gp->downlineQueue)) != NULL)
         {
         npuBipBufRelease(bp);
         }
-    while ((bp = npuBipQueueExtract(&tp->outputQueue)) != NULL)
+    while ((bp = npuBipQueueExtract(&gp->outputQueue)) != NULL)
         {
         npuBipBufRelease(bp);
         }
@@ -1439,12 +1614,12 @@ static void cdcnetCloseConnection(TcpGcb *tp)
 **  Purpose:        Send acknowledgement of reception of a block.
 **
 **  Parameters:     Name        Description.
-**                  tp          TcpGcb pointer
+**                  gp          Gcb pointer
 **                  bp          pointer to NpuBuffer to use for upline message
 **                  bsn         block sequence number to acknowledge
 **
 **------------------------------------------------------------------------*/
-static void cdcnetSendBack(TcpGcb *tp, NpuBuffer *bp, u8 bsn)
+static void cdcnetSendBack(Gcb *gp, NpuBuffer *bp, u8 bsn)
     {
     u8 *mp;
 
@@ -1452,7 +1627,7 @@ static void cdcnetSendBack(TcpGcb *tp, NpuBuffer *bp, u8 bsn)
 
     *mp++ = npuSvmCouplerNode;                   // DN
     *mp++ = cdcnetNode;                          // SN
-    *mp++ = tp->cn;                              // CN
+    *mp++ = gp->cn;                              // CN
     *mp++ = BlkOffBTBSN | (bsn << BlkShiftBSN);  // BT=Back | BSN
 
     bp->numBytes = mp - bp->data;
@@ -1497,13 +1672,13 @@ static void cdcnetSendInitiateConnectionResponse(NpuBuffer *bp, u8 cn, u8 rc)
 **  Purpose:        Send initialize connection request.
 **
 **  Parameters:     Name        Description.
-**                  tp          TcpGcb pointer
+**                  gp          Gcb pointer
 **
 **  Returns:        TRUE if request sent.
 **                  FALSE if insufficient resources
 **
 **------------------------------------------------------------------------*/
-static bool cdcnetSendInitializeConnectionRequest(TcpGcb *tp)
+static bool cdcnetSendInitializeConnectionRequest(Gcb *gp)
     {
     NpuBuffer *bp;
     u8 *mp;
@@ -1518,7 +1693,7 @@ static bool cdcnetSendInitializeConnectionRequest(TcpGcb *tp)
 
     *mp++ = npuSvmCouplerNode;              // DN
     *mp++ = cdcnetNode;                     // SN
-    *mp++ = tp->cn;                         // CN
+    *mp++ = gp->cn;                         // CN
     *mp++ = BtHTRINIT;                      // Initialize request
 
     bp->numBytes = mp - bp->data;
@@ -1533,12 +1708,12 @@ static bool cdcnetSendInitializeConnectionRequest(TcpGcb *tp)
 **
 **  Parameters:     Name        Description.
 **                  bp          pointer to NpuBuffer to use for upline message
-**                  tp          TcpGcb pointer
+**                  gp          Gcb pointer
 **
 **  Returns:        nothing.
 **
 **------------------------------------------------------------------------*/
-static void cdcnetSendInitializeConnectionResponse(NpuBuffer *bp, TcpGcb *tp)
+static void cdcnetSendInitializeConnectionResponse(NpuBuffer *bp, Gcb *gp)
     {
     u8 *mp;
 
@@ -1546,7 +1721,7 @@ static void cdcnetSendInitializeConnectionResponse(NpuBuffer *bp, TcpGcb *tp)
 
     *mp++ = npuSvmCouplerNode;              // DN
     *mp++ = cdcnetNode;                     // SN
-    *mp++ = tp->cn;                         // CN
+    *mp++ = gp->cn;                         // CN
     *mp++ = BtHTNINIT;                      // Initialize response
 
     bp->numBytes = mp - bp->data;
@@ -1643,7 +1818,7 @@ static void cdcnetSendTerminateConnectionResponse(NpuBuffer *bp, u8 cn)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Get an IP address from a gateway message.
+**  Purpose:        Get an IP address from a TCP gateway message.
 **
 **  Parameters:     Name        Description.
 **                  ap          pointer to gateway-encoded IP address structure
@@ -1651,19 +1826,19 @@ static void cdcnetSendTerminateConnectionResponse(NpuBuffer *bp, u8 cn)
 **  Returns:        Assembled address.
 **
 **------------------------------------------------------------------------*/
-static u32 cdcnetGetIpAddress(u8 *ap)
+static u32 cdcnetTcpGetIpAddress(u8 *ap)
     {
     u8 inUse;
     u32 ipAddr;
 
-    inUse = ap[RelOffGwIpAddrFieldsInUse];
+    inUse = ap[RelOffTcpIpAddrFieldsInUse];
     ipAddr = 0;
 
     if (inUse & 0x40)
         {
-        ipAddr = (ap[RelOffGwIpAddressNetwork] << 24)
-                 | (ap[RelOffGwIpAddressNetwork + 1] << 16)
-                 | (ap[RelOffGwIpAddressNetwork + 2] << 8);
+        ipAddr = (ap[RelOffTcpIpAddressNetwork] << 24)
+                 | (ap[RelOffTcpIpAddressNetwork + 1] << 16)
+                 | (ap[RelOffTcpIpAddressNetwork + 2] << 8);
         if ((ipAddr & 0xFFFF0000) == 0) // Class A network
             {
             ipAddr <<= 16;
@@ -1675,17 +1850,17 @@ static u32 cdcnetGetIpAddress(u8 *ap)
         }
     if ((ipAddr & 0xC0000000) == 0xC0000000) // Class C address
         {
-        ipAddr |= ap[RelOffGwIpAddressHost + 2];
+        ipAddr |= ap[RelOffTcpIpAddressHost + 2];
         }
     else if (ipAddr & 0x80000000) // Class B address
         {
-        ipAddr |= (ap[RelOffGwIpAddressHost + 1] << 8) | ap[RelOffGwIpAddressHost + 2];
+        ipAddr |= (ap[RelOffTcpIpAddressHost + 1] << 8) | ap[RelOffTcpIpAddressHost + 2];
         }
     else // Class A address
         {
-        ipAddr |= (ap[RelOffGwIpAddressHost] << 16)
-                  | (ap[RelOffGwIpAddressHost + 1] << 8)
-                  |  ap[RelOffGwIpAddressHost + 2];
+        ipAddr |= (ap[RelOffTcpIpAddressHost] << 16)
+                  | (ap[RelOffTcpIpAddressHost + 1] << 8)
+                  |  ap[RelOffTcpIpAddressHost + 2];
         }
 
     return(ipAddr);
@@ -1701,39 +1876,39 @@ static u32 cdcnetGetIpAddress(u8 *ap)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cdcnetSetIpAddress(u8 *ap, u32 ipAddr)
+static void cdcnetTcpSetIpAddress(u8 *ap, u32 ipAddr)
     {
-    ap[RelOffGwIpAddrFieldsInUse] |= 0xC0;
+    ap[RelOffTcpIpAddrFieldsInUse] |= 0xC0;
 
     if ((ipAddr & 0xC0000000) == 0xC0000000) // Class C address
         {
-        ap[RelOffGwIpAddressNetwork]     = (ipAddr >> 24) & 0xff;
-        ap[RelOffGwIpAddressNetwork + 1] = (ipAddr >> 16) & 0xff;
-        ap[RelOffGwIpAddressNetwork + 2] = (ipAddr >>  8) & 0xff;
+        ap[RelOffTcpIpAddressNetwork]     = (ipAddr >> 24) & 0xff;
+        ap[RelOffTcpIpAddressNetwork + 1] = (ipAddr >> 16) & 0xff;
+        ap[RelOffTcpIpAddressNetwork + 2] = (ipAddr >>  8) & 0xff;
 
-        ap[RelOffGwIpAddressHost]     = 0;
-        ap[RelOffGwIpAddressHost + 1] = 0;
-        ap[RelOffGwIpAddressHost + 2] = ipAddr & 0xff;
+        ap[RelOffTcpIpAddressHost]     = 0;
+        ap[RelOffTcpIpAddressHost + 1] = 0;
+        ap[RelOffTcpIpAddressHost + 2] = ipAddr & 0xff;
         }
     else if (ipAddr & 0x80000000) // Class B address
         {
-        ap[RelOffGwIpAddressNetwork]     = 0;
-        ap[RelOffGwIpAddressNetwork + 1] = (ipAddr >> 24) & 0xff;
-        ap[RelOffGwIpAddressNetwork + 2] = (ipAddr >> 16) & 0xff;
+        ap[RelOffTcpIpAddressNetwork]     = 0;
+        ap[RelOffTcpIpAddressNetwork + 1] = (ipAddr >> 24) & 0xff;
+        ap[RelOffTcpIpAddressNetwork + 2] = (ipAddr >> 16) & 0xff;
 
-        ap[RelOffGwIpAddressHost]     = 0;
-        ap[RelOffGwIpAddressHost + 1] = (ipAddr >> 8) & 0xff;
-        ap[RelOffGwIpAddressHost + 2] = ipAddr & 0xff;
+        ap[RelOffTcpIpAddressHost]     = 0;
+        ap[RelOffTcpIpAddressHost + 1] = (ipAddr >> 8) & 0xff;
+        ap[RelOffTcpIpAddressHost + 2] = ipAddr & 0xff;
         }
     else // Class A address
         {
-        ap[RelOffGwIpAddressNetwork]     = 0;
-        ap[RelOffGwIpAddressNetwork + 1] = 0;
-        ap[RelOffGwIpAddressNetwork + 2] = (ipAddr >> 24) & 0xff;
+        ap[RelOffTcpIpAddressNetwork]     = 0;
+        ap[RelOffTcpIpAddressNetwork + 1] = 0;
+        ap[RelOffTcpIpAddressNetwork + 2] = (ipAddr >> 24) & 0xff;
 
-        ap[RelOffGwIpAddressHost]     = (ipAddr >> 16) & 0xff;
-        ap[RelOffGwIpAddressHost + 1] = (ipAddr >>  8) & 0xff;
-        ap[RelOffGwIpAddressHost + 2] = ipAddr & 0xff;
+        ap[RelOffTcpIpAddressHost]     = (ipAddr >> 16) & 0xff;
+        ap[RelOffTcpIpAddressHost + 1] = (ipAddr >>  8) & 0xff;
+        ap[RelOffTcpIpAddressHost + 2] = ipAddr & 0xff;
         }
     }
 
@@ -1746,17 +1921,17 @@ static void cdcnetSetIpAddress(u8 *ap, u32 ipAddr)
 **  Returns:        TCP port number; 0 if no port specified.
 **
 **------------------------------------------------------------------------*/
-static u16 cdcnetGetTcpPort(u8 *ap)
+static u16 cdcnetTcpGetPort(u8 *ap)
     {
     u8 inUse;
     u16 port;
 
-    inUse = ap[RelOffGwPortInUse] & 0x80;
+    inUse = ap[RelOffTcpPortInUse] & 0x80;
     port = 0;
 
     if (inUse != 0)
        {
-       port = (ap[RelOffGwPort] << 8) | ap[RelOffGwPort + 1];
+       port = (ap[RelOffTcpPort] << 8) | ap[RelOffTcpPort + 1];
        }
 
     return(port);
@@ -1772,11 +1947,11 @@ static u16 cdcnetGetTcpPort(u8 *ap)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cdcnetSetTcpPort(u8 *ap, u16 port)
+static void cdcnetTcpSetPort(u8 *ap, u16 port)
     {
-    ap[RelOffGwPortInUse] |= 0x80;
-    ap[RelOffGwPort] = (port >> 8) & 0xff;
-    ap[RelOffGwPort + 1] = port & 0xff;
+    ap[RelOffTcpPortInUse] |= 0x80;
+    ap[RelOffTcpPort] = (port >> 8) & 0xff;
+    ap[RelOffTcpPort + 1] = port & 0xff;
     }
 
 /*--------------------------------------------------------------------------
@@ -1843,7 +2018,7 @@ static void cdcnetPutU32ToMessage(u32 value, u8 *mp)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Create a non-blocking socket.
+**  Purpose:        Create a non-blocking TCP socket.
 **
 **  Parameters:     Name        Description.
 **
@@ -1852,9 +2027,9 @@ static void cdcnetPutU32ToMessage(u32 value, u8 *mp)
 **
 **------------------------------------------------------------------------*/
 #if defined(_WIN32)
-static SOCKET cdcnetCreateSocket()
+static SOCKET cdcnetCreateTcpSocket()
 #else
-static int cdcnetCreateSocket()
+static int cdcnetCreateTcpSocket()
 #endif
     {
 #if defined(_WIN32)
@@ -1880,10 +2055,10 @@ static int cdcnetCreateSocket()
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Queue a block for upline transfer.
+**  Purpose:        Queue a TCP block for upline transfer.
 **
 **  Parameters:     Name        Description.
-**                  tp          pointer to TCP/IP gateway control block
+**                  gp          pointer to gateway control block
 **                  bp          pointer to NpuBuffer containing block
 **                  blockType   block type (BtHTMSG or BtHTQMSG)
 **                  headerType  TCP/IP gateway header type
@@ -1892,21 +2067,26 @@ static int cdcnetCreateSocket()
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cdcnetGwRequestUplineTransfer(TcpGcb *tp, NpuBuffer *bp, u8 blockType, u8 headerType, TcpGwStatus status)
+static void cdcnetTcpRequestUplineTransfer(Gcb *gp, NpuBuffer *bp, u8 blockType, u8 headerType, TcpGwStatus status)
     {
     bp->data[BlkOffDN] = npuSvmCouplerNode;
     bp->data[BlkOffSN] = cdcnetNode;
-    bp->data[BlkOffCN] = tp->cn;
-    bp->data[BlkOffBTBSN] = (tp->bsn++ << BlkShiftBSN) | blockType;
-    if (tp->bsn > 7) tp->bsn = 1;
+    bp->data[BlkOffCN] = gp->cn;
+    bp->data[BlkOffBTBSN] = (gp->bsn++ << BlkShiftBSN) | blockType;
+    if (gp->bsn > 7) gp->bsn = 1;
     bp->data[BlkOffDbc] = 0;
     if (blockType == BtHTQMSG)
         {
-        bp->data[BlkOffGwStatus]     = (status >> 8) & 0xff;
-        bp->data[BlkOffGwStatus + 1] = status & 0xff;
-        bp->data[BlkOffGwHeaderType] = headerType;
+        bp->data[BlkOffTcpStatus]     = (status >> 8) & 0xff;
+        bp->data[BlkOffTcpStatus + 1] = status & 0xff;
+        bp->data[BlkOffTcpHeaderType] = headerType;
         }
-    tp->unackedBlocks++;
+#if DEBUG
+    fprintf(cdcnetLog, "Send TCP block upline (%d bytes)\n", bp->numBytes);
+    cdcnetLogBytes(bp->data, bp->numBytes);
+    cdcnetLogFlush();
+#endif
+    gp->unackedBlocks++;
     npuBipRequestUplineTransfer(bp);
     }
 
@@ -1914,21 +2094,23 @@ static void cdcnetGwRequestUplineTransfer(TcpGcb *tp, NpuBuffer *bp, u8 blockTyp
 **  Purpose:        Handle TCP Gateway Open SAP request.
 **
 **  Parameters:     Name        Description.
-**                  tp          pointer to TCP/IP gateway control block
+**                  gp          pointer to gateway control block
 **                  bp          pointer to NpuBuffer containing request
 **
 **  Returns:        TRUE if request handled and response sent successfully
 **                  FALSE if request should be retried
 **
 **------------------------------------------------------------------------*/
-static bool cdcnetTcpGwOpenSAPHandler(TcpGcb *tp, NpuBuffer *bp)
+static bool cdcnetTcpOpenSAPHandler(Gcb *gp, NpuBuffer *bp)
     {
-    tp->userSapId = cdcnetGetIdFromMessage(bp->data + BlkOffGwOSUserSapId);
-    npuLogMessage("CDCNet: Open SAP request, gwVersion=%02X, tcpSapId=%d, userSapId=%d, CN=%02X",
-                  bp->data[BlkOffGwOSTcpIpGwVer], tp->ordinal, tp->userSapId, tp->cn);
-    tp->tcpSapId = (u32)tp->ordinal;
-    cdcnetPutIdToMessage(tp->tcpSapId, bp->data + BlkOffGwOSTcpSapId);
-    cdcnetGwRequestUplineTransfer(tp, bp, BtHTQMSG, cdcnetGwHTResponse, tcp_successful);
+    gp->userSapId = cdcnetGetIdFromMessage(bp->data + BlkOffTcpOSUserSapId);
+#if DEBUG
+    fprintf(cdcnetLog, "Open SAP request, gwVersion=%02X, tcpSapId=%d, userSapId=%d, CN=%02X\n",
+        bp->data[BlkOffTcpOSTcpIpGwVer], gp->ordinal, gp->userSapId, gp->cn);
+#endif
+    gp->tcpSapId = (u32)gp->ordinal;
+    cdcnetPutIdToMessage(gp->tcpSapId, bp->data + BlkOffTcpOSTcpSapId);
+    cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_successful);
     return(TRUE);
     }
 
@@ -1936,31 +2118,34 @@ static bool cdcnetTcpGwOpenSAPHandler(TcpGcb *tp, NpuBuffer *bp)
 **  Purpose:        Handle TCP Gateway Close SAP request.
 **
 **  Parameters:     Name        Description.
-**                  tp          pointer to TCP/IP gateway control block
+**                  gp          pointer to gateway control block
 **                  bp          pointer to NpuBuffer containing request
 **
 **  Returns:        TRUE if request handled and response sent successfully
 **                  FALSE if request should be retried
 **
 **------------------------------------------------------------------------*/
-static bool cdcnetTcpGwCloseSAPHandler(TcpGcb *tp, NpuBuffer *bp)
+static bool cdcnetTcpCloseSAPHandler(Gcb *gp, NpuBuffer *bp)
     {
     int i;
-    TcpGcb *tp2;
+    Gcb *gp2;
     u32 tcpSapId;
 
-    tcpSapId = cdcnetGetIdFromMessage(bp->data + BlkOffGwCSTcpSapId);
-    npuLogMessage("CDCNet: Close SAP request, tcpSapId=%d, CN=%02X", tcpSapId, tp->cn);
+    tcpSapId = cdcnetGetIdFromMessage(bp->data + BlkOffTcpCSTcpSapId);
 
-    for (i = 0, tp2 = cdcnetTcpGcbs; i < cdcnetTcpGcbCount; i++, tp2++)
+#if DEBUG
+    fprintf(cdcnetLog, "Close SAP request, tcpSapId=%d, CN=%02X\n", tcpSapId, gp->cn);
+#endif
+
+    for (i = 0, gp2 = cdcnetGcbs; i < cdcnetGcbCount; i++, gp2++)
         {
-        if (tp2->tcpSapId == tcpSapId && tp2->tcpState != StTcpIdle)
+        if (gp2->tcpSapId == tcpSapId && gp2->tcpUdpState != StTcpUdpIdle)
             {
-            cdcnetCloseConnection(tp2);
+            cdcnetCloseConnection(gp2);
             }
         }
 
-    cdcnetGwRequestUplineTransfer(tp, bp, BtHTQMSG, cdcnetGwHTResponse, tcp_successful);
+    cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_successful);
     return(TRUE);
     }
 
@@ -1968,28 +2153,30 @@ static bool cdcnetTcpGwCloseSAPHandler(TcpGcb *tp, NpuBuffer *bp)
 **  Purpose:        Handle TCP Gateway request to abort the current connection
 **
 **  Parameters:     Name        Description.
-**                  tp          pointer to TCP/IP gateway control block
+**                  gp          pointer to gateway control block
 **                  bp          pointer to NpuBuffer containing request
 **
 **  Returns:        TRUE if request handled and response sent successfully
 **                  FALSE if request should be retried
 **
 **------------------------------------------------------------------------*/
-static bool cdcnetTcpGwAbortCurrentConnectionHandler(TcpGcb *tp, NpuBuffer *bp)
+static bool cdcnetTcpAbortCurrentConnectionHandler(Gcb *gp, NpuBuffer *bp)
     {
-    npuLogMessage("CDCNet: Abort current connection request, tcpCepId=%d, size=%08X, CN=%02X",
-                  cdcnetGetIdFromMessage(bp->data + BlkOffGwACCTcpCepId), tp->cn);
-    if (tp->connFd != 0)
+#if DEBUG
+    fprintf(cdcnetLog, "Abort current connection request, tcpCepId=%d, CN=%02X\n",
+        cdcnetGetIdFromMessage(bp->data + BlkOffTcpACCTcpCepId), gp->cn);
+#endif
+    if (gp->connFd != 0)
         {
         #if defined(_WIN32)
-            closesocket(tp->connFd);
+            closesocket(gp->connFd);
         #else
-            close(tp->connFd);
+            close(gp->connFd);
         #endif
-        tp->connFd = 0;
+        gp->connFd = 0;
         }
-    tp->tcpState = StTcpIdle;
-    cdcnetGwRequestUplineTransfer(tp, bp, BtHTQMSG, cdcnetGwHTResponse, tcp_successful);
+    gp->tcpUdpState = StTcpUdpIdle;
+    cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_successful);
     return(TRUE);
     }
 
@@ -1997,14 +2184,14 @@ static bool cdcnetTcpGwAbortCurrentConnectionHandler(TcpGcb *tp, NpuBuffer *bp)
 **  Purpose:        Handle TCP Gateway Active Connect request.
 **
 **  Parameters:     Name        Description.
-**                  tp          pointer to TCP/IP gateway control block
+**                  gp          pointer to gateway control block
 **                  bp          pointer to NpuBuffer containing request
 **
 **  Returns:        TRUE if request handled and response sent successfully
 **                  FALSE if request should be retried
 **
 **------------------------------------------------------------------------*/
-static bool cdcnetTcpGwActiveConnectHandler(TcpGcb *tp, NpuBuffer *bp)
+static bool cdcnetTcpActiveConnectHandler(Gcb *gp, NpuBuffer *bp)
     {
     u8 *dp;
     u32 dstAddr;
@@ -2017,123 +2204,135 @@ static bool cdcnetTcpGwActiveConnectHandler(TcpGcb *tp, NpuBuffer *bp)
     u32 srcAddr;
     TcpGwStatus status;
 
-    tp->connType = TypeActive;
-    tp->tcpSapId = cdcnetGetIdFromMessage(bp->data + BlkOffGwACTcpSapId);
-    tp->userCepId = cdcnetGetIdFromMessage(bp->data + BlkOffGwACUserCepId);
-    tp->tcpCepId = 0;
-    memcpy(tp->tcpSrcAddress, bp->data + BlkOffGwACSrcAddr, cdcnetGwTcpAddressLength);
-    memcpy(tp->tcpDstAddress, bp->data + BlkOffGwACDstAddr, cdcnetGwTcpAddressLength);
-    dp = bp->data + BlkOffGwACSrcAddr;
-    srcAddr = cdcnetGetIpAddress(dp);
-    sprintf(tp->SrcIpAddress, "%d.%d.%d.%d", srcAddr >> 24, (srcAddr >> 16) & 0xff, (srcAddr >> 8) & 0xff, srcAddr & 0xff);
-    tp->SrcTcpPort = cdcnetGetTcpPort(dp);
-    dp = bp->data + BlkOffGwACDstAddr;
-    dstAddr = cdcnetGetIpAddress(dp);
-    sprintf(tp->DstIpAddress, "%d.%d.%d.%d", dstAddr >> 24, (dstAddr >> 16) & 0xff, (dstAddr >> 8) & 0xff, dstAddr & 0xff);
-    tp->DstTcpPort = cdcnetGetTcpPort(dp);
-    npuLogMessage("CDCNet: Active Connect request, tcpSapId=%d, userCepId=%d, tcpCepId=%d, CN=%02X\n        source addr=%s:%d, dest addr=%s:%d",
-                  tp->tcpSapId, tp->userCepId, tp->tcpCepId, tp->cn,
-                  tp->SrcIpAddress, tp->SrcTcpPort, tp->DstIpAddress, tp->DstTcpPort);
+    gp->connType = TypeTcpActive;
+    gp->tcpSapId = cdcnetGetIdFromMessage(bp->data + BlkOffTcpACTcpSapId);
+    gp->userCepId = cdcnetGetIdFromMessage(bp->data + BlkOffTcpACUserCepId);
+    gp->tcpCepId = 0;
+    memcpy(gp->tcpSrcAddress, bp->data + BlkOffTcpACSrcAddr, cdcnetTcpAddressLength);
+    memcpy(gp->tcpDstAddress, bp->data + BlkOffTcpACDstAddr, cdcnetTcpAddressLength);
+    dp = bp->data + BlkOffTcpACSrcAddr;
+    srcAddr = cdcnetTcpGetIpAddress(dp);
+    sprintf(gp->srcIpAddress, "%d.%d.%d.%d", srcAddr >> 24, (srcAddr >> 16) & 0xff, (srcAddr >> 8) & 0xff, srcAddr & 0xff);
+    gp->srcPort = cdcnetTcpGetPort(dp);
+    dp = bp->data + BlkOffTcpACDstAddr;
+    dstAddr = cdcnetTcpGetIpAddress(dp);
+    sprintf(gp->dstIpAddress, "%d.%d.%d.%d", dstAddr >> 24, (dstAddr >> 16) & 0xff, (dstAddr >> 8) & 0xff, dstAddr & 0xff);
+    gp->dstPort = cdcnetTcpGetPort(dp);
+#if DEBUG
+    fprintf(cdcnetLog, "Active Connect request, tcpSapId=%d, userCepId=%d, tcpCepId=%d, CN=%02X\n        source addr=%s:%d, dest addr=%s:%d\n",
+        gp->tcpSapId, gp->userCepId, gp->tcpCepId, gp->cn,
+        gp->srcIpAddress, gp->srcPort, gp->dstIpAddress, gp->dstPort);
+#endif
     status = tcp_successful;
 
-    if (tp->tcpState == StTcpIdle)
+    if (gp->tcpUdpState == StTcpUdpIdle)
         {
-        tp->connFd = cdcnetCreateSocket();
-        if (tp->connFd == -1)
+        gp->connFd = cdcnetCreateTcpSocket();
+        if (gp->connFd == -1)
             {
-            cdcnetGwRequestUplineTransfer(tp, bp, BtHTQMSG, cdcnetGwHTResponse, tcp_no_resources);
+            cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_no_resources);
             return(TRUE);
             }
         hostAddr.sin_addr.s_addr = htonl(dstAddr);
         hostAddr.sin_family = AF_INET;
-        hostAddr.sin_port = htons(tp->DstTcpPort);
-        rc = connect(tp->connFd, (struct sockaddr *)&hostAddr, sizeof(hostAddr));
+        hostAddr.sin_port = htons(gp->dstPort);
+        rc = connect(gp->connFd, (struct sockaddr *)&hostAddr, sizeof(hostAddr));
         #if defined(_WIN32)
             if (rc == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)
                 {
-                npuLogMessage("CDCNet: Failed to connect to host: %s:%u, CN=%02X",
-                              tp->DstIpAddress, tp->DstTcpPort, tp->cn);
-                closesocket(tp->connFd);
-                tp->connFd = 0;
+#if DEBUG
+                fprintf(cdcnetLog, "Failed to connect to host: %s:%u, CN=%02X\n", gp->dstIpAddress, gp->dstPort, gp->cn);
+#endif
+                closesocket(gp->connFd);
+                gp->connFd = 0;
                 status = tcp_host_unreachable;
                 }
             else if (rc == 0) // connection succeeded immediately
                 {
-                if (cdcnetGetEndpoints(tp->connFd, &localAddr, &localPort, &peerAddr, &peerPort))
+                if (cdcnetGetEndpoints(gp->connFd, &localAddr, &localPort, &peerAddr, &peerPort))
                     {
-                    npuLogMessage("CDCNet: Connected to host: %s:%u, CN=%02X", tp->DstIpAddress, tp->DstTcpPort, tp->cn);
-                    tp->localAddr = localAddr;
-                    tp->localPort = localPort;
-                    tp->peerAddr = peerAddr;
-                    tp->peerPort = peerPort;
-                    if (cdcnetTcpGwSendConnectionIndication(tp))
+#if DEBUG
+                    fprintf(cdcnetLog, "Connected to host: %s:%u, CN=%02X\n", gp->dstIpAddress, gp->dstPort, gp->cn);
+#endif
+                    gp->localAddr = localAddr;
+                    gp->localPort = localPort;
+                    gp->peerAddr = peerAddr;
+                    gp->peerPort = peerPort;
+                    if (cdcnetTcpSendConnectionIndication(gp))
                         {
-                        tp->tcpState = StTcpConnected;
+                        gp->tcpUdpState = StTcpConnected;
                         }
                     else
                         {
-                        tp->tcpState = StTcpIndicatingConnection;
+                        gp->tcpUdpState = StTcpIndicatingConnection;
                         }
                     }
                 else
                     {
-                    closesocket(tp->connFd);
-                    tp->connFd = 0;
+                    closesocket(gp->connFd);
+                    gp->connFd = 0;
                     status = tcp_host_unreachable;
                     }
                 }
             else // connection in progress
                 {
-                npuLogMessage("CDCNet: Initiated connection to host: %s:%u, CN=%02X",
-                              tp->DstIpAddress, tp->DstTcpPort, tp->cn);
-                tp->tcpState = StTcpConnecting;
-                tp->deadline = time(NULL) + 60;
+#if DEBUG
+                fprintf(cdcnetLog, "Initiated connection to host: %s:%u, CN=%02X\n",
+                    gp->dstIpAddress, gp->dstPort, gp->cn);
+#endif
+                gp->tcpUdpState = StTcpConnecting;
+                gp->deadline = time(NULL) + 60;
                 }
         #else
             if (rc < 0 && errno != EINPROGRESS)
                 {
-                npuLogMessage("CDCNet: Failed to connect to host %s:%u, %s, CN=%02X",
-                              tp->DstIpAddress, tp->DstTcpPort, strerror(errno), tp->cn);
-                close(tp->connFd);
-                tp->connFd = 0;
+#if DEBUG
+                fprintf(cdcnetLog, "Failed to connect to host %s:%u, %s, CN=%02X\n",
+                    gp->dstIpAddress, gp->dstPort, strerror(errno), gp->cn);
+#endif
+                close(gp->connFd);
+                gp->connFd = 0;
                 status = tcp_host_unreachable;
                 }
             else if (rc == 0) // connection succeeded immediately
                 {
-                if (cdcnetGetEndpoints(tp->connFd, &localAddr, &localPort, &peerAddr, &peerPort))
+                if (cdcnetGetEndpoints(gp->connFd, &localAddr, &localPort, &peerAddr, &peerPort))
                     {
-                    npuLogMessage("CDCNet: Connected to host: %s:%u, CN=%02X", tp->DstIpAddress, tp->DstTcpPort, tp->cn);
-                    tp->localAddr = localAddr;
-                    tp->localPort = localPort;
-                    tp->peerAddr = peerAddr;
-                    tp->peerPort = peerPort;
-                    if (cdcnetTcpGwSendConnectionIndication(tp))
+#if DEBUG
+                    fprintf(cdcnetLog, "Connected to host: %s:%u, CN=%02X\n", gp->dstIpAddress, gp->dstPort, gp->cn);
+#endif
+                    gp->localAddr = localAddr;
+                    gp->localPort = localPort;
+                    gp->peerAddr = peerAddr;
+                    gp->peerPort = peerPort;
+                    if (cdcnetTcpSendConnectionIndication(gp))
                         {
-                        tp->tcpState = StTcpConnected;
+                        gp->tcpUdpState = StTcpConnected;
                         }
                     else
                         {
-                        tp->tcpState = StTcpIndicatingConnection;
+                        gp->tcpUdpState = StTcpIndicatingConnection;
                         }
                     }
                 else
                     {
-                    close(tp->connFd);
-                    tp->connFd = 0;
+                    close(gp->connFd);
+                    gp->connFd = 0;
                     status = tcp_host_unreachable;
                     }
                 }
             else // connection in progress
                 {
-                npuLogMessage("CDCNet: Initiated connection to host: %s:%u, CN=%02X",
-                              tp->DstIpAddress, tp->DstTcpPort, tp->cn);
-                tp->tcpState = StTcpConnecting;
-                tp->deadline = time(NULL) + 60;
+#if DEBUG
+                fprintf(cdcnetLog, "Initiated connection to host: %s:%u, CN=%02X\n", gp->dstIpAddress, gp->dstPort, gp->cn);
+#endif
+                gp->tcpUdpState = StTcpConnecting;
+                gp->deadline = time(NULL) + 60;
                 }
         #endif
         }
 
-    cdcnetGwRequestUplineTransfer(tp, bp, BtHTQMSG, cdcnetGwHTResponse, status);
+    cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, status);
     return(TRUE);
     }
 
@@ -2141,14 +2340,14 @@ static bool cdcnetTcpGwActiveConnectHandler(TcpGcb *tp, NpuBuffer *bp)
 **  Purpose:        Handle TCP Gateway Passive Connect request.
 **
 **  Parameters:     Name        Description.
-**                  tp          pointer to TCP/IP gateway control block
+**                  gp          pointer to gateway control block
 **                  bp          pointer to NpuBuffer containing request
 **
 **  Returns:        TRUE if request handled and response sent successfully
 **                  FALSE if request should be retried
 **
 **------------------------------------------------------------------------*/
-static bool cdcnetTcpGwPassiveConnectHandler(TcpGcb *tp, NpuBuffer *bp)
+static bool cdcnetTcpPassiveConnectHandler(Gcb *gp, NpuBuffer *bp)
     {
     u8 *dp;
     u32 dstAddr;
@@ -2159,41 +2358,43 @@ static bool cdcnetTcpGwPassiveConnectHandler(TcpGcb *tp, NpuBuffer *bp)
     u32 srcAddr;
     TcpGwStatus status;
 
-    tp->connType = TypePassive;
-    tp->tcpSapId = cdcnetGetIdFromMessage(bp->data + BlkOffGwPCTcpSapId);
-    tp->userCepId = cdcnetGetIdFromMessage(bp->data + BlkOffGwPCUserCepId);
-    tp->tcpCepId = (u32)tp->ordinal;
-    memcpy(tp->tcpDstAddress, bp->data + BlkOffGwPCSrcAddr, cdcnetGwTcpAddressLength);
-    memcpy(tp->tcpSrcAddress, bp->data + BlkOffGwPCDstAddr, cdcnetGwTcpAddressLength);
-    dp = bp->data + BlkOffGwPCSrcAddr;
-    dstAddr = cdcnetGetIpAddress(dp);
-    sprintf(tp->DstIpAddress, "%d.%d.%d.%d", dstAddr >> 24, (dstAddr >> 16) & 0xff, (dstAddr >> 8) & 0xff, dstAddr & 0xff);
-    dstPort = cdcnetGetTcpPort(dp);
+    gp->connType = TypeTcpPassive;
+    gp->tcpSapId = cdcnetGetIdFromMessage(bp->data + BlkOffTcpPCTcpSapId);
+    gp->userCepId = cdcnetGetIdFromMessage(bp->data + BlkOffTcpPCUserCepId);
+    gp->tcpCepId = (u32)gp->ordinal;
+    memcpy(gp->tcpDstAddress, bp->data + BlkOffTcpPCSrcAddr, cdcnetTcpAddressLength);
+    memcpy(gp->tcpSrcAddress, bp->data + BlkOffTcpPCDstAddr, cdcnetTcpAddressLength);
+    dp = bp->data + BlkOffTcpPCSrcAddr;
+    dstAddr = cdcnetTcpGetIpAddress(dp);
+    sprintf(gp->dstIpAddress, "%d.%d.%d.%d", dstAddr >> 24, (dstAddr >> 16) & 0xff, (dstAddr >> 8) & 0xff, dstAddr & 0xff);
+    dstPort = cdcnetTcpGetPort(dp);
     if (dstPort == 0) // assign next available port
         {
         if (++cdcnetPassivePort >= 10000) cdcnetPassivePort = 7600;
-        tp->DstTcpPort = cdcnetPassivePort;
+        gp->dstPort = cdcnetPassivePort;
         }
     else if (dstPort < 1024) // add offset to privileged port number
         {
-        tp->DstTcpPort = dstPort + cdcnetPrivilegedPortOffset;
+        gp->dstPort = dstPort + cdcnetPrivilegedTcpPortOffset;
         }
     else
         {
-        tp->DstTcpPort = dstPort;
+        gp->dstPort = dstPort;
         }
-    dp = bp->data + BlkOffGwPCDstAddr;
-    srcAddr = cdcnetGetIpAddress(dp);
-    sprintf(tp->SrcIpAddress, "%d.%d.%d.%d", srcAddr >> 24, (srcAddr >> 16) & 0xff, (srcAddr >> 8) & 0xff, srcAddr & 0xff);
-    tp->SrcTcpPort = cdcnetGetTcpPort(dp);
-    npuLogMessage("CDCNet: Passive Connect request, tcpSapId=%d, userCepId=%d, tcpCepId=%d, CN=%02X\n        source addr=%s:%d, dest addr=%s:%d",
-                  tp->tcpSapId, tp->userCepId, tp->tcpCepId, tp->cn,
-                  tp->SrcIpAddress, tp->SrcTcpPort, tp->DstIpAddress, tp->DstTcpPort);
+    dp = bp->data + BlkOffTcpPCDstAddr;
+    srcAddr = cdcnetTcpGetIpAddress(dp);
+    sprintf(gp->srcIpAddress, "%d.%d.%d.%d", srcAddr >> 24, (srcAddr >> 16) & 0xff, (srcAddr >> 8) & 0xff, srcAddr & 0xff);
+    gp->srcPort = cdcnetTcpGetPort(dp);
+#if DEBUG
+    fprintf(cdcnetLog, "Passive Connect request, tcpSapId=%d, userCepId=%d, tcpCepId=%d, CN=%02X\n        source addr=%s:%d, dest addr=%s:%d\n",
+        gp->tcpSapId, gp->userCepId, gp->tcpCepId, gp->cn,
+        gp->srcIpAddress, gp->srcPort, gp->dstIpAddress, gp->dstPort);
+#endif
     status = tcp_successful;
 
-    if (tp->tcpState == StTcpIdle)
+    if (gp->tcpUdpState == StTcpUdpIdle)
         {
-        pp = cdcnetFindPccb(tp->DstTcpPort);
+        pp = cdcnetFindPccb(gp->dstPort);
         if (pp != NULL)
             {
             /*
@@ -2203,40 +2404,46 @@ static bool cdcnetTcpGwPassiveConnectHandler(TcpGcb *tp, NpuBuffer *bp)
             */
             if (pp->tcpGcbOrdinal == 0) // available for re-use
                 {
-                npuLogMessage("CDCNet: Listening for connections (re-use) on port %d, CN=%02X", tp->DstTcpPort, tp->cn);
-                pp->SrcTcpPort = tp->SrcTcpPort;
-                pp->tcpGcbOrdinal = tp->ordinal;
-                tp->tcpState = StTcpListening;
+#if DEBUG
+                fprintf(cdcnetLog, "Listening for connections (re-use) on port %d, CN=%02X\n", gp->dstPort, gp->cn);
+#endif
+                pp->srcPort = gp->srcPort;
+                pp->tcpGcbOrdinal = gp->ordinal;
+                gp->tcpUdpState = StTcpListening;
                 }
             else // in use by another connection
                 {
-                npuLogMessage("CDCNet: Connection in use by %02X, port=%u, CN=%02X",
-                              (cdcnetTcpGcbs + (pp->tcpGcbOrdinal - 1))->cn, tp->DstTcpPort, tp->cn);
+#if DEBUG
+                fprintf(cdcnetLog, "Connection in use by %02X, port=%u, CN=%02X\n",
+                    (cdcnetGcbs + (pp->tcpGcbOrdinal - 1))->cn, gp->dstPort, gp->cn);
+#endif
                 status = tcp_connection_inuse;
                 }
-            cdcnetGwRequestUplineTransfer(tp, bp, BtHTQMSG, cdcnetGwHTResponse, status);
+            cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, status);
             return(TRUE);
             }
 
         pp = cdcnetGetPccb();
         if (pp == NULL)
             {
-            npuLogMessage("CDCNet: Failed to get/create a control block for a passive connection on port %d, CN=%02X",
-                          tp->DstTcpPort, tp->cn);
-            cdcnetGwRequestUplineTransfer(tp, bp, BtHTQMSG, cdcnetGwHTResponse, tcp_no_resources);
+#if DEBUG
+            fprintf(cdcnetLog, "Failed to get/create a control block for a passive connection on port %d, CN=%02X\n",
+                gp->dstPort, gp->cn);
+#endif
+            cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_no_resources);
             return(TRUE);
             }
 
-        pp->connFd = cdcnetCreateSocket();
+        pp->connFd = cdcnetCreateTcpSocket();
         if (pp->connFd == -1)
             {
-            cdcnetGwRequestUplineTransfer(tp, bp, BtHTQMSG, cdcnetGwHTResponse, tcp_no_resources);
+            cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_no_resources);
             return(TRUE);
             }
 
-        pp->SrcTcpPort = tp->SrcTcpPort;
-        pp->DstTcpPort = tp->DstTcpPort;
-        pp->tcpGcbOrdinal = tp->ordinal;
+        pp->srcPort = gp->srcPort;
+        pp->dstPort = gp->dstPort;
+        pp->tcpGcbOrdinal = gp->ordinal;
         setsockopt(pp->connFd, SOL_SOCKET, SO_REUSEADDR, (void *)&optEnable, sizeof(optEnable));
         memset(&server, 0, sizeof(server));
         server.sin_family = AF_INET;
@@ -2244,63 +2451,69 @@ static bool cdcnetTcpGwPassiveConnectHandler(TcpGcb *tp, NpuBuffer *bp)
 
         while (TRUE)
             {
-            server.sin_port = htons(pp->DstTcpPort);
+            server.sin_port = htons(pp->dstPort);
 
             if (bind(pp->connFd, (struct sockaddr *)&server, sizeof(server)) == 0) break;
 
-            npuLogMessage("CDCNet: Can't bind to listening socket on port %d, %s, CN=%02X",
-                          pp->DstTcpPort, strerror(errno), tp->cn);
+#if DEBUG
+            fprintf(cdcnetLog, "Can't bind to listening socket on port %d, %s, CN=%02X\n",
+                pp->dstPort, strerror(errno), gp->cn);
+#endif
             if (dstPort == 0)
                 {
                 if (++cdcnetPassivePort >= 10000) cdcnetPassivePort = 7600;
-                pp->DstTcpPort = cdcnetPassivePort;
+                pp->dstPort = cdcnetPassivePort;
                 }
             else
                 {
-                pp->DstTcpPort = 0;
+                pp->dstPort = 0;
                 pp->tcpGcbOrdinal = 0;
                 #if defined(_WIN32)
                     closesocket(pp->connFd);
                 #else
                     close(pp->connFd);
                 #endif
-                cdcnetGwRequestUplineTransfer(tp, bp, BtHTQMSG, cdcnetGwHTResponse, tcp_internal_error);
+                cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_internal_error);
                 return(TRUE);
                 }
             }
 
-        tp->DstTcpPort = pp->DstTcpPort;
+        gp->dstPort = pp->dstPort;
 
         /*
         **  Start listening for new connections on this TCP port number
         */
         if (listen(pp->connFd, 10) < 0)
             {
-            npuLogMessage("CDCNet: Can't listen, %s, CN=%02X", strerror(errno), tp->cn);
-            pp->DstTcpPort = 0;
+#if DEBUG
+            fprintf(cdcnetLog, "Can't listen, %s, CN=%02X\n", strerror(errno), gp->cn);
+#endif
+            pp->dstPort = 0;
             pp->tcpGcbOrdinal = 0;
             #if defined(_WIN32)
                 closesocket(pp->connFd);
             #else
                 close(pp->connFd);
             #endif
-            cdcnetGwRequestUplineTransfer(tp, bp, BtHTQMSG, cdcnetGwHTResponse, tcp_internal_error);
+            cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_internal_error);
             return(TRUE);
             }
-
-        npuLogMessage("CDCNet: Listening for connections on port %d, CN=%02X", tp->DstTcpPort, tp->cn);
-
-        tp->tcpState = StTcpListening;
-        cdcnetSetTcpPort(bp->data + BlkOffGwPCSrcAddr, tp->DstTcpPort);
-        cdcnetPutIdToMessage(tp->tcpCepId, bp->data + BlkOffGwPCTcpCepId);
+#if DEBUG
+        fprintf(cdcnetLog, "Listening for connections on port %d, CN=%02X\n", gp->dstPort, gp->cn);
+#endif
+        gp->tcpUdpState = StTcpListening;
+        cdcnetTcpSetPort(bp->data + BlkOffTcpPCSrcAddr, gp->dstPort);
+        cdcnetPutIdToMessage(gp->tcpCepId, bp->data + BlkOffTcpPCTcpCepId);
         }
     else // connection not idle
         {
-        npuLogMessage("CDCNet: Attempted to create passive connection on non-idle connection, CN=%02X", tp->cn);
+#if DEBUG
+        fprintf(cdcnetLog, "Attempted to create passive connection on non-idle connection, CN=%02X\n", gp->cn);
+#endif
         status = tcp_connection_inuse;
         }
 
-    cdcnetGwRequestUplineTransfer(tp, bp, BtHTQMSG, cdcnetGwHTResponse, status);
+    cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, status);
     return(TRUE);
     }
 
@@ -2308,19 +2521,21 @@ static bool cdcnetTcpGwPassiveConnectHandler(TcpGcb *tp, NpuBuffer *bp)
 **  Purpose:        Handle TCP Gateway Allocate request.
 **
 **  Parameters:     Name        Description.
-**                  tp          pointer to TCP/IP gateway control block
+**                  gp          pointer to gateway control block
 **                  bp          pointer to NpuBuffer containing request
 **
 **  Returns:        TRUE if request handled and response sent successfully
 **                  FALSE if request should be retried
 **
 **------------------------------------------------------------------------*/
-static bool cdcnetTcpGwAllocateHandler(TcpGcb *tp, NpuBuffer *bp)
+static bool cdcnetTcpAllocateHandler(Gcb *gp, NpuBuffer *bp)
     {
-    npuLogMessage("CDCNet: Allocate request, tcpCepId=%d, size=%08X, CN=%02X",
-                  cdcnetGetIdFromMessage(bp->data + BlkOffGwATcpCepId),
-                  cdcnetGetIdFromMessage(bp->data + BlkOffGwASize), tp->cn);
-    cdcnetGwRequestUplineTransfer(tp, bp, BtHTQMSG, cdcnetGwHTResponse, tcp_successful);
+#if DEBUG
+    fprintf(cdcnetLog, "Allocate request, tcpCepId=%d, size=%08X, CN=%02X\n",
+        cdcnetGetIdFromMessage(bp->data + BlkOffTcpATcpCepId),
+        cdcnetGetIdFromMessage(bp->data + BlkOffTcpASize), gp->cn);
+#endif
+    cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_successful);
     return(TRUE);
     }
 
@@ -2328,65 +2543,70 @@ static bool cdcnetTcpGwAllocateHandler(TcpGcb *tp, NpuBuffer *bp)
 **  Purpose:        Handle TCP Gateway Disconnect request.
 **
 **  Parameters:     Name        Description.
-**                  tp          pointer to TCP/IP gateway control block
+**                  gp          pointer to gateway control block
 **                  bp          pointer to NpuBuffer containing request
 **
 **  Returns:        TRUE if request handled and response sent successfully
 **                  FALSE if request should be retried
 **
 **------------------------------------------------------------------------*/
-static bool cdcnetTcpGwDisconnectHandler(TcpGcb *tp, NpuBuffer *bp)
+static bool cdcnetTcpDisconnectHandler(Gcb *gp, NpuBuffer *bp)
     {
     Pccb *pp;
 
-    npuLogMessage("CDCNet: Disconnect request, tcpCepId=%d, CN=%02X",
-                  cdcnetGetIdFromMessage(bp->data + BlkOffGwDTcpCepId), tp->cn);
-    memcpy(bp->data + BlkOffGwCmdName, "TCPDC  ", 7);
-    cdcnetPutU16ToMessage(cdcnetGwDCLength, bp->data + BlkOffGwHeaderLen);
-    bp->data[BlkOffGwTcpVersion] = cdcnetGwTcpVersion;
-    cdcnetPutIdToMessage(tp->userCepId, bp->data + BlkOffGwDCUserCepId);
-    bp->numBytes = cdcnetGwDCLength + BlkOffGwCmdName;
-    cdcnetGwRequestUplineTransfer(tp, bp, BtHTQMSG, cdcnetGwHTIndication, tcp_successful);
+#if DEBUG
+    fprintf(cdcnetLog, "Disconnect request, tcpCepId=%d, CN=%02X\n", cdcnetGetIdFromMessage(bp->data + BlkOffTcpDTcpCepId), gp->cn);
+#endif
+    memcpy(bp->data + BlkOffTcpCmdName, "TCPDC  ", 7);
+    cdcnetPutU16ToMessage(cdcnetTcpDCLength, bp->data + BlkOffTcpHeaderLen);
+    bp->data[BlkOffTcpTcpVersion] = cdcnetTcpVersion;
+    cdcnetPutIdToMessage(gp->userCepId, bp->data + BlkOffTcpDCUserCepId);
+    bp->numBytes = cdcnetTcpDCLength + BlkOffTcpCmdName;
+    cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTIndication, tcp_successful);
 
-    if (tp->tcpState == StTcpListening)
+    if (gp->tcpUdpState == StTcpListening)
         {
-        pp = cdcnetFindPccb(tp->DstTcpPort);
-        if (pp != NULL && pp->tcpGcbOrdinal == tp->ordinal)
+        pp = cdcnetFindPccb(gp->dstPort);
+        if (pp != NULL && pp->tcpGcbOrdinal == gp->ordinal)
             {
-            if (pp->SrcTcpPort != 0)
+            if (pp->srcPort != 0)
                 {
-                npuLogMessage("CDCNet: Close listening socket, port=%d, CN=%02X", pp->DstTcpPort, tp->cn);
+#if DEBUG
+                fprintf(cdcnetLog, "Close listening socket, port=%d, CN=%02X\n", pp->dstPort, gp->cn);
+#endif
                 #if defined(_WIN32)
                     closesocket(pp->connFd);
                 #else
                     close(pp->connFd);
                 #endif
-                pp->DstTcpPort = 0;
-                pp->SrcTcpPort = 0;
+                pp->dstPort = 0;
+                pp->srcPort = 0;
                 pp->connFd = 0;
                 }
 #if DEBUG
             else
                 {
-                npuLogMessage("CDCNet: Leave listening socket open, port=%d, CN=%02X", pp->DstTcpPort, tp->cn);
+                fprintf(cdcnetLog, "Leave listening socket open, port=%d, CN=%02X\n", pp->dstPort, gp->cn);
                 }
 #endif
             pp->tcpGcbOrdinal = 0;
             }
         }
-    else if (tp->connFd != 0)
+    else if (gp->connFd != 0)
         {
-        npuLogMessage("CDCNet: Close socket, source addr=%s:%d, dest addr=%s:%d, CN=%02X",
-                      tp->SrcIpAddress, tp->SrcTcpPort, tp->DstIpAddress, tp->DstTcpPort, tp->cn);
+#if DEBUG
+        fprintf(cdcnetLog, "Close socket, source addr=%s:%d, dest addr=%s:%d, CN=%02X\n",
+            gp->srcIpAddress, gp->srcPort, gp->dstIpAddress, gp->dstPort, gp->cn);
+#endif
         #if defined(_WIN32)
-            closesocket(tp->connFd);
+            closesocket(gp->connFd);
         #else
-            close(tp->connFd);
+            close(gp->connFd);
         #endif
-        tp->connFd = 0;
+        gp->connFd = 0;
         }
 
-    tp->tcpState = StTcpIdle;
+    gp->tcpUdpState = StTcpUdpIdle;
     return(TRUE);
     }
 
@@ -2394,58 +2614,60 @@ static bool cdcnetTcpGwDisconnectHandler(TcpGcb *tp, NpuBuffer *bp)
 **  Purpose:        Send indication that a TCP connection has been established.
 **
 **  Parameters:     Name        Description.
-**                  tp          pointer to TCP/IP gateway control block
+**                  gp          pointer to gateway control block
 **
 **  Returns:        TRUE if indication sent successfully
 **                  FALSE if indication should be retried
 **
 **------------------------------------------------------------------------*/
-static bool cdcnetTcpGwSendConnectionIndication(TcpGcb *tp)
+static bool cdcnetTcpSendConnectionIndication(Gcb *gp)
     {
     NpuBuffer *bp;
 
     bp = npuBipBufGet();
     if (bp == NULL) return(FALSE);
-    memset(bp->data, 0, cdcnetGwCILength + BlkOffGwCmdName);
+    memset(bp->data, 0, cdcnetTcpCILength + BlkOffTcpCmdName);
 
-    npuLogMessage("CDCNet: Send connection indication, userCepId=%d, CN=%02X", tp->userCepId, tp->cn);
-    memcpy(bp->data + BlkOffGwCmdName, "TCPCI  ", 7);
-    cdcnetPutU16ToMessage(cdcnetGwCILength, bp->data + BlkOffGwHeaderLen);
-    bp->data[BlkOffGwTcpVersion] = cdcnetGwTcpVersion;
-    cdcnetPutIdToMessage(tp->userCepId, bp->data + BlkOffGwCIUserCepId);
-    if (tp->connType == TypeActive)
+#if DEBUG
+    fprintf(cdcnetLog, "Send connection indication, userCepId=%d, CN=%02X\n", gp->userCepId, gp->cn);
+#endif
+    memcpy(bp->data + BlkOffTcpCmdName, "TCPCI  ", 7);
+    cdcnetPutU16ToMessage(cdcnetTcpCILength, bp->data + BlkOffTcpHeaderLen);
+    bp->data[BlkOffTcpTcpVersion] = cdcnetTcpVersion;
+    cdcnetPutIdToMessage(gp->userCepId, bp->data + BlkOffTcpCIUserCepId);
+    if (gp->connType == TypeTcpActive)
         {
-        cdcnetSetIpAddress(tp->tcpSrcAddress, tp->localAddr);
-        tp->SrcTcpPort = tp->localPort;
-        cdcnetSetTcpPort(tp->tcpSrcAddress, tp->localPort);
-        cdcnetSetIpAddress(tp->tcpDstAddress, tp->peerAddr);
-        tp->DstTcpPort = tp->peerPort;
-        cdcnetSetTcpPort(tp->tcpDstAddress, tp->peerPort);
-        tp->tcpCepId = (u32)tp->ordinal;
+        cdcnetTcpSetIpAddress(gp->tcpSrcAddress, gp->localAddr);
+        gp->srcPort = gp->localPort;
+        cdcnetTcpSetPort(gp->tcpSrcAddress, gp->localPort);
+        cdcnetTcpSetIpAddress(gp->tcpDstAddress, gp->peerAddr);
+        gp->dstPort = gp->peerPort;
+        cdcnetTcpSetPort(gp->tcpDstAddress, gp->peerPort);
+        gp->tcpCepId = (u32)gp->ordinal;
         }
     else
         {
-        cdcnetSetIpAddress(tp->tcpSrcAddress, tp->peerAddr);
-        tp->SrcTcpPort = tp->peerPort;
-        cdcnetSetTcpPort(tp->tcpSrcAddress, tp->peerPort);
-        cdcnetSetIpAddress(tp->tcpDstAddress, tp->localAddr);
-        if (tp->localPort >= cdcnetPrivilegedPortOffset &&
-            tp->localPort <  cdcnetPrivilegedPortOffset + 1024)
+        cdcnetTcpSetIpAddress(gp->tcpSrcAddress, gp->peerAddr);
+        gp->srcPort = gp->peerPort;
+        cdcnetTcpSetPort(gp->tcpSrcAddress, gp->peerPort);
+        cdcnetTcpSetIpAddress(gp->tcpDstAddress, gp->localAddr);
+        if (gp->localPort >= cdcnetPrivilegedTcpPortOffset &&
+            gp->localPort <  cdcnetPrivilegedTcpPortOffset + 1024)
             {
-            cdcnetSetTcpPort(tp->tcpDstAddress, tp->localPort - cdcnetPrivilegedPortOffset);
+            cdcnetTcpSetPort(gp->tcpDstAddress, gp->localPort - cdcnetPrivilegedTcpPortOffset);
             }
         else
             {
-            cdcnetSetTcpPort(tp->tcpDstAddress, tp->localPort);
+            cdcnetTcpSetPort(gp->tcpDstAddress, gp->localPort);
             }
         }
-    memcpy(bp->data + BlkOffGwCISrcAddr, tp->tcpSrcAddress, cdcnetGwTcpAddressLength);
-    memcpy(bp->data + BlkOffGwCIDstAddr, tp->tcpDstAddress, cdcnetGwTcpAddressLength);
-    memset(bp->data + BlkOffGwCIIpHeader, 0, BlkOffGwCIIpOptions - BlkOffGwCIIpHeader);
-    memset(bp->data + BlkOffGwCIIpOptions, 0, BlkOffGwCIUlpTimeout - BlkOffGwCIIpOptions);
-    memset(bp->data + BlkOffGwCIIpHeader, 0, (cdcnetGwCILength + BlkOffGwCmdName) - BlkOffGwCIUlpTimeout);
-    bp->numBytes = cdcnetGwCILength + BlkOffGwCmdName;
-    cdcnetGwRequestUplineTransfer(tp, bp, BtHTQMSG, cdcnetGwHTIndication, tcp_successful);
+    memcpy(bp->data + BlkOffTcpCISrcAddr, gp->tcpSrcAddress, cdcnetTcpAddressLength);
+    memcpy(bp->data + BlkOffTcpCIDstAddr, gp->tcpDstAddress, cdcnetTcpAddressLength);
+    memset(bp->data + BlkOffTcpCIIpHeader, 0, BlkOffTcpCIIpOptions - BlkOffTcpCIIpHeader);
+    memset(bp->data + BlkOffTcpCIIpOptions, 0, BlkOffTcpCIUlpTimeout - BlkOffTcpCIIpOptions);
+    memset(bp->data + BlkOffTcpCIIpHeader, 0, (cdcnetTcpCILength + BlkOffTcpCmdName) - BlkOffTcpCIUlpTimeout);
+    bp->numBytes = cdcnetTcpCILength + BlkOffTcpCmdName;
+    cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTIndication, tcp_successful);
     return(TRUE);
     }
 
@@ -2453,43 +2675,44 @@ static bool cdcnetTcpGwSendConnectionIndication(TcpGcb *tp)
 **  Purpose:        Send an indication that an error has occurred.
 **
 **  Parameters:     Name        Description.
-**                  tp          pointer to TCP/IP gateway control block
+**                  gp          pointer to gateway control block
 **                              reasonCode element provides error code value
 **
 **  Returns:        TRUE if error indication sent successfully
 **                  FALSE if error indication should be retried
 **
 **------------------------------------------------------------------------*/
-static bool cdcnetTcpGwSendErrorIndication(TcpGcb *tp)
+static bool cdcnetTcpSendErrorIndication(Gcb *gp)
     {
     NpuBuffer *bp;
 
     bp = npuBipBufGet();
     if (bp == NULL) return(FALSE);
-    memset(bp->data, 0, cdcnetGwEILength + BlkOffGwCmdName);
+    memset(bp->data, 0, cdcnetTcpEILength + BlkOffTcpCmdName);
 
-    npuLogMessage("CDCNet: Send error indication, userCepId=%d, error=%d, CN=%02X",
-                  tp->userCepId, tp->reasonCode, tp->cn);
-    memcpy(bp->data + BlkOffGwCmdName, "TCPEI  ", 7);
-    cdcnetPutU16ToMessage(cdcnetGwEILength, bp->data + BlkOffGwHeaderLen);
-    bp->data[BlkOffGwTcpVersion] = cdcnetGwTcpVersion;
-    cdcnetPutIdToMessage(tp->userCepId, bp->data + BlkOffGwEIUserCepId);
-    bp->numBytes = cdcnetGwEILength + BlkOffGwCmdName;
-    cdcnetGwRequestUplineTransfer(tp, bp, BtHTQMSG, cdcnetGwHTIndication, tp->reasonCode);
-    tp->reasonCode = 0;
+#if DEBUG
+    fprintf(cdcnetLog, "Send error indication, userCepId=%d, error=%d, CN=%02X\n", gp->userCepId, gp->reasonCode, gp->cn);
+#endif
+    memcpy(bp->data + BlkOffTcpCmdName, "TCPEI  ", 7);
+    cdcnetPutU16ToMessage(cdcnetTcpEILength, bp->data + BlkOffTcpHeaderLen);
+    bp->data[BlkOffTcpTcpVersion] = cdcnetTcpVersion;
+    cdcnetPutIdToMessage(gp->userCepId, bp->data + BlkOffTcpEIUserCepId);
+    bp->numBytes = cdcnetTcpEILength + BlkOffTcpCmdName;
+    cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTIndication, gp->reasonCode);
+    gp->reasonCode = 0;
     return(TRUE);
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Send an indication that data has been received.
+**  Purpose:        Send an indication that TCP data has been received.
 **
 **  Parameters:     Name        Description.
-**                  tp          pointer to TCP/IP gateway control block
+**                  gp          pointer to gateway control block
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cdcnetTcpGwSendDataIndication(TcpGcb *tp)
+static void cdcnetTcpSendDataIndication(Gcb *gp)
     {
     u8 blockType;
     NpuBuffer *bp;
@@ -2500,45 +2723,537 @@ static void cdcnetTcpGwSendDataIndication(TcpGcb *tp)
     bp = npuBipBufGet();
     if (bp == NULL) return;
 
-    npuLogMessage("CDCNet: Send data indication, userCepId=%d, CN=%02X", tp->userCepId, tp->cn);
+#if DEBUG
+    fprintf(cdcnetLog, "Send data indication, userCepId=%d, CN=%02X\n", gp->userCepId, gp->cn);
+#endif
     blockType = BtHTMSG;
     status = tcp_successful;
 
     recvSize = sizeof(bp->data) - (BlkOffDbc + 1);
-    if (recvSize > tp->maxUplineBlockSize) recvSize = tp->maxUplineBlockSize;
-    n = recv(tp->connFd, bp->data + BlkOffDbc + 1, recvSize, 0);
+    if (recvSize > gp->maxUplineBlockSize) recvSize = gp->maxUplineBlockSize;
+    n = recv(gp->connFd, bp->data + BlkOffDbc + 1, recvSize, 0);
     if (n > 0)
         {
-        #if DEBUG
-            npuLogMessage("CDCNet: Received %d bytes, CN=%02X", n, tp->cn);
-        #endif
+#if DEBUG
+        fprintf(cdcnetLog, "Received %d bytes, CN=%02X\n", n, gp->cn);
+#endif
         bp->numBytes = BlkOffDbc + n + 1;
         }
     else if (n == 0)
         {
-        npuLogMessage("CDCNet: Stream closed, CN=%02X", tp->cn);
+#if DEBUG
+        fprintf(cdcnetLog, "Stream closed, CN=%02X\n", gp->cn);
+#endif
         blockType = BtHTQMSG;
-        memset(bp->data + BlkOffDbc + 1, 0, cdcnetGwDILength + BlkOffGwCmdName - (BlkOffDbc + 1));
-        tp->tcpState = StTcpDisconnecting;
-        memcpy(bp->data + BlkOffGwCmdName, "TCPDI  ", 7);
-        cdcnetPutU16ToMessage(cdcnetGwDILength, bp->data + BlkOffGwHeaderLen);
-        bp->data[BlkOffGwTcpVersion] = cdcnetGwTcpVersion;
-        cdcnetPutIdToMessage(tp->userCepId, bp->data + BlkOffGwDIUserCepId);
-        bp->numBytes = cdcnetGwDILength + BlkOffGwCmdName;
+        memset(bp->data + BlkOffDbc + 1, 0, cdcnetTcpDILength + BlkOffTcpCmdName - (BlkOffDbc + 1));
+        gp->tcpUdpState = StTcpDisconnecting;
+        memcpy(bp->data + BlkOffTcpCmdName, "TCPDI  ", 7);
+        cdcnetPutU16ToMessage(cdcnetTcpDILength, bp->data + BlkOffTcpHeaderLen);
+        bp->data[BlkOffTcpTcpVersion] = cdcnetTcpVersion;
+        cdcnetPutIdToMessage(gp->userCepId, bp->data + BlkOffTcpDIUserCepId);
+        bp->numBytes = cdcnetTcpDILength + BlkOffTcpCmdName;
         }
     else
         {
-        npuLogMessage("CDCNet: Error reading stream: %s, CN=%02X", strerror(errno), tp->cn);
+#if DEBUG
+        fprintf(cdcnetLog, "Error reading stream: %s, CN=%02X\n", strerror(errno), gp->cn);
+#endif
         blockType = BtHTQMSG;
-        memset(bp->data + BlkOffDbc + 1, 0, cdcnetGwEILength + BlkOffGwCmdName - (BlkOffDbc + 1));
-        memcpy(bp->data + BlkOffGwCmdName, "TCPEI  ", 7);
-        cdcnetPutU16ToMessage(cdcnetGwEILength, bp->data + BlkOffGwHeaderLen);
+        memset(bp->data + BlkOffDbc + 1, 0, cdcnetTcpEILength + BlkOffTcpCmdName - (BlkOffDbc + 1));
+        memcpy(bp->data + BlkOffTcpCmdName, "TCPEI  ", 7);
+        cdcnetPutU16ToMessage(cdcnetTcpEILength, bp->data + BlkOffTcpHeaderLen);
         status = tcp_internal_error;
-        bp->data[BlkOffGwTcpVersion] = cdcnetGwTcpVersion;
-        cdcnetPutIdToMessage(tp->userCepId, bp->data + BlkOffGwEIUserCepId);
-        bp->numBytes = cdcnetGwEILength + BlkOffGwCmdName;
+        bp->data[BlkOffTcpTcpVersion] = cdcnetTcpVersion;
+        cdcnetPutIdToMessage(gp->userCepId, bp->data + BlkOffTcpEIUserCepId);
+        bp->numBytes = cdcnetTcpEILength + BlkOffTcpCmdName;
         }
-    cdcnetGwRequestUplineTransfer(tp, bp, blockType, cdcnetGwHTIndication, status);
+    cdcnetTcpRequestUplineTransfer(gp, bp, blockType, cdcnetTcpHTIndication, status);
     }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Create a non-blocking UDP socket.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Socket descriptor
+**                  -1 if socket cannot be created
+**
+**------------------------------------------------------------------------*/
+#if defined(_WIN32)
+static SOCKET cdcnetCreateUdpSocket()
+#else
+static int cdcnetCreateUdpSocket()
+#endif
+    {
+#if defined(_WIN32)
+    SOCKET fd;
+    u_long blockEnable = 1;
+#else
+    int fd;
+#endif
+
+    fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    #if defined(_WIN32)
+        if (fd == INVALID_SOCKET) return -1;
+        ioctlsocket(fd, FIONBIO, &blockEnable);
+    #else
+        if (fd < 0) return -1;
+        fcntl(fd, F_SETFL, O_NONBLOCK);
+    #endif
+
+    return(fd);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Get an IP address from a UDP gateway message.
+**
+**  Parameters:     Name        Description.
+**                  ap          pointer to gateway-encoded IP address structure
+**
+**  Returns:        Assembled address.
+**
+**------------------------------------------------------------------------*/
+static u32 cdcnetUdpGetIpAddress(u8 *ap)
+    {
+    u8 inUse;
+    u32 ipAddr;
+
+    inUse = ap[RelOffUdpIpAddrFieldsInUse];
+    ipAddr = 0;
+
+    if (inUse & 0x01)
+        {
+        ipAddr = (ap[RelOffUdpIpAddressNetwork + 1] << 24)
+               | (ap[RelOffUdpIpAddressNetwork + 2] << 16)
+               | (ap[RelOffUdpIpAddressNetwork + 3] << 8);
+        if ((ipAddr & 0xFFFF0000) == 0) // Class A network
+            {
+            ipAddr <<= 16;
+            }
+        else if ((ipAddr & 0xFF000000) == 0) // Class B network
+            {
+            ipAddr <<= 8;
+            }
+        }
+    if ((ipAddr & 0xC0000000) == 0xC0000000) // Class C address
+        {
+        ipAddr |= ap[RelOffUdpIpAddressHost + 3];
+        }
+    else if (ipAddr & 0x80000000) // Class B address
+        {
+        ipAddr |= (ap[RelOffUdpIpAddressHost + 2] << 8) | ap[RelOffUdpIpAddressHost + 3];
+        }
+    else // Class A address
+        {
+        ipAddr |= (ap[RelOffUdpIpAddressHost + 1] << 16)
+               |  (ap[RelOffUdpIpAddressHost + 2] << 8)
+               |   ap[RelOffUdpIpAddressHost + 3];
+        }
+
+    return(ipAddr);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Get a UDP port number from a gateway message.
+**
+**  Parameters:     Name        Description.
+**                  ap          pointer to gateway-encoded IP address structure
+**
+**  Returns:        TCP port number; 0 if no port specified.
+**
+**------------------------------------------------------------------------*/
+static u16 cdcnetUdpGetPort(u8 *ap)
+    {
+    u16 port;
+
+    port = 0;
+
+    if (ap[RelOffUdpPortInUse] != 0)
+       {
+       port = (ap[RelOffUdpPort + 1] << 8) | ap[RelOffUdpPort + 2];
+       }
+
+    return(port);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Set a UDP address and port number in a gateway message.
+**
+**  Parameters:     Name        Description.
+**                  dp          pointer to gateway-encoded IP address structure
+**                  ipAddress   32-bit IP address
+**                  port        16-bit port number
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void cdcnetUdpSetAddress(u8 *dp, u32 ipAddress, u16 port)
+    {
+    *dp++ = 0x03; // fields in use (both net and host)
+    *dp++ = 0;    // most significant byte of net
+
+    if ((ipAddress & 0xC0000000) == 0xC0000000) // Class C address
+        {
+        *dp++ = (ipAddress >> 24) & 0xff;
+        *dp++ = (ipAddress >> 16) & 0xff;
+        *dp++ = (ipAddress >>  8) & 0xff;
+
+        *dp++ = 0;
+        *dp++ = 0;
+        *dp++ = 0;
+        *dp++ = ipAddress & 0xff;
+        }
+    else if (ipAddress & 0x80000000) // Class B address
+        {
+        *dp++ = 0;
+        *dp++ = (ipAddress >> 24) & 0xff;
+        *dp++ = (ipAddress >> 16) & 0xff;
+
+        *dp++ = 0;
+        *dp++ = 0;
+        *dp++ = (ipAddress >> 8) & 0xff;
+        *dp++ = ipAddress & 0xff;
+        }
+    else // Class A address
+        {
+        *dp++ = 0;
+        *dp++ = 0;
+        *dp++ = (ipAddress >> 24) & 0xff;
+
+        *dp++ = 0;
+        *dp++ = (ipAddress >> 16) & 0xff;
+        *dp++ = (ipAddress >>  8) & 0xff;
+        *dp++ = ipAddress & 0xff;
+        }
+    *dp++ = 0x01; // port in use
+    *dp++ = 0;
+    *dp++ = (port >> 8) & 0xff;
+    *dp++ = port & 0xff;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Queue a UDP block for upline transfer.
+**
+**  Parameters:     Name        Description.
+**                  gp          pointer to gateway control block
+**                  bp          pointer to NpuBuffer containing block
+**                  blockType   block type (BtHTMSG or BtHTQMSG)
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void cdcnetUdpRequestUplineTransfer(Gcb *gp, NpuBuffer *bp, u8 blockType)
+    {
+    bp->data[BlkOffDN] = npuSvmCouplerNode;
+    bp->data[BlkOffSN] = cdcnetNode;
+    bp->data[BlkOffCN] = gp->cn;
+    bp->data[BlkOffBTBSN] = (gp->bsn++ << BlkShiftBSN) | blockType;
+    if (gp->bsn > 7) gp->bsn = 1;
+    bp->data[BlkOffDbc] = 0;
+#if DEBUG
+    fprintf(cdcnetLog, "Send UDP block upline (%d bytes), CN=%02X\n", bp->numBytes, gp->cn);
+    cdcnetLogBytes(bp->data, bp->numBytes);
+    cdcnetLogFlush();
+#endif
+    gp->unackedBlocks++;
+    npuBipRequestUplineTransfer(bp);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Bind a UDP address to a gateway control block.
+**
+**  Parameters:     Name        Description.
+**                  gp          pointer to gateway control block
+**                  bp          pointer to NpuBuffer containing request
+**
+**  Returns:        TRUE if request handled and response sent successfully
+**                  FALSE if request should be retried
+**
+**------------------------------------------------------------------------*/
+static bool cdcnetUdpBindAddress(Gcb *gp, NpuBuffer *bp)
+    {
+#if defined(_WIN32)
+    int addrLen;
+#else
+    socklen_t addrLen;
+#endif
+    u32 ipAddress;
+    u16 port;
+    struct sockaddr_in server;
+
+    ipAddress = cdcnetUdpGetIpAddress(bp->data + BlkOffUdpOpenSapSrcAddr);
+    port = cdcnetUdpGetPort(bp->data + BlkOffUdpOpenSapSrcAddr);
+#if DEBUG
+    fprintf(cdcnetLog, "Bind UDP address, %d.%d.%d.%d:%d, CN=%02X\n",
+        ipAddress >> 24, (ipAddress >> 16) & 0xff, (ipAddress >> 8) & 0xff, ipAddress & 0xff, port, gp->cn);
+#endif
+    gp->connFd = cdcnetCreateUdpSocket();
+    if (gp->connFd == -1)
+        {
+        npuBipBufRelease(bp);
+        return TRUE; // TODO: return some kind of error status upline?
+        }
+    memset(&server, 0, sizeof(server));
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = htonl(ipAddress);
+    if (port > 0 && port < 1024)
+        {
+        port += cdcnetPrivilegedUdpPortOffset;
+        }
+    if (bind(gp->connFd, (struct sockaddr *)&server, sizeof(server)) == -1)
+        {
+#if DEBUG
+        fprintf(cdcnetLog, "Can't bind to UDP socket on port %d, %s, CN=%02X\n",
+            port, strerror(errno), gp->cn);
+#endif
+        #if defined(_WIN32)
+            closesocket(gp->connFd);
+        #else
+            close(gp->connFd);
+        #endif
+        gp->connFd = 0;
+        npuBipBufRelease(bp);
+        return TRUE; // TODO: return some kind of error status upline?
+        }
+    addrLen = sizeof(server);
+    if (getsockname(gp->connFd, (struct sockaddr *)&server, &addrLen) != 0)
+        {
+        fprintf(stderr, "CDCNet: Failed to get local UDP socket name: %s\n", strerror(errno));
+        #if defined(_WIN32)
+            closesocket(gp->connFd);
+        #else
+            close(gp->connFd);
+        #endif
+        gp->connFd = 0;
+        return FALSE;
+        }
+    ipAddress = ntohl(server.sin_addr.s_addr);
+    port = ntohs(server.sin_port);
+    if (port >= cdcnetPrivilegedUdpPortOffset && port < cdcnetPrivilegedUdpPortOffset + 1024)
+        {
+        port -= cdcnetPrivilegedUdpPortOffset;
+        }
+    cdcnetUdpSetAddress(bp->data + BlkOffUdpOpenSapSrcAddr, ipAddress, port);
+    gp->srcPort = port;
+    gp->connType = TypeUdp;
+    gp->tcpUdpState = StUdpBound;
+    bp->data[BlkOffUdpRequestType] = cdcnetUdpCallResponse;
+    cdcnetUdpRequestUplineTransfer(gp, bp, BtHTMSG);
+    return TRUE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Send data to a UDP address.
+**
+**  Parameters:     Name        Description.
+**                  gp          pointer to gateway control block
+**                  bp          pointer to NpuBuffer containing request
+**
+**  Returns:        TRUE if request handled and response sent successfully
+**                  FALSE if request should be retried
+**
+**------------------------------------------------------------------------*/
+static bool cdcnetUdpSendDownlineData(Gcb *gp, NpuBuffer *bp)
+    {
+    u32 ipAddress;
+    int len;
+    int n;
+    u16 port;
+    struct sockaddr_in server;
+
+   ipAddress = cdcnetUdpGetIpAddress(bp->data + BlkOffUdpDataReqDstAddr);
+    port = cdcnetUdpGetPort(bp->data + BlkOffUdpDataReqDstAddr);
+#if DEBUG
+    fprintf(cdcnetLog, "Send UDP data to %d.%d.%d.%d:%d, CN=%02X\n",
+        ipAddress >> 24, (ipAddress >> 16) & 0xff, (ipAddress >> 8) & 0xff, ipAddress & 0xff, port, gp->cn);
+#endif
+    if (gp->tcpUdpState != StUdpBound)
+        {
+#if DEBUG
+        fprintf(cdcnetLog, "Invalid UDP state %d, CN=%02X\n", gp->tcpUdpState, gp->cn);
+#endif
+        npuBipBufRelease(bp);
+        return TRUE; // TODO: return some kind of error status upline?
+        }
+    memset(&server, 0, sizeof(server));
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = htonl(ipAddress);
+    server.sin_port = htons(port);
+    len = bp->numBytes - BlkOffUdpDataReqData;
+    n = sendto(gp->connFd, bp->data + BlkOffUdpDataReqData, len, 0, (struct sockaddr *)&server, sizeof(server));
+    if (n == len)
+        {
+#if DEBUG
+        cdcnetLogBytes(bp->data + BlkOffUdpDataReqData, len);
+        cdcnetLogFlush();
+#endif
+        npuBipBufRelease(bp);
+        return TRUE;
+        }
+    else if (n == -1)
+        {
+#if DEBUG
+        fprintf(cdcnetLog, "Failed to send UDP data: %s, CN=%02X\n", strerror(errno), gp->cn);
+#endif
+        npuBipBufRelease(bp);
+        return TRUE;
+        }
+    else
+        {
+#if DEBUG
+        fprintf(cdcnetLog, "Failed to send complete UDP packet (%d of %d bytes), CN=%02X\n", n, len, gp->cn);
+#endif
+        return FALSE;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Send an indication that UDP data has been received.
+**
+**  Parameters:     Name        Description.
+**                  gp          pointer to gateway control block
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void cdcnetUdpSendUplineData(Gcb *gp)
+    {
+    NpuBuffer *bp;
+    struct sockaddr_in client;
+    u8 *dp;
+    u32 ipAddress;
+#if defined(_WIN32)
+    int len;
+#else
+    socklen_t len;
+#endif
+    int n;
+    u16 port;
+    int recvSize;
+
+    bp = npuBipBufGet();
+    if (bp == NULL) return;
+
+    recvSize = sizeof(bp->data) - BlkOffUdpDataIndData;
+    n = recvfrom(gp->connFd, bp->data + BlkOffUdpDataIndData, recvSize,  MSG_WAITALL, (struct sockaddr *)&client, &len);
+    if (n < 1)
+        {
+#if DEBUG
+        if (n == -1)
+            {
+            fprintf(cdcnetLog, "%s, CN=%02X\n", strerror(errno), gp->cn);
+            }
+#endif
+        return;
+        }
+    ipAddress = ntohl(client.sin_addr.s_addr);
+    port = ntohs(client.sin_port);
+#if DEBUG
+    fprintf(cdcnetLog, "Received %d bytes from UDP client %d.%d.%d.%d:%d, CN=%02X\n",
+        n, ipAddress >> 24, (ipAddress >> 16) & 0xff, (ipAddress >> 8) & 0xff, ipAddress & 0xff, port, gp->cn);
+    cdcnetLogBytes(bp->data + BlkOffUdpDataIndData, n);
+    cdcnetLogFlush();
+#endif
+    dp = bp->data + BlkOffDbc;
+    *dp++ = 0;
+    *dp++ = cdcnetUdpDataIndication;
+    *dp++ = cdcnetUdpVersion;
+    *dp++ = 0; // unused byte
+    cdcnetUdpSetAddress(dp, ipAddress, port);
+    bp->numBytes = n + BlkOffUdpDataIndData;
+    cdcnetUdpRequestUplineTransfer(gp, bp, BtHTMSG);
+    }
+
+#if DEBUG
+/*--------------------------------------------------------------------------
+**  Purpose:        Flush incomplete data line
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        nothing
+**
+**------------------------------------------------------------------------*/
+static void cdcnetLogFlush(void)
+    {
+    if (cdcnetLogBytesCol > 0)
+        {
+        fputs(cdcnetLogBuf, cdcnetLog);
+        fputc('\n', cdcnetLog);
+        fflush(cdcnetLog);
+        }
+    cdcnetLogBytesCol = 0;
+    memset(cdcnetLogBuf, ' ', LogLineLength);
+    cdcnetLogBuf[LogLineLength] = '\0';
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Log a sequence of bytes
+**
+**  Parameters:     Name        Description.
+**                  bytes       pointer to sequence of bytes
+**                  len         length of the sequence
+**
+**  Returns:        nothing
+**
+**------------------------------------------------------------------------*/
+static void cdcnetLogBytes(u8 *bytes, int len)
+    {
+    u8 ac;
+    int ascCol;
+    u8 b;
+    char hex[3];
+    int hexCol;
+    int i;
+
+    ascCol = AsciiColumn(cdcnetLogBytesCol);
+    hexCol = HexColumn(cdcnetLogBytesCol);
+
+    for (i = 0; i < len; i++)
+        {
+        b = bytes[i];
+        ac = b;
+        if (ac < 0x20 || ac >= 0x7f)
+            {
+            ac = '.';
+            }
+        sprintf(hex, "%02x", b);
+        memcpy(cdcnetLogBuf + hexCol, hex, 2);
+        hexCol += 3;
+        cdcnetLogBuf[ascCol++] = ac;
+        if (++cdcnetLogBytesCol >= 16)
+            {
+            cdcnetLogFlush();
+            ascCol = AsciiColumn(cdcnetLogBytesCol);
+            hexCol = HexColumn(cdcnetLogBytesCol);
+            }
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Log a stack trace
+**
+**  Parameters:     none
+**
+**  Returns:        nothing
+**
+**------------------------------------------------------------------------*/
+static void cdcnetPrintStackTrace(FILE *fp)
+    {
+#if defined(__APPLE__)
+    void* callstack[128];
+    int i;
+    int frames;
+    char **strs;
+
+    frames = backtrace(callstack, 128);
+    strs = backtrace_symbols(callstack, frames);
+    for (i = 1; i < frames; ++i)
+        {
+        fprintf(fp, "%s\n", strs[i]);
+        }
+    free(strs);
+#endif
+    }
+#endif // DEBUG
 
 /*---------------------------  End Of File  ------------------------------*/

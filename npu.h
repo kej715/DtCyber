@@ -887,7 +887,8 @@ void npuLipTryOutput(Pcb *pcbp);
 **  ----------------------------
 */
 extern u8  cdcnetNode;
-extern u16 cdcnetPrivilegedPortOffset;
+extern u16 cdcnetPrivilegedTcpPortOffset;
+extern u16 cdcnetPrivilegedUdpPortOffset;
 extern u8  npuLipTrunkCount;
 extern u8  npuNetMaxClaPort;
 extern u8  npuNetMaxCN;
