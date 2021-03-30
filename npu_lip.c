@@ -202,8 +202,8 @@ void npuLipPresetPcb(Pcb *pcbp)
             fprintf(stderr, "liplog.txt - aborting\n");
             exit(1);
             }
-        }
         npuLipLogFlush(); // initialize log buffer
+        }
 #endif
     pcbp->controls.lip.stagingBuf = (u8 *)malloc(MaxBuffer);
     if (pcbp->controls.lip.stagingBuf == NULL)

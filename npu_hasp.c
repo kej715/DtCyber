@@ -2185,8 +2185,8 @@ void npuHaspPresetPcb(Pcb *pcbp)
             fprintf(stderr, "hasplog.txt - aborting\n");
             exit(1);
             }
-        }
         npuHaspLogFlush();    // initialize log buffer
+        }
 #endif
 
     pcbp->controls.hasp.lastBlockSent = NULL;
