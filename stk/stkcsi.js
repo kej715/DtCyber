@@ -353,9 +353,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
       delete this.driveMap[driveKey].volId;
       let client = this.getClientForDriveKey(driveKey);
       if (client !== null) {
-        client.client.write(`103 ${volId} dismounted\n`);
-        console.log(`${new Date().toLocaleString()} Dismounted ${volId} from ${driveKey}`);
-        //console.log(JSON.stringify(this.volumeMap, 2));
+        this.sendResponse(client, `103 ${volId} dismounted from ${driveKey}`);
       }
     }
     return status;
@@ -403,9 +401,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
           this.driveMap[driveKey].volId = volId;
           let client = this.getClientForDriveKey(driveKey);
           if (client !== null) {
-            client.client.write(`${volume.writeEnabled ? "102" : "101"} ${volId} mounted\n`);
-            console.log(`${new Date().toLocaleString()} Mounted ${volId} on ${driveKey}`);
-            //console.log(JSON.stringify(this.volumeMap, 2));
+            this.sendResponse(client, `${volume.writeEnabled ? "102" : "101"} ${volId} mounted on ${driveKey}`);
           }
         }
       }
@@ -431,7 +427,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     this.appendExtraInts(response, 11);
     response.appendString(volId);
     this.appendDriveId(response, driveId);
-    console.log(`${new Date().toLocaleString()} StkCSI RPC dismount volume ${volId} from drive ${driveKey}, status ${status}`);
+    this.debugLog(`StkCSI RPC dismount volume ${volId} from drive ${driveKey}, status ${status}`);
   }
 
   processMountCommand(rpcCall, response) {
@@ -457,7 +453,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     this.appendExtraInts(response, 11);
     response.appendString(volId);
     this.appendDriveId(response, driveId);
-    console.log(`${new Date().toLocaleString()} StkCSI RPC mount volume ${volId} on drive ${driveKey}, status ${status}`);
+    this.debugLog(`StkCSI RPC mount volume ${volId} on drive ${driveKey}, status ${status}`);
   }
 
   processQueryCommand(rpcCall, response) {
@@ -479,7 +475,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
           response.appendUnsignedInt(0);
         }
       }
-      console.log(`${new Date().toLocaleString()} StkCSI RPC query type "server", status ${StkCSI.STATUS_SUCCESS}, state "run"`);
+      this.debugLog(`StkCSI RPC query type "server", status ${StkCSI.STATUS_SUCCESS}, state "run"`);
     }
     else {
       response.appendEnum(StkCSI.STATUS_UNSUPPORTED_TYPE);
@@ -487,14 +483,14 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
       this.appendExtraInts(response, 8);
       response.appendEnum(queryType);
       response.appendUnsignedInt(0);
-      console.log(`${new Date().toLocaleString()} StkCSI RPC query type ${queryType}, status ${StkCSI.STATUS_UNSUPPORTED_TYPE}`);
+      this.debugLog(`StkCSI RPC query type ${queryType}, status ${StkCSI.STATUS_UNSUPPORTED_TYPE}`);
     }
   }
 
   processCsiRequest(rpcCall, rpcReply, callback) {
     rpcReply.appendEnum(Program.SUCCESS);
     callback(rpcReply);
-    //console.log("CSI Request:");
+    //this.debugLog("CSI Request:");
     //this.dump(rpcCall.params.getData().slice(rpcCall.params.out));
     let csiHeader = this.extractCsiHeader(rpcCall);
     let msgHeader = this.extractMsgHeader(rpcCall);
@@ -514,17 +510,18 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
       break;
     default:
       response.appendEnum(StkCSI.STATUS_INVALID_COMMAND);
-      console.log(`${new Date().toLocaleString()} StkCSI RPC unsupported command ${msgHeader.command}, status ${StkCSI.STATUS_INVALID_COMMAND}`);
+      this.debugLog(`StkCSI RPC unsupported command ${msgHeader.command}, status ${StkCSI.STATUS_INVALID_COMMAND}`);
       break;
     }
-    //console.log("CSI Response:");
+    //this.debugLog("CSI Response:");
     //this.dump(response.getData());
     setTimeout(() => {
       let obj = this.deserializeHandle(csiHeader.handle);
       let rpc = new RPC();
-      console.log(`${new Date().toLocaleString()} StkCSI call prog ${obj.prog} vers ${obj.vers} proc ${obj.proc} at ${obj.host}:${obj.port}`);
+      rpc.setDebug(this.isDebug);
+      this.debugLog(`StkCSI call prog ${obj.prog} vers ${obj.vers} proc ${obj.proc} at ${obj.host}:${obj.port}`);
       rpc.callProcedure(obj.host, ProgramRegistry.IPPROTO_UDP, obj.port, obj.prog, obj.vers, obj.proc, response.getData(), result => {
-        console.log(`${new Date().toLocaleString()} call response: ${JSON.stringify(result)}`);
+        this.debugLog(`call response: ${JSON.stringify(result)}`);
       });
     }, 0);
   }
@@ -549,6 +546,19 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
       client: socket,
       data: Buffer.allocUnsafe(0)
     });
+  }
+
+  advanceTapePosition(volume, recordLength) {
+    let result = this.readRecordLength(volume, volume.position + recordLength);
+    if (result.status != StkCSI.SUCCESS) return result.status;
+    if (result.length !== recordLength) {
+      recordLength += 1;
+      result = this.readRecordLength(volume, volume.position + recordLength);
+      if (result.status != StkCSI.SUCCESS) return result.status;
+      if (result.length !== recordLength) return StkCSI.TAPE_READ_FAILURE;
+    }
+    volume.position += recordLength + 4;
+    return StkCSI.SUCCESS;
   }
 
   getClientForDriveKey(driveKey) {
@@ -585,17 +595,18 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
 
   readRecordLength(volume, position) {
     if (typeof volume.fd === "undefined") {
-      return StkCSI.END_OF_MEDIUM;
+      return {status:StkCSI.END_OF_MEDIUM};
     }
     let buffer = new Uint8Array(4);
     let bytesRead = fs.readSync(volume.fd, buffer, 0, 4, position);
     if (bytesRead < 0) {
-      return StkCSI.TAPE_READ_FAILURE;
+      return {status:StkCSI.TAPE_READ_FAILURE};
     }
     else if (bytesRead !== 4) {
-      return StkCSI.END_OF_MEDIUM;
+      return {status:StkCSI.END_OF_MEDIUM};
     }
-    return (buffer[3] << 24) | (buffer[2] << 16) | (buffer[1] << 8) | buffer[0];
+    let length = (buffer[3] << 24) | (buffer[2] << 16) | (buffer[1] << 8) | buffer[0];
+    return {status:StkCSI.SUCCESS, length:length};
   }
 
   removeTapeServerClient(socket) {
@@ -614,110 +625,127 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     }
   }
 
+  retreatTapePosition(volume, recordLength) {
+    let position = volume.position - (recordLength + 4);
+    if (position < 0) return StkCSI.TAPE_READ_FAILURE;
+    let result = this.readRecordLength(volume, position);
+    if (result.status != StkCSI.SUCCESS) return result.status;
+    if (result.length !== recordLength) {
+      position -= 1;
+      result = this.readRecordLength(volume, position);
+      if (result.status != StkCSI.SUCCESS) return result.status;
+      if (result.length !== recordLength) return StkCSI.TAPE_READ_FAILURE;
+    }
+    volume.position = position;
+    return StkCSI.SUCCESS;
+  }
+
   processDismountRequest(client, request) {
     client.data = Buffer.allocUnsafe(0);
     if (request.length > 1) {
       const volId = request[1];
       let status = this.dismountVolume(client.driveKey, volId, true);
       if (status === StkCSI.STATUS_SUCCESS) {
-        client.client.write(`200 ${volId} dismounted from ${client.driveKey}\n`);
+        this.sendResponse(client, `200 ${volId} dismounted from ${client.driveKey}`);
       }
       else {
-        client.client.write(`402 ${status} ${volId} not dismounted\n`);
+        this.sendResponse(client, `402 ${status} ${volId} not dismounted`);
       }
     }
     else {
-      client.client.write("400 Bad request\n");
+      this.sendResponse(client, "400 Bad request");
     }
   }
 
   processLocateBlockRequest(client, request) {
     client.data = Buffer.allocUnsafe(0);
     if (request.length < 2) {
-      client.client.write("400 Bad request\n");
+      this.sendResponse(client, "400 Bad request");
       return;
     }
     let blockId = parseInt(request[1]);
     if (isNaN(blockId)) {
-      client.client.write("400 Bad request\n");
+      this.sendResponse(client, "400 Bad request");
       return;
     }
     blockId &= 0xfffff;
     let volume = this.getVolumeForClient(client);
     if (volume === null) {
-      client.client.write("403 No tape mounted\n");
+      this.sendResponse(client, "403 No tape mounted");
       return;
     }
     while (blockId > volume.blockId) {
-      let length = 0;
+      let result = {};
       while (true) {
-        length = this.readRecordLength(volume, volume.position);
-        if (length !== StkCSI.ERASE_GAP) break;
+        result = this.readRecordLength(volume, volume.position);
+        if (result.status != StkCSI.SUCCESS || result.length !== StkCSI.ERASE_GAP) break;
         volume.position += 4;
       }
-      if (length === StkCSI.TAPE_READ_FAILURE) {
-        client.client.write("404 Failed to read record length\n");
+      if (result.status === StkCSI.TAPE_READ_FAILURE) {
+        this.sendResponse(client, "404 Failed to read record length");
         return;
       }
-      else if (length === StkCSI.END_OF_MEDIUM) {
-        client.client.write("504 Block not found\n");
+      else if (result.status === StkCSI.END_OF_MEDIUM) {
+        this.sendResponse(client, "504 Block not found");
         return;
       }
-      else if (length === StkCSI.TAPE_MARK) {
+      else if (result.length === StkCSI.TAPE_MARK) {
         volume.position += 4;
         volume.blockId += 1;
       }
-      else if ((length & StkCSI.RECORD_ERROR_FLAG) !== 0) {
-        client.client.write("501 Record error\n");
+      else if ((result.length & StkCSI.RECORD_ERROR_FLAG) !== 0) {
+        this.sendResponse(client, "501 Record error");
         return;
       }
       else {
-        let dataLength = (length + 1) & 0x7ffffffe;
-        volume.position += dataLength + 8;
+        volume.position += 4;
+        let status = this.advanceTapePosition(volume, result.length);
+        if (status != StkCSI.SUCCESS) {
+          this.sendResponse(client, "404 Failed to advance tape position");
+          return;
+        }
         volume.blockId += 1;
       }
     }
     while (blockId < volume.blockId) {
-      let length = 0;
+      let result = {};
       let position = volume.position - 4;
       while (position >= 0) {
-        length = this.readRecordLength(volume, position);
-        if (length !== StkCSI.ERASE_GAP) break;
+        result = this.readRecordLength(volume, position);
+        if (result.status != StkCSI.SUCCESS || result.length !== StkCSI.ERASE_GAP) break;
         position -= 4;
       }
       if (position < 0) {
         volume.position = 0;
         volume.blockId = 0;
-        client.client.write("504 Block not found\n");
+        this.sendResponse(client, "504 Block not found");
         return;
       }
-      else if (length === StkCSI.TAPE_READ_FAILURE) {
-        client.client.write("404 Failed to read record length\n");
+      else if (result.status === StkCSI.TAPE_READ_FAILURE) {
+        this.sendResponse(client, "404 Failed to read record length");
         return;
       }
-      else if (length === StkCSI.TAPE_MARK) {
+      else if (result.length === StkCSI.TAPE_MARK) {
         volume.position = position;
         volume.blockId -= 1;
       }
-      else if ((length & StkCSI.RECORD_ERROR_FLAG) !== 0) {
+      else if ((result.length & StkCSI.RECORD_ERROR_FLAG) !== 0) {
         volume.position = position + 4;
-        client.client.write("501 Record error\n");
+        this.sendResponse(client, "501 Record error");
         return;
       }
       else {
-        let dataLength = (length + 1) & 0x7ffffffe;
-        position -= dataLength;
-        if (position < 4) {
-          volume.position = 0;
-          volume.blockId = 0;
-          client.client.write("504 Block not found\n");
+        volume.position = position;
+        let status = this.retreatTapePosition(volume, result.length);
+        if (status != StkCSI.SUCCESS) {
+          volume.position += 4;
+          this.sendResponse(client, "404 Failed to retreat tape position");
           return;
         }
-        volume.position = position - 4;
         volume.blockId -= 1;
       }
     }
-    client.client.write("200 Ok\n");
+    this.sendResponse(client, "200 Ok");
   }
 
   processMountRequest(client, request) {
@@ -726,14 +754,14 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
       const volId = request[1];
       let status = this.mountVolume(client.driveKey, volId);
       if (status === StkCSI.STATUS_SUCCESS) {
-        client.client.write(`200 ${volId} mounted on ${client.driveKey}\n`);
+        this.sendResponse(client, `200 ${volId} mounted on ${client.driveKey}`);
       }
       else {
-        client.client.write(`402 ${status} ${volId} not mounted\n`);
+        this.sendResponse(client, `402 ${status} ${volId} not mounted`);
       }
     }
     else {
-      client.client.write("400 Bad request\n");
+      this.sendResponse(client, "400 Bad request");
     }
   }
 
@@ -741,63 +769,66 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     client.data = Buffer.allocUnsafe(0);
     let volume = this.getVolumeForClient(client);
     if (volume === null) {
-      client.client.write("403 No tape mounted\n");
+      this.sendResponse(client, "403 No tape mounted");
       return;
     }
-    let length = 0;
+    let result = {};
     let position = volume.position - 4;
     while (position >= 0) {
-      length = this.readRecordLength(volume, position);
-      if (length !== StkCSI.ERASE_GAP) break;
+      result = this.readRecordLength(volume, position);
+      if (result.status != StkCSI.SUCCESS || result.length !== StkCSI.ERASE_GAP) break;
       position -= 4;
     }
     if (position < 0) {
       volume.position = 0;
       volume.blockId = 0;
-      client.client.write("203 0 Start of medium\n");
+      this.sendResponse(client, "203 Start of medium");
       return;
     }
-    if (length === StkCSI.TAPE_READ_FAILURE) {
-      client.client.write("404 Failed to read record length\n");
+    if (result.status === StkCSI.TAPE_READ_FAILURE) {
+      this.sendResponse(client, "404 Failed to read record length");
       return;
     }
-    if (length === StkCSI.TAPE_MARK) {
-      volume.position = position;
-      volume.blockId -= 1;
-      client.client.write("202 Tape mark\n");
-      return;
-    }
-    if ((length & StkCSI.RECORD_ERROR_FLAG) !== 0) {
+    if ((result.length & StkCSI.RECORD_ERROR_FLAG) !== 0) {
       volume.position = position + 4;
-      client.client.write("501 Record error\n");
+      this.sendResponse(client, "501 Record error");
       return;
     }
-    let dataLength = (length + 1) & 0x7ffffffe;
-    position -= dataLength;
+    volume.position = position;
+    if (result.length === StkCSI.TAPE_MARK) {
+      volume.blockId -= 1;
+      this.sendResponse(client, "202 Tape mark");
+      return;
+    }
     if (position < 4) {
       volume.position = 0;
       volume.blockId = 0;
-      client.client.write("203 Start of medium\n");
+      this.sendResponse(client, "203 Start of medium");
       return;
     }
-    let buffer = new Uint8Array(dataLength);
-    let bytesRead = fs.readSync(volume.fd, buffer, 0, dataLength, position);
+    let status = this.retreatTapePosition(volume, result.length);
+    if (status != StkCSI.SUCCESS) {
+      volume.position = position + 4;
+      this.sendResponse(client, "404 Failed to retreat tape position");
+      return;
+    }
+    let buffer = new Uint8Array(result.length);
+    let bytesRead = fs.readSync(volume.fd, buffer, 0, result.length, volume.position + 4);
     if (bytesRead < 0) {
-      client.client.write("404 Failed to read data\n");
+      this.sendResponse(client, "404 Failed to read data");
       return;
     }
-    if (bytesRead !== dataLength) {
-      client.client.write("501 Failed to read record\n");
+    if (bytesRead !== result.length) {
+      this.sendResponse(client, "501 Failed to read record");
       return;
     }
-    volume.position = position - 4;
     volume.blockId -= 1;
     if (doReturnData) {
-      client.client.write(`201 ${dataLength} Data\n`);
-      client.client.write(buffer.slice(0, dataLength));
+      this.sendResponse(client, `201 ${result.length} Data`);
+      client.client.write(buffer);
     }
     else {
-      client.client.write("200 Ok\n");
+      this.sendResponse(client, "200 Ok");
     }
   }
 
@@ -805,65 +836,71 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     client.data = Buffer.allocUnsafe(0);
     let volume = this.getVolumeForClient(client);
     if (volume === null) {
-      client.client.write("403 No tape mounted\n");
+      this.sendResponse(client, "403 No tape mounted");
       return;
     }
     let stat = fs.fstatSync(volume.fd);
     let physRefValue = Math.floor((volume.position / stat.size) * 126) + 1;
     let id = (physRefValue << 24) | volume.blockId;
-    client.client.write(`204 ${id} ${id} BlockId\n`);
+    this.sendResponse(client, `204 ${id} ${id} BlockId`);
   }
 
   processReadFwdRequest(client, request, doReturnData) {
     client.data = Buffer.allocUnsafe(0);
     let volume = this.getVolumeForClient(client);
     if (volume === null) {
-      client.client.write("403 No tape mounted\n");
+      this.sendResponse(client, "403 No tape mounted");
       return;
     }
-    let length = 0;
+    let result = {};
     while (true) {
-      length = this.readRecordLength(volume, volume.position);
-      if (length !== StkCSI.ERASE_GAP) break;
+      result = this.readRecordLength(volume, volume.position);
+      if (result.status != StkCSI.SUCCESS || result.length !== StkCSI.ERASE_GAP) break;
       volume.position += 4;
     }
-    if (length === StkCSI.TAPE_READ_FAILURE) {
-      client.client.write("404 Failed to read record length\n");
+    if (result.status === StkCSI.TAPE_READ_FAILURE) {
+      this.sendResponse(client, "404 Failed to read record length");
       return;
     }
-    if (length === StkCSI.END_OF_MEDIUM) {
-      client.client.write("201 0 End of medium\n");
+    if (result.status === StkCSI.END_OF_MEDIUM) {
+      this.sendResponse(client, "505 End of medium");
       return;
     }
-    if (length === StkCSI.TAPE_MARK) {
+    if (result.length === StkCSI.TAPE_MARK) {
       volume.position += 4;
       volume.blockId += 1;
-      client.client.write("202 Tape mark\n");
+      this.sendResponse(client, "202 Tape mark");
       return;
     }
-    if ((length & StkCSI.RECORD_ERROR_FLAG) !== 0) {
-      client.client.write("501 Record error\n");
+    if ((result.length & StkCSI.RECORD_ERROR_FLAG) !== 0) {
+      this.sendResponse(client, "501 Record error");
       return;
     }
-    let dataLength = (length + 1) & 0x7ffffffe;
-    let buffer = new Uint8Array(dataLength);
-    let bytesRead = fs.readSync(volume.fd, buffer, 0, dataLength, volume.position + 4);
+    let buffer = new Uint8Array(result.length);
+    let bytesRead = fs.readSync(volume.fd, buffer, 0, result.length, volume.position + 4);
     if (bytesRead < 0) {
-      client.client.write("404 Failed to read data\n");
+      this.sendResponse(client, "404 Failed to read data");
       return;
     }
-    if (bytesRead !== dataLength) {
-      client.client.write("201 0 End of medium\n");
+    if (bytesRead !== result.length) {
+      this.sendResponse(client, "505 End of medium");
       return;
     }
-    volume.position += dataLength + 8;
+    let position = volume.position;
+    volume.position += 4;
+    let status = this.advanceTapePosition(volume, result.length);
+    if (status != StkCSI.SUCCESS) {
+      volume.position = position;
+      this.sendResponse(client, "404 Failed to advance tape position");
+      return;
+    }
     volume.blockId += 1;
     if (doReturnData) {
-      client.client.write(`201 ${dataLength} Data\n`);
-      client.client.write(buffer.slice(0, dataLength));
+      this.sendResponse(client, `201 ${result.length} Data`);
+      client.client.write(buffer);
     }
     else {
-      client.client.write("200 Ok\n");
+      this.sendResponse(client, "200 Ok");
     }
   }
 
@@ -871,51 +908,51 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     client.data = Buffer.allocUnsafe(0);
     let volume = this.getVolumeForClient(client);
     if (volume === null) {
-      client.client.write("403 No tape mounted\n");
+      this.sendResponse(client, "403 No tape mounted");
       return;
     }
     volume.position = 0;
     volume.blockId = 0;
-    client.client.write("200 Ok\n");
+    this.sendResponse(client, "200 Ok");
   }
 
   processRegisterRequest(client, request) {
     client.data = Buffer.allocUnsafe(0);
     if (request.length < 2) {
-      client.client.write("400 Bad request\n");
+      this.sendResponse(client, "400 Bad request");
       return;
     }
     const driveKey = request[1];
     if (typeof this.driveMap[driveKey] !== "undefined") {
-      client.client.write(`401 ${driveKey} already registered\n`);
+      this.sendResponse(client, `401 ${driveKey} already registered`);
       return;
     }
     this.driveMap[driveKey] = {client: client};
     client.driveKey = driveKey;
-    client.client.write(`200 ${driveKey} registered\n`);
+    this.sendResponse(client, `200 ${driveKey} registered`);
   }
 
   processWriteRequest(client, request, dataIndex) {
     let volume = this.getVolumeForClient(client);
     if (volume === null) {
-      client.client.write("403 No tape mounted\n");
+      this.sendResponse(client, "403 No tape mounted");
       client.data = Buffer.allocUnsafe(0);
       return;
     }
     if (request.length < 2) {
-      client.client.write("400 Bad request\n");
+      this.sendResponse(client, "400 Bad request");
       client.data = Buffer.allocUnsafe(0);
       return;
     }
     let dataLength = parseInt(request[1]);
     if (isNaN(dataLength)) {
-      client.client.write("400 Bad request\n");
+      this.sendResponse(client, "400 Bad request");
       client.data = Buffer.allocUnsafe(0);
       return;
     }
     if (client.data.length - dataIndex < dataLength) return;
     if (volume.writeEnabled !== true) {
-      client.client.write("502 Volume is read-only\n");
+      this.sendResponse(client, "502 Volume is read-only");
       client.data = Buffer.allocUnsafe(0);
       return;
     }
@@ -925,7 +962,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     recordLength[2] = (dataLength >> 16) & 0xff;
     recordLength[3] = (dataLength >> 24) & 0xff;
     if (fs.writeSync(volume.fd, recordLength, 0, 4, volume.position) !== 4) {
-      client.client.write("503 Failed to write record length\n");
+      this.sendResponse(client, "503 Failed to write record length");
       client.data = Buffer.allocUnsafe(0);
       return;
     }
@@ -933,45 +970,41 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     let bytesWritten = fs.writeSync(volume.fd, client.data, dataIndex, dataLength, volume.position);
     client.data = Buffer.allocUnsafe(0);
     if (bytesWritten !== dataLength) {
-      client.client.write("503 Failed to write record data\n");
+      this.sendResponse(client, "503 Failed to write record data");
       return;
     }
     volume.position += dataLength;
-    if ((dataLength & 1) === 1) {
-      let fill = new Uint8Array(1);
-      fill[0] = 0;
-      if (fs.writeSync(volume.fd, fill, 0, 1, volume.position) !== 1) {
-        client.client.write("503 Failed to write record data\n");
-        return;
-      }
-      volume.position += 1;
-    }
     if (fs.writeSync(volume.fd, recordLength, 0, 4, volume.position) !== 4) {
-      client.client.write("503 Failed to write record length\n");
+      this.sendResponse(client, "503 Failed to write record length");
       return;
     }
     volume.position += 4;
-    client.client.write("200 Ok\n");
+    this.sendResponse(client, "200 Ok");
   }
 
   processWriteTapeMarkRequest(client, request) {
     client.data = Buffer.allocUnsafe(0);
     let volume = this.getVolumeForClient(client);
     if (volume === null) {
-      client.client.write("403 No tape mounted\n");
+      this.sendResponse(client, "403 No tape mounted");
       return;
     }
     let tapeMark = new Uint8Array(4);
-    tapeMark[0] = StkCSI.TAPE_MARK & 0xff;
+    tapeMark[0] =  StkCSI.TAPE_MARK & 0xff;
     tapeMark[1] = (StkCSI.TAPE_MARK >>  8) & 0xff;
     tapeMark[2] = (StkCSI.TAPE_MARK >> 16) & 0xff;
     tapeMark[3] = (StkCSI.TAPE_MARK >> 24) & 0xff;
     if (fs.writeSync(volume.fd, tapeMark, 0, 4, volume.position) !== 4) {
-      client.client.write("503 Failed to write tape mark\n");
+      this.sendResponse(client, "503 Failed to write tape mark");
       return;
     }
     volume.position += 4;
-    client.client.write("200 Ok\n");
+    this.sendResponse(client, "200 Ok");
+  }
+
+  sendResponse(client, response) {
+    client.client.write(`${response}\n`);
+    this.debugLog(`StkCSI TCP ${client.client.remoteAddress}:${client.client.remotePort} ${response}`);
   }
 
   handleTapeServerRequest(socket, data) {
@@ -984,7 +1017,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
       idx = client.data.indexOf("\n");
       if (idx !== -1) {
         let request = client.data.slice(0, idx).toString().trim();
-        console.log(`${new Date().toLocaleString()} StkCSI TCP ${client.client.remoteAddress}:${client.client.remotePort} ${request}`);
+        this.debugLog(`StkCSI TCP ${client.client.remoteAddress}:${client.client.remotePort} ${request}`);
         request = request.split(" ");
         if (request.length > 0) {
           switch (request[0]) {
@@ -1025,7 +1058,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
             this.processWriteTapeMarkRequest(client, request);
             break;
           default:
-            client.client.write(`401 ${request[0]}?`);
+            this.sendResponse(client, `401 ${request[0]}?`);
             client.data = Buffer.allocUnsafe(0);
             break;
           }
@@ -1046,10 +1079,10 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     super.start();
     const me = this;
     const tapeServer = net.createServer(client => {
-      console.log(`${new Date().toLocaleString()} Tape server connection from ${client.remoteAddress}`);
+      this.debugLog(`StkCSI TCP ${client.remoteAddress}:${client.client.remotePort} connected`);
       me.addTapeServerClient(client);
       client.on("end", () => {
-        console.log(`${new Date().toLocaleString()} Tape server client ${client.remoteAddress} disconnected`);
+        this.debugLog(`StkCSI TCP ${client.remoteAddress}:${client.client.remotePort} disconnected`);
         me.removeTapeServerClient(client);
       });
       client.on("data", data => {

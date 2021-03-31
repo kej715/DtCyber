@@ -10,11 +10,15 @@ let volumeMap = JSON.parse(fs.readFileSync(volumesFile));
 
 const portMapper = new PortMapper();
 if (config.portMapperUdpPort) portMapper.setUdpPort(config.portMapperUdpPort);
+if (config.debug) portMapper.setDebug(config.debug);
 portMapper.start();
+
 const stkcsi = new StkCSI();
 stkcsi.setVolumeMap(volumeMap);
 if (config.tapeServerPort) stkcsi.setTapeServerPort(config.tapeServerPort);
+if (config.debug) stkcsi.setDebug(config.debug);
 stkcsi.start();
+
 fs.watch(volumesFile, (eventType, filename) => {
   if (eventType === "change") {
     console.log(`${new Date().toLocaleString()} reread ${filename}`);

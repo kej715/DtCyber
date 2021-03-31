@@ -7,6 +7,17 @@ const XDR = require("./xdr");
 class RPC {
 
   constructor() {
+    this.isDebug = false;
+  }
+
+  setDebug(isDebug) {
+    this.isDebug = isDebug;
+  }
+
+  debugLog(msg) {
+    if (this.isDebug) {
+      console.log(`${new Date().toLocaleString()} ${msg}`);
+    }
   }
 
   callProcedure(host, prot, port, prog, vers, proc, args, callback) {
@@ -80,13 +91,13 @@ class RPC {
           callback(result);
         }
         else {
-          console.log(`${new Date().toLocaleString()} RPC.callProcedure: received unexpected mtype or xid: mtype ${mtype}, expected xid ${xid}, received xid ${rcvXid}`);
+          this.debugLog(`RPC.callProcedure: received unexpected mtype or xid: mtype ${mtype}, expected xid ${xid}, received xid ${rcvXid}`);
         }
       });
       client.send(rpcCall.getData(), port, host);
     }
     else {
-      console.log(`${new Date().toLocaleString()} RPC.callProcedure: unsupported protocol: ${prot}`);
+      this.debugLog(`RPC.callProcedure: unsupported protocol: ${prot}`);
       callback({isSuccess: false, reason: `unsupported protocol ${prot}`});
     }
   }

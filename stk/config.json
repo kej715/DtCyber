@@ -1,4 +1,5 @@
 {
+"debug": true,
 "portMapperUdpPort": 111,
 "tapeServerPort": 4401
 }

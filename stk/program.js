@@ -77,6 +77,11 @@ class Program {
   constructor(prog, vers) {
     this.prog = prog;
     this.vers = vers;
+    this.isDebug = false;
+  }
+
+  setDebug(isDebug) {
+    this.isDebug = isDebug;
   }
 
   setTcpPort(port) {
@@ -85,6 +90,12 @@ class Program {
 
   setUdpPort(port) {
     this.udpPort = port;
+  }
+
+  debugLog(msg) {
+    if (this.isDebug) {
+      console.log(`${new Date().toLocaleString()} ${msg}`);
+    }
   }
 
   extractCall(msg) {
@@ -156,22 +167,22 @@ class Program {
       }
     });
     this.socket.on('message', (msg, rinfo) => {
-      console.log(`${new Date().toLocaleString()} received UDP packet from ${rinfo.address}:${rinfo.port}`);
+      this.debugLog(`received UDP packet from ${rinfo.address}:${rinfo.port}`);
       let rpcCall = this.extractCall(msg);
-      console.log(`${new Date().toLocaleString()}   xid ${rpcCall.xid}, mtype ${rpcCall.mtype}, rpcvers ${rpcCall.rpcvers}, prog ${rpcCall.prog}, vers ${rpcCall.vers}, proc: ${rpcCall.proc}`);
+      this.debugLog(`    xid ${rpcCall.xid}, mtype ${rpcCall.mtype}, rpcvers ${rpcCall.rpcvers}, prog ${rpcCall.prog}, vers ${rpcCall.vers}, proc: ${rpcCall.proc}`);
       if (rpcCall.mtype !== Program.CALL) {
-        console.log(`${new Date().toLocaleString()} message type is not RPC CALL`);
+        this.debugLog("message type is not RPC CALL");
         return;
       }
       this.handleCallRequest(rpcCall, rpcReply => {
         this.socket.send(rpcReply.getData(), rinfo.port, rinfo.address, () => {
-          console.log(`${new Date().toLocaleString()} replied to ${rinfo.address}:${rinfo.port}`);
+          this.debugLog(`replied to ${rinfo.address}:${rinfo.port}`);
         });
       });
     });
     this.socket.on('listening', () => {
       const address = this.socket.address();
-      console.log(`${new Date().toLocaleString()} Prog ${this.prog} vers ${this.vers} listening on ${address.address}:${address.port}`);
+      this.debugLog(`Prog ${this.prog} vers ${this.vers} listening on ${address.address}:${address.port}`);
     });
 
     this.socket.bind(this.udpPort);
