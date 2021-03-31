@@ -1,5 +1,6 @@
 {
 "debug": true,
 "portMapperUdpPort": 111,
-"tapeServerPort": 4401
+"tapeServerPort": 4401,
+"tapeLibraryRoot": "tapes"
 }

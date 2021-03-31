@@ -218,6 +218,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     this.volumeMap = {};
     this.freeCells = 16;
     this.udpPort = StkCSI.RPC_PORT;
+    this.tapeLibraryRoot = "./tapes";
     this.tapeServerClients = [];
     this.tapeServerPort = 4401;
   }
@@ -386,7 +387,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
         }
       }
       else {
-        let fd = fs.openSync(volume.path, volume.writeEnabled ? "r+" : "r", 0o666);
+        let fd = fs.openSync(`${this.tapeLibraryRoot}/${volume.path}`, volume.writeEnabled ? "r+" : "r", 0o666);
         if (fd === -1) {
           status = StkCSI.STATUS_VOLUME_NOT_IN_LIBRARY;
         }
@@ -824,7 +825,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     }
     volume.blockId -= 1;
     if (doReturnData) {
-      this.sendResponse(client, `201 ${result.length} Data`);
+      this.sendResponse(client, `201 ${result.length} bytes`);
       client.client.write(buffer);
     }
     else {
@@ -842,7 +843,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     let stat = fs.fstatSync(volume.fd);
     let physRefValue = Math.floor((volume.position / stat.size) * 126) + 1;
     let id = (physRefValue << 24) | volume.blockId;
-    this.sendResponse(client, `204 ${id} ${id} BlockId`);
+    this.sendResponse(client, `204 ${id} ${id}`);
   }
 
   processReadFwdRequest(client, request, doReturnData) {
@@ -896,7 +897,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     }
     volume.blockId += 1;
     if (doReturnData) {
-      this.sendResponse(client, `201 ${result.length} Data`);
+      this.sendResponse(client, `201 ${result.length} bytes`);
       client.client.write(buffer);
     }
     else {
@@ -1067,6 +1068,10 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     }
   }
 
+  setTapeLibraryRoot(tapeLibraryRoot) {
+    this.tapeLibraryRoot = fs.realpathSync(tapeLibraryRoot);
+  }
+
   setTapeServerPort(tapeServerPort) {
     this.tapeServerPort = tapeServerPort;
   }
@@ -1079,10 +1084,10 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     super.start();
     const me = this;
     const tapeServer = net.createServer(client => {
-      this.debugLog(`StkCSI TCP ${client.remoteAddress}:${client.client.remotePort} connected`);
+      this.debugLog(`StkCSI TCP ${client.remoteAddress}:${client.remotePort} connected`);
       me.addTapeServerClient(client);
       client.on("end", () => {
-        this.debugLog(`StkCSI TCP ${client.remoteAddress}:${client.client.remotePort} disconnected`);
+        this.debugLog(`StkCSI TCP ${client.remoteAddress}:${client.remotePort} disconnected`);
         me.removeTapeServerClient(client);
       });
       client.on("data", data => {
@@ -1090,6 +1095,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
       });
     });
     tapeServer.listen(this.tapeServerPort, () => {
+      console.log(`${new Date().toLocaleString()} Tape library located at ${this.tapeLibraryRoot}`);
       console.log(`${new Date().toLocaleString()} Tape server listening on port ${this.tapeServerPort}`);
     });
   }

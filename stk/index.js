@@ -16,6 +16,7 @@ portMapper.start();
 const stkcsi = new StkCSI();
 stkcsi.setVolumeMap(volumeMap);
 if (config.tapeServerPort) stkcsi.setTapeServerPort(config.tapeServerPort);
+if (config.tapeLibraryRoot) stkcsi.setTapeLibraryRoot(config.tapeLibraryRoot);
 if (config.debug) stkcsi.setDebug(config.debug);
 stkcsi.start();
 
@@ -23,6 +24,16 @@ fs.watch(volumesFile, (eventType, filename) => {
   if (eventType === "change") {
     console.log(`${new Date().toLocaleString()} reread ${filename}`);
     volumeMap = JSON.parse(fs.readFileSync(filename));
-    stkcsi.setVolumeMap(volumeMap);
+    Object.keys(volumeMap).forEach(key => {
+      if (typeof stkcsi.volumeMap[key] !== "undefined") {
+        let volume = volumeMap[key];
+        Object.keys(volume).forEach(attrName => {
+          stkcsi.volumeMap[key][attrName] = volume[attrName];
+        });
+      }
+      else {
+        stkcsi.volumeMap[key] = volumeMap[key];
+      }
+    });
   }
 });
