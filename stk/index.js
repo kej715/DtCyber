@@ -22,17 +22,24 @@ stkcsi.start();
 
 fs.watch(volumesFile, (eventType, filename) => {
   if (eventType === "change") {
-    console.log(`${new Date().toLocaleString()} reread ${filename}`);
     volumeMap = JSON.parse(fs.readFileSync(filename));
     Object.keys(volumeMap).forEach(key => {
       if (typeof stkcsi.volumeMap[key] !== "undefined") {
         let volume = volumeMap[key];
+        let updatedAttrs = [];
         Object.keys(volume).forEach(attrName => {
+          if (stkcsi.volumeMap[key][attrName] !== volume[attrName]) {
+            updatedAttrs.push(attrName);
+          }
           stkcsi.volumeMap[key][attrName] = volume[attrName];
         });
+        if (updatedAttrs.length > 0) {
+          console.log(`${new Date().toLocaleString()} updated ${updatedAttrs.join(",")} of VSN ${key} in library`);
+        }
       }
       else {
         stkcsi.volumeMap[key] = volumeMap[key];
+        console.log(`${new Date().toLocaleString()} added VSN ${key} to library`);
       }
     });
   }

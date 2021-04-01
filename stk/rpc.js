@@ -8,10 +8,15 @@ class RPC {
 
   constructor() {
     this.isDebug = false;
+    this.responseTimeout = 5000;
   }
 
   setDebug(isDebug) {
     this.isDebug = isDebug;
+  }
+
+  setResponseTime(millis) {
+    this.responseTimeout = millis;
   }
 
   debugLog(msg) {
@@ -39,7 +44,7 @@ class RPC {
       let timer = setTimeout(() => {
         client.close();
         callback({isSuccess: false, reason: "timeout"});
-      }, 10000);
+      }, this.responseTimeout);
       client.on("error", err => {
         clearTimeout(timer);
         client.close();

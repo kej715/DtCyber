@@ -948,9 +948,9 @@ static void mt5744FlushWrite(void)
 
     for (i = 0; i < recLen2; i += 2)
         {
-        *rp++ = ((ip[0] >> 4) & 0xFF);
-        *rp++ = ((ip[0] << 4) & 0xF0) | ((ip[1] >> 8) & 0x0F);
-        *rp++ = ((ip[1] >> 0) & 0xFF);
+        *rp++ = ((ip[0] >> 4) & 0xff);
+        *rp++ = ((ip[0] << 4) & 0xf0) | ((ip[1] >> 8) & 0x0f);
+        *rp++ = ((ip[1] >> 0) & 0xff);
         ip += 2;
         }
 
@@ -1069,12 +1069,10 @@ static FcStatus mt5744Func(PpWord funcCode)
 
     case Fc5744GeneralStatus:
         activeDevice->recordLength = GeneralStatusLength;
-        mt5744CalculateGeneralStatus(tp);
         break;
 
     case Fc5744DetailedStatus:
         activeDevice->recordLength = DetailedStatusLength;
-        mt5744CalculateDetailedStatus(tp);
         break;
 
     case Fc5744SpaceFwd:
@@ -1467,6 +1465,7 @@ static void mt5744Io(void)
                 break;
                 }
             }
+        if (tp->isBusy) return;
         }
     else
         {
@@ -1484,7 +1483,7 @@ static void mt5744Io(void)
         break;
 
     case Fc5744GeneralStatus:
-        if (!activeChannel->full && (tp == NULL || !tp->isBusy))
+        if (!activeChannel->full)
             {
             if (cp->ioDelay > 0)
                 {
@@ -1494,6 +1493,10 @@ static void mt5744Io(void)
             if (activeDevice->recordLength > 0)
                 {
                 wordNumber = GeneralStatusLength - activeDevice->recordLength;
+                if (wordNumber == 0)
+                    {
+                    mt5744CalculateGeneralStatus(tp);
+                    }
                 activeChannel->data = cp->generalStatus[wordNumber];
                 activeDevice->recordLength -= 1;
                 if (wordNumber == (GeneralStatusLength - 1))
@@ -1517,7 +1520,7 @@ static void mt5744Io(void)
         break;
 
     case Fc5744DetailedStatus:
-        if (!activeChannel->full && (tp == NULL || !tp->isBusy))
+        if (!activeChannel->full)
             {
             if (cp->ioDelay > 0)
                 {
@@ -1527,6 +1530,10 @@ static void mt5744Io(void)
             if (activeDevice->recordLength > 0)
                 {
                 wordNumber = DetailedStatusLength - activeDevice->recordLength;
+                if (wordNumber == 0)
+                    {
+                    mt5744CalculateDetailedStatus(tp);
+                    }
                 activeChannel->data = cp->detailedStatus[wordNumber];
                 activeDevice->recordLength -= 1;
                 if(wordNumber == (DetailedStatusLength - 1))
@@ -1549,7 +1556,7 @@ static void mt5744Io(void)
         break;
 
     case Fc5744ReadBufferedLog:
-        if (!activeChannel->full && tp != NULL && !tp->isBusy)
+        if (!activeChannel->full && tp != NULL)
             {
             if (cp->ioDelay > 0)
                 {
@@ -1581,7 +1588,7 @@ static void mt5744Io(void)
 
     case Fc5744ReadFwd:
     case Fc5744ReadBlockId:
-        if (!activeChannel->full && tp != NULL && !tp->isBusy)
+        if (!activeChannel->full && tp != NULL)
             {
             if (tp->recordLength == 0)
                 {
@@ -1613,7 +1620,7 @@ static void mt5744Io(void)
         break;
 
     case Fc5744ReadBkw:
-        if (!activeChannel->full && tp != NULL && !tp->isBusy)
+        if (!activeChannel->full && tp != NULL)
             {
             if (tp->recordLength == 0)
                 {
@@ -1646,7 +1653,7 @@ static void mt5744Io(void)
 
     case Fc5744Write:
     case Fc5744WriteShort:
-        if (activeChannel->full && tp->recordLength < MaxPpBuf)
+        if (activeChannel->full && tp != NULL && tp->recordLength < MaxPpBuf)
             {
 #if DEBUG
             if ((tp->recordLength % 8) == 0) fputs("\n   ", mt5744Log);
@@ -1659,7 +1666,7 @@ static void mt5744Io(void)
         break;
 
     case Fc5744LocateBlock:
-        if (activeChannel->full && tp->recordLength < MaxPpBuf)
+        if (activeChannel->full && tp != NULL && tp->recordLength < MaxPpBuf)
             {
             char buffer[32];
 #if DEBUG
@@ -2138,7 +2145,7 @@ static void mt5744RewindRequestCallback(TapeParam *tp)
     eor = mt5744ParseTapeServerResponse(tp, &status);
     if (eor == NULL) return;
     tp->isBusy = FALSE;
-    if (status == 200)
+    if (status == 203)
         {
         tp->isBOT  = TRUE;
         }

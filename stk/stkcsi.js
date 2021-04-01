@@ -914,7 +914,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     }
     volume.position = 0;
     volume.blockId = 0;
-    this.sendResponse(client, "200 Ok");
+    this.sendResponse(client, "203 Start of medium");
   }
 
   processRegisterRequest(client, request) {

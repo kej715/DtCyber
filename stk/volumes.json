@@ -2,6 +2,7 @@
 "MAILER":
   {
   "path":"massmail.tap",
-  "writeEnabled":false
+  "writeEnabled":false,
+  "description":"UMass Mailer release tape"
   }
 }
