@@ -34,12 +34,12 @@ fs.watch(volumesFile, (eventType, filename) => {
           stkcsi.volumeMap[key][attrName] = volume[attrName];
         });
         if (updatedAttrs.length > 0) {
-          console.log(`${new Date().toLocaleString()} updated ${updatedAttrs.join(",")} of VSN ${key} in library`);
+          console.log(`${new Date().toLocaleString()} Updated ${updatedAttrs.join(",")} of VSN ${key} in tape library`);
         }
       }
       else {
         stkcsi.volumeMap[key] = volumeMap[key];
-        console.log(`${new Date().toLocaleString()} added VSN ${key} to library`);
+        console.log(`${new Date().toLocaleString()} Added VSN ${key} to tape library`);
       }
     });
   }

@@ -488,11 +488,33 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     }
   }
 
+  callRpcCallback(host, port, prog, vers, proc, args, retryCount) {
+    if (++retryCount <= 5) {
+      let rpc = new RPC();
+      rpc.setDebug(this.isDebug);
+      this.debugLog(`StkCSI callback prog ${prog} vers ${vers} proc ${proc} at ${host}:${port} (try ${retryCount})`);
+      rpc.callProcedure(host, ProgramRegistry.IPPROTO_UDP, port, prog, vers, proc, args, result => {
+        if (result.isTimeout) {
+          this.callRpcCallback(host, port, prog, vers, proc, args, retryCount);
+        }
+        else if (result.isSuccess) {
+          this.debugLog(`StkCSI  success prog ${prog} vers ${vers} proc ${proc} at ${host}:${port}`);
+        }
+        else {
+          this.debugLog(`StkCSI  failure prog ${prog} vers ${vers} proc ${proc} at ${host}:${port}`);
+          this.debugLog(`        ${JSON.stringify(result)}`);
+        }
+      });
+    }
+    else {
+      this.debugLog(`StkCSI  failure prog ${prog} vers ${vers} proc ${proc} at ${host}:${port}`);
+      this.debugLog("        maximum retry attempts exceeded");
+    }
+  }
+
   processCsiRequest(rpcCall, rpcReply, callback) {
     rpcReply.appendEnum(Program.SUCCESS);
     callback(rpcReply);
-    //this.debugLog("CSI Request:");
-    //this.dump(rpcCall.params.getData().slice(rpcCall.params.out));
     let csiHeader = this.extractCsiHeader(rpcCall);
     let msgHeader = this.extractMsgHeader(rpcCall);
     let response = new XDR();
@@ -514,16 +536,9 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
       this.debugLog(`StkCSI RPC unsupported command ${msgHeader.command}, status ${StkCSI.STATUS_INVALID_COMMAND}`);
       break;
     }
-    //this.debugLog("CSI Response:");
-    //this.dump(response.getData());
     setTimeout(() => {
       let obj = this.deserializeHandle(csiHeader.handle);
-      let rpc = new RPC();
-      rpc.setDebug(this.isDebug);
-      this.debugLog(`StkCSI call prog ${obj.prog} vers ${obj.vers} proc ${obj.proc} at ${obj.host}:${obj.port}`);
-      rpc.callProcedure(obj.host, ProgramRegistry.IPPROTO_UDP, obj.port, obj.prog, obj.vers, obj.proc, response.getData(), result => {
-        this.debugLog(`call response: ${JSON.stringify(result)}`);
-      });
+      this.callRpcCallback(obj.host, obj.port, obj.prog, obj.vers, obj.proc, response.getData(), 0);
     }, 0);
   }
 
@@ -1005,7 +1020,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
 
   sendResponse(client, response) {
     client.client.write(`${response}\n`);
-    this.debugLog(`StkCSI TCP ${client.client.remoteAddress}:${client.client.remotePort} ${response}`);
+    this.debugLog(`StkCSI TCP ${client.client.remoteAddress}:${client.client.remotePort} => ${response}`);
   }
 
   handleTapeServerRequest(socket, data) {
@@ -1018,7 +1033,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
       idx = client.data.indexOf("\n");
       if (idx !== -1) {
         let request = client.data.slice(0, idx).toString().trim();
-        this.debugLog(`StkCSI TCP ${client.client.remoteAddress}:${client.client.remotePort} ${request}`);
+        this.debugLog(`StkCSI TCP ${client.client.remoteAddress}:${client.client.remotePort} <= ${request}`);
         request = request.split(" ");
         if (request.length > 0) {
           switch (request[0]) {

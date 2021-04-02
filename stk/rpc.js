@@ -8,7 +8,7 @@ class RPC {
 
   constructor() {
     this.isDebug = false;
-    this.responseTimeout = 5000;
+    this.responseTimeout = 4000;
   }
 
   setDebug(isDebug) {
@@ -43,12 +43,12 @@ class RPC {
       const client = dgram.createSocket('udp4');
       let timer = setTimeout(() => {
         client.close();
-        callback({isSuccess: false, reason: "timeout"});
+        callback({isSuccess: false, isTimeout: true, reason: "timeout"});
       }, this.responseTimeout);
       client.on("error", err => {
         clearTimeout(timer);
         client.close();
-        callback({isSuccess: false, reason: err});
+        callback({isSuccess: false, isTimeout: false, reason: err});
       });
       client.on("message", (msg, rinfo) => {
         let rpcReply = new XDR();
@@ -58,7 +58,7 @@ class RPC {
         if (rcvXid === xid && mtype === Program.REPLY) {
           clearTimeout(timer);
           client.close();
-          let result = {};
+          let result = {isTimeout: false};
           let replyStat = rpcReply.extractEnum();
           if (replyStat === Program.MSG_ACCEPTED) {
             result.isAccepted = true;
