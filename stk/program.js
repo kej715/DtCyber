@@ -182,7 +182,7 @@ class Program {
     });
     this.socket.on('listening', () => {
       const address = this.socket.address();
-      this.debugLog(`Prog ${this.prog} vers ${this.vers} listening on ${address.address}:${address.port}`);
+      this.debugLog(`RPC prog ${this.prog} vers ${this.vers} listening on ${address.address}:${address.port}`);
     });
 
     this.socket.bind(this.udpPort);
