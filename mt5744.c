@@ -710,8 +710,16 @@ static void mt5744CheckTapeServer(void)
             if (n <= 0)
                 {
 #if DEBUG
-                fprintf(mt5744Log, "\n%06d Disconnected from %s:%u for CH:%02o u:%d", traceSequenceNo,
-                    tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
+                if (n < 0)
+                    {
+                    fprintf(mt5744Log, "\n%06d Disconnected from %s:%u for CH:%02o u:%d, end of stream", traceSequenceNo,
+                        tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
+                    }
+                else
+                    {
+                    fprintf(mt5744Log, "\n%06d Disconnected from %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
+                        tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
+                    }
 #endif
                 mt5744CloseTapeServerConnection(tp);
                 }
@@ -1934,10 +1942,6 @@ static void mt5744RegisterUnit(TapeParam *tp)
     tp->outputBuffer.out = 0;
     tp->state = StAcsRegistering;
     tp->callback = mt5744RegisterUnitRequestCallback;
-#if DEBUG
-    fprintf(mt5744Log, "\n%06d Send \"REGISTER %s\" for CH:%02o u%d", traceSequenceNo,
-        tp->driveName, tp->channelNo, tp->unitNo);
-#endif
     }
 
 /*--------------------------------------------------------------------------
