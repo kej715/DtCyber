@@ -31,7 +31,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 1
+#define DEBUG 0
 
 /*
 **  -------------
@@ -262,7 +262,6 @@ static void      mt5744CloseTapeServerConnection(TapeParam *tp);
 static void      mt5744ConnectCallback(TapeParam *tp);
 static void      mt5744DismountRequestCallback(TapeParam *tp);
 static FcStatus  mt5744Func(PpWord funcCode);
-static char     *mt5744Func2String(PpWord funcCode);
 static void      mt5744FuncBackspace(void);
 static void      mt5744FuncForespace(void);
 static void      mt5744FuncReadBkw(void);
@@ -284,6 +283,7 @@ static void      mt5744ResetInputBuffer(TapeParam *tp, u8 *eor);
 static void      mt5744ResetStatus(TapeParam *tp);
 static void      mt5744ResetUnit(TapeParam *tp);
 static void      mt5744RewindRequestCallback(TapeParam *tp);
+static void      mt5744RewindUnloadRequestCallback(TapeParam *tp);
 static void      mt5744SendTapeServerRequest(TapeParam *tp);
 static void      mt5744SpaceRequestCallback(TapeParam *tp);
 void             mt5744UnloadTape(TapeParam *tp);
@@ -291,8 +291,9 @@ static void      mt5744WriteRequestCallback(TapeParam *tp);
 static void      mt5744WriteMarkRequestCallback(TapeParam *tp);
 
 #if DEBUG
-static void mt5744LogBytes(u8 *bytes, int len);
-static void mt5744LogFlush(void);
+static char     *mt5744Func2String(PpWord funcCode);
+static void      mt5744LogBytes(u8 *bytes, int len);
+static void      mt5744LogFlush(void);
 #endif
 
 
@@ -1049,21 +1050,12 @@ static FcStatus mt5744Func(PpWord funcCode)
         return(FcProcessed);
 
     case Fc5744Rewind:
-        if (unitNo != -1 && tp->isReady)
-            {
-            mt5744ResetStatus(tp);
-            mt5744IssueTapeServerRequest(tp, "REWIND", mt5744RewindRequestCallback);
-            }
-        return(FcProcessed);
-
     case Fc5744RewindUnload:
         if (unitNo != -1 && tp->isReady)
             {
-            //char buffer[32];
             mt5744ResetStatus(tp);
-            //sprintf(buffer, "DISMOUNT %s", tp->driveName);
-            //mt5744IssueTapeServerRequest(tp, buffer, mt5744DismountRequestCallback);
-            tp->isReady = FALSE;
+            mt5744IssueTapeServerRequest(tp, "REWIND",
+                (funcCode == Fc5744Rewind) ? mt5744RewindRequestCallback : mt5744RewindUnloadRequestCallback);
             }
         return(FcProcessed);
 
@@ -1226,76 +1218,6 @@ static FcStatus mt5744Func(PpWord funcCode)
     activeDevice->fcode = funcCode;
 
     return(FcAccepted);
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Convert function code to string.
-**
-**  Parameters:     Name        Description.
-**                  funcCode    function code
-**
-**  Returns:        String equivalent of function code.
-**
-**------------------------------------------------------------------------*/
-static char *mt5744Func2String(PpWord funcCode)
-    {
-    static char buf[30];
-#if DEBUG
-    switch(funcCode)
-        {
-    case Fc5744Release                           : return "Release";
-    case Fc5744Continue                          : return "Continue";
-    case Fc5744Rewind                            : return "Rewind";
-    case Fc5744RewindUnload                      : return "RewindUnload";
-    case Fc5744GeneralStatus                     : return "GeneralStatus";
-    case Fc5744SpaceFwd                          : return "SpaceFwd";
-    case Fc5744LocateBlock                       : return "LocateBlock";
-    case Fc5744SpaceBkw                          : return "SpaceBkw";
-    case Fc5744DetailedStatus                    : return "DetailedStatus";
-    case Fc5744ReadBlockId                       : return "ReadBlockId";
-    case Fc5744ReadBufferedLog                   : return "ReadBufferedLog";
-    case Fc5744Connect + 0                       :
-    case Fc5744Connect + 1                       :
-    case Fc5744Connect + 2                       :
-    case Fc5744Connect + 3                       :
-    case Fc5744Connect + 4                       :
-    case Fc5744Connect + 5                       :
-    case Fc5744Connect + 6                       :
-    case Fc5744Connect + 7                       :
-    case Fc5744Connect + 010                     :
-    case Fc5744Connect + 011                     :
-    case Fc5744Connect + 012                     :
-    case Fc5744Connect + 013                     :
-    case Fc5744Connect + 014                     :
-    case Fc5744Connect + 015                     :
-    case Fc5744Connect + 016                     :
-    case Fc5744Connect + 017                     : return "Connect";
-    case Fc5744ConnectAndSelectCompression + 0   :
-    case Fc5744ConnectAndSelectCompression + 1   :
-    case Fc5744ConnectAndSelectCompression + 2   :
-    case Fc5744ConnectAndSelectCompression + 3   :
-    case Fc5744ConnectAndSelectCompression + 4   :
-    case Fc5744ConnectAndSelectCompression + 5   :
-    case Fc5744ConnectAndSelectCompression + 6   :
-    case Fc5744ConnectAndSelectCompression + 7   :
-    case Fc5744ConnectAndSelectCompression + 010 :
-    case Fc5744ConnectAndSelectCompression + 011 :
-    case Fc5744ConnectAndSelectCompression + 012 :
-    case Fc5744ConnectAndSelectCompression + 013 :
-    case Fc5744ConnectAndSelectCompression + 014 :
-    case Fc5744ConnectAndSelectCompression + 015 :
-    case Fc5744ConnectAndSelectCompression + 016 :
-    case Fc5744ConnectAndSelectCompression + 017 : return "ConnectAndSelectCompression";
-    case Fc5744ReadFwd                           : return "ReadFwd";
-    case Fc5744ReadBkw                           : return "ReadBkw";
-    case Fc5744Write                             : return "Write";
-    case Fc5744WriteShort                        : return "WriteShort";
-    case Fc5744WriteTapeMark                     : return "WriteTapeMark";
-    case Fc5744Autoload                          : return "Autoload";
-        }
-#endif
-    sprintf(buf, "UNKNOWN: %04o", funcCode);
-    return(buf);
     }
 
 /*--------------------------------------------------------------------------
@@ -1686,10 +1608,7 @@ static void mt5744Io(void)
 
     case Fc5744Autoload:
     case Fc5744Continue:
-        if (activeChannel->full)
-            {
-            activeChannel->full = FALSE;
-            }
+        activeChannel->full = FALSE;
         break;
         }
     }
@@ -2158,6 +2077,32 @@ static void mt5744RewindRequestCallback(TapeParam *tp)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Process a response from the StorageTek simulator to a
+**                  REWIND request. Unload the tape after rewinding.
+**
+**  Parameters:     Name        Description.
+**                  tp          pointer to tape unit parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void mt5744RewindUnloadRequestCallback(TapeParam *tp)
+    {
+    char *eor;
+    int status;
+
+    eor = mt5744ParseTapeServerResponse(tp, &status);
+    if (eor == NULL) return;
+    tp->isBusy = FALSE;
+    tp->isReady = FALSE;
+    if (status != 203)
+        {
+        fprintf(stderr, "MT5744: Unexpected status %d received from StorageTek simulator for REWIND/UNLOAD request\n", status);
+        }
+    mt5744ResetInputBuffer(tp, (u8 *)eor);
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Send a request to the StorageTek simulator
 **
 **  Parameters:     Name        Description.
@@ -2304,6 +2249,74 @@ static void mt5744WriteMarkRequestCallback(TapeParam *tp)
     }
 
 #if DEBUG
+/*--------------------------------------------------------------------------
+**  Purpose:        Convert function code to string.
+**
+**  Parameters:     Name        Description.
+**                  funcCode    function code
+**
+**  Returns:        String equivalent of function code.
+**
+**------------------------------------------------------------------------*/
+static char *mt5744Func2String(PpWord funcCode)
+    {
+    static char buf[30];
+    switch(funcCode)
+        {
+    case Fc5744Release                           : return "Release";
+    case Fc5744Continue                          : return "Continue";
+    case Fc5744Rewind                            : return "Rewind";
+    case Fc5744RewindUnload                      : return "RewindUnload";
+    case Fc5744GeneralStatus                     : return "GeneralStatus";
+    case Fc5744SpaceFwd                          : return "SpaceFwd";
+    case Fc5744LocateBlock                       : return "LocateBlock";
+    case Fc5744SpaceBkw                          : return "SpaceBkw";
+    case Fc5744DetailedStatus                    : return "DetailedStatus";
+    case Fc5744ReadBlockId                       : return "ReadBlockId";
+    case Fc5744ReadBufferedLog                   : return "ReadBufferedLog";
+    case Fc5744Connect + 0                       :
+    case Fc5744Connect + 1                       :
+    case Fc5744Connect + 2                       :
+    case Fc5744Connect + 3                       :
+    case Fc5744Connect + 4                       :
+    case Fc5744Connect + 5                       :
+    case Fc5744Connect + 6                       :
+    case Fc5744Connect + 7                       :
+    case Fc5744Connect + 010                     :
+    case Fc5744Connect + 011                     :
+    case Fc5744Connect + 012                     :
+    case Fc5744Connect + 013                     :
+    case Fc5744Connect + 014                     :
+    case Fc5744Connect + 015                     :
+    case Fc5744Connect + 016                     :
+    case Fc5744Connect + 017                     : return "Connect";
+    case Fc5744ConnectAndSelectCompression + 0   :
+    case Fc5744ConnectAndSelectCompression + 1   :
+    case Fc5744ConnectAndSelectCompression + 2   :
+    case Fc5744ConnectAndSelectCompression + 3   :
+    case Fc5744ConnectAndSelectCompression + 4   :
+    case Fc5744ConnectAndSelectCompression + 5   :
+    case Fc5744ConnectAndSelectCompression + 6   :
+    case Fc5744ConnectAndSelectCompression + 7   :
+    case Fc5744ConnectAndSelectCompression + 010 :
+    case Fc5744ConnectAndSelectCompression + 011 :
+    case Fc5744ConnectAndSelectCompression + 012 :
+    case Fc5744ConnectAndSelectCompression + 013 :
+    case Fc5744ConnectAndSelectCompression + 014 :
+    case Fc5744ConnectAndSelectCompression + 015 :
+    case Fc5744ConnectAndSelectCompression + 016 :
+    case Fc5744ConnectAndSelectCompression + 017 : return "ConnectAndSelectCompression";
+    case Fc5744ReadFwd                           : return "ReadFwd";
+    case Fc5744ReadBkw                           : return "ReadBkw";
+    case Fc5744Write                             : return "Write";
+    case Fc5744WriteShort                        : return "WriteShort";
+    case Fc5744WriteTapeMark                     : return "WriteTapeMark";
+    case Fc5744Autoload                          : return "Autoload";
+        }
+    sprintf(buf, "UNKNOWN: %04o", funcCode);
+    return(buf);
+    }
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Flush incomplete data line
 **
