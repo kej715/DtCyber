@@ -677,11 +677,6 @@ static void mt5744CheckTapeServer(void)
             {
             mt5744InitiateConnection(tp);
             }
-        if (tp->state == StAcsConnecting)
-            {
-            FD_SET(tp->fd, &writeFds);
-            if (tp->fd > maxFd) maxFd = tp->fd;
-            }
         else
             {
             if (tp->fd > 0)
@@ -689,7 +684,7 @@ static void mt5744CheckTapeServer(void)
                 FD_SET(tp->fd, &readFds);
                 if (tp->fd > maxFd) maxFd = tp->fd;
                 }
-            if (tp->outputBuffer.out < tp->outputBuffer.in)
+            if (tp->outputBuffer.out < tp->outputBuffer.in || tp->state == StAcsConnecting)
                 {
                 FD_SET(tp->fd, &writeFds);
                 if (tp->fd > maxFd) maxFd = tp->fd;

@@ -355,6 +355,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
       let client = this.getClientForDriveKey(driveKey);
       if (client !== null) {
         this.sendResponse(client, `103 ${volId} dismounted from ${driveKey}`);
+        console.log(`${new Date().toLocaleString()} ${volId} dismounted from ${driveKey}`);
       }
     }
     return status;
@@ -403,6 +404,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
           let client = this.getClientForDriveKey(driveKey);
           if (client !== null) {
             this.sendResponse(client, `${volume.writeEnabled ? "102" : "101"} ${volId} mounted on ${driveKey}`);
+            console.log(`${new Date().toLocaleString()} ${volId} mounted on ${driveKey}`);
           }
         }
       }
@@ -946,6 +948,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     this.driveMap[driveKey] = {client: client};
     client.driveKey = driveKey;
     this.sendResponse(client, `200 ${driveKey} registered`);
+    console.log(`${new Date().toLocaleString()} ${driveKey} registered by ${client.client.remoteAddress}`);
   }
 
   processWriteRequest(client, request, dataIndex) {
