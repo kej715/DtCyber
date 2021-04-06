@@ -2247,33 +2247,6 @@ static bool cdcnetTcpActiveConnectHandler(Gcb *gp, NpuBuffer *bp)
                 gp->connFd = 0;
                 status = tcp_host_unreachable;
                 }
-            else if (rc == 0) // connection succeeded immediately
-                {
-                if (cdcnetGetEndpoints(gp->connFd, &localAddr, &localPort, &peerAddr, &peerPort))
-                    {
-#if DEBUG
-                    fprintf(cdcnetLog, "Connected to host: %s:%u, CN=%02X\n", gp->dstIpAddress, gp->dstPort, gp->cn);
-#endif
-                    gp->localAddr = localAddr;
-                    gp->localPort = localPort;
-                    gp->peerAddr = peerAddr;
-                    gp->peerPort = peerPort;
-                    if (cdcnetTcpSendConnectionIndication(gp))
-                        {
-                        gp->tcpUdpState = StTcpConnected;
-                        }
-                    else
-                        {
-                        gp->tcpUdpState = StTcpIndicatingConnection;
-                        }
-                    }
-                else
-                    {
-                    closesocket(gp->connFd);
-                    gp->connFd = 0;
-                    status = tcp_host_unreachable;
-                    }
-                }
             else // connection in progress
                 {
 #if DEBUG
@@ -2293,33 +2266,6 @@ static bool cdcnetTcpActiveConnectHandler(Gcb *gp, NpuBuffer *bp)
                 close(gp->connFd);
                 gp->connFd = 0;
                 status = tcp_host_unreachable;
-                }
-            else if (rc == 0) // connection succeeded immediately
-                {
-                if (cdcnetGetEndpoints(gp->connFd, &localAddr, &localPort, &peerAddr, &peerPort))
-                    {
-#if DEBUG
-                    fprintf(cdcnetLog, "Connected to host: %s:%u, CN=%02X\n", gp->dstIpAddress, gp->dstPort, gp->cn);
-#endif
-                    gp->localAddr = localAddr;
-                    gp->localPort = localPort;
-                    gp->peerAddr = peerAddr;
-                    gp->peerPort = peerPort;
-                    if (cdcnetTcpSendConnectionIndication(gp))
-                        {
-                        gp->tcpUdpState = StTcpConnected;
-                        }
-                    else
-                        {
-                        gp->tcpUdpState = StTcpIndicatingConnection;
-                        }
-                    }
-                else
-                    {
-                    close(gp->connFd);
-                    gp->connFd = 0;
-                    status = tcp_host_unreachable;
-                    }
                 }
             else // connection in progress
                 {

@@ -191,8 +191,8 @@ typedef enum {
 */
 typedef struct tapeBuffer
     {
-    int in;
-    int out;
+    u32 in;
+    u32 out;
     u8  data[MaxByteBuf + 16];
     } TapeBuffer;
 
@@ -203,7 +203,7 @@ typedef struct ctrlParam
     {
     bool        isWriting;
     bool        isOddFrameCount;
-    int         ioDelay;
+    u8          ioDelay;
     u8          channelNo;
     u8          eqNo;
     PpWord      generalStatus[GeneralStatusLength];
@@ -258,6 +258,7 @@ static void      mt5744Activate(void);
 static void      mt5744CalculateBufferedLog(TapeParam *tp);
 static void      mt5744CalculateDetailedStatus(TapeParam *tp);
 static void      mt5744CalculateGeneralStatus(TapeParam *tp);
+static void      mt5744CheckTapeServer(void);
 static void      mt5744CloseTapeServerConnection(TapeParam *tp);
 static void      mt5744ConnectCallback(TapeParam *tp);
 static void      mt5744DismountRequestCallback(TapeParam *tp);
@@ -277,6 +278,7 @@ static int       mt5744PackBytes(TapeParam *tp, u8 *rp, int recLen);
 static char     *mt5744ParseTapeServerResponse(TapeParam *tp, int *status);
 static void      mt5744ReadBlockIdRequestCallback(TapeParam *tp);
 static void      mt5744ReadRequestCallback(TapeParam *tp);
+static void      mt5744ReceiveTapeServerResponse(TapeParam *tp);
 static void      mt5744RegisterUnit(TapeParam *tp);
 static void      mt5744RegisterUnitRequestCallback(TapeParam *tp);
 static void      mt5744ResetInputBuffer(TapeParam *tp, u8 *eor);
@@ -310,7 +312,6 @@ static void      mt5744LogFlush(void);
 */
 static TapeParam *firstTape = NULL;
 static TapeParam *lastTape = NULL;
-static u8 rawBuffer[MaxByteBuf];
 
 #if DEBUG
 static FILE *mt5744Log = NULL;
@@ -341,7 +342,7 @@ void mt5744Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
     CtrlParam *cp;
     DevSlot *dp;
-    struct hostent *entry;
+    struct hostent *hp;
     u16 serverPort;
     char *token;
     char *sp;
@@ -440,13 +441,14 @@ void mt5744Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             channelNo, eqNo, unitNo);
         exit(1);
         }
-    entry = gethostbyname(tp->serverName);
-    if (entry == NULL)
+    hp = gethostbyname(tp->serverName);
+    if (hp == NULL)
         {
         fprintf(stderr, "Failed to lookup address of StorageTek 4400 simulator host %s\n", tp->serverName);
         exit(1);
         }
-    memcpy(&tp->serverAddr.sin_addr.s_addr, entry->h_addr, entry->h_length);
+    tp->serverAddr.sin_family = AF_INET;
+    memcpy(&tp->serverAddr.sin_addr.s_addr, (struct in_addr *)hp->h_addr_list[0], sizeof(struct in_addr));
     tp->serverAddr.sin_port = htons(serverPort);
 
     /*
@@ -469,12 +471,11 @@ void mt5744Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     tp->eqNo = eqNo;
     tp->unitNo = unitNo;
 
-    mt5744InitiateConnection(tp);
-
     /*
     **  Print a friendly message.
     */
-    printf("MT5744 initialised on channel %o equipment %o unit %o\n", channelNo, eqNo, unitNo);
+    printf("MT5744 initialised on channel %o equipment %o unit %o, drive %s on tape server %s:%d\n",
+        channelNo, eqNo, unitNo, tp->driveName, tp->serverName, serverPort);
     }
 
 /*--------------------------------------------------------------------------
@@ -652,21 +653,20 @@ static void mt5744CalculateGeneralStatus(TapeParam *tp)
 **------------------------------------------------------------------------*/
 static void mt5744CheckTapeServer(void)
     {
-    char *eor;
 #if defined(_WIN32)
     SOCKET maxFd;
 #else
     int maxFd;
 #endif
-    int n;
-    static fd_set readFds;
+    fd_set readFds;
     int readySockets;
-    int status;
     struct timeval timeout;
     TapeParam *tp;
-    static fd_set writeFds;
+    fd_set writeFds;
 
-    FD_ZERO(&readFds);
+    /*
+    **  First, process any tape server connections in progress
+    */
     FD_ZERO(&writeFds);
     tp = firstTape;
     maxFd = 0;
@@ -677,22 +677,53 @@ static void mt5744CheckTapeServer(void)
             {
             mt5744InitiateConnection(tp);
             }
-        else
+        else if (tp->fd > 0 && tp->state == StAcsConnecting)
             {
-            if (tp->fd > 0)
-                {
-                FD_SET(tp->fd, &readFds);
-                if (tp->fd > maxFd) maxFd = tp->fd;
-                }
-            if (tp->outputBuffer.out < tp->outputBuffer.in || tp->state == StAcsConnecting)
-                {
-                FD_SET(tp->fd, &writeFds);
-                if (tp->fd > maxFd) maxFd = tp->fd;
-                }
+            FD_SET(tp->fd, &writeFds);
+            if (tp->fd > maxFd) maxFd = tp->fd;
             }
         tp = tp->nextTape;
         }
+    if (maxFd > 0)
+        {
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 0;
+        readySockets = select(maxFd + 1, NULL, &writeFds, NULL, &timeout);
+        if (readySockets > 0)
+            {
+            tp = firstTape;
+            while (tp)
+                {
+                if (tp->fd > 0 && tp->state == StAcsConnecting && FD_ISSET(tp->fd, &writeFds))
+                    {
+                    mt5744ConnectCallback(tp);
+                    }
+                tp = tp->nextTape;
+                }
+            }
+        }
 
+    /*
+    **  Second, process normal I/O for connected tape units
+    */
+    FD_ZERO(&readFds);
+    FD_ZERO(&writeFds);
+    tp = firstTape;
+    maxFd = 0;
+
+    while (tp)
+        {
+        if (tp->fd > 0 && tp->state > StAcsConnecting)
+            {
+            FD_SET(tp->fd, &readFds);
+            if (tp->outputBuffer.out < tp->outputBuffer.in)
+                {
+                FD_SET(tp->fd, &writeFds);
+                }
+            if (tp->fd > maxFd) maxFd = tp->fd;
+            }
+        tp = tp->nextTape;
+        }
     if (maxFd < 1) return;
 
     timeout.tv_sec = 0;
@@ -701,74 +732,15 @@ static void mt5744CheckTapeServer(void)
     if (readySockets < 1) return;
 
     tp = firstTape;
-
     while (tp)
         {
-        if (tp->fd > 0 && FD_ISSET(tp->fd, &readFds))
+        if (tp->fd > 0 && tp->state > StAcsConnecting)
             {
-            n = recv(tp->fd, &tp->inputBuffer.data[tp->inputBuffer.in], sizeof(tp->inputBuffer.data) - tp->inputBuffer.in, 0);
-            if (n <= 0)
+            if (FD_ISSET(tp->fd, &readFds))
                 {
-#if DEBUG
-                if (n < 0)
-                    {
-                    fprintf(mt5744Log, "\n%06d Disconnected from %s:%u for CH:%02o u:%d, end of stream", traceSequenceNo,
-                        tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
-                    }
-                else
-                    {
-                    fprintf(mt5744Log, "\n%06d Disconnected from %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
-                        tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
-                    }
-#endif
-                mt5744CloseTapeServerConnection(tp);
+                mt5744ReceiveTapeServerResponse(tp);
                 }
-            else
-                {
-#if DEBUG
-                fprintf(mt5744Log, "\n%06d Received %d bytes from %s:%u for CH:%02o u:%d\n", traceSequenceNo, n,
-                    tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
-                mt5744LogBytes(&tp->inputBuffer.data[tp->inputBuffer.in], n);
-                mt5744LogFlush();
-#endif
-                tp->inputBuffer.in += n;
-                if (tp->inputBuffer.data[0] == '1') // mount/dismount event
-                    {
-                    if (tp->inputBuffer.in > 3)
-                        {
-                        eor = mt5744ParseTapeServerResponse(tp, &status);
-                        if (eor == NULL) return;
-                        switch (status)
-                            {
-                        case 101:
-                        case 102:
-                            mt5744LoadTape(tp, status == 102);
-                            break;
-                        case 103:
-                            mt5744UnloadTape(tp);
-                            break;
-                        default:
-                            fprintf(stderr, "MT5744: Unrecognized event indication %.3s from %s:%u for CH:%02o u:%d", 
-                                &tp->inputBuffer.data[0], tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
-                            mt5744CloseTapeServerConnection(tp);
-                            break;
-                            }
-                        mt5744ResetInputBuffer(tp, (u8 *)eor);
-                        }
-                    }
-                else
-                    {
-                    tp->callback(tp);
-                    }
-                }
-            }
-        if (tp->fd > 0 && FD_ISSET(tp->fd, &writeFds))
-            {
-            if (tp->state == StAcsConnecting)
-                {
-                mt5744ConnectCallback(tp);
-                }
-            else
+            if (tp->fd > 0 && FD_ISSET(tp->fd, &writeFds))
                 {
                 mt5744SendTapeServerRequest(tp);
                 }
@@ -789,8 +761,8 @@ static void mt5744CheckTapeServer(void)
 static void mt5744CloseTapeServerConnection(TapeParam *tp)
     {
 #if DEBUG
-    fprintf(mt5744Log, "\n%06d Close connection to %s:%u for CH:%02o u:%d", traceSequenceNo,
-        tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
+    fprintf(mt5744Log, "\n%06d Close connection on socket %d to %s:%u for CH:%02o u:%d", traceSequenceNo,
+        tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
 #endif
 #if defined(_WIN32)
     closesocket(tp->fd);
@@ -836,24 +808,24 @@ static void mt5744ConnectCallback(TapeParam *tp)
     if (rc < 0)
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Failed to query socket options for %s:%u for CH:%02o u:%d", traceSequenceNo,
-            tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
+        fprintf(mt5744Log, "\n%06d Failed to query socket options on socket %d for %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
+            tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
 #endif
         mt5744CloseTapeServerConnection(tp);
         }
     else if (optVal != 0) // connection failed
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Failed to connect to %s:%u for CH:%02o u:%d", traceSequenceNo,
-            tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
+        fprintf(mt5744Log, "\n%06d Failed to connect on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
+            tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(optVal));
 #endif
         mt5744CloseTapeServerConnection(tp);
         }
     else
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Connected to %s:%u for CH:%02o u:%d", traceSequenceNo,
-            tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
+        fprintf(mt5744Log, "\n%06d Connected on socket %d to %s:%u for CH:%02o u:%d", traceSequenceNo,
+            tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
 #endif
         mt5744RegisterUnit(tp);
         }
@@ -994,8 +966,6 @@ static FcStatus mt5744Func(PpWord funcCode)
     CtrlParam *cp;
     TapeParam *tp;
     i8 unitNo;
-
-    mt5744CheckTapeServer();
 
     cp = activeDevice->controllerContext;
     unitNo = activeDevice->selectedUnit;
@@ -1242,7 +1212,6 @@ static void mt5744InitiateConnection(TapeParam *tp)
     int optVal;
 #else
     int fd;
-    socklen_t optLen;
     int optVal;
 #endif
     int optEnable = 1;
@@ -1254,13 +1223,32 @@ static void mt5744InitiateConnection(TapeParam *tp)
 
     fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 #if defined(_WIN32)
+    //  -------------------------------
+    //       Windows socket setup
+    //  -------------------------------
     if (fd == INVALID_SOCKET)
         {
         fprintf(stderr, "MT5744: Failed to create socket for host: %s\n", tp->serverName);
         return;
         }
-    setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
-    ioctlsocket(fd, FIONBIO, &blockEnable);
+    if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable)) < 0)
+        {
+#if DEBUG
+        fprintf(mt5744Log, "\n%06d Failed to set KEEPALIVE option on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
+            fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
+#endif
+        closesocket(fd);
+        return;
+        }
+    if (ioctlsocket(fd, FIONBIO, &blockEnable) < 0)
+        {
+#if DEBUG
+        fprintf(mt5744Log, "\n%06d Failed to set non-blocking I/O on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
+            fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
+#endif
+        closesocket(fd);
+        return;
+        }
     rc = connect(fd, (struct sockaddr *)&tp->serverAddr, sizeof(tp->serverAddr));
     if (rc == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)
         {
@@ -1270,32 +1258,42 @@ static void mt5744InitiateConnection(TapeParam *tp)
 #endif
         closesocket(fd);
         }
-    else if (rc == 0) // connection succeeded immediately
-        {
-#if DEBUG
-        fprintf(mt5744Log, "\n%06d Connected to %s:%u for CH:%02o u%d", traceSequenceNo,
-            tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
-#endif
-        tp->fd = fd;
-        mt5744RegisterUnit(tp);
-        }
     else // connection in progress
         {
-#if DEBUG
-        fprintf(mt5744Log, "\n%06d Initiated connection to %s:%u for CH:%02o u%d", traceSequenceNo,
-            tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
-#endif
         tp->fd = fd;
         tp->state = StAcsConnecting;
+#if DEBUG
+        fprintf(mt5744Log, "\n%06d Initiated connection on socket %d to %s:%u for CH:%02o u%d", traceSequenceNo,
+            tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
+#endif
         }
 #else
+    //  -------------------------------
+    //     non-Windows socket setup
+    //  -------------------------------
     if (fd < 0)
         {
         fprintf(stderr, "MT5744: Failed to create socket for host: %s\n", tp->serverName);
         return;
         }
-    setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
-    fcntl(fd, F_SETFL, O_NONBLOCK);
+    if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable)) < 0)
+        {
+#if DEBUG
+        fprintf(mt5744Log, "\n%06d Failed to set KEEPALIVE option on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
+            fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
+#endif
+        close(fd);
+        return;
+        }
+    if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
+        {
+#if DEBUG
+        fprintf(mt5744Log, "\n%06d Failed to set non-blocking I/O on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
+            fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
+#endif
+        close(fd);
+        return;
+        }
     rc = connect(fd, (struct sockaddr *)&tp->serverAddr, sizeof(tp->serverAddr));
     if (rc < 0 && errno != EINPROGRESS)
         {
@@ -1305,25 +1303,16 @@ static void mt5744InitiateConnection(TapeParam *tp)
 #endif
         close(fd);
         }
-    else if (rc == 0) // connection succeeded immediately
-        {
-#if DEBUG
-        fprintf(mt5744Log, "\n%06d Connected to %s:%u for CH:%02o u%d", traceSequenceNo,
-            tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
-#endif
-        tp->fd = fd;
-        mt5744RegisterUnit(tp);
-        }
     else // connection in progress
         {
-#if DEBUG
-        fprintf(mt5744Log, "\n%06d Initiated connection to %s:%u for CH:%02o u%d", traceSequenceNo,
-            tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
-#endif
         tp->fd = fd;
         tp->state = StAcsConnecting;
-        }
+#if DEBUG
+        fprintf(mt5744Log, "\n%06d Initiated connection on socket %d to %s:%u for CH:%02o u%d", traceSequenceNo,
+            tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
 #endif
+        }
+#endif // not _WIN32
     }
 
 /*--------------------------------------------------------------------------
@@ -1872,6 +1861,71 @@ static void mt5744ReadBlockIdRequestCallback(TapeParam *tp)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Process a response from the StorageTek simulator
+**
+**  Parameters:     Name        Description.
+**                  tp          pointer to tape unit parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void mt5744ReceiveTapeServerResponse(TapeParam *tp)
+    {
+    char *eor;
+    int n;
+    int status;
+
+    n = recv(tp->fd, &tp->inputBuffer.data[tp->inputBuffer.in], sizeof(tp->inputBuffer.data) - tp->inputBuffer.in, 0);
+    if (n <= 0)
+        {
+#if DEBUG
+        fprintf(mt5744Log, "\n%06d Disconnected on socket %d from %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
+            tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo,
+            (n == 0) ? "end of stream" : strerror(errno));
+#endif
+        mt5744CloseTapeServerConnection(tp);
+        }
+    else
+        {
+#if DEBUG
+        fprintf(mt5744Log, "\n%06d Received %d bytes on socket %d from %s:%u for CH:%02o u:%d\n", traceSequenceNo, n,
+            tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
+        mt5744LogBytes(&tp->inputBuffer.data[tp->inputBuffer.in], n);
+        mt5744LogFlush();
+#endif
+        tp->inputBuffer.in += n;
+        if (tp->inputBuffer.data[0] == '1') // mount/dismount event
+            {
+            if (tp->inputBuffer.in > 3)
+                {
+                eor = mt5744ParseTapeServerResponse(tp, &status);
+                if (eor == NULL) return;
+                switch (status)
+                    {
+                case 101:
+                case 102:
+                    mt5744LoadTape(tp, status == 102);
+                    break;
+                case 103:
+                    mt5744UnloadTape(tp);
+                    break;
+                default:
+                    fprintf(stderr, "MT5744: Unrecognized event indication %.3s from %s:%u for CH:%02o u:%d",
+                        &tp->inputBuffer.data[0], tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
+                    mt5744CloseTapeServerConnection(tp);
+                    break;
+                    }
+                mt5744ResetInputBuffer(tp, (u8 *)eor);
+                }
+            }
+        else
+            {
+            tp->callback(tp);
+            }
+        }
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Process a response from the StorageTek simulator to a
 **                  READFWD or READBKW request.
 **
@@ -2120,8 +2174,8 @@ static void mt5744SendTapeServerRequest(TapeParam *tp)
     if (n > 0)
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Sent %d bytes to %s:%u for CH:%02o u:%d\n", traceSequenceNo, n,
-            tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
+        fprintf(mt5744Log, "\n%06d Sent %d bytes on socket %d to %s:%u for CH:%02o u:%d\n", traceSequenceNo, n,
+            tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
         mt5744LogBytes(&tp->outputBuffer.data[tp->outputBuffer.out], n);
         mt5744LogFlush();
 #endif

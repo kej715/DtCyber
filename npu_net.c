@@ -602,10 +602,10 @@ void npuNetQueueAck(Tcb *tp, u8 blockSeqNo)
 void npuNetCheckStatus(void)
     {
     Pcb *pcbp;
-    static fd_set readFds;
+    fd_set readFds;
     int readySockets = 0;
     struct timeval timeout;
-    static fd_set writeFds;
+    fd_set writeFds;
 
     timeout.tv_sec = 0;
     timeout.tv_usec = 0;
@@ -777,7 +777,7 @@ static void npuNetSendConsoleMsg(int connFd, int connType, char *msg)
 static int npuNetAcceptConnections(fd_set *selectFds, int maxFd)
     {
     int acceptFd;
-    static fd_set acceptFds;
+    fd_set acceptFds;
     struct sockaddr_in from;
     int i;
     int n;
@@ -867,7 +867,7 @@ static int npuNetCreateConnections(void)
     Ncb *ncbp;
     int optEnable = 1;
     int rc;
-    static fd_set selectFds;
+    fd_set selectFds;
     struct timeval timeout;
 #if defined(_WIN32)
     SOCKET fd;
@@ -930,18 +930,6 @@ static int npuNetCreateConnections(void)
                     npuLogMessage("NET: Failed to connect to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
                     closesocket(fd);
                     }
-                else if (rc == 0) // connection succeeded immediately
-                    {
-                    npuLogMessage("NET: Connected to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
-                    if (npuNetProcessNewConnection(fd, ncbp, FALSE))
-                        {
-                        n += 1;
-                        }
-                    else
-                        {
-                        ncbp->nextConnectionAttempt = currentTime + (time_t)ConnectionRetryInterval;
-                        }
-                    }
                 else // connection in progress
                     {
                     npuLogMessage("NET: Initiated connection to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
@@ -961,18 +949,6 @@ static int npuNetCreateConnections(void)
                     {
                     npuLogMessage("NET: Failed to connect to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
                     close(fd);
-                    }
-                else if (rc == 0) // connection succeeded immediately
-                    {
-                    npuLogMessage("NET: Connected to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
-                    if (npuNetProcessNewConnection(fd, ncbp, FALSE))
-                        {
-                        n += 1;
-                        }
-                    else
-                        {
-                        ncbp->nextConnectionAttempt = currentTime + (time_t)ConnectionRetryInterval;
-                        }
                     }
                 else // connection in progress
                     {
@@ -1215,7 +1191,7 @@ static void npuNetThread(void *param)
 static void *npuNetThread(void *param)
 #endif
     {
-    static fd_set listenFds;;
+    fd_set listenFds;;
     int i;
     int j;
     Ncb *ncbp;
