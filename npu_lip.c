@@ -28,7 +28,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG 1
 
 /*
 **  -------------
@@ -143,6 +143,7 @@ static int npuLipLogBytesCol = 0;
 bool npuLipNotifyNetConnect(Pcb *pcbp, bool isPassive)
     {
     npuLipResetPcb(pcbp);
+    pcbp->controls.lip.lastExchange = time(NULL);
     if (isPassive)
         {
         pcbp->controls.lip.state = StTrunkRcvConnReq;
@@ -171,7 +172,7 @@ bool npuLipNotifyNetConnect(Pcb *pcbp, bool isPassive)
 **------------------------------------------------------------------------*/
 void npuLipNotifyNetDisconnect(Pcb *pcbp)
     {
-    if (pcbp->controls.lip.state >= StTrunkRcvBlockLengthHi)
+    if (pcbp->controls.lip.state > StTrunkSndConnReq)
         {
         npuLipDeactivateTrunk(pcbp);
         }
@@ -263,7 +264,7 @@ void npuLipProcessUplineData(Pcb *pcbp)
                 }
             else
                 {
-                fputs("LIP: Staging buffer overflow during connection establishiment\n", stderr);
+                fputs("LIP: Staging buffer overflow during connection establishment\n", stderr);
                 pcbp->controls.lip.state = StTrunkDisconnected;
                 }
             return;
@@ -617,7 +618,7 @@ static bool npuLipProcessConnectRequest(Pcb *pcbp)
             len = sprintf(response, "%d %s %u %u unrecognized trunk\n",
                 status, npuNetHostID, localNode, peerNode);
             }
-        else if (trunkPcbp->connFd > 0)
+        else if (trunkPcbp->connFd > 0 && trunkPcbp != pcbp)
             {
             status = 301;
             len = sprintf(response, "%d %s %u %u already connected\n",
