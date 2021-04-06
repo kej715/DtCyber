@@ -1253,8 +1253,8 @@ static void mt5744InitiateConnection(TapeParam *tp)
     if (rc == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Failed to connect to %s:%u for CH:%02o u:%d", traceSequenceNo,
-            tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
+        fprintf(mt5744Log, "\n%06d Failed to connect to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
+            tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
 #endif
         closesocket(fd);
         }
@@ -1298,8 +1298,8 @@ static void mt5744InitiateConnection(TapeParam *tp)
     if (rc < 0 && errno != EINPROGRESS)
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Failed to connect to %s:%u for CH:%02o u%d", traceSequenceNo,
-            tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
+        fprintf(mt5744Log, "\n%06d Failed to connect to %s:%u for CH:%02o u%d, %s", traceSequenceNo,
+            tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
 #endif
         close(fd);
         }
