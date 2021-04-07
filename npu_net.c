@@ -1321,7 +1321,7 @@ static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive)
     #else
         close(connFd);
     #endif
-        ncbp->connFd = 0;
+        if (isPassive == FALSE) ncbp->connFd = 0;
         ncbp->state = StConnInit;
         return FALSE;
         }
@@ -1377,9 +1377,9 @@ static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive)
             {
             npuLogMessage("NET: Free PCB not found for active connection of type %d (%s)",
                 ncbp->connType, ncbp->hostName);
+            ncbp->connFd = 0;
             ncbp->state = StConnBusy;
             }
-        ncbp->connFd = 0;
         return FALSE;
         }
     /*
@@ -1402,7 +1402,7 @@ static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive)
 #else
     close(connFd);
 #endif
-    ncbp->connFd = 0;
+    if (isPassive == FALSE) ncbp->connFd = 0;
     ncbp->state = StConnInit;
     return FALSE;
     }

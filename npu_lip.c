@@ -445,19 +445,17 @@ void npuLipProcessDownlineData(NpuBuffer *bp)
             {
             pcbp = npuNetFindPcb(claPort);
             if (pcbp->ncbp && pcbp->ncbp->connType == ConnTypeTrunk
-                && pcbp->controls.lip.remoteNode == dn && pcbp->ncbp->connFd > 0)
+                && pcbp->controls.lip.remoteNode == dn && pcbp->connFd > 0)
                 {
                 npuBipQueueAppend(bp, &pcbp->controls.lip.outputQ);
-                break;
+                return;
                 }
             }
-        if (claPort > npuNetMaxClaPort)
-            {
-            fprintf(stderr, "LIP: Block received for unknown or disconnected node %02x\n", dn);
+        fprintf(stderr, "LIP: Block received for unknown or disconnected node %02x\n", dn);
 #if DEBUG
-            fprintf(npuLipLog, "Block received for unknown or disconnected node: %02x\n", dn);
+        fprintf(npuLipLog, "Block received for unknown or disconnected node: %02x\n", dn);
 #endif
-            }
+        npuBipBufRelease(bp);
         }
     }
 
