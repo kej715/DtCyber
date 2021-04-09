@@ -941,7 +941,8 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
       return;
     }
     const driveKey = request[1];
-    if (typeof this.driveMap[driveKey] !== "undefined") {
+    if (typeof this.driveMap[driveKey] !== "undefined"
+        && this.driveMap[driveKey].client.client.remoteAddress !== client.client.remoteAddress) {
       this.sendResponse(client, `401 ${driveKey} already registered`);
       return;
     }
