@@ -27,10 +27,20 @@ const logHttpRequest = (req, status) => {
 };
 
 const httpServer = http.createServer((req, res) => {
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "OPTIONS, GET",
+    "Access-Control-Allow-Headers": "X-Requested-With, Content-Type",
+    "Access-Control-Max-Age": 2592000, // 30 days
+  };
   if (req.method === "GET") {
     let u = url.parse(req.url, true);
     if (u.pathname === "/volumes") {
-      res.writeHead(200, {"Content-Type":"application/json"});
+      let headers = {"Content-Type":"application/json"};
+      Object.keys(corsHeaders).forEach(key => {
+        headers[key] = corsHeaders[key];
+      });
+      res.writeHead(200, headers);
       res.write(JSON.stringify(stkcsi.volumeMap));
       res.end();
       logHttpRequest(req, 200);
@@ -40,6 +50,11 @@ const httpServer = http.createServer((req, res) => {
       res.end();
       logHttpRequest(req, 404);
     }
+  }
+  else if (req.method === "OPTIONS") {
+    res.writeHead(204, corsHeaders);
+    res.end();
+    logHttpRequest(req, 204);
   }
   else {
     res.writeHead(501);
