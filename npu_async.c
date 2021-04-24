@@ -134,6 +134,14 @@ static u8 telnetWill[6] = {TELNET_IAC, TELNET_WILL, 0, TELNET_IAC, TELNET_WILL, 
 static u8 telnetWont[3] = {TELNET_IAC, TELNET_WONT, 0};
 static u8 iAmHereMessage[] = "\r\nYes, I am here.\r\n\r\n";
 
+static u8 blockResetConnection[] =
+    {
+    0,                  // DN
+    0,                  // SN
+    0,                  // CN
+    BtHTRESET,          // BT/BSN/PRIO
+    };
+
 /*
 **--------------------------------------------------------------------------
 **
@@ -156,6 +164,24 @@ void npuAsyncPresetPcb(Pcb *pcbp)
     pcbp->controls.async.state = StTelnetData;
     pcbp->controls.async.pendingWills = 0;
     pcbp->controls.async.tp = NULL;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Process a break indication from the host.
+**
+**  Parameters:     Name        Description.
+**                  tp          pointer to TCB
+**                  len         length of data
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void npuAsyncProcessBreakIndication(Tcb *tp)
+    {
+    blockResetConnection[BlkOffDN] = npuSvmCouplerNode;
+    blockResetConnection[BlkOffSN] = npuSvmNpuNode;
+    blockResetConnection[BlkOffCN] = tp->cn;
+    npuBipRequestUplineCanned(blockResetConnection, sizeof(blockResetConnection));
     }
 
 /*--------------------------------------------------------------------------

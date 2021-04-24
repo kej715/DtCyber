@@ -595,6 +595,13 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
         */
         break;
 
+    case BtHTBREAK:
+        if (tp->tipType == TtASYNC)
+            {
+            npuAsyncProcessBreakIndication(tp);
+            }
+        break;
+
     default:
 #if DEBUG
         {

@@ -830,6 +830,7 @@ void npuAsyncNotifyNetDisconnect(Pcb *pcbp);
 void npuAsyncNotifyTermConnect(Tcb *tp);
 void npuAsyncNotifyTermDisconnect(Tcb *tp);
 void npuAsyncPresetPcb(Pcb *pcbp);
+void npuAsyncProcessBreakIndication(Tcb *tp);
 void npuAsyncProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last);
 void npuAsyncProcessTelnetData(Pcb *pcbp);
 void npuAsyncProcessUplineData(Pcb *pcbp);
