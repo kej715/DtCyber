@@ -16,6 +16,7 @@ class StkCSI extends Program {
   static TAPE_MARK           = 0x00000000;
   static TAPE_READ_FAILURE   = 0x80000000;
   static RECORD_ERROR_FLAG   = 0x80000000;
+  static MAX_TAPE_SIZE       = 200000000;
 
   static COMMAND_AUDIT       = 1;
   static COMMAND_CANCEL      = 2;
@@ -201,7 +202,7 @@ class StkCSI extends Program {
   static STATUS_DUPLICATE_IDENTIFIER  = 114;
   static STATUS_EVENT_LOG_FAILURE     = 115;
   
-static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identifier
+  static EXTERNAL_LABEL_SIZE          = 6;   // maximum length of volume identifier
 
   static MIN_ACS                      = 0;   // minimum automated cartridge server number
   static MAX_ACS                      = 127; // maximum automated cartridge server number
@@ -857,8 +858,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
       this.sendResponse(client, "403 No tape mounted");
       return;
     }
-    let stat = fs.fstatSync(volume.fd);
-    let physRefValue = Math.floor((volume.position / stat.size) * 126) + 1;
+    let physRefValue = Math.floor((volume.position / StkCSI.MAX_TAPE_SIZE) * 126) + 1;
     let id = (physRefValue << 24) | volume.blockId;
     this.sendResponse(client, `204 ${id} ${id}`);
   }
@@ -942,6 +942,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
     }
     const driveKey = request[1];
     if (typeof this.driveMap[driveKey] !== "undefined"
+        && this.driveMap[driveKey].client !== "undefined"
         && this.driveMap[driveKey].client.client.remoteAddress !== client.client.remoteAddress) {
       this.sendResponse(client, `401 ${driveKey} already registered`);
       return;
@@ -999,6 +1000,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
       return;
     }
     volume.position += 4;
+    volume.blockId += 1;
     this.sendResponse(client, "200 Ok");
   }
 
@@ -1019,6 +1021,7 @@ static EXTERNAL_LABEL_SIZE            = 6;   // maximum length of volume identif
       return;
     }
     volume.position += 4;
+    volume.blockId += 1;
     this.sendResponse(client, "200 Ok");
   }
 

@@ -31,7 +31,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG 1
 
 /*
 **  -------------
@@ -208,6 +208,9 @@ typedef struct ctrlParam
     u8          eqNo;
     PpWord      generalStatus[GeneralStatusLength];
     PpWord      detailedStatus[DetailedStatusLength];
+#if DEBUG
+    bool        isJustActivated;
+#endif
     } CtrlParam;
 
 /*
@@ -244,7 +247,7 @@ typedef struct tapeParam
     bool        isTapeMark;
     bool        isWriteEnabled;
     PpWord      errorCode;
-    PpWord      recordLength;
+    u32         recordLength;
     PpWord      ioBuffer[MaxPpBuf];
     PpWord      *bp;
     } TapeParam;
@@ -314,7 +317,8 @@ static TapeParam *firstTape = NULL;
 static TapeParam *lastTape = NULL;
 
 #if DEBUG
-static FILE *mt5744Log = NULL;
+//static FILE *mt5744Log = NULL;
+ FILE *mt5744Log = NULL;
 static char mt5744LogBuf[LogLineLength + 1];
 static int  mt5744LogBytesCol = 0;
 #endif
@@ -544,10 +548,12 @@ static void mt5744Activate(void)
     {
 #if DEBUG
     CtrlParam *cp = activeDevice->controllerContext;
-    fprintf(mt5744Log, "\n%06d PP:%02o CH:%02o Activate\n   ",
+    fprintf(mt5744Log, "\n%010u PP:%02o CH:%02o P:%04o Activate",
         traceSequenceNo,
         activePpu->id,
-        activeDevice->channel->id);
+        activeDevice->channel->id,
+        activePpu->regP);
+    cp->isJustActivated = TRUE;
 #endif
     activeChannel->delayStatus = 5;
     }
@@ -624,16 +630,9 @@ static void mt5744CalculateGeneralStatus(TapeParam *tp)
         if (tp->isCharacterFill) cp->generalStatus[0] |= St5744CharacterFill;
         if (tp->isTapeMark)      cp->generalStatus[0] |= St5744TapeMark;
         if (tp->isWriteEnabled)  cp->generalStatus[0] |= St5744WriteEnabled;
-        if (tp->isEOT)
-            {
-            cp->generalStatus[0] |= St5744EOT;
-            cp->generalStatus[0] |= St5744Alert;
-            }
-        if (tp->isBlockNotFound)
-            {
-            cp->generalStatus[0] |= St5744BlockNotFound;
-            cp->generalStatus[0] |= St5744Alert;
-            }
+        if (tp->isEOT)           cp->generalStatus[0] |= St5744EOT;
+        if (tp->isBlockNotFound) cp->generalStatus[0] |= St5744BlockNotFound;
+        if (tp->isAlert)         cp->generalStatus[0] |= St5744Alert;
         cp->generalStatus[1] = tp->errorCode;
         }
     else
@@ -761,7 +760,7 @@ static void mt5744CheckTapeServer(void)
 static void mt5744CloseTapeServerConnection(TapeParam *tp)
     {
 #if DEBUG
-    fprintf(mt5744Log, "\n%06d Close connection on socket %d to %s:%u for CH:%02o u:%d", traceSequenceNo,
+    fprintf(mt5744Log, "\n%010u Close connection on socket %d to %s:%u for CH:%02o u:%d", traceSequenceNo,
         tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
 #endif
 #if defined(_WIN32)
@@ -808,7 +807,7 @@ static void mt5744ConnectCallback(TapeParam *tp)
     if (rc < 0)
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Failed to query socket options on socket %d for %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
+        fprintf(mt5744Log, "\n%010u Failed to query socket options on socket %d for %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
             tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
 #endif
         mt5744CloseTapeServerConnection(tp);
@@ -816,7 +815,7 @@ static void mt5744ConnectCallback(TapeParam *tp)
     else if (optVal != 0) // connection failed
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Failed to connect on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
+        fprintf(mt5744Log, "\n%010u Failed to connect on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
             tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(optVal));
 #endif
         mt5744CloseTapeServerConnection(tp);
@@ -824,7 +823,7 @@ static void mt5744ConnectCallback(TapeParam *tp)
     else
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Connected on socket %d to %s:%u for CH:%02o u:%d", traceSequenceNo,
+        fprintf(mt5744Log, "\n%010u Connected on socket %d to %s:%u for CH:%02o u:%d", traceSequenceNo,
             tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
 #endif
         mt5744RegisterUnit(tp);
@@ -842,10 +841,11 @@ static void mt5744ConnectCallback(TapeParam *tp)
 static void mt5744Disconnect(void)
     {
 #if DEBUG
-    fprintf(mt5744Log, "\n%06d PP:%02o CH:%02o Disconnect",
+    fprintf(mt5744Log, "\n%010u PP:%02o CH:%02o P:%04o Disconnect",
         traceSequenceNo,
         activePpu->id,
-        activeDevice->channel->id);
+        activeDevice->channel->id,
+        activePpu->regP);
 #endif
     /*
     **  Abort pending device disconnects - the PP is doing the disconnect.
@@ -949,6 +949,14 @@ static void mt5744FlushWrite(void)
     tp->isBusy = TRUE;
     cp->isWriting = FALSE;
     cp->isOddFrameCount = FALSE;
+#if DEBUG
+    fprintf(mt5744Log, "\n%010u PP:%02o CH:%02o P:%04o Write %d PP words",
+        traceSequenceNo,
+        activePpu->id,
+        activeDevice->channel->id,
+        activePpu->regP,
+        tp->recordLength);
+#endif
     mt5744SendTapeServerRequest(tp);
     }
 
@@ -978,11 +986,20 @@ static FcStatus mt5744Func(PpWord funcCode)
         tp = NULL;
         }
 
+    /*
+    **  Flush write data if necessary.
+    */
+    if (cp->isWriting)
+        {
+        mt5744FlushWrite();
+        }
+
 #if DEBUG
-    fprintf(mt5744Log, "\n%06d PP:%02o CH:%02o u:%d f:%04o T:%-25s  >   ",
+    fprintf(mt5744Log, "\n%010u PP:%02o CH:%02o P:%04o u:%d f:%04o T:%-25s",
         traceSequenceNo,
         activePpu->id,
         activeDevice->channel->id,
+        activePpu->regP,
         unitNo,
         funcCode,
         mt5744Func2String(funcCode));
@@ -993,14 +1010,6 @@ static FcStatus mt5744Func(PpWord funcCode)
     */
     activeDevice->fcode = 0;
     activeChannel->full = FALSE;
-
-    /*
-    **  Flush write data if necessary.
-    */
-    if (cp->isWriting)
-        {
-        mt5744FlushWrite();
-        }
 
     /*
     **  Process tape function.
@@ -1234,7 +1243,7 @@ static void mt5744InitiateConnection(TapeParam *tp)
     if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable)) < 0)
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Failed to set KEEPALIVE option on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
+        fprintf(mt5744Log, "\n%010u Failed to set KEEPALIVE option on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
             fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
 #endif
         closesocket(fd);
@@ -1243,7 +1252,7 @@ static void mt5744InitiateConnection(TapeParam *tp)
     if (ioctlsocket(fd, FIONBIO, &blockEnable) < 0)
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Failed to set non-blocking I/O on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
+        fprintf(mt5744Log, "\n%010u Failed to set non-blocking I/O on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
             fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
 #endif
         closesocket(fd);
@@ -1253,7 +1262,7 @@ static void mt5744InitiateConnection(TapeParam *tp)
     if (rc == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Failed to connect to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
+        fprintf(mt5744Log, "\n%010u Failed to connect to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
             tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
 #endif
         closesocket(fd);
@@ -1263,7 +1272,7 @@ static void mt5744InitiateConnection(TapeParam *tp)
         tp->fd = fd;
         tp->state = StAcsConnecting;
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Initiated connection on socket %d to %s:%u for CH:%02o u%d", traceSequenceNo,
+        fprintf(mt5744Log, "\n%010u Initiated connection on socket %d to %s:%u for CH:%02o u%d", traceSequenceNo,
             tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
 #endif
         }
@@ -1279,7 +1288,7 @@ static void mt5744InitiateConnection(TapeParam *tp)
     if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable)) < 0)
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Failed to set KEEPALIVE option on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
+        fprintf(mt5744Log, "\n%010u Failed to set KEEPALIVE option on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
             fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
 #endif
         close(fd);
@@ -1288,7 +1297,7 @@ static void mt5744InitiateConnection(TapeParam *tp)
     if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Failed to set non-blocking I/O on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
+        fprintf(mt5744Log, "\n%010u Failed to set non-blocking I/O on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
             fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
 #endif
         close(fd);
@@ -1298,7 +1307,7 @@ static void mt5744InitiateConnection(TapeParam *tp)
     if (rc < 0 && errno != EINPROGRESS)
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Failed to connect to %s:%u for CH:%02o u%d, %s", traceSequenceNo,
+        fprintf(mt5744Log, "\n%010u Failed to connect to %s:%u for CH:%02o u%d, %s", traceSequenceNo,
             tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
 #endif
         close(fd);
@@ -1308,7 +1317,7 @@ static void mt5744InitiateConnection(TapeParam *tp)
         tp->fd = fd;
         tp->state = StAcsConnecting;
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Initiated connection on socket %d to %s:%u for CH:%02o u%d", traceSequenceNo,
+        fprintf(mt5744Log, "\n%010u Initiated connection on socket %d to %s:%u for CH:%02o u%d", traceSequenceNo,
             tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
 #endif
         }
@@ -1331,8 +1340,6 @@ static void mt5744Io(void)
     int wordNumber;
     PpWord param;
 
-    mt5744CheckTapeServer();
-
     /*
     **  The following avoids too rapid changes of the full/empty status
     **  when probed via FJM and EJM PP opcodes. This allows a second PP
@@ -1344,6 +1351,11 @@ static void mt5744Io(void)
         return;
         }
     activeChannel->delayStatus = 3;
+
+    /*
+    **  Handle tape server events and I/O
+    */
+    mt5744CheckTapeServer();
 
     /*
     **  Setup selected unit context.
@@ -1379,7 +1391,30 @@ static void mt5744Io(void)
                 break;
                 }
             }
-        if (tp->isBusy) return;
+#if DEBUG
+        else if (cp->isJustActivated)
+            {
+            cp->isJustActivated = FALSE;
+            switch (activeDevice->fcode)
+                {
+            case Fc5744ReadFwd:
+            case Fc5744ReadBkw:
+            case Fc5744Write:
+            case Fc5744WriteShort:
+                fprintf(mt5744Log, "\n%010u PP:%02o CH:%02o P:%04o",
+                    traceSequenceNo,
+                    activePpu->id,
+                    activeDevice->channel->id,
+                    activePpu->regP);
+                fprintf(mt5744Log, "\n                       0:%04o",
+                    activePpu->mem[0] & 07777);
+                break;
+            default:
+                // Do nothing
+                break;
+                }
+            }
+#endif
         }
     else
         {
@@ -1397,8 +1432,9 @@ static void mt5744Io(void)
         break;
 
     case Fc5744GeneralStatus:
-        if (!activeChannel->full)
+        if (activeChannel->full == FALSE)
             {
+            if (tp != NULL && tp->isBusy) return;
             if (cp->ioDelay > 0)
                 {
                 cp->ioDelay -= 1;
@@ -1426,7 +1462,10 @@ static void mt5744Io(void)
                 activeChannel->full = TRUE;
                 cp->ioDelay = 1;
 #if DEBUG
-                if (activeDevice->recordLength > 0 && (activeDevice->recordLength % 8) == 0) fputs("\n   ", mt5744Log);
+                if (activeDevice->recordLength == GeneralStatusLength - 1)
+                    {
+                    fputs("\n                             ", mt5744Log);
+                    }
                 fprintf(mt5744Log, " %04o", activeChannel->data);
 #endif
                 }
@@ -1434,8 +1473,9 @@ static void mt5744Io(void)
         break;
 
     case Fc5744DetailedStatus:
-        if (!activeChannel->full)
+        if (activeChannel->full == FALSE)
             {
+            if (tp != NULL && tp->isBusy) return;
             if (cp->ioDelay > 0)
                 {
                 cp->ioDelay -= 1;
@@ -1462,7 +1502,11 @@ static void mt5744Io(void)
                 activeChannel->full = TRUE;
                 cp->ioDelay = 1;
 #if DEBUG
-                if (activeDevice->recordLength > 0 && (activeDevice->recordLength % 8) == 0) fputs("\n   ", mt5744Log);
+                if (activeDevice->recordLength == DetailedStatusLength - 1
+                    || (activeDevice->recordLength > 0 && (activeDevice->recordLength % 8) == 0))
+                    {
+                    fputs("\n                             ", mt5744Log);
+                    }
                 fprintf(mt5744Log, " %04o", activeChannel->data);
 #endif
                 }
@@ -1470,7 +1514,7 @@ static void mt5744Io(void)
         break;
 
     case Fc5744ReadBufferedLog:
-        if (!activeChannel->full && tp != NULL)
+        if (tp != NULL && tp->isBusy == FALSE && activeChannel->full == FALSE)
             {
             if (cp->ioDelay > 0)
                 {
@@ -1493,7 +1537,11 @@ static void mt5744Io(void)
                 activeChannel->full = TRUE;
                 cp->ioDelay = 1;
 #if DEBUG
-                if (tp->recordLength > 0 && (tp->recordLength % 8) == 0) fputs("\n   ", mt5744Log);
+                if (tp->recordLength == BufferedLogLength - 1
+                    || (tp->recordLength > 0 && (tp->recordLength % 8) == 0))
+                    {
+                    fputs("\n                             ", mt5744Log);
+                    }
                 fprintf(mt5744Log, " %04o", activeChannel->data);
 #endif
                 }
@@ -1502,96 +1550,100 @@ static void mt5744Io(void)
 
     case Fc5744ReadFwd:
     case Fc5744ReadBlockId:
-        if (!activeChannel->full && tp != NULL)
+        if (tp != NULL && tp->isBusy == FALSE && activeChannel->full == FALSE)
             {
-            if (tp->recordLength == 0)
+            if (cp->ioDelay > 0)
                 {
-                activeChannel->active = FALSE;
+                cp->ioDelay -= 1;
+                }
+            else if (tp->recordLength > 0)
+                {
+                activeChannel->data = *tp->bp++;
+                activeChannel->full = TRUE;
+                tp->recordLength -= 1;
+                if (tp->recordLength == 0 && activeDevice->fcode == Fc5744ReadBlockId)
+                    {
+                    activeChannel->discAfterInput = TRUE;
+                    }
+#if DEBUG
+                if (tp->recordLength > 0 && (tp->recordLength % 8) == 0)
+                    {
+                    fputs("\n                             ", mt5744Log);
+                    }
+                fprintf(mt5744Log, " %04o", activeChannel->data);
+#endif
                 }
             else
                 {
-                if (cp->ioDelay > 0)
-                    {
-                    cp->ioDelay -= 1;
-                    return;
-                    }
-                if (tp->recordLength > 0)
-                    {
-                    activeChannel->data = *tp->bp++;
-                    activeChannel->full = TRUE;
-                    tp->recordLength -= 1;
-                    if (tp->recordLength == 0)
-                        {
-                        activeChannel->discAfterInput = TRUE;
-                        }
-#if DEBUG
-                    if (tp->recordLength > 0 && (tp->recordLength % 8) == 0) fputs("\n   ", mt5744Log);
-                    fprintf(mt5744Log, " %04o", activeChannel->data);
-#endif
-                    }
+                activeChannel->active = FALSE;
                 }
             }
         break;
 
     case Fc5744ReadBkw:
-        if (!activeChannel->full && tp != NULL)
+        if (tp != NULL && tp->isBusy == FALSE && activeChannel->full == FALSE)
             {
-            if (tp->recordLength == 0)
+            if (cp->ioDelay > 0)
                 {
-                activeChannel->active = FALSE;
+                cp->ioDelay -= 1;
+                }
+            else if (tp->recordLength > 0)
+                {
+                tp->recordLength -= 1;
+                activeChannel->data = tp->ioBuffer[tp->recordLength];
+                activeChannel->full = TRUE; 
+                if (tp->recordLength == 0)
+                    {
+                    activeChannel->discAfterInput = TRUE;
+                    }
+#if DEBUG
+                if (tp->recordLength > 0 && (tp->recordLength % 8) == 0)
+                    {
+                    fputs("\n                             ", mt5744Log);
+                    }
+                fprintf(mt5744Log, " %04o", activeChannel->data);
+#endif
                 }
             else
                 {
-                if (cp->ioDelay > 0)
-                    {
-                    cp->ioDelay -= 1;
-                    return;
-                    }
-                if (tp->recordLength > 0)
-                    {
-                    tp->recordLength -= 1;
-                    activeChannel->data = tp->ioBuffer[tp->recordLength];
-                    activeChannel->full = TRUE; 
-                    if (tp->recordLength == 0)
-                        {
-                        activeChannel->discAfterInput = TRUE;
-                        }
-#if DEBUG
-                    if (tp->recordLength > 0 && (tp->recordLength % 8) == 0) fputs("\n   ", mt5744Log);
-                    fprintf(mt5744Log, " %04o", activeChannel->data);
-#endif
-                    }
+                activeChannel->active = FALSE;
                 }
             }
         break;
 
     case Fc5744Write:
     case Fc5744WriteShort:
-        if (activeChannel->full && tp != NULL && tp->recordLength < MaxPpBuf)
+        if (tp != NULL && tp->isBusy == FALSE && activeChannel->full && tp->recordLength < MaxPpBuf)
             {
 #if DEBUG
-            if ((tp->recordLength % 8) == 0) fputs("\n   ", mt5744Log);
+            if (tp->recordLength > 0 && (tp->recordLength % 8) == 0)
+                {
+                fputs("\n                             ", mt5744Log);
+                }
             fprintf(mt5744Log, " %04o", activeChannel->data);
 #endif
             activeChannel->full = FALSE;
-            tp->recordLength += 1;
             *tp->bp++ = activeChannel->data;
+            tp->recordLength += 1;
             }
         break;
 
     case Fc5744LocateBlock:
-        if (activeChannel->full && tp != NULL && tp->recordLength < MaxPpBuf)
+        if (tp != NULL && tp->isBusy == FALSE && activeChannel->full && tp->recordLength < MaxPpBuf)
             {
-            char buffer[32];
 #if DEBUG
-            if ((tp->recordLength % 8) == 0) fputs("\n   ", mt5744Log);
+            if ((tp->recordLength % 8) == 0)
+                {
+                fputs("\n                             ", mt5744Log);
+                }
             fprintf(mt5744Log, " %04o", activeChannel->data);
 #endif
             activeChannel->full = FALSE;
-            tp->recordLength += 1;
             *tp->bp++ = activeChannel->data;
+            tp->recordLength += 1;
             if (tp->recordLength >= LocateBlockLength)
                 {
+                char buffer[32];
                 sprintf(buffer, "LOCATEBLOCK %lu", ((unsigned long)tp->ioBuffer[1] << 12) | (unsigned long)tp->ioBuffer[2]);
                 mt5744IssueTapeServerRequest(tp, buffer, mt5744LocateBlockRequestCallback);
                 }
@@ -1674,7 +1726,7 @@ void mt5744LoadTape(TapeParam *tp, bool writeEnable)
     tp->isReady        = TRUE;
     tp->isWriteEnabled = writeEnable;
 #if DEBUG
-    fprintf(mt5744Log, "\n%06d Mount %s on CH:%02o u%d", traceSequenceNo, tp->volumeName, tp->channelNo, tp->unitNo);
+    fprintf(mt5744Log, "\n%010u Mount %s on CH:%02o u%d", traceSequenceNo, tp->volumeName, tp->channelNo, tp->unitNo);
 #endif
     }
 
@@ -1696,9 +1748,10 @@ static void mt5744LocateBlockRequestCallback(TapeParam *tp)
     eor = mt5744ParseTapeServerResponse(tp, &status);
     if (eor == NULL) return;
     tp->isBusy = FALSE;
-    if (status == 504)
+    if (status == 504 || status == 501)
         {
         tp->isBlockNotFound = TRUE;
+        tp->isAlert = TRUE;
         tp->errorCode = EcBlockIdError;
         }
     else if (status != 200)
@@ -1879,7 +1932,7 @@ static void mt5744ReceiveTapeServerResponse(TapeParam *tp)
     if (n <= 0)
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Disconnected on socket %d from %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
+        fprintf(mt5744Log, "\n%010u Disconnected on socket %d from %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
             tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo,
             (n == 0) ? "end of stream" : strerror(errno));
 #endif
@@ -1888,7 +1941,7 @@ static void mt5744ReceiveTapeServerResponse(TapeParam *tp)
     else
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Received %d bytes on socket %d from %s:%u for CH:%02o u:%d\n", traceSequenceNo, n,
+        fprintf(mt5744Log, "\n%010u Received %d bytes on socket %d from %s:%u for CH:%02o u:%d\n", traceSequenceNo, n,
             tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
         mt5744LogBytes(&tp->inputBuffer.data[tp->inputBuffer.in], n);
         mt5744LogFlush();
@@ -1969,7 +2022,9 @@ static void mt5744ReadRequestCallback(TapeParam *tp)
         break;
     case 505:
         tp->recordLength = 0;
-        tp->isEOT = TRUE;
+        tp->isBOT = FALSE;
+        //tp->isEOT = TRUE;
+        tp->isTapeMark = TRUE; // simulate tape mark instead of end-of-medium
         break;
     default:
         fprintf(stderr, "MT5744: Unexpected status %d received from StorageTek simulator for READFWD/READBKW request\n", status);
@@ -2174,7 +2229,7 @@ static void mt5744SendTapeServerRequest(TapeParam *tp)
     if (n > 0)
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%06d Sent %d bytes on socket %d to %s:%u for CH:%02o u:%d\n", traceSequenceNo, n,
+        fprintf(mt5744Log, "\n%010u Sent %d bytes on socket %d to %s:%u for CH:%02o u:%d\n", traceSequenceNo, n,
             tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
         mt5744LogBytes(&tp->outputBuffer.data[tp->outputBuffer.out], n);
         mt5744LogFlush();
@@ -2218,7 +2273,9 @@ static void mt5744SpaceRequestCallback(TapeParam *tp)
         tp->isBOT = TRUE;
         break;
     case 505:
-        tp->isEOT = TRUE;
+        tp->isTapeMark = TRUE;
+        //tp->isEOT = TRUE;
+        //tp->isAlert = TRUE;
         break;
     default:
         fprintf(stderr, "MT5744: Unexpected status %d received from StorageTek simulator for SPACEFWD/SPACEBKW request\n", status);
@@ -2241,7 +2298,7 @@ void mt5744UnloadTape(TapeParam *tp)
     {
     mt5744ResetUnit(tp);
 #if DEBUG
-    fprintf(mt5744Log, "\n%06d Dismount CH:%02o u%d", traceSequenceNo, tp->channelNo, tp->unitNo);
+    fprintf(mt5744Log, "\n%010u Dismount CH:%02o u%d", traceSequenceNo, tp->channelNo, tp->unitNo);
 #endif
     }
 

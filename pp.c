@@ -1474,6 +1474,7 @@ static void ppOpOAM(void)     // 73
             activePpu->regP = activePpu->mem[0];
             PpIncrement(activePpu->regP);
             activePpu->busy = FALSE;
+            activeChannel->delayStatus = 0; // ensure last byte is written
             }
         }
 

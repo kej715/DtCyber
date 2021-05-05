@@ -30,7 +30,7 @@ const httpServer = http.createServer((req, res) => {
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "OPTIONS, GET",
-    "Access-Control-Allow-Headers": "X-Requested-With, Content-Type",
+    "Access-Control-Allow-Headers": "X-Requested-With",
     "Access-Control-Max-Age": 2592000, // 30 days
   };
   if (req.method === "GET") {
@@ -69,25 +69,31 @@ console.log(`${new Date().toLocaleString()} HTTP server listening on port ${http
 
 fs.watch(volumesFile, (eventType, filename) => {
   if (eventType === "change") {
-    volumeMap = JSON.parse(fs.readFileSync(filename));
-    Object.keys(volumeMap).forEach(key => {
-      if (typeof stkcsi.volumeMap[key] !== "undefined") {
-        let volume = volumeMap[key];
-        let updatedAttrs = [];
-        Object.keys(volume).forEach(attrName => {
-          if (stkcsi.volumeMap[key][attrName] !== volume[attrName]) {
-            updatedAttrs.push(attrName);
+    try {
+      let volumeMap = JSON.parse(fs.readFileSync(filename));
+      Object.keys(volumeMap).forEach(key => {
+        if (typeof stkcsi.volumeMap[key] !== "undefined") {
+          let volume = volumeMap[key];
+          let updatedAttrs = [];
+          Object.keys(volume).forEach(attrName => {
+            if (stkcsi.volumeMap[key][attrName] !== volume[attrName]) {
+              updatedAttrs.push(attrName);
+            }
+            stkcsi.volumeMap[key][attrName] = volume[attrName];
+          });
+          if (updatedAttrs.length > 0) {
+            console.log(`${new Date().toLocaleString()} Updated ${updatedAttrs.join(",")} of VSN ${key} in tape library`);
           }
-          stkcsi.volumeMap[key][attrName] = volume[attrName];
-        });
-        if (updatedAttrs.length > 0) {
-          console.log(`${new Date().toLocaleString()} Updated ${updatedAttrs.join(",")} of VSN ${key} in tape library`);
         }
-      }
-      else {
-        stkcsi.volumeMap[key] = volumeMap[key];
-        console.log(`${new Date().toLocaleString()} Added VSN ${key} to tape library`);
-      }
-    });
+        else {
+          stkcsi.volumeMap[key] = volumeMap[key];
+          console.log(`${new Date().toLocaleString()} Added VSN ${key} to tape library`);
+        }
+      });
+    }
+    catch (err) {
+      console.log(`${new Date().toLocaleString()} Failed to update volume map`);
+      console.log(`${new Date().toLocaleString()} ${err}`);
+    }
   }
 });
