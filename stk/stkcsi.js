@@ -574,7 +574,7 @@ class StkCSI extends Program {
       recordLength += 1;
       result = this.readRecordLength(volume, volume.position + recordLength);
       if (result.status != StkCSI.SUCCESS) return result.status;
-      if (result.length !== recordLength) return StkCSI.TAPE_READ_FAILURE;
+      if (result.length !== recordLength - 1) return StkCSI.TAPE_READ_FAILURE;
     }
     volume.position += recordLength + 4;
     return StkCSI.SUCCESS;
