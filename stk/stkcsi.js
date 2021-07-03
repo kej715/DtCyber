@@ -942,7 +942,7 @@ class StkCSI extends Program {
     }
     const driveKey = request[1];
     if (typeof this.driveMap[driveKey] !== "undefined"
-        && this.driveMap[driveKey].client !== "undefined"
+        && typeof this.driveMap[driveKey].client !== "undefined"
         && this.driveMap[driveKey].client.client.remoteAddress !== client.client.remoteAddress) {
       this.sendResponse(client, `401 ${driveKey} already registered`);
       return;
@@ -1112,8 +1112,15 @@ class StkCSI extends Program {
         this.debugLog(`StkCSI TCP ${client.remoteAddress}:${client.remotePort} disconnected`);
         me.removeTapeServerClient(client);
       });
+      client.on("close", () => {
+        this.debugLog(`StkCSI TCP ${client.remoteAddress}:${client.remotePort} closed`);
+        me.removeTapeServerClient(client);
+      });
       client.on("data", data => {
         me.handleTapeServerRequest(client, data);
+      });
+      client.on("error", err => {
+        console.log(`${new Date().toLocaleString()} ${client.remoteAddress}:${client.remotePort} ${err}`);
       });
     });
     tapeServer.listen(this.tapeServerPort, () => {
