@@ -143,7 +143,7 @@ static int npuLipLogBytesCol = 0;
 bool npuLipNotifyNetConnect(Pcb *pcbp, bool isPassive)
     {
     npuLipResetPcb(pcbp);
-    pcbp->controls.lip.lastExchange = time(NULL);
+    pcbp->controls.lip.lastExchange = getSeconds();
     if (isPassive)
         {
         pcbp->controls.lip.state = StTrunkRcvConnReq;
@@ -237,7 +237,7 @@ void npuLipProcessUplineData(Pcb *pcbp)
     npuLipLogFlush();
 #endif
 
-    pcbp->controls.lip.lastExchange = time(NULL);
+    pcbp->controls.lip.lastExchange = getSeconds();
     pcbp->controls.lip.inputIndex = 0;
 
     while (pcbp->controls.lip.inputIndex < pcbp->inputCount)
@@ -390,7 +390,7 @@ void npuLipTryOutput(Pcb *pcbp)
     case StTrunkRcvConnReq:
     case StTrunkRcvConnResp:
         if (pcbp->controls.lip.lastExchange > 0
-            && (time(NULL) - pcbp->controls.lip.lastExchange) > MaxIdleTime)
+            && (getSeconds() - pcbp->controls.lip.lastExchange) > MaxIdleTime)
             {
 #if DEBUG
             fprintf(npuLipLog, "Port %02x: timeout while establishing connection with %s\n",
@@ -886,7 +886,7 @@ static void npuLipSendQueuedData(Pcb *pcbp)
     struct iovec vec[2];
 #endif
 
-    currentTime = time(NULL);
+    currentTime = getSeconds();
 
     /*
     **  Process all queued output buffers.

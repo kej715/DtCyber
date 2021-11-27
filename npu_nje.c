@@ -248,7 +248,6 @@ static void npuNjeEbcdicToAscii(u8 *ebcdic, u8 *ascii, int len);
 static Pcb *npuNjeFindPcbForCr(char *rhost, u32 rip, char *ohost, u32 oip);
 static Tcb *npuNjeFindTcb(Pcb *pcbp);
 static void npuNjeFlushOutput(Pcb *pcbp);
-static u64  npuNjeGetMilliseconds(void);
 static void npuNjeParseControlRecord(u8 *crp, char *rhost, u32 *rip, char *ohost, u32 *oip, u8 *r);
 static void npuNjePrepareOutput(Pcb *pcbp);
 static int  npuNjeSend(Pcb *pcbp, u8 *dp, int len);
@@ -357,7 +356,7 @@ void npuNjeTryOutput(Pcb *pcbp)
     int nb;
     Tcb *tcbp;
 
-    currentTime = time(NULL);
+    currentTime = getSeconds();
     tcbp = npuNjeFindTcb(pcbp);
 
     switch (pcbp->controls.nje.state)
@@ -739,12 +738,12 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                 fprintf(npuNjeLog, "Port %02x: OPEN request denied: %s\n", pcbp->claPort, CrNakReasons[r]);
 #endif
                 npuNjeCloseConnection(pcbp);
-                delay = (time_t)((npuNjeGetMilliseconds() % 5) + 3);
+                delay = (time_t)((getMilliseconds() % 5) + 3);
                 // Arrange to attempt reconnection after a relatively short and random-ish interval
 #if DEBUG
                 fprintf(npuNjeLog, "Port %02x: delay %ld secs before attempting reconnection\n", pcbp->claPort, delay);
 #endif
-                pcbp->ncbp->nextConnectionAttempt = time(NULL) + delay;
+                pcbp->ncbp->nextConnectionAttempt = getSeconds() + delay;
                 }
             else
                 {
@@ -930,12 +929,12 @@ bool npuNjeNotifyNetConnect(Pcb *pcbp, bool isPassive)
             fprintf(npuNjeLog, "Port %02x: port is already connected in state %d\n", pcbp->claPort,
                 pcbp->controls.nje.state);
 #endif
-            pcbp->ncbp->nextConnectionAttempt = time(NULL) + (time_t)(24*60*60);
+            pcbp->ncbp->nextConnectionAttempt = getSeconds() + (time_t)(24*60*60);
             return FALSE;
             }
         pcbp->controls.nje.state = StNjeSndOpen;
         }
-    pcbp->controls.nje.lastXmit = time(NULL);
+    pcbp->controls.nje.lastXmit = getSeconds();
     return TRUE;
     }
 
@@ -1578,32 +1577,6 @@ static void npuNjeFlushOutput(Pcb *pcbp)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Returns the current system millisecond clock value.
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        Current millisecond clock value.
-**
-**------------------------------------------------------------------------*/
-static u64 npuNjeGetMilliseconds(void)
-    {
-#if defined(_WIN32)
-    SYSTEMTIME systemTime;
-    FILETIME   fileTime;
-
-    GetSystemTime(&systemTime);
-    SystemTimeToFileTime(&systemTime, &fileTime);
-    return (((u64)fileTime.dwHighDateTime << 32) + (u64)fileTime.dwLowDateTime) / (u64)10000
-        + (u64)systemTime.wMilliseconds;
-#else
-    struct timeval tod;
-
-    gettimeofday(&tod, NULL);
-    return ((u64)tod.tv_sec * (u64)1000) + ((u64)tod.tv_usec / (u64)1000);
-#endif
-    }
-
-/*--------------------------------------------------------------------------
 **  Purpose:        Parse and translate parameters of an NJE/TCP control record.
 **
 **  Parameters:     Name        Description.
@@ -1676,7 +1649,7 @@ static int npuNjeSend(Pcb *pcbp, u8 *dp, int len)
     int n;
 
     n = send(pcbp->connFd, dp, len, 0);
-    pcbp->controls.nje.lastXmit = time(NULL);
+    pcbp->controls.nje.lastXmit = getSeconds();
 #if DEBUG
     if (n > 0)
         {

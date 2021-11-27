@@ -166,7 +166,6 @@ static Scb *npuHaspFindStreamWithPendingRTI(Pcb *pcbp);
 static bool npuHaspFlushBuffer(Pcb *pcbp);
 static void npuHaspFlushPruFragment(Tcb *tp, u8 fe);
 static void npuHaspFlushUplineData(Scb *scbp, bool isEof);
-static u64  npuHaspGetMilliseconds(void);
 static void npuHaspProcessPostPrintFormatControl(Pcb *pcbp);
 static void npuHaspProcessPrePrintFormatControl(Pcb *pcbp);
 static void npuHaspReleaseLastBlockSent(Pcb *pcbp);
@@ -242,7 +241,7 @@ void npuHaspTryOutput(Pcb *pcbp)
     u64 currentTime;
     Scb *scbp;
 
-    currentTime = npuHaspGetMilliseconds();
+    currentTime = getMilliseconds();
 
     switch (pcbp->controls.hasp.majorState)
         {
@@ -889,7 +888,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
 
     if (len > 0)
         {
-        pcbp->controls.hasp.lastRecvTime = npuHaspGetMilliseconds();
+        pcbp->controls.hasp.lastRecvTime = getMilliseconds();
         }
 
     /*
@@ -2292,32 +2291,6 @@ void npuHaspResetPcb(Pcb *pcbp)
 */
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Returns the current system millisecond clock value.
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        Current millisecond clock value.
-**
-**------------------------------------------------------------------------*/
-static u64 npuHaspGetMilliseconds(void)
-    {
-#if defined(_WIN32)
-    SYSTEMTIME systemTime;
-    FILETIME   fileTime;
-
-    GetSystemTime(&systemTime);
-    SystemTimeToFileTime(&systemTime, &fileTime);
-    return (((u64)fileTime.dwHighDateTime << 32) + (u64)fileTime.dwLowDateTime) / (u64)10000
-        + (u64)systemTime.wMilliseconds;
-#else
-    struct timeval tod;
-
-    gettimeofday(&tod, NULL);
-    return ((u64)tod.tv_sec * (u64)1000) + ((u64)tod.tv_usec / (u64)1000);
-#endif
-    }
-
-/*--------------------------------------------------------------------------
 **  Purpose:        Closes a HASP or Reverse HASP connection.
 **
 **  Parameters:     Name        Description.
@@ -3532,7 +3505,7 @@ static int npuHaspSend(Pcb *pcbp, u8 *data, int len)
     n = send(pcbp->connFd, data, len, 0);
     if (n >= 0)
         {
-        pcbp->controls.hasp.recvDeadline = npuHaspGetMilliseconds() + RecvTimeout;
+        pcbp->controls.hasp.recvDeadline = getMilliseconds() + RecvTimeout;
 #if DEBUG
         fprintf(npuHaspLog, "Port %02x: sent\n", pcbp->claPort);
         npuHaspLogBytes(data, n, EBCDIC);

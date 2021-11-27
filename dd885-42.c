@@ -415,7 +415,7 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
                                        | ((DiskType885_42  & 070) << (4 - 3))
                                        | ((DiskType885_42  & 007) << (0 - 0))) << 36;
 
-        time(&mTime);
+        mTime = getSeconds();
         lTime = localtime(&mTime);
         yy = lTime->tm_year % 100;
         mm = lTime->tm_mon + 1;

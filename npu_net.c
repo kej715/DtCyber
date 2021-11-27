@@ -306,7 +306,7 @@ int npuNetRegisterConnType(int tcpPort, int claPort, int numPorts, int connType,
     ncbp->connFd        = 0;
     ncbp->lstnFd        = 0;
     ncbp->hostName      = NULL;
-    ncbp->nextConnectionAttempt = time(NULL) + (time_t)NamStartupTime;
+    ncbp->nextConnectionAttempt = getSeconds() + (time_t)NamStartupTime;
 
     numNcbs += 1;
 
@@ -339,7 +339,7 @@ void npuNetCloseConnection(Pcb *pcbp)
             if (pcbp->connFd == ncbp->connFd || ncbp->state == StConnBusy)
                 {
                 ncbp->state = StConnInit;
-                ncbp->nextConnectionAttempt = time(NULL) + (time_t)ConnectionRetryInterval;
+                ncbp->nextConnectionAttempt = getSeconds() + (time_t)ConnectionRetryInterval;
                 }
             resetPcb[ncbp->connType](pcbp);
             }
@@ -893,7 +893,7 @@ static int npuNetCreateConnections(void)
     **  them, and find client sockets with pending connection requests and
     **  determine whether connections have been completed.
     */
-    currentTime = time(NULL);
+    currentTime = getSeconds();
     n = 0;
 
     for (i = 0; i < numNcbs; i++)

@@ -35,10 +35,6 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
-#include "const.h"
-#include "types.h"
-#include "proto.h"
-#include "npu.h"
 #include <sys/types.h>
 #include <memory.h>
 #include <time.h>
@@ -55,6 +51,10 @@
 #include <netdb.h>
 #include <signal.h>
 #endif
+#include "const.h"
+#include "types.h"
+#include "proto.h"
+#include "npu.h"
 
 #if defined(__APPLE__)
 #include <execinfo.h>
@@ -862,7 +862,7 @@ void cdcnetCheckStatus(void)
 
     FD_ZERO(&readFds);
     FD_ZERO(&writeFds);
-    currentTime = time(NULL);
+    currentTime = getSeconds();
     maxFd = 0;
 
     for (i = 0, pp = cdcnetPccbs; i < cdcnetPccbCount; i++, pp++)
@@ -1587,7 +1587,7 @@ static void cdcnetCloseConnection(Gcb *gp)
             }
         else if (pp->connFd > 0)
             {
-            pp->deadline = time(NULL) + 10;
+            pp->deadline = getSeconds() + 10;
 #if DEBUG
             fprintf(cdcnetLog, "Leave listening socket open, port=%d, CN=%02X\n", pp->dstPort, gp->cn);
 #endif
@@ -2254,7 +2254,7 @@ static bool cdcnetTcpActiveConnectHandler(Gcb *gp, NpuBuffer *bp)
                     gp->dstIpAddress, gp->dstPort, gp->cn);
 #endif
                 gp->tcpUdpState = StTcpConnecting;
-                gp->deadline = time(NULL) + 60;
+                gp->deadline = getSeconds() + 60;
                 }
         #else
             if (rc < 0 && errno != EINPROGRESS)
@@ -2273,7 +2273,7 @@ static bool cdcnetTcpActiveConnectHandler(Gcb *gp, NpuBuffer *bp)
                 fprintf(cdcnetLog, "Initiated connection to host: %s:%u, CN=%02X\n", gp->dstIpAddress, gp->dstPort, gp->cn);
 #endif
                 gp->tcpUdpState = StTcpConnecting;
-                gp->deadline = time(NULL) + 60;
+                gp->deadline = getSeconds() + 60;
                 }
         #endif
         }

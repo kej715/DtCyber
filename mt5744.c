@@ -317,8 +317,7 @@ static TapeParam *firstTape = NULL;
 static TapeParam *lastTape = NULL;
 
 #if DEBUG
-//static FILE *mt5744Log = NULL;
- FILE *mt5744Log = NULL;
+static FILE *mt5744Log = NULL;
 static char mt5744LogBuf[LogLineLength + 1];
 static int  mt5744LogBytesCol = 0;
 #endif
@@ -773,7 +772,7 @@ static void mt5744CloseTapeServerConnection(TapeParam *tp)
     tp->isBusy = FALSE;
     tp->errorCode = EcTranportNotOnline;
     tp->state = StAcsDisconnected;
-    tp->nextConnectionAttempt = time(NULL) + (time_t)ConnectionRetryInterval;
+    tp->nextConnectionAttempt = getSeconds() + (time_t)ConnectionRetryInterval;
     }
 
 /*--------------------------------------------------------------------------
@@ -1226,7 +1225,7 @@ static void mt5744InitiateConnection(TapeParam *tp)
     int optEnable = 1;
     int rc;
 
-    currentTime = time(NULL);
+    currentTime = getSeconds();
     if (tp->nextConnectionAttempt > currentTime) return;
     tp->nextConnectionAttempt = currentTime + ConnectionRetryInterval;
 
@@ -2449,7 +2448,7 @@ static void mt5744LogFlush(void)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Log a sequence of ASCII or EBCDIC bytes
+**  Purpose:        Log a sequence of ASCII bytes
 **
 **  Parameters:     Name        Description.
 **                  bytes       pointer to sequence of bytes

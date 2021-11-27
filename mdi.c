@@ -521,7 +521,7 @@ static FcStatus mdiHipFunc(PpWord funcCode)
         break;
 
     case FcMdiReqGeneralStatus:
-        currentTime = time(NULL);
+        currentTime = getSeconds();
         if (mdiState == StMdiSendRegLevel)
             {
             npuBipRequestUplineCanned(mdiRegLevelIndication, sizeof(mdiRegLevelIndication));
