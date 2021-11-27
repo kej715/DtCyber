@@ -91,6 +91,7 @@ DevDesc deviceDesc[] =
     "DDP",      ddpInit,
     "NPU",      npuInit,
     "MDI",      mdiInit,
+    "FEI",      csFeiInit,
 #if defined(__linux__) || defined(__gnu_linux__) || defined(linux) || defined(_WIN32)
 	/* CYBER channel support only on some platforms */
     "PCICH",    pciInit,

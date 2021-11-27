@@ -43,6 +43,7 @@ OBJS    =   cdcnet.o                \
             cpu.o                   \
             cr3447.o                \
             cr405.o                 \
+            cray_station.o          \
             dcc6681.o               \
             dd6603.o                \
             dd885-42.o              \
@@ -80,6 +81,7 @@ OBJS    =   cdcnet.o                \
             rtc.o                   \
             scr_channel.o           \
             shift.o                 \
+            time.o                  \
             tpmux.o                 \
             trace.o                 \
             window_x11.o            

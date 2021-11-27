@@ -25,6 +25,9 @@
 **--------------------------------------------------------------------------
 */
 
+#include <time.h>
+#include "types.h"
+
 /*
 **  --------------------
 **  Function Prototypes.
@@ -209,6 +212,11 @@ int npuBipBufCount(void);
 void mdiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 
 /*
+**  cray_station.c
+*/
+void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+
+/*
 **  pci_channel_{win32,linux}.c
 */
 void pciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
@@ -217,6 +225,12 @@ void pciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 **  pci_console_linux.c
 */
 void pciConsoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+
+/*
+**  time.c
+*/
+u64 getMilliseconds(void);
+time_t getSeconds(void);
 
 /*
 **  tpmux.c
