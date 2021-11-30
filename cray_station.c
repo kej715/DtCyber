@@ -976,14 +976,28 @@ static void csFeiIo(void)
                     }
                 }
             break;
+        case StCsFeiDisconnected:
+        case StCsFeiConnecting:
+            if (activeChannel->full == TRUE)
+                {
+                activeChannel->full = FALSE;
+                }
+            else
+                {
+                activeChannel->data = 0;
+                activeChannel->full = TRUE;
+                activeChannel->discAfterInput = TRUE;
+                }
+            break;
         default:
+            logError(LogErrorLocation, "channel %02o - invalid state: %d", activeChannel->id, feip->state);
             break;
             }
         break;
 
     default:
         logError(LogErrorLocation, "channel %02o - unsupported function code: %04o",
-             activeChannel->id, activeDevice->fcode);
+            activeChannel->id, activeDevice->fcode);
         break;
         }
     }
