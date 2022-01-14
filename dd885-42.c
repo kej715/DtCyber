@@ -149,7 +149,6 @@ static char *dd885_42Func2String(PpWord funcCode);
 **  Public Variables
 **  ----------------
 */
-extern CpWord *extMem;
 
 /*
 **  -----------------

@@ -84,6 +84,15 @@ static void *opThread(void *param);
 
 static char *opGetString(char *inStr, char *outStr, int outSize);
 
+static void opCmdDumpMemory(bool help, char *cmdParams);
+static void opCmdDumpCM(int fwa, int count);
+static void opCmdDumpEM(int fwa, int count);
+static void opCmdDumpPP(int pp, int fwa, int count);
+static void opHelpDumpMemory(void);
+
+static void opCmdEnterKeys(bool help, char *cmdParams);
+static void opHelpEnterKeys(void);
+
 static void opCmdHelp(bool help, char *cmdParams);
 static void opHelpHelp(void);
 
@@ -105,6 +114,9 @@ static void opHelpRemoveCards(void);
 static void opCmdRemovePaper(bool help, char *cmdParams);
 static void opHelpRemovePaper(void);
 
+static void opCmdSetKeyDelay(bool help, char *cmdParams);
+static void opHelpSetKeyDelay(void);
+
 static void opCmdShutdown(bool help, char *cmdParams);
 static void opHelpShutdown(void);
 
@@ -125,6 +137,7 @@ volatile bool opActive = FALSE;
 */
 static OpCmd decode[] = 
     {
+    "dm",                       opCmdDumpMemory,
     "lc",                       opCmdLoadCards,
     "lt",                       opCmdLoadTape,
     "rc",                       opCmdRemoveCards,
@@ -132,6 +145,7 @@ static OpCmd decode[] =
     "p",                        opCmdPause,
     "st",                       opCmdShowTape,
     "ut",                       opCmdUnloadTape,
+    "dump_memory",              opCmdDumpMemory,
     "load_cards",               opCmdLoadCards,
     "load_tape",                opCmdLoadTape,
     "remove_cards",             opCmdRemoveCards,
@@ -435,6 +449,178 @@ static char *opGetString(char *inStr, char *outStr, int outSize)
         }
 
     return(inStr + pos);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Dump CM, EM, or PP memory.
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdDumpMemory(bool help, char *cmdParams)
+    {
+    int count;
+    char *cp;
+    int fwa;
+    char *memType;
+    int numParam;
+    int pp;
+
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpDumpMemory();
+        return;
+        }
+
+    cp = memType = cmdParams;
+    while (*cp != '\0' && *cp != ',') ++cp;
+    if (*cp != ',')
+        {
+        printf("Not enough parameters\n");
+        return;
+        }
+    *cp++ = '\0';
+    numParam = sscanf(cp, "%o,%d", &fwa, &count);
+    if (numParam != 2)
+        {
+        printf("Not enough or invalid parameters\n");
+        return;
+        }
+    if (strcasecmp(memType, "CM") == 0)
+        {
+        opCmdDumpCM(fwa, count);
+        }
+    else if (strcasecmp(memType, "EM") == 0)
+        {
+        opCmdDumpEM(fwa, count);
+        }
+    else if (strncasecmp(memType, "PP", 2) == 0)
+        {
+        numParam = sscanf(memType + 2, "%o", &pp);
+        if (numParam != 1)
+            {
+            printf("Missing or invalid PP number\n");
+            }
+        opCmdDumpPP(pp, fwa, count);
+        }
+    else
+        {
+        printf("Invalid memory type\n");
+        }
+    }
+
+static void opCmdDumpCM(int fwa, int count)
+    {
+    char buf[40];
+    char *cp;
+    int limit;
+    int n;
+    int shiftCount;
+    CpWord word;
+
+    if (fwa < 0 || count < 0 || fwa + count > cpuMaxMemory)
+        {
+        printf("Invalid CM address or count\n");
+        return;
+        }
+    for (limit = fwa + count; fwa < limit; fwa++)
+        {
+        word = cpMem[fwa];
+        n = sprintf(buf, "%06o %020lo ", fwa, word);
+        cp = buf + n;
+        for (shiftCount = 54; shiftCount >= 0; shiftCount -= 6)
+            {
+            *cp++ = cdcToAscii[(word >> shiftCount) & 077];
+            }
+        *cp++ = '\n';
+        *cp = '\0';
+        fputs(buf, stdout);
+        }
+    }
+
+static void opCmdDumpEM(int fwa, int count)
+    {
+    char buf[42];
+    char *cp;
+    int limit;
+    int n;
+    int shiftCount;
+    CpWord word;
+
+    if (fwa < 0 || count < 0 || fwa + count > extMaxMemory)
+        {
+        printf("Invalid EM address or count\n");
+        return;
+        }
+    for (limit = fwa + count; fwa < limit; fwa++)
+        {
+        word = extMem[fwa];
+        n = sprintf(buf, "%08o %020lo ", fwa, word);
+        cp = buf + n;
+        for (shiftCount = 54; shiftCount >= 0; shiftCount -= 6)
+            {
+            *cp++ = cdcToAscii[(word >> shiftCount) & 077];
+            }
+        *cp++ = '\n';
+        *cp = '\0';
+        fputs(buf, stdout);
+        }
+    }
+
+static void opCmdDumpPP(int ppNum, int fwa, int count)
+    {
+    char buf[14];
+    char *cp;
+    int limit;
+    int n;
+    PpSlot *pp;
+    PpWord word;
+
+    if (ppNum >= 020 && ppNum <= 031)
+        {
+        ppNum -= 6;
+        }
+    else if (ppNum < 0 || ppNum > 011)
+        {
+        printf("Invalid PP number\n");
+        return;
+        }
+    if (ppNum >= ppuCount)
+        {
+        printf("Invalid PP number\n");
+        return;
+        }
+    if (fwa < 0 || count < 0 || fwa + count > 010000)
+        {
+        printf("Invalid PP address or count\n");
+        return;
+        }
+    pp = &ppu[ppNum];
+    for (limit = fwa + count; fwa < limit; fwa++)
+        {
+        word = pp->mem[fwa];
+        n = sprintf(buf, "%04o %04o ", fwa, word);
+        cp = buf + n;
+        *cp++ = cdcToAscii[(word >> 6) & 077];
+        *cp++ = cdcToAscii[word & 077];
+        *cp++ = '\n';
+        *cp = '\0';
+        fputs(buf, stdout);
+        }
+    }
+
+static void opHelpDumpMemory(void)
+    {
+    printf("'dump_memory CM,<fwa>,<count>' dump <count> words of central memory starting from octal address <fwa>.\n");
+    printf("'dump_memory EM,<fwa>,<count>' dump <count> words of extended memory starting from octal address <fwa>.\n");
+    printf("'dump_memory PP<nn>,<fwa>,<count>' dump <count> words of PP nn's memory starting from octal address <fwa>.\n");
     }
 
 /*--------------------------------------------------------------------------
