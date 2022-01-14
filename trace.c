@@ -30,6 +30,7 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "const.h"
 #include "types.h"
 #include "proto.h"
@@ -513,7 +514,7 @@ void traceCpu(u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
         switch (addrMode)
             {
         case CN:
-            sprintf(str, decode[opFm].mnemonic);
+            strcpy(str, decode[opFm].mnemonic);
             break;
 
         case CK:
@@ -788,7 +789,7 @@ void traceExchange(CpuContext *cc, u32 addr, char *title)
     fprintf(cpuF, "B%d %06o", 5, cc->regB[5]);
     fprintf(cpuF, "\n");
                            
-    fprintf(cpuF, "MA      %06.6o  ", cc->regMa); 
+    fprintf(cpuF, "MA      %6.6o  ", cc->regMa); 
     fprintf(cpuF, "A%d %06o  ", 6, cc->regA[6]);
     fprintf(cpuF, "B%d %06o", 6, cc->regB[6]);
     fprintf(cpuF, "\n");
