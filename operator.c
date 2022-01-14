@@ -611,7 +611,7 @@ static void opCmdDumpEM(int fwa, int count)
 
 static void opCmdDumpPP(int ppNum, int fwa, int count)
     {
-    char buf[14];
+    char buf[20];
     char *cp;
     int limit;
     int n;

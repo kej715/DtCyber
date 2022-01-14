@@ -386,7 +386,7 @@ static void dd6603Io(void)
     case Fc6603ReadSector:
         if (!activeChannel->full)
             {
-            fread(&activeChannel->data, 2, 1, fcb);
+            (void)fread(&activeChannel->data, 2, 1, fcb);
             activeChannel->full = TRUE;
 
 #if DEBUG

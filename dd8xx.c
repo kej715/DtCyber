@@ -1481,7 +1481,7 @@ static PpWord dd8xxReadClassic(DiskParam *dp, FILE *fcb)
     if (dp->bufPtr == NULL)
         {
         dp->bufPtr = dp->buffer;
-        fread(dp->buffer, 1, dp->sectorSize, fcb);
+        (void)fread(dp->buffer, 1, dp->sectorSize, fcb);
         }
 
     /*
@@ -1558,7 +1558,7 @@ static PpWord dd8xxReadPacked(DiskParam *dp, FILE *fcb)
     if (dp->bufPtr == NULL)
         {
         dp->bufPtr = dp->buffer;
-        fread(sector, 1, dp->sectorSize, fcb);
+        (void)fread(sector, 1, dp->sectorSize, fcb);
 
         /*
         **  Unpack the sector into the buffer.
@@ -1741,7 +1741,7 @@ static void dd844SetClearFlaw(DiskParam *dp, PpWord flawState)
     dp->track = 0;
     dp->sector = 2;
     fseek(fcb, dd8xxSeek(dp), SEEK_SET);
-    fread(mySector, 2, SectorSize, fcb);
+    (void)fread(mySector, 2, SectorSize, fcb);
 
     /*
     **  Process request.
