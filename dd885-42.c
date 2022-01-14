@@ -467,6 +467,7 @@ static FcStatus dd885_42Func(PpWord funcCode)
     {
     i8 unitNo;
     FILE *fcb;
+    int ignore;
     DiskParam *dp;
 
     unitNo = activeDevice->selectedUnit;
@@ -617,7 +618,7 @@ static FcStatus dd885_42Func(PpWord funcCode)
     case Fc885_42ReadFactoryData:
     case Fc885_42ReadUtilityMap:
     case Fc885_42ReadProtectedSector:
-        (void)fread(&dp->buffer, sizeof dp->buffer, 1, fcb);
+        ignore = fread(&dp->buffer, sizeof dp->buffer, 1, fcb);
         activeDevice->recordLength = ShortSectorSize * 5 + 2;
         break;
         }
@@ -1089,11 +1090,12 @@ static bool dd885_42Read(DiskParam *dp, FILE *fcb)
     CpWord *data;
     u32 emAddress;
     int i;
+    int ignore;
 
     activeDevice->status = 0;
     dp->detailedStatus[2] = Fc885_42Read << 4;
 
-    (void)fread(&dp->buffer, sizeof dp->buffer, 1, fcb);
+    ignore = fread(&dp->buffer, sizeof dp->buffer, 1, fcb);
     activeDevice->status = 0;
     dp->generalStatus[3] = dp->buffer.control[0];
     dp->generalStatus[4] = dp->buffer.control[1];

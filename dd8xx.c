@@ -1475,13 +1475,15 @@ static i32 dd8xxSeekNextSector(DiskParam *dp)
 **------------------------------------------------------------------------*/
 static PpWord dd8xxReadClassic(DiskParam *dp, FILE *fcb)
     {
+    int ignore;
+
     /*
     **  Read an entire sector if the current buffer is empty.
     */
     if (dp->bufPtr == NULL)
         {
         dp->bufPtr = dp->buffer;
-        (void)fread(dp->buffer, 1, dp->sectorSize, fcb);
+        ignore = fread(dp->buffer, 1, dp->sectorSize, fcb);
         }
 
     /*
@@ -1548,6 +1550,7 @@ static void dd8xxWriteClassic(DiskParam *dp, FILE *fcb, PpWord data)
 static PpWord dd8xxReadPacked(DiskParam *dp, FILE *fcb)
     {
     u16 byteCount;
+    int ignore;
     static u8 sector[512];
     u8 *sp;
     PpWord *pp;
@@ -1558,7 +1561,7 @@ static PpWord dd8xxReadPacked(DiskParam *dp, FILE *fcb)
     if (dp->bufPtr == NULL)
         {
         dp->bufPtr = dp->buffer;
-        (void)fread(sector, 1, dp->sectorSize, fcb);
+        ignore = fread(sector, 1, dp->sectorSize, fcb);
 
         /*
         **  Unpack the sector into the buffer.
@@ -1705,6 +1708,7 @@ static void dd844SetClearFlaw(DiskParam *dp, PpWord flawState)
     {
     u8 unitNo;
     FILE *fcb;
+    int ignore;
     int index;
     PpWord flawWord0;
     PpWord flawWord1;
@@ -1741,7 +1745,7 @@ static void dd844SetClearFlaw(DiskParam *dp, PpWord flawState)
     dp->track = 0;
     dp->sector = 2;
     fseek(fcb, dd8xxSeek(dp), SEEK_SET);
-    (void)fread(mySector, 2, SectorSize, fcb);
+    ignore = fread(mySector, 2, SectorSize, fcb);
 
     /*
     **  Process request.

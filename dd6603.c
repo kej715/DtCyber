@@ -371,6 +371,8 @@ static FcStatus dd6603Func(PpWord funcCode)
 **------------------------------------------------------------------------*/
 static void dd6603Io(void)
     {
+    int ignore;
+
     FILE *fcb = activeDevice->fcb[activeDevice->selectedUnit];
     DiskParam *dp = (DiskParam *)activeDevice->context[activeDevice->selectedUnit];
 
@@ -386,7 +388,7 @@ static void dd6603Io(void)
     case Fc6603ReadSector:
         if (!activeChannel->full)
             {
-            (void)fread(&activeChannel->data, 2, 1, fcb);
+            ignore = fread(&activeChannel->data, 2, 1, fcb);
             activeChannel->full = TRUE;
 
 #if DEBUG
