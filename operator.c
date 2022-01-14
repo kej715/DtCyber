@@ -93,7 +93,7 @@ static void opHelpDumpMemory(void);
 static void opCmdEnterKeys(bool help, char *cmdParams);
 static void opHelpEnterKeys(void);
 static void opWaitKeyConsume();
-static void opWaitKeyInterval(int milliseconds);
+static void opWaitKeyInterval(long milliseconds);
 
 static void opCmdHelp(bool help, char *cmdParams);
 static void opHelpHelp(void);
@@ -294,6 +294,8 @@ static void *opThread(void *param)
     {
     OpCmd *cp;
     char cmd[256];
+    bool isOpSection;
+    char *line;
     char name[80];
     char *params;
     char *pos;
@@ -304,6 +306,8 @@ static void *opThread(void *param)
     printf("\n\nOperator interface");
     printf("\nPlease enter 'help' to get a list of commands\n");
     printf("\nOperator> ");
+
+    isOpSection = initOpenOperatorSection() == 1;
 
     while (emulationActive)
         {
@@ -320,9 +324,26 @@ static void *opThread(void *param)
         /*
         **  Wait for command input.
         */
-        if (fgets(cmd, sizeof(cmd), stdin) == NULL || strlen(cmd) == 0)
+        if (isOpSection)
             {
-            continue;
+            if (opPaused || opActive) continue;
+            line = initGetNextLine();
+            if (line == NULL)
+                {
+                isOpSection = FALSE;
+                continue;
+                }
+            strcpy(cmd, line);
+            fputs(cmd, stdout);
+            fputs("\n", stdout);
+            fflush(stdout);
+            }
+        else
+            {
+            if (fgets(cmd, sizeof(cmd), stdin) == NULL || strlen(cmd) == 0)
+                {
+                continue;
+                }
             }
 
         if (opPaused)
@@ -648,8 +669,7 @@ static void opHelpDumpMemory(void)
 **
 **------------------------------------------------------------------------*/
 char opKeyIn = 0;
-
-static int opKeyInterval = 250;
+long opKeyInterval = 250;
 
 static void opCmdEnterKeys(bool help, char *cmdParams)
     {
@@ -659,7 +679,7 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
     char keybuf[256];
     char *kp;
     char *limit;
-    int msec;
+    long msec;
     char timestamp[16];
     struct tm *tmp;
 
@@ -823,7 +843,7 @@ static void opWaitKeyConsume()
         }
     }
 
-static void opWaitKeyInterval(int milliseconds)
+static void opWaitKeyInterval(long milliseconds)
     {
     #if defined(_WIN32)
     Sleep(milliseconds);

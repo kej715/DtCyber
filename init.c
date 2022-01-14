@@ -66,10 +66,10 @@
 */
 static void initCyber(char *config);
 static void initNpuConnections(void);
+static void initOperator(void);
 static void initEquipment(void);
 static void initDeadstart(void);
 static bool initOpenSection(char *name);
-static char *initGetNextLine(void);
 static bool initGetOctal(char *entry, int defValue, long *value);
 static bool initGetInteger(char *entry, int defValue, long *value);
 static bool initGetString(char *entry, char *defString, char *str, int strLen);
@@ -99,6 +99,7 @@ static char *startupFile = "cyber.ini";
 static char deadstart[80];
 static char equipment[80];
 static char npuConnections[80];
+static char operator[80];
 static long chCount;
 static union
     {
@@ -168,6 +169,7 @@ void initStartup(char *config)
     initDeadstart();
     initNpuConnections();
     initEquipment();
+    initOperator();
 
     if ((features & HasMaintenanceChannel) != 0)
         {
@@ -193,6 +195,84 @@ u32 initConvertEndian(u32 value)
     result |= (value & 0x000000ff) << 24;
 
     return(result);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Return next non-blank line in section
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Pointer to line buffer
+**
+**------------------------------------------------------------------------*/
+char *initGetNextLine(void)
+    {
+    static char lineBuffer[MaxLine];
+    char *cp;
+    bool blank;
+
+    /*
+    **  Get next lineBuffer.
+    */
+    do
+        {
+        if (   fgets(lineBuffer, MaxLine, fcb) == NULL
+            || lineBuffer[0] == '[')
+            {
+            /*
+            **  End-of-file or end-of-section - return failure.
+            */
+            return(NULL);
+            }
+
+        /*
+        **  Determine if this line consists only of whitespace or comment and
+        **  replace all whitespace by proper space.
+        */
+        blank = TRUE;
+        for (cp = lineBuffer; *cp != 0; cp++)
+            {
+            if (blank && *cp == ';')
+                {
+                break;
+                }
+
+            if (isspace(*cp))
+                {
+                *cp = ' ';
+                }
+            else
+                {
+                blank = FALSE;
+                }
+            }
+
+        } while (blank);
+
+    /*
+    **  Found a non-blank line - return to caller.
+    */
+    return(lineBuffer);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Open the operator section.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        -1 if error
+**                   0 if section not defined
+**                   1 if section opened
+**
+**------------------------------------------------------------------------*/
+int initOpenOperatorSection(void)
+    {
+    if (strlen(operator) == 0)
+        return 0;
+    else if (initOpenSection(operator))
+        return 1;
+    else
+        return -1;
     }
 
 /*
@@ -473,6 +553,11 @@ static void initCyber(char *config)
     initGetString("npuConnections", "", npuConnections, sizeof(npuConnections));
 
     /*
+    **  Get optional operator section name.
+    */
+    initGetString("operator", "", operator, sizeof(operator));
+
+    /*
     **  Get active equipment section name.
     */
     if (!initGetString("equipment", "", equipment, sizeof(equipment)))
@@ -549,7 +634,7 @@ static void initNpuConnections(void)
 
     if (!initOpenSection(npuConnections))
         {
-        fprintf(stderr, "Required section [%s] not found in %s\n", npuConnections, startupFile);
+        fprintf(stderr, "Section [%s] not found in %s\n", npuConnections, startupFile);
         exit(1);
         }
 
@@ -633,7 +718,7 @@ static void initNpuConnections(void)
     */
     if (!initOpenSection(npuConnections))
         {
-        fprintf(stderr, "Required section [%s] not found in %s\n", npuConnections, startupFile);
+        fprintf(stderr, "Section [%s] not found in %s\n", npuConnections, startupFile);
         exit(1);
         }
 
@@ -1236,6 +1321,25 @@ static void initDeadstart(void)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Read and process operator definitions.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void initOperator(void)
+    {
+    if (strlen(operator) == 0) return;
+
+    if (initOpenOperatorSection() == -1)
+        {
+        fprintf(stderr, "Section [%s] not found in %s\n", operator, startupFile);
+        exit(1);
+        }
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Locate section header and remember the start of data.
 **
 **  Parameters:     Name        Description.
@@ -1281,64 +1385,6 @@ static bool initOpenSection(char *name)
     */
     sectionStart = ftell(fcb);
     return(TRUE);
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Return next non-blank line in section
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        Pointer to line buffer
-**
-**------------------------------------------------------------------------*/
-static char *initGetNextLine(void)
-    {
-    static char lineBuffer[MaxLine];
-    char *cp;
-    bool blank;
-
-    /*
-    **  Get next lineBuffer.
-    */
-    do
-        {
-        if (   fgets(lineBuffer, MaxLine, fcb) == NULL
-            || lineBuffer[0] == '[')
-            {
-            /*
-            **  End-of-file or end-of-section - return failure.
-            */
-            return(NULL);
-            }
-
-        /*
-        **  Determine if this line consists only of whitespace or comment and
-        **  replace all whitespace by proper space.
-        */
-        blank = TRUE;
-        for (cp = lineBuffer; *cp != 0; cp++)
-            {
-            if (blank && *cp == ';')
-                {
-                break;
-                }
-
-            if (isspace(*cp))
-                {
-                *cp = ' ';
-                }
-            else
-                {
-                blank = FALSE;
-                }
-            }
-
-        } while (blank);
-
-    /*
-    **  Found a non-blank line - return to caller.
-    */
-    return(lineBuffer);
     }
 
 /*--------------------------------------------------------------------------

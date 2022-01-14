@@ -39,6 +39,8 @@
 */
 void initStartup(char *);
 u32 initConvertEndian(u32 value);
+char *initGetNextLine(void);
+int initOpenOperatorSection(void);
 
 /*
 **  deadstart.c
@@ -344,6 +346,7 @@ extern u32 cpuMaxMemory;
 extern u32 extMaxMemory;
 extern CpWord *extMem;
 extern char opKeyIn;
+extern long opKeyInterval;
 extern char ppKeyIn;
 extern const u8 asciiToCdc[256];
 extern const char cdcToAscii[64];
