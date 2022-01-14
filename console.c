@@ -307,7 +307,15 @@ static void consoleIo(void)
         activeChannel->full = TRUE;
         activeChannel->status = 0;
         activeDevice->fcode = 0;
-        ppKeyIn = 0;
+        if (opKeyIn != 0)
+            {
+            activeChannel->data = asciiToConsole[opKeyIn];
+            opKeyIn = 0;
+            }
+        else
+            {
+            ppKeyIn = 0;
+            }
         break;
         }
     }

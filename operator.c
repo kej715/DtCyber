@@ -92,6 +92,8 @@ static void opHelpDumpMemory(void);
 
 static void opCmdEnterKeys(bool help, char *cmdParams);
 static void opHelpEnterKeys(void);
+static void opWaitKeyConsume();
+static void opWaitKeyInterval(int milliseconds);
 
 static void opCmdHelp(bool help, char *cmdParams);
 static void opHelpHelp(void);
@@ -114,8 +116,8 @@ static void opHelpRemoveCards(void);
 static void opCmdRemovePaper(bool help, char *cmdParams);
 static void opHelpRemovePaper(void);
 
-static void opCmdSetKeyDelay(bool help, char *cmdParams);
-static void opHelpSetKeyDelay(void);
+static void opCmdSetKeyInterval(bool help, char *cmdParams);
+static void opHelpSetKeyInterval(void);
 
 static void opCmdShutdown(bool help, char *cmdParams);
 static void opHelpShutdown(void);
@@ -137,19 +139,25 @@ volatile bool opActive = FALSE;
 */
 static OpCmd decode[] = 
     {
+    "d",                        opCmdDumpMemory,
     "dm",                       opCmdDumpMemory,
+    "e",                        opCmdEnterKeys,
+    "ek",                       opCmdEnterKeys,
     "lc",                       opCmdLoadCards,
     "lt",                       opCmdLoadTape,
     "rc",                       opCmdRemoveCards,
     "rp",                       opCmdRemovePaper,
     "p",                        opCmdPause,
+    "ski",                      opCmdSetKeyInterval,
     "st",                       opCmdShowTape,
     "ut",                       opCmdUnloadTape,
     "dump_memory",              opCmdDumpMemory,
+    "enter_keys",               opCmdEnterKeys,
     "load_cards",               opCmdLoadCards,
     "load_tape",                opCmdLoadTape,
     "remove_cards",             opCmdRemoveCards,
     "remove_paper",             opCmdRemovePaper,
+    "set_key_interval",         opCmdSetKeyInterval,
     "show_tape",                opCmdShowTape,
     "unload_tape",              opCmdUnloadTape,
     "?",                        opCmdHelp,
@@ -361,6 +369,12 @@ static void *opThread(void *param)
             {
             if (strcmp(cp->name, name) == 0)
                 {
+                if (cp->handler == opCmdEnterKeys)
+                    {
+                    opCmdEnterKeys(FALSE, params);
+                    opActive = FALSE;
+                    break;
+                    }
                 /*
                 **  Request the main emulation thread to execute the command.
                 */
@@ -518,7 +532,7 @@ static void opCmdDumpMemory(bool help, char *cmdParams)
 
 static void opCmdDumpCM(int fwa, int count)
     {
-    char buf[40];
+    char buf[42];
     char *cp;
     int limit;
     int n;
@@ -533,7 +547,7 @@ static void opCmdDumpCM(int fwa, int count)
     for (limit = fwa + count; fwa < limit; fwa++)
         {
         word = cpMem[fwa];
-        n = sprintf(buf, "%06o %020lo ", fwa, word);
+        n = sprintf(buf, "%08o %020lo ", fwa, word);
         cp = buf + n;
         for (shiftCount = 54; shiftCount >= 0; shiftCount -= 6)
             {
@@ -621,6 +635,238 @@ static void opHelpDumpMemory(void)
     printf("'dump_memory CM,<fwa>,<count>' dump <count> words of central memory starting from octal address <fwa>.\n");
     printf("'dump_memory EM,<fwa>,<count>' dump <count> words of extended memory starting from octal address <fwa>.\n");
     printf("'dump_memory PP<nn>,<fwa>,<count>' dump <count> words of PP nn's memory starting from octal address <fwa>.\n");
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Enter keys on the system console.
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+char opKeyIn = 0;
+
+static int opKeyInterval = 250;
+
+static void opCmdEnterKeys(bool help, char *cmdParams)
+    {
+    char *bp;
+    time_t clock;
+    char *cp;
+    char keybuf[256];
+    char *kp;
+    char *limit;
+    int msec;
+    char timestamp[16];
+    struct tm *tmp;
+
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpEnterKeys();
+        return;
+        }
+
+    /*
+     *  First, edit the parameter string to subtitute values
+     *  for keywords. Keywords are delimited by '%'.
+     */
+    clock = time(NULL);
+    tmp = localtime(&clock);
+    sprintf(timestamp, "%02d%02d%02d%02d%02d%02d",
+        tmp->tm_year - 100, tmp->tm_mon + 1, tmp->tm_mday,
+        tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
+    cp = cmdParams;
+    bp = keybuf;
+    limit = bp + sizeof(keybuf) - 2;
+    while (*cp != '\0' && bp < limit)
+        {
+        if (*cp == '%')
+            {
+            kp = ++cp;
+            while (*cp != '%' && *cp != '\0') cp += 1;
+            if (*cp == '%') *cp++ = '\0';
+            if (strcasecmp(kp, "year") == 0)
+                {
+                memcpy(bp, timestamp, 2);
+                bp += 2;
+                }
+            else if (strcasecmp(kp, "mon") == 0)
+                {
+                memcpy(bp, timestamp + 2, 2);
+                bp += 2;
+                }
+            else if (strcasecmp(kp, "day") == 0)
+                {
+                memcpy(bp, timestamp + 4, 2);
+                bp += 2;
+                }
+            else if (strcasecmp(kp, "hour") == 0)
+                {
+                memcpy(bp, timestamp + 6, 2);
+                bp += 2;
+                }
+            else if (strcasecmp(kp, "min") == 0)
+                {
+                memcpy(bp, timestamp + 8, 2);
+                bp += 2;
+                }
+            else if (strcasecmp(kp, "sec") == 0)
+                {
+                memcpy(bp, timestamp + 10, 2);
+                bp += 2;
+                }
+            else
+                {
+                printf("Unrecognized keyword: %%%s%%\n", kp);
+                printf("\nOperator> ");
+                return;
+                }
+            }
+        else
+            {
+            *bp++ = *cp++;
+            }
+        }
+    if (bp > limit)
+        {
+        printf("Key sequence is too long\n");
+        printf("\nOperator> ");
+        return;
+        }
+    *bp = '\0';
+    /*
+     *  Next, traverse the key sequence, supplying keys to the console
+     *  one by one. Recognize and process special characters along the
+     *  way as follows:
+     *
+     *    ! - end the sequence, and do not send an <enter> key
+     *    ; - send an <enter> key within a sequence
+     *    _ - send a blank
+     *    ^ - send a backspace
+     *    # - delimit a milliseconds value (e.g., #500#) and pause for
+     *        the speccified amount of time
+     */
+    cp = keybuf;
+    while (*cp != '\0' && *cp != '!')
+        {
+        switch (*cp)
+            {
+        default:
+            opKeyIn = *cp;
+            break;
+        case ';':
+            opKeyIn = '\r';
+            break;
+        case '_':
+            opKeyIn = ' ';
+            break;
+        case '^':
+            opKeyIn = '\b';
+            break;
+        case '#':
+            msec = 0;
+            cp += 1;
+            while (*cp >= '0' && *cp <= '9')
+                {
+                msec = (msec * 10) + (*cp++ - '0');
+                }
+            if (*cp != '#') cp -= 1;
+            opWaitKeyInterval(msec);
+            break;
+            }
+        cp += 1;
+        opWaitKeyInterval(opKeyInterval);
+        opWaitKeyConsume();
+        }
+    if (*cp != '!')
+        {
+        opKeyIn = '\r';
+        opWaitKeyInterval(opKeyInterval);
+        opWaitKeyConsume();
+        }
+    printf("\nOperator> ");
+    }
+
+static void opHelpEnterKeys(void)
+    {
+    printf("'enter_keys <key-sequence>' supply a sequence of key entries to the system console .\n");
+    fputs("     Special keys:\n", stdout);
+    fputs("       ! - end sequence without sending <enter> key\n", stdout);
+    fputs("       ; - send <enter> key within a sequence\n", stdout);
+    fputs("       _ - send <blank> key\n", stdout);
+    fputs("       ^ - send <backspace> key\n", stdout);
+    fputs("       % - keyword delimiter for keywords:\n", stdout);
+    fputs("           %year% insert current year\n", stdout);
+    fputs("           %mon%  insert current month\n", stdout);
+    fputs("           %day%  insert current day\n", stdout);
+    fputs("           %hour% insert current hour\n", stdout);
+    fputs("           %min%  insert current minute\n", stdout);
+    fputs("           %sec%  insert current second\n", stdout);
+    fputs("       # - delimiter for milliseconds pause value (e.g., #500#)\n", stdout);
+    }
+
+static void opWaitKeyConsume()
+    {
+    while (opKeyIn != 0)
+        {
+        #if defined(_WIN32)
+        Sleep(100);
+        #else
+        usleep(100000);
+        #endif
+        }
+    }
+
+static void opWaitKeyInterval(int milliseconds)
+    {
+    #if defined(_WIN32)
+    Sleep(milliseconds);
+    #else
+    usleep((useconds_t)(milliseconds * 1000));
+    #endif
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Set interval between console key entries.
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdSetKeyInterval(bool help, char *cmdParams)
+    {
+    int msec;
+    int numParam;
+
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpSetKeyInterval();
+        return;
+        }
+    numParam = sscanf(cmdParams, "%d", &msec);
+    if (numParam != 1)
+        {
+        printf("Missing or invalid parameter\n");
+        return;
+        }
+    opKeyInterval = msec;
+    }
+
+static void opHelpSetKeyInterval(void)
+    {
+    printf("'set_key_interval <millisecs>' set the interval between key entries to the system console .\n");
     }
 
 /*--------------------------------------------------------------------------
