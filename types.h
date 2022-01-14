@@ -49,7 +49,7 @@
     #define FMT60_020o "%020I64o"
 #elif defined (__GNUC__) || defined(__SunOS)
     #if defined(__amd64) || defined(__amd64__) || defined(__alpha__) || defined(__powerpc64__) || defined(__ppc64__) \
-        || (defined(__sparc64__) && defined(__arch64__))
+        || (defined(__sparc64__) && defined(__arch64__)) || defined( __aarch64__)
         /*
         **  64 bit systems
         */
@@ -63,7 +63,8 @@
         typedef unsigned long int u64;
         #define FMT60_020o "%020lo"
     #elif defined(__i386) || defined(__i386__) || defined(__powerpc__) || defined(__ppc__) \
-        || defined(__sparc__) || defined(__hppa__) || defined(__APPLE__)  || defined(__arm__)
+        || defined(__sparc__) || defined(__hppa__) || defined(__APPLE__)  || defined(__arm__) \
+        || defined( __ARM_ARCH_6__) || defined( __ARM_ARCH_7__) || defined( __ARM_ARCH_8__)
         /*
         **  32 bit systems
         */
