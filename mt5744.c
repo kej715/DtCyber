@@ -421,13 +421,13 @@ void mt5744Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     tp->driveName = NULL;
     tp->serverName = NULL;
     serverPort = 0;
-    sp = index(deviceName, '/');
+    sp = strchr(deviceName, '/');
     if (sp != NULL)
         {
         *sp++ = '\0';
         tp->driveName = (char *)malloc(strlen(sp) + 1);
         strcpy(tp->driveName, sp);
-        sp = index(deviceName, ':');
+        sp = strchr(deviceName, ':');
         if (sp != NULL)
             {
             *sp++ = '\0';

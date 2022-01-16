@@ -230,6 +230,14 @@
 #if defined (__GNUC__) || defined(__SunOS)
 #define stricmp strcasecmp
 #endif
+#if defined(_WIN32)
+#define strcasecmp _stricmp
+#define stricmp _stricmp
+#define strncasecmp _strnicmp
+#if !defined(MSG_WAITALL)
+#define MSG_WAITALL 0x8
+#endif
+#endif
 
 #endif /* CONST_H */
 /*---------------------------  End Of File  ------------------------------*/

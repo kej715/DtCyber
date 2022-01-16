@@ -328,7 +328,7 @@ void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     */
     feip->serverName = NULL;
     serverPort = 0;
-    sp = index(deviceName, ':');
+    sp = strchr(deviceName, ':');
     if (sp != NULL)
         {
         *sp++ = '\0';
