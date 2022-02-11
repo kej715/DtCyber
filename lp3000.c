@@ -390,17 +390,17 @@ void lp3000RemovePaper(char *params)
     time_t currentTime;
     struct tm t;
     char fname[80];
-    char fnameNew[80];
+    char fnameNew[200];
 
     /*
     **  Operator wants to remove paper.
     */
-    numParam = sscanf(params,"%o,%o",&channelNo, &equipmentNo);
+    numParam = sscanf(params,"%o,%o,%s",&channelNo, &equipmentNo, fnameNew);
 
     /*
     **  Check parameters.
     */
-    if (numParam != 2)
+    if (numParam < 2)
         {
         printf("Not enough or invalid parameters\n");
         return;
@@ -439,15 +439,18 @@ void lp3000RemovePaper(char *params)
     */
     sprintf(fname, "LP5xx_C%02o_E%o", channelNo, equipmentNo);
 
-    time(&currentTime);
-    t = *localtime(&currentTime);
-    sprintf(fnameNew, "LP5xx_%04d%02d%02d_%02d%02d%02d",
-        t.tm_year + 1900,
-        t.tm_mon + 1,
-        t.tm_mday,
-        t.tm_hour,
-        t.tm_min,
-        t.tm_sec);
+    if (numParam < 3)
+        {
+        time(&currentTime);
+        t = *localtime(&currentTime);
+        sprintf(fnameNew, "LP5xx_%04d%02d%02d_%02d%02d%02d",
+            t.tm_year + 1900,
+            t.tm_mon + 1,
+            t.tm_mday,
+            t.tm_hour,
+            t.tm_min,
+            t.tm_sec);
+        }
 
     if (rename(fname, fnameNew) != 0)
         {

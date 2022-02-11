@@ -1256,7 +1256,7 @@ static void opCmdRemovePaper(bool help, char *cmdParams)
 
 static void opHelpRemovePaper(void)
     {
-    printf("'remove_paper <channel>,<equipment>' remover paper from printer.\n");
+    printf("'remove_paper <channel>,<equipment>[,<filename>]' remover paper from printer.\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -1295,7 +1295,7 @@ static void opCmdRemoveCards(bool help, char *cmdParams)
 
 static void opHelpRemoveCards(void)
     {
-    printf("'remove_cards <channel>,<equipment>' remover cards from card puncher.\n");
+    printf("'remove_cards <channel>,<equipment>[,<filename>]' remover cards from card puncher.\n");
     }
 
 /*---------------------------  End Of File  ------------------------------*/
