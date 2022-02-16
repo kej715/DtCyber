@@ -51,6 +51,7 @@
 **  Private Constants
 **  -----------------
 */
+#define MaxCardParams 10
 
 /*
 **  -----------------------
@@ -100,6 +101,7 @@ static void opHelpHelp(void);
 
 static void opCmdLoadCards(bool help, char *cmdParams);
 static void opHelpLoadCards(void);
+static int opPrepCards(char *fname, FILE *fcb);
 
 static void opCmdLoadTape(bool help, char *cmdParams);
 static void opHelpLoadTape(void);
@@ -1067,6 +1069,15 @@ static void opHelpHelp(void)
 **------------------------------------------------------------------------*/
 static void opCmdLoadCards(bool help, char *cmdParams)
     {
+    int channelNo;
+    int equipmentNo;
+    FILE *fcb;
+    char fname[80];
+    int numParam;
+    int rc;
+    static int seqNo = 1;
+    static char str[200];
+
     /*
     **  Process help request.
     */
@@ -1076,23 +1087,215 @@ static void opCmdLoadCards(bool help, char *cmdParams)
         return;
         }
 
+    numParam = sscanf(cmdParams,"%o,%o,%s",&channelNo, &equipmentNo, str);
+
     /*
-    **  Check parameters and process command.
+    **  Check parameters.
     */
-    if (strlen(cmdParams) == 0)
+    if (numParam < 3)
         {
-        printf("parameters expected\n");
+        printf("Not enough or invalid parameters\n");
         opHelpLoadCards();
         return;
         }
 
-    cr405LoadCards(cmdParams);
-    cr3447LoadCards(cmdParams);
+    if (channelNo < 0 || channelNo >= MaxChannels)
+        {
+        printf("Invalid channel no\n");
+        return;
+        }
+
+    if (equipmentNo < 0 || equipmentNo >= MaxEquipment)
+        {
+        printf("Invalid equipment no\n");
+        return;
+        }
+
+    if (str[0] == 0)
+        {
+        printf("Invalid file name\n");
+        return;
+        }
+    /*
+    **  Create temporary file for preprocessed card deck
+    */
+    sprintf(fname, "CR_C%o_E%o_%d", channelNo, equipmentNo, seqNo++);
+    fcb = fopen(fname, "w");
+    if (fcb == NULL)
+        {
+        printf("Failed to create %s\n", fname);
+        return;
+        }
+
+    /*
+    **  Preprocess card file
+    */
+    rc = opPrepCards(str, fcb);
+    fclose(fcb);
+    if (rc == -1)
+        {
+        unlink(fname);
+        return;
+        }
+    cr405LoadCards(fname, channelNo, equipmentNo);
+    cr3447LoadCards(fname, channelNo, equipmentNo);
     }
 
 static void opHelpLoadCards(void)
     {
-    printf("'load_cards <channel>,<equipment>,<filename>' load specified card stack file.\n");
+    printf("'load_cards <channel>,<equipment>,<filename>[,<p1>,<p2>,...,<pn>]' load specified card file with optional parameters.\n");
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Preprocess a card file
+**
+**                  The specified source file is read, nested "~include"
+**                  directives are detected and processed recursively,
+**                  and embedded parameter references are interpolated.
+**
+**  Parameters:     Name        Description.
+**                  str         Source file path and optional parameters
+**                  fcb         handle of output file
+**
+**  Returns:        0 if success
+**                 -1 if failure
+**
+**------------------------------------------------------------------------*/
+static int opPrepCards(char *str, FILE *fcb)
+    {
+    int argc;
+    int argi;
+    char *argv[MaxCardParams];
+    char *cp;
+    char dbuf[400];
+    char *dp;
+    FILE *in;
+    char *lastnb;
+    char params[100];
+    char sbuf[400];
+    char *sp;
+
+    /*
+    **  The parameter string has the form:
+    **
+    **    <filepath>,<arg1>,<arg2>,...,<argn>
+    **
+    **  where the args are optional.
+    */
+    argc = 0;
+    cp = strchr(str, ',');
+    if (cp != NULL)
+        {
+        *cp++ = '\0';
+        while (*cp != '\0')
+            {
+            if (argc < MaxCardParams) argv[argc++] = cp;
+            cp = strchr(cp, ',');
+            if (cp == NULL) break;
+            *cp++ = '\0';
+            }
+        }
+    /*
+    **  Open and parse the input file
+    */
+    in = fopen(str, "r");
+    if (in == NULL)
+        {
+        printf("Failed to open %s\n", str);
+        return -1;
+        }
+    while (TRUE)
+        {
+        sp = fgets(sbuf, sizeof(sbuf), in);
+        if (sp == NULL)
+            {
+            fclose(in);
+            return 0;
+            }
+        /*
+        **  Scan the source line for parameter references and interpolate
+        **  any found. A parameter reference has the form "${n}" where "n"
+        **  is an integer greater than 0.
+        */
+        dp = dbuf;
+        while (*sp != '\0')
+            {
+            if (*sp == '$' && *(sp + 1) == '{' && isdigit(*(sp + 2)))
+                {
+                argi = 0;
+                cp = sp + 2;
+                while (isdigit(*cp))
+                    {
+                    argi = (argi * 10) + (*cp++ - '0');
+                    }
+                if (*cp == '}')
+                    {
+                    sp = cp + 1;
+                    argi -= 1;
+                    if (argi >= 0 && argi < argc)
+                        {
+                        cp = argv[argi];
+                        while (*cp != '\0') *dp++ = *cp++;
+                        }
+                    continue;
+                    }
+                }
+            *dp++ = *sp++;
+            }
+        *dp = '\0';
+        /*
+        **  Recognize nested "~include" directives and
+        **  process them recursively.
+        */
+        sp = dbuf;
+        if (strncmp(sp, "~include ", 9) == 0)
+            {
+            sp += 9;
+            while (isspace(*sp)) sp += 1;
+            if (*sp == '\0')
+                {
+                printf("File name missing from ~include in %s\n", str);
+                fclose(in);
+                return -1;
+                }
+            if (*sp != '/')
+                {
+                cp = strrchr(str, '/');
+                if (cp != NULL)
+                    {
+                    *cp = '\0';
+                    sprintf(params, "%s/%s", str, sp);
+                    *cp = '/';
+                    sp = params;
+                    }
+                }
+            /*
+            **  Trim trailing whitespace from pathname and parameters
+            */
+            lastnb = sp;
+            for (cp = sp; *cp != '\0'; cp++)
+                 {
+                 if (!isspace(*cp)) lastnb = cp;
+                 }
+            *(lastnb + 1) = '\0';
+            /*
+            **  Process nested include file recursively
+            */
+            if (opPrepCards(sp, fcb) == -1)
+                {
+                fclose(in);
+                return -1;
+                }
+            }
+        /*
+        **  Recognize and ignore embedded comments. Embedded comments
+        **  are lines beginning with "~*".
+        */
+        else if (strncmp(sp, "~*", 2) != 0)
+            {
+            fputs(sp, fcb);
+            }
+        }
     }
 
 /*--------------------------------------------------------------------------

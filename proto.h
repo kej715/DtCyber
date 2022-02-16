@@ -137,7 +137,7 @@ void mt5744ShowTapeStatus(void);
 **  cr405.c
 */
 void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void cr405LoadCards(char *params);
+void cr405LoadCards(char *fname, int channelNo, int equipmentNo);
 
 /*
 **  cp3446.c
@@ -149,7 +149,7 @@ void cp3446RemoveCards(char *params);
 **  cr3447.c
 */
 void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void cr3447LoadCards(char *params);
+void cr3447LoadCards(char *fname, int channelNo, int equipmentNo);
 
 /*
 **  lp1612.c

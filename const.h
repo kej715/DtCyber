@@ -234,6 +234,7 @@
 #define strcasecmp _stricmp
 #define stricmp _stricmp
 #define strncasecmp _strnicmp
+#define unlink _unlink
 #if !defined(MSG_WAITALL)
 #define MSG_WAITALL 0x8
 #endif

@@ -32,6 +32,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 #include "const.h"
 #include "types.h"
 #include "proto.h"
@@ -58,6 +63,8 @@
 #define StCr405EOF              00002
 #define StCr405CompareErr       00004
 
+#define Cr405MaxDecks           10
+
 /*
 **  -----------------------
 **  Private Macro Functions
@@ -75,6 +82,9 @@ typedef struct cr405Context
     u32     getCardCycle;
     int     col;
     PpWord  card[80];
+    int     inDeck;
+    int     outDeck;
+    char    *decks[Cr405MaxDecks];
     } Cr405Context;
 
 /*
@@ -87,6 +97,7 @@ static void cr405Io(void);
 static void cr405Activate(void);
 static void cr405Disconnect(void);
 static void cr405NextCard (DevSlot *dp);
+static void cr405StartNextDeck(DevSlot *up, Cr405Context *cc);
 
 /*
 **  ----------------
@@ -190,53 +201,19 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Load cards on 3447 card reader.
+**  Purpose:        Load cards on 405 card reader.
 **
 **  Parameters:     Name        Description.
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void cr405LoadCards(char *params)
+void cr405LoadCards(char *fname, int channelNo, int equipmentNo)
     {
     Cr405Context *cc;
     DevSlot *dp;
-    int numParam;
-    int channelNo;
-    int equipmentNo;
-    static char str[200];
-
-    /*
-    **  Operator wants to load new card stack.
-    */
-    numParam = sscanf(params,"%o,%o,%s",&channelNo, &equipmentNo, str);
-
-    /*
-    **  Check parameters.
-    */
-    if (numParam != 3)
-        {
-        printf("Not enough or invalid parameters\n");
-        return;
-        }
-
-    if (channelNo < 0 || channelNo >= MaxChannels)
-        {
-        printf("Invalid channel no\n");
-        return;
-        }
-
-    if (equipmentNo < 0 || equipmentNo >= MaxEquipment)
-        {
-        printf("Invalid equipment no\n");
-        return;
-        }
-
-    if (str[0] == 0)
-        {
-        printf("Invalid file name\n");
-        return;
-        }
+    int len;
+    char *sp;
 
     /*
     **  Locate the device control block.
@@ -250,28 +227,25 @@ void cr405LoadCards(char *params)
     cc = (Cr405Context *) (dp->context[0]);
 
     /*
-    **  Ensure the tray is empty.
+    **  Ensure the tray is not full.
     */
-    if (dp->fcb[0] != NULL)
+    if (((cc->inDeck + 1) % Cr405MaxDecks) == cc->outDeck)
         {
         printf("Input tray full\n");
         return;
         }
+    len = strlen(fname) + 1;
+    sp = (char *)malloc(len);
+    memcpy(sp, fname, len);
+    cc->decks[cc->inDeck] = sp;
+    cc->inDeck = (cc->inDeck + 1) % Cr405MaxDecks;
 
-    dp->fcb[0] = fopen(str, "r");
-
-    /*
-    **  Check if the open succeeded.
-    */
     if (dp->fcb[0] == NULL)
         {
-        printf("Failed to open %s\n", str);
-        return;
+        cr405StartNextDeck(dp, cc);
         }
 
-    cr405NextCard(dp);
-
-    printf("CR405 loaded with %s", str);
+    printf("Cards loaded on card reader C%o,E%o\n", channelNo, equipmentNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -386,6 +360,35 @@ static void cr405Disconnect(void)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Start reading next card deck.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void cr405StartNextDeck(DevSlot *dp, Cr405Context *cc)
+    {
+    char *fname;
+
+    while (cc->outDeck != cc->inDeck)
+        {
+        fname = cc->decks[cc->outDeck];
+        dp->fcb[0] = fopen(fname, "r");
+        if (dp->fcb[0] != NULL)
+            {
+            cr405NextCard(dp);
+            return;
+            }
+        printf("Failed to open card deck %s\n", fname);
+        unlink(fname);
+        free(fname);
+        cc->outDeck = (cc->outDeck + 1) % Cr405MaxDecks;
+        }
+    dp->fcb[0] = NULL;
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Read next card, update card reader status.
 **
 **  Parameters:     Name        Description.
@@ -437,6 +440,10 @@ static void cr405NextCard(DevSlot *dp)
 
         fclose(dp->fcb[0]);
         dp->fcb[0] = NULL;
+        unlink(cc->decks[cc->outDeck]);
+        free(cc->decks[cc->outDeck]);
+        cc->outDeck = (cc->outDeck + 1) % Cr405MaxDecks;
+        cr405StartNextDeck(dp, cc);
         return;
         }
 

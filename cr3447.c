@@ -34,6 +34,11 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 #include "const.h"
 #include "types.h"
 #include "proto.h"
@@ -89,6 +94,8 @@
 #define StCr3447CompareErr       02000
 #define StCr3447NonIntStatus     02177
 
+#define Cr3447MaxDecks           10
+
 /*
 **  -----------------------
 **  Private Macro Functions
@@ -111,6 +118,9 @@ typedef struct
     const u16 *table;
     u32     getcardcycle;
     PpWord  card[80];
+    int     inDeck;
+    int     outDeck;
+    char    *decks[Cr3447MaxDecks];
     } CrContext;
 
     
@@ -125,6 +135,7 @@ static void cr3447Activate(void);
 static void cr3447Disconnect(void);
 static void cr3447NextCard(DevSlot *up, CrContext *cc);
 static char *cr3447Func2String(PpWord funcCode);
+static void cr3447StartNextDeck(DevSlot *up, CrContext *cc);
 
 /*
 **  ----------------
@@ -226,51 +237,19 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Purpose:        Load cards on 3447 card reader.
 **
 **  Parameters:     Name        Description.
+**                  fname       Pathname of file containing card deck
+**                  channelNo   Channel number of card reader
+**                  equipmentNo Equipment number of card reader
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void cr3447LoadCards(char *params)
+void cr3447LoadCards(char *fname, int channelNo, int equipmentNo)
     {
     CrContext *cc;
     DevSlot *dp;
-    int numParam;
-    int channelNo;
-    int equipmentNo;
-    FILE *fcb;
-    static char str[200];
-
-    /*
-    **  Operator wants to load new card stack.
-    */
-    numParam = sscanf(params,"%o,%o,%s",&channelNo, &equipmentNo, str);
-
-    /*
-    **  Check parameters.
-    */
-    if (numParam != 3)
-        {
-        printf("Not enough or invalid parameters\n");
-        return;
-        }
-
-    if (channelNo < 0 || channelNo >= MaxChannels)
-        {
-        printf("Invalid channel no\n");
-        return;
-        }
-
-    if (equipmentNo < 0 || equipmentNo >= MaxEquipment)
-        {
-        printf("Invalid equipment no\n");
-        return;
-        }
-
-    if (str[0] == 0)
-        {
-        printf("Invalid file name\n");
-        return;
-        }
+    int len;
+    char *sp;
 
     /*
     **  Locate the device control block.
@@ -284,36 +263,25 @@ void cr3447LoadCards(char *params)
     cc = (CrContext *) (dp->context[0]);
 
     /*
-    **  Ensure the tray is empty.
+    **  Ensure the tray is not full.
     */
-    if (dp->fcb[0] != NULL)
+    if (((cc->inDeck + 1) % Cr3447MaxDecks) == cc->outDeck)
         {
         printf("Input tray full\n");
         return;
         }
+    len = strlen(fname) + 1;
+    sp = (char *)malloc(len);
+    memcpy(sp, fname, len);
+    cc->decks[cc->inDeck] = sp;
+    cc->inDeck = (cc->inDeck + 1) % Cr3447MaxDecks;
 
-    dp->fcb[0] = NULL;
-    cc->status = StCr3447Eof;
-
-    fcb = fopen(str, "r");
-
-    /*
-    **  Check if the open succeeded.
-    */
-    if (fcb == NULL)
+    if (dp->fcb[0] == NULL)
         {
-        printf("Failed to open %s\n", str);
-        return;
+        cr3447StartNextDeck(dp, cc);
         }
 
-    dp->fcb[0] = fcb;
-    cc->status = StCr3447Ready;
-    cr3447NextCard(dp, cc);
-
-    activeDevice = channelFindDevice((u8)channelNo, DtDcc6681);
-    dcc6681Interrupt((cc->status & cc->intmask) != 0);
-
-    printf("CR3447 loaded with %s", str);
+    printf("Cards loaded on card reader C%o,E%o\n", channelNo, equipmentNo);
     }
 
 /*
@@ -589,6 +557,39 @@ static void cr3447Disconnect(void)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Start reading next card deck.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void cr3447StartNextDeck(DevSlot *up, CrContext *cc)
+    {
+    char *fname;
+
+    while (cc->outDeck != cc->inDeck)
+        {
+        fname = cc->decks[cc->outDeck];
+        up->fcb[0] = fopen(fname, "r");
+        if (up->fcb[0] != NULL)
+            {
+            cc->status = StCr3447Eof;
+            cc->status = StCr3447Ready;
+            cr3447NextCard(up, cc);
+            activeDevice = channelFindDevice(up->channel->id, DtDcc6681);
+            dcc6681Interrupt((cc->status & cc->intmask) != 0);
+            return;
+            }
+        printf("Failed to open card deck %s\n", fname);
+        unlink(fname);
+        free(fname);
+        cc->outDeck = (cc->outDeck + 1) % Cr3447MaxDecks;
+        }
+    up->fcb[0] = NULL;
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Read next card, update card reader status.
 **
 **  Parameters:     Name        Description.
@@ -634,6 +635,10 @@ static void cr3447NextCard (DevSlot *up, CrContext *cc)
         fclose(up->fcb[0]);
         up->fcb[0] = NULL;
         cc->status = StCr3447Eof;
+        unlink(cc->decks[cc->outDeck]);
+        free(cc->decks[cc->outDeck]);
+        cc->outDeck = (cc->outDeck + 1) % Cr3447MaxDecks;
+        cr3447StartNextDeck(up, cc);
         return;
         }
 
