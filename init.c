@@ -239,7 +239,7 @@ char *initGetNextLine(void)
 
             if (isspace(*cp))
                 {
-                *cp = ' ';
+                *cp = (*cp == '\r' || *cp == '\n') ? '\0' : ' ';
                 }
             else
                 {

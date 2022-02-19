@@ -774,6 +774,7 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
      *    # - delimit a milliseconds value (e.g., #500#) and pause for
      *        the speccified amount of time
      */
+    opWaitKeyConsume(); // just in case
     cp = keybuf;
     while (*cp != '\0' && *cp != '!')
         {
@@ -835,7 +836,7 @@ static void opHelpEnterKeys(void)
 
 static void opWaitKeyConsume()
     {
-    while (opKeyIn != 0)
+    while (opKeyIn != 0 || ppKeyIn != 0)
         {
         #if defined(_WIN32)
         Sleep(100);
