@@ -45,17 +45,20 @@ will be supported by the operating system. Wait for this to complete before proc
 batch job into *DtCyber's* card reader, and the job will compile and install the network definition
 created in the previous step. Wait for this to complete before proceeding to the next step.
 >`lc 12,4,decks/compile-ndlopl.job`
-5. Enter the following command on the system console (on the main green and block window). This
-command initiates a system shutdown. Note that you will need only to enter the first few characters
-before the system recognizes the command and completes it automatically for you. Wait for the
-command to complete before proceeding to the next step.
->`CHECKPOINT SYSTEM.`
-6. Enter the following command on the system console. This will quiesce the system.
+5. Enter the following command on the system console (on the main green and black window). This
+command unlocks the console to enable entering the subsequent commands. Note that you will need
+only to enter the first few characters before the system recognizes the command and completes it
+automatically for you.
+>`UNLOCK.`
+6. Enter the following command on the system console. This command initiates a system shutdown.
+Wait for the command to complete before proceeding to the next step.
+>`CHECK POINT SYSTEM.`
+7. Enter the following command on the system console. This will quiesce the system.
 >`STEP.`
-7. Enter the following command at the *DtCyber* **operator>** prompt. This will shut down *DtCyber*
+8. Enter the following command at the *DtCyber* **operator>** prompt. This will shut down *DtCyber*
 gracefully.
 >`shutdown`
-8. Enter the following command to restart *DtCyber* and bring up the freshly installed operating
+9. Enter the following command to restart *DtCyber* and bring up the freshly installed operating
 system. Note that this differs from step 1 in that *init* is **deliberately not** specified as a parameter.
 This is the usual way to start *DtCyber* after the initial installation of NOS 2.8.7.
 >`sudo ../dtcyber`
