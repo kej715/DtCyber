@@ -14,7 +14,7 @@ that are managed using **Git LFS**. **Git LFS** is not usually provided, by defa
 distributions of Git, so you might need to install it on your host system and execute *git lfs pull*
 or *git lfs checkout* in order to inflate the large binary files properly before *DtCyber* can use
 them. You will also need to use *bunzip2* or a similar tool to uncompress the files before they
-can be used. See the [tapes/README.md](README) file in the [tapes](tapes) subdirectory for details.
+can be used. See the [README](tapes/README.md) file in the [tapes](tapes) subdirectory for details.
 - **Telnet port**. The instance of *DtCyber* used in this process is configured by default to use
 standard TCP ports for services such as Telnet (port 23) and FTP (ports 21 and 22). These are
 privileged port numbers that will require you to run *DtCyber* using *sudo* on Linux and MacOS,
@@ -29,36 +29,36 @@ it from this directory by following these steps:
 probably need to enable the *dtcyber* application to use TCP ports 21, 22, and 23. *DtCyber* should
 proceed automatically through a deadstart sequence that initializes its disk drives and brings up
 an empty system.
-`sudo ../dtcyber init`
+>`sudo ../dtcyber init`
 2. After the deadstart completes and the system appears idle, install a basic set of usernames and
 files by entering the following command on the system console (i.e., on the main green and black
 window that is displayed). The process initiated by this command will take some time to complete,
 perhaps as much as 15 - 20 minutes, depending upon your host system's speed. Wait for this to complete
 before proceeding to the next step.
-`X.SYSGEN(FULL)`
+>`X.SYSGEN(FULL)`
 3. Enter the following command at the *DtCyber* **operator>** prompt (in the window from which
 you executed step 1, above). This command will load a batch job into *DtCyber's* card reader, and
 the job will create an *NDL* (Network Definition Language) file defining the interactive terminals that
 will be supported by the operating system. Wait for this to complete before proceeding to the next step.
-`lc 12,4,decks/create-ndlopl.job`
+>`lc 12,4,decks/create-ndlopl.job`
 4. Enter the following command at the *DtCyber* **operator>** prompt. This command will load another
 batch job into *DtCyber's* card reader, and the job will compile and install the network definition
 created in the previous step. Wait for this to complete before proceeding to the next step.
-`lc 12,4,decks/compile-ndlopl.job`
+>`lc 12,4,decks/compile-ndlopl.job`
 5. Enter the following command on the system console (on the main green and block window). This
 command initiates a system shutdown. Note that you will need only to enter the first few characters
 before the system recognizes the command and completes it automatically for you. Wait for the
 command to complete before proceeding to the next step.
-`CHECKPOINT SYSTEM.`
+>`CHECKPOINT SYSTEM.`
 6. Enter the following command on the system console. This will quiesce the system.
-`STEP.`
+>`STEP.`
 7. Enter the following command at the *DtCyber* **operator>** prompt. This will shut down *DtCyber*
 gracefully.
-`shutdown`
+>`shutdown`
 8. Enter the following command to restart *DtCyber* and bring up the freshly installed operating
 system. Note that this differs from step 1 in that *init* is **deliberately not** specified as a parameter.
 This is the usual way to start *DtCyber* after the initial installation of NOS 2.8.7.
-`sudo ../dtcyber`
+>`sudo ../dtcyber`
 
 The system should deadstart as before. However, it should start the **NAM** (Network Access Method)
 and **IAF** (InterActive Facility) subsystems automatically now. When the deadstart completes and **NAM**
