@@ -1,0 +1,96 @@
+NS2797
+*IDENT    NS2797 PCS.        98/12/11.
+*/        ****   NOS 2.8.7-871 OS.
+*/        ****   NS2G802.
+*/        ****   NS2G803.
+*/        ****   REQUIRES - NONE.
+*/        *****  PROBLEM - EVEN THOUGH *NOS* CANNOT DEAL WITH YEARS
+*/        AFTER 2033, IT IS POSSIBLE TO SET THE DATE TO SUCH A YEAR.
+*/        ALSO, THE DATE CAN ROLL OVER FROM 33/12/31 TO 34/01/01.
+*/
+*/        SOLUTION - CHANGE *DSD* TO REJECT DATES BEYOND 2033.
+*/        CHANGE *CPUMTR* TO POST A *DATE AT MAXIMUM* MESSAGE AND
+*/        SET THE DATE TO 33/12/31 IF A DATE BEYOND 2033 IS 
+*/        RECOVERED AT DEADSTART, OR IF THE DATE TRIES TO ROLL
+*/        OVER INTO 2034.
+*/
+*/        PROBLEM - THE JULIAN DATE IS CORRUPTED WHEN THE DATE
+*/        ROLLS OVER FROM DECEMBER 31, 1999 TO JANUARY 1, 2000.
+*/
+*/        SOLUTION - CHANGE *CPUMTR* TO CALCULATE THE JULIAN DATE
+*/        CORRECTLY.
+*DECK     DSD
+*I,3525
+          STD    T1 
+          ADC    -70D
+          PJN    DTE0        IF YEAR IN RANGE 1970-1999
+          ADN    -34D+70D
+          PJN    DTE2        IF BEYOND YEAR 2033 (NOT SUPPORTED)
+ DTE0     LDD    T1 
+*I,18223
+          ADC    -70D
+          PJN    DTE0        IF YEAR IN RANGE 1970-1999
+          ADN    -34D+70D
+          PJN    DTE2        IF BEYOND YEAR 2033 (NOT SUPPORTED)
+ DTE0     LDD    T7 
+*DECK     CPUMTR
+*D,253L688.681               (6318)
+*         ADVANCE DATE AND TIME.
+*I,253L688.685               (6318)
+  
+*         ADVANCE TIME IN *PDTL*.
+  
+*D,253L688.697               (6318)
+*I,253L688.698               (6318)
+  
+*         CHECK FOR MAXIMUM DATE.
+  
+*I,253L688.700               (6318)
+          SA4    ADTB        CHECK IF DATE ALREADY AT MAXIMUM
+          MX6    -18
+          BX6    -X6*X2
+          BX6    X6-X4
+          NZ     X6,ADT2.0   IF DATE NOT ALREADY AT MAXIMUM 
+          SX1    ADTC        *DATE AT MAXIMUM*
+          SB5    ADT6        RETURN TO *ADT6*
+          EQ     MSC         SET MESSAGE IN SYSTEM CONTROL POINT
+  
+*         ADVANCE DATE IN *PDTL*.
+  
+ ADT2.0   SA4    ADTA        GET DAY LIMIT FOR CURRENT MONTH
+*D,253L688.747               (6318)
+          NZ     X4,ADT5.1   IF NO NEED TO ADVANCE JULIAN YEAR
+*D,253L688.749               (6318)
+          PL     B5,ADT5.1   IF JULIAN YEAR ALREADY ADVANCED
+*I,253L688.753               (6318)
+ ADT5.1   MX4    -30         CLEAR POSSIBLE JDATE OVERFLOW
+          BX6    -X4*X1
+          SA6    A1+         UPDATE *JDAL*
+  
+*D,253L688.759,253L688.760   (6318)
+*I,253L688.761               (6318)
+          MX7    -6 
+*I,253L688.820               (6318)
+ ADTB     CON    771437B     MAXIMUM SUPPORTED PACKED DATE (33/12/31) 
+ ADTC     DATA   C*DATE AT MAXIMUM*
+*I,NS2418.395                (34560)
+*         CHECK FOR DATE BEYOND MAXIMUM SUPPORTED DATE (33/12/31).
+  
+ SDT7     SX1    X4-70       BIAS YEAR BY 1970
+          PL     X1,SDT8     IF YEAR IN RANGE 1970-1999
+          SX1    X1+100      ADJUST BIAS FOR YEARS 2000 - 2033
+          SX6    X4-34
+          NG     X6,SDT8     IF YEAR IN RANGE 2000-2033
+          SA1    /MONITOR/ADTC  *DATE AT MAXIMUM* 
+          BX7    X1 
+          TA7    MS2W,SCA    SET MESSAGE IN SYSTEM CONTROL POINT
+          SA1    A1+B1
+          BX7    X1 
+          SA7    A7+B1
+          SA1    /MONITOR/ADTB  SET PACKED DATE TO 33/12/31 
+          EQ     SDT8.1      CONVERT PACKED DATE TO DISPLAY CODE
+  
+*D,NS2761.44,NS2761.46       (34560)
+*D,NS2418.405                (34560)
+ SDT8.1   EDATE  X1          CONVERT PACKED DATE TO DISPLAY CODE
+*/        END OF MODSET.
