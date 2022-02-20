@@ -1,0 +1,56 @@
+MODOPL.
+USER,INSTALL,INSTALL.
+NORERUN.
+SETTL,*.
+SETASL,*.
+SETJSL,*.
+COPY,INPUT,NOSMODS.
+REPLACE,NOSMODS.
+PURGE,OPL871/NA.
+BEGIN,MODOPL,INSTALL,USERF=NOSMODS.
+********************************
+*                              *
+*            DONE              *
+* CHECK DAYFILS AND/OR OUTPUT  *
+* LISTING FOR SUCCESS/FAILURE  *
+*                              *
+********************************
+EXIT.
+~eor
+~include ../mods/NOS/CCHG5.mod
+~eor
+~include ../mods/NOS/CPUM245.mod
+~eor
+~include ../mods/NOS/IAFMLR.mod
+~eor
+~include ../mods/NOS/NCC6676.mod
+~eor
+~include ../mods/NOS/NCCAPPS.mod
+~eor
+~include ../mods/NOS/NCCCLDT.mod
+~eor
+~include ../mods/NOS/NCCCRS.mod
+~eor
+~include ../mods/NOS/NCCCTS.mod
+~eor
+~include ../mods/NOS/NCCDEMA.mod
+~eor
+~include ../mods/NOS/NCCTMKP.mod
+~eor
+~include ../mods/NOS/NS2797.modset
+~eor
+~include ../mods/NOS/TL0VJ1.mod
+~eor
+~include ../mods/NOS/TLDSP1.mod
+~eor
+~include ../mods/NOS/TLROUT1.mod
+~eor
+~include ../mods/NOS/TLSJCE.mod
+~eor
+~include ../mods/NOS/TLSZOL.mod
+~eor
+~include ../mods/NOS/TLTDSP.mod
+~eor
+~include ../mods/NOS/XULBTAP.mod
+~eor
+~include ../mods/NOS/XXATFTO.mod

@@ -1,0 +1,15 @@
+NOS.
+USER,INSTALL,INSTALL.
+NORERUN.
+SETTL,*.
+SETASL,*.
+SETJSL,*.
+BEGIN,NOS,INSTALL.
+********************************
+*                              *
+*            DONE              *
+* CHECK DAYFILS AND/OR OUTPUT  *
+* LISTING FOR SUCCESS/FAILURE  *
+*                              *
+********************************
+EXIT.

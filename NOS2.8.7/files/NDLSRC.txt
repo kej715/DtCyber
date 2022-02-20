@@ -1,0 +1,225 @@
+NETCFG
+****************************************************************
+*                                                              *
+*      BASIC NETWORK CONFIGURATION FILE FOR DTCYBER            *
+*                                                              *
+****************************************************************
+  
+NCFFILE: NFILE.
+         TITLE,    DTCYBER NETWORK DEFINITIONS.
+  
+****************************************************************
+*                                                              *
+*                     NAMING CONVENTIONS                       *
+*                                                              *
+*     ELEMENT        NAME FORMAT     EXAMPLE                   *
+*     - - - -        - - - - - -     - - - -                   *
+*     COUPLER        CP<CN><PID>     CP01M01                   *
+*     LINE           LI<NN>P<PN>     LI02P09                   *
+*     LOGICAL LINK   LL<CN>N<NN>     LL01C03                   *
+*                    LL<CN>C<CN>     LL01N02                   *
+*     NPU            NP<NN>          NP02                      *
+*     DEVICE         CO<NN>P<PN>     CO02P34   (CONSOLE)       *
+*                    CR<NN>P<PN>     CR02P34   (CARD READER)   *
+*                    LP<NN>P<PN>     LP02P34   (HASP PRINTER)  *
+*                    PL<NN>P<PN>     PL02P34   (PLOTTER)       *
+*                    PR<NN>P<PN>     LP02P34   (ASYNC PRINTER) *
+*                    PU<NN>P<PN>     CP02P34   (PUNCH)         *
+*                    SP<NN>P<PN>     SP02P34   (SPECIAL PUNCH) *
+*                    TE<NN>P<PN>     TE02P12   (TERMINAL)      *
+*     TRUNK          TR<NN>X<NN>     TR02X04                   *
+*                                                              *
+*     LEGEND:                                                  *
+*       <CN>  COUPLER NODE NUMBER, 2 HEXADECIMAL DIGITS        *
+*       <NN>  NPU NODE NUMBER, 2 HEXADECIMAL DIGITS            *
+*       <PID> MAINFRAME PHYSICAL IDENTIFIER FROM CMRDECK       *
+*       <PN>  CLA PORT NUMBER, 2 HEXADECIMAL DIGITS            *
+*                                                              *
+****************************************************************
+  
+L9600:   DEFINE,   LTYPE=A2, TIPTYPE=ASYNC, LSPEED=9600.
+  
+TASX364: DEFINE,   TC=X364, PRI, PG=NO, PL=0, PW=0, OP=DI, OC=YES,
+                   IC=YES, CP=YES, B1=09.
+
+****************************************************************
+*                                                              *
+*    DEFINITIONS FOR TRUNKS CONNECTING NPU-S IN THE NETWORK    *
+*                                                              *
+****************************************************************
+
+* THESE LINES REPLACED BY TRUNK DEFINITIONS IN MULTI-MAINFRAME
+* CONFIGURATION.
+  
+****************************************************************
+*                                                              *
+*                   DEFINITIONS FOR NP02                       *
+*                                                              *
+*   NP02 IS ATTACHED TO MAINFRAME M01 VIA COUPLER CP01M01.     *
+*   COUPLER CP01M01 IS THE SOURCE NODE FOR A LOGICAL LINK TO   *
+*   NPU NP02,                                                  *
+*                                                              *
+****************************************************************
+  
+NP02:    NPU,      NODE=2,VARIANT=SM1,DMP=NO.
+         SUPLINK,  LLNAME=LL01N02.
+  
+CP01M01: COUPLER,  NODE=1.
+         LL01N02:  LOGLINK, NCNAME=NP02.
+*
+* THESE LINES REPLACED BY LOGLINK DEFINITIONS IN MULTI-MAINFRAME
+* CONFIGURATION.
+  
+****************************************************************
+*                                                              *
+*              ASYNCHRONOUS TERMINALS ON NP02                  *
+*                                                              *
+****************************************************************
+  
+LI02P03: LINE,     PORT=03,L9600.
+         PR02P03:  TERMDEV,TC=X364,AUTOCON,HN=1,LK=YES,OC=YES,
+                   EP=NO,PA=N,PW=0,PL=0,ABL=3,DBL=2.
+  
+LI02P:   GROUP,    PORT=04,L9600,NI=16. 
+         TE02P:    TERMDEV, TASX364.
+
+****************************************************************
+*                                                              *
+*           HASP TERMINALS ON NP02                             *
+*                                                              *
+****************************************************************
+
+* THESE LINES REPLACED BY HASP DEFINITIONS IN A CONFIGURATION
+* SUPPORTING *RBF*.
+
+****************************************************************
+*                                                              *
+*           REVERSE HASP TERMINALS ON NP02                     *
+*                                                              *
+****************************************************************
+
+* THESE LINES REPLACED BY REVERSE HASP DEFINITIONS IN A
+* CONFIGURATION SUPPORTING *TLF*.
+
+****************************************************************
+*                                                              *
+*           NJE TERMINALS ON NP02                              *
+*                                                              *
+****************************************************************
+
+* THESE LINES REPLACED BY REVERSE HASP DEFINITIONS IN A
+* CONFIGURATION SUPPORTING *NJF*.
+
+****************************************************************
+*                                                              *
+*              DEFINITIONS FOR ADDITONAL NPU-S                 *
+*                                                              *
+*   THESE LINES REPLACED BY DEFINITIONS OF ADDITIONAL NPU-S    *
+*   IN A MULTI-MAINFRAME CONFIGURATION.                        *
+*                                                              *
+****************************************************************
+
+*====================  E N D   O F   NCF  =====================*
+
+****************************************************************
+*                                                              *
+*            LOCAL CONFIGURATION FILE FOR HOST M01             *
+*                                                              *
+****************************************************************
+  
+LCFM01 : LFILE.
+         TITLE,    LOCAL CONFIGURATION FOR HOST M01.
+  
+****************************************************************
+*                                                              *
+*                  APPLICATION DEFINITIONS                     *
+*                                                              *
+*  THIS IS A FULL SET OF APPLICATION DEFINITIONS. SOME OR MOST *
+*  MIGHT NOT ACTUALLY BE INSTALLED YET ON THIS HOST.           *
+*                                                              *
+****************************************************************
+ 
+ATF:     APPL,     PRIV=YES.
+FTP:     APPL,     PRIV=NO,  MXCOPYS=15.
+FTPI:    APPL,     PRIV=YES, MXCOPYS=15.
+FTPS:    APPL,     PRIV=YES, MXCOPYS=15.
+HTTPS:   APPL,     PRIV=NO,  UID=NO.
+IAF:     APPL,     PRIV=YES, UID=NO.
+ICF:     APPL,     PRIV=YES, UID=NO.
+MCS:     APPL,     PRIV=NO,  UID=NO.
+NJF:     APPL,     PRIV=YES.
+PTF:     APPL,     PRIV=YES, PRU,NETXFR,MXCOPYS=6.
+PTFS:    APPL,     PRIV=YES, PRU,NETXFR,RS,MXCOPYS=10.
+QTF:     APPL,     PRIV=YES, PRU,NETXFR.
+QTFS:    APPL,     PRIV=YES, PRU,NETXFR,RS,MXCOPYS=10.
+RBF:     APPL,     PRIV=YES, PRU,UID=YES.
+REXEC:   APPL,     MXCOPYS=15.
+SMTP:    APPL,     MXCOPYS=15.
+TCP:     APPL,     MXCOPYS=15.
+TLF:     APPL,     PRIV=YES.
+TVF:     APPL,     PRIV=NO,  UID=NO.
+  
+****************************************************************
+*                                                              *
+*                  A-TO-A DEFINITIONS                          *
+*                                                              *
+****************************************************************
+  
+OUTCALL,NAME1=TCPIPGW,NAME2=H01,SNODE=1,DNODE=255,NETOSD=DDV,
+        ABL=7,DBL=7,DBZ=2000,UBL=7,UBZ=18,SERVICE=GW_TCPIP_M01.
+
+* THESE LINES REPLACED BY INCALL AND OUTCALL DEFINITIONS FOR
+* QTFS IN A MULTI-MAINFRAME CONFIGURATION.
+
+* THESE LINES REPLACED BY INCALL AND OUTCALL DEFINITIONS FOR
+* PTFS IN A MULTI-MAINFRAME CONFIGURATION.
+  
+****************************************************************
+*                                                              *
+*                    USER DEFINITIONS                          *
+*                                                              *
+****************************************************************
+  
+IAFUSER: DEFINE,   PAPPL=IAF. 
+RBFUSER: DEFINE,   MFAM=CYBER,PAPPL=RBF.
+TLFUSER: DEFINE,   MFAM=CYBER,MUSER=TIELINE,PAPPL=TLF.
+NJFUSER: DEFINE,   MFAM=CYBER,MUSER=NJF,MAPPL=NJF.
+  
+PR02P03: USER,     MFAM=CYBER,MUSER=PRINT01,MAPPL=PSU.
+  
+TE02P04: USER,     IAFUSER.
+TE02P05: USER,     IAFUSER.
+TE02P06: USER,     IAFUSER.
+TE02P07: USER,     IAFUSER.
+TE02P08: USER,     IAFUSER.
+TE02P09: USER,     IAFUSER.
+TE02P0A: USER,     IAFUSER.
+TE02P0B: USER,     IAFUSER.
+TE02P0C: USER,     IAFUSER.
+TE02P0D: USER,     IAFUSER.
+TE02P0E: USER,     IAFUSER.
+TE02P0F: USER,     IAFUSER.
+TE02P10: USER,     IAFUSER.
+TE02P11: USER,     IAFUSER.
+TE02P12: USER,     IAFUSER.
+TE02P13: USER,     IAFUSER.
+
+* THESE LINES REPLACED BY HASP DEFINITIONS FOR A HOST
+* SUPPORTING *RBF*.
+
+* THESE LINES REPLACED BY REVERSE HASP DEFINITIONS FOR A
+* HOST SUPPORTING *RBF*.
+
+* THESE LINES REPLACED BY NJE DEFINITIONS FOR A HOST
+* SUPPORTING *NJF*.
+
+****************************************************************
+*                                                              *
+*              DEFINITIONS FOR ADDITONAL HOSTS                 *
+*                                                              *
+*  THESE LINES REPLACED BY LOCAL CONFIGRATION FILE DEFINITIONS *
+*  OF ADDITIONAL HOSTS IN A MULTI-MAINFRAME CONFIGURATION.     *
+*                                                              *
+****************************************************************
+  
+         END.

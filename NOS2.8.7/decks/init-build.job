@@ -1,0 +1,22 @@
+IBUILD.
+USER,INSTALL,INSTALL.
+NORERUN.
+SETTL,*.
+SETASL,*.
+SETJSL,*.
+SYSGEN,SOURCE.
+RETURN,COMMOD.
+COPYBR,INPUT,COMMOD.
+REPLACE,COMMOD.
+BEGIN,SETUP,INSTALL,MOD=COMMOD,INSTALL.
+BEGIN,SEED,INSTALL,DST=SYSTEM.
+********************************
+*                              *
+*            DONE              *
+*   CHECK OUTPUT LISTING FOR   *
+*       SUCCESS/FAILURE        *
+*                              *
+********************************
+EXIT.
+~eor
+~include ../files/COMMOD.txt

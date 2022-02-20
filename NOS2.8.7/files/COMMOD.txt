@@ -1,0 +1,106 @@
+COMMOD
+*IDENT COMMOD
+*DECK COMD1
+*D 1,4
+PN      ' PACK NAME FOR INPUT PL               '=(*N=,*A),
+PR      ' DEVICE TYPE                          '=(*N=,*A),
+PNO     ' PACK NAME FOR OUTPUT PL              '=(*N=,*A),
+PRO     ' DEVICE TYPE                          '=(*N=,*A),
+*DECK COMD2
+*D 1,4
+PN      ' PACK NAME FOR INPUT PL               '=(*N=,*A),
+PR      ' DEVICE TYPE                          '=(*N=,*A),
+PNO     ' PACK NAME FOR OUTPUT PL              '=(*N=,*A),
+PRO     ' DEVICE TYPE                          '=(*N=,*A),
+*DECK COMD3
+*D 1,4
+PN      ' PACK NAME FOR INPUT PL               '=(*N=,*A),
+PR      ' DEVICE TYPE                          '=(*N=,*A),
+PNO     ' PACK NAME FOR OUTPUT PL              '=(*N=,*A),
+PRO     ' DEVICE TYPE                          '=(*N=,*A),
+*DECK COMD4
+*D 1,4
+PN      ' PACK NAME FOR INPUT PL               '=(*N=,*A),
+PR      ' DEVICE TYPE                          '=(*N=,*A),
+PNO     ' PACK NAME FOR OUTPUT PL              '=(*N=,*A),
+PRO     ' DEVICE TYPE                          '=(*N=,*A),
+*DECK COMXOPL
+*D 1,2
+PN99    ' AUX PRD: COMPOSITE OPL               '=(*N=,*A),
+PR99    ' DEVICE TYPE                          '=(*N=,*A),
+*DECK COMX1
+*D 1,2
+PN1     'AUX PRD: AAM2,BAM1,CCG1,CPS1,DDL3,TEXT'=(*N=,*A),
+PR1     ' DEVICE TYPE                          '=(*N=,*A),
+*DECK COMX2
+*D 1,2
+PN2     ' AUX PRD: NAM5                        '=(*N=,*A),
+PR2     ' DEVICE TYPE                          '=(*N=,*A),
+*DECK COMX3
+*D 1,2
+PN3     ' AUX PRD: RHC1                        '=(*N=,*A),
+PR3     ' DEVICE TYPE                          '=(*N=,*A),
+*DECK COMDEN
+*D 1,2
+D       ' DENSITY FOR ALL INSTALLATION TAPES   '=(*N=PE,PE,GE,HD,HY,HI),
+VFYTAPE ' SET DEFAULT TO V TO VERIFY TAPE      '=(*N=V),
+*DECK COMDISK
+*D 1,4
+DISKINS ' DISK INSTALLATION DESIRED (YES/NO)   '=(*N=NO,YES,NO),
+UN1     ' ALTERNATE USER NUMBER FOR INPUT PL   '=(*N=0,*F), 
+UN2     ' ALTERNATE USER NUMBER FOR OUTPUT PL  '=(*N=0,*F), 
+OUTPRD  ' WRITE OUTPUT PROGRAM LIBRARY         '=(*N=NO,YES,NO),
+*DECK COMIA
+*D 1
+IA      ' RUN JOB IN CURRENT MODE OF ORIGIN    '=(*N=NO,NO,YES,*K=YES),
+*DECK COMIN
+*D 1
+PSRIN   ' INPUT PSR LEVEL FOR BUILD            '=(*N=871),
+*DECK COMIUN
+*D 1,10
+IUN     ' INSTALLATION USER NUMBER             '=(*N=INSTALL,*A),
+IFAMILY ' INSTALLATION FAMILY                  '=(*N=$$,*A),
+IPW     ' INSTALLATION PASSWORD                '=(*N=INSTALL,*A),
+ICHG    ' INSTALLATION CHARGE COMMAND          '
+          =(*N=$*$,$DEPT,CHG$,*A),
+RESOUR  ' BUILD JOB RESOURCES                  '
+          =(*N=$*$,$RESOURC,PE=3.$),
+PCKNAM  ' PACKNAM COMMAND TO BE USED           '
+          =(*N=$*$,$PACKNAM,PACK/R=DJ.$),
+IUCHG   ' IF NO, THEN FILE USERCHG USED        '=(*N=YES,NO,YES),
+*DECK COMLIST
+*D 1,3
+LIST    ' GENERATE ASSEMBLY LIST FILE          '=(*N=0,*K=LIST,*F),
+MAPTYPE ' TYPE OF LOAD MAP GENERATED           '
+          =(*N=FULL,OFF,ON,PART,FULL),
+*DECK COMOUT
+*D 1
+PSROUT  ' OUTPUT PSR LEVEL FOR BUILD           '=(*N=871),
+*DECK COMPFG
+*D 1,3
+USEPFG  ' ALWAYS WRITE SYSGEN PFG FILES        '=(*N=NO,NO,YES),
+PFGPN   ' PACK NAME TO WRITE SYSGEN PFG FILES  '=(*N=,*A),
+PFGPR   ' PACK TYPE                            '=(*N=,*A),
+*DECK COMTOB
+*D 1
+TOBLD   ' ROUTE JOB OUTPUT TO PRINT OR WAIT Q  '=(*N=PRINT,PRINT,WAIT),
+*DECK COMTOL
+*D 1
+TOLIST  ' ASSEMBLY LISTING. NONE OR IN WAIT Q  '=(*N=NONE,NONE,WAIT), 
+*DECK COMUSER
+*D 1
+USERF   ' PFN NAME OF USER CODE FOR THIS JOB   '=(*N=,UJOBNAM,*F),
+*DECK COMCCPL
+*D 1
+CCPLIST ' TYPE OF CCP LISTING GENERATED        '=(*N=NO,NO,YES,PF,BOTH),
+*DECK COMCCPV
+*D 1
+VARLIST ' TYPE OF VARIANT LISTING GENERATED    '=(*N=PF,NO,YES,PF,BOTH),
+*DECK COMNECS
+*D 1,2
+NOECS   ' USE ECS                    (NO/YES)  '
+          =(*N=ECS,NO=NOECS,YES=ECS,*K=NOECS),
+*DECK COMNOPG
+*D 1,2
+NOPURGE ' SHOULD DRTBAT1 PURGE SOME CCP FILES  '
+          =(*N=PURGE,NO=NOPURGE,YES=PURGE,*K=NOPURGE),

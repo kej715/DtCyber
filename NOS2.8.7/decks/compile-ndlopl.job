@@ -1,0 +1,28 @@
+COMPNDL.
+USER,NETADMN,NETADMN.
+NORERUN.
+SETTL,*.
+SETASL,*.
+SETJSL,*.
+GET,NDLOPL.
+MODIFY,P=NDLOPL,F,LO=E,I=0.
+NDLP,I.
+PURGE,NCFFILE,LCFFILE/NA.
+DEFINE,NCF=NCFFILE,LCF=LCFFILE/CT=PR,AC=Y.
+PERMIT,NCFFILE,NETOPS=W.
+PERMIT,LCFFILE,NETOPS=W.
+REWIND,NCFFILE,LCFM01.
+COPYEI,NCFFILE,NCF.
+COPYEI,LCFM01,LCF.
+********************************
+*                              *
+*          SUCCESS             *
+*                              *
+********************************
+EXIT.
+********************************
+*                              *
+*          FAILURE             *
+*     SEE OUTPUT LISTING       *
+*                              *
+********************************

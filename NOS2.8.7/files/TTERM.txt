@@ -1,0 +1,243 @@
+TTERM
+"   TERMINAL DEFINITION FILE FOR DEC VT100 TERMINAL EMULATION                 "
+"   FOR USE WITH TERATERM PRO 2.3 CONFIGURED FOR 43 LINES                     "
+ 
+"   VARIABLES                                                                 "
+    PREFIX              = (1B(16) 5B(16))
+    CLEAR_STAY          = (PREFIX 32(16) 4A(16)) 
+    CLEAR_ALL_TABS      = (PREFIX 33(16) 67(16)) 
+    SET_TO_24X80        = (PREFIX 3F(16) 33(16) 6C(16))
+    SET_TO_24X132       = (PREFIX 3F(16) 33(16) 68(16))
+    START_ALTERNATE     = (PREFIX 31(16) 6D(16)) 
+    START_BLINK         = (PREFIX 35(16) 6D(16)) 
+    START_INVERSE       = (PREFIX 37(16) 6D(16)) 
+    START_UNDERLINE     = (PREFIX 34(16) 6D(16)) 
+    STOP_ALTERNATE      = (PREFIX 6D(16))
+    STOP_BLINK          = (PREFIX 6D(16))
+    STOP_INVERSE        = (PREFIX 6D(16))
+    STOP_UNDERLINE      = (PREFIX 6D(16))
+ 
+"   VARIABLES FOR FULL SCREEN EDITOR FUNCTION KEY DEFINITIONS                 "
+    K1   = ('SK1/VNS/L/ FWD/;SKS1/VPS/L/ BKW/')
+    K2   = ('SK2/VN/L/LINEUP/;SKS2/VP/L/LINEDN/')
+    K3   = ('SK3/.I/L/ INSC/;SKS3/.D/L/ DELC/')
+    K4   = ('SK4/IBP1/L/ INSL/;SKS4/D;PN/L/ DELL/')
+    K5   = ('SK5/SM/L/ MARK/;SKS5/U/L/ UNDO/') 
+    K6   = ('SK6/MMTP/L/ MOVE/;SKS6/CMTP/L/ COPY/')
+    K7   = ('SK7/H/L/ HELP/;SKS7/VH/L/ HOME/') 
+    K8   = ('SK8/Q/L/ QUIT/;SKS8/SS/L/CLEAR/') 
+    K9   = ('SK9/.E/L/ENDLIN/;SKS9/UM/L/UNMARK/')
+ 
+"   MODEL NAME AND COMMUNICATION TYPE                                         "
+    MODEL_NAME          VALUE = 'TTERM'
+    COMMUNICATIONS      TYPE  = ASYNCH 
+ 
+"   END OF INFORMATION SPECIFICATION                                          "
+    END_OF_INFORMATION  IN    = (0)
+ 
+"   CURSOR POSITIONING INFORMATION                                            "
+    CURSOR_POS_ENCODING      BIAS  = (0)   TYPE = ANSI_CURSOR
+    CURSOR_POS_COLUMN_FIRST  VALUE = FALSE 
+    CURSOR_POS_COLUMN_LENGTH VALUE = (0) 
+    CURSOR_POS_ROW_LENGTH    VALUE = (0) 
+    CURSOR_POS_BEGIN         OUT   = (PREFIX)
+    CURSOR_POS_SECOND        OUT   = (3B(16))
+    CURSOR_POS_THIRD         OUT   = (48(16))
+ 
+"   CURSOR MOVEMENT INFORMATION                                               "
+    CURSOR_HOME              INOUT = (PREFIX 48(16)) 
+    CURSOR_UP                INOUT = (PREFIX 41(16)) 
+    CURSOR_DOWN              INOUT = (PREFIX 42(16)) 
+    CURSOR_LEFT              INOUT = (PREFIX 44(16)) 
+    CURSOR_RIGHT             INOUT = (PREFIX 43(16)) 
+ 
+"   CURSOR BEHAVIOR (FOR CURSOR MOVEMENT KEYS)                                "
+    MOVE_PAST_RIGHT          TYPE  = STOP_NEXT 
+    MOVE_PAST_LEFT           TYPE  = STOP_NEXT 
+    MOVE_PAST_TOP            TYPE  = STOP_NEXT 
+    MOVE_PAST_BOTTOM         TYPE  = STOP_NEXT 
+ 
+"   CURSOR BEHAVIOR (FOR CHARACTER KEYS)                                      "
+    CHAR_PAST_RIGHT          TYPE  = STOP_NEXT 
+    CHAR_PAST_LEFT           TYPE  = STOP_NEXT 
+    CHAR_PAST_LAST_POSITION  TYPE  = STOP_NEXT 
+ 
+"   PROTECTED STOP BEHAVIOR (FOR CURSOR MOVEMENT KEYS)                      "
+    PROTECTED_PAST_RIGHT     TYPE  = STOP_NEXT 
+    PROTECTED_PAST_LEFT      TYPE  = STOP_NEXT 
+    PROTECTED_PAST_UP        TYPE  = STOP_NEXT 
+    PROTECTED_PAST_DOWN      TYPE  = STOP_NEXT 
+ 
+"   PROTECTED STOP BEHAVIOR (FOR CHARACTER KEYS)                            "
+    FIELD_PAST_RIGHT         TYPE  = STOP_NEXT 
+    FIELD_PAST_LEFT          TYPE  = STOP_NEXT 
+    FIELD_PAST_LAST          TYPE  = STOP_NEXT 
+    FIELD_BEFORE_FIRST       TYPE  = WRAP_ADJACENT_NEXT
+ 
+"   TERMINAL ATTRIBUTES                                                       "
+    CLEARS_WHEN_CHANGE_SIZE  VALUE = TRUE
+    FUNCTION_KEY_LEAVES_MARK VALUE = TRUE
+    HAS_HIDDEN               VALUE = FALSE 
+    HAS_PROTECT              VALUE = FALSE 
+    HOME_AT_TOP              VALUE = TRUE
+    MULTIPLE_SIZES           VALUE = TRUE
+    TABS_TO_HOME             VALUE = FALSE 
+    TABS_TO_TAB_STOPS        VALUE = TRUE
+    TABS_TO_UNPROTECTED      VALUE = FALSE 
+ 
+"   SCREEN SIZES                                                              "
+    SET_SIZE       ROWS = 43 COLUMNS = 80   OUT = (SET_TO_24X80) 
+    SET_SIZE       ROWS = 43 COLUMNS = 132  OUT = (SET_TO_24X132)
+ 
+"   SCREEN AND LINE MODE TRANSITION                                           "
+    SET_SCREEN_MODE     OUT = (1B(16) 3C(16) CLEAR_ALL_TABS .. 
+         1B(16) 28(16) 42(16) 1B(16) 29(16) 30(16) 0F(16) 1B(16) ..
+         3D(16)) 
+ 
+    SET_LINE_MODE       OUT = (1B(16) 3C(16) CLEAR_ALL_TABS .. 
+         1B(16) 28(16) 42(16) 1B(16) 29(16) 30(16) 0F(16) 1B(16) ..
+         3E(16)) 
+ 
+"   TERMINAL CAPABILITIES                                                     "
+    BACKSPACE           IN    = (08(16)) 
+    DELETE_CHAR         INOUT = (PREFIX 50(16))
+    DELETE_LINE_BOL     INOUT = (PREFIX 4D(16))
+    ERASE_END_OF_LINE   INOUT = (PREFIX 4B(16))
+    ERASE_END_OF_PAGE   INOUT = (PREFIX 4A(16))
+    ERASE_LINE_STAY     INOUT = (PREFIX 32(16)4B(16))
+    ERASE_PAGE_STAY     INOUT = (CLEAR_STAY) 
+    INSERT_CHAR         INOUT = (PREFIX 40(16))
+    INSERT_LINE_BOL     INOUT = (PREFIX 4C(16))
+    INSERT_MODE_BEGIN   INOUT = (PREFIX 34(16) 68(16)) 
+    INSERT_MODE_END     INOUT = (PREFIX 34(16) 6C(16)) 
+    TAB_BACKWARD        INOUT = (PREFIX 5A(16))
+    TAB_CLEAR_ALL       INOUT = (CLEAR_ALL_TABS) 
+    TAB_FORWARD         INOUT = (09(16)) 
+    TAB_SET             INOUT = (1B(16) 48(16))
+ 
+"   MISCELLANEOUS TERMINAL SEQUENCES                                          "
+    BELL_NAK            OUT = (BEL)
+    OUTPUT_BEGIN        OUT = (PREFIX 34(16) 6C(16)) 
+ 
+"   PROGRAMMABLE FUNCTION KEY INPUT INFORMATION                               "
+    F1        IN = (1B(16) 4F(16) 71(16))
+    F2        IN = (1B(16) 4F(16) 72(16))
+    F3        IN = (1B(16) 4F(16) 73(16))
+    F4        IN = (1B(16) 4F(16) 74(16))
+    F5        IN = (1B(16) 4F(16) 75(16))
+    F6        IN = (1B(16) 4F(16) 76(16))
+    F7        IN = (1B(16) 4F(16) 77(16))
+    F8        IN = (1B(16) 4F(16) 78(16))
+    F9        IN = (1B(16) 4F(16) 79(16))
+    F10       IN = ()
+    F11       IN = ()
+    F12       IN = ()
+    F13       IN = ()
+    F14       IN = ()
+    F15       IN = ()
+    F16       IN = ()
+    F1_S      IN = (1B(16) 4F(16) 50(16))
+    F2_S      IN = (1B(16) 4F(16) 51(16))
+    F3_S      IN = (1B(16) 4F(16) 52(16))
+    F4_S      IN = (1B(16) 4F(16) 53(16))
+    F5_S      IN = (1B(16) 4F(16) 6D(16))
+    F6_S      IN = (1B(16) 4F(16) 6C(16))
+    F7_S      IN = (1B(16) 4F(16) 4D(16))
+    F8_S      IN = (1B(16) 4F(16) 6E(16))
+    F9_S      IN = (1B(16) 4F(16) 70(16))
+    F10_S     IN = ()
+    F11_S     IN = ()
+    F12_S     IN = ()
+    F13_S     IN = ()
+    F14_S     IN = ()
+    F15_S     IN = ()
+    F16_S     IN = ()
+ 
+"   CDC STANDARD FUNCTION KEY INPUT INFORMATION                               "
+    BACK      IN = (ESC 6B(16))
+    BACK_S    IN = (ESC 4B(16))
+    HELP      IN = (ESC 68(16))
+    HELP_S    IN = ()
+    STOP      IN = (14(16))
+    STOP_S    IN = (10(16))
+    DOWN      IN = (ESC 64(16))
+    DOWN_S    IN = (ESC 44(16))
+    UP        IN = (ESC 75(16))
+    UP_S      IN = (ESC 55(16))
+    FWD       IN = (ESC 66(16))
+    FWD_S     IN = (ESC 46(16))
+    BKW       IN = (ESC 62(16))
+    BKW_S     IN = (ESC 42(16))
+    EDIT      IN = ()
+    EDIT_S    IN = ()
+    DATA      IN = ()
+    DATA_S    IN = ()
+ 
+"   TERMINAL VIDEO ATTRIBUTES                                                 "
+    ALT_BEGIN           OUT = (START_ALTERNATE)
+    ALT_END             OUT = (STOP_ALTERNATE) 
+    BLINK_BEGIN         OUT = (START_BLINK)
+    BLINK_END           OUT = (STOP_BLINK) 
+    INVERSE_BEGIN       OUT = (START_INVERSE)
+    INVERSE_END         OUT = (STOP_INVERSE) 
+    UNDERLINE_BEGIN     OUT = (START_UNDERLINE)
+    UNDERLINE_END       OUT = (STOP_UNDERLINE) 
+ 
+"   LOGICAL ATTRIBUTE SPECIFICATIONS                                          "
+    ERROR_BEGIN         OUT = (START_INVERSE)
+    ERROR_END           OUT = (STOP_INVERSE) 
+    INPUT_TEXT_BEGIN    OUT = (START_UNDERLINE)
+    INPUT_TEXT_END      OUT = (STOP_UNDERLINE) 
+    ITALIC_BEGIN        OUT = (START_ALTERNATE)
+    ITALIC_END          OUT = (STOP_ALTERNATE) 
+ 
+"   LINE DRAWING CHARACTER SPECIFICATION                                      "
+    LD_FINE_BEGIN            OUT = 0E(16)
+    LD_FINE_END              OUT = 0F(16)
+    LD_FINE_HORIZONTAL       OUT = 71(16)
+    LD_FINE_VERTICAL         OUT = 78(16)
+    LD_FINE_UPPER_LEFT       OUT = 6C(16)
+    LD_FINE_UPPER_RIGHT      OUT = 6B(16)
+    LD_FINE_LOWER_LEFT       OUT = 6D(16)
+    LD_FINE_LOWER_RIGHT      OUT = 6A(16)
+    LD_FINE_UP_T             OUT = 77(16)
+    LD_FINE_DOWN_T           OUT = 76(16)
+    LD_FINE_LEFT_T           OUT = 74(16)
+    LD_FINE_RIGHT_T          OUT = 75(16)
+    LD_FINE_CROSS            OUT = 6E(16)
+    LD_MEDIUM_BEGIN          OUT = (0E(16) START_ALTERNATE)
+    LD_MEDIUM_END            OUT = (0F(16) STOP_ALTERNATE) 
+    LD_MEDIUM_HORIZONTAL     OUT = 71(16)
+    LD_MEDIUM_VERTICAL       OUT = 78(16)
+    LD_MEDIUM_UPPER_LEFT     OUT = 6C(16)
+    LD_MEDIUM_UPPER_RIGHT    OUT = 6B(16)
+    LD_MEDIUM_LOWER_LEFT     OUT = 6D(16)
+    LD_MEDIUM_LOWER_RIGHT    OUT = 6A(16)
+    LD_MEDIUM_UP_T           OUT = 77(16)
+    LD_MEDIUM_DOWN_T         OUT = 76(16)
+    LD_MEDIUM_LEFT_T         OUT = 74(16)
+    LD_MEDIUM_RIGHT_T        OUT = 75(16)
+    LD_MEDIUM_CROSS          OUT = 6E(16)
+    LD_BOLD_BEGIN            OUT = (0E(16) START_INVERSE)
+    LD_BOLD_END              OUT = (0F(16) STOP_INVERSE) 
+    LD_BOLD_HORIZONTAL       OUT = (' ') 
+    LD_BOLD_VERTICAL         OUT = (' ') 
+    LD_BOLD_UPPER_LEFT       OUT = (' ') 
+    LD_BOLD_UPPER_RIGHT      OUT = (' ') 
+    LD_BOLD_LOWER_LEFT       OUT = (' ') 
+    LD_BOLD_LOWER_RIGHT      OUT = (' ') 
+    LD_BOLD_UP_T             OUT = (' ') 
+    LD_BOLD_DOWN_T           OUT = (' ') 
+    LD_BOLD_LEFT_T           OUT = (' ') 
+    LD_BOLD_RIGHT_T          OUT = (' ') 
+    LD_BOLD_CROSS            OUT = (' ') 
+ 
+"   DEFAULT KEY DEFINITIONS FOR THE FULL SCREEN EDITOR                        "
+    APPLICATION_STRING...
+    NAME = ('FSEKEYS')...
+    OUT  = (K1 ';' K2 ';' K3 ';' K4 ';' K5)
+    APPLICATION_STRING...
+    NAME = ('FSEKEYS')...
+    OUT  = (K6 ';' K7 ';' K8 ';' K9) 
+ 
+"   END OF TERMINAL DEFINITION FILE                                           "

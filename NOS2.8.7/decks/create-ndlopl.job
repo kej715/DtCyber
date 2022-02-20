@@ -1,0 +1,24 @@
+NDLOPL.
+USER,NETADMN,NETADMN.
+NORERUN.
+SETTL,*.
+SETASL,*.
+SETJSL,*.
+COPY,INPUT,NDLSRC.
+REWIND,NDLSRC.
+MODIFY,P=0,N=NDLOPL,C=0,F,Z./*CREATE NDLSRC
+REPLACE,NDLOPL.
+********************************
+*                              *
+*          SUCCESS             *
+*                              *
+********************************
+EXIT.
+********************************
+*                              *
+*          FAILURE             *
+*     SEE OUTPUT LISTING       *
+*                              *
+********************************
+~eor
+~include ../files/NDLSRC.txt
