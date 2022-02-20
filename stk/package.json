@@ -1,0 +1,11 @@
+{
+  "name": "stk",
+  "version": "1.0.0",
+  "description": "StorageTek 4400 Simulator",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Kevin Jordan",
+  "license": "GPL-3.0-or-later"
+}
