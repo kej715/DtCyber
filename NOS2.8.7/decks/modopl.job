@@ -37,7 +37,7 @@ EXIT.
 ~eor
 ~include ../mods/NOS/NCCTMKP.mod
 ~eor
-~include ../mods/NOS/NS2797.modset
+~include ../mods/NOS/NS2797.mod
 ~eor
 ~include ../mods/NOS/TL0VJ1.mod
 ~eor
