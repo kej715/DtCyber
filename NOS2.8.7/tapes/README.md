@@ -8,3 +8,9 @@ content from GitHub.
 After obtaining the full *.bz2* files, you will need to use a tool such as **bunzip2** to
 expand them into their original *.tap* forms before *DtCyber* will recognize them as proper
 tape images.
+
+Note that these tape images are made available by permission of BT Federal under provisions
+of the [BT Federal Permit](https://cdc.sjzoppi.com/doku.php?id=b_t_permit). BT Federal has given
+permission to hobbyists, researchers and museums to freely use and share CDC material.
+The only restriction is that this material cannot be used commercially.
+Previous time limits no longer apply.
