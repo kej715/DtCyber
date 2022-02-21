@@ -1,3 +1,15 @@
+~*
+~*  This job applies all local operating system corrective
+~*  code and customizations to the operating system source
+~*  library. Each correction and customization is maintained
+~*  as separate file containing MODIFY directives and source
+~*  code. This job merges all of them together into a
+~*  multi-record file and calls MODIFY to apply them. The
+~*  result is a new version of the file named OPL871 in the
+~*  catalog of user INSTALL. This job may be rerun at any
+~*  time to add new correction sets or customizations, or to
+~*  update previously applied ones.
+~*
 MODOPL.
 USER,INSTALL,INSTALL.
 NORERUN.

@@ -1,3 +1,9 @@
+~*
+~*  This job builds the operating system. It assumes that the
+~*  job modopl.job has been run previously, if needed, to 
+~*  apply corrective code and customizations to the operationg
+~*  system source library.
+~*
 NOS.
 USER,INSTALL,INSTALL.
 NORERUN.

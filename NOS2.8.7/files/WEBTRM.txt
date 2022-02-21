@@ -1,5 +1,3 @@
-WEBTERM
-  
 "   TERMINAL DEFINITION FILE FOR ANSI-COMATIBLE WEBTERM TERMINAL              "
   
 "   VARIABLES                                                                 "

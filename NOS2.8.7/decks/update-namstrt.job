@@ -1,24 +1,19 @@
 ~*
-~*  This job compiles and installs the network definition
-~*  file of the local host. NAM will use this new definition
-~*  upon its next startup.
+~*  This job updates the NAMSTRT file in the catalog of
+~*  NETOPS to prevent NAM from starting network applications
+~*  that are not used or configured for the local system.
 ~*
-COMPNDL.
-USER,NETADMN,NETADMN.
+UNMSTRT.
+USER,INSTALL,INSTALL.
 NORERUN.
 SETTL,*.
 SETASL,*.
 SETJSL,*.
-GET,NDLOPL.
-MODIFY,P=NDLOPL,F,LO=E,I=0.
-NDLP,I.
-PURGE,NCFFILE,LCFFILE/NA.
-DEFINE,NCF=NCFFILE,LCF=LCFFILE/CT=PR,AC=Y.
-PERMIT,NCFFILE,NETOPS=W.
-PERMIT,LCFFILE,NETOPS=W.
-REWIND,NCFFILE,LCFM01.
-COPYEI,NCFFILE,NCF.
-COPYEI,LCFM01,LCF.
+GET,NAMSTRT/UN=NETOPS.
+COPY,INPUT,LGO.
+REWIND,LGO.
+LIBEDIT,P=NAMSTRT,Z.
+REPLACE,NEW=NAMSTRT/UN=NETOPS.
 ********************************
 *                              *
 *          SUCCESS             *
@@ -31,3 +26,5 @@ EXIT.
 *     SEE OUTPUT LISTING       *
 *                              *
 ********************************
+~eor
+~include ../files/NAMSTRT-update.txt

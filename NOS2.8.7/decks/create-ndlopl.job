@@ -1,3 +1,8 @@
+~*
+~*  This job creates a MODIFY program library file named
+~*  NDLOPL in the catalog of user NETADMN. The file
+~*  contains the network definition of the local host.
+~*
 NDLOPL.
 USER,NETADMN,NETADMN.
 NORERUN.

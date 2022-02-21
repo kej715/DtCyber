@@ -1,0 +1,35 @@
+~*
+~*  This job adds terminal definitions to the terminal
+~*  definition library file, TERMLIB, in catalog LIBRARY.
+~*  Each terminal definition is maintained as a separate
+~*  file, and this job merges them together into a
+~*  multi-record file that is passed as input to the
+~*  terminal definition compiler, TDU.
+~*
+TERMLIB.
+USER,INSTALL,INSTALL.
+NORERUN.
+SETTL,*.
+SETASL,*.
+SETJSL,*.
+COPY,INPUT,SOURCE.
+REWIND,SOURCE.
+GET,TERMLIB/UN=LIBRARY.
+TDU,I=SOURCE,REC=*.
+REPLACE,TERMLIB/UN=LIBRARY.
+********************************
+*                              *
+*          SUCCESS             *
+*                              *
+********************************
+EXIT.
+********************************
+*                              *
+*          FAILURE             *
+*     SEE OUTPUT LISTING       *
+*                              *
+********************************
+~eor
+~include ../files/TTERM.txt
+~eor
+~include ../files/WEBTRM.txt

@@ -1,3 +1,10 @@
+~*
+~*  This job prepares the system artifacts that
+~*  enable user INSTALL to build and customize 
+~*  the operating system and CDC-provided software
+~*  products. This job should be run exactly once
+~*  after the operating system is first installed.
+~*
 IBUILD.
 USER,INSTALL,INSTALL.
 NORERUN.
