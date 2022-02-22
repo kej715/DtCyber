@@ -682,7 +682,7 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
     char *kp;
     char *limit;
     long msec;
-    char timestamp[16];
+    char timestamp[20];
     struct tm *tmp;
 
     /*
