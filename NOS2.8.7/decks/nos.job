@@ -1,7 +1,7 @@
 ~*
 ~*  This job builds the operating system. It assumes that the
 ~*  job modopl.job has been run previously, if needed, to 
-~*  apply corrective code and customizations to the operationg
+~*  apply corrective code and customizations to the operating
 ~*  system source library.
 ~*
 NOS.
