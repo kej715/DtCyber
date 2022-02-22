@@ -1169,6 +1169,8 @@ static int opPrepCards(char *str, FILE *fcb)
     char *argv[MaxCardParams];
     char *cp;
     char dbuf[400];
+    char *dfltVal;
+    int dfltValLen;
     char *dp;
     FILE *in;
     char *lastnb;
@@ -1224,10 +1226,18 @@ static int opPrepCards(char *str, FILE *fcb)
             if (*sp == '$' && *(sp + 1) == '{' && isdigit(*(sp + 2)))
                 {
                 argi = 0;
+                dfltVal = "";
+                dfltValLen = 0;
                 cp = sp + 2;
                 while (isdigit(*cp))
                     {
                     argi = (argi * 10) + (*cp++ - '0');
+                    }
+                if (*cp == ':')
+                    {
+                    dfltVal = ++cp;
+                    while (*cp != '}' && *cp != '\0') cp += 1;
+                    dfltValLen = cp - dfltVal;
                     }
                 if (*cp == '}')
                     {
@@ -1237,6 +1247,10 @@ static int opPrepCards(char *str, FILE *fcb)
                         {
                         cp = argv[argi];
                         while (*cp != '\0') *dp++ = *cp++;
+                        }
+                    else
+                        {
+                        while (dfltValLen-- > 0) *dp++ = *dfltVal++;
                         }
                     continue;
                     }
