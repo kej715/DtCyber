@@ -1,0 +1,40 @@
+*IDENT    QU30732
+*B,HISTORY.2
+ QU30732  PROBLEM - THE *JULIAN* FUNCTION RETURNS INCORRECT RESULTS
+          FOR DATES BEYOND THE YEAR 1999.  ALSO, THE *GREG* FUNCTION
+          RETURNS INCORRECT RESULTS FOR CERTAIN DATES.
+  
+          SOLUTION - CORRECT THE GREGORIAN-TO-JULIAN CONVERSION CODE
+          AND THE JULIAN-TO-GREGORIAN CONVERSION CODE TO ACCOUNT FOR
+          THE YEAR 2000.
+  
+          PCS.   99/03/04.   EXPEV, EXPEVAL.
+  
+*COMPILE  HISTORY
+*INSERT   EXPEV.753 
+          IF J5 LS 7                   # ADJUST FOR YEAR 2000 #
+          THEN
+            BEGIN
+            J5 = J5 + 10;
+            END
+*DELETE   QU3A349.7,QU3A349.11
+          IF J5 GQ 10                  # ADJUST FOR YEAR 2000 #
+          THEN
+            BEGIN
+            J5 = J5 - 10;
+            END
+*COMPILE  EXPEV
+*INSERT   EXPEVAL.1065
+          IF J5 LS 7                   # ADJUST FOR YEAR 2000 #
+          THEN
+            BEGIN
+            J5 = J5 + 10;
+            END
+*DELETE   QU3A349.12,QU3A349.16
+          IF J5 GQ 10                  # ADJUST FOR YEAR 2000 #
+          THEN
+            BEGIN
+            J5 = J5 - 10;
+            END
+*COMPILE  EXPEVAL
+*/          THIS MODSET CONTAINS 40 LINES INCLUDING THIS LINE.

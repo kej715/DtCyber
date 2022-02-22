@@ -1,0 +1,22 @@
+~*
+~*  This job builds the ATF (Automated Tape Facility) product.
+~*
+ATF.
+USER,INSTALL,INSTALL.
+NORERUN.
+SETTL,*.
+SETASL,*.
+SETJSL,*.
+COPY,INPUT,ATFMODS.
+REPLACE,ATFMODS.
+BEGIN,ATF,INSTALL,USERF=ATFMODS.
+********************************
+*                              *
+*            DONE              *
+* CHECK DAYFILS AND/OR OUTPUT  *
+* LISTING FOR SUCCESS/FAILURE  *
+*                              *
+********************************
+EXIT.
+~eor
+~include ../mods/ATF/ATFA005.mod

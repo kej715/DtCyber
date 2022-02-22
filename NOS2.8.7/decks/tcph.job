@@ -1,0 +1,23 @@
+~*
+~*  This job builds the TCPH product. TCPH provides the NOS FTP
+~*  client and server applications.
+~*
+TCPH.
+USER,INSTALL,INSTALL.
+NORERUN.
+SETTL,*.
+SETASL,*.
+SETJSL,*.
+COPY,INPUT,FTPMODS.
+REPLACE,FTPMODS.
+BEGIN,TCPH,INSTALL,USERF=FTPMODS.
+********************************
+*                              *
+*            DONE              *
+* CHECK DAYFILS AND/OR OUTPUT  *
+* LISTING FOR SUCCESS/FAILURE  *
+*                              *
+********************************
+EXIT.
+~eor
+~include ../mods/TCPH/NCCFTP.mod
