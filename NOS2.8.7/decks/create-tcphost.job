@@ -1,0 +1,27 @@
+~*
+~*  This job creates the TCPHOST file needed by various TCP/IP
+~*  applications such as FTP.
+~*
+TCPHOST.
+USER,NETADMN,NETADMN.
+NORERUN.
+SETTL,*.
+SETASL,*.
+SETJSL,*.
+COPY,INPUT,TCPHOST.
+REPLACE,TCPHOST.
+CHANGE,TCPHOST/CT=PU,M=R,AC=Y.
+********************************
+*                              *
+*          SUCCESS             *
+*                              *
+********************************
+EXIT.
+********************************
+*                              *
+*          FAILURE             *
+*     SEE OUTPUT LISTING       *
+*                              *
+********************************
+~eor
+~include ../files/TCPHOST.txt
