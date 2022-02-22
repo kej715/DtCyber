@@ -700,7 +700,7 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
      */
     clock = time(NULL);
     tmp = localtime(&clock);
-    sprintf(timestamp, "%02d%02d%02d%02d%02d%02d",
+    sprintf(timestamp, "%02.2d%02.2d%02.2d%02.2d%02.2d%02.2d",
         tmp->tm_year - 100, tmp->tm_mon + 1, tmp->tm_mday,
         tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
     cp = cmdParams;
