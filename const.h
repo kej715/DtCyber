@@ -231,6 +231,7 @@
 #define stricmp strcasecmp
 #endif
 #if defined(_WIN32)
+#define getcwd _getcwd
 #define strcasecmp _stricmp
 #define stricmp _stricmp
 #define strncasecmp _strnicmp

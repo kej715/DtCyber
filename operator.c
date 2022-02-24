@@ -51,7 +51,9 @@
 **  Private Constants
 **  -----------------
 */
+#define CwdPathSize   256
 #define MaxCardParams 10
+#define MaxCmdStkSize 10
 
 /*
 **  -----------------------
@@ -69,6 +71,12 @@ typedef struct opCmd
     char            *name;               /* command name */
     void            (*handler)(bool help, char *cmdParams);
     } OpCmd;
+
+typedef struct opCmdStackEntry
+    {
+    FILE *fp;
+    char cwd[CwdPathSize];
+    } OpCmdStackEntry;
 
 
 /*
@@ -94,7 +102,7 @@ static void opHelpDumpMemory(void);
 static void opCmdEnterKeys(bool help, char *cmdParams);
 static void opHelpEnterKeys(void);
 static void opWaitKeyConsume();
-static void opWaitKeyInterval(long milliseconds);
+static void opWait(long milliseconds);
 
 static void opCmdHelp(bool help, char *cmdParams);
 static void opHelpHelp(void);
@@ -105,6 +113,8 @@ static int opPrepCards(char *fname, FILE *fcb);
 
 static void opCmdLoadTape(bool help, char *cmdParams);
 static void opHelpLoadTape(void);
+
+static void opCmdPrompt(void);
 
 static void opCmdShowTape(bool help, char *cmdParams);
 static void opHelpShowTape(void);
@@ -171,6 +181,8 @@ static OpCmd decode[] =
 
 static void (*opCmdFunction)(bool help, char *cmdParams);
 static char opCmdParams[256];
+static OpCmdStackEntry opCmdStack[MaxCmdStkSize];
+static int opCmdStackPtr = 0;
 static volatile bool opPaused = FALSE;
 
 /*
@@ -213,10 +225,7 @@ void opRequest(void)
         opCmdFunction(FALSE, opCmdParams);
         opActive = FALSE;
 
-        if (emulationActive)
-            {
-            printf("\nOperator> ");
-            }
+        if (emulationActive) opCmdPrompt();
 
         fflush(stdout);
         }
@@ -296,27 +305,42 @@ static void *opThread(void *param)
     {
     OpCmd *cp;
     char cmd[256];
-    bool isOpSection;
+    FILE *in;
     char *line;
     char name[80];
+    FILE *newIn;
     char *params;
+    char path[256];
     char *pos;
+    char *sp;
 
     printf("\n%s.", DtCyberVersion " - " DtCyberCopyright);
     printf("\n%s.", DtCyberLicense);
     printf("\n%s.", DtCyberLicenseDetails);
     printf("\n\nOperator interface");
     printf("\nPlease enter 'help' to get a list of commands\n");
-    printf("\nOperator> ");
+    opCmdPrompt();
 
-    isOpSection = initOpenOperatorSection() == 1;
+    opCmdStack[opCmdStackPtr].fp = stdin;
+    if (getcwd(opCmdStack[opCmdStackPtr].cwd, CwdPathSize) == NULL)
+        {
+        fputs("Failed to get current working directory path\n", stderr);
+        exit(1);
+        }
+    if (initOpenOperatorSection() == 1)
+        {
+        opCmdStackPtr += 1;
+        opCmdStack[opCmdStackPtr].fp = NULL;
+        strcpy(opCmdStack[opCmdStackPtr].cwd, opCmdStack[opCmdStackPtr - 1].cwd);
+        }
 
     while (emulationActive)
         {
         fflush(stdout);
+        in = opCmdStack[opCmdStackPtr].fp;
 
         #if defined(_WIN32)
-        if (!kbhit())
+        if (in == stdin && !kbhit())
             {
             Sleep(50);
             continue;
@@ -326,26 +350,45 @@ static void *opThread(void *param)
         /*
         **  Wait for command input.
         */
-        if (isOpSection)
+        if (opActive && in != stdin)
             {
-            if (opPaused || opActive) continue;
+            opWait(1);
+            continue;
+            }
+        if (in == NULL)
+            {
             line = initGetNextLine();
             if (line == NULL)
                 {
-                isOpSection = FALSE;
+                opCmdStackPtr -= 1;
                 continue;
                 }
             strcpy(cmd, line);
+            }
+        else if (fgets(cmd, sizeof(cmd), in) == NULL)
+            {
+            if (opCmdStackPtr > 0)
+                {
+                fclose(in);
+                opCmdStackPtr -= 1;
+                }
+            else
+                {
+                fputs("\nConsole closed\n", stdout);
+                emulationActive = FALSE;
+                }
+            continue;
+            }
+        else if (strlen(cmd) == 0)
+            {
+            continue;
+            }
+
+        if (in != stdin)
+            {
             fputs(cmd, stdout);
             fputs("\n", stdout);
             fflush(stdout);
-            }
-        else
-            {
-            if (fgets(cmd, sizeof(cmd), stdin) == NULL || strlen(cmd) == 0)
-                {
-                continue;
-                }
             }
 
         if (opPaused)
@@ -360,7 +403,7 @@ static void *opThread(void *param)
         if (opActive)
             {
             /*
-            **  The main emulation thread is still busy executing the command.
+            **  The main emulation thread is still busy executing the previous command.
             */
             printf("\nPrevious request still busy");
             continue;
@@ -381,7 +424,40 @@ static void *opThread(void *param)
         params = opGetString(cmd, name, sizeof(name));
         if (*name == 0)
             {
-            printf("\nOperator> ");
+            opCmdPrompt();
+            continue;
+            }
+        else if (*name == '@')
+            {
+            if (opCmdStackPtr + 1 >= MaxCmdStkSize)
+                {
+                fputs("Too many nested command scripts\n", stdout);
+                opCmdPrompt();
+                continue;
+                }
+            sp = name + 1;
+            if (*sp == '/')
+                {
+                strcpy(path, sp);
+                }
+            else
+                {
+                sprintf(path, "%s/%s", opCmdStack[opCmdStackPtr].cwd, sp);
+                }
+            newIn = fopen(path, "r");
+            if (newIn != NULL)
+                {
+                opCmdStackPtr += 1;
+                opCmdStack[opCmdStackPtr].fp = newIn;
+                pos = strrchr(path, '/');
+                *pos = '\0';
+                strcpy(opCmdStack[opCmdStackPtr].cwd, path);
+                }
+            else
+                {
+                printf("Failed to open %s\n", path);
+                }
+            opCmdPrompt();
             continue;
             }
 
@@ -416,7 +492,7 @@ static void *opThread(void *param)
             printf("Command not implemented: %s\n\n", name);
             printf("Try 'help' to get a list of commands or 'help <command>'\n");
             printf("to get a brief description of a command.\n");
-            printf("\nOperator> ");
+            opCmdPrompt();
             continue;
             }
         }
@@ -746,7 +822,7 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
             else
                 {
                 printf("Unrecognized keyword: %%%s%%\n", kp);
-                printf("\nOperator> ");
+                opCmdPrompt();
                 return;
                 }
             }
@@ -758,7 +834,7 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
     if (bp > limit)
         {
         printf("Key sequence is too long\n");
-        printf("\nOperator> ");
+        opCmdPrompt();
         return;
         }
     *bp = '\0';
@@ -800,20 +876,20 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
                 msec = (msec * 10) + (*cp++ - '0');
                 }
             if (*cp != '#') cp -= 1;
-            opWaitKeyInterval(msec);
+            opWait(msec);
             break;
             }
         cp += 1;
-        opWaitKeyInterval(opKeyInterval);
+        opWait(opKeyInterval);
         opWaitKeyConsume();
         }
     if (*cp != '!')
         {
         opKeyIn = '\r';
-        opWaitKeyInterval(opKeyInterval);
+        opWait(opKeyInterval);
         opWaitKeyConsume();
         }
-    printf("\nOperator> ");
+    opCmdPrompt();
     }
 
 static void opHelpEnterKeys(void)
@@ -846,7 +922,7 @@ static void opWaitKeyConsume()
         }
     }
 
-static void opWaitKeyInterval(long milliseconds)
+static void opWait(long milliseconds)
     {
     #if defined(_WIN32)
     Sleep(milliseconds);
@@ -946,6 +1022,19 @@ static void opCmdPause(bool help, char *cmdParams)
 static void opHelpPause(void)
     {
     printf("'pause' suspends emulation to reduce CPU load.\n");
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Issue a command prompt.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdPrompt(void)
+    {
+    fputs("\nOperator> ", stdout);
     }
 
 /*--------------------------------------------------------------------------
@@ -1174,7 +1263,8 @@ static int opPrepCards(char *str, FILE *fcb)
     char *dp;
     FILE *in;
     char *lastnb;
-    char params[100];
+    char params[400];
+    char path[256];
     char sbuf[400];
     char *sp;
 
@@ -1201,10 +1291,18 @@ static int opPrepCards(char *str, FILE *fcb)
     /*
     **  Open and parse the input file
     */
-    in = fopen(str, "r");
+    if (*str == '/')
+        {
+        strcpy(path, str);
+        }
+    else
+        {
+        sprintf(path, "%s/%s", opCmdStack[opCmdStackPtr].cwd, str);
+        }
+    in = fopen(path, "r");
     if (in == NULL)
         {
-        printf("Failed to open %s\n", str);
+        printf("Failed to open %s\n", path);
         return -1;
         }
     while (TRUE)
@@ -1269,17 +1367,17 @@ static int opPrepCards(char *str, FILE *fcb)
             while (isspace(*sp)) sp += 1;
             if (*sp == '\0')
                 {
-                printf("File name missing from ~include in %s\n", str);
+                printf("File name missing from ~include in %s\n", path);
                 fclose(in);
                 return -1;
                 }
             if (*sp != '/')
                 {
-                cp = strrchr(str, '/');
+                cp = strrchr(path, '/');
                 if (cp != NULL)
                     {
                     *cp = '\0';
-                    sprintf(params, "%s/%s", str, sp);
+                    sprintf(params, "%s/%s", path, sp);
                     *cp = '/';
                     sp = params;
                     }
