@@ -618,6 +618,7 @@ static void initNpuConnections(void)
     long networkValue;
     Pcb *pcbp;
     long pingInterval;
+    TermRecoType recoType;
     struct hostent *remoteHost;
     char strValue[256];
 
@@ -746,12 +747,11 @@ static void initNpuConnections(void)
             **   terminals=<local-port>,<cla-port>,<connections>,hasp[,B<block-size>]
             **   terminals=<local-port>,<cla-port>,<connections>,nje,<remote-ip>:<remote-port>,<remote-name> ...
             **       [,<local-ip>][,B<block-size>][,P<ping-interval>]
-            **   terminals=<local-port>,<cla-port>,<connections>,pterm
-            **   terminals=<local-port>,<cla-port>,<connections>,raw
+            **   terminals=<local-port>,<cla-port>,<connections>,pterm[,auto|xauto]
+            **   terminals=<local-port>,<cla-port>,<connections>,raw[,auto|xauto]
             **   terminals=<local-port>,<cla-port>,<connections>,rhasp,<remote-ip>:<remote-port>[,B<block-size>]
-            **   terminals=<local-port>,<cla-port>,<connections>,rs232
-            **   terminals=<local-port>,<cla-port>,<connections>,stream
-            **   terminals=<local-port>,<cla-port>,<connections>,telnet
+            **   terminals=<local-port>,<cla-port>,<connections>,rs232[,auto|xauto]
+            **   terminals=<local-port>,<cla-port>,<connections>,telnet[,auto|xauto]
             **   terminals=<local-port>,<cla-port>,<connections>,trunk,<remote-ip>:<remote-port>,<remote-name>,<coupler-node>
             **
             **     terminal types:
@@ -761,10 +761,12 @@ static void initNpuConnections(void)
             **       raw    A raw TCP connection (i.e., no Telnet protocol)
             **       rhasp  A TCP connection supporting Reverse HASP protocol
             **       rs232  A connection supporting an RS-232 terminal server
-            **       stream A raw TCP connection that acts like a stream, not a terminal
             **       telnet A TCP connection supporting full Telnet protocol
             **       trunk  A TCP connection supporting LIP protocol (a trunk between DtCyber systems)
             **
+            **     auto            Optional keyword indicating that an Async terminal connection is
+            **     xauto           auto-configured. The corresponding NDL definition should specify
+            **                     AUTO=YES or XAUTO=YES
             **     <block-size>    Maximum block size to send on HASP, Reverse HASP, and NJE connections
             **     <cla-port>      Starting CLA port number on NPU, in hexadecimal, must match NDL definition
             **     <coupler-node>  Coupler node number of DtCyber host at other end of trunk
@@ -1080,6 +1082,34 @@ static void initNpuConnections(void)
                 {
                 switch (connType)
                     {
+                case ConnTypeRaw:
+                case ConnTypePterm:
+                case ConnTypeRs232:
+                case ConnTypeTelnet:
+                    token = strtok(NULL, " ");
+                    if (token != NULL)
+                        {
+                        if (strcasecmp(token, "auto") == 0)
+                            {
+                            recoType = TermRecoAuto;
+                            }
+                        else if (strcasecmp(token, "xauto") == 0)
+                            {
+                            recoType = TermRecoXauto;
+                            }
+                        else
+                            {
+                            fprintf(stderr, "Unrecognized keyword \"%s\" on terminal definition in section [%s] of %s, relative line %d\n",
+                                token, npuConnections, startupFile, lineNo);
+                            exit(1);
+                            }
+                        while (numConns-- > 0)
+                            {
+                            pcbp = npuNetFindPcb(claPort++);
+                            pcbp->controls.async.recoType = recoType;
+                            }
+                        }
+                    break;
                 case ConnTypeRevHasp:
                 case ConnTypeNje:
                 case ConnTypeTrunk:

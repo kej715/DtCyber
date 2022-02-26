@@ -770,7 +770,19 @@ static bool npuSvmRequestTerminalConfig(Pcb *pcbp)
     case ConnTypePterm:
     case ConnTypeRs232:
     case ConnTypeTelnet:
-        *mp++ = (0 << 7) | (TtASYNC << 3); // no auto recognition; TIP type; speed range 0
+        if (pcbp->controls.async.recoType == TermRecoNonAuto)
+            {
+            *mp++ = (0 << 7) | (TtASYNC << 3); // no auto recognition and TIP type
+            }
+        else
+            {
+            *mp++ = (1 << 7) | (TtASYNC << 3); // auto recognition and TIP type
+            *mp++ = (pcbp->controls.async.recoType == TermRecoAuto) ? Ls1200 : Ls9600; // line speed
+            *mp++ = CsASCII; // code set ASCII
+            *mp++ = StN2741; // sub-tip N2741
+            *mp++ = 0;       // A1
+            *mp++ = 1;       // Number of terminals
+            }
         break;
     case ConnTypeHasp:
         *mp++ = (0 << 7) | (TtHASP << 3);  // no auto recognition; TIP type; speed range 0

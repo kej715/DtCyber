@@ -154,14 +154,32 @@
 #define TtASYNC         1       // ASYNC TIP
 #define TtMODE4         2       // MODE 4 TIP
 #define TtHASP          3       // HASP TIP
+#define TtX25           4       // X.25
+#define TtBSC           5       // BSC
 #define TtTT12          12      // Site-defined TIP 12 (used by TLF for reverse HASP)
 #define TtTT13          13      // Site-defined TIP 13 (used by NJF for NJE)
 #define TtTT14          14      // Site-defined TIP 14
+#define Tt3270          15      // 3270
+
+/*
+**  SubTIP types
+*/
+#define StM4A           1       // M4A
+#define StM4C           2       // M4C
+#define StN2741         1       // N2741
+#define St2741          2       // 2741
+#define StPOST          1       // POST
+#define StPRE           2       // PRE
+#define StPAD           1       // PAD
+#define StUSER          6       // USER
+#define StXAA           3       // XAA
+#define St2780          1       // 2780
+#define St3780          2       // 3780
 
 /*
 **  Device types
 */
-#define DtCONSOLE       0       // Normal terminal
+#define DtCONSOLE       0       // Normal terminal or console
 #define DtCR            1       // Card reader
 #define DtLP            2       // Line printer
 #define DtCP            3       // Card punch
@@ -182,6 +200,19 @@
 #define Ls9600          9       //  9600
 #define Ls19200         10      //  19200
 #define Ls38400         11      //  38400
+
+/*
+**  Line type codes
+*/
+#define LtS1            1       // S1
+#define LtS2            2       // S2
+#define LtS3            3       // S3
+#define LtS4            11      // S4
+#define LtA1            6       // A1
+#define LtA2            7       // A2
+#define LtA6            9       // A6
+#define LtH1            10      // H1
+#define LtH2            12      // H2
                         
 /*                      
 **  Code set codes      
@@ -390,9 +421,17 @@ typedef enum
     StTelnetWill
     } TelnetState;
 
+typedef enum
+    {
+    TermRecoNonAuto = 0,
+    TermRecoAuto,
+    TermRecoXauto
+    } TermRecoType;
+
 typedef struct acb
     {
     TelnetState state;
+    TermRecoType recoType;
     u32 pendingWills;
     struct tcb *tp;
     } Acb;
