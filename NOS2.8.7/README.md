@@ -53,15 +53,19 @@ following command to restart *DtCyber* and bring up the freshly installed operat
 system. This is the usual way to start *DtCyber* after the initial installation of
 NOS 2.8.7. The system should deadstart as it did during the initial installation.
 However, it should start the **NAM** (Network Access Method) and **IAF** (InterActive
-Facility) subsystems automatically too. When the deadstart completes and **NAM**
-appears to settle down, you should be able to log into the system using your favorite
-Telnet client. When it asks for **FAMILY:**, press return. When it asks for **USER
-NAME:**, enter *INSTALL*. When it asks for **PASSWORD:**, enter *INSTALL* again. When
-you see the **/** prompt, the operating system is ready for you to enter commands.
+Facility) subsystems automatically too.
 
 | OS           | Command           |
 |--------------|-------------------|
 | Linux/MacOS: | `sudo ../dtcyber` |
 | Windows:     | `dtcyber`         |
+
+When the deadstart completes and **NAM** appears to settle down, you should be able
+to log into the system using your favorite Telnet client. When it asks for
+**FAMILY:**, press return. When it asks for **USER NAME:**, enter *INSTALL*. When it
+asks for **PASSWORD:**, enter *INSTALL* again. When you see the **/** prompt, the
+operating system is ready for you to enter commands. You may also login using
+**GUEST** as username and password. The initial installation process creates
+**GUEST** as an ordinary, non-privileged user account.
 
 That's it. Welcome back to supercomputing in the 1980's!
