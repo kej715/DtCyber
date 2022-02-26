@@ -34,13 +34,13 @@ for example. Note that it is possible to change the port numbers used by *DtCybe
 1. If not done already, use the appropriate *Makefile* in this directory's parent directory
 to build *DtCyber* and produce the *dtcyber* executable.
 2. Start the automated installation by executing the following *expect* command. On Windows, you
-will probably need to enable the *dtcyber* application to use TCP ports 21, 22, and 23, you 
-will need to copy *dtcyber.exe* to this directory from the parent, and you would omit *sudo*
-from the command line. The process initiated by this command will take some time to complete,
-perhaps as much as 15 - 20 minutes, depending upon your host system's speed. You will see *DtCyber*
-start, and NOS 2.8.7 will be deadstarted and installed. The system will be shutdown gracefull
-when the installation process has completed.
->`PATH=../:$PATH sudo expect first-install.exp`
+will probably need to enable the *dtcyber* application to use TCP ports 21, 22, and 23, and you 
+will need to copy *dtcyber.exe* to this directory from the parent.  The process initiated by this
+command will take some time to complete, perhaps as much as 15 - 20 minutes, depending upon your
+host system's speed. You will see *DtCyber* start, and NOS 2.8.7 will be deadstarted and installed.
+The system will be shutdown gracefull when the installation process has completed.
+>On Linux/MacOS: `PATH=../:$PATH sudo expect first-install.exp`
+>On Windows: `expect first-install.exp`
 3. Enter the following command to restart *DtCyber* and bring up the freshly installed operating
 system. This is the usual way to start *DtCyber* after the initial installation of NOS 2.8.7.
 The system should deadstart as it did during the initial installation. However, it should start
@@ -49,6 +49,7 @@ too. When the deadstart completes and **NAM** appears to settle down, you should
 the system using your favorite Telnet client. When it asks for **FAMILY:**, press return. When it
 asks for **USER NAME:**, enter *INSTALL*. When it asks for **PASSWORD:**, enter *INSTALL* again.
 When you see the **/** prompt, the operating system is ready for you to enter commands.
->`sudo ../dtcyber`
+>Linux/MacOS: `sudo ../dtcyber`
+>Windows: `dtcyber`
 
 That's it. Welcome back to supercomputing in the 1980's!
