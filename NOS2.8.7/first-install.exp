@@ -24,16 +24,16 @@ send_user "\r Full sysgen complete\r\r"
 #dsd "UNLOAD,50."
 console "lc 12,4,decks/add-permit.job"
 check_job ADDPERM
-dsd "X.MS(PERMIT,NAMSTRT,377772,INSTALL)"
-dsd "X.MS(PERMIT,TDUFILE,377776,INSTALL)"
 console "lc 12,4,decks/create-ndlopl.job"
 check_job NDLOPL
 console "lc 12,4,decks/compile-ndlopl.job"
 check_job COMPNDL
+dsd "X.MS(PERMIT,NAMSTRT,377772,INSTALL)"
 console "lc 12,4,decks/update-namstrt.job"
 check_job UNMSTRT
 console "lc 12,4,decks/create-tcphost.job"
 check_job TCPHOST
+dsd "X.MS(PERMIT,TERMLIB,377776,INSTALL)"
 console "lc 12,4,decks/update-termlib.job"
 check_job TERMLIB
 send_user "\rFirst Installation Complete\r\r"
