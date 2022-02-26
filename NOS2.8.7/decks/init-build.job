@@ -17,13 +17,12 @@ COPYBR,INPUT,COMMOD.
 REPLACE,COMMOD.
 BEGIN,SETUP,INSTALL,MOD=COMMOD,INSTALL.
 BEGIN,SEED,INSTALL,DST=SYSTEM.
-********************************
-*                              *
-*            DONE              *
-*   CHECK OUTPUT LISTING FOR   *
-*       SUCCESS/FAILURE        *
-*                              *
-********************************
+***
+*** IBUILD COMPLETE
+***
 EXIT.
+***
+*** IBUILD FAILED
+***
 ~eor
 ~include ../files/COMMOD.txt

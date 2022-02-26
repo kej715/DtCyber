@@ -11,17 +11,12 @@ SETJSL,*.
 COPY,INPUT,TCPHOST.
 REPLACE,TCPHOST.
 CHANGE,TCPHOST/CT=PU,M=R,AC=Y.
-********************************
-*                              *
-*          SUCCESS             *
-*                              *
-********************************
+***
+*** TCPHOST COMPLETE
+***
 EXIT.
-********************************
-*                              *
-*          FAILURE             *
-*     SEE OUTPUT LISTING       *
-*                              *
-********************************
+***
+*** TCPHOST FAILED
+***
 ~eor
 ~include ../files/TCPHOST.txt

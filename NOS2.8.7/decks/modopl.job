@@ -20,14 +20,13 @@ COPY,INPUT,NOSMODS.
 REPLACE,NOSMODS.
 PURGE,OPL871/NA.
 BEGIN,MODOPL,INSTALL,USERF=NOSMODS.
-********************************
-*                              *
-*            DONE              *
-* CHECK DAYFILS AND/OR OUTPUT  *
-* LISTING FOR SUCCESS/FAILURE  *
-*                              *
-********************************
+***
+*** MODOPL COMPLETE
+***
 EXIT.
+***
+*** MODOPL FAILED
+***
 ~eor
 ~include ../mods/NOS/CCHG5.mod
 ~eor

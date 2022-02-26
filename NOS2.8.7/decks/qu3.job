@@ -10,13 +10,12 @@ SETJSL,*.
 COPY,INPUT,QU3MODS.
 REPLACE,QU3MODS.
 BEGIN,QU3,INSTALL,USERF=QU3MODS.
-********************************
-*                              *
-*            DONE              *
-* CHECK DAYFILS AND/OR OUTPUT  *
-* LISTING FOR SUCCESS/FAILURE  *
-*                              *
-********************************
+***
+*** QU3 COMPLETE
+***
 EXIT.
+***
+*** QU3 FAILED
+***
 ~eor
 ~include ../mods/QU3/QU30732.mod

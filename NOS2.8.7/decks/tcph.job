@@ -11,13 +11,12 @@ SETJSL,*.
 COPY,INPUT,FTPMODS.
 REPLACE,FTPMODS.
 BEGIN,TCPH,INSTALL,USERF=FTPMODS.
-********************************
-*                              *
-*            DONE              *
-* CHECK DAYFILS AND/OR OUTPUT  *
-* LISTING FOR SUCCESS/FAILURE  *
-*                              *
-********************************
+***
+*** TCHP COMPLETE
+***
 EXIT.
+***
+*** TCHP FAILED
+***
 ~eor
 ~include ../mods/TCPH/NCCFTP.mod

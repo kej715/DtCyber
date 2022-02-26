@@ -19,15 +19,10 @@ PERMIT,LCFFILE,NETOPS=W.
 REWIND,NCFFILE,LCFM01.
 COPYEI,NCFFILE,NCF.
 COPYEI,LCFM01,LCF.
-********************************
-*                              *
-*          SUCCESS             *
-*                              *
-********************************
+***
+*** COMPNDL COMPLETE
+***
 EXIT.
-********************************
-*                              *
-*          FAILURE             *
-*     SEE OUTPUT LISTING       *
-*                              *
-********************************
+***
+*** COMPNDL FAILED
+***

@@ -17,18 +17,13 @@ REWIND,SOURCE.
 GET,TERMLIB/UN=LIBRARY.
 TDU,I=SOURCE,REC=*.
 REPLACE,TERMLIB/UN=LIBRARY.
-********************************
-*                              *
-*          SUCCESS             *
-*                              *
-********************************
+***
+*** TERMLIB COMPLETE
+***
 EXIT.
-********************************
-*                              *
-*          FAILURE             *
-*     SEE OUTPUT LISTING       *
-*                              *
-********************************
+***
+*** TERMLIB FAILED
+***
 ~eor
 ~include ../files/TTERM.txt
 ~eor

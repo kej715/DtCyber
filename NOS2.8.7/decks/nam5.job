@@ -8,11 +8,10 @@ SETTL,*.
 SETASL,*.
 SETJSL,*.
 BEGIN,NAM5,INSTALL.
-********************************
-*                              *
-*            DONE              *
-* CHECK DAYFILS AND/OR OUTPUT  *
-* LISTING FOR SUCCESS/FAILURE  *
-*                              *
-********************************
+***
+*** NAM5 COMPLETE
+***
 EXIT.
+***
+*** NAM5 FAILED
+***

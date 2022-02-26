@@ -14,17 +14,12 @@ COPY,INPUT,LGO.
 REWIND,LGO.
 LIBEDIT,P=NAMSTRT,Z.
 REPLACE,NEW=NAMSTRT/UN=NETOPS.
-********************************
-*                              *
-*          SUCCESS             *
-*                              *
-********************************
+***
+*** UNMSTRT COMPLETE
+***
 EXIT.
-********************************
-*                              *
-*          FAILURE             *
-*     SEE OUTPUT LISTING       *
-*                              *
-********************************
+***
+*** UNMSTRT FAILED
+***
 ~eor
 ~include ../files/NAMSTRT-update.txt

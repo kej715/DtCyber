@@ -1,0 +1,45 @@
+#!/usr/local/bin/expect -f
+::tcl::tm::path add .
+package require DtCyber;
+namespace import DtCyber::*
+trap int_handler { SIGINT }
+
+proc int_handler {} {
+    error_condition "sigint recieved"
+}
+set DtCyber::profile "init"
+set DtCyber::printer_file "LP5xx_C12_E5"
+DtCyber::init 
+#error_condition "test"
+expect -i $printer "QUEUE FILE UTILITY COMPLETE"
+mount "13,0,1" "tapes/nos287-1.tap"
+mount "13,0,2" "tapes/nos287-2.tap"
+mount "13,0,3" "tapes/nos287-3.tap"
+send_user "\rDeadstart complete now launching sysgen(full)\r\r"
+dsd "x.sysgen(full)"
+expect -i $printer "E N D   F U L L"
+send_user "\r Full sysgen complete\r\r"
+#dsd "xsysgen(source)"
+#expect -i $printer "E N D   S O U R C E"
+#dsd "UNLOAD,50."
+console "lc 12,4,decks/add-permit.job"
+check_job ADDPERM
+dsd "X.MS(PERMIT,NAMSTRT,377772,INSTALL)"
+dsd "X.MS(PERMIT,TDUFILE,377776,INSTALL)"
+console "lc 12,4,decks/create-ndlopl.job"
+check_job NDLOPL
+console "lc 12,4,decks/compile-ndlopl.job"
+check_job COMPNDL
+console "lc 12,4,decks/update-namstrt.job"
+check_job UNMSTRT
+console "lc 12,4,decks/create-tcphost.job"
+check_job TCPHOST
+console "lc 12,4,decks/update-termlib.job"
+check_job TERMLIB
+send_user "\rFirst Installation Complete\r\r"
+sleep 3
+dsd "UNLOCK."
+dsd "CHE"
+sleep 4
+dsd "STEP."
+console "shutdown"

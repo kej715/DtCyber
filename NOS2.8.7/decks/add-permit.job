@@ -24,17 +24,12 @@ REWIND,LGO.
 LIBEDIT,P=ZZZPFIL,Z.+*I PROC/LOADQUE,PROC/PERMIT
 REWIND,NEW.
 COPY,NEW,ZZZPFIL.
-********************************
-*                              *
-*          SUCCESS             *
-*                              *
-********************************
+***
+*** ADDPERM COMPLETE
+***
 EXIT.
-********************************
-*                              *
-*          FAILURE             *
-*     SEE OUTPUT LISTING       *
-*                              *
-********************************
+***
+*** ADDPERM FAILED
+***
 ~eor
 ~include ../files/ZZZPFIL-update.txt

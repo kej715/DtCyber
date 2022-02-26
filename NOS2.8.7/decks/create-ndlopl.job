@@ -13,17 +13,12 @@ COPY,INPUT,NDLSRC.
 REWIND,NDLSRC.
 MODIFY,P=0,N=NDLOPL,C=0,F,Z./*CREATE NDLSRC
 REPLACE,NDLOPL.
-********************************
-*                              *
-*          SUCCESS             *
-*                              *
-********************************
+***
+*** NDLOPL COMPLETE
+***
 EXIT.
-********************************
-*                              *
-*          FAILURE             *
-*     SEE OUTPUT LISTING       *
-*                              *
-********************************
+***
+*** NDLOPL FAILED
+***
 ~eor
 ~include ../files/NDLSRC.txt
