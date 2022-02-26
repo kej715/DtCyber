@@ -24,28 +24,28 @@ the files before they can be used.
 - **expect**. Automated installation of NOS 2.8.7 on DtCyber is accomplished using
 [expect](https://core.tcl-lang.org/expect/index). You will need to install this tool, if you
 don't have it already.
-- **Telnet port**. The instance of *DtCyber* used in this process is configured by default to use
+- **Privileged TCP ports**. The instance of *DtCyber* used in this process is configured by default to use
 standard TCP ports for services such as Telnet (port 23) and FTP (ports 21 and 22). These are
 privileged port numbers that will require you to run *DtCyber* using *sudo* on Linux and MacOS,
 for example. Note that it is possible to change the port numbers used by *DtCyber*, if necessary
 (see the *cyber.ini* file).
 
 ## Installation Steps
-1. It not done already, use the appropriate *Makefile* in this directory's parent directory
+1. If not done already, use the appropriate *Makefile* in this directory's parent directory
 to build *DtCyber* and produce the *dtcyber* executable.
 2. Start the automated installation by executing the following *expect* command. On Windows, you
 will probably need to enable the *dtcyber* application to use TCP ports 21, 22, and 23, you 
-will need to set your PATH environment variant to include this directory's parent using the *SET*
-command, and you would omit *sudo* from the command line. The process initiated by this command
-will take some time to complete, perhaps as much as 15 - 20 minutes, depending upon your host
-system's speed. You will see *DtCyber* start, NOS 2.8.7 will be deadstarted and installed,
-and then shutdown gracefully when installation completes.
+will need to copy *dtcyber.exe* to this directory from the parent, and you would omit *sudo*
+from the command line. The process initiated by this command will take some time to complete,
+perhaps as much as 15 - 20 minutes, depending upon your host system's speed. You will see *DtCyber*
+start, and NOS 2.8.7 will be deadstarted and installed. The system will be shutdown gracefull
+when the installation process has completed.
 >`PATH=../:$PATH sudo expect first-install.exp`
 3. Enter the following command to restart *DtCyber* and bring up the freshly installed operating
 system. This is the usual way to start *DtCyber* after the initial installation of NOS 2.8.7.
 The system should deadstart as it did during the initial installation. However, it should start
-the **NAM** (Network Access Method) and **IAF** (InterActive Facility) subsystems automatically.
-When the deadstart completes and **NAM** appears to settle down, you should be able to log into
+the **NAM** (Network Access Method) and **IAF** (InterActive Facility) subsystems automatically
+too. When the deadstart completes and **NAM** appears to settle down, you should be able to log into
 the system using your favorite Telnet client. When it asks for **FAMILY:**, press return. When it
 asks for **USER NAME:**, enter *INSTALL*. When it asks for **PASSWORD:**, enter *INSTALL* again.
 When you see the **/** prompt, the operating system is ready for you to enter commands.
