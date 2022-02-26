@@ -33,6 +33,7 @@ check_job TCPHOST
 dsd "X.MS(PERMIT,TERMLIB,377776,INSTALL)"
 console "lc 12,4,decks/update-termlib.job"
 check_job TERMLIB
+dsd "X.MS(VALUSER,LIMITED,GUEST,GUEST)"
 send_user "\rFirst Installation Complete\r\r"
 sleep 3
 dsd "UNLOCK."
