@@ -100,9 +100,9 @@ void cpuPpWriteMem(u32 address, CpWord data);
 */
 void mt362xInit_7(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void mt362xInit_9(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void mt362xLoadTape(char *params);
-void mt362xUnloadTape(char *params);
-void mt362xShowTapeStatus(void);
+void mt362xLoadTape(char *params, FILE *out);
+void mt362xUnloadTape(char *params, FILE *out);
+void mt362xShowTapeStatus(FILE *out);
 
 /*
 **  mt607.c
@@ -114,55 +114,55 @@ void mt607Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 */
 void mt669Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void mt669Terminate(DevSlot *dp);
-void mt669LoadTape(char *params);
-void mt669UnloadTape(char *params);
-void mt669ShowTapeStatus(void);
+void mt669LoadTape(char *params, FILE *out);
+void mt669UnloadTape(char *params, FILE *out);
+void mt669ShowTapeStatus(FILE *out);
 
 /*
 **  mt679.c
 */
 void mt679Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void mt679Terminate(DevSlot *dp);
-void mt679LoadTape(char *params);
-void mt679UnloadTape(char *params);
-void mt679ShowTapeStatus(void);
+void mt679LoadTape(char *params, FILE *out);
+void mt679UnloadTape(char *params, FILE *out);
+void mt679ShowTapeStatus(FILE *out);
 
 /*
 **  mt5744.c
 */
 void mt5744Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void mt5744ShowTapeStatus(void);
+void mt5744ShowTapeStatus(FILE *out);
 
 /*
 **  cr405.c
 */
 void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void cr405LoadCards(char *fname, int channelNo, int equipmentNo);
+void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out);
 
 /*
 **  cp3446.c
 */
 void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void cp3446RemoveCards(char *params);
+void cp3446RemoveCards(char *params, FILE *out);
 
 /*
 **  cr3447.c
 */
 void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void cr3447LoadCards(char *fname, int channelNo, int equipmentNo);
+void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out);
 
 /*
 **  lp1612.c
 */
 void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void lp1612RemovePaper(char *params);
+void lp1612RemovePaper(char *params, FILE *out);
 
 /*
 **  lp3000.c
 */
 void lp501Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void lp3000RemovePaper(char *params);
+void lp3000RemovePaper(char *params, FILE *out);
 
 /*
 **  console.c

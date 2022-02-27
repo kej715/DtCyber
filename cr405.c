@@ -208,7 +208,7 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void cr405LoadCards(char *fname, int channelNo, int equipmentNo)
+void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out)
     {
     Cr405Context *cc;
     DevSlot *dp;
@@ -231,7 +231,7 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo)
     */
     if (((cc->inDeck + 1) % Cr405MaxDecks) == cc->outDeck)
         {
-        printf("Input tray full\n");
+        fputs("Input tray full\n", out);
         return;
         }
     len = strlen(fname) + 1;
@@ -245,7 +245,7 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo)
         cr405StartNextDeck(dp, cc);
         }
 
-    printf("Cards loaded on card reader C%o,E%o\n", channelNo, equipmentNo);
+    fprintf(out, "Cards loaded on card reader C%o,E%o\n", channelNo, equipmentNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -380,7 +380,7 @@ static void cr405StartNextDeck(DevSlot *dp, Cr405Context *cc)
             cr405NextCard(dp);
             return;
             }
-        printf("Failed to open card deck %s\n", fname);
+        fprintf(stderr, "Failed to open card deck %s\n", fname);
         unlink(fname);
         free(fname);
         cc->outDeck = (cc->outDeck + 1) % Cr405MaxDecks;

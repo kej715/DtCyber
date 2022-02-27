@@ -240,11 +240,12 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **                  fname       Pathname of file containing card deck
 **                  channelNo   Channel number of card reader
 **                  equipmentNo Equipment number of card reader
+**                  out         DtCyber operator output file
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void cr3447LoadCards(char *fname, int channelNo, int equipmentNo)
+void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out)
     {
     CrContext *cc;
     DevSlot *dp;
@@ -267,7 +268,7 @@ void cr3447LoadCards(char *fname, int channelNo, int equipmentNo)
     */
     if (((cc->inDeck + 1) % Cr3447MaxDecks) == cc->outDeck)
         {
-        printf("Input tray full\n");
+        fputs("Input tray full\n", out);
         return;
         }
     len = strlen(fname) + 1;
@@ -281,7 +282,7 @@ void cr3447LoadCards(char *fname, int channelNo, int equipmentNo)
         cr3447StartNextDeck(dp, cc);
         }
 
-    printf("Cards loaded on card reader C%o,E%o\n", channelNo, equipmentNo);
+    fprintf(out, "Cards loaded on card reader C%o,E%o\n", channelNo, equipmentNo);
     }
 
 /*

@@ -256,7 +256,7 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void cp3446RemoveCards(char *params)
+void cp3446RemoveCards(char *params, FILE *out)
     {
     CpContext *cc;
     DevSlot *dp;
@@ -279,19 +279,19 @@ void cp3446RemoveCards(char *params)
     */
     if (numParam < 2)
         {
-        printf("Not enough or invalid parameters\n");
+        fputs("Not enough or invalid parameters\n", out);
         return;
         }
 
     if (channelNo < 0 || channelNo >= MaxChannels)
         {
-        printf("Invalid channel no\n");
+        fputs("Invalid channel no\n", out);
         return;
         }
 
     if (equipmentNo < 0 || equipmentNo >= MaxEquipment)
         {
-        printf("Invalid equipment no\n");
+        fputs("Invalid equipment no\n", out);
         return;
         }
 
@@ -301,7 +301,7 @@ void cp3446RemoveCards(char *params)
     dp = dcc6681FindDevice((u8)channelNo, (u8)equipmentNo, DtCp3446);
     if (dp == NULL)
         {
-        printf("No card punch on channel %o and equipment %o\n", channelNo, equipmentNo);
+        fprintf(out, "No card punch on channel %o and equipment %o\n", channelNo, equipmentNo);
         return;
         }
 
@@ -334,7 +334,7 @@ void cp3446RemoveCards(char *params)
 
     if (rename(fname, fnameNew) != 0)
         {
-        printf("Could not rename %s to %s - %s\n", fname, fnameNew, strerror(errno));
+        fprintf(out, "Could not rename %s to %s - %s\n", fname, fnameNew, strerror(errno));
         return;
         }
 
@@ -348,11 +348,11 @@ void cp3446RemoveCards(char *params)
     */
     if (dp->fcb[0] == NULL)
         {
-        printf("Failed to open %s\n", fname);
+        fprintf(out, "Failed to open %s\n", fname);
         return;
         }
 
-    printf("Punch cards removed from 3446 card puncher\n");
+    fputs("Punch cards removed from 3446 card puncher\n", out);
     }
 
 /*

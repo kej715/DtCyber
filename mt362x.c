@@ -426,7 +426,7 @@ static void mt362xInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, u8 tr
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void mt362xLoadTape(char *params)
+void mt362xLoadTape(char *params, FILE *out)
     {
     static char str[200];
     DevSlot *dp;
@@ -448,31 +448,31 @@ void mt362xLoadTape(char *params)
     */
     if (numParam != 5)
         {
-        printf("Not enough or invalid parameters\n");
+        fputs("Not enough or invalid parameters\n", out);
         return;
         }
 
     if (channelNo < 0 || channelNo >= MaxChannels)
         {
-        printf("Invalid channel no\n");
+        fputs("Invalid channel no\n", out);
         return;
         }
 
     if (unitNo < 0 || unitNo >= MaxUnits2)
         {
-        printf("Invalid unit no\n");
+        fputs("Invalid unit no\n", out);
         return;
         }
 
     if (unitMode != 'w' && unitMode != 'r')
         {
-        printf("Invalid ring mode (r/w)\n");
+        fputs("Invalid ring mode (r/w)\n", out);
         return;
         }
 
     if (str[0] == 0)
         {
-        printf("Invalid file name\n");
+        fputs("Invalid file name\n", out);
         return;
         }
 
@@ -491,7 +491,7 @@ void mt362xLoadTape(char *params)
     tp = (TapeParam *)dp->context[unitNo];
     if (tp == NULL)
         {
-        printf("Unit %d not allocated\n", unitNo);
+        fprintf(out, "Unit %d not allocated\n", unitNo);
         return;
         }
 
@@ -500,7 +500,7 @@ void mt362xLoadTape(char *params)
     */
     if (dp->fcb[unitNo] != NULL)
         {
-        printf("Unit %d not unloaded\n", unitNo);
+        fprintf(out, "Unit %d not unloaded\n", unitNo);
         return;
         }
 
@@ -527,7 +527,7 @@ void mt362xLoadTape(char *params)
     */
     if (fcb == NULL)
         {
-        printf("Failed to open %s\n", str);
+        fprintf(out, "Failed to open %s\n", str);
         return;
         }
 
@@ -543,7 +543,7 @@ void mt362xLoadTape(char *params)
     tp->unitReady = TRUE;
     tp->ringIn = unitMode == 'w';
 
-    printf("Successfully loaded %s\n", str);
+    fprintf(out, "Successfully loaded %s\n", str);
     }
 
 /*--------------------------------------------------------------------------
@@ -555,7 +555,7 @@ void mt362xLoadTape(char *params)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void mt362xUnloadTape(char *params)
+void mt362xUnloadTape(char *params, FILE *out)
     {
     DevSlot *dp;
     int numParam;
@@ -574,19 +574,19 @@ void mt362xUnloadTape(char *params)
     */
     if (numParam != 3)
         {
-        printf("Not enough or invalid parameters\n");
+        fputs("Not enough or invalid parameters\n", out);
         return;
         }
 
     if (channelNo < 0 || channelNo >= MaxChannels)
         {
-        printf("Invalid channel no\n");
+        fputs("Invalid channel no\n", out);
         return;
         }
 
     if (unitNo < 0 || unitNo >= MaxUnits2)
         {
-        printf("Invalid unit no\n");
+        fputs("Invalid unit no\n", out);
         return;
         }
 
@@ -605,7 +605,7 @@ void mt362xUnloadTape(char *params)
     tp = (TapeParam *)dp->context[unitNo];
     if (tp == NULL)
         {
-        printf("Unit %d not allocated\n", unitNo);
+        fprintf(out, "Unit %d not allocated\n", unitNo);
         return;
         }
 
@@ -614,7 +614,7 @@ void mt362xUnloadTape(char *params)
     */
     if (dp->fcb[unitNo] == NULL)
         {
-        printf("Unit %d not loaded\n", unitNo);
+        fprintf(out, "Unit %d not loaded\n", unitNo);
         return;
         }
 
@@ -634,7 +634,7 @@ void mt362xUnloadTape(char *params)
     */
     mt362xInitStatus(tp);
 
-    printf("Successfully unloaded MT362x on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
+    fprintf(out, "Successfully unloaded MT362x on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -646,20 +646,20 @@ void mt362xUnloadTape(char *params)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void mt362xShowTapeStatus(void)
+void mt362xShowTapeStatus(FILE *out)
     {
     TapeParam *tp = firstTape;
 
     while (tp)
         {
-        printf("MT362x-%d on %o,%o,%o", tp->tracks, tp->channelNo, tp->eqNo, tp->unitNo);
+        fprintf(out, "MT362x-%d on %o,%o,%o", tp->tracks, tp->channelNo, tp->eqNo, tp->unitNo);
         if (tp->unitReady)
             {
-            printf(",%c,%s\n", tp->ringIn ? 'w' : 'r', tp->fileName);
+            fprintf(out, ",%c,%s\n", tp->ringIn ? 'w' : 'r', tp->fileName);
             }
         else
             {
-            printf("  (idle)\n");
+            fputs("  (idle)\n", out);
             }
 
         tp = tp->nextTape;

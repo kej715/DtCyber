@@ -30,7 +30,7 @@
 **  Public Constants
 **  ----------------
 */
-#define DtCyberVersion          "Desktop CYBER 5.5.1"
+#define DtCyberVersion          "Desktop CYBER 5.6.1"
 #define DtCyberCopyright        "Copyright (C) Tom Hunter"
 #define DtCyberLicense          "Licensed under the terms of the GNU General Public License version 3"
 #define DtCyberLicenseDetails	"For details see included text file 'license-gpl-3.0.txt' or visit\n" \
@@ -231,6 +231,8 @@
 #define stricmp strcasecmp
 #endif
 #if defined(_WIN32)
+#define fdopen _fdopen
+#define fileno _fileno
 #define getcwd _getcwd
 #define strcasecmp _stricmp
 #define stricmp _stricmp

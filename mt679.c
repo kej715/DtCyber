@@ -449,7 +449,7 @@ void mt679Terminate(DevSlot *dp)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void mt679LoadTape(char *params)
+void mt679LoadTape(char *params, FILE *out)
     {
     static char str[200];
     DevSlot *dp;
@@ -471,31 +471,31 @@ void mt679LoadTape(char *params)
     */
     if (numParam != 5)
         {
-        printf("Not enough or invalid parameters\n");
+        fputs("Not enough or invalid parameters\n", out);
         return;
         }
 
     if (channelNo < 0 || channelNo >= MaxChannels)
         {
-        printf("Invalid channel no\n");
+        fputs("Invalid channel no\n", out);
         return;
         }
 
     if (unitNo < 0 || unitNo >= MaxUnits)
         {
-        printf("Invalid unit no\n");
+        fputs("Invalid unit no\n", out);
         return;
         }
 
     if (unitMode != 'w' && unitMode != 'r')
         {
-        printf("Invalid ring mode (r/w)\n");
+        fputs("Invalid ring mode (r/w)\n", out);
         return;
         }
 
     if (str[0] == 0)
         {
-        printf("Invalid file name\n");
+        fputs("Invalid file name\n", out);
         return;
         }
 
@@ -514,7 +514,7 @@ void mt679LoadTape(char *params)
     tp = (TapeParam *)dp->context[unitNo];
     if (tp == NULL)
         {
-        printf("Unit %d not allocated\n", unitNo);
+        fprintf(out, "Unit %d not allocated\n", unitNo);
         return;
         }
 
@@ -523,7 +523,7 @@ void mt679LoadTape(char *params)
     */
     if (dp->fcb[unitNo] != NULL)
         {
-        printf("Unit %d not unloaded\n", unitNo);
+        fprintf(out, "Unit %d not unloaded\n", unitNo);
         return;
         }
 
@@ -550,7 +550,7 @@ void mt679LoadTape(char *params)
     */
     if (fcb == NULL)
         {
-        printf("Failed to open %s\n", str);
+        fprintf(out, "Failed to open %s\n", str);
         return;
         }
 
@@ -567,7 +567,7 @@ void mt679LoadTape(char *params)
     tp->blockNo = 0;
     tp->unitReady = TRUE;
 
-    printf("Successfully loaded %s\n", str);
+    fprintf(out, "Successfully loaded %s\n", str);
     }
 
 /*--------------------------------------------------------------------------
@@ -579,7 +579,7 @@ void mt679LoadTape(char *params)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void mt679UnloadTape(char *params)
+void mt679UnloadTape(char *params, FILE *out)
     {
     DevSlot *dp;
     int numParam;
@@ -598,19 +598,19 @@ void mt679UnloadTape(char *params)
     */
     if (numParam != 3)
         {
-        printf("Not enough or invalid parameters\n");
+        fputs("Not enough or invalid parameters\n", out);
         return;
         }
 
     if (channelNo < 0 || channelNo >= MaxChannels)
         {
-        printf("Invalid channel no\n");
+        fputs("Invalid channel no\n", out);
         return;
         }
 
     if (unitNo < 0 || unitNo >= MaxUnits2)
         {
-        printf("Invalid unit no\n");
+        fputs("Invalid unit no\n", out);
         return;
         }
 
@@ -629,7 +629,7 @@ void mt679UnloadTape(char *params)
     tp = (TapeParam *)dp->context[unitNo];
     if (tp == NULL)
         {
-        printf("Unit %d not allocated\n", unitNo);
+        fprintf(out, "Unit %d not allocated\n", unitNo);
         return;
         }
 
@@ -638,7 +638,7 @@ void mt679UnloadTape(char *params)
     */
     if (dp->fcb[unitNo] == NULL)
         {
-        printf("Unit %d not loaded\n", unitNo);
+        fprintf(out, "Unit %d not loaded\n", unitNo);
         return;
         }
 
@@ -664,7 +664,7 @@ void mt679UnloadTape(char *params)
     tp->blockCrc = 0;
     tp->blockNo = 0;
 
-    printf("Successfully unloaded MT679 on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
+    fprintf(out, "Successfully unloaded MT679 on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -676,20 +676,20 @@ void mt679UnloadTape(char *params)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void mt679ShowTapeStatus(void)
+void mt679ShowTapeStatus(FILE *out)
     {
     TapeParam *tp = firstTape;
 
     while (tp)
         {
-        printf("MT679 on %o,%o,%o", tp->channelNo, tp->eqNo, tp->unitNo);
+        fprintf(out, "MT679 on %o,%o,%o", tp->channelNo, tp->eqNo, tp->unitNo);
         if (tp->unitReady)
             {
-            printf(",%c,%s\n", tp->ringIn ? 'w' : 'r', tp->fileName);
+            fprintf(out, ",%c,%s\n", tp->ringIn ? 'w' : 'r', tp->fileName);
             }
         else
             {
-            printf("  (idle)\n");
+            fputs("  (idle)\n", out);
             }
 
         tp = tp->nextTape;

@@ -381,7 +381,7 @@ static void lp3000Init(u8 unitNo, u8 eqNo, u8 channelNo, int flags)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void lp3000RemovePaper(char *params)
+void lp3000RemovePaper(char *params, FILE *out)
     {
     DevSlot *dp;
     int numParam;
@@ -402,19 +402,19 @@ void lp3000RemovePaper(char *params)
     */
     if (numParam < 2)
         {
-        printf("Not enough or invalid parameters\n");
+        fputs("Not enough or invalid parameters\n", out);
         return;
         }
 
     if (channelNo < 0 || channelNo >= MaxChannels)
         {
-        printf("Invalid channel no\n");
+        fputs("Invalid channel no\n", out);
         return;
         }
 
     if (equipmentNo < 0 || equipmentNo >= MaxEquipment)
         {
-        printf("Invalid equipment no\n");
+        fputs("Invalid equipment no\n", out);
         return;
         }
 
@@ -454,7 +454,7 @@ void lp3000RemovePaper(char *params)
 
     if (rename(fname, fnameNew) != 0)
         {
-        printf("Could not rename %s to %s - %s\n", fname, fnameNew, strerror(errno));
+        fprintf(out, "Could not rename %s to %s - %s\n", fname, fnameNew, strerror(errno));
         return;
         }
 
@@ -468,11 +468,11 @@ void lp3000RemovePaper(char *params)
     */
     if (dp->fcb[0] == NULL)
         {
-        printf("Failed to open %s\n", fname);
+        fprintf(out, "Failed to open %s\n", fname);
         return;
         }
 
-    printf("Paper removed from 5xx printer\n");
+    fputs("Paper removed from 5xx printer\n", out);
     }
 
 /*--------------------------------------------------------------------------

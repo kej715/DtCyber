@@ -40,9 +40,17 @@
 #include "proto.h"
 #if defined(_WIN32)
 #include <windows.h>
+#include <winsock.h>
 #else
 #include <pthread.h>
 #include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+
 #endif
 
 
@@ -74,10 +82,11 @@ typedef struct opCmd
 
 typedef struct opCmdStackEntry
     {
-    FILE *fp;
+    FILE *in;
+    FILE *out;
+    bool isNetConn;
     char cwd[CwdPathSize];
     } OpCmdStackEntry;
-
 
 /*
 **  ---------------------------
@@ -91,7 +100,10 @@ static void opThread(void *param);
 static void *opThread(void *param);
 #endif
 
+static void opAcceptConnection(void);
 static char *opGetString(char *inStr, char *outStr, int outSize);
+static bool opHasInput(OpCmdStackEntry *entry);
+static int opStartListening(int port);
 
 static void opCmdDumpMemory(bool help, char *cmdParams);
 static void opCmdDumpCM(int fwa, int count);
@@ -131,6 +143,9 @@ static void opHelpRemovePaper(void);
 static void opCmdSetKeyInterval(bool help, char *cmdParams);
 static void opHelpSetKeyInterval(void);
 
+static void opCmdSetOperatorPort(bool help, char *cmdParams);
+static void opHelpSetOperatorPort(void);
+
 static void opCmdShutdown(bool help, char *cmdParams);
 static void opHelpShutdown(void);
 
@@ -161,6 +176,7 @@ static OpCmd decode[] =
     "rp",                       opCmdRemovePaper,
     "p",                        opCmdPause,
     "ski",                      opCmdSetKeyInterval,
+    "sop",                      opCmdSetOperatorPort,
     "st",                       opCmdShowTape,
     "ut",                       opCmdUnloadTape,
     "dump_memory",              opCmdDumpMemory,
@@ -170,6 +186,7 @@ static OpCmd decode[] =
     "remove_cards",             opCmdRemoveCards,
     "remove_paper",             opCmdRemovePaper,
     "set_key_interval",         opCmdSetKeyInterval,
+    "set_operator_port",        opCmdSetOperatorPort,
     "show_tape",                opCmdShowTape,
     "unload_tape",              opCmdUnloadTape,
     "?",                        opCmdHelp,
@@ -179,10 +196,19 @@ static OpCmd decode[] =
     NULL,                       NULL
     };
 
+static FILE *in;
+static FILE *out;
+
 static void (*opCmdFunction)(bool help, char *cmdParams);
 static char opCmdParams[256];
 static OpCmdStackEntry opCmdStack[MaxCmdStkSize];
 static int opCmdStackPtr = 0;
+#if defined(_WIN32)
+static SOCKET opListenHandle = 0;
+#else
+static int opListenHandle = 0;
+#endif
+static int opListenPort = 0;
 static volatile bool opPaused = FALSE;
 
 /*
@@ -227,7 +253,7 @@ void opRequest(void)
 
         if (emulationActive) opCmdPrompt();
 
-        fflush(stdout);
+        fflush(out);
         }
     }
 
@@ -305,7 +331,6 @@ static void *opThread(void *param)
     {
     OpCmd *cp;
     char cmd[256];
-    FILE *in;
     char *line;
     char name[80];
     FILE *newIn;
@@ -314,14 +339,17 @@ static void *opThread(void *param)
     char *pos;
     char *sp;
 
-    printf("\n%s.", DtCyberVersion " - " DtCyberCopyright);
-    printf("\n%s.", DtCyberLicense);
-    printf("\n%s.", DtCyberLicenseDetails);
-    printf("\n\nOperator interface");
-    printf("\nPlease enter 'help' to get a list of commands\n");
+    opCmdStack[opCmdStackPtr].in  = in  = stdin;
+    opCmdStack[opCmdStackPtr].out = out = stdout;
+    opCmdStack[opCmdStackPtr].isNetConn = FALSE;
+
+    fprintf(out, "\n%s.", DtCyberVersion " - " DtCyberCopyright);
+    fprintf(out, "\n%s.", DtCyberLicense);
+    fprintf(out, "\n%s.", DtCyberLicenseDetails);
+    fputs("\n\nOperator interface", out);
+    fprintf(out, "\nPlease enter 'help' to get a list of commands\n");
     opCmdPrompt();
 
-    opCmdStack[opCmdStackPtr].fp = stdin;
     if (getcwd(opCmdStack[opCmdStackPtr].cwd, CwdPathSize) == NULL)
         {
         fputs("Failed to get current working directory path\n", stderr);
@@ -330,31 +358,35 @@ static void *opThread(void *param)
     if (initOpenOperatorSection() == 1)
         {
         opCmdStackPtr += 1;
-        opCmdStack[opCmdStackPtr].fp = NULL;
+        opCmdStack[opCmdStackPtr].in  = NULL;
+        opCmdStack[opCmdStackPtr].out = out;
+        opCmdStack[opCmdStackPtr].isNetConn = FALSE;
         strcpy(opCmdStack[opCmdStackPtr].cwd, opCmdStack[opCmdStackPtr - 1].cwd);
         }
 
     while (emulationActive)
         {
-        fflush(stdout);
-        in = opCmdStack[opCmdStackPtr].fp;
+        opAcceptConnection();
 
-        #if defined(_WIN32)
-        if (in == stdin && !kbhit())
-            {
-            Sleep(50);
-            continue;
-            }
-        #endif
+        in  = opCmdStack[opCmdStackPtr].in;
+        out = opCmdStack[opCmdStackPtr].out;
+        fflush(out);
 
-        /*
-        **  Wait for command input.
-        */
-        if (opActive && in != stdin)
+        if (opActive)
             {
             opWait(1);
             continue;
             }
+
+        if (opHasInput(&opCmdStack[opCmdStackPtr]) == FALSE)
+            {
+            opWait(10);
+            continue;
+            }
+
+        /*
+        **  Wait for command input.
+        */
         if (in == NULL)
             {
             line = initGetNextLine();
@@ -367,14 +399,27 @@ static void *opThread(void *param)
             }
         else if (fgets(cmd, sizeof(cmd), in) == NULL)
             {
+            if (opCmdStack[opCmdStackPtr].isNetConn && errno == EAGAIN) continue;
             if (opCmdStackPtr > 0)
                 {
                 fclose(in);
+                if (opCmdStack[opCmdStackPtr].isNetConn)
+                    {
+                    fclose(out);
+                    opStartListening(opListenPort);
+                    }
                 opCmdStackPtr -= 1;
+                if (opCmdStackPtr == 0)
+                    {
+                    in = opCmdStack[opCmdStackPtr].in;
+                    out = opCmdStack[opCmdStackPtr].out;
+                    opCmdPrompt();
+                    fflush(out);
+                    };
                 }
             else
                 {
-                fputs("\nConsole closed\n", stdout);
+                fputs("\nConsole closed\n", out);
                 emulationActive = FALSE;
                 }
             continue;
@@ -384,11 +429,11 @@ static void *opThread(void *param)
             continue;
             }
 
-        if (in != stdin)
+        if (in != stdin && opCmdStack[opCmdStackPtr].isNetConn == FALSE)
             {
-            fputs(cmd, stdout);
-            fputs("\n", stdout);
-            fflush(stdout);
+            fputs(cmd, out);
+            fputs("\n", out);
+            fflush(out);
             }
 
         if (opPaused)
@@ -405,7 +450,7 @@ static void *opThread(void *param)
             /*
             **  The main emulation thread is still busy executing the previous command.
             */
-            printf("\nPrevious request still busy");
+            fputs("\nPrevious request still busy", out);
             continue;
             }
 
@@ -431,7 +476,7 @@ static void *opThread(void *param)
             {
             if (opCmdStackPtr + 1 >= MaxCmdStkSize)
                 {
-                fputs("Too many nested command scripts\n", stdout);
+                fputs("Too many nested command scripts\n", out);
                 opCmdPrompt();
                 continue;
                 }
@@ -448,14 +493,16 @@ static void *opThread(void *param)
             if (newIn != NULL)
                 {
                 opCmdStackPtr += 1;
-                opCmdStack[opCmdStackPtr].fp = newIn;
+                opCmdStack[opCmdStackPtr].in  = newIn;
+                opCmdStack[opCmdStackPtr].out = out;
+                opCmdStack[opCmdStackPtr].isNetConn = FALSE;
                 pos = strrchr(path, '/');
                 *pos = '\0';
                 strcpy(opCmdStack[opCmdStackPtr].cwd, path);
                 }
             else
                 {
-                printf("Failed to open %s\n", path);
+                fprintf(out, "Failed to open %s\n", path);
                 }
             opCmdPrompt();
             continue;
@@ -489,9 +536,9 @@ static void *opThread(void *param)
             /*
             **  Try to help user.
             */
-            printf("Command not implemented: %s\n\n", name);
-            printf("Try 'help' to get a list of commands or 'help <command>'\n");
-            printf("to get a brief description of a command.\n");
+            fprintf(out, "Command not implemented: %s\n\n", name);
+            fputs("Try 'help' to get a list of commands or 'help <command>'\n", out);
+            fputs("to get a brief description of a command.\n", out);
             opCmdPrompt();
             continue;
             }
@@ -500,6 +547,102 @@ static void *opThread(void *param)
 #if !defined(_WIN32)
     return(NULL);
 #endif
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Determine whether input is available on a command
+**                  stack entry.
+**
+**  Parameters:     Name        Description.
+**                  param       Thread parameter (unused)
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static bool opHasInput(OpCmdStackEntry *entry)
+    {
+    int fd;
+    fd_set fds;
+    int n;
+    struct timeval timeout;
+
+    if (entry->in == NULL) return TRUE;
+
+#if defined(_WIN32)
+    if (entry->in == stdin) return kbhit();
+#endif
+
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 0;
+    fd = fileno(entry->in);
+    FD_ZERO(&fds);
+    FD_SET(fd, &fds);
+
+    return select(fd + 1, &fds, NULL, NULL, &timeout) > 0;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Accept operator connection.
+**
+**  Parameters:     Name        Description.
+**                  param       Thread parameter (unused)
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opAcceptConnection(void)
+    {
+    int acceptFd;
+    fd_set acceptFds;
+    struct sockaddr_in from;
+    int n;
+    struct timeval timeout;
+#if defined(_WIN32)
+    int fromLen;
+#else
+    socklen_t fromLen;
+#endif
+
+    if (opListenHandle == 0) return;
+
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 0;
+
+    FD_ZERO(&acceptFds);
+    FD_SET(opListenHandle, &acceptFds);
+
+    n = select(opListenHandle + 1, &acceptFds, NULL, NULL, &timeout);
+    if (n <= 0) return;
+    fromLen = sizeof(from);
+    acceptFd = accept(opListenHandle, (struct sockaddr *)&from, &fromLen);
+    if (acceptFd >= 0)
+        {
+        if (opCmdStackPtr + 1 >= MaxCmdStkSize)
+            {
+            fputs("Too many nested operator input sources\n", out);
+#if defined(_WIN32)
+            closesocket(acceptFd);
+#else
+            close(acceptFd);
+#endif
+            return;
+            }
+        fputs("\nOperator connection accepted\n", out);
+        fflush(out);
+        opCmdStackPtr += 1;
+        in  = opCmdStack[opCmdStackPtr].in  = fdopen(acceptFd, "r");
+        out = opCmdStack[opCmdStackPtr].out = fdopen(acceptFd, "w");
+        opCmdStack[opCmdStackPtr].isNetConn = TRUE;
+        strcpy(opCmdStack[opCmdStackPtr].cwd, opCmdStack[opCmdStackPtr - 1].cwd);
+#if defined(_WIN32)
+        closesocket(opListenHandle);
+#else
+        close(opListenHandle);
+#endif
+        opListenHandle = 0;
+        opCmdPrompt();
+        fflush(out);
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -596,14 +739,14 @@ static void opCmdDumpMemory(bool help, char *cmdParams)
     while (*cp != '\0' && *cp != ',') ++cp;
     if (*cp != ',')
         {
-        printf("Not enough parameters\n");
+        fputs("Not enough parameters\n", out);
         return;
         }
     *cp++ = '\0';
     numParam = sscanf(cp, "%o,%d", &fwa, &count);
     if (numParam != 2)
         {
-        printf("Not enough or invalid parameters\n");
+        fputs("Not enough or invalid parameters\n", out);
         return;
         }
     if (strcasecmp(memType, "CM") == 0)
@@ -619,13 +762,13 @@ static void opCmdDumpMemory(bool help, char *cmdParams)
         numParam = sscanf(memType + 2, "%o", &pp);
         if (numParam != 1)
             {
-            printf("Missing or invalid PP number\n");
+            fputs("Missing or invalid PP number\n", out);
             }
         opCmdDumpPP(pp, fwa, count);
         }
     else
         {
-        printf("Invalid memory type\n");
+        fputs("Invalid memory type\n", out);
         }
     }
 
@@ -640,7 +783,7 @@ static void opCmdDumpCM(int fwa, int count)
 
     if (fwa < 0 || count < 0 || fwa + count > cpuMaxMemory)
         {
-        printf("Invalid CM address or count\n");
+        fputs("Invalid CM address or count\n", out);
         return;
         }
     for (limit = fwa + count; fwa < limit; fwa++)
@@ -654,7 +797,7 @@ static void opCmdDumpCM(int fwa, int count)
             }
         *cp++ = '\n';
         *cp = '\0';
-        fputs(buf, stdout);
+        fputs(buf, out);
         }
     }
 
@@ -669,7 +812,7 @@ static void opCmdDumpEM(int fwa, int count)
 
     if (fwa < 0 || count < 0 || fwa + count > extMaxMemory)
         {
-        printf("Invalid EM address or count\n");
+        fputs("Invalid EM address or count\n", out);
         return;
         }
     for (limit = fwa + count; fwa < limit; fwa++)
@@ -683,7 +826,7 @@ static void opCmdDumpEM(int fwa, int count)
             }
         *cp++ = '\n';
         *cp = '\0';
-        fputs(buf, stdout);
+        fputs(buf, out);
         }
     }
 
@@ -702,17 +845,17 @@ static void opCmdDumpPP(int ppNum, int fwa, int count)
         }
     else if (ppNum < 0 || ppNum > 011)
         {
-        printf("Invalid PP number\n");
+        fputs("Invalid PP number\n", out);
         return;
         }
     if (ppNum >= ppuCount)
         {
-        printf("Invalid PP number\n");
+        fputs("Invalid PP number\n", out);
         return;
         }
     if (fwa < 0 || count < 0 || fwa + count > 010000)
         {
-        printf("Invalid PP address or count\n");
+        fputs("Invalid PP address or count\n", out);
         return;
         }
     pp = &ppu[ppNum];
@@ -725,15 +868,15 @@ static void opCmdDumpPP(int ppNum, int fwa, int count)
         *cp++ = cdcToAscii[word & 077];
         *cp++ = '\n';
         *cp = '\0';
-        fputs(buf, stdout);
+        fputs(buf, out);
         }
     }
 
 static void opHelpDumpMemory(void)
     {
-    printf("'dump_memory CM,<fwa>,<count>' dump <count> words of central memory starting from octal address <fwa>.\n");
-    printf("'dump_memory EM,<fwa>,<count>' dump <count> words of extended memory starting from octal address <fwa>.\n");
-    printf("'dump_memory PP<nn>,<fwa>,<count>' dump <count> words of PP nn's memory starting from octal address <fwa>.\n");
+    fputs("'dump_memory CM,<fwa>,<count>' dump <count> words of central memory starting from octal address <fwa>.\n", out);
+    fputs("'dump_memory EM,<fwa>,<count>' dump <count> words of extended memory starting from octal address <fwa>.\n", out);
+    fputs("'dump_memory PP<nn>,<fwa>,<count>' dump <count> words of PP nn's memory starting from octal address <fwa>.\n", out);
     }
 
 /*--------------------------------------------------------------------------
@@ -821,7 +964,7 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
                 }
             else
                 {
-                printf("Unrecognized keyword: %%%s%%\n", kp);
+                fprintf(out, "Unrecognized keyword: %%%s%%\n", kp);
                 opCmdPrompt();
                 return;
                 }
@@ -833,7 +976,7 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
         }
     if (bp > limit)
         {
-        printf("Key sequence is too long\n");
+        fputs("Key sequence is too long\n", out);
         opCmdPrompt();
         return;
         }
@@ -894,20 +1037,20 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
 
 static void opHelpEnterKeys(void)
     {
-    printf("'enter_keys <key-sequence>' supply a sequence of key entries to the system console .\n");
-    fputs("     Special keys:\n", stdout);
-    fputs("       ! - end sequence without sending <enter> key\n", stdout);
-    fputs("       ; - send <enter> key within a sequence\n", stdout);
-    fputs("       _ - send <blank> key\n", stdout);
-    fputs("       ^ - send <backspace> key\n", stdout);
-    fputs("       % - keyword delimiter for keywords:\n", stdout);
-    fputs("           %year% insert current year\n", stdout);
-    fputs("           %mon%  insert current month\n", stdout);
-    fputs("           %day%  insert current day\n", stdout);
-    fputs("           %hour% insert current hour\n", stdout);
-    fputs("           %min%  insert current minute\n", stdout);
-    fputs("           %sec%  insert current second\n", stdout);
-    fputs("       # - delimiter for milliseconds pause value (e.g., #500#)\n", stdout);
+    fputs("'enter_keys <key-sequence>' supply a sequence of key entries to the system console .\n", out);
+    fputs("     Special keys:\n", out);
+    fputs("       ! - end sequence without sending <enter> key\n", out);
+    fputs("       ; - send <enter> key within a sequence\n", out);
+    fputs("       _ - send <blank> key\n", out);
+    fputs("       ^ - send <backspace> key\n", out);
+    fputs("       % - keyword delimiter for keywords:\n", out);
+    fputs("           %year% insert current year\n", out);
+    fputs("           %mon%  insert current month\n", out);
+    fputs("           %day%  insert current day\n", out);
+    fputs("           %hour% insert current hour\n", out);
+    fputs("           %min%  insert current minute\n", out);
+    fputs("           %sec%  insert current second\n", out);
+    fputs("       # - delimiter for milliseconds pause value (e.g., #500#)\n", out);
     }
 
 static void opWaitKeyConsume()
@@ -957,7 +1100,7 @@ static void opCmdSetKeyInterval(bool help, char *cmdParams)
     numParam = sscanf(cmdParams, "%d", &msec);
     if (numParam != 1)
         {
-        printf("Missing or invalid parameter\n");
+        fputs("Missing or invalid parameter\n", out);
         return;
         }
     opKeyInterval = msec;
@@ -965,7 +1108,141 @@ static void opCmdSetKeyInterval(bool help, char *cmdParams)
 
 static void opHelpSetKeyInterval(void)
     {
-    printf("'set_key_interval <millisecs>' set the interval between key entries to the system console .\n");
+    fputs("'set_key_interval <millisecs>' set the interval between key entries to the system console.\n", out);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Set TCP port on which to listen for operator connections
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdSetOperatorPort(bool help, char *cmdParams)
+    {
+    int numParam;
+    int port;
+
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpSetOperatorPort();
+        return;
+        }
+    numParam = sscanf(cmdParams, "%d", &port);
+    if (numParam != 1)
+        {
+        fputs("Missing or invalid parameter\n", out);
+        return;
+        }
+    if (port < 0 || port > 65535)
+        {
+        fputs("Invalid port number\n", out);
+        return;
+        }
+    if (opListenHandle != 0)
+        {
+#if defined(_WIN32)
+        closesocket(opListenHandle);
+#else
+        close(opListenHandle);
+#endif
+        opListenHandle = 0;
+        if (port == 0) fputs("Operator port closed\n", out);
+        }
+    if (port == 0) return;
+
+    if (opStartListening(port))
+        {
+        opListenPort = port;
+        fprintf(out, "Listening for operator connections on port %d\n", port);
+        }
+    }
+
+static void opHelpSetOperatorPort(void)
+    {
+    fputs("'set_operator_port <port>' set the TCP port on which to listen for operator connections.\n", out);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Start listening for operator connections
+**
+**  Parameters:     Name        Description.
+**                  port        TCP port number on which to listen
+**
+**  Returns:        TRUE  if success
+**                  FALSE if failure
+**
+**------------------------------------------------------------------------*/
+static int opStartListening(int port)
+    {
+#if defined(_WIN32)
+    u_long blockEnable = 1;
+#endif
+    int optEnable = 1;
+    struct sockaddr_in server;
+
+    /*
+    **  Create TCP socket and bind to specified port.
+    */
+    opListenHandle = socket(AF_INET, SOCK_STREAM, 0);
+    if (opListenHandle < 0)
+        {
+        fprintf(out, "Failed to create socket for port %d\n", port);
+        opListenHandle = 0;
+        return FALSE;
+        }
+    /*
+    **  Accept will block if client drops connection attempt between select and accept.
+    **  We can't block so make listening socket non-blocking to avoid this condition.
+    */
+#if defined(_WIN32)
+    ioctlsocket(opListenHandle, FIONBIO, &blockEnable);
+#else
+    fcntl(opListenHandle, F_SETFL, O_NONBLOCK);
+#endif
+
+    /*
+    **  Bind to configured TCP port number
+    */
+    setsockopt(opListenHandle, SOL_SOCKET, SO_REUSEADDR, (void *)&optEnable, sizeof(optEnable));
+    memset(&server, 0, sizeof(server));
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = inet_addr("0.0.0.0");
+    server.sin_port = htons(port);
+
+    if (bind(opListenHandle, (struct sockaddr *)&server, sizeof(server)) < 0)
+        {
+        fprintf(out, "Failed to bind to listen socket for port %d\n", port);
+#if defined(_WIN32)
+        closesocket(opListenHandle);
+#else
+        close(opListenHandle);
+#endif
+        opListenHandle = 0;
+        return FALSE;
+        }
+    /*
+    **  Start listening for new connections on this TCP port number
+    */
+    if (listen(opListenHandle, 1) < 0)
+        {
+        fprintf(out, "Failed to listen on port %d\n", port);
+#if defined(_WIN32)
+        closesocket(opListenHandle);
+#else
+        close(opListenHandle);
+#endif
+        opListenHandle = 0;
+        return FALSE;
+        }
+
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -994,7 +1271,7 @@ static void opCmdPause(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) != 0)
         {
-        printf("no parameters expected\n");
+        fputs("No parameters expected\n", out);
         opHelpPause();
         return;
         }
@@ -1002,7 +1279,7 @@ static void opCmdPause(bool help, char *cmdParams)
     /*
     **  Process command.
     */
-    printf("Emulation paused - hit Enter to resume\n");
+    fputs("Emulation paused - hit Enter to resume\n", out);
 
     /*
     **  Wait for Enter key.
@@ -1021,7 +1298,7 @@ static void opCmdPause(bool help, char *cmdParams)
 
 static void opHelpPause(void)
     {
-    printf("'pause' suspends emulation to reduce CPU load.\n");
+    fputs("'pause' suspends emulation to reduce CPU load.\n", out);
     }
 
 /*--------------------------------------------------------------------------
@@ -1034,7 +1311,7 @@ static void opHelpPause(void)
 **------------------------------------------------------------------------*/
 static void opCmdPrompt(void)
     {
-    fputs("\nOperator> ", stdout);
+    fputs("\nOperator> ", out);
     }
 
 /*--------------------------------------------------------------------------
@@ -1063,7 +1340,7 @@ static void opCmdShutdown(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) != 0)
         {
-        printf("no parameters expected\n");
+        fputs("No parameters expected\n", out);
         opHelpShutdown();
         return;
         }
@@ -1074,12 +1351,12 @@ static void opCmdShutdown(bool help, char *cmdParams)
     opActive = FALSE;
     emulationActive = FALSE;
 
-    printf("\nThanks for using %s\nGoodbye for now.\n\n", DtCyberVersion);
+    fprintf(out, "\nThanks for using %s\nGoodbye for now.\n\n", DtCyberVersion);
     }
 
 static void opHelpShutdown(void)
     {
-    printf("'shutdown' terminates emulation.\n");
+    fputs("'shutdown' terminates emulation.\n", out);
     }
 
 /*--------------------------------------------------------------------------
@@ -1113,13 +1390,13 @@ static void opCmdHelp(bool help, char *cmdParams)
         /*
         **  List all available commands.
         */
-        printf("\nList of available commands:\n\n");
+        fputs("\nList of available commands:\n\n", out);
         for (cp = decode; cp->name != NULL; cp++)
             {
-            printf("%s\n", cp->name);
+            fprintf(out, "%s\n", cp->name);
             }
 
-        printf("\nTry 'help <command> to get a brief description of a command.\n");
+        fputs("\nTry 'help <command> to get a brief description of a command.\n", out);
         return;
         }
     else
@@ -1131,20 +1408,20 @@ static void opCmdHelp(bool help, char *cmdParams)
             {
             if (strcmp(cp->name, cmdParams) == 0)
                 {
-                printf("\n");
+                fputs("\n", out);
                 cp->handler(TRUE, NULL);
                 return;
                 }
             }
 
-        printf("Command not implemented: %s\n", cmdParams);
+        fprintf(out, "Command not implemented: %s\n", cmdParams);
         }
     }
 
 static void opHelpHelp(void)
     {
-    printf("'help'       list all available commands.\n");
-    printf("'help <cmd>' provide help for <cmd>.\n");
+    fputs("'help'       list all available commands.\n", out);
+    fputs("'help <cmd>' provide help for <cmd>.\n", out);
     }
 
 /*--------------------------------------------------------------------------
@@ -1184,26 +1461,26 @@ static void opCmdLoadCards(bool help, char *cmdParams)
     */
     if (numParam < 3)
         {
-        printf("Not enough or invalid parameters\n");
+        fputs("Not enough or invalid parameters\n", out);
         opHelpLoadCards();
         return;
         }
 
     if (channelNo < 0 || channelNo >= MaxChannels)
         {
-        printf("Invalid channel no\n");
+        fputs("Invalid channel no\n", out);
         return;
         }
 
     if (equipmentNo < 0 || equipmentNo >= MaxEquipment)
         {
-        printf("Invalid equipment no\n");
+        fputs("Invalid equipment no\n", out);
         return;
         }
 
     if (str[0] == 0)
         {
-        printf("Invalid file name\n");
+        fputs("Invalid file name\n", out);
         return;
         }
     /*
@@ -1213,7 +1490,7 @@ static void opCmdLoadCards(bool help, char *cmdParams)
     fcb = fopen(fname, "w");
     if (fcb == NULL)
         {
-        printf("Failed to create %s\n", fname);
+        fprintf(out, "Failed to create %s\n", fname);
         return;
         }
 
@@ -1227,13 +1504,13 @@ static void opCmdLoadCards(bool help, char *cmdParams)
         unlink(fname);
         return;
         }
-    cr405LoadCards(fname, channelNo, equipmentNo);
-    cr3447LoadCards(fname, channelNo, equipmentNo);
+    cr405LoadCards(fname, channelNo, equipmentNo, out);
+    cr3447LoadCards(fname, channelNo, equipmentNo, out);
     }
 
 static void opHelpLoadCards(void)
     {
-    printf("'load_cards <channel>,<equipment>,<filename>[,<p1>,<p2>,...,<pn>]' load specified card file with optional parameters.\n");
+    fputs("'load_cards <channel>,<equipment>,<filename>[,<p1>,<p2>,...,<pn>]' load specified card file with optional parameters.\n", out);
     }
 
 /*--------------------------------------------------------------------------
@@ -1302,7 +1579,7 @@ static int opPrepCards(char *str, FILE *fcb)
     in = fopen(path, "r");
     if (in == NULL)
         {
-        printf("Failed to open %s\n", path);
+        fprintf(out, "Failed to open %s\n", path);
         return -1;
         }
     while (TRUE)
@@ -1367,7 +1644,7 @@ static int opPrepCards(char *str, FILE *fcb)
             while (isspace(*sp)) sp += 1;
             if (*sp == '\0')
                 {
-                printf("File name missing from ~include in %s\n", path);
+                fprintf(out, "File name missing from ~include in %s\n", path);
                 fclose(in);
                 return -1;
                 }
@@ -1442,14 +1719,14 @@ static void opCmdLoadTape(bool help, char *cmdParams)
         return;
         }
 
-    mt669LoadTape(cmdParams);
-    mt679LoadTape(cmdParams);
-    mt362xLoadTape(cmdParams);
+    mt669LoadTape(cmdParams, out);
+    mt679LoadTape(cmdParams, out);
+    mt362xLoadTape(cmdParams, out);
     }
 
 static void opHelpLoadTape(void)
     {
-    printf("'load_tape <channel>,<equipment>,<unit>,<r|w>,<filename>' load specified tape.\n");
+    fputs("'load_tape <channel>,<equipment>,<unit>,<r|w>,<filename>' load specified tape.\n", out);
     }
 
 /*--------------------------------------------------------------------------
@@ -1478,19 +1755,19 @@ static void opCmdUnloadTape(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) == 0)
         {
-        printf("parameters expected\n");
+        fputs("Parameters expected\n", out);
         opHelpUnloadTape();
         return;
         }
 
-    mt669UnloadTape(cmdParams);
-    mt679UnloadTape(cmdParams);
-    mt362xUnloadTape(cmdParams);
+    mt669UnloadTape(cmdParams, out);
+    mt679UnloadTape(cmdParams, out);
+    mt362xUnloadTape(cmdParams, out);
     }
 
 static void opHelpUnloadTape(void)
     {
-    printf("'unload_tape <channel>,<equipment>,<unit>' unload specified tape unit.\n");
+    fputs("'unload_tape <channel>,<equipment>,<unit>' unload specified tape unit.\n", out);
     }
 
 /*--------------------------------------------------------------------------
@@ -1519,20 +1796,20 @@ static void opCmdShowTape(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) != 0)
         {
-        printf("no parameters expected\n");
+        fputs("No parameters expected\n", out);
         opHelpShowTape();
         return;
         }
 
-    mt669ShowTapeStatus();
-    mt679ShowTapeStatus();
-    mt362xShowTapeStatus();
-    mt5744ShowTapeStatus();
+    mt669ShowTapeStatus(out);
+    mt679ShowTapeStatus(out);
+    mt362xShowTapeStatus(out);
+    mt5744ShowTapeStatus(out);
     }
 
 static void opHelpShowTape(void)
     {
-    printf("'show_tape' show status of all tape units.\n");
+    fputs("'show_tape' show status of all tape units.\n", out);
     }
 
 /*--------------------------------------------------------------------------
@@ -1561,18 +1838,18 @@ static void opCmdRemovePaper(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) == 0)
         {
-        printf("parameters expected\n");
+        fputs("Parameters expected\n", out);
         opHelpRemovePaper();
         return;
         }
 
-    lp1612RemovePaper(cmdParams);
-    lp3000RemovePaper(cmdParams);
+    lp1612RemovePaper(cmdParams, out);
+    lp3000RemovePaper(cmdParams, out);
     }
 
 static void opHelpRemovePaper(void)
     {
-    printf("'remove_paper <channel>,<equipment>[,<filename>]' remover paper from printer.\n");
+    fputs("'remove_paper <channel>,<equipment>[,<filename>]' remover paper from printer.\n", out);
     }
 
 /*--------------------------------------------------------------------------
@@ -1601,17 +1878,17 @@ static void opCmdRemoveCards(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) == 0)
         {
-        printf("parameters expected\n");
+        fputs("Parameters expected\n", out);
         opHelpRemoveCards();
         return;
         }
 
-    cp3446RemoveCards(cmdParams);
+    cp3446RemoveCards(cmdParams, out);
     }
 
 static void opHelpRemoveCards(void)
     {
-    printf("'remove_cards <channel>,<equipment>[,<filename>]' remover cards from card puncher.\n");
+    fputs("'remove_cards <channel>,<equipment>[,<filename>]' remover cards from card puncher.\n", out);
     }
 
 /*---------------------------  End Of File  ------------------------------*/

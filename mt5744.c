@@ -490,36 +490,36 @@ void mt5744Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void mt5744ShowTapeStatus(void)
+void mt5744ShowTapeStatus(FILE *out)
     {
     TapeParam *tp = firstTape;
 
     while (tp)
         {
-        printf("MT5744 on %o,%o,%o", tp->channelNo, tp->eqNo, tp->unitNo);
+        fprintf(out, "MT5744 on %o,%o,%o", tp->channelNo, tp->eqNo, tp->unitNo);
         switch (tp->state)
             {
         case StAcsDisconnected:
-            printf("  (disconnected)\n");
+            fputs("  (disconnected)\n", out);
             break;
         case StAcsConnecting:
-            printf("  (connecting)\n");
+            fputs("  (connecting)\n", out);
             break;
         case StAcsRegistering:
-            printf("  (registering)\n");
+            fputs("  (registering)\n", out);
             break;
         case StAcsReady:
             if (tp->volumeName[0])
                 {
-                printf(",%s,%s\n", tp->isWriteEnabled ? "w" : "r", tp->volumeName);
+                fprintf(out, ",%s,%s\n", tp->isWriteEnabled ? "w" : "r", tp->volumeName);
                 }
             else
                 {
-                printf("  (idle)\n");
+                fputs("  (idle)\n", out);
                 }
             break;
         default:
-            printf("  (unknown state)\n");
+            fputs("  (unknown state)\n", out);
             break;
             }
 
