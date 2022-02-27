@@ -35,18 +35,21 @@ file).
 ## Installation Steps
 1. If not done already, use the appropriate *Makefile* in this directory's parent
 directory to build *DtCyber* and produce the *dtcyber* executable.
-2. Start the automated installation by executing the following *expect* command. On
+2. Start the automated installation by executing the following commands. On
 Windows, you will probably need to enable the *dtcyber* application to use TCP ports
-21, 22, and 23, and you will need to copy *dtcyber.exe* to this directory from the
-parent.  The process initiated by this command will take some time to complete,
-perhaps as much as 15 - 20 minutes, depending upon your host system's speed. You will
-see *DtCyber* start, and NOS 2.8.7 will be deadstarted and installed. The system will
-be shutdown gracefull when the installation process has completed.
+21, 22, and 23 too.  The process initiated by the *expect* command will take some
+time to complete, perhaps as much as 15 - 20 minutes, depending upon your host
+system's speed. You will see *DtCyber* start, and NOS 2.8.7 will be deadstarted and
+installed. The system will be shutdown gracefull when the installation process has
+completed.
 
-| OS           | Command                                        |
+| OS           | Commands                                       |
 |--------------|------------------------------------------------|
-| Linux/MacOS: | `PATH=../:$PATH sudo expect first-install.exp` |
-| Windows:     | `expect first-install.exp`                     |
+| Linux/MacOS: | `ln -s ../dtcyber dtcyber`                     |
+|              | `sudo expect first-install.exp`                |
+|              |                                                |
+| Windows:     | `copy ..\dtcyber dtcyber`                      |
+|              | `expect first-install.exp`                     |
 
 After step 2 has completed, NOS 2.8.7 is fully installed and ready to use. Enter the
 following command to restart *DtCyber* and bring up the freshly installed operating
@@ -57,7 +60,7 @@ Facility) subsystems automatically too.
 
 | OS           | Command           |
 |--------------|-------------------|
-| Linux/MacOS: | `sudo ../dtcyber` |
+| Linux/MacOS: | `sudo ./dtcyber`  |
 | Windows:     | `dtcyber`         |
 
 When the deadstart completes and **NAM** appears to settle down, you should be able

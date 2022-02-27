@@ -113,7 +113,7 @@ proc check_job { ident } {
 proc init {} {
     namespace eval :: {
         set timeout -1
-        spawn dtcyber $DtCyber::profile
+        spawn ./dtcyber $DtCyber::profile
         set dtcyber $spawn_id
         match_max 100000
         expect "Operator> "
