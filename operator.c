@@ -50,7 +50,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-
 #endif
 
 
@@ -563,7 +562,6 @@ static bool opHasInput(OpCmdStackEntry *entry)
     {
     int fd;
     fd_set fds;
-    int n;
     struct timeval timeout;
 
     if (entry->in == NULL) return TRUE;

@@ -2196,10 +2196,6 @@ static bool cdcnetTcpActiveConnectHandler(Gcb *gp, NpuBuffer *bp)
     u8 *dp;
     u32 dstAddr;
     struct sockaddr_in hostAddr;
-    u32 localAddr;
-    u16 localPort;
-    u32 peerAddr;
-    u16 peerPort;
     int rc;
     u32 srcAddr;
     TcpGwStatus status;

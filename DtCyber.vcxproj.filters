@@ -163,6 +163,24 @@
     <ClCompile Include="mdi.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dd885-42.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cray_station.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="mt5744.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="npu_nje.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="npu_hasp.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="time.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="const.h">
@@ -184,6 +202,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dcc6681.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

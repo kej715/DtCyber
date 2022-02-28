@@ -185,7 +185,6 @@ void lp1612RemovePaper(char *params, FILE *out)
     struct tm t;
     char fname[80];
     char fnameNew[200];
-    char *np;
 
     /*
     **  Operator wants to remove paper.

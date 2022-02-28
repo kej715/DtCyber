@@ -347,10 +347,8 @@ void mt5744Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     DevSlot *dp;
     struct hostent *hp;
     u16 serverPort;
-    char *token;
     char *sp;
     TapeParam *tp;
-    TapeParam *tp2;
     long value;
 
     if (deviceName == NULL)
@@ -900,7 +898,6 @@ static void mt5744FlushWrite(void)
     PpWord *ip;
     int len;
     u32 recLen0;
-    u32 recLen1;
     u32 recLen2;
     u8 *rp;
     TapeParam *tp;
@@ -1216,8 +1213,6 @@ static void mt5744InitiateConnection(TapeParam *tp)
 #if defined(_WIN32)
     SOCKET fd;
     u_long blockEnable = 1;
-    int optLen;
-    int optVal;
 #else
     int fd;
     int optVal;
@@ -1337,7 +1332,6 @@ static void mt5744Io(void)
     i8 unitNo;
     TapeParam *tp;
     int wordNumber;
-    PpWord param;
 
     /*
     **  The following avoids too rapid changes of the full/empty status
@@ -1837,7 +1831,6 @@ static char *mt5744ParseTapeServerResponse(TapeParam *tp, int *status)
     char *limit;
     char *sp;
     char *start;
-    long value;
 
     *status = 0;
     sp = start = (char *)tp->inputBuffer.data;

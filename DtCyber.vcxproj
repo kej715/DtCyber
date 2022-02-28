@@ -139,8 +139,10 @@
     <ClCompile Include="cpu.c" />
     <ClCompile Include="cr3447.c" />
     <ClCompile Include="cr405.c" />
+    <ClCompile Include="cray_station.c" />
     <ClCompile Include="dcc6681.c" />
     <ClCompile Include="dd6603.c" />
+    <ClCompile Include="dd885-42.c" />
     <ClCompile Include="dd8xx.c" />
     <ClCompile Include="ddp.c" />
     <ClCompile Include="deadstart.c" />
@@ -156,15 +158,18 @@
     <ClCompile Include="maintenance_channel.c" />
     <ClCompile Include="mdi.c" />
     <ClCompile Include="mt362x.c" />
+    <ClCompile Include="mt5744.c" />
     <ClCompile Include="mt607.c" />
     <ClCompile Include="mt669.c" />
     <ClCompile Include="mt679.c" />
     <ClCompile Include="mux6676.c" />
     <ClCompile Include="npu_async.c" />
     <ClCompile Include="npu_bip.c" />
+    <ClCompile Include="npu_hasp.c" />
     <ClCompile Include="npu_hip.c" />
     <ClCompile Include="npu_lip.c" />
     <ClCompile Include="npu_net.c" />
+    <ClCompile Include="npu_nje.c" />
     <ClCompile Include="npu_svm.c" />
     <ClCompile Include="npu_tip.c" />
     <ClCompile Include="operator.c" />
@@ -181,6 +186,7 @@
     <ClCompile Include="rtc.c" />
     <ClCompile Include="scr_channel.c" />
     <ClCompile Include="shift.c" />
+    <ClCompile Include="time.c" />
     <ClCompile Include="tpmux.c" />
     <ClCompile Include="trace.c" />
     <ClCompile Include="window_win32.c" />
@@ -193,6 +199,7 @@
     <ClInclude Include="const.h" />
     <ClInclude Include="cyber_channel_linux.h" />
     <ClInclude Include="cyber_channel_win32.h" />
+    <ClInclude Include="dcc6681.h" />
     <ClInclude Include="npu.h" />
     <ClInclude Include="proto.h" />
     <ClInclude Include="resource.h" />

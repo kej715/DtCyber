@@ -353,7 +353,6 @@ void npuNjeTryOutput(Pcb *pcbp)
     NpuBuffer *bp;
     time_t currentTime;
     int n;
-    int nb;
     Tcb *tcbp;
 
     currentTime = getSeconds();
@@ -1139,10 +1138,8 @@ static int npuNjeAppendRecords(Pcb *pcbp, u8 *bp, int len, u8 blockType)
     int nBytes;
     u8 ncc;
     u8 rcb;
-    int recLen;
     u8 *recLimit;
     u8 srcb;
-    u8 *ttrp;
 
     dp = pcbp->controls.nje.outputBufPtr;
     limit = bp + len;
@@ -1373,7 +1370,6 @@ static u8 *npuNjeCollectBlock(Pcb *pcbp, u8 *dp, u8 *limit, bool *isComplete, in
     int njeBlockSize;
     int recLen;
     u8 *sp;
-    Tcb *tcbp;
 
     *isComplete = FALSE;
     *status = 0;
@@ -1689,7 +1685,6 @@ static bool npuNjeSendControlRecord(Pcb *pcbp, u8 *crp, char *localName, u32 loc
     u8 *bp;
     u8 buffer[33];
     int len;
-    int n;
 
     bp = buffer;
     memcpy(bp, crp, 8);
@@ -1852,7 +1847,6 @@ static int npuNjeUploadBlock(Pcb *pcbp, u8 *rcb, u8 *srcb)
     int recLen;
     u8 scb;
     u8 *start;
-    u8 strLen;
 
     *rcb = *srcb = 0;
     ibp = pcbp->controls.nje.inputBuf;

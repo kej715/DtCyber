@@ -871,7 +871,6 @@ void npuHaspProcessUplineData(Pcb *pcbp)
     int len;
     u8 mask;
     int numBytes;
-    u8 param;
     u8 recordType;
     u8 retries;
     Scb *scbp;

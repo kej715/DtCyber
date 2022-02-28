@@ -274,7 +274,6 @@ void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     DevSlot *dp;
     struct hostent *hp;
     u16 serverPort;
-    char *token;
     char *sp;
     FeiParam *feip;
     long value;
@@ -578,8 +577,6 @@ static void csFeiInitiateConnection(FeiParam *feip)
 #if defined(_WIN32)
     SOCKET fd;
     u_long blockEnable = 1;
-    int optLen;
-    int optVal;
 #else
     int fd;
     int optVal;
@@ -1039,9 +1036,7 @@ static void csFeiPackPpBuffer(FeiParam *feip, int maxWords)
 **------------------------------------------------------------------------*/
 static void csFeiReceiveData(FeiParam *feip)
     {
-    char *eor;
-    int n;
-    int status;
+	int n;
 
     n = recv(feip->fd, &feip->inputBuffer.data[feip->inputBuffer.in], sizeof(feip->inputBuffer.data) - feip->inputBuffer.in, 0);
     if (n <= 0)

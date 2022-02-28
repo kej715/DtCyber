@@ -613,13 +613,11 @@ static void initNpuConnections(void)
     u16 destHostPort;
     char *destHostName;
     u8 destNode;
-    char *localHostAddr;
     u32 localHostIP;
     long networkValue;
     Pcb *pcbp;
     long pingInterval;
     TermRecoType recoType;
-    struct hostent *remoteHost;
     char strValue[256];
 
     npuNetPreset();
@@ -1588,7 +1586,6 @@ static bool initGetString(char *entry, char *defString, char *str, int strLen)
 static bool initParseIpAddress(char *ipStr, u32 *ip, u16 *port)
     {
     int count;
-    char *cp;
     u32 result;
     long val;
 

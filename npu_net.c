@@ -248,7 +248,6 @@ static void (*tryOutput[])(Pcb *pcbp) =
 int npuNetRegisterConnType(int tcpPort, int claPort, int numPorts, int connType, Ncb **ncbpp)
     {
     int i;
-    int len;
     Ncb *ncbp;
     int status;
 
@@ -410,8 +409,6 @@ void npuNetSetMaxCN(u8 cn)
 **------------------------------------------------------------------------*/
 void npuNetInit(bool startup)
     {
-    int i;
-
     /*
     **  Setup for input data processing.
     */
@@ -442,7 +439,7 @@ void npuNetPreset(void)
     {
     int i;
 
-    for (int i = 0; i < MaxClaPorts; i++)
+    for (i = 0; i < MaxClaPorts; i++)
         {
         memset(&pcbs[i], 0, sizeof(Pcb));
         pcbs[i].claPort = (u8)i;
