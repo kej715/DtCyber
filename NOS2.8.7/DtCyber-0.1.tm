@@ -8,7 +8,7 @@
       lassign [split $modver -] ::pkgtemp::ns ::pkgtemp::version
   }
   package provide $::pkgtemp::ns [namespace eval $::pkgtemp::ns {
-      namespace export error_condition console dsd mount umount check_job profile printer_file
+      namespace export error_condition console dsd mount umount check_job port profile printer_file
       variable version $::pkgtemp::version
       #initialise your module's namespace here (or in the next namespace eval block if desired)
       set version ;#this statement must be the last line in this block (version number is returned to the 'package provide' statement)
@@ -108,8 +108,6 @@ proc check_job { ident } {
 #initialize dtcyber and listen on the printer
 #this runs in the global namespace to allow the caller to
 #continue to use normal expect commands
-#
-#the dtcyber executable must be in the current PATH
 proc init {} {
     namespace eval :: {
         set timeout -1
@@ -124,6 +122,21 @@ proc init {} {
     }
 }
 
+# connect to the dtcyber operator console interface on a specified port
+#this runs in the global namespace to allow the caller to
+#continue to use normal expect commands
+proc connect {} {
+    namespace eval :: {
+        set timeout -1
+        spawn nc localhost $DtCyber::port
+        set dtcyber $spawn_id
+        match_max 100000
+        expect "Operator> "
+        spawn tail -F $DtCyber::printer_file
+        set printer $spawn_id
+        set spawn_id $dtcyber
+    }
+}
 
 }
   namespace delete pkgtemp
