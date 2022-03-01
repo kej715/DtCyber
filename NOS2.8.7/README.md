@@ -1,4 +1,4 @@
-# NOS 2.8.7
+# Installing NOS 2.8.7
 This directory tree contains a collection of artifacts facilitating the installation
 from scratch of the NOS 2.8.7 operating system on *DtCyber*.
 Following these instructions should produce a working instance of the
@@ -71,4 +71,35 @@ operating system is ready for you to enter commands. You may also login using
 **GUEST** as username and password. The initial installation process creates
 **GUEST** as an ordinary, non-privileged user account.
 
-That's it. Welcome back to supercomputing in the 1980's!
+That's it. You have a fully operational Control Data Cyber 865 supercomputer
+running the NOS 2.8.7 operating system, complete with APL, COBOL, FORTRAN IV and V,
+PASCAL, SYMPL, and COMPASS assembly language. Welcome back to supercomputing in the
+1980's!
+
+## Preparing for Customization
+The NOS 2.8.7 installation tape images contain full source code and build procedures
+for the operating system, and this directory tree contains automated scripts
+enabling you to load the source code and run the procedures. Before the build
+procedures can run successfully, however, you must prepare the system for
+customization. This step needs to be executed only once after the initial
+installation of the operating system. It is a prerequisite for building and
+customizing the operating system from source code, and **it is also a prerequisite
+for installing most optional software products**.
+
+To prepare the system for customization and installation of optional products,
+execute the following command from this directory while DtCyber is running NOS 2.8.7:
+
+>`expect prep-customization.exp`
+
+`prep-customization.exp` executes *SYSGEN(SOURCE)* to load operating system source
+code and build procedures on the INSTALL user's account, and then it submits two
+batch jobs from from the INSTALL user to set up for building the operating system
+and to apply initial corrective code and base modifications to OS source program
+library. It will take a few minutes for the script to complete, so be patient and watch it run.
+
+>Note that this and similar scripts for installing optional products require that
+you have [netcat](https://en.wikipedia.org/wiki/Netcat) installed on your host
+system. MacOS and most Linux distributions include it. You will need to
+install it yourself on Windows, if you don't have it already.
+
+ 
