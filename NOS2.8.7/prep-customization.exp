@@ -23,6 +23,8 @@ console "lc 12,4,decks/init-build.job"
 check_job IBUILD
 console "lc 12,4,decks/modopl.job"
 check_job MODOPL
+console "lc 12,4,decks/create-makedst.job"
+check_job MAKEDST
 dsd "\[UNLOAD,51."
 dsd "\[UNLOAD,52."
 dsd "\[UNLOAD,53."
