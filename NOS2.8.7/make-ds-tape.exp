@@ -17,6 +17,7 @@ mount "13,0,0" "tapes/ds.tap"
 mount "13,0,1" "tapes/newds.tap" ring
 
 console "lc 12,4,decks/make-ds-tape.job,50,51"
+send_user "\nMAKEDST started\n"
 log_user 0
 check_job MAKEDST
 log_user 1
