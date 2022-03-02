@@ -1,0 +1,13 @@
+#!/usr/local/bin/expect -f
+::tcl::tm::path add .
+package require DtCyber;
+namespace import DtCyber::*
+trap int_handler { SIGINT }
+
+proc int_handler {} {
+    error_condition "sigint recieved"
+}
+set DtCyber::printer_file "LP5xx_C12_E5"
+set DtCyber::port "6666"
+DtCyber::connect 
+run_job 12 4 [lindex $argv 0]

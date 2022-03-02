@@ -1,0 +1,27 @@
+~*
+~*  This job creates a new deadstart tape. It uses a LIBEDIT to
+~*  edit the contents of the PRODUCT file into an existing
+~*  deadstart tape image, and then it copies the resulting
+~*  file to a new deadstart tape. The equipment numbers of the
+~*  tape drive containing the old and new tapes are passed
+~*  as parameters.
+~*
+MAKEDST.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$ASSIGN,${1},TAPE,D=GE,LB=KU,F=I,PO=R.
+$ATTACH,PRODUCT.
+$LIBEDIT,P=TAPE,B=PRODUCT,I=0.
+$RETURN,TAPE.
+$ASSIGN,${2},TAPE,D=GE,LB=KU,F=I,PO=W.
+$COPY,NEW,TAPE.
+***
+*** MAKEDST COMPLETE
+***
+EXIT.
+***
+*** MAKEDST FAILED
+***
