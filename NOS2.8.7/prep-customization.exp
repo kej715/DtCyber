@@ -16,16 +16,18 @@ dsd "\[UNLOAD,53."
 mount "13,0,1" "tapes/nos287-1.tap"
 mount "13,0,2" "tapes/nos287-2.tap"
 mount "13,0,3" "tapes/nos287-3.tap"
+
 dsd "\[X.SYSGEN(SOURCE)"
+log_user 0
+send_user "\nSYSGEN started\n"
 expect -i $printer "E N D   S O U R C E"
-send_user "\r Full SYSGEN complete\r\r"
-console "lc 12,4,decks/init-build.job"
-check_job IBUILD
-console "lc 12,4,decks/modopl.job"
-check_job MODOPL
-console "lc 12,4,decks/create-makedst.job"
-check_job MAKEDST
+send_user "SYSGEN complete\n"
+log_user 1
+
+run_job 12 4 "decks/init-build.job"
+run_job 12 4 "decks/modopl.job"
+
 dsd "\[UNLOAD,51."
 dsd "\[UNLOAD,52."
 dsd "\[UNLOAD,53."
-send_user "\rPrep for Customization Complete\r\r"
+send_user "\nPrep for Customization Complete\n"

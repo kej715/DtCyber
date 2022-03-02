@@ -2,12 +2,12 @@
 ~*  This job builds the NAM5 (Network Access Method) product.
 ~*
 NAM5.
-USER,INSTALL,INSTALL.
-NORERUN.
-SETTL,*.
-SETASL,*.
-SETJSL,*.
-BEGIN,NAM5,INSTALL.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$BEGIN,NAM5,INSTALL.
 ***
 *** NAM5 COMPLETE
 ***

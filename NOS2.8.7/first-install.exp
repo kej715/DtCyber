@@ -15,26 +15,27 @@ expect -i $printer "QUEUE FILE UTILITY COMPLETE"
 mount "13,0,1" "tapes/nos287-1.tap"
 mount "13,0,2" "tapes/nos287-2.tap"
 mount "13,0,3" "tapes/nos287-3.tap"
-send_user "\rDeadstart complete now launching SYSGEN(FULL)\r\r"
+send_user "\nDeadstart complete now launching SYSGEN(FULL)\n"
+
 dsd "X.SYSGEN(FULL)"
+log_user 0
+send_user "\nSYSGEN started\n"
 expect -i $printer "E N D   F U L L"
-send_user "\r Full SYSGEN complete\r\r"
-console "lc 12,4,decks/add-permit.job"
-check_job ADDPERM
-console "lc 12,4,decks/create-ndlopl.job"
-check_job NDLOPL
-console "lc 12,4,decks/compile-ndlopl.job"
-check_job COMPNDL
+send_user "SYSGEN complete\n"
+log_user 1
+
+run_job 12 4 "decks/add-permit.job"
+run_job 12 4 "decks/create-ndlopl.job"
+run_job 12 4 "decks/compile-ndlopl.job"
 dsd "X.MS(PERMIT,NAMSTRT,377772,INSTALL)"
-console "lc 12,4,decks/update-namstrt.job"
-check_job UNMSTRT
-console "lc 12,4,decks/create-tcphost.job"
-check_job TCPHOST
+run_job 12 4 "decks/update-namstrt.job"
+run_job 12 4 "decks/create-tcphost.job"
 dsd "X.MS(PERMIT,TERMLIB,377776,INSTALL)"
-console "lc 12,4,decks/update-termlib.job"
-check_job TERMLIB
+run_job 12 4 "decks/update-termlib.job"
+
 dsd "X.MS(VALUSER,LIMITED,GUEST,GUEST)"
-send_user "\rFirst Installation Complete\r\r"
+send_user "\nFirst Installation Complete\n"
+send_user "\nShutting down ...\n"
 sleep 3
 dsd "UNLOCK."
 dsd "CHE"
