@@ -8,7 +8,7 @@
       lassign [split $modver -] ::pkgtemp::ns ::pkgtemp::version
   }
   package provide $::pkgtemp::ns [namespace eval $::pkgtemp::ns {
-      namespace export error_condition console dsd mount umount load_job check_job run_job port profile printer_file
+      namespace export error_condition console dsd dis mount umount load_job check_job run_job port profile printer_file
       variable version $::pkgtemp::version
       #initialise your module's namespace here (or in the next namespace eval block if desired)
       set version ;#this statement must be the last line in this block (version number is returned to the 'package provide' statement)
@@ -47,6 +47,16 @@ proc console { cmd } {
 #wrapper for sending commands to dsd display via the e console command.
 proc dsd { cmd } {
     console "e $cmd"
+}
+
+#start DIS and execute commands under a specified user index
+proc dis { cmds {ui 377777} } {
+    dsd "X.DIS."
+    dsd "#1500#SUI,$ui."
+    foreach cmd [split $cmds ";"] {
+        dsd $cmd
+    }
+    dsd "DROP."
 }
 
 #mount tape on unit if ring is specified it is mounted in write mode
