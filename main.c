@@ -73,7 +73,7 @@ static void tracePpuCalls(void);
 **  Public Variables
 **  ----------------
 */
-char ppKeyIn;
+char ppKeyIn = 0;
 bool emulationActive = TRUE;
 u32 cycles;
 #if CcCycleTime
