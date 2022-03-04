@@ -7,15 +7,27 @@ trap int_handler { SIGINT }
 proc int_handler {} {
     error_condition "sigint recieved"
 }
-set DtCyber::profile "init"
+set DtCyber::profile "manual"
 set DtCyber::printer_file "LP5xx_C12_E5"
 DtCyber::init 
-#error_condition "test"
+
+dsd "O!"
+dsd "P!"
+dsd "D=YES"
+dsd ""
+dsd "NEXT."
+dsd "\]!"
+dsd "INITIALIZE,AL,5,6,10,11,12,13."
+dsd "GO."
+dsd "#1500#%year%%mon%%day%"
+dsd "#1500#%hour%%min%%sec%"
+
 expect -i $printer "QUEUE FILE UTILITY COMPLETE"
+send_user "\nDeadstart complete now launching SYSGEN(FULL)\n"
+
 mount "13,0,1" "tapes/nos287-1.tap"
 mount "13,0,2" "tapes/nos287-2.tap"
 mount "13,0,3" "tapes/nos287-3.tap"
-send_user "\nDeadstart complete now launching SYSGEN(FULL)\n"
 
 dsd "X.SYSGEN(FULL)"
 log_user 0
@@ -24,13 +36,12 @@ expect -i $printer "E N D   F U L L"
 send_user "SYSGEN complete\n"
 log_user 1
 
-run_job 12 4 "decks/add-permit.job"
 run_job 12 4 "decks/create-ndlopl.job"
 run_job 12 4 "decks/compile-ndlopl.job"
-dsd "X.MS(PERMIT,NAMSTRT,377772,INSTALL)"
+dis "PERMIT,NAMSTRT,INSTALL=W." 377772
 run_job 12 4 "decks/update-namstrt.job"
 run_job 12 4 "decks/create-tcphost.job"
-dsd "X.MS(PERMIT,TERMLIB,377776,INSTALL)"
+dis "PERMIT,TERMLIB,INSTALL=W." 377776
 run_job 12 4 "decks/update-termlib.job"
 
 dsd "X.MS(VALUSER,LIMITED,GUEST,GUEST)"
