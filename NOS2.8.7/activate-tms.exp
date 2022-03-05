@@ -1,0 +1,39 @@
+#!/usr/local/bin/expect -f
+::tcl::tm::path add .
+package require DtCyber;
+namespace import DtCyber::*
+trap int_handler { SIGINT }
+
+proc int_handler {} {
+    error_condition "sigint recieved"
+}
+set DtCyber::printer_file "LP5xx_C12_E5"
+set DtCyber::port "6666"
+
+# Start the Stk simulator
+if {[fork] == 0} {
+    disconnect
+    system "./start-stk.sh"
+    exit
+}
+
+DtCyber::connect 
+
+# Update the MAG startup job and create the TMS catalog
+run_job 12 4 "decks/create-mag.job"
+dis "GET,MAG.;SUI,377777.;REPLACE,MAG.;PERMIT,MAG,INSTALL=W." 1
+dis "DEFINE,NEW=ZZZZZFC.;TFSP,OP=I,I=0,LF,P=0."
+
+# Restart MAG
+dsd "IDLE,MAG."
+sleep 1
+dsd "MAG."
+
+# Validate INSTALL as a TMS administrator
+dis "TFSP,OP=Z./VALIDAT=INSTALL,GO"
+
+# Get the initial TMS catalog definition from Stk simulator
+system "curl -o files/TMS-catalog.txt 'http://localhost:4480/volumes?tfsp'"
+
+# load the catalog
+run_job 12 4 "decks/load-tms-catalog.job"

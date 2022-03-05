@@ -1,7 +1,8 @@
 {
-"debug": true,
-"httpServerPort": 8080,
+"debug": false,
+"httpServerPort": 4480,
 "portMapperUdpPort": 111,
-"tapeServerPort": 4401,
-"tapeLibraryRoot": "tapes"
+"tapeServerPort": 4400,
+"tapeLibraryRoot": "tapes",
+"tapeCacheRoot": "tapes/cache"
 }

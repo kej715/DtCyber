@@ -36,16 +36,26 @@ expect -i $printer "E N D   F U L L"
 send_user "SYSGEN complete\n"
 log_user 1
 
+# Create and compile the NDL file
 run_job 12 4 "decks/create-ndlopl.job"
 run_job 12 4 "decks/compile-ndlopl.job"
+
+# Update the NAMSTRT file
 dis "PERMIT,NAMSTRT,INSTALL=W." 377772
 run_job 12 4 "decks/update-namstrt.job"
+
+# Create the TCPHOST file
 run_job 12 4 "decks/create-tcphost.job"
+
+# Add terminal definitions to TERMLIB
 dis "PERMIT,TERMLIB,INSTALL=W." 377776
 run_job 12 4 "decks/update-termlib.job"
 
+# Add a non-privileged GUEST user
 dsd "X.MS(VALUSER,LIMITED,GUEST,GUEST)"
+
 send_user "\nFirst Installation Complete\n"
+
 send_user "\nShutting down ...\n"
 sleep 3
 dsd "UNLOCK."

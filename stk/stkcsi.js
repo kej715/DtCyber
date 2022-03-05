@@ -4,6 +4,7 @@ const Program = require("./program");
 const ProgramRegistry = require("./registry");
 const RPC = require("./rpc");
 const XDR = require("./xdr");
+const { http, https } = require('follow-redirects');
 
 class StkCSI extends Program {
 
@@ -219,6 +220,7 @@ class StkCSI extends Program {
     this.volumeMap = {};
     this.freeCells = 16;
     this.udpPort = StkCSI.RPC_PORT;
+    this.tapeCacheRoot = "./cache";
     this.tapeLibraryRoot = "./tapes";
     this.tapeServerClients = [];
     this.tapeServerPort = 4401;
@@ -334,46 +336,42 @@ class StkCSI extends Program {
   }
 
   dismountVolume(driveKey, volId, isForce) {
-    let status = StkCSI.STATUS_SUCCESS;
     if (typeof this.driveMap[driveKey] === "undefined"
              || typeof this.driveMap[driveKey].volId === "undefined") {
-      status = StkCSI.STATUS_DRIVE_AVAILABLE;
+      return StkCSI.STATUS_DRIVE_AVAILABLE;
     }
     else if (this.driveMap[driveKey].volId !== volId && isForce === false) {
-      status = StkCSI.STATUS_VOLUME_NOT_IN_DRIVE;
+      return StkCSI.STATUS_VOLUME_NOT_IN_DRIVE;
     }
-    else {
-      volId = this.driveMap[driveKey].volId;
-      if (typeof this.volumeMap[volId] === "object") {
-        let volume = this.volumeMap[volId];
-        if (typeof volume.fd !== "undefined") {
-          fs.closeSync(volume.fd);
-          delete volume.fd;
-        }
-        delete volume.driveKey;
+    volId = this.driveMap[driveKey].volId;
+    if (typeof this.volumeMap[volId] === "object") {
+      let volume = this.volumeMap[volId];
+      if (typeof volume.fd !== "undefined") {
+        fs.closeSync(volume.fd);
+        delete volume.fd;
       }
-      delete this.driveMap[driveKey].volId;
-      let client = this.getClientForDriveKey(driveKey);
-      if (client !== null) {
-        this.sendResponse(client, `103 ${volId} dismounted from ${driveKey}`);
-        console.log(`${new Date().toLocaleString()} ${volId} dismounted from ${driveKey}`);
-      }
+      delete volume.driveKey;
     }
-    return status;
+    delete this.driveMap[driveKey].volId;
+    let client = this.getClientForDriveKey(driveKey);
+    if (client !== null) {
+      this.sendResponse(client, `103 ${volId} dismounted from ${driveKey}`);
+      console.log(`${new Date().toLocaleString()} ${volId} dismounted from ${driveKey}`);
+    }
+    return StkCSI.STATUS_SUCCESS;
   }
 
-  mountVolume(driveKey, volId) {
-    let status = StkCSI.STATUS_SUCCESS;
+  mountVolume(driveKey, volId, callback) {
     if (typeof this.volumeMap[volId] === "undefined") {
-      status = StkCSI.STATUS_VOLUME_NOT_IN_LIBRARY;
+      callback(StkCSI.STATUS_VOLUME_NOT_IN_LIBRARY);
     }
     else if (typeof this.driveMap[driveKey] !== "undefined"
              && typeof this.driveMap[driveKey].volId !== "undefined") {
       if (this.driveMap[driveKey].volId === volId) {
-        status = StkCSI.STATUS_VOLUME_IN_DRIVE;
+        callback(StkCSI.STATUS_VOLUME_IN_DRIVE);
       }
       else {
-        status = StkCSI.STATUS_DRIVE_IN_USE;
+        callback(StkCSI.STATUS_DRIVE_IN_USE);
       }
     }
     else {
@@ -382,18 +380,14 @@ class StkCSI extends Program {
         if (typeof this.driveMap[driveKey] !== "undefined"
             && typeof this.driveMap[driveKey].volId !== "undefined"
             && this.driveMap[driveKey].volId === volId) {
-          status = StkCSI.STATUS_VOLUME_IN_DRIVE;
+          callback(StkCSI.STATUS_VOLUME_IN_DRIVE);
         }
         else {
-          status = StkCSI.STATUS_VOLUME_IN_USE;
+          callback(StkCSI.STATUS_VOLUME_IN_USE);
         }
       }
       else {
-        let fd = fs.openSync(`${this.tapeLibraryRoot}/${volume.path}`, volume.writeEnabled ? "r+" : "r", 0o666);
-        if (fd === -1) {
-          status = StkCSI.STATUS_VOLUME_NOT_IN_LIBRARY;
-        }
-        else {
+        const mountHandler = fd => {
           volume.fd = fd;
           volume.position = 0;
           volume.blockId = 0;
@@ -407,10 +401,76 @@ class StkCSI extends Program {
             this.sendResponse(client, `${volume.writeEnabled ? "102" : "101"} ${volId} mounted on ${driveKey}`);
             console.log(`${new Date().toLocaleString()} ${volId} mounted on ${driveKey}`);
           }
+        };
+        let fd = -1;
+        try {
+          if (typeof volume.path !== "undefined") {
+            fd = fs.openSync(`${this.tapeLibraryRoot}/${volume.path}`, volume.writeEnabled ? "r+" : "r", 0o666);
+          }
+          else {
+            fd = fs.openSync(`${this.tapeCacheRoot}/${volId}.tap`, volume.writeEnabled ? "r+" : "r", 0o666);
+          }
+        }
+        catch (err) {
+          this.debugLog(err);
+        }
+        if (fd !== -1) {
+          mountHandler(fd);
+          callback(StkCSI.STATUS_SUCCESS);
+        }
+        else if (typeof volume.path !== "undefined" || typeof volume.url === "undefined") {
+          callback(StkCSI.STATUS_VOLUME_NOT_IN_LIBRARY);
+        }
+        else {
+          //
+          // Retrieve the tape from the web
+          //
+          this.debugLog(`Retrieve ${volId} from ${volume.url}`);
+          let req = https.get(volume.url, res => {
+            if (res.statusCode === 200) {
+              let data = [];
+              res.on('data', chunk => {
+                data.push(Buffer.from(chunk));
+              });
+              res.on('end', () => {
+                data = Buffer.concat(data);
+                if (res.complete) {
+                  fs.writeFile(`${this.tapeCacheRoot}/${volId}.tmp`, data, err => {
+                    if (err) {
+                      callback(StkCSI.STATUS_COMMUNICATION_FAILED);
+                    }
+                    else {
+                      fs.rename(`${this.tapeCacheRoot}/${volId}.tmp`, `${this.tapeCacheRoot}/${volId}.tap`, err => {
+                        if (err) {
+                          callback(StkCSI.STATUS_COMMUNICATION_FAILED);
+                        }
+                        else {
+                          fd = fs.openSync(`${this.tapeCacheRoot}/${volId}.tap`, volume.writeEnabled ? "r+" : "r", 0o666);
+                          if (fd !== -1) {
+                            mountHandler(fd);
+                            callback(StkCSI.STATUS_SUCCESS);
+                          }
+                          else {
+                            callback(StkCSI.STATUS_COMMUNICATION_FAILED);
+                          }
+                        }
+                      });
+                    }
+                  });
+                }
+                else {
+                  callback(StkCSI.STATUS_COMMUNICATION_FAILED);
+                }
+              });
+            }
+            else {
+              this.debugLog(`${res.statusCode} ${res.statusMessage}`);
+              callback(res.statusCode === 404 ? StkCSI.STATUS_VOLUME_NOT_IN_LIBRARY : StkCSI.STATUS_COMMUNICATION_FAILED);
+            }
+          });
         }
       }
     }
-    return status;
   }
 
   processDismountCommand(rpcCall, options, response) {
@@ -434,30 +494,37 @@ class StkCSI extends Program {
     this.debugLog(`StkCSI RPC dismount volume ${volId} from drive ${driveKey}, status ${status}`);
   }
 
-  processMountCommand(rpcCall, response) {
-    let volId = rpcCall.params.extractString();
-    let count = rpcCall.params.extractUnsignedInt();
-    let driveId = this.extractDriveId(rpcCall);
-    let driveKey = this.calculateDriveKey(driveId);
-    let status = StkCSI.STATUS_SUCCESS;
-    if (count < 1) {
-      status = StkCSI.STATUS_COUNT_TOO_SMALL;
-    }
-    else if (count > 1) {
-      status = StkCSI.STATUS_COUNT_TOO_LARGE;
-    }
-    else if (driveId.acs !== 0) {
-      status = StkCSI.STATUS_ACS_NOT_IN_LIBRARY;
-    }
-    else {
-      status = this.mountVolume(driveKey, volId);
-    }
+  makeMountCommandResponse(response, volId, driveId, status) {
     response.appendEnum(status);
     response.appendEnum(StkCSI.TYPE_VOLUME);
     this.appendExtraInts(response, 11);
     response.appendString(volId);
     this.appendDriveId(response, driveId);
+    let driveKey = this.calculateDriveKey(driveId);
     this.debugLog(`StkCSI RPC mount volume ${volId} on drive ${driveKey}, status ${status}`);
+    return response;
+  }
+
+  processMountCommand(rpcCall, response, callback) {
+    let volId = rpcCall.params.extractString();
+    let count = rpcCall.params.extractUnsignedInt();
+    let driveId = this.extractDriveId(rpcCall);
+    let status = StkCSI.STATUS_SUCCESS;
+    if (count < 1) {
+      callback(this.makeMountCommandResponse(response, volId, driveId, StkCSI.STATUS_COUNT_TOO_SMALL));
+    }
+    else if (count > 1) {
+      callback(this.makeMountCommandResponse(response, volId, driveId, StkCSI.STATUS_COUNT_TOO_LARGE));
+    }
+    else if (driveId.acs !== 0) {
+      callback(this.makeMountCommandResponse(response, volId, driveId, StkCSI.STATUS_ACS_NOT_IN_LIBRARY));
+    }
+    else {
+      let driveKey = this.calculateDriveKey(driveId);
+      this.mountVolume(driveKey, volId, status => {
+        callback(this.makeMountCommandResponse(response, volId, driveId, status));
+      });
+    }
   }
 
   processQueryCommand(rpcCall, response) {
@@ -515,6 +582,13 @@ class StkCSI extends Program {
     }
   }
 
+  sendCommandResponse(csiHeader, response) {
+    setTimeout(() => {
+      let obj = this.deserializeHandle(csiHeader.handle);
+      this.callRpcCallback(obj.host, obj.port, obj.prog, obj.vers, obj.proc, response.getData(), 0);
+    }, 0);
+  }
+
   processCsiRequest(rpcCall, rpcReply, callback) {
     rpcReply.appendEnum(Program.SUCCESS);
     callback(rpcReply);
@@ -527,22 +601,23 @@ class StkCSI extends Program {
     switch (msgHeader.command) {
     case StkCSI.COMMAND_QUERY:
       this.processQueryCommand(rpcCall, response);
+      this.sendCommandResponse(csiHeader, response);
       break;
     case StkCSI.COMMAND_MOUNT:
-      this.processMountCommand(rpcCall, response);
+      this.processMountCommand(rpcCall, response, rsp => {
+        this.sendCommandResponse(csiHeader, rsp);
+      });
       break;
     case StkCSI.COMMAND_DISMOUNT:
       this.processDismountCommand(rpcCall, msgHeader.options, response);
+      this.sendCommandResponse(csiHeader, response);
       break;
     default:
       response.appendEnum(StkCSI.STATUS_INVALID_COMMAND);
       this.debugLog(`StkCSI RPC unsupported command ${msgHeader.command}, status ${StkCSI.STATUS_INVALID_COMMAND}`);
+      this.sendCommandResponse(csiHeader, response);
       break;
     }
-    setTimeout(() => {
-      let obj = this.deserializeHandle(csiHeader.handle);
-      this.callRpcCallback(obj.host, obj.port, obj.prog, obj.vers, obj.proc, response.getData(), 0);
-    }, 0);
   }
 
   callProcedure(rpcCall, rpcReply, callback) {
@@ -771,17 +846,23 @@ class StkCSI extends Program {
     client.data = Buffer.allocUnsafe(0);
     if (request.length > 1) {
       const volId = request[1];
-      let status = this.mountVolume(client.driveKey, volId);
-      if (status === StkCSI.STATUS_SUCCESS) {
-        this.sendResponse(client, `200 ${volId} mounted on ${client.driveKey}`);
-      }
-      else {
-        this.sendResponse(client, `402 ${status} ${volId} not mounted`);
-      }
+      this.mountVolume(client.driveKey, volId, status => {
+        if (status === StkCSI.STATUS_SUCCESS) {
+          this.sendResponse(client, `200 ${volId} mounted on ${client.driveKey}`);
+        }
+        else {
+          this.sendResponse(client, `402 ${status} ${volId} not mounted`);
+        }
+      });
     }
     else {
       this.sendResponse(client, "400 Bad request");
     }
+  }
+
+  processPingRequest(client, request) {
+    client.data = Buffer.allocUnsafe(0);
+    this.sendResponse(client, "200 Pong");
   }
 
   processReadBkwRequest(client, request, doReturnData) {
@@ -1053,6 +1134,9 @@ class StkCSI extends Program {
           case "MOUNT":
             this.processMountRequest(client, request);
             break;
+          case "PING":
+            this.processPingRequest(client, request);
+            break;
           case "READBKW":
             this.processReadBkwRequest(client, request, true);
             break;
@@ -1090,6 +1174,10 @@ class StkCSI extends Program {
     }
   }
 
+  setTapeCacheRoot(tapeCacheRoot) {
+    this.tapeCacheRoot = fs.realpathSync(tapeCacheRoot);
+  }
+
   setTapeLibraryRoot(tapeLibraryRoot) {
     this.tapeLibraryRoot = fs.realpathSync(tapeLibraryRoot);
   }
@@ -1125,6 +1213,7 @@ class StkCSI extends Program {
     });
     tapeServer.listen(this.tapeServerPort, () => {
       console.log(`${new Date().toLocaleString()} Tape library located at ${this.tapeLibraryRoot}`);
+      console.log(`${new Date().toLocaleString()} Tape cache located at ${this.tapeCacheRoot}`);
       console.log(`${new Date().toLocaleString()} Tape server listening on port ${this.tapeServerPort}`);
     });
   }

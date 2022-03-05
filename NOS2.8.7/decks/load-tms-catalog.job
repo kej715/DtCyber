@@ -1,0 +1,22 @@
+~*
+~*  This job load the TMS catalog.
+~*
+LOADTMS.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$COPY,INPUT,TMSIN.
+$REPLACE,TMSIN.
+$REWIND,TMSIN.
+$TFSP,OP=I,I=TMSIN.
+***
+*** LOADTMS COMPLETE
+***
+EXIT.
+***
+*** LOADTMS FAILED
+***
+~eor
+~include ../files/TMS-catalog.txt

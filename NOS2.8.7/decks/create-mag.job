@@ -1,0 +1,22 @@
+~*
+~*  This job creates a startup file for MAGNET that
+~*  enables activation of TMS and ATF.
+~*
+CRTMAG.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$COPY,INPUT,MAG.
+$REPLACE,MAG.
+$PERMIT,MAG,SYSTEMX=W.
+***
+*** CRTMAG COMPLETE
+***
+EXIT.
+***
+*** CRTMAG FAILED
+***
+~eor
+~include ../files/MAG.txt

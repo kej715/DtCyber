@@ -1,8 +1,39 @@
 {
 "MAILER":
   {
-  "path":"massmail.tap",
+  "description":"UMass Mailer permanent files tape",
+  "owner":"INSTALL",
+  "url":"https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1",
+  "labeled":true,
   "writeEnabled":false,
-  "description":"UMass Mailer release tape"
+  "format":"I",
+  "access":"PUBLIC",
+  "readOnly":true,
+  "listable":true
+  },
+"SES000":
+  {
+  "description":"SES PFDUMP tape",
+  "owner":"INSTALL",
+  "physicalName":"SES",
+  "url": "https://www.dropbox.com/s/ome99ezh4jhz108/SES.tap?dl=1",
+  "labeled":false,
+  "writeEnabled":false,
+  "format":"I",
+  "access":"PUBLIC",
+  "readOnly":true,
+  "listable":true
+  },
+"Y2K871":
+  {
+  "description":"Y2K mods for NOS 2.8.7",
+  "owner":"INSTALL",
+  "url": "https://www.dropbox.com/s/wzzcsanlf7doofb/y2k.tap?dl=1",
+  "labeled":true,
+  "writeEnabled":false,
+  "format":"I",
+  "access":"PUBLIC",
+  "readOnly":true,
+  "listable":true
   }
 }

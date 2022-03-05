@@ -18,6 +18,7 @@ portMapper.start();
 const stkcsi = new StkCSI();
 stkcsi.setVolumeMap(volumeMap);
 if (config.tapeServerPort) stkcsi.setTapeServerPort(config.tapeServerPort);
+if (config.tapeCacheRoot) stkcsi.setTapeCacheRoot(config.tapeCacheRoot);
 if (config.tapeLibraryRoot) stkcsi.setTapeLibraryRoot(config.tapeLibraryRoot);
 if (config.debug) stkcsi.setDebug(config.debug);
 stkcsi.start();
@@ -36,12 +37,42 @@ const httpServer = http.createServer((req, res) => {
   if (req.method === "GET") {
     let u = url.parse(req.url, true);
     if (u.pathname === "/volumes") {
-      let headers = {"Content-Type":"application/json"};
-      Object.keys(corsHeaders).forEach(key => {
-        headers[key] = corsHeaders[key];
-      });
-      res.writeHead(200, headers);
-      res.write(JSON.stringify(stkcsi.volumeMap));
+      if (u.search === "?tfsp") {
+        let headers = {"Content-Type":"text/plain"};
+        Object.keys(corsHeaders).forEach(key => {
+          headers[key] = corsHeaders[key];
+        });
+        let body = "";
+
+        Object.keys(stkcsi.volumeMap).forEach(key => {
+          let volume = stkcsi.volumeMap[key];
+          let owner = (typeof volume.owner !== "undefined") ? volume.owner : "SYSTEMX";
+          body += `VSN=${key}`;
+          if (typeof volume.physicalName !== "undefined") body += `,PRN=${volume.physicalName}`;
+          body += ",OWNER=CENTER,SITE=ON,SYSTEM=YES,VT=AT,GO.\n";
+          body += `USER=${owner}\n`;
+          body += `FILEV=${key}`;
+          body += `,AC=${(typeof volume.listable !== "undefined" && volume.listable) ? "YES" : "NO"}`;
+          body += `,CT=${(typeof volume.access !== "undefined") ? volume.access : "PRIVATE"}`;
+          body += ",D=AE";
+          body += `,F=${(typeof volume.format !== "undefined") ? volume.format : "I"}`;
+          body += `,LB=${(typeof volume.labeled !== "undefined" && volume.labeled) ? "KL" : "KU"}`;
+          body += `,M=${(typeof volume.readOnly !== "undefined" && !volume.readOnly) ? "WRITE" : "READ"}`;
+          body += ",GO\n";
+          body += "GO\n";
+        });
+
+        res.writeHead(200, headers);
+        res.write(body);
+      }
+      else {
+        let headers = {"Content-Type":"application/json"};
+        Object.keys(corsHeaders).forEach(key => {
+          headers[key] = corsHeaders[key];
+        });
+        res.writeHead(200, headers);
+        res.write(JSON.stringify(stkcsi.volumeMap));
+      }
       res.end();
       logHttpRequest(req, 200);
     }
@@ -63,7 +94,7 @@ const httpServer = http.createServer((req, res) => {
   }
 });
 
-const httpServerPort = config.httpServerPort ? config.httpServerPort : 8080;
+const httpServerPort = config.httpServerPort ? config.httpServerPort : 4480;
 httpServer.listen(httpServerPort);
 console.log(`${new Date().toLocaleString()} HTTP server listening on port ${httpServerPort}`);
 
