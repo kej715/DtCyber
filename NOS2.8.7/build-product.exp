@@ -1,0 +1,74 @@
+#!/usr/local/bin/expect -f
+::tcl::tm::path add .
+package require DtCyber;
+namespace import DtCyber::*
+trap int_handler { SIGINT }
+
+proc int_handler {} {
+    error_condition "sigint recieved"
+}
+
+set prod [string tolower [lindex $argv 0]]
+set f [open "opt/products.idx" r]
+
+if { $prod == "list" } {
+    while { 1 } {
+        set line [gets $f]
+        if { [eof $f] } { exit }
+        set tokens [split $line " "]
+        send_user "[lindex $tokens 0] : [join [lrange $tokens 4 end]]\n"
+    }
+}
+while { 1 } {
+    set line [gets $f]
+    if { [eof $f] } {
+        send_user "\nNo such product: $prod\n"
+        exit
+    }
+    set tokens [split $line " "]
+    if { $prod == [lindex $tokens 0] } {
+        set pre [lindex $tokens 1]
+        set post [lindex $tokens 2]
+        set url [lindex $tokens 3]
+        set desc [join [lrange $tokens 4 end]]
+        break
+    }
+}
+close $f
+
+set jobname [string toupper $prod]
+send_user "\nStarting $jobname\n"
+send_user "$desc\n"
+send_user "Download tape image ...\n"
+set tapepath "opt/tapes/$prod.tap"
+system "curl -L -o $tapepath '$url'"
+
+set DtCyber::printer_file "LP5xx_C12_E5"
+set DtCyber::port "6666"
+DtCyber::connect 
+
+dsd "\[UNLOAD,51."
+dsd "\[!"
+mount "13,0,1" $tapepath
+sleep 2
+
+if { $pre != "*" } {
+    send_user "\nRun PRE-install script\n"
+    source "opt/$pre"
+}
+
+set jobpath "opt/$prod.job"
+load_job 12 4 $jobpath,51
+log_user 0
+check_job $jobname
+log_user 1
+
+if { $post != "*" } {
+    send_user "\nRun POST-install script\n"
+    source "opt/$post"
+}
+
+dsd "\[UNLOAD,51."
+dsd "\[!"
+
+send_user "\nBuild of $jobname complete\n"

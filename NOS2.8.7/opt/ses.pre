@@ -1,0 +1,8 @@
+# Create SES user account
+dis "MODVAL,OP=Z./SES,FUI=32B,PW=SESX,RL=ALL,AW=ALL;#1500#MODVAL,OP=Z./SES,AP=IAF,IS=BATCH"
+
+# Load PFDUMP tape to SES user catalog. The tape must have been loaded
+# onto equipment 51.
+dis "ASSIGN,51,TAPE,D=GE,LB=KU.;PFLOAD,UI=32,LO=CEST,OP=LR."
+sleep 45
+dis "PERMIT,NEWSES,INSTALL=R.;PERMIT,SESBINS,INSTALL=R." 32

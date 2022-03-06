@@ -1,0 +1,27 @@
+~*
+~*  This job updates the NAMSTRT file in the catalog of
+~*  NETOPS to prevent NAM from starting network applications
+~*  that are not used or configured for the local system.
+~*
+ENAAPPS.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$GET,NAMSTRT/UN=NETOPS.
+$NOTE,IN,NR.+CS/.*JOB(JOBHTF/JOB(JOBHTF/*
+$NOTE,IN,NR.+CS/.*JOB(JOBSMTI/JOB(JOBSMTI/*
+$NOTE,IN,NR.+CS/.*JOB(JOBSMTS/JOB(JOBSMTS/*
+$NOTE,IN,NR.+CS/.*JOB(JOBREX/JOB(JOBREX/*
+$NOTE,IN,NR.+Q
+$PACK,IN.
+$XEDIT,NAMSTRT,I=IN,L=0.
+$REPLACE,NAMSTRT/UN=NETOPS.
+***
+*** ENAAPPS COMPLETE
+***
+EXIT.
+***
+*** ENAAPPS FAILED
+***

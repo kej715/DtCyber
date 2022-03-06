@@ -1,0 +1,25 @@
+~*
+~*  This job builds the SES product. It assumes that the
+~*  contents of the SES PFDUMP tape have been loaded to
+~*  the SES catalog, and it edits the SES system binaries
+~*  into the PRODUCT file.
+~*
+SES.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$ATTACH,PRODUCT/M=W,WB.
+$ATTACH,NEWSES,SESBINS/UN=SES.
+$COPY,NEWSES,LGO.
+$COPY,SESBINS,LGO.
+$REWIND,LGO.
+$LIBEDIT,P=PRODUCT,B=LGO,I=0,C.
+***
+*** SES COMPLETE
+***
+EXIT.
+***
+*** SES FAILED
+***
