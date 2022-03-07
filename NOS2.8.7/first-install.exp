@@ -56,10 +56,4 @@ dsd "X.MS(VALUSER,LIMITED,GUEST,GUEST)"
 
 send_user "\nFirst Installation Complete\n"
 
-send_user "\nShutting down ...\n"
-sleep 3
-dsd "UNLOCK."
-dsd "CHE"
-sleep 4
-dsd "STEP."
-console "shutdown"
+shutdown

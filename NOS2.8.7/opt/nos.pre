@@ -5,4 +5,4 @@ dsd "\[!"
 mount "13,0,1" "tapes/nos287-1.tap"
 mount "13,0,2" "tapes/nos287-2.tap"
 mount "13,0,3" "tapes/nos287-3.tap"
-sleep 2
+sleep 5

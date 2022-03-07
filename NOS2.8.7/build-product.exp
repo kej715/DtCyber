@@ -52,7 +52,7 @@ if { $url != "*" } {
     dsd "\[UNLOAD,51."
     dsd "\[!"
     mount "13,0,1" $tapepath
-    sleep 2
+    sleep 5
 }
 
 if { $pre != "*" } {
