@@ -1,2 +1,9 @@
-ncctcp * ncctcp.post https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1 NCC TCP/IP Applications
+atf nos.pre nos.post * Rebuild NOS Automated Cartridge Tape Facility (dependency: nam5)
+cdcs2 nos.pre nos.post * CYBER Database Control System Version 2
+cgames * * * NOS Console Games (EYE, KAL, LIFE, LUNAR, MIC, PAC, SNK, TTT)
+nam5 nos.pre nos.post * Rebuild NOS Network Access Method
+nos nos.pre nos.post * Rebuild NOS 2.8.7 Base Operating System
+ncctcp * ncctcp.post https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1 Nostalgic Computing Center TCP/IP Applications
+qu3 nos.pre nos.post * Query Update Utility Version 3
 ses ses.pre * https://www.dropbox.com/s/ome99ezh4jhz108/SES.tap?dl=1 Software Engineering Services Tools
+tcph nos.pre nos.post * Rebuild NOS FTP Client and Server (dependency: nam5)

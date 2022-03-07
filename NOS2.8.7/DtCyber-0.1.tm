@@ -3,18 +3,18 @@
 #
 #  Author: William Schaub
 #
-  namespace eval pkgtemp {
-      set modver [file root [file tail [info script]]]
-      lassign [split $modver -] ::pkgtemp::ns ::pkgtemp::version
-  }
-  package provide $::pkgtemp::ns [namespace eval $::pkgtemp::ns {
-      namespace export error_condition console dsd dis mount umount load_job check_job run_job port profile printer_file
-      variable version $::pkgtemp::version
-      #initialise your module's namespace here (or in the next namespace eval block if desired)
-      set version ;#this statement must be the last line in this block (version number is returned to the 'package provide' statement)
-  }]
-  namespace eval $::pkgtemp::ns {
-      #module procs here
+namespace eval pkgtemp {
+    set modver [file root [file tail [info script]]]
+    lassign [split $modver -] ::pkgtemp::ns ::pkgtemp::version
+}
+package provide $::pkgtemp::ns [namespace eval $::pkgtemp::ns {
+    namespace export error_condition console dsd dis mount umount load_job check_job run_job shutdown port profile printer_file
+    variable version $::pkgtemp::version
+    #initialise your module's namespace here (or in the next namespace eval block if desired)
+    set version ;#this statement must be the last line in this block (version number is returned to the 'package provide' statement)
+}]
+namespace eval $::pkgtemp::ns {
+    #module procs here
 
 set profile ""
 set printer_file "LP5xx_C07_E7"
@@ -118,7 +118,7 @@ proc load_job { ch eq deck } {
 # Jobs that don't produce output to OUTPUT should contain a DAYFILE. control card.
 proc check_job { ident } {
     global printer
-    if { $printer eq ""} {
+    if { $printer eq "" } {
         puts "Something went very wrong"
         exit 1
     }
@@ -172,7 +172,7 @@ proc init {} {
     }
 }
 
-# connect to the dtcyber operator console interface on a specified port
+#connect to the dtcyber operator console interface on a specified port
 #this runs in the global namespace to allow the caller to
 #continue to use normal expect commands
 proc connect {} {
@@ -188,5 +188,20 @@ proc connect {} {
     }
 }
 
+#coordinate a graceful shutdown
+proc shutdown {} {
+    global printer
+    send_user "\nStarting shutdown sequence ...\n"
+    dsd "\[UNLOCK."
+    dsd "CHE"
+    sleep 8
+    dsd "STEP."
+    console "shutdown"
+    if { $printer != "" } {
+        close $printer
+    }
+    send_user "\nShutdown complete\n"
 }
-  namespace delete pkgtemp
+
+}
+namespace delete pkgtemp

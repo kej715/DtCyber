@@ -1,0 +1,35 @@
+~*
+~*  This job creates the sample index.html file for the
+~*  NOS HTTP server.
+~*
+WWWINDX.
+$USER,WWW,WWWX.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$COPYBR,INPUT,INDEX.
+$REPLACE,INDEX.
+$CHANGE,INDEX/CT=PU,M=R,AC=Y.
+***
+*** WWWINDX COMPLETE
+***
+EXIT.
+***
+*** WWWINDX FAILED
+***
+~eor
+<HTML>
+  <HEAD>
+    <TITLE>
+      NOS W^E^B S^E^R^V^I^C^E
+    </TITLE>
+  </HEAD>
+  <BODY>
+    <H1>W^E^L^C^O^M^E</H1>
+    Y^O^U ^A^R^E ^B^E^I^N^G ^S^E^R^V^E^D ^B^Y ^A^N HTTP ^S^E^R^V^E^R
+    ^H^O^S^T^E^D ^B^Y ^T^H^E NOS 2.8.7 ^O^P^E^R^A^T^I^N^G ^S^Y^S^T^E^M
+    ^R^U^N^N^I^N^G ^O^N ^A C^O^N^T^R^O^L D^A^T^A CYBER ^S^E^R^I^E^S
+    ^S^U^P^E^R^C^O^M^P^U^T^E^R.
+  </BODY>
+</HTML>

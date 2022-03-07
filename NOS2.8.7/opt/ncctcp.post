@@ -3,3 +3,6 @@ dis "MODVAL,OP=Z./WWW,FUI=33B,PW=WWWX,RL=ALL,AW=ALL;#1500#MODVAL,OP=Z./WWW,AP=IA
 
 # Run job to enable startup of applications in NAMSTRT
 run_job 12 4 "opt/ncctcp-namstrt.job"
+
+# Run job to create the sample INDEX file for the HTTP server
+run_job 12 4 "opt/ncctcp-www-index.job"

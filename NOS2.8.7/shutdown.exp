@@ -9,10 +9,4 @@ proc int_handler {} {
 }
 set DtCyber::port "6666"
 DtCyber::connect 
-send_user "\nStarting shutdown sequence ...\n"
-dsd "\[UNLOCK."
-dsd "CHE"
-sleep 4
-dsd "STEP."
-console "shutdown"
-send_user "\nShutdown complete\n"
+shutdown
