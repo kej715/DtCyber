@@ -97,9 +97,41 @@ batch jobs from from the INSTALL user to set up for building the operating syste
 and to apply initial corrective code and base modifications to OS source program
 library. It will take a few minutes for the script to complete, so be patient and watch it run.
 
->Note that this and similar scripts for installing optional products require that
-you have [netcat](https://en.wikipedia.org/wiki/Netcat) installed on your host
-system. MacOS and most Linux distributions include it. You will need to
+>Note that this and the script for building optional products, described next,
+require that you have [netcat](https://en.wikipedia.org/wiki/Netcat) installed on
+your host system. MacOS and most Linux distributions include it. You will need to
 install it yourself on Windows, if you don't have it already.
 
- 
+## Building Optional Products
+A script named `build-product.exp` enables you to build optional software products
+for NOS 2.8.7. It also enables you to rebuild the base operating system itself and
+other products provided on the initial deadstart tape. 'build-product.exp` is
+designed to download tape images automatically from public libraries on the web, as
+needed.
+
+To reveal a list of products that `build-product.exp` can build, enter the following
+command:
+
+>`expect build-product.exp list`
+
+Each line displayed begins with a product name which is followed by a short description of the product. To build a product, call `build-product.exp` as in:
+
+>`expect build-product.exp` *product-name*
+
+Products currently supported include:
+
+| Product | Description |
+|---------|-------------|
+| atf     | Rebuild NOS Automated Cartridge Tape Facility (dependency: nam5) |
+| cdcs2   | CYBER Database Control System Version 2 |
+| cgames  | NOS Console Games (EYE, KAL, LIFE, LUNAR, MIC, PAC, SNK, TTT) |
+| nam5    | Rebuild NOS Network Access Method |
+| nos     | Rebuild NOS 2.8.7 Base Operating System |
+| [ncctcp](ncctcp.post https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1) | Nostalgic Computing Center TCP/IP Applications (dependency: ses) |
+| qu3     | Query Update Utility Version 3 |
+| [ses](https://www.dropbox.com/s/ome99ezh4jhz108/SES.tap?dl=1) | Software Engineering Services Tools |
+| tcph    | Rebuild NOS FTP Client and Server (dependency: nam5) |
+
+This list will grow, so revisit this page to see what new products are added, and
+use `git pull` to update the list in your local repository.
+
