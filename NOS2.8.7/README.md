@@ -132,6 +132,24 @@ Products currently supported include:
 | [ses](https://www.dropbox.com/s/ome99ezh4jhz108/SES.tap?dl=1) | Software Engineering Services Tools |
 | tcph    | Rebuild NOS FTP Client and Server (dependency: nam5) |
 
-This list will grow, so revisit this page to see what new products are added, and
-use `git pull` to update the list in your local repository.
+This list will grow, so revisit this page to see what new products have been added,
+and use `git pull` to update the list in your local repository.
 
+## Creating a New Deadstart Tape  
+The jobs initiated by `build-product.exp` insert the binaries they produce into the
+direct access file named `PRODUCT` in the catalog of user `INSTALL`. To create a new deadstart tape that includes the contents of `PRODUCT`, enter the following command:
+
+>`expect make-ds-tape.exp`
+
+`make-ds-tape.exp` reads the current deadstart tape, calls `LIBEDIT` to replace or
+add the contents of `PRODUCT`, and then writes the resulting file to a new tape
+image. The new tape image will be a file with path `NOS2.8.7/tapes/newds.tap`.
+To restart NOS 2.8.7 with the new tape image, execute the following commands:
+
+>`expect shutdown.exp`
+
+>`mv tapes/ds.tap tapes/oldds.tap`
+
+>`mv tapes/newds.tap tapes/ds.tap`
+
+> `sudo ./dtcyber`
