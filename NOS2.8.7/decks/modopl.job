@@ -16,6 +16,9 @@ $NORERUN.
 $SETTL,*.
 $SETASL,*.
 $SETJSL,*.
+$NOEXIT.
+$TMSDEF,TO=F.
+$ONEXIT.
 $COPY,INPUT,NOSMODS.
 $REPLACE,NOSMODS.
 $PURGE,OPL871/NA.
@@ -61,6 +64,8 @@ EXIT.
 ~include ../mods/NOS/TLSZOL.mod
 ~eor
 ~include ../mods/NOS/TLTDSP.mod
+~eor
+~include ../mods/NOS/TMSNOPV.mod
 ~eor
 ~include ../mods/NOS/XULBTAP.mod
 ~eor
