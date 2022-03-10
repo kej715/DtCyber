@@ -1,3 +1,3 @@
 #!/bin/sh
 cd ../stk
-node index.js
+npm start

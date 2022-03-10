@@ -4,11 +4,15 @@
   "description": "StorageTek 4400 Simulator",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"No test specified\" && exit 1"
   },
   "author": "Kevin Jordan",
   "license": "GPL-3.0-or-later",
   "dependencies": {
     "follow-redirects": "^1.14.9"
+  },
+  "engines": {
+    "npm": ">=8.0.0",
+    "node": ">=16.0.0"
   }
 }
