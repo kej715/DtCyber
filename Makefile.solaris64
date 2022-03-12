@@ -67,6 +67,7 @@ OBJS    =   cdcnet.o                \
             mt669.o                 \
             mt679.o                 \
             mux6676.o               \
+            niu.o                   \
             npu_async.o             \
             npu_bip.o               \
             npu_hasp.o              \
@@ -85,14 +86,18 @@ OBJS    =   cdcnet.o                \
             tpmux.o                 \
             trace.o                 \
             window_x11.o            
- 
+
 dtcyber: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
-all: clean dtcyber
+all: dtcyber stk/node_modules
+
+stk/node_modules:
+	$(MAKE) -C stk
 
 clean:
-	rm -f *.o
+	rm -f *.o; \
+	$(MAKE) -C stk clean
 
 %.o : %.c $(HDRS)
 	$(CC) $(CFLAGS) -c $<

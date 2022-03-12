@@ -585,6 +585,18 @@ static void initCyber(char *config)
     */
     initGetInteger("telnetconns", 4, &conns);
     mux6676TelnetConns = (u16)conns;
+
+    /*
+    **  Get optional Plato port number. If not specified, use default value.
+    */
+    initGetInteger("platoport", 5004, &port);
+    platoPort = (u16)port;
+
+    /*
+    **  Get optional max Plato connections. If not specified, use default value.
+    */
+    initGetInteger("platoconns", 4, &conns);
+    platoConns = (u16)conns;
     }
 
 /*--------------------------------------------------------------------------

@@ -219,6 +219,16 @@ void mdiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 
 /*
+**  niu.c
+*/
+typedef void niuProcessOutput(int, u32);
+void niuInInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void niuOutInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+bool niuPresent(void);
+void niuLocalKey(u16 key, int stat);
+void niuSetOutputHandler(niuProcessOutput *h, int stat);
+
+/*
 **  pci_channel_{win32,linux}.c
 */
 void pciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
@@ -369,6 +379,8 @@ extern bool bigEndian;
 extern volatile bool opActive;
 extern u16 mux6676TelnetPort;
 extern u16 mux6676TelnetConns;
+extern u16 platoPort;
+extern u16 platoConns;
 extern u32 cycles;
 extern u32 rtcClock;
 extern ModelFeatures features;
