@@ -46,20 +46,29 @@ const httpServer = http.createServer((req, res) => {
 
         Object.keys(stkcsi.volumeMap).forEach(key => {
           let volume = stkcsi.volumeMap[key];
-          let owner = (typeof volume.owner !== "undefined") ? volume.owner : "SYSTEMX";
-          body += `VSN=${key}`;
-          if (typeof volume.physicalName !== "undefined") body += `,PRN=${volume.physicalName}`;
-          body += ",OWNER=CENTER,SITE=ON,SYSTEM=YES,VT=AT,GO.\n";
-          body += `USER=${owner}\n`;
-          body += `FILEV=${key}`;
-          body += `,AC=${(typeof volume.listable !== "undefined" && volume.listable) ? "YES" : "NO"}`;
-          body += `,CT=${(typeof volume.access !== "undefined") ? volume.access : "PRIVATE"}`;
-          body += ",D=AE";
-          body += `,F=${(typeof volume.format !== "undefined") ? volume.format : "I"}`;
-          body += `,LB=${(typeof volume.labeled !== "undefined" && volume.labeled) ? "KL" : "KU"}`;
-          body += `,M=${(typeof volume.readOnly !== "undefined" && !volume.readOnly) ? "WRITE" : "READ"}`;
-          body += ",GO\n";
-          body += "GO\n";
+          if (typeof volume.tfspManaged === "undefined" || volume.tfspManaged) {
+            body += `VSN=${key}`;
+            if (typeof volume.physicalName !== "undefined") body += `,PRN=${volume.physicalName}`;
+            if (typeof volume.userOwned !== "undefined" && volume.userOwned) {
+              body += ",OWNER=USER,SYSTEM=NO";
+            }
+            else {
+              body += `,OWNER=CENTER,SYSTEM=${(typeof volume.systemVsn !== "undefined" && volume.systemVsn) ? "YES" : "NO"}`;
+            }
+            body += ",SITE=ON,VT=AT,GO.\n";
+            if (typeof volume.owner !== "undefined") {
+              body += `USER=${volume.owner}\n`;
+              body += `FILEV=${key}`;
+              body += `,AC=${(typeof volume.listable !== "undefined" && volume.listable) ? "YES" : "NO"}`;
+              body += `,CT=${(typeof volume.access !== "undefined") ? volume.access : "PRIVATE"}`;
+              body += ",D=AE";
+              body += `,F=${(typeof volume.format !== "undefined") ? volume.format : "I"}`;
+              body += `,LB=${(typeof volume.labeled !== "undefined" && volume.labeled) ? "KL" : "KU"}`;
+              body += `,M=${(typeof volume.readOnly !== "undefined" && !volume.readOnly) ? "WRITE" : "READ"}`;
+              body += ",GO\n";
+              body += "GO\n";
+            }
+          }
         });
 
         res.writeHead(200, headers);
