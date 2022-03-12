@@ -352,11 +352,6 @@ static void niuInit(void)
 static FcStatus niuInFunc(PpWord funcCode)
     {
 #if DEBUG
-    if (niuLog == NULL)
-        {
-        fputs("\nNIU device not active.", niuLog);
-        }
-
     fprintf(niuLog, "\n%06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
         traceSequenceNo,
         activePpu->id,
@@ -459,7 +454,7 @@ static void niuInIo(void)
                 if ((in = niuCheckInput(mp)) >= 0)
                     {
 #ifdef DEBUG
-                    fprintf(niuLog, "niu input byte %d %03o\n", mp->ibytes, in);
+                    fprintf(niuLog, "NIU input byte %d %03o\n", mp->ibytes, in);
 #endif
                     // Connection has data -- assemble it and see if we have
                     // a complete input word
@@ -557,7 +552,7 @@ static void niuOutIo(void)
         #ifdef DEBUG
         if ((d & 06000) != 04000)
             {
-            fprintf(niuLog, "niu output out of sync, first word %04o\n", d);
+            fprintf(niuLog, "NIU output out of sync, first word %04o\n", d);
             return;
             }
         #endif
@@ -572,7 +567,7 @@ static void niuOutIo(void)
         #ifdef DEBUG
         if ((d & 06001) != 0)
             {
-            fprintf(niuLog, "niu output out of sync, second word %04o\n", d);
+            fprintf(niuLog, "NIU output out of sync, second word %04o\n", d);
             return;
             }
         #endif
@@ -584,7 +579,7 @@ static void niuOutIo(void)
     #ifdef DEBUG
     if ((d & 04000) != 0)
         {
-        fprintf(niuLog, "niu output out of sync, third word %04o\n", d);
+        fprintf(niuLog, "NIU output out of sync, third word %04o\n", d);
         return;
         }
     #endif
@@ -825,7 +820,7 @@ static void *niuThread(void *param)
         */
         mp->active = TRUE;
 #if DEBUG
-        printf("niu: Received connection on port %d\n", (int)(mp - portVector));
+        printf("NIU: Received connection on port %d\n", (int)(mp - portVector));
 #endif
         niuWelcome (mp - portVector + NiuLocalStations);
         }
@@ -877,7 +872,7 @@ static int niuCheckInput(PortParam *mp)
 #endif
             mp->active = FALSE;
 #if DEBUG
-            printf("niu: Connection dropped on port %d\n", (int)(mp - portVector));
+            printf("NIU: Connection dropped on port %d\n", (int)(mp - portVector));
 #endif
             return(-1);
             }
@@ -891,7 +886,7 @@ static int niuCheckInput(PortParam *mp)
 #endif
         mp->active = FALSE;
 #if DEBUG
-        printf("niu: Connection dropped on port %d\n", (int)(mp - portVector));
+        printf("NIU: Connection dropped on port %d\n", (int)(mp - portVector));
 #endif
         return(-1);
         }
@@ -1034,7 +1029,7 @@ static void niuSend(int stat, int word)
         data[1] = ((word >> 6) & 077) | 0200;
         data[2] = (word & 077) | 0300;
 #ifdef DEBUG
-        fprintf (niuLog, "niu output %03o %03o %03o\n",
+        fprintf (niuLog, "NIU output %03o %03o %03o\n",
                 data[0], data[1], data[2]);
 #endif
         send(mp->connFd, data, 3, 0);
