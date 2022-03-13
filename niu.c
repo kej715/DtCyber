@@ -37,7 +37,7 @@
 **  Private Constants
 **  -----------------
 */
-#define DEBUG 1
+#define DEBUG 0
 
 #define NiuLocalStations        32          // range reserved for local stations
 #define NiuLocalBufSize         50          // size of local input buffer
@@ -453,7 +453,7 @@ static void niuInIo(void)
                 */
                 if ((in = niuCheckInput(mp)) >= 0)
                     {
-#ifdef DEBUG
+#if DEBUG
                     fprintf(niuLog, "NIU input byte %d %03o\n", mp->ibytes, in);
 #endif
                     // Connection has data -- assemble it and see if we have
@@ -463,8 +463,10 @@ static void niuInIo(void)
                         if ((in & 0200) == 0)
                             {
                             // Sequence error, drop the byte
+#if DEBUG
                             fprintf(niuLog, "niu input sequence error, second byte %03o, port %d\n",
                                     in, port);
+#endif
                             continue;
                             }
                         mp->currInput |= (in & 0177);
@@ -479,8 +481,10 @@ static void niuInIo(void)
                         if ((in & 370) != 0)
                             {
                             // sequence error, drop the byte
+#if DEBUG
                             fprintf(niuLog, "niu input sequence error, first byte %03o, port %d\n",
                                     in, port);
+#endif
                             continue;
                             }
                         mp->currInput = in << 7;
@@ -549,7 +553,7 @@ static void niuOutIo(void)
         frameStart = FALSE;
         // first word of the triple
         activeChannel->full = FALSE;
-        #ifdef DEBUG
+        #if DEBUG
         if ((d & 06000) != 04000)
             {
             fprintf(niuLog, "NIU output out of sync, first word %04o\n", d);
@@ -564,7 +568,7 @@ static void niuOutIo(void)
     if (obytes == 1)
         {
         // second word of the triple
-        #ifdef DEBUG
+        #if DEBUG
         if ((d & 06001) != 0)
             {
             fprintf(niuLog, "NIU output out of sync, second word %04o\n", d);
@@ -576,7 +580,7 @@ static void niuOutIo(void)
         return;
         }
     // Third word of the triple
-    #ifdef DEBUG
+    #if DEBUG
     if ((d & 04000) != 0)
         {
         fprintf(niuLog, "NIU output out of sync, third word %04o\n", d);
@@ -1028,7 +1032,7 @@ static void niuSend(int stat, int word)
         data[0] = word >> 12;
         data[1] = ((word >> 6) & 077) | 0200;
         data[2] = (word & 077) | 0300;
-#ifdef DEBUG
+#if DEBUG
         fprintf (niuLog, "NIU output %03o %03o %03o\n",
                 data[0], data[1], data[2]);
 #endif
