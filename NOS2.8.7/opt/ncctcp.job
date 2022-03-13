@@ -2,7 +2,10 @@
 ~*  This job builds the SES product. It assumes that the
 ~*  contents of the SES PFDUMP tape have been loaded to
 ~*  the SES catalog, and it edits the SES system binaries
-~*  into the PRODUCT file.
+~*  into the PRODUCT file and adds directives to the
+~*  DIRFILE file specifying that ULIB/CCTCPIO should be
+~*  inserted into library 4, and the deadstart file library
+~*  number of the TCP/IP applications.
 ~*
 NCCTCP.
 $USER,INSTALL,INSTALL.
@@ -12,7 +15,8 @@ $SETASL,*.
 $SETJSL,*.
 $GET,XSES/UN=SES.
 XSES.
-$ASSIGN,${1},TAPE,D=GE,LB=KU,F=I,PO=R.
+$COPYBR,INPUT,DIR,2.
+$ASSIGN,${2},TAPE,D=GE,LB=KU,F=I,PO=R.
 $COPYBF,TAPE,TCPMAKE.
 $REPLACE,TCPMAKE.
 $PURGE,TCPBASE/NA.
@@ -29,9 +33,10 @@ $COPYBR,REXEC,LGO.
 $COPYBR,REXECS,LGO.
 $COPYBR,SMTPI,LGO.
 $COPYBR,SMTPS,LGO.
-$REWIND,LGO.
-$ATTACH,PRODUCT/M=W,WB.
+$REWIND,LGO,DIR.
+$ATTACH,PRODUCT,DIRFILE/M=W,WB.
 $LIBEDIT,P=PRODUCT,B=LGO,I=0,C.
+$LIBEDIT,P=DIRFILE,B=DIR,I=0,C.
 ***
 *** NCCTCP COMPLETE
 ***
@@ -39,3 +44,9 @@ EXIT.
 ***
 *** NCCTCP FAILED
 ***
+~eor
+CCTCPIO
+*ADD LIB4,ULIB/CCTCPIO
+~eor
+NCCTCP
+*ADD LIB${1},ABS/HTF-ABS/SMTPS

@@ -1,7 +1,8 @@
 ~*
-~* This job assembles a collection of console games and
-~* utilities and creates a new deadstart tape containing
-~* them.
+~*  This job assembles a collection of console games and
+~*  utilities, and it edits them into the PRODUCT file and
+~*  adds a directive to the DIRFILE file specifying the
+~*  deadstart file library number of CGAMES.
 ~*
 CGAMES.
 $USER,INSTALL,INSTALL.
@@ -9,16 +10,19 @@ $NORERUN.
 $SETASL,*.
 $SETJSL,*.
 $SETTL,*.
-$ATTACH,OPL=OPL871.
+$COPYBR,INPUT,DIR.
 $COPYBR,INPUT,MODIN.
 $COPYBF,INPUT,CGAMES.
 $REWIND,CGAMES,MODIN.
+$ATTACH,OPL=OPL871.
 $MODIFY,P=0,N=TMPPL,C=0,F,Z./*CREATE CGAMES
 $MODIFY,P=TMPPL,I=MODIN.
 $REWIND,COMPILE.
-$COMPASS,I,S,S=NOSTEXT,S=PSSTEXT.
-$ATTACH,PRODUCT/M=W,WB.
-$LIBEDIT,P=PRODUCT,I=0,C.
+$COMPASS,I,L=0,S,S=NOSTEXT,S=PSSTEXT.
+$ATTACH,PRODUCT,DIRFILE/M=W,WB.
+$REWIND,LGO,DIR.
+$LIBEDIT,P=PRODUCT,B=LGO,I=0,C.
+$LIBEDIT,P=DIRFILE,B=DIR,I=0,C.
 ***
 *** CGAMES COMPLETE
 ***
@@ -26,6 +30,9 @@ EXIT.
 ***
 *** CGAMES FAILED
 ***
+~eor
+CGAMES
+*ADD LIB${1},PP/EYE-PP/DUD
 ~eor
 *OPLFILE OPL
 *EDIT EYE

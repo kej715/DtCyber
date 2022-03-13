@@ -2,7 +2,9 @@
 ~*  This job builds the SES product. It assumes that the
 ~*  contents of the SES PFDUMP tape have been loaded to
 ~*  the SES catalog, and it edits the SES system binaries
-~*  into the PRODUCT file.
+~*  into the PRODUCT file and adds a directive to the
+~*  DIRFILE file specifying the deadstart file library
+~*  number of SES.
 ~*
 SES.
 $USER,INSTALL,INSTALL.
@@ -10,12 +12,14 @@ $NORERUN.
 $SETTL,*.
 $SETASL,*.
 $SETJSL,*.
-$ATTACH,PRODUCT/M=W,WB.
+$ATTACH,PRODUCT,DIRFILE/M=W,WB.
 $ATTACH,NEWSES,SESBINS/UN=SES.
+$COPYBR,INPUT,DIR.
 $COPY,NEWSES,LGO.
 $COPY,SESBINS,LGO.
-$REWIND,LGO.
+$REWIND,LGO,DIR.
 $LIBEDIT,P=PRODUCT,B=LGO,I=0,C.
+$LIBEDIT,P=DIRFILE,B=DIR,I=0,C.
 ***
 *** SES COMPLETE
 ***
@@ -23,3 +27,6 @@ EXIT.
 ***
 *** SES FAILED
 ***
+~eor
+SES
+*ADD LIB${1},ABS/SES-ABS/EDT

@@ -16,7 +16,11 @@ if { $prod == "list" } {
         set line [gets $f]
         if { [eof $f] } { exit }
         set tokens [split $line " "]
-        send_user "[lindex $tokens 0] : [join [lrange $tokens 4 end]]\n"
+        if { [lindex $tokens 0] == "*" } {
+            send_user "$line\n"
+        } else {
+            send_user "[lindex $tokens 0] : [join [lrange $tokens 5 end]]\n"
+        }
     }
 }
 while { 1 } {
@@ -29,8 +33,9 @@ while { 1 } {
     if { $prod == [lindex $tokens 0] } {
         set pre [lindex $tokens 1]
         set post [lindex $tokens 2]
-        set url [lindex $tokens 3]
-        set desc [join [lrange $tokens 4 end]]
+        set lib [lindex $tokens 3]
+        set url [lindex $tokens 4]
+        set desc [join [lrange $tokens 5 end]]
         break
     }
 }
@@ -63,9 +68,9 @@ if { $pre != "*" } {
 set jobpath "opt/$prod.job"
 send_user "\nRun $jobname build job\n"
 if { $url != "*" } {
-    load_job 12 4 $jobpath,51
+    load_job 12 4 $jobpath,$lib,51
 } else {
-    load_job 12 4 $jobpath
+    load_job 12 4 $jobpath,$lib
 }
 log_user 0
 check_job $jobname

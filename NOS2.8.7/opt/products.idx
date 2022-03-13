@@ -1,9 +1,19 @@
-atf nos.pre nos.post * Rebuild NOS Automated Cartridge Tape Facility (dependency: nam5)
-cdcs2 nos.pre nos.post * CYBER Database Control System Version 2
-cgames * * * NOS Console Games (EYE, KAL, LIFE, LUNAR, MIC, PAC, SNK, TTT)
-nam5 nos.pre nos.post * Rebuild NOS Network Access Method
-nos nos.pre nos.post * Rebuild NOS 2.8.7 Base Operating System
-ncctcp * ncctcp.post https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1 Nostalgic Computing Center TCP/IP Applications (dependency: ses)
-qu3 nos.pre nos.post * Query Update Utility Version 3
-ses ses.pre * https://www.dropbox.com/s/ome99ezh4jhz108/SES.tap?dl=1 Software Engineering Services Tools
-tcph nos.pre nos.post * Rebuild NOS FTP Client and Server (dependency: nam5)
+*
+*  Standard CDC products provided in base system
+*
+atf nos.pre nos.post 8 * Automated Cartridge Tape Facility (dependency: nam5)
+iaf nos.pre nos.post 30 * IAF (InterActive Facility) subsystem
+nam5 nos.pre nos.post 39 * Network Access Method
+nos nos.pre nos.post 3 * NOS 2.8.7 Base Operating System
+tcph nos.pre nos.post 55 * FTP Client and Server (dependency: nam5)
+*
+*  Optional CDC products
+*
+cdcs2 nos.pre nos.post 14 * CYBER Database Control System Version 2
+qu3 nos.pre nos.post 47 * Query Update Utility Version 3
+ses ses.pre * 64 https://www.dropbox.com/s/ome99ezh4jhz108/SES.tap?dl=1 Software Engineering Services Tools
+*
+*  Optional 3rd-Party products
+*
+cgames * * 66 * NOS Console Games (EYE, KAL, LIFE, LUNAR, MIC, PAC, SNK, TTT)
+ncctcp * ncctcp.post 65 https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1 Nostalgic Computing Center TCP/IP Applications (dependency: ses)

@@ -1,10 +1,14 @@
 ~*
-~*  This job creates a new deadstart tape. It uses a LIBEDIT to
-~*  edit the contents of the PRODUCT file into an existing
-~*  deadstart tape image, and then it copies the resulting
-~*  file to a new deadstart tape. The equipment numbers of the
-~*  tape drive containing the old and new tapes are passed
-~*  as parameters.
+~*  This job creates a new deadstart tape. First, it compares
+~*  ADD directives in DIRFILE against the contents of the
+~*  old deadstart file to determine whether the old deadstart
+~*  file already contains sufficient libraries to accommodate the
+~*  content that will be inserted, and it uses LIBEDIT to add
+~*  empty libraries if necessary. Next, it uses LIBEDIT to
+~*  edit the contents of the PRODUCT file into the old deadstart
+~*  file, and then it copies the resulting file to a new deadstart
+~*  tape. The equipment numbers of the tape drive containing the
+~*  old and new tapes are passed as parameters.
 ~*
 MAKEDST.
 $USER,INSTALL,INSTALL.
@@ -13,9 +17,26 @@ $SETTL,*.
 $SETASL,*.
 $SETJSL,*.
 $ASSIGN,${1},TAPE,D=GE,LB=KU,F=I,PO=R.
-$ATTACH,PRODUCT.
-$LIBEDIT,P=TAPE,B=PRODUCT,I=0.
+$COPY,TAPE,ODS.
 $RETURN,TAPE.
+$CATALOG,ODS,N,R,L=SYSCAT.
+$ATTACH,PRODUCT,DIRFILE/WB.
+$MODIFY,P=0,F,C=IN,Z./*CREATE,DIRFILE/*NOSEQ
+$XEDIT,SYSCAT,I=0,L=XEDLIST.L/ LIBRARY = /*;Q
+$REWIND,IN,XEDLIST.
+$FTN5,L=0.
+LGO.
+$IF,FILE(BDIR,AS),ADDLIBS.
+  $REWIND,BDIR.
+  $LIBEDIT,P=ODS,B=0,I=BDIR.
+  $RETURN,ODS.
+  $RENAME,ODS=NEW.
+  $REWIND,ODS.
+$ENDIF,ADDLIBS.
+$SKIPEI,IN.
+$NOTE,IN,NR./*BUILD,SYSTEM
+$PACK,IN.
+$LIBEDIT,P=ODS,B=PRODUCT,I=IN.
 $ASSIGN,${2},TAPE,D=GE,LB=KU,F=I,PO=W.
 $COPY,NEW,TAPE.
 ***
@@ -25,3 +46,65 @@ EXIT.
 ***
 *** MAKEDST FAILED
 ***
+~eor
+      PROGRAM LIBDIFF
+C$    COLLATE(FIXED)
+      IMPLICIT INTEGER (A-Z)
+      CHARACTER*1   C
+      CHARACTER*120 LINE
+C
+C  OPEN FILE NAMED 'IN' AND FIND THE HIGHEST REFERENCED
+C  LIBRARY NUMBER
+C
+      Z = ICHAR('0')
+      LIBMAX1 = 0
+      OPEN(UNIT=1,FILE='IN')
+ 10   CONTINUE
+      READ(1,'(A)',END=30) LINE
+      IF (LINE(1:8).NE.'*ADD LIB') GOTO 10
+      LIBNUM = 0
+      I = 9
+ 20   CONTINUE
+      C = LINE(I:I)
+      I = I + 1
+      IF (C.GE.'0'.AND.C.LE.'9') THEN
+        LIBNUM = (LIBNUM * 10) + (ICHAR(C) - Z)
+        GOTO 20
+      ENDIF
+      IF (LIBNUM.GT.LIBMAX1) LIBMAX1 = LIBNUM
+      GOTO 10
+ 30   CONTINUE
+C
+C  OPEN FILE NAMED 'XEDLIST' AND FIND THE HIGHEST NUMBERED LIBRARY
+C
+      LIBMAX2 = 0
+      OPEN(UNIT=2,FILE='XEDLIST')
+ 40   CONTINUE
+      READ(2,'(A)',END=60) LINE
+      IF (LINE(41:51).NE.' LIBRARY = ') GOTO 40
+      LIBNUM = 0
+      DO 50 I = 57, 59
+        C = LINE(I:I)
+        IF (C.GE.'0'.AND.C.LE.'9') THEN
+          LIBNUM = (LIBNUM * 10) + (ICHAR(C) - Z)
+        ENDIF
+ 50   CONTINUE
+      IF (LIBNUM.GT.LIBMAX2) LIBMAX2 = LIBNUM
+      GOTO 40
+ 60   CONTINUE
+C
+C  IF LIBMAX1 (HIGHEST REFERENCED LIBRARY IN 'IN') IS GREATER THAN
+C  THE HIGHEST NUMBERED LIBRARY IN 'XEDLIST', WRITE LIBEDIT DIRECTIVES
+C  THAT WILL APPEND EMPTY LIBRARIES TO RESOLVE THE DIFFERENCE
+C
+      IF (LIBMAX1.GT.LIBMAX2) THEN
+        OPEN(UNIT=3,FILE='BDIR')
+ 70     CONTINUE
+        IF (LIBMAX1.GT.LIBMAX2) THEN
+          WRITE(3, '(A)') '*B *,0,0,0,0'
+          LIBMAX2 = LIBMAX2 + 4
+          GOTO 70
+        ENDIF
+      ENDIF
+      STOP
+      END
