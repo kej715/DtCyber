@@ -1,36 +1,27 @@
 {
-"MAILER":
+"CENSUS":
   {
-  "description":"UMass Mailer permanent files tape",
-  "owner":"INSTALL",
-  "url":"https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1",
+  "description":"1990 U.S. Census county-to-county commuting flows",
+  "owner":"LIBRARY",
+  "url":"https://www.dropbox.com/s/ttjzwgdyyg0ewz3/census.tap?dl=1",
   "labeled":true,
   "writeEnabled":false,
-  "format":"I",
+  "userOwned":false,
+  "systemVsn":true,
+  "format":"LI",
   "access":"PUBLIC",
   "readOnly":true,
   "listable":true
   },
-"SES000":
+"DDN000":
   {
-  "description":"SES PFDUMP tape",
-  "owner":"INSTALL",
-  "physicalName":"SES",
-  "url": "https://www.dropbox.com/s/ome99ezh4jhz108/SES.tap?dl=1",
-  "labeled":false,
-  "writeEnabled":false,
-  "format":"I",
-  "access":"PUBLIC",
-  "readOnly":true,
-  "listable":true
-  },
-"Y2K871":
-  {
-  "description":"Y2K mods for NOS 2.8.7",
-  "owner":"INSTALL",
-  "url": "https://www.dropbox.com/s/wzzcsanlf7doofb/y2k.tap?dl=1",
+  "description":"ICEM DDN model of SPACELAB",
+  "owner":"LIBRARY",
+  "url":"https://www.dropbox.com/s/ycx2ax1n6nsbi2z/spacelab.tap?dl=1",
   "labeled":true,
   "writeEnabled":false,
+  "userOwned":false,
+  "systemVsn":true,
   "format":"I",
   "access":"PUBLIC",
   "readOnly":true,
