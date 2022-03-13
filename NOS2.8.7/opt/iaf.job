@@ -1,0 +1,20 @@
+~*
+~*  This job builds the IAF subsystem.
+~*
+IAF.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$NOEXIT.
+$TMSDEF,TO=F.
+$ONEXIT.
+$BEGIN,IAF,INSTALL.
+***
+*** IAF COMPLETE
+***
+EXIT.
+***
+*** IAF FAILED
+***
