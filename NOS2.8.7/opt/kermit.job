@@ -1,0 +1,36 @@
+~*
+~*  This job builds the KERMIT product. It edits the KERMIT binary
+~*  into the PRODUCT file and inserts a directive into the DIRFILE
+~*  file specifying into which deadstart file library KERMIT will
+~*  be inserted.
+~*
+KERMIT.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$COPYBR,INPUT,DIR.
+$ASSIGN,${2},TAPE,D=GE,LB=KU,F=I,PO=R.
+$COPYBF,TAPE,BUILD.
+$COPYBF,TAPE,KERMMOD.
+$PURGE,KERMHLP/NA.
+$DEFINE,KERMHLP.
+$COPYBF,TAPE,KERMHLP.
+$COPY,TAPE,KERMUPL.
+$REWIND,*.
+BUILD.
+$REWIND,KERMIT,DIR.
+$ATTACH,PRODUCT,DIRFILE/M=W,WB.
+$LIBEDIT,P=PRODUCT,B=KERMIT,I=0,C.
+$LIBEDIT,P=DIRFILE,B=DIR,I=0,C.
+***
+*** KERMIT COMPLETE
+***
+EXIT.
+***
+*** KERMIT FAILED
+***
+~eor
+KERMIT
+*ADD LIB${1},ABS/KERMIT-OVL/KRM1300
