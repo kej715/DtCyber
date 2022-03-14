@@ -1,0 +1,33 @@
+~*
+~*  This job builds the ALGOL5 product. It edits the ALGOL5
+~*  binaries into the PRODUCT file and adds directives to the
+~*  DIRFILE file specifying that ULIB/ALG5LIB should be
+~*  inserted into library 4, and the deadstart file library
+~*  number of the ALGOL5 executable and overlays.
+~*
+ALGOL5.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$COPYBR,INPUT,DIR,2.
+$ASSIGN,${2},TAPE,D=GE,LB=KU,F=I,PO=R.
+$COPY,TAPE,LGO.
+$REWIND,LGO,DIR.
+$ATTACH,PRODUCT,DIRFILE/M=W,WB.
+$LIBEDIT,P=PRODUCT,B=LGO,I=0,C.
+$LIBEDIT,P=DIRFILE,B=DIR,I=0,C.
+***
+*** ALGOL5 COMPLETE
+***
+EXIT.
+***
+*** ALGOL5 FAILED
+***
+~eor
+ALG5LIB
+*ADD LIB4,ULIB/ALG5LIB
+~eor
+ALGOL5
+*ADD LIB${1},ABS/ALGOL5-OVL/A60$ST$
