@@ -9,6 +9,7 @@ tcph nos.pre nos.post 55 * FTP Client and Server (dependency: nam5)
 *
 *  Optional CDC products
 *
+algol68 * * 68 https://www.dropbox.com/s/6uo27ja4r9twaxj/algol68.tap?dl=1 ALGOL 68
 cdcs2 nos.pre nos.post 14 * CYBER Database Control System Version 2
 qu3 nos.pre nos.post 47 * Query Update Utility Version 3
 ses ses.pre * 64 https://www.dropbox.com/s/ome99ezh4jhz108/SES.tap?dl=1 Software Engineering Services Tools
@@ -18,3 +19,5 @@ ses ses.pre * 64 https://www.dropbox.com/s/ome99ezh4jhz108/SES.tap?dl=1 Software
 cgames * * 66 * NOS Console Games (EYE, KAL, LIFE, LUNAR, MIC, PAC, SNK, TTT)
 kermit * kermit.post 67 https://www.dropbox.com/s/p819tmvs91veoiv/kermit.tap?dl=1 Kermit file exchange utility
 ncctcp * ncctcp.post 65 https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1 Nostalgic Computing Center TCP/IP Applications (dependency: ses)
+snobol * snobol.post 69 https://www.dropbox.com/s/4q4thkaghi19sro/snobol.tap?dl=1 CAL 6000 SNOBOL
+utlisp * utlisp.post 70 https://www.dropbox.com/s/0wcq8e7m379ivyw/utlisp.tap?dl=1 University of Texas LISP
