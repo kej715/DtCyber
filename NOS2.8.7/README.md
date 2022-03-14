@@ -72,9 +72,9 @@ operating system is ready for you to enter commands. You may also login using
 **GUEST** as an ordinary, non-privileged user account.
 
 That's it. You have a fully operational Control Data Cyber 865 supercomputer
-running the NOS 2.8.7 operating system, complete with APL, COBOL, FORTRAN IV and V,
-PASCAL, SYMPL, and COMPASS assembly language. Welcome back to supercomputing in the
-1980's!
+running the NOS 2.8.7 operating system, complete with APL, BASIC, COBOL, FORTRAN IV
+and V, PASCAL, SYMPL, and COMPASS assembly language. Welcome back to supercomputing
+in the 1980's!
 
 ## Preparing for Customization
 The NOS 2.8.7 installation tape images contain full source code and build procedures
