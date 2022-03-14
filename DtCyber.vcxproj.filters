@@ -181,6 +181,9 @@
     <ClCompile Include="time.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="niu.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="const.h">
