@@ -10,13 +10,6 @@ proc int_handler {} {
 set DtCyber::printer_file "LP5xx_C12_E5"
 set DtCyber::port "6666"
 
-# Start the Stk simulator
-if {[fork] == 0} {
-    disconnect
-    system "./start-stk.sh"
-    exit
-}
-
 DtCyber::connect 
 
 # Update the MAG startup job and create the TMS catalog
