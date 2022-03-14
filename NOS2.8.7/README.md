@@ -25,6 +25,9 @@ similar tool to uncompress the files before they can be used.
 - **expect**. Automated installation of NOS 2.8.7 on DtCyber is accomplished using
 [expect](https://core.tcl-lang.org/expect/index). You will need to install this tool,
 if you don't have it already.
+- **netcat**. The *expect* scripts providing automation use the *netcat* tool (*nc*
+command) to communicate with *DtCyber* while it is running. You will need to install
+this tool, if you don't have it already.
 - **Privileged TCP ports**. The instance of *DtCyber* used in this process is
 configured by default to use standard TCP ports for services such as Telnet (port 23)
 and FTP (ports 21 and 22). These are privileged port numbers that will require you to
