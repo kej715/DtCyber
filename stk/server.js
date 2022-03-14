@@ -1,8 +1,12 @@
 const fs = require("fs");
 const http = require("http");
+const process = require("process");
 const PortMapper = require("./portmapper");
 const StkCSI = require("./stkcsi");
 const url = require("url");
+
+fs.writeFileSync("pid", `${process.pid}\n`);
+console.log(`${new Date().toLocaleString()} PID is ${process.pid}`);
 
 const configFile = (process.argv.length > 2) ? process.argv[2] : "config.json";
 const config = JSON.parse(fs.readFileSync(configFile));
