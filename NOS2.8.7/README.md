@@ -43,7 +43,7 @@ Windows, you will probably need to enable the *dtcyber* application to use TCP p
 21, 22, and 23 too.  The process initiated by the *expect* command will take some
 time to complete, perhaps as much as 15 - 20 minutes, depending upon your host
 system's speed. You will see *DtCyber* start, and NOS 2.8.7 will be deadstarted and
-installed. The system will be shutdown gracefull when the installation process has
+installed. The system will be shutdown gracefully when the installation process has
 completed.
 
 | OS           | Commands                                       |
