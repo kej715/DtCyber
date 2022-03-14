@@ -1,0 +1,17 @@
+#!/bin/sh
+# start and stop the StorageTek 4400 simulator
+cd ../stk
+
+case "$1" in
+  start)
+        npm start >stk.log 2>&1 &
+	;;
+  stop)
+        kill `cat pid`
+	;;
+  *)
+	echo "Usage: $0 {start|stop}"
+	exit 1
+esac
+
+exit 0
