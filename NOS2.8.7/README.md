@@ -54,12 +54,12 @@ completed.
 | Windows:     | `copy ..\dtcyber dtcyber`                      |
 |              | `expect first-install.exp`                     |
 
-After step 2 has completed, NOS 2.8.7 is fully installed and ready to use. Enter the
-following command to restart *DtCyber* and bring up the freshly installed operating
-system. This is the usual way to start *DtCyber* after the initial installation of
-NOS 2.8.7. The system should deadstart as it did during the initial installation.
-However, it should start the **NAM** (Network Access Method) and **IAF** (InterActive
-Facility) subsystems automatically too.
+After `first-install.exp` completes, NOS 2.8.7 is fully installed and ready to use.
+Enter the following command to restart *DtCyber* and bring up the freshly installed
+operating system. This is the usual way to start *DtCyber* after the initial
+installation of NOS 2.8.7. The system should deadstart as it did during the initial
+installation. However, it should start the **NAM** (Network Access Method) and
+**IAF** (InterActive Facility) subsystems automatically too.
 
 | OS           | Command           |
 |--------------|-------------------|
