@@ -97,20 +97,13 @@ execute the following command from this directory while DtCyber is running NOS 2
 `prep-customization.exp` executes *SYSGEN(SOURCE)* to load operating system source
 code and build procedures on the INSTALL user's account, and then it submits two
 batch jobs from from the INSTALL user to set up for building the operating system
-and to apply initial corrective code and base modifications to OS source program
+and to apply initial corrective code and base modifications to the OS source program
 library. It will take a few minutes for the script to complete, so be patient and watch it run.
-
->Note that this and the script for building optional products, described next,
-require that you have [netcat](https://en.wikipedia.org/wiki/Netcat) installed on
-your host system. MacOS and most Linux distributions include it. You will need to
-install it yourself on Windows, if you don't have it already.
 
 ## Building Optional Products
 A script named `build-product.exp` enables you to build optional software products
 for NOS 2.8.7. It also enables you to rebuild the base operating system itself and
-other products provided on the initial deadstart tape. `build-product.exp` is
-designed to download tape images automatically from public libraries on the web, as
-needed.
+other products provided on the initial deadstart tape. `build-product.exp` will download tape images automatically from public libraries on the web, as needed.
 
 To reveal a list of products that `build-product.exp` can build, enter the following
 command:
@@ -120,6 +113,10 @@ command:
 Each line displayed begins with a product name which is followed by a short description of the product. To build a product, call `build-product.exp` as in:
 
 >`expect build-product.exp` *product-name*
+
+For example:
+
+>`expect build-product.exp algol68`
 
 #### Standard CDC Products
 Build scripts are currently available for the following standard CDC products.
@@ -164,17 +161,17 @@ The following build scripts make products from 3rd-party sources available.
 |---------|-------------|
 | cgames  | NOS Console Games (EYE, KAL, LIFE, LUNAR, MIC, PAC, SNK, TTT) |
 | [kermit](https://www.dropbox.com/s/p819tmvs91veoiv/kermit.tap?dl=1) | Kermit file exchange utility |
-| [ncctcp](https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1) | TCP/IP Applications (HTTP, NSQUERY, SMTP, REXEC) (dependency: ses) |
+| [ncctcp](https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1) | TCP/IP Applications (HTTP, NSQUERY, REXEC, SMTP) (dependency: ses) |
 
 These lists will grow, so revisit this page to see what new products have been added,
-and use `git pull` to update the lists in your local repository.
+and use `git pull` to update the lists in your local repository clone.
 
 ## Creating a New Deadstart Tape  
 The jobs initiated by `build-product.exp` insert the binaries they produce into the
 direct access file named `PRODUCT` in the catalog of user `INSTALL`, and they also
 update the file named `DIRFILE` to specify the system libraries with which the
 binaries are associated. To create a new deadstart tape that includes the contents
-of `PRODUCT` execute the following command:
+of `PRODUCT`, execute the following command:
 
 >`expect make-ds-tape.exp`
 
