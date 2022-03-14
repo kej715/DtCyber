@@ -45,8 +45,15 @@ provided for Microsoft Visual Studio too.
 
 For example, to build the simulator on MacOS, execute the following command:
 
->`make -f Makefile.macosx`
+>`make -f Makefile.macosx all`
 
-To build it on Windows, open the solution file (*DtCyber.sln*) in Visual Studio
-and build the project defined by it.
+The `all` target builds both *dtcyber* (the mainframe simulator) and *stk* (the
+StorageTek 4400 automated cartridge tape system simulator). If you want to build only *dtcyber*, execute either of the following commands:
+
+> `make -f Makefile.macosx dtcyber`
+
+> `make -f Makefile.macosx`
+
+To build *dtcyber* on Windows, open the solution file (*DtCyber.sln*) in Visual
+Studio and build the project defined by it.
  
