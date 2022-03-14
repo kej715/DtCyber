@@ -1,0 +1,37 @@
+~*
+~*  This job builds the SNOBOL interpreter. It edits the SNOBOL binary
+~*  into the PRODUCT file and inserts a directive into the DIRFILE
+~*  file specifying into which deadstart file library SNOBOL will
+~*  be inserted.
+~*
+SNOBOL.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$COPYBR,INPUT,DIR.
+$ASSIGN,${2},TAPE,D=GE,LB=KU,F=I,PO=R.
+$PURGE,SNODOC/NA.
+$DEFINE,SNODOC.
+$COPYBF,TAPE,SNODOC.
+$COPY,TAPE,SNOPL.
+$REWIND,*.
+$MODIFY,P=SNOPL,LO=E,F,I=0.
+$COMPASS,I,L=LIST,S=SYSTEXT,S=PSSTEXT.
+$LOAD,LGO.
+$NOGO,SNOABS.
+$REWIND,SNOABS,DIR.
+$ATTACH,PRODUCT,DIRFILE/M=W,WB.
+$LIBEDIT,P=PRODUCT,B=SNOABS,I=0,C.
+$LIBEDIT,P=DIRFILE,B=DIR,I=0,C.
+***
+*** SNOBOL COMPLETE
+***
+EXIT.
+***
+*** SNOBOL FAILED
+***
+~eor
+SNOBOL
+*ADD LIB${1},ABS/SNOBOL

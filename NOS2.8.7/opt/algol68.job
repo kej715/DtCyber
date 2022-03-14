@@ -1,0 +1,35 @@
+~*
+~*  This job builds the ALGOL68 product. It edits the ALGOL68
+~*  binaries into the PRODUCT file and adds directives to the
+~*  DIRFILE file specifying that ULIB/A68LIB should be
+~*  inserted into library 4, and the deadstart file library
+~*  number of the ALGOL68 executable and overlays.
+~*
+ALGOL68.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$COPYBR,INPUT,DIR,2.
+$ASSIGN,${2},TAPE,D=GE,LB=KU,F=I,PO=R.
+$COPYBR,TAPE,LGO,21.
+$SKIPR,TAPE.
+$COPY,TAPE,LGO.
+$REWIND,LGO,DIR.
+$ATTACH,PRODUCT,DIRFILE/M=W,WB.
+$LIBEDIT,P=PRODUCT,B=LGO,I=0,C.
+$LIBEDIT,P=DIRFILE,B=DIR,I=0,C.
+***
+*** ALGOL68 COMPLETE
+***
+EXIT.
+***
+*** ALGOL68 FAILED
+***
+~eor
+A68LIB
+*ADD LIB4,ULIB/A68LIB
+~eor
+ALGOL68
+*ADD LIB${1},TEXT/A68-OVL/TORBAS\

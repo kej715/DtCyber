@@ -1,0 +1,36 @@
+~*
+~*  This job builds the UT LISP product. It edits the UT LISP binary
+~*  into the PRODUCT file and inserts a directive into the DIRFILE
+~*  file specifying into which deadstart file library UT LISP will
+~*  be inserted.
+~*
+UTLISP.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$COPYBR,INPUT,DIR.
+$ASSIGN,${2},TAPE,D=GE,LB=KU,F=I,PO=R.
+$COPYBF,TAPE,BUILD.
+$COPYBF,TAPE,LISPMOD.
+$PURGE,LISPDOC/NA.
+$DEFINE,LISPDOC.
+$COPYBF,TAPE,LISPDOC.
+$COPY,TAPE,LISPPL.
+$REWIND,*.
+BUILD.
+$REWIND,LISPABS,DIR.
+$ATTACH,PRODUCT,DIRFILE/M=W,WB.
+$LIBEDIT,P=PRODUCT,B=LISPABS,I=0,C.
+$LIBEDIT,P=DIRFILE,B=DIR,I=0,C.
+***
+*** UTLISP COMPLETE
+***
+EXIT.
+***
+*** UTLISP FAILED
+***
+~eor
+UTLISP
+*ADD LIB${1},ABS/LISP
