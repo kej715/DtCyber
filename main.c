@@ -65,8 +65,10 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
-static void waitTerminationMessage(void);
+static void startHelpers(void);
+static void stopHelpers(void);
 static void tracePpuCalls(void);
+static void waitTerminationMessage(void);
 
 /*
 **  ----------------
@@ -167,6 +169,11 @@ int main(int argc, char **argv)
 #endif
 
     /*
+    **  Start helpers, if any
+    */
+    startHelpers();
+
+    /*
     **  Setup operator interface.
     */
     opInit();
@@ -240,6 +247,11 @@ int main(int argc, char **argv)
     ppTerminate();
     channelTerminate();
 
+    /*
+    **  Stop helpers, if any
+    */
+    stopHelpers();
+
     exit(0);
     }
 
@@ -251,6 +263,69 @@ int main(int argc, char **argv)
 **
 **--------------------------------------------------------------------------
 */
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Start helper processes.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void startHelpers(void)
+    {
+    char command[200];
+    char *line;
+    int rc;
+
+    if (initOpenHelpersSection() != 1) return;
+
+    while ((line = initGetNextLine()) != NULL)
+        {
+        sprintf(command, "%s start", line);
+        rc = system(command);
+        if (rc == 0)
+            {
+            printf("Started helper: %s\n", line);
+            }
+        else
+            {
+            printf("Failed to start helper \"%s\", rc = %d\n", line, rc);
+            }
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Stop helper processes.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void stopHelpers(void)
+    {
+    char command[200];
+    char *line;
+    int rc;
+
+    if (initOpenHelpersSection() != 1) return;
+
+    while ((line = initGetNextLine()) != NULL)
+        {
+        sprintf(command, "%s stop", line);
+        rc = system(command);
+        if (rc == 0)
+            {
+            printf("Stopped helper: %s\n", line);
+            }
+        else
+            {
+            printf("Failed to stop helper \"%s\", rc = %d\n", line, rc);
+            }
+        }
+    fflush(stdout);
+    }
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Trace SCOPE 3.1 PPU calls (debug only).

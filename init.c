@@ -65,6 +65,7 @@
 **  ---------------------------
 */
 static void initCyber(char *config);
+static void initHelpers(void);
 static void initNpuConnections(void);
 static void initOperator(void);
 static void initEquipment(void);
@@ -98,6 +99,7 @@ static long sectionStart;
 static char *startupFile = "cyber.ini";
 static char deadstart[80];
 static char equipment[80];
+static char helpers[80];
 static char npuConnections[80];
 static char operator[80];
 static long chCount;
@@ -170,6 +172,7 @@ void initStartup(char *config)
     initNpuConnections();
     initEquipment();
     initOperator();
+    initHelpers();
 
     if ((features & HasMaintenanceChannel) != 0)
         {
@@ -253,6 +256,26 @@ char *initGetNextLine(void)
     **  Found a non-blank line - return to caller.
     */
     return(lineBuffer);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Open the helpers section.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        -1 if error
+**                   0 if section not defined
+**                   1 if section opened
+**
+**------------------------------------------------------------------------*/
+int initOpenHelpersSection(void)
+    {
+    if (strlen(helpers) == 0)
+        return 0;
+    else if (initOpenSection(helpers))
+        return 1;
+    else
+        return -1;
     }
 
 /*--------------------------------------------------------------------------
@@ -546,6 +569,11 @@ static void initCyber(char *config)
             scrInit(ChStatusAndControl + 020);
             }
         }
+
+    /*
+    **  Get optional helpers section name.
+    */
+    initGetString("helpers", "", helpers, sizeof(helpers));
 
     /*
     **  Get optional NPU port definition section name.
@@ -1358,6 +1386,25 @@ static void initDeadstart(void)
         }
 
     deadstartCount = lineNo + 1;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Read and process helper definitions.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void initHelpers(void)
+    {
+    if (strlen(helpers) == 0) return;
+
+    if (initOpenHelpersSection() == -1)
+        {
+        fprintf(stderr, "Section [%s] not found in %s\n", helpers, startupFile);
+        exit(1);
+        }
     }
 
 /*--------------------------------------------------------------------------

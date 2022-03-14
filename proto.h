@@ -40,6 +40,7 @@
 void initStartup(char *);
 u32 initConvertEndian(u32 value);
 char *initGetNextLine(void);
+int initOpenHelpersSection(void);
 int initOpenOperatorSection(void);
 
 /*
