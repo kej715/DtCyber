@@ -1,0 +1,45 @@
+~*
+~*  This job builds the I8080 (Intel 8080) cross-tools, CPM80,
+~*  INTRP80, MAC80, and PLM80. It stores the executables and
+~*  supporting files in the LIBRARY catalog, edits procedures
+~*  to run the tools into the PRODUCT file, and inserts a directive
+~*  into the DIRFILE file specifying into which deadstart file
+~*  library the procedures will be inserted.
+~*
+I8080.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$COPYBR,INPUT,DIR.
+$ASSIGN,${2},TAPE,D=GE,LB=KU,F=I,PO=R.
+$PURGE,CPMBOOT,CPMDSKA,CPMDSKB,CPMDSKI/NA.
+$PURGE,INTP80X,MAC80X,PLM1X,PLM2X/NA.
+$DEFINE,CPMDSKA,CPMDSKB,CPMDSKI/CT=PU.
+$COPYBR,TAPE,BUILD.
+$SKIPF,TAPE.
+$COPYBF,TAPE,I8080PL.
+$COPYBR,TAPE,PROCS,4.
+$SKIPF,TAPE.
+$COPYBR,TAPE,CPMBOOT.
+$COPYBR,TAPE,CPMDSKA.
+$COPYBR,TAPE,CPMDSKB.
+$COPYBR,TAPE,CPMDSKI.
+$SAVE,CPMBOOT/CT=PU.
+$REWIND,*.
+BUILD.
+$SAVE,INTP80X,MAC80X,PLM1X,PLM2X/CT=PU.
+$ATTACH,PRODUCT,DIRFILE/M=W,WB.
+$LIBEDIT,P=PRODUCT,B=PROCS,I=0,C.
+$LIBEDIT,P=DIRFILE,B=DIR,I=0,C.
+***
+*** I8080 COMPLETE
+***
+EXIT.
+***
+*** I8080 FAILED
+***
+~eor
+I8080
+*ADD LIB${1},PROC/CPM80-PROC/PLM80
