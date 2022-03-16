@@ -46,7 +46,7 @@ contain [JSON](https://www.json.org/json-en.html)-formatted text:
 ### config.json
 This file provides the simulator's base configuration. Its contents look like this:
 
->```
+```
 {
 "debug": false,
 "httpServerPort": 4480,
@@ -79,7 +79,7 @@ default is `./cache`.
 This file defines all of the tape volumes known to the simulator. Typical contents
 look like this:
 
->```
+```
 {
 "CENSUS":
   {
@@ -169,7 +169,7 @@ TMS catalog with the simulator's volume configuration.
 
 The URL format to use in querying the web service is:
 
->```
+```
 http://<host>:<port>/volumes[?tfsp]
 ```
 
@@ -187,7 +187,7 @@ command can be used to obtain the volume configuration in plain text (suitable f
 
 and the contents of `tfsp-input.txt` would look similar to:
 
->```
+```
 VSN=CENSUS,OWNER=CENTER,SYSTEM=YES,SITE=ON,VT=AT,GO.
 USER=LIBRARY
 FILEV=CENSUS,AC=YES,CT=PUBLIC,D=AE,F=LI,LB=KL,M=READ,GO
@@ -205,7 +205,7 @@ JSON format:
 
 and the contents of `report.json` would look similar to:
 
->```
+```
 {
 "CENSUS":{
   "description":"1990 U.S. Census county-to-county commuting flows",
