@@ -405,7 +405,12 @@ class StkCSI extends Program {
         let fd = -1;
         try {
           if (typeof volume.path !== "undefined") {
-            fd = fs.openSync(`${this.tapeLibraryRoot}/${volume.path}`, volume.writeEnabled ? "r+" : "r", 0o666);
+            if (volume.path.startsWith("/")) {
+              fd = fs.openSync(`{volume.path}`, volume.writeEnabled ? "r+" : "r", 0o666);
+            }
+            else {
+              fd = fs.openSync(`${this.tapeLibraryRoot}/${volume.path}`, volume.writeEnabled ? "r+" : "r", 0o666);
+            }
           }
           else {
             fd = fs.openSync(`${this.tapeCacheRoot}/${volId}.tap`, volume.writeEnabled ? "r+" : "r", 0o666);
