@@ -223,7 +223,7 @@ class StkCSI extends Program {
     this.tapeCacheRoot = "./cache";
     this.tapeLibraryRoot = "./tapes";
     this.tapeServerClients = [];
-    this.tapeServerPort = 4401;
+    this.tapeServerPort = 4400;
   }
 
   dump(data) {
