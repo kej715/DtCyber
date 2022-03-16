@@ -135,14 +135,13 @@ typedef struct decCpControl
 */
 u32 traceMask = 0;
 u32 traceSequenceNo;
-FILE *devF;
 
 /*
 **  -----------------
 **  Private Variables
 **  -----------------
 */
-//static FILE *devF;
+static FILE *devF;
 //static FILE *cpuF;
 FILE *cpuF;
 static FILE **ppuF;

@@ -169,7 +169,6 @@ static void ppInterlock(PpWord func);
 PpSlot *ppu;
 PpSlot *activePpu;
 u8 ppuCount;
-FILE *devF;
 
 /*
 **  -----------------
