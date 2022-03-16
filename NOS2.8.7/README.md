@@ -18,10 +18,15 @@ is not usually provided, by default, with standard distributions of Git, so you 
 need to install it on your host system, if you don't have it already, and you might
 need to execute *git lfs pull* or *git lfs checkout* to inflate the large binary
 files properly before *DtCyber* can use them. See the [README](tapes/README.md) file
-in the [tapes](tapes) subdirectory for additioal details.
+in the [tapes](tapes) subdirectory for additional details.
 - **bunzip2**. The large binary files in the [tapes](tapes) subdirectory are
 delivered in the compressed **bz2** format. You will need to use *bunzip2* or a
 similar tool to uncompress the files before they can be used.
+- **curl**. The automated product build framework (see `build-product.exp` below)
+uses *curl* to download tape images from public libraries on the web, and *curl*
+is also used for communicating with the *StorageTek 4400* automated cartridge
+tape system simulator. You will need to install this tool, if you don't have it
+already.
 - **expect**. Automated installation of NOS 2.8.7 on DtCyber is accomplished using
 [expect](https://core.tcl-lang.org/expect/index). You will need to install this tool,
 if you don't have it already.
