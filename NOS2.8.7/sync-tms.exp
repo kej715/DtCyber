@@ -1,0 +1,18 @@
+#!/usr/local/bin/expect -f
+::tcl::tm::path add .
+package require DtCyber;
+namespace import DtCyber::*
+trap int_handler { SIGINT }
+
+proc int_handler {} {
+    error_condition "sigint recieved"
+}
+set DtCyber::printer_file "LP5xx_C12_E5"
+set DtCyber::port "6666"
+
+# Get the initial TMS catalog definition from Stk simulator
+system "curl -o files/TMS-catalog.txt 'http://localhost:4480/volumes?tfsp'"
+
+# load the catalog
+DtCyber::connect 
+run_job 12 4 "decks/load-tms-catalog.job"
