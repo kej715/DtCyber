@@ -24,9 +24,3 @@ dsd "MAG."
 
 # Validate INSTALL as a TMS administrator
 dis "TFSP,OP=Z./VALIDAT=INSTALL,GO"
-
-# Get the initial TMS catalog definition from Stk simulator
-system "curl -o files/TMS-catalog.txt 'http://localhost:4480/volumes?tfsp'"
-
-# load the catalog
-run_job 12 4 "decks/load-tms-catalog.job"
