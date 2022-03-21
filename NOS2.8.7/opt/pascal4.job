@@ -1,0 +1,6 @@
+~*
+~*  This job builds the Pascal4 product and optionally
+~*  inserts it into the PRODUCT and DIRFILE files.
+~*
+PASCAL4.
+~include pascal4-body.job,${1},${2}
