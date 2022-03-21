@@ -28,7 +28,7 @@ proc error_condition { cmd } {
 
 #wrapper for sending commands to dtcyber console
 proc console { cmd } {
-    if {$cmd eq "shutdown"} {
+    if {$cmd == "shutdown"} {
        send -- "shutdown\r"
        expect "Shutting down main thread"
        wait 
@@ -61,7 +61,7 @@ proc dis { cmds {ui 377777} } {
 
 #mount tape on unit if ring is specified it is mounted in write mode
 proc mount { unit tape {ring ""} } {
-    if {$ring eq ""} {
+    if {$ring == ""} {
         send -- "lt $unit,r,$tape\r"
         expect  {
             "Successfully loaded $tape" exp_continue
@@ -118,7 +118,7 @@ proc load_job { ch eq deck } {
 # Jobs that don't produce output to OUTPUT should contain a DAYFILE. control card.
 proc check_job { ident } {
     global printer
-    if { $printer eq "" } {
+    if { $printer == "" } {
         puts "Something went very wrong"
         exit 1
     }
@@ -134,20 +134,28 @@ proc check_job { ident } {
 }
 
 # load a job on a card reader and wait for it to complete
-proc run_job { ch eq deck } {
+proc run_job { ch eq deck {p1 ""} {p2 ""} } {
     set f [open $deck "r"]
     while {1} {
-      if {[gets $f line] < 0} {
+        if {[gets $f line] < 0} {
+            break
+        }
+        if {[regexp "^~" $line]} {
+            continue
+        }
+        regexp "^(\[A-Z0-9]+)" $line match jobname
         break
-      }
-      if {[regexp "^~" $line]} {
-        continue
-      }
-      regexp "^(\[^,.]*)" $line match jobname
-      break
     }
     close $f
-    load_job $ch $eq $deck
+    if { $p1 != "" } {
+        if { $p2 != "" } {
+            load_job $ch $eq $deck,$p1,$p2
+        } else {
+            load_job $ch $eq $deck,$p1
+        }
+    } else {
+        load_job $ch $eq $deck
+    }
     send_user "\n$jobname started\n"
     log_user 0
     check_job $jobname

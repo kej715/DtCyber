@@ -68,13 +68,10 @@ if { $pre != "*" } {
 set jobpath "opt/$prod.job"
 send_user "\nRun $jobname build job\n"
 if { $url != "*" } {
-    load_job 12 4 $jobpath,$lib,51
+    run_job 12 4 $jobpath $lib 51
 } else {
-    load_job 12 4 $jobpath,$lib
+    run_job 12 4 $jobpath $lib
 }
-log_user 0
-check_job $jobname
-log_user 1
 
 if { $post != "*" } {
     send_user "\nRun $jobname POST-build script\n"
