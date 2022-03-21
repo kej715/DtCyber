@@ -14,6 +14,8 @@ tcph nos.pre nos.post 55 * FTP Client and Server (dependency: nam5)
 *
 algol5 * * 64 https://www.dropbox.com/s/jy6bgj2zugz1wke/algol5.tap?dl=1 ALGOL 5 (ALGOL 60)
 algol68 * * 65 https://www.dropbox.com/s/6uo27ja4r9twaxj/algol68.tap?dl=1 ALGOL 68
+pascal4 * pascal4.post 43 https://www.dropbox.com/s/wsgz02lnrtayfiq/PASCAL6000V410.tap?dl=1 PASCAL-6000 V4.1.0 - replaces PASCAL/170
+pascal4-pf * pascal4.post 0 https://www.dropbox.com/s/wsgz02lnrtayfiq/PASCAL6000V410.tap?dl=1 PASCAL-6000 V4.1.0 - retains PASCAL/170, installs PASCAL4 on UN=LIBRARY only
 pl1 * * 66 https://www.dropbox.com/s/twbq0xpmkjoakzj/pl1.tap?dl=1 PL/I
 ses ses.pre * 67 https://www.dropbox.com/s/ome99ezh4jhz108/SES.tap?dl=1 CYBIL and Software Engineering Services tools
 snobol * snobol.post 68 https://www.dropbox.com/s/4q4thkaghi19sro/snobol.tap?dl=1 CAL 6000 SNOBOL
