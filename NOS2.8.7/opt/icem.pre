@@ -1,0 +1,6 @@
+dsd "\[UNLOAD,51."
+dsd "\[UNLOAD,52."
+dsd "\[!"
+mount "13,0,1" "opt/tapes/REL68.tap"
+mount "13,0,2" "opt/tapes/REL68C.tap"
+sleep 5
