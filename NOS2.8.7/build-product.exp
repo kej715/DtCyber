@@ -48,16 +48,28 @@ DtCyber::connect
 set jobname [string toupper $prod]
 send_user "\nStarting $jobname\n"
 send_user "$desc\n"
+set filetype ""
 
 if { $url != "*" } {
     send_user "Download tape image ...\n"
-    set tapepath "opt/tapes/$prod.tap"
+    set filename [lindex [split [lindex [split $url "/"] end] "?"] 0]
+    set filetype [lindex [split $filename "."] end]
+    set tapepath "opt/tapes/$filename"
     system "curl -L -o $tapepath '$url'"
 
-    dsd "\[UNLOAD,51."
-    dsd "\[!"
-    mount "13,0,1" $tapepath
-    sleep 5
+    if { $filetype == "zip" } {
+        set dir [pwd]
+        cd "opt/tapes"
+        system "unzip -o $filename"
+        cd $dir
+    }
+
+    if { $filetype == "tap" } {
+        dsd "\[UNLOAD,51."
+        dsd "\[!"
+        mount "13,0,1" $tapepath
+        sleep 5
+    }
 }
 
 if { $pre != "*" } {
@@ -66,11 +78,13 @@ if { $pre != "*" } {
 }
 
 set jobpath "opt/$prod.job"
-send_user "\nRun $jobname build job\n"
-if { $url != "*" } {
-    run_job 12 4 $jobpath $lib 51
-} else {
-    run_job 12 4 $jobpath $lib
+if { [file exists $jobpath] } {
+    send_user "\nRun $jobname build job\n"
+    if { $url != "*" } {
+        run_job 12 4 $jobpath $lib 51
+    } else {
+        run_job 12 4 $jobpath $lib
+    }
 }
 
 if { $post != "*" } {
@@ -78,7 +92,7 @@ if { $post != "*" } {
     source "opt/$post"
 }
 
-if { $url != "*" } {
+if { $url != "*" && $filetype == "tap" } {
     dsd "\[UNLOAD,51."
     dsd "\[!"
 }

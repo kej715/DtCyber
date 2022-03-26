@@ -52,7 +52,7 @@ proc dsd { cmd } {
 #start DIS and execute commands under a specified user index
 proc dis { cmds {ui 377777} } {
     dsd "X.DIS."
-    dsd "#1500#SUI,$ui."
+    dsd "#1000#SUI,$ui."
     foreach cmd [split $cmds ";"] {
         dsd $cmd
     }
