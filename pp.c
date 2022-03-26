@@ -23,6 +23,8 @@
 **--------------------------------------------------------------------------
 */
 
+#define PPDEBUG 0
+
 /*
 **  -------------
 **  Include Files
@@ -161,6 +163,10 @@ static u32 ppAdd18(u32 op1, u32 op2);
 static u32 ppSubtract18(u32 op1, u32 op2);
 static void ppInterlock(PpWord func);
 
+#if PPDEBUG
+static void ppValidateCmWrite(char *inst, u32 address, CpWord data);
+#endif
+
 /*
 **  ----------------
 **  Public Variables
@@ -251,6 +257,10 @@ static void (*decodePpuOpcode[])(void) =
     ppOpFNC     // 77
     };
 
+#if PPDEBUG
+static FILE *ppLog = NULL;
+#endif
+
 /*
 **--------------------------------------------------------------------------
 **
@@ -332,6 +342,13 @@ void ppInit(u8 count)
     **  Print a friendly message.
     */
     printf("PPs initialised (number of PPUs %o)\n", ppuCount);
+
+#if PPDEBUG
+    if (ppLog == NULL)
+        {
+        ppLog = fopen("pplog.txt", "wt");
+        }
+#endif
     }
 
 /*--------------------------------------------------------------------------
@@ -976,7 +993,7 @@ static void ppOpCRM(void)     // 61
         activePpu->regP = activePpu->mem[activePpu->regP] & Mask12;
         }
 
-    if (activePpu->regQ--)
+    if (activePpu->regQ > 0)
         {
         if ((activePpu->regA & Sign18) != 0 && (features & HasRelocationReg) != 0)
             {
@@ -987,14 +1004,23 @@ static void ppOpCRM(void)     // 61
             cpuPpReadMem(activePpu->regA & Mask18, &data);
             }
 
-        activePpu->mem[activePpu->regP++ & Mask12] = (PpWord)((data >> 48) & Mask12);
-        activePpu->mem[activePpu->regP++ & Mask12] = (PpWord)((data >> 36) & Mask12);
-        activePpu->mem[activePpu->regP++ & Mask12] = (PpWord)((data >> 24) & Mask12);
-        activePpu->mem[activePpu->regP++ & Mask12] = (PpWord)((data >> 12) & Mask12);
-        activePpu->mem[activePpu->regP++ & Mask12] = (PpWord)((data      ) & Mask12);
+        activePpu->mem[activePpu->regP] = (PpWord)((data >> 48) & Mask12);
+        PpIncrement(activePpu->regP);
 
-        activePpu->regA += 1;
-        activePpu->regA &= Mask18;
+        activePpu->mem[activePpu->regP] = (PpWord)((data >> 36) & Mask12);
+        PpIncrement(activePpu->regP);
+
+        activePpu->mem[activePpu->regP] = (PpWord)((data >> 24) & Mask12);
+        PpIncrement(activePpu->regP);
+
+        activePpu->mem[activePpu->regP] = (PpWord)((data >> 12) & Mask12);
+        PpIncrement(activePpu->regP);
+
+        activePpu->mem[activePpu->regP] = (PpWord)((data      ) & Mask12);
+        PpIncrement(activePpu->regP);
+
+        activePpu->regA = (activePpu->regA + 1) & Mask18;
+        PpDecrement(activePpu->regQ);
         }
 
     if (activePpu->regQ == 0)
@@ -1007,6 +1033,7 @@ static void ppOpCRM(void)     // 61
 
 static void ppOpCWD(void)     // 62
     {
+    u32 address;
     CpWord data;
 
     data  = activePpu->mem[opD++ & Mask12] & Mask12;
@@ -1025,16 +1052,21 @@ static void ppOpCWD(void)     // 62
 
     if ((activePpu->regA & Sign18) != 0 && (features & HasRelocationReg) != 0)
         {
-        cpuPpWriteMem(activePpu->regR + (activePpu->regA & Mask17), data);
+        address = activePpu->regR + (activePpu->regA & Mask17);
         }
     else
         {
-        cpuPpWriteMem(activePpu->regA & Mask18, data);
+        address = activePpu->regA & Mask18;
         }
+#if PPDEBUG
+    ppValidateCmWrite("CWD", address, data);
+#endif
+    cpuPpWriteMem(address, data);
     }
 
 static void ppOpCWM(void)     // 63
     {
+    u32 address;
     CpWord data;
 
     if (!activePpu->busy)
@@ -1048,33 +1080,42 @@ static void ppOpCWM(void)     // 63
         activePpu->regP = activePpu->mem[activePpu->regP] & Mask12;
         }
 
-    if (activePpu->regQ--)
+    if (activePpu->regQ > 0)
         {
-        data  = activePpu->mem[activePpu->regP++ & Mask12] & Mask12;
+        data  = activePpu->mem[activePpu->regP] & Mask12;
+        PpIncrement(activePpu->regP);
         data <<= 12;
 
-        data |= activePpu->mem[activePpu->regP++ & Mask12] & Mask12;
+        data |= activePpu->mem[activePpu->regP] & Mask12;
+        PpIncrement(activePpu->regP);
         data <<= 12;
 
-        data |= activePpu->mem[activePpu->regP++ & Mask12] & Mask12;
+        data |= activePpu->mem[activePpu->regP] & Mask12;
+        PpIncrement(activePpu->regP);
         data <<= 12;
 
-        data |= activePpu->mem[activePpu->regP++ & Mask12] & Mask12;
+        data |= activePpu->mem[activePpu->regP] & Mask12;
+        PpIncrement(activePpu->regP);
         data <<= 12;
 
-        data |= activePpu->mem[activePpu->regP++ & Mask12] & Mask12;
+        data |= activePpu->mem[activePpu->regP] & Mask12;
+        PpIncrement(activePpu->regP);
 
         if ((activePpu->regA & Sign18) != 0 && (features & HasRelocationReg) != 0)
             {
-            cpuPpWriteMem(activePpu->regR + (activePpu->regA & Mask17), data);
+            address = activePpu->regR + (activePpu->regA & Mask17);
             }
         else
             {
-            cpuPpWriteMem(activePpu->regA & Mask18, data);
+            address = activePpu->regA & Mask18;
             }
+#if PPDEBUG
+        ppValidateCmWrite("CWM", address, data);
+#endif
+        cpuPpWriteMem(address, data);
 
-        activePpu->regA += 1;
-        activePpu->regA &= Mask18;
+        activePpu->regA = (activePpu->regA + 1) & Mask18;
+        PpDecrement(activePpu->regQ);
         }
 
     if (activePpu->regQ == 0)
@@ -1617,5 +1658,79 @@ static void ppOpFNC(void)     // 77
     PpIncrement(activePpu->regP);
     activePpu->busy = FALSE;
     }
+
+#if PPDEBUG
+/*--------------------------------------------------------------------------
+**  Purpose:        Check that a write to CM appears to be legitimate.
+**                  This code is very specific to OS type and version, and
+**                  applies only to NOS 2.8.7 initially.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+#define CPA 00200
+#define PPC 07400
+#define FLSW 023
+
+static char *ppMonitored[] = {
+    "1AJ", "LDR", "LDQ", "TCS",
+    NULL
+};
+
+static void ppValidateCmWrite(char *inst, u32 address, CpWord data)
+    {
+    u8 cpn;
+    u32 fl;
+    int i;
+    u32 irAddress;
+    u32 nfl;
+    char *np;
+    char ppName[4];
+    u32 ra;
+    CpWord word;
+    u32 xpAddress;
+
+    if (activePpu->id < 2) return; // MTR and DSD are not checked
+    irAddress = PPC + ((activePpu->id) * 8);
+    word = cpMem[irAddress] & Mask60;
+    ppName[0] = cdcToAscii[(word >> 54) & 077];
+    ppName[1] = cdcToAscii[(word >> 48) & 077];
+    ppName[2] = cdcToAscii[(word >> 42) & 077];
+    ppName[3] = '\0';
+    np = NULL;
+    for (i = 0; ppMonitored[i] != NULL; i++)
+        {
+        if (strcmp(ppName, ppMonitored[i]) == 0)
+            {
+            np = ppMonitored[i];
+            break;
+            }
+        }
+    if (np == NULL) return;
+    cpn = (word >> 36) & 037;
+    xpAddress = cpn * 0200;
+    nfl = ((cpMem[xpAddress + FLSW] >> 48) & 07777) << 6;
+    ra = (cpMem[xpAddress + 1] >> 36) & Mask21;
+    fl = (cpMem[xpAddress + 2] >> 36) & Mask21;
+    if (address < 0200) return;                                     // write to CMR
+    if (address >= irAddress && address < irAddress + 8) return;    // write to PP comm area
+    if (address >= xpAddress && address < xpAddress + 0200) return; // write to job's control point area
+    if (address >= (ra - nfl) && address < ra + fl) return;         // write within job field length
+    if (address >= 041200 && address < 041300) return;              // write to ????
+    if (strcmp(inst, "CWD") == 0)
+        {
+        fprintf(ppLog, "%s : PP%02o CWD P:%04o, write %020lo to %08o\n",
+            ppName, activePpu->id, activePpu->regP, data, address);
+        }
+    else
+        {
+        fprintf(ppLog, "%s : PP%02o CWM P:%04o Q:%04o (0):%04o, write %020lo to %08o\n",
+            ppName, activePpu->id, activePpu->regP, activePpu->regQ, activePpu->mem[0], data, address);
+        }
+    fprintf(ppLog, "      CP%02o RA:%o FL:%o NFL:%o\n", cpn, ra, fl, nfl);
+    }
+#endif
 
 /*---------------------------  End Of File  ------------------------------*/
