@@ -3,7 +3,7 @@ set cmds {
     "MODVAL,OP=Z./WWW,FUI=100B,PW=WWWX,RL=ALL,AW=ALL"
     "MODVAL,OP=Z./WWW,AP=IAF,IS=BATCH"
 }
-dis [join cmds ";"]
+dis [join $cmds ";"]
 
 # Run job to enable startup of applications in NAMSTRT
 run_job 12 4 "opt/ncctcp-namstrt.job"
