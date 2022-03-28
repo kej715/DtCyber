@@ -1,2 +1,9 @@
 # Copy KERMIT help file to LIBRARY catalog
-dis "ATTACH,KH=KERMHLP.;SUI,377776.;PURGE,KERMHLP/NA.;DEFINE,KERMHLP/CT=PU,AC=Y,M=R.;COPY,KH,KERMHLP." 1
+set cmds {
+    "ATTACH,KH=KERMHLP."
+    "SUI,377776."
+    "PURGE,KERMHLP/NA."
+    "DEFINE,KERMHLP/CT=PU,AC=Y,M=R."
+    "COPY,KH,KERMHLP."
+}
+dis [join $cmds ";"] 1
