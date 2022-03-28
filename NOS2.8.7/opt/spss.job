@@ -44,13 +44,11 @@ EXIT.
 *** SPSS FAILED
 ***
 ~eor
-~include ../mods/SPSS/BANNER.mod
-~include ../mods/SPSS/LPI6.mod
 */
 */       UPDATE CORRECTIONS GO HERE
 */
-~eor
-*IGNORE TEXT/*
+~include ../mods/SPSS/BANNER.mod
+~include ../mods/SPSS/LPI6.mod
 ~eor
 USAGE DATA
 NEW FILE
