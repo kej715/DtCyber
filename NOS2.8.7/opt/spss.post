@@ -1,0 +1,12 @@
+# Copy SPSS executable statistics file to LIBRARY catalog
+set cmds {
+    "ATTACH,SPSS,UDCFIL8."
+    "SUI,377776."
+    "PURGE,UDCFIL8/NA."
+    "PURGE,SPSS/NA."
+    "DEFINE,A=UDCFIL8/CT=PU,M=M,PW=4SPSS."
+    "DEFINE,B=SPSS/CT=PU,M=R."
+    "COPYEI,UDCFIL8,A."
+    "COPYEI,SPSS,B."
+}
+dis [join $cmds ";"] 1
