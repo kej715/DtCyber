@@ -1,0 +1,12 @@
+*IDENT  BANNER    
+*/      
+*/       THIS MOD CAN BE USED TO REPLACE THE VOGELBACK BANNER ON OUTPUT       
+*/       WITH THAT OF YOUR OWN CHOICE.
+*/      
+*COMPILE  INIT00  
+*D INIT00.233,234 
+   90 FORMAT (10X,*NOSTALGIC COMPUTING CENTER*/10X,*CDC HOBBYIST COMMUNI      
+     1TY*//10X, *S P S S - - STATISTICAL PACKAGE FOR THE SOCIAL SCIENCES      
+*D MFL.26         
+      CALL LINECT(7)        
+*/ - - - - - - - - - - - - - - - - - - - - - - - - - -  LAST CARD BANNER      
