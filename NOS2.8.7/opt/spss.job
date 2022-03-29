@@ -1,6 +1,9 @@
 ~*
 ~*  This job builds the SPSS application and statistics file
-~*  and saves them in INSTALL's catalog.
+~*  and saves them in INSTALL's catalog. It also inserts a
+~*  procedure for calling SPSS into PRODUCT and directives
+~*  into DIRFILE for adding the procedure to the appropriate
+~*  library in the deadstart file.
 ~*
 SPSS.
 $USER,INSTALL,INSTALL.
@@ -8,6 +11,8 @@ $NORERUN.
 $SETASL,*.
 $SETJSL,*.
 $SETTL,*.
+$COPYBR,INPUT,DIR.
+$COPYBR,INPUT,SPSSPRC.
 $COMMENT.
 $COMMENT.    THIS JOB DOES A FULL RECOMPILATION OF SPSS.
 $COMMENT.
@@ -36,6 +41,10 @@ $REWIND,SPSSABS.
 PRELOAD,SPSSABS,SPSS.
 $RFL,52000.
 SPSS.
+$REWIND,SPSSPRC,DIR.
+$ATTACH,PRODUCT,DIRFILE/M=W,WB.
+$LIBEDIT,P=PRODUCT,B=SPSSPRC,I=0,C.
+$LIBEDIT,P=DIRFILE,B=DIR,I=0,C.
 ***
 *** SPSS COMPLETE
 ***
@@ -43,6 +52,19 @@ EXIT.
 ***
 *** SPSS FAILED
 ***
+~eor
+SPSS
+*ADD LIB${1},PROC/SPSS
+~eor
+.PROC,SPSS*I,I=(*F,*D=INPUT),L=(*F,*D=OUTPUT),LO=(ABRV,ONLINE,*N=).
+$ATTACH,ZZZSPSS=SPSS/UN=LIBRARY.
+$IF,$LO$.NE.$$,HASLO.
+  ZZZSPSS,#I=I,#L=L,#LO=LO.
+$ELSE,HASLO.
+  ZZZSPSS,#I=I,#L=L.
+$ENDIF,HASLO.
+$RETURN,ZZZSPSS.
+$REVERT,NOLIST.
 ~eor
 */
 */       UPDATE CORRECTIONS GO HERE
