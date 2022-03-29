@@ -32,7 +32,8 @@ qu3 nos.pre nos.post 47 * Query Update Utility Version 3
 *  Optional 3rd-Party products
 *
 cgames * * 70 * NOS Console Games (EYE, KAL, LIFE, LUNAR, MIC, PAC, SNK, TTT)
+gplot * gplot.post 73 https://www.dropbox.com/s/l342xe61dqq8aw5/gplot.tap?dl=1 GPLOT and ULCC DIMFILM graphics library
 i8080 * i8080.post 73 https://www.dropbox.com/s/ovgysfxbgpl18am/i8080.tap?dl=1 Intel 8080 cross-tools (CPM80, INTRP80, MAC80, PLM80) (dependency: ses)
 kermit * kermit.post 71 https://www.dropbox.com/s/p819tmvs91veoiv/kermit.tap?dl=1 Kermit file exchange utility
 ncctcp * ncctcp.post 72 https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1 Nostalgic Computing Center TCP/IP Applications (dependency: ses)
-spss * spss.post 0 https://www.dropbox.com/s/2eo63elqvhi0vwg/NOSSPSS6000V9.tap?dl=1 SPSS-6000 V9 - Statistical Package for the Social Sciences
+spss * spss.post 73 https://www.dropbox.com/s/2eo63elqvhi0vwg/NOSSPSS6000V9.tap?dl=1 SPSS-6000 V9 - Statistical Package for the Social Sciences
