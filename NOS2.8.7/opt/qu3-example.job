@@ -1,0 +1,59 @@
+~* Create QU3 example dataset to match up with
+~* 60387700 Query Update Version 3 User's Guide. 
+QUEX.
+user(a0126,passme)
+onsw,5.
+purge(quexamp/na)
+purge(employe/na)
+define(quexamp/ct=pu,m=r)
+ddl3(qd,sb=quexamp)
+return(quexamp)
+define(employe/ct=pu,m=w)
+qu.
+*** quex complete
+exit.
+*** quex failed
+return(employe)
+~eor
+       identification division.
+       sub-schema name is quexample
+       data division.
+       area-name is employees un is a0126 m is w
+       organization is indexed key is emp-id
+       record-name is emp-record
+           02 emp-id        picture x(4)
+           02 emp-name      picture a(20)
+           02 address
+               03 numbers   picture z(5)
+               03 street    picture x(20)
+               03 city      picture a(15)
+               03 state     picture a(2)
+               03 zip-code  picture 9(5)
+           02 phone         picture x(12)
+           02 position      picture x(20)
+           02 facility      picture x(15)
+           02 dept-name     picture x(15)
+~eor
+create employees of quexample (un=a0126)
+store setting emp-id,emp-name,numbers,street,city,state,zip-code, +
+phone,position,facility,dept-name
+$0135$ $john adams$ 100 $pennsylvania ave.$ $washington$ $dc$ 20006 +
+$202-831-1234$ $general manager$ $eastern sales$ $marketing$
+$0325$ $james forrest$ 1003 $w. third st.$ $washington$ $dc$ 20006 +
+$202-451-1515$ $sales rep$ $eastern sales$ $marketing$
+$0342$ $carne miller$ 492 $maple ave.$ $minneapolis$ $mn$ 55440 +
+$612-701-4639$ $secretary$ $corporate$ $administrtaion$ 
+$0425$ $walter hill$ 153 $wilshire blvd.$ $los angeles$ $ca$ 90049 +
+$213-734-9199$ $systems analyst$ $western sales$ $marketing$
+$0613$ $jack kaminski$ 434 $first ave.$ $washington$ $dc$ 20036 +
+$202-451-1375$ $sales rep$ $eastern sales$ $marketing$
+$0734$ $evelyn anderson$ 3841 $e. main st.$ $minneapolis$ $mn$ 55112 +
+$612-634-7915$ $consultant$ $corporate$ $administration$
+$0841$ $janet morrison$ 3425 $montant ave.$ $los angeles$ $ca$ 90049 +
+$213-245-7830$ $application analyst$ $western sales$ $marketing$
+$0910$ $joseph yamada$ 215 $berkshire lane$ $santa monice$ $ca$ 90046 +
+$213-788-1113$ $applications analyst$ $western sales$ $marketing$
+$1000$ $john grauman$ 14 $market st.$ $st. paul$ $mn$ 55104 +
+$612-646-1777$ $security officer$ $corporate$ $administration$
+*end
+~eoi

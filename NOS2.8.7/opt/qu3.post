@@ -1,0 +1,29 @@
+# Create UN A0126 to contain the example dataset
+# SYSEDIT QU3 into live system so we can create example data
+# without building new deadstart tape.
+#
+# Then submit job to create example data. 
+set cmds {
+    "MODVAL,OP=Z./A0126,PW=PASSME"
+    "MODVAL,OP=Z./A0126,AP=NUL,AP=IAF,IS=BATCH,RL=ALL"
+}
+dis [join $cmds ";"]
+
+set cmds {
+    "attach(product)"
+    "GTR(PRODUCT,LGO,U,,,NA)ULIB/DMSLIB"
+    "GTR(PRODUCT,LGO,U,,,NA)ABS/QU-ABS/DFRCV"
+    "sysedit,b=lgo,i=0,l=output."
+}
+#sysedit does not work if nam/iaf are up.
+dsd "idl,nam."
+dsd "idl,iaf."
+dis [join $cmds ";"] 1
+dsd "au"
+run_job 12 4 "opt/qu3-example.job"
+# because I can't specify more than one post script
+# we do the unload dance at the end that nos.post would normally do.
+dsd "\[UNLOAD,51."
+dsd "\[UNLOAD,52."
+dsd "\[UNLOAD,53."
+dsd "\[!"
