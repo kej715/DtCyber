@@ -1,0 +1,7 @@
+# Create UN A0126 to contain the example dataset.
+#
+set cmds {
+    "MODVAL,OP=Z./A0126,PW=A0126"
+    "MODVAL,OP=Z./A0126,AP=NUL,AP=IAF,IS=BATCH,RL=ALL"
+}
+dis [join $cmds ";"]
