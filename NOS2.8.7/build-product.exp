@@ -9,6 +9,11 @@ proc int_handler {} {
 }
 
 set prod [string tolower [lindex $argv 0]]
+set sysedit 0
+if { [string tolower [lindex $argv 1]] == "sysedit" } {
+    set sysedit 1
+}
+
 set f [open "opt/products.idx" r]
 
 if { $prod == "list" } {
@@ -19,7 +24,9 @@ if { $prod == "list" } {
         if { [lindex $tokens 0] == "*" } {
             send_user "$line\n"
         } else {
-            send_user "[lindex $tokens 0] : [join [lrange $tokens 5 end]]\n"
+            if { [lindex $tokens 0] != "#" } {
+                send_user "[format %-7s [lindex $tokens 0]] : [join [lrange $tokens 7 end]]\n"
+            }
         }
     }
 }
@@ -34,8 +41,10 @@ while { 1 } {
         set pre [lindex $tokens 1]
         set post [lindex $tokens 2]
         set lib [lindex $tokens 3]
-        set url [lindex $tokens 4]
-        set desc [join [lrange $tokens 5 end]]
+        set sysedRecs [lindex $tokens 4]
+        set examples [lindex $tokens 5]
+        set url [lindex $tokens 6]
+        set desc [join [lrange $tokens 7 end]]
         break
     }
 }
@@ -45,8 +54,8 @@ set DtCyber::printer_file "LP5xx_C12_E5"
 set DtCyber::port "6666"
 DtCyber::connect 
 
-set jobname [string toupper $prod]
-send_user "\nStarting $jobname\n"
+set productName [string toupper $prod]
+send_user "\nStarting $productName\n"
 send_user "$desc\n"
 set filetype ""
 
@@ -73,13 +82,15 @@ if { $url != "*" } {
 }
 
 if { $pre != "*" } {
-    send_user "\nRun $jobname PRE-build script\n"
-    source "opt/$pre"
+    foreach script [split $pre ","] {
+        send_user "\nRun $productName PRE-build script $script\n"
+        source "opt/$script"
+    }
 }
 
 set jobpath "opt/$prod.job"
 if { [file exists $jobpath] } {
-    send_user "\nRun $jobname build job\n"
+    send_user "\nRun $productName build job\n"
     if { $url != "*" } {
         run_job 12 4 $jobpath $lib 51
     } else {
@@ -88,8 +99,10 @@ if { [file exists $jobpath] } {
 }
 
 if { $post != "*" } {
-    send_user "\nRun $jobname POST-build script\n"
-    source "opt/$post"
+    foreach script [split $post ","] {
+        send_user "\nRun $productName POST-build script $script\n"
+        source "opt/$script"
+    }
 }
 
 if { $url != "*" && $filetype == "tap" } {
@@ -97,4 +110,26 @@ if { $url != "*" && $filetype == "tap" } {
     dsd "\[!"
 }
 
-send_user "\nBuild of $jobname complete\n"
+if { $sysedit == 1 || $examples != "*" } {
+    if { $sysedRecs != "*" } {
+        send_user "\nSYSEDIT $productName into running system\n"
+        dsd "IDLE,IAF."
+        dis "ATTACH,P=PRODUCT.;GTR,P,LGO,U.$sysedRecs;SYSEDIT,B=LGO." 1
+        sleep 10
+        dsd "IAF."
+    }
+    if { $examples != "*" } {
+        foreach script [split $examples ","] {
+            set filetype [lindex [split $script "."] end]
+            if { $filetype == "job" } {
+                send_user "\nRun $productName example installation job $script\n"
+                run_job 12 4 "examples/$script"
+            } else {
+                send_user "\nRun $productName example installation script $script\n"
+                source "examples/$script"
+            }
+        }
+    }
+}
+
+send_user "\nBuild of $productName complete\n"
