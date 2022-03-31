@@ -2,6 +2,7 @@
 "debug": false,
 "httpServerPort": 4480,
 "portMapperUdpPort": 111,
+"tapeRobotPort": 4400,
 "tapeServerPort": 4400,
 "tapeLibraryRoot": "tapes",
 "tapeCacheRoot": "tapes/cache"

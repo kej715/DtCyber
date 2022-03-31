@@ -1,16 +1,21 @@
+const Const = require("./const");
+const Global = require("./global");
 const Program = require("./program");
-const ProgramRegistry = require("./registry");
 const RPC = require("./rpc");
 
 class PortMapper extends Program {
 
+  static PROC_SET = 1;      /* Portmapper SET procedure number */
+  static PROGRAM  = 100000; /* Portmapper program number */
+  static VERSION  = 2;      /* Portmapper version number */
+
   constructor() {
-    super(100000, 2);
+    super(PortMapper.PROGRAM, PortMapper.VERSION);
     this.udpPort = 111;
   }
 
   dumpProgramList(rpcReply) {
-    let list = Program.programRegistry.listPrograms();
+    let list = Global.programRegistry.listPrograms();
     rpcReply.appendEnum(Program.SUCCESS);
     for (let mapping of list) {
       rpcReply.appendBoolean(true);
@@ -27,13 +32,13 @@ class PortMapper extends Program {
     let vers = rpcCall.params.extractUnsignedInt();
     let prot = rpcCall.params.extractUnsignedInt();
     let port = rpcCall.params.extractUnsignedInt();
-    let program = Program.programRegistry.lookupProgram(prog, vers);
+    let program = Global.programRegistry.lookupProgram(prog, vers);
     port = 0;
     if (typeof program === "object") {
-      if (prot === ProgramRegistry.IPPROTO_UDP && typeof program.udpPort !== "undefined") {
+      if (prot === Const.IPPROTO_UDP && typeof program.udpPort !== "undefined") {
         port = program.udpPort;
       }
-      else if (prot === ProgramRegistry.IPPROTO_TCP && typeof program.tcpPort !== "undefined") {
+      else if (prot === Const.IPPROTO_TCP && typeof program.tcpPort !== "undefined") {
         port = program.tcpPort;
       }
     }
@@ -48,21 +53,21 @@ class PortMapper extends Program {
     let port = rpcCall.params.extractUnsignedInt();
     let result = true;
     rpcReply.appendEnum(Program.SUCCESS);
-    let program = Program.programRegistry.lookupProgram(prog, vers);
+    let program = Global.programRegistry.lookupProgram(prog, vers);
     if (typeof program === "object") {
-      if ((prot === ProgramRegistry.IPPROTO_UDP && typeof program.udpPort !== "undefined")
-          || (prot === ProgramRegistry.IPPROTO_TCP && typeof program.tcpPort !== "undefined")) {
+      if ((prot === Const.IPPROTO_UDP && typeof program.udpPort !== "undefined")
+          || (prot === Const.IPPROTO_TCP && typeof program.tcpPort !== "undefined")) {
         result = false;
       }
     }
     else {
       program = new Program(prog, vers);
-      Program.programRegistry.registerProgram(program);
+      Global.programRegistry.registerProgram(program);
     }
-    if (prot === ProgramRegistry.IPPROTO_UDP) {
+    if (prot === Const.IPPROTO_UDP) {
       program.setUdpPort(port);
     }
-    else if (prot === ProgramRegistry.IPPROTO_TCP) {
+    else if (prot === Const.IPPROTO_TCP) {
       program.setTcpPort(port);
     }
     rpcReply.appendEnum(Program.SUCCESS);
@@ -74,7 +79,7 @@ class PortMapper extends Program {
     let vers = rpcCall.params.extractUnsignedInt();
     let prot = rpcCall.params.extractUnsignedInt();
     let port = rpcCall.params.extractUnsignedInt();
-    Program.programRegistry.unregisterProgram(prog, vers);
+    Global.programRegistry.unregisterProgram(prog, vers);
     rpcReply.appendEnum(Program.SUCCESS);
     rpcReply.appendBoolean(true);
   }
@@ -84,10 +89,10 @@ class PortMapper extends Program {
     let vers = rpcCall.params.extractUnsignedInt();
     let proc = rpcCall.params.extractUnsignedInt();
     let args = rpcCall.params.extractRemainder();
-    let program = Program.programRegistry.lookupProgram(prog, vers);
+    let program = Global.programRegistry.lookupProgram(prog, vers);
     if (typeof program === "object" && typeof program.udpPort !== "undefined") {
       let rpc = new RPC();
-      rpc.callProcedure("localhost", ProgramRegistry.IPPROTO_UDP, program.udpPort, prog, vers, proc, args, reply => {
+      rpc.callProcedure("localhost", Const.IPPROTO_UDP, program.udpPort, prog, vers, proc, args, reply => {
         if (reply.isSuccess) {
           rpcReply.appendEnum(Program.SUCCESS);
           rpcReply.appendUnsignedInt(program.udpPort);

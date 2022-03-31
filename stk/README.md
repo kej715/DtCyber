@@ -51,6 +51,7 @@ This file provides the simulator's base configuration. Its contents look like th
 "debug": false,
 "httpServerPort": 4480,
 "portMapperUdpPort": 111,
+"tapeRobotPort": 4400,
 "tapeServerPort": 4400,
 "tapeLibraryRoot": "tapes",
 "tapeCacheRoot": "tapes/cache"
@@ -60,6 +61,15 @@ This file provides the simulator's base configuration. Its contents look like th
 The properties defined in `config.json` are:
 - **debug** : if set to *true*, the simulator will log verbose debug information to
 the console (stdout).
+- **foreignPortMapper** : specifies the host name or address of a foreign ONC RPC
+portmapper. When this property is specified, **portMapperUdpPort** is ignored, and
+the simulator does not start its built-in portmapper. Instead, it calls the
+specified foreign portmapper to register its remotely callable procedures. Specify
+this property if the machine on which you are running the simulator has a portmapper
+running already and does not need the simulator to start its built-in one. For
+example, if the machine is running *NFS* or *rpcbind*, it has a portmapper running
+already, and you should specify **foreignPortMapper** with a value of
+**"localhost"**.
 - **httpServerPort** : specifies the TCP port on which the simulator's web service
 will listen for connections. The default is TCP port `4480`.
 - **portMapperUdpPort** : The simulator implements an ONC RPC portmapper, and this
@@ -67,6 +77,9 @@ property specifies the UDP port on which it will listen for ONC RPC portmapper
 requests. The default is UDP port `111`. On most systems, UDP port 111 is a
 privileged port, so the simulator will need to be run using *sudo* on a Linux,
 for example, in order for it to bind successfully to this port number.
+- **tapeRobotPort** : specifies the UDP port on which the simulator will listen
+for ONC RPC calls from *DtCyber* to mount and dismount tapes. The default is UDP port
+`4400`.
 - **tapeServerPort** : specifies the TCP port on which the simulator will listen
 for channel connections from *DtCyber*. The default is TCP port `4400`.
 - **tapeLibraryRoot** : specifies the pathname of the directory in which the

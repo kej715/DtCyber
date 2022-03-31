@@ -1,6 +1,8 @@
 const fs = require("fs");
+const Global = require("./global");
 const http = require("http");
 const process = require("process");
+const ProgramRegistry = require("./registry");
 const PortMapper = require("./portmapper");
 const StkCSI = require("./stkcsi");
 const url = require("url");
@@ -14,17 +16,29 @@ const config = JSON.parse(fs.readFileSync(configFile));
 const volumesFile = (process.argv.length > 3) ? process.argv[3] : "volumes.json";
 let volumeMap = JSON.parse(fs.readFileSync(volumesFile));
 
-const portMapper = new PortMapper();
-if (config.portMapperUdpPort) portMapper.setUdpPort(config.portMapperUdpPort);
-if (config.debug) portMapper.setDebug(config.debug);
-portMapper.start();
+Global.programRegistry = new ProgramRegistry();
+if (config.debug) Global.programRegistry.setDebug(config.debug);
+
+if (config.foreignPortMapper) {
+  Global.programRegistry.setForeignPortMapper(config.foreignPortMapper);
+  let pm = Global.programRegistry.getForeignPortMapper();
+  console.log(`${new Date().toLocaleString()} Use foreign portmapper at UDP address ${pm.host}:${pm.port}`);
+}
+else {
+  const portMapper = new PortMapper();
+  if (config.portMapperUdpPort) portMapper.setUdpPort(config.portMapperUdpPort);
+  if (config.debug) portMapper.setDebug(config.debug);
+  console.log(`${new Date().toLocaleString()} Start built-in portmapper on UDP port ${portMapper.udpPort}`);
+  portMapper.start();
+}
 
 const stkcsi = new StkCSI();
 stkcsi.setVolumeMap(volumeMap);
-if (config.tapeServerPort) stkcsi.setTapeServerPort(config.tapeServerPort);
-if (config.tapeCacheRoot) stkcsi.setTapeCacheRoot(config.tapeCacheRoot);
+if (config.tapeServerPort)  stkcsi.setTapeServerPort(config.tapeServerPort);
+if (config.tapeRobotPort)   stkcsi.setTapeRobotPort(config.tapeRobotPort);
+if (config.tapeCacheRoot)   stkcsi.setTapeCacheRoot(config.tapeCacheRoot);
 if (config.tapeLibraryRoot) stkcsi.setTapeLibraryRoot(config.tapeLibraryRoot);
-if (config.debug) stkcsi.setDebug(config.debug);
+if (config.debug)           stkcsi.setDebug(config.debug);
 stkcsi.start();
 
 const logHttpRequest = (req, status) => {

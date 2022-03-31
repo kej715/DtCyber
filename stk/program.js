@@ -6,7 +6,7 @@
  *     https://tools.ietf.org/html/draft-ietf-oncrpc-remote-03
  */
 const dgram = require('dgram');
-const ProgramRegistry = require('./registry');
+const Global = require('./global');
 const XDR = require("./xdr");
 
 class Program {
@@ -70,7 +70,6 @@ class Program {
   static AUTH_RSA          = 5;  /* (experimental) RSA-based Authentication */
   static RPCSEC_GSS        = 6;  /* GSS-API based Security           */
 
-  static programRegistry = new ProgramRegistry();
   static tcpPortsInUse = [];
   static udpPortsInUse = [];
 
@@ -139,7 +138,7 @@ class Program {
       callback(rpcReply);
       return;
     }
-    let program = Program.programRegistry.lookupProgram(rpcCall.prog, rpcCall.vers);
+    let program = Global.programRegistry.lookupProgram(rpcCall.prog, rpcCall.vers);
     if (typeof program !== "object"
         || typeof program.udpPort === "undefined"
         || program.udpPort !== this.udpPort) {
@@ -189,7 +188,7 @@ class Program {
   }
 
   start() {
-    Program.programRegistry.registerProgram(this);
+    Global.programRegistry.registerProgram(this);
     if (typeof this.udpPort !== "undefined" && Program.udpPortsInUse.indexOf(this.udpPort) === -1) {
       Program.udpPortsInUse.push(this.udpPort);
       this.startUdp();

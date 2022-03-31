@@ -1,7 +1,7 @@
+const Const = require("./const");
 const crypto = require("crypto");
 const dgram = require("dgram");
 const Program = require("./program");
-const ProgramRegistry = require("./registry");
 const XDR = require("./xdr");
 
 class RPC {
@@ -39,7 +39,7 @@ class RPC {
     rpcCall.appendEnum(Program.AUTH_NONE); // verf flavor
     rpcCall.appendVariableOpaque([]);      // verf body
     rpcCall.appendFixedOpaque(args);
-    if (prot === ProgramRegistry.IPPROTO_UDP) {
+    if (prot === Const.IPPROTO_UDP) {
       const client = dgram.createSocket('udp4');
       let timer = setTimeout(() => {
         client.close();

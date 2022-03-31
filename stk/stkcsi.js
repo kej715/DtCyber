@@ -1,7 +1,7 @@
+const Const = require("./const");
 const fs = require("fs");
 const net = require("net");
 const Program = require("./program");
-const ProgramRegistry = require("./registry");
 const RPC = require("./rpc");
 const XDR = require("./xdr");
 const { http, https } = require('follow-redirects');
@@ -568,7 +568,7 @@ class StkCSI extends Program {
       let rpc = new RPC();
       rpc.setDebug(this.isDebug);
       this.debugLog(`StkCSI callback prog ${prog} vers ${vers} proc ${proc} at ${host}:${port} (try ${retryCount})`);
-      rpc.callProcedure(host, ProgramRegistry.IPPROTO_UDP, port, prog, vers, proc, args, result => {
+      rpc.callProcedure(host, Const.IPPROTO_UDP, port, prog, vers, proc, args, result => {
         if (result.isTimeout) {
           this.callRpcCallback(host, port, prog, vers, proc, args, retryCount);
         }
@@ -1185,6 +1185,10 @@ class StkCSI extends Program {
 
   setTapeLibraryRoot(tapeLibraryRoot) {
     this.tapeLibraryRoot = fs.realpathSync(tapeLibraryRoot);
+  }
+
+  setTapeRobotPort(tapeRobotPort) {
+    this.udpPort = tapeRobotPort;
   }
 
   setTapeServerPort(tapeServerPort) {
