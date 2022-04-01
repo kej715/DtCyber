@@ -63,7 +63,7 @@ utlisp * utlisp.post 69 ABS/LISP * https://www.dropbox.com/s/0wcq8e7m379ivyw/utl
 *
 cdcs2 nos.pre nos.post 14 * * * CYBER Database Control System Version 2
 icem icem.pre icem.post 0 * * https://www.dropbox.com/s/1ufg3504xizju0l/icem.zip?dl=1 ICEM Design/Drafting and GPL compiler
-qu3 nos.pre nos.post 47 ABS/QU-OVL/QU0700 qu3.pre,qu3.job * Query Update Utility Version 3
+qu3 nos.pre nos.post 47 ULIB/DMSLIB,ABS/QU-OVL/QU0700 qu3.pre,qu3.job * Query Update Utility Version 3
 * ------------------------------------------------------------------------------
 *
 *  Optional 3rd-Party products
