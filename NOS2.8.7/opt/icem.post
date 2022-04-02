@@ -2,17 +2,19 @@
 set cmds {
   "ASSIGN,51,TAPE,D=GE,LB=KL,PO=R."
   "COPYBF,TAPE,INSTALL."
-  "NOTE,PROC,NR./.PROC,ICEMINS."
-  "NOTE,PROC,NR./INSTALL."
-  "NOTE,PROC,NR./NOTE.- *** ICEM COMPLETE"
-  "NOTE,PROC,NR./EXIT."
-  "NOTE,PROC,NR./NOTE.- *** ICEM FAILED"
-  "PACK,PROC."
-  "PROC."
+  "INSTALL."
 }
 dis [join $cmds ";"] 377774
 log_user 0
-check_job ICEM
+expect {
+    -i $printer -nocase "SOMETHING WENT WRONG" {
+         send_user "ICEM failed\n"
+         error_condition "job ICEM failed"
+       }
+    -i $printer -nocase "INSTALLATION GPL PACKAGE COMPLETE" {
+         send_user "ICEM complete\n"
+       }
+}
 log_user 1
 dsd "\[UNLOAD,51."
 dsd "\[UNLOAD,52."
