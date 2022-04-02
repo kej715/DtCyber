@@ -60,19 +60,20 @@ send_user "$desc\n"
 set filetype ""
 
 if { $url != "*" } {
-    send_user "Download tape image ...\n"
     set filename [lindex [split [lindex [split $url "/"] end] "?"] 0]
     set filetype [lindex [split $filename "."] end]
     set tapepath "opt/tapes/$filename"
-    system "curl -L -o $tapepath '$url'"
-
+    if { [file exists $tapepath] == 0
+         || ([clock seconds] - [file mtime $tapepath]) > (24*60*60) } { 
+        send_user "Download tape image ...\n"
+        system "curl -L -o $tapepath '$url'"
+    }
     if { $filetype == "zip" } {
         set dir [pwd]
         cd "opt/tapes"
         system "unzip -o $filename"
         cd $dir
     }
-
     if { $filetype == "tap" } {
         dsd "\[UNLOAD,51."
         dsd "\[!"
