@@ -18,12 +18,12 @@ namespace eval $::pkgtemp::ns {
 
 set profile ""
 set printer_file "LP5xx_C07_E7"
+
 #print error message and return control to user
 proc error_condition { cmd } {
     send_user "\n***** Error condition encountered *****\n"
-    send_user "Trying to execute $cmd\n"
-    send_user "Entering interact mode. Type interp to get an interpreter.\n"
-    interact "interp\r" { interpreter } 
+    send_user "While executing: $cmd\n"
+    exit 1
 }
 
 #wrapper for sending commands to dtcyber console
