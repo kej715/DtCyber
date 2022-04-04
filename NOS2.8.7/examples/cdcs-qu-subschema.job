@@ -1,0 +1,56 @@
+QUSS.
+$USER,CDCS,CDCS.
+$NORERUN.
+$SETASL,*.
+$SETJSL,*.
+$SETTL,*.
+$PURGE,QUSSLIB/NA.
+$DEFINE,QUSSLIB.
+$ATTACH,MANUFAC.
+$DDL3,QC,SB=QUSSLIB,SC=MANUFAC.
+*** QUSS COMPLETE
+EXIT.
+*** QUSS FAILED
+~eor
+       TITLE DIVISION.
+          SS QUPRODMGT WITHIN MANUFACTURING-DB.
+       
+       REALM DIVISION.
+          RD DEPARTMENTS, PROJECT, DEVELOPMENT-PRODUCTS, CDCSCAT.
+       
+       RECORD DIVISION.
+       01 DEPTREC.
+          03 DEPT-NO            PICTURE X(4).
+          03 DEPT-NAME          PICTURE X(20).
+          03 MGR-ID             PICTURE X(8).
+          03 MGR-NAME           PICTURE X(20).
+          03 NUM-ITEM           PICTURE 9(3).
+          03 ITEM               OCCURS 2 TO 25 TIMES
+                                  DEPENDING ON NUM-ITEM.
+             05 LOC-CODE        PICTURE X(4).
+             05 HEAD-COUNT      PICTURE Z(4).
+             05 EXPENSES-YTD    PICTURE Z(8).99.
+             05 BUDGET          PICTURE Z(9).
+       
+       01 PROJREC.
+          03 PROJECT-ID         PICTURE X(10).
+          03 PROJ-DESCR         PICTURE X(40).
+          03 BUDGET-TOTAL       PICTURE Z(9).99.
+          03 RESPONSIBILITY     PICTURE X(8).
+       
+       01 DEVREC.
+          03 PRODUCT-ID         PICTURE X(10).
+          03 CLASS              PICTURE Z9.
+          03 PRICE              PICTURE Z(5).99
+                                  USAGE IS COMP-1.
+          03 PROJECT-ID         PICTURE X(10).
+          03 STATUS-CODE        PICTURE A.
+          03 DEV-COST-YTD       PICTURE Z(8)9.99
+                                  USAGE IS COMP-1.
+       01 QUCATREC.
+          03 QUCAT-KEY          PICTURE X(10).
+          03 QUCAT-ITEM         PICTURE X(1030).
+       
+       RELATION DIVISION.
+          RN IS DPD-REL
+             RESTRICT DEVREC WHERE STATUS-CODE EQ "A".

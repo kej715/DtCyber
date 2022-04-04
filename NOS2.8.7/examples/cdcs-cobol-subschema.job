@@ -1,0 +1,68 @@
+COBOLSS.
+$USER,CDCS,CDCS.
+$NORERUN.
+$SETASL,*.
+$SETJSL,*.
+$SETTL,*.
+$PURGE,C5SSLIB/NA.
+$DEFINE,C5SSLIB.
+$ATTACH,MANUFAC.
+$DDL3,C5,SB=C5SSLIB,SC=MANUFAC.
+*** COBOLSS COMPLETE
+EXIT.
+*** COBOLSS FAILED
+~eor
+       TITLE DIVISION.
+         SS  C5SS-PRODUCT-PERSONNEL WITHIN MANUFACTURING-DB.
+
+       ALIAS DIVISION.
+           AD  REALM JOBDETAIL BECOMES WORK-FILE.
+           AD  RECORD JOBREC BECOMES WORD-REC.
+           AD  RECORD EMPREC BECOMES EMP-REC.
+           AD  DATA LOC-CODE BECOMES LOCATION.
+
+       REALM DIVISION.
+           RD EMPLOYEE,WORK-FILE.
+
+       RECORD DIVISION.
+       01  EMP-REC.
+           03  EMP-ID                  PICTURE X(8).
+           03  SALARY                  PICTURE 9(6)V99
+                                           USAGE IS COMP-1.
+           03  EMP-LAST-NAME           PICTURE A(20).
+           03  EMP-INITIALS            PICTURE A(4).
+           03  DEPT                    PICTURE X(4).
+           03  MAILING-ADDRESS.
+               05  ADDRESS-NUMBERS     PICTURE X(6).
+               05  ADDRESS-STREET      PICTURE X(20).
+               05  ADDRESS-CITY        PICTURE X(15).
+               05  ADDRESS-STATE-PROV  PICTURE X(15).
+               05  POSTAL-CODE         PICTURE X(10).
+           03  PHONE-NO                PICTURE 9(10).
+           03  PHONE                   REDEFINES PHONE-NO.
+               05  AREA-CODE           PICTURE 999.
+               05  PREFIX              PICTURE 999.
+               05  DIGITS              PICTURE 9999.
+           03  JOB-CLASS               PICTURE A.
+           03  GRADE-LEVEL             PICTURE 9.
+       01  WORK-REC.
+           03  CONCATKEY.
+               05  EMP-ID              PICTURE X(8).
+               05  SEQ-NO              PICTURE X(4).
+           03  PRODUCT-ID              PICTURE X(10).
+           03  SECURITY-CODE           PICTURE X(2).
+           03  MONTHLY-COMPENSATION    USAGE IS COMP-1
+                                           OCCURS 12 TIMES.
+               05  REG-HOURS           PICTURE 9(3)V99.
+               05  REG-COMPENSATION    PICTURE 9(4)V99.
+               05  OT-HOURS            PICTURE 9(3)V99.
+               05  OT-COMPENSATION     PICTURE 9(4)V99.
+           03  HOURS-YTD               PICTURE 9(4)V99
+                                           USAGE IS COMP-1.
+           03  COMPENSATION-YTD        PICTURE 9(8)V99
+                                           USAGE IS COMP-1.
+           03  LOCATION                PICTURE X(4).
+
+       RELATION DIVISION.
+           RN IS EMP-REL
+               RESTRICT WORK-REC WHERE SECURITY-CODE GE "B1".
