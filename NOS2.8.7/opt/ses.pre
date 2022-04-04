@@ -1,7 +1,7 @@
 # Create SES user account
 set cmds {
     "MODVAL,OP=Z./SES,FUI=32B,PW=SESX,RL=ALL,AW=ALL"
-    "MODVAL,OP=Z./SES,AP=IAF,IS=BATCH"
+    "MODVAL,OP=Z./SES,AP=NUL,AP=IAF,IS=BATCH"
      "ELS.ASSIGN,51,TAPE,D=GE,LB=KU."
      "PFLOAD,UI=32,LO=CEST,OP=LR."
      "SUI,32."

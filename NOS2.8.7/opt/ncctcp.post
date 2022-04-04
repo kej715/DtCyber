@@ -1,7 +1,7 @@
 # Create WWW user account
 set cmds {
     "MODVAL,OP=Z./WWW,FUI=100B,PW=WWWX,RL=ALL,AW=ALL"
-    "MODVAL,OP=Z./WWW,AP=IAF,IS=BATCH"
+    "MODVAL,OP=Z./WWW,AP=NUL,AP=IAF,IS=BATCH"
 }
 dis [join $cmds ";"]
 
