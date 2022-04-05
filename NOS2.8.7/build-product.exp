@@ -115,7 +115,11 @@ if { $sysedit == 1 || $examples != "*" } {
     if { $sysedRecs != "*" } {
         send_user "\nSYSEDIT $productName into running system\n"
         dsd "IDLE,IAF."
-        dis "ATTACH,P=PRODUCT.;GTR,P,LGO,U.$sysedRecs;SYSEDIT,B=LGO." 1
+        set cmds "ATTACH,P=PRODUCT.;GTR,P,LGO,U.$sysedRecs;SYSEDIT,B=LGO."
+        if { [string first \$ $cmds] != -1 } {
+            set cmds [join [split "UCC=+.;$cmds" \$] "+S"]
+        }
+        dis "$cmds" 1
         sleep 10
         dsd "IAF."
     }
