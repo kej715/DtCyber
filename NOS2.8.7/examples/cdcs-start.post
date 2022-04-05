@@ -1,0 +1,5 @@
+# Start the CDCS subssystem.
+#
+dsd "\[IDLE,CDC."
+sleep 5
+dsd "\[CDC."
