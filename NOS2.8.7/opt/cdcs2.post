@@ -1,10 +1,13 @@
 # Create CDCS user account
 set cmds {
-    "GET,CDC/UN=INSTALL."
+    "GET,CDC."
+    "SUI,377777."
     "REPLACE,CDC."
+    "MODVAL,OP=Z./DBCNTLX,PW=DBCNTLX,RL=ALL,AW=ALL"
+    "MODVAL,OP=Z./DBCNTLX,AP=NUL,AP=IAF,IS=BATCH"
     "MODVAL,OP=Z./CDCS,PW=CDCS,RL=ALL,AW=ALL"
     "MODVAL,OP=Z./CDCS,AP=NUL,AP=IAF,IS=BATCH"
 }
-dis [join $cmds ";"]
+dis [join $cmds ";"] 1
 
-run_job 12 4 opt/enable-subsys.job,CDC
+run_job 12 4 opt/enable-subsys.job CDC
