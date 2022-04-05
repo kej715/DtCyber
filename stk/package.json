@@ -2,7 +2,7 @@
   "name": "stk",
   "version": "1.0.0",
   "description": "StorageTek 4400 Simulator",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"No test specified\" && exit 1"
   },
