@@ -6,6 +6,9 @@
     "debug":false
   },
   "hasp":{
-    "debug":false
+    "debug":false,
+    "LP1":{
+      "isPostPrint":true
+    }
   }
 }

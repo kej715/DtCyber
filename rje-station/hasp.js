@@ -28,19 +28,29 @@ class Hasp {
   static ControlInfo_BadBCB       = 6;
   static ControlInfo_GCR          = 7; // General Control Record
 
+  static RecordTypes = [ // indexed by record type
+    "",
+    "CO",
+    "CO",
+    "CR",
+    "LP",
+    "CP",
+    "DS",
+    "TM"
+  ];
+
   constructor(options) {
     this.handlers = {};
     this.isSignedOn = false;
     this.debug = false;
+    this.hasp = {};
     this.streams = {};
     if (typeof options !== "undefined") {
       for (let key of Object.keys(options)) {
         this[key] = options[key];
       }
     }
-    if (typeof this.hasp !== "undefined") {
-       if (this.hasp.debug) this.debug = true;
-    }
+    if (this.hasp.debug) this.debug = true;
     this.translator = new Translator();
     this.bsc = new Bsc(options);
     this.bsc.on("data", data => {
@@ -54,6 +64,28 @@ class Hasp {
         for (const key of Object.keys(this.streams)) this.streams[key].resume();
       }
     });
+  }
+
+  command(text) {
+    let block = [
+      0x80 | (Hasp.BlockType_Normal << 4) | (this.sndSeqNum++ & 0x0f),
+      0x8f, 0xcf,
+      0x80 | (1 << 4) | Hasp.RecordType_OpCmd,
+      0x80
+    ];
+    let i = 0;
+    while (i < text.length) {
+      let len = text.length - i;
+      if (len > 0x3f) len = 0x3f;
+      block.push(0xc0 | len);
+      while (len-- > 0) {
+        block.push(Translator.AsciiToEbcdic[text.charCodeAt(i++)]);
+      }
+    }
+    block.push(0);
+    block.push(0);
+    this.logData("send", block);
+    this.bsc.queueBlock(block);
   }
 
   log(msg) {
@@ -79,6 +111,55 @@ class Hasp {
     if (evt === "error") {
       this.bsc.on(evt, handler);
     }
+  }
+
+  processPostPrint(record, param) {
+    let fe = " ";
+    if (param > 0 && param < 0x20) {
+      if (param < 0x10) { // Space NN lines after print
+        param &= 0x03;
+        if (param === 3) {
+          fe = "-";
+        }
+        else if (param === 2) {
+          fe = "0";
+        }
+      }
+      else  { // Skip to channel NNNN after print
+        param &= 0x0f;
+        if (param === 1) {
+          fe = "1";
+        }
+      }
+    }
+    return record + `\n${fe}`;
+  }
+
+  processPrePrint(record, param) {
+    let fe = " ";
+    switch ((param >> 4) & 0x03) {
+    case 0: // Suppress space or post-print carriage control
+      if ((param & 0x0f) == 0) { // Suppress space
+        fe = "+";
+      }
+      break;
+    case 2: // Space immediately NN spaces
+      switch (param & 0x03) {
+      case 3:
+        fe = "-";
+        break;
+      case 2:
+        fe = "0";
+        break;
+      }
+      break;
+    case 3: // Skip immediately to channel NN
+      if ((param & 0x03) == 1) { // Page eject
+        fe = "1";
+      }
+      break;
+    }
+    return `${fe}${record}\n`;
   }
 
   receiveBlock(data) {
@@ -153,6 +234,8 @@ class Hasp {
         // It's a record for a stream. SCB's should follow.
         // Use them to reconstruct the content of the record.
         //
+        const key = `${Hasp.RecordTypes[recordType]}${streamId}`;
+        if (typeof this.hasp[key] === "undefined") this.hasp[key] = {};
         let str = "";
         if (i + 1 < data.length && data[i] === 0 && data[i + 1] === 0) {
           //
@@ -161,6 +244,7 @@ class Hasp {
           //
           if (typeof this.handlers.data === "function") {
             this.handlers.data(recordType, streamId, null);
+            delete this.hasp[key].recordCount;
           }
           break;
         }
@@ -181,6 +265,26 @@ class Hasp {
               str += String.fromCharCode(Translator.EbcdicToAscii[data[i++]]);
             }
           }
+        }
+        if (recordType === Hasp.RecordType_PrintRecord) {
+          const key = `LP${streamId}`;
+          if (typeof this.hasp[key] === "undefined") this.hasp[key] = {};
+          if (typeof this.hasp[key].isPostPrint === "undefined") this.hasp[key].isPostPrint = true;
+          const isPostPrint = this.hasp[key].isPostPrint;
+          if (typeof this.hasp[key].recordCount === "undefined") {
+            this.hasp[key].recordCount = 0;
+            if (isPostPrint) str = ` ${str}`;
+          }
+          if (isPostPrint) {
+            str = this.processPostPrint(str, srcb & 0x7f);
+          }
+          else {
+            str = this.processPrePrint(str, srcb & 0x7f);
+          }
+          this.hasp[key].recordCount += 1;
+        }
+        else if (recordType === Hasp.RecordType_PunchRecord) {
+          str += "\n";
         }
         if (typeof this.handlers.data === "function") {
           this.handlers.data(recordType, streamId, str);

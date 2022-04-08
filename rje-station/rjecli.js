@@ -15,6 +15,7 @@ for (const key of Object.keys(defaults)) {
 }
 
 let streams = {};
+let timer = null;
 
 function cli() {
 
@@ -25,6 +26,10 @@ function cli() {
   });
 
   rl.on("line", line => {
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+    }
     const argv = line.trim().split(" ");
     if (argv.length > 0) {
       switch (argv[0]) {
@@ -37,8 +42,23 @@ function cli() {
           process.stdout.write("Please provide a file name\n");
         }
         break;
+      case "send_command":
+      case "sc":
+      case "c":
+        if (argv.length > 1) {
+          hasp.command(argv.slice(1).join(" "));
+        }
+        else {
+          process.stdout.write("Please provide command text\n");
+        }
+        break;
+      case "help":
+      case "?":
+        displayHelp(argv);
+        break;
       case "exit":
       case "quit":
+      case "q":
         process.exit(0);
         break;
       case "":
@@ -78,6 +98,30 @@ function loadCards(streamId, path) {
   }
 }
 
+function displayHelp(argv) {
+  const text = [
+    "\nCommands:",
+    "~~~~~~~~~",
+    "  help : Display this help text.",
+    "    alias  : ?",
+    "",
+    "  load_cards : Load a file containing a batch job on the card reader.",
+    "    syntax : load_cards <pathname>",
+    "    alias  : lc",
+    "    example: lc batch.job",
+    "",
+    "  quit : Exit from the RJE CLI.",
+    "    aliases: q, exit",
+    "",
+    "  send_command : Send an operator command to the RJE host.",
+    "    syntax : send_command <command-text>",
+    "    aliases: sc, c",
+    "    example: c display,alld"
+  ];
+  for (const line of text)
+    process.stdout.write(`${line}\n`);
+}
+
 process.stdout.write("\nRJE CLI starting ...");
 
 const hasp = new Hasp(config);
@@ -86,6 +130,8 @@ hasp.on("data", (recordType, streamId, data) => {
   switch (recordType) {
   case Hasp.RecordType_OpMsg:
     process.stdout.write(`\n${data}`);
+    if (timer !== null) clearTimeout(timer);
+    timer = setTimeout(() => {process.stdout.write("\nOperator> ");}, 2000);
     break;
   case Hasp.RecordType_PrintRecord:
   case Hasp.RecordType_PunchRecord:
@@ -117,7 +163,7 @@ hasp.on("data", (recordType, streamId, data) => {
       }
     }
     if (data !== null) {
-      streams[key].stream.write(`${data}\n`);
+      streams[key].stream.write(data);
     }
     else {
       streams[key].stream.close();
