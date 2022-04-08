@@ -1,0 +1,11 @@
+{
+  "debug": false,
+  "host":"localhost",
+  "port":2555,
+  "bsc":{
+    "debug":false
+  },
+  "hasp":{
+    "debug":false
+  }
+}

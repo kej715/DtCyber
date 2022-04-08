@@ -1,0 +1,17 @@
+{
+  "name": "rje-station",
+  "version": "1.0.0",
+  "description": "Remote Job Entry station simulator",
+  "main": "rjecli.js",
+  "scripts": {
+    "test": "echo \"No test specified\" && exit 1"
+  },
+  "author": "Kevin Jordan",
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+  },
+  "engines": {
+    "npm": ">=8.0.0",
+    "node": ">=16.0.0"
+  }
+}
