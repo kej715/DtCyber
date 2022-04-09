@@ -50,17 +50,21 @@ optional parameters. Its contents look like this:
 ```
 
 The properties defined in `config.json` are:
-- **debug** : if set to *true*, **rjecli** will log debugging information to the console.
+- **debug** : if set to *true*, **rjecli** will log debugging information to the console. The default is *false*. This also sets the default values of the **bsc.debug** and **hasp.debug** properties.
 - **host** : specifies the host name or IP address of the host where the RJE host service is located (e.g., the name of the host on which *DtCyber* is running). The default is *localhost*.
 - **name** : specifies the username or terminal name used in the *SIGNON* request
 sent to the RJE host service. The default is none.
 - **password** : specifies the password used in the *SIGNON* request sent to the RJE
 host service. The default is none.
 - **port** : the TCP port number on which the RJE host service is listening for connections. The default is *2552*.
+- **spoolDir** : specifies the pathname of a directory in which print and punch files
+received from the RJE host service will be stored. The default is *./spool*.
 - **bsc** : an optional object defining configuration properties specific to the BSC data communication layer.
-- **bsc.debug** : if set to *true*, the BSC layer will log debugging information to the console.
+- **bsc.debug** : if set to *true*, the BSC layer will log debugging information to the console. The default is the value specified by the top-level **debug**
+property.
 - **hasp** : an optional object defining configuration properties specific to the HASP data communication layer.
-- **hasp.debug** : if set to *true*, the HASP layer will log debugging information to the console.
+- **hasp.debug** : if set to *true*, the HASP layer will log debugging information to the console. The default is the value specified by the top-level **debug**
+property.
 - **hasp.LP1** : an optional object defining configuration properties specific to the LP1 printer stream.
 - **hasp.LP1.isPostPrint** : if set to *true* (the default value), format effectors
 for LP1 are handled as post-print (i.e., after the line with which they're associated

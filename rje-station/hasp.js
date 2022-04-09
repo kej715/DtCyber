@@ -361,7 +361,7 @@ class Hasp {
 
   start(name, password) {
     this.bsc.start(() => {
-      this.rcvSeqNum = 0;
+      this.rcvSeqNum = 0x0f;
       this.sndSeqNum = 0;
       let card = "/*SIGNON       ";
       if (typeof name === "string") card += name;

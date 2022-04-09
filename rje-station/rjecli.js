@@ -4,7 +4,7 @@ const process = require("process");
 const readline = require("readline");
 
 const configFile = (process.argv.length > 2) ? process.argv[2] : "config.json";
-const config = JSON.parse(fs.readFileSync("config.json"));
+const config = JSON.parse(fs.readFileSync(configFile));
 const defaults = {
   host: "localhost",
   port: 2553,
@@ -152,6 +152,10 @@ hasp.on("data", (recordType, streamId, data) => {
       path += date.getMinutes();
       if (date.getSeconds() < 10) path += "0";
       path += date.getSeconds();
+      const ms = date.getMilliseconds();
+      if (ms < 100) path += "0";
+      if (ms <  10) path += "0";
+      path += `${ms}.txt`;
       streams[key].path = path;
       try {
         streams[key].stream = fs.createWriteStream(path, {encoding:"utf8",mode:"660"});
@@ -198,4 +202,7 @@ hasp.on("pti", (recordType, streamId) => {
   hasp.send(streamId, stream);
 });
 
-hasp.start();
+hasp.start(
+  (typeof config.name     !== "undefined") ? config.name     : null,
+  (typeof config.password !== "undefined") ? config.password : null
+);
