@@ -169,6 +169,7 @@ class Hasp {
     const seqNum = bcb & 0x0f;
     const blockType = (bcb >> 4) & 0x07;
     this.fcs = (data[i] << 8) | data[i + 1];
+    this.log(`blockType:${blockType}, seqNum:${seqNum}, fcs:${this.fcs.toString(16)}`);
     i += 2;
     if (blockType === Hasp.BlockType_ResetSeqNum) {
       this.rcvSeqNum = (seqNum - 1) & 0x0f;
@@ -200,6 +201,7 @@ class Hasp {
       let streamId = (rcb >> 4) & 0x07;
       let recordType = rcb & 0x0f;
       const srcb = data[i++];
+      this.log(`streamId:${streamId}, recordType:${recordType}, srcb:${srcb.toString(16)}`);
       if (recordType === Hasp.RecordType_Control) {
         switch (streamId) {
         case Hasp.ControlInfo_RTI:
@@ -266,9 +268,8 @@ class Hasp {
             }
           }
         }
+        this.log(str);
         if (recordType === Hasp.RecordType_PrintRecord) {
-          const key = `LP${streamId}`;
-          if (typeof this.hasp[key] === "undefined") this.hasp[key] = {};
           if (typeof this.hasp[key].isPostPrint === "undefined") this.hasp[key].isPostPrint = true;
           const isPostPrint = this.hasp[key].isPostPrint;
           if (typeof this.hasp[key].recordCount === "undefined") {
