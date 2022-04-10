@@ -1,0 +1,23 @@
+~*
+~*  This job updates the NAMSTRT file in the catalog of
+~*  NETOPS to enable startup of RBF.
+~*
+ENARBF.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$GET,NAMSTRT/UN=NETOPS.
+$NOTE,IN,NR.+CS/.*JOB(JOBRBF/JOB(JOBRBF/*
+$NOTE,IN,NR.+Q
+$PACK,IN.
+$XEDIT,NAMSTRT,I=IN,L=0.
+$REPLACE,NAMSTRT/UN=NETOPS.
+***
+*** ENARBF COMPLETE
+***
+EXIT.
+***
+*** ENARBF FAILED
+***

@@ -1,0 +1,14 @@
+# Create RJE user accounts
+set cmds {
+    "MODVAL,OP=Z./RJE1,PW=RJE1,RL=ALL"
+    "MODVAL,OP=Z./RJE1,AP=NUL,AP=RBF"
+    "MODVAL,OP=Z./RJE2,PW=RJE1,RL=ALL"
+    "MODVAL,OP=Z./RJE2,AP=NUL,AP=RBF"
+}
+dis [join $cmds ";"]
+
+# Run job to enable startup of RBF in NAMSTRT
+run_job 12 4 opt/rbf5-namstrt.job
+
+# Run job to enable the RBF subsystem
+run_job 12 4 opt/enable-subsys.job RBF

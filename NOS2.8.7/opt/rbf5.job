@@ -1,0 +1,20 @@
+~*
+~*  This job builds the RBF (Remote Batch Facility) product.
+~*
+RBF.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$NOEXIT.
+$TMSDEF,TO=F.
+$ONEXIT.
+$BEGIN,RBF5,INSTALL.
+***
+*** RBF COMPLETE
+***
+EXIT.
+***
+*** RBF FAILED
+***
