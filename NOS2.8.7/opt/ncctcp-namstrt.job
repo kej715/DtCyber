@@ -1,7 +1,6 @@
 ~*
 ~*  This job updates the NAMSTRT file in the catalog of
-~*  NETOPS to prevent NAM from starting network applications
-~*  that are not used or configured for the local system.
+~*  NETOPS to enable startup of the NCC TCP/IP applications.
 ~*
 ENAAPPS.
 $USER,INSTALL,INSTALL.
