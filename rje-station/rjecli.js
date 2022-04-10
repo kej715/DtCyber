@@ -122,6 +122,11 @@ function displayHelp(argv) {
     process.stdout.write(`${line}\n`);
 }
 
+function setPromptTimer() {
+  if (timer !== null) clearTimeout(timer);
+  timer = setTimeout(() => {process.stdout.write("\nOperator> ");}, 2000);
+}
+
 process.stdout.write("\nRJE CLI starting ...");
 
 const hasp = new Hasp(config);
@@ -130,8 +135,7 @@ hasp.on("data", (recordType, streamId, data) => {
   switch (recordType) {
   case Hasp.RecordType_OpMsg:
     process.stdout.write(`\n${data}`);
-    if (timer !== null) clearTimeout(timer);
-    timer = setTimeout(() => {process.stdout.write("\nOperator> ");}, 2000);
+    setPromptTimer();
     break;
   case Hasp.RecordType_PrintRecord:
   case Hasp.RecordType_PunchRecord:
@@ -172,6 +176,7 @@ hasp.on("data", (recordType, streamId, data) => {
     else {
       streams[key].stream.close();
       process.stdout.write(`\nClosed ${streams[key].path}`);
+      setPromptTimer();
       delete streams[key];
     }
     break;
@@ -188,7 +193,7 @@ hasp.on("end", streamId => {
   process.stdout.write(`\nDone    ${path} on ${key} ...`);
 });
 
-hasp.on("signon", () => {
+hasp.on("connect", () => {
   process.stdout.write(`\nConnected to HASP host at ${config.host}:${config.port}`);
   cli();
 });

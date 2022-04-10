@@ -44,6 +44,10 @@ class Hasp {
     this.isSignedOn = false;
     this.debug = false;
     this.hasp = {};
+    this.highWaterMark = 64;
+    this.isReady = true;
+    this.lowWaterMark = 32;
+    this.queuedBlocks = [];
     this.streams = {};
     if (typeof options !== "undefined") {
       for (let key of Object.keys(options)) {
@@ -51,24 +55,31 @@ class Hasp {
       }
     }
     if (this.hasp.debug) this.debug = true;
+    if (typeof this.hasp.maxBlockSize === "undefined") this.hasp.maxBlockSize = 400;
     this.translator = new Translator();
     this.bsc = new Bsc(options);
     this.bsc.on("data", data => {
       this.receiveBlock(data);
     });
-    this.bsc.on("ready", isReady => {
-      if (isReady) {
-        for (const key of Object.keys(this.streams)) this.streams[key].pause();
-      }
-      else {
-        for (const key of Object.keys(this.streams)) this.streams[key].resume();
-      }
+    this.bsc.setBlockProvider(() => {
+      return this.provideBlock();
     });
+  }
+
+  checkReadiness() {
+    if (this.queuedBlocks.length < this.lowWaterMark && this.isReady === false) {
+      this.isReady = true;
+      for (const key of Object.keys(this.streams)) this.streams[key].pause();
+    }
+    else if (this.queuedBlocks.length >= this.highWaterMark && this.isReady) {
+      this.isReady = false;
+      for (const key of Object.keys(this.streams)) this.streams[key].resume();
+    }
   }
 
   command(text) {
     let block = [
-      0x80 | (Hasp.BlockType_Normal << 4) | (this.sndSeqNum++ & 0x0f),
+      0x80 | (Hasp.BlockType_Normal << 4),
       0x8f, 0xcf,
       0x80 | (1 << 4) | Hasp.RecordType_OpCmd,
       0x80
@@ -84,8 +95,7 @@ class Hasp {
     }
     block.push(0);
     block.push(0);
-    this.logData("send", block);
-    this.bsc.queueBlock(block);
+    this.queueBlock(block);
   }
 
   log(msg) {
@@ -162,6 +172,45 @@ class Hasp {
     return `${fe}${record}\n`;
   }
 
+  provideBlock() {
+    let i = 0;
+    let block = null;
+    while (i < this.queuedBlocks.length) {
+      block = this.queuedBlocks[i];
+      if ((block[0] & 0x70) !== 0) break; // not a normal block
+      const rcb = block[3];
+      if (   (rcb & 0x80) === 0 // end of transmission block
+          || (rcb & 0x0f) !== Hasp.RecordType_InputRecord) {
+        block[0] = (block[0] & 0xf0) | this.sndSeqNum;
+        this.sndSeqNum = (this.sndSeqNum + 1) & 0x0f;
+        break;
+      }
+      const streamId = (rcb >> 4) & 0x07;
+      const shiftBase = (streamId < 5) ? 12 : 8;
+      if ((this.fcs & 0x4000) === 0
+          && ((1 << (shiftBase - streamId)) & this.fcs) !== 0) {
+        block[0] = (block[0] & 0xf0) | this.sndSeqNum;
+        this.sndSeqNum = (this.sndSeqNum + 1) & 0x0f;
+        break;
+      }
+      i += 1;
+    }
+    if (i < this.queuedBlocks.length) {
+      this.queuedBlocks.splice(i, 1);
+      this.checkReadiness();
+      this.logData("send", block);
+      return block;
+    }
+    else {
+      return null;
+    }
+  }
+
+  queueBlock(block) {
+    this.queuedBlocks.push(block);
+    this.checkReadiness();
+  }
+
   receiveBlock(data) {
     this.logData("recv:", data);
     let i = 0;
@@ -183,15 +232,14 @@ class Hasp {
       }
       else { // Bad sequence number, indicate the one expected
         let block = [
-          0x80 | (Hasp.BlockType_Normal << 4) | (this.sndSeqNum++ & 0x0f),
+          0x80 | (Hasp.BlockType_Normal << 4),
           0x8f, 0xcf,
           0x80 | (Hasp.ControlInfo_BadBCB << 4) | Hasp.RecordType_Control,
           0x80 | ((this.rcvSeqNum + 1) & 0x0f),
           0x00,
           0x00
         ];
-        this.logData("send", block);
-        this.bsc.queueBlock(block);
+        this.queueBlock(block);
         return;
       }
     }
@@ -206,15 +254,14 @@ class Hasp {
         switch (streamId) {
         case Hasp.ControlInfo_RTI:
           let block = [
-            0x80 | (Hasp.BlockType_Normal << 4) | (this.sndSeqNum++ & 0x0f),
+            0x80 | (Hasp.BlockType_Normal << 4),
             0x8f, 0xcf,
             0x80 | (Hasp.ControlInfo_PTI << 4) | Hasp.RecordType_Control,
             srcb,
             0x00,
             0x00
           ];
-          this.logData("send", block);
-          this.bsc.queueBlock(block);
+          this.queueBlock(block);
           break;
         case Hasp.ControlInfo_PTI:
           streamId = (srcb >> 4) & 0x07;
@@ -296,15 +343,14 @@ class Hasp {
 
   requestToSend(streamId) {
     let block = [
-      0x80 | (Hasp.BlockType_Normal << 4) | (this.sndSeqNum++ & 0x0f),
+      0x80 | (Hasp.BlockType_Normal << 4),
       0x8f, 0xcf,
       0x80 | (Hasp.ControlInfo_RTI << 4) | Hasp.RecordType_Control,
       0x80 | (streamId << 4) | Hasp.RecordType_InputRecord,
       0x00,
       0x00
     ];
-    this.logData("send", block);
-    this.bsc.queueBlock(block);
+    this.queueBlock(block);
   }
 
   send(streamId, readable) {
@@ -316,10 +362,7 @@ class Hasp {
       let limit = buf.indexOf(0x0a);
       if (limit > 0 && buf[limit - 1] === 0x0d) limit -= 1;
       if (limit >= 0) {
-        let block = [
-          0x80 | (Hasp.BlockType_Normal << 4) | (this.sndSeqNum++ & 0x0f),
-          0x8f, 0xcf
-        ];
+        let block = [0x80 | (Hasp.BlockType_Normal << 4), 0x8f, 0xcf];
         while (limit >= 0) {
           block.push(0x80 | (streamId << 4) | Hasp.RecordType_InputRecord, 0x80);
           let i = 0;
@@ -337,23 +380,26 @@ class Hasp {
           buf = buf.slice(i);
           limit = buf.indexOf(0x0a);
           if (limit > 0 && buf[limit - 1] == 0x0d) limit -= 1;
+          if (block.length + limit > this.maxBlockSize) {
+            block.push(0);
+            this.queueBlock(block);
+            block = [0x80 | (Hasp.BlockType_Normal << 4), 0x8f, 0xcf];
+          }
         }
         block.push(0);
-        this.logData("send", block);
-        this.bsc.queueBlock(block);
+        this.queueBlock(block);
       }
     });
     readable.on("end", () => {
       let block = [
-        0x80 | (Hasp.BlockType_Normal << 4) | (this.sndSeqNum++ & 0x0f),
+        0x80 | (Hasp.BlockType_Normal << 4),
         0x8f, 0xcf,
         0x80 | (streamId << 4) | Hasp.RecordType_InputRecord,
         0x80,
         0x00,
         0x00
       ];
-      this.logData("send", block);
-      this.bsc.queueBlock(block);
+      this.queueBlock(block);
       delete this.streams[key];
       if (typeof this.handlers.end === "function") this.handlers.end(streamId);
     });
@@ -361,6 +407,7 @@ class Hasp {
 
   start(name, password) {
     this.bsc.start(() => {
+      this.queuedBlocks = [];
       this.rcvSeqNum = 0x0f;
       this.sndSeqNum = 0;
       let card = "/*SIGNON       ";
@@ -369,9 +416,8 @@ class Hasp {
       if (typeof password === "string") card += password;
       while (card.length < 80) card += " ";
       let block = [0xa0, 0x8f, 0xcf, 0xf0, 0xc1].concat(this.translator.toEbcdic(card)).concat([0]);
-      this.logData("send", block);
-      this.bsc.queueBlock(block);
-      if (typeof this.handlers.signon === "function") this.handlers.signon();
+      this.queueBlock(block);
+      if (typeof this.handlers.connect === "function") this.handlers.connect();
     });
   }
 }

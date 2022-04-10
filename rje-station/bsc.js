@@ -34,14 +34,11 @@ class Bsc {
     this.handlers = {};
     this.state = Bsc.StateDisconnected;
     this.host = "localhost";
-    this.port = 2552;
+    this.port = 2553;
     this.debug = false;
     this.queuedBlocks = [];
     this.receivedData = [];
     this.ackDelay = 250;
-    this.highWaterMark = 64;
-    this.lowWaterMark = 32;
-    this.isReady = true;
     if (typeof options !== "undefined") {
       for (let key of Object.keys(options)) {
         this[key] = options[key];
@@ -49,19 +46,6 @@ class Bsc {
     }
     if (typeof this.bsc !== "undefined") {
       if (this.bsc.debug) this.debug = true;
-    }
-  }
-
-  checkReadiness() {
-    if (this.handlers.ready === "function") {
-      if (this.queuedBlocks.length < this.lowWaterMark && this.isReady === false) {
-        this.isReady = true;
-        this.handlers.ready(true);
-      }
-      else if (this.queuedBlocks.length >= this.highWaterMark && this.isReady) {
-        this.isReady = false;
-        this.handlers.ready(false);
-      }
     }
   }
 
@@ -85,30 +69,14 @@ class Bsc {
 
   on(evt, handler) {
     this.handlers[evt] = handler;
-    if (evt === "ready") {
-      this.isReady = this.queuedBlocks.length < this.highWaterMark;
-      handler(this.isReady);
-    }
   }
 
-  queueBlock(block) {
-    this.queuedBlocks.push(block);
-    if (this.handlers.ready === "function") {
-      if (this.queuedBlocks.length < this.lowWaterMark) {
-        this.handlers.ready(true);
-      }
-      else if (this.queuedBlocks.length >= this.highWaterMark) {
-        this.handlers.ready(false);
-      }
-    }
-  }
-
-  sendQueuedBlock(isLastAck) {
-    if (this.queuedBlocks.length > 0) {
+  sendBlock(isLastAck) {
+    const provided = (typeof this.blockProvider === "function") ? this.blockProvider() : null;
+    if (provided != null) {
       this.ackDelay = 250;
       let block = Array.from(Bsc.BlockHeader);
-      let queued = this.queuedBlocks.shift();
-      for (let b of queued) {
+      for (let b of provided) {
         if (b === Const.DLE) {
           block = block.concat([Const.DLE, Const.DLE]);
         }
@@ -127,6 +95,10 @@ class Bsc {
       this.ackDelay = 250;
       this.write(Bsc.AckIndication);
     }
+  }
+
+  setBlockProvider(provider) {
+    this.blockProvider = provider;
   }
 
   start(callback) {
@@ -166,7 +138,7 @@ class Bsc {
               this.state = Bsc.StateSoB_DLE;
               this.queuedBlocks = [];
               if (typeof callback === "function") callback();
-              this.sendQueuedBlock(false);
+              this.sendBlock(false);
             }
             else {
               this.state = Bsc.StateENQ_DLE;
@@ -203,7 +175,7 @@ class Bsc {
           case Bsc.StateSoB_STX:
             if (b === Const.ACK0) {
               this.state = Bsc.StateSoB_DLE;
-              this.sendQueuedBlock(true);
+              this.sendBlock(true);
             }
             else if (b === Const.STX) {
               this.receivedBlock = [];
@@ -239,7 +211,7 @@ class Bsc {
               }
               this.state = Bsc.StateSoB_DLE;
               this.receivedData = [];
-              this.sendQueuedBlock(false);
+              this.sendBlock(false);
             }
             else if (b === Const.DLE) {
               this.receivedData.push(b);

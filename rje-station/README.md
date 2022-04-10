@@ -56,7 +56,7 @@ The properties defined in `config.json` are:
 sent to the RJE host service. The default is none.
 - **password** : specifies the password used in the *SIGNON* request sent to the RJE
 host service. The default is none.
-- **port** : the TCP port number on which the RJE host service is listening for connections. The default is *2552*.
+- **port** : the TCP port number on which the RJE host service is listening for connections. The default is *2553*.
 - **spoolDir** : specifies the pathname of a directory in which print and punch files
 received from the RJE host service will be stored. The default is *./spool*.
 - **bsc** : an optional object defining configuration properties specific to the BSC data communication layer.
@@ -71,3 +71,6 @@ for LP1 are handled as post-print (i.e., after the line with which they're assoc
 in HASP protocol elements). If set to *false*, format effectors for LP1 are handled
 as pre-print. The value chosen must match the corresponding terminal definition
 on the CDC NOS operating system (i.e., in the *NDL* file).
+- **hasp.maxBlockSize** : specifies the maximum number of bytes to send to the HASP
+service host in each HASP protocol block. The default is *400*, which works well for
+IBM MVS and CMS hosts.
