@@ -25,10 +25,12 @@
 #      will never or can not be SYSEDIT'ed into the system.
 #   6) Example scripts. Comma-separated list of expect scripts and/or card decks to
 #      install files and/or run jobs providing examples related to the product.
-#      The scripts are assumed to be located in the examples subdirectory. "*"
-#      is specified if a product does not have any example files or jobs.
-#      Script names ending in ".job" are loaded on the card reader and run as
-#      jobs. Other names are assumed to be expect scripts, and they are sourced.
+#      This can also be used to force a SYSEDIT of the product into the running
+#      system, followed by additional post-build operations. The scripts are assumed
+#      to be located in the examples subdirectory. "*" is specified if a product
+#      does not have any example files or jobs. Script names ending in ".job" are
+#      loaded on the card reader and run as jobs. Other names are assumed to be
+#      expect scripts, and they are sourced.
 #   7) URL. URL of the tape image or ZIP file containing installation materials
 #      for the product, if any. "*" is specified if a product does not have
 #      any external tape image or ZIP file to be retrieved.
@@ -64,6 +66,7 @@ utlisp * utlisp.post 69 ABS/LISP * https://www.dropbox.com/s/0wcq8e7m379ivyw/utl
 cdcs2 nos.pre nos.post,cdcs2.post 14 ULIB/DMSLIB,ABS/CDCS2-OVL/DB$B20B cdcs-create-schema.job,cdcs-cobol-subschema.job,cdcs-ftn-subschema.job,cdcs-qu-subschema.job,cdcs-create-md.job,cdcs-dbrec.job,cdcs-start.post * CYBER Database Control System Version 2
 icem icem.pre icem.post 0 * * https://www.dropbox.com/s/1ufg3504xizju0l/icem.zip?dl=1 ICEM Design/Drafting and GPL compiler
 qu3 nos.pre nos.post 47 ULIB/DMSLIB,ABS/QU-OVL/QU0700 qu3.pre,qu3.job * Query Update Utility Version 3
+rbf5 nos.pre nos.post,rbf5.post 48 ABS/RBF2P0-OVL/RBF0200 rbf5-restart.post * Remote Batch Facility Version 5
 * ------------------------------------------------------------------------------
 *
 *  Optional 3rd-Party products
