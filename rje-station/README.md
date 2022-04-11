@@ -18,19 +18,32 @@ subsystem.
 This directory provides Javascript classes implementing HASP and
 [BSC](https://en.wikipedia.org/wiki/Binary_Synchronous_Communications) protocols over
 TCP/IP. The implementation is designed to execute using Node.js, and it interoperates
-with DtCyber as well as the Hercules IBM mainframe simulator. In addition, a command
-line application named **rjecli** is provided. **rjecli** enables a user to submit
-jobs to RBF on NOS 2 (running on DtCyber), and JES2 on IBM MVS or RCSC on IBM CMS
-(running on Hercules).
+with *DtCyber* as well as the *Hercules* IBM mainframe simulator. In addition, a
+command line application named **rjecli** is provided.
 
+**rjecli** enables a user to submit jobs to RBF on NOS 2 (running on *DtCyber*), and
+JES2 on IBM MVS or RCSC on IBM CMS (running on *Hercules*). Normally, ordinary print
+and punch output produced by these jobs will be returned automatically to **rjecli**.
+**rjecli** creates a file with a unique name in its spooling directory for each
+print and punch file returned. The default spooling directory pathname is `./spool`.
+A different pathname can be defined in the **rjecli** configuration file (see below). 
+
+## Installing rjecli
 Execute the following commands to install and run **rjecli** from this directory:
 
     npm install
     node rjecli
 
-**rjecli** uses a configuration file named `config.json` to define the host and
-TCP port where the RJE host service is located. This file can also define other
-optional parameters. Its contents look like this:
+**rjecli** accepts an optional parameter specifying the pathname of a configuration file. The default configuration file pathname is `./config.json`. To specify a different configuration file, execute **rjecli** as in:
+
+    node rjecli /path/to/file.json
+
+## Configuring rjecli
+**rjecli** uses a configuration file to define the host and TCP port where the RJE
+host service is located. The configuration file can also define other optional 
+parameters. The default pathname of the configuration file is `./config.json`.
+
+The contents of the configuration file look like this:
 
 ```
 {
@@ -74,3 +87,25 @@ on the CDC NOS operating system (i.e., in the *NDL* file).
 - **hasp.maxBlockSize** : specifies the maximum number of bytes to send to the HASP
 service host in each HASP protocol block. The default is *400*, which works well for
 IBM MVS and CMS hosts.
+
+## Using rjecli
+When **rjecli** starts, it attempts to connect to the RJE host service specified by the `host` and `port` properties defined in the configuration file. When the
+connection is complete and **rjecli** is ready to accept commands, it issues this
+prompt:
+
+    Operator> 
+
+It recognizes the following commands:
+
+- **help** or **?** : Displays help text.
+
+- **load_cards** or **lc** : Load a file containing a batch job on the card reader.
+
+  example: `lc /path/to/batch.job`
+
+- **quit** or **q** : Exit from the RJE CLI.
+
+- **send_command** or **sc** or **c** : Send an operator command to the RJE host.
+
+  example: `c display,alld`
+
