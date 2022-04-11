@@ -161,6 +161,7 @@ The following build scripts make optional CDC-provided products available.
 | cdcs2   | CYBER Database Control System Version 2 |
 | [icem](https://www.dropbox.com/s/1ufg3504xizju0l/icem.zip?dl=1) | ICEM Design/Drafting and GPL compiler |
 | qu3     | Query Update Utility Version 3 |
+| rbf5    | Remote Batch Facility Version 5|
 
 #### Optional 3rd-Party Products
 The following build scripts make products from 3rd-party sources available.
