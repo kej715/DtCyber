@@ -108,4 +108,3 @@ It recognizes the following commands:
 - **send_command** or **sc** or **c** : Send an operator command to the RJE host.
 
   example: `c display,alld`
-
