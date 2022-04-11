@@ -1,0 +1,15 @@
+{
+  "debug": false,
+  "host":"localhost",
+  "port":37803,
+  "name":"REMOTE001",
+  "bsc":{
+    "debug":false
+  },
+  "hasp":{
+    "debug":false,
+    "LP1":{
+      "isPostPrint":true
+    }
+  }
+}

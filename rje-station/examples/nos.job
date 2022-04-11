@@ -1,0 +1,20 @@
+FIBONAC.
+USER,GUEST,GUEST.
+FTN5,GO.
+/*EOR
+      PROGRAM FIB
+C
+C     CALCULATE THE FIRST 10 FIBONACCI NUMBERS
+C
+      I1 = 0
+      I2 = 1
+C
+      DO 10 N = 1, 10
+        PRINT *, N, I2
+        I3 = I1 + I2
+        I1 = I2
+        I2 = I3
+ 10   CONTINUE
+      STOP
+      END
+/*EOI
