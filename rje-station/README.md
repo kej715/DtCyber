@@ -107,4 +107,49 @@ It recognizes the following commands:
 
 - **send_command** or **sc** or **c** : Send an operator command to the RJE host.
 
-  example: `c display,alld`
+  example: `c display dev`
+
+The [examples](examples) directory contains example job files for the CDC NOS and
+IBM MVS operating systems. Here is a transcript of an **rjecli** session with RBF
+on CDC NOS 2.8.7. It uses the **c** command to display the status of all devices
+associated with the RJE station, and it uses the **lc** command to submit a job
+from the `examples` directory (`examples/nos.job`) for execution:
+```
+rje-station % node rjecli
+
+RJE CLI starting ...
+
+Operator>
+WELCOME TO THE NOS SOFTWARE SYSTEM.
+COPYRIGHT CONTROL DATA SYSTEMS INC. 1994.
+22/04/11. 10.55.18. CO02P14
+M01 - CYBER 865.                        NOS 2.8.7 871/871.
+Operator>
+RBF  VER 1.8-STARTED 22/04/11. 10.55.24.
+READY
+Operator> c display dev
+Operator>
+RBF DEVICES OF USER RJE1   /CYBER
+EQ  STAT    NAME     FS RP FC/TR OPT WID   BS
+
+CR1 GO                           ACK
+LP1 GO                       /A9 ALL 132  400
+CP1 GO                           A/B      400
+*** END DISPLAY ***
+Operator> lc examples/nos.job
+
+Operator>
+Reading examples/nos.job on CR1 ...
+Done    examples/nos.job on CR1 ...
+10.56.01. CR1 JOB NAME AABO ENTERED INPUT QUEUE
+Operator>
+10.56.17. LP1 JOB NAME AABO
+         6 PRU-S
+Created ./spool/LP1_20220411105620457.txt
+Operator>
+Closed ./spool/LP1_20220411105620457.txt
+END LP1
+Operator> q
+rje-station %
+```
+
