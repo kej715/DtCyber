@@ -82,7 +82,7 @@ static int  npuNetCreateConnections(void);
 static bool npuNetCreateListeningSocket(Ncb *ncbp);
 static void npuNetCreateThread(void);
 static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive);
-static int  npuNetRegisterClaPort(int claPort, int numPorts, int connType, Ncb *ncbp);
+static int  npuNetRegisterClaPort(Ncb *ncbp);
 static void npuNetSendConsoleMsg(int connFd, int connType, char *msg);
 static void npuNetTryOutput(Pcb *pcbp);
 #if defined(_WIN32)
@@ -289,12 +289,6 @@ int npuNetRegisterConnType(int tcpPort, int claPort, int numPorts, int connType,
     if (ncbpp != NULL) *ncbpp = ncbp;
 
     /*
-    **  Register CLA ports and check for duplicates.
-    */
-    status = npuNetRegisterClaPort(claPort, numPorts, connType, ncbp);
-    if (status != NpuNetRegOk) return status;
-
-    /*
     **  Register this port.
     */
     ncbp->state         = StConnInit;
@@ -306,6 +300,12 @@ int npuNetRegisterConnType(int tcpPort, int claPort, int numPorts, int connType,
     ncbp->lstnFd        = 0;
     ncbp->hostName      = NULL;
     ncbp->nextConnectionAttempt = getSeconds() + (time_t)NamStartupTime;
+
+    /*
+    **  Register CLA ports associated with this connection and check for duplicates.
+    */
+    status = npuNetRegisterClaPort(ncbp);
+    if (status != NpuNetRegOk) return status;
 
     numNcbs += 1;
 
@@ -670,11 +670,10 @@ void npuNetCheckStatus(void)
 **  Purpose:        Register CLA port numbers and associated connection types
 **
 **  Parameters:     Name        Description.
-**                  claPort     starting CLA port number on NPU
-**                  numPorts    number of CLA ports on this TCP port
-**                  connType    type of connection (raw/pterm/telnet/hasp/trunk/etc.)
 **                  ncbp        pointer to network connection control block to be
-**                              associated with the ports
+**                              associated with the ports. The NCB provides the
+**                              starting CLA port number, number of CLA ports, and
+**                              connection type.
 **
 **  Returns:        NpuNetRegOk: successfully registered
 **                  NpuNetRegOvfl: invalid CLA port number
@@ -682,7 +681,7 @@ void npuNetCheckStatus(void)
 **                  NpuNetRegDupCla: duplicate CLA port specified
 **
 **------------------------------------------------------------------------*/
-static int npuNetRegisterClaPort(int claPort, int numPorts, int connType, Ncb *ncbp)
+static int npuNetRegisterClaPort(Ncb *ncbp)
     {
     int i;
     int limit;
@@ -697,14 +696,14 @@ static int npuNetRegisterClaPort(int claPort, int numPorts, int connType, Ncb *n
         isPcbsPreset = TRUE;
         }
 
-    limit = claPort + numPorts;
+    limit = ncbp->claPort + ncbp->numPorts;
 
-    if (claPort < 1 || limit > MaxClaPorts)
+    if (ncbp->claPort < 1 || limit > MaxClaPorts)
         {
         return NpuNetRegOvfl;
         }
 
-    for (i = claPort; i < limit; i++)
+    for (i = ncbp->claPort; i < limit; i++)
         {
         pcbp = &pcbs[i];
         if (pcbp->claPort == 0)
@@ -716,7 +715,7 @@ static int npuNetRegisterClaPort(int claPort, int numPorts, int connType, Ncb *n
                 {
                 return NpuNetRegNoMem;
                 }
-            presetPcb[connType](pcbp);
+            presetPcb[ncbp->connType](pcbp);
             }
         else
             {

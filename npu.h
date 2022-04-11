@@ -511,10 +511,13 @@ typedef struct scb
     HaspStreamState state;
     struct tcb *tp;
     BatchParams params;
-    u32 recordCount;
+    u32  recordCount;
     bool isDiscardingRecords;
     bool isStarted;
     bool isWaitingPTI;
+    bool isPruFragmentComplete;
+    int  pruFragmentSize;
+    u8  *pruFragment;
     } Scb;
 
 typedef struct hcb
@@ -537,9 +540,6 @@ typedef struct hcb
     int  blockSize;
     NpuBuffer *lastBlockSent;
     NpuBuffer *outBuf;
-    u8  *pruFragment;
-    int  pruFragmentSize;
-    bool isPruFragmentComplete;
     u8   pollIndex;
     Scb *currentOutputStream;
     Scb *designatedStream;

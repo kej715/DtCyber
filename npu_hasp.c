@@ -169,6 +169,7 @@ static void npuHaspFlushUplineData(Scb *scbp, bool isEof);
 static void npuHaspProcessPostPrintFormatControl(Pcb *pcbp);
 static void npuHaspProcessPrePrintFormatControl(Pcb *pcbp);
 static void npuHaspReleaseLastBlockSent(Pcb *pcbp);
+static void npuHaspResetScb(Scb *scbp);
 static void npuHaspResetSendDeadline(Tcb *tp);
 static int  npuHaspSend(Pcb *pcbp, u8 *data, int len);
 static void npuHaspSendBlockHeader(Tcb *tp);
@@ -516,14 +517,14 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
             break;
         case DtLP:
             rtiRecord[1] = 0x80 | (tp->streamId << 4) | 4;
-            pcbp->controls.hasp.pruFragmentSize = 0;
-            pcbp->controls.hasp.isPruFragmentComplete = TRUE;
+            scbp->pruFragmentSize = 0;
+            scbp->isPruFragmentComplete = TRUE;
             break;
         case DtCP:
         case DtPLOTTER:
             rtiRecord[1] = 0x80 | (tp->streamId << 4) | 5;
-            pcbp->controls.hasp.pruFragmentSize = 0;
-            pcbp->controls.hasp.isPruFragmentComplete = FALSE;
+            scbp->pruFragmentSize = 0;
+            scbp->isPruFragmentComplete = FALSE;
             break;
         default:
 #if DEBUG
@@ -562,7 +563,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
             **  that triggers acknowledgement, if necessary.
             */
             blockType = (dbc & DbcEOI) != 0 ? BtHTMSG : BtHTBLK;
-            if (pcbp->controls.hasp.pruFragmentSize > 0)
+            if (scbp->pruFragmentSize > 0)
                 {
                 npuHaspSendBlockHeader(tp);
                 npuHaspFlushPruFragment(tp, ' ');
@@ -580,7 +581,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
         npuHaspSendBlockHeader(tp);
         while (len > 0)
             {
-            if (pcbp->controls.hasp.isPruFragmentComplete)
+            if (scbp->isPruFragmentComplete)
                 {
                 if (tp->deviceType == DtLP)
                     {
@@ -618,7 +619,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                             }
                         continue;
                         }
-                    blockLen += pcbp->controls.hasp.pruFragmentSize;
+                    blockLen += scbp->pruFragmentSize;
                     npuHaspFlushPruFragment(tp, formatEffector);
                     }
                 else
@@ -645,42 +646,42 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                 }
             if (scbp->params.fvFileType == ASC)
                 {
-                fp = pcbp->controls.hasp.pruFragment + pcbp->controls.hasp.pruFragmentSize;
+                fp = scbp->pruFragment + scbp->pruFragmentSize;
                 while (len-- > 0)
                     {
                     c = *blk++;
                     if (c == 0xff)
                         {
-                        pcbp->controls.hasp.isPruFragmentComplete = TRUE;
+                        scbp->isPruFragmentComplete = TRUE;
                         break;
                         }
-                    else if (pcbp->controls.hasp.pruFragmentSize < MaxBuffer)
+                    else if (scbp->pruFragmentSize < MaxBuffer)
                         {
                         *fp++ = asciiToEbcdic[c];
-                        pcbp->controls.hasp.pruFragmentSize += 1;
+                        scbp->pruFragmentSize += 1;
                         }
                     }
                 }
             else // DO26 or DO29
                 {
-                fp = pcbp->controls.hasp.pruFragment + pcbp->controls.hasp.pruFragmentSize;
+                fp = scbp->pruFragment + scbp->pruFragmentSize;
                 while (len-- > 0)
                     {
                     c = *blk++;
                     if (c == 0xff)
                         {
-                        pcbp->controls.hasp.isPruFragmentComplete = TRUE;
+                        scbp->isPruFragmentComplete = TRUE;
                         break;
                         }
-                    else if (pcbp->controls.hasp.pruFragmentSize < MaxBuffer)
+                    else if (scbp->pruFragmentSize < MaxBuffer)
                         {
                         *fp++ = asciiToEbcdic[cdcToAscii[c]];
-                        pcbp->controls.hasp.pruFragmentSize += 1;
+                        scbp->pruFragmentSize += 1;
                         }
                     }
                 }
             }
-        if (tp->deviceType != DtLP && pcbp->controls.hasp.isPruFragmentComplete)
+        if (tp->deviceType != DtLP && scbp->isPruFragmentComplete)
             {
             /*
             **  If the main loop, above, exited with a full record collected,
@@ -695,7 +696,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
             **  PRU of a file, so flush any data that might have been collected,
             **  and send a HASP end-of-file indication.
             */
-            if (pcbp->controls.hasp.pruFragmentSize > 0)
+            if (scbp->pruFragmentSize > 0)
                 {
                 npuHaspFlushPruFragment(tp, ' ');
                 }
@@ -2172,7 +2173,8 @@ bool npuHaspParseFileParams(u8 *mp, int len, Tcb *tp)
 **------------------------------------------------------------------------*/
 void npuHaspPresetPcb(Pcb *pcbp)
     {
-    u8 *up;
+    int i;
+    Scb *scbp;
 
 #if DEBUG
     if (npuHaspLog == NULL)
@@ -2190,11 +2192,26 @@ void npuHaspPresetPcb(Pcb *pcbp)
     pcbp->controls.hasp.lastBlockSent = NULL;
     pcbp->controls.hasp.retries = 0;
     pcbp->controls.hasp.outBuf = NULL;
-    pcbp->controls.hasp.pruFragment = up = (u8 *)malloc(MaxBuffer);
-    if (up == NULL)
+
+    if (pcbp->ncbp->connType == ConnTypeHasp)
         {
-        fprintf(stderr, "Failed to allocate PRU fragment buffer for HASP port\n");
-        exit(1);
+        for (i = 0; i < MaxHaspStreams; ++i)
+            {
+            scbp = &pcbp->controls.hasp.printStreams[i];
+            scbp->pruFragment = (u8 *)malloc(MaxBuffer);
+            if (scbp->pruFragment == NULL)
+                {
+                fprintf(stderr, "Failed to allocate PRU fragment buffer for HASP print stream\n");
+                exit(1);
+                }
+            scbp = &pcbp->controls.hasp.punchStreams[i];
+            scbp->pruFragment = (u8 *)malloc(MaxBuffer);
+            if (scbp->pruFragment == NULL)
+                {
+                fprintf(stderr, "Failed to allocate PRU fragment buffer for HASP punch stream\n");
+                exit(1);
+                }
+            }
         }
     npuHaspResetPcb(pcbp);
     }
@@ -2210,9 +2227,7 @@ void npuHaspPresetPcb(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 void npuHaspResetPcb(Pcb *pcbp)
     {
-    NpuBuffer *bp;
     int i;
-    Scb *scbp;
 
     pcbp->controls.hasp.majorState = StHaspMajorInit;
     pcbp->controls.hasp.minorState = StHaspMinorNIL;
@@ -2228,8 +2243,6 @@ void npuHaspResetPcb(Pcb *pcbp)
     pcbp->controls.hasp.downlineBSN = 0;
     pcbp->controls.hasp.uplineBSN = 0x0f;
     pcbp->controls.hasp.fcsMask = 0xff;
-    pcbp->controls.hasp.pruFragmentSize = 0;
-    pcbp->controls.hasp.isPruFragmentComplete = FALSE;
     if (pcbp->controls.hasp.lastBlockSent != NULL)
         {
         npuBipBufRelease(pcbp->controls.hasp.lastBlockSent);
@@ -2240,44 +2253,12 @@ void npuHaspResetPcb(Pcb *pcbp)
         npuBipBufRelease(pcbp->controls.hasp.outBuf);
         pcbp->controls.hasp.outBuf = NULL;
         }
-    scbp = &pcbp->controls.hasp.consoleStream;
-    if (scbp->tp != NULL)
-        {
-        while ((bp = npuBipQueueExtract(&scbp->tp->outputQ)) != NULL)
-            {
-            npuBipBufRelease(bp);
-            }
-        }
-    memset(scbp, 0, sizeof(Scb));
+    npuHaspResetScb(&pcbp->controls.hasp.consoleStream);
     for (i = 0; i < MaxHaspStreams; ++i)
         {
-        scbp = &pcbp->controls.hasp.readerStreams[i];
-        if (scbp->tp != NULL)
-            {
-            while ((bp = npuBipQueueExtract(&scbp->tp->outputQ)) != NULL)
-                {
-                npuBipBufRelease(bp);
-                }
-            }
-        memset(scbp, 0, sizeof(Scb));
-        scbp = &pcbp->controls.hasp.printStreams[i];
-        if (scbp->tp != NULL)
-            {
-            while ((bp = npuBipQueueExtract(&scbp->tp->outputQ)) != NULL)
-                {
-                npuBipBufRelease(bp);
-                }
-            }
-        memset(scbp, 0, sizeof(Scb));
-        scbp = &pcbp->controls.hasp.punchStreams[i];
-        if (scbp->tp != NULL)
-            {
-            while ((bp = npuBipQueueExtract(&scbp->tp->outputQ)) != NULL)
-                {
-                npuBipBufRelease(bp);
-                }
-            }
-        memset(scbp, 0, sizeof(Scb));
+        npuHaspResetScb(&pcbp->controls.hasp.readerStreams[i]);
+        npuHaspResetScb(&pcbp->controls.hasp.printStreams [i]);
+        npuHaspResetScb(&pcbp->controls.hasp.punchStreams [i]);
         }
     }
 
@@ -2515,7 +2496,7 @@ static Scb *npuHaspFindStreamWithPendingRTI(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 static void npuHaspFlushPruFragment(Tcb *tp, u8 fe)
     {
-    Pcb *pcbp;
+    Scb *scbp;
     u8 srcb;
 
     if (tp->deviceType == DtLP)
@@ -2545,22 +2526,21 @@ static void npuHaspFlushPruFragment(Tcb *tp, u8 fe)
         srcb = 0;
         }
     
-    pcbp = tp->pcbp;
-    if (pcbp->controls.hasp.pruFragmentSize > 0)
+    scbp = tp->scbp;
+    if (scbp->pruFragmentSize > 0)
         {
         npuHaspSendRecordHeader(tp, srcb);
-        npuHaspSendRecordStrings(tp, pcbp->controls.hasp.pruFragment,
-            pcbp->controls.hasp.pruFragmentSize);
-        tp->scbp->recordCount += 1;
+        npuHaspSendRecordStrings(tp, scbp->pruFragment, scbp->pruFragmentSize);
+        scbp->recordCount += 1;
         }
-    else if (tp->scbp->recordCount > 0 || tp->deviceType != DtLP || fe != ' ')
+    else if (scbp->recordCount > 0 || tp->deviceType != DtLP || fe != ' ')
         {
         npuHaspSendRecordHeader(tp, srcb);
         npuHaspSendRecordStrings(tp, blank, sizeof(blank));
         tp->scbp->recordCount += 1;
         }
-    pcbp->controls.hasp.pruFragmentSize = 0;
-    pcbp->controls.hasp.isPruFragmentComplete = FALSE;
+    scbp->pruFragmentSize = 0;
+    scbp->isPruFragmentComplete = FALSE;
 }
 
 /*--------------------------------------------------------------------------
@@ -2922,6 +2902,36 @@ static void npuHaspReleaseLastBlockSent(Pcb *pcbp)
         pcbp->controls.hasp.lastBlockSent = NULL;
         pcbp->controls.hasp.retries = 0;
         }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Resets a stream control block.
+**
+**  Parameters:     Name        Description.
+**                  scbp        SCB pointer
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void npuHaspResetScb(Scb *scbp)
+    {
+    NpuBuffer *bp;
+
+    scbp->state = StHaspStreamInit;
+    if (scbp->tp != NULL)
+        {
+        while ((bp = npuBipQueueExtract(&scbp->tp->outputQ)) != NULL)
+            {
+            npuBipBufRelease(bp);
+            }
+        }
+    memset(&scbp->params, 0, sizeof(BatchParams));
+    scbp->recordCount = 0;
+    scbp->isDiscardingRecords = FALSE;
+    scbp->isStarted = FALSE;
+    scbp->isWaitingPTI = FALSE;
+    scbp->isPruFragmentComplete = FALSE;
+    scbp->pruFragmentSize = 0;
     }
 
 /*--------------------------------------------------------------------------
@@ -3302,6 +3312,8 @@ static void npuHaspSendSignonRecord(Tcb *tp, u8 *data, int len)
 **------------------------------------------------------------------------*/
 static void npuHaspSendUplineEoiAcctg(Tcb *tp)
     {
+    Scb *scbp;
+
     static u8 commandADEI[] =
         {
         0,                  // DN
@@ -3322,9 +3334,10 @@ static void npuHaspSendUplineEoiAcctg(Tcb *tp)
     commandADEI[BlkOffP4] = (tp->scbp->recordCount >>  8) & 0xff;
     commandADEI[BlkOffP5] = tp->scbp->recordCount & 0xff;
     npuBipRequestUplineCanned(commandADEI, sizeof(commandADEI));
-    tp->scbp->recordCount = 0;
-    tp->pcbp->controls.hasp.pruFragmentSize = 0;
-    tp->pcbp->controls.hasp.isPruFragmentComplete = tp->deviceType == DtLP;
+    scbp = tp->scbp;
+    scbp->recordCount = 0;
+    scbp->pruFragmentSize = 0;
+    scbp->isPruFragmentComplete = tp->deviceType == DtLP;
 #if DEBUG
     fprintf(npuHaspLog, "Port %02x: send AD/EI command to host for stream %u (%.7s)\n",
         tp->pcbp->claPort, tp->streamId, tp->termName);
