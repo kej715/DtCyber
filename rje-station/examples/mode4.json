@@ -1,0 +1,11 @@
+{
+  "protocol":"mode4",
+  "debug": false,
+  "name":"USER",
+  "password":"PASS",
+  "host":"localhost",
+  "port":6100,
+  "mode4":{
+    "debug":false
+  }
+}
