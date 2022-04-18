@@ -85,6 +85,7 @@ DevDesc deviceDesc[] =
     "LP512",    lp512Init,
     "CO6612",   consoleInit,
     "MUX6676",  mux6676Init,
+    "MUX6671",  mux6671Init,
     "CP3446",   cp3446Init,
     "CR3447",   cr3447Init,
     "TPM",      tpMuxInit,

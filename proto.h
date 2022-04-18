@@ -201,6 +201,7 @@ void ddpInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 /*
 **  mux6676.c
 */
+void mux6671Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void mux6676Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 
 /*

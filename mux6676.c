@@ -5,7 +5,10 @@
 **  Name: mux6676.c
 **
 **  Description:
-**      Perform emulation of CDC 6676 data set controller (terminal mux).
+**      Perform emulation of CDC 6671 and 6676 data set controllers.
+**      The 6671 was used primarily as a mux for synchronous MODE4
+**      terminals, and the 6676 was used primarily for asynchronous
+**      TELEX/IAF terminals.
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
@@ -22,6 +25,11 @@
 **
 **--------------------------------------------------------------------------
 */
+#define DEBUG_6671         0
+#define DEBUG_6676         0
+#define DEBUG_NETIO        0
+#define DEBUG_PPIO         0
+#define DEBUG_PPIO_VERBOSE 0
 
 /*
 **  -------------
@@ -31,6 +39,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "const.h"
+#include <fcntl.h>
 #include "types.h"
 #include "proto.h"
 #include <sys/types.h>
@@ -53,22 +62,31 @@
 /*
 **  Function codes.
 */
-#define Fc6676Output            00001
-#define Fc6676Status            00002
-#define Fc6676Input             00003
+#define Fc667xOutput            00001
+#define Fc667xStatus            00002
+#define Fc667xInput             00003
 
-#define Fc6676EqMask            07000
-#define Fc6676EqShift           9
+#define Fc667xEqMask            07000
+#define Fc667xEqShift           9
 
-#define St6676ServiceFailure    00001
-#define St6676InputRequired     00002
-#define St6676ChannelAReserved  00004
+#define St667xServiceFailure    00001
+#define St667xInputRequired     00002
+#define St667xChannelAReserved  00004
+
+#define IoTurnsPerPoll          4
+#define InBufSize               256
+#define OutBufSize              16
 
 /*
 **  -----------------------
 **  Private Macro Functions
 **  -----------------------
 */
+#if DEBUG_6671||DEBUG_6676
+#define HexColumn(x) (3 * (x) + 4)
+#define AsciiColumn(x) (HexColumn(16) + 2 + (x))
+#define LogLineLength (AsciiColumn(16))
+#endif
 
 /*
 **  -----------------------------------------
@@ -77,27 +95,50 @@
 */
 typedef struct portParam
     {
-    u8          id;
-    bool        active;
-    int         connFd;
+    struct muxParam *mux;
+    u8   id;
+    bool active;
+    bool enabled;
+    bool carrierOn;
+    int  connFd;
+    int  inInIdx;
+    int  inOutIdx;
+    u8   inBuffer[InBufSize];
+    int  outInIdx;
+    int  outOutIdx;
+    u8   outBuffer[OutBufSize];
     } PortParam;
+
+typedef struct muxParam
+    {
+    char name[20];
+    int type;
+    int listenPort;
+    int listenFd;
+    int portCount;
+    int ioTurns;
+    PortParam *ports;
+    } MuxParam;
 
 /*
 **  ---------------------------
 **  Private Function Prototypes
 **  ---------------------------
 */
-static FcStatus mux6676Func(PpWord funcCode);
-static void mux6676Io(void);
-static void mux6676Activate(void);
-static void mux6676Disconnect(void);
-static void mux6676CreateThread(DevSlot *dp);
-static int mux6676CheckInput(PortParam *mp);
-static bool mux6676InputRequired(void);
-#if defined(_WIN32)
-static void mux6676Thread(void *param);
-#else
-static void *mux6676Thread(void *param);
+static FcStatus mux667xFunc(PpWord funcCode);
+static void mux667xActivate(void);
+static void mux667xCheckIo(MuxParam *mp);
+static void mux667xCreateThread(DevSlot *dp);
+static void mux667xClose(PortParam *pp);
+static void mux667xDisconnect(void);
+static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params);
+static void mux667xIo(void);
+static bool mux667xInputRequired(MuxParam *mp);
+
+#if DEBUG_6671||DEBUG_6676
+static char *mux667xFunc2String(PpWord funcCode);
+static void mux667xLogBytes(FILE *log, MuxParam *mp, u8 *bytes, int len);
+static void mux667xLogFlush(FILE *log, MuxParam *mp);
 #endif
 
 /*
@@ -113,6 +154,16 @@ u16 mux6676TelnetConns;
 **  Private Variables
 **  -----------------
 */
+#if DEBUG_6671
+static FILE *mux6671Log = NULL;
+#endif
+#if DEBUG_6676
+static FILE *mux6676Log = NULL;
+#endif
+#if DEBUG_6671||DEBUG_6676
+static char mux667xLogBuf[LogLineLength + 1];
+static int  mux667xLogBytesCol = 0;
+#endif
 
 /*
 **--------------------------------------------------------------------------
@@ -122,7 +173,24 @@ u16 mux6676TelnetConns;
 **--------------------------------------------------------------------------
 */
 /*--------------------------------------------------------------------------
-**  Purpose:        Initialise terminal multiplexer.
+**  Purpose:        Initialise 6671 terminal multiplexer.
+**
+**  Parameters:     Name        Description.
+**                  eqNo        equipment number
+**                  unitNo      unit number
+**                  channelNo   channel number the device is attached to
+**                  deviceName  optional device file name
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void mux6671Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
+    {
+    mux667xInit(eqNo, channelNo, DtMux6671, deviceName);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Initialise 6676 terminal multiplexer.
 **
 **  Parameters:     Name        Description.
 **                  eqNo        equipment number
@@ -135,62 +203,183 @@ u16 mux6676TelnetConns;
 **------------------------------------------------------------------------*/
 void mux6676Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
+    mux667xInit(eqNo, channelNo, DtMux6676, deviceName);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Initialise 667x terminal multiplexer.
+**
+**  Parameters:     Name        Description.
+**                  eqNo        equipment number
+**                  channelNo   channel number the device is attached to
+**                  muxType     mux device type
+**                  params      optional device parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
+    {
+#if defined(_WIN32)
+    u_long blockEnable = 1;
+#endif
     DevSlot *dp;
-    PortParam *mp;
     u8 i;
+    int listenPort;
+    int maxPorts;
+    MuxParam *mp;
+    char *mts;
+    int numParam;
+    int optEnable = 1;
+    int portCount;
+    PortParam *pp;
+    struct sockaddr_in server;
 
-    (void)unitNo;
-    (void)deviceName;
+    dp = channelAttach(channelNo, eqNo, muxType);
 
-    dp = channelAttach(channelNo, eqNo, DtMux6676);
+    dp->activate = mux667xActivate;
+    dp->disconnect = mux667xDisconnect;
+    dp->func = mux667xFunc;
+    dp->io = mux667xIo;
 
-    dp->activate = mux6676Activate;
-    dp->disconnect = mux6676Disconnect;
-    dp->func = mux6676Func;
-    dp->io = mux6676Io;
+    mts = (muxType == DtMux6676) ? "MUX6676" : "MUX6671";
 
     /*
-    **  Only one MUX6676 unit is possible per equipment.
+    **  Only one MUX667x unit is possible per equipment.
     */
     if (dp->context[0] != NULL)
         {
-        fprintf (stderr, "Only one MUX6676 unit is possible per equipment\n");
+        fprintf(stderr, "Only one %s unit is possible per equipment\n", mts);
         exit (1);
         }
-
-    mp = calloc(1, sizeof(PortParam) * mux6676TelnetConns);
-    if (mp == NULL)
+    if (params == NULL) params = "";
+    numParam = sscanf(params, "%d,%d", &listenPort, &portCount);
+    if (numParam < 1)
         {
-        fprintf(stderr, "Failed to allocate MUX6676 context block\n");
+        if (muxType == DtMux6676)
+            {
+            listenPort = mux6676TelnetPort;
+            portCount = mux6676TelnetConns;
+            }
+        else
+            {
+            fprintf(stderr, "TCP port missing from %s definition\n", mts);
+            exit(1);
+            }
+        }
+    else if (numParam < 2)
+        {
+        portCount = (muxType == DtMux6676) ? mux6676TelnetConns : 16;
+        }
+    if (listenPort < 1 || listenPort > 65535)
+        {
+        fprintf(stderr, "Invalid TCP port number in %s definition: %d\n", mts, listenPort);
+        exit(1);
+        }
+    maxPorts = (muxType == DtMux6676) ? 64 : 16;
+    if (portCount < 1 || portCount > maxPorts)
+        {
+        fprintf(stderr, "Invalid mux port count in %s definition: %d\n", mts, portCount);
         exit(1);
         }
 
+    mp = calloc(1, sizeof(MuxParam));
+    if (mp == NULL)
+        {
+        fprintf(stderr, "Failed to allocate %s context block\n", mts);
+        exit(1);
+        }
     dp->context[0] = mp;
 
     /*
+    **  Initialise mux control block.
+    */
+    sprintf(mp->name, "%s_CH%02o_EQ%02o", mts, channelNo, eqNo);
+    mp->type = muxType;
+    mp->listenPort = listenPort;
+    mp->portCount = portCount;
+    mp->ports = (PortParam *)calloc(portCount, sizeof(PortParam));
+    mp->ioTurns = IoTurnsPerPoll - 1;
+    if (mp->ports == NULL)
+        {
+        fprintf(stderr, "Failed to allocate %s context block\n", mts);
+        exit(1);
+        }
+    /*
     **  Initialise port control blocks.
     */
-    for (i = 0; i < mux6676TelnetConns; i++)
+    for (i = 0, pp = mp->ports; i < portCount; i++, pp++)
         {
-        mp->active = FALSE;
-        mp->connFd = 0;
-        mp->id = i;
-        mp += 1;
+        pp->mux = mp;
+        pp->enabled   = mp->type == DtMux6676; // enabled by default for 6676
+        pp->carrierOn = mp->type == DtMux6676; //      on by default for 6676
+        pp->active = FALSE;
+        pp->connFd = 0;
+        pp->id = i;
         }
 
     /*
-    **  Create the thread which will deal with TCP connections.
+    **  Create socket, bind to specified port, and begin listening for connections
     */
-    mux6676CreateThread(dp);
+    mp->listenFd = socket(AF_INET, SOCK_STREAM, 0);
+    if (mp->listenFd < 0)
+        {
+        fprintf(stderr, "Can't create socket for %s on port %d\n", mts, mp->listenPort);
+        exit(1);
+        }
+    /*
+    **  Accept will block if client drops connection attempt between select and accept.
+    **  We can't block so make listening socket non-blocking to avoid this condition.
+    */
+#if defined(_WIN32)
+    ioctlsocket(mp->listenFd, FIONBIO, &blockEnable);
+#else
+    fcntl(mp->listenFd, F_SETFL, O_NONBLOCK);
+#endif
+    /*
+    **  Bind to configured TCP port number
+    */
+    setsockopt(mp->listenFd, SOL_SOCKET, SO_REUSEADDR, (void *)&optEnable, sizeof(optEnable));
+    memset(&server, 0, sizeof(server));
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = inet_addr("0.0.0.0");
+    server.sin_port = htons(mp->listenPort);
+    if (bind(mp->listenFd, (struct sockaddr *)&server, sizeof(server)) < 0)
+        {
+        fprintf(stderr, "Can't bind to listen socket for %s on port %d\n", mts, mp->listenPort);
+        exit(1);
+        }
+    /*
+    **  Start listening for new connections on this TCP port number
+    */
+    if (listen(mp->listenFd, 5) < 0)
+        {
+        fprintf(stderr, "Can't listen for %s on port %d\n", mts, mp->listenPort);
+        exit(1);
+        }
 
     /*
     **  Print a friendly message.
     */
-    printf("MUX6676 initialised on channel %o equipment %o\n", channelNo, eqNo);
+    printf("%s initialised on channel %o equipment %o, mux ports %d, TCP port %d\n",
+        mts, channelNo, eqNo, mp->portCount, mp->listenPort);
+
+#if DEBUG_6671
+    if (mux6671Log == NULL)
+        {
+        mux6671Log = fopen("mux6671log.txt", "wt");
+        }
+#endif
+#if DEBUG_6676
+    if (mux6676Log == NULL)
+        {
+        mux6676Log = fopen("mux6676log.txt", "wt");
+        }
+#endif
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Execute function code on 6676 mux.
+**  Purpose:        Execute function code on 667x mux.
 **
 **  Parameters:     Name        Description.
 **                  funcCode    function code
@@ -198,12 +387,31 @@ void mux6676Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Returns:        FcStatus
 **
 **------------------------------------------------------------------------*/
-static FcStatus mux6676Func(PpWord funcCode)
+static FcStatus mux667xFunc(PpWord funcCode)
     {
     u8 eqNo;
-    PortParam *mp = (PortParam *)activeDevice->context[0];
+    MuxParam *mp = (MuxParam *)activeDevice->context[0];
 
-    eqNo = (funcCode & Fc6676EqMask) >> Fc6676EqShift;
+#if DEBUG_PPIO
+#if DEBUG_6671
+    if (mp->type == DtMux6671 && DEBUG_PPIO_VERBOSE != 0)
+        {
+        fprintf(mux6671Log, "\n%010u %s PP:%02o CH:%02o P:%04o f:%04o T:%s",
+            traceSequenceNo, mp->name, activePpu->id, activeDevice->channel->id,
+            activePpu->regP, funcCode, mux667xFunc2String(funcCode));
+        }
+#endif
+#if DEBUG_6676
+    if (mp->type == DtMux6676 && DEBUG_PPIO_VERBOSE != 0)
+        {
+        fprintf(mux6676Log, "\n%010u %s PP:%02o CH:%02o P:%04o f:%04o T:%s",
+            traceSequenceNo, mp->name, activePpu->id, activeDevice->channel->id,
+            activePpu->regP, funcCode, mux667xFunc2String(funcCode));
+        }
+#endif
+#endif
+
+    eqNo = (funcCode & Fc667xEqMask) >> Fc667xEqShift;
     if (eqNo != activeDevice->eqNo)
         {
         /*
@@ -212,16 +420,26 @@ static FcStatus mux6676Func(PpWord funcCode)
         return(FcDeclined);
         }
 
-    funcCode &= ~Fc6676EqMask;
+    funcCode &= ~Fc667xEqMask;
 
     switch (funcCode)
         {
     default:
+#if DEBUG_PPIO
+#if DEBUG_6671
+        if (mp->type == DtMux6671 && DEBUG_PPIO_VERBOSE != 0)
+            fputs("\n  FUNC not implemented & declined!", mux6671Log);
+#endif
+#if DEBUG_6676
+        if (mp->type == DtMux6676 && DEBUG_PPIO_VERBOSE != 0)
+            fputs("\n  FUNC not implemented & declined!", mux6676Log);
+#endif
+#endif
         return(FcDeclined);
 
-    case Fc6676Output:
-    case Fc6676Status:
-    case Fc6676Input:
+    case Fc667xOutput:
+    case Fc667xStatus:
+    case Fc667xInput:
         activeDevice->recordLength = 0;
         break;
         }
@@ -231,28 +449,31 @@ static FcStatus mux6676Func(PpWord funcCode)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Perform I/O on 6676 mux.
+**  Purpose:        Perform I/O on 667x mux.
 **
 **  Parameters:     Name        Description.
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void mux6676Io(void)
+static void mux667xIo(void)
     {
-    PortParam *cp = (PortParam *)activeDevice->context[0];
-    PortParam *mp;
     PpWord function;
+    u8 in;
+    MuxParam *mp = (MuxParam *)activeDevice->context[0];
+    PortParam *pp;
     u8 portNumber;
-    char x;
-    int in;
+    PpWord word;
+    u8 x;
+
+    mux667xCheckIo(mp);
 
     switch (activeDevice->fcode)
         {
     default:
         break;
 
-    case Fc6676Output:
+    case Fc667xOutput:
         if (activeChannel->full)
             {
             /*
@@ -260,78 +481,188 @@ static void mux6676Io(void)
             */
             activeChannel->full = FALSE;
             portNumber = (u8)activeDevice->recordLength++;
-            if (portNumber < mux6676TelnetConns)
+            if (portNumber < mp->portCount)
                 {
-                mp = cp + portNumber;
-                if (mp->active)
+                word = activeChannel->data;
+                function = word >> 9;
+#if DEBUG_PPIO
+#if DEBUG_6671
+                if (mp->type == DtMux6671)
+                    {
+                    fprintf(mux6671Log, "\n%010u %s PP:%02o CH:%02o P:%04o f:%04o T:%s Port:%02o Data:%04o",
+                      traceSequenceNo, mp->name, activePpu->id, activeDevice->channel->id,
+                      activePpu->regP, activeDevice->fcode, mux667xFunc2String(activeDevice->fcode), portNumber, word);
+                    }
+#endif
+#if DEBUG_6676
+                if (mp->type == DtMux6676)
+                    {
+                    fprintf(mux6676Log, "\n%010u %s PP:%02o CH:%02o P:%04o f:%04o T:%s Port:%02o Data:%04o",
+                      traceSequenceNo, mp->name, activePpu->id, activeDevice->channel->id,
+                      activePpu->regP, activeDevice->fcode, mux667xFunc2String(activeDevice->fcode), portNumber, word);
+                    }
+#endif
+#endif
+                pp = mp->ports + portNumber;
+                if (pp->active)
                     {
                     /*
                     **  Port with active TCP connection.
                     */
-                    function = activeChannel->data >> 9;
                     switch (function)
                         {
+                    case 2:
+                    case 3:
+                        if (pp->mux->type == DtMux6671)
+                            {
+                            pp->carrierOn = FALSE;
+                            }
+                        break;
+                    case 5:
+                        if (pp->mux->type != DtMux6671) break;
+                        // fall through if 6671
                     case 4:
-                        /*
-                        **  Send data with parity stripped off.
-                        */
-                        x = (activeChannel->data >> 1) & 0x7f;
-                        send(mp->connFd, &x, 1, 0);
+                        if (mp->type == DtMux6676)
+                            {
+                            x = (word >> 1) & 0x7f; // send data with parity stripped off
+                            }
+                        else
+                            {
+                            pp->carrierOn = TRUE;
+                            x = word & 0xff;
+                            }
+                        if (pp->outInIdx < OutBufSize)
+                            {
+                            pp->outBuffer[pp->outInIdx++] = x;
+                            }
+#if DEBUG_NETIO
+#if DEBUG_6671
+                        else if (pp->mux->type == DtMux6671)
+                            {
+                            fprintf(mux6671Log, "\n%010u %s output buffer overflow on port %02o",
+                                traceSequenceNo, pp->mux->name, pp->id);
+                            }
+#endif
+#if DEBUG_6676
+                        else if (pp->mux->type == DtMux6676)
+                            {
+                            fprintf(mux6676Log, "\n%010u %s output buffer overflow on port %02o",
+                                traceSequenceNo, pp->mux->name, pp->id);
+                            }
+#endif
+#endif
                         break;
 
                     case 6:
                         /*
                         **  Disconnect.
                         */
-                    #if defined(_WIN32)
-                        closesocket(mp->connFd);
-                    #else
-                        close(mp->connFd);
-                    #endif
-                        mp->active = FALSE;
-                        printf("mux6676: Host closed connection on port %d\n", mp->id);
+                        mux667xClose(pp);
+                        break;
+
+                    case 7:
+                        /*
+                        **  Enable.
+                        */
+                        pp->enabled = TRUE;
                         break;
 
                     default:
                         break;
                         }
                     }
+                else if (pp->mux->type == DtMux6671 && function == 7)
+                    {
+                    pp->enabled = TRUE;
+                    }
                 }
             }
         break;
         
-    case Fc6676Input:
+    case Fc667xInput:
         if (!activeChannel->full)
             {
             activeChannel->data = 0;
             activeChannel->full = TRUE;
             portNumber = (u8)activeDevice->recordLength++;
-            if (portNumber < mux6676TelnetConns)
+            if (portNumber < mp->portCount)
                 {
-                mp = cp + portNumber;
-                if (mp->active)
+                pp = mp->ports + portNumber;
+                if (pp->active)
                     {
                     /*
                     **  Port with active TCP connection.
                     */
                     activeChannel->data |= 01000;
-                    if ((in = mux6676CheckInput(mp)) > 0)
+                    if (pp->inOutIdx < pp->inInIdx)
                         {
-                        activeChannel->data |= ((in & 0x7F) << 1) | 04000;
+                        in = pp->inBuffer[pp->inOutIdx++];
+                        if (pp->inOutIdx >= pp->inInIdx)
+                            {
+                            pp->inInIdx = 0;
+                            pp->inOutIdx = 0;
+                            }
+                        if (mp->type == DtMux6676)
+                            {
+                            activeChannel->data |= ((in & 0x7F) << 1) | 04000;
+                            }
+                        else
+                            {
+                            activeChannel->data |= in | 04000;
+                            }
                         }
                     }
+#if DEBUG_PPIO
+                if (DEBUG_PPIO_VERBOSE != 0 || (activeChannel->data & 04000) != 0)
+                    {
+#if DEBUG_6671
+                    if (mp->type == DtMux6671)
+                        {
+                        fprintf(mux6671Log, "\n%010u %s PP:%02o CH:%02o P:%04o f:%04o T:%s Port:%02o Data:%04o",
+                          traceSequenceNo, mp->name, activePpu->id, activeDevice->channel->id,
+                          activePpu->regP, activeDevice->fcode, mux667xFunc2String(activeDevice->fcode), portNumber, activeChannel->data);
+                        }
+#endif
+#if DEBUG_6676
+                    if (mp->type == DtMux6676)
+                        {
+                        fprintf(mux6676Log, "\n%010u %s PP:%02o CH:%02o P:%04o f:%04o T:%s Port:%02o Data:%04o",
+                          traceSequenceNo, mp->name, activePpu->id, activeDevice->channel->id,
+                          activePpu->regP, activeDevice->fcode, mux667xFunc2String(activeDevice->fcode), portNumber, activeChannel->data);
+                        }
+#endif
+                    }
+#endif
                 }
             }
         break;
 
-    case Fc6676Status:
-        activeChannel->data = St6676ChannelAReserved;
-        if (mux6676InputRequired())
+    case Fc667xStatus:
+        activeChannel->data = St667xChannelAReserved;
+        if (mux667xInputRequired(mp))
             {
-            activeChannel->data |= St6676InputRequired;
+            activeChannel->data |= St667xInputRequired;
             }
-
         activeChannel->full = TRUE;
+
+#if DEBUG_PPIO
+#if DEBUG_6671
+        if (mp->type == DtMux6671)
+            {
+            fprintf(mux6671Log, "\n%010u %s PP:%02o CH:%02o P:%04o f:%04o T:%s Data:%04o",
+              traceSequenceNo, mp->name, activePpu->id, activeDevice->channel->id,
+              activePpu->regP, activeDevice->fcode, mux667xFunc2String(activeDevice->fcode), activeChannel->data);
+            }
+#endif
+#if DEBUG_6676
+        if (mp->type == DtMux6676)
+            {
+            fprintf(mux6676Log, "\n%010u %s PP:%02o CH:%02o P:%04o f:%04o T:%s Data:%04o",
+              traceSequenceNo, mp->name, activePpu->id, activeDevice->channel->id,
+              activePpu->regP, activeDevice->fcode, mux667xFunc2String(activeDevice->fcode), activeChannel->data);
+            }
+#endif
+#endif
         break;
         }
     }
@@ -344,7 +675,7 @@ static void mux6676Io(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void mux6676Activate(void)
+static void mux667xActivate(void)
     {
     }
 
@@ -356,68 +687,12 @@ static void mux6676Activate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void mux6676Disconnect(void)
+static void mux667xDisconnect(void)
     {
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Create thread which will deal with all TCP
-**                  connections.
-**
-**  Parameters:     Name        Description.
-**                  dp          pointer to device descriptor
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-static void mux6676CreateThread(DevSlot *dp)
-    {
-#if defined(_WIN32)
-    static bool firstMux = TRUE;
-    DWORD dwThreadId; 
-    HANDLE hThread;
-
-    if (firstMux)
-        {
-        firstMux = FALSE;
-        }
-
-    /*
-    **  Create TCP thread.
-    */
-    hThread = CreateThread( 
-        NULL,                                       // no security attribute 
-        0,                                          // default stack size 
-        (LPTHREAD_START_ROUTINE)mux6676Thread, 
-        (LPVOID)dp,                                 // thread parameter 
-        0,                                          // not suspended 
-        &dwThreadId);                               // returns thread ID 
-
-    if (hThread == NULL)
-        {
-        fprintf(stderr, "Failed to create mux6676 thread\n");
-        exit(1);
-        }
-#else
-    int rc;
-    pthread_t thread;
-    pthread_attr_t attr;
-
-    /*
-    **  Create POSIX thread with default attributes.
-    */
-    pthread_attr_init(&attr);
-    rc = pthread_create(&thread, &attr, mux6676Thread, dp);
-    if (rc < 0)
-        {
-        fprintf(stderr, "Failed to create mux6676 thread\n");
-        exit(1);
-        }
-#endif
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        TCP thread.
+**  Purpose:        Check for I/O availability.
 **
 **  Parameters:     Name        Description.
 **                  mp          pointer to mux parameters.
@@ -425,170 +700,171 @@ static void mux6676CreateThread(DevSlot *dp)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-#if defined(_WIN32)
-static void mux6676Thread(void *param)
-#else
-static void *mux6676Thread(void *param)
-#endif
+static void mux667xCheckIo(MuxParam *mp)
     {
-    DevSlot *dp = (DevSlot *)param;
-    int listenFd;
-    struct sockaddr_in server;
+    int activeCount;
+    PortParam *availablePort;
+#if defined(_WIN32)
+    u_long blockEnable = 1;
+#endif
     struct sockaddr_in from;
-    PortParam *mp;
-    u8 i;
-    int reuse = 1;
 #if defined(_WIN32)
     int fromLen;
 #else
     socklen_t fromLen;
 #endif
-
-    /*
-    **  Create TCP socket and bind to specified port.
-    */
-    listenFd = socket(AF_INET, SOCK_STREAM, 0);
-    if (listenFd < 0)
-        {
-        printf("mux6676: Can't create socket\n");
-#if defined(_WIN32)
-        return;
-#else
-        return(NULL);
-#endif
-        }
-
-    setsockopt(listenFd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse));
-    memset(&server, 0, sizeof(server));
-    server.sin_family = AF_INET;
-    server.sin_addr.s_addr = inet_addr("0.0.0.0");
-    server.sin_port = htons(mux6676TelnetPort);
-
-    if (bind(listenFd, (struct sockaddr *)&server, sizeof(server)) < 0)
-        {
-        printf("mux6676: Can't bind to socket\n");
-#if defined(_WIN32)
-        return;
-#else
-        return(NULL);
-#endif
-        }
-
-    if (listen(listenFd, 5) < 0)
-        {
-        printf("mux6676: Can't listen\n");
-#if defined(_WIN32)
-        return;
-#else
-        return(NULL);
-#endif
-        }
-
-    while (1)
-        {
-        /*
-        **  Find a free port control block.
-        */
-        mp = (PortParam *)dp->context[dp->selectedUnit];
-        for (i = 0; i < mux6676TelnetConns; i++)
-            {
-            if (!mp->active)
-                {
-                break;
-                }
-            mp += 1;
-            }
-
-        if (i == mux6676TelnetConns)
-            {
-            /*
-            **  No free port found - wait a bit and try again.
-            */
-        #if defined(_WIN32)
-            Sleep(1000);
-        #else
-            sleep(1);
-        #endif
-            continue;
-            }
-
-        /*
-        **  Wait for a connection.
-        */
-        fromLen = sizeof(from);
-        mp->connFd = accept(listenFd, (struct sockaddr *)&from, &fromLen);
-
-        /*
-        **  Mark connection as active.
-        */
-        mp->active = TRUE;
-        printf("mux6676: Received connection on port %d\n", mp->id);
-        }
-
-#if !defined(_WIN32)
-    return(NULL);
-#endif
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Check for input.
-**
-**  Parameters:     Name        Description.
-**                  mp          pointer to mux parameters.
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-static int mux6676CheckInput(PortParam *mp)
-    {
     int i;
+    int maxFd;
+    int n;
+    int optEnable = 1;
+    PortParam *pp;
     fd_set readFds;
-    fd_set exceptFds;
     struct timeval timeout;
-    char data;
+    fd_set writeFds;
+
+    mp->ioTurns = (mp->ioTurns + 1) % IoTurnsPerPoll;
+    if (mp->ioTurns != 0) return;
 
     FD_ZERO(&readFds);
-    FD_ZERO(&exceptFds);
-    FD_SET(mp->connFd, &readFds);
-    FD_SET(mp->connFd, &exceptFds);
+    FD_ZERO(&writeFds);
+    maxFd = 0;
+    availablePort = NULL;
+
+    for (i = 0, pp = mp->ports; i < mp->portCount; i++, pp++)
+        {
+        if (pp->active)
+            {
+            if (pp->inInIdx < InBufSize)
+                {
+                FD_SET(pp->connFd, &readFds);
+                if (pp->connFd > maxFd) maxFd = pp->connFd;
+                }
+            if (pp->carrierOn)
+                {
+                if (pp->outInIdx > pp->outOutIdx)
+                    {
+                    FD_SET(pp->connFd, &writeFds);
+                    if (pp->connFd > maxFd) maxFd = pp->connFd;
+                    }
+                }
+            }
+        else if (availablePort == NULL && pp->enabled)
+            {
+            availablePort = pp;
+            FD_SET(mp->listenFd, &readFds);
+            if (mp->listenFd > maxFd) maxFd = mp->listenFd;
+            }
+        }
+
+    if (maxFd < 1) return;
 
     timeout.tv_sec = 0;
     timeout.tv_usec = 0;
+    select(maxFd + 1, &readFds, &writeFds, NULL, &timeout);
 
-    select(mp->connFd + 1, &readFds, NULL, &exceptFds, &timeout);
-    if (FD_ISSET(mp->connFd, &readFds))
+    for (i = 0, pp = mp->ports; i < mp->portCount; i++, pp++)
         {
-        i = recv(mp->connFd, &data, 1, 0);
-        if (i == 1)
+        if (pp->active)
             {
-            return(data);
-            }
-        else
-            {
-        #if defined(_WIN32)
-            closesocket(mp->connFd);
-        #else
-            close(mp->connFd);
-        #endif
-            mp->active = FALSE;
-            printf("mux6676: Connection dropped on port %d\n", mp->id);
-            return(-1);
+            if (FD_ISSET(pp->connFd, &readFds)) {
+                n = recv(pp->connFd, &pp->inBuffer[pp->inInIdx], InBufSize - pp->inInIdx, 0);
+                if (n > 0)
+                    {
+#if DEBUG_NETIO
+#if DEBUG_6671
+                    if (pp->mux->type == DtMux6671)
+                        {
+                        fprintf(mux6671Log, "\n%010u %s received %d bytes on port %02o",
+                            traceSequenceNo, mp->name, n, pp->id);
+                        mux667xLogBytes(mux6671Log, mp, &pp->inBuffer[pp->inInIdx], n);
+                        }
+#endif
+#if DEBUG_6676
+                    if (pp->mux->type == DtMux6676)
+                        {
+                        fprintf(mux6676Log, "\n%010u %s received %d bytes on port %02o",
+                            traceSequenceNo, mp->name, n, pp->id);
+                        mux667xLogBytes(mux6676Log, mp, &pp->inBuffer[pp->inInIdx], n);
+                        }
+#endif
+#endif
+                    pp->inInIdx += n;
+                    }
+                else
+                    {
+                    mux667xClose(pp);
+                    }
+                }
+            if (FD_ISSET(pp->connFd, &writeFds) && pp->outOutIdx < pp->outInIdx)
+                {
+                n = send(pp->connFd, &pp->outBuffer[pp->outOutIdx], pp->outInIdx - pp->outOutIdx, 0);
+                if (n >= 0)
+                    {
+#if DEBUG_NETIO
+#if DEBUG_6671
+                    if (pp->mux->type == DtMux6671)
+                        {
+                        fprintf(mux6671Log, "\n%010u %s sent %d bytes to port %02o",
+                            traceSequenceNo, mp->name, n, pp->id);
+                        mux667xLogBytes(mux6671Log, mp, &pp->outBuffer[pp->outOutIdx], n);
+                        }
+#endif
+#if DEBUG_6676
+                    if (pp->mux->type == DtMux6676)
+                        {
+                        fprintf(mux6676Log, "\n%010u %s sent %d bytes to port %02o",
+                            traceSequenceNo, mp->name, n, pp->id);
+                        mux667xLogBytes(mux6676Log, mp, &pp->outBuffer[pp->outOutIdx], n);
+                        }
+#endif
+#endif
+                    pp->outOutIdx += n;
+                    if (pp->outOutIdx >= pp->outInIdx)
+                        {
+                        pp->outInIdx  = 0;
+                        pp->outOutIdx = 0;
+                        }
+                    }
+                }
             }
         }
-    else if (FD_ISSET(mp->connFd, &exceptFds))
+    if (availablePort != NULL && FD_ISSET(mp->listenFd, &readFds))
         {
-    #if defined(_WIN32)
-        closesocket(mp->connFd);
-    #else
-        close(mp->connFd);
-    #endif
-        mp->active = FALSE;
-        printf("mux6676: Connection dropped on port %d\n", mp->id);
-        return(-1);
-        }
-    else
-        {
-        return(0);
+        fromLen = sizeof(from);
+        availablePort->connFd = accept(mp->listenFd, (struct sockaddr *)&from, &fromLen);
+        if (availablePort->connFd > 0)
+            {
+            availablePort->active = TRUE;
+            availablePort->inInIdx = 0;
+            availablePort->inOutIdx = 0;
+            availablePort->outInIdx = 0;
+            availablePort->outOutIdx = 0;
+            /*
+            **  Set Keepalive option so that we can eventually discover if
+            **  a client has been rebooted.
+            */
+            setsockopt(availablePort->connFd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
+            /*
+            **  Make socket non-blocking.
+            */
+#if defined(_WIN32)
+            ioctlsocket(availablePort->connFd, FIONBIO, &blockEnable);
+#else
+            fcntl(availablePort->connFd, F_SETFL, O_NONBLOCK);
+#endif
+#if DEBUG_NETIO
+#if DEBUG_6671
+            if (availablePort->mux->type == DtMux6671)
+                fprintf(mux6671Log, "\n%010u %s accepted connection on port %02o",
+                    traceSequenceNo, availablePort->mux->name, availablePort->id);
+#endif
+#if DEBUG_6676
+            if (availablePort->mux->type == DtMux6676)
+                fprintf(mux6676Log, "\n%010u %s accepted connection on port %02o",
+                    traceSequenceNo, availablePort->mux->name, availablePort->id);
+#endif
+#endif
+            }
         }
     }
 
@@ -596,38 +872,158 @@ static int mux6676CheckInput(PortParam *mp)
 **  Purpose:        Determine if input is required.
 **
 **  Parameters:     Name        Description.
+**                  mp          pointer to mux parameters
 **
 **  Returns:        TRUE if input is required, FALSE otherwise.
 **
 **------------------------------------------------------------------------*/
-static bool mux6676InputRequired(void)
+static bool mux667xInputRequired(MuxParam *mp)
     {
-    PortParam *cp = (PortParam *)activeDevice->context[0];
-    PortParam *mp;
     int i;
-    fd_set readFds;
-    fd_set exceptFds;
-    struct timeval timeout;
-    int numSocks;
+    PortParam *pp;
 
-    FD_ZERO(&readFds);
-    FD_ZERO(&exceptFds);
-    for (i = 0; i < mux6676TelnetConns; i++)
+    for (i = 0, pp = mp->ports; i < mp->portCount; i++, pp++)
+         {
+         if (pp->active && pp->inOutIdx < pp->inInIdx) return TRUE;
+         }
+    return FALSE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Close a mux port and mark it inactive.
+**
+**  Parameters:     Name        Description.
+**                  pp          pointer to mux port parameters.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void mux667xClose(PortParam *pp)
+    {
+#if defined(_WIN32)
+    closesocket(pp->connFd);
+#else
+    close(pp->connFd);
+#endif
+    pp->connFd    = 0;
+    pp->active    = FALSE;
+    pp->inInIdx   = 0;
+    pp->inOutIdx  = 0;
+    pp->outInIdx  = 0;
+    pp->outOutIdx = 0;
+    if (pp->mux->type == DtMux6671)
         {
-        mp = cp + i;
-        if (mp->active)
+        pp->enabled = FALSE;
+        pp->carrierOn = FALSE;
+        }
+#if DEBUG_NETIO
+#if DEBUG_6671
+    if (pp->mux->type == DtMux6671)
+        fprintf(mux6671Log, "\n%010u %s connection closed on port %02o",
+            traceSequenceNo, pp->mux->name, pp->id);
+#endif
+#if DEBUG_6676
+    if (pp->mux->type == DtMux6676)
+        fprintf(mux6676Log, "\n%010u %s connection closed on port %02o",
+            traceSequenceNo, pp->mux->name, pp->id);
+#endif
+#endif
+    }
+
+#if DEBUG_6671||DEBUG_6676
+/*--------------------------------------------------------------------------
+**  Purpose:        Convert function code to string.
+**
+**  Parameters:     Name        Description.
+**                  funcCode    function code
+**
+**  Returns:        String equivalent of function code.
+**
+**------------------------------------------------------------------------*/
+static char *mux667xFunc2String(PpWord funcCode)
+    {
+    static char buf[30];
+    switch(funcCode)
+        {
+    case Fc667xOutput : return "Output";
+    case Fc667xInput  : return "Input ";
+    case Fc667xStatus : return "Status";
+        }
+    sprintf(buf, "UNKNOWN: %04o", funcCode);
+    return(buf);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Flush incomplete data line
+**
+**  Parameters:     Name        Description.
+**                  log         log file pointer
+**                  mp          pointer to mux parameters
+**
+**  Returns:        nothing
+**
+**------------------------------------------------------------------------*/
+static void mux667xLogFlush(FILE *log, MuxParam *mp)
+    {
+    if (mux667xLogBytesCol > 0)
+        {
+        fprintf(log, "\n%010u %s ", traceSequenceNo, mp->name);
+        fputs(mux667xLogBuf, log);
+        fflush(log);
+        }
+    mux667xLogBytesCol = 0;
+    memset(mux667xLogBuf, ' ', LogLineLength);
+    mux667xLogBuf[LogLineLength] = '\0';
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Log a sequence of ASCII bytes
+**
+**  Parameters:     Name        Description.
+**                  log         log file pointer
+**                  mp          pointer to mux parameters
+**                  bytes       pointer to sequence of bytes
+**                  len         length of the sequence
+**
+**  Returns:        nothing
+**
+**------------------------------------------------------------------------*/
+static void mux667xLogBytes(FILE *log, MuxParam *mp, u8 *bytes, int len)
+    {
+    u8 ac;
+    int ascCol;
+    u8 b;
+    char hex[3];
+    int hexCol;
+    int i;
+
+    mux667xLogBytesCol = 0;
+    mux667xLogFlush(log, mp); // initialize the log buffer
+    ascCol = AsciiColumn(mux667xLogBytesCol);
+    hexCol = HexColumn(mux667xLogBytesCol);
+
+    for (i = 0; i < len; i++)
+        {
+        b = bytes[i];
+        ac = b;
+        if (ac < 0x20 || ac >= 0x7f)
             {
-            FD_SET(mp->connFd, &readFds);
-            FD_SET(mp->connFd, &exceptFds);
+            ac = '.';
+            }
+        sprintf(hex, "%02x", b);
+        memcpy(mux667xLogBuf + hexCol, hex, 2);
+        hexCol += 3;
+        mux667xLogBuf[ascCol++] = ac;
+        if (++mux667xLogBytesCol >= 16)
+            {
+            mux667xLogFlush(log, mp);
+            ascCol = AsciiColumn(mux667xLogBytesCol);
+            hexCol = HexColumn(mux667xLogBytesCol);
             }
         }
-
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 0;
-
-    numSocks = select(mp->connFd + 1, &readFds, NULL, &exceptFds, &timeout);
-
-    return(numSocks > 0);
+    mux667xLogFlush(log, mp);
     }
+
+#endif
 
 /*---------------------------  End Of File  ------------------------------*/
