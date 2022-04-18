@@ -48,6 +48,7 @@ The contents of the configuration file look like this:
 ```
 {
   "debug": false,
+  "protocol":"hasp",
   "host":"localhost",
   "port":2555,
   "bsc":{
@@ -70,13 +71,16 @@ sent to the RJE host service. The default is none.
 - **password** : specifies the password used in the *SIGNON* request sent to the RJE
 host service. The default is none.
 - **port** : the TCP port number on which the RJE host service is listening for connections. The default is *2553*.
+- **protocol** : specifies the name of the RJE data communication protocol to use in
+communicating with the RJE host service. Accepted values are *hasp* and *mode4*. The
+default is *hasp*. 
 - **spoolDir** : specifies the pathname of a directory in which print and punch files
 received from the RJE host service will be stored. The default is *./spool*.
 - **bsc** : an optional object defining configuration properties specific to the BSC data communication layer.
-- **bsc.debug** : if set to *true*, the BSC layer will log debugging information to the console. The default is the value specified by the top-level **debug**
+- **bsc.debug** : if set to *true*, the BSC layer will log debugging information to `bsc.log.txt`. The default is the value specified by the top-level **debug**
 property.
 - **hasp** : an optional object defining configuration properties specific to the HASP data communication layer.
-- **hasp.debug** : if set to *true*, the HASP layer will log debugging information to the console. The default is the value specified by the top-level **debug**
+- **hasp.debug** : if set to *true*, the HASP layer will log debugging information to file `hasp.log.txt`. The default is the value specified by the top-level **debug**
 property.
 - **hasp.LP1** : an optional object defining configuration properties specific to the LP1 printer stream.
 - **hasp.LP1.isPostPrint** : if set to *true* (the default value), format effectors
@@ -87,6 +91,10 @@ on the CDC NOS operating system (i.e., in the *NDL* file).
 - **hasp.maxBlockSize** : specifies the maximum number of bytes to send to the HASP
 service host in each HASP protocol block. The default is *400*, which works well for
 IBM MVS and CMS hosts.
+- **mode4** : an optional object defining configuration properties specific to the MODE4 data communication layer.
+- **mode4.debug** : if set to *true*, the MODE4 layer will log debugging information to file `mode4.log.txt`. The default is the value specified by the top-level
+**debug** property.
+
 
 ## Using rjecli
 When **rjecli** starts, it attempts to connect to the RJE host service specified by the `host` and `port` properties defined in the configuration file. When the
@@ -110,10 +118,11 @@ It recognizes the following commands:
   example: `c display dev`
 
 The [examples](examples) directory contains example job files for the CDC NOS and
-IBM MVS operating systems. Here is a transcript of an **rjecli** session with RBF
-on CDC NOS 2.8.7. It uses the **c** command to display the status of all devices
-associated with the RJE station, and it uses the **lc** command to submit a job
-from the `examples` directory (`examples/nos.job`) for execution:
+IBM MVS operating systems. Here is a transcript of an **rjecli** session using
+the HASP protocol to communicate with RBF on CDC NOS 2.8.7. It uses the **c** command
+to display the status of all devices associated with the RJE station, and it uses the
+**lc** command to submit a job from the `examples` directory (`examples/nos.job`) for
+execution:
 ```
 rje-station % node rjecli
 
