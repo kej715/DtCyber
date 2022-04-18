@@ -15,6 +15,7 @@ class Const {
   static NAK   = 0x3d
   static BLANK = 0x40
   static ACK0  = 0x70
+  static TILDE = 0x7e;
 }
 
 module.exports = Const;

@@ -7,6 +7,7 @@
  */
 
 const Const = require("./const");
+const Logger = require("./logger");
 const net = require("net");
 
 class Bsc {
@@ -47,24 +48,15 @@ class Bsc {
     if (typeof this.bsc !== "undefined") {
       if (this.bsc.debug) this.debug = true;
     }
+    if (this.debug) this.logger = new Logger("bsc");
   }
 
   log(msg) {
-    if (this.debug) {
-      console.log(`${new Date().toLocaleString()} BSC ${msg}`);
-    }
+    if (this.debug) this.logger.log(msg);
   }
 
   logData(label, data) {
-    if (this.debug) {
-      let msg = `${new Date().toLocaleString()} BSC ${label}`;
-      for (const b of data) {
-        msg += " ";
-        if (b < 16) msg += "0";
-        msg += b.toString(16);
-      }
-      console.log(msg);
-    }
+    if (this.debug) this.logger.logData(label, data);
   }
 
   on(evt, handler) {
@@ -110,7 +102,10 @@ class Bsc {
         setTimeout(() => {this.write(Bsc.EnqIndication);}, 0);
       });
       this.socket.on("data", data => {
-        if (typeof this.timeout !== "undefined") clearTimeout(this.timeout);
+        if (typeof this.timeout !== "undefined") {
+          clearTimeout(this.timeout);
+          delete this.timeout;
+        }
         let len = this.receivedData.length;
         for (const b of data) this.receivedData.push(b);
         this.logData("recv:", this.receivedData.slice(len));

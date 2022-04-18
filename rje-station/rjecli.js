@@ -1,11 +1,14 @@
 const fs = require("fs");
 const Hasp = require("./hasp");
+const Mode4 = require("./mode4");
 const process = require("process");
 const readline = require("readline");
+const RJE = require("./rje");
 
 const configFile = (process.argv.length > 2) ? process.argv[2] : "config.json";
 const config = JSON.parse(fs.readFileSync(configFile));
 const defaults = {
+  protocol: "hasp",
   host: "localhost",
   port: 2553,
   spoolDir: "./spool"
@@ -46,7 +49,7 @@ function cli() {
       case "sc":
       case "c":
         if (argv.length > 1) {
-          hasp.command(argv.slice(1).join(" "));
+          service.command(argv.slice(1).join(" "));
         }
         else {
           process.stdout.write("Please provide command text\n");
@@ -91,7 +94,7 @@ function loadCards(streamId, path) {
     streams[key].path = path;
     streams[key].isBusy = true;
     process.stdout.write(`Loading ${path} on ${key} ...`);
-    hasp.requestToSend(streamId);
+    service.requestToSend(streamId);
   }
   catch (err) {
     process.stdout.write(`Failed to open ${path}: ${err}\n`);
@@ -127,19 +130,30 @@ function setPromptTimer() {
   timer = setTimeout(() => {process.stdout.write("\nOperator> ");}, 2000);
 }
 
+let rjeService = null;
+switch (config.protocol) {
+case "hasp":
+  service = new Hasp(config);
+  break;
+case "mode4":
+  service = new Mode4(config);
+  break;
+default:
+  process.stderr.write(`Unrecognized RJE protocol: ${config.protocol}\n`);
+  process.exit(1);
+}
+
 process.stdout.write("\nRJE CLI starting ...");
 
-const hasp = new Hasp(config);
-
-hasp.on("data", (recordType, streamId, data) => {
-  switch (recordType) {
-  case Hasp.RecordType_OpMsg:
+service.on("data", (streamType, streamId, data) => {
+  switch (streamType) {
+  case RJE.StreamType_Console:
     process.stdout.write(`\n${data}`);
     setPromptTimer();
     break;
-  case Hasp.RecordType_PrintRecord:
-  case Hasp.RecordType_PunchRecord:
-    const key = `${recordType === Hasp.RecordType_PrintRecord ? "LP" : "CP"}${streamId}`;
+  case RJE.StreamType_Printer:
+  case RJE.StreamType_Punch:
+    const key = `${streamType === RJE.StreamType_Printer ? "LP" : "CP"}${streamId}`;
     if (typeof streams[key] === "undefined"
         || typeof streams[key].path === "undefined"
         || typeof streams[key].stream === "undefined") {
@@ -186,28 +200,29 @@ hasp.on("data", (recordType, streamId, data) => {
   }
 });
 
-hasp.on("end", streamId => {
+service.on("end", streamId => {
   const key = `CR${streamId}`;
   const path = streams[key].path;
   streams[key].isBusy = false;
   process.stdout.write(`\nDone    ${path} on ${key} ...`);
 });
 
-hasp.on("connect", () => {
-  process.stdout.write(`\nConnected to HASP host at ${config.host}:${config.port}`);
-  cli();
+service.on("connect", () => {
+  process.stdout.write(`\nConnected to ${config.protocol} service at ${config.host}:${config.port}`, () => {
+    cli();
+  });
 });
 
-hasp.on("pti", (recordType, streamId) => {
+service.on("pti", (streamType, streamId) => {
   const key = `CR${streamId}`;
   const path = streams[key].path;
   const stream = fs.createReadStream(path);
   streams[key].stream = stream;
   process.stdout.write(`\nReading ${path} on ${key} ...`);
-  hasp.send(streamId, stream);
+  service.send(streamId, stream);
 });
 
-hasp.start(
+service.start(
   (typeof config.name     !== "undefined") ? config.name     : null,
   (typeof config.password !== "undefined") ? config.password : null
 );

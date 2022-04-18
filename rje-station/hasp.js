@@ -6,9 +6,20 @@
  */
 const Bsc = require("./bsc");
 const Const = require("./const");
+const Logger = require("./logger");
+const RJE = require("./rje");
 const Translator = require("./translator");
 
 class Hasp {
+
+  static TILDE     = 0x7e;
+  static TILDE_EOF = [0x7e,0x65,0x6f,0x66];
+  static TILDE_EOI = [0x7e,0x65,0x6f,0x69];
+  static TILDE_EOR = [0x7e,0x65,0x6f,0x72];
+
+  static EOF       = [0x2f,0x2a,0x45,0x4f,0x46]; // /*EOF
+  static EOI       = [0x2f,0x2a,0x45,0x4f,0x49]; // /*EOI
+  static EOR       = [0x2f,0x2a,0x45,0x4f,0x52]; // /*EOR
 
   static BlockType_Normal         = 0;
   static BlockType_IgnoreSeqNum   = 1;
@@ -39,6 +50,17 @@ class Hasp {
     "TM"
   ];
 
+  static StreamTypes = [ // indexed by record type
+    -1,
+    RJE.StreamType_Console,
+    RJE.StreamType_Console,
+    RJE.StreamType_Reader,
+    RJE.StreamType_Printer,
+    RJE.StreamType_Punch,
+    -1,
+    -1
+  ];
+
   constructor(options) {
     this.handlers = {};
     this.isSignedOn = false;
@@ -55,6 +77,7 @@ class Hasp {
       }
     }
     if (this.hasp.debug) this.debug = true;
+    if (this.debug) this.logger = new Logger("hasp");
     if (typeof this.hasp.maxBlockSize === "undefined") this.hasp.maxBlockSize = 400;
     this.translator = new Translator();
     this.bsc = new Bsc(options);
@@ -99,21 +122,11 @@ class Hasp {
   }
 
   log(msg) {
-    if (this.debug) {
-      console.log(`${new Date().toLocaleString()} HASP ${msg}`);
-    }
+    if (this.debug) this.logger.log(msg);
   }
 
   logData(label, data) {
-    if (this.debug) {
-      let msg = `${new Date().toLocaleString()} HASP ${label}`;
-      for (const b of data) {
-        msg += " ";
-        if (b < 16) msg += "0";
-        msg += b.toString(16);
-      }
-      console.log(msg);
-    }
+    if (this.debug) this.logger.logData(label, data);
   }
 
   on(evt, handler) {
@@ -267,7 +280,7 @@ class Hasp {
           streamId = (srcb >> 4) & 0x07;
           recordType = srcb & 0x0f;
           if (typeof this.handlers.pti === "function") {
-            this.handlers.pti(recordType, streamId);
+            this.handlers.pti(Hasp.StreamTypes[recordType], streamId);
           }
           break;
         case Hasp.ControlInfo_BadBCB:
@@ -292,7 +305,7 @@ class Hasp {
           // an RCB that is also 0
           //
           if (typeof this.handlers.data === "function") {
-            this.handlers.data(recordType, streamId, null);
+            this.handlers.data(Hasp.StreamTypes[recordType], streamId, null);
             delete this.hasp[key].recordCount;
           }
           break;
@@ -335,7 +348,7 @@ class Hasp {
           str += "\n";
         }
         if (typeof this.handlers.data === "function") {
-          this.handlers.data(recordType, streamId, str);
+          this.handlers.data(Hasp.StreamTypes[recordType], streamId, str);
         }
       }
     }
@@ -365,19 +378,37 @@ class Hasp {
         let block = [0x80 | (Hasp.BlockType_Normal << 4), 0x8f, 0xcf];
         while (limit >= 0) {
           block.push(0x80 | (streamId << 4) | Hasp.RecordType_InputRecord, 0x80);
+          let card = buf.slice(0, limit);
+          if (buf[limit] === 0x0d) limit += 1;
+          buf = buf.slice(limit + 1);
+          if (card.length > 0 && card[0] === Hasp.TILDE) {
+            if (card.length === 1
+                || (card.length === 4 && card.every((b, i) => b === Hasp.TILDE_EOR[i]))) {
+              card = Hasp.EOR;
+            }
+            else if (card.length === 4 && card.every((b, i) => b === Hasp.TILDE_EOF[i])) {
+              card = Hasp.EOF;
+            }
+            else if (card.length === 4 && card.every((b, i) => b === Hasp.TILDE_EOI[i])) {
+              card = Hasp.EOI;
+            }
+            else {
+              continue;
+            }
+          }
+          else if (card.length < 1) {
+            card = [0x20];
+          }
           let i = 0;
-          while (i < limit) {
-            let len = limit - i;
+          while (i < card.length) {
+            let len = card.length - i;
             if (len > 0x3f) len = 0x3f;
             block.push(0xc0 | len);
             while (len-- > 0) {
-              block.push(Translator.AsciiToEbcdic[buf[i++]]);
+              block.push(Translator.AsciiToEbcdic[card[i++]]);
             }
           }
           block.push(0);
-          if (buf[i] === 0x0d) i += 1;
-          i += 1;
-          buf = buf.slice(i);
           limit = buf.indexOf(0x0a);
           if (limit > 0 && buf[limit - 1] == 0x0d) limit -= 1;
           if (block.length + limit > this.maxBlockSize) {
