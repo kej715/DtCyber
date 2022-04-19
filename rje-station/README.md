@@ -94,7 +94,9 @@ IBM MVS and CMS hosts.
 - **mode4** : an optional object defining configuration properties specific to the MODE4 data communication layer.
 - **mode4.debug** : if set to *true*, the MODE4 layer will log debugging information to file `mode4.log.txt`. The default is the value specified by the top-level
 **debug** property.
-
+- **mode4.siteId** : specifies the MODE4 layer site identifier (aka site address)
+of the RJE station. Valid values are in the range 0x70 - 0x7f. The default value
+is `0x7a`.
 
 ## Using rjecli
 When **rjecli** starts, it attempts to connect to the RJE host service specified by the `host` and `port` properties defined in the configuration file. When the
