@@ -199,6 +199,11 @@ void dcc6681Interrupt(bool status);
 void ddpInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 
 /*
+**  dsa311.c
+*/
+void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+
+/*
 **  mux6676.c
 */
 void mux6671Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);

@@ -48,7 +48,7 @@
 #define Fc6681Connect6Mode1         06000
 #define Fc6681Connect7Mode1         07000
 #define Fc6681ConnectEquipmentMask  07000
-#define Fc6681ConnectUnitMask       00777
+#define Fc6681ConnectUnitMask       00077
 #define Fc6681ConnectFuncMask       00777
                                     
 #define Fc6681InputToEor            01400

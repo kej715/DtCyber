@@ -101,6 +101,7 @@
 #define DtMt5744                27
 #define DtCsFei                 28
 #define DtMux6671               29 
+#define DtDsa311                30
 
 /*
 **  Special channels.

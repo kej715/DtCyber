@@ -53,6 +53,7 @@ OBJS    =   cdcnet.o                \
             ddp.o                   \
             deadstart.o             \
             device.o                \
+            dsa311.o                \
             dump.o                  \
             float.o                 \
             init.o                  \
