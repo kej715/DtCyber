@@ -71,6 +71,7 @@
 #define HaspStartTimeout   (5*60*1000)
 #define InBufThreshold     (MaxBuffer - 512)
 #define MaxRetries         5
+#define PauseTimeout       100
 #define RecvTimeout        5000
 #define SendTimeout        100
 
@@ -1133,6 +1134,8 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 pcbp->controls.hasp.pauseAllOutput = (ch & 0x40) != 0;
                 pcbp->controls.hasp.fcsMask = (ch &0x0f) << 4;
                 pcbp->controls.hasp.minorState = StHaspMinorRecvFCS2;
+                if (pcbp->controls.hasp.pauseAllOutput)
+                    pcbp->controls.hasp.pauseDeadline = getMilliseconds() + PauseTimeout;
                 }
             else
                 {
@@ -1348,7 +1351,6 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                     switch (ebcdicToAscii[ch])
                         {
                     case 'A': // Signon record
-                        pcbp->controls.hasp.strLength = 80; // signon record is always 80 bytes
                         pcbp->controls.hasp.minorState = StHaspMinorRecvSignon;
                         break;
                     case 'B': // Signoff record
@@ -1359,6 +1361,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                     case 'G': // System configuration status
                     case 'H': // Diagnostic control record
                     default:
+                        pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
 #if DEBUG
                         fprintf(npuHaspLog, "Port %02x: unsupported GCR type %c\n",
                             pcbp->claPort, (char)ebcdicToAscii[ch]);
@@ -1561,33 +1564,34 @@ void npuHaspProcessUplineData(Pcb *pcbp)
             npuHaspStageUplineData(pcbp->controls.hasp.designatedStream, buf, numBytes);
             break;
         /*
-        **  Read bytes of a sign-on record.  A sign-on record has exactly 80 bytes.
+        **  Read bytes of a sign-on record.  A sign-on record is usually 80 bytes.
+        **  Nevertheless, some systems send shorter records (e.g., they don't pad them
+        **  with blanks to 80 bytes), so read bytes until a <00> byte (the terminating
+        **  RCB) is detected.
         */
         case StHaspMinorRecvSignon:
-            i = 0;
-            numBytes = pcbp->controls.hasp.strLength;
-            while (TRUE)
-                {
-                if (ch == DLE)
-                    {
-                    if (len < 1) break;
-                    ch = *dp++;
-                    len -= 1;
-                    if (ch != DLE)
-                        {
 #if DEBUG
-                        fprintf(npuHaspLog, "Port %02x: expected byte-stuffed DLE, received <%02x>\n",
-                            pcbp->claPort, ch);
+            i = 0;
 #endif
-                        dp -= 2;
-                        len += 2;
-                        pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
-                        i = 0;
-                        break;
-                        }
+            while (len > 0)
+                {
+                if (ch == 0)
+                    {
+                    npuHaspAppendOutput(pcbp, ackIndication, sizeof(ackIndication));
+                    pcbp->controls.hasp.minorState = StHaspMinorRecvDLE_Signon;
+                    pcbp->controls.hasp.isSignedOn = TRUE;
+                    break;
+                    }
+#if DEBUG
+                if (i >= sizeof(buf))
+                    {
+                    fprintf(npuHaspLog, "Port %02x: received signon record\n", pcbp->claPort);
+                    npuHaspLogBytes(buf, i, EBCDIC);
+                    npuHaspLogFlush();
+                    i = 0;
                     }
                 buf[i++] = ch;
-                if (len < 1 || i >= numBytes) break;
+#endif
                 ch = *dp++;
                 len -= 1;
                 }
@@ -1598,34 +1602,9 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 npuHaspLogBytes(buf, i, EBCDIC);
                 npuHaspLogFlush();
                 }
-#endif
-            pcbp->controls.hasp.strLength -= i;
-            if (pcbp->controls.hasp.strLength < 1)
-                {
-                npuHaspAppendOutput(pcbp, ackIndication, sizeof(ackIndication));
-                pcbp->controls.hasp.minorState = StHaspMinorRecvRCB_Signon;
-                pcbp->controls.hasp.isSignedOn = TRUE;
-#if DEBUG
+            if (pcbp->controls.hasp.isSignedOn)
                 fprintf(npuHaspLog, "Port %02x: signon complete\n", pcbp->claPort);
 #endif
-                }
-            break;
-        /*
-        **  Read and process Record Control Byte following signon record
-        */
-        case StHaspMinorRecvRCB_Signon:
-            if ((ch & 0x80) == 0) // end of transmission block
-                {
-                pcbp->controls.hasp.minorState = StHaspMinorRecvDLE_Signon;
-                }
-            else
-                {
-#if DEBUG
-                fprintf(npuHaspLog, "Port %02x: expected <00> RCB after signon record, received <%02x>\n",
-                    pcbp->claPort, ch);
-#endif
-                pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
-                }
             break;
         /*
         **  Read DLE terminating signon record. A <00> byte is also tolerated because, e.g.,
@@ -1715,6 +1694,10 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 break;
             case SYN:
                 pcbp->controls.hasp.minorState = StHaspMinorRecvBOF;
+                break;
+            case SOH:
+                npuHaspReleaseLastBlockSent(pcbp);
+                pcbp->controls.hasp.minorState = StHaspMinorRecvENQ;
                 break;
             default:
                 break;
@@ -2352,7 +2335,8 @@ static Scb *npuHaspFindStreamWithOutput(Pcb *pcbp)
     u8 pollIndex;
     Scb *scbp;
 
-    if (pcbp->controls.hasp.pauseAllOutput)
+    if (pcbp->controls.hasp.pauseAllOutput
+        && pcbp->controls.hasp.pauseDeadline > getMilliseconds())
         {
         return NULL;
         }
@@ -2499,6 +2483,8 @@ static void npuHaspFlushPruFragment(Tcb *tp, u8 fe)
     Scb *scbp;
     u8 srcb;
 
+    scbp = tp->scbp;
+
     if (tp->deviceType == DtLP)
         {
         switch (fe)
@@ -2526,18 +2512,20 @@ static void npuHaspFlushPruFragment(Tcb *tp, u8 fe)
         srcb = 0;
         }
     
-    scbp = tp->scbp;
     if (scbp->pruFragmentSize > 0)
         {
-        npuHaspSendRecordHeader(tp, srcb);
-        npuHaspSendRecordStrings(tp, scbp->pruFragment, scbp->pruFragmentSize);
+        if (tp->deviceType != DtCP || scbp->params.fvFileType != 1) // avoid sending lace card
+            {
+            npuHaspSendRecordHeader(tp, srcb);
+            npuHaspSendRecordStrings(tp, scbp->pruFragment, scbp->pruFragmentSize);
+            }
         scbp->recordCount += 1;
         }
     else if (scbp->recordCount > 0 || tp->deviceType != DtLP || fe != ' ')
         {
         npuHaspSendRecordHeader(tp, srcb);
         npuHaspSendRecordStrings(tp, blank, sizeof(blank));
-        tp->scbp->recordCount += 1;
+        scbp->recordCount += 1;
         }
     scbp->pruFragmentSize = 0;
     scbp->isPruFragmentComplete = FALSE;

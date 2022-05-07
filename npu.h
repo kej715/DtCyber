@@ -470,7 +470,6 @@ typedef enum
     StHaspMinorRecvStr,
     StHaspMinorRecvRC,
     StHaspMinorRecvSignon,
-    StHaspMinorRecvRCB_Signon,
     StHaspMinorRecvDLE_Signon,
     StHaspMinorRecvDLE1,
     StHaspMinorRecvETB1,
@@ -529,6 +528,7 @@ typedef struct hcb
     u64  sendDeadline;
     bool isSignedOn;
     bool pauseAllOutput;
+    u64  pauseDeadline;
     u8   lastRecvFrameType;
     u8   retries;
     u8   downlineBSN;

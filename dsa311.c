@@ -610,6 +610,11 @@ static void dsa311Io(void)
                             cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
                             cp->outputState = StDsa311OutDLE1;
                             }
+                        else if (ch == NAK)
+                            {
+                            cp->sktOutBuf.data[cp->sktOutBuf.in++] = SYN;
+                            cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
+                            }
                         break;
                     //
                     //  ENQ indicates SOH-ENQ (beginning of communication), and
@@ -641,6 +646,9 @@ static void dsa311Io(void)
                             {
                             switch (ch)
                                 {
+                            case SYN:
+                                // discard trailing SYN's
+                                break;
                             case SOH:
                                 cp->outputState = StDsa311OutSOH;
                                 break;
@@ -1019,8 +1027,9 @@ static void dsa311Receive(Dsa311Context *cp)
         switch (cp->inputState)
             {
         case StDsa311InpDLE1:
-            if (b == SYN || b == NAK)
+            if (b == NAK)
                 {
+                cp->ppInBuf.data[cp->ppInBuf.in++] = SYN;
                 cp->ppInBuf.data[cp->ppInBuf.in++] = b;
                 }
             else if (b == DLE)
