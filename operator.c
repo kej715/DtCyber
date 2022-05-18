@@ -127,6 +127,11 @@ static void opHelpLoadTape(void);
 
 static void opCmdPrompt(void);
 
+static void opCmdShowState(bool help, char *cmdParams);
+static void opCmdShowStateCP(void);
+static void opCmdShowStatePP(u32 ppMask);
+static void opHelpShowState(void);
+
 static void opCmdShowTape(bool help, char *cmdParams);
 static void opHelpShowTape(void);
 
@@ -176,6 +181,7 @@ static OpCmd decode[] =
     "p",                        opCmdPause,
     "ski",                      opCmdSetKeyInterval,
     "sop",                      opCmdSetOperatorPort,
+    "ss",                       opCmdShowState,
     "st",                       opCmdShowTape,
     "ut",                       opCmdUnloadTape,
     "dump_memory",              opCmdDumpMemory,
@@ -186,6 +192,7 @@ static OpCmd decode[] =
     "remove_paper",             opCmdRemovePaper,
     "set_key_interval",         opCmdSetKeyInterval,
     "set_operator_port",        opCmdSetOperatorPort,
+    "show_state",               opCmdShowState,
     "show_tape",                opCmdShowTape,
     "unload_tape",              opCmdUnloadTape,
     "?",                        opCmdHelp,
@@ -742,7 +749,11 @@ static void opCmdDumpMemory(bool help, char *cmdParams)
         }
     *cp++ = '\0';
     numParam = sscanf(cp, "%o,%d", &fwa, &count);
-    if (numParam != 2)
+    if (numParam == 1)
+        {
+        count = 1;
+        }
+    else if (numParam != 2)
         {
         fputs("Not enough or invalid parameters\n", out);
         return;
@@ -1766,6 +1777,220 @@ static void opCmdUnloadTape(bool help, char *cmdParams)
 static void opHelpUnloadTape(void)
     {
     fputs("'unload_tape <channel>,<equipment>,<unit>' unload specified tape unit.\n", out);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Show status of PP's and/or CPU
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdShowState(bool help, char *cmdParams)
+    {
+    char *cp;
+    bool isCP;
+    int numParam;
+    char *param;
+    u32 ppMask;
+    int ppNum;
+
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpShowState();
+        return;
+        }
+
+    ppMask = (ppuCount > 10) ? 0xfffff : 0x3ff;
+    isCP = TRUE;
+    if (strlen(cmdParams) > 0)
+        {
+        ppMask = 0;
+        isCP = FALSE;
+        cp = cmdParams;
+        while (*cp != '\0')
+            {
+            param = cp;
+            while (*cp != '\0' && *cp != ',') ++cp;
+            if (*cp == ',') *cp++ = '\0';
+            if (strcasecmp(param, "CP") == 0 || strcasecmp(param, "CPU") == 0)
+                {
+                isCP = TRUE;
+                }
+            else if (strncasecmp(param, "PP", 2) == 0)
+                {
+                numParam = sscanf(param + 2, "%o", &ppNum);
+                if (numParam != 1)
+                    {
+                    fputs("Missing or invalid PP number\n", out);
+                    return;
+                    }
+                if (ppNum >= 0 && ppNum < 012)
+                    {
+                    ppMask |= 1 << ppNum;
+                    }
+                else if (ppuCount > 10 && ppNum >= 020 && ppNum < 032)
+                    {
+                    ppMask |= 1 << (ppNum - 6);
+                    }
+                else
+                    {
+                    fputs("Invalid PP number\n", out);
+                    return;
+                    }
+                }
+            else
+                {
+                fputs("Invalid element type\n", out);
+                }
+            }
+        }
+
+    if (ppMask != 0) opCmdShowStatePP(ppMask);
+    if (isCP) opCmdShowStateCP();
+    }
+
+static void opCmdShowStateCP(void)
+    {
+    int i;
+
+    i = 0;
+    fputs("                CPU\n", out);
+    fprintf(out, "P       %06o  A%d %06o  B%d %06o\n",cpu.regP,   i, cpu.regA[i], i, cpu.regB[i]); i++;
+    fprintf(out, "RA    %08o  A%d %06o  B%d %06o\n",cpu.regRaCm,  i, cpu.regA[i], i, cpu.regB[i]); i++;
+    fprintf(out, "FL    %08o  A%d %06o  B%d %06o\n",cpu.regFlCm,  i, cpu.regA[i], i, cpu.regB[i]); i++;
+    fprintf(out, "EM    %08o  A%d %06o  B%d %06o\n",cpu.exitMode, i, cpu.regA[i], i, cpu.regB[i]); i++;
+    fprintf(out, "RAE   %08o  A%d %06o  B%d %06o\n",cpu.regRaEcs, i, cpu.regA[i], i, cpu.regB[i]); i++;
+    fprintf(out, "FLE %010o  A%d %06o  B%d %06o\n",cpu.regFlEcs,  i, cpu.regA[i], i, cpu.regB[i]); i++;
+    fprintf(out, "MA    %08o  A%d %06o  B%d %06o\n",cpu.regMa,    i, cpu.regA[i], i, cpu.regB[i]); i++;
+    fprintf(out, "                A%d %06o  B%d %06o\n\n",        i, cpu.regA[i], i, cpu.regB[i]); i++;
+
+    for (i = 0; i < 8; i++)
+        {
+        fprintf(out, "X%d  %020lo\n", i, cpu.regX[i]);
+        }
+    fputs("\n", out);
+    }
+
+static void opCmdShowStatePP(u32 ppMask)
+    {
+    char buf[20];
+    int col;
+    int i;
+    int len;
+    PpSlot *pp;
+    int ppNum;
+    
+    ppMask |= (1 << 20); // stopper
+    ppNum = 0;
+    while (ppNum < 20)
+        {
+        //
+        // Find next requested PP number
+        //
+        if (((1 << ppNum) & ppMask) == 0)
+            {
+            ppNum += 1;
+            continue;
+            }
+        //
+        // Display next four requested PP's
+        //
+        i = ppNum;
+        col = 0;
+        while (col < 5)
+             {
+             fprintf(out, "  PP%02o          ", (i < 10) ? i : i + 6);
+             i += 1;
+             while (((1 << i) & ppMask) == 0) i += 1;
+             if (i >= 20) break;
+             col += 1;
+             }
+        fputs("\n", out);
+
+        i = ppNum;
+        col = 0;
+        while (col < 5)
+             {
+             pp = &ppu[i++];
+             sprintf(buf, "P %04o", pp->regP);
+             len = strlen(buf);
+             while (len < 16) buf[len++] = ' ';
+             buf[len] = '\0';
+             fputs(buf, out);
+             while (((1 << i) & ppMask) == 0) i += 1;
+             if (i >= 20) break;
+             col += 1;
+             }
+        fputs("\n", out);
+
+        i = ppNum;
+        col = 0;
+        while (col < 5)
+             {
+             pp = &ppu[i++];
+             sprintf(buf, "A %06o", pp->regA);
+             len = strlen(buf);
+             while (len < 16) buf[len++] = ' ';
+             buf[len] = '\0';
+             fputs(buf, out);
+             while (((1 << i) & ppMask) == 0) i += 1;
+             if (i >= 20) break;
+             col += 1;
+             }
+        fputs("\n", out);
+
+        i = ppNum;
+        col = 0;
+        while (col < 5)
+             {
+             pp = &ppu[i++];
+             sprintf(buf, "Q %04o", pp->regQ);
+             len = strlen(buf);
+             while (len < 16) buf[len++] = ' ';
+             buf[len] = '\0';
+             fputs(buf, out);
+             while (((1 << i) & ppMask) == 0) i += 1;
+             if (i >= 20) break;
+             col += 1;
+             }
+        fputs("\n", out);
+
+        if ((features & HasRelocationReg) != 0)
+            {
+            i = ppNum;
+            col = 0;
+            while (col < 5)
+                 {
+                 pp = &ppu[i++];
+                 if ((features & HasRelocationRegShort) != 0)
+                     sprintf(buf, "R %06o", pp->regR);
+                 else
+                     sprintf(buf, "R %010o", pp->regR);
+                 len = strlen(buf);
+                 while (len < 16) buf[len++] = ' ';
+                 buf[len] = '\0';
+                 fputs(buf, out);
+                 while (((1 << i) & ppMask) == 0) i += 1;
+                 if (i >= 20) break;
+                 col += 1;
+                 }
+            fputs("\n", out);
+            }
+        fputs("\n", out);
+        ppNum = i;
+        }
+    }
+
+static void opHelpShowState(void)
+    {
+    fputs("'show_state [pp<n>,...][,cp]' show state of PP's and/or CPU.\n", out);
     }
 
 /*--------------------------------------------------------------------------
