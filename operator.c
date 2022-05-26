@@ -405,7 +405,11 @@ static void *opThread(void *param)
             }
         else if (fgets(cmd, sizeof(cmd), in) == NULL)
             {
-            if (opCmdStack[opCmdStackPtr].isNetConn && errno == EAGAIN) continue;
+#if defined(_WIN32)
+            if (opCmdStack[opCmdStackPtr].isNetConn && WSAGetLastError() == WSAEWOULDBLOCK) continue;
+#else
+            if (opCmdStack[opCmdStackPtr].isNetConn && errno == EWOULDBLOCK) continue;
+#endif
             if (opCmdStackPtr > 0)
                 {
                 fclose(in);
