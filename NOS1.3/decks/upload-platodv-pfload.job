@@ -1,0 +1,32 @@
+~*
+~*  This job saves a file in the catalog of INSTALL that is
+~*  a job that runs PFLOAD to restore PLATO development files
+~*  to the PLATODV auxiliary pack.
+~*
+UPLPLDV.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,7777.
+$SETJSL,7777.
+$SETASL,7777.
+$COPYBR,INPUT,PFLPLDV.
+$REPLACE,PFLPLDV.
+***
+*** UPLPLDV COMPLETE
+***
+EXIT.
+***
+*** UPLPLDV FAILED
+***
+~eor
+PFLPLDV.
+$PACKNAM,PLATODV.
+$ASSIGN,51,TAPE,LB=KU,F=I.
+$PFLOAD,PN=PLATODV,UI=1,LO=TCE.
+***
+*** PFLPLDV COMPLETE
+***
+EXIT.
+***
+*** PFLPLDV FAILED
+***

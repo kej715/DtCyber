@@ -1,0 +1,32 @@
+~*
+~*  This job saves a file in the catalog of INSTALL that is
+~*  a job that runs PFLOAD to restore PLATO master files to
+~*  the PLATO family.
+~*
+UPLPLMF.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,7777.
+$SETJSL,7777.
+$SETASL,7777.
+$COPYBR,INPUT,PFLPLMF.
+$REPLACE,PFLPLMF.
+***
+*** UPLPLMF COMPLETE
+***
+EXIT.
+***
+*** UPLPLMF FAILED
+***
+~eor
+PFLPLMF.
+$FAMILY,PLATO.
+$ASSIGN,51,TAPE,LB=KU,F=I.
+$PFLOAD,FM=PLATO,UI=1,LO=TCE.
+***
+*** PFLPLMF COMPLETE
+***
+EXIT.
+***
+*** PFLPLMF FAILED
+***

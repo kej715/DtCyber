@@ -1,0 +1,26 @@
+~*
+~*  This job applies customizations to the PLATO subsystems.
+~*  Executables are LIBEDIT'ed into the direct access file
+~*  named SYSTEM in the catalog of user INSTALL.
+~*
+SYSUI.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,7777.
+$SETJSL,7777.
+$SETASL,7777.
+$RFL,140000.
+$ATTACH,OPL=OPL485.
+$MODIFY,LO=E.
+$COMPASS,I,L=0,S=PSSTEXT,S=NOSTEXT.
+$ATTACH,SYSTEM/M=W,NA.
+$LIBEDIT,P=SYSTEM,I=0,L=0,C.
+***
+*** SYSUI COMPLETE
+***
+EXIT.
+***
+*** SYSUI FAILED
+***
+~eor
+~include ../mods/SYSUI/SYSUI.mod

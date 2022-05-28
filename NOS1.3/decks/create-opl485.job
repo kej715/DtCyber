@@ -1,0 +1,21 @@
+~*
+~*  This job copies OPL485 from tape to a direct access
+~*  in the catalog of user INSTALL.
+~*
+OPL485.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,7777.
+$SETJSL,7777.
+$SETASL,7777.
+$PURGE,OPL485/NA.
+$DEFINE,OPL485/CT=PU,M=R.
+$ASSIGN,${1},TAPE,LB=KL,F=I.
+$COPY,TAPE,OPL485.
+***
+*** OPL485 COMPLETE
+***
+EXIT.
+***
+*** OPL485 FAILED
+***
