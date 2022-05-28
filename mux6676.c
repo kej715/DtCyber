@@ -760,7 +760,8 @@ static void mux667xCheckIo(MuxParam *mp)
 
     timeout.tv_sec = 0;
     timeout.tv_usec = 0;
-    select(maxFd + 1, &readFds, &writeFds, NULL, &timeout);
+    n = select(maxFd + 1, &readFds, &writeFds, NULL, &timeout);
+    if (n < 1) return;
 
     for (i = 0, pp = mp->ports; i < mp->portCount; i++, pp++)
         {
