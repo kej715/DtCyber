@@ -159,6 +159,9 @@ will interoperate with RBF on NOS 2.
 they will operate correctory for this NOS 1.3 distribution.
 - **customize-plato.job** : a job to build the *PLATO* subsystem PP program named
 *PPA* so that it will operate correctly for this NOS 1.3 distribution.
+- **customize-runner.job** : a job to modify the *RUNNER* utility and associated
+management commands so that they will operate correctly for this NOS 1.3
+distribution.
 - **customize-sysui.job** : a job to modify the *SUI* command so that it will operate
 correctly for this NOS 1.3 distribution.
 
