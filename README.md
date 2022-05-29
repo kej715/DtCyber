@@ -20,8 +20,8 @@ PLATO.
 
 Visit the [doc](doc) directory to find the somewhat outdated *Basic Operation* guide
 for *DtCyber*. This guide is oriented toward operation of an older version of the
-operating system. Nevertheless, most of the basic concepts apply to NOS 2.8.7, and
-most information about operating *DtCyber* itself still applies.
+operating system. Nevertheless, most of the basic concepts apply to NOS 2.8.7 and
+NOS 1.3, and most information about operating *DtCyber* itself still applies.
 
 Visit the [CDC documentation archives at Bitsavers](http://bitsavers.trailing-edge.com/pdf/cdc/)
 for a wealth of preserved documentation on Control Data hardware and software. In
