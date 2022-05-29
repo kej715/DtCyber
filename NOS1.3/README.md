@@ -1,7 +1,9 @@
 # Installing NOS 1.3
 This directory tree contains a collection of artifacts facilitating the installation
-from scratch of the NOS 1.3 operating system on *DtCyber*. Following these
-instructions should produce a working instance of the operating system that supports:
+from scratch of the NOS 1.3 operating system on *DtCyber*. This distribution of the
+NOS 1.3 operating system is based upon a customized version preserved from Florida
+State Universsity. Following the instructions, below, will produce a working instance
+of the operating system that supports:
 
 - Batch job submission via a simulated card reader
 - Interactive login via your favorite Telnet client

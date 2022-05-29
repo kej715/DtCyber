@@ -10,8 +10,13 @@ supports the [Nostalgic Computing Center](http://www.nostalgiccomputing.org).
 This repository also provides automation and artifacts intended to make it easy for
 anyone to build the simulator and run historic software on it.
 
-Visit the [NOS2.8.7](NOS2.8.7) directory to find artifacts and information enabling
-you to install the NOS 2.8.7 operating system on *DtCyber* after building it.
+Visit these subdirectories to find artifacts and information enabling you to install
+operating systems on *DtCyber* after building it:
+
+- [NOS2.8.7](NOS2.8.7) : NOS 2.8.7 was the last operating system formally released
+by CDC for its Cyber 170 series supercomputers.
+- [NOS1.3](NOS1.3) : the NOS 1.3 operating system and a corresponding version of
+PLATO.
 
 Visit the [doc](doc) directory to find the somewhat outdated *Basic Operation* guide
 for *DtCyber*. This guide is oriented toward operation of an older version of the
