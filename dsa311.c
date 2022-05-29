@@ -944,7 +944,7 @@ static void dsa311InitiateConnection(Dsa311Context *cp)
         }
     setsockopt(cp->fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
     ioctlsocket(cp->fd, FIONBIO, &blockEnable);
-    rc = connect(fd, (struct sockaddr *)&cp->serverAddr, sizeof(cp->serverAddr));
+    rc = connect(cp->fd, (struct sockaddr *)&cp->serverAddr, sizeof(cp->serverAddr));
     if (rc == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)
         {
 #if DEBUG

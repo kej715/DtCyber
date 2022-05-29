@@ -1187,7 +1187,7 @@ static void npuNetThread(void *param)
 static void *npuNetThread(void *param)
 #endif
     {
-    fd_set listenFds;;
+    fd_set listenFds;
     int i;
     int j;
     Ncb *ncbp;
