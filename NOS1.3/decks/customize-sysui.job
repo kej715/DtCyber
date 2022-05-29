@@ -1,5 +1,5 @@
 ~*
-~*  This job applies customizations to the PLATO subsystems.
+~*  This job applies customizations to the SYSUI utility.
 ~*  Executables are LIBEDIT'ed into the direct access file
 ~*  named SYSTEM in the catalog of user INSTALL.
 ~*
