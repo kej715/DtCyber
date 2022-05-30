@@ -22,7 +22,7 @@
 #
 #--------------------------------------------------------------------------
 
-LIBS    = -lm -lX11 -lpthread
+LIBS    = -lm -lX11 -lpthread -lrt
 LDFLAGS = -s -L/usr/lib/arm-linux-gnueabihf
 INCL    = -I/usr/include/X11
 
@@ -60,6 +60,8 @@ OBJS    =   cdcnet.o                \
             lp3000.o                \
             main.o                  \
             maintenance_channel.o   \
+	    msufrend.o		    \
+	    msufrend_util.o	    \
             mdi.o                   \
             mt362x.o                \
             mt5744.o                \

@@ -236,6 +236,13 @@ void niuLocalKey(u16 key, int stat);
 void niuSetOutputHandler(niuProcessOutput *h, int stat);
 
 /*
+**  msufrend.c
+*/
+void msufrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void TalkToFrend();
+void SendInterruptToFrend();
+
+/*
 **  pci_channel_{win32,linux}.c
 */
 void pciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
