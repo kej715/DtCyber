@@ -1,6 +1,6 @@
 # Makefile for Linux build of frend2.
 #   /mrr  2006-02-03
-LIBS    = -lm -lpthread
+LIBS    = -lm -lpthread -lrt
 LDFLAGS =
 INCL    = -I..
 
