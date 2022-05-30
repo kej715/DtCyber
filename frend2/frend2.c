@@ -77,6 +77,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "msufrend_util.h"
 #include "lmbi.h"
 #include "frend2_helpers.h"
+#include <string.h>
 #ifdef _WIN32
 #include <conio.h>
 #include <process.h>

@@ -1,7 +1,7 @@
 # Makefile for Linux build of frend2.
 #   /mrr  2006-02-03
-LIBS    = -lm -lrt -lpthread
-LDFLAGS = -s
+LIBS    = -lm -lpthread
+LDFLAGS =
 INCL    = -I..
 
 CFLAGS  = -O2 -I. $(INCL) -std=gnu99
