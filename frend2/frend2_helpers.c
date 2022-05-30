@@ -4,8 +4,14 @@
  * Mark Riordan   24 June 2004
  * Placed in the public domain.
  */
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
+#include <assert.h>
+#include <stdio.h>
 #include <string.h>
-#include "stdafx.h"
+#include <time.h>
 #include "msufrend_util.h"
 #include "frend2_helpers.h"
 

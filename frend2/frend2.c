@@ -72,16 +72,16 @@ OTHER DEALINGS IN THE SOFTWARE.
  * $Id: frend2.c,v 1.21 2006/02/19 02:36:29 riordanmr Exp $
  */
 
-#include "stdafx.h"
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <assert.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
 #include "msufrend_util.h"
 #include "lmbi.h"
 #include "frend2_helpers.h"
-#include <string.h>
-#ifdef _WIN32
-#include <conio.h>
-#include <process.h>
-#endif
 
 char *szFRENDVersion = "62.05";
 static char *szAuthor = "Mark Riordan  4513 Gregg Rd  Madison, WI  53705";
