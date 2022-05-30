@@ -96,7 +96,7 @@ DevDesc deviceDesc[] =
     "FEI",      csFeiInit,
     "NIU-IN",   niuInInit,
     "NIU-OUT",  niuOutInit,
-    "MSUFREND", msufrendInit,
+    "MSUFREND", msuFrendInit,
 #if defined(__linux__) || defined(__gnu_linux__) || defined(linux) || defined(_WIN32)
 	/* CYBER channel support only on some platforms */
     "PCICH",    pciInit,

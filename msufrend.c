@@ -109,7 +109,7 @@ extern TypFrendInterface *pFrendInt;
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void msufrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
+void msuFrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 {
    DevSlot *dp;
 
@@ -146,7 +146,7 @@ void msufrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void TalkToFrend()
+void msuFrendTalkToFrend(void)
 {
    /* Set FREND's copy of data, and active and full flags. */
    pFrendInt->cf.cf_func = activeDevice->fcode;
@@ -167,9 +167,9 @@ void TalkToFrend()
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void SendInterruptToFrend()
+void msuFrendSendInterruptToFrend(void)
 {
-   TalkToFrend();
+   msuFrendTalkToFrend();
 }
 
 /*--------------------------------------------------------------------------
@@ -225,7 +225,7 @@ static FcStatus msufrendFunc(PpWord funcCode)
          break;
       case FcFEFINT:
          /* Interrupt the 7/32 */
-         SendInterruptToFrend();
+         msuFrendSendInterruptToFrend();
          break;
       case FcFEFLP:
          /* LOAD INTERFACE MEMORY */

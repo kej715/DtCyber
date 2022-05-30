@@ -238,9 +238,9 @@ void niuSetOutputHandler(niuProcessOutput *h, int stat);
 /*
 **  msufrend.c
 */
-void msufrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void TalkToFrend();
-void SendInterruptToFrend();
+void msuFrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void msuFrendTalkToFrend(void);
+void msuFrendSendInterruptToFrend(void);
 
 /*
 **  pci_channel_{win32,linux}.c

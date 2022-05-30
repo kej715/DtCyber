@@ -135,16 +135,16 @@ typedef unsigned char Byte8;
  * the memory of the machine. */
 typedef struct struct_frend_state {
    Byte8 fr_mem[MAX_FREND_BYTES];  /* Contents of FREND memory, in bytes.
-                           /* The 7/32 stored in most-significant-byte-first format
-                            * (SPARC format), and so do we. */
-   unsigned int  fr_addr;   /* Next byte (not halfword) address to read or write.
-                             * However, when this is set via the 6CA, the bottom
-                             * bit is cleared, because the memory interface between
-                             * FREND and the Cyber specifies addresses halfword addresses */
-   bool fr_next_is_second; /* true if the next byte of I/O is the second in a sequence.
-                            * This is used for READ-AND-SET, which transfers 2 bytes
-                            * but which is not supposed to change the address register. */
-   PpWord fr_last_func_code;  /* Last function code sent from PP. */
+                                    * The 7/32 stored in most-significant-byte-first format
+                                    * (SPARC format), and so do we. */
+   unsigned int  fr_addr;          /* Next byte (not halfword) address to read or write.
+                                    * However, when this is set via the 6CA, the bottom
+                                    * bit is cleared, because the memory interface between
+                                    * FREND and the Cyber specifies addresses halfword addresses */
+   bool fr_next_is_second;         /* true if the next byte of I/O is the second in a sequence.
+                                    * This is used for READ-AND-SET, which transfers 2 bytes
+                                    * but which is not supposed to change the address register. */
+   PpWord fr_last_func_code;       /* Last function code sent from PP. */
 } TypFRENDState;
 
 typedef struct struct_cyber_to_frend {

@@ -8,6 +8,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>        /* For mode constants */
 #include <fcntl.h>           /* For O_* constants */
+#include <string.h>
 
 TypFrendInterface *pFrendInt = NULL;
 static SOCKET sockToFrend=0; /* Used only by DtCyber */
@@ -364,7 +365,7 @@ int SendToFrend(Byte8 *buf, int len)
 }
 
 /*--- function InitWaitForFrend ---------------------
-/*  Initialize the variables used to respond from frend2 to dtcyber.
+ *  Initialize the variables used to respond from frend2 to dtcyber.
  *  This is optional and is used only if frend2's "-s" command line parameter
  *  is used.  Called only by DtCyber.
  */
