@@ -100,7 +100,7 @@ stk/node_modules:
 	$(MAKE) -C stk
 
 frend2/frend2:
-	$(MAKE) -C frend2
+	$(MAKE) -f Makefile.linux64-armv8 -C frend2
 
 clean:
 	rm -f *.o; \
