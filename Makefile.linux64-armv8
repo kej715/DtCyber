@@ -94,14 +94,18 @@ OBJS    =   cdcnet.o                \
 dtcyber: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
-all: dtcyber stk/node_modules
+all: dtcyber stk/node_modules frend2/frend2
 
 stk/node_modules:
 	$(MAKE) -C stk
 
+frend2/frend2:
+	$(MAKE) -C frend2
+
 clean:
 	rm -f *.o; \
 	$(MAKE) -C stk clean
+	$(MAKE) -C frend2 clean
 
 %.o : %.c $(HDRS)
 	$(CC) $(CFLAGS) -c $<

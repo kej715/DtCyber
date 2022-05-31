@@ -2279,7 +2279,7 @@ void PALISR(HalfWord SocketNum, Byte8 ch)
       SetHalfWord(fwaMySocket+H_SKINCC, 0);
       /* Handle end of line flag.  Tricky. */
       CLEARHFLAG(fwaMySocket, SKINEL);
-      if(!GetByte(bufaddr+C_DHCEOL) & V_DHCEOL) {
+      if((!GetByte(bufaddr+C_DHCEOL)) & V_DHCEOL) {
          SETHFLAG(fwaMySocket, SKINEL);
       }
       /* Clear socket's input buffer address, since we are now going to use the buffer. */

@@ -241,54 +241,63 @@ FrendMapMemoryWindows(char *lpMappingName, DWORD dwNumberOfBytesToMap)
  */
 void *
 FrendMapMemoryLinux(char *lpMappingName, int NumberOfBytesToMap)
-{
-	void *pStart=NULL;
-   int sharedsize = NumberOfBytesToMap;
-	do { /* not a loop */
-      off_t offset=0;
-      int oflag = O_RDWR;
-      mode_t mode = S_IRWXU | S_IRWXG;
-      int handle = shm_open(lpMappingName, oflag , mode);
-		TypBool bMappingNeededToBeCreated=FALSE;
-      if(-1 == handle) {
-			/* Mapping file could not be opened.  Try creating it. */
-			oflag |= O_CREAT;
-			handle = shm_open(lpMappingName, oflag , mode);
-			if(-1 == handle) {
-				/* error */
-				LogOut("shm_open: error %d", errno);
-				perror("shm_open");
-				break;
-			}
-			bMappingNeededToBeCreated = TRUE;
-      }
+    {
+    void *pStart=NULL;
+    int sharedsize = NumberOfBytesToMap;
 
-      /* Give the shared object a non-zero size */
-      if(ftruncate(handle, sharedsize)) {
-			LogOut("ftruncate: error %d", errno);
-         perror("ftruncate");
-         break;
-      }
-      /* FreeBSD recommends writing zeros to the ftruncated file
-       * to avoid fragmentation. */
-      if(bMappingNeededToBeCreated) {
-         char *pzeros = (char *)malloc(sharedsize);
-         memset(pzeros, 0, sharedsize);
-         if (write(handle, pzeros, sharedsize) == -1)
-	   perror("FrendMapMemoryLinux(): shared memory write failed");
-	 break;
-      }
-		/* We don't use MAP_ANONYMOUS, or MAP_NOSYNC,
-		 * because they are not supported in Linux (though they are in BSD). */
-		/* It's said that you can use /dev/zero instead of MAP_ANONYMOUS, */
-		/* but I couldn't get that to work. */
-		/* Thus, shared memory in Linux will probably be a little less */
-		/* efficient than it is in Windows. */
-      pStart = mmap(pStart, sharedsize,
-        PROT_READ|PROT_WRITE, MAP_SHARED /*| MAP_NOSYNC*/, handle, offset);
-	} while(FALSE);
-	return pStart;
-}
+    do
+        { /* not a loop */
+        off_t offset=0;
+        int oflag = O_RDWR;
+        mode_t mode = S_IRWXU | S_IRWXG;
+        int handle = shm_open(lpMappingName, oflag, mode);
+        TypBool bMappingNeededToBeCreated = FALSE;
+        if (-1 == handle)
+            {
+            /* Mapping file could not be opened.  Try creating it. */
+            oflag |= O_CREAT;
+            handle = shm_open(lpMappingName, oflag, mode);
+            if (-1 == handle)
+                {
+                /* error */
+                perror("shm_open");
+                LogOut("shm_open: error %d", errno);
+                break;
+                }
+            bMappingNeededToBeCreated = TRUE;
+            }
+
+        /* Give the shared object a non-zero size */
+#if !defined(__APPLE__)
+        if (-1 == ftruncate(handle, sharedsize))
+            {
+            perror("ftruncate");
+            LogOut("ftruncate: error %d", errno);
+            break;
+            }
+#endif
+        /* FreeBSD recommends writing zeros to the ftruncated file
+         * to avoid fragmentation. */
+        if (bMappingNeededToBeCreated)
+            {
+            char *pzeros = (char *)malloc(sharedsize);
+            memset(pzeros, 0, sharedsize);
+            if (write(handle, pzeros, sharedsize) == -1)
+                perror("FrendMapMemoryLinux(): shared memory write failed");
+            break;
+            }
+        /* We don't use MAP_ANONYMOUS, or MAP_NOSYNC,
+         * because they are not supported in Linux (though they are in BSD).
+         * It's said that you can use /dev/zero instead of MAP_ANONYMOUS,
+         * but I couldn't get that to work.
+         * Thus, shared memory in Linux will probably be a little less
+         * efficient than it is in Windows.
+         */
+        pStart = mmap(pStart, sharedsize, PROT_READ|PROT_WRITE, MAP_SHARED /*| MAP_NOSYNC*/, handle, offset);
+        }
+    while(FALSE);
+    return pStart;
+    }
 #endif
 
 /*--- function InitFRENDInterface ----------------------
