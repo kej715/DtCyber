@@ -382,11 +382,7 @@ static void tracePpuCalls(void)
 static void waitTerminationMessage(void)
     {
     fflush(stdout);
-    #if defined(_WIN32)
-        Sleep(3000);
-    #else
-        sleep(3);
-    #endif
+    sleepMsec(3000);
     }
 
 /*---------------------------  End Of File  ------------------------------*/

@@ -113,7 +113,6 @@ static void opHelpDumpMemory(void);
 static void opCmdEnterKeys(bool help, char *cmdParams);
 static void opHelpEnterKeys(void);
 static void opWaitKeyConsume();
-static void opWait(long milliseconds);
 
 static void opCmdHelp(bool help, char *cmdParams);
 static void opHelpHelp(void);
@@ -380,13 +379,13 @@ static void *opThread(void *param)
 
         if (opActive)
             {
-            opWait(1);
+            sleepMsec(1);
             continue;
             }
 
         if (opHasInput(&opCmdStack[opCmdStackPtr]) == FALSE)
             {
-            opWait(10);
+            sleepMsec(10);
             continue;
             }
 
@@ -1032,17 +1031,17 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
                 msec = (msec * 10) + (*cp++ - '0');
                 }
             if (*cp != '#') cp -= 1;
-            opWait(msec);
+            sleepMsec(msec);
             break;
             }
         cp += 1;
-        opWait(opKeyInterval);
+        sleepMsec(opKeyInterval);
         opWaitKeyConsume();
         }
     if (*cp != '!')
         {
         opKeyIn = '\r';
-        opWait(opKeyInterval);
+        sleepMsec(opKeyInterval);
         opWaitKeyConsume();
         }
     opCmdPrompt();
@@ -1070,21 +1069,8 @@ static void opWaitKeyConsume()
     {
     while (opKeyIn != 0 || ppKeyIn != 0)
         {
-        #if defined(_WIN32)
-        Sleep(100);
-        #else
-        usleep(100000);
-        #endif
+        sleepMsec(100);
         }
-    }
-
-static void opWait(long milliseconds)
-    {
-    #if defined(_WIN32)
-    Sleep(milliseconds);
-    #else
-    usleep((useconds_t)(milliseconds * 1000));
-    #endif
     }
 
 /*--------------------------------------------------------------------------
@@ -1301,11 +1287,7 @@ static void opCmdPause(bool help, char *cmdParams)
     while (opPaused)
         {
         /* wait for operator thread to clear the flag */
-        #if defined(_WIN32)
-        Sleep(500);
-        #else
-        usleep(500000);
-        #endif
+        sleepMsec(500);
         }
     }
 

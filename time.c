@@ -78,3 +78,51 @@ time_t getSeconds(void)
     return time(NULL);
     }
 
+/*--------------------------------------------------------------------------
+**  Purpose:        Sleep for a specified number of milliseconds.
+**
+**  Parameters:     Name        Description.
+**                  msec        number of milliseconds to sleep
+**
+**  Returns:        Nothing
+**
+**------------------------------------------------------------------------*/
+void sleepMsec(u32 msec)
+    {
+#if defined(_WIN32)
+    Sleep(msec);
+#else
+    struct timespec ts;
+
+    ts.tv_sec = msec / 1000;
+    ts.tv_nsec = (msec % 1000) * 1000000;
+    nanosleep(&ts, &ts);
+#endif
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Sleep for a specified number of microseconds.
+**
+**  Parameters:     Name        Description.
+**                  msec        number of microseconds to sleep
+**
+**  Returns:        Nothing
+**
+**------------------------------------------------------------------------*/
+void sleepUsec(u64 usec)
+    {
+#if defined(_WIN32)
+    u64 msec;
+    msec = usec / 1000;
+    if (msec < 1) msec = 1;
+    Sleep(msec);
+#else
+    struct timespec ts;
+
+    ts.tv_sec = usec / 1000000;
+    ts.tv_nsec = (usec % 1000000) * 1000;
+    nanosleep(&ts, &ts);
+#endif
+    }
+
+

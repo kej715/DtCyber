@@ -257,6 +257,8 @@ void pciConsoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 */
 u64 getMilliseconds(void);
 time_t getSeconds(void);
+void sleepMsec(u32 msec);
+void sleepUsec(u64 usec);
 
 /*
 **  tpmux.c

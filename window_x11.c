@@ -535,7 +535,7 @@ void *windowThread(void *param)
                 if (len == 1)
                     {
                     ppKeyIn = text[0];
-                    usleep(5000);
+                    sleepMsec(5);
                     }
                 else if (len == 2 && text[0] == '$')
                     {
@@ -801,7 +801,7 @@ void *windowThread(void *param)
         /*
         **  Give other threads a chance to run. This may require customisation.
         */
-        usleep(FrameTime); 
+        sleepUsec(FrameTime); 
         }
 
     XSync(disp, 0);

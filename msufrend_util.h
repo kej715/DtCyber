@@ -37,7 +37,6 @@
 #define ioctlsocket(sock,cmd,argp) ioctl(sock,cmd,argp)
 #define SOCKET_ERROR (-1)
 #define INVALID_SOCKET (-1)
-#define Sleep(ms) usleep(1000*ms)
 #define _vsnprintf vsnprintf
 #endif
 

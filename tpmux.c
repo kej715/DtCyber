@@ -674,12 +674,7 @@ static void *tpMuxThread(void *param)
             /*
             **  No free port found - wait a bit and try again.
             */
-        #if defined(_WIN32)
-            Sleep(1000);
-        #else
-            //usleep(10000000);
-            sleep(1);
-        #endif
+            sleepMsec(1000);
             continue;
             }
 

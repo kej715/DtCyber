@@ -2795,7 +2795,11 @@ void MainLoop()
          }
       } else if(SOCKET_ERROR == nready) {
          printf("Error %d from select\n", GetLastSocketError());
+#ifdef WIN32
          Sleep(2000);
+#else
+         sleep(2);
+#endif
       }
       DropIL(fwaFPCOM+H_FEDEAD); /* Clear "front-end dead" flag */
    } while(TRUE);

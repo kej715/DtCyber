@@ -447,7 +447,7 @@ int InitReplyToCyber()
 		err = connect(sockReplyToCyber, (struct sockaddr *)&sockaddr_to_cyber, sizeof(sockaddr_to_cyber));
 		if(-1 == err) {
 			printf("Waiting for other dtcyber...\n");
-			usleep(1500000);
+			sleep(2);
 		}
 	} while(-1 == err);
 #endif

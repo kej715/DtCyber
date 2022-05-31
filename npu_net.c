@@ -795,11 +795,7 @@ static int npuNetAcceptConnections(fd_set *selectFds, int maxFd)
     if (rc < 0)
         {
         fprintf(stderr, "NET: select returned unexpected %d\n", rc);
-    #if defined(_WIN32)
-        Sleep(1000);
-    #else
-        sleep(1);
-    #endif
+        sleepMsec(1000);
         }
     else if (rc < 1)
         {
@@ -963,11 +959,7 @@ static int npuNetCreateConnections(void)
                 if (rc < 0)
                     {
                     fprintf(stderr, "NET: select returned unexpected %d\n", rc);
-#if defined(_WIN32)
-                    Sleep(1000);
-#else
-                    sleep(1);
-#endif
+                    sleepMsec(1000);
                     }
                 else if (rc > 0)
                     {
