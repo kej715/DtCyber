@@ -532,7 +532,7 @@ static FcStatus lp3000Func(PpWord funcCode)
         // Treat last-line codes as a single blank line
         fputc('\n', fcb);
 #if DEBUG
-    lp3000DebugData();
+        lp3000DebugData();
 #endif
         return(FcProcessed);
 
@@ -540,14 +540,14 @@ static FcStatus lp3000Func(PpWord funcCode)
         // Turn eject into a formfeed character
         fputc('\f', fcb);
 #if DEBUG
-    lp3000DebugData();
+        lp3000DebugData();
 #endif
         return(FcProcessed);
 
     case FcPrintDouble:
         fprintf(fcb, "\n\n");
 #if DEBUG
-    lp3000DebugData();
+        lp3000DebugData();
 #endif
         return(FcProcessed);
 
@@ -589,7 +589,9 @@ static FcStatus lp3000Func(PpWord funcCode)
         switch (funcCode)
             {
         default:
-            printf("Unknown LP3555 function %04o\n", funcCode);
+#if DEBUG
+            fprintf(lp3000Log, "\nUnknown LP3555 function %04o", funcCode);
+#endif
             return(FcProcessed);
 
         case Fc3555CondClearFormat:
@@ -689,7 +691,9 @@ static FcStatus lp3000Func(PpWord funcCode)
         switch (funcCode)
             {
         default:
-            printf("Unknown LP3152 function %04o\n", funcCode);
+#if DEBUG
+            fprintf(lp3000Log, "\nUnknown LP3152 function %04o", funcCode);
+#endif
             return(FcProcessed);
 
         case Fc3152ClearFormat:
