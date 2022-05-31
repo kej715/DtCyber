@@ -105,7 +105,7 @@ frend2/frend2:
 clean:
 	rm -f *.o; \
 	$(MAKE) -C stk clean
-	$(MAKE) -C frend2 clean
+	$(MAKE) -f Makefile.linux32 -C frend2 clean
 
 %.o : %.c $(HDRS)
 	$(CC) $(CFLAGS) -c $<
