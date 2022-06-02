@@ -111,6 +111,23 @@ typedef struct
     } DevDesc;
 
 /*
+**  Filesystem Watcher Thread Context Block.
+**      20171110: SZoppi - Added Windows Support
+*/
+typedef struct
+{
+    char    id[10];                     /* device id */
+    u8      eqNo;                       /* equipment number */
+    u8      unitNo;                     /* unit number */
+    u8      channelNo;                  /* channel number */ 
+    int     devType;                    /* device type */
+    char    inWatchDir[_MAX_PATH];      /* input directory "hopper" */
+    char    outDoneDir[_MAX_PATH];      /* processed directory "hopper" */
+    void    (*LoadCards)(char *parms);  /* address of load routine */
+} fswContext;
+
+
+/*
 **  Device control block.
 */                                        
 typedef struct devSlot                  

@@ -249,7 +249,7 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
     */
     if (dp->context[0] != NULL)
         {
-        fprintf(stderr, "Only one %s unit is possible per equipment\n", mts);
+        fprintf(stderr, "(mux6676) Only one %s unit is possible per equipment\n", mts);
         exit (1);
         }
     if (params == NULL) params = "";
@@ -263,7 +263,7 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
             }
         else
             {
-            fprintf(stderr, "TCP port missing from %s definition\n", mts);
+            fprintf(stderr, "(mux6676) TCP port missing from %s definition\n", mts);
             exit(1);
             }
         }
@@ -273,20 +273,20 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
         }
     if (listenPort < 1 || listenPort > 65535)
         {
-        fprintf(stderr, "Invalid TCP port number in %s definition: %d\n", mts, listenPort);
+        fprintf(stderr, "(mux6676) Invalid TCP port number in %s definition: %d\n", mts, listenPort);
         exit(1);
         }
     maxPorts = (muxType == DtMux6676) ? 64 : 16;
     if (portCount < 1 || portCount > maxPorts)
         {
-        fprintf(stderr, "Invalid mux port count in %s definition: %d\n", mts, portCount);
+        fprintf(stderr, "(mux6676) Invalid mux port count in %s definition: %d\n", mts, portCount);
         exit(1);
         }
 
     mp = calloc(1, sizeof(MuxParam));
     if (mp == NULL)
         {
-        fprintf(stderr, "Failed to allocate %s context block\n", mts);
+        fprintf(stderr, "(mux6676) Failed to allocate %s context block\n", mts);
         exit(1);
         }
     dp->context[0] = mp;
@@ -302,7 +302,7 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
     mp->ioTurns = IoTurnsPerPoll - 1;
     if (mp->ports == NULL)
         {
-        fprintf(stderr, "Failed to allocate %s context block\n", mts);
+        fprintf(stderr, "(mux6676) Failed to allocate %s context block\n", mts);
         exit(1);
         }
     /*
@@ -324,7 +324,7 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
     mp->listenFd = socket(AF_INET, SOCK_STREAM, 0);
     if (mp->listenFd < 0)
         {
-        fprintf(stderr, "Can't create socket for %s on port %d\n", mts, mp->listenPort);
+        fprintf(stderr, "(mux6676) Can't create socket for %s on port %d\n", mts, mp->listenPort);
         exit(1);
         }
     /*
@@ -346,7 +346,7 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
     server.sin_port = htons(mp->listenPort);
     if (bind(mp->listenFd, (struct sockaddr *)&server, sizeof(server)) < 0)
         {
-        fprintf(stderr, "Can't bind to listen socket for %s on port %d\n", mts, mp->listenPort);
+        fprintf(stderr, "(mux6676) Can't bind to listen socket for %s on port %d\n", mts, mp->listenPort);
         exit(1);
         }
     /*
@@ -354,14 +354,14 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
     */
     if (listen(mp->listenFd, 5) < 0)
         {
-        fprintf(stderr, "Can't listen for %s on port %d\n", mts, mp->listenPort);
+        fprintf(stderr, "(mux6676) Can't listen for %s on port %d\n", mts, mp->listenPort);
         exit(1);
         }
 
     /*
     **  Print a friendly message.
     */
-    printf("%s initialised on channel %o equipment %o, mux ports %d, TCP port %d\n",
+    printf("(mux6676) %s initialised on channel %o equipment %o, mux ports %d, TCP port %d\n",
         mts, channelNo, eqNo, mp->portCount, mp->listenPort);
 
 #if DEBUG_6671
@@ -950,7 +950,7 @@ static char *mux667xFunc2String(PpWord funcCode)
     case Fc667xInput  : return "Input ";
     case Fc667xStatus : return "Status";
         }
-    sprintf(buf, "UNKNOWN: %04o", funcCode);
+    sprintf(buf, "(mux6676) UNKNOWN: %04o", funcCode);
     return(buf);
     }
 

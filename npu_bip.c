@@ -148,7 +148,7 @@ void npuBipInit(void)
     bipUplineQueue = calloc(1, sizeof(NpuQueue));
     if (bipUplineQueue == NULL)
         {
-        fprintf(stderr, "Failed to allocate NPU buffer queue\n");
+        fprintf(stderr, "(npu_bip) Failed to allocate NPU buffer queue\n");
         exit(1);
         }
     }
@@ -235,8 +235,8 @@ NpuBuffer *npuBipBufGet(void)
         }
     else
         {
-        npuLogMessage("BIP: Out of buffers");
-        fprintf(stderr, "Fatal error: BIP: Out of buffers\n");
+        npuLogMessage("(npu_bip) Out of buffers");
+        fprintf(stderr, "(npu_bip) Fatal error: Out of buffers\n");
 #if DEBUG
             {
             /*
@@ -496,22 +496,22 @@ void npuBipNotifyDownlineReceived(void)
 
     if (dn == npuSvmNpuNode)
         {
-        /*
-        **  Hand over the buffer to SVM or TIP.
-        */
-        switch (bipState)
-            {
-        case BipDownSvm:
-            npuSvmProcessBuffer(bp);
-            break;
+    /*
+    **  Hand over the buffer to SVM or TIP.
+    */
+    switch (bipState)
+        {
+    case BipDownSvm:
+        npuSvmProcessBuffer(bp);
+        break;
 
-        case BipDownDataLow:
-            npuTipProcessBuffer(bp, 0);
-            break;
+    case BipDownDataLow:
+        npuTipProcessBuffer(bp, 0);
+        break;
 
-        case BipDownDataHigh:
-            npuTipProcessBuffer(bp, 1);
-            break;
+    case BipDownDataHigh:
+        npuTipProcessBuffer(bp, 1);
+        break;
             }
         }
     else if (dn == cdcnetNode)

@@ -395,7 +395,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
         /*
         **  Service message must be at least DN/SN/0/BSN/PFC/SFC.
         */
-        npuLogMessage("SVM: Short message in state %d", svmState);
+        npuLogMessage("(npu_svm) Short message in state %d", svmState);
 
         /*
         **  Release downline buffer and return.
@@ -413,7 +413,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
         /*
         **  Connection number out of range.
         */
-        npuLogMessage("SVM: Connection number is %u but must be zero in SVM messages %02X/%02X",
+        npuLogMessage("(npu_svm) Connection number is %u but must be zero in SVM messages %02X/%02X",
             cn, block[BlkOffPfc], block[BlkOffSfc]);
 
         /*
@@ -435,7 +435,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             /*
             **  Message too short.
             */
-            npuLogMessage("SVM: Message %02X/%02X is too short and has no required P3", block[BlkOffPfc], block[BlkOffSfc]);
+            npuLogMessage("(npu_svm) Message %02X/%02X is too short and has no required P3", block[BlkOffPfc], block[BlkOffSfc]);
             npuBipBufRelease(bp);
             return;
             }
@@ -447,7 +447,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             /*
             **  Connection number out of range.
             */
-            npuLogMessage("SVM: Unexpected connection number %u in message %02X/%02X", cn, block[BlkOffPfc], block[BlkOffSfc]);
+            npuLogMessage("(npu_svm) Unexpected connection number %u in message %02X/%02X", cn, block[BlkOffPfc], block[BlkOffSfc]);
             npuBipBufRelease(bp);
             return;
             }
@@ -464,7 +464,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             {
             if (svmState != StWaitSupervision)
                 {
-                npuLogMessage("SVM: Unexpected Supervision Reply in state %d", svmState);
+                npuLogMessage("(npu_svm) Unexpected Supervision Reply in state %d", svmState);
                 break;
                 }
 
@@ -476,7 +476,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             }
         else
             {
-            npuLogMessage("SVM: Unexpected message %02X/%02X in state %d", block[BlkOffPfc], block[BlkOffSfc], svmState);
+            npuLogMessage("(npu_svm) Unexpected message %02X/%02X in state %d", block[BlkOffPfc], block[BlkOffSfc], svmState);
             }
         break;
 
@@ -487,7 +487,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             }
         else
             {
-            npuLogMessage("SVM: Unexpected message %02X/%02X in state %d", block[BlkOffPfc], block[BlkOffSfc], svmState);
+            npuLogMessage("(npu_svm) Unexpected message %02X/%02X in state %d", block[BlkOffPfc], block[BlkOffSfc], svmState);
             }
         break;
 
@@ -497,7 +497,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             /*
             **  Message too short.
             */
-            npuLogMessage("SVM: Message %02X/%02X is too short and has no required P3", block[BlkOffPfc], block[BlkOffSfc]);
+            npuLogMessage("(npu_svm) Message %02X/%02X is too short and has no required P3", block[BlkOffPfc], block[BlkOffSfc]);
             npuBipBufRelease(bp);
             return;
             }
@@ -534,12 +534,12 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             /*
             **  This port appears to be unknown to the host.
             */
-            npuLogMessage("SVM: Terminal on port %d not configured", claPort);
+            npuLogMessage("(npu_svm) Terminal on port %d not configured", claPort);
             npuNetCloseConnection(npuNetFindPcb(claPort));
             }
         else
             {
-            npuLogMessage("SVM: Unexpected message %02X/%02X with port %u",
+            npuLogMessage("(npu_svm) Unexpected message %02X/%02X with port %u",
                 block[BlkOffPfc], block[BlkOffSfc], claPort);
             npuNetCloseConnection(npuNetFindPcb(claPort));
             }
@@ -548,7 +548,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
     case PfcICN:
         if (tp->state != StTermRequestConnection)
             {
-            npuLogMessage("SVM: Unexpected Terminal Connection Reply in state %d", tp->state);
+            npuLogMessage("(npu_svm) Unexpected Terminal Connection Reply in state %d", tp->state);
             break;
             }
 
@@ -560,13 +560,13 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             }
         else if (block[BlkOffSfc] == (SfcTE | SfcErr))
             {
-            npuLogMessage("SVM: Terminal Connection Rejected - reason 0x%02X", block[BlkOffP4]);
+            npuLogMessage("(npu_svm) Terminal Connection Rejected - reason 0x%02X", block[BlkOffP4]);
             tp->state = StTermIdle;
             npuNetDisconnected(tp);
             }
         else
             {
-            npuLogMessage("SVM: Unexpected message %02X/%02X with CN %d", block[BlkOffPfc], block[BlkOffSfc], cn);
+            npuLogMessage("(npu_svm) Unexpected message %02X/%02X with CN %d", block[BlkOffPfc], block[BlkOffSfc], cn);
             tp->state = StTermIdle;
             npuNetDisconnected(tp);
             }
@@ -605,13 +605,13 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             }
         else
             {
-            npuLogMessage("SVM: Unexpected message %02X/%02X with CN %d", block[BlkOffPfc], block[BlkOffSfc], cn);
+            npuLogMessage("(npu_svm) Unexpected message %02X/%02X with CN %d", block[BlkOffPfc], block[BlkOffSfc], cn);
             }
         break;
 
     default:
-        npuLogMessage("SVM: Unrecognized message %02X/%02X", block[BlkOffPfc], block[BlkOffSfc]);
-        fprintf(stderr, "SVM: Unrecognized message %02X/%02X\n", block[BlkOffPfc], block[BlkOffSfc]);
+        npuLogMessage("(npu_svm) Unrecognized message %02X/%02X", block[BlkOffPfc], block[BlkOffSfc]);
+        fprintf(stderr, "(npu_svm) Unrecognized message %02X/%02X\n", block[BlkOffPfc], block[BlkOffSfc]);
         break;
         }
 
@@ -635,7 +635,7 @@ void npuSvmSendDiscRequest(Tcb *tp)
     switch (tp->state)
         {
     case StTermRequestConnection: // indicates awaiting response to terminal connection request
-        fprintf(stderr, "SVM: Warning - disconnect request issued for %.7s in state %d\n",
+        fprintf(stderr, "(npu_svm) Warning - disconnect request issued for %.7s in state %d\n",
             tp->termName, tp->state);
         // fall through
     case StTermHostConnected:     // terminal is connected
@@ -654,11 +654,11 @@ void npuSvmSendDiscRequest(Tcb *tp)
     case StTermIdle:              // terminal is not yet configured or connected
     case StTermRequestDisconnect: // terminal disconnection has been requested
     case StTermRequestTerminate:  // connection termination has been requested
-        fprintf(stderr, "SVM: Warning - disconnect request ignored for %.7s in state %d\n",
+        fprintf(stderr, "(npu_svm) Warning - disconnect request ignored for %.7s in state %d\n",
             tp->termName, tp->state);
         break;
     default:
-        fprintf(stderr, "SVM: Unrecognized state %d during %.7s disconnect request\n",
+        fprintf(stderr, "(npu_svm) Unrecognized state %d during %.7s disconnect request\n",
             tp->state, tp->termName);
         break;
         }
@@ -839,20 +839,20 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
     pcbp = npuNetFindPcb(claPort);
     if (pcbp == NULL)
         {
-        npuLogMessage("SVM: PCB not found for port 0x%02x", claPort);
+        npuLogMessage("(npu_svm) PCB not found for port 0x%02x", claPort);
         return NULL;
         }
 
     if (pcbp->connFd <= 0)
         {
-        npuLogMessage("SVM: TCB not allocated for port 0x%02x because network connection is closed", claPort);
+        npuLogMessage("(npu_svm) TCB not allocated for port 0x%02x because network connection is closed", claPort);
         return NULL;
         }
 
     tp = npuTipFindFreeTcb();
     if (tp == NULL)
         {
-        fprintf(stderr, "SVM: No free TCB available for port 0x%02x\n", claPort);
+        fprintf(stderr, "(npu_svm) No free TCB available for port 0x%02x\n", claPort);
         return NULL;
         }
 
@@ -881,7 +881,7 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
     len -= mp - bp->data;
     if (len < 0)
         {
-        npuLogMessage("SVM: Short Terminal Configuration response with length %d", bp->numBytes);
+        npuLogMessage("(npu_svm) Short Terminal Configuration response with length %d", bp->numBytes);
         return NULL;
         }
 
@@ -918,7 +918,7 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
         tp->tipType = TtTT13;
         break;
     default:
-        npuLogMessage("SVM: Invalid connection type for terminal configuration: %d",
+        npuLogMessage("(npu_svm) Invalid connection type for terminal configuration: %d",
             tp->pcbp->ncbp->connType);
         return NULL;
         }
@@ -940,7 +940,7 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
     tp->owningConsole = npuSvmFindOwningConsole(tp);
     if (tp->owningConsole == NULL)
         {
-        npuLogMessage("SVM: Failed to find owning console for %.7s, port 0x%02x", tp->termName, claPort);
+        npuLogMessage("(npu_svm) Failed to find owning console for %.7s, port 0x%02x", tp->termName, claPort);
         return NULL;
         }
     if (tp->owningConsole->state > StTermHostConnected) // owning console is disconnecting
@@ -1009,7 +1009,7 @@ static Tcb *npuSvmFindOwningConsole(Tcb *tp)
             return tp2;
             }
         }
-    npuLogMessage("SVM: No owning console found for connection %u (%.7s)", tp->cn, tp->termName);
+    npuLogMessage("(npu_svm) No owning console found for connection %u (%.7s)", tp->cn, tp->termName);
     return NULL; // owning console not found
     }
 

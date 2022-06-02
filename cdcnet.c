@@ -3058,53 +3058,53 @@ static bool cdcnetUdpSendDownlineData(Gcb *gp, NpuBuffer *bp)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cdcnetUdpSendUplineData(Gcb *gp)
-    {
-    NpuBuffer *bp;
-    struct sockaddr_in client;
-    u8 *dp;
-    u32 ipAddress;
+static void cdcnetUdpSendUplineData(Gcb* gp)
+{
+	NpuBuffer* bp;
+	struct sockaddr_in client;
+	u8* dp;
+	u32 ipAddress;
 #if defined(_WIN32)
-    int len;
+	int len = 0;
 #else
-    socklen_t len;
+	socklen_t len;
 #endif
-    int n;
-    u16 port;
-    int recvSize;
+	int n;
+	u16 port;
+	int recvSize;
 
-    bp = npuBipBufGet();
-    if (bp == NULL) return;
+	bp = npuBipBufGet();
+	if (bp == NULL) return;
 
-    recvSize = sizeof(bp->data) - BlkOffUdpDataIndData;
-    n = recvfrom(gp->connFd, bp->data + BlkOffUdpDataIndData, recvSize,  MSG_WAITALL, (struct sockaddr *)&client, &len);
-    if (n < 1)
-        {
+	recvSize = sizeof(bp->data) - BlkOffUdpDataIndData;
+	n = recvfrom(gp->connFd, bp->data + BlkOffUdpDataIndData, recvSize, MSG_WAITALL, (struct sockaddr*)&client, &len);
+	if (n < 1)
+	{
 #if DEBUG
-        if (n == -1)
-            {
-            fprintf(cdcnetLog, "%s, CN=%02X\n", strerror(errno), gp->cn);
-            }
+		if (n == -1)
+		{
+			fprintf(cdcnetLog, "%s, CN=%02X\n", strerror(errno), gp->cn);
+		}
 #endif
-        return;
-        }
-    ipAddress = ntohl(client.sin_addr.s_addr);
-    port = ntohs(client.sin_port);
+		return;
+	}
+	ipAddress = ntohl(client.sin_addr.s_addr);
+	port = ntohs(client.sin_port);
 #if DEBUG
-    fprintf(cdcnetLog, "Received %d bytes from UDP client %d.%d.%d.%d:%d, CN=%02X\n",
-        n, ipAddress >> 24, (ipAddress >> 16) & 0xff, (ipAddress >> 8) & 0xff, ipAddress & 0xff, port, gp->cn);
-    cdcnetLogBytes(bp->data + BlkOffUdpDataIndData, n);
-    cdcnetLogFlush();
+	fprintf(cdcnetLog, "Received %d bytes from UDP client %d.%d.%d.%d:%d, CN=%02X\n",
+		n, ipAddress >> 24, (ipAddress >> 16) & 0xff, (ipAddress >> 8) & 0xff, ipAddress & 0xff, port, gp->cn);
+	cdcnetLogBytes(bp->data + BlkOffUdpDataIndData, n);
+	cdcnetLogFlush();
 #endif
-    dp = bp->data + BlkOffDbc;
-    *dp++ = 0;
-    *dp++ = cdcnetUdpDataIndication;
-    *dp++ = cdcnetUdpVersion;
-    *dp++ = 0; // unused byte
-    cdcnetUdpSetAddress(dp, ipAddress, port);
-    bp->numBytes = n + BlkOffUdpDataIndData;
-    cdcnetUdpRequestUplineTransfer(gp, bp, BtHTMSG);
-    }
+	dp = bp->data + BlkOffDbc;
+	*dp++ = 0;
+	*dp++ = cdcnetUdpDataIndication;
+	*dp++ = cdcnetUdpVersion;
+	*dp++ = 0; // unused byte
+	cdcnetUdpSetAddress(dp, ipAddress, port);
+	bp->numBytes = n + BlkOffUdpDataIndData;
+	cdcnetUdpRequestUplineTransfer(gp, bp, BtHTMSG);
+}
 
 #if DEBUG
 /*--------------------------------------------------------------------------

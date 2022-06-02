@@ -517,7 +517,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
                 npuNjeProcessDownlineData(tp, bp, last);
                 break;
             default:
-                fprintf(stderr, "TIP: Downline data for unrecognized TIP type %u on connection %u\n",
+                fprintf(stderr, "(npu_tip) Downline data for unrecognized TIP type %u on connection %u\n",
                     tp->tipType, tp->cn);
                 blockAck[BlkOffCN] = block[BlkOffCN];
                 blockAck[BlkOffBTBSN] &= BlkMaskBT;
@@ -541,7 +541,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 
     case BtHTQBLK:
     case BtHTQMSG:
-        fprintf(stderr, "TIP: qualified block/message ignored, port=%02x\n", tp->pcbp->claPort);
+        fprintf(stderr, "(npu_tip) Qualified block/message ignored, port=%02x\n", tp->pcbp->claPort);
         break;
 
     case BtHTBACK:

@@ -33,10 +33,10 @@
 #include <string.h>
 #include <math.h>
 #if defined(_WIN32)
-#include <windows.h>
+	#include <windows.h>
 #elif defined(__GNUC__) || defined(__SunOS)
-#include <sys/time.h>
-#include <unistd.h>
+	#include <sys/time.h>
+	#include <unistd.h>
 #endif
 
 #include "const.h"
@@ -134,7 +134,7 @@ void rtcInit(u8 increment, u32 setMHz)
         {
         if (!rtcInitTick())
             {
-            printf("Invalid clock increment 0, defaulting to 1\n");
+            printf("(rtc    ) Invalid clock increment 0, defaulting to 1\n");
             increment = 1;
             }
         }
@@ -346,13 +346,13 @@ static bool rtcInitTick(void)
 
     if (!QueryPerformanceFrequency(&lhz))
         {
-        printf("No high resolution hardware clock, using emulation cycle counter\n");
+        printf("(rtc    ) No high resolution hardware clock, using emulation cycle counter\n");
         return(FALSE);
         }
 
     Hz = lhz.QuadPart;
     MHz = (double)(i64)Hz / 1000000.0;
-    printf("Using QueryPerformanceCounter() clock at %f MHz\n", MHz);
+    printf("(rtc    ) Using QueryPerformanceCounter() clock at %f MHz\n", MHz);
     return(TRUE);
     }
 
@@ -378,7 +378,7 @@ static bool rtcInitTick(void)
     {
     Hz = 1000000;
     MHz = 1.0;
-    printf("Using gettimeofday() clock at %f MHz\n", MHz);
+    printf("(rtc    ) Using gettimeofday() clock at %f MHz\n", MHz);
     return(TRUE);
     }
 
@@ -402,7 +402,7 @@ static u64 rtcGetTick(void)
 **------------------------------------------------------------------------*/
 static bool rtcInitTick(void)
     {
-    printf("No high resolution hardware clock, using emulation cycle counter\n");
+    printf("(rtc    ) No high resolution hardware clock, using emulation cycle counter\n");
     return(FALSE);
     }
 

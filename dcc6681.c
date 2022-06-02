@@ -125,7 +125,7 @@ DevSlot *dcc6681Attach(u8 channelNo, u8 eqNo, u8 unitNo, u8 devType)
         cp = (DccControl *)calloc(1, sizeof(DccControl));
         if (cp == NULL)
             {
-            fprintf(stderr, "Failed to allocate dcc6681 context block\n");
+            fprintf(stderr, "(dcc6681) Failed to allocate dcc6681 context block\n");
             exit(1);
             }
 
@@ -146,7 +146,7 @@ DevSlot *dcc6681Attach(u8 channelNo, u8 eqNo, u8 unitNo, u8 devType)
         device = calloc(1, sizeof(DevSlot));
         if (device == NULL)
             {
-            fprintf(stderr, "Failed to allocate device control block for converter on channel %d\n", channelNo);
+            fprintf(stderr, "(dcc6681) Failed to allocate device control block for converter on channel %d\n", channelNo);
             exit(1);
             }
 
@@ -163,13 +163,14 @@ DevSlot *dcc6681Attach(u8 channelNo, u8 eqNo, u8 unitNo, u8 devType)
     /*
     **  Print a friendly message.
     */
-    printf("Equipment %02o, Unit %02o attached to DCC6681 on channel %o\n", eqNo, unitNo, channelNo);
+    printf("(dcc6681) Attached Channel %02o, Equipment %02o, Unit %02o\n", channelNo, eqNo, unitNo);
 
     /*
     ** Return the allocated 3000 series control block pointer
     */
     return(device);
     }
+
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Terminate channel converter context.
@@ -449,7 +450,7 @@ static void dcc6681Io(void)
     case Fc6681Connect5Mode1:
     case Fc6681Connect6Mode1:
     case Fc6681Connect7Mode1:
-        printf("unexpected IO for function %04o\n", activeDevice->fcode); 
+        printf("(dcc6681) unexpected IO for function %04o\n", activeDevice->fcode); 
         break;
 
     case Fc6681ConnectMode2:

@@ -34,6 +34,7 @@
 **  Include Files
 **  -------------
 */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -195,6 +196,17 @@ typedef struct diskSize
 
 typedef struct diskParam
     {
+    /*
+    **  Info for show_disk operator command.
+    */
+    struct diskParam * nextDisk;
+    u8          channelNo;
+    u8          eqNo;
+    char        fileName[_MAX_PATH + 1];
+
+    /*
+    **  Parameter Table
+    */
     PpWord      (*read)(struct diskParam *, FILE *fcb);
     void        (*write)(struct diskParam *, FILE *fcb, PpWord);
     i32         sector;
@@ -247,6 +259,9 @@ static char *dd8xxFunc2String(PpWord funcCode);
 */
 static int diskCount = 0;
 static PpWord mySector[SectorSize];
+
+static DiskParam *firstDisk = NULL;
+static DiskParam *lastDisk = NULL;
 
 static DiskSize sizeDd844_2 = {MaxCylinders844_2, MaxTracks844, MaxSectors844};
 static DiskSize sizeDd844_4 = {MaxCylinders844_4, MaxTracks844, MaxSectors844};
@@ -382,7 +397,7 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
     {
     DevSlot *ds;
     FILE *fcb;
-    char fname[80];
+    char fname[_MAX_FNAME + 1];
     DiskParam *dp;
     time_t mTime;
     struct tm *lTime;
@@ -421,7 +436,7 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
     dp = (DiskParam *)calloc(1, sizeof(DiskParam));
     if (dp == NULL)
         {
-        fprintf(stderr, "Failed to allocate dd8xx context block\n");
+        fprintf(stderr, "(dd8xx  ) Failed to allocate dd8xx context block\n");
         exit(1);
         }
 
@@ -457,7 +472,7 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
             }
         else
             {
-            fprintf (stderr, "Unrecognized option name %s\n", opt);
+            fprintf (stderr, "(dd8xx  ) Unrecognized option name %s\n", opt);
             exit (1);
             }
         }
@@ -554,6 +569,20 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
     ds->context[unitNo] = dp;
 
     /*
+    **  Link into list of disk units.
+    */
+    if (lastDisk == NULL)
+    {
+        firstDisk = dp;
+    }
+    else
+    {
+        lastDisk->nextDisk = dp;
+    }
+
+    lastDisk = dp;
+
+    /*
     **  Open or create disk image.
     */
     if (deviceName == NULL)
@@ -589,7 +618,7 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
         fcb = fopen(fname, "w+b");
         if (fcb == NULL)
             {
-            fprintf(stderr, "Failed to open %s\n", fname);
+            fprintf(stderr, "(dd8xx  ) Failed to open %s\n", fname);
             exit(1);
             }
 
@@ -657,6 +686,12 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
         }
 
     ds->fcb[unitNo] = fcb;
+    /*
+    **  For Operator Show Status Command
+    */
+    strcpy_s(dp->fileName, sizeof(fname), fname);
+    dp->channelNo = channelNo;
+    dp->unitNo = unitNo;
 
     /*
     **  Reset disk seek position.
@@ -670,8 +705,8 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
     /*
     **  Print a friendly message.
     */
-    printf("Disk with %d cylinders initialised on channel %o unit %o\n",
-        dp->size.maxCylinders, channelNo, unitNo);
+    printf("(dd8xx  ) Disk with %d cylinders initialised on channel %o equip %o unit %o filename '%s'\n",
+        dp->size.maxCylinders, channelNo, eqNo, unitNo, fname);
     }
 
 /*--------------------------------------------------------------------------
@@ -717,7 +752,7 @@ static FcStatus dd8xxFunc(PpWord funcCode)
     dd8xxLogFlush();
     if (dp != NULL)
         {
-        fprintf(dd8xxLog, "\n%06d PP:%02o CH:%02o DSK:%d f:%04o T:%-25s   c:%3d t:%2d s:%2d  >   ", 
+        fprintf(dd8xxLog, "\n(dd8xx  ) %06d PP:%02o CH:%02o DSK:%d f:%04o T:%-25s   c:%3d t:%2d s:%2d  >   ", 
             traceSequenceNo,
             activePpu->id,
             activeDevice->channel->id,
@@ -730,7 +765,7 @@ static FcStatus dd8xxFunc(PpWord funcCode)
         }
     else
         {
-        fprintf(dd8xxLog, "\n%06d PP:%02o CH:%02o DSK:? f:%04o T:%-25s  >   ", 
+        fprintf(dd8xxLog, "\n(dd8xx  ) %06d PP:%02o CH:%02o DSK:? f:%04o T:%-25s  >   ", 
             traceSequenceNo,
             activePpu->id,
             activeDevice->channel->id,
@@ -943,7 +978,7 @@ static FcStatus dd8xxFunc(PpWord funcCode)
 #if DEBUG
         fprintf(dd8xxLog, " !!!!!FUNC not implemented but accepted!!!!!! ");
 #endif
-        logError(LogErrorLocation, "ch %o, function %04o not implemented\n", activeChannel->id, funcCode);
+        logError(LogErrorLocation, "(dd8xx  ) ch %o, function %04o not implemented\n", activeChannel->id, funcCode);
         break;
         }
 
@@ -999,7 +1034,7 @@ static void dd8xxIo(void)
                 else
                     {
                     activeDevice->selectedUnit = -1;
-                    logError(LogErrorLocation, "channel %02o - invalid connect: %4.4o", activeChannel->id, (u32)activeDevice->fcode);
+                    logError(LogErrorLocation, "(dd8xx  ) channel %02o - invalid connect: %4.4o", activeChannel->id, (u32)activeDevice->fcode);
                     }
                 }
             else
@@ -1030,7 +1065,7 @@ static void dd8xxIo(void)
                         }
                     else
                         {
-                        logError(LogErrorLocation, "channel %02o - invalid select: %4.4o", activeChannel->id, (u32)activeDevice->fcode);
+                        logError(LogErrorLocation, "(dd8xx  ) channel %02o - invalid select: %4.4o", activeChannel->id, (u32)activeDevice->fcode);
                         activeDevice->selectedUnit = -1;
                         }
                     }
@@ -1308,7 +1343,7 @@ static void dd8xxIo(void)
 static void dd8xxActivate(void)
     {
 #if DEBUG
-    fprintf(dd8xxLog, "\n%06d PP:%02o CH:%02o Activate",
+    fprintf(dd8xxLog, "\n(dd8xx  ) %06d PP:%02o CH:%02o Activate",
         traceSequenceNo,
         activePpu->id,
         activeDevice->channel->id);
@@ -1333,7 +1368,7 @@ static void dd8xxDisconnect(void)
     activeChannel->discAfterInput = FALSE;
 
 #if DEBUG
-    fprintf(dd8xxLog, "\n%06d PP:%02o CH:%02o Disconnect",
+    fprintf(dd8xxLog, "\n(dd8xx  ) %06d PP:%02o CH:%02o Disconnect",
         traceSequenceNo,
         activePpu->id,
         activeDevice->channel->id);
@@ -1363,9 +1398,9 @@ static i32 dd8xxSeek(DiskParam *dp)
     if (dp->cylinder >= dp->size.maxCylinders)
         {
 #if DEBUG
-        fprintf(dd8xxLog, "ch %o, cylinder %d invalid\n", activeChannel->id, dp->cylinder); 
+        fprintf(dd8xxLog, "(dd8xx  ) ch %o, cylinder %d invalid\n", activeChannel->id, dp->cylinder); 
 #endif
-        logError(LogErrorLocation, "ch %o, cylinder %d invalid\n", activeChannel->id, dp->cylinder);
+        logError(LogErrorLocation, "(dd8xx  ) ch %o, cylinder %d invalid\n", activeChannel->id, dp->cylinder);
         activeDevice->status = 01000;
         return(-1);
         }
@@ -1373,9 +1408,9 @@ static i32 dd8xxSeek(DiskParam *dp)
     if (dp->track >= dp->size.maxTracks)
         {
 #if DEBUG
-        fprintf(dd8xxLog, "ch %o, track %d invalid\n", activeChannel->id, dp->track);
+        fprintf(dd8xxLog, "(dd8xx  ) ch %o, track %d invalid\n", activeChannel->id, dp->track);
 #endif
-        logError(LogErrorLocation, "ch %o, track %d invalid\n", activeChannel->id, dp->track);
+        logError(LogErrorLocation, "(dd8xx  ) ch %o, track %d invalid\n", activeChannel->id, dp->track);
         activeDevice->status = 01000;
         return(-1);
         }
@@ -1383,9 +1418,9 @@ static i32 dd8xxSeek(DiskParam *dp)
     if (dp->sector >= dp->size.maxSectors)
         {
 #if DEBUG
-        fprintf(dd8xxLog, "ch %o, sector %d invalid\n", activeChannel->id, dp->sector);
+        fprintf(dd8xxLog, "(dd8xx  ) ch %o, sector %d invalid\n", activeChannel->id, dp->sector);
 #endif
-        logError(LogErrorLocation, "ch %o, sector %d invalid\n", activeChannel->id, dp->sector);
+        logError(LogErrorLocation, "(dd8xx  ) ch %o, sector %d invalid\n", activeChannel->id, dp->sector);
         activeDevice->status = 01000;
         return(-1);
         }
@@ -1496,6 +1531,8 @@ static PpWord dd8xxReadClassic(DiskParam *dp, FILE *fcb)
 
     return(*dp->bufPtr++);
     }
+
+
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Perform a 12 bit PP word write to a classic disk container.
@@ -1861,4 +1898,38 @@ static char *dd8xxFunc2String(PpWord funcCode)
     return "UNKNOWN";
     }
 
+/*--------------------------------------------------------------------------
+**  Purpose:        Show disk status (operator interface).
+**
+**  Parameters:     Name        Description.
+**
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void dd8xxShowDiskStatus(void)
+{
+    DiskParam *dp = firstDisk;
+
+	if (dp == NULL)
+	{
+        return;
+	}
+
+    printf("\n    > Disk Drive (dd8xx) Status:\n");
+
+    while (dp)
+    {
+        printf("    >   #%02d. CH %02o EQ %02o UN %02o DT %s CYL 0x%06x TRK 0x%06o FN '%s'\n",
+            dp->diskNo,
+            dp->channelNo,
+            dp->eqNo,
+            dp->unitNo,
+            dp->diskType == DiskType844 ? "844" : "855",
+            dp->cylinder, 
+            dp->track,
+            dp->fileName);
+        dp = dp->nextDisk;
+    }
+}
 /*---------------------------  End Of File  ------------------------------*/

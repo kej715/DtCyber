@@ -37,7 +37,7 @@
 /*
 **  init.c
 */
-void initStartup(char *);
+void initStartup(char* config, char* configFile);
 u32 initConvertEndian(u32 value);
 char *initGetNextLine(void);
 int initOpenHelpersSection(void);
@@ -75,6 +75,7 @@ void channelIn(void);
 void channelSetFull(void);
 void channelSetEmpty(void);
 void channelStep(void);
+void channelDisplayContext(void);
 
 /*
 **  pp.c
@@ -138,32 +139,37 @@ void mt5744ShowTapeStatus(FILE *out);
 **  cr405.c
 */
 void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out);
+void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char *params);
+void cr405ShowStatus(void);
 
 /*
 **  cp3446.c
 */
 void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void cp3446RemoveCards(char *params, FILE *out);
+void cp3446ShowStatus(void);
 
 /*
 **  cr3447.c
 */
 void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out);
+void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char *params);
+void cr3447ShowStatus(void);
 
 /*
 **  lp1612.c
 */
 void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void lp1612RemovePaper(char *params, FILE *out);
+void lp1612ShowStatus(void);
 
 /*
 **  lp3000.c
 */
-void lp501Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void lp501Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams);
+void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams);
 void lp3000RemovePaper(char *params, FILE *out);
+void lp3000ShowStatus(void);
 
 /*
 **  console.c
@@ -174,6 +180,7 @@ void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 **  dd6603.c
 */
 void dd6603Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void dd6603ShowDiskStatus(void);
 
 /*
 **  dd8xx.c
@@ -181,12 +188,14 @@ void dd6603Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void dd844Init_2(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void dd844Init_4(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void dd885Init_1(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void dd8xxShowDiskStatus(void);
+
 
 /*
 **  dd885_42.c
 */
 void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-
+void dd885_42ShowDiskStatus(void);
 /*
 **  dcc6681.c
 */
@@ -345,6 +354,11 @@ void opInit(void);
 void opRequest(void);
 
 /*
+**  fsmon.c
+*/
+bool fsCreateThread(fswContext *parms);
+
+/*
 **  log.c
 */
 void logInit(void);
@@ -387,6 +401,8 @@ extern const char bcdToAscii[64];
 extern const char extBcdToAscii[64];
 extern const i8 asciiToPlato[128];
 extern const i8 altKeyToPlato[128];
+extern const int asciiToPlatoString[256];
+extern const unsigned char platoStringToAscii[4][65];
 extern u32 traceMask;
 extern u32 traceSequenceNo;
 extern DevDesc deviceDesc[];
@@ -402,6 +418,7 @@ extern u32 rtcClock;
 extern ModelFeatures features;
 extern ModelType modelType;
 extern char persistDir[];
+extern char displayName[];
 extern u16 npuNetTelnetPort;
 extern u16 npuNetTcpConns;
 extern u16 npuLipTrunkPort;
@@ -410,6 +427,13 @@ extern char npuNetHostID[];
 extern u32 npuNetHostIP;
 extern u8 npuSvmCouplerNode;
 extern u8 npuSvmNpuNode;
+
+#ifdef IdleThrottle
+/* NOS Idle Loop throttle */
+extern bool NOSIdle;
+extern u32 idletime;
+extern u32 idletrigger;
+#endif
 
 #endif /* PROTO_H */
 /*---------------------------  End Of File  ------------------------------*/

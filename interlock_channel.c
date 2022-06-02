@@ -40,6 +40,7 @@
 #include "types.h"
 #include "proto.h"
 
+
 /*
 **  -----------------
 **  Private Constants
@@ -130,7 +131,7 @@ void ilrInit(u8 registerSize)
     /*
     **  Print a friendly message.
     */
-    printf("Interlock Register initialised on channel %o\n", ChInterlock);
+    printf("(interlock_channel) Interlock Register initialised on channel %o\n", ChInterlock);
     }
 
 /*--------------------------------------------------------------------------

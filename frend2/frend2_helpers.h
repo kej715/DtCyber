@@ -5,8 +5,8 @@
 #ifndef MSUFRENDINT_INCLUDED
 #define MSUFRENDINT_INCLUDED
 
-#include "const.h"
-#include "types.h"
+#include "../const.h"
+#include "../types.h"
 #include "lmbi.h"
 
 

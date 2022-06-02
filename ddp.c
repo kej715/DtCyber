@@ -156,7 +156,7 @@ void ddpInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     if (extMaxMemory == 0)
         {
-        fprintf (stderr, "Cannot configure DDP, no ECS configured\n");
+        fprintf (stderr, "(ddp    ) Cannot configure DDP, no ECS configured\n");
         exit (1);
         }
     
@@ -177,7 +177,7 @@ void ddpInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     dc = calloc(1, sizeof (DdpContext));
     if (dc == NULL)
         {
-        fprintf(stderr, "Failed to allocate DDP context block\n");
+        fprintf(stderr, "(ddp    ) Failed to allocate DDP context block\n");
         exit(1);
         }
 
@@ -187,7 +187,7 @@ void ddpInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Print a friendly message.
     */
-    printf("DDP initialised on channel %o\n", channelNo);
+    printf("(ddp    ) Initialised on channel %o\n", channelNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -206,7 +206,7 @@ static FcStatus ddpFunc(PpWord funcCode)
     dc = (DdpContext *)(activeDevice->context[0]);
 
 #if DEBUG
-    fprintf(ddpLog, "\n%06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
+    fprintf(ddpLog, "\n(ddp    ) %06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
         traceSequenceNo,
         activePpu->id,
         activeDevice->channel->id,
@@ -530,7 +530,7 @@ static char *ddpFunc2String(PpWord funcCode)
     case FcDdpSelectEsmMode           : return "FcDdpSelectEsmMode";
         }
 #endif
-    sprintf(buf, "UNKNOWN: %04o", funcCode);
+    sprintf(buf, "(ddp    ) Unknown Function: %04o", funcCode);
     return(buf);
     }
 

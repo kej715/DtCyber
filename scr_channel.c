@@ -33,12 +33,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #ifndef WIN32
-#include <unistd.h>
+	#include <unistd.h>
 #endif
 #include <string.h>
 #include "const.h"
 #include "types.h"
 #include "proto.h"
+
 
 /*
 **  -----------------
@@ -127,7 +128,7 @@ void scrInit(u8 channelNo)
     dp->context[0] = calloc(StatusAndControlWords, sizeof(PpWord));
     if (dp->context[0] == NULL)
         {
-        fprintf(stderr, "Failed to allocate Status/Control Register context block\n");
+        fprintf(stderr, "(scr_channel) Failed to allocate Status/Control Register context block\n");
         exit(1);
         }
 
@@ -135,7 +136,7 @@ void scrInit(u8 channelNo)
     /*
     **  Print a friendly message.
     */
-    printf("Status/Control Register initialised on channel %o\n", channelNo);
+    printf("(scr_channel) Status/Control Register initialised on channel %o\n", channelNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -560,7 +561,7 @@ static void scrExecute(PpWord func)
         "test all"
         };
 
-    fprintf(scrLog, "%06d ppu[%02o] P=%04o S&C Reg: addr %03o %s result: %04o\n", traceSequenceNo, activePpu->id, activePpu->regP, designator, codeString[code], activeChannel->data);
+    fprintf(scrLog, "(scr_channel) %06d ppu[%02o] P=%04o S&C Reg: addr %03o %s result: %04o\n", traceSequenceNo, activePpu->id, activePpu->regP, designator, codeString[code], activeChannel->data);
     }
 #endif
     }

@@ -48,6 +48,8 @@
 // useful for more stable screen shots
 // #define ListSize            10000
 #define FontName            "Lucida Console"
+// #define FontName            "Sax Mono"
+// #define FontName			"Lekton Mono"
 #if CcLargeWin32Screen == 1
 #define FontSmallHeight     15
 #define FontMediumHeight    20
@@ -55,11 +57,11 @@
 #define ScaleX              11
 #define ScaleY              18
 #else
-#define FontSmallHeight     10
-#define FontMediumHeight    15
+#define FontSmallHeight     13
+#define FontMediumHeight    16
 #define FontLargeHeight     20
 #define ScaleX              10
-#define ScaleY              10
+#define ScaleY              12
 #endif
 
 #define TIMER_ID        1
@@ -85,7 +87,7 @@ typedef struct dispList
     u8              ch;             /* character to be displayed */
     } DispList;
 
-typedef enum {ModeLeft, ModeCenter, ModeRight} DisplayMode;
+typedef enum displaymode {ModeLeft, ModeCenter, ModeRight} DisplayMode;
 
 /*
 **  ---------------------------
@@ -166,7 +168,7 @@ void windowInit(void)
 
     if (hThread == NULL)
         {
-        MessageBox(NULL, "thread creation failed", "Error", MB_OK);
+        MessageBox(NULL, "(window_win32) Thread creation failed", "Error", MB_OK);
         exit(1);
         }
     }
@@ -314,7 +316,7 @@ static void windowThread(void)
     */
     if (!windowCreate()) 
         {
-        MessageBox(NULL, "window creation failed", "Error", MB_OK);
+        MessageBox(NULL, "(window_win32) window creation failed", "Error", MB_OK);
         return;
         }
 
@@ -368,12 +370,16 @@ ATOM windowRegisterClass(HINSTANCE hInstance)
 **------------------------------------------------------------------------*/
 static BOOL windowCreate(void)
     {
+    char windowName[132];
+    windowName[0] = '\0';
+    strcat_s(windowName, sizeof(windowName), displayName);
+    strcat_s(windowName, sizeof(windowName), " - " DtCyberVersion);
+    strcat_s(windowName, sizeof(windowName), " - " DTCyberBuildDate);
+
 #if CcLargeWin32Screen == 1
     hWnd = CreateWindow(
         "CONSOLE",              // Registered class name
-        DtCyberVersion " - "
-        DtCyberCopyright " - "
-        DtCyberLicense,         // window name
+        windowName,             // window name
         WS_OVERLAPPEDWINDOW,    // window style
         CW_USEDEFAULT,          // horizontal position of window
         0,                      // vertical position of window
@@ -386,14 +392,12 @@ static BOOL windowCreate(void)
 #else
     hWnd = CreateWindow(
         "CONSOLE",              // Registered class name
-        DtCyberVersion " - "
-        DtCyberCopyright " - "
-        DtCyberLicense,         // window name
+        windowName,             // window name
         WS_OVERLAPPEDWINDOW,    // window style
         CW_USEDEFAULT,          // horizontal position of window
         CW_USEDEFAULT,          // vertical position of window
         1080,                   // window width
-        600,                    // window height
+        680,                    // window height
         NULL,                   // handle to parent or owner window
         NULL,                   // menu handle or child identifier
         0,                      // handle to application instance
@@ -495,7 +499,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
             {
             MessageBox (GetFocus(),
                 "Unable to get green pen", 
-                "CreatePen Error",
+                "(window_win32) CreatePen Error",
                 MB_OK);
             }
 
@@ -510,7 +514,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
             {
             MessageBox (GetFocus(),
                 "Unable to get font in 15 point", 
-                "CreateFont Error",
+                "(window_win32) CreateFont Error",
                 MB_OK);
             }
 
@@ -525,7 +529,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
             {
             MessageBox (GetFocus(),
                 "Unable to get font in 20 point", 
-                "CreateFont Error",
+                "(window_win32) CreateFont Error",
                 MB_OK);
             }
 
@@ -540,7 +544,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
             {
             MessageBox (GetFocus(),
                 "Unable to get font in 30 point", 
-                "CreateFont Error",
+                "(window_win32) CreateFont Error",
                 MB_OK);
             }
 
@@ -636,6 +640,12 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
         break;
 #endif
 
+    /*
+     * Posted to the window with the keyboard focus when a WM_SYSKEYDOWN message
+     * is translated by the TranslateMessage function. It specifies the character
+     * code of a system character key that is, a character key that is pressed
+     * while the ALT key is down.
+     */
     case WM_SYSCHAR:
         switch (wParam)
             {
@@ -858,7 +868,7 @@ void windowDisplay(HWND hWnd)
 
     if (opActive)
         {
-        static char opMessage[] = "Emulation paused";
+        static char opMessage[] = "(window_win32) Emulation paused";
         hfntOld = SelectObject(hdcMem, hLargeFont);
         oldFont = FontLarge;
         TextOut(hdcMem, (0 * ScaleX) / 10, (256 * ScaleY) / 10, opMessage, strlen(opMessage));

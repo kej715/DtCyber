@@ -382,10 +382,10 @@ void mdiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Print a friendly message.
     */
-    printf("MDI initialised on channel %o equipment %o\n", channelNo, eqNo);
-    printf("       Host ID: %s\n", npuNetHostID);
-    printf("  Coupler node: %u\n", npuSvmCouplerNode);
-    printf("      MDI node: %u\n", npuSvmNpuNode);
+    printf("(mdi     ) MDI initialised on channel %o equipment %o\n", channelNo, eqNo);
+    printf("           Host ID: %s\n", npuNetHostID);
+    printf("(mdi     ) Coupler node: %u\n", npuSvmCouplerNode);
+    printf("           MDI node: %u\n", npuSvmNpuNode);
     }
 
 /*--------------------------------------------------------------------------
@@ -405,7 +405,7 @@ bool mdiHipUplineBlockImpl(NpuBuffer *bp)
         if (bp != mdi->uplineData
             || bp->data[BlkOffCN] != mdi->uplineData->data[BlkOffCN])
             {
-            fprintf(stderr, "MDI upline block rejected, CN=%02X, BT=%02X, PDU size=%d\n", bp->data[BlkOffCN],
+            fprintf(stderr, "(mdi     ) MDI upline block rejected, CN=%02X, BT=%02X, PDU size=%d\n", bp->data[BlkOffCN],
                     bp->data[BlkOffBTBSN] & BlkMaskBT, bp->numBytes);
             mdiPrintStackTrace(stderr);
             }
@@ -1017,7 +1017,7 @@ static char *mdiHipFunc2String(PpWord funcCode)
         }
     else
         {
-        sprintf(buf, "UNKNOWN: %04o", funcCode);
+        sprintf(buf, "(mdi     ) UNKNOWN: %04o", funcCode);
         return(buf);
         }
     }

@@ -344,21 +344,21 @@ void traceInit(void)
     devF = fopen("device.trc", "wt");
     if (devF == NULL)
         {
-        fprintf(stderr, "can't open device.trc - aborting\n");
+        fprintf(stderr, "(trace  ) can't open device.trc - aborting\n");
         exit(1);
         }
 
     cpuF = fopen("cpu.trc", "wt");
     if (cpuF == NULL)
         {
-        fprintf(stderr, "can't open cpu.trc - aborting\n");
+        fprintf(stderr, "(trace  ) can't open cpu.trc - aborting\n");
         exit(1);
         }
 
     ppuF = calloc(ppuCount, sizeof(FILE *));
     if (ppuF == NULL)
         {
-        fprintf(stderr, "Failed to allocate PP trace FILE pointers - aborting\n");
+        fprintf(stderr, "(trace  ) Failed to allocate PP trace FILE pointers - aborting\n");
         exit(1);
         }
 
@@ -368,7 +368,7 @@ void traceInit(void)
         ppuF[pp] = fopen(ppTraceName, "wt");
         if (ppuF[pp] == NULL)
             {
-            fprintf(stderr, "Can't open ppu[%02o] trace (%s) - aborting\n", pp, ppTraceName);
+            fprintf(stderr, "(trace  ) Can't open ppu[%02o] trace (%s) - aborting\n", pp, ppTraceName);
             exit(1);
             }
         }
@@ -513,7 +513,7 @@ void traceCpu(u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
         switch (addrMode)
             {
         case CN:
-            strcpy(str, decode[opFm].mnemonic);
+            sprintf(str, decode[opFm].mnemonic);
             break;
 
         case CK:
@@ -788,7 +788,7 @@ void traceExchange(CpuContext *cc, u32 addr, char *title)
     fprintf(cpuF, "B%d %06o", 5, cc->regB[5]);
     fprintf(cpuF, "\n");
                            
-    fprintf(cpuF, "MA      %6.6o  ", cc->regMa); 
+    fprintf(cpuF, "MA      %06.6o  ", cc->regMa); 
     fprintf(cpuF, "A%d %06o  ", 6, cc->regA[6]);
     fprintf(cpuF, "B%d %06o", 6, cc->regB[6]);
     fprintf(cpuF, "\n");

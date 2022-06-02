@@ -342,7 +342,7 @@ static void mt362xInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, u8 tr
     */
     if (unitNo >= MaxUnits2 || dp->context[unitNo] != NULL)
         {
-        fprintf (stderr, "Invalid or duplicate MT372x unit number\n");
+        fprintf (stderr, "(mt362x ) Invalid or duplicate MT372x unit number\n");
         exit (1);
         }
 
@@ -352,7 +352,7 @@ static void mt362xInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, u8 tr
     tp = calloc(1, sizeof(TapeParam));
     if (tp == NULL)
         {
-        fprintf(stderr, "Failed to allocate MT362x tape unit context block\n");
+        fprintf(stderr, "(mt362x ) Failed to allocate MT362x tape unit context block\n");
         exit(1);
         }
 
@@ -382,7 +382,7 @@ static void mt362xInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, u8 tr
         fcb = fopen(deviceName, "rb");
         if (fcb == NULL)
             {
-            fprintf(stderr, "Failed to open %s\n", deviceName);
+            fprintf(stderr, "(mt362x ) Failed to open %s\n", deviceName);
             exit(1);
             }
 
@@ -414,7 +414,7 @@ static void mt362xInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, u8 tr
     /*
     **  Print a friendly message.
     */
-    printf("MT362x initialized on channel %o equipment %o unit %o\n", channelNo, eqNo, unitNo);
+    printf("(mt362x ) MT362x initialized on channel %o equipment %o unit %o\n", channelNo, eqNo, unitNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -448,31 +448,31 @@ void mt362xLoadTape(char *params, FILE *out)
     */
     if (numParam != 5)
         {
-        fputs("Not enough or invalid parameters\n", out);
+        fputs("(mt362x ) Not enough or invalid parameters\n", out);
         return;
         }
 
     if (channelNo < 0 || channelNo >= MaxChannels)
         {
-        fputs("Invalid channel no\n", out);
+        fputs("(mt362x ) Invalid channel no\n", out);
         return;
         }
 
     if (unitNo < 0 || unitNo >= MaxUnits2)
         {
-        fputs("Invalid unit no\n", out);
+        fputs("(mt362x ) Invalid unit no\n", out);
         return;
         }
 
     if (unitMode != 'w' && unitMode != 'r')
         {
-        fputs("Invalid ring mode (r/w)\n", out);
+        fputs("(mt362x ) Invalid ring mode (r/w)\n", out);
         return;
         }
 
     if (str[0] == 0)
         {
-        fputs("Invalid file name\n", out);
+        fputs("(mt362x ) Invalid file name\n", out);
         return;
         }
 
@@ -491,7 +491,7 @@ void mt362xLoadTape(char *params, FILE *out)
     tp = (TapeParam *)dp->context[unitNo];
     if (tp == NULL)
         {
-        fprintf(out, "Unit %d not allocated\n", unitNo);
+        fprintf(out, "(mt362x ) Unit %d not allocated\n", unitNo);
         return;
         }
 
@@ -500,7 +500,7 @@ void mt362xLoadTape(char *params, FILE *out)
     */
     if (dp->fcb[unitNo] != NULL)
         {
-        fprintf(out, "Unit %d not unloaded\n", unitNo);
+        fprintf(out, "(mt362x ) Unit %d not unloaded\n", unitNo);
         return;
         }
 
@@ -527,7 +527,7 @@ void mt362xLoadTape(char *params, FILE *out)
     */
     if (fcb == NULL)
         {
-        fprintf(out, "Failed to open %s\n", str);
+        fprintf(out, "(mt362x ) Failed to open %s\n", str);
         return;
         }
 
@@ -543,7 +543,7 @@ void mt362xLoadTape(char *params, FILE *out)
     tp->unitReady = TRUE;
     tp->ringIn = unitMode == 'w';
 
-    fprintf(out, "Successfully loaded %s\n", str);
+    fprintf(out, "(mt362x ) Successfully loaded %s\n", str);
     }
 
 /*--------------------------------------------------------------------------
@@ -574,19 +574,19 @@ void mt362xUnloadTape(char *params, FILE *out)
     */
     if (numParam != 3)
         {
-        fputs("Not enough or invalid parameters\n", out);
+        fputs("(mt362x ) Not enough or invalid parameters\n", out);
         return;
         }
 
     if (channelNo < 0 || channelNo >= MaxChannels)
         {
-        fputs("Invalid channel no\n", out);
+        fputs("(mt362x ) Invalid channel no\n", out);
         return;
         }
 
     if (unitNo < 0 || unitNo >= MaxUnits2)
         {
-        fputs("Invalid unit no\n", out);
+        fputs("(mt362x ) Invalid unit no\n", out);
         return;
         }
 
@@ -605,7 +605,7 @@ void mt362xUnloadTape(char *params, FILE *out)
     tp = (TapeParam *)dp->context[unitNo];
     if (tp == NULL)
         {
-        fprintf(out, "Unit %d not allocated\n", unitNo);
+        fprintf(out, "(mt362x ) Unit %d not allocated\n", unitNo);
         return;
         }
 
@@ -614,7 +614,7 @@ void mt362xUnloadTape(char *params, FILE *out)
     */
     if (dp->fcb[unitNo] == NULL)
         {
-        fprintf(out, "Unit %d not loaded\n", unitNo);
+        fprintf(out, "(mt362x ) Unit %d not loaded\n", unitNo);
         return;
         }
 
@@ -634,7 +634,7 @@ void mt362xUnloadTape(char *params, FILE *out)
     */
     mt362xInitStatus(tp);
 
-    fprintf(out, "Successfully unloaded MT362x on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
+    fprintf(out, "(mt362x ) Successfully unloaded MT362x on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -649,17 +649,20 @@ void mt362xUnloadTape(char *params, FILE *out)
 void mt362xShowTapeStatus(FILE *out)
     {
     TapeParam *tp = firstTape;
+    int i = 0;
+    printf("\n    > Magnetic Tape (mt679) Status:\n");
 
     while (tp)
         {
-        fprintf(out, "MT362x-%d on %o,%o,%o", tp->tracks, tp->channelNo, tp->eqNo, tp->unitNo);
+        i = i + 1;
+        fprintf(out, "    >  #%02d. MT362x-%d CH %02o EQ %02o UN %02o", i, tp->tracks, tp->channelNo, tp->eqNo, tp->unitNo);
         if (tp->unitReady)
             {
             fprintf(out, ",%c,%s\n", tp->ringIn ? 'w' : 'r', tp->fileName);
             }
         else
             {
-            fputs("  (idle)\n", out);
+            fprintf(out, "  (idle)\n");
             }
 
         tp = tp->nextTape;
@@ -732,7 +735,7 @@ static void mt362xSetupStatus(TapeParam *tp)
 
     if (tp->rewinding)
         {
-        if (cycles - tp->rewindStart > 1000)
+        if (labs(cycles - tp->rewindStart) > 1000)
             {
             tp->rewinding = FALSE;
             tp->blockNo = 0;
@@ -858,7 +861,7 @@ static FcStatus mt362xFunc(PpWord funcCode)
 
 #if DEBUG
     mt362xLogFlush();
-    fprintf(mt362xLog, "\n%06d PP:%02o CH:%02o Unit:%02o f:%04o T:%-25s  >   ",
+    fprintf(mt362xLog, "\n(mt362x ) %06d PP:%02o CH:%02o Unit:%02o f:%04o T:%-25s  >   ",
         traceSequenceNo,
         activePpu->id,
         activeDevice->channel->id,
@@ -1523,7 +1526,7 @@ static void mt362xFuncRead(void)
         tp->fileMark = TRUE;
 
 #if DEBUG
-        fprintf(mt362xLog, "TAP is at EOF (simulate tape mark)\n");
+        fprintf(mt362xLog, "(mt362x ) TAP is at EOF (simulate tape mark)\n");
 #endif
 
         return;
@@ -1546,7 +1549,7 @@ static void mt362xFuncRead(void)
     */
     if (recLen1 > MaxByteBuf)
         {
-        logError(LogErrorLocation, "channel %02o - tape record too long: %d", activeChannel->id, recLen1);
+        logError(LogErrorLocation, "(mt362x ) channel %02o - tape record too long: %d", activeChannel->id, recLen1);
         tp->intStatus |= Int362xError | Int362xEndOfOp;
         tp->parityError = TRUE;
         tp->endOfOperation = TRUE;
@@ -1564,7 +1567,7 @@ static void mt362xFuncRead(void)
         tp->blockNo += 1;
 
 #if DEBUG
-        fprintf(mt362xLog, "Tape mark\n");
+        fprintf(mt362xLog, "(mt362x ) Tape mark\n");
 #endif
         return;
         }
@@ -1576,7 +1579,7 @@ static void mt362xFuncRead(void)
 
     if (recLen1 != (u32)len)
         {
-        logError(LogErrorLocation, "channel %02o - short tape record read: %d", activeChannel->id, len);
+        logError(LogErrorLocation, "(mt362x ) channel %02o - short tape record read: %d", activeChannel->id, len);
         tp->intStatus |= Int362xError | Int362xEndOfOp;
         tp->parityError = TRUE;
         tp->endOfOperation = TRUE;
@@ -1590,7 +1593,7 @@ static void mt362xFuncRead(void)
 
     if (len != 1)
         {
-        logError(LogErrorLocation, "channel %02o - missing tape record trailer", activeChannel->id);
+        logError(LogErrorLocation, "(mt362x ) channel %02o - missing tape record trailer", activeChannel->id);
         tp->intStatus |= Int362xError | Int362xEndOfOp;
         tp->parityError = TRUE;
         tp->endOfOperation = TRUE;
@@ -1618,7 +1621,7 @@ static void mt362xFuncRead(void)
             }
         else
             {
-            logError(LogErrorLocation, "channel %02o - invalid tape record trailer: %d", activeChannel->id, recLen2);
+            logError(LogErrorLocation, "(mt362x ) channel %02o - invalid tape record trailer: %d", activeChannel->id, recLen2);
             tp->intStatus |= Int362xError | Int362xEndOfOp;
             tp->parityError = TRUE;
             tp->endOfOperation = TRUE;
@@ -1635,7 +1638,7 @@ static void mt362xFuncRead(void)
     **  Setup length, buffer pointer and block number.
     */
 #if DEBUG
-    fprintf(mt362xLog, "Read fwd %d PP words (%d 8-bit bytes)\n", active3000Device->recordLength, recLen1);
+    fprintf(mt362xLog, "(mt362x ) Read fwd %d PP words (%d 8-bit bytes)\n", active3000Device->recordLength, recLen1);
 #endif
 
     tp->recordLength = active3000Device->recordLength;
@@ -1690,7 +1693,7 @@ static void mt362xFuncReadBkw(void)
 
     if (len != 1)
         {
-        logError(LogErrorLocation, "channel %02o - missing tape record trailer", activeChannel->id);
+        logError(LogErrorLocation, "(mt362x ) channel %02o - missing tape record trailer", activeChannel->id);
         tp->intStatus |= Int362xError | Int362xEndOfOp;
         tp->parityError = TRUE;
         tp->endOfOperation = TRUE;
@@ -1714,7 +1717,7 @@ static void mt362xFuncReadBkw(void)
     */
     if (recLen1 > MaxByteBuf)
         {
-        logError(LogErrorLocation, "channel %02o - tape record too long: %d", activeChannel->id, recLen1);
+        logError(LogErrorLocation, "(mt362x ) channel %02o - tape record too long: %d", activeChannel->id, recLen1);
         tp->intStatus |= Int362xError | Int362xEndOfOp;
         tp->parityError = TRUE;
         tp->endOfOperation = TRUE;
@@ -1737,7 +1740,7 @@ static void mt362xFuncReadBkw(void)
 
         if (len != 1)
             {
-            logError(LogErrorLocation, "channel %02o - missing TAP record header", activeChannel->id);
+            logError(LogErrorLocation, "(mt362x ) channel %02o - missing TAP record header", activeChannel->id);
             tp->intStatus |= Int362xError | Int362xEndOfOp;
             tp->parityError = TRUE;
             tp->endOfOperation = TRUE;
@@ -1755,7 +1758,7 @@ static void mt362xFuncReadBkw(void)
 
             if (len != 1 || recLen0 != recLen2)
                 {
-                logError(LogErrorLocation, "channel %02o - invalid record length2: %d %08X != %08X", activeChannel->id, len, recLen0, recLen2);
+                logError(LogErrorLocation, "(mt362x ) channel %02o - invalid record length2: %d %08X != %08X", activeChannel->id, len, recLen0, recLen2);
                 tp->intStatus |= Int362xError | Int362xEndOfOp;
                 tp->parityError = TRUE;
                 tp->endOfOperation = TRUE;
@@ -1770,7 +1773,7 @@ static void mt362xFuncReadBkw(void)
 
         if (recLen1 != (u32)len)
             {
-            logError(LogErrorLocation, "channel %02o - short tape record read: %d", activeChannel->id, len);
+            logError(LogErrorLocation, "(mt362x ) channel %02o - short tape record read: %d", activeChannel->id, len);
             tp->intStatus |= Int362xError | Int362xEndOfOp;
             tp->parityError = TRUE;
             tp->endOfOperation = TRUE;
@@ -1791,7 +1794,7 @@ static void mt362xFuncReadBkw(void)
         **  Setup length and buffer pointer.
         */
 #if DEBUG
-        fprintf(mt362xLog, "Read bkwd %d PP words (%d 8-bit bytes)\n", active3000Device->recordLength, recLen1);
+        fprintf(mt362xLog, "(mt362x ) Read bkwd %d PP words (%d 8-bit bytes)\n", active3000Device->recordLength, recLen1);
 #endif
 
         tp->recordLength = active3000Device->recordLength;
@@ -1807,7 +1810,7 @@ static void mt362xFuncReadBkw(void)
         tp->endOfOperation = TRUE;
 
 #if DEBUG
-        fprintf(mt362xLog, "Tape mark\n");
+        fprintf(mt362xLog, "(mt362x ) Tape mark\n");
 #endif
         }
 
@@ -1861,7 +1864,7 @@ static void mt362xFuncForespace(void)
         tp->endOfOperation = TRUE;
         tp->fileMark = TRUE;
 #if DEBUG
-        fprintf(mt362xLog, "TAP is at EOF (simulate tape mark)\n");
+        fprintf(mt362xLog, "(mt362x ) TAP is at EOF (simulate tape mark)\n");
 #endif
         return;
         }
@@ -1883,7 +1886,7 @@ static void mt362xFuncForespace(void)
     */
     if (recLen1 > MaxByteBuf)
         {
-        logError(LogErrorLocation, "channel %02o - tape record too long: %d", activeChannel->id, recLen1);
+        logError(LogErrorLocation, "(mt362x ) channel %02o - tape record too long: %d", activeChannel->id, recLen1);
         tp->parityError = TRUE;
         tp->endOfOperation = TRUE;
         return;
@@ -1910,7 +1913,7 @@ static void mt362xFuncForespace(void)
     */
     if (fseek(active3000Device->fcb[unitNo], recLen1, SEEK_CUR) != 0)
         {
-        logError(LogErrorLocation, "channel %02o - short tape record read: %d", activeChannel->id, len);
+        logError(LogErrorLocation, "(mt362x ) channel %02o - short tape record read: %d", activeChannel->id, len);
         tp->intStatus |= Int362xError | Int362xEndOfOp;
         tp->parityError = TRUE;
         tp->endOfOperation = TRUE;
@@ -1924,7 +1927,7 @@ static void mt362xFuncForespace(void)
 
     if (len != 1)
         {
-        logError(LogErrorLocation, "channel %02o - missing tape record trailer", activeChannel->id);
+        logError(LogErrorLocation, "(mt362x ) channel %02o - missing tape record trailer", activeChannel->id);
         tp->intStatus |= Int362xError | Int362xEndOfOp;
         tp->parityError = TRUE;
         tp->endOfOperation = TRUE;
@@ -1952,7 +1955,7 @@ static void mt362xFuncForespace(void)
             }
         else
             {
-            logError(LogErrorLocation, "channel %02o - invalid tape record trailer: %d", activeChannel->id, recLen2);
+            logError(LogErrorLocation, "(mt362x ) channel %02o - invalid tape record trailer: %d", activeChannel->id, recLen2);
             tp->intStatus |= Int362xError | Int362xEndOfOp;
             tp->parityError = TRUE;
             tp->endOfOperation = TRUE;
@@ -2007,7 +2010,7 @@ static void mt362xFuncBackspace(void)
 
     if (len != 1)
         {
-        logError(LogErrorLocation, "channel %02o - missing tape record trailer", activeChannel->id);
+        logError(LogErrorLocation, "(mt362x ) channel %02o - missing tape record trailer", activeChannel->id);
         tp->intStatus |= Int362xError | Int362xEndOfOp;
         tp->parityError = TRUE;
         tp->endOfOperation = TRUE;
@@ -2031,7 +2034,7 @@ static void mt362xFuncBackspace(void)
     */
     if (recLen1 > MaxByteBuf)
         {
-        logError(LogErrorLocation, "channel %02o - tape record too long: %d", activeChannel->id, recLen1);
+        logError(LogErrorLocation, "(mt362x ) channel %02o - tape record too long: %d", activeChannel->id, recLen1);
         tp->intStatus |= Int362xError | Int362xEndOfOp;
         tp->parityError = TRUE;
         tp->endOfOperation = TRUE;
@@ -2054,7 +2057,7 @@ static void mt362xFuncBackspace(void)
 
         if (len != 1)
             {
-            logError(LogErrorLocation, "channel %02o - missing TAP record header", activeChannel->id);
+            logError(LogErrorLocation, "(mt362x ) channel %02o - missing TAP record header", activeChannel->id);
             tp->intStatus |= Int362xError | Int362xEndOfOp;
             tp->parityError = TRUE;
             tp->endOfOperation = TRUE;
@@ -2072,7 +2075,7 @@ static void mt362xFuncBackspace(void)
 
             if (len != 1 || recLen0 != recLen2)
                 {
-                logError(LogErrorLocation, "channel %02o - invalid record length2: %d %08X != %08X", activeChannel->id, len, recLen0, recLen2);
+                logError(LogErrorLocation, "(mt362x ) channel %02o - invalid record length2: %d %08X != %08X", activeChannel->id, len, recLen0, recLen2);
                 tp->intStatus |= Int362xError | Int362xEndOfOp;
                 tp->parityError = TRUE;
                 tp->endOfOperation = TRUE;
@@ -2095,7 +2098,7 @@ static void mt362xFuncBackspace(void)
         tp->endOfOperation = TRUE;
 
 #if DEBUG
-        fprintf(mt362xLog, "Tape mark\n");
+        fprintf(mt362xLog, "(mt362x ) Tape mark\n");
 #endif
         }
 
@@ -2268,7 +2271,7 @@ static char *mt362xFunc2String(PpWord funcCode)
     case Fc6681Output                 : return "Fc6681Output";
         }
 #endif
-    sprintf(buf, "UNKNOWN: %04o", funcCode);
+    sprintf(buf, "(mt362x ) Unknown Function: %04o", funcCode);
     return(buf);
     }
 

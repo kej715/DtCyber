@@ -445,7 +445,7 @@ void npuHaspTryOutput(Pcb *pcbp)
             }
         break;
     default:
-        fprintf(stderr, "HASP: Port %02x: invalid  major state: %02x\n",
+        fprintf(stderr, "(npu_hasp) Port %02x: invalid  major state: %02x\n",
             pcbp->claPort,  pcbp->controls.hasp.majorState);
         pcbp->controls.hasp.majorState = StHaspMajorInit;
         break;
@@ -1744,7 +1744,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 }
             // else fall through
         default:
-            fprintf(stderr, "HASP: Port %02x: invalid minor state: %02x\n",
+            fprintf(stderr, "(npu_hasp) Port %02x: invalid minor state: %02x\n",
                 pcbp->claPort, pcbp->controls.hasp.minorState);
             pcbp->controls.hasp.minorState = StHaspMinorRecvBOF;
             return;

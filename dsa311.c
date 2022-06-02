@@ -292,24 +292,24 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
 
     if (eqNo < 4 || eqNo > 7)
         {
-        fputs("DSA311 equipment number must be 4, 5, 6, or 7\n", stderr);
+        fputs("(dsa311 ) Equipment number must be 4, 5, 6, or 7\n", stderr);
         exit(1);
         }
     if (unitNo >= MaxUnits2)
         {
-        fprintf(stderr, "Unit number must be less than %o for DSA311 on channel %o equipment %o unit %o\n",
+        fprintf(stderr, "(dsa311 ) Unit number must be less than %o for DSA311 on channel %o equipment %o unit %o\n",
           MaxUnits2, channelNo, eqNo, unitNo);
         exit(1);
         }
     if ((unitNo & 1) != 0)
         {
-        fprintf(stderr, "Unit number must be even for DSA311 on channel %o equipment %o unit %o\n",
+        fprintf(stderr, "(dsa311 ) Unit number must be even for DSA311 on channel %o equipment %o unit %o\n",
           channelNo, eqNo, unitNo);
         exit(1);
         }
     if (params == NULL)
         {
-        fprintf(stderr, "HASP host connection information required for DSA311 on channel %o equipment %o unit %o\n",
+        fprintf(stderr, "(dsa311 ) HASP host connection information required for DSA311 on channel %o equipment %o unit %o\n",
           channelNo, eqNo, unitNo);
         exit(1);
         }
@@ -318,7 +318,7 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
 
     if (dp->context[unitNo] != NULL)
         {
-        fprintf(stderr, "Duplicate DSA311 unit number %o on channel %o equipment %o\n",
+        fprintf(stderr, "(dsa311 ) Duplicate DSA311 unit number %o on channel %o equipment %o\n",
           unitNo, channelNo, eqNo);
         exit(1);
         }
@@ -331,7 +331,7 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     cp = (Dsa311Context *) calloc(1, sizeof(Dsa311Context));
     if (cp == NULL)
         {
-        fprintf (stderr, "Failed to allocate DSA311 context block\n");
+        fprintf (stderr, "(dsa311 ) Failed to allocate DSA311 context block\n");
         exit(1);
         }
 
@@ -347,7 +347,7 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     cp->sktOutBuf.data = (u8 *)calloc(1, SktOutBufSize);
     if (cp->ppInBuf.data == NULL || cp->sktInBuf.data == NULL || cp->sktOutBuf.data == NULL)
         {
-        fprintf (stderr, "Failed to allocate DSA311 I/O buffer\n");
+        fprintf (stderr, "(dsa311 ) Failed to allocate DSA311 I/O buffer\n");
         exit(1);
         }
     dsa311Reset(cp);
@@ -367,14 +367,14 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     if (serverPort == 0)
         {
         fprintf(stderr,
-            "Invalid HASP host connection specification for DSA311 on channel %o equipment %o unit %o\n",
+            "(dsa311 ) Invalid HASP host connection specification for DSA311 on channel %o equipment %o unit %o\n",
             channelNo, eqNo, unitNo);
         exit(1);
         }
     hp = gethostbyname(serverName);
     if (hp == NULL)
         {
-        fprintf(stderr, "Failed to lookup address of DSA311 HASP host %s\n", serverName);
+        fprintf(stderr, "(dsa311 ) Failed to lookup address of DSA311 HASP host %s\n", serverName);
         exit(1);
         }
     cp->serverAddr.sin_family = AF_INET;
@@ -384,7 +384,7 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     /*
     **  Print a friendly message.
     */
-    printf("DSA311 initialised on channel %o equipment %o unit %o\n",
+    printf("(dsa311 ) Initialised on channel %o equipment %o unit %o\n",
            channelNo, eqNo, unitNo);
     }
 

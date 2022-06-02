@@ -94,7 +94,7 @@ void logInit(void)
     logF = fopen("log.txt", "wt");
     if (logF == NULL)
         {
-        fprintf(stderr, "can't open log file");
+        fprintf(stderr, "(log    ) can't open log file");
         }
     }
 

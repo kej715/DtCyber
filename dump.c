@@ -98,7 +98,7 @@ void dumpInit(void)
     cpuF = fopen("cpu.dmp", "wt");
     if (cpuF == NULL)
         {
-        logError(LogErrorLocation, "can't open cpu dump");
+        logError(LogErrorLocation, "(dump   ) can't open cpu dump");
         }
 
     for (pp = 0; pp < ppuCount; pp++)
@@ -107,7 +107,7 @@ void dumpInit(void)
         ppuF[pp] = fopen(ppDumpName, "wt");
         if (ppuF[pp] == NULL)
             {
-            logError(LogErrorLocation, "can't open ppu[%02o] dump", pp);
+            logError(LogErrorLocation, "(dump   ) can't open ppu[%02o] dump", pp);
             }
         }
     }
@@ -150,7 +150,7 @@ void dumpAll(void)
     {
     u8 pp;
 
-    fprintf(stderr, "dumping core...");
+    fprintf(stderr, "(dump   ) dumping core...");
     fflush(stderr);
 
     dumpCpu();
@@ -407,7 +407,7 @@ void dumpRunningPpu(u8 pp)
     pf = fopen(ppDumpName, "wt");
     if (pf == NULL)
         {
-        logError(LogErrorLocation, "can't open %s", ppDumpName);
+        logError(LogErrorLocation, "(dump   ) can't open %s", ppDumpName);
         return;
         }
 
@@ -432,7 +432,7 @@ void dumpRunningCpu(void)
     cpuF = fopen("cpu_run.dmp", "wt");
     if (cpuF == NULL)
         {
-        logError(LogErrorLocation, "can't open cpu_run.dmp");
+        logError(LogErrorLocation, "(dump   ) can't open cpu_run.dmp");
         return;
         }
 

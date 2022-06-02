@@ -36,13 +36,13 @@
 #include "types.h"
 #include "proto.h"
 #if defined(_WIN32)
-#include <winsock.h>
+	#include <winsock.h>
 #else
-#include <pthread.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+	#include <pthread.h>
+	#include <unistd.h>
+	#include <sys/socket.h>
+	#include <netinet/in.h>
+	#include <arpa/inet.h>
 #endif
 
 #define DEBUG 0
@@ -313,7 +313,7 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     mp = calloc(1, sizeof(PortParam) * telnetConns);
     if (mp == NULL)
         {
-        fprintf(stderr, "Failed to allocate two port mux context block\n");
+        fprintf(stderr, "(tpmux  ) Failed to allocate two port mux context block\n");
         exit(1);
         }
 
@@ -339,7 +339,7 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Print a friendly message.
     */
-    printf("Two port MUX initialised on channel %o\n", channelNo);
+    printf("(tpmux  ) Two port MUX initialised on channel %o\n", channelNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -360,7 +360,7 @@ static FcStatus tpMuxFunc(PpWord funcCode)
         {
     default:
 #if DEBUG
-        printf("Function on tpm %04o Declined \n", funcCode);
+        printf("(tpmux  ) Function on tpm %04o Declined \n", funcCode);
 #endif
         return(FcDeclined);
 
@@ -376,19 +376,19 @@ static FcStatus tpMuxFunc(PpWord funcCode)
 
     case FcTpmSetTerminal:
 #if DEBUG
-        printf("Set Terminal mode %03o (unit %d)\n", funcParam, activeDevice->selectedUnit);
+        printf("(tpmux  ) Set Terminal mode %03o (unit %d)\n", funcParam, activeDevice->selectedUnit);
 #endif
         break;
 
     case FcTpmFlipDTR:
 #if DEBUG
-        printf("%s DTR (unit %d)\n",funcParam == 0 ? "Clear" : "Set", activeDevice->selectedUnit);
+        printf("(tpmux  ) %s DTR (unit %d)\n",funcParam == 0 ? "Clear" : "Set", activeDevice->selectedUnit);
 #endif
         break;
 
     case FcTpmFlipRTS:
 #if DEBUG
-        printf("%s RTS (unit %d)\n",funcParam == 0 ? "Clear" : "Set", activeDevice->selectedUnit);
+        printf("(tpmux  ) %s RTS (unit %d)\n",funcParam == 0 ? "Clear" : "Set", activeDevice->selectedUnit);
 #endif
         break;
 
@@ -454,7 +454,7 @@ static void tpMuxIo(void)
             activeChannel->full = TRUE;
             mp->status &= ~00010;
 #if DEBUG
-            printf("read port %d -  %04o\n",mp->id, activeChannel->data);
+            printf("(tpmux  ) read port %d -  %04o\n",mp->id, activeChannel->data);
 #endif
             }
         break;
@@ -480,7 +480,7 @@ static void tpMuxIo(void)
                    activeDevice->recordLength = 0;
                    }
 #if DEBUG
-                printf("write port %d - %04o\n", mp->id, activeChannel->data);
+                printf("(tpmux  ) write port %d - %04o\n", mp->id, activeChannel->data);
 #endif
                 }
             }
@@ -565,7 +565,7 @@ static void tpMuxCreateThread(DevSlot *dp)
 
     if (hThread == NULL)
         {
-        fprintf(stderr, "Failed to create tpMux thread\n");
+        fprintf(stderr, "(tpmux  ) Failed to create thread\n");
         exit(1);
         }
 #else
@@ -580,7 +580,7 @@ static void tpMuxCreateThread(DevSlot *dp)
     rc = pthread_create(&thread, &attr, tpMuxThread, dp);
     if (rc < 0)
         {
-        fprintf(stderr, "Failed to create tpMux thread\n");
+        fprintf(stderr, "(tpmux  ) Failed to create tpMux thread\n");
         exit(1);
         }
 #endif
@@ -620,7 +620,7 @@ static void *tpMuxThread(void *param)
     listenFd = socket(AF_INET, SOCK_STREAM, 0);
     if (listenFd < 0)
         {
-        printf("tpMux: Can't create socket\n");
+        printf("(tpmux  ) Can't create socket\n");
 #if defined(_WIN32)
         return;
 #else
@@ -636,7 +636,7 @@ static void *tpMuxThread(void *param)
 
     if (bind(listenFd, (struct sockaddr *)&server, sizeof(server)) < 0)
         {
-        printf("tpMux: Can't bind to socket\n");
+        printf("(tpmux  ) tpMux: Can't bind to socket\n");
 #if defined(_WIN32)
         return;
 #else
@@ -646,7 +646,7 @@ static void *tpMuxThread(void *param)
 
     if (listen(listenFd, 5) < 0)
         {
-        printf("tpMux: Can't listen\n");
+        printf("(tpmux  ) Can't listen\n");
 #if defined(_WIN32)
         return;
 #else
@@ -688,7 +688,7 @@ static void *tpMuxThread(void *param)
         **  Mark connection as active.
         */
         mp->active = TRUE;
-        printf("tpMux: Received connection on port %d\n", mp->id);
+        printf("(tpmux  ) Received connection on port %d\n", mp->id);
         }
 
 #if !defined(_WIN32)
@@ -737,7 +737,7 @@ static int tpMuxCheckInput(PortParam *mp)
             close(mp->connFd);
         #endif
             mp->active = FALSE;
-            printf("tpMux: Connection dropped on port %d\n", mp->id);
+            printf("(tpmux  ) Connection dropped on port %d\n", mp->id);
             return(-1);
             }
         }
@@ -749,7 +749,7 @@ static int tpMuxCheckInput(PortParam *mp)
         close(mp->connFd);
     #endif
         mp->active = FALSE;
-        printf("tpMux: Connection dropped on port %d\n", mp->id);
+        printf("(tpmux  ) Connection dropped on port %d\n", mp->id);
         return(-1);
         }
     else

@@ -136,8 +136,8 @@ void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Print a friendly message.
     */
-    printf("Console initialised on channel %o\n", channelNo);
-    }
+	printf("(console) Initialised on channel %o\n", channelNo);
+	}
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Execute function code on 6612 console.

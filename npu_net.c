@@ -534,7 +534,7 @@ void npuNetDisconnected(Tcb *tp)
     **  Cleanup connection.
     */
     npuNetSetMaxCN(tp->cn);
-    npuLogMessage("NET: Connection dropped on port %d", tp->pcbp->claPort);
+    npuLogMessage("(npu_net) Connection dropped on port %d", tp->pcbp->claPort);
     }
 
 /*--------------------------------------------------------------------------
@@ -824,7 +824,7 @@ static int npuNetAcceptConnections(fd_set *selectFds, int maxFd)
                 acceptFd = accept(ncbp->lstnFd, (struct sockaddr *)&from, &fromLen);
                 if (acceptFd < 0)
                     {
-                    fputs("NET: spurious connection attempt\n", stderr);
+                    fputs("(npu_net) spurious connection attempt\n", stderr);
                     }
                 else if (npuNetProcessNewConnection(acceptFd, ncbp, TRUE))
                     {
@@ -835,7 +835,7 @@ static int npuNetAcceptConnections(fd_set *selectFds, int maxFd)
         case ConnTypeRevHasp:
             break;
         default:
-            fprintf(stderr, "NET: Invalid connection type: %u\n", ncbp->connType);
+            fprintf(stderr, "(npu_net) Invalid connection type: %u\n", ncbp->connType);
             break;
             }
         }
@@ -911,7 +911,7 @@ static int npuNetCreateConnections(void)
 #if defined(_WIN32)
                 if (fd == INVALID_SOCKET)
                     {
-                    fprintf(stderr, "NET: Failed to create socket for host: %s\n", ncbp->hostName);
+                    fprintf(stderr, "(npu_net) Failed to create socket for host: %s\n", ncbp->hostName);
                     continue;
                     }
                 setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
@@ -919,19 +919,19 @@ static int npuNetCreateConnections(void)
                 rc = connect(fd, (struct sockaddr *)&ncbp->hostAddr, sizeof(ncbp->hostAddr));
                 if (rc == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)
                     {
-                    npuLogMessage("NET: Failed to connect to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
+                    npuLogMessage("(npu_net) Failed to connect to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
                     closesocket(fd);
                     }
                 else // connection in progress
                     {
-                    npuLogMessage("NET: Initiated connection to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
+                    npuLogMessage("(npu_net) Initiated connection to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
                     ncbp->connFd = fd;
                     ncbp->state = StConnConnecting;
                     }
 #else
                 if (fd < 0)
                     {
-                    fprintf(stderr, "NET: Failed to create socket for host: %s\n", ncbp->hostName);
+                    fprintf(stderr, "(npu_net) Failed to create socket for host: %s\n", ncbp->hostName);
                     continue;
                     }
                 setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
@@ -939,12 +939,12 @@ static int npuNetCreateConnections(void)
                 rc = connect(fd, (struct sockaddr *)&ncbp->hostAddr, sizeof(ncbp->hostAddr));
                 if (rc < 0 && errno != EINPROGRESS)
                     {
-                    npuLogMessage("NET: Failed to connect to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
+                    npuLogMessage("(npu_net) Failed to connect to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
                     close(fd);
                     }
                 else // connection in progress
                     {
-                    npuLogMessage("NET: Initiated connection to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
+                    npuLogMessage("(npu_net) Initiated connection to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
                     ncbp->connFd = fd;
                     ncbp->state = StConnConnecting;
                     }
@@ -974,7 +974,7 @@ static int npuNetCreateConnections(void)
 #endif
                         if (rc < 0)
                             {
-                            npuLogMessage("NET: Failed to get socket status for host: %s:%u",
+                            npuLogMessage("(npu_net) Failed to get socket status for host: %s:%u",
                                           ncbp->hostName, ncbp->tcpPort);
 #if defined(_WIN32)
                             closesocket(ncbp->connFd);
@@ -987,7 +987,7 @@ static int npuNetCreateConnections(void)
                             }
                         else if (optVal != 0) // connection failed
                             {
-                            npuLogMessage("NET: Failed to connect to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
+                            npuLogMessage("(npu_net) Failed to connect to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
 #if defined(_WIN32)
                             closesocket(ncbp->connFd);
 #else
@@ -999,7 +999,7 @@ static int npuNetCreateConnections(void)
                             }
                         else
                             {
-                            npuLogMessage("NET: Connected to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
+                            npuLogMessage("(npu_net) Connected to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
                             if (npuNetProcessNewConnection(ncbp->connFd, ncbp, FALSE))
                                 {
                                 n += 1;
@@ -1013,7 +1013,7 @@ static int npuNetCreateConnections(void)
                     }
                 else if (currentTime > ncbp->connectionDeadline)
                     {
-                    npuLogMessage("NET: Connection timeout to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
+                    npuLogMessage("(npu_net) Connection timeout to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
 #if defined(_WIN32)
                     closesocket(ncbp->connFd);
 #else
@@ -1029,7 +1029,7 @@ static int npuNetCreateConnections(void)
                 }
             break;
         default:
-            fprintf(stderr, "NET: Invalid connection type: %u\n", ncbp->connType);
+            fprintf(stderr, "(npu_net) Invalid connection type: %u\n", ncbp->connType);
             break;
             }
         }
@@ -1061,7 +1061,7 @@ static bool npuNetCreateListeningSocket(Ncb *ncbp)
     ncbp->lstnFd = socket(AF_INET, SOCK_STREAM, 0);
     if (ncbp->lstnFd < 0)
         {
-        fprintf(stderr, "NET: Can't create socket for port %d\n", ncbs->tcpPort);
+        fprintf(stderr, "(npu_net) Can't create socket for port %d\n", ncbs->tcpPort);
         ncbp->lstnFd = 0;
         return FALSE;
         }
@@ -1087,7 +1087,7 @@ static bool npuNetCreateListeningSocket(Ncb *ncbp)
 
     if (bind(ncbp->lstnFd, (struct sockaddr *)&server, sizeof(server)) < 0)
         {
-        fprintf(stderr, "NET: Can't bind to listen socket for port %d\n", ncbp->tcpPort);
+        fprintf(stderr, "(npu_net) Can't bind to listen socket for port %d\n", ncbp->tcpPort);
 #if defined(_WIN32)
         closesocket(ncbp->lstnFd);
 #else
@@ -1102,7 +1102,7 @@ static bool npuNetCreateListeningSocket(Ncb *ncbp)
     */
     if (listen(ncbp->lstnFd, 5) < 0)
         {
-        fprintf(stderr, "NET: Can't listen on port %d\n", ncbp->tcpPort);
+        fprintf(stderr, "(npu_net) Can't listen on port %d\n", ncbp->tcpPort);
 #if defined(_WIN32)
         closesocket(ncbp->lstnFd);
 #else
@@ -1242,7 +1242,7 @@ static void *npuNetThread(void *param)
         case ConnTypeRevHasp:
             break;
         default:
-            fprintf(stderr, "NET: Invalid connection type: %u\n", ncbp->connType);
+            fprintf(stderr, "(npu_net) Invalid connection type: %u\n", ncbp->connType);
             break;
             }
         }
@@ -1363,7 +1363,7 @@ static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive)
             }
         else
             {
-            npuLogMessage("NET: Free PCB not found for active connection of type %d (%s)",
+            npuLogMessage("(npu_net) Free PCB not found for active connection of type %d (%s)",
                 ncbp->connType, ncbp->hostName);
             ncbp->connFd = 0;
             ncbp->state = StConnBusy;

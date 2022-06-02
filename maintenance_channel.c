@@ -35,7 +35,6 @@
 #ifndef WIN32
 #include <unistd.h>
 #endif
-#include <string.h>
 #include "const.h"
 #include "types.h"
 #include "proto.h"
@@ -356,7 +355,7 @@ void mchInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Print a friendly message.
     */
-    printf("Maintenance Channel initialised on channel %o\n", channelNo);
+    printf("(maintenance_channel) Initialised on channel %o\n", channelNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -379,7 +378,7 @@ static FcStatus mchFunc(PpWord funcCode)
     typeCode = funcCode & FcTypeMask;
 
 #if DEBUG
-    fprintf(mchLog, "\n%06d PP:%02o CH:%02o f:0x%03X C:%-25s O:%-25s  >   ",
+    fprintf(mchLog, "\n(maintenance_channel) %06d PP:%02o CH:%02o f:0x%03X C:%-25s O:%-25s  >   ",
         traceSequenceNo,
         activePpu->id,
         activeDevice->channel->id,
@@ -733,7 +732,7 @@ static char *mchConn2String(PpWord connCode)
     case FcConnCpu         : return "Processor";
         }
 #endif
-    sprintf(buf, "UNKNOWN: %03X", connCode);
+    sprintf(buf, "(maintenance_channel) Unknown connCode: %03X", connCode);
     return(buf);
     }
 
@@ -763,7 +762,7 @@ static char *mchOp2String(PpWord opCode)
     case FcOpRequSummaryStatus : return "RequSummaryStatus";
         }
 #endif
-    sprintf(buf, "UNKNOWN: %03X", opCode);
+    sprintf(buf, "(maintenance_channel) Unknown opCode: %03X", opCode);
     return(buf);
     }
 

@@ -353,7 +353,7 @@ void mt5744Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     if (deviceName == NULL)
         {
-        fprintf(stderr, "StorageTek 4400 simulator connection information required for MT5744 on channel %o equipment %o unit %o\n",
+        fprintf(stderr, "(mt5744)  StorageTek 4400 simulator connection information required for MT5744 on channel %o equipment %o unit %o\n",
             channelNo, eqNo, unitNo);
         exit(1);
         }
@@ -402,7 +402,7 @@ void mt5744Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     tp = calloc(1, sizeof(TapeParam));
     if (tp == NULL)
         {
-        fprintf(stderr, "Failed to allocate MT5744 context block\n");
+        fprintf(stderr, "(mt5744)  Failed to allocate MT5744 context block\n");
         exit(1);
         }
 
@@ -438,14 +438,14 @@ void mt5744Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     if (tp->driveName == NULL || tp->serverName == NULL || serverPort == 0)
         {
         fprintf(stderr,
-            "Invalid StorageTek 4400 simulator connection specification for MT5744 on channel %o equipment %o unit %o\n",
+            "(mt5744)  Invalid StorageTek 4400 simulator connection specification for MT5744 on channel %o equipment %o unit %o\n",
             channelNo, eqNo, unitNo);
         exit(1);
         }
     hp = gethostbyname(tp->serverName);
     if (hp == NULL)
         {
-        fprintf(stderr, "Failed to lookup address of StorageTek 4400 simulator host %s\n", tp->serverName);
+        fprintf(stderr, "(mt5744)  Failed to lookup address of StorageTek 4400 simulator host %s\n", tp->serverName);
         exit(1);
         }
     tp->serverAddr.sin_family = AF_INET;
@@ -475,7 +475,7 @@ void mt5744Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Print a friendly message.
     */
-    printf("MT5744 initialised on channel %o equipment %o unit %o, drive %s on tape server %s:%d\n",
+    printf("(mt5744)  initialised on channel %o equipment %o unit %o, drive %s on tape server %s:%d\n",
         channelNo, eqNo, unitNo, tp->driveName, tp->serverName, serverPort);
     }
 
@@ -494,7 +494,7 @@ void mt5744ShowTapeStatus(FILE *out)
 
     while (tp)
         {
-        fprintf(out, "MT5744 on %o,%o,%o", tp->channelNo, tp->eqNo, tp->unitNo);
+        fprintf(out, "(mt5744)  MT5744 on %o,%o,%o", tp->channelNo, tp->eqNo, tp->unitNo);
         switch (tp->state)
             {
         case StAcsDisconnected:
@@ -875,7 +875,7 @@ static void mt5744DismountRequestCallback(TapeParam *tp)
         }
     else
         {
-        fprintf(stderr, "MT5744: Unexpected status %d received from StorageTek simulator for DISMOUNT request\n", status);
+        fprintf(stderr, "(mt5744)  Unexpected status %d received from StorageTek simulator for DISMOUNT request\n", status);
         mt5744CloseTapeServerConnection(tp);
         }
     mt5744ResetInputBuffer(tp, (u8 *)eor);
@@ -1231,7 +1231,7 @@ static void mt5744InitiateConnection(TapeParam *tp)
     //  -------------------------------
     if (fd == INVALID_SOCKET)
         {
-        fprintf(stderr, "MT5744: Failed to create socket for host: %s\n", tp->serverName);
+        fprintf(stderr, "(mt5744)  Failed to create socket for host: %s\n", tp->serverName);
         return;
         }
     if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable)) < 0)
@@ -1702,13 +1702,13 @@ void mt5744LoadTape(TapeParam *tp, bool writeEnable)
     len = sp - volumeName;
     if (len < 1)
         {
-        fputs("MT5744: Volume name missing from command received from StorageTek simulator\n", stderr);
+        fputs("(mt5744)  Volume name missing from command received from StorageTek simulator\n", stderr);
         mt5744CloseTapeServerConnection(tp);
         return;
         }
     else if (len > 6)
         {
-        fputs("MT5744: Invalid volume name received from StorageTek simulator\n", stderr);
+        fputs("(mt5744)  Invalid volume name received from StorageTek simulator\n", stderr);
         mt5744CloseTapeServerConnection(tp);
         return;
         }
@@ -1749,7 +1749,7 @@ static void mt5744LocateBlockRequestCallback(TapeParam *tp)
         }
     else if (status != 200)
         {
-        fprintf(stderr, "MT5744: Unexpected status %d received from StorageTek simulator for LOCATEBLOCK request\n", status);
+        fprintf(stderr, "(mt5744)  Unexpected status %d received from StorageTek simulator for LOCATEBLOCK request\n", status);
         mt5744CloseTapeServerConnection(tp);
         }
     mt5744ResetInputBuffer(tp, (u8 *)eor);
@@ -1851,7 +1851,7 @@ static char *mt5744ParseTapeServerResponse(TapeParam *tp, int *status)
         }
     if (*status == -1)
         {
-        fputs("MT5744: Bad response received from StorageTek simulator\n", stderr);
+        fputs("(mt5744)  Bad response received from StorageTek simulator\n", stderr);
         *sp = '\0';
         fprintf(stderr, "%s\n", start);
         *sp = '\n';
@@ -1899,7 +1899,7 @@ static void mt5744ReadBlockIdRequestCallback(TapeParam *tp)
         }
     else
         {
-        fprintf(stderr, "MT5744: Unexpected status %d received from StorageTek simulator for READBLOCKID request\n", status);
+        fprintf(stderr, "(mt5744)  Unexpected status %d received from StorageTek simulator for READBLOCKID request\n", status);
         mt5744CloseTapeServerConnection(tp);
         }
     mt5744ResetInputBuffer(tp, (u8 *)eor);
@@ -1955,7 +1955,7 @@ static void mt5744ReceiveTapeServerResponse(TapeParam *tp)
                     mt5744UnloadTape(tp);
                     break;
                 default:
-                    fprintf(stderr, "MT5744: Unrecognized event indication %.3s from %s:%u for CH:%02o u:%d",
+                    fprintf(stderr, "(mt5744)  Unrecognized event indication %.3s from %s:%u for CH:%02o u:%d",
                         &tp->inputBuffer.data[0], tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
                     mt5744CloseTapeServerConnection(tp);
                     break;
@@ -2019,7 +2019,7 @@ static void mt5744ReadRequestCallback(TapeParam *tp)
         tp->isTapeMark = TRUE; // simulate tape mark instead of end-of-medium
         break;
     default:
-        fprintf(stderr, "MT5744: Unexpected status %d received from StorageTek simulator for READFWD/READBKW request\n", status);
+        fprintf(stderr, "(mt5744)  Unexpected status %d received from StorageTek simulator for READFWD/READBKW request\n", status);
         mt5744CloseTapeServerConnection(tp);
         return;
         }
@@ -2069,7 +2069,7 @@ static void mt5744RegisterUnitRequestCallback(TapeParam *tp)
         }
     else
         {
-        fprintf(stderr, "MT5744: Unexpected status %d received from StorageTek simulator for REGISTER request\n", status);
+        fprintf(stderr, "(mt5744)  Unexpected status %d received from StorageTek simulator for REGISTER request\n", status);
         mt5744CloseTapeServerConnection(tp);
         }
     mt5744ResetInputBuffer(tp, (u8 *)eor);
@@ -2170,7 +2170,7 @@ static void mt5744RewindRequestCallback(TapeParam *tp)
         }
     else
         {
-        fprintf(stderr, "MT5744: Unexpected status %d received from StorageTek simulator for REWIND request\n", status);
+        fprintf(stderr, "(mt5744)  Unexpected status %d received from StorageTek simulator for REWIND request\n", status);
         mt5744CloseTapeServerConnection(tp);
         }
     mt5744ResetInputBuffer(tp, (u8 *)eor);
@@ -2197,7 +2197,7 @@ static void mt5744RewindUnloadRequestCallback(TapeParam *tp)
     tp->isReady = FALSE;
     if (status != 203)
         {
-        fprintf(stderr, "MT5744: Unexpected status %d received from StorageTek simulator for REWIND/UNLOAD request\n", status);
+        fprintf(stderr, "(mt5744)  Unexpected status %d received from StorageTek simulator for REWIND/UNLOAD request\n", status);
         }
     mt5744ResetInputBuffer(tp, (u8 *)eor);
     }
@@ -2270,7 +2270,7 @@ static void mt5744SpaceRequestCallback(TapeParam *tp)
         //tp->isAlert = TRUE;
         break;
     default:
-        fprintf(stderr, "MT5744: Unexpected status %d received from StorageTek simulator for SPACEFWD/SPACEBKW request\n", status);
+        fprintf(stderr, "(mt5744)  Unexpected status %d received from StorageTek simulator for SPACEFWD/SPACEBKW request\n", status);
         mt5744CloseTapeServerConnection(tp);
         return;
         }
@@ -2318,7 +2318,7 @@ static void mt5744WriteRequestCallback(TapeParam *tp)
         }
     else
         {
-        fprintf(stderr, "MT5744: Unexpected status %d received from StorageTek simulator for WRITE request\n", status);
+        fprintf(stderr, "(mt5744)  Unexpected status %d received from StorageTek simulator for WRITE request\n", status);
         mt5744CloseTapeServerConnection(tp);
         }
     mt5744ResetInputBuffer(tp, (u8 *)eor);
@@ -2344,7 +2344,7 @@ static void mt5744WriteMarkRequestCallback(TapeParam *tp)
     tp->isBusy = FALSE;
     if (status != 200)
         {
-        fprintf(stderr, "MT5744: Unexpected status %d received from StorageTek simulator for WRITEMARK request\n", status);
+        fprintf(stderr, "(mt5744)  Unexpected status %d received from StorageTek simulator for WRITEMARK request\n", status);
         mt5744CloseTapeServerConnection(tp);
         }
     mt5744ResetInputBuffer(tp, (u8 *)eor);

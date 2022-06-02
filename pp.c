@@ -286,7 +286,7 @@ void ppInit(u8 count)
     ppu = calloc(count, sizeof(PpSlot));
     if (ppu == NULL)
         {
-        fprintf(stderr, "Failed to allocate ppu control blocks\n");
+        fprintf(stderr, "(pp     ) Failed to allocate ppu control blocks\n");
         exit(1);
         }
 
@@ -310,7 +310,7 @@ void ppInit(u8 count)
             */
             if (fread(ppu, sizeof(PpSlot), count, ppHandle) != count)
                 {
-                printf("Unexpected length of PPM backing file, clearing PPM\n");
+                printf("(pp     ) Unexpected length of PPM backing file, clearing PPM\n");
                 memset(ppu, 0, count * sizeof(PpSlot));
                 }
             }
@@ -322,7 +322,7 @@ void ppInit(u8 count)
             ppHandle = fopen(fileName, "w+b");
             if (ppHandle == NULL)
                 {
-                fprintf(stderr, "Failed to create PPM backing file\n");
+                fprintf(stderr, "(pp     ) Failed to create PPM backing file\n");
                 exit(1);
                 }
             }
@@ -341,7 +341,7 @@ void ppInit(u8 count)
     /*
     **  Print a friendly message.
     */
-    printf("PPs initialised (number of PPUs %o)\n", ppuCount);
+    printf("(pp     ) PPs initialised (number of PPUs %o)\n", ppuCount);
 
 #if PPDEBUG
     if (ppLog == NULL)
@@ -369,7 +369,7 @@ void ppTerminate(void)
         fseek(ppHandle, 0, SEEK_SET);
         if (fwrite(ppu, sizeof(PpSlot), ppuCount, ppHandle) != ppuCount)
             {
-            fprintf(stderr, "Error writing PPM backing file\n");
+            fprintf(stderr, "(pp     ) Error writing PPM backing file\n");
             }
 
         fclose(ppHandle);

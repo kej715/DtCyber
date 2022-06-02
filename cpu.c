@@ -23,8 +23,6 @@
 **--------------------------------------------------------------------------
 */
 
-#define EMDEBUG 0
-
 /*
 **  -------------
 **  Include Files
@@ -206,7 +204,7 @@ static u32 acc21;
 static u32 acc24;
 static bool floatException = FALSE;
 
-static int debugCount = 0;
+// *unused* static int debugCount = 0;
 
 #if CcSMM_EJT
 static int skipStep = 0;
@@ -311,7 +309,7 @@ static u8 cpOp01Length[8] = { 30, 30, 30, 30, 15, 15, 15, 15 };
 **------------------------------------------------------------------------*/
 void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
     {
-    u32 extBanksSize;
+    u32 extBanksSize = 0;
 
     /*
     **  Allocate configured central memory.
@@ -319,7 +317,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
     cpMem = calloc(memory, sizeof(CpWord));
     if (cpMem == NULL)
         {
-        fprintf(stderr, "Failed to allocate CPU memory\n");
+        fprintf(stderr, "(cpu    ) Failed to allocate CPU memory\n");
         exit(1);
         }
 
@@ -342,7 +340,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
     extMem = calloc(emBanks * extBanksSize, sizeof(CpWord));
     if (extMem == NULL)
         {
-        fprintf(stderr, "Failed to allocate ECS memory\n");
+        fprintf(stderr, "(cpu    ) Failed to allocate ECS memory\n");
         exit(1);
         }
 
@@ -368,7 +366,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
             */
             if (fread(cpMem, sizeof(CpWord), cpuMaxMemory, cmHandle) != cpuMaxMemory)
                 {
-                printf("Unexpected length of CM backing file, clearing CM\n");
+                printf("(cpu    ) Unexpected length of CM backing file, clearing CM\n");
                 memset(cpMem, 0, cpuMaxMemory);
                 }
             }
@@ -380,7 +378,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
             cmHandle = fopen(fileName, "w+b");
             if (cmHandle == NULL)
                 {
-                fprintf(stderr, "Failed to create CM backing file\n");
+                fprintf(stderr, "(cpu    ) Failed to create CM backing file\n");
                 exit(1);
                 }
             }
@@ -398,7 +396,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
             */
             if (fread(extMem, sizeof(CpWord), extMaxMemory, ecsHandle) != extMaxMemory)
                 {
-                printf("Unexpected length of ECS backing file, clearing ECS\n");
+                printf("(cpu    ) Unexpected length of ECS backing file, clearing ECS\n");
                 memset(extMem, 0, extMaxMemory);
                 }
             }
@@ -410,7 +408,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
             ecsHandle = fopen(fileName, "w+b");
             if (ecsHandle == NULL)
                 {
-                fprintf(stderr, "Failed to create ECS backing file\n");
+                fprintf(stderr, "(cpu    ) Failed to create ECS backing file\n");
                 exit(1);
                 }
             }
@@ -419,8 +417,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
     /*
     **  Print a friendly message.
     */
-    printf("CPU model %s initialised (CM: %o, ECS: %o)\n", model, cpuMaxMemory, extMaxMemory);
-
+    printf("(cpu    ) CPU model %s initialised (CM: %o, ECS: %o)\n", model, cpuMaxMemory, extMaxMemory);
 #if EMDEBUG
     if (emLog == NULL)
         {
@@ -447,7 +444,7 @@ void cpuTerminate(void)
         fseek(cmHandle, 0, SEEK_SET);
         if (fwrite(cpMem, sizeof(CpWord), cpuMaxMemory, cmHandle) != cpuMaxMemory)
             {
-            fprintf(stderr, "Error writing CM backing file\n");
+            fprintf(stderr, "(cpu    ) Error writing CM backing file\n");
             }
 
         fclose(cmHandle);
@@ -461,7 +458,7 @@ void cpuTerminate(void)
         fseek(ecsHandle, 0, SEEK_SET);
         if (fwrite(extMem, sizeof(CpWord), extMaxMemory, ecsHandle) != extMaxMemory)
             {
-            fprintf(stderr, "Error writing ECS backing file\n");
+            fprintf(stderr, "(cpu    ) Error writing ECS backing file\n");
             }
 
         fclose(ecsHandle);
@@ -1916,6 +1913,13 @@ static void cpuUemTransfer(bool writeToUem)
             {
             if (isZeroFill || uemAddress >= cpuMaxMemory)
                 {
+                /*
+                **  If bits 21 or 22 are non-zero, zero CM, but take error exit
+                **  to lower 30 bits once zeroing is finished.
+>>>>>>>>>>>> manual says to only do this when the condition is true on instruction start <<<<<<<<<<<<<<<<
+>>>>>>>>>>>> NOS 2 now works by specifiying an address > cpuMaxMemory with bit 24 set?!? <<<<<<<<<<<<<<<<
+>>>>>>>>>>>> Maybe the manual is wrong about bits 21/22 and it should be bit 24 instead? <<<<<<<<<<<<<<<<
+                */
                 cpMem[cmAddress] = 0;
                 takeErrorExit = TRUE;
                 }

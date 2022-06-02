@@ -139,7 +139,7 @@ void rtcInit(u8 increment, u32 setMHz)
         {
         if (!rtcInitTick(setMHz))
             {
-            printf("Invalid clock increment 0, defaulting to 1\n");
+            printf("(rtc_rdtsc) Invalid clock increment 0, defaulting to 1\n");
             increment = 1;
             }
         }
@@ -368,7 +368,7 @@ static bool rtcInitTick(u32 setMHz)
     else
         {
         rtcGetTick = rtcGetTickCpu;
-        printf("Windows performance counter not available, using Pentium's RDTSC\n");
+        printf("(rtc_rdtsc) Windows performance counter not available, using Pentium's RDTSC\n");
         if (setMHz == 0)
             {
             u64 first = rtcGetTick();
@@ -383,7 +383,7 @@ static bool rtcInitTick(u32 setMHz)
 
     MHz = (double)(i64)Hz / 1000000.0;
 
-    printf("Using high resolution hardware clock at %f MHz\n", MHz);
+    printf("(rtc_rdtsc) Using high resolution hardware clock at %f MHz\n", MHz);
 
     return(TRUE);
     }
@@ -472,7 +472,7 @@ static bool rtcInitTick(u32 setMHz)
 
     Hz = 1000000;
     MHz = 1.0;
-    printf("Using high resolution hardware clock at %f MHz\n", MHz);
+    printf("(rtc_rdtsc) Using high resolution hardware clock at %f MHz\n", MHz);
     return(TRUE);
     }
 
@@ -500,7 +500,7 @@ static bool rtcInitTick(u32 setMHz)
 
     Hz = 1000000000;     /* 10^9, because timer is in ns */
     MHz = 1000.0;
-    printf("Using high resolution hardware clock at %f MHz\n", MHz);
+    printf("(rtc_rdtsc) Using high resolution hardware clock at %f MHz\n", MHz);
     return(TRUE);
     }
 
@@ -523,7 +523,7 @@ static bool rtcInitTick(u32 setMHz)
     {
     (void)setMHz;
 
-    printf("No high resolution hardware clock, using emulation cycle counter\n");
+    printf("(rtc_rdtsc) No high resolution hardware clock, using emulation cycle counter\n");
     return(FALSE);
     }
 

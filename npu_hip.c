@@ -243,7 +243,7 @@ void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     npu = calloc(1, sizeof(NpuParam));
     if (npu == NULL)
         {
-        fprintf(stderr, "Failed to allocate npu context block\n");
+        fprintf(stderr, "(npu_hip) Failed to allocate npu context block\n");
         exit(1);
         }
 
@@ -263,10 +263,10 @@ void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Print a friendly message.
     */
-    printf("NPU initialised on channel %o equipment %o\n", channelNo, eqNo);
-    printf("       Host ID: %s\n", npuNetHostID);
-    printf("  Coupler node: %u\n", npuSvmCouplerNode);
-    printf("      NPU node: %u\n", npuSvmNpuNode);
+    printf("(npu_hip) NPU initialised on channel %o equipment %o\n", channelNo, eqNo);
+    printf("                 Host ID: %s\n", npuNetHostID);
+    printf("            Coupler node: %u\n", npuSvmCouplerNode);
+    printf("                NPU node: %u\n", npuSvmNpuNode);
     }
 
 /*--------------------------------------------------------------------------
@@ -439,7 +439,7 @@ static FcStatus npuHipFunc(PpWord funcCode)
     npuLogFlush();
     if (funcCode != FcNpuInCouplerStatus)
         {
-        fprintf(npuLog, "\n%06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
+        fprintf(npuLog, "\n(npu_hip) %06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
                 traceSequenceNo,
                 activePpu->id,
                 activeChannel->id,
@@ -604,7 +604,7 @@ static void npuHipIo(void)
 #if DEBUG
         if (npu->regCouplerStatus != 0)
             {
-            fprintf(npuLog, "\n%06d PP:%02o CH:%02o f:%04o T:%-25s  >    %03X",
+            fprintf(npuLog, "\n(npu_hip) %06d PP:%02o CH:%02o f:%04o T:%-25s  >    %03X",
                     traceSequenceNo,
                     activePpu->id,
                     activeChannel->id,
@@ -867,7 +867,7 @@ static char *npuHipFunc2String(PpWord funcCode)
     case FcNpuClearCoupler       : return "FcNpuClearCoupler";
         }
 #endif
-    sprintf(buf, "UNKNOWN: %04o", funcCode);
+    sprintf(buf, "(npu_hip) Unknown Function: %04o", funcCode);
     return(buf);
     }
 

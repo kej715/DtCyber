@@ -79,7 +79,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-#include "msufrend_util.h"
+#include "../msufrend_util.h"
 #include "lmbi.h"
 #include "frend2_helpers.h"
 

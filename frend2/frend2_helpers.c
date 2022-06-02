@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-#include "msufrend_util.h"
+#include "../msufrend_util.h"
 #include "frend2_helpers.h"
 
 SOCKET sockFromCyber=0;

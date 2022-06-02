@@ -209,7 +209,7 @@ void npuLipPresetPcb(Pcb *pcbp)
     pcbp->controls.lip.stagingBuf = (u8 *)malloc(MaxBuffer);
     if (pcbp->controls.lip.stagingBuf == NULL)
         {
-        fputs("LIP: Failed to allocate buffer for LCB\n", stderr);
+        fputs("(npu_lip) Failed to allocate buffer for LCB\n", stderr);
         exit(1);
         }
     pcbp->controls.lip.stagingBufPtr = pcbp->controls.lip.stagingBuf;
@@ -264,7 +264,7 @@ void npuLipProcessUplineData(Pcb *pcbp)
                 }
             else
                 {
-                fputs("LIP: Staging buffer overflow during connection establishment\n", stderr);
+                fputs("(npu_lip) Staging buffer overflow during connection establishment\n", stderr);
                 pcbp->controls.lip.state = StTrunkDisconnected;
                 }
             return;
@@ -289,7 +289,7 @@ void npuLipProcessUplineData(Pcb *pcbp)
                 }
             else
                 {
-                fputs("LIP: Staging buffer overflow during connection establishiment\n", stderr);
+                fputs("(npu_lip) Staging buffer overflow during connection establishiment\n", stderr);
                 pcbp->controls.lip.state = StTrunkDisconnected;
                 }
             return;
@@ -304,7 +304,7 @@ void npuLipProcessUplineData(Pcb *pcbp)
                 | pcbp->inputData[pcbp->controls.lip.inputIndex++];
             if (pcbp->controls.lip.blockLength > MaxBuffer)
                 {
-                fprintf(stderr, "LIP: Invalid block length %d received from %s\n",
+                fprintf(stderr, "(npu_lip) Invalid block length %d received from %s\n",
                     pcbp->controls.lip.blockLength, pcbp->ncbp->hostName);
 #if DEBUG
                 fprintf(npuLipLog, "Port %02x: invalid block length %d received from %s\n", pcbp->claPort,
@@ -451,7 +451,7 @@ void npuLipProcessDownlineData(NpuBuffer *bp)
                 return;
                 }
             }
-        fprintf(stderr, "LIP: Block received for unknown or disconnected node %02x\n", dn);
+        fprintf(stderr, "(npu_lip) Block received for unknown or disconnected node %02x\n", dn);
 #if DEBUG
         fprintf(npuLipLog, "Block received for unknown or disconnected node: %02x\n", dn);
 #endif
@@ -997,7 +997,7 @@ static void npuLipSendQueuedData(Pcb *pcbp)
             if (n < 0)
                 {
                 npuBipBufRelease(bp);
-                fprintf(stderr, "LIP: Failed to send whole block length to %s\n",
+                fprintf(stderr, "(npu_lip) Failed to send whole block length to %s\n",
                     pcbp->ncbp->hostName);
                 npuLipNotifyNetDisconnect(pcbp);
                 return;

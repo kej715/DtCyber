@@ -5,7 +5,7 @@
 **  Name: cray_station.c
 **
 **  Description:
-**      Perform eumlation of Cray Station hardware interface. Cray supported
+**      Perform emulation of Cray Station hardware interface. Cray supported
 **      two types of station interfaces to its supercomputers:
 **
 **        1) Front end interface (FEI). This was a direct channel interface
