@@ -154,6 +154,9 @@ static void opHelpRemovePaper(void);
 static void opCmdSetKeyInterval(bool help, char *cmdParams);
 static void opHelpSetKeyInterval(void);
 
+static void opCmdSetKeyWaitInterval(bool help, char* cmdParams);
+static void opHelpSetKeyWaitInterval(void);
+
 static void opCmdSetOperatorPort(bool help, char *cmdParams);
 static void opHelpSetOperatorPort(void);
 
@@ -210,6 +213,7 @@ static OpCmd decode[] =
     "sd",                       opCmdShowDisk,
     "se",                       opCmdShowEquipment,
     "ski",                      opCmdSetKeyInterval,
+    "skwi",                     opCmdSetKeyWaitInterval,
     "sop",                      opCmdSetOperatorPort,
     "ss",                       opCmdShowState,
     "st",                       opCmdShowTape,
@@ -225,6 +229,7 @@ static OpCmd decode[] =
     "show_all",                 opCmdShowAll,
     "show_disk",                opCmdShowDisk,
     "show_equipment",           opCmdShowEquipment,
+    "set_key_wait_interval",    opCmdSetKeyWaitInterval,
     "set_key_interval",         opCmdSetKeyInterval,
     "set_operator_port",        opCmdSetOperatorPort,
     "show_state",               opCmdShowState,
@@ -443,17 +448,17 @@ static void *opThread(void *param)
         #if defined(_WIN32)
         if (!kbhit())
             {
-            Sleep(50);
+            sleepMsec(10);
             continue;
             }
         #endif
-
+/*
         if (opActive)
             {
             sleepMsec(1);
             continue;
             }
-
+*/
         if (opHasInput(&opCmdStack[opCmdStackPtr]) == FALSE)
             {
             sleepMsec(10);
@@ -517,13 +522,13 @@ static void *opThread(void *param)
             }
 
         if (opPaused)
-            {
+        {
             /*
             **  Unblock main emulation thread.
             */
             opPaused = FALSE;
             continue;
-            }
+        }
 
         if (opActive)
             {
@@ -974,6 +979,7 @@ static void opHelpDumpMemory(void)
 **------------------------------------------------------------------------*/
 char opKeyIn = 0;
 long opKeyInterval = 250;
+long opKeyWaitInterval = 100;
 
 static void opCmdEnterKeys(bool help, char *cmdParams)
     {
@@ -1107,13 +1113,13 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
             }
         cp += 1;
         sleepMsec(opKeyInterval);
-        opWaitKeyConsume();
+        // 20220609: sjz Removing this - because the above should be "it" // opWaitKeyConsume();
         }
     if (*cp != '!')
         {
         opKeyIn = '\r';
         sleepMsec(opKeyInterval);
-        opWaitKeyConsume();
+        // 20220609: sjz Removing this - because the above should be "it" // opWaitKeyConsume();
         }
     opCmdPrompt();
     }
@@ -1140,7 +1146,7 @@ static void opWaitKeyConsume()
     {
     while (opKeyIn != 0 || ppKeyIn != 0)
         {
-        sleepMsec(100);
+        sleepMsec(opKeyWaitInterval);
     	}
     }
 
@@ -1171,6 +1177,7 @@ static void opCmdSetKeyInterval(bool help, char *cmdParams)
     if (numParam != 1)
         {
         fputs("    > Missing or invalid parameter\n", out);
+        opHelpSetKeyInterval();
         return;
         }
     opKeyInterval = msec;
@@ -1179,7 +1186,48 @@ static void opCmdSetKeyInterval(bool help, char *cmdParams)
 static void opHelpSetKeyInterval(void)
     {
     fputs("    > 'set_key_interval <millisecs>' set the interval between key entries to the system console.\n", out);
+    fprintf(out, "    > [Current Key Interval is %d msec.]\n", opKeyInterval);
+}
+
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Set interval between console key scans.
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdSetKeyWaitInterval(bool help, char* cmdParams)
+{
+    int msec;
+    int numParam;
+
+    /*
+    **  Process help request.
+    */
+    if (help)
+    {
+        opHelpSetKeyWaitInterval();
+        return;
     }
+    numParam = sscanf(cmdParams, "%d", &msec);
+    if (numParam != 1)
+    {
+        fputs("    > Missing or invalid parameter\n", out);
+        opHelpSetKeyWaitInterval();
+        return;
+    }
+    opKeyWaitInterval = msec;
+}
+
+static void opHelpSetKeyWaitInterval(void)
+{
+    fputs("    > 'set_keywait_interval <millisecs>' set the interval between keyboard scans of the emulated system console.\n", out);
+    fprintf(out, "    > [Current Key Wait Interval is %d msec.]\n", opKeyWaitInterval);
+}
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Set TCP port on which to listen for operator connections
