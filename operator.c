@@ -452,13 +452,7 @@ static void *opThread(void *param)
             continue;
             }
         #endif
-/*
-        if (opActive)
-            {
-            sleepMsec(1);
-            continue;
-            }
-*/
+
         if (opHasInput(&opCmdStack[opCmdStackPtr]) == FALSE)
             {
             sleepMsec(10);
@@ -2235,7 +2229,7 @@ static void opCmdRemovePaper(bool help, char *cmdParams)
 
 static void opHelpRemovePaper(void)
     {
-    fputs("    > 'remove_paper <channel>,<equipment>[,<filename>]' remover paper from printer.\n", out);
+    fputs("    > 'remove_paper <channel>,<equipment>[,<filename>]' remove paper from printer.\n", out);
     }
 
 

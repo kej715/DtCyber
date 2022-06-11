@@ -351,21 +351,21 @@ static void initCyber(char *config)
     */
     if (initGetOctal("channels", 020, &chCount))
         {
-        fprintf(stderr, "(init   ) ***WARNING*** Entry 'channels' obsolete in section [cyber] in %s,\n", startupFile);
+        fprintf(stderr, "(init   ) ***WARNING*** Entry 'channels' obsolete in section [%s] in %s,\n", config, startupFile);
         fprintf(stderr, "                        channel count is determined from PP count.\n");
         exit(1);
         }
 
     if (initGetString("cmFile", "", dummy, sizeof(dummy)))
         {
-        fprintf(stderr, "(init   ) ***WARNING*** Entry 'cmFile' obsolete in section [cyber] in %s,\n", startupFile);
+        fprintf(stderr, "(init   ) ***WARNING*** Entry 'cmFile' obsolete in section [%s] in %s,\n", config, startupFile);
         fprintf(stderr, "                        please use 'persistDir' instead.\n");
         exit(1);
         }
 
     if (initGetString("ecsFile", "", dummy, sizeof(dummy)))
         {
-        fprintf(stderr, "(init   ) ***WARNING*** Entry 'ecsFile' obsolete in section [cyber] in %s,\n", startupFile);
+        fprintf(stderr, "(init   ) ***WARNING*** Entry 'ecsFile' obsolete in section [%s] in %s,\n", config, startupFile);
         fprintf(stderr, "                        please use 'persistDir' instead.\n");
         exit(1);
     }
@@ -493,21 +493,21 @@ static void initCyber(char *config)
         struct stat s;
         if (stat(persistDir, &s) != 0)
             {
-            fprintf(stderr, "(init   ) Entry 'persistDir' in section [cyber] in %s\n", startupFile);
+            fprintf(stderr, "(init   ) Entry 'persistDir' in section [%s] in %s\n", config, startupFile);
             fprintf(stderr, "          specifies non-existing directory '%s'.\n", persistDir);
             exit(1);
             }
 
         if ((s.st_mode & S_IFDIR) == 0)
             {
-            fprintf(stderr, "(init   ) Entry 'persistDir' in section [cyber] in %s\n", startupFile);
+            fprintf(stderr, "(init   ) Entry 'persistDir' in section [%s] in %s\n", config, startupFile);
             fprintf(stderr, "          '%s' is not a directory.\n", persistDir);
             exit(1);
             }
         }
     else
     {
-        fprintf(stderr, "(init   ) Entry 'persistDir' was not found in section [cyber] in %s\n", startupFile);
+        fprintf(stderr, "(init   ) Entry 'persistDir' was not found in section [%s] in %s\n", config, startupFile);
         exit(1);
     }
 
@@ -522,7 +522,7 @@ static void initCyber(char *config)
     (void)initGetOctal("pps", 012, &pps);
     if (pps != 012 && pps != 024)
         {
-        fprintf(stderr, "(init   ) Entry 'pps' invalid in section [cyber] in %s - supported values are 12 or 24\n", startupFile);
+        fprintf(stderr, "(init   ) Entry 'pps' invalid in section [%s] in %s - supported values are 012 or 024 (octal)\n", config, startupFile);
         exit(1);
         }
 
@@ -547,7 +547,7 @@ static void initCyber(char *config)
     */
     if (!initGetString("deadstart", "", deadstart, sizeof(deadstart)))
         {
-        fprintf(stderr, "(init   ) Required entry 'deadstart' in section [cyber] not found in %s\n", startupFile);
+        fprintf(stderr, "(init   ) Required entry 'deadstart' in section [%s] not found in %s\n", config, startupFile);
         exit(1);
         }
 
@@ -610,7 +610,7 @@ static void initCyber(char *config)
     */
     if (!initGetString("equipment", "", equipment, sizeof(equipment)))
         {
-        fprintf(stderr, "(init   ) Required entry 'equipment' in section [cyber] not found in %s\n", startupFile);
+        fprintf(stderr, "(init   ) Required entry 'equipment' in section [%s] not found in %s\n", config, startupFile);
         exit(1);
         }
 
