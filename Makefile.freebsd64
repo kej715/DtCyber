@@ -102,7 +102,7 @@ frend2/frend2:
 
 clean:
 	rm -f *.o; \
-	$(MAKE) -C stk clean
+	$(MAKE) -C stk clean; \
 	$(MAKE) -f Makefile.freebsd64 -C frend2 clean
 
 %.o : %.c $(HDRS)
