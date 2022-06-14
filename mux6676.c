@@ -702,7 +702,6 @@ static void mux667xDisconnect(void)
 **------------------------------------------------------------------------*/
 static void mux667xCheckIo(MuxParam *mp)
     {
-    int activeCount;
     PortParam *availablePort;
 #if defined(_WIN32)
     u_long blockEnable = 1;

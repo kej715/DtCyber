@@ -5,7 +5,6 @@
  */
 
 #include "msufrend_util.h"
-#include <sys/mman.h>
 #include <sys/stat.h>        /* For mode constants */
 #include <fcntl.h>           /* For O_* constants */
 #include <string.h>
@@ -182,16 +181,12 @@ FrendMapMemoryWindows(char *lpMappingName, DWORD dwNumberOfBytesToMap)
    DWORD dwDesiredAccess = FILE_MAP_ALL_ACCESS;	/* access mode */
    DWORD dwFileOffsetHigh=0;	/* high-order 32 bits of file offset */
    DWORD dwFileOffsetLow=0;	/* low-order 32 bits of file offset */
-   DWORD dwGetVer;
    LPSECURITY_ATTRIBUTES lpFileMappingAttributes;
 
    /* Create permissive security attributes */
    SECURITY_ATTRIBUTES     sa;
    CreateNullSecurity(&sa);
    lpFileMappingAttributes = &sa;
-   dwGetVer = GetVersion();
-   /* Windows 95 gets no security attributes */
-   if ((dwGetVer & 0x80000000)) lpFileMappingAttributes = NULL;
 
    hFileMappingObject = CreateFileMapping(
      hMappingFile,	/* handle to file to map */

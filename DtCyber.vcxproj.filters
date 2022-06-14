@@ -190,6 +190,12 @@
     <ClCompile Include="rtc_rdtsc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="msufrend.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="msufrend_util.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="const.h">
@@ -212,6 +218,9 @@
     </ClInclude>
     <ClInclude Include="types.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="msufrend_util.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

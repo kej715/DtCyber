@@ -760,8 +760,6 @@ static void dsa311Disconnect(void)
 **------------------------------------------------------------------------*/
 static void dsa311AppendCRC(Dsa311Context *cp)
     {
-    u8 *bp;
-
     cp->ppInBuf.data[cp->ppInBuf.in++] = cp->crc >> 8;
     cp->ppInBuf.data[cp->ppInBuf.in++] = cp->crc & 0xff;
     }

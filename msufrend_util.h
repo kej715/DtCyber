@@ -42,7 +42,6 @@
 
 /*====  OS portability section ===============================*/
 #ifdef WIN32
-#define EWOULDBLOCK WSAEWOULDBLOCK
 /* Windows and Linux use different signed vs. unsigned for the size of sockaddr. */
 typedef int TypSockAddrLen;
 #else

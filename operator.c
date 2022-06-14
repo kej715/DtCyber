@@ -39,6 +39,7 @@
 #include "types.h"
 #include "proto.h"
 #if defined(_WIN32)
+#include <direct.h>
 #include <windows.h>
 #include <winsock.h>
 #else
