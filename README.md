@@ -61,4 +61,7 @@ StorageTek 4400 automated cartridge tape system simulator). If you want to build
 
 To build *dtcyber* on Windows, open the solution file (*DtCyber.sln*) in Visual
 Studio and build the project defined by it.
- 
+
+## Contributing
+See [CONTRIBUTING.md](CONTRIBUTING.md) for information about contributing new
+features, enhancements, and bug fixes to the simulator.
