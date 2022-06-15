@@ -17,6 +17,13 @@ int main(int argc, char *argv[])
 
     while (fgets(line, MAX_LINE, stdin))
         {
+        if (strcmp(line, "void *\n") == 0
+            || strcmp(line, "static void *\n") == 0)
+            {
+            for (cp = line; *cp != '\n'; cp++)
+                ;
+            *cp = '\0';
+            }
         fputs(line, stdout);
         for (cp = line; isspace(*cp); cp++)
             ;
