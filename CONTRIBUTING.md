@@ -13,13 +13,15 @@ they conform to the coding style discussed below.
 merge your changes into main repo.
 
 ## Coding Style
-Code must conform to the coding style established by Tom Hunter, the original creator of *DtCyber*. Review the existing source code to become familiar with the style. The
+Code must conform to the coding style established by Tom Hunter, the original creator of
+*DtCyber*. Review the existing source code to become familiar with the style. The
 essential rules are:
 
 **Indentation**. Spaces must be used for indentation, and each level of indentation
 is four spaces. Tabs are not accepted.
 
-**Braces** Braces are indented the same number of spaces as the body of code they surround. For example, an *if* statement looks like:
+**Braces** Braces are indented the same number of spaces as the body of code they
+surround. For example, an *if* statement looks like:
 
 >     if (condition)
 >         {
@@ -85,7 +87,8 @@ Underscores are **not** used in field names. For example, a conformant field
 name is `conformantFieldName`. Names such as `FieldName` and `field_name`
 are **non-conformant**.
 
-**constant names** Constant names begin with an upper case letter. Camel case may be used to indicate where words begin and end, or a constant name may be entirely upper
+**constant names** Constant names begin with an upper case letter. Camel case may be
+used to indicate where words begin and end, or a constant name may be entirely upper
 case, and underscores may be used to indicate where words begin and end. For example,
 conformant constant names are `ConstantName` and `CONSTANT_NAME`. Non-conformant
 constant names are `constantName` (it looks like a variable name) and `constant_name`
@@ -140,4 +143,8 @@ with the required coding style. For example, the shell script `se-tools/style.sh
 accepts a file name, applies [`uncrustify`](https://github.com/uncrustify/uncrustify)
 to it, and then post-processes the output to produce an output stream conforming to
 the indentation and whitespace rules discussed above. `uncrustify` is a widely used
-tool for formatting source code according to predefined styling rules. The file, `se-tools/style.cfg`, provides most of the indentation and whitespace rules needed by `uncrustify` to support the required *DtCyber* coding style. In addition, `se-tools/pp` is a simple C program that can be applied to the output of `uncrustify` to post-process *switch* statements so that they conform to *DtCyber* coding style too.
+tool for formatting source code according to predefined styling rules. The file,
+`se-tools/style.cfg`, provides most of the indentation and whitespace rules needed by
+`uncrustify` to support the required *DtCyber* coding style. In addition, `se-tools/pp`
+is a simple C program that can be applied to the output of `uncrustify` to post-process
+*switch* statements so that they conform to *DtCyber* coding style too.
