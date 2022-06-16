@@ -75,7 +75,14 @@ a private function definition looks like:
 **variable names** Variable names and formal parameter names begin with a lower case
 letter, and *camel case* is used to indicate where words begin and end within names.
 Underscores are **not** used in variable names. For example, a conformant variable
-name is `conformantVariableName`. Names such as `VariableName` and `variable_name`
+name is `conformantVariableName`, and a conformant parameter name is `parameterName`.
+Names such as `VariableName`, `variable_name`, and `parameter_name` are
+**non-conformant**.
+
+**field names** Names of fields in structs and unions begin with a lower case
+letter, and *camel case* is used to indicate where words begin and end within names.
+Underscores are **not** used in field names. For example, a conformant field
+name is `conformantFieldName`. Names such as `FieldName` and `field_name`
 are **non-conformant**.
 
 **constant names** Constant names begin with an upper case letter. Camel case may be used to indicate where words begin and end, or a constant name may be entirely upper
@@ -86,7 +93,29 @@ constant names are `constantName` (it looks like a variable name) and `constant_
 
 **typedef names** Names of types defined by *typedef* declarations begin with an
 upper case letter, and *camel case* is used to indicate where words begin and end
-within them. Underscores are **not** used in *typedef* names.
+within them. Underscores are **not** used in *typedef* names. For example:
+
+>     typedef struct feiBuffer
+>         {
+>         u32 in;
+>         u32 out;
+>         u8  data[MaxByteBuf];
+>         } FeiBuffer;
+
+**enum members** Member names in enums begin with an upper case letter, and camel case
+is used to indicate where words begin and end. For example:
+
+>     typedef enum
+>         {
+>         StDsa311OutSOH = 0,
+>         StDsa311OutENQ,
+>         StDsa311OutDLE1,
+>         StDsa311OutDLE2,
+>         StDsa311OutETB1,
+>         StDsa311OutETB2,
+>         StDsa311OutCRC1,
+>         StDsa311OutCRC2
+>         } Dsa311OutputState;
 
 **function names** Like variable names, function names begin with a lower case
 letter, and *camel case* is used to indicate where words begin and end within them.
