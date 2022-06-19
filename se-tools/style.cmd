@@ -180,6 +180,8 @@ uncrustify -c "%~dp0style.cfg" -f "%~dp2%~1" | pp   > "%~dp2%~1.formatted.txt"
 diff -E -Z "%~dp2%~1" "%~dp2%~1.formatted.txt"      > "%~dp2%~1.diff"
 if !ERRORLEVEL! EQU 0 (
     echo :: No Format Changes Detected
+    erase "%~dp2%~1.formatted.txt"
+    erase "%~dp2%~1.diff"
     exit /b
 )
 

@@ -1,0 +1,103 @@
+;   --------------------------------------------------------------------------
+;   
+;      Copyright (c) 2022, Steven Zoppi
+;   
+;      Name: style_process_list.txt
+;   
+;      Description:
+;          (Windows Development)
+;          This is the text file input for style.cmd
+;          which post-processes the enumerated files to ensure
+;          semantic consistency of the codebase.
+;   
+;   
+;   --------------------------------------------------------------------------
+;
+;   This is a list of files which must be passed through the
+;   syntax post-processing filter to ensure consistency of the
+;   codebase prior to the creation of a pull-request.
+;
+;   Use of this file list may be preferred when simple wildcard
+;   processing is too imprecise.
+;
+;   NOTE:   Filenames in this list are 
+;           ALWAYS RELATIVE TO THE PATH 
+;           CONTAINING THIS FILE
+;
+cdcnet.c
+channel.c
+charset.c
+console.c
+const.h
+cp3446.c
+cpu.c
+cr3447.c
+cr405.c
+cray_station.c
+cyber_channel_linux.h
+cyber_channel_win32.h
+dcc6681.c
+dcc6681.h
+dd6603.c
+dd885-42.c
+dd8xx.c
+ddp.c
+deadstart.c
+device.c
+dirent.c
+dirent.h
+dsa311.c
+dump.c
+float.c
+fsmon.c
+init.c
+interlock_channel.c
+log.c
+lp1612.c
+lp3000.c
+main.c
+maintenance_channel.c
+mdi.c
+msufrend.c
+msufrend_util.c
+msufrend_util.h
+mt362x.c
+mt5744.c
+mt607.c
+mt669.c
+mt679.c
+mux6676.c
+niu.c
+npu.h
+npu_async.c
+npu_bip.c
+npu_hasp.c
+npu_hip.c
+npu_lip.c
+npu_net.c
+npu_nje.c
+npu_svm.c
+npu_tip.c
+operator.c
+pci_channel_linux.c
+pci_channel_win32.c
+pci_console_linux.c
+pp.c
+proto.h
+resource.h
+rtc.c
+rtc_rdtsc.c
+scr_channel.c
+shift.c
+time.c
+tpmux.c
+trace.c
+types.h
+version.h
+window_win32.c
+window_x11.c
+frend2\frend2.c
+frend2\frend2_helpers.c
+frend2\frend2_helpers.h
+frend2\lmbi.h
+se-tools\pp.c
