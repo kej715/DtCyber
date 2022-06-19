@@ -33,7 +33,7 @@ setlocal ENABLEEXTENSIONS ENABLEDELAYEDEXPANSION
 ::
 if exist "C:\Windows\System32\where.exe" goto :Start
 set _returncode=10
-set _errormessage=("where" not found. Are you running Windows 10 or above?)
+set _errormessage="where" not found. Are you running Windows 10 or above^?
 goto :exit
 
 :Start
@@ -66,8 +66,23 @@ PATH %~dp0wintools;%PATH%
 
 :PathOK
 
+::
+::  Establish our storage directory
+::
+set _storagedir=%~dp0_Attic
+if exist "%_storagedir%" (
+    Call :IsDirectory "%_storagedir%"
+    set _returncode=!ERRORLEVEL!
+    if !_returncode! NEQ 0 (
+        set _errormessage="!_storagedir!" found, but is a file.  Must be directory.
+        goto :exit
+    )
+) else (
+    mkdir "%_storagedir%"
+)
+
 set _returncode=-1
-set _errormessage=(No Parameters)
+set _errormessage=No Parameters Provided
 If [%1] EQU [] goto :DisplayHelp
 
 ::
@@ -90,7 +105,9 @@ Set _ss=%_dtm:~12,2%
 Echo The current date/time is: %_yyyy%-%_mm%-%_dd%_%_hh%.%_nn%.%_ss%
 Endlocal&Set _dtm=%_YYYY%-%_mm%-%_dd%_%_hh%-%_nn%-%_ss%
 
-set _tarfile=%~dp0!_dtm!.tar
+set _tarfile=%_storagedir%\!_dtm!.tar
+echo :: Before, Diff and After images will be written to:
+echo :: File ^[!_tarfile!^]
 
 ::
 ::  Reset the return code and continue processing.
@@ -107,7 +124,7 @@ if EXIST "%~1" goto :InputFile
 
 Echo :: The filelist specified ^[%~1^] does not exist.
 set _returncode=2  
-set _errormessage=(list of lists does not exist)  
+set _errormessage=List of Files does not exist
 goto :Exit
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -156,7 +173,7 @@ exit /b
 :ProcFileFound
 echo :: ^[Processing^] "%~dp2%~1"
 
-set _errormessage=(Processing Successful)
+set _errormessage=Processing Successful
 
 ::  Put the original file into the current tarfile 
 ::  (preserving last modified date and time just in case we have to restore)
@@ -189,6 +206,16 @@ exit /b
 ::  End of ProcFile Subroutine
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:IsDirectory
+SETLOCAL
+Set _attr=%~a1
+Set _isdir=%_attr:~0,1%
+If /I "%_isdir%"=="d" (
+    REM %1 is a directory
+    Exit /b 0
+)
+REM %1 is NOT a directory
+Exit /b 2
 
 :DisplayHelp
 
