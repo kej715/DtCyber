@@ -175,6 +175,18 @@ echo :: ^[Processing^] "%~dp2%~1"
 
 set _errormessage=Processing Successful
 
+::  Reformat the code and put the output into the "formatted.txt" file.
+uncrustify -c "%~dp0style.cfg" -f "%~dp2%~1" | pp   > "%~dp2%~1.formatted.txt"
+diff -E -Z "%~dp2%~1" "%~dp2%~1.formatted.txt"      > "%~dp2%~1.diff"
+if !ERRORLEVEL! EQU 0 (
+    echo :: No Format Changes Detected
+    exit /b
+)
+
+::  Put the dated copy of the original into the _Attic directory for quick
+::  (additional) retrieval.
+cscript //NOLOGO "%~dp0_SendToAttic.vbs"  "%~dp2%~1"
+
 ::  Put the original file into the current tarfile 
 ::  (preserving last modified date and time just in case we have to restore)
 if not exist "!_tarfile!" (
@@ -182,15 +194,6 @@ if not exist "!_tarfile!" (
 ) else (
     tar -r -f "!_tarfile!" "%~dp2%~1"   
 )
-
-::  Put the dated copy of the original into the _Attic directory for quick
-::  (additional) retrieval.
-cscript //NOLOGO "%~dp0_SendToAttic.vbs"  "%~dp2%~1"
-
-::  Reformat the code and put the output into the "formatted.txt" file.
-uncrustify -c "%~dp0style.cfg" -f "%~dp2%~1" | pp   > "%~dp2%~1.formatted.txt"
-diff -E -Z "%~dp2%~1" "%~dp2%~1.formatted.txt"      > "%~dp2%~1.diff"
-
 ::  Write the newly formatted replacement to the archive (before copy/rename)
 tar -r -f "!_tarfile!" "%~dp2%~1.formatted.txt"     > NUL 2>&1
 ::  Write the diff to the TAR Archive
