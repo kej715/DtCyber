@@ -11,12 +11,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -24,7 +24,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -45,7 +45,7 @@
 **  Private Constants
 **  -----------------
 */
-#define NumBuffs        1000
+#define NumBuffs    1000
 
 /*
 **  -----------------------
@@ -78,10 +78,10 @@
 */
 static NpuBuffer *buffers = NULL;
 static NpuBuffer *bufPool = NULL;
-static int bufCount = 0;
+static int       bufCount = 0;
 
 static NpuBuffer *bipUplineBuffer = NULL;
-static NpuQueue *bipUplineQueue;
+static NpuQueue  *bipUplineQueue;
 
 static NpuBuffer *bipDownlineBuffer = NULL;
 
@@ -91,15 +91,16 @@ static enum
     BipDownSvm,
     BipDownDataLow,
     BipDownDataHigh,
-    } bipState = BipIdle;
+    }
+bipState = BipIdle;
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialize BIP.
@@ -113,13 +114,13 @@ void npuBipInit(void)
     {
     NpuBuffer *bp;
     NpuBuffer *np;
-    int count;
+    int       count;
 
     /*
     **  Allocate data buffer pool.
     */
     bufCount = NumBuffs;
-    buffers = bufPool = calloc(NumBuffs, sizeof(NpuBuffer));
+    buffers  = bufPool = calloc(NumBuffs, sizeof(NpuBuffer));
     if (bufPool == NULL)
         {
         fprintf(stderr, "Failed to allocate NPU data buffer pool\n");
@@ -135,9 +136,9 @@ void npuBipInit(void)
         /*
         **  Link to next buffer.
         */
-        np = bp + 1;
+        np       = bp + 1;
         bp->next = np;
-        bp = np;
+        bp       = np;
         }
 
     bp->next = NULL;
@@ -219,15 +220,15 @@ NpuBuffer *npuBipBufGet(void)
         /*
         **  Unlink allocated buffer.
         */
-        bufPool = bp->next;
+        bufPool   = bp->next;
         bufCount -= 1;
 
         /*
         **  Initialise buffer.
         */
-        bp->next = NULL;
-        bp->offset = 0;
-        bp->numBytes = 0;
+        bp->next       = NULL;
+        bp->offset     = 0;
+        bp->numBytes   = 0;
         bp->blockSeqNo = 0;
 #if DEBUG
         memset(bp->data, 0, MaxBuffer);
@@ -242,8 +243,8 @@ NpuBuffer *npuBipBufGet(void)
             /*
              *  Dump metadata and first 32 bytes of each buffer to stderr
              */
-            u8 *data;
-            int i,j,k;
+            u8  *data;
+            int i, j, k;
 
             for (i = 1, bp = buffers; i <= NumBuffs; i++, bp++)
                 {
@@ -259,7 +260,7 @@ NpuBuffer *npuBipBufGet(void)
                     data -= 16;
                     for (k = 0; k < 16; k++)
                         {
-                        if (*data >= 0x20 && *data < 0x7f)
+                        if ((*data >= 0x20) && (*data < 0x7f))
                             {
                             fprintf(stderr, "%c", *data);
                             }
@@ -272,14 +273,14 @@ NpuBuffer *npuBipBufGet(void)
                     fputc('\n', stderr);
                     }
                 }
-            data = NULL;
+            data  = NULL;
             *data = 0; // force SEGV to facilitate debugger usage
             }
 #endif
         exit(1);
         }
 
-    return(bp);
+    return (bp);
     }
 
 /*--------------------------------------------------------------------------
@@ -298,8 +299,8 @@ void npuBipBufRelease(NpuBuffer *bp)
         /*
         **  Link buffer back into the pool.
         */
-        bp->next = bufPool;
-        bufPool = bp;
+        bp->next  = bufPool;
+        bufPool   = bp;
         bufCount += 1;
         }
     }
@@ -328,7 +329,7 @@ void npuBipQueueAppend(NpuBuffer *bp, NpuQueue *queue)
             }
 
         queue->last = bp;
-        bp->next = NULL;
+        bp->next    = NULL;
         }
     }
 
@@ -351,7 +352,7 @@ void npuBipQueuePrepend(NpuBuffer *bp, NpuQueue *queue)
             queue->last = bp;
             }
 
-        bp->next = queue->first;
+        bp->next     = queue->first;
         queue->first = bp;
         }
     }
@@ -378,7 +379,7 @@ NpuBuffer *npuBipQueueExtract(NpuQueue *queue)
             }
         }
 
-    return(bp);
+    return (bp);
     }
 
 /*--------------------------------------------------------------------------
@@ -393,7 +394,7 @@ NpuBuffer *npuBipQueueExtract(NpuQueue *queue)
 **------------------------------------------------------------------------*/
 NpuBuffer *npuBipQueueGetLast(NpuQueue *queue)
     {
-    return(queue->last);
+    return (queue->last);
     }
 
 /*--------------------------------------------------------------------------
@@ -408,7 +409,7 @@ NpuBuffer *npuBipQueueGetLast(NpuQueue *queue)
 **------------------------------------------------------------------------*/
 bool npuBipQueueNotEmpty(NpuQueue *queue)
     {
-    return(queue->first != NULL);
+    return (queue->first != NULL);
     }
 
 /*--------------------------------------------------------------------------
@@ -486,7 +487,7 @@ void npuBipRetryInput(void)
 void npuBipNotifyDownlineReceived(void)
     {
     NpuBuffer *bp = bipDownlineBuffer;
-    u8 dn;
+    u8        dn;
 
     /*
     **  BIP loses ownership of the downline buffer.
@@ -496,22 +497,22 @@ void npuBipNotifyDownlineReceived(void)
 
     if (dn == npuSvmNpuNode)
         {
-    /*
-    **  Hand over the buffer to SVM or TIP.
-    */
-    switch (bipState)
-        {
-    case BipDownSvm:
-        npuSvmProcessBuffer(bp);
-        break;
+        /*
+        **  Hand over the buffer to SVM or TIP.
+        */
+        switch (bipState)
+            {
+        case BipDownSvm:
+            npuSvmProcessBuffer(bp);
+            break;
 
-    case BipDownDataLow:
-        npuTipProcessBuffer(bp, 0);
-        break;
+        case BipDownDataLow:
+            npuTipProcessBuffer(bp, 0);
+            break;
 
-    case BipDownDataHigh:
-        npuTipProcessBuffer(bp, 1);
-        break;
+        case BipDownDataHigh:
+            npuTipProcessBuffer(bp, 1);
+            break;
             }
         }
     else if (dn == cdcnetNode)
@@ -549,7 +550,7 @@ void npuBipAbortDownlineReceived(void)
     */
     npuBipBufRelease(bipDownlineBuffer);
     bipDownlineBuffer = NULL;
-    bipState = BipIdle;
+    bipState          = BipIdle;
 
     /*
     **  Check if any more upline buffer is pending and send if necessary.
@@ -577,6 +578,7 @@ void npuBipRequestUplineTransfer(NpuBuffer *bp)
         **  Upline buffer pending, so queue this one for later.
         */
         npuBipQueueAppend(bp, bipUplineQueue);
+
         return;
         }
 
@@ -604,6 +606,7 @@ void npuBipRequestUplineTransfer(NpuBuffer *bp)
 void npuBipRequestUplineCanned(u8 *msg, int msgSize)
     {
     NpuBuffer *bp = npuBipBufGet();
+
     if (bp == NULL)
         {
         return;
@@ -640,11 +643,11 @@ void npuBipNotifyUplineSent(void)
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*---------------------------  End Of File  ------------------------------*/

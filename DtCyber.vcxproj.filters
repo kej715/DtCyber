@@ -267,5 +267,17 @@
     <None Include="Makefile.solaris64">
       <Filter>Other Files</Filter>
     </None>
+    <None Include="x64Debug.iss">
+      <Filter>Other Files</Filter>
+    </None>
+    <None Include="x64Release.iss">
+      <Filter>Other Files</Filter>
+    </None>
+    <None Include="x86Debug.iss">
+      <Filter>Other Files</Filter>
+    </None>
+    <None Include="x86Release.iss">
+      <Filter>Other Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

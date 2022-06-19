@@ -338,3 +338,6 @@ ASALocalRun/
 
 # BeatPulse healthcheck temp database
 healthchecksdb
+
+# 20220618 SJZ: Code Reformatter Backups
+**/_Attic

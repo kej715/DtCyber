@@ -10,9 +10,9 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG_PP    0
-#define DEBUG_NET   0
-#define REAL_TIMING 1
+#define DEBUG_PP       0
+#define DEBUG_NET      0
+#define REAL_TIMING    1
 
 /*
 **  -------------
@@ -37,33 +37,34 @@
 #include "const.h"
 #include "types.h"
 #include "proto.h"
+
 /*
 **  -----------------
 **  Private Constants
 **  -----------------
 */
-#define NiuLocalStations        32          // range reserved for local stations
-#define NiuLocalBufSize         50          // size of local input buffer
+#define NiuLocalStations    32              // range reserved for local stations
+#define NiuLocalBufSize     50              // size of local input buffer
 
-#define IoTurnsPerPoll          4
-#define InBufSize               32
-#define OutBufSize              256
+#define IoTurnsPerPoll      4
+#define InBufSize           32
+#define OutBufSize          256
 
 /*
 **  Function codes.
 */
-#define FcNiuOutput             00000
-#define FcNiuInput              00040
+#define FcNiuOutput         00000
+#define FcNiuInput          00040
 
 /*
 **  -----------------------
 **  Private Macro Functions
 **  -----------------------
 */
-#if DEBUG_PP||DEBUG_NET
-#define HexColumn(x) (3 * (x) + 4)
-#define AsciiColumn(x) (HexColumn(16) + 2 + (x))
-#define LogLineLength (AsciiColumn(16))
+#if DEBUG_PP || DEBUG_NET
+#define HexColumn(x)      (3 * (x) + 4)
+#define AsciiColumn(x)    (HexColumn(16) + 2 + (x))
+#define LogLineLength    (AsciiColumn(16))
 #endif
 
 /*
@@ -74,10 +75,10 @@
 typedef struct portParam
     {
     int  id;
-    int         connFd;
-    u16         currInput;
-    u8          ibytes;      // how many bytes have been assembled into currInput (0..2)
-    bool        active;
+    int  connFd;
+    u16  currInput;
+    u8   ibytes;             // how many bytes have been assembled into currInput (0..2)
+    bool active;
     int  inInIdx;
     int  inOutIdx;
     u8   inBuffer[InBufSize];
@@ -88,7 +89,7 @@ typedef struct portParam
 
 typedef struct localRing
     {
-    u8 buf[NiuLocalBufSize];
+    u8  buf[NiuLocalBufSize];
     int get;
     int put;
     } LocalRing;
@@ -112,8 +113,10 @@ static void niuCheckIo(void);
 static void niuWelcome(int stat);
 static void niuSend(int stat, int word);
 static void niuSendstr(int stat, const char *p);
-#if DEBUG_PP||DEBUG_NET
+
+#if DEBUG_PP || DEBUG_NET
 static char *niuFunc2String(PpWord funcCode);
+
 #endif
 
 /*
@@ -129,36 +132,36 @@ u16 platoConns;
 **  Private Variables
 **  -----------------
 */
-static int currInPort;
-static u32 currOutput;
-static DevSlot *in;
-static int ioTurns = IoTurnsPerPoll - 1;
-static DevSlot *out;
-static int lastInPort;
-static int listenFd;
-static LocalRing localInput[NiuLocalStations];
-static int obytes;
+static int              currInPort;
+static u32              currOutput;
+static DevSlot          *in;
+static int              ioTurns = IoTurnsPerPoll - 1;
+static DevSlot          *out;
+static int              lastInPort;
+static int              listenFd;
+static LocalRing        localInput[NiuLocalStations];
+static int              obytes;
 static niuProcessOutput *outputHandler[NiuLocalStations];
-static PortParam *portVector;
+static PortParam        *portVector;
 
 #if REAL_TIMING
 static bool frameStart;
-static u32 lastFrame;
+static u32  lastFrame;
 #endif
 
-#if DEBUG_PP||DEBUG_NET
+#if DEBUG_PP || DEBUG_NET
 static FILE *niuLog = NULL;
 static char niuLogBuf[LogLineLength + 1];
 static int  niuLogBytesCol = 0;
 #endif
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise NIU-IN
@@ -181,27 +184,30 @@ void niuInInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     if (in != NULL)
         {
         fputs("Multiple NIUs not supported\n", stderr);
-        exit (1);
+        exit(1);
         }
-    
-    in = channelAttach(channelNo, eqNo, DtNiu);
-    in->activate = niuActivate;
-    in->disconnect = niuDisconnect;
-    in->func = niuInFunc;
-    in->io = niuInIo;
 
-    if (params == NULL) params = "";
+    in             = channelAttach(channelNo, eqNo, DtNiu);
+    in->activate   = niuActivate;
+    in->disconnect = niuDisconnect;
+    in->func       = niuInFunc;
+    in->io         = niuInIo;
+
+    if (params == NULL)
+        {
+        params = "";
+        }
     numParam = sscanf(params, "%d,%d", &listenPort, &portCount);
     if (numParam > 1)
         {
-        platoPort = listenPort;
+        platoPort  = listenPort;
         platoConns = portCount;
         }
     else if (numParam > 0)
         {
         platoPort = listenPort;
         }
-    if (platoPort < 1 || platoPort > 65535)
+    if ((platoPort < 1) || (platoPort > 65535))
         {
         fprintf(stderr, "(niu    ) Invalid TCP port number in NIU definition: %d\n", platoPort);
         exit(1);
@@ -212,7 +218,10 @@ void niuInInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
         exit(1);
         }
 
-    if (out != NULL) niuInit();
+    if (out != NULL)
+        {
+        niuInit();
+        }
 
     /*
     **  Print a friendly message.
@@ -236,17 +245,20 @@ void niuOutInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
     if (out != NULL)
         {
-        fputs ("Multiple NIUs not supported\n", stderr);
-        exit (1);
+        fputs("Multiple NIUs not supported\n", stderr);
+        exit(1);
         }
 
-    out = channelAttach(channelNo, eqNo, DtNiu);
-    out->activate = niuActivate;
+    out             = channelAttach(channelNo, eqNo, DtNiu);
+    out->activate   = niuActivate;
     out->disconnect = niuDisconnect;
-    out->func = niuOutFunc;
-    out->io = niuOutIo;
+    out->func       = niuOutFunc;
+    out->io         = niuOutIo;
 
-    if (in != NULL) niuInit();
+    if (in != NULL)
+        {
+        niuInit();
+        }
 
     /*
     **  Print a friendly message.
@@ -279,24 +291,26 @@ bool niuPresent(void)
 **------------------------------------------------------------------------*/
 void niuLocalKey(u16 key, int stat)
     {
-    int nextput;
+    int       nextput;
     LocalRing *rp;
 
     if (stat >= NiuLocalStations)
         {
-        fprintf (stderr, "Local station number out of range: %d\n", stat);
-        exit (1);
+        fprintf(stderr, "Local station number out of range: %d\n", stat);
+        exit(1);
         }
     rp = &localInput[stat];
 
     nextput = rp->put + 1;
     if (nextput == NiuLocalBufSize)
+        {
         nextput = 0;
+        }
 
     if (nextput != rp->get)
         {
         rp->buf[rp->put] = (u8)key;
-        rp->put = nextput;
+        rp->put          = nextput;
         }
     }
 
@@ -314,19 +328,19 @@ void niuSetOutputHandler(niuProcessOutput *h, int stat)
     {
     if (stat >= NiuLocalStations)
         {
-        fprintf (stderr, "Local station number out of range: %d\n", stat);
-        exit (1);
+        fprintf(stderr, "Local station number out of range: %d\n", stat);
+        exit(1);
         }
     outputHandler[stat] = h;
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Execute function code on NIU input channel.
@@ -342,18 +356,18 @@ static void niuInit(void)
 #if defined(_WIN32)
     u_long blockEnable = 1;
 #endif
-    u8 i;
-    int optEnable = 1;
-    PortParam *pp;
+    u8                 i;
+    int                optEnable = 1;
+    PortParam          *pp;
     struct sockaddr_in server;
 
-#if DEBUG_PP||DEBUG_NET
+#if DEBUG_PP || DEBUG_NET
     if (niuLog == NULL)
         {
         niuLog = fopen("niuLog.txt", "wt");
         fputs("\nniuLog opened.\n", niuLog);
         }
-    #endif
+#endif
 
     pp = portVector = calloc(platoConns, sizeof(PortParam));
     if (portVector == NULL)
@@ -369,7 +383,7 @@ static void niuInit(void)
     */
     for (i = 0; i < platoConns; i++)
         {
-        pp->id = i;
+        pp->id     = i;
         pp->active = FALSE;
         pp->connFd = 0;
         pp->ibytes = 0;
@@ -383,7 +397,7 @@ static void niuInit(void)
 
     currInPort = -1;
     lastInPort = 0;
-    ioTurns = IoTurnsPerPoll - 1;
+    ioTurns    = IoTurnsPerPoll - 1;
 
     /*
     **  Create socket, bind to specified port, and begin listening for connections
@@ -394,6 +408,7 @@ static void niuInit(void)
         fprintf(stderr, "(niu    ) Can't create socket for NIU on port %d\n", platoPort);
         exit(1);
         }
+
     /*
     **  Accept will block if client drops connection attempt between select and accept.
     **  We can't block so make listening socket non-blocking to avoid this condition.
@@ -403,19 +418,21 @@ static void niuInit(void)
 #else
     fcntl(listenFd, F_SETFL, O_NONBLOCK);
 #endif
+
     /*
     **  Bind to configured TCP port number
     */
     setsockopt(listenFd, SOL_SOCKET, SO_REUSEADDR, (void *)&optEnable, sizeof(optEnable));
     memset(&server, 0, sizeof(server));
-    server.sin_family = AF_INET;
+    server.sin_family      = AF_INET;
     server.sin_addr.s_addr = inet_addr("0.0.0.0");
-    server.sin_port = htons(platoPort);
+    server.sin_port        = htons(platoPort);
     if (bind(listenFd, (struct sockaddr *)&server, sizeof(server)) < 0)
         {
         fprintf(stderr, "(niu    ) Can't bind to listen socket for NIU on port %d\n", platoPort);
         exit(1);
         }
+
     /*
     **  Start listening for new connections on this TCP port number
     */
@@ -443,22 +460,23 @@ static FcStatus niuInFunc(PpWord funcCode)
     {
 #if DEBUG_PP
     fprintf(niuLog, "\n%06d PP:%02o CH:%02o f:%04o T:%-8s >   ",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id,
-        funcCode,
-        niuFunc2String(funcCode));
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id,
+            funcCode,
+            niuFunc2String(funcCode));
 #endif
     niuCheckIo();
     if (funcCode == FcNiuInput)
         {
-        currInPort = -1;
-    activeDevice->fcode = funcCode;
-    return(FcAccepted);
-    }
+        currInPort          = -1;
+        activeDevice->fcode = funcCode;
+
+        return (FcAccepted);
+        }
     else
         {
-        return(FcDeclined);
+        return (FcDeclined);
         }
     }
 
@@ -475,22 +493,23 @@ static FcStatus niuOutFunc(PpWord funcCode)
     {
 #if DEBUG_PP
     fprintf(niuLog, "\n%06d PP:%02o CH:%02o f:%04o T:%-8s >   ",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id,
-        funcCode,
-        niuFunc2String(funcCode));
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id,
+            funcCode,
+            niuFunc2String(funcCode));
 #endif
     niuCheckIo();
     if (funcCode == FcNiuOutput)
         {
         obytes = 0;
-    activeDevice->fcode = funcCode;
-    return(FcAccepted);
-    }
+        activeDevice->fcode = funcCode;
+
+        return (FcAccepted);
+        }
     else
         {
-        return(FcDeclined);
+        return (FcDeclined);
         }
     }
 
@@ -504,41 +523,48 @@ static FcStatus niuOutFunc(PpWord funcCode)
 **------------------------------------------------------------------------*/
 static void niuInIo(void)
     {
-    int port;
-    int in;
-    int nextget;
+    int       port;
+    int       in;
+    int       nextget;
     PortParam *pp;
     LocalRing *rp;
-    
-    if (activeDevice->fcode != FcNiuInput || activeChannel->full)
+
+    if ((activeDevice->fcode != FcNiuInput) || activeChannel->full)
+        {
         return;
-    
+        }
+
     if (currInPort < 0)
         {
         // We're at the first of the two-word input sequence; find a
         // port with data.
         port = lastInPort;
-        for (;;)
+        for ( ; ;)
             {
             if (++port >= NiuLocalStations + platoConns)
+                {
                 port = 0;
+                }
             if (port < NiuLocalStations)
                 {
                 // check for local terminal input
                 rp = &localInput[port];
                 if (rp->get != rp->put)
                     {
-                    currInPort = lastInPort = port;
+                    currInPort          = lastInPort = port;
                     activeChannel->data = 04000 + currInPort;
                     activeChannel->full = TRUE;
+
                     return;
                     }
                 if (port == lastInPort)
+                    {
                     return;         // No input, leave channel empty
+                    }
                 continue;
                 }
             pp = portVector + (port - NiuLocalStations);
-            if (pp->active && pp->inOutIdx < pp->inInIdx)
+            if (pp->active && (pp->inOutIdx < pp->inInIdx))
                 {
                 /*
                 **  Port with active TCP connection has data available
@@ -550,45 +576,48 @@ static void niuInIo(void)
                     }
 #if DEBUG_PP
                 fprintf(niuLog, "\n%010u input byte %d %03o on port %d",
-                    traceSequenceNo, pp->ibytes, in, pp->id);
+                        traceSequenceNo, pp->ibytes, in, pp->id);
 #endif
-                    // Connection has data -- assemble it and see if we have
-                    // a complete input word
+                // Connection has data -- assemble it and see if we have
+                // a complete input word
                 if (pp->ibytes != 0)
+                    {
+                    if ((in & 0200) == 0)
                         {
-                        if ((in & 0200) == 0)
-                            {
-                            // Sequence error, drop the byte
-#if DEBUG_PP||DEBUG_NET
+                        // Sequence error, drop the byte
+#if DEBUG_PP || DEBUG_NET
                         fprintf(niuLog, "\n%010u input sequence error, second byte %03o, port %d",
-                            traceSequenceNo, in, port);
+                                traceSequenceNo, in, port);
 #endif
-                            continue;
-                            }
-                    pp->currInput |= (in & 0177);
-                        currInPort = lastInPort = port;
-                        activeChannel->data = 04000 + currInPort;
-                        activeChannel->full = TRUE;
-                        return;
+                        continue;
                         }
-                    else
-                        {
-                        // first byte of key data, save it for later
-                        if ((in & 370) != 0)
-                            {
-                            // sequence error, drop the byte
-#if DEBUG_PP||DEBUG_NET
-                        fprintf(niuLog, "\n%010u input sequence error, first byte %03o, port %d",
-                            traceSequenceNo, in, port);
-#endif
-                            continue;
-                            }
-                    pp->currInput = in << 7;
-                    pp->ibytes = 1;
-                        }
+                    pp->currInput      |= (in & 0177);
+                    currInPort          = lastInPort = port;
+                    activeChannel->data = 04000 + currInPort;
+                    activeChannel->full = TRUE;
+
+                    return;
                     }
+                else
+                    {
+                    // first byte of key data, save it for later
+                    if ((in & 370) != 0)
+                        {
+                        // sequence error, drop the byte
+#if DEBUG_PP || DEBUG_NET
+                        fprintf(niuLog, "\n%010u input sequence error, first byte %03o, port %d",
+                                traceSequenceNo, in, port);
+#endif
+                        continue;
+                        }
+                    pp->currInput = in << 7;
+                    pp->ibytes    = 1;
+                    }
+                }
             if (port == lastInPort)
+                {
                 return;         // No input, leave channel empty
+                }
             }
         }
     // We have a current port, so we already sent the port number;
@@ -596,22 +625,24 @@ static void niuInIo(void)
     if (currInPort < NiuLocalStations)
         {
         // local input, send a keypress format input word
-        rp = &localInput[currInPort];
+        rp      = &localInput[currInPort];
         nextget = rp->get + 1;
         if (nextget == NiuLocalBufSize)
+            {
             nextget = 0;
-        in = rp->buf[rp->get];
-        rp->get = nextget;
+            }
+        in                  = rp->buf[rp->get];
+        rp->get             = nextget;
         activeChannel->data = in << 1;
         }
     else
         {
         pp = portVector + (currInPort - NiuLocalStations);
         activeChannel->data = pp->currInput << 1;
-        pp->ibytes = 0;
+        pp->ibytes          = 0;
         }
     activeChannel->full = TRUE;
-    currInPort = -1;
+    currInPort          = -1;
     }
 
 /*--------------------------------------------------------------------------
@@ -625,11 +656,13 @@ static void niuInIo(void)
 static void niuOutIo(void)
     {
     PpWord d;
-    int port;
-    
-    if (activeDevice->fcode != FcNiuOutput || !activeChannel->full)
+    int    port;
+
+    if ((activeDevice->fcode != FcNiuOutput) || !activeChannel->full)
+        {
         return;
-    
+        }
+
     /*
     **  Output data.
     */
@@ -640,11 +673,12 @@ static void niuOutIo(void)
         {
         // first word of the triple
 #if REAL_TIMING
-        if(frameStart)
+        if (frameStart)
             {
-            if(rtcClock - lastFrame < (u32)16667)
+            if (rtcClock - lastFrame < (u32)16667)
                 {
                 activeChannel->full = TRUE;
+
                 return;
                 }
             lastFrame = rtcClock;
@@ -654,15 +688,16 @@ static void niuOutIo(void)
 #if DEBUG_PP
         fprintf(niuLog, "\n%010u output byte %d %04o", traceSequenceNo, obytes, d);
 #endif
-#if DEBUG_PP||DEBUG_NET
+#if DEBUG_PP || DEBUG_NET
         if ((d & 06000) != 04000)
             {
             fprintf(niuLog, "\n%010u output out of sync, first word %04o",
-                traceSequenceNo, d);
+                    traceSequenceNo, d);
             }
-        #endif
+#endif
         currOutput = (d & 01777) << 9;
-        obytes = 1;
+        obytes     = 1;
+
         return;
         }
 
@@ -673,38 +708,39 @@ static void niuOutIo(void)
     if (obytes == 1)
         {
         // second word of the triple
-#if DEBUG_PP||DEBUG_NET
+#if DEBUG_PP || DEBUG_NET
         if ((d & 06001) != 0)
             {
             fprintf(niuLog, "\n%010u output out of sync, second word %04o",
-                traceSequenceNo, d);
+                    traceSequenceNo, d);
             }
-        #endif
+#endif
         currOutput |= d >> 1;
-        obytes = 2;
+        obytes      = 2;
+
         return;
         }
     // Third word of the triple
-#if DEBUG_PP||DEBUG_NET
+#if DEBUG_PP || DEBUG_NET
     if ((d & 04000) != 0)
         {
         fprintf(niuLog, "\n%010u output out of sync, third word %04o",
-            traceSequenceNo, d);
+                traceSequenceNo, d);
         }
-    #endif
+#endif
 #if REAL_TIMING
     /*
-    **  If end of frame bit is set, remember that so the next 
+    **  If end of frame bit is set, remember that so the next
     **  output word is recognized as the start of a new frame.
     */
     if ((d & 02000) != 0)
-        {    
+        {
         frameStart = TRUE;
-        }    
+        }
 #endif
 
     port = (d & 01777);
-    niuSend (port, currOutput);
+    niuSend(port, currOutput);
     obytes = 0;
     }
 
@@ -743,8 +779,9 @@ static void niuDisconnect(void)
 **------------------------------------------------------------------------*/
 static void niuCheckIo(void)
     {
-    int activeCount;
+    int       activeCount;
     PortParam *availablePort;
+
 #if defined(_WIN32)
     u_long blockEnable = 1;
 #endif
@@ -754,23 +791,26 @@ static void niuCheckIo(void)
 #else
     socklen_t fromLen;
 #endif
-    int i;
-    int maxFd;
-    int n;
-    int optEnable = 1;
-    PortParam *pp;
-    fd_set readFds;
+    int            i;
+    int            maxFd;
+    int            n;
+    int            optEnable = 1;
+    PortParam      *pp;
+    fd_set         readFds;
     struct timeval timeout;
-    fd_set writeFds;
+    fd_set         writeFds;
 
     ioTurns = (ioTurns + 1) % IoTurnsPerPoll;
-    if (ioTurns != 0) return;
+    if (ioTurns != 0)
+        {
+        return;
+        }
 
     FD_ZERO(&readFds);
     FD_ZERO(&writeFds);
-    maxFd = 0;
+    maxFd         = 0;
     availablePort = NULL;
- 
+
     for (i = 0, pp = portVector; i < platoConns; i++, pp++)
         {
         if (pp->active)
@@ -778,86 +818,103 @@ static void niuCheckIo(void)
             if (pp->inInIdx < InBufSize)
                 {
                 FD_SET(pp->connFd, &readFds);
-                if (pp->connFd > maxFd) maxFd = pp->connFd;
+                if (pp->connFd > maxFd)
+                    {
+                    maxFd = pp->connFd;
+                    }
                 }
             if (pp->outInIdx > pp->outOutIdx)
                 {
                 FD_SET(pp->connFd, &writeFds);
-                if (pp->connFd > maxFd) maxFd = pp->connFd;
+                if (pp->connFd > maxFd)
+                    {
+                    maxFd = pp->connFd;
+                    }
+                }
             }
-        }
         else if (availablePort == NULL)
-        {
+            {
             availablePort = pp;
             FD_SET(listenFd, &readFds);
-            if (listenFd > maxFd) maxFd = listenFd;
+            if (listenFd > maxFd)
+                {
+                maxFd = listenFd;
+                }
             }
         }
 
-    if (maxFd < 1) return;
+    if (maxFd < 1)
+        {
+        return;
+        }
 
-    timeout.tv_sec = 0;
+    timeout.tv_sec  = 0;
     timeout.tv_usec = 0;
     n = select(maxFd + 1, &readFds, &writeFds, NULL, &timeout);
-    if (n < 1) return;
+    if (n < 1)
+        {
+        return;
+        }
 
     for (i = 0, pp = portVector; i < platoConns; i++, pp++)
         {
         if (pp->active)
-        {
+            {
             if (FD_ISSET(pp->connFd, &readFds))
-    {
+                {
                 n = recv(pp->connFd, &pp->inBuffer[pp->inInIdx], InBufSize - pp->inInIdx, 0);
                 if (n > 0)
-        {
+                    {
 #if DEBUG_NET
                     fprintf(niuLog, "\n%010u received %d bytes on port %02o",
-                        traceSequenceNo, n, pp->id);
+                            traceSequenceNo, n, pp->id);
                     niuLogBytes(&pp->inBuffer[pp->inInIdx], n);
 #endif
                     pp->inInIdx += n;
-        }
+                    }
                 else
-        {
+                    {
                     niuClose(pp);
-        }
-        }
-            if (FD_ISSET(pp->connFd, &writeFds) && pp->outOutIdx < pp->outInIdx)
-        {
+                    }
+                }
+            if (FD_ISSET(pp->connFd, &writeFds) && (pp->outOutIdx < pp->outInIdx))
+                {
                 n = send(pp->connFd, &pp->outBuffer[pp->outOutIdx], pp->outInIdx - pp->outOutIdx, 0);
                 if (n >= 0)
-            {
+                    {
 #if DEBUG_NET
                     fprintf(niuLog, "\n%010u sent %d bytes to port %02o",
-                        traceSequenceNo, n, pp->id);
+                            traceSequenceNo, n, pp->id);
                     niuLogBytes(&pp->outBuffer[pp->outOutIdx], n);
 #endif
                     pp->outOutIdx += n;
                     if (pp->outOutIdx >= pp->outInIdx)
-                {
+                        {
                         pp->outInIdx  = 0;
                         pp->outOutIdx = 0;
                         }
+                    }
                 }
             }
-            }
         }
-    if (availablePort != NULL && FD_ISSET(listenFd, &readFds))
+    if ((availablePort != NULL) && FD_ISSET(listenFd, &readFds))
         {
         fromLen = sizeof(from);
         availablePort->connFd = accept(listenFd, (struct sockaddr *)&from, &fromLen);
         if (availablePort->connFd > 0)
             {
-            availablePort->active = TRUE;
-            availablePort->inInIdx = 0;
-            availablePort->inOutIdx = 0;
-            availablePort->outInIdx = 0;
+            availablePort->active    = TRUE;
+            availablePort->inInIdx   = 0;
+            availablePort->inOutIdx  = 0;
+            availablePort->outInIdx  = 0;
             availablePort->outOutIdx = 0;
+
             /*
             **  Set Keepalive option so that we can eventually discover if
             **  a client has been rebooted.
             */
             setsockopt(availablePort->connFd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
+
             /*
             **  Make socket non-blocking.
             */
@@ -868,7 +925,7 @@ static void niuCheckIo(void)
 #endif
 #if DEBUG_NET
             fprintf(niuLog, "\n%010u accepted connection on port %02o",
-                traceSequenceNo, availablePort->id);
+                    traceSequenceNo, availablePort->id);
 #endif
             niuWelcome(availablePort->id + NiuLocalStations);
             }
@@ -885,7 +942,7 @@ static void niuCheckIo(void)
 **
 **------------------------------------------------------------------------*/
 static void niuClose(PortParam *pp)
-            {
+    {
 #if defined(_WIN32)
     closesocket(pp->connFd);
 #else
@@ -894,7 +951,7 @@ static void niuClose(PortParam *pp)
     pp->active = FALSE;
 #if DEBUG_NET
     fprintf(niuLog, "\n%010u connection closed on port %02o",
-        traceSequenceNo, pp->id);
+            traceSequenceNo, pp->id);
 #endif
     }
 
@@ -910,13 +967,13 @@ static void niuClose(PortParam *pp)
 static void niuWelcome(int stat)
     {
     char msg[100];
-    
-    sprintf (msg, "Connected to Plato station %d-%d", stat >> 5, stat & 037);
+
+    sprintf(msg, "Connected to Plato station %d-%d", stat >> 5, stat & 037);
     niuSend(stat, 0042000 + stat); // NOP with station number in it
-    niuSend (stat, 0100033);        // mode 3, mode rewrite, screen
-    niuSend (stat, 0201200);        // load Y = 128
-    niuSend (stat, 0200200);        // load X = 128
-    niuSendstr (stat, msg);
+    niuSend(stat, 0100033);        // mode 3, mode rewrite, screen
+    niuSend(stat, 0201200);        // load Y = 128
+    niuSend(stat, 0200200);        // load X = 128
+    niuSendstr(stat, msg);
     }
 
 /*--------------------------------------------------------------------------
@@ -931,30 +988,30 @@ static void niuWelcome(int stat)
 **------------------------------------------------------------------------*/
 static void niuSendstr(int stat, const char *p)
     {
-    int cc = 2;
-    int w = 017720;
+    int  cc    = 2;
+    int  w     = 017720;
     bool shift = FALSE;
     char c;
-    
+
     while ((c = *p++) != 0)
         {
-        if (isupper (c))
+        if (isupper(c))
             {
-            c = tolower (c);
+            c = tolower(c);
             if (!shift)
                 {
                 w = (w << 6 | 077);
                 if (++cc == 3)
                     {
                     cc = 0;
-                    niuSend (stat, w);
+                    niuSend(stat, w);
                     w = 1;
                     }
                 w = (w << 6 | 021);
                 if (++cc == 3)
                     {
                     cc = 0;
-                    niuSend (stat, w);
+                    niuSend(stat, w);
                     w = 1;
                     }
                 shift = TRUE;
@@ -966,14 +1023,14 @@ static void niuSendstr(int stat, const char *p)
             if (++cc == 3)
                 {
                 cc = 0;
-                niuSend (stat, w);
+                niuSend(stat, w);
                 w = 1;
                 }
             w = (w << 6 | 020);
             if (++cc == 3)
                 {
                 cc = 0;
-                niuSend (stat, w);
+                niuSend(stat, w);
                 w = 1;
                 }
             shift = FALSE;
@@ -982,7 +1039,7 @@ static void niuSendstr(int stat, const char *p)
         if (++cc == 3)
             {
             cc = 0;
-            niuSend (stat, w);
+            niuSend(stat, w);
             w = 1;
             }
         }
@@ -993,7 +1050,7 @@ static void niuSendstr(int stat, const char *p)
             w = (w << 6 | 077);
             cc++;
             }
-        niuSend (stat, w);
+        niuSend(stat, w);
         }
     }
 
@@ -1032,11 +1089,11 @@ static void niuSend(int stat, int word)
                     pp->outBuffer[pp->outInIdx++] = ((word >> 6) & 077) | 0200;
                     pp->outBuffer[pp->outInIdx++] = (word & 077) | 0300;
                     }
-#if DEBUG_PP||DEBUG_NET
+#if DEBUG_PP || DEBUG_NET
                 else
                     {
                     fprintf(niuLog, "\n%010u output buffer overflow, port %d",
-                        traceSequenceNo, pp->id);
+                            traceSequenceNo, pp->id);
                     }
 #endif
                 }
@@ -1044,7 +1101,8 @@ static void niuSend(int stat, int word)
         }
     }
 
-#if DEBUG_PP||DEBUG_NET
+#if DEBUG_PP || DEBUG_NET
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert function code to string.
 **
@@ -1057,13 +1115,19 @@ static void niuSend(int stat, int word)
 static char *niuFunc2String(PpWord funcCode)
     {
     static char buf[30];
-    switch(funcCode)
+
+    switch (funcCode)
         {
-    case FcNiuInput  : return "Input";
-    case FcNiuOutput : return "Output";
+    case FcNiuInput:
+        return "Input";
+
+    case FcNiuOutput:
+        return "Output";
+
     default:
         sprintf(buf, "UNKNOWN: %04o", funcCode);
-        return(buf);
+
+        return (buf);
         }
     }
 
@@ -1100,12 +1164,12 @@ static void niuLogFlush(void)
 **------------------------------------------------------------------------*/
 static void niuLogBytes(u8 *bytes, int len)
     {
-    u8 ac;
-    int ascCol;
-    u8 b;
+    u8   ac;
+    int  ascCol;
+    u8   b;
     char hex[3];
-    int hexCol;
-    int i;
+    int  hexCol;
+    int  i;
 
     niuLogBytesCol = 0;
     niuLogFlush(); // initialize the log buffer
@@ -1114,12 +1178,12 @@ static void niuLogBytes(u8 *bytes, int len)
 
     for (i = 0; i < len; i++)
         {
-        b = bytes[i];
+        b  = bytes[i];
         ac = b;
-        if (ac < 0x20 || ac >= 0x7f)
+        if ((ac < 0x20) || (ac >= 0x7f))
             {
             ac = '.';
-        }
+            }
         sprintf(hex, "%02x", b);
         memcpy(niuLogBuf + hexCol, hex, 2);
         hexCol += 3;

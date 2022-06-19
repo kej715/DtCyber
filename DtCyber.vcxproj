@@ -346,6 +346,10 @@
     <None Include="Makefile.macosx" />
     <None Include="Makefile.solaris32" />
     <None Include="Makefile.solaris64" />
+    <None Include="x64Debug.iss" />
+    <None Include="x64Release.iss" />
+    <None Include="x86Debug.iss" />
+    <None Include="x86Release.iss" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

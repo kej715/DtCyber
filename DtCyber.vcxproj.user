@@ -7,7 +7,7 @@
     </LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerWorkingDirectory>..\FSU.Cut5.Test</LocalDebuggerWorkingDirectory>
+    <LocalDebuggerWorkingDirectory>..\CybisRelease1.Test</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerCommandArguments />
   </PropertyGroup>

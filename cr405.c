@@ -1,7 +1,7 @@
 /*--------------------------------------------------------------------------
 **
 **  Copyright (c) 2003-2011, Tom Hunter
-**	          (c) 2017       Steven Zoppi 10-Nov-2017
+**            (c) 2017       Steven Zoppi 10-Nov-2017
 **                           Added status messaging support
 **
 **  Name: cr405b.c
@@ -79,10 +79,10 @@ static FILE *cr405Log = NULL;
 **      S704 functions.
 **      One column of card data per 12-bit data word.
 */
-#define FcCr405Deselect         00700
-#define FcCr405GateToSec        00701
-#define FcCr405ReadNonStop      00702
-#define FcCr405StatusReq        00704
+#define FcCr405Deselect       00700
+#define FcCr405GateToSec      00701
+#define FcCr405ReadNonStop    00702
+#define FcCr405StatusReq      00704
 
 /*
 **      Status reply
@@ -93,12 +93,12 @@ static FILE *cr405Log = NULL;
 **      0004 = Compare error
 **
 */
-#define StCr405Ready            00000
-#define StCr405NotReady         00001
-#define StCr405EOF              00002
-#define StCr405CompareErr       00004
+#define StCr405Ready          00000
+#define StCr405NotReady       00001
+#define StCr405EOF            00002
+#define StCr405CompareErr     00004
 
-#define Cr405MaxDecks           10
+#define Cr405MaxDecks         10
 
 /*
 **  -----------------------
@@ -112,29 +112,29 @@ static FILE *cr405Log = NULL;
 **  -----------------------------------------
 */
 typedef struct cr405Context
-{
+    {
     /*
     **  Info for show_tape operator command.
     */
-    struct cr405Context* nextUnit;
-    u8          channelNo;
-    u8          eqNo;
-    u8          unitNo;
+    struct cr405Context *nextUnit;
+    u8                  channelNo;
+    u8                  eqNo;
+    u8                  unitNo;
 
-	const u16 *table;
-    u32     getCardCycle;
-    int     col;
-    PpWord  card[80];
-    int     inDeck;
-    int     outDeck;
-    char    *decks[Cr405MaxDecks];
-    
-    char    curFileName[_MAX_PATH + 1];
-    char    dirInput[_MAX_PATH];
-    char    dirOutput[_MAX_PATH];
-    int     seqNum;
-    bool    IsWatched;
-} Cr405Context;
+    const u16           *table;
+    u32                 getCardCycle;
+    int                 col;
+    PpWord              card[80];
+    int                 inDeck;
+    int                 outDeck;
+    char                *decks[Cr405MaxDecks];
+
+    char                curFileName[_MAX_PATH + 1];
+    char                dirInput[_MAX_PATH];
+    char                dirOutput[_MAX_PATH];
+    int                 seqNum;
+    bool                IsWatched;
+    } Cr405Context;
 
 /*
 **  ---------------------------
@@ -159,16 +159,16 @@ static bool cr405StartNextDeck(DevSlot *up, Cr405Context *cc, FILE *out);
 **  Private Variables
 **  -----------------
 */
-static Cr405Context* firstcr405 = NULL;
-static Cr405Context* lastcr405 = NULL;
+static Cr405Context *firstcr405 = NULL;
+static Cr405Context *lastcr405  = NULL;
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise card reader.
 **
@@ -182,9 +182,9 @@ static Cr405Context* lastcr405 = NULL;
 **
 **------------------------------------------------------------------------*/
 void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
-{
+    {
     Cr405Context *cc;
-    DevSlot *dp;
+    DevSlot      *dp;
 
     (void)deviceName;
 
@@ -252,110 +252,109 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
 #if DEBUG
     if (cr405Log == NULL)
-    {
+        {
         cr405Log = fopen("cr405Log.txt", "wt");
-    }
+        }
 #endif
 
     if (eqNo != 0)
-    {
+        {
         fprintf(stderr, "(cr405  ) Invalid equipment number - hardwired to equipment number 0\n");
         exit(1);
-    }
+        }
 
     if (unitNo != 0)
-    {
+        {
         fprintf(stderr, "(cr405  ) Invalid unit number - hardwired to unit number 0\n");
         exit(1);
-    }
+        }
 
     dp = channelAttach(channelNo, eqNo, DtCr405);
 
-    dp->activate = cr405Activate;
-    dp->disconnect = cr405Disconnect;
-    dp->func = cr405Func;
-    dp->io = cr405Io;
+    dp->activate     = cr405Activate;
+    dp->disconnect   = cr405Disconnect;
+    dp->func         = cr405Func;
+    dp->io           = cr405Io;
     dp->selectedUnit = 0;
 
     /*
     **  Only one card reader unit is possible per equipment.
     */
     if (dp->context[0] != NULL)
-    {
+        {
         fprintf(stderr, "(cr405  ) Only one unit is possible per equipment\n");
         exit(1);
-    }
+        }
 
     cc = calloc(1, sizeof(Cr405Context));
     if (cc == NULL)
-    {
+        {
         fprintf(stderr, "(cr405  ) Failed to allocate context block\n");
         exit(1);
-    }
+        }
 
     dp->context[0] = (void *)cc;
 
     threadParms = calloc(1, sizeof(fswContext));    //  Need to check for null result
     if (cc == NULL)
-    {
+        {
         fprintf(stderr, "(cr405  ) Failed to allocate CR3447 FileWatcher Context block\n");
         exit(1);
-    }
+        }
 
     threadParms->LoadCards = 0;
     strcat(tokenstring, deviceName);
     xlateTable = strtok(tokenstring, ",");
-    CrInput = strtok(NULL, ",");
-    CrOutput = strtok(NULL, ",");
-    Auto = strtok(NULL, ",");
+    CrInput    = strtok(NULL, ",");
+    CrOutput   = strtok(NULL, ",");
+    Auto       = strtok(NULL, ",");
 
     /*
     **  Process the Request for FileSystem Watcher
     */
     bWatchRequested = TRUE;     // Default = Run Filewatcher Thread
     if (Auto != NULL)
-    {
+        {
         strlwr(Auto);
         if (!strcmp(Auto, "noauto"))
-        {
+            {
             bWatchRequested = FALSE;
-        }
-        else if (strcmp(Auto, "auto") != 0 && strcmp(Auto, "*") != 0)
-        {
+            }
+        else if ((strcmp(Auto, "auto") != 0) && (strcmp(Auto, "*") != 0))
+            {
             fprintf(stderr, "(cr405  ) Unrecognized Automation Type '%s'\n", Auto);
             exit(1);
+            }
         }
-
-    }
 
 
     /*
     **  Setup character set translation table.
     */
-    cc->table = asciiTo026;     // default translation table
+    cc->table     = asciiTo026; // default translation table
     cc->IsWatched = FALSE;
 
-	cc->channelNo = channelNo;
-    cc->eqNo = eqNo;
-    cc->unitNo = unitNo;
+    cc->channelNo = channelNo;
+    cc->eqNo      = eqNo;
+    cc->unitNo    = unitNo;
 
-	strcpy(cc->dirInput, "");
+    strcpy(cc->dirInput, "");
     strcpy(cc->dirOutput, "");
 
     if (xlateTable != NULL)
-    {
+        {
         if (strcmp(xlateTable, "029") == 0)
-        {
+            {
             cc->table = asciiTo029;
-        }
-        else if (strcmp(xlateTable, "026") != 0
-            && strcmp(xlateTable, " *") != 0
-            && strcmp(xlateTable, " ") != 0)
-        {
+            }
+        else if ((strcmp(xlateTable, "026") != 0)
+                 && (strcmp(xlateTable, " *") != 0)
+                 && (strcmp(xlateTable, " ") != 0))
+            {
             fprintf(stderr, "(cr405  ) Unrecognized card code name %s\n", xlateTable);
             exit(1);
+            }
         }
-    }
 
     /*
     **  Incorrect specifications for input / output directories
@@ -364,44 +363,45 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     **  supplied through the ini file to be correct from the start.
     */
 
-    if (CrOutput != NULL && CrOutput[0] != '*')
-    {
-        if (stat(CrOutput, &s) != 0)
+    if ((CrOutput != NULL) && (CrOutput[0] != '*'))
         {
+        if (stat(CrOutput, &s) != 0)
+            {
             fprintf(stderr, "(cr405  ) The Output location specified '%s' does not exist.\n", CrOutput);
             exit(1);
-        }
+            }
 
         if ((s.st_mode & S_IFDIR) == 0)
-        {
+            {
             fprintf(stderr, "(cr405  ) The Output location specified '%s' is not a directory.\n", CrOutput);
             exit(1);
-        }
+            }
         strcpy_s(threadParms->outDoneDir, sizeof(threadParms->outDoneDir), CrOutput);
         strcpy_s(cc->dirOutput, sizeof(cc->dirOutput), CrOutput);
         fprintf(stderr, "(cr405  ) Submissions will be preserved in '%s'.\n", CrOutput);
-    }
+        }
     else
-    {
-        threadParms->outDoneDir[0] = '\0';
-        cc->dirOutput[0] = '\0';
-        fprintf(stderr, "(cr405  ) Submissions will be purged after processing.\n");
-    }
-
-    if (CrInput != NULL && CrInput[0] != '*')
-    {
-        if (stat(CrInput, &s) != 0)
         {
+        threadParms->outDoneDir[0] = '\0';
+        cc->dirOutput[0]           = '\0';
+        fprintf(stderr, "(cr405  ) Submissions will be purged after processing.\n");
+        }
+
+    if ((CrInput != NULL) && (CrInput[0] != '*'))
+        {
+        if (stat(CrInput, &s) != 0)
+            {
             fprintf(stderr, "(cr405  ) The Input location specified '%s' does not exist.\n", CrInput);
             exit(1);
-        }
+            }
 
         if ((s.st_mode & S_IFDIR) == 0)
-        {
+            {
             fprintf(stderr, "(cr405  ) The Input location specified '%s' is not a directory.\n", CrInput);
             exit(1);
-        }
+            }
         //  We only care about the "Auto" "NoAuto" flag if there is a good input location
+
         /*
         **  The thread needs to know what directory to watch.
         **
@@ -411,11 +411,11 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         strcpy_s(threadParms->inWatchDir, sizeof(threadParms->inWatchDir), CrInput);
         strcpy_s(cc->dirInput, sizeof(cc->dirInput), CrInput);
 
-        threadParms->eqNo = eqNo;
-        threadParms->unitNo = unitNo;
+        threadParms->eqNo      = eqNo;
+        threadParms->unitNo    = unitNo;
         threadParms->channelNo = channelNo;
         threadParms->LoadCards = cr405LoadCards;
-        threadParms->devType = DtCr405;
+        threadParms->devType   = DtCr405;
 
         /*
         **  At this point, we should have a completed context
@@ -432,25 +432,24 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         */
         cc->IsWatched = FALSE;
         if (bWatchRequested)
-        {
+            {
             cc->IsWatched = fsCreateThread(threadParms);
             if (!cc->IsWatched)
-            {
+                {
                 printf("(cr405  ) Unable to create filesystem watch thread for '%s'.\n", CrInput);
                 printf("          Card Loading is still possible via Operator Console.\n");
-            }
+                }
             else
-            {
+                {
                 printf("(cr405  ) Filesystem watch thread for '%s' created successfully.\n", CrInput);
+                }
             }
-        }
         else
-        {
+            {
             printf("(cr405  ) Filesystem watch thread not requested for '%s'.\n", CrInput);
             printf("          Card Loading is required via Operator Console.\n");
+            }
         }
-
-    }
 
     cc->col = 80;
 
@@ -458,30 +457,29 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     **  Print a friendly message.
     */
     printf("(cr405  ) Initialised on channel %o equipment %o type '%s'\n",
-        channelNo,
-        eqNo,
-        cc->table == asciiTo026 ? "026" : "029");
+           channelNo,
+           eqNo,
+           cc->table == asciiTo026 ? "026" : "029");
 
     if (!cc->IsWatched)
-    {
+        {
         free(threadParms);
-    }
-	
+        }
+
     /*
     **  Link into list of 405 Card Reader units.
     */
     if (lastcr405 == NULL)
-    {
+        {
         firstcr405 = cc;
-    }
+        }
     else
-    {
+        {
         lastcr405->nextUnit = cc;
-    }
+        }
 
     lastcr405 = cc;
-
-}
+    }
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Load cards on 405 card reader.
@@ -492,20 +490,20 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **
 **------------------------------------------------------------------------*/
 void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char *params)
-{
+    {
     Cr405Context *cc;
-    DevSlot *dp;
-    int len;
-    char *sp;
-    
+    DevSlot      *dp;
+    int          len;
+    char         *sp;
+
     int numParam;
 
     static char str[_MAX_PATH];
     static char strWork[_MAX_PATH];
     static char fOldest[_MAX_PATH] = "";
-    time_t tOldest;
+    time_t      tOldest;
 
-    struct stat s;
+    struct stat   s;
     struct dirent *curDirEntry;
 
     DIR *curDir;
@@ -515,9 +513,9 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char
     */
     dp = channelFindDevice((u8)channelNo, DtCr405);
     if (dp == NULL)
-    {
+        {
         return;
-    }
+        }
 
     cc = (Cr405Context *)(dp->context[0]);
 
@@ -525,19 +523,23 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char
     **  Ensure the tray is not full.
     */
     if (((cc->inDeck + 1) % Cr405MaxDecks) == cc->outDeck)
-    {
+        {
         printf("(cr405  ) Input tray full\n");
+
         return;
-    }
+        }
     len = strlen(fname) + 1;
-    sp = (char *)malloc(len);
+    sp  = (char *)malloc(len);
     memcpy(sp, fname, len);
     cc->decks[cc->inDeck] = sp;
-    cc->inDeck = (cc->inDeck + 1) % Cr405MaxDecks;
+    cc->inDeck            = (cc->inDeck + 1) % Cr405MaxDecks;
 
     if (dp->fcb[0] == NULL)
         {
-         if (cr405StartNextDeck(dp, cc, out)) return;
+        if (cr405StartNextDeck(dp, cc, out))
+            {
+            return;
+            }
         }
 
 
@@ -555,8 +557,8 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char
     **  For anything other than an asterisk, the
     **  string is assumed to be a filename.
     */
-    if (strcmp(str, "*") == 0 && cc->dirInput[0] != '\0')
-    {
+    if ((strcmp(str, "*") == 0) && (cc->dirInput[0] != '\0'))
+        {
         curDir = opendir(cc->dirInput);
 
         /*
@@ -565,48 +567,48 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char
         */
 
         do
-        {
+            {
             curDirEntry = readdir(curDir);
             if (curDirEntry == NULL)
-            {
+                {
                 continue;
-            }
+                }
 
             //  Pop over the dot (.) directories
             if (curDirEntry->d_name[0] == '.')
-            {
+                {
                 continue;
-            }
+                }
 
             sprintf_s(strWork, sizeof(strWork), "%s/%s", cc->dirInput, curDirEntry->d_name);
             stat(strWork, &s);
             if (fOldest[0] == '\0')
-            {
+                {
                 strcpy(fOldest, strWork);
                 tOldest = s.st_ctime;
-            }
+                }
             else
-            {
-                if (s.st_ctime > tOldest)
                 {
+                if (s.st_ctime > tOldest)
+                    {
                     strcpy(fOldest, strWork);
                     tOldest = s.st_ctime;
+                    }
                 }
-            }
-
-        } while (curDirEntry != NULL);
+            } while (curDirEntry != NULL);
         if (fOldest[0] != '\0')
-        {
+            {
             printf("(cr405  ) Dequeueing Unprocessed File '%s'.\n", fOldest);
             strcpy(str, fOldest);
+            }
         }
-    }
 
     if (stat(str, &s) != 0)
-    {
+        {
         fprintf(stderr, "(cr405  ) The Input location specified '%s' does not exist.\n", str);
+
         return;
-    }
+        }
 
     dp->fcb[0] = fopen(str, "r");
 
@@ -614,16 +616,17 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char
     **  Check if the open succeeded.
     */
     if (dp->fcb[0] == NULL)
-    {
+        {
         printf("(cr405  ) Failed to open '%s'\n", str);
+
         return;
-    }
+        }
 
     cr405NextCard(dp);
 
     strcpy_s(cc->curFileName, sizeof(cc->curFileName), str);
     printf("(cr405  ) Loaded with '%s'", str);
-}
+    }
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Show card reader status (operator interface).
@@ -634,40 +637,37 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char
 **
 **------------------------------------------------------------------------*/
 void cr405ShowStatus(void)
-{
-    Cr405Context* cp = firstcr405;
+    {
+    Cr405Context *cp = firstcr405;
 
     if (cp == NULL)
-    {
+        {
         return;
-    }
-	
+        }
+
     printf("\n    > Card Reader (cr405) Status:\n");
 
     while (cp)
-    {
+        {
         printf("    > CH %02o EQ %02o UN %02o Col %02i Seq:%i File '%s'\n",
-            cp->channelNo,
-            cp->eqNo,
-            cp->unitNo,
-            cp->col,
-            cp->seqNum,
-            cp->curFileName);
+               cp->channelNo,
+               cp->eqNo,
+               cp->unitNo,
+               cp->col,
+               cp->seqNum,
+               cp->curFileName);
 
         if (cp->IsWatched)
-        {
+            {
             printf("    >   Autoloading from '%s' to '%s'\n",
-                cp->dirInput,
-                cp->dirOutput);
-        }
-    	
+                   cp->dirInput,
+                   cp->dirOutput);
+            }
+
         cp = cp->nextUnit;
-    }
+        }
     printf("\n");
-
-}
-
-
+    }
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Execute function code on 405 card reader.
@@ -679,25 +679,26 @@ void cr405ShowStatus(void)
 **
 **------------------------------------------------------------------------*/
 static FcStatus cr405Func(PpWord funcCode)
-{
-    switch (funcCode)
     {
+    switch (funcCode)
+        {
     default:
-        return(FcDeclined);
+        return (FcDeclined);
 
     case FcCr405Deselect:
     case FcCr405GateToSec:
         activeDevice->fcode = 0;
-        return(FcProcessed);
+
+        return (FcProcessed);
 
     case FcCr405ReadNonStop:
     case FcCr405StatusReq:
         activeDevice->fcode = funcCode;
         break;
-    }
+        }
 
-    return(FcAccepted);
-}
+    return (FcAccepted);
+    }
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Perform I/O on 405 card reader.
@@ -708,25 +709,25 @@ static FcStatus cr405Func(PpWord funcCode)
 **
 **------------------------------------------------------------------------*/
 static void cr405Io(void)
-{
+    {
     Cr405Context *cc = activeDevice->context[0];
 
     switch (activeDevice->fcode)
-    {
+        {
     default:
     case FcCr405Deselect:
     case FcCr405GateToSec:
         break;
 
     case FcCr405StatusReq:
-        if (activeDevice->fcb[0] == NULL && cc->col >= 80)
-        {
+        if ((activeDevice->fcb[0] == NULL) && (cc->col >= 80))
+            {
             activeChannel->data = StCr405NotReady;
-        }
+            }
         else
-        {
+            {
             activeChannel->data = StCr405Ready;
-        }
+            }
         activeChannel->full = TRUE;
         break;
 
@@ -735,26 +736,26 @@ static void cr405Io(void)
         **  Simulate card in motion for 20 major cycles.
         */
         if (cycles - cc->getCardCycle < 20)
-        {
+            {
             break;
-        }
+            }
 
         if (activeChannel->full)
-        {
+            {
             break;
-        }
+            }
 
         activeChannel->data = cc->card[cc->col++] & Mask12;
         activeChannel->full = TRUE;
 
         if (cc->col >= 80)
-        {
+            {
             cr405NextCard(activeDevice);
-        }
+            }
 
         break;
+        }
     }
-}
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Handle channel activation.
@@ -765,14 +766,14 @@ static void cr405Io(void)
 **
 **------------------------------------------------------------------------*/
 static void cr405Activate(void)
-{
+    {
 #if DEBUG
     fprintf(cr405Log, "\n(cr405  ) %06d PP:%02o CH:%02o Activate",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id);
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id);
 #endif
-}
+    }
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Handle disconnecting of channel.
@@ -783,17 +784,14 @@ static void cr405Activate(void)
 **
 **------------------------------------------------------------------------*/
 static void cr405Disconnect(void)
-{
-
+    {
 #if DEBUG
     fprintf(cr405Log, "\n(cr405  ) %06d PP:%02o CH:%02o Disconnect",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id);
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id);
 #endif
-
-}
-
+    }
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Start reading next card deck.
@@ -810,12 +808,13 @@ static bool cr405StartNextDeck(DevSlot *dp, Cr405Context *cc, FILE *out)
 
     while (cc->outDeck != cc->inDeck)
         {
-        fname = cc->decks[cc->outDeck];
+        fname      = cc->decks[cc->outDeck];
         dp->fcb[0] = fopen(fname, "r");
         if (dp->fcb[0] != NULL)
             {
             cr405NextCard(dp);
             fprintf(out, "Cards loaded on card reader C%o,E%o\n", cc->channelNo, cc->eqNo);
+
             return TRUE;
             }
         fprintf(stderr, "Failed to open card deck %s\n", fname);
@@ -824,6 +823,7 @@ static bool cr405StartNextDeck(DevSlot *dp, Cr405Context *cc, FILE *out)
         cc->outDeck = (cc->outDeck + 1) % Cr405MaxDecks;
         }
     dp->fcb[0] = NULL;
+
     return FALSE;
     }
 
@@ -836,58 +836,59 @@ static bool cr405StartNextDeck(DevSlot *dp, Cr405Context *cc, FILE *out)
 **
 **------------------------------------------------------------------------*/
 static void cr405NextCard(DevSlot *dp)
-{
+    {
     Cr405Context *cc = dp->context[0];
-    static char buffer[322];
-    bool binaryCard;
-    char *cp;
-    char c;
-    int value;
-    int i;
-    int j;
+    static char  buffer[322];
+    bool         binaryCard;
+    char         *cp;
+    char         c;
+    int          value;
+    int          i;
+    int          j;
 
     static char fnwork[_MAX_PATH];
-    bool isFromInput;
-    int fnindex;
+    bool        isFromInput;
+    int         fnindex;
 
     if (dp->fcb[0] == NULL)
-    {
+        {
         return;
-    }
+        }
 
     /*
     **  Initialise read.
     */
     cc->getCardCycle = cycles;
-    cc->col = 0;
-    binaryCard = FALSE;
+    cc->col          = 0;
+    binaryCard       = FALSE;
 
     /*
     **  Read the next card.
     */
     cp = fgets(buffer, sizeof(buffer), dp->fcb[0]);
     if (cp == NULL)
-    {
+        {
         /*
         **  If the last card wasn't a 6/7/8/9 card, fake one.
         */
         if (cc->card[0] != 00017)
-        {
+            {
             memset(cc->card, 0, sizeof(cc->card));
             cc->card[0] = 00017;
-        }
+            }
         else
-        {
+            {
             cc->col = 80;
-        }
+            }
 
         fclose(dp->fcb[0]);
         dp->fcb[0] = NULL;
 
         printf("(cr405  ) End of Deck '%s' reached on channel %o equipment %o\n",
-            cc->curFileName,
-            dp->channel->id,
-            dp->eqNo);
+               cc->curFileName,
+               dp->channel->id,
+               dp->eqNo);
+
         /*
         **  If the current file comes from the "input" directory specified
         **      then
@@ -903,20 +904,19 @@ static void cr405NextCard(DevSlot *dp)
         */
         isFromInput = (!strncmp(cc->curFileName, cc->dirInput, strlen(cc->dirInput)));
         if (isFromInput)
-        {
+            {
             //  Files from the input directory are handled specially
             if (cc->dirOutput[0] == '\0')
-            {
+                {
                 //  Once a file is closed, we can simply delete it
                 //  from the input directory.  This will also trigger
                 //  the filechange watcher who will initiate the next
                 //  file load automatically.
 
                 remove(cc->curFileName);
-            }
+                }
             else
-            {
-
+                {
                 //  perform the rename of the current file to the "Processed"
                 //  directory.  This rename will ALSO trigger the filechange
                 //  watcher.  Otherwise the operator will need to use the load
@@ -925,163 +925,165 @@ static void cr405NextCard(DevSlot *dp)
                 fnindex = 0;
 
                 while (TRUE)
-                {
+                    {
                     //  create the file's new name
                     sprintf_s(fnwork, sizeof(fnwork), "%s/%s_%04i", cc->dirOutput, cc->curFileName + strlen(cc->dirInput) + 1, fnindex);
                     if (rename(cc->curFileName, fnwork) == 0)
-                    {
+                        {
                         printf("(cr405  ) Deck '%s' moved to '%s'. (Input Preserved)\n",
-                            cc->curFileName + strlen(cc->dirInput) + 1,
-                            fnwork);
+                               cc->curFileName + strlen(cc->dirInput) + 1,
+                               fnwork);
                         break;
-                    }
+                        }
                     else
-                    {
+                        {
                         printf("(cr405  ) Rename Failure on '%s' - (%s). Retrying (%d)...\n",
-                            cc->curFileName + strlen(cc->dirInput) + 1,
-                            strerror(errno),
-                            fnindex);
-                    }
+                               cc->curFileName + strlen(cc->dirInput) + 1,
+                               strerror(errno),
+                               fnindex);
+                        }
                     fnindex++;
-                } // while(TRUE)
+                    } // while(TRUE)
                 if (fnindex > 0)
-                {
+                    {
                     printf("\n");
-                }
-
-            } // else
-        } // if (isFromInput)
+                    }
+                } // else
+            }     // if (isFromInput)
 
         cc->curFileName[0] = '\0';
 
         return;
-    }
+        }
 
     /*
     **  Deal with special first-column codes.
     */
     if (buffer[0] == '~')
-    {
-        if (memcmp(buffer + 1, "eoi\n", 4) == 0)
         {
+        if (memcmp(buffer + 1, "eoi\n", 4) == 0)
+            {
             /*
             **  EOI = 6/7/8/9 card.
             */
             memset(cc->card, 0, sizeof(cc->card));
             cc->card[0] = 00017;
+
             return;
-        }
+            }
 
         if (memcmp(buffer + 1, "eof\n", 4) == 0)
-        {
+            {
             /*
             **  EOF = 6/7/9 card.
             */
             memset(cc->card, 0, sizeof(cc->card));
             cc->card[0] = 00015;
+
             return;
-        }
+            }
 
         if (memcmp(buffer + 1, "eor\n", 4) == 0)
-        {
+            {
             /*
             **  EOR = 7/8/9 card.
             */
             memset(cc->card, 0, sizeof(cc->card));
             cc->card[0] = 00007;
+
             return;
-        }
+            }
 
         if (memcmp(buffer + 1, "bin", 3) == 0)
-        {
+            {
             /*
             **  Binary = 7/9 card.
             */
-            binaryCard = TRUE;
+            binaryCard  = TRUE;
             cc->card[0] = 00005;
+            }
         }
-    }
 
     /*
     **  Convert cards.
     */
     if (!binaryCard)
-    {
+        {
         /*
         **  Skip over any characters past column 80 (if line is longer).
         */
         if ((cp = strchr(buffer, '\n')) == NULL)
-        {
-            do
             {
+            do
+                {
                 c = fgetc(dp->fcb[0]);
-            } while (c != '\n' && c != EOF);
+                } while (c != '\n' && c != EOF);
             cp = buffer + 80;
-        }
+            }
 
         /*
         **  Blank fill line shorter then 80 characters.
         */
-        for (; cp < buffer + 80; cp++)
-        {
+        for ( ; cp < buffer + 80; cp++)
+            {
             *cp = ' ';
-        }
+            }
 
         /*
         **  Convert ASCII card.
         */
         for (i = 0; i < 80; i++)
-        {
+            {
             cc->card[i] = cc->table[buffer[i]];
+            }
         }
-    }
     else
-    {
+        {
         /*
         **  Skip over any characters past column 320 (if line is longer).
         */
         if ((cp = strchr(buffer, '\n')) == NULL)
-        {
-            do
             {
+            do
+                {
                 c = fgetc(dp->fcb[0]);
-            } while (c != '\n' && c != EOF);
+                } while (c != '\n' && c != EOF);
             cp = buffer + 320;
-        }
+            }
 
         /*
         **  Zero fill line shorter then 320 characters.
         */
-        for (; cp < buffer + 320; cp++)
-        {
+        for ( ; cp < buffer + 320; cp++)
+            {
             *cp = '0';
-        }
+            }
 
         /*
         **  Convert binary card (79 x 4 octal digits).
         */
         cp = buffer + 4;
         for (i = 1; i < 80; i++)
-        {
+            {
             value = 0;
             for (j = 0; j < 4; j++)
-            {
-                if (cp[j] >= '0' && cp[j] <= '7')
                 {
+                if ((cp[j] >= '0') && (cp[j] <= '7'))
+                    {
                     value = (value << 3) | (cp[j] - '0');
-                }
+                    }
                 else
-                {
+                    {
                     value = 0;
                     break;
+                    }
                 }
-            }
 
             cc->card[i] = value;
 
             cp += 4;
+            }
         }
     }
-}
 
 /*---------------------------  End Of File  ------------------------------*/

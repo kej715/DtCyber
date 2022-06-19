@@ -10,12 +10,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -42,21 +42,21 @@
 */
 
 /* Only enable this for testing to pass section 4.A of EJT (divide break-in test) */
-#define CcSMM_EJT               1
+#define CcSMM_EJT              1
 
 /*
 **  CPU exit conditions.
 */
-#define EcNone                  00
-#define EcAddressOutOfRange     01
-#define EcOperandOutOfRange     02
-#define EcIndefiniteOperand     04
+#define EcNone                 00
+#define EcAddressOutOfRange    01
+#define EcOperandOutOfRange    02
+#define EcIndefiniteOperand    04
 
 /*
 **  ECS bank size taking into account the 5k reserve.
 */
-#define EcsBankSize             (131072 - 5120)
-#define EsmBankSize             131072
+#define EcsBankSize            (131072 - 5120)
+#define EsmBankSize            131072
 
 /*
 **  -----------------------
@@ -72,7 +72,7 @@
 typedef struct opDispatch
     {
     void (*execute)(void);
-    u8   length;
+    u8 length;
     } OpDispatch;
 
 /*
@@ -174,35 +174,35 @@ static void cpOp77(void);
 **  Public Variables
 **  ----------------
 */
-CpWord *cpMem;
-CpWord *extMem;
-u32 ecsFlagRegister;
+CpWord     *cpMem;
+CpWord     *extMem;
+u32        ecsFlagRegister;
 CpuContext cpu;
-bool cpuStopped = TRUE;
-u32 cpuMaxMemory;
-u32 extMaxMemory;
+bool       cpuStopped = TRUE;
+u32        cpuMaxMemory;
+u32        extMaxMemory;
 
 /*
 **  -----------------
 **  Private Variables
 **  -----------------
 */
-static FILE *cmHandle;
-static FILE *ecsHandle;
-static u8 opOffset;
+static FILE   *cmHandle;
+static FILE   *ecsHandle;
+static u8     opOffset;
 static CpWord opWord;
-static u8 opFm;
-static u8 opI;
-static u8 opJ;
-static u8 opK;
-static u8 opLength;
-static u32 opAddress;
-static u32 oldRegP;
+static u8     opFm;
+static u8     opI;
+static u8     opJ;
+static u8     opK;
+static u8     opLength;
+static u32    opAddress;
+static u32    oldRegP;
 static CpWord acc60;
-static u32 acc18;
-static u32 acc21;
-static u32 acc24;
-static bool floatException = FALSE;
+static u32    acc18;
+static u32    acc21;
+static u32    acc24;
+static bool   floatException = FALSE;
 
 // *unused* static int debugCount = 0;
 
@@ -220,7 +220,7 @@ static FILE *emLog = NULL;
 static OpDispatch decodeCpuOpcode[] =
     {
     cpOp00, 15,
-    cpOp01, 0,
+    cpOp01,  0,
     cpOp02, 30,
     cpOp03, 30,
     cpOp04, 30,
@@ -288,12 +288,12 @@ static OpDispatch decodeCpuOpcode[] =
 static u8 cpOp01Length[8] = { 30, 30, 30, 30, 15, 15, 15, 15 };
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 
 /*--------------------------------------------------------------------------
@@ -481,7 +481,7 @@ void cpuTerminate(void)
 **------------------------------------------------------------------------*/
 u32 cpuGetP(void)
     {
-    return((cpu.regP) & Mask18);
+    return ((cpu.regP) & Mask18);
     }
 
 /*--------------------------------------------------------------------------
@@ -511,7 +511,7 @@ void cpuPpReadMem(u32 address, CpWord *data)
     else
         {
         address %= cpuMaxMemory;
-        *data = cpMem[address] & Mask60;
+        *data    = cpMem[address] & Mask60;
         }
     }
 
@@ -537,7 +537,7 @@ void cpuPpWriteMem(u32 address, CpWord data)
         }
     else
         {
-        address %= cpuMaxMemory;
+        address       %= cpuMaxMemory;
         cpMem[address] = data & Mask60;
         }
     }
@@ -554,14 +554,14 @@ void cpuPpWriteMem(u32 address, CpWord data)
 bool cpuExchangeJump(u32 addr)
     {
     CpuContext tmp;
-    CpWord *mem;
+    CpWord     *mem;
 
     /*
     **  Only perform exchange jump on instruction boundary or when stopped.
     */
-    if (opOffset != 60 && !cpuStopped)
+    if ((opOffset != 60) && !cpuStopped)
         {
-        return(FALSE);
+        return (FALSE);
         }
 
 #if CcDebug == 1
@@ -581,7 +581,7 @@ bool cpuExchangeJump(u32 addr)
         /*
         **  Pretend that exchange worked, but the address is bad.
         */
-        return(TRUE);
+        return (TRUE);
         }
 
     /*
@@ -594,28 +594,28 @@ bool cpuExchangeJump(u32 addr)
     */
     mem = cpMem + addr;
 
-    cpu.regP     = (u32)((*mem >> 36) & Mask18);
-    cpu.regA[0]  = (u32)((*mem >> 18) & Mask18);
-    cpu.regB[0]  = 0;
+    cpu.regP    = (u32)((*mem >> 36) & Mask18);
+    cpu.regA[0] = (u32)((*mem >> 18) & Mask18);
+    cpu.regB[0] = 0;
 
-    mem += 1;
-    cpu.regRaCm  = (u32)((*mem >> 36) & Mask24);
-    cpu.regA[1]  = (u32)((*mem >> 18) & Mask18);
-    cpu.regB[1]  = (u32)((*mem      ) & Mask18);
+    mem        += 1;
+    cpu.regRaCm = (u32)((*mem >> 36) & Mask24);
+    cpu.regA[1] = (u32)((*mem >> 18) & Mask18);
+    cpu.regB[1] = (u32)((*mem) & Mask18);
 
-    mem += 1;
-    cpu.regFlCm  = (u32)((*mem >> 36) & Mask24);
-    cpu.regA[2]  = (u32)((*mem >> 18) & Mask18);
-    cpu.regB[2]  = (u32)((*mem      ) & Mask18);
+    mem        += 1;
+    cpu.regFlCm = (u32)((*mem >> 36) & Mask24);
+    cpu.regA[2] = (u32)((*mem >> 18) & Mask18);
+    cpu.regB[2] = (u32)((*mem) & Mask18);
 
-    mem += 1;
+    mem         += 1;
     cpu.exitMode = (u32)((*mem >> 36) & Mask24);
     cpu.regA[3]  = (u32)((*mem >> 18) & Mask18);
-    cpu.regB[3]  = (u32)((*mem      ) & Mask18);
+    cpu.regB[3]  = (u32)((*mem) & Mask18);
 
     mem += 1;
-    if (   (features & IsSeries800) != 0
-        && (cpu.exitMode & EmFlagExpandedAddress) != 0)
+    if (((features & IsSeries800) != 0)
+        && ((cpu.exitMode & EmFlagExpandedAddress) != 0))
         {
         cpu.regRaEcs = (u32)((*mem >> 30) & Mask30Ecs);
         }
@@ -624,12 +624,12 @@ bool cpuExchangeJump(u32 addr)
         cpu.regRaEcs = (u32)((*mem >> 36) & Mask24Ecs);
         }
 
-    cpu.regA[4]  = (u32)((*mem >> 18) & Mask18);
-    cpu.regB[4]  = (u32)((*mem      ) & Mask18);
+    cpu.regA[4] = (u32)((*mem >> 18) & Mask18);
+    cpu.regB[4] = (u32)((*mem) & Mask18);
 
     mem += 1;
-    if (   (features & IsSeries800) != 0
-        && (cpu.exitMode & EmFlagExpandedAddress) != 0)
+    if (((features & IsSeries800) != 0)
+        && ((cpu.exitMode & EmFlagExpandedAddress) != 0))
         {
         cpu.regFlEcs = (u32)((*mem >> 30) & Mask30Ecs);
         }
@@ -638,28 +638,28 @@ bool cpuExchangeJump(u32 addr)
         cpu.regFlEcs = (u32)((*mem >> 36) & Mask24Ecs);
         }
 
-    cpu.regA[5]  = (u32)((*mem >> 18) & Mask18);
-    cpu.regB[5]  = (u32)((*mem      ) & Mask18);
+    cpu.regA[5] = (u32)((*mem >> 18) & Mask18);
+    cpu.regB[5] = (u32)((*mem) & Mask18);
 
-    mem += 1;
-    cpu.regMa    = (u32)((*mem >> 36) & Mask24);
-    cpu.regA[6]  = (u32)((*mem >> 18) & Mask18);
-    cpu.regB[6]  = (u32)((*mem      ) & Mask18);
+    mem        += 1;
+    cpu.regMa   = (u32)((*mem >> 36) & Mask24);
+    cpu.regA[6] = (u32)((*mem >> 18) & Mask18);
+    cpu.regB[6] = (u32)((*mem) & Mask18);
 
-    mem += 1;
+    mem         += 1;
     cpu.regSpare = (u32)((*mem >> 36) & Mask24);
     cpu.regA[7]  = (u32)((*mem >> 18) & Mask18);
-    cpu.regB[7]  = (u32)((*mem      ) & Mask18);
+    cpu.regB[7]  = (u32)((*mem) & Mask18);
 
-    mem += 1;
-    cpu.regX[0]  = *mem++ & Mask60;
-    cpu.regX[1]  = *mem++ & Mask60;
-    cpu.regX[2]  = *mem++ & Mask60;
-    cpu.regX[3]  = *mem++ & Mask60;
-    cpu.regX[4]  = *mem++ & Mask60;
-    cpu.regX[5]  = *mem++ & Mask60;
-    cpu.regX[6]  = *mem++ & Mask60;
-    cpu.regX[7]  = *mem++ & Mask60;
+    mem        += 1;
+    cpu.regX[0] = *mem++ & Mask60;
+    cpu.regX[1] = *mem++ & Mask60;
+    cpu.regX[2] = *mem++ & Mask60;
+    cpu.regX[3] = *mem++ & Mask60;
+    cpu.regX[4] = *mem++ & Mask60;
+    cpu.regX[5] = *mem++ & Mask60;
+    cpu.regX[6] = *mem++ & Mask60;
+    cpu.regX[7] = *mem++ & Mask60;
 
     cpu.exitCondition = EcNone;
 
@@ -672,13 +672,13 @@ bool cpuExchangeJump(u32 addr)
     */
     mem = cpMem + addr;
 
-    *mem++ = ((CpWord)(tmp.regP     & Mask18) << 36) | ((CpWord)(tmp.regA[0] & Mask18) << 18);
-    *mem++ = ((CpWord)(tmp.regRaCm  & Mask24) << 36) | ((CpWord)(tmp.regA[1] & Mask18) << 18) | ((CpWord)(tmp.regB[1] & Mask18));
-    *mem++ = ((CpWord)(tmp.regFlCm  & Mask24) << 36) | ((CpWord)(tmp.regA[2] & Mask18) << 18) | ((CpWord)(tmp.regB[2] & Mask18));
+    *mem++ = ((CpWord)(tmp.regP & Mask18) << 36) | ((CpWord)(tmp.regA[0] & Mask18) << 18);
+    *mem++ = ((CpWord)(tmp.regRaCm & Mask24) << 36) | ((CpWord)(tmp.regA[1] & Mask18) << 18) | ((CpWord)(tmp.regB[1] & Mask18));
+    *mem++ = ((CpWord)(tmp.regFlCm & Mask24) << 36) | ((CpWord)(tmp.regA[2] & Mask18) << 18) | ((CpWord)(tmp.regB[2] & Mask18));
     *mem++ = ((CpWord)(tmp.exitMode & Mask24) << 36) | ((CpWord)(tmp.regA[3] & Mask18) << 18) | ((CpWord)(tmp.regB[3] & Mask18));
 
-    if (   (features & IsSeries800) != 0
-        && (tmp.exitMode & EmFlagExpandedAddress) != 0)
+    if (((features & IsSeries800) != 0)
+        && ((tmp.exitMode & EmFlagExpandedAddress) != 0))
         {
         *mem++ = ((CpWord)(tmp.regRaEcs & Mask30Ecs) << 30) | ((CpWord)(tmp.regA[4] & Mask18) << 18) | ((CpWord)(tmp.regB[4] & Mask18));
         }
@@ -687,8 +687,8 @@ bool cpuExchangeJump(u32 addr)
         *mem++ = ((CpWord)(tmp.regRaEcs & Mask24Ecs) << 36) | ((CpWord)(tmp.regA[4] & Mask18) << 18) | ((CpWord)(tmp.regB[4] & Mask18));
         }
 
-    if (   (features & IsSeries800) != 0
-        && (tmp.exitMode & EmFlagExpandedAddress) != 0)
+    if (((features & IsSeries800) != 0)
+        && ((tmp.exitMode & EmFlagExpandedAddress) != 0))
         {
         *mem++ = ((CpWord)(tmp.regFlEcs & Mask30Ecs) << 30) | ((CpWord)(tmp.regA[5] & Mask18) << 18) | ((CpWord)(tmp.regB[5] & Mask18));
         }
@@ -697,7 +697,7 @@ bool cpuExchangeJump(u32 addr)
         *mem++ = ((CpWord)(tmp.regFlEcs & Mask24Ecs) << 36) | ((CpWord)(tmp.regA[5] & Mask18) << 18) | ((CpWord)(tmp.regB[5] & Mask18));
         }
 
-    *mem++ = ((CpWord)(tmp.regMa    & Mask24) << 36) | ((CpWord)(tmp.regA[6] & Mask18) << 18) | ((CpWord)(tmp.regB[6] & Mask18));
+    *mem++ = ((CpWord)(tmp.regMa & Mask24) << 36) | ((CpWord)(tmp.regA[6] & Mask18) << 18) | ((CpWord)(tmp.regB[6] & Mask18));
     *mem++ = ((CpWord)(tmp.regSpare & Mask24) << 36) | ((CpWord)(tmp.regA[7] & Mask18) << 18) | ((CpWord)(tmp.regB[7] & Mask18));
     *mem++ = tmp.regX[0] & Mask60;
     *mem++ = tmp.regX[1] & Mask60;
@@ -722,7 +722,7 @@ bool cpuExchangeJump(u32 addr)
     cpuStopped = FALSE;
     cpuFetchOpWord(cpu.regP, &opWord);
 
-    return(TRUE);
+    return (TRUE);
     }
 
 /*--------------------------------------------------------------------------
@@ -744,6 +744,7 @@ void cpuStep(void)
     if (skipStep != 0)
         {
         skipStep -= 1;
+
         return;
         }
 #endif
@@ -756,9 +757,9 @@ void cpuStep(void)
         /*
         **  Decode based on type.
         */
-        opFm = (u8)((opWord >> (opOffset -  6)) & Mask6);
-        opI  = (u8)((opWord >> (opOffset -  9)) & Mask3);
-        opJ  = (u8)((opWord >> (opOffset - 12)) & Mask3);
+        opFm     = (u8)((opWord >> (opOffset - 6)) & Mask6);
+        opI      = (u8)((opWord >> (opOffset - 9)) & Mask3);
+        opJ      = (u8)((opWord >> (opOffset - 12)) & Mask3);
         opLength = decodeCpuOpcode[opFm].length;
 
         if (opLength == 0)
@@ -781,6 +782,7 @@ void cpuStep(void)
                 **  Invalid packing is handled as illegal instruction.
                 */
                 cpuOpIllegal();
+
                 return;
                 }
 
@@ -820,6 +822,7 @@ void cpuStep(void)
 #if CcDebug == 1
             traceCpuPrint("Stopped\n");
 #endif
+
             return;
             }
 
@@ -846,7 +849,7 @@ void cpuStep(void)
 bool cpuEcsFlagRegister(u32 ecsAddress)
     {
     u32 flagFunction = (ecsAddress >> 21) & Mask3;
-    u32 flagWord = ecsAddress & Mask18;
+    u32 flagWord     = ecsAddress & Mask18;
 
     switch (flagFunction)
         {
@@ -854,12 +857,12 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
         /*
         **  Ready/Select.
         */
-        if ((ecsFlagRegister & flagWord ) != 0)
+        if ((ecsFlagRegister & flagWord) != 0)
             {
             /*
             **  Error exit.
             */
-            return(FALSE);
+            return (FALSE);
             }
 
         ecsFlagRegister |= flagWord;
@@ -876,12 +879,12 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
         /*
         **  Status.
         */
-        if ((ecsFlagRegister & flagWord ) != 0)
+        if ((ecsFlagRegister & flagWord) != 0)
             {
             /*
             **  Error exit.
             */
-            return(FALSE);
+            return (FALSE);
             }
 
         break;
@@ -897,7 +900,7 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
     /*
     **  Normal exit.
     */
-    return(TRUE);
+    return (TRUE);
     }
 
 /*--------------------------------------------------------------------------
@@ -922,7 +925,7 @@ bool cpuDdpTransfer(u32 ecsAddress, CpWord *data, bool writeToEcs)
         /*
         **  Abort.
         */
-        return(FALSE);
+        return (FALSE);
         }
 
     /*
@@ -940,16 +943,16 @@ bool cpuDdpTransfer(u32 ecsAddress, CpWord *data, bool writeToEcs)
     /*
     **  Normal accept.
     */
-    return(TRUE);
+    return (TRUE);
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Print the current register set (exchange package) and
@@ -965,7 +968,7 @@ static char cmRegAstr[24];
 
 static char *readCmRegA(int regNum)
     {
-    int addr;
+    int    addr;
     CpWord word;
 
     addr = cpu.regA[regNum];
@@ -977,7 +980,8 @@ static char *readCmRegA(int regNum)
                 (word >> 45) & 077777,
                 (word >> 30) & 077777,
                 (word >> 15) & 077777,
-                 word & 077777);
+                word & 077777);
+
         return cmRegAstr;
         }
     else
@@ -985,27 +989,36 @@ static char *readCmRegA(int regNum)
         return "----- ----- ----- -----";
         }
     }
+
 static void dumpXP(int before, int after)
     {
-    int i;
-    u32 p;
+    int    i;
+    u32    p;
     CpWord word;
 
     fprintf(emLog, "            Monitor mode: %d\n", cpu.monitorMode);
     fprintf(emLog, "   Expanded Address mode: %d\n", (features & IsSeries800) != 0
-        && (cpu.exitMode & EmFlagExpandedAddress) != 0);
+            && (cpu.exitMode & EmFlagExpandedAddress) != 0);
     fprintf(emLog, "Enhanced Block Copy mode: %d\n\n", (features & IsSeries800) != 0
-        && (cpu.exitMode & EmFlagEnhancedBlockCopy) != 0);
-    
+            && (cpu.exitMode & EmFlagEnhancedBlockCopy) != 0);
+
     i = 0;
-    fprintf(emLog, "P       %06o  A%d %06o [%s]  B%d %06o\n",cpu.regP,   i, cpu.regA[i], readCmRegA(i), i, cpu.regB[i]); i++;
-    fprintf(emLog, "RA    %08o  A%d %06o [%s]  B%d %06o\n",cpu.regRaCm,  i, cpu.regA[i], readCmRegA(i), i, cpu.regB[i]); i++;
-    fprintf(emLog, "FL    %08o  A%d %06o [%s]  B%d %06o\n",cpu.regFlCm,  i, cpu.regA[i], readCmRegA(i), i, cpu.regB[i]); i++;
-    fprintf(emLog, "EM    %08o  A%d %06o [%s]  B%d %06o\n",cpu.exitMode, i, cpu.regA[i], readCmRegA(i), i, cpu.regB[i]); i++;
-    fprintf(emLog, "RAE   %08o  A%d %06o [%s]  B%d %06o\n",cpu.regRaEcs, i, cpu.regA[i], readCmRegA(i), i, cpu.regB[i]); i++;
-    fprintf(emLog, "FLE %010o  A%d %06o [%s]  B%d %06o\n",cpu.regFlEcs,  i, cpu.regA[i], readCmRegA(i), i, cpu.regB[i]); i++;
-    fprintf(emLog, "MA    %08o  A%d %06o [%s]  B%d %06o\n",cpu.regMa,    i, cpu.regA[i], readCmRegA(i), i, cpu.regB[i]); i++;
-    fprintf(emLog, "                A%d %06o [%s]  B%d %06o\n\n",        i, cpu.regA[i], readCmRegA(i), i, cpu.regB[i]); i++;
+    fprintf(emLog, "P       %06o  A%d %06o [%s]  B%d %06o\n", cpu.regP, i, cpu.regA[i], readCmRegA(i), i, cpu.regB[i]);
+    i++;
+    fprintf(emLog, "RA    %08o  A%d %06o [%s]  B%d %06o\n", cpu.regRaCm, i, cpu.regA[i], readCmRegA(i), i, cpu.regB[i]);
+    i++;
+    fprintf(emLog, "FL    %08o  A%d %06o [%s]  B%d %06o\n", cpu.regFlCm, i, cpu.regA[i], readCmRegA(i), i, cpu.regB[i]);
+    i++;
+    fprintf(emLog, "EM    %08o  A%d %06o [%s]  B%d %06o\n", cpu.exitMode, i, cpu.regA[i], readCmRegA(i), i, cpu.regB[i]);
+    i++;
+    fprintf(emLog, "RAE   %08o  A%d %06o [%s]  B%d %06o\n", cpu.regRaEcs, i, cpu.regA[i], readCmRegA(i), i, cpu.regB[i]);
+    i++;
+    fprintf(emLog, "FLE %010o  A%d %06o [%s]  B%d %06o\n", cpu.regFlEcs, i, cpu.regA[i], readCmRegA(i), i, cpu.regB[i]);
+    i++;
+    fprintf(emLog, "MA    %08o  A%d %06o [%s]  B%d %06o\n", cpu.regMa, i, cpu.regA[i], readCmRegA(i), i, cpu.regB[i]);
+    i++;
+    fprintf(emLog, "                A%d %06o [%s]  B%d %06o\n\n", i, cpu.regA[i], readCmRegA(i), i, cpu.regB[i]);
+    i++;
 
     for (i = 0; i < 8; i++)
         {
@@ -1020,9 +1033,10 @@ static void dumpXP(int before, int after)
                 (word >> 45) & 077777,
                 (word >> 30) & 077777,
                 (word >> 15) & 077777,
-                 word & 077777);
+                word & 077777);
         }
     }
+
 #endif
 
 /*--------------------------------------------------------------------------
@@ -1043,7 +1057,7 @@ static void cpuOpIllegal(void)
 
     cpu.regP = 0;
 
-    if ((features & (HasNoCejMej | IsSeries6x00)) == 0 && !cpu.monitorMode)
+    if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !cpu.monitorMode)
         {
         /*
         **  Exchange jump to MA.
@@ -1069,8 +1083,8 @@ static bool cpuCheckOpAddress(u32 address, u32 *location)
     **  Calculate absolute address.
     */
     *location = cpuAddRa(address);
-    
-    if (address >= cpu.regFlCm || (*location >= cpuMaxMemory && (features & HasNoCmWrap) != 0))
+
+    if ((address >= cpu.regFlCm) || ((*location >= cpuMaxMemory) && ((features & HasNoCmWrap) != 0)))
         {
         /*
         **  Exit mode is always selected for RNI or branch.
@@ -1088,8 +1102,8 @@ static bool cpuCheckOpAddress(u32 address, u32 *location)
             }
 
         cpu.regP = 0;
-    
-        if ((features & (HasNoCejMej | IsSeries6x00)) == 0 && !cpu.monitorMode)
+
+        if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !cpu.monitorMode)
             {
             /*
             **  Exchange jump to MA.
@@ -1098,15 +1112,15 @@ static bool cpuCheckOpAddress(u32 address, u32 *location)
             cpuExchangeJump(cpu.regMa);
             }
 
-        return(TRUE);
+        return (TRUE);
         }
 
     /*
     **  Calculate absolute address with wraparound.
     */
     *location %= cpuMaxMemory;
-    
-    return(FALSE);
+
+    return (FALSE);
     }
 
 /*--------------------------------------------------------------------------
@@ -1139,7 +1153,7 @@ static void cpuFetchOpWord(u32 address, CpWord *data)
         */
         for (i = 0; i < MaxIwStack; i++)
             {
-            if (cpu.iwValid[i] && cpu.iwAddress[i] == location)
+            if (cpu.iwValid[i] && (cpu.iwAddress[i] == location))
                 {
                 *data = cpu.iwStack[i];
                 break;
@@ -1153,12 +1167,12 @@ static void cpuFetchOpWord(u32 address, CpWord *data)
             */
             cpu.iwRank = (cpu.iwRank + 1) % MaxIwStack;
             cpu.iwAddress[cpu.iwRank] = location;
-            cpu.iwStack[cpu.iwRank] = cpMem[location] & Mask60;
-            cpu.iwValid[cpu.iwRank] = TRUE;
+            cpu.iwStack[cpu.iwRank]   = cpMem[location] & Mask60;
+            cpu.iwValid[cpu.iwRank]   = TRUE;
             *data = cpu.iwStack[cpu.iwRank];
             }
 
-        if ((features & HasIStackPrefetch) != 0 && (i == MaxIwStack || i == cpu.iwRank))
+        if (((features & HasIStackPrefetch) != 0) && ((i == MaxIwStack) || (i == cpu.iwRank)))
             {
 #if 0
             /*
@@ -1174,8 +1188,8 @@ static void cpuFetchOpWord(u32 address, CpWord *data)
 
                 cpu.iwRank = (cpu.iwRank + 1) % MaxIwStack;
                 cpu.iwAddress[cpu.iwRank] = location;
-                cpu.iwStack[cpu.iwRank] = cpMem[location] & Mask60;
-                cpu.iwValid[cpu.iwRank] = TRUE;
+                cpu.iwStack[cpu.iwRank]   = cpMem[location] & Mask60;
+                cpu.iwValid[cpu.iwRank]   = TRUE;
                 }
 #else
             /*
@@ -1189,8 +1203,8 @@ static void cpuFetchOpWord(u32 address, CpWord *data)
 
             cpu.iwRank = (cpu.iwRank + 1) % MaxIwStack;
             cpu.iwAddress[cpu.iwRank] = location;
-            cpu.iwStack[cpu.iwRank] = cpMem[location] & Mask60;
-            cpu.iwValid[cpu.iwRank] = TRUE;
+            cpu.iwStack[cpu.iwRank]   = cpMem[location] & Mask60;
+            cpu.iwValid[cpu.iwRank]   = TRUE;
 #endif
             }
         }
@@ -1229,7 +1243,7 @@ static void cpuVoidIwStack(u32 branchAddr)
 
         for (i = 0; i < MaxIwStack; i++)
             {
-            if (cpu.iwValid[i] && cpu.iwAddress[i] == location)
+            if (cpu.iwValid[i] && (cpu.iwAddress[i] == location))
                 {
                 /*
                 **  Branch target is within stack - do nothing.
@@ -1295,7 +1309,7 @@ static bool cpuReadMem(u32 address, CpWord *data)
                 *data = 0;
                 }
 
-            if ((features & (HasNoCejMej | IsSeries6x00)) == 0 && !cpu.monitorMode)
+            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !cpu.monitorMode)
                 {
                 /*
                 **  Exchange jump to MA.
@@ -1304,10 +1318,10 @@ static bool cpuReadMem(u32 address, CpWord *data)
                 cpuExchangeJump(cpu.regMa);
                 }
 
-            return(TRUE);
+            return (TRUE);
             }
 
-        return(FALSE);
+        return (FALSE);
         }
 
     /*
@@ -1323,7 +1337,8 @@ static bool cpuReadMem(u32 address, CpWord *data)
         if ((features & HasNoCmWrap) != 0)
             {
             *data = (~((CpWord)0)) & Mask60;
-            return(FALSE);
+
+            return (FALSE);
             }
 
         location %= cpuMaxMemory;
@@ -1334,7 +1349,7 @@ static bool cpuReadMem(u32 address, CpWord *data)
     */
     *data = cpMem[location] & Mask60;
 
-    return(FALSE);
+    return (FALSE);
     }
 
 /*--------------------------------------------------------------------------
@@ -1369,7 +1384,7 @@ static bool cpuWriteMem(u32 address, CpWord *data)
 
             cpu.regP = 0;
 
-            if ((features & (HasNoCejMej | IsSeries6x00)) == 0 && !cpu.monitorMode)
+            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !cpu.monitorMode)
                 {
                 /*
                 **  Exchange jump to MA.
@@ -1378,10 +1393,10 @@ static bool cpuWriteMem(u32 address, CpWord *data)
                 cpuExchangeJump(cpu.regMa);
                 }
 
-            return(TRUE);
+            return (TRUE);
             }
 
-        return(FALSE);
+        return (FALSE);
         }
 
     /*
@@ -1396,7 +1411,7 @@ static bool cpuWriteMem(u32 address, CpWord *data)
         {
         if ((features & HasNoCmWrap) != 0)
             {
-            return(FALSE);
+            return (FALSE);
             }
 
         location %= cpuMaxMemory;
@@ -1407,7 +1422,7 @@ static bool cpuWriteMem(u32 address, CpWord *data)
     */
     cpMem[location] = *data & Mask60;
 
-    return(FALSE);
+    return (FALSE);
     }
 
 /*--------------------------------------------------------------------------
@@ -1470,7 +1485,7 @@ static u32 cpuAddRa(u32 op)
             acc21 -= 1;
             }
 
-        return(acc21 & Mask21);
+        return (acc21 & Mask21);
         }
 
     acc18 = (cpu.regRaCm & Mask18) - (~op & Mask18);
@@ -1479,7 +1494,7 @@ static u32 cpuAddRa(u32 op)
         acc18 -= 1;
         }
 
-    return(acc18 & Mask18);
+    return (acc18 & Mask18);
     }
 
 /*--------------------------------------------------------------------------
@@ -1500,7 +1515,7 @@ static u32 cpuAdd18(u32 op1, u32 op2)
         acc18 -= 1;
         }
 
-    return(acc18 & Mask18);
+    return (acc18 & Mask18);
     }
 
 /*--------------------------------------------------------------------------
@@ -1521,7 +1536,7 @@ static u32 cpuAdd24(u32 op1, u32 op2)
         acc24 -= 1;
         }
 
-    return(acc24 & Mask24);
+    return (acc24 & Mask24);
     }
 
 /*--------------------------------------------------------------------------
@@ -1542,7 +1557,7 @@ static u32 cpuSubtract18(u32 op1, u32 op2)
         acc18 -= 1;
         }
 
-    return(acc18 & Mask18);
+    return (acc18 & Mask18);
     }
 
 /*--------------------------------------------------------------------------
@@ -1591,7 +1606,7 @@ static void cpuUemWord(bool writeToUem)
 
             cpu.regP = 0;
 
-            if ((features & (HasNoCejMej | IsSeries6x00)) == 0 && !cpu.monitorMode)
+            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !cpu.monitorMode)
                 {
                 /*
                 **  Exchange jump to MA.
@@ -1614,14 +1629,14 @@ static void cpuUemWord(bool writeToUem)
     */
     if (writeToUem)
         {
-        if (uemAddress < cpuMaxMemory && (uemAddress & (3 << 21)) == 0)
+        if ((uemAddress < cpuMaxMemory) && ((uemAddress & (3 << 21)) == 0))
             {
             cpMem[uemAddress++] = cpu.regX[opJ] & Mask60;
             }
         }
     else
         {
-        if (uemAddress >= cpuMaxMemory || (uemAddress & (3 << 21)) != 0)
+        if ((uemAddress >= cpuMaxMemory) || ((uemAddress & (3 << 21)) != 0))
             {
             /*
             **  If bits 21 or 22 are non-zero, zero Xj.
@@ -1647,10 +1662,10 @@ static void cpuUemWord(bool writeToUem)
 **------------------------------------------------------------------------*/
 static void cpuEcsWord(bool writeToEcs)
     {
-    u32 ecsAddress;
-    u32 flEcs;
+    u32  ecsAddress;
+    u32  flEcs;
     bool isZeroFill;
-    u32 raEcs;
+    u32  raEcs;
 
     /*
     **  ECS must exist.
@@ -1658,24 +1673,25 @@ static void cpuEcsWord(bool writeToEcs)
     if (extMaxMemory == 0)
         {
         cpuOpIllegal();
+
         return;
         }
 
     isZeroFill = FALSE;
 
-    if (   (features & IsSeries800) != 0
-        && (cpu.exitMode & EmFlagExpandedAddress) != 0)
+    if (((features & IsSeries800) != 0)
+        && ((cpu.exitMode & EmFlagExpandedAddress) != 0))
         {
         ecsAddress = (u32)(cpu.regX[opK] & Mask30);
-        raEcs = (u32)(cpu.regRaEcs & Mask24);
-        flEcs = (u32)(cpu.regFlEcs & Mask30);
+        raEcs      = (u32)(cpu.regRaEcs & Mask24);
+        flEcs      = (u32)(cpu.regFlEcs & Mask30);
         isZeroFill = (modelType == ModelCyber865) && (((cpu.regX[opK] + cpu.regRaEcs) & (021 << 24)) != 0);
         }
     else
         {
         ecsAddress = (u32)(cpu.regX[opK] & Mask24);
-        raEcs = (u32)(cpu.regRaEcs & Mask21);
-        flEcs = (u32)(cpu.regFlEcs & Mask23);
+        raEcs      = (u32)(cpu.regRaEcs & Mask21);
+        flEcs      = (u32)(cpu.regFlEcs & Mask23);
         isZeroFill = (modelType == ModelCyber865) && (((cpu.regX[opK] + cpu.regRaEcs) & (01 << 21)) != 0);
         }
 
@@ -1699,7 +1715,7 @@ static void cpuEcsWord(bool writeToEcs)
 
             cpu.regP = 0;
 
-            if ((features & (HasNoCejMej | IsSeries6x00)) == 0 && !cpu.monitorMode)
+            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !cpu.monitorMode)
                 {
                 /*
                 **  Exchange jump to MA.
@@ -1735,7 +1751,7 @@ static void cpuEcsWord(bool writeToEcs)
             **  Zero Xj, then full exit to next instruction word.
             */
             cpu.regX[opJ] = 0;
-            cpu.regP = (cpu.regP + 1) & Mask18;
+            cpu.regP      = (cpu.regP + 1) & Mask18;
             cpuFetchOpWord(cpu.regP, &opWord);
             }
         else if (ecsAddress >= cpuMaxMemory)
@@ -1764,13 +1780,13 @@ static void cpuEcsWord(bool writeToEcs)
 **------------------------------------------------------------------------*/
 static void cpuUemTransfer(bool writeToUem)
     {
-    u32 wordCount;
-    u32 uemAddress;
-    u32 cmAddress;
-    u32 flEcs;
+    u32  wordCount;
+    u32  uemAddress;
+    u32  cmAddress;
+    u32  flEcs;
     bool isFlagRegister;
     bool isZeroFill;
-    u32 raEcs;
+    u32  raEcs;
 
     /*
     **  Instruction must be located in the upper 30 bits.
@@ -1778,10 +1794,11 @@ static void cpuUemTransfer(bool writeToUem)
     if (opOffset != 30)
         {
         cpuOpIllegal();
+
         return;
         }
 
-    isZeroFill = FALSE;     // for Cyber 865/875
+    isZeroFill     = FALSE; // for Cyber 865/875
     isFlagRegister = FALSE; // flag register applies to ECS/ESM only
 
     /*
@@ -1789,22 +1806,22 @@ static void cpuUemTransfer(bool writeToUem)
     */
     wordCount = cpuAdd18(cpu.regB[opJ], opAddress);
 
-    if (   (features & IsSeries800) != 0
-        && (cpu.exitMode & EmFlagExpandedAddress) != 0)
+    if (((features & IsSeries800) != 0)
+        && ((cpu.exitMode & EmFlagExpandedAddress) != 0))
         {
-        uemAddress = (u32)(cpu.regX[0] & Mask30);
-        raEcs = (u32)(cpu.regRaEcs & Mask24);
-        flEcs = (u32)(cpu.regFlEcs & Mask30);
-        isFlagRegister =    (cpu.regX[0]  & (1 << 29)) != 0
+        uemAddress     = (u32)(cpu.regX[0] & Mask30);
+        raEcs          = (u32)(cpu.regRaEcs & Mask24);
+        flEcs          = (u32)(cpu.regFlEcs & Mask30);
+        isFlagRegister = (cpu.regX[0] & (1 << 29)) != 0
                          && (cpu.regFlEcs & (1 << 29)) != 0;
         isZeroFill = (modelType == ModelCyber865) && (((cpu.regX[0] + cpu.regRaEcs) & (01 << 28)) != 0);
         }
     else
         {
-        uemAddress = (u32)(cpu.regX[0] & Mask24);
-        raEcs = (u32)(cpu.regRaEcs & Mask21);
-        flEcs = (u32)(cpu.regFlEcs & Mask23);
-        isFlagRegister =    (cpu.regX[0]  & (1 << 23)) != 0
+        uemAddress     = (u32)(cpu.regX[0] & Mask24);
+        raEcs          = (u32)(cpu.regRaEcs & Mask21);
+        flEcs          = (u32)(cpu.regFlEcs & Mask23);
+        isFlagRegister = (cpu.regX[0] & (1 << 23)) != 0
                          && (cpu.regFlEcs & (1 << 23)) != 0;
         isZeroFill = (modelType == ModelCyber865) && (((cpu.regX[0] + cpu.regRaEcs) & (03 << 21)) != 0);
         }
@@ -1829,14 +1846,14 @@ static void cpuUemTransfer(bool writeToUem)
     /*
     **  Check for positive word count, CM and UEM range.
     */
-    if (   (wordCount & Sign18) != 0
-        || cpu.regFlCm  < cmAddress  + wordCount
-        || flEcs < uemAddress + wordCount
+    if (((wordCount & Sign18) != 0)
+        || (cpu.regFlCm < cmAddress + wordCount)
+        || (flEcs < uemAddress + wordCount)
         || isFlagRegister)
         {
 #if EMDEBUG
         fprintf(emLog, "   UEM AddressOutOfRange: EM %010o  FLE %010o  CM %06o  FL %08o  Words %d\n",
-            uemAddress, flEcs, cmAddress, cpu.regFlCm, wordCount);
+                uemAddress, flEcs, cmAddress, cpu.regFlCm, wordCount);
         dumpXP(020, 017);
 #endif
         cpu.exitCondition |= EcAddressOutOfRange;
@@ -1854,7 +1871,7 @@ static void cpuUemTransfer(bool writeToUem)
 
             cpu.regP = 0;
 
-            if ((features & (HasNoCejMej | IsSeries6x00)) == 0 && !cpu.monitorMode)
+            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !cpu.monitorMode)
                 {
                 /*
                 **  Exchange jump to MA.
@@ -1875,7 +1892,7 @@ static void cpuUemTransfer(bool writeToUem)
     /*
     **  Add base addresses.
     */
-    cmAddress = cpuAddRa(cmAddress);
+    cmAddress  = cpuAddRa(cmAddress);
     cmAddress %= cpuMaxMemory;
 
     uemAddress += raEcs;
@@ -1887,7 +1904,7 @@ static void cpuUemTransfer(bool writeToUem)
         {
         while (wordCount--)
             {
-            if (uemAddress >= cpuMaxMemory || (uemAddress & (3 << 21)) != 0)
+            if ((uemAddress >= cpuMaxMemory) || ((uemAddress & (3 << 21)) != 0))
                 {
                 /*
                 **  If bits 21 or 22 are non-zero, error exit to lower
@@ -1901,7 +1918,7 @@ static void cpuUemTransfer(bool writeToUem)
             /*
             **  Increment CM address.
             */
-            cmAddress = cpuAdd24(cmAddress, 1);
+            cmAddress  = cpuAdd24(cmAddress, 1);
             cmAddress %= cpuMaxMemory;
             }
         }
@@ -1911,17 +1928,17 @@ static void cpuUemTransfer(bool writeToUem)
 
         while (wordCount--)
             {
-            if (isZeroFill || uemAddress >= cpuMaxMemory)
+            if (isZeroFill || (uemAddress >= cpuMaxMemory))
                 {
                 /*
                 **  If bits 21 or 22 are non-zero, zero CM, but take error exit
                 **  to lower 30 bits once zeroing is finished.
->>>>>>>>>>>> manual says to only do this when the condition is true on instruction start <<<<<<<<<<<<<<<<
->>>>>>>>>>>> NOS 2 now works by specifiying an address > cpuMaxMemory with bit 24 set?!? <<<<<<<<<<<<<<<<
->>>>>>>>>>>> Maybe the manual is wrong about bits 21/22 and it should be bit 24 instead? <<<<<<<<<<<<<<<<
+                ** >>>>>>>>>>>> manual says to only do this when the condition is true on instruction start <<<<<<<<<<<<<<<<
+                ** >>>>>>>>>>>> NOS 2 now works by specifiying an address > cpuMaxMemory with bit 24 set?!? <<<<<<<<<<<<<<<<
+                ** >>>>>>>>>>>> Maybe the manual is wrong about bits 21/22 and it should be bit 24 instead? <<<<<<<<<<<<<<<<
                 */
                 cpMem[cmAddress] = 0;
-                takeErrorExit = TRUE;
+                takeErrorExit    = TRUE;
                 }
             else
                 {
@@ -1931,7 +1948,7 @@ static void cpuUemTransfer(bool writeToUem)
             /*
             **  Increment CM address.
             */
-            cmAddress = cpuAdd24(cmAddress, 1);
+            cmAddress  = cpuAdd24(cmAddress, 1);
             cmAddress %= cpuMaxMemory;
             }
 
@@ -1963,53 +1980,54 @@ static void cpuUemTransfer(bool writeToUem)
 **------------------------------------------------------------------------*/
 static void cpuEcsTransfer(bool writeToEcs)
     {
-    u32 wordCount;
-    u32 ecsAddress;
-    u32 cmAddress;
-    u32 flEcs;
+    u32  wordCount;
+    u32  ecsAddress;
+    u32  cmAddress;
+    u32  flEcs;
     bool isFlagRegister;
     bool isZeroFill;
-    u32 raEcs;
+    u32  raEcs;
 
     /*
     **  ECS must exist and instruction must be located in the upper 30 bits.
     */
-    if (extMaxMemory == 0 || opOffset != 30)
+    if ((extMaxMemory == 0) || (opOffset != 30))
         {
         cpuOpIllegal();
+
         return;
         }
 
     isFlagRegister = FALSE;
-    isZeroFill = FALSE; // for Cyber 865/875
+    isZeroFill     = FALSE; // for Cyber 865/875
 
     /*
     **  Calculate word count, source and destination addresses.
     */
     wordCount = cpuAdd18(cpu.regB[opJ], opAddress);
 
-    if (   (features & IsSeries800) != 0
-        && (cpu.exitMode & EmFlagExpandedAddress) != 0)
+    if (((features & IsSeries800) != 0)
+        && ((cpu.exitMode & EmFlagExpandedAddress) != 0))
         {
-        ecsAddress = (u32)(cpu.regX[0] & Mask30);
-        raEcs = (u32)(cpu.regRaEcs & Mask24);
-        flEcs = (u32)(cpu.regFlEcs & Mask30);
-        isFlagRegister =    (cpu.regX[0]  & (1 << 29)) != 0
+        ecsAddress     = (u32)(cpu.regX[0] & Mask30);
+        raEcs          = (u32)(cpu.regRaEcs & Mask24);
+        flEcs          = (u32)(cpu.regFlEcs & Mask30);
+        isFlagRegister = (cpu.regX[0] & (1 << 29)) != 0
                          && (cpu.regFlEcs & (1 << 29)) != 0;
         isZeroFill = (modelType == ModelCyber865) && (((cpu.regX[0] + cpu.regRaEcs) & (021 << 24)) != 0);
         }
     else
         {
-        ecsAddress = (u32)(cpu.regX[0] & Mask24);
-        raEcs = (u32)(cpu.regRaEcs & Mask21);
-        flEcs = (u32)(cpu.regFlEcs & Mask23);
-        isFlagRegister =    (cpu.regX[0]  & (1 << 23)) != 0
+        ecsAddress     = (u32)(cpu.regX[0] & Mask24);
+        raEcs          = (u32)(cpu.regRaEcs & Mask21);
+        flEcs          = (u32)(cpu.regFlEcs & Mask23);
+        isFlagRegister = (cpu.regX[0] & (1 << 23)) != 0
                          && (cpu.regFlEcs & (1 << 23)) != 0;
         isZeroFill = (modelType == ModelCyber865) && (((cpu.regX[0] + cpu.regRaEcs) & (01 << 21)) != 0);
         }
 
-    if (   (features & IsSeries800) != 0
-        && (cpu.exitMode & EmFlagEnhancedBlockCopy) != 0)
+    if (((features & IsSeries800) != 0)
+        && ((cpu.exitMode & EmFlagEnhancedBlockCopy) != 0))
         {
         cmAddress = (u32)((cpu.regX[0] >> 30) & Mask24);
         }
@@ -2038,6 +2056,7 @@ static void cpuEcsTransfer(bool writeToEcs)
         */
         cpu.regP = (cpu.regP + 1) & Mask18;
         cpuFetchOpWord(cpu.regP, &opWord);
+
         return;
         }
 
@@ -2052,14 +2071,14 @@ static void cpuEcsTransfer(bool writeToEcs)
     /*
     **  Check for positive word count, CM and ECS range.
     */
-    if (   (wordCount & Sign18) != 0
-        || cpu.regFlCm  < cmAddress  + wordCount
-        || flEcs < ecsAddress + wordCount)
+    if (((wordCount & Sign18) != 0)
+        || (cpu.regFlCm < cmAddress + wordCount)
+        || (flEcs < ecsAddress + wordCount))
         {
 #if EMDEBUG
         fprintf(emLog, "   ECS AddressOutOfRange: EM %010o  FLE %010o  CM %06o  FL %08o  Words %d\n",
-            ecsAddress, flEcs, cmAddress, cpu.regFlCm, wordCount);
-        dumpXP(020,017);
+                ecsAddress, flEcs, cmAddress, cpu.regFlCm, wordCount);
+        dumpXP(020, 017);
 #endif
         cpu.exitCondition |= EcAddressOutOfRange;
         if ((cpu.exitMode & EmAddressOutOfRange) != 0)
@@ -2076,7 +2095,7 @@ static void cpuEcsTransfer(bool writeToEcs)
 
             cpu.regP = 0;
 
-            if ((features & (HasNoCejMej | IsSeries6x00)) == 0 && !cpu.monitorMode)
+            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !cpu.monitorMode)
                 {
                 /*
                 **  Exchange jump to MA.
@@ -2097,7 +2116,7 @@ static void cpuEcsTransfer(bool writeToEcs)
     /*
     **  Add base addresses.
     */
-    cmAddress = cpuAddRa(cmAddress);
+    cmAddress  = cpuAddRa(cmAddress);
     cmAddress %= cpuMaxMemory;
 
     ecsAddress += raEcs;
@@ -2122,7 +2141,7 @@ static void cpuEcsTransfer(bool writeToEcs)
             /*
             **  Increment CM address.
             */
-            cmAddress = cpuAdd24(cmAddress, 1);
+            cmAddress  = cpuAdd24(cmAddress, 1);
             cmAddress %= cpuMaxMemory;
             }
         }
@@ -2132,13 +2151,13 @@ static void cpuEcsTransfer(bool writeToEcs)
 
         while (wordCount--)
             {
-            if (isZeroFill || ecsAddress >= extMaxMemory)
+            if (isZeroFill || (ecsAddress >= extMaxMemory))
                 {
                 /*
                 **  Zero CM, but take error exit to lower 30 bits once zeroing is finished.
                 */
                 cpMem[cmAddress] = 0;
-                takeErrorExit = TRUE;
+                takeErrorExit    = TRUE;
                 }
             else
                 {
@@ -2148,7 +2167,7 @@ static void cpuEcsTransfer(bool writeToEcs)
             /*
             **  Increment CM address.
             */
-            cmAddress = cpuAdd24(cmAddress, 1);
+            cmAddress  = cpuAdd24(cmAddress, 1);
             cmAddress %= cpuMaxMemory;
             }
 
@@ -2181,13 +2200,13 @@ static void cpuEcsTransfer(bool writeToEcs)
 **------------------------------------------------------------------------*/
 static bool cpuCmuGetByte(u32 address, u32 pos, u8 *byte)
     {
-    u32 location;
+    u32    location;
     CpWord data;
 
     /*
     **  Validate access.
     */
-    if (address >= cpu.regFlCm || cpu.regRaCm + address >= cpuMaxMemory)
+    if ((address >= cpu.regFlCm) || (cpu.regRaCm + address >= cpuMaxMemory))
         {
         cpu.exitCondition |= EcAddressOutOfRange;
         if ((cpu.exitMode & EmAddressOutOfRange) != 0)
@@ -2204,7 +2223,7 @@ static bool cpuCmuGetByte(u32 address, u32 pos, u8 *byte)
 
             cpu.regP = 0;
 
-            if ((features & (HasNoCejMej | IsSeries6x00)) == 0 && !cpu.monitorMode)
+            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !cpu.monitorMode)
                 {
                 /*
                 **  Exchange jump to MA.
@@ -2214,13 +2233,13 @@ static bool cpuCmuGetByte(u32 address, u32 pos, u8 *byte)
                 }
             }
 
-        return(TRUE);
+        return (TRUE);
         }
 
     /*
     **  Calculate absolute address with wraparound.
     */
-    location = cpuAddRa(address);
+    location  = cpuAddRa(address);
     location %= cpuMaxMemory;
 
     /*
@@ -2233,7 +2252,7 @@ static bool cpuCmuGetByte(u32 address, u32 pos, u8 *byte)
     */
     *byte = (u8)((data >> ((9 - pos) * 6)) & Mask6);
 
-    return(FALSE);
+    return (FALSE);
     }
 
 /*--------------------------------------------------------------------------
@@ -2249,13 +2268,13 @@ static bool cpuCmuGetByte(u32 address, u32 pos, u8 *byte)
 **------------------------------------------------------------------------*/
 static bool cpuCmuPutByte(u32 address, u32 pos, u8 byte)
     {
-    u32 location;
+    u32    location;
     CpWord data;
 
     /*
     **  Validate access.
     */
-    if (address >= cpu.regFlCm || cpu.regRaCm + address >= cpuMaxMemory)
+    if ((address >= cpu.regFlCm) || (cpu.regRaCm + address >= cpuMaxMemory))
         {
         cpu.exitCondition |= EcAddressOutOfRange;
         if ((cpu.exitMode & EmAddressOutOfRange) != 0)
@@ -2272,7 +2291,7 @@ static bool cpuCmuPutByte(u32 address, u32 pos, u8 byte)
 
             cpu.regP = 0;
 
-            if ((features & (HasNoCejMej | IsSeries6x00)) == 0 && !cpu.monitorMode)
+            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !cpu.monitorMode)
                 {
                 /*
                 **  Exchange jump to MA.
@@ -2282,13 +2301,13 @@ static bool cpuCmuPutByte(u32 address, u32 pos, u8 byte)
                 }
             }
 
-        return(TRUE);
+        return (TRUE);
         }
 
     /*
     **  Calculate absolute address with wraparound.
     */
-    location = cpuAddRa(address);
+    location  = cpuAddRa(address);
     location %= cpuMaxMemory;
 
     /*
@@ -2311,7 +2330,7 @@ static bool cpuCmuPutByte(u32 address, u32 pos, u8 byte)
     */
     cpMem[location] = data & Mask60;
 
-    return(FALSE);
+    return (FALSE);
     }
 
 /*--------------------------------------------------------------------------
@@ -2325,11 +2344,11 @@ static bool cpuCmuPutByte(u32 address, u32 pos, u8 byte)
 static void cpuCmuMoveIndirect(void)
     {
     CpWord descWord;
-    u32 k1, k2;
-    u32 c1, c2;
-    u32 ll;
-    u8 byte;
-    bool failed;
+    u32    k1, k2;
+    u32    c1, c2;
+    u32    ll;
+    u8     byte;
+    bool   failed;
 
     //<<<<<<<<<<<<<<<<<<<<<<<< don't forget to optimise c1 == c2 cases.
 
@@ -2338,7 +2357,7 @@ static void cpuCmuMoveIndirect(void)
     */
     opAddress = (u32)((opWord >> 30) & Mask18);
     opAddress = cpuAdd18(cpu.regB[opJ], opAddress);
-    failed = cpuReadMem(opAddress, &descWord);
+    failed    = cpuReadMem(opAddress, &descWord);
     if (failed)
         {
         return;
@@ -2348,7 +2367,7 @@ static void cpuCmuMoveIndirect(void)
     **  Decode descriptor word.
     */
     k1 = (u32)(descWord >> 30) & Mask18;
-    k2 = (u32)(descWord >>  0) & Mask18;
+    k2 = (u32)(descWord >> 0) & Mask18;
     c1 = (u32)(descWord >> 22) & Mask4;
     c2 = (u32)(descWord >> 18) & Mask4;
     ll = (u32)((descWord >> 26) & Mask4) | (u32)((descWord >> (48 - 4)) & (Mask9 << 4));
@@ -2356,7 +2375,7 @@ static void cpuCmuMoveIndirect(void)
     /*
     **  Check for address out of range.
     */
-    if (c1 > 9 || c2 > 9)
+    if ((c1 > 9) || (c2 > 9))
         {
         cpu.exitCondition |= EcAddressOutOfRange;
         if ((cpu.exitMode & EmAddressOutOfRange) != 0)
@@ -2373,7 +2392,7 @@ static void cpuCmuMoveIndirect(void)
 
             cpu.regP = 0;
 
-            if ((features & (HasNoCejMej | IsSeries6x00)) == 0 && !cpu.monitorMode)
+            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !cpu.monitorMode)
                 {
                 /*
                 **  Exchange jump to MA.
@@ -2399,7 +2418,7 @@ static void cpuCmuMoveIndirect(void)
         /*
         **  Transfer one byte, but abort if access fails.
         */
-        if (   cpuCmuGetByte(k1, c1, &byte)
+        if (cpuCmuGetByte(k1, c1, &byte)
             || cpuCmuPutByte(k2, c2, byte))
             {
             if (cpuStopped) //????????????????????????
@@ -2454,7 +2473,7 @@ static void cpuCmuMoveDirect(void)
     u32 k1, k2;
     u32 c1, c2;
     u32 ll;
-    u8 byte;
+    u8  byte;
 
     //<<<<<<<<<<<<<<<<<<<<<<<< don't forget to optimise c1 == c2 cases.
 
@@ -2462,7 +2481,7 @@ static void cpuCmuMoveDirect(void)
     **  Decode opcode word.
     */
     k1 = (u32)(opWord >> 30) & Mask18;
-    k2 = (u32)(opWord >>  0) & Mask18;
+    k2 = (u32)(opWord >> 0) & Mask18;
     c1 = (u32)(opWord >> 22) & Mask4;
     c2 = (u32)(opWord >> 18) & Mask4;
     ll = (u32)((opWord >> 26) & Mask4) | (u32)((opWord >> (48 - 4)) & (Mask3 << 4));
@@ -2470,7 +2489,7 @@ static void cpuCmuMoveDirect(void)
     /*
     **  Check for address out of range.
     */
-    if (c1 > 9 || c2 > 9)
+    if ((c1 > 9) || (c2 > 9))
         {
         cpu.exitCondition |= EcAddressOutOfRange;
         if ((cpu.exitMode & EmAddressOutOfRange) != 0)
@@ -2487,7 +2506,7 @@ static void cpuCmuMoveDirect(void)
 
             cpu.regP = 0;
 
-            if ((features & (HasNoCejMej | IsSeries6x00)) == 0 && !cpu.monitorMode)
+            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !cpu.monitorMode)
                 {
                 /*
                 **  Exchange jump to MA.
@@ -2513,7 +2532,7 @@ static void cpuCmuMoveDirect(void)
         /*
         **  Transfer one byte, but abort if access fails.
         */
-        if (   cpuCmuGetByte(k1, c1, &byte)
+        if (cpuCmuGetByte(k1, c1, &byte)
             || cpuCmuPutByte(k2, c2, byte))
             {
             if (cpuStopped) //?????????????????????
@@ -2566,17 +2585,17 @@ static void cpuCmuMoveDirect(void)
 static void cpuCmuCompareCollated(void)
     {
     CpWord result = 0;
-    u32 k1, k2;
-    u32 c1, c2;
-    u32 ll;
-    u32 collTable;
-    u8 byte1, byte2;
+    u32    k1, k2;
+    u32    c1, c2;
+    u32    ll;
+    u32    collTable;
+    u8     byte1, byte2;
 
     /*
     **  Decode opcode word.
     */
     k1 = (u32)(opWord >> 30) & Mask18;
-    k2 = (u32)(opWord >>  0) & Mask18;
+    k2 = (u32)(opWord >> 0) & Mask18;
     c1 = (u32)(opWord >> 22) & Mask4;
     c2 = (u32)(opWord >> 18) & Mask4;
     ll = (u32)((opWord >> 26) & Mask4) | (u32)((opWord >> (48 - 4)) & (Mask3 << 4));
@@ -2589,7 +2608,7 @@ static void cpuCmuCompareCollated(void)
     /*
     **  Check for addresses and collTable out of range.
     */
-    if (c1 > 9 || c2 > 9 || collTable >= cpu.regFlCm || cpu.regRaCm + collTable >= cpuMaxMemory)
+    if ((c1 > 9) || (c2 > 9) || (collTable >= cpu.regFlCm) || (cpu.regRaCm + collTable >= cpuMaxMemory))
         {
         cpu.exitCondition |= EcAddressOutOfRange;
         if ((cpu.exitMode & EmAddressOutOfRange) != 0)
@@ -2606,7 +2625,7 @@ static void cpuCmuCompareCollated(void)
 
             cpu.regP = 0;
 
-            if ((features & (HasNoCejMej | IsSeries6x00)) == 0 && !cpu.monitorMode)
+            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !cpu.monitorMode)
                 {
                 /*
                 **  Exchange jump to MA.
@@ -2632,7 +2651,7 @@ static void cpuCmuCompareCollated(void)
         /*
         **  Check the two bytes raw.
         */
-        if (   cpuCmuGetByte(k1, c1, &byte1)
+        if (cpuCmuGetByte(k1, c1, &byte1)
             || cpuCmuGetByte(k2, c2, &byte2))
             {
             if (cpuStopped) //?????????????????????
@@ -2651,7 +2670,7 @@ static void cpuCmuCompareCollated(void)
             /*
             **  Bytes differ - check using collating table.
             */
-            if (   cpuCmuGetByte(collTable + ((byte1 >> 3) & Mask3), byte1 & Mask3, &byte1)
+            if (cpuCmuGetByte(collTable + ((byte1 >> 3) & Mask3), byte1 & Mask3, &byte1)
                 || cpuCmuGetByte(collTable + ((byte2 >> 3) & Mask3), byte2 & Mask3, &byte2))
                 {
                 if (cpuStopped) //??????????????????????
@@ -2720,16 +2739,16 @@ static void cpuCmuCompareCollated(void)
 static void cpuCmuCompareUncollated(void)
     {
     CpWord result = 0;
-    u32 k1, k2;
-    u32 c1, c2;
-    u32 ll;
-    u8 byte1, byte2;
+    u32    k1, k2;
+    u32    c1, c2;
+    u32    ll;
+    u8     byte1, byte2;
 
     /*
     **  Decode opcode word.
     */
     k1 = (u32)(opWord >> 30) & Mask18;
-    k2 = (u32)(opWord >>  0) & Mask18;
+    k2 = (u32)(opWord >> 0) & Mask18;
     c1 = (u32)(opWord >> 22) & Mask4;
     c2 = (u32)(opWord >> 18) & Mask4;
     ll = (u32)((opWord >> 26) & Mask4) | (u32)((opWord >> (48 - 4)) & (Mask3 << 4));
@@ -2737,7 +2756,7 @@ static void cpuCmuCompareUncollated(void)
     /*
     **  Check for address out of range.
     */
-    if (c1 > 9 || c2 > 9)
+    if ((c1 > 9) || (c2 > 9))
         {
         cpu.exitCondition |= EcAddressOutOfRange;
         if ((cpu.exitMode & EmAddressOutOfRange) != 0)
@@ -2754,7 +2773,7 @@ static void cpuCmuCompareUncollated(void)
 
             cpu.regP = 0;
 
-            if ((features & (HasNoCejMej | IsSeries6x00)) == 0 && !cpu.monitorMode)
+            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !cpu.monitorMode)
                 {
                 /*
                 **  Exchange jump to MA.
@@ -2780,7 +2799,7 @@ static void cpuCmuCompareUncollated(void)
         /*
         **  Check the two bytes raw.
         */
-        if (   cpuCmuGetByte(k1, c1, &byte1)
+        if (cpuCmuGetByte(k1, c1, &byte1)
             || cpuCmuGetByte(k2, c2, &byte2))
             {
             if (cpuStopped) //?????????????????
@@ -2851,15 +2870,15 @@ static void cpuFloatCheck(CpWord value)
     {
     int exponent = ((int)(value >> 48)) & Mask12;
 
-    if (exponent == 03777 || exponent == 04000)
+    if ((exponent == 03777) || (exponent == 04000))
         {
         cpu.exitCondition |= EcOperandOutOfRange;
-        floatException = TRUE;
+        floatException     = TRUE;
         }
-    else if (exponent == 01777 || exponent == 06000)
+    else if ((exponent == 01777) || (exponent == 06000))
         {
         cpu.exitCondition |= EcIndefiniteOperand;
-        floatException = TRUE;
+        floatException     = TRUE;
         }
     }
 
@@ -2891,7 +2910,7 @@ static void cpuFloatExceptionHandler(void)
 
             cpu.regP = 0;
 
-            if ((features & (HasNoCejMej | IsSeries6x00)) == 0 && !cpu.monitorMode)
+            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !cpu.monitorMode)
                 {
                 /*
                 **  Exchange jump to MA.
@@ -2911,13 +2930,12 @@ static void cpuFloatExceptionHandler(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-
 static void cpOp00(void)
     {
     /*
     **  PS or Error Exit to MA.
     */
-    if ((features & (HasNoCejMej | IsSeries6x00)) != 0 || cpu.monitorMode)
+    if (((features & (HasNoCejMej | IsSeries6x00)) != 0) || cpu.monitorMode)
         {
         cpuStopped = TRUE;
         }
@@ -2996,17 +3014,18 @@ static void cpOp01(void)
         /*
         **  XJ  K
         */
-        if ((features & HasNoCejMej) != 0 || opOffset != 30)
+        if (((features & HasNoCejMej) != 0) || (opOffset != 30))
             {
             /*
             **  CEJ/MEJ must be enabled and the instruction must be in parcel 0,
             **  if not, it is interpreted as an illegal instruction.
             */
             cpuOpIllegal();
+
             return;
             }
 
-        cpu.regP = (cpu.regP + 1) & Mask18;
+        cpu.regP   = (cpu.regP + 1) & Mask18;
         cpuStopped = TRUE;
 
         if (cpu.monitorMode)
@@ -3026,6 +3045,7 @@ static void cpOp01(void)
         if (modelType != ModelCyber865)
             {
             cpuOpIllegal();
+
             return;
             }
 
@@ -3047,6 +3067,7 @@ static void cpOp01(void)
         if (modelType != ModelCyber865)
             {
             cpuOpIllegal();
+
             return;
             }
 
@@ -3146,7 +3167,7 @@ static void cpOp03(void)
         **  IR  Xj K
         */
         acc60 = cpu.regX[opJ] >> 48;
-        jump = acc60 != 03777 && acc60 != 04000;
+        jump  = acc60 != 03777 && acc60 != 04000;
         break;
 
     case 5:
@@ -3154,7 +3175,7 @@ static void cpOp03(void)
         **  OR  Xj K
         */
         acc60 = cpu.regX[opJ] >> 48;
-        jump = acc60 == 03777 || acc60 == 04000;
+        jump  = acc60 == 03777 || acc60 == 04000;
         break;
 
     case 6:
@@ -3162,7 +3183,7 @@ static void cpOp03(void)
         **  DF  Xj K
         */
         acc60 = cpu.regX[opJ] >> 48;
-        jump = acc60 != 01777 && acc60 != 06000;
+        jump  = acc60 != 01777 && acc60 != 06000;
         break;
 
     case 7:
@@ -3170,7 +3191,7 @@ static void cpOp03(void)
         **  ID  Xj K
         */
         acc60 = cpu.regX[opJ] >> 48;
-        jump = acc60 == 01777 || acc60 == 06000;
+        jump  = acc60 == 01777 || acc60 == 06000;
         break;
         }
 
@@ -3249,6 +3270,7 @@ static void cpOp06(void)
     **  GE  Bi Bj K
     */
     i32 signDiff = (cpu.regB[opI] & Sign18) - (cpu.regB[opJ] & Sign18);
+
     if (signDiff > 0)
         {
         return;
@@ -3257,7 +3279,7 @@ static void cpOp06(void)
     if (signDiff == 0)
         {
         acc18 = (cpu.regB[opI] & Mask18) - (cpu.regB[opJ] & Mask18);
-        if ((acc18 & Overflow18) != 0 && (acc18 & Mask18) != 0)
+        if (((acc18 & Overflow18) != 0) && ((acc18 & Mask18) != 0))
             {
             acc18 -= 1;
             }
@@ -3286,6 +3308,7 @@ static void cpOp07(void)
     **  LT  Bi Bj K
     */
     i32 signDiff = (cpu.regB[opI] & Sign18) - (cpu.regB[opJ] & Sign18);
+
     if (signDiff < 0)
         {
         return;
@@ -3294,12 +3317,12 @@ static void cpOp07(void)
     if (signDiff == 0)
         {
         acc18 = (cpu.regB[opI] & Mask18) - (cpu.regB[opJ] & Mask18);
-        if ((acc18 & Overflow18) != 0 && (acc18 & Mask18) != 0)
+        if (((acc18 & Overflow18) != 0) && ((acc18 & Mask18) != 0))
             {
             acc18 -= 1;
             }
 
-        if ((acc18 & Sign18) == 0 || acc18 == 0)
+        if (((acc18 & Sign18) == 0) || (acc18 == 0))
             {
             return;
             }
@@ -3388,7 +3411,7 @@ static void cpOp20(void)
     */
     u8 jk;
 
-    jk = (u8)((opJ << 3) | opK);
+    jk            = (u8)((opJ << 3) | opK);
     cpu.regX[opI] = shiftLeftCircular(cpu.regX[opI] & Mask60, jk);
     }
 
@@ -3399,7 +3422,7 @@ static void cpOp21(void)
     */
     u8 jk;
 
-    jk = (u8)((opJ << 3) | opK);
+    jk            = (u8)((opJ << 3) | opK);
     cpu.regX[opI] = shiftRightArithmetic(cpu.regX[opI] & Mask60, jk);
     }
 
@@ -3415,12 +3438,12 @@ static void cpOp22(void)
 
     if ((count & Sign18) == 0)
         {
-        count &= Mask6;
+        count        &= Mask6;
         cpu.regX[opI] = shiftLeftCircular(acc60, count);
         }
     else
         {
-        count = ~count;
+        count  = ~count;
         count &= Mask11;
         if ((count & ~Mask6) != 0)
             {
@@ -3457,8 +3480,8 @@ static void cpOp23(void)
         }
     else
         {
-        count = ~count;
-        count &= Mask6;
+        count         = ~count;
+        count        &= Mask6;
         cpu.regX[opI] = shiftLeftCircular(acc60, count);
         }
     }
@@ -3647,7 +3670,7 @@ static void cpOp43(void)
     */
     u8 jk;
 
-    jk = (u8)((opJ << 3) | opK);
+    jk            = (u8)((opJ << 3) | opK);
     cpu.regX[opI] = shiftMask(jk);
     }
 
@@ -3693,6 +3716,7 @@ static void cpOp46(void)
         if ((features & HasCMU) == 0)
             {
             cpuOpIllegal();
+
             return;
             }
 
@@ -3750,13 +3774,13 @@ static void cpOp47(void)
     /*
     **  CXi Xk
     */
-    acc60 = cpu.regX[opK] & Mask60;
-    acc60 = ((acc60 & 0xAAAAAAAAAAAAAAAA) >>  1) + (acc60 & 0x5555555555555555);
-    acc60 = ((acc60 & 0xCCCCCCCCCCCCCCCC) >>  2) + (acc60 & 0x3333333333333333);
-    acc60 = ((acc60 & 0xF0F0F0F0F0F0F0F0) >>  4) + (acc60 & 0x0F0F0F0F0F0F0F0F);
-    acc60 = ((acc60 & 0xFF00FF00FF00FF00) >>  8) + (acc60 & 0x00FF00FF00FF00FF);
-    acc60 = ((acc60 & 0xFFFF0000FFFF0000) >> 16) + (acc60 & 0x0000FFFF0000FFFF);
-    acc60 = ((acc60 & 0xFFFFFFFF00000000) >> 32) + (acc60 & 0x00000000FFFFFFFF);
+    acc60         = cpu.regX[opK] & Mask60;
+    acc60         = ((acc60 & 0xAAAAAAAAAAAAAAAA) >> 1) + (acc60 & 0x5555555555555555);
+    acc60         = ((acc60 & 0xCCCCCCCCCCCCCCCC) >> 2) + (acc60 & 0x3333333333333333);
+    acc60         = ((acc60 & 0xF0F0F0F0F0F0F0F0) >> 4) + (acc60 & 0x0F0F0F0F0F0F0F0F);
+    acc60         = ((acc60 & 0xFF00FF00FF00FF00) >> 8) + (acc60 & 0x00FF00FF00FF00FF);
+    acc60         = ((acc60 & 0xFFFF0000FFFF0000) >> 16) + (acc60 & 0x0000FFFF0000FFFF);
+    acc60         = ((acc60 & 0xFFFFFFFF00000000) >> 32) + (acc60 & 0x00000000FFFFFFFF);
     cpu.regX[opI] = acc60 & Mask60;
     }
 
@@ -3890,12 +3914,13 @@ static void cpOp65(void)
 
 static void cpOp66(void)
     {
-    if (opI == 0 && (features & IsSeries800) != 0)
+    if ((opI == 0) && ((features & IsSeries800) != 0))
         {
         /*
         **  CR Xj,Xk
         */
         cpuReadMem((u32)(cpu.regX[opK]) & Mask21, cpu.regX + opJ);
+
         return;
         }
 
@@ -3907,12 +3932,13 @@ static void cpOp66(void)
 
 static void cpOp67(void)
     {
-    if (opI == 0 && (features & IsSeries800) != 0)
+    if ((opI == 0) && ((features & IsSeries800) != 0))
         {
         /*
         **  CW Xj,Xk
         */
         cpuWriteMem((u32)(cpu.regX[opK]) & Mask21, cpu.regX + opJ);
+
         return;
         }
 

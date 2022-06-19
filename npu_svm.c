@@ -11,12 +11,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -47,64 +47,64 @@
 /*
 **  Primary Service Message function codes.
 */
-#define PfcREG          0x1     // logical link regulation 
-#define PfcICN          0x2     // initiate connection     
-#define PfcTCN          0x3     // terminate connection    
-#define PfcCHC          0x4     // change terminal characteristics
-#define PfcNPU          0xA     // initialize npu          
-#define PfcSUP          0xE     // initiate supervision    
-#define PfcCNF          0xF     // configure terminal      
-#define PfcENB          0x10    // enable command(s)       
-#define PfcDIB          0x11    // disable command(s)      
-#define PfcNPS          0x12    // npu status request      
-#define PfcLLS          0x13    // ll status request       
-#define PfcLIS          0x14    // line status request     
-#define PfcTES          0x15    // term status request     
-#define PfcTRS          0x16    // trunk status request    
-#define PfcCPS          0x17    // coupler status request  
-#define PfcVCS          0x18    // svc status request       
-#define PfcSTU          0x19    // unsolicated statuses    
-#define PfcSTI          0x1A    // statistics              
-#define PfcMSG          0x1B    // message(s)             
-#define PfcLOG          0x1C    // error log entry         
-#define PfcALM          0x1D    // operator alarm          
-#define PfcNPI          0x1E    // reload npu               
-#define PfcCDI          0x1F    // count(s)                
-#define PfcOLD          0x20    // on-line diagnostics     
+#define PfcREG               0x1  // logical link regulation
+#define PfcICN               0x2  // initiate connection
+#define PfcTCN               0x3  // terminate connection
+#define PfcCHC               0x4  // change terminal characteristics
+#define PfcNPU               0xA  // initialize npu
+#define PfcSUP               0xE  // initiate supervision
+#define PfcCNF               0xF  // configure terminal
+#define PfcENB               0x10 // enable command(s)
+#define PfcDIB               0x11 // disable command(s)
+#define PfcNPS               0x12 // npu status request
+#define PfcLLS               0x13 // ll status request
+#define PfcLIS               0x14 // line status request
+#define PfcTES               0x15 // term status request
+#define PfcTRS               0x16 // trunk status request
+#define PfcCPS               0x17 // coupler status request
+#define PfcVCS               0x18 // svc status request
+#define PfcSTU               0x19 // unsolicated statuses
+#define PfcSTI               0x1A // statistics
+#define PfcMSG               0x1B // message(s)
+#define PfcLOG               0x1C // error log entry
+#define PfcALM               0x1D // operator alarm
+#define PfcNPI               0x1E // reload npu
+#define PfcCDI               0x1F // count(s)
+#define PfcOLD               0x20 // on-line diagnostics
 
 /*
 **  Secondary Service Message function codes.
 */
-#define SfcNP           0x0     // npu                     
-#define SfcLL           0x1     // logical link            
-#define SfcLI           0x2     // line                    
-#define SfcTE           0x3     // terminal                
-#define SfcTR           0x4     // trunk                   
-#define SfcCP           0x5     // coupler                 
-#define SfcVC           0x6     // switched virtual circuit
-#define SfcOP           0x7     // operator                
-#define SfcTA           0x8     // terminate connection    
-#define SfcAP           0x9     // outbound a-a connection 
-#define SfcIN           0xA     // initiate supervision    
-#define SfcDO           0xB     // dump option             
-#define SfcPB           0xC     // program block           
-#define SfcDT           0xD     // data                    
-#define SfcTM           0xE     // terminate diagnostics   
-#define SfcLD           0xE     // load                    
-#define SfcGO           0xF     // go                      
-#define SfcER           0x10    // error(s)                
-#define SfcEX           0x11    // a to a connection       
-#define SfcNQ           0x12    // sfc for *pbperform* sti 
-#define SfcNE           0x13    // nip block protocol error
-#define SfcPE           0x14    // pip block protocol error
-#define SfcRC           0x11    // reconfigure terminal    
+#define SfcNP                0x0  // npu
+#define SfcLL                0x1  // logical link
+#define SfcLI                0x2  // line
+#define SfcTE                0x3  // terminal
+#define SfcTR                0x4  // trunk
+#define SfcCP                0x5  // coupler
+#define SfcVC                0x6  // switched virtual circuit
+#define SfcOP                0x7  // operator
+#define SfcTA                0x8  // terminate connection
+#define SfcAP                0x9  // outbound a-a connection
+#define SfcIN                0xA  // initiate supervision
+#define SfcDO                0xB  // dump option
+#define SfcPB                0xC  // program block
+#define SfcDT                0xD  // data
+#define SfcTM                0xE  // terminate diagnostics
+#define SfcLD                0xE  // load
+#define SfcGO                0xF  // go
+#define SfcER                0x10 // error(s)
+#define SfcEX                0x11 // a to a connection
+#define SfcNQ                0x12 // sfc for *pbperform* sti
+#define SfcNE                0x13 // nip block protocol error
+#define SfcPE                0x14 // pip block protocol error
+#define SfcRC                0x11 // reconfigure terminal
 
 /*
 **  Regulation level change bit masks.
 */
-#define RegLvlBuffers       0x03
-#define RegLvlCsAvailable   0x04
-#define RegLvlNsAvailable   0x08
+#define RegLvlBuffers        0x03
+#define RegLvlCsAvailable    0x04
+#define RegLvlNsAvailable    0x08
 
 /*
 **  -----------------------
@@ -143,37 +143,37 @@ u8 npuSvmNpuNode     = 2;
 */
 static u8 linkRegulation[] =
     {
-    0,                  // DN
-    0,                  // SN
-    0,                  // CN
-    BtHTCMD,            // BT=CMD
-    PfcREG,             // PFC
-    SfcLL,              // SFC
-    0x0F,               // NS=1, CS=1, Regulation level=3
-    0,0,0,0,            // not used
-    0,0,0,              // not used
+    0,          // DN
+    0,          // SN
+    0,          // CN
+    BtHTCMD,    // BT=CMD
+    PfcREG,     // PFC
+    SfcLL,      // SFC
+    0x0F,       // NS=1, CS=1, Regulation level=3
+    0, 0, 0, 0, // not used
+    0, 0, 0,    // not used
     };
 
 static u8 requestSupervision[] =
     {
-    0,                  // DN
-    0,                  // SN
-    0,                  // CN
-    BtHTCMD,            // BT=CMD
-    PfcSUP,             // PFC
-    SfcIN,              // SFC
-    0,                  // PS
-    0,                  // PL
-    0,                  // RI
-    0,0,0,              // not used
-    3,                  // CCP version
-    1,                  // ...
-    0,                  // CCP level
-    0,                  // ...
-    0,                  // CCP cycle or variant
-    0,                  // ...
-    0,                  // not used
-    0,0                 // NCF version in NDL file (ignored)
+    0,       // DN
+    0,       // SN
+    0,       // CN
+    BtHTCMD, // BT=CMD
+    PfcSUP,  // PFC
+    SfcIN,   // SFC
+    0,       // PS
+    0,       // PL
+    0,       // RI
+    0, 0, 0, // not used
+    3,       // CCP version
+    1,       // ...
+    0,       // CCP level
+    0,       // ...
+    0,       // CCP cycle or variant
+    0,       // ...
+    0,       // not used
+    0, 0     // NCF version in NDL file (ignored)
     };
 
 static u8 responseNpuStatus[] =
@@ -221,7 +221,8 @@ static enum
     StIdle,
     StWaitSupervision,
     StReady,
-    } svmState = StIdle;
+    }
+svmState = StIdle;
 
 static u8 oldRegLevel = 0;
 
@@ -258,12 +259,12 @@ static void (*notifyTermDisconnect[])(Tcb *tp) =
     };
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialize SVM.
@@ -312,7 +313,7 @@ void npuSvmReset(void)
     /*
     **  Set initial state.
     */
-    svmState = StIdle;
+    svmState    = StIdle;
     oldRegLevel = 0;
     }
 
@@ -327,14 +328,14 @@ void npuSvmReset(void)
 **------------------------------------------------------------------------*/
 void npuSvmNotifyHostRegulation(u8 regLevel)
     {
-    if (svmState == StIdle || regLevel != oldRegLevel)
+    if ((svmState == StIdle) || (regLevel != oldRegLevel))
         {
         oldRegLevel = regLevel;
         linkRegulation[BlkOffP3] = regLevel;
         npuBipRequestUplineCanned(linkRegulation, sizeof(linkRegulation));
         }
 
-    if (svmState == StIdle && (regLevel & RegLvlCsAvailable) != 0)
+    if ((svmState == StIdle) && ((regLevel & RegLvlCsAvailable) != 0))
         {
         npuBipRequestUplineCanned(requestSupervision, sizeof(requestSupervision));
         svmState = StWaitSupervision;
@@ -354,9 +355,10 @@ bool npuSvmConnectTerminal(Pcb *pcbp)
     {
     if (npuSvmRequestTerminalConfig(pcbp))
         {
-        return(TRUE);
+        return (TRUE);
         }
-    return(FALSE);
+
+    return (FALSE);
     }
 
 /*--------------------------------------------------------------------------
@@ -370,17 +372,17 @@ bool npuSvmConnectTerminal(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 void npuSvmProcessBuffer(NpuBuffer *bp)
     {
-    u8 *block = bp->data;
+    u8  *block = bp->data;
     Tcb *tp;
-    u8 cn;
-    u8 claPort;
+    u8  cn;
+    u8  claPort;
 
     /*
     **  Ensure there is at least a minimal service message.
     */
     if (bp->numBytes < BlkOffSfc + 1)
         {
-        if (bp->numBytes == BlkOffBTBSN + 1 && block[BlkOffCN] != 0)
+        if ((bp->numBytes == BlkOffBTBSN + 1) && (block[BlkOffCN] != 0))
             {
             /*
             **  Exception to minimal service message:
@@ -389,6 +391,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             **  to deal with this.
             */
             npuTipProcessBuffer(bp, 0);
+
             return;
             }
 
@@ -401,6 +404,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
         **  Release downline buffer and return.
         */
         npuBipBufRelease(bp);
+
         return;
         }
 
@@ -414,12 +418,13 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
         **  Connection number out of range.
         */
         npuLogMessage("(npu_svm) Connection number is %u but must be zero in SVM messages %02X/%02X",
-            cn, block[BlkOffPfc], block[BlkOffSfc]);
+                      cn, block[BlkOffPfc], block[BlkOffSfc]);
 
         /*
         **  Release downline buffer and return.
         */
         npuBipBufRelease(bp);
+
         return;
         }
 
@@ -437,6 +442,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             */
             npuLogMessage("(npu_svm) Message %02X/%02X is too short and has no required P3", block[BlkOffPfc], block[BlkOffSfc]);
             npuBipBufRelease(bp);
+
             return;
             }
 
@@ -449,6 +455,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             */
             npuLogMessage("(npu_svm) Unexpected connection number %u in message %02X/%02X", cn, block[BlkOffPfc], block[BlkOffSfc]);
             npuBipBufRelease(bp);
+
             return;
             }
         break;
@@ -499,6 +506,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             */
             npuLogMessage("(npu_svm) Message %02X/%02X is too short and has no required P3", block[BlkOffPfc], block[BlkOffSfc]);
             npuBipBufRelease(bp);
+
             return;
             }
 
@@ -540,7 +548,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
         else
             {
             npuLogMessage("(npu_svm) Unexpected message %02X/%02X with port %u",
-                block[BlkOffPfc], block[BlkOffSfc], claPort);
+                          block[BlkOffPfc], block[BlkOffSfc], claPort);
             npuNetCloseConnection(npuNetFindPcb(claPort));
             }
         break;
@@ -579,6 +587,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             **  Terminate connection from host.
             */
             npuSvmDiscRequestTerminal(tp);
+
             /*
             **  Send an initial TERM block which will be echoed by the host.
             */
@@ -592,10 +601,11 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
                 **  If this is a HASP or Reverse HASP connection, reset the
                 **  the associated stream.
                 */
-                if (tp->tipType == TtHASP || tp->tipType == TtTT12)
+                if ((tp->tipType == TtHASP) || (tp->tipType == TtTT12))
                     {
                     npuHaspCloseStream(tp);
                     }
+
                 /*
                 **  Reset connection state.
                 */
@@ -636,14 +646,16 @@ void npuSvmSendDiscRequest(Tcb *tp)
         {
     case StTermRequestConnection: // indicates awaiting response to terminal connection request
         fprintf(stderr, "(npu_svm) Warning - disconnect request issued for %.7s in state %d\n",
-            tp->termName, tp->state);
-        // fall through
+                tp->termName, tp->state);
+
+    // fall through
     case StTermHostConnected:     // terminal is connected
         /*
         **  Clean up flow control state and discard any pending output.
         */
         tp->xoff = FALSE;
         npuTipDiscardOutputQ(tp);
+
         /*
         **  Send TCN/TA/R message to request termination of connection.
         */
@@ -651,15 +663,17 @@ void npuSvmSendDiscRequest(Tcb *tp)
         npuBipRequestUplineCanned(requestTerminateConnection, sizeof(requestTerminateConnection));
         tp->state = StTermRequestDisconnect;
         break;
+
     case StTermIdle:              // terminal is not yet configured or connected
     case StTermRequestDisconnect: // terminal disconnection has been requested
     case StTermRequestTerminate:  // connection termination has been requested
         fprintf(stderr, "(npu_svm) Warning - disconnect request ignored for %.7s in state %d\n",
-            tp->termName, tp->state);
+                tp->termName, tp->state);
         break;
+
     default:
         fprintf(stderr, "(npu_svm) Unrecognized state %d during %.7s disconnect request\n",
-            tp->state, tp->termName);
+                tp->state, tp->termName);
         break;
         }
     }
@@ -704,7 +718,7 @@ void npuSvmDiscReplyTerminal(Tcb *tp)
 **------------------------------------------------------------------------*/
 bool npuSvmIsReady(void)
     {
-    return(svmState == StReady);
+    return (svmState == StReady);
     }
 
 /*--------------------------------------------------------------------------
@@ -724,12 +738,12 @@ void npuSvmSendTermBlock(Tcb *tp)
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Send terminal configuration request to host.
@@ -743,12 +757,12 @@ void npuSvmSendTermBlock(Tcb *tp)
 static bool npuSvmRequestTerminalConfig(Pcb *pcbp)
     {
     NpuBuffer *bp;
-    u8 *mp;
+    u8        *mp;
 
     bp = npuBipBufGet();
     if (bp == NULL)
         {
-        return(FALSE);
+        return (FALSE);
         }
 
     /*
@@ -776,22 +790,25 @@ static bool npuSvmRequestTerminalConfig(Pcb *pcbp)
             }
         else
             {
-            *mp++ = (1 << 7) | (TtASYNC << 3); // auto recognition and TIP type
+            *mp++ = (1 << 7) | (TtASYNC << 3);                                         // auto recognition and TIP type
             *mp++ = (pcbp->controls.async.recoType == TermRecoAuto) ? Ls1200 : Ls9600; // line speed
-            *mp++ = CsASCII;   // code set ASCII
-            *mp++ = StN2741;   // sub-tip N2741
-            *mp++ = 0;         // A1
-            *mp++ = 1;         // number of terminals
-            *mp++ = 0;         // A2
-            *mp++ = DtCONSOLE; // device type
+            *mp++ = CsASCII;                                                           // code set ASCII
+            *mp++ = StN2741;                                                           // sub-tip N2741
+            *mp++ = 0;                                                                 // A1
+            *mp++ = 1;                                                                 // number of terminals
+            *mp++ = 0;                                                                 // A2
+            *mp++ = DtCONSOLE;                                                         // device type
             }
         break;
+
     case ConnTypeHasp:
         *mp++ = (0 << 7) | (TtHASP << 3);  // no auto recognition; TIP type; speed range 0
         break;
+
     case ConnTypeRevHasp:
         *mp++ = (0 << 7) | (TtTT12 << 3);  // no auto recognition; TIP type; speed range 0
         break;
+
     case ConnTypeNje:
         *mp++ = (0 << 7) | (TtTT13 << 3);  // no auto recognition; TIP type; speed range 0
         break;
@@ -804,7 +821,7 @@ static bool npuSvmRequestTerminalConfig(Pcb *pcbp)
     */
     npuBipRequestUplineTransfer(bp);
 
-    return(TRUE);
+    return (TRUE);
     }
 
 /*--------------------------------------------------------------------------
@@ -819,33 +836,35 @@ static bool npuSvmRequestTerminalConfig(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
     {
-    u8 cn;
-    u8 *mp = bp->data;
+    u8  cn;
+    u8  *mp = bp->data;
     int len = bp->numBytes;
-    u8 port;
-    u8 subPort;
-    u8 address1;
-    u8 address2;
-    u8 deviceType;
+    u8  port;
+    u8  subPort;
+    u8  address1;
+    u8  address2;
+    u8  deviceType;
     Pcb *pcbp;
-    u8 subTip;
-    u8 termName[7];
-    u8 termClass;
+    u8  subTip;
+    u8  termName[7];
+    u8  termClass;
     Tcb *tp;
-    u8 status;
-    u8 lastResp;
-    u8 codeSet;
+    u8  status;
+    u8  lastResp;
+    u8  codeSet;
 
     pcbp = npuNetFindPcb(claPort);
     if (pcbp == NULL)
         {
         npuLogMessage("(npu_svm) PCB not found for port 0x%02x", claPort);
+
         return NULL;
         }
 
     if (pcbp->connFd <= 0)
         {
         npuLogMessage("(npu_svm) TCB not allocated for port 0x%02x because network connection is closed", claPort);
+
         return NULL;
         }
 
@@ -853,27 +872,28 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
     if (tp == NULL)
         {
         fprintf(stderr, "(npu_svm) No free TCB available for port 0x%02x\n", claPort);
+
         return NULL;
         }
 
     /*
     **  Extract configuration.
     */
-    mp += BlkOffP3;
-    port        = *mp++; // should be same as claPort
-    subPort     = *mp++;
-    address1    = *mp++;
-    address2    = *mp++;
-    deviceType  = *mp++;
-    subTip      = *mp++;
+    mp        += BlkOffP3;
+    port       = *mp++;  // should be same as claPort
+    subPort    = *mp++;
+    address1   = *mp++;
+    address2   = *mp++;
+    deviceType = *mp++;
+    subTip     = *mp++;
 
     memcpy(termName, mp, sizeof(termName));
     mp += sizeof(termName);
 
-    termClass   = *mp++;
-    status      = *mp++;
-    lastResp    = *mp++;
-    codeSet     = *mp++;
+    termClass = *mp++;
+    status    = *mp++;
+    lastResp  = *mp++;
+    codeSet   = *mp++;
 
     /*
     **  Verify minimum length;
@@ -882,6 +902,7 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
     if (len < 0)
         {
         npuLogMessage("(npu_svm) Short Terminal Configuration response with length %d", bp->numBytes);
+
         return NULL;
         }
 
@@ -908,18 +929,23 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
     case ConnTypeTelnet:
         tp->tipType = TtASYNC;
         break;
+
     case ConnTypeHasp:
         tp->tipType = TtHASP;
         break;
+
     case ConnTypeRevHasp:
         tp->tipType = TtTT12;
         break;
+
     case ConnTypeNje:
         tp->tipType = TtTT13;
         break;
+
     default:
         npuLogMessage("(npu_svm) Invalid connection type for terminal configuration: %d",
-            tp->pcbp->ncbp->connType);
+                      tp->pcbp->ncbp->connType);
+
         return NULL;
         }
 
@@ -928,10 +954,10 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
     */
     tp->enabled = status == 0;
     memcpy(tp->termName, termName, sizeof(termName));
-    tp->deviceType = deviceType;
-    tp->streamId = address2;
-    tp->subTip = subTip;
-    tp->codeSet = codeSet;
+    tp->deviceType  = deviceType;
+    tp->streamId    = address2;
+    tp->subTip      = subTip;
+    tp->codeSet     = codeSet;
     tp->params.fvTC = termClass;
 
     /*
@@ -941,6 +967,7 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
     if (tp->owningConsole == NULL)
         {
         npuLogMessage("(npu_svm) Failed to find owning console for %.7s, port 0x%02x", tp->termName, claPort);
+
         return NULL;
         }
     if (tp->owningConsole->state > StTermHostConnected) // owning console is disconnecting
@@ -992,10 +1019,10 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
 static Tcb *npuSvmFindOwningConsole(Tcb *tp)
     {
     int i;
-    u8 claPort;
+    u8  claPort;
     Tcb *tp2;
 
-    if (tp->tipType == TtASYNC || tp->deviceType == DtCONSOLE)
+    if ((tp->tipType == TtASYNC) || (tp->deviceType == DtCONSOLE))
         {
         return tp;
         }
@@ -1004,12 +1031,13 @@ static Tcb *npuSvmFindOwningConsole(Tcb *tp)
     for (i = 1; i <= npuNetMaxCN; i++)
         {
         tp2 = &npuTcbs[i];
-        if (tp2->state != StTermIdle && tp2->pcbp->claPort == claPort && tp2->deviceType == DtCONSOLE)
+        if ((tp2->state != StTermIdle) && (tp2->pcbp->claPort == claPort) && (tp2->deviceType == DtCONSOLE))
             {
             return tp2;
             }
         }
     npuLogMessage("(npu_svm) No owning console found for connection %u (%.7s)", tp->cn, tp->termName);
+
     return NULL; // owning console not found
     }
 
@@ -1025,12 +1053,12 @@ static Tcb *npuSvmFindOwningConsole(Tcb *tp)
 static bool npuSvmRequestTerminalConnection(Tcb *tp)
     {
     NpuBuffer *bp;
-    u8 *mp;
+    u8        *mp;
 
     bp = npuBipBufGet();
     if (bp == NULL)
         {
-        return(FALSE);
+        return (FALSE);
         }
 
     /*
@@ -1052,7 +1080,7 @@ static bool npuSvmRequestTerminalConnection(Tcb *tp)
     *mp++ = tp->params.fvDBL;                   // downline block limit
 
     memcpy(mp, tp->termName, 7);                // terminal name
-    mp += 7;                        
+    mp += 7;
 
     *mp++ = tp->params.fvABL;                   // application block limit
     *mp++ = tp->params.fvDBZ >> 8;              // downline block size
@@ -1062,10 +1090,10 @@ static bool npuSvmRequestTerminalConnection(Tcb *tp)
     *mp++ = tp->params.fvUBZ >> 8;              // transmission block size
     *mp++ = tp->params.fvUBZ & 0xff;
     *mp++ = tp->params.fvSDT;                   // sub device type
-                                    
+
     memcpy(mp, tp->owningConsole->termName, 7); // owning console
-    mp += 7;                        
-                                    
+    mp += 7;
+
     *mp++ = 7;                                  // security level
     *mp++ = tp->params.fvPriority;              // priority
     *mp++ = (tp->tipType == TtHASP)             // interactive capability
@@ -1085,8 +1113,7 @@ static bool npuSvmRequestTerminalConnection(Tcb *tp)
     */
     npuBipRequestUplineTransfer(bp);
 
-    return(TRUE);
+    return (TRUE);
     }
 
 /*---------------------------  End Of File  ------------------------------*/
-

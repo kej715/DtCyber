@@ -11,12 +11,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -24,7 +24,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -49,74 +49,74 @@
 /*
 **  Function codes.
 */
-#define FcNpuInData             00003
-#define FcNpuInNpuStatus        00004
-#define FcNpuInCouplerStatus    00005
-#define FcNpuInNpuOrder         00006
-#define FcNpuInProgram          00007
+#define FcNpuInData                00003
+#define FcNpuInNpuStatus           00004
+#define FcNpuInCouplerStatus       00005
+#define FcNpuInNpuOrder            00006
+#define FcNpuInProgram             00007
 
-#define FcNpuOutMemAddr0        00010
-#define FcNpuOutMemAddr1        00011
-#define FcNpuOutData            00014
-#define FcNpuOutProgram         00015
-#define FcNpuOutNpuOrder        00016
+#define FcNpuOutMemAddr0           00010
+#define FcNpuOutMemAddr1           00011
+#define FcNpuOutData               00014
+#define FcNpuOutProgram            00015
+#define FcNpuOutNpuOrder           00016
 
-#define FcNpuStartNpu           00040
-#define FcNpuHaltNpu            00100
-#define FcNpuClearNpu           00200
-#define FcNpuClearCoupler       00400
+#define FcNpuStartNpu              00040
+#define FcNpuHaltNpu               00100
+#define FcNpuClearNpu              00200
+#define FcNpuClearCoupler          00400
 
-#define FcNpuEqMask             07000
+#define FcNpuEqMask                07000
 
 /*
 **  Coupler status bits (read by PP).
 */
-#define StCplrStatusLoaded      (1 << 2)
-#define StCplrAddrLoaded        (1 << 3)
-#define StCplrTransferCompleted (1 << 5)
-#define StCplrHostTransferTerm  (1 << 7)    // PP has disconnected during the transfer
-#define StCplrOrderLoaded       (1 << 8)
-#define StCplrNpuStatusRead     (1 << 9)
-#define StCplrTimeout           (1 << 10)
+#define StCplrStatusLoaded         (1 << 2)
+#define StCplrAddrLoaded           (1 << 3)
+#define StCplrTransferCompleted    (1 << 5)
+#define StCplrHostTransferTerm     (1 << 7) // PP has disconnected during the transfer
+#define StCplrOrderLoaded          (1 << 8)
+#define StCplrNpuStatusRead        (1 << 9)
+#define StCplrTimeout              (1 << 10)
 
 /*
 **  NPU status values (read by PP when StCplrStatusLoaded is set).
 */
-#define StNpuIgnore             00000
-#define StNpuIdle               00001
-#define StNpuReadyOutput        00002
-#define StNpuNotReadyOutput     00003
-#define StNpuInputAvailLe256    00004
-#define StNpuInputAvailGt256    00005
-#define StNpuInputAvailPru      00006
-#define StNpuInitRequest        00007
-#define StNpuInitCompleted      00010
+#define StNpuIgnore                00000
+#define StNpuIdle                  00001
+#define StNpuReadyOutput           00002
+#define StNpuNotReadyOutput        00003
+#define StNpuInputAvailLe256       00004
+#define StNpuInputAvailGt256       00005
+#define StNpuInputAvailPru         00006
+#define StNpuInitRequest           00007
+#define StNpuInitCompleted         00010
 
 /*
 **  NPU order word codes (written by PP which results in
 **  StCplrOrderLoaded being set). The LSB contains the
 **  block length or the new regulation level.
 */
-#define OrdOutServiceMsg        0x100
-#define OrdOutPriorHigh         0x200
-#define OrdOutPriorLow          0x300
-#define OrdNotReadyForInput     0x400
-#define OrdRegulationLvlChange  0x500
-#define OrdInitRequestAck       0x600
+#define OrdOutServiceMsg           0x100
+#define OrdOutPriorHigh            0x200
+#define OrdOutPriorLow             0x300
+#define OrdNotReadyForInput        0x400
+#define OrdRegulationLvlChange     0x500
+#define OrdInitRequestAck          0x600
 
-#define OrdMaskType             0xF00
-#define OrdMaskValue            0x0FF
+#define OrdMaskType                0xF00
+#define OrdMaskValue               0x0FF
 
 /*
 **  Misc constants.
 */
-#define CyclesOneSecond         100000
-#define ReportInitCount         4
+#define CyclesOneSecond            100000
+#define ReportInitCount            4
 
 #if DEBUG
-#define HexColumn(x) (4 * (x) + 1 + 4)
-#define AsciiColumn(x) (HexColumn(16) + 2 + (x))
-#define LogLineLength (AsciiColumn(16))
+#define HexColumn(x)      (4 * (x) + 1 + 4)
+#define AsciiColumn(x)    (HexColumn(16) + 2 + (x))
+#define LogLineLength    (AsciiColumn(16))
 #endif
 
 /*
@@ -132,12 +132,12 @@
 */
 typedef struct npuParam
     {
-    PpWord      regCouplerStatus;
-    PpWord      regNpuStatus;
-    PpWord      regOrder;
-    NpuBuffer   *buffer;
-    u8          *npuData;
-    u32         lastCommandTime;
+    PpWord    regCouplerStatus;
+    PpWord    regNpuStatus;
+    PpWord    regOrder;
+    NpuBuffer *buffer;
+    u8        *npuData;
+    u32       lastCommandTime;
     } NpuParam;
 
 /*
@@ -155,9 +155,11 @@ static PpWord npuHipReadNpuStatus(void);
 static bool npuHipDownlineBlockImpl(NpuBuffer *bp);
 static bool npuHipUplineBlockImpl(NpuBuffer *bp);
 static char *npuHipFunc2String(PpWord funcCode);
+
 #if DEBUG
-static void npuLogFlush (void);
-static void npuLogByte (int b);
+static void npuLogFlush(void);
+static void npuLogByte(int b);
+
 #endif
 
 /*
@@ -177,7 +179,7 @@ FILE *npuLog = NULL;
 **  Private Variables
 **  -----------------
 */
-static int initCount = ReportInitCount;
+static int      initCount = ReportInitCount;
 static NpuParam *npu;
 
 static enum
@@ -186,20 +188,21 @@ static enum
     StHipIdle,
     StHipUpline,
     StHipDownline,
-    } hipState = StHipInit;
+    }
+hipState = StHipInit;
 
 #if DEBUG
 static char npuLogBuf[LogLineLength + 1];
-static int npuLogCol = 0;
+static int  npuLogCol = 0;
 #endif
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise NPU.
 **
@@ -229,13 +232,13 @@ void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Attach device to channel and initialise device control block.
     */
-    dp = channelAttach(channelNo, eqNo, DtNpu);
-    dp->activate = npuHipActivate;
-    dp->disconnect = npuHipDisconnect;
-    dp->func = npuHipFunc;
-    dp->io = npuHipIo;
+    dp               = channelAttach(channelNo, eqNo, DtNpu);
+    dp->activate     = npuHipActivate;
+    dp->disconnect   = npuHipDisconnect;
+    dp->func         = npuHipFunc;
+    dp->io           = npuHipIo;
     dp->selectedUnit = unitNo;
-    activeDevice = dp;
+    activeDevice     = dp;
 
     /*
     **  Allocate and initialise NPU parameters.
@@ -251,7 +254,7 @@ void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     npu->regCouplerStatus = 0;
     hipState = StHipInit;
     npuHipDownlineBlockFunc = npuHipDownlineBlockImpl;
-    npuHipUplineBlockFunc = npuHipUplineBlockImpl;
+    npuHipUplineBlockFunc   = npuHipUplineBlockImpl;
 
     /*
     **  Initialise BIP, SVC and TIP.
@@ -291,14 +294,14 @@ bool npuHipUplineBlockImpl(NpuBuffer *bp)
 
     if (hipState != StHipIdle)
         {
-        return(FALSE);
+        return (FALSE);
         }
 
-    if (   bp->numBytes > BlkOffL7UB
-        && (bp->data[BlkOffBTBSN] & BlkMaskBT) == BtHTMSG
-        && (bp->data[BlkOffDbc]   & DbcPRU)    == DbcPRU)
+    if ((bp->numBytes > BlkOffL7UB)
+        && ((bp->data[BlkOffBTBSN] & BlkMaskBT) == BtHTMSG)
+        && ((bp->data[BlkOffDbc] & DbcPRU) == DbcPRU))
         {
-        bits = ((bp->data[BlkOffL7BL] << 8) | bp->data[BlkOffL7BL + 1]) * 8 - bp->data[BlkOffL7UB];
+        bits  = ((bp->data[BlkOffL7BL] << 8) | bp->data[BlkOffL7BL + 1]) * 8 - bp->data[BlkOffL7UB];
         words = (bits / 60);
         if (bits % 60)
             {
@@ -325,8 +328,9 @@ bool npuHipUplineBlockImpl(NpuBuffer *bp)
         }
 
     npu->buffer = bp;
-    hipState = StHipUpline;
-    return(TRUE);
+    hipState    = StHipUpline;
+
+    return (TRUE);
     }
 
 /*--------------------------------------------------------------------------
@@ -347,19 +351,21 @@ bool npuHipDownlineBlockImpl(NpuBuffer *bp)
     {
     if (hipState != StHipIdle)
         {
-        return(FALSE);
+        return (FALSE);
         }
 
     if (bp == NULL)
         {
         npuHipWriteNpuStatus(StNpuNotReadyOutput);
-        return(FALSE);
+
+        return (FALSE);
         }
 
     npuHipWriteNpuStatus(StNpuReadyOutput);
     npu->buffer = bp;
-    hipState = StHipDownline;
-    return(TRUE);
+    hipState    = StHipDownline;
+
+    return (TRUE);
     }
 
 /*--------------------------------------------------------------------------
@@ -387,12 +393,12 @@ void npuLogMessage(char *format, ...)
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Reset NPU.
@@ -417,7 +423,7 @@ static void npuReset(void)
     */
     memset(npu, 0, sizeof(NpuParam));
     initCount = ReportInitCount;
-    hipState = StHipInit;
+    hipState  = StHipInit;
     }
 
 /*--------------------------------------------------------------------------
@@ -454,11 +460,12 @@ static FcStatus npuHipFunc(PpWord funcCode)
 #if DEBUG
         fprintf(npuLog, " FUNC not implemented & declined!");
 #endif
-        return(FcDeclined);
+
+        return (FcDeclined);
 
     case FcNpuInCouplerStatus:
         switch (hipState)
-            {
+        {
         case StHipInit:
             if (initCount > 0)
                 {
@@ -500,7 +507,7 @@ static FcStatus npuHipFunc(PpWord funcCode)
 
         default:
             break;
-            }
+        }
 
         break;
 
@@ -511,11 +518,12 @@ static FcStatus npuHipFunc(PpWord funcCode)
             /*
             **  Unexpected input request by host.
             */
-            hipState = StHipIdle;
+            hipState     = StHipIdle;
             npu->npuData = NULL;
             activeDevice->recordLength = 0;
-            activeDevice->fcode = 0;
-            return(FcDeclined);
+            activeDevice->fcode        = 0;
+
+            return (FcDeclined);
             }
 
         npu->npuData = bp->data;
@@ -529,11 +537,12 @@ static FcStatus npuHipFunc(PpWord funcCode)
             /*
             **  Unexpected output request by host.
             */
-            hipState = StHipIdle;
+            hipState     = StHipIdle;
             npu->npuData = NULL;
             activeDevice->recordLength = 0;
-            activeDevice->fcode = 0;
-            return(FcDeclined);
+            activeDevice->fcode        = 0;
+
+            return (FcDeclined);
             }
 
         npu->npuData = bp->data;
@@ -565,11 +574,12 @@ static FcStatus npuHipFunc(PpWord funcCode)
     case FcNpuStartNpu:
     case FcNpuHaltNpu:
     case FcNpuClearCoupler:
-        return(FcProcessed);
+        return (FcProcessed);
         }
 
     activeDevice->fcode = funcCode;
-    return(FcAccepted);
+
+    return (FcAccepted);
     }
 
 /*--------------------------------------------------------------------------
@@ -583,7 +593,7 @@ static FcStatus npuHipFunc(PpWord funcCode)
 static void npuHipIo(void)
     {
     PpWord orderType;
-    u8 orderValue;
+    u8     orderValue;
 
     switch (activeDevice->fcode)
         {
@@ -622,7 +632,7 @@ static void npuHipIo(void)
         fprintf(npuLog, " %03X", activeChannel->data);
 #endif
         break;
-        
+
     case FcNpuInData:
         if (activeChannel->full)
             {
@@ -640,9 +650,9 @@ static void npuHipIo(void)
                 /*
                 **  Transmission complete.
                 */
-                activeChannel->data |= 04000;
+                activeChannel->data          |= 04000;
                 activeChannel->discAfterInput = TRUE;
-                activeDevice->fcode = 0;
+                activeDevice->fcode           = 0;
                 hipState = StHipIdle;
                 npuBipNotifyUplineSent();
                 }
@@ -650,7 +660,7 @@ static void npuHipIo(void)
             npuLogByte(activeChannel->data);
 #endif
             }
-        
+
         break;
 
     case FcNpuOutData:
@@ -662,7 +672,7 @@ static void npuHipIo(void)
             activeChannel->full = FALSE;
             if (activeDevice->recordLength < MaxBuffer)
                 {
-                *npu->npuData++ = activeChannel->data & Mask8;
+                *npu->npuData++             = activeChannel->data & Mask8;
                 activeDevice->recordLength += 1;
                 if ((activeChannel->data & 04000) != 0)
                     {
@@ -670,7 +680,7 @@ static void npuHipIo(void)
                     **  Top bit set - process message.
                     */
                     npu->buffer->numBytes = activeDevice->recordLength;
-                    activeDevice->fcode = 0;
+                    activeDevice->fcode   = 0;
                     hipState = StHipIdle;
                     npuBipNotifyDownlineReceived();
                     }
@@ -680,7 +690,7 @@ static void npuHipIo(void)
                     **  We run out of buffer space before the end of the message.
                     */
                     activeDevice->fcode = 0;
-                    hipState = StHipIdle;
+                    hipState            = StHipIdle;
                     npuBipAbortDownlineReceived();
                     }
                 }
@@ -705,15 +715,15 @@ static void npuHipIo(void)
                 };
 
             fprintf(npuLog, " Order word %03X - function %02X : %s",
-                activeChannel->data, activeChannel->data >> 8, orderCode[(activeChannel->data >> 8) & 7]);
+                    activeChannel->data, activeChannel->data >> 8, orderCode[(activeChannel->data >> 8) & 7]);
 #endif
-            npu->regOrder = activeChannel->data;
-            orderType  = activeChannel->data & OrdMaskType;
-            orderValue = (u8)(activeChannel->data & OrdMaskValue);
+            npu->regOrder       = activeChannel->data;
+            orderType           = activeChannel->data & OrdMaskType;
+            orderValue          = (u8)(activeChannel->data & OrdMaskValue);
             activeChannel->full = FALSE;
 
             switch (orderType)
-                {
+            {
             case OrdOutServiceMsg:
                 npuBipNotifyServiceMessage();
                 break;
@@ -746,7 +756,7 @@ static void npuHipIo(void)
                 */
                 npuBipRetryInput();
                 break;
-                }
+            }
             }
 
         break;
@@ -814,8 +824,8 @@ static void npuHipDisconnect(void)
 **------------------------------------------------------------------------*/
 static void npuHipWriteNpuStatus(PpWord status)
     {
-    npu->lastCommandTime = cycles;
-    npu->regNpuStatus = status;
+    npu->lastCommandTime   = cycles;
+    npu->regNpuStatus      = status;
     npu->regCouplerStatus |= StCplrStatusLoaded;
     }
 
@@ -830,10 +840,11 @@ static void npuHipWriteNpuStatus(PpWord status)
 static PpWord npuHipReadNpuStatus(void)
     {
     PpWord value = npu->regNpuStatus;
-    
+
     npu->regCouplerStatus &= ~StCplrStatusLoaded;
-    npu->regNpuStatus = StNpuIgnore;
-    return(value);
+    npu->regNpuStatus      = StNpuIgnore;
+
+    return (value);
     }
 
 /*--------------------------------------------------------------------------
@@ -848,30 +859,60 @@ static PpWord npuHipReadNpuStatus(void)
 static char *npuHipFunc2String(PpWord funcCode)
     {
     static char buf[30];
+
 #if DEBUG
-    switch(funcCode)
+    switch (funcCode)
         {
-    case FcNpuInData             : return "FcNpuInData";
-    case FcNpuInNpuStatus        : return "FcNpuInNpuStatus";
-    case FcNpuInCouplerStatus    : return "FcNpuInCouplerStatus";
-    case FcNpuInNpuOrder         : return "FcNpuInNpuOrder";
-    case FcNpuInProgram          : return "FcNpuInProgram";
-    case FcNpuOutMemAddr0        : return "FcNpuOutMemAddr0";
-    case FcNpuOutMemAddr1        : return "FcNpuOutMemAddr1";
-    case FcNpuOutData            : return "FcNpuOutData";
-    case FcNpuOutProgram         : return "FcNpuOutProgram";
-    case FcNpuOutNpuOrder        : return "FcNpuOutNpuOrder";
-    case FcNpuStartNpu           : return "FcNpuStartNpu";
-    case FcNpuHaltNpu            : return "FcNpuHaltNpu";
-    case FcNpuClearNpu           : return "FcNpuClearNpu";
-    case FcNpuClearCoupler       : return "FcNpuClearCoupler";
+    case FcNpuInData:
+        return "FcNpuInData";
+
+    case FcNpuInNpuStatus:
+        return "FcNpuInNpuStatus";
+
+    case FcNpuInCouplerStatus:
+        return "FcNpuInCouplerStatus";
+
+    case FcNpuInNpuOrder:
+        return "FcNpuInNpuOrder";
+
+    case FcNpuInProgram:
+        return "FcNpuInProgram";
+
+    case FcNpuOutMemAddr0:
+        return "FcNpuOutMemAddr0";
+
+    case FcNpuOutMemAddr1:
+        return "FcNpuOutMemAddr1";
+
+    case FcNpuOutData:
+        return "FcNpuOutData";
+
+    case FcNpuOutProgram:
+        return "FcNpuOutProgram";
+
+    case FcNpuOutNpuOrder:
+        return "FcNpuOutNpuOrder";
+
+    case FcNpuStartNpu:
+        return "FcNpuStartNpu";
+
+    case FcNpuHaltNpu:
+        return "FcNpuHaltNpu";
+
+    case FcNpuClearNpu:
+        return "FcNpuClearNpu";
+
+    case FcNpuClearCoupler:
+        return "FcNpuClearCoupler";
         }
 #endif
     sprintf(buf, "(npu_hip) Unknown Function: %04o", funcCode);
-    return(buf);
+
+    return (buf);
     }
 
 #if DEBUG
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Flush incomplete numeric/ascii data line
 **
@@ -889,7 +930,7 @@ static void npuLogFlush(void)
 
     npuLogCol = 0;
     memset(npuLogBuf, ' ', LogLineLength);
-    npuLogBuf[0] = '\n';
+    npuLogBuf[0]             = '\n';
     npuLogBuf[LogLineLength] = '\0';
     }
 
@@ -904,15 +945,15 @@ static void npuLogFlush(void)
 static void npuLogByte(int b)
     {
     char hex[5];
-    int col;
-    
+    int  col;
+
     col = HexColumn(npuLogCol);
     sprintf(hex, "%03X ", b);
     memcpy(npuLogBuf + col, hex, 4);
 
     col = AsciiColumn(npuLogCol);
-    b &= 0x7f;
-    if (b < 0x20 || b >= 0x7f)
+    b  &= 0x7f;
+    if ((b < 0x20) || (b >= 0x7f))
         {
         b = '.';
         }
@@ -923,7 +964,7 @@ static void npuLogByte(int b)
         npuLogFlush();
         }
     }
+
 #endif
 
 /*---------------------------  End Of File  ------------------------------*/
-

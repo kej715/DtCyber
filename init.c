@@ -11,12 +11,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -44,14 +44,14 @@
 **  Private Constants
 **  -----------------
 */
-#define MaxLine                 512
+#define MaxLine    512
 
 /*
 **  -----------------------
 **  Private Macro Functions
 **  -----------------------
 */
-#define isoctal(c) ((c) >= '0' && (c) <= '7')
+#define isoctal(c)    ((c) >= '0' && (c) <= '7')
 
 /*
 **  -----------------------------------------
@@ -83,13 +83,13 @@ char *initGetNextLine(void);
 **  Public Variables
 **  ----------------
 */
-bool bigEndian;
-extern u16 deadstartPanel[];
-extern u8 deadstartCount;
+bool          bigEndian;
+extern u16    deadstartPanel[];
+extern u8     deadstartCount;
 ModelFeatures features;
-ModelType modelType;
-char persistDir[256];
-char displayName[32];
+ModelType     modelType;
+char          persistDir[256];
+char          displayName[32];
 
 /*
 **  -----------------
@@ -108,29 +108,30 @@ static long chCount;
 static union
     {
     u32 number;
-    u8 bytes[4];
-    } endianCheck;
+    u8  bytes[4];
+    }
+endianCheck;
 
-static ModelFeatures features6400 = (IsSeries6x00);
-static ModelFeatures featuresCyber73 = (IsSeries70 | HasInterlockReg | HasCMU);
+static ModelFeatures features6400     = (IsSeries6x00);
+static ModelFeatures featuresCyber73  = (IsSeries70 | HasInterlockReg | HasCMU);
 static ModelFeatures featuresCyber173 =
     (IsSeries170 | HasStatusAndControlReg | HasCMU);
 static ModelFeatures featuresCyber175 =
     (IsSeries170 | HasStatusAndControlReg | HasInstructionStack | HasIStackPrefetch | Has175Float);
 static ModelFeatures featuresCyber840A =
-    (  IsSeries800 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasMaintenanceChannel | HasCMU | HasChannelFlag
+    (IsSeries800 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasMaintenanceChannel | HasCMU | HasChannelFlag
      | HasErrorFlag | HasRelocationRegLong | HasMicrosecondClock | HasInstructionStack | HasIStackPrefetch);
 static ModelFeatures featuresCyber865 =
-    (  IsSeries800 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasStatusAndControlReg
+    (IsSeries800 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasStatusAndControlReg
      | HasRelocationRegShort | HasMicrosecondClock | HasInstructionStack | HasIStackPrefetch | Has175Float);
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Read and process startup file.
@@ -144,6 +145,7 @@ static ModelFeatures featuresCyber865 =
 void initStartup(char *config, char *configFile)
     {
     startupFile = configFile;
+
     /*
     **  Open startup file.
     */
@@ -161,16 +163,16 @@ void initStartup(char *config, char *configFile)
     endianCheck.bytes[1] = 0;
     endianCheck.bytes[2] = 0;
     endianCheck.bytes[3] = 1;
-    bigEndian = endianCheck.number == 1;
+    bigEndian            = endianCheck.number == 1;
 
     /*
     **  Read and process cyber.ini file.
     */
-    printf("\n%s\n", DtCyberVersion );
+    printf("\n%s\n", DtCyberVersion);
     printf("%s\n", DtCyberCopyright);
     printf("%s\n\n", DtCyberLicense);
     printf("Starting initialisation\n\n");
-	
+
 #ifdef _DEBUG
     printf("[Version Build Date: %s %s ( DEBUG )]\n\n", __DATE__, __TIME__);
 #else
@@ -203,11 +205,11 @@ u32 initConvertEndian(u32 value)
     u32 result;
 
     result  = (value & 0xff000000) >> 24;
-    result |= (value & 0x00ff0000) >>  8;
-    result |= (value & 0x0000ff00) <<  8;
+    result |= (value & 0x00ff0000) >> 8;
+    result |= (value & 0x0000ff00) << 8;
     result |= (value & 0x000000ff) << 24;
 
-    return(result);
+    return (result);
     }
 
 /*--------------------------------------------------------------------------
@@ -221,21 +223,21 @@ u32 initConvertEndian(u32 value)
 char *initGetNextLine(void)
     {
     static char lineBuffer[MaxLine];
-    char *cp;
-    bool blank;
+    char        *cp;
+    bool        blank;
 
     /*
     **  Get next lineBuffer.
     */
     do
         {
-        if (   fgets(lineBuffer, MaxLine, fcb) == NULL
-            || lineBuffer[0] == '[')
+        if ((fgets(lineBuffer, MaxLine, fcb) == NULL)
+            || (lineBuffer[0] == '['))
             {
             /*
             **  End-of-file or end-of-section - return failure.
             */
-            return(NULL);
+            return (NULL);
             }
 
         /*
@@ -245,7 +247,7 @@ char *initGetNextLine(void)
         blank = TRUE;
         for (cp = lineBuffer; *cp != 0; cp++)
             {
-            if (blank && *cp == ';')
+            if (blank && (*cp == ';'))
                 {
                 break;
                 }
@@ -259,13 +261,12 @@ char *initGetNextLine(void)
                 blank = FALSE;
                 }
             }
-
         } while (blank);
 
     /*
     **  Found a non-blank line - return to caller.
     */
-    return(lineBuffer);
+    return (lineBuffer);
     }
 
 /*--------------------------------------------------------------------------
@@ -281,11 +282,17 @@ char *initGetNextLine(void)
 int initOpenHelpersSection(void)
     {
     if (strlen(helpers) == 0)
+        {
         return 0;
+        }
     else if (initOpenSection(helpers))
+        {
         return 1;
+        }
     else
+        {
         return -1;
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -301,20 +308,26 @@ int initOpenHelpersSection(void)
 int initOpenOperatorSection(void)
     {
     if (strlen(operator) == 0)
+        {
         return 0;
+        }
     else if (initOpenSection(operator))
+        {
         return 1;
+        }
     else
+        {
         return -1;
+        }
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Read and process [cyber] startup file section.
@@ -368,12 +381,12 @@ static void initCyber(char *config)
         fprintf(stderr, "(init   ) ***WARNING*** Entry 'ecsFile' obsolete in section [%s] in %s,\n", config, startupFile);
         fprintf(stderr, "                        please use 'persistDir' instead.\n");
         exit(1);
-    }
+        }
 
     if (initGetString("displayName", "CYBER Console A", displayName, sizeof(displayName)))
-    {
+        {
         fprintf(stderr, "(init   ) Consoles will be labeled '%s',\n", displayName);
-    }
+        }
 
     /*
     **  Determine mainframe model and setup feature structure.
@@ -383,22 +396,22 @@ static void initCyber(char *config)
     if (stricmp(model, "6400") == 0)
         {
         modelType = Model6400;
-        features = features6400;
+        features  = features6400;
         }
     else if (stricmp(model, "CYBER73") == 0)
         {
         modelType = ModelCyber73;
-        features = featuresCyber73;
+        features  = featuresCyber73;
         }
     else if (stricmp(model, "CYBER173") == 0)
         {
         modelType = ModelCyber173;
-        features = featuresCyber173;
+        features  = featuresCyber173;
         }
     else if (stricmp(model, "CYBER175") == 0)
         {
         modelType = ModelCyber175;
-        features = featuresCyber175;
+        features  = featuresCyber175;
         }
     else if (stricmp(model, "CYBER840A") == 0)
         {
@@ -410,7 +423,7 @@ static void initCyber(char *config)
     else if (stricmp(model, "CYBER865") == 0)
         {
         modelType = ModelCyber865;
-        features = featuresCyber865;
+        features  = featuresCyber865;
         }
     else
         {
@@ -436,10 +449,10 @@ static void initCyber(char *config)
 
     if (modelType == ModelCyber865)
         {
-        if (   memory != 01000000
-            && memory != 02000000
-            && memory != 03000000
-            && memory != 04000000)
+        if ((memory != 01000000)
+            && (memory != 02000000)
+            && (memory != 03000000)
+            && (memory != 04000000))
             {
             fprintf(stderr, "(init   ) Cyber 170-865 memory must be configured in 262K increments in section [%s] in %s\n", config, startupFile);
             exit(1);
@@ -447,7 +460,7 @@ static void initCyber(char *config)
         }
 
     (void)initGetInteger("ecsbanks", 0, &ecsBanks);
-    switch(ecsBanks)
+    switch (ecsBanks)
         {
     case 0:
     case 1:
@@ -463,7 +476,7 @@ static void initCyber(char *config)
         }
 
     (void)initGetInteger("esmbanks", 0, &esmBanks);
-    switch(esmBanks)
+    switch (esmBanks)
         {
     case 0:
     case 1:
@@ -478,7 +491,7 @@ static void initCyber(char *config)
         exit(1);
         }
 
-    if (ecsBanks != 0 && esmBanks != 0)
+    if ((ecsBanks != 0) && (esmBanks != 0))
         {
         fprintf(stderr, "(init   ) You can't have both 'ecsbanks' and 'esmbanks' in section [%s] in %s\n", config, startupFile);
         exit(1);
@@ -506,10 +519,10 @@ static void initCyber(char *config)
             }
         }
     else
-    {
+        {
         fprintf(stderr, "(init   ) Entry 'persistDir' was not found in section [%s] in %s\n", config, startupFile);
         exit(1);
-    }
+        }
 
     /*
     **  Initialise CPU.
@@ -520,7 +533,7 @@ static void initCyber(char *config)
     **  Determine number of PPs and initialise PP subsystem.
     */
     (void)initGetOctal("pps", 012, &pps);
-    if (pps != 012 && pps != 024)
+    if ((pps != 012) && (pps != 024))
         {
         fprintf(stderr, "(init   ) Entry 'pps' invalid in section [%s] in %s - supported values are 012 or 024 (octal)\n", config, startupFile);
         exit(1);
@@ -657,28 +670,28 @@ static void initCyber(char *config)
 **------------------------------------------------------------------------*/
 static void initNpuConnections(void)
     {
-    long blockSize;
-    int claPort;
-    char *line;
-    char *token;
-    long tcpPort;
-    int numConns;
-    u8 connType;
-    int len;
-    int lineNo;
-    Ncb *ncbp;
-    int rc;
-    char *destHostAddr;
-    u32 destHostIP;
-    u16 destHostPort;
-    char *destHostName;
-    u8 destNode;
-    u32 localHostIP;
-    long networkValue;
-    Pcb *pcbp;
-    long pingInterval;
+    long         blockSize;
+    int          claPort;
+    char         *line;
+    char         *token;
+    long         tcpPort;
+    int          numConns;
+    u8           connType;
+    int          len;
+    int          lineNo;
+    Ncb          *ncbp;
+    int          rc;
+    char         *destHostAddr;
+    u32          destHostIP;
+    u16          destHostPort;
+    char         *destHostName;
+    u8           destNode;
+    u32          localHostIP;
+    long         networkValue;
+    Pcb          *pcbp;
+    long         pingInterval;
     TermRecoType recoType;
-    char strValue[256];
+    char         strValue[256];
 
     npuNetPreset();
 
@@ -688,6 +701,7 @@ static void initNpuConnections(void)
         **  Default is the classic port 6610, 10 connections starting at CLA port 01 and raw TCP connection.
         */
         npuNetRegisterConnType(6610, 0x01, 10, ConnTypeRaw, &ncbp);
+
         return;
         }
 
@@ -710,7 +724,7 @@ static void initNpuConnections(void)
     if (initParseIpAddress(strValue, &npuNetHostIP, NULL) == FALSE)
         {
         fprintf(stderr, "(init   ) Invalid 'hostIP' value %s in section [%s] of %s - correct values are IPv4 addresses\n",
-            strValue, npuConnections, startupFile);
+                strValue, npuConnections, startupFile);
         exit(1);
         }
 
@@ -718,10 +732,10 @@ static void initNpuConnections(void)
     **  Get optional coupler node number. If not specified, use default value of 1.
     */
     initGetInteger("couplerNode", 1, &networkValue);
-    if (networkValue < 1 || networkValue > 255)
+    if ((networkValue < 1) || (networkValue > 255))
         {
         fprintf(stderr, "(init   ) Invalid 'couplerNode' value %ld in section [%s] of %s - correct values are 1..255\n",
-            networkValue, npuConnections, startupFile);
+                networkValue, npuConnections, startupFile);
         exit(1);
         }
     npuSvmCouplerNode = (u8)networkValue;
@@ -730,10 +744,10 @@ static void initNpuConnections(void)
     **  Get optional NPU node number. If not specified, use default value of 2.
     */
     initGetInteger("npuNode", 2, &networkValue);
-    if (networkValue < 1 || networkValue > 255)
+    if ((networkValue < 1) || (networkValue > 255))
         {
         fprintf(stderr, "(init   ) Invalid 'npuNode' value %ld in section [%s] of %s - correct values are 1..255\n",
-            networkValue, npuConnections, startupFile);
+                networkValue, npuConnections, startupFile);
         exit(1);
         }
     npuSvmNpuNode = (u8)networkValue;
@@ -742,10 +756,10 @@ static void initNpuConnections(void)
     **  Get optional CDCNet node number. If not specified, use default value of 255.
     */
     initGetInteger("cdcnetNode", 255, &networkValue);
-    if (networkValue < 1 || networkValue > 255)
+    if ((networkValue < 1) || (networkValue > 255))
         {
         fprintf(stderr, "(init   ) Invalid 'cdcnetNode' value %ld in section [%s] of %s - correct values are 1..255\n",
-            networkValue, npuConnections, startupFile);
+                networkValue, npuConnections, startupFile);
         exit(1);
         }
     cdcnetNode = (u8)networkValue;
@@ -755,19 +769,19 @@ static void initNpuConnections(void)
     **  use default value of 6600.
     */
     initGetInteger("cdcnetPrivilegedTcpPortOffset", 6600, &networkValue);
-    if (networkValue < 0 || networkValue > 64000)
+    if ((networkValue < 0) || (networkValue > 64000))
         {
-			fprintf(stderr, "(init   ) Invalid 'cdcnetPrivilegedTcpPortOffset' value %ld in section [%s] of %s - correct values are 0..64000\n",
-            networkValue, npuConnections, startupFile);
+        fprintf(stderr, "(init   ) Invalid 'cdcnetPrivilegedTcpPortOffset' value %ld in section [%s] of %s - correct values are 0..64000\n",
+                networkValue, npuConnections, startupFile);
         exit(1);
         }
     cdcnetPrivilegedTcpPortOffset = (u16)networkValue;
 
     initGetInteger("cdcnetPrivilegedUdpPortOffset", 6600, &networkValue);
-    if (networkValue < 0 || networkValue > 64000)
+    if ((networkValue < 0) || (networkValue > 64000))
         {
         fprintf(stderr, "(init   ) Invalid 'cdcnetPrivilegedUdpPortOffset' value %ld in section [%s] of %s - correct values are 0..64000\n",
-            networkValue, npuConnections, startupFile);
+                networkValue, npuConnections, startupFile);
         exit(1);
         }
     cdcnetPrivilegedUdpPortOffset = (u16)networkValue;
@@ -782,7 +796,7 @@ static void initNpuConnections(void)
         }
 
     lineNo = -1;
-    while  ((line = initGetNextLine()) != NULL)
+    while ((line = initGetNextLine()) != NULL)
         {
         lineNo += 1;
 
@@ -793,7 +807,7 @@ static void initNpuConnections(void)
         if (token == NULL)
             {
             fprintf(stderr, "(init   ) Invalid syntax in section [%s] of %s, relative line %d\n",
-                npuConnections, startupFile, lineNo);
+                    npuConnections, startupFile, lineNo);
             exit(1);
             }
 
@@ -839,10 +853,10 @@ static void initNpuConnections(void)
             **     <remote-port>   TCP port number to which Reverse HASP, NJE, or LIP will connect
             */
             token = strtok(NULL, ",");
-            if (token == NULL || !isdigit(token[0]))
+            if ((token == NULL) || !isdigit(token[0]))
                 {
                 fprintf(stderr, "(init   ) Invalid TCP port number %s in section [%s] of %s, relative line %d\n",
-                    token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
+                        token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
                 exit(1);
                 }
 
@@ -850,7 +864,7 @@ static void initNpuConnections(void)
             if (tcpPort > 65535)
                 {
                 fprintf(stderr, "(init   ) Invalid TCP port number %ld in section [%s] of %s, relative line %d\n",
-                    tcpPort, npuConnections, startupFile, lineNo);
+                        tcpPort, npuConnections, startupFile, lineNo);
                 exit(1);
                 }
 
@@ -858,18 +872,18 @@ static void initNpuConnections(void)
             **  Parse starting CLA port number
             */
             token = strtok(NULL, ",");
-            if (token == NULL || !isxdigit(token[0]))
+            if ((token == NULL) || !isxdigit(token[0]))
                 {
                 fprintf(stderr, "(init   ) Invalid CLA port number %s in section [%s] of %s, relative line %d\n",
-                    token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
+                        token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
                 exit(1);
                 }
 
             networkValue = strtol(token, NULL, 16);
-            if (networkValue < 1 || networkValue > 255)
+            if ((networkValue < 1) || (networkValue > 255))
                 {
                 fprintf(stderr, "(init   ) Invalid CLA port number %ld in section [%s] of %s, relative line %d\n",
-                    networkValue, npuConnections, startupFile, lineNo);
+                        networkValue, npuConnections, startupFile, lineNo);
                 fprintf(stderr, "(init   ) CLA port numbers must be between 01 and FF, and expressed in hexadecimal\n");
                 exit(1);
                 }
@@ -879,17 +893,17 @@ static void initNpuConnections(void)
             **  Parse number of connections on this port.
             */
             token = strtok(NULL, ",");
-            if (token == NULL || !isdigit(token[0]))
+            if ((token == NULL) || !isdigit(token[0]))
                 {
                 fprintf(stderr, "(init   ) Invalid number of connections %s in section [%s] of %s, relative line %d\n",
-                    token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
+                        token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
                 exit(1);
                 }
             networkValue = strtol(token, NULL, 10);
-            if (networkValue < 0 || networkValue > 100)
+            if ((networkValue < 0) || (networkValue > 100))
                 {
                 fprintf(stderr, "(init   ) Invalid number of connections %ld in section [%s] of %s, relative line %d\n",
-                    networkValue, npuConnections, startupFile, lineNo);
+                        networkValue, npuConnections, startupFile, lineNo);
                 fprintf(stderr, "(init   ) Connection count must be between 0 and 100\n");
                 exit(1);
                 }
@@ -902,11 +916,11 @@ static void initNpuConnections(void)
             if (token == NULL)
                 {
                 fprintf(stderr, "(init   ) Invalid NPU connection type %s in section [%s] of %s, relative line %d\n",
-                    token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
+                        token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
                 exit(1);
                 }
             destHostAddr = NULL;
-            blockSize = DefaultBlockSize;
+            blockSize    = DefaultBlockSize;
 
             if (strcmp(token, "raw") == 0)
                 {
@@ -929,18 +943,18 @@ static void initNpuConnections(void)
                 /*
                 **  terminals=<local-port>,<cla-port>,<connections>,hasp[,<block-size>]
                 */
-                connType = ConnTypeHasp;
+                connType  = ConnTypeHasp;
                 blockSize = DefaultHaspBlockSize;
-                token = strtok(NULL, " ");
+                token     = strtok(NULL, " ");
                 if (token != NULL)
                     {
-                    if (*token == 'B' || *token == 'b')
+                    if ((*token == 'B') || (*token == 'b'))
                         {
                         blockSize = strtol(token + 1, NULL, 10);
-                        if (blockSize < MinBlockSize || blockSize > MaxBlockSize)
+                        if ((blockSize < MinBlockSize) || (blockSize > MaxBlockSize))
                             {
                             fprintf(stderr, "(init   ) Invalid block size %ld in section [%s] of %s, relative line %d\n",
-                                blockSize, npuConnections, startupFile, lineNo);
+                                    blockSize, npuConnections, startupFile, lineNo);
                             fprintf(stderr, "(init   ) Block size must be between %d and %d\n", MinBlockSize, MaxBlockSize);
                             exit(1);
                             }
@@ -948,7 +962,7 @@ static void initNpuConnections(void)
                     else
                         {
                         fprintf(stderr, "(init   ) Invalid HASP block size specification '%s' in section [%s] of %s, relative line %d\n",
-                            token, npuConnections, startupFile, lineNo);
+                                token, npuConnections, startupFile, lineNo);
                         exit(1);
                         }
                     }
@@ -959,38 +973,38 @@ static void initNpuConnections(void)
                 **   terminals=<local-port>,<cla-port>,<connections>,rhasp,<remote-ip>:<remote-port>[,<block-size>]
                 */
                 connType = ConnTypeRevHasp;
-                token = strtok(NULL, ", ");
+                token    = strtok(NULL, ", ");
                 if (token == NULL)
                     {
                     fprintf(stderr, "(init   ) Missing remote host address in section [%s] of %s, relative line %d\n",
-                        npuConnections, startupFile, lineNo);
+                            npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 destHostAddr = token;
                 if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
                     {
                     fprintf(stderr, "(init   ) Invalid Reverse HASP address '%s' in section [%s] of %s, relative line %d\n",
-                        destHostAddr, npuConnections, startupFile, lineNo);
+                            destHostAddr, npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 if (destHostPort == 0)
                     {
                     fprintf(stderr, "(init   ) Missing port number on Reverse HASP address '%s' in section [%s] of %s, relative line %d\n",
-                        destHostAddr, npuConnections, startupFile, lineNo);
+                            destHostAddr, npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 destHostName = destHostAddr;
-                blockSize = DefaultRevHaspBlockSize;
-                token = strtok(NULL, " ");
+                blockSize    = DefaultRevHaspBlockSize;
+                token        = strtok(NULL, " ");
                 if (token != NULL)
                     {
-                    if (*token == 'B' || *token == 'b')
+                    if ((*token == 'B') || (*token == 'b'))
                         {
                         blockSize = strtol(token + 1, NULL, 10);
-                        if (blockSize < MinBlockSize || blockSize > MaxBlockSize)
+                        if ((blockSize < MinBlockSize) || (blockSize > MaxBlockSize))
                             {
                             fprintf(stderr, "(init   ) Invalid block size %ld in section [%s] of %s, relative line %d\n",
-                                blockSize, npuConnections, startupFile, lineNo);
+                                    blockSize, npuConnections, startupFile, lineNo);
                             fprintf(stderr, "(init   ) Block size must be between %d and %d\n", MinBlockSize, MaxBlockSize);
                             exit(1);
                             }
@@ -998,7 +1012,7 @@ static void initNpuConnections(void)
                     else
                         {
                         fprintf(stderr, "(init   ) Invalid Reverse HASP block size specification '%s' in section [%s] of %s, relative line %d\n",
-                            token, npuConnections, startupFile, lineNo);
+                                token, npuConnections, startupFile, lineNo);
                         exit(1);
                         }
                     }
@@ -1012,64 +1026,68 @@ static void initNpuConnections(void)
                 if (numConns != 1)
                     {
                     fprintf(stderr, "(init   ) Invalid port count on NJE definition (must be 1) in section [%s] of %s, relative line %d\n",
-                        npuConnections, startupFile, lineNo);
+                            npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 connType = ConnTypeNje;
-                token = strtok(NULL, ", ");
+                token    = strtok(NULL, ", ");
                 if (token == NULL)
                     {
                     fprintf(stderr, "(init   ) Missing remote NJE node address in section [%s] of %s, relative line %d\n",
-                        npuConnections, startupFile, lineNo);
+                            npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 destHostAddr = token;
-                if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE) {
+                if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
+                    {
                     fprintf(stderr, "(init   ) Invalid remote NJE node address %s in section [%s] of %s, relative line %d\n",
-                        destHostAddr, npuConnections, startupFile, lineNo);
+                            destHostAddr, npuConnections, startupFile, lineNo);
                     exit(1);
-                }
-                if (destHostPort == 0) destHostPort = 175; // default NJE/TCP port number
+                    }
+                if (destHostPort == 0)
+                    {
+                    destHostPort = 175;                    // default NJE/TCP port number
+                    }
                 token = strtok(NULL, ", ");
                 if (token == NULL)
                     {
                     fprintf(stderr, "(init   ) Missing remote NJE node name in section [%s] of %s, relative line %d\n",
-                        npuConnections, startupFile, lineNo);
+                            npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 destHostName = token;
                 initToUpperCase(destHostName);
-                localHostIP = npuNetHostIP;
-                blockSize = DefaultNjeBlockSize;
+                localHostIP  = npuNetHostIP;
+                blockSize    = DefaultNjeBlockSize;
                 pingInterval = DefaultNjePingInterval;
-                token = strtok(NULL, ", ");
+                token        = strtok(NULL, ", ");
                 while (token != NULL)
                     {
-                    if (*token == 'B' || *token == 'b')
+                    if ((*token == 'B') || (*token == 'b'))
                         {
                         blockSize = strtol(token + 1, NULL, 10);
                         if (blockSize < MinNjeBlockSize)
                             {
                             fprintf(stderr, "(init   ) Invalid block size %ld in section [%s] of %s, relative line %d\n",
-                                blockSize, npuConnections, startupFile, lineNo);
+                                    blockSize, npuConnections, startupFile, lineNo);
                             fprintf(stderr, "(init   ) Block size must be at least %d\n", MinNjeBlockSize);
                             exit(1);
                             }
                         }
-                    else if (*token == 'P' || *token == 'p')
+                    else if ((*token == 'P') || (*token == 'p'))
                         {
                         pingInterval = strtol(token + 1, NULL, 10);
                         if (pingInterval < 0)
                             {
                             fprintf(stderr, "(init   ) Invalid ping interval %ld in section [%s] of %s, relative line %d\n",
-                                pingInterval, npuConnections, startupFile, lineNo);
+                                    pingInterval, npuConnections, startupFile, lineNo);
                             exit(1);
                             }
                         }
                     else if (initParseIpAddress(token, &localHostIP, NULL) == FALSE)
                         {
                         fprintf(stderr, "(init   ) Invalid local NJE node address %s in section [%s] of %s, relative line %d\n",
-                            token, npuConnections, startupFile, lineNo);
+                                token, npuConnections, startupFile, lineNo);
                         exit(1);
                         }
                     token = strtok(NULL, ", ");
@@ -1083,28 +1101,29 @@ static void initNpuConnections(void)
                 if (numConns != 1)
                     {
                     fprintf(stderr, "(init   ) Invalid port count on trunk definition (must be 1) in section [%s] of %s, relative line %d\n",
-                        npuConnections, startupFile, lineNo);
+                            npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 connType = ConnTypeTrunk;
-                token = strtok(NULL, ", ");
+                token    = strtok(NULL, ", ");
                 if (token == NULL)
                     {
                     fprintf(stderr, "(init   ) Missing remote host address on trunk definition in section [%s] of %s, relative line %d\n",
-                        npuConnections, startupFile, lineNo);
+                            npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 destHostAddr = token;
-                if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE) {
+                if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
+                    {
                     fprintf(stderr, "(init   ) Invalid remote host IP address %s on trunk definition in section [%s] of %s, relative line %d\n",
-                        destHostAddr, npuConnections, startupFile, lineNo);
+                            destHostAddr, npuConnections, startupFile, lineNo);
                     exit(1);
-                }
+                    }
                 token = strtok(NULL, ", ");
                 if (token == NULL)
                     {
                     fprintf(stderr, "(init   ) Missing remote node name on trunk definition in section [%s] of %s, relative line %d\n",
-                        npuConnections, startupFile, lineNo);
+                            npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 destHostName = token;
@@ -1113,14 +1132,14 @@ static void initNpuConnections(void)
                 if (token == NULL)
                     {
                     fprintf(stderr, "(init   ) Missing coupler node number on trunk definition in section [%s] of %s, relative line %d\n",
-                        npuConnections, startupFile, lineNo);
+                            npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 networkValue = strtol(token, NULL, 10);
-                if (networkValue < 1 || networkValue > 255)
+                if ((networkValue < 1) || (networkValue > 255))
                     {
                     fprintf(stderr, "(init   ) Invalid coupler node number %ld on trunk definition in section [%s] of %s, relative line %d\n",
-                        networkValue, npuConnections, startupFile, lineNo);
+                            networkValue, npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 destNode = (u8)networkValue;
@@ -1128,10 +1147,11 @@ static void initNpuConnections(void)
             else
                 {
                 fprintf(stderr, "(init   ) Invalid NPU connection type %s in section [%s] of %s, relative line %d\n",
-                    token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
+                        token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
                 fprintf(stderr, "(init   ) NPU connection types must be one of: hasp, nje, pterm, raw, rhasp, rs232, telnet\n");
                 exit(1);
                 }
+
             /*
             **  Setup NPU connection type.
             */
@@ -1158,7 +1178,7 @@ static void initNpuConnections(void)
                         else
                             {
                             fprintf(stderr, "(init   ) Unrecognized keyword \"%s\" on terminal definition in section [%s] of %s, relative line %d\n",
-                                token, npuConnections, startupFile, lineNo);
+                                    token, npuConnections, startupFile, lineNo);
                             exit(1);
                             }
                         while (numConns-- > 0)
@@ -1168,22 +1188,23 @@ static void initNpuConnections(void)
                             }
                         }
                     break;
+
                 case ConnTypeRevHasp:
                 case ConnTypeNje:
                 case ConnTypeTrunk:
-                    len = strlen(destHostName) + 1;
-                    ncbp->hostName = (char *)malloc(len);;
+                    len            = strlen(destHostName) + 1;
+                    ncbp->hostName = (char *)malloc(len);
                     if (ncbp->hostName == NULL)
                         {
                         fprintf(stderr, "(init   ) Failed to register terminal (out of memory) in section [%s] of %s, relative line %d\n",
-                            npuConnections, startupFile, lineNo);
+                                npuConnections, startupFile, lineNo);
                         exit(1);
                         }
                     memcpy(ncbp->hostName, destHostName, len);
                     memset(&ncbp->hostAddr, 0, sizeof(ncbp->hostAddr));
-                    ncbp->hostAddr.sin_family = AF_INET;
+                    ncbp->hostAddr.sin_family      = AF_INET;
                     ncbp->hostAddr.sin_addr.s_addr = htonl(destHostIP);
-                    ncbp->hostAddr.sin_port = htons(destHostPort);
+                    ncbp->hostAddr.sin_port        = htons(destHostPort);
                     if (connType == ConnTypeNje)
                         {
                         pcbp = npuNetFindPcb(claPort);
@@ -1210,6 +1231,7 @@ static void initNpuConnections(void)
                         pcbp->controls.lip.remoteNode = destNode;
                         }
                     break;
+
                 case ConnTypeHasp:
                     pcbp = npuNetFindPcb(claPort);
                     pcbp->controls.hasp.blockSize = blockSize;
@@ -1220,25 +1242,30 @@ static void initNpuConnections(void)
                 {
             case NpuNetRegOk:
                 break;
+
             case NpuNetRegOvfl:
                 fprintf(stderr, "(init   ) Too many terminal and trunk definitions (max of %d), in section [%s] of %s, relative line %d\n",
-                    MaxTermDefs, npuConnections, startupFile, lineNo);
+                        MaxTermDefs, npuConnections, startupFile, lineNo);
                 exit(1);
+
             case NpuNetRegDupTcp:
                 fprintf(stderr, "(init   ) Duplicate TCP port %ld for terminal definition in section [%s] of %s, relative line %d\n",
-                    tcpPort, npuConnections, startupFile, lineNo);
+                        tcpPort, npuConnections, startupFile, lineNo);
                 exit(1);
+
             case NpuNetRegDupCla:
                 fprintf(stderr, "(init   ) Duplicate CLA port in terminal set starting with 0x%02x for connection type %s in section [%s] of %s, relative line %d\n",
-                    claPort, token, npuConnections, startupFile, lineNo);
+                        claPort, token, npuConnections, startupFile, lineNo);
                 exit(1);
+
             case NpuNetRegNoMem:
                 fprintf(stderr, "(init   ) Failed to register terminals (out of memory) in section [%s] of %s, relative line %d\n",
-                    npuConnections, startupFile, lineNo);
+                        npuConnections, startupFile, lineNo);
                 exit(1);
+
             default:
                 fprintf(stderr, "(init   ) Failed to register terminals (unexpected rc=%d) in section [%s] of %s, relative line %d\n",
-                    rc, npuConnections, startupFile, lineNo);
+                        rc, npuConnections, startupFile, lineNo);
                 exit(1);
                 }
             }
@@ -1258,11 +1285,11 @@ static void initEquipment(void)
     char *line;
     char *token;
     char *deviceName;
-    int eqNo;
-    int unitNo;
-    int channelNo;
-    u8 deviceIndex;
-    int lineNo;
+    int  eqNo;
+    int  unitNo;
+    int  channelNo;
+    u8   deviceIndex;
+    int  lineNo;
 
     if (!initOpenSection(equipment))
         {
@@ -1270,13 +1297,13 @@ static void initEquipment(void)
         exit(1);
         }
 
-	printf( "(init   ) Loading Equipment Section [%s] from %s\n", equipment, startupFile);
+    printf("(init   ) Loading Equipment Section [%s] from %s\n", equipment, startupFile);
 
     /*
     **  Process all equipment entries.
     */
     lineNo = -1;
-    while  ((line = initGetNextLine()) != NULL)
+    while ((line = initGetNextLine()) != NULL)
         {
         lineNo += 1;
 
@@ -1284,10 +1311,10 @@ static void initEquipment(void)
         **  Parse device type.
         */
         token = strtok(line, ",");
-        if (token == NULL || strlen(token) < 2)
+        if ((token == NULL) || (strlen(token) < 2))
             {
             fprintf(stderr, "(init   ) Section [%s], relative line %d, invalid device type %s in %s\n",
-                equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
+                    equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
             exit(1);
             }
 
@@ -1302,7 +1329,7 @@ static void initEquipment(void)
         if (deviceIndex == deviceCount)
             {
             fprintf(stderr, "(init   ) Section [%s], relative line %d, unknown device %s in %s\n",
-                equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
+                    equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
             exit(1);
             }
 
@@ -1310,10 +1337,10 @@ static void initEquipment(void)
         **  Parse equipment number.
         */
         token = strtok(NULL, ",");
-        if (token == NULL || strlen(token) != 1 || !isoctal(token[0]))
+        if ((token == NULL) || (strlen(token) != 1) || !isoctal(token[0]))
             {
             fprintf(stderr, "(init   ) Section [%s], relative line %d, invalid equipment no %s in %s\n",
-                equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
+                    equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
             exit(1);
             }
 
@@ -1323,10 +1350,10 @@ static void initEquipment(void)
         **  Parse unit number.
         */
         token = strtok(NULL, ",");
-        if (token == NULL || !isoctal(token[0]))
+        if ((token == NULL) || !isoctal(token[0]))
             {
             fprintf(stderr, "(init   ) Section [%s], relative line %d, invalid unit count %s in %s\n",
-                equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
+                    equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
             exit(1);
             }
 
@@ -1336,19 +1363,19 @@ static void initEquipment(void)
         **  Parse channel number.
         */
         token = strtok(NULL, ", ");
-        if (token == NULL || strlen(token) != 2 || !isoctal(token[0]) || !isoctal(token[1]))
+        if ((token == NULL) || (strlen(token) != 2) || !isoctal(token[0]) || !isoctal(token[1]))
             {
             fprintf(stderr, "(init   ) Section [%s], relative line %d, invalid channel no %s in %s\n",
-                equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
+                    equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
             exit(1);
             }
 
         channelNo = strtol(token, NULL, 8);
 
-        if (channelNo < 0 || channelNo >= chCount)
+        if ((channelNo < 0) || (channelNo >= chCount))
             {
             fprintf(stderr, "(init   ) Section [%s], relative line %d, channel no %s not permitted in %s\n",
-                equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
+                    equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
             exit(1);
             }
 
@@ -1376,7 +1403,7 @@ static void initDeadstart(void)
     {
     char *line;
     char *token;
-    u8 lineNo;
+    u8   lineNo;
 
 
     if (!initOpenSection(deadstart))
@@ -1391,51 +1418,51 @@ static void initDeadstart(void)
     **  Process all deadstart panel switches.
     */
     lineNo = 0;
-    while  ((line = initGetNextLine()) != NULL && lineNo < MaxDeadStart)
+    while ((line = initGetNextLine()) != NULL && lineNo < MaxDeadStart)
         {
         /*
         **  Parse switch settings.
         */
         token = strtok(line, " ;\n");
-        if (   token == NULL || strlen(token) != 4
+        if ((token == NULL) || (strlen(token) != 4)
             || !isoctal(token[0]) || !isoctal(token[1])
             || !isoctal(token[2]) || !isoctal(token[3]))
             {
             fprintf(stderr, "(init   ) Section [%s], relative line %d, invalid deadstart setting %s in %s\n",
-                deadstart, lineNo, token == NULL ? "NULL" : token, startupFile);
+                    deadstart, lineNo, token == NULL ? "NULL" : token, startupFile);
             exit(1);
             }
 
         deadstartPanel[lineNo++] = (u16)strtol(token, NULL, 8);
-    	/*
-    	 * Print the value so we know what we captured
-    	 */
-        printf("          Row %02d (%s):[", lineNo - 1, token);
-    	
-        for (int c = 11; c >= 0; c--)
-        {
 
+        /*
+         * Print the value so we know what we captured
+         */
+        printf("          Row %02d (%s):[", lineNo - 1, token);
+
+        for (int c = 11; c >= 0; c--)
+            {
             if ((deadstartPanel[lineNo - 1] >> c) & 1)
-            {
+                {
                 printf("1");
-            }
+                }
             else
-            {
+                {
                 printf("0");
-            }
-        	
-        	if ( ( c > 0 ) && (c % 3 == 0 ) )
-        	{
+                }
+
+            if ((c > 0) && (c % 3 == 0))
+                {
                 printf(" ");
-        	}
-        }
+                }
+            }
 
         printf("]\n");
         }
 
     deadstartCount = lineNo + 1;
     }
-    
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Read and process helper definitions.
 **
@@ -1446,7 +1473,10 @@ static void initDeadstart(void)
 **------------------------------------------------------------------------*/
 static void initHelpers(void)
     {
-    if (strlen(helpers) == 0) return;
+    if (strlen(helpers) == 0)
+        {
+        return;
+        }
 
     if (initOpenHelpersSection() == -1)
         {
@@ -1465,7 +1495,10 @@ static void initHelpers(void)
 **------------------------------------------------------------------------*/
 static void initOperator(void)
     {
-    if (strlen(operator) == 0) return;
+    if (strlen(operator) == 0)
+        {
+        return;
+        }
 
     if (initOpenOperatorSection() == -1)
         {
@@ -1487,7 +1520,7 @@ static bool initOpenSection(char *name)
     {
     char lineBuffer[MaxLine];
     char section[40];
-    u8 sectionLength = (u8) strlen(name) + 2;
+    u8   sectionLength = (u8)strlen(name) + 2;
 
     /*
     **  Build section label.
@@ -1511,7 +1544,7 @@ static bool initOpenSection(char *name)
             /*
             **  End-of-file - return failure.
             */
-            return(FALSE);
+            return (FALSE);
             }
         //  20200905 (SJZ): Case Insensitive Comparison
         } while (strnicmp(lineBuffer, section, sectionLength) != 0);
@@ -1520,7 +1553,8 @@ static bool initOpenSection(char *name)
     **  Remember start of section and return success.
     */
     sectionStart = ftell(fcb);
-    return(TRUE);
+
+    return (TRUE);
     }
 
 /*--------------------------------------------------------------------------
@@ -1538,15 +1572,16 @@ static bool initGetOctal(char *entry, int defValue, long *value)
     {
     char buffer[40];
 
-    if (   !initGetString(entry, "", buffer, sizeof(buffer))
-        || buffer[0] < '0'
-        || buffer[0] > '7')
+    if (!initGetString(entry, "", buffer, sizeof(buffer))
+        || (buffer[0] < '0')
+        || (buffer[0] > '7'))
         {
         /*
         **  Return default value.
         */
         *value = defValue;
-        return(FALSE);
+
+        return (FALSE);
         }
 
     /*
@@ -1554,7 +1589,7 @@ static bool initGetOctal(char *entry, int defValue, long *value)
     */
     *value = strtol(buffer, NULL, 8);
 
-    return(TRUE);
+    return (TRUE);
     }
 
 /*--------------------------------------------------------------------------
@@ -1572,15 +1607,16 @@ static bool initGetInteger(char *entry, int defValue, long *value)
     {
     char buffer[40];
 
-    if (   !initGetString(entry, "", buffer, sizeof(buffer))
-        || buffer[0] < '0'
-        || buffer[0] > '9')
+    if (!initGetString(entry, "", buffer, sizeof(buffer))
+        || (buffer[0] < '0')
+        || (buffer[0] > '9'))
         {
         /*
         **  Return default value.
         */
         *value = defValue;
-        return(FALSE);
+
+        return (FALSE);
         }
 
     /*
@@ -1588,7 +1624,7 @@ static bool initGetInteger(char *entry, int defValue, long *value)
     */
     *value = strtol(buffer, NULL, 10);
 
-    return(TRUE);
+    return (TRUE);
     }
 
 /*--------------------------------------------------------------------------
@@ -1605,7 +1641,7 @@ static bool initGetInteger(char *entry, int defValue, long *value)
 **------------------------------------------------------------------------*/
 static bool initGetString(char *entry, char *defString, char *str, int strLen)
     {
-    u8 entryLength = (u8) strlen(entry);
+    u8   entryLength = (u8)strlen(entry);
     char *line;
     char *pos;
 
@@ -1634,9 +1670,9 @@ static bool initGetString(char *entry, char *defString, char *str, int strLen)
             /*
             **  End-of-file or end-of-section - return failure.
             */
-            return(FALSE);
+            return (FALSE);
             }
-    	//  20200905 (SJZ): Case Insensitive Comparison
+        //  20200905 (SJZ): Case Insensitive Comparison
         } while (strnicmp(line, entry, entryLength) != 0);
 
     /*
@@ -1671,14 +1707,15 @@ static bool initGetString(char *entry, char *defString, char *str, int strLen)
         /*
         **  No value specified.
         */
-        return(FALSE);
+        return (FALSE);
         }
 
     /*
     **  Return value and success.
     */
     strncpy(str, pos + 1, strLen);
-    return(TRUE);
+
+    return (TRUE);
     }
 
 /*--------------------------------------------------------------------------
@@ -1694,30 +1731,30 @@ static bool initGetString(char *entry, char *defString, char *str, int strLen)
 **------------------------------------------------------------------------*/
 static bool initParseIpAddress(char *ipStr, u32 *ip, u16 *port)
     {
-    int count;
-    u32 result;
+    int  count;
+    u32  result;
     long val;
 
-    count = 0;
+    count  = 0;
     result = 0;
     while (*ipStr)
         {
-        if (*ipStr >= '0' && *ipStr <= '9')
+        if ((*ipStr >= '0') && (*ipStr <= '9'))
             {
             val = 0;
             while (*ipStr >= '0' && *ipStr <= '9')
                 {
                 val = (val * 10) + (*ipStr++ - '0');
                 }
-            if (val >= 0 && val < 256)
+            if ((val >= 0) && (val < 256))
                 {
                 result = (result << 8) | (u8)val;
                 count += 1;
-                if (*ipStr == '.' && count < 4)
+                if ((*ipStr == '.') && (count < 4))
                     {
                     ipStr += 1;
                     }
-                else if ((*ipStr == '\0' || *ipStr == ':') && count == 4)
+                else if (((*ipStr == '\0') || (*ipStr == ':')) && (count == 4))
                     {
                     *ip = result;
                     if (port != NULL)
@@ -1725,13 +1762,13 @@ static bool initParseIpAddress(char *ipStr, u32 *ip, u16 *port)
                         if (*ipStr == ':')
                             {
                             val = strtol(ipStr + 1, NULL, 10);
-                            if (val >= 0 && val <= 65535)
-                               {
+                            if ((val >= 0) && (val <= 65535))
+                                {
                                 *port = (u16)val;
                                 }
                             else
                                 {
-                                return(FALSE);
+                                return (FALSE);
                                 }
                             }
                         else
@@ -1739,24 +1776,26 @@ static bool initParseIpAddress(char *ipStr, u32 *ip, u16 *port)
                             *port = 0;
                             }
                         }
-                    return(TRUE);
+
+                    return (TRUE);
                     }
                 else
                     {
-                    return(FALSE);
+                    return (FALSE);
                     }
                 }
             else
                 {
-                return(FALSE);
+                return (FALSE);
                 }
             }
         else
             {
-            return(FALSE);
+            return (FALSE);
             }
         }
-        return(FALSE);
+
+    return (FALSE);
     }
 
 /*--------------------------------------------------------------------------
@@ -1772,11 +1811,12 @@ static void initToUpperCase(char *str)
     {
     while (*str != '\0')
         {
-        if (*str >= 'a' && *str <= 'z') *str -= 0x20;
+        if ((*str >= 'a') && (*str <= 'z'))
+            {
+            *str -= 0x20;
+            }
         str += 1;
         }
     }
 
 /*---------------------------  End Of File  ------------------------------*/
-
-

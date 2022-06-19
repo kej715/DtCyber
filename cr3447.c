@@ -1,7 +1,7 @@
 /*--------------------------------------------------------------------------
 **
 **  Copyright (c) 2003-2011, Paul Koning, Tom Hunter
-**	          (c) 2017       Steven Zoppi 10-Nov-2017
+**            (c) 2017       Steven Zoppi 10-Nov-2017
 **                           Added status messaging support
 **
 **  Name: cr3447.c
@@ -14,12 +14,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -27,7 +27,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -61,17 +61,17 @@
 /*
 **  CDC 3447 card reader function and status codes.
 */
-#define FcCr3447Deselect         00000
-#define FcCr3447Binary           00001
-#define FcCr3447BCD              00002
-#define FcCr3447SetGateCard      00004
-#define FcCr3447Clear            00005
-#define FcCr3447IntReady         00020
-#define FcCr3447NoIntReady       00021
-#define FcCr3447IntEoi           00022
-#define FcCr3447NoIntEoi         00023
-#define FcCr3447IntError         00024
-#define FcCr3447NoIntError       00025
+#define FcCr3447Deselect        00000
+#define FcCr3447Binary          00001
+#define FcCr3447BCD             00002
+#define FcCr3447SetGateCard     00004
+#define FcCr3447Clear           00005
+#define FcCr3447IntReady        00020
+#define FcCr3447NoIntReady      00021
+#define FcCr3447IntEoi          00022
+#define FcCr3447NoIntEoi        00023
+#define FcCr3447IntError        00024
+#define FcCr3447NoIntError      00025
 
 /*
 **      Status reply flags
@@ -90,19 +90,19 @@
 **      4000 = Reserved by other controller (3649 only)
 **
 */
-#define StCr3447Ready            00201  // includes ReadyInt
-#define StCr3447Busy             00002
-#define StCr3447Binary           00004
-#define StCr3447File             00010
-#define StCr3447Empty            00040
-#define StCr3447Eof              01540  // includes Empty, EoiInt, ErrorInt
-#define StCr3447ReadyInt         00200
-#define StCr3447EoiInt           00400
-#define StCr3447ErrorInt         01000
-#define StCr3447CompareErr       02000
-#define StCr3447NonIntStatus     02177
+#define StCr3447Ready           00201   // includes ReadyInt
+#define StCr3447Busy            00002
+#define StCr3447Binary          00004
+#define StCr3447File            00010
+#define StCr3447Empty           00040
+#define StCr3447Eof             01540   // includes Empty, EoiInt, ErrorInt
+#define StCr3447ReadyInt        00200
+#define StCr3447EoiInt          00400
+#define StCr3447ErrorInt        01000
+#define StCr3447CompareErr      02000
+#define StCr3447NonIntStatus    02177
 
-#define Cr3447MaxDecks           10
+#define Cr3447MaxDecks          10
 
 /*
 **  -----------------------
@@ -121,30 +121,30 @@ typedef struct crContext
     /*
     **  Info for show_tape operator command.
     */
-    struct crContext* nextUnit;
-    u8          channelNo;
-    u8          eqNo;
-    u8          unitNo;
+    struct crContext *nextUnit;
+    u8               channelNo;
+    u8               eqNo;
+    u8               unitNo;
 
-	bool    binary;
-    bool    rawcard;
-    int     intmask;
-    int     status;
-    int     col;
-    const u16 *table;
-    u32     getcardcycle;
-    PpWord  card[80];
-    int     inDeck;
-    int     outDeck;
-    char    *decks[Cr3447MaxDecks];
-    char    curFileName[_MAX_PATH];
-    char    dirInput[_MAX_PATH];
-    char    dirOutput[_MAX_PATH];
-    int     seqNum;
-    bool    IsWatched;
+    bool             binary;
+    bool             rawcard;
+    int              intmask;
+    int              status;
+    int              col;
+    const u16        *table;
+    u32              getcardcycle;
+    PpWord           card[80];
+    int              inDeck;
+    int              outDeck;
+    char             *decks[Cr3447MaxDecks];
+    char             curFileName[_MAX_PATH];
+    char             dirInput[_MAX_PATH];
+    char             dirOutput[_MAX_PATH];
+    int              seqNum;
+    bool             IsWatched;
     } CrContext;
 
-    
+
 /*
 **  ---------------------------
 **  Private Function Prototypes
@@ -170,20 +170,20 @@ static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc, FILE *out);
 **  -----------------
 */
 
-static CrContext* firstcr3447 = NULL;
-static CrContext* lastcr3447 = NULL;
+static CrContext *firstcr3447 = NULL;
+static CrContext *lastcr3447  = NULL;
 
 #if DEBUG
 static FILE *cr3447Log = NULL;
 #endif
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise card reader.
 **
@@ -199,7 +199,7 @@ static FILE *cr3447Log = NULL;
 **------------------------------------------------------------------------*/
 void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
-    DevSlot *up;
+    DevSlot   *up;
     CrContext *cc;
 
     fswContext *threadParms;
@@ -215,7 +215,7 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
                                     //  as one.
     struct stat s;
 
-    /* 
+    /*
     **  For FileSystem Watcher
     **
     **  We pass the fswContext structure to be used by the thread.
@@ -260,21 +260,21 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     **              from the CRInputFolder
     **
     **  The context can be declared locally because it's just
-    **  a structure used to marshal the parameters into the 
+    **  a structure used to marshal the parameters into the
     **  thread's context.
     */
-    
+
 #if DEBUG
     if (cr3447Log == NULL)
         {
         cr3447Log = fopen("cr3447log.txt", "wt");
         }
 #endif
-    up = dcc6681Attach(channelNo, eqNo, 0, DtCr3447);
-    up->activate = cr3447Activate;
+    up             = dcc6681Attach(channelNo, eqNo, 0, DtCr3447);
+    up->activate   = cr3447Activate;
     up->disconnect = cr3447Disconnect;
-    up->func = cr3447Func;
-    up->io = cr3447Io;
+    up->func       = cr3447Func;
+    up->io         = cr3447Io;
 
     /*
     **  Only one card reader unit is possible per equipment.
@@ -282,82 +282,81 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     if (up->context[0] != NULL)
         {
         fprintf(stderr, "(cr3447 ) Only one CR3447 unit is possible per equipment\n");
-        exit (1);
+        exit(1);
         }
 
-    cc = calloc(1, sizeof (CrContext));
+    cc = calloc(1, sizeof(CrContext));
     if (cc == NULL)
         {
         fprintf(stderr, "(cr3447 ) Failed to allocate CR3447 context block\n");
-        exit (1);
+        exit(1);
         }
 
     up->context[0] = (void *)cc;
 
     threadParms = calloc(1, sizeof(fswContext));    //  Need to check for null result
     if (cc == NULL)
-    {
+        {
         fprintf(stderr, "(cr3447 ) Failed to allocate CR3447 FileWatcher Context block\n");
         exit(1);
-    }
+        }
 
     threadParms->LoadCards = 0;
     if (deviceName != NULL)
-    {
+        {
         strcat(tokenstring, deviceName);
-    }
+        }
     xlateTable = strtok(tokenstring, ",");
-    CrInput = strtok(NULL, ",");
-    CrOutput = strtok(NULL, ",");
-    Auto = strtok(NULL, ",");
-    
+    CrInput    = strtok(NULL, ",");
+    CrOutput   = strtok(NULL, ",");
+    Auto       = strtok(NULL, ",");
+
     /*
     **  Process the Request for FileSystem Watcher
     */
     bWatchRequested = TRUE;     // Default = Run Filewatcher Thread
     if (Auto != NULL)
-    {
+        {
         strlwr(Auto);
         if (!strcmp(Auto, "noauto"))
-        {
+            {
             bWatchRequested = FALSE;
-        }
-        else if (strcmp(Auto, "auto") != 0 && strcmp(Auto, "*") != 0)
-        {
+            }
+        else if ((strcmp(Auto, "auto") != 0) && (strcmp(Auto, "*") != 0))
+            {
             fprintf(stderr, "(cr3447 ) Unrecognized Automation Type '%s'\n", Auto);
             exit(1);
+            }
         }
-
-    }
 
     /*
     **  Setup character set translation table.
     */
-    
-    cc->table = asciiTo026;     // default translation table
+
+    cc->table     = asciiTo026; // default translation table
     cc->IsWatched = FALSE;
-	
+
     cc->channelNo = channelNo;
-    cc->eqNo = eqNo;
-    cc->unitNo = unitNo;
-	
-    strcpy(cc->dirInput,"");
+    cc->eqNo      = eqNo;
+    cc->unitNo    = unitNo;
+
+    strcpy(cc->dirInput, "");
     strcpy(cc->dirOutput, "");
 
     if (xlateTable != NULL)
-    {
+        {
         if (strcmp(xlateTable, " 029") == 0)
-        {
+            {
             cc->table = asciiTo029;
-        }
-        else if (strcmp(xlateTable, " 026") != 0
-            && strcmp(xlateTable, " *") != 0
-            && strcmp(xlateTable, " ") != 0)
-        {
+            }
+        else if ((strcmp(xlateTable, " 026") != 0)
+                 && (strcmp(xlateTable, " *") != 0)
+                 && (strcmp(xlateTable, " ") != 0))
+            {
             fprintf(stderr, "(cr3447 ) Unrecognized card code name %s\n", xlateTable);
             exit(1);
+            }
         }
-    }
 
     /*
     **  Incorrect specifications for input / output directories
@@ -366,44 +365,45 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     **  supplied through the ini file to be correct from the start.
     */
 
-    if (CrOutput != NULL && CrOutput[0] != '*')
-    {
-        if (stat(CrOutput, &s) != 0)
+    if ((CrOutput != NULL) && (CrOutput[0] != '*'))
         {
+        if (stat(CrOutput, &s) != 0)
+            {
             fprintf(stderr, "(cr3447 ) The Output location specified '%s' does not exist.\n", CrOutput);
             exit(1);
-        }
+            }
 
         if ((s.st_mode & S_IFDIR) == 0)
-        {
+            {
             fprintf(stderr, "(cr3447 ) The Output location specified '%s' is not a directory.\n", CrOutput);
             exit(1);
-        }
+            }
         strcpy_s(threadParms->outDoneDir, sizeof(threadParms->outDoneDir), CrOutput);
         strcpy_s(cc->dirOutput, sizeof(cc->dirOutput), CrOutput);
         fprintf(stderr, "(cr3447 ) Submissions will be preserved in '%s'.\n", CrOutput);
-    }
+        }
     else
-    {
-        threadParms->outDoneDir[0] = '\0';
-        cc->dirOutput[0] = '\0';
-        fprintf(stderr, "(cr3447 ) Submissions will be purged after processing.\n");
-    }
-
-    if (CrInput != NULL && CrInput[0] != '*')
-    {
-        if (stat(CrInput, &s) != 0)
         {
+        threadParms->outDoneDir[0] = '\0';
+        cc->dirOutput[0]           = '\0';
+        fprintf(stderr, "(cr3447 ) Submissions will be purged after processing.\n");
+        }
+
+    if ((CrInput != NULL) && (CrInput[0] != '*'))
+        {
+        if (stat(CrInput, &s) != 0)
+            {
             fprintf(stderr, "(cr3447 ) The Input location specified '%s' does not exist.\n", CrInput);
             exit(1);
-        }
+            }
 
         if ((s.st_mode & S_IFDIR) == 0)
-        {
+            {
             fprintf(stderr, "(cr3447 ) The Input location specified '%s' is not a directory.\n", CrInput);
             exit(1);
-        }
+            }
         //  We only care about the "Auto" "NoAuto" flag if there is a good input location
+
         /*
         **  The thread needs to know what directory to watch.
         **
@@ -413,16 +413,16 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         strcpy_s(threadParms->inWatchDir, sizeof(threadParms->inWatchDir), CrInput);
         strcpy_s(cc->dirInput, sizeof(cc->dirInput), CrInput);
 
-        threadParms->eqNo = eqNo;
-        threadParms->unitNo = unitNo;
+        threadParms->eqNo      = eqNo;
+        threadParms->unitNo    = unitNo;
         threadParms->channelNo = channelNo;
         threadParms->LoadCards = cr3447LoadCards;
-        threadParms->devType = DtCr3447;
-        
+        threadParms->devType   = DtCr3447;
+
         /*
         **  At this point, we should have a completed context
         **  and should be ready to launch the thread and pass
-        **  the context along.  We don't free the block, the 
+        **  the context along.  We don't free the block, the
         **  thread will do that if it is launched correctly.
         */
 
@@ -434,35 +434,34 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         */
         cc->IsWatched = FALSE;
         if (bWatchRequested)
-        {
+            {
             cc->IsWatched = fsCreateThread(threadParms);
             if (!cc->IsWatched)
-            {
+                {
                 printf("(cr3447 ) Unable to create filesystem watch thread for '%s'.\n", CrInput);
                 printf("          Card Loading is still possible via Operator Console.\n");
-            }
+                }
             else
-            {
+                {
                 printf("(cr3447 ) Filesystem watch thread for '%s' created successfully.\n", CrInput);
+                }
             }
-        }
         else
-        {
+            {
             printf("(cr3447 ) Filesystem watch thread not requested for '%s'.\n", CrInput);
             printf("          Card Loading is required via Operator Console.\n");
+            }
         }
-
-    }
 
 
     /*
     **  Print a friendly message.
     */
 
-    printf("(cr3447 ) Initialised on channel %o equipment %o type '%s'\n", 
-        channelNo, 
-        eqNo, 
-        cc->table == asciiTo026 ? "026" : "029");
+    printf("(cr3447 ) Initialised on channel %o equipment %o type '%s'\n",
+           channelNo,
+           eqNo,
+           cc->table == asciiTo026 ? "026" : "029");
 
     if (!cc->IsWatched)
         {
@@ -473,16 +472,15 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     **  Link into list of 3447 Card Reader units.
     */
     if (lastcr3447 == NULL)
-    {
+        {
         firstcr3447 = cc;
-    }
+        }
     else
-    {
+        {
         lastcr3447->nextUnit = cc;
-    }
+        }
 
     lastcr3447 = cc;
-	
     }
 
 /*--------------------------------------------------------------------------
@@ -493,7 +491,7 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **                  channelNo   Channel number of card reader
 **                  equipmentNo Equipment number of card reader
 **                  out         DtCyber operator output file
-**					params		Parameter list supplied on command line
+**                  params      Parameter list supplied on command line
 **
 **  Returns:        Nothing.
 **
@@ -505,19 +503,19 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char *params)
     {
     CrContext *cc;
-    DevSlot *dp;
-    int len;
-    char *sp;
-            
-    int numParam;
+    DevSlot   *dp;
+    int       len;
+    char      *sp;
+
+    int  numParam;
     FILE *fcb;
 
-    static char str[_MAX_PATH] = "";
+    static char str[_MAX_PATH]     = "";
     static char strWork[_MAX_PATH] = "";
     static char fOldest[_MAX_PATH] = "";
-    time_t tOldest;
+    time_t      tOldest;
 
-    struct stat s;
+    struct stat   s;
     struct dirent *curDirEntry;
 
     DIR *curDir;
@@ -531,7 +529,7 @@ void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, cha
         return;
         }
 
-    cc = (CrContext *) (dp->context[0]);
+    cc = (CrContext *)(dp->context[0]);
 
     /*
     **  Ensure the tray is not full.
@@ -539,43 +537,44 @@ void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, cha
     if (((cc->inDeck + 1) % Cr3447MaxDecks) == cc->outDeck)
         {
         printf("(cr3447 ) Input tray full\n");
+
         return;
         }
 
     len = strlen(fname) + 1;
-    sp = (char *)malloc(len);
+    sp  = (char *)malloc(len);
     memcpy(sp, fname, len);
     cc->decks[cc->inDeck] = sp;
-    cc->inDeck = (cc->inDeck + 1) % Cr3447MaxDecks;
+    cc->inDeck            = (cc->inDeck + 1) % Cr3447MaxDecks;
 
     if (dp->fcb[0] == NULL)
         {
         if (cr3447StartNextDeck(dp, cc, out))
-        	{
-        		return;
-        	}
+            {
+            return;
+            }
         }
 
- 
+
     dp->fcb[0] = NULL;
     cc->status = StCr3447Eof;
 
     /*
-    **  If the string for the filename = "*" Then we 
+    **  If the string for the filename = "*" Then we
     **  invoke the logic that selects the next file from
-    **  the input directory (if one exists) in create 
+    **  the input directory (if one exists) in create
     **  date order.
     **
     **  The asterisk convention works even if the
     **  filewatcher thread cannot be started.  It
-    **  simply means: "Pick the next oldest file 
-    **  found in the input directory. 
+    **  simply means: "Pick the next oldest file
+    **  found in the input directory.
     **
     **  For anything other than an asterisk, the
-    **  string is assumed to be a filename. 
+    **  string is assumed to be a filename.
     */
-    if (strcmp(str, "*") == 0 && cc->dirInput[0] != '\0')
-    {
+    if ((strcmp(str, "*") == 0) && (cc->dirInput[0] != '\0'))
+        {
         curDir = opendir(cc->dirInput);
 
         /*
@@ -584,50 +583,50 @@ void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, cha
         */
 
         do
-        {
+            {
             curDirEntry = readdir(curDir);
             if (curDirEntry == NULL)
-            {
-                continue;  
-            }
-            
+                {
+                continue;
+                }
+
             //  Pop over the dot (.) directories
             if (curDirEntry->d_name[0] == '.')
-            {
+                {
                 continue;
-            }
+                }
 
             sprintf_s(strWork, sizeof(strWork), "%s/%s", cc->dirInput, curDirEntry->d_name);
             stat(strWork, &s);
             if (fOldest[0] == '\0')
-            {
+                {
                 strcpy(fOldest, strWork);
                 tOldest = s.st_ctime;
-            }
+                }
             else
-            {
-                if (s.st_ctime > tOldest)
                 {
+                if (s.st_ctime > tOldest)
+                    {
                     strcpy(fOldest, strWork);
                     tOldest = s.st_ctime;
+                    }
                 }
-            }
-
-        } while (curDirEntry != NULL);
+            } while (curDirEntry != NULL);
         if (fOldest[0] != '\0')
-        {
+            {
             printf("(cr3447 ) Dequeueing Unprocessed File '%s'.\n", fOldest);
             strcpy(str, fOldest);
+            }
         }
-    }
-    
-    if (stat(str, &s) != 0)
-    {
-        fprintf(stderr, "(cr3447 ) The Input location specified '%s' does not exist.\n", str);
-        return;
-    }
 
-    
+    if (stat(str, &s) != 0)
+        {
+        fprintf(stderr, "(cr3447 ) The Input location specified '%s' does not exist.\n", str);
+
+        return;
+        }
+
+
     fcb = fopen(str, "r");
 
     /*
@@ -636,6 +635,7 @@ void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, cha
     if (fcb == NULL)
         {
         printf("(cr3447 ) Failed to open %s\n", str);
+
         return;
         }
 
@@ -648,9 +648,7 @@ void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, cha
 
     strcpy_s(cc->curFileName, sizeof(cc->curFileName), str);
     printf("(cr3447 ) Loaded with '%s'\n", str);
-
     }
-
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Show card reader status (operator interface).
@@ -661,48 +659,47 @@ void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, cha
 **
 **------------------------------------------------------------------------*/
 void cr3447ShowStatus(void)
-{
-    CrContext* cp = firstcr3447;
+    {
+    CrContext *cp = firstcr3447;
 
     if (cp == NULL)
-    {
+        {
         return;
-    }
+        }
 
-	printf("\n    > Card Reader (cr3447) Status:\n");
+    printf("\n    > Card Reader (cr3447) Status:\n");
 
     while (cp)
-    {
-    	printf("    >   CH %02o EQ %02o UN %02o Col %02i Mode(%s) Raw(%s) Seq:%i File '%s'\n",
-            cp->channelNo,
-            cp->eqNo,
-            cp->unitNo,
-            cp->col,
-            cp->binary ? "Char" : "Bin ",
-            cp->rawcard ? "Yes" : "No ",
-            cp->seqNum,
-            cp->curFileName);
+        {
+        printf("    >   CH %02o EQ %02o UN %02o Col %02i Mode(%s) Raw(%s) Seq:%i File '%s'\n",
+               cp->channelNo,
+               cp->eqNo,
+               cp->unitNo,
+               cp->col,
+               cp->binary ? "Char" : "Bin ",
+               cp->rawcard ? "Yes" : "No ",
+               cp->seqNum,
+               cp->curFileName);
 
         if (cp->IsWatched)
-        {
+            {
             printf("    >   Autoloading from '%s' to '%s'\n",
-                cp->dirInput,
-                cp->dirOutput);
-        }
-    	
-        cp = cp->nextUnit;
-    }
-    printf("\n");
+                   cp->dirInput,
+                   cp->dirOutput);
+            }
 
-}
+        cp = cp->nextUnit;
+        }
+    printf("\n");
+    }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Execute function code on 3447 card reader.
@@ -716,15 +713,15 @@ void cr3447ShowStatus(void)
 static FcStatus cr3447Func(PpWord funcCode)
     {
     CrContext *cc;
-    FcStatus st;
-    
+    FcStatus  st;
+
 #if DEBUG
     fprintf(cr3447Log, "\n(cr3447 ) %06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id,
-        funcCode,
-        cr3447Func2String(funcCode));
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id,
+            funcCode,
+            cr3447Func2String(funcCode));
 #endif
 
     cc = (CrContext *)active3000Device->context[0];
@@ -745,8 +742,8 @@ static FcStatus cr3447Func(PpWord funcCode)
     case Fc6681InputToEor:
     case Fc6681Input:
         st = FcAccepted;
-        cc->getcardcycle = cycles;
-        cc->status = StCr3447Ready;
+        cc->getcardcycle        = cycles;
+        cc->status              = StCr3447Ready;
         active3000Device->fcode = funcCode;
         break;
 
@@ -757,60 +754,61 @@ static FcStatus cr3447Func(PpWord funcCode)
 
     case FcCr3447Binary:
         cc->binary = TRUE;
-        st = FcProcessed;
+        st         = FcProcessed;
         break;
-        
+
     case FcCr3447Deselect:
     case FcCr3447Clear:
         cc->intmask = 0;
-        cc->binary = FALSE;
-        st = FcProcessed;
+        cc->binary  = FALSE;
+        st          = FcProcessed;
         break;
-        
+
     case FcCr3447BCD:
         cc->binary = FALSE;
-        st = FcProcessed;
+        st         = FcProcessed;
         break;
-        
+
     case FcCr3447IntReady:
         cc->intmask |= StCr3447ReadyInt;
-        cc->status &= ~StCr3447ReadyInt;
-        st = FcProcessed;
+        cc->status  &= ~StCr3447ReadyInt;
+        st           = FcProcessed;
         break;
-        
+
     case FcCr3447NoIntReady:
         cc->intmask &= ~StCr3447ReadyInt;
-        cc->status &= ~StCr3447ReadyInt;
-        st = FcProcessed;
+        cc->status  &= ~StCr3447ReadyInt;
+        st           = FcProcessed;
         break;
-        
+
     case FcCr3447IntEoi:
         cc->intmask |= StCr3447EoiInt;
-        cc->status &= ~StCr3447EoiInt;
-        st = FcProcessed;
+        cc->status  &= ~StCr3447EoiInt;
+        st           = FcProcessed;
         break;
-        
+
     case FcCr3447NoIntEoi:
         cc->intmask &= ~StCr3447EoiInt;
-        cc->status &= ~StCr3447EoiInt;
-        st = FcProcessed;
+        cc->status  &= ~StCr3447EoiInt;
+        st           = FcProcessed;
         break;
 
     case FcCr3447IntError:
-        cc->intmask |=StCr3447ErrorInt;
-        cc->status &= ~StCr3447ErrorInt;
-        st = FcProcessed;
+        cc->intmask |= StCr3447ErrorInt;
+        cc->status  &= ~StCr3447ErrorInt;
+        st           = FcProcessed;
         break;
 
     case FcCr3447NoIntError:
         cc->intmask &= ~StCr3447ErrorInt;
-        cc->status &= ~StCr3447ErrorInt;
-        st = FcProcessed;
+        cc->status  &= ~StCr3447ErrorInt;
+        st           = FcProcessed;
         break;
         }
 
     dcc6681Interrupt((cc->status & cc->intmask) != 0);
-    return(st);
+
+    return (st);
     }
 
 /*--------------------------------------------------------------------------
@@ -824,14 +822,14 @@ static FcStatus cr3447Func(PpWord funcCode)
 static void cr3447Io(void)
     {
     CrContext *cc;
-    PpWord c;
-    
+    PpWord    c;
+
     cc = (CrContext *)active3000Device->context[0];
 
     switch (active3000Device->fcode)
         {
     default:
-        printf("(cr3447 ) Unexpected IO for function %04o\n", active3000Device->fcode); 
+        printf("(cr3447 ) Unexpected IO for function %04o\n", active3000Device->fcode);
         break;
 
     case 0:
@@ -847,15 +845,15 @@ static void cr3447Io(void)
 #endif
             }
         break;
-        
+
     case Fc6681InputToEor:
     case Fc6681Input:
 
         // Don't admit to having new data immediately after completing
         // a card, otherwise 1CD may get stuck occasionally.
         // So we simulate card in motion for 20 major cycles.
-        if (   activeChannel->full
-            || cycles - cc->getcardcycle < 20)
+        if (activeChannel->full
+            || (cycles - cc->getcardcycle < 20))
             {
             break;
             }
@@ -865,12 +863,12 @@ static void cr3447Io(void)
             cc->status = StCr3447Eof;
             break;
             }
-        
+
         if (cc->col >= 80)
             {
             // Read the next card.
             // If the function is input to EOR, disconnect to indicate EOR
-            cr3447NextCard (active3000Device, cc, stdout);
+            cr3447NextCard(active3000Device, cc, stdout);
             if (activeDevice->fcode == Fc6681InputToEor)
                 {
                 // End of card but we're still ready
@@ -908,7 +906,7 @@ static void cr3447Io(void)
             }
         break;
         }
-    
+
     dcc6681Interrupt((cc->status & cc->intmask) != 0);
     }
 
@@ -924,9 +922,9 @@ static void cr3447Activate(void)
     {
 #if DEBUG
     fprintf(cr3447Log, "\n(cr3447 ) %06d PP:%02o CH:%02o Activate",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id);
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id);
 #endif
     }
 
@@ -941,12 +939,12 @@ static void cr3447Activate(void)
 static void cr3447Disconnect(void)
     {
     CrContext *cc;
-    
+
 #if DEBUG
     fprintf(cr3447Log, "\n(cr3447 ) %06d PP:%02o CH:%02o Disconnect",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id);
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id);
 #endif
 
     /*
@@ -962,7 +960,7 @@ static void cr3447Disconnect(void)
         {
         cc->status |= StCr3447EoiInt;
         dcc6681Interrupt((cc->status & cc->intmask) != 0);
-        if (active3000Device->fcb[0] != NULL && cc->col != 0)
+        if ((active3000Device->fcb[0] != NULL) && (cc->col != 0))
             {
             cr3447NextCard(active3000Device, cc, stdout);
             }
@@ -984,7 +982,7 @@ static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc, FILE *out)
 
     while (cc->outDeck != cc->inDeck)
         {
-        fname = cc->decks[cc->outDeck];
+        fname      = cc->decks[cc->outDeck];
         up->fcb[0] = fopen(fname, "r");
         if (up->fcb[0] != NULL)
             {
@@ -993,7 +991,8 @@ static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc, FILE *out)
             cr3447NextCard(up, cc, out);
             activeDevice = channelFindDevice(up->channel->id, DtDcc6681);
             dcc6681Interrupt((cc->status & cc->intmask) != 0);
-		    fprintf(out, "\n(cr3447 ) Cards loaded on card reader C%o,E%o\n", cc->channelNo, cc->eqNo);
+            fprintf(out, "\n(cr3447 ) Cards loaded on card reader C%o,E%o\n", cc->channelNo, cc->eqNo);
+
             return TRUE;
             }
         printf("\n(cr3447 ) Failed to open card deck %s\n", fname);
@@ -1002,9 +1001,10 @@ static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc, FILE *out)
         cc->outDeck = (cc->outDeck + 1) % Cr3447MaxDecks;
         }
     up->fcb[0] = NULL;
+
     return FALSE;
     }
-    
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Read next card, update card reader status.
 **
@@ -1013,24 +1013,24 @@ static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc, FILE *out)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cr3447NextCard (DevSlot *up, CrContext *cc, FILE *out)
+static void cr3447NextCard(DevSlot *up, CrContext *cc, FILE *out)
     {
     static char buffer[326];
-    char *cp;
-    char c;
-    int value;
-    int i;
-    int j;
-    PpWord col1;
+    char        *cp;
+    char        c;
+    int         value;
+    int         i;
+    int         j;
+    PpWord      col1;
 
     static char fnwork[_MAX_PATH] = "";
 
-    /* 
+    /*
     **  Initialise read.
     */
     cc->getcardcycle = cycles;
-    cc->col = 0;
-    cc->rawcard = FALSE;
+    cc->col          = 0;
+    cc->rawcard      = FALSE;
 
     /*
     **  Read the next card.
@@ -1047,29 +1047,34 @@ static void cr3447NextCard (DevSlot *up, CrContext *cc, FILE *out)
             cc->status |= StCr3447Binary;
             memset(cc->card, 0, sizeof(cc->card));
             cc->card[0] = 00017;
+
             return;
             }
 
         fclose(up->fcb[0]);
         up->fcb[0] = NULL;
         cc->status = StCr3447Eof;
-        
-        
-        printf("(cr3447 ) End of Deck '%s' reached on channel %o equipment %o\n", 
-            cc->curFileName,
-            up->channel->id,
-            up->eqNo);
+
+
+        printf("(cr3447 ) End of Deck '%s' reached on channel %o equipment %o\n",
+               cc->curFileName,
+               up->channel->id,
+               up->eqNo);
 
         unlink(cc->decks[cc->outDeck]);
         free(cc->decks[cc->outDeck]);
         cc->outDeck = (cc->outDeck + 1) % Cr3447MaxDecks;
-        if (cr3447StartNextDeck(up, cc, out)) return;
-        
+        if (cr3447StartNextDeck(up, cc, out))
+            {
+            return;
+            }
+
 //TODO: Check this next phase and continue fixing up messages
+
         /*
         **  If the current file comes from the "input" directory specified
-        **      then 
-        **          if the output directory exists 
+        **      then
+        **          if the output directory exists
         **              then we move it to the "output" directory if specified
         **              else we remove the file from the "input" directory
         **      else we leave it alone
@@ -1079,22 +1084,21 @@ static void cr3447NextCard (DevSlot *up, CrContext *cc, FILE *out)
         **  If the "output" directory is specified, move the file
         **  to the "processed" state
         */
-        bool isFromInput = (! strncmp(cc->curFileName,cc->dirInput,strlen(cc->dirInput)));
+        bool isFromInput = (!strncmp(cc->curFileName, cc->dirInput, strlen(cc->dirInput)));
         if (isFromInput)
-        {   
+            {
             //  Files from the input directory are handled specially
             if (cc->dirOutput[0] == '\0')
-            {
+                {
                 //  Once a file is closed, we can simply delete it
                 //  from the input directory.  This will also trigger
                 //  the filechange watcher who will initiate the next
                 //  file load automatically.
-                
+
                 remove(cc->curFileName);
-            }
+                }
             else
-            {
-                
+                {
                 //  perform the rename of the current file to the "Processed"
                 //  directory.  This rename will ALSO trigger the filechange
                 //  watcher.  Otherwise the operator will need to use the load
@@ -1102,33 +1106,32 @@ static void cr3447NextCard (DevSlot *up, CrContext *cc, FILE *out)
 
                 int fnindex = 0;
 
-                while(TRUE)
-                {
+                while (TRUE)
+                    {
                     //  create the file's new name
-                    sprintf_s(fnwork, sizeof(fnwork), "%s/%s_%04i", cc->dirOutput, cc->curFileName + strlen(cc->dirInput) + 1, fnindex );
+                    sprintf_s(fnwork, sizeof(fnwork), "%s/%s_%04i", cc->dirOutput, cc->curFileName + strlen(cc->dirInput) + 1, fnindex);
                     if (rename(cc->curFileName, fnwork) == 0)
-                    {
+                        {
                         printf("(cr3447 ) Deck '%s' moved to '%s'. (Input Preserved)\n",
-                            cc->curFileName + strlen(cc->dirInput) + 1,
-                            fnwork);
+                               cc->curFileName + strlen(cc->dirInput) + 1,
+                               fnwork);
                         break;
-                    }
+                        }
                     else
-                    {
-                        printf("(cr3447 ) Rename Failure on '%s' - (%s). Retrying (%d)...\n", 
-                            cc->curFileName + strlen(cc->dirInput) + 1, 
-                            strerror(errno),
-                            fnindex);
-                    }
+                        {
+                        printf("(cr3447 ) Rename Failure on '%s' - (%s). Retrying (%d)...\n",
+                               cc->curFileName + strlen(cc->dirInput) + 1,
+                               strerror(errno),
+                               fnindex);
+                        }
                     fnindex++;
-                } // while(TRUE)
+                    } // while(TRUE)
                 if (fnindex > 0)
-                {
+                    {
                     printf("\n");
-                }
-
-            } // else
-        } // if (isFromInput)
+                    }
+                } // else
+            }     // if (isFromInput)
 
         cc->curFileName[0] = '\0';
 
@@ -1147,6 +1150,7 @@ static void cr3447NextCard (DevSlot *up, CrContext *cc, FILE *out)
         cc->status |= StCr3447Binary;
         memset(cc->card, 0, sizeof(cc->card));
         cc->card[0] = 00017;
+
         return;
         }
 
@@ -1161,6 +1165,7 @@ static void cr3447NextCard (DevSlot *up, CrContext *cc, FILE *out)
             cc->status |= StCr3447Binary;
             memset(cc->card, 0, sizeof(cc->card));
             cc->card[0] = 00017;
+
             return;
             }
 
@@ -1173,10 +1178,11 @@ static void cr3447NextCard (DevSlot *up, CrContext *cc, FILE *out)
             cc->status |= StCr3447Binary;
             memset(cc->card, 0, sizeof(cc->card));
             cc->card[0] = 00015;
+
             return;
             }
 
-        if (strcmp(buffer + 1, "eor\n") == 0 || buffer[1] == '\n' || buffer[1] == ' ')
+        if ((strcmp(buffer + 1, "eor\n") == 0) || (buffer[1] == '\n') || (buffer[1] == ' '))
             {
             /*
             **  EOR = 7/8/9 card.
@@ -1185,6 +1191,7 @@ static void cr3447NextCard (DevSlot *up, CrContext *cc, FILE *out)
             cc->status |= StCr3447Binary;
             memset(cc->card, 0, sizeof(cc->card));
             cc->card[0] = 00007;
+
             return;
             }
 
@@ -1194,12 +1201,12 @@ static void cr3447NextCard (DevSlot *up, CrContext *cc, FILE *out)
             **  Raw binary card.
             */
             cc->rawcard = TRUE;
-            col1 = buffer[4] & Mask5;
+            col1        = buffer[4] & Mask5;
             if (col1 == 00005)
                 {
                 cc->status |= StCr3447Binary;
                 }
-            else if (col1 == 00006 && !cc->binary)
+            else if ((col1 == 00006) && !cc->binary)
                 {
                 cc->status |= StCr3447File;
                 }
@@ -1213,7 +1220,7 @@ static void cr3447NextCard (DevSlot *up, CrContext *cc, FILE *out)
         */
         if ((cp = strchr(buffer, '\n')) == NULL)
             {
-            do 
+            do
                 {
                 c = fgetc(up->fcb[0]);
                 } while (c != '\n' && c != EOF);
@@ -1234,6 +1241,7 @@ static void cr3447NextCard (DevSlot *up, CrContext *cc, FILE *out)
         for (i = 0; i < 80; i++)
             {
             c = buffer[i];
+
             /*
             **  Convert any non-ASCII characters to blank.
             */
@@ -1247,7 +1255,7 @@ static void cr3447NextCard (DevSlot *up, CrContext *cc, FILE *out)
         */
         if ((cp = strchr(buffer, '\n')) == NULL)
             {
-            do 
+            do
                 {
                 c = fgetc(up->fcb[0]);
                 } while (c != '\n' && c != EOF);
@@ -1271,7 +1279,7 @@ static void cr3447NextCard (DevSlot *up, CrContext *cc, FILE *out)
             value = 0;
             for (j = 0; j < 4; j++)
                 {
-                if (cp[j] >= '0' && cp[j] <= '7')
+                if ((cp[j] >= '0') && (cp[j] <= '7'))
                     {
                     value = (value << 3) | (cp[j] - '0');
                     }
@@ -1301,27 +1309,56 @@ static void cr3447NextCard (DevSlot *up, CrContext *cc, FILE *out)
 static char *cr3447Func2String(PpWord funcCode)
     {
     static char buf[30];
+
 #if DEBUG
-    switch(funcCode)
+    switch (funcCode)
         {
-    case FcCr3447Deselect             : return "Deselect";
-    case FcCr3447Binary               : return "Binary";
-    case FcCr3447BCD                  : return "BCD";
-    case FcCr3447SetGateCard          : return "SetGateCard";
-    case FcCr3447Clear                : return "Clear";
-    case FcCr3447IntReady             : return "IntReady";
-    case FcCr3447NoIntReady           : return "NoIntReady";
-    case FcCr3447IntEoi               : return "IntEoi";
-    case FcCr3447NoIntEoi             : return "NoIntEoi";
-    case FcCr3447IntError             : return "IntError";
-    case FcCr3447NoIntError           : return "NoIntError";
-    case Fc6681DevStatusReq           : return "6681DevStatusReq";
-    case Fc6681InputToEor             : return "6681InputToEor";
-    case Fc6681Input                  : return "6681Input";
+    case FcCr3447Deselect:
+        return "Deselect";
+
+    case FcCr3447Binary:
+        return "Binary";
+
+    case FcCr3447BCD:
+        return "BCD";
+
+    case FcCr3447SetGateCard:
+        return "SetGateCard";
+
+    case FcCr3447Clear:
+        return "Clear";
+
+    case FcCr3447IntReady:
+        return "IntReady";
+
+    case FcCr3447NoIntReady:
+        return "NoIntReady";
+
+    case FcCr3447IntEoi:
+        return "IntEoi";
+
+    case FcCr3447NoIntEoi:
+        return "NoIntEoi";
+
+    case FcCr3447IntError:
+        return "IntError";
+
+    case FcCr3447NoIntError:
+        return "NoIntError";
+
+    case Fc6681DevStatusReq:
+        return "6681DevStatusReq";
+
+    case Fc6681InputToEor:
+        return "6681InputToEor";
+
+    case Fc6681Input:
+        return "6681Input";
         }
 #endif
     sprintf(buf, "(cr3447 ) Unknown Function: %04o", funcCode);
-    return(buf);
+
+    return (buf);
     }
 
 /*---------------------------  End Of File  ------------------------------*/
