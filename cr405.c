@@ -133,7 +133,7 @@ typedef struct cr405Context
     char                dirInput[_MAX_PATH];
     char                dirOutput[_MAX_PATH];
     int                 seqNum;
-    bool                IsWatched;
+    bool                isWatched;
     } Cr405Context;
 
 /*
@@ -159,8 +159,8 @@ static bool cr405StartNextDeck(DevSlot *up, Cr405Context *cc, FILE *out);
 **  Private Variables
 **  -----------------
 */
-static Cr405Context *firstcr405 = NULL;
-static Cr405Context *lastcr405  = NULL;
+static Cr405Context *firstCr405 = NULL;
+static Cr405Context *lastCr405  = NULL;
 
 /*
  **--------------------------------------------------------------------------
@@ -192,11 +192,11 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     //  Extensions for Filesystem Watcher
     char *xlateTable;
-    char *CrInput;
-    char *CrOutput;
+    char *crInput;
+    char *crOutput;
     char *Auto;
-    bool bWatchRequested;
-    char tokenstring[80] = " ";     //  Silly workaround because of strtok
+    bool watchRequested;
+    char tokenString[80] = " ";     //  Silly workaround because of strtok
                                     //  treating multiple consecutive delims
                                     //  as one.
     struct stat s;
@@ -303,22 +303,22 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         }
 
     threadParms->LoadCards = 0;
-    strcat(tokenstring, deviceName);
-    xlateTable = strtok(tokenstring, ",");
-    CrInput    = strtok(NULL, ",");
-    CrOutput   = strtok(NULL, ",");
+    strcat(tokenString, deviceName);
+    xlateTable = strtok(tokenString, ",");
+    crInput    = strtok(NULL, ",");
+    crOutput   = strtok(NULL, ",");
     Auto       = strtok(NULL, ",");
 
     /*
     **  Process the Request for FileSystem Watcher
     */
-    bWatchRequested = TRUE;     // Default = Run Filewatcher Thread
+    watchRequested = TRUE;     // Default = Run Filewatcher Thread
     if (Auto != NULL)
         {
         strlwr(Auto);
         if (!strcmp(Auto, "noauto"))
             {
-            bWatchRequested = FALSE;
+            watchRequested = FALSE;
             }
         else if ((strcmp(Auto, "auto") != 0) && (strcmp(Auto, "*") != 0))
             {
@@ -332,7 +332,7 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     **  Setup character set translation table.
     */
     cc->table     = asciiTo026; // default translation table
-    cc->IsWatched = FALSE;
+    cc->isWatched = FALSE;
 
     cc->channelNo = channelNo;
     cc->eqNo      = eqNo;
@@ -363,22 +363,22 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     **  supplied through the ini file to be correct from the start.
     */
 
-    if ((CrOutput != NULL) && (CrOutput[0] != '*'))
+    if ((crOutput != NULL) && (crOutput[0] != '*'))
         {
-        if (stat(CrOutput, &s) != 0)
+        if (stat(crOutput, &s) != 0)
             {
-            fprintf(stderr, "(cr405  ) The Output location specified '%s' does not exist.\n", CrOutput);
+            fprintf(stderr, "(cr405  ) The Output location specified '%s' does not exist.\n", crOutput);
             exit(1);
             }
 
         if ((s.st_mode & S_IFDIR) == 0)
             {
-            fprintf(stderr, "(cr405  ) The Output location specified '%s' is not a directory.\n", CrOutput);
+            fprintf(stderr, "(cr405  ) The Output location specified '%s' is not a directory.\n", crOutput);
             exit(1);
             }
-        strcpy_s(threadParms->outDoneDir, sizeof(threadParms->outDoneDir), CrOutput);
-        strcpy_s(cc->dirOutput, sizeof(cc->dirOutput), CrOutput);
-        fprintf(stderr, "(cr405  ) Submissions will be preserved in '%s'.\n", CrOutput);
+        strcpy_s(threadParms->outDoneDir, sizeof(threadParms->outDoneDir), crOutput);
+        strcpy_s(cc->dirOutput, sizeof(cc->dirOutput), crOutput);
+        fprintf(stderr, "(cr405  ) Submissions will be preserved in '%s'.\n", crOutput);
         }
     else
         {
@@ -387,17 +387,17 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         fprintf(stderr, "(cr405  ) Submissions will be purged after processing.\n");
         }
 
-    if ((CrInput != NULL) && (CrInput[0] != '*'))
+    if ((crInput != NULL) && (crInput[0] != '*'))
         {
-        if (stat(CrInput, &s) != 0)
+        if (stat(crInput, &s) != 0)
             {
-            fprintf(stderr, "(cr405  ) The Input location specified '%s' does not exist.\n", CrInput);
+            fprintf(stderr, "(cr405  ) The Input location specified '%s' does not exist.\n", crInput);
             exit(1);
             }
 
         if ((s.st_mode & S_IFDIR) == 0)
             {
-            fprintf(stderr, "(cr405  ) The Input location specified '%s' is not a directory.\n", CrInput);
+            fprintf(stderr, "(cr405  ) The Input location specified '%s' is not a directory.\n", crInput);
             exit(1);
             }
         //  We only care about the "Auto" "NoAuto" flag if there is a good input location
@@ -408,8 +408,8 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         **  The Card Reader Context needs to remember what directory
         **  will supply the input files so more can be found at EOD.
         */
-        strcpy_s(threadParms->inWatchDir, sizeof(threadParms->inWatchDir), CrInput);
-        strcpy_s(cc->dirInput, sizeof(cc->dirInput), CrInput);
+        strcpy_s(threadParms->inWatchDir, sizeof(threadParms->inWatchDir), crInput);
+        strcpy_s(cc->dirInput, sizeof(cc->dirInput), crInput);
 
         threadParms->eqNo      = eqNo;
         threadParms->unitNo    = unitNo;
@@ -430,23 +430,23 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         **  It is non-fatal if the filesystem watcher thread
         **  cannot be started.
         */
-        cc->IsWatched = FALSE;
-        if (bWatchRequested)
+        cc->isWatched = FALSE;
+        if (watchRequested)
             {
-            cc->IsWatched = fsCreateThread(threadParms);
-            if (!cc->IsWatched)
+            cc->isWatched = fsCreateThread(threadParms);
+            if (!cc->isWatched)
                 {
-                printf("(cr405  ) Unable to create filesystem watch thread for '%s'.\n", CrInput);
+                printf("(cr405  ) Unable to create filesystem watch thread for '%s'.\n", crInput);
                 printf("          Card Loading is still possible via Operator Console.\n");
                 }
             else
                 {
-                printf("(cr405  ) Filesystem watch thread for '%s' created successfully.\n", CrInput);
+                printf("(cr405  ) Filesystem watch thread for '%s' created successfully.\n", crInput);
                 }
             }
         else
             {
-            printf("(cr405  ) Filesystem watch thread not requested for '%s'.\n", CrInput);
+            printf("(cr405  ) Filesystem watch thread not requested for '%s'.\n", crInput);
             printf("          Card Loading is required via Operator Console.\n");
             }
         }
@@ -461,7 +461,7 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
            eqNo,
            cc->table == asciiTo026 ? "026" : "029");
 
-    if (!cc->IsWatched)
+    if (!cc->isWatched)
         {
         free(threadParms);
         }
@@ -469,16 +469,16 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Link into list of 405 Card Reader units.
     */
-    if (lastcr405 == NULL)
+    if (lastCr405 == NULL)
         {
-        firstcr405 = cc;
+        firstCr405 = cc;
         }
     else
         {
-        lastcr405->nextUnit = cc;
+        lastCr405->nextUnit = cc;
         }
 
-    lastcr405 = cc;
+    lastCr405 = cc;
     }
 
 /*--------------------------------------------------------------------------
@@ -638,7 +638,7 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char
 **------------------------------------------------------------------------*/
 void cr405ShowStatus(void)
     {
-    Cr405Context *cp = firstcr405;
+    Cr405Context *cp = firstCr405;
 
     if (cp == NULL)
         {
@@ -657,7 +657,7 @@ void cr405ShowStatus(void)
                cp->seqNum,
                cp->curFileName);
 
-        if (cp->IsWatched)
+        if (cp->isWatched)
             {
             printf("    >   Autoloading from '%s' to '%s'\n",
                    cp->dirInput,

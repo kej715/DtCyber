@@ -330,6 +330,7 @@
     <ClInclude Include="proto.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="types.h" />
+    <ClInclude Include="version.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="console.ICO" />

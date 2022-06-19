@@ -113,13 +113,13 @@ typedef struct cpContext
     u8               unitNo;
 
     bool             binary;
-    bool             rawcard;
-    int              intmask;
+    bool             rawCard;
+    int              intMask;
     int              status;
     int              col;
-    int              lastnbcol;
-    char             convtable[4096];
-    u32              getcardcycle;
+    int              lastNonBlankCol;
+    char             convTable[4096];
+    u32              getCardCycle;
     char             card[322];
     char             extPath[_MAX_PATH];
     } CpContext;
@@ -233,14 +233,14 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         exit(1);
         }
 
-    up->context[0] = (void *)cc;
-    cc->lastnbcol  = -1;
-    cc->col        = 0;
-    cc->status     = StCp3446Ready;
-    cc->extPath[0] = '\0';
-    cc->channelNo  = channelNo;
-    cc->unitNo     = unitNo;
-    cc->eqNo       = eqNo;
+    up->context[0]      = (void *)cc;
+    cc->lastNonBlankCol = -1;
+    cc->col             = 0;
+    cc->status          = StCp3446Ready;
+    cc->extPath[0]      = '\0';
+    cc->channelNo       = channelNo;
+    cc->unitNo          = unitNo;
+    cc->eqNo            = eqNo;
 
     //  Remember the device Path for future fopen calls
     if (devicePath == NULL)
@@ -284,13 +284,13 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         }
 
-    memset(cc->convtable, ' ', sizeof(cc->convtable));
+    memset(cc->convTable, ' ', sizeof(cc->convTable));
     for (int i = 040; i < 0177; i++)
         {
         hol = charset[i] & Mask12;
         if (hol != 0)
             {
-            cc->convtable[hol] = i;
+            cc->convTable[hol] = i;
             }
         }
 
@@ -544,7 +544,7 @@ static FcStatus cp3446Func(PpWord funcCode)
 
     case FcCp3446Deselect:
     case FcCp3446Clear:
-        cc->intmask = 0;
+        cc->intMask = 0;
         cc->binary  = FALSE;
         st          = FcProcessed;
         break;
@@ -555,43 +555,43 @@ static FcStatus cp3446Func(PpWord funcCode)
         break;
 
     case FcCp3446IntReady:
-        cc->intmask |= StCp3446ReadyInt;
+        cc->intMask |= StCp3446ReadyInt;
         cc->status  &= ~StCp3446ReadyInt;
         st           = FcProcessed;
         break;
 
     case FcCp3446NoIntReady:
-        cc->intmask &= ~StCp3446ReadyInt;
+        cc->intMask &= ~StCp3446ReadyInt;
         cc->status  &= ~StCp3446ReadyInt;
         st           = FcProcessed;
         break;
 
     case FcCp3446IntEoi:
-        cc->intmask |= StCp3446EoiInt;
+        cc->intMask |= StCp3446EoiInt;
         cc->status  &= ~StCp3446EoiInt;
         st           = FcProcessed;
         break;
 
     case FcCp3446NoIntEoi:
-        cc->intmask &= ~StCp3446EoiInt;
+        cc->intMask &= ~StCp3446EoiInt;
         cc->status  &= ~StCp3446EoiInt;
         st           = FcProcessed;
         break;
 
     case FcCp3446IntError:
-        cc->intmask |= StCp3446ErrorInt;
+        cc->intMask |= StCp3446ErrorInt;
         cc->status  &= ~StCp3446ErrorInt;
         st           = FcProcessed;
         break;
 
     case FcCp3446NoIntError:
-        cc->intmask &= ~StCp3446ErrorInt;
+        cc->intMask &= ~StCp3446ErrorInt;
         cc->status  &= ~StCp3446ErrorInt;
         st           = FcProcessed;
         break;
         }
 
-    dcc6681Interrupt((cc->status & cc->intmask) != 0);
+    dcc6681Interrupt((cc->status & cc->intMask) != 0);
 
     return (st);
     }
@@ -624,7 +624,7 @@ static void cp3446Io(void)
     case Fc6681DevStatusReq:
         if (!activeChannel->full)
             {
-            activeChannel->data = (cc->status & (cc->intmask | StCp3446NonIntStatus));
+            activeChannel->data = (cc->status & (cc->intMask | StCp3446NonIntStatus));
             activeChannel->full = TRUE;
 #if DEBUG
             fprintf(cp3446Log, " %04o", activeChannel->data);
@@ -639,16 +639,16 @@ static void cp3446Io(void)
         **  So we simulate card in motion for 20 major cycles.
         */
         if (!activeChannel->full
-            || (cycles - cc->getcardcycle < 20))
+            || (cycles - cc->getCardCycle < 20))
             {
             break;
             }
 
-        if (!cc->rawcard && (cc->col >= 80))
+        if (!cc->rawCard && (cc->col >= 80))
             {
             cp3446FlushCard(active3000Device, cc);
             }
-        else if (cc->rawcard && (cc->col >= (80 * 4)))
+        else if (cc->rawCard && (cc->col >= (80 * 4)))
             {
             cp3446FlushCard(active3000Device, cc);
             }
@@ -669,28 +669,28 @@ static void cp3446Io(void)
                 {
                 if (cc->binary && ((p & Mask5) == 00005))
                     {
-                    cc->rawcard = TRUE;
+                    cc->rawCard = TRUE;
                     }
                 else
                     {
-                    cc->rawcard = FALSE;
+                    cc->rawCard = FALSE;
                     }
                 }
 
-            if (cc->rawcard)
+            if (cc->rawCard)
                 {
                 sprintf(cc->card + cc->col, "%04o", p);
                 cc->col += 4;
                 }
             else if (cc->binary)
                 {
-                c = cc->convtable[p];
+                c = cc->convTable[p];
 #if (CP_LC == 1)
                 c = tolower(c);
 #endif
                 if ((cc->card[cc->col] = c) != ' ')
                     {
-                    cc->lastnbcol = cc->col;
+                    cc->lastNonBlankCol = cc->col;
                     }
 
                 cc->col++;
@@ -703,7 +703,7 @@ static void cp3446Io(void)
 #endif
                 if ((cc->card[cc->col] = c) != ' ')
                     {
-                    cc->lastnbcol = cc->col;
+                    cc->lastNonBlankCol = cc->col;
                     }
 
                 cc->col++;
@@ -714,7 +714,7 @@ static void cp3446Io(void)
 #endif
                 if ((cc->card[cc->col] = c) != ' ')
                     {
-                    cc->lastnbcol = cc->col;
+                    cc->lastNonBlankCol = cc->col;
                     }
 
                 cc->col++;
@@ -723,7 +723,7 @@ static void cp3446Io(void)
         break;
         }
 
-    dcc6681Interrupt((cc->status & cc->intmask) != 0);
+    dcc6681Interrupt((cc->status & cc->intMask) != 0);
     }
 
 /*--------------------------------------------------------------------------
@@ -767,7 +767,7 @@ static void cp3446Disconnect(void)
     if (cc != NULL)
         {
         cc->status |= StCp3446EoiInt;
-        dcc6681Interrupt((cc->status & cc->intmask) != 0);
+        dcc6681Interrupt((cc->status & cc->intMask) != 0);
         if ((active3000Device->fcb[0] != NULL) && (cc->col != 0))
             {
             cp3446FlushCard(active3000Device, cc);
@@ -795,9 +795,9 @@ static void cp3446FlushCard(DevSlot *up, CpContext *cc)
     /*
     **  Remember the cycle counter when the card punch started.
     */
-    cc->getcardcycle = cycles;
+    cc->getCardCycle = cycles;
 
-    if (cc->binary && cc->rawcard)
+    if (cc->binary && cc->rawCard)
         {
         fputs("~raw", up->fcb[0]);
         lc             = cc->col;
@@ -808,7 +808,7 @@ static void cp3446FlushCard(DevSlot *up, CpContext *cc)
         /*
         **  Omit trailing blanks.
         */
-        lc             = cc->lastnbcol + 1;
+        lc             = cc->lastNonBlankCol + 1;
         cc->card[lc++] = '\n';
         }
 
@@ -816,8 +816,8 @@ static void cp3446FlushCard(DevSlot *up, CpContext *cc)
     **  Write the card and reset for next card.
     */
     fwrite(cc->card, 1, lc, up->fcb[0]);
-    cc->col       = 0;
-    cc->lastnbcol = -1;
+    cc->col             = 0;
+    cc->lastNonBlankCol = -1;
     }
 
 /*--------------------------------------------------------------------------
@@ -915,7 +915,7 @@ void cp3446ShowStatus(void)
                cp->unitNo,
                cp->col,
                cp->binary ? "Char " : "Bin  ",
-               cp->rawcard ? "Yes" : "No ",
+               cp->rawCard ? "Yes" : "No ",
                cp->extPath);
 
         cp = cp->nextUnit;

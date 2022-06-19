@@ -228,12 +228,12 @@ static void fsWatchDir(fswContext *parms)
     TCHAR         buffer[BUFSIZE]  = TEXT("");
     TCHAR         **lppPart        = { NULL };
     char          lpDir[_MAX_PATH] = "";
-    char          crdevid[16]      = "";
+    char          crDevId[16]      = "";
     struct dirent *curDirEntry;
     DIR           *curDir;
 
     //  Bring the Parameter List into the thread context
-    sprintf_s(crdevid, sizeof(crdevid), "%o,%o,*",
+    sprintf_s(crDevId, sizeof(crDevId), "%o,%o,*",
               parms->channelNo,
               parms->eqNo);
 
@@ -379,7 +379,7 @@ static void fsWatchDir(fswContext *parms)
                     {
                     //  We have found an unprocessed file
                     //  invoke the card load command
-                    parms->LoadCards(crdevid);
+                    parms->LoadCards(crDevId);
                     break;
                     }
                 } while (curDirEntry != NULL);

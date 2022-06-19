@@ -185,7 +185,7 @@ typedef struct lpContext
     u8               unitNo;
 
     int              flags;
-    bool             printed;
+    bool             isPrinted;
     bool             keepInt;
 
     /*
@@ -194,18 +194,18 @@ typedef struct lpContext
     **      line printers.  Line space handling (pre and post) messes with
     **      translation to proper PDF format (the new purpose for this).
     */
-    u8               extspaceopt;       //  Spacing option (<>0 = PostPrintMode)
-    u8               extlpi;            //  Lines Per Inch 6 or 8 (usually)
-    u8               extlpp;            //  Number of Lines per Printed Page
+    u8               extSpaceOpt;       //  Spacing option (<>0 = PostPrintMode)
+    u8               extLPI;            //  Lines Per Inch 6 or 8 (usually)
+    u8               extLPP;            //  Number of Lines per Printed Page
     //      at 8 LPI * 11" = 88 LPP
     //      at 6 LPI * 11" = 66 LPP
-    u8               extcurline;        //  current page position
+    u8               extCurLine;        //  current page position
 
     //  Todo: Verify that the use of this doesn't
     //        overflow over a long operating window
-    bool             extuseANSI;             //  use ANSI/ASA Carriage-control characters
-    bool             extsuppress;            // suppress next post-print spacing op
-    bool             extpostprint;           // all spacing occurs in post-print mode
+    bool             extUseANSI;             //  use ANSI/ASA Carriage-control characters
+    bool             extSuppress;            // suppress next post-print spacing op
+    bool             extPostPrint;           // all spacing occurs in post-print mode
     char             extPath[_MAX_PATH + 1]; //  preserve the device folder path
     } LpContext;
 
@@ -447,7 +447,7 @@ void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
 static void lp3000Init(u8 unitNo, u8 eqNo, u8 channelNo, int flags, bool useANSI, char *deviceName)
     {
     DevSlot   *up;
-    char      fname[_MAX_PATH];
+    char      fName[_MAX_PATH];
     LpContext *lc;
 
     up = dcc6681Attach(channelNo, eqNo, unitNo, DtLp5xx);
@@ -479,13 +479,13 @@ static void lp3000Init(u8 unitNo, u8 eqNo, u8 channelNo, int flags, bool useANSI
     /*
     **  SZoppi: Extensions
     */
-    lc->extspaceopt  = FcPrintSingle;   //  Default Single Space
-    lc->extlpi       = 6;               //  Default Page Length
-    lc->extlpp       = LpInchesPerPage * lc->extlpi;
-    lc->extcurline   = 1;               //  1 = Initialized
-    lc->extsuppress  = FALSE;           //  Clear Suppress Print
-    lc->extpostprint = TRUE;            //  Post-Print Mode by Default
-    lc->extuseANSI   = useANSI;         //  Indicate how to handle Carriage Control
+    lc->extSpaceOpt  = FcPrintSingle;   //  Default Single Space
+    lc->extLPI       = 6;               //  Default Page Length
+    lc->extLPP       = LpInchesPerPage * lc->extLPI;
+    lc->extCurLine   = 1;               //  1 = Initialized
+    lc->extSuppress  = FALSE;           //  Clear Suppress Print
+    lc->extPostPrint = TRUE;            //  Post-Print Mode by Default
+    lc->extUseANSI   = useANSI;         //  Indicate how to handle Carriage Control
     lc->channelNo    = channelNo;
     lc->unitNo       = unitNo;
     lc->eqNo         = eqNo;
@@ -512,12 +512,12 @@ static void lp3000Init(u8 unitNo, u8 eqNo, u8 channelNo, int flags, bool useANSI
     /*
     **  Open the device file.
     */
-    sprintf_s(fname, sizeof(fname), "%sLP5xx_C%02o_E%o", lc->extPath, channelNo, eqNo);
+    sprintf_s(fName, sizeof(fName), "%sLP5xx_C%02o_E%o", lc->extPath, channelNo, eqNo);
 
-    up->fcb[0] = fopen(fname, "w");
+    up->fcb[0] = fopen(fName, "w");
     if (up->fcb[0] == NULL)
         {
-        fprintf(stderr, "(lp3000 ) Failed to open %s\n", fname);
+        fprintf(stderr, "(lp3000 ) Failed to open %s\n", fName);
         exit(1);
         }
 
@@ -528,7 +528,7 @@ static void lp3000Init(u8 unitNo, u8 eqNo, u8 channelNo, int flags, bool useANSI
            (useANSI) ? "ASCII" : "ANSI",
            (flags & Lp3000Type3555) ? 3555 : 3152,
            (flags & Lp3000Type501) ? 501 : 512,
-           channelNo, eqNo, fname);
+           channelNo, eqNo, fName);
 
     /*
     **  Link into list of lp1612 Line Printer units.
@@ -573,12 +573,12 @@ void lp3000ShowStatus(void)
                lc->unitNo,
                (lc->flags & Lp3000Type3555) ? 3555 : 3152,
                (lc->flags & Lp3000Type501) ? 501 : 512,
-               lc->extuseANSI ? "ANSI " : "ASCII",
-               lc->extlpi,
-               lc->extlpp,
-               lc->extcurline,
-               lc->extsuppress ? "ON" : "Off",
-               lc->extpostprint ? "ON" : "Off",
+               lc->extUseANSI ? "ANSI " : "ASCII",
+               lc->extLPI,
+               lc->extLPP,
+               lc->extCurLine,
+               lc->extSuppress ? "ON" : "Off",
+               lc->extPostPrint ? "ON" : "Off",
                lc->extPath);
 
 
@@ -604,12 +604,12 @@ void lp3000RemovePaper(char *params, FILE *out)
     int numParam;
     int channelNo;
     int equipmentNo;
-    int isuffix;
+    int iSuffix;
 
     struct tm t;
 
-    char fname[_MAX_PATH];
-    char fnameNew[_MAX_PATH];
+    char fName[_MAX_PATH];
+    char fNameNew[_MAX_PATH];
     bool renameOK;
 
 
@@ -654,7 +654,7 @@ void lp3000RemovePaper(char *params, FILE *out)
         }
 
     lc = (LpContext *)dp->context[0];
-    sprintf_s(fname, sizeof(fname), "%sLP5xx_C%02o_E%o", lc->extPath, channelNo, equipmentNo);
+    sprintf_s(fName, sizeof(fName), "%sLP5xx_C%02o_E%o", lc->extPath, channelNo, equipmentNo);
 
 
     //  SZoppi: this can happen if something goes wrong in the open
@@ -690,11 +690,11 @@ void lp3000RemovePaper(char *params, FILE *out)
 
         renameOK = FALSE;
 
-        for (isuffix = 0; isuffix < 100; isuffix++)
+        for (iSuffix = 0; iSuffix < 100; iSuffix++)
             {
             time(&currentTime);
             t = *localtime(&currentTime);
-            sprintf_s(fnameNew, sizeof(fnameNew), "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d",
+            sprintf_s(fNameNew, sizeof(fNameNew), "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d",
                       lc->extPath,
                       t.tm_year + 1900,
                       t.tm_mon + 1,
@@ -702,20 +702,20 @@ void lp3000RemovePaper(char *params, FILE *out)
                       t.tm_hour,
                       t.tm_min,
                       t.tm_sec,
-                      isuffix);
+                      iSuffix);
 
-            if (rename(fname, fnameNew) == 0)
+            if (rename(fName, fNameNew) == 0)
                 {
                 renameOK = TRUE;
                 break;
                 }
             printf("(lp3000 ) Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
-                   fname,
-                   fnameNew,
+                   fName,
+                   fNameNew,
                    strerror(errno),
-                   isuffix);
+                   iSuffix);
             }
-        if (isuffix > 0)
+        if (iSuffix > 0)
             {
             printf("\n");
             }
@@ -726,19 +726,19 @@ void lp3000RemovePaper(char *params, FILE *out)
     */
 
     //  Just append to the old file if the rename didn't happen correctly
-    dp->fcb[0] = fopen(fname, renameOK ? "w" : "a");
+    dp->fcb[0] = fopen(fName, renameOK ? "w" : "a");
 
     /*
     **  Check if the open succeeded.
     */
     if (dp->fcb[0] == NULL)
         {
-        printf("Failed to open %s\n", fname);
+        printf("Failed to open %s\n", fName);
 
         return;
         }
 
-    printf("(lp3000 ) Paper removed from 5xx printer and available on '%s'\n", fnameNew);
+    printf("(lp3000 ) Paper removed from 5xx printer and available on '%s'\n", fNameNew);
     }
 
 /*--------------------------------------------------------------------------
@@ -755,9 +755,9 @@ static FcStatus lp3000Func(PpWord funcCode)
     FILE      *fcb;
     LpContext *lc;
 
-    char         lpdevid[16];       //  Used for automatically removing printouts at EOJ
-    unsigned int channelid;
-    unsigned int deviceid;
+    char         dispLpDevId[16];       //  Used for automatically removing printouts at EOJ
+    unsigned int channelId;
+    unsigned int deviceId;
 
     //  SZoppi: this can happen if something goes wrong in the open
     //          and the file fails to be properly re-opened.
@@ -793,7 +793,7 @@ static FcStatus lp3000Func(PpWord funcCode)
     switch (funcCode)
         {
     case FcPrintNoSpace:
-        lc->extsuppress = TRUE;
+        lc->extSuppress = TRUE;
 
         return (FcProcessed);
 
@@ -804,13 +804,13 @@ static FcStatus lp3000Func(PpWord funcCode)
         /*
         **  SZoppi: Extensions
         */
-        lc->extspaceopt  = FcPrintSingle;           //  Default Single Space
-        lc->extlpi       = 6;                       //  Default Page Length
-        lc->extlpp       = LpInchesPerPage * lc->extlpi;
-        lc->extcurline   = 1;                       //  1 = Initialized
-        lc->extsuppress  = FALSE;                   //  Clear Suppress Print
-        lc->extpostprint = TRUE;                    //  Post-Print Mode by Default
-        if (lc->extuseANSI)
+        lc->extSpaceOpt  = FcPrintSingle;           //  Default Single Space
+        lc->extLPI       = 6;                       //  Default Page Length
+        lc->extLPP       = LpInchesPerPage * lc->extLPI;
+        lc->extCurLine   = 1;                       //  1 = Initialized
+        lc->extSuppress  = FALSE;                   //  Clear Suppress Print
+        lc->extPostPrint = TRUE;                    //  Post-Print Mode by Default
+        if (lc->extUseANSI)
             {
             fputc('1', fcb);
             }
@@ -826,34 +826,34 @@ static FcStatus lp3000Func(PpWord funcCode)
         lc->flags &= ~(StPrintIntReady | StPrintIntEnd);
 
         // Release is sent at end of job, so flush the print file
-        if (lc->printed)
+        if (lc->isPrinted)
             {
             fflush(fcb);
-            channelid = (int)active3000Device->channel->id;
-            deviceid  = (int)active3000Device->eqNo;
-            sprintf_s(lpdevid, sizeof(lpdevid), "%o,%o", channelid, deviceid);
-            lp3000RemovePaper(lpdevid, stdout);
-            lc->printed = FALSE;
+            channelId = (int)active3000Device->channel->id;
+            deviceId  = (int)active3000Device->eqNo;
+            sprintf_s(dispLpDevId, sizeof(dispLpDevId), "%o,%o", channelId, deviceId);
+            lp3000RemovePaper(dispLpDevId, stdout);
+            lc->isPrinted = FALSE;
             }
 
         return (FcProcessed);
 
     case FcPrintSingle:
-        lc->extspaceopt = FcPrintSingle;
-        if (lc->extuseANSI)
+        lc->extSpaceOpt = FcPrintSingle;
+        if (lc->extUseANSI)
             {
-            if (!lc->extpostprint)
+            if (!lc->extPostPrint)
                 {
                 //  if we are not post-print spacing,
                 //  then we space pre-print
                 fprintf(fcb, "\n ");
-                lc->extcurline++;
+                lc->extCurLine++;
                 }
             }
         else
             {
             fputc('\n', fcb);
-            lc->extcurline++;
+            lc->extCurLine++;
             }
 
 
@@ -867,15 +867,15 @@ static FcStatus lp3000Func(PpWord funcCode)
         //  Treat last-line codes as a single blank line
         //  ToDo:   This will need to be reimplemented when
         //          we have the current line counters working.
-        if (lc->extuseANSI)
+        if (lc->extUseANSI)
             {
             fprintf(fcb, "\n ");
-            lc->extcurline++;
+            lc->extCurLine++;
             }
         else
             {
             fputc('\n', fcb);
-            lc->extcurline++;
+            lc->extCurLine++;
             }
 
 #if DEBUG
@@ -886,9 +886,9 @@ static FcStatus lp3000Func(PpWord funcCode)
 
     case FcPrintEject:
         // Turn eject into a formfeed character
-        lc->extcurline = 1;
+        lc->extCurLine = 1;
 
-        if (lc->extuseANSI)
+        if (lc->extUseANSI)
             {
             fprintf(fcb, "\n1");
             }
@@ -903,20 +903,20 @@ static FcStatus lp3000Func(PpWord funcCode)
         return (FcProcessed);
 
     case FcPrintDouble:
-        lc->extspaceopt = FcPrintDouble;
+        lc->extSpaceOpt = FcPrintDouble;
 
-        if (lc->extuseANSI)
+        if (lc->extUseANSI)
             {
-            if (!lc->extpostprint)
+            if (!lc->extPostPrint)
                 {
                 fprintf(fcb, "\n0");
-                lc->extcurline += 2;
+                lc->extCurLine += 2;
                 }
             }
         else
             {
             fprintf(fcb, "\n\n");
-            lc->extcurline += 2;
+            lc->extCurLine += 2;
             }
 
 #if DEBUG
@@ -974,14 +974,14 @@ static FcStatus lp3000Func(PpWord funcCode)
             return (FcProcessed);
 
         case Fc3555Sel8Lpi:
-            lc->extlpi = 8;
-            lc->extlpp = LpInchesPerPage * lc->extlpi;
+            lc->extLPI = 8;
+            lc->extLPP = LpInchesPerPage * lc->extLPI;
 
             return (FcProcessed);
 
         case Fc3555Sel6Lpi:
-            lc->extlpi = 6;
-            lc->extlpp = LpInchesPerPage * lc->extlpi;
+            lc->extLPI = 6;
+            lc->extLPP = LpInchesPerPage * lc->extLPI;
 
             return (FcProcessed);
 
@@ -996,13 +996,13 @@ static FcStatus lp3000Func(PpWord funcCode)
             /*
             **  SZoppi: Extensions
             */
-            lc->extspaceopt = FcPrintSingle;            //  Non-Zero = Print-Then-Space
+            lc->extSpaceOpt = FcPrintSingle;            //  Non-Zero = Print-Then-Space
                                                         //  (Post-Print Spacing)
-            lc->extlpi       = 6;                       //  Default Page Length
-            lc->extlpp       = LpInchesPerPage * lc->extlpi;
-            lc->extsuppress  = FALSE;
-            lc->extspaceopt  = FcPrintSingle;
-            lc->extpostprint = TRUE;
+            lc->extLPI       = 6;                       //  Default Page Length
+            lc->extLPP       = LpInchesPerPage * lc->extLPI;
+            lc->extSuppress  = FALSE;
+            lc->extSpaceOpt  = FcPrintSingle;
+            lc->extPostPrint = TRUE;
 
             return (FcProcessed);
 
@@ -1022,7 +1022,7 @@ static FcStatus lp3000Func(PpWord funcCode)
 
         case Fc3555SelectPreprint:
             // Zero Function Code
-            lc->extpostprint = FALSE;
+            lc->extPostPrint = FALSE;
 
             return (FcProcessed);
 
@@ -1111,7 +1111,7 @@ static FcStatus lp3000Func(PpWord funcCode)
             return (FcProcessed);
 
         case Fc3152ClearFormat:
-            lc->extpostprint = TRUE;
+            lc->extPostPrint = TRUE;
 
             return (FcProcessed);
 
@@ -1124,7 +1124,7 @@ static FcStatus lp3000Func(PpWord funcCode)
             return (FcProcessed);
 
         case Fc3152SelectPreprint:
-            lc->extpostprint = FALSE;
+            lc->extPostPrint = FALSE;
 
             return (FcProcessed);
 
@@ -1255,7 +1255,7 @@ static void lp3000Io(void)
                 fputc(activeChannel->data & 0377, fcb);
                 }
             activeChannel->full = FALSE;
-            lc->printed         = TRUE;
+            lc->isPrinted       = TRUE;
             lc->keepInt         = TRUE;
             }
         break;
@@ -1315,12 +1315,12 @@ static void lp3000Disconnect(void)
 
     if (active3000Device->fcode == Fc6681Output)
         {
-        if (lc->extsuppress)
+        if (lc->extSuppress)
             {
             //  20171022: There was no LineFeed Action expected so
             //            we use Carriage Return Only for NON-ASA
             //            otherwise the default is a line-end.
-            if (lc->extuseANSI)
+            if (lc->extUseANSI)
                 {
                 fprintf(fcb, "\n+");
                 }
@@ -1328,17 +1328,17 @@ static void lp3000Disconnect(void)
                 {
                 fputc('\r', fcb);
                 }
-            lc->extsuppress = FALSE;
+            lc->extSuppress = FALSE;
             }
-        else if (lc->extpostprint)
+        else if (lc->extPostPrint)
             {
             /*
             **  20171022: We perform post-print actions here if needed
             */
-            switch (lc->extspaceopt)
+            switch (lc->extSpaceOpt)
                 {
             case FcPrintDouble:
-                if (lc->extuseANSI)
+                if (lc->extUseANSI)
                     {
                     //  We simply terminate the existing line
                     fprintf(fcb, "\n0");
@@ -1350,14 +1350,14 @@ static void lp3000Disconnect(void)
 #if DEBUG
                 lp3000DebugData();
 #endif
-                lc->extcurline += 2;
+                lc->extCurLine += 2;
                 break;
 
             case FcPrintSingle:
             default:
                 //  At the end of every "Normal" line -
                 //  we do a line end
-                if (lc->extuseANSI)
+                if (lc->extUseANSI)
                     {
                     fprintf(fcb, "\n ");
                     }
@@ -1365,14 +1365,14 @@ static void lp3000Disconnect(void)
                     {
                     fputc('\n', fcb);
                     }
-                lc->extcurline++;
+                lc->extCurLine++;
 
 #if DEBUG
                 lp3000DebugData();
 #endif
                 break;
                 }
-            lc->extspaceopt = FcPrintSingle;
+            lc->extSpaceOpt = FcPrintSingle;
             }
         else
             {

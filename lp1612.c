@@ -122,7 +122,7 @@ typedef struct lpContext1612
     u8                   eqNo;
     u8                   unitNo;
 
-    bool                 extuseANSI;
+    bool                 extUseANSI;
     char                 extPath[_MAX_PATH + 1];
     } LpContext1612;
 
@@ -148,8 +148,8 @@ static void lp1612Disconnect(void);
 **  -----------------
 */
 
-static LpContext1612 *firstlp1612 = NULL;
-static LpContext1612 *lastlp1612  = NULL;
+static LpContext1612 *firstLp1612 = NULL;
+static LpContext1612 *lastLp1612  = NULL;
 
 /*
  **--------------------------------------------------------------------------
@@ -246,7 +246,7 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         }
 
     dp->context[0] = (void *)lc;
-    lc->extuseANSI = useANSI;
+    lc->extUseANSI = useANSI;
     lc->channelNo  = channelNo;
     lc->unitNo     = unitNo;
     lc->eqNo       = eqNo;
@@ -290,16 +290,16 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Link into list of lp1612 Line Printer units.
     */
-    if (lastlp1612 == NULL)
+    if (lastLp1612 == NULL)
         {
-        firstlp1612 = lc;
+        firstLp1612 = lc;
         }
     else
         {
-        lastlp1612->nextUnit = lc;
+        lastLp1612->nextUnit = lc;
         }
 
-    lastlp1612 = lc;
+    lastLp1612 = lc;
     }
 
 /*--------------------------------------------------------------------------
@@ -312,7 +312,7 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 void lp1612ShowStatus(void)
     {
-    LpContext1612 *lc = firstlp1612;
+    LpContext1612 *lc = firstLp1612;
 
     if (lc == NULL)
         {
@@ -327,7 +327,7 @@ void lp1612ShowStatus(void)
                lc->channelNo,
                lc->eqNo,
                lc->unitNo,
-               lc->extuseANSI ? "ANSI" : "ASCII",
+               lc->extUseANSI ? "ANSI" : "ASCII",
                lc->extPath);
 
         lc = lc->nextUnit;
@@ -352,12 +352,12 @@ void lp1612RemovePaper(char *params, FILE *out)
     int numParam;
     int channelNo;
     int equipmentNo;
-    int isuffix;
+    int iSuffix;
 
     struct tm t;
 
-    char fname[_MAX_PATH];
-    char fnameNew[_MAX_PATH];
+    char fName[_MAX_PATH];
+    char fNameNew[_MAX_PATH];
     bool renameOK;
 
 
@@ -400,7 +400,7 @@ void lp1612RemovePaper(char *params, FILE *out)
         }
 
     lc = (LpContext1612 *)dp->context[0];
-    sprintf_s(fname, sizeof(fname), "%sLP1612_C%02o", lc->extPath, channelNo);
+    sprintf_s(fName, sizeof(fName), "%sLP1612_C%02o", lc->extPath, channelNo);
 
     //  SZoppi: this can happen if something goes wrong in the open
     //          and the file fails to be properly re-opened.
@@ -435,11 +435,11 @@ void lp1612RemovePaper(char *params, FILE *out)
 
         renameOK = FALSE;
 
-        for (isuffix = 0; isuffix < 100; isuffix++)
+        for (iSuffix = 0; iSuffix < 100; iSuffix++)
             {
             time(&currentTime);
             t = *localtime(&currentTime);
-            sprintf_s(fnameNew, sizeof(fnameNew), "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d",
+            sprintf_s(fNameNew, sizeof(fNameNew), "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d",
                       lc->extPath,
                       t.tm_year + 1900,
                       t.tm_mon + 1,
@@ -447,20 +447,20 @@ void lp1612RemovePaper(char *params, FILE *out)
                       t.tm_hour,
                       t.tm_min,
                       t.tm_sec,
-                      isuffix);
+                      iSuffix);
 
-            if (rename(fname, fnameNew) == 0)
+            if (rename(fName, fNameNew) == 0)
                 {
                 break;
                 }
 
             printf("(lp1612 ) Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
-                   fname,
-                   fnameNew,
+                   fName,
+                   fNameNew,
                    strerror(errno),
-                   isuffix);
+                   iSuffix);
             }
-        if (isuffix > 0)
+        if (iSuffix > 0)
             {
             printf("\n");
             }
@@ -469,19 +469,19 @@ void lp1612RemovePaper(char *params, FILE *out)
     /*
     **  Open the device file.
     */
-    dp->fcb[0] = fopen(fname, renameOK ? "w" : "a");
+    dp->fcb[0] = fopen(fName, renameOK ? "w" : "a");
 
     /*
     **  Check if the open succeeded.
     */
     if (dp->fcb[0] == NULL)
         {
-        printf("(lp1612 ) Failed to open %s\n", fname);
+        printf("(lp1612 ) Failed to open %s\n", fName);
 
         return;
         }
 
-    printf("(lp1612 ) Paper removed and available on '%s'\n", fnameNew);
+    printf("(lp1612 ) Paper removed and available on '%s'\n", fNameNew);
     }
 
 /*--------------------------------------------------------------------------
@@ -520,7 +520,7 @@ static FcStatus lp1612Func(PpWord funcCode)
         break;
 
     case FcPrintSingleSpace:
-        if (lc->extuseANSI)
+        if (lc->extUseANSI)
             {
             fprintf(fcb, "\n ");
             }
@@ -531,7 +531,7 @@ static FcStatus lp1612Func(PpWord funcCode)
         break;
 
     case FcPrintDoubleSpace:
-        if (lc->extuseANSI)
+        if (lc->extUseANSI)
             {
             fprintf(fcb, "\n0");
             }
@@ -542,7 +542,7 @@ static FcStatus lp1612Func(PpWord funcCode)
         break;
 
     case FcPrintMoveChannel7:
-        if (lc->extuseANSI)
+        if (lc->extUseANSI)
             {
             fprintf(fcb, "\n ");
             }
@@ -553,7 +553,7 @@ static FcStatus lp1612Func(PpWord funcCode)
         break;
 
     case FcPrintMoveTOF:
-        if (lc->extuseANSI)
+        if (lc->extUseANSI)
             {
             fprintf(fcb, "\n1");
             }
@@ -564,7 +564,7 @@ static FcStatus lp1612Func(PpWord funcCode)
         break;
 
     case FcPrintPrint:
-        if (lc->extuseANSI)
+        if (lc->extUseANSI)
             {
             fprintf(fcb, "\n ");
             }
@@ -575,7 +575,7 @@ static FcStatus lp1612Func(PpWord funcCode)
         break;
 
     case FcPrintSuppressLF:
-        if (lc->extuseANSI)
+        if (lc->extUseANSI)
             {
             fprintf(fcb, "\n+");
             }
@@ -700,7 +700,7 @@ static void lp1612Disconnect(void)
 
     lc = (LpContext1612 *)activeDevice->context[0];
 
-    if (lc->extuseANSI)
+    if (lc->extUseANSI)
         {
         fprintf(fcb, "\n ");
         }
