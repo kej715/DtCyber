@@ -158,6 +158,7 @@ static void cr3447Disconnect(void);
 static void cr3447NextCard(DevSlot *up, CrContext *cc, FILE *out);
 static char *cr3447Func2String(PpWord funcCode);
 static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc, FILE *out);
+static char* strlwr(char* str);
 
 /*
 **  ----------------
@@ -720,6 +721,33 @@ void cr3447ShowStatus(void)
  **
  **--------------------------------------------------------------------------
  */
+ 
+#if !defined(_WIN32)
+
+ /*--------------------------------------------------------------------------
+  **  Purpose:        Convert String to Lower-Case
+  **
+  **  Parameters:     Name        Description.
+  **                  str         Character String
+  **
+  **  Returns:        Character String
+  **
+  **------------------------------------------------------------------------*/
+
+char* strlwr(char* str)
+{
+    unsigned char* p = (unsigned char*)str;
+
+    while (*p) {
+        *p = tolower((unsigned char)*p);
+        p++;
+    }
+
+    return str;
+}
+
+#endif
+
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Execute function code on 3447 card reader.

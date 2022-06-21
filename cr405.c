@@ -149,6 +149,7 @@ static void cr405Activate(void);
 static void cr405Disconnect(void);
 static void cr405NextCard(DevSlot *dp);
 static bool cr405StartNextDeck(DevSlot *up, Cr405Context *cc, FILE *out);
+static char* strlwr(char* str);
 
 /*
 **  ----------------
@@ -689,6 +690,38 @@ void cr405ShowStatus(void)
     printf("\n");
     }
 
+/*
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
+
+#if !defined(_WIN32)
+/*--------------------------------------------------------------------------
+**  Purpose:        Convert String to Lower-Case
+**
+**  Parameters:     Name        Description.
+**                  str         Character String
+**
+**  Returns:        Character String
+**
+**------------------------------------------------------------------------*/
+
+char* strlwr(char* str)
+{
+    unsigned char* p = (unsigned char*)str;
+
+    while (*p) {
+        *p = tolower((unsigned char)*p);
+        p++;
+    }
+
+    return str;
+}
+
+#endif
 /*--------------------------------------------------------------------------
 **  Purpose:        Execute function code on 405 card reader.
 **
@@ -1110,20 +1143,5 @@ static void cr405NextCard(DevSlot *dp)
         }
     }
 
-#if !defined(_WIN32)
-
-        char* strlwr(char* str)
-    {
-        unsigned char* p = (unsigned char*)str;
-
-        while (*p) {
-            *p = tolower((unsigned char)*p);
-            p++;
-        }
-
-        return str;
-    }
-
-#endif
 
 /*---------------------------  End Of File  ------------------------------*/
