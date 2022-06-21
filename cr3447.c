@@ -158,7 +158,6 @@ static void cr3447Disconnect(void);
 static void cr3447NextCard(DevSlot *up, CrContext *cc, FILE *out);
 static char *cr3447Func2String(PpWord funcCode);
 static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc, FILE *out);
-//static char* strlwr(char* str);
 
 /*
 **  ----------------
@@ -319,7 +318,7 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     bWatchRequested = TRUE;     // Default = Run Filewatcher Thread
     if (tokenAuto != NULL)
         {
-        strlwr(tokenAuto);
+        _strlwr(tokenAuto);
         if (!strcmp(tokenAuto, "noauto"))
             {
             bWatchRequested = FALSE;
@@ -721,33 +720,6 @@ void cr3447ShowStatus(void)
  **
  **--------------------------------------------------------------------------
  */
- 
-#if !defined(_WIN32)
-
- /*--------------------------------------------------------------------------
-  **  Purpose:        Convert String to Lower-Case
-  **
-  **  Parameters:     Name        Description.
-  **                  str         Character String
-  **
-  **  Returns:        Character String
-  **
-  **------------------------------------------------------------------------*/
-
-//char* strlwr(char* str)
-//{
-//    unsigned char* p = (unsigned char*)str;
-//
-//    while (*p) {
-//        *p = tolower((unsigned char)*p);
-//        p++;
-//    }
-//
-//    return str;
-//}
-
-#endif
-
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Execute function code on 3447 card reader.

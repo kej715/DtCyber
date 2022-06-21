@@ -229,7 +229,7 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     if ((deviceMode) != NULL)
         {
-        deviceMode = strlwr(deviceMode);         //  pick up "ansi" or "ascii" flag
+        deviceMode = _strlwr(deviceMode);         //  pick up "ansi" or "ascii" flag
         useANSI    = FALSE;
         if (strcmp(deviceMode, "ansi") == 0)
             {

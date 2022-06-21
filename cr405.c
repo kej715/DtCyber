@@ -149,7 +149,6 @@ static void cr405Activate(void);
 static void cr405Disconnect(void);
 static void cr405NextCard(DevSlot *dp);
 static bool cr405StartNextDeck(DevSlot *up, Cr405Context *cc, FILE *out);
-// static char* strlwr(char* str);
 
 /*
 **  ----------------
@@ -318,7 +317,7 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     watchRequested = TRUE;     // Default = Run Filewatcher Thread
     if (Auto != NULL)
         {
-        strlwr(Auto);
+        _strlwr(Auto);
         if (!strcmp(Auto, "noauto"))
             {
             watchRequested = FALSE;
@@ -698,30 +697,6 @@ void cr405ShowStatus(void)
  **--------------------------------------------------------------------------
  */
 
-#if !defined(_WIN32)
-/*--------------------------------------------------------------------------
-**  Purpose:        Convert String to Lower-Case
-**
-**  Parameters:     Name        Description.
-**                  str         Character String
-**
-**  Returns:        Character String
-**
-**------------------------------------------------------------------------*/
-
-//char* strlwr(char* str)
-//{
-//    unsigned char* p = (unsigned char*)str;
-//
-//    while (*p) {
-//        *p = tolower((unsigned char)*p);
-//        p++;
-//    }
-//
-//    return str;
-//}
-//
-#endif
 /*--------------------------------------------------------------------------
 **  Purpose:        Execute function code on 405 card reader.
 **

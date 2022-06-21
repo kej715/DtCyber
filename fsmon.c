@@ -39,13 +39,14 @@
 #include "types.h"
 #include "proto.h"
 #include "dcc6681.h"
-#include "dirent.h"
 
 #if defined(_WIN32)
 #include <windows.h>
+#include "dirent_win.h"
 #else
 #include <pthread.h>
 #include <unistd.h>
+#include <dirent.h>
 #endif
 
 /*
