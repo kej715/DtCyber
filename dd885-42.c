@@ -264,7 +264,7 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
     DevSlot   *ds;
     FILE      *fcb;
-    char      fname[_MAX_FNAME + 1];
+    char      fname[_MAX_PATH + 1];
     DiskParam *dp;
     time_t    mTime;
     struct tm *lTime;
