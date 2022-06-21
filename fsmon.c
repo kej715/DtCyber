@@ -34,7 +34,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <tchar.h>
 #include "const.h"
 #include "types.h"
 #include "proto.h"
@@ -42,6 +41,7 @@
 
 #if defined(_WIN32)
 #include <windows.h>
+#include <tchar.h>
 #include "dirent_win.h"
 #else
 #include <pthread.h>
