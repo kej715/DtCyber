@@ -233,9 +233,15 @@ static void fsWatchDir(fswContext *parms)
     DIR           *curDir;
 
     //  Bring the Parameter List into the thread context
+#if defined(SAFECALLS)
     sprintf_s(crDevId, sizeof(crDevId), "%o,%o,*",
               parms->channelNo,
               parms->eqNo);
+#else
+    sprintf(crDevId, "%o,%o,*",
+        parms->channelNo,
+        parms->eqNo);
+#endif
 
     // Retrieve the full path name.
 
@@ -260,7 +266,11 @@ static void fsWatchDir(fswContext *parms)
             }
         }
 
+#if defined(SAFECALLS)
     strcpy_s(lpDir, sizeof(lpDir), buffer);
+#else
+    strcpy(lpDir, buffer);
+#endif
     printf("(fsmon  ) Watching Directory:  %s\n", lpDir);
 
     //  File Change Watch Invocation code.

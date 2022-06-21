@@ -465,7 +465,12 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  For Operator Show Status Command
     */
+#if defined(SAFECALLS)
     strcpy_s(dp->fileName, sizeof(fname), fname);
+#else
+    strcpy(dp->fileName, fname);
+#endif
+
     dp->channelNo = channelNo;
     dp->unitNo    = unitNo;
 

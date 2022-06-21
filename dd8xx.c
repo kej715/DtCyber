@@ -693,7 +693,11 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
     /*
     **  For Operator Show Status Command
     */
+#if defined(SAFECALLS)
     strcpy_s(dp->fileName, sizeof(fname), fname);
+#else
+    strcpy(dp->fileName, fname);
+#endif
     dp->channelNo = channelNo;
     dp->unitNo    = unitNo;
 

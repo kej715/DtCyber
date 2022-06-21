@@ -376,8 +376,13 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             fprintf(stderr, "(cr405  ) The Output location specified '%s' is not a directory.\n", crOutput);
             exit(1);
             }
+#if defined(SAFECALLS)
         strcpy_s(threadParms->outDoneDir, sizeof(threadParms->outDoneDir), crOutput);
         strcpy_s(cc->dirOutput, sizeof(cc->dirOutput), crOutput);
+#else
+        strcpy(threadParms->outDoneDir, crOutput);
+        strcpy(cc->dirOutput, crOutput);
+#endif
         fprintf(stderr, "(cr405  ) Submissions will be preserved in '%s'.\n", crOutput);
         }
     else
@@ -408,8 +413,13 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         **  The Card Reader Context needs to remember what directory
         **  will supply the input files so more can be found at EOD.
         */
+#if defined(SAFECALLS)
         strcpy_s(threadParms->inWatchDir, sizeof(threadParms->inWatchDir), crInput);
         strcpy_s(cc->dirInput, sizeof(cc->dirInput), crInput);
+#else
+        strcpy(threadParms->inWatchDir, crInput);
+        strcpy(cc->dirInput, crInput);
+#endif
 
         threadParms->eqNo      = eqNo;
         threadParms->unitNo    = unitNo;
@@ -579,8 +589,11 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char
                 {
                 continue;
                 }
-
+#if defined(SAFECALLS)
             sprintf_s(strWork, sizeof(strWork), "%s/%s", cc->dirInput, curDirEntry->d_name);
+#else
+            sprintf(strWork, "%s/%s", cc->dirInput, curDirEntry->d_name);
+#endif
             stat(strWork, &s);
             if (fOldest[0] == '\0')
                 {
@@ -624,7 +637,12 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char
 
     cr405NextCard(dp);
 
+#if defined(SAFECALLS)
     strcpy_s(cc->curFileName, sizeof(cc->curFileName), str);
+#else
+    strcpy(cc->curFileName, str);
+#endif
+
     printf("(cr405  ) Loaded with '%s'", str);
     }
 
@@ -927,7 +945,11 @@ static void cr405NextCard(DevSlot *dp)
                 while (TRUE)
                     {
                     //  create the file's new name
+#if defined(SAFECALLS)
                     sprintf_s(fnwork, sizeof(fnwork), "%s/%s_%04i", cc->dirOutput, cc->curFileName + strlen(cc->dirInput) + 1, fnindex);
+#else
+                    sprintf(fnwork, "%s/%s_%04i", cc->dirOutput, cc->curFileName + strlen(cc->dirInput) + 1, fnindex);
+#endif
                     if (rename(cc->curFileName, fnwork) == 0)
                         {
                         printf("(cr405  ) Deck '%s' moved to '%s'. (Input Preserved)\n",

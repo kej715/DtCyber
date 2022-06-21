@@ -259,10 +259,18 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         }
     else
         {
+#if defined(SAFECALLS)
         strcpy_s(lc->extPath, sizeof(lc->extPath), devicePath);
+#else
+        strcpy(lc->extPath, devicePath);
+#endif
         if (lc->extPath[0] != '\0')
             {
+#if defined(SAFECALLS)
             strcat_s(lc->extPath, sizeof(lc->extPath), "/");
+#else
+            strcat(lc->extPath, "/");
+#endif
             }
         }
 
@@ -270,7 +278,11 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     **  Open the device file.
     */
 
+#if defined(SAFECALLS)
     sprintf_s(fname, sizeof(fname), "%sLP1612_C%02o", lc->extPath, channelNo);
+#else
+    sprintf(fname, "%sLP1612_C%02o", lc->extPath, channelNo);
+#endif
     dp->fcb[0] = fopen(fname, "w+t");
 
     if (dp->fcb[0] == NULL)
@@ -400,7 +412,11 @@ void lp1612RemovePaper(char *params, FILE *out)
         }
 
     lc = (LpContext1612 *)dp->context[0];
+#if defined(SAFECALLS)
     sprintf_s(fName, sizeof(fName), "%sLP1612_C%02o", lc->extPath, channelNo);
+#else
+    sprintf(fName, "%sLP1612_C%02o", lc->extPath, channelNo);
+#endif
 
     //  SZoppi: this can happen if something goes wrong in the open
     //          and the file fails to be properly re-opened.
@@ -439,6 +455,7 @@ void lp1612RemovePaper(char *params, FILE *out)
             {
             time(&currentTime);
             t = *localtime(&currentTime);
+#if defined(SAFECALLS)
             sprintf_s(fNameNew, sizeof(fNameNew), "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d",
                       lc->extPath,
                       t.tm_year + 1900,
@@ -448,6 +465,17 @@ void lp1612RemovePaper(char *params, FILE *out)
                       t.tm_min,
                       t.tm_sec,
                       iSuffix);
+#else
+            sprintf(fNameNew, "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d",
+                lc->extPath,
+                t.tm_year + 1900,
+                t.tm_mon + 1,
+                t.tm_mday,
+                t.tm_hour,
+                t.tm_min,
+                t.tm_sec,
+                iSuffix);
+#endif
 
             if (rename(fName, fNameNew) == 0)
                 {

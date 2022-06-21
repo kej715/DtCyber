@@ -291,8 +291,12 @@ void dd6603Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             exit(1);
             }
         }
-
+#if defined(SAFECALLS)
     strcpy_s(diskP->fileName, sizeof(diskP->fileName), fname);
+#else
+    strcpy(diskP->fileName, fname);
+#endif
+
     diskP->eqNo      = eqNo;
     diskP->channelNo = channelNo;
     diskP->unitNo    = unitNo;

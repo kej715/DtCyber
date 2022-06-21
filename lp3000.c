@@ -502,17 +502,29 @@ static void lp3000Init(u8 unitNo, u8 eqNo, u8 channelNo, int flags, bool useANSI
         }
     else
         {
+#if defined(SAFECALLS)
         strcpy_s(lc->extPath, sizeof(lc->extPath), deviceName);
+#else
+        strcpy(lc->extPath, deviceName);
+#endif
         if (lc->extPath[0] != '\0')
             {
+#if defined(SAFECALLS)
             strcat_s(lc->extPath, sizeof(lc->extPath), "/");
+#else
+            strcat(lc->extPath, "/");
+#endif
             }
         }
 
     /*
     **  Open the device file.
     */
+#if defined(SAFECALLS)
     sprintf_s(fName, sizeof(fName), "%sLP5xx_C%02o_E%o", lc->extPath, channelNo, eqNo);
+#else
+    sprintf(fName, "%sLP5xx_C%02o_E%o", lc->extPath, channelNo, eqNo);
+#endif
 
     up->fcb[0] = fopen(fName, "w");
     if (up->fcb[0] == NULL)
@@ -654,7 +666,11 @@ void lp3000RemovePaper(char *params, FILE *out)
         }
 
     lc = (LpContext *)dp->context[0];
+#if defined(SAFECALLS)
     sprintf_s(fName, sizeof(fName), "%sLP5xx_C%02o_E%o", lc->extPath, channelNo, equipmentNo);
+#else
+    sprintf(fName, "%sLP5xx_C%02o_E%o", lc->extPath, channelNo, equipmentNo);
+#endif
 
 
     //  SZoppi: this can happen if something goes wrong in the open
@@ -694,6 +710,7 @@ void lp3000RemovePaper(char *params, FILE *out)
             {
             time(&currentTime);
             t = *localtime(&currentTime);
+#if defined(SAFECALLS)
             sprintf_s(fNameNew, sizeof(fNameNew), "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d",
                       lc->extPath,
                       t.tm_year + 1900,
@@ -703,6 +720,17 @@ void lp3000RemovePaper(char *params, FILE *out)
                       t.tm_min,
                       t.tm_sec,
                       iSuffix);
+#else
+            sprintf(fNameNew, "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d",
+                lc->extPath,
+                t.tm_year + 1900,
+                t.tm_mon + 1,
+                t.tm_mday,
+                t.tm_hour,
+                t.tm_min,
+                t.tm_sec,
+                iSuffix);
+#endif
 
             if (rename(fName, fNameNew) == 0)
                 {
@@ -831,7 +859,11 @@ static FcStatus lp3000Func(PpWord funcCode)
             fflush(fcb);
             channelId = (int)active3000Device->channel->id;
             deviceId  = (int)active3000Device->eqNo;
+#if defined(SAFECALLS)
             sprintf_s(dispLpDevId, sizeof(dispLpDevId), "%o,%o", channelId, deviceId);
+#else
+            sprintf(dispLpDevId, "%o,%o", channelId, deviceId);
+#endif
             lp3000RemovePaper(dispLpDevId, stdout);
             lc->isPrinted = FALSE;
             }
