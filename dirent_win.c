@@ -10,7 +10,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "dirent.h"
+#include "dirent_win.h"
 
 #if defined(_WIN32)
 

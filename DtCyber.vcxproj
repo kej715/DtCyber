@@ -261,7 +261,7 @@
     <ClCompile Include="ddp.c" />
     <ClCompile Include="deadstart.c" />
     <ClCompile Include="device.c" />
-    <ClCompile Include="dirent.c" />
+    <ClCompile Include="dirent_win.c" />
     <ClCompile Include="dsa311.c" />
     <ClCompile Include="dump.c" />
     <ClCompile Include="float.c" />
@@ -324,7 +324,7 @@
     <ClInclude Include="const.h" />
     <ClInclude Include="cyber_channel_linux.h" />
     <ClInclude Include="cyber_channel_win32.h" />
-    <ClInclude Include="dirent.h" />
+    <ClInclude Include="dirent_win.h" />
     <ClInclude Include="dcc6681.h" />
     <ClInclude Include="npu.h" />
     <ClInclude Include="proto.h" />

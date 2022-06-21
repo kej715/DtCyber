@@ -163,7 +163,7 @@
     <ClCompile Include="fsmon.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dirent.c">
+    <ClCompile Include="dirent_win.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="cdcnet.c">
@@ -225,7 +225,7 @@
     <ClInclude Include="dcc6681.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dirent.h">
+    <ClInclude Include="dirent_win.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\DtCyber.kej715\msufrend_util.h">

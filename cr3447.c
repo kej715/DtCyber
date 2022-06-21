@@ -42,10 +42,11 @@
 #if defined(_WIN32)
 //  Filesystem Watcher Machinery
 #include <windows.h>
-#include "dirent.h"
+#include "dirent_win.h"
 #else
 #include <dirent.h>
 #include <unistd.h>
+#include <ctype.h>
 #endif
 #include "const.h"
 #include "types.h"
@@ -1384,5 +1385,20 @@ static char *cr3447Func2String(PpWord funcCode)
 
     return (buf);
     }
+
+#if !defined(_WIN32)
+
+char* strlwr(char* str)
+{
+    unsigned char* p = (unsigned char*)str;
+
+    while (*p) {
+        *p = tolower((unsigned char)*p);
+        p++;
+    }
+
+    return str;
+}
+#endif
 
 /*---------------------------  End Of File  ------------------------------*/

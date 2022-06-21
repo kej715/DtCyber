@@ -36,6 +36,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <sys/stat.h>
 #include "const.h"
 #include "types.h"
@@ -46,9 +47,10 @@
 //  Filesystem Watcher Machinery
 
 #include <Windows.h>
-#include "dirent.h"
+#include "dirent_win.h"
 #else
 #include <dirent.h>
+#include <ctype.h>
 #endif
 
 /*
@@ -1107,5 +1109,21 @@ static void cr405NextCard(DevSlot *dp)
             }
         }
     }
+
+#if !defined(_WIN32)
+
+        char* strlwr(char* str)
+    {
+        unsigned char* p = (unsigned char*)str;
+
+        while (*p) {
+            *p = tolower((unsigned char)*p);
+            p++;
+        }
+
+        return str;
+    }
+
+#endif
 
 /*---------------------------  End Of File  ------------------------------*/
