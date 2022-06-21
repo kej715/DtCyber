@@ -158,7 +158,7 @@ static void cr3447Disconnect(void);
 static void cr3447NextCard(DevSlot *up, CrContext *cc, FILE *out);
 static char *cr3447Func2String(PpWord funcCode);
 static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc, FILE *out);
-static char* strlwr(char* str);
+//static char* strlwr(char* str);
 
 /*
 **  ----------------
@@ -734,17 +734,17 @@ void cr3447ShowStatus(void)
   **
   **------------------------------------------------------------------------*/
 
-char* strlwr(char* str)
-{
-    unsigned char* p = (unsigned char*)str;
-
-    while (*p) {
-        *p = tolower((unsigned char)*p);
-        p++;
-    }
-
-    return str;
-}
+//char* strlwr(char* str)
+//{
+//    unsigned char* p = (unsigned char*)str;
+//
+//    while (*p) {
+//        *p = tolower((unsigned char)*p);
+//        p++;
+//    }
+//
+//    return str;
+//}
 
 #endif
 
@@ -1413,20 +1413,5 @@ static char *cr3447Func2String(PpWord funcCode)
 
     return (buf);
     }
-
-#if !defined(_WIN32)
-
-char* strlwr(char* str)
-{
-    unsigned char* p = (unsigned char*)str;
-
-    while (*p) {
-        *p = tolower((unsigned char)*p);
-        p++;
-    }
-
-    return str;
-}
-#endif
 
 /*---------------------------  End Of File  ------------------------------*/

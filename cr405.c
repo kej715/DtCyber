@@ -149,7 +149,7 @@ static void cr405Activate(void);
 static void cr405Disconnect(void);
 static void cr405NextCard(DevSlot *dp);
 static bool cr405StartNextDeck(DevSlot *up, Cr405Context *cc, FILE *out);
-static char* strlwr(char* str);
+// static char* strlwr(char* str);
 
 /*
 **  ----------------
@@ -709,18 +709,18 @@ void cr405ShowStatus(void)
 **
 **------------------------------------------------------------------------*/
 
-char* strlwr(char* str)
-{
-    unsigned char* p = (unsigned char*)str;
-
-    while (*p) {
-        *p = tolower((unsigned char)*p);
-        p++;
-    }
-
-    return str;
-}
-
+//char* strlwr(char* str)
+//{
+//    unsigned char* p = (unsigned char*)str;
+//
+//    while (*p) {
+//        *p = tolower((unsigned char)*p);
+//        p++;
+//    }
+//
+//    return str;
+//}
+//
 #endif
 /*--------------------------------------------------------------------------
 **  Purpose:        Execute function code on 405 card reader.
