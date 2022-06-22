@@ -1547,7 +1547,7 @@ static bool initOpenSection(char *name)
             return (FALSE);
             }
         //  20200905 (SJZ): Case Insensitive Comparison
-        } while (strnicmp(lineBuffer, section, sectionLength) != 0);
+        } while (strncasecmp(lineBuffer, section, sectionLength) != 0);
 
     /*
     **  Remember start of section and return success.
@@ -1673,7 +1673,7 @@ static bool initGetString(char *entry, char *defString, char *str, int strLen)
             return (FALSE);
             }
         //  20200905 (SJZ): Case Insensitive Comparison
-        } while (strnicmp(line, entry, entryLength) != 0);
+        } while (strncasecmp(line, entry, entryLength) != 0);
 
     /*
     **  Cut off any trailing comments.
