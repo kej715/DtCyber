@@ -25,73 +25,74 @@
 LIBS    = -lm -lX11 -lpthread -lrt
 LDFLAGS = -s -L/usr/X11R6/lib64
 INCL    = -I/usr/X11R6/include
+EXTRACFLAGS = -Wno-switch -Wno-format-security
 
 CFLAGS  = -O2 -I. $(INCL) -std=gnu99
 
 HDRS    =   const.h                 \
-			cyber_channel_linux.h   \
-			npu.h                   \
-			proto.h                 \
-			types.h
+            cyber_channel_linux.h   \
+            npu.h                   \
+            proto.h                 \
+            types.h
 
 OBJS    =   cdcnet.o                \
-	channel.o               \
-	charset.o               \
-	console.o               \
-	cp3446.o                \
-	cpu.o                   \
-	cr3447.o                \
-	cr405.o                 \
-	cray_station.o          \
-	dcc6681.o               \
-	dd6603.o                \
-	dd885-42.o              \
-	dd8xx.o                 \
-	ddp.o                   \
-	deadstart.o             \
-	device.o                \
-	dsa311.o                \
-	dump.o                  \
-	float.o                 \
-    fsmon.o                 \
-	init.o                  \
-	interlock_channel.o     \
-	log.o                   \
-	lp1612.o                \
-	lp3000.o                \
-	main.o                  \
-	maintenance_channel.o   \
-	msufrend.o              \
-	msufrend_util.o         \
-	mdi.o                   \
-	mt362x.o                \
-	mt5744.o                \
-	mt607.o                 \
-	mt669.o                 \
-	mt679.o                 \
-	mux6676.o               \
-	niu.o                   \
-	npu_async.o             \
-	npu_bip.o               \
-	npu_hasp.o              \
-	npu_hip.o               \
-	npu_lip.o               \
-	npu_net.o               \
-	npu_nje.o               \
-	npu_svm.o               \
-	npu_tip.o               \
-	operator.o              \
-	pci_channel_linux.o     \
-	pci_console_linux.o     \
-	pp.o                    \
-	rtc.o                   \
-	scr_channel.o           \
-	shift.o                 \
-	string.o                \
-	time.o                  \
-	tpmux.o                 \
-	trace.o                 \
-	window_x11.o            
+            channel.o               \
+            charset.o               \
+            console.o               \
+            cp3446.o                \
+            cpu.o                   \
+            cr3447.o                \
+            cr405.o                 \
+            cray_station.o          \
+            dcc6681.o               \
+            dd6603.o                \
+            dd885-42.o              \
+            dd8xx.o                 \
+            ddp.o                   \
+            deadstart.o             \
+            device.o                \
+            dsa311.o                \
+            dump.o                  \
+            float.o                 \
+            fsmon.o                 \
+            init.o                  \
+            interlock_channel.o     \
+            log.o                   \
+            lp1612.o                \
+            lp3000.o                \
+            main.o                  \
+            maintenance_channel.o   \
+            msufrend.o              \
+            msufrend_util.o         \
+            mdi.o                   \
+            mt362x.o                \
+            mt5744.o                \
+            mt607.o                 \
+            mt669.o                 \
+            mt679.o                 \
+            mux6676.o               \
+            niu.o                   \
+            npu_async.o             \
+            npu_bip.o               \
+            npu_hasp.o              \
+            npu_hip.o               \
+            npu_lip.o               \
+            npu_net.o               \
+            npu_nje.o               \
+            npu_svm.o               \
+            npu_tip.o               \
+            operator.o              \
+            pci_channel_linux.o     \
+            pci_console_linux.o     \
+            pp.o                    \
+            rtc.o                   \
+            scr_channel.o           \
+            shift.o                 \
+            string.o                \
+            time.o                  \
+            tpmux.o                 \
+            trace.o                 \
+            window_x11.o            
 
 dtcyber: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)

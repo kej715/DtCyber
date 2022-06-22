@@ -28,11 +28,11 @@ INCL    = -I/usr/X11R6/include
 
 CFLAGS  = -O2 -I. $(INCL) -std=gnu99
 
-HDRS	=   const.h		    \
+HDRS    =   const.h                 \
             cyber_channel_linux.h   \
-	    npu.h		    \
-	    proto.h		    \
-	    types.h
+            npu.h                   \
+            proto.h                 \
+            types.h
 
 OBJS    =   cdcnet.o                \
             channel.o               \
@@ -53,6 +53,7 @@ OBJS    =   cdcnet.o                \
             dsa311.o                \
             dump.o                  \
             float.o                 \
+            fsmon.o                 \
             init.o                  \
             interlock_channel.o     \
             log.o                   \
@@ -60,9 +61,9 @@ OBJS    =   cdcnet.o                \
             lp3000.o                \
             main.o                  \
             maintenance_channel.o   \
-            mdi.o                   \
             msufrend.o              \
             msufrend_util.o         \
+            mdi.o                   \
             mt362x.o                \
             mt5744.o                \
             mt607.o                 \
@@ -84,6 +85,7 @@ OBJS    =   cdcnet.o                \
             rtc.o                   \
             scr_channel.o           \
             shift.o                 \
+            string.o                \
             time.o                  \
             tpmux.o                 \
             trace.o                 \
