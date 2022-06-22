@@ -10,12 +10,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -23,7 +23,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -46,7 +46,7 @@
 **  Private Constants
 **  -----------------
 */
-#define InterlockWords          11
+#define InterlockWords    11
 
 /*
 **  -----------------------
@@ -90,12 +90,12 @@ static FILE *ilrLog = NULL;
 #endif
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise interlock register channel.
 **
@@ -115,17 +115,17 @@ void ilrInit(u8 registerSize)
         }
 #endif
 
-    dp = channelAttach(ChInterlock, 0, DtInterlockRegister);
-    dp->activate = ilrActivate;
+    dp             = channelAttach(ChInterlock, 0, DtInterlockRegister);
+    dp->activate   = ilrActivate;
     dp->disconnect = ilrDisconnect;
-    dp->func = ilrFunc;
-    dp->io = ilrIo;
+    dp->func       = ilrFunc;
+    dp->io         = ilrIo;
 
-    channel[ChInterlock].active = TRUE;
-    channel[ChInterlock].ioDevice = dp;
+    channel[ChInterlock].active    = TRUE;
+    channel[ChInterlock].ioDevice  = dp;
     channel[ChInterlock].hardwired = TRUE;
 
-    ilrBits = registerSize;
+    ilrBits  = registerSize;
     ilrWords = (ilrBits + 11) / 12;
 
     /*
@@ -145,7 +145,7 @@ void ilrInit(u8 registerSize)
 **------------------------------------------------------------------------*/
 static FcStatus ilrFunc(PpWord funcCode)
     {
-    return(FcAccepted);
+    return (FcAccepted);
     }
 
 /*--------------------------------------------------------------------------
@@ -205,13 +205,13 @@ static void ilrDisconnect(void)
 **------------------------------------------------------------------------*/
 static void ilrExecute(PpWord func)
     {
-    static PpWord interlockRegister[InterlockWords] = {0};
-    u8 code;
-    u8 designator;
-    u8 word;
-    u8 bit;
+    static PpWord interlockRegister[InterlockWords] = { 0 };
+    u8            code;
+    u8            designator;
+    u8            word;
+    u8            bit;
 
-    code = (func >> 9) & 7;
+    code       = (func >> 9) & 7;
     designator = func & 0177;
 
     switch (code)
@@ -238,7 +238,7 @@ static void ilrExecute(PpWord func)
         if (designator < ilrBits)
             {
             word = designator / 12;
-            bit = designator % 12;
+            bit  = designator % 12;
 
             activeChannel->data = (interlockRegister[word] & (1 << bit)) != 0 ? 1 : 0;
             }
@@ -256,7 +256,7 @@ static void ilrExecute(PpWord func)
         if (designator < ilrBits)
             {
             word = designator / 12;
-            bit = designator % 12;
+            bit  = designator % 12;
 
             interlockRegister[word] &= ~(1 << bit);
             }
@@ -271,9 +271,9 @@ static void ilrExecute(PpWord func)
         if (designator < ilrBits)
             {
             word = designator / 12;
-            bit = designator % 12;
+            bit  = designator % 12;
 
-            activeChannel->data = (interlockRegister[word] & (1 << bit)) != 0 ? 1 : 0;
+            activeChannel->data      = (interlockRegister[word] & (1 << bit)) != 0 ? 1 : 0;
             interlockRegister[word] &= ~(1 << bit);
             }
         else
@@ -290,7 +290,7 @@ static void ilrExecute(PpWord func)
         if (designator < ilrBits)
             {
             word = designator / 12;
-            bit = designator % 12;
+            bit  = designator % 12;
 
             interlockRegister[word] |= (1 << bit);
             }
@@ -305,9 +305,9 @@ static void ilrExecute(PpWord func)
         if (designator < ilrBits)
             {
             word = designator / 12;
-            bit = designator % 12;
+            bit  = designator % 12;
 
-            activeChannel->data = (interlockRegister[word] & (1 << bit)) != 0 ? 1 : 0;
+            activeChannel->data      = (interlockRegister[word] & (1 << bit)) != 0 ? 1 : 0;
             interlockRegister[word] |= (1 << bit);
             }
         else
@@ -349,22 +349,22 @@ static void ilrExecute(PpWord func)
     activeChannel->full = TRUE;
 
 #if DEBUG
-    {
-    static char *codeString[] =
         {
-        "read word",
-        "test bit",
-        "clear bit",
-        "test & clear bit",
-        "set bit",
-        "test & set bit",
-        "clear all",
-        "test all"
-        };
+        static char *codeString[] =
+            {
+            "read word",
+            "test bit",
+            "clear bit",
+            "test & clear bit",
+            "set bit",
+            "test & set bit",
+            "clear all",
+            "test all"
+            };
 
-    fprintf(ilrLog, "%06d Interlock Reg: bit %03o %s result: %04o\n", traceSequenceNo, designator, codeString[code], activeChannel->data);
-    }
+        fprintf(ilrLog, "%06d Interlock Reg: bit %03o %s result: %04o\n", traceSequenceNo, designator, codeString[code], activeChannel->data);
+        }
 #endif
     }
-    
+
 /*---------------------------  End Of File  ------------------------------*/
