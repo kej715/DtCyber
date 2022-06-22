@@ -247,6 +247,7 @@
 #define getcwd                     _getcwd
 #define strcasecmp                 _stricmp
 #define stricmp                    _stricmp
+#define tolower                    _tolower
 #define strncasecmp                _strnicmp
 #define unlink                     _unlink
 #if !defined(MSG_WAITALL)

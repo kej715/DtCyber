@@ -60,8 +60,8 @@ OBJS    =   cdcnet.o                \
             lp3000.o                \
             main.o                  \
             maintenance_channel.o   \
-	    msufrend.o		    \
-	    msufrend_util.o	    \
+            msufrend.o              \
+            msufrend_util.o         \
             mdi.o                   \
             mt362x.o                \
             mt5744.o                \
@@ -86,28 +86,29 @@ OBJS    =   cdcnet.o                \
             rtc.o                   \
             scr_channel.o           \
             shift.o                 \
+            string.o                \
             time.o                  \
             tpmux.o                 \
             trace.o                 \
             window_x11.o            
 
 dtcyber: $(OBJS)
-	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+    $(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
 all: dtcyber stk/node_modules frend2/frend2
 
 stk/node_modules:
-	$(MAKE) -C stk
+    $(MAKE) -C stk
 
 frend2/frend2:
-	$(MAKE) -f Makefile.linux64 -C frend2
+    $(MAKE) -f Makefile.linux64 -C frend2
 
 clean:
-	rm -f *.o; \
-	$(MAKE) -C stk clean
-	$(MAKE) -f Makefile.linux64 -C frend2 clean
+    rm -f *.o; \
+    $(MAKE) -C stk clean
+    $(MAKE) -f Makefile.linux64 -C frend2 clean
 
 %.o : %.c $(HDRS)
-	$(CC) $(CFLAGS) -c $<
+    $(CC) $(CFLAGS) -c $<
 
 #---------------------------  End Of File  --------------------------------

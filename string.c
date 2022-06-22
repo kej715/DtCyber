@@ -28,13 +28,13 @@
 **  Include Files
 **  -------------
 */
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#if defined(_WIN32)
-#include <Windows.h>
-#else
-#include <sys/time.h>
-#endif
+#include "const.h"
+#include "types.h"
+#include "proto.h"
 
 /*--------------------------------------------------------------------------
 **  Purpose:        convert a string to lower case.

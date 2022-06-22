@@ -6,7 +6,7 @@
 
 #include "msufrend_util.h"
 
-#if not defined(WIN32)
+#if !defined(WIN32)
 #include <sys/mman.h>
 #endif
 
