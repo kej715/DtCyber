@@ -318,7 +318,7 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     bWatchRequested = TRUE;     // Default = Run Filewatcher Thread
     if (tokenAuto != NULL)
         {
-        _strlwr(tokenAuto);
+        dtStrLwr(tokenAuto);
         if (!strcmp(tokenAuto, "noauto"))
             {
             bWatchRequested = FALSE;

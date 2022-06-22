@@ -308,6 +308,7 @@
     <ClCompile Include="rtc.c" />
     <ClCompile Include="scr_channel.c" />
     <ClCompile Include="shift.c" />
+    <ClCompile Include="string.c" />
     <ClCompile Include="time.c" />
     <ClCompile Include="tpmux.c" />
     <ClCompile Include="trace.c" />

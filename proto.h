@@ -1,5 +1,6 @@
 #ifndef PROTO_H
 #define PROTO_H
+
 /*--------------------------------------------------------------------------
 **
 **  Copyright (c) 2003-2011, Tom Hunter
@@ -12,12 +13,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -37,7 +38,7 @@
 /*
 **  init.c
 */
-void initStartup(char* config, char* configFile);
+void initStartup(char *config, char *configFile);
 u32 initConvertEndian(u32 value);
 char *initGetNextLine(void);
 int initOpenHelpersSection(void);
@@ -196,6 +197,7 @@ void dd8xxShowDiskStatus(void);
 */
 void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void dd885_42ShowDiskStatus(void);
+
 /*
 **  dcc6681.c
 */
@@ -260,6 +262,11 @@ void pciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 **  pci_console_linux.c
 */
 void pciConsoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+
+/*
+**	string.c
+*/
+char* dtStrLwr(char* str);
 
 /*
 **  time.c
@@ -370,71 +377,70 @@ void logError(char *file, int line, char *fmt, ...);
 **  -----------------
 */
 
-extern bool emulationActive;
-extern PpSlot *ppu;
-extern ChSlot *channel;
-extern u8 ppuCount;
-extern u8 channelCount;
-extern PpSlot *activePpu;
-extern ChSlot *activeChannel;
-extern DevSlot *activeDevice;
-extern DevSlot *active3000Device;
-extern CpuContext cpu;
-extern bool cpuStopped;
-extern CpWord *cpMem;
-extern u32 cpuMaxMemory;
-extern u32 extMaxMemory;
-extern CpWord *extMem;
-extern char opKeyIn;
-extern long opKeyInterval;
-extern char ppKeyIn;
-extern const u8 asciiToCdc[256];
-extern const char cdcToAscii[64];
-extern const u8 asciiToConsole[256];
-extern const char consoleToAscii[64];
-extern const u16 asciiTo026[256];
-extern const u16 asciiTo029[256];
-extern const u8  asciiToBcd[256];
-extern const u8  asciiToEbcdic[256];
-extern const u8  ebcdicToAscii[256];
-extern const char bcdToAscii[64];
-extern const char extBcdToAscii[64];
-extern const i8 asciiToPlato[128];
-extern const i8 altKeyToPlato[128];
-extern const int asciiToPlatoString[256];
+extern bool                emulationActive;
+extern PpSlot              *ppu;
+extern ChSlot              *channel;
+extern u8                  ppuCount;
+extern u8                  channelCount;
+extern PpSlot              *activePpu;
+extern ChSlot              *activeChannel;
+extern DevSlot             *activeDevice;
+extern DevSlot             *active3000Device;
+extern CpuContext          cpu;
+extern bool                cpuStopped;
+extern CpWord              *cpMem;
+extern u32                 cpuMaxMemory;
+extern u32                 extMaxMemory;
+extern CpWord              *extMem;
+extern char                opKeyIn;
+extern long                opKeyInterval;
+extern char                ppKeyIn;
+extern const u8            asciiToCdc[256];
+extern const char          cdcToAscii[64];
+extern const u8            asciiToConsole[256];
+extern const char          consoleToAscii[64];
+extern const u16           asciiTo026[256];
+extern const u16           asciiTo029[256];
+extern const u8            asciiToBcd[256];
+extern const u8            asciiToEbcdic[256];
+extern const u8            ebcdicToAscii[256];
+extern const char          bcdToAscii[64];
+extern const char          extBcdToAscii[64];
+extern const i8            asciiToPlato[128];
+extern const i8            altKeyToPlato[128];
+extern const int           asciiToPlatoString[256];
 extern const unsigned char platoStringToAscii[4][65];
-extern u32 traceMask;
-extern u32 traceSequenceNo;
-extern DevDesc deviceDesc[];
-extern u8 deviceCount;
-extern bool bigEndian;
-extern volatile bool opActive;
-extern u16 mux6676TelnetPort;
-extern u16 mux6676TelnetConns;
-extern u16 platoPort;
-extern u16 platoConns;
-extern u32 cycles;
-extern u32 rtcClock;
-extern ModelFeatures features;
-extern ModelType modelType;
-extern char persistDir[];
-extern char displayName[];
-extern u16 npuNetTelnetPort;
-extern u16 npuNetTcpConns;
-extern u16 npuLipTrunkPort;
-extern u8 npuLipTrunkCount;
-extern char npuNetHostID[];
-extern u32 npuNetHostIP;
-extern u8 npuSvmCouplerNode;
-extern u8 npuSvmNpuNode;
+extern u32                 traceMask;
+extern u32                 traceSequenceNo;
+extern DevDesc             deviceDesc[];
+extern u8                  deviceCount;
+extern bool                bigEndian;
+extern volatile bool       opActive;
+extern u16                 mux6676TelnetPort;
+extern u16                 mux6676TelnetConns;
+extern u16                 platoPort;
+extern u16                 platoConns;
+extern u32                 cycles;
+extern u32                 rtcClock;
+extern ModelFeatures       features;
+extern ModelType           modelType;
+extern char                persistDir[];
+extern char                displayName[];
+extern u16                 npuNetTelnetPort;
+extern u16                 npuNetTcpConns;
+extern u16                 npuLipTrunkPort;
+extern u8                  npuLipTrunkCount;
+extern char                npuNetHostID[];
+extern u32                 npuNetHostIP;
+extern u8                  npuSvmCouplerNode;
+extern u8                  npuSvmNpuNode;
 
 #ifdef IdleThrottle
 /* NOS Idle Loop throttle */
 extern bool NOSIdle;
-extern u32 idletime;
-extern u32 idletrigger;
+extern u32  idletime;
+extern u32  idletrigger;
 #endif
 
 #endif /* PROTO_H */
 /*---------------------------  End Of File  ------------------------------*/
-

@@ -304,7 +304,7 @@ void lp501Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
 
     if ((deviceMode) != NULL)
         {
-        deviceMode = _strlwr(deviceMode);         //  pick up "ansi" or "ascii" flag
+        deviceMode = dtStrLwr(deviceMode);         //  pick up "ansi" or "ascii" flag
         useANSI    = FALSE;
         if (strcmp(deviceMode, "ansi") == 0)
             {
@@ -391,7 +391,7 @@ void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
 
     if ((deviceMode) != NULL)
         {
-        deviceMode = _strlwr(deviceMode);
+        deviceMode = dtStrLwr(deviceMode);
         useANSI    = FALSE;
         if (strcmp(deviceMode, "ansi") == 0)
             {

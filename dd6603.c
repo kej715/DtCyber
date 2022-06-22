@@ -278,7 +278,11 @@ void dd6603Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         }
     else
         {
+#if defined(SAFECALLS)
         strcpy_s(fname, sizeof(fname), strchr(deviceName, ','));
+#else
+        strcpy(fname, strchr(deviceName, ','));
+#endif
         }
 
     fcb = fopen(fname, "r+b");

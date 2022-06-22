@@ -51,6 +51,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <time.h>
 #endif
 
 
@@ -399,8 +400,6 @@ static void *opThread(void *param)
     char  *pos;
     char  *sp;
 
-    SYSTEMTIME dt;
-
     opCmdStack[opCmdStackPtr].in        = in = stdin;
     opCmdStack[opCmdStackPtr].out       = out = stdout;
     opCmdStack[opCmdStackPtr].isNetConn = FALSE;
@@ -424,8 +423,7 @@ static void *opThread(void *param)
     fprintf(out, "DTCYBER: Operator interface\n");
     fprintf(out, "---------------------------\n\n");
     fprintf(out, "\nPlease enter 'help' to get a list of commands\n");
-    GetLocalTime(&dt);
-    fprintf(out, "\n%02d:%02d:%02d [%s] Operator> ", dt.wHour, dt.wMinute, dt.wSecond, displayName);
+    opCmdPrompt();
 
     if (getcwd(opCmdStack[opCmdStackPtr].cwd, CwdPathSize) == NULL)
         {
@@ -1492,10 +1490,25 @@ static void opHelpPause(void)
 **------------------------------------------------------------------------*/
 static void opCmdPrompt(void)
     {
+
+#if defined(_WIN32)
     SYSTEMTIME dt;
 
     GetLocalTime(&dt);
     fprintf(out, "\n%02d:%02d:%02d [%s] Operator> ", dt.wHour, dt.wMinute, dt.wSecond, displayName);
+
+#else
+    time_t rawtime;
+    struct tm* info;
+    char buffer[80];
+
+    time(&rawtime);
+
+    info = localtime(&rawtime);
+    strftime(buffer, 80, "%H:%M:%S", info);
+    fprintf(out, "\n%s [%s] Operator> ", buffer, displayName);
+#endif
+
     }
 
 /*--------------------------------------------------------------------------
@@ -2717,13 +2730,13 @@ static void opCmdIdle(bool help, char *cmdParams)
 
         return;
         }
-    if (strcmp("on", _strlwr(cmdParams)) == 0)
+    if (strcmp("on", dtStrLwr(cmdParams)) == 0)
         {
         NOSIdle = TRUE;
 
         return;
         }
-    if (strcmp("off", _strlwr(cmdParams)) == 0)
+    if (strcmp("off", dtStrLwr(cmdParams)) == 0)
         {
         NOSIdle = FALSE;
 

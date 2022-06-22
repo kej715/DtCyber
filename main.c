@@ -199,7 +199,7 @@ int main(int argc, char **argv)
         }
     else if (argc == 2)
         {
-        if ((_stricmp(argv[1], "-?") == 0) | (_stricmp(argv[1], "/?") == 0))
+        if ((stricmp(argv[1], "-?") == 0) | (stricmp(argv[1], "/?") == 0))
             {
             printf("Command Format:\n\n");
             printf("    %s <parameters>\n\n", argv[0]);

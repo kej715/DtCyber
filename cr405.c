@@ -317,7 +317,7 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     watchRequested = TRUE;     // Default = Run Filewatcher Thread
     if (Auto != NULL)
         {
-        _strlwr(Auto);
+        dtStrLwr(Auto);
         if (!strcmp(Auto, "noauto"))
             {
             watchRequested = FALSE;
