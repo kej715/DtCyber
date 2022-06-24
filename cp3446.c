@@ -267,11 +267,7 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Open the device file.
     */
-#if defined(SAFECALLS)
-    sprintf_s(fname, sizeof(fname), "%sCP3446_C%02o_E%o", cc->extPath, channelNo, eqNo);
-#else
     sprintf(fname, "%sCP3446_C%02o_E%o", cc->extPath, channelNo, eqNo);
-#endif
 
     up->fcb[0] = fopen(fname, "w");
     if (up->fcb[0] == NULL)
@@ -296,6 +292,8 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             exit(1);
             }
         }
+
+    fprintf(stderr, "(cp3446 ) Card Code selected '%s'\n", deviceType);
 
     memset(cc->convTable, ' ', sizeof(cc->convTable));
     for (int i = 040; i < 0177; i++)
@@ -460,14 +458,14 @@ void cp3446RemoveCards(char *params, FILE *out)
                       isuffix);
 #else
             sprintf(fnameNew, "%sCP3446_%04d%02d%02d_%02d%02d%02d_%02d",
-                cc->extPath,
-                t.tm_year + 1900,
-                t.tm_mon + 1,
-                t.tm_mday,
-                t.tm_hour,
-                t.tm_min,
-                t.tm_sec,
-                isuffix);
+                    cc->extPath,
+                    t.tm_year + 1900,
+                    t.tm_mon + 1,
+                    t.tm_mday,
+                    t.tm_hour,
+                    t.tm_min,
+                    t.tm_sec,
+                    isuffix);
 #endif
             if (rename(fname, fnameNew) != 0)
                 {

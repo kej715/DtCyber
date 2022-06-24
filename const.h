@@ -32,13 +32,18 @@
 **  ----------------
 */
 #ifdef _DEBUG
-#define DtCyberVersion      "Desktop CYBER 5.8.8.1SZ (Debug)   "
+#define DtCyberVersion      "Desktop CYBER 5.8.8.1 (Debug)   "
 #else
-#define DtCyberVersion      "Desktop CYBER 5.8.8.1SZ (Release) "
+#define DtCyberVersion      "Desktop CYBER 5.8.8.1 (Release) "
 #endif
 
 #define DTCyberBuildDate    __DATE__ " " __TIME__
-#define DtCyberCopyright    "Copyright (c) \t2011-2021 Tom Hunter \n\tPortions Copyright (c):\n\t\t2021-2022 Kevin Jordan\n\t\t2011-2022 Paul Koning\n\t\t2017-2022 Steven Zoppi\n\t\t2022 Mark Rustad"
+#define DtCyberCopyright    "Copyright (c) 2011-2017 Tom Hunter \n \
+    Portions Copyright:\n \
+        (c) 2021-2022 Kevin Jordan\n \
+        (c) 2011-2022 Paul Koning\n \
+        (c) 2017-2022 Steven Zoppi\n \
+        (c) 2006-2022 Mark Rustad"
 #define DtCyberLicense      "Licensed under the terms of the GNU General Public License version 3"
 #define DtCyberLicenseDetails                                             \
     "For details see included text file 'license-gpl-3.0.txt' or visit\n" \

@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <ctype.h>
 #include "const.h"
 #include "types.h"
@@ -126,7 +127,7 @@ static void opHelpHelp(void);
 static void opCmdHelpAll(bool help, char *cmdParams);
 static void opHelpHelpAll(void);
 
-static void opCmdLoadCards(bool help, char *cmdParams);
+// static void opCmdLoadCards(bool help, char *cmdParams); moved to proto/used by fsmon.c
 static void opHelpLoadCards(void);
 static int opPrepCards(char *fname, FILE *fcb);
 
@@ -404,19 +405,7 @@ static void *opThread(void *param)
     opCmdStack[opCmdStackPtr].out       = out = stdout;
     opCmdStack[opCmdStackPtr].isNetConn = FALSE;
 
-    fprintf(out, "\n%s.", DtCyberVersion " - " DtCyberCopyright);
-    fprintf(out, "\n%s.", DtCyberLicense);
-    fprintf(out, "\n%s.", DtCyberLicenseDetails);
-    fputs("\n\nOperator interface", out);
-    fprintf(out, "\nPlease enter 'help' to get a list of commands\n");
-    opCmdPrompt();
-
     opDisplayVersion();
-
-    fprintf(out, "\n--------------------------------------------------------------------------------");
-    fprintf(out, "\n     %s.", DtCyberLicense);
-    fprintf(out, "\n     %s.", DtCyberLicenseDetails);
-    fprintf(out, "\n--------------------------------------------------------------------------------");
 
     fprintf(out, "\n\n");
     fprintf(out, "---------------------------\n");
@@ -1490,17 +1479,15 @@ static void opHelpPause(void)
 **------------------------------------------------------------------------*/
 static void opCmdPrompt(void)
     {
-
 #if defined(_WIN32)
     SYSTEMTIME dt;
 
     GetLocalTime(&dt);
     fprintf(out, "\n%02d:%02d:%02d [%s] Operator> ", dt.wHour, dt.wMinute, dt.wSecond, displayName);
-
 #else
-    time_t rawtime;
-    struct tm* info;
-    char buffer[80];
+    time_t    rawtime;
+    struct tm *info;
+    char      buffer[80];
 
     time(&rawtime);
 
@@ -1508,7 +1495,6 @@ static void opCmdPrompt(void)
     strftime(buffer, 80, "%H:%M:%S", info);
     fprintf(out, "\n%s [%s] Operator> ", buffer, displayName);
 #endif
-
     }
 
 /*--------------------------------------------------------------------------
@@ -1679,16 +1665,17 @@ static void opHelpHelpAll(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void opCmdLoadCards(bool help, char *cmdParams)
+void opCmdLoadCards(bool help, char *cmdParams)
     {
     int         channelNo;
     int         equipmentNo;
     FILE        *fcb;
     char        fname[_MAX_PATH];
+    char        newDeck[_MAX_PATH];
     int         numParam;
     int         rc;
     static int  seqNo = 1;
-    static char str[_MAX_PATH];
+    struct stat statBuf;
 
     /*
     **  Process help request.
@@ -1700,14 +1687,14 @@ static void opCmdLoadCards(bool help, char *cmdParams)
         return;
         }
 
-    numParam = sscanf(cmdParams, "%o,%o,%s", &channelNo, &equipmentNo, str);
+    numParam = sscanf(cmdParams, "%o,%o,%s", &channelNo, &equipmentNo, fname);
 
     /*
     **  Check parameters.
     */
     if (numParam < 3)
         {
-        fputs("    > No parameters supplied.\n", out);
+        fprintf(out, "    > %i parameters supplied. Expected at least 3.\n", numParam);
         opHelpLoadCards();
 
         return;
@@ -1715,19 +1702,19 @@ static void opCmdLoadCards(bool help, char *cmdParams)
 
     if ((channelNo < 0) || (channelNo >= MaxChannels))
         {
-        fputs("    > Invalid channel no\n", out);
+        fprintf(out, "    > Invalid channel no %02o. (must be 0 to %02o) \n", channelNo, MaxChannels);
 
         return;
         }
 
     if ((equipmentNo < 0) || (equipmentNo >= MaxEquipment))
         {
-        fputs("    > Invalid equipment no\n", out);
+        fprintf(out, "    > Invalid equipment no %02o. (must be 0 to %02o) \n", equipmentNo, MaxEquipment);
 
         return;
         }
 
-    if (str[0] == 0)
+    if (fname[0] == 0)
         {
         fputs("    > Invalid file name\n", out);
 
@@ -1735,13 +1722,46 @@ static void opCmdLoadCards(bool help, char *cmdParams)
         }
 
     /*
+    **  As long as the name of the file isn't the
+    **  special identifier "*" (processed by the card reader as
+    **  "retrieve next deck from input directory")
+    **  xxxxGetNextDeck moves the file from the input directory
+    **  to the output directory if it was specified.  Otherwise
+    **  the file remains in the input directory until it is
+    **  pre-processed.
+    **
+    **  After Pre-processing xxxxPostProcess is called to
+    **  unlink any file that originates from the input directory.
+    **
+    **  Calls to xxxxGetNextDeck leave 'fname' unmodified unless
+    **  a suitable file is found.
+    */
+
+    if (fname[0] == '*')
+        {
+        cr405GetNextDeck(fname, channelNo, equipmentNo, out, cmdParams);
+        }
+
+    if (fname[0] == '*')
+        {
+        cr3447GetNextDeck(fname, channelNo, equipmentNo, out, cmdParams);
+        }
+
+    if (fname[0] == '*')
+        {
+        fputs("    > No decks available to process.\n", out);
+
+        return;
+        }
+
+    /*
     **  Create temporary file for preprocessed card deck
     */
-    sprintf(fname, "CR_C%o_E%o_%d", channelNo, equipmentNo, seqNo++);
-    fcb = fopen(fname, "w");
+    sprintf(newDeck, "CR_C%02o_E%02o_%05d", channelNo, equipmentNo, seqNo++);
+    fcb = fopen(newDeck, "w");
     if (fcb == NULL)
         {
-        fprintf(out, "    > Failed to create %s\n", fname);
+        fprintf(out, "    > Failed to create temporary card deck '%s'\n", newDeck);
 
         return;
         }
@@ -1749,21 +1769,60 @@ static void opCmdLoadCards(bool help, char *cmdParams)
     /*
     **  Preprocess card file
     */
-    rc = opPrepCards(str, fcb);
+    rc = opPrepCards(fname, fcb);
     fclose(fcb);
     if (rc == -1)
         {
-        unlink(fname);
+        unlink(newDeck);
 
         return;
         }
-    cr405LoadCards(fname, channelNo, equipmentNo, out, cmdParams);
-    cr3447LoadCards(fname, channelNo, equipmentNo, out, cmdParams);
+
+    fprintf(out, "    > Preprocessing for '%s' into submit file '%s' complete.\n", fname, newDeck);
+
+    /*
+    **  Do not process any file that results in zero-length submission.
+    */
+    if (stat(newDeck, &statBuf) != 0)
+        {
+        fprintf(out, "    > Error learning status of file '%s' (%s)\n", newDeck, strerror(errno));
+
+        return;
+        }
+    if (statBuf.st_size == 0)
+        {
+        fprintf(out, "    > Skipping Zero-Length file '%s' (Removing '%s')\n", fname, newDeck);
+        unlink(newDeck);
+
+        return;
+        }
+
+    /*
+    **  If an input directory was specified (but there was no
+    **  output directory) then we need to give the card reader
+    **  a chance to clean up the dedicated input directory.
+    **
+    **  This event should trigger the filesystem monitor thread
+    **  (if active) and prompt it to load the next deck.
+    */
+    cr405PostProcess(fname, channelNo, equipmentNo, out, cmdParams);
+    cr3447PostProcess(fname, channelNo, equipmentNo, out, cmdParams);
+
+    /*
+    **  If an input directory was specified (but there was no
+    **  output directory) then we need to give the card reader
+    **  a chance to clean up the dedicated input directory.
+    */
+    cr405LoadCards(newDeck, channelNo, equipmentNo, out, cmdParams);
+    cr3447LoadCards(newDeck, channelNo, equipmentNo, out, cmdParams);
     }
 
 static void opHelpLoadCards(void)
     {
     fputs("    > 'load_cards <channel>,<equipment>,<filename>[,<p1>,<p2>,...,<pn>]' load specified card file with optional parameters.\n", out);
+    fputs("    >      If <filename> = '*' and the card reader has been configured with dedicated\n", out);
+    fputs("    >      input and output directories, the next file is ingested from the input directory\n", out);
+    fputs("    >      and 'ejected' to the output directory as it was originally submitted.\n", out);
     }
 
 /*--------------------------------------------------------------------------

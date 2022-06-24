@@ -467,14 +467,14 @@ void lp1612RemovePaper(char *params, FILE *out)
                       iSuffix);
 #else
             sprintf(fNameNew, "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d",
-                lc->extPath,
-                t.tm_year + 1900,
-                t.tm_mon + 1,
-                t.tm_mday,
-                t.tm_hour,
-                t.tm_min,
-                t.tm_sec,
-                iSuffix);
+                    lc->extPath,
+                    t.tm_year + 1900,
+                    t.tm_mon + 1,
+                    t.tm_mday,
+                    t.tm_hour,
+                    t.tm_min,
+                    t.tm_sec,
+                    iSuffix);
 #endif
 
             if (rename(fName, fNameNew) == 0)

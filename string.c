@@ -42,11 +42,17 @@
 **  Parameters:     Name        Description.
 **                  str         Input string to convert
 **
-**  Returns:        Nothing.
+**  Returns:        string.
 **
 **------------------------------------------------------------------------*/
+
 char* dtStrLwr(char* str)
 {
+#if defined (_WIN32)
+
+    return _strlwr(str);
+
+#else
     unsigned char* p = (unsigned char*)str;
 
     while (*p) {
@@ -54,4 +60,5 @@ char* dtStrLwr(char* str)
         p++;
     }
     return str;
+#endif
 }

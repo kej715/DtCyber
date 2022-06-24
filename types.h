@@ -120,6 +120,7 @@ typedef struct
 /*
 **  Filesystem Watcher Thread Context Block.
 **      20171110: SZoppi - Added Windows Support
+**      20220623: SZoppi - Added Linux Support
 */
 typedef struct
     {
@@ -130,7 +131,7 @@ typedef struct
     int  devType;                       /* device type */
     char inWatchDir[_MAX_PATH];         /* input directory "hopper" */
     char outDoneDir[_MAX_PATH];         /* processed directory "hopper" */
-    void (*LoadCards)(char *parms);     /* address of load routine */
+    // void (*LoadCards)(char* fname, int channelNo, int equipmentNo, FILE* out, char* params);     /* address of load routine */
     } fswContext;
 
 

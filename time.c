@@ -114,8 +114,8 @@ void sleepMsec(u32 msec)
 void sleepUsec(u64 usec)
     {
 #if defined(_WIN32)
-    DWORD   msec;
-    msec = (DWORD) usec / 1000;
+    DWORD msec;
+    msec = (DWORD)usec / 1000;
     if (msec < 1)
         {
         msec = 1;

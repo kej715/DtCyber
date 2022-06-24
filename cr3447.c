@@ -1,8 +1,9 @@
 /*--------------------------------------------------------------------------
 **
 **  Copyright (c) 2003-2011, Paul Koning, Tom Hunter
-**            (c) 2017       Steven Zoppi 10-Nov-2017
-**                           Added status messaging support
+**            (c) 2017-2022  Steven Zoppi 23-Jun-2022
+**                           Rewrite Job Submission and support for
+**                           dedicated input/output directories.
 **
 **  Name: cr3447.c
 **
@@ -120,7 +121,7 @@
 typedef struct crContext
     {
     /*
-    **  Info for show_tape operator command.
+    **  Info for show_unitrecord operator command.
     */
     struct crContext *nextUnit;
     u8               channelNo;
@@ -158,6 +159,7 @@ static void cr3447Disconnect(void);
 static void cr3447NextCard(DevSlot *up, CrContext *cc, FILE *out);
 static char *cr3447Func2String(PpWord funcCode);
 static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc, FILE *out);
+static void cr3447SwapInOut(CrContext *cc, char *fname, FILE *out);
 
 /*
 **  ----------------
@@ -178,19 +180,18 @@ static CrContext *lastCr3447  = NULL;
 static FILE *cr3447Log = NULL;
 #endif
 
-/*
- **--------------------------------------------------------------------------
- **
- **  Public Functions
- **
- **--------------------------------------------------------------------------
- */
+/*--------------------------------------------------------------------------
+**
+**  Public Functions
+**
+**------------------------------------------------------------------------*/
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise card reader.
 **
 **  Parameters:     Name        Description.
 **                  eqNo        equipment number
-**                  unitCount   number of units to initialise
+**                  unitNo      unit number
 **                  channelNo   channel number the device is attached to
 **                  deviceName  optional card source file name, "026" (default)
 **                              or "029" to select translation mode
@@ -206,14 +207,12 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     fswContext *threadParms;
 
     //  Extensions for Filesystem Watcher
-    char *xlateTable;
-    char *crInput;
-    char *crOutput;
-    char *tokenAuto;
-    bool bWatchRequested;
-    char tokenString[80] = " ";     //  Silly workaround because of strtok
-                                    //  treating multiple consecutive delims
-                                    //  as one.
+    char        *xlateTable;
+    char        *crInput;
+    char        *crOutput;
+    char        *tokenAuto;
+    bool        watchRequested;
+    char        tokenString[80];
     struct stat s;
 
     /*
@@ -302,9 +301,14 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         exit(1);
         }
 
-    threadParms->LoadCards = 0;
+    // threadParms->LoadCards = 0;
     if (deviceName != NULL)
         {
+        //  Silly workaround because of strtok
+        //  treating multiple consecutive delims
+        //  as one.
+        tokenString[0] = ' ';
+        tokenString[1] = '\0';
         strcat(tokenString, deviceName);
         }
     xlateTable = strtok(tokenString, ",");
@@ -315,13 +319,13 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Process the Request for FileSystem Watcher
     */
-    bWatchRequested = TRUE;     // Default = Run Filewatcher Thread
+    watchRequested = TRUE;     // Default = Run Filewatcher Thread
     if (tokenAuto != NULL)
         {
-        dtStrLwr(tokenAuto);
+        tokenAuto = dtStrLwr(tokenAuto);
         if (!strcmp(tokenAuto, "noauto"))
             {
-            bWatchRequested = FALSE;
+            watchRequested = FALSE;
             }
         else if ((strcmp(tokenAuto, "auto") != 0) && (strcmp(tokenAuto, "*") != 0))
             {
@@ -329,6 +333,8 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             exit(1);
             }
         }
+
+    fprintf(stderr, "(cr3447 ) File watcher %s Requested'\n", watchRequested ? "Was" : "Was Not");
 
     /*
     **  Setup character set translation table.
@@ -346,11 +352,11 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     if (xlateTable != NULL)
         {
-        if (strcmp(xlateTable, " 029") == 0)
+        if (strcmp(xlateTable, "029") == 0)
             {
             cc->table = asciiTo029;
             }
-        else if ((strcmp(xlateTable, " 026") != 0)
+        else if ((strcmp(xlateTable, "026") != 0)
                  && (strcmp(xlateTable, " *") != 0)
                  && (strcmp(xlateTable, " ") != 0))
             {
@@ -358,6 +364,8 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             exit(1);
             }
         }
+
+    fprintf(stderr, "(cr405  ) Card Code selected '%s'\n", xlateTable);
 
     /*
     **  Incorrect specifications for input / output directories
@@ -416,19 +424,14 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         **  The Card Reader Context needs to remember what directory
         **  will supply the input files so more can be found at EOD.
         */
-#if defined (SAFECALLS)
-        strcpy_s(threadParms->inWatchDir, sizeof(threadParms->inWatchDir), crInput);
-        strcpy_s(cc->dirInput, sizeof(cc->dirInput), crInput);
-#else
         strcpy(threadParms->inWatchDir, crInput);
         strcpy(cc->dirInput, crInput);
-#endif
 
         threadParms->eqNo      = eqNo;
         threadParms->unitNo    = unitNo;
         threadParms->channelNo = channelNo;
-        threadParms->LoadCards = cr3447LoadCards;
-        threadParms->devType   = DtCr3447;
+        // threadParms->LoadCards = cr3447LoadCards;
+        threadParms->devType = DtCr3447;
 
         /*
         **  At this point, we should have a completed context
@@ -444,7 +447,7 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         **  cannot be started.
         */
         cc->isWatched = FALSE;
-        if (bWatchRequested)
+        if (watchRequested)
             {
             cc->isWatched = fsCreateThread(threadParms);
             if (!cc->isWatched)
@@ -509,7 +512,6 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 
 //TODO: Fixup Code Logic for Max Decks Queued
-//TODO: Fixup Initiator for FileWatcher Thread
 
 void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char *params)
     {
@@ -518,18 +520,12 @@ void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, cha
     int       len;
     char      *sp;
 
-    int  numParam;
-    FILE *fcb;
-
     static char str[_MAX_PATH]     = "";
     static char strWork[_MAX_PATH] = "";
     static char fOldest[_MAX_PATH] = "";
-    time_t      tOldest;
 
-    struct stat   s;
-    struct dirent *curDirEntry;
+    struct stat s;
 
-    DIR *curDir;
 
     /*
     **  Locate the device control block.
@@ -552,9 +548,21 @@ void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, cha
         return;
         }
 
-    len = strlen(fname) + 1;
+    //  At this point we should have a valid(ish) input file
+    //  Make sure before enqueueing it.
+
+    if (stat(str, &s) != 0)
+        {
+        printf("(cr3447 ) Requested file '%s' not found. (%s).\n", str, strerror(errno));
+
+        return;
+        }
+
+    //  Enqueue the file in the chain of pending files
+
+    len = strlen(str) + 1;
     sp  = (char *)malloc(len);
-    memcpy(sp, fname, len);
+    memcpy(sp, str, len);
     cc->decks[cc->inDeck] = sp;
     cc->inDeck            = (cc->inDeck + 1) % Cr3447MaxDecks;
 
@@ -566,108 +574,311 @@ void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, cha
             }
         }
 
+    //  Starting the next deck was not possible
 
     dp->fcb[0] = NULL;
     cc->status = StCr3447Eof;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Get the next available deck named in the
+**                  3447 card reader's input directory.
+**
+**  Parameters:     Name        Description.
+**                  fname       (in/out) string buffer for next file name
+**                              we don't change anything input
+**                              unless there's an existing file.
+**                  channelNo   Channel number of card reader
+**                  equipmentNo Equipment number of card reader
+**                  out         DtCyber operator output file
+**                  params      Parameter list supplied on command line
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+
+//TODO: Fixup Code Logic for Max Decks Queued
+
+void cr3447GetNextDeck(char *fname, int channelNo, int equipmentNo, FILE *out, char *params)
+    {
+    CrContext *cc;
+    DevSlot   *dp;
+
+    static char strWork[_MAX_PATH] = "";
+    static char fOldest[_MAX_PATH] = "";
+    time_t      tOldest            = 0;
+
+    struct stat   s;
+    struct dirent *curDirEntry;
+
+    DIR *curDir;
+
+    //  Safety check, we only respond if the first
+    //  character of the filename is an asterisk '*'
+
+    if (fname[0] != '*')
+        {
+        fprintf(out, "(cr3447 ) GetNextDeck called with improper parameter '%s'.\n", fname);
+
+        return;
+        }
 
     /*
-    **  If the string for the filename = "*" Then we
-    **  invoke the logic that selects the next file from
-    **  the input directory (if one exists) in create
-    **  date order.
+    **  Locate the device control block.
+    */
+    dp = dcc6681FindDevice((u8)channelNo, (u8)equipmentNo, DtCr3447);
+    if (dp == NULL)
+        {
+        return;
+        }
+
+    cc = (CrContext *)(dp->context[0]);
+
+    /*
+    **  Ensure the tray is not full.
+    */
+    if (((cc->inDeck + 1) % Cr3447MaxDecks) == cc->outDeck)
+        {
+        fputs("(cr3447 ) Input tray full\n", out);
+
+        return;
+        }
+
+    /*
+    **  The special filename, asterisk(*)
+    **  means "Load the next deck" from the dirInput
+    **  directory (if it's defined).
+    **
+    **  This routine is called from operator.c during
+    **  preparation of the input card deck when it detects
+    **  the filename specified as "*".
+    **
+    **  in that case, we don't link the deck into the chain.
+    **  this flow in date order.
     **
     **  The asterisk convention works even if the
     **  filewatcher thread cannot be started.  It
     **  simply means: "Pick the next oldest file
     **  found in the input directory.
-    **
-    **  For anything other than an asterisk, the
-    **  string is assumed to be a filename.
     */
-    if ((strcmp(str, "*") == 0) && (cc->dirInput[0] != '\0'))
+
+    //  If the input directory isn't specified, we cannot trust the
+    //  contents of the input file so the feature isn't used.
+
+    if (cc->dirInput[0] == '\0')
         {
-        curDir = opendir(cc->dirInput);
+        fputs("(cr3447 ) No card reader directory has been specified on the device declaration.\n", out);
+        fputs("(cr3447 ) The 'Load Next Deck' request is ignored.\n", out);
 
-        /*
-        **  Scan the input directory (if specified)
-        **  for the oldest file queued.
-        */
+        return;
+        }
 
-        do
+    curDir = opendir(cc->dirInput);
+
+    /*
+    **  Scan the input directory (if specified)
+    **  for the oldest file queued.
+    **  If one is found, we replace the
+    **  asterisk with the name of the found file.
+    **  and continue processing.
+    */
+
+    do
+        {
+        curDirEntry = readdir(curDir);
+        if (curDirEntry == NULL)
             {
-            curDirEntry = readdir(curDir);
-            if (curDirEntry == NULL)
-                {
-                continue;
-                }
+            continue;
+            }
 
-            //  Pop over the dot (.) directories
-            if (curDirEntry->d_name[0] == '.')
-                {
-                continue;
-                }
-#if defined(SAFECALLS)
-            sprintf_s(strWork, sizeof(strWork), "%s/%s", cc->dirInput, curDirEntry->d_name);
-#else
-            sprintf(strWork, "%s/%s", cc->dirInput, curDirEntry->d_name);
-#endif
-
-            stat(strWork, &s);
-            if (fOldest[0] == '\0')
+        //  Pop over the dot (.) directories
+        if (curDirEntry->d_name[0] == '.')
+            {
+            continue;
+            }
+        sprintf(strWork, "%s/%s", cc->dirInput, curDirEntry->d_name);
+        stat(strWork, &s);
+        if (fOldest[0] == '\0')
+            {
+            strcpy(fOldest, strWork);
+            tOldest = s.st_ctime;
+            }
+        else
+            {
+            if (s.st_ctime > tOldest)
                 {
                 strcpy(fOldest, strWork);
                 tOldest = s.st_ctime;
                 }
-            else
-                {
-                if (s.st_ctime > tOldest)
-                    {
-                    strcpy(fOldest, strWork);
-                    tOldest = s.st_ctime;
-                    }
-                }
-            } while (curDirEntry != NULL);
-        if (fOldest[0] != '\0')
-            {
-            printf("(cr3447 ) Dequeueing Unprocessed File '%s'.\n", fOldest);
-            strcpy(str, fOldest);
             }
-        }
+        } while (curDirEntry != NULL);
 
-    if (stat(str, &s) != 0)
+    if (fOldest[0] != '\0')
         {
-        fprintf(stderr, "(cr3447 ) The Input location specified '%s' does not exist.\n", str);
+        fprintf(out, "(cr3447 ) Dequeueing Unprocessed File '%s' from '%s'.\n", fOldest, cc->dirInput);
 
-        return;
+        /*
+        **  To complement the functionality of the operator.c process,
+        **  there is an expectation that the file provided must be
+        **  preprocessed.
+        **
+        **  When the input file is dequeued, and if there exists a
+        **  crOutDir, then we MOVE the file to the output directory
+        **  before dequeueing it.
+        **
+        **  if there is no output directory, we don't bother changing
+        **  the name.
+        */
+        strcpy(fname, fOldest);
+        cr3447SwapInOut(cc, fname, out);
+        }
+    else
+        {
+        fprintf(out, "(cr3447 ) No files found in '%s'.\n", cc->dirInput);
         }
 
+    return;
+    }
 
-    fcb = fopen(str, "r");
+/*--------------------------------------------------------------------------
+**  Purpose:        Cleanup files located in the dirInput
+**                  virtual card reader hopper.
+**
+**  Parameters:     Name        Description.
+**                  fname       (in) string buffer for file name
+**                              to be tested for removal.
+**                  channelNo   Channel number of card reader
+**                  equipmentNo Equipment number of card reader
+**                  out         DtCyber operator output file
+**                  params      Parameter list supplied on command line
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cr3447PostProcess(char *fname, int channelNo, int equipmentNo, FILE *out, char *params)
+    {
+    CrContext *cc;
+    DevSlot   *dp;
 
     /*
-    **  Check if the open succeeded.
+    **  Locate the device control block.
     */
-    if (fcb == NULL)
+
+    dp = channelFindDevice((u8)channelNo, DtCr405);
+    if (dp == NULL)
         {
-        printf("(cr3447 ) Failed to open %s\n", str);
+        return;
+        }
+
+    cc = (CrContext *)(dp->context[0]);
+
+    bool hasNoInputDir = (cc->dirInput[0] == '\0');
+
+    if (hasNoInputDir)
+        {
+        fprintf(out, "(cr3447 ) Submitted Deck '%s' Processing Complete.\n", fname);
 
         return;
         }
 
-    dp->fcb[0] = fcb;
-    cc->status = StCr3447Ready;
-    cr3447NextCard(dp, cc, out);
+    bool isFromInput = (
+        strncmp(
+            fname, cc->dirInput,
+            strlen(cc->dirInput)
+            ) == 0);
 
-    activeDevice = channelFindDevice((u8)channelNo, DtDcc6681);
-    dcc6681Interrupt((cc->status & cc->intMask) != 0);
+    //  There should be no expectation that the file needs to be preserved
 
-#if defined (SAFECALLS)
-    strcpy_s(cc->curFileName, sizeof(cc->curFileName), str);
-#else
-    strcpy(cc->curFileName, str);
-#endif
+    if (isFromInput)
+        {
+        fprintf(out, "(cr3447 ) Purging Submitted Deck '%s'.\n", fname);
+        unlink(fname);
+        }
+    }
 
-    printf("(cr3447 ) Loaded with '%s'\n", str);
+/*--------------------------------------------------------------------------
+**  Purpose:        Moves Input Directory File to Output Directory.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void cr3447SwapInOut(CrContext *cc, char *fName, FILE *out)
+    {
+    static char fnwork[_MAX_PATH] = "";
+
+    bool hasNoOutputDir = (cc->dirOutput[0] == '\0');
+    bool hasNoInputDir  = (cc->dirInput[0] == '\0');
+
+    //  If either directory isn't specified, just ignore the rename.
+    if (hasNoOutputDir || hasNoOutputDir)
+        {
+        return;
+        }
+
+    /*
+    **  We have both Input and Output directories
+    **      then we move it to the "output" directory
+    **      and we return the changed name in fname
+    **
+    **  Don't touch any files that aren't from the input directory
+    */
+
+    bool isFromInput = (
+        strncmp(
+            fName, cc->dirInput,
+            strlen(cc->dirInput)
+            ) == 0);
+
+    if (!isFromInput)
+        {
+        return;
+        }
+
+    /*
+    **  Perform the rename of the current file to the "Processed"
+    **  directory.  This rename will ALSO trigger the filechange
+    **  watcher.  Otherwise the operator will need to use the load
+    **  command from the console.
+    */
+
+    int fnindex = 0;
+
+    while (TRUE)
+        {
+        //  Create the new filename
+        sprintf(fnwork, "%s/%s_%04i",
+                cc->dirOutput,
+                fName + strlen(cc->dirInput) + 1,
+                fnindex);
+
+        if (rename(fName, fnwork) == 0)
+            {
+            printf("(cr3447 ) Deck '%s' moved to '%s'. (Input Preserved)\n",
+                   fName + strlen(cc->dirInput) + 1,
+                   fnwork);
+            strcpy(fName, fnwork);
+            break;
+            }
+        else
+            {
+            printf("(cr3447 ) Rename Failure on '%s' - (%s). Retrying (%d)...\n",
+                   fName + strlen(cc->dirInput) + 1,
+                   strerror(errno),
+                   fnindex);
+            }
+        fnindex++;
+        if (fnindex > 999)
+            {
+            fprintf(out, "(cr3447 ) Rename Failure on '%s' to '%s'(Retries > 999)", fName, fnwork);
+            break;
+            }
+        }
+    if (fnindex > 0)
+        {
+        printf("\n");
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -1075,93 +1286,41 @@ static void cr3447NextCard(DevSlot *up, CrContext *cc, FILE *out)
         up->fcb[0] = NULL;
         cc->status = StCr3447Eof;
 
+        fprintf(out, "(cr3447 ) End of Deck '%s' reached on channel %o equipment %o\n",
+                cc->curFileName,
+                up->channel->id,
+                up->eqNo);
 
-        printf("(cr3447 ) End of Deck '%s' reached on channel %o equipment %o\n",
-               cc->curFileName,
-               up->channel->id,
-               up->eqNo);
+        /*
+        **  At end of file, it is assumed that ALL decks have been
+        **  passed through the preprocessor and therefore have
+        **  new names of the format: CR_C%02o_E%02o_%05d
+        **  (See operator.c)
+        **
+        **  So we do a cursory test BEFORE we delete the file
+        */
+        if (strncmp("CR_", cc->curFileName, 3) == 0)
+            {
+            unlink(cc->decks[cc->outDeck]);
+            }
+        else
+            {
+            fprintf(out, "(cr3447 ) *WARNING* We are not removing file '%s'\n",
+                    cc->curFileName);
+            }
 
-        unlink(cc->decks[cc->outDeck]);
         free(cc->decks[cc->outDeck]);
         cc->outDeck = (cc->outDeck + 1) % Cr3447MaxDecks;
+
         if (cr3447StartNextDeck(up, cc, out))
             {
             return;
             }
 
-//TODO: Check this next phase and continue fixing up messages
-
-        /*
-        **  If the current file comes from the "input" directory specified
-        **      then
-        **          if the output directory exists
-        **              then we move it to the "output" directory if specified
-        **              else we remove the file from the "input" directory
-        **      else we leave it alone
-        **
-        **  clear the filename string.
-        **
-        **  If the "output" directory is specified, move the file
-        **  to the "processed" state
-        */
-        bool isFromInput = (!strncmp(cc->curFileName, cc->dirInput, strlen(cc->dirInput)));
-        if (isFromInput)
-            {
-            //  Files from the input directory are handled specially
-            if (cc->dirOutput[0] == '\0')
-                {
-                //  Once a file is closed, we can simply delete it
-                //  from the input directory.  This will also trigger
-                //  the filechange watcher who will initiate the next
-                //  file load automatically.
-
-                remove(cc->curFileName);
-                }
-            else
-                {
-                //  perform the rename of the current file to the "Processed"
-                //  directory.  This rename will ALSO trigger the filechange
-                //  watcher.  Otherwise the operator will need to use the load
-                //  command from the console.
-
-                int fnindex = 0;
-
-                while (TRUE)
-                    {
-                    //  create the file's new name
-#if defined(SAFECALLS)
-                    sprintf_s(fnwork, sizeof(fnwork), "%s/%s_%04i", cc->dirOutput, cc->curFileName + strlen(cc->dirInput) + 1, fnindex);
-#else
-                    sprintf(fnwork, "%s/%s_%04i", cc->dirOutput, cc->curFileName + strlen(cc->dirInput) + 1, fnindex);
-#endif
-
-                    if (rename(cc->curFileName, fnwork) == 0)
-                        {
-                        printf("(cr3447 ) Deck '%s' moved to '%s'. (Input Preserved)\n",
-                               cc->curFileName + strlen(cc->dirInput) + 1,
-                               fnwork);
-                        break;
-                        }
-                    else
-                        {
-                        printf("(cr3447 ) Rename Failure on '%s' - (%s). Retrying (%d)...\n",
-                               cc->curFileName + strlen(cc->dirInput) + 1,
-                               strerror(errno),
-                               fnindex);
-                        }
-                    fnindex++;
-                    } // while(TRUE)
-                if (fnindex > 0)
-                    {
-                    printf("\n");
-                    }
-                } // else
-            }     // if (isFromInput)
-
         cc->curFileName[0] = '\0';
 
         return;
-        }
+        } // if (cp == NULL)
 
     /*
     **  Deal with special first-column codes.

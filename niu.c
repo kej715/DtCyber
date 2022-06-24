@@ -779,7 +779,6 @@ static void niuDisconnect(void)
 **------------------------------------------------------------------------*/
 static void niuCheckIo(void)
     {
-    int       activeCount;
     PortParam *availablePort;
 
 #if defined(_WIN32)

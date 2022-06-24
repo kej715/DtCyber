@@ -204,8 +204,9 @@ typedef struct lpContext
     //  Todo: Verify that the use of this doesn't
     //        overflow over a long operating window
     bool             extUseANSI;             //  use ANSI/ASA Carriage-control characters
-    bool             extSuppress;            // suppress next post-print spacing op
-    bool             extPostPrint;           // all spacing occurs in post-print mode
+    bool             extBurst;               //  bursting option for forced segmentation at EOJ
+    bool             extSuppress;            //  suppress next post-print spacing op
+    bool             extPostPrint;           //  all spacing occurs in post-print mode
     char             extPath[_MAX_PATH + 1]; //  preserve the device folder path
     } LpContext;
 
@@ -215,7 +216,7 @@ typedef struct lpContext
 **  Private Function Prototypes
 **  ---------------------------
 */
-static void lp3000Init(u8 unitNo, u8 eqNo, u8 channelNo, int flags, bool useANSI, char *devicePath);
+static void lp3000Init(u8 unitNo, u8 eqNo, u8 channelNo, int flags, bool useANSI, bool burstMode, char *devicePath);
 static FcStatus lp3000Func(PpWord funcCode);
 static void lp3000Io(void);
 static void lp3000Activate(void);
@@ -272,11 +273,14 @@ static int    linePos = 0;
 **------------------------------------------------------------------------*/
 void lp501Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
     {
-    int  flags   = Lp3000Type501;
-    bool useANSI = TRUE;
+    int  flags    = Lp3000Type501;
+    bool useANSI  = TRUE;
+    bool bursting = FALSE;
+
     char *deviceType;
     char *devicePath;
     char *deviceMode;
+    char *burstMode;
 
 #if DEBUG
     if (lp3000Log == NULL)
@@ -296,11 +300,13 @@ void lp501Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
     **
     **      <DeviceType> (NULL(="3555")|"3555"|"3512")
     **      <OutputMode> ("ASCII"|"ANSI")
+    **      <BurstingMode> ("Burst"|"NoBurst")
     **
     */
     deviceType = strtok(deviceParams, ","); //  "3555" | "3152"
     devicePath = strtok(NULL, ",");         //  Get the Path (subdirectory)
-    deviceMode = strtok(NULL, ",");
+    deviceMode = strtok(NULL, ",");         //  Ascii or Ansi
+    burstMode  = strtok(NULL, ",");         //  Indication for bursting
 
     if ((deviceMode) != NULL)
         {
@@ -316,9 +322,37 @@ void lp501Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
             }
         else
             {
-            useANSI = FALSE;
+            fprintf(stderr, "(lp3000 ) lp501 Unrecognized TRANSLATION mode '%s'\n", deviceMode);
+            exit(1);
             }
         }
+    fprintf(stderr, "(lp3000 ) lp501 Translation mode '%s'\n", (useANSI ? "ANSI" : "ASCII"));
+
+    /*
+    **  This is an optional parameter, therefore the default prevails
+    **  lack of presence will not constitute failure.
+    */
+    if ((burstMode) != NULL)
+        {
+        burstMode = dtStrLwr(burstMode);         //  pick up "ansi" or "ascii" flag
+        bursting  = TRUE;                        //  Default
+        if (strcmp(burstMode, "burst") == 0)
+            {
+            bursting = TRUE;
+            }
+        else if (strcmp(burstMode, "noburst") == 0)
+            {
+            bursting = FALSE;
+            }
+        else
+            {
+            fprintf(stderr, "(lp3000 ) lp501 Unrecognized BURST mode '%s'\n", burstMode);
+            exit(1);
+            }
+        }
+
+    fprintf(stderr, "(lp3000 ) lp501 Burst mode '%s'\n", (burstMode ? "Bursting" : "Non-Bursting (Default)"));
+
 
     if ((deviceType == NULL)
         || (strcmp(deviceType, "3555") == 0))
@@ -331,11 +365,11 @@ void lp501Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
         }
     else
         {
-        fprintf(stderr, "(lp3000 ) Unrecognized LP501 controller type %s\n", deviceType);
+        fprintf(stderr, "(lp3000 ) lp501 Unrecognized lp501 controller type '%s'\n", deviceType);
         exit(1);
         }
 
-    lp3000Init(unitNo, eqNo, channelNo, flags, useANSI, devicePath);
+    lp3000Init(unitNo, eqNo, channelNo, flags, useANSI, burstMode, devicePath);
     }
 
 /*--------------------------------------------------------------------------
@@ -356,11 +390,14 @@ void lp501Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
 **------------------------------------------------------------------------*/
 void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
     {
-    int  flags   = Lp3000Type512;
-    bool useANSI = TRUE;
+    int  flags    = Lp3000Type512;
+    bool useANSI  = TRUE;
+    bool bursting = FALSE;
+
     char *deviceType;
     char *devicePath;
     char *deviceMode;
+    char *burstMode;
 
 #if DEBUG
     if (lp3000Log == NULL)
@@ -383,11 +420,13 @@ void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
     **
     **      <DeviceType> (NULL(="3555")|"3555"|"3512")
     **      <OutputMode> ("ASCII"|"ANSI")
+    **      <BurstingMode> ("Burst"|"NoBurst")
     **
     */
     deviceType = strtok(deviceParams, ","); //  "3555" | "3152"
     devicePath = strtok(NULL, ",");         //  Get the Path (subdirectory)
     deviceMode = strtok(NULL, ",");         //  pick up "ansi" or "ascii" flag
+    burstMode  = strtok(NULL, ",");         //  Indication for bursting
 
     if ((deviceMode) != NULL)
         {
@@ -403,9 +442,37 @@ void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
             }
         else
             {
-            useANSI = FALSE;
+            fprintf(stderr, "(lp3000 ) lp512 Unrecognized TRANSLATION mode '%s'\n", deviceMode);
+            exit(1);
             }
         }
+    fprintf(stderr, "(lp3000 ) lp512 Translation mode '%s'\n", (useANSI ? "ANSI" : "ASCII"));
+
+    /*
+    **  This is an optional parameter, therefore the default prevails
+    **  lack of presence will not constitute failure.
+    */
+    if ((burstMode) != NULL)
+        {
+        burstMode = dtStrLwr(burstMode);         //  pick up "ansi" or "ascii" flag
+        bursting  = TRUE;                        //  Default
+        if (strcmp(burstMode, "burst") == 0)
+            {
+            bursting = TRUE;
+            }
+        else if (strcmp(burstMode, "noburst") == 0)
+            {
+            bursting = FALSE;
+            }
+        else
+            {
+            fprintf(stderr, "(lp3000 ) lp512 Unrecognized BURST mode '%s'\n", burstMode);
+            exit(1);
+            }
+        }
+
+    fprintf(stderr, "(lp3000 ) lp512 Burst mode '%s'\n", (burstMode ? "Bursting" : "Non-Bursting (Default)"));
+
 
     if ((deviceType == NULL)
         || (strcmp(deviceType, "3555") == 0))
@@ -418,11 +485,11 @@ void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
         }
     else
         {
-        fprintf(stderr, "(lp3000 ) Unrecognized LP512 controller type %s\n", deviceType);
+        fprintf(stderr, "(lp3000 ) Unrecognized lp512 controller type %s\n", deviceType);
         exit(1);
         }
 
-    lp3000Init(unitNo, eqNo, channelNo, flags, useANSI, devicePath);
+    lp3000Init(unitNo, eqNo, channelNo, flags, useANSI, burstMode, devicePath);
     }
 
 /*
@@ -444,7 +511,7 @@ void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void lp3000Init(u8 unitNo, u8 eqNo, u8 channelNo, int flags, bool useANSI, char *deviceName)
+static void lp3000Init(u8 unitNo, u8 eqNo, u8 channelNo, int flags, bool useANSI, bool burstMode, char *deviceName)
     {
     DevSlot   *up;
     char      fName[_MAX_PATH];
@@ -485,6 +552,7 @@ static void lp3000Init(u8 unitNo, u8 eqNo, u8 channelNo, int flags, bool useANSI
     lc->extCurLine   = 1;               //  1 = Initialized
     lc->extSuppress  = FALSE;           //  Clear Suppress Print
     lc->extPostPrint = TRUE;            //  Post-Print Mode by Default
+    lc->extBurst     = burstMode;       //  Whether or not we force segmentation at EOJ
     lc->extUseANSI   = useANSI;         //  Indicate how to handle Carriage Control
     lc->channelNo    = channelNo;
     lc->unitNo       = unitNo;
@@ -722,14 +790,14 @@ void lp3000RemovePaper(char *params, FILE *out)
                       iSuffix);
 #else
             sprintf(fNameNew, "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d",
-                lc->extPath,
-                t.tm_year + 1900,
-                t.tm_mon + 1,
-                t.tm_mday,
-                t.tm_hour,
-                t.tm_min,
-                t.tm_sec,
-                iSuffix);
+                    lc->extPath,
+                    t.tm_year + 1900,
+                    t.tm_mon + 1,
+                    t.tm_mday,
+                    t.tm_hour,
+                    t.tm_min,
+                    t.tm_sec,
+                    iSuffix);
 #endif
 
             if (rename(fName, fNameNew) == 0)
@@ -859,12 +927,11 @@ static FcStatus lp3000Func(PpWord funcCode)
             fflush(fcb);
             channelId = (int)active3000Device->channel->id;
             deviceId  = (int)active3000Device->eqNo;
-#if defined(SAFECALLS)
-            sprintf_s(dispLpDevId, sizeof(dispLpDevId), "%o,%o", channelId, deviceId);
-#else
             sprintf(dispLpDevId, "%o,%o", channelId, deviceId);
-#endif
-            lp3000RemovePaper(dispLpDevId, stdout);
+            if (lc->extBurst)
+                {
+                lp3000RemovePaper(dispLpDevId, stdout);
+                }
             lc->isPrinted = FALSE;
             }
 

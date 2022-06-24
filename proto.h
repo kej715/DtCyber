@@ -140,6 +140,8 @@ void mt5744ShowTapeStatus(FILE *out);
 **  cr405.c
 */
 void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, FILE *out, char *params);
+void cr405PostProcess(char *fname, int channelNo, int equipmentNo, FILE *out, char *params);
 void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char *params);
 void cr405ShowStatus(void);
 
@@ -154,6 +156,8 @@ void cp3446ShowStatus(void);
 **  cr3447.c
 */
 void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void cr3447GetNextDeck(char *fname, int channelNo, int equipmentNo, FILE *out, char *params);
+void cr3447PostProcess(char *fname, int channelNo, int equipmentNo, FILE *out, char *params);
 void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char *params);
 void cr3447ShowStatus(void);
 
@@ -215,6 +219,13 @@ void ddpInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 
 /*
+**  msufrend.c
+*/
+void msuFrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void msuFrendTalkToFrend(void);
+void msuFrendSendInterruptToFrend(void);
+
+/*
 **  mux6676.c
 */
 void mux6671Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
@@ -246,12 +257,11 @@ bool niuPresent(void);
 void niuLocalKey(u16 key, int stat);
 void niuSetOutputHandler(niuProcessOutput *h, int stat);
 
+
 /*
-**  msufrend.c
+**  operator.c
 */
-void msuFrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void msuFrendTalkToFrend(void);
-void msuFrendSendInterruptToFrend(void);
+void opCmdLoadCards(bool help, char *cmdParams);
 
 /*
 **  pci_channel_{win32,linux}.c
@@ -264,9 +274,9 @@ void pciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void pciConsoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 
 /*
-**	string.c
+**  string.c
 */
-char* dtStrLwr(char* str);
+char * dtStrLwr(char *str);
 
 /*
 **  time.c
