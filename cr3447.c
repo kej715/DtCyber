@@ -365,7 +365,7 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         }
 
-    fprintf(stderr, "(cr405  ) Card Code selected '%s'\n", xlateTable);
+    fprintf(stderr, "(cr3447 ) Card Code selected '%s'\n", (cc->table == asciiTo029) ? "029" : "026");
 
     /*
     **  Incorrect specifications for input / output directories
@@ -387,13 +387,8 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             fprintf(stderr, "(cr3447 ) The Output location specified '%s' is not a directory.\n", crOutput);
             exit(1);
             }
-#if defined(SAFECALLS)
-        strcpy_s(threadParms->outDoneDir, sizeof(threadParms->outDoneDir), crOutput);
-        strcpy_s(cc->dirOutput, sizeof(cc->dirOutput), crOutput);
-#else
         strcpy(threadParms->outDoneDir, crOutput);
         strcpy(cc->dirOutput, crOutput);
-#endif
         fprintf(stderr, "(cr3447 ) Submissions will be preserved in '%s'.\n", crOutput);
         }
     else
