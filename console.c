@@ -10,12 +10,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -43,17 +43,17 @@
 /*
 **  CDC 6612 console functions and status codes.
 */
-#define Fc6612Sel64CharLeft     07000
-#define Fc6612Sel32CharLeft     07001
-#define Fc6612Sel16CharLeft     07002
+#define Fc6612Sel64CharLeft      07000
+#define Fc6612Sel32CharLeft      07001
+#define Fc6612Sel16CharLeft      07002
 
-#define Fc6612Sel512DotsLeft    07010
-#define Fc6612Sel512DotsRight   07110
-#define Fc6612SelKeyIn          07020
+#define Fc6612Sel512DotsLeft     07010
+#define Fc6612Sel512DotsRight    07110
+#define Fc6612SelKeyIn           07020
 
-#define Fc6612Sel64CharRight    07100
-#define Fc6612Sel32CharRight    07101
-#define Fc6612Sel16CharRight    07102
+#define Fc6612Sel64CharRight     07100
+#define Fc6612Sel32CharRight     07101
+#define Fc6612Sel16CharRight     07102
 
 /*
 **  -----------------------
@@ -88,17 +88,17 @@ static void consoleDisconnect(void);
 **  Private Variables
 **  -----------------
 */
-static u8 currentFont;
-static u16 currentOffset;
+static u8   currentFont;
+static u16  currentOffset;
 static bool emptyDrop = FALSE;
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise 6612 console.
@@ -122,11 +122,11 @@ void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     dp = channelAttach(channelNo, eqNo, DtConsole);
 
-    dp->activate = consoleActivate;
-    dp->disconnect = consoleDisconnect;
+    dp->activate     = consoleActivate;
+    dp->disconnect   = consoleDisconnect;
     dp->selectedUnit = 0;
-    dp->func = consoleFunc;
-    dp->io = consoleIo;
+    dp->func         = consoleFunc;
+    dp->io           = consoleIo;
 
     /*
     **  Initialise (X)Windows environment.
@@ -136,7 +136,7 @@ void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Print a friendly message.
     */
-    printf("Console initialised on channel %o\n", channelNo);
+    printf("(console) Initialised on channel %o\n", channelNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -155,52 +155,52 @@ static FcStatus consoleFunc(PpWord funcCode)
     switch (funcCode)
         {
     default:
-        return(FcDeclined);
+        return (FcDeclined);
 
     case Fc6612Sel512DotsLeft:
-        currentFont = FontDot;
+        currentFont   = FontDot;
         currentOffset = OffLeftScreen;
         windowSetFont(currentFont);
         break;
 
     case Fc6612Sel512DotsRight:
-        currentFont = FontDot;
+        currentFont   = FontDot;
         currentOffset = OffRightScreen;
         windowSetFont(currentFont);
         break;
 
     case Fc6612Sel64CharLeft:
-        currentFont = FontSmall;
+        currentFont   = FontSmall;
         currentOffset = OffLeftScreen;
         windowSetFont(currentFont);
         break;
 
     case Fc6612Sel32CharLeft:
-        currentFont = FontMedium;
+        currentFont   = FontMedium;
         currentOffset = OffLeftScreen;
         windowSetFont(currentFont);
         break;
 
     case Fc6612Sel16CharLeft:
-        currentFont = FontLarge;
+        currentFont   = FontLarge;
         currentOffset = OffLeftScreen;
         windowSetFont(currentFont);
         break;
 
     case Fc6612Sel64CharRight:
-        currentFont = FontSmall;
+        currentFont   = FontSmall;
         currentOffset = OffRightScreen;
         windowSetFont(currentFont);
         break;
 
     case Fc6612Sel32CharRight:
-        currentFont = FontMedium;
+        currentFont   = FontMedium;
         currentOffset = OffRightScreen;
         windowSetFont(currentFont);
         break;
 
     case Fc6612Sel16CharRight:
-        currentFont = FontLarge;
+        currentFont   = FontLarge;
         currentOffset = OffRightScreen;
         windowSetFont(currentFont);
         break;
@@ -210,7 +210,8 @@ static FcStatus consoleFunc(PpWord funcCode)
         }
 
     activeDevice->fcode = funcCode;
-    return(FcAccepted);
+
+    return (FcAccepted);
     }
 
 /*--------------------------------------------------------------------------
@@ -303,19 +304,19 @@ static void consoleIo(void)
 
     case Fc6612SelKeyIn:
         windowGetChar();
-        activeChannel->data = 0;
-        activeChannel->full = TRUE;
+        activeChannel->data   = 0;
+        activeChannel->full   = TRUE;
         activeChannel->status = 0;
-        activeDevice->fcode = 0;
+        activeDevice->fcode   = 0;
         if (ppKeyIn != 0)
             {
             activeChannel->data = asciiToConsole[ppKeyIn];
-            ppKeyIn = 0;
+            ppKeyIn             = 0;
             }
         else if (opKeyIn != 0)
             {
             activeChannel->data = asciiToConsole[opKeyIn];
-            opKeyIn = 0;
+            opKeyIn             = 0;
             }
         break;
         }

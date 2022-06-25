@@ -2,19 +2,19 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source Files">
-      <UniqueIdentifier>{559c179e-8680-4be0-a9e6-186206940ad9}</UniqueIdentifier>
+      <UniqueIdentifier>{8bc646f4-d9be-4483-9a2b-6b740598284f}</UniqueIdentifier>
       <Extensions>cpp;c;cxx;rc;def;r;odl;idl;hpj;bat</Extensions>
     </Filter>
     <Filter Include="Header Files">
-      <UniqueIdentifier>{431ae8e3-ea48-4706-b754-70b271fe367e}</UniqueIdentifier>
+      <UniqueIdentifier>{b81cde6c-4527-419b-b334-a4064799f6d5}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl</Extensions>
     </Filter>
     <Filter Include="Resource Files">
-      <UniqueIdentifier>{0dd9767b-a442-40f4-9be4-76e00f478b83}</UniqueIdentifier>
+      <UniqueIdentifier>{e1bec55f-acc7-460c-a9aa-f3f28ea6198b}</UniqueIdentifier>
       <Extensions>ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe</Extensions>
     </Filter>
     <Filter Include="Other Files">
-      <UniqueIdentifier>{d80e2967-a5c5-4a19-b5e5-978721be4de5}</UniqueIdentifier>
+      <UniqueIdentifier>{96ca3a84-a1f7-479a-b2ff-f09aec1dc445}</UniqueIdentifier>
       <Extensions>*.ini</Extensions>
     </Filter>
   </ItemGroup>
@@ -56,6 +56,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="device.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dsa311.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dump.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="float.c">
@@ -133,6 +139,9 @@
     <ClCompile Include="pp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="rtc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="scr_channel.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -142,52 +151,55 @@
     <ClCompile Include="tpmux.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="window_x11.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="niu.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="mdi.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="dsa311.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="npu_hasp.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="npu_nje.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="cdcnet.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="mt5744.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="cray_station.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="rtc.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="dd885-42.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="time.c">
+    <ClCompile Include="trace.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="window_win32.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dump.c">
+    <ClCompile Include="window_x11.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="trace.c">
+    <ClCompile Include="fsmon.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="rtc_rdtsc.c">
+    <ClCompile Include="dirent_win.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cdcnet.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="mdi.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dd885-42.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cray_station.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="mt5744.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="npu_nje.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="npu_hasp.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="time.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="niu.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\DtCyber.kej715\msufrend.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\DtCyber.kej715\msufrend_util.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="string.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="msufrend.c">
@@ -219,20 +231,33 @@
     <ClInclude Include="types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="msufrend_util.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="dcc6681.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dirent_win.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\DtCyber.kej715\msufrend_util.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="version.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="console.ICO">
+    <Image Include="console.ICO">
       <Filter>Resource Files</Filter>
-    </None>
-    <None Include="small.ico">
+    </Image>
+    <Image Include="small.ico">
       <Filter>Resource Files</Filter>
-    </None>
-    <None Include="..\OldCDrive\Cyber\Develop\DtCyber\work\cyber.ini">
-      <Filter>Other Files</Filter>
-    </None>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="window.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
     <None Include="Makefile.freebsd32">
       <Filter>Other Files</Filter>
     </None>
@@ -254,10 +279,17 @@
     <None Include="Makefile.solaris64">
       <Filter>Other Files</Filter>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="window.rc">
-      <Filter>Resource Files</Filter>
-    </ResourceCompile>
+    <None Include="x64Debug.iss">
+      <Filter>Other Files</Filter>
+    </None>
+    <None Include="x64Release.iss">
+      <Filter>Other Files</Filter>
+    </None>
+    <None Include="x86Debug.iss">
+      <Filter>Other Files</Filter>
+    </None>
+    <None Include="x86Release.iss">
+      <Filter>Other Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

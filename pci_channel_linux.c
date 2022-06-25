@@ -10,12 +10,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -23,7 +23,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -54,22 +54,22 @@
 **  -----------------
 */
 
-#define PciCmdNop           0x0000
-#define PciCmdFunction      0x2000
-#define PciCmdFull          0x4000
-#define PciCmdEmpty         0x6000
-#define PciCmdActive        0x8000
-#define PciCmdInactive      0xA000
-#define PciCmdClear         0xC000
-#define PciCmdMasterClear   0xE000
+#define PciCmdNop            0x0000
+#define PciCmdFunction       0x2000
+#define PciCmdFull           0x4000
+#define PciCmdEmpty          0x6000
+#define PciCmdActive         0x8000
+#define PciCmdInactive       0xA000
+#define PciCmdClear          0xC000
+#define PciCmdMasterClear    0xE000
 
-#define PciStaFull          0x2000
-#define PciStaActive        0x4000
-#define PciStaBusy          0x8000
+#define PciStaFull           0x2000
+#define PciStaActive         0x4000
+#define PciStaBusy           0x8000
 
-#define PciMaskData         0x0FFF
-#define PciMaskParity       0x1000
-#define PciShiftParity      12
+#define PciMaskData          0x0FFF
+#define PciMaskParity        0x1000
+#define PciShiftParity       12
 
 /*
 **  -----------------------
@@ -84,8 +84,8 @@
 */
 typedef struct pciParam
     {
-    int         fdPci;
-    int         data;
+    int fdPci;
+    int data;
     } PciParam;
 
 /*
@@ -118,20 +118,20 @@ static u16 pciParity(PpWord val);
 **  -----------------
 */
 static PciParam *pci;
-static IoCB io;
+static IoCB     io;
 
 #if DEBUG
 static FILE *pciLog = NULL;
-static bool active = FALSE;
+static bool active  = FALSE;
 #endif
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise PCI channel interface.
 **
@@ -161,16 +161,16 @@ void pciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Attach device to channel and initialise device control block.
     */
-    dp = channelAttach(channelNo, eqNo, DtPciChannel);
-    dp->activate = pciActivate;
+    dp             = channelAttach(channelNo, eqNo, DtPciChannel);
+    dp->activate   = pciActivate;
     dp->disconnect = pciDisconnect;
-    dp->func = pciFunc;
-    dp->io = pciIo;
-    dp->flags = pciFlags;
-    dp->in = pciIn;
-    dp->out = pciOut;
-    dp->full = pciFull;
-    dp->empty = pciEmpty;
+    dp->func       = pciFunc;
+    dp->io         = pciIo;
+    dp->flags      = pciFlags;
+    dp->in         = pciIn;
+    dp->out        = pciOut;
+    dp->full       = pciFull;
+    dp->empty      = pciEmpty;
 
     /*
     **  Allocate and initialise channel parameters.
@@ -198,12 +198,12 @@ void pciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Execute function code on channel.
@@ -226,7 +226,7 @@ static FcStatus pciFunc(PpWord funcCode)
 
     pciCmd(PciCmdFunction | funcCode | (pciParity(funcCode) << PciShiftParity));
 
-    return(FcAccepted);
+    return (FcAccepted);
     }
 
 /*--------------------------------------------------------------------------
@@ -257,7 +257,7 @@ static PpWord pciIn(void)
     fprintf(pciLog, " I(%03X)", data);
 #endif
 
-    return(data);
+    return (data);
     }
 
 /*--------------------------------------------------------------------------
@@ -355,9 +355,10 @@ static u16 pciFlags(void)
         {
 //        fprintf(pciLog, " S(%04X)", s);
         }
-    return(s);
+
+    return (s);
 #else
-    return(pciStatus());
+    return (pciStatus());
 #endif
     }
 
@@ -398,7 +399,8 @@ static u16 pciStatus(void)
 
     io.address = 0;
     ioctl(pci->fdPci, IOCTL_FPGA_READ, &io);
-    return(io.data);
+
+    return (io.data);
     }
 
 /*--------------------------------------------------------------------------
@@ -416,12 +418,11 @@ static u16 pciParity(PpWord data)
 
     while (data != 0)
         {
-        ret ^= data & 1;
+        ret   ^= data & 1;
         data >>= 1;
         }
 
-    return(ret);
+    return (ret);
     }
 
 /*---------------------------  End Of File  ------------------------------*/
-

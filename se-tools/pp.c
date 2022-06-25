@@ -4,7 +4,7 @@
 #include <string.h>
 
 #define FALSE       0
-#define MAX_LINE 1024
+#define MAX_LINE    1024
 #define TRUE        1
 
 static void processSwitch(void);
@@ -17,17 +17,19 @@ int main(int argc, char *argv[])
 
     while (fgets(line, MAX_LINE, stdin))
         {
-        if (strcmp(line, "void *\n") == 0
-            || strcmp(line, "static void *\n") == 0)
+        if ((strcmp(line, "void *\n") == 0)
+            || (strcmp(line, "static void *\n") == 0))
             {
             for (cp = line; *cp != '\n'; cp++)
-                ;
+                {
+                }
             *cp = '\0';
             }
         fputs(line, stdout);
         for (cp = line; isspace(*cp); cp++)
-            ;
-        if (*cp != '\0' && strncmp(cp, "switch (", 8) == 0)
+            {
+            }
+        if ((*cp != '\0') && (strncmp(cp, "switch (", 8) == 0))
             {
             processSwitch();
             }
@@ -37,7 +39,7 @@ int main(int argc, char *argv[])
 static void processSwitch(void)
     {
     char *cp;
-    int swIndent;
+    int  swIndent;
 
     //
     // First line assumed to be open brace of switch body
@@ -52,7 +54,8 @@ static void processSwitch(void)
     // of blanks is assumed to be the end of the switch body.
     //
     for (cp = line; isspace(*cp); cp++)
-        ;
+        {
+        }
     if (*cp != '{')
         {
         fputs("Invalid switch statement: '{' of body missing\n", stderr);
@@ -64,11 +67,13 @@ static void processSwitch(void)
     while (fgets(line, MAX_LINE, stdin))
         {
         for (cp = line; isspace(*cp); cp++)
-            ;
-        if (*cp == '}' && (cp - line) == swIndent)
+            {
+            }
+        if ((*cp == '}') && ((cp - line) == swIndent))
             {
             fputs("    ", stdout);
             fputs(line, stdout);
+
             return;
             }
         fputs(line, stdout);

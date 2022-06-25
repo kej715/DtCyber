@@ -15,12 +15,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <htlp://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -28,7 +28,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -64,8 +64,8 @@
 **  Private Constants
 **  -----------------
 */
-#define MaxIdleTime 15
-#define MaxTrunks   16
+#define MaxIdleTime    15
+#define MaxTrunks      16
 
 /*
 **  -----------------------
@@ -73,12 +73,12 @@
 **  -----------------------
 */
 #if DEBUG
-#define HexColumn(x) (3 * (x) + 4)
-#define AsciiColumn(x) (HexColumn(16) + 2 + (x))
-#define LogLineLength (AsciiColumn(16))
+#define HexColumn(x)      (3 * (x) + 4)
+#define AsciiColumn(x)    (HexColumn(16) + 2 + (x))
+#define LogLineLength    (AsciiColumn(16))
 #endif
 #if defined(_WIN32)
-#define strcasecmp _stricmp
+#define strcasecmp       _stricmp
 #endif
 
 /*
@@ -98,10 +98,12 @@ static bool npuLipProcessConnectRequest(Pcb *pcbp);
 static bool npuLipProcessConnectResponse(Pcb *pcbp);
 static bool npuLipSendConnectRequest(Pcb *pcbp);
 static void npuLipSendQueuedData(Pcb *pcbp);
+
 #if DEBUG
-static void npuLipLogBytes (u8 *bytes, int len);
-static void npuLipLogFlush (void);
+static void npuLipLogBytes(u8 *bytes, int len);
+static void npuLipLogFlush(void);
 static void npuLipPrintStackTrace(FILE *fp);
+
 #endif
 
 /*
@@ -119,16 +121,16 @@ u8 npuLipTrunkCount = 0;
 #if DEBUG
 static FILE *npuLipLog = NULL;
 static char npuLipLogBuf[LogLineLength + 1];
-static int npuLipLogBytesCol = 0;
+static int  npuLipLogBytesCol = 0;
 #endif
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Handles notification of a network connection from NET.
@@ -158,6 +160,7 @@ bool npuLipNotifyNetConnect(Pcb *pcbp, bool isPassive)
         fprintf(npuLipLog, "Port %02x: trunk connection request completed\n", pcbp->claPort);
 #endif
         }
+
     return TRUE;
     }
 
@@ -209,7 +212,7 @@ void npuLipPresetPcb(Pcb *pcbp)
     pcbp->controls.lip.stagingBuf = (u8 *)malloc(MaxBuffer);
     if (pcbp->controls.lip.stagingBuf == NULL)
         {
-        fputs("LIP: Failed to allocate buffer for LCB\n", stderr);
+        fputs("(npu_lip) Failed to allocate buffer for LCB\n", stderr);
         exit(1);
         }
     pcbp->controls.lip.stagingBufPtr = pcbp->controls.lip.stagingBuf;
@@ -238,7 +241,7 @@ void npuLipProcessUplineData(Pcb *pcbp)
 #endif
 
     pcbp->controls.lip.lastExchange = getSeconds();
-    pcbp->controls.lip.inputIndex = 0;
+    pcbp->controls.lip.inputIndex   = 0;
 
     while (pcbp->controls.lip.inputIndex < pcbp->inputCount)
         {
@@ -247,6 +250,7 @@ void npuLipProcessUplineData(Pcb *pcbp)
         case StTrunkDisconnected:
             // discard any data received while disconnected
             return;
+
         case StTrunkRcvConnReq:
             if ((pcbp->controls.lip.stagingBufPtr - pcbp->controls.lip.stagingBuf) + pcbp->inputCount < MaxBuffer)
                 {
@@ -264,10 +268,12 @@ void npuLipProcessUplineData(Pcb *pcbp)
                 }
             else
                 {
-                fputs("LIP: Staging buffer overflow during connection establishment\n", stderr);
+                fputs("(npu_lip) Staging buffer overflow during connection establishment\n", stderr);
                 pcbp->controls.lip.state = StTrunkDisconnected;
                 }
+
             return;
+
         case StTrunkRcvConnResp:
             if ((pcbp->controls.lip.stagingBufPtr - pcbp->controls.lip.stagingBuf) + pcbp->inputCount < MaxBuffer)
                 {
@@ -289,28 +295,32 @@ void npuLipProcessUplineData(Pcb *pcbp)
                 }
             else
                 {
-                fputs("LIP: Staging buffer overflow during connection establishiment\n", stderr);
+                fputs("(npu_lip) Staging buffer overflow during connection establishiment\n", stderr);
                 pcbp->controls.lip.state = StTrunkDisconnected;
                 }
+
             return;
+
         case StTrunkRcvBlockLengthHi:
-            pcbp->controls.lip.state = StTrunkRcvBlockLengthLo;
-            pcbp->controls.lip.stagingBufPtr = pcbp->controls.lip.stagingBuf;
+            pcbp->controls.lip.state          = StTrunkRcvBlockLengthLo;
+            pcbp->controls.lip.stagingBufPtr  = pcbp->controls.lip.stagingBuf;
             *pcbp->controls.lip.stagingBufPtr = pcbp->inputData[pcbp->controls.lip.inputIndex++];
             break;
+
         case StTrunkRcvBlockLengthLo:
-            pcbp->controls.lip.state = StTrunkRcvBlockContent;
+            pcbp->controls.lip.state       = StTrunkRcvBlockContent;
             pcbp->controls.lip.blockLength = (*pcbp->controls.lip.stagingBuf << 8)
-                | pcbp->inputData[pcbp->controls.lip.inputIndex++];
+                                             | pcbp->inputData[pcbp->controls.lip.inputIndex++];
             if (pcbp->controls.lip.blockLength > MaxBuffer)
                 {
-                fprintf(stderr, "LIP: Invalid block length %d received from %s\n",
-                    pcbp->controls.lip.blockLength, pcbp->ncbp->hostName);
+                fprintf(stderr, "(npu_lip) Invalid block length %d received from %s\n",
+                        pcbp->controls.lip.blockLength, pcbp->ncbp->hostName);
 #if DEBUG
                 fprintf(npuLipLog, "Port %02x: invalid block length %d received from %s\n", pcbp->claPort,
-                    pcbp->controls.lip.blockLength, pcbp->ncbp->hostName);
+                        pcbp->controls.lip.blockLength, pcbp->ncbp->hostName);
 #endif
                 npuLipNotifyNetDisconnect(pcbp);
+
                 return;
                 }
             else if (pcbp->controls.lip.blockLength < 1)
@@ -321,20 +331,22 @@ void npuLipProcessUplineData(Pcb *pcbp)
                 pcbp->controls.lip.state = StTrunkRcvBlockLengthHi;
                 }
             break;
+
         case StTrunkRcvBlockContent:
-            stagingCount = pcbp->controls.lip.stagingBufPtr - pcbp->controls.lip.stagingBuf;
+            stagingCount   = pcbp->controls.lip.stagingBufPtr - pcbp->controls.lip.stagingBuf;
             inputRemainder = pcbp->inputCount - pcbp->controls.lip.inputIndex;
             n = (stagingCount + inputRemainder <= pcbp->controls.lip.blockLength)
                 ? inputRemainder : pcbp->controls.lip.blockLength - stagingCount;
             memcpy(pcbp->controls.lip.stagingBufPtr, pcbp->inputData + pcbp->controls.lip.inputIndex, n);
             pcbp->controls.lip.stagingBufPtr += n;
-            pcbp->controls.lip.inputIndex += n;
+            pcbp->controls.lip.inputIndex    += n;
             if (pcbp->controls.lip.stagingBufPtr - pcbp->controls.lip.stagingBuf >= pcbp->controls.lip.blockLength)
                 {
                 npuBipRequestUplineCanned(pcbp->controls.lip.stagingBuf, pcbp->controls.lip.blockLength);
                 pcbp->controls.lip.state = StTrunkRcvBlockLengthHi;
                 }
             break;
+
         default:
 #if DEBUG
             fprintf(npuLipLog, "Port %02x: invalid LIP state: %d\n", pcbp->claPort, pcbp->controls.lip.state);
@@ -357,10 +369,10 @@ void npuLipResetPcb(Pcb *pcbp)
     {
     NpuBuffer *bp;
 
-    pcbp->controls.lip.state = StTrunkDisconnected;
-    pcbp->controls.lip.lastExchange = 0;
-    pcbp->controls.lip.blockLength = 0;
-    pcbp->controls.lip.inputIndex = 0;
+    pcbp->controls.lip.state         = StTrunkDisconnected;
+    pcbp->controls.lip.lastExchange  = 0;
+    pcbp->controls.lip.blockLength   = 0;
+    pcbp->controls.lip.inputIndex    = 0;
     pcbp->controls.lip.stagingBufPtr = pcbp->controls.lip.stagingBuf;
     while ((bp = npuBipQueueExtract(&pcbp->controls.lip.outputQ)) != NULL)
         {
@@ -387,19 +399,21 @@ void npuLipTryOutput(Pcb *pcbp)
     case StTrunkDisconnected:
         // do not send output during these states
         break;
+
     case StTrunkRcvConnReq:
     case StTrunkRcvConnResp:
-        if (pcbp->controls.lip.lastExchange > 0
-            && (getSeconds() - pcbp->controls.lip.lastExchange) > MaxIdleTime)
+        if ((pcbp->controls.lip.lastExchange > 0)
+            && ((getSeconds() - pcbp->controls.lip.lastExchange) > MaxIdleTime))
             {
 #if DEBUG
             fprintf(npuLipLog, "Port %02x: timeout while establishing connection with %s\n",
-                pcbp->claPort, pcbp->ncbp->hostName);
+                    pcbp->claPort, pcbp->ncbp->hostName);
 #endif
             npuNetCloseConnection(pcbp);
             pcbp->controls.lip.state = StTrunkDisconnected;
             }
         break;
+
     case StTrunkSndConnReq:
         if (npuLipSendConnectRequest(pcbp))
             {
@@ -411,6 +425,7 @@ void npuLipTryOutput(Pcb *pcbp)
             pcbp->controls.lip.state = StTrunkDisconnected;
             }
         break;
+
     default:
         npuLipSendQueuedData(pcbp);
         break;
@@ -430,7 +445,7 @@ void npuLipTryOutput(Pcb *pcbp)
 void npuLipProcessDownlineData(NpuBuffer *bp)
     {
     int claPort;
-    u8 dn;
+    u8  dn;
     Pcb *pcbp;
 
     dn = bp->data[BlkOffDN];
@@ -444,14 +459,15 @@ void npuLipProcessDownlineData(NpuBuffer *bp)
         for (claPort = 0; claPort <= npuNetMaxClaPort; claPort++)
             {
             pcbp = npuNetFindPcb(claPort);
-            if (pcbp->ncbp && pcbp->ncbp->connType == ConnTypeTrunk
-                && pcbp->controls.lip.remoteNode == dn && pcbp->connFd > 0)
+            if (pcbp->ncbp && (pcbp->ncbp->connType == ConnTypeTrunk)
+                && (pcbp->controls.lip.remoteNode == dn) && (pcbp->connFd > 0))
                 {
                 npuBipQueueAppend(bp, &pcbp->controls.lip.outputQ);
+
                 return;
                 }
             }
-        fprintf(stderr, "LIP: Block received for unknown or disconnected node %02x\n", dn);
+        fprintf(stderr, "(npu_lip) Block received for unknown or disconnected node %02x\n", dn);
 #if DEBUG
         fprintf(npuLipLog, "Block received for unknown or disconnected node: %02x\n", dn);
 #endif
@@ -460,12 +476,12 @@ void npuLipProcessDownlineData(NpuBuffer *bp)
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Send a LIP CONNECT request to a peer.  The CONNECT
@@ -488,16 +504,17 @@ void npuLipProcessDownlineData(NpuBuffer *bp)
 static bool npuLipSendConnectRequest(Pcb *pcbp)
     {
     char request[256];
-    int len;
-    int n;
+    int  len;
+    int  n;
 
     len = sprintf(request, "CONNECT %s %u %u\n", npuNetHostID, npuSvmCouplerNode, pcbp->controls.lip.remoteNode);
-    n = send(pcbp->connFd, request, len, 0);
+    n   = send(pcbp->connFd, request, len, 0);
     if (n == len)
         {
 #if DEBUG
         fprintf(npuLipLog, "Port %02x: connect request sent to %s: %s", pcbp->claPort, pcbp->ncbp->hostName, request);
 #endif
+
         return TRUE;
         }
     else
@@ -505,6 +522,7 @@ static bool npuLipSendConnectRequest(Pcb *pcbp)
 #if DEBUG
         fprintf(npuLipLog, "Port %02x: failed to send connect request to %s: %s", pcbp->claPort, pcbp->ncbp->hostName, request);
 #endif
+
         return FALSE;
         }
     }
@@ -529,15 +547,15 @@ static bool npuLipSendConnectRequest(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 static bool npuLipProcessConnectRequest(Pcb *pcbp)
     {
-    int claPort;
+    int  claPort;
     char hostID[HostIdSize];
-    int len;
-    u8 localNode;
-    u8 peerNode;
+    int  len;
+    u8   localNode;
+    u8   peerNode;
     char response[256];
-    int status;
+    int  status;
     char *token;
-    Pcb *trunkPcbp;
+    Pcb  *trunkPcbp;
     long value;
 
 #if DEBUG
@@ -548,7 +566,7 @@ static bool npuLipProcessConnectRequest(Pcb *pcbp)
     **  Parse CONNECT request
     */
     token = strtok((char *)pcbp->controls.lip.stagingBuf, " \r\n");
-    if (token == NULL || strcasecmp(token, "CONNECT") != 0)
+    if ((token == NULL) || (strcasecmp(token, "CONNECT") != 0))
         {
         return FALSE;
         }
@@ -557,8 +575,8 @@ static bool npuLipProcessConnectRequest(Pcb *pcbp)
     **  Parse peer name.
     */
     token = strtok(NULL, " \r\n");
-    len = strlen(token);
-    if (token == NULL || len >= sizeof(hostID))
+    len   = strlen(token);
+    if ((token == NULL) || (len >= sizeof(hostID)))
         {
         return FALSE;
         }
@@ -568,11 +586,11 @@ static bool npuLipProcessConnectRequest(Pcb *pcbp)
     **  Parse peer's coupler node number.
     */
     peerNode = 0;
-    token = strtok(NULL, " ");
+    token    = strtok(NULL, " ");
     if (token != NULL)
         {
         value = strtol(token, NULL, 10);
-        if (value < 1 || value > 255)
+        if ((value < 1) || (value > 255))
             {
             return FALSE;
             }
@@ -583,11 +601,11 @@ static bool npuLipProcessConnectRequest(Pcb *pcbp)
     **  Parse this host's coupler node number, from the peer's perspective.
     */
     localNode = 0;
-    token = strtok(NULL, " ");
+    token     = strtok(NULL, " ");
     if (token != NULL)
         {
         value = strtol(token, NULL, 10);
-        if (value < 1 || value > 255)
+        if ((value < 1) || (value > 255))
             {
             return FALSE;
             }
@@ -600,9 +618,9 @@ static bool npuLipProcessConnectRequest(Pcb *pcbp)
     for (claPort = 0; claPort <= npuNetMaxClaPort; claPort++)
         {
         trunkPcbp = npuNetFindPcb(claPort);
-        if (trunkPcbp->ncbp != NULL && trunkPcbp->ncbp->connType == ConnTypeTrunk
-            && strcasecmp(trunkPcbp->ncbp->hostName, hostID) == 0
-            && peerNode == trunkPcbp->controls.lip.remoteNode)
+        if ((trunkPcbp->ncbp != NULL) && (trunkPcbp->ncbp->connType == ConnTypeTrunk)
+            && (strcasecmp(trunkPcbp->ncbp->hostName, hostID) == 0)
+            && (peerNode == trunkPcbp->controls.lip.remoteNode))
             {
             break;
             }
@@ -613,38 +631,38 @@ static bool npuLipProcessConnectRequest(Pcb *pcbp)
         if (npuSvmCouplerNode != localNode)
             {
             status = 402;
-            len = sprintf(response, "%d %s %u %u unrecognized trunk\n",
-                status, npuNetHostID, localNode, peerNode);
+            len    = sprintf(response, "%d %s %u %u unrecognized trunk\n",
+                             status, npuNetHostID, localNode, peerNode);
             }
-        else if (trunkPcbp->connFd > 0 && trunkPcbp != pcbp)
+        else if ((trunkPcbp->connFd > 0) && (trunkPcbp != pcbp))
             {
             status = 301;
-            len = sprintf(response, "%d %s %u %u already connected\n",
-                status, npuNetHostID, npuSvmCouplerNode, peerNode);
+            len    = sprintf(response, "%d %s %u %u already connected\n",
+                             status, npuNetHostID, npuSvmCouplerNode, peerNode);
             }
         else if (!npuSvmIsReady())
             {
             status = 302;
-            len = sprintf(response, "%d %s %u %u not ready\n",
-                status, npuNetHostID, npuSvmCouplerNode, peerNode);
+            len    = sprintf(response, "%d %s %u %u not ready\n",
+                             status, npuNetHostID, npuSvmCouplerNode, peerNode);
             }
         else if (!npuLipActivateTrunk(trunkPcbp))
             {
             status = 501;
-            len = sprintf(response, "%d %s %u %u resources unavailable\n",
-                status, npuNetHostID, npuSvmCouplerNode, peerNode);
+            len    = sprintf(response, "%d %s %u %u resources unavailable\n",
+                             status, npuNetHostID, npuSvmCouplerNode, peerNode);
             }
         else
             {
             status = 200;
-            len = sprintf(response, "%d %s %u %u connected\n",
-                status, npuNetHostID, npuSvmCouplerNode, peerNode);
+            len    = sprintf(response, "%d %s %u %u connected\n",
+                             status, npuNetHostID, npuSvmCouplerNode, peerNode);
             }
         }
     else
         {
         status = 401;
-        len = sprintf(response, "%d %s %u unknown peer\n", status, hostID, peerNode);
+        len    = sprintf(response, "%d %s %u unknown peer\n", status, hostID, peerNode);
         }
 
     if (send(pcbp->connFd, response, len, 0) == len)
@@ -658,14 +676,15 @@ static bool npuLipProcessConnectRequest(Pcb *pcbp)
 #endif
                 npuLipResetPcb(trunkPcbp);
                 trunkPcbp->connFd = pcbp->connFd;
-                pcbp->connFd = 0;
+                pcbp->connFd      = 0;
                 pcbp = trunkPcbp;
                 }
             pcbp->controls.lip.state = StTrunkRcvBlockLengthHi;
-            pcbp->ncbp->state = StConnConnected;
+            pcbp->ncbp->state        = StConnConnected;
 #if DEBUG
             fprintf(npuLipLog, "Port %02x: connect response sent: %s", pcbp->claPort, response);
 #endif
+
             return TRUE;
             }
         else
@@ -673,6 +692,7 @@ static bool npuLipProcessConnectRequest(Pcb *pcbp)
 #if DEBUG
             fprintf(npuLipLog, "Port %02x: connect response sent: %s", pcbp->claPort, response);
 #endif
+
             return FALSE;
             }
         }
@@ -681,6 +701,7 @@ static bool npuLipProcessConnectRequest(Pcb *pcbp)
 #if DEBUG
         fprintf(npuLipLog, "Port %02x: failed to send connect response\n", pcbp->claPort);
 #endif
+
         return FALSE;
         }
     }
@@ -705,7 +726,10 @@ static bool npuLipProcessConnectResponse(Pcb *pcbp)
 #endif
 
     token = strtok((char *)pcbp->controls.lip.stagingBuf, " \r\n");
-    if (token == NULL) return -1;
+    if (token == NULL)
+        {
+        return -1;
+        }
 
     value = strtol(token, NULL, 10);
     if (value != 200)
@@ -726,8 +750,9 @@ static bool npuLipProcessConnectResponse(Pcb *pcbp)
         {
 #if DEBUG
         fprintf(npuLipLog, "Port %02x: received incorrect host ID '%s' from %s\n", pcbp->claPort,
-            token, pcbp->ncbp->hostName);
+                token, pcbp->ncbp->hostName);
 #endif
+
         return FALSE;
         }
 
@@ -745,8 +770,9 @@ static bool npuLipProcessConnectResponse(Pcb *pcbp)
         {
 #if DEBUG
         fprintf(npuLipLog, "Port %02x: received incorrect remote node number %ld from %s, expected %d\n", pcbp->claPort,
-            value, pcbp->ncbp->hostName, pcbp->controls.lip.remoteNode);
+                value, pcbp->ncbp->hostName, pcbp->controls.lip.remoteNode);
 #endif
+
         return FALSE;
         }
 
@@ -764,8 +790,9 @@ static bool npuLipProcessConnectResponse(Pcb *pcbp)
         {
 #if DEBUG
         fprintf(npuLipLog, "Port %02x: received incorrect local node number %ld from %s, expected %d\n", pcbp->claPort,
-            value, pcbp->ncbp->hostName, npuSvmCouplerNode);
+                value, pcbp->ncbp->hostName, npuSvmCouplerNode);
 #endif
+
         return FALSE;
         }
 
@@ -773,8 +800,9 @@ static bool npuLipProcessConnectResponse(Pcb *pcbp)
         {
 #if DEBUG
         fprintf(npuLipLog, "Port %02x: resource exhaustion prevented activation of trunk to %s\n", pcbp->claPort,
-            pcbp->ncbp->hostName);
+                pcbp->ncbp->hostName);
 #endif
+
         return FALSE;
         }
 
@@ -794,12 +822,12 @@ static bool npuLipProcessConnectResponse(Pcb *pcbp)
 static bool npuLipActivateTrunk(Pcb *pcbp)
     {
     NpuBuffer *bp;
-    u8 *mp;
+    u8        *mp;
 
     bp = npuBipBufGet();
     if (bp == NULL)
         {
-        return(FALSE);
+        return (FALSE);
         }
 
     mp = bp->data;
@@ -836,12 +864,12 @@ static bool npuLipActivateTrunk(Pcb *pcbp)
 static bool npuLipDeactivateTrunk(Pcb *pcbp)
     {
     NpuBuffer *bp;
-    u8 *mp;
+    u8        *mp;
 
     bp = npuBipBufGet();
     if (bp == NULL)
         {
-        return(FALSE);
+        return (FALSE);
         }
 
     mp = bp->data;
@@ -855,7 +883,7 @@ static bool npuLipDeactivateTrunk(Pcb *pcbp)
     *mp++ = 0x0c;                           // NS=1, CS=1, Regulation level=0
 
     bp->numBytes = mp - bp->data;
- 
+
     npuBipRequestUplineTransfer(bp);
 
 #if DEBUG
@@ -876,13 +904,14 @@ static bool npuLipDeactivateTrunk(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 static void npuLipSendQueuedData(Pcb *pcbp)
     {
-    u8 blockLen[2];
+    u8        blockLen[2];
     NpuBuffer *bp;
-    time_t currentTime;
-    int n;
-    static u8 ping[] = {0, 0};
+    time_t    currentTime;
+    int       n;
+    static u8 ping[] = { 0, 0 };
+
 #if !defined(_WIN32)
-    int i;
+    int          i;
     struct iovec vec[2];
 #endif
 
@@ -897,8 +926,8 @@ static void npuLipSendQueuedData(Pcb *pcbp)
         }
     else
         {
-        if (pcbp->controls.lip.lastExchange > 0
-            && (currentTime - pcbp->controls.lip.lastExchange) > MaxIdleTime)
+        if ((pcbp->controls.lip.lastExchange > 0)
+            && ((currentTime - pcbp->controls.lip.lastExchange) > MaxIdleTime))
             {
             /*
             **  Max idle time exceeded, so try pinging the peer
@@ -915,6 +944,7 @@ static void npuLipSendQueuedData(Pcb *pcbp)
                 npuLipNotifyNetDisconnect(pcbp);
                 }
             }
+
         return;
         }
     while ((bp = npuBipQueueExtract(&pcbp->controls.lip.outputQ)) != NULL)
@@ -928,7 +958,7 @@ static void npuLipSendQueuedData(Pcb *pcbp)
             {
             blockLen[0] = bp->numBytes >> 8;
             blockLen[1] = bp->numBytes & 0xff;
-            n = send(pcbp->connFd, blockLen, 2, 0);
+            n           = send(pcbp->connFd, blockLen, 2, 0);
             if (n < 2)
                 {
                 n = -1;
@@ -959,9 +989,9 @@ static void npuLipSendQueuedData(Pcb *pcbp)
         i = 0;
         if (bp->offset < 1)
             {
-            blockLen[0] = bp->numBytes >> 8;
-            blockLen[1] = bp->numBytes & 0xff;
-            vec[i].iov_base = blockLen;
+            blockLen[0]      = bp->numBytes >> 8;
+            blockLen[1]      = bp->numBytes & 0xff;
+            vec[i].iov_base  = blockLen;
             vec[i++].iov_len = 2;
             }
         vec[i].iov_base = bp->data + bp->offset;
@@ -988,6 +1018,7 @@ static void npuLipSendQueuedData(Pcb *pcbp)
             **  the receive handler.
             */
             npuBipQueuePrepend(bp, &pcbp->controls.lip.outputQ);
+
             return;
             }
 #if !defined(_WIN32)
@@ -997,9 +1028,10 @@ static void npuLipSendQueuedData(Pcb *pcbp)
             if (n < 0)
                 {
                 npuBipBufRelease(bp);
-                fprintf(stderr, "LIP: Failed to send whole block length to %s\n",
-                    pcbp->ncbp->hostName);
+                fprintf(stderr, "(npu_lip) Failed to send whole block length to %s\n",
+                        pcbp->ncbp->hostName);
                 npuLipNotifyNetDisconnect(pcbp);
+
                 return;
                 }
             }
@@ -1022,6 +1054,7 @@ static void npuLipSendQueuedData(Pcb *pcbp)
     }
 
 #if DEBUG
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Flush incomplete numeric/ascii data line
 **
@@ -1055,11 +1088,11 @@ static void npuLipLogFlush(void)
 **------------------------------------------------------------------------*/
 static void npuLipLogBytes(u8 *bytes, int len)
     {
-    int ascCol;
-    u8 b;
+    int  ascCol;
+    u8   b;
     char hex[3];
-    int hexCol;
-    int i;
+    int  hexCol;
+    int  i;
 
     ascCol = AsciiColumn(npuLipLogBytesCol);
     hexCol = HexColumn(npuLipLogBytesCol);
@@ -1091,13 +1124,13 @@ static void npuLipLogBytes(u8 *bytes, int len)
 static void npuLipPrintStackTrace(FILE *fp)
     {
 #if defined(__APPLE__)
-    void* callstack[128];
-    int i;
-    int frames;
+    void *callstack[128];
+    int  i;
+    int  frames;
     char **strs;
 
     frames = backtrace(callstack, 128);
-    strs = backtrace_symbols(callstack, frames);
+    strs   = backtrace_symbols(callstack, frames);
     for (i = 1; i < frames; ++i)
         {
         fprintf(fp, "%s\n", strs[i]);
@@ -1105,6 +1138,7 @@ static void npuLipPrintStackTrace(FILE *fp)
     free(strs);
 #endif
     }
+
 #endif // DEBUG
 
 /*---------------------------  End Of File  ------------------------------*/

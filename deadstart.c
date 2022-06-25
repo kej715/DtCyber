@@ -10,12 +10,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -69,7 +69,7 @@ static void deadDisconnect(void);
 **  ----------------
 */
 u16 deadstartPanel[MaxDeadStart];
-u8 deadstartCount;
+u8  deadstartCount;
 
 
 /*
@@ -80,12 +80,12 @@ u8 deadstartCount;
 static u8 dsSequence;       /* deadstart sequencer */
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Execute deadstart function.
@@ -98,15 +98,15 @@ static u8 dsSequence;       /* deadstart sequencer */
 void deadStart(void)
     {
     DevSlot *dp;
-    u8 pp;
-    u8 ch;
+    u8      pp;
+    u8      ch;
 
     dp = channelAttach(0, 0, DtDeadStartPanel);
 
-    dp->activate = deadActivate;
-    dp->disconnect = deadDisconnect;
-    dp->func = deadFunc;
-    dp->io = deadIo;
+    dp->activate     = deadActivate;
+    dp->disconnect   = deadDisconnect;
+    dp->func         = deadFunc;
+    dp->io           = deadIo;
     dp->selectedUnit = 0;
 
     /*
@@ -114,7 +114,7 @@ void deadStart(void)
     */
     for (ch = 0; ch < channelCount; ch++)
         {
-        if (ch <= 013 || (ch >= 020 && ch <= 033))
+        if ((ch <= 013) || ((ch >= 020) && (ch <= 033)))
             {
             channel[ch].active = TRUE;
             }
@@ -123,7 +123,7 @@ void deadStart(void)
     /*
     **  Set special channels appropriately.
     */
-    channel[ChInterlock  ].active = (features & HasInterlockReg) != 0;
+    channel[ChInterlock].active   = (features & HasInterlockReg) != 0;
     channel[ChMaintenance].active = FALSE;
 
     /*
@@ -138,7 +138,7 @@ void deadStart(void)
         */
         if (pp < 012)
             {
-            ppu[pp].opD = pp;
+            ppu[pp].opD        = pp;
             channel[pp].active = TRUE;
             }
         else
@@ -150,7 +150,7 @@ void deadStart(void)
         /*
         **  Set all PPs to INPUT (71) instruction.
         */
-        ppu[pp].opF = 071;
+        ppu[pp].opF  = 071;
         ppu[pp].busy = TRUE;
 
         /*
@@ -169,9 +169,9 @@ void deadStart(void)
     **  Start load of PPU0.
     */
     channel[0].ioDevice = dp;
-    channel[0].active = TRUE;
-    channel[0].full = TRUE;
-    channel[0].data = 0;
+    channel[0].active   = TRUE;
+    channel[0].full     = TRUE;
+    channel[0].data     = 0;
     }
 
 /*--------------------------------------------------------------------------
@@ -187,7 +187,7 @@ static FcStatus deadFunc(PpWord funcCode)
     {
     (void)funcCode;
 
-    return(FcDeclined);
+    return (FcDeclined);
     }
 
 /*--------------------------------------------------------------------------

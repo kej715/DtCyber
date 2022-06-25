@@ -53,6 +53,7 @@ OBJS    =   cdcnet.o                \
             dsa311.o                \
             dump.o                  \
             float.o                 \
+            fsmon.o                 \
             init.o                  \
             interlock_channel.o     \
             log.o                   \
@@ -60,8 +61,8 @@ OBJS    =   cdcnet.o                \
             lp3000.o                \
             main.o                  \
             maintenance_channel.o   \
-	    msufrend.o		    \
-	    msufrend_util.o	    \
+            msufrend.o              \
+            msufrend_util.o         \
             mdi.o                   \
             mt362x.o                \
             mt5744.o                \
@@ -86,6 +87,7 @@ OBJS    =   cdcnet.o                \
             rtc.o                   \
             scr_channel.o           \
             shift.o                 \
+            string.o                \
             time.o                  \
             tpmux.o                 \
             trace.o                 \

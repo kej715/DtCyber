@@ -10,12 +10,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -23,7 +23,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -47,22 +47,22 @@
 **  -----------------
 */
 
-#define PciCmdNop           0x0000
-#define PciCmdFunction      0x2000
-#define PciCmdFull          0x4000
-#define PciCmdEmpty         0x6000
-#define PciCmdActive        0x8000
-#define PciCmdInactive      0xA000
-#define PciCmdClear         0xC000
-#define PciCmdMasterClear   0xE000
+#define PciCmdNop            0x0000
+#define PciCmdFunction       0x2000
+#define PciCmdFull           0x4000
+#define PciCmdEmpty          0x6000
+#define PciCmdActive         0x8000
+#define PciCmdInactive       0xA000
+#define PciCmdClear          0xC000
+#define PciCmdMasterClear    0xE000
 
-#define PciStaFull          0x2000
-#define PciStaActive        0x4000
-#define PciStaBusy          0x8000
+#define PciStaFull           0x2000
+#define PciStaActive         0x4000
+#define PciStaBusy           0x8000
 
-#define PciMaskData         0x0FFF
-#define PciMaskParity       0x1000
-#define PciShiftParity      12
+#define PciMaskData          0x0FFF
+#define PciMaskParity        0x1000
+#define PciShiftParity       12
 
 /*
 **  -----------------------
@@ -77,7 +77,7 @@
 */
 typedef struct pciParam
     {
-	PpWord		data;
+    PpWord data;
     } PciParam;
 
 /*
@@ -113,21 +113,21 @@ static BOOL GetDeviceHandle();
 */
 static PciParam *pci;
 static PSP_DEVICE_INTERFACE_DETAIL_DATA pDeviceInterfaceDetail = NULL;
-static HANDLE hDevice = INVALID_HANDLE_VALUE;
+static HANDLE   hDevice = INVALID_HANDLE_VALUE;
 static HDEVINFO hDevInfo;
 
 #if DEBUG
 static FILE *pciLog = NULL;
-static bool active = FALSE;
+static bool active  = FALSE;
 #endif
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise PCI channel interface.
 **
@@ -143,7 +143,7 @@ static bool active = FALSE;
 void pciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
     DevSlot *dp;
-    BOOL retValue;
+    BOOL    retValue;
 
     (void)unitNo;
     (void)deviceName;
@@ -158,16 +158,16 @@ void pciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Attach device to channel and initialise device control block.
     */
-    dp = channelAttach(channelNo, eqNo, DtPciChannel);
-    dp->activate = pciActivate;
+    dp             = channelAttach(channelNo, eqNo, DtPciChannel);
+    dp->activate   = pciActivate;
     dp->disconnect = pciDisconnect;
-    dp->func = pciFunc;
-    dp->io = pciIo;
-    dp->flags = pciFlags;
-    dp->in = pciIn;
-    dp->out = pciOut;
-    dp->full = pciFull;
-    dp->empty = pciEmpty;
+    dp->func       = pciFunc;
+    dp->io         = pciIo;
+    dp->flags      = pciFlags;
+    dp->in         = pciIn;
+    dp->out        = pciOut;
+    dp->full       = pciFull;
+    dp->empty      = pciEmpty;
 
     /*
     **  Allocate and initialise channel parameters.
@@ -175,14 +175,14 @@ void pciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     pci = calloc(1, sizeof(PciParam));
     if (pci == NULL)
         {
-        fprintf(stderr, "Failed to allocate PCI channel context block\n");
+        fprintf(stderr, "(pci_channel_win32) Failed to allocate PCI channel context block\n");
         exit(1);
         }
 
     retValue = GetDeviceHandle();
     if (!retValue)
         {
-        fprintf(stderr, "Can't open CYBER channel interface.\n");
+        fprintf(stderr, "(pci_channel_win32) Can't open CYBER channel interface.\n");
         exit(1);
         }
 
@@ -191,16 +191,16 @@ void pciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Print a friendly message.
     */
-    printf("PCI channel interface initialised on channel %o unit %o\n", channelNo, unitNo);
+    printf("(pci_channel_win32) PCI channel interface initialised on channel %o unit %o\n", channelNo, unitNo);
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Execute function code on channel.
@@ -223,7 +223,7 @@ static FcStatus pciFunc(PpWord funcCode)
 
     pciCmd((u16)(PciCmdFunction | funcCode | (pciParity(funcCode) << PciShiftParity)));
 
-    return(FcAccepted);
+    return (FcAccepted);
     }
 
 /*--------------------------------------------------------------------------
@@ -254,7 +254,7 @@ static PpWord pciIn(void)
     fprintf(pciLog, " I(%03X)", data);
 #endif
 
-    return(data);
+    return (data);
     }
 
 /*--------------------------------------------------------------------------
@@ -352,9 +352,10 @@ static u16 pciFlags(void)
         {
 //        fprintf(pciLog, " S(%04X)", s);
         }
-    return(s);
+
+    return (s);
 #else
-    return(pciStatus());
+    return (pciStatus());
 #endif
     }
 
@@ -370,7 +371,7 @@ static u16 pciFlags(void)
 static void pciCmd(PpWord data)
     {
     DWORD bytesReturned;
-    u16 status = 0;
+    u16   status = 0;
 
     do
         {
@@ -391,10 +392,11 @@ static void pciCmd(PpWord data)
 static u16 pciStatus(void)
     {
     DWORD bytesReturned;
-    u16 data;
+    u16   data;
 
     DeviceIoControl(hDevice, IOCTL_CYBER_CHANNEL_GET, NULL, 0, &data, sizeof(data), &bytesReturned, NULL);
-    return(data);
+
+    return (data);
     }
 
 /*--------------------------------------------------------------------------
@@ -412,11 +414,11 @@ static u16 pciParity(PpWord data)
 
     while (data != 0)
         {
-        ret ^= data & 1;
+        ret   ^= data & 1;
         data >>= 1;
         }
 
-    return(ret);
+    return (ret);
     }
 
 /*--------------------------------------------------------------------------
@@ -431,12 +433,12 @@ static u16 pciParity(PpWord data)
 static BOOL GetDevicePath()
     {
     SP_DEVICE_INTERFACE_DATA DeviceInterfaceData;
-    SP_DEVINFO_DATA DeviceInfoData;
+    SP_DEVINFO_DATA          DeviceInfoData;
 
     ULONG size;
-    int count, i, index;
-    BOOL status = TRUE;
-    TCHAR *DeviceName = NULL;
+    int   count, i, index;
+    BOOL  status          = TRUE;
+    TCHAR *DeviceName     = NULL;
     TCHAR *DeviceLocation = NULL;
 
     //
@@ -451,18 +453,20 @@ static BOOL GetDevicePath()
     //
     //  Initialize the SP_DEVICE_INTERFACE_DATA Structure.
     //
-    DeviceInterfaceData.cbSize  = sizeof(SP_DEVICE_INTERFACE_DATA);
+    DeviceInterfaceData.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
 
     //
     //  Determine how many devices are present.
     //
     count = 0;
     while (SetupDiEnumDeviceInterfaces(hDevInfo,
-                                      NULL,
-                                      (LPGUID)&GUID_DEVINTERFACE_CYBER_CHANNEL,
-                                      count++,  //Cycle through the available devices.
-                                      &DeviceInterfaceData)
-          );
+                                       NULL,
+                                       (LPGUID)&GUID_DEVINTERFACE_CYBER_CHANNEL,
+                                       count++, //Cycle through the available devices.
+                                       &DeviceInterfaceData)
+           )
+        {
+        }
 
     //
     // Since the last call fails when all devices have been enumerated,
@@ -475,7 +479,8 @@ static BOOL GetDevicePath()
     //
     if (count == 0)
         {
-        printf("No PLX devices are present and enabled in the system.\n");
+        printf("(pci_channel_win32) No PLX devices are present and enabled in the system.\n");
+
         return FALSE;
         }
 
@@ -484,7 +489,7 @@ static BOOL GetDevicePath()
     //  the SetupDi calls.
     //
     DeviceInterfaceData.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
-    DeviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
+    DeviceInfoData.cbSize      = sizeof(SP_DEVINFO_DATA);
 
     //
     //  Loop through the device list to allow user to choose
@@ -498,7 +503,6 @@ static BOOL GetDevicePath()
                                        i,
                                        &DeviceInterfaceData))
         {
-
         //
         // Determine the size required for the DeviceInterfaceData
         //
@@ -511,15 +515,17 @@ static BOOL GetDevicePath()
 
         if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
             {
-            printf("SetupDiGetDeviceInterfaceDetail failed, Error: %d", GetLastError());
+            printf("(pci_channel_win32) SetupDiGetDeviceInterfaceDetail failed, Error: %d", GetLastError());
+
             return FALSE;
             }
 
-        pDeviceInterfaceDetail = (PSP_DEVICE_INTERFACE_DETAIL_DATA) malloc(size);
+        pDeviceInterfaceDetail = (PSP_DEVICE_INTERFACE_DETAIL_DATA)malloc(size);
 
         if (!pDeviceInterfaceDetail)
             {
-            printf("Insufficient memory.\n");
+            printf("(pci_channel_win32) Insufficient memory.\n");
+
             return FALSE;
             }
 
@@ -538,7 +544,8 @@ static BOOL GetDevicePath()
 
         if (!status)
             {
-            printf("SetupDiGetDeviceInterfaceDetail failed, Error: %d", GetLastError());
+            printf("(pci_channel_win32) SetupDiGetDeviceInterfaceDetail failed, Error: %d", GetLastError());
+
             return status;
             }
 
@@ -549,23 +556,25 @@ static BOOL GetDevicePath()
         //  the data.
         //
         SetupDiGetDeviceRegistryProperty(hDevInfo,
-                                        &DeviceInfoData,
-                                        SPDRP_DEVICEDESC,
-                                        NULL,
-                                        (PBYTE)DeviceName,
-                                        0,
-                                        &size);
+                                         &DeviceInfoData,
+                                         SPDRP_DEVICEDESC,
+                                         NULL,
+                                         (PBYTE)DeviceName,
+                                         0,
+                                         &size);
 
         if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
             {
-            printf("SetupDiGetDeviceRegistryProperty failed, Error: %d", GetLastError());
+            printf("(pci_channel_win32) SetupDiGetDeviceRegistryProperty failed, Error: %d", GetLastError());
+
             return FALSE;
             }
 
-        DeviceName = (TCHAR*) malloc(size);
+        DeviceName = (TCHAR *)malloc(size);
         if (!DeviceName)
             {
-            printf("Insufficient memory.\n");
+            printf("(pci_channel_win32) Insufficient memory.\n");
+
             return FALSE;
             }
 
@@ -578,8 +587,9 @@ static BOOL GetDevicePath()
                                                   NULL);
         if (!status)
             {
-            printf("SetupDiGetDeviceRegistryProperty failed, Error: %d", GetLastError());
+            printf("(pci_channel_win32) SetupDiGetDeviceRegistryProperty failed, Error: %d", GetLastError());
             free(DeviceName);
+
             return status;
             }
 
@@ -596,7 +606,7 @@ static BOOL GetDevicePath()
 
         if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
             {
-            DeviceLocation = (TCHAR*) malloc(size);
+            DeviceLocation = (TCHAR *)malloc(size);
 
             if (DeviceLocation != NULL)
                 {
@@ -613,7 +623,6 @@ static BOOL GetDevicePath()
                     DeviceLocation = NULL;
                     }
                 }
-
             }
         else
             {
@@ -623,12 +632,12 @@ static BOOL GetDevicePath()
         //
         // Print description.
         //
-        printf("%d - ", i);
-        printf("%s\n", DeviceName);
+        printf("(pci_channel_win32) %d - ", i);
+        printf("(pci_channel_win32) %s\n", DeviceName);
 
         if (DeviceLocation)
             {
-            printf("        %s\n", DeviceLocation);
+            printf("(pci_channel_win32)         %s\n", DeviceLocation);
             }
 
         free(DeviceName);
@@ -649,7 +658,7 @@ static BOOL GetDevicePath()
     index = 0;
     if (count > 1)
         {
-        printf("Too many CYBER channel boards\n");
+        printf("(pci_channel_win32) Too many CYBER channel boards\n");
         exit(1);
         }
 
@@ -657,14 +666,15 @@ static BOOL GetDevicePath()
     //  Get information for specific device.
     //
     status = SetupDiEnumDeviceInterfaces(hDevInfo,
-                                    NULL,
-                                    (LPGUID)&GUID_DEVINTERFACE_CYBER_CHANNEL,
-                                    index,
-                                    &DeviceInterfaceData);
+                                         NULL,
+                                         (LPGUID)&GUID_DEVINTERFACE_CYBER_CHANNEL,
+                                         index,
+                                         &DeviceInterfaceData);
 
     if (!status)
         {
-        printf("SetupDiEnumDeviceInterfaces failed, Error: %d", GetLastError());
+        printf("(pci_channel_win32) SetupDiEnumDeviceInterfaces failed, Error: %d", GetLastError());
+
         return status;
         }
 
@@ -680,15 +690,17 @@ static BOOL GetDevicePath()
 
     if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
         {
-        printf("SetupDiGetDeviceInterfaceDetail failed, Error: %d", GetLastError());
+        printf("(pci_channel_win32) SetupDiGetDeviceInterfaceDetail failed, Error: %d", GetLastError());
+
         return FALSE;
         }
 
-    pDeviceInterfaceDetail = (PSP_DEVICE_INTERFACE_DETAIL_DATA) malloc(size);
+    pDeviceInterfaceDetail = (PSP_DEVICE_INTERFACE_DETAIL_DATA)malloc(size);
 
     if (!pDeviceInterfaceDetail)
         {
-        printf("Insufficient memory.\n");
+        printf("(pci_channel_win32) Insufficient memory.\n");
+
         return FALSE;
         }
 
@@ -705,7 +717,8 @@ static BOOL GetDevicePath()
                                              &DeviceInfoData);
     if (!status)
         {
-        printf("SetupDiGetDeviceInterfaceDetail failed, Error: %d", GetLastError());
+        printf("(pci_channel_win32) SetupDiGetDeviceInterfaceDetail failed, Error: %d", GetLastError());
+
         return status;
         }
 
@@ -739,9 +752,9 @@ static BOOL GetDeviceHandle()
         //
         //  Get handle to device.
         //
-        printf("\nDevice path = %s\n", pDeviceInterfaceDetail->DevicePath);
+        printf("\n(pci_channel_win32) Device path = %s\n", pDeviceInterfaceDetail->DevicePath);
         hDevice = CreateFile(pDeviceInterfaceDetail->DevicePath,
-                             GENERIC_READ|GENERIC_WRITE,
+                             GENERIC_READ | GENERIC_WRITE,
                              FILE_SHARE_READ | FILE_SHARE_WRITE,
                              NULL,
                              OPEN_EXISTING,
@@ -751,12 +764,11 @@ static BOOL GetDeviceHandle()
         if (hDevice == INVALID_HANDLE_VALUE)
             {
             status = FALSE;
-            printf("CreateFile failed.  Error:%d", GetLastError());
+            printf("(pci_channel_win32) CreateFile failed.  Error:%d", GetLastError());
             }
         }
 
-    return(status);
+    return (status);
     }
 
 /*---------------------------  End Of File  ------------------------------*/
-

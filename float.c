@@ -14,12 +14,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -44,13 +44,13 @@
 **  Private Constants
 **  -----------------
 */
-#define ID  ((CpWord)01777)
-#define OR  ((CpWord)03777)
+#define ID    ((CpWord)01777)
+#define OR    ((CpWord)03777)
 
-#define IR(x)   (((x) & ID) != ID)
-#define OVFL(s) ((OR ^ (s >> 48)) << 48)
+#define IR(x)      (((x) & ID) != ID)
+#define OVFL(s)    ((OR ^ (s >> 48)) << 48)
 
-#define IND (ID << 48)
+#define IND    (ID << 48)
 
 /*
 **  -----------------------
@@ -64,7 +64,7 @@
 **  sign = SignX(v, 60);                    extract sign bit
 **  v ^= sign;                              make absolute
 **  exponent = (v >> 48);                   extract exponent
-**                                          
+**
 **  exponent -= 02000;                      un-bias exponent
 **  exponent -= (exponent >> 11);           make two's complement
 **
@@ -74,7 +74,7 @@
 **  it is an underflow condition)
 */
 
-#define SignX(v, bit) (((v) & ((CpWord)1 << ((bit) - 1))) == 0 ? 0 : Mask60)
+#define SignX(v, bit)    (((v) & ((CpWord)1 << ((bit) - 1))) == 0 ? 0 : Mask60)
 
 /*
 **  -----------------------------------------
@@ -101,12 +101,12 @@
 */
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*
 **  Visual C++ 6.0 Enterprise Edition appears to have a bug in its optimizer
@@ -124,7 +124,7 @@
 **                  check for special cases, shift smaller exponent to the right,
 **                  do a 96 bit signed one's complement add, shift right by one
 **                  if overflow.
-**                  Return upper 48 bits and adjusted exponent for 
+**                  Return upper 48 bits and adjusted exponent for
 **
 **  Parameters:     Name        Description.
 **                  v1          First operand
@@ -138,15 +138,15 @@
 **------------------------------------------------------------------------*/
 CpWord floatAdd(CpWord v1, CpWord v2, bool doRound, bool doDouble)
     {
-    CpWord   sign1;
-    CpWord   sign2;
-    int exponent1;
-    int exponent2;
-    int shift;
-    CpWord   upper;  /* upper half of 98 bit adder register - 50 bits */
-    CpWord   lower;  /* bottom half is 48 bits */
-    CpWord   round = 0;
-    CpWord   result;
+    CpWord sign1;
+    CpWord sign2;
+    int    exponent1;
+    int    exponent2;
+    int    shift;
+    CpWord upper;    /* upper half of 98 bit adder register - 50 bits */
+    CpWord lower;    /* bottom half is 48 bits */
+    CpWord round = 0;
+    CpWord result;
 
     sign1 = SignX(v1, 60);
     sign2 = SignX(v2, 60);
@@ -216,7 +216,7 @@ CpWord floatAdd(CpWord v1, CpWord v2, bool doRound, bool doDouble)
     if (exponent1 > exponent2)
         {
         upper = (v1 & Mask48) ^ sign1;
-        v1 = v2 & Mask48;
+        v1    = v2 & Mask48;
         lower = sign1 >> 2;
         if (doRound)
             {
@@ -228,13 +228,13 @@ CpWord floatAdd(CpWord v1, CpWord v2, bool doRound, bool doDouble)
     else
         {
         upper = (v2 & Mask48) ^ sign2;
-        v1 &= Mask48;
+        v1   &= Mask48;
         lower = sign2 >> 2;
         if (doRound)
             {
             lower = Sign48 ^ lower;  /* rounding bit */
             }
-        shift = exponent2 - exponent1;
+        shift     = exponent2 - exponent1;
         exponent1 = exponent2;
         }
 
@@ -258,7 +258,7 @@ CpWord floatAdd(CpWord v1, CpWord v2, bool doRound, bool doDouble)
         upper += (v1 >> shift) ^ sign1;
         if (doRound)
             {
-            round = (round & Sign48) >> shift;
+            round  = (round & Sign48) >> shift;
             lower += (((v1 << (48 - shift)) & Mask48) | round) ^ sign2;
             }
         else
@@ -295,7 +295,7 @@ CpWord floatAdd(CpWord v1, CpWord v2, bool doRound, bool doDouble)
     /*
     **  get sign of result, and make result absolute
     */
-    sign1 = SignX(upper, 50);
+    sign1  = SignX(upper, 50);
     upper ^= (sign1 >> 10);
     lower ^= (sign1 >> 12);
 
@@ -310,7 +310,7 @@ CpWord floatAdd(CpWord v1, CpWord v2, bool doRound, bool doDouble)
             */
             if (exponent1 < -01717)
                 {
-                return(0);
+                return (0);
                 }
             }
 
@@ -321,7 +321,7 @@ CpWord floatAdd(CpWord v1, CpWord v2, bool doRound, bool doDouble)
         */
         if (upper >> 48)
             {
-            lower = ((upper & 1) << 47) | (lower >> 1);
+            lower      = ((upper & 1) << 47) | (lower >> 1);
             exponent1 += 1;
             }
 
@@ -334,12 +334,12 @@ CpWord floatAdd(CpWord v1, CpWord v2, bool doRound, bool doDouble)
         */
         if (exponent1 < -01717)
             {
-            return(0);
+            return (0);
             }
 
         exponent1 -= 48;
         exponent1 += 02000 + (exponent1 >> 11);
-        result =  ((((CpWord) exponent1) << 48) | (lower & Mask48)) ^ sign1;
+        result     = ((((CpWord)exponent1) << 48) | (lower & Mask48)) ^ sign1;
         }
     else
         {
@@ -348,16 +348,16 @@ CpWord floatAdd(CpWord v1, CpWord v2, bool doRound, bool doDouble)
         */
         if (upper >> 48)
             {
-            upper >>= 1;
+            upper    >>= 1;
             exponent1 += 1;
             }
 
         exponent1 += 02000 + (exponent1 >> 11);
 
-        result = ((((CpWord) exponent1) << 48) | upper) ^ sign1;
+        result = ((((CpWord)exponent1) << 48) | upper) ^ sign1;
         }
 
-    return(result);
+    return (result);
     }
 
 /*--------------------------------------------------------------------------
@@ -365,11 +365,11 @@ CpWord floatAdd(CpWord v1, CpWord v2, bool doRound, bool doDouble)
 **                  do four 24 bit multiplies, combine, offset exponent and return
 **                  upper 48 bits of result. does a one bit post-normalize if
 **                  necessary if both values were normalized to begin with.
-**                  
+**
 **                  Double precision multiply. returns the bottom half of the 96
 **                  bit product. also used for integer multiply by checking for
 **                  both exponents zero and one or both values not normalized.
-**                  
+**
 **                  Rounding multiply is almost identical to floating multiply,
 **                  except that a single rounding bit is added to the result in
 **                  bit 46 of the 96 bit product.
@@ -386,20 +386,21 @@ CpWord floatAdd(CpWord v1, CpWord v2, bool doRound, bool doDouble)
 **------------------------------------------------------------------------*/
 CpWord floatMultiply(CpWord v1, CpWord v2, bool doRound, bool doDouble)
     {
-    CpWord  sign1;
-    CpWord  sign2;
-    int exponent1;
-    int exponent2;
-    int norm;           /* flag for post-normalize */
-    CpWord  upper;      /* upper 48 bits of product */
-    CpWord  middle;     /* middle cross-product */
-    CpWord  lower;      /* lower 48 bits of product */
+    CpWord sign1;
+    CpWord sign2;
+    int    exponent1;
+    int    exponent2;
+    int    norm;        /* flag for post-normalize */
+    CpWord upper;       /* upper 48 bits of product */
+    CpWord middle;      /* middle cross-product */
+    CpWord lower;       /* lower 48 bits of product */
 
     sign1 = SignX(v1, 60);
     sign2 = SignX(v2, 60);
 
     v1 ^= sign1;
     v2 ^= sign2;
+
     /*
     **  get sign of result
     */
@@ -450,10 +451,10 @@ CpWord floatMultiply(CpWord v1, CpWord v2, bool doRound, bool doDouble)
         }
 
     middle += (v1 >> 24) * (v2 & Mask24);
-    lower = (v1 & Mask24) * (v2 & Mask24);
-    lower += (middle & Mask24) << 24;
-    upper = (v1 >> 24) * (v2 >> 24);
-    upper += (middle >> 24) + (lower >> 48);
+    lower   = (v1 & Mask24) * (v2 & Mask24);
+    lower  += (middle & Mask24) << 24;
+    upper   = (v1 >> 24) * (v2 >> 24);
+    upper  += (middle >> 24) + (lower >> 48);
 
     /*
     **  do an integer multiply if one or both values are not normalized
@@ -474,7 +475,7 @@ CpWord floatMultiply(CpWord v1, CpWord v2, bool doRound, bool doDouble)
             return 0;
             }
 
-        upper = (v1 >> 24) * (v2 >> 24);
+        upper  = (v1 >> 24) * (v2 >> 24);
         upper += (middle >> 24) + (lower >> 48);
 
         exponent1 -= 02000;
@@ -494,13 +495,13 @@ CpWord floatMultiply(CpWord v1, CpWord v2, bool doRound, bool doDouble)
 
             if (exponent1 <= -01777)
                 {
-                return(0);
+                return (0);
                 }
             }
 
         if (norm && !(upper >> 47))
             {
-            lower <<= 1;
+            lower    <<= 1;
             exponent1 -= 1;
             }
 
@@ -520,7 +521,7 @@ CpWord floatMultiply(CpWord v1, CpWord v2, bool doRound, bool doDouble)
             return 0;
             }
 
-        return ((((CpWord) exponent1) << 48) | (lower & Mask48)) ^ sign1;
+        return ((((CpWord)exponent1) << 48) | (lower & Mask48)) ^ sign1;
         }
 
 
@@ -534,7 +535,9 @@ CpWord floatMultiply(CpWord v1, CpWord v2, bool doRound, bool doDouble)
     **  (underflow), return positive zero.
     */
     if (!(exponent1 && exponent2))
+        {
         return 0;
+        }
 
     exponent1 -= 02000;
     exponent2 -= 02000;
@@ -553,7 +556,7 @@ CpWord floatMultiply(CpWord v1, CpWord v2, bool doRound, bool doDouble)
 
         if ((exponent1 + 48) <= -01777)
             {
-            return(0);
+            return (0);
             }
         }
 
@@ -562,7 +565,7 @@ CpWord floatMultiply(CpWord v1, CpWord v2, bool doRound, bool doDouble)
     */
     if (norm && !(upper >> 47))
         {
-        upper = (upper << 1) | ((lower >> 47) & 1);
+        upper      = (upper << 1) | ((lower >> 47) & 1);
         exponent1 -= 1;
         }
 
@@ -584,7 +587,7 @@ CpWord floatMultiply(CpWord v1, CpWord v2, bool doRound, bool doDouble)
         return 0;
         }
 
-    return ((((CpWord) exponent1) << 48) | upper) ^ sign1;
+    return ((((CpWord)exponent1) << 48) | upper) ^ sign1;
     }
 
 /*--------------------------------------------------------------------------
@@ -605,11 +608,11 @@ CpWord floatMultiply(CpWord v1, CpWord v2, bool doRound, bool doDouble)
 **------------------------------------------------------------------------*/
 CpWord floatDivide(CpWord v1, CpWord v2, bool doRound)
     {
-    CpWord  sign1;
-    CpWord  sign2;
-    int round = 0;
-    int exponent1;
-    int exponent2;
+    CpWord sign1;
+    CpWord sign2;
+    int    round = 0;
+    int    exponent1;
+    int    exponent2;
 
     sign1 = SignX(v1, 60);
     sign2 = SignX(v2, 60);
@@ -677,7 +680,9 @@ CpWord floatDivide(CpWord v1, CpWord v2, bool doRound)
     **  should be normalized, but it isn't checked for explicitly.
     */
     if (v1 >= (v2 << 1))
+        {
         return IND;
+        }
 
     exponent1 -= 02000;
     exponent2 -= 02000;
@@ -696,7 +701,7 @@ CpWord floatDivide(CpWord v1, CpWord v2, bool doRound)
     */
     if (v1 < v2)
         {
-        v1 <<= 1;
+        v1       <<= 1;
         exponent1 -= 1;
         if (doRound)
             {
@@ -731,14 +736,14 @@ CpWord floatDivide(CpWord v1, CpWord v2, bool doRound)
         sign2 <<= 1;
         if (v1 >= v2)
             {
-            v1 -= v2;
+            v1    -= v2;
             sign2 += 1;
             }
 
         if (doRound)
             {
-            v1 = (v1 << 1) | round; /* shift in rounding bit */
-            round = 1 - round;      /* toggle round back and forth */
+            v1    = (v1 << 1) | round; /* shift in rounding bit */
+            round = 1 - round;         /* toggle round back and forth */
             }
         else
             {
@@ -746,15 +751,15 @@ CpWord floatDivide(CpWord v1, CpWord v2, bool doRound)
             }
         }
 
-    return ((((CpWord) exponent1) << 48) | sign2) ^ sign1;
+    return ((((CpWord)exponent1) << 48) | sign2) ^ sign1;
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*---------------------------  End Of File  ------------------------------*/

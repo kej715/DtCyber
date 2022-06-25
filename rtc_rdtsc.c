@@ -10,12 +10,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -72,9 +72,11 @@ static FcStatus rtcFunc(PpWord funcCode);
 static void rtcIo(void);
 static void rtcActivate(void);
 static void rtcDisconnect(void);
-static bool rtcInitTick (u32 setMHz);
+static bool rtcInitTick(u32 setMHz);
+
 #ifndef _WIN32
 static u64 rtcGetTick(void);
+
 #endif
 
 /*
@@ -90,9 +92,9 @@ u32 rtcClock = 0;
 **  Private Variables
 **  -----------------
 */
-static u8 rtcIncrement;
-static bool rtcFull;
-static u64 Hz;
+static u8     rtcIncrement;
+static bool   rtcFull;
+static u64    Hz;
 static double MHz;
 #ifdef _WIN32
 static u64 (*rtcGetTick)(void);
@@ -103,12 +105,12 @@ static u64 startTime;
 
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise RTC.
@@ -126,20 +128,20 @@ void rtcInit(u8 increment, u32 setMHz)
 
     dp = channelAttach(ChClock, 0, DtRtc);
 
-    dp->activate = rtcActivate;
-    dp->disconnect = rtcDisconnect;
-    dp->func = rtcFunc;
-    dp->io = rtcIo;
+    dp->activate     = rtcActivate;
+    dp->disconnect   = rtcDisconnect;
+    dp->func         = rtcFunc;
+    dp->io           = rtcIo;
     dp->selectedUnit = 0;
 
-    activeChannel->ioDevice = dp;
+    activeChannel->ioDevice  = dp;
     activeChannel->hardwired = TRUE;
 
     if (increment == 0)
         {
         if (!rtcInitTick(setMHz))
             {
-            printf("Invalid clock increment 0, defaulting to 1\n");
+            printf("(rtc_rdtsc) Invalid clock increment 0, defaulting to 1\n");
             increment = 1;
             }
         }
@@ -150,8 +152,8 @@ void rtcInit(u8 increment, u32 setMHz)
     **  RTC channel may be active or inactive and empty or full
     **  depending on model.
     */
-    rtcFull = (features & HasFullRTC) != 0;
-    activeChannel->full = rtcFull;
+    rtcFull               = (features & HasFullRTC) != 0;
+    activeChannel->full   = rtcFull;
     activeChannel->active = (features & HasFullRTC) != 0;
     }
 
@@ -184,6 +186,7 @@ void rtcStartTimer(void)
         startTime = rtcGetTick();
         }
     }
+
 #endif
 
 /*--------------------------------------------------------------------------
@@ -198,17 +201,20 @@ void rtcStartTimer(void)
 double rtcStopTimer(void)
     {
     u64 endTime;
+
     if (rtcIncrement == 0)
         {
         endTime = rtcGetTick();
+
 //        return((double)(int)(endTime - startTime) / ((double)(int)Hz / 1000000.0L));
-        return((double)(int)(endTime - startTime) / ((double)(i64)Hz / 1000000.0L));
+        return ((double)(int)(endTime - startTime) / ((double)(i64)Hz / 1000000.0L));
         }
     else
         {
-        return(0.0);
+        return (0.0);
         }
     }
+
 #endif
 
 /*--------------------------------------------------------------------------
@@ -221,18 +227,18 @@ double rtcStopTimer(void)
 **
 **------------------------------------------------------------------------*/
 
-#define MaxMicroseconds 400.0L
+#define MaxMicroseconds    400.0L
 
 void rtcReadUsCounter(void)
     {
-    static bool first = TRUE;
-    static u64 old = 0;
-    static double fraction = 0.0L;
+    static bool   first               = TRUE;
+    static u64    old                 = 0;
+    static double fraction            = 0.0L;
     static double delayedMicroseconds = 0.0L;
-    u64 new;
-    u64 difference;
-    double microseconds;
-    double result;
+    u64           new;
+    u64           difference;
+    double        microseconds;
+    double        result;
 
     if (rtcIncrement != 0)
         {
@@ -242,37 +248,37 @@ void rtcReadUsCounter(void)
     if (first)
         {
         first = FALSE;
-        old = rtcGetTick();
+        old   = rtcGetTick();
         }
 
     new = rtcGetTick();
 
     difference = new - old;
-    old = new;
+    old        = new;
 
-    microseconds = (double)(i64)difference / MHz;
-    microseconds += fraction + delayedMicroseconds;
+    microseconds        = (double)(i64)difference / MHz;
+    microseconds       += fraction + delayedMicroseconds;
     delayedMicroseconds = 0.0;
 
     if (microseconds > MaxMicroseconds)
         {
         delayedMicroseconds = microseconds - MaxMicroseconds;
-        microseconds = MaxMicroseconds;
+        microseconds        = MaxMicroseconds;
         }
 
-    result = floor(microseconds);
+    result   = floor(microseconds);
     fraction = microseconds - result;
 
     rtcClock += (u32)result;
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Execute function code on RTC pseudo device.
@@ -287,7 +293,7 @@ static FcStatus rtcFunc(PpWord funcCode)
     {
     (void)funcCode;
 
-    return(FcAccepted);
+    return (FcAccepted);
     }
 
 /*--------------------------------------------------------------------------
@@ -344,7 +350,8 @@ static u64 rtcGetTickWindows(void)
     LARGE_INTEGER ctr;
 
     QueryPerformanceCounter(&ctr);
-    return(ctr.QuadPart);
+
+    return (ctr.QuadPart);
     }
 
 static __declspec(naked) u64 rtcGetTickCpu(void)
@@ -352,7 +359,9 @@ static __declspec(naked) u64 rtcGetTickCpu(void)
     __asm
         {
         rdtsc
-        ret ; return value at EDX:EAX
+            ret;
+
+        return value at EDX:EAX
         }
     }
 
@@ -363,12 +372,13 @@ static bool rtcInitTick(u32 setMHz)
     if (QueryPerformanceFrequency(&lhz))
         {
         Hz = lhz.QuadPart;
+
         rtcGetTick = rtcGetTickWindows;
         }
     else
         {
         rtcGetTick = rtcGetTickCpu;
-        printf("Windows performance counter not available, using Pentium's RDTSC\n");
+        printf("(rtc_rdtsc) Windows performance counter not available, using Pentium's RDTSC\n");
         if (setMHz == 0)
             {
             u64 first = rtcGetTick();
@@ -383,9 +393,9 @@ static bool rtcInitTick(u32 setMHz)
 
     MHz = (double)(i64)Hz / 1000000.0;
 
-    printf("Using high resolution hardware clock at %f MHz\n", MHz);
+    printf("(rtc_rdtsc) Using high resolution hardware clock at %f MHz\n", MHz);
 
-    return(TRUE);
+    return (TRUE);
     }
 
 #elif defined(__GNUC__) && defined(__linux__) && (defined(__x86_64) || defined(__i386))
@@ -400,19 +410,21 @@ static bool rtcInitTick(u32 setMHz)
 **------------------------------------------------------------------------*/
 static u64 rtcGetTick(void)
     {
-     u32 a, d; 
-     __asm__ __volatile__("rdtsc" : "=a" (a), "=d" (d)); 
-     return((u64)a | ((u64)d << 32)); 
+    u32 a, d;
+
+    __asm__ __volatile__ ("rdtsc" : "=a" (a), "=d" (d));
+
+    return ((u64)a | ((u64)d << 32));
     }
 
 static bool rtcInitTick(u32 setMHz)
     {
-    FILE *procf;
-    char procbuf[512];
-    u64 now, prev;
-    char *p;
+    FILE   *procf;
+    char   procbuf[512];
+    u64    now, prev;
+    char   *p;
     double procMHz;
-    u64 hz = 0;
+    u64    hz = 0;
 
     if (setMHz == 0)
         {
@@ -439,21 +451,21 @@ static bool rtcInitTick(u32 setMHz)
             prev = rtcGetTick();
             sleep(1);
             now = rtcGetTick();
-            hz = now - prev;
+            hz  = now - prev;
             }
 
-        Hz = hz;
+        Hz  = hz;
         MHz = (double)Hz / 1000000.0;
         }
     else
         {
         MHz = (double)setMHz;
-        Hz = setMHz * 1000000;
+        Hz  = setMHz * 1000000;
         }
 
     printf("Using high resolution hardware clock at %f MHz\n", MHz);
 
-    return(TRUE);
+    return (TRUE);
     }
 
 #elif defined(__GNUC__) && (defined(__linux__) || defined(__SunOS) || defined (__FreeBSD__))
@@ -470,10 +482,11 @@ static bool rtcInitTick(u32 setMHz)
     {
     (void)setMHz;
 
-    Hz = 1000000;
+    Hz  = 1000000;
     MHz = 1.0;
-    printf("Using high resolution hardware clock at %f MHz\n", MHz);
-    return(TRUE);
+    printf("(rtc_rdtsc) Using high resolution hardware clock at %f MHz\n", MHz);
+
+    return (TRUE);
     }
 
 static u64 rtcGetTick(void)
@@ -481,7 +494,8 @@ static u64 rtcGetTick(void)
     struct timeval tv;
 
     gettimeofday(&tv, NULL);
-    return(tv.tv_sec * 1000000 + tv.tv_usec);
+
+    return (tv.tv_sec * 1000000 + tv.tv_usec);
     }
 
 #elif defined(__GNUC__) && defined(__APPLE__)
@@ -498,15 +512,16 @@ static bool rtcInitTick(u32 setMHz)
     {
     (void)setMHz;
 
-    Hz = 1000000000;     /* 10^9, because timer is in ns */
+    Hz  = 1000000000;    /* 10^9, because timer is in ns */
     MHz = 1000.0;
-    printf("Using high resolution hardware clock at %f MHz\n", MHz);
-    return(TRUE);
+    printf("(rtc_rdtsc) Using high resolution hardware clock at %f MHz\n", MHz);
+
+    return (TRUE);
     }
 
 static u64 rtcGetTick(void)
     {
-    return(UnsignedWideToUInt64(AbsoluteToNanoseconds(UpTime())));
+    return (UnsignedWideToUInt64(AbsoluteToNanoseconds(UpTime())));
     }
 
 #else
@@ -523,8 +538,9 @@ static bool rtcInitTick(u32 setMHz)
     {
     (void)setMHz;
 
-    printf("No high resolution hardware clock, using emulation cycle counter\n");
-    return(FALSE);
+    printf("(rtc_rdtsc) No high resolution hardware clock, using emulation cycle counter\n");
+
+    return (FALSE);
     }
 
 #endif
