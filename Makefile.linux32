@@ -25,6 +25,7 @@
 LIBS    = -lm -lX11 -lpthread -lrt
 LDFLAGS = -s -L/usr/X11R6/lib
 INCL    = -I/usr/X11R6/include
+EXTRACFLAGS = -Wno-switch -Wno-format-security
 
 CFLAGS  = -O2 -I. $(INCL) -std=gnu99
 
@@ -53,6 +54,7 @@ OBJS    =   cdcnet.o                \
             dsa311.o                \
             dump.o                  \
             float.o                 \
+            fsmon.o                 \
             init.o                  \
             interlock_channel.o     \
             log.o                   \
@@ -60,8 +62,8 @@ OBJS    =   cdcnet.o                \
             lp3000.o                \
             main.o                  \
             maintenance_channel.o   \
-	    msufrend.o		    \
-	    msufrend_util.o	    \
+            msufrend.o              \
+            msufrend_util.o         \
             mdi.o                   \
             mt362x.o                \
             mt5744.o                \
@@ -86,6 +88,7 @@ OBJS    =   cdcnet.o                \
             rtc.o                   \
             scr_channel.o           \
             shift.o                 \
+            string.o                \
             time.o                  \
             tpmux.o                 \
             trace.o                 \
@@ -93,7 +96,7 @@ OBJS    =   cdcnet.o                \
 
 dtcyber: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
- 
+
 all: dtcyber stk/node_modules frend2/frend2
 
 stk/node_modules:

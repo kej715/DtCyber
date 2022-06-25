@@ -1,6 +1,9 @@
 /*--------------------------------------------------------------------------
 **
 **  Copyright (c) 2003-2011, Tom Hunter
+**            (c) 2017       Steven Zoppi 22-Oct-2017
+**                           Added Ascii and ANSI support
+**                           Added subdirectory support
 **
 **  Name: lp1612.c
 **
@@ -10,12 +13,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -43,21 +46,41 @@
 **  -----------------
 */
 
-#define FcPrintSelect           00600
-#define FcPrintSingleSpace      00601
-#define FcPrintDoubleSpace      00602
-#define FcPrintMoveChannel7     00603
-#define FcPrintMoveTOF          00604
-#define FcPrintPrint            00605
-#define FcPrintSuppressLF       00606
-#define FcPrintStatusReq        00607
-#define FcPrintClearFormat      00610
-#define FcPrintFormat1          00611
-#define FcPrintFormat2          00612
-#define FcPrintFormat3          00613
-#define FcPrintFormat4          00614
-#define FcPrintFormat5          00615
-#define FcPrintFormat6          00616
+/*
+**      Function codes
+**
+**      ----------------------------------
+**      |  Equip select  |   function    |
+**      ----------------------------------
+**      11              6 5             0
+**
+**      06x0 = Select printer
+**      06x1 = Single space
+**      06x2 = Double space
+**      06x3 = Move paper to format channel 7
+**      06x4 = Move paper to top of form
+**      06x5 = Print
+**      06x6 = Suppress line advance after next print
+**      06x7 = Status request
+**
+**      x = printer unit # on channel
+*/
+
+#define FcPrintSelect          00600
+#define FcPrintSingleSpace     00601
+#define FcPrintDoubleSpace     00602
+#define FcPrintMoveChannel7    00603
+#define FcPrintMoveTOF         00604
+#define FcPrintPrint           00605
+#define FcPrintSuppressLF      00606
+#define FcPrintStatusReq       00607
+#define FcPrintClearFormat     00610
+#define FcPrintFormat1         00611
+#define FcPrintFormat2         00612
+#define FcPrintFormat3         00613
+#define FcPrintFormat4         00614
+#define FcPrintFormat5         00615
+#define FcPrintFormat6         00616
 
 /*
 **      Status reply
@@ -66,8 +89,8 @@
 **      4000 = Ready
 **
 */
-#define StPrintReady            04000
-#define StPrintNotReady         00000
+#define StPrintReady           04000
+#define StPrintNotReady        00000
 
 /*
 **  -----------------------
@@ -80,6 +103,28 @@
 **  Private Typedef and Structure Definitions
 **  -----------------------------------------
 */
+
+/*
+**  (SZoppi) 22-Oct-2017
+**      These extensions are to properly simulate the behavior of the
+**      line printers.  Line space handling (pre and post) messes with
+**      translation to proper PDF format (the new purpose for this).
+**
+**      This is a simple device so we need a minimal context block.
+*/
+typedef struct lpContext1612
+    {
+    /*
+    **  Info for show_tape operator command.
+    */
+    struct lpContext1612 *nextUnit;
+    u8                   channelNo;
+    u8                   eqNo;
+    u8                   unitNo;
+
+    bool                 extUseANSI;
+    char                 extPath[_MAX_PATH + 1];
+    } LpContext1612;
 
 /*
 **  ---------------------------
@@ -103,13 +148,16 @@ static void lp1612Disconnect(void);
 **  -----------------
 */
 
+static LpContext1612 *firstLp1612 = NULL;
+static LpContext1612 *lastLp1612  = NULL;
+
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise 1612 line printer.
 **
@@ -124,46 +172,178 @@ static void lp1612Disconnect(void);
 **------------------------------------------------------------------------*/
 void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
-    DevSlot *dp;
-    char fname[80];
+    DevSlot       *dp;
+    LpContext1612 *lc;
+    bool          useANSI = TRUE;
+
+    char fname[_MAX_PATH];
+    char *deviceType;
+    char *devicePath;
+    char *deviceMode;
 
     (void)deviceName;
 
     if (eqNo != 0)
         {
-        fprintf(stderr, "Invalid equipment number - LP1612 is hardwired to equipment number 0\n");
+        fprintf(stderr, "(lp1612 ) Invalid equipment number - LP1612 is hardwired to equipment number 0\n");
         exit(1);
         }
 
     if (unitNo != 0)
         {
-        fprintf(stderr, "Invalid unit number - LP1612 is hardwired to unit number 0\n");
+        fprintf(stderr, "(lp1612 ) Invalid unit number - LP1612 is hardwired to unit number 0\n");
         exit(1);
         }
 
     dp = channelAttach(channelNo, eqNo, DtLp1612);
 
-    dp->activate = lp1612Activate;
-    dp->disconnect = lp1612Disconnect;
-    dp->func = lp1612Func;
-    dp->io = lp1612Io;
+    dp->activate     = lp1612Activate;
+    dp->disconnect   = lp1612Disconnect;
+    dp->func         = lp1612Func;
+    dp->io           = lp1612Io;
     dp->selectedUnit = 0;
+    lc = (LpContext1612 *)calloc(1, sizeof(LpContext1612));
+    if (lc == NULL)
+        {
+        fprintf(stderr, "(lp1612 ) Failed to allocate LP1612 context block\n");
+        exit(1);
+        }
+
+
+    /*
+    **  When we are called, "deviceParams" is a space terminated string
+    **  at the end of the INI entry.
+    **
+    **  Tokenizing the remainder of the string as comma-delimited
+    **  parameters gives us the configuration data that we need.
+    **
+    **  The format of the remainder of the line is:
+    **
+    **      <DeviceType> (NULL(="3555")|"3555"|"3512")
+    **      <OutputMode> ("ASCII"|"ANSI")
+    **
+    */
+    deviceType = strtok(deviceName, ",");     //  Get Device Type
+    devicePath = strtok(NULL, ",");           //  Get the Path (subdirectory)
+    deviceMode = strtok(NULL, ",");
+
+    if ((deviceMode) != NULL)
+        {
+        deviceMode = dtStrLwr(deviceMode);         //  pick up "ansi" or "ascii" flag
+        useANSI    = FALSE;
+        if (strcmp(deviceMode, "ansi") == 0)
+            {
+            useANSI = TRUE;
+            }
+        else if (strcmp(deviceMode, "ascii") == 0)
+            {
+            useANSI = FALSE;
+            }
+        else
+            {
+            useANSI = FALSE;
+            }
+        }
+
+    dp->context[0] = (void *)lc;
+    lc->extUseANSI = useANSI;
+    lc->channelNo  = channelNo;
+    lc->unitNo     = unitNo;
+    lc->eqNo       = eqNo;
+
+
+    //  Remember the device Path for future fopen calls
+    if (devicePath == NULL)
+        {
+        lc->extPath[0] = '\0';
+        }
+    else
+        {
+#if defined(SAFECALLS)
+        strcpy_s(lc->extPath, sizeof(lc->extPath), devicePath);
+#else
+        strcpy(lc->extPath, devicePath);
+#endif
+        if (lc->extPath[0] != '\0')
+            {
+#if defined(SAFECALLS)
+            strcat_s(lc->extPath, sizeof(lc->extPath), "/");
+#else
+            strcat(lc->extPath, "/");
+#endif
+            }
+        }
 
     /*
     **  Open the device file.
     */
-    sprintf(fname, "LP1612_C%02o", channelNo);
+
+#if defined(SAFECALLS)
+    sprintf_s(fname, sizeof(fname), "%sLP1612_C%02o", lc->extPath, channelNo);
+#else
+    sprintf(fname, "%sLP1612_C%02o", lc->extPath, channelNo);
+#endif
     dp->fcb[0] = fopen(fname, "w+t");
+
     if (dp->fcb[0] == NULL)
         {
-        fprintf(stderr, "Failed to open %s\n", fname);
+        fprintf(stderr, "(lp1612 ) Failed to open %s\n", fname);
         exit(1);
         }
 
     /*
     **  Print a friendly message.
     */
-    printf("LP1612 initialised on channel %o\n", channelNo);
+    printf("(lp1612 ) Initialised on channel %o equipment %o filename %s\n",
+           channelNo,
+           eqNo,
+           fname);
+
+    /*
+    **  Link into list of lp1612 Line Printer units.
+    */
+    if (lastLp1612 == NULL)
+        {
+        firstLp1612 = lc;
+        }
+    else
+        {
+        lastLp1612->nextUnit = lc;
+        }
+
+    lastLp1612 = lc;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Show Line Printer Status (operator interface).
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void lp1612ShowStatus(void)
+    {
+    LpContext1612 *lc = firstLp1612;
+
+    if (lc == NULL)
+        {
+        return;
+        }
+
+    printf("\n    > Line Printer (lp1612) Status:\n");
+
+    while (lc)
+        {
+        printf("    > CH %02o EQ %02o UN %02o Mode %s Path '%s'\n",
+               lc->channelNo,
+               lc->eqNo,
+               lc->unitNo,
+               lc->extUseANSI ? "ANSI" : "ASCII",
+               lc->extPath);
+
+        lc = lc->nextUnit;
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -177,38 +357,48 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 void lp1612RemovePaper(char *params, FILE *out)
     {
-    DevSlot *dp;
+    DevSlot       *dp;
+    LpContext1612 *lc;
+    time_t        currentTime;
+
     int numParam;
     int channelNo;
     int equipmentNo;
-    time_t currentTime;
+    int iSuffix;
+
     struct tm t;
-    char fname[80];
-    char fnameNew[200];
+
+    char fName[_MAX_PATH];
+    char fNameNew[_MAX_PATH];
+    bool renameOK;
+
 
     /*
     **  Operator wants to remove paper.
     */
-    numParam = sscanf(params,"%o,%o,%s",&channelNo, &equipmentNo, fnameNew);
+    numParam = sscanf(params, "%o,%o", &channelNo, &equipmentNo);
 
     /*
     **  Check parameters.
     */
-    if (numParam < 2)
+    if (numParam != 2)
         {
-        fputs("Not enough or invalid parameters\n", out);
+        printf("(lp1612 ) Not enough or invalid parameters\n");
+
         return;
         }
 
-    if (channelNo < 0 || channelNo >= MaxChannels)
+    if ((channelNo < 0) || (channelNo >= MaxChannels))
         {
-        fputs("Invalid channel no\n", out);
+        printf("(lp1612 ) Invalid channel no\n");
+
         return;
         }
 
-    if (equipmentNo < 0 || equipmentNo >= MaxEquipment)
+    if ((equipmentNo < 0) || (equipmentNo >= MaxEquipment))
         {
-        fputs("Invalid equipment no\n", out);
+        printf("(lp1612 ) Invalid equipment no\n");
+
         return;
         }
 
@@ -221,52 +411,105 @@ void lp1612RemovePaper(char *params, FILE *out)
         return;
         }
 
-    /*
-    **  Close the old device file.
-    */
-    fflush(dp->fcb[0]);
-    fclose(dp->fcb[0]);
-    dp->fcb[0] = NULL;
+    lc = (LpContext1612 *)dp->context[0];
+#if defined(SAFECALLS)
+    sprintf_s(fName, sizeof(fName), "%sLP1612_C%02o", lc->extPath, channelNo);
+#else
+    sprintf(fName, "%sLP1612_C%02o", lc->extPath, channelNo);
+#endif
 
-    /*
-    **  Rename the device file to the format "LP1612_yyyymmdd_hhmmss".
-    */
-    sprintf(fname, "LP1612_C%02o", channelNo);
-
-    if (numParam < 3)
+    //  SZoppi: this can happen if something goes wrong in the open
+    //          and the file fails to be properly re-opened.
+    if (dp->fcb[0] == NULL)
         {
-        time(&currentTime);
-        t = *localtime(&currentTime);
-        sprintf(fnameNew, "LP1612_%04d%02d%02d_%02d%02d%02d",
-            t.tm_year + 1900,
-            t.tm_mon + 1,
-            t.tm_mday,
-            t.tm_hour,
-            t.tm_min,
-            t.tm_sec);
+        renameOK = TRUE;        //  Since nothing was open - we're not renaming
+        printf("(lp1612 ) lp1612RemovePaper: FCB is Null on channel %o equipment %o\n",
+               dp->channel->id,
+               dp->eqNo);
+        //  proceed to attempt to open a new FCB
         }
-
-    if (rename(fname, fnameNew) != 0)
+    else
         {
-        fprintf(out, "Could not rename %s to %s - %s\n", fname, fnameNew, strerror(errno));
-        return;
+        fflush(dp->fcb[0]);
+
+        if (ftell(dp->fcb[0]) == 0)
+            {
+            printf("(lp1612 ) No output has been written on channel %o and equipment %o\n", channelNo, equipmentNo);
+
+            return;
+            }
+
+        /*
+        **  Close the old device file.
+        */
+        fclose(dp->fcb[0]);
+        dp->fcb[0] = NULL;
+
+        /*
+        **  Rename the device file to the format "LP5xx_yyyymmdd_hhmmss_nn".
+        */
+
+        renameOK = FALSE;
+
+        for (iSuffix = 0; iSuffix < 100; iSuffix++)
+            {
+            time(&currentTime);
+            t = *localtime(&currentTime);
+#if defined(SAFECALLS)
+            sprintf_s(fNameNew, sizeof(fNameNew), "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d",
+                      lc->extPath,
+                      t.tm_year + 1900,
+                      t.tm_mon + 1,
+                      t.tm_mday,
+                      t.tm_hour,
+                      t.tm_min,
+                      t.tm_sec,
+                      iSuffix);
+#else
+            sprintf(fNameNew, "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d",
+                    lc->extPath,
+                    t.tm_year + 1900,
+                    t.tm_mon + 1,
+                    t.tm_mday,
+                    t.tm_hour,
+                    t.tm_min,
+                    t.tm_sec,
+                    iSuffix);
+#endif
+
+            if (rename(fName, fNameNew) == 0)
+                {
+                break;
+                }
+
+            printf("(lp1612 ) Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
+                   fName,
+                   fNameNew,
+                   strerror(errno),
+                   iSuffix);
+            }
+        if (iSuffix > 0)
+            {
+            printf("\n");
+            }
         }
 
     /*
     **  Open the device file.
     */
-    dp->fcb[0] = fopen(fname, "w");
+    dp->fcb[0] = fopen(fName, renameOK ? "w" : "a");
 
     /*
     **  Check if the open succeeded.
     */
     if (dp->fcb[0] == NULL)
         {
-        fprintf(out, "Failed to open %s\n", fname);
+        printf("(lp1612 ) Failed to open %s\n", fName);
+
         return;
         }
 
-    fputs("Paper removed from 1612 printer\n", out);
+    printf("(lp1612 ) Paper removed and available on '%s'\n", fNameNew);
     }
 
 /*--------------------------------------------------------------------------
@@ -280,38 +523,96 @@ void lp1612RemovePaper(char *params, FILE *out)
 **------------------------------------------------------------------------*/
 static FcStatus lp1612Func(PpWord funcCode)
     {
-    FILE *fcb = activeDevice->fcb[0];
+    FILE          *fcb = activeDevice->fcb[0];
+    LpContext1612 *lc;
+
+    lc = (LpContext1612 *)activeDevice->context[0];
+
+    //  SZoppi: this can happen if something goes wrong in the open
+    //          and the file fails to be properly re-opened.
+    if (activeDevice->fcb[0] == NULL)
+        {
+        printf("(lp1612 ) lp1612Func: FCB is Null on channel %o equipment %o\n",
+               activeDevice->channel->id,
+               activeDevice->eqNo);
+
+        return (FcProcessed);
+        }
 
     switch (funcCode)
         {
     default:
-        return(FcDeclined);
+        return (FcDeclined);
 
     case FcPrintSelect:
         break;
 
     case FcPrintSingleSpace:
-        fprintf(fcb, "\n");
+        if (lc->extUseANSI)
+            {
+            fprintf(fcb, "\n ");
+            }
+        else
+            {
+            fprintf(fcb, "\n");
+            }
         break;
 
     case FcPrintDoubleSpace:
-        fprintf(fcb, "\n\n");
+        if (lc->extUseANSI)
+            {
+            fprintf(fcb, "\n0");
+            }
+        else
+            {
+            fprintf(fcb, "\n\n");
+            }
         break;
 
     case FcPrintMoveChannel7:
-        fprintf(fcb, "\n");
+        if (lc->extUseANSI)
+            {
+            fprintf(fcb, "\n ");
+            }
+        else
+            {
+            fprintf(fcb, "\n");
+            }
         break;
 
     case FcPrintMoveTOF:
-        fprintf(fcb, "\f");
+        if (lc->extUseANSI)
+            {
+            fprintf(fcb, "\n1");
+            }
+        else
+            {
+            fprintf(fcb, "\f");
+            }
         break;
 
     case FcPrintPrint:
-        fprintf(fcb, "\n");
+        if (lc->extUseANSI)
+            {
+            fprintf(fcb, "\n ");
+            }
+        else
+            {
+            fprintf(fcb, "\n");
+            }
         break;
 
     case FcPrintSuppressLF:
-        return(FcProcessed);
+        if (lc->extUseANSI)
+            {
+            fprintf(fcb, "\n+");
+            }
+        else
+            {
+            fprintf(fcb, "\r");
+            }
+
+        return (FcProcessed);
 
     case FcPrintStatusReq:
         activeChannel->status = StPrintReady;
@@ -328,7 +629,8 @@ static FcStatus lp1612Func(PpWord funcCode)
         }
 
     activeDevice->fcode = funcCode;
-    return(FcAccepted);
+
+    return (FcAccepted);
     }
 
 /*--------------------------------------------------------------------------
@@ -342,6 +644,17 @@ static FcStatus lp1612Func(PpWord funcCode)
 static void lp1612Io(void)
     {
     FILE *fcb = activeDevice->fcb[0];
+
+    //  SZoppi: this can happen if something goes wrong in the open
+    //          and the file fails to be properly re-opened.
+    if (activeDevice->fcb[0] == NULL)
+        {
+        printf("(lp1612 ) lp1612Io: FCB is Null on channel %o equipment %o\n",
+               activeDevice->channel->id,
+               activeDevice->eqNo);
+
+        return;
+        }
 
     switch (activeDevice->fcode)
         {
@@ -368,9 +681,9 @@ static void lp1612Io(void)
         break;
 
     case FcPrintStatusReq:
-        activeChannel->data = activeChannel->status;
-        activeChannel->full = TRUE;
-        activeDevice->fcode = 0;
+        activeChannel->data   = activeChannel->status;
+        activeChannel->full   = TRUE;
+        activeDevice->fcode   = 0;
         activeChannel->status = 0;
         break;
         }
@@ -398,6 +711,31 @@ static void lp1612Activate(void)
 **------------------------------------------------------------------------*/
 static void lp1612Disconnect(void)
     {
+    FILE *fcb = activeDevice->fcb[0];
+
+    //  SZoppi: this can happen if something goes wrong in the open
+    //          and the file fails to be properly re-opened.
+    if (activeDevice->fcb[0] == NULL)
+        {
+        printf("(lp1612 ) lp1612Disconnect: FCB is Null on channel %o equipment %o\n",
+               activeDevice->channel->id,
+               activeDevice->eqNo);
+
+        return;
+        }
+
+    LpContext1612 *lc;
+
+    lc = (LpContext1612 *)activeDevice->context[0];
+
+    if (lc->extUseANSI)
+        {
+        fprintf(fcb, "\n ");
+        }
+    else
+        {
+        fputc('\n', fcb);
+        }
     }
 
 /*---------------------------  End Of File  ------------------------------*/

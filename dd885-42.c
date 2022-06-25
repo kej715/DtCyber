@@ -10,12 +10,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -23,7 +23,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -44,39 +44,39 @@
 **  -----------------
 */
 
-#define DiskType885_42  3
+#define DiskType885_42                     3
 
 /*
 **  CDC 885-42 disk drive function and status codes.
 */
-#define Fc885_42Seek                    00001
-#define Fc885_42Read                    00004
-#define Fc885_42Write                   00005
-#define Fc885_42OpComplete              00010
-#define Fc885_42GeneralStatus           00012
-#define Fc885_42Continue                00014
-#define Fc885_42DetailedStatus          00023
-#define Fc885_42ReadFactoryData         00030
-#define Fc885_42ReadUtilityMap          00031
-#define Fc885_42ReadProtectedSector     00034
-#define Fc885_42ExtendedGeneralStatus   00066
-#define Fc885_42InterlockAutoload       00067
-#define Fc885_42Autoload                00414
+#define Fc885_42Seek                       00001
+#define Fc885_42Read                       00004
+#define Fc885_42Write                      00005
+#define Fc885_42OpComplete                 00010
+#define Fc885_42GeneralStatus              00012
+#define Fc885_42Continue                   00014
+#define Fc885_42DetailedStatus             00023
+#define Fc885_42ReadFactoryData            00030
+#define Fc885_42ReadUtilityMap             00031
+#define Fc885_42ReadProtectedSector        00034
+#define Fc885_42ExtendedGeneralStatus      00066
+#define Fc885_42InterlockAutoload          00067
+#define Fc885_42Autoload                   00414
 
 /*
 **  General status bits.
 */
-#define St885_42Abnormal                04000
-#define St885_42ControllerReserved      02000
-#define St885_42NonrecoverableError     01000
-#define St885_42Recovering              00400
-#define St885_42CheckwordError          00200
-#define St885_42CorrectableAddressError 00100
-#define St885_42DriveMalfunction        00020
-#define St885_42DriveReservied          00010
-#define St885_42AutoloadError           00004
-#define St885_42Busy                    00002
-#define St885_42ControllerRecovery      00001
+#define St885_42Abnormal                   04000
+#define St885_42ControllerReserved         02000
+#define St885_42NonrecoverableError        01000
+#define St885_42Recovering                 00400
+#define St885_42CheckwordError             00200
+#define St885_42CorrectableAddressError    00100
+#define St885_42DriveMalfunction           00020
+#define St885_42DriveReservied             00010
+#define St885_42AutoloadError              00004
+#define St885_42Busy                       00002
+#define St885_42ControllerRecovery         00001
 
 /*
 **  Detailed status.
@@ -85,17 +85,17 @@
 /*
 **  Physical geometry of 885-42 disk.
 **  256 words/sector + 2 12-bit control bytes
-**   32 sectors/track                                     
+**   32 sectors/track
 **   10 tracks/cylinder (heads/unit)
 **  841 cylinders/unit
 */
 #define MaxCylinders       843
-#define MaxTracks           10
-#define MaxSectors          32
+#define MaxTracks          10
+#define MaxSectors         32
 #define SectorSize         256
-#define ShortSectorSize     64
+#define ShortSectorSize    64
 
-#define AutoloadSize     16870
+#define AutoloadSize       16870
 
 /*
 **  -----------------------
@@ -117,16 +117,27 @@ typedef struct sector
 
 typedef struct diskParam
     {
-    i32         sector;
-    i32         track;
-    i32         cylinder;
-    PpWord      generalStatus[5];
-    PpWord      detailedStatus[20];
-    u8          diskNo;
-    u8          unitNo;
-    PpWord      emAddress[2];
-    PpWord      writeParams[4];
-    Sector      buffer;
+    /*
+    **  Info for show_disk operator command.
+    */
+    struct diskParam *nextDisk;
+    u8               channelNo;
+    u8               eqNo;
+    char             fileName[_MAX_PATH + 1];
+
+    /*
+    **  Parameter Table
+    */
+    i32              sector;
+    i32              track;
+    i32              cylinder;
+    PpWord           generalStatus[5];
+    PpWord           detailedStatus[20];
+    u8               diskNo;
+    u8               unitNo;
+    PpWord           emAddress[2];
+    PpWord           writeParams[4];
+    Sector           buffer;
     } DiskParam;
 
 /*
@@ -142,7 +153,8 @@ static i32 dd885_42Seek(DiskParam *dp);
 static i32 dd885_42SeekNext(DiskParam *dp);
 static bool dd885_42Read(DiskParam *dp, FILE *fcb);
 static bool dd885_42Write(DiskParam *dp, FILE *fcb);
-static char *dd885_42Func2String(PpWord funcCode);
+static char * dd885_42Func2String(PpWord funcCode);
+void dd885_42ShowDiskStatus(void);
 
 /*
 **  ----------------
@@ -155,18 +167,21 @@ static char *dd885_42Func2String(PpWord funcCode);
 **  Private Variables
 **  -----------------
 */
-static int diskCount = 0;
+static int       diskCount  = 0;
+static DiskParam *firstDisk = NULL;
+static DiskParam *lastDisk  = NULL;
 
 #if DEBUG
-#define OctalColumn(x) (5 * (x) + 1 + 5)
-#define AsciiColumn(x) (OctalColumn(5) + 2 + (2 * x))
-#define LogLineLength (AsciiColumn(5))
+#define OctalColumn(x)    (5 * (x) + 1 + 5)
+#define AsciiColumn(x)    (OctalColumn(5) + 2 + (2 * x))
+#define LogLineLength    (AsciiColumn(5))
 
 static FILE *dd885_42Log = NULL;
-static void dd885_42LogFlush (void);
-static void dd885_42LogByte (int b);
+static void dd885_42LogFlush(void);
+static void dd885_42LogByte(int b);
+
 static char dd885_42LogBuf[LogLineLength + 1];
-static int dd885_42LogCol = 0;
+static int  dd885_42LogCol = 0;
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Flush incomplete numeric/ascii data line
@@ -185,7 +200,7 @@ static void dd885_42LogFlush(void)
 
     dd885_42LogCol = 0;
     memset(dd885_42LogBuf, ' ', LogLineLength);
-    dd885_42LogBuf[0] = '\n';
+    dd885_42LogBuf[0]             = '\n';
     dd885_42LogBuf[LogLineLength] = '\0';
     }
 
@@ -200,8 +215,8 @@ static void dd885_42LogFlush(void)
 static void dd885_42LogByte(int b)
     {
     char octal[10];
-    int col;
-    
+    int  col;
+
     col = OctalColumn(dd885_42LogCol);
     sprintf(octal, "%04o ", b);
     memcpy(dd885_42LogBuf + col, octal, 5);
@@ -214,23 +229,24 @@ static void dd885_42LogByte(int b)
         dd885_42LogFlush();
         }
     }
+
 #endif
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise specified disk drive.
@@ -246,19 +262,20 @@ static void dd885_42LogByte(int b)
 **------------------------------------------------------------------------*/
 void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
-    DevSlot *ds;
-    FILE *fcb;
-    char fname[80];
+    DevSlot   *ds;
+    FILE      *fcb;
+    char      fname[_MAX_PATH + 1];
     DiskParam *dp;
-    time_t mTime;
+    time_t    mTime;
     struct tm *lTime;
-    u8 yy, mm, dd;
+    u8        yy, mm, dd;
+
     char *opt = NULL;
 
     if (extMaxMemory == 0)
         {
-        fprintf (stderr, "Cannot configure 885-42 disk, no ECS configured\n");
-        exit (1);
+        fprintf(stderr, "(dd885-42) Cannot configure 885-42 disk, no ECS configured\n");
+        exit(1);
         }
 
 #if DEBUG
@@ -276,12 +293,12 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Setup channel functions.
     */
-    ds = channelAttach(channelNo, eqNo, DtDd885_42);
-    activeDevice = ds;
-    ds->activate = dd885_42Activate;
+    ds             = channelAttach(channelNo, eqNo, DtDd885_42);
+    activeDevice   = ds;
+    ds->activate   = dd885_42Activate;
     ds->disconnect = dd885_42Disconnect;
-    ds->func = dd885_42Func;
-    ds->io = dd885_42Io;
+    ds->func       = dd885_42Func;
+    ds->io         = dd885_42Io;
 
     /*
     **  Save disk parameters.
@@ -290,7 +307,7 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     dp = (DiskParam *)calloc(1, sizeof(DiskParam));
     if (dp == NULL)
         {
-        fprintf(stderr, "Failed to allocate dd885_42 context block\n");
+        fprintf(stderr, "(dd885-42) Failed to allocate dd885_42 context block\n");
         exit(1);
         }
 
@@ -302,7 +319,7 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     */
     if (deviceName != NULL)
         {
-        opt = strchr (deviceName, ',');
+        opt = strchr(deviceName, ',');
         }
 
     if (opt != NULL)
@@ -311,38 +328,52 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         **  Process options.
         */
         *opt++ = '\0';
-        fprintf (stderr, "Unrecognized option name %s\n", opt);
-        exit (1);
+        fprintf(stderr, "(dd885-42) Unrecognized option name %s\n", opt);
+        exit(1);
         }
 
     /*
     **  Initialize detailed status.
     */
-    dp->detailedStatus[ 0] =     0;             // strobe offset & address error status
-    dp->detailedStatus[ 1] =  0371;             // checkword error status, 885 sequence latches, motor at speed
-    dp->detailedStatus[ 2] =     0;             // current function & error bits
-    dp->detailedStatus[ 3] = 07700 | unitNo;    // 7155 controlware, revision #, drive unit number
-    dp->detailedStatus[ 4] =     0;             // track flaw, factory flaw map flaw, cylinder # bits 9-4
-    dp->detailedStatus[ 5] =     0;             // cylinder # bits 3-0, track # bits 7-0
-    dp->detailedStatus[ 6] =   010;             // logical sector number bits 7-0, ready&safe, system maint mode, drive # bits 7-6
-    dp->detailedStatus[ 7] = (unitNo<<6) | 037; // drive # bits 5-0, write enable, online, air switch, start switch, motor at speed
-    dp->detailedStatus[ 8] = 01640;             // DSU status
-    dp->detailedStatus[ 9] = 07201;             // DSU status
-    dp->detailedStatus[10] =     0;             // DSU status
-    dp->detailedStatus[11] =     0;             // DSU status
-    dp->detailedStatus[12] =     0;             // command causing error or word address of correctable read data
-    dp->detailedStatus[13] =     0;             // first word of correction vector
-    dp->detailedStatus[14] =     0;             // second word of correction vector
-    dp->detailedStatus[15] =     0;             // DSC operating status word
-    dp->detailedStatus[16] =     0;             // coupler buffer status
-    dp->detailedStatus[17] =  0400;             // access A is connected & last function
-    dp->detailedStatus[18] =     0;             // 2nd and 3rd to last functions
-    dp->detailedStatus[19] =     0;             // 3rd to last function
+    dp->detailedStatus[0]  = 0;                   // strobe offset & address error status
+    dp->detailedStatus[1]  = 0371;                // checkword error status, 885 sequence latches, motor at speed
+    dp->detailedStatus[2]  = 0;                   // current function & error bits
+    dp->detailedStatus[3]  = 07700 | unitNo;      // 7155 controlware, revision #, drive unit number
+    dp->detailedStatus[4]  = 0;                   // track flaw, factory flaw map flaw, cylinder # bits 9-4
+    dp->detailedStatus[5]  = 0;                   // cylinder # bits 3-0, track # bits 7-0
+    dp->detailedStatus[6]  = 010;                 // logical sector number bits 7-0, ready&safe, system maint mode, drive # bits 7-6
+    dp->detailedStatus[7]  = (unitNo << 6) | 037; // drive # bits 5-0, write enable, online, air switch, start switch, motor at speed
+    dp->detailedStatus[8]  = 01640;               // DSU status
+    dp->detailedStatus[9]  = 07201;               // DSU status
+    dp->detailedStatus[10] = 0;                   // DSU status
+    dp->detailedStatus[11] = 0;                   // DSU status
+    dp->detailedStatus[12] = 0;                   // command causing error or word address of correctable read data
+    dp->detailedStatus[13] = 0;                   // first word of correction vector
+    dp->detailedStatus[14] = 0;                   // second word of correction vector
+    dp->detailedStatus[15] = 0;                   // DSC operating status word
+    dp->detailedStatus[16] = 0;                   // coupler buffer status
+    dp->detailedStatus[17] = 0400;                // access A is connected & last function
+    dp->detailedStatus[18] = 0;                   // 2nd and 3rd to last functions
+    dp->detailedStatus[19] = 0;                   // 3rd to last function
 
     /*
     **  Link device parameters.
     */
     ds->context[unitNo] = dp;
+
+    /*
+    **  Link into list of disk units.
+    */
+    if (lastDisk == NULL)
+        {
+        firstDisk = dp;
+        }
+    else
+        {
+        lastDisk->nextDisk = dp;
+        }
+
+    lastDisk = dp;
 
     /*
     **  Open or create disk image.
@@ -371,7 +402,7 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         fcb = fopen(fname, "w+b");
         if (fcb == NULL)
             {
-            fprintf(stderr, "Failed to open %s\n", fname);
+            fprintf(stderr, "(dd885-42) Failed to open %s\n", fname);
             exit(1);
             }
 
@@ -380,8 +411,8 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         */
         memset(&dp->buffer, 0, sizeof dp->buffer);
         dp->cylinder = MaxCylinders - 1;
-        dp->track = MaxTracks - 1;
-        dp->sector = MaxSectors - 1;
+        dp->track    = MaxTracks - 1;
+        dp->sector   = MaxSectors - 1;
         fseek(fcb, dd885_42Seek(dp), SEEK_SET);
         fwrite(&dp->buffer, sizeof dp->buffer, 1, fcb);
 
@@ -407,23 +438,23 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         /*
         **  Write serial number and date of manufacture.
         */
-        dp->buffer.data[0]  = (CpWord)(  ((channelNo & 070) << (8 - 3))
-                                       | ((channelNo & 007) << (4 - 0))
-                                       | ((unitNo    & 070) >> (3 - 0))) << 48;
-        dp->buffer.data[0] |= (CpWord)(  ((unitNo    & 007) << (8 - 0))
-                                       | ((DiskType885_42  & 070) << (4 - 3))
-                                       | ((DiskType885_42  & 007) << (0 - 0))) << 36;
+        dp->buffer.data[0] = (CpWord)(((channelNo & 070) << (8 - 3))
+                                      | ((channelNo & 007) << (4 - 0))
+                                      | ((unitNo & 070) >> (3 - 0))) << 48;
+        dp->buffer.data[0] |= (CpWord)(((unitNo & 007) << (8 - 0))
+                                       | ((DiskType885_42 & 070) << (4 - 3))
+                                       | ((DiskType885_42 & 007) << (0 - 0))) << 36;
 
         mTime = getSeconds();
         lTime = localtime(&mTime);
-        yy = lTime->tm_year % 100;
-        mm = lTime->tm_mon + 1;
-        dd = lTime->tm_mday;
+        yy    = lTime->tm_year % 100;
+        mm    = lTime->tm_mon + 1;
+        dd    = lTime->tm_mday;
 
         dp->buffer.data[0] |= ((dd / 10) << 8 | (dd % 10) << 4 | mm / 10) << 24;
         dp->buffer.data[0] |= ((mm % 10) << 8 | (yy / 10) << 4 | yy % 10) << 12;
 
-        dp->track = 0;
+        dp->track  = 0;
         dp->sector = 0;
         fseek(fcb, dd885_42Seek(dp), SEEK_SET);
         fwrite(&dp->buffer, sizeof dp->buffer, 1, fcb);
@@ -432,27 +463,39 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     ds->fcb[unitNo] = fcb;
 
     /*
+    **  For Operator Show Status Command
+    */
+#if defined(SAFECALLS)
+    strcpy_s(dp->fileName, sizeof(fname), fname);
+#else
+    strcpy(dp->fileName, fname);
+#endif
+
+    dp->channelNo = channelNo;
+    dp->unitNo    = unitNo;
+
+    /*
     **  Reset disk seek position.
     */
     dp->cylinder = 0;
-    dp->track = 0;
-    dp->sector = 0;
+    dp->track    = 0;
+    dp->sector   = 0;
     fseek(fcb, dd885_42Seek(dp), SEEK_SET);
 
     /*
     **  Print a friendly message.
     */
-    printf("Disk with %d cylinders initialised on channel %o unit %o\n",
-        MaxCylinders, channelNo, unitNo);
+    printf("(dd885-42) Disk with %d cylinders initialised on channel %o unit %o\n",
+           MaxCylinders, channelNo, unitNo);
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Execute function code on 885-42 disk drive.
@@ -465,20 +508,20 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 static FcStatus dd885_42Func(PpWord funcCode)
     {
-    i8 unitNo;
-    FILE *fcb;
-    int ignore;
+    i8        unitNo;
+    FILE      *fcb;
+    int       ignore;
     DiskParam *dp;
 
     unitNo = activeDevice->selectedUnit;
     if (unitNo != -1)
         {
-        dp = (DiskParam *)activeDevice->context[unitNo];
+        dp  = (DiskParam *)activeDevice->context[unitNo];
         fcb = activeDevice->fcb[unitNo];
         }
     else
         {
-        dp = NULL;
+        dp  = NULL;
         fcb = NULL;
         }
 
@@ -486,25 +529,25 @@ static FcStatus dd885_42Func(PpWord funcCode)
     dd885_42LogFlush();
     if (dp != NULL)
         {
-        fprintf(dd885_42Log, "\n%06d PP:%02o CH:%02o DSK:%d f:%04o T:%-25s   c:%3d t:%2d s:%2d  >   ", 
-            traceSequenceNo,
-            activePpu->id,
-            activeDevice->channel->id,
-            dp->diskNo,
-            funcCode,
-            dd885_42Func2String(funcCode),
-            dp->cylinder,
-            dp->track,
-            dp->sector);
+        fprintf(dd885_42Log, "\n%06d PP:%02o CH:%02o DSK:%d f:%04o T:%-25s   c:%3d t:%2d s:%2d  >   ",
+                traceSequenceNo,
+                activePpu->id,
+                activeDevice->channel->id,
+                dp->diskNo,
+                funcCode,
+                dd885_42Func2String(funcCode),
+                dp->cylinder,
+                dp->track,
+                dp->sector);
         }
     else
         {
-        fprintf(dd885_42Log, "\n%06d PP:%02o CH:%02o DSK:? f:%04o T:%-25s  >   ", 
-            traceSequenceNo,
-            activePpu->id,
-            activeDevice->channel->id,
-            funcCode,
-            dd885_42Func2String(funcCode));
+        fprintf(dd885_42Log, "\n%06d PP:%02o CH:%02o DSK:? f:%04o T:%-25s  >   ",
+                traceSequenceNo,
+                activePpu->id,
+                activeDevice->channel->id,
+                funcCode,
+                dd885_42Func2String(funcCode));
         }
 
     fflush(dd885_42Log);
@@ -527,7 +570,7 @@ static FcStatus dd885_42Func(PpWord funcCode)
             **  These functions are OK - do nothing.
             */
             break;
-        
+
         default:
             /*
             **  All remaining functions are declined if no drive is selected.
@@ -535,7 +578,8 @@ static FcStatus dd885_42Func(PpWord funcCode)
 #if DEBUG
             fprintf(dd885_42Log, " No drive selected, function %s declined ", dd885_42Func2String(funcCode));
 #endif
-            return(FcDeclined);
+
+            return (FcDeclined);
             }
         }
 
@@ -548,7 +592,8 @@ static FcStatus dd885_42Func(PpWord funcCode)
 #if DEBUG
         fprintf(dd885_42Log, " !!!!!FUNC %s not implemented & declined!!!!!! ", dd885_42Func2String(funcCode));
 #endif
-        return(FcDeclined);
+
+        return (FcDeclined);
 
     case Fc885_42Seek:
         /*
@@ -572,7 +617,7 @@ static FcStatus dd885_42Func(PpWord funcCode)
         break;
 
     case Fc885_42OpComplete:
-        return(FcProcessed);
+        return (FcProcessed);
 
     case Fc885_42GeneralStatus:
         activeDevice->recordLength = 1;
@@ -586,7 +631,7 @@ static FcStatus dd885_42Func(PpWord funcCode)
             }
         activeDevice->recordLength = 5;
         break;
- 
+
     case Fc885_42DetailedStatus:
         dp->detailedStatus[2] = (funcCode << 4) & 07760;
         dp->detailedStatus[4] = (dp->cylinder >> 4) & 077;
@@ -594,7 +639,7 @@ static FcStatus dd885_42Func(PpWord funcCode)
         dp->detailedStatus[6] = ((dp->sector << 4) | 010) & 07777;
         if ((dp->track & 1) != 0)
             {
-            dp->detailedStatus[9] |= 2;  /* odd track */
+            dp->detailedStatus[9] |= 2;              /* odd track */
             }
         else
             {
@@ -628,7 +673,8 @@ static FcStatus dd885_42Func(PpWord funcCode)
 #if DEBUG
     fflush(dd885_42Log);
 #endif
-    return(FcAccepted);
+
+    return (FcAccepted);
     }
 
 /*--------------------------------------------------------------------------
@@ -641,23 +687,23 @@ static FcStatus dd885_42Func(PpWord funcCode)
 **------------------------------------------------------------------------*/
 static void dd885_42Io(void)
     {
-    u16 byteIndex;
+    u16       byteIndex;
     DiskParam *dp;
-    FILE *fcb;
-    i32 pos;
-    u16 shiftCount;
-    i8 unitNo;
-    u16 wordIndex;
+    FILE      *fcb;
+    i32       pos;
+    u16       shiftCount;
+    i8        unitNo;
+    u16       wordIndex;
 
     unitNo = activeDevice->selectedUnit;
     if (unitNo != -1)
         {
-        dp = (DiskParam *)activeDevice->context[unitNo];
+        dp  = (DiskParam *)activeDevice->context[unitNo];
         fcb = activeDevice->fcb[unitNo];
         }
     else
         {
-        dp = NULL;
+        dp  = NULL;
         fcb = NULL;
         }
 
@@ -667,7 +713,7 @@ static void dd885_42Io(void)
         if (activeChannel->full)
             {
             switch (activeDevice->recordLength--)
-                {
+            {
             case 4:
                 unitNo = activeChannel->data & 07;
                 if (unitNo != activeDevice->selectedUnit)
@@ -677,7 +723,6 @@ static void dd885_42Io(void)
                         activeDevice->selectedUnit = unitNo;
                         dp = (DiskParam *)activeDevice->context[unitNo];
                         dp->detailedStatus[12] &= ~01000;
-
                         }
                     else
                         {
@@ -710,8 +755,8 @@ static void dd885_42Io(void)
                 if (dp != NULL)
                     {
                     dp->sector = activeChannel->data;
-                    pos = dd885_42Seek(dp);
-                    if (pos >= 0 && fcb != NULL)
+                    pos        = dd885_42Seek(dp);
+                    if ((pos >= 0) && (fcb != NULL))
                         {
                         fseek(fcb, pos, SEEK_SET);
                         }
@@ -725,7 +770,7 @@ static void dd885_42Io(void)
             default:
                 activeDevice->recordLength = 0;
                 break;
-                }
+            }
 
 #if DEBUG
             fprintf(dd885_42Log, " %04o[%d]", activeChannel->data, activeChannel->data);
@@ -741,7 +786,7 @@ static void dd885_42Io(void)
             if (dp != NULL)
                 {
                 switch (activeDevice->recordLength--)
-                    {
+                {
                 case 2:
                     dp->emAddress[0] = activeChannel->data;
                     break;
@@ -751,7 +796,7 @@ static void dd885_42Io(void)
                     if (dd885_42Read(dp, fcb))
                         {
                         pos = dd885_42SeekNext(dp);
-                        if (pos >= 0 && fcb != NULL)
+                        if ((pos >= 0) && (fcb != NULL))
                             {
                             fseek(fcb, pos, SEEK_SET);
                             }
@@ -761,7 +806,7 @@ static void dd885_42Io(void)
                 default:
                     activeDevice->recordLength = 0;
                     break;
-                    }
+                }
                 }
 #if DEBUG
             fprintf(dd885_42Log, " %04o", activeChannel->data);
@@ -777,7 +822,7 @@ static void dd885_42Io(void)
             if (dp != NULL)
                 {
                 switch (activeDevice->recordLength--)
-                    {
+                {
                 case 6:
                     dp->emAddress[0] = activeChannel->data;
                     break;
@@ -803,7 +848,7 @@ static void dd885_42Io(void)
                     if (dd885_42Write(dp, fcb))
                         {
                         pos = dd885_42SeekNext(dp);
-                        if (pos >= 0 && fcb != NULL)
+                        if ((pos >= 0) && (fcb != NULL))
                             {
                             fseek(fcb, pos, SEEK_SET);
                             }
@@ -813,7 +858,7 @@ static void dd885_42Io(void)
                 default:
                     activeDevice->recordLength = 0;
                     break;
-                    }
+                }
                 }
 
 #if DEBUG
@@ -927,9 +972,9 @@ static void dd885_42Io(void)
                 }
             else
                 {
-                byteIndex = (ShortSectorSize * 5) - activeDevice->recordLength;
-                wordIndex = byteIndex / 5;
-                shiftCount = 48 - (wordIndex * 12);
+                byteIndex           = (ShortSectorSize * 5) - activeDevice->recordLength;
+                wordIndex           = byteIndex / 5;
+                shiftCount          = 48 - (wordIndex * 12);
                 activeChannel->data = (dp->buffer.data[wordIndex] >> shiftCount) & 07777;
                 if (--activeDevice->recordLength == 0)
                     {
@@ -957,9 +1002,9 @@ static void dd885_42Activate(void)
     {
 #if DEBUG
     fprintf(dd885_42Log, "\n%06d PP:%02o CH:%02o Activate",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id);
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id);
 
     fflush(dd885_42Log);
 #endif
@@ -982,9 +1027,9 @@ static void dd885_42Disconnect(void)
 
 #if DEBUG
     fprintf(dd885_42Log, "\n%06d PP:%02o CH:%02o Disconnect",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id);
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id);
 
     fflush(dd885_42Log);
 #endif
@@ -1004,18 +1049,19 @@ static i32 dd885_42Seek(DiskParam *dp)
     {
     i32 result;
 
-    activeDevice->status = 0;
+    activeDevice->status  = 0;
     dp->detailedStatus[2] = Fc885_42Seek << 4;
 
     if (dp->cylinder >= MaxCylinders)
         {
 #if DEBUG
-        fprintf(dd885_42Log, "ch %o, cylinder %d invalid\n", activeChannel->id, dp->cylinder); 
+        fprintf(dd885_42Log, "ch %o, cylinder %d invalid\n", activeChannel->id, dp->cylinder);
 #endif
         logError(LogErrorLocation, "ch %o, cylinder %d invalid\n", activeChannel->id, dp->cylinder);
-        activeDevice->status = St885_42Abnormal | St885_42NonrecoverableError;
+        activeDevice->status   = St885_42Abnormal | St885_42NonrecoverableError;
         dp->detailedStatus[2] |= 0010;
-        return(-1);
+
+        return (-1);
         }
 
     if (dp->track >= MaxTracks)
@@ -1024,9 +1070,10 @@ static i32 dd885_42Seek(DiskParam *dp)
         fprintf(dd885_42Log, "ch %o, track %d invalid\n", activeChannel->id, dp->track);
 #endif
         logError(LogErrorLocation, "ch %o, track %d invalid\n", activeChannel->id, dp->track);
-        activeDevice->status = St885_42Abnormal | St885_42NonrecoverableError;
+        activeDevice->status   = St885_42Abnormal | St885_42NonrecoverableError;
         dp->detailedStatus[2] |= 0010;
-        return(-1);
+
+        return (-1);
         }
 
     if (dp->sector >= MaxSectors)
@@ -1035,9 +1082,10 @@ static i32 dd885_42Seek(DiskParam *dp)
         fprintf(dd885_42Log, "ch %o, sector %d invalid\n", activeChannel->id, dp->sector);
 #endif
         logError(LogErrorLocation, "ch %o, sector %d invalid\n", activeChannel->id, dp->sector);
-        activeDevice->status = St885_42Abnormal | St885_42NonrecoverableError;
+        activeDevice->status   = St885_42Abnormal | St885_42NonrecoverableError;
         dp->detailedStatus[2] |= 0010;
-        return(-1);
+
+        return (-1);
         }
 
     dp->detailedStatus[4] = (PpWord)(dp->cylinder >> 4);
@@ -1049,7 +1097,7 @@ static i32 dd885_42Seek(DiskParam *dp)
     result += dp->sector;
     result *= sizeof(Sector);
 
-    return(result);
+    return (result);
     }
 
 /*--------------------------------------------------------------------------
@@ -1072,6 +1120,7 @@ static i32 dd885_42SeekNext(DiskParam *dp)
             dp->track = 0;
             }
         }
+
     return dd885_42Seek(dp);
     }
 
@@ -1088,32 +1137,32 @@ static i32 dd885_42SeekNext(DiskParam *dp)
 static bool dd885_42Read(DiskParam *dp, FILE *fcb)
     {
     CpWord *data;
-    u32 emAddress;
-    int i;
-    int ignore;
+    u32    emAddress;
+    int    i;
+    int    ignore;
 
-    activeDevice->status = 0;
+    activeDevice->status  = 0;
     dp->detailedStatus[2] = Fc885_42Read << 4;
 
     ignore = fread(&dp->buffer, sizeof dp->buffer, 1, fcb);
     activeDevice->status = 0;
     dp->generalStatus[3] = dp->buffer.control[0];
     dp->generalStatus[4] = dp->buffer.control[1];
-    emAddress = (dp->emAddress[0] << 12) | dp->emAddress[1];
+    emAddress            = (dp->emAddress[0] << 12) | dp->emAddress[1];
     data = dp->buffer.data;
 
 #if DEBUG
     fprintf(dd885_42Log, "\n%06d PP:%02o CH:%02o DSK:%d f:%04o T:%-25s   c:%3d t:%2d s:%2d em:%08o >   ",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id,
-        dp->diskNo,
-        Fc885_42Read,
-        dd885_42Func2String(Fc885_42Read),
-        dp->cylinder,
-        dp->track,
-        dp->sector,
-        emAddress);
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id,
+            dp->diskNo,
+            Fc885_42Read,
+            dd885_42Func2String(Fc885_42Read),
+            dp->cylinder,
+            dp->track,
+            dp->sector,
+            emAddress);
 #endif
 
     if (emAddress + SectorSize <= extMaxMemory)
@@ -1126,8 +1175,9 @@ static bool dd885_42Read(DiskParam *dp, FILE *fcb)
     else
         {
         logError(LogErrorLocation, "ch %o, ECS transfer from 885-42 rejected, address: %08o\n", activeChannel->id, emAddress);
-        activeDevice->status = St885_42Abnormal | St885_42NonrecoverableError;
+        activeDevice->status   = St885_42Abnormal | St885_42NonrecoverableError;
         dp->detailedStatus[2] |= 0010;
+
         return FALSE;
         }
 
@@ -1147,32 +1197,32 @@ static bool dd885_42Read(DiskParam *dp, FILE *fcb)
 static bool dd885_42Write(DiskParam *dp, FILE *fcb)
     {
     CpWord *data;
-    u32 emAddress;
-    int i;
+    u32    emAddress;
+    int    i;
 
-    activeDevice->status = 0;
+    activeDevice->status  = 0;
     dp->detailedStatus[2] = Fc885_42Write << 4;
 
-    activeDevice->status = 0;
+    activeDevice->status  = 0;
     dp->buffer.control[0] = dp->writeParams[2];
     dp->buffer.control[1] = dp->writeParams[3];
-    emAddress = (dp->emAddress[0] << 12) | dp->emAddress[1];
+    emAddress             = (dp->emAddress[0] << 12) | dp->emAddress[1];
     data = dp->buffer.data;
 
 #if DEBUG
     fprintf(dd885_42Log, "\n%06d PP:%02o CH:%02o DSK:%d f:%04o T:%-25s   c:%3d t:%2d s:%2d em:%08o flags:%04o link:%04o >   ",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id,
-        dp->diskNo,
-        Fc885_42Write,
-        dd885_42Func2String(Fc885_42Write),
-        dp->cylinder,
-        dp->track,
-        dp->sector,
-        emAddress,
-        dp->buffer.control[0],
-        dp->buffer.control[1]);
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id,
+            dp->diskNo,
+            Fc885_42Write,
+            dd885_42Func2String(Fc885_42Write),
+            dp->cylinder,
+            dp->track,
+            dp->sector,
+            emAddress,
+            dp->buffer.control[0],
+            dp->buffer.control[1]);
 #endif
 
     if (emAddress + SectorSize <= extMaxMemory)
@@ -1185,12 +1235,14 @@ static bool dd885_42Write(DiskParam *dp, FILE *fcb)
     else
         {
         logError(LogErrorLocation, "ch %o, ECS transfer from 885-42 rejected, address: %08o\n", activeChannel->id, emAddress);
-        activeDevice->status = St885_42Abnormal | St885_42NonrecoverableError;
+        activeDevice->status   = St885_42Abnormal | St885_42NonrecoverableError;
         dp->detailedStatus[2] |= 0010;
+
         return FALSE;
         }
 
     fwrite(&dp->buffer, sizeof dp->buffer, 1, fcb);
+
     return TRUE;
     }
 
@@ -1207,24 +1259,85 @@ static char dd885_42FuncString[10];
 
 static char *dd885_42Func2String(PpWord funcCode)
     {
-    switch(funcCode)
+    switch (funcCode)
         {
-    case Fc885_42Seek                   :  return "Seek";             
-    case Fc885_42Read                   :  return "Read";                 
-    case Fc885_42Write                  :  return "Write";                
-    case Fc885_42OpComplete             :  return "OpComplete";           
-    case Fc885_42GeneralStatus          :  return "GeneralStatus";        
-    case Fc885_42DetailedStatus         :  return "DetailedStatus";       
-    case Fc885_42ReadFactoryData        :  return "ReadFactoryData";
-    case Fc885_42ReadUtilityMap         :  return "ReadUtilityMap";
-    case Fc885_42ReadProtectedSector    :  return "ReadProtectedSector";
-    case Fc885_42Continue               :  return "Continue";             
-    case Fc885_42ExtendedGeneralStatus  :  return "ExtendedGeneralStatus";        
-    case Fc885_42InterlockAutoload      :  return "Autoload";         
-    case Fc885_42Autoload               :  return "Autoload";         
+    case Fc885_42Seek:
+        return "Seek";
+
+    case Fc885_42Read:
+        return "Read";
+
+    case Fc885_42Write:
+        return "Write";
+
+    case Fc885_42OpComplete:
+        return "OpComplete";
+
+    case Fc885_42GeneralStatus:
+        return "GeneralStatus";
+
+    case Fc885_42DetailedStatus:
+        return "DetailedStatus";
+
+    case Fc885_42ReadFactoryData:
+        return "ReadFactoryData";
+
+    case Fc885_42ReadUtilityMap:
+        return "ReadUtilityMap";
+
+    case Fc885_42ReadProtectedSector:
+        return "ReadProtectedSector";
+
+    case Fc885_42Continue:
+        return "Continue";
+
+    case Fc885_42ExtendedGeneralStatus:
+        return "ExtendedGeneralStatus";
+
+    case Fc885_42InterlockAutoload:
+        return "Autoload";
+
+    case Fc885_42Autoload:
+        return "Autoload";
         }
     sprintf(dd885_42FuncString, "%04o", funcCode);
+
     return dd885_42FuncString;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Show disk status (operator interface).
+**
+**  Parameters:     Name        Description.
+**
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void dd885_42ShowDiskStatus(void)
+    {
+    DiskParam *dp = firstDisk;
+
+    if (dp == NULL)
+        {
+        return;
+        }
+
+    printf("\n    > dd885-42 Disk Status:\n");
+
+    while (dp)
+        {
+        printf("    >   #%02d. CH %02o EQ %02o UN %02o DT %s CYL 0x%06x TRK 0x%06o FN '%s'\n",
+               dp->diskNo,
+               dp->channelNo,
+               dp->eqNo,
+               dp->unitNo,
+               "885-42",
+               dp->cylinder,
+               dp->track,
+               dp->fileName);
+        dp = dp->nextDisk;
+        }
     }
 
 /*---------------------------  End Of File  ------------------------------*/

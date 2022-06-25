@@ -10,12 +10,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -46,7 +46,7 @@
 **  Private Macro Functions
 **  -----------------------
 */
-#define SignX(v, bit) (((v) & ((CpWord)1 << ((bit) - 1))) == 0 ? 0 : Mask60)
+#define SignX(v, bit)    (((v) & ((CpWord)1 << ((bit) - 1))) == 0 ? 0 : Mask60)
 
 /*
 **  -----------------------------------------
@@ -138,12 +138,12 @@ CpWord SignExtend[61] =
 
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Shift left circular count places.
@@ -164,7 +164,8 @@ CpWord shiftLeftCircular(CpWord data, u32 count)
         }
 
     data = ((data << count) | (data >> (60 - count))) & Mask60;
-    return(data);
+
+    return (data);
     }
 
 /*--------------------------------------------------------------------------
@@ -194,7 +195,7 @@ CpWord shiftRightArithmetic(CpWord data, u32 count)
         data |= SignExtend[count];
         }
 
-    return(data);
+    return (data);
     }
 
 /*--------------------------------------------------------------------------
@@ -221,9 +222,9 @@ CpWord shiftPack(CpWord coeff, u32 expo)
         }
 
     coeff ^= sign;
-    expo ^= 02000;
+    expo  ^= 02000;
 
-    return((((CpWord)(expo & Mask11)) << 48) | (coeff & Mask48)) ^ sign;
+    return ((((CpWord)(expo & Mask11)) << 48) | (coeff & Mask48)) ^ sign;
     }
 
 /*--------------------------------------------------------------------------
@@ -253,10 +254,10 @@ CpWord shiftUnpack(CpWord number, u32 *expo)
 
     if (expo != NULL)
         {
-        *expo = ((u32)(((number >> 48) - 02000) ) & Mask18);
+        *expo = ((u32)(((number >> 48) - 02000)) & Mask18);
         }
 
-    return((number & Mask48) ^ sign);
+    return ((number & Mask48) ^ sign);
     }
 
 /*--------------------------------------------------------------------------
@@ -273,17 +274,17 @@ CpWord shiftUnpack(CpWord number, u32 *expo)
 **------------------------------------------------------------------------*/
 CpWord shiftNormalize(CpWord number, u32 *shift, bool round)
     {
-    u16 count;
+    u16    count;
     CpWord sign;
     CpWord result;
     CpWord coeff;
-    i16 expo;
+    i16    expo;
 
     number &= Mask60;
-    sign = SignX(number, 60);
+    sign    = SignX(number, 60);
     number ^= sign;
-    coeff = number & MaskCoeff;
-    expo = (i16)((number >> 48) & Mask12);
+    coeff   = number & MaskCoeff;
+    expo    = (i16)((number >> 48) & Mask12);
 
     /*
     **  Handle infinite and indefinite cases.
@@ -295,13 +296,13 @@ CpWord shiftNormalize(CpWord number, u32 *shift, bool round)
             *shift = 0;
             }
 
-        return(number ^ sign);
+        return (number ^ sign);
         }
-    
+
     /*
     **  Handle a coefficient of zero.
     */
-    if (!round && coeff == 0)
+    if (!round && (coeff == 0))
         {
         /*
         **  Plus or minus zero coeff results in 0 and a shift count of 48.
@@ -311,9 +312,9 @@ CpWord shiftNormalize(CpWord number, u32 *shift, bool round)
             *shift = 48;
             }
 
-        return(0);
+        return (0);
         }
-    
+
     /*
     **  Shift into place with optional rounding.
     */
@@ -325,7 +326,7 @@ CpWord shiftNormalize(CpWord number, u32 *shift, bool round)
             break;
             }
 
-        if (count == 0 && round)
+        if ((count == 0) && round)
             {
             coeff = (coeff << 1) | 1;
             }
@@ -345,7 +346,7 @@ CpWord shiftNormalize(CpWord number, u32 *shift, bool round)
     expo -= count;
     expo += 02000 + (expo >> 11);
 
-    if (expo < 0 )
+    if (expo < 0)
         {
         /*
         **  Over/Underflow.
@@ -362,7 +363,7 @@ CpWord shiftNormalize(CpWord number, u32 *shift, bool round)
         *shift = count;
         }
 
-    return(result);
+    return (result);
     }
 
 /*--------------------------------------------------------------------------
@@ -381,15 +382,15 @@ CpWord shiftMask(u8 count)
         count = 60;
         }
 
-    return(SignExtend[count]);
+    return (SignExtend[count]);
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*---------------------------  End Of File  ------------------------------*/

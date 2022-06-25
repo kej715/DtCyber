@@ -5,7 +5,7 @@
 **  Name: cray_station.c
 **
 **  Description:
-**      Perform eumlation of Cray Station hardware interface. Cray supported
+**      Perform emulation of Cray Station hardware interface. Cray supported
 **      two types of station interfaces to its supercomputers:
 **
 **        1) Front end interface (FEI). This was a direct channel interface
@@ -19,12 +19,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -32,7 +32,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -82,27 +82,27 @@
 **    SRPE     EQU    0010        TRANSMISSION PARITY ERROR
 */
 
-#define FcCsFeiOutput           00000 /* not used by CSD */
-#define FcCsFeiInput            00100 /* not used by CSD */
-#define FcCsFeiStatus           00200
-#define FcCsFeiBad              00400
-#define FcCsFeiMasterClear      00700
+#define FcCsFeiOutput              00000 /* not used by CSD */
+#define FcCsFeiInput               00100 /* not used by CSD */
+#define FcCsFeiStatus              00200
+#define FcCsFeiBad                 00400
+#define FcCsFeiMasterClear         00700
 
-#define RcCsFeiReadyForOutput   00001 /* Cray is sending data */
-#define RcCsFeiReadyForInput    00002 /* Cray is receiving data - not used by CSD */
-#define RcCsFeiBusy             00004 /* Interface is busy */
-#define RcCsFeiParityError      00010
+#define RcCsFeiReadyForOutput      00001 /* Cray is sending data */
+#define RcCsFeiReadyForInput       00002 /* Cray is receiving data - not used by CSD */
+#define RcCsFeiBusy                00004 /* Interface is busy */
+#define RcCsFeiParityError         00010
 
-#define McLogon                 001     /* Login message code   */
-#define McStart                 004     /* Start message code   */
-#define McControl               011     /* Control message code */
+#define McLogon                    001  /* Login message code   */
+#define McStart                    004  /* Start message code   */
+#define McControl                  011  /* Control message code */
 
 /*
 **  Misc constants.
 */
-#define BytesPerLCP             48
-#define ConnectionRetryInterval 60
-#define PpWordsPerLCP           32
+#define BytesPerLCP                48
+#define ConnectionRetryInterval    60
+#define PpWordsPerLCP              32
 
 /*
 **  Buffer sizes.
@@ -112,8 +112,8 @@
 **  value plus some extra, and set the maximum byte buffer size to
 **  coincide.
 */
-#define MaxPpBuf                20000
-#define MaxByteBuf              30000
+#define MaxPpBuf                   20000
+#define MaxByteBuf                 30000
 
 /*
 **  -----------------------
@@ -121,9 +121,9 @@
 **  -----------------------
 */
 #if DEBUG
-#define HexColumn(x) (3 * (x) + 4)
-#define AsciiColumn(x) (HexColumn(16) + 2 + (x))
-#define LogLineLength (AsciiColumn(16))
+#define HexColumn(x)      (3 * (x) + 4)
+#define AsciiColumn(x)    (HexColumn(16) + 2 + (x))
+#define LogLineLength    (AsciiColumn(16))
 #endif
 
 /*
@@ -135,7 +135,8 @@
 /*
 **  FEI data communication state.
 */
-typedef enum {
+typedef enum
+    {
     StCsFeiDisconnected = 0,
     StCsFeiConnecting,
     StCsFeiSendLCP,
@@ -175,13 +176,13 @@ typedef struct feiLcpParams
     {
     char did[3];  // destination ID
     char sid[3];  // source ID
-    u8  nssg;     // number of subsegments in segment
-    u8  mn;       // message number
-    u8  mc;       // message code
-    u8  msc;      // message subcode
-    u8  stn;      // stream number
-    u32 sgn;      // segment number
-    u32 sgbc;     // number of data bits in segment
+    u8   nssg;    // number of subsegments in segment
+    u8   mn;      // message number
+    u8   mc;      // message code
+    u8   msc;     // message subcode
+    u8   stn;     // stream number
+    u32  sgn;     // segment number
+    u32  sgbc;    // number of data bits in segment
     } FeiLcpParams;
 
 /*
@@ -189,20 +190,20 @@ typedef struct feiLcpParams
 */
 typedef struct feiParam
     {
-    FeiState     state;
-    time_t       nextConnectionAttempt;
-    char        *serverName;
+    FeiState           state;
+    time_t             nextConnectionAttempt;
+    char               *serverName;
     struct sockaddr_in serverAddr;
 #if defined(_WIN32)
-    SOCKET       fd;
+    SOCKET             fd;
 #else
-    int          fd;
+    int                fd;
 #endif
-    FeiLcpParams lcpParams;
-    int          subsegSize;
-    FeiBuffer    inputBuffer;
-    FeiBuffer    outputBuffer;
-    PpBuffer     ppIoBuffer;
+    FeiLcpParams       lcpParams;
+    int                subsegSize;
+    FeiBuffer          inputBuffer;
+    FeiBuffer          outputBuffer;
+    PpBuffer           ppIoBuffer;
     } FeiParam;
 
 /*
@@ -210,26 +211,27 @@ typedef struct feiParam
 **  Private Function Prototypes
 **  ---------------------------
 */
-static void     csFeiActivate(void);
-static void     csFeiCheckStatus(FeiParam *feip);
-static void     csFeiCloseConnection(FeiParam *feip);
-static void     csFeiDisconnect(void);
+static void csFeiActivate(void);
+static void csFeiCheckStatus(FeiParam *feip);
+static void csFeiCloseConnection(FeiParam *feip);
+static void csFeiDisconnect(void);
 static FcStatus csFeiFunc(PpWord funcCode);
-static void     csFeiIo(void);
-static void     csFeiInitiateConnection(FeiParam *feip);
-static void     csFeiPackPpBuffer(FeiParam *feip, int maxWords);
-static void     csFeiReceiveData(FeiParam *feip);
-static void     csFeiReset(FeiParam *feip);
-static void     csFeiSendData(FeiParam *feip);
-static bool     csFeiSetupConnection(FeiParam *feip);
-static void     csFeiUnpackPpBuffer(FeiParam *feip);
+static void csFeiIo(void);
+static void csFeiInitiateConnection(FeiParam *feip);
+static void csFeiPackPpBuffer(FeiParam *feip, int maxWords);
+static void csFeiReceiveData(FeiParam *feip);
+static void csFeiReset(FeiParam *feip);
+static void csFeiSendData(FeiParam *feip);
+static bool csFeiSetupConnection(FeiParam *feip);
+static void csFeiUnpackPpBuffer(FeiParam *feip);
 
 #if DEBUG
-static char     *csFeiFunc2String(PpWord funcCode);
-static void     csFeiLogBytes(u8 *bytes, int len);
-static void     csFeiLogFlush(void);
-static void     csFeiLogLcpParams(FeiParam *feip);
-static void     csFeiLogPpBuffer(FeiParam *feip);
+static char *csFeiFunc2String(PpWord funcCode);
+static void csFeiLogBytes(u8 *bytes, int len);
+static void csFeiLogFlush(void);
+static void csFeiLogLcpParams(FeiParam *feip);
+static void csFeiLogPpBuffer(FeiParam *feip);
+
 #endif
 
 /*
@@ -251,12 +253,12 @@ static int  csFeiLogBytesCol = 0;
 #endif
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise FEI interface.
 **
@@ -271,17 +273,17 @@ static int  csFeiLogBytesCol = 0;
 **------------------------------------------------------------------------*/
 void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
-    DevSlot *dp;
+    DevSlot        *dp;
     struct hostent *hp;
-    u16 serverPort;
-    char *sp;
-    FeiParam *feip;
-    long value;
+    u16            serverPort;
+    char           *sp;
+    FeiParam       *feip;
+    long           value;
 
     if (deviceName == NULL)
         {
         fprintf(stderr, "Cray computer simulator connection information required for FEI on channel %o equipment %o unit %o\n",
-          channelNo, eqNo, unitNo);
+                channelNo, eqNo, unitNo);
         exit(1);
         }
 
@@ -301,10 +303,10 @@ void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Setup channel functions.
     */
-    dp->activate = csFeiActivate;
-    dp->disconnect = csFeiDisconnect;
-    dp->func = csFeiFunc;
-    dp->io = csFeiIo;
+    dp->activate     = csFeiActivate;
+    dp->disconnect   = csFeiDisconnect;
+    dp->func         = csFeiFunc;
+    dp->io           = csFeiIo;
     dp->selectedUnit = unitNo;
 
     /*
@@ -316,8 +318,8 @@ void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         fprintf(stderr, "Failed to allocate Cray Station FEI context block\n");
         exit(1);
         }
-    dp->controllerContext = feip;
-    feip->state = StCsFeiDisconnected;
+    dp->controllerContext       = feip;
+    feip->state                 = StCsFeiDisconnected;
     feip->nextConnectionAttempt = 0;
     feip->fd = 0;
     csFeiReset(feip);
@@ -326,21 +328,24 @@ void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     **  Set up server connection
     */
     feip->serverName = NULL;
-    serverPort = 0;
+    serverPort       = 0;
     sp = strchr(deviceName, ':');
     if (sp != NULL)
         {
-        *sp++ = '\0';
+        *sp++            = '\0';
         feip->serverName = (char *)malloc(strlen(deviceName) + 1);
         strcpy(feip->serverName, deviceName);
         value = strtol(sp, NULL, 10);
-        if (value > 0 && value < 0x10000) serverPort = (u16)value;
+        if ((value > 0) && (value < 0x10000))
+            {
+            serverPort = (u16)value;
+            }
         }
-    if (feip->serverName == NULL || serverPort == 0)
+    if ((feip->serverName == NULL) || (serverPort == 0))
         {
         fprintf(stderr,
-            "Invalid Cray computer simulator connection specification for Cray Station FEI on channel %o equipment %o unit %o\n",
-            channelNo, eqNo, unitNo);
+                "Invalid Cray computer simulator connection specification for Cray Station FEI on channel %o equipment %o unit %o\n",
+                channelNo, eqNo, unitNo);
         exit(1);
         }
     hp = gethostbyname(feip->serverName);
@@ -357,16 +362,16 @@ void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     **  Print a friendly message.
     */
     printf("Cray Station FEI initialised on channel %o equipment %o unit %o for Cray computer simulator at %s:%d\n",
-        channelNo, eqNo, unitNo, feip->serverName, serverPort);
+           channelNo, eqNo, unitNo, feip->serverName, serverPort);
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Handle channel activation.
@@ -380,10 +385,10 @@ static void csFeiActivate(void)
     {
 #if DEBUG
     fprintf(csFeiLog, "\n%010u PP:%02o CH:%02o P:%04o Activate",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id,
-        activePpu->regP);
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id,
+            activePpu->regP);
 #endif
     //activeChannel->delayStatus = 5;
     }
@@ -399,10 +404,10 @@ static void csFeiActivate(void)
 **------------------------------------------------------------------------*/
 static void csFeiCheckStatus(FeiParam *feip)
     {
-    fd_set readFds;
-    int readySockets;
+    fd_set         readFds;
+    int            readySockets;
     struct timeval timeout;
-    fd_set writeFds;
+    fd_set         writeFds;
 
     /*
     **  First, process possible connection in progress
@@ -411,24 +416,27 @@ static void csFeiCheckStatus(FeiParam *feip)
         {
         csFeiInitiateConnection(feip);
         }
-    else if (feip->fd > 0 && feip->state == StCsFeiConnecting)
+    else if ((feip->fd > 0) && (feip->state == StCsFeiConnecting))
         {
         FD_ZERO(&writeFds);
         FD_SET(feip->fd, &writeFds);
-        timeout.tv_sec = 0;
+        timeout.tv_sec  = 0;
         timeout.tv_usec = 0;
-        readySockets = select(feip->fd + 1, NULL, &writeFds, NULL, &timeout);
-        if (readySockets > 0 && FD_ISSET(feip->fd, &writeFds))
+        readySockets    = select(feip->fd + 1, NULL, &writeFds, NULL, &timeout);
+        if ((readySockets > 0) && FD_ISSET(feip->fd, &writeFds))
             {
             csFeiReset(feip);
-            if (csFeiSetupConnection(feip)) feip->state = StCsFeiSendLCP;
+            if (csFeiSetupConnection(feip))
+                {
+                feip->state = StCsFeiSendLCP;
+                }
             }
         }
 
     /*
     **  Second, process normal I/O for connected FEI
     */
-    if (feip->fd > 0 && feip->state > StCsFeiConnecting)
+    if ((feip->fd > 0) && (feip->state > StCsFeiConnecting))
         {
         FD_ZERO(&readFds);
         FD_ZERO(&writeFds);
@@ -437,16 +445,16 @@ static void csFeiCheckStatus(FeiParam *feip)
             {
             FD_SET(feip->fd, &writeFds);
             }
-        timeout.tv_sec = 0;
+        timeout.tv_sec  = 0;
         timeout.tv_usec = 0;
-        readySockets = select(feip->fd + 1, &readFds, &writeFds, NULL, &timeout);
+        readySockets    = select(feip->fd + 1, &readFds, &writeFds, NULL, &timeout);
         if (readySockets > 0)
             {
             if (FD_ISSET(feip->fd, &readFds))
                 {
                 csFeiReceiveData(feip);
                 }
-            if (feip->fd > 0 && FD_ISSET(feip->fd, &writeFds))
+            if ((feip->fd > 0) && FD_ISSET(feip->fd, &writeFds))
                 {
                 csFeiSendData(feip);
                 }
@@ -467,14 +475,14 @@ static void csFeiCloseConnection(FeiParam *feip)
     {
 #if DEBUG
     fprintf(csFeiLog, "\n%010u Close connection on socket %d to %s:%u", traceSequenceNo,
-        feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port));
+            feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port));
 #endif
 #if defined(_WIN32)
     closesocket(feip->fd);
 #else
     close(feip->fd);
 #endif
-    feip->fd = 0;
+    feip->fd    = 0;
     feip->state = StCsFeiDisconnected;
     feip->nextConnectionAttempt = getSeconds() + (time_t)ConnectionRetryInterval;
     }
@@ -491,16 +499,17 @@ static void csFeiDisconnect(void)
     {
 #if DEBUG
     fprintf(csFeiLog, "\n%010u PP:%02o CH:%02o P:%04o Disconnect",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id,
-        activePpu->regP);
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id,
+            activePpu->regP);
 #endif
+
     /*
     **  Abort pending device disconnects - the PP is doing the disconnect.
     */
     activeChannel->delayDisconnect = 0;
-    activeChannel->discAfterInput = FALSE;
+    activeChannel->discAfterInput  = FALSE;
     }
 
 /*--------------------------------------------------------------------------
@@ -518,12 +527,12 @@ static FcStatus csFeiFunc(PpWord funcCode)
 
 #if DEBUG
     fprintf(csFeiLog, "\n%010u PP:%02o CH:%02o P:%04o f:%04o T:%-25s",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id,
-        activePpu->regP,
-        funcCode,
-        csFeiFunc2String(funcCode));
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id,
+            activePpu->regP,
+            funcCode,
+            csFeiFunc2String(funcCode));
 #endif
 
     /*
@@ -536,15 +545,19 @@ static FcStatus csFeiFunc(PpWord funcCode)
     **  Process FEI function.
     */
     feip = (FeiParam *)activeDevice->controllerContext;
-    if (feip == NULL) return(FcDeclined);
+    if (feip == NULL)
+        {
+        return (FcDeclined);
+        }
     switch (funcCode)
         {
     case FcCsFeiStatus:
         activeDevice->fcode = funcCode;
-        return(FcAccepted);
+
+        return (FcAccepted);
 
     case FcCsFeiBad:
-        return(FcProcessed);
+        return (FcProcessed);
 
     case FcCsFeiMasterClear:
         if (feip->state > StCsFeiConnecting)
@@ -552,13 +565,15 @@ static FcStatus csFeiFunc(PpWord funcCode)
             csFeiReset(feip);
             feip->state = StCsFeiSendLCP;
             }
-        return(FcProcessed);
+
+        return (FcProcessed);
 
     default:
 #if DEBUG
         fprintf(csFeiLog, " FUNC not implemented & declined!");
 #endif
-        return(FcDeclined);
+
+        return (FcDeclined);
         }
     }
 
@@ -574,6 +589,7 @@ static FcStatus csFeiFunc(PpWord funcCode)
 static void csFeiInitiateConnection(FeiParam *feip)
     {
     time_t currentTime;
+
 #if defined(_WIN32)
     SOCKET fd;
     u_long blockEnable = 1;
@@ -585,7 +601,10 @@ static void csFeiInitiateConnection(FeiParam *feip)
     int rc;
 
     currentTime = getSeconds();
-    if (feip->nextConnectionAttempt > currentTime) return;
+    if (feip->nextConnectionAttempt > currentTime)
+        {
+        return;
+        }
     feip->nextConnectionAttempt = currentTime + ConnectionRetryInterval;
 
     fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -596,42 +615,45 @@ static void csFeiInitiateConnection(FeiParam *feip)
     if (fd == INVALID_SOCKET)
         {
         fprintf(stderr, "FEI: Failed to create socket for host: %s\n", feip->serverName);
+
         return;
         }
     if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable)) < 0)
         {
 #if DEBUG
         fprintf(csFeiLog, "\n%010u Failed to set KEEPALIVE option on socket %d to %s:%u, %s", traceSequenceNo,
-            fd, feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
+                fd, feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
 #endif
         closesocket(fd);
+
         return;
         }
     if (ioctlsocket(fd, FIONBIO, &blockEnable) < 0)
         {
 #if DEBUG
         fprintf(csFeiLog, "\n%010u Failed to set non-blocking I/O on socket %d to %s:%u, %s", traceSequenceNo,
-            fd, feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
+                fd, feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
 #endif
         closesocket(fd);
+
         return;
         }
     rc = connect(fd, (struct sockaddr *)&feip->serverAddr, sizeof(feip->serverAddr));
-    if (rc == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)
+    if ((rc == SOCKET_ERROR) && (WSAGetLastError() != WSAEWOULDBLOCK))
         {
 #if DEBUG
         fprintf(csFeiLog, "\n%010u Failed to connect to %s:%u, %s", traceSequenceNo,
-            feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
+                feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
 #endif
         closesocket(fd);
         }
     else // connection in progress
         {
-        feip->fd = fd;
+        feip->fd    = fd;
         feip->state = StCsFeiConnecting;
 #if DEBUG
         fprintf(csFeiLog, "\n%010u Initiated connection on socket %d to %s:%u", traceSequenceNo,
-            feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port));
+                feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port));
 #endif
         }
 #else
@@ -641,42 +663,45 @@ static void csFeiInitiateConnection(FeiParam *feip)
     if (fd < 0)
         {
         fprintf(stderr, "FEI: Failed to create socket for host: %s\n", feip->serverName);
+
         return;
         }
     if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable)) < 0)
         {
 #if DEBUG
         fprintf(csFeiLog, "\n%010u Failed to set KEEPALIVE option on socket %d to %s:%u, %s", traceSequenceNo,
-            fd, feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
+                fd, feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
 #endif
         close(fd);
+
         return;
         }
     if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
         {
 #if DEBUG
         fprintf(csFeiLog, "\n%010u Failed to set non-blocking I/O on socket %d to %s:%u, %s", traceSequenceNo,
-            fd, feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
+                fd, feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
 #endif
         close(fd);
+
         return;
         }
     rc = connect(fd, (struct sockaddr *)&feip->serverAddr, sizeof(feip->serverAddr));
-    if (rc < 0 && errno != EINPROGRESS)
+    if ((rc < 0) && (errno != EINPROGRESS))
         {
 #if DEBUG
         fprintf(csFeiLog, "\n%010u Failed to connect to %s:%u, %s", traceSequenceNo,
-            feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
+                feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
 #endif
         close(fd);
         }
     else // connection in progress
         {
-        feip->fd = fd;
+        feip->fd    = fd;
         feip->state = StCsFeiConnecting;
 #if DEBUG
         fprintf(csFeiLog, "\n%010u Initiated connection on socket %d to %s:%u", traceSequenceNo,
-            feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port));
+                feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port));
 #endif
         }
 #endif // not _WIN32
@@ -692,16 +717,19 @@ static void csFeiInitiateConnection(FeiParam *feip)
 **------------------------------------------------------------------------*/
 static void csFeiIo(void)
     {
-    int di;
+    int      di;
     FeiParam *feip;
-    int i;
-    int recordLength;
+    int      i;
+    int      recordLength;
 
     /*
     **  Perform actual I/O according to function issued.
     */
     feip = (FeiParam *)activeDevice->controllerContext;
-    if (feip == NULL) return;
+    if (feip == NULL)
+        {
+        return;
+        }
 
     csFeiCheckStatus(feip);
 
@@ -712,7 +740,7 @@ static void csFeiIo(void)
             {
             activeChannel->data = 0;
             switch (feip->state)
-                {
+            {
             case StCsFeiSendLCP:
             case StCsFeiSendSubsegment:
                 if (feip->outputBuffer.out < feip->outputBuffer.in)
@@ -720,6 +748,7 @@ static void csFeiIo(void)
                     activeChannel->data = RcCsFeiReadyForInput;
                     }
                 break;
+
             case StCsFeiRecvLCPLen:
             case StCsFeiRecvLCP1:
             case StCsFeiRecvLCP2:
@@ -731,12 +760,13 @@ static void csFeiIo(void)
                     activeChannel->data = RcCsFeiReadyForOutput;
                     }
                 break;
+
             default:
                 break;
-                }
-            activeDevice->fcode = 0;
+            }
+            activeDevice->fcode           = 0;
             activeChannel->discAfterInput = FALSE;
-            activeChannel->full = TRUE;
+            activeChannel->full           = TRUE;
 #if DEBUG
             fprintf(csFeiLog, " %04o", activeChannel->data);
 #endif
@@ -745,7 +775,7 @@ static void csFeiIo(void)
 
     case 0: /* I/O typically after FcCsFeiStatus function processed */
         switch (feip->state)
-            {
+        {
         case StCsFeiSendLCP:
             if (activeChannel->full == TRUE)
                 {
@@ -757,6 +787,7 @@ static void csFeiIo(void)
                     csFeiLogPpBuffer(feip);
 #endif
                     csFeiUnpackPpBuffer(feip);
+
                     /*
                     **  Deserialize key fields of LCP
                     */
@@ -772,14 +803,14 @@ static void csFeiIo(void)
                     feip->lcpParams.mc   = feip->outputBuffer.data[di++];
                     feip->lcpParams.msc  = feip->outputBuffer.data[di++];
                     feip->lcpParams.stn  = feip->outputBuffer.data[di++] & 0x0f;
-                    feip->lcpParams.sgn  = (feip->outputBuffer.data[di  ] << 16)
-                                         | (feip->outputBuffer.data[di+1] <<  8)
-                                         |  feip->outputBuffer.data[di+2];
+                    feip->lcpParams.sgn  = (feip->outputBuffer.data[di] << 16)
+                                           | (feip->outputBuffer.data[di + 1] << 8)
+                                           | feip->outputBuffer.data[di + 2];
                     di += 3;
-                    feip->lcpParams.sgbc = (feip->outputBuffer.data[di  ] << 24)
-                                         | (feip->outputBuffer.data[di+1] << 16)
-                                         | (feip->outputBuffer.data[di+2] <<  8)
-                                         |  feip->outputBuffer.data[di+3];
+                    feip->lcpParams.sgbc = (feip->outputBuffer.data[di] << 24)
+                                           | (feip->outputBuffer.data[di + 1] << 16)
+                                           | (feip->outputBuffer.data[di + 2] << 8)
+                                           | feip->outputBuffer.data[di + 3];
 #if DEBUG
                     csFeiLogLcpParams(feip);
 #endif
@@ -793,6 +824,7 @@ static void csFeiIo(void)
                     }
                 }
             break;
+
         case StCsFeiSendSubsegment:
             if (activeChannel->full == TRUE)
                 {
@@ -811,34 +843,40 @@ static void csFeiIo(void)
                         feip->subsegSize = (((feip->outputBuffer.data[10] << 8) | feip->outputBuffer.data[11]) * 64) / 12;
 #if DEBUG
                         fprintf(csFeiLog, "\n%010u SSGZ: %d PP words (%d 64-bit words), VARS: %s", traceSequenceNo, feip->subsegSize,
-                            (feip->outputBuffer.data[10] << 8) | feip->outputBuffer.data[11],
-                            ((feip->outputBuffer.data[13] & 0x20) == 0) ? "no" : "yes");
+                                (feip->outputBuffer.data[10] << 8) | feip->outputBuffer.data[11],
+                                ((feip->outputBuffer.data[13] & 0x20) == 0) ? "no" : "yes");
 #endif
                         }
                     csFeiSendData(feip);
                     feip->lcpParams.nssg -= 1;
-                    if (feip->lcpParams.nssg <= 0) feip->state = StCsFeiRecvLCPLen;
+                    if (feip->lcpParams.nssg <= 0)
+                        {
+                        feip->state = StCsFeiRecvLCPLen;
+                        }
                     }
                 }
             break;
+
         case StCsFeiRecvLCPLen:
             if (feip->inputBuffer.in - feip->inputBuffer.out < 4)
                 {
                 break; // continue waiting for receipt of full PDU length value
                 }
             di = feip->inputBuffer.out;
-            activeDevice->recordLength = (feip->inputBuffer.data[di  ] << 24)
-                                       | (feip->inputBuffer.data[di+1] << 16)
-                                       | (feip->inputBuffer.data[di+2] <<  8)
-                                       |  feip->inputBuffer.data[di+3];
-            feip->state = StCsFeiRecvLCP1;
+            activeDevice->recordLength = (feip->inputBuffer.data[di] << 24)
+                                         | (feip->inputBuffer.data[di + 1] << 16)
+                                         | (feip->inputBuffer.data[di + 2] << 8)
+                                         | feip->inputBuffer.data[di + 3];
+            feip->state            = StCsFeiRecvLCP1;
             feip->inputBuffer.out += 4;
-            // fall through
+
+        // fall through
         case StCsFeiRecvLCP1:
             if (feip->inputBuffer.in - feip->inputBuffer.out < activeDevice->recordLength)
                 {
                 break; // continue waiting for receipt of full LCP
                 }
+
             /*
             **  Full LCP received. Deserialize the key fields.
             */
@@ -854,17 +892,18 @@ static void csFeiIo(void)
             feip->lcpParams.mc   = feip->inputBuffer.data[di++];
             feip->lcpParams.msc  = feip->inputBuffer.data[di++];
             feip->lcpParams.stn  = feip->inputBuffer.data[di++] & 0x0f;
-            feip->lcpParams.sgn  = (feip->inputBuffer.data[di  ] << 16)
-                                 | (feip->inputBuffer.data[di+1] <<  8)
-                                 |  feip->inputBuffer.data[di+2];
+            feip->lcpParams.sgn  = (feip->inputBuffer.data[di] << 16)
+                                   | (feip->inputBuffer.data[di + 1] << 8)
+                                   | feip->inputBuffer.data[di + 2];
             di += 3;
-            feip->lcpParams.sgbc = (feip->inputBuffer.data[di  ] << 24)
-                                 | (feip->inputBuffer.data[di+1] << 16)
-                                 | (feip->inputBuffer.data[di+2] <<  8)
-                                 |  feip->inputBuffer.data[di+3];
+            feip->lcpParams.sgbc = (feip->inputBuffer.data[di] << 24)
+                                   | (feip->inputBuffer.data[di + 1] << 16)
+                                   | (feip->inputBuffer.data[di + 2] << 8)
+                                   | feip->inputBuffer.data[di + 3];
 #if DEBUG
             csFeiLogLcpParams(feip);
 #endif
+
             /*
             **  Pack the LCP into the PP I/O buffer, then move any
             **  bytes remaining in the input buffer to the beginning
@@ -876,19 +915,20 @@ static void csFeiIo(void)
 #endif
             i = 0;
             while (feip->inputBuffer.out < feip->inputBuffer.in)
-               {
-               feip->inputBuffer.data[i++] = feip->inputBuffer.data[feip->inputBuffer.out++];
-               }
-            feip->inputBuffer.out = 0;
-            feip->inputBuffer.in = i;
-            feip->state = StCsFeiRecvLCP2;
+                {
+                feip->inputBuffer.data[i++] = feip->inputBuffer.data[feip->inputBuffer.out++];
+                }
+            feip->inputBuffer.out      = 0;
+            feip->inputBuffer.in       = i;
+            feip->state                = StCsFeiRecvLCP2;
             activeDevice->recordLength = PpWordsPerLCP;
-            // fall through
+
+        // fall through
         case StCsFeiRecvLCP2:
             if (activeChannel->full == FALSE)
                 {
-                activeChannel->data = feip->ppIoBuffer.data[feip->ppIoBuffer.out++];
-                activeChannel->full = TRUE;
+                activeChannel->data         = feip->ppIoBuffer.data[feip->ppIoBuffer.out++];
+                activeChannel->full         = TRUE;
                 activeDevice->recordLength -= 1;
                 if (feip->ppIoBuffer.out >= feip->ppIoBuffer.in)
                     {
@@ -908,24 +948,27 @@ static void csFeiIo(void)
                     }
                 }
             break;
+
         case StCsFeiRecvSubsegmentLen:
             if (feip->inputBuffer.in - feip->inputBuffer.out < 4)
                 {
                 break; // continue waiting for receipt of full PDU length value
                 }
             di = feip->inputBuffer.out;
-            activeDevice->recordLength = (feip->inputBuffer.data[di  ] << 24)
-                                       | (feip->inputBuffer.data[di+1] << 16)
-                                       | (feip->inputBuffer.data[di+2] <<  8)
-                                       |  feip->inputBuffer.data[di+3];
-            feip->state = StCsFeiRecvSubsegment1;
+            activeDevice->recordLength = (feip->inputBuffer.data[di] << 24)
+                                         | (feip->inputBuffer.data[di + 1] << 16)
+                                         | (feip->inputBuffer.data[di + 2] << 8)
+                                         | feip->inputBuffer.data[di + 3];
+            feip->state            = StCsFeiRecvSubsegment1;
             feip->inputBuffer.out += 4;
-            // fall through
+
+        // fall through
         case StCsFeiRecvSubsegment1:
             if (feip->inputBuffer.in - feip->inputBuffer.out < activeDevice->recordLength)
                 {
                 break; // continue waiting for receipt of full subsegment
                 }
+
             /*
             **  Pack the subsegment into the PP I/O buffer, then move any
             **  bytes remaining in the input buffer to the beginning of
@@ -935,24 +978,25 @@ static void csFeiIo(void)
             csFeiPackPpBuffer(feip, recordLength);
 #if DEBUG
             fprintf(csFeiLog, "\n%010u Received subsegment (%d bytes, %d PP words) from %s:%u", traceSequenceNo,
-                activeDevice->recordLength, recordLength, feip->serverName, ntohs(feip->serverAddr.sin_port));
+                    activeDevice->recordLength, recordLength, feip->serverName, ntohs(feip->serverAddr.sin_port));
             csFeiLogPpBuffer(feip);
 #endif
             i = 0;
             while (feip->inputBuffer.out < feip->inputBuffer.in)
-               {
-               feip->inputBuffer.data[i++] = feip->inputBuffer.data[feip->inputBuffer.out++];
-               }
-            feip->inputBuffer.out = 0;
-            feip->inputBuffer.in = i;
-            feip->state = StCsFeiRecvSubsegment2;
+                {
+                feip->inputBuffer.data[i++] = feip->inputBuffer.data[feip->inputBuffer.out++];
+                }
+            feip->inputBuffer.out      = 0;
+            feip->inputBuffer.in       = i;
+            feip->state                = StCsFeiRecvSubsegment2;
             activeDevice->recordLength = recordLength;
-            // fall through
+
+        // fall through
         case StCsFeiRecvSubsegment2:
             if (activeChannel->full == FALSE)
                 {
-                activeChannel->data = feip->ppIoBuffer.data[feip->ppIoBuffer.out++];
-                activeChannel->full = TRUE;
+                activeChannel->data         = feip->ppIoBuffer.data[feip->ppIoBuffer.out++];
+                activeChannel->full         = TRUE;
                 activeDevice->recordLength -= 1;
                 if (feip->ppIoBuffer.out >= feip->ppIoBuffer.in)
                     {
@@ -961,7 +1005,7 @@ static void csFeiIo(void)
                 if (activeDevice->recordLength <= 0)
                     {
                     activeChannel->discAfterInput = TRUE;
-                    feip->lcpParams.nssg -= 1;
+                    feip->lcpParams.nssg         -= 1;
                     if (feip->lcpParams.nssg > 0)
                         {
                         feip->state = StCsFeiRecvSubsegmentLen;
@@ -973,6 +1017,7 @@ static void csFeiIo(void)
                     }
                 }
             break;
+
         case StCsFeiDisconnected:
         case StCsFeiConnecting:
             if (activeChannel->full == TRUE)
@@ -981,20 +1026,21 @@ static void csFeiIo(void)
                 }
             else
                 {
-                activeChannel->data = 0;
-                activeChannel->full = TRUE;
+                activeChannel->data           = 0;
+                activeChannel->full           = TRUE;
                 activeChannel->discAfterInput = TRUE;
                 }
             break;
+
         default:
             logError(LogErrorLocation, "channel %02o - invalid state: %d", activeChannel->id, feip->state);
             break;
-            }
+        }
         break;
 
     default:
         logError(LogErrorLocation, "channel %02o - unsupported function code: %04o",
-            activeChannel->id, activeDevice->fcode);
+                 activeChannel->id, activeDevice->fcode);
         break;
         }
     }
@@ -1036,14 +1082,14 @@ static void csFeiPackPpBuffer(FeiParam *feip, int maxWords)
 **------------------------------------------------------------------------*/
 static void csFeiReceiveData(FeiParam *feip)
     {
-	int n;
+    int n;
 
     n = recv(feip->fd, &feip->inputBuffer.data[feip->inputBuffer.in], sizeof(feip->inputBuffer.data) - feip->inputBuffer.in, 0);
     if (n <= 0)
         {
 #if DEBUG
         fprintf(csFeiLog, "\n%010u Disconnected on socket %d from %s:%u, %s", traceSequenceNo,
-            feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port), (n == 0) ? "end of stream" : strerror(errno));
+                feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port), (n == 0) ? "end of stream" : strerror(errno));
 #endif
         csFeiCloseConnection(feip);
         }
@@ -1051,7 +1097,7 @@ static void csFeiReceiveData(FeiParam *feip)
         {
 #if DEBUG
         fprintf(csFeiLog, "\n%010u Received %d bytes on socket %d from %s:%u\n", traceSequenceNo, n,
-            feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port));
+                feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port));
         csFeiLogBytes(&feip->inputBuffer.data[feip->inputBuffer.in], n);
         csFeiLogFlush();
 #endif
@@ -1099,12 +1145,12 @@ static void csFeiSendData(FeiParam *feip)
     int n;
 
     len = feip->outputBuffer.in - feip->outputBuffer.out;
-    n = send(feip->fd, &feip->outputBuffer.data[feip->outputBuffer.out], len, 0);
+    n   = send(feip->fd, &feip->outputBuffer.data[feip->outputBuffer.out], len, 0);
     if (n > 0)
         {
 #if DEBUG
         fprintf(csFeiLog, "\n%010u Sent %d bytes on socket %d to %s:%u\n", traceSequenceNo, n,
-            feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port));
+                feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port));
         csFeiLogBytes(&feip->outputBuffer.data[feip->outputBuffer.out], n);
         csFeiLogFlush();
 #endif
@@ -1125,7 +1171,6 @@ static void csFeiSendData(FeiParam *feip)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-
 static bool csFeiSetupConnection(FeiParam *feip)
     {
 #if defined(_WIN32)
@@ -1133,41 +1178,44 @@ static bool csFeiSetupConnection(FeiParam *feip)
     int optVal;
 #else
     socklen_t optLen;
-    int optVal;
+    int       optVal;
 #endif
     int rc;
 
 #if defined(_WIN32)
     optLen = sizeof(optVal);
-    rc = getsockopt(feip->fd, SOL_SOCKET, SO_ERROR, (char *)&optVal, &optLen);
+    rc     = getsockopt(feip->fd, SOL_SOCKET, SO_ERROR, (char *)&optVal, &optLen);
 #else
     optLen = (socklen_t)sizeof(optVal);
-    rc = getsockopt(feip->fd, SOL_SOCKET, SO_ERROR, &optVal, &optLen);
+    rc     = getsockopt(feip->fd, SOL_SOCKET, SO_ERROR, &optVal, &optLen);
 #endif
     if (rc < 0)
         {
 #if DEBUG
         fprintf(csFeiLog, "\n%010u Failed to query socket options on socket %d for %s:%u, %s", traceSequenceNo,
-            feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
+                feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
 #endif
         csFeiCloseConnection(feip);
+
         return FALSE;
         }
     else if (optVal != 0) // connection failed
         {
 #if DEBUG
         fprintf(csFeiLog, "\n%010u Failed to connect on socket %d to %s:%u, %s", traceSequenceNo,
-            feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(optVal));
+                feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(optVal));
 #endif
         csFeiCloseConnection(feip);
+
         return FALSE;
         }
     else
         {
 #if DEBUG
         fprintf(csFeiLog, "\n%010u Connected on socket %d to %s:%u", traceSequenceNo,
-            feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port));
+                feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port));
 #endif
+
         return TRUE;
         }
     }
@@ -1182,11 +1230,10 @@ static bool csFeiSetupConnection(FeiParam *feip)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-
 static void csFeiUnpackPpBuffer(FeiParam *feip)
     {
-    int in;
-    int pduLen;
+    int    in;
+    int    pduLen;
     PpWord word1;
     PpWord word2;
 
@@ -1197,7 +1244,10 @@ static void csFeiUnpackPpBuffer(FeiParam *feip)
         {
         word1 = feip->ppIoBuffer.data[feip->ppIoBuffer.out++];
         feip->outputBuffer.data[feip->outputBuffer.in++] = word1 >> 4;
-        if (feip->ppIoBuffer.out >= feip->ppIoBuffer.in) break;
+        if (feip->ppIoBuffer.out >= feip->ppIoBuffer.in)
+            {
+            break;
+            }
         word2 = feip->ppIoBuffer.data[feip->ppIoBuffer.out++];
         feip->outputBuffer.data[feip->outputBuffer.in++] = ((word1 & 0x0f) << 4) | (word2 >> 8);
         feip->outputBuffer.data[feip->outputBuffer.in++] = word2 & 0xff;
@@ -1207,11 +1257,12 @@ static void csFeiUnpackPpBuffer(FeiParam *feip)
 
     feip->outputBuffer.data[in++] = (pduLen >> 24) & 0xff;
     feip->outputBuffer.data[in++] = (pduLen >> 16) & 0xff;
-    feip->outputBuffer.data[in++] = (pduLen >>  8) & 0xff;
-    feip->outputBuffer.data[in  ] =  pduLen & 0xff;
+    feip->outputBuffer.data[in++] = (pduLen >> 8) & 0xff;
+    feip->outputBuffer.data[in]   = pduLen & 0xff;
     }
 
 #if DEBUG
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert function code to string.
 **
@@ -1224,16 +1275,27 @@ static void csFeiUnpackPpBuffer(FeiParam *feip)
 static char *csFeiFunc2String(PpWord funcCode)
     {
     static char buf[30];
-    switch(funcCode)
+
+    switch (funcCode)
         {
-    case FcCsFeiOutput      : return "Output";
-    case FcCsFeiInput       : return "Input";
-    case FcCsFeiStatus      : return "Status";
-    case FcCsFeiBad         : return "BadRequest";
-    case FcCsFeiMasterClear : return "MasterClear";
+    case FcCsFeiOutput:
+        return "Output";
+
+    case FcCsFeiInput:
+        return "Input";
+
+    case FcCsFeiStatus:
+        return "Status";
+
+    case FcCsFeiBad:
+        return "BadRequest";
+
+    case FcCsFeiMasterClear:
+        return "MasterClear";
         }
     sprintf(buf, "UNKNOWN: %04o", funcCode);
-    return(buf);
+
+    return (buf);
     }
 
 /*--------------------------------------------------------------------------
@@ -1269,21 +1331,21 @@ static void csFeiLogFlush(void)
 **------------------------------------------------------------------------*/
 static void csFeiLogBytes(u8 *bytes, int len)
     {
-    u8 ac;
-    int ascCol;
-    u8 b;
+    u8   ac;
+    int  ascCol;
+    u8   b;
     char hex[3];
-    int hexCol;
-    int i;
+    int  hexCol;
+    int  i;
 
     ascCol = AsciiColumn(csFeiLogBytesCol);
     hexCol = HexColumn(csFeiLogBytesCol);
 
     for (i = 0; i < len; i++)
         {
-        b = bytes[i];
+        b  = bytes[i];
         ac = b;
-        if (ac < 0x20 || ac >= 0x7f)
+        if ((ac < 0x20) || (ac >= 0x7f))
             {
             ac = '.';
             }
@@ -1312,12 +1374,12 @@ static void csFeiLogBytes(u8 *bytes, int len)
 static void csFeiLogLcpParams(FeiParam *feip)
     {
     fprintf(csFeiLog, "\n%010u %s %s:%u", traceSequenceNo,
-        (feip->state >= StCsFeiRecvLCPLen) ? "Received LCP from" : "Sent LCP to",
-        feip->serverName, ntohs(feip->serverAddr.sin_port));
+            (feip->state >= StCsFeiRecvLCPLen) ? "Received LCP from" : "Sent LCP to",
+            feip->serverName, ntohs(feip->serverAddr.sin_port));
     fprintf(csFeiLog, "\n                DID: %s   SID: %s  NSSG: %02x    MN: %02x    MC: %02x   MSC: %02x",
-        feip->lcpParams.did, feip->lcpParams.sid, feip->lcpParams.nssg, feip->lcpParams.mn, feip->lcpParams.mc, feip->lcpParams.msc);
+            feip->lcpParams.did, feip->lcpParams.sid, feip->lcpParams.nssg, feip->lcpParams.mn, feip->lcpParams.mc, feip->lcpParams.msc);
     fprintf(csFeiLog, "\n                STN: %02x   SGN: %06x        SGBC: %08x",
-        feip->lcpParams.stn, feip->lcpParams.sgn, feip->lcpParams.sgbc);
+            feip->lcpParams.stn, feip->lcpParams.sgn, feip->lcpParams.sgbc);
     }
 
 /*--------------------------------------------------------------------------
@@ -1331,14 +1393,17 @@ static void csFeiLogLcpParams(FeiParam *feip)
 **------------------------------------------------------------------------*/
 static void csFeiLogPpBuffer(FeiParam *feip)
     {
-    char octal[5];
+    char   octal[5];
     PpWord word;
-    int i;
-    int n;
+    int    i;
+    int    n;
 
     for (i = feip->ppIoBuffer.out, n = 0; i < feip->ppIoBuffer.in; i++, n++)
         {
-        if (n % 5 == 0) fputs("\n    ", csFeiLog);
+        if (n % 5 == 0)
+            {
+            fputs("\n    ", csFeiLog);
+            }
         fprintf(csFeiLog, " %04o", feip->ppIoBuffer.data[i]);
         }
     }
@@ -1346,4 +1411,3 @@ static void csFeiLogPpBuffer(FeiParam *feip)
 #endif // DEBUG
 
 /*---------------------------  End Of File  ------------------------------*/
-

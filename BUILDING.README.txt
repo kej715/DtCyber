@@ -1,0 +1,12 @@
+
+==========================
+BUILDING dtCYBER on Linux.
+==========================
+
+In older Ubuntu versions and older X11s in general, there used to be the fonts
+
+-b&h-lucidatypewriter-* ...
+
+To use these fonts on modern installations, you MUST also install xfonts-base, AND (xfonts-75dpi OR xfonts-100dpi)
+and log off/on again to ensure that the X11 fonts server is refreshed.
+

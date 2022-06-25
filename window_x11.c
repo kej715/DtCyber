@@ -10,12 +10,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -46,9 +46,9 @@
 **  Private Constants
 **  -----------------
 */
-#define ListSize        5000
-#define FrameTime       100000
-#define FramesPerSecond (1000000 / FrameTime)
+#define ListSize           5000
+#define FrameTime          100000
+#define FramesPerSecond    (1000000 / FrameTime)
 
 /*
 **  -----------------------
@@ -63,10 +63,10 @@
 */
 typedef struct dispList
     {
-    u16             xPos;           /* horizontal position */
-    u16             yPos;           /* vertical position */
-    u8              fontSize;       /* size of font */
-    u8              ch;             /* character to be displayed */
+    u16 xPos;                       /* horizontal position */
+    u16 yPos;                       /* vertical position */
+    u8  fontSize;                   /* size of font */
+    u8  ch;                         /* character to be displayed */
     } DispList;
 
 /*
@@ -87,33 +87,33 @@ void *windowThread(void *param);
 **  Private Variables
 **  -----------------
 */
-static volatile bool displayActive = FALSE;
-static u8 currentFont;
-static i16 currentX;
-static i16 currentY;
-static u16 oldCurrentY;
-static DispList display[ListSize];
-static u32 listEnd;
-static Font hSmallFont;
-static Font hMediumFont;
-static Font hLargeFont;
-static int width;
-static int height;
-static bool refresh = FALSE;
+static volatile bool   displayActive = FALSE;
+static u8              currentFont;
+static i16             currentX;
+static i16             currentY;
+static u16             oldCurrentY;
+static DispList        display[ListSize];
+static u32             listEnd;
+static Font            hSmallFont;
+static Font            hMediumFont;
+static Font            hLargeFont;
+static int             width;
+static int             height;
+static bool            refresh = FALSE;
 static pthread_mutex_t mutexDisplay;
-static Display *disp;
-static Window window;
-static u8 *lpClipToKeyboard = NULL;
-static u8 *lpClipToKeyboardPtr = NULL;
-static u8 clipToKeyboardDelay = 0;
+static Display         *disp;
+static Window          window;
+static u8              *lpClipToKeyboard    = NULL;
+static u8              *lpClipToKeyboardPtr = NULL;
+static u8              clipToKeyboardDelay  = 0;
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Create POSIX thread which will deal with all X11
@@ -126,8 +126,8 @@ static u8 clipToKeyboardDelay = 0;
 **------------------------------------------------------------------------*/
 void windowInit(void)
     {
-    int rc;
-    pthread_t thread;
+    int            rc;
+    pthread_t      thread;
     pthread_attr_t attr;
 
     /*
@@ -209,9 +209,9 @@ void windowQueue(u8 ch)
     {
     DispList *elem;
 
-    if (   listEnd  >= ListSize
-        || currentX == -1
-        || currentY == -1)
+    if ((listEnd >= ListSize)
+        || (currentX == -1)
+        || (currentY == -1))
         {
         return;
         }
@@ -219,15 +219,15 @@ void windowQueue(u8 ch)
     /*
     **  Protect display list.
     */
-    pthread_mutex_lock (&mutexDisplay);
+    pthread_mutex_lock(&mutexDisplay);
 
     if (ch != 0)
         {
-        elem = display + listEnd++;
-        elem->ch = ch;
+        elem           = display + listEnd++;
+        elem->ch       = ch;
         elem->fontSize = currentFont;
-        elem->xPos = currentX;
-        elem->yPos = currentY;
+        elem->xPos     = currentX;
+        elem->yPos     = currentY;
         }
 
     currentX += currentFont;
@@ -235,7 +235,7 @@ void windowQueue(u8 ch)
     /*
     **  Release display list.
     */
-    pthread_mutex_unlock (&mutexDisplay);
+    pthread_mutex_unlock(&mutexDisplay);
     }
 
 /*--------------------------------------------------------------------------
@@ -280,12 +280,12 @@ void windowTerminate(void)
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Windows thread.
@@ -297,37 +297,37 @@ void windowTerminate(void)
 **------------------------------------------------------------------------*/
 void *windowThread(void *param)
     {
-    GC gc;
-    KeySym key;
-    KeySym modList[2];
-    Pixmap pixmap;
-    XEvent event;
-    XWMHints wmhints;
-    int screen, depth;
-    char text[30];
-    unsigned long fg, bg;
-    int len;
+    GC                gc;
+    KeySym            key;
+    KeySym            modList[2];
+    Pixmap            pixmap;
+    XEvent            event;
+    XWMHints          wmhints;
+    int               screen, depth;
+    char              text[30];
+    unsigned long     fg, bg;
+    int               len;
     XWindowAttributes a;
-    XColor b,c;
-    static int refreshCount = 0;
-    char str[2] = " ";
-    DispList *curr;
-    DispList *end;
-    u8 oldFont = 0;
-    Atom targetProperty;
-    Atom retAtom;
-    Atom wmDeleteWindow;
-    int retFormat;
-    int retStatus;
-    unsigned long retRemaining;
-    unsigned long retLength; 
-    int usageDisplayCount = 0;
+    XColor            b, c;
+    static int        refreshCount = 0;
+    char              str[2]       = " ";
+    DispList          *curr;
+    DispList          *end;
+    u8                oldFont = 0;
+    Atom              targetProperty;
+    Atom              retAtom;
+    Atom              wmDeleteWindow;
+    int               retFormat;
+    int               retStatus;
+    unsigned long     retRemaining;
+    unsigned long     retLength;
+    int               usageDisplayCount = 0;
 
     /*
     **  Open the X11 display.
     */
     disp = XOpenDisplay(0);
-    if (disp == (Display *) NULL)
+    if (disp == (Display *)NULL)
         {
         fprintf(stderr, "Could not open display\n");
         exit(1);
@@ -338,31 +338,31 @@ void *windowThread(void *param)
     /*
     **  Create a window using the following hints.
     */
-    width = 1100;
+    width  = 1100;
     height = 750;
 
     bg = BlackPixel(disp, screen);
     fg = WhitePixel(disp, screen);
 
-    window = XCreateSimpleWindow (disp, DefaultRootWindow(disp),
-        10, 10, width, height, 5, fg, bg);
+    window = XCreateSimpleWindow(disp, DefaultRootWindow(disp),
+                                 10, 10, width, height, 5, fg, bg);
 
     /*
     **  Create a pixmap for background image generation.
     */
-    depth = DefaultDepth (disp, screen);
-    pixmap = XCreatePixmap (disp, window, width, height, depth);
+    depth  = DefaultDepth(disp, screen);
+    pixmap = XCreatePixmap(disp, window, width, height, depth);
 
     /*
     **  Set window and icon titles.
     */
-    XSetStandardProperties (disp, window, DtCyberVersion " - " DtCyberCopyright " - " DtCyberLicense,
-        DtCyberVersion, None, NULL, 0, NULL);
+    XSetStandardProperties(disp, window, DtCyberVersion " - " DtCyberCopyright " - " DtCyberLicense,
+                           DtCyberVersion, None, NULL, 0, NULL);
 
     /*
     **  Create the graphics contexts for window and pixmap.
     */
-    gc = XCreateGC (disp, window, 0, 0);
+    gc = XCreateGC(disp, window, 0, 0);
 
     /*
     **  We don't want to get Expose events, otherwise every XCopyArea will generate one,
@@ -374,16 +374,16 @@ void *windowThread(void *param)
     /*
     **  Load three Cyber fonts.
     */
-    hSmallFont = XLoadFont(disp, "-*-lucidatypewriter-medium-*-*-*-10-*-*-*-*-*-*-*\0");
+    hSmallFont  = XLoadFont(disp, "-*-lucidatypewriter-medium-*-*-*-10-*-*-*-*-*-*-*\0");
     hMediumFont = XLoadFont(disp, "-*-lucidatypewriter-medium-*-*-*-14-*-*-*-*-*-*-*\0");
-    hLargeFont = XLoadFont(disp, "-*-lucidatypewriter-medium-*-*-*-24-*-*-*-*-*-*-*\0");
+    hLargeFont  = XLoadFont(disp, "-*-lucidatypewriter-medium-*-*-*-24-*-*-*-*-*-*-*\0");
 
     /*
     **  Setup fore- and back-ground colors.
     */
-    XGetWindowAttributes(disp,window,&a);
-    XAllocNamedColor(disp, a.colormap,"green",&b,&c);
-    fg=b.pixel;
+    XGetWindowAttributes(disp, window, &a);
+    XAllocNamedColor(disp, a.colormap, "green", &b, &c);
+    fg = b.pixel;
     bg = BlackPixel(disp, screen);
     XSetBackground(disp, gc, bg);
     XSetForeground(disp, gc, fg);
@@ -417,12 +417,12 @@ void *windowThread(void *param)
     wmhints.flags = InputHint;
     wmhints.input = True;
     XSetWMHints(disp, window, &wmhints);
-    XSelectInput (disp, window, KeyPressMask | KeyReleaseMask | StructureNotifyMask);
+    XSelectInput(disp, window, KeyPressMask | KeyReleaseMask | StructureNotifyMask);
 
     /*
     **  We like to be on top.
     */
-    XMapRaised (disp, window);
+    XMapRaised(disp, window);
 
     /*
     **  Create atom for paste operations,
@@ -439,7 +439,7 @@ void *windowThread(void *param)
     **  Window thread loop.
     */
     displayActive = TRUE;
-    while(displayActive)
+    while (displayActive)
         {
         /*
         **  Process paste buffer one character a time.
@@ -462,7 +462,7 @@ void *windowThread(void *param)
                     **  All paste data has been processed - clean up.
                     */
                     XFree(lpClipToKeyboard);
-                    lpClipToKeyboard = NULL;
+                    lpClipToKeyboard    = NULL;
                     lpClipToKeyboardPtr = NULL;
                     }
                 else if (ppKeyIn == '\n')
@@ -510,37 +510,37 @@ void *windowThread(void *param)
                 break;
 
             case MappingNotify:
-                XRefreshKeyboardMapping ((XMappingEvent *)&event);
+                XRefreshKeyboardMapping((XMappingEvent *)&event);
                 refresh = TRUE;
                 break;
 
             case ConfigureNotify:
-                if (event.xconfigure.width > width || event.xconfigure.height > height)
+                if ((event.xconfigure.width > width) || (event.xconfigure.height > height))
                     {
                     /*
                     **  Reallocate pixmap only if it has grown.
                     */
-                    width = event.xconfigure.width;
+                    width  = event.xconfigure.width;
                     height = event.xconfigure.height;
-                    XFreePixmap (disp, pixmap);
-                    pixmap = XCreatePixmap (disp, window, width, height, depth);
+                    XFreePixmap(disp, pixmap);
+                    pixmap = XCreatePixmap(disp, window, width, height, depth);
                     }
 
-                XFillRectangle (disp, pixmap, gc, 0, 0, width, height);
+                XFillRectangle(disp, pixmap, gc, 0, 0, width, height);
                 refresh = TRUE;
                 break;
 
             case KeyPress:
-                len = XLookupString ((XKeyEvent *)&event, text, 10, &key, 0);
+                len = XLookupString((XKeyEvent *)&event, text, 10, &key, 0);
                 if (len == 1)
                     {
                     ppKeyIn = text[0];
                     sleepMsec(5);
                     }
-                else if (len == 2 && text[0] == '$')
+                else if ((len == 2) && (text[0] == '$'))
                     {
                     switch (text[1])
-                        {
+                    {
                     case '0':
                     case '1':
                     case '2':
@@ -590,14 +590,14 @@ void *windowThread(void *param)
                             */
                             break;
                             }
-    
+
                         /*
                         **  Request the server to send an event to the present owner of the selection,
                         **  asking the owner to convert the data in the selection to the required type.
                         */
                         XConvertSelection(disp, XA_PRIMARY, XA_STRING, targetProperty, window, event.xbutton.time);
                         break;
-                        }
+                    }
                     }
                 break;
 
@@ -606,10 +606,10 @@ void *windowThread(void *param)
                 if (len == 1)
                     {
                     switch (text[0])
-                        {
+                    {
                     default:
                         break;
-                        }
+                    }
                     }
 
                 break;
@@ -630,8 +630,8 @@ void *windowThread(void *param)
                 **  Fetch up to 1 kb from the selection.
                 */
                 retStatus = XGetWindowProperty(disp, window, event.xselection.property,
-                    0L, 1024, False, AnyPropertyType, &retAtom, &retFormat, 
-                    &retLength, &retRemaining, &lpClipToKeyboard);
+                                               0L, 1024, False, AnyPropertyType, &retAtom, &retFormat,
+                                               &retLength, &retRemaining, &lpClipToKeyboard);
 
                 if (retStatus == Success)
                     {
@@ -639,7 +639,7 @@ void *windowThread(void *param)
                     }
                 else
                     {
-                    lpClipToKeyboard = NULL;
+                    lpClipToKeyboard    = NULL;
                     lpClipToKeyboardPtr = NULL;
                     }
 
@@ -650,50 +650,50 @@ void *windowThread(void *param)
         /*
         **  Process any refresh request.
         */
-        XSetForeground (disp, gc, fg);
+        XSetForeground(disp, gc, fg);
 
         XSetFont(disp, gc, hSmallFont);
         oldFont = FontSmall;
 
 #if CcCycleTime
-        {
-        extern double cycleTime;
-        char buf[80];
+            {
+            extern double cycleTime;
+            char          buf[80];
 
-        sprintf(buf, "Cycle time: %.3f", cycleTime);
-        XDrawString(disp, pixmap, gc, 0, 10, buf, strlen(buf));
-        }
+            sprintf(buf, "Cycle time: %.3f", cycleTime);
+            XDrawString(disp, pixmap, gc, 0, 10, buf, strlen(buf));
+            }
 #endif
 
 #if CcDebug == 1
-        {
-        char buf[160];
+            {
+            char buf[160];
 
-        /*
-        **  Display P registers of PPUs and CPU and current trace mask.
-        */
-        sprintf(buf, "Refresh: %-10d  PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o   CPU P-reg: %06o",
-            refreshCount++,
-            ppu[0].regP, ppu[1].regP, ppu[2].regP, ppu[3].regP, ppu[4].regP,
-            ppu[5].regP, ppu[6].regP, ppu[7].regP, ppu[8].regP, ppu[9].regP,
-            cpu.regP); 
+            /*
+            **  Display P registers of PPUs and CPU and current trace mask.
+            */
+            sprintf(buf, "Refresh: %-10d  PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o   CPU P-reg: %06o",
+                    refreshCount++,
+                    ppu[0].regP, ppu[1].regP, ppu[2].regP, ppu[3].regP, ppu[4].regP,
+                    ppu[5].regP, ppu[6].regP, ppu[7].regP, ppu[8].regP, ppu[9].regP,
+                    cpu.regP);
 
-        sprintf(buf + strlen(buf), "   Trace: %c%c%c%c%c%c%c%c%c%c%c%c",
-            (traceMask >> 0) & 1 ? '0' : '_',
-            (traceMask >> 1) & 1 ? '1' : '_',
-            (traceMask >> 2) & 1 ? '2' : '_',
-            (traceMask >> 3) & 1 ? '3' : '_',
-            (traceMask >> 4) & 1 ? '4' : '_',
-            (traceMask >> 5) & 1 ? '5' : '_',
-            (traceMask >> 6) & 1 ? '6' : '_',
-            (traceMask >> 7) & 1 ? '7' : '_',
-            (traceMask >> 8) & 1 ? '8' : '_',
-            (traceMask >> 9) & 1 ? '9' : '_',
-            (traceMask >> 14) & 1 ? 'C' : '_',
-            (traceMask >> 15) & 1 ? 'E' : '_');
+            sprintf(buf + strlen(buf), "   Trace: %c%c%c%c%c%c%c%c%c%c%c%c",
+                    (traceMask >> 0) & 1 ? '0' : '_',
+                    (traceMask >> 1) & 1 ? '1' : '_',
+                    (traceMask >> 2) & 1 ? '2' : '_',
+                    (traceMask >> 3) & 1 ? '3' : '_',
+                    (traceMask >> 4) & 1 ? '4' : '_',
+                    (traceMask >> 5) & 1 ? '5' : '_',
+                    (traceMask >> 6) & 1 ? '6' : '_',
+                    (traceMask >> 7) & 1 ? '7' : '_',
+                    (traceMask >> 8) & 1 ? '8' : '_',
+                    (traceMask >> 9) & 1 ? '9' : '_',
+                    (traceMask >> 14) & 1 ? 'C' : '_',
+                    (traceMask >> 15) & 1 ? 'E' : '_');
 
-        XDrawString(disp, pixmap, gc, 0, 10, buf, strlen(buf));
-        }
+            XDrawString(disp, pixmap, gc, 0, 10, buf, strlen(buf));
+            }
 #endif
 
         if (opActive)
@@ -723,7 +723,7 @@ void *windowThread(void *param)
             oldFont = FontMedium;
             XDrawString(disp, pixmap, gc, 20, 256, usageMessage1, strlen(usageMessage1));
             XDrawString(disp, pixmap, gc, 20, 275, usageMessage2, strlen(usageMessage2));
-            listEnd = 0;
+            listEnd            = 0;
             usageDisplayCount -= 1;
             }
 
@@ -731,7 +731,7 @@ void *windowThread(void *param)
         **  Draw display list in pixmap.
         */
         curr = display;
-        end = display + listEnd;
+        end  = display + listEnd;
 
         for (curr = display; curr < end; curr++)
             {
@@ -772,15 +772,15 @@ void *windowThread(void *param)
                 }
             }
 
-        listEnd = 0;
+        listEnd  = 0;
         currentX = -1;
         currentY = -1;
-        refresh = FALSE;
+        refresh  = FALSE;
 
         /*
         **  Release display list.
         */
-        pthread_mutex_unlock (&mutexDisplay);
+        pthread_mutex_unlock(&mutexDisplay);
 
         /*
         **  Update display from pixmap.
@@ -790,8 +790,8 @@ void *windowThread(void *param)
         /*
         **  Erase pixmap for next round.
         */
-        XSetForeground (disp, gc, bg);
-        XFillRectangle (disp, pixmap, gc, 0, 0, width, height);
+        XSetForeground(disp, gc, bg);
+        XFillRectangle(disp, pixmap, gc, 0, 0, width, height);
 
         /*
         **  Make sure the updates make it to the X11 server.
@@ -801,14 +801,14 @@ void *windowThread(void *param)
         /*
         **  Give other threads a chance to run. This may require customisation.
         */
-        sleepUsec(FrameTime); 
+        sleepUsec(FrameTime);
         }
 
     XSync(disp, 0);
-    XFreeGC (disp, gc);
-    XFreePixmap (disp, pixmap);
-    XDestroyWindow (disp, window);
-    XCloseDisplay (disp);
+    XFreeGC(disp, gc);
+    XFreePixmap(disp, pixmap);
+    XDestroyWindow(disp, window);
+    XCloseDisplay(disp);
     pthread_exit(NULL);
     }
 

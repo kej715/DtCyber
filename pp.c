@@ -10,12 +10,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -23,7 +23,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define PPDEBUG 0
+#define PPDEBUG    0
 
 /*
 **  -------------
@@ -48,38 +48,38 @@
 **  Private Macro Functions
 **  -----------------------
 */
-#define PpIncrement(word) (word) = (((word) + 1) & Mask12)
-#define PpDecrement(word) (word) = (((word) - 1) & Mask12)
+#define PpIncrement(word)    (word) = (((word) + 1) & Mask12)
+#define PpDecrement(word)    (word) = (((word) - 1) & Mask12)
 
 ///// the program (PPU ?) stops when "from" is 000 or 077 a deadstart is necessary - see 6600 RM page 4-22 (UJN)
-#define PpAddOffset(to, from)                                               \
-    {                                                                       \
-    (to) = ((to) - 1) & Mask12;                                             \
-    if (from < 040)                                                         \
-        (to) = ((to) + (from));                                             \
-    else                                                                    \
-        (to) = ((to) + (from) - 077);                                       \
-    if (((to) & Overflow12) != 0)                                           \
-        {                                                                   \
-        (to) += 1;                                                          \
-        }                                                                   \
-    (to) &= Mask12;                                                         \
-    }
+#define PpAddOffset(to, from)         \
+        {                             \
+        (to) = ((to) - 1) & Mask12;   \
+        if (from < 040)               \
+        (to) = ((to) + (from));       \
+        else                          \
+        (to) = ((to) + (from) - 077); \
+        if (((to) & Overflow12) != 0) \
+            {                         \
+            (to) += 1;                \
+            }                         \
+        (to) &= Mask12;               \
+        }
 
-#define IndexLocation                                                       \
-    if (opD != 0)                                                           \
-        {                                                                   \
-        location = activePpu->mem[opD] + activePpu->mem[activePpu->regP];   \
-        }                                                                   \
-    else                                                                    \
-        {                                                                   \
-        location = activePpu->mem[activePpu->regP];                         \
-        }                                                                   \
-    if ((location & Overflow12) != 0 || (location & Mask12) == 07777)       \
-        {                                                                   \
-        location += 1;                                                      \
-        }                                                                   \
-    location &= Mask12;                                                     \
+#define IndexLocation                                                     \
+    if (opD != 0)                                                         \
+        {                                                                 \
+        location = activePpu->mem[opD] + activePpu->mem[activePpu->regP]; \
+        }                                                                 \
+    else                                                                  \
+        {                                                                 \
+        location = activePpu->mem[activePpu->regP];                       \
+        }                                                                 \
+    if ((location & Overflow12) != 0 || (location & Mask12) == 07777)     \
+        {                                                                 \
+        location += 1;                                                    \
+        }                                                                 \
+    location &= Mask12;                                                   \
     PpIncrement(activePpu->regP);
 
 
@@ -165,6 +165,7 @@ static void ppInterlock(PpWord func);
 
 #if PPDEBUG
 static void ppValidateCmWrite(char *inst, u32 address, CpWord data);
+
 #endif
 
 /*
@@ -174,22 +175,22 @@ static void ppValidateCmWrite(char *inst, u32 address, CpWord data);
 */
 PpSlot *ppu;
 PpSlot *activePpu;
-u8 ppuCount;
+u8     ppuCount;
 
 /*
 **  -----------------
 **  Private Variables
 **  -----------------
 */
-static FILE *ppHandle;
-static u8 pp = 0;
+static FILE   *ppHandle;
+static u8     pp = 0;
 static PpByte opF;
 static PpByte opD;
 static PpWord location;
-static u32 acc18;
-static bool noHang;
+static u32    acc18;
+static bool   noHang;
 
-static void (*decodePpuOpcode[])(void) = 
+static void (*decodePpuOpcode[])(void) =
     {
     ppOpPSN,    // 00
     ppOpLJM,    // 01
@@ -262,12 +263,12 @@ static FILE *ppLog = NULL;
 #endif
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise PP subsystem.
@@ -283,10 +284,10 @@ void ppInit(u8 count)
     **  Allocate ppu structures.
     */
     ppuCount = count;
-    ppu = calloc(count, sizeof(PpSlot));
+    ppu      = calloc(count, sizeof(PpSlot));
     if (ppu == NULL)
         {
-        fprintf(stderr, "Failed to allocate ppu control blocks\n");
+        fprintf(stderr, "(pp     ) Failed to allocate ppu control blocks\n");
         exit(1);
         }
 
@@ -310,7 +311,7 @@ void ppInit(u8 count)
             */
             if (fread(ppu, sizeof(PpSlot), count, ppHandle) != count)
                 {
-                printf("Unexpected length of PPM backing file, clearing PPM\n");
+                printf("(pp     ) Unexpected length of PPM backing file, clearing PPM\n");
                 memset(ppu, 0, count * sizeof(PpSlot));
                 }
             }
@@ -322,7 +323,7 @@ void ppInit(u8 count)
             ppHandle = fopen(fileName, "w+b");
             if (ppHandle == NULL)
                 {
-                fprintf(stderr, "Failed to create PPM backing file\n");
+                fprintf(stderr, "(pp     ) Failed to create PPM backing file\n");
                 exit(1);
                 }
             }
@@ -341,7 +342,7 @@ void ppInit(u8 count)
     /*
     **  Print a friendly message.
     */
-    printf("PPs initialised (number of PPUs %o)\n", ppuCount);
+    printf("(pp     ) PPs initialised (number of PPUs %o)\n", ppuCount);
 
 #if PPDEBUG
     if (ppLog == NULL)
@@ -369,7 +370,7 @@ void ppTerminate(void)
         fseek(ppHandle, 0, SEEK_SET);
         if (fwrite(ppu, sizeof(PpSlot), ppuCount, ppHandle) != ppuCount)
             {
-            fprintf(stderr, "Error writing PPM backing file\n");
+            fprintf(stderr, "(pp     ) Error writing PPM backing file\n");
             }
 
         fclose(ppHandle);
@@ -391,7 +392,7 @@ void ppTerminate(void)
 **------------------------------------------------------------------------*/
 void ppStep(void)
     {
-    u8 i;
+    u8     i;
     PpWord opCode;
 
     /*
@@ -410,8 +411,8 @@ void ppStep(void)
             **  Extract next PPU instruction.
             */
             opCode = activePpu->mem[activePpu->regP];
-            opF = (opCode >> 6) & 077;
-            opD = opCode & 077;
+            opF    = (opCode >> 6) & 077;
+            opD    = opCode & 077;
 
 #if CcDebug == 1
             /*
@@ -427,7 +428,7 @@ void ppStep(void)
             traceRegisters();
             traceOpcode();
 #else
-traceSequenceNo += 1;
+            traceSequenceNo += 1;
 #endif
 
             /*
@@ -471,12 +472,12 @@ traceSequenceNo += 1;
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        18 bit ones-complement addition with subtractive adder
@@ -496,7 +497,7 @@ static u32 ppAdd18(u32 op1, u32 op2)
         acc18 -= 1;
         }
 
-    return(acc18 & Mask18);
+    return (acc18 & Mask18);
     }
 
 /*--------------------------------------------------------------------------
@@ -517,7 +518,7 @@ static u32 ppSubtract18(u32 op1, u32 op2)
         acc18 -= 1;
         }
 
-    return(acc18 & Mask18);
+    return (acc18 & Mask18);
     }
 
 /*--------------------------------------------------------------------------
@@ -592,14 +593,14 @@ static void ppOpSHN(void)     // 10
 
     if (opD < 040)
         {
-        opD = opD % 18;
-        acc = activePpu->regA & Mask18;
-        acc <<= opD;
+        opD             = opD % 18;
+        acc             = activePpu->regA & Mask18;
+        acc           <<= opD;
         activePpu->regA = (u32)((acc & Mask18) | (acc >> 18));
         }
     else if (opD > 037)
         {
-        opD = 077 - opD;
+        opD               = 077 - opD;
         activePpu->regA >>= opD;
         }
     }
@@ -673,7 +674,7 @@ static void ppOpPSN24(void)     // 24
             **  LRD.
             */
 //            activePpu->regR  = (u32)(activePpu->mem[opD    ] & Mask4 ) << 18; // 875
-            activePpu->regR  = (u32)(activePpu->mem[opD    ] & Mask3 ) << 18; // 865
+            activePpu->regR  = (u32)(activePpu->mem[opD] & Mask3) << 18;      // 865
             activePpu->regR |= (u32)(activePpu->mem[opD + 1] & Mask12) << 6;
             }
         else if ((features & HasRelocationRegLong) != 0)
@@ -681,7 +682,7 @@ static void ppOpPSN24(void)     // 24
             /*
             **  LRD.
             */
-            activePpu->regR  = (u32)(activePpu->mem[opD    ] & Mask10) << 18;
+            activePpu->regR  = (u32)(activePpu->mem[opD] & Mask10) << 18;
             activePpu->regR |= (u32)(activePpu->mem[opD + 1] & Mask12) << 6;
             }
         }
@@ -701,16 +702,16 @@ static void ppOpPSN25(void)     // 25
             **  SRD.
             */
 //            activePpu->mem[opD    ] = (PpWord)(activePpu->regR >> 18) & Mask4; // 875
-            activePpu->mem[opD    ] = (PpWord)(activePpu->regR >> 18) & Mask3; // 865
-            activePpu->mem[opD + 1] = (PpWord)(activePpu->regR >>  6) & Mask12;
+            activePpu->mem[opD]     = (PpWord)(activePpu->regR >> 18) & Mask3; // 865
+            activePpu->mem[opD + 1] = (PpWord)(activePpu->regR >> 6) & Mask12;
             }
         else if ((features & HasRelocationRegLong) != 0)
             {
             /*
             **  SRD.
             */
-            activePpu->mem[opD    ] = (PpWord)(activePpu->regR >> 18) & Mask10;
-            activePpu->mem[opD + 1] = (PpWord)(activePpu->regR >>  6) & Mask12;
+            activePpu->mem[opD]     = (PpWord)(activePpu->regR >> 18) & Mask10;
+            activePpu->mem[opD + 1] = (PpWord)(activePpu->regR >> 6) & Mask12;
             }
         }
 
@@ -723,12 +724,12 @@ static void ppOpEXN(void)     // 26
     {
     u32 exchangeAddress;
 
-    if ((opD & 070) == 0 || (features & HasNoCejMej) != 0)
+    if (((opD & 070) == 0) || ((features & HasNoCejMej) != 0))
         {
         /*
         **  EXN or MXN/MAN with CEJ/MEJ disabled.
         */
-        if ((activePpu->regA & Sign18) != 0 && (features & HasRelocationReg) != 0)
+        if (((activePpu->regA & Sign18) != 0) && ((features & HasRelocationReg) != 0))
             {
             exchangeAddress = activePpu->regR + (activePpu->regA & Mask17);
             if ((features & HasRelocationRegShort) != 0)
@@ -758,7 +759,7 @@ static void ppOpEXN(void)     // 26
             */
             cpu.monitorMode = TRUE;
 
-            if ((activePpu->regA & Sign18) != 0 && (features & HasRelocationReg) != 0)
+            if (((activePpu->regA & Sign18) != 0) && ((features & HasRelocationReg) != 0))
                 {
                 exchangeAddress = activePpu->regR + (activePpu->regA & Mask17);
                 if ((features & HasRelocationRegShort) != 0)
@@ -804,7 +805,7 @@ static void ppOpRPN(void)     // 27
     /*
     **  RPN except for series 800 (865 has it though).
     */
-    if ((features & IsSeries800) == 0 || modelType == ModelCyber865)
+    if (((features & IsSeries800) == 0) || (modelType == ModelCyber865))
         {
         activePpu->regA = cpuGetP();
         }
@@ -812,7 +813,7 @@ static void ppOpRPN(void)     // 27
 
 static void ppOpLDD(void)     // 30
     {
-    activePpu->regA = activePpu->mem[opD] & Mask12;
+    activePpu->regA  = activePpu->mem[opD] & Mask12;
     activePpu->regA &= Mask18;
     }
 
@@ -839,43 +840,43 @@ static void ppOpSTD(void)     // 34
 
 static void ppOpRAD(void)     // 35
     {
-    activePpu->regA = ppAdd18(activePpu->regA, activePpu->mem[opD] & Mask12);
+    activePpu->regA     = ppAdd18(activePpu->regA, activePpu->mem[opD] & Mask12);
     activePpu->mem[opD] = (PpWord)activePpu->regA & Mask12;
     }
 
 static void ppOpAOD(void)     // 36
     {
-    activePpu->regA = ppAdd18(activePpu->mem[opD] & Mask12, 1);
+    activePpu->regA     = ppAdd18(activePpu->mem[opD] & Mask12, 1);
     activePpu->mem[opD] = (PpWord)activePpu->regA & Mask12;
     }
 
 static void ppOpSOD(void)     // 37
     {
-    activePpu->regA = ppSubtract18(activePpu->mem[opD] & Mask12, 1);
+    activePpu->regA     = ppSubtract18(activePpu->mem[opD] & Mask12, 1);
     activePpu->mem[opD] = (PpWord)activePpu->regA & Mask12;
     }
 
 static void ppOpLDI(void)     // 40
     {
-    location = activePpu->mem[opD] & Mask12;
+    location        = activePpu->mem[opD] & Mask12;
     activePpu->regA = activePpu->mem[location] & Mask12;
     }
 
 static void ppOpADI(void)     // 41
     {
-    location = activePpu->mem[opD] & Mask12;
+    location        = activePpu->mem[opD] & Mask12;
     activePpu->regA = ppAdd18(activePpu->regA, activePpu->mem[location] & Mask12);
     }
 
 static void ppOpSBI(void)     // 42
     {
-    location = activePpu->mem[opD] & Mask12;
+    location        = activePpu->mem[opD] & Mask12;
     activePpu->regA = ppSubtract18(activePpu->regA, activePpu->mem[location] & Mask12);
     }
 
 static void ppOpLMI(void)     // 43
     {
-    location = activePpu->mem[opD] & Mask12;
+    location         = activePpu->mem[opD] & Mask12;
     activePpu->regA ^= activePpu->mem[location] & Mask12;
     activePpu->regA &= Mask18;
     }
@@ -888,22 +889,22 @@ static void ppOpSTI(void)     // 44
 
 static void ppOpRAI(void)     // 45
     {
-    location = activePpu->mem[opD] & Mask12;
-    activePpu->regA = ppAdd18(activePpu->regA, activePpu->mem[location] & Mask12);
+    location                 = activePpu->mem[opD] & Mask12;
+    activePpu->regA          = ppAdd18(activePpu->regA, activePpu->mem[location] & Mask12);
     activePpu->mem[location] = (PpWord)activePpu->regA & Mask12;
     }
 
 static void ppOpAOI(void)     // 46
     {
-    location = activePpu->mem[opD] & Mask12;
-    activePpu->regA = ppAdd18(activePpu->mem[location] & Mask12, 1);
+    location                 = activePpu->mem[opD] & Mask12;
+    activePpu->regA          = ppAdd18(activePpu->mem[location] & Mask12, 1);
     activePpu->mem[location] = (PpWord)activePpu->regA & Mask12;
     }
 
 static void ppOpSOI(void)     // 47
     {
-    location = activePpu->mem[opD] & Mask12;
-    activePpu->regA = ppSubtract18(activePpu->mem[location] & Mask12, 1);
+    location                 = activePpu->mem[opD] & Mask12;
+    activePpu->regA          = ppSubtract18(activePpu->mem[location] & Mask12, 1);
     activePpu->mem[location] = (PpWord)activePpu->regA & Mask12;
     }
 
@@ -940,21 +941,21 @@ static void ppOpSTM(void)     // 54
 static void ppOpRAM(void)     // 55
     {
     IndexLocation;
-    activePpu->regA = ppAdd18(activePpu->regA, activePpu->mem[location] & Mask12);
+    activePpu->regA          = ppAdd18(activePpu->regA, activePpu->mem[location] & Mask12);
     activePpu->mem[location] = (PpWord)activePpu->regA & Mask12;
     }
 
 static void ppOpAOM(void)     // 56
     {
     IndexLocation;
-    activePpu->regA = ppAdd18(activePpu->mem[location] & Mask12, 1);
+    activePpu->regA          = ppAdd18(activePpu->mem[location] & Mask12, 1);
     activePpu->mem[location] = (PpWord)activePpu->regA & Mask12;
     }
 
 static void ppOpSOM(void)     // 57
     {
     IndexLocation;
-    activePpu->regA = ppSubtract18(activePpu->mem[location] & Mask12, 1);
+    activePpu->regA          = ppSubtract18(activePpu->mem[location] & Mask12, 1);
     activePpu->mem[location] = (PpWord)activePpu->regA & Mask12;
     }
 
@@ -962,7 +963,7 @@ static void ppOpCRD(void)     // 60
     {
     CpWord data;
 
-    if ((activePpu->regA & Sign18) != 0 && (features & HasRelocationReg) != 0)
+    if (((activePpu->regA & Sign18) != 0) && ((features & HasRelocationReg) != 0))
         {
         cpuPpReadMem(activePpu->regR + (activePpu->regA & Mask17), &data);
         }
@@ -975,7 +976,7 @@ static void ppOpCRD(void)     // 60
     activePpu->mem[opD++ & Mask12] = (PpWord)((data >> 36) & Mask12);
     activePpu->mem[opD++ & Mask12] = (PpWord)((data >> 24) & Mask12);
     activePpu->mem[opD++ & Mask12] = (PpWord)((data >> 12) & Mask12);
-    activePpu->mem[opD   & Mask12] = (PpWord)((data      ) & Mask12);
+    activePpu->mem[opD & Mask12]   = (PpWord)((data) & Mask12);
     }
 
 static void ppOpCRM(void)     // 61
@@ -984,18 +985,18 @@ static void ppOpCRM(void)     // 61
 
     if (!activePpu->busy)
         {
-        activePpu->opF = opF;
+        activePpu->opF  = opF;
         activePpu->regQ = activePpu->mem[opD] & Mask12;
 
         activePpu->busy = TRUE;
 
         activePpu->mem[0] = activePpu->regP;
-        activePpu->regP = activePpu->mem[activePpu->regP] & Mask12;
+        activePpu->regP   = activePpu->mem[activePpu->regP] & Mask12;
         }
 
     if (activePpu->regQ > 0)
         {
-        if ((activePpu->regA & Sign18) != 0 && (features & HasRelocationReg) != 0)
+        if (((activePpu->regA & Sign18) != 0) && ((features & HasRelocationReg) != 0))
             {
             cpuPpReadMem(activePpu->regR + (activePpu->regA & Mask17), &data);
             }
@@ -1016,7 +1017,7 @@ static void ppOpCRM(void)     // 61
         activePpu->mem[activePpu->regP] = (PpWord)((data >> 12) & Mask12);
         PpIncrement(activePpu->regP);
 
-        activePpu->mem[activePpu->regP] = (PpWord)((data      ) & Mask12);
+        activePpu->mem[activePpu->regP] = (PpWord)((data) & Mask12);
         PpIncrement(activePpu->regP);
 
         activePpu->regA = (activePpu->regA + 1) & Mask18;
@@ -1033,24 +1034,24 @@ static void ppOpCRM(void)     // 61
 
 static void ppOpCWD(void)     // 62
     {
-    u32 address;
+    u32    address;
     CpWord data;
 
-    data  = activePpu->mem[opD++ & Mask12] & Mask12;
+    data   = activePpu->mem[opD++ & Mask12] & Mask12;
     data <<= 12;
 
-    data |= activePpu->mem[opD++ & Mask12] & Mask12;
+    data  |= activePpu->mem[opD++ & Mask12] & Mask12;
     data <<= 12;
 
-    data |= activePpu->mem[opD++ & Mask12] & Mask12;
+    data  |= activePpu->mem[opD++ & Mask12] & Mask12;
     data <<= 12;
 
-    data |= activePpu->mem[opD++ & Mask12] & Mask12;
+    data  |= activePpu->mem[opD++ & Mask12] & Mask12;
     data <<= 12;
 
-    data |= activePpu->mem[opD   & Mask12] & Mask12;
+    data |= activePpu->mem[opD & Mask12] & Mask12;
 
-    if ((activePpu->regA & Sign18) != 0 && (features & HasRelocationReg) != 0)
+    if (((activePpu->regA & Sign18) != 0) && ((features & HasRelocationReg) != 0))
         {
         address = activePpu->regR + (activePpu->regA & Mask17);
         }
@@ -1066,23 +1067,23 @@ static void ppOpCWD(void)     // 62
 
 static void ppOpCWM(void)     // 63
     {
-    u32 address;
+    u32    address;
     CpWord data;
 
     if (!activePpu->busy)
         {
-        activePpu->opF = opF;
+        activePpu->opF  = opF;
         activePpu->regQ = activePpu->mem[opD] & Mask12;
 
         activePpu->busy = TRUE;
 
         activePpu->mem[0] = activePpu->regP;
-        activePpu->regP = activePpu->mem[activePpu->regP] & Mask12;
+        activePpu->regP   = activePpu->mem[activePpu->regP] & Mask12;
         }
 
     if (activePpu->regQ > 0)
         {
-        data  = activePpu->mem[activePpu->regP] & Mask12;
+        data = activePpu->mem[activePpu->regP] & Mask12;
         PpIncrement(activePpu->regP);
         data <<= 12;
 
@@ -1101,7 +1102,7 @@ static void ppOpCWM(void)     // 63
         data |= activePpu->mem[activePpu->regP] & Mask12;
         PpIncrement(activePpu->regP);
 
-        if ((activePpu->regA & Sign18) != 0 && (features & HasRelocationReg) != 0)
+        if (((activePpu->regA & Sign18) != 0) && ((features & HasRelocationReg) != 0))
             {
             address = activePpu->regR + (activePpu->regA & Mask17);
             }
@@ -1128,12 +1129,12 @@ static void ppOpCWM(void)     // 63
 
 static void ppOpAJM(void)     // 64
     {
-    location = activePpu->mem[activePpu->regP];
+    location  = activePpu->mem[activePpu->regP];
     location &= Mask12;
     PpIncrement(activePpu->regP);
 
-    if (   (opD & 040) != 0
-        && (features & HasChannelFlag) != 0)
+    if (((opD & 040) != 0)
+        && ((features & HasChannelFlag) != 0))
         {
         /*
         **  SCF.
@@ -1164,17 +1165,16 @@ static void ppOpAJM(void)     // 64
             activePpu->regP = location;
             }
         }
-
     }
 
 static void ppOpIJM(void)     // 65
     {
-    location = activePpu->mem[activePpu->regP];
+    location  = activePpu->mem[activePpu->regP];
     location &= Mask12;
     PpIncrement(activePpu->regP);
 
-    if (   (opD & 040) != 0
-        && (features & HasChannelFlag) != 0)
+    if (((opD & 040) != 0)
+        && ((features & HasChannelFlag) != 0))
         {
         /*
         **  CCF.
@@ -1206,12 +1206,12 @@ static void ppOpIJM(void)     // 65
 
 static void ppOpFJM(void)     // 66
     {
-    location = activePpu->mem[activePpu->regP];
+    location  = activePpu->mem[activePpu->regP];
     location &= Mask12;
     PpIncrement(activePpu->regP);
 
-    if (   (opD & 040) != 0
-        && (features & HasErrorFlag) != 0)
+    if (((opD & 040) != 0)
+        && ((features & HasErrorFlag) != 0))
         {
         /*
         **  SFM - we never have errors, so this is just a pass.
@@ -1234,12 +1234,12 @@ static void ppOpFJM(void)     // 66
 
 static void ppOpEJM(void)     // 67
     {
-    location = activePpu->mem[activePpu->regP];
+    location  = activePpu->mem[activePpu->regP];
     location &= Mask12;
     PpIncrement(activePpu->regP);
 
-    if (   (opD & 040) != 0
-        && (features & HasErrorFlag) != 0)
+    if (((opD & 040) != 0)
+        && ((features & HasErrorFlag) != 0))
         {
         /*
         **  CFM - we never have errors, so we always jump.
@@ -1274,17 +1274,17 @@ static void ppOpIAN(void)     // 70
     {
     if (!activePpu->busy)
         {
-        activePpu->opF = opF;
-        activePpu->opD = opD;
+        activePpu->opF             = opF;
+        activePpu->opD             = opD;
         activeChannel->delayStatus = 0;
         }
 
-    noHang = (activePpu->opD & 040) != 0;
-    activeChannel = channel + (activePpu->opD & 037);
+    noHang          = (activePpu->opD & 040) != 0;
+    activeChannel   = channel + (activePpu->opD & 037);
     activePpu->busy = TRUE;
 
     channelCheckIfActive();
-    if (!activeChannel->active && activeChannel->id != ChClock)
+    if (!activeChannel->active && (activeChannel->id != ChClock))
         {
         if (noHang)
             {
@@ -1304,7 +1304,7 @@ static void ppOpIAN(void)     // 70
         channelIo();
         }
 
-    if (activeChannel->full || activeChannel->id == ChClock)
+    if (activeChannel->full || (activeChannel->id == ChClock))
         {
         /*
         **  Handle input (note that the clock channel has always data pending,
@@ -1312,14 +1312,14 @@ static void ppOpIAN(void)     // 70
         */
         channelIn();
         channelSetEmpty();
-        activePpu->regA = activeChannel->data & Mask12;
+        activePpu->regA             = activeChannel->data & Mask12;
         activeChannel->inputPending = FALSE;
         if (activeChannel->discAfterInput)
             {
-            activeChannel->discAfterInput = FALSE;
+            activeChannel->discAfterInput  = FALSE;
             activeChannel->delayDisconnect = 0;
-            activeChannel->active = FALSE;
-            activeChannel->ioDevice = NULL;
+            activeChannel->active          = FALSE;
+            activeChannel->ioDevice        = NULL;
             }
 
         activePpu->busy = FALSE;
@@ -1333,11 +1333,11 @@ static void ppOpIAM(void)     // 71
         activePpu->opF = opF;
         activePpu->opD = opD;
 
-        activeChannel = channel + (activePpu->opD & 037);
+        activeChannel   = channel + (activePpu->opD & 037);
         activePpu->busy = TRUE;
 
-        activePpu->mem[0] = activePpu->regP;
-        activePpu->regP = activePpu->mem[activePpu->regP] & Mask12;
+        activePpu->mem[0]          = activePpu->regP;
+        activePpu->regP            = activePpu->mem[activePpu->regP] & Mask12;
         activeChannel->delayStatus = 0;
         }
     else
@@ -1369,6 +1369,7 @@ static void ppOpIAM(void)     // 71
         activePpu->regP = activePpu->mem[0];
         PpIncrement(activePpu->regP);
         activePpu->busy = FALSE;
+
         return;
         }
 
@@ -1381,7 +1382,7 @@ static void ppOpIAM(void)     // 71
         channelIo();
         }
 
-    if (activeChannel->full || activeChannel->id == ChClock)
+    if (activeChannel->full || (activeChannel->id == ChClock))
         {
         /*
         **  Handle input (note that the clock channel has always data pending,
@@ -1390,16 +1391,16 @@ static void ppOpIAM(void)     // 71
         channelIn();
         channelSetEmpty();
         activePpu->mem[activePpu->regP] = activeChannel->data & Mask12;
-        activePpu->regP = (activePpu->regP + 1) & Mask12;
-        activePpu->regA = (activePpu->regA - 1) & Mask18;
+        activePpu->regP             = (activePpu->regP + 1) & Mask12;
+        activePpu->regA             = (activePpu->regA - 1) & Mask18;
         activeChannel->inputPending = FALSE;
 
         if (activeChannel->discAfterInput)
             {
-            activeChannel->discAfterInput = FALSE;
+            activeChannel->discAfterInput  = FALSE;
             activeChannel->delayDisconnect = 0;
-            activeChannel->active = FALSE;
-            activeChannel->ioDevice = NULL;
+            activeChannel->active          = FALSE;
+            activeChannel->ioDevice        = NULL;
             if (activePpu->regA != 0)
                 {
                 activePpu->mem[activePpu->regP] = 0;
@@ -1421,13 +1422,13 @@ static void ppOpOAN(void)     // 72
     {
     if (!activePpu->busy)
         {
-        activePpu->opF = opF;
-        activePpu->opD = opD;
+        activePpu->opF             = opF;
+        activePpu->opD             = opD;
         activeChannel->delayStatus = 0;
         }
 
-    noHang = (activePpu->opD & 040) != 0;
-    activeChannel = channel + (activePpu->opD & 037);
+    noHang          = (activePpu->opD & 040) != 0;
+    activeChannel   = channel + (activePpu->opD & 037);
     activePpu->busy = TRUE;
 
     channelCheckIfActive();
@@ -1437,6 +1438,7 @@ static void ppOpOAN(void)     // 72
             {
             activePpu->busy = FALSE;
             }
+
         return;
         }
 
@@ -1462,11 +1464,11 @@ static void ppOpOAM(void)     // 73
         activePpu->opF = opF;
         activePpu->opD = opD;
 
-        activeChannel = channel + (activePpu->opD & 037);
+        activeChannel   = channel + (activePpu->opD & 037);
         activePpu->busy = TRUE;
 
-        activePpu->mem[0] = activePpu->regP;
-        activePpu->regP = activePpu->mem[activePpu->regP] & Mask12;
+        activePpu->mem[0]          = activePpu->regP;
+        activePpu->regP            = activePpu->mem[activePpu->regP] & Mask12;
         activeChannel->delayStatus = 0;
         }
     else
@@ -1497,6 +1499,7 @@ static void ppOpOAM(void)     // 73
         activePpu->regP = activePpu->mem[0];
         PpIncrement(activePpu->regP);
         activePpu->busy = FALSE;
+
         return;
         }
 
@@ -1504,8 +1507,8 @@ static void ppOpOAM(void)     // 73
     if (!activeChannel->full)
         {
         activeChannel->data = activePpu->mem[activePpu->regP] & Mask12;
-        activePpu->regP = (activePpu->regP + 1) & Mask12;
-        activePpu->regA = (activePpu->regA - 1) & Mask18;
+        activePpu->regP     = (activePpu->regP + 1) & Mask12;
+        activePpu->regA     = (activePpu->regA - 1) & Mask18;
         channelOut();
         channelSetFull();
 
@@ -1513,7 +1516,7 @@ static void ppOpOAM(void)     // 73
             {
             activePpu->regP = activePpu->mem[0];
             PpIncrement(activePpu->regP);
-            activePpu->busy = FALSE;
+            activePpu->busy            = FALSE;
             activeChannel->delayStatus = 0; // ensure last byte is written
             }
         }
@@ -1532,7 +1535,7 @@ static void ppOpACN(void)     // 74
         activePpu->opD = opD;
         }
 
-    noHang = (activePpu->opD & 040) != 0;
+    noHang        = (activePpu->opD & 040) != 0;
     activeChannel = channel + (activePpu->opD & 037);
 
     channelCheckIfActive();
@@ -1542,6 +1545,7 @@ static void ppOpACN(void)     // 74
             {
             activePpu->busy = TRUE;
             }
+
         return;
         }
 
@@ -1557,7 +1561,7 @@ static void ppOpDCN(void)     // 75
         activePpu->opD = opD;
         }
 
-    noHang = (activePpu->opD & 040) != 0;
+    noHang        = (activePpu->opD & 040) != 0;
     activeChannel = channel + (activePpu->opD & 037);
 
     /*
@@ -1568,12 +1572,12 @@ static void ppOpDCN(void)     // 75
         return;
         }
 
-    if (activeChannel->id == ChInterlock && (features & HasInterlockReg) != 0)
+    if ((activeChannel->id == ChInterlock) && ((features & HasInterlockReg) != 0))
         {
         return;
         }
 
-    if (activeChannel->id == ChStatusAndControl && (features & HasStatusAndControlReg) != 0)
+    if ((activeChannel->id == ChStatusAndControl) && ((features & HasStatusAndControlReg) != 0))
         {
         return;
         }
@@ -1585,6 +1589,7 @@ static void ppOpDCN(void)     // 75
             {
             activePpu->busy = TRUE;
             }
+
         return;
         }
 
@@ -1600,13 +1605,13 @@ static void ppOpFAN(void)     // 76
         activePpu->opD = opD;
         }
 
-    noHang = (activePpu->opD & 040) != 0;
+    noHang        = (activePpu->opD & 040) != 0;
     activeChannel = channel + (activePpu->opD & 037);
 
     /*
     **  Interlock register channel ignores functions.
     */
-    if (activeChannel->id == ChInterlock && (features & HasInterlockReg) != 0)
+    if ((activeChannel->id == ChInterlock) && ((features & HasInterlockReg) != 0))
         {
         return;
         }
@@ -1618,6 +1623,7 @@ static void ppOpFAN(void)     // 76
             {
             activePpu->busy = TRUE;
             }
+
         return;
         }
 
@@ -1633,13 +1639,13 @@ static void ppOpFNC(void)     // 77
         activePpu->opD = opD;
         }
 
-    noHang = (activePpu->opD & 040) != 0;
+    noHang        = (activePpu->opD & 040) != 0;
     activeChannel = channel + (activePpu->opD & 037);
 
     /*
     **  Interlock register channel ignores functions.
     */
-    if (activeChannel->id == ChInterlock && (features & HasInterlockReg) != 0)
+    if ((activeChannel->id == ChInterlock) && ((features & HasInterlockReg) != 0))
         {
         return;
         }
@@ -1651,6 +1657,7 @@ static void ppOpFNC(void)     // 77
             {
             activePpu->busy = TRUE;
             }
+
         return;
         }
 
@@ -1660,6 +1667,7 @@ static void ppOpFNC(void)     // 77
     }
 
 #if PPDEBUG
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Check that a write to CM appears to be legitimate.
 **                  This code is very specific to OS type and version, and
@@ -1670,36 +1678,40 @@ static void ppOpFNC(void)     // 77
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-#define CPA 00200
-#define PPC 07400
-#define FLSW 023
+#define CPA     00200
+#define PPC     07400
+#define FLSW    023
 
-static char *ppMonitored[] = {
+static char *ppMonitored[] =
+    {
     "1AJ", "LDR", "LDQ", "TCS",
     NULL
-};
+    };
 
 static void ppValidateCmWrite(char *inst, u32 address, CpWord data)
     {
-    u8 cpn;
-    u32 fl;
-    int i;
-    u32 irAddress;
-    u32 nfl;
-    char *np;
-    char ppName[4];
-    u32 ra;
+    u8     cpn;
+    u32    fl;
+    int    i;
+    u32    irAddress;
+    u32    nfl;
+    char   *np;
+    char   ppName[4];
+    u32    ra;
     CpWord word;
-    u32 xpAddress;
+    u32    xpAddress;
 
-    if (activePpu->id < 2) return; // MTR and DSD are not checked
+    if (activePpu->id < 2)
+        {
+        return;                    // MTR and DSD are not checked
+        }
     irAddress = PPC + ((activePpu->id) * 8);
-    word = cpMem[irAddress] & Mask60;
+    word      = cpMem[irAddress] & Mask60;
     ppName[0] = cdcToAscii[(word >> 54) & 077];
     ppName[1] = cdcToAscii[(word >> 48) & 077];
     ppName[2] = cdcToAscii[(word >> 42) & 077];
     ppName[3] = '\0';
-    np = NULL;
+    np        = NULL;
     for (i = 0; ppMonitored[i] != NULL; i++)
         {
         if (strcmp(ppName, ppMonitored[i]) == 0)
@@ -1708,29 +1720,48 @@ static void ppValidateCmWrite(char *inst, u32 address, CpWord data)
             break;
             }
         }
-    if (np == NULL) return;
-    cpn = (word >> 36) & 037;
+    if (np == NULL)
+        {
+        return;
+        }
+    cpn       = (word >> 36) & 037;
     xpAddress = cpn * 0200;
-    nfl = ((cpMem[xpAddress + FLSW] >> 48) & 07777) << 6;
-    ra = (cpMem[xpAddress + 1] >> 36) & Mask21;
-    fl = (cpMem[xpAddress + 2] >> 36) & Mask21;
-    if (address < 0200) return;                                     // write to CMR
-    if (address >= irAddress && address < irAddress + 8) return;    // write to PP comm area
-    if (address >= xpAddress && address < xpAddress + 0200) return; // write to job's control point area
-    if (address >= (ra - nfl) && address < ra + fl) return;         // write within job field length
-    if (address >= 041200 && address < 041300) return;              // write to ????
+    nfl       = ((cpMem[xpAddress + FLSW] >> 48) & 07777) << 6;
+    ra        = (cpMem[xpAddress + 1] >> 36) & Mask21;
+    fl        = (cpMem[xpAddress + 2] >> 36) & Mask21;
+    if (address < 0200)
+        {
+        return;                                                     // write to CMR
+        }
+    if ((address >= irAddress) && (address < irAddress + 8))
+        {
+        return;                                                     // write to PP comm area
+        }
+    if ((address >= xpAddress) && (address < xpAddress + 0200))
+        {
+        return;                                                     // write to job's control point area
+        }
+    if ((address >= (ra - nfl)) && (address < ra + fl))
+        {
+        return;                                                     // write within job field length
+        }
+    if ((address >= 041200) && (address < 041300))
+        {
+        return;                                                     // write to ????
+        }
     if (strcmp(inst, "CWD") == 0)
         {
         fprintf(ppLog, "%s : PP%02o CWD P:%04o, write %020lo to %08o\n",
-            ppName, activePpu->id, activePpu->regP, data, address);
+                ppName, activePpu->id, activePpu->regP, data, address);
         }
     else
         {
         fprintf(ppLog, "%s : PP%02o CWM P:%04o Q:%04o (0):%04o, write %020lo to %08o\n",
-            ppName, activePpu->id, activePpu->regP, activePpu->regQ, activePpu->mem[0], data, address);
+                ppName, activePpu->id, activePpu->regP, activePpu->regQ, activePpu->mem[0], data, address);
         }
     fprintf(ppLog, "      CP%02o RA:%o FL:%o NFL:%o\n", cpn, ra, fl, nfl);
     }
+
 #endif
 
 /*---------------------------  End Of File  ------------------------------*/

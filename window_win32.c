@@ -10,12 +10,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -44,10 +44,12 @@
 **  Private Constants
 **  -----------------
 */
-#define ListSize            5000
+#define ListSize    5000
 // useful for more stable screen shots
 // #define ListSize            10000
-#define FontName            "Lucida Console"
+#define FontName    "Lucida Console"
+// #define FontName            "Sax Mono"
+// #define FontName         "Lekton Mono"
 #if CcLargeWin32Screen == 1
 #define FontSmallHeight     15
 #define FontMediumHeight    20
@@ -55,15 +57,15 @@
 #define ScaleX              11
 #define ScaleY              18
 #else
-#define FontSmallHeight     10
-#define FontMediumHeight    15
+#define FontSmallHeight     13
+#define FontMediumHeight    16
 #define FontLargeHeight     20
 #define ScaleX              10
-#define ScaleY              10
+#define ScaleY              12
 #endif
 
-#define TIMER_ID        1
-#define TIMER_RATE      100
+#define TIMER_ID            1
+#define TIMER_RATE          100
 //#define TIMER_RATE      1
 
 /*
@@ -79,13 +81,16 @@
 */
 typedef struct dispList
     {
-    u16             xPos;           /* horizontal position */
-    u16             yPos;           /* vertical position */
-    u8              fontSize;       /* size of font */
-    u8              ch;             /* character to be displayed */
+    u16 xPos;                       /* horizontal position */
+    u16 yPos;                       /* vertical position */
+    u8  fontSize;                   /* size of font */
+    u8  ch;                         /* character to be displayed */
     } DispList;
 
-typedef enum {ModeLeft, ModeCenter, ModeRight} DisplayMode;
+typedef enum displaymode
+    {
+    ModeLeft, ModeCenter, ModeRight
+    } DisplayMode;
 
 /*
 **  ---------------------------
@@ -110,23 +115,23 @@ void windowDisplay(HWND hWnd);
 **  Private Variables
 **  -----------------
 */
-static u8 currentFont;
-static i16 currentX = -1;
-static i16 currentY = -1;
-static DispList display[ListSize];
-static u32 listEnd;
-static HWND hWnd;
-static HFONT hSmallFont=0;
-static HFONT hMediumFont=0;
-static HFONT hLargeFont=0;
-static HPEN hPen = 0;
-static HINSTANCE hInstance = 0;
-static char *lpClipToKeyboard = NULL;
-static char *lpClipToKeyboardPtr = NULL;
-static u8 clipToKeyboardDelay = 0;
-static DisplayMode displayMode = ModeCenter;
-static bool displayModeNeedsErase = FALSE;
-static BOOL shifted = FALSE;
+static u8          currentFont;
+static i16         currentX = -1;
+static i16         currentY = -1;
+static DispList    display[ListSize];
+static u32         listEnd;
+static HWND        hWnd;
+static HFONT       hSmallFont            = 0;
+static HFONT       hMediumFont           = 0;
+static HFONT       hLargeFont            = 0;
+static HPEN        hPen                  = 0;
+static HINSTANCE   hInstance             = 0;
+static char        *lpClipToKeyboard     = NULL;
+static char        *lpClipToKeyboardPtr  = NULL;
+static u8          clipToKeyboardDelay   = 0;
+static DisplayMode displayMode           = ModeCenter;
+static bool        displayModeNeedsErase = FALSE;
+static BOOL        shifted               = FALSE;
 
 
 /*--------------------------------------------------------------------------
@@ -140,7 +145,7 @@ static BOOL shifted = FALSE;
 **------------------------------------------------------------------------*/
 void windowInit(void)
     {
-    DWORD dwThreadId; 
+    DWORD  dwThreadId;
     HANDLE hThread;
 
     /*
@@ -156,17 +161,17 @@ void windowInit(void)
     /*
     **  Create windowing thread.
     */
-    hThread = CreateThread( 
-        NULL,                                       // no security attribute 
-        0,                                          // default stack size 
-        (LPTHREAD_START_ROUTINE) windowThread, 
-        (LPVOID) NULL,                              // thread parameter 
-        0,                                          // not suspended 
-        &dwThreadId);                               // returns thread ID 
+    hThread = CreateThread(
+        NULL,                                       // no security attribute
+        0,                                          // default stack size
+        (LPTHREAD_START_ROUTINE)windowThread,
+        (LPVOID)NULL,                               // thread parameter
+        0,                                          // not suspended
+        &dwThreadId);                               // returns thread ID
 
     if (hThread == NULL)
         {
-        MessageBox(NULL, "thread creation failed", "Error", MB_OK);
+        MessageBox(NULL, "(window_win32) Thread creation failed", "Error", MB_OK);
         exit(1);
         }
     }
@@ -227,20 +232,20 @@ void windowQueue(u8 ch)
     {
     DispList *elem;
 
-    if (   listEnd  >= ListSize
-        || currentX == -1
-        || currentY == -1)
+    if ((listEnd >= ListSize)
+        || (currentX == -1)
+        || (currentY == -1))
         {
         return;
         }
 
     if (ch != 0)
         {
-        elem = display + listEnd++;
-        elem->ch = ch;
+        elem           = display + listEnd++;
+        elem->ch       = ch;
         elem->fontSize = currentFont;
-        elem->xPos = currentX;
-        elem->yPos = currentY;
+        elem->xPos     = currentX;
+        elem->yPos     = currentY;
         }
 
     currentX += currentFont;
@@ -285,12 +290,12 @@ void windowTerminate(void)
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Windows thread.
@@ -312,22 +317,22 @@ static void windowThread(void)
     /*
     **  Create the window.
     */
-    if (!windowCreate()) 
+    if (!windowCreate())
         {
-        MessageBox(NULL, "window creation failed", "Error", MB_OK);
+        MessageBox(NULL, "(window_win32) window creation failed", "Error", MB_OK);
+
         return;
         }
 
     /*
     **  Main message loop.
     */
-    while (GetMessage(&msg, NULL, 0, 0) > 0) 
+    while (GetMessage(&msg, NULL, 0, 0) > 0)
         {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
         }
     }
-
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Register the window class.
@@ -341,19 +346,19 @@ ATOM windowRegisterClass(HINSTANCE hInstance)
     {
     WNDCLASSEX wcex;
 
-    wcex.cbSize = sizeof(WNDCLASSEX); 
+    wcex.cbSize = sizeof(WNDCLASSEX);
 
-    wcex.style          = CS_HREDRAW | CS_VREDRAW | CS_NOCLOSE;
-    wcex.lpfnWndProc    = (WNDPROC)windowProcedure;
-    wcex.cbClsExtra     = 0;
-    wcex.cbWndExtra     = 0;
-    wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, (LPCTSTR)IDI_CONSOLE);
-    wcex.hCursor        = LoadCursor(NULL, IDC_ARROW);
-    wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = (LPCSTR)IDC_CONSOLE;
-    wcex.lpszClassName  = "CONSOLE";
-    wcex.hIconSm        = LoadIcon(hInstance, (LPCTSTR)IDI_SMALL);
+    wcex.style         = CS_HREDRAW | CS_VREDRAW | CS_NOCLOSE;
+    wcex.lpfnWndProc   = (WNDPROC)windowProcedure;
+    wcex.cbClsExtra    = 0;
+    wcex.cbWndExtra    = 0;
+    wcex.hInstance     = hInstance;
+    wcex.hIcon         = LoadIcon(hInstance, (LPCTSTR)IDI_CONSOLE);
+    wcex.hCursor       = LoadCursor(NULL, IDC_ARROW);
+    wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    wcex.lpszMenuName  = (LPCSTR)IDC_CONSOLE;
+    wcex.lpszClassName = "CONSOLE";
+    wcex.hIconSm       = LoadIcon(hInstance, (LPCTSTR)IDI_SMALL);
 
     return RegisterClassEx(&wcex);
     }
@@ -368,12 +373,17 @@ ATOM windowRegisterClass(HINSTANCE hInstance)
 **------------------------------------------------------------------------*/
 static BOOL windowCreate(void)
     {
+    char windowName[132];
+
+    windowName[0] = '\0';
+    strcat_s(windowName, sizeof(windowName), displayName);
+    strcat_s(windowName, sizeof(windowName), " - " DtCyberVersion);
+    strcat_s(windowName, sizeof(windowName), " - " DTCyberBuildDate);
+
 #if CcLargeWin32Screen == 1
     hWnd = CreateWindow(
         "CONSOLE",              // Registered class name
-        DtCyberVersion " - "
-        DtCyberCopyright " - "
-        DtCyberLicense,         // window name
+        windowName,             // window name
         WS_OVERLAPPEDWINDOW,    // window style
         CW_USEDEFAULT,          // horizontal position of window
         0,                      // vertical position of window
@@ -386,14 +396,12 @@ static BOOL windowCreate(void)
 #else
     hWnd = CreateWindow(
         "CONSOLE",              // Registered class name
-        DtCyberVersion " - "
-        DtCyberCopyright " - "
-        DtCyberLicense,         // window name
+        windowName,             // window name
         WS_OVERLAPPEDWINDOW,    // window style
         CW_USEDEFAULT,          // horizontal position of window
         CW_USEDEFAULT,          // vertical position of window
         1080,                   // window width
-        600,                    // window height
+        680,                    // window height
         NULL,                   // handle to parent or owner window
         NULL,                   // menu handle or child identifier
         0,                      // handle to application instance
@@ -424,9 +432,9 @@ static BOOL windowCreate(void)
 static void windowClipboard(HWND hWnd)
     {
     HANDLE hClipMemory;
-    char *lpClipMemory;
+    char   *lpClipMemory;
 
-    if (   !IsClipboardFormatAvailable(CF_TEXT)
+    if (!IsClipboardFormatAvailable(CF_TEXT)
         || !OpenClipboard(hWnd))
         {
         return;
@@ -436,6 +444,7 @@ static void windowClipboard(HWND hWnd)
     if (hClipMemory == NULL)
         {
         CloseClipboard();
+
         return;
         }
 
@@ -461,90 +470,91 @@ static void windowClipboard(HWND hWnd)
 **------------------------------------------------------------------------*/
 static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
-    int wmId, wmEvent;
+    int     wmId, wmEvent;
     LOGFONT lfTmp;
-    RECT rt;
+    RECT    rt;
 
-    switch (message) 
+    switch (message)
         {
     /*
     **  Process the application menu.
     */
     case WM_COMMAND:
-        wmId    = LOWORD(wParam); 
-        wmEvent = HIWORD(wParam); 
+        wmId    = LOWORD(wParam);
+        wmEvent = HIWORD(wParam);
 
         switch (wmId)
-            {
+        {
         case IDM_EXIT:
             DestroyWindow(hWnd);
             break;
 
         default:
             return DefWindowProc(hWnd, message, wParam, lParam);
-            }
+        }
         break;
 
     case WM_ERASEBKGND:
-        return(1);
+        return (1);
+
         break;
 
     case WM_CREATE:
         hPen = CreatePen(PS_SOLID, 1, RGB(0, 255, 0));
         if (!hPen)
             {
-            MessageBox (GetFocus(),
-                "Unable to get green pen", 
-                "CreatePen Error",
-                MB_OK);
+            MessageBox(GetFocus(),
+                       "Unable to get green pen",
+                       "(window_win32) CreatePen Error",
+                       MB_OK);
             }
 
         memset(&lfTmp, 0, sizeof(lfTmp));
         lfTmp.lfPitchAndFamily = FIXED_PITCH;
         strcpy(lfTmp.lfFaceName, FontName);
-        lfTmp.lfWeight = FW_THIN;
+        lfTmp.lfWeight       = FW_THIN;
         lfTmp.lfOutPrecision = OUT_TT_PRECIS;
-        lfTmp.lfHeight = FontSmallHeight;
-        hSmallFont = CreateFontIndirect(&lfTmp);
+        lfTmp.lfHeight       = FontSmallHeight;
+        hSmallFont           = CreateFontIndirect(&lfTmp);
         if (!hSmallFont)
             {
-            MessageBox (GetFocus(),
-                "Unable to get font in 15 point", 
-                "CreateFont Error",
-                MB_OK);
+            MessageBox(GetFocus(),
+                       "Unable to get font in 15 point",
+                       "(window_win32) CreateFont Error",
+                       MB_OK);
             }
 
         memset(&lfTmp, 0, sizeof(lfTmp));
         lfTmp.lfPitchAndFamily = FIXED_PITCH;
         strcpy(lfTmp.lfFaceName, FontName);
-        lfTmp.lfWeight = FW_THIN;
+        lfTmp.lfWeight       = FW_THIN;
         lfTmp.lfOutPrecision = OUT_TT_PRECIS;
-        lfTmp.lfHeight = FontMediumHeight;
-        hMediumFont = CreateFontIndirect(&lfTmp);
+        lfTmp.lfHeight       = FontMediumHeight;
+        hMediumFont          = CreateFontIndirect(&lfTmp);
         if (!hMediumFont)
             {
-            MessageBox (GetFocus(),
-                "Unable to get font in 20 point", 
-                "CreateFont Error",
-                MB_OK);
+            MessageBox(GetFocus(),
+                       "Unable to get font in 20 point",
+                       "(window_win32) CreateFont Error",
+                       MB_OK);
             }
 
         memset(&lfTmp, 0, sizeof(lfTmp));
         lfTmp.lfPitchAndFamily = FIXED_PITCH;
         strcpy(lfTmp.lfFaceName, FontName);
-        lfTmp.lfWeight = FW_THIN;
+        lfTmp.lfWeight       = FW_THIN;
         lfTmp.lfOutPrecision = OUT_TT_PRECIS;
-        lfTmp.lfHeight = FontLargeHeight;
-        hLargeFont = CreateFontIndirect(&lfTmp);
+        lfTmp.lfHeight       = FontLargeHeight;
+        hLargeFont           = CreateFontIndirect(&lfTmp);
         if (!hLargeFont)
             {
-            MessageBox (GetFocus(),
-                "Unable to get font in 30 point", 
-                "CreateFont Error",
-                MB_OK);
+            MessageBox(GetFocus(),
+                       "Unable to get font in 30 point",
+                       "(window_win32) CreateFont Error",
+                       MB_OK);
             }
 
-        return DefWindowProc (hWnd, message, wParam, lParam);
+        return DefWindowProc(hWnd, message, wParam, lParam);
 
     case WM_DESTROY:
         if (hSmallFont)
@@ -575,7 +585,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
                 if (ppKeyIn == 0)
                     {
                     free(lpClipToKeyboard);
-                    lpClipToKeyboard = NULL;
+                    lpClipToKeyboard    = NULL;
                     lpClipToKeyboardPtr = NULL;
                     }
                 else if (ppKeyIn == '\r')
@@ -604,15 +614,15 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
         windowDisplay(hWnd);
         break;
 
-    /*
-    **  Handle input characters.
-    */
+        /*
+        **  Handle input characters.
+        */
 #if CcDebug == 1
     case WM_KEYDOWN:
         if (GetKeyState(VK_CONTROL) & 0x8000)
             {
             switch (wParam)
-                {
+            {
             case '0':
             case '1':
             case '2':
@@ -630,15 +640,21 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
             case 'c':
                 dumpRunningCpu();
                 break;
-                }
+            }
             }
 
         break;
 #endif
 
+    /*
+     * Posted to the window with the keyboard focus when a WM_SYSKEYDOWN message
+     * is translated by the TranslateMessage function. It specifies the character
+     * code of a system character key that is, a character key that is pressed
+     * while the ALT key is down.
+     */
     case WM_SYSCHAR:
         switch (wParam)
-            {
+        {
         case '0':
         case '1':
         case '2':
@@ -683,14 +699,14 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
         case 'L':
         case 'l':
         case '[':
-            displayMode = ModeLeft;
+            displayMode           = ModeLeft;
             displayModeNeedsErase = TRUE;
             break;
 
         case 'R':
         case 'r':
         case ']':
-            displayMode = ModeRight;
+            displayMode           = ModeRight;
             displayModeNeedsErase = TRUE;
             break;
 
@@ -708,7 +724,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
         case 's':
         case 'S':
             shifted = !shifted;
-            }
+        }
         break;
 
     case WM_CHAR:
@@ -733,20 +749,20 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 **------------------------------------------------------------------------*/
 void windowDisplay(HWND hWnd)
     {
-    static refreshCount = 0;
-    char str[2] = " ";
+    static   refreshCount = 0;
+    char     str[2]       = " ";
     DispList *curr;
     DispList *end;
-    u8 oldFont = 0;
+    u8       oldFont = 0;
 
-    RECT rect;
+    RECT        rect;
     PAINTSTRUCT ps;
-    HDC hdc;
-    HBRUSH hBrush;
+    HDC         hdc;
+    HBRUSH      hBrush;
 
-    HDC hdcMem;
+    HDC     hdcMem;
     HBITMAP hbmMem, hbmOld;
-    HFONT hfntOld;
+    HFONT   hfntOld;
 
     hdc = BeginPaint(hWnd, &ps);
 
@@ -762,8 +778,8 @@ void windowDisplay(HWND hWnd)
     **  Create a bitmap big enough for our client rect.
     */
     hbmMem = CreateCompatibleBitmap(ps.hdc,
-                                    rect.right-rect.left,
-                                    rect.bottom-rect.top);
+                                    rect.right - rect.left,
+                                    rect.bottom - rect.top);
 
     /*
     **  Select the bitmap into the off-screen dc.
@@ -787,78 +803,78 @@ void windowDisplay(HWND hWnd)
     oldFont = FontSmall;
 
 #if CcCycleTime
-    {
-    extern double cycleTime;
-    char buf[80];
+        {
+        extern double cycleTime;
+        char          buf[80];
 
 //    sprintf(buf, "Cycle time: %.3f", cycleTime);
-    sprintf(buf, "Cycle time: %10.3f    NPU Buffers: %5d", cycleTime, npuBipBufCount());
-    TextOut(hdcMem, 0, 0, buf, strlen(buf));
-    }
+        sprintf(buf, "Cycle time: %10.3f    NPU Buffers: %5d", cycleTime, npuBipBufCount());
+        TextOut(hdcMem, 0, 0, buf, strlen(buf));
+        }
 #endif
 
 #if CcDebug == 1
-    {
-    char buf[160];
-
-    /*
-    **  Display P registers of PPUs and CPU and current trace mask.
-    */
-    sprintf(buf, "Refresh: %-10d  PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o   CPU P-reg: %06o",
-        refreshCount++,
-        ppu[0].regP, ppu[1].regP, ppu[2].regP, ppu[3].regP, ppu[4].regP,
-        ppu[5].regP, ppu[6].regP, ppu[7].regP, ppu[8].regP, ppu[9].regP,
-        cpu.regP); 
-
-    sprintf(buf + strlen(buf), "   Trace0x: %c%c%c%c%c%c%c%c%c%c%c%c %c",
-        (traceMask >> 0) & 1 ? '0' : '_',
-        (traceMask >> 1) & 1 ? '1' : '_',
-        (traceMask >> 2) & 1 ? '2' : '_',
-        (traceMask >> 3) & 1 ? '3' : '_',
-        (traceMask >> 4) & 1 ? '4' : '_',
-        (traceMask >> 5) & 1 ? '5' : '_',
-        (traceMask >> 6) & 1 ? '6' : '_',
-        (traceMask >> 7) & 1 ? '7' : '_',
-        (traceMask >> 8) & 1 ? '8' : '_',
-        (traceMask >> 9) & 1 ? '9' : '_',
-        traceMask & TraceCpu ? 'C' : '_',
-        traceMask & TraceExchange ? 'E' : '_',
-        shifted ? ' ' : '<');
-
-    TextOut(hdcMem, 0, 0, buf, strlen(buf));
-
-    if (ppuCount == 20)
         {
+        char buf[160];
+
         /*
-        **  Display P registers of second barrel of PPUs.
+        **  Display P registers of PPUs and CPU and current trace mask.
         */
-        sprintf(buf, "                     PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o                    ",
-            ppu[10].regP, ppu[11].regP, ppu[12].regP, ppu[13].regP, ppu[14].regP,
-            ppu[15].regP, ppu[16].regP, ppu[17].regP, ppu[18].regP, ppu[19].regP);
+        sprintf(buf, "Refresh: %-10d  PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o   CPU P-reg: %06o",
+                refreshCount++,
+                ppu[0].regP, ppu[1].regP, ppu[2].regP, ppu[3].regP, ppu[4].regP,
+                ppu[5].regP, ppu[6].regP, ppu[7].regP, ppu[8].regP, ppu[9].regP,
+                cpu.regP);
 
-        sprintf(buf + strlen(buf), "   Trace1x: %c%c%c%c%c%c%c%c%c%c%c%c %c",
-            (traceMask >> 10) & 1 ? '0' : '_',
-            (traceMask >> 11) & 1 ? '1' : '_',
-            (traceMask >> 12) & 1 ? '2' : '_',
-            (traceMask >> 13) & 1 ? '3' : '_',
-            (traceMask >> 14) & 1 ? '4' : '_',
-            (traceMask >> 15) & 1 ? '5' : '_',
-            (traceMask >> 16) & 1 ? '6' : '_',
-            (traceMask >> 17) & 1 ? '7' : '_',
-            (traceMask >> 18) & 1 ? '8' : '_',
-            (traceMask >> 19) & 1 ? '9' : '_',
-            ' ',
-            ' ',
-            shifted ? '<' : ' ');
+        sprintf(buf + strlen(buf), "   Trace0x: %c%c%c%c%c%c%c%c%c%c%c%c %c",
+                (traceMask >> 0) & 1 ? '0' : '_',
+                (traceMask >> 1) & 1 ? '1' : '_',
+                (traceMask >> 2) & 1 ? '2' : '_',
+                (traceMask >> 3) & 1 ? '3' : '_',
+                (traceMask >> 4) & 1 ? '4' : '_',
+                (traceMask >> 5) & 1 ? '5' : '_',
+                (traceMask >> 6) & 1 ? '6' : '_',
+                (traceMask >> 7) & 1 ? '7' : '_',
+                (traceMask >> 8) & 1 ? '8' : '_',
+                (traceMask >> 9) & 1 ? '9' : '_',
+                traceMask & TraceCpu ? 'C' : '_',
+                traceMask & TraceExchange ? 'E' : '_',
+                shifted ? ' ' : '<');
 
-        TextOut(hdcMem, 0, 12, buf, strlen(buf));
+        TextOut(hdcMem, 0, 0, buf, strlen(buf));
+
+        if (ppuCount == 20)
+            {
+            /*
+            **  Display P registers of second barrel of PPUs.
+            */
+            sprintf(buf, "                     PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o                    ",
+                    ppu[10].regP, ppu[11].regP, ppu[12].regP, ppu[13].regP, ppu[14].regP,
+                    ppu[15].regP, ppu[16].regP, ppu[17].regP, ppu[18].regP, ppu[19].regP);
+
+            sprintf(buf + strlen(buf), "   Trace1x: %c%c%c%c%c%c%c%c%c%c%c%c %c",
+                    (traceMask >> 10) & 1 ? '0' : '_',
+                    (traceMask >> 11) & 1 ? '1' : '_',
+                    (traceMask >> 12) & 1 ? '2' : '_',
+                    (traceMask >> 13) & 1 ? '3' : '_',
+                    (traceMask >> 14) & 1 ? '4' : '_',
+                    (traceMask >> 15) & 1 ? '5' : '_',
+                    (traceMask >> 16) & 1 ? '6' : '_',
+                    (traceMask >> 17) & 1 ? '7' : '_',
+                    (traceMask >> 18) & 1 ? '8' : '_',
+                    (traceMask >> 19) & 1 ? '9' : '_',
+                    ' ',
+                    ' ',
+                    shifted ? '<' : ' ');
+
+            TextOut(hdcMem, 0, 12, buf, strlen(buf));
+            }
         }
-    }
 #endif
 
     if (opActive)
         {
-        static char opMessage[] = "Emulation paused";
+        static char opMessage[] = "(window_win32) Emulation paused";
         hfntOld = SelectObject(hdcMem, hLargeFont);
         oldFont = FontLarge;
         TextOut(hdcMem, (0 * ScaleX) / 10, (256 * ScaleY) / 10, opMessage, strlen(opMessage));
@@ -867,7 +883,7 @@ void windowDisplay(HWND hWnd)
     SelectObject(hdcMem, hPen);
 
     curr = display;
-    end = display + listEnd;
+    end  = display + listEnd;
     for (curr = display; curr < end; curr++)
         {
         if (oldFont != curr->fontSize)
@@ -883,7 +899,7 @@ void windowDisplay(HWND hWnd)
             case FontMedium:
                 SelectObject(hdcMem, hMediumFont);
                 break;
-    
+
             case FontLarge:
                 SelectObject(hdcMem, hLargeFont);
                 break;
@@ -901,7 +917,7 @@ void windowDisplay(HWND hWnd)
             }
         }
 
-    listEnd = 0;
+    listEnd  = 0;
     currentX = -1;
     currentY = -1;
 
@@ -917,31 +933,31 @@ void windowDisplay(HWND hWnd)
         {
     default:
     case ModeCenter:
-        BitBlt(ps.hdc, 
+        BitBlt(ps.hdc,
                rect.left, rect.top,
-               rect.right-rect.left, rect.bottom-rect.top,
+               rect.right - rect.left, rect.bottom - rect.top,
                hdcMem,
                0, 0,
                SRCCOPY);
         break;
 
     case ModeLeft:
-        StretchBlt(ps.hdc, 
-                   rect.left + (rect.right-rect.left) / 2 - 512 * ScaleY / 10 / 2, rect.top,
-                   512 * ScaleY / 10, rect.bottom-rect.top,
+        StretchBlt(ps.hdc,
+                   rect.left + (rect.right - rect.left) / 2 - 512 * ScaleY / 10 / 2, rect.top,
+                   512 * ScaleY / 10, rect.bottom - rect.top,
                    hdcMem,
                    OffLeftScreen, 0,
-                   512 * ScaleX / 10 + FontLarge, rect.bottom-rect.top,
+                   512 * ScaleX / 10 + FontLarge, rect.bottom - rect.top,
                    SRCCOPY);
         break;
 
     case ModeRight:
-        StretchBlt(ps.hdc, 
-                   rect.left + (rect.right-rect.left) / 2 - 512 * ScaleY / 10 / 2, rect.top,
-                   512 * ScaleY / 10, rect.bottom-rect.top,
+        StretchBlt(ps.hdc,
+                   rect.left + (rect.right - rect.left) / 2 - 512 * ScaleY / 10 / 2, rect.top,
+                   512 * ScaleY / 10, rect.bottom - rect.top,
                    hdcMem,
                    OffRightScreen, 0,
-                   512 * ScaleX / 10 + FontLarge, rect.bottom-rect.top,
+                   512 * ScaleX / 10 + FontLarge, rect.bottom - rect.top,
                    SRCCOPY);
         break;
         }
