@@ -212,7 +212,6 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     char        *crOutput;
     char        *tokenAuto;
     bool        watchRequested;
-    char        tokenString[80];
     struct stat s;
 
     /*
@@ -301,20 +300,14 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         exit(1);
         }
 
-    // threadParms->LoadCards = 0;
-    if (deviceName != NULL)
+    if (deviceName == NULL)
         {
-        //  Silly workaround because of strtok
-        //  treating multiple consecutive delims
-        //  as one.
-        tokenString[0] = ' ';
-        tokenString[1] = '\0';
-        strcat(tokenString, deviceName);
+        deviceName = "";
         }
-    xlateTable = strtok(tokenString, ",");
-    crInput    = strtok(NULL, ",");
-    crOutput   = strtok(NULL, ",");
-    tokenAuto  = strtok(NULL, ",");
+    xlateTable = strtok(deviceName, ", ");
+    crInput    = strtok(NULL, ", ");
+    crOutput   = strtok(NULL, ", ");
+    tokenAuto  = strtok(NULL, ", ");
 
     /*
     **  Process the Request for FileSystem Watcher
@@ -513,14 +506,8 @@ void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, cha
     CrContext *cc;
     DevSlot   *dp;
     int       len;
-    char      *sp;
-
-    static char str[_MAX_PATH]     = "";
-    static char strWork[_MAX_PATH] = "";
-    static char fOldest[_MAX_PATH] = "";
-
     struct stat s;
-
+    char      *sp;
 
     /*
     **  Locate the device control block.
@@ -538,26 +525,24 @@ void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, cha
     */
     if (((cc->inDeck + 1) % Cr3447MaxDecks) == cc->outDeck)
         {
-        printf("(cr3447 ) Input tray full\n");
-
+        fputs("(cr3447 ) Input tray full\n", out);
         return;
         }
 
     //  At this point we should have a valid(ish) input file
     //  Make sure before enqueueing it.
 
-    if (stat(str, &s) != 0)
+    if (stat(fname, &s) != 0)
         {
-        printf("(cr3447 ) Requested file '%s' not found. (%s).\n", str, strerror(errno));
-
+        fprintf(out, "(cr3447 ) Requested file '%s' not found. (%s).\n", fname, strerror(errno));
         return;
         }
 
     //  Enqueue the file in the chain of pending files
 
-    len = strlen(str) + 1;
+    len = strlen(fname) + 1;
     sp  = (char *)malloc(len);
-    memcpy(sp, str, len);
+    memcpy(sp, fname, len);
     cc->decks[cc->inDeck] = sp;
     cc->inDeck            = (cc->inDeck + 1) % Cr3447MaxDecks;
 
@@ -884,7 +869,7 @@ static void cr3447SwapInOut(CrContext *cc, char *fName, FILE *out)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void cr3447ShowStatus(void)
+void cr3447ShowStatus(FILE *out)
     {
     CrContext *cp = firstCr3447;
 
@@ -893,11 +878,11 @@ void cr3447ShowStatus(void)
         return;
         }
 
-    printf("\n    > Card Reader (cr3447) Status:\n");
+    fputs("\n    > Card Reader (cr3447) Status:\n", out);
 
     while (cp)
         {
-        printf("    >   CH %02o EQ %02o UN %02o Col %02i Mode(%s) Raw(%s) Seq:%i File '%s'\n",
+        fprintf(out, "    >   CH %02o EQ %02o UN %02o Col %02i Mode(%s) Raw(%s) Seq:%i File '%s'\n",
                cp->channelNo,
                cp->eqNo,
                cp->unitNo,
@@ -909,14 +894,14 @@ void cr3447ShowStatus(void)
 
         if (cp->isWatched)
             {
-            printf("    >   Autoloading from '%s' to '%s'\n",
+            fprintf(out, "    >   Autoloading from '%s' to '%s'\n",
                    cp->dirInput,
                    cp->dirOutput);
             }
 
         cp = cp->nextUnit;
         }
-    printf("\n");
+    fputs("\n", out);
     }
 
 /*
@@ -1217,11 +1202,11 @@ static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc, FILE *out)
             cr3447NextCard(up, cc, out);
             activeDevice = channelFindDevice(up->channel->id, DtDcc6681);
             dcc6681Interrupt((cc->status & cc->intMask) != 0);
-            fprintf(out, "\n(cr3447 ) Cards loaded on card reader C%o,E%o\n", cc->channelNo, cc->eqNo);
+            fprintf(out, "(cr3447 ) Cards loaded on card reader C%o,E%o\n", cc->channelNo, cc->eqNo);
 
             return TRUE;
             }
-        printf("\n(cr3447 ) Failed to open card deck %s\n", fname);
+        fprintf(out, "(cr3447 ) Failed to open card deck %s\n", fname);
         unlink(fname);
         free(fname);
         cc->outDeck = (cc->outDeck + 1) % Cr3447MaxDecks;
@@ -1487,7 +1472,7 @@ static void cr3447NextCard(DevSlot *up, CrContext *cc, FILE *out)
 **------------------------------------------------------------------------*/
 static char *cr3447Func2String(PpWord funcCode)
     {
-    static char buf[30];
+    static char buf[40];
 
 #if DEBUG
     switch (funcCode)

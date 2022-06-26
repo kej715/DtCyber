@@ -465,7 +465,7 @@ static FcStatus npuHipFunc(PpWord funcCode)
 
     case FcNpuInCouplerStatus:
         switch (hipState)
-        {
+            {
         case StHipInit:
             if (initCount > 0)
                 {
@@ -507,7 +507,7 @@ static FcStatus npuHipFunc(PpWord funcCode)
 
         default:
             break;
-        }
+            }
 
         break;
 
@@ -723,7 +723,7 @@ static void npuHipIo(void)
             activeChannel->full = FALSE;
 
             switch (orderType)
-            {
+                {
             case OrdOutServiceMsg:
                 npuBipNotifyServiceMessage();
                 break;
@@ -756,7 +756,7 @@ static void npuHipIo(void)
                 */
                 npuBipRetryInput();
                 break;
-            }
+                }
             }
 
         break;
@@ -858,7 +858,7 @@ static PpWord npuHipReadNpuStatus(void)
 **------------------------------------------------------------------------*/
 static char *npuHipFunc2String(PpWord funcCode)
     {
-    static char buf[30];
+    static char buf[40];
 
 #if DEBUG
     switch (funcCode)

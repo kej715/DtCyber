@@ -930,7 +930,7 @@ static int npuNetCreateConnections(void)
         case ConnTypeRevHasp:
         case ConnTypeNje:
             switch (ncbp->state)
-            {
+                {
             case StConnInit:
                 if (currentTime < ncbp->nextConnectionAttempt)
                     {
@@ -1058,7 +1058,7 @@ static int npuNetCreateConnections(void)
 
             default:
                 break;
-            }
+                }
             break;
 
         default:

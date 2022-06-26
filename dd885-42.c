@@ -154,7 +154,6 @@ static i32 dd885_42SeekNext(DiskParam *dp);
 static bool dd885_42Read(DiskParam *dp, FILE *fcb);
 static bool dd885_42Write(DiskParam *dp, FILE *fcb);
 static char * dd885_42Func2String(PpWord funcCode);
-void dd885_42ShowDiskStatus(void);
 
 /*
 **  ----------------
@@ -465,11 +464,7 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  For Operator Show Status Command
     */
-#if defined(SAFECALLS)
-    strcpy_s(dp->fileName, sizeof(fname), fname);
-#else
     strcpy(dp->fileName, fname);
-#endif
 
     dp->channelNo = channelNo;
     dp->unitNo    = unitNo;
@@ -1314,7 +1309,7 @@ static char *dd885_42Func2String(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void dd885_42ShowDiskStatus(void)
+void dd885_42ShowDiskStatus(FILE *out)
     {
     DiskParam *dp = firstDisk;
 
@@ -1323,11 +1318,11 @@ void dd885_42ShowDiskStatus(void)
         return;
         }
 
-    printf("\n    > dd885-42 Disk Status:\n");
+    fputs("\n    > dd885-42 Disk Status:\n", out);
 
     while (dp)
         {
-        printf("    >   #%02d. CH %02o EQ %02o UN %02o DT %s CYL 0x%06x TRK 0x%06o FN '%s'\n",
+        fprintf(out, "    >   #%02d. CH %02o EQ %02o UN %02o DT %s CYL 0x%06x TRK 0x%06o FN '%s'\n",
                dp->diskNo,
                dp->channelNo,
                dp->eqNo,

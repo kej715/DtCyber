@@ -129,7 +129,7 @@ void channelInit(u8 count)
 **  Returns:        List of All Devices Attached to All Channels.
 **
 **------------------------------------------------------------------------*/
-void channelDisplayContext(void)
+void channelDisplayContext(FILE *out)
     {
     DevSlot *dp;
     u8      ch;
@@ -138,127 +138,100 @@ void channelDisplayContext(void)
     u8      devNum;
     u8      devFCB;
 
-    printf("\n\n Channel Context Display\n ------- ------- -------\n\n");
+    fputs("\n\n Channel Context Display\n ------- ------- -------\n\n", out);
 
     //                  00 Deadstart Panel............. (01) Attached: 00 Files: 00
-    printf("    > CH First Device Type........... (DT)  # Devices    # Files\n");
-    printf("    > -- ---------------------------- ---- ------------ ---------\n");
-    printf("    >\n");
+    fputs("    > CH First Device Type........... (DT)  # Devices    # Files\n", out);
+    fputs("    > -- ---------------------------- ---- ------------ ---------\n", out);
+    fputs("    >\n", out);
 
     for (ch = 0; ch < channelCount; ch++)
         {
         for (dp = channel[ch].firstDevice; dp != NULL; dp = dp->next)
             {
             //                                                               0....+....1....+....2....+....3..
-            if (dp->devType == DtNone)
+            switch (dp->devType)
                 {
+            case DtNone:
                 devTypeName = "None .......................";
-                }
-            else if (dp->devType == DtDeadStartPanel)
-                {
+                break;
+            case DtDeadStartPanel:
                 devTypeName = "Deadstart Panel.............";
-                }
-            else if (dp->devType == DtMt607)
-                {
+                break;
+            case DtMt607:
                 devTypeName = "Magnetic Tape 607...........";
-                }
-            else if (dp->devType == DtMt669)
-                {
+                break;
+            case DtMt669:
                 devTypeName = "Magnetic Tape 669...........";
-                }
-            else if (dp->devType == DtDd6603)
-                {
+                break;
+            case DtDd6603:
                 devTypeName = "Disk Device 6603............";
-                }
-            else if (dp->devType == DtDd8xx)
-                {
+                break;
+            case DtDd8xx:
                 devTypeName = "Disk Device 8xx.............";
-                }
-            else if (dp->devType == DtCr405)
-                {
+                break;
+            case DtCr405:
                 devTypeName = "Card Reader 405.............";
-                }
-            else if (dp->devType == DtLp1612)
-                {
+                break;
+            case DtLp1612:
                 devTypeName = "Line Printer 1612...........";
-                }
-            else if (dp->devType == DtLp5xx)
-                {
+                break;
+            case DtLp5xx:
                 devTypeName = "Line Printer 5xx............";
-                }
-            else if (dp->devType == DtRtc)
-                {
+                break;
+            case DtRtc:
                 devTypeName = "Realtime Clock..............";
-                }
-            else if (dp->devType == DtConsole)
-                {
+                break;
+            case DtConsole:
                 devTypeName = "Console.....................";
-                }
-            else if (dp->devType == DtMux6676)
-                {
+                break;
+            case DtMux6676:
                 devTypeName = "Multiplexer 6676............";
-                }
-            else if (dp->devType == DtCp3446)
-                {
+                break;
+            case DtCp3446:
                 devTypeName = "Card Punch 3446.............";
-                }
-            else if (dp->devType == DtCr3447)
-                {
+                break;
+            case DtCr3447:
                 devTypeName = "Card Reader 3447............";
-                }
-            else if (dp->devType == DtDcc6681)
-                {
+                break;
+            case DtDcc6681:
                 devTypeName = "Data Channel Converter 6681.";
-                }
-            else if (dp->devType == DtTpm)
-                {
+                break;
+            case DtTpm:
                 devTypeName = "Two Port Multiplexer........";
-                }
-            else if (dp->devType == DtDdp)
-                {
+                break;
+            case DtDdp:
                 devTypeName = "Distributive Data Path......";
-                }
-            else if (dp->devType == DtNiu)
-                {
+                break;
+            case DtNiu:
                 devTypeName = "Network Interface Unit......";
-                }
-            else if (dp->devType == DtMt679)
-                {
+                break;
+            case DtMt679:
                 devTypeName = "Magnetic Tape 679...........";
-                }
-            else if (dp->devType == DtNpu)
-                {
+                break;
+            case DtNpu:
                 devTypeName = "Network Processor Unit......";
-                }
-            else if (dp->devType == DtMt362x)
-                {
+                break;
+            case DtMt362x:
                 devTypeName = "Magnetic Tape 362x..........";
-                }
-            else if (dp->devType == DtMch)
-                {
+                break;
+            case DtMch:
                 devTypeName = "Maintenance Channel.........";
-                }
-            else if (dp->devType == DtStatusControlRegister)
-                {
+                break;
+            case DtStatusControlRegister:
                 devTypeName = "Status Control Register.....";
-                }
-            else if (dp->devType == DtInterlockRegister)
-                {
+                break;
+            case DtInterlockRegister:
                 devTypeName = "Interlock Register..........";
-                }
-            else if (dp->devType == DtPciChannel)
-                {
+                break;
+            case DtPciChannel:
                 devTypeName = "PCI Channel.................";
-                }
-            else if (dp->devType == DtMt362x)
-                {
-                devTypeName = "Magnetic Tape 362x..........";
-                }
-            else
-                {
+                break;
+            default:
                 devTypeName = "Unknown Device..............";
+                break;
                 }
-            printf("    > %02o %s (%02o)",
+            fprintf(out, "    > %02o %s (%02o)",
                    channel[ch].id,
                    devTypeName,
                    dp->devType
@@ -281,22 +254,22 @@ void channelDisplayContext(void)
 
             if (devNum > 0)
                 {
-                printf(" Attached: %02i", devNum);
+                fprintf(out, " Attached: %02i", devNum);
                 }
             else
                 {
-                printf(" ------------");
+                fputs(" ------------", out);
                 }
 
             if (devFCB > 0)
                 {
-                printf(" Files: %02i", devFCB);
+                fprintf(out, " Files: %02i", devFCB);
                 }
             else
                 {
-                printf(" ---------");
+                fputs(" ---------", out);
                 }
-            printf("\n");
+            fputs("\n", out);
             }
         }
     }

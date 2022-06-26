@@ -249,18 +249,10 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         }
     else
         {
-#if defined (SAFECALLS)
-        strcpy_s(cc->extPath, sizeof(cc->extPath), devicePath);
-#else
         strcpy(cc->extPath, devicePath);
-#endif
         if (cc->extPath[0] != '\0')
             {
-#if defined (SAFECALLS)
-            strcat_s(cc->extPath, sizeof(cc->extPath), "/");
-#else
             strcat(cc->extPath, "/");
-#endif
             }
         }
 
@@ -399,11 +391,7 @@ void cp3446RemoveCards(char *params, FILE *out)
     **  Close the old device file.
     */
     cc = (CpContext *)(dp->context[0]);
-#if defined(SAFECALLS)
-    sprintf_s(fname, sizeof(fname), "%sCP3446_C%02o_E%o", cc->extPath, channelNo, equipmentNo);
-#else
     sprintf(fname, "%sCP3446_C%02o_E%o", cc->extPath, channelNo, equipmentNo);
-#endif
 
     //  SZoppi: this can happen if something goes wrong in the open
     //          and the file fails to be properly re-opened.
@@ -446,17 +434,6 @@ void cp3446RemoveCards(char *params, FILE *out)
             {
             time(&currentTime);
             t = *localtime(&currentTime);
-#if defined(SAFECALLS)
-            sprintf_s(fnameNew, sizeof(fnameNew), "%sCP3446_%04d%02d%02d_%02d%02d%02d_%02d",
-                      cc->extPath,
-                      t.tm_year + 1900,
-                      t.tm_mon + 1,
-                      t.tm_mday,
-                      t.tm_hour,
-                      t.tm_min,
-                      t.tm_sec,
-                      isuffix);
-#else
             sprintf(fnameNew, "%sCP3446_%04d%02d%02d_%02d%02d%02d_%02d",
                     cc->extPath,
                     t.tm_year + 1900,
@@ -466,7 +443,6 @@ void cp3446RemoveCards(char *params, FILE *out)
                     t.tm_min,
                     t.tm_sec,
                     isuffix);
-#endif
             if (rename(fname, fnameNew) != 0)
                 {
                 renameOK = TRUE;
@@ -543,11 +519,7 @@ static FcStatus cp3446Func(PpWord funcCode)
     case FcCp3446CheckLastCard:
         channelid = (int)active3000Device->channel->id;
         deviceid  = (int)active3000Device->eqNo;
-#if defined (SAFECALLS)
-        sprintf_s(cpdevid, sizeof(cpdevid), "%o,%o", channelid, deviceid);
-#else
         sprintf(cpdevid, "%o,%o", channelid, deviceid);
-#endif
         cp3446RemoveCards(cpdevid, stdout);
     //  fall through to "FcProcessed" response
 
@@ -861,7 +833,7 @@ static void cp3446FlushCard(DevSlot *up, CpContext *cc)
 **------------------------------------------------------------------------*/
 static char *cp3446Func2String(PpWord funcCode)
     {
-    static char buf[30];
+    static char buf[40];
 
 #if DEBUG
     switch (funcCode)
@@ -925,7 +897,7 @@ static char *cp3446Func2String(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void cp3446ShowStatus(void)
+void cp3446ShowStatus(FILE *out)
     {
     CpContext *cp = firstUnit;
 
@@ -935,11 +907,11 @@ void cp3446ShowStatus(void)
         }
 
 
-    printf("\n    > Card Punch (cp3446) Status:\n");
+    fputs("\n    > Card Punch (cp3446) Status:\n", out);
 
     while (cp)
         {
-        printf("    >   CH %02o EQ %02o UN %02o Col %02i Mode(%s) RAW(%s) Path '%s'\n",
+        fprintf(out, "    >   CH %02o EQ %02o UN %02o Col %02i Mode(%s) RAW(%s) Path '%s'\n",
                cp->channelNo,
                cp->eqNo,
                cp->unitNo,

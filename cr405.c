@@ -200,7 +200,6 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     char        *crOutput;
     char        *tokenAuto;
     bool        watchRequested;
-    char        tokenString[80];
     struct stat s;
 
     /*
@@ -305,19 +304,14 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         }
 
     // threadParms->LoadCards = 0;
-    if (deviceName != NULL)
+    if (deviceName == NULL)
         {
-        //  Silly workaround because of strtok
-        //  treating multiple consecutive delims
-        //  as one.
-        tokenString[0] = ' ';
-        tokenString[1] = '\0';
-        strcat(tokenString, deviceName);
+        deviceName = "";
         }
-    xlateTable = strtok(tokenString, ",");
-    crInput    = strtok(NULL, ",");
-    crOutput   = strtok(NULL, ",");
-    tokenAuto  = strtok(NULL, ",");
+    xlateTable = strtok(deviceName, ", ");
+    crInput    = strtok(NULL, ", ");
+    crOutput   = strtok(NULL, ", ");
+    tokenAuto  = strtok(NULL, ", ");
 
     /*
     **  Process the Request for FileSystem Watcher
@@ -422,13 +416,8 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         **  The Card Reader Context needs to remember what directory
         **  will supply the input files so more can be found at EOD.
         */
-#if defined(SAFECALLS)
-        strcpy_s(threadParms->inWatchDir, sizeof(threadParms->inWatchDir), crInput);
-        strcpy_s(cc->dirInput, sizeof(cc->dirInput), crInput);
-#else
         strcpy(threadParms->inWatchDir, crInput);
         strcpy(cc->dirInput, crInput);
-#endif
 
         threadParms->eqNo      = eqNo;
         threadParms->unitNo    = unitNo;
@@ -518,14 +507,8 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char
     Cr405Context *cc;
     DevSlot      *dp;
     int          len;
-    char         *sp;
-
-    static char str[_MAX_PATH]     = "";
-    static char strWork[_MAX_PATH] = "";
-    static char fOldest[_MAX_PATH] = "";
-
     struct stat s;
-
+    char         *sp;
 
     /*
     **  Locate the device control block.
@@ -543,26 +526,24 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char
     */
     if (((cc->inDeck + 1) % Cr405MaxDecks) == cc->outDeck)
         {
-        printf("(cr405  ) Input tray full\n");
-
+        fputs("(cr405  ) Input tray full\n", out);
         return;
         }
 
     //  At this point we should have a valid(ish) input file
     //  Make sure before enqueueing it.
 
-    if (stat(str, &s) != 0)
+    if (stat(fname, &s) != 0)
         {
-        printf("(cr405  ) Requested file '%s' not found. (%s).\n", str, strerror(errno));
-
+        fprintf(out, "(cr405  ) Requested file '%s' not found. (%s).\n", fname, strerror(errno));
         return;
         }
 
     //  Enqueue the file in the chain of pending files
 
-    len = strlen(str) + 1;
+    len = strlen(fname) + 1;
     sp  = (char *)malloc(len);
-    memcpy(sp, str, len);
+    memcpy(sp, fname, len);
     cc->decks[cc->inDeck] = sp;
     cc->inDeck            = (cc->inDeck + 1) % Cr405MaxDecks;
 
@@ -618,7 +599,6 @@ void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, FILE *out, ch
     if (fname[0] != '*')
         {
         fprintf(out, "(cr405  ) GetNextDeck called with improper parameter '%s'.\n", fname);
-
         return;
         }
 
@@ -639,7 +619,6 @@ void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, FILE *out, ch
     if (((cc->inDeck + 1) % Cr405MaxDecks) == cc->outDeck)
         {
         fputs("(cr405  ) Input tray full\n", out);
-
         return;
         }
 
@@ -779,11 +758,7 @@ void cr405PostProcess(char *fname, int channelNo, int equipmentNo, FILE *out, ch
         return;
         }
 
-    bool isFromInput = (
-        strncmp(
-            fname, cc->dirInput,
-            strlen(cc->dirInput)
-            ) == 0);
+    bool isFromInput = strncmp(fname, cc->dirInput, strlen(cc->dirInput)) == 0;
 
     //  There should be no expectation that the file needs to be preserved
     if (isFromInput)
@@ -889,7 +864,7 @@ static void cr405SwapInOut(Cr405Context *cc, char *fName, FILE *out)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void cr405ShowStatus(void)
+void cr405ShowStatus(FILE *out)
     {
     Cr405Context *cp = firstCr405;
 
@@ -898,11 +873,11 @@ void cr405ShowStatus(void)
         return;
         }
 
-    printf("\n    > Card Reader (cr405) Status:\n");
+    fputs("\n    > Card Reader (cr405) Status:\n", out);
 
     while (cp)
         {
-        printf("    > CH %02o EQ %02o UN %02o Col %02i Seq:%i File '%s'\n",
+        fprintf(out, "    > CH %02o EQ %02o UN %02o Col %02i Seq:%i File '%s'\n",
                cp->channelNo,
                cp->eqNo,
                cp->unitNo,
@@ -912,14 +887,14 @@ void cr405ShowStatus(void)
 
         if (cp->isWatched)
             {
-            printf("    >   Autoloading from '%s' to '%s'\n",
+            fprintf(out, "    >   Autoloading from '%s' to '%s'\n",
                    cp->dirInput,
                    cp->dirOutput);
             }
 
         cp = cp->nextUnit;
         }
-    printf("\n");
+    fputs("\n", out);
     }
 
 /*
@@ -1143,7 +1118,7 @@ static void cr405NextCard(DevSlot *dp, FILE *out)
         fclose(dp->fcb[0]);
         dp->fcb[0] = NULL;
 
-        printf("(cr405  ) End of Deck '%s' reached on channel %o equipment %o\n",
+        fprintf(out, "(cr405  ) End of Deck '%s' reached on channel %o equipment %o\n",
                cc->curFileName,
                dp->channel->id,
                dp->eqNo);

@@ -234,7 +234,7 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
 
         case StTelnetProtoElem:
             switch (*sp++)
-            {
+                {
             case TELNET_IAC:
                 *dp++ = TELNET_IAC;
                 break;
@@ -312,7 +312,7 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
             default:
                 pcbp->controls.async.state = StTelnetData;
                 break;
-            }
+                }
             break;
 
         case StTelnetDont:

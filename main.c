@@ -80,7 +80,7 @@ static void tracePpuCalls(void);
 static void waitTerminationMessage(void);
 
 static void INThandler(int);
-static void op_Exit(void);
+static void opExit(void);
 
 /*
 **  ----------------
@@ -133,12 +133,12 @@ u32  idlecycles = 0;        /* count of idle loop cycles */
 **------------------------------------------------------------------------*/
 int main(int argc, char **argv)
     {
+#if defined(_WIN32)
     /*
     **  Pause for user upon exit so display doesn't disappear
     */
-    atexit(op_Exit);
+    atexit(opExit);
 
-#if defined(_WIN32)
     /*
     **  Select WINSOCK 1.1.
     */
@@ -489,7 +489,7 @@ static void waitTerminationMessage(void)
 **  Returns:        Zero.
 **
 **------------------------------------------------------------------------*/
-void INThandler(int sig)
+static void INThandler(int sig)
     {
     char c;
 
@@ -509,12 +509,14 @@ void INThandler(int sig)
         }
     }
 
-void op_Exit()
+#if defined(_WIN32)
+static void opExit()
     {
     char check;
 
     printf("Press ENTER to Exit");
     check = (char)getchar();
     }
+#endif
 
 /*---------------------------  End Of File  ------------------------------*/

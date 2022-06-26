@@ -408,11 +408,11 @@ static void *opThread(void *param)
 
     opDisplayVersion();
 
-    fprintf(out, "\n\n");
-    fprintf(out, "---------------------------\n");
-    fprintf(out, "DTCYBER: Operator interface\n");
-    fprintf(out, "---------------------------\n\n");
-    fprintf(out, "\nPlease enter 'help' to get a list of commands\n");
+    fputs("\n\n", out);
+    fputs("---------------------------\n", out);
+    fputs("DTCYBER: Operator interface\n", out);
+    fputs("---------------------------\n\n", out);
+    fputs("\nPlease enter 'help' to get a list of commands\n", out);
     opCmdPrompt();
 
     if (getcwd(opCmdStack[opCmdStackPtr].cwd, CwdPathSize) == NULL)
@@ -1224,7 +1224,7 @@ static void opCmdSetKeyInterval(bool help, char *cmdParams)
 static void opHelpSetKeyInterval(void)
     {
     fputs("    > 'set_key_interval <millisecs>' set the interval between key entries to the system console.\n", out);
-    fprintf(out, "    > [Current Key Interval is %d msec.]\n", opKeyInterval);
+    fprintf(out, "    > [Current Key Interval is %ld msec.]\n", opKeyInterval);
     }
 
 /*--------------------------------------------------------------------------
@@ -1265,7 +1265,7 @@ static void opCmdSetKeyWaitInterval(bool help, char *cmdParams)
 static void opHelpSetKeyWaitInterval(void)
     {
     fputs("    > 'set_keywait_interval <millisecs>' set the interval between keyboard scans of the emulated system console.\n", out);
-    fprintf(out, "    > [Current Key Wait Interval is %d msec.]\n", opKeyWaitInterval);
+    fprintf(out, "    > [Current Key Wait Interval is %ld msec.]\n", opKeyWaitInterval);
     }
 
 /*--------------------------------------------------------------------------
@@ -1652,7 +1652,7 @@ static void opCmdHelpAll(bool help, char *cmdParams)
 
 static void opHelpHelpAll(void)
     {
-    fputs("    > '??'       provide help for ALL commands.\n", out);
+    fputs("    > '?\?'       provide help for ALL commands.\n", out);
     fputs("    > 'help_all' \n", out);
     }
 
@@ -2449,7 +2449,7 @@ static void opCmdShowTape(bool help, char *cmdParams)
 
 static void opHelpShowTape(void)
     {
-    printf("    > 'show_tape' show status of all tape units.\n");
+    fputs("    > 'show_tape' show status of all tape units.\n", out);
     }
 
 /*--------------------------------------------------------------------------
@@ -2547,7 +2547,7 @@ static void opHelpRemoveCards(void)
 **------------------------------------------------------------------------*/
 static void opHelpShowUnitRecord(void)
     {
-    fprintf(out, "    > 'show_unitrecord' show status of all print and card devices.\n");
+    fputs("    > 'show_unitrecord' show status of all print and card devices.\n", out);
     }
 
 static void opCmdShowUnitRecord(bool help, char *cmdParams)
@@ -2572,11 +2572,11 @@ static void opCmdShowUnitRecord(bool help, char *cmdParams)
 
         return;
         }
-    cr3447ShowStatus();
-    cr405ShowStatus();
-    cp3446ShowStatus();
-    lp3000ShowStatus();
-    lp1612ShowStatus();
+    cr3447ShowStatus(out);
+    cr405ShowStatus(out);
+    cp3446ShowStatus(out);
+    lp3000ShowStatus(out);
+    lp1612ShowStatus(out);
     }
 
 /*--------------------------------------------------------------------------
@@ -2606,19 +2606,19 @@ static void opCmdShowDisk(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) != 0)
         {
-        fprintf(out, "    > No parameters expected\n");
+        fputs("    > No parameters expected\n", out);
         opHelpShowDisk();
 
         return;
         }
 
-    dd8xxShowDiskStatus();
-    dd6603ShowDiskStatus();
+    dd8xxShowDiskStatus(out);
+    dd6603ShowDiskStatus(out);
     }
 
 static void opHelpShowDisk(void)
     {
-    fprintf(out, "    > 'show_disk' show status of all disk units.\n");
+    fputs("    > 'show_disk' show status of all disk units.\n", out);
     }
 
 /*--------------------------------------------------------------------------
@@ -2648,13 +2648,13 @@ static void opCmdShowEquipment(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) != 0)
         {
-        fprintf(out, "    > No parameters expected\n");
+        fputs("    > No parameters expected\n", out);
         opHelpShowEquipment();
 
         return;
         }
 
-    channelDisplayContext();
+    channelDisplayContext(out);
     }
 
 static void opHelpShowEquipment(void)
@@ -2689,7 +2689,7 @@ static void opCmdShowVersion(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) != 0)
         {
-        fprintf(out, "    > No parameters expected\n");
+        fputs("    > No parameters expected\n", out);
         opHelpShowVersion();
 
         return;
@@ -2700,8 +2700,8 @@ static void opCmdShowVersion(bool help, char *cmdParams)
 
 static void opHelpShowVersion(void)
     {
-    fprintf(out, "    > 'sv'           show version of dtCyber.\n");
-    fprintf(out, "    > 'show_version'\n");
+    fputs("    > 'sv'           show version of dtCyber.\n", out);
+    fputs("    > 'show_version'\n", out);
     }
 
 /*--------------------------------------------------------------------------
@@ -2731,7 +2731,7 @@ static void opCmdShowAll(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) != 0)
         {
-        fprintf(out, "    > No parameters expected\n");
+        fputs("    > No parameters expected\n", out);
         opHelpShowAll();
 
         return;
@@ -2747,8 +2747,8 @@ static void opCmdShowAll(bool help, char *cmdParams)
 
 static void opHelpShowAll(void)
     {
-    fprintf(out, "    > 'sa'       show status of all dtCyber Devices.\n");
-    fprintf(out, "    > 'show_all'\n");
+    fputs("    > 'sa'       show status of all dtCyber Devices.\n", out);
+    fputs("    > 'show_all'\n", out);
     }
 
 #ifdef IdleThrottle
@@ -2771,9 +2771,9 @@ static void opCmdIdle(bool help, char *cmdParams)
 
     if (help)
         {
-        fprintf(out, "    > NOS Idle Loop Throttle\n");
-        fprintf(out, "    > idle <on|off>                   turn NOS idle loop throttle on/off\n");
-        fprintf(out, "    > idle <num_cycles>,<sleep_time>  set number of cycles before sleep and sleep time\n");
+        fputs("    > NOS Idle Loop Throttle\n", out);
+        fputs("    > idle <on|off>                   turn NOS idle loop throttle on/off\n", out);
+        fputs("    > idle <num_cycles>,<sleep_time>  set number of cycles before sleep and sleep time\n", out);
 
         return;
         }
@@ -2835,15 +2835,15 @@ static void opCmdIdle(bool help, char *cmdParams)
 **------------------------------------------------------------------------*/
 static void opDisplayVersion(void)
     {
-    fprintf(out, "\n--------------------------------------------------------------------------------");
+    fputs("\n--------------------------------------------------------------------------------", out);
     fprintf(out, "\n     %s", DtCyberVersion);
     fprintf(out, "\n     %s", DtCyberCopyright);
     fprintf(out, "\n     %s", DtCyberLicense);
     fprintf(out, "\n     %s", DtCyberLicenseDetails);
-    fprintf(out, "\n--------------------------------------------------------------------------------");
+    fputs("\n--------------------------------------------------------------------------------", out);
     fprintf(out, "\n     Build Date: %s", DTCyberBuildDate);
-    fprintf(out, "\n--------------------------------------------------------------------------------");
-    fprintf(out, "\n");
+    fputs("\n--------------------------------------------------------------------------------", out);
+    fputs("\n", out);
     }
 
 /*---------------------------  End Of File  ------------------------------*/

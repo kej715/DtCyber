@@ -511,7 +511,7 @@ static void mt607Disconnect(void)
 **------------------------------------------------------------------------*/
 static char *mt607Func2String(PpWord funcCode)
     {
-    static char buf[30];
+    static char buf[40];
 
 #if DEBUG
     switch (funcCode)

@@ -386,10 +386,10 @@ void mdiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Print a friendly message.
     */
-    printf("(mdi     ) MDI initialised on channel %o equipment %o\n", channelNo, eqNo);
-    printf("           Host ID: %s\n", npuNetHostID);
-    printf("(mdi     ) Coupler node: %u\n", npuSvmCouplerNode);
-    printf("           MDI node: %u\n", npuSvmNpuNode);
+    printf("(mdi    ) MDI initialised on channel %o equipment %o\n", channelNo, eqNo);
+    printf("          Host ID: %s\n", npuNetHostID);
+    printf("(mdi    ) Coupler node: %u\n", npuSvmCouplerNode);
+    printf("          MDI node: %u\n", npuSvmNpuNode);
     }
 
 /*--------------------------------------------------------------------------

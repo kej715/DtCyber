@@ -50,6 +50,8 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/types.h>
+#endif
+#if defined(__linux__)
 #include <sys/inotify.h>
 #endif
 
@@ -59,8 +61,7 @@
 **  -----------------
 */
 
-#define BUFSIZE          4096
-#define LONG_DIR_NAME    TEXT("c:\\longdirectoryname")
+#define BUFSIZE    4096
 
 /*
 **  -----------------------
@@ -247,15 +248,9 @@ static void fsWatchDir(fswContext *parms)
     DIR           *curDir;
 
     //  Bring the Parameter List into the thread context
-#if defined(SAFECALLS)
-    sprintf_s(crDevId, sizeof(crDevId), "%o,%o,*",
-              parms->channelNo,
-              parms->eqNo);
-#else
     sprintf(crDevId, "%o,%o,*",
             parms->channelNo,
             parms->eqNo);
-#endif
 
     // Retrieve the full path name.
 
@@ -280,11 +275,7 @@ static void fsWatchDir(fswContext *parms)
             }
         }
 
-#if defined(SAFECALLS)
-    strcpy_s(lpDir, sizeof(lpDir), buffer);
-#else
     strcpy(lpDir, buffer);
-#endif
     printf("(fsmon  ) Watching Directory:  %s\n", lpDir);
 
     //  File Change Watch Invocation code.
@@ -459,7 +450,7 @@ static void fsWatchDir(fswContext *parms)
     free(parms);
     }
 
-#else
+#elif defined(__linux__)
 static void * fsWatchDir(void *arg)
     {
     fswContext *parms = arg;
@@ -608,80 +599,80 @@ static void * fsWatchDir(void *arg)
             /* Perform event dependent handler routines */
             /* The mask is the magic that tells us what file operation occurred */
 
-            switch (event->mask &
-                (IN_ALL_EVENTS | IN_UNMOUNT | IN_Q_OVERFLOW | IN_IGNORED))
-            {
+            switch (event->mask & (IN_ALL_EVENTS | IN_UNMOUNT | IN_Q_OVERFLOW | IN_IGNORED))
+                {
             /* File was accessed */
             case IN_ACCESS:
                 printf("(fsmon  ) INFO: ACCESS: %s \"%s\" on WD #%i\n",
-                    cur_event_file_or_dir, cur_event_filename, cur_event_wd);
+                       cur_event_file_or_dir, cur_event_filename, cur_event_wd);
                 break;
 
             /* File changed attributes */
             case IN_ATTRIB:
                 printf("(fsmon  ) INFO: ATTRIB: %s \"%s\" on WD #%i\n",
-                    cur_event_file_or_dir, cur_event_filename, cur_event_wd);
+                       cur_event_file_or_dir, cur_event_filename, cur_event_wd);
                 break;
 
             /* File open for writing was closed */
             case IN_CLOSE_WRITE:
                 printf("(fsmon  ) INFO: CLOSE_WRITE: %s \"%s\" on WD #%i\n",
-                    cur_event_file_or_dir, cur_event_filename, cur_event_wd);
+                       cur_event_file_or_dir, cur_event_filename, cur_event_wd);
                 break;
 
             /* File open read-only was closed */
             case IN_CLOSE_NOWRITE:
                 printf("(fsmon  ) INFO: CLOSE_NOWRITE: %s \"%s\" on WD #%i\n",
-                    cur_event_file_or_dir, cur_event_filename, cur_event_wd);
+                       cur_event_file_or_dir, cur_event_filename, cur_event_wd);
                 break;
 
             /* File was created from X */
             case IN_CREATE:
                 printf("(fsmon  ) INFO: CREATED: %s \"%s\" on WD #%i. Cookie=%d\n",
-                    cur_event_file_or_dir, cur_event_filename, cur_event_wd,
-                    cur_event_cookie);
+                       cur_event_file_or_dir, cur_event_filename, cur_event_wd,
+                       cur_event_cookie);
                 break;
+
             /* File was created from X */
             case IN_DELETE:
                 printf("(fsmon  ) INFO: DELETED: %s \"%s\" on WD #%i. Cookie=%d\n",
-                    cur_event_file_or_dir, cur_event_filename, cur_event_wd,
-                    cur_event_cookie);
+                       cur_event_file_or_dir, cur_event_filename, cur_event_wd,
+                       cur_event_cookie);
                 break;
 
             case IN_DELETE_SELF:
                 printf("(fsmon  ) INFO: DELETED_SELF: %s \"%s\" on WD #%i. Cookie=%d\n",
-                    cur_event_file_or_dir, cur_event_filename, cur_event_wd,
-                    cur_event_cookie);
+                       cur_event_file_or_dir, cur_event_filename, cur_event_wd,
+                       cur_event_cookie);
                 break;
 
             /* File was modified */
             case IN_MODIFY:
                 printf("(fsmon  ) INFO: MODIFY: %s \"%s\" on WD #%i\n",
-                    cur_event_file_or_dir, cur_event_filename, cur_event_wd);
+                       cur_event_file_or_dir, cur_event_filename, cur_event_wd);
                 break;
 
             case IN_MOVE_SELF:
                 printf("(fsmon  ) INFO: MOVE_SELF: %s \"%s\" on WD #%i\n",
-                    cur_event_file_or_dir, cur_event_filename, cur_event_wd);
+                       cur_event_file_or_dir, cur_event_filename, cur_event_wd);
                 break;
 
             /* File was moved from X */
             case IN_MOVED_FROM:
                 printf("(fsmon  ) INFO: MOVED_FROM: %s \"%s\" on WD #%i. Cookie=%d\n",
-                    cur_event_file_or_dir, cur_event_filename, cur_event_wd,
-                    cur_event_cookie);
+                       cur_event_file_or_dir, cur_event_filename, cur_event_wd,
+                       cur_event_cookie);
                 break;
 
             case IN_MOVED_TO:
                 printf("(fsmon  ) INFO: MOVED_TO: %s \"%s\" on WD #%i. Cookie=%d\n",
-                    cur_event_file_or_dir, cur_event_filename, cur_event_wd,
-                    cur_event_cookie);
+                       cur_event_file_or_dir, cur_event_filename, cur_event_wd,
+                       cur_event_cookie);
                 break;
 
             /* File was opened */
             case IN_OPEN:
                 printf("(fsmon  ) INFO: OPEN: %s \"%s\" on WD #%i\n",
-                    cur_event_file_or_dir, cur_event_filename, cur_event_wd);
+                       cur_event_file_or_dir, cur_event_filename, cur_event_wd);
                 break;
 
             /*
@@ -697,89 +688,94 @@ static void * fsWatchDir(void *arg)
             /* Some unknown message received */
             default:
                 printf("(fsmon  ) INFO: UNKNOWN EVENT \"%X\" OCCURRED for file \"%s\" on WD #%i\n",
-                    event->mask, cur_event_filename, cur_event_wd);
+                       event->mask, cur_event_filename, cur_event_wd);
                 break;
-            } // switch
-            
+                } // switch
+
             /* If any flags were set other than IN_ISDIR, report the flags */
             if (flags & (~IN_ISDIR))
-            {
+                {
                 flags = event->mask;
                 printf("(fsmon  ) INFO: Flags=%lX\n", flags);
-            }
-            
+                }
 #endif
             i += EVENT_SIZE + event->len;
             } // while ( i < length )
 
-            /*
-            **  TODO: Refactor this and the Windows code
-            **        as they are functionally equal
-            **
-            **  We were awaked by SOMETHING so we should 
-            **  process all of the files that we can find.
-            **
-            **  The inotify API doesn't support a "Timeout"
-            **  interval so we will need to figure out a way
-            **  to periodically poll the target.
-            */
+        /*
+        **  TODO: Refactor this and the Windows code
+        **        as they are functionally equal
+        **
+        **  We were awaked by SOMETHING so we should
+        **  process all of the files that we can find.
+        **
+        **  The inotify API doesn't support a "Timeout"
+        **  interval so we will need to figure out a way
+        **  to periodically poll the target.
+        */
 
-            /*
-            **  Ensure the tray is empty.
-            **  TODO: attempt to QUEUE the file if space
-            **        on the input list is available.
-            */
-            if (dp->fcb[0] != NULL)
+        /*
+        **  Ensure the tray is empty.
+        **  TODO: attempt to QUEUE the file if space
+        **        on the input list is available.
+        */
+        if (dp->fcb[0] != NULL)
+            {
+            continue;
+            }
+
+        curDir = opendir(parms->inWatchDir);
+        do
+            {
+            //  See if there are files in the directory
+            curDirEntry = readdir(curDir);
+            if (curDirEntry == NULL)
                 {
                 continue;
                 }
-
-            curDir = opendir(parms->inWatchDir);
-            do
+            //  Pop over the dot (.) directories
+            if (curDirEntry->d_name[0] == '.')
                 {
-                //  See if there are files in the directory
-                curDirEntry = readdir(curDir);
-                if (curDirEntry == NULL)
-                    {
-                    continue;
-                    }
-                //  Pop over the dot (.) directories
-                if (curDirEntry->d_name[0] == '.')
-                    {
-                    continue;
-                    }
-                else
-                    {
-                    //  We have found an unprocessed file
-                    //  invoke the card load command
-                    //	TODO: We can remove the prototype from 
-                    // parms->LoadCards("*",parms->channelNo,parms->eqNo,stdout,"");
-                    opCmdLoadCards(FALSE, crDevId);
-                    break;
-                    }
-                } while (curDirEntry != NULL);
-            closedir(curDir);
+                continue;
+                }
+            else
+                {
+                //  We have found an unprocessed file
+                //  invoke the card load command
+                //  TODO: We can remove the prototype from
+                // parms->LoadCards("*",parms->channelNo,parms->eqNo,stdout,"");
+                opCmdLoadCards(FALSE, crDevId);
+                break;
+                }
+            } while (curDirEntry != NULL);
+        closedir(curDir);
 
 
-            printf("(fsmon  ) Continuing to watch ... '%s'.\n", parms->inWatchDir);
-
+        printf("(fsmon  ) Continuing to watch ... '%s'.\n", parms->inWatchDir);
         } // while (emulationactive)
 
-	/*
-	 * removing the directory from the watch list.
-	 */
-	inotify_rm_watch(fd, wd);
+    /*
+     * removing the directory from the watch list.
+     */
+    inotify_rm_watch(fd, wd);
 
-	/*
-	 * closing the INOTIFY instance
-	 */
-	close(fd);
+    /*
+     * closing the INOTIFY instance
+     */
+    close(fd);
 
-	printf("(fsmon  ) Terminating Monitor Thread '%s'.\n", parms->inWatchDir);
-	free(parms);
-	return 0;
+    printf("(fsmon  ) Terminating Monitor Thread '%s'.\n", parms->inWatchDir);
+    free(parms);
 
-}
-    
+    return 0;
+    }
+
+#else
+static void * fsWatchDir(void *arg)
+    {
+    fputs("(fsmon  ) Terminating Monitor Thread - not yet supported.\n", stdout);
+
+    return 0;
+    }
 
 #endif

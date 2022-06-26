@@ -29,17 +29,24 @@ proc error_condition { cmd } {
 #wrapper for sending commands to dtcyber console
 proc console { cmd } {
     if {$cmd == "shutdown"} {
-       send -- "shutdown\r"
-       expect "Shutting down main thread"
-       wait 
-       exit 0
+        send -- "shutdown\r"
+        expect {
+          "Shutting down main thread" {
+            wait 
+          }
+          "Press ENTER to Exit" {
+            send == "\r"
+            wait 
+          }
+        }
+        exit 0
     }
     send -- "$cmd\r"
     expect {
         "Command not implemented" { error_condition "console $cmd" }
         "Not enough or invalid parameters" { error_condition "console $cmd" }
         "Failed to open" { error_condition "console $cmd" }
-        -re "\nOperator> $" {}
+        -re "Operator> $" {}
     }
     sleep 1
 }
@@ -68,7 +75,7 @@ proc mount { unit tape {ring ""} } {
             "Failed to open" { error_condition "mount $unit $tape" }
             "Not enough or invalid parameters" { error_condition "mount $unit $tape" }
             "Invalid" { error_condition "mount $unit $tape" }
-        -re "\nOperator> $" {}
+        -re "Operator> $" {}
         }
     } else {
         send "lt $unit,w,$tape\r"
@@ -77,7 +84,7 @@ proc mount { unit tape {ring ""} } {
             "Failed to open" { error_condition "mount $unit $tape ring" }
             "Not enough or invalid parameters" { error_condition "mount $unit $tape ring" }
             "Invalid" { error_condition "mount $unit $tape ring" }
-        -re "\nOperator> $" {}
+        -re "Operator> $" {}
         }
     }
     sleep 1
@@ -91,7 +98,7 @@ proc unmount { unit } {
         "not loaded" exp_continue
         "Not enough or invalid parameters" { error_condition "unmount $unit " }
         "Invalid" { error_condition "unmount $unit" }
-    -re "\nOperator> $" {}
+    -re "Operator> $" {}
     }
     sleep 1
 }
@@ -105,7 +112,7 @@ proc load_job { ch eq deck } {
         "Not enough or invalid parameters" { error_condition "load_job $ch $eq" }
         "Invalid" { error_condition "load_job $ch $eq" }
         "Input tray full" { error_condition "load_job $ch $eq" }
-    -re "\nOperator> $" {}
+    -re "Operator> $" {}
     }
 }
 

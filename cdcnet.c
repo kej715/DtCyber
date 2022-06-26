@@ -641,7 +641,7 @@ void cdcnetProcessDownlineData(NpuBuffer *bp)
         sfc = bp->data[BlkOffSfc];
 
         switch (pfc)
-        {
+            {
         case 0x02:           // initiate connection
             if (sfc == 0x09) // A-A connection
                 {
@@ -727,7 +727,7 @@ void cdcnetProcessDownlineData(NpuBuffer *bp)
 #endif
             npuBipBufRelease(bp);
             break;
-        }
+            }
         break;
 
     case BtHTQBLK:
@@ -952,7 +952,7 @@ void cdcnetCheckStatus(void)
                 blockType = bp->data[BlkOffBTBSN] & BlkMaskBT;
 
                 switch (blockType)
-                {
+                    {
                 case BtHTBLK:
                 case BtHTMSG:
                     bp->offset = BlkOffDbc + 1;
@@ -1021,11 +1021,11 @@ void cdcnetCheckStatus(void)
 #endif
                     npuBipBufRelease(bp);
                     break;
-                }
+                    }
                 }
 
             switch (gp->tcpUdpState)
-            {
+                {
             case StTcpConnecting:
                 FD_SET(gp->connFd, &writeFds);
                 if (gp->connFd > maxFd)
@@ -1063,7 +1063,7 @@ void cdcnetCheckStatus(void)
 
             default: // do nothing
                 break;
-            }
+                }
 
             break;
 

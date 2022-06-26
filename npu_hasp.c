@@ -338,7 +338,7 @@ void npuHaspTryOutput(Pcb *pcbp)
             scbp->isWaitingPTI = FALSE;
             scbp->recordCount  = 0;
             switch (scbp->tp->deviceType)
-            {
+                {
             case DtCR:
                 ptiRecord[1] = 0x80 | (scbp->tp->streamId << 4) | 3;
                 break;
@@ -350,7 +350,7 @@ void npuHaspTryOutput(Pcb *pcbp)
             case DtCP:
                 ptiRecord[1] = 0x80 | (scbp->tp->streamId << 4) | 5;
                 break;
-            }
+                }
             npuHaspAppendRecord(pcbp, ptiRecord, sizeof(ptiRecord));
             npuHaspAppendOutput(pcbp, blockTrailer, sizeof(blockTrailer));
             if (npuHaspFlushBuffer(pcbp))
@@ -396,7 +396,7 @@ void npuHaspTryOutput(Pcb *pcbp)
         **  request to initiate transmission.
         */
         switch (scbp->state)
-        {
+            {
         case StHaspStreamReady:
         case StHaspStreamSendRTI:
         case StHaspStreamWaitAcctng:
@@ -413,7 +413,7 @@ void npuHaspTryOutput(Pcb *pcbp)
                     pcbp->claPort, scbp->state, scbp->tp->streamId, scbp->tp->termName);
 #endif
             break;
-        }
+            }
         break;
 
     case StHaspMajorSendENQ:
@@ -935,7 +935,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
         */
         case StHaspMinorRecvBOF:
             switch (ch)
-            {
+                {
             case SYN:
                 // Do nothing, continue searching for beginning of frame
                 break;
@@ -992,7 +992,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                         pcbp->claPort, ch);
 #endif
                 break;
-            }
+                }
             break;
 
         /*
@@ -1002,7 +1002,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
         case StHaspMinorRecvSTX:
             pcbp->controls.hasp.lastRecvFrameType = ch;
             switch (ch)
-            {
+                {
             case STX:
                 pcbp->controls.hasp.minorState = StHaspMinorRecvBCB;
                 break;
@@ -1019,7 +1019,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
 #endif
                 pcbp->controls.hasp.minorState = StHaspMinorRecvBOF;
                 break;
-            }
+                }
             break;
 
         /*
@@ -1028,7 +1028,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
         */
         case StHaspMinorRecvENQ_Resp:
             switch (ch)
-            {
+                {
             case SYN:
                 // Do nothing, continue waiting for response
                 break;
@@ -1044,7 +1044,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                         pcbp->claPort, ch);
 #endif
                 break;
-            }
+                }
             break;
 
         /*
@@ -1054,7 +1054,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
         case StHaspMinorRecvACK0:
             pcbp->controls.hasp.lastRecvFrameType = ch;
             switch (ch)
-            {
+                {
             case ACK0:
                 pcbp->controls.hasp.majorState = StHaspMajorWaitSignon;
                 break;
@@ -1065,7 +1065,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                         pcbp->claPort, ch);
 #endif
                 break;
-            }
+                }
             break;
 
         /*
@@ -1086,7 +1086,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
         */
         case StHaspMinorRecvENQ:
             switch (ch)
-            {
+                {
             case ENQ:
                 if (pcbp->controls.hasp.consoleStream.tp != NULL)
                     {
@@ -1118,7 +1118,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
             default:
                 pcbp->controls.hasp.minorState = StHaspMinorRecvSOH;
                 break;
-            }
+                }
             break;
 
         /*
@@ -1129,7 +1129,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 {
                 blockSeqNum = ch & 0x0f;
                 switch ((ch >> 4) & 0x07)
-                {
+                    {
                 case 0x00: // Normal Block
                     if (blockSeqNum == ((pcbp->controls.hasp.uplineBSN + 1) & 0x0f))
                         {
@@ -1163,7 +1163,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
 #endif
                     pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
                     break;
-                }
+                    }
                 }
             else
                 {
@@ -1265,10 +1265,10 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 recordType = ch & 0x0f;
                 streamId   = (ch >> 4) & 0x07;
                 switch (recordType)
-                {
+                    {
                 case 0x00:            // Control record
                     switch (streamId) // stream id is control info for control record
-                    {
+                        {
                     case 1:           // Request to initiate a function transmission
                         pcbp->controls.hasp.sRCBType = SRCB_RTI;
                         break;
@@ -1292,7 +1292,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
 #endif
                         pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
                         break;
-                    }
+                        }
                     continue;
 
                 case 0x01: // Operator message display request
@@ -1328,7 +1328,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                     deviceType = 0xff;
                     pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
                     continue;
-                }
+                    }
                 scbp = npuHaspFindStream(pcbp, streamId, deviceType);
                 if (scbp != NULL)
                     {
@@ -1345,12 +1345,12 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 {
                 pcbp->controls.hasp.minorState = StHaspMinorRecvSCB0;
                 switch (pcbp->controls.hasp.sRCBType)
-                {
+                    {
                 case SRCB_RTI: // Request To Initiate transmission
                     streamId   = (ch >> 4) & 0x07;
                     deviceType = ch & 0x0f;
                     switch (deviceType)
-                    {
+                        {
                     case 3: // Reader
                         scbp = npuHaspFindStream(pcbp, streamId, DtCR);
                         break;
@@ -1370,7 +1370,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
 #endif
                         scbp = NULL;
                         break;
-                    }
+                        }
                     if (scbp != NULL)
                         {
                         if ((scbp->tp == NULL)
@@ -1392,7 +1392,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                     streamId   = (ch >> 4) & 0x07;
                     deviceType = ch & 0x0f;
                     switch (deviceType)
-                    {
+                        {
                     case 3: // Reader
                         scbp = npuHaspFindStream(pcbp, streamId, DtCR);
                         break;
@@ -1412,7 +1412,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
 #endif
                         scbp = NULL;
                         break;
-                    }
+                        }
                     if (scbp != NULL)
                         {
                         scbp->state       = StHaspStreamReady;
@@ -1422,7 +1422,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
 
                 case SRCB_GCR: // General Control Record
                     switch (ebcdicToAscii[ch])
-                    {
+                        {
                     case 'A': // Signon record
                         pcbp->controls.hasp.minorState = StHaspMinorRecvSignon;
                         break;
@@ -1441,7 +1441,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                                 pcbp->claPort, (char)ebcdicToAscii[ch]);
 #endif
                         break;
-                    }
+                        }
                     break;
 
                 case SRCB_LP: // Print record
@@ -1459,7 +1459,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
 
                 default: // do nothing for other SRCB types
                     break;
-                }
+                    }
                 }
             else
                 {
@@ -1786,7 +1786,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
         */
         case StHaspMinorRecvDLE2:
             switch (ch)
-            {
+                {
             case DLE:
                 pcbp->controls.hasp.minorState = StHaspMinorRecvETB2;
                 break;
@@ -1802,7 +1802,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
 
             default:
                 break;
-            }
+                }
             break;
 
         /*
@@ -2980,7 +2980,7 @@ static void npuHaspProcessPrePrintFormatControl(Pcb *pcbp)
 
     case 2: // Space immediately NN spaces
         switch (param & 0x03)
-        {
+            {
         case 3:
             formatEffector = asciiToEbcdic['-'];
             break;
@@ -2993,7 +2993,7 @@ static void npuHaspProcessPrePrintFormatControl(Pcb *pcbp)
         default:
             formatEffector = asciiToEbcdic[' '];
             break;
-        }
+            }
         npuHaspStageUplineData(scbp, &formatEffector, 1);
         break;
 

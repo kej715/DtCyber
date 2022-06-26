@@ -278,11 +278,7 @@ void dd6603Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         }
     else
         {
-#if defined(SAFECALLS)
-        strcpy_s(fname, sizeof(fname), strchr(deviceName, ','));
-#else
         strcpy(fname, strchr(deviceName, ','));
-#endif
         }
 
     fcb = fopen(fname, "r+b");
@@ -295,11 +291,7 @@ void dd6603Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             exit(1);
             }
         }
-#if defined(SAFECALLS)
-    strcpy_s(diskP->fileName, sizeof(diskP->fileName), fname);
-#else
     strcpy(diskP->fileName, fname);
-#endif
 
     diskP->eqNo      = eqNo;
     diskP->channelNo = channelNo;
@@ -569,7 +561,7 @@ static i32 dd6603Seek(i32 track, i32 head, i32 sector)
 **------------------------------------------------------------------------*/
 static char *dd6603Func2String(PpWord funcCode)
     {
-    static char buf[30];
+    static char buf[40];
 
 #if DEBUG
     switch (funcCode & Fc6603CodeMask)
@@ -604,7 +596,7 @@ static char *dd6603Func2String(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void dd6603ShowDiskStatus(void)
+void dd6603ShowDiskStatus(FILE *out)
     {
     DiskParam *dp = firstDisk;
     int       i   = 0;
@@ -614,11 +606,11 @@ void dd6603ShowDiskStatus(void)
         return;
         }
 
-    printf("\n    > Disk Drive (dd6603) Status:\n");
+    fputs("\n    > Disk Drive (dd6603) Status:\n", out);
 
     while (dp)
         {
-        printf("    >   #%02d. CH %02o EQ %02o UN %02o HD %02o SECT 0x%06x TRK 0x%06o FN '%s'\n",
+        fprintf(out, "    >   #%02d. CH %02o EQ %02o UN %02o HD %02o SECT 0x%06x TRK 0x%06o FN '%s'\n",
                i,
                dp->channelNo,
                dp->eqNo,

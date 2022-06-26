@@ -725,7 +725,7 @@ static void mchDisconnect(void)
 **------------------------------------------------------------------------*/
 static char *mchConn2String(PpWord connCode)
     {
-    static char buf[30];
+    static char buf[50];
 
 #if DEBUG
     switch (connCode)
@@ -756,7 +756,7 @@ static char *mchConn2String(PpWord connCode)
 **------------------------------------------------------------------------*/
 static char *mchOp2String(PpWord opCode)
     {
-    static char buf[30];
+    static char buf[50];
 
 #if DEBUG
     switch (opCode)

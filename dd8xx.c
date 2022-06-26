@@ -693,11 +693,7 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
     /*
     **  For Operator Show Status Command
     */
-#if defined(SAFECALLS)
-    strcpy_s(dp->fileName, sizeof(fname), fname);
-#else
     strcpy(dp->fileName, fname);
-#endif
     dp->channelNo = channelNo;
     dp->unitNo    = unitNo;
 
@@ -1987,7 +1983,7 @@ static char *dd8xxFunc2String(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void dd8xxShowDiskStatus(void)
+void dd8xxShowDiskStatus(FILE *out)
     {
     DiskParam *dp = firstDisk;
 
@@ -1996,11 +1992,11 @@ void dd8xxShowDiskStatus(void)
         return;
         }
 
-    printf("\n    > Disk Drive (dd8xx) Status:\n");
+    fputs("\n    > Disk Drive (dd8xx) Status:\n", out);
 
     while (dp)
         {
-        printf("    >   #%02d. CH %02o EQ %02o UN %02o DT %s CYL 0x%06x TRK 0x%06o FN '%s'\n",
+        fprintf(out, "    >   #%02d. CH %02o EQ %02o UN %02o DT %s CYL 0x%06x TRK 0x%06o FN '%s'\n",
                dp->diskNo,
                dp->channelNo,
                dp->eqNo,

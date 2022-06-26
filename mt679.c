@@ -795,7 +795,7 @@ static void mt679SetupStatus(TapeParam *tp)
         if (tp->rewinding)
             {
             tp->deviceStatus[1] |= St679Busy;
-            if (labs(cycles - tp->rewindStart) > 1000)
+            if (cycles - tp->rewindStart > 1000)
                 {
                 tp->rewinding = FALSE;
                 tp->blockNo   = 0;
@@ -2780,7 +2780,7 @@ static void mt679FuncBackspace(void)
 **------------------------------------------------------------------------*/
 static char *mt679Func2String(PpWord funcCode)
     {
-    static char buf[30];
+    static char buf[40];
 
 #if DEBUG
     switch (funcCode)

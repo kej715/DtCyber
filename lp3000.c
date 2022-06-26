@@ -570,29 +570,17 @@ static void lp3000Init(u8 unitNo, u8 eqNo, u8 channelNo, int flags, bool useANSI
         }
     else
         {
-#if defined(SAFECALLS)
-        strcpy_s(lc->extPath, sizeof(lc->extPath), deviceName);
-#else
         strcpy(lc->extPath, deviceName);
-#endif
         if (lc->extPath[0] != '\0')
             {
-#if defined(SAFECALLS)
-            strcat_s(lc->extPath, sizeof(lc->extPath), "/");
-#else
             strcat(lc->extPath, "/");
-#endif
             }
         }
 
     /*
     **  Open the device file.
     */
-#if defined(SAFECALLS)
-    sprintf_s(fName, sizeof(fName), "%sLP5xx_C%02o_E%o", lc->extPath, channelNo, eqNo);
-#else
     sprintf(fName, "%sLP5xx_C%02o_E%o", lc->extPath, channelNo, eqNo);
-#endif
 
     up->fcb[0] = fopen(fName, "w");
     if (up->fcb[0] == NULL)
@@ -633,7 +621,7 @@ static void lp3000Init(u8 unitNo, u8 eqNo, u8 channelNo, int flags, bool useANSI
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void lp3000ShowStatus(void)
+void lp3000ShowStatus(FILE *out)
     {
     LpContext *lc = firstUnit;
 
@@ -643,11 +631,11 @@ void lp3000ShowStatus(void)
         }
 
 
-    printf("\n    > Line Printer (lp3000) Status:\n");
+    fputs("\n    > Line Printer (lp3000) Status:\n", out);
 
     while (lc)
         {
-        printf("    >   CH %02o EQ %02o UN %02o LP%d/%d (%s) %i_lpi %i_lpp line %i Suppress(%s) PostPrint(%s) Path '%s'\n",
+        fprintf(out, "    >   CH %02o EQ %02o UN %02o LP%d/%d (%s) %i_lpi %i_lpp line %i Suppress(%s) PostPrint(%s) Path '%s'\n",
                lc->channelNo,
                lc->eqNo,
                lc->unitNo,
@@ -734,12 +722,7 @@ void lp3000RemovePaper(char *params, FILE *out)
         }
 
     lc = (LpContext *)dp->context[0];
-#if defined(SAFECALLS)
-    sprintf_s(fName, sizeof(fName), "%sLP5xx_C%02o_E%o", lc->extPath, channelNo, equipmentNo);
-#else
     sprintf(fName, "%sLP5xx_C%02o_E%o", lc->extPath, channelNo, equipmentNo);
-#endif
-
 
     //  SZoppi: this can happen if something goes wrong in the open
     //          and the file fails to be properly re-opened.
@@ -769,7 +752,7 @@ void lp3000RemovePaper(char *params, FILE *out)
         dp->fcb[0] = NULL;
 
         /*
-        **  Rename the device file to the format "LP5xx_yyyymmdd_hhmmss_nn".
+        **  Rename the device file to the format "LP5xx_yyyymmdd_hhmmss_nn.txt".
         */
 
         renameOK = FALSE;
@@ -778,18 +761,7 @@ void lp3000RemovePaper(char *params, FILE *out)
             {
             time(&currentTime);
             t = *localtime(&currentTime);
-#if defined(SAFECALLS)
-            sprintf_s(fNameNew, sizeof(fNameNew), "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d",
-                      lc->extPath,
-                      t.tm_year + 1900,
-                      t.tm_mon + 1,
-                      t.tm_mday,
-                      t.tm_hour,
-                      t.tm_min,
-                      t.tm_sec,
-                      iSuffix);
-#else
-            sprintf(fNameNew, "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d",
+            sprintf(fNameNew, "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d.txt",
                     lc->extPath,
                     t.tm_year + 1900,
                     t.tm_mon + 1,
@@ -798,7 +770,6 @@ void lp3000RemovePaper(char *params, FILE *out)
                     t.tm_min,
                     t.tm_sec,
                     iSuffix);
-#endif
 
             if (rename(fName, fNameNew) == 0)
                 {
@@ -1533,7 +1504,7 @@ static void lp3000DebugData(void)
 **------------------------------------------------------------------------*/
 static char *lp3000Func2String(PpWord funcCode)
     {
-    static char buf[30];
+    static char buf[40];
 
 #if DEBUG
     switch (funcCode)
