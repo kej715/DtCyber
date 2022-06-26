@@ -457,6 +457,7 @@ static void * fsWatchDir(void *arg)
 
     int           length;
     int           i = 0;
+    char          *ignore;
     int           fd;
     int           wd;
     int           flags;
@@ -477,7 +478,7 @@ static void * fsWatchDir(void *arg)
             parms->eqNo);
 
     // Retrieve the full path name.
-    realpath(parms->inWatchDir, pathBuffer);
+    ignore = realpath(parms->inWatchDir, pathBuffer);
 
     /* This is the watch descriptor the event occurred on */
 
@@ -555,7 +556,7 @@ static void * fsWatchDir(void *arg)
             printf("(fsmon  ) ERROR: inotify 'read' FAILED. '%s'\n", strerror(errno));
             }
 
-        printf("(fsmon  ) READ: File Descriptor:%lX Length:%lX\n",
+        printf("(fsmon  ) READ: File Descriptor:%x Length:%x\n",
                fd, length);
 
         /*
@@ -571,7 +572,7 @@ static void * fsWatchDir(void *arg)
             **  Snag local copies for debugging
             */
 
-            printf("(fsmon  ) EVENT: MASK:%lX %s \"%s\" on WD #%i\n",
+            printf("(fsmon  ) EVENT: MASK:%x %s \"%s\" on WD #%i\n",
                    event->mask, (event->mask & IN_ISDIR) ? "Dir" : "File", event->name, event->wd);
 
 #if defined (DEBUG)

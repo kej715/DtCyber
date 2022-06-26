@@ -45,6 +45,7 @@
 **  Private Constants
 **  -----------------
 */
+#define FNAME_SIZE _MAX_PATH+30
 
 /*
 **      Function codes
@@ -158,6 +159,7 @@ static LpContext1612 *lastLp1612  = NULL;
  **
  **--------------------------------------------------------------------------
  */
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise 1612 line printer.
 **
@@ -176,7 +178,7 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     LpContext1612 *lc;
     bool          useANSI = TRUE;
 
-    char fname[_MAX_PATH];
+    char fname[FNAME_SIZE];
     char *deviceType;
     char *devicePath;
     char *deviceMode;
@@ -324,11 +326,11 @@ void lp1612ShowStatus(FILE *out)
     while (lc)
         {
         fprintf(out, "    > CH %02o EQ %02o UN %02o Mode %s Path '%s'\n",
-               lc->channelNo,
-               lc->eqNo,
-               lc->unitNo,
-               lc->extUseANSI ? "ANSI" : "ASCII",
-               lc->extPath);
+                lc->channelNo,
+                lc->eqNo,
+                lc->unitNo,
+                lc->extUseANSI ? "ANSI" : "ASCII",
+                lc->extPath);
 
         lc = lc->nextUnit;
         }
@@ -356,8 +358,8 @@ void lp1612RemovePaper(char *params, FILE *out)
 
     struct tm t;
 
-    char fName[_MAX_PATH];
-    char fNameNew[_MAX_PATH];
+    char fName[FNAME_SIZE];
+    char fNameNew[FNAME_SIZE];
     bool renameOK;
 
 
@@ -512,8 +514,9 @@ static FcStatus lp1612Func(PpWord funcCode)
         }
 
     switch (funcCode)
-        {
+            {
     default:
+
         return (FcDeclined);
 
     case FcPrintSelect:
@@ -598,7 +601,7 @@ static FcStatus lp1612Func(PpWord funcCode)
     case FcPrintFormat5:
     case FcPrintFormat6:
         break;
-        }
+            }
 
     activeDevice->fcode = funcCode;
 
@@ -629,7 +632,7 @@ static void lp1612Io(void)
         }
 
     switch (activeDevice->fcode)
-        {
+            {
     default:
     case FcPrintSelect:
     case FcPrintSingleSpace:
@@ -658,7 +661,7 @@ static void lp1612Io(void)
         activeDevice->fcode   = 0;
         activeChannel->status = 0;
         break;
-        }
+            }
     }
 
 /*--------------------------------------------------------------------------

@@ -55,6 +55,7 @@
 **  Private Constants
 **  -----------------
 */
+#define FNAME_SIZE _MAX_PATH+30
 
 // General
 
@@ -303,10 +304,10 @@ void lp501Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
     **      <BurstingMode> ("Burst"|"NoBurst")
     **
     */
-    deviceType = strtok(deviceParams, ","); //  "3555" | "3152"
-    devicePath = strtok(NULL, ",");         //  Get the Path (subdirectory)
-    deviceMode = strtok(NULL, ",");         //  Ascii or Ansi
-    burstMode  = strtok(NULL, ",");         //  Indication for bursting
+    deviceType = strtok(deviceParams, ", "); //  "3555" | "3152"
+    devicePath = strtok(NULL, ", ");         //  Get the Path (subdirectory)
+    deviceMode = strtok(NULL, ", ");         //  Ascii or Ansi
+    burstMode  = strtok(NULL, ", ");         //  Indication for bursting
 
     if ((deviceMode) != NULL)
         {
@@ -332,7 +333,7 @@ void lp501Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
     **  This is an optional parameter, therefore the default prevails
     **  lack of presence will not constitute failure.
     */
-    if ((burstMode) != NULL)
+    if (burstMode != NULL)
         {
         burstMode = dtStrLwr(burstMode);         //  pick up "ansi" or "ascii" flag
         bursting  = TRUE;                        //  Default
@@ -351,7 +352,7 @@ void lp501Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
             }
         }
 
-    fprintf(stderr, "(lp3000 ) lp501 Burst mode '%s'\n", (burstMode ? "Bursting" : "Non-Bursting (Default)"));
+    fprintf(stderr, "(lp3000 ) lp501 Burst mode '%s'\n", (bursting ? "Bursting" : "Non-Bursting (Default)"));
 
 
     if ((deviceType == NULL)
@@ -369,7 +370,7 @@ void lp501Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
         exit(1);
         }
 
-    lp3000Init(unitNo, eqNo, channelNo, flags, useANSI, burstMode, devicePath);
+    lp3000Init(unitNo, eqNo, channelNo, flags, useANSI, bursting, devicePath);
     }
 
 /*--------------------------------------------------------------------------
@@ -423,10 +424,10 @@ void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
     **      <BurstingMode> ("Burst"|"NoBurst")
     **
     */
-    deviceType = strtok(deviceParams, ","); //  "3555" | "3152"
-    devicePath = strtok(NULL, ",");         //  Get the Path (subdirectory)
-    deviceMode = strtok(NULL, ",");         //  pick up "ansi" or "ascii" flag
-    burstMode  = strtok(NULL, ",");         //  Indication for bursting
+    deviceType = strtok(deviceParams, ", "); //  "3555" | "3152"
+    devicePath = strtok(NULL, ", ");         //  Get the Path (subdirectory)
+    deviceMode = strtok(NULL, ", ");         //  pick up "ansi" or "ascii" flag
+    burstMode  = strtok(NULL, ", ");         //  Indication for bursting
 
     if ((deviceMode) != NULL)
         {
@@ -452,7 +453,7 @@ void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
     **  This is an optional parameter, therefore the default prevails
     **  lack of presence will not constitute failure.
     */
-    if ((burstMode) != NULL)
+    if (burstMode != NULL)
         {
         burstMode = dtStrLwr(burstMode);         //  pick up "ansi" or "ascii" flag
         bursting  = TRUE;                        //  Default
@@ -471,7 +472,7 @@ void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
             }
         }
 
-    fprintf(stderr, "(lp3000 ) lp512 Burst mode '%s'\n", (burstMode ? "Bursting" : "Non-Bursting (Default)"));
+    fprintf(stderr, "(lp3000 ) lp512 Burst mode '%s'\n", (bursting ? "Bursting" : "Non-Bursting (Default)"));
 
 
     if ((deviceType == NULL)
@@ -489,7 +490,7 @@ void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
         exit(1);
         }
 
-    lp3000Init(unitNo, eqNo, channelNo, flags, useANSI, burstMode, devicePath);
+    lp3000Init(unitNo, eqNo, channelNo, flags, useANSI, bursting, devicePath);
     }
 
 /*
@@ -499,6 +500,7 @@ void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
  **
  **--------------------------------------------------------------------------
  */
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise 3000 class line printer.
 **
@@ -514,7 +516,7 @@ void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
 static void lp3000Init(u8 unitNo, u8 eqNo, u8 channelNo, int flags, bool useANSI, bool burstMode, char *deviceName)
     {
     DevSlot   *up;
-    char      fName[_MAX_PATH];
+    char      fName[FNAME_SIZE];
     LpContext *lc;
 
     up = dcc6681Attach(channelNo, eqNo, unitNo, DtLp5xx);
@@ -636,18 +638,18 @@ void lp3000ShowStatus(FILE *out)
     while (lc)
         {
         fprintf(out, "    >   CH %02o EQ %02o UN %02o LP%d/%d (%s) %i_lpi %i_lpp line %i Suppress(%s) PostPrint(%s) Path '%s'\n",
-               lc->channelNo,
-               lc->eqNo,
-               lc->unitNo,
-               (lc->flags & Lp3000Type3555) ? 3555 : 3152,
-               (lc->flags & Lp3000Type501) ? 501 : 512,
-               lc->extUseANSI ? "ANSI " : "ASCII",
-               lc->extLPI,
-               lc->extLPP,
-               lc->extCurLine,
-               lc->extSuppress ? "ON" : "Off",
-               lc->extPostPrint ? "ON" : "Off",
-               lc->extPath);
+                lc->channelNo,
+                lc->eqNo,
+                lc->unitNo,
+                (lc->flags & Lp3000Type3555) ? 3555 : 3152,
+                (lc->flags & Lp3000Type501) ? 501 : 512,
+                lc->extUseANSI ? "ANSI " : "ASCII",
+                lc->extLPI,
+                lc->extLPP,
+                lc->extCurLine,
+                lc->extSuppress ? "ON" : "Off",
+                lc->extPostPrint ? "ON" : "Off",
+                lc->extPath);
 
 
         lc = lc->nextUnit;
@@ -676,8 +678,8 @@ void lp3000RemovePaper(char *params, FILE *out)
 
     struct tm t;
 
-    char fName[_MAX_PATH];
-    char fNameNew[_MAX_PATH];
+    char fName[FNAME_SIZE];
+    char fNameNew[FNAME_SIZE];
     bool renameOK;
 
 
@@ -858,16 +860,18 @@ static FcStatus lp3000Func(PpWord funcCode)
     //  20171022: This section includes the "pre-print" carriage controls
 
     switch (funcCode)
-        {
+            {
     case FcPrintNoSpace:
         lc->extSuppress = TRUE;
 
         return (FcProcessed);
 
     case FcPrintAutoEject:
+
         return (FcProcessed);
 
     case Fc6681MasterClear:
+
         /*
         **  SZoppi: Extensions
         */
@@ -1028,12 +1032,12 @@ static FcStatus lp3000Func(PpWord funcCode)
         active3000Device->fcode = funcCode;
 
         return (FcAccepted);
-        }
+            }
 
     if (lc->flags & Lp3000Type3555)             // This is LP3555
         {
         switch (funcCode)
-            {
+                {
         default:
             printf("(lp3000 ) Unknown LP3555 function %04o\n", funcCode);
 
@@ -1060,9 +1064,11 @@ static FcStatus lp3000Func(PpWord funcCode)
         case Fc3555SelIntError:
         case Fc3555RelIntError:
         case Fc3555ReloadMemEnable:
+
             return (FcProcessed);
 
         case Fc3555ClearFormat:
+
             /*
             **  SZoppi: Extensions
             */
@@ -1088,6 +1094,7 @@ static FcStatus lp3000Func(PpWord funcCode)
         case Fc3555PostVFU10:
         case Fc3555PostVFU11:
         case Fc3555PostVFU12:
+
             return (FcProcessed);
 
         case Fc3555SelectPreprint:
@@ -1110,6 +1117,7 @@ static FcStatus lp3000Func(PpWord funcCode)
         case Fc3555PreVFU12:
         case Fc3555MaintStatus:
         case Fc3555ClearMaint:
+
             // All of the above are NOPs
             return (FcProcessed);
 
@@ -1169,12 +1177,12 @@ static FcStatus lp3000Func(PpWord funcCode)
             dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
 
             return (FcProcessed);
-            }
+                }
         }
     else        // This is LP3152
         {
         switch (funcCode)
-            {
+                {
         default:
             printf("(lp3000 ) Unknown LP3152 function %04o\n", funcCode);
 
@@ -1191,6 +1199,7 @@ static FcStatus lp3000Func(PpWord funcCode)
         case Fc3152PostVFU4:
         case Fc3152PostVFU5:
         case Fc3152PostVFU6:
+
             return (FcProcessed);
 
         case Fc3152SelectPreprint:
@@ -1207,6 +1216,7 @@ static FcStatus lp3000Func(PpWord funcCode)
         case Fc3152SelIntError:
         case Fc3152RelIntError:
         case Fc3152Release2:
+
             // All of the above are NOPs
             return (FcProcessed);
 
@@ -1259,7 +1269,7 @@ static FcStatus lp3000Func(PpWord funcCode)
             dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
 
             return (FcProcessed);
-            }
+                }
         }
 
     active3000Device->fcode = funcCode;
@@ -1298,7 +1308,7 @@ static void lp3000Io(void)
     **  Process printer I/O.
     */
     switch (active3000Device->fcode)
-        {
+            {
     default:
         activeChannel->full = FALSE;
         break;
@@ -1343,7 +1353,7 @@ static void lp3000Io(void)
         activeChannel->full     = TRUE;
         active3000Device->fcode = 0;
         break;
-        }
+            }
     }
 
 /*--------------------------------------------------------------------------
@@ -1406,7 +1416,7 @@ static void lp3000Disconnect(void)
             **  20171022: We perform post-print actions here if needed
             */
             switch (lc->extSpaceOpt)
-                {
+                    {
             case FcPrintDouble:
                 if (lc->extUseANSI)
                     {
@@ -1441,7 +1451,7 @@ static void lp3000Disconnect(void)
                 lp3000DebugData();
 #endif
                 break;
-                }
+                    }
             lc->extSpaceOpt = FcPrintSingle;
             }
         else
@@ -1508,11 +1518,11 @@ static char *lp3000Func2String(PpWord funcCode)
 
 #if DEBUG
     switch (funcCode)
-        {
+            {
     //    case Fc669FormatUnit             : return "Fc669FormatUnit";
     default:
         break;
-        }
+            }
 #endif
     sprintf(buf, "(lp3000 ) Unknown Function: %04o", funcCode);
 

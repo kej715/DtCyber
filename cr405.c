@@ -59,9 +59,7 @@
 **  Private Constants
 **  -----------------
 */
-#if DEBUG
-static FILE *cr405Log = NULL;
-#endif
+#define FNAME_SIZE _MAX_PATH*2+30
 
 /*
 **  CDC 405 card reader function and status codes.
@@ -157,6 +155,9 @@ static void cr405SwapInOut(Cr405Context *cc, char *fname, FILE *out);
 **  Public Variables
 **  ----------------
 */
+#if DEBUG
+static FILE *cr405Log = NULL;
+#endif
 
 /*
 **  -----------------
@@ -173,6 +174,7 @@ static Cr405Context *lastCr405  = NULL;
  **
  **--------------------------------------------------------------------------
  */
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise card reader.
 **
@@ -507,7 +509,7 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char
     Cr405Context *cc;
     DevSlot      *dp;
     int          len;
-    struct stat s;
+    struct stat  s;
     char         *sp;
 
     /*
@@ -527,6 +529,7 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char
     if (((cc->inDeck + 1) % Cr405MaxDecks) == cc->outDeck)
         {
         fputs("(cr405  ) Input tray full\n", out);
+
         return;
         }
 
@@ -536,6 +539,7 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char
     if (stat(fname, &s) != 0)
         {
         fprintf(out, "(cr405  ) Requested file '%s' not found. (%s).\n", fname, strerror(errno));
+
         return;
         }
 
@@ -584,9 +588,9 @@ void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, FILE *out, ch
     Cr405Context *cc;
     DevSlot      *dp;
 
-    static char strWork[_MAX_PATH] = "";
-    static char fOldest[_MAX_PATH] = "";
-    time_t      tOldest            = 0;
+    static char strWork[FNAME_SIZE] = "";
+    static char fOldest[FNAME_SIZE] = "";
+    time_t      tOldest             = 0;
 
     struct stat   s;
     struct dirent *curDirEntry;
@@ -599,6 +603,7 @@ void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, FILE *out, ch
     if (fname[0] != '*')
         {
         fprintf(out, "(cr405  ) GetNextDeck called with improper parameter '%s'.\n", fname);
+
         return;
         }
 
@@ -619,6 +624,7 @@ void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, FILE *out, ch
     if (((cc->inDeck + 1) % Cr405MaxDecks) == cc->outDeck)
         {
         fputs("(cr405  ) Input tray full\n", out);
+
         return;
         }
 
@@ -713,8 +719,6 @@ void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, FILE *out, ch
         {
         fprintf(out, "(cr405  ) No files found in '%s'.\n", cc->dirInput);
         }
-
-    return;
     }
 
 /*--------------------------------------------------------------------------
@@ -781,7 +785,7 @@ void cr405PostProcess(char *fname, int channelNo, int equipmentNo, FILE *out, ch
 **------------------------------------------------------------------------*/
 static void cr405SwapInOut(Cr405Context *cc, char *fName, FILE *out)
     {
-    static char fnwork[_MAX_PATH] = "";
+    static char fnwork[FNAME_SIZE] = "";
 
     bool hasNoOutputDir = (cc->dirOutput[0] == '\0');
     bool hasNoInputDir  = (cc->dirInput[0] == '\0');
@@ -878,18 +882,18 @@ void cr405ShowStatus(FILE *out)
     while (cp)
         {
         fprintf(out, "    > CH %02o EQ %02o UN %02o Col %02i Seq:%i File '%s'\n",
-               cp->channelNo,
-               cp->eqNo,
-               cp->unitNo,
-               cp->col,
-               cp->seqNum,
-               cp->curFileName);
+                cp->channelNo,
+                cp->eqNo,
+                cp->unitNo,
+                cp->col,
+                cp->seqNum,
+                cp->curFileName);
 
         if (cp->isWatched)
             {
             fprintf(out, "    >   Autoloading from '%s' to '%s'\n",
-                   cp->dirInput,
-                   cp->dirOutput);
+                    cp->dirInput,
+                    cp->dirOutput);
             }
 
         cp = cp->nextUnit;
@@ -917,8 +921,9 @@ void cr405ShowStatus(FILE *out)
 static FcStatus cr405Func(PpWord funcCode)
     {
     switch (funcCode)
-        {
+            {
     default:
+
         return (FcDeclined);
 
     case FcCr405Deselect:
@@ -931,7 +936,7 @@ static FcStatus cr405Func(PpWord funcCode)
     case FcCr405StatusReq:
         activeDevice->fcode = funcCode;
         break;
-        }
+            }
 
     return (FcAccepted);
     }
@@ -949,7 +954,7 @@ static void cr405Io(void)
     Cr405Context *cc = activeDevice->context[0];
 
     switch (activeDevice->fcode)
-        {
+            {
     default:
     case FcCr405Deselect:
     case FcCr405GateToSec:
@@ -968,6 +973,7 @@ static void cr405Io(void)
         break;
 
     case FcCr405ReadNonStop:
+
         /*
         **  Simulate card in motion for 20 major cycles.
         */
@@ -990,7 +996,7 @@ static void cr405Io(void)
             }
 
         break;
-        }
+            }
     }
 
 /*--------------------------------------------------------------------------
@@ -1082,7 +1088,7 @@ static void cr405NextCard(DevSlot *dp, FILE *out)
     int          i;
     int          j;
 
-    static char fnwork[_MAX_PATH] = "";
+    static char fnwork[FNAME_SIZE] = "";
 
     if (dp->fcb[0] == NULL)
         {
@@ -1119,9 +1125,9 @@ static void cr405NextCard(DevSlot *dp, FILE *out)
         dp->fcb[0] = NULL;
 
         fprintf(out, "(cr405  ) End of Deck '%s' reached on channel %o equipment %o\n",
-               cc->curFileName,
-               dp->channel->id,
-               dp->eqNo);
+                cc->curFileName,
+                dp->channel->id,
+                dp->eqNo);
 
         /*
         **  At end of file, it is assumed that ALL decks have been

@@ -49,7 +49,8 @@
 **  -----------------
 */
 
-#define CP_LC    0
+#define CP_LC      0
+#define FNAME_SIZE _MAX_PATH+30
 
 /*
 **  CDC 3446 card punch function and status codes.
@@ -163,6 +164,7 @@ static FILE *cp3446Log = NULL;
  **
  **--------------------------------------------------------------------------
  */
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise card punch.
 **
@@ -180,7 +182,7 @@ static FILE *cp3446Log = NULL;
 void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
     DevSlot      *up;
-    char         fname[_MAX_PATH];
+    char         fname[FNAME_SIZE];
     CpContext    *cc;
     const PpWord *charset;
     PpWord       hol;
@@ -341,8 +343,8 @@ void cp3446RemoveCards(char *params, FILE *out)
     int isuffix;
 
     struct tm   t;
-    char        fname[_MAX_PATH];
-    char        fnameNew[_MAX_PATH];
+    char        fname[FNAME_SIZE];
+    char        fnameNew[FNAME_SIZE];
     static char msgBuf[80] = "";
 
     bool renameOK;
@@ -508,7 +510,7 @@ static FcStatus cp3446Func(PpWord funcCode)
     cc = (CpContext *)active3000Device->context[0];
 
     switch (funcCode)
-        {
+            {
     default:                    // all unrecognized codes are NOPs
 #if DEBUG
         fprintf(cp3446Log, "(cp3446 ) FUNC not implemented & silently ignored!");
@@ -591,7 +593,7 @@ static FcStatus cp3446Func(PpWord funcCode)
         cc->status  &= ~StCp3446ErrorInt;
         st           = FcProcessed;
         break;
-        }
+            }
 
     dcc6681Interrupt((cc->status & cc->intMask) != 0);
 
@@ -615,7 +617,7 @@ static void cp3446Io(void)
     cc = (CpContext *)active3000Device->context[0];
 
     switch (active3000Device->fcode)
-        {
+            {
     default:
         printf("(cp3446 ) Unexpected IO for function %04o\n", active3000Device->fcode);
         break;
@@ -635,6 +637,7 @@ static void cp3446Io(void)
         break;
 
     case Fc6681Output:
+
         /*
         **  Don't admit to having new data immediately after completing
         **  a card, otherwise 1CD may get stuck occasionally.
@@ -723,7 +726,7 @@ static void cp3446Io(void)
                 }
             }
         break;
-        }
+            }
 
     dcc6681Interrupt((cc->status & cc->intMask) != 0);
     }
@@ -837,52 +840,67 @@ static char *cp3446Func2String(PpWord funcCode)
 
 #if DEBUG
     switch (funcCode)
-        {
+            {
     case FcCp3446Deselect:
+
         return "Deselect";
 
     case FcCp3446Binary:
+
         return "Binary";
 
     case FcCp3446BCD:
+
         return "BCD";
 
     case FcCp3446SelectOffset:
+
         return "SelectOffset";
 
     case FcCp3446CheckLastCard:
+
         return "CheckLastCard";
 
     case FcCp3446Clear:
+
         return "Clear";
 
     case FcCp3446IntReady:
+
         return "IntReady";
 
     case FcCp3446NoIntReady:
+
         return "NoIntReady";
 
     case FcCp3446IntEoi:
+
         return "IntEoi";
 
     case FcCp3446NoIntEoi:
+
         return "NoIntEoi";
 
     case FcCp3446IntError:
+
         return "IntError";
 
     case FcCp3446NoIntError:
+
         return "NoIntError";
 
     case Fc6681DevStatusReq:
+
         return "6681DevStatusReq";
 
     case Fc6681Output:
+
         return "6681Output";
 
     case Fc6681MasterClear:
+
         return "6681MasterClear";
-        }
+            }
 #endif
     sprintf(buf, "(cp3446 ) Unknown Function: %04o", funcCode);
 
@@ -912,13 +930,13 @@ void cp3446ShowStatus(FILE *out)
     while (cp)
         {
         fprintf(out, "    >   CH %02o EQ %02o UN %02o Col %02i Mode(%s) RAW(%s) Path '%s'\n",
-               cp->channelNo,
-               cp->eqNo,
-               cp->unitNo,
-               cp->col,
-               cp->binary ? "Char " : "Bin  ",
-               cp->rawCard ? "Yes" : "No ",
-               cp->extPath);
+                cp->channelNo,
+                cp->eqNo,
+                cp->unitNo,
+                cp->col,
+                cp->binary ? "Char " : "Bin  ",
+                cp->rawCard ? "Yes" : "No ",
+                cp->extPath);
 
         cp = cp->nextUnit;
         }
