@@ -10,12 +10,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -23,7 +23,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -45,7 +45,7 @@
 
 /*
 **  CDC 607 tape function and status codes.
-**  
+**
 **  200x    Select
 **  201x    Write Binary
 **  202x    Read Binary
@@ -56,7 +56,7 @@
 **  221x    Write BCD
 **  222x    Read BCD
 **  261x    Write File Mark
-**  
+**
 **  (x = unit = 0 - 7)
 */
 #define Fc607UnitMask           07770
@@ -73,7 +73,7 @@
 #define Fc607WrFileMark         02610
 
 /*
-**  
+**
 **  Status Reply:
 **
 **  0x00 = Ready
@@ -83,11 +83,11 @@
 **  0x10 = End of Tape
 **  0x20 = File Mark
 **  0x40 = Write Lockout
-**  
+**
 **  x = 0: 800 bpi
 **  x = 1: 556 bpi
 **  x = 2: 200 bpi
-**  
+**
 */
 #define St607DensityMask        0700
 
@@ -98,6 +98,7 @@
 #define St607EOT                010
 #define St607FileMark           020
 #define St607WriteLockout       040
+
 /*
 **  Misc constants.
 */
@@ -117,8 +118,8 @@
 */
 typedef struct tapeBuf
     {
-    PpWord      ioBuffer[MaxPpBuf];
-    PpWord      *bp;
+    PpWord ioBuffer[MaxPpBuf];
+    PpWord *bp;
     } TapeBuf;
 
 /*
@@ -150,12 +151,12 @@ static FILE *mt607Log = NULL;
 #endif
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise 607 tape drives.
 **
@@ -171,7 +172,7 @@ static FILE *mt607Log = NULL;
 void mt607Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
     DevSlot *dp;
-    char fname[80];
+    char    fname[80];
 
     (void)eqNo;
 
@@ -190,10 +191,10 @@ void mt607Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Setup channel functions.
     */
-    dp->activate = mt607Activate;
-    dp->disconnect = mt607Disconnect;
-    dp->func = mt607Func;
-    dp->io = mt607Io;
+    dp->activate     = mt607Activate;
+    dp->disconnect   = mt607Disconnect;
+    dp->func         = mt607Func;
+    dp->io           = mt607Io;
     dp->selectedUnit = unitNo;
 
     /*
@@ -202,7 +203,7 @@ void mt607Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     dp->context[unitNo] = calloc(1, sizeof(TapeBuf));
     if (dp->context[unitNo] == NULL)
         {
-        fprintf(stderr, "Failed to allocate MT607 context block\n");
+        fprintf(stderr, "(mt607   ) Failed to allocate MT607 context block\n");
         exit(1);
         }
 
@@ -221,14 +222,14 @@ void mt607Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     dp->fcb[unitNo] = fopen(fname, "rb");
     if (dp->fcb[unitNo] == NULL)
         {
-        fprintf(stderr, "Failed to open %s\n", fname);
+        fprintf(stderr, "(mt607   ) Failed to open %s\n", fname);
         exit(1);
         }
 
     /*
     **  Print a friendly message.
     */
-    printf("MT607 initialised on channel %o unit %o)\n", channelNo, unitNo);
+    printf("(mt607   ) Initialised on channel %o unit %o)\n", channelNo, unitNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -242,33 +243,34 @@ void mt607Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 static FcStatus mt607Func(PpWord funcCode)
     {
-    u32 len;
-    u32 recLen0;
-    u32 recLen1;
-    u32 recLen2;
-    u32 i;
-    u16 c1, c2, c3;
-    u16 *op;
-    u8 *rp;
+    u32     len;
+    u32     recLen0;
+    u32     recLen1;
+    u32     recLen2;
+    u32     i;
+    u16     c1, c2, c3;
+    u16     *op;
+    u8      *rp;
     TapeBuf *tp;
 
 #if DEBUG
-    fprintf(mt607Log, "\n%06d PP:%02o CH:%02o u:%d f:%04o T:%-25s  >   ",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id,
-        activeDevice->selectedUnit, 
-        funcCode,
-        mt607Func2String(funcCode));
+    fprintf(mt607Log, "\n(mt607   ) %06d PP:%02o CH:%02o u:%d f:%04o T:%-25s  >   ",
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id,
+            activeDevice->selectedUnit,
+            funcCode,
+            mt607Func2String(funcCode));
 #endif
 
     switch (funcCode & Fc607UnitMask)
         {
     default:
 #if DEBUG
-        fprintf(mt607Log, " FUNC not implemented & declined!");
+        fprintf(mt607Log, "  FUNC not implemented & declined!\n");
 #endif
-        return(FcDeclined);
+
+        return (FcDeclined);
 
     case Fc607WrBinary:
     case Fc607Backspace:
@@ -277,7 +279,7 @@ static FcStatus mt607Func(PpWord funcCode)
     case Fc607RdBCD:
     case Fc607WrFileMark:
         activeDevice->fcode = 0;
-        logError(LogErrorLocation, "channel %02o - unsupported function code: %04o", activeChannel->id, (u32)funcCode);
+        logError(LogErrorLocation, "(mt607   ) channel %02o - unsupported function code: %04o", activeChannel->id, (u32)funcCode);
         break;
 
     case Fc607Rewind:
@@ -290,11 +292,11 @@ static FcStatus mt607Func(PpWord funcCode)
         break;
 
     case Fc607SelUnitCode:
-        activeDevice->fcode = 0;
+        activeDevice->fcode        = 0;
         activeDevice->selectedUnit = funcCode & 07;
         if (activeDevice->fcb[activeDevice->selectedUnit] == NULL)
             {
-            logError(LogErrorLocation, "channel %02o - invalid select: %04o", activeChannel->id, (u32)funcCode);
+            logError(LogErrorLocation, "(mt607   ) channel %02o - invalid select: %04o", activeChannel->id, (u32)funcCode);
             }
         break;
 
@@ -311,7 +313,7 @@ static FcStatus mt607Func(PpWord funcCode)
         /*
         **  Reset tape buffer pointer.
         */
-        tp = (TapeBuf *)activeDevice->context[activeDevice->selectedUnit];
+        tp     = (TapeBuf *)activeDevice->context[activeDevice->selectedUnit];
         tp->bp = tp->ioBuffer;
 
         /*
@@ -321,7 +323,7 @@ static FcStatus mt607Func(PpWord funcCode)
 
         if (len != 1)
             {
-            activeChannel->status = St607EOT;
+            activeChannel->status      = St607EOT;
             activeDevice->recordLength = 0;
             break;
             }
@@ -349,8 +351,8 @@ static FcStatus mt607Func(PpWord funcCode)
 
         if (recLen1 > MaxByteBuf)
             {
-            logError(LogErrorLocation, "channel %02o - tape record too long: %d", activeChannel->id, recLen1);
-            activeChannel->status = St607NotReadyMask;
+            logError(LogErrorLocation, "(mt607   ) channel %02o - tape record too long: %d", activeChannel->id, recLen1);
+            activeChannel->status      = St607NotReadyMask;
             activeDevice->recordLength = 0;
             break;
             }
@@ -362,8 +364,8 @@ static FcStatus mt607Func(PpWord funcCode)
 
         if (recLen1 != (u32)len)
             {
-            logError(LogErrorLocation, "channel %02o - short tape record read: %d", activeChannel->id, len);
-            activeChannel->status = St607NotReadyMask;
+            logError(LogErrorLocation, "(mt607   ) channel %02o - short tape record read: %d", activeChannel->id, len);
+            activeChannel->status      = St607NotReadyMask;
             activeDevice->recordLength = 0;
             break;
             }
@@ -373,10 +375,10 @@ static FcStatus mt607Func(PpWord funcCode)
         */
         len = fread(&recLen2, sizeof(recLen2), 1, activeDevice->fcb[activeDevice->selectedUnit]);
 
-        if (len != 1 || recLen0 != recLen2)
+        if ((len != 1) || (recLen0 != recLen2))
             {
-            logError(LogErrorLocation, "channel %02o - invalid tape record trailer: %08x", activeChannel->id, recLen2);
-            activeChannel->status = St607NotReadyMask;
+            logError(LogErrorLocation, "(mt607   ) channel %02o - invalid tape record trailer: %08x", activeChannel->id, recLen2);
+            activeChannel->status      = St607NotReadyMask;
             activeDevice->recordLength = 0;
             break;
             }
@@ -398,15 +400,15 @@ static FcStatus mt607Func(PpWord funcCode)
             }
 
         activeDevice->recordLength = op - tp->ioBuffer;
-        activeChannel->status = St607Ready;
+        activeChannel->status      = St607Ready;
 
 #if DEBUG
-        fprintf(mt607Log, "Read fwd %d PP words (%d 8-bit bytes)\n", activeDevice->recordLength, recLen1);
+        fprintf(mt607Log, "(mt607   ) Read fwd %d PP words (%d 8-bit bytes)\n", activeDevice->recordLength, recLen1);
 #endif
         break;
         }
 
-    return(FcAccepted);
+    return (FcAccepted);
     }
 
 /*--------------------------------------------------------------------------
@@ -432,7 +434,7 @@ static void mt607Io(void)
     case Fc607WrBCD:
     case Fc607RdBCD:
     case Fc607WrFileMark:
-        logError(LogErrorLocation, "channel %02o - unsupported function code: %04o", activeChannel->id, activeDevice->fcode);
+        logError(LogErrorLocation, "(mt607   ) channel %02o - unsupported function code: %04o", activeChannel->id, activeDevice->fcode);
         break;
 
     case Fc607StatusReq:
@@ -459,11 +461,11 @@ static void mt607Io(void)
         if (activeDevice->recordLength > 0)
             {
             activeDevice->recordLength -= 1;
-            activeChannel->data = *tp->bp++;
-            activeChannel->full = TRUE;
+            activeChannel->data         = *tp->bp++;
+            activeChannel->full         = TRUE;
             if (activeDevice->recordLength == 0)
                 {
-//                activeChannel->discAfterInput = TRUE;  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< fixed COS 
+//                activeChannel->discAfterInput = TRUE;  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< fixed COS
                 }
             }
         break;
@@ -509,24 +511,45 @@ static void mt607Disconnect(void)
 **------------------------------------------------------------------------*/
 static char *mt607Func2String(PpWord funcCode)
     {
-    static char buf[30];
+    static char buf[40];
+
 #if DEBUG
-    switch(funcCode)
+    switch (funcCode)
         {
-    case Fc607SelUnitCode            : return "Fc607SelUnitCode";
-    case Fc607WrBinary               : return "Fc607WrBinary";
-    case Fc607RdBinary               : return "Fc607RdBinary";
-    case Fc607Backspace              : return "Fc607Backspace";
-    case Fc607Rewind                 : return "Fc607Rewind";
-    case Fc607RewindUnload           : return "Fc607RewindUnload";
-    case Fc607StatusReq              : return "Fc607StatusReq";
-    case Fc607WrBCD                  : return "Fc607WrBCD";
-    case Fc607RdBCD                  : return "Fc607RdBCD";
-    case Fc607WrFileMark             : return "Fc607WrFileMark";
+    case Fc607SelUnitCode:
+        return "Fc607SelUnitCode";
+
+    case Fc607WrBinary:
+        return "Fc607WrBinary";
+
+    case Fc607RdBinary:
+        return "Fc607RdBinary";
+
+    case Fc607Backspace:
+        return "Fc607Backspace";
+
+    case Fc607Rewind:
+        return "Fc607Rewind";
+
+    case Fc607RewindUnload:
+        return "Fc607RewindUnload";
+
+    case Fc607StatusReq:
+        return "Fc607StatusReq";
+
+    case Fc607WrBCD:
+        return "Fc607WrBCD";
+
+    case Fc607RdBCD:
+        return "Fc607RdBCD";
+
+    case Fc607WrFileMark:
+        return "Fc607WrFileMark";
         }
 #endif
-    sprintf(buf, "UNKNOWN: %04o", funcCode);
-    return(buf);
+    sprintf(buf, "(mt607   ) Unknown Function: %04o", funcCode);
+
+    return (buf);
     }
 
 /*---------------------------  End Of File  ------------------------------*/

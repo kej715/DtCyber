@@ -55,12 +55,14 @@ u64 getMilliseconds(void)
 
     GetSystemTime(&systemTime);
     SystemTimeToFileTime(&systemTime, &fileTime);
+
     return (((u64)fileTime.dwHighDateTime << 32) + (u64)fileTime.dwLowDateTime) / (u64)10000
-        + (u64)systemTime.wMilliseconds;
+           + (u64)systemTime.wMilliseconds;
 #else
     struct timeval tod;
 
     gettimeofday(&tod, NULL);
+
     return ((u64)tod.tv_sec * (u64)1000) + ((u64)tod.tv_usec / (u64)1000);
 #endif
     }
@@ -94,7 +96,7 @@ void sleepMsec(u32 msec)
 #else
     struct timespec ts;
 
-    ts.tv_sec = msec / 1000;
+    ts.tv_sec  = msec / 1000;
     ts.tv_nsec = (msec % 1000) * 1000000;
     nanosleep(&ts, &ts);
 #endif
@@ -112,17 +114,18 @@ void sleepMsec(u32 msec)
 void sleepUsec(u64 usec)
     {
 #if defined(_WIN32)
-    u64 msec;
-    msec = usec / 1000;
-    if (msec < 1) msec = 1;
+    DWORD msec;
+    msec = (DWORD)usec / 1000;
+    if (msec < 1)
+        {
+        msec = 1;
+        }
     Sleep(msec);
 #else
     struct timespec ts;
 
-    ts.tv_sec = usec / 1000000;
+    ts.tv_sec  = usec / 1000000;
     ts.tv_nsec = (usec % 1000000) * 1000;
     nanosleep(&ts, &ts);
 #endif
     }
-
-

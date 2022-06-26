@@ -20,12 +20,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -33,7 +33,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -67,57 +67,57 @@
 **  -----------------
 */
 
-#define DeadPeerTimeout    15000
-#define HaspStartTimeout   (5*60*1000)
-#define InBufThreshold     (MaxBuffer - 512)
-#define MaxRetries         5
-#define PauseTimeout       100
-#define RecvTimeout        5000
-#define SendTimeout        100
+#define DeadPeerTimeout     15000
+#define HaspStartTimeout    (5 * 60 * 1000)
+#define InBufThreshold      (MaxBuffer - 512)
+#define MaxRetries          5
+#define PauseTimeout        100
+#define RecvTimeout         5000
+#define SendTimeout         100
 
-#define SOH                0x01
-#define STX                0x02
-#define ETX                0x03
-#define DLE                0x10
-#define ITB                0x1f
-#define ETB                0x26
-#define ENQ                0x2d
-#define SYN                0x32
-#define EOT                0x37
-#define NAK                0x3d
-#define ACK0               0x70
+#define SOH                 0x01
+#define STX                 0x02
+#define ETX                 0x03
+#define DLE                 0x10
+#define ITB                 0x1f
+#define ETB                 0x26
+#define ENQ                 0x2d
+#define SYN                 0x32
+#define EOT                 0x37
+#define NAK                 0x3d
+#define ACK0                0x70
 
-#define DcBlank            055
-#define EbcdicBlank        0x40
+#define DcBlank             055
+#define EbcdicBlank         0x40
 
-#define SRCB_GCR             0
-#define SRCB_RTI             1
-#define SRCB_PTI             2
-#define SRCB_CI              3
-#define SRCB_CO              4
-#define SRCB_LP              5
-#define SRCB_CP              6
-#define SRCB_CR              7
-#define SRCB_BAD_BCB         8
+#define SRCB_GCR            0
+#define SRCB_RTI            1
+#define SRCB_PTI            2
+#define SRCB_CI             3
+#define SRCB_CO             4
+#define SRCB_LP             5
+#define SRCB_CP             6
+#define SRCB_CR             7
+#define SRCB_BAD_BCB        8
 
 /*
 **  Field name codes used in setting batch device parameters.
 */
-#define FnDevTbsUpper    30  // TBS upper 3 bits
-#define FnDevTbsLower    31  // TBS lower 8 bits
-#define FnDevPW          35  // Page width
-#define FnDevPL          36  // Page length
-#define FnDevPrintTrain  76  // Print train type
+#define FnDevTbsUpper       30 // TBS upper 3 bits
+#define FnDevTbsLower       31 // TBS lower 8 bits
+#define FnDevPW             35 // Page width
+#define FnDevPL             36 // Page length
+#define FnDevPrintTrain     76 // Print train type
 
 /*
 **  Field name codes used in setting batch file parameters.
 */
-#define FnFileType       81  // File type
-#define FnFileCC         82  // Carriage control
-#define FnFileLace       83  // Lace card punching
-#define FnFileLimUpper   84  // File limit upper byte
-#define FnFileLimLower   85  // File limit lower byte
-#define FnFilePunchLimit 86  // Punch limit
+#define FnFileType          81 // File type
+#define FnFileCC            82 // Carriage control
+#define FnFileLace          83 // Lace card punching
+#define FnFileLimUpper      84 // File limit upper byte
+#define FnFileLimLower      85 // File limit lower byte
+#define FnFilePunchLimit    86 // Punch limit
 
 /*
 **  -----------------------
@@ -125,9 +125,9 @@
 **  -----------------------
 */
 #if DEBUG
-#define HexColumn(x) (3 * (x) + 4)
-#define AsciiColumn(x) (HexColumn(16) + 2 + (x))
-#define LogLineLength (AsciiColumn(16))
+#define HexColumn(x)      (3 * (x) + 4)
+#define AsciiColumn(x)    (HexColumn(16) + 2 + (x))
+#define LogLineLength    (AsciiColumn(16))
 #endif
 
 /*
@@ -158,8 +158,8 @@ typedef enum
 **  Private Function Prototypes
 **  ---------------------------
 */
-static int  npuHaspAppendOutput(Pcb *pcbp, u8 *data, int len);
-static int  npuHaspAppendRecord(Pcb *pcbp, u8 *data, int len);
+static int npuHaspAppendOutput(Pcb *pcbp, u8 *data, int len);
+static int npuHaspAppendRecord(Pcb *pcbp, u8 *data, int len);
 static void npuHaspCloseConnection(Pcb *pcbp);
 static Scb *npuHaspFindStream(Pcb *pcbp, u8 streamId, u8 deviceType);
 static Scb *npuHaspFindStreamWithOutput(Pcb *pcbp);
@@ -172,7 +172,7 @@ static void npuHaspProcessPrePrintFormatControl(Pcb *pcbp);
 static void npuHaspReleaseLastBlockSent(Pcb *pcbp);
 static void npuHaspResetScb(Scb *scbp);
 static void npuHaspResetSendDeadline(Tcb *tp);
-static int  npuHaspSend(Pcb *pcbp, u8 *data, int len);
+static int npuHaspSend(Pcb *pcbp, u8 *data, int len);
 static void npuHaspSendBlockHeader(Tcb *tp);
 static void npuHaspSendBlockTrailer(Tcb *tp);
 static bool npuHaspSendDownlineData(Tcb *tp);
@@ -190,6 +190,7 @@ static void npuHaspLogDevParam(Tcb *tp, u8 fn, u8 fv);
 static void npuHaspLogFileParam(Tcb *tp, u8 fn, u8 fv);
 static void npuHaspLogFlush(void);
 static void npuHaspPrintStackTrace(FILE *fp);
+
 #endif
 
 /*
@@ -203,17 +204,17 @@ static void npuHaspPrintStackTrace(FILE *fp);
 **  Private Variables
 **  -----------------
 */
-static u8 blank        [] = {EbcdicBlank};
-static u8 blockHeader  [] = {SYN, SYN, SYN, SYN, DLE, STX};
-static u8 blockTrailer [] = {0x00, DLE, ETB};
-static u8 enqIndication[] = {SOH, ENQ};
-static u8 ackIndication[] = {SYN, SYN, SYN, SYN, DLE, ACK0};
-static u8 nakIndication[] = {SYN, SYN, SYN, SYN, NAK};
-static u8 ptiRecord    [] = {0xa0, 0x80, 0x00};
-static u8 rtiRecord    [] = {0x90, 0x80, 0x00};
+static u8 blank        [] = { EbcdicBlank };
+static u8 blockHeader  [] = { SYN, SYN, SYN, SYN, DLE, STX };
+static u8 blockTrailer [] = { 0x00, DLE, ETB };
+static u8 enqIndication[] = { SOH, ENQ };
+static u8 ackIndication[] = { SYN, SYN, SYN, SYN, DLE, ACK0 };
+static u8 nakIndication[] = { SYN, SYN, SYN, SYN, NAK };
+static u8 ptiRecord    [] = { 0xa0, 0x80, 0x00 };
+static u8 rtiRecord    [] = { 0x90, 0x80, 0x00 };
 
-static u8 dcEoi        [] = {050, 047, 005, 017, 011}; //  /*EOI
-static u8 dcEor        [] = {050, 047, 005, 017, 022}; //  /*EOR
+static u8 dcEoi        [] = { 050, 047, 005, 017, 011 }; //  /*EOI
+static u8 dcEor        [] = { 050, 047, 005, 017, 022 }; //  /*EOR
 
 #if DEBUG
 static FILE *npuHaspLog = NULL;
@@ -222,12 +223,12 @@ static int  npuHaspLogBytesCol = 0;
 #endif
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Try to send any queued data.
@@ -250,14 +251,15 @@ void npuHaspTryOutput(Pcb *pcbp)
     case StHaspMajorInit:
         if (pcbp->ncbp->connType == ConnTypeHasp)
             {
-            pcbp->controls.hasp.minorState = StHaspMinorRecvSOH;
-            pcbp->controls.hasp.majorState = StHaspMajorWaitENQ;
+            pcbp->controls.hasp.minorState   = StHaspMinorRecvSOH;
+            pcbp->controls.hasp.majorState   = StHaspMajorWaitENQ;
             pcbp->controls.hasp.recvDeadline = currentTime + HaspStartTimeout;
             }
         break;
+
     case StHaspMajorRecvData:
-        if (pcbp->controls.hasp.recvDeadline < currentTime
-            && pcbp->controls.hasp.recvDeadline > 0)
+        if ((pcbp->controls.hasp.recvDeadline < currentTime)
+            && (pcbp->controls.hasp.recvDeadline > 0))
             {
             /*
             **  Too much time has elapsed without receiving anything
@@ -274,10 +276,11 @@ void npuHaspTryOutput(Pcb *pcbp)
 #endif
                 npuHaspCloseConnection(pcbp);
                 pcbp->controls.hasp.majorState = StHaspMajorInit;
+
                 return;
                 }
-            if (pcbp->controls.hasp.minorState >= StHaspMinorRecvENQ_Resp
-                && pcbp->controls.hasp.minorState <= StHaspMinorRecvACK0)
+            if ((pcbp->controls.hasp.minorState >= StHaspMinorRecvENQ_Resp)
+                && (pcbp->controls.hasp.minorState <= StHaspMinorRecvACK0))
                 {
                 /*
                 **  Timeout awaiting response to ENQ, so return to SendENQ
@@ -300,6 +303,7 @@ void npuHaspTryOutput(Pcb *pcbp)
                 }
             }
         break;
+
     case StHaspMajorSendData:
         /*
         **  If the last exchange between peers involved idle frames,
@@ -310,6 +314,7 @@ void npuHaspTryOutput(Pcb *pcbp)
             {
             return;
             }
+
         /*
         **  If the port's output buffer is allocated, send the data
         **  contained in it.
@@ -320,8 +325,10 @@ void npuHaspTryOutput(Pcb *pcbp)
                 {
                 pcbp->controls.hasp.majorState = StHaspMajorRecvData;
                 }
+
             return;
             }
+
         /*
         **  Check for streams with pending requests to initiate transmission.
         */
@@ -329,15 +336,17 @@ void npuHaspTryOutput(Pcb *pcbp)
         if (scbp != NULL)
             {
             scbp->isWaitingPTI = FALSE;
-            scbp->recordCount = 0;
+            scbp->recordCount  = 0;
             switch (scbp->tp->deviceType)
                 {
             case DtCR:
                 ptiRecord[1] = 0x80 | (scbp->tp->streamId << 4) | 3;
                 break;
+
             case DtLP:
                 ptiRecord[1] = 0x80 | (scbp->tp->streamId << 4) | 4;
                 break;
+
             case DtCP:
                 ptiRecord[1] = 0x80 | (scbp->tp->streamId << 4) | 5;
                 break;
@@ -348,8 +357,10 @@ void npuHaspTryOutput(Pcb *pcbp)
                 {
                 pcbp->controls.hasp.majorState = StHaspMajorRecvData;
                 }
+
             return;
             }
+
         /*
         **  Attempt to find a stream having data to transmit.
         */
@@ -374,9 +385,11 @@ void npuHaspTryOutput(Pcb *pcbp)
                     {
                     pcbp->controls.hasp.majorState = StHaspMajorRecvData;
                     }
+
                 return;
                 }
             }
+
         /*
         **  A stream with data to send has been identified.  If the stream has been granted
         **  permission to initiate transmission already, send the data.  Otherwise, send a
@@ -389,18 +402,20 @@ void npuHaspTryOutput(Pcb *pcbp)
         case StHaspStreamWaitAcctng:
             if (npuHaspSendDownlineData(scbp->tp))
                 {
-                pcbp->controls.hasp.majorState = StHaspMajorRecvData;
+                pcbp->controls.hasp.majorState          = StHaspMajorRecvData;
                 pcbp->controls.hasp.currentOutputStream = NULL;
                 }
             break;
+
         default:
 #if DEBUG
             fprintf(npuHaspLog, "Port %02x: invalid stream state %d on stream %u (%.7s)\n",
-                pcbp->claPort, scbp->state, scbp->tp->streamId, scbp->tp->termName);
+                    pcbp->claPort, scbp->state, scbp->tp->streamId, scbp->tp->termName);
 #endif
             break;
             }
         break;
+
     case StHaspMajorSendENQ:
         if (npuHaspSend(pcbp, enqIndication, sizeof(enqIndication)) >= sizeof(enqIndication))
             {
@@ -408,6 +423,7 @@ void npuHaspTryOutput(Pcb *pcbp)
             pcbp->controls.hasp.minorState = StHaspMinorRecvENQ_Resp;
             }
         break;
+
     case StHaspMajorWaitENQ:
         if (pcbp->controls.hasp.recvDeadline < currentTime)
             {
@@ -420,9 +436,11 @@ void npuHaspTryOutput(Pcb *pcbp)
 #endif
             npuHaspCloseConnection(pcbp);
             pcbp->controls.hasp.majorState = StHaspMajorInit;
+
             return;
             }
         break;
+
     case StHaspMajorWaitSignon:
         if (pcbp->controls.hasp.outBuf != NULL)
             {
@@ -437,6 +455,7 @@ void npuHaspTryOutput(Pcb *pcbp)
                 }
             }
         break;
+
     case StHaspMajorSendSignon:
         if (npuHaspFlushBuffer(pcbp))
             {
@@ -444,9 +463,10 @@ void npuHaspTryOutput(Pcb *pcbp)
             pcbp->controls.hasp.minorState = StHaspMinorRecvBOF;
             }
         break;
+
     default:
-        fprintf(stderr, "HASP: Port %02x: invalid  major state: %02x\n",
-            pcbp->claPort,  pcbp->controls.hasp.majorState);
+        fprintf(stderr, "(npu_hasp) Port %02x: invalid  major state: %02x\n",
+                pcbp->claPort, pcbp->controls.hasp.majorState);
         pcbp->controls.hasp.majorState = StHaspMajorInit;
         break;
         }
@@ -465,30 +485,30 @@ void npuHaspTryOutput(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
     {
-    u8 *blk;
+    u8  *blk;
     int blockLen;
-    u8 blockType;
-    u8 c;
-    u8 dbc;
-    u8 formatEffector;
-    u8 *fp;
+    u8  blockType;
+    u8  c;
+    u8  dbc;
+    u8  formatEffector;
+    u8  *fp;
     int len;
     Pcb *pcbp;
-    u8 recordLen;
-    u8 *recordStart;
+    u8  recordLen;
+    u8  *recordStart;
     Scb *scbp;
-    u8 srcb;
+    u8  srcb;
 
     pcbp = tp->pcbp;
-    blk = bp->data + BlkOffData;
-    len = bp->numBytes - BlkOffData;
-    dbc = *blk++; // extract data block clarifier
+    blk  = bp->data + BlkOffData;
+    len  = bp->numBytes - BlkOffData;
+    dbc  = *blk++; // extract data block clarifier
     len -= 1;
 
 #if DEBUG
     blockType = bp->data[BlkOffBTBSN] & BlkMaskBT;
     fprintf(npuHaspLog, "Port %02x: downline data received from host for stream %u (%.7s), block type %u, dbc %02x\n",
-        pcbp->claPort, tp->streamId, tp->termName, blockType, dbc);
+            pcbp->claPort, tp->streamId, tp->termName, blockType, dbc);
     if ((dbc & DbcPRU) == 0)
         {
         npuHaspLogBytes(bp->data, bp->numBytes, (dbc & DbcTransparent) != 0 ? EBCDIC : ASCII);
@@ -516,21 +536,24 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
         case DtCR:
             rtiRecord[1] = 0x80 | (tp->streamId << 4) | 3;
             break;
+
         case DtLP:
-            rtiRecord[1] = 0x80 | (tp->streamId << 4) | 4;
-            scbp->pruFragmentSize = 0;
+            rtiRecord[1]                = 0x80 | (tp->streamId << 4) | 4;
+            scbp->pruFragmentSize       = 0;
             scbp->isPruFragmentComplete = TRUE;
             break;
+
         case DtCP:
         case DtPLOTTER:
-            rtiRecord[1] = 0x80 | (tp->streamId << 4) | 5;
-            scbp->pruFragmentSize = 0;
+            rtiRecord[1]                = 0x80 | (tp->streamId << 4) | 5;
+            scbp->pruFragmentSize       = 0;
             scbp->isPruFragmentComplete = FALSE;
             break;
+
         default:
 #if DEBUG
             fprintf(npuHaspLog, "Port %02x: invalid device type %u on RTI\n",
-                pcbp->claPort, tp->deviceType);
+                    pcbp->claPort, tp->deviceType);
 #endif
             break;
             }
@@ -556,7 +579,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
         **  an accounting record (both EOR and EOI bits set).
         **
         */
-        if (len < 1 && (dbc & DbcAcctg) != 0 && (dbc & DbcAcctg) != DbcAcctg)
+        if ((len < 1) && ((dbc & DbcAcctg) != 0) && ((dbc & DbcAcctg) != DbcAcctg))
             {
             /*
             **  EOR or EOI with no data, and not accounting record, so
@@ -576,6 +599,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                 }
             npuNetQueueAck(tp, (bp->data[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN)) | blockType);
             npuHaspResetSendDeadline(tp);
+
             return;
             }
         blockLen = 0;
@@ -592,7 +616,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                     **  The format effector is the first character of the
                     **  next record.
                     */
-                    c = *blk++;
+                    c    = *blk++;
                     len -= 1;
                     if (scbp->params.fvFileType == ASC)
                         {
@@ -600,13 +624,13 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                         }
                     else if (c < 0100)
                         {
-                        formatEffector = cdcToAscii[c] ;
+                        formatEffector = cdcToAscii[c];
                         }
                     else
                         {
                         formatEffector = ' ';
                         }
-                    if (formatEffector >= 'Q' && formatEffector <= 'T')
+                    if ((formatEffector >= 'Q') && (formatEffector <= 'T'))
                         {
                         /*
                         **  Any text following format effectors Q, R, S, and T
@@ -616,7 +640,10 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                         */
                         while (len-- > 0)
                             {
-                            if (*blk++ == 0xff) break;
+                            if (*blk++ == 0xff)
+                                {
+                                break;
+                                }
                             }
                         continue;
                         }
@@ -632,7 +659,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                     */
                     npuHaspFlushPruFragment(tp, ' ');
                     }
-                if (blockLen > pcbp->controls.hasp.blockSize && len > 0)
+                if ((blockLen > pcbp->controls.hasp.blockSize) && (len > 0))
                     {
                     /*
                     **  Sufficient data has been staged to fill a block,
@@ -682,7 +709,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                     }
                 }
             }
-        if (tp->deviceType != DtLP && scbp->isPruFragmentComplete)
+        if ((tp->deviceType != DtLP) && scbp->isPruFragmentComplete)
             {
             /*
             **  If the main loop, above, exited with a full record collected,
@@ -716,17 +743,18 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
         **  NVF and RBF send normal data on console streams.  Records of normal
         **  streams are delimited by ASCII <US> characters.
         */
-        if (pcbp->controls.hasp.isSignedOn == FALSE && pcbp->ncbp->connType == ConnTypeRevHasp)
+        if ((pcbp->controls.hasp.isSignedOn == FALSE) && (pcbp->ncbp->connType == ConnTypeRevHasp))
             {
 #if DEBUG
             fprintf(npuHaspLog, "Port %02x: not signed on yet, data discarded from stream %u (%.7s)\n",
-                pcbp->claPort, tp->streamId, tp->termName);
+                    pcbp->claPort, tp->streamId, tp->termName);
 #endif
             npuTipNotifySent(tp, bp->data[BlkOffBTBSN]);
+
             return;
             }
         blockType = bp->data[BlkOffBTBSN] & BlkMaskBT;
-        blockLen = 0;
+        blockLen  = 0;
         npuHaspSendBlockHeader(tp);
         while (len > 0)
             {
@@ -741,7 +769,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                 else
                     {
                     *blk++ = asciiToEbcdic[c];
-                    len -= 1;
+                    len   -= 1;
                     }
                 }
             srcb = 0;
@@ -772,7 +800,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                 len -= 1;
                 }
             blockLen += recordLen;
-            if (blockLen > pcbp->controls.hasp.blockSize && len > 0)
+            if ((blockLen > pcbp->controls.hasp.blockSize) && (len > 0))
                 {
                 npuHaspSendBlockTrailer(tp);
                 npuBipQueueAppend(npuBipBufGet(), &tp->outputQ);
@@ -780,7 +808,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                 npuHaspSendBlockHeader(tp);
                 }
             }
-        if (blockType == BtHTMSG && tp->deviceType != DtCONSOLE)
+        if ((blockType == BtHTMSG) && (tp->deviceType != DtCONSOLE))
             {
             npuHaspSendEofRecord(tp);
             }
@@ -795,12 +823,12 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
         **  from TLF. A signon record from TLF begins with <01> (transparency control character?).
         */
         recordLen = (*blk++) - 1;
-        len -= 1;
+        len      -= 1;
         if (len > 0)
             {
-            blk += 1;
+            blk       += 1;
             recordLen -= 1;
-            pcbp->controls.hasp.isSignedOn = TRUE;
+            pcbp->controls.hasp.isSignedOn  = TRUE;
             pcbp->controls.hasp.downlineBSN = 0;
             npuHaspSendSignonRecord(tp, blk, recordLen);
             }
@@ -816,12 +844,12 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
         **  byte itself.
         */
         blockType = bp->data[BlkOffBTBSN] & BlkMaskBT;
-        blockLen = 0;
+        blockLen  = 0;
         npuHaspSendBlockHeader(tp);
         while (len > 0)
             {
             recordLen = (*blk++) - 1;
-            len -= 1;
+            len      -= 1;
             npuHaspSendRecordHeader(tp, 0);
             if (recordLen > 0)
                 {
@@ -831,10 +859,10 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                 {
                 npuHaspSendRecordStrings(tp, blank, sizeof(blank));
                 }
-            blk += recordLen;
-            len -= recordLen;
+            blk      += recordLen;
+            len      -= recordLen;
             blockLen += recordLen;
-            if (blockLen > pcbp->controls.hasp.blockSize && len > 0)
+            if ((blockLen > pcbp->controls.hasp.blockSize) && (len > 0))
                 {
                 npuHaspSendBlockTrailer(tp);
                 npuBipQueueAppend(npuBipBufGet(), &tp->outputQ);
@@ -842,7 +870,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                 npuHaspSendBlockHeader(tp);
                 }
             }
-        if (blockType == BtHTMSG && tp->deviceType != DtCONSOLE)
+        if ((blockType == BtHTMSG) && (tp->deviceType != DtCONSOLE))
             {
             npuHaspSendEofRecord(tp);
             }
@@ -864,21 +892,21 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
 void npuHaspProcessUplineData(Pcb *pcbp)
     {
     int blockLen;
-    u8 blockSeqNum;
-    u8 buf[128];
-    u8 ch;
-    u8 deviceType;
-    u8 *dp;
+    u8  blockSeqNum;
+    u8  buf[128];
+    u8  ch;
+    u8  deviceType;
+    u8  *dp;
     int i;
     int len;
-    u8 mask;
+    u8  mask;
     int numBytes;
-    u8 recordType;
-    u8 retries;
+    u8  recordType;
+    u8  retries;
     Scb *scbp;
-    u8 streamId;
+    u8  streamId;
 
-    dp = pcbp->inputData;
+    dp  = pcbp->inputData;
     len = pcbp->inputCount;
 
 #if DEBUG
@@ -911,10 +939,12 @@ void npuHaspProcessUplineData(Pcb *pcbp)
             case SYN:
                 // Do nothing, continue searching for beginning of frame
                 break;
+
             case DLE:
                 npuHaspReleaseLastBlockSent(pcbp);
                 pcbp->controls.hasp.minorState = StHaspMinorRecvSTX;
                 break;
+
             case NAK:
                 pcbp->controls.hasp.lastRecvFrameType = ch;
                 if (pcbp->controls.hasp.lastBlockSent != NULL)
@@ -926,7 +956,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                     retries = pcbp->controls.hasp.retries + 1;
                     if (retries < MaxRetries)
                         {
-                        pcbp->controls.hasp.outBuf = pcbp->controls.hasp.lastBlockSent;
+                        pcbp->controls.hasp.outBuf        = pcbp->controls.hasp.lastBlockSent;
                         pcbp->controls.hasp.lastBlockSent = NULL;
                         if (npuHaspFlushBuffer(pcbp))
                             {
@@ -945,22 +975,26 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                         npuHaspReleaseLastBlockSent(pcbp);
                         npuHaspCloseConnection(pcbp);
                         pcbp->controls.hasp.majorState = StHaspMajorInit;
+
                         return;
                         }
                     }
                 break;
+
             case SOH:
                 npuHaspReleaseLastBlockSent(pcbp);
                 pcbp->controls.hasp.minorState = StHaspMinorRecvENQ;
                 break;
+
             default:
 #if DEBUG
                 fprintf(npuHaspLog, "Port %02x: expected SYN, DLE, or SOH, received <%02x>\n",
-                    pcbp->claPort, ch);
+                        pcbp->claPort, ch);
 #endif
                 break;
                 }
             break;
+
         /*
         **  Read and process the byte following a DLE byte. It should be either
         **  STX indicating start of block or ACK0 indicating idle frame.
@@ -972,19 +1006,22 @@ void npuHaspProcessUplineData(Pcb *pcbp)
             case STX:
                 pcbp->controls.hasp.minorState = StHaspMinorRecvBCB;
                 break;
+
             case ACK0:
                 pcbp->controls.hasp.majorState = StHaspMajorSendData;
                 pcbp->controls.hasp.minorState = StHaspMinorRecvBOF;
                 break;
+
             default:
 #if DEBUG
                 fprintf(npuHaspLog, "Port %02x: expected ACK0 or STX, received <%02x>\n",
-                    pcbp->claPort, ch);
+                        pcbp->claPort, ch);
 #endif
                 pcbp->controls.hasp.minorState = StHaspMinorRecvBOF;
                 break;
                 }
             break;
+
         /*
         **  Wait for response to SOH-ENQ. Read and discard leading SYN bytes.
         **  The next non-SYN should be a DLE followed by ACK0.
@@ -995,18 +1032,21 @@ void npuHaspProcessUplineData(Pcb *pcbp)
             case SYN:
                 // Do nothing, continue waiting for response
                 break;
+
             case DLE:
                 npuHaspReleaseLastBlockSent(pcbp);
                 pcbp->controls.hasp.minorState = StHaspMinorRecvACK0;
                 break;
+
             default:
 #if DEBUG
                 fprintf(npuHaspLog, "Port %02x: expected DLE, received <%02x>\n",
-                    pcbp->claPort, ch);
+                        pcbp->claPort, ch);
 #endif
                 break;
                 }
             break;
+
         /*
         **  Read and process the byte following a DLE byte during initial
         **  connection creation.  It should be ACK0 acknowledging ENQ.
@@ -1018,14 +1058,16 @@ void npuHaspProcessUplineData(Pcb *pcbp)
             case ACK0:
                 pcbp->controls.hasp.majorState = StHaspMajorWaitSignon;
                 break;
+
             default:
 #if DEBUG
                 fprintf(npuHaspLog, "Port %02x: expected ACK0, received <%02x>\n",
-                    pcbp->claPort, ch);
+                        pcbp->claPort, ch);
 #endif
                 break;
                 }
-            break;;
+            break;
+
         /*
         **  Read bytes until SOH detected.  This is the initial state of a
         **  HASP connection. The HASP host should send SOH ENQ to initiate
@@ -1037,6 +1079,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 pcbp->controls.hasp.minorState = StHaspMinorRecvENQ;
                 }
             break;
+
         /*
         **  Read and process the byte following an SOH byte. It should be ENQ.
         **  If not, return to SOH state.
@@ -1063,18 +1106,21 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                     pcbp->controls.hasp.minorState = StHaspMinorRecvSOH;
 #if DEBUG
                     fprintf(npuHaspLog, "Port %02x: port not configured yet, ENQ ignored\n",
-                        pcbp->claPort);
+                            pcbp->claPort);
 #endif
                     }
                 break;
+
             case SOH:
                 // remain in this state
                 break;
+
             default:
                 pcbp->controls.hasp.minorState = StHaspMinorRecvSOH;
                 break;
                 }
             break;
+
         /*
         **  Read and process Block Control Byte.
         */
@@ -1087,30 +1133,33 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 case 0x00: // Normal Block
                     if (blockSeqNum == ((pcbp->controls.hasp.uplineBSN + 1) & 0x0f))
                         {
-                        pcbp->controls.hasp.uplineBSN = blockSeqNum;
+                        pcbp->controls.hasp.uplineBSN  = blockSeqNum;
                         pcbp->controls.hasp.minorState = StHaspMinorRecvFCS1;
                         }
                     else
                         {
 #if DEBUG
                         fprintf(npuHaspLog, "Port %02x: expected BSN %u, received %u\n",
-                            pcbp->claPort, (pcbp->controls.hasp.uplineBSN + 1) & 0x0f, blockSeqNum);
+                                pcbp->claPort, (pcbp->controls.hasp.uplineBSN + 1) & 0x0f, blockSeqNum);
 #endif
                         // TODO: send BAD BCB indication
                         pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
                         }
                     break;
+
                 case 0x01: // Bypass sequence count validation
                     pcbp->controls.hasp.minorState = StHaspMinorRecvFCS1;
                     break;
+
                 case 0x02: // Reset expected block sequence count to this one
-                    pcbp->controls.hasp.uplineBSN = (blockSeqNum - 1) & 0x0f;
+                    pcbp->controls.hasp.uplineBSN  = (blockSeqNum - 1) & 0x0f;
                     pcbp->controls.hasp.minorState = StHaspMinorRecvFCS1;
                     break;
+
                 default:
 #if DEBUG
                     fprintf(npuHaspLog, "Port %02x: unrecognized BCB type: <%02x>\n",
-                        pcbp->claPort, ch);
+                            pcbp->claPort, ch);
 #endif
                     pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
                     break;
@@ -1120,11 +1169,12 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 {
 #if DEBUG
                 fprintf(npuHaspLog, "Port %02x: invalid BCB byte: <%02x>\n",
-                    pcbp->claPort, ch);
+                        pcbp->claPort, ch);
 #endif
                 pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
                 }
             break;
+
         /*
         **  Read the first byte of Function Control Sequence.
         */
@@ -1132,27 +1182,30 @@ void npuHaspProcessUplineData(Pcb *pcbp)
             if ((ch & 0x80) != 0)
                 {
                 pcbp->controls.hasp.pauseAllOutput = (ch & 0x40) != 0;
-                pcbp->controls.hasp.fcsMask = (ch &0x0f) << 4;
-                pcbp->controls.hasp.minorState = StHaspMinorRecvFCS2;
+                pcbp->controls.hasp.fcsMask        = (ch & 0x0f) << 4;
+                pcbp->controls.hasp.minorState     = StHaspMinorRecvFCS2;
                 if (pcbp->controls.hasp.pauseAllOutput)
+                    {
                     pcbp->controls.hasp.pauseDeadline = getMilliseconds() + PauseTimeout;
+                    }
                 }
             else
                 {
 #if DEBUG
                 fprintf(npuHaspLog, "Port %02x: invalid FCS1 byte: <%02x>\n",
-                    pcbp->claPort, ch);
+                        pcbp->claPort, ch);
 #endif
                 pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
                 }
             break;
+
         /*
         **  Read the second byte of Function Control Sequence.
         */
         case StHaspMinorRecvFCS2:
             if ((ch & 0x80) != 0)
                 {
-                scbp = npuHaspFindStream(pcbp, 0, DtCONSOLE);
+                scbp           = npuHaspFindStream(pcbp, 0, DtCONSOLE);
                 scbp->tp->xoff = (ch & 0x40) == 0;
                 pcbp->controls.hasp.fcsMask |= ch & 0x0f;
                 mask = 0x80;
@@ -1191,75 +1244,86 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 {
 #if DEBUG
                 fprintf(npuHaspLog, "Port %02x: invalid FCS2 byte: <%02x>\n",
-                    pcbp->claPort, ch);
+                        pcbp->claPort, ch);
 #endif
                 pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
                 }
             break;
+
         /*
         **  Read and process Record Control Byte.
         */
         case StHaspMinorRecvRCB:
             pcbp->controls.hasp.designatedStream = NULL;
-            pcbp->controls.hasp.minorState = StHaspMinorRecvSRCB;
+            pcbp->controls.hasp.minorState       = StHaspMinorRecvSRCB;
             if ((ch & 0x80) == 0) // end of transmission block
                 {
                 pcbp->controls.hasp.minorState = StHaspMinorRecvDLE1;
                 }
-            else 
+            else
                 {
                 recordType = ch & 0x0f;
-                streamId = (ch >> 4) & 0x07;
+                streamId   = (ch >> 4) & 0x07;
                 switch (recordType)
                     {
-                case 0x00: // Control record
+                case 0x00:            // Control record
                     switch (streamId) // stream id is control info for control record
                         {
-                    case 1: // Request to initiate a function transmission
+                    case 1:           // Request to initiate a function transmission
                         pcbp->controls.hasp.sRCBType = SRCB_RTI;
                         break;
+
                     case 2: // Permission to initiate a function transmission
                         pcbp->controls.hasp.sRCBType = SRCB_PTI;
                         break;
+
                     case 6: // Bad BCB on last block
                         pcbp->controls.hasp.sRCBType = SRCB_BAD_BCB;
                         break;
+
                     case 7: // General Control Record (type indicated in SRCB)
                         pcbp->controls.hasp.sRCBType = SRCB_GCR;
                         break;
+
                     default:
 #if DEBUG
                         fprintf(npuHaspLog, "Port %02x: unrecognized control info in RCB: %u\n",
-                            pcbp->claPort, (ch >> 4) & 0x07);
+                                pcbp->claPort, (ch >> 4) & 0x07);
 #endif
                         pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
                         break;
                         }
                     continue;
+
                 case 0x01: // Operator message display request
                     deviceType = DtCONSOLE;
                     pcbp->controls.hasp.sRCBType = SRCB_CO;
                     break;
+
                 case 0x02: // Operator command
                     deviceType = DtCONSOLE;
                     pcbp->controls.hasp.sRCBType = SRCB_CI;
                     break;
+
                 case 0x03: // Normal input record
                     deviceType = DtCR;
                     pcbp->controls.hasp.sRCBType = SRCB_CR;
                     break;
+
                 case 0x04: // Print record
                     deviceType = DtLP;
                     pcbp->controls.hasp.sRCBType = SRCB_LP;
                     break;
+
                 case 0x05: // Punch record
                     deviceType = DtCP;
                     pcbp->controls.hasp.sRCBType = SRCB_CP;
                     break;
+
                 default:
 #if DEBUG
                     fprintf(npuHaspLog, "Port %02x: unrecognized record type in RCB: <%02x>\n",
-                        pcbp->claPort, recordType);
+                            pcbp->claPort, recordType);
 #endif
                     deviceType = 0xff;
                     pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
@@ -1272,6 +1336,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                     }
                 }
             break;
+
         /*
         **  Read and process Sub-Record Control Byte.
         */
@@ -1282,31 +1347,34 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 switch (pcbp->controls.hasp.sRCBType)
                     {
                 case SRCB_RTI: // Request To Initiate transmission
-                    streamId = (ch >> 4) & 0x07;
+                    streamId   = (ch >> 4) & 0x07;
                     deviceType = ch & 0x0f;
                     switch (deviceType)
                         {
                     case 3: // Reader
                         scbp = npuHaspFindStream(pcbp, streamId, DtCR);
                         break;
+
                     case 4: // Printer
                         scbp = npuHaspFindStream(pcbp, streamId, DtLP);
                         break;
+
                     case 5: // Punch
                         scbp = npuHaspFindStream(pcbp, streamId, DtCP);
                         break;
+
                     default:
 #if DEBUG
                         fprintf(npuHaspLog, "Port %02x: invalid stream id (%u) or device type (%u) ignored in RTI\n",
-                            pcbp->claPort, streamId, deviceType);
+                                pcbp->claPort, streamId, deviceType);
 #endif
                         scbp = NULL;
                         break;
                         }
                     if (scbp != NULL)
                         {
-                        if (scbp->tp == NULL
-                            || (pcbp->ncbp->connType == ConnTypeHasp && scbp->isStarted == FALSE))
+                        if ((scbp->tp == NULL)
+                            || ((pcbp->ncbp->connType == ConnTypeHasp) && (scbp->isStarted == FALSE)))
                             {
                             scbp->isWaitingPTI = TRUE;
                             }
@@ -1319,40 +1387,46 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                             }
                         }
                     break;
+
                 case SRCB_PTI: // Permission To Initiate transmission
-                    streamId = (ch >> 4) & 0x07;
+                    streamId   = (ch >> 4) & 0x07;
                     deviceType = ch & 0x0f;
                     switch (deviceType)
                         {
                     case 3: // Reader
                         scbp = npuHaspFindStream(pcbp, streamId, DtCR);
                         break;
+
                     case 4: // Printer
                         scbp = npuHaspFindStream(pcbp, streamId, DtLP);
                         break;
+
                     case 5: // Punch
                         scbp = npuHaspFindStream(pcbp, streamId, DtCP);
                         break;
+
                     default:
 #if DEBUG
                         fprintf(npuHaspLog, "Port %02x: invalid stream id (%u) or device type (%u) ignored in PTI\n",
-                            pcbp->claPort, streamId, deviceType);
+                                pcbp->claPort, streamId, deviceType);
 #endif
                         scbp = NULL;
                         break;
                         }
                     if (scbp != NULL)
                         {
-                        scbp->state = StHaspStreamReady;
+                        scbp->state       = StHaspStreamReady;
                         scbp->recordCount = 0;
                         }
                     break;
+
                 case SRCB_GCR: // General Control Record
                     switch (ebcdicToAscii[ch])
                         {
                     case 'A': // Signon record
                         pcbp->controls.hasp.minorState = StHaspMinorRecvSignon;
                         break;
+
                     case 'B': // Signoff record
                     case 'C': // Print initialization record
                     case 'D': // Punch initialization record
@@ -1364,22 +1438,25 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                         pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
 #if DEBUG
                         fprintf(npuHaspLog, "Port %02x: unsupported GCR type %c\n",
-                            pcbp->claPort, (char)ebcdicToAscii[ch]);
+                                pcbp->claPort, (char)ebcdicToAscii[ch]);
 #endif
                         break;
                         }
                     break;
+
                 case SRCB_LP: // Print record
                     pcbp->controls.hasp.sRCBParam = ch & 0x7f;
                     break;
+
                 case SRCB_BAD_BCB:
 #if DEBUG
                     fprintf(npuHaspLog, "Port %02x: bad BCB sent in last block: %02x\n",
-                        pcbp->claPort, ch);
+                            pcbp->claPort, ch);
 #endif
                     pcbp->controls.hasp.downlineBSN = ch % 0x0f;
                     // TODO: retransmit last block with expected BSN
                     break;
+
                 default: // do nothing for other SRCB types
                     break;
                     }
@@ -1388,11 +1465,12 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 {
 #if DEBUG
                 fprintf(npuHaspLog, "Port %02x: invalid SRCB byte: <%02x>\n",
-                    pcbp->claPort, ch);
+                        pcbp->claPort, ch);
 #endif
                 pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
                 }
             break;
+
         /*
         **  Read and process first String Control Byte of a record. If the
         **  first SCB is 0x00, then it might be an EOF indication. EOF is
@@ -1403,11 +1481,12 @@ void npuHaspProcessUplineData(Pcb *pcbp)
             scbp = pcbp->controls.hasp.designatedStream;
             if (scbp != NULL) // RCB designated a stream
                 {
-                if (ch == 0) // possible EOF indication
+                if (ch == 0)  // possible EOF indication
                     {
                     pcbp->controls.hasp.minorState = StHaspMinorRecvSCB_EOF;
                     continue;
                     }
+
                 /*
                 **  If the designated stream is a print stream, process pre-print
                 **  carriage control.
@@ -1417,7 +1496,9 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                     npuHaspProcessPrePrintFormatControl(pcbp);
                     }
                 }
-            // fall through
+
+        // fall through
+
         /*
         **  Read and process String Control Byte other than the first of a record.
         */
@@ -1434,6 +1515,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                     else
                         {
                         npuHaspFlushUplineData(scbp, FALSE);
+
                         /*
                         **  If the designated stream is a print stream, process post-print
                         **  carriage control.
@@ -1461,7 +1543,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                     {
                     if (len > 0)
                         {
-                        ch = *dp++;
+                        ch   = *dp++;
                         len -= 1;
                         for (i = 0; i < numBytes; i++)
                             {
@@ -1471,7 +1553,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                         }
                     else
                         {
-                        pcbp->controls.hasp.strLength = numBytes;
+                        pcbp->controls.hasp.strLength  = numBytes;
                         pcbp->controls.hasp.minorState = StHaspMinorRecvRC;
                         }
                     }
@@ -1485,13 +1567,14 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                     }
                 }
             break;
+
         /*
         **  This state is entered after reading a 0x00 SCB byte. Read the next byte, an RCB byte.
         **  If it is 0x00, end of file is indicated. Otherwise, the 0x00 SCB byte indicates a
         **  zero length record.
         */
         case StHaspMinorRecvSCB_EOF:
-            dp -= 1;  // cause RCB byte to be reprocessed
+            dp  -= 1; // cause RCB byte to be reprocessed
             len += 1;
             pcbp->controls.hasp.minorState = StHaspMinorRecvRCB;
             scbp = pcbp->controls.hasp.designatedStream;
@@ -1510,26 +1593,30 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 npuHaspFlushUplineData(scbp, FALSE);
                 }
             break;
+
         /*
         **  Read bytes of string.
         */
         case StHaspMinorRecvStr:
-            i = 0;
+            i        = 0;
             numBytes = pcbp->controls.hasp.strLength;
             while (TRUE)
                 {
                 if (ch == DLE)
                     {
-                    if (len < 1) break;
-                    ch = *dp++;
+                    if (len < 1)
+                        {
+                        break;
+                        }
+                    ch   = *dp++;
                     len -= 1;
                     if (ch != DLE)
                         {
 #if DEBUG
                         fprintf(npuHaspLog, "Port %02x: expected byte-stuffed DLE, received <%02x>\n",
-                            pcbp->claPort, ch);
+                                pcbp->claPort, ch);
 #endif
-                        dp -= 2;
+                        dp  -= 2;
                         len += 2;
                         pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
                         i = 0;
@@ -1537,8 +1624,11 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                         }
                     }
                 buf[i++] = ch;
-                if (len < 1 || i >= numBytes) break;
-                ch = *dp++;
+                if ((len < 1) || (i >= numBytes))
+                    {
+                    break;
+                    }
+                ch   = *dp++;
                 len -= 1;
                 }
             if (i > 0)
@@ -1551,6 +1641,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 pcbp->controls.hasp.minorState = StHaspMinorRecvSCB;
                 }
             break;
+
         /*
         **  Read repeated character.
         */
@@ -1563,6 +1654,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 }
             npuHaspStageUplineData(pcbp->controls.hasp.designatedStream, buf, numBytes);
             break;
+
         /*
         **  Read bytes of a sign-on record.  A sign-on record is usually 80 bytes.
         **  Nevertheless, some systems send shorter records (e.g., they don't pad them
@@ -1592,7 +1684,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                     }
                 buf[i++] = ch;
 #endif
-                ch = *dp++;
+                ch   = *dp++;
                 len -= 1;
                 }
 #if DEBUG
@@ -1603,9 +1695,12 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 npuHaspLogFlush();
                 }
             if (pcbp->controls.hasp.isSignedOn)
+                {
                 fprintf(npuHaspLog, "Port %02x: signon complete\n", pcbp->claPort);
+                }
 #endif
             break;
+
         /*
         **  Read DLE terminating signon record. A <00> byte is also tolerated because, e.g.,
         **  PRIMOS RJE sends a <00> SCB and a <00> RCB after a signon record instead of sending
@@ -1624,11 +1719,12 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 {
 #if DEBUG
                 fprintf(npuHaspLog, "Port %02x: expected DLE or <00> after signon record, received <%02x>\n",
-                    pcbp->claPort, ch);
+                        pcbp->claPort, ch);
 #endif
                 pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
                 }
             break;
+
         /*
         **  Read DLE terminating record.
         */
@@ -1641,11 +1737,12 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 {
 #if DEBUG
                 fprintf(npuHaspLog, "Port %02x: expected DLE after transmission block terminator, received <%02x>\n",
-                    pcbp->claPort, ch);
+                        pcbp->claPort, ch);
 #endif
                 pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
                 }
             break;
+
         /*
         **  Read ETB terminating record at end of successfully processed block.
         */
@@ -1657,12 +1754,12 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 if (pcbp->controls.hasp.outBuf != NULL)
                     {
                     blockLen = pcbp->controls.hasp.outBuf->numBytes;
-                    if (blockLen > 1
-                        && !(pcbp->controls.hasp.outBuf->data[blockLen - 2] == DLE
-                             && (   pcbp->controls.hasp.outBuf->data[blockLen - 1] == ETB
-                                 || pcbp->controls.hasp.outBuf->data[blockLen - 1] == ACK0))
-                        && !(pcbp->controls.hasp.outBuf->data[blockLen - 2] == SYN
-                             && pcbp->controls.hasp.outBuf->data[blockLen - 1] == NAK))
+                    if ((blockLen > 1)
+                        && !((pcbp->controls.hasp.outBuf->data[blockLen - 2] == DLE)
+                             && ((pcbp->controls.hasp.outBuf->data[blockLen - 1] == ETB)
+                                 || (pcbp->controls.hasp.outBuf->data[blockLen - 1] == ACK0)))
+                        && !((pcbp->controls.hasp.outBuf->data[blockLen - 2] == SYN)
+                             && (pcbp->controls.hasp.outBuf->data[blockLen - 1] == NAK)))
                         {
                         npuHaspAppendOutput(pcbp, blockTrailer, sizeof(blockTrailer));
                         }
@@ -1676,11 +1773,12 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 {
 #if DEBUG
                 fprintf(npuHaspLog, "Port %02x: expected ETB, received <%02x>\n",
-                    pcbp->claPort, ch);
+                        pcbp->claPort, ch);
 #endif
                 pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
                 }
             break;
+
         /*
         **  Hunt for DLE possibly indicating termination of record. This state is
         **  entered after a protocol error is detected. Bytes are read and discarded
@@ -1692,17 +1790,21 @@ void npuHaspProcessUplineData(Pcb *pcbp)
             case DLE:
                 pcbp->controls.hasp.minorState = StHaspMinorRecvETB2;
                 break;
+
             case SYN:
                 pcbp->controls.hasp.minorState = StHaspMinorRecvBOF;
                 break;
+
             case SOH:
                 npuHaspReleaseLastBlockSent(pcbp);
                 pcbp->controls.hasp.minorState = StHaspMinorRecvENQ;
                 break;
+
             default:
                 break;
                 }
             break;
+
         /*
         **  Read ETB terminating record while processing protocol error.
         */
@@ -1725,11 +1827,12 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 {
 #if DEBUG
                 fprintf(npuHaspLog, "Port %02x: expected ETB, received <%02x>\n",
-                    pcbp->claPort, ch);
+                        pcbp->claPort, ch);
 #endif
                 pcbp->controls.hasp.minorState = StHaspMinorRecvDLE2;
                 }
             break;
+
         /*
         **  Invalid state.
         */
@@ -1738,15 +1841,18 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                 {
 #if DEBUG
                 fprintf(npuHaspLog, "Port %02x: not configured yet, data discarded\n",
-                    pcbp->claPort);
+                        pcbp->claPort);
 #endif
+
                 return;
                 }
-            // else fall through
+
+        // else fall through
         default:
-            fprintf(stderr, "HASP: Port %02x: invalid minor state: %02x\n",
-                pcbp->claPort, pcbp->controls.hasp.minorState);
+            fprintf(stderr, "(npu_hasp) Port %02x: invalid minor state: %02x\n",
+                    pcbp->claPort, pcbp->controls.hasp.minorState);
             pcbp->controls.hasp.minorState = StHaspMinorRecvBOF;
+
             return;
             }
         }
@@ -1764,38 +1870,40 @@ void npuHaspProcessUplineData(Pcb *pcbp)
 void npuHaspCloseStream(Tcb *tp)
     {
     Pcb *pcbp;
-    u8 streamId;
+    u8  streamId;
 
-    pcbp = tp->pcbp;
+    pcbp     = tp->pcbp;
     streamId = tp->streamId;
 
 #if DEBUG
     fprintf(npuHaspLog, "Port %02x: close stream %d (%.7s)\n", pcbp->claPort,
-        streamId, tp->termName);
+            streamId, tp->termName);
 #endif
 
     switch (tp->deviceType)
         {
     case DtCR:
-        if (streamId > 0 && streamId <= MaxHaspStreams)
+        if ((streamId > 0) && (streamId <= MaxHaspStreams))
             {
             pcbp->controls.hasp.readerStreams[streamId - 1].state = StHaspStreamInit;
-            pcbp->controls.hasp.readerStreams[streamId - 1].tp = NULL;
+            pcbp->controls.hasp.readerStreams[streamId - 1].tp    = NULL;
             }
         break;
+
     case DtLP:
-        if (streamId > 0 && streamId <= MaxHaspStreams)
+        if ((streamId > 0) && (streamId <= MaxHaspStreams))
             {
             pcbp->controls.hasp.printStreams[streamId - 1].state = StHaspStreamInit;
-            pcbp->controls.hasp.printStreams[streamId - 1].tp = NULL;
+            pcbp->controls.hasp.printStreams[streamId - 1].tp    = NULL;
             }
         break;
+
     case DtCP:
     case DtPLOTTER:
-        if (streamId > 0 && streamId <= MaxHaspStreams)
+        if ((streamId > 0) && (streamId <= MaxHaspStreams))
             {
             pcbp->controls.hasp.punchStreams[streamId - 1].state = StHaspStreamInit;
-            pcbp->controls.hasp.punchStreams[streamId - 1].tp = NULL;
+            pcbp->controls.hasp.punchStreams[streamId - 1].tp    = NULL;
             }
         break;
         }
@@ -1817,6 +1925,7 @@ bool npuHaspNotifyNetConnect(Pcb *pcbp, bool isPassive)
     fprintf(npuHaspLog, "Port %02x: network connection indication\n", pcbp->claPort);
 #endif
     npuHaspResetPcb(pcbp);
+
     return npuSvmConnectTerminal(pcbp);
     }
 
@@ -1859,24 +1968,24 @@ void npuHaspNotifyStartInput(Tcb *tp, u8 sfc)
     {
     Scb *scbp;
 
-    if (sfc == SfcNONTR && tp->scbp != NULL)
+    if ((sfc == SfcNONTR) && (tp->scbp != NULL))
         {
         scbp = tp->scbp;
         scbp->isDiscardingRecords = FALSE;
-        scbp->isStarted = TRUE;
+        scbp->isStarted           = TRUE;
 #if DEBUG
         fprintf(npuHaspLog, "Port %02x: SI/NONTR command received for stream %d (%.7s)\n",
-            tp->pcbp->claPort, tp->streamId, tp->termName);
+                tp->pcbp->claPort, tp->streamId, tp->termName);
         }
     else if (sfc != SfcNONTR)
         {
         fprintf(npuHaspLog, "Port %02x: Unexpected SFC %u in SI command received for stream %d (%.7s)\n",
-            tp->pcbp->claPort, sfc, tp->streamId, tp->termName);
+                tp->pcbp->claPort, sfc, tp->streamId, tp->termName);
         }
     else
         {
         fprintf(npuHaspLog, "Port %02x: SI/MONTR command received for stream %d (%.7s) that has no SCB\n",
-            tp->pcbp->claPort, tp->streamId, tp->termName);
+                tp->pcbp->claPort, tp->streamId, tp->termName);
 #endif
         }
     }
@@ -1892,18 +2001,18 @@ void npuHaspNotifyStartInput(Tcb *tp, u8 sfc)
 **------------------------------------------------------------------------*/
 void npuHaspNotifyTermConnect(Tcb *tp)
     {
-    u8 deviceType;
+    u8  deviceType;
     Pcb *pcbp;
     Scb *scbp;
-    u8 streamId;
+    u8  streamId;
 
     deviceType = tp->deviceType;
-    streamId = tp->streamId;
-    pcbp = tp->pcbp;
+    streamId   = tp->streamId;
+    pcbp       = tp->pcbp;
 
 #if DEBUG
     fprintf(npuHaspLog, "Port %02x: connect stream %d (%.7s)\n", pcbp->claPort,
-        streamId, tp->termName);
+            streamId, tp->termName);
 #endif
 
     if (pcbp->connFd <= 0)
@@ -1911,46 +2020,50 @@ void npuHaspNotifyTermConnect(Tcb *tp)
         npuSvmDiscRequestTerminal(tp);
 #if DEBUG
         fprintf(npuHaspLog, "Port %02x: no network connection, disconnect stream %d (%.7s)\n",
-            pcbp->claPort, streamId, tp->termName);
+                pcbp->claPort, streamId, tp->termName);
 #endif
+
         return;
         }
 
     if (deviceType == DtCONSOLE)
         {
-        tp->scbp = scbp = &tp->pcbp->controls.hasp.consoleStream;
+        tp->scbp    = scbp = &tp->pcbp->controls.hasp.consoleStream;
         scbp->state = StHaspStreamReady;
-        scbp->tp = tp;
-        if (pcbp->ncbp->connType == ConnTypeRevHasp
-            && pcbp->controls.hasp.majorState == StHaspMajorInit)
+        scbp->tp    = tp;
+        if ((pcbp->ncbp->connType == ConnTypeRevHasp)
+            && (pcbp->controls.hasp.majorState == StHaspMajorInit))
             {
             pcbp->controls.hasp.majorState = StHaspMajorSendENQ;
             }
         }
-    else if (streamId > 0 && streamId <= MaxHaspStreams)
+    else if ((streamId > 0) && (streamId <= MaxHaspStreams))
         {
         switch (deviceType)
             {
         case DtCR:
-            tp->scbp = scbp = &tp->pcbp->controls.hasp.readerStreams[streamId - 1];
+            tp->scbp    = scbp = &tp->pcbp->controls.hasp.readerStreams[streamId - 1];
             scbp->state = StHaspStreamInit;
-            scbp->tp = tp;
+            scbp->tp    = tp;
             break;
+
         case DtLP:
-            tp->scbp = scbp = &tp->pcbp->controls.hasp.printStreams[streamId - 1];
+            tp->scbp    = scbp = &tp->pcbp->controls.hasp.printStreams[streamId - 1];
             scbp->state = StHaspStreamInit;
-            scbp->tp = tp;
+            scbp->tp    = tp;
             break;
+
         case DtCP:
         case DtPLOTTER:
-            tp->scbp = scbp = &tp->pcbp->controls.hasp.punchStreams[streamId - 1];
+            tp->scbp    = scbp = &tp->pcbp->controls.hasp.punchStreams[streamId - 1];
             scbp->state = StHaspStreamInit;
-            scbp->tp = tp;
+            scbp->tp    = tp;
             break;
+
         default:
 #if DEBUG
             fprintf(npuHaspLog, "Port %02x: attempt to initialize stream for invalid device type %u\n",
-                tp->pcbp->claPort, deviceType);
+                    tp->pcbp->claPort, deviceType);
 #endif
             break;
             }
@@ -1959,7 +2072,7 @@ void npuHaspNotifyTermConnect(Tcb *tp)
     else
         {
         fprintf(npuHaspLog, "Port %02x: attempt to initialize invalid stream id %u\n",
-            tp->pcbp->claPort, streamId);
+                tp->pcbp->claPort, streamId);
         }
 #endif
     }
@@ -1986,7 +2099,7 @@ void npuHaspNotifyTermDisconnect(Tcb *tp)
         {
 #if DEBUG
         fprintf(npuHaspLog, "Port %02x: disconnect stream %d (%.7s)\n", pcbp->claPort,
-            tp2->streamId, tp2->termName);
+                tp2->streamId, tp2->termName);
 #endif
         npuSvmSendDiscRequest(tp2);
         }
@@ -1998,7 +2111,7 @@ void npuHaspNotifyTermDisconnect(Tcb *tp)
             {
 #if DEBUG
             fprintf(npuHaspLog, "Port %02x: disconnect stream %d (%.7s)\n", pcbp->claPort,
-                tp2->streamId, tp2->termName);
+                    tp2->streamId, tp2->termName);
 #endif
             npuSvmSendDiscRequest(tp2);
             }
@@ -2007,7 +2120,7 @@ void npuHaspNotifyTermDisconnect(Tcb *tp)
             {
 #if DEBUG
             fprintf(npuHaspLog, "Port %02x: disconnect stream %d (%.7s)\n", pcbp->claPort,
-                tp2->streamId, tp2->termName);
+                    tp2->streamId, tp2->termName);
 #endif
             npuSvmSendDiscRequest(tp2);
             }
@@ -2016,7 +2129,7 @@ void npuHaspNotifyTermDisconnect(Tcb *tp)
             {
 #if DEBUG
             fprintf(npuHaspLog, "Port %02x: disconnect stream %d (%.7s)\n", pcbp->claPort,
-                tp2->streamId, tp2->termName);
+                    tp2->streamId, tp2->termName);
 #endif
             npuSvmSendDiscRequest(tp2);
             }
@@ -2061,7 +2174,7 @@ bool npuHaspParseDevParams(u8 *mp, int len, Tcb *tp)
             pp->fvDevPL = mp[1];
             break;
 
-        case  FnDevPrintTrain:
+        case FnDevPrintTrain:
             pp->fvDevPrintTrain = mp[1];
             break;
 
@@ -2075,11 +2188,11 @@ bool npuHaspParseDevParams(u8 *mp, int len, Tcb *tp)
         /*
         **  Advance to next FN/FV pair.
         */
-        mp += 2;
+        mp  += 2;
         len -= 2;
         }
 
-    return(TRUE);
+    return (TRUE);
     }
 
 /*--------------------------------------------------------------------------
@@ -2138,11 +2251,11 @@ bool npuHaspParseFileParams(u8 *mp, int len, Tcb *tp)
         /*
         **  Advance to next FN/FV pair.
         */
-        mp += 2;
+        mp  += 2;
         len -= 2;
         }
 
-    return(TRUE);
+    return (TRUE);
     }
 
 /*--------------------------------------------------------------------------
@@ -2173,8 +2286,8 @@ void npuHaspPresetPcb(Pcb *pcbp)
 #endif
 
     pcbp->controls.hasp.lastBlockSent = NULL;
-    pcbp->controls.hasp.retries = 0;
-    pcbp->controls.hasp.outBuf = NULL;
+    pcbp->controls.hasp.retries       = 0;
+    pcbp->controls.hasp.outBuf        = NULL;
 
     if (pcbp->ncbp->connType == ConnTypeHasp)
         {
@@ -2212,20 +2325,20 @@ void npuHaspResetPcb(Pcb *pcbp)
     {
     int i;
 
-    pcbp->controls.hasp.majorState = StHaspMajorInit;
-    pcbp->controls.hasp.minorState = StHaspMinorNIL;
-    pcbp->controls.hasp.lastRecvTime = 0;
-    pcbp->controls.hasp.recvDeadline = 0;
-    pcbp->controls.hasp.sendDeadline = 0;
-    pcbp->controls.hasp.isSignedOn = FALSE;
-    pcbp->controls.hasp.pauseAllOutput = FALSE;
+    pcbp->controls.hasp.majorState          = StHaspMajorInit;
+    pcbp->controls.hasp.minorState          = StHaspMinorNIL;
+    pcbp->controls.hasp.lastRecvTime        = 0;
+    pcbp->controls.hasp.recvDeadline        = 0;
+    pcbp->controls.hasp.sendDeadline        = 0;
+    pcbp->controls.hasp.isSignedOn          = FALSE;
+    pcbp->controls.hasp.pauseAllOutput      = FALSE;
     pcbp->controls.hasp.currentOutputStream = NULL;
-    pcbp->controls.hasp.designatedStream = NULL;
-    pcbp->controls.hasp.retries = 0;
-    pcbp->controls.hasp.lastRecvFrameType = 0;
-    pcbp->controls.hasp.downlineBSN = 0;
-    pcbp->controls.hasp.uplineBSN = 0x0f;
-    pcbp->controls.hasp.fcsMask = 0xff;
+    pcbp->controls.hasp.designatedStream    = NULL;
+    pcbp->controls.hasp.retries             = 0;
+    pcbp->controls.hasp.lastRecvFrameType   = 0;
+    pcbp->controls.hasp.downlineBSN         = 0;
+    pcbp->controls.hasp.uplineBSN           = 0x0f;
+    pcbp->controls.hasp.fcsMask             = 0xff;
     if (pcbp->controls.hasp.lastBlockSent != NULL)
         {
         npuBipBufRelease(pcbp->controls.hasp.lastBlockSent);
@@ -2246,12 +2359,12 @@ void npuHaspResetPcb(Pcb *pcbp)
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Closes a HASP or Reverse HASP connection.
@@ -2295,26 +2408,30 @@ static Scb *npuHaspFindStream(Pcb *pcbp, u8 streamId, u8 deviceType)
         {
     case DtCONSOLE:
         return &pcbp->controls.hasp.consoleStream;
+
     case DtCR:
-        if (streamId > 0 && streamId <= MaxHaspStreams)
+        if ((streamId > 0) && (streamId <= MaxHaspStreams))
             {
             scbp = &pcbp->controls.hasp.readerStreams[streamId - 1];
             }
         break;
+
     case DtLP:
-        if (streamId > 0 && streamId <= MaxHaspStreams)
+        if ((streamId > 0) && (streamId <= MaxHaspStreams))
             {
             scbp = &pcbp->controls.hasp.printStreams[streamId - 1];
             }
         break;
+
     case DtCP:
     case DtPLOTTER:
-        if (streamId > 0 && streamId <= MaxHaspStreams)
+        if ((streamId > 0) && (streamId <= MaxHaspStreams))
             {
             scbp = &pcbp->controls.hasp.punchStreams[streamId - 1];
             }
         break;
         }
+
     return (scbp != NULL && scbp->tp != NULL) ? scbp : NULL;
     }
 
@@ -2322,7 +2439,7 @@ static Scb *npuHaspFindStream(Pcb *pcbp, u8 streamId, u8 deviceType)
 **  Purpose:        Find a stream with queued output.
 **
 **  Parameters:     Name        Description.
-**                  pcbp        pointer to PCB 
+**                  pcbp        pointer to PCB
 **
 **  Returns:        Pointer to SCB of stream with queued output, or NULL if
 **                  no streams have queued output
@@ -2330,16 +2447,17 @@ static Scb *npuHaspFindStream(Pcb *pcbp, u8 streamId, u8 deviceType)
 **------------------------------------------------------------------------*/
 static Scb *npuHaspFindStreamWithOutput(Pcb *pcbp)
     {
-    u8 i;
-    u8 pi;
-    u8 pollIndex;
+    u8  i;
+    u8  pi;
+    u8  pollIndex;
     Scb *scbp;
 
     if (pcbp->controls.hasp.pauseAllOutput
-        && pcbp->controls.hasp.pauseDeadline > getMilliseconds())
+        && (pcbp->controls.hasp.pauseDeadline > getMilliseconds()))
         {
         return NULL;
         }
+
     /*
     **  If this is a HASP connection, and it is not signed on yet,
     **  hold all output until signon has completed.  If it's a
@@ -2349,7 +2467,7 @@ static Scb *npuHaspFindStreamWithOutput(Pcb *pcbp)
     */
     if (pcbp->controls.hasp.isSignedOn == FALSE)
         {
-        if (pcbp->ncbp->connType == ConnTypeRevHasp
+        if ((pcbp->ncbp->connType == ConnTypeRevHasp)
             && npuBipQueueNotEmpty(&pcbp->controls.hasp.consoleStream.tp->outputQ))
             {
             return &pcbp->controls.hasp.consoleStream;
@@ -2359,14 +2477,16 @@ static Scb *npuHaspFindStreamWithOutput(Pcb *pcbp)
             return NULL;
             }
         }
+
     /*
     **  Console takes precedence over other streams
     */
-    if (pcbp->controls.hasp.consoleStream.tp->xoff == FALSE
+    if ((pcbp->controls.hasp.consoleStream.tp->xoff == FALSE)
         && npuBipQueueNotEmpty(&pcbp->controls.hasp.consoleStream.tp->outputQ))
         {
         return &pcbp->controls.hasp.consoleStream;
         }
+
     /*
     **  Round-robin using pollIndex for other streams.  For HASP connections,
     **  output streams are printer and punch streams.  For Reverse HASP
@@ -2382,11 +2502,11 @@ static Scb *npuHaspFindStreamWithOutput(Pcb *pcbp)
             if (pi < MaxHaspStreams)
                 {
                 scbp = &pcbp->controls.hasp.printStreams[pi];
-                if (scbp->tp != NULL
-                    && (scbp->state == StHaspStreamReady
-                        || scbp->state == StHaspStreamSendRTI
-                        || scbp->state == StHaspStreamWaitAcctng)
-                    && scbp->tp->xoff == FALSE && npuBipQueueNotEmpty(&scbp->tp->outputQ))
+                if ((scbp->tp != NULL)
+                    && ((scbp->state == StHaspStreamReady)
+                        || (scbp->state == StHaspStreamSendRTI)
+                        || (scbp->state == StHaspStreamWaitAcctng))
+                    && (scbp->tp->xoff == FALSE) && npuBipQueueNotEmpty(&scbp->tp->outputQ))
                     {
                     return scbp;
                     }
@@ -2394,11 +2514,11 @@ static Scb *npuHaspFindStreamWithOutput(Pcb *pcbp)
             else
                 {
                 scbp = &pcbp->controls.hasp.punchStreams[pi - MaxHaspStreams];
-                if (scbp->tp != NULL
-                    && (scbp->state == StHaspStreamReady
-                        || scbp->state == StHaspStreamSendRTI
-                        || scbp->state == StHaspStreamWaitAcctng)
-                    && scbp->tp->xoff == FALSE && npuBipQueueNotEmpty(&scbp->tp->outputQ))
+                if ((scbp->tp != NULL)
+                    && ((scbp->state == StHaspStreamReady)
+                        || (scbp->state == StHaspStreamSendRTI)
+                        || (scbp->state == StHaspStreamWaitAcctng))
+                    && (scbp->tp->xoff == FALSE) && npuBipQueueNotEmpty(&scbp->tp->outputQ))
                     {
                     return scbp;
                     }
@@ -2410,16 +2530,17 @@ static Scb *npuHaspFindStreamWithOutput(Pcb *pcbp)
         pcbp->controls.hasp.pollIndex = (pollIndex + 1) % MaxHaspStreams;
         for (i = 0; i < MaxHaspStreams; i++)
             {
-            pi = (pollIndex + i) % MaxHaspStreams;
+            pi   = (pollIndex + i) % MaxHaspStreams;
             scbp = &pcbp->controls.hasp.readerStreams[pi];
-            if (scbp->tp != NULL
-                && (scbp->state == StHaspStreamReady || scbp->state == StHaspStreamSendRTI)
-                && scbp->tp->xoff == FALSE && npuBipQueueNotEmpty(&scbp->tp->outputQ))
+            if ((scbp->tp != NULL)
+                && ((scbp->state == StHaspStreamReady) || (scbp->state == StHaspStreamSendRTI))
+                && (scbp->tp->xoff == FALSE) && npuBipQueueNotEmpty(&scbp->tp->outputQ))
                 {
                 return scbp;
                 }
             }
         }
+
     return NULL;
     }
 
@@ -2435,7 +2556,7 @@ static Scb *npuHaspFindStreamWithOutput(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 static Scb *npuHaspFindStreamWithPendingRTI(Pcb *pcbp)
     {
-    u8 i;
+    u8  i;
     Scb *scbp;
 
     if (pcbp->ncbp->connType == ConnTypeRevHasp)
@@ -2443,12 +2564,12 @@ static Scb *npuHaspFindStreamWithPendingRTI(Pcb *pcbp)
         for (i = 0; i < MaxHaspStreams; i++)
             {
             scbp = &pcbp->controls.hasp.printStreams[i];
-            if (scbp->tp != NULL && scbp->isWaitingPTI)
+            if ((scbp->tp != NULL) && scbp->isWaitingPTI)
                 {
                 return scbp;
                 }
             scbp = &pcbp->controls.hasp.punchStreams[i];
-            if (scbp->tp != NULL && scbp->isWaitingPTI)
+            if ((scbp->tp != NULL) && scbp->isWaitingPTI)
                 {
                 return scbp;
                 }
@@ -2459,12 +2580,13 @@ static Scb *npuHaspFindStreamWithPendingRTI(Pcb *pcbp)
         for (i = 0; i < MaxHaspStreams; i++)
             {
             scbp = &pcbp->controls.hasp.readerStreams[i];
-            if (scbp->tp != NULL && scbp->isWaitingPTI && scbp->isStarted)
+            if ((scbp->tp != NULL) && scbp->isWaitingPTI && scbp->isStarted)
                 {
                 return scbp;
                 }
             }
         }
+
     return NULL;
     }
 
@@ -2481,7 +2603,7 @@ static Scb *npuHaspFindStreamWithPendingRTI(Pcb *pcbp)
 static void npuHaspFlushPruFragment(Tcb *tp, u8 fe)
     {
     Scb *scbp;
-    u8 srcb;
+    u8  srcb;
 
     scbp = tp->scbp;
 
@@ -2492,15 +2614,19 @@ static void npuHaspFlushPruFragment(Tcb *tp, u8 fe)
         case '0': // skip one line
             srcb = 2;
             break;
+
         case '1': // skip to channel 1 (page eject)
             srcb = 0x11;
             break;
+
         case '-': // skip two lines
             srcb = 3;
             break;
+
         case '+': // suppress carriage control (overstrike)
             srcb = 0;
             break;
+
         case ' ':
         default:
             srcb = 1;
@@ -2511,25 +2637,25 @@ static void npuHaspFlushPruFragment(Tcb *tp, u8 fe)
         {
         srcb = 0;
         }
-    
+
     if (scbp->pruFragmentSize > 0)
         {
-        if (tp->deviceType != DtCP || scbp->params.fvFileType != 1) // avoid sending lace card
+        if ((tp->deviceType != DtCP) || (scbp->params.fvFileType != 1)) // avoid sending lace card
             {
             npuHaspSendRecordHeader(tp, srcb);
             npuHaspSendRecordStrings(tp, scbp->pruFragment, scbp->pruFragmentSize);
             }
         scbp->recordCount += 1;
         }
-    else if (scbp->recordCount > 0 || tp->deviceType != DtLP || fe != ' ')
+    else if ((scbp->recordCount > 0) || (tp->deviceType != DtLP) || (fe != ' '))
         {
         npuHaspSendRecordHeader(tp, srcb);
         npuHaspSendRecordStrings(tp, blank, sizeof(blank));
         scbp->recordCount += 1;
         }
-    scbp->pruFragmentSize = 0;
+    scbp->pruFragmentSize       = 0;
     scbp->isPruFragmentComplete = FALSE;
-}
+    }
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Flush queued data upline.
@@ -2543,16 +2669,16 @@ static void npuHaspFlushPruFragment(Tcb *tp, u8 fe)
 **------------------------------------------------------------------------*/
 static void npuHaspFlushUplineData(Scb *scbp, bool isEof)
     {
-    int i;
+    int  i;
     bool isEoi;
     bool isEor;
-    Ncb *ncbp;
-    int numBytes;
-    int recordLength;
-    Tcb *tp;
+    Ncb  *ncbp;
+    int  numBytes;
+    int  recordLength;
+    Tcb  *tp;
 
-    tp = scbp->tp;
-    ncbp = tp->pcbp->ncbp;
+    tp    = scbp->tp;
+    ncbp  = tp->pcbp->ncbp;
     isEor = FALSE;
 
     if (ncbp->connType == ConnTypeHasp)
@@ -2566,12 +2692,12 @@ static void npuHaspFlushUplineData(Scb *scbp, bool isEof)
                 recordLength -= 1;
                 }
             *tp->inBufPtr++ = ChrUS;
-            numBytes = tp->inBufPtr - tp->inBuf;
+            numBytes        = tp->inBufPtr - tp->inBuf;
             }
         else if (scbp->isDiscardingRecords)
             {
             tp->inBufPtr = tp->inBufStart;
-            numBytes = tp->inBufPtr - tp->inBuf;
+            numBytes     = tp->inBufPtr - tp->inBuf;
             }
         else // card reader input is PRU format
             {
@@ -2588,23 +2714,23 @@ static void npuHaspFlushUplineData(Scb *scbp, bool isEof)
             //  If record ends with colon (display code 00 byte), append a blank
             //  to avoid misterpreting the colon as end of line
             //
-            if (recordLength > 0 && *(tp->inBufPtr - 1) == 000)
+            if ((recordLength > 0) && (*(tp->inBufPtr - 1) == 000))
                 {
                 *tp->inBufPtr++ = DcBlank;
-                recordLength += 1;
+                recordLength   += 1;
                 }
             //
             //  If record is "/*EOR", then write end-of-record
             //
-            if (recordLength == sizeof(dcEor) && memcmp(tp->inBufStart, dcEor, sizeof(dcEor)) == 0)
+            if ((recordLength == sizeof(dcEor)) && (memcmp(tp->inBufStart, dcEor, sizeof(dcEor)) == 0))
                 {
-                isEor = TRUE;
+                isEor        = TRUE;
                 tp->inBufPtr = tp->inBufStart;
                 }
             //
             //  If record is "/*EOI", then begin discarding records until end of file reached
             //
-            else if (recordLength == sizeof(dcEoi) && memcmp(tp->inBufStart, dcEoi, sizeof(dcEoi)) == 0)
+            else if ((recordLength == sizeof(dcEoi)) && (memcmp(tp->inBufStart, dcEoi, sizeof(dcEoi)) == 0))
                 {
                 scbp->isDiscardingRecords = TRUE;
                 tp->inBufPtr = tp->inBufStart;
@@ -2615,42 +2741,46 @@ static void npuHaspFlushUplineData(Scb *scbp, bool isEof)
             else
                 {
                 i = 10 - (recordLength % 10);
-                if (i == 1) i = 11;
+                if (i == 1)
+                    {
+                    i = 11;
+                    }
                 while (i-- > 0)
                     {
                     *tp->inBufPtr++ = 000;
                     }
-                tp->inBufStart = tp->inBufPtr;
+                tp->inBufStart     = tp->inBufPtr;
                 scbp->recordCount += 1;
                 }
             }
-            numBytes = tp->inBufPtr - tp->inBuf;
+        numBytes = tp->inBufPtr - tp->inBuf;
         }
     else // ncbp->connType == ConnTypeRevHasp
         {
         scbp->recordCount += 1;
-        recordLength = tp->inBufPtr - tp->inBufStart; // transparent record length
-        if (recordLength > 1 || isEof == FALSE)
+        recordLength       = tp->inBufPtr - tp->inBufStart; // transparent record length
+        if ((recordLength > 1) || (isEof == FALSE))
             {
             if (recordLength < 2) // ensure record has at least one character
                 {
                 *tp->inBufPtr++ = EbcdicBlank;
-                recordLength += 1;
+                recordLength   += 1;
                 }
             *tp->inBufStart = recordLength;
-            numBytes = tp->inBufPtr - tp->inBuf;
-            tp->inBufStart = tp->inBufPtr++;
+            numBytes        = tp->inBufPtr - tp->inBuf;
+            tp->inBufStart  = tp->inBufPtr++;
             }
         else
             {
             numBytes = tp->inBufStart - tp->inBuf;
             }
         }
+
     /*
     **  If end of record, end of information, or buffer threshold reached,
     **  send staged records upline.
     */
-    if (isEof || isEor || numBytes > InBufThreshold)
+    if (isEof || isEor || (numBytes > InBufThreshold))
         {
         isEoi = FALSE;
         if (ncbp->connType == ConnTypeHasp)
@@ -2677,12 +2807,12 @@ static void npuHaspFlushUplineData(Scb *scbp, bool isEof)
         else
             {
             tp->inBuf[BlkOffBTBSN] = (tp->uplineBsn << BlkShiftBSN) | (isEof ? BtHTMSG : BtHTBLK);
-            tp->inBuf[BlkOffDbc] = DbcTransparent;
+            tp->inBuf[BlkOffDbc]   = DbcTransparent;
             }
 #if DEBUG
         fprintf(npuHaspLog, "Port %02x: send upline data to host for stream %u (%.7s), block type %u, dbc %02x\n",
-            tp->pcbp->claPort, tp->streamId, tp->termName, tp->inBuf[BlkOffBTBSN] & BlkMaskBT,
-            tp->inBuf[BlkOffDbc]);
+                tp->pcbp->claPort, tp->streamId, tp->termName, tp->inBuf[BlkOffBTBSN] & BlkMaskBT,
+                tp->inBuf[BlkOffDbc]);
         if (ncbp->connType == ConnTypeHasp)
             {
             npuHaspLogBytes(tp->inBuf, numBytes, (tp->deviceType == DtCONSOLE) ? ASCII : DisplayCode);
@@ -2715,7 +2845,7 @@ static void npuHaspFlushUplineData(Scb *scbp, bool isEof)
 static bool npuHaspFlushBuffer(Pcb *pcbp)
     {
     NpuBuffer *bp;
-    int numSent;
+    int       numSent;
 
     bp = pcbp->controls.hasp.outBuf;
     if (bp->numBytes > 0)
@@ -2731,10 +2861,11 @@ static bool npuHaspFlushBuffer(Pcb *pcbp)
     if (bp->numBytes < 1)
         {
         bp->numBytes = bp->offset;
-        bp->offset = 0;
+        bp->offset   = 0;
         npuHaspReleaseLastBlockSent(pcbp);
         pcbp->controls.hasp.lastBlockSent = bp;
-        pcbp->controls.hasp.outBuf = NULL;
+        pcbp->controls.hasp.outBuf        = NULL;
+
         return TRUE;
         }
     else
@@ -2754,13 +2885,13 @@ static bool npuHaspFlushBuffer(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 static void npuHaspProcessPostPrintFormatControl(Pcb *pcbp)
     {
-    u8 formatEffector;
+    u8  formatEffector;
     Scb *scbp;
-    u8 param;
+    u8  param;
 
-    scbp = pcbp->controls.hasp.designatedStream;
+    scbp  = pcbp->controls.hasp.designatedStream;
     param = pcbp->controls.hasp.sRCBParam & 0x7f;
-    if (param > 0 && param < 0x20)
+    if ((param > 0) && (param < 0x20))
         {
         if (param < 0x10) // Space NN lines after print
             {
@@ -2769,9 +2900,11 @@ static void npuHaspProcessPostPrintFormatControl(Pcb *pcbp)
             case 3:
                 formatEffector = asciiToEbcdic['-'];
                 break;
+
             case 2:
                 formatEffector = asciiToEbcdic['0'];
                 break;
+
             case 1:
             default:
                 formatEffector = asciiToEbcdic[' '];
@@ -2806,15 +2939,15 @@ static void npuHaspProcessPostPrintFormatControl(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 static void npuHaspProcessPrePrintFormatControl(Pcb *pcbp)
     {
-    u8 formatEffector;
+    u8  formatEffector;
     Scb *scbp;
-    u8 param;
+    u8  param;
 
-    scbp = pcbp->controls.hasp.designatedStream;
+    scbp  = pcbp->controls.hasp.designatedStream;
     param = pcbp->controls.hasp.sRCBParam;
     switch ((param >> 4) & 0x03)
         {
-    case 0: // Suppress space or post-print carriage control
+    case 0:                      // Suppress space or post-print carriage control
         if ((param & 0x0f) == 0) // Suppress space
             {
             formatEffector = asciiToEbcdic['+'];
@@ -2831,6 +2964,7 @@ static void npuHaspProcessPrePrintFormatControl(Pcb *pcbp)
             npuHaspStageUplineData(scbp, &formatEffector, 1);
             }
         break;
+
     case 1: // Skip to channel NNNN after print
         if (scbp->recordCount < 1)
             {
@@ -2843,15 +2977,18 @@ static void npuHaspProcessPrePrintFormatControl(Pcb *pcbp)
             npuHaspStageUplineData(scbp, &formatEffector, 1);
             }
         break;
+
     case 2: // Space immediately NN spaces
         switch (param & 0x03)
             {
         case 3:
             formatEffector = asciiToEbcdic['-'];
             break;
+
         case 2:
             formatEffector = asciiToEbcdic['0'];
             break;
+
         case 1:
         default:
             formatEffector = asciiToEbcdic[' '];
@@ -2859,7 +2996,8 @@ static void npuHaspProcessPrePrintFormatControl(Pcb *pcbp)
             }
         npuHaspStageUplineData(scbp, &formatEffector, 1);
         break;
-    case 3: // Skip immediately to channel NN
+
+    case 3:                      // Skip immediately to channel NN
         if ((param & 0x03) == 1) // Page eject
             {
             formatEffector = asciiToEbcdic['1'];
@@ -2888,7 +3026,7 @@ static void npuHaspReleaseLastBlockSent(Pcb *pcbp)
         {
         npuBipBufRelease(pcbp->controls.hasp.lastBlockSent);
         pcbp->controls.hasp.lastBlockSent = NULL;
-        pcbp->controls.hasp.retries = 0;
+        pcbp->controls.hasp.retries       = 0;
         }
     }
 
@@ -2914,12 +3052,12 @@ static void npuHaspResetScb(Scb *scbp)
             }
         }
     memset(&scbp->params, 0, sizeof(BatchParams));
-    scbp->recordCount = 0;
-    scbp->isDiscardingRecords = FALSE;
-    scbp->isStarted = FALSE;
-    scbp->isWaitingPTI = FALSE;
+    scbp->recordCount           = 0;
+    scbp->isDiscardingRecords   = FALSE;
+    scbp->isStarted             = FALSE;
+    scbp->isWaitingPTI          = FALSE;
     scbp->isPruFragmentComplete = FALSE;
-    scbp->pruFragmentSize = 0;
+    scbp->pruFragmentSize       = 0;
     }
 
 /*--------------------------------------------------------------------------
@@ -2934,15 +3072,15 @@ static void npuHaspResetScb(Scb *scbp)
 static void npuHaspResetSendDeadline(Tcb *tp)
     {
     NpuBuffer *bp;
-    Pcb *pcbp;
+    Pcb       *pcbp;
 
     pcbp = tp->pcbp;
     pcbp->controls.hasp.sendDeadline = 0;
     if (pcbp->controls.hasp.outBuf != NULL)
         {
         bp = pcbp->controls.hasp.outBuf;
-        if (bp->numBytes >= sizeof(ackIndication) && bp->offset < 1
-            && memcmp(bp->data, ackIndication, sizeof(ackIndication)) == 0)
+        if ((bp->numBytes >= sizeof(ackIndication)) && (bp->offset < 1)
+            && (memcmp(bp->data, ackIndication, sizeof(ackIndication)) == 0))
             {
             /*
             **  If the stream output buffer is not empty, and it contains an ACK0 indication that
@@ -2965,7 +3103,7 @@ static void npuHaspResetSendDeadline(Tcb *tp)
 **------------------------------------------------------------------------*/
 static void npuHaspSendBlockHeader(Tcb *tp)
     {
-    u8 header[16];
+    u8  header[16];
     int i;
     Pcb *pcbp;
 
@@ -2975,11 +3113,13 @@ static void npuHaspSendBlockHeader(Tcb *tp)
     **  Send SYN bytes and Bisync start-of-text
     */
     npuNetSend(tp, blockHeader, sizeof(blockHeader));
+
     /*
     **  Send BCB byte
     */
-    i = 0;
+    i           = 0;
     header[i++] = 0x80 | (0 << 4) | 0; // sequence number will be inserted at transmission time
+
     /*
     **  Send FCS bytes
     */
@@ -2999,14 +3139,15 @@ static void npuHaspSendBlockHeader(Tcb *tp)
 **------------------------------------------------------------------------*/
 static void npuHaspSendBlockTrailer(Tcb *tp)
     {
-    u8 header[16];
+    u8  header[16];
     int i;
 
     /*
     **  Send RCB indicating end of block
     */
-    i = 0;
+    i           = 0;
     header[i++] = 0;
+
     /*
     **  Send Bisync end of transmission
     */
@@ -3027,20 +3168,21 @@ static void npuHaspSendBlockTrailer(Tcb *tp)
 static bool npuHaspSendDownlineData(Tcb *tp)
     {
     NpuBuffer *bp;
-    u8 *data;
-    Pcb *pcbp;
-    int result;
+    u8        *data;
+    Pcb       *pcbp;
+    int       result;
 
     if ((bp = npuBipQueueExtract(&tp->outputQ)) != NULL)
         {
         pcbp = tp->pcbp;
+
         /*
         **  If no bytes have been transmitted yet, and the buffer contains
         **  a message, insert a block sequence number into the BCB byte.
         */
-        if (bp->offset < 1 && bp->numBytes > sizeof(blockHeader))
+        if ((bp->offset < 1) && (bp->numBytes > sizeof(blockHeader)))
             {
-            data = bp->data + sizeof(blockHeader); // point at BCB
+            data  = bp->data + sizeof(blockHeader); // point at BCB
             *data = (*data & 0xf0) | pcbp->controls.hasp.downlineBSN++;
             pcbp->controls.hasp.downlineBSN &= 0x0f;
             }
@@ -3051,7 +3193,7 @@ static bool npuHaspSendDownlineData(Tcb *tp)
         */
         if (bp->numBytes > 0)
             {
-            result = npuHaspSend(pcbp, data, bp->numBytes);
+            result        = npuHaspSend(pcbp, data, bp->numBytes);
             bp->offset   += result;
             bp->numBytes -= result;
             }
@@ -3075,14 +3217,14 @@ static bool npuHaspSendDownlineData(Tcb *tp)
             **  accounting record from RBF. In case of final accounting record,
             **  stream state is set to StHaspStreamInit.
             */
-            if (tp->scbp != NULL && tp->scbp->state == StHaspStreamSendRTI)
+            if ((tp->scbp != NULL) && (tp->scbp->state == StHaspStreamSendRTI))
                 {
                 tp->scbp->state = StHaspStreamWaitPTI;
                 }
             else if (bp->blockSeqNo != 0)
                 {
                 npuTipNotifySent(tp, bp->blockSeqNo);
-                if ((bp->blockSeqNo & BlkMaskBT) == BtHTMSG && tp->deviceType != DtCONSOLE)
+                if (((bp->blockSeqNo & BlkMaskBT) == BtHTMSG) && (tp->deviceType != DtCONSOLE))
                     {
                     if (tp->tipType == TtHASP)
                         {
@@ -3095,7 +3237,7 @@ static bool npuHaspSendDownlineData(Tcb *tp)
                         tp->scbp->state = StHaspStreamInit;
                         }
                     }
-                if (bp->offset < 1 && tp->tipType == TtHASP)
+                if ((bp->offset < 1) && (tp->tipType == TtHASP))
                     {
                     /*
                     **  An empty buffer with a sequence number was queued to
@@ -3106,21 +3248,25 @@ static bool npuHaspSendDownlineData(Tcb *tp)
                     */
                     npuBipBufRelease(bp);
                     pcbp->controls.hasp.currentOutputStream = NULL;
+
                     return FALSE;
                     }
                 }
             bp->numBytes = bp->offset;
-            bp->offset = 0;
+            bp->offset   = 0;
             npuHaspReleaseLastBlockSent(pcbp);
             pcbp->controls.hasp.lastBlockSent = bp;
-            pcbp->controls.hasp.retries = 0;
+            pcbp->controls.hasp.retries       = 0;
+
             return TRUE;
             }
+
         /*
         **  Not all has been sent. Put the buffer back into the queue.
         */
         npuBipQueuePrepend(bp, &tp->outputQ);
         }
+
     return FALSE;
     }
 
@@ -3154,7 +3300,7 @@ static void npuHaspSendEofRecord(Tcb *tp)
 **------------------------------------------------------------------------*/
 static void npuHaspSendRecordHeader(Tcb *tp, u8 srcb)
     {
-    u8 header[16];
+    u8  header[16];
     int i;
 
     /*
@@ -3168,32 +3314,37 @@ static void npuHaspSendRecordHeader(Tcb *tp, u8 srcb)
         if (tp->pcbp->ncbp->connType == ConnTypeHasp)
             {
             header[i++] = 0x80 | (tp->streamId << 4) | 0x01; // Operator message
-            header[i++] = 0x80 | (0 << 5) | (0 << 4); // count units = 1, EBCDIC
+            header[i++] = 0x80 | (0 << 5) | (0 << 4);        // count units = 1, EBCDIC
             }
         else
             {
             header[i++] = 0x80 | (tp->streamId << 4) | 0x02; // Operator command
-            header[i++] = 0x80 | (0 << 5) | (0 << 4); // count units = 1, EBCDIC
+            header[i++] = 0x80 | (0 << 5) | (0 << 4);        // count units = 1, EBCDIC
             }
         break;
+
     case DtCR:
         header[i++] = 0x80 | (tp->streamId << 4) | 0x03; // Normal input record
-        header[i++] = 0x80 | (0 << 5) | (0 << 4); // count units = 1, EBCDIC
+        header[i++] = 0x80 | (0 << 5) | (0 << 4);        // count units = 1, EBCDIC
         break;
+
     case DtLP:
         header[i++] = 0x80 | (tp->streamId << 4) | 0x04; // Print record
-        header[i++] = 0x80 | (0 << 6) | srcb; // normal carriage control plus format effector
+        header[i++] = 0x80 | (0 << 6) | srcb;            // normal carriage control plus format effector
         break;
+
     case DtCP:
     case DtPLOTTER:
         header[i++] = 0x80 | (tp->streamId << 4) | 0x05; // Punch record
-        header[i++] = 0x80 | (0 << 5) | (0 << 4) | 0; // count units = 1, EBCDIC, stacker select = 0
+        header[i++] = 0x80 | (0 << 5) | (0 << 4) | 0;    // count units = 1, EBCDIC, stacker select = 0
         break;
+
     default:
 #if DEBUG
         fprintf(npuHaspLog, "Port %02x: invalid HASP output stream type %u\n",
-            tp->pcbp->claPort, tp->deviceType);
+                tp->pcbp->claPort, tp->deviceType);
 #endif
+
         return;
         }
     npuNetSend(tp, header, i);
@@ -3227,7 +3378,7 @@ static void npuHaspSendRecordStrings(Tcb *tp, u8 *data, int len)
         npuNetSend(tp, header, 1);
         npuNetSend(tp, data, 63);
         data += 63;
-        len -= 63;
+        len  -= 63;
         }
     if (len > 0)
         {
@@ -3252,7 +3403,7 @@ static void npuHaspSendRecordStrings(Tcb *tp, u8 *data, int len)
 **------------------------------------------------------------------------*/
 static void npuHaspSendSignonRecord(Tcb *tp, u8 *data, int len)
     {
-    u8 header[16];
+    u8  header[16];
     int i;
     int n;
     Pcb *pcbp;
@@ -3262,15 +3413,17 @@ static void npuHaspSendSignonRecord(Tcb *tp, u8 *data, int len)
     /*
     **  RCB and SRCB for signon record
     */
-    i = 0;
+    i           = 0;
     header[i++] = 0x80 | (7 << 4) | 0;       // General control record
     header[i++] = 0x80 | asciiToEbcdic['A']; // Initial terminal signon
     npuHaspAppendRecord(pcbp, header, i);
+
     /*
     **  Append signon card image
     */
     n = (len > 80) ? 80 : len;
     npuHaspAppendOutput(pcbp, data, n);
+
     /*
     **  Blank-fill signon record to 80 characters.
     **    Note: Normally, TLF ensures that the signon record
@@ -3283,6 +3436,7 @@ static void npuHaspSendSignonRecord(Tcb *tp, u8 *data, int len)
         npuHaspAppendOutput(pcbp, header, 1);
         len += 1;
         }
+
     /*
     **  Append block trailer
     */
@@ -3304,31 +3458,34 @@ static void npuHaspSendUplineEoiAcctg(Tcb *tp)
 
     static u8 commandADEI[] =
         {
-        0,                  // DN
-        0,                  // SN
-        0,                  // CN
+        0,                            // DN
+        0,                            // SN
+        0,                            // CN
         (0 << BlkShiftBSN) | BtHTCMD, // BT/BSN/PRIO
         PfcAD,
         SfcEOI,
         0, 0, 0
         };
 
-    commandADEI[BlkOffDN] = npuSvmCouplerNode;
-    commandADEI[BlkOffSN] = npuSvmNpuNode;
-    commandADEI[BlkOffCN] = tp->cn;
+    commandADEI[BlkOffDN]    = npuSvmCouplerNode;
+    commandADEI[BlkOffSN]    = npuSvmNpuNode;
+    commandADEI[BlkOffCN]    = tp->cn;
     commandADEI[BlkOffBTBSN] = BtHTCMD | (tp->uplineBsn++ << BlkShiftBSN);
-    if (tp->uplineBsn >= 8) tp->uplineBsn = 1;
+    if (tp->uplineBsn >= 8)
+        {
+        tp->uplineBsn = 1;
+        }
     commandADEI[BlkOffP3] = (tp->scbp->recordCount >> 16) & 0xff;
-    commandADEI[BlkOffP4] = (tp->scbp->recordCount >>  8) & 0xff;
+    commandADEI[BlkOffP4] = (tp->scbp->recordCount >> 8) & 0xff;
     commandADEI[BlkOffP5] = tp->scbp->recordCount & 0xff;
     npuBipRequestUplineCanned(commandADEI, sizeof(commandADEI));
     scbp = tp->scbp;
-    scbp->recordCount = 0;
-    scbp->pruFragmentSize = 0;
+    scbp->recordCount           = 0;
+    scbp->pruFragmentSize       = 0;
     scbp->isPruFragmentComplete = tp->deviceType == DtLP;
 #if DEBUG
     fprintf(npuHaspLog, "Port %02x: send AD/EI command to host for stream %u (%.7s)\n",
-        tp->pcbp->claPort, tp->streamId, tp->termName);
+            tp->pcbp->claPort, tp->streamId, tp->termName);
     npuHaspLogBytes(commandADEI, sizeof(commandADEI), ASCII);
     npuHaspLogFlush();
 #endif
@@ -3347,23 +3504,26 @@ static void npuHaspSendUplineEOS(Tcb *tp)
     {
     static u8 commandEOS[] =
         {
-        0,                  // DN
-        0,                  // SN
-        0,                  // CN
+        0,                            // DN
+        0,                            // SN
+        0,                            // CN
         (0 << BlkShiftBSN) | BtHTCMD, // BT/BSN/PRIO
         PfcIS,
         SfcES
         };
 
-    commandEOS[BlkOffDN] = npuSvmCouplerNode;
-    commandEOS[BlkOffSN] = npuSvmNpuNode;
-    commandEOS[BlkOffCN] = tp->cn;
+    commandEOS[BlkOffDN]    = npuSvmCouplerNode;
+    commandEOS[BlkOffSN]    = npuSvmNpuNode;
+    commandEOS[BlkOffCN]    = tp->cn;
     commandEOS[BlkOffBTBSN] = BtHTCMD | (tp->uplineBsn++ << BlkShiftBSN);
-    if (tp->uplineBsn >= 8) tp->uplineBsn = 1;
+    if (tp->uplineBsn >= 8)
+        {
+        tp->uplineBsn = 1;
+        }
     npuBipRequestUplineCanned(commandEOS, sizeof(commandEOS));
 #if DEBUG
     fprintf(npuHaspLog, "Port %02x: send end of stream command to host for stream %u (%.7s)\n",
-        tp->pcbp->claPort, tp->streamId, tp->termName);
+            tp->pcbp->claPort, tp->streamId, tp->termName);
     npuHaspLogBytes(commandEOS, sizeof(commandEOS), ASCII);
     npuHaspLogFlush();
 #endif
@@ -3386,7 +3546,7 @@ static void npuHaspStageUplineData(Scb *scbp, u8 *data, int len)
     Ncb *ncbp;
     Tcb *tp;
 
-    tp = scbp->tp;
+    tp   = scbp->tp;
     ncbp = tp->pcbp->ncbp;
 
     if (ncbp->connType == ConnTypeHasp)
@@ -3433,8 +3593,8 @@ static void npuHaspStageUplineData(Scb *scbp, u8 *data, int len)
 static int npuHaspAppendOutput(Pcb *pcbp, u8 *data, int len)
     {
     NpuBuffer *bp;
-    u8 *dp;
-    u8 *start;
+    u8        *dp;
+    u8        *start;
 
     bp = pcbp->controls.hasp.outBuf;
     if (bp == NULL)
@@ -3446,6 +3606,7 @@ static int npuHaspAppendOutput(Pcb *pcbp, u8 *data, int len)
         {
         *dp++ = *data++;
         }
+
     return dp - start;
     }
 
@@ -3462,21 +3623,23 @@ static int npuHaspAppendOutput(Pcb *pcbp, u8 *data, int len)
 **------------------------------------------------------------------------*/
 static int npuHaspAppendRecord(Pcb *pcbp, u8 *data, int len)
     {
-    u8 header[16];
+    u8  header[16];
     int i;
 
-    if (pcbp->controls.hasp.outBuf == NULL || pcbp->controls.hasp.outBuf->numBytes < 1)
+    if ((pcbp->controls.hasp.outBuf == NULL) || (pcbp->controls.hasp.outBuf->numBytes < 1))
         {
         /*
         **  Append SYN bytes and Bisync start-of-text
         */
         npuHaspAppendOutput(pcbp, blockHeader, sizeof(blockHeader));
+
         /*
         **  Append BCB byte
         */
-        i = 0;
+        i           = 0;
         header[i++] = 0x80 | (0 << 4) | pcbp->controls.hasp.downlineBSN++; // normal block, sequence number
         pcbp->controls.hasp.downlineBSN &= 0x0f;
+
         /*
         **  Append FCS bytes
         */
@@ -3484,6 +3647,7 @@ static int npuHaspAppendRecord(Pcb *pcbp, u8 *data, int len)
         header[i++] = 0x80 | (1 << 6) | 0x0f; // console on, all print/punch streams on
         npuHaspAppendOutput(pcbp, header, i);
         }
+
     return npuHaspAppendOutput(pcbp, data, len);
     }
 
@@ -3525,6 +3689,7 @@ static int npuHaspSend(Pcb *pcbp, u8 *data, int len)
     }
 
 #if DEBUG
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Flush incomplete data line
 **
@@ -3559,12 +3724,12 @@ static void npuHaspLogFlush(void)
 **------------------------------------------------------------------------*/
 static void npuHaspLogBytes(u8 *bytes, int len, CharEncoding encoding)
     {
-    u8 ac;
-    int ascCol;
-    u8 b;
+    u8   ac;
+    int  ascCol;
+    u8   b;
     char hex[3];
-    int hexCol;
-    int i;
+    int  hexCol;
+    int  i;
 
     ascCol = AsciiColumn(npuHaspLogBytesCol);
     hexCol = HexColumn(npuHaspLogBytesCol);
@@ -3578,14 +3743,16 @@ static void npuHaspLogBytes(u8 *bytes, int len, CharEncoding encoding)
         case ASCII:
             ac = b;
             break;
+
         case EBCDIC:
             ac = ebcdicToAscii[b];
             break;
+
         case DisplayCode:
             ac = (b < 0x40) ? cdcToAscii[b] : '.';
             break;
             }
-        if (ac < 0x20 || ac >= 0x7f)
+        if ((ac < 0x20) || (ac >= 0x7f))
             {
             ac = '.';
             }
@@ -3625,18 +3792,23 @@ static void npuHaspLogDevParam(Tcb *tp, u8 fn, u8 fv)
     case FnDevTbsUpper:
         kw = "TbsUpper";
         break;
+
     case FnDevTbsLower:
         kw = "TbsLower";
         break;
+
     case FnDevPW:
         kw = "PW";
         break;
+
     case FnDevPL:
         kw = "PL";
         break;
-    case  FnDevPrintTrain:
+
+    case FnDevPrintTrain:
         kw = "PrintTrain";
         break;
+
     default:
         sprintf(kbuf, "<%02x>", fn);
         kw = kbuf;
@@ -3668,21 +3840,27 @@ static void npuHaspLogFileParam(Tcb *tp, u8 fn, u8 fv)
     case FnFileType:
         kw = "FileType";
         break;
+
     case FnFileCC:
         kw = "CC";
         break;
+
     case FnFileLace:
         kw = "Lace";
         break;
+
     case FnFileLimUpper:
         kw = "FileLimitUpper";
         break;
+
     case FnFileLimLower:
         kw = "FileLimitLower";
         break;
+
     case FnFilePunchLimit:
         kw = "PunchLimit";
         break;
+
     default:
         sprintf(kbuf, "<%02x>", fn);
         kw = kbuf;
@@ -3702,13 +3880,13 @@ static void npuHaspLogFileParam(Tcb *tp, u8 fn, u8 fv)
 static void npuHaspPrintStackTrace(FILE *fp)
     {
 #if defined(__APPLE__)
-    void* callstack[128];
-    int i;
-    int frames;
+    void *callstack[128];
+    int  i;
+    int  frames;
     char **strs;
 
     frames = backtrace(callstack, 128);
-    strs = backtrace_symbols(callstack, frames);
+    strs   = backtrace_symbols(callstack, frames);
     for (i = 1; i < frames; ++i)
         {
         fprintf(fp, "%s\n", strs[i]);
@@ -3716,6 +3894,7 @@ static void npuHaspPrintStackTrace(FILE *fp)
     free(strs);
 #endif
     }
+
 #endif // DEBUG
 
 /*---------------------------  End Of File  ------------------------------*/

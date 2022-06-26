@@ -10,12 +10,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -23,7 +23,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -57,32 +57,32 @@
 /*
 **  CDC 6612 console functions and status codes.
 */
-#define Fc6612Sel64CharLeft     07000
-#define Fc6612Sel32CharLeft     07001
-#define Fc6612Sel16CharLeft     07002
+#define Fc6612Sel64CharLeft      07000
+#define Fc6612Sel32CharLeft      07001
+#define Fc6612Sel16CharLeft      07002
 
-#define Fc6612Sel512DotsLeft    07010
-#define Fc6612Sel512DotsRight   07110
-#define Fc6612SelKeyIn          07020
+#define Fc6612Sel512DotsLeft     07010
+#define Fc6612Sel512DotsRight    07110
+#define Fc6612SelKeyIn           07020
 
-#define Fc6612Sel64CharRight    07100
-#define Fc6612Sel32CharRight    07101
-#define Fc6612Sel16CharRight    07102
+#define Fc6612Sel64CharRight     07100
+#define Fc6612Sel32CharRight     07101
+#define Fc6612Sel16CharRight     07102
 
-#define PciCmdNop               0x0000
-#define PciCmdFunction          0x2000
-#define PciCmdFull              0x4000
-#define PciCmdEmpty             0x6000
-#define PciCmdActive            0x8000
-#define PciCmdInactive          0xA000
-#define PciCmdClear             0xC000
-#define PciCmdMasterClear       0xE000
-                                
-#define PciStaFull              0x2000
-#define PciStaActive            0x4000
-#define PciStaBusy              0x8000
-                                
-#define PciMaskData             0x0FFF
+#define PciCmdNop                0x0000
+#define PciCmdFunction           0x2000
+#define PciCmdFull               0x4000
+#define PciCmdEmpty              0x6000
+#define PciCmdActive             0x8000
+#define PciCmdInactive           0xA000
+#define PciCmdClear              0xC000
+#define PciCmdMasterClear        0xE000
+
+#define PciStaFull               0x2000
+#define PciStaActive             0x4000
+#define PciStaBusy               0x8000
+
+#define PciMaskData              0x0FFF
 
 /*
 **  -----------------------
@@ -97,8 +97,8 @@
 */
 typedef struct pciParam
     {
-    int         fdPci;
-    int         data;
+    int fdPci;
+    int data;
     } PciParam;
 
 /*
@@ -133,16 +133,16 @@ static u16 pciParity(PpWord val);
 **  Private Variables
 **  -----------------
 */
-static u8 currentFont;
-static u16 currentOffset;
+static u8   currentFont;
+static u16  currentOffset;
 static bool emptyDrop = FALSE;
 
 static PciParam *pci;
-static IoCB io;
+static IoCB     io;
 
 #if DEBUG
 static FILE *pciLog = NULL;
-static bool active = FALSE;
+static bool active  = FALSE;
 #endif
 
 /*
@@ -151,23 +151,24 @@ static bool active = FALSE;
 */
 static const u8 serial2ToConsole[64] =
     {
-    /* 00-07 */   0,  01,  02,  03,  04,  05,  06,  07,
+    /* 00-07 */
+    0,                01,  02,  03,  04,  05,  06,  07,
     /* 10-17 */ 010, 011, 012, 013, 014, 015, 016, 017,
     /* 20-27 */ 020, 021, 022, 023, 024, 025, 026, 027,
     /* 30-37 */ 030, 031, 032,   0,   0, 060,   0,   0,
-    /* 40-47 */ 062, 061,   0,   0, 053,   0,   0,   0, 
+    /* 40-47 */ 062, 061,   0,   0, 053,   0,   0,   0,
     /* 50-57 */ 051, 052, 047, 045, 056, 046, 057, 050,
     /* 60-67 */ 033, 034, 035, 036, 037, 040, 041, 042,
-    /* 70-77 */   0,   0,   0, 044, 043,   0, 055, 054
+    /* 70-77 */ 0,     0,   0, 044, 043,   0, 055, 054
     };
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise PCI console interface.
 **
@@ -197,16 +198,16 @@ void pciConsoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Attach device to channel and initialise device control block.
     */
-    dp = channelAttach(channelNo, eqNo, DtPciChannel);
-    dp->activate = pciActivate;
+    dp             = channelAttach(channelNo, eqNo, DtPciChannel);
+    dp->activate   = pciActivate;
     dp->disconnect = pciDisconnect;
-    dp->func = pciFunc;
-    dp->io = pciIo;
-    dp->flags = pciFlags;
-    dp->in = pciIn;
-    dp->out = pciOut;
-    dp->full = pciFull;
-    dp->empty = pciEmpty;
+    dp->func       = pciFunc;
+    dp->io         = pciIo;
+    dp->flags      = pciFlags;
+    dp->in         = pciIn;
+    dp->out        = pciOut;
+    dp->full       = pciFull;
+    dp->empty      = pciEmpty;
 
     /*
     **  Allocate and initialise channel parameters.
@@ -235,12 +236,12 @@ void pciConsoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Execute function code on channel.
@@ -255,7 +256,7 @@ static FcStatus pciFunc(PpWord funcCode)
     {
     if (funcCode == 0)
         {
-        return(FcDeclined);
+        return (FcDeclined);
         }
 #if DEBUG
     fprintf(pciLog, "\n%06d PP:%02o CH:%02o f:%04o >   ",
@@ -268,7 +269,7 @@ static FcStatus pciFunc(PpWord funcCode)
     pciCmd(PciCmdFunction | funcCode);
     consoleFunc(funcCode);
 
-    return(FcAccepted);
+    return (FcAccepted);
     }
 
 /*--------------------------------------------------------------------------
@@ -302,7 +303,7 @@ static PpWord pciIn(void)
         {
         data |= asciiToConsole[ppKeyIn];
         activeDevice->fcode = 0;
-        ppKeyIn = 0;
+        ppKeyIn             = 0;
         }
 
 
@@ -310,7 +311,7 @@ static PpWord pciIn(void)
     fprintf(pciLog, " I(%04o)", data);
 #endif
 
-    return(data & Mask6);
+    return (data & Mask6);
     }
 
 /*--------------------------------------------------------------------------
@@ -405,13 +406,14 @@ static u16 pciFlags(void)
     {
 #if DEBUG
     u16 s = pciStatus();
- //   if (active)
+    //   if (active)
         {
         fprintf(pciLog, " S(0x%04X)", s);
         }
-    return(s);
+
+    return (s);
 #else
-    return(pciStatus());
+    return (pciStatus());
 #endif
     }
 
@@ -452,7 +454,8 @@ static u16 pciStatus(void)
 
     io.address = 0;
     ioctl(pci->fdPci, IOCTL_FPGA_READ, &io);
-    return(io.data);
+
+    return (io.data);
     }
 
 /*--------------------------------------------------------------------------
@@ -472,49 +475,49 @@ static void consoleFunc(PpWord funcCode)
         return;
 
     case Fc6612Sel512DotsLeft:
-        currentFont = FontDot;
+        currentFont   = FontDot;
         currentOffset = OffLeftScreen;
         windowSetFont(currentFont);
         break;
 
     case Fc6612Sel512DotsRight:
-        currentFont = FontDot;
+        currentFont   = FontDot;
         currentOffset = OffRightScreen;
         windowSetFont(currentFont);
         break;
 
     case Fc6612Sel64CharLeft:
-        currentFont = FontSmall;
+        currentFont   = FontSmall;
         currentOffset = OffLeftScreen;
         windowSetFont(currentFont);
         break;
 
     case Fc6612Sel32CharLeft:
-        currentFont = FontMedium;
+        currentFont   = FontMedium;
         currentOffset = OffLeftScreen;
         windowSetFont(currentFont);
         break;
 
     case Fc6612Sel16CharLeft:
-        currentFont = FontLarge;
+        currentFont   = FontLarge;
         currentOffset = OffLeftScreen;
         windowSetFont(currentFont);
         break;
 
     case Fc6612Sel64CharRight:
-        currentFont = FontSmall;
+        currentFont   = FontSmall;
         currentOffset = OffRightScreen;
         windowSetFont(currentFont);
         break;
 
     case Fc6612Sel32CharRight:
-        currentFont = FontMedium;
+        currentFont   = FontMedium;
         currentOffset = OffRightScreen;
         windowSetFont(currentFont);
         break;
 
     case Fc6612Sel16CharRight:
-        currentFont = FontLarge;
+        currentFont   = FontLarge;
         currentOffset = OffRightScreen;
         windowSetFont(currentFont);
         break;
@@ -605,4 +608,3 @@ static void consoleOut(PpWord data)
     }
 
 /*---------------------------  End Of File  ------------------------------*/
-

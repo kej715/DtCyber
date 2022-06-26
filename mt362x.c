@@ -25,7 +25,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -49,68 +49,68 @@
 /*
 **  CDC 362x tape function codes.
 */
-#define Fc362xRelease			00000
-#define Fc362xSelectBinary		00001
-#define Fc362xSelectCoded		00002
-#define Fc362xSelect556Bpi		00003
-#define Fc362xSelect200Bpi		00004
-#define Fc362xClear				00005
-#define Fc362xSelect800Bpi		00006
-#define Fc362xRewind			00010
-#define Fc362xRewindUnload		00011
-#define Fc362xBackspace			00012
-#define Fc362xSearchFwdFileMark	00013
-#define Fc362xSearchBckFileMark	00014
-#define Fc362xWriteFileMark		00015
-#define Fc362xSkipBadSpot		00016
-#define Fc362xSelectIntReady	00020
-#define Fc362xReleaseIntReady	00021
-#define Fc362xSelectIntEndOfOp	00022
-#define Fc362xReleaseIntEndOfOp	00023
-#define	Fc362xSelectIntError	00024
-#define Fc362xReleaseIntError	00025
-#define Fc362xClearReverseRead	00040
-#define Fc362xSetReverseRead	00041
+#define Fc362xRelease              00000
+#define Fc362xSelectBinary         00001
+#define Fc362xSelectCoded          00002
+#define Fc362xSelect556Bpi         00003
+#define Fc362xSelect200Bpi         00004
+#define Fc362xClear                00005
+#define Fc362xSelect800Bpi         00006
+#define Fc362xRewind               00010
+#define Fc362xRewindUnload         00011
+#define Fc362xBackspace            00012
+#define Fc362xSearchFwdFileMark    00013
+#define Fc362xSearchBckFileMark    00014
+#define Fc362xWriteFileMark        00015
+#define Fc362xSkipBadSpot          00016
+#define Fc362xSelectIntReady       00020
+#define Fc362xReleaseIntReady      00021
+#define Fc362xSelectIntEndOfOp     00022
+#define Fc362xReleaseIntEndOfOp    00023
+#define Fc362xSelectIntError       00024
+#define Fc362xReleaseIntError      00025
+#define Fc362xClearReverseRead     00040
+#define Fc362xSetReverseRead       00041
 
 /*
 **  CDC 362x tape status bits.
 */
-#define St362xReady             00001
-#define St362xBusy				00002
-#define St362xWriteEnable		00004
-#define St362xFileMark			00010
-#define St362xLoadPoint			00020
-#define St362xEndOfTape			00040
-#define St362xDensity200Bpi		00000
-#define St362xDensity556Bpi		00100
-#define St362xDensity800Bpi		00200
-#define St362xLostData			00400
-#define St362xEndOfOperation	01000
-#define St362xParityError		02000
-#define St362xUnitReserved		04000
+#define St362xReady                00001
+#define St362xBusy                 00002
+#define St362xWriteEnable          00004
+#define St362xFileMark             00010
+#define St362xLoadPoint            00020
+#define St362xEndOfTape            00040
+#define St362xDensity200Bpi        00000
+#define St362xDensity556Bpi        00100
+#define St362xDensity800Bpi        00200
+#define St362xLostData             00400
+#define St362xEndOfOperation       01000
+#define St362xParityError          02000
+#define St362xUnitReserved         04000
 
-#define Int362xReady			00001
-#define Int362xEndOfOp			00002
-#define Int362xError			00004
+#define Int362xReady               00001
+#define Int362xEndOfOp             00002
+#define Int362xError               00004
 
-#define St362xReadyMask			(St362xReady | St362xBusy)
-#define St362xWriteMask			00007	// Also includes Busy, Ready
-#define St362xWriteReady		00005
-#define St362xNonDensityMask	07475
-#define St362xConnectClr		03367
-#define St362xClearMask			01765	// Clears Parity, File Mark, Busy
-#define St362xMstrClrMask		01365
-#define St362xTpMotionClr		03305
-#define St362xDensityParity		03300
-#define St362xRWclear			01305
-#define St362xClearBusy			07775
+#define St362xReadyMask            (St362xReady | St362xBusy)
+#define St362xWriteMask            00007        // Also includes Busy, Ready
+#define St362xWriteReady           00005
+#define St362xNonDensityMask       07475
+#define St362xConnectClr           03367
+#define St362xClearMask            01765        // Clears Parity, File Mark, Busy
+#define St362xMstrClrMask          01365
+#define St362xTpMotionClr          03305
+#define St362xDensityParity        03300
+#define St362xRWclear              01305
+#define St362xClearBusy            07775
 
 /*
 **  Misc constants.
 */
-#define MaxPpBuf                40000
-#define MaxByteBuf              60000
-#define MaxTapeSize             1250000000   // this may need adjusting for shorter real tapes
+#define MaxPpBuf                   40000
+#define MaxByteBuf                 60000
+#define MaxTapeSize                1250000000 // this may need adjusting for shorter real tapes
 
 /*
 **  -----------------------
@@ -132,49 +132,49 @@ typedef struct tapeParam
     /*
     **  Info for show_tape operator command.
     */
-    struct tapeParam * nextTape;
-    u8          channelNo;
-    u8          eqNo;
-    u8          unitNo;
-    char        fileName[_MAX_PATH + 1];
+    struct tapeParam *nextTape;
+    u8               channelNo;
+    u8               eqNo;
+    u8               unitNo;
+    char             fileName[_MAX_PATH + 1];
 
     /*
     **  Format parameters.
     */
-    u8          tracks;
+    u8               tracks;
 
     /*
     **  Tape status variables.
     */
-	PpWord		intMask;
-	PpWord		intStatus;
-	PpWord		status;
+    PpWord           intMask;
+    PpWord           intStatus;
+    PpWord           status;
 
-	bool		bcdMode;
-	bool		reverseRead;
-    bool        writing;
+    bool             bcdMode;
+    bool             reverseRead;
+    bool             writing;
 
-    bool        unitReady;
-    bool        busy;
-    bool        ringIn;
-    bool        fileMark;
-    u32         blockNo;
-    bool        endOfTape;
-    u16         density;
-    bool        lostData;
-    bool        endOfOperation;
-    bool        parityError;
-    bool        reserved;
+    bool             unitReady;
+    bool             busy;
+    bool             ringIn;
+    bool             fileMark;
+    u32              blockNo;
+    bool             endOfTape;
+    u16              density;
+    bool             lostData;
+    bool             endOfOperation;
+    bool             parityError;
+    bool             reserved;
 
-    bool        rewinding;
-    u32         rewindStart;
+    bool             rewinding;
+    u32              rewindStart;
 
     /*
     **  I/O buffer.
     */
-    PpWord      recordLength;
-    PpWord      ioBuffer[MaxPpBuf];
-    PpWord      *bp;
+    PpWord           recordLength;
+    PpWord           ioBuffer[MaxPpBuf];
+    PpWord           *bp;
     } TapeParam;
 
 /*
@@ -210,20 +210,21 @@ static char *mt362xFunc2String(PpWord funcCode);
 **  -----------------
 */
 static TapeParam *firstTape = NULL;
-static TapeParam *lastTape = NULL;
-static u8 rawBuffer[MaxByteBuf];
+static TapeParam *lastTape  = NULL;
+static u8        rawBuffer[MaxByteBuf];
 
 #if DEBUG
 static FILE *mt362xLog = NULL;
 
-#define OctalColumn(x) (5 * (x) + 1 + 5)
-#define AsciiColumn(x) (OctalColumn(5) + 2 + (2 * x))
-#define LogLineLength (AsciiColumn(5))
+#define OctalColumn(x)    (5 * (x) + 1 + 5)
+#define AsciiColumn(x)    (OctalColumn(5) + 2 + (2 * x))
+#define LogLineLength    (AsciiColumn(5))
 
-static void mt362xLogFlush (void);
-static void mt362xLogByte (int b);
+static void mt362xLogFlush(void);
+static void mt362xLogByte(int b);
+
 static char mt362xLogBuf[LogLineLength + 1];
-static int mt362xLogCol = 0;
+static int  mt362xLogCol = 0;
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Flush incomplete numeric/ascii data line
@@ -242,7 +243,7 @@ static void mt362xLogFlush(void)
 
     mt362xLogCol = 0;
     memset(mt362xLogBuf, ' ', LogLineLength);
-    mt362xLogBuf[0] = '\n';
+    mt362xLogBuf[0]             = '\n';
     mt362xLogBuf[LogLineLength] = '\0';
     }
 
@@ -257,8 +258,8 @@ static void mt362xLogFlush(void)
 static void mt362xLogByte(int b)
     {
     char octal[10];
-    int col;
-    
+    int  col;
+
     col = OctalColumn(mt362xLogCol);
     sprintf(octal, "%04o ", b);
     memcpy(mt362xLogBuf + col, octal, 5);
@@ -271,15 +272,16 @@ static void mt362xLogByte(int b)
         mt362xLogFlush();
         }
     }
+
 #endif
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise tape drive types on 362x controller(7 or 9 track)
 **
@@ -317,8 +319,8 @@ void mt362xInit_9(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 static void mt362xInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, u8 tracks)
     {
-    DevSlot *dp;
-    FILE *fcb;
+    DevSlot   *dp;
+    FILE      *fcb;
     TapeParam *tp;
 
 #if DEBUG
@@ -328,22 +330,22 @@ static void mt362xInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, u8 tr
         }
 #endif
 
-	/*
-	** Attach 362x controller to converter (create if necessary).
-	*/
-    dp = dcc6681Attach(channelNo, eqNo, unitNo, DtMt362x);
-    dp->activate = mt362xActivate;
+    /*
+    ** Attach 362x controller to converter (create if necessary).
+    */
+    dp             = dcc6681Attach(channelNo, eqNo, unitNo, DtMt362x);
+    dp->activate   = mt362xActivate;
     dp->disconnect = mt362xDisconnect;
-    dp->func = mt362xFunc;
-    dp->io = mt362xIo;
+    dp->func       = mt362xFunc;
+    dp->io         = mt362xIo;
 
     /*
     **  Check if unit has already been configured.
     */
-    if (unitNo >= MaxUnits2 || dp->context[unitNo] != NULL)
+    if ((unitNo >= MaxUnits2) || (dp->context[unitNo] != NULL))
         {
-        fprintf (stderr, "Invalid or duplicate MT372x unit number\n");
-        exit (1);
+        fprintf(stderr, "(mt362x ) Invalid or duplicate MT372x unit number\n");
+        exit(1);
         }
 
     /*
@@ -352,12 +354,12 @@ static void mt362xInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, u8 tr
     tp = calloc(1, sizeof(TapeParam));
     if (tp == NULL)
         {
-        fprintf(stderr, "Failed to allocate MT362x tape unit context block\n");
+        fprintf(stderr, "(mt362x ) Failed to allocate MT362x tape unit context block\n");
         exit(1);
         }
 
     dp->context[unitNo] = tp;
-    tp->tracks = tracks;
+    tp->tracks          = tracks;
 
     /*
     **  Link into list of tape units.
@@ -370,7 +372,7 @@ static void mt362xInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, u8 tr
         {
         lastTape->nextTape = tp;
         }
-    
+
     lastTape = tp;
 
     /*
@@ -382,29 +384,29 @@ static void mt362xInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, u8 tr
         fcb = fopen(deviceName, "rb");
         if (fcb == NULL)
             {
-            fprintf(stderr, "Failed to open %s\n", deviceName);
+            fprintf(stderr, "(mt362x ) Failed to open %s\n", deviceName);
             exit(1);
             }
 
         dp->fcb[unitNo] = fcb;
 
-        tp->blockNo = 0;
+        tp->blockNo   = 0;
         tp->unitReady = TRUE;
-		tp->status = St362xReady | St362xLoadPoint;
+        tp->status    = St362xReady | St362xLoadPoint;
         }
     else
         {
         dp->fcb[unitNo] = NULL;
-        tp->unitReady = FALSE;
-		tp->status = 0;
+        tp->unitReady   = FALSE;
+        tp->status      = 0;
         }
 
     /*
     **  Setup show_tape values.
     */
     tp->channelNo = channelNo;
-    tp->eqNo = eqNo;
-    tp->unitNo = unitNo;
+    tp->eqNo      = eqNo;
+    tp->unitNo    = unitNo;
 
     /*
     **  All initially mounted tapes are read only.
@@ -414,7 +416,7 @@ static void mt362xInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, u8 tr
     /*
     **  Print a friendly message.
     */
-    printf("MT362x initialized on channel %o equipment %o unit %o\n", channelNo, eqNo, unitNo);
+    printf("(mt362x ) MT362x initialized on channel %o equipment %o unit %o\n", channelNo, eqNo, unitNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -429,50 +431,55 @@ static void mt362xInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, u8 tr
 void mt362xLoadTape(char *params, FILE *out)
     {
     static char str[200];
-    DevSlot *dp;
-    int numParam;
-    int channelNo;
-    int equipmentNo;
-    int unitNo;
-    TapeParam *tp;
-    FILE *fcb;
-    u8 unitMode;
+    DevSlot     *dp;
+    int         numParam;
+    int         channelNo;
+    int         equipmentNo;
+    int         unitNo;
+    TapeParam   *tp;
+    FILE        *fcb;
+    u8          unitMode;
 
     /*
     **  Operator inserted a new tape.
     */
-    numParam = sscanf(params,"%o,%o,%o,%c,%s",&channelNo, &equipmentNo, &unitNo, &unitMode, str);
+    numParam = sscanf(params, "%o,%o,%o,%c,%s", &channelNo, &equipmentNo, &unitNo, &unitMode, str);
 
     /*
     **  Check parameters.
     */
     if (numParam != 5)
         {
-        fputs("Not enough or invalid parameters\n", out);
+        fputs("(mt362x ) Not enough or invalid parameters\n", out);
+
         return;
         }
 
-    if (channelNo < 0 || channelNo >= MaxChannels)
+    if ((channelNo < 0) || (channelNo >= MaxChannels))
         {
-        fputs("Invalid channel no\n", out);
+        fputs("(mt362x ) Invalid channel no\n", out);
+
         return;
         }
 
-    if (unitNo < 0 || unitNo >= MaxUnits2)
+    if ((unitNo < 0) || (unitNo >= MaxUnits2))
         {
-        fputs("Invalid unit no\n", out);
+        fputs("(mt362x ) Invalid unit no\n", out);
+
         return;
         }
 
-    if (unitMode != 'w' && unitMode != 'r')
+    if ((unitMode != 'w') && (unitMode != 'r'))
         {
-        fputs("Invalid ring mode (r/w)\n", out);
+        fputs("(mt362x ) Invalid ring mode (r/w)\n", out);
+
         return;
         }
 
     if (str[0] == 0)
         {
-        fputs("Invalid file name\n", out);
+        fputs("(mt362x ) Invalid file name\n", out);
+
         return;
         }
 
@@ -491,7 +498,8 @@ void mt362xLoadTape(char *params, FILE *out)
     tp = (TapeParam *)dp->context[unitNo];
     if (tp == NULL)
         {
-        fprintf(out, "Unit %d not allocated\n", unitNo);
+        fprintf(out, "(mt362x ) Unit %d not allocated\n", unitNo);
+
         return;
         }
 
@@ -500,7 +508,8 @@ void mt362xLoadTape(char *params, FILE *out)
     */
     if (dp->fcb[unitNo] != NULL)
         {
-        fprintf(out, "Unit %d not unloaded\n", unitNo);
+        fprintf(out, "(mt362x ) Unit %d not unloaded\n", unitNo);
+
         return;
         }
 
@@ -527,7 +536,8 @@ void mt362xLoadTape(char *params, FILE *out)
     */
     if (fcb == NULL)
         {
-        fprintf(out, "Failed to open %s\n", str);
+        fprintf(out, "(mt362x ) Failed to open %s\n", str);
+
         return;
         }
 
@@ -541,9 +551,9 @@ void mt362xLoadTape(char *params, FILE *out)
     */
     mt362xInitStatus(tp);
     tp->unitReady = TRUE;
-    tp->ringIn = unitMode == 'w';
+    tp->ringIn    = unitMode == 'w';
 
-    fprintf(out, "Successfully loaded %s\n", str);
+    fprintf(out, "(mt362x ) Successfully loaded %s\n", str);
     }
 
 /*--------------------------------------------------------------------------
@@ -557,36 +567,39 @@ void mt362xLoadTape(char *params, FILE *out)
 **------------------------------------------------------------------------*/
 void mt362xUnloadTape(char *params, FILE *out)
     {
-    DevSlot *dp;
-    int numParam;
-    int channelNo;
-    int equipmentNo;
-    int unitNo;
+    DevSlot   *dp;
+    int       numParam;
+    int       channelNo;
+    int       equipmentNo;
+    int       unitNo;
     TapeParam *tp;
 
     /*
     **  Operator inserted a new tape.
     */
-    numParam = sscanf(params,"%o,%o,%o",&channelNo, &equipmentNo, &unitNo);
+    numParam = sscanf(params, "%o,%o,%o", &channelNo, &equipmentNo, &unitNo);
 
     /*
     **  Check parameters.
     */
     if (numParam != 3)
         {
-        fputs("Not enough or invalid parameters\n", out);
+        fputs("(mt362x ) Not enough or invalid parameters\n", out);
+
         return;
         }
 
-    if (channelNo < 0 || channelNo >= MaxChannels)
+    if ((channelNo < 0) || (channelNo >= MaxChannels))
         {
-        fputs("Invalid channel no\n", out);
+        fputs("(mt362x ) Invalid channel no\n", out);
+
         return;
         }
 
-    if (unitNo < 0 || unitNo >= MaxUnits2)
+    if ((unitNo < 0) || (unitNo >= MaxUnits2))
         {
-        fputs("Invalid unit no\n", out);
+        fputs("(mt362x ) Invalid unit no\n", out);
+
         return;
         }
 
@@ -605,7 +618,8 @@ void mt362xUnloadTape(char *params, FILE *out)
     tp = (TapeParam *)dp->context[unitNo];
     if (tp == NULL)
         {
-        fprintf(out, "Unit %d not allocated\n", unitNo);
+        fprintf(out, "(mt362x ) Unit %d not allocated\n", unitNo);
+
         return;
         }
 
@@ -614,7 +628,8 @@ void mt362xUnloadTape(char *params, FILE *out)
     */
     if (dp->fcb[unitNo] == NULL)
         {
-        fprintf(out, "Unit %d not loaded\n", unitNo);
+        fprintf(out, "(mt362x ) Unit %d not loaded\n", unitNo);
+
         return;
         }
 
@@ -634,14 +649,14 @@ void mt362xUnloadTape(char *params, FILE *out)
     */
     mt362xInitStatus(tp);
 
-    fprintf(out, "Successfully unloaded MT362x on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
+    fprintf(out, "(mt362x ) Successfully unloaded MT362x on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
     }
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Show tape status (operator interface).
 **
 **  Parameters:     Name        Description.
-**                  
+**
 **
 **  Returns:        Nothing.
 **
@@ -649,17 +664,21 @@ void mt362xUnloadTape(char *params, FILE *out)
 void mt362xShowTapeStatus(FILE *out)
     {
     TapeParam *tp = firstTape;
+    int       i   = 0;
+
+    printf("\n    > Magnetic Tape (mt679) Status:\n");
 
     while (tp)
         {
-        fprintf(out, "MT362x-%d on %o,%o,%o", tp->tracks, tp->channelNo, tp->eqNo, tp->unitNo);
+        i = i + 1;
+        fprintf(out, "    >  #%02d. MT362x-%d CH %02o EQ %02o UN %02o", i, tp->tracks, tp->channelNo, tp->eqNo, tp->unitNo);
         if (tp->unitReady)
             {
             fprintf(out, ",%c,%s\n", tp->ringIn ? 'w' : 'r', tp->fileName);
             }
         else
             {
-            fputs("  (idle)\n", out);
+            fprintf(out, "  (idle)\n");
             }
 
         tp = tp->nextTape;
@@ -677,9 +696,9 @@ void mt362xShowTapeStatus(FILE *out)
 **------------------------------------------------------------------------*/
 static void mt362xInitStatus(TapeParam *tp)
     {
-    tp->bcdMode        = FALSE;
-    tp->reverseRead    = FALSE;
-    tp->writing        = FALSE;
+    tp->bcdMode     = FALSE;
+    tp->reverseRead = FALSE;
+    tp->writing     = FALSE;
 
     tp->unitReady      = FALSE;
     tp->busy           = FALSE;
@@ -693,8 +712,8 @@ static void mt362xInitStatus(TapeParam *tp)
     tp->parityError    = FALSE;
     tp->reserved       = FALSE;
 
-    tp->rewinding      = FALSE;
-    tp->rewindStart    = FALSE;
+    tp->rewinding   = FALSE;
+    tp->rewindStart = FALSE;
     }
 
 /*--------------------------------------------------------------------------
@@ -734,10 +753,10 @@ static void mt362xSetupStatus(TapeParam *tp)
         {
         if (cycles - tp->rewindStart > 1000)
             {
-            tp->rewinding = FALSE;
-            tp->blockNo = 0;
+            tp->rewinding      = FALSE;
+            tp->blockNo        = 0;
             tp->endOfOperation = TRUE;
-            tp->intStatus |= Int362xEndOfOp;
+            tp->intStatus     |= Int362xEndOfOp;
             }
         else
             {
@@ -836,13 +855,13 @@ static void mt362xSetupStatus(TapeParam *tp)
 **------------------------------------------------------------------------*/
 static FcStatus mt362xFunc(PpWord funcCode)
     {
-    u32 recLen1;
-    i8 unitNo;
+    u32       recLen1;
+    i8        unitNo;
     TapeParam *tp;
-	FcStatus st;
+    FcStatus  st;
 
     unitNo = active3000Device->selectedUnit;
-    if (unitNo != -1 && unitNo < MaxUnits2)
+    if ((unitNo != -1) && (unitNo < MaxUnits2))
         {
         tp = (TapeParam *)active3000Device->context[unitNo];
         }
@@ -853,110 +872,114 @@ static FcStatus mt362xFunc(PpWord funcCode)
 
     if (tp == NULL)
         {
-        return(FcDeclined);
+        return (FcDeclined);
         }
 
 #if DEBUG
     mt362xLogFlush();
-    fprintf(mt362xLog, "\n%06d PP:%02o CH:%02o Unit:%02o f:%04o T:%-25s  >   ",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id,
-        unitNo,
-        funcCode,
-        mt362xFunc2String(funcCode));
+    fprintf(mt362xLog, "\n(mt362x ) %06d PP:%02o CH:%02o Unit:%02o f:%04o T:%-25s  >   ",
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id,
+            unitNo,
+            funcCode,
+            mt362xFunc2String(funcCode));
 #endif
 
 
-	switch (funcCode)
-		{
-	case Fc362xRelease:
-		active3000Device->selectedUnit = -1;
-		st = FcProcessed;
-		break;
+    switch (funcCode)
+        {
+    case Fc362xRelease:
+        active3000Device->selectedUnit = -1;
+        st = FcProcessed;
+        break;
 
-	case Fc362xSelectBinary:
-		tp->bcdMode = FALSE;
-		st = FcProcessed;
-		break;
+    case Fc362xSelectBinary:
+        tp->bcdMode = FALSE;
+        st          = FcProcessed;
+        break;
 
-	case Fc362xSelectCoded:
-		tp->bcdMode = TRUE;
-		st = FcProcessed;
-		break;
+    case Fc362xSelectCoded:
+        tp->bcdMode = TRUE;
+        st          = FcProcessed;
+        break;
 
-	case Fc362xSelect200Bpi:
-		tp->density = 200;
-		st = FcProcessed;
-		break;
+    case Fc362xSelect200Bpi:
+        tp->density = 200;
+        st          = FcProcessed;
+        break;
 
-	case Fc362xSelect556Bpi:
-		tp->density = 556;
-		st = FcProcessed;
-		break;
+    case Fc362xSelect556Bpi:
+        tp->density = 556;
+        st          = FcProcessed;
+        break;
 
-	case Fc362xSelect800Bpi:
-		tp->density = 800;
-		st = FcProcessed;
-		break;
+    case Fc362xSelect800Bpi:
+        tp->density = 800;
+        st          = FcProcessed;
+        break;
 
-	case Fc362xClear:
-		active3000Device->selectedUnit = -1;
-		st = FcProcessed;
-		break;
+    case Fc362xClear:
+        active3000Device->selectedUnit = -1;
+        st = FcProcessed;
+        break;
 
-	case Fc362xRewind:
-		if (tp->unitReady)
-			{
+    case Fc362xRewind:
+        if (tp->unitReady)
+            {
             mt362xResetStatus(tp);
             fseek(active3000Device->fcb[unitNo], 0, SEEK_SET);
             if (tp->blockNo != 0)
                 {
                 if (!tp->rewinding)
                     {
-                    tp->rewinding = TRUE;
+                    tp->rewinding   = TRUE;
                     tp->rewindStart = cycles;
                     }
                 }
 
-			tp->busy = TRUE;
-			}
+            tp->busy = TRUE;
+            }
 
         st = FcProcessed;
-		break;
+        break;
 
-	case Fc362xRewindUnload:
+    case Fc362xRewindUnload:
         if (tp->unitReady)
             {
             mt362xResetStatus(tp);
-            tp->blockNo = 0;
+            tp->blockNo   = 0;
             tp->unitReady = FALSE;
-            tp->ringIn = FALSE;
+            tp->ringIn    = FALSE;
             fclose(active3000Device->fcb[unitNo]);
             active3000Device->fcb[unitNo] = NULL;
-			tp->endOfOperation = TRUE;
-			tp->intStatus |= Int362xEndOfOp;
-			}
-        
-        st = FcProcessed;
-		break;
+            tp->endOfOperation            = TRUE;
+            tp->intStatus |= Int362xEndOfOp;
+            }
 
-	case Fc362xBackspace:
+        st = FcProcessed;
+        break;
+
+    case Fc362xBackspace:
         if (tp->unitReady)
-			{
-			if (tp->reverseRead)
-				mt362xFuncForespace();
-			else
-				mt362xFuncBackspace();
+            {
+            if (tp->reverseRead)
+                {
+                mt362xFuncForespace();
+                }
+            else
+                {
+                mt362xFuncBackspace();
+                }
 
-			tp->endOfOperation = TRUE;
-			tp->intStatus |= Int362xEndOfOp;
-			}
+            tp->endOfOperation = TRUE;
+            tp->intStatus     |= Int362xEndOfOp;
+            }
 
         st = FcProcessed;
-		break;
+        break;
 
-	case Fc362xSearchFwdFileMark:
+    case Fc362xSearchFwdFileMark:
         if (tp->unitReady)
             {
             mt362xResetStatus(tp);
@@ -965,14 +988,14 @@ static FcStatus mt362xFunc(PpWord funcCode)
                 mt362xFuncForespace();
                 } while (!tp->fileMark && !tp->endOfTape && !tp->parityError);
 
-			tp->endOfOperation = TRUE;
-			tp->intStatus |= Int362xEndOfOp;
-			}
+            tp->endOfOperation = TRUE;
+            tp->intStatus     |= Int362xEndOfOp;
+            }
 
-		st = FcProcessed;
-		break;
+        st = FcProcessed;
+        break;
 
-	case Fc362xSearchBckFileMark:
+    case Fc362xSearchBckFileMark:
         if (tp->unitReady)
             {
             mt362xResetStatus(tp);
@@ -983,17 +1006,17 @@ static FcStatus mt362xFunc(PpWord funcCode)
 
             if (tp->blockNo == 0)
                 {
-				mt362xUnload(tp);
+                mt362xUnload(tp);
                 }
 
-			tp->endOfOperation = TRUE;
-			tp->intStatus |= Int362xEndOfOp;
-			}
+            tp->endOfOperation = TRUE;
+            tp->intStatus     |= Int362xEndOfOp;
+            }
 
         st = FcProcessed;
-		break;
+        break;
 
-	case Fc362xWriteFileMark:
+    case Fc362xWriteFileMark:
         if (tp->unitReady && tp->ringIn)
             {
             mt362xResetStatus(tp);
@@ -1016,79 +1039,79 @@ static FcStatus mt362xFunc(PpWord funcCode)
             */
             fseek(active3000Device->fcb[unitNo], 0, SEEK_CUR);
 
-			tp->endOfOperation = TRUE;
-			tp->intStatus |= Int362xEndOfOp;
-			}
+            tp->endOfOperation = TRUE;
+            tp->intStatus     |= Int362xEndOfOp;
+            }
 
         st = FcProcessed;
-		break;
+        break;
 
-	case Fc362xSkipBadSpot:
+    case Fc362xSkipBadSpot:
         if (tp->unitReady && tp->ringIn)
-			{
+            {
             mt362xResetStatus(tp);
-			tp->endOfOperation = TRUE;
-			tp->intStatus |= Int362xEndOfOp;
-			}
+            tp->endOfOperation = TRUE;
+            tp->intStatus     |= Int362xEndOfOp;
+            }
 
         st = FcProcessed;
-		break;
+        break;
 
-	case Fc362xSelectIntReady:
-		tp->intMask |= Int362xReady;
-		tp->intStatus &= ~Int362xReady;
-		st = FcProcessed;
-		break;
+    case Fc362xSelectIntReady:
+        tp->intMask   |= Int362xReady;
+        tp->intStatus &= ~Int362xReady;
+        st             = FcProcessed;
+        break;
 
-	case Fc362xReleaseIntReady:
-		tp->intMask &= ~Int362xReady;
-		tp->intStatus &= ~Int362xReady;
-		st = FcProcessed;
-		break;
+    case Fc362xReleaseIntReady:
+        tp->intMask   &= ~Int362xReady;
+        tp->intStatus &= ~Int362xReady;
+        st             = FcProcessed;
+        break;
 
-	case Fc362xSelectIntEndOfOp:
-		tp->intMask |= Int362xEndOfOp;
-		tp->intStatus &= ~Int362xEndOfOp;
-		st = FcProcessed;
-		break;
+    case Fc362xSelectIntEndOfOp:
+        tp->intMask   |= Int362xEndOfOp;
+        tp->intStatus &= ~Int362xEndOfOp;
+        st             = FcProcessed;
+        break;
 
-	case Fc362xReleaseIntEndOfOp:
-		tp->intMask &= ~Int362xEndOfOp;
-		tp->intStatus &= ~Int362xEndOfOp;
-		st = FcProcessed;
-		break;
+    case Fc362xReleaseIntEndOfOp:
+        tp->intMask   &= ~Int362xEndOfOp;
+        tp->intStatus &= ~Int362xEndOfOp;
+        st             = FcProcessed;
+        break;
 
-	case Fc362xSelectIntError:
-		tp->intMask |= Int362xError;
-		tp->intStatus &= ~Int362xError;
-		st = FcProcessed;
-		break;
+    case Fc362xSelectIntError:
+        tp->intMask   |= Int362xError;
+        tp->intStatus &= ~Int362xError;
+        st             = FcProcessed;
+        break;
 
-	case Fc362xReleaseIntError:
-		tp->intMask &= ~Int362xError;
-		tp->intStatus &= ~Int362xError;
-		st = FcProcessed;
-		break;
+    case Fc362xReleaseIntError:
+        tp->intMask   &= ~Int362xError;
+        tp->intStatus &= ~Int362xError;
+        st             = FcProcessed;
+        break;
 
-	case Fc362xClearReverseRead:
-		tp->reverseRead = FALSE;
-		st = FcProcessed;
-		break;
+    case Fc362xClearReverseRead:
+        tp->reverseRead = FALSE;
+        st = FcProcessed;
+        break;
 
-	case Fc362xSetReverseRead:
-		tp->reverseRead = TRUE;
-		st = FcProcessed;
-		break;
+    case Fc362xSetReverseRead:
+        tp->reverseRead = TRUE;
+        st = FcProcessed;
+        break;
 
-	case Fc6681DevStatusReq:
-		tp->busy = TRUE;
-		st = FcAccepted;
-		break;
+    case Fc6681DevStatusReq:
+        tp->busy = TRUE;
+        st       = FcAccepted;
+        break;
 
-	case Fc6681InputToEor:
-	case Fc6681Input:
-		if (tp->unitReady && (tp->intStatus & Int362xError) == 0)
-			{
+    case Fc6681InputToEor:
+    case Fc6681Input:
+        if (tp->unitReady && ((tp->intStatus & Int362xError) == 0))
+            {
             mt362xResetStatus(tp);
             if (tp->reverseRead)
                 {
@@ -1100,34 +1123,38 @@ static FcStatus mt362xFunc(PpWord funcCode)
                 }
 
             tp->busy = TRUE;
-			st = FcAccepted;
-			}
-		else
-			/*  Tape unit was already busy when read was requested */
-			st = FcDeclined;
-		break;
+            st       = FcAccepted;
+            }
+        else
+            {
+            /*  Tape unit was already busy when read was requested */
+            st = FcDeclined;
+            }
+        break;
 
-	case Fc6681Output:
+    case Fc6681Output:
         if (tp->unitReady && tp->ringIn)
-			{
+            {
             mt362xResetStatus(tp);
             tp->bp = tp->ioBuffer;
             active3000Device->recordLength = 0;
-            tp->writing = TRUE;
+            tp->writing  = TRUE;
             tp->blockNo += 1;
-            tp->busy = TRUE;
-			st = FcAccepted;
-			}
-		else
-			st = FcDeclined;
-		break;
+            tp->busy     = TRUE;
+            st           = FcAccepted;
+            }
+        else
+            {
+            st = FcDeclined;
+            }
+        break;
 
-	case Fc6681MasterClear:
+    case Fc6681MasterClear:
         active3000Device->selectedUnit = -1;
-		tp->bcdMode = FALSE;
-		tp->intMask = 0;
-		tp->intStatus = 0;
-		for (unitNo = 0; unitNo < 16; unitNo++)
+        tp->bcdMode   = FALSE;
+        tp->intMask   = 0;
+        tp->intStatus = 0;
+        for (unitNo = 0; unitNo < 16; unitNo++)
             {
             tp = (TapeParam *)active3000Device->context[unitNo];
             if (tp != NULL)
@@ -1136,18 +1163,18 @@ static FcStatus mt362xFunc(PpWord funcCode)
                 }
             }
 
-		st = FcProcessed;
-		break;
+        st = FcProcessed;
+        break;
 
-	default:
-		st = FcDeclined;
-		break;
-		}
+    default:
+        st = FcDeclined;
+        break;
+        }
 
     /*
     **  Remember function code for subsequent I/O.
     */
-	if (st == FcAccepted)
+    if (st == FcAccepted)
         {
         active3000Device->fcode = funcCode;
         }
@@ -1159,7 +1186,7 @@ static FcStatus mt362xFunc(PpWord funcCode)
     // setup any pending interrupts based on status
     dcc6681Interrupt((tp->intMask & tp->intStatus) != 0);
 
-	return(st);
+    return (st);
     }
 
 /*--------------------------------------------------------------------------
@@ -1172,7 +1199,7 @@ static FcStatus mt362xFunc(PpWord funcCode)
 **------------------------------------------------------------------------*/
 static void mt362xIo(void)
     {
-    i8 unitNo;
+    i8        unitNo;
     TapeParam *tp;
 
     /*
@@ -1191,7 +1218,7 @@ static void mt362xIo(void)
     **  Setup selected unit context.
     */
     unitNo = active3000Device->selectedUnit;
-    if (unitNo != -1 && unitNo < MaxUnits2)
+    if ((unitNo != -1) && (unitNo < MaxUnits2))
         {
         tp = (TapeParam *)active3000Device->context[unitNo];
         }
@@ -1205,24 +1232,24 @@ static void mt362xIo(void)
         return;
         }
 
-	switch (active3000Device->fcode)
-	    {
-	case Fc6681DevStatusReq:
-		if (!activeChannel->full)
-		    {
-			tp->status &= St362xClearBusy;
-			activeChannel->data = tp->status;
-			activeChannel->full = TRUE;
-			tp->endOfOperation = TRUE;
-			tp->intStatus |= Int362xEndOfOp;
+    switch (active3000Device->fcode)
+        {
+    case Fc6681DevStatusReq:
+        if (!activeChannel->full)
+            {
+            tp->status         &= St362xClearBusy;
+            activeChannel->data = tp->status;
+            activeChannel->full = TRUE;
+            tp->endOfOperation  = TRUE;
+            tp->intStatus      |= Int362xEndOfOp;
 #if DEBUG
-    fprintf(mt362xLog, " %04o", activeChannel->data);
+            fprintf(mt362xLog, " %04o", activeChannel->data);
 #endif
-		    }
-		break;
+            }
+        break;
 
-	case Fc6681Input:
-	case Fc6681InputToEor:
+    case Fc6681Input:
+    case Fc6681InputToEor:
         if (activeChannel->full)
             {
             break;
@@ -1231,7 +1258,7 @@ static void mt362xIo(void)
         if (tp->recordLength == 0)
             {
             activeChannel->active = FALSE;
-            tp->busy = FALSE;
+            tp->busy       = FALSE;
             tp->intStatus |= Int362xEndOfOp;
             break;
             }
@@ -1252,26 +1279,26 @@ static void mt362xIo(void)
 #endif
 
             activeChannel->full = TRUE;
-            tp->recordLength -= 1;
+            tp->recordLength   -= 1;
             if (tp->recordLength == 0)
                 {
                 /*
                 **  Last word deactivates function.
                 */
-                activeDevice->fcode = 0;
+                activeDevice->fcode           = 0;
                 activeChannel->discAfterInput = TRUE;
-                tp->busy = FALSE;
-				tp->intStatus |= Int362xEndOfOp;
+                tp->busy       = FALSE;
+                tp->intStatus |= Int362xEndOfOp;
                 }
             }
 
         break;
 
-	case Fc6681Output:
-        if (activeChannel->full && active3000Device->recordLength < MaxPpBuf)
+    case Fc6681Output:
+        if (activeChannel->full && (active3000Device->recordLength < MaxPpBuf))
             {
-            *tp->bp++ = activeChannel->data;
-            activeChannel->full = FALSE;
+            *tp->bp++                       = activeChannel->data;
+            activeChannel->full             = FALSE;
             active3000Device->recordLength += 1;
 #if DEBUG
             mt362xLogByte(activeChannel->data);
@@ -1280,9 +1307,9 @@ static void mt362xIo(void)
 
         break;
 
-	default:	// No Action
-		break;
-	    }
+    default:            // No Action
+        break;
+        }
 
     /*
     **  Signal interrupts.
@@ -1315,18 +1342,18 @@ static void mt362xActivate(void)
 **------------------------------------------------------------------------*/
 static void mt362xDisconnect(void)
     {
-    FILE *fcb;
+    FILE      *fcb;
     TapeParam *tp;
-    i8 unitNo;
-    u32 i;
-    u32 recLen0;
-    u32 recLen1;
-    u32 recLen2;
-    PpWord *ip;
-    u8 *rp;
+    i8        unitNo;
+    u32       i;
+    u32       recLen0;
+    u32       recLen1;
+    u32       recLen2;
+    PpWord    *ip;
+    u8        *rp;
 
     unitNo = active3000Device->selectedUnit;
-    if (unitNo != -1 && unitNo < MaxUnits2)
+    if ((unitNo != -1) && (unitNo < MaxUnits2))
         {
         tp = (TapeParam *)active3000Device->context[unitNo];
         }
@@ -1339,30 +1366,30 @@ static void mt362xDisconnect(void)
     **  Abort pending device disconnects - the PP is doing the disconnect.
     */
     activeChannel->delayDisconnect = 0;
-    activeChannel->discAfterInput = FALSE;
+    activeChannel->discAfterInput  = FALSE;
 
     /*
     **  Nothing more to do unless we are writing.
     */
-    if (tp != NULL && tp->writing)
+    if ((tp != NULL) && tp->writing)
         {
         /*
         **  Flush written TAP record to disk.
         */
         unitNo = active3000Device->selectedUnit;
-        tp = (TapeParam *)active3000Device->context[unitNo];
+        tp     = (TapeParam *)active3000Device->context[unitNo];
 
-        if (unitNo == -1 || !tp->unitReady)
+        if ((unitNo == -1) || !tp->unitReady)
             {
             return;
             }
 
-        fcb = active3000Device->fcb[unitNo];
-        tp->bp = tp->ioBuffer;
+        fcb     = active3000Device->fcb[unitNo];
+        tp->bp  = tp->ioBuffer;
         recLen0 = 0;
         recLen2 = active3000Device->recordLength;
-        ip = tp->ioBuffer;
-        rp = rawBuffer;
+        ip      = tp->ioBuffer;
+        rp      = rawBuffer;
 
         if (tp->tracks == 9)
             {
@@ -1376,7 +1403,7 @@ static void mt362xDisconnect(void)
                     {
                     *rp++ = bcdToAscii[(*ip >> 6) & Mask6];
                     *rp++ = bcdToAscii[(*ip >> 0) & Mask6];
-                    ip += 1;
+                    ip   += 1;
                     }
 
                 recLen0 = rp - rawBuffer;
@@ -1391,7 +1418,7 @@ static void mt362xDisconnect(void)
                     *rp++ = ((ip[0] >> 4) & 0xFF);
                     *rp++ = ((ip[0] << 4) & 0xF0) | ((ip[1] >> 8) & 0x0F);
                     *rp++ = ((ip[1] >> 0) & 0xFF);
-                    ip += 2;
+                    ip   += 2;
                     }
 
                 /*
@@ -1417,9 +1444,8 @@ static void mt362xDisconnect(void)
                     {
                     *rp++ = bcdToAscii[(*ip >> 6) & Mask6];
                     *rp++ = bcdToAscii[(*ip >> 0) & Mask6];
-                    ip += 1;
+                    ip   += 1;
                     }
-
                 }
             else
                 {
@@ -1430,7 +1456,7 @@ static void mt362xDisconnect(void)
                     {
                     *rp++ = ((*ip >> 6) & Mask6);
                     *rp++ = ((*ip >> 0) & Mask6);
-                    ip += 1;
+                    ip   += 1;
                     }
                 }
 
@@ -1472,9 +1498,9 @@ static void mt362xDisconnect(void)
         tp->writing = FALSE;
         }
 
-    tp->busy = FALSE;
+    tp->busy           = FALSE;
     tp->endOfOperation = TRUE;
-	tp->intStatus |= Int362xEndOfOp;
+    tp->intStatus     |= Int362xEndOfOp;
 
     mt362xSetupStatus(tp);
     // setup any pending interrupts based on status
@@ -1492,16 +1518,16 @@ static void mt362xDisconnect(void)
 **------------------------------------------------------------------------*/
 static void mt362xFuncRead(void)
     {
-    u32 len;
-    u32 recLen0;
-    u32 recLen1;
-    u32 recLen2;
-    i8 unitNo;
+    u32       len;
+    u32       recLen0;
+    u32       recLen1;
+    u32       recLen2;
+    i8        unitNo;
     TapeParam *tp;
-    i32 position;
+    i32       position;
 
     unitNo = active3000Device->selectedUnit;
-    tp = (TapeParam *)active3000Device->context[unitNo];
+    tp     = (TapeParam *)active3000Device->context[unitNo];
 
     active3000Device->recordLength = 0;
     tp->recordLength = 0;
@@ -1518,12 +1544,12 @@ static void mt362xFuncRead(void)
 
     if (len != 1)
         {
-        tp->intStatus |= Int362xEndOfOp;
+        tp->intStatus     |= Int362xEndOfOp;
         tp->endOfOperation = TRUE;
-        tp->fileMark = TRUE;
+        tp->fileMark       = TRUE;
 
 #if DEBUG
-        fprintf(mt362xLog, "TAP is at EOF (simulate tape mark)\n");
+        fprintf(mt362xLog, "(mt362x ) TAP is at EOF (simulate tape mark)\n");
 #endif
 
         return;
@@ -1546,10 +1572,11 @@ static void mt362xFuncRead(void)
     */
     if (recLen1 > MaxByteBuf)
         {
-        logError(LogErrorLocation, "channel %02o - tape record too long: %d", activeChannel->id, recLen1);
-        tp->intStatus |= Int362xError | Int362xEndOfOp;
-        tp->parityError = TRUE;
+        logError(LogErrorLocation, "(mt362x ) channel %02o - tape record too long: %d", activeChannel->id, recLen1);
+        tp->intStatus     |= Int362xError | Int362xEndOfOp;
+        tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
+
         return;
         }
 
@@ -1558,14 +1585,15 @@ static void mt362xFuncRead(void)
         /*
         **  Report a tape mark and return.
         */
-        tp->intStatus |= Int362xEndOfOp;
-        tp->fileMark = TRUE;
+        tp->intStatus     |= Int362xEndOfOp;
+        tp->fileMark       = TRUE;
         tp->endOfOperation = TRUE;
-        tp->blockNo += 1;
+        tp->blockNo       += 1;
 
 #if DEBUG
-        fprintf(mt362xLog, "Tape mark\n");
+        fprintf(mt362xLog, "(mt362x ) Tape mark\n");
 #endif
+
         return;
         }
 
@@ -1576,10 +1604,11 @@ static void mt362xFuncRead(void)
 
     if (recLen1 != (u32)len)
         {
-        logError(LogErrorLocation, "channel %02o - short tape record read: %d", activeChannel->id, len);
-        tp->intStatus |= Int362xError | Int362xEndOfOp;
-        tp->parityError = TRUE;
+        logError(LogErrorLocation, "(mt362x ) channel %02o - short tape record read: %d", activeChannel->id, len);
+        tp->intStatus     |= Int362xError | Int362xEndOfOp;
+        tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
+
         return;
         }
 
@@ -1590,10 +1619,11 @@ static void mt362xFuncRead(void)
 
     if (len != 1)
         {
-        logError(LogErrorLocation, "channel %02o - missing tape record trailer", activeChannel->id);
-        tp->intStatus |= Int362xError | Int362xEndOfOp;
-        tp->parityError = TRUE;
+        logError(LogErrorLocation, "(mt362x ) channel %02o - missing tape record trailer", activeChannel->id);
+        tp->intStatus     |= Int362xError | Int362xEndOfOp;
+        tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
+
         return;
         }
 
@@ -1618,10 +1648,11 @@ static void mt362xFuncRead(void)
             }
         else
             {
-            logError(LogErrorLocation, "channel %02o - invalid tape record trailer: %d", activeChannel->id, recLen2);
-            tp->intStatus |= Int362xError | Int362xEndOfOp;
-            tp->parityError = TRUE;
+            logError(LogErrorLocation, "(mt362x ) channel %02o - invalid tape record trailer: %d", activeChannel->id, recLen2);
+            tp->intStatus     |= Int362xError | Int362xEndOfOp;
+            tp->parityError    = TRUE;
             tp->endOfOperation = TRUE;
+
             return;
             }
         }
@@ -1635,12 +1666,12 @@ static void mt362xFuncRead(void)
     **  Setup length, buffer pointer and block number.
     */
 #if DEBUG
-    fprintf(mt362xLog, "Read fwd %d PP words (%d 8-bit bytes)\n", active3000Device->recordLength, recLen1);
+    fprintf(mt362xLog, "(mt362x ) Read fwd %d PP words (%d 8-bit bytes)\n", active3000Device->recordLength, recLen1);
 #endif
 
     tp->recordLength = active3000Device->recordLength;
-    tp->bp = tp->ioBuffer;
-    tp->blockNo += 1;
+    tp->bp           = tp->ioBuffer;
+    tp->blockNo     += 1;
     }
 
 /*--------------------------------------------------------------------------
@@ -1653,16 +1684,16 @@ static void mt362xFuncRead(void)
 **------------------------------------------------------------------------*/
 static void mt362xFuncReadBkw(void)
     {
-    u32 len;
-    u32 recLen0;
-    u32 recLen1;
-    u32 recLen2;
-    i8 unitNo;
+    u32       len;
+    u32       recLen0;
+    u32       recLen1;
+    u32       recLen2;
+    i8        unitNo;
     TapeParam *tp;
-    i32 position;
+    i32       position;
 
     unitNo = active3000Device->selectedUnit;
-    tp = (TapeParam *)active3000Device->context[unitNo];
+    tp     = (TapeParam *)active3000Device->context[unitNo];
 
     active3000Device->recordLength = 0;
     tp->recordLength = 0;
@@ -1673,9 +1704,10 @@ static void mt362xFuncReadBkw(void)
     position = ftell(active3000Device->fcb[unitNo]);
     if (position == 0)
         {
-        tp->blockNo = 0;
-        tp->intStatus |= Int362xEndOfOp;
+        tp->blockNo        = 0;
+        tp->intStatus     |= Int362xEndOfOp;
         tp->endOfOperation = TRUE;
+
         return;
         }
 
@@ -1690,10 +1722,11 @@ static void mt362xFuncReadBkw(void)
 
     if (len != 1)
         {
-        logError(LogErrorLocation, "channel %02o - missing tape record trailer", activeChannel->id);
-        tp->intStatus |= Int362xError | Int362xEndOfOp;
-        tp->parityError = TRUE;
+        logError(LogErrorLocation, "(mt362x ) channel %02o - missing tape record trailer", activeChannel->id);
+        tp->intStatus     |= Int362xError | Int362xEndOfOp;
+        tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
+
         return;
         }
 
@@ -1704,7 +1737,7 @@ static void mt362xFuncReadBkw(void)
         {
         recLen1 = initConvertEndian(recLen0);
         }
-   else
+    else
         {
         recLen1 = recLen0;
         }
@@ -1714,10 +1747,11 @@ static void mt362xFuncReadBkw(void)
     */
     if (recLen1 > MaxByteBuf)
         {
-        logError(LogErrorLocation, "channel %02o - tape record too long: %d", activeChannel->id, recLen1);
-        tp->intStatus |= Int362xError | Int362xEndOfOp;
-        tp->parityError = TRUE;
+        logError(LogErrorLocation, "(mt362x ) channel %02o - tape record too long: %d", activeChannel->id, recLen1);
+        tp->intStatus     |= Int362xError | Int362xEndOfOp;
+        tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
+
         return;
         }
 
@@ -1737,10 +1771,11 @@ static void mt362xFuncReadBkw(void)
 
         if (len != 1)
             {
-            logError(LogErrorLocation, "channel %02o - missing TAP record header", activeChannel->id);
-            tp->intStatus |= Int362xError | Int362xEndOfOp;
-            tp->parityError = TRUE;
+            logError(LogErrorLocation, "(mt362x ) channel %02o - missing TAP record header", activeChannel->id);
+            tp->intStatus     |= Int362xError | Int362xEndOfOp;
+            tp->parityError    = TRUE;
             tp->endOfOperation = TRUE;
+
             return;
             }
 
@@ -1753,14 +1788,15 @@ static void mt362xFuncReadBkw(void)
             fseek(active3000Device->fcb[unitNo], position, SEEK_SET);
             len = fread(&recLen2, sizeof(recLen2), 1, active3000Device->fcb[unitNo]);
 
-            if (len != 1 || recLen0 != recLen2)
+            if ((len != 1) || (recLen0 != recLen2))
                 {
-                logError(LogErrorLocation, "channel %02o - invalid record length2: %d %08X != %08X", activeChannel->id, len, recLen0, recLen2);
-                tp->intStatus |= Int362xError | Int362xEndOfOp;
-                tp->parityError = TRUE;
+                logError(LogErrorLocation, "(mt362x ) channel %02o - invalid record length2: %d %08X != %08X", activeChannel->id, len, recLen0, recLen2);
+                tp->intStatus     |= Int362xError | Int362xEndOfOp;
+                tp->parityError    = TRUE;
                 tp->endOfOperation = TRUE;
+
                 return;
-               }
+                }
             }
 
         /*
@@ -1770,10 +1806,11 @@ static void mt362xFuncReadBkw(void)
 
         if (recLen1 != (u32)len)
             {
-            logError(LogErrorLocation, "channel %02o - short tape record read: %d", activeChannel->id, len);
-            tp->intStatus |= Int362xError | Int362xEndOfOp;
-            tp->parityError = TRUE;
+            logError(LogErrorLocation, "(mt362x ) channel %02o - short tape record read: %d", activeChannel->id, len);
+            tp->intStatus     |= Int362xError | Int362xEndOfOp;
+            tp->parityError    = TRUE;
             tp->endOfOperation = TRUE;
+
             return;
             }
 
@@ -1791,23 +1828,23 @@ static void mt362xFuncReadBkw(void)
         **  Setup length and buffer pointer.
         */
 #if DEBUG
-        fprintf(mt362xLog, "Read bkwd %d PP words (%d 8-bit bytes)\n", active3000Device->recordLength, recLen1);
+        fprintf(mt362xLog, "(mt362x ) Read bkwd %d PP words (%d 8-bit bytes)\n", active3000Device->recordLength, recLen1);
 #endif
 
         tp->recordLength = active3000Device->recordLength;
-        tp->bp = tp->ioBuffer + tp->recordLength - 1;
+        tp->bp           = tp->ioBuffer + tp->recordLength - 1;
         }
     else
         {
         /*
         **  A tape mark consists of only a single TAP record header of zero.
         */
-        tp->intStatus |= Int362xEndOfOp;
-        tp->fileMark = TRUE;
+        tp->intStatus     |= Int362xEndOfOp;
+        tp->fileMark       = TRUE;
         tp->endOfOperation = TRUE;
 
 #if DEBUG
-        fprintf(mt362xLog, "Tape mark\n");
+        fprintf(mt362xLog, "(mt362x ) Tape mark\n");
 #endif
         }
 
@@ -1834,16 +1871,16 @@ static void mt362xFuncReadBkw(void)
 **------------------------------------------------------------------------*/
 static void mt362xFuncForespace(void)
     {
-    u32 len;
-    u32 recLen0;
-    u32 recLen1;
-    u32 recLen2;
-    i8 unitNo;
+    u32       len;
+    u32       recLen0;
+    u32       recLen1;
+    u32       recLen2;
+    i8        unitNo;
     TapeParam *tp;
-    i32 position;
+    i32       position;
 
     unitNo = active3000Device->selectedUnit;
-    tp = (TapeParam *)active3000Device->context[unitNo];
+    tp     = (TapeParam *)active3000Device->context[unitNo];
 
     /*
     **  Determine if the tape is at the load point.
@@ -1857,12 +1894,13 @@ static void mt362xFuncForespace(void)
 
     if (len != 1)
         {
-        tp->intStatus |= Int362xEndOfOp;
+        tp->intStatus     |= Int362xEndOfOp;
         tp->endOfOperation = TRUE;
-        tp->fileMark = TRUE;
+        tp->fileMark       = TRUE;
 #if DEBUG
-        fprintf(mt362xLog, "TAP is at EOF (simulate tape mark)\n");
+        fprintf(mt362xLog, "(mt362x ) TAP is at EOF (simulate tape mark)\n");
 #endif
+
         return;
         }
 
@@ -1883,9 +1921,10 @@ static void mt362xFuncForespace(void)
     */
     if (recLen1 > MaxByteBuf)
         {
-        logError(LogErrorLocation, "channel %02o - tape record too long: %d", activeChannel->id, recLen1);
-        tp->parityError = TRUE;
+        logError(LogErrorLocation, "(mt362x ) channel %02o - tape record too long: %d", activeChannel->id, recLen1);
+        tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
+
         return;
         }
 
@@ -1894,14 +1933,15 @@ static void mt362xFuncForespace(void)
         /*
         **  Report a tape mark and return.
         */
-        tp->fileMark = TRUE;
-        tp->blockNo += 1;
-        tp->intStatus |= Int362xEndOfOp;
+        tp->fileMark       = TRUE;
+        tp->blockNo       += 1;
+        tp->intStatus     |= Int362xEndOfOp;
         tp->endOfOperation = TRUE;
 
 #if DEBUG
         fprintf(mt362xLog, "Tape mark\n");
 #endif
+
         return;
         }
 
@@ -1910,10 +1950,11 @@ static void mt362xFuncForespace(void)
     */
     if (fseek(active3000Device->fcb[unitNo], recLen1, SEEK_CUR) != 0)
         {
-        logError(LogErrorLocation, "channel %02o - short tape record read: %d", activeChannel->id, len);
-        tp->intStatus |= Int362xError | Int362xEndOfOp;
-        tp->parityError = TRUE;
+        logError(LogErrorLocation, "(mt362x ) channel %02o - short tape record read: %d", activeChannel->id, len);
+        tp->intStatus     |= Int362xError | Int362xEndOfOp;
+        tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
+
         return;
         }
 
@@ -1924,10 +1965,11 @@ static void mt362xFuncForespace(void)
 
     if (len != 1)
         {
-        logError(LogErrorLocation, "channel %02o - missing tape record trailer", activeChannel->id);
-        tp->intStatus |= Int362xError | Int362xEndOfOp;
-        tp->parityError = TRUE;
+        logError(LogErrorLocation, "(mt362x ) channel %02o - missing tape record trailer", activeChannel->id);
+        tp->intStatus     |= Int362xError | Int362xEndOfOp;
+        tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
+
         return;
         }
 
@@ -1952,10 +1994,11 @@ static void mt362xFuncForespace(void)
             }
         else
             {
-            logError(LogErrorLocation, "channel %02o - invalid tape record trailer: %d", activeChannel->id, recLen2);
-            tp->intStatus |= Int362xError | Int362xEndOfOp;
-            tp->parityError = TRUE;
+            logError(LogErrorLocation, "(mt362x ) channel %02o - invalid tape record trailer: %d", activeChannel->id, recLen2);
+            tp->intStatus     |= Int362xError | Int362xEndOfOp;
+            tp->parityError    = TRUE;
             tp->endOfOperation = TRUE;
+
             return;
             }
         }
@@ -1973,16 +2016,16 @@ static void mt362xFuncForespace(void)
 **------------------------------------------------------------------------*/
 static void mt362xFuncBackspace(void)
     {
-    u32 len;
-    u32 recLen0;
-    u32 recLen1;
-    u32 recLen2;
-    i8 unitNo;
+    u32       len;
+    u32       recLen0;
+    u32       recLen1;
+    u32       recLen2;
+    i8        unitNo;
     TapeParam *tp;
-    i32 position;
+    i32       position;
 
     unitNo = active3000Device->selectedUnit;
-    tp = (TapeParam *)active3000Device->context[unitNo];
+    tp     = (TapeParam *)active3000Device->context[unitNo];
 
     /*
     **  Check if we are already at the beginning of the tape.
@@ -1990,9 +2033,10 @@ static void mt362xFuncBackspace(void)
     position = ftell(active3000Device->fcb[unitNo]);
     if (position == 0)
         {
-        tp->intStatus |= Int362xEndOfOp;
+        tp->intStatus     |= Int362xEndOfOp;
         tp->endOfOperation = TRUE;
-        tp->blockNo = 0;
+        tp->blockNo        = 0;
+
         return;
         }
 
@@ -2007,10 +2051,11 @@ static void mt362xFuncBackspace(void)
 
     if (len != 1)
         {
-        logError(LogErrorLocation, "channel %02o - missing tape record trailer", activeChannel->id);
-        tp->intStatus |= Int362xError | Int362xEndOfOp;
-        tp->parityError = TRUE;
+        logError(LogErrorLocation, "(mt362x ) channel %02o - missing tape record trailer", activeChannel->id);
+        tp->intStatus     |= Int362xError | Int362xEndOfOp;
+        tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
+
         return;
         }
 
@@ -2021,7 +2066,7 @@ static void mt362xFuncBackspace(void)
         {
         recLen1 = initConvertEndian(recLen0);
         }
-   else
+    else
         {
         recLen1 = recLen0;
         }
@@ -2031,10 +2076,11 @@ static void mt362xFuncBackspace(void)
     */
     if (recLen1 > MaxByteBuf)
         {
-        logError(LogErrorLocation, "channel %02o - tape record too long: %d", activeChannel->id, recLen1);
-        tp->intStatus |= Int362xError | Int362xEndOfOp;
-        tp->parityError = TRUE;
+        logError(LogErrorLocation, "(mt362x ) channel %02o - tape record too long: %d", activeChannel->id, recLen1);
+        tp->intStatus     |= Int362xError | Int362xEndOfOp;
+        tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
+
         return;
         }
 
@@ -2054,10 +2100,11 @@ static void mt362xFuncBackspace(void)
 
         if (len != 1)
             {
-            logError(LogErrorLocation, "channel %02o - missing TAP record header", activeChannel->id);
-            tp->intStatus |= Int362xError | Int362xEndOfOp;
-            tp->parityError = TRUE;
+            logError(LogErrorLocation, "(mt362x ) channel %02o - missing TAP record header", activeChannel->id);
+            tp->intStatus     |= Int362xError | Int362xEndOfOp;
+            tp->parityError    = TRUE;
             tp->endOfOperation = TRUE;
+
             return;
             }
 
@@ -2070,14 +2117,15 @@ static void mt362xFuncBackspace(void)
             fseek(active3000Device->fcb[unitNo], position, SEEK_SET);
             len = fread(&recLen2, sizeof(recLen2), 1, active3000Device->fcb[unitNo]);
 
-            if (len != 1 || recLen0 != recLen2)
+            if ((len != 1) || (recLen0 != recLen2))
                 {
-                logError(LogErrorLocation, "channel %02o - invalid record length2: %d %08X != %08X", activeChannel->id, len, recLen0, recLen2);
-                tp->intStatus |= Int362xError | Int362xEndOfOp;
-                tp->parityError = TRUE;
+                logError(LogErrorLocation, "(mt362x ) channel %02o - invalid record length2: %d %08X != %08X", activeChannel->id, len, recLen0, recLen2);
+                tp->intStatus     |= Int362xError | Int362xEndOfOp;
+                tp->parityError    = TRUE;
                 tp->endOfOperation = TRUE;
+
                 return;
-               }
+                }
             }
 
         /*
@@ -2090,12 +2138,12 @@ static void mt362xFuncBackspace(void)
         /*
         **  A tape mark consists of only a single TAP record header of zero.
         */
-        tp->fileMark = TRUE;
-        tp->intStatus |= Int362xEndOfOp;
+        tp->fileMark       = TRUE;
+        tp->intStatus     |= Int362xEndOfOp;
         tp->endOfOperation = TRUE;
 
 #if DEBUG
-        fprintf(mt362xLog, "Tape mark\n");
+        fprintf(mt362xLog, "(mt362x ) Tape mark\n");
 #endif
         }
 
@@ -2123,12 +2171,12 @@ static void mt362xFuncBackspace(void)
 **------------------------------------------------------------------------*/
 static void mt362xPackAndConvert(u32 recLen)
     {
-    i8 unitNo = active3000Device->selectedUnit;
-    TapeParam *tp = active3000Device->context[unitNo];
-    u32 i;
-    u16 c1, c2, c3;
-    u16 *op;
-    u8 *rp;
+    i8        unitNo = active3000Device->selectedUnit;
+    TapeParam *tp    = active3000Device->context[unitNo];
+    u32       i;
+    u16       c1, c2, c3;
+    u16       *op;
+    u8        *rp;
 
     /*
     **  Convert the raw data into PP words suitable for a channel.
@@ -2146,7 +2194,7 @@ static void mt362xPackAndConvert(u32 recLen)
         for (i = 0; i < recLen; i += 2)
             {
             *op++ = ((PpWord)asciiToBcd[rp[0]] << 6) | ((PpWord)asciiToBcd[rp[1]] << 0);
-            rp += 2;
+            rp   += 2;
             }
 
         active3000Device->recordLength = op - tp->ioBuffer;
@@ -2193,7 +2241,7 @@ static void mt362xPackAndConvert(u32 recLen)
             for (i = 0; i < recLen; i += 2)
                 {
                 *op++ = ((PpWord)(rp[0] & Mask6) << 6) | ((PpWord)(rp[1] & Mask6) << 0);
-                rp += 2;
+                rp   += 2;
                 }
 
             active3000Device->recordLength = op - tp->ioBuffer;
@@ -2215,11 +2263,11 @@ static void mt362xUnload(TapeParam *tp)
     i8 unitNo;
 
     mt362xResetStatus(tp);
-    tp->blockNo = 0;
-    tp->unitReady = FALSE;
-    tp->ringIn = FALSE;
+    tp->blockNo        = 0;
+    tp->unitReady      = FALSE;
+    tp->ringIn         = FALSE;
     tp->endOfOperation = TRUE;
-    unitNo = active3000Device->selectedUnit;
+    unitNo             = active3000Device->selectedUnit;
     fclose(active3000Device->fcb[unitNo]);
     active3000Device->fcb[unitNo] = NULL;
     }
@@ -2235,41 +2283,96 @@ static void mt362xUnload(TapeParam *tp)
 **------------------------------------------------------------------------*/
 static char *mt362xFunc2String(PpWord funcCode)
     {
-    static char buf[30];
+    static char buf[40];
+
 #if DEBUG
-    switch(funcCode)
+    switch (funcCode)
         {
-    case Fc362xRelease                : return "Fc362xRelease";
-    case Fc362xSelectBinary           : return "Fc362xSelectBinary";
-    case Fc362xSelectCoded            : return "Fc362xSelectCoded";
-    case Fc362xSelect556Bpi           : return "Fc362xSelect556Bpi";
-    case Fc362xSelect200Bpi           : return "Fc362xSelect200Bpi";
-    case Fc362xClear                  : return "Fc362xClear";
-    case Fc362xSelect800Bpi           : return "Fc362xSelect800Bpi";
-    case Fc362xRewind                 : return "Fc362xRewind";
-    case Fc362xRewindUnload           : return "Fc362xRewindUnload";
-    case Fc362xBackspace              : return "Fc362xBackspace";
-    case Fc362xSearchFwdFileMark      : return "Fc362xSearchFwdFileMark";
-    case Fc362xSearchBckFileMark      : return "Fc362xSearchBckFileMark";
-    case Fc362xWriteFileMark          : return "Fc362xWriteFileMark";
-    case Fc362xSkipBadSpot            : return "Fc362xSkipBadSpot";
-    case Fc362xSelectIntReady         : return "Fc362xSelectIntReady";
-    case Fc362xReleaseIntReady        : return "Fc362xReleaseIntReady";
-    case Fc362xSelectIntEndOfOp       : return "Fc362xSelectIntEndOfOp";
-    case Fc362xReleaseIntEndOfOp      : return "Fc362xReleaseIntEndOfOp";
-    case Fc362xSelectIntError         : return "Fc362xSelectIntError";
-    case Fc362xReleaseIntError        : return "Fc362xReleaseIntError";
-    case Fc362xClearReverseRead       : return "Fc362xClearReverseRead";
-    case Fc362xSetReverseRead         : return "Fc362xSetReverseRead";
-    case Fc6681DevStatusReq           : return "Fc6681DevStatusReq";
-    case Fc6681MasterClear            : return "Fc6681MasterClear";
-    case Fc6681InputToEor             : return "Fc6681InputToEor";
-    case Fc6681Input                  : return "Fc6681Input";
-    case Fc6681Output                 : return "Fc6681Output";
+    case Fc362xRelease:
+        return "Fc362xRelease";
+
+    case Fc362xSelectBinary:
+        return "Fc362xSelectBinary";
+
+    case Fc362xSelectCoded:
+        return "Fc362xSelectCoded";
+
+    case Fc362xSelect556Bpi:
+        return "Fc362xSelect556Bpi";
+
+    case Fc362xSelect200Bpi:
+        return "Fc362xSelect200Bpi";
+
+    case Fc362xClear:
+        return "Fc362xClear";
+
+    case Fc362xSelect800Bpi:
+        return "Fc362xSelect800Bpi";
+
+    case Fc362xRewind:
+        return "Fc362xRewind";
+
+    case Fc362xRewindUnload:
+        return "Fc362xRewindUnload";
+
+    case Fc362xBackspace:
+        return "Fc362xBackspace";
+
+    case Fc362xSearchFwdFileMark:
+        return "Fc362xSearchFwdFileMark";
+
+    case Fc362xSearchBckFileMark:
+        return "Fc362xSearchBckFileMark";
+
+    case Fc362xWriteFileMark:
+        return "Fc362xWriteFileMark";
+
+    case Fc362xSkipBadSpot:
+        return "Fc362xSkipBadSpot";
+
+    case Fc362xSelectIntReady:
+        return "Fc362xSelectIntReady";
+
+    case Fc362xReleaseIntReady:
+        return "Fc362xReleaseIntReady";
+
+    case Fc362xSelectIntEndOfOp:
+        return "Fc362xSelectIntEndOfOp";
+
+    case Fc362xReleaseIntEndOfOp:
+        return "Fc362xReleaseIntEndOfOp";
+
+    case Fc362xSelectIntError:
+        return "Fc362xSelectIntError";
+
+    case Fc362xReleaseIntError:
+        return "Fc362xReleaseIntError";
+
+    case Fc362xClearReverseRead:
+        return "Fc362xClearReverseRead";
+
+    case Fc362xSetReverseRead:
+        return "Fc362xSetReverseRead";
+
+    case Fc6681DevStatusReq:
+        return "Fc6681DevStatusReq";
+
+    case Fc6681MasterClear:
+        return "Fc6681MasterClear";
+
+    case Fc6681InputToEor:
+        return "Fc6681InputToEor";
+
+    case Fc6681Input:
+        return "Fc6681Input";
+
+    case Fc6681Output:
+        return "Fc6681Output";
         }
 #endif
-    sprintf(buf, "UNKNOWN: %04o", funcCode);
-    return(buf);
+    sprintf(buf, "(mt362x ) Unknown Function: %04o", funcCode);
+
+    return (buf);
     }
 
 /*---------------------------  End Of File  ------------------------------*/

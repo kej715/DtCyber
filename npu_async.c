@@ -11,12 +11,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -43,36 +43,36 @@
 **  Private Constants
 **  -----------------
 */
-#define MaxIvtData          100
-#define Ms200               200000
+#define MaxIvtData    100
+#define Ms200         200000
 
 /*
 **  Telnet protocol elements
 */
 
-#define TELNET_IAC          255
-#define TELNET_DONT         254
-#define TELNET_DO           253
-#define TELNET_WONT         252
-#define TELNET_WILL         251
-#define TELNET_SB           250
-#define TELNET_GO_AHEAD     249
-#define TELNET_ERASE_LINE   248
-#define TELNET_ERASE_CHAR   247
-#define TELNET_AYT          246
-#define TELNET_ABT_OUTPUT   245
-#define TELNET_INTERRUPT    244
-#define TELNET_BREAK        243
-#define TELNET_DATA_MARK    242
-#define TELNET_NO_OP        241
-#define TELNET_SE           240
+#define TELNET_IAC              255
+#define TELNET_DONT             254
+#define TELNET_DO               253
+#define TELNET_WONT             252
+#define TELNET_WILL             251
+#define TELNET_SB               250
+#define TELNET_GO_AHEAD         249
+#define TELNET_ERASE_LINE       248
+#define TELNET_ERASE_CHAR       247
+#define TELNET_AYT              246
+#define TELNET_ABT_OUTPUT       245
+#define TELNET_INTERRUPT        244
+#define TELNET_BREAK            243
+#define TELNET_DATA_MARK        242
+#define TELNET_NO_OP            241
+#define TELNET_SE               240
 
-#define TELNET_OPT_BINARY     0
-#define TELNET_OPT_ECHO       1
-#define TELNET_OPT_SGA        3
-#define TELNET_OPT_MSG_SIZE   4
-#define TELNET_OPT_STATUS     5
-#define TELNET_OPT_LINE_MODE 34
+#define TELNET_OPT_BINARY       0
+#define TELNET_OPT_ECHO         1
+#define TELNET_OPT_SGA          3
+#define TELNET_OPT_MSG_SIZE     4
+#define TELNET_OPT_STATUS       5
+#define TELNET_OPT_LINE_MODE    34
 
 /*
 **  -----------------------
@@ -112,26 +112,26 @@ static void npuAsyncProcessUplineNormal(Tcb *tp);
 */
 static Tcb *npuTp;
 
-static u8 fcSingleSpace[] = "\r\n";
-static u8 fcDoubleSpace[] = "\r\n\n";
-static u8 fcTripleSpace[] = "\r\n\n\n";
-static u8 fcBol[] = "\r";
-static u8 fcTofAnsi[] = "\r\n\033[H";
-static u8 fcTof[] = "\f";
+static u8 fcSingleSpace[]   = "\r\n";
+static u8 fcDoubleSpace[]   = "\r\n\n";
+static u8 fcTripleSpace[]   = "\r\n\n\n";
+static u8 fcBol[]           = "\r";
+static u8 fcTofAnsi[]       = "\r\n\033[H";
+static u8 fcTof[]           = "\f";
 static u8 fcClearHomeAnsi[] = "\r\n\033[H\033[J";
 
-static u8 netBEL[] = {ChrBEL};
-static u8 netLF[] = {ChrLF};
-static u8 netCR[] = {ChrCR};
-static u8 netCRLF[] = {ChrCR, ChrLF};
-static u8 echoBuffer[1000];
-static u8 *echoPtr;
+static u8  netBEL[]  = { ChrBEL };
+static u8  netLF[]   = { ChrLF };
+static u8  netCR[]   = { ChrCR };
+static u8  netCRLF[] = { ChrCR, ChrLF };
+static u8  echoBuffer[1000];
+static u8  *echoPtr;
 static int echoLen;
 
-static u8 telnetDo  [3] = {TELNET_IAC, TELNET_DO,   0};
-static u8 telnetDont[3] = {TELNET_IAC, TELNET_DONT, 0};
-static u8 telnetWill[6] = {TELNET_IAC, TELNET_WILL, 0, TELNET_IAC, TELNET_WILL, 0};
-static u8 telnetWont[3] = {TELNET_IAC, TELNET_WONT, 0};
+static u8 telnetDo[3]      = { TELNET_IAC, TELNET_DO, 0 };
+static u8 telnetDont[3]    = { TELNET_IAC, TELNET_DONT, 0 };
+static u8 telnetWill[6]    = { TELNET_IAC, TELNET_WILL, 0, TELNET_IAC, TELNET_WILL, 0 };
+static u8 telnetWont[3]    = { TELNET_IAC, TELNET_WONT, 0 };
 static u8 iAmHereMessage[] = "\r\nYes, I am here.\r\n\r\n";
 
 static u8 blockResetConnection[] =
@@ -143,12 +143,12 @@ static u8 blockResetConnection[] =
     };
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Presets async TIP controls in a freshly allocated PCB.
@@ -161,9 +161,9 @@ static u8 blockResetConnection[] =
 **------------------------------------------------------------------------*/
 void npuAsyncPresetPcb(Pcb *pcbp)
     {
-    pcbp->controls.async.state = StTelnetData;
+    pcbp->controls.async.state        = StTelnetData;
     pcbp->controls.async.pendingWills = 0;
-    pcbp->controls.async.tp = NULL;
+    pcbp->controls.async.tp           = NULL;
     }
 
 /*--------------------------------------------------------------------------
@@ -195,21 +195,21 @@ void npuAsyncProcessBreakIndication(Tcb *tp)
 **------------------------------------------------------------------------*/
 void npuAsyncProcessTelnetData(Pcb *pcbp)
     {
-    u8 *dp;
-    u8 *lp;
-    u8 opt;
-    u8 *sp;
-    u8 tnOutBuf[MaxBuffer];
-    u8 *tnOutLimit;
-    u8 *tnOutPtr;
+    u8  *dp;
+    u8  *lp;
+    u8  opt;
+    u8  *sp;
+    u8  tnOutBuf[MaxBuffer];
+    u8  *tnOutLimit;
+    u8  *tnOutPtr;
     Tcb *tp;
 
-    tp = npuAsyncFindTcb(pcbp);
-    sp = pcbp->inputData;
-    dp = sp;
-    tnOutPtr = tnOutBuf;
+    tp         = npuAsyncFindTcb(pcbp);
+    sp         = pcbp->inputData;
+    dp         = sp;
+    tnOutPtr   = tnOutBuf;
     tnOutLimit = tnOutPtr + sizeof(tnOutBuf);
-    lp = sp + pcbp->inputCount;
+    lp         = sp + pcbp->inputCount;
 
     while (sp < lp)
         {
@@ -231,24 +231,30 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
                 *dp++ = *sp++;
                 }
             break;
+
         case StTelnetProtoElem:
             switch (*sp++)
                 {
             case TELNET_IAC:
                 *dp++ = TELNET_IAC;
                 break;
+
             case TELNET_DONT:
                 pcbp->controls.async.state = StTelnetDont;
                 break;
+
             case TELNET_DO:
                 pcbp->controls.async.state = StTelnetDo;
                 break;
+
             case TELNET_WONT:
                 pcbp->controls.async.state = StTelnetWont;
                 break;
+
             case TELNET_WILL:
                 pcbp->controls.async.state = StTelnetWill;
                 break;
+
             case TELNET_ERASE_LINE:
                 if (tp != NULL)
                     {
@@ -256,6 +262,7 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
                     }
                 pcbp->controls.async.state = StTelnetData;
                 break;
+
             case TELNET_ERASE_CHAR:
                 if (tp != NULL)
                     {
@@ -263,6 +270,7 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
                     }
                 pcbp->controls.async.state = StTelnetData;
                 break;
+
             case TELNET_AYT:
                 if (tnOutPtr + sizeof(iAmHereMessage) <= tnOutLimit)
                     {
@@ -271,6 +279,7 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
                     }
                 pcbp->controls.async.state = StTelnetData;
                 break;
+
             case TELNET_ABT_OUTPUT:
                 if (tp != NULL)
                     {
@@ -278,6 +287,7 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
                     }
                 pcbp->controls.async.state = StTelnetData;
                 break;
+
             case TELNET_INTERRUPT:
                 if (tp != NULL)
                     {
@@ -285,6 +295,7 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
                     }
                 pcbp->controls.async.state = StTelnetData;
                 break;
+
             case TELNET_BREAK:
                 if (tp != NULL)
                     {
@@ -292,6 +303,7 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
                     }
                 pcbp->controls.async.state = StTelnetData;
                 break;
+
             case TELNET_DATA_MARK:
             case TELNET_GO_AHEAD:
             case TELNET_SB:
@@ -302,9 +314,10 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
                 break;
                 }
             break;
+
         case StTelnetDont:
             opt = *sp++;
-            if (opt < 8 && ((1 << opt) & pcbp->controls.async.pendingWills))
+            if ((opt < 8) && ((1 << opt) & pcbp->controls.async.pendingWills))
                 {
                 pcbp->controls.async.pendingWills &= ~(1 << opt);
                 }
@@ -319,13 +332,14 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
                 }
             pcbp->controls.async.state = StTelnetData;
             break;
+
         case StTelnetDo:
             opt = *sp++;
-            if (opt < 8 && ((1 << opt) & pcbp->controls.async.pendingWills))
+            if ((opt < 8) && ((1 << opt) & pcbp->controls.async.pendingWills))
                 {
                 pcbp->controls.async.pendingWills &= ~(1 << opt);
                 }
-            else if (opt == TELNET_OPT_BINARY || opt == TELNET_OPT_ECHO || opt == TELNET_OPT_SGA)
+            else if ((opt == TELNET_OPT_BINARY) || (opt == TELNET_OPT_ECHO) || (opt == TELNET_OPT_SGA))
                 {
                 if (tnOutPtr + 3 <= tnOutLimit)
                     {
@@ -345,6 +359,7 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
                 }
             pcbp->controls.async.state = StTelnetData;
             break;
+
         case StTelnetWont:
             if (tnOutPtr + 3 <= tnOutLimit)
                 {
@@ -354,9 +369,10 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
                 }
             pcbp->controls.async.state = StTelnetData;
             break;
+
         case StTelnetWill:
             opt = *sp++;
-            if (opt == TELNET_OPT_BINARY || opt == TELNET_OPT_SGA)
+            if ((opt == TELNET_OPT_BINARY) || (opt == TELNET_OPT_SGA))
                 {
                 if (tnOutPtr + 3 <= tnOutLimit)
                     {
@@ -376,8 +392,9 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
                 }
             pcbp->controls.async.state = StTelnetData;
             break;
+
         case StTelnetCR:
-            if (*sp == 0 || *sp == 0x0A)
+            if ((*sp == 0) || (*sp == 0x0A))
                 {
                 sp += 1;
                 }
@@ -392,7 +409,7 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
         }
 
     pcbp->inputCount = dp - pcbp->inputData;
-    if (pcbp->inputCount > 0 && tp != NULL)
+    if ((pcbp->inputCount > 0) && (tp != NULL))
         {
         npuAsyncProcessUplineData(pcbp);
         }
@@ -411,7 +428,7 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 void npuAsyncPtermNetSend(Tcb *tp, u8 *data, int len)
     {
-    u8 *p;
+    u8  *p;
     int count;
 
     /*
@@ -462,7 +479,7 @@ void npuAsyncResetPcb(Pcb *pcbp)
     {
     NpuBuffer *bp;
 
-    pcbp->controls.async.state = StTelnetData;
+    pcbp->controls.async.state        = StTelnetData;
     pcbp->controls.async.pendingWills = 0;
     if (pcbp->controls.async.tp != NULL)
         {
@@ -487,9 +504,9 @@ void npuAsyncResetPcb(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 void npuAsyncTelnetNetSend(Tcb *tp, u8 *data, int len)
     {
-    static u8 iac[] = {TELNET_IAC};
-    u8 *p;
-    int count;
+    static u8 iac[] = { TELNET_IAC };
+    u8        *p;
+    int       count;
 
     /*
     **  Telnet escape processing as required by Telnet protocol.
@@ -526,9 +543,9 @@ void npuAsyncTelnetNetSend(Tcb *tp, u8 *data, int len)
 void npuAsyncTryOutput(Pcb *pcbp)
     {
     NpuBuffer *bp;
-    u8 *data;
-    int result;
-    Tcb *tp;
+    u8        *data;
+    int       result;
+    Tcb       *tp;
 
     tp = npuAsyncFindTcb(pcbp);
     if (tp == NULL)
@@ -539,7 +556,7 @@ void npuAsyncTryOutput(Pcb *pcbp)
     /*
     **  Handle transparent input timeout.
     */
-    if (tp->xInputTimerRunning && (cycles - tp->xStartCycle) >= Ms200)
+    if (tp->xInputTimerRunning && ((cycles - tp->xStartCycle) >= Ms200))
         {
         npuAsyncFlushUplineTransparent(tp);
         }
@@ -629,27 +646,28 @@ void npuAsyncTryOutput(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 void npuAsyncProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
     {
-    u8 *blk = bp->data + BlkOffData;
-    int len = bp->numBytes - BlkOffData;
-    u8 dbc;
-    u8 fe;
+    u8  *blk = bp->data + BlkOffData;
+    int len  = bp->numBytes - BlkOffData;
+    u8  dbc;
+    u8  fe;
     int textlen;
-    u8 *ptrUS;
+    u8  *ptrUS;
 
     npuTp = tp;
 
     /*
     **  Extract Data Block Clarifier settings.
     */
-    dbc = *blk++;
+    dbc  = *blk++;
     len -= 1;
-    npuTp->dbcNoEchoplex  = (dbc & DbcEchoplex)    != 0;
+    npuTp->dbcNoEchoplex  = (dbc & DbcEchoplex) != 0;
     npuTp->dbcNoCursorPos = (dbc & DbcNoCursorPos) != 0;
 
     if ((dbc & DbcTransparent) != 0)
         {
         npuNetSend(npuTp, blk, len);
         npuNetQueueAck(npuTp, (u8)(bp->data[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN)));
+
         return;
         }
 
@@ -667,7 +685,7 @@ void npuAsyncProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
             }
         else
             {
-            fe = *blk++;
+            fe   = *blk++;
             len -= 1;
             }
 
@@ -736,7 +754,7 @@ void npuAsyncProcessUplineData(Pcb *pcbp)
     Tcb *tp;
 
     tp = npuAsyncFindTcb(pcbp);
-    if (tp == NULL || tp->state != StTermHostConnected)
+    if ((tp == NULL) || (tp->state != StTermHostConnected))
         {
         return;
         }
@@ -815,6 +833,7 @@ void npuAsyncFlushUplineTransparent(Tcb *tp)
 bool npuAsyncNotifyNetConnect(Pcb *pcbp, bool isPassive)
     {
     npuAsyncResetPcb(pcbp);
+
     return npuSvmConnectTerminal(pcbp);
     }
 
@@ -836,6 +855,7 @@ void npuAsyncNotifyNetDisconnect(Pcb *pcbp)
         {
         npuSvmDiscRequestTerminal(tp);
         }
+
     /*
     **  Close socket and reset PCB.
     */
@@ -881,12 +901,12 @@ void npuAsyncNotifyTermDisconnect(Tcb *tp)
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Process format effector at start of line
@@ -1029,12 +1049,14 @@ static Tcb *npuAsyncFindTcb(Pcb *pcbp)
     for (i = 1; i < MaxTcbs; i++)
         {
         tp = &npuTcbs[i];
-        if (tp->state != StTermIdle && tp->pcbp == pcbp)
+        if ((tp->state != StTermIdle) && (tp->pcbp == pcbp))
             {
             pcbp->controls.async.tp = tp;
+
             return tp;
             }
         }
+
     return NULL;
     }
 
@@ -1049,14 +1071,14 @@ static Tcb *npuAsyncFindTcb(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 static void npuAsyncProcessUplineTransparent(Tcb *tp)
     {
-    u8 *dp;
+    u8  *dp;
     int len;
-    u8 ch;
+    u8  ch;
     Pcb *pcbp;
 
     pcbp = tp->pcbp;
-    dp = pcbp->inputData;
-    len = pcbp->inputCount;
+    dp   = pcbp->inputData;
+    len  = pcbp->inputCount;
 
     /*
     **  Cancel transparent input forwarding timeout.
@@ -1075,7 +1097,7 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
             *echoPtr++ = ch;
             }
 
-        if (tp->params.fvXCharFlag && ch == tp->params.fvXChar)
+        if (tp->params.fvXCharFlag && (ch == tp->params.fvXChar))
             {
             if (!tp->params.fvXModeMultiple)
                 {
@@ -1092,9 +1114,9 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
             npuBipRequestUplineCanned(tp->inBuf, tp->inBufPtr - tp->inBuf);
             npuTipInputReset(tp);
             }
-        else if (ch == tp->params.fvUserBreak2 && tp->params.fvEnaXUserBreak)
+        else if ((ch == tp->params.fvUserBreak2) && tp->params.fvEnaXUserBreak)
             {
-            *tp->inBufPtr++ = ch;
+            *tp->inBufPtr++      = ch;
             tp->inBuf[BlkOffDbc] = DbcTransparent;
             npuBipRequestUplineCanned(tp->inBuf, tp->inBufPtr - tp->inBuf);
             npuTipInputReset(tp);
@@ -1102,8 +1124,8 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
         else
             {
             *tp->inBufPtr++ = ch;
-            if (   tp->inBufPtr - tp->inBufStart >= tp->params.fvXCnt
-                || tp->inBufPtr - tp->inBufStart >= MaxBuffer - BlkOffDbc - 2)
+            if ((tp->inBufPtr - tp->inBufStart >= tp->params.fvXCnt)
+                || (tp->inBufPtr - tp->inBufStart >= MaxBuffer - BlkOffDbc - 2))
                 {
                 if (!tp->params.fvXModeMultiple)
                     {
@@ -1126,9 +1148,9 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
     /*
     **  If data is pending, schedule transparent input forwarding timeout.
     */
-    if (tp->params.fvXTimeout && tp->inBufStart != tp->inBufPtr)
+    if (tp->params.fvXTimeout && (tp->inBufStart != tp->inBufPtr))
         {
-        tp->xStartCycle = cycles;
+        tp->xStartCycle        = cycles;
         tp->xInputTimerRunning = TRUE;
         }
     }
@@ -1144,14 +1166,14 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
 **------------------------------------------------------------------------*/
 static void npuAsyncProcessUplineAscii(Tcb *tp)
     {
-    u8 *dp;
+    u8  *dp;
     int len;
-    u8 ch;
+    u8  ch;
     Pcb *pcbp;
 
     pcbp = tp->pcbp;
-    dp = pcbp->inputData;
-    len = pcbp->inputCount;
+    dp   = pcbp->inputData;
+    len  = pcbp->inputCount;
 
     /*
     **  Process normalised input.
@@ -1176,7 +1198,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
                 }
             }
 
-        if (   (ch == ChrDC1 || ch == ChrDC3)
+        if (((ch == ChrDC1) || (ch == ChrDC3))
             && tp->params.fvOutFlowControl)
             {
             /*
@@ -1191,7 +1213,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
                 }
             else
                 {
-                /* 
+                /*
                 **  XOFF (turn output off)
                 */
                 tp->xoff = TRUE;
@@ -1200,8 +1222,8 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
             continue;
             }
 
-        if (   ch == tp->params.fvCN
-            || ch == tp->params.fvEOL)
+        if ((ch == tp->params.fvCN)
+            || (ch == tp->params.fvEOL))
             {
             /*
             **  EOL or Cancel entered - send the input upline.
@@ -1219,7 +1241,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
                 **  DBC prevented echoplex for this line.
                 */
                 tp->dbcNoEchoplex = FALSE;
-                echoPtr = echoBuffer;
+                echoPtr           = echoBuffer;
                 }
             else
                 {
@@ -1299,16 +1321,16 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
 **------------------------------------------------------------------------*/
 static void npuAsyncProcessUplineSpecial(Tcb *tp)
     {
-    u8 *dp;
+    u8  *dp;
     int len;
-    u8 ch;
+    u8  ch;
     int i;
     int cnt;
     Pcb *pcbp;
 
     pcbp = tp->pcbp;
-    dp = pcbp->inputData;
-    len = pcbp->inputCount;
+    dp   = pcbp->inputData;
+    len  = pcbp->inputCount;
 
     /*
     **  Process normalised input.
@@ -1341,7 +1363,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
                 }
             }
 
-        if (   (ch == ChrDC1 || ch == ChrDC3)
+        if (((ch == ChrDC1) || (ch == ChrDC3))
             && tp->params.fvOutFlowControl)
             {
             /*
@@ -1356,7 +1378,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
                 }
             else
                 {
-                /* 
+                /*
                 **  XOFF (turn output off)
                 */
                 tp->xoff = TRUE;
@@ -1373,7 +1395,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
             **  to build and send the sequence.
             */
             echoPtr = echoBuffer;
-            cnt = tp->inBufPtr - tp->inBufStart;
+            cnt     = tp->inBufPtr - tp->inBufStart;
             for (i = cnt; i > 0; i--)
                 {
                 *echoPtr++ = ChrBS;
@@ -1452,7 +1474,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
                 **  DBC prevented echoplex for this line.
                 */
                 tp->dbcNoEchoplex = FALSE;
-                echoPtr = echoBuffer;
+                echoPtr           = echoBuffer;
                 }
             else
                 {
@@ -1526,16 +1548,16 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
 **------------------------------------------------------------------------*/
 static void npuAsyncProcessUplineNormal(Tcb *tp)
     {
-    u8 *dp;
+    u8  *dp;
     int len;
-    u8 ch;
+    u8  ch;
     int i;
     int cnt;
     Pcb *pcbp;
 
     pcbp = tp->pcbp;
-    dp = pcbp->inputData;
-    len = pcbp->inputCount;
+    dp   = pcbp->inputData;
+    len  = pcbp->inputCount;
 
     /*
     **  Process normalised input.
@@ -1557,7 +1579,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
             continue;
             }
 
-        if (   (ch == ChrDC1 || ch == ChrDC3)
+        if (((ch == ChrDC1) || (ch == ChrDC3))
             && tp->params.fvOutFlowControl)
             {
             /*
@@ -1572,7 +1594,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
                 }
             else
                 {
-                /* 
+                /*
                 **  XOFF (turn output off)
                 */
                 tp->xoff = TRUE;
@@ -1589,7 +1611,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
             **  to build and send the sequence.
             */
             echoPtr = echoBuffer;
-            cnt = tp->inBufPtr - tp->inBufStart;
+            cnt     = tp->inBufPtr - tp->inBufStart;
             for (i = cnt; i > 0; i--)
                 {
                 *echoPtr++ = ChrBS;
@@ -1669,7 +1691,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
                 **  DBC prevented echoplex for this line.
                 */
                 tp->dbcNoEchoplex = FALSE;
-                echoPtr = echoBuffer;
+                echoPtr           = echoBuffer;
                 }
             else
                 {
@@ -1723,8 +1745,8 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
             if (tp->inBufPtr > tp->inBufStart)
                 {
                 tp->inBufPtr -= 1;
-                *echoPtr++ = ' ';
-                *echoPtr++ = tp->params.fvBS;
+                *echoPtr++    = ' ';
+                *echoPtr++    = tp->params.fvBS;
                 }
             else
                 {

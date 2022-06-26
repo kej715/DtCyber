@@ -10,12 +10,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -23,7 +23,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -40,12 +40,13 @@
 #include "types.h"
 #include "proto.h"
 
+
 /*
 **  -----------------
 **  Private Constants
 **  -----------------
 */
-#define StatusAndControlWords   021
+#define StatusAndControlWords    021
 
 /*
 **  -----------------------
@@ -89,12 +90,12 @@ static FILE *scrLog = NULL;
 #endif
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise status and control register channel.
 **
@@ -114,20 +115,20 @@ void scrInit(u8 channelNo)
         }
 #endif
 
-    dp = channelAttach(channelNo, 0, DtStatusControlRegister);
-    dp->activate = scrActivate;
+    dp             = channelAttach(channelNo, 0, DtStatusControlRegister);
+    dp->activate   = scrActivate;
     dp->disconnect = scrDisconnect;
-    dp->func = scrFunc;
-    dp->io = scrIo;
+    dp->func       = scrFunc;
+    dp->io         = scrIo;
 
-    channel[channelNo].active = TRUE;
-    channel[channelNo].ioDevice = dp;
+    channel[channelNo].active    = TRUE;
+    channel[channelNo].ioDevice  = dp;
     channel[channelNo].hardwired = TRUE;
 
     dp->context[0] = calloc(StatusAndControlWords, sizeof(PpWord));
     if (dp->context[0] == NULL)
         {
-        fprintf(stderr, "Failed to allocate Status/Control Register context block\n");
+        fprintf(stderr, "(scr_channel) Failed to allocate Status/Control Register context block\n");
         exit(1);
         }
 
@@ -135,7 +136,7 @@ void scrInit(u8 channelNo)
     /*
     **  Print a friendly message.
     */
-    printf("Status/Control Register initialised on channel %o\n", channelNo);
+    printf("(scr_channel) Status/Control Register initialised on channel %o\n", channelNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -149,7 +150,7 @@ void scrInit(u8 channelNo)
 **------------------------------------------------------------------------*/
 static FcStatus scrFunc(PpWord funcCode)
     {
-    return(FcAccepted);
+    return (FcAccepted);
     }
 
 /*--------------------------------------------------------------------------
@@ -209,16 +210,16 @@ static void scrDisconnect(void)
 **------------------------------------------------------------------------*/
 static void scrExecute(PpWord func)
     {
-    u8 code;
-    u8 designator;
-    u8 word;
-    u8 bit;
+    u8     code;
+    u8     designator;
+    u8     word;
+    u8     bit;
     PpWord *scrRegister = (PpWord *)activeDevice->context[0];
 
 // <<<<<<<<<<<<<<<<<<<< change this to be an array of bytes with:
 // value, read_enable, write_enable, status, control (as bits)
 
-    code = (func >> 9) & 7;
+    code       = (func >> 9) & 7;
     designator = func & 0377;
 
     /*
@@ -303,7 +304,7 @@ static void scrExecute(PpWord func)
             **  Select appropriate CM configuration quadrants.
             */
             switch (cpuMaxMemory)
-                {
+            {
             case 01000000:
                 scrSetBit(scrRegister, 0260);
                 scrClrBit(scrRegister, 0261);
@@ -338,7 +339,7 @@ static void scrExecute(PpWord func)
                 scrClrBit(scrRegister, 0262);
                 scrClrBit(scrRegister, 0263);
                 break;
-                }
+            }
             }
 
         break;
@@ -426,7 +427,7 @@ static void scrExecute(PpWord func)
         **  Test bit.
         */
         word = designator / 12;
-        bit = designator % 12;
+        bit  = designator % 12;
 
         if (word < StatusAndControlWords)
             {
@@ -444,7 +445,7 @@ static void scrExecute(PpWord func)
         **  Clear bit.
         */
         word = designator / 12;
-        bit = designator % 12;
+        bit  = designator % 12;
 
         if (word < StatusAndControlWords)
             {
@@ -459,12 +460,12 @@ static void scrExecute(PpWord func)
         **  Test bit and leave clear.
         */
         word = designator / 12;
-        bit = designator % 12;
+        bit  = designator % 12;
 
         if (word < StatusAndControlWords)
             {
             activeChannel->data = (scrRegister[word] & (1 << bit)) != 0 ? 1 : 0;
-            scrRegister[word] &= ~(1 << bit);
+            scrRegister[word]  &= ~(1 << bit);
             }
         else
             {
@@ -478,7 +479,7 @@ static void scrExecute(PpWord func)
         **  Set bit.
         */
         word = designator / 12;
-        bit = designator % 12;
+        bit  = designator % 12;
 
         if (word < StatusAndControlWords)
             {
@@ -493,12 +494,12 @@ static void scrExecute(PpWord func)
         **  Test bit and leave set.
         */
         word = designator / 12;
-        bit = designator % 12;
+        bit  = designator % 12;
 
         if (word < StatusAndControlWords)
             {
             activeChannel->data = (scrRegister[word] & (1 << bit)) != 0 ? 1 : 0;
-            scrRegister[word] |= (1 << bit);
+            scrRegister[word]  |= (1 << bit);
             }
         else
             {
@@ -547,21 +548,21 @@ static void scrExecute(PpWord func)
     activeChannel->full = TRUE;
 
 #if DEBUG
-    {
-    static char *codeString[] =
         {
-        "read word",
-        "test bit",
-        "clear bit",
-        "test & clear bit",
-        "set bit",
-        "test & set bit",
-        "clear all",
-        "test all"
-        };
+        static char *codeString[] =
+            {
+            "read word",
+            "test bit",
+            "clear bit",
+            "test & clear bit",
+            "set bit",
+            "test & set bit",
+            "clear all",
+            "test all"
+            };
 
-    fprintf(scrLog, "%06d ppu[%02o] P=%04o S&C Reg: addr %03o %s result: %04o\n", traceSequenceNo, activePpu->id, activePpu->regP, designator, codeString[code], activeChannel->data);
-    }
+        fprintf(scrLog, "(scr_channel) %06d ppu[%02o] P=%04o S&C Reg: addr %03o %s result: %04o\n", traceSequenceNo, activePpu->id, activePpu->regP, designator, codeString[code], activeChannel->data);
+        }
 #endif
     }
 

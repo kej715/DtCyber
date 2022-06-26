@@ -10,19 +10,19 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 **
 **--------------------------------------------------------------------------
 */
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -45,14 +45,14 @@
 /*
 **  DDP function and status codes.
 */
-#define FcDdpReadECS             05001
-#define FcDdpWriteECS            05002
-#define FcDdpStatus              05004
-#define FcDdpMasterClear         05010
-#define FcDdpClearMaintMode      05020
-#define FcDdpClearDdpPort        05030
-#define FcDdpFlagRegister        05040
-#define FcDdpSelectEsmMode       05404
+#define FcDdpReadECS           05001
+#define FcDdpWriteECS          05002
+#define FcDdpStatus            05004
+#define FcDdpMasterClear       05010
+#define FcDdpClearMaintMode    05020
+#define FcDdpClearDdpPort      05030
+#define FcDdpFlagRegister      05040
+#define FcDdpSelectEsmMode     05404
 
 /*
 **      Status reply flags
@@ -64,19 +64,19 @@
 **      0020 = Channel parity error
 **      0040 = 6640 parity error
 */
-#define StDdpAbort               00001
-#define StDdpAccept              00002
-#define StDdpParErr              00004
-#define StDdpWrite               00010
-#define StDdpChParErr            00020
-#define StDdp6640ParErr          00040
+#define StDdpAbort             00001
+#define StDdpAccept            00002
+#define StDdpParErr            00004
+#define StDdpWrite             00010
+#define StDdpChParErr          00020
+#define StDdp6640ParErr        00040
 
 /*
 **  DDP magical ECS address bits
 */
-#define DdpAddrMaint             (1 << 21)
-#define DdpAddrReadOne           (1 << 22)
-#define DdpAddrFlagReg           (1 << 23)
+#define DdpAddrMaint           (1 << 21)
+#define DdpAddrReadOne         (1 << 22)
+#define DdpAddrFlagReg         (1 << 23)
 
 /*
 **  -----------------------
@@ -92,12 +92,12 @@
 
 typedef struct
     {
-    CpWord  curword;
-    u32     addr;
-    int     dbyte;
-    int     abyte;
-    int     endaddrcycle;
-    PpWord  stat;
+    CpWord curword;
+    u32    addr;
+    int    dbyte;
+    int    abyte;
+    int    endaddrcycle;
+    PpWord stat;
     } DdpContext;
 
 /*
@@ -128,12 +128,12 @@ static FILE *ddpLog = NULL;
 #endif
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise DDP.
@@ -147,19 +147,19 @@ static FILE *ddpLog = NULL;
 **------------------------------------------------------------------------*/
 void ddpInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
-    DevSlot *dp;
+    DevSlot    *dp;
     DdpContext *dc;
-    
+
     (void)eqNo;
     (void)unitNo;
     (void)deviceName;
 
     if (extMaxMemory == 0)
         {
-        fprintf (stderr, "Cannot configure DDP, no ECS configured\n");
-        exit (1);
+        fprintf(stderr, "(ddp    ) Cannot configure DDP, no ECS configured\n");
+        exit(1);
         }
-    
+
 #if DEBUG
     if (ddpLog == NULL)
         {
@@ -169,25 +169,25 @@ void ddpInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     dp = channelAttach(channelNo, eqNo, DtDdp);
 
-    dp->activate = ddpActivate;
+    dp->activate   = ddpActivate;
     dp->disconnect = ddpDisconnect;
-    dp->func = ddpFunc;
-    dp->io = ddpIo;
+    dp->func       = ddpFunc;
+    dp->io         = ddpIo;
 
-    dc = calloc(1, sizeof (DdpContext));
+    dc = calloc(1, sizeof(DdpContext));
     if (dc == NULL)
         {
-        fprintf(stderr, "Failed to allocate DDP context block\n");
+        fprintf(stderr, "(ddp    ) Failed to allocate DDP context block\n");
         exit(1);
         }
 
     dp->context[0] = dc;
-    dc->stat = StDdpAccept;
+    dc->stat       = StDdpAccept;
 
     /*
     **  Print a friendly message.
     */
-    printf("DDP initialised on channel %o\n", channelNo);
+    printf("(ddp    ) Initialised on channel %o\n", channelNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -206,12 +206,12 @@ static FcStatus ddpFunc(PpWord funcCode)
     dc = (DdpContext *)(activeDevice->context[0]);
 
 #if DEBUG
-    fprintf(ddpLog, "\n%06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id,
-        funcCode,
-        ddpFunc2String(funcCode));
+    fprintf(ddpLog, "\n(ddp    ) %06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id,
+            funcCode,
+            ddpFunc2String(funcCode));
 #endif
 
     switch (funcCode)
@@ -224,25 +224,28 @@ static FcStatus ddpFunc(PpWord funcCode)
 
     case FcDdpWriteECS:
         dc->curword = 0;
+
     case FcDdpReadECS:
     case FcDdpStatus:
     case FcDdpFlagRegister:
-        dc->abyte = 0;
-        dc->dbyte = 0;
-        dc->addr = 0;
+        dc->abyte           = 0;
+        dc->dbyte           = 0;
+        dc->addr            = 0;
         activeDevice->fcode = funcCode;
-        return(FcAccepted);
+
+        return (FcAccepted);
 
     case FcDdpMasterClear:
         activeDevice->fcode = 0;
-        dc->stat = StDdpAccept;
-        return(FcProcessed);
+        dc->stat            = StDdpAccept;
+
+        return (FcProcessed);
 
     case FcDdpSelectEsmMode:
-        return(FcProcessed);
+        return (FcProcessed);
         }
 
-    return(FcDeclined);
+    return (FcDeclined);
     }
 
 /*--------------------------------------------------------------------------
@@ -257,13 +260,13 @@ static void ddpIo(void)
     {
     DdpContext *dc;
 
-    dc = (DdpContext *) (activeDevice->context[0]);
+    dc = (DdpContext *)(activeDevice->context[0]);
 
     switch (activeDevice->fcode)
         {
     default:
         return;
-        
+
     case FcDdpStatus:
         if (!activeChannel->full)
             {
@@ -272,11 +275,11 @@ static void ddpIo(void)
             activeDevice->fcode = 0;
             // ? activeChannel->discAfterInput = TRUE;
 #if DEBUG
-                fprintf(ddpLog, " %04o", activeChannel->data);
+            fprintf(ddpLog, " %04o", activeChannel->data);
 #endif
             }
         break;
-        
+
     case FcDdpReadECS:
     case FcDdpWriteECS:
     case FcDdpFlagRegister:
@@ -288,7 +291,7 @@ static void ddpIo(void)
             if (activeChannel->full)
                 {
                 dc->addr <<= 12;
-                dc->addr += activeChannel->data;
+                dc->addr  += activeChannel->data;
                 dc->abyte++;
                 activeChannel->full = FALSE;
                 }
@@ -299,7 +302,7 @@ static void ddpIo(void)
                 fprintf(ddpLog, " ECS addr: %08o Data: ", dc->addr);
 #endif
 
-                if (activeDevice->fcode == FcDdpReadECS || activeDevice->fcode == FcDdpFlagRegister)
+                if ((activeDevice->fcode == FcDdpReadECS) || (activeDevice->fcode == FcDdpFlagRegister))
                     {
                     /*
                     **  Delay a bit before we set channel full.
@@ -309,7 +312,7 @@ static void ddpIo(void)
                     /*
                     **  A flag register reference occurs when bit 23 is set in address.
                     */
-                    if ((dc->addr & DdpAddrFlagReg) != 0 || activeDevice->fcode == FcDdpFlagRegister)
+                    if (((dc->addr & DdpAddrFlagReg) != 0) || (activeDevice->fcode == FcDdpFlagRegister))
                         {
 #if DEBUG
                         fputs("(flag register operation: ", ddpLog);
@@ -330,8 +333,9 @@ static void ddpIo(void)
 #endif
                             }
 
-                        dc->dbyte = 0;
+                        dc->dbyte   = 0;
                         dc->curword = 0;
+
                         return;
                         }
                     else
@@ -356,7 +360,7 @@ static void ddpIo(void)
 
         if (activeDevice->fcode == FcDdpReadECS)
             {
-            if (!activeChannel->full && cycles - dc->endaddrcycle > 20)
+            if (!activeChannel->full && (cycles - dc->endaddrcycle > 20))
                 {
                 if (dc->dbyte == -1)
                     {
@@ -407,9 +411,9 @@ static void ddpIo(void)
             }
         else if (activeChannel->full)
             {
-            dc->stat = StDdpAccept;
-            dc->curword <<= 12;
-            dc->curword += activeChannel->data;
+            dc->stat            = StDdpAccept;
+            dc->curword       <<= 12;
+            dc->curword        += activeChannel->data;
             activeChannel->full = FALSE;
 
 #if DEBUG
@@ -428,11 +432,12 @@ static void ddpIo(void)
 #endif
                     activeChannel->active = FALSE;
                     dc->stat = StDdpAbort;
+
                     return;
                     }
 
                 dc->curword = 0;
-                dc->dbyte = 0;
+                dc->dbyte   = 0;
                 dc->addr++;
                 }
             }
@@ -451,9 +456,9 @@ static void ddpActivate(void)
     {
 #if DEBUG
     fprintf(ddpLog, "\n%06d PP:%02o CH:%02o Activate",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id);
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id);
 #endif
     }
 
@@ -469,16 +474,16 @@ static void ddpDisconnect(void)
     {
     DdpContext *dc;
 
-    dc = (DdpContext *) (activeDevice->context[0]);
+    dc = (DdpContext *)(activeDevice->context[0]);
 
 #if DEBUG
     fprintf(ddpLog, "\n%06d PP:%02o CH:%02o Disconnect",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id);
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id);
 #endif
 
-    if (activeDevice->fcode == FcDdpWriteECS && dc->dbyte != 0)
+    if ((activeDevice->fcode == FcDdpWriteECS) && (dc->dbyte != 0))
         {
         /*
         **  Write final 60 bit to ECS padded with zeros.
@@ -491,11 +496,12 @@ static void ddpDisconnect(void)
 #if DEBUG
             fputs(" abort", ddpLog);
 #endif
+
             return;
             }
 
         dc->curword = 0;
-        dc->dbyte = 0;
+        dc->dbyte   = 0;
         dc->addr++;
         }
 
@@ -516,22 +522,39 @@ static void ddpDisconnect(void)
 **------------------------------------------------------------------------*/
 static char *ddpFunc2String(PpWord funcCode)
     {
-    static char buf[30];
+    static char buf[40];
+
 #if DEBUG
-    switch(funcCode)
+    switch (funcCode)
         {
-    case FcDdpReadECS                 : return "FcDdpReadECS";
-    case FcDdpWriteECS                : return "FcDdpWriteECS";
-    case FcDdpStatus                  : return "FcDdpStatus";
-    case FcDdpMasterClear             : return "FcDdpMasterClear";
-    case FcDdpClearMaintMode          : return "FcDdpClearMaintMode";
-    case FcDdpClearDdpPort            : return "FcDdpClearDdpPort";
-    case FcDdpFlagRegister            : return "FcDdpFlagRegister";
-    case FcDdpSelectEsmMode           : return "FcDdpSelectEsmMode";
+    case FcDdpReadECS:
+        return "FcDdpReadECS";
+
+    case FcDdpWriteECS:
+        return "FcDdpWriteECS";
+
+    case FcDdpStatus:
+        return "FcDdpStatus";
+
+    case FcDdpMasterClear:
+        return "FcDdpMasterClear";
+
+    case FcDdpClearMaintMode:
+        return "FcDdpClearMaintMode";
+
+    case FcDdpClearDdpPort:
+        return "FcDdpClearDdpPort";
+
+    case FcDdpFlagRegister:
+        return "FcDdpFlagRegister";
+
+    case FcDdpSelectEsmMode:
+        return "FcDdpSelectEsmMode";
         }
 #endif
-    sprintf(buf, "UNKNOWN: %04o", funcCode);
-    return(buf);
+    sprintf(buf, "(ddp    ) Unknown Function: %04o", funcCode);
+
+    return (buf);
     }
 
 /*---------------------------  End Of File  ------------------------------*/

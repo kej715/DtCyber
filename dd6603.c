@@ -10,12 +10,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -23,7 +23,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -45,7 +45,7 @@
 
 /*
 **  CDC 6603 disk drive function and status codes.
-**  
+**
 **  10xx    Read sector xx (00-77)
 **  11xx    Read sector xx (100-177)
 **  12xx    Write sector xx (00-77)
@@ -55,19 +55,19 @@
 **  16xy    Select head group y (x is read sampling time - ignore)
 **  1700    Status request
 */
-#define Fc6603CodeMask          07600
-#define Fc6603SectMask          0177
-#define Fc6603TrackMask         0177
-#define Fc6603HeadMask          07
+#define Fc6603CodeMask           07600
+#define Fc6603SectMask           0177
+#define Fc6603TrackMask          0177
+#define Fc6603HeadMask           07
 
-#define Fc6603ReadSector        01000
-#define Fc6603WriteSector       01200
-#define Fc6603SelectTrack       01400
-#define Fc6603SelectHead        01600
-#define Fc6603StatusReq         01700
+#define Fc6603ReadSector         01000
+#define Fc6603WriteSector        01200
+#define Fc6603SelectTrack        01400
+#define Fc6603SelectHead         01600
+#define Fc6603StatusReq          01700
 
 /*
-**  
+**
 **  Status Reply:
 **
 **  0xysSS
@@ -77,20 +77,20 @@
 **  Y=1     Parity error
 **  sSS     Sector number (bits 6-0)
 */
-#define St6603StatusMask        07000
-#define St6603StatusValue       00000
-#define St6603SectMask          0177
-#define St6603ParityErrorMask   0200
-#define St6603ReadyMask         0400
+#define St6603StatusMask         07000
+#define St6603StatusValue        00000
+#define St6603SectMask           0177
+#define St6603ParityErrorMask    0200
+#define St6603ReadyMask          0400
 
 /*
 **  Physical dimensions of disk.
 */
-#define MaxTracks               0200
-#define MaxHeads                8
-#define MaxOuterSectors         128
-#define MaxInnerSectors         100
-#define SectorSize              (322 + 16)
+#define MaxTracks                0200
+#define MaxHeads                 8
+#define MaxOuterSectors          128
+#define MaxInnerSectors          100
+#define SectorSize               (322 + 16)
 
 
 /*
@@ -106,9 +106,18 @@
 */
 typedef struct diskParam
     {
-    i32         sector;
-    i32         track;
-    i32         head;
+    /*
+    **  Info for show_disk operator command.
+    */
+    struct diskParam *nextDisk;
+    u8               channelNo;
+    u8               eqNo;
+    u8               unitNo;
+    char             fileName[_MAX_PATH];
+
+    i32              sector;
+    i32              track;
+    i32              head;
     } DiskParam;
 
 /*
@@ -136,27 +145,32 @@ static char *dd6603Func2String(PpWord funcCode);
 */
 static u8 logColumn;
 
+static DiskParam *firstDisk = NULL;
+static DiskParam *lastDisk  = NULL;
+
 #if DEBUG
 static FILE *dd6603Log = NULL;
 #endif
 
 #if DEBUG
-#define OctalColumn(x) (5 * (x) + 1 + 5)
-#define AsciiColumn(x) (OctalColumn(5) + 2 + (2 * x))
-#define LogLineLength (AsciiColumn(5))
+#define OctalColumn(x)    (5 * (x) + 1 + 5)
+#define AsciiColumn(x)    (OctalColumn(5) + 2 + (2 * x))
+#define LogLineLength    (AsciiColumn(5))
 #endif
 
 #if DEBUG
-static void dd6603LogFlush (void);
-static void dd6603LogByte (int b);
+static void dd6603LogFlush(void);
+static void dd6603LogByte(int b);
+
 #endif
 
 #if DEBUG
 static char dd6603LogBuf[LogLineLength + 1];
-static int dd6603LogCol = 0;
+static int  dd6603LogCol = 0;
 #endif
 
 #if DEBUG
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Flush incomplete numeric/ascii data line
 **
@@ -174,7 +188,7 @@ static void dd6603LogFlush(void)
 
     dd6603LogCol = 0;
     memset(dd6603LogBuf, ' ', LogLineLength);
-    dd6603LogBuf[0] = '\n';
+    dd6603LogBuf[0]             = '\n';
     dd6603LogBuf[LogLineLength] = '\0';
     }
 
@@ -189,8 +203,8 @@ static void dd6603LogFlush(void)
 static void dd6603LogByte(int b)
     {
     char octal[10];
-    int col;
-    
+    int  col;
+
     col = OctalColumn(dd6603LogCol);
     sprintf(octal, "%04o ", b);
     memcpy(dd6603LogBuf + col, octal, 5);
@@ -203,15 +217,16 @@ static void dd6603LogByte(int b)
         dd6603LogFlush();
         }
     }
+
 #endif
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise 6603 disk drive.
@@ -227,13 +242,10 @@ static void dd6603LogByte(int b)
 **------------------------------------------------------------------------*/
 void dd6603Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
-    DevSlot *dp;
-    FILE *fcb;
-    char fname[80];
-
-    (void)eqNo;
-    (void)unitNo;
-    (void)deviceName;
+    DevSlot   *dp;
+    DiskParam *diskP;
+    FILE      *fcb;
+    char      fname[_MAX_PATH];
 
 #if DEBUG
     if (dd6603Log == NULL)
@@ -244,37 +256,68 @@ void dd6603Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     dp = channelAttach(channelNo, eqNo, DtDd6603);
 
-    dp->activate = dd6603Activate;
-    dp->disconnect = dd6603Disconnect;
-    dp->func = dd6603Func;
-    dp->io = dd6603Io;
+    dp->activate     = dd6603Activate;
+    dp->disconnect   = dd6603Disconnect;
+    dp->func         = dd6603Func;
+    dp->io           = dd6603Io;
     dp->selectedUnit = unitNo;
 
     dp->context[unitNo] = calloc(1, sizeof(DiskParam));
+    diskP = (DiskParam *)dp->context[unitNo];
+
+
     if (dp->context[unitNo] == NULL)
         {
-        fprintf(stderr, "Failed to allocate dd6603 context block\n");
+        fprintf(stderr, "(dd6603 ) Failed to allocate context block\n");
         exit(1);
         }
 
-    sprintf(fname, "DD6603_C%02oU%1o", channelNo,unitNo);
+    if (deviceName == NULL)
+        {
+        sprintf(fname, "DD6603_C%02oU%1o", channelNo, unitNo);
+        }
+    else
+        {
+        strcpy(fname, strchr(deviceName, ','));
+        }
+
     fcb = fopen(fname, "r+b");
     if (fcb == NULL)
         {
         fcb = fopen(fname, "w+b");
         if (fcb == NULL)
             {
-            fprintf(stderr, "Failed to open %s\n", fname);
+            fprintf(stderr, "(dd6603 ) Failed to open '%s'\n", fname);
             exit(1);
             }
         }
+    strcpy(diskP->fileName, fname);
+
+    diskP->eqNo      = eqNo;
+    diskP->channelNo = channelNo;
+    diskP->unitNo    = unitNo;
 
     dp->fcb[unitNo] = fcb;
 
     /*
+    **  Link into list of disk units.
+    */
+    if (lastDisk == NULL)
+        {
+        firstDisk = diskP;
+        }
+    else
+        {
+        lastDisk->nextDisk = diskP;
+        }
+
+    lastDisk = diskP;
+
+
+    /*
     **  Print a friendly message.
     */
-    printf("DD6603 initialised on channel %o unit %o \n", channelNo, unitNo);
+    printf("(dd6603 ) Initialised on channel %o unit %o\n", channelNo, unitNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -288,32 +331,32 @@ void dd6603Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 static FcStatus dd6603Func(PpWord funcCode)
     {
-    FILE *fcb = activeDevice->fcb[activeDevice->selectedUnit];
-    DiskParam *dp = (DiskParam *)activeDevice->context[activeDevice->selectedUnit];
-    i32 pos;
+    FILE      *fcb = activeDevice->fcb[activeDevice->selectedUnit];
+    DiskParam *dp  = (DiskParam *)activeDevice->context[activeDevice->selectedUnit];
+    i32       pos;
 
 #if DEBUG
     dd6603LogFlush();
-    fprintf(dd6603Log, "\n%06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
-        traceSequenceNo,
-        activePpu->id,
-        activeDevice->channel->id,
-        funcCode,
-        dd6603Func2String(funcCode));
+    fprintf(dd6603Log, "\n(dd6603 ) %06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id,
+            funcCode,
+            dd6603Func2String(funcCode));
 #endif
 
     switch (funcCode & Fc6603CodeMask)
         {
     default:
-        return(FcDeclined);
+        return (FcDeclined);
 
     case Fc6603ReadSector:
         activeDevice->fcode = funcCode;
-        dp->sector = funcCode & Fc6603SectMask;
+        dp->sector          = funcCode & Fc6603SectMask;
         pos = dd6603Seek(dp->track, dp->head, dp->sector);
         if (pos < 0)
             {
-            return(FcDeclined);
+            return (FcDeclined);
             }
         fseek(fcb, pos, SEEK_SET);
         logColumn = 0;
@@ -321,11 +364,11 @@ static FcStatus dd6603Func(PpWord funcCode)
 
     case Fc6603WriteSector:
         activeDevice->fcode = funcCode;
-        dp->sector = funcCode & Fc6603SectMask;
+        dp->sector          = funcCode & Fc6603SectMask;
         pos = dd6603Seek(dp->track, dp->head, dp->sector);
         if (pos < 0)
             {
-            return(FcDeclined);
+            return (FcDeclined);
             }
         fseek(fcb, pos, SEEK_SET);
         logColumn = 0;
@@ -333,13 +376,15 @@ static FcStatus dd6603Func(PpWord funcCode)
 
     case Fc6603SelectTrack:
         dp->track = funcCode & Fc6603TrackMask;
-        return(FcProcessed);
+
+        return (FcProcessed);
+
         break;
 
     case Fc6603SelectHead:
         if (funcCode == Fc6603StatusReq)
             {
-            activeDevice->fcode = funcCode;
+            activeDevice->fcode   = funcCode;
             activeChannel->status = (u16)dp->sector;
 
             /*
@@ -353,12 +398,13 @@ static FcStatus dd6603Func(PpWord funcCode)
             **  Select head.
             */
             dp->head = funcCode & Fc6603HeadMask;
-            return(FcProcessed);
+
+            return (FcProcessed);
             }
         break;
         }
 
-    return(FcAccepted);
+    return (FcAccepted);
     }
 
 /*--------------------------------------------------------------------------
@@ -373,13 +419,13 @@ static void dd6603Io(void)
     {
     int ignore;
 
-    FILE *fcb = activeDevice->fcb[activeDevice->selectedUnit];
-    DiskParam *dp = (DiskParam *)activeDevice->context[activeDevice->selectedUnit];
+    FILE      *fcb = activeDevice->fcb[activeDevice->selectedUnit];
+    DiskParam *dp  = (DiskParam *)activeDevice->context[activeDevice->selectedUnit];
 
     switch (activeDevice->fcode & Fc6603CodeMask)
         {
     default:
-        logError(LogErrorLocation, "channel %02o - invalid function code: %4.4o", activeChannel->id, (u32)activeDevice->fcode);
+        logError(LogErrorLocation, "(dd6603 ) channel %02o - invalid function code: %4.4o", activeChannel->id, (u32)activeDevice->fcode);
         break;
 
     case 0:
@@ -427,7 +473,7 @@ static void dd6603Io(void)
             dp->sector = (dp->sector + 1) & 0177;
 #else
             activeChannel->status = 0;
-            activeDevice->fcode = 0;
+            activeDevice->fcode   = 0;
 #endif
             }
         break;
@@ -477,20 +523,23 @@ static i32 dd6603Seek(i32 track, i32 head, i32 sector)
 
     if (track >= MaxTracks)
         {
-        logError(LogErrorLocation, "ch %o, track %o invalid", activeChannel->id, track);
-        return(-1);
+        logError(LogErrorLocation, "(dd6603 ) ch %o, track %o invalid", activeChannel->id, track);
+
+        return (-1);
         }
 
     if (head >= MaxHeads)
         {
-        logError(LogErrorLocation, "ch %o, head %o invalid", activeChannel->id, head);
-        return(-1);
+        logError(LogErrorLocation, "(dd6603 ) ch %o, head %o invalid", activeChannel->id, head);
+
+        return (-1);
         }
 
     if (sector >= sectorsPerTrack)
         {
-        logError(LogErrorLocation, "ch %o, sector %o invalid", activeChannel->id, sector);
-        return(-1);
+        logError(LogErrorLocation, "(dd6603 ) ch %o, sector %o invalid", activeChannel->id, sector);
+
+        return (-1);
         }
 
     result  = track * MaxHeads * sectorsPerTrack;
@@ -498,7 +547,7 @@ static i32 dd6603Seek(i32 track, i32 head, i32 sector)
     result += sector;
     result *= SectorSize * 2;
 
-    return(result);
+    return (result);
     }
 
 /*--------------------------------------------------------------------------
@@ -512,19 +561,67 @@ static i32 dd6603Seek(i32 track, i32 head, i32 sector)
 **------------------------------------------------------------------------*/
 static char *dd6603Func2String(PpWord funcCode)
     {
-    static char buf[30];
+    static char buf[40];
+
 #if DEBUG
-    switch(funcCode & Fc6603CodeMask)
+    switch (funcCode & Fc6603CodeMask)
         {
-    case Fc6603ReadSector             : return "Fc6603ReadSector";
-    case Fc6603WriteSector            : return "Fc6603WriteSector";
-    case Fc6603SelectTrack            : return "Fc6603SelectTrack";
-    case Fc6603SelectHead             : return "Fc6603SelectHead";
-    case Fc6603StatusReq              : return "Fc6603StatusReq";
+    case Fc6603ReadSector:
+        return "Fc6603ReadSector";
+
+    case Fc6603WriteSector:
+        return "Fc6603WriteSector";
+
+    case Fc6603SelectTrack:
+        return "Fc6603SelectTrack";
+
+    case Fc6603SelectHead:
+        return "Fc6603SelectHead";
+
+    case Fc6603StatusReq:
+        return "Fc6603StatusReq";
         }
 #endif
-    sprintf(buf, "UNKNOWN: %04o", funcCode);
-    return(buf);
+    sprintf(buf, "(dd6603 ) Unknown Fundtion: %04o", funcCode);
+
+    return (buf);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Show disk status (operator interface).
+**
+**  Parameters:     Name        Description.
+**
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void dd6603ShowDiskStatus(FILE *out)
+    {
+    DiskParam *dp = firstDisk;
+    int       i   = 0;
+
+    if (dp == NULL)
+        {
+        return;
+        }
+
+    fputs("\n    > Disk Drive (dd6603) Status:\n", out);
+
+    while (dp)
+        {
+        fprintf(out, "    >   #%02d. CH %02o EQ %02o UN %02o HD %02o SECT 0x%06x TRK 0x%06o FN '%s'\n",
+               i,
+               dp->channelNo,
+               dp->eqNo,
+               dp->unitNo,
+               dp->head,
+               dp->sector,
+               dp->track,
+               dp->fileName);
+        dp = dp->nextDisk;
+        i++;
+        }
     }
 
 /*---------------------------  End Of File  ------------------------------*/

@@ -17,12 +17,12 @@
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
 **  published by the Free Software Foundation.
-**  
+**
 **  This program is distributed in the hope that it will be useful,
 **  but WITHOUT ANY WARRANTY; without even the implied warranty of
 **  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 **  GNU General Public License version 3 for more details.
-**  
+**
 **  You should have received a copy of the GNU General Public License
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
@@ -30,7 +30,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -62,40 +62,40 @@
 **  Private Constants
 **  -----------------
 */
-#define SOH                       0x01
-#define STX                       0x02
-#define DLE                       0x10
-#define ETB                       0x26
-#define ENQ                       0x2d
-#define SYN                       0x32
-#define NAK                       0x3d
-#define ACK0                      0x70
+#define SOH                          0x01
+#define STX                          0x02
+#define DLE                          0x10
+#define ETB                          0x26
+#define ENQ                          0x2d
+#define SYN                          0x32
+#define NAK                          0x3d
+#define ACK0                         0x70
 
 /*
 **      DSA 311 specific function codes
 */
-#define FcDsa311DisableInterrupts 0300
+#define FcDsa311DisableInterrupts    0300
 
 /*
 **      Special output characters
 */
-#define Dsa311RequestSend         0042
-#define Dsa311Resync              0045
+#define Dsa311RequestSend            0042
+#define Dsa311Resync                 0045
 
 /*
 **      Status reply bits
 */
-#define Dsa311InputReady          04000
-#define Dsa311OutputReady         02000
-#define Dsa311InputLost           01000
-#define Dsa311ErrorMask           00007
+#define Dsa311InputReady             04000
+#define Dsa311OutputReady            02000
+#define Dsa311InputLost              01000
+#define Dsa311ErrorMask              00007
 
-#define IoTurnsPerPoll            4
-#define PpInBufSize               1032
-#define SktInBufSize              1024
-#define SktOutBufSize             1024
+#define IoTurnsPerPoll               4
+#define PpInBufSize                  1032
+#define SktInBufSize                 1024
+#define SktOutBufSize                1024
 
-#define ConnectionRetryInterval   30
+#define ConnectionRetryInterval      30
 
 /*
 **  -----------------------
@@ -103,9 +103,9 @@
 **  -----------------------
 */
 #if DEBUG
-#define HexColumn(x) (3 * (x) + 4)
-#define AsciiColumn(x) (HexColumn(16) + 2 + (x))
-#define LogLineLength (AsciiColumn(16))
+#define HexColumn(x)      (3 * (x) + 4)
+#define AsciiColumn(x)    (HexColumn(16) + 2 + (x))
+#define LogLineLength    (AsciiColumn(16))
 #endif
 
 /*
@@ -145,7 +145,7 @@ typedef struct buffer
     {
     int in;
     int out;
-    u8 *data;
+    u8  *data;
     } Buffer;
 
 typedef struct dsa311Context
@@ -155,17 +155,17 @@ typedef struct dsa311Context
     Dsa311OutputState  outputState;
     struct sockaddr_in serverAddr;
 #if defined(_WIN32)
-    SOCKET fd;
+    SOCKET             fd;
 #else
-    int    fd;
+    int                fd;
 #endif
-    int    ioTurns;
-    time_t nextConnectAttempt;
-    bool   isRTS;
-    u16    crc;
-    Buffer sktInBuf;
-    Buffer ppInBuf;
-    Buffer sktOutBuf;
+    int                ioTurns;
+    time_t             nextConnectAttempt;
+    bool               isRTS;
+    u16                crc;
+    Buffer             sktInBuf;
+    Buffer             ppInBuf;
+    Buffer             sktOutBuf;
     } Dsa311Context;
 
 /*
@@ -189,6 +189,7 @@ static void dsa311UpdateCRC(Dsa311Context *cp, u8 b);
 static char *dsa311Func2String(PpWord funcCode);
 static void dsa311LogBytes(u8 *bytes, int len);
 static void dsa311LogFlush(void);
+
 #endif
 
 /*
@@ -253,12 +254,12 @@ static int  dsa311LogBytesCol = 0;
 #endif
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Public Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Public Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise 3266/DSA 311.
@@ -274,14 +275,14 @@ static int  dsa311LogBytesCol = 0;
 **------------------------------------------------------------------------*/
 void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     {
-    Dsa311Context *cp;
-    DevSlot *dp;
+    Dsa311Context  *cp;
+    DevSlot        *dp;
     struct hostent *hp;
-    char *serverName;
-    u16 serverPort;
-    char *sp;
-    long value;
- 
+    char           *serverName;
+    u16            serverPort;
+    char           *sp;
+    long           value;
+
 #if DEBUG
     if (dsa311Log == NULL)
         {
@@ -290,64 +291,64 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     baseTime = getMilliseconds();
 #endif
 
-    if (eqNo < 4 || eqNo > 7)
+    if ((eqNo < 4) || (eqNo > 7))
         {
-        fputs("DSA311 equipment number must be 4, 5, 6, or 7\n", stderr);
+        fputs("(dsa311 ) Equipment number must be 4, 5, 6, or 7\n", stderr);
         exit(1);
         }
     if (unitNo >= MaxUnits2)
         {
-        fprintf(stderr, "Unit number must be less than %o for DSA311 on channel %o equipment %o unit %o\n",
-          MaxUnits2, channelNo, eqNo, unitNo);
+        fprintf(stderr, "(dsa311 ) Unit number must be less than %o for DSA311 on channel %o equipment %o unit %o\n",
+                MaxUnits2, channelNo, eqNo, unitNo);
         exit(1);
         }
     if ((unitNo & 1) != 0)
         {
-        fprintf(stderr, "Unit number must be even for DSA311 on channel %o equipment %o unit %o\n",
-          channelNo, eqNo, unitNo);
+        fprintf(stderr, "(dsa311 ) Unit number must be even for DSA311 on channel %o equipment %o unit %o\n",
+                channelNo, eqNo, unitNo);
         exit(1);
         }
     if (params == NULL)
         {
-        fprintf(stderr, "HASP host connection information required for DSA311 on channel %o equipment %o unit %o\n",
-          channelNo, eqNo, unitNo);
+        fprintf(stderr, "(dsa311 ) HASP host connection information required for DSA311 on channel %o equipment %o unit %o\n",
+                channelNo, eqNo, unitNo);
         exit(1);
         }
-    
+
     dp = dcc6681Attach(channelNo, eqNo, unitNo, DtDsa311);
 
     if (dp->context[unitNo] != NULL)
         {
-        fprintf(stderr, "Duplicate DSA311 unit number %o on channel %o equipment %o\n",
-          unitNo, channelNo, eqNo);
+        fprintf(stderr, "(dsa311 ) Duplicate DSA311 unit number %o on channel %o equipment %o\n",
+                unitNo, channelNo, eqNo);
         exit(1);
         }
 
-    dp->activate = dsa311Activate;
+    dp->activate   = dsa311Activate;
     dp->disconnect = dsa311Disconnect;
-    dp->func = dsa311Func;
-    dp->io = dsa311Io;
+    dp->func       = dsa311Func;
+    dp->io         = dsa311Io;
 
-    cp = (Dsa311Context *) calloc(1, sizeof(Dsa311Context));
+    cp = (Dsa311Context *)calloc(1, sizeof(Dsa311Context));
     if (cp == NULL)
         {
-        fprintf (stderr, "Failed to allocate DSA311 context block\n");
+        fprintf(stderr, "(dsa311 ) Failed to allocate DSA311 context block\n");
         exit(1);
         }
 
-    dp->context[unitNo] = (void *)cp;
-    dp->context[unitNo+1] = (void *)cp;
-    cp->majorState = StDsa311MajDisconnected;
-    cp->ioTurns = IoTurnsPerPoll - 1;
-    cp->nextConnectAttempt = 0;
-    cp->fd = 0;
-    cp->isRTS = FALSE;
+    dp->context[unitNo]     = (void *)cp;
+    dp->context[unitNo + 1] = (void *)cp;
+    cp->majorState          = StDsa311MajDisconnected;
+    cp->ioTurns             = IoTurnsPerPoll - 1;
+    cp->nextConnectAttempt  = 0;
+    cp->fd             = 0;
+    cp->isRTS          = FALSE;
     cp->ppInBuf.data   = (u8 *)calloc(1, PpInBufSize);
     cp->sktInBuf.data  = (u8 *)calloc(1, SktInBufSize);
     cp->sktOutBuf.data = (u8 *)calloc(1, SktOutBufSize);
-    if (cp->ppInBuf.data == NULL || cp->sktInBuf.data == NULL || cp->sktOutBuf.data == NULL)
+    if ((cp->ppInBuf.data == NULL) || (cp->sktInBuf.data == NULL) || (cp->sktOutBuf.data == NULL))
         {
-        fprintf (stderr, "Failed to allocate DSA311 I/O buffer\n");
+        fprintf(stderr, "(dsa311 ) Failed to allocate DSA311 I/O buffer\n");
         exit(1);
         }
     dsa311Reset(cp);
@@ -357,24 +358,27 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     */
     serverName = params;
     serverPort = 0;
-    sp = strchr(params, ':');
+    sp         = strchr(params, ':');
     if (sp != NULL)
         {
         *sp++ = '\0';
         value = strtol(sp, NULL, 10);
-        if (value > 0 && value < 0x10000) serverPort = (u16)value;
+        if ((value > 0) && (value < 0x10000))
+            {
+            serverPort = (u16)value;
+            }
         }
     if (serverPort == 0)
         {
         fprintf(stderr,
-            "Invalid HASP host connection specification for DSA311 on channel %o equipment %o unit %o\n",
-            channelNo, eqNo, unitNo);
+                "(dsa311 ) Invalid HASP host connection specification for DSA311 on channel %o equipment %o unit %o\n",
+                channelNo, eqNo, unitNo);
         exit(1);
         }
     hp = gethostbyname(serverName);
     if (hp == NULL)
         {
-        fprintf(stderr, "Failed to lookup address of DSA311 HASP host %s\n", serverName);
+        fprintf(stderr, "(dsa311 ) Failed to lookup address of DSA311 HASP host %s\n", serverName);
         exit(1);
         }
     cp->serverAddr.sin_family = AF_INET;
@@ -384,17 +388,17 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     /*
     **  Print a friendly message.
     */
-    printf("DSA311 initialised on channel %o equipment %o unit %o\n",
+    printf("(dsa311 ) Initialised on channel %o equipment %o unit %o\n",
            channelNo, eqNo, unitNo);
     }
 
 /*
-**--------------------------------------------------------------------------
-**
-**  Private Functions
-**
-**--------------------------------------------------------------------------
-*/
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Execute function code on DSA 311.
@@ -408,7 +412,7 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
 static FcStatus dsa311Func(PpWord funcCode)
     {
     Dsa311Context *cp;
-    i8 unitNo;
+    i8            unitNo;
 
 #if DEBUG
     elapsedTime = getMilliseconds() - baseTime;
@@ -425,10 +429,10 @@ static FcStatus dsa311Func(PpWord funcCode)
         }
     if (cp == NULL)
         {
-        return(FcDeclined);
+        return (FcDeclined);
         }
 
-    if (cp->majorState == StDsa311MajDisconnected && time(0) >= cp->nextConnectAttempt)
+    if ((cp->majorState == StDsa311MajDisconnected) && (time(0) >= cp->nextConnectAttempt))
         {
         dsa311InitiateConnection(cp);
         }
@@ -439,26 +443,32 @@ static FcStatus dsa311Func(PpWord funcCode)
     case FcDsa311DisableInterrupts:
 #if DEBUG
         fprintf(dsa311Log, "\n%010lu PP:%02o CH:%02o U:%02o f:%04o T:%s",
-            elapsedTime, activePpu->id, activeDevice->channel->id, unitNo,
-            funcCode, dsa311Func2String(funcCode));
+                elapsedTime, activePpu->id, activeDevice->channel->id, unitNo,
+                funcCode, dsa311Func2String(funcCode));
 #endif
         //
         // 1TL disables interrupts during its preset phase, so use this as an
         // indication that the connection to the HASP host should be re-established
         // if it has been established already.
         //
-        if (cp->majorState == StDsa311MajConnected) dsa311CloseConnection(cp);
-        return(FcProcessed);
+        if (cp->majorState == StDsa311MajConnected)
+            {
+            dsa311CloseConnection(cp);
+            }
+
+        return (FcProcessed);
+
     case Fc6681Input:
     case Fc6681Output:
         active3000Device->fcode = funcCode;
-        return(FcAccepted);
+
+        return (FcAccepted);
 
     case Fc6681MasterClear:
 #if DEBUG
         fprintf(dsa311Log, "\n%010lu PP:%02o CH:%02o U:%02o f:%04o T:%s  >  ",
-            elapsedTime, activePpu->id, activeDevice->channel->id, unitNo,
-            funcCode, dsa311Func2String(funcCode));
+                elapsedTime, activePpu->id, activeDevice->channel->id, unitNo,
+                funcCode, dsa311Func2String(funcCode));
 #endif
         active3000Device->selectedUnit = -1;
         for (unitNo = 0; unitNo < MaxUnits2; unitNo += 2)
@@ -469,15 +479,17 @@ static FcStatus dsa311Func(PpWord funcCode)
                 dsa311Reset(cp);
                 }
             }
-        return(FcProcessed);
+
+        return (FcProcessed);
 
     default:
 #if DEBUG
         fprintf(dsa311Log, "\n%010lu PP:%02o CH:%02o U:%02o f:%04o T:%s  >  ",
-            elapsedTime, activePpu->id, activeDevice->channel->id, unitNo,
-            funcCode, dsa311Func2String(funcCode));
+                elapsedTime, activePpu->id, activeDevice->channel->id, unitNo,
+                funcCode, dsa311Func2String(funcCode));
 #endif
-        return(FcDeclined);
+
+        return (FcDeclined);
         }
     }
 
@@ -491,9 +503,9 @@ static FcStatus dsa311Func(PpWord funcCode)
 **------------------------------------------------------------------------*/
 static void dsa311Io(void)
     {
-    u8 ch;
+    u8            ch;
     Dsa311Context *cp;
-    i8 unitNo;
+    i8            unitNo;
 
 #if DEBUG
     elapsedTime = getMilliseconds() - baseTime;
@@ -512,8 +524,11 @@ static void dsa311Io(void)
         cp = NULL;
         }
 
-    if (cp == NULL) return;
-    
+    if (cp == NULL)
+        {
+        return;
+        }
+
     dsa311CheckIo(cp);
 
     /*
@@ -527,14 +542,14 @@ static void dsa311Io(void)
 
     case Fc6681Input:
         activeChannel->full = TRUE;
-        if ((unitNo & 1) == 1) // input control port
+        if ((unitNo & 1) == 1)       // input control port
             {
             activeChannel->data = 0; // bit 9 indicates data lost
 #if DEBUG
             fprintf(dsa311Log, "\n%010lu PP:%02o CH:%02o U:%02o f:%04o T:%s  <  %04o",
-                elapsedTime, activePpu->id, activeDevice->channel->id, unitNo,
-                active3000Device->fcode, dsa311Func2String(active3000Device->fcode),
-                activeChannel->data);
+                    elapsedTime, activePpu->id, activeDevice->channel->id, unitNo,
+                    active3000Device->fcode, dsa311Func2String(active3000Device->fcode),
+                    activeChannel->data);
 #endif
             }
         else // input data port
@@ -542,24 +557,28 @@ static void dsa311Io(void)
             activeChannel->data = 0;
             if (cp->majorState == StDsa311MajConnected)
                 {
-                if (cp->isRTS == TRUE && cp->sktOutBuf.in < SktOutBufSize)
+                if ((cp->isRTS == TRUE) && (cp->sktOutBuf.in < SktOutBufSize))
                     {
                     activeChannel->data |= Dsa311OutputReady;
                     }
                 if (cp->ppInBuf.out < cp->ppInBuf.in)
                     {
                     activeChannel->data |= Dsa311InputReady
-                        | cp->ppInBuf.data[cp->ppInBuf.out++];
+                                           | cp->ppInBuf.data[cp->ppInBuf.out++];
                     if (cp->ppInBuf.out >= cp->ppInBuf.in)
+                        {
                         cp->ppInBuf.out = cp->ppInBuf.in = 0;
+                        }
                     }
                 }
 #if DEBUG
             if ((activeChannel->data & Dsa311InputReady) != 0)
+                {
                 fprintf(dsa311Log, "\n%010lu PP:%02o CH:%02o U:%02o f:%04o T:%s  <  %04o",
-                    elapsedTime, activePpu->id, activeDevice->channel->id, unitNo,
-                    active3000Device->fcode, dsa311Func2String(active3000Device->fcode),
-                    activeChannel->data);
+                        elapsedTime, activePpu->id, activeDevice->channel->id, unitNo,
+                        active3000Device->fcode, dsa311Func2String(active3000Device->fcode),
+                        activeChannel->data);
+                }
 #endif
             }
         break;
@@ -569,9 +588,9 @@ static void dsa311Io(void)
             {
 #if DEBUG
             fprintf(dsa311Log, "\n%010lu PP:%02o CH:%02o U:%02o f:%04o T:%s  >  %04o",
-                elapsedTime, activePpu->id, activeDevice->channel->id, unitNo,
-                active3000Device->fcode, dsa311Func2String(active3000Device->fcode),
-                activeChannel->data);
+                    elapsedTime, activePpu->id, activeDevice->channel->id, unitNo,
+                    active3000Device->fcode, dsa311Func2String(active3000Device->fcode),
+                    activeChannel->data);
 #endif
             ch = activeChannel->data & 0xff;
             if ((unitNo & 1) == 1) // output control port
@@ -593,125 +612,144 @@ static void dsa311Io(void)
                 {
                 switch (cp->outputState)
                     {
-                    //
-                    //  Look for beginning of a message, and discard characters
-                    //  until SOH or DLE is seen.
-                    //    SOH indicates beginning of communication (SOH-ENQ), or
-                    //    beginning of a non-transparent message (SOH-STX).  DLE
-                    //    indicates beginning of transparent message.
-                    //
-                    case StDsa311OutSOH:
-                        if (ch == SOH)
-                            {
-                            cp->outputState = StDsa311OutENQ;
-                            }
-                        else if (ch == DLE)
-                            {
-                            cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
-                            cp->outputState = StDsa311OutDLE1;
-                            }
-                        else if (ch == NAK)
-                            {
-                            cp->sktOutBuf.data[cp->sktOutBuf.in++] = SYN;
-                            cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
-                            }
-                        break;
-                    //
-                    //  ENQ indicates SOH-ENQ (beginning of communication), and
-                    //  STX indicates beginning of non-transparent message.
-                    //
-                    case StDsa311OutENQ:
-                        if (ch == ENQ)
-                            {
-                            cp->sktOutBuf.data[cp->sktOutBuf.in++] = SOH;
-                            cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
-                            cp->outputState = StDsa311OutSOH;
-                            }
-                        else if (ch == STX)
-                            {
-                            cp->sktOutBuf.data[cp->sktOutBuf.in++] = DLE;
-                            cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
-                            cp->outputState = StDsa311OutETB1;
-                            }
-                        else
-                            {
-                            cp->outputState = StDsa311OutSOH;
-                            }
-                        break;
-                    //
-                    //  Look for non-transparent end of message, ETB
-                    //
-                    case StDsa311OutETB1:
-                        if (cp->sktOutBuf.in + 1 < SktOutBufSize)
-                            {
-                            switch (ch)
-                                {
-                            case SYN:
-                                // discard trailing SYN's
-                                break;
-                            case SOH:
-                                cp->outputState = StDsa311OutSOH;
-                                break;
-                            case ETB:
-                                cp->outputState = StDsa311OutCRC1;
-                            case STX:
-                            case DLE:
-                                cp->sktOutBuf.data[cp->sktOutBuf.in++] = DLE;
-                                // fall through
-                            default:
-                                cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
-                                break;
-                                }
-                            }
-                        break;
-                    //
-                    //  Process character following DLE. If it is ACK0, then the
-                    //  the message is a simple acknowledgement. Otherwise, it is
-                    //  a transparent escape, so output the next character and
-                    //  look for end of message.
-                    //
-                    case StDsa311OutDLE1:
-                        if (cp->sktOutBuf.in < SktOutBufSize)
-                            cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
-                        if (ch == ACK0)
-                            {
-                            cp->outputState = StDsa311OutSOH;
-                            }
-                        else
-                            {
-                            cp->outputState = StDsa311OutDLE2;
-                            }
-                        break;
-                    //
-                    //  Look for transparent end of message, DLE-ETB
-                    //
-                    case StDsa311OutDLE2:
-                        if (cp->sktOutBuf.in < SktOutBufSize)
-                            cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
-                        if (ch == DLE)
-                            cp->outputState = StDsa311OutETB2;
-                        break;
-                    case StDsa311OutETB2:
-                        if (cp->sktOutBuf.in < SktOutBufSize)
-                            cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
-                        cp->outputState = (ch == ETB) ? StDsa311OutCRC1 : StDsa311OutDLE2;
-                        break;
-                    //
-                    //  Discard two CRC bytes
-                    //
-                    case StDsa311OutCRC1: //discard CRC byte
-                        cp->outputState = StDsa311OutCRC2;
-                        break;
-                    case StDsa311OutCRC2: //discard CRC byte
-                        cp->outputState = StDsa311OutSOH;
-                        break;
+                //
+                //  Look for beginning of a message, and discard characters
+                //  until SOH or DLE is seen.
+                //    SOH indicates beginning of communication (SOH-ENQ), or
+                //    beginning of a non-transparent message (SOH-STX).  DLE
+                //    indicates beginning of transparent message.
+                //
+                case StDsa311OutSOH:
+                    if (ch == SOH)
+                        {
+                        cp->outputState = StDsa311OutENQ;
+                        }
+                    else if (ch == DLE)
+                        {
+                        cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
+                        cp->outputState = StDsa311OutDLE1;
+                        }
+                    else if (ch == NAK)
+                        {
+                        cp->sktOutBuf.data[cp->sktOutBuf.in++] = SYN;
+                        cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
+                        }
+                    break;
 
-                    default:
-#if DEBUG
-                        fprintf(dsa311Log, "\n%010lu unrecognized output state: %d", elapsedTime, cp->outputState);
-#endif
+                //
+                //  ENQ indicates SOH-ENQ (beginning of communication), and
+                //  STX indicates beginning of non-transparent message.
+                //
+                case StDsa311OutENQ:
+                    if (ch == ENQ)
+                        {
+                        cp->sktOutBuf.data[cp->sktOutBuf.in++] = SOH;
+                        cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
                         cp->outputState = StDsa311OutSOH;
-                        break;
+                        }
+                    else if (ch == STX)
+                        {
+                        cp->sktOutBuf.data[cp->sktOutBuf.in++] = DLE;
+                        cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
+                        cp->outputState = StDsa311OutETB1;
+                        }
+                    else
+                        {
+                        cp->outputState = StDsa311OutSOH;
+                        }
+                    break;
+
+                //
+                //  Look for non-transparent end of message, ETB
+                //
+                case StDsa311OutETB1:
+                    if (cp->sktOutBuf.in + 1 < SktOutBufSize)
+                        {
+                        switch (ch)
+                            {
+                        case SYN:
+                            // discard trailing SYN's
+                            break;
+
+                        case SOH:
+                            cp->outputState = StDsa311OutSOH;
+                            break;
+
+                        case ETB:
+                            cp->outputState = StDsa311OutCRC1;
+
+                        case STX:
+                        case DLE:
+                            cp->sktOutBuf.data[cp->sktOutBuf.in++] = DLE;
+
+                        // fall through
+                        default:
+                            cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
+                            break;
+                            }
+                        }
+                    break;
+
+                //
+                //  Process character following DLE. If it is ACK0, then the
+                //  the message is a simple acknowledgement. Otherwise, it is
+                //  a transparent escape, so output the next character and
+                //  look for end of message.
+                //
+                case StDsa311OutDLE1:
+                    if (cp->sktOutBuf.in < SktOutBufSize)
+                        {
+                        cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
+                        }
+                    if (ch == ACK0)
+                        {
+                        cp->outputState = StDsa311OutSOH;
+                        }
+                    else
+                        {
+                        cp->outputState = StDsa311OutDLE2;
+                        }
+                    break;
+
+                //
+                //  Look for transparent end of message, DLE-ETB
+                //
+                case StDsa311OutDLE2:
+                    if (cp->sktOutBuf.in < SktOutBufSize)
+                        {
+                        cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
+                        }
+                    if (ch == DLE)
+                        {
+                        cp->outputState = StDsa311OutETB2;
+                        }
+                    break;
+
+                case StDsa311OutETB2:
+                    if (cp->sktOutBuf.in < SktOutBufSize)
+                        {
+                        cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
+                        }
+                    cp->outputState = (ch == ETB) ? StDsa311OutCRC1 : StDsa311OutDLE2;
+                    break;
+
+                //
+                //  Discard two CRC bytes
+                //
+                case StDsa311OutCRC1:     //discard CRC byte
+                    cp->outputState = StDsa311OutCRC2;
+                    break;
+
+                case StDsa311OutCRC2:     //discard CRC byte
+                    cp->outputState = StDsa311OutSOH;
+                    break;
+
+                default:
+#if DEBUG
+                    fprintf(dsa311Log, "\n%010lu unrecognized output state: %d", elapsedTime, cp->outputState);
+#endif
+                    cp->outputState = StDsa311OutSOH;
+                    break;
                     }
                 }
             activeChannel->full = FALSE;
@@ -778,43 +816,54 @@ static void dsa311CheckIo(Dsa311Context *cp)
     int maxFd;
     int n;
     int optEnable = 1;
+
 #if defined(_WIN32)
     u_long blockEnable = 1;
-    int optLen;
-    int optVal;
+    int    optLen;
+    int    optVal;
 #else
     socklen_t optLen;
-    int optVal;
+    int       optVal;
 #endif
-    int rc;
-    fd_set readFds;
+    int            rc;
+    fd_set         readFds;
     struct timeval timeout;
-    fd_set writeFds;
+    fd_set         writeFds;
 
     cp->ioTurns = (cp->ioTurns + 1) % IoTurnsPerPoll;
-    if (cp->ioTurns != 0) return;
+    if (cp->ioTurns != 0)
+        {
+        return;
+        }
 
     if (cp->majorState == StDsa311MajConnecting)
         {
         FD_ZERO(&writeFds);
         FD_SET(cp->fd, &writeFds);
-        timeout.tv_sec = 0;
+        timeout.tv_sec  = 0;
         timeout.tv_usec = 0;
         n = select(cp->fd + 1, NULL, &writeFds, NULL, &timeout);
         if (n <= 0)
             {
 #if DEBUG
-            if (n < 0) fprintf(dsa311Log, "\n%010lu select failed", elapsedTime);
+            if (n < 0)
+                {
+                fprintf(dsa311Log, "\n%010lu select failed", elapsedTime);
+                }
 #endif
+
             return;
             }
-        if (FD_ISSET(cp->fd, &writeFds) == FALSE) return;
+        if (FD_ISSET(cp->fd, &writeFds) == FALSE)
+            {
+            return;
+            }
 #if defined(_WIN32)
         optLen = sizeof(optVal);
-        rc = getsockopt(cp->fd, SOL_SOCKET, SO_ERROR, (char *)&optVal, &optLen);
+        rc     = getsockopt(cp->fd, SOL_SOCKET, SO_ERROR, (char *)&optVal, &optLen);
 #else
         optLen = (socklen_t)sizeof(optVal);
-        rc = getsockopt(cp->fd, SOL_SOCKET, SO_ERROR, &optVal, &optLen);
+        rc     = getsockopt(cp->fd, SOL_SOCKET, SO_ERROR, &optVal, &optLen);
 #endif
         if (rc < 0)
             {
@@ -822,6 +871,7 @@ static void dsa311CheckIo(Dsa311Context *cp)
             fprintf(dsa311Log, "\n%010lu failed to get socket status", elapsedTime);
 #endif
             dsa311CloseConnection(cp);
+
             return;
             }
         else if (optVal != 0) // connection failed
@@ -830,16 +880,19 @@ static void dsa311CheckIo(Dsa311Context *cp)
             fprintf(dsa311Log, "\n%010lu failed to connect", elapsedTime);
 #endif
             dsa311CloseConnection(cp);
+
             return;
             }
 #if DEBUG
         fprintf(dsa311Log, "\n%010lu connected", elapsedTime);
 #endif
+
         /*
         **  Set Keepalive option so that we can eventually discover if
         **  a client has been rebooted.
         */
         setsockopt(cp->fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
+
         /*
         **  Make socket non-blocking.
         */
@@ -848,7 +901,7 @@ static void dsa311CheckIo(Dsa311Context *cp)
 #else
         fcntl(cp->fd, F_SETFL, O_NONBLOCK);
 #endif
-        cp->majorState  = StDsa311MajConnected;
+        cp->majorState = StDsa311MajConnected;
         dsa311Reset(cp);
         }
 
@@ -865,9 +918,12 @@ static void dsa311CheckIo(Dsa311Context *cp)
         FD_SET(cp->fd, &writeFds);
         maxFd = cp->fd;
         }
-    if (maxFd == 0) return;
+    if (maxFd == 0)
+        {
+        return;
+        }
 
-    timeout.tv_sec = 0;
+    timeout.tv_sec  = 0;
     timeout.tv_usec = 0;
 
     n = select(maxFd + 1, &readFds, &writeFds, NULL, &timeout);
@@ -875,8 +931,12 @@ static void dsa311CheckIo(Dsa311Context *cp)
     if (n <= 0)
         {
 #if DEBUG
-        if (n < 0) fprintf(dsa311Log, "\n%010lu select failed", elapsedTime);
+        if (n < 0)
+            {
+            fprintf(dsa311Log, "\n%010lu select failed", elapsedTime);
+            }
 #endif
+
         return;
         }
     if (FD_ISSET(cp->fd, &readFds))
@@ -907,7 +967,7 @@ static void dsa311CloseConnection(Dsa311Context *cp)
 #endif
     cp->fd = 0;
     cp->nextConnectAttempt = time(0) + (time_t)ConnectionRetryInterval;
-    cp->majorState = StDsa311MajDisconnected;
+    cp->majorState         = StDsa311MajDisconnected;
 #if DEBUG
     fprintf(dsa311Log, "\n%010lu closed connection", elapsedTime);
 #endif
@@ -938,12 +998,13 @@ static void dsa311InitiateConnection(Dsa311Context *cp)
 #if DEBUG
         fprintf(dsa311Log, "\n%010lu failed to create socket", elapsedTime);
 #endif
+
         return;
         }
     setsockopt(cp->fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
     ioctlsocket(cp->fd, FIONBIO, &blockEnable);
     rc = connect(cp->fd, (struct sockaddr *)&cp->serverAddr, sizeof(cp->serverAddr));
-    if (rc == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)
+    if ((rc == SOCKET_ERROR) && (WSAGetLastError() != WSAEWOULDBLOCK))
         {
 #if DEBUG
         fprintf(dsa311Log, "\n%010lu connect request failed", elapsedTime);
@@ -963,12 +1024,13 @@ static void dsa311InitiateConnection(Dsa311Context *cp)
 #if DEBUG
         fprintf(dsa311Log, "\n%010lu failed to create socket", elapsedTime);
 #endif
+
         return;
         }
     setsockopt(cp->fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
     fcntl(cp->fd, F_SETFL, O_NONBLOCK);
     rc = connect(cp->fd, (struct sockaddr *)&cp->serverAddr, sizeof(cp->serverAddr));
-    if (rc < 0 && errno != EINPROGRESS)
+    if ((rc < 0) && (errno != EINPROGRESS))
         {
 #if DEBUG
         fprintf(dsa311Log, "\n%010lu connect request failed", elapsedTime);
@@ -996,17 +1058,24 @@ static void dsa311InitiateConnection(Dsa311Context *cp)
 **------------------------------------------------------------------------*/
 static void dsa311Receive(Dsa311Context *cp)
     {
-    u8 b;
+    u8  b;
     int n;
 
     n = recv(cp->fd, &cp->sktInBuf.data[cp->sktInBuf.in], SktInBufSize - cp->sktInBuf.in, 0);
     if (n <= 0)
         {
 #if DEBUG
-        if (n < 0) fprintf(dsa311Log, "\n%010lu recv failed", elapsedTime);
-        else       fprintf(dsa311Log, "\n%010lu connection closed", elapsedTime);
+        if (n < 0)
+            {
+            fprintf(dsa311Log, "\n%010lu recv failed", elapsedTime);
+            }
+        else
+            {
+            fprintf(dsa311Log, "\n%010lu connection closed", elapsedTime);
+            }
 #endif
         dsa311CloseConnection(cp);
+
         return;
         }
 #if DEBUG
@@ -1035,6 +1104,7 @@ static void dsa311Receive(Dsa311Context *cp)
                 cp->inputState = StDsa311InpSTX;
                 }
             break;
+
         case StDsa311InpSTX:
             if (b == STX)
                 {
@@ -1052,6 +1122,7 @@ static void dsa311Receive(Dsa311Context *cp)
                 cp->inputState = StDsa311InpDLE1;
                 }
             break;
+
         case StDsa311InpDLE2:
             if (b == DLE)
                 {
@@ -1063,6 +1134,7 @@ static void dsa311Receive(Dsa311Context *cp)
                 dsa311UpdateCRC(cp, b);
                 }
             break;
+
         case StDsa311InpETB:
             cp->ppInBuf.data[cp->ppInBuf.in++] = b;
             dsa311UpdateCRC(cp, b);
@@ -1072,6 +1144,7 @@ static void dsa311Receive(Dsa311Context *cp)
                 cp->inputState = StDsa311InpDLE1;
                 }
             break;
+
         default:
 #if DEBUG
             fprintf(dsa311Log, "\n%010lu unrecognized input state: %d", elapsedTime, cp->inputState);
@@ -1092,8 +1165,8 @@ static void dsa311Receive(Dsa311Context *cp)
 **------------------------------------------------------------------------*/
 static void dsa311Reset(Dsa311Context *cp)
     {
-    cp->ppInBuf.in   = cp->ppInBuf.out   = 0;
-    cp->sktInBuf.in  = cp->sktInBuf.out  = 0;
+    cp->ppInBuf.in   = cp->ppInBuf.out = 0;
+    cp->sktInBuf.in  = cp->sktInBuf.out = 0;
     cp->sktOutBuf.in = cp->sktOutBuf.out = 0;
     cp->inputState   = StDsa311InpDLE1;
     cp->outputState  = StDsa311OutSOH;
@@ -1119,6 +1192,7 @@ static void dsa311Send(Dsa311Context *cp)
         fprintf(dsa311Log, "\n%010lu send failed", elapsedTime);
 #endif
         dsa311CloseConnection(cp);
+
         return;
         }
 #if DEBUG
@@ -1127,7 +1201,9 @@ static void dsa311Send(Dsa311Context *cp)
 #endif
     cp->sktOutBuf.out += n;
     if (cp->sktOutBuf.out >= cp->sktOutBuf.in)
+        {
         cp->sktOutBuf.out = cp->sktOutBuf.in = 0;
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -1160,17 +1236,27 @@ static char *dsa311Func2String(PpWord funcCode)
     {
     static char buf[30];
 
-    switch(funcCode)
+    switch (funcCode)
         {
-    case FcDsa311DisableInterrupts : return "DisableInterrupts";
-    case Fc6681FunctionMode2       : return "FunctionMode2    ";
-    case Fc6681Input               : return "Input            ";
-    case Fc6681Output              : return "Output           ";
-    case Fc6681MasterClear         : return "MasterClear      ";
+    case FcDsa311DisableInterrupts:
+        return "DisableInterrupts";
+
+    case Fc6681FunctionMode2:
+        return "FunctionMode2    ";
+
+    case Fc6681Input:
+        return "Input            ";
+
+    case Fc6681Output:
+        return "Output           ";
+
+    case Fc6681MasterClear:
+        return "MasterClear      ";
 
     default:
         sprintf(buf, "UNKNOWN %04o ", funcCode);
-        return(buf);
+
+        return (buf);
         }
     }
 
@@ -1206,12 +1292,12 @@ static void dsa311LogFlush(void)
 **------------------------------------------------------------------------*/
 static void dsa311LogBytes(u8 *bytes, int len)
     {
-    u8 ac;
-    int ascCol;
-    u8 b;
+    u8   ac;
+    int  ascCol;
+    u8   b;
     char hex[3];
-    int hexCol;
-    int i;
+    int  hexCol;
+    int  i;
 
     dsa311LogBytesCol = 0;
     dsa311LogFlush(); // initialize the log buffer
@@ -1220,9 +1306,9 @@ static void dsa311LogBytes(u8 *bytes, int len)
 
     for (i = 0; i < len; i++)
         {
-        b = bytes[i];
+        b  = bytes[i];
         ac = ebcdicToAscii[b];
-        if (ac < 0x20 || ac >= 0x7f)
+        if ((ac < 0x20) || (ac >= 0x7f))
             {
             ac = '.';
             }
