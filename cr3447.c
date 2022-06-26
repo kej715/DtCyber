@@ -1201,6 +1201,7 @@ static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc, FILE *out)
             {
             cc->status = StCr3447Eof;
             cc->status = StCr3447Ready;
+            strcpy(cc->curFileName, fname);
             cr3447NextCard(up, cc, out);
             activeDevice = channelFindDevice(up->channel->id, DtDcc6681);
             dcc6681Interrupt((cc->status & cc->intMask) != 0);

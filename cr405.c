@@ -1054,6 +1054,7 @@ static bool cr405StartNextDeck(DevSlot *dp, Cr405Context *cc, FILE *out)
         dp->fcb[0] = fopen(fname, "r");
         if (dp->fcb[0] != NULL)
             {
+            strcpy(cc->curFileName, fname);
             cr405NextCard(dp, out);
             fprintf(out, "Cards loaded on card reader C%o,E%o\n", cc->channelNo, cc->eqNo);
 
