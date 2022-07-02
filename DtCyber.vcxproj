@@ -76,21 +76,25 @@
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\Intermediate\</IntDir>
+    <IncludePath>$(ProjectDir)\frend2;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IntDir>$(Platform)\$(Configuration)\Intermediate\</IntDir>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <IncludePath>$(ProjectDir)\frend2;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\Intermediate\</IntDir>
+    <IncludePath>$(ProjectDir)\frend2;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IntDir>$(Platform)\$(Configuration)\Intermediate\</IntDir>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <IncludePath>$(ProjectDir)\frend2;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Midl>
@@ -124,8 +128,6 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Bscmake>
     <PostBuildEvent>
-      <Command>"Post-Build.cmd" "$(OutDirFullPath)" "$(PlatformTarget)" "$(Configuration)"</Command>
-      <Message>Position DLLS into the respective folders and build the setup packaging.</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -161,8 +163,6 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Bscmake>
     <PostBuildEvent>
-      <Command>"Post-Build.cmd" "$(OutDirFullPath)" "$(PlatformTarget)" "$(Configuration)"</Command>
-      <Message>Position DLLS into the respective folders and build the setup packaging.</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -200,8 +200,6 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Bscmake>
     <PostBuildEvent>
-      <Command>"Post-Build.cmd" "$(OutDirFullPath)" "$(PlatformTarget)" "$(Configuration)"</Command>
-      <Message>Position DLLS into the respective folders and build the setup packaging.</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -240,13 +238,9 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Bscmake>
     <PostBuildEvent>
-      <Command>"Post-Build.cmd" "$(OutDirFullPath)" "$(PlatformTarget)" "$(Configuration)"</Command>
-      <Message>Position DLLS into the respective folders and build the setup packaging.</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\DtCyber.kej715\msufrend.c" />
-    <ClCompile Include="..\..\DtCyber.kej715\msufrend_util.c" />
     <ClCompile Include="cdcnet.c" />
     <ClCompile Include="channel.c" />
     <ClCompile Include="charset.c" />

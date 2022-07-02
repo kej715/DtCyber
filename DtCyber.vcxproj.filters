@@ -193,12 +193,6 @@
     <ClCompile Include="niu.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\DtCyber.kej715\msufrend.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\DtCyber.kej715\msufrend_util.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="string.c">
       <Filter>Source Files</Filter>
     </ClCompile>
