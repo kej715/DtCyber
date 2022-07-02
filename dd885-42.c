@@ -123,7 +123,7 @@ typedef struct diskParam
     struct diskParam *nextDisk;
     u8               channelNo;
     u8               eqNo;
-    char             fileName[_MAX_PATH + 1];
+    char             fileName[MaxFSPath];
 
     /*
     **  Parameter Table
@@ -263,7 +263,7 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
     DevSlot   *ds;
     FILE      *fcb;
-    char      fname[_MAX_PATH + 1];
+    char      fname[MaxFSPath];
     DiskParam *dp;
     time_t    mTime;
     struct tm *lTime;
@@ -1323,14 +1323,14 @@ void dd885_42ShowDiskStatus(FILE *out)
     while (dp)
         {
         fprintf(out, "    >   #%02d. CH %02o EQ %02o UN %02o DT %s CYL 0x%06x TRK 0x%06o FN '%s'\n",
-               dp->diskNo,
-               dp->channelNo,
-               dp->eqNo,
-               dp->unitNo,
-               "885-42",
-               dp->cylinder,
-               dp->track,
-               dp->fileName);
+                dp->diskNo,
+                dp->channelNo,
+                dp->eqNo,
+                dp->unitNo,
+                "885-42",
+                dp->cylinder,
+                dp->track,
+                dp->fileName);
         dp = dp->nextDisk;
         }
     }

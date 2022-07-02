@@ -23,8 +23,8 @@
 #--------------------------------------------------------------------------
 
 LIBS    = -lm -lX11 -lpthread
-LDFLAGS = -s -L/usr/X11R6/lib
-INCL    = -I/usr/X11R6/include
+LDFLAGS = -s -L/usr/local/lib
+INCL    = -I/usr/local/include
 
 CFLAGS  = -O2 -I. $(INCL) -std=gnu99
 
