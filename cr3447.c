@@ -60,7 +60,6 @@
 **  -----------------
 */
 
-#define FNAME_SIZE _MAX_PATH*2+30
 
 /*
 **  CDC 3447 card reader function and status codes.
@@ -141,9 +140,9 @@ typedef struct crContext
     int              inDeck;
     int              outDeck;
     char             *decks[Cr3447MaxDecks];
-    char             curFileName[_MAX_PATH];
-    char             dirInput[_MAX_PATH];
-    char             dirOutput[_MAX_PATH];
+    char             curFileName[MaxFSPath];
+    char             dirInput[MaxFSPath];
+    char             dirOutput[MaxFSPath];
     int              seqNum;
     bool             isWatched;
     } CrContext;
@@ -588,9 +587,9 @@ void cr3447GetNextDeck(char *fname, int channelNo, int equipmentNo, FILE *out, c
     CrContext *cc;
     DevSlot   *dp;
 
-    static char strWork[FNAME_SIZE] = "";
-    static char fOldest[FNAME_SIZE] = "";
-    time_t      tOldest             = 0;
+    static char strWork[MaxFSPath] = "";
+    static char fOldest[MaxFSPath] = "";
+    time_t      tOldest            = 0;
 
     struct stat   s;
     struct dirent *curDirEntry;
@@ -788,7 +787,7 @@ void cr3447PostProcess(char *fname, int channelNo, int equipmentNo, FILE *out, c
 **------------------------------------------------------------------------*/
 static void cr3447SwapInOut(CrContext *cc, char *fName, FILE *out)
     {
-    static char fnwork[FNAME_SIZE] = "";
+    static char fnwork[MaxFSPath] = "";
 
     bool hasNoOutputDir = (cc->dirOutput[0] == '\0');
     bool hasNoInputDir  = (cc->dirInput[0] == '\0');
@@ -940,7 +939,7 @@ static FcStatus cr3447Func(PpWord funcCode)
     cc = (CrContext *)active3000Device->context[0];
 
     switch (funcCode)
-            {
+        {
     default:                    // all unrecognized codes are NOPs
 #if DEBUG
         fprintf(cr3447Log, "(cr3447 ) FUNC not implemented & silently ignored!");
@@ -1017,7 +1016,7 @@ static FcStatus cr3447Func(PpWord funcCode)
         cc->status  &= ~StCr3447ErrorInt;
         st           = FcProcessed;
         break;
-            }
+        }
 
     dcc6681Interrupt((cc->status & cc->intMask) != 0);
 
@@ -1040,7 +1039,7 @@ static void cr3447Io(void)
     cc = (CrContext *)active3000Device->context[0];
 
     switch (active3000Device->fcode)
-            {
+        {
     default:
         printf("(cr3447 ) Unexpected IO for function %04o\n", active3000Device->fcode);
         break;
@@ -1118,7 +1117,7 @@ static void cr3447Io(void)
 #endif
             }
         break;
-            }
+        }
 
     dcc6681Interrupt((cc->status & cc->intMask) != 0);
     }
@@ -1205,11 +1204,11 @@ static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc, FILE *out)
             cr3447NextCard(up, cc, out);
             activeDevice = channelFindDevice(up->channel->id, DtDcc6681);
             dcc6681Interrupt((cc->status & cc->intMask) != 0);
-            fprintf(out, "(cr3447 ) Cards loaded on card reader C%o,E%o\n", cc->channelNo, cc->eqNo);
+            fprintf(out, "\n(cr3447 ) Cards '%s' loaded on card reader C%02o,E%02o\n", cc->curFileName, cc->channelNo, cc->eqNo);
 
             return TRUE;
             }
-        fprintf(out, "(cr3447 ) Failed to open card deck %s\n", fname);
+        fprintf(out, "(cr3447 ) Failed to open card deck '%s'\n", fname);
         unlink(fname);
         free(fname);
         cc->outDeck = (cc->outDeck + 1) % Cr3447MaxDecks;
@@ -1237,7 +1236,7 @@ static void cr3447NextCard(DevSlot *up, CrContext *cc, FILE *out)
     int         j;
     PpWord      col1;
 
-    static char fnwork[FNAME_SIZE] = "";
+    static char fnwork[MaxFSPath] = "";
 
     /*
     **  Initialise read.
@@ -1479,7 +1478,7 @@ static char *cr3447Func2String(PpWord funcCode)
 
 #if DEBUG
     switch (funcCode)
-            {
+        {
     case FcCr3447Deselect:
 
         return "Deselect";
@@ -1535,7 +1534,7 @@ static char *cr3447Func2String(PpWord funcCode)
     case Fc6681Input:
 
         return "6681Input";
-            }
+        }
 #endif
     sprintf(buf, "(cr3447 ) Unknown Function: %04o", funcCode);
 

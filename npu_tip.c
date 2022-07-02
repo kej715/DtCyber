@@ -35,6 +35,14 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+
+#if defined(__FreeBSD__)
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#endif 
+
+
 #include "const.h"
 #include "types.h"
 #include "proto.h"
@@ -420,7 +428,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 
     case BtHTCMD:
         switch (block[BlkOffPfc])
-            {
+        {
         case PfcCTRL:
             if (block[BlkOffSfc] == SfcCHAR)
                 {
@@ -496,7 +504,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
                 }
 #endif
             break;
-            }
+        }
 
         /*
         **  Acknowledge any command (although most are ignored).
@@ -513,7 +521,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
             {
             last = (block[BlkOffBTBSN] & BlkMaskBT) == BtHTMSG;
             switch (tp->tipType)
-                {
+            {
             case TtASYNC:
                 npuAsyncProcessDownlineData(tp, bp, last);
                 break;
@@ -535,7 +543,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
                 blockAck[BlkOffBTBSN] |= block[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN);
                 npuBipRequestUplineCanned(blockAck, sizeof(blockAck));
                 break;
-                }
+            }
             }
         else
             {
@@ -683,7 +691,7 @@ void npuTipSetupTerminalClass(Tcb *tp, u8 tc)
 
     default:
         switch (tp->tipType)
-            {
+        {
         default:
         case TtASYNC:
             tp->params = defaultTc3;
@@ -700,7 +708,7 @@ void npuTipSetupTerminalClass(Tcb *tp, u8 tc)
         case TtTT13:
             tp->params = defaultTc29;
             break;
-            }
+        }
         }
     }
 

@@ -176,8 +176,10 @@ void msuFrendLog(const char *fmt, ...);
 
 #if defined(WIN32)
 void *msuFrendMapMemory(char *lpMappingName, DWORD dwNumberOfBytesToMap);
+
 #else
 void *msuFrendMapMemory(char *lpMappingName, int NumberOfBytesToMap);
+
 #endif
 int msuFrendInitInterface(bool isThisFrend);
 int msuFrendCreateSocket();

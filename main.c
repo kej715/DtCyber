@@ -90,6 +90,7 @@ static void opExit(void);
 char ppKeyIn         = 0;
 bool emulationActive = TRUE;
 u32  cycles;
+u32  readerScanSecs = 3;
 
 #ifdef IdleThrottle
 bool NOSIdle     = FALSE;   /* NOS2 Idle loop detection */
@@ -477,7 +478,7 @@ static void tracePpuCalls(void)
 static void waitTerminationMessage(void)
     {
     fflush(stdout);
-    sleepMsec(3000);
+    sleepMsec(readerScanSecs * 1000);
     }
 
 /*--------------------------------------------------------------------------
@@ -517,6 +518,7 @@ static void opExit()
     printf("Press ENTER to Exit");
     check = (char)getchar();
     }
+
 #endif
 
 /*---------------------------  End Of File  ------------------------------*/

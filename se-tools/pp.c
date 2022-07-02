@@ -69,10 +69,11 @@ static void processSwitch(void)
         for (cp = line; isspace(*cp); cp++)
             {
             }
-        if ((strcmp(cp, "}\n") == 0 || strcmp(cp, "}\r") == 0) && ((cp - line) == swIndent))
+        if (((strcmp(cp, "}\n") == 0) || (strcmp(cp, "}\r") == 0)) && ((cp - line) == swIndent))
             {
             fputs("    ", stdout);
             fputs(line, stdout);
+
             return;
             }
         if ((*cp != '\0') && (strncmp(cp, "switch (", 8) == 0))

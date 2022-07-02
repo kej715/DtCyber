@@ -33,6 +33,14 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+
+#if defined(__FreeBSD__)
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#endif 
+
+
 #include "const.h"
 #include "types.h"
 #include "proto.h"
@@ -234,7 +242,7 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
 
         case StTelnetProtoElem:
             switch (*sp++)
-                {
+            {
             case TELNET_IAC:
                 *dp++ = TELNET_IAC;
                 break;
@@ -312,7 +320,7 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
             default:
                 pcbp->controls.async.state = StTelnetData;
                 break;
-                }
+            }
             break;
 
         case StTelnetDont:
