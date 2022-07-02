@@ -351,8 +351,8 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             cc->table = asciiTo029;
             }
         else if ((strcmp(xlateTable, "026") != 0)
-                 && (strcmp(xlateTable, " *") != 0)
-                 && (strcmp(xlateTable, " ") != 0))
+                 && (strcmp(xlateTable, "*") != 0)
+                 && (strcmp(xlateTable, "") != 0))
             {
             fprintf(stderr, "(cr3447 ) Unrecognized card code name %s\n", xlateTable);
             exit(1);
