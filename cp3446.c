@@ -49,8 +49,7 @@
 **  -----------------
 */
 
-#define CP_LC      0
-#define FNAME_SIZE _MAX_PATH+30
+#define CP_LC    0
 
 /*
 **  CDC 3446 card punch function and status codes.
@@ -122,7 +121,7 @@ typedef struct cpContext
     char             convTable[4096];
     u32              getCardCycle;
     char             card[322];
-    char             extPath[_MAX_PATH];
+    char             extPath[MaxFSPath];
     } CpContext;
 
 
@@ -182,7 +181,7 @@ static FILE *cp3446Log = NULL;
 void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
     DevSlot      *up;
-    char         fname[FNAME_SIZE];
+    char         fname[MaxFSPath];
     CpContext    *cc;
     const PpWord *charset;
     PpWord       hol;
@@ -287,7 +286,7 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         }
 
-    fprintf(stderr, "(cp3446 ) Card Code selected '%s'\n", deviceType);
+    fprintf(stderr, "(cp3446 ) Card Code selected '%s'\n", (charset == asciiTo029) ? "029" : "026");
 
     memset(cc->convTable, ' ', sizeof(cc->convTable));
     for (int i = 040; i < 0177; i++)
@@ -306,7 +305,7 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
            channelNo,
            eqNo,
            fname,
-           charset == asciiTo026 ? "026" : "029");
+           (charset == asciiTo029) ? "029" : "026");
 
     /*
     **  Link into list of 405 Card Reader units.
@@ -343,8 +342,8 @@ void cp3446RemoveCards(char *params, FILE *out)
     int isuffix;
 
     struct tm   t;
-    char        fname[FNAME_SIZE];
-    char        fnameNew[FNAME_SIZE];
+    char        fname[MaxFSPath];
+    char        fnameNew[MaxFSPath];
     static char msgBuf[80] = "";
 
     bool renameOK;
@@ -510,7 +509,7 @@ static FcStatus cp3446Func(PpWord funcCode)
     cc = (CpContext *)active3000Device->context[0];
 
     switch (funcCode)
-            {
+        {
     default:                    // all unrecognized codes are NOPs
 #if DEBUG
         fprintf(cp3446Log, "(cp3446 ) FUNC not implemented & silently ignored!");
@@ -593,7 +592,7 @@ static FcStatus cp3446Func(PpWord funcCode)
         cc->status  &= ~StCp3446ErrorInt;
         st           = FcProcessed;
         break;
-            }
+        }
 
     dcc6681Interrupt((cc->status & cc->intMask) != 0);
 
@@ -617,7 +616,7 @@ static void cp3446Io(void)
     cc = (CpContext *)active3000Device->context[0];
 
     switch (active3000Device->fcode)
-            {
+        {
     default:
         printf("(cp3446 ) Unexpected IO for function %04o\n", active3000Device->fcode);
         break;
@@ -726,7 +725,7 @@ static void cp3446Io(void)
                 }
             }
         break;
-            }
+        }
 
     dcc6681Interrupt((cc->status & cc->intMask) != 0);
     }
@@ -840,7 +839,7 @@ static char *cp3446Func2String(PpWord funcCode)
 
 #if DEBUG
     switch (funcCode)
-            {
+        {
     case FcCp3446Deselect:
 
         return "Deselect";
@@ -900,7 +899,7 @@ static char *cp3446Func2String(PpWord funcCode)
     case Fc6681MasterClear:
 
         return "6681MasterClear";
-            }
+        }
 #endif
     sprintf(buf, "(cp3446 ) Unknown Function: %04o", funcCode);
 

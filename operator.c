@@ -120,7 +120,6 @@ static void opHelpDumpMemory(void);
 static void opCmdEnterKeys(bool help, char *cmdParams);
 static void opHelpEnterKeys(void);
 static void opWaitKeyConsume();
-static void opWait(long milliseconds);
 
 static void opCmdHelp(bool help, char *cmdParams);
 static void opHelpHelp(void);
@@ -128,7 +127,6 @@ static void opHelpHelp(void);
 static void opCmdHelpAll(bool help, char *cmdParams);
 static void opHelpHelpAll(void);
 
-// static void opCmdLoadCards(bool help, char *cmdParams); moved to proto/used by fsmon.c
 static void opHelpLoadCards(void);
 static int opPrepCards(char *fname, FILE *fcb);
 
@@ -1671,8 +1669,8 @@ void opCmdLoadCards(bool help, char *cmdParams)
     int         channelNo;
     int         equipmentNo;
     FILE        *fcb;
-    char        fname[_MAX_PATH];
-    char        newDeck[_MAX_PATH];
+    char        fname[MaxFSPath];
+    char        newDeck[MaxFSPath];
     int         numParam;
     int         rc;
     static int  seqNo = 1;

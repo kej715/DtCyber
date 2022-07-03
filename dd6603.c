@@ -113,7 +113,7 @@ typedef struct diskParam
     u8               channelNo;
     u8               eqNo;
     u8               unitNo;
-    char             fileName[_MAX_PATH];
+    char             fileName[MaxFSPath];
 
     i32              sector;
     i32              track;
@@ -245,7 +245,7 @@ void dd6603Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     DevSlot   *dp;
     DiskParam *diskP;
     FILE      *fcb;
-    char      fname[_MAX_PATH];
+    char      fname[MaxFSPath];
 
 #if DEBUG
     if (dd6603Log == NULL)
@@ -611,14 +611,14 @@ void dd6603ShowDiskStatus(FILE *out)
     while (dp)
         {
         fprintf(out, "    >   #%02d. CH %02o EQ %02o UN %02o HD %02o SECT 0x%06x TRK 0x%06o FN '%s'\n",
-               i,
-               dp->channelNo,
-               dp->eqNo,
-               dp->unitNo,
-               dp->head,
-               dp->sector,
-               dp->track,
-               dp->fileName);
+                i,
+                dp->channelNo,
+                dp->eqNo,
+                dp->unitNo,
+                dp->head,
+                dp->sector,
+                dp->track,
+                dp->fileName);
         dp = dp->nextDisk;
         i++;
         }

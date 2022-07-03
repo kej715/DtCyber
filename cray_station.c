@@ -200,7 +200,7 @@ typedef struct feiParam
     int                fd;
 #endif
     FeiLcpParams       lcpParams;
-    int                subsegSize;
+    u32                subsegSize;
     FeiBuffer          inputBuffer;
     FeiBuffer          outputBuffer;
     PpBuffer           ppIoBuffer;
@@ -218,7 +218,7 @@ static void csFeiDisconnect(void);
 static FcStatus csFeiFunc(PpWord funcCode);
 static void csFeiIo(void);
 static void csFeiInitiateConnection(FeiParam *feip);
-static void csFeiPackPpBuffer(FeiParam *feip, int maxWords);
+static void csFeiPackPpBuffer(FeiParam *feip, u32 maxWords);
 static void csFeiReceiveData(FeiParam *feip);
 static void csFeiReset(FeiParam *feip);
 static void csFeiSendData(FeiParam *feip);
@@ -740,7 +740,7 @@ static void csFeiIo(void)
             {
             activeChannel->data = 0;
             switch (feip->state)
-                {
+            {
             case StCsFeiSendLCP:
             case StCsFeiSendSubsegment:
                 if (feip->outputBuffer.out < feip->outputBuffer.in)
@@ -763,7 +763,7 @@ static void csFeiIo(void)
 
             default:
                 break;
-                }
+            }
             activeDevice->fcode           = 0;
             activeChannel->discAfterInput = FALSE;
             activeChannel->full           = TRUE;
@@ -775,7 +775,7 @@ static void csFeiIo(void)
 
     case 0: /* I/O typically after FcCsFeiStatus function processed */
         switch (feip->state)
-            {
+        {
         case StCsFeiSendLCP:
             if (activeChannel->full == TRUE)
                 {
@@ -1035,7 +1035,7 @@ static void csFeiIo(void)
         default:
             logError(LogErrorLocation, "channel %02o - invalid state: %d", activeChannel->id, feip->state);
             break;
-            }
+        }
         break;
 
     default:
@@ -1056,7 +1056,7 @@ static void csFeiIo(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void csFeiPackPpBuffer(FeiParam *feip, int maxWords)
+static void csFeiPackPpBuffer(FeiParam *feip, u32 maxWords)
     {
     u8 b1, b2, b3;
 

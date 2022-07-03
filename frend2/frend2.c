@@ -722,7 +722,7 @@ TypSymToName SymToNameLMBIPT[] =
         { H_PWNE,  "H_PWNE"  },
         { H_PWM1,  "H_PWM1"  },
         { H_PWM2,  "H_PWM2"  },
-               {      -1,           }
+        {      -1,           }
     };
 
 TypSymToName SymToNameMISC[] =
@@ -734,7 +734,7 @@ TypSymToName SymToNameMISC[] =
         { H_MIDAY, "H_MIDAY" },
         { H_MIYR,  "H_MIYR"  },
         { W_MIVER, "W_MIVER" },
-               {      -1,           }
+        {      -1,           }
     };
 TypSymToName SymToNameFPCOM[] =
     {
@@ -749,7 +749,7 @@ TypSymToName SymToNameFPCOM[] =
         { H_NOBUF,  "H_NOBUF"  },
         { W_NBF80,  "W_NBF80"  },
         { W_NBF240, "W_NBF240" },
-                {       -1,            }
+        {       -1,            }
     };
 TypSymToName SymToNameSOCK[] =
     {
@@ -806,7 +806,7 @@ TypSymToName SymToNameSOCK[] =
         { H_SKECHO, "H_SKECHO" },
         { W_SKPORD, "W_SKPORD" },
         { W_SKOTCL, "W_SKOTCL" },
-                {       -1,            }
+        {       -1,            }
     };
 TypSymToName SymToNamePORT[] =
     {
@@ -828,7 +828,7 @@ TypSymToName SymToNamePORT[] =
         { H_PTOTNE, "H_PTOTNE" },
         { W_PTOTCL, "W_PTOTCL" },
         { W_PTINCL, "W_PTINCL" },
-                {       -1,            }
+        {       -1,            }
     };
 
 /* Table for producing debug info, mapping LMBI addresses to table names. */

@@ -35,6 +35,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+
+#if defined(__FreeBSD__)
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#endif 
+
 #include "const.h"
 #include "types.h"
 #include "proto.h"
@@ -465,7 +472,7 @@ static FcStatus npuHipFunc(PpWord funcCode)
 
     case FcNpuInCouplerStatus:
         switch (hipState)
-            {
+        {
         case StHipInit:
             if (initCount > 0)
                 {
@@ -507,7 +514,7 @@ static FcStatus npuHipFunc(PpWord funcCode)
 
         default:
             break;
-            }
+        }
 
         break;
 
@@ -723,7 +730,7 @@ static void npuHipIo(void)
             activeChannel->full = FALSE;
 
             switch (orderType)
-                {
+            {
             case OrdOutServiceMsg:
                 npuBipNotifyServiceMessage();
                 break;
@@ -756,7 +763,7 @@ static void npuHipIo(void)
                 */
                 npuBipRetryInput();
                 break;
-                }
+            }
             }
 
         break;

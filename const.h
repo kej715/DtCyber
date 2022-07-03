@@ -144,9 +144,18 @@
 #define FontSmall                  8
 #define FontDot                    0
 
-#ifndef _MAX_PATH
-#define _MAX_PATH                  256
+
+/*
+**  Filesystem Path Lengths
+*/
+#ifdef PATH_MAX
+#define MaxFSPath    PATH_MAX   //  Linux Default 4096
+#elif defined(_MAX_PATH)
+#define MaxFSPath    _MAX_PATH  //  Windows Default 260
+#else
+#define MaxFSPath    4096       //  Go for the larger, Linux Default
 #endif
+
 
 #if CcLargeWin32Screen == 1
 #define OffLeftScreen     010
@@ -255,8 +264,13 @@
 #define tolower                    _tolower
 #define strncasecmp                _strnicmp
 #define unlink                     _unlink
+#define realpath(N, R)             _fullpath((R), (N), sizeof(R))
+#define fprintf(S, F, ...)         fprintf_s(S, F, __VA_ARGS__)
+#define sprintf(S, F, ...)         sprintf_s(S, sizeof(S), F, __VA_ARGS__)
+#define vfprintf(S, F, ...)        vfprintf_s(S, F, __VA_ARGS__)
+
 #if !defined(MSG_WAITALL)
-#define MSG_WAITALL                0x8
+#define MSG_WAITALL    0x8
 #endif
 #endif
 

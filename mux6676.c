@@ -525,7 +525,7 @@ static void mux667xIo(void)
                     **  Port with active TCP connection.
                     */
                     switch (function)
-                        {
+                    {
                     case 2:
                     case 3:
                         if (pp->mux->type == DtMux6671)
@@ -589,7 +589,7 @@ static void mux667xIo(void)
 
                     default:
                         break;
-                        }
+                    }
                     }
                 else if ((pp->mux->type == DtMux6671) && (function == 7))
                     {

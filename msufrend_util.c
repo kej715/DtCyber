@@ -257,9 +257,9 @@ void *msuFrendMapMemory(char *lpMappingName, DWORD dwNumberOfBytesToMap)
  */
 void *msuFrendMapMemory(char *lpMappingName, int numberOfBytesToMap)
     {
-    mode_t  mode = S_IRWXU | S_IRWXG;
-    int    oflag = O_RDWR;
-    void *pStart = NULL;
+    mode_t mode    = S_IRWXU | S_IRWXG;
+    int    oflag   = O_RDWR;
+    void   *pStart = NULL;
 
     do
         { /* not a loop */
@@ -268,7 +268,7 @@ void *msuFrendMapMemory(char *lpMappingName, int numberOfBytesToMap)
             {
             /* Mapping file could not be opened.  Try creating it. */
             oflag |= O_CREAT;
-	    handle = shm_open(lpMappingName, oflag, mode);
+            handle = shm_open(lpMappingName, oflag, mode);
             if (-1 == handle)
                 {
                 /* error */
@@ -305,8 +305,7 @@ void *msuFrendMapMemory(char *lpMappingName, int numberOfBytesToMap)
             pStart = NULL;
             break;
             }
-        }
-    while (FALSE);
+        }while (FALSE);
 
     return pStart;
     }
@@ -326,6 +325,7 @@ int msuFrendInitInterface(bool isThisFrend)
     if (pFrendInt == NULL)
         {
         msuFrendLog("Cannot map memory.");
+
         return 2;
         }
     if (isThisFrend)
@@ -360,8 +360,7 @@ int msuFrendCreateSocket()
         sockAddrToFrend.sin_addr.s_addr = inet_addr("127.0.0.1");
         sockAddrToFrend.sin_family      = AF_INET;
         sockAddrToFrend.sin_port        = htons(PORT_FREND_LISTEN);
-        }
-    while (FALSE);
+        }while (FALSE);
     if (retval)
         {
         msuFrendLog("==**msuFrendCreateSocket got error %d", retval);
