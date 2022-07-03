@@ -83,19 +83,19 @@ EXTRACFLAGS.Linux.i386     := -Wno-switch -Wno-format-security
 # Platform Parameters (LINUX/aarch64) [\Makefile.linux64-armv8-a]
 #--------------------------------------------------------------------------
 #	Include Files
-INCL.Linux.x86_64          := -I. -I..
+INCL.Linux.aarch64          := -I. -I..
 						   
 #	Library Paths          
-LDFLAGS.Linux.x86_64       := -s -L/usr/lib
+LDFLAGS.Linux.aarch64       := -s -L/usr/lib
 						   
 #	Libraries              
-LIBS.Linux.x86_64          := -lm -lpthread -lrt
+LIBS.Linux.aarch64          := -lm -lpthread -lrt
 						   
 #	Compiler Flags         
-CFLAGS.Linux.x86_64        := -O2 -std=gnu99 -march=armv8-a
+CFLAGS.Linux.aarch64        := -O2 -std=gnu99 -march=armv8-a
 						   
 #	Optional C Flags       
-EXTRACFLAGS.Linux.x86_64   := -Wno-switch -Wno-format-security
+EXTRACFLAGS.Linux.aarch64   := -Wno-switch -Wno-format-security
 
 #--------------------------------------------------------------------------
 # Platform Parameters (FreeBSD) [\Makefile.freedbsd32/64]
@@ -171,6 +171,10 @@ OBJ=obj
 #--------------------------------------------------------------------------
 # Sources and Targets
 #--------------------------------------------------------------------------
+
+HDRS    =   $(addprefix ../, \
+            msufrend_util.h         \
+			)
 
 BINS    =   $(addprefix $(BIN)/,    \
 			frend2                  \

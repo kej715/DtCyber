@@ -40,10 +40,10 @@ THISMAKEFILE := $(lastword $(MAKEFILE_LIST))
 EXECUTABLES = $(CC) ls npm node
 K := $(foreach exec,$(EXECUTABLES),\
         $(if \
-		  $(shell which $(exec)), \
-		  $(info "OK: '$(exec)' exists in PATH."), \
-		  $(error "FAIL: Required executable '$(exec)' not found in PATH.")) \
-		  )
+            $(shell which $(exec)), \
+            $(info "OK: '$(exec)' exists in PATH."), \
+            $(error "FAIL: Required executable '$(exec)' not found in PATH.")) \
+         )
 
 
 #------------------------------------------------------------------------------
