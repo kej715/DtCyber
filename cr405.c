@@ -59,7 +59,6 @@
 **  Private Constants
 **  -----------------
 */
-#define FNAME_SIZE _MAX_PATH*2+30
 
 /*
 **  CDC 405 card reader function and status codes.
@@ -130,9 +129,9 @@ typedef struct cr405Context
     int                 outDeck;
     char                *decks[Cr405MaxDecks];
 
-    char                curFileName[_MAX_PATH];
-    char                dirInput[_MAX_PATH];
-    char                dirOutput[_MAX_PATH];
+    char                curFileName[MaxFSPath];
+    char                dirInput[MaxFSPath];
+    char                dirOutput[MaxFSPath];
     int                 seqNum;
     bool                isWatched;
     } Cr405Context;
@@ -356,8 +355,8 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             cc->table = asciiTo029;
             }
         else if ((strcmp(xlateTable, "026") != 0)
-                 && (strcmp(xlateTable, " *") != 0)
-                 && (strcmp(xlateTable, " ") != 0))
+                 && (strcmp(xlateTable, "*") != 0)
+                 && (strcmp(xlateTable, "") != 0))
             {
             fprintf(stderr, "(cr405  ) Unrecognized card code name %s\n", xlateTable);
             exit(1);
@@ -588,9 +587,9 @@ void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, FILE *out, ch
     Cr405Context *cc;
     DevSlot      *dp;
 
-    static char strWork[FNAME_SIZE] = "";
-    static char fOldest[FNAME_SIZE] = "";
-    time_t      tOldest             = 0;
+    static char strWork[MaxFSPath] = "";
+    static char fOldest[MaxFSPath] = "";
+    time_t      tOldest            = 0;
 
     struct stat   s;
     struct dirent *curDirEntry;
@@ -785,7 +784,7 @@ void cr405PostProcess(char *fname, int channelNo, int equipmentNo, FILE *out, ch
 **------------------------------------------------------------------------*/
 static void cr405SwapInOut(Cr405Context *cc, char *fName, FILE *out)
     {
-    static char fnwork[FNAME_SIZE] = "";
+    static char fnwork[MaxFSPath] = "";
 
     bool hasNoOutputDir = (cc->dirOutput[0] == '\0');
     bool hasNoInputDir  = (cc->dirInput[0] == '\0');
@@ -921,7 +920,7 @@ void cr405ShowStatus(FILE *out)
 static FcStatus cr405Func(PpWord funcCode)
     {
     switch (funcCode)
-            {
+        {
     default:
 
         return (FcDeclined);
@@ -936,7 +935,7 @@ static FcStatus cr405Func(PpWord funcCode)
     case FcCr405StatusReq:
         activeDevice->fcode = funcCode;
         break;
-            }
+        }
 
     return (FcAccepted);
     }
@@ -954,7 +953,7 @@ static void cr405Io(void)
     Cr405Context *cc = activeDevice->context[0];
 
     switch (activeDevice->fcode)
-            {
+        {
     default:
     case FcCr405Deselect:
     case FcCr405GateToSec:
@@ -996,7 +995,7 @@ static void cr405Io(void)
             }
 
         break;
-            }
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -1056,11 +1055,11 @@ static bool cr405StartNextDeck(DevSlot *dp, Cr405Context *cc, FILE *out)
             {
             strcpy(cc->curFileName, fname);
             cr405NextCard(dp, out);
-            fprintf(out, "Cards loaded on card reader C%o,E%o\n", cc->channelNo, cc->eqNo);
+            fprintf(out, "Cards '%s' loaded on card reader C%o,E%o\n", cc->curFileName, cc->channelNo, cc->eqNo);
 
             return TRUE;
             }
-        fprintf(stderr, "Failed to open card deck %s\n", fname);
+        fprintf(stderr, "Failed to open card deck '%s'\n", fname);
         unlink(fname);
         free(fname);
         cc->outDeck = (cc->outDeck + 1) % Cr405MaxDecks;
@@ -1089,7 +1088,7 @@ static void cr405NextCard(DevSlot *dp, FILE *out)
     int          i;
     int          j;
 
-    static char fnwork[FNAME_SIZE] = "";
+    static char fnwork[MaxFSPath] = "";
 
     if (dp->fcb[0] == NULL)
         {

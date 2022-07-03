@@ -611,7 +611,7 @@ static void dsa311Io(void)
             else // output data port
                 {
                 switch (cp->outputState)
-                    {
+                {
                 //
                 //  Look for beginning of a message, and discard characters
                 //  until SOH or DLE is seen.
@@ -666,7 +666,7 @@ static void dsa311Io(void)
                     if (cp->sktOutBuf.in + 1 < SktOutBufSize)
                         {
                         switch (ch)
-                            {
+                        {
                         case SYN:
                             // discard trailing SYN's
                             break;
@@ -686,7 +686,7 @@ static void dsa311Io(void)
                         default:
                             cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
                             break;
-                            }
+                        }
                         }
                     break;
 
@@ -750,7 +750,7 @@ static void dsa311Io(void)
 #endif
                     cp->outputState = StDsa311OutSOH;
                     break;
-                    }
+                }
                 }
             activeChannel->full = FALSE;
             }

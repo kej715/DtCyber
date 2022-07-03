@@ -434,7 +434,6 @@ void traceCpu(u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
         }
 
 #if 0
-
     /*
     **  Don't trace Scope 3.1 idle loop.
     */
@@ -514,9 +513,9 @@ void traceCpu(u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
         link = FALSE;
 
         switch (addrMode)
-                {
+            {
         case CN:
-            strcpy(str, decode[opFm].mnemonic);
+            sprintf(str, decode[opFm].mnemonic);
             break;
 
         case CK:
@@ -573,7 +572,7 @@ void traceCpu(u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
         default:
             sprintf(str, "unsupported mode %02o", opFm);
             break;
-                }
+            }
         }
 
     fprintf(cpuF, "%-30s", str);
@@ -582,7 +581,7 @@ void traceCpu(u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
     **  Dump relevant register set.
     */
     switch (decode[opFm].regSet)
-            {
+        {
     case R:
         break;
 
@@ -732,7 +731,7 @@ void traceCpu(u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
     default:
         fprintf(cpuF, "unsupported register set %d", decode[opFm].regSet);
         break;
-            }
+        }
 
     fprintf(cpuF, "\n");
     }
@@ -911,7 +910,7 @@ void traceOpcode(void)
     fprintf(ppuF[activePpu->id], "O:%04o   %3.3s ", opCode, ppDecode[opF].mnemonic);
 
     switch (addrMode)
-            {
+        {
     case AN:
         fprintf(ppuF[activePpu->id], "        ");
         break;
@@ -938,7 +937,7 @@ void traceOpcode(void)
     case Adm:
         fprintf(ppuF[activePpu->id], "%02o%04o  ", opD, activePpu->mem[activePpu->regP + 1]);
         break;
-            }
+        }
 
     fprintf(ppuF[activePpu->id], "    ");
     }
@@ -970,7 +969,7 @@ u8 traceDisassembleOpcode(char *str, PpWord *pm)
     str += sprintf(str, "%3.3s  ", ppDecode[opF].mnemonic);
 
     switch (addrMode)
-            {
+        {
     case AN:
         sprintf(str, "        ");
         break;
@@ -999,7 +998,7 @@ u8 traceDisassembleOpcode(char *str, PpWord *pm)
         sprintf(str, "%02o%04o  ", opD, *pm);
         result = 2;
         break;
-            }
+        }
 
     return (result);
     }

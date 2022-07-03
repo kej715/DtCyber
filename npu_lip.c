@@ -37,6 +37,14 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
+
+#if defined(__FreeBSD__)
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#endif 
+
+
 #include "const.h"
 #include "types.h"
 #include "proto.h"

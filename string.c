@@ -53,12 +53,18 @@ char* dtStrLwr(char* str)
     return _strlwr(str);
 
 #else
-    unsigned char* p = (unsigned char*)str;
 
-    while (*p) {
-        *p = tolower((unsigned char)*p);
-        p++;
+    int i = 0;
+
+    while (str[i] != '\0')
+    {
+        if (str[i] >= 'A' && str[i] <= 'Z')
+        {
+            str[i] = str[i] + 32;
+        }
+        i++;
     }
     return str;
 #endif
 }
+

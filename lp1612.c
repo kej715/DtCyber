@@ -45,7 +45,6 @@
 **  Private Constants
 **  -----------------
 */
-#define FNAME_SIZE _MAX_PATH+30
 
 /*
 **      Function codes
@@ -124,7 +123,7 @@ typedef struct lpContext1612
     u8                   unitNo;
 
     bool                 extUseANSI;
-    char                 extPath[_MAX_PATH + 1];
+    char                 extPath[MaxFSPath];
     } LpContext1612;
 
 /*
@@ -178,7 +177,7 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     LpContext1612 *lc;
     bool          useANSI = TRUE;
 
-    char fname[FNAME_SIZE];
+    char fname[MaxFSPath];
     char *deviceType;
     char *devicePath;
     char *deviceMode;
@@ -358,8 +357,8 @@ void lp1612RemovePaper(char *params, FILE *out)
 
     struct tm t;
 
-    char fName[FNAME_SIZE];
-    char fNameNew[FNAME_SIZE];
+    char fName[MaxFSPath];
+    char fNameNew[MaxFSPath];
     bool renameOK;
 
 
@@ -514,7 +513,7 @@ static FcStatus lp1612Func(PpWord funcCode)
         }
 
     switch (funcCode)
-            {
+        {
     default:
 
         return (FcDeclined);
@@ -601,7 +600,7 @@ static FcStatus lp1612Func(PpWord funcCode)
     case FcPrintFormat5:
     case FcPrintFormat6:
         break;
-            }
+        }
 
     activeDevice->fcode = funcCode;
 
@@ -632,7 +631,7 @@ static void lp1612Io(void)
         }
 
     switch (activeDevice->fcode)
-            {
+        {
     default:
     case FcPrintSelect:
     case FcPrintSingleSpace:
@@ -661,7 +660,7 @@ static void lp1612Io(void)
         activeDevice->fcode   = 0;
         activeChannel->status = 0;
         break;
-            }
+        }
     }
 
 /*--------------------------------------------------------------------------

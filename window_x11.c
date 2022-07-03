@@ -322,7 +322,6 @@ void *windowThread(void *param)
     unsigned long     retRemaining;
     unsigned long     retLength;
     int               usageDisplayCount = 0;
-    char              windowTitle[200];
 
     /*
     **  Open the X11 display.
@@ -357,8 +356,15 @@ void *windowThread(void *param)
     /*
     **  Set window and icon titles.
     */
-    sprintf(windowTitle, "%s - " DtCyberVersion " - Copyright (c) 2011-2022 Tom Hunter - " DtCyberLicense, displayName);
-    XSetStandardProperties(disp, window, windowTitle, displayName, None, NULL, 0, NULL);
+    char windowTitle[132];
+
+    windowTitle[0] = '\0';
+    strcat(windowTitle, displayName);
+    strcat(windowTitle, " - " DtCyberVersion);
+    strcat(windowTitle, " - " DTCyberBuildDate);
+
+    XSetStandardProperties(disp, window, windowTitle,
+                           DtCyberVersion, None, NULL, 0, NULL);
 
     /*
     **  Create the graphics contexts for window and pixmap.

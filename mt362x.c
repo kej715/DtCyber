@@ -136,7 +136,7 @@ typedef struct tapeParam
     u8               channelNo;
     u8               eqNo;
     u8               unitNo;
-    char             fileName[_MAX_PATH + 1];
+    char             fileName[MaxFSPath];
 
     /*
     **  Format parameters.
@@ -380,7 +380,7 @@ static void mt362xInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, u8 tr
     */
     if (deviceName != NULL)
         {
-        strncpy(tp->fileName, deviceName, _MAX_PATH);
+        strncpy(tp->fileName, deviceName, MaxFSPath);
         fcb = fopen(deviceName, "rb");
         if (fcb == NULL)
             {
@@ -544,7 +544,7 @@ void mt362xLoadTape(char *params, FILE *out)
     /*
     **  Setup show_tape path name.
     */
-    strncpy(tp->fileName, str, _MAX_PATH);
+    strncpy(tp->fileName, str, MaxFSPath);
 
     /*
     **  Setup status.
@@ -642,7 +642,7 @@ void mt362xUnloadTape(char *params, FILE *out)
     /*
     **  Clear show_tape path name.
     */
-    memset(tp->fileName, '0', _MAX_PATH);
+    memset(tp->fileName, '0', MaxFSPath);
 
     /*
     **  Setup status.

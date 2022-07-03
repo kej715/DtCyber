@@ -155,87 +155,112 @@ void channelDisplayContext(FILE *out)
             case DtNone:
                 devTypeName = "None .......................";
                 break;
+
             case DtDeadStartPanel:
                 devTypeName = "Deadstart Panel.............";
                 break;
+
             case DtMt607:
                 devTypeName = "Magnetic Tape 607...........";
                 break;
+
             case DtMt669:
                 devTypeName = "Magnetic Tape 669...........";
                 break;
+
             case DtDd6603:
                 devTypeName = "Disk Device 6603............";
                 break;
+
             case DtDd8xx:
                 devTypeName = "Disk Device 8xx.............";
                 break;
+
             case DtCr405:
                 devTypeName = "Card Reader 405.............";
                 break;
+
             case DtLp1612:
                 devTypeName = "Line Printer 1612...........";
                 break;
+
             case DtLp5xx:
                 devTypeName = "Line Printer 5xx............";
                 break;
+
             case DtRtc:
                 devTypeName = "Realtime Clock..............";
                 break;
+
             case DtConsole:
                 devTypeName = "Console.....................";
                 break;
+
             case DtMux6676:
                 devTypeName = "Multiplexer 6676............";
                 break;
+
             case DtCp3446:
                 devTypeName = "Card Punch 3446.............";
                 break;
+
             case DtCr3447:
                 devTypeName = "Card Reader 3447............";
                 break;
+
             case DtDcc6681:
                 devTypeName = "Data Channel Converter 6681.";
                 break;
+
             case DtTpm:
                 devTypeName = "Two Port Multiplexer........";
                 break;
+
             case DtDdp:
                 devTypeName = "Distributive Data Path......";
                 break;
+
             case DtNiu:
                 devTypeName = "Network Interface Unit......";
                 break;
+
             case DtMt679:
                 devTypeName = "Magnetic Tape 679...........";
                 break;
+
             case DtNpu:
                 devTypeName = "Network Processor Unit......";
                 break;
+
             case DtMt362x:
                 devTypeName = "Magnetic Tape 362x..........";
                 break;
+
             case DtMch:
                 devTypeName = "Maintenance Channel.........";
                 break;
+
             case DtStatusControlRegister:
                 devTypeName = "Status Control Register.....";
                 break;
+
             case DtInterlockRegister:
                 devTypeName = "Interlock Register..........";
                 break;
+
             case DtPciChannel:
                 devTypeName = "PCI Channel.................";
                 break;
+
             default:
                 devTypeName = "Unknown Device..............";
                 break;
                 }
             fprintf(out, "    > %02o %s (%02o)",
-                   channel[ch].id,
-                   devTypeName,
-                   dp->devType
-                   );
+                    channel[ch].id,
+                    devTypeName,
+                    dp->devType
+                    );
 
             devNum = 0;
             devFCB = 0;
