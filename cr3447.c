@@ -328,7 +328,7 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         }
 
-    fprintf(stderr, "(cr3447 ) File watcher %s Requested'\n", watchRequested ? "Was" : "Was Not");
+    fprintf(stdout, "(cr3447 ) File watcher %s Requested'\n", watchRequested ? "Was" : "Was Not");
 
     /*
     **  Setup character set translation table.
@@ -359,7 +359,7 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         }
 
-    fprintf(stderr, "(cr3447 ) Card Code selected '%s'\n", (cc->table == asciiTo029) ? "029" : "026");
+    fprintf(stdout, "(cr3447 ) Card Code selected '%s'\n", (cc->table == asciiTo029) ? "029" : "026");
 
     /*
     **  Incorrect specifications for input / output directories
@@ -383,13 +383,13 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         strcpy(threadParms->outDoneDir, crOutput);
         strcpy(cc->dirOutput, crOutput);
-        fprintf(stderr, "(cr3447 ) Submissions will be preserved in '%s'.\n", crOutput);
+        fprintf(stdout, "(cr3447 ) Submissions will be preserved in '%s'.\n", crOutput);
         }
     else
         {
         threadParms->outDoneDir[0] = '\0';
         cc->dirOutput[0]           = '\0';
-        fprintf(stderr, "(cr3447 ) Submissions will be purged after processing.\n");
+        fputs("(cr3447 ) Submissions will be purged after processing.\n", stdout);
         }
 
     if ((crInput != NULL) && (crInput[0] != '*'))
@@ -1287,7 +1287,7 @@ static void cr3447NextCard(DevSlot *up, CrContext *cc, FILE *out)
             }
         else
             {
-            fprintf(out, "(cr3447 ) *WARNING* We are not removing file '%s'\n",
+            fprintf(out, "(cr3447 ) *WARNING* file '%s' will not be removed\n",
                     cc->curFileName);
             }
 

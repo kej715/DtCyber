@@ -332,7 +332,7 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         }
 
-    fprintf(stderr, "(cr405  ) File watcher %s Requested'\n", watchRequested ? "Was" : "Was Not");
+    fprintf(stdout, "(cr405  ) File watcher %s Requested'\n", watchRequested ? "Was" : "Was Not");
 
 
     /*
@@ -363,7 +363,7 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         }
 
-    fprintf(stderr, "(cr405  ) Card Code selected '%s'\n", xlateTable);
+    fprintf(stdout, "(cr405  ) Card Code selected '%s'\n", xlateTable);
 
     /*
     **  Incorrect specifications for input / output directories
@@ -387,13 +387,13 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         strcpy(threadParms->outDoneDir, crOutput);
         strcpy(cc->dirOutput, crOutput);
-        fprintf(stderr, "(cr405  ) Submissions will be preserved in '%s'.\n", crOutput);
+        fprintf(stdout, "(cr405  ) Submissions will be preserved in '%s'.\n", crOutput);
         }
     else
         {
         threadParms->outDoneDir[0] = '\0';
         cc->dirOutput[0]           = '\0';
-        fprintf(stderr, "(cr405  ) Submissions will be purged after processing.\n");
+        fputs("(cr405  ) Submissions will be purged after processing.\n", stdout);
         }
 
     if ((crInput != NULL) && (crInput[0] != '*'))
