@@ -326,7 +326,7 @@ void lp501Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
             exit(1);
             }
         }
-    fprintf(stderr, "(lp3000 ) lp501 Translation mode '%s'\n", (useANSI ? "ANSI" : "ASCII"));
+    fprintf(stdout, "(lp3000 ) lp501 Translation mode '%s'\n", (useANSI ? "ANSI" : "ASCII"));
 
     /*
     **  This is an optional parameter, therefore the default prevails
@@ -351,7 +351,7 @@ void lp501Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
             }
         }
 
-    fprintf(stderr, "(lp3000 ) lp501 Burst mode '%s'\n", (bursting ? "Bursting" : "Non-Bursting (Default)"));
+    fprintf(stdout, "(lp3000 ) lp501 Burst mode '%s'\n", (bursting ? "Bursting" : "Non-Bursting (Default)"));
 
 
     if ((deviceType == NULL)
@@ -446,7 +446,7 @@ void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
             exit(1);
             }
         }
-    fprintf(stderr, "(lp3000 ) lp512 Translation mode '%s'\n", (useANSI ? "ANSI" : "ASCII"));
+    fprintf(stdout, "(lp3000 ) lp512 Translation mode '%s'\n", (useANSI ? "ANSI" : "ASCII"));
 
     /*
     **  This is an optional parameter, therefore the default prevails
@@ -471,7 +471,7 @@ void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
             }
         }
 
-    fprintf(stderr, "(lp3000 ) lp512 Burst mode '%s'\n", (bursting ? "Bursting" : "Non-Bursting (Default)"));
+    fprintf(stdout, "(lp3000 ) lp512 Burst mode '%s'\n", (bursting ? "Bursting" : "Non-Bursting (Default)"));
 
 
     if ((deviceType == NULL)
