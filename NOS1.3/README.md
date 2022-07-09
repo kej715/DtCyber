@@ -86,7 +86,7 @@ The system listens for PLATO connections on TCP port 5004. To log into PLATO, yo
 will need a PLATO terminal emulator such as [pterm](https://www.cyber1.org/pterm.asp).
 The following PLATO logins are available after `first-install.js` completes:
 
-| PLATO name   | Course/Grou       | Password |
+| PLATO name   | Course/Group      | Password |
 |--------------|-------------------|----------|
 | admin        | s                 | admin    |
 | guest        | guests            | guest    |
