@@ -1,0 +1,38 @@
+#!/usr/bin/env node
+//
+// Copy PASCAL4 files to LIBRARY catalog
+//
+
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect(6666)
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.dis([
+  "ATTACH,PASCAL,PASCLIB,PASDOC.",
+  "GET,INCLGEN,PASTEXT,ANALYZE,AUGMENT.",
+  "GET,COMPARE,PASCODE,PASCREF,PASPPIX.",
+  "GET,PASVERT,PRETTY,PROSE,SPRUCE,WRITE.",
+  "SUI,377776.",
+  "PURGE,PASCAL,PASCLIB,PASDOC/NA.",
+  "PURGE,INCLGEN,PASTEXT,ANALYZE,AUGMENT/NA.",
+  "PURGE,COMPARE,PASCODE,PASCREF,PASPPIX/NA.",
+  "PURGE,PASVERT,PRETTY,PROSE,SPRUCE,WRITE/NA.",
+  "DEFINE,PC=PASCAL,PL=PASCLIB/CT=PU,AC=Y.",
+  "DEFINE,PD=PASDOC/CT=PU,AC=Y.",
+  "COPY,PASCAL,PC.",
+  "COPY,PASCLIB,PL.",
+  "COPY,PASDOC,PD.",
+  "SAVE,INCLGEN,PASTEXT,ANALYZE,AUGMENT/CT=PU,AC=Y.",
+  "SAVE,COMPARE,PASCODE,PASCREF,PASPPIX/CT=PU,AC=Y.",
+  "SAVE,PASVERT,PRETTY,PROSE,SPRUCE/CT=PU,AC=Y.",
+  "SAVE,WRITE/CT=PU,AC=Y."
+], 1))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

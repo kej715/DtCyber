@@ -1,0 +1,216 @@
+[
+  {
+    "desc": "Standard CDC products provided in base system. These products are are pre-built and included on the initial deadstart tape.",
+    "products": [
+      {
+        "name": "atf",
+        "pre": "nos.pre",
+        "post": "nos.post",
+        "lib": 8,
+        "desc": "Automated Cartridge Tape Facility"
+      },
+      {
+        "name": "iaf",
+        "pre": "nos.pre",
+        "post": "nos.post",
+        "lib": 30,
+        "desc": "IAF (InterActive Facility) subsystem"
+      },
+      {
+        "name": "nam5",
+        "pre": "nos.pre",
+        "post": "nos.post",
+        "lib": 39,
+        "desc": "Network Access Method"
+      },
+      {
+        "name": "nos",
+        "pre": "nos.pre",
+        "post": "nos.post",
+        "lib": 3,
+        "desc": "NOS 2.8.7 Base Operating System"
+      },
+      {
+        "name": "tcph",
+        "pre": "nos.pre",
+        "post": "nos.post",
+        "lib": 55,
+        "desc": "FTP Client and Server"
+      }
+    ]
+  },
+  {
+    "desc": "Optional programming languages and toolchains.",
+    "products": [
+      {
+        "name": "algol5",
+        "lib": 64,
+        "records": "ABS/ALGOL5,ULIB/ALG5LIB",
+        "url": "https://www.dropbox.com/s/jy6bgj2zugz1wke/algol5.tap?dl=1",
+        "desc": "ALGOL 5 (ALGOL 60)"
+      },
+      {
+        "name": "algol68",
+        "lib": 65,
+        "records": "TEXT/A68-ULIB/A68LIB",
+        "url": "https://www.dropbox.com/s/6uo27ja4r9twaxj/algol68.tap?dl=1",
+        "desc": "ALGOL 68"
+      },
+      {
+        "name": "pascal4",
+        "lib": 43,
+        "records": "ABS/PASCAL,ULIB/PASCLIB",
+        "desc": "PASCAL-6000 V4.1.0 - replaces PASCAL/170",
+        "depends": ["pascal4-pf"]
+      },
+      {
+        "name": "pascal4-pf",
+        "post": "pascal4-pf.post",
+        "url": "https://www.dropbox.com/s/wsgz02lnrtayfiq/PASCAL6000V410.tap?dl=1",
+        "desc": "PASCAL-6000 V4.1.0 - retains PASCAL/170, installs PASCAL4 on UN=LIBRARY only"
+      },
+      {
+        "name": "pl1",
+        "lib": 66,
+        "records": "ABS/PLI-ULIB/PLILIB",
+        "url": "https://www.dropbox.com/s/twbq0xpmkjoakzj/pl1.tap?dl=1",
+        "desc": "PL/I"
+      },
+      {
+        "name": "ses",
+        "pre": "ses.pre",
+        "lib": 67,
+        "records": "ABS/SES-ABS/EDT",
+        "url": "https://www.dropbox.com/s/ome99ezh4jhz108/SES.tap?dl=1",
+        "desc": "CYBIL and Software Engineering Services tools"
+      },
+      {
+        "name": "snobol",
+        "post": "snobol.post",
+        "lib": 68,
+        "records": "ABS/SNOBOL",
+        "url": "https://www.dropbox.com/s/4q4thkaghi19sro/snobol.tap?dl=1",
+        "desc": "CAL 6000 SNOBOL"
+      },
+      {
+        "name": "utlisp",
+        "post": "utlisp.post",
+        "lib": 69,
+        "records": "ABS/LISP",
+        "url": "https://www.dropbox.com/s/0wcq8e7m379ivyw/utlisp.tap?dl=1",
+        "desc": "University of Texas LISP"
+      }
+    ]
+  },
+  {
+    "desc": "Optional CDC products.",
+    "products": [
+      {
+        "name": "cdcs2",
+        "pre": "nos.pre",
+        "post": [
+          "nos.post",
+          "cdcs2.post"
+        ],
+        "lib": 14,
+        "records": "ULIB/DMSLIB,ABS/CDCS2-OVL/DB$B20B",
+        "examples": [
+          "cdcs-create-schema.job",
+          "cdcs-cobol-subschema.job",
+          "cdcs-ftn-subschema.job",
+          "cdcs-qu-subschema.job",
+          "cdcs-create-md.job",
+          "cdcs-dbrec.job",
+          "cdcs-start.post"
+        ],
+        "desc": "CYBER Database Control System Version 2",
+        "depends": ["qu3"]
+      },
+      {
+        "name": "icem",
+        "pre": "icem.pre",
+        "post": "icem.post",
+        "lib": 0,
+        "url": "https://www.dropbox.com/s/1ufg3504xizju0l/icem.zip?dl=1",
+        "desc": "ICEM Design/Drafting and GPL compiler"
+      },
+      {
+        "name": "qu3",
+        "pre": "nos.pre",
+        "post": "nos.post",
+        "lib": 47,
+        "records": "ULIB/DMSLIB,ABS/QU-OVL/QU0700",
+        "examples": [
+          "qu3.pre",
+          "qu3.job"
+        ],
+        "desc": "Query Update Utility Version 3"
+      },
+      {
+        "name": "rbf5",
+        "pre": "nos.pre",
+        "post": [
+          "nos.post",
+          "rbf5.post"
+        ],
+        "lib": 48,
+        "records": "ABS/RBF2P0-OVL/RBF0200",
+        "examples": "rbf5-restart.post",
+        "desc": "Remote Batch Facility Version 5"
+      }
+    ]
+  },
+  {
+    "desc": "Optional 3rd-Party products.",
+    "products": [
+      {
+        "name": "cgames",
+        "lib": 70,
+        "records": "PP/EYE-PP/DUD",
+        "desc": "NOS Console Games (EYE, KAL, LIFE, LUNAR, MIC, PAC, SNK, TTT)"
+      },
+      {
+        "name": "gplot",
+        "post": "gplot.post",
+        "lib": 73,
+        "records": "PROC/GPLOT",
+        "url": "https://www.dropbox.com/s/l342xe61dqq8aw5/gplot.tap?dl=1",
+        "desc": "GPLOT and ULCC DIMFILM graphics library"
+      },
+      {
+        "name": "i8080",
+        "post": "i8080.post",
+        "lib": 73,
+        "records": "PROC/CPM80-PROC/PLM80",
+        "url": "https://www.dropbox.com/s/ovgysfxbgpl18am/i8080.tap?dl=1",
+        "desc": "Intel 8080 cross-tools (CPM80, INTRP80, MAC80, PLM80)",
+        "depends": ["ses"]
+      },
+      {
+        "name": "kermit",
+        "post": "kermit.post",
+        "lib": 71,
+        "records": "ABS/KERMIT-OVL/KRM1300",
+        "url": "https://www.dropbox.com/s/p819tmvs91veoiv/kermit.tap?dl=1",
+        "desc": "Kermit file exchange utility"
+      },
+      {
+        "name": "ncctcp",
+        "post": "ncctcp.post",
+        "lib": 72,
+        "records": "ULIB/CCTCPIO-ABS/SMTPS",
+        "url": "https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1",
+        "desc": "Nostalgic Computing Center TCP/IP Applications",
+        "depends": ["ses"]
+      },
+      {
+        "name": "spss",
+        "post": "spss.post",
+        "lib": 73,
+        "records": "PROC/SPSS",
+        "url": "https://www.dropbox.com/s/2eo63elqvhi0vwg/NOSSPSS6000V9.tap?dl=1",
+        "desc": "SPSS-6000 V9 - Statistical Package for the Social Sciences"
+      }
+    ]
+  }
+]
