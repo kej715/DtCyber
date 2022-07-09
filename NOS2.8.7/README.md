@@ -22,21 +22,15 @@ in the [tapes](tapes) subdirectory for additional details.
 - **bunzip2**. The large binary files in the [tapes](tapes) subdirectory are
 delivered in the compressed **bz2** format. You will need to use *bunzip2* or a
 similar tool to uncompress the files before they can be used.
-- **curl**. The automated product build framework (see `build-product.exp` below)
-uses *curl* to download tape images from public libraries on the web, and *curl*
-is also used for communicating with the *StorageTek 4400* automated cartridge
-tape system simulator. You will need to install this tool, if you don't have it
-already.
-- **expect**. Automated installation of NOS 2.8.7 on DtCyber is accomplished using
-[expect](https://core.tcl-lang.org/expect/index). You will need to install this tool,
-if you don't have it already.
-- **netcat**. The *expect* scripts providing automation use the *netcat* tool (*nc*
-command) to communicate with *DtCyber* while it is running. You will need to install
-this tool, if you don't have it already.
+- **Node.js**. The scripts that automate installation of the operating system and
+products are implemented in Javascript and use the Node.js runtime. You will need
+to have Node.js version 16.0.0 (or later) and NPM version 8.0.0 or later. Node.js and
+NPM can be downloaded from the [Node.js](https://nodejs.org/) website, and most
+package managers support it as well.
 - **Privileged TCP ports**. The instance of *DtCyber* used in this process is
 configured by default to use standard TCP ports for services such as Telnet (port 23)
 and FTP (ports 21 and 22). These are privileged port numbers that will require you to
-run *DtCyber* using *sudo* on Linux and MacOS, for example. Note that it is possible
+run *DtCyber* using *sudo* on FreeBSD, Linux and MacOS. Note that it is possible
 to change the port numbers used by *DtCyber*, if necessary (see the *cyber.ini*
 file).
 
@@ -45,7 +39,7 @@ file).
 directory to build *DtCyber* and produce the *dtcyber* executable.
 2. Start the automated installation by executing the following commands. On
 Windows, you will probably need to enable the *dtcyber* application to use TCP ports
-21, 22, and 23 too.  The process initiated by the *expect* command will take some
+21, 22, and 23 too.  The process initiated by the *node* command will take some
 time to complete, perhaps as much as 15 - 20 minutes, depending upon your host
 system's speed. You will see *DtCyber* start, and NOS 2.8.7 will be deadstarted and
 installed. The system will be shutdown gracefully when the installation process has
@@ -54,12 +48,12 @@ completed.
 | OS           | Commands                                       |
 |--------------|------------------------------------------------|
 | Linux/MacOS: | `ln -s ../dtcyber dtcyber`                     |
-|              | `sudo expect first-install.exp`                |
+|              | `sudo node first-install`                      |
 |              |                                                |
 | Windows:     | `copy ..\dtcyber dtcyber`                      |
-|              | `expect first-install.exp`                     |
+|              | `node first-install`                           |
 
-After `first-install.exp` completes, NOS 2.8.7 is fully installed and ready to use.
+After `first-install.js` completes, NOS 2.8.7 is fully installed and ready to use.
 Enter the following command to restart *DtCyber* and bring up the freshly installed
 operating system. This is the usual way to start *DtCyber* after the initial
 installation of NOS 2.8.7. The system should deadstart as it did during the initial
@@ -97,34 +91,47 @@ for installing most optional software products**.
 To prepare the system for customization and installation of optional products,
 execute the following command from this directory while DtCyber is running NOS 2.8.7:
 
->`expect prep-customization.exp`
+>`node prep-customization`
 
-`prep-customization.exp` executes *SYSGEN(SOURCE)* to load operating system source
+`prep-customization.js` executes *SYSGEN(SOURCE)* to load operating system source
 code and build procedures on the INSTALL user's account, and then it submits two
 batch jobs from from the INSTALL user to set up for building the operating system
 and to apply initial corrective code and base modifications to the OS source program
 library. It will take a few minutes for the script to complete, so be patient and watch it run.
 
-## Building Optional Products
-A script named `build-product.exp` enables you to build optional software products
+## Installing Optional Products
+A script named `install-product.js` enables you to install optional software products
 for NOS 2.8.7. It also enables you to rebuild the base operating system itself and
-other products provided on the initial deadstart tape. `build-product.exp` will download tape images automatically from public libraries on the web, as needed.
+other products provided on the initial deadstart tape. `install-product.js` will download tape images automatically from public libraries on the web, as needed.
 
-To reveal a list of products that `build-product.exp` can build, enter the following
-command:
+To reveal a list of products that `install-product.js` can install, enter the
+following command:
 
->`expect build-product.exp list`
+>`node install-product list`
 
-Each line displayed begins with a product name which is followed by a short description of the product. To build a product, call `build-product.exp` as in:
+Each line displayed begins with a product name which is followed by a short description of the product. To install a product, call `install-product.js` as in:
 
->`expect build-product.exp` *product-name*
+>`node install-product` *product-name*
 
 For example:
 
->`expect build-product.exp algol68`
+>`node install-product algol68`
+
+You may specify more than one product name on the command line as well, and
+`install-product.js` will install the multiple products requested. By default,
+`install-product.js` will not re-install a product that is already installed. You
+can force it to re-install a product by specifying the `-f` command line option, as
+in:
+
+>`node install-product -f algol68`
+
+Finally, you may request all not-yet-installed products to be installed by
+specifying `all` as the product name, as in:
+
+>`node install-product all`
 
 #### Standard CDC Products
-Build scripts are currently available for the following standard CDC products.
+Installation scripts are currently available for the following standard CDC products.
 These products are pre-built and included on the initial deadstart tape. The
 scripts are available to facilitate customization, if needed.
 
@@ -137,7 +144,7 @@ scripts are available to facilitate customization, if needed.
 | tcph | FTP Client and Server (dependency: nam5) |
 
 #### Optional Programming Languages and Toolchains
-The following build scripts make optional programming languages and associated
+The following installation scripts make optional programming languages and associated
 toolchains available. Note that the initial deadstart tape includes the standard,
 CDC-provided programming languages APL, BASIC, COBOL, COMPASS, FORTRAN (both FTN and
 FTN5), PASCAL, and SYMPL.
@@ -154,7 +161,7 @@ FTN5), PASCAL, and SYMPL.
 | [utlisp](https://www.dropbox.com/s/0wcq8e7m379ivyw/utlisp.tap?dl=1) | University of Texas LISP |
 
 #### Optional CDC Products
-The following build scripts make optional CDC-provided products available.
+The following installation scripts make optional CDC-provided products available.
 
 | Product | Description |
 |---------|-------------|
@@ -164,7 +171,7 @@ The following build scripts make optional CDC-provided products available.
 | rbf5    | Remote Batch Facility Version 5|
 
 #### Optional 3rd-Party Products
-The following build scripts make products from 3rd-party sources available.
+The following installation scripts make products from 3rd-party sources available.
 
 | Product | Description |
 |---------|-------------|
@@ -179,21 +186,21 @@ These lists will grow, so revisit this page to see what new products have been a
 and use `git pull` to update the lists in your local repository clone.
 
 ## Creating a New Deadstart Tape  
-The jobs initiated by `build-product.exp` insert the binaries they produce into the
+The jobs initiated by `install-product.js` insert the binaries they produce into the
 direct access file named `PRODUCT` in the catalog of user `INSTALL`, and they also
 update the file named `DIRFILE` to specify the system libraries with which the
 binaries are associated. To create a new deadstart tape that includes the contents
 of `PRODUCT`, execute the following command:
 
->`expect make-ds-tape.exp`
+>`node make-ds-tape`
 
-`make-ds-tape.exp` reads the current deadstart tape, calls `LIBEDIT` to replace or
+`make-ds-tape.js` reads the current deadstart tape, calls `LIBEDIT` to replace or
 add the contents of `PRODUCT` as directed by `DIRFILE`, and then writes the resulting
 file to a new tape image. The new tape image will be a file with path
 `NOS2.8.7/tapes/newds.tap`. To restart NOS 2.8.7 with the new tape image, execute the
 following commands:
 
->`expect shutdown.exp`
+>`node shutdown`
 
 >`mv tapes/ds.tap tapes/oldds.tap`
 

@@ -1,18 +1,33 @@
-# Create SES user account
-set cmds {
-    "MODVAL,OP=Z./SES,FUI=32B,PW=SESX,RL=ALL,AW=ALL"
-    "MODVAL,OP=Z./SES,AP=NUL,AP=IAF,IS=BATCH"
-     "ELS.ASSIGN,51,TAPE,D=GE,LB=KU."
-     "PFLOAD,UI=32,LO=CEST,OP=LR."
-     "SUI,32."
-     "PERMIT,NEWSES,INSTALL=R."
-     "PERMIT,SESBINS,INSTALL=R."
-     "*** SESINS COMPLETE"
-     "EXIT."
-     "*** SESINS FAILED"
-     "\[!"
-}
-dis [join $cmds ";"]
-log_user 0
-check_job SESINS
-log_user 1
+#!/usr/bin/env node
+//
+// Create SES user account
+//
+
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect(6666)
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.dis([
+  "MODVAL,OP=Z./SES,FUI=32B,PW=SESX,RL=ALL,AW=ALL",
+  "MODVAL,OP=Z./SES,AP=NUL,AP=IAF,IS=BATCH",
+  "ELS.ASSIGN,51,TAPE,D=GE,LB=KU.",
+  "PFLOAD,UI=32,LO=CEST,OP=LR.",
+  "SUI,32.",
+  "PERMIT,NEWSES,INSTALL=R.",
+  "PERMIT,SESBINS,INSTALL=R.",
+  "*** SESINS COMPLETE",
+  "EXIT.",
+  "*** SESINS FAILED",
+  "[!"
+]))
+.then(() => dtc.waitJob("SESINS"))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

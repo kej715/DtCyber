@@ -31,21 +31,17 @@ in the [tapes](tapes) subdirectory for additional details.
 - **bunzip2**. The large binary files in the [tapes](tapes) subdirectory are
 delivered in the compressed **bz2** format. You will need to use *bunzip2* or a
 similar tool to uncompress the files before they can be used.
-- **curl**. Some large tape images are downloaded from public libraries on the web,
-and *curl* is the tool that is used to download them. You will need to install this
-tool, if you don't have it already.
-- **expect**. Automated installation of NOS 1.3 on DtCyber is accomplished using
-[expect](https://core.tcl-lang.org/expect/index). You will need to install this tool,
-if you don't have it already.
-- **netcat**. The *expect* scripts providing automation use the *netcat* tool (*nc*
-command) to communicate with *DtCyber* while it is running. You will need to install
-this tool, if you don't have it already.
+- **Node.js**. The scripts that automate installation of the operating system and
+products are implemented in Javascript and use the Node.js runtime. You will need
+to have Node.js version 16.0.0 (or later) and NPM version 8.0.0 or later. Node.js and
+NPM can be downloaded from the [Node.js](https://nodejs.org/) website, and most
+package managers support it as well.
 
 ## Installation Steps
 1. If not done already, use the appropriate *Makefile* in this directory's parent
 directory to build *DtCyber* and produce the *dtcyber* executable.
 2. Start the automated installation by executing the following commands. The process
-initiated by the *expect* command will take some time to complete, perhaps as much as
+initiated by the *node* command will take some time to complete, perhaps as much as
 15 - 20 minutes, depending upon your host system's speed. You will see *DtCyber*
 start, and NOS 1.3 will be deadstarted and installed. The system will be shutdown
 gracefully when the installation process has completed.
@@ -53,12 +49,12 @@ gracefully when the installation process has completed.
 | OS           | Commands                                       |
 |--------------|------------------------------------------------|
 | Linux/MacOS: | `ln -s ../dtcyber dtcyber`                     |
-|              | `expect first-install.exp`                     |
+|              | `node first-install`                           |
 |              |                                                |
 | Windows:     | `copy ..\dtcyber dtcyber`                      |
-|              | `expect first-install.exp`                     |
+|              | `node first-install`                           |
 
-After `first-install.exp` completes, NOS 1.3 is fully installed and ready to use.
+After `first-install.js` completes, NOS 1.3 is fully installed and ready to use.
 Enter the following command to restart *DtCyber* and bring up the freshly installed
 operating system. This is the usual way to start *DtCyber* after the initial
 installation of NOS 1.3. The system should deadstart as it did during the initial
@@ -88,7 +84,7 @@ ordinary, non-privileged user account.
 ## PLATO
 The system listens for PLATO connections on TCP port 5004. To log into PLATO, you
 will need a PLATO terminal emulator such as [pterm](https://www.cyber1.org/pterm.asp).
-The following PLATO logins are available after `first-install.exp` completes:
+The following PLATO logins are available after `first-install.js` completes:
 
 | PLATO name   | Course/Grou       | Password |
 |--------------|-------------------|----------|
@@ -106,7 +102,7 @@ configuration file conditions [rjecli](../rje-station) to use *MODE4* to connect
 interact with NOS 1.3.
 
 ## Remote Batch Networking
-After running `first-install.exp`, the system attempts to connect to an RJE HASP
+After running `first-install.js`, the system attempts to connect to an RJE HASP
 service on the local host at TCP port 2553. The [NOS 2.8.7](../NOS2.8.7) system will
 listen for connections on this port if the RBF product is installed, so if the NOS
 1.3 and NOS 2.8.7 systems are started on the same host machine, the TIELINE
@@ -116,19 +112,19 @@ system.
 
 The `DSA311` definition in the `cyber.ini` file of the NOS 1.3 system defines the
 host and port to which TIELINE will attempt to connect. After running
-`first-install.exp`, the `DSA311` entry looks like this:
+`first-install.js`, the `DSA311` entry looks like this:
 
 >`DSA311,5,10,20,localhost:2553`
 
 If you want TIELINE to connect to a HASP service on a different host and/or port,
 change `localhost:2553` accordingly. Note also that after running
-`first-install.exp`, TIELINE is conditioned to interoperate with RBF on NOS 2. If
+`first-install.js`, TIELINE is conditioned to interoperate with RBF on NOS 2. If
 you want it to interoperate with an IBM HASP service such as JES2 or RSCS running on
 the Hercules IBM mainframe emulator, you must modify TIELINE and rebuild it. A job
 is available for doing this. See the **Customization** section, below, for details.
 
 ## Customization
-After running `first-install.exp`, the NOS 1.3 system has the artifacts needed to
+After running `first-install.js`, the NOS 1.3 system has the artifacts needed to
 facilitate customization. In particular, the catalog of user `INSTALL` (UI=1)
 contains the following files:
 
@@ -158,7 +154,7 @@ the [decks](decks) directory of this git repository. These include:
 - **build-tieline-nos2.job** : a job to build the *TIELINE* subsystem such that it
 will interoperate with RBF on NOS 2.
 - **customize-auto.job** : a job that modifies PP programs *1DS* and *1SJ* so that
-they will operate correctory for this NOS 1.3 distribution.
+they will operate correctly for this NOS 1.3 distribution.
 - **customize-plato.job** : a job to build the *PLATO* subsystem PP program named
 *PPA* so that it will operate correctly for this NOS 1.3 distribution.
 - **customize-runner.job** : a job to modify the *RUNNER* utility and associated
@@ -167,7 +163,7 @@ distribution.
 - **customize-sysui.job** : a job to modify the *SUI* command so that it will operate
 correctly for this NOS 1.3 distribution.
 
-The released deadstart tape used by `first-install.exp` was built using all of these
+The released deadstart tape used by `first-install.js` was built using all of these
 jobs except **build-tieline-ibm.job**, so there is no need to run any of these jobs
 unless you want to modify the associated customizations, **or you want to modify
 the system to make TIELINE interoperate with JES2 or RSCS on MVS or VM/CMS instead of
@@ -189,13 +185,13 @@ All of these jobs automatically edit the executables they produce into the file 
 The customization jobs insert the binaries they produce into the direct access file
 named `SYSTEM` in the catalog of user `INSTALL`. To create a new deadstart tape that includes the contents of `SYSTEM`, execute the following command:
 
->`expect make-ds-tape.exp`
+>`node make-ds-tape`
 
-`make-ds-tape.exp` copies `SYSTEM` to a new tape image. The new tape image will be a
-file with relative path `tapes/newds.tap`. To restart NOS 1.3 with the new tape image,
-execute the following commands:
+`make-ds-tape.js` copies `SYSTEM` to a new tape image. The new tape image will be a
+file with relative path `tapes/newds.tap`. To restart NOS 1.3 with the new tape
+image, execute the following commands:
 
->`expect shutdown.exp`
+>`node shutdown`
 
 >`mv tapes/ds.tap tapes/oldds.tap`
 

@@ -8,6 +8,10 @@ steps:
 * Implement and test your changes and additions in your local clone, and ensure that
 they conform to the coding style discussed below.
 * Commit your changes and additions to your local clone.
+* Ensure that your changes build cleanly on all supported platforms (FreeBSD 32-bit
+and 64-bit, Linux 32-bit and 64-bit on Intel, ARMv8, and ARMv8a, and MacOS).
+* Ensure that the automated installation scripts in the NOS1.3 and NOS2.8.7
+directories execute successfully with your changes.
 * Push the changes to your fork in GitHub.
 * Use GitHub to submit a pull request to the main *DtCyber* repository, requesting to
 merge your changes into main repo.

@@ -16,7 +16,7 @@ dtc.connect(6666)
 .then(() => dtc.sleep(2000))
 .then(() => dtc.mount(13, 0, 1, "tapes/newds.tap", true))
 .then(() => dtc.sleep(5000))
-.then(() => dtc.say("Submit job to write new deadstart tape"))
+.then(() => dtc.say("Run job to write new deadstart tape"))
 .then(() => dtc.runJob(11, 4, "decks/make-ds-tape.job", [51]))
 .then(() => dtc.say("New deadstart tape created: tapes/newds.tap"))
 .then(() => {

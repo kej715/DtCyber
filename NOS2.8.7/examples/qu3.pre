@@ -1,7 +1,22 @@
-# Create UN A0126 to contain the example dataset.
-#
-set cmds {
-    "MODVAL,OP=Z./A0126,PW=A0126"
-    "MODVAL,OP=Z./A0126,AP=NUL,AP=IAF,IS=BATCH,RL=ALL"
-}
-dis [join $cmds ";"]
+#!/usr/bin/env node
+//
+// Create UN A0126 to contain the example dataset.
+//
+
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect(6666)
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.dis([
+  "MODVAL,OP=Z./A0126,PW=A0126",
+  "MODVAL,OP=Z./A0126,AP=NUL,AP=IAF,IS=BATCH,RL=ALL"
+]))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

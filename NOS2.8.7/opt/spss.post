@@ -1,12 +1,28 @@
-# Copy SPSS executable statistics file to LIBRARY catalog
-set cmds {
-    "ATTACH,SPSS,UDCFIL8."
-    "SUI,377776."
-    "PURGE,UDCFIL8/NA."
-    "PURGE,SPSS/NA."
-    "DEFINE,A=UDCFIL8/CT=PU,M=M,PW=4SPSS."
-    "DEFINE,B=SPSS/CT=PU,M=R."
-    "COPYEI,UDCFIL8,A."
-    "COPYEI,SPSS,B."
-}
-dis [join $cmds ";"] 1
+#!/usr/bin/env node
+//
+// Copy SPSS executable statistics file to LIBRARY catalog
+//
+
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect(6666)
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.dis([
+  "ATTACH,SPSS,UDCFIL8.",
+  "SUI,377776.",
+  "PURGE,UDCFIL8/NA.",
+  "PURGE,SPSS/NA.",
+  "DEFINE,A=UDCFIL8/CT=PU,M=M,PW=4SPSS.",
+  "DEFINE,B=SPSS/CT=PU,M=R.",
+  "COPYEI,UDCFIL8,A.",
+  "COPYEI,SPSS,B."
+], 1))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

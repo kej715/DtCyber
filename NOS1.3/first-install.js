@@ -7,7 +7,7 @@ const dtc = new DtCyber();
 dtc.start("./dtcyber", ["manual"])
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.say("DtCyber started"))
-.then(() => dtc.attachPrinter("../NOS1.3/LP5xx_C11_E5"))
+.then(() => dtc.attachPrinter("LP5xx_C11_E5"))
 .then(() => dtc.dsd([
   "",
   "]!",
@@ -113,7 +113,7 @@ dtc.start("./dtcyber", ["manual"])
   "ROUTE,PFLPLDV,DC=IN,OT=SYOT."
 ], 1))
 .then(() => dtc.waitJob("PFLPLDV"))
-.then(() => dtc.say("First Installation Complete"))
+.then(() => dtc.say("\n\n===== First Installation completed successfully =====\n"))
 .then(() => dtc.sleep(4000))
 .then(() => dtc.shutdown())
 .catch(err => {

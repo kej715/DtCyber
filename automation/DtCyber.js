@@ -1,5 +1,6 @@
 const bz2 = require("unbzip2-stream");
 const child_process = require("child_process");
+const extract = require("extract-zip");
 const fs = require("fs");
 const https = require("https");
 const net = require("net");
@@ -131,21 +132,43 @@ class DtCyber {
 
   connect(port) {
     const me = this;
+    this.isExitOnEnd = true;
     this.streamMgrs.dtCyber = new DtCyberStreamMgr();
-    return new Promise((resolve, reject) => {
-      const socket = net.createConnection({port:port}, () => {
-        resolve(me.streamMgrs.dtCyber);
+    this.connectDeadline = Date.now() + 2000;
+    const doConnect = (callback) => {
+      me.socket = net.createConnection({port:port}, () => {
+        callback(null);
       });
-      me.streamMgrs.dtCyber.setOutputStream(socket);
-      socket.on("data", (data) => {
+      me.streamMgrs.dtCyber.setOutputStream(me.socket);
+      me.socket.on("data", data => {
         me.streamMgrs.dtCyber.appendData(data);
       });
-      socket.on("end", () => {
-        console.log(`${new Date().toLocaleTimeString()} DtCyber disconnected`);
-        process.exit(0);
+      me.socket.on("end", () => {
+        if (me.isExitOnEnd) {
+          console.log(`${new Date().toLocaleTimeString()} DtCyber disconnected`);
+          process.exit(0);
+        }
       });
-      socket.on("error", err => {
-        reject(err);
+      me.socket.on("error", err => {
+        const now = Date.now();
+        if (now >= me.connectDeadline) {
+          callback(err);
+        }
+        else {
+          setTimeout(() => {
+            doConnect(callback);
+          }, 500);
+        }
+      });
+    };
+    return new Promise((resolve, reject) => {
+      doConnect(err => {
+        if (err === null) {
+          resolve(me.streamMgrs.dtCyber);
+        }
+        else {
+          reject(err);
+        }
       });
     });
   }
@@ -171,16 +194,48 @@ class DtCyber {
     .then(() => me.sleep(1000));
   }
 
+  disconnect() {
+    const me = this;
+    this.isExitOnEnd = false;
+    return new Promise((resolve, reject) => {
+      me.socket.end(() => {
+        me.socket.destroy();
+        resolve();
+      });
+    });
+  }
+
   dsd(commands) {
-    if (typeof commands === "string") {
-      return this.console(`e ${commands}`);
+    if (typeof commands === "string") commands = [commands];
+    const me = this;
+    let promise = Promise.resolve();
+    for (const command of commands) {
+      promise = promise.then(() => me.console(`e ${command}`))
     }
-    else {
-      const me = this;
-      return commands.reduce((p, cmd) => {
-        return p.then(() => me.dsd(cmd))
-      }, Promise.resolve());
-    }
+    return promise;
+  }
+
+  exec(command, args) {
+    return new Promise((resolve, reject) => {
+      const child = child_process.spawn(command, args, {
+        shell:true,
+        stdio:["pipe", process.stdout, process.stderr]
+      });
+      child.on("exit", (code, signal) => {
+        if (signal !== null) {
+          reject(new Error(`${command} exited due to signal ${signal}`));
+        }
+        else if (code === 0) {
+          resolve();
+        }
+        else {
+          reject(new Error(`${command} exited with status ${code}`));
+        }
+      });
+      child.on("error", err => {
+        reject(err);
+      });
+    });
   }
 
   expect(patterns, strmId) {
@@ -352,6 +407,10 @@ class DtCyber {
       {re:/Invalid/,                          fn:new Error(`Invalid: ${cmd}`)},
       {re:/Operator> /}
     ]);
+  }
+
+  unzip(srcPath, dstDir) {
+    return extract(srcPath, { dir: fs.realpathSync(dstDir) });
   }
 
   waitJob(jobName) {

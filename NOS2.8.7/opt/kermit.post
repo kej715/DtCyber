@@ -1,9 +1,25 @@
-# Copy KERMIT help file to LIBRARY catalog
-set cmds {
-    "ATTACH,KH=KERMHLP."
-    "SUI,377776."
-    "PURGE,KERMHLP/NA."
-    "DEFINE,KERMHLP/CT=PU,AC=Y,M=R."
-    "COPY,KH,KERMHLP."
-}
-dis [join $cmds ";"] 1
+#!/usr/bin/env node
+//
+// Copy KERMIT help file to LIBRARY catalog
+//
+
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect(6666)
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.dis([
+  "ATTACH,KH=KERMHLP.",
+  "SUI,377776.",
+  "PURGE,KERMHLP/NA.",
+  "DEFINE,KERMHLP/CT=PU,AC=Y,M=R.",
+  "COPY,KH,KERMHLP."
+], 1))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

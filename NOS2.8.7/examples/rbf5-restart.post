@@ -1,2 +1,19 @@
-# Use NAMI to restart RBF
-dsd "X.NAMI(RS=RBF)"
+#!/usr/bin/env node
+//
+// Use NAMI to restart RBF
+//
+
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect(6666)
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.dsd("X.NAMI(RS=RBF)"))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});
