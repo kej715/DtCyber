@@ -3,20 +3,22 @@
 const fs = require("fs");
 const DtCyber = require("../automation/DtCyber");
 
-const baseTapes = ["ds.tap", "opl485.tap"];
 const dtc = new DtCyber();
 
-let dtCyberPath = "./dtcyber";
-if (!fs.existsSync(dtCyberPath)) {
-  dtCyberPath = "../dtcyber";
-  if (!fs.existsSync(dtCyberPath)) {
-    process.stderr,write("DtCyber executable not found in current directory or parent directory\n");
-    process.exit(1);
+let dtCyberPath = null;
+for (const path of ["./dtcyber", "../dtcyber", "../bin/dtcyber"]) {
+  if (fs.existsSync(path)) {
+    dtCyberPath = path;
+    break;
   }
 }
+if (dtCyberPath === null) {
+  process.stderr,write("DtCyber executable not found in current directory or parent directory\n");
+  process.exit(1);
+}
 
-let promise = Promise.resolve();
-for (const baseTape of baseTapes) {
+let promise = dtc.say("Begin installation of NOS 1.3 ...");
+for (const baseTape of ["ds.tap", "opl485.tap"]) {
   if (!fs.existsSync(`tapes/${baseTape}`)) {
     promise = promise
     .then(() => dtc.say(`Decompress tapes/${baseTape}.bz2 to tapes/${baseTape} ...`))
@@ -134,15 +136,16 @@ promise = promise
   "ROUTE,PFLPLDV,DC=IN,OT=SYOT."
 ], 1))
 .then(() => dtc.waitJob("PFLPLDV"))
-.then(() => dtc.say("Installation completed successfully"))
 .then(() => dtc.sleep(4000))
 .then(() => dtc.shutdown(false))
-.then(() => dtc.say("Re-deadstart system and detach DtCyber to run independently ..."))
+.then(() => dtc.say("Re-deadstart freshly installed system ..."))
 .then(() => dtc.exec(dtCyberPath, [], {
   detached: true,
   shell:    true,
-  stdio:    [0, 1, 2]
+  stdio:    [0, "ignore", 2]
 }))
+.then(() => dtc.say("Installation of NOS 1.3 complete"))
+.then(() => dtc.say("Use 'node shutdown' to shutdown gracefully"))
 .then(() => {
   process.exit(0);
 })

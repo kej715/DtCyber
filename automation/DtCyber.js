@@ -215,26 +215,37 @@ class DtCyber {
     return promise;
   }
 
-  exec(command, args) {
-    return new Promise((resolve, reject) => {
-      const child = child_process.spawn(command, args, {
+  exec(command, args, options) {
+    if (typeof options === "undefined") {
+      options = {
         shell:true,
         stdio:["pipe", process.stdout, process.stderr]
-      });
-      child.on("exit", (code, signal) => {
-        if (signal !== null) {
-          reject(new Error(`${command} exited due to signal ${signal}`));
+      };
+    }
+    return new Promise((resolve, reject) => {
+      const child = child_process.spawn(command, args, options);
+      if (options.detached) {
+        if (typeof options.unref === "undefined" || options.unref === true) {
+          child.unref();
         }
-        else if (code === 0) {
-          resolve();
-        }
-        else {
-          reject(new Error(`${command} exited with status ${code}`));
-        }
-      });
-      child.on("error", err => {
-        reject(err);
-      });
+        resolve(child);
+      }
+      else {
+        child.on("exit", (code, signal) => {
+          if (signal !== null) {
+            reject(new Error(`${command} exited due to signal ${signal}`));
+          }
+          else if (code === 0) {
+            resolve();
+          }
+          else {
+            reject(new Error(`${command} exited with status ${code}`));
+          }
+        });
+        child.on("error", err => {
+          reject(err);
+        });
+      }
     });
   }
 
@@ -348,15 +359,27 @@ class DtCyber {
     mgr.write(`${command}\n`);
   }
 
-  shutdown() {
+  shutdown(isExitAfterShutdown) {
     const me = this;
-    return me.say("Starting shutdown sequence ...")
+    this.isExitAfterShutdown = (typeof isExitAfterShutdown === "undefined") ? true : isExitAfterShutdown;
+    let promise = me.say("Starting shutdown sequence ...")
     .then(() => me.dsd("[UNLOCK."))
     .then(() => me.dsd("CHE"))
     .then(() => me.sleep(8000))
     .then(() => me.dsd("STEP."))
     .then(() => me.sleep(2000))
-    .then(() => me.console("shutdown"));
+    .then(() => me.send("shutdown"));
+    if (this.isExitAfterShutdown === false && typeof me.dtCyberChild !== "undefined") {
+      promise = promise
+      .then(() => new Promise((resolve, reject) => {
+        me.dtCyberChild.on("exit", (code, signal) => {
+          if (signal == null && code === 0) {
+            resolve();
+          }
+        });
+      }));
+    }
+    return promise;
   }
 
   sleep(ms) {
@@ -367,14 +390,14 @@ class DtCyber {
     const me = this;
     this.streamMgrs.dtCyber = new DtCyberStreamMgr();
     return new Promise((resolve, reject) => {
-      const child = child_process.spawn(command, args, {
+      me.dtCyberChild = child_process.spawn(command, args, {
         stdio:["pipe", "pipe", process.stderr]
       });
-      me.streamMgrs.dtCyber.setOutputStream(child.stdin);
-      child.on("spawn", () => {
-        resolve(me.streamMgrs.dtCyber);
+      me.streamMgrs.dtCyber.setOutputStream(me.dtCyberChild.stdin);
+      me.dtCyberChild.on("spawn", () => {
+        resolve(me.dtCyberChild);
       });
-      child.on("exit", (code, signal) => {
+      me.dtCyberChild.on("exit", (code, signal) => {
         const d = new Date();
         if (signal !== null) {
           console.log(`${d.toLocaleTimeString()} DtCyber exited due to signal ${signal}`);
@@ -382,17 +405,19 @@ class DtCyber {
         }
         else if (code === 0) {
           console.log(`${d.toLocaleTimeString()} DtCyber exited normally`);
-          process.exit(0);
+          if (typeof me.isExitAfterShutdown === "undefined" || me.isExitAfterShutdown === true) {
+            process.exit(0);
+          }
         }
         else {
           console.log(`${d.toLocaleTimeString()} DtCyber exited with status ${code}`);
           process.exit(code);
         }
       });
-      child.on("error", err => {
+      me.dtCyberChild.on("error", err => {
         reject(err);
       });
-      child.stdout.on("data", (data) => {
+      me.dtCyberChild.stdout.on("data", (data) => {
         me.streamMgrs.dtCyber.appendData(data);
       });
     });

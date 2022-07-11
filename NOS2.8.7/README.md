@@ -19,9 +19,6 @@ need to install it on your host system, if you don't have it already, and you mi
 need to execute *git lfs pull* or *git lfs checkout* to inflate the large binary
 files properly before *DtCyber* can use them. See the [README](tapes/README.md) file
 in the [tapes](tapes) subdirectory for additional details.
-- **bunzip2**. The large binary files in the [tapes](tapes) subdirectory are
-delivered in the compressed **bz2** format. You will need to use *bunzip2* or a
-similar tool to uncompress the files before they can be used.
 - **Node.js**. The scripts that automate installation of the operating system and
 products are implemented in Javascript and use the Node.js runtime. You will need
 to have Node.js version 16.0.0 (or later) and NPM version 8.0.0 or later. Node.js and
@@ -37,70 +34,47 @@ file).
 ## Installation Steps
 1. If not done already, use the appropriate *Makefile* in this directory's parent
 directory to build *DtCyber* and produce the *dtcyber* executable.
-2. Start the automated installation by executing the following commands. On
+2. Start the automated installation by executing the following command. On
 Windows, you will probably need to enable the *dtcyber* application to use TCP ports
 21, 22, and 23 too.  The process initiated by the *node* command will take some
-time to complete, perhaps as much as 15 - 20 minutes, depending upon your host
-system's speed. You will see *DtCyber* start, and NOS 2.8.7 will be deadstarted and
-installed. The system will be shutdown gracefully when the installation process has
-completed.
+time to complete, perhaps as much as 90 minutes or more, depending upon your host
+system's speed. You will see *DtCyber* start and shut down a number of times to
+install the base NOS 2.8.7 operating system and all of the currently available
+optional products.
 
 | OS           | Commands                                       |
 |--------------|------------------------------------------------|
-| Linux/MacOS: | `ln -s ../dtcyber dtcyber`                     |
-|              | `sudo node first-install`                      |
-|              |                                                |
-| Windows:     | `copy ..\dtcyber dtcyber`                      |
-|              | `node first-install`                           |
+| Linux/MacOS: | `sudo node install`                            |
+| Windows:     | `node install`                                 |
 
-After `first-install.js` completes, NOS 2.8.7 is fully installed and ready to use.
-Enter the following command to restart *DtCyber* and bring up the freshly installed
-operating system. This is the usual way to start *DtCyber* after the initial
-installation of NOS 2.8.7. The system should deadstart as it did during the initial
-installation. However, it should start the **NAM** (Network Access Method) and
-**IAF** (InterActive Facility) subsystems automatically too.
+After `install.js` completes, NOS 2.8.7 and all currently available optional products
+are fully installed and ready to use, and the system will be left running in the
+background. You should be able to log into the system using your favorite Telnet client.
+When it asks for **FAMILY:**, press return. When it asks for **USER NAME:**, enter
+*INSTALL*. When it asks for **PASSWORD:**, enter *INSTALL* again. When you see the **/**
+prompt, the operating system is ready for you to enter commands. You may also login
+using **GUEST** as username and password. The installation process creates
+**GUEST** as an ordinary, non-privileged user account.
+
+Enter the following command to shutdown the system gracefully when you have finished
+playing with it, and you are ready to shut it down:
+
+>`node shutdown`
+
+To start *DtCyber* and NOS 2.8.7 again in the future, enter the following command:
 
 | OS           | Command           |
 |--------------|-------------------|
-| Linux/MacOS: | `sudo ./dtcyber`  |
-| Windows:     | `dtcyber`         |
-
-When the deadstart completes and **NAM** appears to settle down, you should be able
-to log into the system using your favorite Telnet client. When it asks for
-**FAMILY:**, press return. When it asks for **USER NAME:**, enter *INSTALL*. When it
-asks for **PASSWORD:**, enter *INSTALL* again. When you see the **/** prompt, the
-operating system is ready for you to enter commands. You may also login using
-**GUEST** as username and password. The initial installation process creates
-**GUEST** as an ordinary, non-privileged user account.
+| Linux/MacOS: | `sudo ../dtcyber` |
+| Windows:     | `../dtcyber`      |
 
 That's it. You have a fully operational Control Data Cyber 865 supercomputer
-running the NOS 2.8.7 operating system, complete with APL, BASIC, COBOL, FORTRAN IV
-and V, PASCAL, SYMPL, and COMPASS assembly language. Welcome back to supercomputing
-in the 1980's!
-
-## Preparing for Customization
-The NOS 2.8.7 installation tape images contain full source code and build procedures
-for the operating system, and this directory tree contains automated scripts
-enabling you to load the source code and run the procedures. Before the build
-procedures can run successfully, however, you must prepare the system for
-customization. This step needs to be executed only once after the initial
-installation of the operating system. It is a prerequisite for building and
-customizing the operating system from source code, and **it is also a prerequisite
-for installing most optional software products**.
-
-To prepare the system for customization and installation of optional products,
-execute the following command from this directory while DtCyber is running NOS 2.8.7:
-
->`node prep-customization`
-
-`prep-customization.js` executes *SYSGEN(SOURCE)* to load operating system source
-code and build procedures on the INSTALL user's account, and then it submits two
-batch jobs from from the INSTALL user to set up for building the operating system
-and to apply initial corrective code and base modifications to the OS source program
-library. It will take a few minutes for the script to complete, so be patient and watch it run.
+running the NOS 2.8.7 operating system, complete with ALGOL, APL, BASIC, COBOL, CYBIL,
+FORTRAN IV and V, LISP, PASCAL, PL/1, SNOBOL, SYMPL, COMPASS assembly language, and
+various other goodies. Welcome back to supercomputing in the 1980's!
 
 ## Installing Optional Products
-A script named `install-product.js` enables you to install optional software products
+A script named `install-product.js` enables you to re/install optional software products
 for NOS 2.8.7. It also enables you to rebuild the base operating system itself and
 other products provided on the initial deadstart tape. `install-product.js` will download tape images automatically from public libraries on the web, as needed.
 
@@ -129,6 +103,9 @@ Finally, you may request all not-yet-installed products to be installed by
 specifying `all` as the product name, as in:
 
 >`node install-product all`
+
+New products are added to the repository from time to time, so this command is particularly useful for installing products that were not available when you first
+installed NOS 2.8.7 (or since the last time you executed the command).
 
 #### Standard CDC Products
 Installation scripts are currently available for the following standard CDC products.
@@ -183,7 +160,8 @@ The following installation scripts make products from 3rd-party sources availabl
 | [spss](https://www.dropbox.com/s/2eo63elqvhi0vwg/NOSSPSS6000V9.tap?dl=1) | SPSS-6000 V9 - Statistical Package for the Social Sciences |
 
 These lists will grow, so revisit this page to see what new products have been added,
-and use `git pull` to update the lists in your local repository clone.
+use `git pull` to update the lists in your local repository clone, and then use
+`node install-product all` to install them.
 
 ## Creating a New Deadstart Tape  
 The jobs initiated by `install-product.js` insert the binaries they produce into the
@@ -202,8 +180,34 @@ following commands:
 
 >`node shutdown`
 
->`mv tapes/ds.tap tapes/oldds.tap`
+>`mv tapes/ds.tap tapes/ods.tap`
 
 >`mv tapes/newds.tap tapes/ds.tap`
 
-> `sudo ./dtcyber`
+> `sudo ../dtcyber`
+
+## Installing a Minimal System
+If you prefer to install a minimal NOS 2.8.7 system with a subset of optional products,
+or none of the optional products, you may accomplish this by avoiding the use of the
+`install.js` script and using the `base-install.js` script directly instead, as in:
+
+| OS           | Commands                                       |
+|--------------|------------------------------------------------|
+| Linux/MacOS: | `sudo node base-install`                       |
+| Windows:     | `node base-install`                            |
+
+`base-install.js` installs a minimal NOS 2.8.7 system without any optional products, and
+it shuts down the system when it completes. You may then start *DtCyber* and deadstart
+the minimal NOS 2.8.7 system by executing the following command (i.e., the usual way
+to start *DtCyber* and NOS 2.8.7):
+
+| OS           | Command           |
+|--------------|-------------------|
+| Linux/MacOS: | `sudo ../dtcyber` |
+| Windows:     | `../dtcyber`      |
+
+To install any optional products atop the minimal system, use the `install-product.js`
+script, as in:
+
+>`node install-product rbf5`
+
