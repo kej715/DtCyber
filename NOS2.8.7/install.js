@@ -15,6 +15,8 @@ if (dtCyberPath === null) {
   process.exit(1);
 }
 
+fs.writeFileSync("opt/installed.json", JSON.stringify(["atf","iaf","nam5","nos","tcph"]));
+
 const dtc = new DtCyber();
 
 dtc.say("Begin full installation of NOS 2.8.7 ...")
