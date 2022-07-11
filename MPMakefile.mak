@@ -30,7 +30,7 @@
   ####   #    #   ####           #    #  #    #  #    #  ######
 
 #	The LIST of the projects to be built
-PROJECTS = dtcyber frend2/frend2 stk/node_modules 
+PROJECTS = dtcyber frend2/frend2 automation/node_modules stk/node_modules 
 
 #	When calling other makefiles, they must be named the 
 #	same as this one ...
@@ -258,6 +258,9 @@ OBJS    =   $(addprefix $(OBJ)/,    \
 dtcyber: $(OBJS) $(BINS)
 	$(CC) $(LDFLAGS) -o $(BIN)/$@ $(OBJS) $(LIBS)
 
+automation/node_modules:
+	$(MAKE) -f $(THISMAKEFILE) -C automation
+
 stk/node_modules:
 	$(MAKE) -f $(THISMAKEFILE) -C stk
 
@@ -300,6 +303,7 @@ all: $(PROJECTS)
 clean:
 	@echo Cleaning Object files for $@ 
 	rm -f $(OBJS); 
+	$(MAKE) -C automation clean; 
 	$(MAKE) -C stk clean; 
 	$(MAKE) -f $(THISMAKEFILE) -C frend2 clean
 

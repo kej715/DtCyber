@@ -96,7 +96,10 @@ OBJS    =   cdcnet.o                \
 dtcyber: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
  
-all: dtcyber stk/node_modules frend2/frend2
+all: dtcyber stk/node_modules automation/node_modules frend2/frend2
+
+automation/node_modules:
+        $(MAKE) -C automation
 
 stk/node_modules:
 	$(MAKE) -C stk
@@ -106,6 +109,7 @@ frend2/frend2:
 
 clean:
 	rm -f *.o; \
+	$(MAKE) -C automation clean; \
 	$(MAKE) -C stk clean; \
 	$(MAKE) -f Makefile.linux64-armv8-a -C frend2 clean
 
