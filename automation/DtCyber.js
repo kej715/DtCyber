@@ -144,7 +144,8 @@ class DtCyber {
         me.streamMgrs.dtCyber.appendData(data);
       });
       me.socket.on("end", () => {
-        if (me.isExitOnEnd) {
+        if (me.isExitOnEnd
+            && (typeof me.isExitAfterShutdown === "undefined" || me.isExitAfterShutdown === true)) {
           console.log(`${new Date().toLocaleTimeString()} DtCyber disconnected`);
           process.exit(0);
         }
