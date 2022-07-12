@@ -234,7 +234,9 @@ class DtCyber {
     const me = this;
     let promise = Promise.resolve();
     for (const command of commands) {
-      promise = promise.then(() => me.console(`e ${command}`))
+      promise = promise
+      .then(() => me.sleep(500))
+      .then(() => me.console(`e ${command}`))
     }
     return promise;
   }
