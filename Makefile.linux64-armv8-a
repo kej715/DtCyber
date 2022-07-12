@@ -99,7 +99,7 @@ dtcyber: $(OBJS)
 all: dtcyber stk/node_modules automation/node_modules frend2/frend2
 
 automation/node_modules:
-        $(MAKE) -C automation
+	$(MAKE) -C automation
 
 stk/node_modules:
 	$(MAKE) -C stk
