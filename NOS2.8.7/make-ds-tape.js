@@ -4,7 +4,7 @@ const DtCyber = require("../automation/DtCyber");
 
 const dtc = new DtCyber();
 
-dtc.connect(6666)
+dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.say("Connected to DtCyber"))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))

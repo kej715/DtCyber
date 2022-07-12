@@ -130,13 +130,36 @@ class DtCyber {
     });
   }
 
-  connect(port) {
+  connect() {
     const me = this;
     this.isExitOnEnd = true;
+    if (typeof this.operatorPort === "undefined") {
+      let path = null;
+      for (const p of ["./cyber.ini", "../cyber.ini"]) {
+        if (fs.existsSync(p)) {
+          path = p;
+          break;
+        }
+      }
+      if (path === null) {
+        throw new Error("cyber.ini not found");
+      }
+      const lines = fs.readFileSync(path, "utf8").split("\n");
+      for (const line of lines) {
+        let result = /^\s*set_operator_port\s+([0-9]+)/.exec(line);
+        if (result !== null) {
+          this.operatorPort = parseInt(result[1]);
+          break;
+        }
+      }
+      if (typeof this.operatorPort === "undefined") {
+        throw new Error(`Operator port not found in ${path}`);
+      }
+    }
     this.streamMgrs.dtCyber = new DtCyberStreamMgr();
     this.connectDeadline = Date.now() + 2000;
     const doConnect = (callback) => {
-      me.socket = net.createConnection({port:port}, () => {
+      me.socket = net.createConnection({port:me.operatorPort}, () => {
         callback(null);
       });
       me.streamMgrs.dtCyber.setOutputStream(me.socket);

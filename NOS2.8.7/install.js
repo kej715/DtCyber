@@ -39,7 +39,7 @@ dtc.say("Begin full installation of NOS 2.8.7 ...")
   fs.renameSync("tapes/ds.tap", "tapes/ods.tap");
   fs.renameSync("tapes/newds.tap", "tapes/ds.tap");
 })
-.then(() => dtc.connect(6666))
+.then(() => dtc.connect())
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.shutdown(false))
 .then(() => dtc.sleep(5000))

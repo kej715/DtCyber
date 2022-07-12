@@ -7,7 +7,7 @@ const DtCyber = require("../../automation/DtCyber");
 
 const dtc = new DtCyber();
 
-dtc.connect(6666)
+dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.dis([
   "ATTACH,KH=KERMHLP.",

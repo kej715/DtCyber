@@ -4,8 +4,6 @@ const child_process = require("child_process");
 const fs = require("fs");
 const DtCyber = require("../automation/DtCyber");
 
-const DtCyberPort = 6666;
-
 let installedProductSet = [];
 let productSet = [];
 
@@ -192,7 +190,7 @@ const runWorkList = (dtc, workList, dir) => {
       .then(() => dtc.say(`  Run command "node ${dir}/${item}" ...`))
       .then(() => dtc.disconnect())
       .then(() => dtc.exec("node", [`${dir}/${item}`]))
-      .then(() => dtc.connect(DtCyberPort))
+      .then(() => dtc.connect())
       .then(() => dtc.expect([ {re:/Operator> $/} ]));
     }
   }
@@ -284,7 +282,7 @@ if (n < 1) {
 
 const dtc = new DtCyber();
 
-let promise = dtc.connect(DtCyberPort)
+let promise = dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"));
 for (const productEntry of productSet) {
