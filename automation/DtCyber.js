@@ -391,7 +391,7 @@ class DtCyber {
     let promise = me.say("Starting shutdown sequence ...")
     .then(() => me.dsd("[UNLOCK."))
     .then(() => me.dsd("CHE"))
-    .then(() => me.sleep(8000))
+    .then(() => me.sleep(15000))
     .then(() => me.dsd("STEP."))
     .then(() => me.sleep(2000))
     .then(() => me.send("shutdown"));
