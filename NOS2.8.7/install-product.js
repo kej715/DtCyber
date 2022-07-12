@@ -117,12 +117,12 @@ const installProduct = productEntry => {
       cmds.push(
         "ATTACH,P=PRODUCT.",
         `GTR,P,LGO,U.${recs}`,
-        "#5000#SYSEDIT,B=LGO."
+        "#12000#SYSEDIT,B=LGO."
       );
       promise = promise
       .then(() => dtc.dsd("IDLE,IAF."))
       .then(() => dtc.dis(cmds, 1))
-      .then(() => dtc.sleep(10000))
+      .then(() => dtc.sleep(30000))
       .then(() => dtc.dsd("IAF."));
     }
     if (typeof prodDefn.examples !== "undefined") {
