@@ -58,25 +58,22 @@ const installProduct = productEntry => {
     filetype = filename.split(".").pop();
     promise = promise
     .then(() => dtc.say("Download tape image ..."))
-    .then(() => dtc.wget(prodDefn.url, "opt/tapes", filename))
-    .then(() => {
-      if (filetype === "tap") {
-        return dtc.say("Mount tape ...")
-        .then(() => dtc.dsd([
-          "[UNLOAD,51.",
-          "[!"
-        ]))
-        .then(() => dtc.mount(13, 0, 1, `opt/tapes/${filename}`))
-        .then(() => dtc.sleep(5000));
-      }
-      else if (filetype === "zip") {
-        return dtc.say("Extract contents of ZIP file ...")
-        .then(() => dtc.unzip(`opt/tapes/${filename}`, "opt/tapes"));
-      }
-      else {
-        return Promise.resolve();
-      }
-    });
+    .then(() => dtc.wget(prodDefn.url, "opt/tapes", filename));
+    if (filetype === "tap") {
+      promise = promise
+      .then(() => dtc.say("Mount tape ..."))
+      .then(() => dtc.dsd([
+        "[UNLOAD,51.",
+        "[!"
+      ]))
+      .then(() => dtc.mount(13, 0, 1, `opt/tapes/${filename}`))
+      .then(() => dtc.sleep(5000));
+    }
+    else if (filetype === "zip") {
+      promise = promise
+      .then(() => dtc.say("Extract contents of ZIP file ..."))
+      .then(() => dtc.unzip(`opt/tapes/${filename}`, "opt/tapes"));
+    }
   }
   
   if (typeof prodDefn.pre !== "undefined") {
@@ -216,7 +213,6 @@ if (fs.existsSync("opt/installed.json")) {
 }
 let isForcedInstall = false;
 let isSysedit = false;
-let n = 0;
 
 for (let i = 2; i < process.argv.length; i++) {
   let arg = process.argv[i];
@@ -242,7 +238,6 @@ for (let i = 2; i < process.argv.length; i++) {
   case "all":
     for (const category of products) {
       for (const prodDefn of category.products) {
-        n += 1;
         if (isForcedInstall || isInstalled(prodDefn.name) === false) {
           addProduct(prodDefn, isSysedit);
         }
@@ -264,7 +259,6 @@ for (let i = 2; i < process.argv.length; i++) {
       process.stderr.write(`Unrecognized product name: ${arg}\n`);
       process.exit(1);
     }
-    n += 1;
     if (isForcedInstall || isInstalled(productName) === false) {
       addProduct(prodDefn, isSysedit);
     }
@@ -275,9 +269,9 @@ for (let i = 2; i < process.argv.length; i++) {
   }
 }
 
-if (n < 1) {
-  process.stderr.write("Please provide at least one product name\n");
-  usage(1);
+if (productSet.length < 1) {
+  process.stderr.write("No products to be installed.\n");
+  process.exit(0);
 }
 
 const dtc = new DtCyber();
