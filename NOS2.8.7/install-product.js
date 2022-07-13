@@ -288,6 +288,10 @@ for (const productEntry of productSet) {
     return Promise.resolve();
   });
 }
+if (productSet.length > 1) {
+  promise = promise
+  .then(() => dtc.say("All requested products installed"));
+}
 promise
 .then(() => {
   process.exit(0);
