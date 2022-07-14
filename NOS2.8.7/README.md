@@ -36,19 +36,21 @@ file).
 directory to build *DtCyber* and produce the *dtcyber* executable.
 2. Start the automated installation by executing the following command. On
 Windows, you will probably need to enable the *dtcyber* application to use TCP ports
-21, 22, and 23 too.  The process initiated by the *node* command will take some
-time to complete, perhaps as much as 90 minutes or more, depending upon your host
-system's speed. You will see *DtCyber* start and shut down a number of times to
-install the base NOS 2.8.7 operating system and all of the currently available
-optional products.
+21, 22, and 23 too.
 
-| OS           | Commands                                       |
-|--------------|------------------------------------------------|
-| Linux/MacOS: | `sudo node install`                            |
-| Windows:     | `node install`                                 |
+| OS           | Command             |
+|--------------|---------------------|
+| Linux/MacOS: | `sudo node install` |
+| Windows:     | `node install`      |
+
+The process initiated by the *node* command will take some time to complete, perhaps as
+much as 90 minutes or more, depending upon your host system's speed and load. You will
+see console interaction, jobs submitted via the virtual card reader, and *DtCyber*
+shutting down and restarting a number of times to install the base NOS 2.8.7 operating
+system and all of the currently available optional products.
 
 After `install.js` completes, NOS 2.8.7 and all currently available optional products
-are fully installed and ready to use, and the system will be left running in the
+will be fully installed and ready to use, and the system will be left running in the
 background. You should be able to log into the system using your favorite Telnet client.
 When it asks for **FAMILY:**, press return. When it asks for **USER NAME:**, enter
 *INSTALL*. When it asks for **PASSWORD:**, enter *INSTALL* again. When you see the **/**
@@ -72,6 +74,17 @@ That's it. You have a fully operational Control Data Cyber 865 supercomputer
 running the NOS 2.8.7 operating system, complete with ALGOL, APL, BASIC, COBOL, CYBIL,
 FORTRAN IV and V, LISP, PASCAL, PL/1, SNOBOL, SYMPL, COMPASS assembly language, and
 various other goodies. Welcome back to supercomputing in the 1980's!
+
+## Continuing an Interrupted Installation
+The installation process tracks its progress and can continue from its last successful
+step in case of an unexpected network interruption, or due to some other form of
+interruption that causes the `install.js` script to exit abnormally. To continue from an
+interruption, use the `continue` option as in:
+
+| OS           | Command                      |
+|--------------|------------------------------|
+| Linux/MacOS: | `sudo node install continue` |
+| Windows:     | `node install continue`      |
 
 ## Installing Optional Products
 A script named `install-product.js` enables you to re/install optional software products
@@ -108,9 +121,8 @@ New products are added to the repository from time to time, so this command is p
 installed NOS 2.8.7 (or since the last time you executed the command).
 
 #### Standard CDC Products
-Installation scripts are currently available for the following standard CDC products.
-These products are pre-built and included on the initial deadstart tape. The
-scripts are available to facilitate customization, if needed.
+The following standard CDC products are pre-installed and included on the initial
+deadstart tape. However, you may re-install them (e.g., after customization), if needed.
 
 | Product | Description |
 |---------|-------------|
@@ -121,10 +133,10 @@ scripts are available to facilitate customization, if needed.
 | tcph | FTP Client and Server (dependency: nam5) |
 
 #### Optional Programming Languages and Toolchains
-The following installation scripts make optional programming languages and associated
-toolchains available. Note that the initial deadstart tape includes the standard,
-CDC-provided programming languages APL, BASIC, COBOL, COMPASS, FORTRAN (both FTN and
-FTN5), PASCAL, and SYMPL.
+The following product names represent optional programming languages and associated
+toolchains that may be installed. Note that the initial deadstart tape includes the
+standard, CDC-provided programming languages APL, BASIC, COBOL, COMPASS, FORTRAN (both
+FTN and FTN5), PASCAL, and SYMPL.
 
 | Product | Description |
 |---------|-------------|
@@ -138,7 +150,7 @@ FTN5), PASCAL, and SYMPL.
 | [utlisp](https://www.dropbox.com/s/0wcq8e7m379ivyw/utlisp.tap?dl=1) | University of Texas LISP |
 
 #### Optional CDC Products
-The following installation scripts make optional CDC-provided products available.
+The following optional CDC-provided products may be installed:
 
 | Product | Description |
 |---------|-------------|
@@ -148,7 +160,7 @@ The following installation scripts make optional CDC-provided products available
 | rbf5    | Remote Batch Facility Version 5|
 
 #### Optional 3rd-Party Products
-The following installation scripts make products from 3rd-party sources available.
+The following 3rd-party products may be installed.
 
 | Product | Description |
 |---------|-------------|
@@ -188,26 +200,25 @@ following commands:
 
 ## Installing a Minimal System
 If you prefer to install a minimal NOS 2.8.7 system with a subset of optional products,
-or none of the optional products, you may accomplish this by avoiding the use of the
-`install.js` script and using the `base-install.js` script directly instead, as in:
+or none of the optional products, you may accomplish this by specifying the `basic`
+option when calling the `install.js` script, as in:
 
-| OS           | Commands                                       |
-|--------------|------------------------------------------------|
-| Linux/MacOS: | `sudo node base-install`                       |
-| Windows:     | `node base-install`                            |
+| OS           | Commands                  |
+|--------------|---------------------------|
+| Linux/MacOS: | `sudo node install basic` |
+| Windows:     | `node install basic`      |
 
-`base-install.js` installs a minimal NOS 2.8.7 system without any optional products, and
-it shuts down the system when it completes. You may then start *DtCyber* and deadstart
-the minimal NOS 2.8.7 system by executing the following command (i.e., the usual way
-to start *DtCyber* and NOS 2.8.7):
-
-| OS           | Command           |
-|--------------|-------------------|
-| Linux/MacOS: | `sudo ../dtcyber` |
-| Windows:     | `../dtcyber`      |
-
-To install any optional products atop the minimal system, use the `install-product.js`
-script, as in:
+The `basic` option causes `install.js` to install a minimal NOS 2.8.7 system without any
+optional products. To install optional products atop the basic system, use the
+`install-product.js` script, as in:
 
 >`node install-product rbf5`
+
+In case a basic installation is interrupted before completing successfully, use the
+`continue` option to proceed from the point of interruption, as in:
+
+| OS           | Commands                           |
+|--------------|------------------------------------|
+| Linux/MacOS: | `sudo node install basic continue` |
+| Windows:     | `node install basic continue`      |
 
