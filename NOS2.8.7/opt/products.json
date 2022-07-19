@@ -7,7 +7,8 @@
         "pre": "nos.pre",
         "post": "nos.post",
         "lib": 8,
-        "desc": "Automated Cartridge Tape Facility"
+        "desc": "Automated Cartridge Tape Facility",
+        "depends": ["nam5"]
       },
       {
         "name": "iaf",

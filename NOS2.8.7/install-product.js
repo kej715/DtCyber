@@ -4,6 +4,7 @@ const child_process = require("child_process");
 const fs = require("fs");
 const DtCyber = require("../automation/DtCyber");
 
+const baseProducts = ["atf","iaf","nam5","nos","tcph"];
 let installedProductSet = [];
 let productSet = [];
 
@@ -11,14 +12,16 @@ const addDependencies = (prodDefn, isSysedit) => {
   if (typeof prodDefn.depends !== "undefined") {
     const productName = prodDefn.name;
     for (const dependencyName of prodDefn.depends) {
-      if (isInstalled(dependencyName) === false) {
+      if (isInstalled(dependencyName) === false
+          || baseProducts.indexOf(dependencyName) !== -1) {
         const dependencyDefn = lookupProduct(dependencyName);
         if (dependencyDefn === null) {
           process.stderr.write(`${productName} depends upon ${dependencyName}, but it does not exist.\n`);
           process.exit(1);
         }
-        process.stdout.write(`${dependencyName} will be installed because ${productName} depends upon it.\n`);
-        addProduct(dependencyDefn, isSysedit);
+        if (addProduct(dependencyDefn, isSysedit)) {
+          process.stdout.write(`${new Date().toLocaleTimeString()} ${dependencyName} will be installed because ${productName} depends upon it.\n`);
+        }
       }
     }
   }
@@ -31,13 +34,14 @@ const addInstalledProduct = name => {
 
 const addProduct = (prodDefn, isSysedit) => {
   for (const pe of productSet) {
-    if (prodDefn.name === pe.prodDefn.name) return;
+    if (prodDefn.name === pe.prodDefn.name) return false;
   }
   addDependencies(prodDefn, isSysedit);
   productSet.push({
     prodDefn:prodDefn,
     isSysedit:isSysedit
   });
+  return true;
 };
 
 const installProduct = productEntry => {
@@ -133,7 +137,8 @@ const installProduct = productEntry => {
 }
 
 const isInstalled = name => {
-  return (installedProductSet.indexOf(name) === -1) ? false : true;
+  return installedProductSet.indexOf(name) !== -1
+         || baseProducts.indexOf(name) !== -1;
 };
 
 const listProducts = () => {
@@ -270,7 +275,7 @@ for (let i = 2; i < process.argv.length; i++) {
 }
 
 if (productSet.length < 1) {
-  process.stderr.write("No products to be installed.\n");
+  process.stderr.write("No products need to be installed.\n");
   process.exit(0);
 }
 

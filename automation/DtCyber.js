@@ -5,6 +5,12 @@ const fs = require("fs");
 const https = require("https");
 const net = require("net");
 
+/*
+ * DtCyberStreamMgr
+ *
+ * This class manages the input and output streams associated with a connection
+ * to the DtCyber operator interface.
+ */
 class DtCyberStreamMgr {
 
   constructor() {
@@ -48,6 +54,14 @@ class DtCyberStreamMgr {
   }
 }
 
+/*
+ * PrinterStreamMgr
+ *
+ * This class manages the input stream associated with the file to which
+ * the DtCyber line printer device writes. It uses a file watcher to
+ * detect changes in the file and reads newly appended data, effectively
+ * performing a "tail -f" function.
+ */
 class PrinterStreamMgr {
 
   constructor() {
@@ -93,12 +107,30 @@ class PrinterStreamMgr {
   }
 }
 
+/*
+ * DtCyber
+ *
+ * This is the main class of the module. It provides a collection of methods facilitating
+ * interaction with DtCyber.
+ */
 class DtCyber {
 
   constructor() {
     this.streamMgrs = {};
   }
 
+  /*
+   * attachPrinter
+   *
+   * Instantiates a PrinterStreamMgr to begin monitoring a file to which DtCyber's line printer
+   * device is connected.
+   *
+   * Arguments:
+   *   printerFile - name of file to which DtCyber's printer is connected
+   *
+   * Returns:
+   *   A promise that is resolved when the printer file is open and ready to be monitored
+   */
   attachPrinter(printerFile) {
     const me = this;
     this.streamMgrs.printer = new PrinterStreamMgr();
@@ -114,6 +146,18 @@ class DtCyber {
     });
   }
 
+  /*
+   * bunzip2
+   *
+   * Decompress a file that was comppressed using the BZIP2 algorithm.
+   *
+   * Arguments:
+   *   srcPath - pathname of compressed input file
+   *   dstPath - pathname of decmpressed output file to be created
+   *
+   * Returns:
+   *   A promise that is resolved when decompression has completed
+   */
   bunzip2(srcPath, dstPath) {
     const me = this;
     return new Promise((resolve, reject) => {
@@ -130,6 +174,17 @@ class DtCyber {
     });
   }
 
+  /*
+   * connect
+   *
+   * Create a connection to the DtCyber operator interface. Looks for a cyber.ini in
+   * the current working directory or its parent, parses the file for a set_operator_port
+   * command, and attempts to connect to the port number defined by that command. Creates
+   * an instance of DtCyberStreamMgr to manage the connection that is established.
+   *
+   * Returns:
+   *   A promise that is resolved when the connection has been established
+   */
   connect() {
     const me = this;
     this.isExitOnEnd = true;
@@ -197,11 +252,40 @@ class DtCyber {
     });
   }
 
+  /*
+   * console
+   *
+   * Sends a command to the DtCyber operator interface and waits for the interface to
+   * indicate that the command is complete by prompting for another command.
+   *
+   * Arguments:
+   *   command - the command to send to the operator interface
+   *
+   * Returns:
+   *   A promise that is resolved when the command has completed
+   */
   console(command) {
     this.send(command);
     return this.expect([ {re:/Operator> /} ]);
   }
 
+  /*
+   * dis
+   *
+   * Call DIS, provide it with a sequence of commands to execute, and then drop DIS. 
+   *
+   * Arguments:
+   *   commands - a string representing a single command to execute, or
+   *              an array of strings representing a sequence of commands
+   *              to execute. 
+   *   ui       - user index under which to execute the sequence of commands.
+   *              This argument is optional. If omitted, user index 377777
+   *              is used.
+   *
+   * Returns:
+   *   A promise that is resolved when the sequence of commands has completed and
+   *   DIS has dropped
+   */
   dis(commands, ui) {
     const me = this;
     let list = [`SUI,${typeof ui === "undefined" ? "377777" : ui.toString()}.`];
@@ -218,6 +302,15 @@ class DtCyber {
     .then(() => me.sleep(1000));
   }
 
+  /*
+   * disconnect
+   *
+   * Disconnect from the DtCyber operator interface, usually with intention to
+   * perform work after disconnecting and possibly re-connecting later.
+   *
+   * Returns:
+   *   A promise that is resolved when disconnection has completed
+   */
   disconnect() {
     const me = this;
     this.isExitOnEnd = false;
@@ -229,6 +322,19 @@ class DtCyber {
     });
   }
 
+  /*
+   * dsd
+   *
+   * Execute a sequence of DSD commands.
+   *
+   * Arguments:
+   *   commands - a string representing a single command to execute, or
+   *              an array of strings representing a sequence of commands
+   *              to execute.
+   *
+   * Returns:
+   *   A promise that is resolved when the sequence of commands has completed
+   */
   dsd(commands) {
     if (typeof commands === "string") commands = [commands];
     const me = this;
@@ -241,6 +347,23 @@ class DtCyber {
     return promise;
   }
 
+  /*
+   * exec
+   *
+   * Spawn and optionally detach a subprocess using the Node.js
+   * child_process.spawn API.
+   *
+   * Arguments:
+   *   command - the command to execute, usually "node"
+   *   args    - array of arguments for the command
+   *   options - optional object providing child_process.spawn options
+   *             If omitted, the default options are:
+   *               {shell: true, stdio: ["pipe", process.stdout, process.stderr]}
+   *
+   * Returns:
+   *   A promise that is resolved when a detached process has started, or when
+   *   a non-detached process has exited normally
+   */
   exec(command, args, options) {
     if (typeof options === "undefined") {
       options = {
@@ -275,6 +398,32 @@ class DtCyber {
     });
   }
 
+  /*
+   * expect
+   *
+   * Match the contents of a stream against a set of patterns and take
+   * specified actions when matches occur.
+   *
+   * Arguments:
+   *   patterns - a array of objects representing patterns and associated
+   *              actions to be taken when matches occur. Each object has
+   *              these fields:
+   *                re: regular expression representing a pattern to
+   *                    be applied to the stream
+   *                fn: if string "continue", other patterns in the array
+   *                    continue to be applied. This provides a way to 
+   *                    recognize an intermediate pattern in the stream
+   *                    and continue looking for other patterns. 
+   *                    if a function, the function is executed and a match
+   *                    is indicated.
+   *                    if ommitted, a match is indicated.
+   *                    otherwise, an error is indicated
+   *   strmId   - optional string identifying the stream to which patterns
+   *              are applied. If omitted, the default is "dtCyber".
+   *
+   * Returns:
+   *   A promise that is resolved when a match is indicated.
+   */
   expect(patterns, strmId) {
     const me = this;
     return new Promise((resolve, reject) => {
@@ -313,11 +462,36 @@ class DtCyber {
     });
   }
 
+  /*
+   * getStreamMgr
+   *
+   * Look up a registered stream manager by identifier.
+   *
+   * Arguments:
+   *   strmId - stream identifier, usually "dtCyber" or "printer".
+   *            If omitted, the default is "dtCyber".
+   *
+   * Returns:
+   *   The stream manager object registered with the specified id.
+   */
   getStreamMgr(strmId) {
     if (typeof strmId === "undefined") strmId = "dtCyber";
     return this.streamMgrs[strmId];
   }
 
+  /*
+   * loadJob
+   *
+   * Load a card deck on a specified card reader.
+   *
+   * Arguments:
+   *   ch   - channel number of the channel to which the reader is attached
+   *   eq   - equipment number of the reader on the channel
+   *   deck - pathname of the card deck to be loaded
+   *
+   * Returns:
+   *   A promise that is resolved when the card deck has been loaded.
+   */
   loadJob(ch, eq, deck) {
     const cmd = `lc ${ch},${eq},${deck}`;
     this.send(cmd);
@@ -330,6 +504,22 @@ class DtCyber {
     ]);
   }
 
+  /*
+   * mount
+   *
+   * Mount a tape image on a specified tape drive.
+   *
+   * Arguments:
+   *   ch   - channel number of the channel to which the tape drive is attached
+   *   eq   - equipment number of the tape drive on the channel
+   *   unit - unit number of the tape drive
+   *   tape - pathname of the tape image to be mounted
+   *   ring - true if tape to be mounted as writable
+   *          If omitted, the default is false
+   *
+   * Returns:
+   *   A promise that is resolved when the tape has been mounted.
+   */
   mount(ch, eq, unit, tape, ring) {
     const cmd = `lt ${ch},${eq},${unit},${(typeof ring !== "undefined" && ring === true) ? "w" : "r"},${tape}`;
     this.send(cmd);
@@ -341,6 +531,22 @@ class DtCyber {
     ]);
   }
 
+  /*
+   * runJob
+   *
+   * Load a card deck on a specified card reader and wait for the associated
+   * job to complete. See description of waitJob for information about the
+   * expected format of the card deck.
+   *
+   * Arguments:
+   *   ch        - channel number of the channel to which the reader is attached
+   *   eq        - equipment number of the reader on the channel
+   *   deck      - pathname of the card deck to be loaded
+   *   jobParams - optional parameters substituted into the card deck
+   *
+   * Returns:
+   *   A promise that is resolved when the job has completed.
+   */
   runJob(ch, eq, deck, jobParams) {
     const me = this;
     return new Promise((resolve, reject) => {
@@ -375,16 +581,49 @@ class DtCyber {
     });
   }
 
+  /*
+   * say
+   *
+   * Display a message prefaced by a timestamp to the user.
+   *
+   * Arguments:
+   *   message - the message to be displayed
+   *
+   * Returns:
+   *   A promise that is resolved when the message has been displayed.
+   */
   say(message) {
     console.log(`${new Date().toLocaleTimeString()} ${message}`);
     return Promise.resolve();
   }
 
+  /*
+   * send
+   *
+   * Send a command to the DtCyber operator interface.
+   *
+   * Arguments:
+   *   command - the command to send. End-of-line is appended automatically.
+   *   strmId  - identifier of the DtCyber stream. If omitted, the default
+   *             is "dtCyber".
+   */
   send(command, strmId) {
     const mgr = this.getStreamMgr(strmId);
     mgr.write(`${command}\n`);
   }
 
+  /*
+   * shutdown
+   *
+   * Execute a command sequence to shutdown DtCyber gracefully.
+   *
+   * Arguments:
+   *   isExitAfterShutdown - true if the current process should exit after DtCyber has
+   *                         been shutdown. If omitted, the default is true.
+   *
+   * Returns:
+   *   A promise that is resolved when the shutdown is complete.
+   */
   shutdown(isExitAfterShutdown) {
     const me = this;
     this.isExitAfterShutdown = (typeof isExitAfterShutdown === "undefined") ? true : isExitAfterShutdown;
@@ -408,10 +647,34 @@ class DtCyber {
     return promise;
   }
 
+  /*
+   * sleep
+   *
+   * Sleep for a specified number of milliseconds.
+   *
+   * Arguments:
+   *   ms - the number of milliseconds to sleep
+   *
+   * Returns:
+   *   A promise that is reolved when the specified number of milliseconds has elapsed.
+   */
   sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  /*
+   * start
+   *
+   * Start DtCyber as a non-detached process and create a stream named "dtCyber" to manage it.
+   *
+   * Arguments:
+   *   command - pathname of DtCyber executable
+   *   args    - optional command line arguments to provide to DtCyber (e.g., "manual")
+   *
+   * Returns:
+   *   A promise that is resolved when DtCyber has started and its operator interface is
+   *   ready to accept commands.
+   */
   start(command, args) {
     const me = this;
     this.streamMgrs.dtCyber = new DtCyberStreamMgr();
@@ -449,6 +712,19 @@ class DtCyber {
     });
   }
 
+  /*
+   * unmount
+   *
+   * Unmount a tape image from a specified tape drive.
+   *
+   * Arguments:
+   *   ch   - channel number of the channel to which the tape drive is attached
+   *   eq   - equipment number of the tape drive on the channel
+   *   unit - unit number of the tape drive
+   *
+   * Returns:
+   *   A promise that is resolved when the tape has been unmounted.
+   */
   unmount(ch, eq, unit) {
     const cmd = `ut ${ch},${eq},${unit}`;
     this.send(cmd);
@@ -460,10 +736,42 @@ class DtCyber {
     ]);
   }
 
+  /*
+   * unzip
+   *
+   * Extract all of the files from a ZIP archive.
+   *
+   * Arguments:
+   *   srcPath - pathname of ZIP archive
+   *   dstDir  - pathname of directory into which to extract files from the arvhive
+   *
+   * Returns:
+   *   A promise that is resolved when the extraction is complete.
+   */
   unzip(srcPath, dstDir) {
     return extract(srcPath, { dir: fs.realpathSync(dstDir) });
   }
 
+  /*
+   * waitJob
+   *
+   * Wait for a job to complete. Watch the printer stream for indications that a
+   * specified job has completed successfully or failed. Jobs to be watched must
+   * issue one these dayfile messages before they complete:
+   *
+   *    *** jobname COMPLETE
+   *    *** jobname FAILED
+   *
+   * Normally, "jobname" is the jobname as specified by the job's job card.
+   *
+   * Arguments:
+   *   jobName - jobname of the job to watch (normally the name specified on the
+   *             job card)
+   *
+   * Returns:
+   *   A promise that is resolved when the job completes successfully (i.e., when
+   *   it issues the dayfile message "*** jobName COMPLETE").
+   */
   waitJob(jobName) {
     return this.expect([
       {re:new RegExp(`\\*\\*\\* ${jobName} FAILED`, "i"), fn:new Error(`${jobName} failed`)},
@@ -471,6 +779,23 @@ class DtCyber {
     ], "printer");
   }
 
+  /*
+   * wget
+   *
+   * Get a file from the web and store it in a specified directory. If the file
+   * already exists in the directory, and it is less than 24 hours old, avoid
+   * getting it from the web.
+   *
+   * Arguments:
+   *   url      - URL of the file to get
+   *   cacheDir - pathname of the directory in which to store the file
+   *   filename - filename under which to store the file. If omitted, the
+   *              filename is derived from the URL.
+   *
+   * Returns:
+   *   A promise that is resolved when the file has been retrieved, if
+   *   necessary, and is available for use.
+   */
   wget(url, cacheDir, filename) {
     const me = this;
     return new Promise((resolve, reject) => {
