@@ -436,7 +436,9 @@ static void *opThread(void *param)
         fflush(out);
 
 #if defined(_WIN32)
-        if (opCmdStack[opCmdStackPtr].in == stdin && !kbhit())
+        if (opCmdStack[opCmdStackPtr].in == stdin
+            && _isatty(_fileno(stdin))
+            && !kbhit())
             {
             sleepMsec(10);
             continue;
@@ -647,7 +649,7 @@ static bool opHasInput(OpCmdStackEntry *entry)
         }
 
 #if defined(_WIN32)
-    if (entry->in == stdin)
+    if (entry->in == stdin && _isatty(_fileno(stdin)))
         {
         return kbhit();
         }
