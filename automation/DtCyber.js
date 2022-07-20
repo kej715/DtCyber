@@ -70,7 +70,7 @@ class PrinterStreamMgr {
 
   endConsumer() {
     delete this.consumer;
-    this.watcher.close();
+    fs.unwatchFile(this.printerFile);
   }
 
   openPrinter(printerFile, callback) {
@@ -91,8 +91,8 @@ class PrinterStreamMgr {
     this.consumer = consumer;
     fs.fstat(this.file, (err, stats) => {
       me.position = stats.size;
-      this.watcher = fs.watch(this.printerFile, {persistent:false, encoding:"utf8"}, (eventType, filename) => {
-        if (eventType === "change") {
+      this.watcher = fs.watchFile(me.printerFile, {persistent:false, interval:250}, (current, previous) => {
+        if (current.size > me.position) {
           fs.read(me.file, me.buffer, 0, me.buffer.length, me.position, (err, bytesRead, buffer) => {
             if (bytesRead > 0) {
               me.position += bytesRead;
@@ -460,6 +460,25 @@ class DtCyber {
         return true;
       });
     });
+  }
+
+  /*
+   * findDtCyber
+   *
+   * Find the DtCyber executable.
+   *
+   * Returns:
+   *   Pathname of DtCyber executable, or null if not found
+   */
+  findDtCyber() {
+    const paths = process.platform === "win32"
+      ? ["../x64/Release/DtCyber/DtCyber.exe", "../Win32/Release/DtCyber/DtCyber.exe",
+         "../x64/Debug/DtCyber/DtCyber.exe", "../Win32/Debug/DtCyber/DtCyber.exe"]
+      : ["./dtcyber", "../dtcyber", "../bin/dtcyber"];
+    for (const path of paths) {
+      if (fs.existsSync(path)) return path;
+    }
+    return null;
   }
 
   /*

@@ -3,6 +3,14 @@
 const fs = require("fs");
 const DtCyber = require("../automation/DtCyber");
 
+const dtc = new DtCyber();
+
+const dtCyberPath = dtc.findDtCyber();
+if (dtCyberPath === null) {
+  process.stderr,write("DtCyber executable not found\n");
+  process.exit(1);
+}
+
 let isContinueInstall = false;
 
 for (let arg of process.argv.slice(2)) {
@@ -32,20 +40,6 @@ const addCompletedStep = step => {
 const isCompletedStep = step => {
   return completedSteps.indexOf(step) !== -1;
 };
-
-const dtc = new DtCyber();
-
-let dtCyberPath = null;
-for (const path of ["./dtcyber", "../dtcyber", "../bin/dtcyber"]) {
-  if (fs.existsSync(path)) {
-    dtCyberPath = path;
-    break;
-  }
-}
-if (dtCyberPath === null) {
-  process.stderr,write("DtCyber executable not found in current directory or parent directory\n");
-  process.exit(1);
-}
 
 let promise = Promise.resolve();
 for (const baseTape of ["ds.tap", "nos287-1.tap", "nos287-2.tap", "nos287-3.tap"]) {

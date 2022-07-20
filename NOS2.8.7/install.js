@@ -3,15 +3,11 @@
 const fs = require("fs");
 const DtCyber = require("../automation/DtCyber");
 
-let dtCyberPath = null;
-for (const path of ["./dtcyber", "../dtcyber", "../bin/dtcyber"]) {
-  if (fs.existsSync(path)) {
-    dtCyberPath = path;
-    break;
-  }
-}
+const dtc = new DtCyber();
+
+const dtCyberPath = dtc.findDtCyber();
 if (dtCyberPath === null) {
-  process.stderr,write("DtCyber executable not found in current directory or parent directory\n");
+  process.stderr,write("DtCyber executable not found\n");
   process.exit(1);
 }
 
@@ -43,8 +39,6 @@ for (let arg of process.argv.slice(2)) {
 for (const name of fs.readdirSync("opt/tapes")) {
   if (name.toLowerCase() !== "dummy") fs.unlinkSync(`opt/tapes/${name}`);
 }
-
-const dtc = new DtCyber();
 
 let installedProductSet = [];
 if (isContinueInstall === false) {
