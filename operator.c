@@ -108,7 +108,7 @@ static void *opThread(void *param);
 
 static void opAcceptConnection(void);
 static char *opGetString(char *inStr, char *outStr, int outSize);
-static bool opHasInput(OpCmdStackEntry *entry);
+static bool opHasInput(FILE *fp);
 static int opStartListening(int port);
 
 static void opCmdDumpMemory(bool help, char *cmdParams);
@@ -435,17 +435,7 @@ static void *opThread(void *param)
         out = opCmdStack[opCmdStackPtr].out;
         fflush(out);
 
-#if defined(_WIN32)
-        if (opCmdStack[opCmdStackPtr].in == stdin
-            && _isatty(_fileno(stdin))
-            && !kbhit())
-            {
-            sleepMsec(10);
-            continue;
-            }
-#endif
-
-        if (opHasInput(&opCmdStack[opCmdStackPtr]) == FALSE)
+        if (opHasInput(in) == FALSE)
             {
             sleepMsec(10);
             continue;
@@ -628,28 +618,27 @@ static void *opThread(void *param)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Determine whether input is available on a command
-**                  stack entry.
+**  Purpose:        Determine whether input is available from a file stream
 **
 **  Parameters:     Name        Description.
-**                  param       Thread parameter (unused)
+**                  fp          file stream pointer
 **
-**  Returns:        Nothing.
+**  Returns:        TRUE if input is available.
 **
 **------------------------------------------------------------------------*/
-static bool opHasInput(OpCmdStackEntry *entry)
+static bool opHasInput(FILE *fp)
     {
     int            fd;
     fd_set         fds;
     struct timeval timeout;
 
-    if (entry->in == NULL)
+    if (fp == NULL)
         {
         return TRUE;
         }
 
 #if defined(_WIN32)
-    if (entry->in == stdin && _isatty(_fileno(stdin)))
+    if (fp == stdin && _isatty(_fileno(stdin)))
         {
         return kbhit();
         }
@@ -657,7 +646,7 @@ static bool opHasInput(OpCmdStackEntry *entry)
 
     timeout.tv_sec  = 0;
     timeout.tv_usec = 0;
-    fd = fileno(entry->in);
+    fd = fileno(fp);
     FD_ZERO(&fds);
     FD_SET(fd, &fds);
 
