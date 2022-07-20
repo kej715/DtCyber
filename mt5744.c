@@ -410,7 +410,7 @@ void mt5744Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     mt5744ResetUnit(tp);
     dp->context[unitNo]       = tp;
-    tp->controller            = cp;
+    tp->controller            = dp->controllerContext;
     tp->state                 = StAcsDisconnected;
     tp->nextConnectionAttempt = 0;
     tp->fd = 0;
