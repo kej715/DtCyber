@@ -41,11 +41,13 @@ for (const name of fs.readdirSync("opt/tapes")) {
 }
 
 let installedProductSet = [];
-if (isContinueInstall === false) {
-  fs.unlinkSync("opt/installed.json");
-}
-else if (fs.existsSync("opt/installed.json")) {
-  installedProductSet = JSON.parse(fs.readFileSync("opt/installed.json", "utf8"));
+if (fs.existsSync("opt/installed.json")) {
+  if (isContinueInstall) {
+    installedProductSet = JSON.parse(fs.readFileSync("opt/installed.json", "utf8"));
+  }
+  else {
+    fs.unlinkSync("opt/installed.json");
+  }
 }
 let promise = dtc.say(`${isContinueInstall ? "Continue" : "Begin"} ${isBasicInstall ? "basic" : "full"} installation of NOS 2.8.7 ...`);
 if (isContinueInstall) {
@@ -81,6 +83,9 @@ if (isBasicInstall === false) {
       .then(() => dtc.exec("node", ["make-ds-tape"]))
       .then(() => dtc.say("Save previous deadstart tape and rename new one ..."))
       .then(() => {
+        if (fs.existsSync("tapes/ods.tap")) {
+          fs.unlinkSync("tapes/ods.tap");
+        }
         fs.renameSync("tapes/ds.tap", "tapes/ods.tap");
         fs.renameSync("tapes/newds.tap", "tapes/ds.tap");
       })

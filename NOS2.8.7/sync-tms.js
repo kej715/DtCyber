@@ -5,7 +5,9 @@ const DtCyber = require("../automation/DtCyber");
 
 const dtc = new DtCyber();
 
-fs.unlinkSync("files/TMS-catalog.txt");
+if (fs.existsSync("files/TMS-catalog.txt")) {
+  fs.unlinkSync("files/TMS-catalog.txt");
+}
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.say("Connected to DtCyber"))
