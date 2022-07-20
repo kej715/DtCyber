@@ -436,7 +436,7 @@ static void *opThread(void *param)
         fflush(out);
 
 #if defined(_WIN32)
-        if (!kbhit())
+        if (opCmdStack[opCmdStackPtr].in == stdin && !kbhit())
             {
             sleepMsec(10);
             continue;
