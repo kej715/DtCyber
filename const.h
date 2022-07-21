@@ -37,7 +37,7 @@
 #define DtCyberVersion      "Desktop CYBER 5.7.1 (Release) "
 #endif
 
-#define DTCyberBuildDate    __DATE__ " " __TIME__
+#define DtCyberBuildDate    __DATE__ " " __TIME__
 #define DtCyberCopyright    "Copyright (c) 2011-2017 Tom Hunter \n \
     Portions Copyright:\n \
         (c) 2018-2022 Kevin Jordan\n \

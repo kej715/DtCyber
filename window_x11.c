@@ -361,7 +361,7 @@ void *windowThread(void *param)
     windowTitle[0] = '\0';
     strcat(windowTitle, displayName);
     strcat(windowTitle, " - " DtCyberVersion);
-    strcat(windowTitle, " - " DTCyberBuildDate);
+    strcat(windowTitle, " - " DtCyberBuildDate);
 
     XSetStandardProperties(disp, window, windowTitle,
                            DtCyberVersion, None, NULL, 0, NULL);

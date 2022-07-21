@@ -100,6 +100,7 @@ static void opCreateThread(void);
 
 #if defined(_WIN32)
 static void opThread(void *param);
+static void opToUnixPath(char *path);
 
 #else
 static void *opThread(void *param);
@@ -109,7 +110,8 @@ static void *opThread(void *param);
 static void opAcceptConnection(void);
 static char *opGetString(char *inStr, char *outStr, int outSize);
 static bool opHasInput(FILE *fp);
-static int opStartListening(int port);
+static bool opIsAbsolutePath(char *path);
+static int  opStartListening(int port);
 
 static void opCmdDumpMemory(bool help, char *cmdParams);
 static void opCmdDumpCM(int fwa, int count);
@@ -186,10 +188,7 @@ static void opDisplayVersion(void);
 
 #ifdef IdleThrottle
 static void opCmdIdle(bool help, char *cmdParams);
-
 #endif
-
-
 
 /*
 **  ----------------
@@ -418,6 +417,11 @@ static void *opThread(void *param)
         fputs("    > Failed to get current working directory path\n", stderr);
         exit(1);
         }
+
+#if defined(_WIN32)
+    opToUnixPath(opCmdStack[opCmdStackPtr].cwd);
+#endif
+
     if (initOpenOperatorSection() == 1)
         {
         opCmdStackPtr += 1;
@@ -548,7 +552,10 @@ static void *opThread(void *param)
                 continue;
                 }
             sp = name + 1;
-            if (*sp == '/')
+#if defined(_WIN32)
+            opToUnixPath(sp);
+#endif
+            if (opIsAbsolutePath(sp))
                 {
                 strcpy(path, sp);
                 }
@@ -630,6 +637,7 @@ static bool opHasInput(FILE *fp)
     {
     int            fd;
     fd_set         fds;
+    int            n;
     struct timeval timeout;
 
     if (fp == NULL)
@@ -650,7 +658,27 @@ static bool opHasInput(FILE *fp)
     FD_ZERO(&fds);
     FD_SET(fd, &fds);
 
-    return select(fd + 1, &fds, NULL, NULL, &timeout) > 0;
+    n = select(fd + 1, &fds, NULL, NULL, &timeout);
+    if (n > 0)
+        {
+        return TRUE;
+        }
+    else if (n == 0)
+        {
+        return FALSE;
+        }
+    else
+        {
+#if defined(_WIN32)
+        //
+        // Windows doesn't support select on pipes, and it will
+        // return an error condition.
+        //
+        return TRUE;
+#else
+        return FALSE;
+#endif
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -786,6 +814,27 @@ static char *opGetString(char *inStr, char *outStr, int outSize)
         }
 
     return (inStr + pos);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Determine whether a pathname is absolute or relative.
+**
+**  Parameters:     Name        Description.
+**                  path        the pathname to test
+**
+**  Returns:        TRUE if the pathname is absolute.
+**
+**------------------------------------------------------------------------*/
+static bool opIsAbsolutePath(char *path)
+    {
+    if (*path == '/') return TRUE;
+#if defined(_WIN32)
+    if ((*(path + 1) == ':')
+        && (   (*path >= 'A' && *path <= 'Z')
+            || (*path >= 'a' && *path <= 'z'))) return TRUE;
+
+#endif
+    return FALSE;
     }
 
 /*--------------------------------------------------------------------------
@@ -1873,11 +1922,14 @@ static int opPrepCards(char *str, FILE *fcb)
             *cp++ = '\0';
             }
         }
+#if defined(_WIN32)
+    opToUnixPath(str);
+#endif
 
     /*
     **  Open and parse the input file
     */
-    if (*str == '/')
+    if (opIsAbsolutePath(str))
         {
         strcpy(path, str);
         }
@@ -1974,7 +2026,10 @@ static int opPrepCards(char *str, FILE *fcb)
 
                 return -1;
                 }
-            if (*sp != '/')
+#if defined(_WIN32)
+            opToUnixPath(sp);
+#endif
+            if (opIsAbsolutePath(sp) == FALSE)
                 {
                 cp = strrchr(path, '/');
                 if (cp != NULL)
@@ -2813,7 +2868,7 @@ static void opCmdIdle(bool help, char *cmdParams)
 #endif
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Display the DTCyber Version
+**  Purpose:        Display the DtCyber Version
 **
 **  Parameters:     Name        Description.
 **                  help        Request only help on this command.
@@ -2830,9 +2885,30 @@ static void opDisplayVersion(void)
     fprintf(out, "\n     %s", DtCyberLicense);
     fprintf(out, "\n     %s", DtCyberLicenseDetails);
     fputs("\n--------------------------------------------------------------------------------", out);
-    fprintf(out, "\n     Build Date: %s", DTCyberBuildDate);
+    fprintf(out, "\n     Build Date: %s", DtCyberBuildDate);
     fputs("\n--------------------------------------------------------------------------------", out);
     fputs("\n", out);
     }
+
+#if defined(_WIN32)
+/*--------------------------------------------------------------------------
+**  Purpose:        Translate a Windows-style pathname to a Unix-style one
+**
+**  Parameters:     Name        Description.
+**                  path        Windows-style pathname
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opToUnixPath(char *path)
+    {
+    char *cp;
+
+    for (cp = path; *cp != '\0'; cp++)
+        {
+        if (*cp == '\\') *cp = '/';
+        }
+    }
+#endif
 
 /*---------------------------  End Of File  ------------------------------*/
