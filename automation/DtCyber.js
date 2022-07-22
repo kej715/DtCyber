@@ -653,7 +653,7 @@ class DtCyber {
     .then(() => me.dsd("STEP."))
     .then(() => me.sleep(2000))
     .then(() => me.send("shutdown"));
-    if (this.isExitAfterShutdown === false && typeof me.dtCyberChild !== "undefined") {
+    if (this.isExitAfterShutdown === false && typeof this.dtCyberChild !== "undefined") {
       promise = promise
       .then(() => new Promise((resolve, reject) => {
         me.dtCyberChild.on("exit", (code, signal) => {
