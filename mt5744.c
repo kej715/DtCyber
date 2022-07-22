@@ -2173,7 +2173,18 @@ static void mt5744ReadRequestCallback(TapeParam *tp)
 **------------------------------------------------------------------------*/
 static void mt5744RegisterUnit(TapeParam *tp)
     {
-    tp->outputBuffer.in  = sprintf((char *)&tp->outputBuffer.data, "REGISTER %s\n", tp->driveName);
+    u8 *bp;
+    size_t len;
+
+    bp = tp->outputBuffer.data;
+    len = strlen(tp->driveName);
+    memcpy(bp, "REGISTER ", 9);
+    bp += 9;
+    memcpy(bp, tp->driveName, len);
+    bp += len;
+    *bp = '\n';
+
+    tp->outputBuffer.in  = len + 10;
     tp->outputBuffer.out = 0;
     tp->state            = StAcsRegistering;
     tp->callback         = mt5744RegisterUnitRequestCallback;

@@ -790,7 +790,7 @@ static void cr405SwapInOut(Cr405Context *cc, char *fName, FILE *out)
     bool hasNoInputDir  = (cc->dirInput[0] == '\0');
 
     //  If either directory isn't specified, just ignore the rename.
-    if (hasNoOutputDir || hasNoOutputDir)
+    if (hasNoInputDir || hasNoOutputDir)
         {
         return;
         }
