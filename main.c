@@ -527,8 +527,11 @@ static void opExit()
     {
     char check;
 
-    printf("Press ENTER to Exit");
-    check = (char)getchar();
+    if (_isatty(_fileno(stdin)))
+        {
+        printf("Press ENTER to Exit");
+        check = (char)getchar();
+        }
     }
 
 #endif
