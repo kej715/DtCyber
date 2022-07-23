@@ -5,15 +5,9 @@ const DtCyber = require("../automation/DtCyber");
 
 const dtc = new DtCyber();
 
-let dtCyberPath = null;
-for (const path of ["./dtcyber", "../dtcyber", "../bin/dtcyber"]) {
-  if (fs.existsSync(path)) {
-    dtCyberPath = path;
-    break;
-  }
-}
+const dtCyberPath = dtc.findDtCyber();
 if (dtCyberPath === null) {
-  process.stderr,write("DtCyber executable not found in current directory or parent directory\n");
+  process.stderr.write("DtCyber executable not found in current directory or parent directory\n");
   process.exit(1);
 }
 

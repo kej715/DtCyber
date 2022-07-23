@@ -824,8 +824,11 @@ class DtCyber {
         filename = pathname.substring((li >= 0) ? li + 1 : 0);
       }
       const cachePath = `${cacheDir}/${filename}`;
-      const stat = fs.statSync(cachePath, {throwIfNoEntry:false});
-      if (typeof stat !== "undefined" && (Date.now() - stat.ctimeMs) < (24*60*60*1000)) {
+      let stat = null;
+      if (fs.existsSync(cachePath)) {
+        stat = fs.statSync(cachePath);
+      }
+      if (stat !== null && (Date.now() - stat.ctimeMs) < (24*60*60*1000)) {
         resolve(cachePath);
       }
       else {
