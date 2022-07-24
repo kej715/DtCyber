@@ -7,6 +7,8 @@ const PortMapper = require("./portmapper");
 const StkCSI = require("./stkcsi");
 const url = require("url");
 
+process.title = "STK4400";
+
 fs.writeFileSync("pid", `${process.pid}\n`);
 console.log(`${new Date().toLocaleString()} PID is ${process.pid}`);
 

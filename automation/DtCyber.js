@@ -688,49 +688,72 @@ class DtCyber {
    *
    * Arguments:
    *   args    - optional command line arguments to provide to DtCyber (e.g., ["manual"])
+   *   options - optional options for child_process.spawn()
    *
    * Returns:
    *   A promise that is resolved when DtCyber has started and its operator interface is
    *   ready to accept commands.
    */
-  start(args) {
+  start(args, options) {
     const me = this;
     const command = this.findDtCyber();
     if (command === null) {
       return Promise.reject(new Error("DtCyber executable not found"))
     }
+    if (typeof args !== "undefined") {
+      if (typeof args === "string") {
+        args = [args];
+      }
+      else if (!Array.isArray(args)) {
+        if (typeof options === "undefined") {
+          options = args;
+          args = [];
+        }
+      }
+    }
+    if (typeof options === "undefined") {
+      options = {
+        stdio:["pipe", "pipe", process.stderr]
+      };
+    }
     this.streamMgrs.dtCyber = new DtCyberStreamMgr();
     return new Promise((resolve, reject) => {
-      me.dtCyberChild = child_process.spawn(command, args, {
-        stdio:["pipe", "pipe", process.stderr]
-      });
-      me.streamMgrs.dtCyber.setOutputStream(me.dtCyberChild.stdin);
-      me.dtCyberChild.on("spawn", () => {
+      me.dtCyberChild = child_process.spawn(command, args, options);
+      if (options.detached) {
+        if (typeof options.unref === "undefined" || options.unref === true) {
+          me.dtCyberChild.unref();
+        }
         resolve(me.dtCyberChild);
-      });
-      me.dtCyberChild.on("exit", (code, signal) => {
-        const d = new Date();
-        if (signal !== null) {
-          console.log(`${d.toLocaleTimeString()} DtCyber exited due to signal ${signal}`);
-          process.exit(1);
-        }
-        else if (code === 0) {
-          console.log(`${d.toLocaleTimeString()} DtCyber exited normally`);
-          if (typeof me.isExitAfterShutdown === "undefined" || me.isExitAfterShutdown === true) {
-            process.exit(0);
+      }
+      else {
+        me.streamMgrs.dtCyber.setOutputStream(me.dtCyberChild.stdin);
+        me.dtCyberChild.on("spawn", () => {
+          resolve(me.dtCyberChild);
+        });
+        me.dtCyberChild.on("exit", (code, signal) => {
+          const d = new Date();
+          if (signal !== null) {
+            console.log(`${d.toLocaleTimeString()} DtCyber exited due to signal ${signal}`);
+            process.exit(1);
           }
-        }
-        else {
-          console.log(`${d.toLocaleTimeString()} DtCyber exited with status ${code}`);
-          process.exit(code);
-        }
-      });
-      me.dtCyberChild.on("error", err => {
-        reject(err);
-      });
-      me.dtCyberChild.stdout.on("data", (data) => {
-        me.streamMgrs.dtCyber.appendData(data);
-      });
+          else if (code === 0) {
+            console.log(`${d.toLocaleTimeString()} DtCyber exited normally`);
+            if (typeof me.isExitAfterShutdown === "undefined" || me.isExitAfterShutdown === true) {
+              process.exit(0);
+            }
+          }
+          else {
+            console.log(`${d.toLocaleTimeString()} DtCyber exited with status ${code}`);
+            process.exit(code);
+          }
+        });
+        me.dtCyberChild.on("error", err => {
+          reject(err);
+        });
+        me.dtCyberChild.stdout.on("data", (data) => {
+          me.streamMgrs.dtCyber.appendData(data);
+        });
+      }
     });
   }
 

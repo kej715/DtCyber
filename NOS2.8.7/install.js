@@ -5,12 +5,6 @@ const DtCyber = require("../automation/DtCyber");
 
 const dtc = new DtCyber();
 
-const dtCyberPath = dtc.findDtCyber();
-if (dtCyberPath === null) {
-  process.stderr,write("DtCyber executable not found\n");
-  process.exit(1);
-}
-
 let isBasicInstall = false;
 let isContinueInstall = false;
 
@@ -61,9 +55,8 @@ else {
 
 promise = promise
 .then(() => dtc.say(`Deadstart ${isBasicInstall ? "basic installed system" : "system to install optional products"} ...`))
-.then(() => dtc.exec(dtCyberPath, [], {
+.then(() => dtc.start({
   detached: true,
-  shell:    true,
   stdio:    [0, "ignore", 2],
   unref:    false
 }));
@@ -94,9 +87,8 @@ if (isBasicInstall === false) {
       .then(() => dtc.expect([ {re:/Operator> $/} ]))
       .then(() => dtc.shutdown(false))
       .then(() => dtc.sleep(5000))
-      .then(() => dtc.exec(dtCyberPath, [], {
+      .then(() => dtc.start({
         detached: true,
-        shell:    true,
         stdio:    [0, "ignore", 2]
       }));
     }

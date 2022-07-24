@@ -5,12 +5,6 @@ const DtCyber = require("../automation/DtCyber");
 
 const dtc = new DtCyber();
 
-const dtCyberPath = dtc.findDtCyber();
-if (dtCyberPath === null) {
-  process.stderr.write("DtCyber executable not found in current directory or parent directory\n");
-  process.exit(1);
-}
-
 let promise = dtc.say("Begin installation of NOS 1.3 ...");
 for (const baseTape of ["ds.tap", "opl485.tap"]) {
   if (!fs.existsSync(`tapes/${baseTape}`)) {
@@ -133,9 +127,8 @@ promise = promise
 .then(() => dtc.sleep(4000))
 .then(() => dtc.shutdown(false))
 .then(() => dtc.say("Re-deadstart freshly installed system ..."))
-.then(() => dtc.exec(dtCyberPath, [], {
+.then(() => dtc.start({
   detached: true,
-  shell:    true,
   stdio:    [0, "ignore", 2]
 }))
 .then(() => dtc.say("Installation of NOS 1.3 complete"))
