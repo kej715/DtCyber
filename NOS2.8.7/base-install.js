@@ -5,12 +5,6 @@ const DtCyber = require("../automation/DtCyber");
 
 const dtc = new DtCyber();
 
-const dtCyberPath = dtc.findDtCyber();
-if (dtCyberPath === null) {
-  process.stderr,write("DtCyber executable not found\n");
-  process.exit(1);
-}
-
 let isContinueInstall = false;
 
 for (let arg of process.argv.slice(2)) {
@@ -52,7 +46,7 @@ for (const baseTape of ["ds.tap", "nos287-1.tap", "nos287-2.tap", "nos287-3.tap"
 
 if (isCompletedStep("init")) {
   promise = promise
-  .then(() => dtc.start(dtCyberPath, []))
+  .then(() => dtc.start())
   .then(() => dtc.expect([ {re:/Operator> $/} ]))
   .then(() => dtc.say("DtCyber started using default profile"))
   .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
@@ -61,7 +55,7 @@ if (isCompletedStep("init")) {
 }
 else {
   promise = promise
-  .then(() => dtc.start(dtCyberPath, ["manual"]))
+  .then(() => dtc.start(["manual"]))
   .then(() => dtc.expect([ {re:/Operator> $/} ]))
   .then(() => dtc.say("DtCyber started using manual profile"))
   .then(() => dtc.attachPrinter("LP5xx_C12_E5"))

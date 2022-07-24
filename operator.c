@@ -36,6 +36,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <ctype.h>
+#include <fcntl.h>
 #include "const.h"
 #include "types.h"
 #include "proto.h"
@@ -48,7 +49,6 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -732,21 +732,24 @@ static void opAcceptConnection(void)
 #else
             close(acceptFd);
 #endif
-
             return;
             }
         fputs("\nOperator connection accepted\n", out);
         fflush(out);
         opCmdStackPtr += 1;
-        in             = opCmdStack[opCmdStackPtr].in = fdopen(acceptFd, "r");
-        out            = opCmdStack[opCmdStackPtr].out = fdopen(acceptFd, "w");
-        opCmdStack[opCmdStackPtr].isNetConn = TRUE;
-        strcpy(opCmdStack[opCmdStackPtr].cwd, opCmdStack[opCmdStackPtr - 1].cwd);
-#if defined(_WIN32)
+#if defined(WIN32)
+        in  = fdopen(_open_osfhandle((SOCKET)acceptFd, _O_RDONLY), "r");
+        out = fdopen(_open_osfhandle((SOCKET)acceptFd, _O_WRONLY), "w");
         closesocket(opListenHandle);
 #else
+        in  = fdopen(acceptFd, "r");
+        out = fdopen(acceptFd, "w");
         close(opListenHandle);
 #endif
+        opCmdStack[opCmdStackPtr].in        = in;
+        opCmdStack[opCmdStackPtr].out       = out;
+        opCmdStack[opCmdStackPtr].isNetConn = TRUE;
+        strcpy(opCmdStack[opCmdStackPtr].cwd, opCmdStack[opCmdStackPtr - 1].cwd);
         opListenHandle = 0;
         opCmdPrompt();
         fflush(out);

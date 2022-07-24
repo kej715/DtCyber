@@ -21,7 +21,7 @@ for (const baseTape of ["ds.tap", "opl485.tap"]) {
 }
 
 promise = promise
-.then(() => dtc.start(dtCyberPath, ["manual"]))
+.then(() => dtc.start(["manual"]))
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.say("DtCyber started"))
 .then(() => dtc.attachPrinter("LP5xx_C11_E5"))

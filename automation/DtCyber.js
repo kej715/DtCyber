@@ -687,15 +687,18 @@ class DtCyber {
    * Start DtCyber as a non-detached process and create a stream named "dtCyber" to manage it.
    *
    * Arguments:
-   *   command - pathname of DtCyber executable
-   *   args    - optional command line arguments to provide to DtCyber (e.g., "manual")
+   *   args    - optional command line arguments to provide to DtCyber (e.g., ["manual"])
    *
    * Returns:
    *   A promise that is resolved when DtCyber has started and its operator interface is
    *   ready to accept commands.
    */
-  start(command, args) {
+  start(args) {
     const me = this;
+    const command = this.findDtCyber();
+    if (command === null) {
+      return Promise.reject(new Error("DtCyber executable not found"))
+    }
     this.streamMgrs.dtCyber = new DtCyberStreamMgr();
     return new Promise((resolve, reject) => {
       me.dtCyberChild = child_process.spawn(command, args, {
@@ -817,28 +820,29 @@ class DtCyber {
    */
   wget(url, cacheDir, filename) {
     const me = this;
+    const pathname = new URL(url).pathname;
+    if (typeof filename === "undefined") {
+      const li = pathname.lastIndexOf("/");
+      filename = pathname.substring((li >= 0) ? li + 1 : 0);
+    }
+    const cachePath = `${cacheDir}/${filename}`;
+    if (fs.existsSync(cachePath)) {
+      const stat = fs.statSync(cachePath);
+      if (Date.now() - stat.ctimeMs < (24 * 60 * 60 * 1000)) {
+        return Promise.resolve();
+      }
+    }
     return new Promise((resolve, reject) => {
-      const pathname = new URL(url).pathname;
-      if (typeof filename === "undefined") {
-        const li = pathname.lastIndexOf("/");
-        filename = pathname.substring((li >= 0) ? li + 1 : 0);
-      }
-      const cachePath = `${cacheDir}/${filename}`;
-      let stat = null;
       if (fs.existsSync(cachePath)) {
-        stat = fs.statSync(cachePath);
+        fs.unlinkSync(cachePath);
       }
-      if (stat !== null && (Date.now() - stat.ctimeMs) < (24*60*60*1000)) {
-        resolve(cachePath);
-      }
-      else {
-        const strm = fs.createWriteStream(cachePath, {mode:0o644});
-        https.get(url, res => {
-          res.on("data", data => {
-            strm.write(data);
-          });
-          res.on("end", () => {
-            strm.end();
+      const strm = fs.createWriteStream(cachePath, { mode: 0o644 });
+      https.get(url, res => {
+        res.on("data", data => {
+          strm.write(data);
+        });
+        res.on("end", () => {
+          strm.end(() => {
             switch (res.statusCode) {
             case 200:
               resolve(cachePath);
@@ -856,15 +860,14 @@ class DtCyber {
               .catch(err => { reject(err); });
               break;
             default:
-              fs.unlinkSync(cachePath);
               reject(new Error(`${res.statusCode}: failed to get ${url}`));
               break;
             }
           });
-        }).on("error", err => {
-          reject(err);
         });
-      }
+      }).on("error", err => {
+        reject(err);
+      });
     });
   }
 }
