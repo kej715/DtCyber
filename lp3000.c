@@ -220,7 +220,7 @@ static void lp3000Init(u8 unitNo, u8 eqNo, u8 channelNo, int flags, bool useANSI
 static FcStatus lp3000Func(PpWord funcCode);
 static void lp3000Io(void);
 static void lp3000Activate(void);
-void lp3000RemovePaper(char *params, FILE *out);
+void lp3000RemovePaper(char *params);
 static void lp3000Disconnect(void);
 static void lp3000DebugData(void);
 static char *lp3000Func2String(PpWord funcCode);
@@ -622,21 +622,21 @@ static void lp3000Init(u8 unitNo, u8 eqNo, u8 channelNo, int flags, bool useANSI
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void lp3000ShowStatus(FILE *out)
+void lp3000ShowStatus()
     {
     LpContext *lc = firstUnit;
+    char      outBuf[400];
 
     if (lc == NULL)
         {
         return;
         }
 
-
-    fputs("\n    > Line Printer (lp3000) Status:\n", out);
+    opDisplay("\n    > Line Printer (lp3000) Status:\n");
 
     while (lc)
         {
-        fprintf(out, "    >   CH %02o EQ %02o UN %02o LP%d/%d (%s) %i_lpi %i_lpp line %i %s Suppress(%s) PostPrint(%s) Path '%s'\n",
+        sprintf(outBuf, "    >   CH %02o EQ %02o UN %02o LP%d/%d (%s) %i_lpi %i_lpp line %i %s Suppress(%s) PostPrint(%s) Path '%s'\n",
                 lc->channelNo,
                 lc->eqNo,
                 lc->unitNo,
@@ -650,8 +650,7 @@ void lp3000ShowStatus(FILE *out)
                 lc->extSuppress ? "ON" : "Off",
                 lc->extPostPrint ? "ON" : "Off",
                 lc->extPath);
-
-
+        opDisplay(outBuf);
         lc = lc->nextUnit;
         }
     }
@@ -665,23 +664,20 @@ void lp3000ShowStatus(FILE *out)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void lp3000RemovePaper(char *params, FILE *out)
+void lp3000RemovePaper(char *params)
     {
-    LpContext *lc;
-    DevSlot   *dp;
-    time_t    currentTime;
-
-    int numParam;
     int channelNo;
+    time_t    currentTime;
+    DevSlot   *dp;
     int equipmentNo;
-    int iSuffix;
-
-    struct tm t;
-
     char fName[MaxFSPath];
     char fNameNew[MaxFSPath];
+    int iSuffix;
+    LpContext *lc;
+    int numParam;
+    char outBuf[100];
     bool renameOK;
-
+    struct tm t;
 
     /*
     **  Operator wants to remove paper.
@@ -742,8 +738,8 @@ void lp3000RemovePaper(char *params, FILE *out)
 
         if (ftell(dp->fcb[0]) == 0)
             {
-            printf("(lp3000 ) No output has been written on channel %o and equipment %o\n", channelNo, equipmentNo);
-
+            sprintf(outBuf, "(lp3000 ) No output has been written on channel %o and equipment %o\n", channelNo, equipmentNo);
+            opDisplay(outBuf);
             return;
             }
 
@@ -905,7 +901,7 @@ static FcStatus lp3000Func(PpWord funcCode)
             sprintf(dispLpDevId, "%o,%o", channelId, deviceId);
             if (lc->extBurst)
                 {
-                lp3000RemovePaper(dispLpDevId, stdout);
+                lp3000RemovePaper(dispLpDevId);
                 }
             lc->isPrinted = FALSE;
             }

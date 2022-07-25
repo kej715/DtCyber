@@ -311,26 +311,27 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void lp1612ShowStatus(FILE *out)
+void lp1612ShowStatus()
     {
     LpContext1612 *lc = firstLp1612;
+    char          outBuf[400];
 
     if (lc == NULL)
         {
         return;
         }
 
-    fputs("\n    > Line Printer (lp1612) Status:\n", out);
+    opDisplay("\n    > Line Printer (lp1612) Status:\n");
 
     while (lc)
         {
-        fprintf(out, "    > CH %02o EQ %02o UN %02o Mode %s Path '%s'\n",
+        sprintf(outBuf, "    > CH %02o EQ %02o UN %02o Mode %s Path '%s'\n",
                 lc->channelNo,
                 lc->eqNo,
                 lc->unitNo,
                 lc->extUseANSI ? "ANSI" : "ASCII",
                 lc->extPath);
-
+        opDisplay(outBuf);
         lc = lc->nextUnit;
         }
     }
@@ -344,22 +345,20 @@ void lp1612ShowStatus(FILE *out)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void lp1612RemovePaper(char *params, FILE *out)
+void lp1612RemovePaper(char *params)
     {
-    DevSlot       *dp;
-    LpContext1612 *lc;
-    time_t        currentTime;
-
-    int numParam;
     int channelNo;
+    time_t        currentTime;
+    DevSlot       *dp;
     int equipmentNo;
-    int iSuffix;
-
-    struct tm t;
-
     char fName[MaxFSPath];
     char fNameNew[MaxFSPath];
+    int iSuffix;
+    LpContext1612 *lc;
+    int numParam;
+    char outBuf[100];
     bool renameOK;
+    struct tm t;
 
 
     /*
@@ -419,7 +418,8 @@ void lp1612RemovePaper(char *params, FILE *out)
 
         if (ftell(dp->fcb[0]) == 0)
             {
-            printf("(lp1612 ) No output has been written on channel %o and equipment %o\n", channelNo, equipmentNo);
+            sprintf(outBuf, "(lp1612 ) No output has been written on channel %o and equipment %o\n", channelNo, equipmentNo);
+            opDisplay(outBuf);
 
             return;
             }

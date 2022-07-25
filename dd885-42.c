@@ -1309,20 +1309,21 @@ static char *dd885_42Func2String(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void dd885_42ShowDiskStatus(FILE *out)
+void dd885_42ShowDiskStatus()
     {
     DiskParam *dp = firstDisk;
+    char      outBuf[400];
 
     if (dp == NULL)
         {
         return;
         }
 
-    fputs("\n    > dd885-42 Disk Status:\n", out);
+    opDisplay("\n    > dd885-42 Disk Status:\n");
 
     while (dp)
         {
-        fprintf(out, "    >   #%02d. CH %02o EQ %02o UN %02o DT %s CYL 0x%06x TRK 0x%06o FN '%s'\n",
+        sprintf(outBuf, "    >   #%02d. CH %02o EQ %02o UN %02o DT %s CYL 0x%06x TRK 0x%06o FN '%s'\n",
                 dp->diskNo,
                 dp->channelNo,
                 dp->eqNo,
@@ -1331,6 +1332,7 @@ void dd885_42ShowDiskStatus(FILE *out)
                 dp->cylinder,
                 dp->track,
                 dp->fileName);
+        opDisplay(outBuf);
         dp = dp->nextDisk;
         }
     }

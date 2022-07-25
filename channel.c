@@ -129,21 +129,22 @@ void channelInit(u8 count)
 **  Returns:        List of All Devices Attached to All Channels.
 **
 **------------------------------------------------------------------------*/
-void channelDisplayContext(FILE *out)
+void channelDisplayContext()
     {
-    DevSlot *dp;
     u8      ch;
-    u8      i;
     char    *devTypeName;
     u8      devNum;
     u8      devFCB;
+    DevSlot *dp;
+    u8      i;
+    char    outBuf[64];
 
-    fputs("\n\n Channel Context Display\n ------- ------- -------\n\n", out);
+    opDisplay("\n\n Channel Context Display\n ------- ------- -------\n\n");
 
     //                  00 Deadstart Panel............. (01) Attached: 00 Files: 00
-    fputs("    > CH First Device Type........... (DT)  # Devices    # Files\n", out);
-    fputs("    > -- ---------------------------- ---- ------------ ---------\n", out);
-    fputs("    >\n", out);
+    opDisplay("    > CH First Device Type........... (DT)  # Devices    # Files\n");
+    opDisplay("    > -- ---------------------------- ---- ------------ ---------\n");
+    opDisplay("    >\n");
 
     for (ch = 0; ch < channelCount; ch++)
         {
@@ -256,11 +257,12 @@ void channelDisplayContext(FILE *out)
                 devTypeName = "Unknown Device..............";
                 break;
                 }
-            fprintf(out, "    > %02o %s (%02o)",
+            sprintf(outBuf, "    > %02o %s (%02o)",
                     channel[ch].id,
                     devTypeName,
                     dp->devType
                     );
+            opDisplay(outBuf);
 
             devNum = 0;
             devFCB = 0;
@@ -279,22 +281,24 @@ void channelDisplayContext(FILE *out)
 
             if (devNum > 0)
                 {
-                fprintf(out, " Attached: %02i", devNum);
+                sprintf(outBuf, " Attached: %02i", devNum);
+                opDisplay(outBuf);
                 }
             else
                 {
-                fputs(" ------------", out);
+                opDisplay(" ------------");
                 }
 
             if (devFCB > 0)
                 {
-                fprintf(out, " Files: %02i", devFCB);
+                sprintf(outBuf, " Files: %02i", devFCB);
+                opDisplay(outBuf);
                 }
             else
                 {
-                fputs(" ---------", out);
+                opDisplay(" ---------");
                 }
-            fputs("\n", out);
+            opDisplay("\n");
             }
         }
     }

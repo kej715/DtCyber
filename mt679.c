@@ -451,7 +451,7 @@ void mt679Terminate(DevSlot *dp)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void mt679LoadTape(char *params, FILE *out)
+void mt679LoadTape(char *params)
     {
     static char str[200];
     DevSlot     *dp;
@@ -462,6 +462,7 @@ void mt679LoadTape(char *params, FILE *out)
     TapeParam   *tp;
     FILE        *fcb;
     u8          unitMode;
+    char        outBuf[400];
 
     /*
     **  Operator inserted a new tape.
@@ -473,35 +474,34 @@ void mt679LoadTape(char *params, FILE *out)
     */
     if (numParam != 5)
         {
-        fprintf(out, "(mt679  ) Not enough or invalid parameters\n");
-
+        opDisplay("(mt679  ) Not enough or invalid parameters\n");
         return;
         }
 
     if ((channelNo < 0) || (channelNo >= MaxChannels))
         {
-        fprintf(out, "(mt679  ) Invalid channel no\n");
+        opDisplay("(mt679  ) Invalid channel no\n");
 
         return;
         }
 
     if ((unitNo < 0) || (unitNo >= MaxUnits))
         {
-        fprintf(out, "(mt679  ) Invalid unit no\n");
+        opDisplay("(mt679  ) Invalid unit no\n");
 
         return;
         }
 
     if ((unitMode != 'w') && (unitMode != 'r'))
         {
-        fprintf(out, "(mt679  ) Invalid ring mode (r/w)\n");
+        opDisplay("(mt679  ) Invalid ring mode (r/w)\n");
 
         return;
         }
 
     if (str[0] == 0)
         {
-        fprintf(out, "(mt679  ) Invalid file name\n");
+        opDisplay("(mt679  ) Invalid file name\n");
 
         return;
         }
@@ -521,8 +521,8 @@ void mt679LoadTape(char *params, FILE *out)
     tp = (TapeParam *)dp->context[unitNo];
     if (tp == NULL)
         {
-        fprintf(out, "(mt679  ) Unit %d not allocated\n", unitNo);
-
+        sprintf(outBuf, "(mt679  ) Unit %d not allocated\n", unitNo);
+        opDisplay(outBuf);
         return;
         }
 
@@ -531,8 +531,8 @@ void mt679LoadTape(char *params, FILE *out)
     */
     if (dp->fcb[unitNo] != NULL)
         {
-        fprintf(out, "(mt679  ) Unit %d not unloaded\n", unitNo);
-
+        sprintf(outBuf, "(mt679  ) Unit %d not unloaded\n", unitNo);
+        opDisplay(outBuf);
         return;
         }
 
@@ -559,8 +559,8 @@ void mt679LoadTape(char *params, FILE *out)
     */
     if (fcb == NULL)
         {
-        fprintf(out, "(mt679  ) Failed to open %s\n", str);
-
+        sprintf(outBuf, "(mt679  ) Failed to open %s\n", str);
+        opDisplay(outBuf);
         return;
         }
 
@@ -577,7 +577,8 @@ void mt679LoadTape(char *params, FILE *out)
     tp->blockNo   = 0;
     tp->unitReady = TRUE;
 
-    fprintf(out, "(mt679  ) Successfully loaded %s\n", str);
+    sprintf(outBuf, "(mt679  ) Successfully loaded %s\n", str);
+    opDisplay(outBuf);
     }
 
 /*--------------------------------------------------------------------------
@@ -589,7 +590,7 @@ void mt679LoadTape(char *params, FILE *out)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void mt679UnloadTape(char *params, FILE *out)
+void mt679UnloadTape(char *params)
     {
     DevSlot   *dp;
     int       numParam;
@@ -597,6 +598,7 @@ void mt679UnloadTape(char *params, FILE *out)
     int       equipmentNo;
     int       unitNo;
     TapeParam *tp;
+    char      outBuf[400];
 
     /*
     **  Operator inserted a new tape.
@@ -608,21 +610,21 @@ void mt679UnloadTape(char *params, FILE *out)
     */
     if (numParam != 3)
         {
-        fprintf(out, "(mt679  ) Not enough or invalid parameters\n");
+        opDisplay("(mt679  ) Not enough or invalid parameters\n");
 
         return;
         }
 
     if ((channelNo < 0) || (channelNo >= MaxChannels))
         {
-        fprintf(out, "(mt679  ) Invalid channel no\n");
+        opDisplay("(mt679  ) Invalid channel no\n");
 
         return;
         }
 
     if ((unitNo < 0) || (unitNo >= MaxUnits2))
         {
-        fprintf(out, "(mt679  ) Invalid unit no\n");
+        opDisplay("(mt679  ) Invalid unit no\n");
 
         return;
         }
@@ -642,8 +644,8 @@ void mt679UnloadTape(char *params, FILE *out)
     tp = (TapeParam *)dp->context[unitNo];
     if (tp == NULL)
         {
-        fprintf(out, "(mt679  ) Unit %d not allocated\n", unitNo);
-
+        sprintf(outBuf, "(mt679  ) Unit %d not allocated\n", unitNo);
+        opDisplay(outBuf);
         return;
         }
 
@@ -652,8 +654,8 @@ void mt679UnloadTape(char *params, FILE *out)
     */
     if (dp->fcb[unitNo] == NULL)
         {
-        fprintf(out, "(mt679  ) Unit %d not loaded\n", unitNo);
-
+        sprintf(outBuf, "(mt679  ) Unit %d not loaded\n", unitNo);
+        opDisplay(outBuf);
         return;
         }
 
@@ -679,7 +681,8 @@ void mt679UnloadTape(char *params, FILE *out)
     tp->blockCrc    = 0;
     tp->blockNo     = 0;
 
-    fprintf(out, "(mt679  ) Successfully unloaded MT679 on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
+    sprintf(outBuf, "(mt679  ) Successfully unloaded MT679 on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
+    opDisplay(outBuf);
     }
 
 /*--------------------------------------------------------------------------
@@ -691,24 +694,27 @@ void mt679UnloadTape(char *params, FILE *out)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void mt679ShowTapeStatus(FILE *out)
+void mt679ShowTapeStatus()
     {
     TapeParam *tp = firstTape;
+    char      outBuf[400];
 
-    printf("\n    > Magnetic Tape (mt679) Status:\n");
+    opDisplay("\n    > Magnetic Tape (mt679) Status:\n");
     int i = 0;
 
     while (tp)
         {
         i = i + 1;
-        fprintf(out, "    >   #%02d. MT679 on CH %02o EQ %02o UN %02o", i, tp->channelNo, tp->eqNo, tp->unitNo);
+        sprintf(outBuf, "    >   #%02d. MT679 on CH %02o EQ %02o UN %02o", i, tp->channelNo, tp->eqNo, tp->unitNo);
+        opDisplay(outBuf);
         if (tp->unitReady)
             {
-            fprintf(out, ",%c,%s\n", tp->ringIn ? 'w' : 'r', tp->fileName);
+            sprintf(outBuf, ",%c,%s\n", tp->ringIn ? 'w' : 'r', tp->fileName);
+            opDisplay(outBuf);
             }
         else
             {
-            fprintf(out, "  (idle)\n");
+            opDisplay("  (idle)\n");
             }
 
         tp = tp->nextTape;
