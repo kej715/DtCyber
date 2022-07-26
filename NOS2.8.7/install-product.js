@@ -243,7 +243,8 @@ for (let i = 2; i < process.argv.length; i++) {
   case "all":
     for (const category of products) {
       for (const prodDefn of category.products) {
-        if (isForcedInstall || isInstalled(prodDefn.name) === false) {
+        if ((isForcedInstall && baseProducts.indexOf(prodDefn.name) == -1)
+          || isInstalled(prodDefn.name) === false) {
           addProduct(prodDefn, isSysedit);
         }
       }

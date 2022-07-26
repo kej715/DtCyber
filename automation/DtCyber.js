@@ -648,11 +648,13 @@ class DtCyber {
     this.isExitAfterShutdown = (typeof isExitAfterShutdown === "undefined") ? true : isExitAfterShutdown;
     let promise = me.say("Starting shutdown sequence ...")
     .then(() => me.dsd("[UNLOCK."))
-    .then(() => me.dsd("CHE"))
+    .then(() => me.dsd("CHECK#2000#"))
     .then(() => me.sleep(15000))
     .then(() => me.dsd("STEP."))
     .then(() => me.sleep(2000))
-    .then(() => me.send("shutdown"));
+    .then(() => me.send("shutdown"))
+    .then(() => me.expect([{ re: /Goodbye for now/ }]))
+    .then(() => me.say("Shutdown complete"));
     if (this.isExitAfterShutdown === false && typeof this.dtCyberChild !== "undefined") {
       promise = promise
       .then(() => new Promise((resolve, reject) => {

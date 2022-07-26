@@ -43,6 +43,7 @@
 
 #if defined(_WIN32)
 #include <direct.h>
+#include <io.h>
 #include <windows.h>
 #include <winsock.h>
 #else
@@ -319,7 +320,29 @@ void opDisplay(char *msg)
         }
     else
         {
+#if defined(_WIN32)
+        char *cp;
+        char *sp;
+
+        sp = cp = msg;
+        while (*sp != '\0')
+            {
+            while (*cp != '\0' && *cp != '\n') cp += 1;
+            if (*cp == '\n')
+                {
+                if (cp > sp) send(ep->netConn, sp, cp - sp, 0);
+                send(ep->netConn, "\r\n", 2, 0);
+                cp += 1;
+                }
+            else if (cp > sp)
+                {
+                send(ep->netConn, sp, cp - sp, 0);
+                }
+            sp = cp;
+            }
+#else
         send(ep->netConn, msg, strlen(msg), 0);
+#endif
         }
     }
 
@@ -729,7 +752,7 @@ static int opReadLine(char *buf, int size)
                         sleepMsec(10);
                         continue;
                         }
-                    fprintf(stderr, "Unexpected error while reading operator input: %d\n", err;
+                    fprintf(stderr, "Unexpected error while reading operator input: %d\n", err);
                     closesocket(ep->netConn);
 #else
                     if (errno == EWOULDBLOCK)
@@ -813,7 +836,15 @@ static bool opHasInput()
 #if defined(_WIN32)
         if (ep->in == _fileno(stdin) && _isatty(_fileno(stdin)))
             {
-            return kbhit();
+            if (kbhit())
+                {
+                return TRUE;
+                }
+            else
+                {
+                opAcceptConnection();
+                return FALSE;
+                }
             }
         else
             {
@@ -861,10 +892,12 @@ static void opAcceptConnection(void)
     fd_set             acceptFds;
     struct sockaddr_in from;
     int                n;
+    int                optEnable = 1;
     struct timeval     timeout;
 
 #if defined(_WIN32)
     int fromLen;
+    u_long blockEnable = 1;
 #else
     socklen_t fromLen;
 #endif
@@ -883,7 +916,7 @@ static void opAcceptConnection(void)
     FD_SET(opListenHandle, &acceptFds);
 
     n = select(opListenHandle + 1, &acceptFds, NULL, NULL, &timeout);
-    if (n <= 0)
+    if (n <= 0 || !FD_ISSET(opListenHandle, &acceptFds))
         {
         return;
         }
@@ -901,6 +934,12 @@ static void opAcceptConnection(void)
 #endif
             return;
             }
+        setsockopt(acceptFd, SOL_SOCKET, SO_KEEPALIVE, (void*)&optEnable, sizeof(optEnable));
+#if defined(_WIN32)
+        ioctlsocket(acceptFd, FIONBIO, &blockEnable);
+#else
+        fcntl(acceptFd, F_SETFL, O_NONBLOCK);
+#endif
         opDisplay("\nOperator connection accepted\n");
         opCmdStackPtr += 1;
 #if defined(WIN32)
@@ -908,9 +947,11 @@ static void opAcceptConnection(void)
 #else
         close(opListenHandle);
 #endif
+        opListenHandle                    = 0;
         opCmdStack[opCmdStackPtr].netConn = acceptFd;
+        opCmdStack[opCmdStackPtr].in      = 0;
+        opCmdStack[opCmdStackPtr].out     = 0;
         strcpy(opCmdStack[opCmdStackPtr].cwd, opCmdStack[opCmdStackPtr - 1].cwd);
-        opListenHandle = 0;
         opCmdPrompt();
         }
     }
