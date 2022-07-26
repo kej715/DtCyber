@@ -3196,7 +3196,7 @@ static void cdcnetUdpSendUplineData(Gcb *gp)
             fprintf(cdcnetLog, "%s, CN=%02X\n", strerror(errno), gp->cn);
             }
 #endif
-
+        npuBipBufRelease(bp);
         return;
         }
     ipAddress = ntohl(client.sin_addr.s_addr);
