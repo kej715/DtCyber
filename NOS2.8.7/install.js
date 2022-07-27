@@ -74,6 +74,11 @@ if (isBasicInstall === false) {
         || installedProductSet.length !== JSON.parse(fs.readFileSync("opt/installed.json", "utf8")).length) {
       return dtc.say("Make a new deadstart tape ...")
       .then(() => dtc.exec("node", ["make-ds-tape"]))
+      .then(() => dtc.say("Shutdown system to deadstart using new tape ..."))
+      .then(() => dtc.connect())
+      .then(() => dtc.expect([ {re:/Operator> $/} ]))
+      .then(() => dtc.shutdown(false))
+      .then(() => dtc.sleep(5000))
       .then(() => dtc.say("Save previous deadstart tape and rename new one ..."))
       .then(() => {
         if (fs.existsSync("tapes/ods.tap")) {
@@ -82,11 +87,6 @@ if (isBasicInstall === false) {
         fs.renameSync("tapes/ds.tap", "tapes/ods.tap");
         fs.renameSync("tapes/newds.tap", "tapes/ds.tap");
       })
-      .then(() => dtc.say("Shutdown system to deadstart using new tape ..."))
-      .then(() => dtc.connect())
-      .then(() => dtc.expect([ {re:/Operator> $/} ]))
-      .then(() => dtc.shutdown(false))
-      .then(() => dtc.sleep(5000))
       .then(() => dtc.start({
         detached: true,
         stdio:    [0, "ignore", 2]
