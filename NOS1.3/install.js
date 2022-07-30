@@ -150,4 +150,5 @@ promise = promise
   .on("close", () => {
     process.exit(1);
   });
+  rl.prompt();
 });
