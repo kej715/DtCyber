@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
-const fs = require("fs");
-const DtCyber = require("../automation/DtCyber");
+const fs       = require("fs");
+const readline = require("readline");
+const DtCyber  = require("../automation/DtCyber");
 
 const dtc = new DtCyber();
 
@@ -57,8 +58,7 @@ promise = promise
 .then(() => dtc.say(`Deadstart ${isBasicInstall ? "basic installed system" : "system to install optional products"} ...`))
 .then(() => dtc.start({
   detached: true,
-  stdio:    [0, "ignore", 2],
-  unref:    false
+  stdio:    [0, "ignore", 2]
 }));
 
 if (isBasicInstall === false) {
@@ -105,5 +105,15 @@ promise = promise
 })
 .catch(err => {
   console.log(err);
-  process.exit(1);
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    prompt: "Press ENTER to terminate"
+  });
+  rl.on("line", line => {
+    process.exit(1);
+  })
+  .on("close", () => {
+    process.exit(1);
+  });
 });

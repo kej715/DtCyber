@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
-const fs = require("fs");
-const DtCyber = require("../automation/DtCyber");
+const fs       = require("fs");
+const readline = require("readline");
+const DtCyber  = require("../automation/DtCyber");
 
 const dtc = new DtCyber();
 
@@ -138,5 +139,15 @@ promise = promise
 })
 .catch(err => {
   console.log(`Error caught: ${err}`);
-  process.exit(1);
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    prompt: "Press ENTER to terminate"
+  });
+  rl.on("line", line => {
+    process.exit(1);
+  })
+  .on("close", () => {
+    process.exit(1);
+  });
 });
