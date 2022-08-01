@@ -1,9 +1,9 @@
-const bz2 = require("unbzip2-stream");
+const bz2           = require("unbzip2-stream");
 const child_process = require("child_process");
-const extract = require("extract-zip");
-const fs = require("fs");
-const https = require("https");
-const net = require("net");
+const extract       = require("extract-zip");
+const fs            = require("fs");
+const https         = require("https");
+const net           = require("net");
 
 /*
  * DtCyberStreamMgr
@@ -348,6 +348,45 @@ class DtCyber {
   }
 
   /*
+   * engageOperator
+   *
+   * Begin serving as an intermediary between the user and the DtCyber
+   * operator interface.
+   *
+   * Returns:
+   *   A promise that is resolved when stdin is closed.
+   */
+  engageOperator() {
+    const me = this;
+    return new Promise((resolve, reject) => {
+      const mgr = me.getStreamMgr();
+      let str = "";
+      mgr.startConsumer(data => {
+        process.stdout.write(data);
+        return true;
+      });
+      process.stdin.on("data", data => {
+        str += data
+        while (true) {
+          let eoli = str.indexOf("\n");
+          if (eoli === -1) break;
+          let line = str.substring(0, eoli).trim();
+          str = str.substring(eoli + 1);
+          if (line.toLowerCase() === "exit") {
+            resolve();
+            break;
+          }
+          mgr.write(`${line}\n`);
+        }
+      });
+      process.stdin.on("close", () => {
+        resolve();
+      });
+      mgr.write("\n");
+    });
+    }
+
+  /*
    * exec
    *
    * Spawn and optionally detach a subprocess using the Node.js
@@ -430,8 +469,8 @@ class DtCyber {
       let str = "";
       let mgr = me.getStreamMgr(strmId);
       mgr.startConsumer(data => {
-        if (str.length > 200) {
-          str = str.substring(200);
+        if (str.length > 8192) {
+          str = str.substring(str.length - 8192);
         }
         str += data;
         for (let pattern of patterns) {

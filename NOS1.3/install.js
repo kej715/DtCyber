@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
-const fs       = require("fs");
-const readline = require("readline");
-const DtCyber  = require("../automation/DtCyber");
+const fs      = require("fs");
+const DtCyber = require("../automation/DtCyber");
 
 const dtc = new DtCyber();
 
@@ -130,25 +129,29 @@ promise = promise
 .then(() => dtc.say("Re-deadstart freshly installed system ..."))
 .then(() => dtc.start({
   detached: true,
-  stdio:    [0, "ignore", 2]
+  stdio: [0, "ignore", 2],
+  unref: false
 }))
+.then(() => dtc.sleep(5000))
+.then(() => dtc.attachPrinter("LP5xx_C11_E5"))
+.then(() => dtc.expect([{ re: /QUEUE FILE UTILITY COMPLETE/ }], "printer"))
+.then(() => dtc.say("Deadstart complete"))
+.then(() => dtc.connect())
+.then(() => dtc.expect([{ re: /Operator> $/ }]))
 .then(() => dtc.say("Installation of NOS 1.3 complete"))
-.then(() => dtc.say("Use 'node shutdown' to shutdown gracefully"))
+.then(() => dtc.say("Enter 'exit' command to exit and shutdown gracefully"))
+.then(() => dtc.engageOperator())
+.then(() => dtc.shutdown())
 .then(() => {
   process.exit(0);
 })
 .catch(err => {
-  console.log(`Error caught: ${err}`);
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    prompt: "Press ENTER to terminate"
-  });
-  rl.on("line", line => {
-    process.exit(1);
-  })
-  .on("close", () => {
+  console.log(err);
+  process.stdout.write("Press ENTER to terminate...");
+  process.stdin.on("data", data => {
     process.exit(1);
   });
-  rl.prompt();
+  process.stdin.on("close", () => {
+    process.exit(1);
+  });
 });

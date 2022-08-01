@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
-const fs       = require("fs");
-const readline = require("readline");
-const DtCyber  = require("../automation/DtCyber");
+const fs      = require("fs");
+const DtCyber = require("../automation/DtCyber");
 
 const dtc = new DtCyber();
 
@@ -58,15 +57,17 @@ promise = promise
 .then(() => dtc.say(`Deadstart ${isBasicInstall ? "basic installed system" : "system to install optional products"} ...`))
 .then(() => dtc.start({
   detached: true,
-  stdio:    [0, "ignore", 2]
-}));
+  stdio:    [0, "ignore", 2],
+  unref:    false
+}))
+.then(() => dtc.sleep(5000))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.expect([{ re: /QUEUE FILE UTILITY COMPLETE/ }], "printer"))
+.then(() => dtc.say("Deadstart complete"));
 
 if (isBasicInstall === false) {
   const installCmd = isContinueInstall ? ["install-product", "all"] : ["install-product", "-f", "all"];
   promise = promise
-  .then(() => dtc.sleep(5000))
-  .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
-  .then(() => dtc.expect([ {re:/QUEUE FILE UTILITY COMPLETE/} ], "printer"))
   .then(() => dtc.say("Begin installing optional products ..."))
   .then(() => dtc.exec("node", installCmd))
   .then(() => {
@@ -87,10 +88,16 @@ if (isBasicInstall === false) {
         fs.renameSync("tapes/ds.tap", "tapes/ods.tap");
         fs.renameSync("tapes/newds.tap", "tapes/ds.tap");
       })
+      .then(() => dtc.say("Deadstart system using new tape"))
       .then(() => dtc.start({
         detached: true,
-        stdio:    [0, "ignore", 2]
-      }));
+        stdio:    [0, "ignore", 2],
+        unref:    false
+      }))
+      .then(() => dtc.sleep(5000))
+      .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+      .then(() => dtc.expect([{ re: /QUEUE FILE UTILITY COMPLETE/ }], "printer"))
+      .then(() => dtc.say("Deadstart complete"));
     }
     else {
       return Promise.resolve();
@@ -98,23 +105,22 @@ if (isBasicInstall === false) {
   })
 }
 promise = promise
+.then(() => dtc.connect())
+.then(() => dtc.expect([{ re: /Operator> $/ }]))
 .then(() => dtc.say(`${isBasicInstall ? "Basic" : "Full"} installation of NOS 2.8.7 complete`))
-.then(() => dtc.say("Use 'node shutdown' to shutdown gracefully"))
+.then(() => dtc.say("Enter 'exit' command to exit and shutdown gracefully"))
+.then(() => dtc.engageOperator())
+.then(() => dtc.shutdown())
 .then(() => {
   process.exit(0);
 })
 .catch(err => {
   console.log(err);
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    prompt: "Press ENTER to terminate"
-  });
-  rl.on("line", line => {
-    process.exit(1);
-  })
-  .on("close", () => {
+  process.stdout.write("Press ENTER to terminate...");
+  process.stdin.on("data", data => {
     process.exit(1);
   });
-  rl.prompt();
+  process.stdin.on("close", () => {
+    process.exit(1);
+  });
 });
