@@ -314,7 +314,7 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 void lp1612ShowStatus()
     {
     LpContext1612 *lc = firstLp1612;
-    char          outBuf[400];
+    char          outBuf[MaxFSPath+128];
 
     if (lc == NULL)
         {
@@ -351,12 +351,12 @@ void lp1612RemovePaper(char *params)
     time_t        currentTime;
     DevSlot       *dp;
     int equipmentNo;
-    char fName[MaxFSPath];
-    char fNameNew[MaxFSPath];
+    char fName[MaxFSPath+128];
+    char fNameNew[MaxFSPath+128];
     int iSuffix;
     LpContext1612 *lc;
     int numParam;
-    char outBuf[100];
+    char outBuf[MaxFSPath+256];
     bool renameOK;
     struct tm t;
 
@@ -371,21 +371,21 @@ void lp1612RemovePaper(char *params)
     */
     if (numParam != 2)
         {
-        printf("(lp1612 ) Not enough or invalid parameters\n");
+        opDisplay("(lp1612 ) Not enough or invalid parameters\n");
 
         return;
         }
 
     if ((channelNo < 0) || (channelNo >= MaxChannels))
         {
-        printf("(lp1612 ) Invalid channel no\n");
+        opDisplay("(lp1612 ) Invalid channel no\n");
 
         return;
         }
 
     if ((equipmentNo < 0) || (equipmentNo >= MaxEquipment))
         {
-        printf("(lp1612 ) Invalid equipment no\n");
+        opDisplay("(lp1612 ) Invalid equipment no\n");
 
         return;
         }
@@ -407,9 +407,9 @@ void lp1612RemovePaper(char *params)
     if (dp->fcb[0] == NULL)
         {
         renameOK = TRUE;        //  Since nothing was open - we're not renaming
-        printf("(lp1612 ) lp1612RemovePaper: FCB is Null on channel %o equipment %o\n",
-               dp->channel->id,
-               dp->eqNo);
+        fprintf(stderr, "(lp1612 ) lp1612RemovePaper: FCB is Null on channel %o equipment %o\n",
+                dp->channel->id,
+                dp->eqNo);
         //  proceed to attempt to open a new FCB
         }
     else
@@ -455,15 +455,15 @@ void lp1612RemovePaper(char *params)
                 break;
                 }
 
-            printf("(lp1612 ) Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
-                   fName,
-                   fNameNew,
-                   strerror(errno),
-                   iSuffix);
+            fprintf(stderr, "(lp1612 ) Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
+                    fName,
+                    fNameNew,
+                    strerror(errno),
+                    iSuffix);
             }
         if (iSuffix > 0)
             {
-            printf("\n");
+            opDisplay("\n");
             }
         }
 
@@ -477,12 +477,13 @@ void lp1612RemovePaper(char *params)
     */
     if (dp->fcb[0] == NULL)
         {
-        printf("(lp1612 ) Failed to open %s\n", fName);
+        fprintf(stderr, "(lp1612 ) Failed to open %s\n", fName);
 
         return;
         }
 
-    printf("(lp1612 ) Paper removed and available on '%s'\n", fNameNew);
+    sprintf(outBuf, "(lp1612 ) Paper removed and available on '%s'\n", fNameNew);
+    opDisplay(outBuf);
     }
 
 /*--------------------------------------------------------------------------
@@ -505,9 +506,9 @@ static FcStatus lp1612Func(PpWord funcCode)
     //          and the file fails to be properly re-opened.
     if (activeDevice->fcb[0] == NULL)
         {
-        printf("(lp1612 ) lp1612Func: FCB is Null on channel %o equipment %o\n",
-               activeDevice->channel->id,
-               activeDevice->eqNo);
+        fprintf(stderr, "(lp1612 ) lp1612Func: FCB is Null on channel %o equipment %o\n",
+                activeDevice->channel->id,
+                activeDevice->eqNo);
 
         return (FcProcessed);
         }
@@ -623,9 +624,9 @@ static void lp1612Io(void)
     //          and the file fails to be properly re-opened.
     if (activeDevice->fcb[0] == NULL)
         {
-        printf("(lp1612 ) lp1612Io: FCB is Null on channel %o equipment %o\n",
-               activeDevice->channel->id,
-               activeDevice->eqNo);
+        fprintf(stderr, "(lp1612 ) lp1612Io: FCB is Null on channel %o equipment %o\n",
+                activeDevice->channel->id,
+                activeDevice->eqNo);
 
         return;
         }
@@ -691,9 +692,9 @@ static void lp1612Disconnect(void)
     //          and the file fails to be properly re-opened.
     if (activeDevice->fcb[0] == NULL)
         {
-        printf("(lp1612 ) lp1612Disconnect: FCB is Null on channel %o equipment %o\n",
-               activeDevice->channel->id,
-               activeDevice->eqNo);
+        fprintf(stderr, "(lp1612 ) lp1612Disconnect: FCB is Null on channel %o equipment %o\n",
+                activeDevice->channel->id,
+                activeDevice->eqNo);
 
         return;
         }

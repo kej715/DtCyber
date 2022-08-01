@@ -1312,7 +1312,7 @@ static char *dd885_42Func2String(PpWord funcCode)
 void dd885_42ShowDiskStatus()
     {
     DiskParam *dp = firstDisk;
-    char      outBuf[400];
+    char      outBuf[MaxFSPath+128];
 
     if (dp == NULL)
         {

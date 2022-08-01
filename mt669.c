@@ -767,7 +767,7 @@ void mt669ShowTapeStatus()
     {
     TapeParam *tp = firstTape;
     int       i   = 0;
-    char      outBuf[400];
+    char      outBuf[MaxFSPath+128];
 
     opDisplay("\n    > Magnetic Tape (mt669) Status:\n");
 

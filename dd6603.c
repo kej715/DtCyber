@@ -600,7 +600,7 @@ void dd6603ShowDiskStatus()
     {
     DiskParam *dp = firstDisk;
     int       i   = 0;
-    char      outBuf[400];
+    char      outBuf[MaxFSPath+128];
 
     if (dp == NULL)
         {

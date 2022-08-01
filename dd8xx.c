@@ -1986,7 +1986,7 @@ static char *dd8xxFunc2String(PpWord funcCode)
 void dd8xxShowDiskStatus()
     {
     DiskParam *dp = firstDisk;
-    char      outBuf[400];
+    char      outBuf[MaxFSPath+128];
 
     if (dp == NULL)
         {

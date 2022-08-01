@@ -625,7 +625,7 @@ static void lp3000Init(u8 unitNo, u8 eqNo, u8 channelNo, int flags, bool useANSI
 void lp3000ShowStatus()
     {
     LpContext *lc = firstUnit;
-    char      outBuf[400];
+    char      outBuf[MaxFSPath+128];
 
     if (lc == NULL)
         {
@@ -670,12 +670,12 @@ void lp3000RemovePaper(char *params)
     time_t    currentTime;
     DevSlot   *dp;
     int equipmentNo;
-    char fName[MaxFSPath];
-    char fNameNew[MaxFSPath];
+    char fName[MaxFSPath+128];
+    char fNameNew[MaxFSPath+128];
     int iSuffix;
     LpContext *lc;
     int numParam;
-    char outBuf[100];
+    char outBuf[MaxFSPath+256];
     bool renameOK;
     struct tm t;
 
@@ -689,21 +689,21 @@ void lp3000RemovePaper(char *params)
     */
     if (numParam != 2)
         {
-        printf("(lp3000 ) Not enough or invalid parameters\n");
+        opDisplay("(lp3000 ) Not enough or invalid parameters\n");
 
         return;
         }
 
     if ((channelNo < 0) || (channelNo >= MaxChannels))
         {
-        printf("(lp3000 ) Invalid channel no\n");
+        opDisplay("(lp3000 ) Invalid channel no\n");
 
         return;
         }
 
     if ((equipmentNo < 0) || (equipmentNo >= MaxEquipment))
         {
-        printf("(lp3000 ) Invalid equipment no\n");
+        opDisplay("(lp3000 ) Invalid equipment no\n");
 
         return;
         }
@@ -714,7 +714,8 @@ void lp3000RemovePaper(char *params)
     dp = dcc6681FindDevice((u8)channelNo, (u8)equipmentNo, DtLp5xx);
     if (dp == NULL)
         {
-        printf("(lp3000 ) No printer on channel %o and equipment %o\n", channelNo, equipmentNo);
+        sprintf(outBuf, "(lp3000 ) No printer on channel %o and equipment %o\n", channelNo, equipmentNo);
+        opDisplay(outBuf);
 
         return;
         }
@@ -727,7 +728,7 @@ void lp3000RemovePaper(char *params)
     if (dp->fcb[0] == NULL)
         {
         renameOK = TRUE;        //  Since nothing was open - we're not renaming
-        printf("(lp3000 ) lp3000RemovePaper: FCB is Null on channel %o equipment %o\n",
+        fprintf(stderr, "(lp3000 ) lp3000RemovePaper: FCB is Null on channel %o equipment %o\n",
                dp->channel->id,
                dp->eqNo);
         //  proceed to attempt to open a new FCB
@@ -774,15 +775,15 @@ void lp3000RemovePaper(char *params)
                 renameOK = TRUE;
                 break;
                 }
-            printf("(lp3000 ) Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
-                   fName,
-                   fNameNew,
-                   strerror(errno),
-                   iSuffix);
+            fprintf(stderr, "(lp3000 ) Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
+                    fName,
+                    fNameNew,
+                    strerror(errno),
+                    iSuffix);
             }
         if (iSuffix > 0)
             {
-            printf("\n");
+            opDisplay("\n");
             }
         }
 
@@ -798,12 +799,13 @@ void lp3000RemovePaper(char *params)
     */
     if (dp->fcb[0] == NULL)
         {
-        printf("Failed to open %s\n", fName);
+        fprintf(stderr, "Failed to open %s\n", fName);
 
         return;
         }
 
-    printf("(lp3000 ) Paper removed from 5xx printer and available on '%s'\n", fNameNew);
+    sprintf(outBuf, "(lp3000 ) Paper removed from 5xx printer and available on '%s'\n", fNameNew);
+    opDisplay(outBuf);
     }
 
 /*--------------------------------------------------------------------------
@@ -828,9 +830,9 @@ static FcStatus lp3000Func(PpWord funcCode)
     //          and the file fails to be properly re-opened.
     if (active3000Device->fcb[0] == NULL)
         {
-        printf("(lp3000 ) lp3000Func: FCB is Null on channel %o equipment %o\n",
-               active3000Device->channel->id,
-               active3000Device->eqNo);
+        fprintf(stderr, "(lp3000 ) lp3000Func: FCB is Null on channel %o equipment %o\n",
+                active3000Device->channel->id,
+                active3000Device->eqNo);
 
         return (FcProcessed);
         }
@@ -1035,7 +1037,7 @@ static FcStatus lp3000Func(PpWord funcCode)
         switch (funcCode)
             {
         default:
-            printf("(lp3000 ) Unknown LP3555 function %04o\n", funcCode);
+            fprintf(stderr, "(lp3000 ) Unknown LP3555 function %04o\n", funcCode);
 
             return (FcProcessed);
 
@@ -1180,7 +1182,7 @@ static FcStatus lp3000Func(PpWord funcCode)
         switch (funcCode)
             {
         default:
-            printf("(lp3000 ) Unknown LP3152 function %04o\n", funcCode);
+            fprintf(stderr, "(lp3000 ) Unknown LP3152 function %04o\n", funcCode);
 
             return (FcProcessed);
 
@@ -1290,9 +1292,9 @@ static void lp3000Io(void)
     //          and the file fails to be properly re-opened.
     if (active3000Device->fcb[0] == NULL)
         {
-        printf("(lp3000 ) lp3000Io: FCB is Null on channel %o equipment %o\n",
-               active3000Device->channel->id,
-               active3000Device->eqNo);
+        fprintf(stderr, "(lp3000 ) lp3000Io: FCB is Null on channel %o equipment %o\n",
+                active3000Device->channel->id,
+                active3000Device->eqNo);
 
         return;
         }
@@ -1381,9 +1383,9 @@ static void lp3000Disconnect(void)
     //          and the file fails to be properly re-opened.
     if (active3000Device->fcb[0] == NULL)
         {
-        printf("(lp3000 ) lp3000Disconnect: FCB is Null on channel %o equipment %o\n",
-               active3000Device->channel->id,
-               active3000Device->eqNo);
+        fprintf(stderr, "(lp3000 ) lp3000Disconnect: FCB is Null on channel %o equipment %o\n",
+                active3000Device->channel->id,
+                active3000Device->eqNo);
 
         return;
         }

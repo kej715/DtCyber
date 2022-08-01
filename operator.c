@@ -273,7 +273,7 @@ static volatile bool opPaused     = FALSE;
 
 static char opInBuf[256];
 static int  opInIdx  = 0;
-static char opOutBuf[256];
+static char opOutBuf[MaxFSPath*2+128];
 static int  opOutIdx = 0;
 
 /*
@@ -312,11 +312,12 @@ void opInit(void)
 void opDisplay(char *msg)
     {
     OpCmdStackEntry *ep;
+    int             n;
 
     ep = &opCmdStack[opCmdStackPtr];
     if (ep->netConn == 0)
         {
-        write(ep->out, msg, strlen(msg));
+        n = write(ep->out, msg, strlen(msg));
         }
     else
         {
