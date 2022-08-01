@@ -176,7 +176,6 @@ static void cr3447SwapInOut(CrContext *cc, char *fname);
 
 static CrContext *firstCr3447 = NULL;
 static CrContext *lastCr3447  = NULL;
-static char      outBuf[400];
 
 #if DEBUG
 static FILE *cr3447Log = NULL;
@@ -507,6 +506,7 @@ void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, char *params)
     CrContext   *cc;
     DevSlot     *dp;
     int         len;
+    char        outBuf[MaxFSPath+128];
     struct stat s;
     char        *sp;
 
@@ -583,17 +583,16 @@ void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, char *params)
 
 void cr3447GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params)
     {
-    CrContext *cc;
-    DevSlot   *dp;
-
-    static char strWork[MaxFSPath] = "";
-    static char fOldest[MaxFSPath] = "";
-    time_t      tOldest            = 0;
-
-    struct stat   s;
+    CrContext     *cc;
+    DIR           *curDir;
     struct dirent *curDirEntry;
+    DevSlot       *dp;
+    char          fOldest[MaxFSPath*2+2] = "";
+    char          outBuf[MaxFSPath*2+64];
+    struct stat   s;
+    char          strWork[MaxFSPath*2+2] = "";
+    time_t        tOldest            = 0;
 
-    DIR *curDir;
 
     //  Safety check, we only respond if the first
     //  character of the filename is an asterisk '*'
@@ -740,6 +739,7 @@ void cr3447PostProcess(char *fname, int channelNo, int equipmentNo, char *params
     {
     CrContext *cc;
     DevSlot   *dp;
+    char      outBuf[MaxFSPath+64];
 
     /*
     **  Locate the device control block.
@@ -788,7 +788,9 @@ void cr3447PostProcess(char *fname, int channelNo, int equipmentNo, char *params
 **------------------------------------------------------------------------*/
 static void cr3447SwapInOut(CrContext *cc, char *fName)
     {
-    static char fnwork[MaxFSPath] = "";
+    char fnwork[MaxFSPath*2+32] = "";
+    char outBuf[MaxFSPath+2+64];
+    
 
     bool hasNoOutputDir = (cc->dirOutput[0] == '\0');
     bool hasNoInputDir  = (cc->dirInput[0] == '\0');
@@ -837,18 +839,20 @@ static void cr3447SwapInOut(CrContext *cc, char *fName)
 
         if (rename(fName, fnwork) == 0)
             {
-            printf("(cr3447 ) Deck '%s' moved to '%s'. (Input Preserved)\n",
-                   fName + strlen(cc->dirInput) + 1,
-                   fnwork);
+            sprintf(outBuf, "(cr3447 ) Deck '%s' moved to '%s'. (Input Preserved)\n",
+                    fName + strlen(cc->dirInput) + 1,
+                    fnwork);
+            opDisplay(outBuf);
             strcpy(fName, fnwork);
             break;
             }
         else
             {
-            printf("(cr3447 ) Rename Failure on '%s' - (%s). Retrying (%d)...\n",
-                   fName + strlen(cc->dirInput) + 1,
-                   strerror(errno),
-                   fnindex);
+            sprintf(outBuf, "(cr3447 ) Rename Failure on '%s' - (%s). Retrying (%d)...\n",
+                    fName + strlen(cc->dirInput) + 1,
+                    strerror(errno),
+                    fnindex);
+            opDisplay(outBuf);
             }
         fnindex++;
         if (fnindex > 999)
@@ -875,6 +879,7 @@ static void cr3447SwapInOut(CrContext *cc, char *fName)
 void cr3447ShowStatus()
     {
     CrContext *cp = firstCr3447;
+    char      outBuf[MaxFSPath*2+64];
 
     if (cp == NULL)
         {
@@ -1195,6 +1200,7 @@ static void cr3447Disconnect(void)
 static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc)
     {
     char *fname;
+    char outBuf[MaxFSPath+128];
 
     while (cc->outDeck != cc->inDeck)
         {
@@ -1234,14 +1240,13 @@ static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc)
 static void cr3447NextCard(DevSlot *up, CrContext *cc)
     {
     static char buffer[326];
-    char        *cp;
     char        c;
-    int         value;
+    PpWord      col1;
+    char        *cp;
     int         i;
     int         j;
-    PpWord      col1;
-
-    static char fnwork[MaxFSPath] = "";
+    char        outBuf[MaxFSPath+128];
+    int         value;
 
     /*
     **  Initialise read.
