@@ -342,8 +342,8 @@ void cp3446RemoveCards(char *params)
     int isuffix;
 
     struct tm   t;
-    char        fname[MaxFSPath];
-    char        fnameNew[MaxFSPath];
+    char        fname[MaxFSPath+64];
+    char        fnameNew[MaxFSPath+64];
     static char msgBuf[80] = "";
 
     bool renameOK;
@@ -917,7 +917,7 @@ static char *cp3446Func2String(PpWord funcCode)
 void cp3446ShowStatus()
     {
     CpContext *cp = firstUnit;
-    char outBuf[128];
+    char outBuf[MaxFSPath+128];
 
     if (cp == NULL)
         {
