@@ -165,7 +165,6 @@ static FILE *cr405Log = NULL;
 */
 static Cr405Context *firstCr405 = NULL;
 static Cr405Context *lastCr405  = NULL;
-static char          outBuf[400];
 
 /*
  **--------------------------------------------------------------------------
@@ -508,6 +507,7 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, char *params)
     Cr405Context *cc;
     DevSlot      *dp;
     int          len;
+    char         outBuf[MaxFSPath+128];
     struct stat  s;
     char         *sp;
 
@@ -583,17 +583,15 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, char *params)
 
 void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params)
     {
-    Cr405Context *cc;
-    DevSlot      *dp;
-
-    static char strWork[MaxFSPath] = "";
-    static char fOldest[MaxFSPath] = "";
-    time_t      tOldest            = 0;
-
-    struct stat   s;
+    Cr405Context  *cc;
+    DIR           *curDir;
     struct dirent *curDirEntry;
-
-    DIR *curDir;
+    DevSlot       *dp;
+    char          fOldest[MaxFSPath*2+2] = "";
+    char          outBuf[MaxFSPath*2+128];
+    struct stat   s;
+    char          strWork[MaxFSPath*2+2] = "";
+    time_t        tOldest            = 0;
 
     //  Safety check, we only respond if the first
     //  character of the filename is an asterisk '*'
@@ -739,6 +737,7 @@ void cr405PostProcess(char *fname, int channelNo, int equipmentNo, char *params)
     {
     Cr405Context *cc;
     DevSlot      *dp;
+    char         outBuf[MaxFSPath*2+128];
 
     /*
     **  Locate the device control block.
@@ -785,7 +784,8 @@ void cr405PostProcess(char *fname, int channelNo, int equipmentNo, char *params)
 **------------------------------------------------------------------------*/
 static void cr405SwapInOut(Cr405Context *cc, char *fName)
     {
-    static char fnwork[MaxFSPath] = "";
+    char fnwork[MaxFSPath*2+32] = "";
+    char outBuf[MaxFSPath*2+128];
 
     bool hasNoOutputDir = (cc->dirOutput[0] == '\0');
     bool hasNoInputDir  = (cc->dirInput[0] == '\0');
@@ -834,18 +834,20 @@ static void cr405SwapInOut(Cr405Context *cc, char *fName)
 
         if (rename(fName, fnwork) == 0)
             {
-            printf("(cr405  ) Deck '%s' moved to '%s'. (Input Preserved)\n",
-                   fName + strlen(cc->dirInput) + 1,
-                   fnwork);
+            sprintf(outBuf, "(cr405  ) Deck '%s' moved to '%s'. (Input Preserved)\n",
+                    fName + strlen(cc->dirInput) + 1,
+                    fnwork);
+            opDisplay(outBuf);
             strcpy(fName, fnwork);
             break;
             }
         else
             {
-            printf("(cr3447 ) Rename Failure on '%s' - (%s). Retrying (%d)...\n",
-                   fName + strlen(cc->dirInput) + 1,
-                   strerror(errno),
-                   fnindex);
+            sprintf(outBuf, "(cr3447 ) Rename Failure on '%s' - (%s). Retrying (%d)...\n",
+                    fName + strlen(cc->dirInput) + 1,
+                    strerror(errno),
+                    fnindex);
+            opDisplay(outBuf);
             }
         fnindex++;
         if (fnindex > 999)
@@ -857,7 +859,7 @@ static void cr405SwapInOut(Cr405Context *cc, char *fName)
         }
     if (fnindex > 0)
         {
-        printf("\n");
+        opDisplay("\n");
         }
     }
 
@@ -872,6 +874,7 @@ static void cr405SwapInOut(Cr405Context *cc, char *fName)
 void cr405ShowStatus()
     {
     Cr405Context *cp = firstCr405;
+    char         outBuf[MaxFSPath*2+64];
 
     if (cp == NULL)
         {
@@ -1050,6 +1053,7 @@ static void cr405Disconnect(void)
 static bool cr405StartNextDeck(DevSlot *dp, Cr405Context *cc)
     {
     char *fname;
+    char outBuf[MaxFSPath+128];
 
     while (cc->outDeck != cc->inDeck)
         {
@@ -1083,16 +1087,16 @@ static bool cr405StartNextDeck(DevSlot *dp, Cr405Context *cc)
 **------------------------------------------------------------------------*/
 static void cr405NextCard(DevSlot *dp)
     {
-    Cr405Context *cc = dp->context[0];
     static char  buffer[322];
     bool         binaryCard;
-    char         *cp;
     char         c;
-    int          value;
+    Cr405Context *cc = dp->context[0];
+    char         *cp;
     int          i;
     int          j;
+    char         outBuf[MaxFSPath+128];
+    int          value;
 
-    static char fnwork[MaxFSPath] = "";
 
     if (dp->fcb[0] == NULL)
         {
