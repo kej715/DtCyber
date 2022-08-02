@@ -133,7 +133,8 @@ facilitate customization. In particular, the catalog of user `INSTALL` (UI=1)
 contains the following files:
 
 - **OPL485** : a *MODIFY* program library containing the source code of the operating
-system and various utility programs.
+system and various utility programs. Modsets have been pre-applied to correspond with
+executables on the supplied deadstart tape.
 - **SYSTEM** : a working copy of the system's deadstart file.
 
 In addition, the system's hardware configuration includes an auxiliary disk pack
@@ -157,15 +158,6 @@ the [decks](decks) directory of this git repository. These include:
 - **build-tieline-ibm.job** : a job to build the *TIELINE* subsystem such that it will interoperate with JES2 or RSCS running on the Hercules IBM emulator.
 - **build-tieline-nos2.job** : a job to build the *TIELINE* subsystem such that it
 will interoperate with RBF on NOS 2.
-- **customize-auto.job** : a job that modifies PP programs *1DS* and *1SJ* so that
-they will operate correctly for this NOS 1.3 distribution.
-- **customize-plato.job** : a job to build the *PLATO* subsystem PP program named
-*PPA* so that it will operate correctly for this NOS 1.3 distribution.
-- **customize-runner.job** : a job to modify the *RUNNER* utility and associated
-management commands so that they will operate correctly for this NOS 1.3
-distribution.
-- **customize-sysui.job** : a job to modify the *SUI* command so that it will operate
-correctly for this NOS 1.3 distribution.
 
 The released deadstart tape used by `install.js` was built using all of these
 jobs except **build-tieline-ibm.job**, so there is no need to run any of these jobs
@@ -187,18 +179,27 @@ All of these jobs automatically edit the executables they produce into the file 
 
 ## Creating a New Deadstart Tape  
 The customization jobs insert the binaries they produce into the direct access file
-named `SYSTEM` in the catalog of user `INSTALL`. To create a new deadstart tape that includes the contents of `SYSTEM`, execute the following command:
+named `SYSTEM` in the catalog of user `INSTALL`. To create a new deadstart tape that includes the contents of `SYSTEM`, execute the following command at the `Operator> `
+prompt:
 
->`node make-ds-tape`
+>Operator> `make_ds_tape`
 
-`make-ds-tape.js` copies `SYSTEM` to a new tape image. The new tape image will be a
+`make_ds_tape` copies `SYSTEM` to a new tape image. The new tape image will be a
 file with relative path `tapes/newds.tap`. To restart NOS 1.3 with the new tape
-image, execute the following commands:
+image, first shut it down gracefully using the `shutdown` command:
 
->`node shutdown`
+>Operator> `shutdown`
 
->`mv tapes/ds.tap tapes/ods.tap`
+Then, when shutdown is complete, save the old deadstart tape image and activate the
+new one by renaming them, as in:
 
->`mv tapes/newds.tap tapes/ds.tap`
+| OS           | Command                            |
+|--------------|------------------------------------|
+| Linux/MacOS: | `mv tapes/ds.tap tapes/ods.tap`    |
+|              | `mv tapes/newds.tap tapes/ds.tap`  |
+| Windows:     | `ren tapes\ds.tap tapes\ods.tap`   |
+|              | `ren tapes\newds.tap tapes\ds.tap` |
 
->`../dtcyber`
+To restart the system using the new deadstart tape, use the `start.js` script, as in:
+
+>`node start`
