@@ -857,14 +857,10 @@ static void cr3447SwapInOut(CrContext *cc, char *fName)
         fnindex++;
         if (fnindex > 999)
             {
-            sprintf(outBuf, "(cr3447 ) Rename Failure on '%s' to '%s'(Retries > 999)", fName, fnwork);
+            sprintf(outBuf, "(cr3447 ) Rename Failure on '%s' to '%s'(Retries > 999)\n", fName, fnwork);
             opDisplay(outBuf);
             break;
             }
-        }
-    if (fnindex > 0)
-        {
-        opDisplay("\n");
         }
     }
 
@@ -911,7 +907,6 @@ void cr3447ShowStatus()
 
         cp = cp->nextUnit;
         }
-    opDisplay("\n");
     }
 
 /*
