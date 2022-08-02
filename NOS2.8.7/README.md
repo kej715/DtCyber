@@ -33,7 +33,9 @@ file).
 
 ## Installation Steps
 1. If not done already, use the appropriate *Makefile* in this directory's parent
-directory to build *DtCyber* and produce the *dtcyber* executable.
+directory to build *DtCyber* and produce the *dtcyber* executable. For Windows, a
+Visual Studio solution file is available. On Windows, you will also need to execute
+`npm install` manually in folders `stk` and `automation`.
 2. Start the automated installation by executing the following command. On
 Windows, you will probably need to enable the *dtcyber* application to use TCP ports
 21, 22, and 23 too.
@@ -50,30 +52,42 @@ shutting down and restarting a number of times to install the base NOS 2.8.7 ope
 system and all of the currently available optional products.
 
 After `install.js` completes, NOS 2.8.7 and all currently available optional products
-will be fully installed and ready to use, and the system will be left running in the
-background. You should be able to log into the system using your favorite Telnet client.
+will be fully installed and ready to use, and the system will be left running.
+You should be able to log into the system using your favorite Telnet client.
 When it asks for **FAMILY:**, press return. When it asks for **USER NAME:**, enter
 *INSTALL*. When it asks for **PASSWORD:**, enter *INSTALL* again. When you see the **/**
 prompt, the operating system is ready for you to enter commands. You may also login
 using **GUEST** as username and password. The installation process creates
 **GUEST** as an ordinary, non-privileged user account.
 
-Enter the following command to shutdown the system gracefully when you have finished
-playing with it, and you are ready to shut it down:
-
->`node shutdown`
+When the installation completes, NOS 2.8.7 will be running, and the command window will
+be left at the DtCyber `Operator> ` prompt. Enter the `exit` command or the `shutdown`
+command to shutdown the system gracefully when you have finished playing with it, and
+you are ready to shut it down.
 
 To start *DtCyber* and NOS 2.8.7 again in the future, enter the following command:
 
 | OS           | Command           |
 |--------------|-------------------|
-| Linux/MacOS: | `sudo ../dtcyber` |
-| Windows:     | `../dtcyber`      |
+| Linux/MacOS: | `sudo node start` |
+| Windows:     | `node start`      |
 
 That's it. You have a fully operational Control Data Cyber 865 supercomputer
 running the NOS 2.8.7 operating system, complete with ALGOL, APL, BASIC, COBOL, CYBIL,
 FORTRAN IV and V, LISP, PASCAL, PL/1, SNOBOL, SYMPL, COMPASS assembly language, and
 various other goodies. Welcome back to supercomputing in the 1980's!
+
+## Operator Command Extensions
+When installation completes successfully, and also when DtCyber is started using 
+`start.js`, the set of commands that may be entered at the `Operator> ` prompt is
+extended to include the following:
+
+- `exit` : exits the operator interface and initiates graceful shutdown of the system.
+- `install_product` (aliases `install`, `ip`) : installs one or more optional products
+on the system. Use `install list` to display the list of products available.
+- `make_ds_tape` (alias `mdt`) : creates a new deadstart tape that includes products
+installed by `install_product`.
+- `shutdown` : initiates graceful shutdown of the system.
 
 ## Continuing an Interrupted Installation
 The installation process tracks its progress and can continue from its last successful
@@ -87,35 +101,35 @@ interruption, use the `continue` option as in:
 | Windows:     | `node install continue`      |
 
 ## Installing Optional Products
-A script named `install-product.js` enables you to re/install optional software products
-for NOS 2.8.7. It also enables you to rebuild the base operating system itself and
-other products provided on the initial deadstart tape. `install-product.js` will download tape images automatically from public libraries on the web, as needed.
+The `install_product` command extension enables you to re/install optional software
+products for NOS 2.8.7. It also enables you to rebuild the base operating system itself
+and other products provided on the initial deadstart tape. `install_product` will download tape images automatically from public libraries on the web, as needed.
 
-To reveal a list of products that `install-product.js` can install, enter the
-following command:
+To reveal a list of products that `install_product` can install, enter the
+following command at the `Operator> ` prompt:
 
->`node install-product list`
+>Operator> `install list`
 
-Each line displayed begins with a product name which is followed by a short description of the product. To install a product, call `install-product.js` as in:
+Each line displayed begins with a product name which is followed by a short description of the product. To install a product, call `install_product` as in:
 
->`node install-product` *product-name*
+>Operator> `install` *product-name*
 
 For example:
 
->`node install-product algol68`
+>Operator> `install algol68`
 
 You may specify more than one product name on the command line as well, and
-`install-product.js` will install the multiple products requested. By default,
-`install-product.js` will not re-install a product that is already installed. You
+`install_product` will install the multiple products requested. By default,
+`install_product` will not re-install a product that is already installed. You
 can force it to re-install a product by specifying the `-f` command line option, as
 in:
 
->`node install-product -f algol68`
+>Operator> `install -f algol68`
 
 Finally, you may request all not-yet-installed products to be installed by
 specifying `all` as the product name, as in:
 
->`node install-product all`
+>Operator> `install all`
 
 New products are added to the repository from time to time, so this command is particularly useful for installing products that were not available when you first
 installed NOS 2.8.7 (or since the last time you executed the command).
@@ -173,30 +187,41 @@ The following 3rd-party products may be installed.
 
 These lists will grow, so revisit this page to see what new products have been added,
 use `git pull` to update the lists in your local repository clone, and then use
-`node install-product all` to install them.
+`install all` to install them.
 
 ## Creating a New Deadstart Tape  
-The jobs initiated by `install-product.js` insert the binaries they produce into the
+Jobs initiated by `install_product` insert the binaries they produce into the
 direct access file named `PRODUCT` in the catalog of user `INSTALL`, and they also
 update the file named `DIRFILE` to specify the system libraries with which the
 binaries are associated. To create a new deadstart tape that includes the contents
 of `PRODUCT`, execute the following command:
 
->`node make-ds-tape`
+>Operator> `make_ds_tape`
 
-`make-ds-tape.js` reads the current deadstart tape, calls `LIBEDIT` to replace or
+`make_ds_tape` reads the current deadstart tape, calls `LIBEDIT` to replace or
 add the contents of `PRODUCT` as directed by `DIRFILE`, and then writes the resulting
 file to a new tape image. The new tape image will be a file with path
-`NOS2.8.7/tapes/newds.tap`. To restart NOS 2.8.7 with the new tape image, execute the
-following commands:
+`NOS2.8.7/tapes/newds.tap`. To restart NOS 2.8.7 with the new tape image, first shut it
+down gracefully using the `shutdown` command:
 
->`node shutdown`
+>Operator> `shutdown`
 
->`mv tapes/ds.tap tapes/ods.tap`
+Then, when shutdown is complete, save the old deadstart tape image and activate the
+new one by renaming them, as in:
 
->`mv tapes/newds.tap tapes/ds.tap`
+| OS           | Command                            |
+|--------------|------------------------------------|
+| Linux/MacOS: | `mv tapes/ds.tap tapes/ods.tap`    |
+|              | `mv tapes/newds.tap tapes/ds.tap`  |
+| Windows:     | `ren tapes\ds.tap tapes\ods.tap`   |
+|              | `ren tapes\newds.tap tapes\ds.tap` |
 
-> `sudo ../dtcyber`
+To restart the system using the new deadstart tape, use the `start.js` script, as in:
+
+| OS           | Command           |
+|--------------|-------------------|
+| Linux/MacOS: | `sudo node start` |
+| Windows:     | `node start`      |
 
 ## Installing a Minimal System
 If you prefer to install a minimal NOS 2.8.7 system with a subset of optional products,
@@ -210,9 +235,9 @@ option when calling the `install.js` script, as in:
 
 The `basic` option causes `install.js` to install a minimal NOS 2.8.7 system without any
 optional products. To install optional products atop the basic system, use the
-`install-product.js` script, as in:
+`install_product` command, as in:
 
->`node install-product rbf5`
+>Operator> `install rbf5`
 
 In case a basic installation is interrupted before completing successfully, use the
 `continue` option to proceed from the point of interruption, as in:

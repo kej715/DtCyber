@@ -36,7 +36,9 @@ package managers support it as well.
 
 ## Installation Steps
 1. If not done already, use the appropriate *Makefile* in this directory's parent
-directory to build *DtCyber* and produce the *dtcyber* executable.
+directory to build *DtCyber* and produce the *dtcyber* executable. For Windows, a
+Visual Studio solution file is available. On Windows, you will also need to execute
+`npm install` manually in folder `automation`.
 2. Start the automated installation by executing the following command:
 
 >`node install`
@@ -44,20 +46,33 @@ directory to build *DtCyber* and produce the *dtcyber* executable.
 The process initiated by the *node* command will take some time to complete, perhaps
 as much as 15 - 20 minutes, depending upon your host system's speed. You will see
 *DtCyber* start, and NOS 1.3 will be deadstarted and installed. The system will be
-left running as a background process when installation is complete, and it will be
-ready to use. When you have finished playing with it, and you are ready to shut it
-down, you may shut it down gracefully using the following command:
+left running as a background process when installation is complete, and the command
+window will be left at the DtCyber `Operator> ` prompt. Enter the `exit` command or
+the `shutdown` command to shutdown the system gracefully when you have finished
+playing with it, and you are ready to shut it down.
 
->`node shutdown`
+To start *DtCyber* and NOS 1.3 again in the future, enter the following command:
 
-To start it again, use the following command:
-
->`../dtcyber`
+| OS           | Command           |
+|--------------|-------------------|
+| Linux/MacOS: | `sudo node start` |
+| Windows:     | `node start`      |
 
 That's it. You have a fully operational Control Data Cyber 173 supercomputer
 running the NOS 1.3 operating system, complete with APL, BASIC, COBOL, FORTRAN IV,
 LISP, PASCAL, SNOBOL, SYMPL, COMPASS assembly language, and PLATO. Welcome back to
 supercomputing in the 1980's!
+
+## Operator Command Extensions
+When installation completes successfully, and also when DtCyber is started using 
+`start.js`, the set of commands that may be entered at the `Operator> ` prompt is
+extended to include the following:
+
+- `exit` : exits the operator interface and initiates graceful shutdown of the
+system.
+- `make_ds_tape` (alias `mdt`) : creates a new deadstart tape.
+- `shutdown` : initiates graceful shutdown of the system.
+
 
 ## Interactive Login
 You should be able to log into the system using your favorite Telnet client. The
