@@ -18,6 +18,4 @@ EXIT.
 *** MOD1TM FAILED
 ***
 ~eor
-~include ../mods/TIELINE/1TL.common.mod
 ~include ../mods/TIELINE/1TL.nos2.mod
-*EDIT 1TL 
