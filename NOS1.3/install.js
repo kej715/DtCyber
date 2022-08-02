@@ -55,7 +55,7 @@ promise = promise
   "MODVAL,OP=Z./INSTALL,OF=7,DB=7,DS=7,FS=7,FC=7",
   "MODVAL,OP=Z./INSTALL,CS=7,CP=77B,CC=77B,DF=77B"
 ]))
-.then(() => dtc.say("Copy OPL485 to INSTALL catalog ..."))
+.then(() => dtc.say("Apply mods to OPL485, and copy it to INSTALL catalog ..."))
 .then(() => dtc.mount(13, 0, 1, "tapes/opl485.tap"))
 .then(() => dtc.runJob(11, 4, "decks/create-opl485.job", [51]))
 .then(() => dtc.say("Make a copy of SYSTEM to support customization ..."))
