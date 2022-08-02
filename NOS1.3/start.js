@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const cmdExtensions = require("./cmd-extensions");
 const DtCyber = require("../automation/DtCyber");
 
 const dtc = new DtCyber();
@@ -18,7 +19,7 @@ dtc.start({
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.say("Connected to DtCyber"))
 .then(() => dtc.say("Enter 'exit' command to exit and terminate system gracefully"))
-.then(() => dtc.engageOperator())
+.then(() => dtc.engageOperator(cmdExtensions))
 .then(() => dtc.shutdown())
 .then(() => {
   process.exit(0);

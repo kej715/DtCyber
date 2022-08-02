@@ -177,44 +177,52 @@ class DtCyber {
   /*
    * connect
    *
-   * Create a connection to the DtCyber operator interface. Looks for a cyber.ini in
-   * the current working directory or its parent, parses the file for a set_operator_port
-   * command, and attempts to connect to the port number defined by that command. Creates
-   * an instance of DtCyberStreamMgr to manage the connection that is established.
+   * Create a connection to the DtCyber operator interface. The port on which to connect
+   * may be specified as a parameter. If the port is not specified, the method looks for
+   * a cyber.ini in the current working directory or its parent, parses the file for a
+   * set_operator_port command, and attempts to connect to the port number defined by
+   * that command. Creates an instance of DtCyberStreamMgr to manage the connection that
+   * is established.
+   *
+   * Arguments:
+   *   port - optional port number
    *
    * Returns:
    *   A promise that is resolved when the connection has been established
    */
-  connect() {
+  connect(port) {
     const me = this;
     this.isExitOnEnd = true;
-    if (typeof this.operatorPort === "undefined") {
-      let path = null;
-      for (const p of ["./cyber.ini", "../cyber.ini"]) {
-        if (fs.existsSync(p)) {
-          path = p;
-          break;
-        }
-      }
-      if (path === null) {
-        throw new Error("cyber.ini not found");
-      }
-      const lines = fs.readFileSync(path, "utf8").split("\n");
-      for (const line of lines) {
-        let result = /^\s*set_operator_port\s+([0-9]+)/.exec(line);
-        if (result !== null) {
-          this.operatorPort = parseInt(result[1]);
-          break;
-        }
-      }
+    if (typeof port === "undefined") {
       if (typeof this.operatorPort === "undefined") {
-        throw new Error(`Operator port not found in ${path}`);
+        let path = null;
+        for (const p of ["./cyber.ini", "../cyber.ini"]) {
+          if (fs.existsSync(p)) {
+            path = p;
+            break;
+          }
+        }
+        if (path === null) {
+          throw new Error("cyber.ini not found");
+        }
+        const lines = fs.readFileSync(path, "utf8").split("\n");
+        for (const line of lines) {
+          let result = /^\s*set_operator_port\s+([0-9]+)/.exec(line);
+          if (result !== null) {
+            this.operatorPort = parseInt(result[1]);
+            break;
+          }
+        }
+        if (typeof this.operatorPort === "undefined") {
+          throw new Error(`Operator port not found in ${path}`);
+        }
       }
+      port = this.operatorPort;
     }
     this.streamMgrs.dtCyber = new DtCyberStreamMgr();
     this.connectDeadline = Date.now() + 2000;
     const doConnect = (callback) => {
-      me.socket = net.createConnection({port:me.operatorPort}, () => {
+      me.socket = net.createConnection({port:port}, () => {
         callback(null);
       });
       me.streamMgrs.dtCyber.setOutputStream(me.socket);
@@ -353,13 +361,28 @@ class DtCyber {
    * Begin serving as an intermediary between the user and the DtCyber
    * operator interface.
    *
+   * Arguments:
+   *   commands - optional array of commands to recognize. Each element
+   *              of the array is an object containing these properties:
+   *              names: array of names and aliases of the command
+   *              fn:    function implementing the command. Two parameters
+   *                     are passed to the function: a reference to this
+   *                     DtCyber object instance, and the remainder of the
+   *                     command line following the command token itself.
+   *                     The function is expected to return a promise that
+   *                     is resolved when the command is complete.
+   *              desc:  description of the command
+   *
    * Returns:
    *   A promise that is resolved when stdin is closed.
    */
-  engageOperator() {
+  engageOperator(commands) {
     const me = this;
+    if (typeof commands === "undefined") {
+      commands = [];
+    }
     return new Promise((resolve, reject) => {
-      const mgr = me.getStreamMgr();
+      let mgr = me.getStreamMgr();
       let str = "";
       mgr.startConsumer(data => {
         process.stdout.write(data);
@@ -372,9 +395,62 @@ class DtCyber {
           if (eoli === -1) break;
           let line = str.substring(0, eoli).trim();
           str = str.substring(eoli + 1);
-          if (line.toLowerCase() === "exit") {
+          let si = line.indexOf(" ");
+          let cmdToken = line;
+          let rest = "";
+          if (si !== -1) {
+            cmdToken = line.substring(0, si);
+            rest = line.substring(si + 1).trim();
+          }
+          cmdToken = cmdToken.toLowerCase();
+          let cmdDefn = null;
+          for (const defn of commands) {
+            if (defn.names.indexOf(cmdToken) !== -1) {
+              cmdDefn = defn;
+              break;
+            }
+          }
+          if (cmdDefn !== null) {
+            cmdDefn.fn(me, rest)
+            .then(() => {
+              mgr = me.getStreamMgr();
+              mgr.startConsumer(data => {
+                process.stdout.write(data);
+                return true;
+              });
+              mgr.write("\n");
+            });
+            break;
+          }
+          else if (cmdToken === "exit") {
             resolve();
             break;
+          }
+          else if (cmdToken === "help" || cmdToken === "?") {
+            if (rest === "") {
+              process.stdout.write("---------------------------\n");
+              process.stdout.write("List of extended commands:\n");
+              process.stdout.write("---------------------------\n\n");
+              for (const defn of commands) {
+                for (const name of defn.names) {
+                  process.stdout.write(`    > ${name}\n`);
+                }
+              }
+            }
+            else {
+              let cmdDefn = null;
+              for (const defn of commands) {
+                if (defn.names.indexOf(rest) !== -1) {
+                  cmdDefn = defn;
+                  break;
+                }
+              }
+              if (cmdDefn !== null) {
+                process.stdout.write(`\n    > ${cmdDefn.desc}\n`);
+                mgr.write("\n");
+                break;
+              }
+            }
           }
           mgr.write(`${line}\n`);
         }
@@ -512,7 +588,8 @@ class DtCyber {
   findDtCyber() {
     const paths = process.platform === "win32"
       ? ["../x64/Release/DtCyber/DtCyber.exe", "../Win32/Release/DtCyber/DtCyber.exe",
-         "../x64/Debug/DtCyber/DtCyber.exe", "../Win32/Debug/DtCyber/DtCyber.exe"]
+         "../x64/Debug/DtCyber/DtCyber.exe", "../Win32/Debug/DtCyber/DtCyber.exe",
+         "./dtcyber.exe", "../dtcyber.exe"]
       : ["./dtcyber", "../dtcyber", "../bin/dtcyber"];
     for (const path of paths) {
       if (fs.existsSync(path)) return path;

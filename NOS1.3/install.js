@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
-const fs      = require("fs");
-const DtCyber = require("../automation/DtCyber");
+const cmdExtensions = require("./cmd-extensions");
+const DtCyber       = require("../automation/DtCyber");
+const fs            = require("fs");
 
 const dtc = new DtCyber();
 
@@ -140,7 +141,7 @@ promise = promise
 .then(() => dtc.expect([{ re: /Operator> $/ }]))
 .then(() => dtc.say("Installation of NOS 1.3 complete"))
 .then(() => dtc.say("Enter 'exit' command to exit and shutdown gracefully"))
-.then(() => dtc.engageOperator())
+.then(() => dtc.engageOperator(cmdExtensions))
 .then(() => dtc.shutdown())
 .then(() => {
   process.exit(0);
