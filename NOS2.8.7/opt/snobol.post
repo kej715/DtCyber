@@ -1,2 +1,25 @@
-# Copy SNOBOL documentation file to LIBRARY catalog
-dis "ATTACH,SD=SNODOC.;SUI,377776.;PURGE,SNODOC/NA.;DEFINE,SNODOC/CT=PU,AC=Y,M=R.;COPY,SD,SNODOC." 1
+#!/usr/bin/env node
+//
+// Copy SNOBOL documentation file to LIBRARY catalog
+//
+
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.dis([
+  "ATTACH,SD=SNODOC.",
+  "SUI,377776.",
+  "PURGE,SNODOC/NA.",
+  "DEFINE,SNODOC/CT=PU,AC=Y,M=R.",
+  "COPY,SD,SNODOC."
+], 1))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

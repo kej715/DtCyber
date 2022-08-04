@@ -286,7 +286,7 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         }
 
-    fprintf(stderr, "(cp3446 ) Card Code selected '%s'\n", (charset == asciiTo029) ? "029" : "026");
+    fprintf(stdout, "(cp3446 ) Card Code selected '%s'\n", (charset == asciiTo029) ? "029" : "026");
 
     memset(cc->convTable, ' ', sizeof(cc->convTable));
     for (int i = 040; i < 0177; i++)
@@ -330,7 +330,7 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void cp3446RemoveCards(char *params, FILE *out)
+void cp3446RemoveCards(char *params)
     {
     CpContext *cc;
     DevSlot   *dp;
@@ -342,8 +342,8 @@ void cp3446RemoveCards(char *params, FILE *out)
     int isuffix;
 
     struct tm   t;
-    char        fname[MaxFSPath];
-    char        fnameNew[MaxFSPath];
+    char        fname[MaxFSPath+64];
+    char        fnameNew[MaxFSPath+64];
     static char msgBuf[80] = "";
 
     bool renameOK;
@@ -521,7 +521,7 @@ static FcStatus cp3446Func(PpWord funcCode)
         channelid = (int)active3000Device->channel->id;
         deviceid  = (int)active3000Device->eqNo;
         sprintf(cpdevid, "%o,%o", channelid, deviceid);
-        cp3446RemoveCards(cpdevid, stdout);
+        cp3446RemoveCards(cpdevid);
     //  fall through to "FcProcessed" response
 
     case FcCp3446SelectOffset:
@@ -914,9 +914,10 @@ static char *cp3446Func2String(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void cp3446ShowStatus(FILE *out)
+void cp3446ShowStatus()
     {
     CpContext *cp = firstUnit;
+    char outBuf[MaxFSPath+128];
 
     if (cp == NULL)
         {
@@ -924,11 +925,11 @@ void cp3446ShowStatus(FILE *out)
         }
 
 
-    fputs("\n    > Card Punch (cp3446) Status:\n", out);
+    opDisplay("\n    > Card Punch (cp3446) Status:\n");
 
     while (cp)
         {
-        fprintf(out, "    >   CH %02o EQ %02o UN %02o Col %02i Mode(%s) RAW(%s) Path '%s'\n",
+        sprintf(outBuf, "    >   CH %02o EQ %02o UN %02o Col %02i Mode(%s) RAW(%s) Path '%s'\n",
                 cp->channelNo,
                 cp->eqNo,
                 cp->unitNo,
@@ -936,6 +937,7 @@ void cp3446ShowStatus(FILE *out)
                 cp->binary ? "Char " : "Bin  ",
                 cp->rawCard ? "Yes" : "No ",
                 cp->extPath);
+        opDisplay(outBuf);
 
         cp = cp->nextUnit;
         }

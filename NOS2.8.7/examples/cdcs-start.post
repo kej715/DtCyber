@@ -1,5 +1,21 @@
-# Start the CDCS subssystem.
-#
-dsd "\[IDLE,CDC."
-sleep 5
-dsd "\[CDC."
+#!/usr/bin/env node
+//
+// Start the CDCS subssystem.
+//
+
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.dsd("[IDLE,CDC."))
+.then(() => dtc.sleep(5000))
+.then(() => dtc.dsd("[CDC."))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

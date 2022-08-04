@@ -1,12 +1,26 @@
-# Create WWW user account
-set cmds {
-    "MODVAL,OP=Z./WWW,FUI=100B,PW=WWWX,RL=ALL,AW=ALL"
-    "MODVAL,OP=Z./WWW,AP=NUL,AP=IAF,IS=BATCH"
-}
-dis [join $cmds ";"]
+#!/usr/bin/env node
+//
+// Create WWW user account, enable startup of TCP/IP applications,
+// and create the sample INDEX file for the HTTP server.
+//
 
-# Run job to enable startup of applications in NAMSTRT
-run_job 12 4 "opt/ncctcp-namstrt.job"
+const DtCyber = require("../../automation/DtCyber");
 
-# Run job to create the sample INDEX file for the HTTP server
-run_job 12 4 "opt/ncctcp-www-index.job"
+const dtc = new DtCyber();
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.dis([
+  "MODVAL,OP=Z./WWW,FUI=100B,PW=WWWX,RL=ALL,AW=ALL",
+  "MODVAL,OP=Z./WWW,AP=NUL,AP=IAF,IS=BATCH"
+]))
+.then(() => dtc.runJob(12, 4, "opt/ncctcp-namstrt.job"))
+.then(() => dtc.runJob(12, 4, "opt/ncctcp-www-index.job"))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

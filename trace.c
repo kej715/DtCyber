@@ -515,7 +515,7 @@ void traceCpu(u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
         switch (addrMode)
             {
         case CN:
-            sprintf(str, decode[opFm].mnemonic);
+            strcpy(str, decode[opFm].mnemonic);
             break;
 
         case CK:

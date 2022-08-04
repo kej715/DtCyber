@@ -376,6 +376,12 @@ static void startHelpers(void)
     while ((line = initGetNextLine()) != NULL)
         {
         sprintf(command, "%s start", line);
+#if defined(_WIN32)
+        for (char *cp = command; *cp != '\0'; cp++)
+            {
+            if (*cp == '/') *cp = '\\';
+            }
+#endif
         rc = system(command);
         if (rc == 0)
             {
@@ -410,6 +416,12 @@ static void stopHelpers(void)
     while ((line = initGetNextLine()) != NULL)
         {
         sprintf(command, "%s stop", line);
+#if defined(_WIN32)
+        for (char *cp = command; *cp != '\0'; cp++)
+            {
+            if (*cp == '/') *cp = '\\';
+            }
+#endif
         rc = system(command);
         if (rc == 0)
             {
@@ -515,8 +527,11 @@ static void opExit()
     {
     char check;
 
-    printf("Press ENTER to Exit");
-    check = (char)getchar();
+    if (_isatty(_fileno(stdin)))
+        {
+        printf("Press ENTER to Exit");
+        check = (char)getchar();
+        }
     }
 
 #endif

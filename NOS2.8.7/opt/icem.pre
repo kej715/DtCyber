@@ -1,6 +1,26 @@
-dsd "\[UNLOAD,51."
-dsd "\[UNLOAD,52."
-dsd "\[!"
-mount "13,0,1" "opt/tapes/REL68.tap"
-mount "13,0,2" "opt/tapes/REL68C.tap"
-sleep 5
+#!/usr/bin/env node
+//
+// Mount ICEM release tapes
+//
+
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.dsd([
+  "[UNLOAD,51.",
+  "[UNLOAD,52.",
+  "[!"
+]))
+.then(() => dtc.mount(13, 0, 1, "opt/tapes/REL68.tap"))
+.then(() => dtc.mount(13, 0, 2, "opt/tapes/REL68C.tap"))
+.then(() => dtc.sleep(5000))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

@@ -410,7 +410,7 @@ void mt5744Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     mt5744ResetUnit(tp);
     dp->context[unitNo]       = tp;
-    tp->controller            = cp;
+    tp->controller            = dp->controllerContext;
     tp->state                 = StAcsDisconnected;
     tp->nextConnectionAttempt = 0;
     tp->fd = 0;
@@ -493,40 +493,43 @@ void mt5744Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void mt5744ShowTapeStatus(FILE *out)
+void mt5744ShowTapeStatus()
     {
     TapeParam *tp = firstTape;
+    char      outBuf[400];
 
     while (tp)
         {
-        fprintf(out, "(mt5744 ) MT5744 on %o,%o,%o", tp->channelNo, tp->eqNo, tp->unitNo);
+        sprintf(outBuf, "(mt5744 ) MT5744 on %o,%o,%o", tp->channelNo, tp->eqNo, tp->unitNo);
+        opDisplay(outBuf);
         switch (tp->state)
             {
         case StAcsDisconnected:
-            fputs("  (disconnected)\n", out);
+            opDisplay("  (disconnected)\n");
             break;
 
         case StAcsConnecting:
-            fputs("  (connecting)\n", out);
+            opDisplay("  (connecting)\n");
             break;
 
         case StAcsRegistering:
-            fputs("  (registering)\n", out);
+            opDisplay("  (registering)\n");
             break;
 
         case StAcsReady:
             if (tp->volumeName[0])
                 {
-                fprintf(out, ",%s,%s\n", tp->isWriteEnabled ? "w" : "r", tp->volumeName);
+                sprintf(outBuf, ",%s,%s\n", tp->isWriteEnabled ? "w" : "r", tp->volumeName);
+                opDisplay(outBuf);
                 }
             else
                 {
-                fputs("  (idle)\n", out);
+                opDisplay("  (idle)\n");
                 }
             break;
 
         default:
-            fputs("  (unknown state)\n", out);
+            opDisplay("  (unknown state)\n");
             break;
             }
 
@@ -2173,7 +2176,18 @@ static void mt5744ReadRequestCallback(TapeParam *tp)
 **------------------------------------------------------------------------*/
 static void mt5744RegisterUnit(TapeParam *tp)
     {
-    tp->outputBuffer.in  = sprintf((char *)&tp->outputBuffer.data, "REGISTER %s\n", tp->driveName);
+    u8 *bp;
+    size_t len;
+
+    bp = tp->outputBuffer.data;
+    len = strlen(tp->driveName);
+    memcpy(bp, "REGISTER ", 9);
+    bp += 9;
+    memcpy(bp, tp->driveName, len);
+    bp += len;
+    *bp = '\n';
+
+    tp->outputBuffer.in  = len + 10;
     tp->outputBuffer.out = 0;
     tp->state            = StAcsRegistering;
     tp->callback         = mt5744RegisterUnitRequestCallback;

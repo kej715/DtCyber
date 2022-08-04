@@ -311,26 +311,27 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void lp1612ShowStatus(FILE *out)
+void lp1612ShowStatus()
     {
     LpContext1612 *lc = firstLp1612;
+    char          outBuf[MaxFSPath+128];
 
     if (lc == NULL)
         {
         return;
         }
 
-    fputs("\n    > Line Printer (lp1612) Status:\n", out);
+    opDisplay("\n    > Line Printer (lp1612) Status:\n");
 
     while (lc)
         {
-        fprintf(out, "    > CH %02o EQ %02o UN %02o Mode %s Path '%s'\n",
+        sprintf(outBuf, "    > CH %02o EQ %02o UN %02o Mode %s Path '%s'\n",
                 lc->channelNo,
                 lc->eqNo,
                 lc->unitNo,
                 lc->extUseANSI ? "ANSI" : "ASCII",
                 lc->extPath);
-
+        opDisplay(outBuf);
         lc = lc->nextUnit;
         }
     }
@@ -344,22 +345,20 @@ void lp1612ShowStatus(FILE *out)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void lp1612RemovePaper(char *params, FILE *out)
+void lp1612RemovePaper(char *params)
     {
-    DevSlot       *dp;
-    LpContext1612 *lc;
-    time_t        currentTime;
-
-    int numParam;
     int channelNo;
+    time_t        currentTime;
+    DevSlot       *dp;
     int equipmentNo;
+    char fName[MaxFSPath+128];
+    char fNameNew[MaxFSPath+128];
     int iSuffix;
-
-    struct tm t;
-
-    char fName[MaxFSPath];
-    char fNameNew[MaxFSPath];
+    LpContext1612 *lc;
+    int numParam;
+    char outBuf[MaxFSPath+256];
     bool renameOK;
+    struct tm t;
 
 
     /*
@@ -372,21 +371,21 @@ void lp1612RemovePaper(char *params, FILE *out)
     */
     if (numParam != 2)
         {
-        printf("(lp1612 ) Not enough or invalid parameters\n");
+        opDisplay("(lp1612 ) Not enough or invalid parameters\n");
 
         return;
         }
 
     if ((channelNo < 0) || (channelNo >= MaxChannels))
         {
-        printf("(lp1612 ) Invalid channel no\n");
+        opDisplay("(lp1612 ) Invalid channel no\n");
 
         return;
         }
 
     if ((equipmentNo < 0) || (equipmentNo >= MaxEquipment))
         {
-        printf("(lp1612 ) Invalid equipment no\n");
+        opDisplay("(lp1612 ) Invalid equipment no\n");
 
         return;
         }
@@ -408,9 +407,9 @@ void lp1612RemovePaper(char *params, FILE *out)
     if (dp->fcb[0] == NULL)
         {
         renameOK = TRUE;        //  Since nothing was open - we're not renaming
-        printf("(lp1612 ) lp1612RemovePaper: FCB is Null on channel %o equipment %o\n",
-               dp->channel->id,
-               dp->eqNo);
+        fprintf(stderr, "(lp1612 ) lp1612RemovePaper: FCB is Null on channel %o equipment %o\n",
+                dp->channel->id,
+                dp->eqNo);
         //  proceed to attempt to open a new FCB
         }
     else
@@ -419,7 +418,8 @@ void lp1612RemovePaper(char *params, FILE *out)
 
         if (ftell(dp->fcb[0]) == 0)
             {
-            printf("(lp1612 ) No output has been written on channel %o and equipment %o\n", channelNo, equipmentNo);
+            sprintf(outBuf, "(lp1612 ) No output has been written on channel %o and equipment %o\n", channelNo, equipmentNo);
+            opDisplay(outBuf);
 
             return;
             }
@@ -455,15 +455,15 @@ void lp1612RemovePaper(char *params, FILE *out)
                 break;
                 }
 
-            printf("(lp1612 ) Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
-                   fName,
-                   fNameNew,
-                   strerror(errno),
-                   iSuffix);
+            fprintf(stderr, "(lp1612 ) Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
+                    fName,
+                    fNameNew,
+                    strerror(errno),
+                    iSuffix);
             }
         if (iSuffix > 0)
             {
-            printf("\n");
+            opDisplay("\n");
             }
         }
 
@@ -477,12 +477,13 @@ void lp1612RemovePaper(char *params, FILE *out)
     */
     if (dp->fcb[0] == NULL)
         {
-        printf("(lp1612 ) Failed to open %s\n", fName);
+        fprintf(stderr, "(lp1612 ) Failed to open %s\n", fName);
 
         return;
         }
 
-    printf("(lp1612 ) Paper removed and available on '%s'\n", fNameNew);
+    sprintf(outBuf, "(lp1612 ) Paper removed and available on '%s'\n", fNameNew);
+    opDisplay(outBuf);
     }
 
 /*--------------------------------------------------------------------------
@@ -505,9 +506,9 @@ static FcStatus lp1612Func(PpWord funcCode)
     //          and the file fails to be properly re-opened.
     if (activeDevice->fcb[0] == NULL)
         {
-        printf("(lp1612 ) lp1612Func: FCB is Null on channel %o equipment %o\n",
-               activeDevice->channel->id,
-               activeDevice->eqNo);
+        fprintf(stderr, "(lp1612 ) lp1612Func: FCB is Null on channel %o equipment %o\n",
+                activeDevice->channel->id,
+                activeDevice->eqNo);
 
         return (FcProcessed);
         }
@@ -623,9 +624,9 @@ static void lp1612Io(void)
     //          and the file fails to be properly re-opened.
     if (activeDevice->fcb[0] == NULL)
         {
-        printf("(lp1612 ) lp1612Io: FCB is Null on channel %o equipment %o\n",
-               activeDevice->channel->id,
-               activeDevice->eqNo);
+        fprintf(stderr, "(lp1612 ) lp1612Io: FCB is Null on channel %o equipment %o\n",
+                activeDevice->channel->id,
+                activeDevice->eqNo);
 
         return;
         }
@@ -691,9 +692,9 @@ static void lp1612Disconnect(void)
     //          and the file fails to be properly re-opened.
     if (activeDevice->fcb[0] == NULL)
         {
-        printf("(lp1612 ) lp1612Disconnect: FCB is Null on channel %o equipment %o\n",
-               activeDevice->channel->id,
-               activeDevice->eqNo);
+        fprintf(stderr, "(lp1612 ) lp1612Disconnect: FCB is Null on channel %o equipment %o\n",
+                activeDevice->channel->id,
+                activeDevice->eqNo);
 
         return;
         }

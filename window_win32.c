@@ -378,7 +378,7 @@ static BOOL windowCreate(void)
     windowName[0] = '\0';
     strcat(windowName, displayName);
     strcat(windowName, " - " DtCyberVersion);
-    strcat(windowName, " - " DTCyberBuildDate);
+    strcat(windowName, " - " DtCyberBuildDate);
 
 #if CcLargeWin32Screen == 1
     hWnd = CreateWindow(

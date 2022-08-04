@@ -1,6 +1,7 @@
 ~*
-~*  This job copies OPL485 from tape to a direct access
-~*  in the catalog of user INSTALL.
+~*  This job copies OPL485 from tape, applies a set of mods,
+~*  and writes the modified OPL to a direct access in the
+~*  catalog of user INSTALL.
 ~*
 OPL485.
 $USER,INSTALL,INSTALL.
@@ -11,7 +12,10 @@ $SETASL,7777.
 $PURGE,OPL485/NA.
 $DEFINE,OPL485/CT=PU,M=R.
 $ASSIGN,${1},TAPE,LB=KL,F=I.
-$COPY,TAPE,OPL485.
+$COPY,TAPE,OPL.
+$COPY,INPUT,MODS.
+$REWIND,OPL,MODS.
+$MODIFY,C=0,N=OPL485,LO=E,F,Z./*READ,MODS,*
 ***
 *** OPL485 COMPLETE
 ***
@@ -19,3 +23,18 @@ EXIT.
 ***
 *** OPL485 FAILED
 ***
+~eor
+NCCAUTO
+~include ../mods/AUTO/1DS.mod
+~eor
+NCCPPA
+~include ../mods/PLATO/PPA.mod
+~eor
+NCCRUNR
+~include ../mods/RUNNER/RUNNER.mod
+~eor
+NCCSUI
+~include ../mods/SYSUI/SYSUI.mod
+~eor
+NCC1TL
+~include ../mods/TIELINE/1TL.common.mod

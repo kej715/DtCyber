@@ -3187,16 +3187,21 @@ static void cdcnetUdpSendUplineData(Gcb *gp)
         }
 
     recvSize = sizeof(bp->data) - BlkOffUdpDataIndData;
-    n        = recvfrom(gp->connFd, bp->data + BlkOffUdpDataIndData, recvSize, MSG_WAITALL, (struct sockaddr *)&client, &len);
+    len      = sizeof(client);
+    n        = recvfrom(gp->connFd, bp->data + BlkOffUdpDataIndData, recvSize, 0, (struct sockaddr*)&client, &len);
     if (n < 1)
         {
 #if DEBUG
         if (n == -1)
             {
+#if defined(_WIN32)
+            fprintf(cdcnetLog, "socket error %d: CN=%02X\n", WSAGetLastError(), gp->cn);
+#else
             fprintf(cdcnetLog, "%s, CN=%02X\n", strerror(errno), gp->cn);
+#endif
             }
 #endif
-
+        npuBipBufRelease(bp);
         return;
         }
     ipAddress = ntohl(client.sin_addr.s_addr);

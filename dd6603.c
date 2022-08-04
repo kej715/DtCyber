@@ -596,21 +596,22 @@ static char *dd6603Func2String(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void dd6603ShowDiskStatus(FILE *out)
+void dd6603ShowDiskStatus()
     {
     DiskParam *dp = firstDisk;
     int       i   = 0;
+    char      outBuf[MaxFSPath+128];
 
     if (dp == NULL)
         {
         return;
         }
 
-    fputs("\n    > Disk Drive (dd6603) Status:\n", out);
+    opDisplay("\n    > Disk Drive (dd6603) Status:\n");
 
     while (dp)
         {
-        fprintf(out, "    >   #%02d. CH %02o EQ %02o UN %02o HD %02o SECT 0x%06x TRK 0x%06o FN '%s'\n",
+        sprintf(outBuf, "    >   #%02d. CH %02o EQ %02o UN %02o HD %02o SECT 0x%06x TRK 0x%06o FN '%s'\n",
                 i,
                 dp->channelNo,
                 dp->eqNo,
@@ -619,6 +620,7 @@ void dd6603ShowDiskStatus(FILE *out)
                 dp->sector,
                 dp->track,
                 dp->fileName);
+        opDisplay(outBuf);
         dp = dp->nextDisk;
         i++;
         }

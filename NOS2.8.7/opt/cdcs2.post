@@ -1,13 +1,29 @@
-# Create CDCS user account
-set cmds {
-    "GET,CDC."
-    "SUI,377777."
-    "REPLACE,CDC."
-    "MODVAL,OP=Z./DBCNTLX,PW=DBCNTLX,RL=ALL,AW=ALL"
-    "MODVAL,OP=Z./DBCNTLX,AP=NUL,AP=IAF,IS=BATCH"
-    "MODVAL,OP=Z./CDCS,PW=CDCS,RL=ALL,AW=ALL"
-    "MODVAL,OP=Z./CDCS,AP=NUL,AP=IAF,IS=BATCH"
-}
-dis [join $cmds ";"] 1
+#!/usr/bin/env node
+//
+// Create CDCS user account
+//
 
-run_job 12 4 opt/enable-subsys.job CDC
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.dis([
+  "GET,CDC.",
+  "SUI,377777.",
+  "REPLACE,CDC.",
+  "MODVAL,OP=Z./DBCNTLX,PW=DBCNTLX,RL=ALL,AW=ALL",
+  "MODVAL,OP=Z./DBCNTLX,AP=NUL,AP=IAF,IS=BATCH",
+  "MODVAL,OP=Z./CDCS,PW=CDCS,RL=ALL,AW=ALL",
+  "MODVAL,OP=Z./CDCS,AP=NUL,AP=IAF,IS=BATCH"
+], 1))
+.then(() => dtc.runJob(12, 4, "opt/enable-subsys.job", "CDC"))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

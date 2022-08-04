@@ -56,7 +56,7 @@ void channelIn(void);
 void channelSetFull(void);
 void channelSetEmpty(void);
 void channelStep(void);
-void channelDisplayContext(FILE *out);
+void channelDisplayContext();
 
 /*
 **  console.c
@@ -80,26 +80,26 @@ void cpuPpWriteMem(u32 address, CpWord data);
 **  cr405.c
 */
 void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, FILE *out, char *params);
-void cr405PostProcess(char *fname, int channelNo, int equipmentNo, FILE *out, char *params);
-void cr405LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char *params);
-void cr405ShowStatus(FILE *out);
+void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params);
+void cr405PostProcess(char *fname, int channelNo, int equipmentNo, char *params);
+void cr405LoadCards(char *fname, int channelNo, int equipmentNo, char *params);
+void cr405ShowStatus();
 
 /*
 **  cp3446.c
 */
 void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void cp3446RemoveCards(char *params, FILE *out);
-void cp3446ShowStatus(FILE *out);
+void cp3446RemoveCards(char *params);
+void cp3446ShowStatus();
 
 /*
 **  cr3447.c
 */
 void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void cr3447GetNextDeck(char *fname, int channelNo, int equipmentNo, FILE *out, char *params);
-void cr3447PostProcess(char *fname, int channelNo, int equipmentNo, FILE *out, char *params);
-void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, FILE *out, char *params);
-void cr3447ShowStatus(FILE *out);
+void cr3447GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params);
+void cr3447PostProcess(char *fname, int channelNo, int equipmentNo, char *params);
+void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, char *params);
+void cr3447ShowStatus();
 
 /*
 **  cray_station.c
@@ -110,7 +110,7 @@ void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 **  dd6603.c
 */
 void dd6603Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void dd6603ShowDiskStatus(FILE *out);
+void dd6603ShowDiskStatus();
 
 /*
 **  dd8xx.c
@@ -118,14 +118,14 @@ void dd6603ShowDiskStatus(FILE *out);
 void dd844Init_2(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void dd844Init_4(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void dd885Init_1(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void dd8xxShowDiskStatus(FILE *out);
+void dd8xxShowDiskStatus();
 
 
 /*
 **  dd885_42.c
 */
 void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void dd885_42ShowDiskStatus(FILE *out);
+void dd885_42ShowDiskStatus();
 
 /*
 **  dcc6681.c
@@ -190,16 +190,16 @@ void ilrInit(u8 registerSize);
 **  lp1612.c
 */
 void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void lp1612RemovePaper(char *params, FILE *out);
-void lp1612ShowStatus(FILE *out);
+void lp1612RemovePaper(char *params);
+void lp1612ShowStatus();
 
 /*
 **  lp3000.c
 */
 void lp501Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams);
 void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams);
-void lp3000RemovePaper(char *params, FILE *out);
-void lp3000ShowStatus(FILE *out);
+void lp3000RemovePaper(char *params);
+void lp3000ShowStatus();
 
 /*
 **  log.c
@@ -229,9 +229,9 @@ void msuFrendSendInterruptToFrend(void);
 */
 void mt362xInit_7(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void mt362xInit_9(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void mt362xLoadTape(char *params, FILE *out);
-void mt362xUnloadTape(char *params, FILE *out);
-void mt362xShowTapeStatus(FILE *out);
+void mt362xLoadTape(char *params);
+void mt362xUnloadTape(char *params);
+void mt362xShowTapeStatus();
 
 /*
 **  mt607.c
@@ -243,24 +243,24 @@ void mt607Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 */
 void mt669Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void mt669Terminate(DevSlot *dp);
-void mt669LoadTape(char *params, FILE *out);
-void mt669UnloadTape(char *params, FILE *out);
-void mt669ShowTapeStatus(FILE *out);
+void mt669LoadTape(char *params);
+void mt669UnloadTape(char *params);
+void mt669ShowTapeStatus();
 
 /*
 **  mt679.c
 */
 void mt679Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void mt679Terminate(DevSlot *dp);
-void mt679LoadTape(char *params, FILE *out);
-void mt679UnloadTape(char *params, FILE *out);
-void mt679ShowTapeStatus(FILE *out);
+void mt679LoadTape(char *params);
+void mt679UnloadTape(char *params);
+void mt679ShowTapeStatus();
 
 /*
 **  mt5744.c
 */
 void mt5744Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void mt5744ShowTapeStatus(FILE *out);
+void mt5744ShowTapeStatus();
 
 /*
 **  mux6676.c
@@ -288,9 +288,10 @@ int npuBipBufCount(void);
 /*
 **  operator.c
 */
+void opCmdLoadCards(bool help, char *cmdParams);
+void opDisplay(char *msg);
 void opInit(void);
 void opRequest(void);
-void opCmdLoadCards(bool help, char *cmdParams);
 
 /*
 **  pci_channel_{win32,linux}.c

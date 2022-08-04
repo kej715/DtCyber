@@ -1,2 +1,25 @@
-# Copy UTLISP documentation file to LIBRARY catalog
-dis "ATTACH,LD=LISPDOC.;SUI,377776.;PURGE,LISPDOC/NA.;DEFINE,LISPDOC/CT=PU,AC=Y,M=R.;COPY,LD,LISPDOC." 1
+#!/usr/bin/env node
+//
+// Copy UTLISP documentation file to LIBRARY catalog
+//
+
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.dis([
+  "ATTACH,LD=LISPDOC.",
+  "SUI,377776.",
+  "PURGE,LISPDOC/NA.",
+  "DEFINE,LISPDOC/CT=PU,AC=Y,M=R.",
+  "COPY,LD,LISPDOC."
+], 1))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

@@ -1983,20 +1983,21 @@ static char *dd8xxFunc2String(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void dd8xxShowDiskStatus(FILE *out)
+void dd8xxShowDiskStatus()
     {
     DiskParam *dp = firstDisk;
+    char      outBuf[MaxFSPath+128];
 
     if (dp == NULL)
         {
         return;
         }
 
-    fputs("\n    > Disk Drive (dd8xx) Status:\n", out);
+    opDisplay("\n    > Disk Drive (dd8xx) Status:\n");
 
     while (dp)
         {
-        fprintf(out, "    >   #%02d. CH %02o EQ %02o UN %02o DT %s CYL 0x%06x TRK 0x%06o FN '%s'\n",
+        sprintf(outBuf, "    >   #%02d. CH %02o EQ %02o UN %02o DT %s CYL 0x%06x TRK 0x%06o FN '%s'\n",
                 dp->diskNo,
                 dp->channelNo,
                 dp->eqNo,
@@ -2005,6 +2006,7 @@ void dd8xxShowDiskStatus(FILE *out)
                 dp->cylinder,
                 dp->track,
                 dp->fileName);
+        opDisplay(outBuf);
         dp = dp->nextDisk;
         }
     }

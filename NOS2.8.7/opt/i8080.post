@@ -1,15 +1,31 @@
-# Copy I8080 executables and supporting files to LIBRARY catalog
-set cmds {
-  "GET,CPMBOOT,INTP80X,MAC80X,PLM1X,PLM2X."
-  "ATTACH,A=CPMDSKA,B=CPMDSKB,I=CPMDSKI."
-  "SUI,377776."
-  "PURGE,CPMBOOT,INTP80X,MAC80X,PLM1X,PLM2X/NA."
-  "PURGE,CPMDSKA,CPMDSKB,CPMDSKI/NA."
-  "SAVE,CPMBOOT,INTP80X,MAC80X/CT=PU,AC=Y."
-  "SAVE,PLM1X,PLM2X/CT=PU,AC=Y."
-  "DEFINE,CPMDSKA,CPMDSKB,CPMDSKI/CT=PU,AC=Y."
-  "COPY,A,CPMDSKA."
-  "COPY,B,CPMDSKB."
+#!/usr/bin/env node
+//
+// Copy I8080 executables and supporting files to LIBRARY catalog
+//
+
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.dis([
+  "GET,CPMBOOT,INTP80X,MAC80X,PLM1X,PLM2X.",
+  "ATTACH,A=CPMDSKA,B=CPMDSKB,I=CPMDSKI.",
+  "SUI,377776.",
+  "PURGE,CPMBOOT,INTP80X,MAC80X,PLM1X,PLM2X/NA.",
+  "PURGE,CPMDSKA,CPMDSKB,CPMDSKI/NA.",
+  "SAVE,CPMBOOT,INTP80X,MAC80X/CT=PU,AC=Y.",
+  "SAVE,PLM1X,PLM2X/CT=PU,AC=Y.",
+  "DEFINE,CPMDSKA,CPMDSKB,CPMDSKI/CT=PU,AC=Y.",
+  "COPY,A,CPMDSKA.",
+  "COPY,B,CPMDSKB.",
   "COPY,I,CPMDSKI."
-}
-dis [join $cmds ";"] 1
+], 1))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

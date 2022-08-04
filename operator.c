@@ -36,19 +36,20 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <ctype.h>
+#include <fcntl.h>
 #include "const.h"
 #include "types.h"
 #include "proto.h"
 
 #if defined(_WIN32)
 #include <direct.h>
+#include <io.h>
 #include <windows.h>
 #include <winsock.h>
 #else
 #include <pthread.h>
 #include <unistd.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -85,9 +86,13 @@ typedef struct opCmd
 
 typedef struct opCmdStackEntry
     {
-    FILE *in;
-    FILE *out;
-    bool isNetConn;
+    int in;
+    int out;
+#if defined(_WIN32)
+    SOCKET netConn;
+#else
+    int netConn;
+#endif
     char cwd[CwdPathSize];
     } OpCmdStackEntry;
 
@@ -100,6 +105,7 @@ static void opCreateThread(void);
 
 #if defined(_WIN32)
 static void opThread(void *param);
+static void opToUnixPath(char *path);
 
 #else
 static void *opThread(void *param);
@@ -108,8 +114,10 @@ static void *opThread(void *param);
 
 static void opAcceptConnection(void);
 static char *opGetString(char *inStr, char *outStr, int outSize);
-static bool opHasInput(OpCmdStackEntry *entry);
-static int opStartListening(int port);
+static bool opHasInput();
+static bool opIsAbsolutePath(char *path);
+static int  opReadLine(char *buf, int size);
+static int  opStartListening(int port);
 
 static void opCmdDumpMemory(bool help, char *cmdParams);
 static void opCmdDumpCM(int fwa, int count);
@@ -186,10 +194,7 @@ static void opDisplayVersion(void);
 
 #ifdef IdleThrottle
 static void opCmdIdle(bool help, char *cmdParams);
-
 #endif
-
-
 
 /*
 **  ----------------
@@ -254,9 +259,6 @@ static OpCmd decode[] =
     NULL,                    NULL
     };
 
-static FILE *in;
-static FILE *out;
-
 static void            (*opCmdFunction)(bool help, char *cmdParams);
 static char            opCmdParams[256];
 static OpCmdStackEntry opCmdStack[MaxCmdStkSize];
@@ -268,6 +270,11 @@ static int opListenHandle = 0;
 #endif
 static int           opListenPort = 0;
 static volatile bool opPaused     = FALSE;
+
+static char opInBuf[256];
+static int  opInIdx  = 0;
+static char opOutBuf[MaxFSPath*2+128];
+static int  opOutIdx = 0;
 
 /*
  **--------------------------------------------------------------------------
@@ -294,6 +301,53 @@ void opInit(void)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Display a message to the operator interface.
+**
+**  Parameters:     Name        Description.
+**                  msg         the message to display
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void opDisplay(char *msg)
+    {
+    OpCmdStackEntry *ep;
+    int             n;
+
+    ep = &opCmdStack[opCmdStackPtr];
+    if (ep->netConn == 0)
+        {
+        n = write(ep->out, msg, strlen(msg));
+        }
+    else
+        {
+#if defined(_WIN32)
+        char *cp;
+        char *sp;
+
+        sp = cp = msg;
+        while (*sp != '\0')
+            {
+            while (*cp != '\0' && *cp != '\n') cp += 1;
+            if (*cp == '\n')
+                {
+                if (cp > sp) send(ep->netConn, sp, cp - sp, 0);
+                send(ep->netConn, "\r\n", 2, 0);
+                cp += 1;
+                }
+            else if (cp > sp)
+                {
+                send(ep->netConn, sp, cp - sp, 0);
+                }
+            sp = cp;
+            }
+#else
+        send(ep->netConn, msg, strlen(msg), 0);
+#endif
+        }
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Operator request handler called from the main emulation
 **                  thread to avoid race conditions.
 **
@@ -308,13 +362,6 @@ void opRequest(void)
         {
         opCmdFunction(FALSE, opCmdParams);
         opActive = FALSE;
-
-        if (emulationActive)
-            {
-            opCmdPrompt();
-            }
-
-        fflush(out);
         }
     }
 
@@ -353,7 +400,7 @@ static void opCreateThread(void)
 
     if (hThread == NULL)
         {
-        fprintf(stderr, "(operator) Failed to create operator thread\n");
+        fputs("(operator) Failed to create operator thread\n", stderr);
         exit(1);
         }
 #else
@@ -368,7 +415,7 @@ static void opCreateThread(void)
     rc = pthread_create(&thread, &attr, opThread, NULL);
     if (rc < 0)
         {
-        fprintf(stderr, "(operator) Failed to create operator thread\n");
+        fputs("(operator) Failed to create operator thread\n", stderr);
         exit(1);
         }
 #endif
@@ -392,123 +439,98 @@ static void *opThread(void *param)
     {
     OpCmd *cp;
     char  cmd[256];
-    char  *line;
+    OpCmdStackEntry *ep;
+    int   len;
     char  name[80];
-    FILE  *newIn;
+    int   newIn;
     char  *params;
     char  path[256];
     char  *pos;
     char  *sp;
 
-    opCmdStack[opCmdStackPtr].in        = in = stdin;
-    opCmdStack[opCmdStackPtr].out       = out = stdout;
-    opCmdStack[opCmdStackPtr].isNetConn = FALSE;
+    ep = &opCmdStack[opCmdStackPtr];
+    ep->in      = fileno(stdin);
+    ep->out     = fileno(stdout);
+    ep->netConn = 0;
 
     opDisplayVersion();
 
-    fputs("\n\n", out);
-    fputs("---------------------------\n", out);
-    fputs("DTCYBER: Operator interface\n", out);
-    fputs("---------------------------\n\n", out);
-    fputs("\nPlease enter 'help' to get a list of commands\n", out);
-    opCmdPrompt();
+    opDisplay("\n\n");
+    opDisplay("---------------------------\n");
+    opDisplay("DTCYBER: Operator interface\n");
+    opDisplay("---------------------------\n\n");
+    opDisplay("\nPlease enter 'help' to get a list of commands\n");
 
-    if (getcwd(opCmdStack[opCmdStackPtr].cwd, CwdPathSize) == NULL)
+    if (getcwd(ep->cwd, CwdPathSize) == NULL)
         {
         fputs("    > Failed to get current working directory path\n", stderr);
         exit(1);
         }
+
+#if defined(_WIN32)
+    opToUnixPath(ep->cwd);
+#endif
+
     if (initOpenOperatorSection() == 1)
         {
         opCmdStackPtr += 1;
-        opCmdStack[opCmdStackPtr].in        = NULL;
-        opCmdStack[opCmdStackPtr].out       = out;
-        opCmdStack[opCmdStackPtr].isNetConn = FALSE;
-        strcpy(opCmdStack[opCmdStackPtr].cwd, opCmdStack[opCmdStackPtr - 1].cwd);
+        ep = &opCmdStack[opCmdStackPtr];
+        ep->in      = -1;
+        ep->out     = opCmdStack[opCmdStackPtr - 1].out;
+        ep->netConn = 0;
+        strcpy(ep->cwd, opCmdStack[opCmdStackPtr - 1].cwd);
         }
 
     while (emulationActive)
         {
-        opAcceptConnection();
-
-        in  = opCmdStack[opCmdStackPtr].in;
-        out = opCmdStack[opCmdStackPtr].out;
-        fflush(out);
-
-#if defined(_WIN32)
-        if (!kbhit())
-            {
-            sleepMsec(10);
-            continue;
-            }
-#endif
-
-        if (opHasInput(&opCmdStack[opCmdStackPtr]) == FALSE)
-            {
-            sleepMsec(10);
-            continue;
-            }
+        ep = &opCmdStack[opCmdStackPtr];
 
         /*
         **  Wait for command input.
         */
-        if (in == NULL)
+        len = opReadLine(cmd, sizeof(cmd));
+        if (!emulationActive) break;
+        if (len <= 0)
             {
-            line = initGetNextLine();
-            if (line == NULL)
+            if (opCmdStackPtr == 0)
+                {
+                emulationActive = FALSE;
+                opActive        = FALSE;
+                break;
+                }
+            else if (len == 0)
                 {
                 opCmdStackPtr -= 1;
                 continue;
-                }
-            strcpy(cmd, line);
-            }
-        else if (fgets(cmd, sizeof(cmd), in) == NULL)
-            {
-#if defined(_WIN32)
-            if (opCmdStack[opCmdStackPtr].isNetConn && (WSAGetLastError() == WSAEWOULDBLOCK))
-                {
-                continue;
-                }
-#else
-            if (opCmdStack[opCmdStackPtr].isNetConn && (errno == EWOULDBLOCK))
-                {
-                continue;
-                }
-#endif
-            if (opCmdStackPtr > 0)
-                {
-                fclose(in);
-                if (opCmdStack[opCmdStackPtr].isNetConn)
-                    {
-                    fclose(out);
-                    opStartListening(opListenPort);
-                    }
-                opCmdStackPtr -= 1;
-                if (opCmdStackPtr == 0)
-                    {
-                    in  = opCmdStack[opCmdStackPtr].in;
-                    out = opCmdStack[opCmdStackPtr].out;
-                    opCmdPrompt();
-                    fflush(out);
-                    }
                 }
             else
                 {
-                fputs("\n    > Console closed\n", out);
-                emulationActive = FALSE;
+                opCmdStackPtr -= 1;
+                while (opCmdStackPtr > 0)
+                    {
+                    ep = &opCmdStack[opCmdStackPtr];
+                    if (ep->netConn == 0)
+                        {
+                        close(ep->in);
+                        }
+                    else
+                        {
+#if defined(_WIN32)
+                        closesocket(ep->netConn);
+#else
+                        close(ep->netConn);
+#endif
+                        }
+                    opCmdStackPtr -= 1;
+                    }
+                continue;
                 }
-            continue;
-            }
-        else if (strlen(cmd) == 0)
-            {
-            continue;
             }
 
-        if ((in != stdin) && (opCmdStack[opCmdStackPtr].isNetConn == FALSE))
+        if (ep->netConn == 0 && ep->in != fileno(stdin))
             {
-            fputs(cmd, out);
-            fputs("\n", out);
-            fflush(out);
+            opDisplay(cmd);
+            opDisplay("\n");
             }
 
         if (opPaused)
@@ -525,17 +547,8 @@ static void *opThread(void *param)
             /*
             **  The main emulation thread is still busy executing the previous command.
             */
-            fputs("\n    > Previous request still busy\n\n", out);
+            opDisplay("\n    > Previous request still busy\n\n");
             continue;
-            }
-
-        /*
-        **  Replace newline by zero terminator.
-        */
-        pos = strchr(cmd, '\n');
-        if (pos != NULL)
-            {
-            *pos = 0;
             }
 
         /*
@@ -544,42 +557,44 @@ static void *opThread(void *param)
         params = opGetString(cmd, name, sizeof(name));
         if (*name == 0)
             {
-            opCmdPrompt();
             continue;
             }
         else if (*name == '@')
             {
             if (opCmdStackPtr + 1 >= MaxCmdStkSize)
                 {
-                fputs("    > Too many nested command scripts\n", out);
-                opCmdPrompt();
+                opDisplay("    > Too many nested command scripts\n");
                 continue;
                 }
             sp = name + 1;
-            if (*sp == '/')
+#if defined(_WIN32)
+            opToUnixPath(sp);
+#endif
+            if (opIsAbsolutePath(sp))
                 {
                 strcpy(path, sp);
                 }
             else
                 {
-                sprintf(path, "%s/%s", opCmdStack[opCmdStackPtr].cwd, sp);
+                sprintf(path, "%s/%s", ep->cwd, sp);
                 }
-            newIn = fopen(path, "r");
-            if (newIn != NULL)
+            newIn = open(path, O_RDONLY);
+            if (newIn >= 0)
                 {
                 opCmdStackPtr += 1;
-                opCmdStack[opCmdStackPtr].in        = newIn;
-                opCmdStack[opCmdStackPtr].out       = out;
-                opCmdStack[opCmdStackPtr].isNetConn = FALSE;
+                ep = &opCmdStack[opCmdStackPtr];
+                ep->in      = newIn;
+                ep->out     = opCmdStack[opCmdStackPtr - 1].out;
+                ep->netConn = 0;
                 pos  = strrchr(path, '/');
                 *pos = '\0';
-                strcpy(opCmdStack[opCmdStackPtr].cwd, path);
+                strcpy(ep->cwd, path);
                 }
             else
                 {
-                fprintf(out, "    > Failed to open %s\n", path);
+                sprintf(opOutBuf, "    > Failed to open %s\n", path);
+                opDisplay(opOutBuf);
                 }
-            opCmdPrompt();
             continue;
             }
 
@@ -612,10 +627,10 @@ static void *opThread(void *param)
             /*
             **  Try to help user.
             */
-            fprintf(out, "    > Command not implemented: %s\n\n", name);
-            fputs("    > Try 'help' to get a list of commands or 'help <command>'\n", out);
-            fputs("    > to get a brief description of a command.\n", out);
-            opCmdPrompt();
+            sprintf(opOutBuf, "    > Command not implemented: %s\n\n", name);
+            opDisplay(opOutBuf);
+            opDisplay("    > Try 'help' to get a list of commands or 'help <command>'\n");
+            opDisplay("    > to get a brief description of a command.\n");
             continue;
             }
         }
@@ -626,40 +641,241 @@ static void *opThread(void *param)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Determine whether input is available on a command
-**                  stack entry.
+**  Purpose:        Issue a command prompt.
 **
 **  Parameters:     Name        Description.
-**                  param       Thread parameter (unused)
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static bool opHasInput(OpCmdStackEntry *entry)
+static void opCmdPrompt(void)
     {
-    int            fd;
-    fd_set         fds;
-    struct timeval timeout;
-
-    if (entry->in == NULL)
-        {
-        return TRUE;
-        }
-
 #if defined(_WIN32)
-    if (entry->in == stdin)
-        {
-        return kbhit();
-        }
+    SYSTEMTIME dt;
+
+    if (opCmdStackPtr != 0
+        && opCmdStack[opCmdStackPtr].netConn == 0
+        && opCmdStack[opCmdStackPtr].in != -1) return;
+
+    GetLocalTime(&dt);
+    sprintf(opOutBuf, "\n%02d:%02d:%02d [%s] Operator> ", dt.wHour, dt.wMinute, dt.wSecond, displayName);
+#else
+    time_t    rawtime;
+    struct tm *info;
+    char      buffer[80];
+
+    if (opCmdStackPtr != 0
+        && opCmdStack[opCmdStackPtr].netConn == 0
+        && opCmdStack[opCmdStackPtr].in != -1) return;
+
+    time(&rawtime);
+    info = localtime(&rawtime);
+    strftime(buffer, 80, "%H:%M:%S", info);
+    sprintf(opOutBuf, "\n%s [%s] Operator> ", buffer, displayName);
 #endif
+    opDisplay(opOutBuf);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Read a line from the operator interface.
+**
+**  Parameters:     Name        Description.
+**                  buf         buffer in which to place the line read
+**                  size        size of buf
+**
+**  Returns:        Number of bytes read.
+**                  0 if end of input
+**                 -1 if error
+**
+**------------------------------------------------------------------------*/
+static int opReadLine(char *buf, int size)
+    {
+    char *bp;
+    char c;
+    OpCmdStackEntry *ep;
+    int err;
+    char *limit;
+    char *line;
+    int n;
+
+    while (opActive)
+        {
+        sleepMsec(10);
+        }
+    if (!emulationActive) return 0;
+
+    bp = buf;
+    limit = buf + (size - 2);
+    opCmdPrompt();
+    while (TRUE)
+        {
+        if (!emulationActive) return 0;
+        if (opOutIdx >= opInIdx)
+            {
+            if (!opHasInput())
+                {
+                sleepMsec(10);
+                continue;
+                }
+            ep = &opCmdStack[opCmdStackPtr];
+            opOutIdx = opInIdx = 0;
+            if (ep->netConn != 0)
+                {
+                n = recv(ep->netConn, opInBuf, sizeof(opInBuf), 0);
+                }
+            else if (ep->in == -1)
+                {
+                line = initGetNextLine();
+                if (line == NULL)
+                    {
+                    n = 0;
+                    }
+                else
+                    {
+                    strcpy(opInBuf, line);
+                    n = strlen(line);
+                    if (n == 0) continue;
+                    opInBuf[n++] = '\n';
+                    }
+                }
+            else
+                {
+                n = read(ep->in, opInBuf, sizeof(opInBuf));
+                }
+            if (n == -1)
+                {
+                if (ep->netConn != 0)
+                    {
+#if defined(_WIN32)
+                    err = WSAGetLastError();
+                    if (err == WSAEWOULDBLOCK)
+                        {
+                        sleepMsec(10);
+                        continue;
+                        }
+                    fprintf(stderr, "Unexpected error while reading operator input: %d\n", err);
+                    closesocket(ep->netConn);
+#else
+                    if (errno == EWOULDBLOCK)
+                        {
+                        sleepMsec(10);
+                        continue;
+                        }
+                    perror("Unexpected error while reading operator input");
+                    close(ep->netConn);
+#endif
+                    opStartListening(opListenPort);
+                    }
+                    return -1;
+                }
+            else if (n == 0)
+                {
+                if (bp > buf)
+                    {
+                    *bp = '\0';
+                    return bp - buf;
+                    }
+                if (ep->netConn != 0)
+                    {
+#if defined(_WIN32)
+                    closesocket(ep->netConn);
+#else
+                    close(ep->netConn);
+#endif
+                    opStartListening(opListenPort);
+                    }
+                else if (ep->in != -1)
+                    {
+                    close(ep->in);
+                    }
+                return 0;
+                }
+            opInIdx = n;
+            }
+        while (opOutIdx < opInIdx)
+            {
+            c = opInBuf[opOutIdx++];
+            if (c == '\n')
+                {
+                if (bp > buf && *(bp - 1) == '\r') bp -= 1;
+                *bp = '\0';
+                if (bp > buf)
+                    {
+                    return bp - buf;
+                    }
+                else
+                    {
+                    opCmdPrompt();
+                    break;
+                    }
+                }
+            if (bp < limit) *bp++ = c;
+            }
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Determine whether input is available from the operator
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        TRUE if input is available.
+**
+**------------------------------------------------------------------------*/
+static bool opHasInput()
+    {
+    OpCmdStackEntry *ep;
+    int             fd;
+    fd_set          fds;
+    int             n;
+    struct timeval  timeout;
+
+    ep = &opCmdStack[opCmdStackPtr];
+    if (ep->netConn == 0)
+        {
+        if (ep->in == -1) return TRUE;
+#if defined(_WIN32)
+        if (ep->in == _fileno(stdin) && _isatty(_fileno(stdin)))
+            {
+            if (kbhit())
+                {
+                return TRUE;
+                }
+            else
+                {
+                opAcceptConnection();
+                return FALSE;
+                }
+            }
+        else
+            {
+            opAcceptConnection();
+            return TRUE;
+            }
+#else
+        fd = ep->in;
+#endif
+        }
+    else
+        {
+        fd = ep->netConn;
+        }
 
     timeout.tv_sec  = 0;
     timeout.tv_usec = 0;
-    fd = fileno(entry->in);
     FD_ZERO(&fds);
     FD_SET(fd, &fds);
 
-    return select(fd + 1, &fds, NULL, NULL, &timeout) > 0;
+    n = select(fd + 1, &fds, NULL, NULL, &timeout);
+    if (n > 0)
+        {
+        return TRUE;
+        }
+    else
+        {
+        opAcceptConnection();
+        return FALSE;
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -677,15 +893,19 @@ static void opAcceptConnection(void)
     fd_set             acceptFds;
     struct sockaddr_in from;
     int                n;
+    int                optEnable = 1;
     struct timeval     timeout;
 
 #if defined(_WIN32)
     int fromLen;
+    u_long blockEnable = 1;
 #else
     socklen_t fromLen;
 #endif
 
-    if (opListenHandle == 0)
+    if (opListenHandle == 0
+        || opCmdStackPtr > 0
+        || opCmdStack[opCmdStackPtr].netConn != 0)
         {
         return;
         }
@@ -697,7 +917,7 @@ static void opAcceptConnection(void)
     FD_SET(opListenHandle, &acceptFds);
 
     n = select(opListenHandle + 1, &acceptFds, NULL, NULL, &timeout);
-    if (n <= 0)
+    if (n <= 0 || !FD_ISSET(opListenHandle, &acceptFds))
         {
         return;
         }
@@ -707,30 +927,33 @@ static void opAcceptConnection(void)
         {
         if (opCmdStackPtr + 1 >= MaxCmdStkSize)
             {
-            fputs("    > Too many nested operator input sources\n", out);
+            opDisplay("    > Too many nested operator input sources\n");
 #if defined(_WIN32)
             closesocket(acceptFd);
 #else
             close(acceptFd);
 #endif
-
             return;
             }
-        fputs("\nOperator connection accepted\n", out);
-        fflush(out);
-        opCmdStackPtr += 1;
-        in             = opCmdStack[opCmdStackPtr].in = fdopen(acceptFd, "r");
-        out            = opCmdStack[opCmdStackPtr].out = fdopen(acceptFd, "w");
-        opCmdStack[opCmdStackPtr].isNetConn = TRUE;
-        strcpy(opCmdStack[opCmdStackPtr].cwd, opCmdStack[opCmdStackPtr - 1].cwd);
+        setsockopt(acceptFd, SOL_SOCKET, SO_KEEPALIVE, (void*)&optEnable, sizeof(optEnable));
 #if defined(_WIN32)
+        ioctlsocket(acceptFd, FIONBIO, &blockEnable);
+#else
+        fcntl(acceptFd, F_SETFL, O_NONBLOCK);
+#endif
+        opDisplay("\nOperator connection accepted\n");
+        opCmdStackPtr += 1;
+#if defined(WIN32)
         closesocket(opListenHandle);
 #else
         close(opListenHandle);
 #endif
-        opListenHandle = 0;
+        opListenHandle                    = 0;
+        opCmdStack[opCmdStackPtr].netConn = acceptFd;
+        opCmdStack[opCmdStackPtr].in      = 0;
+        opCmdStack[opCmdStackPtr].out     = 0;
+        strcpy(opCmdStack[opCmdStackPtr].cwd, opCmdStack[opCmdStackPtr - 1].cwd);
         opCmdPrompt();
-        fflush(out);
         }
     }
 
@@ -798,6 +1021,27 @@ static char *opGetString(char *inStr, char *outStr, int outSize)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Determine whether a pathname is absolute or relative.
+**
+**  Parameters:     Name        Description.
+**                  path        the pathname to test
+**
+**  Returns:        TRUE if the pathname is absolute.
+**
+**------------------------------------------------------------------------*/
+static bool opIsAbsolutePath(char *path)
+    {
+    if (*path == '/') return TRUE;
+#if defined(_WIN32)
+    if ((*(path + 1) == ':')
+        && (   (*path >= 'A' && *path <= 'Z')
+            || (*path >= 'a' && *path <= 'z'))) return TRUE;
+
+#endif
+    return FALSE;
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Dump CM, EM, or PP memory.
 **
 **  Parameters:     Name        Description.
@@ -833,7 +1077,7 @@ static void opCmdDumpMemory(bool help, char *cmdParams)
         }
     if (*cp != ',')
         {
-        fputs("    > Not enough parameters\n", out);
+        opDisplay("    > Not enough parameters\n");
 
         return;
         }
@@ -845,7 +1089,7 @@ static void opCmdDumpMemory(bool help, char *cmdParams)
         }
     else if (numParam != 2)
         {
-        fputs("    > Not enough or invalid parameters\n", out);
+        opDisplay("    > Not enough or invalid parameters\n");
 
         return;
         }
@@ -862,13 +1106,13 @@ static void opCmdDumpMemory(bool help, char *cmdParams)
         numParam = sscanf(memType + 2, "%o", &pp);
         if (numParam != 1)
             {
-            fputs("    > Missing or invalid PP number\n", out);
+            opDisplay("    > Missing or invalid PP number\n");
             }
         opCmdDumpPP(pp, fwa, count);
         }
     else
         {
-        fputs("    > Invalid memory type\n", out);
+        opDisplay("    > Invalid memory type\n");
         }
     }
 
@@ -883,7 +1127,7 @@ static void opCmdDumpCM(int fwa, int count)
 
     if ((fwa < 0) || (count < 0) || (fwa + count > cpuMaxMemory))
         {
-        fputs("    > Invalid CM address or count\n", out);
+        opDisplay("    > Invalid CM address or count\n");
 
         return;
         }
@@ -898,7 +1142,7 @@ static void opCmdDumpCM(int fwa, int count)
             }
         *cp++ = '\n';
         *cp   = '\0';
-        fputs(buf, out);
+        opDisplay(buf);
         }
     }
 
@@ -913,7 +1157,7 @@ static void opCmdDumpEM(int fwa, int count)
 
     if ((fwa < 0) || (count < 0) || (fwa + count > extMaxMemory))
         {
-        fputs("    > Invalid EM address or count\n", out);
+        opDisplay("    > Invalid EM address or count\n");
 
         return;
         }
@@ -928,7 +1172,7 @@ static void opCmdDumpEM(int fwa, int count)
             }
         *cp++ = '\n';
         *cp   = '\0';
-        fputs(buf, out);
+        opDisplay(buf);
         }
     }
 
@@ -947,19 +1191,19 @@ static void opCmdDumpPP(int ppNum, int fwa, int count)
         }
     else if ((ppNum < 0) || (ppNum > 011))
         {
-        fputs("    > Invalid PP number\n", out);
+        opDisplay("    > Invalid PP number\n");
 
         return;
         }
     if (ppNum >= ppuCount)
         {
-        fputs("    > Invalid PP number\n", out);
+        opDisplay("    > Invalid PP number\n");
 
         return;
         }
     if ((fwa < 0) || (count < 0) || (fwa + count > 010000))
         {
-        fputs("    > Invalid PP address or count\n", out);
+        opDisplay("    > Invalid PP address or count\n");
 
         return;
         }
@@ -973,15 +1217,15 @@ static void opCmdDumpPP(int ppNum, int fwa, int count)
         *cp++ = cdcToAscii[word & 077];
         *cp++ = '\n';
         *cp   = '\0';
-        fputs(buf, out);
+        opDisplay(buf);
         }
     }
 
 static void opHelpDumpMemory(void)
     {
-    fputs("    > 'dump_memory CM,<fwa>,<count>' dump <count> words of central memory starting from octal address <fwa>.\n", out);
-    fputs("    > 'dump_memory EM,<fwa>,<count>' dump <count> words of extended memory starting from octal address <fwa>.\n", out);
-    fputs("    > 'dump_memory PP<nn>,<fwa>,<count>' dump <count> words of PP nn's memory starting from octal address <fwa>.\n", out);
+    opDisplay("    > 'dump_memory CM,<fwa>,<count>' dump <count> words of central memory starting from octal address <fwa>.\n");
+    opDisplay("    > 'dump_memory EM,<fwa>,<count>' dump <count> words of extended memory starting from octal address <fwa>.\n");
+    opDisplay("    > 'dump_memory PP<nn>,<fwa>,<count>' dump <count> words of PP nn's memory starting from octal address <fwa>.\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -1077,9 +1321,8 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
                 }
             else
                 {
-                fprintf(out, "Unrecognized keyword: %%%s%%\n", kp);
-                opCmdPrompt();
-
+                sprintf(opOutBuf, "Unrecognized keyword: %%%s%%\n", kp);
+                opDisplay(opOutBuf);
                 return;
                 }
             }
@@ -1090,9 +1333,7 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
         }
     if (bp > limit)
         {
-        fputs("Key sequence is too long\n", out);
-        opCmdPrompt();
-
+        opDisplay("Key sequence is too long\n");
         return;
         }
     *bp = '\0';
@@ -1155,25 +1396,24 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
         sleepMsec(opKeyInterval);
         // 20220609: sjz Removing this - because the above should be "it" // opWaitKeyConsume();
         }
-    opCmdPrompt();
     }
 
 static void opHelpEnterKeys(void)
     {
-    fputs("    > 'enter_keys <key-sequence>' supply a sequence of key entries to the system console .\n", out);
-    fputs("    >      Special keys:\n", out);
-    fputs("    >        ! - end sequence without sending <enter> key\n", out);
-    fputs("    >        ; - send <enter> key within a sequence\n", out);
-    fputs("    >        _ - send <blank> key\n", out);
-    fputs("    >        ^ - send <backspace> key\n", out);
-    fputs("    >        % - keyword delimiter for keywords:\n", out);
-    fputs("    >            %year% insert current year\n", out);
-    fputs("    >            %mon%  insert current month\n", out);
-    fputs("    >            %day%  insert current day\n", out);
-    fputs("    >            %hour% insert current hour\n", out);
-    fputs("    >            %min%  insert current minute\n", out);
-    fputs("    >            %sec%  insert current second\n", out);
-    fputs("    >        # - delimiter for milliseconds pause value (e.g., #500#)\n", out);
+    opDisplay("    > 'enter_keys <key-sequence>' supply a sequence of key entries to the system console .\n");
+    opDisplay("    >      Special keys:\n");
+    opDisplay("    >        ! - end sequence without sending <enter> key\n");
+    opDisplay("    >        ; - send <enter> key within a sequence\n");
+    opDisplay("    >        _ - send <blank> key\n");
+    opDisplay("    >        ^ - send <backspace> key\n");
+    opDisplay("    >        % - keyword delimiter for keywords:\n");
+    opDisplay("    >            %year% insert current year\n");
+    opDisplay("    >            %mon%  insert current month\n");
+    opDisplay("    >            %day%  insert current day\n");
+    opDisplay("    >            %hour% insert current hour\n");
+    opDisplay("    >            %min%  insert current minute\n");
+    opDisplay("    >            %sec%  insert current second\n");
+    opDisplay("    >        # - delimiter for milliseconds pause value (e.g., #500#)\n");
     }
 
 static void opWaitKeyConsume()
@@ -1211,7 +1451,7 @@ static void opCmdSetKeyInterval(bool help, char *cmdParams)
     numParam = sscanf(cmdParams, "%d", &msec);
     if (numParam != 1)
         {
-        fputs("    > Missing or invalid parameter\n", out);
+        opDisplay("    > Missing or invalid parameter\n");
         opHelpSetKeyInterval();
 
         return;
@@ -1221,8 +1461,9 @@ static void opCmdSetKeyInterval(bool help, char *cmdParams)
 
 static void opHelpSetKeyInterval(void)
     {
-    fputs("    > 'set_key_interval <millisecs>' set the interval between key entries to the system console.\n", out);
-    fprintf(out, "    > [Current Key Interval is %ld msec.]\n", opKeyInterval);
+    opDisplay("    > 'set_key_interval <millisecs>' set the interval between key entries to the system console.\n");
+    sprintf(opOutBuf, "    > [Current Key Interval is %ld msec.]\n", opKeyInterval);
+    opDisplay(opOutBuf);
     }
 
 /*--------------------------------------------------------------------------
@@ -1252,7 +1493,7 @@ static void opCmdSetKeyWaitInterval(bool help, char *cmdParams)
     numParam = sscanf(cmdParams, "%d", &msec);
     if (numParam != 1)
         {
-        fputs("    > Missing or invalid parameter\n", out);
+        opDisplay("    > Missing or invalid parameter\n");
         opHelpSetKeyWaitInterval();
 
         return;
@@ -1262,8 +1503,9 @@ static void opCmdSetKeyWaitInterval(bool help, char *cmdParams)
 
 static void opHelpSetKeyWaitInterval(void)
     {
-    fputs("    > 'set_keywait_interval <millisecs>' set the interval between keyboard scans of the emulated system console.\n", out);
-    fprintf(out, "    > [Current Key Wait Interval is %ld msec.]\n", opKeyWaitInterval);
+    opDisplay("    > 'set_keywait_interval <millisecs>' set the interval between keyboard scans of the emulated system console.\n");
+    sprintf(opOutBuf, "    > [Current Key Wait Interval is %ld msec.]\n", opKeyWaitInterval);
+    opDisplay(opOutBuf);
     }
 
 /*--------------------------------------------------------------------------
@@ -1293,13 +1535,13 @@ static void opCmdSetOperatorPort(bool help, char *cmdParams)
     numParam = sscanf(cmdParams, "%d", &port);
     if (numParam != 1)
         {
-        fputs("    > Missing or invalid parameter\n", out);
+        opDisplay("    > Missing or invalid parameter\n");
 
         return;
         }
     if ((port < 0) || (port > 65535))
         {
-        fputs("    > Invalid port number\n", out);
+        opDisplay("    > Invalid port number\n");
 
         return;
         }
@@ -1313,24 +1555,23 @@ static void opCmdSetOperatorPort(bool help, char *cmdParams)
         opListenHandle = 0;
         if (port == 0)
             {
-            fputs("    > Operator port closed\n", out);
+            opDisplay("    > Operator port closed\n");
             }
         }
-    if (port == 0)
+    if (port != 0)
         {
-        return;
-        }
-
-    if (opStartListening(port))
-        {
-        opListenPort = port;
-        fprintf(out, "    > Listening for operator connections on port %d\n", port);
+        if (opStartListening(port))
+            {
+            opListenPort = port;
+            sprintf(opOutBuf, "    > Listening for operator connections on port %d\n", port);
+            opDisplay(opOutBuf);
+            }
         }
     }
 
 static void opHelpSetOperatorPort(void)
     {
-    fputs("    > 'set_operator_port <port>' set the TCP port on which to listen for operator connections.\n", out);
+    opDisplay("    > 'set_operator_port <port>' set the TCP port on which to listen for operator connections.\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -1351,13 +1592,16 @@ static int opStartListening(int port)
     int                optEnable = 1;
     struct sockaddr_in server;
 
+    if (port <= 0) return FALSE;
+
     /*
     **  Create TCP socket and bind to specified port.
     */
     opListenHandle = socket(AF_INET, SOCK_STREAM, 0);
     if (opListenHandle < 0)
         {
-        fprintf(out, "    > Failed to create socket for port %d\n", port);
+        sprintf(opOutBuf, "    > Failed to create socket for port %d\n", port);
+        opDisplay(opOutBuf);
         opListenHandle = 0;
 
         return FALSE;
@@ -1384,7 +1628,8 @@ static int opStartListening(int port)
 
     if (bind(opListenHandle, (struct sockaddr *)&server, sizeof(server)) < 0)
         {
-        fprintf(out, "    > Failed to bind to listen socket for port %d\n", port);
+        sprintf(opOutBuf, "    > Failed to bind to listen socket for port %d\n", port);
+        opDisplay(opOutBuf);
 #if defined(_WIN32)
         closesocket(opListenHandle);
 #else
@@ -1400,7 +1645,8 @@ static int opStartListening(int port)
     */
     if (listen(opListenHandle, 1) < 0)
         {
-        fprintf(out, "    > Failed to listen on port %d\n", port);
+        sprintf(opOutBuf, "    > Failed to listen on port %d\n", port);
+        opDisplay(opOutBuf);
 #if defined(_WIN32)
         closesocket(opListenHandle);
 #else
@@ -1441,7 +1687,7 @@ static void opCmdPause(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) != 0)
         {
-        fputs("    > No parameters expected\n", out);
+        opDisplay("    > No parameters expected\n");
         opHelpPause();
 
         return;
@@ -1450,7 +1696,7 @@ static void opCmdPause(bool help, char *cmdParams)
     /*
     **  Process command.
     */
-    fputs("    > Emulation paused - hit Enter to resume\n", out);
+    opDisplay("    > Emulation paused - hit Enter to resume\n");
 
     /*
     **  Wait for Enter key.
@@ -1465,35 +1711,7 @@ static void opCmdPause(bool help, char *cmdParams)
 
 static void opHelpPause(void)
     {
-    fputs("    > 'pause' suspends emulation to reduce CPU load.\n", out);
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Issue a command prompt.
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-static void opCmdPrompt(void)
-    {
-#if defined(_WIN32)
-    SYSTEMTIME dt;
-
-    GetLocalTime(&dt);
-    fprintf(out, "\n%02d:%02d:%02d [%s] Operator> ", dt.wHour, dt.wMinute, dt.wSecond, displayName);
-#else
-    time_t    rawtime;
-    struct tm *info;
-    char      buffer[80];
-
-    time(&rawtime);
-
-    info = localtime(&rawtime);
-    strftime(buffer, 80, "%H:%M:%S", info);
-    fprintf(out, "\n%s [%s] Operator> ", buffer, displayName);
-#endif
+    opDisplay("    > 'pause' suspends emulation to reduce CPU load.\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -1523,7 +1741,7 @@ static void opCmdShutdown(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) != 0)
         {
-        fputs("    > No parameters expected\n", out);
+        opDisplay("    > No parameters expected\n");
         opHelpShutdown();
 
         return;
@@ -1532,15 +1750,16 @@ static void opCmdShutdown(bool help, char *cmdParams)
     /*
     **  Process command.
     */
-    opActive        = FALSE;
     emulationActive = FALSE;
+    opActive        = FALSE;
 
-    fprintf(out, "\nThanks for using %s\nGoodbye for now.\n\n", DtCyberVersion);
+    sprintf(opOutBuf, "\nThanks for using %s\nGoodbye for now.\n\n", DtCyberVersion);
+    opDisplay(opOutBuf);
     }
 
 static void opHelpShutdown(void)
     {
-    fputs("    > 'shutdown' terminates emulation.\n", out);
+    opDisplay("    > 'shutdown' terminates emulation.\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -1575,16 +1794,17 @@ static void opCmdHelp(bool help, char *cmdParams)
         /*
         **  List all available commands.
         */
-        fputs("\n\n", out);
-        fputs("---------------------------\n", out);
-        fputs("List of available commands:\n", out);
-        fputs("---------------------------\n\n", out);
+        opDisplay("\n\n");
+        opDisplay("---------------------------\n");
+        opDisplay("List of available commands:\n");
+        opDisplay("---------------------------\n\n");
         for (cp = decode; cp->name != NULL; cp++)
             {
-            fprintf(out, "    > %s\n", cp->name);
+            sprintf(opOutBuf, "    > %s\n", cp->name);
+            opDisplay(opOutBuf);
             }
 
-        fputs("\n    > Try 'help <command>' to get a brief description of a command.\n", out);
+        opDisplay("\n    > Try 'help <command>' to get a brief description of a command.\n");
 
         return;
         }
@@ -1597,21 +1817,22 @@ static void opCmdHelp(bool help, char *cmdParams)
             {
             if (strcmp(cp->name, cmdParams) == 0)
                 {
-                fputs("\n", out);
+                opDisplay("\n");
                 cp->handler(TRUE, NULL);
 
                 return;
                 }
             }
 
-        fprintf(out, "\n    > Command not implemented: %s\n", cmdParams);
+        sprintf(opOutBuf, "\n    > Command not implemented: %s\n", cmdParams);
+        opDisplay(opOutBuf);
         }
     }
 
 static void opHelpHelp(void)
     {
-    fputs("    > 'help'       list all available commands.\n", out);
-    fputs("    > 'help <cmd>' provide help for <cmd>.\n", out);
+    opDisplay("    > 'help'       list all available commands.\n");
+    opDisplay("    > 'help <cmd>' provide help for <cmd>.\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -1643,15 +1864,16 @@ static void opCmdHelpAll(bool help, char *cmdParams)
     */
     for (cp = decode; cp->name != NULL; cp++)
         {
-        fprintf(out, "\n    > Command: %s\n", cp->name);
+        sprintf(opOutBuf, "\n    > Command: %s\n", cp->name);
+        opDisplay(opOutBuf);
         cp->handler(TRUE, NULL);
         }
     }
 
 static void opHelpHelpAll(void)
     {
-    fputs("    > '?\?'       provide help for ALL commands.\n", out);
-    fputs("    > 'help_all' \n", out);
+    opDisplay("    > '?\?'       provide help for ALL commands.\n");
+    opDisplay("    > 'help_all' \n");
     }
 
 /*--------------------------------------------------------------------------
@@ -1693,7 +1915,8 @@ void opCmdLoadCards(bool help, char *cmdParams)
     */
     if (numParam < 3)
         {
-        fprintf(out, "    > %i parameters supplied. Expected at least 3.\n", numParam);
+        sprintf(opOutBuf, "    > %i parameters supplied. Expected at least 3.\n", numParam);
+        opDisplay(opOutBuf);
         opHelpLoadCards();
 
         return;
@@ -1701,21 +1924,21 @@ void opCmdLoadCards(bool help, char *cmdParams)
 
     if ((channelNo < 0) || (channelNo >= MaxChannels))
         {
-        fprintf(out, "    > Invalid channel no %02o. (must be 0 to %02o) \n", channelNo, MaxChannels);
-
+        sprintf(opOutBuf, "    > Invalid channel no %02o. (must be 0 to %02o) \n", channelNo, MaxChannels);
+        opDisplay(opOutBuf);
         return;
         }
 
     if ((equipmentNo < 0) || (equipmentNo >= MaxEquipment))
         {
-        fprintf(out, "    > Invalid equipment no %02o. (must be 0 to %02o) \n", equipmentNo, MaxEquipment);
-
+        sprintf(opOutBuf, "    > Invalid equipment no %02o. (must be 0 to %02o) \n", equipmentNo, MaxEquipment);
+        opDisplay(opOutBuf);
         return;
         }
 
     if (fname[0] == 0)
         {
-        fputs("    > Invalid file name\n", out);
+        opDisplay("    > Invalid file name\n");
 
         return;
         }
@@ -1738,17 +1961,17 @@ void opCmdLoadCards(bool help, char *cmdParams)
 
     if (fname[0] == '*')
         {
-        cr405GetNextDeck(fname, channelNo, equipmentNo, out, cmdParams);
+        cr405GetNextDeck(fname, channelNo, equipmentNo, cmdParams);
         }
 
     if (fname[0] == '*')
         {
-        cr3447GetNextDeck(fname, channelNo, equipmentNo, out, cmdParams);
+        cr3447GetNextDeck(fname, channelNo, equipmentNo, cmdParams);
         }
 
     if (fname[0] == '*')
         {
-        fputs("    > No decks available to process.\n", out);
+        opDisplay("    > No decks available to process.\n");
 
         return;
         }
@@ -1760,8 +1983,8 @@ void opCmdLoadCards(bool help, char *cmdParams)
     fcb = fopen(newDeck, "w");
     if (fcb == NULL)
         {
-        fprintf(out, "    > Failed to create temporary card deck '%s'\n", newDeck);
-
+        sprintf(opOutBuf, "    > Failed to create temporary card deck '%s'\n", newDeck);
+        opDisplay(opOutBuf);
         return;
         }
 
@@ -1777,20 +2000,22 @@ void opCmdLoadCards(bool help, char *cmdParams)
         return;
         }
 
-    fprintf(out, "    > Preprocessing for '%s' into submit file '%s' complete.\n", fname, newDeck);
+    sprintf(opOutBuf, "    > Preprocessing for '%s' into submit file '%s' complete.\n", fname, newDeck);
+    opDisplay(opOutBuf);
 
     /*
     **  Do not process any file that results in zero-length submission.
     */
     if (stat(newDeck, &statBuf) != 0)
         {
-        fprintf(out, "    > Error learning status of file '%s' (%s)\n", newDeck, strerror(errno));
-
+        sprintf(opOutBuf, "    > Error learning status of file '%s' (%s)\n", newDeck, strerror(errno));
+        opDisplay(opOutBuf);
         return;
         }
     if (statBuf.st_size == 0)
         {
-        fprintf(out, "    > Skipping Zero-Length file '%s' (Removing '%s')\n", fname, newDeck);
+        sprintf(opOutBuf, "    > Skipping Zero-Length file '%s' (Removing '%s')\n", fname, newDeck);
+        opDisplay(opOutBuf);
         unlink(newDeck);
 
         return;
@@ -1804,24 +2029,24 @@ void opCmdLoadCards(bool help, char *cmdParams)
     **  This event should trigger the filesystem monitor thread
     **  (if active) and prompt it to load the next deck.
     */
-    cr405PostProcess(fname, channelNo, equipmentNo, out, cmdParams);
-    cr3447PostProcess(fname, channelNo, equipmentNo, out, cmdParams);
+    cr405PostProcess(fname, channelNo, equipmentNo, cmdParams);
+    cr3447PostProcess(fname, channelNo, equipmentNo, cmdParams);
 
     /*
     **  If an input directory was specified (but there was no
     **  output directory) then we need to give the card reader
     **  a chance to clean up the dedicated input directory.
     */
-    cr405LoadCards(newDeck, channelNo, equipmentNo, out, cmdParams);
-    cr3447LoadCards(newDeck, channelNo, equipmentNo, out, cmdParams);
+    cr405LoadCards(newDeck, channelNo, equipmentNo, cmdParams);
+    cr3447LoadCards(newDeck, channelNo, equipmentNo, cmdParams);
     }
 
 static void opHelpLoadCards(void)
     {
-    fputs("    > 'load_cards <channel>,<equipment>,<filename>[,<p1>,<p2>,...,<pn>]' load specified card file with optional parameters.\n", out);
-    fputs("    >      If <filename> = '*' and the card reader has been configured with dedicated\n", out);
-    fputs("    >      input and output directories, the next file is ingested from the input directory\n", out);
-    fputs("    >      and 'ejected' to the output directory as it was originally submitted.\n", out);
+    opDisplay("    > 'load_cards <channel>,<equipment>,<filename>[,<p1>,<p2>,...,<pn>]' load specified card file with optional parameters.\n");
+    opDisplay("    >      If <filename> = '*' and the card reader has been configured with dedicated\n");
+    opDisplay("    >      input and output directories, the next file is ingested from the input directory\n");
+    opDisplay("    >      and 'ejected' to the output directory as it was originally submitted.\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -1882,11 +2107,14 @@ static int opPrepCards(char *str, FILE *fcb)
             *cp++ = '\0';
             }
         }
+#if defined(_WIN32)
+    opToUnixPath(str);
+#endif
 
     /*
     **  Open and parse the input file
     */
-    if (*str == '/')
+    if (opIsAbsolutePath(str))
         {
         strcpy(path, str);
         }
@@ -1897,8 +2125,8 @@ static int opPrepCards(char *str, FILE *fcb)
     in = fopen(path, "r");
     if (in == NULL)
         {
-        fprintf(out, "    > Failed to open %s\n", path);
-
+        sprintf(opOutBuf, "    > Failed to open %s\n", path);
+        opDisplay(opOutBuf);
         return -1;
         }
     while (TRUE)
@@ -1978,12 +2206,16 @@ static int opPrepCards(char *str, FILE *fcb)
                 }
             if (*sp == '\0')
                 {
-                fprintf(out, "    > File name missing from ~include in %s\n", path);
+                sprintf(opOutBuf, "    > File name missing from ~include in %s\n", path);
+                opDisplay(opOutBuf);
                 fclose(in);
 
                 return -1;
                 }
-            if (*sp != '/')
+#if defined(_WIN32)
+            opToUnixPath(sp);
+#endif
+            if (opIsAbsolutePath(sp) == FALSE)
                 {
                 cp = strrchr(path, '/');
                 if (cp != NULL)
@@ -2063,14 +2295,14 @@ static void opCmdLoadTape(bool help, char *cmdParams)
         return;
         }
 
-    mt669LoadTape(cmdParams, out);
-    mt679LoadTape(cmdParams, out);
-    mt362xLoadTape(cmdParams, out);
+    mt669LoadTape(cmdParams);
+    mt679LoadTape(cmdParams);
+    mt362xLoadTape(cmdParams);
     }
 
 static void opHelpLoadTape(void)
     {
-    fputs("    > 'load_tape <channel>,<equipment>,<unit>,<r|w>,<filename>' load specified tape.\n", out);
+    opDisplay("    > 'load_tape <channel>,<equipment>,<unit>,<r|w>,<filename>' load specified tape.\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -2100,20 +2332,20 @@ static void opCmdUnloadTape(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) == 0)
         {
-        fputs("    > No parameters supplied\n", out);
+        opDisplay("    > No parameters supplied\n");
         opHelpUnloadTape();
 
         return;
         }
 
-    mt669UnloadTape(cmdParams, out);
-    mt679UnloadTape(cmdParams, out);
-    mt362xUnloadTape(cmdParams, out);
+    mt669UnloadTape(cmdParams);
+    mt679UnloadTape(cmdParams);
+    mt362xUnloadTape(cmdParams);
     }
 
 static void opHelpUnloadTape(void)
     {
-    fputs("    > 'unload_tape <channel>,<equipment>,<unit>' unload specified tape unit.\n", out);
+    opDisplay("    > 'unload_tape <channel>,<equipment>,<unit>' unload specified tape unit.\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -2172,7 +2404,7 @@ static void opCmdShowState(bool help, char *cmdParams)
                 numParam = sscanf(param + 2, "%o", &ppNum);
                 if (numParam != 1)
                     {
-                    fputs("    > Missing or invalid PP number\n", out);
+                    opDisplay("    > Missing or invalid PP number\n");
 
                     return;
                     }
@@ -2186,14 +2418,14 @@ static void opCmdShowState(bool help, char *cmdParams)
                     }
                 else
                     {
-                    fputs("    > Invalid PP number\n", out);
+                    opDisplay("    > Invalid PP number\n");
 
                     return;
                     }
                 }
             else
                 {
-                fputs("    > Invalid element type\n", out);
+                opDisplay("    > Invalid element type\n");
                 }
             }
         }
@@ -2213,29 +2445,38 @@ static void opCmdShowStateCP(void)
     int i;
 
     i = 0;
-    fputs("    >|--------------- CPU ----------------|\n", out);
-    fprintf(out, "    > P       %06o  A%d %06o  B%d %06o\n", cpu.regP, i, cpu.regA[i], i, cpu.regB[i]);
+    opDisplay("    >|--------------- CPU ----------------|\n");
+    sprintf(opOutBuf, "    > P       %06o  A%d %06o  B%d %06o\n", cpu.regP, i, cpu.regA[i], i, cpu.regB[i]);
+    opDisplay(opOutBuf);
     i++;
-    fprintf(out, "    > RA    %08o  A%d %06o  B%d %06o\n", cpu.regRaCm, i, cpu.regA[i], i, cpu.regB[i]);
+    sprintf(opOutBuf, "    > RA    %08o  A%d %06o  B%d %06o\n", cpu.regRaCm, i, cpu.regA[i], i, cpu.regB[i]);
+    opDisplay(opOutBuf);
     i++;
-    fprintf(out, "    > FL    %08o  A%d %06o  B%d %06o\n", cpu.regFlCm, i, cpu.regA[i], i, cpu.regB[i]);
+    sprintf(opOutBuf, "    > FL    %08o  A%d %06o  B%d %06o\n", cpu.regFlCm, i, cpu.regA[i], i, cpu.regB[i]);
+    opDisplay(opOutBuf);
     i++;
-    fprintf(out, "    > EM    %08o  A%d %06o  B%d %06o\n", cpu.exitMode, i, cpu.regA[i], i, cpu.regB[i]);
+    sprintf(opOutBuf, "    > EM    %08o  A%d %06o  B%d %06o\n", cpu.exitMode, i, cpu.regA[i], i, cpu.regB[i]);
+    opDisplay(opOutBuf);
     i++;
-    fprintf(out, "    > RAE   %08o  A%d %06o  B%d %06o\n", cpu.regRaEcs, i, cpu.regA[i], i, cpu.regB[i]);
+    sprintf(opOutBuf, "    > RAE   %08o  A%d %06o  B%d %06o\n", cpu.regRaEcs, i, cpu.regA[i], i, cpu.regB[i]);
+    opDisplay(opOutBuf);
     i++;
-    fprintf(out, "    > FLE %010o  A%d %06o  B%d %06o\n", cpu.regFlEcs, i, cpu.regA[i], i, cpu.regB[i]);
+    sprintf(opOutBuf, "    > FLE %010o  A%d %06o  B%d %06o\n", cpu.regFlEcs, i, cpu.regA[i], i, cpu.regB[i]);
+    opDisplay(opOutBuf);
     i++;
-    fprintf(out, "    > MA    %08o  A%d %06o  B%d %06o\n", cpu.regMa, i, cpu.regA[i], i, cpu.regB[i]);
+    sprintf(opOutBuf, "    > MA    %08o  A%d %06o  B%d %06o\n", cpu.regMa, i, cpu.regA[i], i, cpu.regB[i]);
+    opDisplay(opOutBuf);
     i++;
-    fprintf(out, "    >                 A%d %06o  B%d %06o\n\n", i, cpu.regA[i], i, cpu.regB[i]);
+    sprintf(opOutBuf, "    >                 A%d %06o  B%d %06o\n\n", i, cpu.regA[i], i, cpu.regB[i]);
+    opDisplay(opOutBuf);
     i++;
 
     for (i = 0; i < 8; i++)
         {
-        fprintf(out, "    > X%d  %020lo\n", i, cpu.regX[i]);
+        sprintf(opOutBuf, "    > X%d  %020lo\n", i, cpu.regX[i]);
+        opDisplay(opOutBuf);
         }
-    fputs("\n", out);
+    opDisplay("\n");
     }
 
 static void opCmdShowStatePP(u32 ppMask)
@@ -2264,10 +2505,11 @@ static void opCmdShowStatePP(u32 ppMask)
         //
         i   = ppNum;
         col = 0;
-        fputs("    > ", out);
+        opDisplay("    > ");
         while (col < 5)
             {
-            fprintf(out, "  PP%02o          ", (i < 10) ? i : i + 6);
+            sprintf(opOutBuf, "  PP%02o          ", (i < 10) ? i : i + 6);
+            opDisplay(opOutBuf);
             i += 1;
             while (((1 << i) & ppMask) == 0)
                 {
@@ -2279,11 +2521,11 @@ static void opCmdShowStatePP(u32 ppMask)
                 }
             col += 1;
             }
-        fputs("\n", out);
+        opDisplay("\n");
 
         i   = ppNum;
         col = 0;
-        fputs("    > ", out);
+        opDisplay("    > ");
         while (col < 5)
             {
             pp = &ppu[i++];
@@ -2294,7 +2536,7 @@ static void opCmdShowStatePP(u32 ppMask)
                 buf[len++] = ' ';
                 }
             buf[len] = '\0';
-            fputs(buf, out);
+            opDisplay(buf);
             while (((1 << i) & ppMask) == 0)
                 {
                 i += 1;
@@ -2305,11 +2547,11 @@ static void opCmdShowStatePP(u32 ppMask)
                 }
             col += 1;
             }
-        fputs("\n", out);
+        opDisplay("\n");
 
         i   = ppNum;
         col = 0;
-        fputs("    > ", out);
+        opDisplay("    > ");
         while (col < 5)
             {
             pp = &ppu[i++];
@@ -2320,7 +2562,7 @@ static void opCmdShowStatePP(u32 ppMask)
                 buf[len++] = ' ';
                 }
             buf[len] = '\0';
-            fputs(buf, out);
+            opDisplay(buf);
             while (((1 << i) & ppMask) == 0)
                 {
                 i += 1;
@@ -2331,11 +2573,11 @@ static void opCmdShowStatePP(u32 ppMask)
                 }
             col += 1;
             }
-        fputs("\n", out);
+        opDisplay("\n");
 
         i   = ppNum;
         col = 0;
-        fputs("    > ", out);
+        opDisplay("    > ");
 
         while (col < 5)
             {
@@ -2347,7 +2589,7 @@ static void opCmdShowStatePP(u32 ppMask)
                 buf[len++] = ' ';
                 }
             buf[len] = '\0';
-            fputs(buf, out);
+            opDisplay(buf);
             while (((1 << i) & ppMask) == 0)
                 {
                 i += 1;
@@ -2358,13 +2600,13 @@ static void opCmdShowStatePP(u32 ppMask)
                 }
             col += 1;
             }
-        fputs("\n", out);
+        opDisplay("\n");
 
         if ((features & HasRelocationReg) != 0)
             {
             i   = ppNum;
             col = 0;
-            fputs("    > ", out);
+            opDisplay("    > ");
 
             while (col < 5)
                 {
@@ -2383,7 +2625,7 @@ static void opCmdShowStatePP(u32 ppMask)
                     buf[len++] = ' ';
                     }
                 buf[len] = '\0';
-                fputs(buf, out);
+                opDisplay(buf);
                 while (((1 << i) & ppMask) == 0)
                     {
                     i += 1;
@@ -2394,16 +2636,16 @@ static void opCmdShowStatePP(u32 ppMask)
                     }
                 col += 1;
                 }
-            fputs("\n", out);
+            opDisplay("\n");
             }
-        fputs("\n", out);
+        opDisplay("\n");
         ppNum = i;
         }
     }
 
 static void opHelpShowState(void)
     {
-    fputs("    > 'show_state [pp<n>,...][,cp]' show state of PP's and/or CPU.\n", out);
+    opDisplay("    > 'show_state [pp<n>,...][,cp]' show state of PP's and/or CPU.\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -2433,21 +2675,21 @@ static void opCmdShowTape(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) != 0)
         {
-        fputs("    > No parameters expected.\n", out);
+        opDisplay("    > No parameters expected.\n");
         opHelpShowTape();
 
         return;
         }
 
-    mt669ShowTapeStatus(out);
-    mt679ShowTapeStatus(out);
-    mt362xShowTapeStatus(out);
-    mt5744ShowTapeStatus(out);
+    mt669ShowTapeStatus();
+    mt679ShowTapeStatus();
+    mt362xShowTapeStatus();
+    mt5744ShowTapeStatus();
     }
 
 static void opHelpShowTape(void)
     {
-    fputs("    > 'show_tape' show status of all tape units.\n", out);
+    opDisplay("    > 'show_tape' show status of all tape units.\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -2477,19 +2719,19 @@ static void opCmdRemovePaper(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) == 0)
         {
-        fputs("    > Parameters expected\n", out);
+        opDisplay("    > Parameters expected\n");
         opHelpRemovePaper();
 
         return;
         }
 
-    lp1612RemovePaper(cmdParams, out);
-    lp3000RemovePaper(cmdParams, out);
+    lp1612RemovePaper(cmdParams);
+    lp3000RemovePaper(cmdParams);
     }
 
 static void opHelpRemovePaper(void)
     {
-    fputs("    > 'remove_paper <channel>,<equipment>[,<filename>]' remove paper from printer.\n", out);
+    opDisplay("    > 'remove_paper <channel>,<equipment>[,<filename>]' remove paper from printer.\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -2519,18 +2761,18 @@ static void opCmdRemoveCards(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) == 0)
         {
-        fputs("    > Parameters expected\n", out);
+        opDisplay("    > Parameters expected\n");
         opHelpRemoveCards();
 
         return;
         }
 
-    cp3446RemoveCards(cmdParams, out);
+    cp3446RemoveCards(cmdParams);
     }
 
 static void opHelpRemoveCards(void)
     {
-    fputs("    > 'remove_cards <channel>,<equipment>[,<filename>]' remove cards from card puncher.\n", out);
+    opDisplay("    > 'remove_cards <channel>,<equipment>[,<filename>]' remove cards from card puncher.\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -2545,7 +2787,7 @@ static void opHelpRemoveCards(void)
 **------------------------------------------------------------------------*/
 static void opHelpShowUnitRecord(void)
     {
-    fputs("    > 'show_unitrecord' show status of all print and card devices.\n", out);
+    opDisplay("    > 'show_unitrecord' show status of all print and card devices.\n");
     }
 
 static void opCmdShowUnitRecord(bool help, char *cmdParams)
@@ -2565,16 +2807,17 @@ static void opCmdShowUnitRecord(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) != 0)
         {
-        fprintf(out, "    > No Parameters Expected.\n");
+        sprintf(opOutBuf, "    > No Parameters Expected.\n");
+        opDisplay(opOutBuf);
         opHelpShowUnitRecord();
 
         return;
         }
-    cr3447ShowStatus(out);
-    cr405ShowStatus(out);
-    cp3446ShowStatus(out);
-    lp3000ShowStatus(out);
-    lp1612ShowStatus(out);
+    cr3447ShowStatus();
+    cr405ShowStatus();
+    cp3446ShowStatus();
+    lp3000ShowStatus();
+    lp1612ShowStatus();
     }
 
 /*--------------------------------------------------------------------------
@@ -2604,19 +2847,19 @@ static void opCmdShowDisk(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) != 0)
         {
-        fputs("    > No parameters expected\n", out);
+        opDisplay("    > No parameters expected\n");
         opHelpShowDisk();
 
         return;
         }
 
-    dd8xxShowDiskStatus(out);
-    dd6603ShowDiskStatus(out);
+    dd8xxShowDiskStatus();
+    dd6603ShowDiskStatus();
     }
 
 static void opHelpShowDisk(void)
     {
-    fputs("    > 'show_disk' show status of all disk units.\n", out);
+    opDisplay("    > 'show_disk' show status of all disk units.\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -2646,13 +2889,13 @@ static void opCmdShowEquipment(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) != 0)
         {
-        fputs("    > No parameters expected\n", out);
+        opDisplay("    > No parameters expected\n");
         opHelpShowEquipment();
 
         return;
         }
 
-    channelDisplayContext(out);
+    channelDisplayContext();
     }
 
 static void opHelpShowEquipment(void)
@@ -2687,7 +2930,7 @@ static void opCmdShowVersion(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) != 0)
         {
-        fputs("    > No parameters expected\n", out);
+        opDisplay("    > No parameters expected\n");
         opHelpShowVersion();
 
         return;
@@ -2698,8 +2941,8 @@ static void opCmdShowVersion(bool help, char *cmdParams)
 
 static void opHelpShowVersion(void)
     {
-    fputs("    > 'sv'           show version of dtCyber.\n", out);
-    fputs("    > 'show_version'\n", out);
+    opDisplay("    > 'sv'           show version of dtCyber.\n");
+    opDisplay("    > 'show_version'\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -2729,7 +2972,7 @@ static void opCmdShowAll(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) != 0)
         {
-        fputs("    > No parameters expected\n", out);
+        opDisplay("    > No parameters expected\n");
         opHelpShowAll();
 
         return;
@@ -2745,8 +2988,8 @@ static void opCmdShowAll(bool help, char *cmdParams)
 
 static void opHelpShowAll(void)
     {
-    fputs("    > 'sa'       show status of all dtCyber Devices.\n", out);
-    fputs("    > 'show_all'\n", out);
+    opDisplay("    > 'sa'       show status of all dtCyber Devices.\n");
+    opDisplay("    > 'show_all'\n");
     }
 
 #ifdef IdleThrottle
@@ -2769,21 +3012,23 @@ static void opCmdIdle(bool help, char *cmdParams)
 
     if (help)
         {
-        fputs("    > NOS Idle Loop Throttle\n", out);
-        fputs("    > idle <on|off>                   turn NOS idle loop throttle on/off\n", out);
-        fputs("    > idle <num_cycles>,<sleep_time>  set number of cycles before sleep and sleep time\n", out);
+        opDisplay("    > NOS Idle Loop Throttle\n");
+        opDisplay("    > idle <on|off>                   turn NOS idle loop throttle on/off\n");
+        opDisplay("    > idle <num_cycles>,<sleep_time>  set number of cycles before sleep and sleep time\n");
 
         return;
         }
 
     if (strlen(cmdParams) == 0)
         {
-        fprintf(out, "    > Idle loop throttling: %s\n", NOSIdle ? "ON" : "OFF");
-
+        sprintf(opOutBuf, "    > Idle loop throttling: %s\n", NOSIdle ? "ON" : "OFF");
+        opDisplay(opOutBuf);
 #ifdef WIN32
-        fprintf(out, "    > Sleep every %u cycles for %u milliseconds.\n", idletrigger, idletime);
+        sprintf(opOutBuf, "    > Sleep every %u cycles for %u milliseconds.\n", idletrigger, idletime);
+        opDisplay(opOutBuf);
 #else
-        fprintf(out, "usleep every %u cycles for %u usec\n", idletrigger, idletime);
+        sprintf(opOutBuf, "usleep every %u cycles for %u usec\n", idletrigger, idletime);
+        opDisplay(opOutBuf);
 #endif
 
         return;
@@ -2804,25 +3049,26 @@ static void opCmdIdle(bool help, char *cmdParams)
 
     if (numParam != 2)
         {
-        fprintf(out, "    > 2 Parameters Expected - %u Provided\n", numParam);
-
+        sprintf(opOutBuf, "    > 2 Parameters Expected - %u Provided\n", numParam);
+        opDisplay(opOutBuf);
         return;
         }
     if ((newtrigger < 1) || (newsleep < 1))
         {
-        fprintf(out, "    > No Parameters Provided (1 or 2 Expected)\n");
-
+        sprintf(opOutBuf, "    > No Parameters Provided (1 or 2 Expected)\n");
+        opDisplay(opOutBuf);
         return;
         }
     idletrigger = (u32)newtrigger;
     idletime    = (u32)newsleep;
-    fprintf(out, "    > Sleep will now occur every %u cycles for %u milliseconds.\n", idletrigger, idletime);
+    sprintf(opOutBuf, "    > Sleep will now occur every %u cycles for %u milliseconds.\n", idletrigger, idletime);
+    opDisplay(opOutBuf);
     }
 
 #endif
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Display the DTCyber Version
+**  Purpose:        Display the DtCyber Version
 **
 **  Parameters:     Name        Description.
 **                  help        Request only help on this command.
@@ -2833,15 +3079,36 @@ static void opCmdIdle(bool help, char *cmdParams)
 **------------------------------------------------------------------------*/
 static void opDisplayVersion(void)
     {
-    fputs("\n--------------------------------------------------------------------------------", out);
-    fprintf(out, "\n     %s", DtCyberVersion);
-    fprintf(out, "\n     %s", DtCyberCopyright);
-    fprintf(out, "\n     %s", DtCyberLicense);
-    fprintf(out, "\n     %s", DtCyberLicenseDetails);
-    fputs("\n--------------------------------------------------------------------------------", out);
-    fprintf(out, "\n     Build Date: %s", DTCyberBuildDate);
-    fputs("\n--------------------------------------------------------------------------------", out);
-    fputs("\n", out);
+    opDisplay("\n--------------------------------------------------------------------------------");
+    sprintf(opOutBuf, "\n     %s", DtCyberVersion); opDisplay(opOutBuf);
+    sprintf(opOutBuf, "\n     %s", DtCyberCopyright); opDisplay(opOutBuf);
+    sprintf(opOutBuf, "\n     %s", DtCyberLicense); opDisplay(opOutBuf);
+    sprintf(opOutBuf, "\n     %s", DtCyberLicenseDetails); opDisplay(opOutBuf);
+    opDisplay("\n--------------------------------------------------------------------------------");
+    sprintf(opOutBuf, "\n     Build Date: %s", DtCyberBuildDate); opDisplay(opOutBuf);
+    opDisplay("\n--------------------------------------------------------------------------------");
+    opDisplay("\n");
     }
+
+#if defined(_WIN32)
+/*--------------------------------------------------------------------------
+**  Purpose:        Translate a Windows-style pathname to a Unix-style one
+**
+**  Parameters:     Name        Description.
+**                  path        Windows-style pathname
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opToUnixPath(char *path)
+    {
+    char *cp;
+
+    for (cp = path; *cp != '\0'; cp++)
+        {
+        if (*cp == '\\') *cp = '/';
+        }
+    }
+#endif
 
 /*---------------------------  End Of File  ------------------------------*/

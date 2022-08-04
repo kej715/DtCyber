@@ -1,8 +1,28 @@
-dsd "\[UNLOAD,51."
-dsd "\[UNLOAD,52."
-dsd "\[UNLOAD,53."
-dsd "\[!"
-mount "13,0,1" "tapes/nos287-1.tap"
-mount "13,0,2" "tapes/nos287-2.tap"
-mount "13,0,3" "tapes/nos287-3.tap"
-sleep 5
+#!/usr/bin/env node
+//
+// Mount the NOS permanent file tapes
+//
+
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.dsd([
+  "[UNLOAD,51.",
+  "[UNLOAD,52.",
+  "[UNLOAD,53.",
+  "[!"
+]))
+.then(() => dtc.mount(13, 0, 1, "tapes/nos287-1.tap"))
+.then(() => dtc.mount(13, 0, 2, "tapes/nos287-2.tap"))
+.then(() => dtc.mount(13, 0, 3, "tapes/nos287-3.tap"))
+.then(() => dtc.sleep(5000))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});
