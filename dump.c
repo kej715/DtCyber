@@ -71,7 +71,7 @@
 **  Private Variables
 **  -----------------
 */
-static FILE *cpuF;
+static FILE *cpuF[2];
 static FILE *ppuF[024];
 
 /*
@@ -92,19 +92,24 @@ static FILE *ppuF[024];
 **------------------------------------------------------------------------*/
 void dumpInit(void)
     {
+    u8   cp;
+    char fileName[20];
     u8   pp;
-    char ppDumpName[20];
 
-    cpuF = fopen("cpu.dmp", "wt");
-    if (cpuF == NULL)
+    for (cp = 0; cp < cpuCount; cp++)
         {
-        logError(LogErrorLocation, "(dump   ) can't open cpu dump");
+        sprintf(fileName, "cpu%o.dmp", cp);
+        cpuF[cp] = fopen(fileName, "wt");
+        if (cpuF[cp] == NULL)
+            {
+            logError(LogErrorLocation, "(dump   ) can't open cpu[%o] dump", cp);
+            }
         }
 
     for (pp = 0; pp < ppuCount; pp++)
         {
-        sprintf(ppDumpName, "ppu%02o.dmp", pp);
-        ppuF[pp] = fopen(ppDumpName, "wt");
+        sprintf(fileName, "ppu%02o.dmp", pp);
+        ppuF[pp] = fopen(fileName, "wt");
         if (ppuF[pp] == NULL)
             {
             logError(LogErrorLocation, "(dump   ) can't open ppu[%02o] dump", pp);
@@ -113,7 +118,7 @@ void dumpInit(void)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Termiante dumping.
+**  Purpose:        Terminate dumping.
 **
 **  Parameters:     Name        Description.
 **
@@ -122,11 +127,15 @@ void dumpInit(void)
 **------------------------------------------------------------------------*/
 void dumpTerminate(void)
     {
+    u8 cp;
     u8 pp;
 
-    if (cpuF != NULL)
+    for (cp = 0; cp < cpuCount; cp++)
         {
-        fclose(cpuF);
+        if (cpuF[cp] != NULL)
+            {
+            fclose(cpuF[cp]);
+            }
         }
 
     for (pp = 0; pp < ppuCount; pp++)
@@ -148,12 +157,17 @@ void dumpTerminate(void)
 **------------------------------------------------------------------------*/
 void dumpAll(void)
     {
+    u8 cp;
     u8 pp;
 
     fprintf(stderr, "(dump   ) dumping core...");
     fflush(stderr);
 
-    dumpCpu();
+    for (cp = 0; pp < cpuCount; cp++)
+        {
+        dumpCpu(cp);
+        }
+
     for (pp = 0; pp < ppuCount; pp++)
         {
         dumpPpu(pp);
@@ -164,77 +178,80 @@ void dumpAll(void)
 **  Purpose:        Dump CPU.
 **
 **  Parameters:     Name        Description.
+**                  cp          CPU number.
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void dumpCpu(void)
+void dumpCpu(u8 cp)
     {
-    u32    addr;
-    CpWord data;
-    CpWord lastData;
-    bool   duplicateLine;
-    u8     ch;
-    u8     i;
-    u8     shiftCount;
+    u32         addr;
+    u8          ch;
+    CpuContext *cpu;
+    CpWord      data;
+    bool        duplicateLine;
+    u8          i;
+    CpWord      lastData;
+    FILE        *pf = cpuF[cp];
+    u8          shiftCount;
 
-    fprintf(cpuF, "P       %06o  ", cpu.regP);
-    fprintf(cpuF, "A%d %06o  ", 0, cpu.regA[0]);
-    fprintf(cpuF, "B%d %06o", 0, cpu.regB[0]);
-    fprintf(cpuF, "\n");
+    fprintf(pf, "P       %06o  ", cpu->regP);
+    fprintf(pf, "A%d %06o  ", 0, cpu->regA[0]);
+    fprintf(pf, "B%d %06o", 0, cpu->regB[0]);
+    fprintf(pf, "\n");
 
-    fprintf(cpuF, "RA      %06o  ", cpu.regRaCm);
-    fprintf(cpuF, "A%d %06o  ", 1, cpu.regA[1]);
-    fprintf(cpuF, "B%d %06o", 1, cpu.regB[1]);
-    fprintf(cpuF, "\n");
+    fprintf(pf, "RA      %06o  ", cpu->regRaCm);
+    fprintf(pf, "A%d %06o  ", 1, cpu->regA[1]);
+    fprintf(pf, "B%d %06o", 1, cpu->regB[1]);
+    fprintf(pf, "\n");
 
-    fprintf(cpuF, "FL      %06o  ", cpu.regFlCm);
-    fprintf(cpuF, "A%d %06o  ", 2, cpu.regA[2]);
-    fprintf(cpuF, "B%d %06o", 2, cpu.regB[2]);
-    fprintf(cpuF, "\n");
+    fprintf(pf, "FL      %06o  ", cpu->regFlCm);
+    fprintf(pf, "A%d %06o  ", 2, cpu->regA[2]);
+    fprintf(pf, "B%d %06o", 2, cpu->regB[2]);
+    fprintf(pf, "\n");
 
-    fprintf(cpuF, "RAE   %08o  ", cpu.regRaEcs);
-    fprintf(cpuF, "A%d %06o  ", 3, cpu.regA[3]);
-    fprintf(cpuF, "B%d %06o", 3, cpu.regB[3]);
-    fprintf(cpuF, "\n");
+    fprintf(pf, "RAE   %08o  ", cpu->regRaEcs);
+    fprintf(pf, "A%d %06o  ", 3, cpu->regA[3]);
+    fprintf(pf, "B%d %06o", 3, cpu->regB[3]);
+    fprintf(pf, "\n");
 
-    fprintf(cpuF, "FLE   %08o  ", cpu.regFlEcs);
-    fprintf(cpuF, "A%d %06o  ", 4, cpu.regA[4]);
-    fprintf(cpuF, "B%d %06o", 4, cpu.regB[4]);
-    fprintf(cpuF, "\n");
+    fprintf(pf, "FLE   %08o  ", cpu->regFlEcs);
+    fprintf(pf, "A%d %06o  ", 4, cpu->regA[4]);
+    fprintf(pf, "B%d %06o", 4, cpu->regB[4]);
+    fprintf(pf, "\n");
 
-    fprintf(cpuF, "EM/FL %08o  ", cpu.exitMode);
-    fprintf(cpuF, "A%d %06o  ", 5, cpu.regA[5]);
-    fprintf(cpuF, "B%d %06o", 5, cpu.regB[5]);
-    fprintf(cpuF, "\n");
+    fprintf(pf, "EM/FL %08o  ", cpu->exitMode);
+    fprintf(pf, "A%d %06o  ", 5, cpu->regA[5]);
+    fprintf(pf, "B%d %06o", 5, cpu->regB[5]);
+    fprintf(pf, "\n");
 
-    fprintf(cpuF, "MA      %06o  ", cpu.regMa);
-    fprintf(cpuF, "A%d %06o  ", 6, cpu.regA[6]);
-    fprintf(cpuF, "B%d %06o", 6, cpu.regB[6]);
-    fprintf(cpuF, "\n");
+    fprintf(pf, "MA      %06o  ", cpu->regMa);
+    fprintf(pf, "A%d %06o  ", 6, cpu->regA[6]);
+    fprintf(pf, "B%d %06o", 6, cpu->regB[6]);
+    fprintf(pf, "\n");
 
-    fprintf(cpuF, "ECOND       %02o  ", cpu.exitCondition);
-    fprintf(cpuF, "A%d %06o  ", 7, cpu.regA[7]);
-    fprintf(cpuF, "B%d %06o  ", 7, cpu.regB[7]);
-    fprintf(cpuF, "\n");
-    fprintf(cpuF, "STOP         %d  ", cpuStopped ? 1 : 0);
-    fprintf(cpuF, "\n");
-    fprintf(cpuF, "\n");
+    fprintf(pf, "ECOND       %02o  ", cpu->exitCondition);
+    fprintf(pf, "A%d %06o  ", 7, cpu->regA[7]);
+    fprintf(pf, "B%d %06o  ", 7, cpu->regB[7]);
+    fprintf(pf, "\n");
+    fprintf(pf, "STOP         %d  ", cpu->isStopped ? 1 : 0);
+    fprintf(pf, "\n");
+    fprintf(pf, "\n");
 
     for (i = 0; i < 8; i++)
         {
-        fprintf(cpuF, "X%d ", i);
-        data = cpu.regX[i];
-        fprintf(cpuF, "%04o %04o %04o %04o %04o   ",
+        fprintf(pf, "X%d ", i);
+        data = cpu->regX[i];
+        fprintf(pf, "%04o %04o %04o %04o %04o   ",
                 (PpWord)((data >> 48) & Mask12),
                 (PpWord)((data >> 36) & Mask12),
                 (PpWord)((data >> 24) & Mask12),
                 (PpWord)((data >> 12) & Mask12),
                 (PpWord)((data) & Mask12));
-        fprintf(cpuF, "\n");
+        fprintf(pf, "\n");
         }
 
-    fprintf(cpuF, "\n");
+    fprintf(pf, "\n");
 
     lastData      = ~cpMem[0];
     duplicateLine = FALSE;
@@ -246,7 +263,7 @@ void dumpCpu(void)
             {
             if (!duplicateLine)
                 {
-                fprintf(cpuF, "     DUPLICATED LINES.\n");
+                fprintf(pf, "     DUPLICATED LINES.\n");
                 duplicateLine = TRUE;
                 }
             }
@@ -254,8 +271,8 @@ void dumpCpu(void)
             {
             duplicateLine = FALSE;
             lastData      = data;
-            fprintf(cpuF, "%07o   ", addr & Mask21);
-            fprintf(cpuF, "%04o %04o %04o %04o %04o   ",
+            fprintf(pf, "%07o   ", addr & Mask21);
+            fprintf(pf, "%04o %04o %04o %04o %04o   ",
                     (PpWord)((data >> 48) & Mask12),
                     (PpWord)((data >> 36) & Mask12),
                     (PpWord)((data >> 24) & Mask12),
@@ -267,19 +284,19 @@ void dumpCpu(void)
                 {
                 shiftCount -= 6;
                 ch          = (u8)((data >> shiftCount) & Mask6);
-                fprintf(cpuF, "%c", cdcToAscii[ch]);
+                fprintf(pf, "%c", cdcToAscii[ch]);
                 }
             }
 
         if (!duplicateLine)
             {
-            fprintf(cpuF, "\n");
+            fprintf(pf, "\n");
             }
         }
 
     if (duplicateLine)
         {
-        fprintf(cpuF, "LAST ADDRESS:%07o\n", addr & Mask21);
+        fprintf(pf, "LAST ADDRESS:%07o\n", addr & Mask21);
         }
     }
 
@@ -425,24 +442,31 @@ void dumpRunningPpu(u8 pp)
 **  Purpose:        Dump running CPU.
 **
 **  Parameters:     Name        Description.
+**                  cp          CPU number.
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void dumpRunningCpu(void)
+void dumpRunningCpu(u8 cp)
     {
-    cpuF = fopen("cpu_run.dmp", "wt");
-    if (cpuF == NULL)
+    FILE *pf;
+    char cpDumpName[20];
+
+    sprintf(cpDumpName, "cpu%o_run.dmp", cp);
+    pf = fopen(cpDumpName, "wt");
+    if (pf == NULL)
         {
-        logError(LogErrorLocation, "(dump   ) can't open cpu_run.dmp");
+        logError(LogErrorLocation, "(dump   ) can't open %s", cpDumpName);
 
         return;
         }
 
-    dumpCpu();
-    fclose(cpuF);
+    cpuF[cp] = pf;
 
-    cpuF = NULL;
+    dumpCpu(cp);
+    fclose(pf);
+
+    cpuF[cp] = NULL;
     }
 
 /*---------------------------  End Of File  ------------------------------*/

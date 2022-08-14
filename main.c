@@ -245,9 +245,12 @@ int main(int argc, char **argv)
     */
     deadStart();
 
+    fputs("(cpu    ) CPU0 started\n",  stdout);
+
     /*
     **  Emulation loop.
     */
+
     while (emulationActive)
         {
 #if CcCycleTime
@@ -272,10 +275,10 @@ int main(int argc, char **argv)
         */
         ppStep();
 
-        cpuStep();
-        cpuStep();
-        cpuStep();
-        cpuStep();
+        cpuStep(cpus);
+        cpuStep(cpus);
+        cpuStep(cpus);
+        cpuStep(cpus);
 
         channelStep();
         rtcTick();

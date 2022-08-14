@@ -193,6 +193,7 @@ typedef struct
     PpWord regQ;                        /* register Q (12 bit) */
     PpWord mem[PpMemSize];              /* PP memory */
     bool   busy;                        /* instruction execution state */
+    int    exchangingCpu;               /* CPU for which exchange initiated */
     u8     id;                          /* PP number */
     PpByte opF;                         /* current opcode */
     PpByte opD;                         /* current opcode */
@@ -203,27 +204,40 @@ typedef struct
 */
 typedef struct
     {
-    CpWord regX[010];                   /* data registers (60 bit) */
-    u32    regA[010];                   /* address registers (18 bit) */
-    u32    regB[010];                   /* index registers (18 bit) */
-    u32    regP;                        /* program counter */
-    u32    regRaCm;                     /* reference address CM */
-    u32    regFlCm;                     /* field length CM */
-    u32    regRaEcs;                    /* reference address ECS */
-    u32    regFlEcs;                    /* field length ECS */
-    u32    regMa;                       /* monitor address */
-    u32    regSpare;                    /* reserved */
-    u32    exitMode;                    /* CPU exit mode (24 bit) */
-    bool   monitorMode;                 /* monitor mode bit */
-    u8     exitCondition;               /* recorded exit conditions since XJ */
-
+    int           id;                   /* CPU ordinal */
+    CpWord        regX[010];            /* data registers (60 bit) */
+    u32           regA[010];            /* address registers (18 bit) */
+    u32           regB[010];            /* index registers (18 bit) */
+    u32           regP;                 /* program counter */
+    u32           regRaCm;              /* reference address CM */
+    u32           regFlCm;              /* field length CM */
+    u32           regRaEcs;             /* reference address ECS */
+    u32           regFlEcs;             /* field length ECS */
+    u32           regMa;                /* monitor address */
+    u32           regSpare;             /* reserved */
+    u32           exitMode;             /* CPU exit mode (24 bit) */
+    volatile bool isMonitorMode;        /* TRUE if CPU is in monitor mode */
+    volatile bool isStopped;            /* TRUE if CPU is stopped */
+    volatile int  ppRequestingExchange; /* PP number of PP requesting exchange, -1 if none */
+    u32           ppExchangeAddress;    /* PP-requested exchange address */
+    bool          doChangeMode;         /* TRUE if monitor mode flag should be changed by PP exchange jump */
+    volatile bool isErrorExitPending;   /* TRUE if error exit pending */
+    u8            exitCondition;        /* pending error exit conditions */
+    CpWord        opWord;               /* Current instruction word */
+    u8            opOffset;             /* Bit offset to current instruction */
+    u8            opFm;                 /* Opcode field (first 6 bits) */
+    u8            opI;                  /* I field of current instruction */
+    u8            opJ;                  /* J field of current instruction */
+    u8            opK;                  /* K field (first 3 bits only) */
+    u32           opAddress;            /* K field (18 bits) */
+    bool          floatException;       /* TRUE if CPU detected float exception */
     /*
     **  Instruction word stack.
     */
-    CpWord iwStack[MaxIwStack];
-    u32    iwAddress[MaxIwStack];
-    bool   iwValid[MaxIwStack];
-    u8     iwRank;
+    CpWord        iwStack[MaxIwStack];
+    u32           iwAddress[MaxIwStack];
+    bool          iwValid[MaxIwStack];
+    u8            iwRank;
     } CpuContext;
 
 /*

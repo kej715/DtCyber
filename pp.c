@@ -334,7 +334,8 @@ void ppInit(u8 count)
     */
     for (pp = 0; pp < ppuCount; pp++)
         {
-        ppu[pp].id = pp;
+        ppu[pp].id            = pp;
+        ppu[pp].exchangingCpu = -1;
         }
 
     pp = 0;
@@ -404,6 +405,21 @@ void ppStep(void)
         **  Advance to next PPU.
         */
         activePpu = ppu + i;
+        
+        if (activePpu->exchangingCpu >= 0)
+            {
+            cpuAcquireExchangeMutex();
+            if (cpus[activePpu->exchangingCpu].ppRequestingExchange == activePpu->id)
+                {
+                cpuReleaseExchangeMutex();
+                continue;
+                }
+            else
+                {
+                activePpu->exchangingCpu = -1;
+                cpuReleaseExchangeMutex();
+                }
+            }
 
         if (!activePpu->busy)
             {
@@ -722,13 +738,31 @@ static void ppOpPSN25(void)     // 25
 
 static void ppOpEXN(void)     // 26
     {
+    CpuContext *cpu;
+    int cpuNum;
+    bool doChangeMode;
+    bool isExchangePending;
     u32 exchangeAddress;
+
+    cpuNum = (cpuCount > 1) ? (opD & 001) : 0;
+    cpu = cpus + cpuNum;
+
+    cpuAcquireExchangeMutex();
+    isExchangePending = cpu->ppRequestingExchange != -1;
 
     if (((opD & 070) == 0) || ((features & HasNoCejMej) != 0))
         {
         /*
         **  EXN or MXN/MAN with CEJ/MEJ disabled.
         */
+        if (isExchangePending)
+            {
+            // Release mutex and arrange to retry instruction
+            cpuReleaseExchangeMutex();
+            PpDecrement(activePpu->regP);
+            return;
+            }
+        doChangeMode = FALSE;
         if (((activePpu->regA & Sign18) != 0) && ((features & HasRelocationReg) != 0))
             {
             exchangeAddress = activePpu->regR + (activePpu->regA & Mask17);
@@ -744,20 +778,21 @@ static void ppOpEXN(void)     // 26
         }
     else
         {
-        if (cpu.monitorMode)
+        if (cpu->isMonitorMode || isExchangePending)
             {
             /*
             **  Pass.
             */
+            cpuReleaseExchangeMutex();
             return;
             }
 
+        doChangeMode = TRUE;
         if ((opD & 070) == 010)
             {
             /*
             **  MXN.
             */
-            cpu.monitorMode = TRUE;
 
             if (((activePpu->regA & Sign18) != 0) && ((features & HasRelocationReg) != 0))
                 {
@@ -777,37 +812,40 @@ static void ppOpEXN(void)     // 26
             /*
             **  MAN.
             */
-            cpu.monitorMode = TRUE;
-
-            exchangeAddress = cpu.regMa & Mask18;
+            exchangeAddress = cpu->regMa & Mask18;
             }
         else
             {
             /*
             **  Pass.
             */
+            cpuReleaseExchangeMutex();
             return;
             }
         }
 
     /*
-    **  Perform the exchange, but wait until the last parcel of the
-    **  current instruction word has been executed.
+    **  Request the exchange, and wait for it to complete.
     */
-    while (!cpuExchangeJump(exchangeAddress))
-        {
-        cpuStep();
-        }
+    cpu->ppRequestingExchange = activePpu->id;
+    cpu->ppExchangeAddress = exchangeAddress;
+    cpu->doChangeMode = doChangeMode;
+    activePpu->exchangingCpu = cpu->id;
+
+    cpuReleaseExchangeMutex();
     }
 
 static void ppOpRPN(void)     // 27
     {
+    u8 cpuNum;
+
     /*
     **  RPN except for series 800 (865 has it though).
     */
     if (((features & IsSeries800) == 0) || (modelType == ModelCyber865))
         {
-        activePpu->regA = cpuGetP();
+        cpuNum = (cpuCount > 1) ? (opD & 001) : 0;
+        activePpu->regA = cpuGetP(cpuNum);
         }
     }
 
