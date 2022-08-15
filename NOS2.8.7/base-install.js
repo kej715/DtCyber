@@ -156,6 +156,13 @@ if (isCompletedStep("sysgen-source") === false) {
 }
 
 if (isCompletedStep("prep-customization") === false) {
+  if (isMountTapes === false) {
+    isMountTapes = true;
+    promise = promise
+    .then(() => dtc.mount(13, 0, 1, "tapes/nos287-1.tap"))
+    .then(() => dtc.mount(13, 0, 2, "tapes/nos287-2.tap"))
+    .then(() => dtc.mount(13, 0, 3, "tapes/nos287-3.tap"));
+  }
   promise = promise
   .then(() => dtc.say("Run job to initialize customization artifacts ..."))
   .then(() => dtc.runJob(12, 4, "decks/init-build.job"))
