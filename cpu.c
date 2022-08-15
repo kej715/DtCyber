@@ -993,7 +993,7 @@ static void *cpuThread(void *param)
 
     printf("(cpu    ) CPU%o started\n",  activeCpu->id);
 
-    while (TRUE)
+    while (emulationActive)
         {
         cpuStep(activeCpu);
         }

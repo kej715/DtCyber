@@ -285,9 +285,9 @@ int main(int argc, char **argv)
 
 #ifdef IdleThrottle
         /* NOS Idle loop throttle */
-        if ((!cpu.monitorMode) && NOSIdle)
+        if ((cpus->isMonitorMode) && NOSIdle)
             {
-            if ((cpu.regP == 2) && (cpu.regFlCm == 5))
+            if ((cpus->regP == 2) && (cpus->regFlCm == 5))
                 {
                 idlecycles++;
                 if ((idlecycles % idletrigger) == 0)

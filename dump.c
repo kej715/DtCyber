@@ -163,7 +163,7 @@ void dumpAll(void)
     fprintf(stderr, "(dump   ) dumping core...");
     fflush(stderr);
 
-    for (cp = 0; pp < cpuCount; cp++)
+    for (cp = 0; cp < cpuCount; cp++)
         {
         dumpCpu(cp);
         }
@@ -195,6 +195,7 @@ void dumpCpu(u8 cp)
     FILE        *pf = cpuF[cp];
     u8          shiftCount;
 
+    cpu = cpus + cp;
     fprintf(pf, "P       %06o  ", cpu->regP);
     fprintf(pf, "A%d %06o  ", 0, cpu->regA[0]);
     fprintf(pf, "B%d %06o", 0, cpu->regB[0]);
