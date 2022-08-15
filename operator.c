@@ -533,15 +533,6 @@ static void *opThread(void *param)
             opDisplay("\n");
             }
 
-        if (opPaused)
-            {
-            /*
-            **  Unblock main emulation thread.
-            */
-            opPaused = FALSE;
-            continue;
-            }
-
         if (opActive)
             {
             /*
@@ -797,6 +788,7 @@ static int opReadLine(char *buf, int size)
             c = opInBuf[opOutIdx++];
             if (c == '\n')
                 {
+                opPaused = FALSE;
                 if (bp > buf && *(bp - 1) == '\r') bp -= 1;
                 *bp = '\0';
                 if (bp > buf)
@@ -1702,6 +1694,7 @@ static void opCmdPause(bool help, char *cmdParams)
     **  Wait for Enter key.
     */
     opPaused = TRUE;
+    opActive = FALSE;
     while (opPaused)
         {
         /* wait for operator thread to clear the flag */
