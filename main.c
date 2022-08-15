@@ -340,7 +340,6 @@ int main(int argc, char **argv)
     ppTerminate();
     channelTerminate();
 
-
     /*
     **  Stop helpers, if any
     */

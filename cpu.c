@@ -545,12 +545,6 @@ void cpuTerminate(void)
 
         fclose(ecsHandle);
         }
-
-    /*
-    **  Free allocated memory.
-    */
-    free(cpMem);
-    free(extMem);
     }
 
 /*--------------------------------------------------------------------------
@@ -995,6 +989,11 @@ static void *cpuThread(void *param)
 
     while (emulationActive)
         {
+        while (opPaused)
+            {
+            /* wait for operator thread to clear the flag */
+            sleepMsec(500);
+            }
         cpuStep(activeCpu);
         }
 #if !defined(_WIN32)

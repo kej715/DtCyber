@@ -202,6 +202,7 @@ static void opCmdIdle(bool help, char *cmdParams);
 **  ----------------
 */
 volatile bool opActive = FALSE;
+volatile bool opPaused = FALSE;
 
 /*
 **  -----------------
@@ -268,8 +269,7 @@ static SOCKET opListenHandle = 0;
 #else
 static int opListenHandle = 0;
 #endif
-static int           opListenPort = 0;
-static volatile bool opPaused     = FALSE;
+static int opListenPort = 0;
 
 static char opInBuf[256];
 static int  opInIdx  = 0;

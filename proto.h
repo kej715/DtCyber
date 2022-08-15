@@ -438,6 +438,7 @@ extern u8                  npuSvmNpuNode;
 extern volatile bool       opActive;
 extern char                opKeyIn;
 extern long                opKeyInterval;
+extern volatile bool       opPaused;
 extern char                persistDir[];
 extern u16                 platoConns;
 extern u16                 platoPort;
