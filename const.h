@@ -32,9 +32,9 @@
 **  ----------------
 */
 #ifdef _DEBUG
-#define DtCyberVersion      "Desktop CYBER 5.7.2 (Debug)   "
+#define DtCyberVersion      "Desktop CYBER 5.7.3 (Debug)   "
 #else
-#define DtCyberVersion      "Desktop CYBER 5.7.2 (Release) "
+#define DtCyberVersion      "Desktop CYBER 5.7.3 (Release) "
 #endif
 
 #define DtCyberBuildDate    __DATE__ " " __TIME__
@@ -131,6 +131,7 @@
 */
 #define PpMemSize                  010000
 
+#define MaxCpus                    2
 #define MaxUnits                   010
 #define MaxUnits2                  020
 #define MaxEquipment               010

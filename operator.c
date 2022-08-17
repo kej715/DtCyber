@@ -144,7 +144,7 @@ static void opHelpLoadTape(void);
 static void opCmdPrompt(void);
 
 static void opCmdShowState(bool help, char *cmdParams);
-static void opCmdShowStateCP(void);
+static void opCmdShowStateCP(u8 cpMask);
 static void opCmdShowStatePP(u32 ppMask);
 static void opHelpShowState(void);
 
@@ -202,6 +202,7 @@ static void opCmdIdle(bool help, char *cmdParams);
 **  ----------------
 */
 volatile bool opActive = FALSE;
+volatile bool opPaused = FALSE;
 
 /*
 **  -----------------
@@ -268,8 +269,7 @@ static SOCKET opListenHandle = 0;
 #else
 static int opListenHandle = 0;
 #endif
-static int           opListenPort = 0;
-static volatile bool opPaused     = FALSE;
+static int opListenPort = 0;
 
 static char opInBuf[256];
 static int  opInIdx  = 0;
@@ -533,15 +533,6 @@ static void *opThread(void *param)
             opDisplay("\n");
             }
 
-        if (opPaused)
-            {
-            /*
-            **  Unblock main emulation thread.
-            */
-            opPaused = FALSE;
-            continue;
-            }
-
         if (opActive)
             {
             /*
@@ -797,6 +788,7 @@ static int opReadLine(char *buf, int size)
             c = opInBuf[opOutIdx++];
             if (c == '\n')
                 {
+                opPaused = FALSE;
                 if (bp > buf && *(bp - 1) == '\r') bp -= 1;
                 *bp = '\0';
                 if (bp > buf)
@@ -1702,6 +1694,7 @@ static void opCmdPause(bool help, char *cmdParams)
     **  Wait for Enter key.
     */
     opPaused = TRUE;
+    opActive = FALSE;
     while (opPaused)
         {
         /* wait for operator thread to clear the flag */
@@ -2361,7 +2354,8 @@ static void opHelpUnloadTape(void)
 static void opCmdShowState(bool help, char *cmdParams)
     {
     char *cp;
-    bool isCP;
+    u8   cpMask;
+    int  cpNum;
     int  numParam;
     char *param;
     u32  ppMask;
@@ -2377,12 +2371,12 @@ static void opCmdShowState(bool help, char *cmdParams)
         return;
         }
 
+    cpMask = (cpuCount >  1) ? 0x03 : 0x01;
     ppMask = (ppuCount > 10) ? 0xfffff : 0x3ff;
-    isCP   = TRUE;
     if (strlen(cmdParams) > 0)
         {
+        cpMask = 0;
         ppMask = 0;
-        isCP   = FALSE;
         cp     = cmdParams;
         while (*cp != '\0')
             {
@@ -2395,9 +2389,31 @@ static void opCmdShowState(bool help, char *cmdParams)
                 {
                 *cp++ = '\0';
                 }
-            if ((strcasecmp(param, "CP") == 0) || (strcasecmp(param, "CPU") == 0))
+            if ((strncasecmp(param, "CP", 2) == 0))
                 {
-                isCP = TRUE;
+                numParam = sscanf(param + 2, "%d", &cpNum);
+                if (numParam != 1)
+                    {
+                    if (*(param + 2) == '\0')
+                        {
+                        cpMask = (cpuCount >  1) ? 0x03 : 0x01;
+                        }
+                    else
+                        {
+                        opDisplay("    > Missing or invalid CPU number\n");
+                        return;
+                        }
+                    }
+                else if ((cpNum >= 0) && (cpNum < cpuCount))
+                    {
+                    cpMask |= 1 << cpNum;
+                    }
+                else
+                    {
+                    opDisplay("    > Invalid CPU number\n");
+
+                    return;
+                    }
                 }
             else if (strncasecmp(param, "PP", 2) == 0)
                 {
@@ -2434,49 +2450,75 @@ static void opCmdShowState(bool help, char *cmdParams)
         {
         opCmdShowStatePP(ppMask);
         }
-    if (isCP)
+    if (cpMask != 0)
         {
-        opCmdShowStateCP();
+        opCmdShowStateCP(cpMask);
         }
     }
 
-static void opCmdShowStateCP(void)
+static void opCmdShowStateCP(u8 cpMask)
     {
+    u8 cpNum;
+    CpuContext *cpu;
     int i;
 
-    i = 0;
-    opDisplay("    >|--------------- CPU ----------------|\n");
-    sprintf(opOutBuf, "    > P       %06o  A%d %06o  B%d %06o\n", cpu.regP, i, cpu.regA[i], i, cpu.regB[i]);
-    opDisplay(opOutBuf);
-    i++;
-    sprintf(opOutBuf, "    > RA    %08o  A%d %06o  B%d %06o\n", cpu.regRaCm, i, cpu.regA[i], i, cpu.regB[i]);
-    opDisplay(opOutBuf);
-    i++;
-    sprintf(opOutBuf, "    > FL    %08o  A%d %06o  B%d %06o\n", cpu.regFlCm, i, cpu.regA[i], i, cpu.regB[i]);
-    opDisplay(opOutBuf);
-    i++;
-    sprintf(opOutBuf, "    > EM    %08o  A%d %06o  B%d %06o\n", cpu.exitMode, i, cpu.regA[i], i, cpu.regB[i]);
-    opDisplay(opOutBuf);
-    i++;
-    sprintf(opOutBuf, "    > RAE   %08o  A%d %06o  B%d %06o\n", cpu.regRaEcs, i, cpu.regA[i], i, cpu.regB[i]);
-    opDisplay(opOutBuf);
-    i++;
-    sprintf(opOutBuf, "    > FLE %010o  A%d %06o  B%d %06o\n", cpu.regFlEcs, i, cpu.regA[i], i, cpu.regB[i]);
-    opDisplay(opOutBuf);
-    i++;
-    sprintf(opOutBuf, "    > MA    %08o  A%d %06o  B%d %06o\n", cpu.regMa, i, cpu.regA[i], i, cpu.regB[i]);
-    opDisplay(opOutBuf);
-    i++;
-    sprintf(opOutBuf, "    >                 A%d %06o  B%d %06o\n\n", i, cpu.regA[i], i, cpu.regB[i]);
-    opDisplay(opOutBuf);
-    i++;
-
-    for (i = 0; i < 8; i++)
+    cpMask |= (1 << 2); // stopper
+    cpNum   = 0;
+    while (cpNum < 2)
         {
-        sprintf(opOutBuf, "    > X%d  %020lo\n", i, cpu.regX[i]);
+        //
+        // Find next requested CPU number
+        //
+        if (((1 << cpNum) & cpMask) == 0)
+            {
+            cpNum += 1;
+            continue;
+            }
+
+        if (cpuCount > 1)
+            {
+            sprintf(opOutBuf, "    > ---------------- CPU%o --------------\n", cpNum);
+            opDisplay(opOutBuf);
+            }
+        else
+            {
+            opDisplay("    > ---------------- CPU ---------------\n");
+            }
+        cpu = cpus + cpNum;
+        i = 0;
+        sprintf(opOutBuf, "    > P       %06o  A%d %06o  B%d %06o\n", cpu->regP, i, cpu->regA[i], i, cpu->regB[i]);
         opDisplay(opOutBuf);
+        i++;
+        sprintf(opOutBuf, "    > RA    %08o  A%d %06o  B%d %06o\n", cpu->regRaCm, i, cpu->regA[i], i, cpu->regB[i]);
+        opDisplay(opOutBuf);
+        i++;
+        sprintf(opOutBuf, "    > FL    %08o  A%d %06o  B%d %06o\n", cpu->regFlCm, i, cpu->regA[i], i, cpu->regB[i]);
+        opDisplay(opOutBuf);
+        i++;
+        sprintf(opOutBuf, "    > EM    %08o  A%d %06o  B%d %06o\n", cpu->exitMode, i, cpu->regA[i], i, cpu->regB[i]);
+        opDisplay(opOutBuf);
+        i++;
+        sprintf(opOutBuf, "    > RAE   %08o  A%d %06o  B%d %06o\n", cpu->regRaEcs, i, cpu->regA[i], i, cpu->regB[i]);
+        opDisplay(opOutBuf);
+        i++;
+        sprintf(opOutBuf, "    > FLE %010o  A%d %06o  B%d %06o\n", cpu->regFlEcs, i, cpu->regA[i], i, cpu->regB[i]);
+        opDisplay(opOutBuf);
+        i++;
+        sprintf(opOutBuf, "    > MA    %08o  A%d %06o  B%d %06o\n", cpu->regMa, i, cpu->regA[i], i, cpu->regB[i]);
+        opDisplay(opOutBuf);
+        i++;
+        sprintf(opOutBuf, "    > MF           %d  A%d %06o  B%d %06o\n\n", cpu->isMonitorMode, i, cpu->regA[i], i, cpu->regB[i]);
+        opDisplay(opOutBuf);
+        i++;
+
+        for (i = 0; i < 8; i++)
+            {
+            sprintf(opOutBuf, "    > X%d  %020lo\n", i, cpu->regX[i]);
+            opDisplay(opOutBuf);
+            }
+        opDisplay("\n");
+        cpNum += 1;
         }
-    opDisplay("\n");
     }
 
 static void opCmdShowStatePP(u32 ppMask)

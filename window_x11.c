@@ -703,7 +703,7 @@ void *windowThread(void *param)
             }
 #endif
 
-        if (opActive)
+        if (opPaused)
             {
             /*
             **  Display pause message.

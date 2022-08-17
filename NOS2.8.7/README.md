@@ -224,9 +224,9 @@ To restart the system using the new deadstart tape, use the `start.js` script, a
 | Windows:     | `node start`      |
 
 ## Installing a Minimal System
-If you prefer to install a minimal NOS 2.8.7 system with a subset of optional products,
-or none of the optional products, you may accomplish this by specifying the `basic`
-option when calling the `install.js` script, as in:
+If you prefer to install a minimal NOS 2.8.7 system with a subset of optional
+products, or none of the optional products, you may accomplish this by specifying the
+`basic` option when calling the `install.js` script, as in:
 
 | OS           | Commands                  |
 |--------------|---------------------------|
@@ -247,3 +247,11 @@ In case a basic installation is interrupted before completing successfully, use 
 | Linux/MacOS: | `sudo node install basic continue` |
 | Windows:     | `node install basic continue`      |
 
+## A Note About Anti-Virus Software
+The installation scripts automatically download tape images and other files, as
+needed, from the internet. Anti-virus software can interfere with this process
+and prevent these files from being downloaded successfully. If an installation script
+fails to download a file successfully and exits with an error indication, and
+anti-virus software is running on your host system, look into configuring the
+anti-virus software such that it does not apply to files being downloaded to the
+NOS2.8.7/opt/tapes directory of your *DtCyber* git repository.

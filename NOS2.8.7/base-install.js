@@ -62,15 +62,15 @@ else {
   .then(() => dtc.say("Begin initial deadstart ..."))
   .then(() => dtc.dsd([
     "O!",
-    "#500#P!",
-    "#500#D=YES",
-    "#500#",
-    "#4500#NEXT.",
+    "#1000#P!",
+    "#1000#D=YES",
+    "#1000#",
+    "#5000#NEXT.",
     "#1000#]!",
     "#1000#INITIALIZE,AL,5,6,10,11,12,13.",
-    "#500#GO.",
-    "#1500#%year%%mon%%day%",
-    "#1500#%hour%%min%%sec%"
+    "#1000#GO.",
+    "#5000#%year%%mon%%day%",
+    "#3000#%hour%%min%%sec%"
   ]))
   .then(() => dtc.expect([ {re:/QUEUE FILE UTILITY COMPLETE/} ], "printer"))
   .then(() => {
@@ -137,7 +137,15 @@ if (isCompletedStep("add-guest") === false) {
 
 if (isCompletedStep("sysgen-source") === false) {
   promise = promise
-  .then(() => dtc.say("Start SYSGEN(SOURCE) ..."))
+  .then(() => dtc.say("Start SYSGEN(SOURCE) ..."));
+  if (isMountTapes === false) {
+    isMountTapes = true;
+    promise = promise
+    .then(() => dtc.mount(13, 0, 1, "tapes/nos287-1.tap"))
+    .then(() => dtc.mount(13, 0, 2, "tapes/nos287-2.tap"))
+    .then(() => dtc.mount(13, 0, 3, "tapes/nos287-3.tap"));
+  }
+  promise = promise
   .then(() => dtc.dsd("[X.SYSGEN(SOURCE)"))
   .then(() => dtc.expect([ {re:/E N D   S O U R C E/} ], "printer"))
   .then(() => dtc.say("SYSGEN(SOURCE) complete"))
@@ -148,6 +156,13 @@ if (isCompletedStep("sysgen-source") === false) {
 }
 
 if (isCompletedStep("prep-customization") === false) {
+  if (isMountTapes === false) {
+    isMountTapes = true;
+    promise = promise
+    .then(() => dtc.mount(13, 0, 1, "tapes/nos287-1.tap"))
+    .then(() => dtc.mount(13, 0, 2, "tapes/nos287-2.tap"))
+    .then(() => dtc.mount(13, 0, 3, "tapes/nos287-3.tap"));
+  }
   promise = promise
   .then(() => dtc.say("Run job to initialize customization artifacts ..."))
   .then(() => dtc.runJob(12, 4, "decks/init-build.job"))

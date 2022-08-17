@@ -872,7 +872,7 @@ void windowDisplay(HWND hWnd)
         }
 #endif
 
-    if (opActive)
+    if (opPaused)
         {
         static char opMessage[] = "(window_win32) Emulation paused";
         hfntOld = SelectObject(hdcMem, hLargeFont);
