@@ -347,17 +347,18 @@ int initOpenOperatorSection(void)
 **------------------------------------------------------------------------*/
 static void initCyber(char *config)
     {
-    char model[40];
-    char dummy[256];
-    long memory;
-    long ecsBanks;
-    long esmBanks;
-    long enableCejMej;
     long clockIncrement;
-    long pps;
-    long mask;
-    long port;
     long conns;
+    long cpus;
+    char dummy[256];
+    long ecsBanks;
+    long enableCejMej;
+    long esmBanks;
+    long mask;
+    long memory;
+    char model[40];
+    long port;
+    long pps;
     long setMHz;
 
     if (!initOpenSection(config))
@@ -503,6 +504,17 @@ static void initCyber(char *config)
         fprintf(stderr, "(init   ) You can't have both 'ecsbanks' and 'esmbanks' in section [%s] in %s\n", config, startupFile);
         exit(1);
         }
+
+     /*
+     **  Determine the number of CPU's to use.
+     */
+    initGetInteger ("cpus", 1, &cpus);
+    if (cpus < 1 || cpus > MaxCpus)
+        {
+        fprintf (stderr, "(init   ) Entry 'cpus' invalid in section [%s] in %s -- correct values are 1 or 2\n", config, startupFile);
+        exit (1);
+        }
+    cpuCount = (int)cpus;
 
     /*
     **  Determine where to persist data between emulator invocations

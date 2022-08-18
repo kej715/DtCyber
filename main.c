@@ -245,9 +245,12 @@ int main(int argc, char **argv)
     */
     deadStart();
 
+    fputs("(cpu    ) CPU0 started\n",  stdout);
+
     /*
     **  Emulation loop.
     */
+
     while (emulationActive)
         {
 #if CcCycleTime
@@ -272,19 +275,19 @@ int main(int argc, char **argv)
         */
         ppStep();
 
-        cpuStep();
-        cpuStep();
-        cpuStep();
-        cpuStep();
+        cpuStep(cpus);
+        cpuStep(cpus);
+        cpuStep(cpus);
+        cpuStep(cpus);
 
         channelStep();
         rtcTick();
 
 #ifdef IdleThrottle
         /* NOS Idle loop throttle */
-        if ((!cpu.monitorMode) && NOSIdle)
+        if ((cpus->isMonitorMode) && NOSIdle)
             {
-            if ((cpu.regP == 2) && (cpu.regFlCm == 5))
+            if ((cpus->regP == 2) && (cpus->regFlCm == 5))
                 {
                 idlecycles++;
                 if ((idlecycles % idletrigger) == 0)
@@ -336,7 +339,6 @@ int main(int argc, char **argv)
     cpuTerminate();
     ppTerminate();
     channelTerminate();
-
 
     /*
     **  Stop helpers, if any

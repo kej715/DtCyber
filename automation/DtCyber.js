@@ -303,9 +303,9 @@ class DtCyber {
     else {
       list.push(commands);
     }
-    list.push("DROP.");
+    list.push("#1000#DROP.");
     return this.dsd("X.DIS.")
-    .then(() => me.sleep(1000))
+    .then(() => me.sleep(2000))
     .then(() => me.dsd(list))
     .then(() => me.sleep(1000));
   }

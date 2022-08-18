@@ -66,15 +66,16 @@ void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 /*
 **  cpu.c
 */
-void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType);
-void cpuTerminate(void);
-u32 cpuGetP(void);
-bool cpuExchangeJump(u32 addr);
-void cpuStep(void);
-bool cpuEcsFlagRegister(u32 ecsAddress);
+void cpuAcquireExchangeMutex(void);
 bool cpuDdpTransfer(u32 ecsAddress, CpWord *data, bool writeToEcs);
+bool cpuEcsFlagRegister(u32 ecsAddress);
+u32  cpuGetP(u8 cpuNum);
+void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType);
 void cpuPpReadMem(u32 address, CpWord *data);
 void cpuPpWriteMem(u32 address, CpWord data);
+void cpuReleaseExchangeMutex(void);
+void cpuStep(CpuContext *activeCpu);
+void cpuTerminate(void);
 
 /*
 **  cr405.c
@@ -154,11 +155,11 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void dumpInit(void);
 void dumpTerminate(void);
 void dumpAll(void);
-void dumpCpu(void);
+void dumpCpu(u8 cp);
 void dumpPpu(u8 pp);
 void dumpDisassemblePpu(u8 pp);
 void dumpRunningPpu(u8 pp);
-void dumpRunningCpu(void);
+void dumpRunningCpu(u8 cp);
 
 /*
 **  float.c
@@ -363,11 +364,11 @@ void traceOpcode(void);
 u8 traceDisassembleOpcode(char *str, PpWord *pm);
 void traceChannelFunction(PpWord funcCode);
 void tracePrint(char *str);
-void traceCpuPrint(char *str);
+void traceCpuPrint(CpuContext *cpu, char *str);
 void traceChannel(u8 ch);
 void traceEnd(void);
-void traceCpu(u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress);
-void traceExchange(CpuContext *cc, u32 addr, char *title);
+void traceCpu(CpuContext *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress);
+void traceExchange(CpuContext *cpu, u32 addr, char *title);
 
 /*
 **  window_{win32,x11}.c
@@ -409,7 +410,8 @@ extern ChSlot              *channel;
 extern u8                  channelCount;
 extern const char          consoleToAscii[64];
 extern CpWord              *cpMem;
-extern CpuContext          cpu;
+extern CpuContext          *cpus;
+extern int                 cpuCount;
 extern u32                 cpuMaxMemory;
 extern bool                cpuStopped;
 extern u32                 cycles;
@@ -436,6 +438,7 @@ extern u8                  npuSvmNpuNode;
 extern volatile bool       opActive;
 extern char                opKeyIn;
 extern long                opKeyInterval;
+extern volatile bool       opPaused;
 extern char                persistDir[];
 extern u16                 platoConns;
 extern u16                 platoPort;

@@ -358,15 +358,22 @@ static void scrExecute(PpWord func)
             scrClrBit(scrRegister, 0265);
 
             /*
-            **  Disable "has CP1" bit.
+            **  Enable or disable "has CP1" bit.
             */
-            scrClrBit(scrRegister, 0266);
+            if (cpuCount > 1)
+                {
+                scrSetBit(scrRegister, 0266);
+                }
+            else
+                {
+                scrClrBit(scrRegister, 0266);
+                }
             }
 
         break;
 
     case 020:
-        if (cpuStopped)
+        if (cpus[0].isStopped)
             {
             scrSetBit(scrRegister, 0300);
             }
@@ -374,10 +381,7 @@ static void scrExecute(PpWord func)
             {
             scrClrBit(scrRegister, 0300);
             }
-
-        scrClrBit(scrRegister, 0301);
-
-        if (cpu.monitorMode)
+        if (cpus[0].isMonitorMode)
             {
             scrSetBit(scrRegister, 0303);
             }
@@ -386,11 +390,34 @@ static void scrExecute(PpWord func)
             scrClrBit(scrRegister, 0303);
             }
 
-        scrClrBit(scrRegister, 0304);
+        if (cpuCount > 1)
+            {
+            if (cpus[1].isStopped)
+                {
+                scrSetBit(scrRegister, 0301);
+                }
+            else
+                {
+                scrClrBit(scrRegister, 0301);
+                }
+            if (cpus[1].isMonitorMode)
+                {
+                scrSetBit(scrRegister, 0304);
+                }
+            else
+                {
+                scrClrBit(scrRegister, 0304);
+                }
+            }
+        else
+            {
+            scrClrBit(scrRegister, 0301);
+            scrClrBit(scrRegister, 0304);
+            }
 
         if (modelType == ModelCyber865)
             {
-            if ((cpu.exitMode & EmFlagExpandedAddress) != 0)
+            if ((cpus[0].exitMode & EmFlagExpandedAddress) != 0)
                 {
                 scrSetBit(scrRegister, 0312);
                 }

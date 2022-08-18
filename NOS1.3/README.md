@@ -203,3 +203,12 @@ new one by renaming them, as in:
 To restart the system using the new deadstart tape, use the `start.js` script, as in:
 
 >`node start`
+
+## A Note About Anti-Virus Software
+The installation scripts automatically download tape images and other files, as
+needed, from the internet. Anti-virus software can interfere with this process
+and prevent these files from being downloaded successfully. If an installation script
+fails to download a file successfully and exits with an error indication, and
+anti-virus software is running on your host system, look into configuring the
+anti-virus software such that it does not apply to files being downloaded to the
+NOS1.3/tapes directory of your *DtCyber* git repository.
