@@ -10,7 +10,6 @@ if (fs.existsSync("files/TMS-catalog.txt")) {
 }
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
-.then(() => dtc.say("Connected to DtCyber"))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => dtc.say("Get the initial TMS catalog definition from Stk simulator ..."))
 .then(() => dtc.wget("http://localhost:4480/volumes?tfsp", "files", "TMS-catalog.txt"))

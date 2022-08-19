@@ -6,7 +6,6 @@ const dtc = new DtCyber();
 
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
-.then(() => dtc.say("Connected to DtCyber"))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => dtc.say("Run job to update the MAG startup job ..."))
 .then(() => dtc.runJob(12, 4, "decks/create-mag.job"))

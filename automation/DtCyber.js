@@ -2,6 +2,7 @@ const bz2           = require("unbzip2-stream");
 const child_process = require("child_process");
 const extract       = require("extract-zip");
 const fs            = require("fs");
+const http          = require("http");
 const https         = require("https");
 const net           = require("net");
 
@@ -451,6 +452,10 @@ class DtCyber {
                 break;
               }
             }
+          }
+          else if (cmdToken === "set_operator_port" || cmdToken === "sop") {
+            process.stdout.write("Command ignored; cannot change operator port while connected to it\n");
+            break;
           }
           mgr.write(`${line}\n`);
         }
@@ -978,7 +983,8 @@ class DtCyber {
         fs.unlinkSync(cachePath);
       }
       const strm = fs.createWriteStream(cachePath, { mode: 0o644 });
-      https.get(url, res => {
+      const svc = url.startsWith("https:") ? https : http;
+      svc.get(url, res => {
         res.on("data", data => {
           strm.write(data);
         });

@@ -82,12 +82,18 @@ When installation completes successfully, and also when DtCyber is started using
 `start.js`, the set of commands that may be entered at the `Operator> ` prompt is
 extended to include the following:
 
+- `activate_tms` : activates the NOS Tape Management System. This is recommended if
+you intend to use the automated StorageTek 4400 cartridge tape subsystem. You need
+to execute this command only once.
 - `exit` : exits the operator interface and initiates graceful shutdown of the system.
-- `install_product` (aliases `install`, `ip`) : installs one or more optional products
+- `install_product` (aliases `install`, `ip`) : installs one or more optional products.
 on the system. Use `install list` to display the list of products available.
 - `make_ds_tape` (alias `mdt`) : creates a new deadstart tape that includes products
 installed by `install_product`.
 - `shutdown` : initiates graceful shutdown of the system.
+- `sync_tms` : synchronizes the NOS Tape Management System catalog with the
+cartridge tape definitions specified in the `volumes.json` configuration file
+found in the `stk` directory. See [stk/README.md](../stk/README.md) for details.
 
 ## Continuing an Interrupted Installation
 The installation process tracks its progress and can continue from its last successful

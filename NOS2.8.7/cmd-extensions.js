@@ -1,5 +1,15 @@
 const cmdExtensions = [
   {
+    names: ["activate_tms"],
+    desc:  "'activate_tms' activate the NOS Tape Management System",
+    fn:    (dtc, args) => {
+      return dtc.disconnect()
+      .then(() => dtc.exec("node", ["activate-tms"]))
+      .then(() => dtc.connect())
+      .then(() => dtc.expect([ {re:/Operator> $/} ]));
+    }
+  },
+  {
     names: ["install_product", "install", "ip"],
     desc:  "'install_product [-f] name...' install optional product(s)",
     fn:    (dtc, args) => {
@@ -35,6 +45,16 @@ const cmdExtensions = [
       .then(() => {
         process.exit(0);
       });
+    }
+  },
+  {
+    names: ["sync_tms"],
+    desc:  "'sync_tms' synchronize the NOS Tape Management System catalog with the Stk simulator configuration",
+    fn:    (dtc, args) => {
+      return dtc.disconnect()
+      .then(() => dtc.exec("node", ["sync-tms"]))
+      .then(() => dtc.connect())
+      .then(() => dtc.expect([ {re:/Operator> $/} ]));
     }
   }
 ];
