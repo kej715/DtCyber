@@ -146,11 +146,12 @@ deadstart tape. However, you may re-install them (e.g., after customization), if
 
 | Product | Description |
 |---------|-------------|
-| atf  | Automated Cartridge Tape Facility (dependency: nam5) |
-| iaf  | IAF (InterActive Facility) subsystem |
-| nam5 | Network Access Method |
-| nos  | NOS 2.8.7 Base Operating System |
-| tcph | FTP Client and Server (dependency: nam5) |
+| atf     | Automated Cartridge Tape Facility |
+| iaf     | IAF (InterActive Facility) subsystem |
+| nam5    | Network Access Method |
+| nos     | NOS 2.8.7 Base Operating System |
+| ostext  | Operating System source texts |
+| tcph    | FTP Client and Server |
 
 #### Optional Programming Languages and Toolchains
 The following product names represent optional programming languages and associated

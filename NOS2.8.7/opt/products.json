@@ -29,7 +29,15 @@
         "pre": "nos.pre",
         "post": "nos.post",
         "lib": 3,
-        "desc": "NOS 2.8.7 Base Operating System"
+        "desc": "NOS 2.8.7 Base Operating System",
+        "depends": ["ostext"]
+      },
+     {
+        "name": "ostext",
+        "pre": "nos.pre",
+        "post": "nos.post",
+        "lib": 42,
+        "desc": "NOS 2.8.7 Operating System Source Texts"
       },
       {
         "name": "tcph",

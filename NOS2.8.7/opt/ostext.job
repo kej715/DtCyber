@@ -1,0 +1,23 @@
+~*
+~*  This job builds the operating system source texts. It assumes
+~*  that the job modopl.job has been run previously, if needed, to 
+~*  apply corrective code and customizations to the operating
+~*  system source library.
+~*
+OSTEXT.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$NOEXIT.
+$TMSDEF,TO=F.
+$ONEXIT.
+$BEGIN,OSTEXT,INSTALL.
+***
+*** OSTEXT COMPLETE
+***
+EXIT.
+***
+*** OSTEXT FAILED
+***
