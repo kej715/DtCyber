@@ -223,7 +223,7 @@ class DtCyber {
     this.streamMgrs.dtCyber = new DtCyberStreamMgr();
     this.connectDeadline = Date.now() + 2000;
     const doConnect = (callback) => {
-      me.socket = net.createConnection({port:port}, () => {
+      me.socket = net.createConnection({port:port, host:"127.0.0.1"}, () => {
         callback(null);
       });
       me.streamMgrs.dtCyber.setOutputStream(me.socket);
