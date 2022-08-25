@@ -1010,7 +1010,7 @@ static char *mux667xFunc2String(PpWord funcCode)
     case Fc667xStatus:
         return "Status";
         }
-    sprintf(buf, "(mux6676) UNKNOWN: %04o", funcCode);
+    sprintf(buf, "UNKNOWN: %04o", funcCode);
 
     return (buf);
     }
