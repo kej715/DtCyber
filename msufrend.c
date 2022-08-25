@@ -3005,7 +3005,6 @@ static void processIncomingConnection()
 #if defined(_WIN32)
     u_long blockEnable = 1;
 #endif
-    unsigned char  buf[256];
     SOCKET fd;
     struct sockaddr_in from;
 #if defined(_WIN32)
@@ -3014,8 +3013,6 @@ static void processIncomingConnection()
     socklen_t fromLen;
 #endif
     int            i;
-    int            maxFd;
-    int            n;
     int            optEnable = 1;
     PortContext    *pp;
 
