@@ -285,7 +285,7 @@ int main(int argc, char **argv)
 
 #ifdef IdleThrottle
         /* NOS Idle loop throttle */
-        if ((cpus->isMonitorMode) && NOSIdle)
+        if ((!cpus->isMonitorMode) && NOSIdle)
             {
             if ((cpus->regP == 2) && (cpus->regFlCm == 5))
                 {

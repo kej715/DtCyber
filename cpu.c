@@ -984,7 +984,7 @@ static void *cpuThread(void *param)
 #endif
     {
     CpuContext *activeCpu = (CpuContext *)param;
-
+    u32        cp1idlecycles = 0;
     printf("(cpu    ) CPU%o started\n",  activeCpu->id);
 
     while (emulationActive)
@@ -995,6 +995,21 @@ static void *cpuThread(void *param)
             sleepMsec(500);
             }
         cpuStep(activeCpu);
+#ifdef IdleThrottle
+        /* NOS Idle loop throttle */
+        if ((!activeCpu->isMonitorMode) && NOSIdle)
+            {   
+            if ((activeCpu->regP == 2) && (activeCpu->regFlCm == 5))
+                {
+                cp1idlecycles++;
+                if ((cp1idlecycles % idletrigger) == 0)
+                    {
+                    sleepUsec(idletime);
+                    }
+                }
+            }
+#endif
+
         }
 #if !defined(_WIN32)
     return (NULL);
