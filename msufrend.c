@@ -474,6 +474,7 @@ static FcStatus msufrendFunc(PpWord funcCode)
         if (FcFEFDES == funcCode)
             {
             activeDevice->fcode = funcCode;
+            return FcProcessed;
             }
 
         /* Technically, this is not correct, because SELECT (2400) and
@@ -490,7 +491,7 @@ static FcStatus msufrendFunc(PpWord funcCode)
 #if DEBUG
         fprintf(msufrendLog, " data:%02x", data);
 #endif
-        break;
+        return FcProcessed;
 
     case FcFEFSAM:
         /* SET ADDRESS (MIDDLE) - Set middle byte of address, bits 2**8 thru 2**15 */
@@ -498,21 +499,21 @@ static FcStatus msufrendFunc(PpWord funcCode)
 #if DEBUG
         fprintf(msufrendLog, " data:%02x", data);
 #endif
-        break;
+        return FcProcessed;
 
     case FcFEFHL:
         /* Halt-Load the 7/32 */
-        break;
+        return FcProcessed;
 
     case FcFEFINT: /* Interrupt the 7/32 */
         handleInterruptFromHost();
-        break;
+        return FcProcessed;
 
     case FcFEFLP: /* LOAD INTERFACE MEMORY */
         /* Prepare to accept 8-bit bytes, to be written in "a 16-byte memory"
          * starting at location 0. */
         activeFrend->addr = 0;
-        break;
+        return FcProcessed;
 
     case FcFEFRM:
         /* READ - I think the data byte is the lower 8 bits of the address. */
@@ -555,10 +556,10 @@ static FcStatus msufrendFunc(PpWord funcCode)
 
     case FcFEFCI:
         /* CLEAR INITIALIZED STATUS BIT   */
-        break;
+        return FcProcessed;
         }
 
-    return (FcAccepted);
+    return FcAccepted;
     }
 
 /*--------------------------------------------------------------------------
@@ -591,10 +592,6 @@ static void msufrendIo(void)
         /* I don't know what to do on an I/O after a SELECT */
         activeChannel->full   = TRUE;
         activeChannel->active = TRUE;
-        break;
-
-    case FcFEFDES:
-        /* DESELECT 6000 CHANNEL ADAPTER  */
         break;
 
     case FcFEFST:
