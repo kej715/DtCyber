@@ -53,10 +53,7 @@ playing with it, and you are ready to shut it down.
 
 To start *DtCyber* and NOS 1.3 again in the future, enter the following command:
 
-| OS           | Command           |
-|--------------|-------------------|
-| Linux/MacOS: | `sudo node start` |
-| Windows:     | `node start`      |
+>`node start`
 
 That's it. You have a fully operational Control Data Cyber 173 supercomputer
 running the NOS 1.3 operating system, complete with APL, BASIC, COBOL, FORTRAN IV,
