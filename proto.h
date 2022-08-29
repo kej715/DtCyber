@@ -457,6 +457,8 @@ extern u32  idleTime;
 extern u32  idleTrigger;
 extern char osType[];
 bool idleCheckBusy();
+bool (*idleDetector)(CpuContext *ctx);
+bool idleDetectorNOS(CpuContext *ctx);
 void idleThrottle(CpuContext *ctx, bool checkBusy);
 
 #endif /* PROTO_H */

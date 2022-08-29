@@ -671,6 +671,7 @@ static void initCyber(char *config)
     initGetInteger("idlecycles", 200, &idleTrigger);
     initGetInteger("idletime", 200, &idleTime);
     initGetString("ostype", "none", &osType, 16);
+    idleDetector = &idleDetectorNOS;
 
     /*
     **  Get optional Plato port number. If not specified, use default value.

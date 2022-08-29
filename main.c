@@ -93,9 +93,10 @@ u32  cycles;
 u32  readerScanSecs = 3;
 
 int idle     = FALSE;   /* Idle loop detection */
-u32  idleTrigger = 200;     /* sleep every <idletrigger> cycles of the idle loop */
-u32  idleTime    = 1;       /* milliseconds to sleep when idle */
+u32  idleTrigger;     /* sleep every <idletrigger> cycles of the idle loop */
+u32  idleTime;       /* milliseconds to sleep when idle */
 char osType[16];
+bool (*idleDetector)(CpuContext *);
 
 #if CcCycleTime
 double cycleTime;
@@ -334,13 +335,13 @@ void idleThrottle(CpuContext *ctx, bool checkBusy)
         /* NOS Idle loop throttle */
         if ((!ctx->isMonitorMode) && idle)
             {   
-            if ((ctx->regP == 2) && (ctx->regFlCm == 5)) 
+            if ((*idleDetector)(ctx)) 
                 {   
                 ctx->idleCycles++;
                 if ((ctx->idleCycles % idleTrigger) == 0)
                     {   
                         if(checkBusy) {
-                           if(idleCheckBusy)
+                           if(idleCheckBusy())
                            {
                               return; 
                            }
@@ -367,11 +368,19 @@ bool idleCheckBusy()
             if (ppu[i].busy)
             {   
                 busyFlag = TRUE;
-                break;
             }   
         }   
     return busyFlag;
     }
+
+bool idleDetectorNOS(CpuContext *ctx)
+     {
+         if ((ctx->regP == 2) && (ctx->regFlCm == 5))
+         {
+             return TRUE;
+         }
+     return FALSE;
+     }
 /*
  **--------------------------------------------------------------------------
  **
