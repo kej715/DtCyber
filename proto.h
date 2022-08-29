@@ -221,9 +221,7 @@ void mdiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 /*
 **  msufrend.c
 */
-void msuFrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void msuFrendTalkToFrend(void);
-void msuFrendSendInterruptToFrend(void);
+void msufrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 
 /*
 **  mt362x.c

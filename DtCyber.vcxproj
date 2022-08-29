@@ -34,7 +34,7 @@
     <PlatformToolset>v143</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -47,7 +47,7 @@
     <PlatformToolset>v143</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -271,7 +271,6 @@
     <ClCompile Include="maintenance_channel.c" />
     <ClCompile Include="mdi.c" />
     <ClCompile Include="msufrend.c" />
-    <ClCompile Include="msufrend_util.c" />
     <ClCompile Include="mt362x.c" />
     <ClCompile Include="mt5744.c" />
     <ClCompile Include="mt607.c" />
@@ -319,7 +318,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\DtCyber.kej715\msufrend_util.h" />
     <ClInclude Include="const.h" />
     <ClInclude Include="cyber_channel_linux.h" />
     <ClInclude Include="cyber_channel_win32.h" />

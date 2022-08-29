@@ -47,9 +47,8 @@ class Mode4 {
                 0x50,0x50,0x50,0x50,0x50,0x50,0x50,0x50,0x50,0x50,
                 0x50,0x50,0x50,0x50,0x50,0x50,0x50,0x50,0x50];
 
-  static StateBOH = 0;
+  static StateSOH = 0;
   static StateETX = 1;
-  static StateMPC = 2;
 
   static MsgTypePoll       = 0x05;
   static MsgTypeAck        = 0x06;
@@ -139,9 +138,10 @@ class Mode4 {
   }
 
   processMessage(message) {
-    const stationId = message[2];
-    const payload = message.slice(4, message.length - 2);
-    switch (message[3]) {
+    const stationId = message[1];
+    const payload = message.slice(3);
+    const msgType = message[2];
+    switch (msgType) {
     case Mode4.MsgTypePoll:
       if (this.queuedMessages.length > 0) {
         const message = this.queuedMessages.shift();
@@ -228,6 +228,9 @@ class Mode4 {
       this.lastWriteStationId = stationId;
       this.write([Mode4.MsgTypeAck], stationId);
       break;
+    default:
+      this.log(`Unrecognized message type: $(msgType)`);
+      break;
     }
   }
 
@@ -295,7 +298,7 @@ class Mode4 {
   start(name, password) {
     this.isPrintStreamActive = false;
     this.queuedMessages = [];
-    this.state = Mode4.State_SOH;
+    this.state = Mode4.StateSOH;
     this.message = [];
     this.lastWriteStationId = 0x61;
     this.socket = net.createConnection({port:this.port, host:this.host}, () => {
@@ -308,24 +311,27 @@ class Mode4 {
       for (let b of data) {
         b &= 0x7f;
         if (b !== Mode4.SYN) {
-          this.message.push(b);
           switch (this.state) {
           case Mode4.StateSOH:
-            if (b === Mode4.SOH) this.state = Mode4.StateETX;
+            if (b === Mode4.SOH) {
+              this.message = [];
+              this.state = Mode4.StateETX;
+            }
             break;
           case Mode4.StateETX:
-            if (b === Mode4.ETX) this.state = Mode4.StateMPC;
-            break;
-          case Mode4.StateMPC:
-            if (this.verbose || this.message[1] === this.siteId)
-              this.logData("recv:", this.message);
-            if (this.message.length > 5) {
-              if (this.message[1] === this.siteId) {
-                this.processMessage(this.message);
+            if (b === Mode4.ETX) {
+              if (this.verbose || this.message[0] === this.siteId)
+                this.logData("recv:", this.message);
+              if (this.message.length > 2) {
+                if (this.message[0] === this.siteId) {
+                  this.processMessage(this.message);
+                }
               }
+              this.state = Mode4.StateSOH;
             }
-            this.state = Mode4.State_SOH;
-            this.message = [];
+            else {
+              this.message.push(b);
+            }
             break;
           }
         }
@@ -347,12 +353,12 @@ class Mode4 {
 
   write(data, stationId, siteId) {
     if (typeof siteId === "undefined") siteId = this.siteId;
-    let msg = [Mode4.SOH,siteId,stationId].concat(data).concat([Mode4.ETX]);
-    msg = this.calculateByteParity(msg);
-    msg.push(0);
-    msg = [Mode4.SYN,Mode4.SYN,Mode4.SYN,Mode4.SYN].concat(msg);
+    data = [siteId,stationId].concat(data);
+    this.logData("send:", data);
+    const msg = [Mode4.SYN,Mode4.SYN,Mode4.SYN,Mode4.SYN]
+                .concat(this.calculateByteParity([Mode4.SOH].concat(data).concat([Mode4.ETX])))
+                .concat([0]);
     this.socket.write(new Uint8Array(msg));
-    this.logData("send:", msg.slice(4));
   }
 }
 

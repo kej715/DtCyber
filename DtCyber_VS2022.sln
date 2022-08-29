@@ -4,11 +4,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.2.32526.322
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DtCyber", "DtCyber.vcxproj", "{F6DFA584-CEE8-4B18-B4B5-749A2B6F1142}"
-	ProjectSection(ProjectDependencies) = postProject
-		{19A748A6-6C85-401F-8B50-CCF2A0536345} = {19A748A6-6C85-401F-8B50-CCF2A0536345}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "frend2", "frend2\frend2.vcxproj", "{19A748A6-6C85-401F-8B50-CCF2A0536345}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pp", "se-tools\pp.vcxproj", "{042776DA-8CCB-4573-8057-21C576DC256B}"
 EndProject
@@ -28,14 +23,6 @@ Global
 		{F6DFA584-CEE8-4B18-B4B5-749A2B6F1142}.Release|Win32.Build.0 = Release|Win32
 		{F6DFA584-CEE8-4B18-B4B5-749A2B6F1142}.Release|x64.ActiveCfg = Release|x64
 		{F6DFA584-CEE8-4B18-B4B5-749A2B6F1142}.Release|x64.Build.0 = Release|x64
-		{19A748A6-6C85-401F-8B50-CCF2A0536345}.Debug|Win32.ActiveCfg = Debug|Win32
-		{19A748A6-6C85-401F-8B50-CCF2A0536345}.Debug|Win32.Build.0 = Debug|Win32
-		{19A748A6-6C85-401F-8B50-CCF2A0536345}.Debug|x64.ActiveCfg = Debug|x64
-		{19A748A6-6C85-401F-8B50-CCF2A0536345}.Debug|x64.Build.0 = Debug|x64
-		{19A748A6-6C85-401F-8B50-CCF2A0536345}.Release|Win32.ActiveCfg = Release|Win32
-		{19A748A6-6C85-401F-8B50-CCF2A0536345}.Release|Win32.Build.0 = Release|Win32
-		{19A748A6-6C85-401F-8B50-CCF2A0536345}.Release|x64.ActiveCfg = Release|x64
-		{19A748A6-6C85-401F-8B50-CCF2A0536345}.Release|x64.Build.0 = Release|x64
 		{042776DA-8CCB-4573-8057-21C576DC256B}.Debug|Win32.ActiveCfg = Debug|Win32
 		{042776DA-8CCB-4573-8057-21C576DC256B}.Debug|Win32.Build.0 = Debug|Win32
 		{042776DA-8CCB-4573-8057-21C576DC256B}.Debug|x64.ActiveCfg = Debug|x64
