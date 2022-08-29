@@ -666,6 +666,12 @@ static void initCyber(char *config)
     initGetInteger("telnetconns", 4, &conns);
     mux6676TelnetConns = (u16)conns;
 
+    /* Get Idle loop settings */
+    initGetInteger("idle", 0, &idle);
+    initGetInteger("idlecycles", 200, &idleTrigger);
+    initGetInteger("idletime", 200, &idleTime);
+    initGetString("ostype", "none", &osType, 16);
+
     /*
     **  Get optional Plato port number. If not specified, use default value.
     */

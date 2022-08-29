@@ -452,9 +452,12 @@ extern u32                 traceMask;
 extern u32                 traceSequenceNo;
 
 /* Idle Loop throttle */
-extern bool idle;
+extern int idle;
 extern u32  idleTime;
 extern u32  idleTrigger;
+extern char osType[];
+bool idleCheckBusy();
+void idleThrottle(CpuContext *ctx, bool checkBusy);
 
 #endif /* PROTO_H */
 /*---------------------------  End Of File  ------------------------------*/

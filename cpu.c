@@ -995,19 +995,7 @@ static void *cpuThread(void *param)
             sleepMsec(500);
             }
         cpuStep(activeCpu);
-        /* Idle loop throttle */
-        if ((!activeCpu->isMonitorMode) && idle)
-            {   
-            if ((activeCpu->regP == 2) && (activeCpu->regFlCm == 5))
-                {
-                activeCpu->idleCycles++;
-                if ((activeCpu->idleCycles % idleTrigger) == 0)
-                    {
-                    sleepUsec(idleTime);
-                    }
-                }
-            }
-
+        idleThrottle(activeCpu, FALSE);
         }
 #if !defined(_WIN32)
     return (NULL);

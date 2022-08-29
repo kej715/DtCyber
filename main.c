@@ -92,9 +92,10 @@ bool emulationActive = TRUE;
 u32  cycles;
 u32  readerScanSecs = 3;
 
-bool idle     = FALSE;   /* Idle loop detection */
+int idle     = FALSE;   /* Idle loop detection */
 u32  idleTrigger = 200;     /* sleep every <idletrigger> cycles of the idle loop */
 u32  idleTime    = 1;       /* milliseconds to sleep when idle */
+char osType[16];
 
 #if CcCycleTime
 double cycleTime;
@@ -277,31 +278,7 @@ int main(int argc, char **argv)
         channelStep();
         rtcTick();
 
-        /* NOS Idle loop throttle */
-        if ((!cpus->isMonitorMode) && idle)
-            {
-            if ((cpus->regP == 2) && (cpus->regFlCm == 5))
-                {
-                cpus->idleCycles++;
-                if ((cpus->idleCycles % idleTrigger) == 0)
-                    {
-                    bool busyFlag = FALSE;
-                    /* Get out of the way if any PP is busy */
-                    for (u8 i = 0; i < ppuCount; i++)
-                        {
-                        if (ppu[i].busy)
-                            {
-                            busyFlag = TRUE;
-                            }
-                        }
-                    if (busyFlag)
-                        {
-                        continue;
-                        }
-                    sleepUsec(idleTime);
-                    }
-                }
-            }
+        idleThrottle(cpus, TRUE);
 
 #if CcCycleTime
         cycleTime = rtcStopTimer();
@@ -339,7 +316,62 @@ int main(int argc, char **argv)
 
     exit(0);
     }
-
+/*--------------------------------------------------------------------------
+**  Purpose:        Return CPU cycles to host if idle package is seen
+**                  and the trigger conditions are met.
+**
+**  Parameters:     Name        Description.
+**                  ctx         Cpu context to throttle.
+**                  checkBusy   enable/disable checking busy PPs
+**                              only set this to true when calling
+**                              from main thread. 
+**
+**  Returns:        void
+**
+**------------------------------------------------------------------------*/
+void idleThrottle(CpuContext *ctx, bool checkBusy)
+     {
+        /* NOS Idle loop throttle */
+        if ((!ctx->isMonitorMode) && idle)
+            {   
+            if ((ctx->regP == 2) && (ctx->regFlCm == 5)) 
+                {   
+                ctx->idleCycles++;
+                if ((ctx->idleCycles % idleTrigger) == 0)
+                    {   
+                        if(checkBusy) {
+                           if(idleCheckBusy)
+                           {
+                              return; 
+                           }
+                        }
+                        sleepUsec(idleTime);    
+                    }   
+                }   
+            }
+     return;
+     }
+/*--------------------------------------------------------------------------
+**  Purpose:        Check for busy PPs for idle throttle.
+**
+**  Parameters:     None.
+**
+**  Returns:        TRUE for busy FALSE for not busy. 
+**
+**------------------------------------------------------------------------*/
+bool idleCheckBusy()
+    {
+    bool busyFlag = FALSE;
+        for (u8 i = 0; i < ppuCount; i++)
+        {   
+            if (ppu[i].busy)
+            {   
+                busyFlag = TRUE;
+                break;
+            }   
+        }   
+    return busyFlag;
+    }
 /*
  **--------------------------------------------------------------------------
  **
