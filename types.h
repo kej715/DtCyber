@@ -238,6 +238,7 @@ typedef struct
     u32           iwAddress[MaxIwStack];
     bool          iwValid[MaxIwStack];
     u8            iwRank;
+    volatile u32 idleCycles;            /* Counter for how many times we've seen the idle loop */
     } CpuContext;
 
 /*

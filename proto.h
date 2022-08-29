@@ -451,12 +451,10 @@ extern u32                 rtcClock;
 extern u32                 traceMask;
 extern u32                 traceSequenceNo;
 
-#ifdef IdleThrottle
-/* NOS Idle Loop throttle */
-extern bool NOSIdle;
-extern u32  idletime;
-extern u32  idletrigger;
-#endif
+/* Idle Loop throttle */
+extern bool idle;
+extern u32  idleTime;
+extern u32  idleTrigger;
 
 #endif /* PROTO_H */
 /*---------------------------  End Of File  ------------------------------*/

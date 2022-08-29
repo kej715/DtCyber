@@ -92,11 +92,9 @@ bool emulationActive = TRUE;
 u32  cycles;
 u32  readerScanSecs = 3;
 
-#ifdef IdleThrottle
-bool NOSIdle     = FALSE;   /* NOS2 Idle loop detection */
-u32  idletrigger = 200;     /* sleep every <idletrigger> cycles of the idle loop */
-u32  idletime    = 1;       /* milliseconds to sleep when idle */
-#endif
+bool idle     = FALSE;   /* Idle loop detection */
+u32  idleTrigger = 200;     /* sleep every <idletrigger> cycles of the idle loop */
+u32  idleTime    = 1;       /* milliseconds to sleep when idle */
 
 #if CcCycleTime
 double cycleTime;
@@ -107,10 +105,6 @@ double cycleTime;
 **  Private Variables
 **  -----------------
 */
-#ifdef IdleThrottle
-bool busyFlag   = FALSE;
-u32  idlecycles = 0;        /* count of idle loop cycles */
-#endif
 
 
 
@@ -283,16 +277,15 @@ int main(int argc, char **argv)
         channelStep();
         rtcTick();
 
-#ifdef IdleThrottle
         /* NOS Idle loop throttle */
-        if ((!cpus->isMonitorMode) && NOSIdle)
+        if ((!cpus->isMonitorMode) && idle)
             {
             if ((cpus->regP == 2) && (cpus->regFlCm == 5))
                 {
-                idlecycles++;
-                if ((idlecycles % idletrigger) == 0)
+                cpus->idleCycles++;
+                if ((cpus->idleCycles % idleTrigger) == 0)
                     {
-                    busyFlag = FALSE;
+                    bool busyFlag = FALSE;
                     /* Get out of the way if any PP is busy */
                     for (u8 i = 0; i < ppuCount; i++)
                         {
@@ -305,11 +298,10 @@ int main(int argc, char **argv)
                         {
                         continue;
                         }
-                    sleepUsec(idletime);
+                    sleepUsec(idleTime);
                     }
                 }
             }
-#endif
 
 #if CcCycleTime
         cycleTime = rtcStopTimer();

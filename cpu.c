@@ -446,6 +446,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
         cpus[cpuNum].id                   = cpuNum;
         cpus[cpuNum].isStopped            = TRUE;
         cpus[cpuNum].ppRequestingExchange = -1;
+        cpus[cpuNum].idleCycles = 0;
         if (cpuNum > 0)
             {
             cpuCreateThread(cpuNum);
@@ -984,7 +985,6 @@ static void *cpuThread(void *param)
 #endif
     {
     CpuContext *activeCpu = (CpuContext *)param;
-    u32        cp1idlecycles = 0;
     printf("(cpu    ) CPU%o started\n",  activeCpu->id);
 
     while (emulationActive)
@@ -995,20 +995,18 @@ static void *cpuThread(void *param)
             sleepMsec(500);
             }
         cpuStep(activeCpu);
-#ifdef IdleThrottle
-        /* NOS Idle loop throttle */
-        if ((!activeCpu->isMonitorMode) && NOSIdle)
+        /* Idle loop throttle */
+        if ((!activeCpu->isMonitorMode) && idle)
             {   
             if ((activeCpu->regP == 2) && (activeCpu->regFlCm == 5))
                 {
-                cp1idlecycles++;
-                if ((cp1idlecycles % idletrigger) == 0)
+                activeCpu->idleCycles++;
+                if ((activeCpu->idleCycles % idleTrigger) == 0)
                     {
-                    sleepUsec(idletime);
+                    sleepUsec(idleTime);
                     }
                 }
             }
-#endif
 
         }
 #if !defined(_WIN32)

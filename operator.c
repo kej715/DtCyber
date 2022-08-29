@@ -192,9 +192,7 @@ static void opHelpShowVersion(void);
 
 static void opDisplayVersion(void);
 
-#ifdef IdleThrottle
 static void opCmdIdle(bool help, char *cmdParams);
-#endif
 
 /*
 **  ----------------
@@ -254,9 +252,7 @@ static OpCmd decode[] =
     "help_all",              opCmdHelpAll,
     "shutdown",              opCmdShutdown,
     "pause",                 opCmdPause,
-#ifdef IdleThrottle
     "idle",                  opCmdIdle,
-#endif
     NULL,                    NULL
     };
 
@@ -3034,7 +3030,6 @@ static void opHelpShowAll(void)
     opDisplay("    > 'show_all'\n");
     }
 
-#ifdef IdleThrottle
 
 /*--------------------------------------------------------------------------
 **  Purpose:        control NOS idle loop throttle.
@@ -3054,7 +3049,7 @@ static void opCmdIdle(bool help, char *cmdParams)
 
     if (help)
         {
-        opDisplay("    > NOS Idle Loop Throttle\n");
+        opDisplay("    > Idle Loop Throttle\n");
         opDisplay("    > idle <on|off>                   turn NOS idle loop throttle on/off\n");
         opDisplay("    > idle <num_cycles>,<sleep_time>  set number of cycles before sleep and sleep time\n");
 
@@ -3063,13 +3058,13 @@ static void opCmdIdle(bool help, char *cmdParams)
 
     if (strlen(cmdParams) == 0)
         {
-        sprintf(opOutBuf, "    > Idle loop throttling: %s\n", NOSIdle ? "ON" : "OFF");
+        sprintf(opOutBuf, "    > Idle loop throttling: %s\n", idle ? "ON" : "OFF");
         opDisplay(opOutBuf);
 #ifdef WIN32
-        sprintf(opOutBuf, "    > Sleep every %u cycles for %u milliseconds.\n", idletrigger, idletime);
+        sprintf(opOutBuf, "    > Sleep every %u cycles for %u milliseconds.\n", idleTrigger, idleTime);
         opDisplay(opOutBuf);
 #else
-        sprintf(opOutBuf, "usleep every %u cycles for %u usec\n", idletrigger, idletime);
+        sprintf(opOutBuf, "usleep every %u cycles for %u usec\n", idleTrigger, idleTime);
         opDisplay(opOutBuf);
 #endif
 
@@ -3077,13 +3072,13 @@ static void opCmdIdle(bool help, char *cmdParams)
         }
     if (strcmp("on", dtStrLwr(cmdParams)) == 0)
         {
-        NOSIdle = TRUE;
+        idle  = TRUE;
 
         return;
         }
     if (strcmp("off", dtStrLwr(cmdParams)) == 0)
         {
-        NOSIdle = FALSE;
+        idle = FALSE;
 
         return;
         }
@@ -3101,13 +3096,12 @@ static void opCmdIdle(bool help, char *cmdParams)
         opDisplay(opOutBuf);
         return;
         }
-    idletrigger = (u32)newtrigger;
-    idletime    = (u32)newsleep;
-    sprintf(opOutBuf, "    > Sleep will now occur every %u cycles for %u milliseconds.\n", idletrigger, idletime);
+    idleTrigger = (u32)newtrigger;
+    idleTime    = (u32)newsleep;
+    sprintf(opOutBuf, "    > Sleep will now occur every %u cycles for %u milliseconds.\n", idleTrigger, idleTime);
     opDisplay(opOutBuf);
     }
 
-#endif
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Display the DtCyber Version
