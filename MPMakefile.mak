@@ -30,7 +30,7 @@
   ####   #    #   ####           #    #  #    #  #    #  ######
 
 #	The LIST of the projects to be built
-PROJECTS = dtcyber frend2/frend2 automation/node_modules stk/node_modules 
+PROJECTS = dtcyber automation/node_modules stk/node_modules 
 
 #	When calling other makefiles, they must be named the 
 #	same as this one ...
@@ -218,7 +218,6 @@ OBJS    =   $(addprefix $(OBJ)/,    \
             main.o                  \
             maintenance_channel.o   \
             msufrend.o              \
-            msufrend_util.o         \
             mdi.o                   \
             mt362x.o                \
             mt5744.o                \
@@ -264,9 +263,6 @@ automation/node_modules:
 stk/node_modules:
 	$(MAKE) -f $(THISMAKEFILE) -C stk
 
-frend2/frend2:
-	$(MAKE) -f $(THISMAKEFILE) -C frend2
-
 
 #------------------------------------------------------------------------------
 #	Recipe to Ensure that the subdirectories exist
@@ -304,8 +300,7 @@ clean:
 	@echo Cleaning Object files for $@ 
 	rm -f $(OBJS); 
 	$(MAKE) -C automation clean; 
-	$(MAKE) -C stk clean; 
-	$(MAKE) -f $(THISMAKEFILE) -C frend2 clean
+	$(MAKE) -C stk clean
 
 .PHONY: info
 info:
