@@ -96,7 +96,7 @@ int idle     = FALSE;   /* Idle loop detection */
 u32  idleTrigger;     /* sleep every <idletrigger> cycles of the idle loop */
 u32  idleTime;       /* milliseconds to sleep when idle */
 char osType[16];
-bool (*idleDetector)(CpuContext *);
+bool (*idleDetector)(CpuContext *) = &idleDetectorNone;
 
 #if CcCycleTime
 double cycleTime;
@@ -332,8 +332,7 @@ int main(int argc, char **argv)
 **------------------------------------------------------------------------*/
 void idleThrottle(CpuContext *ctx, bool checkBusy)
      {
-        /* NOS Idle loop throttle */
-        if ((!ctx->isMonitorMode) && idle)
+        if (idle)
             {   
             if ((*idleDetector)(ctx)) 
                 {   
@@ -372,13 +371,106 @@ bool idleCheckBusy()
         }   
     return busyFlag;
     }
-
+/*--------------------------------------------------------------------------
+**  Purpose:        Dummy idle cycle detector
+**                  always returns false.
+**
+**  Parameters:     Name        Description.
+**                  ctx         Cpu context to check for idle.
+**
+**  Returns:        FALSE
+**
+**------------------------------------------------------------------------*/
+bool idleDetectorNone(CpuContext *ctx)
+     {
+     return FALSE;
+     }
+/*--------------------------------------------------------------------------
+**  Purpose:        NOS idle cycle detector
+**
+**  Parameters:     Name        Description.
+**                  ctx         Cpu context to check for idle.
+**
+**  Returns:        TRUE if in idle, FALSE if not.
+**
+**------------------------------------------------------------------------*/
 bool idleDetectorNOS(CpuContext *ctx)
      {
-         if ((ctx->regP == 2) && (ctx->regFlCm == 5))
+         if ((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 05))
          {
              return TRUE;
          }
+     return FALSE;
+     }
+/*--------------------------------------------------------------------------
+**  Purpose:        NOS/BE idle cycle detector
+**
+**  Parameters:     Name        Description.
+**                  ctx         Cpu context to check for idle.
+**
+**  Returns:        TRUE if in idle, FALSE if not.
+**
+**------------------------------------------------------------------------*/
+bool idleDetectorNOSBE(CpuContext *ctx)
+     {
+         /* Based on observing CPU state on the NOS/BE TUB ready to run package */
+         if((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 010))
+         {
+             return TRUE;
+         }
+     return FALSE;
+     }
+/*--------------------------------------------------------------------------
+**  Purpose:        MACE idle cycle detector
+**
+**  Parameters:     Name        Description.
+**                  ctx         Cpu context to check for idle.
+**
+**  Returns:        TRUE if in idle, FALSE if not.
+**
+**------------------------------------------------------------------------*/
+bool idleDetectorMACE(CpuContext *ctx)
+     {
+         /* This is based on the KRONOS1 source code for CPUMTR
+          * I have no working system to test this on, it may also work
+          * for other early cyber operating systems, YMMV */
+         if((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 03))
+         {
+             return TRUE;
+         }
+     return FALSE;
+     }
+/*--------------------------------------------------------------------------
+**  Purpose:        Hustler idle cycle detector
+**
+**  Parameters:     Name        Description.
+**                  ctx         Cpu context to check for idle.
+**
+**  Returns:        TRUE if in idle, FALSE if not.
+**
+**------------------------------------------------------------------------*/
+bool idleDetectorHUSTLER(CpuContext *ctx)
+     {
+         /*This is currently unimplemnted because I just can't
+          * find a good indicator for being idle on HUSTLER
+          *
+          * There doesn't appear to be an idle package like on NOS or vanilla
+          * NOS/BE and the system seems to spend most of its time in monitor
+          * mode even with no jobs running.
+          *
+          * There are things that run with RA=0 outside of monitor mode
+          * but even just generalizing for that behavior doesn't seem to happen
+          * often enough to throttle effectively. 
+          *
+          * My assumption is there's some kind of aggressive scheduler running
+          * in monitor mode as often as it can, we should probably try and figure
+          * out where that is and use that.
+          *
+          * I suspect if an idle package exists it would be used for CPU1 but I
+          * so far have not figured out how to make HUSTLER even try to use
+          * CPU1 and it stays in a non running state with everything zeroed out.
+          *
+          * */
      return FALSE;
      }
 /*

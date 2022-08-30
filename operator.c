@@ -3060,6 +3060,16 @@ static void opCmdIdle(bool help, char *cmdParams)
         {
         sprintf(opOutBuf, "    > Idle loop throttling: %s\n", idle ? "ON" : "OFF");
         opDisplay(opOutBuf);
+        if(idleDetector == &idleDetectorNone)
+           {
+           sprintf(opOutBuf, "    > OS handler: None\n");
+           opDisplay(opOutBuf);
+           }
+        else
+        {
+            sprintf(opOutBuf,"    > OS handler: %s\n",osType);
+            opDisplay(opOutBuf);
+        }
 #ifdef WIN32
         sprintf(opOutBuf, "    > Sleep every %u cycles for %u milliseconds.\n", idleTrigger, idleTime);
         opDisplay(opOutBuf);

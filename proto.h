@@ -458,7 +458,11 @@ extern u32  idleTrigger;
 extern char osType[];
 bool idleCheckBusy();
 bool (*idleDetector)(CpuContext *ctx);
-bool idleDetectorNOS(CpuContext *ctx);
+bool idleDetectorNone(CpuContext *ctx);
+bool idleDetectorNOS(CpuContext *ctx); /* KRONOS2.1 - NOS 2.8.7 */
+bool idleDetectorNOSBE(CpuContext *ctx); /* NOS/BE (only tested with TUB) */
+bool idleDetectorMACE(CpuContext *ctx); /* KRONOS1 or MACE, possibly SCOPE too) */
+bool idleDetectorHUSTLER(CpuContext *ctx); /* SCOPE HUSTLER */
 void idleThrottle(CpuContext *ctx, bool checkBusy);
 
 #endif /* PROTO_H */

@@ -351,6 +351,7 @@ static void initCyber(char *config)
     long conns;
     long cpus;
     char dummy[256];
+    long dummyInt;
     long ecsBanks;
     long enableCejMej;
     long esmBanks;
@@ -667,11 +668,33 @@ static void initCyber(char *config)
     mux6676TelnetConns = (u16)conns;
 
     /* Get Idle loop settings */
-    initGetInteger("idle", 0, &idle);
-    initGetInteger("idlecycles", 200, &idleTrigger);
-    initGetInteger("idletime", 200, &idleTime);
-    initGetString("ostype", "none", &osType, 16);
-    idleDetector = &idleDetectorNOS;
+    initGetInteger("idle", 0, &dummyInt);
+    idle = (int)dummyInt;
+    initGetInteger("idlecycles", 200, &dummyInt);
+    idleTrigger =(u32)dummyInt;
+    initGetInteger("idletime", 200, &dummyInt);
+    idleTime = (u32)dummyInt;
+    initGetString("ostype", "none", osType, 16);
+    if(strcmp(osType,"none") == 0)
+    {
+        idleDetector = &idleDetectorNone;
+    }
+    if(strcmp(osType,"nos") == 0)
+    {
+        idleDetector = &idleDetectorNOS;
+    }
+    if(strcmp(osType,"mace") == 0)
+    {
+        idleDetector = &idleDetectorMACE;
+    }
+    if(strcmp(osType,"nosbe") == 0)
+    {
+        idleDetector = &idleDetectorNOSBE;
+    }
+    if(strcmp(osType,"hustler") == 0)
+    {
+        idleDetector = &idleDetectorHUSTLER;
+    }
 
     /*
     **  Get optional Plato port number. If not specified, use default value.
