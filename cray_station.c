@@ -282,7 +282,7 @@ void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     if (deviceName == NULL)
         {
-        fprintf(stderr, "Cray computer simulator connection information required for FEI on channel %o equipment %o unit %o\n",
+        fprintf(stderr, "(crayfei) Cray computer simulator connection information required for FEI on channel %o equipment %o unit %o\n",
                 channelNo, eqNo, unitNo);
         exit(1);
         }
@@ -315,7 +315,7 @@ void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     feip = calloc(1, sizeof(FeiParam));
     if (feip == NULL)
         {
-        fprintf(stderr, "Failed to allocate Cray Station FEI context block\n");
+        fprintf(stderr, "(crayfei) Failed to allocate Cray Station FEI context block\n");
         exit(1);
         }
     dp->controllerContext       = feip;
@@ -344,14 +344,14 @@ void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     if ((feip->serverName == NULL) || (serverPort == 0))
         {
         fprintf(stderr,
-                "Invalid Cray computer simulator connection specification for Cray Station FEI on channel %o equipment %o unit %o\n",
+                "(crayfei) Invalid Cray computer simulator connection specification for Cray Station FEI on channel %o equipment %o unit %o\n",
                 channelNo, eqNo, unitNo);
         exit(1);
         }
     hp = gethostbyname(feip->serverName);
     if (hp == NULL)
         {
-        fprintf(stderr, "Failed to lookup address of Cray computer simulator host %s\n", feip->serverName);
+        fprintf(stderr, "(crayfei) Failed to lookup address of Cray computer simulator host %s\n", feip->serverName);
         exit(1);
         }
     feip->serverAddr.sin_family = AF_INET;
@@ -361,7 +361,7 @@ void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Print a friendly message.
     */
-    printf("Cray Station FEI initialised on channel %o equipment %o unit %o for Cray computer simulator at %s:%d\n",
+    printf("(crayfei) Cray Station FEI initialised on channel %o equipment %o unit %o for Cray computer simulator at %s:%d\n",
            channelNo, eqNo, unitNo, feip->serverName, serverPort);
     }
 
@@ -614,7 +614,7 @@ static void csFeiInitiateConnection(FeiParam *feip)
     //  -------------------------------
     if (fd == INVALID_SOCKET)
         {
-        fprintf(stderr, "FEI: Failed to create socket for host: %s\n", feip->serverName);
+        fprintf(stderr, "(crayfei) Failed to create socket for host: %s\n", feip->serverName);
 
         return;
         }
@@ -662,7 +662,7 @@ static void csFeiInitiateConnection(FeiParam *feip)
     //  -------------------------------
     if (fd < 0)
         {
-        fprintf(stderr, "FEI: Failed to create socket for host: %s\n", feip->serverName);
+        fprintf(stderr, "(crayfei) Failed to create socket for host: %s\n", feip->serverName);
 
         return;
         }
