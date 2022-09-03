@@ -355,7 +355,7 @@ void lp1612RemovePaper(char *params)
     int iSuffix;
     LpContext1612 *lc;
     int numParam;
-    char outBuf[MaxFSPath*2+256];
+    char outBuf[MaxFSPath*2+300];
     bool renameOK;
     struct tm t;
 
