@@ -193,9 +193,6 @@
     <ClCompile Include="niu.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="string.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="msufrend.c">
       <Filter>Source Files</Filter>
     </ClCompile>
