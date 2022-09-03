@@ -85,9 +85,6 @@
 #define AsciiColumn(x)    (HexColumn(16) + 2 + (x))
 #define LogLineLength    (AsciiColumn(16))
 #endif
-#if defined(_WIN32)
-#define strcasecmp       _stricmp
-#endif
 
 /*
 **  -----------------------------------------

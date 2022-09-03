@@ -242,7 +242,6 @@ OBJS    =   $(addprefix $(OBJ)/,    \
             rtc.o                   \
             scr_channel.o           \
             shift.o                 \
-            string.o                \
             time.o                  \
             tpmux.o                 \
             trace.o                 \

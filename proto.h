@@ -334,11 +334,6 @@ CpWord shiftNormalize(CpWord number, u32 *shift, bool round);
 CpWord shiftMask(u8 count);
 
 /*
-**  string.c
-*/
-char * dtStrLwr(char *str);
-
-/*
 **  time.c
 */
 u64 getMilliseconds(void);

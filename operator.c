@@ -594,7 +594,7 @@ static void *opThread(void *param)
         */
         for (cp = decode; cp->name != NULL; cp++)
             {
-            if (strcmp(cp->name, name) == 0)
+            if (strcasecmp(cp->name, name) == 0)
                 {
                 if (cp->handler == opCmdEnterKeys)
                     {
@@ -1808,7 +1808,7 @@ static void opCmdHelp(bool help, char *cmdParams)
         */
         for (cp = decode; cp->name != NULL; cp++)
             {
-            if (strcmp(cp->name, cmdParams) == 0)
+            if (strcasecmp(cp->name, cmdParams) == 0)
                 {
                 opDisplay("\n");
                 cp->handler(TRUE, NULL);
@@ -1853,7 +1853,7 @@ static void opCmdHelpAll(bool help, char *cmdParams)
         }
 
     /*
-    **  Display Provide help for each command.
+    **  Provide help for each command.
     */
     for (cp = decode; cp->name != NULL; cp++)
         {
@@ -3075,13 +3075,13 @@ static void opCmdIdle(bool help, char *cmdParams)
 
         return;
         }
-    if (strcmp("on", dtStrLwr(cmdParams)) == 0)
+    if (strcasecmp("on", cmdParams) == 0)
         {
         NOSIdle = TRUE;
 
         return;
         }
-    if (strcmp("off", dtStrLwr(cmdParams)) == 0)
+    if (strcasecmp("off", cmdParams) == 0)
         {
         NOSIdle = FALSE;
 
