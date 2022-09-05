@@ -94,9 +94,20 @@
 **  Private Typedef and Structure Definitions
 **  -----------------------------------------
 */
+#define MaxPortGroups 16
+
+typedef struct portGroup
+    {
+    int       listenFd;
+    int       listenPort;
+    int       portIndex;
+    int       portCount;
+    } PortGroup;
+
 typedef struct portParam
     {
     struct muxParam *mux;
+    PortGroup       *group;
     u8              id;
     bool            active;
     bool            enabled;
@@ -114,10 +125,9 @@ typedef struct muxParam
     {
     char      name[20];
     int       type;
-    int       listenPort;
-    int       listenFd;
     int       portCount;
     int       ioTurns;
+    PortGroup portGroups[MaxPortGroups];
     PortParam *ports;
     } MuxParam;
 
@@ -181,14 +191,14 @@ static int  mux667xLogBytesCol = 0;
 **                  eqNo        equipment number
 **                  unitNo      unit number
 **                  channelNo   channel number the device is attached to
-**                  deviceName  optional device file name
+**                  params      optional device parameters
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void mux6671Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
+void mux6671Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     {
-    mux667xInit(eqNo, channelNo, DtMux6671, deviceName);
+    mux667xInit(eqNo, channelNo, DtMux6671, params);
     }
 
 /*--------------------------------------------------------------------------
@@ -198,14 +208,14 @@ void mux6671Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **                  eqNo        equipment number
 **                  unitNo      unit number
 **                  channelNo   channel number the device is attached to
-**                  deviceName  optional device file name
+**                  params      optional device parameters
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void mux6676Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
+void mux6676Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     {
-    mux667xInit(eqNo, channelNo, DtMux6676, deviceName);
+    mux667xInit(eqNo, channelNo, DtMux6676, params);
     }
 
 /*--------------------------------------------------------------------------
@@ -219,18 +229,27 @@ void mux6676Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **
 **  Returns:        Nothing.
 **
+**  The device parameters are a comma-separated list of pairs of TCP port
+**  numbers and multiplexor port counts. Each pair specifies a TCP port on
+**  which to listen for connections and a count representing the number of
+**  consecutive multiplexor ports associated with the TCP port.
+**
 **------------------------------------------------------------------------*/
 static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
     {
 #if defined(_WIN32)
     u_long blockEnable = 1;
 #endif
+    char               *cp;
     DevSlot            *dp;
+    u8                 g;
+    PortGroup          *gp;
     u8                 i;
     int                listenPort;
     int                maxPorts;
     MuxParam           *mp;
     char               *mts;
+    int                n;
     int                numParam;
     int                optEnable = 1;
     int                portCount;
@@ -244,7 +263,16 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
     dp->func       = mux667xFunc;
     dp->io         = mux667xIo;
 
-    mts = (muxType == DtMux6676) ? "MUX6676" : "MUX6671";
+    if (muxType == DtMux6676)
+        {
+        mts      = "MUX6676";
+        maxPorts = 64;
+        }
+    else
+        {
+        mts      = "MUX6671";
+        maxPorts = 16;
+        }
 
     /*
     **  Only one MUX667x unit is possible per equipment.
@@ -254,69 +282,136 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
         fprintf(stderr, "(mux6676) Only one %s unit is possible per equipment\n", mts);
         exit(1);
         }
-    if (params == NULL)
-        {
-        params = "";
-        }
-    numParam = sscanf(params, "%d,%d", &listenPort, &portCount);
-    if (numParam < 1)
-        {
-        if (muxType == DtMux6676)
-            {
-            listenPort = mux6676TelnetPort;
-            portCount  = mux6676TelnetConns;
-            }
-        else
-            {
-            fprintf(stderr, "(mux6676) TCP port missing from %s definition\n", mts);
-            exit(1);
-            }
-        }
-    else if (numParam < 2)
-        {
-        portCount = (muxType == DtMux6676) ? mux6676TelnetConns : 16;
-        }
-    if ((listenPort < 1) || (listenPort > 65535))
-        {
-        fprintf(stderr, "(mux6676) Invalid TCP port number in %s definition: %d\n", mts, listenPort);
-        exit(1);
-        }
-    maxPorts = (muxType == DtMux6676) ? 64 : 16;
-    if ((portCount < 1) || (portCount > maxPorts))
-        {
-        fprintf(stderr, "(mux6676) Invalid mux port count in %s definition: %d\n", mts, portCount);
-        exit(1);
-        }
-
+    /*
+    **  Allocate and initialise mux control block.
+    */
     mp = calloc(1, sizeof(MuxParam));
     if (mp == NULL)
         {
         fprintf(stderr, "(mux6676) Failed to allocate %s context block\n", mts);
         exit(1);
         }
+    sprintf(mp->name, "%s_CH%02o_EQ%02o", mts, channelNo, eqNo);
+    mp->type       = muxType;
+    mp->ioTurns    = IoTurnsPerPoll - 1;
+    if (params == NULL)
+        {
+        params = "";
+        }
+    cp = params;
+    g  = 0;
+
+    while (TRUE)
+        {
+        numParam = sscanf(cp, "%d,%d", &listenPort, &portCount);
+        if (numParam < 1)
+            {
+            if (g > 0)
+                {
+                break;
+                }
+            else if (muxType == DtMux6676)
+                {
+                listenPort = mux6676TelnetPort;
+                portCount  = mux6676TelnetConns;
+                }
+            else
+                {
+                fprintf(stderr, "(mux6676) TCP port missing from %s definition\n", mts);
+                exit(1);
+                }
+            }
+        else if (numParam < 2)
+            {
+            portCount = ((muxType == DtMux6676) ? mux6676TelnetConns : 16) - mp->portCount;
+            }
+        if (listenPort < 0 || listenPort > 65535)
+            {
+            fprintf(stderr, "(mux6676) Invalid TCP port number in %s definition: %d\n", mts, listenPort);
+            exit(1);
+            }
+        if (portCount < 1)
+            {
+            fprintf(stderr, "(mux6676) Invalid port count %d in %s definition, valid range is 0 < count <= %d\n", portCount, mts, maxPorts);
+            exit(1);
+            }
+        gp = &mp->portGroups[g++];
+        gp->portIndex  = mp->portCount;
+        gp->portCount  = portCount;
+        gp->listenPort = listenPort;
+        mp->portCount += portCount;
+        if (mp->portCount > maxPorts)
+            {
+            fprintf(stderr, "(mux6676) Invalid total port count %d in %s definition, valid range is 0 < count <= %d\n", mp->portCount, mts, maxPorts);
+            exit(1);
+            }
+        if (listenPort > 0)
+            {
+            /*
+            **  Create socket, bind to specified port, and begin listening for connections
+            */
+            gp->listenFd = socket(AF_INET, SOCK_STREAM, 0);
+            if (gp->listenFd < 0)
+                {
+                fprintf(stderr, "(mux6676) Can't create socket for %s on port %d\n", mts, listenPort);
+                exit(1);
+                }
+            /*
+            **  Accept will block if client drops connection attempt between select and accept.
+            **  We can't block so make listening socket non-blocking to avoid this condition.
+            */
+#if defined(_WIN32)
+            ioctlsocket(gp->listenFd, FIONBIO, &blockEnable);
+#else
+            fcntl(gp->listenFd, F_SETFL, O_NONBLOCK);
+#endif
+            /*
+            **  Bind to configured TCP port number
+            */
+            setsockopt(gp->listenFd, SOL_SOCKET, SO_REUSEADDR, (void *)&optEnable, sizeof(optEnable));
+            memset(&server, 0, sizeof(server));
+            server.sin_family      = AF_INET;
+            server.sin_addr.s_addr = inet_addr("0.0.0.0");
+            server.sin_port        = htons(listenPort);
+            if (bind(gp->listenFd, (struct sockaddr *)&server, sizeof(server)) < 0)
+                {
+                fprintf(stderr, "(mux6676) Can't bind to listen socket for %s on port %d\n", mts, listenPort);
+                exit(1);
+                }
+            /*
+            **  Start listening for new connections on this TCP port number
+            */
+            if (listen(gp->listenFd, 5) < 0)
+                {
+                fprintf(stderr, "(mux6676) Can't listen for %s on port %d\n", mts, listenPort);
+                exit(1);
+                }
+            }
+        /*
+        **  Advance to next port/count pair
+        */
+        while (*cp != '\0' && *cp != ',') cp += 1;
+        if (*cp == ',') cp += 1;
+        while (*cp != '\0' && *cp != ',') cp += 1;
+        if (*cp == ',') cp += 1;
+        }
     dp->context[0] = mp;
 
     /*
-    **  Initialise mux control block.
+    **  Initialise port control blocks.
     */
-    sprintf(mp->name, "%s_CH%02o_EQ%02o", mts, channelNo, eqNo);
-    mp->type       = muxType;
-    mp->listenPort = listenPort;
-    mp->portCount  = portCount;
-    mp->ports      = (PortParam *)calloc(portCount, sizeof(PortParam));
-    mp->ioTurns    = IoTurnsPerPoll - 1;
+    mp->ports = (PortParam *)calloc(mp->portCount, sizeof(PortParam));
     if (mp->ports == NULL)
         {
         fprintf(stderr, "(mux6676) Failed to allocate %s context block\n", mts);
         exit(1);
         }
-
-    /*
-    **  Initialise port control blocks.
-    */
-    for (i = 0, pp = mp->ports; i < portCount; i++, pp++)
+    gp = &mp->portGroups[0];
+    for (i = 0, pp = mp->ports; i < mp->portCount; i++, pp++)
         {
+        if (i >= gp->portIndex + gp->portCount) gp += 1;
         pp->mux       = mp;
+        pp->group     = gp;
         pp->enabled   = mp->type == DtMux6676; // enabled by default for 6676
         pp->carrierOn = mp->type == DtMux6676; //      on by default for 6676
         pp->active    = FALSE;
@@ -325,53 +420,24 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
         }
 
     /*
-    **  Create socket, bind to specified port, and begin listening for connections
-    */
-    mp->listenFd = socket(AF_INET, SOCK_STREAM, 0);
-    if (mp->listenFd < 0)
-        {
-        fprintf(stderr, "(mux6676) Can't create socket for %s on port %d\n", mts, mp->listenPort);
-        exit(1);
-        }
-
-    /*
-    **  Accept will block if client drops connection attempt between select and accept.
-    **  We can't block so make listening socket non-blocking to avoid this condition.
-    */
-#if defined(_WIN32)
-    ioctlsocket(mp->listenFd, FIONBIO, &blockEnable);
-#else
-    fcntl(mp->listenFd, F_SETFL, O_NONBLOCK);
-#endif
-
-    /*
-    **  Bind to configured TCP port number
-    */
-    setsockopt(mp->listenFd, SOL_SOCKET, SO_REUSEADDR, (void *)&optEnable, sizeof(optEnable));
-    memset(&server, 0, sizeof(server));
-    server.sin_family      = AF_INET;
-    server.sin_addr.s_addr = inet_addr("0.0.0.0");
-    server.sin_port        = htons(mp->listenPort);
-    if (bind(mp->listenFd, (struct sockaddr *)&server, sizeof(server)) < 0)
-        {
-        fprintf(stderr, "(mux6676) Can't bind to listen socket for %s on port %d\n", mts, mp->listenPort);
-        exit(1);
-        }
-
-    /*
-    **  Start listening for new connections on this TCP port number
-    */
-    if (listen(mp->listenFd, 5) < 0)
-        {
-        fprintf(stderr, "(mux6676) Can't listen for %s on port %d\n", mts, mp->listenPort);
-        exit(1);
-        }
-
-    /*
     **  Print a friendly message.
     */
-    printf("(mux6676) %s initialised on channel %o equipment %o, mux ports %d, TCP port %d\n",
-           mts, channelNo, eqNo, mp->portCount, mp->listenPort);
+    printf("(mux6676) %s initialised on channel %o equipment %o, TCP port/mux ports: ",
+           mts, channelNo, eqNo);
+    n = 0;
+    for (g = 0, gp = &mp->portGroups[0]; g < MaxPortGroups && gp->portCount > 0; g++, gp++)
+        {
+        if (gp->listenPort != 0)
+            {
+            if (n++ > 0) fputs(", ", stdout);
+            printf("%d/%d", gp->listenPort, gp->portIndex);
+            if (gp->portCount > 1)
+                {
+                printf("-%d", gp->portIndex + gp->portCount - 1);
+                }
+            }
+        }
+    fputc('\n', stdout);
 
 #if DEBUG_6671
     if (mux6671Log == NULL)
@@ -723,7 +789,6 @@ static void mux667xDisconnect(void)
 static void mux667xCheckIo(MuxParam *mp)
     {
     PortParam *availablePort;
-
 #if defined(_WIN32)
     u_long blockEnable = 1;
 #endif
@@ -733,6 +798,9 @@ static void mux667xCheckIo(MuxParam *mp)
 #else
     socklen_t fromLen;
 #endif
+    int            fd;
+    int            g;
+    PortGroup      *gp;
     int            i;
     int            maxFd;
     int            n;
@@ -777,13 +845,12 @@ static void mux667xCheckIo(MuxParam *mp)
                     }
                 }
             }
-        else if ((availablePort == NULL) && pp->enabled)
+        else if (pp->enabled && pp->group->listenFd != 0 && !FD_ISSET(pp->group->listenFd, &readFds))
             {
-            availablePort = pp;
-            FD_SET(mp->listenFd, &readFds);
-            if (mp->listenFd > maxFd)
+            FD_SET(pp->group->listenFd, &readFds);
+            if (pp->group->listenFd > maxFd)
                 {
-                maxFd = mp->listenFd;
+                maxFd = pp->group->listenFd;
                 }
             }
         }
@@ -868,48 +935,69 @@ static void mux667xCheckIo(MuxParam *mp)
                 }
             }
         }
-    if ((availablePort != NULL) && FD_ISSET(mp->listenFd, &readFds))
+    for (g = 0, gp = &mp->portGroups[0]; g < MaxPortGroups && gp->portCount > 0; g++, gp++)
         {
-        fromLen = sizeof(from);
-        availablePort->connFd = accept(mp->listenFd, (struct sockaddr *)&from, &fromLen);
-        if (availablePort->connFd > 0)
+        if (gp->listenFd != 0 && FD_ISSET(gp->listenFd, &readFds))
             {
-            availablePort->active    = TRUE;
-            availablePort->inInIdx   = 0;
-            availablePort->inOutIdx  = 0;
-            availablePort->outInIdx  = 0;
-            availablePort->outOutIdx = 0;
-
-            /*
-            **  Set Keepalive option so that we can eventually discover if
-            **  a client has been rebooted.
-            */
-            setsockopt(availablePort->connFd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
-
-            /*
-            **  Make socket non-blocking.
-            */
+            fromLen = sizeof(from);
+            fd = accept(gp->listenFd, (struct sockaddr *)&from, &fromLen);
+            if (fd < 0) break;
+            availablePort = NULL;
+            for (i = gp->portIndex; i < gp->portIndex + gp->portCount; i++)
+                {
+                pp = mp->ports + i;
+                if (pp->active == FALSE)
+                    {
+                    availablePort = pp;
+                    break;
+                    }
+                }
+            if (availablePort != NULL)
+                {
+                availablePort->active    = TRUE;
+                availablePort->connFd    = fd;
+                availablePort->inInIdx   = 0;
+                availablePort->inOutIdx  = 0;
+                availablePort->outInIdx  = 0;
+                availablePort->outOutIdx = 0;
+                /*
+                **  Set Keepalive option so that we can eventually discover if
+                **  a client has been rebooted.
+                */
+                setsockopt(availablePort->connFd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
+                /*
+                **  Make socket non-blocking.
+                */
 #if defined(_WIN32)
-            ioctlsocket(availablePort->connFd, FIONBIO, &blockEnable);
+                ioctlsocket(availablePort->connFd, FIONBIO, &blockEnable);
 #else
-            fcntl(availablePort->connFd, F_SETFL, O_NONBLOCK);
+                fcntl(availablePort->connFd, F_SETFL, O_NONBLOCK);
 #endif
 #if DEBUG_NETIO
 #if DEBUG_6671
-            if (availablePort->mux->type == DtMux6671)
-                {
-                fprintf(mux6671Log, "\n%010u %s accepted connection on port %02o",
-                        traceSequenceNo, availablePort->mux->name, availablePort->id);
-                }
+                if (availablePort->mux->type == DtMux6671)
+                    {
+                    fprintf(mux6671Log, "\n%010u %s accepted connection on port %02o",
+                            traceSequenceNo, availablePort->mux->name, availablePort->id);
+                    }
 #endif
 #if DEBUG_6676
-            if (availablePort->mux->type == DtMux6676)
-                {
-                fprintf(mux6676Log, "\n%010u %s accepted connection on port %02o",
-                        traceSequenceNo, availablePort->mux->name, availablePort->id);
+                if (availablePort->mux->type == DtMux6676)
+                    {
+                    fprintf(mux6676Log, "\n%010u %s accepted connection on port %02o",
+                            traceSequenceNo, availablePort->mux->name, availablePort->id);
+                    }
+#endif
+#endif
                 }
+            else
+                {
+#if defined(_WIN32)
+                closesocket(fd);
+#else
+                close(fd);
 #endif
-#endif
+                }
             }
         }
     }
@@ -1010,7 +1098,7 @@ static char *mux667xFunc2String(PpWord funcCode)
     case Fc667xStatus:
         return "Status";
         }
-    sprintf(buf, "(mux6676) UNKNOWN: %04o", funcCode);
+    sprintf(buf, "UNKNOWN: %04o", funcCode);
 
     return (buf);
     }

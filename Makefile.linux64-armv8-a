@@ -62,7 +62,6 @@ OBJS    =   cdcnet.o                \
             main.o                  \
             maintenance_channel.o   \
             msufrend.o              \
-            msufrend_util.o         \
             mdi.o                   \
             mt362x.o                \
             mt5744.o                \
@@ -87,7 +86,6 @@ OBJS    =   cdcnet.o                \
             rtc.o                   \
             scr_channel.o           \
             shift.o                 \
-            string.o                \
             time.o                  \
             tpmux.o                 \
             trace.o                 \
@@ -96,7 +94,7 @@ OBJS    =   cdcnet.o                \
 dtcyber: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
  
-all: dtcyber stk/node_modules automation/node_modules frend2/frend2
+all: dtcyber stk/node_modules automation/node_modules
 
 automation/node_modules:
 	$(MAKE) -C automation
@@ -104,14 +102,10 @@ automation/node_modules:
 stk/node_modules:
 	$(MAKE) -C stk
 
-frend2/frend2:
-	$(MAKE) -f Makefile.linux64-armv8-a -C frend2
-
 clean:
 	rm -f *.o; \
 	$(MAKE) -C automation clean; \
-	$(MAKE) -C stk clean; \
-	$(MAKE) -f Makefile.linux64-armv8-a -C frend2 clean
+	$(MAKE) -C stk clean
 
 %.o : %.c $(HDRS)
 	$(CC) $(CFLAGS) -c $<

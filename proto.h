@@ -221,9 +221,7 @@ void mdiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 /*
 **  msufrend.c
 */
-void msuFrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void msuFrendTalkToFrend(void);
-void msuFrendSendInterruptToFrend(void);
+void msufrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 
 /*
 **  mt362x.c
@@ -334,11 +332,6 @@ CpWord shiftPack(CpWord coeff, u32 expo);
 CpWord shiftUnpack(CpWord number, u32 *expo);
 CpWord shiftNormalize(CpWord number, u32 *shift, bool round);
 CpWord shiftMask(u8 count);
-
-/*
-**  string.c
-*/
-char * dtStrLwr(char *str);
 
 /*
 **  time.c

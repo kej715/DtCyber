@@ -193,13 +193,7 @@
     <ClCompile Include="niu.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="string.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="msufrend.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="msufrend_util.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -229,9 +223,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="dirent_win.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\DtCyber.kej715\msufrend_util.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="version.h">

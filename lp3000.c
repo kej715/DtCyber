@@ -310,13 +310,12 @@ void lp501Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
 
     if ((deviceMode) != NULL)
         {
-        deviceMode = dtStrLwr(deviceMode);         //  pick up "ansi" or "ascii" flag
         useANSI    = FALSE;
-        if (strcmp(deviceMode, "ansi") == 0)
+        if (strcasecmp(deviceMode, "ansi") == 0)
             {
             useANSI = TRUE;
             }
-        else if (strcmp(deviceMode, "ascii") == 0)
+        else if (strcasecmp(deviceMode, "ascii") == 0)
             {
             useANSI = FALSE;
             }
@@ -334,13 +333,12 @@ void lp501Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
     */
     if (burstMode != NULL)
         {
-        burstMode = dtStrLwr(burstMode);         //  pick up "ansi" or "ascii" flag
         bursting  = TRUE;                        //  Default
-        if (strcmp(burstMode, "burst") == 0)
+        if (strcasecmp(burstMode, "burst") == 0)
             {
             bursting = TRUE;
             }
-        else if (strcmp(burstMode, "noburst") == 0)
+        else if (strcasecmp(burstMode, "noburst") == 0)
             {
             bursting = FALSE;
             }
@@ -430,13 +428,12 @@ void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
 
     if ((deviceMode) != NULL)
         {
-        deviceMode = dtStrLwr(deviceMode);
         useANSI    = FALSE;
-        if (strcmp(deviceMode, "ansi") == 0)
+        if (strcasecmp(deviceMode, "ansi") == 0)
             {
             useANSI = TRUE;
             }
-        else if (strcmp(deviceMode, "ascii") == 0)
+        else if (strcasecmp(deviceMode, "ascii") == 0)
             {
             useANSI = FALSE;
             }
@@ -454,13 +451,12 @@ void lp512Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams)
     */
     if (burstMode != NULL)
         {
-        burstMode = dtStrLwr(burstMode);         //  pick up "ansi" or "ascii" flag
         bursting  = TRUE;                        //  Default
-        if (strcmp(burstMode, "burst") == 0)
+        if (strcasecmp(burstMode, "burst") == 0)
             {
             bursting = TRUE;
             }
-        else if (strcmp(burstMode, "noburst") == 0)
+        else if (strcasecmp(burstMode, "noburst") == 0)
             {
             bursting = FALSE;
             }
@@ -675,19 +671,19 @@ void lp3000RemovePaper(char *params)
     int iSuffix;
     LpContext *lc;
     int numParam;
-    char outBuf[MaxFSPath+256];
+    char outBuf[MaxFSPath*2+300];
     bool renameOK;
     struct tm t;
 
     /*
     **  Operator wants to remove paper.
     */
-    numParam = sscanf(params, "%o,%o", &channelNo, &equipmentNo);
+    numParam = sscanf(params, "%o,%o,%s", &channelNo, &equipmentNo, fNameNew);
 
     /*
     **  Check parameters.
     */
-    if (numParam != 2)
+    if (numParam < 2)
         {
         opDisplay("(lp3000 ) Not enough or invalid parameters\n");
 
@@ -723,11 +719,12 @@ void lp3000RemovePaper(char *params)
     lc = (LpContext *)dp->context[0];
     sprintf(fName, "%sLP5xx_C%02o_E%o", lc->extPath, channelNo, equipmentNo);
 
+    renameOK = FALSE;
+
     //  SZoppi: this can happen if something goes wrong in the open
     //          and the file fails to be properly re-opened.
     if (dp->fcb[0] == NULL)
         {
-        renameOK = TRUE;        //  Since nothing was open - we're not renaming
         fprintf(stderr, "(lp3000 ) lp3000RemovePaper: FCB is Null on channel %o equipment %o\n",
                dp->channel->id,
                dp->eqNo);
@@ -750,40 +747,48 @@ void lp3000RemovePaper(char *params)
         fclose(dp->fcb[0]);
         dp->fcb[0] = NULL;
 
-        /*
-        **  Rename the device file to the format "LP5xx_yyyymmdd_hhmmss_nn.txt".
-        */
-
-        renameOK = FALSE;
-
-        for (iSuffix = 0; iSuffix < 100; iSuffix++)
+        if (numParam > 2)
             {
-            time(&currentTime);
-            t = *localtime(&currentTime);
-            sprintf(fNameNew, "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d.txt",
-                    lc->extPath,
-                    t.tm_year + 1900,
-                    t.tm_mon + 1,
-                    t.tm_mday,
-                    t.tm_hour,
-                    t.tm_min,
-                    t.tm_sec,
-                    iSuffix);
-
             if (rename(fName, fNameNew) == 0)
                 {
                 renameOK = TRUE;
-                break;
                 }
-            fprintf(stderr, "(lp3000 ) Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
-                    fName,
-                    fNameNew,
-                    strerror(errno),
-                    iSuffix);
+            else
+                {
+                sprintf(outBuf, "(lp3000 ) Rename Failure '%s' to '%s' - (%s).\n", fName, fNameNew, strerror(errno));
+                opDisplay(outBuf);
+                }
             }
-        if (iSuffix > 0)
+        else
             {
-            opDisplay("\n");
+            /*
+            **  Rename the device file to the format "LP5xx_yyyymmdd_hhmmss_nn.txt".
+            */
+            for (iSuffix = 0; iSuffix < 100; iSuffix++)
+                {
+                time(&currentTime);
+                t = *localtime(&currentTime);
+                sprintf(fNameNew, "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d.txt",
+                        lc->extPath,
+                        t.tm_year + 1900,
+                        t.tm_mon + 1,
+                        t.tm_mday,
+                        t.tm_hour,
+                        t.tm_min,
+                        t.tm_sec,
+                        iSuffix);
+
+                if (rename(fName, fNameNew) == 0)
+                    {
+                    renameOK = TRUE;
+                    break;
+                    }
+                fprintf(stderr, "(lp3000 ) Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
+                        fName,
+                        fNameNew,
+                        strerror(errno),
+                        iSuffix);
+                }
             }
         }
 
@@ -803,9 +808,11 @@ void lp3000RemovePaper(char *params)
 
         return;
         }
-
-    sprintf(outBuf, "(lp3000 ) Paper removed from 5xx printer and available on '%s'\n", fNameNew);
-    opDisplay(outBuf);
+    if (renameOK)
+        {
+        sprintf(outBuf, "(lp3000 ) Paper removed from 5xx printer and available on '%s'\n", fNameNew);
+        opDisplay(outBuf);
+        }
     }
 
 /*--------------------------------------------------------------------------

@@ -316,12 +316,11 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     watchRequested = TRUE;     // Default = Run Filewatcher Thread
     if (tokenAuto != NULL)
         {
-        tokenAuto = dtStrLwr(tokenAuto);
-        if (!strcmp(tokenAuto, "noauto"))
+        if (strcasecmp(tokenAuto, "noauto") == 0)
             {
             watchRequested = FALSE;
             }
-        else if ((strcmp(tokenAuto, "auto") != 0) && (strcmp(tokenAuto, "*") != 0))
+        else if ((strcasecmp(tokenAuto, "auto") != 0) && (strcasecmp(tokenAuto, "*") != 0))
             {
             fprintf(stderr, "(cr3447 ) Unrecognized Automation Type '%s'\n", tokenAuto);
             exit(1);

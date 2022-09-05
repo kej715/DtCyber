@@ -230,13 +230,12 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     if ((deviceMode) != NULL)
         {
-        deviceMode = dtStrLwr(deviceMode);         //  pick up "ansi" or "ascii" flag
         useANSI    = FALSE;
-        if (strcmp(deviceMode, "ansi") == 0)
+        if (strcasecmp(deviceMode, "ansi") == 0)
             {
             useANSI = TRUE;
             }
-        else if (strcmp(deviceMode, "ascii") == 0)
+        else if (strcasecmp(deviceMode, "ascii") == 0)
             {
             useANSI = FALSE;
             }
@@ -356,7 +355,7 @@ void lp1612RemovePaper(char *params)
     int iSuffix;
     LpContext1612 *lc;
     int numParam;
-    char outBuf[MaxFSPath+256];
+    char outBuf[MaxFSPath*2+300];
     bool renameOK;
     struct tm t;
 
@@ -364,12 +363,12 @@ void lp1612RemovePaper(char *params)
     /*
     **  Operator wants to remove paper.
     */
-    numParam = sscanf(params, "%o,%o", &channelNo, &equipmentNo);
+    numParam = sscanf(params, "%o,%o,%s", &channelNo, &equipmentNo, fNameNew);
 
     /*
     **  Check parameters.
     */
-    if (numParam != 2)
+    if (numParam < 2)
         {
         opDisplay("(lp1612 ) Not enough or invalid parameters\n");
 
@@ -402,11 +401,12 @@ void lp1612RemovePaper(char *params)
     lc = (LpContext1612 *)dp->context[0];
     sprintf(fName, "%sLP1612_C%02o", lc->extPath, channelNo);
 
+    renameOK = FALSE;
+
     //  SZoppi: this can happen if something goes wrong in the open
     //          and the file fails to be properly re-opened.
     if (dp->fcb[0] == NULL)
         {
-        renameOK = TRUE;        //  Since nothing was open - we're not renaming
         fprintf(stderr, "(lp1612 ) lp1612RemovePaper: FCB is Null on channel %o equipment %o\n",
                 dp->channel->id,
                 dp->eqNo);
@@ -430,40 +430,49 @@ void lp1612RemovePaper(char *params)
         fclose(dp->fcb[0]);
         dp->fcb[0] = NULL;
 
-        /*
-        **  Rename the device file to the format "LP5xx_yyyymmdd_hhmmss_nn.txt".
-        */
-
-        renameOK = FALSE;
-
-        for (iSuffix = 0; iSuffix < 100; iSuffix++)
+        if (numParam > 2)
             {
-            time(&currentTime);
-            t = *localtime(&currentTime);
-            sprintf(fNameNew, "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d.txt",
-                    lc->extPath,
-                    t.tm_year + 1900,
-                    t.tm_mon + 1,
-                    t.tm_mday,
-                    t.tm_hour,
-                    t.tm_min,
-                    t.tm_sec,
-                    iSuffix);
-
             if (rename(fName, fNameNew) == 0)
                 {
-                break;
+                renameOK = TRUE;
                 }
-
-            fprintf(stderr, "(lp1612 ) Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
-                    fName,
-                    fNameNew,
-                    strerror(errno),
-                    iSuffix);
+            else
+                {
+                sprintf(outBuf, "(lp1612 ) Rename Failure '%s' to '%s' - (%s).\n", fName, fNameNew, strerror(errno));
+                opDisplay(outBuf);
+                }
             }
-        if (iSuffix > 0)
+        else
             {
-            opDisplay("\n");
+            /*
+            **  Rename the device file to the format "LP5xx_yyyymmdd_hhmmss_nn.txt".
+            */
+            for (iSuffix = 0; iSuffix < 100; iSuffix++)
+                {
+                time(&currentTime);
+                t = *localtime(&currentTime);
+                sprintf(fNameNew, "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d.txt",
+                        lc->extPath,
+                        t.tm_year + 1900,
+                        t.tm_mon + 1,
+                        t.tm_mday,
+                        t.tm_hour,
+                        t.tm_min,
+                        t.tm_sec,
+                        iSuffix);
+
+                if (rename(fName, fNameNew) == 0)
+                    {
+                    renameOK = TRUE;
+                    break;
+                    }
+
+                fprintf(stderr, "(lp1612 ) Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
+                        fName,
+                        fNameNew,
+                        strerror(errno),
+                        iSuffix);
+                }
             }
         }
 
@@ -482,8 +491,11 @@ void lp1612RemovePaper(char *params)
         return;
         }
 
-    sprintf(outBuf, "(lp1612 ) Paper removed and available on '%s'\n", fNameNew);
-    opDisplay(outBuf);
+    if (renameOK)
+        {
+        sprintf(outBuf, "(lp1612 ) Paper removed and available on '%s'\n", fNameNew);
+        opDisplay(outBuf);
+        }
     }
 
 /*--------------------------------------------------------------------------
