@@ -143,6 +143,8 @@ static bool npuSvmRequestTerminalConnection(Tcb *tp);
 u8 npuSvmCouplerNode = 1;
 u8 npuSvmNpuNode     = 2;
 
+extern void (*npuHipResetFunc)(void);
+
 /*
 **  -----------------
 **  Private Variables
@@ -624,6 +626,12 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             {
             npuLogMessage("(npu_svm) Unexpected message %02X/%02X with CN %d", block[BlkOffPfc], block[BlkOffSfc], cn);
             }
+        break;
+
+    case PfcNPI:
+        npuLogMessage("(npu_svm) NPU reload request, SFC %02X", block[BlkOffSfc]);
+        fprintf(stderr, "(npu_svm) NPU reload request, SFC %02X\n", block[BlkOffSfc]);
+        (*npuHipResetFunc)();
         break;
 
     default:
