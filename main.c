@@ -364,6 +364,7 @@ bool idleCheckBusy()
             if (ppu[i].busy)
             {   
                 busyFlag = TRUE;
+                break;
             }   
         }   
     return busyFlag;
