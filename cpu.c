@@ -995,7 +995,7 @@ static void *cpuThread(void *param)
             sleepMsec(500);
             }
         cpuStep(activeCpu);
-        idleThrottle(activeCpu, FALSE);
+        idleThrottle(activeCpu);
         }
 #if !defined(_WIN32)
     return (NULL);

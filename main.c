@@ -279,7 +279,7 @@ int main(int argc, char **argv)
         channelStep();
         rtcTick();
 
-        idleThrottle(cpus, TRUE);
+        idleThrottle(cpus);
 
 #if CcCycleTime
         cycleTime = rtcStopTimer();
@@ -323,14 +323,11 @@ int main(int argc, char **argv)
 **
 **  Parameters:     Name        Description.
 **                  ctx         Cpu context to throttle.
-**                  checkBusy   enable/disable checking busy PPs
-**                              only set this to true when calling
-**                              from main thread. 
 **
 **  Returns:        void
 **
 **------------------------------------------------------------------------*/
-void idleThrottle(CpuContext *ctx, bool checkBusy)
+void idleThrottle(CpuContext *ctx)
      {
         if (idle)
             {   
@@ -339,7 +336,7 @@ void idleThrottle(CpuContext *ctx, bool checkBusy)
                 ctx->idleCycles++;
                 if ((ctx->idleCycles % idleTrigger) == 0)
                     {   
-                        if(checkBusy) {
+                        if(ctx->id == 0) {
                            if(idleCheckBusy())
                            {
                               return; 
@@ -451,26 +448,71 @@ bool idleDetectorMACE(CpuContext *ctx)
 **------------------------------------------------------------------------*/
 bool idleDetectorHUSTLER(CpuContext *ctx)
      {
-         /*This is currently unimplemnted because I just can't
-          * find a good indicator for being idle on HUSTLER
+
+         /* Definitions taken from CMR listing of HUSTLER with current mods applied */
+         /* CORRIDOR Idle loop, we enter here when we think
+          * another CPU is in the idle package.
+          * This is always true when we have 1 CPU
+          */
+         #define CORIDLE_START 025170
+         #define CORIDLE_END   025201
+
+         /* Idle package loop, used with dual CPU systems only  */
+        #define IDLE_PKG_START 04041
+        #define IDLE_PKG_END  04043
+
+         /* Definitions from SCPTEXT of Hustler */
+        /* CPU Status word
+         * byte 4 = CPUB control point address
+         * byte 5 = CPUA control point address
+         * byte 1 first 2 high bits bit 1 set if nocpuA, bit 2 set if nocpuB
+         * */
+        #define CPU_STATUS_WORD 025
+         CpWord cpstatw;
+         PpWord acpua,acpub,usecpu,mystatus;
+         cpstatw = cpMem[CPU_STATUS_WORD]; /* CPU status word */
+         usecpu = (PpWord)((cpstatw >>48) &Mask12);
+         acpub = (PpWord)((cpstatw >>12) &Mask12);
+         acpua = (PpWord)((cpstatw) &Mask12);
+         if(ctx->id == 01)
+         {
+             mystatus = acpub;
+         }
+         else
+         {
+             mystatus = acpua;
+         }
+         /* If our CPU is not running or our status word is 0
+          * we are not even being used, just throttle */
+         if((ctx->isStopped) || mystatus == 0) {
+             return TRUE;
+         }
+
+         /* 4000B is the idle control point area
+          * We don't test for ! Monitor mode because with one CPU
+          * We end up in monitor mode at this controlpoint
+          * in the corridor idle loop.
           *
-          * There doesn't appear to be an idle package like on NOS or vanilla
-          * NOS/BE and the system seems to spend most of its time in monitor
-          * mode even with no jobs running.
+          * we test for RA = 0 to filter out tasks.
           *
-          * There are things that run with RA=0 outside of monitor mode
-          * but even just generalizing for that behavior doesn't seem to happen
-          * often enough to throttle effectively. 
+          * Next we need to check for either being inside CORIDLE
+          * or the actual idle package.
           *
-          * My assumption is there's some kind of aggressive scheduler running
-          * in monitor mode as often as it can, we should probably try and figure
-          * out where that is and use that.
+          * On a single CPU system the corridor treats the unused CPU as always idling and
+          * so we always enter CORIDLE which is in monitor mode.
           *
-          * I suspect if an idle package exists it would be used for CPU1 but I
-          * so far have not figured out how to make HUSTLER even try to use
-          * CPU1 and it stays in a non running state with everything zeroed out.
           *
-          * */
+          */
+         if((mystatus == 04000) && (ctx->regRaCm == 0)) {
+             /* Check for Idle package */
+             if((ctx->regP >= IDLE_PKG_START) && (ctx->regP <= IDLE_PKG_END)) {
+                 return TRUE;
+             }
+             /* Check for Corridor Idle loop */
+             if((ctx->regP >= CORIDLE_START) && (ctx->regP <= CORIDLE_END)) {
+                 return TRUE;
+             }
+         }
      return FALSE;
      }
 /*

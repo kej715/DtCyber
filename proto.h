@@ -456,7 +456,7 @@ bool idleDetectorNOS(CpuContext *ctx); /* KRONOS2.1 - NOS 2.8.7 */
 bool idleDetectorNOSBE(CpuContext *ctx); /* NOS/BE (only tested with TUB) */
 bool idleDetectorMACE(CpuContext *ctx); /* KRONOS1 or MACE, possibly SCOPE too) */
 bool idleDetectorHUSTLER(CpuContext *ctx); /* SCOPE HUSTLER */
-void idleThrottle(CpuContext *ctx, bool checkBusy);
+void idleThrottle(CpuContext *ctx);
 
 #endif /* PROTO_H */
 /*---------------------------  End Of File  ------------------------------*/
