@@ -368,6 +368,7 @@ class Hasp {
 
   send(streamId, readable) {
     let buf = [];
+    let block = [0x80 | (Hasp.BlockType_Normal << 4), 0x8f, 0xcf];
     const key = `CR${streamId}`;
     this.streams[key] = readable;
     readable.on("data", data => {
@@ -375,12 +376,10 @@ class Hasp {
       let limit = buf.indexOf(0x0a);
       if (limit > 0 && buf[limit - 1] === 0x0d) limit -= 1;
       if (limit >= 0) {
-        let block = [0x80 | (Hasp.BlockType_Normal << 4), 0x8f, 0xcf];
         while (limit >= 0) {
-          block.push(0x80 | (streamId << 4) | Hasp.RecordType_InputRecord, 0x80);
           let card = buf.slice(0, limit);
           if (buf[limit] === 0x0d) limit += 1;
-          buf = buf.slice(limit + 1);
+          if (card.length > 80) card = card.slice(0, 80);
           if (card.length > 0 && card[0] === Hasp.TILDE) {
             if (card.length === 1
                 || (card.length === 4 && card.every((b, i) => b === Hasp.TILDE_EOR[i]))) {
@@ -393,44 +392,53 @@ class Hasp {
               card = Hasp.EOI;
             }
             else {
+              buf = buf.slice(limit + 1);
+              limit = buf.indexOf(0x0a);
               continue;
             }
           }
           else if (card.length < 1) {
             card = [0x20];
           }
+          let frags = [0x80 | (streamId << 4) | Hasp.RecordType_InputRecord, 0x80];
           let i = 0;
           while (i < card.length) {
             let len = card.length - i;
             if (len > 0x3f) len = 0x3f;
-            block.push(0xc0 | len);
+            frags.push(0xc0 | len);
             while (len-- > 0) {
-              block.push(Translator.AsciiToEbcdic[card[i++]]);
+              frags.push(Translator.AsciiToEbcdic[card[i++]]);
             }
           }
-          block.push(0);
-          limit = buf.indexOf(0x0a);
-          if (limit > 0 && buf[limit - 1] == 0x0d) limit -= 1;
-          if (block.length + limit > this.maxBlockSize) {
+          frags.push(0);
+          if (block.length + frags.length + 8 > this.hasp.maxBlockSize) {
             block.push(0);
             this.queueBlock(block);
             block = [0x80 | (Hasp.BlockType_Normal << 4), 0x8f, 0xcf];
           }
+          else {
+            block = block.concat(frags);
+            buf = buf.slice(limit + 1);
+            limit = buf.indexOf(0x0a);
+            if (limit > 0 && buf[limit - 1] == 0x0d) limit -= 1;
+          }
         }
-        block.push(0);
-        this.queueBlock(block);
       }
     });
     readable.on("end", () => {
-      let block = [
+      if (block.length > 3) { // flush accumulated block
+        block.push(0);
+        this.queueBlock(block);
+      }
+      // Queue end of file indication
+      this.queueBlock([
         0x80 | (Hasp.BlockType_Normal << 4),
         0x8f, 0xcf,
         0x80 | (streamId << 4) | Hasp.RecordType_InputRecord,
         0x80,
         0x00,
         0x00
-      ];
-      this.queueBlock(block);
+      ]);
       delete this.streams[key];
       if (typeof this.handlers.end === "function") this.handlers.end(streamId);
     });
