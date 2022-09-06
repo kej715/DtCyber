@@ -75,8 +75,10 @@
 */
 
 #define DeadPeerTimeout     15000
+#define HaspPduHdrLen       5
+#define HaspMaxPruDataSize  1280
 #define HaspStartTimeout    (5 * 60 * 1000)
-#define InBufThreshold      (MaxBuffer - 512)
+#define InBufThreshold      (HaspMaxPruDataSize + HaspPduHdrLen)
 #define MaxRetries          5
 #define PauseTimeout        100
 #define RecvTimeout         5000
@@ -187,9 +189,11 @@ static void npuHaspSendEofRecord(Tcb *tp);
 static void npuHaspSendRecordHeader(Tcb *tp, u8 srcb);
 static void npuHaspSendRecordStrings(Tcb *tp, u8 *data, int len);
 static void npuHaspSendSignonRecord(Tcb *tp, u8 *data, int len);
+static void npuHaspSendUplineData(Tcb *tp, u8 *data, int len);
 static void npuHaspSendUplineEoiAcctg(Tcb *tp);
 static void npuHaspSendUplineEOS(Tcb *tp);
 static void npuHaspStageUplineData(Scb *scbp, u8 *data, int len);
+static void npuHaspTransmitQueuedBlocks(Tcb *tp);
 
 #if DEBUG
 static void npuHaspLogBytes(u8 *bytes, int len, CharEncoding encoding);
@@ -249,8 +253,23 @@ static int  npuHaspLogBytesCol = 0;
 void npuHaspTryOutput(Pcb *pcbp)
     {
     u64 currentTime;
+    int i;
     Scb *scbp;
 
+    /*
+     *  Send queued blocks upline
+     */
+    npuHaspTransmitQueuedBlocks(pcbp->controls.hasp.consoleStream.tp);
+    for (i = 0; i < MaxHaspStreams; ++i)
+        {
+        npuHaspTransmitQueuedBlocks(pcbp->controls.hasp.readerStreams[i].tp);
+        npuHaspTransmitQueuedBlocks(pcbp->controls.hasp.printStreams [i].tp);
+        npuHaspTransmitQueuedBlocks(pcbp->controls.hasp.punchStreams [i].tp);
+        }
+
+    /*
+     *  Process HASP protocol output
+     */ 
     currentTime = getMilliseconds();
 
     switch (pcbp->controls.hasp.majorState)
@@ -514,8 +533,8 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
 
 #if DEBUG
     blockType = bp->data[BlkOffBTBSN] & BlkMaskBT;
-    fprintf(npuHaspLog, "Port %02x: downline data received from host for stream %u (%.7s), block type %u, dbc %02x\n",
-            pcbp->claPort, tp->streamId, tp->termName, blockType, dbc);
+    fprintf(npuHaspLog, "Port %02x: downline data received from host for stream %u (%.7s), block type %u, block len %d, dbc %02x\n",
+            pcbp->claPort, tp->streamId, tp->termName, blockType, bp->numBytes, dbc);
     if ((dbc & DbcPRU) == 0)
         {
         npuHaspLogBytes(bp->data, bp->numBytes, (dbc & DbcTransparent) != 0 ? EBCDIC : ASCII);
@@ -917,7 +936,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
     len = pcbp->inputCount;
 
 #if DEBUG
-    fprintf(npuHaspLog, "Port %02x: received\n", pcbp->claPort);
+    fprintf(npuHaspLog, "Port %02x: received from terminal\n", pcbp->claPort);
     npuHaspLogBytes(dp, len, EBCDIC);
     npuHaspLogFlush();
 #endif
@@ -1917,6 +1936,25 @@ void npuHaspCloseStream(Tcb *tp)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Handle upline block acknowledgement
+**
+**  Parameters:     Name        Description.
+**                  tcbp        Pointer to TCB
+**                  bsn         Block sequence number of acknowledged block
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void npuHaspNotifyAck(Tcb *tp, u8 bsn)
+    {
+    tp->uplineBlockLimit += 1;
+#if DEBUG
+    fprintf(npuHaspLog, "Port %02x: ack for upline block from %.7s, ubl %d\n",
+            tp->pcbp->claPort, tp->termName, tp->uplineBlockLimit);
+#endif
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Handles a network connect notification from NET.
 **
 **  Parameters:     Name        Description.
@@ -2016,6 +2054,7 @@ void npuHaspNotifyTermConnect(Tcb *tp)
     deviceType = tp->deviceType;
     streamId   = tp->streamId;
     pcbp       = tp->pcbp;
+    scbp       = NULL;
 
 #if DEBUG
     fprintf(npuHaspLog, "Port %02x: connect stream %d (%.7s)\n", pcbp->claPort,
@@ -2035,9 +2074,8 @@ void npuHaspNotifyTermConnect(Tcb *tp)
 
     if (deviceType == DtCONSOLE)
         {
-        tp->scbp    = scbp = &tp->pcbp->controls.hasp.consoleStream;
+        tp->scbp    = scbp = &pcbp->controls.hasp.consoleStream;
         scbp->state = StHaspStreamReady;
-        scbp->tp    = tp;
         if ((pcbp->ncbp->connType == ConnTypeRevHasp)
             && (pcbp->controls.hasp.majorState == StHaspMajorInit))
             {
@@ -2049,39 +2087,46 @@ void npuHaspNotifyTermConnect(Tcb *tp)
         switch (deviceType)
             {
         case DtCR:
-            tp->scbp    = scbp = &tp->pcbp->controls.hasp.readerStreams[streamId - 1];
+            tp->scbp    = scbp = &pcbp->controls.hasp.readerStreams[streamId - 1];
             scbp->state = StHaspStreamInit;
-            scbp->tp    = tp;
             break;
 
         case DtLP:
-            tp->scbp    = scbp = &tp->pcbp->controls.hasp.printStreams[streamId - 1];
+            tp->scbp    = scbp = &pcbp->controls.hasp.printStreams[streamId - 1];
             scbp->state = StHaspStreamInit;
-            scbp->tp    = tp;
             break;
 
         case DtCP:
         case DtPLOTTER:
-            tp->scbp    = scbp = &tp->pcbp->controls.hasp.punchStreams[streamId - 1];
+            tp->scbp    = scbp = &pcbp->controls.hasp.punchStreams[streamId - 1];
             scbp->state = StHaspStreamInit;
-            scbp->tp    = tp;
             break;
 
         default:
 #if DEBUG
             fprintf(npuHaspLog, "Port %02x: attempt to initialize stream for invalid device type %u\n",
-                    tp->pcbp->claPort, deviceType);
+                    pcbp->claPort, deviceType);
 #endif
+            npuSvmDiscRequestTerminal(tp);
             break;
             }
         }
-#if DEBUG
     else
         {
+#if DEBUG
         fprintf(npuHaspLog, "Port %02x: attempt to initialize invalid stream id %u\n",
-                tp->pcbp->claPort, streamId);
-        }
+                pcbp->claPort, streamId);
 #endif
+        npuSvmDiscRequestTerminal(tp);
+        }
+    if (scbp != NULL)
+        {
+        scbp->tp             = tp;
+        tp->uplineBlockLimit = tp->params.fvUBL;
+#if DEBUG
+        fprintf(npuHaspLog, "Port %02x: upline block limit %d\n", pcbp->claPort, tp->uplineBlockLimit);
+#endif
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -2292,14 +2337,18 @@ void npuHaspPresetPcb(Pcb *pcbp)
         }
 #endif
 
-    pcbp->controls.hasp.lastBlockSent = NULL;
-    pcbp->controls.hasp.retries       = 0;
-    pcbp->controls.hasp.outBuf        = NULL;
+    pcbp->controls.hasp.lastBlockSent         = NULL;
+    pcbp->controls.hasp.retries               = 0;
+    pcbp->controls.hasp.outBuf                = NULL;
+    memset(&pcbp->controls.hasp.consoleStream.uplineQ, 0, sizeof(NpuQueue));
 
     if (pcbp->ncbp->connType == ConnTypeHasp)
         {
         for (i = 0; i < MaxHaspStreams; ++i)
             {
+            scbp = &pcbp->controls.hasp.readerStreams[i];
+            memset(&scbp->uplineQ, 0, sizeof(NpuQueue));
+
             scbp = &pcbp->controls.hasp.printStreams[i];
             scbp->pruFragment = (u8 *)malloc(MaxBuffer);
             if (scbp->pruFragment == NULL)
@@ -2307,6 +2356,8 @@ void npuHaspPresetPcb(Pcb *pcbp)
                 fprintf(stderr, "Failed to allocate PRU fragment buffer for HASP print stream\n");
                 exit(1);
                 }
+            memset(&scbp->uplineQ, 0, sizeof(NpuQueue));
+
             scbp = &pcbp->controls.hasp.punchStreams[i];
             scbp->pruFragment = (u8 *)malloc(MaxBuffer);
             if (scbp->pruFragment == NULL)
@@ -2314,6 +2365,7 @@ void npuHaspPresetPcb(Pcb *pcbp)
                 fprintf(stderr, "Failed to allocate PRU fragment buffer for HASP punch stream\n");
                 exit(1);
                 }
+            memset(&scbp->uplineQ, 0, sizeof(NpuQueue));
             }
         }
     npuHaspResetPcb(pcbp);
@@ -2782,55 +2834,56 @@ static void npuHaspFlushUplineData(Scb *scbp, bool isEof)
             numBytes = tp->inBufStart - tp->inBuf;
             }
         }
-
     /*
     **  If end of record, end of information, or buffer threshold reached,
     **  send staged records upline.
     */
-    if (isEof || isEor || (numBytes > InBufThreshold))
+    if (isEof || isEor || (numBytes >= InBufThreshold))
         {
         isEoi = FALSE;
         if (ncbp->connType == ConnTypeHasp)
             {
-            tp->inBuf[BlkOffBTBSN] = (tp->uplineBsn << BlkShiftBSN) | BtHTMSG;
             if (tp->deviceType == DtCONSOLE)
                 {
                 tp->inBuf[BlkOffDbc] = 0;
                 }
-            else if (isEof)
-                {
-                tp->inBuf[BlkOffDbc] = DbcPRU | DbcEOI;
-                isEoi = TRUE;
-                }
-            else if (isEor)
-                {
-                tp->inBuf[BlkOffDbc] = DbcPRU | DbcEOR;
-                }
             else
                 {
-                tp->inBuf[BlkOffDbc] = DbcPRU;
+                if (numBytes > InBufThreshold)
+                    {
+                    tp->inBuf[BlkOffDbc] = DbcPRU;
+                    tp->inBuf[BlkOffBTBSN] = (tp->uplineBsn << BlkShiftBSN) | BtHTMSG;
+                    npuHaspSendUplineData(tp, tp->inBuf, InBufThreshold);
+                    npuTipInputReset(tp);
+                    numBytes -= InBufThreshold;
+                    memcpy(tp->inBuf + HaspPduHdrLen, tp->inBuf + InBufThreshold, numBytes);
+                    numBytes += HaspPduHdrLen;
+                    tp->inBufPtr = tp->inBuf + numBytes;
+                    tp->inBufStart = tp->inBufPtr;
+                    if (isEof == FALSE && isEor == FALSE) return;
+                    }
+                if (isEof)
+                    {
+                    tp->inBuf[BlkOffDbc] = DbcPRU | DbcEOI;
+                    isEoi = TRUE;
+                    }
+                else if (isEor)
+                    {
+                    tp->inBuf[BlkOffDbc] = DbcPRU | DbcEOR;
+                    }
+                else
+                    {
+                    tp->inBuf[BlkOffDbc] = DbcPRU;
+                    }
                 }
+            tp->inBuf[BlkOffBTBSN] = (tp->uplineBsn << BlkShiftBSN) | BtHTMSG;
             }
-        else
+        else // ConnTypeRevHasp
             {
             tp->inBuf[BlkOffBTBSN] = (tp->uplineBsn << BlkShiftBSN) | (isEof ? BtHTMSG : BtHTBLK);
             tp->inBuf[BlkOffDbc]   = DbcTransparent;
             }
-#if DEBUG
-        fprintf(npuHaspLog, "Port %02x: send upline data to host for stream %u (%.7s), block type %u, dbc %02x\n",
-                tp->pcbp->claPort, tp->streamId, tp->termName, tp->inBuf[BlkOffBTBSN] & BlkMaskBT,
-                tp->inBuf[BlkOffDbc]);
-        if (ncbp->connType == ConnTypeHasp)
-            {
-            npuHaspLogBytes(tp->inBuf, numBytes, (tp->deviceType == DtCONSOLE) ? ASCII : DisplayCode);
-            }
-        else
-            {
-            npuHaspLogBytes(tp->inBuf, numBytes, EBCDIC);
-            }
-        npuHaspLogFlush();
-#endif
-        npuBipRequestUplineCanned(tp->inBuf, numBytes);
+        npuHaspSendUplineData(tp, tp->inBuf, numBytes);
         npuTipInputReset(tp);
         if (isEoi)
             {
@@ -3057,6 +3110,10 @@ static void npuHaspResetScb(Scb *scbp)
             {
             npuBipBufRelease(bp);
             }
+        }
+    while ((bp = npuBipQueueExtract(&scbp->uplineQ)) != NULL)
+        {
+        npuBipBufRelease(bp);
         }
     memset(&scbp->params, 0, sizeof(BatchParams));
     scbp->recordCount           = 0;
@@ -3451,6 +3508,28 @@ static void npuHaspSendSignonRecord(Tcb *tp, u8 *data, int len)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Allocate a block and send or queue it upline.
+**
+**  Parameters:     Name        Description.
+**                  tp          TCB pointer
+**                  data        Pointer to the data (block format)
+**                  len         Length of the data
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void npuHaspSendUplineData(Tcb *tp, u8 *data, int len)
+    {
+    NpuBuffer *bp;
+
+    bp = npuBipBufGet();
+    bp->numBytes = len;
+    memcpy(bp->data, data, bp->numBytes);
+    npuBipQueueAppend(bp, &tp->scbp->uplineQ);
+    npuHaspTransmitQueuedBlocks(tp);
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Send EOI accounting indication upline.
 **
 **  Parameters:     Name        Description.
@@ -3485,7 +3564,7 @@ static void npuHaspSendUplineEoiAcctg(Tcb *tp)
     commandADEI[BlkOffP3] = (tp->scbp->recordCount >> 16) & 0xff;
     commandADEI[BlkOffP4] = (tp->scbp->recordCount >> 8) & 0xff;
     commandADEI[BlkOffP5] = tp->scbp->recordCount & 0xff;
-    npuBipRequestUplineCanned(commandADEI, sizeof(commandADEI));
+    npuHaspSendUplineData(tp, commandADEI, sizeof(commandADEI));
     scbp = tp->scbp;
     scbp->recordCount           = 0;
     scbp->pruFragmentSize       = 0;
@@ -3527,7 +3606,7 @@ static void npuHaspSendUplineEOS(Tcb *tp)
         {
         tp->uplineBsn = 1;
         }
-    npuBipRequestUplineCanned(commandEOS, sizeof(commandEOS));
+    npuHaspSendUplineData(tp, commandEOS, sizeof(commandEOS));
 #if DEBUG
     fprintf(npuHaspLog, "Port %02x: send end of stream command to host for stream %u (%.7s)\n",
             tp->pcbp->claPort, tp->streamId, tp->termName);
@@ -3583,6 +3662,47 @@ static void npuHaspStageUplineData(Scb *scbp, u8 *data, int len)
             {
             *tp->inBufPtr++ = *data++;
             }
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Transmit queued blocks upline until upline block limit reached.
+**
+**  Parameters:     Name        Description.
+**                  tp          TCB pointer
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void npuHaspTransmitQueuedBlocks(Tcb *tp)
+    {
+    NpuBuffer *bp;
+    Scb       *scbp;
+
+    if (tp != NULL && tp->state == StTermHostConnected)
+        {
+        scbp = tp->scbp;
+        while (tp->uplineBlockLimit > 0
+               && (bp = npuBipQueueExtract(&scbp->uplineQ)) != NULL)
+            {
+            tp->uplineBlockLimit -= 1;
+            npuBipRequestUplineTransfer(bp);
+#if DEBUG
+            fprintf(npuHaspLog, "Port %02x: send upline data to host for stream %u (%.7s), block type %u, block len %d, dbc %02x\n",
+                    tp->pcbp->claPort, tp->streamId, tp->termName, bp->data[BlkOffBTBSN] & BlkMaskBT, bp->numBytes,
+                    bp->data[BlkOffDbc]);
+            if (tp->pcbp->ncbp->connType == ConnTypeHasp)
+                {
+                npuHaspLogBytes(bp->data, bp->numBytes, (tp->deviceType == DtCONSOLE) ? ASCII : DisplayCode);
+                }
+            else
+                {
+                npuHaspLogBytes(bp->data, bp->numBytes, EBCDIC);
+                }
+            npuHaspLogFlush();
+#endif
+            }
+
         }
     }
 
@@ -3678,7 +3798,7 @@ static int npuHaspSend(Pcb *pcbp, u8 *data, int len)
         {
         pcbp->controls.hasp.recvDeadline = getMilliseconds() + RecvTimeout;
 #if DEBUG
-        fprintf(npuHaspLog, "Port %02x: sent\n", pcbp->claPort);
+        fprintf(npuHaspLog, "Port %02x: sent to terminal\n", pcbp->claPort);
         npuHaspLogBytes(data, n, EBCDIC);
         npuHaspLogFlush();
 #endif

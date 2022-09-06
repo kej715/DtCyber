@@ -309,6 +309,7 @@
 #define DefaultNjeBlockSize        8192
 #define DefaultNjePingInterval     600
 #define DefaultRevHaspBlockSize    640
+#define DefaultUplineBlockLimit    5
 #define HostIdSize                 9
 #define MaxBuffer                  2048
 #define MaxHaspStreams             7
@@ -519,6 +520,7 @@ typedef struct scb
     bool            isPruFragmentComplete;
     int             pruFragmentSize;
     u8              *pruFragment;
+    NpuQueue        uplineQ;
     } Scb;
 
 typedef struct hcb
@@ -575,7 +577,6 @@ typedef struct njecb
     bool         isPassive;        // TRUE if connection established as passive
     u8           downlineBSN;      // downline NJE block sequence number
     u8           uplineBSN;        // upline   NJE block sequence number
-    u8           uplineBlockLimit; // max unacknowledged blocks queueable upline
     int          blockSize;        // NJE/TCP block sizw
     int          maxRecordSize;    // maximum NJE/TCP record size
     u8           lastDownlineRCB;  // last downline RCB processed
@@ -588,7 +589,7 @@ typedef struct njecb
     u8           *outputBuf;       // NJE/TCP block output buffer
     u8           *outputBufPtr;    // pointer to next storage location
     u8           *ttrp;            // pointer to last TTR in output buffer
-    NpuQueue     uplineQ;
+    NpuQueue     uplineQ;          // queue of blocks to be sent upline
     } NJEcb;
 
 /*
@@ -757,6 +758,7 @@ typedef struct tcb
     **  Input state.
     */
     u8            uplineBsn;
+    u8            uplineBlockLimit;
     u8            inBuf[MaxBuffer];
     u8            *inBufPtr;
     u8            *inBufStart;
@@ -885,6 +887,7 @@ void npuAsyncTryOutput(Pcb *pcbp);
 void npuHaspCloseStream(Tcb *tp);
 bool npuHaspParseDevParams(u8 *mp, int len, Tcb *tp);
 bool npuHaspParseFileParams(u8 *mp, int len, Tcb *tp);
+void npuHaspNotifyAck(Tcb *tcbp, u8 bsn);
 bool npuHaspNotifyNetConnect(Pcb *pcbp, bool isPassive);
 void npuHaspNotifyNetDisconnect(Pcb *pcbp);
 void npuHaspNotifyStartInput(Tcb *tp, u8 sfc);

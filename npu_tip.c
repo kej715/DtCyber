@@ -223,12 +223,11 @@ static void (*notifyAck[])(Tcb *tp, u8 bsn) =
     npuTipNotifyAck,  // ConnTypePterm
     npuTipNotifyAck,  // ConnTypeRs232
     npuTipNotifyAck,  // ConnTypeTelnet
-    npuTipNotifyAck,  // ConnTypeHasp
-    npuTipNotifyAck,  // ConnTypeRevHasp
+    npuHaspNotifyAck, // ConnTypeHasp
+    npuHaspNotifyAck, // ConnTypeRevHasp
     npuNjeNotifyAck,  // ConnTypeNje
     npuTipNotifyAck   // ConnTypeTrunk
     };
-
 
 #if DEBUG
 static FILE *npuTipLog = NULL;

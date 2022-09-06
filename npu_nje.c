@@ -84,7 +84,6 @@
 **  -----------------
 */
 
-#define DefaultUplineBlockLimit      5
 #define MaxRetries                   8
 #define MaxUplineBlockSize           640
 #define MaxWaitTime                  15
@@ -914,10 +913,10 @@ void npuNjeProcessUplineData(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 void npuNjeNotifyAck(Tcb *tcbp, u8 bsn)
     {
-    tcbp->pcbp->controls.nje.uplineBlockLimit += 1;
+    tcbp->uplineBlockLimit += 1;
 #if DEBUG
     fprintf(npuNjeLog, "Port %02x: ack for upline block from %.7s, ubl %d\n",
-            tcbp->pcbp->claPort, tcbp->termName, tcbp->pcbp->controls.nje.uplineBlockLimit);
+            tcbp->pcbp->claPort, tcbp->termName, tcbp->uplineBlockLimit);
 #endif
     }
 
@@ -1002,10 +1001,10 @@ void npuNjeNotifyTermConnect(Tcb *tcbp)
 
     if (tcbp->pcbp->connFd > 0)
         {
-        tcbp->pcbp->controls.nje.uplineBlockLimit = tcbp->params.fvUBL;
+        tcbp->uplineBlockLimit = tcbp->params.fvUBL;
 #if DEBUG
         fprintf(npuNjeLog, "Port %02x: upline block limit %d\n", tcbp->pcbp->claPort,
-                tcbp->pcbp->controls.nje.uplineBlockLimit);
+                tcbp->uplineBlockLimit);
 #endif
         }
     else
@@ -1084,7 +1083,6 @@ void npuNjeResetPcb(Pcb *pcbp)
     pcbp->controls.nje.isPassive        = FALSE;
     pcbp->controls.nje.downlineBSN      = 0xff;
     pcbp->controls.nje.uplineBSN        = 0x0f;
-    pcbp->controls.nje.uplineBlockLimit = DefaultUplineBlockLimit;
     pcbp->controls.nje.lastDownlineRCB  = 0;
     pcbp->controls.nje.lastDownlineSRCB = 0;
     pcbp->controls.nje.retries          = 0;
@@ -1854,7 +1852,7 @@ static void npuNjeTransmitQueuedBlocks(Pcb *pcbp)
     tcbp = npuNjeFindTcb(pcbp);
     if (tcbp != NULL)
         {
-        while (pcbp->controls.nje.uplineBlockLimit > 0
+        while (tcbp->uplineBlockLimit > 0
                && (bp = npuBipQueueExtract(&pcbp->controls.nje.uplineQ)) != NULL)
             {
             bp->data[BlkOffDN]     = npuSvmCouplerNode;
@@ -1865,12 +1863,12 @@ static void npuNjeTransmitQueuedBlocks(Pcb *pcbp)
                 {
                 tcbp->uplineBsn = 1;
                 }
-            pcbp->controls.nje.uplineBlockLimit -= 1;
+            tcbp->uplineBlockLimit -= 1;
             npuBipRequestUplineTransfer(bp);
 #if DEBUG
             fprintf(npuNjeLog, "Port %02x: upline data sent from %.7s, size %d, block type %u, ubl %d, dbc %02x\n",
                     pcbp->claPort, tcbp->termName, bp->numBytes - (BlkOffDbc + 1), bp->data[BlkOffBTBSN] & BlkMaskBT,
-                    pcbp->controls.nje.uplineBlockLimit, bp->data[BlkOffDbc]);
+                    tcbp->uplineBlockLimit, bp->data[BlkOffDbc]);
             npuNjeLogBytes(bp->data, bp->numBytes, EBCDIC);
             npuNjeLogFlush();
 #endif
