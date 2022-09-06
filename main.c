@@ -448,6 +448,13 @@ bool idleDetectorMACE(CpuContext *ctx)
 **------------------------------------------------------------------------*/
 bool idleDetectorHUSTLER(CpuContext *ctx)
      {
+         CpWord cpstatw;
+         PpWord acpua,acpub,usecpu,mystatus;
+
+         /* If our CPU is not running just throttle */
+         if(ctx->isStopped) {
+             return TRUE;
+         }
 
          /* Definitions taken from CMR listing of HUSTLER with current mods applied */
          /* CORRIDOR Idle loop, we enter here when we think
@@ -468,8 +475,7 @@ bool idleDetectorHUSTLER(CpuContext *ctx)
          * byte 1 first 2 high bits bit 1 set if nocpuA, bit 2 set if nocpuB
          * */
         #define CPU_STATUS_WORD 025
-         CpWord cpstatw;
-         PpWord acpua,acpub,usecpu,mystatus;
+
          cpstatw = cpMem[CPU_STATUS_WORD]; /* CPU status word */
          usecpu = (PpWord)((cpstatw >>48) &Mask12);
          acpub = (PpWord)((cpstatw >>12) &Mask12);
@@ -481,11 +487,6 @@ bool idleDetectorHUSTLER(CpuContext *ctx)
          else
          {
              mystatus = acpua;
-         }
-         /* If our CPU is not running or our status word is 0
-          * we are not even being used, just throttle */
-         if((ctx->isStopped) || mystatus == 0) {
-             return TRUE;
          }
 
          /* 4000B is the idle control point area
