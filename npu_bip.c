@@ -244,7 +244,7 @@ NpuBuffer *npuBipBufGet(void)
     else
         {
         npuLogMessage("(npu_bip) Out of buffers");
-        fprintf(stderr, "(npu_bip) Fatal error: Out of buffers\n");
+        fputs("(npu_bip) Fatal error: Out of buffers\n", stderr);
 #if DEBUG
             {
             /*
@@ -588,7 +588,6 @@ void npuBipRequestUplineTransfer(NpuBuffer *bp)
 
         return;
         }
-
     /*
     **  Send this block now.
     */
@@ -613,11 +612,6 @@ void npuBipRequestUplineTransfer(NpuBuffer *bp)
 void npuBipRequestUplineCanned(u8 *msg, int msgSize)
     {
     NpuBuffer *bp = npuBipBufGet();
-
-    if (bp == NULL)
-        {
-        return;
-        }
 
     bp->numBytes = msgSize;
     memcpy(bp->data, msg, bp->numBytes);
