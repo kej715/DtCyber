@@ -175,6 +175,7 @@ static void npuLogByte(int b);
 **  ----------------
 */
 bool (*npuHipDownlineBlockFunc)(NpuBuffer *bp);
+void (*npuHipResetFunc)(void);
 bool (*npuHipUplineBlockFunc)(NpuBuffer *bp);
 
 #if DEBUG
@@ -261,6 +262,7 @@ void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     npu->regCouplerStatus = 0;
     hipState = StHipInit;
     npuHipDownlineBlockFunc = npuHipDownlineBlockImpl;
+    npuHipResetFunc         = npuReset;
     npuHipUplineBlockFunc   = npuHipUplineBlockImpl;
 
     /*
@@ -304,11 +306,11 @@ bool npuHipUplineBlockImpl(NpuBuffer *bp)
         return (FALSE);
         }
 
-    if ((bp->numBytes > BlkOffL7UB)
+    if ((bp->numBytes > BlkOffDbc)
         && ((bp->data[BlkOffBTBSN] & BlkMaskBT) == BtHTMSG)
         && ((bp->data[BlkOffDbc] & DbcPRU) == DbcPRU))
         {
-        bits  = ((bp->data[BlkOffL7BL] << 8) | bp->data[BlkOffL7BL + 1]) * 8 - bp->data[BlkOffL7UB];
+        bits  = (bp->numBytes - (BlkOffDbc + 1)) * (((bp->data[BlkOffDbc] & Dbc8Bit) != 0) ? 8 : 6);
         words = (bits / 60);
         if (bits % 60)
             {

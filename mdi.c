@@ -225,6 +225,7 @@ static void mdiPrintStackTrace(FILE *fp);
 */
 
 extern bool (*npuHipDownlineBlockFunc)(NpuBuffer *bp);
+extern void (*npuHipResetFunc)(void);
 extern bool (*npuHipUplineBlockFunc)(NpuBuffer *bp);
 
 #if DEBUG
@@ -375,6 +376,7 @@ void mdiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     dp->controllerContext   = mdi;
     npuHipDownlineBlockFunc = mdiHipDownlineBlockImpl;
+    npuHipResetFunc         = mdiReset;
     npuHipUplineBlockFunc   = mdiHipUplineBlockImpl;
 
     /*
@@ -949,11 +951,11 @@ static PpWord mdiHipReadMdiStatus(void)
         mdiStatus |= MdiStatusDataAvailable;
         bp         = mdi->uplineData;
 
-        if ((bp->numBytes > BlkOffL7UB)
+        if ((bp->numBytes > BlkOffDbc)
             && ((bp->data[BlkOffBTBSN] & BlkMaskBT) == BtHTMSG)
             && ((bp->data[BlkOffDbc] & DbcPRU) == DbcPRU))
             {
-            bits  = ((bp->data[BlkOffL7BL] << 8) | bp->data[BlkOffL7BL + 1]) * 8 - bp->data[BlkOffL7UB];
+            bits  = (bp->numBytes - (BlkOffDbc + 1)) * (((bp->data[BlkOffDbc] & Dbc8Bit) != 0) ? 8 : 6);
             words = (bits / 60);
             if (bits % 60)
                 {
