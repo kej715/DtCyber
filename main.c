@@ -92,8 +92,8 @@ bool emulationActive = TRUE;
 u32  cycles;
 u32  readerScanSecs = 3;
 
-int idle     = FALSE;   /* Idle loop detection */
-u32  idleTrigger;     /* sleep every <idletrigger> cycles of the idle loop */
+bool idle = FALSE;   /* Idle loop detection */
+u32  idleTrigger;    /* sleep every <idletrigger> cycles of the idle loop */
 u32  idleTime;       /* milliseconds to sleep when idle */
 char osType[16];
 bool (*idleDetector)(CpuContext *) = &idleDetectorNone;
@@ -317,6 +317,7 @@ int main(int argc, char **argv)
 
     exit(0);
     }
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Return CPU cycles to host if idle package is seen
 **                  and the trigger conditions are met.
@@ -328,47 +329,51 @@ int main(int argc, char **argv)
 **
 **------------------------------------------------------------------------*/
 void idleThrottle(CpuContext *ctx)
-     {
-        if (idle)
-            {   
-            if ((*idleDetector)(ctx)) 
-                {   
-                ctx->idleCycles++;
-                if ((ctx->idleCycles % idleTrigger) == 0)
-                    {   
-                        if(ctx->id == 0) {
-                           if(idleCheckBusy())
-                           {
-                              return; 
-                           }
+    {
+    if (idle)
+        {
+        if ((*idleDetector)(ctx))
+            {
+            ctx->idleCycles++;
+            if ((ctx->idleCycles % idleTrigger) == 0)
+                {
+                if (ctx->id == 0)
+                    {
+                    if (idleCheckBusy())
+                        {
+                        return;
                         }
-                        sleepUsec(idleTime);    
-                    }   
-                }   
+                    }
+                sleepUsec(idleTime);
+                }
             }
-     return;
-     }
+        }
+    }
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Check for busy PPs for idle throttle.
 **
 **  Parameters:     None.
 **
-**  Returns:        TRUE for busy FALSE for not busy. 
+**  Returns:        TRUE for busy FALSE for not busy.
 **
 **------------------------------------------------------------------------*/
 bool idleCheckBusy()
     {
     bool busyFlag = FALSE;
-        for (u8 i = 0; i < ppuCount; i++)
-        {   
-            if (ppu[i].busy)
-            {   
-                busyFlag = TRUE;
-                break;
-            }   
-        }   
+
+    for (u8 i = 0; i < ppuCount; i++)
+        {
+        if (ppu[i].busy)
+            {
+            busyFlag = TRUE;
+            break;
+            }
+        }
+
     return busyFlag;
     }
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Dummy idle cycle detector
 **                  always returns false.
@@ -380,9 +385,10 @@ bool idleCheckBusy()
 **
 **------------------------------------------------------------------------*/
 bool idleDetectorNone(CpuContext *ctx)
-     {
-     return FALSE;
-     }
+    {
+    return FALSE;
+    }
+
 /*--------------------------------------------------------------------------
 **  Purpose:        NOS idle cycle detector
 **
@@ -393,13 +399,15 @@ bool idleDetectorNone(CpuContext *ctx)
 **
 **------------------------------------------------------------------------*/
 bool idleDetectorNOS(CpuContext *ctx)
-     {
-         if ((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 05))
-         {
-             return TRUE;
-         }
-     return FALSE;
-     }
+    {
+    if ((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 05))
+        {
+        return TRUE;
+        }
+
+    return FALSE;
+    }
+
 /*--------------------------------------------------------------------------
 **  Purpose:        NOS/BE idle cycle detector
 **
@@ -410,14 +418,16 @@ bool idleDetectorNOS(CpuContext *ctx)
 **
 **------------------------------------------------------------------------*/
 bool idleDetectorNOSBE(CpuContext *ctx)
-     {
-         /* Based on observing CPU state on the NOS/BE TUB ready to run package */
-         if((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 010))
-         {
-             return TRUE;
-         }
-     return FALSE;
-     }
+    {
+    /* Based on observing CPU state on the NOS/BE TUB ready to run package */
+    if ((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 010))
+        {
+        return TRUE;
+        }
+
+    return FALSE;
+    }
+
 /*--------------------------------------------------------------------------
 **  Purpose:        MACE idle cycle detector
 **
@@ -428,95 +438,17 @@ bool idleDetectorNOSBE(CpuContext *ctx)
 **
 **------------------------------------------------------------------------*/
 bool idleDetectorMACE(CpuContext *ctx)
-     {
-         /* This is based on the KRONOS1 source code for CPUMTR
-          * I have no working system to test this on, it may also work
-          * for other early cyber operating systems, YMMV */
-         if((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 03))
-         {
-             return TRUE;
-         }
-     return FALSE;
-     }
-/*--------------------------------------------------------------------------
-**  Purpose:        Hustler idle cycle detector
-**
-**  Parameters:     Name        Description.
-**                  ctx         Cpu context to check for idle.
-**
-**  Returns:        TRUE if in idle, FALSE if not.
-**
-**------------------------------------------------------------------------*/
-bool idleDetectorHUSTLER(CpuContext *ctx)
-     {
-         CpWord cpstatw;
-         PpWord acpua,acpub,usecpu,mystatus;
+    {
+    /* This is based on the KRONOS1 source code for CPUMTR
+     * I have no working system to test this on, it may also work
+     * for other early cyber operating systems, YMMV */
+    if ((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 03))
+        {
+        return TRUE;
+        }
+    return FALSE;
+    }
 
-         /* If our CPU is not running just throttle */
-         if(ctx->isStopped) {
-             return TRUE;
-         }
-
-         /* Definitions taken from CMR listing of HUSTLER with current mods applied */
-         /* CORRIDOR Idle loop, we enter here when we think
-          * another CPU is in the idle package.
-          * This is always true when we have 1 CPU
-          */
-         #define CORIDLE_START 025170
-         #define CORIDLE_END   025201
-
-         /* Idle package loop, used with dual CPU systems only  */
-        #define IDLE_PKG_START 04041
-        #define IDLE_PKG_END  04043
-
-         /* Definitions from SCPTEXT of Hustler */
-        /* CPU Status word
-         * byte 4 = CPUB control point address
-         * byte 5 = CPUA control point address
-         * byte 1 first 2 high bits bit 1 set if nocpuA, bit 2 set if nocpuB
-         * */
-        #define CPU_STATUS_WORD 025
-
-         cpstatw = cpMem[CPU_STATUS_WORD]; /* CPU status word */
-         usecpu = (PpWord)((cpstatw >>48) &Mask12);
-         acpub = (PpWord)((cpstatw >>12) &Mask12);
-         acpua = (PpWord)((cpstatw) &Mask12);
-         if(ctx->id == 01)
-         {
-             mystatus = acpub;
-         }
-         else
-         {
-             mystatus = acpua;
-         }
-
-         /* 4000B is the idle control point area
-          * We don't test for ! Monitor mode because with one CPU
-          * We end up in monitor mode at this controlpoint
-          * in the corridor idle loop.
-          *
-          * we test for RA = 0 to filter out tasks.
-          *
-          * Next we need to check for either being inside CORIDLE
-          * or the actual idle package.
-          *
-          * On a single CPU system the corridor treats the unused CPU as always idling and
-          * so we always enter CORIDLE which is in monitor mode.
-          *
-          *
-          */
-         if((mystatus == 04000) && (ctx->regRaCm == 0)) {
-             /* Check for Idle package */
-             if((ctx->regP >= IDLE_PKG_START) && (ctx->regP <= IDLE_PKG_END)) {
-                 return TRUE;
-             }
-             /* Check for Corridor Idle loop */
-             if((ctx->regP >= CORIDLE_START) && (ctx->regP <= CORIDLE_END)) {
-                 return TRUE;
-             }
-         }
-     return FALSE;
-     }
 /*
  **--------------------------------------------------------------------------
  **

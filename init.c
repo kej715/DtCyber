@@ -669,32 +669,28 @@ static void initCyber(char *config)
 
     /* Get Idle loop settings */
     initGetInteger("idle", 0, &dummyInt);
-    idle = (int)dummyInt;
+    idle = (bool)dummyInt;
     initGetInteger("idlecycles", 200, &dummyInt);
-    idleTrigger =(u32)dummyInt;
+    idleTrigger = (u32)dummyInt;
     initGetInteger("idletime", 200, &dummyInt);
     idleTime = (u32)dummyInt;
     initGetString("ostype", "none", osType, 16);
-    if(strcmp(osType,"none") == 0)
-    {
+    if (strcasecmp(osType,"none") == 0)
+        {
         idleDetector = &idleDetectorNone;
-    }
-    if(strcmp(osType,"nos") == 0)
-    {
+        }
+    if (strcasecmp(osType,"nos") == 0)
+        {
         idleDetector = &idleDetectorNOS;
-    }
-    if(strcmp(osType,"mace") == 0)
-    {
+        }
+    if (strcasecmp(osType,"mace") == 0)
+        {
         idleDetector = &idleDetectorMACE;
-    }
-    if(strcmp(osType,"nosbe") == 0)
-    {
+        }
+    if (strcasecmp(osType,"nosbe") == 0)
+        {
         idleDetector = &idleDetectorNOSBE;
-    }
-    if(strcmp(osType,"hustler") == 0)
-    {
-        idleDetector = &idleDetectorHUSTLER;
-    }
+        }
 
     /*
     **  Get optional Plato port number. If not specified, use default value.

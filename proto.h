@@ -445,17 +445,17 @@ extern u32                 traceMask;
 extern u32                 traceSequenceNo;
 
 /* Idle Loop throttle */
-extern int idle;
+extern bool idle;
 extern u32  idleTime;
 extern u32  idleTrigger;
 extern char osType[];
+
 bool idleCheckBusy();
 bool (*idleDetector)(CpuContext *ctx);
 bool idleDetectorNone(CpuContext *ctx);
-bool idleDetectorNOS(CpuContext *ctx); /* KRONOS2.1 - NOS 2.8.7 */
+bool idleDetectorNOS(CpuContext *ctx);   /* KRONOS2.1 - NOS 2.8.7 */
 bool idleDetectorNOSBE(CpuContext *ctx); /* NOS/BE (only tested with TUB) */
-bool idleDetectorMACE(CpuContext *ctx); /* KRONOS1 or MACE, possibly SCOPE too) */
-bool idleDetectorHUSTLER(CpuContext *ctx); /* SCOPE HUSTLER */
+bool idleDetectorMACE(CpuContext *ctx);  /* KRONOS1 or MACE, possibly SCOPE too) */
 void idleThrottle(CpuContext *ctx);
 
 #endif /* PROTO_H */
