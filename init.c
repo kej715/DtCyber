@@ -351,6 +351,7 @@ static void initCyber(char *config)
     long conns;
     long cpus;
     char dummy[256];
+    long dummyInt;
     long ecsBanks;
     long enableCejMej;
     long esmBanks;
@@ -665,6 +666,31 @@ static void initCyber(char *config)
     */
     initGetInteger("telnetconns", 4, &conns);
     mux6676TelnetConns = (u16)conns;
+
+    /* Get Idle loop settings */
+    initGetInteger("idle", 0, &dummyInt);
+    idle = (bool)dummyInt;
+    initGetInteger("idlecycles", 200, &dummyInt);
+    idleTrigger = (u32)dummyInt;
+    initGetInteger("idletime", 200, &dummyInt);
+    idleTime = (u32)dummyInt;
+    initGetString("ostype", "none", osType, 16);
+    if (strcasecmp(osType,"none") == 0)
+        {
+        idleDetector = &idleDetectorNone;
+        }
+    if (strcasecmp(osType,"nos") == 0)
+        {
+        idleDetector = &idleDetectorNOS;
+        }
+    if (strcasecmp(osType,"mace") == 0)
+        {
+        idleDetector = &idleDetectorMACE;
+        }
+    if (strcasecmp(osType,"nosbe") == 0)
+        {
+        idleDetector = &idleDetectorNOSBE;
+        }
 
     /*
     **  Get optional Plato port number. If not specified, use default value.

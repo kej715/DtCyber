@@ -92,11 +92,11 @@ bool emulationActive = TRUE;
 u32  cycles;
 u32  readerScanSecs = 3;
 
-#ifdef IdleThrottle
-bool NOSIdle     = FALSE;   /* NOS2 Idle loop detection */
-u32  idletrigger = 200;     /* sleep every <idletrigger> cycles of the idle loop */
-u32  idletime    = 1;       /* milliseconds to sleep when idle */
-#endif
+bool idle = FALSE;   /* Idle loop detection */
+u32  idleTrigger;    /* sleep every <idletrigger> cycles of the idle loop */
+u32  idleTime;       /* milliseconds to sleep when idle */
+char osType[16];
+bool (*idleDetector)(CpuContext *) = &idleDetectorNone;
 
 #if CcCycleTime
 double cycleTime;
@@ -107,10 +107,6 @@ double cycleTime;
 **  Private Variables
 **  -----------------
 */
-#ifdef IdleThrottle
-bool busyFlag   = FALSE;
-u32  idlecycles = 0;        /* count of idle loop cycles */
-#endif
 
 
 
@@ -283,33 +279,7 @@ int main(int argc, char **argv)
         channelStep();
         rtcTick();
 
-#ifdef IdleThrottle
-        /* NOS Idle loop throttle */
-        if ((cpus->isMonitorMode) && NOSIdle)
-            {
-            if ((cpus->regP == 2) && (cpus->regFlCm == 5))
-                {
-                idlecycles++;
-                if ((idlecycles % idletrigger) == 0)
-                    {
-                    busyFlag = FALSE;
-                    /* Get out of the way if any PP is busy */
-                    for (u8 i = 0; i < ppuCount; i++)
-                        {
-                        if (ppu[i].busy)
-                            {
-                            busyFlag = TRUE;
-                            }
-                        }
-                    if (busyFlag)
-                        {
-                        continue;
-                        }
-                    sleepUsec(idletime);
-                    }
-                }
-            }
-#endif
+        idleThrottle(cpus);
 
 #if CcCycleTime
         cycleTime = rtcStopTimer();
@@ -346,6 +316,137 @@ int main(int argc, char **argv)
     stopHelpers();
 
     exit(0);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Return CPU cycles to host if idle package is seen
+**                  and the trigger conditions are met.
+**
+**  Parameters:     Name        Description.
+**                  ctx         Cpu context to throttle.
+**
+**  Returns:        void
+**
+**------------------------------------------------------------------------*/
+void idleThrottle(CpuContext *ctx)
+    {
+    if (idle)
+        {
+        if ((*idleDetector)(ctx))
+            {
+            ctx->idleCycles++;
+            if ((ctx->idleCycles % idleTrigger) == 0)
+                {
+                if (ctx->id == 0)
+                    {
+                    if (idleCheckBusy())
+                        {
+                        return;
+                        }
+                    }
+                sleepUsec(idleTime);
+                }
+            }
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Check for busy PPs for idle throttle.
+**
+**  Parameters:     None.
+**
+**  Returns:        TRUE for busy FALSE for not busy.
+**
+**------------------------------------------------------------------------*/
+bool idleCheckBusy()
+    {
+    bool busyFlag = FALSE;
+
+    for (u8 i = 0; i < ppuCount; i++)
+        {
+        if (ppu[i].busy)
+            {
+            busyFlag = TRUE;
+            break;
+            }
+        }
+
+    return busyFlag;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Dummy idle cycle detector
+**                  always returns false.
+**
+**  Parameters:     Name        Description.
+**                  ctx         Cpu context to check for idle.
+**
+**  Returns:        FALSE
+**
+**------------------------------------------------------------------------*/
+bool idleDetectorNone(CpuContext *ctx)
+    {
+    return FALSE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        NOS idle cycle detector
+**
+**  Parameters:     Name        Description.
+**                  ctx         Cpu context to check for idle.
+**
+**  Returns:        TRUE if in idle, FALSE if not.
+**
+**------------------------------------------------------------------------*/
+bool idleDetectorNOS(CpuContext *ctx)
+    {
+    if ((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 05))
+        {
+        return TRUE;
+        }
+
+    return FALSE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        NOS/BE idle cycle detector
+**
+**  Parameters:     Name        Description.
+**                  ctx         Cpu context to check for idle.
+**
+**  Returns:        TRUE if in idle, FALSE if not.
+**
+**------------------------------------------------------------------------*/
+bool idleDetectorNOSBE(CpuContext *ctx)
+    {
+    /* Based on observing CPU state on the NOS/BE TUB ready to run package */
+    if ((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 010))
+        {
+        return TRUE;
+        }
+
+    return FALSE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        MACE idle cycle detector
+**
+**  Parameters:     Name        Description.
+**                  ctx         Cpu context to check for idle.
+**
+**  Returns:        TRUE if in idle, FALSE if not.
+**
+**------------------------------------------------------------------------*/
+bool idleDetectorMACE(CpuContext *ctx)
+    {
+    /* This is based on the KRONOS1 source code for CPUMTR
+     * I have no working system to test this on, it may also work
+     * for other early cyber operating systems, YMMV */
+    if ((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 03))
+        {
+        return TRUE;
+        }
+    return FALSE;
     }
 
 /*

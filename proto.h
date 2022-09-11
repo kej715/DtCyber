@@ -444,12 +444,19 @@ extern u32                 rtcClock;
 extern u32                 traceMask;
 extern u32                 traceSequenceNo;
 
-#ifdef IdleThrottle
-/* NOS Idle Loop throttle */
-extern bool NOSIdle;
-extern u32  idletime;
-extern u32  idletrigger;
-#endif
+/* Idle Loop throttle */
+extern bool idle;
+extern u32  idleTime;
+extern u32  idleTrigger;
+extern char osType[];
+
+bool idleCheckBusy();
+bool (*idleDetector)(CpuContext *ctx);
+bool idleDetectorNone(CpuContext *ctx);
+bool idleDetectorNOS(CpuContext *ctx);   /* KRONOS2.1 - NOS 2.8.7 */
+bool idleDetectorNOSBE(CpuContext *ctx); /* NOS/BE (only tested with TUB) */
+bool idleDetectorMACE(CpuContext *ctx);  /* KRONOS1 or MACE, possibly SCOPE too) */
+void idleThrottle(CpuContext *ctx);
 
 #endif /* PROTO_H */
 /*---------------------------  End Of File  ------------------------------*/
