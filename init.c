@@ -668,26 +668,39 @@ static void initCyber(char *config)
     mux6676TelnetConns = (u16)conns;
 
     /* Get Idle loop settings */
-    initGetInteger("idle", 0, &dummyInt);
-    idle = (bool)dummyInt;
+    idle = FALSE;
+    initGetString("idle", "off", dummy, sizeof(dummy));
+    if (strcasecmp(dummy, "on") == 0
+        || strcasecmp(dummy, "true") == 0
+        || strcasecmp(dummy, "1") == 0)
+        {
+        idle = TRUE;
+        }
+    else if (strcasecmp(dummy, "off") != 0
+             && strcasecmp(dummy, "false") != 0
+             && strcasecmp(dummy, "0") != 0)
+        {
+        fprintf(stderr, "(init   ) Invalid value for 'idle' in section [%s] of %s\n", config, startupFile);
+        exit(1);
+        }
     initGetInteger("idlecycles", 200, &dummyInt);
     idleTrigger = (u32)dummyInt;
     initGetInteger("idletime", 200, &dummyInt);
     idleTime = (u32)dummyInt;
     initGetString("ostype", "none", osType, 16);
-    if (strcasecmp(osType,"none") == 0)
+    if (strcasecmp(osType, "none") == 0)
         {
         idleDetector = &idleDetectorNone;
         }
-    if (strcasecmp(osType,"nos") == 0)
+    if (strcasecmp(osType, "nos") == 0)
         {
         idleDetector = &idleDetectorNOS;
         }
-    if (strcasecmp(osType,"mace") == 0)
+    if (strcasecmp(osType, "mace") == 0)
         {
         idleDetector = &idleDetectorMACE;
         }
-    if (strcasecmp(osType,"nosbe") == 0)
+    if (strcasecmp(osType, "nosbe") == 0)
         {
         idleDetector = &idleDetectorNOSBE;
         }
