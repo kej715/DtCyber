@@ -286,7 +286,7 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         }
 
-    fprintf(stdout, "(cp3446 ) Card Code selected '%s'\n", (charset == asciiTo029) ? "029" : "026");
+    fprintf(stdout, "(cp3446 ) Card code selected '%s'\n", (charset == asciiTo029) ? "029" : "026");
 
     memset(cc->convTable, ' ', sizeof(cc->convTable));
     for (int i = 040; i < 0177; i++)

@@ -331,7 +331,7 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         }
 
-    fprintf(stdout, "(cr405  ) File watcher %s Requested'\n", watchRequested ? "Was" : "Was Not");
+    fprintf(stdout, "(cr405  ) File watcher %s requested\n", watchRequested ? "was" : "was not");
 
 
     /*
@@ -362,7 +362,7 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         }
 
-    fprintf(stdout, "(cr405  ) Card Code selected '%s'\n", xlateTable);
+    fprintf(stdout, "(cr405  ) Card code selected '%s'\n", xlateTable);
 
     /*
     **  Incorrect specifications for input / output directories

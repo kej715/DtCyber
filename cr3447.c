@@ -327,7 +327,7 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         }
 
-    fprintf(stdout, "(cr3447 ) File watcher %s Requested'\n", watchRequested ? "Was" : "Was Not");
+    fprintf(stdout, "(cr3447 ) File watcher %s requested\n", watchRequested ? "was" : "was not");
 
     /*
     **  Setup character set translation table.
@@ -358,7 +358,7 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         }
 
-    fprintf(stdout, "(cr3447 ) Card Code selected '%s'\n", (cc->table == asciiTo029) ? "029" : "026");
+    fprintf(stdout, "(cr3447 ) Card code selected '%s'\n", (cc->table == asciiTo029) ? "029" : "026");
 
     /*
     **  Incorrect specifications for input / output directories
