@@ -694,7 +694,7 @@ class DtCyber {
         const lines = fs.readFileSync(deck, {encoding:"utf8"}).split("\n");
         let jobName = null;
         for (let line of lines) {
-          if (!line.match(/^~/)) {
+          if (line.match(/^[A-Z0-9$]+/)) {
             jobName = /^([A-Z0-9$]+)/.exec(line)[1];
             break;
           }
