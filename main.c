@@ -148,7 +148,7 @@ int main(int argc, char **argv)
     err = WSAStartup(versionRequested, &wsaData);
     if (err != 0)
         {
-        fprintf(stderr, "\r\n(main) Error in WSAStartup: %d\r\n", err);
+        fprintf(stderr, "\n(main) Error in WSAStartup: %d\n", err);
         exit(1);
         }
 #else
@@ -488,11 +488,11 @@ static void startHelpers(void)
         rc = system(command);
         if (rc == 0)
             {
-            printf("\r\n(main   ) Started helper: %s\n", line);
+            printf("(main   ) Started helper: %s\n", line);
             }
         else
             {
-            printf("\r\n(main   ) Failed to start helper \"%s\", rc = %d\n", line, rc);
+            printf("(main   ) Failed to start helper \"%s\", rc = %d\n", line, rc);
             }
         }
     }
@@ -528,11 +528,11 @@ static void stopHelpers(void)
         rc = system(command);
         if (rc == 0)
             {
-            printf("\r\n(main) Stopped helper: %s\n", line);
+            printf("\n(main) Stopped helper: %s\n", line);
             }
         else
             {
-            printf("\r\n(main) Failed to stop helper \"%s\", rc = %d\n", line, rc);
+            printf("\n(main) Failed to stop helper \"%s\", rc = %d\n", line, rc);
             }
         }
     fflush(stdout);
