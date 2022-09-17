@@ -1,0 +1,21 @@
+~*
+~*  This job uploads the CYBIS startup proc and configuration
+~*  extension to the catalog of user INSTALL
+~*
+CYBSTRT.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$COPYBR,INPUT,CYBIS.
+$REPLACE,CYBIS.
+***
+*** CYBSTRT COMPLETE
+***
+EXIT.
+***
+*** CYBSTRT FAILED
+***
+~eor
+~include cybis-start.txt

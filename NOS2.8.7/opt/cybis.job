@@ -1,0 +1,29 @@
+~*
+~*  This job builds the CYBIS product. It edits the CYBIS
+~*  binaries into the PRODUCT file and adds a directive to the
+~*  DIRFILE file specifying the deadstart file library number
+~*  of the CYBIS executables and supporting files.
+~*
+CYBIS.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$COPYBR,INPUT,DIR.
+$ASSIGN,${2},TAPE,D=GE,LB=KU,F=I,PO=R.
+$COPY,TAPE,LGO.
+$REWIND,LGO,DIR.
+$ATTACH,PRODUCT,DIRFILE/M=W,WB.
+$LIBEDIT,P=PRODUCT,B=LGO,I=0,C.
+$LIBEDIT,P=DIRFILE,B=DIR,I=0,C.
+***
+*** CYBIS COMPLETE
+***
+EXIT.
+***
+*** CYBIS FAILED
+***
+~eor
+CYBIS
+*ADD LIB${1},ABS/MASTOR-PROC/SETPUN

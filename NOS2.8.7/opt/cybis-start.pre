@@ -1,0 +1,24 @@
+#!/usr/bin/env node
+//
+// Install the CYBIS startup procedure
+//
+
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.say("Install CYBIS startup procedure ..."))
+.then(() => dtc.dis([
+  "GET,CYBIS.",
+  "SUI,377777.",
+  "REPLACE,CYBIS."
+], 1))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

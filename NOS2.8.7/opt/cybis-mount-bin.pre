@@ -1,0 +1,25 @@
+#!/usr/bin/env node
+//
+// Mount the CYBIS product tape
+//
+
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.say("Load CYBIS product tape ..."))
+.then(() => dtc.dsd([
+  "[UNLOAD,51.",
+  "[!"
+]))
+.then(() => dtc.mount(13, 0, 1, "opt/tapes/cybis-bin.tap"))
+.then(() => dtc.sleep(5000))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});
