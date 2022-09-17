@@ -488,7 +488,7 @@ class DtCyber {
     if (typeof options === "undefined") {
       options = {
         shell:true,
-        stdio:["pipe", process.stdout, process.stderr]
+        stdio:[0, 1, 2]
       };
     }
     return new Promise((resolve, reject) => {

@@ -46,7 +46,7 @@ Windows, you will probably need to enable the *dtcyber* application to use TCP p
 | Windows:     | `node install`      |
 
 The process initiated by the *node* command will take some time to complete, perhaps as
-much as 90 minutes or more, depending upon your host system's speed and load. You will
+much as two hours or more, depending upon your host system's speed and load. You will
 see console interaction, jobs submitted via the virtual card reader, and *DtCyber*
 shutting down and restarting a number of times to install the base NOS 2.8.7 operating
 system and all of the currently available optional products.
@@ -59,6 +59,23 @@ When it asks for **FAMILY:**, press return. When it asks for **USER NAME:**, ent
 prompt, the operating system is ready for you to enter commands. You may also login
 using **GUEST** as username and password. The installation process creates
 **GUEST** as an ordinary, non-privileged user account.
+
+CYBIS, the Cyber Instruction System, will also be installed, but it must be started
+manually by entering the following command at the NOS 2.8.7 console (i.e., *DSD*):
+
+>`CYBIS.`
+
+This will initiate the five subsystems comprising of CYBIS. When CYBIS is up and
+running, you may log into it using a PLATO terminal emulator such as
+[pterm](https://www.cyber1.org/pterm.asp). The system is configured to listen for
+PLATO terminal connections on TCP port 8005, and the following CYBIS users are
+available:
+
+| User   | Group  | Password |
+|--------|--------|----------|
+| admin  | s      | passme   |
+| author | author | passme   |
+| guest  | guests | public   |
 
 When the installation completes, NOS 2.8.7 will be running, and the command window will
 be left at the DtCyber `Operator> ` prompt. Enter the `exit` command or the `shutdown`
@@ -86,8 +103,11 @@ extended to include the following:
 you intend to use the automated StorageTek 4400 cartridge tape subsystem. You need
 to execute this command only once.
 - `exit` : exits the operator interface and initiates graceful shutdown of the system.
-- `install_product` (aliases `install`, `ip`) : installs one or more optional products.
-on the system. Use `install list` to display the list of products available.
+- `install_product` (aliases `install`, `ip`) : installs one or more optional products
+on the system. Use `install help` to display the general syntax of the command
+including options and a list of *categories* recognized by it. Use `install list` to
+display the full list of individual products available. The command can be used to
+install specific products by name or whole categories of products.
 - `make_ds_tape` (alias `mdt`) : creates a new deadstart tape that includes products
 installed by `install_product`.
 - `shutdown` : initiates graceful shutdown of the system.
@@ -116,19 +136,25 @@ following command at the `Operator> ` prompt:
 
 >Operator> `install list`
 
-Each line displayed begins with a product name which is followed by a short description of the product. To install a product, call `install_product` as in:
+The `install list` command displays product names grouped by category. You may use the
+`install` command to install whole categories of products or specific, individual
+products. Category names are shown in category headers, and product names are shown
+along with short descriptions of them.
 
->Operator> `install` *product-name*
+For example, to install all products in the category named `lang` (programming languages
+and toolchains), execute the following command:
 
-For example:
+>Operator> `install lang`
+
+To install the specific product named `algol68`, execute the following command:
 
 >Operator> `install algol68`
 
-You may specify more than one product name on the command line as well, and
-`install_product` will install the multiple products requested. By default,
-`install_product` will not re-install a product that is already installed. You
-can force it to re-install a product by specifying the `-f` command line option, as
-in:
+You may specify more than one product name or category on the command line as well, and
+`install_product` will install the multiple products and/or categories requested. By
+default, `install_product` will not re-install a product that is already installed. You
+can force it to re-install a product or whole category by specifying the `-f` command
+line option, as in:
 
 >Operator> `install -f algol68`
 
@@ -140,8 +166,8 @@ specifying `all` as the product name, as in:
 New products are added to the repository from time to time, so this command is particularly useful for installing products that were not available when you first
 installed NOS 2.8.7 (or since the last time you executed the command).
 
-#### Standard CDC Products
-The following standard CDC products are pre-installed and included on the initial
+#### Category *base*
+The following base CDC products are pre-installed and included on the initial
 deadstart tape. However, you may re-install them (e.g., after customization), if needed.
 
 | Product | Description |
@@ -153,7 +179,38 @@ deadstart tape. However, you may re-install them (e.g., after customization), if
 | ostext  | Operating System source texts |
 | tcph    | FTP Client and Server |
 
-#### Optional Programming Languages and Toolchains
+#### Category *cybis*
+
+| Product | Description |
+|---------|-------------|
+| [cybis](https://www.dropbox.com/s/jiythdoifn1f6bm/cybis-bin.tap?dl=1) | Cyber Instructional System |
+
+#### Category *database*
+This category includes database software packages.
+
+| Product | Description |
+|---------|-------------|
+| cdcs2   | CYBER Database Control System Version 2 |
+| qu3     | Query Update Utility Version 3 |
+
+#### Category *datacomm*
+This category includes data communication software.
+
+| Product | Description |
+|---------|-------------|
+| [kermit](https://www.dropbox.com/s/p819tmvs91veoiv/kermit.tap?dl=1) | Kermit file exchange utility |
+| [ncctcp](https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1) | TCP/IP Applications (HTTP, NSQUERY, REXEC, SMTP) |
+| rbf5    | Remote Batch Facility Version 5|
+
+#### Category *graphics*
+This category includes graphics and CAD/CAM software.
+
+| Product | Description |
+|---------|-------------|
+| [gplot](https://www.dropbox.com/s/l342xe61dqq8aw5/gplot.tap?dl=1) | GPLOT and ULCC DIMFILM graphics library |
+| [icem](https://www.dropbox.com/s/1ufg3504xizju0l/icem.zip?dl=1) | ICEM Design/Drafting and GPL compiler |
+
+#### Category *lang*
 The following product names represent optional programming languages and associated
 toolchains that may be installed. Note that the initial deadstart tape includes the
 standard, CDC-provided programming languages APL, BASIC, COBOL, COMPASS, FORTRAN (both
@@ -170,26 +227,14 @@ FTN and FTN5), PASCAL, and SYMPL.
 | [snobol](https://www.dropbox.com/s/4q4thkaghi19sro/snobol.tap?dl=1) | CAL 6000 SNOBOL |
 | [utlisp](https://www.dropbox.com/s/0wcq8e7m379ivyw/utlisp.tap?dl=1) | University of Texas LISP |
 
-#### Optional CDC Products
-The following optional CDC-provided products may be installed:
-
-| Product | Description |
-|---------|-------------|
-| cdcs2   | CYBER Database Control System Version 2 |
-| [icem](https://www.dropbox.com/s/1ufg3504xizju0l/icem.zip?dl=1) | ICEM Design/Drafting and GPL compiler |
-| qu3     | Query Update Utility Version 3 |
-| rbf5    | Remote Batch Facility Version 5|
-
-#### Optional 3rd-Party Products
-The following 3rd-party products may be installed.
+#### Category *misc*
+This category contains miscellaneous software packages that don't fit into any other
+category.
 
 | Product | Description |
 |---------|-------------|
 | cgames  | NOS Console Games (EYE, KAL, LIFE, LUNAR, MIC, PAC, SNK, TTT) |
-| [gplot](https://www.dropbox.com/s/l342xe61dqq8aw5/gplot.tap?dl=1) | GPLOT and ULCC DIMFILM graphics library |
 | [i8080](https://www.dropbox.com/s/ovgysfxbgpl18am/i8080.tap?dl=1) | Intel 8080 tools (CPM80, INTRP80, MAC80, PLM80) |
-| [kermit](https://www.dropbox.com/s/p819tmvs91veoiv/kermit.tap?dl=1) | Kermit file exchange utility |
-| [ncctcp](https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1) | TCP/IP Applications (HTTP, NSQUERY, REXEC, SMTP) |
 | [spss](https://www.dropbox.com/s/2eo63elqvhi0vwg/NOSSPSS6000V9.tap?dl=1) | SPSS-6000 V9 - Statistical Package for the Social Sciences |
 
 These lists will grow, so revisit this page to see what new products have been added,
@@ -244,7 +289,7 @@ The `basic` option causes `install.js` to install a minimal NOS 2.8.7 system wit
 optional products. To install optional products atop the basic system, use the
 `install_product` command, as in:
 
->Operator> `install rbf5`
+>Operator> `install lang`
 
 In case a basic installation is interrupted before completing successfully, use the
 `continue` option to proceed from the point of interruption, as in:

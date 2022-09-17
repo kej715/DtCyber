@@ -144,6 +144,7 @@ const isInstalled = name => {
 const listProducts = () => {
   for (const category of products) {
     process.stdout.write("\n------------------------------------------------------------\n");
+    process.stdout.write(`Category: ${category.category}\n`);
     let words = category.desc.split(" ");
     let line = "";
     while (words.length > 0) {
@@ -205,10 +206,18 @@ const usage = status => {
   process.stderr.write("      +f   do not install subsequently named products if they're already installed\n");
   process.stderr.write("      -s   SYSEDIT subsequently named products into the running system\n");
   process.stderr.write("      +s   do not SYSEDIT subsequently named products into the running system\n");
-  process.stderr.write("  <name>   name of product to install\n");
-  process.stderr.write("           Special names: \"all\", \"list\"\n");
-  process.stderr.write("              all : install all products\n");
-  process.stderr.write("             list : list all available products\n");
+  process.stderr.write("  <name>   name of product or category to install\n");
+  process.stderr.write("           Category names:\n");
+  for (const category of products) {
+    let name = category.category;
+    let desc = (typeof category.shortDesc === "undefined") ? category.desc : category.shortDesc;
+    process.stderr.write("             ");
+    for (let len = name.length; len < 8; len++) process.stderr.write(" ");
+    process.stderr.write(`${name} : ${desc}\n`);
+  }
+  process.stderr.write("           Special names:\n");
+  process.stderr.write("                  all : Install all products\n");
+  process.stderr.write("                 list : List all available products\n");
   process.exit(status);
 };
 
@@ -218,6 +227,14 @@ if (fs.existsSync("opt/installed.json")) {
 }
 let isForcedInstall = false;
 let isSysedit = false;
+
+let categories = {};
+let categoryNames = [];
+for (const category of products) {
+  const name = category.category;
+  categoryNames.push(name);
+  categories[name] = category.products;
+}
 
 for (let i = 2; i < process.argv.length; i++) {
   let arg = process.argv[i];
@@ -250,6 +267,9 @@ for (let i = 2; i < process.argv.length; i++) {
       }
     }
     break;
+  case "help":
+    usage(0);
+    break;
   case "list":
     listProducts();
     process.exit(0);
@@ -260,16 +280,26 @@ for (let i = 2; i < process.argv.length; i++) {
       usage(1);
     }
     let productName = arg.toLowerCase();
-    let prodDefn = lookupProduct(productName);
-    if (prodDefn === null) {
-      process.stderr.write(`Unrecognized product name: ${arg}\n`);
-      process.exit(1);
-    }
-    if (isForcedInstall || isInstalled(productName) === false) {
-      addProduct(prodDefn, isSysedit);
+    if (categoryNames.indexOf(productName) >= 0) {
+      for (const prodDefn of categories[productName]) {
+        if ((isForcedInstall && baseProducts.indexOf(prodDefn.name) == -1)
+          || isInstalled(prodDefn.name) === false) {
+          addProduct(prodDefn, isSysedit);
+        }
+      }
     }
     else {
-      process.stdout.write(`${process.argv[i]} is already installed.\n`);
+      let prodDefn = lookupProduct(productName);
+      if (prodDefn === null) {
+        process.stderr.write(`Unrecognized product name: ${arg}\n`);
+        process.exit(1);
+      }
+      if (isForcedInstall || isInstalled(productName) === false) {
+        addProduct(prodDefn, isSysedit);
+      }
+      else {
+        process.stdout.write(`${process.argv[i]} is already installed.\n`);
+      }
     }
     break;
   }
