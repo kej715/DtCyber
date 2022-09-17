@@ -11,22 +11,23 @@ on the station's card punch.
 
 Various data communication protocols were defined for implementing RJE.
 [HASP](https://en.wikipedia.org/wiki/Houston_Automatic_Spooling_Priority) was one
-such protocol implemented by many computer system manufacturers in the 1970's, 80's, and 90's. For example, CDC operating systems such as NOS and NOS/BE supported HASP.
-The NOS 2 operating system provided HASP in its RBF (Remote Batch Facility)
-subsystem.
+such protocol implemented by many computer system manufacturers in the 1970's, 80's, and 90's. For example, CDC's NOS 2 operating system provided HASP in its RBF (Remote Batch
+Facility) subsystem. Another RJE protocol known as MODE4 was created by CDC and
+supported by its KRONOS, SCOPE, NOS 1, NOS 2, and NOS/BE operating systems.
 
-This directory provides Javascript classes implementing HASP and
-[BSC](https://en.wikipedia.org/wiki/Binary_Synchronous_Communications) protocols over
-TCP/IP. The implementation is designed to execute using Node.js, and it interoperates
-with *DtCyber* as well as the *Hercules* IBM mainframe simulator. In addition, a
-command line application named **rjecli** is provided.
+This directory provides Javascript classes implementing HASP,
+[BSC](https://en.wikipedia.org/wiki/Binary_Synchronous_Communications), and MODE4
+protocols over TCP/IP. The implementation is designed to execute using Node.js, and it
+interoperates with *DtCyber* as well as the *Hercules* IBM mainframe simulator. In
+addition, a command line application named **rjecli** is provided.
 
-**rjecli** enables a user to submit jobs to RBF on NOS 2 (running on *DtCyber*), and
-JES2 on IBM MVS or RCSC on IBM CMS (running on *Hercules*). Normally, ordinary print
-and punch output produced by these jobs will be returned automatically to **rjecli**.
-**rjecli** creates a file with a unique name in its spooling directory for each
-print and punch file returned. The default spooling directory pathname is `./spool`.
-A different pathname can be defined in the **rjecli** configuration file (see below). 
+**rjecli** enables a user to submit jobs to RBF on NOS 2 (running on *DtCyber*), EI200
+on NOS 1, and JES2 on IBM MVS or RSCS on IBM CMS (running on *Hercules*). Normally,
+ordinary print and punch output produced by these jobs will be returned automatically to
+**rjecli**. **rjecli** creates a file with a unique name in its spooling directory for
+each print and punch file returned. The default spooling directory pathname is
+./spool`. A different pathname can be defined in the **rjecli** configuration file (see
+below). 
 
 ## Installing rjecli
 Execute the following commands to install and run **rjecli** from this directory:
@@ -43,7 +44,7 @@ Execute the following commands to install and run **rjecli** from this directory
 host service is located. The configuration file can also define other optional 
 parameters. The default pathname of the configuration file is `./config.json`.
 
-The contents of the configuration file look like this:
+The contents of a typical configuration file look like this:
 
 ```
 {
@@ -119,14 +120,14 @@ It recognizes the following commands:
 
   example: `c display dev`
 
-The [examples](examples) directory contains example job files for the CDC NOS and
-IBM MVS operating systems. Here is a transcript of an **rjecli** session using
-the HASP protocol to communicate with RBF on CDC NOS 2.8.7. It uses the **c** command
-to display the status of all devices associated with the RJE station, and it uses the
-**lc** command to submit a job from the `examples` directory (`examples/nos.job`) for
-execution:
+The [examples](examples) directory contains example configuration and job files for the
+CDC NOS and IBM MVS operating systems. Here is a transcript of an **rjecli** session
+using the HASP protocol to communicate with RBF on CDC NOS 2.8.7. It uses the **c**
+command to display the status of all devices associated with the RJE station, and it
+uses the **lc** command to submit a job from the `examples` directory
+(`examples/nos.job`) for execution:
 ```
-rje-station % node rjecli
+rje-station % node rjecli examples/nos2.json
 
 RJE CLI starting ...
 
