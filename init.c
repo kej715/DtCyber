@@ -683,10 +683,19 @@ static void initCyber(char *config)
         fprintf(stderr, "(init   ) Invalid value for 'idle' in section [%s] of %s\n", config, startupFile);
         exit(1);
         }
-    initGetInteger("idlecycles", 200, &dummyInt);
-    idleTrigger = (u32)dummyInt;
-    initGetInteger("idletime", 200, &dummyInt);
     idleTime = (u32)dummyInt;
+#if defined(_WIN32)
+    /* Sleep() on Windows seems to work OK with these defaults YMMV */
+    initGetInteger("idlecycles", 7000, &dummyInt);
+    idleTrigger = (u32)dummyInt;
+    initGetInteger("idletime", 1, &dummyInt);
+    idleTime = (u32)dummyInt;
+#else
+    initGetInteger("idlecycles", 50, &dummyInt);
+    idleTrigger = (u32)dummyInt;
+    initGetInteger("idletime", 60, &dummyInt);
+    idleTime = (u32)dummyInt;
+#endif
     initGetString("ostype", "none", osType, 16);
     if (strcasecmp(osType, "none") == 0)
         {
