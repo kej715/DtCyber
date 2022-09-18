@@ -446,12 +446,12 @@ extern u32                 traceSequenceNo;
 
 /* Idle Loop throttle */
 extern bool idle;
+extern bool (*idleDetector)(CpuContext *ctx);
 extern u32  idleTime;
 extern u32  idleTrigger;
 extern char osType[];
 
 bool idleCheckBusy();
-bool (*idleDetector)(CpuContext *ctx);
 bool idleDetectorNone(CpuContext *ctx);
 bool idleDetectorNOS(CpuContext *ctx);   /* KRONOS2.1 - NOS 2.8.7 */
 bool idleDetectorNOSBE(CpuContext *ctx); /* NOS/BE (only tested with TUB) */
