@@ -3,6 +3,8 @@
 const fs = require("fs");
 const DtCyber = require("../automation/DtCyber");
 
+const baseTapes = ["ds.tap", "nos287-1.tap", "nos287-2.tap", "nos287-3.tap"];
+
 const dtc = new DtCyber();
 
 let isContinueInstall = false;
@@ -35,8 +37,14 @@ const isCompletedStep = step => {
   return completedSteps.indexOf(step) !== -1;
 };
 
+if (isContinueInstall === false) {
+  for (const baseTape of baseTapes) {
+    if (fs.existsSync(`tapes/${baseTape}`)) fs.unlinkSync(`tapes/${baseTape}`);
+  }
+}
+
 let promise = Promise.resolve();
-for (const baseTape of ["ds.tap", "nos287-1.tap", "nos287-2.tap", "nos287-3.tap"]) {
+for (const baseTape of baseTapes) {
   if (!fs.existsSync(`tapes/${baseTape}`)) {
     promise = promise
     .then(() => dtc.say(`Decompress tapes/${baseTape}.bz2 to tapes/${baseTape} ...`))
