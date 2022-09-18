@@ -121,10 +121,13 @@ const installProduct = productEntry => {
         "#12000#SYSEDIT,B=LGO."
       );
       promise = promise
-      .then(() => dtc.dsd("IDLE,IAF."))
+      .then(() => dtc.dsd([
+        "[IDLE,IAF.",
+        "#1000#[!"
+      ]))
       .then(() => dtc.dis(cmds, 1))
       .then(() => dtc.sleep(30000))
-      .then(() => dtc.dsd("IAF."));
+      .then(() => dtc.dsd("[IAF."));
     }
     if (typeof prodDefn.examples !== "undefined") {
       promise = promise
