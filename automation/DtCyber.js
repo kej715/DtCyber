@@ -780,7 +780,7 @@ class DtCyber {
       promise = promise
       .then(() => new Promise((resolve, reject) => {
         me.dtCyberChild.on("exit", (code, signal) => {
-          if (signal == null && code === 0) {
+          if (signal === null && code === 0) {
             resolve();
           }
         });
