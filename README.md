@@ -17,6 +17,8 @@ operating systems on *DtCyber* after building it:
 by CDC for its Cyber 170 series supercomputers.
 - [NOS1.3](NOS1.3) : the NOS 1.3 operating system and a corresponding version of
 PLATO.
+- [HUSTLER](HUSTLER) : a derivative of the SCOPE operating system implemented and
+originally deployed at Michigan State University.
 
 Visit the [doc](doc) directory to find the somewhat outdated *Basic Operation* guide
 for *DtCyber*. This guide is oriented toward operation of an older version of the
