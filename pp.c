@@ -1261,8 +1261,11 @@ static void ppOpFJM(void)     // 66
     if (opD < channelCount)
         {
         activeChannel = channel + opD;
-        channelIo();
-        channelCheckIfFull();
+        if (!activeChannel->full)
+            {
+            channelIo();
+            channelCheckIfFull();
+            }
         if (activeChannel->full)
             {
             activePpu->regP = location;
@@ -1299,11 +1302,14 @@ static void ppOpEJM(void)     // 67
     else
         {
         activeChannel = channel + opD;
-        channelIo();
-        channelCheckIfFull();
         if (!activeChannel->full)
             {
-            activePpu->regP = location;
+            channelIo();
+            channelCheckIfFull();
+            if (!activeChannel->full)
+                {
+                activePpu->regP = location;
+                }
             }
         }
     }
