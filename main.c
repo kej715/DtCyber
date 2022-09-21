@@ -74,6 +74,7 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
+static int runHelper(char* command);
 static void startHelpers(void);
 static void stopHelpers(void);
 static void tracePpuCalls(void);
@@ -457,6 +458,59 @@ bool idleDetectorMACE(CpuContext *ctx)
  **--------------------------------------------------------------------------
  */
 
+ /*--------------------------------------------------------------------------
+ **  Purpose:        Run a helper process.
+ **
+ **  Parameters:     Name        Description.
+ **                  command     Helper command to run
+ **
+ **  Returns:        0 if successful, error code otherwise.
+ **
+ **------------------------------------------------------------------------*/
+static int runHelper(char *command)
+    {
+#if defined (_WIN32)
+    char *dp;
+    PROCESS_INFORMATION pi;
+    STARTUPINFO si;
+    char *sp;
+    char winCmdLine[210];
+
+    memset(&si, 0, sizeof(si));
+    si.cb = sizeof(si);
+    memset(&pi, 0, sizeof(pi));
+    strcpy(winCmdLine, "/c ");
+    sp = command;
+    dp = winCmdLine + 3;
+    while (*sp != '\0')
+        {
+        *dp++ = (*sp == '/') ? '\\' : *sp;
+        sp += 1;
+        }
+    *dp = '\0';
+
+    if (!CreateProcessA("C:\\Windows\\System32\\cmd.exe", // Module name
+        winCmdLine,                // Command line
+        NULL,                      // Process handle not inheritable
+        NULL,                      // Thread handle not inheritable
+        FALSE,                     // Set handle inheritance to FALSE
+        CREATE_NEW_CONSOLE,        // Creation flags
+        NULL,                      // Use parent's environment block
+        NULL,                      // Use parent's starting directory 
+        &si,                       // Pointer to STARTUPINFO structure
+        &pi)                       // Pointer to PROCESS_INFORMATION structure
+        )
+        {
+        return GetLastError();
+        }
+    else
+        {
+        return 0;
+        }
+#else
+    return system(command);
+#endif
+    }
 /*--------------------------------------------------------------------------
 **  Purpose:        Start helper processes.
 **
@@ -479,13 +533,7 @@ static void startHelpers(void)
     while ((line = initGetNextLine()) != NULL)
         {
         sprintf(command, "%s start", line);
-#if defined(_WIN32)
-        for (char *cp = command; *cp != '\0'; cp++)
-            {
-            if (*cp == '/') *cp = '\\';
-            }
-#endif
-        rc = system(command);
+        rc = runHelper(command);
         if (rc == 0)
             {
             printf("(main   ) Started helper: %s\n", line);
@@ -519,13 +567,7 @@ static void stopHelpers(void)
     while ((line = initGetNextLine()) != NULL)
         {
         sprintf(command, "%s stop", line);
-#if defined(_WIN32)
-        for (char *cp = command; *cp != '\0'; cp++)
-            {
-            if (*cp == '/') *cp = '\\';
-            }
-#endif
-        rc = system(command);
+        rc = runHelper(command);
         if (rc == 0)
             {
             printf("\n(main) Stopped helper: %s\n", line);
