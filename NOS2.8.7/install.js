@@ -79,6 +79,7 @@ if (isBasicInstall === false) {
       .then(() => dtc.say("Shutdown system to deadstart using new tape ..."))
       .then(() => dtc.connect())
       .then(() => dtc.expect([ {re:/Operator> $/} ]))
+      .then(() => dtc.console("idle off"))
       .then(() => dtc.shutdown(false))
       .then(() => dtc.sleep(5000))
       .then(() => dtc.say("Save previous deadstart tape and rename new one ..."))
@@ -108,6 +109,7 @@ if (isBasicInstall === false) {
 promise = promise
 .then(() => dtc.connect())
 .then(() => dtc.expect([{ re: /Operator> $/ }]))
+.then(() => dtc.console("idle on"))
 .then(() => dtc.say(`${isBasicInstall ? "Basic" : "Full"} installation of NOS 2.8.7 complete`))
 .then(() => dtc.say("Enter 'exit' command to exit and shutdown gracefully"))
 .then(() => dtc.engageOperator(cmdExtensions))

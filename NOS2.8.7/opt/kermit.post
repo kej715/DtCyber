@@ -3,19 +3,15 @@
 // Copy KERMIT help file to LIBRARY catalog
 //
 
-const DtCyber = require("../../automation/DtCyber");
+const DtCyber   = require("../../automation/DtCyber");
+const utilities = require("./utilities");
 
 const dtc = new DtCyber();
 
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
-.then(() => dtc.dis([
-  "ATTACH,KH=KERMHLP.",
-  "SUI,377776.",
-  "PURGE,KERMHLP/NA.",
-  "DEFINE,KERMHLP/CT=PU,AC=Y,M=R.",
-  "COPY,KH,KERMHLP."
-], 1))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => utilities.moveFile(dtc, "KERMHLP", 1, 377776))
 .then(() => {
   process.exit(0);
 })

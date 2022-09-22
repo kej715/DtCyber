@@ -3,19 +3,15 @@
 // Copy SNOBOL documentation file to LIBRARY catalog
 //
 
-const DtCyber = require("../../automation/DtCyber");
+const DtCyber   = require("../../automation/DtCyber");
+const utilities = require("./utilities");
 
 const dtc = new DtCyber();
 
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
-.then(() => dtc.dis([
-  "ATTACH,SD=SNODOC.",
-  "SUI,377776.",
-  "PURGE,SNODOC/NA.",
-  "DEFINE,SNODOC/CT=PU,AC=Y,M=R.",
-  "COPY,SD,SNODOC."
-], 1))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => utilities.moveFile(dtc, "SNODOC", 1, 377776))
 .then(() => {
   process.exit(0);
 })

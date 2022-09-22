@@ -9,23 +9,13 @@ const dtc = new DtCyber();
 
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => dtc.dis([
-  "ATTACH,DADIMFO,GPLOT,LBDIMFM.",
-  "ATTACH,LBGRDEV,LBUTILS.",
-  "SUI,377776.",
-  "PURGE,DADIMFO,GPLOT,LBDIMFM/NA.",
-  "PURGE,LBGRDEV,LBUTILS/NA.",
-  "DEFINE,F1=DADIMFO/CT=PU,AC=Y.",
-  "COPY,DADIMFO,F1.",
-  "DEFINE,F2=GPLOT/CT=PU,AC=Y.",
-  "COPY,GPLOT,F2.",
-  "DEFINE,F3=LBDIMFM/CT=PU,AC=Y.",
-  "COPY,LBDIMFM,F3.",
-  "DEFINE,F4=LBGRDEV/CT=PU,AC=Y.",
-  "COPY,LBGRDEV,F4.",
-  "DEFINE,F5=LBUTILS/CT=PU,AC=Y.",
-  "COPY,LBUTILS,F5."
+  "GET,GPLPROC.",
+  "PURGE,GPLPROC.",
+  "GPLPROC."
 ], 1))
+.then(() => dtc.waitJob("GPLPROC"))
 .then(() => {
   process.exit(0);
 })

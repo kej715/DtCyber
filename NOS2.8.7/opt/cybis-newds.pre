@@ -3,8 +3,9 @@
 // Shutdown and re-deadstart using new deadstart tape
 //
 
-const fs = require("fs");
-const DtCyber = require("../../automation/DtCyber");
+const fs        = require("fs");
+const DtCyber   = require("../../automation/DtCyber");
+const utilities = require("./utilities");
 
 const packList = [
   "DQ20_BINARY",
@@ -17,6 +18,7 @@ const packList = [
 
 const dtc = new DtCyber();
 
+let maxProgressLen = 0;
 let promise = dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.say("Shutdown to prepare for activating CYBIS disk packs ..."))
@@ -37,7 +39,10 @@ let promise = dtc.connect()
   resolve();
 }))
 .then(() => dtc.say("Get CYBIS disk pack archive ..."))
-.then(() => dtc.wget("https://www.dropbox.com/s/wdk53d825fmbkt0/cybis-packs.zip?dl=1", "disks"))
+.then(() => dtc.wget("https://www.dropbox.com/s/wdk53d825fmbkt0/cybis-packs.zip?dl=1", "disks", (byteCount, contentLength) => {
+  maxProgressLen = utilities.reportProgress(byteCount, contentLength, maxProgressLen);
+}))
+.then(() => utilities.clearProgress(maxProgressLen))
 .then(() => dtc.say("Expand CYBIS disk pack archive ..."))
 .then(() => dtc.unzip("disks/cybis-packs.zip", "disks"))
 .then(() => new Promise((resolve, reject) => {
@@ -70,6 +75,8 @@ promise = promise
 }))
 .then(() => dtc.sleep(5000))
 .then(() => dtc.connect())
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.console("idle off"))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => dtc.expect([{ re: /QUEUE FILE UTILITY COMPLETE/ }], "printer"))
 .then(() => dtc.say("Deadstart complete"))
