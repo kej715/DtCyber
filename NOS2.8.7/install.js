@@ -83,13 +83,14 @@ if (isBasicInstall === false) {
       .then(() => dtc.shutdown(false))
       .then(() => dtc.sleep(5000))
       .then(() => dtc.say("Save previous deadstart tape and rename new one ..."))
-      .then(() => {
+      .then(() => new Promise ((resolve, reject) => {
         if (fs.existsSync("tapes/ods.tap")) {
           fs.unlinkSync("tapes/ods.tap");
         }
         fs.renameSync("tapes/ds.tap", "tapes/ods.tap");
         fs.renameSync("tapes/newds.tap", "tapes/ds.tap");
-      })
+        resolve();
+      }))
       .then(() => dtc.say("Deadstart system using new tape"))
       .then(() => dtc.start({
         detached: true,
@@ -104,7 +105,7 @@ if (isBasicInstall === false) {
     else {
       return Promise.resolve();
     }
-  })
+  });
 }
 promise = promise
 .then(() => dtc.connect())

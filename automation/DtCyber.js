@@ -222,15 +222,18 @@ class DtCyber {
     }
     this.streamMgrs.dtCyber = new DtCyberStreamMgr();
     this.connectDeadline = Date.now() + 2000;
-    const doConnect = (callback) => {
+    this.isConnected = false;
+    const doConnect = callback => {
       me.socket = net.createConnection({port:port, host:"127.0.0.1"}, () => {
+        me.isConnected = true;
         callback(null);
       });
       me.streamMgrs.dtCyber.setOutputStream(me.socket);
       me.socket.on("data", data => {
         me.streamMgrs.dtCyber.appendData(data);
       });
-      me.socket.on("end", () => {
+      me.socket.on("close", () => {
+        me.isConnected = false;
         if (me.isExitOnEnd
             && (typeof me.isExitAfterShutdown === "undefined" || me.isExitAfterShutdown === true)) {
           console.log(`${new Date().toLocaleTimeString()} DtCyber disconnected`);
@@ -238,8 +241,10 @@ class DtCyber {
         }
       });
       me.socket.on("error", err => {
-        const now = Date.now();
-        if (now >= me.connectDeadline) {
+        if (me.isConnected) {
+          console.log(`${new Date().toLocaleTimeString()} ${err}`);
+        }
+        else if (Date.now() >= me.connectDeadline) {
           callback(err);
         }
         else {
@@ -252,7 +257,7 @@ class DtCyber {
     return new Promise((resolve, reject) => {
       doConnect(err => {
         if (err === null) {
-          resolve(me.streamMgrs.dtCyber);
+          resolve();
         }
         else {
           reject(err);
