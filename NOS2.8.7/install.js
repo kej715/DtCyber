@@ -128,3 +128,15 @@ promise = promise
     process.exit(1);
   });
 });
+
+//
+// The following code is necessary to keep some work on the
+// event queue. Otherwise, Node.js will exit prematurely
+// before all promises are fulfilled. Explicit calls to
+// process.exit(), above, will enable graceful exit when
+// all promises are fulfilled or an error occurs.
+//
+const stayAlive = () => {
+  setTimeout(stayAlive, 60000);
+}
+stayAlive();

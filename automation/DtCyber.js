@@ -193,7 +193,6 @@ class DtCyber {
    */
   connect(port) {
     const me = this;
-    this.isExitOnEnd = true;
     if (typeof port === "undefined") {
       if (typeof this.operatorPort === "undefined") {
         let path = null;
@@ -221,8 +220,6 @@ class DtCyber {
       port = this.operatorPort;
     }
     this.streamMgrs.dtCyber = new DtCyberStreamMgr();
-    this.connectDeadline = Date.now() + 2000;
-    this.isConnected = false;
     const doConnect = callback => {
       me.socket = net.createConnection({port:port, host:"127.0.0.1"}, () => {
         me.isConnected = true;
@@ -233,12 +230,11 @@ class DtCyber {
         me.streamMgrs.dtCyber.appendData(data);
       });
       me.socket.on("close", () => {
-        me.isConnected = false;
-        if (me.isExitOnEnd
-            && (typeof me.isExitAfterShutdown === "undefined" || me.isExitAfterShutdown === true)) {
+        if (me.isConnected && me.isExitOnClose) {
           console.log(`${new Date().toLocaleTimeString()} DtCyber disconnected`);
           process.exit(0);
         }
+        me.isConnected = false;
       });
       me.socket.on("error", err => {
         if (me.isConnected) {
@@ -255,6 +251,9 @@ class DtCyber {
       });
     };
     return new Promise((resolve, reject) => {
+      me.connectDeadline = Date.now() + 2000;
+      me.isConnected = false;
+      me.isExitOnClose = true;
       doConnect(err => {
         if (err === null) {
           resolve();
@@ -361,8 +360,8 @@ class DtCyber {
    */
   disconnect() {
     const me = this;
-    this.isExitOnEnd = false;
     return new Promise((resolve, reject) => {
+      me.isExitOnClose = false;
       me.socket.end(() => {
         me.socket.destroy();
         resolve();
@@ -798,31 +797,40 @@ class DtCyber {
    *
    * Arguments:
    *   isExitAfterShutdown - true if the current process should exit after DtCyber has
-   *                         been shutdown. If omitted, the default is true.
+   *                         been shut down. If omitted, the default is true.
    *
    * Returns:
    *   A promise that is resolved when the shutdown is complete.
    */
   shutdown(isExitAfterShutdown) {
     const me = this;
-    this.isExitAfterShutdown = (typeof isExitAfterShutdown === "undefined") ? true : isExitAfterShutdown;
+    if (typeof isExitAfterShutdown === "undefined") {
+      isExitAfterShutdown = true;
+    }
     let promise = me.say("Starting shutdown sequence ...")
     .then(() => me.dsd("[UNLOCK."))
     .then(() => me.dsd("CHECK#2000#"))
     .then(() => me.sleep(20000))
     .then(() => me.dsd("STEP."))
     .then(() => me.sleep(2000))
+    .then(() => new Promise((resolve, reject) => {
+      me.isExitOnClose = isExitAfterShutdown;
+      resolve();
+    }))
     .then(() => me.send("shutdown"))
     .then(() => me.expect([{ re: /Goodbye for now/ }]))
     .then(() => me.say("Shutdown complete"));
-    if (this.isExitAfterShutdown === false && typeof this.dtCyberChild !== "undefined") {
+    if (isExitAfterShutdown === false) {
       promise = promise
       .then(() => new Promise((resolve, reject) => {
-        me.dtCyberChild.on("exit", (code, signal) => {
-          if (signal === null && code === 0) {
+        if (typeof me.dtCyberChild !== "undefined" && me.dtCyberChild.exitCode === null) {
+          me.shutdownResolver = () => {
             resolve();
-          }
-        });
+          };
+        }
+        else {
+          resolve();
+        }
       }));
     }
     return promise;
@@ -885,7 +893,24 @@ class DtCyber {
         if (typeof options.unref === "undefined" || options.unref === true) {
           me.dtCyberChild.unref();
         }
-        resolve(me.dtCyberChild);
+        resolve();
+        me.dtCyberChild.on("exit", (code, signal) => {
+          const d = new Date();
+          if (signal !== null) {
+            console.log(`${d.toLocaleTimeString()} DtCyber exited due to signal ${signal}`);
+          }
+          else if (code !== 0) {
+            console.log(`${d.toLocaleTimeString()} DtCyber exited with status ${code}`);
+          }
+          else {
+            console.log(`${d.toLocaleTimeString()} DtCyber exited normally`);
+          }
+          if (typeof me.shutdownResolver === "function") {
+            me.shutdownResolver();
+            delete me.shutdownResolver;
+          }
+          delete me.dtCyberChild;
+        });
       }
       else {
         me.streamMgrs.dtCyber.setOutputStream(me.dtCyberChild.stdin);
@@ -900,7 +925,12 @@ class DtCyber {
           }
           else if (code === 0) {
             console.log(`${d.toLocaleTimeString()} DtCyber exited normally`);
-            if (typeof me.isExitAfterShutdown === "undefined" || me.isExitAfterShutdown === true) {
+            if (typeof me.shutdownResolver === "function") {
+              me.shutdownResolver();
+              delete me.shutdownResolver;
+              delete me.dtCyberChild;
+            }
+            else {
               process.exit(0);
             }
           }
