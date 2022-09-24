@@ -11,9 +11,9 @@ dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.dis([
   "ATTACH,SPSS,UDCFIL8.",
+  "PURGE,SPSS,UDCFIL8/NA.",
   "SUI,377776.",
-  "PURGE,UDCFIL8/NA.",
-  "PURGE,SPSS/NA.",
+  "PURGE,SPSS,UDCFIL8/NA.",
   "DEFINE,A=UDCFIL8/CT=PU,M=M,PW=4SPSS.",
   "DEFINE,B=SPSS/CT=PU,AC=Y.",
   "COPYEI,UDCFIL8,A.",
