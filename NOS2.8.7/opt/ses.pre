@@ -11,19 +11,16 @@ dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => dtc.dis([
-  "MODVAL,OP=Z./SES,FUI=32B,PW=SESX,RL=ALL,AW=ALL",
-  "MODVAL,OP=Z./SES,AP=NUL,AP=IAF,IS=BATCH",
-  "ELS.ASSIGN,51,TAPE,D=GE,LB=KU.",
+  "GET,SESUSRS.",
+  "PURGE,SESUSRS.",
+  "MODVAL,FA,I=SESUSRS,OP=U."
+], "SESMODV", 1))
+.then(() => dtc.dis([
+  "ASSIGN,51,TAPE,D=GE,LB=KU.",
   "PFLOAD,UI=32,LO=CEST,OP=LR.",
-  "SUI,32.",
   "PERMIT,NEWSES,INSTALL=R.",
-  "PERMIT,SESBINS,INSTALL=R.",
-  "*** SESINS COMPLETE",
-  "EXIT.",
-  "*** SESINS FAILED",
-  "[!"
-]))
-.then(() => dtc.waitJob("SESINS"))
+  "PERMIT,SESBINS,INSTALL=R."
+], "SESINS", 32))
 .then(() => {
   process.exit(0);
 })

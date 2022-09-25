@@ -12,9 +12,10 @@ dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => dtc.dis([
-  "MODVAL,OP=Z./WWW,FUI=100B,PW=WWWX,RL=ALL,AW=ALL",
-  "MODVAL,OP=Z./WWW,AP=NUL,AP=IAF,IS=BATCH"
-]))
+  "GET,TCPUSRS.",
+  "PURGE,TCPUSRS.",
+  "MODVAL,FA,I=TCPUSRS,OP=U."
+], "TCPMODV", 1))
 .then(() => dtc.runJob(12, 4, "opt/ncctcp-namstrt.job"))
 .then(() => dtc.runJob(12, 4, "opt/ncctcp-www-index.job"))
 .then(() => {

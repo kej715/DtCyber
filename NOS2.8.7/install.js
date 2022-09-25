@@ -79,16 +79,18 @@ if (isBasicInstall === false) {
       .then(() => dtc.say("Shutdown system to deadstart using new tape ..."))
       .then(() => dtc.connect())
       .then(() => dtc.expect([ {re:/Operator> $/} ]))
+      .then(() => dtc.console("idle off"))
       .then(() => dtc.shutdown(false))
       .then(() => dtc.sleep(5000))
       .then(() => dtc.say("Save previous deadstart tape and rename new one ..."))
-      .then(() => {
+      .then(() => new Promise ((resolve, reject) => {
         if (fs.existsSync("tapes/ods.tap")) {
           fs.unlinkSync("tapes/ods.tap");
         }
         fs.renameSync("tapes/ds.tap", "tapes/ods.tap");
         fs.renameSync("tapes/newds.tap", "tapes/ds.tap");
-      })
+        resolve();
+      }))
       .then(() => dtc.say("Deadstart system using new tape"))
       .then(() => dtc.start({
         detached: true,
@@ -103,11 +105,12 @@ if (isBasicInstall === false) {
     else {
       return Promise.resolve();
     }
-  })
+  });
 }
 promise = promise
 .then(() => dtc.connect())
 .then(() => dtc.expect([{ re: /Operator> $/ }]))
+.then(() => dtc.console("idle on"))
 .then(() => dtc.say(`${isBasicInstall ? "Basic" : "Full"} installation of NOS 2.8.7 complete`))
 .then(() => dtc.say("Enter 'exit' command to exit and shutdown gracefully"))
 .then(() => dtc.engageOperator(cmdExtensions))
@@ -125,3 +128,15 @@ promise = promise
     process.exit(1);
   });
 });
+
+//
+// The following code is necessary to keep some work on the
+// event queue. Otherwise, Node.js will exit prematurely
+// before all promises are fulfilled. Explicit calls to
+// process.exit(), above, will enable graceful exit when
+// all promises are fulfilled or an error occurs.
+//
+const stayAlive = () => {
+  setTimeout(stayAlive, 60000);
+}
+stayAlive();

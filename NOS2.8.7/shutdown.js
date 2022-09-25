@@ -7,6 +7,7 @@ const dtc = new DtCyber();
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.say("Connected to DtCyber"))
+.then(() => dtc.console("idle off"))
 .then(() => dtc.shutdown())
 .then(() => {
   process.exit(0);

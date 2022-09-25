@@ -193,7 +193,6 @@ class DtCyber {
    */
   connect(port) {
     const me = this;
-    this.isExitOnEnd = true;
     if (typeof port === "undefined") {
       if (typeof this.operatorPort === "undefined") {
         let path = null;
@@ -221,25 +220,27 @@ class DtCyber {
       port = this.operatorPort;
     }
     this.streamMgrs.dtCyber = new DtCyberStreamMgr();
-    this.connectDeadline = Date.now() + 2000;
-    const doConnect = (callback) => {
+    const doConnect = callback => {
       me.socket = net.createConnection({port:port, host:"127.0.0.1"}, () => {
+        me.isConnected = true;
         callback(null);
       });
       me.streamMgrs.dtCyber.setOutputStream(me.socket);
       me.socket.on("data", data => {
         me.streamMgrs.dtCyber.appendData(data);
       });
-      me.socket.on("end", () => {
-        if (me.isExitOnEnd
-            && (typeof me.isExitAfterShutdown === "undefined" || me.isExitAfterShutdown === true)) {
+      me.socket.on("close", () => {
+        if (me.isConnected && me.isExitOnClose) {
           console.log(`${new Date().toLocaleTimeString()} DtCyber disconnected`);
           process.exit(0);
         }
+        me.isConnected = false;
       });
       me.socket.on("error", err => {
-        const now = Date.now();
-        if (now >= me.connectDeadline) {
+        if (me.isConnected) {
+          console.log(`${new Date().toLocaleTimeString()} ${err}`);
+        }
+        else if (Date.now() >= me.connectDeadline) {
           callback(err);
         }
         else {
@@ -250,9 +251,12 @@ class DtCyber {
       });
     };
     return new Promise((resolve, reject) => {
+      me.connectDeadline = Date.now() + 2000;
+      me.isConnected = false;
+      me.isExitOnClose = true;
       doConnect(err => {
         if (err === null) {
-          resolve(me.streamMgrs.dtCyber);
+          resolve();
         }
         else {
           reject(err);
@@ -282,33 +286,67 @@ class DtCyber {
    * dis
    *
    * Call DIS, provide it with a sequence of commands to execute, and then drop DIS. 
+   * If a job name is provided, commands are entered using the DIS ELS command.
    *
    * Arguments:
    *   commands - a string representing a single command to execute, or
    *              an array of strings representing a sequence of commands
    *              to execute. 
-   *   ui       - user index under which to execute the sequence of commands.
-   *              This argument is optional. If omitted, user index 377777
-   *              is used.
+   *   jobName  - optional job name. If provided, ELS is called to collect
+   *              commands, and waitJob() is used to wait for the collected
+   *              sequence to complete (or fail).
+   *   ui       - optional user index under which to execute the sequence of
+   *              commands. If omitted, user index 377777 is used.
    *
    * Returns:
-   *   A promise that is resolved when the sequence of commands has completed and
+   *   A promise that is resolved when the sequence of commands has completed and/or
    *   DIS has dropped
    */
-  dis(commands, ui) {
+  dis(commands, jobName, ui) {
     const me = this;
-    let list = [`SUI,${typeof ui === "undefined" ? "377777" : ui.toString()}.`];
-    if (Array.isArray(commands)) {
-      list = list.concat(commands);
+    let hasJobName = false;
+    let hasUi = false;
+    if (typeof jobName === "string") {
+      hasJobName = true;
+      if (typeof ui === "number") {
+        hasUi = true;
+      }
+    }
+    else if (typeof jobName === "number") {
+      ui = jobName;
+      hasUi = true;
+    }
+    let list = [`SUI,${hasUi ? ui.toString() : "377777"}.`];
+    if (!Array.isArray(commands)) {
+      commands = [commands];
+    }
+    if (hasJobName) {
+      list.push(`#2000#ELS.NOTE./1${jobName}`);
+      list = list.concat(commands).concat([
+        `*** ${jobName} COMPLETE`,
+        "EXIT.",
+        `*** ${jobName} FAILED`,
+        "[!",
+        ".!"
+      ]);
     }
     else {
-      list.push(commands);
+      list.push(`#2000#${commands.shift()}`);
+      list = list.concat(commands);
     }
     list.push("#1000#[DROP.");
-    return this.dsd("[X.DIS.")
+    let promise = this.dsd("[X.DIS.")
     .then(() => me.sleep(2000))
-    .then(() => me.dsd(list))
-    .then(() => me.sleep(1000));
+    .then(() => me.dsd(list));
+    if (hasJobName) {
+      promise = promise
+      .then(() => me.waitJob(jobName));
+    }
+    else {
+      promise = promise
+      .then(() => me.sleep(1000));
+    }
+    return promise;
   }
 
   /*
@@ -322,8 +360,8 @@ class DtCyber {
    */
   disconnect() {
     const me = this;
-    this.isExitOnEnd = false;
     return new Promise((resolve, reject) => {
+      me.isExitOnClose = false;
       me.socket.end(() => {
         me.socket.destroy();
         resolve();
@@ -759,31 +797,40 @@ class DtCyber {
    *
    * Arguments:
    *   isExitAfterShutdown - true if the current process should exit after DtCyber has
-   *                         been shutdown. If omitted, the default is true.
+   *                         been shut down. If omitted, the default is true.
    *
    * Returns:
    *   A promise that is resolved when the shutdown is complete.
    */
   shutdown(isExitAfterShutdown) {
     const me = this;
-    this.isExitAfterShutdown = (typeof isExitAfterShutdown === "undefined") ? true : isExitAfterShutdown;
+    if (typeof isExitAfterShutdown === "undefined") {
+      isExitAfterShutdown = true;
+    }
     let promise = me.say("Starting shutdown sequence ...")
     .then(() => me.dsd("[UNLOCK."))
     .then(() => me.dsd("CHECK#2000#"))
-    .then(() => me.sleep(15000))
+    .then(() => me.sleep(20000))
     .then(() => me.dsd("STEP."))
     .then(() => me.sleep(2000))
+    .then(() => new Promise((resolve, reject) => {
+      me.isExitOnClose = isExitAfterShutdown;
+      resolve();
+    }))
     .then(() => me.send("shutdown"))
     .then(() => me.expect([{ re: /Goodbye for now/ }]))
     .then(() => me.say("Shutdown complete"));
-    if (this.isExitAfterShutdown === false && typeof this.dtCyberChild !== "undefined") {
+    if (isExitAfterShutdown === false) {
       promise = promise
       .then(() => new Promise((resolve, reject) => {
-        me.dtCyberChild.on("exit", (code, signal) => {
-          if (signal === null && code === 0) {
+        if (typeof me.dtCyberChild !== "undefined" && me.dtCyberChild.exitCode === null) {
+          me.shutdownResolver = () => {
             resolve();
-          }
-        });
+          };
+        }
+        else {
+          resolve();
+        }
       }));
     }
     return promise;
@@ -846,7 +893,24 @@ class DtCyber {
         if (typeof options.unref === "undefined" || options.unref === true) {
           me.dtCyberChild.unref();
         }
-        resolve(me.dtCyberChild);
+        resolve();
+        me.dtCyberChild.on("exit", (code, signal) => {
+          const d = new Date();
+          if (signal !== null) {
+            console.log(`${d.toLocaleTimeString()} DtCyber exited due to signal ${signal}`);
+          }
+          else if (code !== 0) {
+            console.log(`${d.toLocaleTimeString()} DtCyber exited with status ${code}`);
+          }
+          else {
+            console.log(`${d.toLocaleTimeString()} DtCyber exited normally`);
+          }
+          if (typeof me.shutdownResolver === "function") {
+            me.shutdownResolver();
+            delete me.shutdownResolver;
+          }
+          delete me.dtCyberChild;
+        });
       }
       else {
         me.streamMgrs.dtCyber.setOutputStream(me.dtCyberChild.stdin);
@@ -861,7 +925,12 @@ class DtCyber {
           }
           else if (code === 0) {
             console.log(`${d.toLocaleTimeString()} DtCyber exited normally`);
-            if (typeof me.isExitAfterShutdown === "undefined" || me.isExitAfterShutdown === true) {
+            if (typeof me.shutdownResolver === "function") {
+              me.shutdownResolver();
+              delete me.shutdownResolver;
+              delete me.dtCyberChild;
+            }
+            else {
               process.exit(0);
             }
           }
@@ -959,15 +1028,19 @@ class DtCyber {
    *   cacheDir - pathname of the directory in which to store the file
    *   filename - filename under which to store the file. If omitted, the
    *              filename is derived from the URL.
+   *   progress - optional callback function to which to report progress
    *
    * Returns:
    *   A promise that is resolved when the file has been retrieved, if
    *   necessary, and is available for use.
    */
-  wget(url, cacheDir, filename) {
+  wget(url, cacheDir, filename, progress) {
     const me = this;
+    if (typeof filename === "function") {
+      progress = filename;
+    }
     const pathname = new URL(url).pathname;
-    if (typeof filename === "undefined") {
+    if (typeof filename === "undefined" || typeof filename === "function") {
       const li = pathname.lastIndexOf("/");
       filename = pathname.substring((li >= 0) ? li + 1 : 0);
     }
@@ -975,6 +1048,9 @@ class DtCyber {
     if (fs.existsSync(cachePath)) {
       const stat = fs.statSync(cachePath);
       if (Date.now() - stat.ctimeMs < (24 * 60 * 60 * 1000)) {
+        if (typeof progress === "function") {
+          progress(stat.size, stat.size);
+        }
         return Promise.resolve();
       }
     }
@@ -985,8 +1061,17 @@ class DtCyber {
       const strm = fs.createWriteStream(cachePath, { mode: 0o644 });
       const svc = url.startsWith("https:") ? https : http;
       svc.get(url, res => {
+        let contentLength = -1;
+        if (typeof res.headers["content-length"] !== "undefined") {
+          contentLength = parseInt(res.headers["content-length"]);
+        }
+        let byteCount = 0;
         res.on("data", data => {
           strm.write(data);
+          byteCount += data.length;
+          if (typeof progress === "function") {
+            progress(byteCount, contentLength);
+          }
         });
         res.on("end", () => {
           strm.end(() => {
@@ -1002,7 +1087,7 @@ class DtCyber {
                 const pi = url.indexOf(pathname);
                 location = `${url.substring(0, pi)}${location}`;
               }
-              me.wget(location, cacheDir, filename)
+              me.wget(location, cacheDir, filename, progress)
               .then(path => { resolve(path); })
               .catch(err => { reject(err); });
               break;

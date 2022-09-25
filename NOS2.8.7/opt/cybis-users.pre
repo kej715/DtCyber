@@ -4,9 +4,12 @@
 // and other supporting files.
 //
 
-const DtCyber = require("../../automation/DtCyber");
+const DtCyber   = require("../../automation/DtCyber");
+const utilities = require("./utilities");
 
 const dtc = new DtCyber();
+
+let maxProgressLen = 0;
 
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
@@ -15,9 +18,13 @@ dtc.connect()
 .then(() => dtc.dis([
   "GET,CYBUSRS.",
   "MODVAL,FA,I=CYBUSRS,OP=U.",
-], 1))
+  "PURGE,CYBUSRS/NA."
+], "CYBMODV", 1))
 .then(() => dtc.say("Get CYBIS development tools and PL's archive ..."))
-.then(() => dtc.wget("https://www.dropbox.com/s/uz78wfg0cpd3lxd/cybisdv4nos287.tap?dl=1", "opt/tapes"))
+.then(() => dtc.wget("https://www.dropbox.com/s/uz78wfg0cpd3lxd/cybisdv4nos287.tap?dl=1", "opt/tapes", (byteCount, contentLength) => {
+  maxProgressLen = utilities.reportProgress(byteCount, contentLength, maxProgressLen);
+}))
+.then(() => utilities.clearProgress(maxProgressLen))
 .then(() => dtc.say("Load CYBIS development tools and PL's archive into catalog of PLATO ..."))
 .then(() => dtc.dsd([
   "[UNLOAD,51.",
@@ -25,19 +32,17 @@ dtc.connect()
 ]))
 .then(() => dtc.mount(13, 0, 1, "opt/tapes/cybisdv4nos287.tap"))
 .then(() => dtc.dis([
-  "ELS.ASSIGN,51,TAPE,D=GE,LB=KU.",
+  "ASSIGN,51,TAPE,D=GE,LB=KU.",
   "PFLOAD,UI=33,LO=CEST,OP=LR.",
   "SUI,32.",
   "PERMIT,NEWSES,PLATO=R,CYBIS=R/NA.",
-  "PERMIT,SESBINS,PLATO=R,CYBIS=R/NA.",
-  "*** PFLDCYB COMPLETE",
-  "EXIT.",
-  "*** PFLDCYB FAILED",
-  "[!"
-]))
-.then(() => dtc.waitJob("PFLDCYB"))
+  "PERMIT,SESBINS,PLATO=R,CYBIS=R/NA."
+], "PFLDCYB"))
 .then(() => dtc.say("Get PLATOMF user archive ..."))
-.then(() => dtc.wget("https://www.dropbox.com/s/st8opwk0q87g80n/cybis-platomf.tap?dl=1", "opt/tapes"))
+.then(() => dtc.wget("https://www.dropbox.com/s/st8opwk0q87g80n/cybis-platomf.tap?dl=1", "opt/tapes", (byteCount, contentLength) => {
+  maxProgressLen = utilities.reportProgress(byteCount, contentLength, maxProgressLen);
+}))
+.then(() => utilities.clearProgress(maxProgressLen))
 .then(() => dtc.say("Load archive into catalog of user PLATOMF ..."))
 .then(() => dtc.dsd([
   "[UNLOAD,51.",
@@ -45,16 +50,14 @@ dtc.connect()
 ]))
 .then(() => dtc.mount(13, 0, 1, "opt/tapes/cybis-platomf.tap"))
 .then(() => dtc.dis([
-  "ELS.ASSIGN,51,TAPE,D=GE,LB=KU.",
-  "PFLOAD,UI=377773,LO=CEST,OP=LR.",
-  "*** PLATOMF COMPLETE",
-  "EXIT.",
-  "*** PLATOMF FAILED",
-  "[!"
-]))
-.then(() => dtc.waitJob("PLATOMF"))
+  "ASSIGN,51,TAPE,D=GE,LB=KU.",
+  "PFLOAD,UI=377773,LO=CEST,OP=LR."
+], "PLATOMF"))
 .then(() => dtc.say("Get SYS user archive ..."))
-.then(() => dtc.wget("https://www.dropbox.com/s/fgvrpoginhk2msb/cybis-sys.tap?dl=1", "opt/tapes"))
+.then(() => dtc.wget("https://www.dropbox.com/s/fgvrpoginhk2msb/cybis-sys.tap?dl=1", "opt/tapes", (byteCount, contentLength) => {
+  maxProgressLen = utilities.reportProgress(byteCount, contentLength, maxProgressLen);
+}))
+.then(() => utilities.clearProgress(maxProgressLen))
 .then(() => dtc.say("Load archive into catalog of user SYS ..."))
 .then(() => dtc.dsd([
   "[UNLOAD,51.",
@@ -62,14 +65,9 @@ dtc.connect()
 ]))
 .then(() => dtc.mount(13, 0, 1, "opt/tapes/cybis-sys.tap"))
 .then(() => dtc.dis([
-  "ELS.ASSIGN,51,TAPE,D=GE,LB=KU.",
-  "PFLOAD,UI=31,LO=CEST,OP=LR.",
-  "*** SYS COMPLETE",
-  "EXIT.",
-  "*** SYS FAILED",
-  "[!"
-]))
-.then(() => dtc.waitJob("SYS"))
+  "ASSIGN,51,TAPE,D=GE,LB=KU.",
+  "PFLOAD,UI=31,LO=CEST,OP=LR."
+], "SYS"))
 .then(() => {
   process.exit(0);
 })

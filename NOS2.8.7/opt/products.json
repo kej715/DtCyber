@@ -88,6 +88,7 @@
         "pre": "nos.pre",
         "post": [
           "nos.post",
+          "cdcs2-users.job",
           "cdcs2.post"
         ],
         "lib": 14,
@@ -132,7 +133,10 @@
       },
       {
         "name": "ncctcp",
-        "post": "ncctcp.post",
+        "post": [
+          "ncctcp-users.job",
+          "ncctcp.post"
+        ],
         "lib": 72,
         "records": "ULIB/CCTCPIO-ABS/SMTPS",
         "url": "https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1",
@@ -144,6 +148,7 @@
         "pre": "nos.pre",
         "post": [
           "nos.post",
+          "rbf5-users.job",
           "rbf5.post"
         ],
         "lib": 48,
@@ -159,7 +164,10 @@
     "products": [
       {
         "name": "gplot",
-        "post": "gplot.post",
+        "post": [
+          "gplot-proc.job",
+          "gplot.post"
+        ],
         "lib": 73,
         "records": "PROC/GPLOT",
         "url": "https://www.dropbox.com/s/l342xe61dqq8aw5/gplot.tap?dl=1",
@@ -202,7 +210,10 @@
       },
       {
         "name": "pascal4-pf",
-        "post": "pascal4-pf.post",
+        "post": [
+          "pascal4-pf-proc.job",
+          "pascal4-pf.post"
+        ],
         "url": "https://www.dropbox.com/s/wsgz02lnrtayfiq/PASCAL6000V410.tap?dl=1",
         "desc": "PASCAL-6000 V4.1.0 - retains PASCAL/170, installs PASCAL4 on UN=LIBRARY only"
       },
@@ -215,7 +226,10 @@
       },
       {
         "name": "ses",
-        "pre": "ses.pre",
+        "pre": [
+          "ses-users.job",
+          "ses.pre"
+        ],
         "lib": 67,
         "records": "ABS/SES-ABS/EDT",
         "url": "https://www.dropbox.com/s/ome99ezh4jhz108/SES.tap?dl=1",
@@ -251,7 +265,10 @@
       },
       {
         "name": "i8080",
-        "post": "i8080.post",
+        "post": [
+          "i8080-proc.job",
+          "i8080.post"
+        ],
         "lib": 73,
         "records": "PROC/CPM80-PROC/PLM80",
         "url": "https://www.dropbox.com/s/ovgysfxbgpl18am/i8080.tap?dl=1",

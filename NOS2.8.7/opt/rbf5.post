@@ -12,11 +12,10 @@ dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => dtc.dis([
-  "MODVAL,OP=Z./RJE1,PW=RJE1,RL=ALL",
-  "MODVAL,OP=Z./RJE1,AP=NUL,AP=RBF",
-  "MODVAL,OP=Z./RJE2,PW=RJE1,RL=ALL",
-  "MODVAL,OP=Z./RJE2,AP=NUL,AP=RBF"
-]))
+  "GET,RBFUSRS.",
+  "PURGE,RBFUSRS.",
+  "MODVAL,FA,I=RBFUSRS,OP=U."
+], "RBFMODV", 1))
 .then(() => dtc.runJob(12, 4, "opt/rbf5-namstrt.job"))
 .then(() => dtc.runJob(12, 4, "opt/enable-subsys.job", "RBF"))
 .then(() => {

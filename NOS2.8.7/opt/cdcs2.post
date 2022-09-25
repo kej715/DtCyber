@@ -11,14 +11,12 @@ dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => dtc.dis([
-  "GET,CDC.",
+  "GET,CDC,CDCUSRS.",
+  "PURGE,CDC,CDCUSRS.",
   "SUI,377777.",
   "REPLACE,CDC.",
-  "MODVAL,OP=Z./DBCNTLX,PW=DBCNTLX,RL=ALL,AW=ALL",
-  "MODVAL,OP=Z./DBCNTLX,AP=NUL,AP=IAF,IS=BATCH",
-  "MODVAL,OP=Z./CDCS,PW=CDCS,RL=ALL,AW=ALL",
-  "MODVAL,OP=Z./CDCS,AP=NUL,AP=IAF,IS=BATCH"
-], 1))
+  "MODVAL,FA,I=CDCUSRS,OP=U."
+], "CDCMODV", 1))
 .then(() => dtc.runJob(12, 4, "opt/enable-subsys.job", "CDC"))
 .then(() => {
   process.exit(0);

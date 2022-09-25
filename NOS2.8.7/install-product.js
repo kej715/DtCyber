@@ -56,13 +56,30 @@ const installProduct = productEntry => {
 
   let filename = null;
   let filetype = null;
+  let progressMaxLen = 0;
   
   if (typeof prodDefn.url !== "undefined") {
     filename = prodDefn.url.split("/").pop().split("?")[0];
     filetype = filename.split(".").pop();
     promise = promise
     .then(() => dtc.say("Download tape image ..."))
-    .then(() => dtc.wget(prodDefn.url, "opt/tapes", filename));
+    .then(() => dtc.wget(prodDefn.url, "opt/tapes", filename, (byteCount, contentLength) => {
+      let progress = `\r${new Date().toLocaleTimeString()}   Received ${byteCount}`;
+      if (contentLength === -1) {
+        progress += " bytes";
+      }
+      else {
+        progress += ` of ${contentLength} bytes (${Math.round((byteCount / contentLength) * 100)}%)`;
+      }
+      if (progress.length > progressMaxLen) progressMaxLen = progress.length;
+      process.stdout.write(progress)
+    }))
+    .then(() => new Promise((resolve, reject) => {
+      let progress = `\r`;
+      while (progress.length++ < progressMaxLen) progress += " ";
+      process.stdout.write(`${progress}\r`);
+      resolve();
+    }));
     if (filetype === "tap") {
       promise = promise
       .then(() => dtc.say("Mount tape ..."))
@@ -317,6 +334,7 @@ const dtc = new DtCyber();
 
 let promise = dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.console("idle off"))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"));
 for (const productEntry of productSet) {
   promise = promise
@@ -327,6 +345,9 @@ for (const productEntry of productSet) {
     return Promise.resolve();
   });
 }
+promise = promise
+.then(() => dtc.console("idle on"));
+
 if (productSet.length > 1) {
   promise = promise
   .then(() => dtc.say("All requested products installed"));

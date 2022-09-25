@@ -56,6 +56,7 @@ if (isCompletedStep("init")) {
   promise = promise
   .then(() => dtc.start())
   .then(() => dtc.expect([ {re:/Operator> $/} ]))
+  .then(() => dtc.console("idle off"))
   .then(() => dtc.say("DtCyber started using default profile"))
   .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
   .then(() => dtc.expect([ {re:/QUEUE FILE UTILITY COMPLETE/} ], "printer"))
@@ -65,6 +66,7 @@ else {
   promise = promise
   .then(() => dtc.start(["manual"]))
   .then(() => dtc.expect([ {re:/Operator> $/} ]))
+  .then(() => dtc.console("idle off"))
   .then(() => dtc.say("DtCyber started using manual profile"))
   .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
   .then(() => dtc.say("Begin initial deadstart ..."))

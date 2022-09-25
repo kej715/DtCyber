@@ -392,7 +392,7 @@ static void initCyber(char *config)
         exit(1);
         }
 
-    if (initGetString("displayName", "CYBER Console", displayName, sizeof(displayName)))
+    if (initGetString("displayName", "DtCyber Console", displayName, sizeof(displayName)))
         {
         fprintf(stderr, "(init   ) Consoles will be labeled '%s',\n", displayName);
         }

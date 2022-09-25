@@ -3,19 +3,15 @@
 // Copy UTLISP documentation file to LIBRARY catalog
 //
 
-const DtCyber = require("../../automation/DtCyber");
+const DtCyber   = require("../../automation/DtCyber");
+const utilities = require("./utilities");
 
 const dtc = new DtCyber();
 
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
-.then(() => dtc.dis([
-  "ATTACH,LD=LISPDOC.",
-  "SUI,377776.",
-  "PURGE,LISPDOC/NA.",
-  "DEFINE,LISPDOC/CT=PU,AC=Y,M=R.",
-  "COPY,LD,LISPDOC."
-], 1))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => utilities.moveFile(dtc, "LISPDOC", 1, 377776))
 .then(() => {
   process.exit(0);
 })
