@@ -69,7 +69,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="odbc32.lib odbccp32.lib ws2_32.lib setupapi.lib"
+				AdditionalDependencies="winmm.lib;odbc32.lib odbccp32.lib ws2_32.lib setupapi.lib"
 				OutputFile=".\Release/DtCyber.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -160,7 +160,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="odbc32.lib odbccp32.lib ws2_32.lib setupapi.lib"
+				AdditionalDependencies="winmm.lib;odbc32.lib odbccp32.lib ws2_32.lib setupapi.lib"
 				OutputFile=".\Debug/DtCyber.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
