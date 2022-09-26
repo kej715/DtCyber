@@ -46,6 +46,7 @@
 #if defined(_WIN32)
 #include <Windows.h>
 #include <winsock.h>
+#include <timeapi.h>
 #else
 #include <signal.h>
 #include <unistd.h>
@@ -136,7 +137,7 @@ int main(int argc, char **argv)
     **  Pause for user upon exit so display doesn't disappear
     */
     atexit(opExit);
-
+    timeBeginPeriod(8);
     /*
     **  Select WINSOCK 1.1.
     */
@@ -671,7 +672,7 @@ static void INThandler(int sig)
 static void opExit()
     {
     char check;
-
+    timeEndPeriod(8);
     if (_isatty(_fileno(stdin)))
         {
         printf("Press ENTER to Exit");
