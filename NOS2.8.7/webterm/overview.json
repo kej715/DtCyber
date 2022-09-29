@@ -1,0 +1,10 @@
+{
+  "model": "CDC Cyber 865",
+  "cpus": 2,
+  "pps": 20,
+  "wordSize": "60 bits",
+  "addressWidth": "18 bits",
+  "addressSpace": "128K words",
+  "mips": 22,
+  "os": "NOS 2.8.7"
+}
