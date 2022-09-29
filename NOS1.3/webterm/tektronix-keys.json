@@ -1,0 +1,7 @@
+{
+  "labels": ["Tektronix Keys", "Keyboard Keys"],
+  "mappings": [
+    ["Page",  "F1"],
+    ["Reset", "Shift-F1"]
+  ]
+}

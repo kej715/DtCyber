@@ -1,0 +1,42 @@
+[
+  {"name":"BASIC",
+   "id":"basic",
+   "desc":"Create and run a BASIC program",
+   "defn":"/machines/nos1/scripts/basic.txt"
+  },
+  {"name":"COBOL",
+   "id":"cobol",
+   "desc":"Create and run a COBOL program",
+   "defn":"/machines/nos1/scripts/cobol.txt"
+  },
+  {"name":"COMPASS",
+   "id":"compass",
+   "desc":"Create and run a Cyber assembly language program",
+   "defn":"/machines/nos1/scripts/compass.txt"
+  },
+  {"name":"FORTRAN IV",
+   "id":"ftn4",
+   "desc":"Create and run a FORTRAN 66 program",
+   "defn":"/machines/nos1/scripts/ftn4.txt"
+  },
+  {"name":"LISP",
+   "id":"lisp",
+   "desc":"Create and run a UT LISP program",
+   "defn":"/machines/nos1/scripts/lisp.txt"
+  },
+  {"name":"Pascal",
+   "id":"pascal",
+   "desc":"Create and run a PASCAL program",
+   "defn":"/machines/nos1/scripts/pascal.txt"
+  },
+  {"name":"SYMPL",
+   "id":"sympl",
+   "desc":"Create and run a SYMPL program",
+   "defn":"/machines/nos1/scripts/sympl.txt"
+  },
+  {"name":"TIELINE",
+   "id":"tieline",
+   "desc":"Create and submit a batch job to another mainframe",
+   "defn":"/machines/nos1/scripts/tieline.txt"
+  }
+]
