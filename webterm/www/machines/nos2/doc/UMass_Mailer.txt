@@ -1,0 +1,2671 @@
+
+
+
+
+
+
+
+
+MAILER was developed at the University Computing Center, University of
+Massachusetts, Amherst, by Kevin Jordan, John Curran, Peter Krotkov, and
+Ken Shores. The manual was written by Pat Driscoll.
+
+The UCC wishes to thank Jim Day of  Florida State University for
+converting the original version of this manual for use on the Apple
+Macintosh* and Jim Lyons, also of FSU, for the cover picture.
+  
+Mailer Quick Reference Chart
+
+Here  is a brief description of each command with a reference to the pages 
+in  the  manual  where a more indepth description can be found.   Commands
+may  be  abbreviated  to  their  shortest unique form (the upper case
+letters  in  each  command).
+
+Command Description Page
+
+MAIL - Enter Mailer. 9
+Bye, Exit, Quit - Exit from Mailer to the operating system.    9
+COunt - Issue count of messages in the current notesfile. 11
+CReate - Create a public notesfile, group, or alias. 17
+Delete - Delete message(s) from the current notesfile. 13
+FInd - Find names and notesfiles by template. 25
+FOrward - Forward message(s) to another user. 15
+Help - List the general help topics. 3
+List - List information on the message(s) in a notesfile. 12
+Print - Send message(s) to a printer. 14
+REAd - Change the notesfile to be read. 10
+REMove - Remove a public notesfile, group, or alias. 19
+REName - Rename a notesfile, group or alias. 19
+REPly - Reply to the last message read or a list of messages. 15
+SAve - Store message(s) in a file. 13
+SENd - Send a message to another user, or users. 20
+SET - Set Alias, Abbreviation, Forwarding, or Verbosity. 26
+SHow - Show the current values for the SET options. 28
+SYstem - Execute a NOS system command from within Mailer. 34
+Transmit - Send a messaage (contained in a file)  24
+Update - Read all new messages in a list of notesfiles. 11
+[FILENAME] - Read commands from a file 32
+_________________________________________________________
+
+You can simply type a command,  press RETURN and be prompted for
+parameters if the command requires them.   Primarily,  parameters fall
+into two  categories,  range or name.
+
+NAME In  general,   name  is  either  a  notesfile,  list  of  notesfiles
+(separated  by commas),  file name (surrounded by brackets) or   registered
+group that  you wish to send mail to.   A username can be used as long  as
+the username is preceeded by a "=" sign.  (e.g., =aqzy000).  Name can also be
+any combination of the above separated by commas.
+
+RANGE If Mailer is looking for a range it expects either 
+
+  Number(s)  - a single number or range separated by a "-"
+     ex. 1 (message 1)
+     5-10 (messages 5-10)
+     10-5 (messages 10-5    reverse order)
+     3- (messages 3-last)
+     -10 (messages 1-10)
+  
+ or one of the following keywords:
+
+  New - any messages that have not yet been updated.
+  Old - any messages that have already been updated. 
+  All - all the messages in a notesfile.
+  Last  - the highest numbered message.
+
+REMEMBER You  can type a ? in response to any prompt in Mailer  and
+receive help with what Mailer is expecting for a response.
+
+INTRODUCTION
+
+Due to  the growing use of computers as a means of communication, the 
+University Computing Center has recognized the need for an  UCC supported
+and administered electronic mail system.  With the release of Version
+4.01, Mailer was chosen as the official mail system for the UCC computer
+system.
+
+Mailer is an easy to use interactive mail program.  In its barest form it
+allows you to exchange mail with any other user of the Mailer system.
+Once you register with Mailer a private notesfile is created for you from
+which you can enter, edit, and send a letter to another user.  You can also
+read and reply to mail that has been sent to you.  Help with Mailer can be
+obtained at any time simply by typing a ? (question mark) in response to
+any of the prompts from Mailer.
+
+Using Mailer's more advanced options you can forward mail, create groups
+so mail can be sent to more than one person at a time, create and maintain
+a public notesfile that users may send mail to, and send mail to users on
+other computers that are linked to the CYBER.  Through Mailer you can also
+register with the BITNET network to send mail to users at other sites
+around the country and the world.
+
+Users should be aware that as with any mail system they are responsible
+for the contents of the mail that they send.  Even though the use of aliases
+is allowed it is always possible for the Mailer Manager to trace the origin
+of any letter.  Your username will be printed along with your mailer name
+in the "from" section of any letter you send.   Mailer also logs messages in
+both the user and system dayfiles to aid in the authentication of message
+origins.  Messages are logged when mail is sent or when a user changes his
+ Mailer name.   Remember the use of Mailer, and the UCC computers for that
+matter, is not a right, but a privilege that can be revoked if misused.
+
+This manual is meant to be used as both a tutorial for the first time user
+and a reference for those old hands at using Mailer.
+
+As always, in the never ending effort to improve our services, we are open
+for suggestions.   If  you have any comments (we accept praise too) about
+the Mailer system, please feel free to send them (via Mailer) to "Mailer 
+Manager".
+
+Table of Contents
+
+I. General Information   2
+  Mailer Names  2
+           Notesfiles  2
+  Notification of Mail Delivery -- Silence Command  2
+  Help  3
+  Mailer Command Syntax  3
+
+II. A No Frills Session For The New User   5
+
+III. Using Mailer   9
+  Accessing and Leaving Mailer  9
+   Mail 9
+   Exit, Quit or Bye 9
+  Reading Mail  10
+   Read 10
+   Update 11
+   Count 11
+   List  12
+  What You Can Do With Mail After Reading It  13
+   Delete 13
+   Save 13
+   Print 14
+   Forward 15
+   Reply  15
+  Public Notesfiles, Groups and Aliases  17
+   Create 17
+   Rename 19
+   Remove 19
+  Creating, Editing and Sending a Letter  20
+   Send 20
+   Sending a Message with Options 21
+   Resending a Message 22
+   Editing 22
+  Sending  A Previously Created File As Mail  24
+   Transmit 24
+  Finding A Mailer Name, Alias, or Public Notesfile  25
+   Find 25
+  Setting Alias, Forwarding, Verbosity, or Abbreviation  26
+   Set 26
+   Show 28
+
+IV. Examples of  Files that Mailer Uses       29
+  Creating an ASCII File for a Group  29
+  Creating a Login Procedure  30
+  Creating a Mail Prolog  30
+  Creating a Command File  31
+  
+V. Advanced Features   33
+   Entering Mailer with Special Switches --MAILER/V,P,I,C  33
+   Managing a Notesfile -- MAIL,MANAGE  33
+   Initiating NOS System Commands From Within Mailer   34
+   Uploading Messages Created on a Micro  into Mailer  34
+   Customizing the  Mailer .Proc Command  34
+   Customizing the Mailer Print Command  35
+   Customizing the Mailer .Edit Command   36
+   Changing Permissions on a Notesfile  36
+   Sending Mail to Someone on a Different Computer
+   or at Another Site 38
+
+VI. Error Messages     45
+
+I.  General Things You Need to Know
+
+Mailer is an interactive program.  If a command is expecting some options
+and you have not given them, Mailer will prompt you for them.  If you have
+given a command and then decide you didn't really want to give that
+command, you can usually get back to the main prompt by simply pressing
+RETURN when Mailer prompts you for an option.  Discussed here are some
+important features and concepts that you should be aware of when using
+Mailer.  All of the examples of what you need to type are in italics.
+
+Mailer Names
+
+In Mailer you are identified by a name.  The first time you enter Mailer you
+are asked to choose this name.  After that, you will be known by that name
+every time you access Mailer.  All names in Mailer  can be up to eighty
+characters long, although we recommend that you keep them less than
+twenty if you want to send or receive mail over the network (to and from
+other computers).  A name should only contain letters, numbers, and
+blanks, but the following characters are valid: A-Z, a-z, 0-9, blank (" "),
+period ("."), minus ("-"), underscore ("_"), ampersand ("&"), dollar sign ("$"),
+and apostrophe (" ' ").  Your Mailer name can be changed at any time by
+using the "RENAME" command.  It is also possible to create aliases for
+yourself that others can use when sending you mail.  This is done using the
+"CREATE alias" command.  If you wish to use one of these aliases when
+sending mail use the "SET alias" command.
+
+We recommend that either your Mailer name or one of your aliases be some
+form of your real name (e.g.  "Bob Jones" or "B. Jones") so that others may
+more easily find your Mailer name when they want to send you mail.
+
+Notesfiles
+
+The files that Mailer uses to store messages are called notesfiles.  There
+are two types of notesfiles, private and public.
+
+Mailer creates a private notesfile for every user who accesses Mailer. 
+This private notesfile will have the same name as the user's Mailer name.  
+Each time a user signs on to Mailer he is put into his own private notesfile
+unless he has set up a prolog (see discussion of Mail Prolog in Section IV)
+that does otherwise.  This notesfile is stored on the user's account in a
+permanent file.  Unless the user has altered the permissions on this file
+(done with the NOS PERMIT and CHANGE commands -- see Section V of this
+manual) only he can read mail from this file.  The name of the file that
+this private notesfile is stored in is called MAILBOX.  Do not delete this
+file.
+
+Public notesfiles can be created by anyone wishing to create one.  These
+files also reside on the accounts of the people creating them, but anyone
+can send to and read mail from these notesfiles.  The names of these files
+will appear in your catalog under the name you specified in the CREATE
+command or as the first seven characters of the notesfile name if you did
+not specify a filename.  Do not delete these files from your catalog.
+
+Notification of Mail Delivery -- Silence Command
+
+If you receive mail while you are signed on to a terminal a message will
+immediately be printed at your terminal notifying you of this fact.  Some
+users -- especially graphics users -- might not want to take advantage of
+this feature.  If you do not want to be notified of incoming mail use the
+SILENCE command when signing on.  Type 
+
+ silence,on
+or
+ silence,on,quiet
+
+Use the second form if you wish to also suppress the confirmation
+message.  This can be especially useful  in setting up procedure files.   If
+you are going to use this command each time you sign on you might want to
+put it in a login procedure (see Section IV -- Creating a Login Procedure).
+
+Help
+
+There are two different means of obtaining help with Mailer.  Help with
+Mailer commands is available anywhere in Mailer simply by typing a ? and
+pressing RETURN in  response  to any Mailer prompt.  Mailer will give you a
+short description of what you may type at this point and then prompt you
+again.
+
+There is also a HELP command in Mailer that will offer information on
+general topics.  To use this command simply type HELP   and  the name of
+the topic   then press RETURN.  A list of the topics  can be obtained by
+typing
+
+ help  index
+
+and  pressing RETURN.,
+
+Mailer Command Syntax
+
+Users may, if they wish, abbreviate Mailer commands to the shortest
+unique sequence.  For example, DELETE can be abbreviated to D and COUNT
+can be abbreviated to CO.
+
+Mailer commands consist of two parts, commands and parameters.  There
+are different ways of initiating a command.  Since Mailer is interactive, 
+the most common way is to type a command by itself and press RETURN.  If
+Mailer is expecting anything else it will prompt you for the information. 
+If you already know the parameter you may type it on the same line as the
+command.  If there are certain commands that you always do in sequence
+you may want to put those commands in a command file.  You can then
+initiate the command file simply by typing the name of the file surrounded
+by brackets and pressing RETURN.  For information on creating a command
+file see Section IV of  this manual.
+
+Primarily, the parameters in Mailer fall into two categories, range or
+name.
+
+ NAME
+
+In general, name can be a single notesfile name.  For example:
+
+ Mailer News
+
+is the name of public notesfile that contains general news items about
+Mailer.  Name can also be a list of notesfile names (separated by commas), 
+
+ S. Morse,B. Franklin
+
+or the name of a local or permanent filename (surrounded by brackets).
+This file is a previously created ASCII file that contains anything that is
+legal for a name (notesfile  names,  groups, filenames, user names)
+separated by commas.  For example suppose the above Mailer names were
+entered into an ASCII file called "Friends".  You could then specify the
+following for name
+
+ [Friends]
+
+Name can also be the name of a registered  group.  The   registered group
+name  references a file containing Mailer names, that has been registered
+as a group with the "CREATE GROUP" command.  If the name has been
+registered as a group then you do not have to put brackets around the name. 
+
+A username can be used as a name as long as the username is preceeded by
+a "=" sign.  For example:
+
+ =aqzy000
+
+Also, name can be any combination of these separated by commas.  For
+example
+
+ Mailer News,[Friends],=aqzy000
+  
+ RANGE
+
+If Mailer is looking for a range it expects either
+
+ Number(s) - a single number or range separated by a "-".  For example: 
+  
+   1 (message 1)
+   5-10 (messages 5-10)
+   10-5       (messages 10-5,  reverse order) 
+   3- (messages 3-last)
+   -10 (messages 1-10)
+
+or one of the following keywords:
+
+ New - any messages that have not yet been updated.
+ Old - any messages that have already been updated.  
+ All - all the messages in a notesfile. 
+ Last - the highest numbered message.
+
+If a command is expecting any other sort of parameter, it will be explained
+under the command name in Section III of this manual.
+
+REMEMBER - If you need help with a command or parameter you can type a ?
+in response to any Mailer prompt and receive information on what Mailer
+expects at that point.
+
+It is also possible to string Mailer commands together using semicolons
+between the commands.  For example:
+
+  delete 4;read mailer news
+
+will delete message number 4 from your private notesfile and then
+establish the public notesfile "Mailer News" as the notesfile you will be
+reading.  You should be aware though that if you string commands together
+and Mailer encounters an error in one of the commands, the remainder of
+the commands on that line will be ignored.  In some cases this can be very
+useful.  For example suppose you typed
+
+  read mailer news;list
+
+and the read failed.  If Mailer did not ignore the rest of the line, you would
+get a listing of the wrong notesfile.
+
+II.  A No Frills Session for the New User
+
+This brief session with Mailer is merely intended to get your feet wet. 
+You will register with Mailer and be shown the simplest way to send and
+read a message, get rid of it if you don't want to keep it around and then
+leave Mailer.  All of the examples are in italics; remember to press the
+RETURN key after every command that you type in. 
+
+Entering Mailer
+
+If this is your first time on the CYBER you may want to obtain  Handout 43:
+Logging On and Off the System, that is available in the UCC Consulting
+Office (A119, LGRES).  Once you have successfully logged on to the CYBER
+with your username, password and charge (if necessary) you can enter
+Mailer by typing 
+
+ mail
+
+and pressing RETURN.
+
+Mailer responds with the message
+
+  Welcome to Mailer (version 4.03)
+
+ Please enter the name you'd like to be known as:
+
+ Name>
+
+You are being prompted for the name you wish to be known as on Mailer.  If
+you type a ? at this point and press RETURN, you will receive information
+on what a name can be and then be prompted for the name again.  Though a
+name can be up to 80 characters in length, it is advisable to keep it less
+than 20 characters.  We hope you will share our philosophy that this is a
+professional mail system, and choose your real name or a variation of your
+name.  This will make it easier for others to find your Mailer name when
+they are trying to send you mail.  For example, suppose a person named
+Benjamin Franklin was choosing his Mailer name.  It could be one of the
+following:
+
+ Benjamin Franklin
+ Ben Franklin
+ B. Franklin 
+
+Of course the choice is up to you.  Any combination of letters (upper and
+lower), numbers, blanks ("J"), apostrophes(" ' "), periods ("."), minus signs
+("-"), underscores ("_"), or ampersands ("&") may be used.  The only
+restriction is that you may not have any leading or trailing blanks and that
+the name must also be unique.  If you choose a name that is already in use
+you will be given a message to that effect and prompted for another name.
+For this example suppose Franklin chose B.JFranklin as his Mailer name.
+He would have typed in the following in response to "Name>" and pressed
+RETURN. 
+
+ Name> B. Franklin
+
+Assuming that Mailer does not already have a B. Franklin registered, Mailer
+would respond with:
+
+ Your name has been registered as "B. Franklin"  
+  
+ Type ? for help at any prompt!
+ "B. Franklin">
+
+Franklin is now registered with Mailer and is in his own private notesfile
+called B. Franklin.  From now on any time Franklin enters Mailer he will
+initially be put into his own private notesfile.
+
+To summarize, in response to "Name>" you can type in the name you wish to
+be known by and press RETURN.  Remember if you choose a name that is
+already in use, you will be prompted to enter another name.  Once you have
+registered successfully you will receive a message similar to the one
+above except your notesfile name will be substituted.
+
+You are now in your own private notesfile.  If you type a ? here and press
+RETURN, Mailer will display a list of its commands with a brief
+description of each.  You probably don't have any mail to read yet but you
+can send mail to someone. 
+
+Sending a Message  
+
+To send a message to someone type "send" and press RETURN.  Suppose for
+this example Franklin wanted to send a message to S. Morse. 
+
+ "B. Franklin"> send
+
+Mailer would respond with:
+
+ Please enter the destination for the mail:
+ To> 
+
+Here you would enter the name you wish to send mail to.  This can be
+anything that is legal for a name in Mailer.  It could be a single name, list
+of names separated by commas, registered group name, filename
+(surrounded by brackets), a public notesfile name, or a username prefixed
+with an = sign.  It can also be any combination of these separated by
+commas.  For this example Franklin is sending to S. Morse. 
+
+ To> S. Morse
+
+Mailer would respond with:
+
+ Please enter the subject for this message:
+ Subject>
+
+It is not mandatory to enter a subject.  You could simply press RETURN
+here if you wish and not have a subject.  For this example the message will
+have a subject. 
+
+ Subject> Effects of Kite Flying
+
+Mailer would respond with:
+
+ Please enter the message below: (.done to finish)
+ ]
+
+At this point Franklin types in his message pressing RETURN after each
+line, or he can type a ? and press RETURN and Mailer will list the
+commands he can use while creating his message and prompt for the
+message again.  Also the message can be edited by typing .EDIT on a line by
+itself and pressing RETURN.  This puts you into the system editor allowing
+you to edit the message.  (see Section III  -- Editing a Message.) For this
+example suppose the following message was typed in with no mistakes. 
+
+ ] You are not going to believe the soothing 
+ ] effect I have found that kite flying has on the
+ ] nerves.  You must try it.
+ ] .done
+
+The ".done" on a line by itself signifies that the message is finished.  After
+Franklin has typed the .done and pressed RETURN, Mailer would respond
+with:
+
+ Your message has been sent to "S. Morse". 
+
+or
+  
+ Your message has been sent to "S. Morse" who has been informed. 
+
+The second message would appear if S. Morse had been signed on to a
+terminal at the time and had not turned on the SILENCE command (see page
+2).
+
+Reading a Message  
+
+There are many different ways to read mail.  For this first session only
+the easiest is shown.  Suppose user Franklin wanted to see if he had any
+new mail.  The UPDATE command automatically displays any new mail that
+has been received since the last time an update was done. 
+
+ "B. Franklin"> update
+
+ Update of notesfile "B. Franklin":
+
+------------------------------------------------------------------------------------------------------------------------------
+ Message number: 1 
+ Message-ID: <860211093918.000001BF.AGCC. MA@UMass>  (UMass-Mailer
+4.03)
+ Date:  Tue, 19 Aug 86 14:18:53 EDT
+ From: S. Morse (=ABBR793)
+ Subject: In Reference To Kites
+ To: B. Franklin
+
+  I am very interested in your findings.
+ Please send more information.
+
+
+--------------------------------------------------------------------------------------------------------------------------- 1
+
+He could also have read the message by typing the number of the messege
+he wanted to read, in this case a 1, in response to "B. Franklin>". 
+
+Deleting Mail
+
+Messages received will accumulate in a notesfile until they are deleted.
+The DELETE command can be used to remove messages from a notesfile. 
+You simply type DELETE and the number of the message you wish to delete. 
+For example, suppose Franklin wanted to get rid of the message above.  In
+response to
+
+ "B. Franklin">
+
+he could have typed: 
+
+ delete 1
+
+and pressed RETURN.  Mailer would respond with
+
+ Message 1 has been deleted.
+
+ Type ? for help at any prompt!
+ "B. Franklin">
+
+Leaving Mailer
+
+Once you have finished with Mailer you can get out of Mailer and back to
+the operating system by typing either quit, exit or bye.  They all do the
+same thing.  For this example Franklin will use quit.
+
+ "B. Franklin"> quit
+ /
+
+III.  Using Mailer 
+
+
+Accessing and Leaving Mailer
+
+
+Accessing Mailer
+
+Once you have successfully logged on to the UCC CYBER system and entered
+the batch subsystem, you can access Mailer by typing either of the
+following two commands:
+
+ mail
+
+or
+
+ mail,count
+
+If you just type "mail" and press RETURN Mailer will be called up.  You
+would do this the first time you use Mailer and you may use it any other
+time you use Mailer too.  Typing "mail,count" will tell you how many
+private messages you currently have but not put you into Mailer.  This can
+be placed into a procedure file so that you get a count of your mail
+automatically each time you log on to the CYBER (see Section IV --
+Creating a Login Procedure).
+
+There is an additional way to enter Mailer using the MAILER command that
+more advanced users may wish to use.  This command can be used to
+access Mailer, issue the commands you want, and leave Mailer all on one
+line.  See Section V -- Entering Mailer with Special Switches. 
+
+
+Leaving Mailer
+
+We have put the commands for leaving Mailer early in this section in case
+you want to exit Mailer without trying any of the commands at this point. 
+There are three commands that allow you to leave MAILER.  The choice of
+which to use is up to you.  All three exit MAILER and return you to the
+operating system so that you can continue doing something else on the
+computer, if you wish.  The three commands are: 
+  
+ exit quit bye 
+
+Simply choose one of these and type it in, in response to the Mailer prompt.
+
+Mailer will also allow you to add a parameter to these commands  if you
+wish.  Any text  after  the bye, exit, or quit command will be passed on to
+the system as a system command.  For example
+
+ bye  catlist
+
+will exit Mailer and execute a "Catlist" command.  Or,
+
+ bye  bye
+
+will exit Mailer and also log you off the system.
+
+
+Reading Mail
+
+
+When you enter Mailer your private notesfile is initially established as the
+notesfile you are reading.  You do not have to use the READ command to
+read your private mail.  You can use the UPDATE command or you can
+simply specify one of the values for range (number(s), all, new, old, last)
+to read mail in this notesfile.  You can also press the RETURN key to print
+the first unread message.  For example suppose B. Franklin wishes to read
+all the mail in his notesfile.
+
+ "B. Franklin"> all
+
+Specifying "all" in response to the prompt will display all of his mail.  If
+he wished to read only message number 3, specifying "3" in response to the
+prompt will print message number 3. 
+
+ "B. Franklin"> 3
+
+You can also use any of the commands listed below to change to a different
+notesfile, read new mail, or find out information about the notesfile you
+are in.
+
+
+READ
+READ name
+
+The READ command need only be used if you wish to change notesfiles.  You
+can only access another notesfile if it is a public notesfile or it has been
+permitted to you in READ, WRITE, or MODIFY mode (done with the NOS
+PERMIT or CHANGE commands -- see Section V).  Also, only one notesfile
+name can be specified for name.  For example suppose Franklin wants to
+read the public notesfile "Mailer News".  
+
+ "B. Franklin"> read Mailer News
+
+ Type ? for help at any prompt!
+ "Mailer News">
+
+Notice how the prompt has changed.  Franklin is now reading the public
+notesfile Mailer News.  This new notesfile then becomes the current
+notesfile until you switch notesfiles again or leave Mailer.  Franklin can
+now use either a range or any of the other commands listed here to read
+the messages in Mailer News.
+
+If you just specify READ without a name you will be prompted for the
+notesfile name you wish to switch to. 
+
+If you have switched notesfiles and wish to switch back to your private
+notesfile use the READ command with your Mailer name.  For example,
+continuing with the above example, suppose Franklin after reading Mailer
+News wishes to switch back to his private notesfile:
+
+ "Mailer News"> read B. Franklin
+
+ Type ? for help at any prompt!
+ "B. Franklin">
+UPDATE
+UPDATE name, name, name, ...
+
+The UPDATE command will print all the new mail you have received, in the
+notesfile you are currently in, since the last time you used the UPDATE
+command. 
+
+UPDATE and notesfile names separated by commas will read all the new
+mail in the notesfiles you specify, but keep you in the notesfile you were
+initially in when you did the UPDATE. 
+  
+UPDATE used with a filename (surrounded by brackets) will look in your
+list of local files and your permanent file catalog for the filename
+specified.  An update will then be done on the notesfile names specified in
+that file.
+
+In this example, Franklin is getting an update of his private notesfile.  He
+has only one new message and it is the fifth message in his file.
+
+ "B. Franklin"> update
+
+ Update of notesfile "B. Franklin": 
+
+--------------------------------------------------------------------------------------------------------------------------
+ Message number: 5
+ MessageID:<860211093918.00001BF.AGCC.MA@UMass>(UMass-Mailer4.03)
+ Date: Tue, 19 Aug 86 14:18:53 EDT
+ From: S. Morse (=ABBR793)
+ Subject: In Reference To Kites
+ To: B. Franklin
+
+ I am very interested in your findings.
+ Please send more information.
+
+
+----------------------------------------------------------------------------------------------------------------------- 5
+
+
+COUNT
+COUNT name, name, name, ...
+
+The COUNT command allows you to find out how many letters are in the
+notesfiles specified.  For example if Franklin wanted a count of his private
+notesfile.
+
+ "B. Franklin"> count 
+ "B. Franklin": 4 messages. 
+
+ Type ? for help at any prompt!
+ "B. Franklin">
+
+COUNT with a notesfile name will give you a count on the specified
+notesfile.  For example, if Franklin wants to obtain a count of the mail in
+the public "Mailer News" file. 
+
+ "B. Franklin"> count Mailer News 
+ "Mailer News": 72 messages. 
+
+ Type ? for help at any prompt!
+ "B. Franklin">
+LIST
+LIST range
+
+The LIST command, without a range, will give information including
+message number, date sent, from whom, and subjects of any messages that
+are in the current notesfile.  An asterisk (*) will appear next to the last
+message read (the message the REPLY command would use).  The word
+"new" will appear next to any unread messages.  For example, 
+
+ Type ? for help at any prompt!
+ "B. Franklin"> list 
+
+ Listing of the notesfile "B. Franklin":
+ -------------------------------------------
+  
+ 1   |  Mon,  1   Aug  86  |  John Doe    |  Here's that information 
+ 2   |  Wed,  3  Aug  86  |   Mom |     How have you been?  
+ * 3   |  Tue,  16  Aug  86  |   Coach  |  Exercise schedule
+ New 4   |  Mon,  22  Aug  86   |   Narrator  |  Theme for your new story
+
+LIST used with a range will list the same information but only for the
+messages specified by the range.  For example the command
+
+ list new
+
+will list information about all messages not yet read.
+What You Can Do With Mail After Reading It
+
+
+DELETE
+DELETE range
+
+The 'Delete' command will delete a message or messages from the current
+notesfile if the notesfile is either your private notesfile or a public
+notesfile that you have created or to which you have been granted write
+permission.  If you specify the delete command without a range then you
+will be prompted for the range you wish to delete.  
+
+When you delete a message, all the messages with numbers greater than
+that message are instantly renumbered.  Make sure to delete in descending
+order (from higher to lower) if you are going to delete more than one
+message at a time.
+
+Here is an example of a delete, deleting the 2nd and 3rd messages of 4
+messages.  Notice how in the second listing of the notesfile, the 4th
+message has become the 2nd.
+
+ Type ? for help at any prompt!
+ "B. Franklin"> list 
+
+ Listing of the notesfile "B. Franklin":
+ -------------------------------------------
+  
+ 1   |  Mon,  1   Aug  86  |  John Doe    |  Here's that information 
+ 2   |  Wed,  3  Aug  86  |   Mom |     How have you been?  
+  3   |  Tue,  16  Aug  86  |   Coach  |  Exercise schedule
+ * 4   |  Mon,  22  Aug  86   |   Narrator  |  Theme for your new story
+
+ Type ? for help at any prompt!
+ "B. Franklin"> delete 3;delete 2
+ Letter number 3 deleted. 
+ Letter number 2 deleted.
+  
+ Type ? for help at any prompt!
+ "B. Franklin"> list 
+
+ Listing of the notesfile "B. Franklin":
+ -------------------------------------------
+
+ 1   |  Mon,  1   Aug  86  |  John Doe    |  Here's that information 
+ * 2   |  Mon,  22  Aug  86   |   Narrator  |  Theme for your new story
+  
+
+ Type ? for help at any prompt!
+ "B. Franklin">
+
+The only time you don't have to delete in descending order is when you are
+deleting letters in a range.  For instance, in the above example, you could
+have typed "Delete 2-3".  If you type "Delete -", all of your letters will be
+deleted. 
+
+
+SAVE
+SAVE range filename
+
+The SAVE command saves, in a permanent file, the message or messages
+specified by a range.  If you do not specify the range you will be prompted
+for it.  You will also be prompted for the filename of the file you wish the
+message(s) stored in.  If this file already exists the message(s) will be
+appended to the file.  For example
+
+ Type ? for help at any prompt!
+ "B. Franklin"> save 1-3 Augmail
+ Messages 1-3 have been saved in file "AUGMAIL".
+
+ Type ? for help at any prompt!
+ "B. Franklin">
+
+ In the above example Franklin saves messages 1, 2 and 3 from his private
+notesfile in a file called AUGMAIL.  A message is displayed showing that
+the save was successful.  An error message would have been issued if the
+save was unsuccessful.
+
+
+PRINT 
+PRINT range printer 
+
+The PRINT command is used to send a copy of the specified messages to a
+printer.  This command uses the NOS PRINT command.  Any printer that can
+be used with the NOS PRINT command is valid.  It is possible for a user to
+customize this command (see Section V of this manual).
+
+If you do not specify the range of messages you want printed you will be
+prompted for them.
+
+You will not be prompted for a printer.  If you do not specify a printer the
+messages will be printed on the  ASCII  printer.  Valid options for printer
+include:
+
+ ASCII Computer room, Lederle GRES
+ GRC1 A118, Lederle GRES
+ GTWR2 Lederle GDTWR 220
+ LIBRARY Tower Library, 7th floor
+ ELAB ELAB
+ CHEME Chemical Engineering
+ MATH Lederle GDTWR 1535
+  
+You may also specify optional printing parameters.  Most parameters
+supported by the NOS  PRINT command are allowed.
+
+In this example, Franklin is sending all the messages in his notesfile to be
+printed on the printer in  room A118, called GRC1.
+  
+ Type ? for help at any prompt!
+ "B. Franklin"> print all  grc1
+ File: Zzzmprt, Printer:Grc1, Jsn:ADSM, Hash:GL2Q
+ A copy of your ascii file has been queued for printing on
+ long, wide paper.
+ It will be shifted.
+
+ Type ? for help at any prompt!
+ "B. Franklin">
+
+The listing of the messages would be picked up in room A118 Lederle GRES
+by the identifying hash code (in this case GL2Q).
+In the following example, Franklin is sending multiple copies of all his
+messages to the  ASCII line printer, specifying that the listing will be
+thicker  than an inch and specifying a  job name.
+
+ Type ? for help at any prompt!
+ "B. Franklin"> print all  ascii  copies=3,thick,ujn=mail
+
+
+FORWARD 
+FORWARD range name,name,name...
+FORWARD range name,name,(name):option
+
+You may wish to forward a copy of a message you received to another
+Mailer user or group.  The FORWARD command can do this.  If you simply
+type FORWARD and press RETURN you will be prompted for the range of
+messages you wish to forward, the name or names you wish the mail
+forwarded to and a  subject.  You can specify anything for name that is
+valid for the name  parameter.  You can leave the subject blank if you wish.
+
+In this example Franklin is forwarding a copy of message 1 from his
+private notesfile to Mailer user "S. Morse". 
+
+ Type ? for help at any prompt!
+ "B. Franklin"> forward 1 S. Morse
+ Please  enter the subject for this message: 
+ Subject> For your information
+
+ Your message has been sent to "S. Morse".
+
+ Type ? for help at any prompt!
+ "B. Franklin">
+
+When you are forwarding the same message to more than one person Mailer
+allows different options to be set for  each name or group if desired.  For a
+list of these options and how to use them see  the section in this manual
+on the SEND command.
+
+
+REPLY 
+REPLY range
+
+The REPLY command allows you to reply to a message or messages you
+have received.  It is similar to the SEND command only there is no need to
+give a destination for the message.  Mailer will fill that in for you.  If you
+do not give a range with the command, Mailer will assume you wish to
+reply to the last message that you read.  You will not be prompted for a
+range.  If you wish to reply to something other than the last message read
+or more than one message, you must give a range with the command.  A
+reply to a range will prompt separately for each message.
+
+When you  are replying to a message that message is loaded into a local
+file called ZZREPLY.  This can be helpful if you wish  to  edit the original
+message or read the original message into the reply for commenting
+purposes.  If you are using FSE you  can view both the message and your
+reply at the same time by splitting the screen.
+
+Replying can become confusing if you are replying to a message that has
+been forwarded to you, or if you are replying to a reply.  If you are replying
+to a forwarded message, the reply will be addressed to the person who
+originally sent the message not the person that forwarded the message.  In
+the case of replying to a reply, check the header of the message.  If there
+is a "Resent-reply-to:" field your reply will be sent to the address in this
+field.  If this field is not present, the "Reply- to:" field will be checked and
+if present used as the address.  If neither of these is present the address
+in the "From": field will be used.
+
+If you need directions on editing the reply, see "Editing a Message", in this
+manual.
+
+In this example Franklin is sending a reply to message 2 from Narrator.
+
+ Type ? for help at any prompt!
+ "B. Franklin"> reply 2
+
+ Replying to message number 2 whose subject is "Theme for your new
+story".
+ Reply is addressed to "Narrator (=ABBR408)".
+
+ Please enter the subject for this reply.
+ Subject> Deadline for Theme
+
+ Please enter the message below: (.done to finish)
+ ] Dear Narrator:
+ ]
+ ] I will be unable to meet the deadline for my
+ ] new theme.  Is an extension possible?
+ ]
+ ]     Thanks, Franklin
+ ] .done
+
+ Your message has been sent to "Narrator".
+
+ Type ? for help at any prompt!
+ "B. Franklin">
+
+Note that blank lines may be included in your message text.  Blank lines do
+not terminate message input.
+Public Notesfiles, Groups and Aliases
+
+
+CREATE
+
+The CREATE command allows you to create a public notesfile that other
+users can read and send mail to, or aliases for your Mailer name that users
+can use when sending you mail.  It also allows you to register a file
+containing Mailer names as a valid group that users can send mail to.
+
+If you enter the CREATE command by itself you will be prompted for the
+type of object you wish to create.  The valid objects are:
+
+ PUBLIC --  A public notesfile.
+ ALIAS --  An alternative name for your private notesfile.
+ GROUP --  A registered list of names.
+
+CREATE PUBLIC
+CREATE PUBLIC name:filename
+
+This command allows you to create a public notesfile which other Mailer
+users can read and send mail to.  You can create as many public notesfiles
+as you wish.  Remember that these files will reside on your account and
+that you will be identified as the owner of the notesfile in the Mailer
+database.  The name of the public notesfile must conform to the rules for a
+Mailer name.  If there is already a notesfile by the name you are trying to
+use, you will be informed.  If you do not specify a filename (1-7
+alphanumeric characters) for the messages to be stored in, the first seven
+characters of the notesfile name will be used.  In this example Franklin is
+creating a public notesfile called "Weather Information" and specified the
+filename for the notesfile to be "winfo".
+
+ Type ? for help at any prompt!
+ "B. Franklin"> create public
+
+ Please enter the name of the public notesfile to be created:  
+ Name> Weather Information:winfo
+
+ The public notesfile "Weather Information" has been created.
+
+ Type ? for help at any prompt!
+ "B. Franklin">
+
+Once you have created a public notesfile you are considered the owner of
+the notesfile and are allowed to use the name of the public notesfile as an
+alias.
+
+CREATE ALIAS
+
+You may wish to create aliases for your Mailer name that users can use
+when sending you mail.  You can have as many aliases as you wish.
+Remember that aliases do not make you anonymous.  In the Mailer database
+the owner  of each alias is identified.  In this example Franklin creates the
+alias "Weatherman" for himself.
+
+ Type ? for help at any prompt!
+ "B. Franklin"> create alias
+
+ Please enter the name of the alias to be created:
+ Name> Weatherman
+
+           The alias "Weatherman"  has been created.
+
+
+CREATE GROUP
+CREATE GROUP name:filename:recordname
+
+The CREATE GROUP command can be used to register a file containing a list
+of Mailer names as a group.  Anyone that this file is then permitted to
+(using the NOS PERMIT command -- see Section V), can send to the group as
+a whole, instead of having to send the letter to each member of the group
+individually.
+
+You should be aware that the CREATE GROUP command does not actually
+create the file containing the Mailer names, it just registers the name of
+the group in the Mailer database.  You must create the actual ASCII file
+containing the Mailer names that you want in the group. 
+
+When specifying the group name it must follow the conventions for a
+Mailer name.  You should also specify the filename of the ASCII file
+containing the Mailer names in the group and because there can be more
+than one group of names in the file, a record name within that file to
+identify the group.  If you do not specify the ASCII filename, Mailer will
+assume that the filename is the same as the first seven characters of the
+group name.  If you do not specify a record name within the file, for the
+group, Mailer will assume that the record name is the same as the first
+seven characters of the group name.
+
+In this example Franklin is registering a group called "Flying Friends"
+whose names are stored in a file called "mgroups" under the record name
+"flying".
+
+ Type ? for help at any prompt!
+ "B. Franklin"> create group
+  
+ Please enter the name of the group to be created:
+ Name> Flying Friends:mgroups:flying
+
+ The group "Flying Friends" has been created.
+
+ Type ? for help at any prompt!
+ "B. Franklin">
+
+Now anytime Franklin sends mail to "Flying Friends", Mailer will go look
+for the file "mgroups" in his permanent file catalog and send to the Mailer
+names listed in that file under the record name "flying".
+
+Remember to create the ASCII file containing the Mailer names in the
+group.  An ASCII file is an upper/lower case file.  It can be created using
+XEDIT or FSE.
+
+When creating the ASCII file the first line must be upper case and must be
+the record name of the group.  If there is more than one group in the file
+there must be an EOR (End-of-Record) separating each group from the next. 
+See Section IV of this manual for examples of the structure of the ASCII
+file.
+
+Once you have created the ASCII file it is stored as a private file on your
+account.  You must permit this file to whomever you want to be able to use
+it.  This is done with the NOS PERMIT command (see Section V of this
+manual).
+
+
+RENAME
+RENAME name,newname
+
+You can use the RENAME command to rename anything that you have
+created.  This can be a notesfile (private or public), alias or group that you
+have registered.  If you specify the RENAME command by itself you will be
+prompted for both the name of the object you wish to rename and its new
+name.  If you specify the name and new name along with the command you
+must separate the two with a comma.  In this example Franklin is
+renaming the public notesfile he created called "Weather Information" to
+"The Weather".
+
+ Type ? for help at any prompt!
+ "B. Franklin"> rename Weather Information,The Weather 
+
+ "Weather Information" has been renamed "The Weather".
+
+
+REMOVE
+REMOVE name
+
+If you wish to remove a public notesfile, alias, or group that you created
+use the REMOVE command followed by the name of the notesfile, alias or
+group you wish to remove.  Only one name can be specified at a time. 
+Please note this will remove the notesfile name, alias, or group name from
+the Mailer database but you will have to delete the file for the notesfile or
+group from your account yourself.  If you do not specify the name you wish
+removed you will be prompted for it.
+
+In this example Franklin is removing the alias "Weatherman" that he
+created for himself from the database.
+
+ Type ? for help at any prompt!
+ "B. Franklin"> remove
+
+ Please enter the name you wish to remove.
+ Name> Weatherman
+
+ "Weatherman" has been removed.
+
+ Type ? for help at any prompt!
+ "B. Franklin">
+Creating, Editing, and Sending a Letter
+
+
+SEND
+SEND name,name,name,...
+SEND name,name,(name,name):options
+
+The SEND command is used to create and send a message to another Mailer
+user or users.  It is also the command used to create a message to send to
+a user on another computer or at another site (see Section V of this
+manual).  If you simply type "send" in response to the Mailer prompt and
+press RETURN you will be prompted for everything else.  In this example
+Franklin is sending a message to the "Mailer Manager".
+
+ Type ? for help at any prompt!
+ "B. Franklin"> send
+
+ Please enter the destination for the mail:
+ To> Mailer Manager
+
+ Please enter the subject for this message:
+ Subject> Comment on Mailer 4.03
+
+ Please enter the message below: (.done to finish)
+ ] I am very pleased with the new version of
+ ] Mailer.  Keep up the good work!!! 
+ ]
+ ]   Ben Franklin
+ ] .done
+
+ Your message has been sent to "Mailer Manager".
+
+ Type ? for help at any prompt!
+ "B. Franklin">
+
+Let's analyze the above example.  When sending a message, Mailer first
+prompts for the destination of the message.  This can be a group, Mailer
+name, public notesfile name, list of notefile names separated by commas, 
+filename (surrounded by brackets), or username preceeded by an equals (=)
+sign.  It can also be any combination of these separated by commas.
+
+Next Mailer prompts for a subject for the message.  A subject can be up to
+80 characters.  It is not mandatory to type in a subject.  This is up to you.  
+If you do not wish to enter a subject just press RETURN. 
+
+ Mailer then prompts for the body of the message and lets you know if the
+person you are sending to has set a limit on the length of message they are
+willing to receive (see Section V -- MAIL,MANAGE).  If you do not see a
+linelimit specified the message can be as long as you wish.  If you are
+sending to a group the minimum linelimit that will reach everyone in the
+group will be shown.  If your message exceeds the linelimit of the receiver
+you will be notified when Mailer tries to send your message.  Remember
+that the header of the message is counted in the linelimit. 
+
+When you have finished entering your message type .done or .d on a line by
+itself and press RETURN.  This tells Mailer that you are finished typing in
+your message and it is sent off.  If the message is sent successfully you
+will receive a message similar to the one above.  If the message is not
+received successfully you will also receive a message, usually containing
+the reason for the unsuccessful delivery.
+
+If for some reason the message is undeliverable (exceeds linelimit, can't
+find Mailer name, etc.), you should be aware that Mailer will temporarily
+store this message in a local file named MESSAGE which can be saved
+using the NOS system command "SAVE,MESSAGE".  To initiate NOS
+commands from Mailer see Section V of this manual.
+
+Sending Mail with Options
+
+It is possible when sending mail to a user or users to specify different
+options concerning  the mail.  These options are attached to the name of
+the recipient with a ":".  These are the options:
+
+nosubject   prevents Mailer from adding a subject field to the message.  If
+it is applied
+    to all names in a list it prevents Mailer from prompting for a subject.
+
+userfields   prompts the sender for additional header fields to be added to
+the     message after the subject field.
+
+nocc                       prevents the recipient from receiving the "cc" field, but
+adds a empty
+   "bcc" field to the header that indicates that there were unlisted recip-
+   ients of the message.
+
+bcc   supresses this recipient from appearing in the "cc" field, but adds the
+   name to the "bcc" field.
+
+For example, suppose Franklin wanted to send a message to S. Morse and
+did not want to be prompted for the usual subject field, but wanted to
+specify his own user field.  He would have typed
+
+  send S. Morse:nosubject:userfields
+
+He would then have been prompted for the userfields he wanted to add,
+before being prompted for the body of the message.
+
+When a message is sent to more than one person each recipient receives a
+"cc:" field in their message header containing the names of the other
+recipients of the message.  For a long mailing list or if you do not want the
+recipients to know who else has received the message you can add the
+option "nocc" when sending the message.  This will suppress the printing
+of the "cc:" field but will add a blank "bcc:" field to the message.  This
+indicates to the recipient that someone else has received this message but
+does not name the other recipients.  For example if Franklin wanted to
+send a message  to the group "Flying Friends"  but did not want the "cc:"
+field to be printed for each recipient he would have typed
+
+  send  flying friends:nocc
+
+at the prompt.
+
+Any recipient who had the "bcc" option appended to their name wil not
+appear in the cc: of the other  recipients but they will have a non blank
+"bcc" field if any of the other recipients also had the "bcc" option attached
+to their name.  For example
+
+  send  (S. Morse, B. Franklin):bcc, Flying Friends
+
+What this example is saying is that the same message is being sent to S.
+Morse, B. Franklin and  each member in the group called Flying Friends.
+Each of the members of Flying Friends will have a "cc:" field in their
+message header that contains the names of the other members of the
+group.  They will also have a blank "bcc:" field indicating that someone else
+received the message (S. Morse and B. Franklin) but not naming them.  S.
+Morse and B. Franklin will have a "cc:" field in their message header that
+contains the members of Flying Friends and will also have each others
+names in the "bcc:" field of their message.
+
+Notice in the above example the parenthesis around S. Morse and B.
+Franklin.  If you wish more than one name to receive the same option
+surround those names with parenthesis.
+  
+Resending A Message 
+
+It is possible to resend the previous message as long as the message is
+still in the local file "message".  Simply type
+
+ send name:previous
+
+in response to the Mailer prompt substituting the destination of the
+message for name.  "Previous" can be abbreviated to "p" if you wish.  You
+will be placed in message entry mode with the previous message as the
+body of the message.  You can then edit the message with the following
+commands. 
+
+Editing a Message  
+
+The simplest editing technique is used if you notice an error in the line
+you are currently typing.  Hold down the CTRL key and h to back up on that
+line and retype the rest of the line.  If you wish to do more complicated
+editing, Mailer provides you with some editing commands.  When one of
+these is used it must be typed on a line by itself and you should press
+RETURN after typing it.  The commands can be shortened to their most
+unique form.  The commands are:
+
+ .ABORT (.A)
+
+This command is used if you are in the midst of typing a message and then
+decide you do not want to send the message.  It aborts the sending of the
+message and returns you to the Mailer prompt.
+  
+ .NEW (.N)  
+
+If you have totally messed up your message and want to start again, this
+command will clear the current message and let you start the message
+again.
+
+ .EDIT (.E)
+
+This command will put you into the system editor so you can edit your
+message.   Normally you will be put into XEDIT but if your terminal is in
+screen mode you will be put into the Full Screen Editor.  See the
+appropriate manuals for an explanation of these editors (available  in the
+UCC Bookstore, A123, LGRES).   It is also possible to choose a different
+editor by customizing this command (see Section V).
+
+Any  text  (up  to forty characters) typed on the same line as the .EDIT
+command will be passed on to the appropriate editor as an editing
+command.
+
+ .READ (.R)
+
+This  command makes it possible to append a file to the note being
+written, without entering the  editor.   The filename will be prompted for
+if not given with the command.  A search for the file will be done in the
+following order:  local file, indirect access permanent file.
+
+        .PROC (.P)
+
+This command allows the user to upload mail created on a micro-computer.  
+See Section  V for an example of using this command.  This command can
+also be customized to perform other operations (see Section V).
+
+ .LIST (.L)
+
+This command will list out the current message.  If you have edited the
+message you may want to look at a fresh copy of the message before
+ending the message.
+
+          .INFO (.I)
+
+This command displays the list of names that the message is destined for,
+including all the options that will be processed for each name.  It will also
+show other  information about the message, such as user-defined header
+fields, subject, and linelimit.
+
+ .DONE (.D)
+
+This command tells Mailer you have finished your message and to send it.
+
+ In this example, Franklin is sending a message to S. Morse.  He types part
+of the letter, starts over, edits the message, lists it back out and then
+decides not to send it.  The example as it would be typed is on the left.  On
+the right, when needed, is an explanation of the command.
+
+ Type ? for help at any prompt!
+ "B. Franklin"> send
+ Please enter the destination for the mail:
+ To> S. Morse
+ Please enter the subject for this message:
+ Subject> Conflict of Interest
+ Please enter the message below: (.done to finish)
+ ] Dear Sam:
+ ] In reference to your new assignment.  Don't
+ ] .new   Decides to start over
+ ] Dear Sam:
+ ]
+ ] Congraduations !!  I  was  very happy  to hear that
+ ] your work is finally being  recognized.  Have you
+ ] given any thought as to  how this affects your
+ ] .edit   Wants to edit what 
+ XEDIT  3.1.00    he has typed so far
+  ??   c/very happy/pleased/
+   Congradulations!! I was pleased to hear that
+ ?? quit   Stops editing
+ MESSAGE is a local file
+ ] .list   Relists the message
+ Dear Sam:   to check changes
+  
+ Congraduations !!  I was  pleased to hear that
+ your work is finally being  recognized.  Have you
+ given any thought as to  how this affects your
+ ] .abort   Decides not to send
+ Message sending is  aborted.   the message 
+
+ Type ? for help at any prompt!
+ "B. Franklin">
+Sending A Previously Created File As Mail
+
+You  may wish to send a previously created file to someone.  Instead of
+reading the file into the message body you can simply use the TRANSMIT
+command.
+
+
+TRANSMIT
+   TRANSMIT filename name
+   TRANSMIT filename name,(name,name):options
+
+If you specify the TRANSMIT command by itself you will be prompted for
+the name of the file you wish to send and the name  or names you wish to
+send the file to.  You will also be prompted for a subject.   If you do not
+wish to give a subject just press  RETURN.
+
+In this example Franklin is sending a  previously created file called
+"history" to S. Morse
+
+   Type ? for help at any prompt!
+            "B. Franklin">  transmit 
+  Please enter the filename containing the mail:
+  File>  history
+  Please enter the destination for this file:
+  Name> S.  Morse
+  Please enter the  subject for this message:
+  Subject>  Here's the Update
+
+  Your message has be sent to "S. Morse",
+
+  Type ? for help at any prompt!
+  "B. Franklin"> 
+
+
+You can also transmit  a file to a name or names specifying options.  These
+options are identical to the options used with the SEND command.  For a
+list of options and their meanings see the section in this manual on the
+SEND  command.
+
+
+Finding A Mailer Name, Alias or Public Notesfile
+
+
+You may wish to send mail to someone and not know their Mailer name.  If
+you have some idea of what their name might be you can search the Mailer
+database using the FIND command.  This command can also be useful for
+finding out who an alias belongs to, if a linelimit has been set for a Mailer
+notesfile or what the names of public notesfiles are.  You should be aware
+that this command is searching the whole Mailer database which is very
+large.  This could cause Mailer to be slow in responding.
+
+FIND
+FIND name,name,name,...
+
+If you specify the FIND command by itself you will be prompted for the
+template you wish to search the database for.  A template is either the
+name  you wish to search for or a form of the name  with wildcards in
+place of the characters in the name that you might be unsure of.   You can
+also specify a list of names or templates as long as they are separated by
+commas.  There are two wildcards that can be used.
+
+ * -- An asterisk in a name stands for any single character.
+
+ + -- A plus stands for any string of characters.
+
+You may also narrow down the search by specifying the type of name to
+search for -- public, private, group,  alias, or mine. This is done by
+attaching a colon and the type to the end of the template you are searching
+for.
+
+If you specify a specific  Mailer name or user name,  instead of a template
+with wild cards, more information will be returned to you.  Among that
+information is the state of the "Mail refused flag", the "Forum" flag, and
+notification if the residence of the mailfile is not on the default device
+for mailfiles.
+
+In this example Franklin can only remember part of the Mailer name for his
+friend Morse and is using the FIND command with wildcards to find out
+what the full name is.
+
+ Type ? for help at any prompt!
+ "B. Franklin"> find +morse+
+  
+ Name Type
+ -----------------------------------------------
+ "S. Morse" [Private]
+ "Morse Codes"  [Publlic]
+  
+The results of the FIND command show there are two Mailer names that
+contain the string "Morse" and that one is a private notesfile and the other
+public.  Since Franklin knew that he was looking for a private notesfile he
+could have restricted the search as follows:
+
+ "B. Franklin"> find +morse+:Private
+
+The following, typed in response to the prompt, will return a list of all
+public notesfiles.
+
+ "B. Franklin"> find +:Public
+
+Please note that the notesfile whose Mailer name is "Directory" contains a
+list of all public notesfiles that are generally accessible.  Some public
+notefiles that would be listed with the above FIND command may have
+restrictions on them and may not be accessible to all users.
+Setting Alias, Forwarding, Verbosity, or Abbreviation
+
+
+There are certain options in Mailer that can be changed by the user.  Some
+of these are only changed for the current session, others last until you use
+the set command again.  The option that is set permanently is
+FORWARDING, which is used to have your mail automatically forwarded to
+someone else.  The options that are set only for the current session are:
+ALIAS, which allows you to use one of the aliases you have created with
+the CREATE ALIAS command when sending mail; VERBOSITY, which controls
+the kinds of prompts Mailer issues; and ABBREVIATION, which can be used
+to set up abbreviations for Mailer names or commands.  If you wish the
+temporary options to be set all the time you can put the set command with
+these options into a MAILPRO prolog file that is initiated each time you
+enter Mailer (see Section IV).  The Mailer SHOW command can be used to
+see what the options used by the SET command are currently set to.
+
+SET
+
+If you type the SET command by itself you will be prompted for the option
+that you want to set.  The options are: alias, verbosity, forwarding and
+abbreviation.  These options can be abbreviated to their shortest unique
+form.
+
+SET ALIAS
+
+Using this option allows you to send mail using one of the aliases you have
+created with the CREATE ALIAS command.  This alias will only be in effect
+for the current session.  If you do not type in the alias you wish to use
+with the command you will be prompted for it.  Here, Franklin wishes to
+send mail using the alias he created, called  "Weatherman".
+
+ Type ? for help at any prompt!
+ "B. Franklin"> set alias
+  
+ Please enter the alias you wish to now send mail under:
+ Alias> Weatherman
+
+ Now using mailer as "Weatherman".
+
+You may also use SET ALIAS to set your  current name to the name of one
+of the public notesfiles that you have created.
+
+Please note  --  SET ALIAS should not be used when sending network mail
+unless the alias has been registered with the CREATE  ALIAS command.
+
+SET FORWARDING
+
+The forwarding option can be used to have your private mail automatically
+forwarded to another user, more than one user (names separated by
+commas), a registered group or anything that is valid for the name option. 
+Once forwarding is set your mail will continue to be forwarded until you
+clear forwarding by specifying "" ( two adjacent quotes) for the
+forwarding address.  In the following example Franklin is going to have all
+his mail forwarded to S. Morse.
+  
+ Type ? for help at any prompt!
+ "Ben Franklin"> set forwarding
+
+ Please enter the forwarding address for this notesfile.
+ Forwarding Address> S. Morse
+
+ Forwarding address is set to "S. Morse".
+
+  
+Franklin can clear the forwarding address by specifying either his private
+notesfile name for the forwarding address or "" (adjacent double quotes). 
+In the following example Franklin is clearing his forwarding address.
+
+ Type ? for help at any prompt!
+ "Ben Franklin"> set forwarding ""
+
+ Forwarding address is cleared.
+
+ Type ? for help at any prompt!
+ "Ben Franklin">
+
+SET VERBOSITY
+
+Verbosity refers to the type of prompts you receive, error messages and
+acknowledgement messages.  If you do not change the verbosity it is set to
+full.  Setting the verbosity to other than full only lasts for the current
+session unless you have put the command into the MAILPRO prolog file. 
+The options for verbosity are:
+
+ silent - issues only error messages and brief prompts
+ brief  - error messages, brief prompts and acknowledgements
+ full - error messages, full prompts and acknowledgements
+
+In this example Franklin is setting his verbosity to "brief".
+
+ Type ? for help at any prompt!
+ "Ben Franklin"> set verbosity
+
+ Please enter the verbosity mode:
+ Verbosity> brief
+
+ "Ben Franklin">
+
+Notice that with verbosity set to brief you no longer receive the help
+message.
+
+There is an even more temporary way to change the verbosity  for a single
+command.  This is done by simply prefixing the command with either a "!"
+for full verbosity or a "$" for silent verbosity.  This can be especially
+useful in MAILPRO when defining abbreviations.
+
+SET ABBREVIATION
+
+This option can be used to set up abbreviations for such things as Mailer
+names, commands or sequences of commands.  These abbreviations are only
+in effect for the current session.  If you want to set up permanent
+abbreviations you should put this command into a MAILPRO prolog file.  In
+this example Franklin is setting up the abbreviation CAT for initiating the
+NOS command CATLIST from within Mailer.
+  
+  
+ Type ? for help at any prompt!
+ "Ben Franklin"> set abbreviation
+
+ Please enter the abbreviation to be set:
+ Abbreviation> cat
+
+ Please enter the definition for the abbreviation:
+ Definition> system catlist
+
+ The abbreviation "cat" is set to "system catlist".
+ Type ? for help at any prompt!
+ "Ben Franklin"> 
+
+Now when Franklin types "cat" in response to a Mailer prompt he will
+receive a listing of his CYBER files and be prompted again.
+
+SHOW
+SHOW ALIAS
+SHOW ABBREVIATION
+SHOW FORWARDING
+SHOW VERBOSITY
+
+If you type the SHOW command by itself you will be prompted for the
+option you want information on.  The options are the same as for the SET
+command -- alias, abbreviation, forwarding, and verbosity.  These can be
+abbreviated to their shortest unique form.  In this example Franklin is
+checking to see what he has set for abbreviations.
+
+ Type ? for help at any prompt!
+ "Ben Franklin"> show abbreviation
+
+ The abbreviation "CAT" is set to "SYSTEM CATLIST".
+
+ Type ? for help at any prompt!
+ "Ben Franklin">
+
+This shows that Franklin had previously set up an abbreviation for the
+command "system catlist" and called it "cat". 
+
+IV.  Examples of Files that Mailer Uses
+
+
+An ASCII file is a file that can contain both upper and lower case text.  It
+is important that you create some of the following files in ASCII mode.   A
+file  that must be created in NORMAL mode contains only upper case text.
+These examples also assume that you are using XEDIT to create the files. 
+You can use any system editor.
+
+Creating an ASCII file for a Group
+
+The first line in the file must contain the upper case record name of the
+group.  If the file is to contain more than one group this line would be the
+record name of the first group.  Subsequent lines contain all the Mailer
+names in that group separated by commas.  Each Mailer name can be on a
+separate line.  Just remember to put a comma after each one except the
+last.
+
+If there is more than one group in the file an EOR (End-of-Record) must
+separate one group from the next.   To  enter an EOR use the WEOR command
+in XEDIT after typing in the next record name.   To enter an EOR using FSE
+put in a line containing (EOR).
+
+In this example the file mgroups is created containing a group whose
+record name is flying.
+  
+ batch
+ /ascii
+ xedit,mgroups
+  empty file/creation mode assumed.
+ ??
+   INPUT
+ ? FLYING
+ ? S.  Morse,T. Smith,
+ ? R. Jones
+ ?
+  EDIT
+ ?? e,,rl
+ MGROUPS REPLACED.
+ MGROUPS IS A LOCAL FILE.
+
+This group can then be registered with a group name using the CREATE
+GROUP command where "mgroup" is specified as the filename and "flying"
+as the record name.
+
+Suppose you want to add another group to "mgroups" under the record name
+"staff".
+
+ batch
+ /ascii
+ /get,mgroups
+ /xedit,mgoups
+ ?? b
+ R. Jones
+ ??
+  INPUT
+ ? STAFF
+ ?
+  EDIT
+ ?? weor
+ ??
+  INPUT
+ ? P. Driscoll,K. Jordan,E. Campbell
+ ?
+  EDIT
+ ?? e,,rl
+ MGROUPS REPLACED.
+ MGROUPS IS A LOCAL FILE.
+The file "mgroups" now contains two groups, flying and staff.  The second
+group would also have to be registered with a name using the CREATE
+GROUP command.  It would use the same filename "mgroups" but the record
+name would be "staff".
+
+Creating a Login Procedure
+
+A login procedure is a procedure that is executed automatically each time
+you sign on to the CYBER.  It can be used to do such things as turn the
+SILENCE command on so that you do not receive notification of mail or to
+get a count of your mail automatically without having to get into Mailer.
+
+The following shows the creation of a login procedure that turns the
+silence command on but does not give a  confirmation message and then
+uses the MAILER command to access Mailer to display information about
+your new mail.  For an explanation of the MAILER command see Section V of
+this manual.  This file should be created using NORMAL (upper-case only)
+mode.
+
+ batch
+ /XEDIT,MYLOGIN
+ EMPTY FILE/CREATION MODE ASSUMED.
+ ??
+  INPUT
+ ? .PROC,LOGIN.
+ ? .IF, OT  .EQ.  IAO, TERMINAL.
+ ?  $SILENCE,ON,QUIET.
+ ?  $MAILER/P-,I-,V-. LIST NEW
+ ? .ENDIF,TERMINAL.
+ ? $REVERT,NOLIST.
+ ?
+  EDIT
+ ?? e,,rl
+ MYLOGIN REPLACED.
+ MYLOGIN IS A LOCAL FILE.
+ /uproc,mylogin
+
+The UPROC,MYLOGIN command tells the system to use the file "mylogin" as
+the login procedure. 
+
+Creating a Mail Prolog
+
+If there are certain commands you want Mailer to execute for you
+automatically each time you call it, create an ASCII text file with the
+commands in it and store it under the name MAILPRO.  Each time you start
+up Mailer, it looks for this file.  If it finds MAILPRO, Mailer performs the
+commands in the file.  For example, if you want Mailer to automatically do
+an UPDATE of new messages each time you call it, put the UPDATE
+command in a MAILPRO file.  Any Mailer command which you can type on
+your keyboard can be placed in MAILPRO.
+
+Here is an example of the creation of a MAILPRO file that automatically
+does an update of new messages each time you use Mailer.
+
+ batch
+ /ascii
+ /xedit,mailpro
+ empty file/creation mode assumed.
+ ??
+  INPUT
+ ? update
+ ?
+  EDIT
+ ?? e,,rl
+ MAILPRO REPLACED.
+ MAILPRO IS A LOCAL FILE.
+
+It is important to know that Mailer first looks for a local file named
+MAILPRO.  If there is no local file named MAILPRO, Mailer looks for a file
+by that name in your permanent file catalog.
+
+Also, when Mailer executes MAILPRO it only executes commands up to the
+first EOR.  This means that MAILPRO can contain groups.  If you do use
+MAILPRO to store your groups be careful that the first line of the file does
+not conflict with any of the record names.
+
+Here is an example creating a MAILPRO that executes a LIST NEW and
+contains a group whose record name is GRP1.
+
+ batch
+ /ascii
+ /xedit,mailpro
+  empty file/creation mode assumed.
+ ??
+  INPUT
+ ? .This is my Mailpro
+ ? list new
+ ?GRP1
+ ?
+  EDIT
+ ?? weor
+ ??
+  INPUT
+ ? S. Morse,B. Franklin
+ ?
+  EDIT
+ ?? e,,rl
+ MAILPRO REPLACED.
+ MAILPRO  IS  A LOCAL FILE.
+
+Creating a Command File
+
+A command file is similar to a Mail prolog.  It is an ASCII file that
+contains Mailer commands that you want executed.   The difference is that 
+a command file is not executed automatically when you enter Mailer 
+(unless of course you have put the name of your command file surrounded
+by brackets in your  Mail prolog).  It is executed anytime you type the name
+of the file surrounded by brackets at the Mailer prompt.  You can have as
+many command files as you want  and they do not have to have any special
+names.
+
+Here is an example of a command file that that B. Franklin uses to read any
+new mail in the  public file  called "Morse Codes" and then return to his
+own private mail file.  He has called the command file "rcodes".
+
+ batch
+ /ascii
+ xedit,rcodes
+ empty file/creation mode assumed.
+ ??
+ INPUT
+ ?. This file reads  new messages in the file  Morse Codes.
+ ? read Morse Codes
+ ? new
+ ? read  B. Franklin
+ ?
+ EDIT
+ ?? e,,rl
+ RCODES REPLACED.
+ RCODES I S  A  LOCAL FILE.
+
+This file can now be executed anytime from within Mailer simply  by
+typing
+
+ [rcodes]
+
+Notice the first line in the command file.  This is a comment line and is
+not executed.   You can put a comment line anywhere you want in your file.  
+A comment line must start with a period.
+
+V. Advanced Features
+
+
+Entering Mailer and Setting Special Switches -- MAILER/P,V,I,C
+
+There is a way to access Mailer, set certain switches, perform Mailer
+commands and leave Mailer all on one line. You must be in the BATCH
+subsystem to use this command. With each of the switches you specify a
+plus ("+") or a minus ("-") to show which way you want the switch to work.
+The switches are
+
+ P+  Executes your MAILPRO file.  (default)
+ P-  Does not execute your MAILPRO file.
+  
+ V+  Full verbosity for prompts.  (default)
+  V=     Brief verbosity for prompts.
+ V-  Silent verbosity for prompts.
+
+ I+  Enter Mailer interactively.  (default)
+ I-  Assumes you are going to enter Mailer commands only on this line. 
+
+  C       Puts a comment in the dayfile giving the full Mailer version number.
+
+If you do not specify a switch a plus ("+") is assumed for that switch.
+
+You may wish to issue additional Mailer commands on the same line in
+which you set special switches.  To do so, type a period (".") after the
+switches are set, then type any Mailer commands (separated by ";") that
+you wish performed.
+
+For example:
+
+ MAILER/P-,V-,I-.LIST NEW;QUIT
+
+will not execute your MAILPRO file, will set verbosity to silent, and will
+display information on any new mail you have received. Then Mailer will
+exit.
+
+This command can be put into a login procedure to be executed each time
+you sign on to the CYBER. 
+
+Managing a Notesfile -- MAIL,MANAGE
+
+Issuing the command MAIL,MANAGE activates an interactive notesfile
+managing facility. You must have given the proper screen command for your
+terminal to have this procedure work properly. For example, if you are
+working on a VT100 terminal you must give the
+
+ screen,vt100
+
+command before typing  
+
+ mail,manage
+
+This facility allows you to update parameters of your private notesfile
+including setting a linelimit for your notesfile and setting a forwarding
+address. You can also update parameters of a public notesfile or group that
+you have previously created. Help is available at all levels. This procedure
+uses the FSE function keys that correspond to your terminal type. See "NOS
+Full Screen Editor User's Guide" for information about function keys used
+on various terminals.  This manual is available at the UCC  Bookstore (Rm.
+A123,  LGRES).
+Initiating NOS System Commands From Within Mailer 
+
+If you are a beginning CYBER user and are only concerned with Mailer you
+do not need to worry about this command. NOS is the operating system that
+runs on the CYBER. For those users who need to, it is possible to initiate
+NOS commands without leaving Mailer by using the Mailer "system"
+command. Simply type
+
+ system noscom
+
+substituting the NOS command you want for "noscom", and press RETURN.
+This can be especially helpful if you want to change permissions on a
+notesfile, or get a listing of your CYBER files without leaving Mailer.
+Remember though that if you were not in ASCII before entering Mailer any
+of the NOS commands you issue will assume you are in NORMAL.
+
+For example, suppose Franklin wanted to see a list of his permanent files.
+
+ Type ? for help at any prompt!
+ "B. Franklin"> system catlist
+
+Or, in this example Franklin wants to permit S. Morse to send to the group
+"Flying Friends" that was stored in the file "mgroups". S. Morse's username
+on the CYBER is ABBR793. Franklin must permit the file "mgroups" to
+username ABBR793 in read mode.
+
+ Type ? for help at any prompt!
+ "B. Franklin"> system permit,mgroups,abbr793=r
+
+Uploading Messages Created on a Micro into  Mailer
+
+It is possible to  create messages you wish to send on your micro and then
+upload the file containing the message into Mailer.  This is done using
+.PROC.  The file containing the message must be a previously created file.
+
+After you have created the file on your micro get into Mailer on the CYBER.
+Follow the directions for sending a message with the SEND command.
+When you  are prompted for the body of the message type
+
+ .proc  name
+
+substitute the name of the transfer package you are using, either AUNT,
+KERMIT, or XMODEM  for  "name" and press RETURN. 
+
+The transfer package you have specified will be started up.  Exit back to
+your micro and transfer the file.  With AUNT and KERMIT you must specify
+NOTE as the remote file name.  The PC file is then copied to NOTE, which is
+then appended to MESSAGE.  Once the transfer is finished you will be back
+in the message collection mode of Mailer and can use any of the other
+editing commands to edit, list or exit message mode.
+
+Customizing the Mailer  .PROC  Command
+
+If you wish to customize the .PROC  command so that it performs special
+processing other   than its default purpose  (Uploading mail created on a
+micro into  Mailer  via AUNT, KERMIT, or XMODEM)  you must create a
+MAILPRC  procedure that Mailer can use when you issue the .PROC
+command.  It must be a local file or a file in your global library set.
+Remember that this procedure must be created and edited in NORMAL
+(upper-case only) mode.  
+
+Here is what the standard MAILPRC procedure looks like:
+
+ .PROC,MAILPRC*I,FN.OPTS.
+ .HELP
+  THIS PROCEDURE CALLS ONE OF THE HOST PROGRAMS
+  FOR  UPLOADING FILES FROM MICROS.
+ .ENDHELP
+ .IF,$OPTS$.EQ.$$.OR.$OPTS$.EQ.$HELP$,HELP.
+  $NOTE./ THE FOLLOWING PROGRAMS ARE ALLOWED:
+  $NOTE.//  AUNT, KERMIT, XMODEM./
+ .ENDIF(HELP)
+ .IF,$OPTS$.EQ.$AUNT$,AUNT.
+  $AUNT.
+  $GET,NOTE.
+  $PURGE,NOTE.
+  $SKIPEI,FN.
+  $COPY,NOTE,FN.
+ .ENDIF(AUNT)
+ .IF,$OPTS$.EQ.$KERMIT$,KERMIT.
+  $KERMIT.
+  $FCOPY,P=NOTE,PC=ASCII8,NC=ASCII,R.
+  $SKIPEI,FN.
+  $COPY,NEW,FN.
+  $RETURN,NEW.
+ .ENDIF(KERMIT)
+ .IF,$OPTS$.EQ.$XMODEM$,XMODEM.
+  $RETURN,NOTE.
+  $XMODEM,NOTE,R,A,CF=ZZZXMD.
+  $SKIPEI,FN.
+  $REWIND,NOTE.
+  $COPY,NOTE,FN.
+ .ENDIF(XMODEM)
+ $REVERT,EX.$MAILER.
+ $EXIT.
+ $REVERT,EX.$MAILER.
+ .DATA,ZZZXMD
+ EC=CHECKSM
+ FM=MSDOS
+ EP=Y
+ OC=Y
+ PG=N
+
+           FN -  the message file to append to (MESSAGE)
+                            OPTS  - the name of the package you wish to use
+
+Customizing the Mailer Print Command
+
+If you wish to customize the Mailer print command for your individual use
+you must create a MAILPRT procedure that Mailer can use when you issue
+the PRINT command. It must be a local file or a file in your global library
+set. Remember that this procedure must be created and edited in NORMAL
+(upper-case only) mode.  
+
+Here is what the standard MAILPRT procedure looks like:
+
+  .PROC,MAILPRT*I,FN,PR=(*F,*N=ASCII).OPTS.
+           $PRINT,FN,PR,SHIFT_OPTS.
+       $REVERT,EX.$MAILER
+        $EXIT.
+   $REVERT,EX.$MAILER
+  
+  FN - File created by Mailer
+  PR  - Printer name
+  OPTS - Option string supplied by user
+
+
+Customizing the Mailer .EDIT command
+
+It is possible to customize the Mailer .EDIT command to call a different
+editor other than XEDIT or FSE. To do this you must have a procedure called
+MAILEDT that is either a local file or in your global library set. Remember
+to create and edit   in NORMAL (upper-case only) mode.
+
+Here is an example of what the standard MAILEDT procedure looks like:
+
+  .PROC,MAILEDT*I,FN=(*F).OPTS.
+  $PACK,FN.
+   .IF,SL.EQ.1, THEN.
+  $FSE,FN,A,WF=ZZZMEDT.OPTS
+  $RETURN,ZZZMEDT.
+            .ELSE, THEN.
+  $XEDIT,FN,AS.OPTS
+            .ENDIF,THEN.
+ $REVERT,EX.$MAILER.
+ $EXIT.
+ $REVERT,EX.$MAILER
+  
+  FN - File to be edited (MESSAGE) 
+
+
+Changing the Permissions on a Notesfile
+
+When Mailer creates either a private or public notesfile certain
+permissions are automatically assigned to the file. Both files are PUBLIC
+files which means that all users can get to the files, but only according to
+the modes that are set for each.
+
+Your private notesfile is a PUBLIC file in APPEND mode. This means that
+anyone can send mail to you, but they cannot read or delete your mail. A
+public notesfile is a PUBLIC file in MODIFY mode; anyone can send to or
+read the notesfile but only the person creating it can delete from the file.
+
+There may be instances where you might wish to alter these permissions.
+If it is your private notesfile or a public notesfile that you created, you
+are allowed to do this. There are three categories that files can fall into.
+They are PUBLIC (PU), SEMI-PRIVATE (S), and PRIVATE (P).
+
+PU  Available to all users according to the mode set.
+
+S  Available to any user according to the mode set, unless the user has
+been denied permission with the NOS PERMIT command.
+
+P Only the owner of the file can access it unless permission has been
+granted on an individual basis using the NOS PERMIT command.
+
+These modes apply for each of the above categories:
+
+R  Other users can only read the file. 
+
+M  Other users can read and send to the file. 
+
+A  Other users can only send to the file.  
+
+W  Other users can send, read and delete.  
+
+NULL  Other users are not allowed to use the file.
+
+When a file is PUBLIC the same permissions apply to everyone.
+SEMI-PRIVATE gives you more control over the file. You can permit the file
+to different users in different modes and you can stop certain people from
+using the file. PRIVATE allows you the most control over the file because
+no one can use the file unless you have permitted the file to them.
+
+To actually change the permissions on the notesfile you use the NOS
+CHANGE and PERMIT commands. The form for the CHANGE command is:
+
+ change,filename/ct=x,m=y
+
+where you substitute the actual name of the file the notesfile is stored in
+for "filename", the category you want for "x", and the actual mode for "y".
+
+If you have made the file SEMI-PRIVATE and wish to permit it to a user in
+a different mode or stop someone from using it, you would then use the
+PERMIT command to permit it in that mode to the individual user. This
+would also be the case if you had made the file PRIVATE and wish to
+permit it to another user. The form for the PERMIT command is:
+
+ permit,filename,username=mode
+
+where you substitute the name of the file the notesfile is stored in for
+"filename", the CYBER username of the user you are permitting the file to
+for "username" and the mode that you want the user to use the file in for
+"mode".  For more information on the NOS CHANGE and PERMIT commands
+see NOS Volume 3 -- System Commands, Chapter 10.
+Sending Mail to Someone on a Different Computer or at Another Site
+
+
+What are Network Mail Services?
+
+A  single computer's mail system allows its users to exchange messages
+electronically. A network mail system allows the users  on independent
+computers connected to the same network to  exchange electronic mail.
+Going one step farther, if networks at different Universities have a
+common link, users on these networks can exchange information.
+
+The network here at the  University of Massachusetts  is called UMNet. 
+Currently, several mail systems are linked by UMNet. These are CYBER
+Mailer,  Eagle Mailer,  RCF mail,     and BITNET.
+
+Through UMNet users can access BITNET,   an electronic  mail network
+which interconnects  hundreds of universities and research institutions
+worldwide.  BITNET is connected to other, independent networks  such as
+ARPANET, CSNET, MAILNET,  JANET,  and UUCP.  Consequently, users with
+access to BITNET may exchange electronic mail with colleaagues all  over
+the world.
+
+How the Network Mail System Works
+
+The network mail system can be compared to a postal system. Each
+computer system acts as a branch post office. When you send mail to
+someone on a different computer, the file you send as mail is put into a
+queue on your computer, the branch post office. If your computer is
+directly connected to the mail recipient's computer then the mail is
+directly transferred to that computer. If not, it is first sent to a branch
+that is directly connected to both computers and from that branch on to
+the recipient's computer.    Because this process is  automatic, it iis not
+necessary for you to be aware of it.
+
+There is one thing you must know in  order to send mial to a user on a
+different computer:  the user's network address.  A network address
+consists of two basic parts: a recipient's name and a destination host
+identifier.  These parts are separated by an '@'.  For example, the basic
+formula for a network address is:
+
+                  Someone@Somewhere
+
+Sometimes  real network addresses can be just this simple.  Other times,
+they can be more complicated.  For example:
+
+     "DRA1::Jones%VAX3.SomeU"@CSNet-Relay.ARPA
+
+But even in this more complicated case, the basic formula  remains valid. 
+The '@' still separates the recipient's rather complicated name for his/her
+rather complicated destination host identifier.
+
+Generally, the construction of the destination host identifier follows a
+convention.  In its most complicated form, the destination host identifier
+appears as a string of names which are separated from each other by
+periods.  These are usually arranged (JANet identifiers are an exception)
+as an address which becomes progressively more specific as you read the
+string from right to left.  An example of a network address  which
+contains such a destination host  identifier might be:
+
+    Someuser@UMass.Amherst.MA.USA
+
+The network communication software "looks" at the destination host
+identifier.  It delivers your mail message to that address.  It is the
+responsibility of the recipient's computer system to make sense out of the
+part of the network address which occurs to the left of the '@'.
+Sending Network Mail from Mailer
+
+When MAILER asks you to whom you want to send mail, you may specify a
+full network address. A full network address consists of the name which
+identifies the mail recipient, followed by the character "@", followed by a
+destination host  identifier.  For example, to send mail to a EAGLE  user
+named Jones, you would enter the following Mailer command:
+
+ send jones@eagle
+
+Dissecting this string, "jones" is clearly the name of the recipient of the
+message, the "@" indicates to Mailer that this message is destined for a
+foreign mail system,   and "eagle" is the name of the  host on  which 
+Jones'  mailbox resides.
+
+To send mail to a VAX user named Johnson, you would enter:
+
+           send johnson@cs
+
+Where "johnson" is the name of the recipient of the message, and "cs" is
+the name of the Computer Science Department VAX network.
+
+You can send mail to any  user of a  VAX  which is connected to the
+Computer Science Department VAX network (not only VAXen in the
+Computer Science Department).  As always, you need to know the
+recipients mail name and also the DECNet node name of the VAX on which  
+the recipient's  mailbox  resides.  For example:
+
+           thomas%hamp@cs
+
+would be the network address of a user named Thomas at Hampshire
+College, where "hamp" is the DECNet node name of the VAX at Hampshire
+College.
+
+Sending Network Mail From The Eagle
+
+You  may specify full network addresses from the EAGLE mail system, as
+with  MAILER.  For example, to send a message from the  EAGLE to a CYBER
+Mailer user named Jones, you would enter the following when the EAGLE
+mail system asks to whom you want your message delivered:
+
+ jones@mars
+
+In  this example, "jones" is the name of the recipient, and   "mars" is the
+host identifier of the Cyber 175.  To send a message to a  Mailer user who
+resides on the Cyber 830, you would enter a full network address like:
+
+ jones@pluto
+
+Similarly, if you wish to send mail to someone on the Computer Science
+Department VAX network whose name is Johnson, the full network address
+would be:
+
+ johnson@cs
+
+Where "johnson" is the name of the recipient of the message, and "cs" is
+the name of the VAX network.
+
+Sending Network Mail From The Computer Science Department VAX
+Network
+
+When sending mail from the Computer Science Department VAX network,
+the full network address must be quoted and also be preceded by  UMNET%.
+For example, if you are sending to a user named Jones whose mailbox 
+resides on the Cyber 175, you would address your  mail to:
+
+ umnet%"jones@mars.ucc"
+
+Here, "mars"  is the destination host identifier of the Cyber 175, and "ucc"
+names the domain (or department) within which "mars" resides.  In case
+the Computer Science Department  VAX network contains a node named
+"mars", the "ucc" differentiates that local node from the one  with the
+same name at the University Computing Center.
+
+If you  wish  to send mail from the VAX to an EAGLE user named Johnson
+the address would be:
+
+ umnet%"johnson@eagle.ucc"
+
+Again, the "ucc" resolves a potential conflict between a Computer Science
+node named "eagle",  and one with the same name at the UCC.
+  
+Undeliverable  or   Unreadable   Mail 
+
+If you are expecting to receive network mail, you must allow UN=SYSTEMX
+permission to the receiving mail file.  At this time   this is the default.
+
+If you send a message through the network and, for some reason, the
+network is unable to deliver the message, it attempts to return the
+message to you along with the reason for its return. If your message is so
+botched up that the network can not return it to you, it logs this event in a
+system  file.   No message is discarded without a trace.
+
+If you  receive mail through  BITNET and  it appears to be giberish, find out
+the format that the  mail was sent in.  We are unable  to read NETDATA and
+DMS DISK DUMP formats (sent by some IBM sites).  You should inform the
+person sending you mail that the only format we can read is CLASS M
+PUNCH.
+
+How to Get Help from the Network Mail System
+
+To obtain information about network related topics, send a mail message
+to:
+
+ help@system
+
+If you want to obtain a list of topics that you can get help on send a
+message containing the word INTRO as the body of the message.  A short
+introduction on the mail system along with a list of available topics will
+be returned to you as a mail file. You can then send a message to
+help@system requesting information on individual topics. The body of the
+message should contain a list of the topics you wish help on.
+
+Sending Mail through BITNET
+
+A mail directory database  exists that allows users to register by
+electronic mail to access BITNET. Your first step in sending mail through
+BITNET is to register with this database. After successfully registering
+with the database you can then send and receive BITNET mail.
+
+There are two different methods   which  can be  employed to register 
+with  BITNET. The simplest method  involves using the BITNET command.
+There is a restriction on this command. You must be using a terminal that
+has been defined to run the Full Screen Editor or a PC that can emulate one
+of these terminals. If you have the correct type terminal, you simply enter
+the proper screen command for your terminal then type
+
+ BITNET
+
+and press RETURN. For example, if you are using a VT100 terminal, you can
+enter the following two commands to invoke the BITNET utility:
+
+ SCREEN,VT100
+ BITNET
+
+This activates a menu driven facility with options for registering with the
+BITNET database, sending a previously created file as mail, modifying or
+deleting your entry in the database, obtaining network related information,
+and entering MAILER. Just choose the option you wish and answer the
+questions presented to you for that option.  Remember  that the first thing
+you must do is  register with the database.
+
+As you answer each question press RETURN and the cursor will move to the
+next answer space. When you have finished answering the questions press
+F6 to quit. The key on your keyboard that corresponds to F6 varies
+depending on your terminal type.  Refer to "NOS Full Screen Editor User's
+Guide" or "Using FSE  at UMASS"  for a listing of the keys for each terminal.
+  
+
+The second method  for registering with the database  will work on any
+terminal from within any mail system which is part of UMNet. To add
+yourself to the BITNET database using this method, you must send a
+message from your mail system to 
+
+ Registrar@System 
+
+The body of the message you send to registrar should contain the following
+Registrar command
+  
+ Add name=x path="fnp" pw=y comment="dc"
+
+where
+
+x  is the name you wish users of BITNET to know you by. It can be up to 7
+characters and must be unique in the database. This is the name which
+users at other BITNET sites will use to address mail to you.
+
+fnp  is your  local  network  address  (remember -- your name on your  mail
+system, an '@',   and the  destination  host identifier of the host on which
+your mailbox resides). This must be enclosed in double quotes. For
+example, 
+
+  "J. Smith@Mars.UCC"
+  "Jackson@CS"
+  "Davis%Smith@CS"
+
+y  is a password that you will need to remember later if you wish to
+change or delete your entry in the database. It can be up to 10 characters.
+
+dc  is a descriptive comment. It can be up to 60 characters long. It usually
+contains your full name and a local phone number or department name.
+
+For example, you wish to be known as Ming to BITNET users; you use
+MAILER on the UCC node  named Mars (Cyber 175)  and your name on MAILER
+is J. Smith, so your  local network address here at UMASS is J.
+Smith@Mars.UCC;  you have chosen Gordon as your password and you wish
+to have your name and phone in the comment field.  To add yourself to the
+BITNET database you would send the following message to
+registrar@system:
+
+ Add name= Ming path="J. Smith@ Mars.UCC" pw=Gordon -
+  comment="Judy Smith 413-545-2690"
+
+Registrar commands must be contained entirely on a single line unless a
+dash occurs at the end of a line. A dash at the end of a line indicates that
+the command is continued on the next line.
+
+The registrar will respond to you by electronic mail. You will receive a
+reassuring response if you have been successfully added to the database. If
+you have not been added (possibly the name you chose is not unique) you
+will receive an error message which describes why your request was
+rejected.
+
+Once you have been successfully added to the database you can send mail
+through BITNET by addressing the mail to:
+
+ name@node.BITNET
+
+where
+
+ name is the mail recipient's name on BITNET
+
+ node is the name of the node the recipient resides on
+
+For example, to send a letter to a user known on BITNET as Riley and whose
+nodename is TUCC (Triangle Universities Computation Center in North
+Carolina) you would type
+
+ Riley@TUCC.BITNET
+
+It is also possible to change or delete your entry in the database. Suppose
+you are the user  Ming that was added above. You have decided to delete
+yourself from the database. The delete command is similar to the add
+command. Again, you would send a message to
+
+ Registrar@System
+
+and the body of the message would read 
+
+ Delete name=Ming path="J. Smith@Mars.UCC" pw=Gordon
+
+All the parameters must be present and identical to the ones you used
+when you added yourself to the database.
+
+To change your name, path, password, or comment, the general form of the
+command is
+
+ Change name=x path="fpn" pw=y -
+  newname=newx newpath="newfpn" newpw=newy newcomment="dc"
+
+The information provided in the first line must be identical to the
+information you provided when you added yourself. You need only include
+the parts of the second line that are changing from the first line. For
+example, say the user  Ming,  who was added above, wishes to change her
+password to Flash. She would send a message to Registrar@System that
+reads
+
+ Change name=Ming path="J. Smith@ Mars.UCC" pw=Gordon -
+  newpw=Flash
+
+You may also interrogate the database using the List command. The general
+form of the List command is:  
+
+ List name=x path="fpn"
+
+The 'name' and 'path' parameters are both optional. You may supply both,
+either, or neither. For example, to obtain a listing of the database entry
+whose name component is  Ming, you would send a message to the
+Registrar looking like:
+
+ List name=Ming
+
+To obtain a listing of the database entry whose path component is "J.
+Smith@Mars.UCC" you would send:
+
+ List path="J. Smith@Mars.UCC" 
+
+The List command also allows wild carding. A plus sign (+) in a name or
+path parameter matches any sequence of characters. An asterisk (*)
+matches any single character. For example:
+
+ List path="+Smith+"
+
+will return a listing of all database entries whose path components
+contain the string 'Smith'.
+
+ List path="+@Mars.UCC***"
+
+will return all database entries whose path components end in the string
+'@Mars.UCC' followed by any three characters.
+
+Sending Mail Through ARPANET, CSNET,  MAILNET, JANET, AND UUCP 
+
+Once you have registered to access BITNET you may also send mail through
+the ARPANET, CSNET, MAILNET,  JANET and UUCP networks. All you need to
+know is the name and   destination host identifier of the person to whom
+you are sending mail.
+
+The general form of an address on ARPANET, CSNET, MAILNET,  JANET or
+UUCP is:
+
+ name@node.ARPA
+or
+ name@node.CSNET
+or
+ name@node.MAILNET
+or
+ name%janetpath@AC.UK
+or
+  node2!node3!...!nodei!name@node1.UUCP
+
+The following  domains of ARPANet are also recognized, so you can send
+mail  to them:
+
+ COM, EDU, GOV,  MIL and NET
+
+For example, an ARPANet user named Jake whose mailbox is located on the
+Wiscvm host of the University  of Wisconsin within the EDU domain of
+ARPANet  can be addressed by:
+
+ Jake@Wiscvm.Wisc.EDU
+
+Anyone on ARPANET or CSNET wishing to send you mail would send it to  
+
+ name%UMass.BITNET@Wiscvm.Wisc.EDU
+
+where "name"  is the name you used when you registered with BITNET.  The
+Wiscvm host  of the University of Wisconsin has access to both ARPANet
+and BITNET, so it acts as a gateway between the two networks.
+
+Receiving Mail from Another BITNET User
+
+It is very simple for someone at a different site to send you mail once you
+have registered with BITNET. All they need to know is your BITNET name
+and the BITNET node name for the University of Massachusetts  which  is 
+"umass".  They would send the mail to:
+
+ Yourname@UMass
+
+substituting your real BITNET name for "Yourname".
+
+ Hints and Short Cuts
+
+If you know that someone at UMASS is registered with BITNET but you do
+not know what mail system they are using at UMASS you can still get mial
+to them as long as you know their name on  BITNET.  For example, you wish
+to send mail to Jones.  You know he is registered as Jones with  BITNET,
+but you are not sure what mail system he is using here at UMASS.  Simply
+send the mail to
+
+ Jones@UMass
+
+BITNET will route the  mail to the mail system that Jones resides on.
+
+ If you are sending mail through BITNET you can leave off the .BITNET, and
+the message will still be sent, as long as the nodename you specify is a
+valid BITNET node. For example, you wish to send mail to Riley at TUCC.
+Instead of typing
+
+ Riley@TUCC.BITNET
+
+just type
+
+ Riley@TUCC
+
+The system will check to see if TUCC is   the name of a node in the local
+mail network (UMass and Five Colleges).     If it is not,  the message is  
+passed on  to BITNET. If BITNET recognizes the node, then it sends the
+message on. If it does not recognize it, an error message is returned to
+you.
+
+VI.  ERROR MESSAGES
+
+The first set of error messages listed here are not the only error
+messages you can get in Mailer, but are the ones that are not
+self-explanatory.  These error messages also do not  cause Mailer to abort. 
+
+Unneeded input "xxx" discarded.
+
+You supplied an extra parameter(s) that Mailer didn't need for a command .  
+
+Typeahead "xxx" discarded.
+
+If you have strung a number of commands together on a line and Mailer
+detects an error, anything on the line after the error is discarded.
+
+Mail was refused because your private notesfile was full.
+Please delete unnecessary messages and/or files if you wish to receive
+mail in the future.
+
+If you receive this message then some incoming mail has definitely been
+refused.  You should check the limits on your account.  You have either
+exceeded the size allowed for one file or you have exceeded your total file
+space.  You will not be able to receive any mail until you have freed up
+some space.  Delete any uneeded mail in your notesfile or any unnecessary
+files on your account.
+
+Due to a missing permanent file or lack of permission, ... 
+
+You may not have the proper permissions to read or send to the notesfile
+you are trying to access.  Or, that notesfile may have been purged.
+
+Due to the number of queued files or jobs, ...
+
+If you have too much in the system queues you can't send network mail.
+Each network name that you send to will require one queue entry for
+several minutes.
+
+Due to the absence of a permanent file device, ...
+
+The permanent file device required is not available.  This message will
+occur if a user on the CYBER 730 sends to a notesfile which resides on a 
+removable or auxillary pack.  It may also occur if there is a system
+problem.
+
+Due to the notesfile's established linelimit of nnn, ...
+
+A linelimit of nnn has been established by the owner of the notesfile that
+you are trying to send to and you have exceeded that line limit.  The header
+lines (about 6) are also counted towards this limit.
+
+Due to an unexpected system error, ...
+
+This message usually means that something is wrong with the system or
+with Mailer itself.  Try again later.  If the error persists then contact the
+Mailer Manager, whose Mailer name is "Mailer Manager".
+
+When  an operation within Mailer encounters some limit of the users
+account it will try to recover if it can.  However some errors are
+sufficiently   serious that an abort of Mailer is the only solution.
+
+An  abort will prevent Mailer from updating any UPDATE information that
+changed during the current session, this means that mail you have read
+may be marked as NEW when you re-enter  Mailer.
+
+When Mailer aborts it will issue two messages to the dayfile:
+
+ FATAL  MAILER ERROR OCCURED.
+ ERROR CODE WAS   n.
+
+Generally  the system will issue some message prior to these that
+indicates the problem encountered.  The actual number in the "ERROR CODE
+..." message is not very useful, it is the REPRIEVE error number which
+corresponds to the system error that caused the abort.  The only solution
+to most of these problems is to increase the account's limits.
+
+Here   is a list  of some common messages  issued by the system and their
+causes:
+
+FL REQUEST BEYOND MFL (CM).
+
+This message means that Mailer needed more memory than was allowed by
+the users account.  Generally this occurs when Mailer is processing a large
+list of names, as in a mailing list.  It can also be caused by reading a
+notesfile with a lot of messages, or messages with many  fields in their
+headers.  It may also be caused by a loop.
+
+PRU LIMIT...
+
+Any message refering to "PRU LIMIT" means that the size of local files
+exceeds that allowed for the account.  This can happen even if the local
+files seem small because the system typically allocates local files in
+increments of several hundred PRUs.  Mailer creates local files when
+processing groups, aliases, forwarding addresses, and of course when
+processing files; avoiding the use of these may prevent the error.
+
+LOCAL FILE LIMIT.
+
+This message means that Mailer tried to create more local files than were
+allowed.  This usually means that some kind of loop occured.  The most
+likely cause is a forwarding address that evaluates to itself.
+
+

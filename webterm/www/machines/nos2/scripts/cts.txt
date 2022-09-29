@@ -1,0 +1,104 @@
+<p>
+Use the LABEL command to request the cartridge tape robot to mount a tape of U.S. census data from 1990.
+The data provides information about county-to-county commuting patterns. Use the SKIPF and COPY commands
+to position the tape and copy the census data to a local file. Use the FILE command to declare
+the record formats of the source data and a sorted copy of it.  Use the SORT5 command to sort the
+data by number of workers in desceding order, then compile and execute a FORTRAN program that displays
+counties with the greatest number of people who work in other counties.
+</p>
+<pre>
+     /LABEL,TAPE,VSN=CENSUS,UN=LIBRARY
+     /SKIPF,TAPE.     Skip past documentation file
+     /COPY,TAPE,DATA. Copy census data to local file
+     /UNLOAD,TAPE
+     /REWIND,DATA
+     /FILE,DATA,RT=Z,FL=120
+     /FILE,TAPE1,RT=Z,FL=120
+     /SORT5.FROM=DATA,TO=TAPE1,KEY=((46,9,ASCII6,D))
+     /REWIND,TAPE1
+     /NEW,<i>filename</i>/ND
+     /TEXT
+       <i>Enter FORTRAN program source code
+       Exit TEXT mode by pressing Control-T key</i>
+     /FTN5,I=<i>filename</i>,L=0,GO
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="http://www.bitsavers.org/pdf/cdc/Tom_Hunter_Scans/FTN5_Refereence_Manual.60481300H.1985.pdf" target="_blank">
+   FORTRAN 5 Reference Manual
+   </a>
+  </li>
+  <li>
+   <a href="http://www.bitsavers.org/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+  <li>
+   <a href="http://www.bitsavers.org/pdf/cdc/cyber/nos2/60463110D_NOS_2_Tape_Management_System_User_Reference_Jun92.pdf" target="_blank">
+   NOS 2 Tape Management System (TMS) User Reference Manual
+   </a>
+  </li>
+  <li>
+   <a href="http://www.bitsavers.org/pdf/cdc/Tom_Hunter_Scans/Sort_Merge_Ver_5_Ref_Man_60484800D_Sep86.pdf" target="_blank">
+   SORT/MERGE Version 5 Reference Manual
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+I250 ^/$ =====
+label,tape,vsn=census,un=library
+skipf,tape.     Skip past documentation file
+copy,tape,data. Copy census data to local file - please be patient
+unload,tape
+rewind,data
+file,data,rt=z,fl=120
+file,tape1,rt=z,fl=120
+sort5.from=data,to=tape1,key=((46,9,ASCII6,D))
+rewind,tape1
+=====
+Lnew,commute/nd
+W^/$
+Ltext
+W ENTER TEXT MODE
+W\\r
+I250 \\r =====
+      PROGRAM COMMUTE
+      CHARACTER*30 RESCTY(10)
+      CHARACTER*30 WRKCTY(10)
+      INTEGER WORKERS(10)
+
+      I = 1
+ 10   CONTINUE
+      IF (I.LE.10) THEN
+        READ(1, 20) WORKERS(i), RESCTY(I), WRKCTY(I)
+ 20     FORMAT(45X, I9, 1X, A30, A30)
+        IF (RESCTY(I).NE.WRKCTY(I)) I = I + 1
+        GOTO 10
+      ENDIF
+
+      PRINT 30, '  WORKERS',
+     +          'RESIDENCE COUNTY              ',
+     +          'WORK COUNTY                   '
+      PRINT 30, '---------',
+     +          '------------------------------',
+     +          '------------------------------'
+ 30   FORMAT(1X, A9, 2X, A30, 1X, A30)
+
+      DO 50 I = 1, 10
+        PRINT 40, WORKERS(I), RESCTY(I), WRKCTY(I)
+ 40     FORMAT(I10, 2X, A30, 1X, A30)
+ 50   CONTINUE
+
+      END 
+=====
+S\x14
+W EXIT TEXT MODE
+W^/$
+D1000
+Sftn5,i=commute,l=0,go
+D1000
+L
+W CP SECONDS EXECUTION TIME
+W^/$

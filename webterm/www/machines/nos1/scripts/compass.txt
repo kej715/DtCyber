@@ -1,0 +1,139 @@
+<p>
+Use the NEW and TEXT commands to create a Cyber assembly language source file, use MODIFY to create a program library
+from it, and use MODIFY again to expand the source and insert system interface definitions. Then use the COMPASS
+command to assemble the expanded source, and then run the executable file produced.
+</p>
+<pre>
+     /NEW,SOURCE
+     /TEXT
+       <i>Enter program source code
+       Exit TEXT mode by pressing Control-C key</i>
+     PACK,SOURCE
+     /MODIFY,P=0,N=NPL,C=0,F,LO=E,Z./*CREATE SOURCE
+     /ATTACH,OPL=OPL485/UN=INSTALL
+     /MODIFY,P=NPL,LO=E,Z./*OPLFILE OPL/*EDIT FIB
+     /COMPASS,I,L=0
+     /MAP,OFF
+     /LGO
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/COMPASS_v3_Reference_Manual.60492600.1979_.pdf" target="_blank">
+   COMPASS Version 3 Reference Manual
+   </a>
+  </li>
+  <li>
+   <a href="http://www.bitsavers.org/pdf/cdc/Tom_Hunter_Scans/Modify_RefMan_Sept85.pdf" target="_blank">
+   MODIFY Reference Manual
+   </a>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/cyber/nos/60435400M_NOS_Version_1_Reference_Manual_Volume_1_Dec80.pdf" target="_blank">
+   NOS Version 1 Reference Manual
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,source
+W^/$
+D500
+Ltext
+WENTER TEXT MODE
+W\\r
+D500
+I500 \\r =====
+FIB
+          IDENT  FIB
+          ENTRY  FIB
+          SYSCOM B1
+
+*CALL COMCCDD
+
+ MAX      EQU    10D         COUNT OF FIBONACCI NUMBERS TO CALCULATE
+ OBUFL    EQU    301B        OUTPUT BUFFER LENGTH
+
+**        MAIN PROGRAM
+*
+*         CALCULATE AND PRINT THE FIRST 10 FIBONACCI NUMBERS
+
+ FIB      SB1    1
+
+ FIB1     SA1    N
+          SB2    MAX
+          SB3    X1
+          GE     B3,B2,FIB2  IF DONE
+          SX1    X1+B1       UPDATE CURRENT INDEX
+          BX6    X1
+          SA6    A1
+          RJ     CDD         CONVERT TO DECIMAL DIGITS
+          LX6    6           ENSURE THAT THERE'S A BLANK TO THE RIGHT
+          WRITEO O           AND OUTPUT
+          SA1    I2          OUTPUT CORRESPONDING FIBONACCI NUMBER
+          SA2    I1
+          BX6    X1
+          IX7    X1+X2       CALCULATE NEXT FIBONACCI NUMBER
+          SA6    I1
+          SA7    I2
+          RJ     CDD         CONVERT CURRENT ONE TO DECIMAL
+          BX6    X4          USE THE LEFT-JUSTIFIED RESULT
+          WRITEO O           AND OUTPUT IT
+          BX6    X6-X6       OUTPUT END OF LINE
+          WRITEO O
+          EQ     FIB1
+
+ FIB2     WRITER O           WRITE END OF RECORD
+
+          ENDRUN             EXIT PROGRAM
+
+**        WORKING STORAGE
+
+ I1       CON    0
+ I2       CON    1
+ N        CON    0
+
+**        FET AND OUTPUT BUFFER
+
+ O        BSS    0
+ OUTPUT   FILEB  OBUF,OBUFL
+ OBUF     BSS    OBUFL
+
+          END    FIB
+=====
+S\x03
+WEXIT TEXT MODE
+D1000
+Lpack,source
+W/$
+D500
+Smodify,p=0,n=npl,c=0,f,lo=e,z./*create source
+D500
+L
+WMODIFICATION COMPLETE
+W/$
+D500
+Sattach,opl=opl485/un=install
+D500
+L
+W/$
+D500
+Smodify,p=npl,lo=e,z./*oplfile opl/*edit fib
+D500
+L
+WMODIFICATION COMPLETE
+W/$
+D500
+Scompass,i,l=0
+D500
+L
+WCPU SECONDS  ASSEMBLY TIME
+W/$
+D500
+Lmap,off
+W/$
+D500
+Slgo
+D1000
+L
+WLGO\\.
+W/$

@@ -1,0 +1,602 @@
+<html>
+  <head>
+    <title>Machine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preload" href="css/fonts/apl2741.ttf" as="font" />
+    <link rel="icon" type="image/png" href="images/ncc.png">
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/apl.css" />
+    <script src="js/jquery-3.3.1.min.js"></script>
+    <script src="js/aterm.js"></script>
+    <script src="js/tekterm.js"></script>
+    <script src="js/machine-comm.js"></script>
+    <script src="js/machine-desc.js"></script>
+    <script src="js/updownload.js"></script>
+    <script src="js/kermit.js"></script>
+    <script src="js/util.js"></script>
+  </head>
+  <body class="fanfold-background">
+    <div id="title" class="title"></div>
+    <div id="content-container" class="content-container">
+      <div id="terminal-container" class="content-container top left-floater right-padded zindex-1">
+        <div id="terminal"></div>
+        <div id="term-type-toggle-container" class="left-floater"><div>ANSI <a id="term-type" href="#" class="toggler">&nbsp;</a> Tektronix</div></div>
+        <div class="left-floater spacer-2">&nbsp;</div>
+        <div id="width-toggle-container" class="left-floater"><div>80 <a id="width" href="#" class="toggler">&nbsp;</a> 132</div></div>
+        <div class="left-floater spacer-2">&nbsp;</div>
+        <div id="charset-toggle-container" class="left-floater"><div>Normal <a id="charset" href="#" class="toggler">&nbsp;</a> APL</div></div>
+        <div class="left-floater spacer-2">&nbsp;</div>
+        <div class="left-floater">
+          <button id="upload-button" type="button" class="button">
+            <img src="images/upload-16x15.png"/> Upload
+          </button>
+        </div>
+        <div class="left-floater spacer-1">&nbsp;</div>
+        <div class="left-floater">
+          <button id="download-button" type="button" class="button">
+            <img src="images/download-16x15.png"/> Download
+          </button>
+        </div>
+      </div>
+      <div id="content" class="content-container zindex-0">
+        <div id="machine-overview" class="machine-overview-container"></div>
+        <div id="machine-configuration" class="machine-config-container"></div>
+        <div id="machine-login" class="machine-login-container"></div>
+        <div id="machine-login-script-container" class="machine-login-script-container"></div>
+        <div id="machine-keys" class="machine-keys-container"></div>
+        <div id="machine-examples" class="machine-example-container"></div>
+        <div id="machine-more" class="machine-more-container"></div>
+      </div>
+    </div>
+    <div id="keyboard-dialog" class="draggable dialog">
+      <div class="dialog-header">
+        APL keyboard character mappings
+        <img id="keyboard-max-min-button" class="right-justified-button" src="images/minimize-16x16.png"/>
+      </div>
+      <img id="keyboard-image" src="images/APL_Keyboard.gif"/>
+    </div>
+    <div id="example-container" class="draggable dialog">
+      <div class="dialog-header">
+        <span id="example-title">Example</span>
+        <img id="example-close-button" class="right-justified-button" src="../../images/close-16x16.png"/>
+      </div>
+      <div id="example-content-container" class="code-container">
+        <div id="example-content"></div>
+        <div id="busy-indicator-container" class="busy-indicator">
+          <img id="busy-indicator" src="../../images/loading-animation.gif"/>
+        </div>
+      </div>
+      <div id="example-button-container" class="button-container">
+        <button id="example-run-button" type="button" class="button">Run</button>
+      </div>
+    </div>
+    <div id="upload-dialog" class="draggable dialog">
+      <div class="dialog-header">
+        Upload File
+        <img id="upload-dialog-close-button" class="right-justified-button" src="../../images/close-16x16.png"/>
+      </div>
+      <div class="updownload-file-dialog-content">
+        <div class="updownload-file-input-container">
+          <div class="updownload-file-label">Local file:</div>
+          <input id="upload-local-file-input" class="updownload-file-input" type="file"></input>
+        </div>
+        <div class="updownload-file-input-container">
+          <div class="updownload-file-label">Host file:</div>
+          <input id="upload-remote-file-input" class="updownload-file-input" type="text" size="20" placeholder="enter file name"></input>
+        </div>
+        <fieldset class="updownload-file-controls-container">
+          <legend>Transfer type</legend>
+          <input id="upload-text-radio" class="updownload-file-radio-button" type="radio"></input>
+          <label for="upload-text-radio">Text</label>
+          <input id="upload-binary-radio" class="updownload-file-radio-button" type="radio"></input>
+          <label for="upload-binary-radio">Binary</label>
+          <div id="upload-text-charset-container" class="updownload-file-charset-container">
+            <div class="menu">
+              <button id="upload-text-charset-button" type="button" class="menu-button"></button>
+              <img src="images/dropdown-16x16.png" class="menu-dropdown-icon"/>
+              <div id="upload-text-charset-menu-items" class="menu-content"></div>
+              <label for="upload-text-charset-button" class="menu-button-label">Character set</label>
+            </div>
+          </div>
+        </fieldset>
+        <div class="updownload-file-status-container">
+          <div id="upload-diagnostic" class="updownload-file-diagnostic"></div>
+          <div id="upload-progress-container">
+            Progress: <progress id="upload-progress" value="0">0%</progress>
+          </div>
+        </div>
+        <div class="button-container">
+          <button id="upload-file-button" class="button" type="button">Upload</button>
+        </div>
+      </div>
+    </div>
+    <div id="download-dialog" class="draggable dialog">
+      <div class="dialog-header">
+        Download File
+        <img id="download-dialog-close-button" class="right-justified-button" src="../../images/close-16x16.png"/>
+      </div>
+      <div class="updownload-file-dialog-content">
+        <div class="updownload-file-input-container">
+          <div class="updownload-file-label">Local file:</div>
+          <input id="download-local-file-input" class="updownload-file-input" type="text" size="20" placeholder="enter file name"></input>
+        </div>
+        <div class="updownload-file-input-container">
+          <div class="updownload-file-label">Host file:</div>
+          <input id="download-remote-file-input" class="updownload-file-input" type="text" size="20" placeholder="enter file name"></input>
+        </div>
+        <fieldset class="updownload-file-controls-container">
+          <legend>Transfer type</legend>
+          <input id="download-text-radio" class="updownload-file-radio-button" type="radio"></input>
+          <label for="download-text-radio">Text</label>
+          <input id="download-binary-radio" class="updownload-file-radio-button" type="radio"></input>
+          <label for="download-binary-radio">Binary</label>
+          <div id="download-text-charset-container" class="updownload-file-charset-container">
+            <div class="menu">
+              <button id="download-text-charset-button" type="button" class="menu-button"></button>
+              <img src="images/dropdown-16x16.png" class="menu-dropdown-icon"/>
+              <div id="download-text-charset-menu-items" class="menu-content"></div>
+              <label for="download-text-charset-button" class="menu-button-label">Character set</label>
+            </div>
+          </div>
+        </fieldset>
+        <div class="updownload-file-status-container">
+          <div id="download-diagnostic" class="updownload-file-diagnostic"></div>
+          <div id="download-progress-container">
+            Progress: <span id="download-progress"></span>
+          </div>
+        </div>
+        <div class="button-container">
+          <button id="download-file-button" class="button" type="button">Download</button>
+        </div>
+      </div>
+      <a id="download-file-saver" style="display:none;"></a>
+    </div>
+    <script>
+    $(document).ready(function() {
+      let machineId = "unknown";
+      let title = "Unnamed Machine";
+      let cols = 80;
+      let rows = 45;
+      let hasAPL = true;
+      let hasInvertDelBs = false;
+      let isKSR = false;
+      let qs = window.location.search;
+      if (qs && qs.length > 1) {
+        qs.substr(1).split("&").forEach(function(param) {
+          let nvp = param.split("=");
+          if (nvp.length > 1) {
+            switch (nvp[0]) {
+            case "a": // APL character set
+              hasAPL = nvp[1] === "1";
+              break;
+            case "c": // columns
+              cols = parseInt(nvp[1]);
+              break;
+            case "d": // invert Delete and Backspace keys
+              hasInvertDelBs = nvp[1] === "1";
+              break;
+            case "k": // emulate KSR-33 behavior
+              isKSR = nvp[1] === "1";
+              break;
+            case "m": // machine identifier
+              machineId = nvp[1];
+              break;
+            case "r": // rows
+              rows = parseInt(nvp[1]);
+              break;
+            case "t": // title
+              title = decodeURIComponent(nvp[1]);
+              break;
+            }
+          }
+        });
+      }
+      $("title").html(title);
+      $("#title").html(title);
+      if (!hasAPL) {
+        $("#charset-toggle-container").hide();
+      }
+      const machine = new Machine(machineId);
+      const containerStack = new ContainerStack();
+      const machineDesc = new MachineDescription(machine);
+      machineDesc.setContainerStack(containerStack);
+      const exampleContainer = document.getElementById("example-container");
+      containerStack.push(exampleContainer);
+      $(exampleContainer).hide();
+      $("#busy-indicator-container").hide();
+      $("#machine-keys").hide();
+      const offset = 60;
+      const terminalContainer = $("#terminal-container");
+      const contentContainer = document.getElementById("content-container");
+      const content = document.getElementById("content");
+      contentContainer.style.left = `${offset}px`;
+      const setContentWidth = () => {
+        contentContainer.style.width = `${contentContainer.offsetParent.offsetWidth - offset * 2}px`;
+        let contentWidth = $(contentContainer).width() - terminalContainer.outerWidth(true);
+        $("#machine-configuration,#machine-keys,#machine-examples").width(contentWidth);
+      };
+      window.onresize = () => {
+        setContentWidth();
+      };
+      const ansiTerminal = new ATerm();
+      ansiTerminal.createScreen("normal", rows, cols);
+      const widthChangeListener = function(width) {
+        terminalContainer.width(ansiTerminal.getWidth());
+      };
+      ansiTerminal.setWidthChangeListener(widthChangeListener);
+      ansiTerminal.setInvertDelBs(hasInvertDelBs);
+      ansiTerminal.setIsKSR(isKSR);
+      const tektronixTerminal = new Tektronix();
+      tektronixTerminal.createScreen();
+      tektronixTerminal.setInvertDelBs(hasInvertDelBs);
+      tektronixTerminal.setIsKSR(isKSR);
+      let terminal = null;
+      const setTerminal = (term) => {
+        terminal = term;
+        const terminalElem = $("#terminal");
+        terminalElem.empty();
+        const canvas = term.getCanvas();
+        terminalElem.append(canvas);
+        canvas.focus();
+        terminalContainer.width(term.getWidth());
+        setContentWidth();
+        machine.setTerminal(terminal);
+        machine.setReceivedDataHandler(function(data) {
+          terminal.renderText(data);
+        });
+      };
+      setTerminal(ansiTerminal);
+      let url = machine.createConnection();
+      const keyboardInputHandler = function(data) {
+        machine.send(data);
+      };
+      ansiTerminal.setKeyboardInputHandler(keyboardInputHandler);
+      tektronixTerminal.setKeyboardInputHandler(keyboardInputHandler);
+      machine.setDisconnectListener(function() {
+        terminal.reset();
+        terminal.renderText("\r\n\nDisconnected from " + title + ".\r\n\n   Press any key to reconnect ...\r\n");
+        terminal.setKeyboardInputHandler(function(data) {
+          url = machine.createConnection();
+          ansiTerminal.setKeyboardInputHandler(keyboardInputHandler);
+          tektronixTerminal.setKeyboardInputHandler(keyboardInputHandler);
+        });
+      });
+      $(document).ajaxError(function(event, jqxhr, settings, thrownError) {
+        if (settings.url === url) {
+          terminal.reset();
+          terminal.renderText("\r\n\n" + jqxhr.responseText + "\r\n\n   Failed to connect to " + title);
+        }
+      });
+      $(window).bind("beforeunload", function() {
+        machine.closeConnection();
+      });
+      const termTypeButton = $("#term-type");
+      termTypeButton.click(function() {
+        termTypeButton.toggleClass("off");
+        if (termTypeButton.is(".off")) {
+          setTerminal(tektronixTerminal);
+          $("#machine-keys").show();
+          $("#width-toggle-container").hide();
+        }
+        else {
+          setTerminal(ansiTerminal);
+          $("#machine-keys").hide();
+          $("#width-toggle-container").show();
+        }
+      });
+      const widthButton = $("#width");
+      widthButton.click(function() {
+        widthButton.toggleClass("off");
+        terminal.changeWidth(widthButton.is(".off") ? 132 : 80);
+      });
+      const keybdDialog = document.getElementById("keyboard-dialog");
+      containerStack.push(keybdDialog);
+      const keybdImage = document.getElementById("keyboard-image");
+      keybdImage.addEventListener("load", evt => {
+        keybdDialog.style.width = `${keybdImage.width}px`;
+        const keybdDragMgr = new DraggableManager();
+        keybdDragMgr.activate(keybdDialog);
+      });
+      keybdDialog.style.top = "0px";
+      keybdDialog.style.right = "0px";
+      const keybdMaxMinBtn = document.getElementById("keyboard-max-min-button");
+      let isKeybdMax = true;
+      keybdMaxMinBtn.onclick = e => {
+        isKeybdMax = !isKeybdMax;
+        if (isKeybdMax) {
+          keybdMaxMinBtn.src = "images/minimize-16x16.png";
+          $(keybdImage).slideDown();
+        }
+        else {
+          keybdMaxMinBtn.src = "images/maximize-16x16.png";
+          $(keybdImage).slideUp();
+        }
+      };
+      $(keybdDialog).hide();
+      const charsetButton = $("#charset");
+      charsetButton.click(function() {
+        charsetButton.toggleClass("off");
+        if (charsetButton.is(".off")) {
+          ansiTerminal.changeFont("apl");
+          tektronixTerminal.changeFont("apl");
+          $(keybdDialog).show();
+          containerStack.promote(keybdDialog);
+        }
+        else {
+          ansiTerminal.changeFont("normal");
+          tektronixTerminal.changeFont("normal");
+          $(keybdDialog).hide();
+        }
+      });
+      //
+      // File upload support
+      //
+      let scriptDefs = {};
+      const interpolate = (template, key, value) => {
+        let startIdx = 0;
+        let result = "";
+        const searchStr = "${" + key + "}";
+        while (startIdx < template.length) {
+          let nextIdx = template.indexOf(searchStr, startIdx);
+          if (nextIdx >= 0) {
+            result += template.substring(startIdx, nextIdx) + value;
+            startIdx = nextIdx + searchStr.length;
+          }
+          else {
+            result += template.substring(startIdx);
+            break;
+          }
+        }
+        return result;
+      };
+      const uploadDialog = document.getElementById("upload-dialog");
+      containerStack.push(uploadDialog);
+      uploadDialog.style.left = `${offset + 50}px`;
+      uploadDialog.style.top = `50px`;
+      const uploadDragMgr = new DraggableManager();
+      uploadDragMgr.activate(uploadDialog);
+      $(uploadDialog).hide();
+      const uploadCloseBtn = document.getElementById("upload-dialog-close-button");
+      uploadCloseBtn.onclick = e => {
+        $(uploadDialog).hide();
+      };
+      const uploadActivateBtn = $(document.getElementById("upload-button"));
+      uploadActivateBtn.hide();
+      uploadActivateBtn.click(() => {
+        $(uploadDialog).show();
+        containerStack.promote(uploadDialog);
+      });
+      const uploadStartBtn = $(document.getElementById("upload-file-button"));
+      const uploadLocalFileInput = document.getElementById("upload-local-file-input");
+      const uploadRemoteFileInput = document.getElementById("upload-remote-file-input");
+      const uploadTextRadio = document.getElementById("upload-text-radio");
+      const uploadBinaryRadio = document.getElementById("upload-binary-radio");
+      const uploadCharsetMenuContainer = document.getElementById("upload-text-charset-container");
+      const uploadCharsetMenuBtn = document.getElementById("upload-text-charset-button");
+      const uploadCharsetMenuItems = document.getElementById("upload-text-charset-menu-items");
+      const uploadStatusElem = document.getElementById("upload-diagnostic");
+      const uploadProgressContainer = document.getElementById("upload-progress-container");
+      const uploadProgressElem = document.getElementById("upload-progress");
+      $(uploadStatusElem).hide();
+      $(uploadProgressContainer).hide();
+      uploadRemoteFileInput.onclick = evt => {
+        uploadRemoteFileInput.focus();
+      };
+      uploadTextRadio.checked = true;
+      uploadTextRadio.onclick = evt => {
+        if (uploadTextRadio.checked) uploadBinaryRadio.checked = false;
+      }
+      uploadBinaryRadio.onclick = evt => {
+        if (uploadBinaryRadio.checked) uploadTextRadio.checked = false;
+      }
+      uploadStartBtn.click(() => {
+        uploadProgressElem.setAttribute("value", 0);
+        uploadProgressElem.innerHTML = "0%";
+        const localFile = uploadLocalFileInput.files[0];
+        if (typeof localFile === "undefined" || localFile.name === "") {
+          uploadStatusElem.innerHTML = "Please select a file to upload";
+          $(uploadStatusElem).show();
+          return;
+        }
+        const remoteFileName = uploadRemoteFileInput.value.trim();
+        if (remoteFileName === "") {
+          uploadStatusElem.innerHTML = "Please provide a remote file name";
+          $(uploadStatusElem).show();
+          return;
+        }
+        uploadStatusElem.innerHTML = "";
+        $(uploadStatusElem).hide();
+        const isText = uploadTextRadio.checked;
+        let startScript = scriptDefs[isText ? "upload-text" : "upload-binary"];
+        if (typeof machineDesc.machineDefinition["file-charset-options"] !== "undefined") {
+          startScript = interpolate(startScript, "charset", uploadCharsetMenuBtn.value);
+        }
+        const endScript = scriptDefs["upload-end"];
+        const kermit = new KermitTransceiver(machine);
+        const uploader = new Uploader(machine, localFile, remoteFileName, isText, startScript, endScript, kermit);
+        $(uploadProgressContainer).show();
+        uploader.start(
+          () => {
+            $(uploadProgressContainer).hide();
+            $(uploadDialog).hide();
+          },
+          msg => {
+            $(uploadProgressContainer).hide();
+            uploadStatusElem.innerHTML = msg;
+            $(uploadStatusElem).show();
+          },
+          fraction => {
+            uploadProgressElem.setAttribute("value", fraction);
+            uploadProgressElem.innerHTML = `${Math.round(fraction * 100)}%`;
+          }
+        );
+      });
+      //
+      // File download support
+      //
+      const downloadDialog = document.getElementById("download-dialog");
+      containerStack.push(downloadDialog);
+      downloadDialog.style.left = `${offset + 50}px`;
+      downloadDialog.style.top = `50px`;
+      const downloadDragMgr = new DraggableManager();
+      downloadDragMgr.activate(downloadDialog);
+      $(downloadDialog).hide();
+      const downloadCloseBtn = document.getElementById("download-dialog-close-button");
+      downloadCloseBtn.onclick = e => {
+        $(downloadDialog).hide();
+      };
+      const downloadActivateBtn = $(document.getElementById("download-button"));
+      downloadActivateBtn.hide();
+      downloadActivateBtn.click(() => {
+        $(downloadDialog).show();
+        containerStack.promote(downloadDialog);
+      });
+      const downloadStartBtn = $(document.getElementById("download-file-button"));
+      const downloadLocalFileInput = document.getElementById("download-local-file-input");
+      const downloadRemoteFileInput = document.getElementById("download-remote-file-input");
+      const downloadTextRadio = document.getElementById("download-text-radio");
+      const downloadBinaryRadio = document.getElementById("download-binary-radio");
+      const downloadCharsetMenuContainer = document.getElementById("download-text-charset-container");
+      const downloadCharsetMenuBtn = document.getElementById("download-text-charset-button");
+      const downloadCharsetMenuItems = document.getElementById("download-text-charset-menu-items");
+      const downloadStatusElem = document.getElementById("download-diagnostic");
+      const downloadProgressContainer = document.getElementById("download-progress-container");
+      const downloadProgressElem = document.getElementById("download-progress");
+      $(downloadStatusElem).hide();
+      $(downloadProgressContainer).hide();
+      downloadLocalFileInput.onclick = evt => {
+        downloadLocalFileInput.focus();
+      };
+      downloadRemoteFileInput.onclick = evt => {
+        downloadRemoteFileInput.focus();
+      };
+      downloadTextRadio.checked = true;
+      downloadTextRadio.onclick = evt => {
+        if (downloadTextRadio.checked) downloadBinaryRadio.checked = false;
+      }
+      downloadBinaryRadio.onclick = evt => {
+        if (downloadBinaryRadio.checked) downloadTextRadio.checked = false;
+      }
+      downloadStartBtn.click(() => {
+        downloadProgressElem.innerHTML = "0 bytes";
+        const localFileName = downloadLocalFileInput.value.trim();
+        if (localFileName === "") {
+          downloadStatusElem.innerHTML = "Please provide a local file name";
+          $(downloadStatusElem).show();
+          return;
+        }
+        const remoteFileName = downloadRemoteFileInput.value.trim();
+        if (remoteFileName === "") {
+          downloadStatusElem.innerHTML = "Please provide a remote file name";
+          $(downloadStatusElem).show();
+          return;
+        }
+        downloadStatusElem.innerHTML = "";
+        $(downloadStatusElem).hide();
+        const isText = downloadTextRadio.checked;
+        let startScript = scriptDefs[isText ? "download-text" : "download-binary"];
+        if (typeof machineDesc.machineDefinition["file-charset-options"] !== "undefined") {
+          startScript = interpolate(startScript, "charset", downloadCharsetMenuBtn.value);
+        }
+        const endScript = scriptDefs["download-end"];
+        const kermit = new KermitTransceiver(machine);
+        const downloader = new Downloader(machine, localFileName, remoteFileName, isText, startScript, endScript, kermit);
+        $(downloadProgressContainer).show();
+        downloader.start(
+          data => {
+            if (isText) {
+              data = data.map(b => {
+                return String.fromCharCode(b);
+              }).join("");
+            }
+            else {
+              data = new Uint8Array(data);
+            }
+            const blob = new Blob([data], {type: isText ? "text/plain" : "application/octet-stream"});
+            const fileSaver = document.getElementById("download-file-saver");
+            const blobUrl = URL.createObjectURL(blob);
+            fileSaver.setAttribute("href", blobUrl);
+            fileSaver.setAttribute("download", localFileName);
+            fileSaver.click();
+            URL.revokeObjectURL(blobUrl);
+            $(downloadProgressContainer).hide();
+            $(downloadDialog).hide();
+          },
+          msg => {
+            $(downloadProgressContainer).hide();
+            downloadStatusElem.innerHTML = msg;
+            $(downloadStatusElem).show();
+          },
+          progress => {
+            downloadProgressElem.innerHTML = progress;
+          }
+        );
+      });
+
+      machine.registerButton("charset", charsetButton);
+      machine.registerButton("termType", termTypeButton);
+      machineDesc.renderDescription(() => {
+        if (typeof machineDesc.machineDefinition["file-charset-options"] === "undefined") {
+          $(uploadCharsetMenuContainer).hide();
+          $(downloadCharsetMenuContainer).hide();
+        }
+        else {
+          uploadCharsetMenuBtn.onclick = evt => {
+            uploadCharsetMenuItems.classList.toggle("menu-show");
+          };
+          downloadCharsetMenuBtn.onclick = evt => {
+            downloadCharsetMenuItems.classList.toggle("menu-show");
+          };
+          const options = machineDesc.machineDefinition["file-charset-options"];
+          for (let i = 0; i < options.length; i++) {
+             let option = options[i];
+             if (i === 0) {
+               uploadCharsetMenuBtn.value = option.value;
+               uploadCharsetMenuBtn.innerHTML = option.label;
+               downloadCharsetMenuBtn.value = option.value;
+               downloadCharsetMenuBtn.innerHTML = option.label;
+             }
+             let menuItem = document.createElement("A");
+             menuItem.href = "#";
+             menuItem.innerHTML = option.label;
+             menuItem.onclick = evt => {
+               uploadCharsetMenuBtn.value = option.value;
+               uploadCharsetMenuBtn.innerHTML = option.label;
+               uploadCharsetMenuItems.classList.toggle("menu-show");
+             };
+             uploadCharsetMenuItems.appendChild(menuItem);
+             menuItem = document.createElement("A");
+             menuItem.href = "#";
+             menuItem.innerHTML = option.label;
+             menuItem.onclick = evt => {
+               downloadCharsetMenuBtn.value = option.value;
+               downloadCharsetMenuBtn.innerHTML = option.label;
+               downloadCharsetMenuItems.classList.toggle("menu-show");
+             };
+             downloadCharsetMenuItems.appendChild(menuItem);
+          }
+        }
+        if (typeof machineDesc.machineDefinition["file-transfer-scripts"] !== "undefined") {
+          const loadScripts = (refs, keys, callback) => {
+            if (keys.length > 0) {
+              const key = keys.shift();
+              $.get(refs[key], script => {
+                scriptDefs[key] = script;
+                loadScripts(refs, keys, callback);
+              });
+            }
+            else {
+              callback();
+            }
+          };
+          let scriptRefs = machineDesc.machineDefinition["file-transfer-scripts"];
+          loadScripts(scriptRefs, Object.keys(scriptRefs), () => {
+            uploadActivateBtn.show();
+            downloadActivateBtn.show();
+          });
+        }
+      });
+    });
+    </script>
+  </body>
+</html>

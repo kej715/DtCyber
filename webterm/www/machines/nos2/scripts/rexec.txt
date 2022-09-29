@@ -1,0 +1,47 @@
+<p>
+Use the REXEC command to execute commands on other systems in the local network. First, REXEC is used to
+display the status of all processes running on the 2.11BSD Unix system, then it is used again to display
+the status of jobs running on the TOPS-20 system. Because these systems produce mixed case output, the
+ASCII and NORMAL commands are used to place the terminal into mixed case mode, and then revert it to upper
+case mode. Note also that the 2.11BSD Unix system is case-sensitive, so lower case letters to be sent
+in commands to it must be encoded as <i>^-letter</i>.
+</p>
+<pre>
+     /ASCII
+     /REXEC,H=BSD211,Z.^P^S -^A^X
+     /REXEC,H=TOP20,Z.SYSTAT
+     /NORMAL
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="/machines/nos2/doc/rexec.html" target="_blank">
+   CDC Cyber REXEC Command
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Sascii
+D500
+L
+W^/$
+Srexec,h=bsd211,z.^p^s -^a^x
+D1000
+L
+W^REXEC COMPLETE
+W^/$
+Srexec,h=tops20,z.systat
+D1000
+L
+W^REXEC COMPLETE
+W^/$
+Snormal
+D500
+L
+W^/$

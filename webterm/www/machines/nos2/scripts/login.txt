@@ -1,0 +1,14 @@
+L
+:top:W(FAMILY:|USER NAME:|PASSWORD:|IDLE)
+T${0} IDLE done
+T${0} FAMILY: family
+T${0} USER\x20NAME: username
+T${0} PASSWORD: password
+Gdone
+:family:L
+Gtop
+:username:Lguest
+Gtop
+:password:Lguest
+W^/$
+:done:

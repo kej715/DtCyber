@@ -1,0 +1,57 @@
+<p>
+Enter the UT LISP language interpreter, create and execute some functions, then exit from the interpreter.
+</p>
+<pre>
+     /LISP
+       <i>Create and execute some functions, then exit the interpreter</i>
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="/machines/nos1/doc/UTLisp-1975.pdf" target="_blank">
+   LISP Reference Manual
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/cyber/nos/60435400M_NOS_Version_1_Reference_Manual_Volume_1_Dec80.pdf" target="_blank">
+   NOS Version 1 Reference Manual
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Llisp
+WCYBER-LISP
+W\\?\x20$
+D500
+I500 \\?\x20$ =====
+%
+  FUNCTION PAIR THAT RECURSIVELY CALCULATES AND PRINTS THE FIRST N FIBONACCI NUMBERS.
+%
+(DEF (FIBHELPER (N PRINTP)
+  (COND
+    (PRINTP (COND
+              ((< N 2) 0)
+              ((< N 3) (PRINT 1 NIL))
+              (T (PRINT (+ (FIBHELPER (- N 1) T)
+                           (FIBHELPER (- N 2) NIL)) NIL))
+            )
+    )
+    (T (COND
+         ((< N 2) 0)
+         ((< N 3) 1)
+         (T (+ (FIBHELPER (- N 1) NIL) (FIBHELPER (- N 2) NIL)))
+       )
+    )
+  )
+]
+(DEF (FIBONACCI (N) (FIBHELPER (+ N 1) T)))
+=====
+S(FIBONACCI 10)
+D1000
+L
+W\\?\x20$
+D500
+L
+WEND LISP
+W/$

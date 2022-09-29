@@ -1,0 +1,134 @@
+<p>
+Use the NEW and TEXT commands to create a batch job that will execute on the IBM 4381 mainframe
+running the VM/CMS operating system.
+Use the SUBMIT command to submit it for execution. Specify the TO parameter on the SUBMIT command
+to route the job's output to the wait queue. Use the STATUS command to poll the job's status. When the
+STATUS command indicates that the job has completed, and its output file is in the wait queue, use the QGET
+command to retrieve the output file, then use FSE (the Full Screen Editor) to examine it.
+</p>
+<p>
+Note that the IBM 4381 is physically connected to the CDC Cyber 175, so when this example is
+run from the CDC Cyber 865, the 865 will relay it automatically to the 175, and the 175 will then submit
+it to the 4381. The 175 will relay the job's output back to the 865. The STATUS command will report that
+the job is NOT FOUND after it leaves the 865 and until its output arrives from the 175. 
+</p>
+<pre>
+     /NEW,<i>filename</i>
+     /TEXT
+       <i>Enter remote batch job source code
+       Exit TEXT mode by pressing Control-T key</i>
+     /SUBMIT,<i>filename</i>,TO
+     /STATUS,UJN=<i>jobname</i>
+       <i>repeat STATUS command until it indicates that the job has completed</i>
+     /QGET,UJN=<i>jobname</i>
+     /SCREEN,WEBTRM
+     /FSE,<i>jobname</i>
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="/machines/nos2/doc/rje.html" target="_blank">
+   RJE - Remote Job Entry
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/ibm/370/VM_370/Release_6/GC20-1819-2_IBM_Virtual_Machine_Facility_370_CMS_Users_Guide_Rel_6_PLC_1_Mar79.pdf" target="_blank">
+   IBM Virtual Machine Facility/370: CMS User's Guide
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.org/pdf/cdc/Tom_Hunter_Scans/FSE_Full_Screen_Editor_Users_Guide_Apr87.pdf" target="_blank">
+   NOS Full Screen Editor User's Guide
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,job
+W^/$
+Ltext
+W ENTER TEXT MODE
+W\\r
+I250 \\r =====
+/job
+/noseq
+/ec=$
+fibonac,st=cms.
+ID       CMSBATCH
+/JOB GUEST GUEST FIB
+CP SPOOL PRINTER TO RSCS
+CP SPOOL CONSOLE TO RSCS
+CP TAG DEV PRINTER TLFMIN
+CP TAG DEV CONSOLE TLFMIN
+GLOBAL TXTLIB CMSLIB PLILIB FORTLIB TSOLIB
+GLOBAL MACLIB DMSGPI CMSHRC OSMACRO TSOMAC
+FILEDEF INMOVE TERM (RECFM F BLOCK 80 LRECL 80
+FILEDEF OUTMOVE DISK FIB FORTRAN A1 (RECFM F BLOCK 80 LRECL 80
+MOVEFILE
+C
+C     CALCULATE THE FIRST 10 FIBONACCI NUMBERS
+C
+      I1 = 0
+      I2 = 1
+C
+      DO 20 N = 1, 10
+        WRITE(6, 10) N, I2
+ 10     FORMAT(1X, I3, I4)
+        I3 = I1 + I2
+        I1 = I2
+        I2 = I3
+ 20   CONTINUE
+      STOP
+      END
+/*
+FORTRAN FIB
+TYPE FIB LISTING
+FILEDEF 6 TERM
+RUN FIB
+/*
+=====
+S\x14
+W EXIT TEXT MODE
+W^/$
+D1000
+Ssubmit,job,to
+D1000
+L
+WJSN IS ([A-Z]+)\\.\\r
+Ajsn ${0}
+W^/$
+:status:Sstatus,ujn=fibonac
+D2000
+L
+WFIBONAC\x20\x20(INPUT QUEUE|WAIT QUEUE|NOT FOUND)
+T${0} (WAIT\x20QUEUE) qget
+W^/$
+D3000
+Gstatus
+:qget:W^/$
+Sqget,ujn=fibonac
+D500
+L
+W^/$
+Sscreen,webtrm
+D500
+L
+W^/$
+Sfse,fibonac
+D2000
+L
+W\x1b\\[43;1H
+D2000
+KF1
+W\x1b\\[43;1H
+D2000
+KF1
+W\x1b\\[43;1H
+D4000
+KF8
+W^/$

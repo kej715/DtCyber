@@ -1,0 +1,99 @@
+<p>
+Use the NEW and TEXT commands to create a CYBIL program, compile and link it using SES (the Software Engineering
+Services utility), and then run the executable file produced. Note that ASCII mode is used because CYBIL supports mixed case.
+</p>
+<pre>
+     /NEW,SOURCE
+     /ASCII
+     /TEXT
+       <i>Enter program source code
+       Exit TEXT mode by pressing Control-T key</i>
+     /SES.GENCOMP SF=SOURCE CYBCCMN
+     /SES.CYBIL
+     /SES.LINK170 CYBCLIB
+     /LGOB
+     /NORMAL
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/cyber/lang/cybil/60455280A_CYBIL_Reference_Manual_Aug84.pdf" target="_blank">
+   CYBIL Reference Manual
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+  <li>
+   <a href="http://www.bitsavers.org/pdf/cdc/cyber/cyber_180/NOS_VE/ses/Software_Engineering_Services_User_Handbook_Rev_4A_Dec84.pdf" target="_blank">
+   SES User's Handbook
+   </a>
+ </ul>
+</p>
+~~~~
+Lnew,source
+W^/$
+Lascii
+WASCII
+W^/$
+Ltext
+W ENTER TEXT MODE
+W\\r
+I250 \\r =====
+MODULE fibonacci;
+?? SET (LIST := OFF) ??
+*CALLC pxiotyp
+*CALLALL lgz
+?? SET (LIST := ON) ??
+
+  PROGRAM fibonacci;
+    VAR
+      f: file,
+      i1: integer,
+      i2: integer,
+      i3: integer,
+      n: integer,
+      line: string (80),
+      line_len: integer;
+    lg#open (f, 'OUTPUT', old#, output#, asis#);
+    i1 := 0;
+    i2 := 1;
+    FOR n := 1 TO 10 DO
+      STRINGREP (line, line_len, n, ':', i2);
+      lg#put (f, line (1, line_len));
+      i3 := i1 + i2;
+      i1 := i2;
+      i2 := i3;
+    FOREND;
+    lg#close (f, asis#);
+  PROCEND fibonacci;
+MODEND fibonacci;
+=====
+S\x14
+W EXIT TEXT MODE
+W^/$
+D1000
+Sses.gencomp sf=source cybccmn
+D1000
+L
+WREVERT.+END GENCOMP.+COMPILE <- BASE
+W^/$
+Sses.cybil
+D1000
+L
+WREVERT.+END CYBIL.+COMPILE -> LISTING, LGO
+W^/$
+Sses.link170 cybclib
+D1000
+L
+WREVERT.+END LINK170.+LGOB
+W^/$
+Slgob
+D1000
+L
+WLGOB\\.
+W^/$
+Lnormal
+W^/$

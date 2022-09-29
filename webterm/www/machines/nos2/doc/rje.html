@@ -1,0 +1,111 @@
+<html>
+  <head>
+    <title>RJE - Remote Job Entry</title>
+    <link rel="icon" type="image/png" href="../../../images/ncc.png">
+    <link rel="stylesheet" href="../../../css/styles.css"/>
+    <script>
+    window.onload = () => {
+      const offset = 60;
+      const contentContainer = document.getElementById("content-container");
+      contentContainer.style.left = `${offset}px`;
+      const setContentWidth = () => {
+        contentContainer.style.width = `${contentContainer.offsetParent.offsetWidth - offset * 2}px`;
+      };
+      window.onresize = () => {
+        setContentWidth();
+      };
+      setContentWidth();
+    };
+    </script>
+  </head>
+  <body class="fanfold-background">
+    <div class="title">RJE - Remote Job Entry</div>
+    <div id="content-container" class="absolute-position">
+      <p>
+The Cyber 865 and 175 at the Nostalgic Computing Center each run two subsystems named RBF and TLF. RBF is the Remote Batch Facility.
+It accepts batch jobs from remote batch stations, and it arranges for the output from these batch jobs to be returned to the originating
+remote batch stations.
+      </p>
+      <p>
+TLF is the TieLine Facility. It enables the Cyber 865 and 175 to act as remote batch stations, allowing users of the Cyber systems to
+submit batch jobs to other computer systems. TLF also arranges for the output from these jobs to be returned to the originating
+Cyber mainframe.
+      </p>
+The Cyber 865 has two physical HASP connections to Prime1 (one of the Prime P9950 systems). One of these connections is managed by TLF, and
+the other is managed by RBF. Thus, users of the 865 can send batch jobs to the P9950, and users of the P9950 can send batch jobs to
+the 865. The Cyber 865 also has one physical HASP connection to the IBM 3033 (running the MVS operating system), and this connection is
+managed by TLF. This allows users of the 865 to submit batch jobs to the 3033. Similarly, the Cyber 175 has two physical HASP connections
+to Prime2 (the second Prime P9950 system) and two physical HASP connections to the IBM 4381 (running the VM/CMS operating system), and
+these two pairs of connections enable bi-directional job exchange between the 175 and P9950, and the 175 and IBM 4381.
+      </p>
+      <p>
+To submit a batch job to a system supported by TLF from either of the Cyber systems, a user specifies the target system's
+3-character LID (logical identifier) on the job card (first line) of the file to be submitted. TLF reads the job card to determine
+where to route the job (as indicated by the LID) and what the user has named the job. The job card is not sent to the target system.
+The second and subsequent lines of the file are sent to the target system. They represent commands in the target system's job command
+language. 
+      </p>
+      <p>
+For example, a job file destined for the IBM 4381 might look like:
+      </p>
+      <pre>
+/JOB
+/NOSEQ
+/EC=$
+MYJOB,ST=CMS.
+ID       CMSBATCH
+/JOB GUEST GUEST FIB
+CP SPOOL PRINTER TO RSCS
+CP SPOOL CONSOLE TO RSCS
+CP TAG DEV PRINTER MINS
+CP TAG DEV CONSOLE MINS
+GLOBAL TXTLIB CMSLIB PLILIB FORTLIB TSOLIB
+GLOBAL MACLIB DMSGPI CMSHRC OSMACRO TSOMAC
+FILEDEF INMOVE TERM (RECFM F BLOCK 80 LRECL 80
+FILEDEF OUTMOVE DISK HELLO FORTRAN A1 (RECFM F BLOCK 80 LRECL 80
+MOVEFILE
+      WRITE(6, 10)
+ 10   FORMAT(12H HELLO WORLD)
+      STOP
+      END
+/*
+FORTRAN HELLO
+FILEDEF 6 TERM
+RUN HELLO
+/* </pre>
+      <p>
+To submit this job to the IBM 4381 and cause the output to be returned to your wait queue, execute the SUBMIT command as in:
+      </p>
+      <pre>
+    SUBMIT,<i>lfn</i>,TO.</pre>
+      <p>
+Where <i>lfn</i> is the name of the local file containing the job. If you specify BC instead of
+TO on the SUBMIT command, the job's output will be sent to the NOS print queue, and you can visit
+the <a href="http://www.nostalgiccomputing.org:8081" target="ncc-output-folders">Nostalgic Computing Center Output Folders</a> page
+to find it.
+      </p>
+      <p>
+Each machine to which TLF can send jobs is identified by a unique LID (Logical IDentifier). To route a job to a particular
+machine, its LID is specified on the job's jobcard, as described above. The following table lists the machines at the
+Nostalgic Computing Center to which TLF can send jobs:
+      </p>
+      <div class="table highlighted">
+        <div class="table-row">
+          <div class="table-header">Machine</div><div class="table-header">Operating System</div><div class="table-header">LID</div>
+        </div>
+        <div class="table-row">
+          <div class="table-cell">IBM 3033</div><div class="table-cell">MVS 3.8j</div><div class="table-cell">MVS</div>
+        </div>
+        <div class="table-row">
+          <div class="table-cell">IBM 4381</div><div class="table-cell">VM/CMS 6.0</div><div class="table-cell">CMS</div>
+        </div>
+        <div class="table-row">
+          <div class="table-cell">Prime 9950</div><div class="table-cell">PRIMOS 19.2</div><div class="table-cell">PR1</div>
+        </div>
+        <div class="table-row">
+          <div class="table-cell">Prime 9950</div><div class="table-cell">PRIMOS 19.2</div><div class="table-cell">PR2</div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

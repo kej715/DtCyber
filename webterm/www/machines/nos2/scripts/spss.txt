@@ -1,0 +1,84 @@
+<p>
+Use the NEW and TEXT commands to create an SPSS (Statistical Package for the Social Sciences) 
+statistical analysis run, then attach the SPSS package from the system library, and execute it
+against the directives and data in the run defintion to calculate a variety of statistics.
+Finally, use FSE (NOS Full Screen Editor) to browse the results.
+</p>
+<pre>
+     /NEW,<i>filename</i>
+     /TEXT
+       <i>Enter SPSS run directives and data
+       Exit TEXT mode by pressing Control-T key</i>
+     /ATTACH,SPSS/UN=LIBRARY
+     /SPSS,I=<i>filename</i>,L=<i>results</i>
+     /SCREEN,WEBTRM
+     /FSE,<i>results</i>
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="/machines/nos2/doc/spss.txt" target="_blank">
+   SPSS-6000 Update Manual
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.org/pdf/cdc/Tom_Hunter_Scans/FSE_Full_Screen_Editor_Users_Guide_Apr87.pdf" target="_blank">
+   NOS Full Screen Editor User's Guide
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,rundefn
+W^/$
+Ltext
+W ENTER TEXT MODE
+W\\r
+I250 \\r =====
+RUN NAME       DESCRIPTIVE STATS FOR EXERCISE PROGRAM
+DATA LIST      WEIGHT 10-12 WAIST 15-16 PULSE 19-20 CHINUPS 23-24
+                SITUPS 27-29 JUMPS 31-33
+CONDESCRIPTIVE ALL
+READ INPUT DATA
+HODGES   191  36  50  5  162 60
+KERR     189  37  52  4  179 60
+SCOTT    138  33  68  6  180 43
+FISHER   125  34  50  7  250 75
+KLEIN    127  33  52 10  250 75
+EVANS    160  33  55 12  300 100
+=====
+S\x14
+W EXIT TEXT MODE
+W^/$
+D1000
+Sattach,spss/un=library
+D1000
+L
+W^/$
+D1000
+Sspss,i=rundefn,l=stats
+D1000
+L
+W^/$
+Sscreen,webtrm
+D500
+L
+W^/$
+Sfse,stats
+D2000
+L
+W\x1b\\[43;1H
+D2000
+KF1
+W\x1b\\[43;1H
+D2000
+KF1
+W\x1b\\[43;1H
+D4000
+KF8
+W^/$

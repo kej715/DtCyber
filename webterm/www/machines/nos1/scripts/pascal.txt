@@ -1,0 +1,79 @@
+<p>
+Use the NEW and TEXT commands to create a PASCAL program, compile it using the PASCAL command, then run the
+executable file produced.
+</p>
+<pre>
+     /NEW,<i>filename</i>
+     /TEXT
+       <i>Enter program source code
+       Exit TEXT mode by pressing Control-C key</i>
+     PACK,<i>filename</i>
+     /PASCAL,<i>filename</i>,LIST
+     /MAP,OFF
+     /LGO
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/Pascal_Ver_1_RM_Dec82_2nd_scan.pdf" target="_blank">
+   PASCAL Version 1 Reference Manual",
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/cyber/nos/60435400M_NOS_Version_1_Reference_Manual_Volume_1_Dec80.pdf" target="_blank">
+   NOS Version 1 Reference Manual
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,fib
+W^/$
+D500
+Ltext
+WENTER TEXT MODE
+W\\r
+D500
+I500 \\r =====
+PROGRAM FIBONACCI(OUTPUT);
+(* ---------------------------------------------*)
+(*   CALCULATE THE FIRST 10 FIBONACCI NUMBERS   *)
+(* ---------------------------------------------*)
+
+VAR
+  I1, I2, I3, N : INTEGER;
+
+BEGIN
+  I1 := 0;
+  I2 := 1;
+  FOR N := 1 TO 10 DO
+  BEGIN
+    WRITELN(' ', N, ': ', I2);
+    I3 := I1 + I2;
+    I1 := I2;
+    I2 := I3;
+  END;
+END.
+=====
+S\x03
+WEXIT TEXT MODE
+D1000
+Lpack,fib
+W/$
+D500
+Spascal,fib,list
+D500
+L
+W CP SECS,.+CM USED
+W/$
+D500
+Smap,off
+D500
+L
+W/$
+D500
+Slgo
+D500
+L
+W CP SECS,.+CM USED
+W/$

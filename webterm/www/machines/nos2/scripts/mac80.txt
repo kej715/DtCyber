@@ -1,0 +1,99 @@
+<p>
+Use the NEW and TEXT commands to create an Intel 8080 assembly language program for the CP/M operating system,
+use the MAC80 cross-assembler to assemble it, then enter the Intel 8080 emulator, boot the CP/M operating system,
+load, and run the cross-assembled program. Halt the 8080 emulator and return to NOS when done.
+</p>
+<pre>
+     /NEW,<i>filename</i>
+     /TEXT
+       <i>Enter the Intel 8080 assembly language program source code
+       Exit TEXT mode by pressing Control-T key</i>
+     /MAC80,I=<i>filename</i>,B=HEX,L=0
+     /REWIND,HEX
+     /CPM80,R=HEX,RC=DIS
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="/machines/nos2/doc/mac80.pdf" target="_blank">
+   8080 Assembly Language Programming Manual
+   </a>
+  </li>
+  <li>
+   <a href="/machines/nos2/doc/cpm2.2-manual.pdf" target="_blank">
+   CP/M Operating System Manual
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,source
+W^/$
+Ltext
+W ENTER TEXT MODE
+W\\r
+I250 \\r =====
+
+; A VERY SIMPLE 'HELLO WORLD' PROGRAM WRITTEN IN INTEL 8080
+; ASSEMBLY LANGUAGE TO DEMONSTRATE THE MAC80 CROSS-ASSEMBLER
+; AND INTERP80 CPU EMULATOR.
+
+CPM     EQU     5       ; CP/M OPERATING SYSTEM ENTRY POINT
+CR      EQU     0DH     ; ASCII <CR>
+LF      EQU     0AH     ; ASCII <LF>
+PRINT   EQU     9       ; CP/M FUNCTION CODE TO PRINT A STRING
+
+        ORG     100H    ; TRANSFER ADDRESS FOR ALL CP/M PROGRAMS
+
+        LXI     SP,STACK
+        MVI     C,PRINT ; CALL CP/M TO PRINT 'HELLO WORLD!'
+        LXI     D,HELLO
+        CALL    CPM
+        JMP     0       ; EXIT PROGRAM
+
+HELLO:  DB      'HELLO WORLD!',CR,LF,'$'
+        DS      8
+STACK:  DS      0
+
+        END
+=====
+S\x14
+W EXIT TEXT MODE
+W^/$
+D1000
+Smac80,i=source,b=hex,l=0
+D1000
+L
+W^/$
+Srewind,hex
+D1000
+L
+W^/$
+Scpm80,r=hex,rc=dis
+D1000
+L
+WLOADING CP/M.+DONE
+W64K CP/M v2.2 ready
+W^A>$
+Spip hello.hex=rdr:
+D1000
+L
+W^A>$
+Sload hello
+D1000
+L
+W^A>$
+Shello
+D1000
+L
+W^A>$
+Shalt
+D2000
+L
+WHalting CP/M.+Goodbye!
+W^/$

@@ -1,0 +1,95 @@
+<p>
+Use the NEW and TEXT commands to create a batch job that will execute on the CDC Cyber 865
+running the NOS 2.8.7 operating system.  Use the ROUTE command to enter it into the local
+input queue. The TIELINE subsystem will detect the job waiting in the input queue, it will
+remove the job from the input queue and transmit it to the Cyber 865 for execution. When
+the job completes, TIELINE will receive the job's output from the Cyber 865 and route it to
+the local output queue for printing.
+</p>
+<pre>
+     /NEW,<i>filename</i>
+     /TEXT
+       <i>Enter remote batch job commands
+       Exit TEXT mode by pressing Control-C key</i>
+     PACK,<i>filename</i>
+     /COPY,<i>filename</i>,JOB
+     /NEW,SOURCE/ND
+     /TEXT
+       <i>Enter remote batch job input data
+       Exit TEXT mode by pressing Control-C key</i>
+     PACK,SOURCE
+     /COPY,SOURCE.JOB
+     /ROUTE,JOB,DC=IN
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="/machines/nos1/doc/tieline.html" target="_blank">
+   TIELINE - Job Submission to Remote Mainframes
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/cyber/nos/60435400M_NOS_Version_1_Reference_Manual_Volume_1_Dec80.pdf" target="_blank">
+   NOS Version 1 Reference Manual
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,cmds
+W^/$
+D500
+Ltext
+WENTER TEXT MODE
+W\\r
+D500
+I500 \\r =====
+//job.
+user,guest,guest.
+ftn5,go.
+=====
+S\x03
+WEXIT TEXT MODE
+D500
+Lpack,cmds
+W/$
+D500
+Lcopy,cmds,job
+W/$
+D500
+Lnew,source/nd
+W^/$
+D500
+Ltext
+WENTER TEXT MODE
+W\\r
+D500
+I500 \\r =====
+      PROGRAM FIB
+C
+C     CALCULATE THE FIRST 10 FIBONACCI NUMBERS
+C
+      I1 = 0
+      I2 = 1
+C
+      DO 20 N = 1, 10
+        PRINT 10, N, I2
+ 10     FORMAT(I3, I4)
+        I3 = I1 + I2
+        I1 = I2
+        I2 = I3
+ 20   CONTINUE
+      STOP
+      END
+=====
+S\x03
+WEXIT TEXT MODE
+D500
+Lpack,source
+W/$
+D500
+Lcopy,source,job
+W/$
+D500
+Lroute,job,dc=in
+W/$

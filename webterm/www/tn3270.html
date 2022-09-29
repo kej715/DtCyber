@@ -1,0 +1,470 @@
+<html>
+  <head>
+    <title>Machine</title>
+    <link rel="preload" href="css/fonts/3270-Regular.ttf" as="font" />
+    <link rel="icon" type="image/png" href="images/ncc.png">
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/tn3270.css" />
+    <script src="js/jquery-3.3.1.min.js"></script>
+    <script src="js/tn3270.js"></script>
+    <script src="js/machine-comm.js"></script>
+    <script src="js/machine-desc.js"></script>
+    <script src="js/updownload.js"></script>
+    <script src="js/indfile.js"></script>
+    <script src="js/util.js"></script>
+  </head>
+  <body class="fanfold-background">
+    <div id="title" class="title"></div>
+    <div id="content-container" class="content-container">
+      <div id="terminal-container" class="content-container top left-floater right-padded zindex-1">
+        <div id="terminal"></div>
+        <div id="status" class="status-container">
+          <img id="status-ready-icon" class="absolute-position-left" src="/images/green-circle-16x16.png"/>
+          <img id="status-wait-icon"  class="absolute-position-left" src="/images/red-cross-16x16.png"/>
+          <span class="right-justified"><span id="status-row"></span> | <span id="status-col"></span></span>
+        </div>
+        <div class="left-floater">
+           <button id="upload-button" type="button" class="button">
+             <img src="images/upload-16x15.png"/> Upload
+           </button>
+         </div>
+         <div class="left-floater spacer-1">&nbsp;</div>
+         <div class="left-floater">
+           <button id="download-button" type="button" class="button">
+             <img src="images/download-16x15.png"/> Download
+           </button>
+         </div>
+      </div>
+      <div id="content" class="content-container zindex-0">
+        <div id="machine-overview" class="machine-overview-container"></div>
+        <div id="machine-configuration" class="machine-config-container"></div>
+        <div id="machine-login" class="machine-login-container"></div>
+        <div id="machine-login-script-container" class="machine-login-script-container"></div>
+        <div id="machine-examples" class="machine-example-container"></div>
+        <div id="machine-keys" class="machine-keys-container"></div>
+        <div id="machine-more" class="machine-more-container"></div>
+      </div>
+    </div>
+    <div id="example-container" class="draggable dialog">
+      <div class="dialog-header">
+        <span id="example-title">Example</span>
+        <img id="example-close-button" class="right-justified-button" src="../../images/close-16x16.png"/>
+      </div>
+      <div id="example-content-container" class="code-container">
+        <div id="example-content"></div>
+        <div id="busy-indicator-container" class="busy-indicator">
+          <img id="busy-indicator" src="../../images/loading-animation.gif"/>
+        </div>
+      </div>
+      <div id="example-button-container" class="button-container">
+        <button id="example-run-button" class="button">Run</button>
+      </div>
+    </div>
+    <div id="upload-dialog" class="draggable dialog">
+      <div class="dialog-header">
+        Upload File
+        <img id="upload-dialog-close-button" class="right-justified-button" src="../../images/close-16x16.png"/>
+      </div>
+      <div class="upload-3270-file-dialog-content">
+        <div class="updownload-file-input-container">
+          <div class="updownload-file-label">Local file:</div>
+          <input id="upload-local-file-input" class="updownload-file-input" type="file"></input>
+        </div>
+        <div class="updownload-file-input-container">
+          <div class="updownload-file-label">Host file:</div>
+          <input id="upload-remote-file-input" class="updownload-file-input" type="text" size="20" placeholder="enter file name"></input>
+        </div>
+        <fieldset class="updownload-file-controls-container">
+          <legend>Transfer type</legend>
+          <input id="upload-text-radio" class="updownload-file-radio-button" type="radio"></input>
+          <label for="upload-text-radio">Text</label>
+          <input id="upload-binary-radio" class="updownload-file-radio-button" type="radio"></input>
+          <label for="upload-binary-radio">Binary</label>
+        </fieldset>
+        <fieldset class="updownload-file-controls-container">
+          <legend>Record format</legend>
+          <input id="upload-v-rec-radio" class="updownload-file-radio-button" type="radio"></input>
+          <label for="upload-v-rec-radio">Variable</label>
+          <input id="upload-f-rec-radio" class="updownload-file-radio-button" type="radio"></input>
+          <label for="upload-f-rec-radio">Fixed</label>
+          <input id="upload-rec-len-input" class="updownload-file-num-input" type="number" min="1" max="32760" value="80"></input>
+          <div class="updownload-file-label">Record len</div>
+        </fieldset>
+        <div class="updownload-file-status-container">
+          <div id="upload-diagnostic" class="updownload-file-diagnostic"></div>
+          <div id="upload-progress-container">
+            Progress: <progress id="upload-progress" value="0">0%</progress>
+          </div>
+        </div>
+        <div class="button-container">
+          <button id="upload-file-button" class="button" type="button">Upload</button>
+        </div>
+      </div>
+    </div>
+    <div id="download-dialog" class="draggable dialog">
+      <div class="dialog-header">
+        Download File
+        <img id="download-dialog-close-button" class="right-justified-button" src="../../images/close-16x16.png"/>
+      </div>
+      <div class="updownload-file-dialog-content">
+        <div class="updownload-file-input-container">
+          <div class="updownload-file-label">Local file:</div>
+          <input id="download-local-file-input" class="updownload-file-input" type="text" size="20" placeholder="enter file name"></input>
+        </div>
+        <div class="updownload-file-input-container">
+          <div class="updownload-file-label">Host file:</div>
+          <input id="download-remote-file-input" class="updownload-file-input" type="text" size="20" placeholder="enter file name"></input>
+        </div>
+        <fieldset class="updownload-file-controls-container">
+          <legend>Transfer type</legend>
+          <input id="download-text-radio" class="updownload-file-radio-button" type="radio"></input>
+          <label for="download-text-radio">Text</label>
+          <input id="download-binary-radio" class="updownload-file-radio-button" type="radio"></input>
+          <label for="download-binary-radio">Binary</label>
+        </fieldset>
+        <div class="updownload-file-status-container">
+          <div id="download-diagnostic" class="updownload-file-diagnostic"></div>
+          <div id="download-progress-container">
+            Progress: <span id="download-progress"></span>
+          </div>
+        </div>
+        <div class="button-container">
+          <button id="download-file-button" class="button" type="button">Download</button>
+        </div>
+      </div>
+      <a id="download-file-saver" style="display:none;"></a>
+    </div>
+    <script>
+    $(document).ready(() => {
+      let machineId = "unknown";
+      let title = "IBM 370";
+      let cols = 80;
+      let rows = 43;
+      let termType = "IBM-3279-4-E@MOD4";
+      let qs = window.location.search;
+      if (qs && qs.length > 1) {
+        qs.substr(1).split("&").forEach(param => {
+          let nvp = param.split("=");
+          if (nvp.length > 1) {
+            switch (nvp[0]) {
+            case "c": // columns
+              cols = parseInt(nvp[1]);
+              break;
+            case "m": // machine name
+              machineId = nvp[1];
+              break;
+            case "r": // rows
+              rows = parseInt(nvp[1]);
+              break;
+            case "t": // title
+              title = decodeURIComponent(nvp[1]);
+              break;
+            case "tt": // terminal type
+              termType = decodeURIComponent(nvp[1]);
+              break;
+            }
+          }
+        });
+      }
+      $("title").html(title);
+      $("#title").html(title);
+      const machine = new Machine(machineId);
+      const containerStack = new ContainerStack();
+      const machineDesc = new MachineDescription(machine);
+      machineDesc.setContainerStack(containerStack);
+      let exampleContainer = document.getElementById("example-container");
+      containerStack.push(exampleContainer);
+      $(exampleContainer).hide();
+      $("#busy-indicator-container").hide();
+      $("#status-wait-icon").hide();
+      const offset = 60;
+      const terminalContainer = $("#terminal-container");
+      let contentContainer = document.getElementById("content-container");
+      let content = document.getElementById("content");
+      contentContainer.style.left = `${offset}px`;
+      const setContentWidth = () => {
+        contentContainer.style.width = `${contentContainer.offsetParent.offsetWidth - offset * 2}px`;
+        let contentWidth = $(contentContainer).width() - terminalContainer.outerWidth(true);
+        $("#machine-configuration,#machine-examples").width(contentWidth);
+      };
+      window.onresize = () => {
+        setContentWidth();
+      };
+      const terminalElem = $("#terminal");
+      const terminal = new Tn3270();
+      terminal.createScreen(15, rows, cols);
+      terminal.setTerminalType(termType);
+      const canvas = terminal.getCanvas();
+      terminalElem.empty();
+      terminalElem.append(canvas);
+      canvas.focus();
+      setContentWidth();
+      $("#terminal-container").width(terminal.getWidth());
+      machine.setTerminal(terminal);
+      machine.setReceivedDataHandler(data => {
+        terminal.renderText(data);
+      });
+      let url = machine.createConnection();
+      const keyboardInputHandler = data => {
+        machine.send(data);
+      };
+      terminal.setKeyboardInputHandler(keyboardInputHandler);
+      terminal.addTerminalStatusHandler(status => {
+        if (status.isTerminalWait) {
+          $("#status-wait-icon").show();
+          $("#status-ready-icon").hide();
+        }
+        else {
+          $("#status-wait-icon").hide();
+          $("#status-ready-icon").show();
+        }
+        $("#status-row").html(`${status.cursorRow}`);
+        $("#status-col").html(`${status.cursorCol}`);
+        machine.notifyTerminalStatus(status);
+      });
+      machine.setDisconnectListener(() => {
+        terminal.reset();
+        terminal.renderText("\r\n\nDisconnected from " + title + ".\r\n\n   Press any key to reconnect ...\r\n");
+        terminal.setKeyboardInputHandler(data => {
+          url = machine.createConnection();
+          terminal.setKeyboardInputHandler(keyboardInputHandler);
+        });
+      });
+      $(document).ajaxError((event, jqxhr, settings, thrownError) => {
+        if (settings.url === url) {
+          terminal.reset();
+          terminal.renderText("\r\n\n" + jqxhr.responseText + "\r\n\n   Failed to connect to " + title);
+        }
+      });
+      $(window).bind("beforeunload", () => {
+        machine.closeConnection();
+      });
+      //
+      // File upload support
+      //
+      let scriptDefs = {};
+      const interpolate = (template, key, value) => {
+        let result = template;
+        const searchStr = "${" + key + "}";
+        while (true) {
+          let idx = result.indexOf(searchStr);
+          if (idx >= 0) {
+            let prefix = result.substring(0, idx);
+            let suffix = result.substring(idx + searchStr.length);
+            result = prefix + value + suffix;
+          }
+          else {
+            break;
+          }
+        }
+        return result;
+      };
+      const uploadDialog = document.getElementById("upload-dialog");
+      containerStack.push(uploadDialog);
+      uploadDialog.style.left = `${offset + 50}px`;
+      uploadDialog.style.top = `50px`;
+      const uploadDragMgr = new DraggableManager();
+      uploadDragMgr.activate(uploadDialog);
+      $(uploadDialog).hide();
+      const uploadCloseBtn = document.getElementById("upload-dialog-close-button");
+      uploadCloseBtn.onclick = e => {
+        $(uploadDialog).hide();
+      };
+      const uploadActivateBtn = $(document.getElementById("upload-button"));
+      uploadActivateBtn.hide();
+      uploadActivateBtn.click(() => {
+        $(uploadDialog).show();
+        containerStack.promote(uploadDialog);
+      });
+      const uploadStartBtn = $(document.getElementById("upload-file-button"));
+      const uploadLocalFileInput = document.getElementById("upload-local-file-input");
+      const uploadRemoteFileInput = document.getElementById("upload-remote-file-input");
+      const uploadTextRadio = document.getElementById("upload-text-radio");
+      const uploadBinaryRadio = document.getElementById("upload-binary-radio");
+      const uploadVRecRadio = document.getElementById("upload-v-rec-radio");
+      const uploadFRecRadio = document.getElementById("upload-f-rec-radio");
+      const uploadRecLenInput = document.getElementById("upload-rec-len-input");
+      const uploadStatusElem = document.getElementById("upload-diagnostic");
+      const uploadProgressContainer = document.getElementById("upload-progress-container");
+      const uploadProgressElem = document.getElementById("upload-progress");
+      $(uploadStatusElem).hide();
+      $(uploadProgressContainer).hide();
+      uploadRemoteFileInput.onclick = evt => {
+        uploadRemoteFileInput.focus();
+      };
+      uploadTextRadio.checked = true;
+      uploadTextRadio.onclick = evt => {
+        if (uploadTextRadio.checked) uploadBinaryRadio.checked = false;
+      }
+      uploadBinaryRadio.onclick = evt => {
+        if (uploadBinaryRadio.checked) uploadTextRadio.checked = false;
+      }
+      uploadVRecRadio.checked = true;
+      uploadVRecRadio.onclick = evt => {
+        if (uploadVRecRadio.checked) uploadFRecRadio.checked = false;
+      }
+      uploadFRecRadio.onclick = evt => {
+        if (uploadFRecRadio.checked) uploadVRecRadio.checked = false;
+      }
+      uploadStartBtn.click(() => {
+        uploadProgressElem.setAttribute("value", 0);
+        uploadProgressElem.innerHTML = "0%";
+        const localFile = uploadLocalFileInput.files[0];
+        if (typeof localFile === "undefined" || localFile.name === "") {
+          uploadStatusElem.innerHTML = "Please select a file to upload";
+          $(uploadStatusElem).show();
+          return;
+        }
+        const remoteFileName = uploadRemoteFileInput.value.trim();
+        if (remoteFileName === "") {
+          uploadStatusElem.innerHTML = "Please provide a remote file name";
+          $(uploadStatusElem).show();
+          return;
+        }
+        uploadStatusElem.innerHTML = "";
+        $(uploadStatusElem).hide();
+        const isText = uploadTextRadio.checked;
+        const isVRec = uploadVRecRadio.checked;
+        const recLen = uploadRecLenInput.value.trim();
+        let startScript = scriptDefs[isText ? "upload-text" : "upload-binary"];
+        startScript = interpolate(startScript, "recfm", isVRec ? "V" : "F");
+        startScript = interpolate(startScript, "lrecl", recLen);
+        const indfile = new IndFileTransceiver(machine);
+        const uploader = new Uploader(machine, localFile, remoteFileName, isText, startScript, null, indfile);
+        $(uploadProgressContainer).show();
+        uploader.start(
+          () => {
+            $(uploadProgressContainer).hide();
+            $(uploadDialog).hide();
+          },
+          msg => {
+            $(uploadProgressContainer).hide();
+            uploadStatusElem.innerHTML = msg;
+            $(uploadStatusElem).show();
+          },
+          fraction => {
+            uploadProgressElem.setAttribute("value", fraction);
+            uploadProgressElem.innerHTML = `${Math.round(fraction * 100)}%`;
+          }
+        );
+      });
+      //
+      // File download support
+      //
+      const downloadDialog = document.getElementById("download-dialog");
+      containerStack.push(downloadDialog);
+      downloadDialog.style.left = `${offset + 50}px`;
+      downloadDialog.style.top = `50px`;
+      const downloadDragMgr = new DraggableManager();
+      downloadDragMgr.activate(downloadDialog);
+      $(downloadDialog).hide();
+      const downloadCloseBtn = document.getElementById("download-dialog-close-button");
+      downloadCloseBtn.onclick = e => {
+        $(downloadDialog).hide();
+      };
+      const downloadActivateBtn = $(document.getElementById("download-button"));
+      downloadActivateBtn.hide();
+      downloadActivateBtn.click(() => {
+        $(downloadDialog).show();
+        containerStack.promote(downloadDialog);
+      });
+      const downloadStartBtn = $(document.getElementById("download-file-button"));
+      const downloadLocalFileInput = document.getElementById("download-local-file-input");
+      const downloadRemoteFileInput = document.getElementById("download-remote-file-input");
+      const downloadTextRadio = document.getElementById("download-text-radio");
+      const downloadBinaryRadio = document.getElementById("download-binary-radio");
+      const downloadStatusElem = document.getElementById("download-diagnostic");
+      const downloadProgressContainer = document.getElementById("download-progress-container");
+      const downloadProgressElem = document.getElementById("download-progress");
+      $(downloadStatusElem).hide();
+      $(downloadProgressContainer).hide();
+      downloadLocalFileInput.onclick = evt => {
+        downloadLocalFileInput.focus();
+      };
+      downloadRemoteFileInput.onclick = evt => {
+        downloadRemoteFileInput.focus();
+      };
+      downloadTextRadio.checked = true;
+      downloadTextRadio.onclick = evt => {
+        if (downloadTextRadio.checked) downloadBinaryRadio.checked = false;
+      }
+      downloadBinaryRadio.onclick = evt => {
+        if (downloadBinaryRadio.checked) downloadTextRadio.checked = false;
+      }
+      downloadStartBtn.click(() => {
+        downloadProgressElem.innerHTML = "0 bytes";
+        const localFileName = downloadLocalFileInput.value.trim();
+        if (localFileName === "") {
+          downloadStatusElem.innerHTML = "Please provide a local file name";
+          $(downloadStatusElem).show();
+          return;
+        }
+        const remoteFileName = downloadRemoteFileInput.value.trim();
+        if (remoteFileName === "") {
+          downloadStatusElem.innerHTML = "Please provide a remote file name";
+          $(downloadStatusElem).show();
+          return;
+        }
+        downloadStatusElem.innerHTML = "";
+        $(downloadStatusElem).hide();
+        const isText = downloadTextRadio.checked;
+        let startScript = scriptDefs[isText ? "download-text" : "download-binary"];
+        const indfile = new IndFileTransceiver(machine);
+        const downloader = new Downloader(machine, localFileName, remoteFileName, isText, startScript, null, indfile);
+        $(downloadProgressContainer).show();
+        downloader.start(
+          data => {
+            if (isText) {
+              data = data.map(b => {
+                return String.fromCharCode(b);
+              }).join("");
+            }
+            else {
+              data = new Uint8Array(data);
+            }
+            const blob = new Blob([data], {type: isText ? "text/plain" : "application/octet-stream"});
+            const fileSaver = document.getElementById("download-file-saver");
+            const blobUrl = URL.createObjectURL(blob);
+            fileSaver.setAttribute("href", blobUrl);
+            fileSaver.setAttribute("download", localFileName);
+            fileSaver.click();
+            URL.revokeObjectURL(blobUrl);
+            $(downloadProgressContainer).hide();
+            $(downloadDialog).hide();
+          },
+          msg => {
+            $(downloadProgressContainer).hide();
+            downloadStatusElem.innerHTML = msg;
+            $(downloadStatusElem).show();
+          },
+          progress => {
+            downloadProgressElem.innerHTML = progress;
+          }
+        );
+      });
+
+      machineDesc.renderDescription(() => {
+        if (typeof machineDesc.machineDefinition["file-transfer-scripts"] !== "undefined") {
+          const loadScripts = (refs, keys, callback) => {
+            if (keys.length > 0) {
+              const key = keys.shift();
+              $.get(refs[key], script => {
+                scriptDefs[key] = script;
+                loadScripts(refs, keys, callback);
+              });
+            }
+            else {
+              callback();
+            }
+          };
+          let scriptRefs = machineDesc.machineDefinition["file-transfer-scripts"];
+          loadScripts(scriptRefs, Object.keys(scriptRefs), () => {
+            uploadActivateBtn.show();
+            downloadActivateBtn.show();
+          });
+        }
+      });
+    });
+    </script>
+  </body>
+</html>

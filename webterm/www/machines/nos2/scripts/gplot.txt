@@ -1,0 +1,62 @@
+<p>
+Switch to Tektronix terminal emulation, enter the GPLOT utility, and execute a sequence of commands that
+will plot a simple graph. Switch back to ANSI terminal emulation when finished.
+</p>
+<pre>
+     /GPLOT
+     ? DEV TEK
+     ? MEMTEST
+     ? TITLE "A *LMEMORY TEST PLOT."
+     ? XLAB X
+     ? YLAB Y
+     ? XYL
+     ? EXIT
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="/machines/nos2/doc/DIMFILM_Manual.pdf" target="_blank">
+   DIMFILM Preliminary User Guide
+   </a>
+  </li>
+  <li>
+   <a href="/machines/nos2/doc/gplot.pdf" target="_blank">
+   GPLOT: A DIMFILM Based Graph Plotting Program for CDC NOS 2.8
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+BtermType
+D500
+KShift F1
+D50
+KF1
+D50
+Sgplot
+D500
+L
+W^\\? $
+I500 \x1f\\?\x20$ =====
+dev tek
+memtest
+title "A *Lmemory test plot."
+xlab x
+ylab y
+=====
+Sxyl
+D1000
+L
+W\x1f\\? $
+D4000
+Sexit
+D500
+L
+WGPLOT FINISHED
+W^/$
+BtermType

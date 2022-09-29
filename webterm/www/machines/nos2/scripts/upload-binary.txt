@@ -1,0 +1,7 @@
+L$kermit
+W^Kermit-170>
+Lset file-mode binary
+W^Kermit-170>
+Lreceive
+W]
+D500

@@ -1,0 +1,57 @@
+<p>
+Use the NEW and TEXT commands to create a BASIC program, then compile and run it using the $BASIC command.
+</p>
+<pre>
+     /NEW,<i>filename</i>
+     /TEXT
+       <i>Enter program source code
+       Exit TEXT mode by pressing Control-T key</i>
+     /$BASIC,I=<i>filename</i>,L=0,GO
+</pre>
+<p>
+Note the '$' prefix on the command. This ensures that the BASIC compiler is called. Without it, the system will
+attempt to enter the BASIC subsystem.
+</p>
+<p>References:
+ <ul>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/cyber/lang/basic/19983900K_BASIC_Version_3_Reference_Manual_Aug84.pdf" target="_blank">
+   Basic Version 3 Reference Manual
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,fib
+W^/$
+Ltext
+W ENTER TEXT MODE
+W\\r
+I250 \\r =====
+1  REM
+2  REM  CALCULATE THE FIRST 10 FIBONACCI NUMBERS
+3  REM
+10 LET I = 0
+20 LET J = 1
+30 FOR N = 1 TO 10
+40   PRINT USING "### ###", N, J
+50   LET K = I + J
+60   LET I = J
+70   LET J = K
+80 NEXT N
+90 END
+=====
+S\x14
+W EXIT TEXT MODE
+W^/$
+D1000
+S$basic,i=fib,l=0,go
+D1000
+L
+W CP SECONDS EXECUTION TIME
+W^/$
