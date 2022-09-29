@@ -340,8 +340,8 @@ const processStaticRequest = (req, res, url) => {
   let rootPath = path.resolve(config.httpRoot);
   let absPath  = path.resolve(`${config.httpRoot}${relPath}`);
   if (os.type().startsWith("Windows")) {
-    rootPath = rootPath.replaceAll(/\\/, "/");
-    absPath  = absPath.replaceAll(/\\/, "/");
+    rootPath = rootPath.replaceAll("\\", "/");
+    absPath  = absPath.replaceAll("\\", "/");
   }
   if (absPath === rootPath) {
     absPath += "/index.html";
@@ -423,7 +423,7 @@ const readConfigFile = path => {
 };
 
 const readConfigObject = path => {
-  if (os.type().startsWith("Windows")) path = path.replaceAll(/\\/, "/");
+    if (os.type().startsWith("Windows")) path = path.replaceAll("\\", "/");
   let i = path.lastIndexOf("/");
   const baseDir = (i >= 0) ? path.substring(0, path.lastIndexOf("/") + 1) : "";
   log(`read configuration file ${path}`);
@@ -446,7 +446,7 @@ const readConfigObject = path => {
     }
     else if (key === "httpRoot") {
       let httpRoot = configObj[key];
-      if (os.type().startsWith("Windows")) httpRoot = httpRoot.replaceAll(/\\/, "/");
+      if (os.type().startsWith("Windows")) httpRoot = httpRoot.replaceAll("\\", "/");
       configObj[key] = httpRoot.startsWith("/") ? httpRoot : `${baseDir}${httpRoot}`;
     }
   }
