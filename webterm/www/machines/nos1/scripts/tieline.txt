@@ -9,16 +9,10 @@ the local output queue for printing.
 <pre>
      /NEW,<i>filename</i>
      /TEXT
-       <i>Enter remote batch job commands
+       <i>Enter remote batch job commands and data.
        Exit TEXT mode by pressing Control-C key</i>
      PACK,<i>filename</i>
      /COPY,<i>filename</i>,JOB
-     /NEW,SOURCE/ND
-     /TEXT
-       <i>Enter remote batch job input data
-       Exit TEXT mode by pressing Control-C key</i>
-     PACK,SOURCE
-     /COPY,SOURCE.JOB
      /ROUTE,JOB,DC=IN
 </pre>
 <p>References:
@@ -36,7 +30,7 @@ the local output queue for printing.
  </ul>
 </p>
 ~~~~
-Lnew,cmds
+Lnew,source
 W^/$
 D500
 Ltext
@@ -47,24 +41,7 @@ I500 \\r =====
 //job.
 user,guest,guest.
 ftn5,go.
-=====
-S\x03
-WEXIT TEXT MODE
-D500
-Lpack,cmds
-W/$
-D500
-Lcopy,cmds,job
-W/$
-D500
-Lnew,source/nd
-W^/$
-D500
-Ltext
-WENTER TEXT MODE
-W\\r
-D500
-I500 \\r =====
+/*EOR
       PROGRAM FIB
 C
 C     CALCULATE THE FIRST 10 FIBONACCI NUMBERS
@@ -81,6 +58,7 @@ C
  20   CONTINUE
       STOP
       END
+/*EOI
 =====
 S\x03
 WEXIT TEXT MODE
