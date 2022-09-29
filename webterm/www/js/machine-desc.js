@@ -67,13 +67,13 @@ class MachineDescription {
       $(exampleContainer).show();
       me.containerStack.promote(exampleContainer);
       $.get(currentExampleDefinition.defn, defn => {
-        exampleSegments = defn.split("~~~~\n");
+        exampleSegments = defn.replaceAll("\r\n", "\n").split("~~~~\n");
         $("#example-content").html(exampleSegments[0]);
       });
     });
     const runButton = document.getElementById("example-run-button");
     runButton.onclick = e => {
-      if (exampleSegments.length > 0) {
+      if (exampleSegments.length > 1) {
         $(busyIndicatorContainer).show();
         me.machine.runScript(exampleSegments[1], () => {
           $(busyIndicatorContainer).hide();
