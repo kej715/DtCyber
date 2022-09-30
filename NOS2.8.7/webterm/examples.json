@@ -142,6 +142,12 @@
    "defn":"/machines/nos2/scripts/rje-mvs.txt",
    "depends":"tlf"
   },
+  {"name":"RJE - NOS 1",
+   "id":"rje-nos1",
+   "desc":"Create and submit a remote batch job to NOS 1",
+   "defn":"/machines/nos2/scripts/rje-mvs.txt",
+   "depends":"rbf"
+  },
   {"name":"RJE - PRIMOS",
    "id":"rje-primos",
    "desc":"Create and submit a remote batch job to PRIMOS",
