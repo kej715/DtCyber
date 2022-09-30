@@ -11,7 +11,7 @@ execute. The job's output will be printed by the NOS 1 system on one of its prin
        <i>Enter remote batch job source code
        Exit TEXT mode by pressing Control-T key</i>
      /COPY,<i>filename</i>,JOB
-     /ROUTE,JOB,DC=PU,UN=<station-id>
+     /ROUTE,JOB,DC=PU,UN=<i>station-id</i>
 </pre>
 <p>References:
  <ul>
@@ -65,7 +65,7 @@ D1000
 L
 W^/$
 D1000
-Sroute,job,dc=pu,id=rje1
+Sroute,job,dc=pu,un=rje1
 D1000
 L
 W^/$

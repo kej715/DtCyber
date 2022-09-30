@@ -145,8 +145,8 @@
   {"name":"RJE - NOS 1",
    "id":"rje-nos1",
    "desc":"Create and submit a remote batch job to NOS 1",
-   "defn":"/machines/nos2/scripts/rje-mvs.txt",
-   "depends":"rbf"
+   "defn":"/machines/nos2/scripts/rje-nos1.txt",
+   "depends":"rbf5"
   },
   {"name":"RJE - PRIMOS",
    "id":"rje-primos",

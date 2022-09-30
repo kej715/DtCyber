@@ -42,7 +42,7 @@ Use the ROUTE command in the usual way to route the job into the NOS output queu
       <p>
 If TIELINE is built to communicate with a NOS 2 system running RBF (Remote Batch Facility), it will remove the two leading "/"
 characters before transmitting the job. This enables NOS 2 to recognize the job card as a correctly formed one for NOS 2. If TIELINE
-is built to communicate with an IBM operating system such as MVS with JES2 or VM/CMS with RSCS, the job card is transmitted without
+is built to communicate with an IBM operating system such as MVS with JES2, the job card is transmitted without
 editing it because a correctly formed IBM job card begins with two "/" characters. When the job completes, the system on which it
 ran will return its output to TIELINE, and TIELINE will place the output in the output queue for printing.
       </p>
@@ -66,10 +66,10 @@ TIELINE also enables users on remote mainframes to submit batch jobs to the loca
 into the local system's job input queue. For example, a user on a remote NOS 2 system can submit a batch job to the local NOS 1 system by
 entering a ROUTE command, as in:
 <pre>
-     ROUTE,lfn,DC=PU,UN=id
+     ROUTE,lfn,DC=PU,UN=station-id
 
 </pre>
-where <i>lfn</i> is a file containing the job to be submitted, and <i>id</i> is the username used by TIELINE to connect to the NOS 2 system
+where <i>lfn</i> is a file containing the job to be submitted, and <i>station-id</i> is the username used by TIELINE to connect to the NOS 2 system
 (e.g., RJE1).
       </p>
     </div>

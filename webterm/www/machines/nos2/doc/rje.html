@@ -43,7 +43,7 @@ user has named the job. The job card is not sent to the target system. The secon
 They represent commands in the target system's job command language. 
       </p>
       <p>
-For example, a job file destined for the IBM 4381 might look like:
+For example, a job file destined for an IBM mainframe running the VM/CMS operating system with RSCS might look like:
       </p>
       <pre>
 /JOB
@@ -81,8 +81,9 @@ TO on the SUBMIT command, the job's output will be sent to the NOS print queue w
 on one of the system's printers.
       </p>
       <p>
-Control Data mainframes running the NOS 1 operating system support a subsystem named TIELINE. TIELINE is an ancestor of TLF on NOS 2. TIELINE
-implements the HASP data communication protocol and enables a host running NOS 1 to act as a remote batch station. For example, it can be
+Control Data mainframes running the NOS 1 operating system support a subsystem named TIELINE.
+<a href="/machines/nos1/doc/tieline.html" target="_blank">TIELINE on NOS 1</a> is an ancestor of TLF on NOS 2.
+TIELINE implements the HASP data communication protocol and enables a host running NOS 1 to act as a remote batch station. For example, it can be
 used to connect a machine running NOS 1 to a machine running NOS 2 and RBF. It allows users of a NOS 1 system to submit batch jobs to a
 connected NOS 2 system.
       </p>
