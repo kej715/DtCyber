@@ -257,7 +257,7 @@ class Machine {
     const interpolate = text => {
       let result = "";
       const matchedSubstringsRE = /\$\{[0-9]+\}/g;
-      const scriptVariableRE = /\$\{[A-Za-z_[0-9]+\}/g;
+      const scriptVariableRE = /\$\{[A-Za-z_][A-Za-z_0-9]+\}/g;
       let mi = text.search(matchedSubstringsRE);
       let si = text.search(scriptVariableRE);
       while (mi >= 0 || si >= 0) {

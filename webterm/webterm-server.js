@@ -98,13 +98,18 @@ const processMachinesRequest = (req, res, query) => {
     if (machine) {
       let server = {
         host: machine.host,
-        port: machine.termPort
+        port: machine.port
       };
       let client = new net.Socket();
       let connection = getAvailableConnection();
       connection.machineName = query.machine;
       connection.client = client;
-      connection.telnetProtocol = machine.telnetProtocol;
+      if (typeof machine.protocol !== "undefined" && machine.protocol.toLowerCase() === "telnet") {
+        connection.isTelnetProtocol = true;
+      }
+      else {
+        connection.isTelnetProtocol = false;
+      }
       connection.crlf = machine.crlf;
       connection.command = [];
       connection.data = Buffer.allocUnsafe(0);
@@ -130,7 +135,7 @@ const processMachinesRequest = (req, res, query) => {
         res.end(connection.id.toString());
         logHttpRequest(req, 200);
         connection.client.on("data", data => {
-          if (connection.telnetProtocol) {
+          if (connection.isTelnetProtocol) {
             // Telnet protocol elements
             // 255 - IAC
             // 254 - DON'T
@@ -571,7 +576,7 @@ wsServer.on("request", req => {
             if (connection.crlf) {
               s = s.split("\r").join("\r\n");
             }
-            if (connection.telnetProtocol && s.indexOf("\xff") >= 0) {
+            if (connection.isTelnetProtocol && s.indexOf("\xff") >= 0) {
               s = s.split("\xff").join("\xff\xff");
             }
             connection.client.write(s, "utf8");
@@ -579,7 +584,7 @@ wsServer.on("request", req => {
           }
           else {
             let binaryData = msg.binaryData;
-            if (connection.telnetProtocol) {
+            if (connection.isTelnetProtocol) {
               const ary = new Uint8Array(binaryData);
               let bytes = [];
               let start = 0;
