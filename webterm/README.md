@@ -406,15 +406,15 @@ terminal window that it creates. The default is 80.
 when the *Delete* key is pressed. Otherwise, it will send ASCII &lt;BS&gt;. The default
 of &lt;BS&gt; is appropriate for CDC machines. &lt;DEL&gt; is better for DEC machines.
 
-- **k** Specifying `k=1` requests the emulator to emulate
+- **k** : Specifying `k=1` requests the emulator to emulate
 [KSR-33](https://en.wikipedia.org/wiki/Teletype_Model_33) terminal behavior.
 
-- **m** Specifies the [unique identifier](#mid) of the machine to which to connect.
+- **m** : Specifies the [unique identifier](#mid) of the machine to which to connect.
 
-- **r** Specifies the number of rows that the emulator should provide in the terminal
+- **r** : Specifies the number of rows that the emulator should provide in the terminal
 window that it creates. The default is 24.
 
-- **t** Specifies the title that should be associated with the HTML page created for
+- **t** : Specifies the title that should be associated with the HTML page created for
 the emulator.
 
 Example:
@@ -431,9 +431,9 @@ hosted by NOS 2.
 Operational parameters that can be specified in the query string of this emulator
 include:
 
-- **m** Specifies the [unique identifier](#mid) of the machine to which to connect.
+- **m** : Specifies the [unique identifier](#mid) of the machine to which to connect.
 
-- **t** Specifies the title that should be associated with the HTML page created for
+- **t** : Specifies the title that should be associated with the HTML page created for
 the emulator.
 
 Example:
@@ -450,9 +450,9 @@ configuration hosted by NOS 1.
 Operational parameters that can be specified in
 the query string of this emulator include:
 
-- **m** Specifies the [unique identifier](#mid) of the machine to which to connect.
+- **m** : Specifies the [unique identifier](#mid) of the machine to which to connect.
 
-- **t** Specifies the title that should be associated with the HTML page created for
+- **t** : Specifies the title that should be associated with the HTML page created for
 the emulator.
 
 Example:
@@ -467,15 +467,15 @@ Operational parameters that can be specified in its query string include:
 - **c** : Specifies the number of columns that the emulator should provide in the
 terminal window that it creates. The default is 80.
 
-- **m** Specifies the [unique identifier](#mid) of the machine to which to connect.
+- **m** : Specifies the [unique identifier](#mid) of the machine to which to connect.
 
-- **r** Specifies the number of rows that the emulator should provide in the terminal
+- **r** : Specifies the number of rows that the emulator should provide in the terminal
 window that it creates. The default is 43.
 
-- **t** Specifies the title that should be associated with the HTML page created for
+- **t** : Specifies the title that should be associated with the HTML page created for
 the emulator.
 
-- **tt** Specifies the IBM 3270 terminal type identifier that will be sent to the
+- **tt** : Specifies the IBM 3270 terminal type identifier that will be sent to the
 machine. This provides the 3270 base model and model number. The default is
 `IBM-3279-4-E@MOD4`, a color display with 43 lines. 
 
