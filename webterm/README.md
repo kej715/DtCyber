@@ -418,6 +418,7 @@ window that it creates. The default is 24.
 the emulator.
 
 Example:
+
 ```
 /aterm.html?m=m01&a=1&r=40&c=80&t=Cyber%20865
 ```
@@ -437,6 +438,7 @@ include:
 the emulator.
 
 Example:
+
 ```
 /pterm.html?m=cybis&t=CYBIS%20on%20Cyber%20865
 ```
@@ -748,7 +750,7 @@ The first **W** instruction shown above will match the next line received from t
 machine that begins with the character "/" and does not have an end-of-line
 indication.
 
-The second **W** instruction show above will match the next line received from the
+The second **W** instruction shown above will match the next line received from the
 machine that contains any of the strings `FAMILY:`, `USER NAME:`, or `PASSWORD:`. In
 addition, when any of these are detected, the matching string is stored in the saved
 substring that can be referenced using the interpolation syntax `${0}`. If the **W**
