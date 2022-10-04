@@ -1,0 +1,5 @@
+[
+  {"prompt": "User name:",  "response":"guest"},
+  {"prompt": "User group:", "response":"guests"},
+  {"prompt": "Password:",   "response":"public"}
+]

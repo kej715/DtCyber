@@ -1,0 +1,57 @@
+<p>
+Switch to the APL character set, enter the APL language interpreter, create a function that calculates
+sequences of Fibonacci numbers, execute it, then exit from the interpeter and switch back to the normal
+character set.
+</p>
+<pre>
+     /APL,TT=TYPE
+       <i>Execute some functions, then exit the interpreter</i>
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/APLUM.pdf" target="_blank">
+   APLUM Reference Manual
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Sapl,tt=type
+Bcharset
+L
+Wclear ws
+W^\x20{6}$
+SGz[fibonacci n
+D500
+L
+W^;[0-9]+'\x20+\x07$
+I500 ^;[0-9]+'\x20+\x07$ =====
+C\bJ
+C\bJ this monadic function calculates the first n fibonacci numbers
+C\bJ and returns them as a vector
+C\bJ
+fibs[0 1
+l1>]:n#R fibs"/l2
+fibs[fibs,-/@2Yfibs
+]l1
+l2>z[1Ufibs
+=====
+SG
+D500
+L
+W^\x20{6}$
+Sfibonacci 10
+D1000
+L
+W^\x20{6}$
+S"system
+Bcharset
+L
+WAPL2.1.014
+W^/$

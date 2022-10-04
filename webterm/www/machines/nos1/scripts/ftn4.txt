@@ -1,0 +1,65 @@
+<p>
+Use the NEW and TEXT commands to create a FORTRAN 66 program, then compile and run it using the FTN command.
+</p>
+<pre>
+     /NEW,<i>filename</i>
+     /TEXT
+       <i>Enter program source code
+       Exit TEXT mode by pressing Control-C key</i>
+     PACK,<i>filename</i>
+     /MAP,OFF
+     /FTN,I=<i>filename</i>,L=0,GO
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/Fortran_Extended_4_Ref_Man_60497800J_Jun83.pdf" target="_blank">
+   FORTRAN Extended 4 Reference Manual
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/cyber/nos/60435400M_NOS_Version_1_Reference_Manual_Volume_1_Dec80.pdf" target="_blank">
+   NOS Version 1 Reference Manual
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,fib
+W^/$
+D500
+Ltext
+WENTER TEXT MODE
+W\\r
+D500
+I500 \\r =====
+      PROGRAM FIB(OUTPUT, TAPE1=OUTPUT)
+C
+C     CALCULATE THE FIRST 10 FIBONACCI NUMBERS
+C
+      I1 = 0
+      I2 = 1
+
+      DO 20 N = 1, 10 
+        WRITE(1, 10) N, I2
+10      FORMAT(1X, I4, 2H: , I4)
+        I3 = I1 + I2
+        I1 = I2
+        I2 = I3
+20    CONTINUE
+      END
+=====
+S\x03
+WEXIT TEXT MODE
+D1000
+Lpack,fib
+W/$
+D500
+Lmap,off
+W/$
+D500
+Sftn,i=fib,l=0,go
+D1000
+L
+W CP SECONDS EXECUTION TIME
+W/$

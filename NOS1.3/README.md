@@ -38,7 +38,7 @@ package managers support it as well.
 1. If not done already, use the appropriate *Makefile* in this directory's parent
 directory to build *DtCyber* and produce the *dtcyber* executable. For Windows, a
 Visual Studio solution file is available. On Windows, you will also need to execute
-`npm install` manually in folder `automation`.
+`npm install` manually in folders `automation` and `webterm`.
 2. Start the automated installation by executing the following command:
 
 >`node install`
@@ -56,8 +56,8 @@ To start *DtCyber* and NOS 1.3 again in the future, enter the following command:
 >`node start`
 
 That's it. You have a fully operational Control Data Cyber 173 supercomputer
-running the NOS 1.3 operating system, complete with APL, BASIC, COBOL, FORTRAN IV,
-LISP, PASCAL, SNOBOL, SYMPL, COMPASS assembly language, and PLATO. Welcome back to
+running the NOS 1.3 operating system, complete with BASIC, COBOL, FORTRAN IV,
+LISP, PASCAL, SYMPL, COMPASS assembly language, and PLATO. Welcome back to
 supercomputing in the 1980's!
 
 ## Operator Command Extensions
@@ -71,21 +71,42 @@ system.
 - `shutdown` : initiates graceful shutdown of the system.
 
 
-## Interactive Login
-You should be able to log into the system using your favorite Telnet client. The
-system listens for interactive connections on TCP port 6676, so direct your Telnet
-client to use that port. When NOS 1.3 asks for **USER NUMBER**, enter *INSTALL*, when
-it asks for **PASSWORD**, enter *INSTALL* again, and when it asks
-**RECOVER /SYSTEM:**, enter *HALF*. When you see the **/** prompt, the operating
-system is ready for you to enter commands. You may also login using **GUEST** as user
-number and password. The initial installation process creates **GUEST** as an
-ordinary, non-privileged user account.
+## Login
+You may log into the system using your web browser. *DtCyber* is configured to
+start a special web server that supports browser-based terminal emulators. For the NOS
+1.3 system, this web server listens for connections on TCP port 8003. When you request
+your web browser to open the following URL:
 
-## PLATO
-The system listens for PLATO connections on TCP port 5004. To log into PLATO, you
-will need a PLATO terminal emulator such as
-[pterm](https://www.cyber1.org/pterm.asp). The following PLATO logins are available
-after `install.js` completes:
+>`http://localhost:8003`
+
+it will display a page showing the systems served by the web server, and this will
+include the NOS 1.3 system itself and the PLATO subsystem running on it. When you
+click on the link associated with either of these systems, an appropriate browser-based
+terminal emulator will launch, and you will be invited to login. For example, when
+you click on the link for system `m03` (the NOS 1.3 system itself), an ANSI X.364
+(DEC VT-100 family) terminal emulator will launch. When you click on the link for
+`plato`, a PLATO terminal emulator will launch.
+
+You may also log into the NOS 1.3 system itself using your favorite Telnet client,
+and you may log into PLATO using a PLATO terminal emulator such as
+[pterm](https://www.cyber1.org/pterm.asp). The system listens for interactive
+connections on TCP port 6676, and it listens for PLATO connections on TCP port
+5004.
+
+NOS logins supported by the system include:
+
+| User Number | Password |
+|-------------|----------|
+| INSTALL     | INSTALL  |
+| GUEST       | GUEST    |
+
+INSTALL is a privileged account, and GUEST is an unprivileged one. When NOS 1.3 asks
+**RECOVER /SYSTEM:** during login, enter *full* and set your Telnet client to use
+character mode. The browser-based terminal emulator operates in a compatible mode by
+default. When you see the **/** prompt, the operating system is ready for you to enter
+commands.
+
+PLATO logins supported by the system include:
 
 | PLATO name   | Course/Group      | Password |
 |--------------|-------------------|----------|

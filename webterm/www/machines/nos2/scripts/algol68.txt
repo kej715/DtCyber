@@ -1,0 +1,63 @@
+<p>
+Use the NEW and TEXT commands to create an ALGOL 68 program, compile it using the A68 command, and then
+run the executable file produced. The A68 compiler does not allocate memory dynamically, so the RFL
+command must be used to pre-allocate memory for it.
+</p>
+<pre>
+     /NEW,<i>filename</i>
+     /TEXT
+       <i>Enter program source code
+       Exit TEXT mode by pressing Control-T key</i>
+     /RFL,100000
+     /A68,I=<i>filename</i>,L=0
+     /LGO
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/Algol_68_version_1_Reference_Manual_RevB.pdf" target="_blank">
+   ALGOL 68 Version 1 Reference Manual
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,fib
+W^/$
+Ltext
+W ENTER TEXT MODE
+W\\r
+I250 \\r =====
+FIB:
+(
+  'INT' I1 := 0, I2 := 1;
+  'FOR' N 'FROM' 1 'TO' 10 'DO'
+    PRINT((N, " ", I2, NEWLINE));
+    'INT' I3 := I1 + I2;
+    I1 := I2;
+    I2 := I3
+  'OD'
+)
+=====
+S\x14
+W EXIT TEXT MODE
+W^/$
+D1000
+Lrfl,100000
+W^/$
+D250
+Sa68,i=fib,l=0
+D250
+L
+WCM \\d+. CP
+W^/$
+Slgo
+D1000
+L
+WSTOP.+CP SEC.+CM USED
+W^/$

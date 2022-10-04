@@ -1,0 +1,129 @@
+<p>
+Use the NEW and TEXT commands to create an Intel 8080 PL/M program for the CP/M operating system,
+use the PLM80 cross-compiler to compile it, then enter the Intel 8080 emulator, boot the CP/M operating system,
+load, and run the cross-compiled program. Halt the 8080 emulator and return to NOS when done.
+</p>
+<pre>
+     /NEW,<i>filename</i>
+     /TEXT
+       <i>Enter the Intel 8080 assembly language program source code
+       Exit TEXT mode by pressing Control-T key</i>
+     /PLM80,I=<i>filename</i>,B=HEX,L=0
+     /REWIND,HEX
+     /CPM80,R=HEX,RC=DIS
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="/machines/nos2/doc/plm80.pdf" target="_blank">
+   A Guide to PL/M Programming
+   </a>
+  </li>
+  <li>
+   <a href="/machines/nos2/doc/cpm2.2-manual.pdf" target="_blank">
+   CP/M Operating System Manual
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,source
+W^/$
+Ltext
+W ENTER TEXT MODE
+W\\r
+I250 \\r =====
+/*
+ * CALCULATE THE FIRST 10 FIBONACCI NUMBERS.
+ */
+0100H: /* TRANSFER ADDRESS FOR ALL PROGRAMS RUNNING ON CP/M */
+DECLARE OS$EXIT  LITERALLY '0';   /* CP/M FUNCTION EXIT PROGRAM */
+DECLARE OS$PRINT LITERALLY '9';   /* CP/M FUNCTION PRINT STRING */
+DECLARE CR LITERALLY '0DH';       /* ASCII CARRIAGE RETURN     */
+DECLARE LF LITERALLY '0AH';       /* ASCII LINE FEED           */
+DECLARE EOL DATA (CR,LF,'$');
+DECLARE (N1, N2, N3, I) ADDRESS;
+/*
+ * PROCEDURE TO CALL CP/M OPERATING SYSTEM FUNCTIONS
+ */
+CPM: PROCEDURE(FUNC, PARM);
+  DECLARE FUNC BYTE;
+  DECLARE PARM ADDRESS;
+  DECLARE CPM$ENTRY LITERALLY '05H';
+  GO TO CPM$ENTRY;
+END CPM;
+/*
+ * PROCEDURE TO PRINT A 16-BIT INTEGER
+ */
+PRINT$INT: PROCEDURE(VALUE);
+  DECLARE DIGITS(6) BYTE INITIAL ('00000$');
+  DECLARE I BYTE;
+  DECLARE VALUE ADDRESS;
+  DO I = 0 TO 4;
+    DIGITS(4 - I) = '0' + (VALUE MOD 10);
+    VALUE = VALUE / 10;
+  END;
+  I = 0;
+  DO WHILE (I < 4) AND (DIGITS(I) = '0');
+    DIGITS(I) = ' ';
+    I = I + 1;
+  END;
+  CALL CPM(OS$PRINT, .DIGITS);
+END PRINT$INT;
+/*
+ * MAIN PROGRAM
+ */
+N1 = 0;
+N2 = 1;
+DO I = 1 TO 10;
+  CALL PRINT$INT(I);
+  CALL CPM(OS$PRINT, .': $');
+  CALL PRINT$INT(N2);
+  CALL CPM(OS$PRINT, .EOL);
+  N3 = N1 + N2;
+  N1 = N2;
+  N2 = N3;
+END;
+CALL CPM(OS$EXIT,0);
+EOF
+=====
+S\x14
+W EXIT TEXT MODE
+W^/$
+D1000
+Splm80,i=source,b=hex,l=0
+D1000
+L
+W^/$
+Srewind,hex
+D1000
+L
+W^/$
+Scpm80,r=hex,rc=dis
+D1000
+L
+WLOADING CP/M.+DONE
+W64K CP/M v2.2 ready
+W^A>$
+Spip hello.hex=rdr:
+D1000
+L
+W^A>$
+Sload hello
+D1000
+L
+W^A>$
+Shello
+D1000
+L
+W^A>$
+Shalt
+D2000
+L
+WHalting CP/M.+Goodbye!
+W^/$

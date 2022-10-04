@@ -1,0 +1,102 @@
+<html>
+  <head>
+    <title>PLATO</title>
+    <link rel="preload" href="css/fonts/PlatoAscii.ttf" as="font" />
+    <link rel="preload" href="css/fonts/PlatoMicro.ttf" as="font" />
+    <link rel="icon" type="image/png" href="images/ncc.png">
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/plato.css" />
+    <script src="js/jquery-3.3.1.min.js"></script>
+    <script src="js/pterm-classic.js"></script>
+    <script src="js/machine-comm.js"></script>
+    <script src="js/machine-desc.js"></script>
+  </head>
+  <body class="fanfold-background">
+    <div id="title" class="title"></div>
+    <div id="content-container" class="content-container">
+      <div id="terminal-container" class="content-container top left-floater right-padded zindex-1"></div>
+      <div id="content" class="content-container zindex-0">
+        <div id="machine-overview" class="machine-overview-container"></div>
+        <div id="machine-configuration" class="machine-config-container"></div>
+        <div id="machine-login" class="machine-login-container"></div>
+        <div id="machine-lessons" class="machine-example-container"></div>
+        <div id="machine-keys" class="machine-keys-container"></div>
+        <div id="machine-more" class="machine-more-container"></div>
+      </div>
+    </div>
+    <script>
+    $(document).ready(function() {
+      let machineId = "unknown";
+      let title = "PLATO";
+      let qs = window.location.search;
+      if (qs && qs.length > 1) {
+        qs.substr(1).split("&").forEach(function(param) {
+          var nvp = param.split("=");
+          if (nvp.length > 1) {
+            switch (nvp[0]) {
+            case "m": // machine name
+              machineId = nvp[1];
+              break;
+            case "t": // title
+              title = decodeURIComponent(nvp[1]);
+              break;
+            }
+          }
+        });
+      }
+      $("title").html(title);
+      $("#title").html(title);
+      const offset = 60;
+      const terminalContainer = $("#terminal-container");
+      let contentContainer = document.getElementById("content-container");
+      let content = document.getElementById("content");
+      contentContainer.style.left = `${offset}px`;
+      const setContentWidth = () => {
+        contentContainer.style.width = `${contentContainer.offsetParent.offsetWidth - offset * 2}px`;
+        let contentWidth = $(contentContainer).width() - terminalContainer.outerWidth(true);
+        $("#machine-configuration,#machine-lessons").width(contentWidth);
+      };
+      window.onresize = () => {
+        setContentWidth();
+      };
+      const pterm = new PTermClassic();
+      pterm.createScreen();
+      const canvas = pterm.getCanvas();
+      terminalContainer.empty();
+      terminalContainer.append(canvas);
+      setContentWidth();
+      canvas.focus();
+      const machine = new Machine(machineId);
+      const machineDesc = new MachineDescription(machine);
+      machine.setTerminal(pterm);
+      machine.setReceivedDataHandler(function(data) {
+        pterm.receive(data);
+      });
+      let url = machine.createConnection();
+      let uplineDataSender = function(data) {
+        machine.send(data);
+      };
+      pterm.setUplineDataSender(uplineDataSender);
+      machine.setDisconnectListener(function() {
+        pterm.reset();
+        pterm.receive("\r\n\nDisconnected from " + title + ".\r\n\n   Press any key to reconnect ...\r\n");
+        pterm.setUplineDataSender(function(data) {
+          url = machine.createConnection();
+          pterm.setUplineDataSender(uplineDataSender);
+        });
+      });
+      $(document).ajaxError(function(event, jqxhr, settings, thrownError) {
+        if (settings.url === url) {
+          pterm.reset();
+          pterm.renderText("\r\n\n" + jqxhr.responseText + "\r\n\n   Failed to connect to " + title);
+        }
+      });
+      $(window).bind("beforeunload", function() {
+        machine.closeConnection();
+      });
+
+      machineDesc.renderDescription();
+    });
+    </script>
+  </body>
+</html>

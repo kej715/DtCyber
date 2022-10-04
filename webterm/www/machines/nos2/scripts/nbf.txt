@@ -1,0 +1,127 @@
+<p>
+Use the NEW and TEXT commands to create a batch job that will execute on VAX1, a DEC VAX 8650 system.
+Use the SUBMIT command to submit it for execution. Specify the TO parameter on the SUBMIT command
+to route the job's output to the wait queue. Use the STATUS command to poll the job's status. When the
+STATUS command indicates that the job has completed, and its output file is in the wait queue, use the QGET
+command to retrieve the output file, then use the ASCII command to enable mixed-case processing, call
+FSE (the Full Screen Editor) to examine the output, and then exit from the editor and use the NORMAL
+command to return to normal (upper-case) processing.
+</p>
+<p>
+The <i>ST</i> parameter on the job's initial job card identifies the <i>LID</i> (Logical IDentifier)
+of the machine on which the job is intended to run. In this example, <i>ST=VX1</i> is specified.
+The NBF (Network Batch Facility) subsystem of the CDC Cyber mainframe will recognize the LID and route the job
+for execution on that system. When the job completes, its output will be returned to the CDC Cyber mainframe
+where it will be placed in the user's wait queue.
+</p>
+<pre>
+     /NEW,<i>filename</i>
+     /TEXT
+       <i>Enter network batch job source code
+       Exit TEXT mode by pressing Control-T key</i>
+     /SUBMIT,<i>filename</i>,TO
+     /STATUS,UJN=<i>jobname</i>
+       <i>repeat STATUS command until it indicates that the job has completed</i>
+     /QGET,UJN=<i>jobname</i>
+     /ASCII
+     /SCREEN,WEBTRM
+     /FSE,<i>jobname</i>
+     /NORMAL
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="/machines/nos2/doc/nbf.html" target="_blank">
+   NBF - Network Batch Facility
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.org/pdf/cdc/Tom_Hunter_Scans/FSE_Full_Screen_Editor_Users_Guide_Apr87.pdf" target="_blank">
+   NOS Full Screen Editor User's Guide
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,job
+W^/$
+Ltext
+W ENTER TEXT MODE
+W\\r
+I250 \\r =====
+/job
+/noseq
+fibonac,st=vx1.
+login guest publ1c
+$fortran/list=sys$output fib
+$link fib
+$run fib
+/eor
+.temp fib.for
+C
+C     CALCULATE THE FIRST 10 FIBONACCI NUMBERS
+C
+      I1 = 0
+      I2 = 1
+      DO 10 N = 1, 10
+        PRINT *, N, I2
+        I3 = I1 + I2
+        I1 = I2
+        I2 = I3
+ 10   CONTINUE
+      STOP
+      END
+=====
+S\x14
+W EXIT TEXT MODE
+W^/$
+D1000
+Ssubmit,job,to
+D1000
+L
+WJSN IS ([A-Z]+)\\.\\r
+Ajsn ${0}
+W^/$
+:status:Sstatus,ujn=fibonac
+D2000
+L
+WFIBONAC\x20\x20(INPUT QUEUE|EXECUTING|WAIT QUEUE|SCP ROLLOUT|NOT FOUND)
+T${0} (WAIT\x20QUEUE) qget
+W^/$
+D3000
+Gstatus
+:qget:W^/$
+Sqget,ujn=fibonac
+D500
+L
+W^/$
+Sascii
+D500
+L
+W^/$
+Sscreen,webtrm
+D500
+L
+W^/$
+Sfse,fibonac
+D2000
+L
+W\x1b\\[43;1H
+D2000
+KF1
+W\x1b\\[43;1H
+D2000
+KF1
+W\x1b\\[43;1H
+D4000
+KF8
+W^/$
+Snormal
+D500
+L
+W^/$

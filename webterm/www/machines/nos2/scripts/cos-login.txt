@@ -1,0 +1,58 @@
+<p>
+The Cyber 865 mainframe at the Nostalgic Computing Center serves as a front-end computer to the Cray X-MP supercomputer.
+Cray Station software running on the 865 includes a NOS application named ICF (Interactive Cray Facility), and this
+application enables users to log into the X-MP and execute commands on it interactively.
+</p>
+<p>
+Use the HELLO command to enter the ICF application, then use ICF to log into the Cray X-MP and execute some COS
+commands. Logoff COS when done and re-enter IAF (the Cyber interactive facility).
+</p>
+<pre>
+     /HELLO,ICF
+     /logon
+     account,ac=<i>cos-account</i>,apw=<i>account-password</i>,upw=<i>user-password</i>.
+     audit.
+     /logoff
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="http://www.bitsavers.org/pdf/cray/COS/SR-0011-O-CRAY_XMP_and_CRAY_1_Computer_Systems-COS_Version_1_Reference_Manual-May_1987.OCR.pdf" target="_blank">
+   COS Version 1 Reference Manual
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lhello,icf
+WPLEASE ENTER /LOGON
+D2000
+S/logon
+D500
+L
+W^!\x20
+D1000
+Saccount,ac=cray,apw=xyzzy,upw=quasar.
+D500
+L
+W^!\x20
+D1000
+Saudit.
+D500
+L
+W^!\x20
+D1000
+S/logoff
+D500
+L
+WAPPLICATION:
+D1000
+SIAF
+D500
+L
+W^/$

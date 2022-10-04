@@ -1,0 +1,19 @@
+{
+  "labels": ["PLATO Keys", "Keyboard Keys"],
+  "mappings": [
+    ["Back",       "Ctrl-b"],
+    ["Shift-Back", "Ctrl-B"],
+    ["Data",       "Ctrl-d"],
+    ["Shift-Data", "Ctrl-D"],
+    ["Edit",       "Ctrl-e"],
+    ["Shift-Edit", "Ctrl-E"],
+    ["Help",       "Ctrl-h"],
+    ["Shift-Help", "Ctrl-H"],
+    ["Lab",        "Ctrl-l"],
+    ["Shift-Lab",  "Ctrl-L"],
+    ["Next",       "Enter or Ctrl-n"],
+    ["Shift-Next", "Ctrl-N"],
+    ["Stop",       "Ctrl-s"],
+    ["Shift-Stop", "Ctrl-S"]
+  ]
+}

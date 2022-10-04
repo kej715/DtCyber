@@ -1,0 +1,73 @@
+<p>
+Use the NEW and TEXT commands to create a COBOL program, compile it using the COBOL5 command, and run the
+executable file produced.
+</p>
+<pre>
+     /NEW,<i>filename</i>
+     /TEXT
+       <i>Enter program source code
+       Exit TEXT mode by pressing Control-T key</i>
+     /COBOL5,I=<i>filename</i>,L=0
+     /LGO
+</pre>
+<p>References:
+ <ul>
+  <li>
+  <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/Cobol_5_RM_60497100H_Oct1980.pdf" target="_blank">
+   COBOL 5 Reference Manual"
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,fib
+W^/$
+Ltext
+W ENTER TEXT MODE
+W\\r
+I250 \\r =====
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. FIB.
+      *
+      *  CALCULATE THE FIRST 10 FIBONACCI NUMBERS
+      *
+       ENVIRONMENT DIVISION.
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01  I1          PIC 9(5) VALUE 0.
+       01  I2          PIC 9(5) VALUE 1.
+       01  I3          PIC 9(5).
+       01  N           PIC 9(5).
+       01  FIB-INDEX   PIC Z(3)9.
+       01  FIB-NUMBER  PIC Z(5)9.
+       PROCEDURE DIVISION.
+       START-PROGRAM.
+           PERFORM VARYING N FROM 1 BY 1 UNTIL N > 10
+               MOVE  N TO FIB-INDEX
+               MOVE I2 TO FIB-NUMBER
+               DISPLAY FIB-INDEX " " FIB-NUMBER
+               ADD  I1, I2 GIVING I3
+               MOVE I2 TO I1
+               MOVE I3 TO I2
+           END-PERFORM.
+           STOP RUN.
+=====
+S\x14
+W EXIT TEXT MODE
+W^/$
+D1000
+Scobol5,i=fib,l=0
+D250
+L
+WCM,.+CPS,.+ECS
+W^/$
+Slgo
+D250
+L
+WLGO\\.
+W^/$

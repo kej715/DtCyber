@@ -30,7 +30,7 @@
   ####   #    #   ####           #    #  #    #  #    #  ######
 
 #	The LIST of the projects to be built
-PROJECTS = dtcyber automation/node_modules stk/node_modules 
+PROJECTS = dtcyber automation/node_modules stk/node_modules webterm/node_modules
 
 #	When calling other makefiles, they must be named the 
 #	same as this one ...
@@ -262,6 +262,9 @@ automation/node_modules:
 stk/node_modules:
 	$(MAKE) -f $(THISMAKEFILE) -C stk
 
+webterm/node_modules:
+	$(MAKE) -f $(THISMAKEFILE) -C webterm
+
 
 #------------------------------------------------------------------------------
 #	Recipe to Ensure that the subdirectories exist
@@ -299,7 +302,8 @@ clean:
 	@echo Cleaning Object files for $@ 
 	rm -f $(OBJS); 
 	$(MAKE) -C automation clean; 
-	$(MAKE) -C stk clean
+	$(MAKE) -C stk clean;
+	$(MAKE) -C webterm clean
 
 .PHONY: info
 info:

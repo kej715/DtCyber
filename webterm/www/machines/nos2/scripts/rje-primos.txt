@@ -1,0 +1,98 @@
+<p>
+Use the NEW and TEXT commands to create a batch job that will execute on Prime1, a Prime P9950 supermini
+running the PRIMOS 19.2 operating system.
+Use the SUBMIT command to submit it for execution. The job's output will be returned to the NOS system that
+originated the job, and that system will print it. After printing, it will be filed in the
+<a href="http://www.nostalgiccomputing.org:8081/" target="ncc-output-folders">Nostalgic Computing Center
+Output Folders</a>. Be patient, as batch is a low priority background operation on PRIMOS, so it might take
+several minutes before the job completes and its output becomes available.
+</p>
+<p>
+Note also that Prime1 is physically connected to the CDC Cyber 865, so when this example is
+run from the CDC Cyber 175, the 175 will relay it automatically to the 865, and the 865 will then submit
+it to Prime1. The 865 will relay the job's output back to the 175, and the 175 will then print it.
+</p>
+<pre>
+     /NEW,<i>filename</i>
+     /TEXT
+       <i>Enter remote batch job source code
+       Exit TEXT mode by pressing Control-T key</i>
+     /SUBMIT,<i>filename</i>,TO
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="/machines/nos2/doc/rje.html" target="_blank">
+   RJE - Remote Job Entry
+   </a>
+  </li>
+  <li>
+   <a href="http://yagi.h-net.msu.edu/prime_manuals/prirun_scans/Primos%20Commands%20Ref%20Guide%20Rev%2019.0%20FDR3108-190L%201982.pdf" target="_blank">
+   PRIMOS Commands Reference Guide, Revision 19.0
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,job
+W^/$
+Ltext
+W ENTER TEXT MODE
+W\\r
+I250 \\r =====
+/job
+/noseq
+FIBONAC,ST=PR1.
+LOGIN GUEST PUBL1C
+A GUEST1
+&S EMPTYLINE :=
+&SEVERITY &ERROR &IGNORE
+  DELETE FIB.F77
+&SEVERITY &ERROR &FAIL
+&DATA ED
+C
+C     FORTRAN (FORTRAN 77) PROGRAM TO CALCULATE THE FIRST N FIBONACCI
+C     NUMBERS USING A SEQUENTIAL ALGORITHM.
+C
+C     WITH 32-BIT INTEGERS, UP TO 46 FIBONACCI NUMBERS CAN BE
+C     CALCULATED BEFORE INTEGER OVERFLOW OCCURS.
+C
+      N = 46
+      I1 = 0
+      I2 = 1
+C
+      DO 20 J = 1, N
+        PRINT *, ' ', J, ': ', I2
+        I3 = I1 + I2
+        I1 = I2
+        I2 = I3
+ 20   CONTINUE
+      STOP
+      END
+%EMPTYLINE%
+FILE FIB.F77
+&END
+F77 FIB -L TTY
+&DATA SEG -LOAD
+LOAD FIB.BIN
+LIBRARY
+SAVE
+QUIT
+&END
+SEG FIB
+=====
+S\x14
+W EXIT TEXT MODE
+W^/$
+D1000
+Ssubmit,job
+D1000
+L
+WJSN IS ([A-Z]+)\\.\\r
+Ajsn ${0}
+W^/$

@@ -1,0 +1,34 @@
+{
+  "port": 8001,
+  "httpRoot": "../../webterm/www",
+  "machines":
+  [
+    {
+      "id": "cybis",
+      "title": "CYBIS on NOS 2.8.7",
+      "host": "localhost",
+      "port": 8005,
+      "protocol": "raw",
+      "terminal": "pterm.html?m=cybis&t=CYBIS%20on%20NOS%202.8.7",
+      "overview": "@overview.json",
+      "login": "@cybis-login.json",
+      "lessons": "@cybis-lessons.json",
+      "keys": "@cybis-keys.json"
+    },
+    {
+      "id": "m01",
+      "title": "NOS 2.8.7",
+      "host": "localhost",
+      "port": 23,
+      "protocol": "telnet",
+      "terminal": "aterm.html?m=m01&t=NOS%202.8.7&r=45&c=80&a=1",
+      "overview": "@overview.json",
+      "login-script":"/machines/nos2/scripts/login.txt",
+      "file-transfer-scripts": "@file-transfer-scripts.json",
+      "file-charset-options": "@file-charset-options.json",
+      "installed": "@../opt/installed.json",
+      "examples": "@examples.json",
+      "keys": "@tektronix-keys.json"
+    }
+  ]
+}

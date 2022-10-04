@@ -1,0 +1,9 @@
+L$kermit
+W^Kermit-170>
+Lset text-mode ${charset}
+W^Kermit-170>
+Lset delay 1
+W^Kermit-170>
+Lsend ${filename}
+W]
+D500

@@ -1,0 +1,93 @@
+<p>
+ICEM DDN (Integrated Computer-aided Engineering and Manufacturing Design/Drafting/Numerical Control) was
+an early CAD/CAM software product created by CDC. This example provides a simple demonstration of it using
+a sample database.
+</p>
+<p>
+Switch to Tektronix terminal emulation, use the ATTACH command to access the ICEMDDN utility and the sample
+database, enter the utility, navigate through its initiial menus, select and draw an interesting part, then exit
+from the utility without changing the part. Switch back to ANSI terminal emulation when finished.
+</p>
+<pre>
+     /ATTACH,ICEMDDN/UN=APPLLIB
+     /ATTACH,TAPE3=ICEMDB/UN=APPLLIB,M=W
+     /ICEMDDN
+       <i>Navigate menus, select and display part named "GROWTH KEEL", then exit</i>
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="http://www.bitsavers.org/pdf/cdc/cyber/icem/60456940F_ICEM_Design_Drafting_Users_Guide_for_NOS_Tutorial_Feb86.pdf" target="_blank">
+   ICEM Design/Drafting Users Guide for NOS Tutorial
+   </a>
+  </li>
+  <li>
+   <a href="http://www.bitsavers.org/pdf/cdc/cyber/icem/60457130J_ICEM_Design_Drafting_Introduction_and_System_Controls_Reference_May85.pdf" target="_blank">
+   ICEM Design/Drafting Introduction and System Controls for NOS
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+BtermType
+D500
+KShift F1
+D50
+KF1
+D50
+I500 ^/$ =====
+attach,icemddn/un=appllib
+attach,tape3=icemdb/un=appllib,m=w
+=====
+Sicemddn
+D500
+L
+WENTER BAUD RATE
+W^\\.\\r$
+S9600
+D500
+L
+W10. CDC IEW 790 WITH TEKEM
+W^\\r$
+S1
+D1000
+L
+W^3\\. +\\r$
+S1
+D1000
+L
+WENTER PART NAME.+\x1f
+Sgrowth keel
+D1000
+L
+WSHEET NUMBER =
+D500
+S1
+D1000
+L
+W19.SI/US/RESIZE\x20
+D4000
+S4
+D500
+L
+W8.+SUSPEND SESSION
+D500
+S7
+D500
+L
+WQUIT SESSION WITHOUT FILING\\?
+Sy
+D500
+L
+WICEMDDN TERMINATED
+W^/$
+Sreturn,tape3
+D500
+L
+W^/$
+BtermType

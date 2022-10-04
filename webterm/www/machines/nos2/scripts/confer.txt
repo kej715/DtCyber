@@ -1,0 +1,60 @@
+<p>
+The University of Massachusetts (UMass) created an interactive conferencing application for Control Data Cyber 170 systems.
+It was known as CONFER, and it was widely distributed to universities with Cyber 170 systems in North America and Europe.
+It enabled users of these systems to create online conferences (i.e., chat rooms) and send instant messages to each other
+within these conferences.
+</p>
+<p>
+Use the HELLO command to enter the multi-user CONFER application, then use CONFER's <i>/help</i> command to display the full
+list of commands it recognizes.  Next, use the <i>/create</i> command to create a conference, use the <i>/show</i> command
+to display all active conferences and associated users, and send a message to members of the conference created. Finally,
+use the <i>bye</i> command to exit CONFER and re-enter IAF (the Cyber interactive facility).
+</p>
+<pre>
+     /HELLO,CONFER
+     /help
+     /create <i>conference name</i>
+     /show
+     <i>compose and send an instant message</i>
+
+     /bye iaf
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lhello,confer
+Wis entering Confer
+D2000
+S/help
+D2000
+L
+W^  send the message\\.
+D2000
+S/create Example Conference
+D1000
+L
+W is moving to another conference
+D2000
+S/show
+D1000
+L
+WTotal of [0-9]+ conferences at [0-9]+:[0-9]+[ap]m
+D2000
+SHi, everyone. What are your thoughts?
+D500
+L
+D500
+L
+W^   Hi, everyone\\. What are your thoughts\\?
+D4000
+S/bye iaf
+D1000
+L
+W^/$

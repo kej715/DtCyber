@@ -1,0 +1,95 @@
+<p>
+Use the NEW and TEXT commands to create a batch job that will execute on the local CDC Cyber mainframe.
+Use the SUBMIT command to submit it for execution. Specify the TO parameter on the SUBMIT command
+to route the job's output to the wait queue. Use the STATUS command to poll the job's status. When the
+STATUS command indicates that the job has completed, and its output file is in the wait queue, use the QGET
+command to retrieve the output file, then use FSE (the Full Screen Editor) to examine it.
+</p>
+<pre>
+     /NEW,<i>filename</i>
+     /TEXT
+       <i>Enter batch job source code
+       Exit TEXT mode by pressing Control-T key</i>
+     /SUBMIT,<i>filename</i>,TO
+     /STATUS,UJN=<i>jobname</i>
+       <i>repeat STATUS command until it indicates that the job has completed</i>
+     /QGET,UJN=<i>jobname</i>
+     /SCREEN,WEBTRM
+     /FSE,<i>jobname</i>
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="http://bitsavers.org/pdf/cdc/Tom_Hunter_Scans/FSE_Full_Screen_Editor_Users_Guide_Apr87.pdf" target="_blank">
+   NOS Full Screen Editor User's Guide
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,job
+W^/$
+Ltext
+W ENTER TEXT MODE
+W\\r
+I250 \\r =====
+/job
+/noseq
+fibonac.
+/user
+ftn5,go.
+/eor
+      PROGRAM FIB
+C
+C  CALCULATE THE FIRST 10 FIBONACCI NUMBERS
+C
+      I1 = 0
+      I2 = 1
+
+      DO 10 N = 1, 10
+        PRINT *, N, ': ', I2
+        I3 = I1 + I2
+        I1 = I2
+        I2 = I3
+10    CONTINUE
+      END 
+=====
+S\x14
+W EXIT TEXT MODE
+W^/$
+D1000
+Ssubmit,job,to
+D1000
+L
+WJSN IS ([A-Z]+)\\.\\r
+Ajsn ${0}
+:status:W^/$
+Sstatus,ujn=fibonac
+D2000
+L
+WFIBONAC\x20\x20(EXECUTING|WAIT QUEUE)
+T${0} EXECUTING status
+W^/$
+Sqget,ujn=fibonac
+D500
+L
+W^/$
+Sscreen,webtrm
+D500
+L
+W^/$
+Sfse,fibonac
+D2000
+L
+W\x1b\\[43;1H
+D4000
+KF1
+W\x1b\\[43;1H
+D4000
+KF8
+W^/$

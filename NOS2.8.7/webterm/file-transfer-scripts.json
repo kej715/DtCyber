@@ -1,0 +1,8 @@
+{
+  "upload-text":     "/machines/nos2/scripts/upload-text.txt",
+  "upload-binary":   "/machines/nos2/scripts/upload-binary.txt",
+  "upload-end":      "/machines/nos2/scripts/updownload-end.txt",
+  "download-text":   "/machines/nos2/scripts/download-text.txt",
+  "download-binary": "/machines/nos2/scripts/download-binary.txt",
+  "download-end":    "/machines/nos2/scripts/updownload-end.txt"
+}

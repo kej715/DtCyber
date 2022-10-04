@@ -1,0 +1,52 @@
+<html>
+  <head>
+    <title>CDC Cyber REXEC Command</title>
+    <link rel="icon" type="image/png" href="../../../images/ncc.png">
+    <link rel="stylesheet" href="../../../css/styles.css"/>
+    <script>
+    window.onload = () => {
+      const offset = 60;
+      const contentContainer = document.getElementById("content-container");
+      contentContainer.style.left = `${offset}px`;
+      const setContentWidth = () => {
+        contentContainer.style.width = `${contentContainer.offsetParent.offsetWidth - offset * 2}px`;
+      };
+      window.onresize = () => {
+        setContentWidth();
+      };
+      setContentWidth();
+    };
+    </script>
+  </head>
+  <body class="fanfold-background">
+    <div class="title">CDC Cyber REXEC Command</div>
+    <div id="content-container" class="absolute-position">
+      <p>
+The CDC Cyber systems at the NCC support the BSD REXEC protocol and implement an REXEC client and server. The REXEC command is the
+client application. It may be used to execute commands remotely on other computer systems in the local network. It uses the
+NOS FTP command prolog file (usually FTPPRLG) to obtain auto-login credentials for the other machines. The format 
+of the command is:
+      </p>
+      <pre>
+     REXEC,H=<i>hostname</i>,I=<i>filename</i>,O=<i>filename</i>,Z.<i>remote command</i>
+       H: name of host on which to execute the command(s).
+       I: file containing commands to be executed on the remote machine.  Default is INPUT unless Z is specified.
+       O: file on which to write output from command(s) executed on remote host.  Default is OUTPUT.
+       Z: if specified, the command to execute remotely is specified after the NOS command terminator.</pre>
+      <p>
+Examples:
+      </p>
+      <pre>
+    REXEC,H=BSD211,Z.^P^S -^A^X
+    REXEC,H=RSX11M,Z.SHOW USERS
+    REXEC,H=TOPS20,Z.SYSTAT
+    REXEC,H=VAX1,Z.SHOW PROC</pre>
+      <p>
+In all four examples, the Z parameter is specified, so the commands to be sent to the remote systems are provided
+at the end of the command, after the NOS command terminator (the "." character in all four cases).
+In the first example, 6/12 character set escape characters are specified ("^") to ensure that "ps -ax" (lower case letters)
+is sent as the command to be executed.
+      </p>
+    </div>
+  </body>
+</html>

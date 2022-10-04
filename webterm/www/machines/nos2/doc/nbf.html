@@ -1,0 +1,97 @@
+<html>
+  <head>
+    <title>NBF - Network Batch Facility</title>
+    <link rel="icon" type="image/png" href="../../../images/ncc.png">
+    <link rel="stylesheet" href="../../../css/styles.css"/>
+    <script>
+    window.onload = () => {
+      const offset = 60;
+      const contentContainer = document.getElementById("content-container");
+      contentContainer.style.left = `${offset}px`;
+      const setContentWidth = () => {
+        contentContainer.style.width = `${contentContainer.offsetParent.offsetWidth - offset * 2}px`;
+      };
+      window.onresize = () => {
+        setContentWidth();
+      };
+      setContentWidth();
+    };
+    </script>
+  </head>
+  <body class="fanfold-background">
+    <div class="title">NBF - Network Batch Facility</div>
+    <div id="content-container" class="absolute-position">
+      <p>
+The Cyber 865 and 175 support NBF, the Network Batch Facility. NBF enables NOS users to submit batch jobs to the various
+other systems supporting TCP/IP in the Nostalgic Computing Center intranet, i.e., the VAX/VMS, TOPS-20, RSX-11M-Plus,
+and Unix systems. NBF also arranges for the output from those jobs to be returned to the NOS system from which the jobs are submitted.
+      </p>
+      <p>
+To submit a batch job to any of the TCP/IP-supporting systems from either of the Cyber systems, a user specifies the target system's
+3-character LID (logical identifier) on the job card (first line) of the file to be submitted. The second line of each job specifies
+a LOGIN command providing login credentials for the target system. Subsequent lines of the file represent commands in the target
+system's job command language.
+      </p>
+      <p>
+An NBF job file can have multiple records. The first record provides the commands to be executed on the target system (as described
+above), and additional records can provide data for the commands in the first record (e.g., program source code and/or input data for
+programs executed). The first line of each such record can be a .FILE or .TEMP directive specifying the name of a file in which to
+store the data specified in subsequent lines of the record. The .FILE directive indicates that the file is to be saved. The .TEMP
+directive indicates that the file is temporary, and NBF arranges for these temporary files to be deleted from the target
+system automatically when the job completes.
+      </p>
+      <p>
+For example, a job file destined for VAX1 might look like:
+      </p>
+      <pre>
+/JOB
+/NOSEQ
+MYJOB,ST=VX1.
+LOGIN <i>username</i> <i>password</i>
+$FORTRAN HELLO
+$LINK HELLO
+$RUN HELLO
+/EOR
+.TEMP HELLO.FOR
+      PRINT *, ' HELLO WORLD!'
+      STOP
+      END</pre>
+      <p>
+To submit this job to VAX1 and cause the output to be returned to your wait queue, execute the SUBMIT command as in:
+      </p>
+      <pre>
+    SUBMIT,<i>lfn</i>,TO.</pre>
+      <p>
+Where <i>lfn</i> is the name of the local file containing the job. If you specify BC instead of
+TO on the SUBMIT command, the job's output will be sent to the NOS print queue, and you can visit
+the <a href="http://www.nostalgiccomputing.org:8081" target="ncc-output-folders">Nostalgic Computing Center Output Folders</a> page
+to find it.
+      </p>
+      <p>
+Each machine to which NBF can send jobs is identified by a unique LID (Logical IDentifier). To route a job to a particular
+machine, its LID is specified on the job's jobcard, as described above. The following table lists the machines at the
+Nostalgic Computing Center to which NBF can send jobs:
+      </p>
+      <div class="table highlighted">
+        <div class="table-row">
+          <div class="table-header">Machine</div><div class="table-header">Operating System</div><div class="table-header">LID</div>
+        </div>
+        <div class="table-row">
+          <div class="table-cell">PDP-10/KL-10B</div><div class="table-cell">TOPS-20 7.1</div><div class="table-cell">T20</div>
+        </div>
+        <div class="table-row">
+          <div class="table-cell">PDP-11/44</div><div class="table-cell">2.11BSD Unix</div><div class="table-cell">BSD</div>
+        </div>
+        <div class="table-row">
+          <div class="table-cell">PDP-11/70</div><div class="table-cell">RSX-11M-Plus 4.6</div><div class="table-cell">RSX</div>
+        </div>
+        <div class="table-row">
+          <div class="table-cell">VAX 8650</div><div class="table-cell">VMS 4.7</div><div class="table-cell">VX1</div>
+        </div>
+        <div class="table-row">
+          <div class="table-cell">VAX 8650</div><div class="table-cell">VMS 4.7</div><div class="table-cell">VX2</div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

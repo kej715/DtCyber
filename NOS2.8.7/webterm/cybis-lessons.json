@@ -1,0 +1,41 @@
+[
+  {"name":"aids",
+   "description":"Main documentation repository"
+  },
+  {"name":"catalogs",
+   "description":"Shows a list of CYBIS courseware"
+  },
+  {"name":"sysaids",
+   "description":"Documents system commands available only to administrators"
+  },
+  {"name":"0backgam",
+   "description":"Backgammon"
+  },
+  {"name":"0battleshi",
+   "description":"Sea Battle – attempt to destroy Plato’s fleet"
+  },
+  {"name":"0checkers",
+   "description":"Checkers"
+  },
+  {"name":"0edl",
+   "description":"Horse racing"
+  },
+  {"name":"0hangman",
+   "description":"Ordeal of a hangman"
+  },
+  {"name":"0mreact",
+   "description":"Mathematics drill game"
+  },
+  {"name":"0playgo",
+   "description":"Game of GO"
+  },
+  {"name":"0solitaire",
+   "description":"Card game with touch panel"
+  },
+  {"name":"0tictac",
+   "description":"Tic Tac Toe"
+  },
+  {"name":"0ychess1",
+   "description":"Chess program"
+  }
+]

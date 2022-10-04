@@ -35,7 +35,7 @@ file).
 1. If not done already, use the appropriate *Makefile* in this directory's parent
 directory to build *DtCyber* and produce the *dtcyber* executable. For Windows, a
 Visual Studio solution file is available. On Windows, you will also need to execute
-`npm install` manually in folders `stk` and `automation`.
+`npm install` manually in folders `automation`, `stk`, and `webterm`.
 2. Start the automated installation by executing the following command. On
 Windows, you will probably need to enable the *dtcyber* application to use TCP ports
 21, 22, and 23 too.
@@ -53,23 +53,64 @@ system and all of the currently available optional products.
 
 After `install.js` completes, NOS 2.8.7 and all currently available optional products
 will be fully installed and ready to use, and the system will be left running.
-You should be able to log into the system using your favorite Telnet client.
-When it asks for **FAMILY:**, press return. When it asks for **USER NAME:**, enter
-*INSTALL*. When it asks for **PASSWORD:**, enter *INSTALL* again. When you see the **/**
-prompt, the operating system is ready for you to enter commands. You may also login
-using **GUEST** as username and password. The installation process creates
-**GUEST** as an ordinary, non-privileged user account.
-
 CYBIS, the Cyber Instruction System, will also be installed, but it must be started
 manually by entering the following command at the NOS 2.8.7 console (i.e., *DSD*):
 
 >`CYBIS.`
 
-This will initiate the five subsystems comprising of CYBIS. When CYBIS is up and
-running, you may log into it using a PLATO terminal emulator such as
-[pterm](https://www.cyber1.org/pterm.asp). The system is configured to listen for
-PLATO terminal connections on TCP port 8005, and the following CYBIS users are
-available:
+This will initiate the five subsystems comprising of CYBIS.
+
+That's it. You have a fully operational Control Data Cyber 865 supercomputer
+running the NOS 2.8.7 operating system, complete with ALGOL, APL, BASIC, COBOL, CYBIL,
+FORTRAN IV and V, LISP, PASCAL, PL/1, SNOBOL, SPSS, SYMPL, COMPASS assembly language,
+and various other goodies including CYBIS, ICEM (an early CAD/CAM system), CDCS (a
+relational database subsystem), and GPLOT (a graphics package). Welcome back to
+supercomputing in the 1980's!
+
+## Login
+You may log into the system using your web browser. *DtCyber* is configured to
+start a special web server that supports browser-based terminal emulators. For the NOS
+2.8.7 system, this web server listens for connections on TCP port 8001. When you request
+your web browser to open the following URL:
+
+>`http://localhost:8001`
+
+it will display a page showing the systems served by the web server, and this will
+include the NOS 2.8.7 system itself and the CYBIS subsystem running on it. When you
+click on the link associated with either of these systems, an appropriate browser-based
+terminal emulator will launch, and you will be invited to login. For example, when
+you click on the link for system `m01` (the NOS 2.8.7 system itself), an ANSI X.364
+(DEC VT-100 family) terminal emulator will launch. When you click on the link for
+`cybis`, a PLATO terminal emulator will launch.
+
+The browser-based X.364 terminal emulator is supported by a NOS 2 terminal definition
+named `WEBTRM`. For example, to use FSE (the NOS Full Screen Editor) with the
+browser-based terminal emulator, execute the following NOS command before entering FSE:
+
+>`SCREEN,WEBTRM`
+
+Note that the X.364 terminal emulator supports the APL character set for interacting
+with the APL programming language, and it can be switched into Tektronix 4010
+terminal emulation mode for use with graphics applications such as GPLOT and ICEM.
+
+You may also log into the NOS 2.8.7 system itself using your favorite Telnet client,
+and you may log into CYBIS using a PLATO terminal emulator such as
+[pterm](https://www.cyber1.org/pterm.asp). The system listens for Telnet connections
+on the default Telnet TCP port, 23, and it listens for CYBIS connections on TCP port
+8005.
+
+NOS logins supported by the system include:
+
+| Family | Username | Password |
+|--------|----------|----------|
+| CYBER  | INSTALL  | INSTALL  |
+| CYBER  | GUEST    | GUEST    |
+
+INSTALL is a privileged account, and GUEST is an unprivileged one. The family named
+CYBER is the default family, so you may simply press the return key in response to
+the **FAMILY:** prompt during login.
+.
+The following CYBIS users are available:
 
 | User   | Group  | Password |
 |--------|--------|----------|
@@ -77,6 +118,8 @@ available:
 | author | author | passme   |
 | guest  | guests | public   |
 
+
+## Shutdown and Restart
 When the installation completes, NOS 2.8.7 will be running, and the command window will
 be left at the DtCyber `Operator> ` prompt. Enter the `exit` command or the `shutdown`
 command to shutdown the system gracefully when you have finished playing with it, and
@@ -88,11 +131,6 @@ To start *DtCyber* and NOS 2.8.7 again in the future, enter the following comman
 |--------------|-------------------|
 | Linux/MacOS: | `sudo node start` |
 | Windows:     | `node start`      |
-
-That's it. You have a fully operational Control Data Cyber 865 supercomputer
-running the NOS 2.8.7 operating system, complete with ALGOL, APL, BASIC, COBOL, CYBIL,
-FORTRAN IV and V, LISP, PASCAL, PL/1, SNOBOL, SYMPL, COMPASS assembly language, and
-various other goodies. Welcome back to supercomputing in the 1980's!
 
 ## Operator Command Extensions
 When installation completes successfully, and also when DtCyber is started using 

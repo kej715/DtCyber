@@ -1,0 +1,71 @@
+<p>
+Use the NEW and TEXT commands to create a batch job that will execute on the NOS 1 system. Use the ROUTE
+command to submit it for execution. Direct the ROUTE command to place the job in the remote batch punch queue
+where RBF (NOS 2 Remote Batch Facility) will pick it up and transfer it to the NOS 1 system. The TIELINE
+subsystem on the NOS 1 system will receive the job and place it in its job input queue from where it will
+execute. The job's output will be printed by the NOS 1 system on one of its printers.
+</p>
+<pre>
+     /NEW,<i>filename</i>
+     /TEXT
+       <i>Enter remote batch job source code
+       Exit TEXT mode by pressing Control-T key</i>
+     /COPY,<i>filename</i>,JOB
+     /ROUTE,JOB,DC=PU,UN=<i>station-id</i>
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="/machines/nos2/doc/rje.html" target="_blank">
+   RJE - Remote Job Entry
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,source
+W^/$
+Ltext
+W ENTER TEXT MODE
+W\\r
+I250 \\r =====
+FIBONAC.
+USER,GUEST,GUEST.
+FTN.
+LGO.
+/*EOR
+      PROGRAM FIB(OUTPUT, TAPE1=OUTPUT)
+C
+C     CALCULATE THE FIRST 10 FIBONACCI NUMBERS
+C
+      I1 = 0
+      I2 = 1
+
+      DO 20 N = 1, 10
+        WRITE(1, 10) N, I2
+10      FORMAT(1X, I4, 2H: , I4)
+        I3 = I1 + I2
+        I1 = I2
+        I2 = I3
+20    CONTINUE
+      END
+/*EOI
+=====
+S\x14
+W EXIT TEXT MODE
+W^/$
+D1000
+Scopy,source,job
+D1000
+L
+W^/$
+D1000
+Sroute,job,dc=pu,un=rje1
+D1000
+L
+W^/$

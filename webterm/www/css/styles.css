@@ -1,0 +1,606 @@
+.absolute-position {
+  position: absolute;
+}
+.absolute-position-left {
+  position: absolute;
+  left: 10px;
+}
+.apl {
+  font-family: APL2741;
+}
+.attach-file-diagnostic {
+  color: red;
+  font-weight: bold;
+  margin-left: 20px;
+  margin-top: 5px;
+}
+.attach-file-dialog-button {
+  margin-right: 20px;
+}
+.attach-file-dialog-content {
+  height: 80px;
+}
+.attach-file-dialog-input {
+  margin-top: 20px;
+  margin-left: 20px;
+}
+.bottom-border {
+  border-bottom: 2px solid black;
+}
+.busy-indicator {
+  position: absolute;
+  z-index: 15;
+}
+.button {
+  background-color: lightgreen;
+  color: black;
+  text-align: center;
+  text-decoration: none;
+  outline: none;
+  padding: 3px 5px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  box-shadow: 0 2px #999;
+  -webkit-transition-duration: 0.4s; /* Safari */
+  transition-duration: 0.4s;
+}
+.button:hover {
+  background-color: green;
+  color: white;
+}
+.button:active {
+  background-color: green;
+  color: white;
+  box-shadow: 0 1px #666;
+  transform: translateY(2px);
+}
+.button-container {
+  background-color: lightgray;
+  padding: 3px;
+  border: 1px solid black;
+}
+.centered {
+  text-align: center;
+}
+.caption {
+  color: black;
+  font-weight: bold;
+  text-decoration: underline;
+}
+.clickable {
+  cursor: pointer;
+  background-color: lightblue;
+}
+.clickable:hover {
+  background-color: blue;
+  color: white;
+}
+.code-container {
+  background-color: white;
+  font-family: monospace;
+  margin: 0px;
+  padding: 10px;
+  overflow: scroll;
+}
+.content-container {
+  position: relative;
+}
+.dialog {
+  border: 1px solid black;
+  background-color: white;
+}
+.dialog-header {
+  text-align: center;
+  background-color: blue;
+  color: white;
+}
+.draggable {
+  position: fixed;
+  z-index: 10;
+  cursor: move;
+}
+.fanfold-background {
+  background-image: url("fanfold-716x528.jpg");
+  background-blend-mode: lighten;
+  background-size: cover;
+}
+.fanfold-background-fixed-size {
+  background-image: url("fanfold-716x528.jpg");
+  background-blend-mode: lighten;
+  background-size: 1428px 1056px;
+}
+.fanfold-background-cpm-printer {
+  background-image: url("fanfold-716x528.jpg");
+  background-blend-mode: lighten;
+  background-size: 716px 1056px;
+}
+.fixed {
+  position: fixed;
+}
+.fixed-font {
+  font-family: monospace;
+  font-weight: bold;
+}
+.grid {
+  border-collapse: collapse;
+}
+.grid th, .grid td {
+  border: 2px solid black;
+  padding: 4px;
+}
+.highlighted {
+  background-color: lightyellow;
+}
+.inline {
+  display: inline;
+}
+.italic {
+  font-style: italic;
+}
+
+.large-font {
+  font-size: x-large;
+}
+
+.left-aligned {
+  text-align: left;
+}
+.left-floater {
+  float: left;
+}
+.left-padded {
+  padding-left: 10px;
+}
+.machine-config-container {
+  position: relative;
+  display: table;
+  padding-top: 10px;
+}
+.machine-config-category-details {
+  color: black;
+  display: table-cell;
+  text-align: left;
+  padding-left: 5px;
+}
+.machine-config-category-entry {
+  display: table-row;
+}
+.machine-config-category-label {
+  color: black;
+  font-weight: bold;
+  display: table-cell;
+  text-align: right;
+  padding-right: 5px;
+}
+.machine-example-command {
+  color: black;
+  display: table-cell;
+  text-align: left;
+  padding-right: 5px;
+  padding-left: 5px;
+}
+.machine-example-container {
+  position: relative;
+  display: table;
+  padding-top: 10px;
+}
+.machine-example-description {
+  color: black;
+  display: table-cell;
+  text-align: left;
+  padding-left: 5px;
+}
+.machine-example-entry {
+  display: table-row;
+}
+.machine-example-header {
+  display: table-caption;
+  padding-top: 10px;
+}
+.machine-example-name {
+  color: black;
+  display: table-cell;
+  text-align: right;
+  padding-right: 5px;
+}
+.machine-example-ref {
+  color: black;
+  display: table-cell;
+  text-align: left;
+  padding-left: 5px;
+}
+.machine-keys-container {
+  position: relative;
+  display: table;
+  padding-top: 10px;
+}
+.machine-keys-effect {
+  color: black;
+  display: table-cell;
+  text-align: right;
+  padding-right: 5px;
+}
+.machine-keys-entry {
+  display: table-row;
+}
+.machine-keys-header {
+  display: table-caption;
+  padding-top: 10px;
+}
+.machine-keys-keystrokes {
+  color: black;
+  display: table-cell;
+  text-align: left;
+  padding-left: 5px;
+}
+.machine-list {
+  list-style-type: none;
+}
+.machine-login-action {
+  display: table-row;
+}
+.machine-login-container {
+  position: relative;
+  display: table;
+  padding-top: 10px;
+}
+.machine-login-header {
+  display: table-caption;
+  padding-top: 10px;
+}
+.machine-login-prompt {
+  color: black;
+  display: table-cell;
+  text-align: right;
+  padding-right: 5px;
+}
+.machine-login-response {
+  color: black;
+  display: table-cell;
+  text-align: left;
+  padding-left: 5px;
+}
+.machine-login-script-button {
+  text-decoration: none;
+  background-color: lightyellow;
+}
+.machine-login-script-container {
+  position: relative;
+  padding-top: 10px;
+}
+.machine-login-script-button:hover {
+  background-color: lightblue;
+  color: white;
+}
+.machine-login-script-button:active {
+  background-color: lightblue;
+  color: white;
+  box-shadow: 0 1px #666;
+  transform: translateY(2px);
+}
+
+.machine-more-container {
+  position: relative;
+  padding-top: 10px;
+}
+.machine-overview-container {
+  position: relative;
+  display: table;
+  padding-top: 5px;
+}
+.machine-overview-label {
+  color: black;
+  font-weight: bold;
+  display: table-cell;
+  text-align: right;
+  padding-right: 5px;
+}
+.machine-overview-property {
+  display: table-row;
+}
+.machine-overview-value {
+  color: black;
+  display: table-cell;
+  text-align: left;
+  padding-left: 5px;
+}
+.menu {
+  position: relative;
+  display: inline-block;
+}
+.menu a:hover {
+  background-color: #ddd;
+}
+.menu-button {
+  position: relative;
+  display: inline-block;
+  background-color: lightgrey;
+  color: black;
+  border: none;
+  padding-right: 24px;
+  cursor: pointer;
+}
+.menu-button-label {
+  display: inline-block;
+  position: relative;
+  margin-left: 0px;
+  left: -20px;
+}
+.menu-button:hover, .menu-button:focus {
+  background-color: grey;
+  color: white;
+}
+.menu-content {
+  display: none;
+  position: absolute;
+  background-color: #f1f1f1;
+  min-width: 80px;
+  overflow: auto;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+}
+.menu-content a {
+  color: black;
+  padding: 5px 5px;
+  text-decoration: none;
+  display: block;
+}
+.menu-dropdown-icon {
+  position: relative;
+  display: inline-block;
+  top: 4px;
+  left: -24px;
+  margin-left: 0px;
+}
+.menu-show {
+  display: block;
+}
+.nav-bar {
+  background-color: lightblue;
+  border: 1px solid grey;
+  float: left;
+  overflow: auto;
+  position: relative;
+  width: 64px;
+  z-index: 5;
+}
+.nav-option {
+  background-color: lightblue;
+  border: 1px solid grey;
+  cursor: pointer;
+  display: block;
+  height: 20px;
+  padding-left: 4px;
+  text-decoration: none;
+}
+.nav-option:hover {
+  background-color: blue;
+  color: white;
+}
+.printer-text {
+  font-family: monospace;
+  white-space: pre;
+  position: absolute;
+  top: 0px;
+  left: 35px;
+  margin: 0px;
+}
+.queue-action-container {
+  top: 24px;
+  left: 40px;
+  position: relative;
+}
+.queue-button {
+  padding-right: 4px;
+  position: absolute;
+  text-decoration: none;
+}
+.queue-button:hover {
+  background-color: lightblue;
+  color: white;
+}
+.queue-button:active {
+  background-color: lightblue;
+  color: white;
+  box-shadow: 0 1px #666;
+  transform: translateY(2px);
+}
+.queue-checkbox {
+  position: absolute;
+  left: 25px;
+}
+.queue-datum {
+  display: inline-block;
+  position: absolute;
+  color: black;
+  text-align: left;
+  font-weight: normal;
+}
+.queue-empty-indication {
+  display: inline-block;
+  position: absolute;
+  font-style: italic;
+  text-align: center;
+  font-weight: normal;
+  white-space: nowrap;
+}
+.queue-heading {
+  display: inline-block;
+  position: absolute;
+  color: black;
+  display: table-cell;
+  text-decoration: underline;
+  font-weight: normal;
+}
+.queue-list {
+  top: 24px;
+  left: 40px;
+  position: relative;
+}
+.queue-name {
+  display: block;
+  position: absolute;
+  color: black;
+  font-weight: bold;
+}
+.queued-file-container {
+  position: absolute;
+  margin: 0px;
+  padding: 0px;
+  border-width: 0px;
+}
+.queued-file-content {
+  position: absolute;
+  color: black;
+  margin: 0px;
+  padding: 0px;
+  border-width: 0px;
+  height: 1056px;
+  top: 22px;
+  left: 48px;
+}
+.queued-file-line {
+  position: absolute;
+  font-family: monospace;
+  white-space: pre;
+  left: 0px;
+  margin: 0px;
+  padding: 0px;
+}
+.relative {
+  position: relative;
+}
+.right-aligned {
+  text-align: right;
+}
+.right-border {
+  border-right: 2px solid black;
+}
+.right-justified {
+  position: absolute;
+  right: 4px;
+}
+.right-justified-button {
+  background-color: white;
+  cursor: pointer;
+  position: absolute;
+  right: 4px;
+}
+.right-padded {
+  padding-right: 10px;
+}
+.spacer-1 {
+  margin: 0px;
+  padding: 0px;
+  width: 1em;
+}
+.spacer-2 {
+  margin: 0px;
+  padding: 0px;
+  width: 2em;
+}
+.status-container {
+  position: relative;
+  background-color: lightgray;
+  height: 16px;
+  padding: 3px;
+  border: 1px solid black;
+}
+.table {
+  position: relative;
+  display: table;
+}
+.table-cell {
+  display: table-cell;
+  padding: 2px 10px;
+}
+.table-header {
+  display: table-cell;
+  font-weight: bold;
+  padding: 2px 10px;
+}
+.table-row {
+  display: table-row;
+}
+.title {
+  text-align: center;
+  background-color: lightgrey;
+  color: black;
+  font-weight: bold;
+  padding: 10px;
+}
+.toggler {
+  background: green;
+  cursor: pointer;
+  border: 2px solid black;
+  border-right-width: 15px;
+  padding: 0 5px;
+  border-radius: 5px;
+  text-decoration: none;
+  transition: all .5s ease;
+}
+.toggler.off {
+  border-right-width: 2px;
+  border-left-width: 15px;
+}
+.top {
+  top: 2px;
+}
+.top-border {
+  border-top: 1px solid grey;
+}
+.top-padded {
+  padding-top: 10px;
+}
+.updownload-file-charset-container {
+  display: inline-block;
+  margin-left: 20px;
+  margin-right: 20px;
+}
+.updownload-file-controls-container {
+  margin-top: 20px;
+}
+.updownload-file-diagnostic {
+  color: red;
+  font-weight: bold;
+}
+.updownload-file-dialog-content {
+  height: 200px;
+}
+.updownload-file-input {
+  width: 200px;
+}
+.updownload-file-input-container {
+  width: 320px;
+  margin-top: 20px;
+  margin-left: 20px;
+  margin-right: 20px;
+}
+.updownload-file-label {
+  display: inline-block;
+  width: 80px;
+}
+.updownload-file-num-input {
+  margin-left: 20px;
+}
+.updownload-file-radio-button {
+  margin-left: 20px;
+}
+.updownload-file-status-container {
+  height: 2em;
+  margin-top: 20px;
+  margin-left: 20px;
+}
+.upload-3270-file-dialog-content {
+  height: 280px;
+}
+.vertical-spacer {
+  height: 20px;
+}
+.zindex-0 {
+  z-index: 0;
+}
+.zindex-1 {
+  z-index: 1;
+}

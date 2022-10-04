@@ -1,0 +1,19 @@
+{
+  "name": "webterm-server",
+  "version": "1.0.0",
+  "description": "Nostalgic Computing Center Web Terminal Server",
+  "main": "webterm-server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Kevin Jordan",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "mime": "^3.0.0",
+    "websocket": "^1.0.34"
+  },
+  "engines": {
+    "npm": ">=8.0.0",
+    "node": ">=16.0.0"
+  }
+}

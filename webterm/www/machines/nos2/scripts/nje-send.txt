@@ -1,0 +1,62 @@
+<p>
+Use the NEW and TEXT commands to create a file that will be sent to a user on the IBM 4381 mainframe
+running the VM/CMS operating system.
+Use the NJROUTE command to enqueue it for transmission across the NJE network. Use the DC=PU parameter
+on the NJROUTE command to identify the file as a punch stream, specify the DNN parameter to identify the
+destination host, and use the DRN parameter to identify the recipient on that host.
+</p>
+<p>
+Note that the IBM 4381 is physically connected to the CDC Cyber 175 and to the IBM 3033 on the NJE network. The 4381 is
+not directly connected to the CDC Cyber 865, but the 865 is directly connected to the 3033. Consequently,
+when this example is run from the CDC Cyber 865, the 865 will forward the file automatically to the 3033, and the 3033 will then
+deliver it to the 4381. When this example is run from the CDC Cyber 175, the 175 can deliver the file directly to
+the 4381.
+</p>
+<p>
+Regardless of whether the file orginates from the 865 or 175, it will be delivered to the virtual reader of the
+recipient user on the 4381, and that user can use the CMS READCARD command to receive it.
+</p>
+<pre>
+     /NEW,<i>filename</i>
+     /TEXT
+       <i>Enter contents of file.
+       Exit TEXT mode by pressing Control-T key</i>
+     /COPY,<i>filename</i>,CPY
+     /NJROUTE,CPY,DC=PU,DNN=NCCCMS,DRN=GUEST
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="/machines/nos2/doc/rje.html" target="_blank">
+   RJE - Remote Job Entry
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/ibm/370/VM_370/Release_6/GC20-1819-2_IBM_Virtual_Machine_Facility_370_CMS_Users_Guide_Rel_6_PLC_1_Mar79.pdf" target="_blank">
+   IBM Virtual Machine Facility/370: CMS User's Guide
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,greet
+W^/$
+Ltext
+W ENTER TEXT MODE
+W\\r
+I250 \\r =====
+Hello. This file originated from a CDC supercomputer.
+=====
+S\x14
+W EXIT TEXT MODE
+W^/$
+D1000
+I500 / =====
+copy,greet,cpy
+njroute,cpy,dc=pu,dnn=ncccms,drn=guest
+=====

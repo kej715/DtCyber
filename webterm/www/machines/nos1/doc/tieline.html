@@ -1,0 +1,77 @@
+<html>
+  <head>
+    <title>TIELINE</title>
+    <link rel="icon" type="image/png" href="../../../images/ncc.png">
+    <link rel="stylesheet" href="../../../css/styles.css"/>
+    <script>
+    window.onload = () => {
+      const offset = 60;
+      const contentContainer = document.getElementById("content-container");
+      contentContainer.style.left = `${offset}px`;
+      const setContentWidth = () => {
+        contentContainer.style.width = `${contentContainer.offsetParent.offsetWidth - offset * 2}px`;
+      };
+      window.onresize = () => {
+        setContentWidth();
+      };
+      setContentWidth();
+    };
+    </script>
+  </head>
+  <body class="fanfold-background">
+    <div class="title">TIELINE - Job Submission to Remote Mainframes</div>
+    <div id="content-container" class="absolute-position">
+      <p>
+TIELINE is a NOS subsystem that enables the local Control Data mainframe to act as a remote batch station, allowing users of the
+local system to submit batch jobs to other computer systems acting as remote batch hosts. TIELINE also arranges for the output from
+these jobs to be returned to the local system where it will be printed on local output devices. The data communication
+protocol used in exchanging jobs and output is <a href="https://en.wikipedia.org/wiki/Houston_Automatic_Spooling_Priority" target="_blank">HASP</a>,
+a protocol originally implemented for IBM mainframes.
+      </p>
+      <p>
+To distinguish a job to be processed by TIELINE from an ordinary batch job, the job card must look like the job card of an IBM
+JCL job. Specifically, it must begin with two "/" characters, as in:
+<pre>
+     //JOB.
+</pre>
+Use the ROUTE command in the usual way to route the job into the NOS output queue, as in:
+<pre>
+     ROUTE,lfn,DC=IN
+</pre>
+      </p>
+      <p>
+If TIELINE is built to communicate with a NOS 2 system running RBF (Remote Batch Facility), it will remove the two leading "/"
+characters before transmitting the job. This enables NOS 2 to recognize the job card as a correctly formed one for NOS 2. If TIELINE
+is built to communicate with an IBM operating system such as MVS with JES2, the job card is transmitted without
+editing it because a correctly formed IBM job card begins with two "/" characters. When the job completes, the system on which it
+ran will return its output to TIELINE, and TIELINE will place the output in the output queue for printing.
+      </p>
+      <p>
+For example, a job file destined for NOS 2 might look like:
+      </p>
+<pre>
+//JOB.
+USER,GUEST,GUEST.
+FTN5.
+LGO.
+/*EOR
+      PROGRAM HELLO
+      PRINT *, 'HELLO WORLD'
+      STOP
+      END
+
+</pre>
+      <p>
+TIELINE also enables users on remote mainframes to submit batch jobs to the local host. TIELINE places files received on punch streams
+into the local system's job input queue. For example, a user on a remote NOS 2 system can submit a batch job to the local NOS 1 system by
+entering a ROUTE command, as in:
+<pre>
+     ROUTE,lfn,DC=PU,UN=station-id
+
+</pre>
+where <i>lfn</i> is a file containing the job to be submitted, and <i>station-id</i> is the username used by TIELINE to connect to the NOS 2 system
+(e.g., RJE1).
+      </p>
+    </div>
+  </body>
+</html>
