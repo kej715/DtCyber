@@ -456,6 +456,7 @@ the query string of this emulator include:
 the emulator.
 
 Example:
+
 ```
 /pterm-classic.html?m=plato&t=PLATO%20on%20Cyber%20173
 ```
@@ -480,6 +481,7 @@ machine. This provides the 3270 base model and model number. The default is
 `IBM-3279-4-E@MOD4`, a color display with 43 lines. 
 
 Example:
+
 ```
 /tn3270.html?m=cms&r=43&c=80&t=VM/CMS
 ```
@@ -640,8 +642,8 @@ syntax, i.e., `${<index>}` and `${<variable-name>}`. Occurrences of these are re
 by the referenced values before the line is sent to the machine.
 
 Example:
-
-> ```
+>
+```
 I250 \\r =====
       PROGRAM FIB
 C
