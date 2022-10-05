@@ -374,7 +374,7 @@ void mt679Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     */
     if (deviceName != NULL)
         {
-        strncpy(tp->fileName, deviceName, MaxFSPath);
+        strcpy(tp->fileName, deviceName);
         fcb = fopen(deviceName, "rb");
         if (fcb == NULL)
             {
@@ -567,7 +567,7 @@ void mt679LoadTape(char *params)
     /*
     **  Setup show_tape path name.
     */
-    strncpy(tp->fileName, str, MaxFSPath);
+    strcpy(tp->fileName, str);
 
     /*
     **  Setup status.
@@ -668,7 +668,7 @@ void mt679UnloadTape(char *params)
     /*
     **  Clear show_tape path name.
     */
-    memset(tp->fileName, '0', MaxFSPath);
+    memset(tp->fileName, 0, MaxFSPath);
 
     /*
     **  Setup status.
