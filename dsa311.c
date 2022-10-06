@@ -537,7 +537,6 @@ static void dsa311Io(void)
     switch (active3000Device->fcode)
         {
     default:
-        activeChannel->full = FALSE;
         break;
 
     case Fc6681Input:
