@@ -1032,35 +1032,31 @@ static void ppOpCRM(void)     // 61
         activePpu->regP   = activePpu->mem[activePpu->regP] & Mask12;
         }
 
-    if (activePpu->regQ > 0)
+    if (((activePpu->regA & Sign18) != 0) && ((features & HasRelocationReg) != 0))
         {
-        if (((activePpu->regA & Sign18) != 0) && ((features & HasRelocationReg) != 0))
-            {
-            cpuPpReadMem(activePpu->regR + (activePpu->regA & Mask17), &data);
-            }
-        else
-            {
-            cpuPpReadMem(activePpu->regA & Mask18, &data);
-            }
-
-        activePpu->mem[activePpu->regP] = (PpWord)((data >> 48) & Mask12);
-        PpIncrement(activePpu->regP);
-
-        activePpu->mem[activePpu->regP] = (PpWord)((data >> 36) & Mask12);
-        PpIncrement(activePpu->regP);
-
-        activePpu->mem[activePpu->regP] = (PpWord)((data >> 24) & Mask12);
-        PpIncrement(activePpu->regP);
-
-        activePpu->mem[activePpu->regP] = (PpWord)((data >> 12) & Mask12);
-        PpIncrement(activePpu->regP);
-
-        activePpu->mem[activePpu->regP] = (PpWord)((data) & Mask12);
-        PpIncrement(activePpu->regP);
-
-        activePpu->regA = (activePpu->regA + 1) & Mask18;
-        PpDecrement(activePpu->regQ);
+        cpuPpReadMem(activePpu->regR + (activePpu->regA & Mask17), &data);
         }
+    else
+        {
+        cpuPpReadMem(activePpu->regA & Mask18, &data);
+        }
+    activePpu->mem[activePpu->regP] = (PpWord)((data >> 48) & Mask12);
+    PpIncrement(activePpu->regP);
+
+    activePpu->mem[activePpu->regP] = (PpWord)((data >> 36) & Mask12);
+    PpIncrement(activePpu->regP);
+
+    activePpu->mem[activePpu->regP] = (PpWord)((data >> 24) & Mask12);
+    PpIncrement(activePpu->regP);
+
+    activePpu->mem[activePpu->regP] = (PpWord)((data >> 12) & Mask12);
+    PpIncrement(activePpu->regP);
+
+    activePpu->mem[activePpu->regP] = (PpWord)((data) & Mask12);
+    PpIncrement(activePpu->regP);
+
+    activePpu->regA = (activePpu->regA + 1) & Mask18;
+    PpDecrement(activePpu->regQ);
 
     if (activePpu->regQ == 0)
         {
@@ -1118,44 +1114,39 @@ static void ppOpCWM(void)     // 63
         activePpu->mem[0] = activePpu->regP;
         activePpu->regP   = activePpu->mem[activePpu->regP] & Mask12;
         }
+    data = activePpu->mem[activePpu->regP] & Mask12;
+    PpIncrement(activePpu->regP);
+    data <<= 12;
 
-    if (activePpu->regQ > 0)
+    data |= activePpu->mem[activePpu->regP] & Mask12;
+    PpIncrement(activePpu->regP);
+    data <<= 12;
+
+    data |= activePpu->mem[activePpu->regP] & Mask12;
+    PpIncrement(activePpu->regP);
+    data <<= 12;
+
+    data |= activePpu->mem[activePpu->regP] & Mask12;
+    PpIncrement(activePpu->regP);
+    data <<= 12;
+
+    data |= activePpu->mem[activePpu->regP] & Mask12;
+    PpIncrement(activePpu->regP);
+
+    if (((activePpu->regA & Sign18) != 0) && ((features & HasRelocationReg) != 0))
         {
-        data = activePpu->mem[activePpu->regP] & Mask12;
-        PpIncrement(activePpu->regP);
-        data <<= 12;
-
-        data |= activePpu->mem[activePpu->regP] & Mask12;
-        PpIncrement(activePpu->regP);
-        data <<= 12;
-
-        data |= activePpu->mem[activePpu->regP] & Mask12;
-        PpIncrement(activePpu->regP);
-        data <<= 12;
-
-        data |= activePpu->mem[activePpu->regP] & Mask12;
-        PpIncrement(activePpu->regP);
-        data <<= 12;
-
-        data |= activePpu->mem[activePpu->regP] & Mask12;
-        PpIncrement(activePpu->regP);
-
-        if (((activePpu->regA & Sign18) != 0) && ((features & HasRelocationReg) != 0))
-            {
-            address = activePpu->regR + (activePpu->regA & Mask17);
-            }
-        else
-            {
-            address = activePpu->regA & Mask18;
-            }
-#if PPDEBUG
-        ppValidateCmWrite("CWM", address, data);
-#endif
-        cpuPpWriteMem(address, data);
-
-        activePpu->regA = (activePpu->regA + 1) & Mask18;
-        PpDecrement(activePpu->regQ);
+        address = activePpu->regR + (activePpu->regA & Mask17);
         }
+    else
+        {
+        address = activePpu->regA & Mask18;
+        }
+#if PPDEBUG
+    ppValidateCmWrite("CWM", address, data);
+#endif
+    cpuPpWriteMem(address, data);
+    activePpu->regA = (activePpu->regA + 1) & Mask18;
+    PpDecrement(activePpu->regQ);
 
     if (activePpu->regQ == 0)
         {
@@ -1261,11 +1252,8 @@ static void ppOpFJM(void)     // 66
     if (opD < channelCount)
         {
         activeChannel = channel + opD;
-        if (!activeChannel->full)
-            {
-            channelIo();
-            channelCheckIfFull();
-            }
+        channelIo();
+        channelCheckIfFull();
         if (activeChannel->full)
             {
             activePpu->regP = location;
@@ -1302,14 +1290,11 @@ static void ppOpEJM(void)     // 67
     else
         {
         activeChannel = channel + opD;
+        channelIo();
+        channelCheckIfFull();
         if (!activeChannel->full)
             {
-            channelIo();
-            channelCheckIfFull();
-            if (!activeChannel->full)
-                {
-                activePpu->regP = location;
-                }
+            activePpu->regP = location;
             }
         }
     }
