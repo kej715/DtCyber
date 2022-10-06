@@ -200,6 +200,7 @@ typedef struct diskParam
     **  Info for show_disk operator command.
     */
     struct diskParam *nextDisk;
+    DevSlot          *device;
     u8               channelNo;
     u8               eqNo;
     char             fileName[MaxFSPath];
@@ -642,6 +643,7 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
         exit(1);
         }
 
+    dp->device    = ds;
     dp->size      = *size;
     dp->diskNo    = diskCount++;
     dp->diskType  = diskType;
@@ -1634,7 +1636,7 @@ static i32 dd8xxSeek(DiskParam *dp)
 
     dp->bufPtr = NULL;
 
-    activeDevice->status = 0;
+    dp->device->status = 0;
 
     if (dp->cylinder >= dp->size.maxCylinders)
         {
@@ -1642,7 +1644,7 @@ static i32 dd8xxSeek(DiskParam *dp)
         fprintf(dd8xxLog, "(dd8xx  ) ch %o, cylinder %d invalid\n", activeChannel->id, dp->cylinder);
 #endif
         logError(LogErrorLocation, "(dd8xx  ) ch %o, cylinder %d invalid\n", activeChannel->id, dp->cylinder);
-        activeDevice->status = 01000;
+        dp->device->status = 01000;
 
         return (-1);
         }
@@ -1653,7 +1655,7 @@ static i32 dd8xxSeek(DiskParam *dp)
         fprintf(dd8xxLog, "(dd8xx  ) ch %o, track %d invalid\n", activeChannel->id, dp->track);
 #endif
         logError(LogErrorLocation, "(dd8xx  ) ch %o, track %d invalid\n", activeChannel->id, dp->track);
-        activeDevice->status = 01000;
+        dp->device->status = 01000;
 
         return (-1);
         }
@@ -1664,7 +1666,7 @@ static i32 dd8xxSeek(DiskParam *dp)
         fprintf(dd8xxLog, "(dd8xx  ) ch %o, sector %d invalid\n", activeChannel->id, dp->sector);
 #endif
         logError(LogErrorLocation, "(dd8xx  ) ch %o, sector %d invalid\n", activeChannel->id, dp->sector);
-        activeDevice->status = 01000;
+        dp->device->status = 01000;
 
         return (-1);
         }
@@ -1674,7 +1676,7 @@ static i32 dd8xxSeek(DiskParam *dp)
     result += dp->sector;
     result *= dp->sectorSize;
 
-    return (result);
+    return result;
     }
 
 /*--------------------------------------------------------------------------
