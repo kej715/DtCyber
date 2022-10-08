@@ -138,6 +138,9 @@ static void opHelpHelpAll(void);
 static void opHelpLoadCards(void);
 static int opPrepCards(char *fname, FILE *fcb);
 
+static void opCmdLoadDisk(bool help, char *cmdParams);
+static void opHelpLoadDisk(void);
+
 static void opCmdLoadTape(bool help, char *cmdParams);
 static void opHelpLoadTape(void);
 
@@ -153,6 +156,9 @@ static void opHelpShowAll(void);
 
 static void opCmdShowTape(bool help, char *cmdParams);
 static void opHelpShowTape(void);
+
+static void opCmdUnloadDisk(bool help, char *cmdParams);
+static void opHelpUnloadDisk(void);
 
 static void opCmdUnloadTape(bool help, char *cmdParams);
 static void opHelpUnloadTape(void);
@@ -214,6 +220,7 @@ static OpCmd decode[] =
     "e",                     opCmdEnterKeys,
     "ek",                    opCmdEnterKeys,
     "lc",                    opCmdLoadCards,
+    "ld",                    opCmdLoadDisk,
     "lt",                    opCmdLoadTape,
     "rc",                    opCmdRemoveCards,
     "rp",                    opCmdRemovePaper,
@@ -228,10 +235,12 @@ static OpCmd decode[] =
     "st",                    opCmdShowTape,
     "sur",                   opCmdShowUnitRecord,
     "sv",                    opCmdShowVersion,
+    "ud",                    opCmdUnloadDisk,
     "ut",                    opCmdUnloadTape,
     "dump_memory",           opCmdDumpMemory,
     "enter_keys",            opCmdEnterKeys,
     "load_cards",            opCmdLoadCards,
+    "load_disk",             opCmdLoadDisk,
     "load_tape",             opCmdLoadTape,
     "remove_cards",          opCmdRemoveCards,
     "remove_paper",          opCmdRemovePaper,
@@ -245,6 +254,7 @@ static OpCmd decode[] =
     "show_tape",             opCmdShowTape,
     "show_unitrecord",       opCmdShowUnitRecord,
     "show_version",          opCmdShowVersion,
+    "unload_disk",           opCmdUnloadDisk,
     "unload_tape",           opCmdUnloadTape,
     "?",                     opCmdHelp,
     "help",                  opCmdHelp,
@@ -2249,6 +2259,88 @@ static int opPrepCards(char *str, FILE *fcb)
             fputs(sp, fcb);
             }
         }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Load a new disk
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdLoadDisk(bool help, char *cmdParams)
+    {
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpLoadDisk();
+
+        return;
+        }
+
+    /*
+    **  Check parameters and process command.
+    */
+    if (strlen(cmdParams) == 0)
+        {
+        printf("    > No parameters supplied.\n");
+        opHelpLoadDisk();
+
+        return;
+        }
+
+    dd8xxLoadDisk(cmdParams);
+    }
+
+static void opHelpLoadDisk(void)
+    {
+    opDisplay("    > 'load_disk <channel>,<equipment>,<unit>,<filename>' load specified disk.\n");
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Unload a mounted disk
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdUnloadDisk(bool help, char *cmdParams)
+    {
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpUnloadDisk();
+
+        return;
+        }
+
+    /*
+    **  Check parameters and process command.
+    */
+    if (strlen(cmdParams) == 0)
+        {
+        opDisplay("    > No parameters supplied\n");
+        opHelpUnloadDisk();
+
+        return;
+        }
+
+    dd8xxUnloadDisk(cmdParams);
+    }
+
+static void opHelpUnloadDisk(void)
+    {
+    opDisplay("    > 'unload_disk <channel>,<equipment>,<unit>' unload specified disk unit.\n");
     }
 
 /*--------------------------------------------------------------------------
