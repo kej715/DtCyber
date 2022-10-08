@@ -200,6 +200,7 @@ typedef struct diskParam
     **  Info for show_disk operator command.
     */
     struct diskParam *nextDisk;
+    DevSlot          *device;
     u8               channelNo;
     u8               eqNo;
     char             fileName[MaxFSPath];
@@ -228,23 +229,24 @@ typedef struct diskParam
 **  Private Function Prototypes
 **  ---------------------------
 */
-static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSize *size, u8 diskType);
+static void     dd8xxActivate(void);
+static void     dd8xxDisconnect(void);
+static void     dd8xxDump(PpWord data);
+static void     dd8xxFlush(void);
 static FcStatus dd8xxFunc(PpWord funcCode);
-static void dd8xxIo(void);
-static void dd8xxActivate(void);
-static void dd8xxDisconnect(void);
-static i32 dd8xxSeek(DiskParam *dp);
-static i32 dd8xxSeekNextSector(DiskParam *dp);
-static void dd8xxDump(PpWord data);
-static void dd8xxFlush(void);
-static PpWord dd8xxReadClassic(DiskParam *dp, FILE *fcb);
-static PpWord dd8xxReadPacked(DiskParam *dp, FILE *fcb);
-static void dd8xxWriteClassic(DiskParam *dp, FILE *fcb, PpWord data);
-static void dd8xxWritePacked(DiskParam *dp, FILE *fcb, PpWord data);
-static void dd8xxSectorRead(DiskParam *dp, FILE *fcb, PpWord *sector);
-static void dd8xxSectorWrite(DiskParam *dp, FILE *fcb, PpWord *sector);
-static void dd844SetClearFlaw(DiskParam *dp, PpWord flawState);
-static char *dd8xxFunc2String(PpWord funcCode);
+static char    *dd8xxFunc2String(PpWord funcCode);
+static void     dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSize *size, u8 diskType);
+static void     dd8xxIo(void);
+static FILE    *dd8xxMount(char *deviceName, DiskParam *dp);
+static PpWord   dd8xxReadClassic(DiskParam *dp, FILE *fcb);
+static PpWord   dd8xxReadPacked(DiskParam *dp, FILE *fcb);
+static void     dd8xxSectorRead(DiskParam *dp, FILE *fcb, PpWord *sector);
+static void     dd8xxSectorWrite(DiskParam *dp, FILE *fcb, PpWord *sector);
+static i32      dd8xxSeek(DiskParam *dp);
+static i32      dd8xxSeekNextSector(DiskParam *dp);
+static void     dd844SetClearFlaw(DiskParam *dp, PpWord flawState);
+static void     dd8xxWriteClassic(DiskParam *dp, FILE *fcb, PpWord data);
+static void     dd8xxWritePacked(DiskParam *dp, FILE *fcb, PpWord data);
 
 /*
 **  ----------------
@@ -375,6 +377,208 @@ void dd885Init_1(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     dd8xxInit(eqNo, unitNo, channelNo, deviceName, &sizeDd885_1, DiskType885);
     }
 
+/*--------------------------------------------------------------------------
+**  Purpose:        Load a new disk (operator interface).
+**
+**  Parameters:     Name        Description.
+**                  params      parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void dd8xxLoadDisk(char *params)
+    {
+    static char str[200];
+    DiskParam   *dp;
+    DevSlot     *ds;
+    int         numParam;
+    int         channelNo;
+    int         equipmentNo;
+    int         unitNo;
+    FILE        *fcb;
+    char        outBuf[400];
+
+    /*
+    **  Operator mounted a new disk.
+    */
+    numParam = sscanf(params, "%o,%o,%o,%s", &channelNo, &equipmentNo, &unitNo, str);
+
+    /*
+    **  Check parameters.
+    */
+    if (numParam != 4)
+        {
+        opDisplay("(dd8xx  ) Not enough or invalid parameters\n");
+        return;
+        }
+
+    if ((channelNo < 0) || (channelNo >= MaxChannels))
+        {
+        opDisplay("(dd8xx  ) Invalid channel no\n");
+
+        return;
+        }
+
+    if ((unitNo < 0) || (unitNo >= MaxUnits))
+        {
+        opDisplay("(dd8xx  ) Invalid unit no\n");
+
+        return;
+        }
+
+    if (str[0] == 0)
+        {
+        opDisplay("(dd8xx  ) Invalid file name\n");
+
+        return;
+        }
+
+    /*
+    **  Locate the device control block.
+    */
+    ds = channelFindDevice((u8)channelNo, DtDd8xx);
+    if (ds == NULL)
+        {
+        return;
+        }
+
+    /*
+    **  Check if the unit is even configured.
+    */
+    dp = (DiskParam *)ds->context[unitNo];
+    if (dp == NULL)
+        {
+        sprintf(outBuf, "(dd8xx  ) Unit %d not allocated\n", unitNo);
+        opDisplay(outBuf);
+        return;
+        }
+
+    /*
+    **  Check if the unit has been unloaded.
+    */
+    if (ds->fcb[unitNo] != NULL)
+        {
+        sprintf(outBuf, "(dd8xx  ) Unit %d not unloaded\n", unitNo);
+        opDisplay(outBuf);
+        return;
+        }
+
+    fcb = dd8xxMount(str, dp);
+
+    /*
+    **  Check if the open succeeded.
+    */
+    if (fcb == NULL)
+        {
+        sprintf(outBuf, "(dd8xx  ) Failed to open %s\n", str);
+        opDisplay(outBuf);
+        return;
+        }
+
+    ds->fcb[unitNo] = fcb;
+
+    /*
+    **  Setup show_disk path name.
+    */
+    strcpy(dp->fileName, str);
+
+    sprintf(outBuf, "(dd8xx  ) Successfully loaded %s\n", str);
+    opDisplay(outBuf);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Unload a mounted disk (operator interface).
+**
+**  Parameters:     Name        Description.
+**                  params      parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void dd8xxUnloadDisk(char *params)
+    {
+    DiskParam *dp;
+    DevSlot   *ds;
+    int       numParam;
+    int       channelNo;
+    int       equipmentNo;
+    int       unitNo;
+    char      outBuf[400];
+
+    /*
+    **  Operator unloaded a disk.
+    */
+    numParam = sscanf(params, "%o,%o,%o", &channelNo, &equipmentNo, &unitNo);
+
+    /*
+    **  Check parameters.
+    */
+    if (numParam != 3)
+        {
+        opDisplay("(dd8xx  ) Not enough or invalid parameters\n");
+
+        return;
+        }
+
+    if ((channelNo < 0) || (channelNo >= MaxChannels))
+        {
+        opDisplay("(dd8xx  ) Invalid channel no\n");
+
+        return;
+        }
+
+    if ((unitNo < 0) || (unitNo >= MaxUnits2))
+        {
+        opDisplay("(dd8xx  ) Invalid unit no\n");
+
+        return;
+        }
+
+    /*
+    **  Locate the device control block.
+    */
+    ds = channelFindDevice((u8)channelNo, DtDd8xx);
+    if (ds == NULL)
+        {
+        return;
+        }
+
+    /*
+    **  Check if the unit is even configured.
+    */
+    dp = (DiskParam *)ds->context[unitNo];
+    if (dp == NULL)
+        {
+        sprintf(outBuf, "(dd8xx  ) Unit %d not allocated\n", unitNo);
+        opDisplay(outBuf);
+        return;
+        }
+
+    /*
+    **  Check if the unit has been unloaded.
+    */
+    if (ds->fcb[unitNo] == NULL)
+        {
+        sprintf(outBuf, "(dd8xx  ) Unit %d not loaded\n", unitNo);
+        opDisplay(outBuf);
+        return;
+        }
+
+    /*
+    **  Close the file.
+    */
+    fclose(ds->fcb[unitNo]);
+    ds->fcb[unitNo] = NULL;
+
+    /*
+    **  Clear show_disk path name.
+    */
+    memset(dp->fileName, 0, MaxFSPath);
+
+    sprintf(outBuf, "(dd8xx  ) Successfully unloaded DD8xx disk on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
+    opDisplay(outBuf);
+    }
+
 /*
  **--------------------------------------------------------------------------
  **
@@ -400,11 +604,7 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
     {
     DevSlot   *ds;
     FILE      *fcb;
-    char      fname[MaxFSPath];
     DiskParam *dp;
-    time_t    mTime;
-    struct tm *lTime;
-    u8        yy, mm, dd;
     u8        containerType;
     char      *opt = NULL;
 
@@ -443,10 +643,13 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
         exit(1);
         }
 
-    dp->size     = *size;
-    dp->diskNo   = diskCount++;
-    dp->diskType = diskType;
-    dp->unitNo   = unitNo;
+    dp->device    = ds;
+    dp->size      = *size;
+    dp->diskNo    = diskCount++;
+    dp->diskType  = diskType;
+    dp->unitNo    = unitNo;
+    dp->eqNo      = eqNo;
+    dp->channelNo = channelNo;
 
     /*
     **  Determine if any options have been specified.
@@ -585,6 +788,46 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
 
     lastDisk = dp;
 
+    if (deviceName != NULL && strcmp(deviceName, "*") == 0)
+        {
+        ds->fcb[unitNo] = NULL;
+        printf("(dd8xx  ) Removable disk initialised on channel %o equip %o unit %o\n", channelNo, eqNo, unitNo);
+        }
+    else
+        {
+        /*
+        **  Mount disk image
+        */
+        fcb = dd8xxMount(deviceName, dp);
+        if (fcb == NULL)
+            {
+            exit(1);
+            }
+        ds->fcb[unitNo] = fcb;
+        printf("(dd8xx  ) Disk with %d cylinders initialised on channel %o equip %o unit %o filename '%s'\n",
+           dp->size.maxCylinders, channelNo, eqNo, unitNo, dp->fileName);
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Mount an 8xx disk drive.
+**
+**  Parameters:     Name        Description.
+**                  deviceName  pathname of disk container file
+**                  dp          pointer to disk parameters
+**
+**  Returns:        Pointer to FILE, or NULL if disk not mounted
+**
+**------------------------------------------------------------------------*/
+static FILE *dd8xxMount(char *deviceName, DiskParam *dp)
+    {
+    FILE      *fcb;
+    char      fname[MaxFSPath];
+    char      msg[MaxFSPath+30];
+    time_t    mTime;
+    struct tm *lTime;
+    u8        yy, mm, dd;
+
     /*
     **  Open or create disk image.
     */
@@ -593,14 +836,14 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
         /*
         **  Construct a name.
         */
-        switch (diskType)
+        switch (dp->diskType)
             {
         case DiskType844:
-            sprintf(fname, "DD844_C%02ou%1o", channelNo, unitNo);
+            sprintf(fname, "DD844_C%02ou%1o", dp->channelNo, dp->unitNo);
             break;
 
         case DiskType885:
-            sprintf(fname, "DD885_C%02ou%1o", channelNo, unitNo);
+            sprintf(fname, "DD885_C%02ou%1o", dp->channelNo, dp->unitNo);
             break;
             }
         }
@@ -621,17 +864,18 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
         fcb = fopen(fname, "w+b");
         if (fcb == NULL)
             {
-            fprintf(stderr, "(dd8xx  ) Failed to open %s\n", fname);
-            exit(1);
+            sprintf(msg, "(dd8xx  ) Failed to open %s\n", fname);
+            opDisplay(msg);
+            return NULL;
             }
 
         /*
         **  Write last disk sector to reserve the space.
         */
         memset(mySector, 0, SectorSize * 2);
-        dp->cylinder = size->maxCylinders - 1;
-        dp->track    = size->maxTracks - 1;
-        dp->sector   = size->maxSectors - 1;
+        dp->cylinder = dp->size.maxCylinders - 1;
+        dp->track    = dp->size.maxTracks - 1;
+        dp->sector   = dp->size.maxSectors - 1;
         fseek(fcb, dd8xxSeek(dp), SEEK_SET);
         dd8xxSectorWrite(dp, fcb, mySector);
 
@@ -639,14 +883,14 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
         **  Position to cylinder with the disk's factory and utility
         **  data areas.
         */
-        switch (diskType)
+        switch (dp->diskType)
             {
         case DiskType885:
-            dp->cylinder = size->maxCylinders - 2;
+            dp->cylinder = dp->size.maxCylinders - 2;
             break;
 
         case DiskType844:
-            dp->cylinder = size->maxCylinders - 1;
+            dp->cylinder = dp->size.maxCylinders - 1;
             break;
             }
 
@@ -654,9 +898,9 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
         **  Zero entire cylinder containing factory and utility data areas.
         */
         memset(mySector, 0, SectorSize * 2);
-        for (dp->track = 0; dp->track < size->maxTracks; dp->track++)
+        for (dp->track = 0; dp->track < dp->size.maxTracks; dp->track++)
             {
-            for (dp->sector = 0; dp->sector < size->maxSectors; dp->sector++)
+            for (dp->sector = 0; dp->sector < dp->size.maxSectors; dp->sector++)
                 {
                 fseek(fcb, dd8xxSeek(dp), SEEK_SET);
                 dd8xxSectorWrite(dp, fcb, mySector);
@@ -666,12 +910,12 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
         /*
         **  Write serial number and date of manufacture.
         */
-        mySector[0]  = (channelNo & 070) << (8 - 3);
-        mySector[0] |= (channelNo & 007) << (4 - 0);
-        mySector[0] |= (unitNo & 070) >> (3 - 0);
-        mySector[1]  = (unitNo & 007) << (8 - 0);
-        mySector[1] |= (diskType & 070) << (4 - 3);
-        mySector[1] |= (diskType & 007) << (0 - 0);
+        mySector[0]  = (dp->channelNo & 070) << (8 - 3);
+        mySector[0] |= (dp->channelNo & 007) << (4 - 0);
+        mySector[0] |= (dp->unitNo & 070) >> (3 - 0);
+        mySector[1]  = (dp->unitNo & 007) << (8 - 0);
+        mySector[1] |= (dp->diskType & 070) << (4 - 3);
+        mySector[1] |= (dp->diskType & 007) << (0 - 0);
 
         time(&mTime);
         lTime = localtime(&mTime);
@@ -688,14 +932,10 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
         dd8xxSectorWrite(dp, fcb, mySector);
         }
 
-    ds->fcb[unitNo] = fcb;
-
     /*
     **  For Operator Show Status Command
     */
     strcpy(dp->fileName, fname);
-    dp->channelNo = channelNo;
-    dp->unitNo    = unitNo;
 
     /*
     **  Reset disk seek position.
@@ -706,11 +946,7 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
     dp->interlace = 1;
     fseek(fcb, dd8xxSeek(dp), SEEK_SET);
 
-    /*
-    **  Print a friendly message.
-    */
-    printf("(dd8xx  ) Disk with %d cylinders initialised on channel %o equip %o unit %o filename '%s'\n",
-           dp->size.maxCylinders, channelNo, eqNo, unitNo, fname);
+    return fcb;
     }
 
 /*--------------------------------------------------------------------------
@@ -1032,7 +1268,7 @@ static void dd8xxIo(void)
             unitNo = activeChannel->data & 07;
             if (unitNo != activeDevice->selectedUnit)
                 {
-                if (activeDevice->fcb[unitNo] != NULL)
+                if (dp != NULL && fcb != NULL)
                     {
                     activeDevice->selectedUnit = unitNo;
                     dp = (DiskParam *)activeDevice->context[unitNo];
@@ -1041,7 +1277,7 @@ static void dd8xxIo(void)
                 else
                     {
                     activeDevice->selectedUnit = -1;
-                    logError(LogErrorLocation, "(dd8xx  ) channel %02o - invalid connect: %4.4o", activeChannel->id, (u32)activeDevice->fcode);
+                    activeDevice->status = 05020;
                     }
                 }
             else
@@ -1400,7 +1636,7 @@ static i32 dd8xxSeek(DiskParam *dp)
 
     dp->bufPtr = NULL;
 
-    activeDevice->status = 0;
+    dp->device->status = 0;
 
     if (dp->cylinder >= dp->size.maxCylinders)
         {
@@ -1408,7 +1644,7 @@ static i32 dd8xxSeek(DiskParam *dp)
         fprintf(dd8xxLog, "(dd8xx  ) ch %o, cylinder %d invalid\n", activeChannel->id, dp->cylinder);
 #endif
         logError(LogErrorLocation, "(dd8xx  ) ch %o, cylinder %d invalid\n", activeChannel->id, dp->cylinder);
-        activeDevice->status = 01000;
+        dp->device->status = 01000;
 
         return (-1);
         }
@@ -1419,7 +1655,7 @@ static i32 dd8xxSeek(DiskParam *dp)
         fprintf(dd8xxLog, "(dd8xx  ) ch %o, track %d invalid\n", activeChannel->id, dp->track);
 #endif
         logError(LogErrorLocation, "(dd8xx  ) ch %o, track %d invalid\n", activeChannel->id, dp->track);
-        activeDevice->status = 01000;
+        dp->device->status = 01000;
 
         return (-1);
         }
@@ -1430,7 +1666,7 @@ static i32 dd8xxSeek(DiskParam *dp)
         fprintf(dd8xxLog, "(dd8xx  ) ch %o, sector %d invalid\n", activeChannel->id, dp->sector);
 #endif
         logError(LogErrorLocation, "(dd8xx  ) ch %o, sector %d invalid\n", activeChannel->id, dp->sector);
-        activeDevice->status = 01000;
+        dp->device->status = 01000;
 
         return (-1);
         }
@@ -1440,7 +1676,7 @@ static i32 dd8xxSeek(DiskParam *dp)
     result += dp->sector;
     result *= dp->sectorSize;
 
-    return (result);
+    return result;
     }
 
 /*--------------------------------------------------------------------------
@@ -1997,16 +2233,24 @@ void dd8xxShowDiskStatus()
 
     while (dp)
         {
-        sprintf(outBuf, "    >   #%02d. CH %02o EQ %02o UN %02o DT %s CYL 0x%06x TRK 0x%06o FN '%s'\n",
+        sprintf(outBuf, "    >   #%02d. CH %02o EQ %02o UN %02o DT %s CYL 0x%06x TRK 0x%06o",
                 dp->diskNo,
                 dp->channelNo,
                 dp->eqNo,
                 dp->unitNo,
                 dp->diskType == DiskType844 ? "844" : "855",
                 dp->cylinder,
-                dp->track,
-                dp->fileName);
+                dp->track);
         opDisplay(outBuf);
+        if (*dp->fileName != '\0')
+            {
+            sprintf(outBuf, " FN '%s'\n", dp->fileName);
+            opDisplay(outBuf);
+            }
+        else
+            {
+            opDisplay(" (unmounted)\n");
+            }
         dp = dp->nextDisk;
         }
     }

@@ -119,8 +119,9 @@ void dd6603ShowDiskStatus();
 void dd844Init_2(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void dd844Init_4(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void dd885Init_1(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void dd8xxLoadDisk(char *params);
+void dd8xxUnloadDisk(char *params);
 void dd8xxShowDiskStatus();
-
 
 /*
 **  dd885_42.c

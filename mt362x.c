@@ -380,7 +380,7 @@ static void mt362xInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, u8 tr
     */
     if (deviceName != NULL)
         {
-        strncpy(tp->fileName, deviceName, MaxFSPath);
+        strcpy(tp->fileName, deviceName);
         fcb = fopen(deviceName, "rb");
         if (fcb == NULL)
             {
@@ -545,7 +545,7 @@ void mt362xLoadTape(char *params)
     /*
     **  Setup show_tape path name.
     */
-    strncpy(tp->fileName, str, MaxFSPath);
+    strcpy(tp->fileName, str);
 
     /*
     **  Setup status.
@@ -645,7 +645,7 @@ void mt362xUnloadTape(char *params)
     /*
     **  Clear show_tape path name.
     */
-    memset(tp->fileName, '0', MaxFSPath);
+    memset(tp->fileName, 0, MaxFSPath);
 
     /*
     **  Setup status.
