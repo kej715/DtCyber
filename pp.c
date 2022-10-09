@@ -1780,12 +1780,12 @@ static void ppValidateCmWrite(char *inst, u32 address, CpWord data)
         }
     if (strcmp(inst, "CWD") == 0)
         {
-        fprintf(ppLog, "%s : PP%02o CWD P:%04o, write %020lo to %08o\n",
+        fprintf(ppLog, "%s : PP%02o CWD P:%04o, write %020llo to %08o\n",
                 ppName, activePpu->id, activePpu->regP, data, address);
         }
     else
         {
-        fprintf(ppLog, "%s : PP%02o CWM P:%04o Q:%04o (0):%04o, write %020lo to %08o\n",
+        fprintf(ppLog, "%s : PP%02o CWM P:%04o Q:%04o (0):%04o, write %020llo to %08o\n",
                 ppName, activePpu->id, activePpu->regP, activePpu->regQ, activePpu->mem[0], data, address);
         }
     fprintf(ppLog, "      CP%02o RA:%o FL:%o NFL:%o\n", cpn, ra, fl, nfl);
