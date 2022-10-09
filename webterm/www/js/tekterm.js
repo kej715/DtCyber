@@ -655,3 +655,8 @@ class Tektronix {
     }
   }
 }
+//
+// The following lines enable this file to be used as a Node.js module.
+//
+if (typeof module === "undefined") module = {};
+module.exports = Tektronix;

@@ -1018,3 +1018,8 @@ class ATerm {
     this.context.fillRect(0, y, w, this.fontHeight);
   }
 }
+//
+// The following lines enable this file to be used as a Node.js module.
+//
+if (typeof module === "undefined") module = {};
+module.exports = ATerm;

@@ -1306,7 +1306,7 @@ class PTerm {
     }
   }
 
-  receive(text) {
+  renderText(text) {
     if (typeof text === "string") {
       for (let i = 0; i < text.length; i++) {
         this.renderer(text.charCodeAt(i) & 0x7f);
@@ -1355,3 +1355,8 @@ class PTerm {
     }
   }
 }
+//
+// The following lines enable this file to be used as a Node.js module.
+//
+if (typeof module === "undefined") module = {};
+module.exports = PTerm;

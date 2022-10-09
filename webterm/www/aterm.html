@@ -152,7 +152,7 @@
       <a id="download-file-saver" style="display:none;"></a>
     </div>
     <script>
-    $(document).ready(function() {
+    $(document).ready(() => {
       let machineId = "unknown";
       let title = "Unnamed Machine";
       let cols = 80;
@@ -162,7 +162,7 @@
       let isKSR = false;
       let qs = window.location.search;
       if (qs && qs.length > 1) {
-        qs.substr(1).split("&").forEach(function(param) {
+        qs.substr(1).split("&").forEach(param => {
           let nvp = param.split("=");
           if (nvp.length > 1) {
             switch (nvp[0]) {
@@ -220,7 +220,7 @@
       };
       const ansiTerminal = new ATerm();
       ansiTerminal.createScreen("normal", rows, cols);
-      const widthChangeListener = function(width) {
+      const widthChangeListener = width => {
         terminalContainer.width(ansiTerminal.getWidth());
       };
       ansiTerminal.setWidthChangeListener(widthChangeListener);
@@ -241,37 +241,37 @@
         terminalContainer.width(term.getWidth());
         setContentWidth();
         machine.setTerminal(terminal);
-        machine.setReceivedDataHandler(function(data) {
+        machine.setReceivedDataHandler(data => {
           terminal.renderText(data);
         });
       };
       setTerminal(ansiTerminal);
       let url = machine.createConnection();
-      const keyboardInputHandler = function(data) {
+      const keyboardInputHandler = data => {
         machine.send(data);
       };
       ansiTerminal.setKeyboardInputHandler(keyboardInputHandler);
       tektronixTerminal.setKeyboardInputHandler(keyboardInputHandler);
-      machine.setDisconnectListener(function() {
+      machine.setDisconnectListener(() => {
         terminal.reset();
         terminal.renderText("\r\n\nDisconnected from " + title + ".\r\n\n   Press any key to reconnect ...\r\n");
-        terminal.setKeyboardInputHandler(function(data) {
+        terminal.setKeyboardInputHandler(data => {
           url = machine.createConnection();
           ansiTerminal.setKeyboardInputHandler(keyboardInputHandler);
           tektronixTerminal.setKeyboardInputHandler(keyboardInputHandler);
         });
       });
-      $(document).ajaxError(function(event, jqxhr, settings, thrownError) {
+      $(document).ajaxError((event, jqxhr, settings, thrownError) => {
         if (settings.url === url) {
           terminal.reset();
           terminal.renderText("\r\n\n" + jqxhr.responseText + "\r\n\n   Failed to connect to " + title);
         }
       });
-      $(window).bind("beforeunload", function() {
+      $(window).bind("beforeunload", () => {
         machine.closeConnection();
       });
       const termTypeButton = $("#term-type");
-      termTypeButton.click(function() {
+      termTypeButton.click(() => {
         termTypeButton.toggleClass("off");
         if (termTypeButton.is(".off")) {
           setTerminal(tektronixTerminal);
@@ -285,7 +285,7 @@
         }
       });
       const widthButton = $("#width");
-      widthButton.click(function() {
+      widthButton.click(() => {
         widthButton.toggleClass("off");
         terminal.changeWidth(widthButton.is(".off") ? 132 : 80);
       });
@@ -314,7 +314,7 @@
       };
       $(keybdDialog).hide();
       const charsetButton = $("#charset");
-      charsetButton.click(function() {
+      charsetButton.click(() => {
         charsetButton.toggleClass("off");
         if (charsetButton.is(".off")) {
           ansiTerminal.changeFont("apl");

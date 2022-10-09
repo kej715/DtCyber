@@ -1026,7 +1026,7 @@ class PTermClassic {
     }
   }
 
-  receive(bytes) {
+  renderText(bytes) {
     let len = this.receivedBytes.length;
     if (typeof bytes === "string") {
       for (let i = 0; i < bytes.length; i++) {
@@ -1060,3 +1060,8 @@ class PTermClassic {
     }
   }
 }
+//
+// The following lines enable this file to be used as a Node.js module.
+//
+if (typeof module === "undefined") module = {};
+module.exports = PTermClassic;
