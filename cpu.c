@@ -1269,7 +1269,11 @@ static void dumpXP(CpuContext *activeCpu, int before, int after)
 
     for (i = 0; i < 8; i++)
         {
+#if defined(_WIN32)
         fprintf(emLog, "X%d  %020llo\n", i, activeCpu->regX[i]);
+#else
+        fprintf(emLog, "X%d  %020lo\n", i, activeCpu->regX[i]);
+#endif
         }
     fputs("\n", emLog);
     p = (activeCpu->regP >= before) ? (activeCpu->regP + activeCpu->regRaCm) - before : activeCpu->regRaCm;
