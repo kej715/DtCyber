@@ -4,15 +4,22 @@
 * text=auto
 
 # These files are text and should be normalized (Convert crlf => lf)
+*.c text
 *.css text
-*.js text
-*.json text
+*.ftn text
+*.h text
 *.htm text
 *.html text
-*.xml text
-*.txt text
 *.ini text
+*.job text
+*.js text
+*.json text
+*.md text
+*.pre text
+*.post text
 *.sh text
+*.txt text
+*.xml text
 
 ###############################################################################
 # Set default behavior for command prompt diff.
