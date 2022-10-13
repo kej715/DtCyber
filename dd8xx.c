@@ -1268,7 +1268,7 @@ static void dd8xxIo(void)
             unitNo = activeChannel->data & 07;
             if (unitNo != activeDevice->selectedUnit)
                 {
-                if (dp != NULL && fcb != NULL)
+                if (activeDevice->fcb[unitNo] != NULL)
                     {
                     activeDevice->selectedUnit = unitNo;
                     dp = (DiskParam *)activeDevice->context[unitNo];
