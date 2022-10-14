@@ -12,6 +12,7 @@ class ATerm {
 
   constructor() {
 
+    this.autowrapMode  = false;
     this.bgndColor     = "black";
     this.canvas        = null;
     this.col           = 0;
@@ -24,6 +25,8 @@ class ATerm {
     this.fontWidth     = 10;
     this.inverse       = false;
     this.isScreenMode  = false;
+    this.lfNewlineMode = false;
+    this.originMode    = false;
     this.overstrike    = false;
     this.row           = 0;
     this.rows          = 24;
@@ -32,10 +35,8 @@ class ATerm {
     this.invertDelBs   = false;
     this.isKSR         = false;
 
-    this.normalSet     = this.ASCIIset;
-    this.charset       = this.normalSet;
-    this.G0            = this.normalSet;
-    this.G1            = this.normalSet;
+    this.scrollingRegionBottom = this.rows - 1;
+    this.scrollingRegionTop    = 0;
 
     this.ASCIIset      = [
       0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, // <NUL> - <SI>
@@ -85,6 +86,11 @@ class ATerm {
       0xf050, 0xf051, 0xf052, 0xf053, 0xf054, 0xf055, 0xf056, 0xf057, // p - w
       0xf058, 0xf059, 0xf05a, 0xf07b, 0xf081, 0xf07d, 0xf024, 0x7f    // x - <DEL>
     ];
+
+    this.normalSet     = this.ASCIIset;
+    this.charset       = this.normalSet;
+    this.G0            = this.normalSet;
+    this.G1            = this.normalSet;
   }
 
   setFont(type) {
@@ -119,8 +125,8 @@ class ATerm {
     this.isKSR = isKSR;
   }
 
-  setKeyboardInputHandler(callback) {
-    this.keyboardInputHandler = callback;
+  setUplineDataSender(callback) {
+    this.uplineDataSender = callback;
   }
 
   setWidthChangeListener(callback) {
@@ -291,8 +297,8 @@ class ATerm {
         break;
       }
     }
-    if (this.keyboardInputHandler) {
-      this.keyboardInputHandler(sendStr);
+    if (this.uplineDataSender) {
+      this.uplineDataSender(sendStr);
     }
   }
 
@@ -686,8 +692,8 @@ class ATerm {
               }
               break;
             case "c": // What Are You?
-              if (this.keyboardInputHandler) {
-                this.keyboardInputHandler("\x1B[?1;0c");
+              if (this.uplineDataSender) {
+                this.uplineDataSender("\x1B[?1;0c");
               }
               break;
             case "h": // (SM) Set Mode
@@ -801,13 +807,13 @@ class ATerm {
               }
               break;
             case "n": // (DSR) Device Status Report
-              if (params.length > 0 && this.keyboardInputHandler) {
+              if (params.length > 0 && this.uplineDataSender) {
                 switch (params[0]) {
                 case 5: // please report status
-                  this.keyboardInputHandler("\x1B[0n");
+                  this.uplineDataSender("\x1B[0n");
                   break;
                 case 6: // please report active position
-                  this.keyboardInputHandler(`\x1B[${(this.row - this.scrollingRegionTop) + 1};${this.col + 1}R`);
+                  this.uplineDataSender(`\x1B[${(this.row - this.scrollingRegionTop) + 1};${this.col + 1}R`);
                   break;
                 }
               }

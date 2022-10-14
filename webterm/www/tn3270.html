@@ -205,10 +205,10 @@
         terminal.renderText(data);
       });
       let url = machine.createConnection();
-      const keyboardInputHandler = data => {
+      const uplineDataSender = data => {
         machine.send(data);
       };
-      terminal.setKeyboardInputHandler(keyboardInputHandler);
+      terminal.setUplineDataSender(uplineDataSender);
       terminal.addTerminalStatusHandler(status => {
         if (status.isTerminalWait) {
           $("#status-wait-icon").show();
@@ -225,9 +225,9 @@
       machine.setDisconnectListener(() => {
         terminal.reset();
         terminal.renderText("\r\n\nDisconnected from " + title + ".\r\n\n   Press any key to reconnect ...\r\n");
-        terminal.setKeyboardInputHandler(data => {
+        terminal.setUplineDataSender(data => {
           url = machine.createConnection();
-          terminal.setKeyboardInputHandler(keyboardInputHandler);
+          terminal.setUplineDataSender(uplineDataSender);
         });
       });
       $(document).ajaxError((event, jqxhr, settings, thrownError) => {

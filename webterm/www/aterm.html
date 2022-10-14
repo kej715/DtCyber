@@ -247,18 +247,18 @@
       };
       setTerminal(ansiTerminal);
       let url = machine.createConnection();
-      const keyboardInputHandler = data => {
+      const uplineDataSender = data => {
         machine.send(data);
       };
-      ansiTerminal.setKeyboardInputHandler(keyboardInputHandler);
-      tektronixTerminal.setKeyboardInputHandler(keyboardInputHandler);
+      ansiTerminal.setUplineDataSender(uplineDataSender);
+      tektronixTerminal.setUplineDataSender(uplineDataSender);
       machine.setDisconnectListener(() => {
         terminal.reset();
         terminal.renderText("\r\n\nDisconnected from " + title + ".\r\n\n   Press any key to reconnect ...\r\n");
-        terminal.setKeyboardInputHandler(data => {
+        terminal.setUplineDataSender(data => {
           url = machine.createConnection();
-          ansiTerminal.setKeyboardInputHandler(keyboardInputHandler);
-          tektronixTerminal.setKeyboardInputHandler(keyboardInputHandler);
+          ansiTerminal.setUplineDataSender(uplineDataSender);
+          tektronixTerminal.setUplineDataSender(uplineDataSender);
         });
       });
       $(document).ajaxError((event, jqxhr, settings, thrownError) => {

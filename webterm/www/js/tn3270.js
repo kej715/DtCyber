@@ -426,8 +426,8 @@ class Tn3270 {
     this.fontWidth = Math.round(ctx.measureText(testLine).width / testLine.length);
   }
 
-  setKeyboardInputHandler(callback) {
-    this.keyboardInputHandler = callback;
+  setUplineDataSender(callback) {
+    this.uplineDataSender = callback;
   }
 
   addTerminalStatusHandler(callback) {
@@ -855,7 +855,7 @@ class Tn3270 {
 
   sendAID(aid) {
     let data = [aid].concat(this.to12Bit(this.cursorAddress), this.IAC, this.EOR);
-    this.keyboardInputHandler(Uint8Array.from(data).buffer);
+    this.uplineDataSender(Uint8Array.from(data).buffer);
     this.isTerminalWait = true;
     this.notifyTerminalStatus();
     this.debug("SENT", data);
@@ -865,7 +865,7 @@ class Tn3270 {
 
   sendAIDWithData(aid, data) {
     let awd = [aid].concat(this.to12Bit(this.cursorAddress), data, this.IAC, this.EOR);
-    this.keyboardInputHandler(Uint8Array.from(awd).buffer);
+    this.uplineDataSender(Uint8Array.from(awd).buffer);
     this.isTerminalWait = true;
     this.notifyTerminalStatus();
     this.debug("SENT", awd);
@@ -929,7 +929,7 @@ class Tn3270 {
         this.debug(`........${s}`);
       }
     }
-    this.keyboardInputHandler(Uint8Array.from(data).buffer);
+    this.uplineDataSender(Uint8Array.from(data).buffer);
     this.isTerminalWait = true;
     this.notifyTerminalStatus();
   }
@@ -937,7 +937,7 @@ class Tn3270 {
   sendStructuredFields(aid, fieldData) {
     let data = [aid].concat(fieldData);
     data.push(this.IAC, this.EOR);
-    this.keyboardInputHandler(Uint8Array.from(data).buffer);
+    this.uplineDataSender(Uint8Array.from(data).buffer);
     this.isTerminalWait = true;
     this.notifyTerminalStatus();
     if (this.isDebug) {
@@ -1058,16 +1058,16 @@ class Tn3270 {
         case this.OPT_BINARY:
         case this.OPT_SGA:
         case this.OPT_EOR:
-          this.keyboardInputHandler(Uint8Array.from([this.IAC, this.DO, b]).buffer);
+          this.uplineDataSender(Uint8Array.from([this.IAC, this.DO, b]).buffer);
           this.debug(`SENT:   DO ${b}`);
           break;
         case OPT_ECHO:
-          this.keyboardInputHandler(Uint8Array.from([this.IAC, this.DO, b]).buffer);
+          this.uplineDataSender(Uint8Array.from([this.IAC, this.DO, b]).buffer);
           this.debug(`SENT:   DO ${b}`);
           this.doEcho = false;
           break;
         default:
-          this.keyboardInputHandler(Uint8Array.from([this.IAC, this.DONT, b]).buffer);
+          this.uplineDataSender(Uint8Array.from([this.IAC, this.DONT, b]).buffer);
           this.debug(`SENT: DONT ${b}`);
           break;
         }
@@ -1078,7 +1078,7 @@ class Tn3270 {
         if (b === this.OPT_ECHO) {
           this.doEcho = true;
         }
-        this.keyboardInputHandler(Uint8Array.from([this.IAC, this.DONT, b]).buffer);
+        this.uplineDataSender(Uint8Array.from([this.IAC, this.DONT, b]).buffer);
         this.debug(`SENT: DONT ${b}`);
         this.state = this.ST_DATA;
         break;
@@ -1088,21 +1088,21 @@ class Tn3270 {
         case this.OPT_BINARY:
         case this.OPT_SGA:
         case this.OPT_TERM_TYPE:
-          this.keyboardInputHandler(Uint8Array.from([this.IAC, this.WILL, b]).buffer);
+          this.uplineDataSender(Uint8Array.from([this.IAC, this.WILL, b]).buffer);
           this.debug(`SENT: WILL ${b}`);
           break;
         case this.OPT_EOR:
-          this.keyboardInputHandler(Uint8Array.from([this.IAC, this.WILL, b]).buffer);
+          this.uplineDataSender(Uint8Array.from([this.IAC, this.WILL, b]).buffer);
           this.debug(`SENT: WILL ${b}`);
           this.doEor = true;
           break;
         case OPT_ECHO:
-          this.keyboardInputHandler(Uint8Array.from([this.IAC, this.WILL, b]).buffer);
+          this.uplineDataSender(Uint8Array.from([this.IAC, this.WILL, b]).buffer);
           this.debug(`SENT: WILL ${b}`);
           this.doEcho = true;
           break;
         default:
-          this.keyboardInputHandler(Uint8Array.from([this.IAC, this.WONT, b]).buffer);
+          this.uplineDataSender(Uint8Array.from([this.IAC, this.WONT, b]).buffer);
           this.debug(`SENT: WONT ${b}`);
           break;
         }
@@ -1112,15 +1112,15 @@ class Tn3270 {
         this.debug(`RCVD: DONT ${b}`);
         switch (b) {
         case this.OPT_EOR:
-          this.keyboardInputHandler(Uint8Array.from([this.IAC, this.WONT, b]).buffer);
+          this.uplineDataSender(Uint8Array.from([this.IAC, this.WONT, b]).buffer);
           this.doEor = false;
           break;
         case OPT_ECHO:
-          this.keyboardInputHandler(Uint8Array.from([this.IAC, this.WONT, b]).buffer);
+          this.uplineDataSender(Uint8Array.from([this.IAC, this.WONT, b]).buffer);
           this.doEcho = false;
           break;
         default:
-          this.keyboardInputHandler(Uint8Array.from([this.IAC, this.WONT, b]).buffer);
+          this.uplineDataSender(Uint8Array.from([this.IAC, this.WONT, b]).buffer);
           break;
         }
         this.debug(`SENT: WONT ${b}`);
@@ -1144,7 +1144,7 @@ class Tn3270 {
             }
             bytes.push(this.IAC);
             bytes.push(this.SE);
-            this.keyboardInputHandler(Uint8Array.from(bytes).buffer);
+            this.uplineDataSender(Uint8Array.from(bytes).buffer);
             this.debug(`SENT: SB TERM_TYPE IS ${this.termType}`);
           }
           this.state = this.ST_DATA;
