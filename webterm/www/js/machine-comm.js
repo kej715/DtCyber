@@ -646,7 +646,7 @@ class Machine {
     //
     this.scriptLabels = {};
     this.scriptVariables = {};
-    let lines = s.split("\n");
+      let lines = s.replaceAll("\r\n", "\n").split("\n");
     let lineNo = 0;
     let labelRE = /^:[A-Za-z_0-9]+:/;
     while (lines.length > 0) {
