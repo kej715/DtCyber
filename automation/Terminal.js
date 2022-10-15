@@ -1,7 +1,8 @@
 const net = require("net");
 
-const ATerm = require("../webterm/www/js/aterm");
-const PTerm = require("../webterm/www/js/pterm");
+const ATerm        = require("../webterm/www/js/aterm");
+const Machine      = require("../webterm/www/js/machine-comm");
+const PTerm        = require("../webterm/www/js/pterm");
 const PTermClassic = require("../webterm/www/js/pterm-classic");
 
 /*
@@ -15,6 +16,8 @@ class RenderingContext {
 
   constructor(streamMgr) {
     this.streamMgr = streamMgr;
+    this.x = 0;
+    this.y = 0;
   }
 
   beginPath() {
@@ -101,9 +104,13 @@ class RenderingContext {
   }
 
   lineTo(x, y) {
+    this.x = x;
+    this.y = y;
   }
 
   moveTo(x, y) {
+    this.x = x;
+    this.y = y;
   }
 
   putImageData(data, x, y) {
@@ -201,13 +208,23 @@ class BaseTerminal {
   constructor(emulator) {
     this.minimumKeyInterval = 0;
     this.emulator = emulator;
+    this.machine = new Machine(null);
+    this.machine.setTerminal(this.emulator);
+    this.machine.setReceivedDataHandler(data => {
+      if (typeof this.tracer === "function") this.tracer("R", data);
+      this.emulator.renderText(data);
+    });
+    this.machine.setSender(data => {
+      if (typeof this.tracer === "function") this.tracer("S", data);
+      this.socket.write(data);
+    });
     this.streamMgr = new StreamMgr();
     let ctx = new RenderingContext(this.streamMgr);
     this.emulator.context = ctx;
     ctx.setFontHeight(this.emulator.fontHeight);
     ctx.setFontWidth(this.emulator.fontWidth);
     this.emulator.setUplineDataSender(data => {
-      this.socket.write(data);
+      this.machine.sender(data);
     });
   }
 
@@ -345,7 +362,7 @@ class BaseTerminal {
               // just collect the byte
               break;
             case 255: // escaped FF
-              me.emulator.renderText("\xff");
+              me.machine.receivedDataHandler("\xff");
               me.telnetCommand = [];
               start = i + 1;
               break;
@@ -359,18 +376,18 @@ class BaseTerminal {
         else if (data[i] === 255) { // IAC
           me.telnetCommand.push(data[i]);
           if (i > start) {
-            me.emulator.renderText(data.slice(start, i));
+            me.machine.receivedDataHandler(data.slice(start, i));
           }
         }
         else if (data[i] === 0x0d && i + 1 < data.length && data[i + 1] === 0x00) {
-          me.emulator.renderText(data.slice(start, i + 1));
+          me.machine.receivedDataHandler(data.slice(start, i + 1));
           start = i + 2;
           i += 1;
         }
         i += 1;
       }
       if (i > start && me.telnetCommand.length < 1) {
-        me.emulator.renderText(data.slice(start, i));
+        me.machine.receivedDataHandler(data.slice(start, i));
       }
     };
 
@@ -385,7 +402,7 @@ class BaseTerminal {
           doTelnet(data);
         }
         else {
-          me.emulator.renderText(data);
+          me.machine.receivedDataHandler(data);
         }
       });
       me.socket.on("close", () => {
@@ -512,9 +529,10 @@ class BaseTerminal {
               // When the timeout function returns false, this
               // indicates that the consumer should not be applied
               // to incoming text anymore, and the promise should
-              // be reject. Otherwise, if the function returns true,
+              // be rejected. Otherwise, if the function returns true,
               // the timeout interval will remain in effect and
-              // attempting to match received text will continue.
+              // the consumer will continue to be applied to received
+              // text.
               //
               clearTimeout(intervalId);
               me.streamMgr.endConsumer();
@@ -577,6 +595,24 @@ class BaseTerminal {
     console.log(`${new Date().toLocaleTimeString()} ${message}`);
   }
 
+  /*
+   * runScript
+   *
+   * Run a script on the terminal emulator.
+   *
+   * Arguments:
+   *   script - the script to run
+   *
+   * Returns:
+   *   A promise that is resolved when the script is finished.
+   */
+  runScript(script) {
+    return new Promise((resolve, reject) => {
+      this.machine.runScript(script, () => {
+        resolve();
+      });
+    });
+  }
 
   /*
    * say
@@ -649,7 +685,7 @@ class BaseTerminal {
   /*
    * sendKey
    *
-   * Send a keyboard key with modifiers to DtCyber, as if a user had pressed the
+   * Send a keyboard key with modifiers to the host, as if a user had pressed the
    * indicated key combination.
    *
    * Arguments:
@@ -669,6 +705,33 @@ class BaseTerminal {
     if (this.minimumKeyInterval > 0) {
       promise = promise
       .then(() => this.sleep(this.minimumKeyInterval));
+    }
+    return promise;
+  }
+
+  /*
+   * sendList
+   *
+   * Send a list of strings (usually commands or text lines) to the host, waiting for
+   * a specified prompt from the host after each one, and delaying by a specified
+   * amount of time after each one.
+   *
+   * Arguments:
+   *   list    - the list of strings (usually commands or text lines)
+   *   prompt  - a regular expression representing the prompt for which to wait
+   *             after each string is sent
+   *   delay   - number of milliseconds to delay after each string
+   *
+   * Returns:
+   *   A promise that is resolved when the whole list has been sent.
+   */
+  sendList(list, prompt, delay) {
+    let promise = Promise.resolve();
+    for (const s of list) {
+      promise = promise
+      .then(() => this.send(s))
+      .then(() => this.expect([{ re: prompt }]))
+      .then(() => this.sleep(delay));
     }
     return promise;
   }
@@ -702,6 +765,66 @@ class BaseTerminal {
    */
   setKeyInterval(interval) {
     this.minimumKeyInterval = interval;
+  }
+
+  /*
+   * setTracer
+   *
+   * Set a function that traces data received from and sent to the host.
+   *
+   * Arguments
+   *   tracer - the tracing function. If this parameter is omitted, a default tracing
+   *            function is registered. The default tracing function logs data to the console.
+   *            Two parameters are passed to the tracing function:
+   *              direction : "R" for receive, "S" for send
+   *              data      : the data received or sent
+   */
+  setTracer(tracer) {
+    if (typeof tracer === "function") {
+      this.tracer = tracer;
+    }
+    else {
+      let lastDirection = null;
+      let text = "";
+      process.on("exit", code => {
+        if (text.length > 0) {
+          for (const line of text.split("\n")) {
+            if (line.length > 0) this.log(`${lastDirection} : ${line}`);
+          }
+        }
+      });
+      this.tracer = (direction, data) => {
+        if (typeof data === "string") {
+          let ab = new Uint8Array(data.length);
+          for (let i = 0; i < data.length; i++) {
+            ab[i] = data.charCodeAt(i) & 0xff;
+          }
+          data = ab;
+        }
+        let s = "";
+        for (let i = 0; i < data.length; i++) {
+          let b = data[i];
+          if (b < 0x10) {
+            s += `<0${b.toString(16)}>`;
+            if (b === 0x0a) s += "\n";
+          }
+          else if (b < 0x20 || b > 0x7e) {
+            s += `<${b.toString(16)}>`;
+          }
+          else {
+            s += String.fromCharCode(b);
+          }
+        }
+        if (direction !== lastDirection && text.length > 0) {
+          for (const line of text.split("\n")) {
+            if (line.length > 0) this.log(`${lastDirection} : ${line}`);
+          }
+          text = "";
+        }
+        text += s;
+        lastDirection = direction;
+      };
+    }
   }
 
   /*
@@ -746,6 +869,7 @@ class AnsiTerminal extends BaseTerminal {
    *   A promise that is reolved when the login is complete.
    */
   loginNOS1(username, password) {
+    this.isTelnetConnection = false; // connections via 6676 mux do not have Telnet protocol
     return this.expect([{ re: /USER NUMBER/ }])
     .then(() => this.expect([{ re: /XXXXXXXXXXXXXX/ }]))
     .then(() => this.sleep(1000))
@@ -755,7 +879,7 @@ class AnsiTerminal extends BaseTerminal {
     .then(() => this.send(`${password}\r`))
     .then(() => this.expect([{ re: /RECOVER \/SYSTEM/ }]))
     .then(() => this.sleep(1000))
-    .then(() => this.send("half\r"))
+    .then(() => this.send("full\r"))
     .then(() => this.expect([{ re: /\// }]));
   }
 

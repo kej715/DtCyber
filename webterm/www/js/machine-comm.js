@@ -44,6 +44,10 @@ class Machine {
     }
   }
 
+  setSender(sender) {
+    this.sender = sender;
+  }
+
   setTerminal(terminal) {
     this.terminal = terminal;
   }
@@ -561,7 +565,7 @@ class Machine {
             logReceivedText(this.receivedText);
             console.log(`runScript: ${action}${text}`);
           }
-          let re = new RegExp(interpolate(unescape(text)), "g");
+          let re = new RegExp(interpolate(unescape(text)).replaceAll("\\n", "$"), "gm");
           let lines = this.receivedText.split("\n");
           while (lines.length > 0) {
             let line = lines.shift();
@@ -573,7 +577,7 @@ class Machine {
                   console.log(`runScript:   [${i}] ${this.matchedSubstrings[i]}`);
                 }
               }
-              line = line.substr(re.lastIndex);
+              line = line.substring(re.lastIndex);
               this.scriptIndex += 1;
             }
             else if (lines.length > 0) {
@@ -582,7 +586,7 @@ class Machine {
             else {
               done = true;
             }
-            lines.unshift(line);
+            if (line.length > 0) lines.unshift(line);
             this.receivedText = lines.join("\n");
             break;
           }
@@ -707,3 +711,8 @@ class Machine {
     this.executeScript();
   }
 }
+//
+// The following lines enable this file to be used as a Node.js module.
+//
+if (typeof module === "undefined") module = {};
+module.exports = Machine;

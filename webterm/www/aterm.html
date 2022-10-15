@@ -231,7 +231,7 @@
       tektronixTerminal.setInvertDelBs(hasInvertDelBs);
       tektronixTerminal.setIsKSR(isKSR);
       let terminal = null;
-      const setTerminal = (term) => {
+      const setTerminal = term => {
         terminal = term;
         const terminalElem = $("#terminal");
         terminalElem.empty();

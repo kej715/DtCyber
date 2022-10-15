@@ -619,7 +619,7 @@ Example:
 ```
 
 ### <a id="script-i"></a>I : Iterate over sequence of lines
-This instructions sends a sequence of lines to the machine, each prompted by the same
+This instruction sends a sequence of lines to the machine, each prompted by the same
 pattern and followed by the same delay. The sequence of lines to be sent immediately
 follows the instruction. The end of the sequence is indicated by a boundary line,
 and the boundary is defined as a parameter of the instruction.
