@@ -1,0 +1,30 @@
+Lnew,fib
+W^/$
+Ltext
+W ENTER TEXT MODE
+W\\r
+I250 \\r =====
+      PROGRAM FIB
+C
+C  CALCULATE FIRST 10 FIBONACCI NUMBERS
+C
+      I1 = 0
+      I2 = 1
+
+      DO 10 N = 1, 10
+        PRINT *, N, ': ', I2
+        I3 = I1 + I2
+        I1 = I2
+        I2 = I3
+10    CONTINUE
+      END 
+=====
+S\x14
+W EXIT TEXT MODE
+W^/$
+D1000
+Sftn5,i=fib,l=0,go
+D1000
+L
+W CP SECONDS EXECUTION TIME
+W^/$
