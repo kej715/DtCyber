@@ -392,7 +392,14 @@ class BaseTerminal {
     };
 
     const doConnect = callback => {
-      me.socket = net.createConnection({port:port, host:"127.0.0.1"}, () => {
+      let host = "127.0.0.1";
+      if (typeof port === "string" && port.indexOf(":") >= 0) {
+        let ci = port.indexOf(":");
+        host = port.substring(0, ci);
+        port = port.substring(ci + 1);
+        if (host.length < 1) host = "127.0.0.1";
+      }
+      me.socket = net.createConnection({port:port, host:host}, () => {
         me.isConnected = true;
         callback(null);
       });
@@ -678,6 +685,10 @@ class BaseTerminal {
       promise = promise === null
       ? this.sendKey(key, isShift, isCtrl, isAlt)
       : promise.then(() => this.sendKey(key, isShift, isCtrl, isAlt));
+      if (this.minimumKeyInterval > 0) {
+        promise = promise
+        .then(() => this.sleep(this.minimumKeyInterval));
+      }
     }
     return promise;
   }
@@ -699,14 +710,34 @@ class BaseTerminal {
    */
   sendKey(key, isShift, isCtrl, isAlt) {
     let promise = new Promise((resolve, reject) => {
-      this.emulator.processKeyboardEvent(key, isShift, isCtrl, isAlt);
+      this.sendKeyDirect(key, isShift, isCtrl, isAlt);
       resolve();
     });
-    if (this.minimumKeyInterval > 0) {
-      promise = promise
-      .then(() => this.sleep(this.minimumKeyInterval));
-    }
     return promise;
+  }
+
+  /*
+   * sendKeyDirect
+   *
+   * Send a keyboard key with modifiers to the host directly (not as a promise),
+   * as if a user had pressed the indicated key combination.
+   *
+   * Arguments:
+   *   key     - the name of the base key pressed
+   *   isShift - true if shift keypress indication
+   *   isCtrl  - true if control keypress indication
+   *   isAlt   - true if alt keypress indication
+   *   delay   - optional delay in milliseconds before sending key
+   */
+  sendKeyDirect(key, isShift, isCtrl, isAlt, delay) {
+    if (typeof delay === "undefined") {
+      this.emulator.processKeyboardEvent(key, isShift, isCtrl, isAlt);
+    }
+    else {
+      setTimeout(() => {
+        this.emulator.processKeyboardEvent(key, isShift, isCtrl, isAlt);
+      }, delay);
+    }
   }
 
   /*
@@ -942,7 +973,16 @@ class CybisTerminal extends BaseTerminal {
     .then(() => this.expect([{ re: /password/ }]))
     .then(() => this.sleep(1000))
     .then(() => this.send(`${password}\r`))
-    .then(() => this.expect([{ re: /Choose a lesson/ }]));
+    .then(() => this.expect([
+      { re: /Incorrect password/, fn: "Incorrect password" },
+      { re: /Choose a lesson/ },
+      { re: /You have not changed your password in the last.*Press LAB.*, or NEXT to continue\./,
+        fn: () => {
+              this.sendKeyDirect("Enter", false, false, false, 500);
+              return true;
+            }
+      }
+    ]));
   }
 }
 
