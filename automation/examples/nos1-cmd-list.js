@@ -22,4 +22,5 @@ term.connect(6676)
 })
 .catch(err => {
   console.log(err);
+  process.exit(1);
 });

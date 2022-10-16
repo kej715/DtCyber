@@ -19,4 +19,5 @@ term.connect(23)
 })
 .catch(err => {
   console.log(err);
+  process.exit(1);
 });

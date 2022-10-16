@@ -24,4 +24,5 @@ term.connect(8005)
 })
 .catch(err => {
   console.log(err);
+  process.exit(1);
 });
