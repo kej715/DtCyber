@@ -76,11 +76,11 @@ class PTermClassic {
     this.bgndColor     = "#000000"; // black
     this.canvas        = null;
     this.charArray     = [];
-    this.charHeight    = 16;
     this.charState     = this.CHAR_STATE_NORMAL;
-    this.charWidth     = 8;
     this.context       = null;
     this.fgndColor     = "#ffa500"; // orange
+    this.fontHeight    = 16;
+    this.fontWidth     = 8;
     this.inverse       = false;
     this.isDebug       = false;
     this.lastX         = 0;  // last computed X coordinate
@@ -89,6 +89,45 @@ class PTermClassic {
     this.wc            = 0;
     this.X             = 0;  // current X coordinate
     this.Y             = 0;  // current Y coordinate
+
+    this.bgndColor         = "#000000"; // black
+    this.charset           = this.CHARSET_M0;
+    this.fontHeight        = 16;
+    this.charSize          = this.CHAR_SIZE_0;
+    this.charState         = this.CHAR_STATE_NORMAL;
+    this.fontWidth         = 8;
+    this.direction         = this.DIRECTION_FORWARD;
+    this.renderMode        = this.MODE_PLOT_CHARS;
+    this.fgndColor         = "#ffa500"; // orange
+    this.graphicsMode      = this.MODE_WRITE;
+    this.lastX             = 0;
+    this.lastY             = 0;
+    this.margin            = [0, 0];
+    this.orientation       = this.ORIENTATION_HORIZONTAL;
+    this.receivedBytes     = [];
+    this.touchPanelEnabled = false;
+    this.wc                = 0;
+    this.X                 = 0;
+    this.Y                 = 496;
+
+    this.ram = new Uint8Array(0x10000);
+    this.ram.fill(0);
+    this.ram[this.C2_ORIGIN]     =  this.M2_ADDRESS & 0xff;
+    this.ram[this.C2_ORIGIN + 1] = (this.M2_ADDRESS >> 8) & 0xff;
+    this.ram[this.C3_ORIGIN]     =  this.M3_ADDRESS & 0xff;
+    this.ram[this.C3_ORIGIN + 1] = (this.M3_ADDRESS >> 8) & 0xff;
+    this.c2origin = this.M2_ADDRESS;
+    this.c3origin = this.M3_ADDRESS;
+    this.ramAddress = 0;
+
+    this.alternateCharset = [];
+    for (let i = 0; i < 128; i++) {
+      let char = [];
+      for (let j = 0; j < 8; j++) {
+        char.push(0);
+      }
+      this.alternateCharset.push(char);
+    }
 
     this.cdcToAscii = [
       0x3a,0x41,0x42,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4a,0x4b,0x4c,0x4d,0x4e,0x4f, // 000 - 017
@@ -197,7 +236,7 @@ class PTermClassic {
   }
 
   toHex(value) {
-    if (Array.isArray(value)) {
+    if (Array.isArray(value) || typeof value === "object") {
       let result = [];
       for (let i = 0; i < value.length; i++) {
         let byte = value[i];
@@ -388,10 +427,10 @@ class PTermClassic {
   reset() {
     this.bgndColor         = "#000000"; // black
     this.charset           = this.CHARSET_M0;
-    this.charHeight        = 16;
+    this.fontHeight        = 16;
     this.charSize          = this.CHAR_SIZE_0;
     this.charState         = this.CHAR_STATE_NORMAL;
-    this.charWidth         = 8;
+    this.fontWidth         = 8;
     this.direction         = this.DIRECTION_FORWARD;
     this.renderMode        = this.MODE_PLOT_CHARS;
     this.fgndColor         = "#ffa500"; // orange
@@ -410,7 +449,6 @@ class PTermClassic {
     this.context.fillRect(0, 0, 512, 512);
     this.setFont();
 
-    this.ram = new Uint8Array(0x10000);
     this.ram.fill(0);
     this.ram[this.C2_ORIGIN]     =  this.M2_ADDRESS & 0xff;
     this.ram[this.C2_ORIGIN + 1] = (this.M2_ADDRESS >> 8) & 0xff;
@@ -451,7 +489,7 @@ class PTermClassic {
     }
     else if (this.graphicsMode === this.MODE_REWRITE) {
       this.context.fillStyle = this.bgndColor;
-      this.context.fillRect(x, 511 - y - 15, this.charWidth, this.charHeight);
+      this.context.fillRect(x, 511 - y - 15, this.fontWidth, this.fontHeight);
       this.context.fillStyle = this.fgndColor;
       this.context.fillText(String.fromCharCode(chCode), x, 511 - y);
       if (this.isDebug) {
@@ -461,7 +499,7 @@ class PTermClassic {
     }
     else { // MODE_INVERSE
       this.context.fillStyle = this.fgndColor;
-      this.context.fillRect(x, 511 - y - 15, this.charWidth, this.charHeight);
+      this.context.fillRect(x, 511 - y - 15, this.fontWidth, this.fontHeight);
       this.context.fillStyle = this.bgndColor;
       this.context.fillText(String.fromCharCode(chCode), x, 511 - y);
       if (this.isDebug) {
@@ -572,7 +610,7 @@ class PTermClassic {
     else if (this.charset < this.CHARSET_M4) {
       this.drawAltChar(chCode, x, y);
     }
-    this.X = (x + this.charWidth) & 0x1ff; // TODO: accommodate direction and orientation
+    this.X = (x + this.fontWidth) & 0x1ff; // TODO: accommodate direction and orientation
     this.Y = y;
   }
 
@@ -680,11 +718,11 @@ class PTermClassic {
       this.charState = this.CHAR_STATE_NORMAL;
       switch (c6) {
       case 0o10:   // backspace
-        this.X = (this.X - this.charWidth) & 0x1ff;
+        this.X = (this.X - this.fontWidth) & 0x1ff;
         this.debug(`<BS> (${this.X},${this.Y})`);
         break;
       case 0o11:   // tab
-        this.X = (this.X + this.charWidth) & 0x1ff;
+        this.X = (this.X + this.fontWidth) & 0x1ff;
         this.debug(`<HT> (${this.X},${this.Y})`);
         break;
       case 0o12:   // linefeed
@@ -1026,7 +1064,7 @@ class PTermClassic {
     }
   }
 
-  receive(bytes) {
+  renderText(bytes) {
     let len = this.receivedBytes.length;
     if (typeof bytes === "string") {
       for (let i = 0; i < bytes.length; i++) {
@@ -1060,3 +1098,8 @@ class PTermClassic {
     }
   }
 }
+//
+// The following lines enable this file to be used as a Node.js module.
+//
+if (typeof module === "undefined") module = {};
+module.exports = PTermClassic;

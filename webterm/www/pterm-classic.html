@@ -25,12 +25,12 @@
       </div>
     </div>
     <script>
-    $(document).ready(function() {
+    $(document).ready(() => {
       let machineId = "unknown";
       let title = "PLATO";
       let qs = window.location.search;
       if (qs && qs.length > 1) {
-        qs.substr(1).split("&").forEach(function(param) {
+        qs.substr(1).split("&").forEach(param => {
           var nvp = param.split("=");
           if (nvp.length > 1) {
             switch (nvp[0]) {
@@ -69,29 +69,29 @@
       const machine = new Machine(machineId);
       const machineDesc = new MachineDescription(machine);
       machine.setTerminal(pterm);
-      machine.setReceivedDataHandler(function(data) {
-        pterm.receive(data);
+      machine.setReceivedDataHandler(data => {
+        pterm.renderText(data);
       });
       let url = machine.createConnection();
-      let uplineDataSender = function(data) {
+      let uplineDataSender = data => {
         machine.send(data);
       };
       pterm.setUplineDataSender(uplineDataSender);
-      machine.setDisconnectListener(function() {
+      machine.setDisconnectListener(() => {
         pterm.reset();
-        pterm.receive("\r\n\nDisconnected from " + title + ".\r\n\n   Press any key to reconnect ...\r\n");
-        pterm.setUplineDataSender(function(data) {
+        pterm.renderText("\r\n\nDisconnected from " + title + ".\r\n\n   Press any key to reconnect ...\r\n");
+        pterm.setUplineDataSender(data => {
           url = machine.createConnection();
           pterm.setUplineDataSender(uplineDataSender);
         });
       });
-      $(document).ajaxError(function(event, jqxhr, settings, thrownError) {
+      $(document).ajaxError((event, jqxhr, settings, thrownError) => {
         if (settings.url === url) {
           pterm.reset();
           pterm.renderText("\r\n\n" + jqxhr.responseText + "\r\n\n   Failed to connect to " + title);
         }
       });
-      $(window).bind("beforeunload", function() {
+      $(window).bind("beforeunload", () => {
         machine.closeConnection();
       });
 

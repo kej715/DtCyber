@@ -62,14 +62,15 @@ class PTerm {
     this.bgndColor     = "#000000"; // black
     this.canvas        = null;
     this.charArray     = [];
-    this.charHeight    = 16;
-    this.charWidth     = 8;
     this.context       = null;
     this.fgndColor     = "#ffa500"; // orange
+    this.fontHeight    = 16;
+    this.fontWidth     = 8;
     this.inverse       = false;
     this.isDebug       = false;
     this.lastX         = 0;  // last computed X coordinate
     this.lastY         = 0;  // last computed Y coordinate
+    this.renderer      = this.ttyMode;
     this.termSubtype   = 16; // Pterm
     this.X             = 0;  // current X coordinate
     this.Y             = 0;  // current Y coordinate
@@ -127,10 +128,12 @@ class PTerm {
       }
       this.parityMap[b] = (n & 1) ? b|0x80 : b;
     }
+
+    this.initPlatoMode();
   }
 
   toHex(value) {
-    if (Array.isArray(value)) {
+    if (Array.isArray(value) || typeof value === "object") {
       let result = [];
       for (let i = 0; i < value.length; i++) {
         let byte = value[i];
@@ -146,7 +149,7 @@ class PTerm {
   debug(message, bytes) {
     if (this.isDebug) {
       if (bytes) {
-        console.log(message + ": [" + this.toHex(bytes).join(" ") + "]");
+        console.log(`${message}: [${this.toHex(bytes).join(" ")}]`);
       }
       else {
         console.log(message);
@@ -167,7 +170,7 @@ class PTerm {
   }
 
   setFont() {
-    this.context.font = "normal 16px " + this.fontNames[this.charset];
+    this.context.font = `normal 16px ${this.fontNames[this.charset]}`;
   }
 
   processKeyboardEvent(keyStr, shiftKey, ctrlKey, altKey) {
@@ -309,8 +312,8 @@ class PTerm {
 
   reset() {
     this.initPlatoMode();
-    this.charHeight = 16;
-    this.charWidth  = 8;
+    this.fontHeight = 16;
+    this.fontWidth  = 8;
     this.renderer   = this.ttyMode;
     this.context.fillStyle = this.bgndColor;
     this.context.fillRect(0, 0, 512, 512);
@@ -339,7 +342,7 @@ class PTerm {
     }
     else if (this.graphicsMode === this.MODE_REWRITE) {
       this.context.fillStyle = this.bgndColor;
-      this.context.fillRect(x, 511 - y - 15, this.charWidth, this.charHeight);
+      this.context.fillRect(x, 511 - y - 15, this.fontWidth, this.fontHeight);
       this.context.fillStyle = this.fgndColor;
       this.context.fillText(String.fromCharCode(this.charsets[this.charset][chCode]), x, 511 - y);
       if (this.isDebug) {
@@ -350,7 +353,7 @@ class PTerm {
     }
     else { // MODE_INVERSE
       this.context.fillStyle = this.fgndColor;
-      this.context.fillRect(x, 511 - y - 15, this.charWidth, this.charHeight);
+      this.context.fillRect(x, 511 - y - 15, this.fontWidth, this.fontHeight);
       this.context.fillStyle = this.bgndColor;
       this.context.fillText(String.fromCharCode(this.charsets[this.charset][chCode]), x, 511 - y);
       if (this.isDebug) {
@@ -471,7 +474,10 @@ class PTerm {
     else if (this.charset < this.CHARSET_M4) {
       this.drawAltChar(chCode, x, y);
     }
-    this.X = (x + this.charWidth) & 0x1ff; // TODO: accommodate direction and orientation
+    else {
+      this.debug(`Unsupported character set: ${this.charset}`);
+    }
+    this.X = (x + this.fontWidth) & 0x1ff; // TODO: accommodate direction and orientation
     this.Y = y;
   }
 
@@ -1306,7 +1312,7 @@ class PTerm {
     }
   }
 
-  receive(text) {
+  renderText(text) {
     if (typeof text === "string") {
       for (let i = 0; i < text.length; i++) {
         this.renderer(text.charCodeAt(i) & 0x7f);
@@ -1355,3 +1361,8 @@ class PTerm {
     }
   }
 }
+//
+// The following lines enable this file to be used as a Node.js module.
+//
+if (typeof module === "undefined") module = {};
+module.exports = PTerm;

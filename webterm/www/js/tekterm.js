@@ -110,8 +110,8 @@ class Tektronix {
     this.showCursor();
   }
 
-  setKeyboardInputHandler(callback) {
-    this.keyboardInputHandler = callback;
+  setUplineDataSender(callback) {
+    this.uplineDataSender = callback;
   }
 
   setInvertDelBs(invertDelBs) {
@@ -233,8 +233,8 @@ class Tektronix {
               +  String.fromCharCode((this.crosshairY >> 5)   | 0x40)
               +  String.fromCharCode((this.crosshairY & 0x1f) | 0x40);
     }
-    if (this.keyboardInputHandler) {
-      this.keyboardInputHandler(sendStr);
+    if (this.uplineDataSender) {
+      this.uplineDataSender(sendStr);
     }
   }
 
@@ -594,7 +594,7 @@ class Tektronix {
                      +  String.fromCharCode((this.y >> 5)   | 0x40)
                      +  String.fromCharCode((this.y & 0x1f) | 0x40);
           }
-          this.keyboardInputHandler(response);
+          this.uplineDataSender(response);
           break;
         case 0x0c: // <FF>
           this.x            = 0;
@@ -655,3 +655,8 @@ class Tektronix {
     }
   }
 }
+//
+// The following lines enable this file to be used as a Node.js module.
+//
+if (typeof module === "undefined") module = {};
+module.exports = Tektronix;
