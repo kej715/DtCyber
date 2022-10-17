@@ -1033,7 +1033,10 @@ class PlatoTerminal extends BaseTerminal {
     .then(() => this.expect([{ re: /Type your password, then press NEXT/ }]))
     .then(() => this.sleep(1000))
     .then(() => this.send(`${password}\r`))
-    .then(() => this.expect([{ re: /Choose a lesson/ }]));
+    .then(() => this.expect([
+      { re: /WRONG CODE/, fn: "Incorrect password" },
+      { re: /Choose a lesson/ }
+    ]));
   }
 }
 
