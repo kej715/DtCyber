@@ -1132,11 +1132,7 @@ static void opCmdDumpCM(int fwa, int count)
     for (limit = fwa + count; fwa < limit; fwa++)
         {
         word = cpMem[fwa];
-#if defined(_WIN32)
-        n    = sprintf(buf, "    > %08o %020llo ", fwa, word);
-#else
-        n    = sprintf(buf, "    > %08o %020lo ", fwa, word);
-#endif
+        n    = sprintf(buf, "    > %08o " FMT60_020o " ", fwa, word);
         cp   = buf + n;
         for (shiftCount = 54; shiftCount >= 0; shiftCount -= 6)
             {
@@ -1166,11 +1162,7 @@ static void opCmdDumpEM(int fwa, int count)
     for (limit = fwa + count; fwa < limit; fwa++)
         {
         word = extMem[fwa];
-#if defined(_WIN32)
-        n    = sprintf(buf, "%08o %020llo ", fwa, word);
-#else
-        n    = sprintf(buf, "%08o %020lo ", fwa, word);
-#endif
+        n    = sprintf(buf, "%08o " FMT60_020o " ", fwa, word);
         cp   = buf + n;
         for (shiftCount = 54; shiftCount >= 0; shiftCount -= 6)
             {
@@ -2609,11 +2601,7 @@ static void opCmdShowStateCP(u8 cpMask)
 
         for (i = 0; i < 8; i++)
             {
-#if defined(_WIN32)
-            sprintf(opOutBuf, "    > X%d  %020llo\n", i, cpu->regX[i]);
-#else
-            sprintf(opOutBuf, "    > X%d  %020lo\n", i, cpu->regX[i]);
-#endif
+            sprintf(opOutBuf, "    > X%d  " FMT60_020o "\n", i, cpu->regX[i]);
             opDisplay(opOutBuf);
             }
         opDisplay("\n");
