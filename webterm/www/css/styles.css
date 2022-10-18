@@ -8,25 +8,6 @@
 .apl {
   font-family: APL2741;
 }
-.attach-file-diagnostic {
-  color: red;
-  font-weight: bold;
-  margin-left: 20px;
-  margin-top: 5px;
-}
-.attach-file-dialog-button {
-  margin-right: 20px;
-}
-.attach-file-dialog-content {
-  height: 80px;
-}
-.attach-file-dialog-input {
-  margin-top: 20px;
-  margin-left: 20px;
-}
-.bottom-border {
-  border-bottom: 2px solid black;
-}
 .busy-indicator {
   position: absolute;
   z-index: 15;
@@ -105,29 +86,12 @@
   background-blend-mode: lighten;
   background-size: cover;
 }
-.fanfold-background-fixed-size {
-  background-image: url("fanfold-716x528.jpg");
-  background-blend-mode: lighten;
-  background-size: 1428px 1056px;
-}
-.fanfold-background-cpm-printer {
-  background-image: url("fanfold-716x528.jpg");
-  background-blend-mode: lighten;
-  background-size: 716px 1056px;
-}
 .fixed {
   position: fixed;
 }
 .fixed-font {
   font-family: monospace;
   font-weight: bold;
-}
-.grid {
-  border-collapse: collapse;
-}
-.grid th, .grid td {
-  border: 2px solid black;
-  padding: 4px;
 }
 .highlighted {
   background-color: lightyellow;
@@ -138,11 +102,9 @@
 .italic {
   font-style: italic;
 }
-
 .large-font {
   font-size: x-large;
 }
-
 .left-aligned {
   text-align: left;
 }
@@ -234,9 +196,6 @@
   text-align: left;
   padding-left: 5px;
 }
-.machine-list {
-  list-style-type: none;
-}
 .machine-login-action {
   display: table-row;
 }
@@ -279,7 +238,6 @@
   box-shadow: 0 1px #666;
   transform: translateY(2px);
 }
-
 .machine-more-container {
   position: relative;
   padding-top: 10px;
@@ -356,126 +314,11 @@
 .menu-show {
   display: block;
 }
-.nav-bar {
-  background-color: lightblue;
-  border: 1px solid grey;
-  float: left;
-  overflow: auto;
-  position: relative;
-  width: 64px;
-  z-index: 5;
-}
-.nav-option {
-  background-color: lightblue;
-  border: 1px solid grey;
-  cursor: pointer;
-  display: block;
-  height: 20px;
-  padding-left: 4px;
-  text-decoration: none;
-}
-.nav-option:hover {
-  background-color: blue;
-  color: white;
-}
-.printer-text {
-  font-family: monospace;
-  white-space: pre;
-  position: absolute;
-  top: 0px;
-  left: 35px;
-  margin: 0px;
-}
-.queue-action-container {
-  top: 24px;
-  left: 40px;
-  position: relative;
-}
-.queue-button {
-  padding-right: 4px;
-  position: absolute;
-  text-decoration: none;
-}
-.queue-button:hover {
-  background-color: lightblue;
-  color: white;
-}
-.queue-button:active {
-  background-color: lightblue;
-  color: white;
-  box-shadow: 0 1px #666;
-  transform: translateY(2px);
-}
-.queue-checkbox {
-  position: absolute;
-  left: 25px;
-}
-.queue-datum {
-  display: inline-block;
-  position: absolute;
-  color: black;
-  text-align: left;
-  font-weight: normal;
-}
-.queue-empty-indication {
-  display: inline-block;
-  position: absolute;
-  font-style: italic;
-  text-align: center;
-  font-weight: normal;
-  white-space: nowrap;
-}
-.queue-heading {
-  display: inline-block;
-  position: absolute;
-  color: black;
-  display: table-cell;
-  text-decoration: underline;
-  font-weight: normal;
-}
-.queue-list {
-  top: 24px;
-  left: 40px;
-  position: relative;
-}
-.queue-name {
-  display: block;
-  position: absolute;
-  color: black;
-  font-weight: bold;
-}
-.queued-file-container {
-  position: absolute;
-  margin: 0px;
-  padding: 0px;
-  border-width: 0px;
-}
-.queued-file-content {
-  position: absolute;
-  color: black;
-  margin: 0px;
-  padding: 0px;
-  border-width: 0px;
-  height: 1056px;
-  top: 22px;
-  left: 48px;
-}
-.queued-file-line {
-  position: absolute;
-  font-family: monospace;
-  white-space: pre;
-  left: 0px;
-  margin: 0px;
-  padding: 0px;
-}
 .relative {
   position: relative;
 }
 .right-aligned {
   text-align: right;
-}
-.right-border {
-  border-right: 2px solid black;
 }
 .right-justified {
   position: absolute;
