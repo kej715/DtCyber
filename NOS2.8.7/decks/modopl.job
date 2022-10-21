@@ -2,7 +2,7 @@
 ~*  This job applies all local operating system corrective
 ~*  code and customizations to the operating system source
 ~*  library. Each correction and customization is maintained
-~*  as separate file containing MODIFY directives and source
+~*  as a separate file containing MODIFY directives and source
 ~*  code. This job merges all of them together into a
 ~*  multi-record file and calls MODIFY to apply them. The
 ~*  result is a new version of the file named OPL871 in the
@@ -23,6 +23,7 @@ $COPY,INPUT,NOSMODS.
 $REPLACE,NOSMODS.
 $PURGE,OPL871/NA.
 $BEGIN,MODOPL,INSTALL,USERF=NOSMODS.
+$CHANGE,OPL871/CT=PU,M=R,AC=Y.
 ***
 *** MODOPL COMPLETE
 ***
