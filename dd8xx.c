@@ -269,6 +269,54 @@ static DiskSize sizeDd844_2 = { MaxCylinders844_2, MaxTracks844, MaxSectors844 }
 static DiskSize sizeDd844_4 = { MaxCylinders844_4, MaxTracks844, MaxSectors844 };
 static DiskSize sizeDd885_1 = { MaxCylinders885_1, MaxTracks885, MaxSectors885 };
 
+static u16 detailedStatus885[] =
+    {
+    0,                 // strobe offset & address error status
+    0340,              // checkword error status & sector count
+    0,                 // command code & error bits
+    07440,             // dsu number
+    0,                 // address 1 of failing sector
+    0,                 // address 2 of failing sector
+    010,               // non recoverable error status
+    037,               // 11 bit correction factor
+    01640,             // DSU status
+    07201,             // DSU fault status
+    0,                 // DSU interlock status
+    0,                 // bit address of correctable read error
+    02000,             // PP address of correctable read error
+    0,                 // first word of correction vector
+    0,                 // second word of correction vector
+    0,                 // DSC operating status word
+    0,                 // coupler buffer status
+    0400,              // access A is connected & last command
+    0,                 // last command 2 and 3
+    0                  // last command 4
+    };
+
+static u16 detailedStatus844[] =
+    {
+    0,                 // strobe offset & address error status
+    0,                 // checkword error status & sector count
+    0,                 // command code & error bits
+    04440,             // dsu number
+    0,                 // address 1 of failing sector
+    0,                 // address 2 of failing sector
+    010,               // non recoverable error status
+    0,                 // 11 bit correction factor
+    00740,             // DSU status
+    04001,             // DSU fault status
+    07520,             // DSU interlock status
+    0,                 // bit address of correctable read error
+    0,                 // PP address of correctable read error
+    0,                 // first word of correction vector
+    0,                 // second word of correction vector
+    00020,             // DSC operating status word
+    0,                 // coupler buffer status
+    0400,              // access A is connected & last command
+    0,                 // last command 2 and 3
+    0                  // last command 4
+    };
+
 #if DEBUG
 static FILE *dd8xxLog = NULL;
 #endif
@@ -282,7 +330,6 @@ static FILE *dd8xxLog = NULL;
 #if DEBUG
 static void dd8xxLogFlush(void);
 static void dd8xxLogByte(int b);
-
 #endif
 
 #if DEBUG
@@ -723,49 +770,13 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
     switch (diskType)
         {
     case DiskType885:
-        dp->detailedStatus[0]  = 0;                 // strobe offset & address error status
-        dp->detailedStatus[1]  = 0340;              // checkword error status & sector count
-        dp->detailedStatus[2]  = 0;                 // command code & error bits
-        dp->detailedStatus[3]  = 07440 + unitNo;    // dsu number
-        dp->detailedStatus[4]  = 0;                 // address 1 of failing sector
-        dp->detailedStatus[5]  = 0;                 // address 2 of failing sector
-        dp->detailedStatus[6]  = 010;               // non recoverable error status
-        dp->detailedStatus[7]  = 037;               // 11 bit correction factor
-        dp->detailedStatus[8]  = 01640;             // DSU status
-        dp->detailedStatus[9]  = 07201;             // DSU fault status
-        dp->detailedStatus[10] = 0;                 // DSU interlock status
-        dp->detailedStatus[11] = 0;                 // bit address of correctable read error
-        dp->detailedStatus[12] = 02000;             // PP address of correctable read error
-        dp->detailedStatus[13] = 0;                 // first word of correction vector
-        dp->detailedStatus[14] = 0;                 // second word of correction vector
-        dp->detailedStatus[15] = 0;                 // DSC operating status word
-        dp->detailedStatus[16] = 0;                 // coupler buffer status
-        dp->detailedStatus[17] = 0400;              // access A is connected & last command
-        dp->detailedStatus[18] = 0;                 // last command 2 and 3
-        dp->detailedStatus[19] = 0;                 // last command 4
+        memcpy(dp->detailedStatus, detailedStatus885, 20);
+        dp->detailedStatus[3] += unitNo;
         break;
 
     case DiskType844:
-        dp->detailedStatus[0]  = 0;                 // strobe offset & address error status
-        dp->detailedStatus[1]  = 0;                 // checkword error status & sector count
-        dp->detailedStatus[2]  = 0;                 // command code & error bits
-        dp->detailedStatus[3]  = 04440 + unitNo;    // dsu number
-        dp->detailedStatus[4]  = 0;                 // address 1 of failing sector
-        dp->detailedStatus[5]  = 0;                 // address 2 of failing sector
-        dp->detailedStatus[6]  = 010;               // non recoverable error status
-        dp->detailedStatus[7]  = 0;                 // 11 bit correction factor
-        dp->detailedStatus[8]  = 00740;             // DSU status
-        dp->detailedStatus[9]  = 04001;             // DSU fault status
-        dp->detailedStatus[10] = 07520;             // DSU interlock status
-        dp->detailedStatus[11] = 0;                 // bit address of correctable read error
-        dp->detailedStatus[12] = 0;                 // PP address of correctable read error
-        dp->detailedStatus[13] = 0;                 // first word of correction vector
-        dp->detailedStatus[14] = 0;                 // second word of correction vector
-        dp->detailedStatus[15] = 00020;             // DSC operating status word
-        dp->detailedStatus[16] = 0;                 // coupler buffer status
-        dp->detailedStatus[17] = 0400;              // access A is connected & last command
-        dp->detailedStatus[18] = 0;                 // last command 2 and 3
-        dp->detailedStatus[19] = 0;                 // last command 4
+        memcpy(dp->detailedStatus, detailedStatus844, 20);
+        dp->detailedStatus[3] += unitNo;
         break;
         }
 
@@ -1029,6 +1040,8 @@ static FcStatus dd8xxFunc(PpWord funcCode)
         case Fc8xxOpComplete:
         case Fc8xxDropSeeks:
         case Fc8xxGeneralStatus:
+        case Fc8xxDetailedStatus:
+        case Fc8xxDetailedStatus2:
         case Fc8xxStartMemLoad:
         case Fc8xxDriveRelease:
         case Fc8xxManipulateProcessor:
@@ -1110,31 +1123,53 @@ static FcStatus dd8xxFunc(PpWord funcCode)
 
     case Fc8xxDetailedStatus:
     case Fc8xxDetailedStatus2:
-        dp->detailedStatus[2] = (funcCode << 4) & 07760;
+        if (dp != NULL)
+            {
+            dp->detailedStatus[2] = (funcCode << 4) & 07760;
 
-        switch (dp->diskType)
-        {
-        case DiskType885:
-            dp->detailedStatus[4] = (dp->cylinder >> 4) & 077;
-            dp->detailedStatus[5] = ((dp->cylinder << 8) | dp->track) & 07777;
-            dp->detailedStatus[6] = ((dp->sector << 4) | 010) & 07777;
-            if ((dp->track & 1) != 0)
+            switch (dp->diskType)
                 {
-                dp->detailedStatus[9] |= 2;  /* odd track */
-                }
-            else
-                {
-                dp->detailedStatus[9] &= ~2;
-                }
+            case DiskType885:
+                dp->detailedStatus[4] = (dp->cylinder >> 4) & 077;
+                dp->detailedStatus[5] = ((dp->cylinder << 8) | dp->track) & 07777;
+                dp->detailedStatus[6] = ((dp->sector << 4) | 010) & 07777;
+                if ((dp->track & 1) != 0)
+                    {
+                    dp->detailedStatus[9] |= 2;  /* odd track */
+                    }
+                else
+                    {
+                    dp->detailedStatus[9] &= ~2;
+                    }
+                if (fcb != NULL)
+                    {
+                    dp->detailedStatus[6] |= 010;
+                    }
+                else
+                    {
+                    dp->detailedStatus[6] &= ~010;
+                    }
+                break;
 
-            break;
-
-        case DiskType844:
-            dp->detailedStatus[4] = ((dp->cylinder & 0777) << 3) | ((dp->track >> 2) & 07);
-            dp->detailedStatus[5] = ((dp->track & 03) << 10) | ((dp->sector & 017) << 5) | ((dp->cylinder >> 9) & 01);
-            dp->detailedStatus[6] = ((dp->sector << 4) | 010) & 07777;
-            break;
-        }
+            case DiskType844:
+                dp->detailedStatus[4] = ((dp->cylinder & 0777) << 3) | ((dp->track >> 2) & 07);
+                dp->detailedStatus[5] = ((dp->track & 03) << 10) | ((dp->sector & 017) << 5) | ((dp->cylinder >> 9) & 01);
+                dp->detailedStatus[6] = ((dp->sector << 4) | 010) & 07777;
+                if (fcb != NULL)
+                    {
+                    dp->detailedStatus[8] |= 0300;
+                    }
+                else
+                    {
+                    dp->detailedStatus[8] &= ~0300;
+                    }
+                break;
+                }
+            }
+        else
+            {
+            detailedStatus844[2] = (funcCode << 4) & 07760;
+            }
 
         if (funcCode == Fc8xxDetailedStatus)
             {
@@ -1268,14 +1303,15 @@ static void dd8xxIo(void)
             unitNo = activeChannel->data & 07;
             if (unitNo != activeDevice->selectedUnit)
                 {
-                if (activeDevice->fcb[unitNo] != NULL)
+                dp = (DiskParam *)activeDevice->context[unitNo];
+                if (dp != NULL)
                     {
                     activeDevice->selectedUnit = unitNo;
-                    dp = (DiskParam *)activeDevice->context[unitNo];
                     dp->detailedStatus[12] &= ~01000;
                     }
                 else
                     {
+                    logError(LogErrorLocation, "(dd8xx  ) channel %02o - invalid select: %4.4o", activeChannel->id, (u32)activeDevice->fcode);
                     activeDevice->selectedUnit = -1;
                     activeDevice->status = 05020;
                     }
@@ -1299,16 +1335,17 @@ static void dd8xxIo(void)
                 unitNo = activeChannel->data & 07;
                 if (unitNo != activeDevice->selectedUnit)
                     {
-                    if (activeDevice->fcb[unitNo] != NULL)
+                    dp = (DiskParam *)activeDevice->context[unitNo];
+                    if (dp != NULL)
                         {
                         activeDevice->selectedUnit = unitNo;
-                        dp = (DiskParam *)activeDevice->context[unitNo];
                         dp->detailedStatus[12] &= ~01000;
                         }
                     else
                         {
                         logError(LogErrorLocation, "(dd8xx  ) channel %02o - invalid select: %4.4o", activeChannel->id, (u32)activeDevice->fcode);
                         activeDevice->selectedUnit = -1;
+                        activeDevice->status = 05020;
                         }
                     }
                 else
@@ -1487,7 +1524,14 @@ static void dd8xxIo(void)
     case Fc8xxDetailedStatus:
         if (!activeChannel->full)
             {
-            activeChannel->data = dp->detailedStatus[12 - activeDevice->recordLength];
+            if (dp == NULL)
+                {
+                activeChannel->data = detailedStatus844[12 - activeDevice->recordLength];
+                }
+            else
+                {
+                activeChannel->data = dp->detailedStatus[12 - activeDevice->recordLength];
+                }
             activeChannel->full = TRUE;
 
 #if DEBUG
@@ -1504,7 +1548,14 @@ static void dd8xxIo(void)
     case Fc8xxDetailedStatus2:
         if (!activeChannel->full)
             {
-            activeChannel->data = dp->detailedStatus[20 - activeDevice->recordLength];
+            if (dp == NULL) // if no unit selected, use default 844 status as detailed controller status
+                {
+                activeChannel->data = detailedStatus844[20 - activeDevice->recordLength];
+                }
+            else
+                {
+                activeChannel->data = dp->detailedStatus[20 - activeDevice->recordLength];
+                }
             activeChannel->full = TRUE;
 #if DEBUG
             fprintf(dd8xxLog, " %04o[%d]", activeChannel->data, activeChannel->data);
