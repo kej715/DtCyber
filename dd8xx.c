@@ -1304,23 +1304,26 @@ static void dd8xxIo(void)
             if (unitNo != activeDevice->selectedUnit)
                 {
                 dp = (DiskParam *)activeDevice->context[unitNo];
-                if (dp != NULL)
+                if (dp != NULL && activeDevice->fcb[unitNo] != NULL)
                     {
                     activeDevice->selectedUnit = unitNo;
                     dp->detailedStatus[12] &= ~01000;
                     }
                 else
                     {
-                    logError(LogErrorLocation, "(dd8xx  ) channel %02o - invalid select: %4.4o", activeChannel->id, (u32)activeDevice->fcode);
                     activeDevice->selectedUnit = -1;
                     activeDevice->status = 05020;
                     }
                 }
-            else
+            else if (fcb != NULL)
                 {
                 dp->detailedStatus[12] |= 01000;
                 }
-
+            else
+                {
+                activeDevice->selectedUnit = -1;
+                activeDevice->status = 05020;
+                }
             activeChannel->full = FALSE;
             }
         break;
@@ -1335,22 +1338,26 @@ static void dd8xxIo(void)
                 unitNo = activeChannel->data & 07;
                 if (unitNo != activeDevice->selectedUnit)
                     {
-                    dp = (DiskParam *)activeDevice->context[unitNo];
-                    if (dp != NULL)
+                    dp  = (DiskParam *)activeDevice->context[unitNo];
+                    if (dp != NULL && activeDevice->fcb[unitNo] != NULL)
                         {
                         activeDevice->selectedUnit = unitNo;
                         dp->detailedStatus[12] &= ~01000;
                         }
                     else
                         {
-                        logError(LogErrorLocation, "(dd8xx  ) channel %02o - invalid select: %4.4o", activeChannel->id, (u32)activeDevice->fcode);
                         activeDevice->selectedUnit = -1;
                         activeDevice->status = 05020;
                         }
                     }
-                else
+                else if (fcb != NULL)
                     {
                     dp->detailedStatus[12] |= 01000;
+                    }
+                else
+                    {
+                    activeDevice->selectedUnit = -1;
+                    activeDevice->status = 05020;
                     }
                 break;
 
