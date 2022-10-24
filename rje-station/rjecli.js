@@ -1,3 +1,15 @@
+#!/usr/bin/env node
+/*--------------------------------------------------------------------------
+**
+**  Copyright (c) 2022, Kevin Jordan
+**
+**  rjecli.js
+**    This program implements a command line interface for remote job entry.
+**    It interacts with mainframe emulators such as DtCyber and Hercules
+**    and emulates an RJE station.
+**
+**--------------------------------------------------------------------------
+*/
 const fs = require("fs");
 const Hasp = require("./hasp");
 const Mode4 = require("./mode4");
@@ -130,7 +142,7 @@ function setPromptTimer() {
   timer = setTimeout(() => {process.stdout.write("\nOperator> ");}, 2000);
 }
 
-let rjeService = null;
+let service = null;
 switch (config.protocol) {
 case "hasp":
   service = new Hasp(config);
