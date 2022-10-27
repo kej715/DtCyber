@@ -1,0 +1,36 @@
+#!/usr/bin/env node
+//SYSEDIT CYBIS into the running system and start it in preparation for the cybis-lessons
+//install steps.
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.say("idle IAF"))
+.then(() => dtc.dsd([
+"IDLE,IAF.",
+"IDLE,NAM.",
+"SUB."]))
+.then(() => dtc.sleep(2000))
+.then(() => dtc.dsd([
+"ENABLE,CYB"]))
+.then(() => dtc.sleep(2000))
+.then(() => dtc.dsd([
+"END",
+"AB",
+]))
+.then(() => dtc.say("SYSEDIT CYBIS"))
+.then(() => dtc.dis([
+    "SUI(1)",
+    "ATTACH(CYBBIN)",
+    "SYSEDIT(B=CYBBIN,L=OUTPUT)"
+], "CYBSE", 1))
+.then(() => dtc.say("Starting NAM"))
+.then(() => dtc.dsd(["NA."]))
+.then(() => dtc.sleep(20000))
+.then(() => dtc.say("Starting CYBIS ..."))
+.then(() => dtc.dsd(["CYBIS."]))
+.then(() => dtc.sleep(20000))
+.then(() => process.exit(0))

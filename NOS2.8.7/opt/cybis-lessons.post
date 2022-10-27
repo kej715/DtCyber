@@ -1,0 +1,18 @@
+#!/usr/bin/env node
+//shut down CYBIS
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.say("idle IAF"))
+.then(() => dtc.dsd([
+"K,MAS1.",
+"K.STOP.",
+"[ab",
+"IAF."
+]))
+.then(() => dtc.sleep(2000))
+.then(() => process.exit(0))

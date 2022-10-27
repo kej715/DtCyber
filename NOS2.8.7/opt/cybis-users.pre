@@ -25,6 +25,10 @@ dtc.connect()
   maxProgressLen = utilities.reportProgress(byteCount, contentLength, maxProgressLen);
 }))
 .then(() => utilities.clearProgress(maxProgressLen))
+.then(() => dtc.say("Get CYBIS development tool update tape ..."))
+.then(() => dtc.wget("https://steubentech.com/CYBIS/CYBIS-src-additions.tap", "opt/tapes", (byteCount, contentLength) => {
+  maxProgressLen = utilities.reportProgress(byteCount, contentLength, maxProgressLen);
+}))
 .then(() => dtc.say("Load CYBIS development tools and PL's archive into catalog of PLATO ..."))
 .then(() => dtc.dsd([
   "[UNLOAD,51.",
@@ -51,7 +55,12 @@ dtc.connect()
 .then(() => dtc.mount(13, 0, 1, "opt/tapes/cybis-platomf.tap"))
 .then(() => dtc.dis([
   "ASSIGN,51,TAPE,D=GE,LB=KU.",
-  "PFLOAD,UI=377773,LO=CEST,OP=LR."
+  "PFLOAD,UI=377773,LO=CEST,OP=LR.",
+  "SUI(377773)",
+  "PURGE(AUDIT,AUDITX,BACKDIR,COMBUF/NA)",
+  "PURGE(DUMPDIR,S0BACKC/NA)",
+  "DEFINE(AUDIT,AUDITX,BACKDIR,COMBUF,DUMPDIR)",
+  "DEFINE(S0BACKC)"
 ], "PLATOMF"))
 .then(() => dtc.say("Get SYS user archive ..."))
 .then(() => dtc.wget("https://www.dropbox.com/s/fgvrpoginhk2msb/cybis-sys.tap?dl=1", "opt/tapes", (byteCount, contentLength) => {
@@ -68,6 +77,17 @@ dtc.connect()
   "ASSIGN,51,TAPE,D=GE,LB=KU.",
   "PFLOAD,UI=31,LO=CEST,OP=LR."
 ], "SYS"))
+//The Z is important because the system the dump tape
+//came from uses tape alternate storage and we don't want the 
+//alternate VSN information cataloged, otherwise
+//some of these new files might be released with a 
+//PFREL.  Z  strips out the alternate storage information when
+//restoring files. 
+.then(() => dtc.mount(13, 0, 3, "opt/tapes/CYBIS-src-additions.tap"))
+.then(() => dtc.dsd([
+    "LABEL(TAPE,VSN=CYBSCA,PO=R)",
+    "PFLOAD,UN=PLATO,LO=CEST,OP=RLZ."
+],"CYBSCA"))
 .then(() => {
   process.exit(0);
 })

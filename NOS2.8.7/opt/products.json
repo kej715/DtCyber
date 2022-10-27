@@ -69,13 +69,21 @@
           "cybis-mount-bin.pre"
         ],
         "post": [
-          "cybis-enable.job"
+          "cybis-enable.job",
+          "cybis.post"
         ],
         "lib": 74,
-        "records": "ABS/MASTOR-PROC/SETPUN",
+        "records": "TEXT/CONFIG-PP/EPE",
         "url": "https://www.dropbox.com/s/jiythdoifn1f6bm/cybis-bin.tap?dl=1",
         "desc": "CYBIS",
         "depends": ["ses"]
+      }, 
+      {
+          "name": "cybis-lessons",
+          "desc": "CYBIS Exposed courseware and updates to group s",
+          "pre": ["cybis-lessons-mkfiles.pre",
+          "cybis-lessons-load.pre"],
+          "post": ["cybis-lessons.post"]
       }
     ]
   },
