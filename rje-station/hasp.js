@@ -121,6 +121,10 @@ class Hasp {
     this.queueBlock(block);
   }
 
+  end() {
+    this.bsc.end();
+  }
+
   log(msg) {
     if (this.debug) this.logger.log(msg);
   }
