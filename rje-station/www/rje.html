@@ -1,0 +1,447 @@
+<html>
+  <head>
+    <title>RJE Station</title>
+    <link rel="icon" type="image/png" href="images/ncc.png">
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/jquery-3.3.1.min.js"></script>
+    <script src="js/machine-comm.js"></script>
+    <script src="js/util.js"></script>
+  </head>
+  <body class="fanfold-background">
+    <div id="title" class="title"></div>
+    <div id="console-container" class="draggable">
+      <div class="frame-header">
+        Console
+      </div>
+      <div id="console-frame-container" class="full-width">
+        <iframe id="console-frame" src="console.html"></iframe>
+      </div>
+      <div id="console-controls-container" class="content-container top left-floater full-width zindex-1">
+        <div class="command-dialog-content">
+          <div class="command-input-container">
+            <div class="command-input-label">Command:</div>
+            <input id="console-command" class="command-input" type="text"></input>
+          </div>
+        </div>
+        <div class="reader-dialog-content">
+          <div class="reader-input-container">
+            <div class="reader-input-label">Card Deck:</div>
+            <input id="reader-file-input" class="reader-input" type="file"></input>
+          </div>
+        </div>
+        <div class="button-container">
+          <button id="send-cards-button" class="button" type="button">Send Card Deck</button>
+        </div>
+      </div>
+    </div>
+    <div id="printer-container" class="draggable">
+      <div class="frame-header">
+        Printer
+        <img id="printer-close-button" class="right-justified-button" src="images/close-16x16.png"/>
+      </div>
+      <div id="printer-frame-container">
+        <iframe id="printer-frame" src="printer.html"></iframe>
+      </div>
+    </div>
+    <div id="punch-container" class="draggable">
+      <div class="frame-header">
+        Card Punch
+        <img id="punch-close-button" class="right-justified-button" src="images/close-16x16.png"/>
+      </div>
+      <div id="punch-frame-container">
+        <iframe id="punch-frame" src="punch.html"></iframe>
+      </div>
+    </div>
+    <div id="reader-container" class="draggable">
+      <div class="frame-header">
+        Card Reader
+      </div>
+      <div id="reader-frame-container">
+        <iframe id="reader-frame" src="reader.html"></iframe>
+      </div>
+    </div>
+    <a id="print-file-saver" style="display:none;"></a>
+    <a id="punch-file-saver" style="display:none;"></a>
+    <script>
+
+    const StreamTypeConsole = 0;
+    const StreamTypeReader  = 1;
+    const StreamTypePrinter = 2;
+    const StreamTypePunch   = 3;
+    const StreamTypes       = [ "CO", "CR", "LP", "CP" ];
+
+    let consoleFrame = null;
+    let printerFrame = null;
+    let punchFrame   = null;
+    let readerFrame  = null;
+
+    const generateFileName = (machineId, streamType, streamId) => {
+      const date = new Date();
+      let name = `${machineId}_${StreamTypes[streamType]}${streamId}_${date.getFullYear()}`;
+      if (date.getMonth() < 9) name += "0";
+      name += date.getMonth() + 1;
+      if (date.getDate() < 10) name += "0";
+      name += date.getDate();
+      if (date.getHours() < 10) name += "0";
+      name += date.getHours();
+      if (date.getMinutes() < 10) name += "0";
+      name += date.getMinutes();
+      if (date.getSeconds() < 10) name += "0";
+      name += date.getSeconds();
+      const ms = date.getMilliseconds();
+      if (ms < 100) name += "0";
+      if (ms <  10) name += "0";
+      name += `${ms}.txt`;
+      return name;
+    };
+
+    const main = () => {
+
+      let machineId = "unknown";
+      let title = "RJE Station";
+      let qs = window.location.search;
+      if (qs && qs.length > 1) {
+        qs.substr(1).split("&").forEach(param => {
+          let nvp = param.split("=");
+          if (nvp.length > 1) {
+            switch (nvp[0]) {
+            case "m": // machine name
+              machineId = nvp[1];
+              break;
+            case "t": // title
+              title = decodeURIComponent(nvp[1]);
+              break;
+            }
+          }
+        });
+      }
+      $("title").html(title);
+      $("#title").html(title);
+
+      const consoleContainer = document.getElementById("console-container");
+      const consoleFrameContainer = document.getElementById("console-frame-container");
+      const consoleText = consoleFrame.contentDocument.getElementsByTagName("body")[0];
+      consoleContainer.style.left = "60px";
+      consoleContainer.style.top = "50px";
+      consoleContainer.style.right = "0px";
+      consoleContainer.style.width = "720px";
+      consoleFrameContainer.style.height = "480px";
+      consoleFrame.style.width = "100%";
+      consoleFrame.style.height = "100%";
+      const consoleDragMgr = new DraggableManager();
+      consoleDragMgr.activate(consoleContainer);
+
+      const printerContainer = document.getElementById("printer-container");
+      const printerCloseButton = document.getElementById("printer-close-button");
+      const printerFrameContainer = document.getElementById("printer-frame-container");
+      const printerText = printerFrame.contentDocument.getElementsByTagName("body")[0];
+      printerContainer.style.left = "120px";
+      printerContainer.style.top = "60px";
+      printerContainer.style.right = "0px";
+      printerContainer.style.width = "1080px";
+      printerFrameContainer.style.height = "640px";
+      printerFrame.style.width = "100%";
+      printerFrame.style.height = "100%";
+      const printerDragMgr = new DraggableManager();
+      printerDragMgr.activate(printerContainer);
+      $(printerContainer).hide();
+      let isPrinterVisible = false;
+      $(printerCloseButton).click(() => {
+        $(printerContainer).hide();
+        isPrinterVisible = false;
+      });
+
+      const punchContainer = document.getElementById("punch-container");
+      const punchCloseButton = document.getElementById("punch-close-button");
+      const punchFrameContainer = document.getElementById("punch-frame-container");
+      const punchText = punchFrame.contentDocument.getElementsByTagName("body")[0];
+      punchContainer.style.left = "120px";
+      punchContainer.style.top = "60px";
+      punchContainer.style.right = "0px";
+      punchContainer.style.width = "720px";
+      punchFrameContainer.style.height = "640px";
+      punchFrame.style.width = "100%";
+      punchFrame.style.height = "100%";
+      const punchDragMgr = new DraggableManager();
+      punchDragMgr.activate(punchContainer);
+      $(punchContainer).hide();
+      let isPunchVisible = false;
+      $(punchCloseButton).click(() => {
+        $(punchContainer).hide();
+        isPunchVisible = false;
+      });
+
+      const readerContainer = document.getElementById("reader-container");
+      const readerCloseButton = document.getElementById("reader-close-button");
+      const readerFrameContainer = document.getElementById("reader-frame-container");
+      const readerText = readerFrame.contentDocument.getElementsByTagName("body")[0];
+      readerContainer.style.left = "120px";
+      readerContainer.style.top = "190px";
+      readerContainer.style.right = "0px";
+      readerContainer.style.width = "720px";
+      readerFrameContainer.style.height = "320px";
+      readerFrame.style.width = "100%";
+      readerFrame.style.height = "100%";
+      const readerDragMgr = new DraggableManager();
+      readerDragMgr.activate(readerContainer);
+      $(readerContainer).hide();
+      $(readerCloseButton).click(() => {
+        $(readerContainer).hide();
+      });
+
+      consoleText.textContent = `Connecting to ${title} ...\n`;
+      consoleText.scrollIntoView(false);
+
+      let streams = {};
+      let key = `${StreamTypePrinter}.1`;
+      streams[key] = {};
+      streams[key].lineCount = 0;
+      streams[key].data = "";
+
+      let inputBuffer = "";
+
+      const machine = new Machine(machineId);
+      machine.createConnection(() => {
+        consoleText.textContent = `Connected to ${title}\n`;
+        consoleText.scrollIntoView(false);
+      });
+
+      machine.setReceivedDataHandler(data => {
+        if (typeof data === "object") {
+          for (let i = 0; i < data.length; i++) inputBuffer += String.fromCharCode(data[i]);
+        }
+        else {
+          inputBuffer += data;
+        }
+        while (inputBuffer.length > 0) {
+          //
+          // Parse stream type
+          //
+          let fi = 0;
+          let si = inputBuffer.indexOf(" ", fi);
+          if (si < 0) return;
+          const streamType = parseInt(inputBuffer.substring(fi, si));
+          //
+          // Parse stream identifier
+          //
+          fi = si + 1;
+          si = inputBuffer.indexOf(" ", fi);
+          if (si < 0) return;
+          const streamId = parseInt(inputBuffer.substring(fi, si));
+          //
+          // Parse record length
+          //
+          fi = si + 1;
+          si = inputBuffer.indexOf(" ", fi);
+          if (si < 0) return;
+          const len = parseInt(inputBuffer.substring(fi, si));
+          fi = si + 1;
+          if (fi + len > inputBuffer.length) return;
+          let text = inputBuffer.substring(fi, fi + len);
+          inputBuffer = inputBuffer.substring(fi + len);
+          //
+          // Handle stream-specific data
+          //
+          let key = `${streamType}.${streamId}`;
+          let stream = streams[key];
+          if (len === 0) stream.isEOI = true;
+
+          switch (streamType) {
+          case StreamTypeConsole:
+            consoleText.textContent += text;
+            consoleText.scrollIntoView(false);
+            break;
+          case StreamTypePrinter:
+            stream.data += text;
+            while (stream.data.length > 0) {
+              let si = stream.data.indexOf("\n");
+              if (si < 0) break;
+              let line = stream.data.substring(0, si + 1);
+              stream.data = stream.data.substring(si + 1);
+              if (line.length < 1) continue;
+              let fe = line.charAt(0);
+              line = line.substring(1);
+              switch (fe) {
+              case "1":
+                if (printerText.textContent.match(/^\s*$/)) {
+                  printerText.textContent = "";
+                  stream.lineCount = 0;
+                }
+                if (stream.lineCount > 0) {
+                  while ((++stream.lineCount % 66) !== 0) {
+                    printerText.textContent += "\n";
+                  }
+                }
+                break;
+              case "0":
+                printerText.textContent += "\n";
+                stream.lineCount += 1;
+                break;
+              case "+":
+                let textContentLen = printerText.textContent.length;
+                if (textContentLen > 0) {
+                  printerText.textContent = `${printerText.textContent.substring(0, textContentLen - 1)}\r`;
+                  stream.lineCount -= 1;
+                }
+                break;
+              case "-":
+                printerText.textContent += "\n";
+                printerText.textContent += "\n";
+                stream.lineCount += 2;
+                break;
+              case "S":
+              case "T":
+                continue;
+              default:
+                break;
+              }
+              printerText.textContent += line;
+              stream.lineCount += 1;
+            }
+            printerText.scrollIntoView(false);
+            if (isPrinterVisible === false) {
+              $(printerContainer).show();
+              isPrinterVisible = true;
+            }
+            if (stream.isEOI) {
+              const blob = new Blob([printerText.textContent], {type: "text/plain"});
+              const fileSaver = document.getElementById("print-file-saver");
+              const blobUrl = URL.createObjectURL(blob);
+              fileSaver.setAttribute("href", blobUrl);
+              fileSaver.setAttribute("download", generateFileName(machine.id, streamType, streamId));
+              fileSaver.click();
+              URL.revokeObjectURL(blobUrl);
+              $(printerContainer).hide();
+              isPrinterVisible = false;
+              printerText.textContent = "";
+              stream.data = "";
+              stream.isEOI = false;
+              stream.lineCount = 0;
+            }
+            break;
+          case StreamTypePunch:
+            punchText.textContent += text;
+            punchText.scrollIntoView(false);
+            if (isPunchVisible === false) {
+              $(punchContainer).show();
+              isPunchVisible = true;
+            }
+            break;
+          }
+        }
+      });
+
+      machine.setDisconnectListener(() => {
+        consoleText.textContent += `\nDisconnected from ${title}.\n\n   Press any key to reconnect ...\n`;
+        consoleText.scrollIntoView(false);
+      });
+
+      $(document).ajaxError((event, jqxhr, settings, thrownError) => {
+        if (settings.url === url) {
+          consoleText.textContent += `\n${jqxhr.responseText}\n\n   Failed to connect to ${title}`;
+          consoleText.scrollIntoView(false);
+        }
+      });
+
+      $(window).bind("beforeunload", () => {
+        machine.closeConnection();
+      });
+
+      //
+      // Console command input support
+      //
+      const consoleCommandInput = document.getElementById("console-command");
+      consoleCommandInput.focus();
+      document.addEventListener("keydown", evt => {
+        if (machine.isConnected() === false) {
+          consoleText.textContent = `Reconnecting to ${title} ...\n`;
+          consoleText.scrollIntoView(false);
+          machine.createConnection(() => {
+            consoleText.textContent = `Connected to ${title}\n`;
+            consoleText.scrollIntoView(false);
+          });
+          return;
+        }
+        if (evt.key === "Enter") {
+          let value = consoleCommandInput.value;
+          if (value !== "") {
+            machine.send(`${StreamTypeConsole} 1 ${value.length} ${value}`);
+            consoleText.textContent += `${value}\n`;
+            consoleText.scrollIntoView(false);
+            consoleCommandInput.value = "";
+          }
+        }
+      });
+
+      //
+      // Card reader support
+      //
+      const sendCardsBtn = $(document.getElementById("send-cards-button"));
+      const readerFileInput = document.getElementById("reader-file-input");
+      sendCardsBtn.click(() => {
+        readerText.textContent = "";
+        $(readerContainer).show();
+        const localFile = readerFileInput.files[0];
+        const fileReader = new FileReader();
+        fileReader.onload = evt => {
+          const text = fileReader.result;
+          readerText.textContent = text;
+          readerText.scrollIntoView(true);
+          setTimeout(() => {
+            transmitCardDeck(machine, 1, readerContainer, readerText);
+          }, 2000);
+        };
+        fileReader.onerror = evt => {
+          renderText.textContent = `Failed to load ${localFile.name}: ${evt.message}`;
+        };
+        fileReader.readAsText(localFile);
+      });
+    };
+
+    const transmitCardDeck = (machine, streamId, frame, textElem) => {
+      if (textElem.textContent.length > 0) {
+        let si = textElem.textContent.indexOf("\n");
+        if (si < 0) si = textElem.textContent.length - 1;
+        si += 1;
+        let card = textElem.textContent.substring(0, si);
+        machine.send(`${StreamTypeReader} ${streamId} ${card.length} ${card}`);
+        textElem.textContent = textElem.textContent.substring(si);
+        setTimeout(() => {
+          transmitCardDeck(machine, streamId, frame, textElem);
+        }, 25);
+      }
+      else {
+        machine.send(`${StreamTypeReader} ${streamId} 0 `);
+        $(frame).hide();
+      }
+    };
+
+    $(document).ready(() => {
+      let consoleLoaded  = false;
+      let printerLoaded  = false;
+      let punchLoaded    = false;
+      let readerLoaded   = false;
+      consoleFrame = document.getElementById("console-frame");
+      printerFrame = document.getElementById("printer-frame");
+      punchFrame   = document.getElementById("punch-frame");
+      readerFrame  = document.getElementById("reader-frame");
+      consoleFrame.onload = () => {
+        consoleLoaded = true;
+        if (printerLoaded && punchLoaded && readerLoaded) main();
+      };
+      printerFrame.onload = () => {
+        printerLoaded = true;
+        if (consoleLoaded && punchLoaded && readerLoaded) main();
+      };
+      punchFrame.onload = () => {
+        punchLoaded = true;
+        if (consoleLoaded && printerLoaded && readerLoaded) main();
+      };
+      readerFrame.onload = () => {
+        readerLoaded = true;
+        if (consoleLoaded && printerLoaded && punchLoaded) main();
+      };
+    });
+    </script>
+  </body>
+</html>
