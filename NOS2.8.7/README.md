@@ -112,11 +112,21 @@ the **FAMILY:** prompt during login.
 .
 The following CYBIS users are available:
 
-| User   | Group  | Password |
-|--------|--------|----------|
-| admin  | s      | passme   |
-| author | author | passme   |
-| guest  | guests | public   |
+| User      | Group    | Password | Purpose                               |
+|-----------|----------|----------|---------------------------------------|
+| admin     | s        | passme   | admin user                            |
+| author    | author   | passme   | author                                |
+| guest     | guests   | public   | guest account                         |
+| nosguide  | cnos     | none     | Lessons on the NOS operating system   |
+| nosts     | cnosts   | none     | NOS Timesharing lessons               |
+| tutor     | ctutor   | none     | TUTOR programming course              |
+| compass   | compass  | none     | CPU COMPASS lessons                   |
+| ppu       | cppu     | none     | PP COMPASS lessons                    |
+| cobol     | ccrm     | none     | Cyber Record Manager for COBOL users  |
+| fortran   | ccrm     | none     | Cyber Record Manager for FORTRAN users|
+| fortrancob| ccrm     | none     | Cyber Record Manager combined course  |
+| fortran   | cfortran | none     | Cyber FORTRAN lessons                 |
+| cobol     | ccobol   | none     | Cyber COBOL lessons                   |
 
 
 ## Shutdown and Restart
@@ -221,7 +231,8 @@ deadstart tape. However, you may re-install them (e.g., after customization), if
 
 | Product | Description |
 |---------|-------------|
-| [cybis](https://www.dropbox.com/s/jiythdoifn1f6bm/cybis-bin.tap?dl=1) | Cyber Instructional System |
+| [cybis](https://www.dropbox.com/s/jiythdoifn1f6bm/cybis-bin.tap?dl=1)                         | Cyber Instructional System                     |
+| [cybis-lessons](https://drive.google.com/drive/u/0/folders/1SY86n39EfFrX3T8scaoltRr_XMjjZiAb) | Additonal lesson content and patches for CYBIS |
 
 #### Category *database*
 This category includes database software packages.
