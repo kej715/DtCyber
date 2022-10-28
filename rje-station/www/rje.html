@@ -193,11 +193,6 @@
       consoleText.scrollIntoView(false);
 
       let streams = {};
-      let key = `${StreamTypePrinter}.1`;
-      streams[key] = {};
-      streams[key].lineCount = 0;
-      streams[key].data = "";
-
       let inputBuffer = "";
 
       const machine = new Machine(machineId);
@@ -243,6 +238,11 @@
           // Handle stream-specific data
           //
           let key = `${streamType}.${streamId}`;
+          if (typeof streams[key] === "undefined") {
+            streams[key]             = {};
+            streams[key].data        = "";
+            streams[key].recordCount = 0;
+          }
           let stream = streams[key];
           if (len === 0) stream.isEOI = true;
 
@@ -265,29 +265,29 @@
               case "1":
                 if (printerText.textContent.match(/^\s*$/)) {
                   printerText.textContent = "";
-                  stream.lineCount = 0;
+                  stream.recordCount = 0;
                 }
-                if (stream.lineCount > 0) {
-                  while ((++stream.lineCount % 66) !== 0) {
+                if (stream.recordCount > 0) {
+                  while ((++stream.recordCount % 66) !== 0) {
                     printerText.textContent += "\n";
                   }
                 }
                 break;
               case "0":
                 printerText.textContent += "\n";
-                stream.lineCount += 1;
+                stream.recordCount += 1;
                 break;
               case "+":
                 let textContentLen = printerText.textContent.length;
                 if (textContentLen > 0) {
                   printerText.textContent = `${printerText.textContent.substring(0, textContentLen - 1)}\r`;
-                  stream.lineCount -= 1;
+                  stream.recordCount -= 1;
                 }
                 break;
               case "-":
                 printerText.textContent += "\n";
                 printerText.textContent += "\n";
-                stream.lineCount += 2;
+                stream.recordCount += 2;
                 break;
               case "S":
               case "T":
@@ -296,7 +296,7 @@
                 break;
               }
               printerText.textContent += line;
-              stream.lineCount += 1;
+              stream.recordCount += 1;
             }
             printerText.scrollIntoView(false);
             if (isPrinterVisible === false) {
@@ -316,7 +316,7 @@
               printerText.textContent = "";
               stream.data = "";
               stream.isEOI = false;
-              stream.lineCount = 0;
+              stream.recordCount = 0;
             }
             break;
           case StreamTypePunch:
@@ -325,6 +325,21 @@
             if (isPunchVisible === false) {
               $(punchContainer).show();
               isPunchVisible = true;
+            }
+            if (stream.isEOI) {
+              const blob = new Blob([punchText.textContent], {type: "text/plain"});
+              const fileSaver = document.getElementById("punch-file-saver");
+              const blobUrl = URL.createObjectURL(blob);
+              fileSaver.setAttribute("href", blobUrl);
+              fileSaver.setAttribute("download", generateFileName(machine.id, streamType, streamId));
+              fileSaver.click();
+              URL.revokeObjectURL(blobUrl);
+              $(punchContainer).hide();
+              isPunchVisible = false;
+              punchText.textContent = "";
+              stream.data = "";
+              stream.isEOI = false;
+              stream.recordCount = 0;
             }
             break;
           }
