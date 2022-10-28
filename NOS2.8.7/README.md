@@ -123,7 +123,7 @@ The system listens for RJE (remote job entry) connections on TCP port 2553. You
 can use [rjecli](../rje-station) and [rjews](../rje-station) to connect to this port and
 submit batch jobs via the NOS 2.8.7 *RBF* (Remote Batch Facility) subsystem. The RJE
 data communication protocol supported by NOS 2.8.7 is *HASP*. The example
-[hasp.json](../rje-station/examples/) and
+[nos2.json](../rje-station/examples/) and
 [rjews.json](../rje-station/examples/) configuration files condition
 [rjecli](../rje-station) and [rjews](../rje-station), respectively, to use *HASP* to
 connect and interact with NOS 2.8.7.
@@ -156,14 +156,14 @@ the following commands on Linux/MacOS:
 
 >```
 cd rje-station
-node rjecli examples/hasp.json
+node rjecli examples/nos2.json
 ```
 
 On Windows:
 
 >```
 cd rje-station
-node rjecli examples\hasp.json
+node rjecli examples\nos2.json
 ```
 
 For more information about RJE, see the [README](rje-station) file in the `rje-station`

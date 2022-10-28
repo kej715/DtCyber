@@ -120,7 +120,7 @@ The system listens for RJE (remote job entry) connections on TCP port 6671. You
 can use [rjecli](../rje-station) and [rjews](../rje-station) to connect to this port and
 submit batch jobs via the NOS 1.3 *EI200* subsystem. The RJE data communication
 protocol supported by NOS 1.3 is *MODE4*. The example
-[mode4.json](../rje-station/examples/) and
+[nos1.json](../rje-station/examples/) and
 [rjews.json](../rje-station/examples/) configuration files condition
 [rjecli](../rje-station) and [rjews](../rje-station), respectively, to use *MODE4* to
 connect and interact with NOS 1.3.
@@ -154,14 +154,14 @@ the following commands on Linux/MacOS:
 
 >```
 cd rje-station
-node rjecli examples/mode4.json
+node rjecli examples/nos1.json
 ```
 
 On Windows:
 
 >```
 cd rje-station
-node rjecli examples\mode4.json
+node rjecli examples\nos1.json
 ```
 
 For more information about RJE, see the [README](rje-station) file in the `rje-station`
