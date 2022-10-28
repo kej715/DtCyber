@@ -95,10 +95,13 @@ OBJS    =   cdcnet.o                \
 dtcyber: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
-all: dtcyber stk/node_modules automation/node_modules webterm/node_modules
+all: dtcyber stk/node_modules automation/node_modules webterm/node_modules rje-station/node_modules
 
 automation/node_modules:
 	$(MAKE) -C automation
+
+rje-station/node_modules:
+	$(MAKE) -C rje-station
 
 stk/node_modules:
 	$(MAKE) -C stk
@@ -109,6 +112,7 @@ webterm/node_modules:
 clean:
 	rm -f *.o; \
 	$(MAKE) -C automation clean; \
+	$(MAKE) -C rje-station clean; \
 	$(MAKE) -C stk clean; \
 	$(MAKE) -C webterm clean
 
