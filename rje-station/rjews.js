@@ -53,7 +53,7 @@ const generateDefaultResponse = (req, res) => {
   res.write("<html>");
   res.write(  "<head>");
   res.write(    '<link rel="stylesheet" href="css/styles.css" />');
-  res.write(    '<link rel="icon" type="image/png" href="images/ncc.png">');
+  res.write(    '<link rel="icon" type="image/png" href="images/ncc.png" />');
   res.write(    '<script src="js/jquery-3.3.1.min.js"></script>');
   res.write(  "</head>");
   res.write(  "<body>");
