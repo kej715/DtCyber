@@ -128,6 +128,47 @@ data communication protocol supported by NOS 2.8.7 is *HASP*. The example
 [rjecli](../rje-station) and [rjews](../rje-station), respectively, to use *HASP* to
 connect and interact with NOS 2.8.7.
 
+*DtCyber* is configured to start a special web service that supports browser-based
+RJE access to the NOS 2.8.7 system. The web service listens for connections on TCP port
+8085. When you request your web browser to open the following URL:
+
+>`http://localhost:8085`
+
+it will display a page showing the RJE hosts served by the web service, and this will
+include the NOS 2.8.7 system. It will also indicate that it can provide access to the
+[NOS 1.3](../NOS1.3) system. However, both the NOS 1.3 and the NOS 2.8.7 system must
+be running concurrently, below) in order for you to be able to select both successfully.
+
+When you click on the link associated with either of these systems, a browser-based
+RJE station emulator will launch, and you will be presented with its console window.
+The console window displays operator messages sent by the RJE host to the RJE station.
+It also enables you to enter station operator commands to send to the host, and it
+provides a user interface for loading the station's virtual card reader with virtual
+card decks (i.e., batch jobs) to submit for execution on the host.
+
+You may also request the browser-based RJE station emulator for NOS 2.8.7 directly by
+entering the following URL:
+
+>`http://localhost:8085/rje.html?m=m01&t=RBF%20on%20NOS%202.8.7`
+
+An RJE command line interface is available as well. The RJI CLI can be started using
+the following commands on Linux/MacOS:
+
+>```
+cd rje-station
+node rjecli examples/hasp.json
+```
+
+On Windows:
+
+>```
+cd rje-station
+node rjecli examples\hasp.json
+```
+
+For more information about RJE, see the [README](rje-station) file in the `rje-station`
+directory.
+
 ## Shutdown and Restart
 When the installation completes, NOS 2.8.7 will be running, and the command window will
 be left at the DtCyber `Operator> ` prompt. Enter the `exit` command or the `shutdown`
