@@ -45,7 +45,7 @@ const streamTypes = [
   "CO",
   "CR",
   "LP",
-  "PU"
+  "CP"
 ];
 
 const generateDefaultResponse = (req, res) => {
