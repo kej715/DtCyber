@@ -35,7 +35,7 @@ file).
 1. If not done already, use the appropriate *Makefile* in this directory's parent
 directory to build *DtCyber* and produce the *dtcyber* executable. For Windows, a
 Visual Studio solution file is available. On Windows, you will also need to execute
-`npm install` manually in folders `automation`, `stk`, and `webterm`.
+`npm install` manually in folders `automation`, `rje-station`, `stk`, and `webterm`.
 2. Start the automated installation by executing the following command. On
 Windows, you will probably need to enable the *dtcyber* application to use TCP ports
 21, 22, and 23 too.
@@ -118,6 +118,15 @@ The following CYBIS users are available:
 | author | author | passme   |
 | guest  | guests | public   |
 
+## Remote Job Entry
+The system listens for RJE (remote job entry) connections on TCP port 2553. You
+can use [rjecli](../rje-station) and [rjews](../rje-station) to connect to this port and
+submit batch jobs via the NOS 2.8.7 *RBF* (Remote Batch Facility) subsystem. The RJE
+data communication protocol supported by NOS 2.8.7 is *HASP*. The example
+[hasp.json](../rje-station/examples/) and
+[rjews.json](../rje-station/examples/) configuration files condition
+[rjecli](../rje-station) and [rjews](../rje-station), respectively, to use *HASP* to
+connect and interact with NOS 2.8.7.
 
 ## Shutdown and Restart
 When the installation completes, NOS 2.8.7 will be running, and the command window will

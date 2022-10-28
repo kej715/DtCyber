@@ -38,7 +38,7 @@ package managers support it as well.
 1. If not done already, use the appropriate *Makefile* in this directory's parent
 directory to build *DtCyber* and produce the *dtcyber* executable. For Windows, a
 Visual Studio solution file is available. On Windows, you will also need to execute
-`npm install` manually in folders `automation` and `webterm`.
+`npm install` manually in folders `automation`, `rje-station`, and `webterm`.
 2. Start the automated installation by executing the following command:
 
 >`node install`
@@ -117,11 +117,13 @@ PLATO logins supported by the system include:
 
 ## Remote Job Entry
 The system listens for RJE (remote job entry) connections on TCP port 6671. You
-can use [rjecli](../rje-station) to connect to this port and submit batch jobs via
-the NOS 1.3 *Export/Import* subsystem. The RJE data communication protocol supported
-by NOS 1.3 is *MODE4*. The example [mode4.json](../rje-station/examples/)
-configuration file conditions [rjecli](../rje-station) to use *MODE4* to connect and
-interact with NOS 1.3.
+can use [rjecli](../rje-station) and [rjews](../rje-station) to connect to this port and
+submit batch jobs via the NOS 1.3 *Export/Import* subsystem. The RJE data communication
+protocol supported by NOS 1.3 is *MODE4*. The example
+[mode4.json](../rje-station/examples/) and
+[rjews.json](../rje-station/examples/) configuration files condition
+[rjecli](../rje-station) and [rjews](../rje-station), respectively, to use *MODE4* to
+connect and interact with NOS 1.3.
 
 ## Remote Batch Networking
 After running `install.js`, the system attempts to connect to an RJE HASP
