@@ -3,20 +3,20 @@
   "httpRoot":"www",
   "machines":[
     {
-    "id":"nos1",
+    "id":"m01",
+    "title":"RBF on NOS 2.8.7 (Cyber 865)",
+    "host":"localhost",
+    "port":2553,
+    "protocol":"hasp"
+    },
+    {
+    "id":"m03",
     "title":"EI200 on NOS 1.3 (Cyber 173)",
     "host":"localhost",
     "port":6671,
     "name":"GUEST",
     "password":"GUEST",
     "protocol":"mode4"
-    },
-    {
-    "id":"nos2",
-    "title":"RBF on NOS 2.8.7 (Cyber 865)",
-    "host":"localhost",
-    "port":2553,
-    "protocol":"hasp"
     }
   ]
 }
