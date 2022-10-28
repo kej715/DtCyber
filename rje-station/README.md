@@ -135,7 +135,7 @@ CDC NOS and IBM MVS operating systems. Here is a transcript of an **rjecli** ses
 using the HASP protocol to communicate with RBF on CDC NOS 2.8.7. It uses the **c**
 command to display the status of all devices associated with the RJE station, and it
 uses the **lc** command to submit a job from the `examples` directory
-(`examples/nos.job`) for execution:
+(`examples/nos2.job`) for execution:
 ```
 rje-station % node rjecli examples/nos2.json
 
@@ -158,11 +158,11 @@ CR1 GO                           ACK
 LP1 GO                       /A9 ALL 132  400
 CP1 GO                           A/B      400
 *** END DISPLAY ***
-Operator> lc examples/nos.job
+Operator> lc examples/nos2.job
 
 Operator>
-Reading examples/nos.job on CR1 ...
-Done    examples/nos.job on CR1 ...
+Reading examples/nos2.job on CR1 ...
+Done    examples/nos2.job on CR1 ...
 10.56.01. CR1 JOB NAME AABO ENTERED INPUT QUEUE
 Operator>
 10.56.17. LP1 JOB NAME AABO
