@@ -9,6 +9,7 @@
   "author": "Kevin Jordan",
   "license": "GPL-3.0-or-later",
   "dependencies": {
+    "websocket": "^1.0.34"
   },
   "engines": {
     "npm": ">=8.0.0",

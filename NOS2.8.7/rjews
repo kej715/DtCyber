@@ -1,0 +1,17 @@
+#!/bin/sh
+# start and stop the RJE web service
+cd ../rje-station
+
+case "$1" in
+  start)
+        node rjews -p ../NOS2.8.7/rjews.pid examples/rjews.json >../NOS2.8.7/rjews.log 2>&1 &
+	;;
+  stop)
+        kill `cat ../NOS2.8.7/rjews.pid`
+	;;
+  *)
+	echo "Usage: $0 {start|stop}"
+	exit 1
+esac
+
+exit 0

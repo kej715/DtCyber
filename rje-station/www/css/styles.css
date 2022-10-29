@@ -1,0 +1,166 @@
+.button {
+  background-color: lightgreen;
+  color: black;
+  text-align: center;
+  text-decoration: none;
+  outline: none;
+  padding: 3px 5px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  box-shadow: 0 2px #999;
+  -webkit-transition-duration: 0.4s; /* Safari */
+  transition-duration: 0.4s;
+}
+.button:hover {
+  background-color: green;
+  color: white;
+}
+.button:active {
+  background-color: green;
+  color: white;
+  box-shadow: 0 1px #666;
+  transform: translateY(2px);
+}
+.button-container {
+  background-color: lightgray;
+  padding: 5px;
+  border: 1px solid black;
+}
+.card-background {
+  background-image: url("card-620x280.jpg");
+  background-blend-mode: lighten;
+  background-size: cover;
+}
+.command-dialog-content {
+  background: cornsilk;
+  border: 1px solid black;
+  height: 20px;
+  padding-top: 5px;
+  padding-left: 5px;
+  width: 100%;
+}
+.command-input {
+  width: 600px;
+}
+.command-input-container {
+}
+.command-input-label {
+  display: inline-block;
+  width: 80px;
+}
+.console-background {
+  background: black;
+}
+.console-text {
+  font-family: monospace;
+  white-space: pre;
+  color: orange;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  margin: 0px;
+}
+.content-container {
+  position: relative;
+}
+.draggable {
+  position: fixed;
+  z-index: 10;
+  cursor: move;
+}
+.fanfold-background {
+  background-image: url("fanfold-716x528.jpg");
+  background-blend-mode: lighten;
+  background-size: cover;
+}
+.frame-header {
+  text-align: center;
+  background-color: blue;
+  color: white;
+}
+.full-width {
+  width: 100%;
+}
+.left-floater {
+  float: left;
+}
+.printer-background {
+  background-image: url("fanfold-716x528.jpg");
+  background-blend-mode: lighten;
+  background-size: cover;
+}
+.printer-text {
+  font-family: monospace;
+  white-space: pre;
+  color: black;
+  position: absolute;
+  top: 0px;
+  left: 35px;
+  margin: 0px;
+}
+.punch-background {
+  background: cornsilk;
+}
+.punch-text {
+  font-family: monospace;
+  white-space: pre;
+  color: black;
+  position: absolute;
+  top: 15px;
+  left: 25px;
+  margin: 0px;
+}
+.reader-background {
+  background: cornsilk;
+}
+.reader-dialog-content {
+  background: cornsilk;
+  border: 1px solid black;
+  height: 20px;
+  padding-bottom: 5px;
+  padding-top: 5px;
+  padding-left: 5px;
+  width: 100%;
+}
+.reader-input {
+  width: 200px;
+}
+.reader-input-container {
+  width: 320px;
+}
+.reader-input-label {
+  display: inline-block;
+  width: 80px;
+}
+.reader-text {
+  font-family: monospace;
+  white-space: pre;
+  color: black;
+  position: absolute;
+  top: 15px;
+  left: 25px;
+  margin: 0px;
+}
+.right-justified-button {
+  background-color: white;
+  cursor: pointer;
+  position: absolute;
+  right: 4px;
+}
+.right-padded {
+  padding-right: 10px;
+}
+.title {
+  text-align: center;
+  background-color: lightgrey;
+  color: black;
+  font-weight: bold;
+  padding: 10px;
+}
+.top {
+  top: 2px;
+}
+.zindex-1 {
+  z-index: 1;
+}

@@ -55,6 +55,12 @@ class Bsc {
     if (this.debug) this.logger.log(msg);
   }
 
+  end() {
+    if (typeof this.socket !== "undefined") {
+      this.socket.end();
+    }
+  }
+
   logData(label, data) {
     if (this.debug) this.logger.logData(label, data);
   }

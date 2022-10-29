@@ -35,7 +35,7 @@ file).
 1. If not done already, use the appropriate *Makefile* in this directory's parent
 directory to build *DtCyber* and produce the *dtcyber* executable. For Windows, a
 Visual Studio solution file is available. On Windows, you will also need to execute
-`npm install` manually in folders `automation`, `stk`, and `webterm`.
+`npm install` manually in folders `automation`, `rje-station`, `stk`, and `webterm`.
 2. Start the automated installation by executing the following command. On
 Windows, you will probably need to enable the *dtcyber* application to use TCP ports
 21, 22, and 23 too.
@@ -118,6 +118,56 @@ The following CYBIS users are available:
 | author | author | passme   |
 | guest  | guests | public   |
 
+## Remote Job Entry
+The system listens for RJE (remote job entry) connections on TCP port 2553. You
+can use [rjecli](../rje-station) and [rjews](../rje-station) to connect to this port and
+submit batch jobs via the NOS 2.8.7 *RBF* (Remote Batch Facility) subsystem. The RJE
+data communication protocol supported by NOS 2.8.7 is *HASP*. The example
+[nos2.json](../rje-station/examples/) and
+[rjews.json](../rje-station/examples/) configuration files condition
+[rjecli](../rje-station) and [rjews](../rje-station), respectively, to use *HASP* to
+connect and interact with NOS 2.8.7.
+
+*DtCyber* is configured to start a special web service that supports browser-based
+RJE access to the NOS 2.8.7 system. The web service listens for connections on TCP port
+8085. When you request your web browser to open the following URL:
+
+>`http://localhost:8085`
+
+it will display a page showing the RJE hosts served by the web service, and this will
+include the NOS 2.8.7 system. It will also indicate that it can provide access to the
+[NOS 1.3](../NOS1.3) system. However, both the NOS 1.3 and the NOS 2.8.7 system must
+be running concurrently, below) in order for you to be able to select both successfully.
+
+When you click on the link associated with either of these systems, a browser-based
+RJE station emulator will launch, and you will be presented with its console window.
+The console window displays operator messages sent by the RJE host to the RJE station.
+It also enables you to enter station operator commands to send to the host, and it
+provides a user interface for loading the station's virtual card reader with virtual
+card decks (i.e., batch jobs) to submit for execution on the host.
+
+You may also request the browser-based RJE station emulator for NOS 2.8.7 directly by
+entering the following URL:
+
+>`http://localhost:8085/rje.html?m=m01&t=RBF%20on%20NOS%202.8.7`
+
+An RJE command line interface is available as well. The RJI CLI can be started using
+the following commands on Linux/MacOS:
+
+>```
+cd rje-station
+node rjecli examples/nos2.json
+```
+
+On Windows:
+
+>```
+cd rje-station
+node rjecli examples\nos2.json
+```
+
+For more information about RJE, see the [README](rje-station) file in the `rje-station`
+directory.
 
 ## Shutdown and Restart
 When the installation completes, NOS 2.8.7 will be running, and the command window will
