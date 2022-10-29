@@ -32,7 +32,7 @@ dtc.connect()
 //which will force our job to end instead of recalling DIS. 
 //the INSTALL job success/fail commands exist inside the procedure instead in this case.
 .then(() => dtc.dis([
-    "LABEL(TAPE,VSN=CYBL1,PO=R)",
+    "LABEL(TAPE,VSN=CYBL1,PO=RF)",
     "BEGIN,INSTALL,TAPE.",
 ], "INSTALL", 1))
 .then(() => dtc.sleep(5000))
