@@ -83,7 +83,8 @@
           "desc": "CYBIS Exposed courseware and updates to group s",
           "pre": ["cybis-lessons-mkfiles.pre",
           "cybis-lessons-load.pre"],
-          "post": ["cybis-lessons.post"]
+          "post": ["cybis-lessons.post"],
+          "depends": ["cybis"]
       }
     ]
   },
