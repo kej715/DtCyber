@@ -84,8 +84,8 @@ dtc.connect()
 //PFREL.  Z  strips out the alternate storage information when
 //restoring files. 
 .then(() => dtc.mount(13, 0, 3, "opt/tapes/CYBIS-src-additions.tap"))
-.then(() => dtc.dsd([
-    "LABEL(TAPE,VSN=CYBSCA,PO=R)",
+.then(() => dtc.dis([
+    "LABEL(TAPE,VSN=CYBSCA,PO=RF)",
     "PFLOAD,UN=PLATO,LO=CEST,OP=RLZ."
 ],"CYBSCA"))
 .then(() => {
