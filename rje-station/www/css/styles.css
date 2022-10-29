@@ -27,6 +27,11 @@
   padding: 5px;
   border: 1px solid black;
 }
+.card-background {
+  background-image: url("card-620x280.jpg");
+  background-blend-mode: lighten;
+  background-size: cover;
+}
 .command-dialog-content {
   background: cornsilk;
   border: 1px solid black;
@@ -102,8 +107,8 @@
   white-space: pre;
   color: black;
   position: absolute;
-  top: 0px;
-  left: 0px;
+  top: 15px;
+  left: 25px;
   margin: 0px;
 }
 .reader-background {
@@ -133,8 +138,8 @@
   white-space: pre;
   color: black;
   position: absolute;
-  top: 0px;
-  left: 0px;
+  top: 15px;
+  left: 25px;
   margin: 0px;
 }
 .right-justified-button {

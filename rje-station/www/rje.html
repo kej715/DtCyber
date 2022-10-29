@@ -152,7 +152,7 @@
       punchContainer.style.top = "60px";
       punchContainer.style.right = "0px";
       punchContainer.style.width = "720px";
-      punchFrameContainer.style.height = "640px";
+      punchFrameContainer.style.height = "320px";
       punchFrame.style.width = "100%";
       punchFrame.style.height = "100%";
       const punchDragMgr = new DraggableManager();
@@ -242,6 +242,7 @@
           if (typeof streams[key] === "undefined") {
             streams[key]             = {};
             streams[key].data        = "";
+            streams[key].nextIndex   = 0;
             streams[key].recordCount = 0;
           }
           let stream = streams[key];
@@ -322,15 +323,23 @@
             }
             break;
           case StreamTypePunch:
-            punchText.textContent += text;
-            punchText.scrollIntoView(false);
+            stream.data += text;
+            while (stream.data.length > stream.nextIndex) {
+              let ni = stream.data.indexOf("\n", stream.nextIndex);
+              if (ni < 0) break;
+              ni += 1;
+              let card = stream.data.substring(stream.nextIndex, ni);
+              stream.nextIndex = ni;
+              punchText.textContent = card;
+              punchText.scrollIntoView(true);
+            }
             if (isPunchVisible === false) {
               $(punchContainer).show();
               containerStack.promote(punchContainer);
               isPunchVisible = true;
             }
             if (stream.isEOI) {
-              const blob = new Blob([punchText.textContent], {type: "text/plain"});
+              const blob = new Blob([stream.data], {type: "text/plain"});
               const fileSaver = document.getElementById("punch-file-saver");
               const blobUrl = URL.createObjectURL(blob);
               fileSaver.setAttribute("href", blobUrl);
@@ -340,8 +349,9 @@
               $(punchContainer).hide();
               isPunchVisible = false;
               punchText.textContent = "";
-              stream.data = "";
-              stream.isEOI = false;
+              stream.data        = "";
+              stream.nextIndex   = 0;
+              stream.isEOI       = false;
               stream.recordCount = 0;
             }
             break;
@@ -405,34 +415,41 @@
         const localFile = readerFileInput.files[0];
         if (typeof localFile === "undefined" || localFile.name === "") {
           readerText.textContent = "Please select a card deck to send";
+          readerText.scrollIntoView(true);
           return;
         }
         const fileReader = new FileReader();
         fileReader.onload = evt => {
           const text = fileReader.result;
-          readerText.textContent = text;
-          readerText.scrollIntoView(true);
+          let si = text.indexOf("\n");
+          if (si >= 0) {
+            readerText.textContent = text.substring(0, si + 1);
+            readerText.scrollIntoView(true);
+          }
           setTimeout(() => {
-            transmitCardDeck(machine, 1, readerContainer, readerText);
-          }, 2000);
+            transmitCardDeck(machine, 1, text, readerContainer, readerText);
+          }, 1000);
         };
         fileReader.onerror = evt => {
           readerText.textContent = `Failed to load ${localFile.name}: ${evt.message}`;
+          readerText.scrollIntoView(true);
         };
         fileReader.readAsText(localFile);
       });
     };
 
-    const transmitCardDeck = (machine, streamId, frame, textElem) => {
-      if (textElem.textContent.length > 0) {
-        let si = textElem.textContent.indexOf("\n");
-        if (si < 0) si = textElem.textContent.length - 1;
+    const transmitCardDeck = (machine, streamId, cardDeck, frame, textElem) => {
+      if (cardDeck.length > 0) {
+        let si = cardDeck.indexOf("\n");
+        if (si < 0) si = cardDeck.length - 1;
         si += 1;
-        let card = textElem.textContent.substring(0, si);
+        let card = cardDeck.substring(0, si);
+        textElem.textContent = card;
+        textElem.scrollIntoView(true);
         machine.send(`${StreamTypeReader} ${streamId} ${card.length} ${card}`);
-        textElem.textContent = textElem.textContent.substring(si);
+        cardDeck = cardDeck.substring(si);
         setTimeout(() => {
-          transmitCardDeck(machine, streamId, frame, textElem);
+          transmitCardDeck(machine, streamId, cardDeck, frame, textElem);
         }, 25);
       }
       else {
