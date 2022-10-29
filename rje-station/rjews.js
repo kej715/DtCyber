@@ -48,6 +48,16 @@ const streamTypes = [
   "CP"
 ];
 
+class ReaderStream extends Readable {
+
+  constructor(options) {
+    super(options);
+  }
+
+  _read(n) {
+  }
+}
+
 const generateDefaultResponse = (req, res) => {
   res.writeHead(200, {"Content-Type":"text/html"});
   res.write("<html>");
@@ -277,17 +287,19 @@ const processReceivedData = (connection, data) => {
       stream.data += text;
       switch (streamType) {
       case RJE.StreamType_Console:
-        connection.service.command(stream.data.trim());
-        stream.data = "";
+        connection.service.command(text.trim());
         break;
       case RJE.StreamType_Reader:
-        if (stream.isEOI) {
-          stream.stream = new Readable();
-          stream.stream.push(stream.data.slice());
-          stream.stream.push(null);
+        if (typeof stream.stream === "undefined") {
+          stream.stream = new ReaderStream();
           connection.service.requestToSend(streamId);
-          stream.data = "";
+        }
+        if (stream.isEOI) {
+          stream.stream.push(null);
           stream.isEOI = false;
+        }
+        else {
+          stream.stream.push(text);
         }
         break;
       default:
