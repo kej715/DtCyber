@@ -55,6 +55,7 @@
     <div id="reader-container" class="draggable">
       <div class="frame-header">
         Card Reader
+        <img id="reader-close-button" class="right-justified-button" src="images/close-16x16.png"/>
       </div>
       <div id="reader-frame-container">
         <iframe id="reader-frame" src="reader.html"></iframe>
@@ -69,6 +70,9 @@
     const StreamTypePrinter = 2;
     const StreamTypePunch   = 3;
     const StreamTypes       = [ "CO", "CR", "LP", "CP" ];
+
+    let machineId    = "unknown";
+    let title        = "RJE Station";
 
     let consoleFrame = null;
     let printerFrame = null;
@@ -97,26 +101,7 @@
 
     const main = () => {
 
-      let machineId = "unknown";
-      let title = "RJE Station";
-      let qs = window.location.search;
-      if (qs && qs.length > 1) {
-        qs.substr(1).split("&").forEach(param => {
-          let nvp = param.split("=");
-          if (nvp.length > 1) {
-            switch (nvp[0]) {
-            case "m": // machine name
-              machineId = nvp[1];
-              break;
-            case "t": // title
-              title = decodeURIComponent(nvp[1]);
-              break;
-            }
-          }
-        });
-      }
-      $("title").html(title);
-      $("#title").html(title);
+      const containerStack = new ContainerStack();
 
       const consoleContainer = document.getElementById("console-container");
       const consoleFrameContainer = document.getElementById("console-frame-container");
@@ -130,6 +115,10 @@
       consoleFrame.style.height = "100%";
       const consoleDragMgr = new DraggableManager();
       consoleDragMgr.activate(consoleContainer);
+      containerStack.push(consoleContainer);
+      $(consoleContainer).click(() => {
+        containerStack.promote(consoleContainer);
+      });
 
       const printerContainer = document.getElementById("printer-container");
       const printerCloseButton = document.getElementById("printer-close-button");
@@ -149,6 +138,10 @@
       $(printerCloseButton).click(() => {
         $(printerContainer).hide();
         isPrinterVisible = false;
+      });
+      containerStack.push(printerContainer);
+      $(printerContainer).click(() => {
+        containerStack.promote(printerContainer);
       });
 
       const punchContainer = document.getElementById("punch-container");
@@ -170,6 +163,10 @@
         $(punchContainer).hide();
         isPunchVisible = false;
       });
+      containerStack.push(punchContainer);
+      $(punchContainer).click(() => {
+        containerStack.promote(punchContainer);
+      });
 
       const readerContainer = document.getElementById("reader-container");
       const readerCloseButton = document.getElementById("reader-close-button");
@@ -187,6 +184,10 @@
       $(readerContainer).hide();
       $(readerCloseButton).click(() => {
         $(readerContainer).hide();
+      });
+      containerStack.push(readerContainer);
+      $(readerContainer).click(() => {
+        containerStack.promote(readerContainer);
       });
 
       consoleText.textContent = `Connecting to ${title} ...\n`;
@@ -301,6 +302,7 @@
             printerText.scrollIntoView(false);
             if (isPrinterVisible === false) {
               $(printerContainer).show();
+              containerStack.promote(printerContainer);
               isPrinterVisible = true;
             }
             if (stream.isEOI) {
@@ -324,6 +326,7 @@
             punchText.scrollIntoView(false);
             if (isPunchVisible === false) {
               $(punchContainer).show();
+              containerStack.promote(punchContainer);
               isPunchVisible = true;
             }
             if (stream.isEOI) {
@@ -396,7 +399,14 @@
       sendCardsBtn.click(() => {
         readerText.textContent = "";
         $(readerContainer).show();
+        setTimeout(() => { // delay to allow console window click to fire
+          containerStack.promote(readerContainer);
+        }, 10);
         const localFile = readerFileInput.files[0];
+        if (typeof localFile === "undefined" || localFile.name === "") {
+          readerText.textContent = "Please select a card deck to send";
+          return;
+        }
         const fileReader = new FileReader();
         fileReader.onload = evt => {
           const text = fileReader.result;
@@ -432,6 +442,26 @@
     };
 
     $(document).ready(() => {
+
+      let qs = window.location.search;
+      if (qs && qs.length > 1) {
+        qs.substr(1).split("&").forEach(param => {
+          let nvp = param.split("=");
+          if (nvp.length > 1) {
+            switch (nvp[0]) {
+            case "m": // machine name
+              machineId = nvp[1];
+              break;
+            case "t": // title
+              title = decodeURIComponent(nvp[1]);
+              break;
+            }
+          }
+        });
+      }
+      $("title").html(title);
+      $("#title").html(title);
+
       let consoleLoaded  = false;
       let printerLoaded  = false;
       let punchLoaded    = false;
