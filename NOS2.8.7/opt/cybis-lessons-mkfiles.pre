@@ -4,137 +4,137 @@ const Terminal = require("../../automation/Terminal");
 
 const term = new Terminal.CybisTerminal();
 const cybdevpat = [
-    { re:/currently being edited/, fn: "Account is being edited by someone else" },
-    { re:/Account last changed on/, fn:() => { term.log("Account last changed"); term.send("\r\r"); return true;} },
-    { re:/ACCOUNT EDITOR/,fn:() => { term.log("account editor"); term.send("\r"); return true; } },
-    { re:/File management options/,fn:() => { term.log("File management options"); term.send("1\r"); return true;} },
-    { re:/Select new file type/,fn:() => {term.log("Select new file type"); return false;  } }
+  { re: /currently being edited/, fn: "Account is being edited by someone else" },
+  { re: /Account last changed on/, fn: () => { term.log("Account last changed"); term.send("\r\r"); return true; } },
+  { re: /ACCOUNT EDITOR/, fn: () => { term.log("account editor"); term.send("\r"); return true; } },
+  { re: /File management options/, fn: () => { term.log("File management options"); term.send("1\r"); return true; } },
+  { re: /Select new file type/, fn: () => { term.log("Select new file type"); return false; } }
 ];
 /* make a normal PLATO group the short way */
-function makegroup(name,author,masterfile,parts,names) {
-    const grouppat = [
-        { re: /Enter new file name/, fn:() => { term.log(`makegroup name = ${name}`); term.send(`${name}\r`); return true; } },
-        { re: /Already a file/, fn:"Already a file with this name"},
-        { re: /Enter masterfile/, fn:() => { term.log(`makegroup masterfile = ${masterfile}`); term.send(`${masterfile}\r`); return true; } },
-        { re: /Allow author records/, fn:() => {term.log(`makegroup author = ${author}`); term.send(`${author}\r`); return true; } },
-        { re: /Press DATA to enter/, fn:() => { term.log("makegroup sent DATA key"); term.sendKey("d",false, true, false); return true; } },
-        { re: /Enter number of parts/, fn:() => {term.log(`makegroup parts = ${parts}`); term.send(`${parts}\r`); return true; } },
-        { re: /Enter number of names/, fn:() => {term.log(`makegroup names = ${names}`); term.send(`${names}\r`); return true; } },
-        { re: /Press NEXT to proceed/, fn:() => {term.log("makegroup press NEXT to proceed"); term.send("\r"); return true; } },
-        { re: /File created/, fn:() => {term.log("makegroup File created pressing NEXT"); term.send("\r"); return true; } },
-        { re: /Select new file type/, fn:() => {term.sleep(2000); return false; } }
-    ];
-term.send("c");
-return term.expect(grouppat);
+function makegroup(name, author, masterfile, parts, names) {
+  const grouppat = [
+    { re: /Enter new file name/, fn: () => { term.log(`makegroup name = ${name}`); term.send(`${name}\r`); return true; } },
+    { re: /Already a file/, fn: "Already a file with this name" },
+    { re: /Enter masterfile/, fn: () => { term.log(`makegroup masterfile = ${masterfile}`); term.send(`${masterfile}\r`); return true; } },
+    { re: /Allow author records/, fn: () => { term.log(`makegroup author = ${author}`); term.send(`${author}\r`); return true; } },
+    { re: /Press DATA to enter/, fn: () => { term.log("makegroup sent DATA key"); term.sendKey("d", false, true, false); return true; } },
+    { re: /Enter number of parts/, fn: () => { term.log(`makegroup parts = ${parts}`); term.send(`${parts}\r`); return true; } },
+    { re: /Enter number of names/, fn: () => { term.log(`makegroup names = ${names}`); term.send(`${names}\r`); return true; } },
+    { re: /Press NEXT to proceed/, fn: () => { term.log("makegroup press NEXT to proceed"); term.send("\r"); return true; } },
+    { re: /File created/, fn: () => { term.log("makegroup File created pressing NEXT"); term.send("\r"); return true; } },
+    { re: /Select new file type/, fn: () => { term.sleep(2000); return false; } }
+  ];
+  term.send("c");
+  return term.expect(grouppat);
 }
 
 /* make a normal PLATO group the long way */
-function makegroup_long(name,masterfile,author,signons,datasignons,datarecords) {
-    const grouppat = [
-        { re: /Enter new file name/, fn:() => { term.log(`makegroup_long name = ${name}`); term.send(`${name}\r`); return true; } },
-        { re: /Already a file/, fn:"Already a file with this name"},
-        { re: /Enter masterfile/, fn:() => { term.log(`makegroup_long masterfile = ${masterfile}`); term.send(`${masterfile}\r`); return true; } },
-        { re: /Allow author records/, fn:() => {term.log(`makegroup_long author = ${author}`); term.send(`${author}\r`); return true; } },
-        { re: /Press DATA to enter/, fn:() => { term.log(`makegroup_long signons = ${signons}`); term.send(`${signons}\r`); return true; } },
-        { re: /-of data signons/, fn:() => {term.log(`makegroup_long datasignons = ${datasignons}`); term.send(`${datasignons}\r`); return true; } },
-        { re: /-of data records and/, fn:() => {term.log(`makegroup_long datarecords = ${datarecords}`); term.send(`${datarecords}\r`); return true; } },
-        { re: /Press NEXT to proceed/, fn:() => {term.log("makegroup_long press NEXT to proceed"); term.send("\r"); return true; } },
-        { re: /File created/, fn:() => {term.log("makegroup_long File created pressing NEXT"); term.send("\r"); return true; } },
-        { re: /Select new file type/, fn:() => {term.sleep(2000); return false; } }
-    ];
-    term.send("c");
-    return term.expect(grouppat);
+function makegroup_long(name, masterfile, author, signons, datasignons, datarecords) {
+  const grouppat = [
+    { re: /Enter new file name/, fn: () => { term.log(`makegroup_long name = ${name}`); term.send(`${name}\r`); return true; } },
+    { re: /Already a file/, fn: "Already a file with this name" },
+    { re: /Enter masterfile/, fn: () => { term.log(`makegroup_long masterfile = ${masterfile}`); term.send(`${masterfile}\r`); return true; } },
+    { re: /Allow author records/, fn: () => { term.log(`makegroup_long author = ${author}`); term.send(`${author}\r`); return true; } },
+    { re: /Press DATA to enter/, fn: () => { term.log(`makegroup_long signons = ${signons}`); term.send(`${signons}\r`); return true; } },
+    { re: /-of data signons/, fn: () => { term.log(`makegroup_long datasignons = ${datasignons}`); term.send(`${datasignons}\r`); return true; } },
+    { re: /-of data records and/, fn: () => { term.log(`makegroup_long datarecords = ${datarecords}`); term.send(`${datarecords}\r`); return true; } },
+    { re: /Press NEXT to proceed/, fn: () => { term.log("makegroup_long press NEXT to proceed"); term.send("\r"); return true; } },
+    { re: /File created/, fn: () => { term.log("makegroup_long File created pressing NEXT"); term.send("\r"); return true; } },
+    { re: /Select new file type/, fn: () => { term.sleep(2000); return false; } }
+  ];
+  term.send("c");
+  return term.expect(grouppat);
 }
 
 /* make a PLM group */
-function makePLMgroup(name,masterfile,parts,names) {
-    const grouppat = [
-        { re: /Enter new file name/, fn:() => { term.log(`makePLMgroup name = ${name}`); term.send(`${name}\r`); return true; } },
-        { re: /Already a file/, fn:"Already a file with this name"},
-        { re: /Enter masterfile/, fn:() => { term.log(`makePLMgroup masterfile = ${masterfile}`); term.send(`${masterfile}\r`); return true; } },
-        { re: /Use PLMROUTER or/, fn:() => { term.log("makePLMgroup sending p key"); term.send("p"); return true; } },
-        { re: /Enter number of parts/, fn:() => {term.log(`makePLMgroup parts = ${parts}`); term.send(`${parts}\r`); return true; } },
-        { re: /Enter number of names/, fn:() => {term.log(`makePLMgroup names = ${names}`); term.send(`${names}\r`); return true; } },
-        { re: /Press NEXT to proceed/, fn:() => {term.log("makePLMgroup Press NEXT to proceed"); term.send("\r"); return true; } },
-        { re: /File created/, fn:() => {term.log("makePLMgroup File created pressing NEXT"); term.send("\r"); return true; } },
-        { re: /Select new file type/, fn:() => {term.sleep(2000); return false; } }
-    ];
-    term.send("m");
-    return term.expect(grouppat);
+function makePLMgroup(name, masterfile, parts, names) {
+  const grouppat = [
+    { re: /Enter new file name/, fn: () => { term.log(`makePLMgroup name = ${name}`); term.send(`${name}\r`); return true; } },
+    { re: /Already a file/, fn: "Already a file with this name" },
+    { re: /Enter masterfile/, fn: () => { term.log(`makePLMgroup masterfile = ${masterfile}`); term.send(`${masterfile}\r`); return true; } },
+    { re: /Use PLMROUTER or/, fn: () => { term.log("makePLMgroup sending p key"); term.send("p"); return true; } },
+    { re: /Enter number of parts/, fn: () => { term.log(`makePLMgroup parts = ${parts}`); term.send(`${parts}\r`); return true; } },
+    { re: /Enter number of names/, fn: () => { term.log(`makePLMgroup names = ${names}`); term.send(`${names}\r`); return true; } },
+    { re: /Press NEXT to proceed/, fn: () => { term.log("makePLMgroup Press NEXT to proceed"); term.send("\r"); return true; } },
+    { re: /File created/, fn: () => { term.log("makePLMgroup File created pressing NEXT"); term.send("\r"); return true; } },
+    { re: /Select new file type/, fn: () => { term.sleep(2000); return false; } }
+  ];
+  term.send("m");
+  return term.expect(grouppat);
 }
 
 /* make an instructor file */
-function makeinstructor(name,masterfile,parts) {
-    const instpat = [
-        { re: /Enter new file name/, fn:() => { term.log(`makeinstructor name = ${name}`); term.send(`${name}\r`); return true; } },
-        { re: /Already a file/, fn:"Already a file with this name"},
-        { re: /Enter masterfile/, fn:() => { term.log(`makeinstructor masterfile = ${masterfile}`); term.send(`${masterfile}\r`); return true; } },
-        { re: /Enter number of parts/, fn:() => {term.log(`makeinstructor parts = ${parts}`); term.send(`${parts}\r`); return true; } },
-        { re: /File created/, fn:() => {term.log("makeinstructor File created pressing NEXT"); term.send("\r"); return true; } },
-        { re: /Select new file type/, fn:() => {term.sleep(2000); return false; } }
-    ];
-    term.send("e");
-    return term.expect(instpat);
+function makeinstructor(name, masterfile, parts) {
+  const instpat = [
+    { re: /Enter new file name/, fn: () => { term.log(`makeinstructor name = ${name}`); term.send(`${name}\r`); return true; } },
+    { re: /Already a file/, fn: "Already a file with this name" },
+    { re: /Enter masterfile/, fn: () => { term.log(`makeinstructor masterfile = ${masterfile}`); term.send(`${masterfile}\r`); return true; } },
+    { re: /Enter number of parts/, fn: () => { term.log(`makeinstructor parts = ${parts}`); term.send(`${parts}\r`); return true; } },
+    { re: /File created/, fn: () => { term.log("makeinstructor File created pressing NEXT"); term.send("\r"); return true; } },
+    { re: /Select new file type/, fn: () => { term.sleep(2000); return false; } }
+  ];
+  term.send("e");
+  return term.expect(instpat);
 
 }
 
 /* make PLM curriculum */
-function makePLMcurriculum(name,masterfile,parts) {
-    const PLMcurpat = [
-        { re: /Enter new file name/, fn:() => { term.log(`makePLMcurriculum name = ${name}`); term.send(`${name}\r`); return true; } },
-        { re: /Already a file/, fn:"Already a file with this name"},
-        { re: /Enter masterfile/, fn:() => { term.log(`makePLMcurriculum masterfile = ${masterfile}`); term.send(`${masterfile}\r`); return true; } },
-        { re: /Enter number of parts/, fn:() => {term.log(`makePLMcurriculum parts = ${parts}`); term.send(`${parts}\r`); return true; } },
-        { re: /File created/, fn:() => {term.log("makePLMcurriculum File created pressing NEXT"); term.send("\r"); return true; } },
-        { re: /Select new file type/, fn:() => {term.sleep(2000); return false; } }
-    ];
-    term.send("n");
-    return term.expect(PLMcurpat);
+function makePLMcurriculum(name, masterfile, parts) {
+  const PLMcurpat = [
+    { re: /Enter new file name/, fn: () => { term.log(`makePLMcurriculum name = ${name}`); term.send(`${name}\r`); return true; } },
+    { re: /Already a file/, fn: "Already a file with this name" },
+    { re: /Enter masterfile/, fn: () => { term.log(`makePLMcurriculum masterfile = ${masterfile}`); term.send(`${masterfile}\r`); return true; } },
+    { re: /Enter number of parts/, fn: () => { term.log(`makePLMcurriculum parts = ${parts}`); term.send(`${parts}\r`); return true; } },
+    { re: /File created/, fn: () => { term.log("makePLMcurriculum File created pressing NEXT"); term.send("\r"); return true; } },
+    { re: /Select new file type/, fn: () => { term.sleep(2000); return false; } }
+  ];
+  term.send("n");
+  return term.expect(PLMcurpat);
 }
 
 /* make code file */
-function makecode(name,masterfile,parts) {
-    const codepat = [
-        { re: /Enter new file name/, fn:() => { term.log(`makecode name = ${name}`); term.send(`${name}\r`); return true; } },
-        { re: /Already a file/, fn:"Already a file with this name"},
-        { re: /Enter masterfile/, fn:() => { term.log(`makecode masterfile = ${masterfile}`); term.send(`${masterfile}\r`); return true; } },
-        { re: /Enter number of parts/, fn:() => {term.log(`makecode parts = ${parts}`); term.send(`${parts}\r`); return true; } },
-        { re: /File created/, fn:() => {term.log("makecode File created pressing NEXT"); term.send("\r"); return true; } },
-        { re: /Select new file type/, fn:() => {term.sleep(2000); return false; } }
-    ];
-    term.send("k");
-    return term.expect(codepat);
+function makecode(name, masterfile, parts) {
+  const codepat = [
+    { re: /Enter new file name/, fn: () => { term.log(`makecode name = ${name}`); term.send(`${name}\r`); return true; } },
+    { re: /Already a file/, fn: "Already a file with this name" },
+    { re: /Enter masterfile/, fn: () => { term.log(`makecode masterfile = ${masterfile}`); term.send(`${masterfile}\r`); return true; } },
+    { re: /Enter number of parts/, fn: () => { term.log(`makecode parts = ${parts}`); term.send(`${parts}\r`); return true; } },
+    { re: /File created/, fn: () => { term.log("makecode File created pressing NEXT"); term.send("\r"); return true; } },
+    { re: /Select new file type/, fn: () => { term.sleep(2000); return false; } }
+  ];
+  term.send("k");
+  return term.expect(codepat);
 }
 term.emulator.setDebug(false);
 term.connect(8005)
-.then(() => term.say("Connected"))
-.then(() => term.say("Login ..."))
-.then(() => term.login("admin", "s", "passme"))
-.then(() => term.say("logged in"))
-.then(() => term.sleep(2000))
-.then(() => term.sendKey("h",false, true, false))
-.then(() => term.expect([{re:/AUTHOR MODE/}]))
-.then(() => term.send("\r"))
-.then(() => term.expect([{ re: /SYSTEM MODE/ }]))
-.then(() => term.say("system login detected"))
-.then(() => term.send("cybdeva\r"))
-.then(() => term.expect(cybdevpat))
-.then(() => term.say("ready to create files"))
-.then(() => makegroup_long("cnos","system","n","20","20","20"))
-.then(() => makegroup("compass","n","system","1","15"))
-.then(() => makePLMgroup("cppu","system","1","5"))
-.then(() => makePLMgroup("ccrm","system","2","5"))
-.then(() => makePLMgroup("cfortran","system","1","5"))
-.then(() => makePLMgroup("ccobol","system","1","5"))
-.then(() => makePLMgroup("ctutor","system","1","5"))
-.then(() => makePLMgroup("cnosts","system","1","5"))
-.then(() => makeinstructor("noscrse1","system","2"))
-.then(() => makePLMcurriculum("tutplm","system","18"))
-.then(() => makecode("wsbatch","system","18"))
-.then(() => {
-  process.exit(0);
-})
-.catch(err => {
-  console.log(err);
-  process.exit(1);
-});
+  .then(() => term.say("Connected"))
+  .then(() => term.say("Login ..."))
+  .then(() => term.login("admin", "s", "passme"))
+  .then(() => term.say("logged in"))
+  .then(() => term.sleep(2000))
+  .then(() => term.sendKey("h", false, true, false))
+  .then(() => term.expect([{ re: /AUTHOR MODE/ }]))
+  .then(() => term.send("\r"))
+  .then(() => term.expect([{ re: /SYSTEM MODE/ }]))
+  .then(() => term.say("system login detected"))
+  .then(() => term.send("cybdeva\r"))
+  .then(() => term.expect(cybdevpat))
+  .then(() => term.say("ready to create files"))
+  .then(() => makegroup_long("cnos", "system", "n", "20", "20", "20"))
+  .then(() => makegroup("compass", "n", "system", "1", "15"))
+  .then(() => makePLMgroup("cppu", "system", "1", "5"))
+  .then(() => makePLMgroup("ccrm", "system", "2", "5"))
+  .then(() => makePLMgroup("cfortran", "system", "1", "5"))
+  .then(() => makePLMgroup("ccobol", "system", "1", "5"))
+  .then(() => makePLMgroup("ctutor", "system", "1", "5"))
+  .then(() => makePLMgroup("cnosts", "system", "1", "5"))
+  .then(() => makeinstructor("noscrse1", "system", "2"))
+  .then(() => makePLMcurriculum("tutplm", "system", "18"))
+  .then(() => makecode("wsbatch", "system", "18"))
+  .then(() => {
+    process.exit(0);
+  })
+  .catch(err => {
+    console.log(err);
+    process.exit(1);
+  });
