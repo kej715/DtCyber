@@ -106,12 +106,12 @@ class Machine {
   }
 
   isConnected() {
-    return this.ws ? true : false;
+    return typeof this.ws !== "undefined";
   }
 
   closeConnection() {
-    if (this.ws) {
-      this.ws.onclose = function() {}; // disable onclose handler
+    if (typeof this.ws !== "undefined") {
+      this.ws.onclose = () => {}; // disable onclose handler
       this.ws.close();
       delete this.ws;
     }
