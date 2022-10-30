@@ -93,7 +93,6 @@ class Machine {
         }
       };
       me.ws.onclose = () => {
-        delete me.ws;
         if (typeof me.disconnectListener === "function") {
           me.disconnectListener();
         }
@@ -106,7 +105,9 @@ class Machine {
   }
 
   isConnected() {
-    return typeof this.ws !== "undefined";
+    return typeof this.ws === "object"
+        && typeof this.ws.readyState !== "undefined"
+        && (this.ws.readyState === 0 /*CONNECTING*/ || this.ws.readyState === 1 /*OPEN*/);
   }
 
   closeConnection() {
