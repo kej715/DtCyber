@@ -284,7 +284,6 @@ const processReceivedData = (connection, data) => {
     if (len === 0) stream.isEOI = true;
 
     if (typeof connection.service !== "undefined") {
-      stream.data += text;
       switch (streamType) {
       case RJE.StreamType_Console:
         connection.service.command(text.trim());

@@ -392,11 +392,11 @@
         }
         if (evt.key === "Enter") {
           let value = consoleCommandInput.value;
+          consoleCommandInput.value = "";
           if (value !== "") {
-            machine.send(`${StreamTypeConsole} 1 ${value.length} ${value}`);
             consoleText.textContent += `${value}\n`;
             consoleText.scrollIntoView(false);
-            consoleCommandInput.value = "";
+            machine.send(`${StreamTypeConsole} 1 ${value.length} ${value}`);
           }
         }
       });
