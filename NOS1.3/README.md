@@ -38,7 +38,7 @@ package managers support it as well.
 1. If not done already, use the appropriate *Makefile* in this directory's parent
 directory to build *DtCyber* and produce the *dtcyber* executable. For Windows, a
 Visual Studio solution file is available. On Windows, you will also need to execute
-`npm install` manually in folders `automation` and `webterm`.
+`npm install` manually in folders `automation`, `rje-station`, and `webterm`.
 2. Start the automated installation by executing the following command:
 
 >`node install`
@@ -117,15 +117,59 @@ PLATO logins supported by the system include:
 
 ## Remote Job Entry
 The system listens for RJE (remote job entry) connections on TCP port 6671. You
-can use [rjecli](../rje-station) to connect to this port and submit batch jobs via
-the NOS 1.3 *Export/Import* subsystem. The RJE data communication protocol supported
-by NOS 1.3 is *MODE4*. The example [mode4.json](../rje-station/examples/)
-configuration file conditions [rjecli](../rje-station) to use *MODE4* to connect and
-interact with NOS 1.3.
+can use [rjecli](../rje-station) and [rjews](../rje-station) to connect to this port and
+submit batch jobs via the NOS 1.3 *EI200* subsystem. The RJE data communication
+protocol supported by NOS 1.3 is *MODE4*. The example
+[nos1.json](../rje-station/examples/) and
+[rjews.json](../rje-station/examples/) configuration files condition
+[rjecli](../rje-station) and [rjews](../rje-station), respectively, to use *MODE4* to
+connect and interact with NOS 1.3.
 
-## Remote Batch Networking
+*DtCyber* is configured to start a special web service that supports browser-based
+RJE access to the NOS 1.3 system. The web service listens for connections on TCP port
+8085. When you request your web browser to open the following URL:
+
+>`http://localhost:8085`
+
+it will display a page showing the RJE hosts served by the web service, and this will
+include the NOS 1.3 system. It will also indicate that it can provide access to the
+[NOS 2.8.7](../NOS2.8.7) system. However, both the NOS 1.3 and the NOS 2.8.7 system must
+be running concurrently (see [Remote Batch Networking(#rbn), below) in order for you to
+be able to select both successfully.
+
+When you click on the link associated with either of these systems, a browser-based
+RJE station emulator will launch, and you will be presented with its console window.
+The console window displays operator messages sent by the RJE host to the RJE station.
+It also enables you to enter station operator commands to send to the host, and it
+provides a user interface for loading the station's virtual card reader with virtual
+card decks (i.e., batch jobs) to submit for execution on the host.
+
+You may also request the browser-based RJE station emulator for NOS 1.3 directly by
+entering the following URL:
+
+>`http://localhost:8085/rje.html?m=m03&t=EI200%20on%20NOS%201.3`
+
+An RJE command line interface is available as well. The RJI CLI can be started using
+the following commands on Linux/MacOS:
+
+>```
+cd rje-station
+node rjecli examples/nos1.json
+```
+
+On Windows:
+
+>```
+cd rje-station
+node rjecli examples\nos1.json
+```
+
+For more information about RJE, see the [README](rje-station) file in the `rje-station`
+directory.
+
+## <a id="rbn"></a>Remote Batch Networking
 After running `install.js`, the system attempts to connect to an RJE HASP
-service on the local host at TCP port 2553. The [NOS 2.8.7](../NOS2.8.7) system will
+service on the local host at TCP port 2554. The [NOS 2.8.7](../NOS2.8.7) system will
 listen for connections on this port if the RBF product is installed, so if the NOS
 1.3 and NOS 2.8.7 systems are started on the same host machine, the TIELINE
 subsystem of NOS 1.3 will connect automatically to the RBF subsystem of NOS 2.8.7,
@@ -136,10 +180,10 @@ The `DSA311` definition in the `cyber.ini` file of the NOS 1.3 system defines th
 host and port to which TIELINE will attempt to connect. After running
 `install.js`, the `DSA311` entry looks like this:
 
->`DSA311,5,10,20,localhost:2553`
+>`DSA311,5,10,20,localhost:2554`
 
 If you want TIELINE to connect to a HASP service on a different host and/or port,
-change `localhost:2553` accordingly. Note also that after running
+change `localhost:2554` accordingly. Note also that after running
 `install.js`, TIELINE is conditioned to interoperate with RBF on NOS 2. If
 you want it to interoperate with an IBM HASP service such as JES2 or RSCS running on
 the Hercules IBM mainframe emulator, you must modify TIELINE and rebuild it. A job

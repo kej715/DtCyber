@@ -30,7 +30,7 @@
   ####   #    #   ####           #    #  #    #  #    #  ######
 
 #	The LIST of the projects to be built
-PROJECTS = dtcyber automation/node_modules stk/node_modules webterm/node_modules
+PROJECTS = dtcyber automation/node_modules stk/node_modules webterm/node_modules rje-station/node_modules
 
 #	When calling other makefiles, they must be named the 
 #	same as this one ...
@@ -259,6 +259,9 @@ dtcyber: $(OBJS) $(BINS)
 automation/node_modules:
 	$(MAKE) -f $(THISMAKEFILE) -C automation
 
+rje-station/node_modules:
+	$(MAKE) -f $(THISMAKEFILE) -C rje-station
+
 stk/node_modules:
 	$(MAKE) -f $(THISMAKEFILE) -C stk
 
@@ -302,6 +305,7 @@ clean:
 	@echo Cleaning Object files for $@ 
 	rm -f $(OBJS); 
 	$(MAKE) -C automation clean; 
+	$(MAKE) -C rje-station clean;
 	$(MAKE) -C stk clean;
 	$(MAKE) -C webterm clean
 

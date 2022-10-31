@@ -125,6 +125,12 @@ class Mode4 {
     this.queueMessage([Mode4.MsgTypeRead].concat(bcd).concat(Mode4.EOL).concat([Mode4.ESC,Mode4.E1]));
   }
 
+  end() {
+    if (typeof this.socket !== "undefined") {
+      this.socket.end();
+    }
+  }
+
   log(msg) {
     if (this.debug) this.logger.log(msg);
   }
