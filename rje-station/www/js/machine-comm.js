@@ -43,10 +43,16 @@ class Machine {
   }
 
   createConnection(callback) {
+    const me = this;
     this.url = `/machines?machine=${this.id}`;
-    let me = this;
-    const req = new XMLHttpRequest();
+    let req  = new XMLHttpRequest();
     req.onload = evt => {
+      if (req.status !== 200) {
+        if (typeof callback === "function") {
+          callback(`${req.status} ${req.statusText}`);
+        }
+        return;
+      }
       let id = req.responseText;
       let protocol = (location.protocol === "https:") ? "wss://" : "ws://";
       let socketURL = protocol + location.hostname

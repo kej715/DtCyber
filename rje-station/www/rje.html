@@ -197,9 +197,15 @@
       let inputBuffer = "";
 
       const machine = new Machine(machineId);
-      machine.createConnection(() => {
-        consoleText.textContent = `Connected to ${title}\n`;
-        consoleText.scrollIntoView(false);
+      machine.createConnection(err => {
+        if (typeof err === "undefined") {
+          consoleText.textContent = `Connected to ${title}\n`;
+          consoleText.scrollIntoView(false);
+        }
+        else {
+          consoleText.textContent += `\n${err}\n\n   Failed to connect to ${title}.\n\n   Press any key to try again ...`;
+          consoleText.scrollIntoView(false);
+        }
       });
 
       machine.setReceivedDataHandler(data => {
@@ -384,9 +390,15 @@
         if (machine.isConnected() === false) {
           consoleText.textContent = `Reconnecting to ${title} ...\n`;
           consoleText.scrollIntoView(false);
-          machine.createConnection(() => {
-            consoleText.textContent = `Connected to ${title}\n`;
-            consoleText.scrollIntoView(false);
+          machine.createConnection(err => {
+            if (typeof err === "undefined") {
+              consoleText.textContent = `Connected to ${title}\n`;
+              consoleText.scrollIntoView(false);
+            }
+            else {
+              consoleText.textContent += `\n${err}\n\n   Failed to connect to ${title}.\n\n   Press any key to try again ...\n`;
+              consoleText.scrollIntoView(false);
+            }
           });
           return;
         }

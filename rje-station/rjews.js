@@ -202,6 +202,11 @@ const processMachinesRequest = (req, res, query) => {
           connection.ws.close();
           delete connection.ws;
         }
+        else if (connection.isConnected === false) {
+          res.writeHead(500, {"Content-Type":"text/plain"});
+          res.end(err.toString());
+          logHttpRequest(req, 500);
+        }
         connection.isConnected = false;
       });
 
