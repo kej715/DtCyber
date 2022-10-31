@@ -354,6 +354,23 @@ void opDisplay(char *msg)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Reports whether operator input is currently being taken
+**                  from the console.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        TRUE if operator input currently being taken from conole
+**
+**------------------------------------------------------------------------*/
+bool opIsConsoleInput(void)
+    {
+    OpCmdStackEntry *ep;
+
+    ep = &opCmdStack[opCmdStackPtr];
+    return ep->netConn == 0 && ep->in == fileno(stdin);
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Operator request handler called from the main emulation
 **                  thread to avoid race conditions.
 **
