@@ -36,13 +36,11 @@ for (const name of fs.readdirSync("opt/tapes")) {
 }
 
 let installedProductSet = [];
-if (fs.existsSync("opt/installed.json")) {
-  if (isContinueInstall) {
-    installedProductSet = JSON.parse(fs.readFileSync("opt/installed.json", "utf8"));
-  }
-  else {
-    fs.unlinkSync("opt/installed.json");
-  }
+if (fs.existsSync("opt/installed.json") && isContinueInstall) {
+  installedProductSet = JSON.parse(fs.readFileSync("opt/installed.json", "utf8"));
+}
+else {
+  fs.writeFileSync("opt/installed.json", JSON.stringify(installedProductSet));
 }
 let promise = dtc.say(`${isContinueInstall ? "Continue" : "Begin"} ${isBasicInstall ? "basic" : "full"} installation of NOS 2.8.7 ...`);
 if (isContinueInstall) {
