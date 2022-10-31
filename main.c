@@ -673,7 +673,7 @@ static void opExit()
     {
     char check;
     timeEndPeriod(8);
-    if (_isatty(_fileno(stdin)))
+    if (_isatty(_fileno(stdin)) && opIsConsoleInput())
         {
         printf("Press ENTER to Exit");
         check = (char)getchar();

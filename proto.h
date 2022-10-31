@@ -291,6 +291,7 @@ int npuBipBufCount(void);
 void opCmdLoadCards(bool help, char *cmdParams);
 void opDisplay(char *msg);
 void opInit(void);
+bool opIsConsoleInput(void);
 void opRequest(void);
 
 /*
