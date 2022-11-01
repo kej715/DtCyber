@@ -254,6 +254,8 @@ const processReceivedData = (connection, data) => {
     // Parse stream type
     //
     let fi = 0;
+    while (fi < connection.inputBuffer.length && /\s/.test(connection.inputBuffer.charAt(fi))) fi += 1;
+    if (fi >= connection.inputBuffer.length) return;
     let si = connection.inputBuffer.indexOf(" ", fi);
     if (si < 0) return;
     const streamType = parseInt(connection.inputBuffer.substring(fi, si));

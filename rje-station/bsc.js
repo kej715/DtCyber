@@ -186,6 +186,7 @@ class Bsc {
               this.log(`received <${b.toString(16)}> while expecting <STX>`);
               this.state = Bsc.StateSoB_DLE;
               this.write(Bsc.NakIndication);
+              this.receivedData = [];
             }
             break;
           //
@@ -197,31 +198,31 @@ class Bsc {
               this.state = Bsc.StateEoB_ETB;
             }
             else {
-              this.receivedData.push(b);
+              this.receivedBlock.push(b);
             }
             break;
           //
           // Wait for <ETB> following <DLE> at end of block.
           // If a second <DLE> is detected, this indicates a "quoted"
-          // <DLE< that is appended as received data.
+          // <DLE> that is appended as received data.
           //
           case Bsc.StateEoB_ETB:
             if (b === Const.ETB) {
               if (typeof this.handlers.data === "function") {
-                this.handlers.data(this.receivedData);
+                this.handlers.data(this.receivedBlock);
               }
               this.state = Bsc.StateSoB_DLE;
-              this.receivedData = [];
               this.sendBlock(false);
             }
             else if (b === Const.DLE) {
-              this.receivedData.push(b);
+              this.receivedBlock.push(b);
               this.state = Bsc.StateEoB_DLE;
             }
             else {
               this.log(`received <${b.toString(16)}> while expecting <ETB>`);
               this.state = Bsc.StateSoB_DLE;
               this.write(Bsc.NakIndication);
+              this.receivedData = [];
             }
             break;
 
