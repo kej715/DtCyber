@@ -11,7 +11,6 @@ dtc.connect()
 .then(() => dtc.say("idle IAF"))
 .then(() => dtc.dsd([
 "IDLE,IAF.",
-"IDLE,NAM.",
 "SUB."]))
 .then(() => dtc.sleep(2000))
 .then(() => dtc.dsd([
@@ -27,9 +26,6 @@ dtc.connect()
     "ATTACH(CYBBIN)",
     "SYSEDIT(B=CYBBIN,L=OUTPUT)"
 ], "CYBSE", 1))
-.then(() => dtc.say("Starting NAM"))
-.then(() => dtc.dsd(["NA."]))
-.then(() => dtc.sleep(20000))
 .then(() => dtc.say("Starting CYBIS ..."))
 .then(() => dtc.dsd(["CYBIS."]))
 .then(() => dtc.sleep(20000))

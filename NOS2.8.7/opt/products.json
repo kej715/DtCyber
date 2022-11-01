@@ -57,6 +57,8 @@
       {
         "name": "cybis",
         "pre": [
+          "cybis-ndl.job",
+          "../decks/compile-ndlopl.job",
           "cybis-eqpd.job",
           "../make-ds-tape.js",
           "cybis-newds.pre",
@@ -64,8 +66,6 @@
           "cybis-start.pre",
           "cybis-users.job",
           "cybis-users.pre",
-          "cybis-ndl.job",
-          "../decks/compile-ndlopl.job",
           "cybis-mount-bin.pre"
         ],
         "post": [
