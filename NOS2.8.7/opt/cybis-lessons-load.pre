@@ -1,0 +1,45 @@
+#!/usr/bin/env node
+//
+//Load CYBIS files into the CYBIS master files from tape
+//
+
+const DtCyber = require("../../automation/DtCyber");
+const utilities = require("./utilities");
+const dtc = new DtCyber();
+let maxProgressLen = 0;
+dtc.connect()
+  .then(() => dtc.expect([{ re: /Operator> $/ }]))
+  .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+  .then(() => dtc.say("Load CYBIS lesson  tape ..."))
+  .then(() => dtc.say("Download CYBIS lesson tape"))
+  .then(() => dtc.wget("https://steubentech.com/CYBIS/CYBIS-lessons.tap", "opt/tapes", (byteCount, contentLength) => {
+    maxProgressLen = utilities.reportProgress(byteCount, contentLength, maxProgressLen);
+  }))
+  .then(() => utilities.clearProgress(maxProgressLen))
+  .then(() => dtc.dsd([
+    "[UNLOAD,51.",
+    "[!"
+  ]))
+  .then(() => dtc.mount(13, 0, 1, "opt/tapes/CYBIS-lessons.tap"))
+  //I had to make the REVERT for the INSTALL
+  //procedure look like REVERT,EX.DROP.
+  //This is because when DIS runs BEGIN all of the command buffer
+  //vanishes this will cause DIS to re-appear once we return from the
+  //procedure because it has an empty command buffer at that point
+  //and it automatically issues a DIS. command.
+  //
+  //,EX.DROP. will cause the next command to be forced to be DROP.
+  //which will force our job to end instead of recalling DIS. 
+  //the INSTALL job success/fail commands exist inside the procedure instead in this case.
+  .then(() => dtc.dis([
+    "LABEL(TAPE,VSN=CYBL1,PO=RF)",
+    "BEGIN,INSTALL,TAPE.",
+  ], "INSTALL", 1))
+  .then(() => dtc.sleep(5000))
+  .then(() => {
+    process.exit(0);
+  })
+  .catch(err => {
+    console.log(err);
+    process.exit(1);
+  });
