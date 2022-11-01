@@ -85,8 +85,8 @@ dtc.connect()
 //restoring files. 
 .then(() => dtc.mount(13, 0, 3, "opt/tapes/CYBIS-src-additions.tap"))
 .then(() => dtc.dis([
-    "LABEL(TAPE,VSN=CYBSCA,PO=RF)",
-    "PFLOAD,UN=PLATO,LO=CEST,OP=RLZ."
+  "LABEL(TAPE,VSN=CYBSCA,PO=RF)",
+  "PFLOAD,UN=PLATO,LO=CEST,OP=RLZ."
 ],"CYBSCA"))
 .then(() => {
   process.exit(0);
