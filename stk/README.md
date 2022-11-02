@@ -69,7 +69,7 @@ this property if the machine on which you are running the simulator has a portma
 running already and does not need the simulator to start its built-in one. For
 example, if the machine is running *NFS* or *rpcbind*, it has a portmapper running
 already, and you should specify **foreignPortMapper** with a value of
-**"localhost"**.
+**"127.0.0.1"**.
 - **httpServerPort** : specifies the TCP port on which the simulator's web service
 will listen for connections. The default is TCP port `4480`.
 - **portMapperUdpPort** : The simulator implements an ONC RPC portmapper, and this

@@ -3,7 +3,7 @@
   "debug": false,
   "name":"GUEST",
   "password":"GUEST",
-  "host":"localhost",
+  "host":"127.0.0.1",
   "port":6671,
   "mode4":{
     "debug":false

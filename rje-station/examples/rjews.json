@@ -5,14 +5,14 @@
     {
     "id":"m01",
     "title":"RBF on NOS 2.8.7 (Cyber 865)",
-    "host":"localhost",
+    "host":"127.0.0.1",
     "port":2553,
     "protocol":"hasp"
     },
     {
     "id":"m03",
     "title":"EI200 on NOS 1.3 (Cyber 173)",
-    "host":"localhost",
+    "host":"127.0.0.1",
     "port":6671,
     "name":"GUEST",
     "password":"GUEST",

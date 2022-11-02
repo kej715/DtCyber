@@ -6,7 +6,7 @@
     {
       "id": "cybis",
       "title": "CYBIS on NOS 2.8.7",
-      "host": "localhost",
+      "host": "127.0.0.1",
       "port": 8005,
       "protocol": "raw",
       "terminal": "pterm.html?m=cybis&t=CYBIS%20on%20NOS%202.8.7",
@@ -18,7 +18,7 @@
     {
       "id": "m01",
       "title": "NOS 2.8.7",
-      "host": "localhost",
+      "host": "127.0.0.1",
       "port": 23,
       "protocol": "telnet",
       "terminal": "aterm.html?m=m01&t=NOS%202.8.7&r=45&c=80&a=1",

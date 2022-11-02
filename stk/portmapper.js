@@ -92,7 +92,7 @@ class PortMapper extends Program {
     let program = Global.programRegistry.lookupProgram(prog, vers);
     if (typeof program === "object" && typeof program.udpPort !== "undefined") {
       let rpc = new RPC();
-      rpc.callProcedure("localhost", Const.IPPROTO_UDP, program.udpPort, prog, vers, proc, args, reply => {
+      rpc.callProcedure("127.0.0.1", Const.IPPROTO_UDP, program.udpPort, prog, vers, proc, args, reply => {
         if (reply.isSuccess) {
           rpcReply.appendEnum(Program.SUCCESS);
           rpcReply.appendUnsignedInt(program.udpPort);
