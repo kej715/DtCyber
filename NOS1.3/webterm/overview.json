@@ -5,6 +5,6 @@
   "wordSize": "60 bits",
   "addressWidth": "18 bits",
   "addressSpace": "128K words",
-  "mips": 4,
+  "mips": 2.6,
   "os": "NOS 1.3"
 }
