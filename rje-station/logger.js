@@ -9,7 +9,7 @@ const fs = require("fs");
 class Logger {
 
   constructor(name) {
-    this.logStream = fs.createWriteStream(`${name}.log.txt`);
+    this.logStream = name === "-" ? process.stdout : fs.createWriteStream(`${name}.log.txt`);
   }
 
   log(msg) {
