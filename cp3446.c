@@ -180,12 +180,11 @@ static FILE *cp3446Log = NULL;
 **------------------------------------------------------------------------*/
 void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
-    DevSlot      *up;
-    char         fname[MaxFSPath];
     CpContext    *cc;
     const PpWord *charset;
+    char         fname[MaxFSPath];
     PpWord       hol;
-
+    DevSlot      *up;
 
     /*
     **  When we are called, "deviceParams" is a space terminated string
@@ -200,9 +199,8 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     **      <deviceType> ("026"|"029")
     **
     */
-
-    char *devicePath = strtok(deviceName, ",");           //  Get the directory name
-    char *deviceType = strtok(NULL, ",");                 //  Device Type "026" | "029"
+    char *devicePath = strtok(deviceName, ", ");           //  Get the directory name
+    char *deviceType = strtok(NULL, ", ");                 //  Device Type "026" | "029"
 
 #if DEBUG
     if (cp3446Log == NULL)

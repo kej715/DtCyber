@@ -173,16 +173,13 @@ static LpContext1612 *lastLp1612  = NULL;
 **------------------------------------------------------------------------*/
 void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
+    char          *deviceMode;
+    char          *devicePath;
+    char          *deviceType;
     DevSlot       *dp;
+    char          fname[MaxFSPath];
+    bool          isANSI;
     LpContext1612 *lc;
-    bool          useANSI = TRUE;
-
-    char fname[MaxFSPath];
-    char *deviceType;
-    char *devicePath;
-    char *deviceMode;
-
-    (void)deviceName;
 
     if (eqNo != 0)
         {
@@ -210,7 +207,6 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         exit(1);
         }
 
-
     /*
     **  When we are called, "deviceParams" is a space terminated string
     **  at the end of the INI entry.
@@ -221,38 +217,39 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     **  The format of the remainder of the line is:
     **
     **      <DeviceType> (NULL(="3555")|"3555"|"3512")
+    **      <DevicePath>
     **      <OutputMode> ("ASCII"|"ANSI")
     **
     */
-    deviceType = strtok(deviceName, ",");     //  Get Device Type
-    devicePath = strtok(NULL, ",");           //  Get the Path (subdirectory)
-    deviceMode = strtok(NULL, ",");
+    deviceType = strtok(deviceName, ", ");     //  Get Device Type
+    devicePath = strtok(NULL, ", ");           //  Get the Path (subdirectory)
+    deviceMode = strtok(NULL, ", ");
 
-    if ((deviceMode) != NULL)
+    isANSI = TRUE;
+    if (deviceMode != NULL)
         {
-        useANSI    = FALSE;
         if (strcasecmp(deviceMode, "ansi") == 0)
             {
-            useANSI = TRUE;
+            isANSI = TRUE;
             }
         else if (strcasecmp(deviceMode, "ascii") == 0)
             {
-            useANSI = FALSE;
+            isANSI = FALSE;
             }
         else
             {
-            useANSI = FALSE;
+            fprintf(stderr, "(lp1612 ) Unrecognized TRANSLATION mode '%s'\n", deviceMode);
+            exit(1);
             }
         }
 
     dp->context[0] = (void *)lc;
-    lc->extUseANSI = useANSI;
+    lc->extUseANSI = isANSI;
     lc->channelNo  = channelNo;
     lc->unitNo     = unitNo;
     lc->eqNo       = eqNo;
 
-
-    //  Remember the device Path for future fopen calls
+    //  Remember the device path for future fopen calls
     if (devicePath == NULL)
         {
         lc->extPath[0] = '\0';
@@ -269,7 +266,6 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Open the device file.
     */
-
     sprintf(fname, "%sLP1612_C%02o", lc->extPath, channelNo);
     dp->fcb[0] = fopen(fname, "w+t");
 
@@ -282,10 +278,7 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Print a friendly message.
     */
-    printf("(lp1612 ) Initialised on channel %o equipment %o filename %s\n",
-           channelNo,
-           eqNo,
-           fname);
+    printf("(lp1612 ) Initialised on channel %o equipment %o filename %s\n", channelNo, eqNo, fname);
 
     /*
     **  Link into list of lp1612 Line Printer units.
@@ -537,66 +530,66 @@ static FcStatus lp1612Func(PpWord funcCode)
     case FcPrintSingleSpace:
         if (lc->extUseANSI)
             {
-            fprintf(fcb, "\n ");
+            fputs("\n ", fcb);
             }
         else
             {
-            fprintf(fcb, "\n");
+            fputs("\n", fcb);
             }
         break;
 
     case FcPrintDoubleSpace:
         if (lc->extUseANSI)
             {
-            fprintf(fcb, "\n0");
+            fputs("\n0", fcb);
             }
         else
             {
-            fprintf(fcb, "\n\n");
+            fputs("\n\n", fcb);
             }
         break;
 
     case FcPrintMoveChannel7:
         if (lc->extUseANSI)
             {
-            fprintf(fcb, "\n ");
+            fputs("\n ", fcb);
             }
         else
             {
-            fprintf(fcb, "\n");
+            fputs("\n", fcb);
             }
         break;
 
     case FcPrintMoveTOF:
         if (lc->extUseANSI)
             {
-            fprintf(fcb, "\n1");
+            fputs("\n1", fcb);
             }
         else
             {
-            fprintf(fcb, "\f");
+            fputs("\f", fcb);
             }
         break;
 
     case FcPrintPrint:
         if (lc->extUseANSI)
             {
-            fprintf(fcb, "\n ");
+            fputs("\n ", fcb);
             }
         else
             {
-            fprintf(fcb, "\n");
+            fputs("\n", fcb);
             }
         break;
 
     case FcPrintSuppressLF:
         if (lc->extUseANSI)
             {
-            fprintf(fcb, "\n+");
+            fputs("\n+", fcb);
             }
         else
             {
-            fprintf(fcb, "\r");
+            fputs("\r", fcb);
             }
 
         return (FcProcessed);
@@ -717,7 +710,7 @@ static void lp1612Disconnect(void)
 
     if (lc->extUseANSI)
         {
-        fprintf(fcb, "\n ");
+        fputs("\n ", fcb);
         }
     else
         {
