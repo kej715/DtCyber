@@ -74,6 +74,7 @@
 **  -----------------
 */
 
+#define BlockCushion        140
 #define DeadPeerTimeout     15000
 #define HaspPduHdrLen       5
 #define HaspMaxPruDataSize  1280
@@ -685,7 +686,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                     */
                     npuHaspFlushPruFragment(tp, ' ');
                     }
-                if ((blockLen > pcbp->controls.hasp.blockSize) && (len > 0))
+                if ((blockLen > pcbp->controls.hasp.blockSize - BlockCushion) && (len > 0))
                     {
                     /*
                     **  Sufficient data has been staged to fill a block,
@@ -826,7 +827,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                 len -= 1;
                 }
             blockLen += recordLen;
-            if ((blockLen > pcbp->controls.hasp.blockSize) && (len > 0))
+            if ((blockLen > pcbp->controls.hasp.blockSize - BlockCushion) && (len > 0))
                 {
                 npuHaspSendBlockTrailer(tp);
                 npuBipQueueAppend(npuBipBufGet(), &tp->outputQ);
@@ -888,7 +889,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
             blk      += recordLen;
             len      -= recordLen;
             blockLen += recordLen;
-            if ((blockLen > pcbp->controls.hasp.blockSize) && (len > 0))
+            if ((blockLen > pcbp->controls.hasp.blockSize - BlockCushion) && (len > 0))
                 {
                 npuHaspSendBlockTrailer(tp);
                 npuBipQueueAppend(npuBipBufGet(), &tp->outputQ);
