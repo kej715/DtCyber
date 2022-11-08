@@ -31,6 +31,7 @@
         </div>
         <div class="button-container">
           <button id="send-cards-button" class="button" type="button">Send Card Deck</button>
+          <button id="show-printer-button" class="button right-justified" type="button">Show Printer</button>
         </div>
       </div>
     </div>
@@ -261,70 +262,64 @@
             break;
           case StreamTypePrinter:
             stream.data += text;
-            while (stream.data.length > 0) {
-              let si = stream.data.indexOf("\n");
-              if (si < 0) break;
-              let line = stream.data.substring(0, si + 1);
-              stream.data = stream.data.substring(si + 1);
+            while (stream.data.length > stream.nextIndex) {
+              let ni = stream.data.indexOf("\n", stream.nextIndex);
+              if (ni < 0) break;
+              let line = stream.data.substring(stream.nextIndex, ni);
+              stream.nextIndex = ni + 1;
               if (line.length < 1) continue;
               let fe = line.charAt(0);
               line = line.substring(1);
               switch (fe) {
               case "1":
-                if (printerText.textContent.match(/^\s*$/)) {
+                if (printerText.textContent.search(/\S/) === -1) {
                   printerText.textContent = "";
                   stream.recordCount = 0;
                 }
-                if (stream.recordCount > 0) {
+                if (printerText.textContent.length > 0) {
                   while ((++stream.recordCount % 66) !== 0) {
                     printerText.textContent += "\n";
                   }
                 }
                 break;
               case "0":
-                printerText.textContent += "\n";
+                printerText.textContent += "\n\n";
                 stream.recordCount += 1;
                 break;
               case "+":
-                let textContentLen = printerText.textContent.length;
-                if (textContentLen > 0) {
-                  printerText.textContent = `${printerText.textContent.substring(0, textContentLen - 1)}\r`;
-                  stream.recordCount -= 1;
-                }
+                printerText.textContent += "\r";
                 break;
               case "-":
-                printerText.textContent += "\n";
-                printerText.textContent += "\n";
+                printerText.textContent += "\n\n\n";
                 stream.recordCount += 2;
                 break;
               case "S":
               case "T":
                 continue;
               default:
+                printerText.textContent += "\n";
                 break;
               }
               printerText.textContent += line;
               stream.recordCount += 1;
+              printerText.scrollIntoView(false);
             }
-            printerText.scrollIntoView(false);
             if (isPrinterVisible === false) {
               $(printerContainer).show();
               containerStack.promote(printerContainer);
               isPrinterVisible = true;
             }
             if (stream.isEOI) {
-              const blob = new Blob([printerText.textContent], {type: "text/plain"});
+              const blob = new Blob([stream.data], {type: "text/plain"});
               const fileSaver = document.getElementById("print-file-saver");
               const blobUrl = URL.createObjectURL(blob);
               fileSaver.setAttribute("href", blobUrl);
               fileSaver.setAttribute("download", generateFileName(machine.id, streamType, streamId));
               fileSaver.click();
               URL.revokeObjectURL(blobUrl);
-              $(printerContainer).hide();
-              isPrinterVisible = false;
-              printerText.textContent = "";
-              stream.data = "";
-              stream.isEOI = false;
+              stream.data        = "";
+              stream.nextIndex   = 0;
+              stream.isEOI       = false;
               stream.recordCount = 0;
             }
             break;
@@ -410,6 +405,20 @@
             consoleText.scrollIntoView(false);
             machine.send(`${StreamTypeConsole} 1 ${value.length} ${value}`);
           }
+        }
+      });
+
+      //
+      // Printer support
+      //
+      const showPrinterBtn = $(document.getElementById("show-printer-button"));
+      showPrinterBtn.click(() => {
+        if (isPrinterVisible === false) {
+          $(printerContainer).show();
+          setTimeout(() => { // delay to allow console window click to fire
+            containerStack.promote(printerContainer);
+          }, 0);
+          isPrinterVisible = true;
         }
       });
 

@@ -88,7 +88,7 @@
 .printer-background {
   background-image: url("fanfold-716x528.jpg");
   background-blend-mode: lighten;
-  background-size: cover;
+  background-size: 716px 1056px;
 }
 .printer-text {
   font-family: monospace;
@@ -141,6 +141,10 @@
   top: 15px;
   left: 25px;
   margin: 0px;
+}
+.right-justified {
+  position: absolute;
+  right: 4px;
 }
 .right-justified-button {
   background-color: white;
