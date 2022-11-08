@@ -1,4 +1,9 @@
 [
+  {"name":"ALGOL 60",
+   "id":"algol60",
+   "desc":"Create and run an ALGOL 60 program",
+   "defn":"/machines/nos1/scripts/algol60.txt"
+  },
   {"name":"BASIC",
    "id":"basic",
    "desc":"Create and run a BASIC program",
@@ -19,6 +24,11 @@
    "desc":"Create and run a FORTRAN 66 program",
    "defn":"/machines/nos1/scripts/ftn4.txt"
   },
+  {"name":"FORTRAN V",
+   "id":"m77",
+   "desc":"Create and run a FORTRAN 77 program",
+   "defn":"/machines/nos1/scripts/m77.txt"
+  },
   {"name":"LISP",
    "id":"lisp",
    "desc":"Create and run a UT LISP program",
@@ -28,6 +38,11 @@
    "id":"pascal",
    "desc":"Create and run a PASCAL program",
    "defn":"/machines/nos1/scripts/pascal.txt"
+  },
+  {"name":"SNOBOL",
+   "id":"snobol",
+   "desc":"Create and run a SNOBOL program",
+   "defn":"/machines/nos1/scripts/snobol.txt"
   },
   {"name":"SYMPL",
    "id":"sympl",
