@@ -1,0 +1,72 @@
+<p>
+Use the NEW and TEXT commands to create a SNOBOL program, then use the SNOBOL command to compile and run it.
+</p>
+<pre>
+     /NEW,<i>filename</i>
+     /TEXT
+       <i>Enter program source code
+       Exit TEXT mode by pressing Control-T key</i>
+     /SNOBOLC,I=<i>filename</i>
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="/machines/nos2/doc/Snobol4_Reference.pdf" target="_blank">
+   SNOBOL4 Reference Manual
+   </a>
+  </li>
+  <li>
+   <a href="/machines/nos2/doc/snobol.txt" target="_blank">
+   CAL SNOBOL at the University of Minnesota
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/cyber/nos/60435400M_NOS_Version_1_Reference_Manual_Volume_1_Dec80.pdf" target="_blank">
+   NOS Version 1 Reference Manual
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,meet
+W^/$
+D500
+Ltext
+WENTER TEXT MODE
+W\\r
+D500
+I500 \\r =====
+          OUTPUT = "WHAT IS YOUR NAME?"
+          USERNAME = INPUT
+          USERNAME "J"                                   %S(LIKE)
+          USERNAME "K"                                   %S(DISLIKE)
+MEH       OUTPUT = "HI, " USERNAME                       %(END)
+LIKE      OUTPUT = "HOW NICE TO MEET YOU, " USERNAME     %(END)
+DISLIKE   OUTPUT = "OH. IT'S YOU, " USERNAME
+END
+=====
+S\x03
+WEXIT TEXT MODE
+D1000
+Lpack,meet
+W/$
+D500
+Ssnobolc,i=meet
+D1000
+L
+W\\? $
+D1000
+SJane
+D1000
+L
+W/$
+D1000
+Ssnobolc,i=meet,l=0
+D1000
+L
+W\\? $
+D1000
+SKen
+D1000
+L
+W/$
