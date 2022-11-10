@@ -27,8 +27,12 @@
 }
 .button-container {
   background-color: lightgray;
-  padding: 5px;
+  padding-bottom: 5px;
+  padding-top: 5px;
   border: 1px solid black;
+  height: 20px;
+  width: 100%;
+
 }
 .card-background {
   background-image: url("card-620x280.jpg");
@@ -39,8 +43,8 @@
   background: cornsilk;
   border: 1px solid black;
   height: 20px;
+  padding-bottom: 5px;
   padding-top: 5px;
-  padding-left: 5px;
   width: 100%;
 }
 .command-input {
@@ -50,7 +54,16 @@
 }
 .command-input-label {
   display: inline-block;
+  margin-left: 5px;
   width: 80px;
+}
+.composer-text {
+  display: block;
+  background: cornsilk;
+  border: 1px solid black;
+  font-family: monospace;
+  margin: 0px;
+  overflow: auto;
 }
 .console-background {
   background: black;
@@ -81,6 +94,7 @@
   text-align: center;
   background-color: blue;
   color: white;
+  width: 100%;
 }
 .full-width {
   width: 100%;
@@ -123,7 +137,6 @@
   height: 20px;
   padding-bottom: 5px;
   padding-top: 5px;
-  padding-left: 5px;
   width: 100%;
 }
 .reader-input {
@@ -134,6 +147,7 @@
 }
 .reader-input-label {
   display: inline-block;
+  margin-left: 5px;
   width: 80px;
 }
 .reader-text {
@@ -145,6 +159,9 @@
   left: 25px;
   margin: 0px;
 }
+.right-floater {
+  float: right;
+}
 .right-justified {
   position: absolute;
   right: 4px;
@@ -155,8 +172,8 @@
   position: absolute;
   right: 4px;
 }
-.right-padded {
-  padding-right: 10px;
+.right-margin {
+  margin-right: 5px;
 }
 .title {
   text-align: center;

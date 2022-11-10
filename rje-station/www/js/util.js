@@ -38,9 +38,11 @@ class DraggableManager {
   constructor() {
   }
 
-  activate(draggable) {
+  activate(draggable, selector) {
 
-    draggable.onmousedown = e => {
+    if (typeof selector === "undefined") selector = draggable;
+
+    selector.onmousedown = e => {
 
       e.preventDefault();
       let lastX = e.clientX;

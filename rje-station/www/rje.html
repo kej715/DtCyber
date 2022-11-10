@@ -27,11 +27,12 @@
           <div class="reader-input-container">
             <div class="reader-input-label">Card Deck:</div>
             <input id="reader-file-input" class="reader-input" type="file"></input>
+            <button id="send-cards-button" class="button right-justified" type="button">Send Card Deck</button>
           </div>
         </div>
         <div class="button-container">
-          <button id="send-cards-button" class="button" type="button">Send Card Deck</button>
-          <button id="show-printer-button" class="button right-justified" type="button">Show Printer</button>
+          <button id="show-printer-button" class="button right-floater right-margin" type="button">Show Printer</button>
+          <button id="show-composer-button" class="button right-floater right-margin" type="button">Compose Job</button>
         </div>
       </div>
     </div>
@@ -60,6 +61,18 @@
       </div>
       <div id="reader-frame-container">
         <iframe id="reader-frame" src="reader.html"></iframe>
+      </div>
+    </div>
+    <div id="composer-container" class="draggable bordered">
+      <div id="composer-header" class="frame-header">
+        Job Composer 
+        <img id="composer-close-button" class="right-justified-button" src="images/close-16x16.png"/>
+      </div>
+      <textarea id="composer-text" class="composer-text" placeholder="Enter job commands and data"
+                rows="20" cols="80" autocomplete="off" autocorrect="off" spellcheck="false">
+      </textarea>
+      <div class="button-container">
+        <button id="send-job-button" class="button right-floater" type="button">Send Job</button>
       </div>
     </div>
     <a id="print-file-saver" style="display:none;"></a>
@@ -109,7 +122,6 @@
       const consoleText = consoleFrame.contentDocument.getElementsByTagName("body")[0];
       consoleContainer.style.left = "60px";
       consoleContainer.style.top = "50px";
-      consoleContainer.style.right = "0px";
       consoleContainer.style.width = "720px";
       consoleFrameContainer.style.height = "480px";
       consoleFrame.style.width = "100%";
@@ -119,6 +131,7 @@
       containerStack.push(consoleContainer);
       $(consoleContainer).click(() => {
         containerStack.promote(consoleContainer);
+        consoleCommandInput.focus();
       });
 
       const printerContainer = document.getElementById("printer-container");
@@ -127,7 +140,6 @@
       const printerText = printerFrame.contentDocument.getElementsByTagName("body")[0];
       printerContainer.style.left = "120px";
       printerContainer.style.top = "60px";
-      printerContainer.style.right = "0px";
       printerContainer.style.width = "1080px";
       printerFrameContainer.style.height = "640px";
       printerFrame.style.width = "100%";
@@ -151,7 +163,6 @@
       const punchText = punchFrame.contentDocument.getElementsByTagName("body")[0];
       punchContainer.style.left = "120px";
       punchContainer.style.top = "60px";
-      punchContainer.style.right = "0px";
       punchContainer.style.width = "720px";
       punchFrameContainer.style.height = "320px";
       punchFrame.style.width = "100%";
@@ -175,7 +186,6 @@
       const readerText = readerFrame.contentDocument.getElementsByTagName("body")[0];
       readerContainer.style.left = "120px";
       readerContainer.style.top = "190px";
-      readerContainer.style.right = "0px";
       readerContainer.style.width = "720px";
       readerFrameContainer.style.height = "320px";
       readerFrame.style.width = "100%";
@@ -189,6 +199,66 @@
       containerStack.push(readerContainer);
       $(readerContainer).click(() => {
         containerStack.promote(readerContainer);
+      });
+
+      const composerContainer = document.getElementById("composer-container");
+      const composerHeader = document.getElementById("composer-header");
+      const composerCloseButton = document.getElementById("composer-close-button");
+      const composerText = document.getElementById("composer-text");
+      composerText.value = "";
+      composerContainer.style.left = "200px";
+      composerContainer.style.top = "200px";
+      const composerDragMgr = new DraggableManager();
+      composerDragMgr.activate(composerContainer, composerHeader);
+      $(composerContainer).hide();
+      let isComposerVisible = false;
+      $(composerCloseButton).click(() => {
+        $(composerContainer).hide();
+        isComposerVisible = false;
+      });
+      containerStack.push(composerContainer);
+      const sensor = $("<span>M</span>").css({"font-family": "monospace", margin: 0, padding: 0});
+      $("body").prepend(sensor);
+      const fontWidth  = sensor.width();
+      const fontHeight = parseInt(window.getComputedStyle(composerText).fontSize);
+      sensor.remove();
+      $(composerContainer).click(evt => {
+        containerStack.promote(composerContainer);
+        composerText.focus();
+        //
+        // Position curosr to point of click
+        //
+        let offset = $(composerText).offset();
+        if (evt.pageX >= offset.left && evt.pageY >= offset.top) {
+          let   row = Math.floor((evt.pageY - offset.top)  / fontHeight);
+          let   col = Math.floor((evt.pageX - offset.left) / fontWidth);
+          const text = composerText.value;
+          let i = 0;
+          let r = 0;
+          while (r < row && i < text.length) {
+            let ni = text.indexOf("\n", i);
+            if (ni < 0) {
+              i = text.length;
+              break;
+            }
+            i = ni + 1;
+            r += 1;
+          }
+          if (i < text.length) {
+            let ni = text.indexOf("\n", i);
+            if (ni < 0) {
+              ni = text.length;
+            }
+            if (ni - i > col) {
+              i += col;
+            }
+            else {
+              i = ni - 1;
+            }
+          }
+          i += 1;
+          composerText.setSelectionRange(i, i);
+        }
       });
 
       consoleText.textContent = `Connecting to ${title} ...\n`;
@@ -380,7 +450,6 @@
       // Console command input support
       //
       const consoleCommandInput = document.getElementById("console-command");
-      consoleCommandInput.focus();
       document.addEventListener("keydown", evt => {
         if (machine.isConnected() === false) {
           consoleText.textContent = `Reconnecting to ${title} ...\n`;
@@ -417,7 +486,7 @@
           $(printerContainer).show();
           setTimeout(() => { // delay to allow console window click to fire
             containerStack.promote(printerContainer);
-          }, 0);
+          }, 10);
           isPrinterVisible = true;
         }
       });
@@ -448,7 +517,9 @@
             readerText.scrollIntoView(true);
           }
           setTimeout(() => {
-            transmitCardDeck(machine, 1, text, readerContainer, readerText);
+            transmitCardDeck(machine, 1, text, readerText, () => {
+              $(readerContainer).hide();
+            });
           }, 1000);
         };
         fileReader.onerror = evt => {
@@ -457,12 +528,48 @@
         };
         fileReader.readAsText(localFile);
       });
+
+      //
+      // Composer support
+      //
+      const showComposerBtn = $(document.getElementById("show-composer-button"));
+      showComposerBtn.click(() => {
+        if (isComposerVisible === false) {
+          $(composerContainer).show();
+          setTimeout(() => { // delay to allow console window click to fire
+            containerStack.promote(composerContainer);
+          }, 10);
+          isComposerVisible = true;
+        }
+      });
+      const sendJobButton = document.getElementById("send-job-button");
+      $(sendJobButton).click(() => {
+        readerText.textContent = "";
+        $(readerContainer).show();
+        setTimeout(() => { // delay to allow console window click to fire
+          containerStack.promote(readerContainer);
+        }, 10);
+        let text = composerText.value;
+        let si = text.indexOf("\n");
+        if (si >= 0) {
+          readerText.textContent = text.substring(0, si + 1);
+          readerText.scrollIntoView(true);
+        }
+        setTimeout(() => {
+          transmitCardDeck(machine, 1, text, readerText, () => {
+            $(readerContainer).hide();
+          });
+        }, 1000);
+      });
     };
 
-    const transmitCardDeck = (machine, streamId, cardDeck, frame, textElem) => {
+    const transmitCardDeck = (machine, streamId, cardDeck, textElem, callback) => {
       if (cardDeck.length > 0) {
         let si = cardDeck.indexOf("\n");
-        if (si < 0) si = cardDeck.length - 1;
+        if (si < 0) {
+          si = cardDeck.length;
+          cardDeck += "\n";
+        }
         si += 1;
         let card = cardDeck.substring(0, si);
         textElem.textContent = card;
@@ -470,12 +577,12 @@
         machine.send(`${StreamTypeReader} ${streamId} ${card.length} ${card}`);
         cardDeck = cardDeck.substring(si);
         setTimeout(() => {
-          transmitCardDeck(machine, streamId, cardDeck, frame, textElem);
+          transmitCardDeck(machine, streamId, cardDeck, textElem, callback);
         }, 25);
       }
       else {
         machine.send(`${StreamTypeReader} ${streamId} 0 `);
-        $(frame).hide();
+        if (typeof callback === "function") callback();
       }
     };
 
