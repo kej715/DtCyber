@@ -222,7 +222,7 @@
       const fontWidth  = sensor.width();
       const fontHeight = parseInt(window.getComputedStyle(composerText).fontSize);
       sensor.remove();
-      $(composerContainer).click(evt => {
+      composerContainer.addEventListener("mousedown", evt => {
         containerStack.promote(composerContainer);
         composerText.focus();
         //
