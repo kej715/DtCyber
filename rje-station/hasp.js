@@ -142,8 +142,11 @@ class Hasp {
 
   processPostPrint(record, param) {
     let fe = " ";
-    if (param > 0 && param < 0x20) {
-      if (param < 0x10) { // Space NN lines after print
+    if (param >= 0 && param < 0x20) {
+      if (param === 0) {
+        fe = "+";
+      }
+      else if (param < 0x10) { // Space NN lines after print
         param &= 0x03;
         if (param === 3) {
           fe = "-";
@@ -159,14 +162,14 @@ class Hasp {
         }
       }
     }
-    return record + `\n${fe}`;
+    return `${record}\n${fe}`;
   }
 
   processPrePrint(record, param) {
     let fe = " ";
     switch ((param >> 4) & 0x03) {
     case 0: // Suppress space or post-print carriage control
-      if ((param & 0x0f) == 0) { // Suppress space
+      if ((param & 0x0f) === 0) { // Suppress space
         fe = "+";
       }
       break;
@@ -181,7 +184,7 @@ class Hasp {
       }
       break;
     case 3: // Skip immediately to channel NN
-      if ((param & 0x03) == 1) { // Page eject
+      if ((param & 0x03) === 1) { // Page eject
         fe = "1";
       }
       break;
