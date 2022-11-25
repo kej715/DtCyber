@@ -151,6 +151,7 @@ const processMachinesRequest = (req, res, query) => {
       connection.service.on("connect", () => {
         log(`Connected to ${machine.protocol} service on ${connection.machineName} at ${machine.host}:${machine.port}`);
         connection.isConnected = true;
+        connection.lastAction = Date.now();
         res.writeHead(200, {"Content-Type":"text/plain"});
         res.end(connection.id.toString());
         logHttpRequest(req, 200);

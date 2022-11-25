@@ -134,10 +134,11 @@
 **  Private Macro Functions
 **  -----------------------
 */
+#define isPostPrint(tp) ((tp)->params.fvTC == TcHASP)
 #if DEBUG
-#define HexColumn(x)      (3 * (x) + 4)
-#define AsciiColumn(x)    (HexColumn(16) + 2 + (x))
-#define LogLineLength    (AsciiColumn(16))
+#define HexColumn(x)    (3 * (x) + 4)
+#define AsciiColumn(x)  (HexColumn(16) + 2 + (x))
+#define LogLineLength   (AsciiColumn(16))
 #endif
 
 /*
@@ -168,33 +169,35 @@ typedef enum
 **  Private Function Prototypes
 **  ---------------------------
 */
-static int npuHaspAppendOutput(Pcb *pcbp, u8 *data, int len);
-static int npuHaspAppendRecord(Pcb *pcbp, u8 *data, int len);
+static int  npuHaspAppendOutput(Pcb *pcbp, u8 *data, int len);
+static int  npuHaspAppendRecord(Pcb *pcbp, u8 *data, int len);
 static void npuHaspCloseConnection(Pcb *pcbp);
 static Scb *npuHaspFindStream(Pcb *pcbp, u8 streamId, u8 deviceType);
 static Scb *npuHaspFindStreamWithOutput(Pcb *pcbp);
 static Scb *npuHaspFindStreamWithPendingRTI(Pcb *pcbp);
 static bool npuHaspFlushBuffer(Pcb *pcbp);
-static void npuHaspFlushPruFragment(Tcb *tp, u8 fe);
+static int  npuHaspFlushPruFragment(Tcb *tp);
+static int  npuHaspFlushPruPostPrintFragment(Tcb *tp);
+static int  npuHaspFlushPruPrePrintFragment(Tcb *tp);
 static void npuHaspFlushUplineData(Scb *scbp, bool isEof);
-static void npuHaspProcessPostPrintFormatControl(Pcb *pcbp);
-static void npuHaspProcessPrePrintFormatControl(Pcb *pcbp);
+static void npuHaspProcessFormatControl(Pcb *pcbp);
 static void npuHaspReleaseLastBlockSent(Pcb *pcbp);
 static void npuHaspResetScb(Scb *scbp);
 static void npuHaspResetSendDeadline(Tcb *tp);
-static int npuHaspSend(Pcb *pcbp, u8 *data, int len);
-static void npuHaspSendBlockHeader(Tcb *tp);
-static void npuHaspSendBlockTrailer(Tcb *tp);
+static int  npuHaspSend(Pcb *pcbp, u8 *data, int len);
+static int  npuHaspSendBlockHeader(Tcb *tp);
+static int  npuHaspSendBlockTrailer(Tcb *tp);
 static bool npuHaspSendDownlineData(Tcb *tp);
-static void npuHaspSendEofRecord(Tcb *tp);
-static void npuHaspSendRecordHeader(Tcb *tp, u8 srcb);
-static void npuHaspSendRecordStrings(Tcb *tp, u8 *data, int len);
+static int  npuHaspSendEofRecord(Tcb *tp);
+static int  npuHaspSendRecordHeader(Tcb *tp, u8 srcb);
+static int  npuHaspSendRecordStrings(Tcb *tp, u8 *data, int len);
 static void npuHaspSendSignonRecord(Tcb *tp, u8 *data, int len);
 static void npuHaspSendUplineData(Tcb *tp, u8 *data, int len);
 static void npuHaspSendUplineEoiAcctg(Tcb *tp);
 static void npuHaspSendUplineEOS(Tcb *tp);
 static void npuHaspStageUplineData(Scb *scbp, u8 *data, int len);
 static void npuHaspTransmitQueuedBlocks(Tcb *tp);
+static u8   npuHaspTranslateSrcbToFe(u8 cc);
 
 #if DEBUG
 static void npuHaspLogBytes(u8 *bytes, int len, CharEncoding encoding);
@@ -364,6 +367,7 @@ void npuHaspTryOutput(Pcb *pcbp)
             {
             scbp->isWaitingPTI = FALSE;
             scbp->recordCount  = 0;
+            scbp->lastSRCB     = 0;
             switch (scbp->tp->deviceType)
             {
             case DtCR:
@@ -517,7 +521,6 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
     u8  blockType;
     u8  c;
     u8  dbc;
-    u8  formatEffector;
     u8  *fp;
     int len;
     Pcb *pcbp;
@@ -558,6 +561,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
     if (scbp->state == StHaspStreamInit)
         {
         scbp->recordCount = 0;
+        scbp->lastSRCB    = 0;
         switch (tp->deviceType)
             {
         case DtCR:
@@ -568,6 +572,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
             rtiRecord[1]                = 0x80 | (tp->streamId << 4) | 4;
             scbp->pruFragmentSize       = 0;
             scbp->isPruFragmentComplete = TRUE;
+            scbp->pruFragment2          = NULL;
             break;
 
         case DtCP:
@@ -584,9 +589,10 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
 #endif
             break;
             }
-        npuHaspSendBlockHeader(tp);
+        blockLen = npuHaspSendBlockHeader(tp);
         npuNetSend(tp, rtiRecord, sizeof(rtiRecord));
-        npuHaspSendBlockTrailer(tp);
+        blockLen += sizeof(rtiRecord);
+        blockLen += npuHaspSendBlockTrailer(tp);
         scbp->state = StHaspStreamSendRTI;
         npuBipQueueAppend(npuBipBufGet(), &tp->outputQ);
         npuHaspResetSendDeadline(tp);
@@ -613,90 +619,42 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
             **  flush PRU fragment data, if any, or queue an empty block
             **  that triggers acknowledgement, if necessary.
             */
-            blockType = (dbc & DbcEOI) != 0 ? BtHTMSG : BtHTBLK;
             if (scbp->pruFragmentSize > 0)
                 {
                 npuHaspSendBlockHeader(tp);
-                npuHaspFlushPruFragment(tp, ' ');
+                npuHaspFlushPruFragment(tp);
                 npuHaspSendBlockTrailer(tp);
                 }
             else
                 {
                 npuBipQueueAppend(npuBipBufGet(), &tp->outputQ);
                 }
+            blockType = (dbc & DbcEOI) != 0 ? BtHTMSG : BtHTBLK;
             npuNetQueueAck(tp, (bp->data[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN)) | blockType);
             npuHaspResetSendDeadline(tp);
 
             return;
             }
-        blockLen = 0;
-        npuHaspSendBlockHeader(tp);
+        blockLen = npuHaspSendBlockHeader(tp);
         while (len > 0)
             {
             if (scbp->isPruFragmentComplete)
                 {
-                if (tp->deviceType == DtLP)
-                    {
-                    /*
-                    **  A complete record has been collected, and this is a
-                    **  print stream, so process a post-print format effector.
-                    **  The format effector is the first character of the
-                    **  next record.
-                    */
-                    c    = *blk++;
-                    len -= 1;
-                    if (scbp->params.fvFileType == ASC)
-                        {
-                        formatEffector = c;
-                        }
-                    else if (c < 0100)
-                        {
-                        formatEffector = cdcToAscii[c];
-                        }
-                    else
-                        {
-                        formatEffector = ' ';
-                        }
-                    if ((formatEffector >= 'Q') && (formatEffector <= 'T'))
-                        {
-                        /*
-                        **  Any text following format effectors Q, R, S, and T
-                        **  is not printed. These format effectors are CDC-specific.
-                        **  They control auto-eject and line density. They are
-                        **  ignored in this context.
-                        */
-                        while (len-- > 0)
-                            {
-                            if (*blk++ == 0xff)
-                                {
-                                break;
-                                }
-                            }
-                        continue;
-                        }
-                    blockLen += scbp->pruFragmentSize;
-                    npuHaspFlushPruFragment(tp, formatEffector);
-                    }
-                else
-                    {
-                    /*
-                    **  A complete record has been collected, and this is not
-                    **  a print stream, so send the record immediately as no
-                    **  format effector processing needs to be performed.
-                    */
-                    npuHaspFlushPruFragment(tp, ' ');
-                    }
-                if ((blockLen > pcbp->controls.hasp.blockSize - BlockCushion) && (len > 0))
+                /*
+                **  A complete record has been collected, so flush the record
+                **  to the output stream.
+                */
+                blockLen += npuHaspFlushPruFragment(tp);
+                if (blockLen > pcbp->controls.hasp.blockSize - BlockCushion)
                     {
                     /*
                     **  Sufficient data has been staged to fill a block,
                     **  so complete the block, queue it for transmission,
                     **  and start a new block.
                     */
-                    npuHaspSendBlockTrailer(tp);
+                    blockLen += npuHaspSendBlockTrailer(tp);
                     npuBipQueueAppend(npuBipBufGet(), &tp->outputQ);
-                    blockLen = 0;
-                    npuHaspSendBlockHeader(tp);
+                    blockLen = npuHaspSendBlockHeader(tp);
                     }
                 }
             if (scbp->params.fvFileType == ASC)
@@ -717,7 +675,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                         }
                     }
                 }
-            else // DO26 or DO29
+            else // Display Code
                 {
                 fp = scbp->pruFragment + scbp->pruFragmentSize;
                 while (len-- > 0)
@@ -736,13 +694,15 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                     }
                 }
             }
-        if ((tp->deviceType != DtLP) && scbp->isPruFragmentComplete)
+        if (scbp->isPruFragmentComplete)
             {
-            /*
-            **  If the main loop, above, exited with a full record collected,
-            **  and this is not a print stream, flush it for transmission.
-            */
-            npuHaspFlushPruFragment(tp, ' ');
+            blockLen += npuHaspFlushPruFragment(tp);
+            if (blockLen > pcbp->controls.hasp.blockSize - BlockCushion)
+                {
+                blockLen += npuHaspSendBlockTrailer(tp);
+                npuBipQueueAppend(npuBipBufGet(), &tp->outputQ);
+                blockLen = npuHaspSendBlockHeader(tp);
+                }
             }
         if ((dbc & DbcAcctg) == DbcAcctg) // EOI accounting record
             {
@@ -753,11 +713,11 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
             */
             if (scbp->pruFragmentSize > 0)
                 {
-                npuHaspFlushPruFragment(tp, ' ');
+                blockLen += npuHaspFlushPruFragment(tp);
                 }
-            npuHaspSendEofRecord(tp);
+            blockLen += npuHaspSendEofRecord(tp);
             }
-        npuHaspSendBlockTrailer(tp);
+        blockLen += npuHaspSendBlockTrailer(tp);
         blockType = (dbc & DbcEOI) != 0 ? BtHTMSG : BtHTBLK;
         npuNetQueueAck(tp, (bp->data[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN)) | blockType);
         npuHaspResetSendDeadline(tp);
@@ -781,8 +741,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
             return;
             }
         blockType = bp->data[BlkOffBTBSN] & BlkMaskBT;
-        blockLen  = 0;
-        npuHaspSendBlockHeader(tp);
+        blockLen  = npuHaspSendBlockHeader(tp);
         while (len > 0)
             {
             recordStart = blk;
@@ -811,33 +770,31 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                     srcb = 0x01;
                     }
                 }
-            npuHaspSendRecordHeader(tp, srcb);
+            blockLen += npuHaspSendRecordHeader(tp, srcb);
             recordLen = blk - recordStart;
             if (recordLen > 0)
                 {
-                npuHaspSendRecordStrings(tp, recordStart, recordLen);
+                blockLen += npuHaspSendRecordStrings(tp, recordStart, recordLen);
                 }
             else
                 {
-                npuHaspSendRecordStrings(tp, blank, sizeof(blank));
+                blockLen += npuHaspSendRecordStrings(tp, blank, sizeof(blank));
                 }
             if (len > 0)
                 {
                 blk += 1;
                 len -= 1;
                 }
-            blockLen += recordLen;
             if ((blockLen > pcbp->controls.hasp.blockSize - BlockCushion) && (len > 0))
                 {
-                npuHaspSendBlockTrailer(tp);
+                blockLen += npuHaspSendBlockTrailer(tp);
                 npuBipQueueAppend(npuBipBufGet(), &tp->outputQ);
-                blockLen = 0;
-                npuHaspSendBlockHeader(tp);
+                blockLen = npuHaspSendBlockHeader(tp);
                 }
             }
         if ((blockType == BtHTMSG) && (tp->deviceType != DtCONSOLE))
             {
-            npuHaspSendEofRecord(tp);
+            blockLen += npuHaspSendEofRecord(tp);
             }
         npuHaspSendBlockTrailer(tp);
         npuNetQueueAck(tp, bp->data[BlkOffBTBSN]);
@@ -871,37 +828,34 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
         **  byte itself.
         */
         blockType = bp->data[BlkOffBTBSN] & BlkMaskBT;
-        blockLen  = 0;
-        npuHaspSendBlockHeader(tp);
+        blockLen  = npuHaspSendBlockHeader(tp);
         while (len > 0)
             {
             recordLen = (*blk++) - 1;
             len      -= 1;
-            npuHaspSendRecordHeader(tp, 0);
+            blockLen += npuHaspSendRecordHeader(tp, 0);
             if (recordLen > 0)
                 {
-                npuHaspSendRecordStrings(tp, blk, recordLen);
+                blockLen += npuHaspSendRecordStrings(tp, blk, recordLen);
                 }
             else
                 {
-                npuHaspSendRecordStrings(tp, blank, sizeof(blank));
+                blockLen += npuHaspSendRecordStrings(tp, blank, sizeof(blank));
                 }
             blk      += recordLen;
             len      -= recordLen;
-            blockLen += recordLen;
             if ((blockLen > pcbp->controls.hasp.blockSize - BlockCushion) && (len > 0))
                 {
-                npuHaspSendBlockTrailer(tp);
+                blockLen += npuHaspSendBlockTrailer(tp);
                 npuBipQueueAppend(npuBipBufGet(), &tp->outputQ);
-                blockLen = 0;
-                npuHaspSendBlockHeader(tp);
+                blockLen = npuHaspSendBlockHeader(tp);
                 }
             }
         if ((blockType == BtHTMSG) && (tp->deviceType != DtCONSOLE))
             {
-            npuHaspSendEofRecord(tp);
+            blockLen += npuHaspSendEofRecord(tp);
             }
-        npuHaspSendBlockTrailer(tp);
+        blockLen += npuHaspSendBlockTrailer(tp);
         npuNetQueueAck(tp, bp->data[BlkOffBTBSN]);
         npuHaspResetSendDeadline(tp);
         }
@@ -1411,6 +1365,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                             npuHaspAppendRecord(pcbp, ptiRecord, sizeof(ptiRecord));
                             npuHaspAppendOutput(pcbp, blockTrailer, sizeof(blockTrailer));
                             scbp->recordCount = 0;
+                            scbp->lastSRCB    = 0;
                             }
                         }
                     break;
@@ -1444,6 +1399,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                         {
                         scbp->state       = StHaspStreamReady;
                         scbp->recordCount = 0;
+                        scbp->lastSRCB    = 0;
                         }
                     break;
 
@@ -1515,12 +1471,11 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                     }
 
                 /*
-                **  If the designated stream is a print stream, process pre-print
-                **  carriage control.
+                **  If the designated stream is a print stream, process format control.
                 */
                 if (scbp->tp->deviceType == DtLP)
                     {
-                    npuHaspProcessPrePrintFormatControl(pcbp);
+                    npuHaspProcessFormatControl(pcbp);
                     }
                 }
 
@@ -1542,15 +1497,6 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                     else
                         {
                         npuHaspFlushUplineData(scbp, FALSE);
-
-                        /*
-                        **  If the designated stream is a print stream, process post-print
-                        **  carriage control.
-                        */
-                        if (scbp->tp->deviceType == DtLP)
-                            {
-                            npuHaspProcessPostPrintFormatControl(pcbp);
-                            }
                         }
                     }
                 pcbp->controls.hasp.minorState = StHaspMinorRecvRCB;
@@ -1607,13 +1553,18 @@ void npuHaspProcessUplineData(Pcb *pcbp)
             scbp = pcbp->controls.hasp.designatedStream;
             if (ch == 0x00) // if RCB is 0x00 then EOF detected
                 {
+                if (scbp->tp->deviceType == DtLP && scbp->lastSRCB != 0)
+                    {
+                    buf[0] = npuHaspTranslateSrcbToFe(scbp->lastSRCB);
+                    buf[1] = EbcdicBlank;
+                    npuHaspStageUplineData(scbp, buf, 2);
+                    }
                 npuHaspFlushUplineData(scbp, TRUE);
                 }
             else if (scbp->tp->deviceType == DtLP)
                 {
-                npuHaspProcessPrePrintFormatControl(pcbp);
+                npuHaspProcessFormatControl(pcbp);
                 npuHaspFlushUplineData(scbp, FALSE);
-                npuHaspProcessPostPrintFormatControl(pcbp);
                 }
             else
                 {
@@ -2357,6 +2308,7 @@ void npuHaspPresetPcb(Pcb *pcbp)
                 fprintf(stderr, "Failed to allocate PRU fragment buffer for HASP print stream\n");
                 exit(1);
                 }
+            scbp->pruFragment2 = NULL;
             memset(&scbp->uplineQ, 0, sizeof(NpuQueue));
 
             scbp = &pcbp->controls.hasp.punchStreams[i];
@@ -2655,66 +2607,304 @@ static Scb *npuHaspFindStreamWithPendingRTI(Pcb *pcbp)
 **
 **  Parameters:     Name        Description.
 **                  tp          TCB pointer
-**                  fe          post-print format effector
 **
-**  Returns:        Nothing.
+**  Returns:        Number of bytes flushed.
 **
 **------------------------------------------------------------------------*/
-static void npuHaspFlushPruFragment(Tcb *tp, u8 fe)
+static int npuHaspFlushPruFragment(Tcb *tp)
     {
+    u8  *fp;
+    int len;
     Scb *scbp;
+    int size;
+
+    if (tp->deviceType == DtLP)
+        {
+        return isPostPrint(tp) ? npuHaspFlushPruPostPrintFragment(tp) : npuHaspFlushPruPrePrintFragment(tp);
+        }
+    else
+        {
+        scbp = tp->scbp;
+        fp   = scbp->pruFragment;
+        size = scbp->pruFragmentSize;
+
+        if (tp->deviceType == DtCP && scbp->params.fvFileType == 1) // avoid sending lace card
+            {
+            scbp->pruFragmentSize       = 0;
+            scbp->isPruFragmentComplete = FALSE;
+            return 0;
+            }
+        else if (size < 1)
+            {
+            fp = blank;
+            size = sizeof(blank);
+            }
+        len  = npuHaspSendRecordHeader(tp, 0);
+        len += npuHaspSendRecordStrings(tp, fp, size);
+        scbp->recordCount += 1;
+        scbp->pruFragmentSize       = 0;
+        scbp->isPruFragmentComplete = FALSE;
+        return len;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Flush a buffered PRU fragment for a post-print terminal
+**                  downline.
+**
+**  Parameters:     Name        Description.
+**                  tp          TCB pointer
+**
+**  Returns:        Number of bytes flushed.
+**
+**------------------------------------------------------------------------*/
+static int npuHaspFlushPruPostPrintFragment(Tcb *tp)
+    {
+    u8  *dp;
+    u8  fe;
+    u8  *fp;
+    int len;
+    Scb *scbp;
+    int size;
     u8  srcb;
 
     scbp = tp->scbp;
 
-    if (tp->deviceType == DtLP)
+    if (scbp->pruFragmentSize < 1)
         {
+        scbp->isPruFragmentComplete = FALSE;
+        return 0;
+        }
+    if (scbp->pruFragment2 == NULL)
+        {
+        //
+        // The first record of a file has been received, so modify the
+        // PRU fragment buffer to appear as if the first record was an
+        // empty line and the first record actually received was the
+        // next record.
+        //
+        dp = scbp->pruFragment + scbp->pruFragmentSize + 1;
+        fp = dp - 2;
+        while (fp >= scbp->pruFragment) *dp-- = *fp--;
+        fp = scbp->pruFragment;
+        *fp++ = EbcdicBlank;
+        *fp++ = EbcdicBlank;
+        scbp->pruFragment2 = fp;
+        scbp->pruFragmentSize += 2;
+        return npuHaspFlushPruPostPrintFragment(tp);
+        }
+    //
+    // A previous record is pending, so handle the following cases:
+    //
+    //   1) The pending record has a post-print format effector. Flush it
+    //      immediately, and make the current record pending.
+    //   2) The pending record has a pre-print format effector, and the
+    //      current record also has a pre-print format effector. Translate
+    //      the current record's format effector to post-print, and flush
+    //      the previous record with it. Then, make the current record pending.
+    //   3) The pending record has a pre-print format effector, and the
+    //      current record has a post-print format effector. Flush the pending
+    //      record with a post-print format effector that advances one line.
+    //      Then, make the current record pending.
+    //
+    if (scbp->pruFragment2 >= scbp->pruFragment + scbp->pruFragmentSize)
+        {
+        //
+        // Current record is empty, so treat it as if it is an empty
+        // line with the pre-print format effector ' '
+        //
+        scbp->pruFragment2  = scbp->pruFragment + scbp->pruFragmentSize;
+        *scbp->pruFragment2 = EbcdicBlank;
+        }
+    fe = ebcdicToAscii[*scbp->pruFragment2];
+    if (fe >= 'Q' && fe <= 'T') // discard lines with these
+        {
+        scbp->pruFragmentSize = scbp->pruFragment2 - scbp->pruFragment;
+        scbp->isPruFragmentComplete = FALSE;
+        return 0;
+        }
+    fp = scbp->pruFragment;
+    fe = ebcdicToAscii[*fp++];
+    size = scbp->pruFragment2 - fp;
+    switch (fe)
+        {
+    case 'C': // skip to channel 6 after print
+    case 'D': // skip to channel 5 after print
+    case 'E': // skip to channel 4 after print
+    case 'F': // skip to channel 3 after print
+    case 'G': // skip to channel 2 after print
+    case 'H': // skip to channel 1 after print
+        srcb = 0x11 + ('H' - fe);
+        break;
+
+    case '/': // suppress space after print
+        srcb = 0x00;
+        break;
+
+    default:
+        fe = ebcdicToAscii[*scbp->pruFragment2];
         switch (fe)
             {
-        case '0': // skip one line
-            srcb = 2;
+        case '0': // space two lines after print
+            srcb = 0x02;
             break;
 
-        case '1': // skip to channel 1 (page eject)
+        case '1': // skip to channel 1 after print (page eject)
             srcb = 0x11;
             break;
 
-        case '-': // skip two lines
-            srcb = 3;
+        case '2': // skip to channel 12 after print (end of form)
+            srcb = 0x1c;
+            break;
+
+        case '3': // skip to channel 6 after print
+        case '4': // skip to channel 5 after print
+        case '5': // skip to channel 4 after print
+        case '6': // skip to channel 3 after print
+        case '7': // skip to channel 2 after print
+        case '8': // skip to channel 1 after print
+          srcb = 0x11 + ('8' - fe);
+          break;
+
+        case '-': // space three lines after print
+            srcb = 0x03;
             break;
 
         case '+': // suppress carriage control (overstrike)
-            srcb = 0;
+            srcb = 0x00;
             break;
 
         case ' ':
+        case 'C':
+        case 'D':
+        case 'E':
+        case 'F':
+        case 'G':
+        case 'H':
         default:
-            srcb = 1;
+            srcb = 0x01;
             break;
             }
+        break;
+        }
+    len = npuHaspSendRecordHeader(tp, srcb);
+    if (size < 1)
+        {
+        fp = blank;
+        size = sizeof(blank);
+        }
+    len += npuHaspSendRecordStrings(tp, fp, size);
+    scbp->recordCount += 1;
+    scbp->pruFragmentSize -= scbp->pruFragment2 - scbp->pruFragment;
+    if (scbp->pruFragmentSize > 0)
+        {
+        memcpy(scbp->pruFragment, scbp->pruFragment2, scbp->pruFragmentSize);
+        scbp->pruFragment2 = scbp->pruFragment + scbp->pruFragmentSize;
         }
     else
         {
-        srcb = 0;
+        scbp->pruFragment2 = NULL;
         }
+    scbp->isPruFragmentComplete = FALSE;
+    return len;
+    }
 
-    if (scbp->pruFragmentSize > 0)
+/*--------------------------------------------------------------------------
+**  Purpose:        Flush a buffered PRU fragment for a pre-print terminal
+**                  downline.
+**
+**  Parameters:     Name        Description.
+**                  tp          TCB pointer
+**
+**  Returns:        Number of bytes flushed.
+**
+**------------------------------------------------------------------------*/
+static int npuHaspFlushPruPrePrintFragment(Tcb *tp)
+    {
+    u8  fe;
+    u8  *fp;
+    int len;
+    Scb *scbp;
+    int size;
+    u8  srcb;
+
+    scbp = tp->scbp;
+    srcb = 0;
+    fp   = scbp->pruFragment;
+    size = scbp->pruFragmentSize;
+
+    if (size < 1)
         {
-        if ((tp->deviceType != DtCP) || (scbp->params.fvFileType != 1)) // avoid sending lace card
-            {
-            npuHaspSendRecordHeader(tp, srcb);
-            npuHaspSendRecordStrings(tp, scbp->pruFragment, scbp->pruFragmentSize);
-            }
-        scbp->recordCount += 1;
+        scbp->pruFragmentSize       = 0;
+        scbp->isPruFragmentComplete = FALSE;
+        return 0;
         }
-    else if ((scbp->recordCount > 0) || (tp->deviceType != DtLP) || (fe != ' '))
+    fe = ebcdicToAscii[*fp++];
+    size -= 1;
+    switch (fe)
         {
-        npuHaspSendRecordHeader(tp, srcb);
-        npuHaspSendRecordStrings(tp, blank, sizeof(blank));
-        scbp->recordCount += 1;
+    case '0': // space one line before print
+        srcb = 0x22;
+        break;
+
+    case '1': // skip to channel 1 before print (page eject)
+        srcb = 0x31;
+        break;
+
+    case '2': // skip to channel 12 before print (end of form)
+        srcb = 0x3c;
+        break;
+
+    case '3': // skip to channel 6 before print
+    case '4': // skip to channel 5 before print
+    case '5': // skip to channel 4 before print
+    case '6': // skip to channel 3 before print
+    case '7': // skip to channel 2 before print
+    case '8': // skip to channel 1 before print
+      srcb = 0x31 + ('8' - fe);
+      break;
+
+    case 'C': // skip to channel 6 after print
+    case 'D': // skip to channel 5 after print
+    case 'E': // skip to channel 4 after print
+    case 'F': // skip to channel 3 after print
+    case 'G': // skip to channel 2 after print
+    case 'H': // skip to channel 1 after print
+      srcb = 0x11 + ('H' - fe);
+      break;
+
+    case 'Q': // suppress auto-eject
+    case 'R': // set auto-eject
+    case 'S': // clear 8 LPI
+    case 'T': // set 8 LPI
+        scbp->pruFragmentSize       = 0;
+        scbp->isPruFragmentComplete = FALSE;
+        return 0;
+
+    case '-': // space two lines before print
+        srcb = 0x23;
+        break;
+
+    case '+': // suppress carriage control (overstrike)
+        srcb = 0x00;
+        break;
+
+    case ' ':
+    default:
+        srcb = 0x21;
+        break;
         }
+    if (size < 1)
+        {
+        fp = blank;
+        size = sizeof(blank);
+        }
+    len  = npuHaspSendRecordHeader(tp, srcb);
+    len += npuHaspSendRecordStrings(tp, fp, size);
+    scbp->recordCount += 1;
     scbp->pruFragmentSize       = 0;
     scbp->isPruFragmentComplete = FALSE;
+    return len;
     }
 
 /*--------------------------------------------------------------------------
@@ -2936,140 +3126,43 @@ static bool npuHaspFlushBuffer(Pcb *pcbp)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Process post-print format control for print stream.
+**  Purpose:        Process format control for print stream.
 **
 **  Parameters:     Name        Description.
 **                  pcbp        PCB pointer
 **
-**  Returns:        TRUE if all bytes sent.
+**  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void npuHaspProcessPostPrintFormatControl(Pcb *pcbp)
+static void npuHaspProcessFormatControl(Pcb *pcbp)
     {
-    u8  formatEffector;
+    u8  buf[2];
+    u8  cc;
     Scb *scbp;
     u8  param;
 
     scbp  = pcbp->controls.hasp.designatedStream;
-    param = pcbp->controls.hasp.sRCBParam & 0x7f;
-    if ((param > 0) && (param < 0x20))
+    param = pcbp->controls.hasp.sRCBParam & 0x3f;
+    cc = param;
+    if ((param & 0x20) == 0) // post-print, use last SRCB
         {
-        if (param < 0x10) // Space NN lines after print
-            {
-            switch (param & 0x03)
-                {
-            case 3:
-                formatEffector = asciiToEbcdic['-'];
-                break;
-
-            case 2:
-                formatEffector = asciiToEbcdic['0'];
-                break;
-
-            case 1:
-            default:
-                formatEffector = asciiToEbcdic[' '];
-                break;
-                }
-            npuHaspStageUplineData(scbp, &formatEffector, 1);
-            }
-        else // Skip to channel NNNN after print
-            {
-            param &= 0x0f;
-            if (param == 1)
-                {
-                formatEffector = asciiToEbcdic['1'];
-                }
-            else
-                {
-                formatEffector = asciiToEbcdic[' '];
-                }
-            npuHaspStageUplineData(scbp, &formatEffector, 1);
-            }
+        cc = scbp->lastSRCB;
+        scbp->lastSRCB = param;
         }
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Process pre-print format control for print stream.
-**
-**  Parameters:     Name        Description.
-**                  pcbp        PCB pointer
-**
-**  Returns:        TRUE if all bytes sent.
-**
-**------------------------------------------------------------------------*/
-static void npuHaspProcessPrePrintFormatControl(Pcb *pcbp)
-    {
-    u8  formatEffector;
-    Scb *scbp;
-    u8  param;
-
-    scbp  = pcbp->controls.hasp.designatedStream;
-    param = pcbp->controls.hasp.sRCBParam;
-    switch ((param >> 4) & 0x03)
+    else if (scbp->lastSRCB != 0)
         {
-    case 0:                      // Suppress space or post-print carriage control
-        if ((param & 0x0f) == 0) // Suppress space
-            {
-            formatEffector = asciiToEbcdic['+'];
-            npuHaspStageUplineData(scbp, &formatEffector, 1);
-            }
-        else if (scbp->recordCount < 1) // Space NN lines after print
-            {
-            /*
-            **  If this is the first record of the file, set
-            **  the first format effector to 'T' (select 8
-            **  lines per inch).
-            */
-            formatEffector = asciiToEbcdic['T'];
-            npuHaspStageUplineData(scbp, &formatEffector, 1);
-            }
-        break;
-
-    case 1: // Skip to channel NNNN after print
-        if (scbp->recordCount < 1)
-            {
-            /*
-            **  If this is the first record of the file, set
-            **  the first format effector to 'T' (select 8
-            **  lines per inch).
-            */
-            formatEffector = asciiToEbcdic['T'];
-            npuHaspStageUplineData(scbp, &formatEffector, 1);
-            }
-        break;
-
-    case 2: // Space immediately NN spaces
-        switch (param & 0x03)
+        buf[0] = npuHaspTranslateSrcbToFe(scbp->lastSRCB);
+        buf[1] = EbcdicBlank;
+        npuHaspStageUplineData(scbp, buf, 2);
+        npuHaspFlushUplineData(scbp, FALSE);
+        scbp->lastSRCB = 0;
+        }
+    else
         {
-        case 3:
-            formatEffector = asciiToEbcdic['-'];
-            break;
-
-        case 2:
-            formatEffector = asciiToEbcdic['0'];
-            break;
-
-        case 1:
-        default:
-            formatEffector = asciiToEbcdic[' '];
-            break;
+        scbp->lastSRCB = 0;
         }
-        npuHaspStageUplineData(scbp, &formatEffector, 1);
-        break;
-
-    case 3:                      // Skip immediately to channel NN
-        if ((param & 0x03) == 1) // Page eject
-            {
-            formatEffector = asciiToEbcdic['1'];
-            }
-        else
-            {
-            formatEffector = asciiToEbcdic[' '];
-            }
-        npuHaspStageUplineData(scbp, &formatEffector, 1);
-        break;
-        }
+    buf[0] = npuHaspTranslateSrcbToFe(cc);
+    npuHaspStageUplineData(scbp, buf, 1);
     }
 
 /*--------------------------------------------------------------------------
@@ -3118,10 +3211,12 @@ static void npuHaspResetScb(Scb *scbp)
         }
     memset(&scbp->params, 0, sizeof(BatchParams));
     scbp->recordCount           = 0;
+    scbp->lastSRCB              = 0;
     scbp->isDiscardingRecords   = FALSE;
     scbp->isStarted             = FALSE;
     scbp->isWaitingPTI          = FALSE;
     scbp->isPruFragmentComplete = FALSE;
+    scbp->pruFragment2          = NULL;
     scbp->pruFragmentSize       = 0;
     }
 
@@ -3163,10 +3258,10 @@ static void npuHaspResetSendDeadline(Tcb *tp)
 **  Parameters:     Name        Description.
 **                  tp          TCB pointer
 **
-**  Returns:        Nothing.
+**  Returns:        Number of bytes sent.
 **
 **------------------------------------------------------------------------*/
-static void npuHaspSendBlockHeader(Tcb *tp)
+static int npuHaspSendBlockHeader(Tcb *tp)
     {
     u8  header[16];
     int i;
@@ -3191,6 +3286,7 @@ static void npuHaspSendBlockHeader(Tcb *tp)
     header[i++] = 0x80 | (0 << 6) | 0x0f; // normal state, all print/punch streams on
     header[i++] = 0x80 | (1 << 6) | 0x0f; // console on, all print/punch streams on
     npuNetSend(tp, header, i);
+    return sizeof(blockHeader) + i;
     }
 
 /*--------------------------------------------------------------------------
@@ -3199,10 +3295,10 @@ static void npuHaspSendBlockHeader(Tcb *tp)
 **  Parameters:     Name        Description.
 **                  tp          TCB pointer
 **
-**  Returns:        Nothing.
+**  Returns:        Number of bytes sent.
 **
 **------------------------------------------------------------------------*/
-static void npuHaspSendBlockTrailer(Tcb *tp)
+static int npuHaspSendBlockTrailer(Tcb *tp)
     {
     u8  header[16];
     int i;
@@ -3219,6 +3315,7 @@ static void npuHaspSendBlockTrailer(Tcb *tp)
     header[i++] = DLE;
     header[i++] = ETB;
     npuNetSend(tp, header, i);
+    return i;
     }
 
 /*--------------------------------------------------------------------------
@@ -3341,16 +3438,18 @@ static bool npuHaspSendDownlineData(Tcb *tp)
 **  Parameters:     Name        Description.
 **                  tp          TCB pointer
 **
-**  Returns:        Nothing.
+**  Returns:        Number of bytes sent.
 **
 **------------------------------------------------------------------------*/
-static void npuHaspSendEofRecord(Tcb *tp)
+static int npuHaspSendEofRecord(Tcb *tp)
     {
     u8 data[1];
+    int len;
 
-    npuHaspSendRecordHeader(tp, 0);
+    len = npuHaspSendRecordHeader(tp, 0);
     data[0] = 0;
     npuNetSend(tp, data, 1);
+    return len + 1;
     }
 
 /*--------------------------------------------------------------------------
@@ -3360,10 +3459,10 @@ static void npuHaspSendEofRecord(Tcb *tp)
 **                  tp          TCB pointer
 **                  srcb        SRCB byte for print records
 **
-**  Returns:        Nothing.
+**  Returns:        Number of bytes sent.
 **
 **------------------------------------------------------------------------*/
-static void npuHaspSendRecordHeader(Tcb *tp, u8 srcb)
+static int npuHaspSendRecordHeader(Tcb *tp, u8 srcb)
     {
     u8  header[16];
     int i;
@@ -3410,9 +3509,10 @@ static void npuHaspSendRecordHeader(Tcb *tp, u8 srcb)
                 tp->pcbp->claPort, tp->deviceType);
 #endif
 
-        return;
+        return 0;
         }
     npuNetSend(tp, header, i);
+    return i;
     }
 
 /*--------------------------------------------------------------------------
@@ -3423,12 +3523,13 @@ static void npuHaspSendRecordHeader(Tcb *tp, u8 srcb)
 **                  data        pointer to the content of the record
 **                  len         length of the content
 **
-**  Returns:        Nothing.
+**  Returns:        Number of bytes sent.
 **
 **------------------------------------------------------------------------*/
-static void npuHaspSendRecordStrings(Tcb *tp, u8 *data, int len)
+static int npuHaspSendRecordStrings(Tcb *tp, u8 *data, int len)
     {
-    u8 header[16];
+    u8  header[16];
+    int n;
 
     /*
     **  Send strings comprising of the record. Each string begins with
@@ -3437,6 +3538,7 @@ static void npuHaspSendRecordStrings(Tcb *tp, u8 *data, int len)
     **  must be segmented into multiple strings. The record must end with
     **  an end-of-record SCB.
     */
+    n = 0;
     while (len > 0x3f)
         {
         header[0] = (1 << 7) | (1 << 6) | 0x3f; // Non-duplicate string, max length
@@ -3444,15 +3546,18 @@ static void npuHaspSendRecordStrings(Tcb *tp, u8 *data, int len)
         npuNetSend(tp, data, 63);
         data += 63;
         len  -= 63;
+        n += 64;
         }
     if (len > 0)
         {
         header[0] = (1 << 7) | (1 << 6) | len; // Non-duplicate string, remaining record length
         npuNetSend(tp, header, 1);
         npuNetSend(tp, data, len);
+        n += len + 1;
         }
     header[0] = 0;
     npuNetSend(tp, header, 1);
+    return n + 1;
     }
 
 /*--------------------------------------------------------------------------
@@ -3568,6 +3673,7 @@ static void npuHaspSendUplineEoiAcctg(Tcb *tp)
     npuHaspSendUplineData(tp, commandADEI, sizeof(commandADEI));
     scbp = tp->scbp;
     scbp->recordCount           = 0;
+    scbp->lastSRCB              = 0;
     scbp->pruFragmentSize       = 0;
     scbp->isPruFragmentComplete = tp->deviceType == DtLP;
 #if DEBUG
@@ -3664,6 +3770,65 @@ static void npuHaspStageUplineData(Scb *scbp, u8 *data, int len)
             *tp->inBufPtr++ = *data++;
             }
         }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Translate HASP carriage control indication to format effector
+**
+**  Parameters:     Name        Description.
+**                  cc          carriage control (SRCB)
+**
+**  Returns:        Format effector (in EBCDIC).
+**
+**------------------------------------------------------------------------*/
+static u8 npuHaspTranslateSrcbToFe(u8 cc)
+    {
+    u8 channel;
+    u8 fe;
+
+    if ((cc & 0x10) != 0) // Skip to channel
+        {
+        channel = cc & 0x0f;
+        switch (channel)
+            {
+        case 1:
+            fe = '1';
+            break;
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+            fe = '3' + (6 - channel);
+            break;
+        case 12:
+            fe = '2';
+            break;
+        default:
+            fe = ' ';
+            break;
+            }
+        }
+    else // Line space
+        {
+        switch (cc & 0x03)
+            {
+        case 0:
+            fe = '+';
+            break;
+        case 1:
+        default:
+            fe = ' ';
+            break;
+        case 2:
+            fe = '0';
+            break;
+        case 3:
+            fe = '-';
+            break;
+            }
+        }
+    return asciiToEbcdic[fe];
     }
 
 /*--------------------------------------------------------------------------

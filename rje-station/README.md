@@ -61,16 +61,7 @@ The contents of a typical configuration file look like this:
   "debug": false,
   "protocol":"hasp",
   "host":"localhost",
-  "port":2555,
-  "bsc":{
-    "debug":false
-  },
-  "hasp":{
-    "debug":true,
-    "LP1":{
-      "isPostPrint":true
-    }
-  }
+  "port":2555
 }
 ```
 
@@ -93,12 +84,6 @@ property.
 - **hasp** : an optional object defining configuration properties specific to the HASP data communication layer.
 - **hasp.debug** : if set to *true*, the HASP layer will log debugging information to file `hasp.log.txt`. The default is the value specified by the top-level **debug**
 property.
-- **hasp.LP1** : an optional object defining configuration properties specific to the LP1 printer stream.
-- **hasp.LP1.isPostPrint** : if set to *true* (the default value), format effectors
-for LP1 are handled as post-print (i.e., after the line with which they're associated
-in HASP protocol elements). If set to *false*, format effectors for LP1 are handled
-as pre-print. The value chosen must match the corresponding terminal definition
-on the CDC NOS operating system (i.e., in the *NDL* file).
 - **hasp.maxBlockSize** : specifies the maximum number of bytes to send to the HASP
 service host in each HASP protocol block. The default is *400*, which works well for
 IBM MVS and CMS hosts.
@@ -269,12 +254,6 @@ property.
 - **hasp** : an optional object defining configuration properties specific to the HASP data communication layer.
 - **hasp.debug** : if set to *true*, the HASP layer will log debugging information to file `hasp.log.txt`. The default is the value specified by the top-level **debug**
 property.
-- **hasp.LP1** : an optional object defining configuration properties specific to the LP1 printer stream.
-- **hasp.LP1.isPostPrint** : if set to *true* (the default value), format effectors
-for LP1 are handled as post-print (i.e., after the line with which they're associated
-in HASP protocol elements). If set to *false*, format effectors for LP1 are handled
-as pre-print. The value chosen must match the corresponding terminal definition
-on the CDC NOS operating system (i.e., in the *NDL* file).
 - **hasp.maxBlockSize** : specifies the maximum number of bytes to send to the HASP
 service host in each HASP protocol block. The default is *400*, which works well for
 IBM MVS and CMS hosts.

@@ -90,6 +90,11 @@
   background-blend-mode: lighten;
   background-size: cover;
 }
+.fanfold-background-fixed-size {
+  background-image: url("fanfold-716x528.jpg");
+  background-blend-mode: lighten;
+  background-size: 1428px 1056px;
+}
 .frame-header {
   text-align: center;
   background-color: blue;
@@ -107,13 +112,22 @@
   background-blend-mode: lighten;
   background-size: 716px 1056px;
 }
+.printer-line {
+  color: black;
+  font-family: monospace;
+  left: 0px;
+  margin: 0px;
+  padding: 0px;
+  position: absolute;
+  white-space: pre;
+}
 .printer-text {
   font-family: monospace;
   white-space: pre;
   color: black;
   position: absolute;
   top: 0px;
-  left: 35px;
+  left: 48px;
   margin: 0px;
 }
 .punch-background {

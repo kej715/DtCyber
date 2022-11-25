@@ -79,6 +79,10 @@
     <a id="punch-file-saver" style="display:none;"></a>
     <script>
 
+    const FONT_HEIGHT       = 16;
+    const LINES_PER_PAGE    = 66;
+    const PAGE_HEIGHT       = FONT_HEIGHT * LINES_PER_PAGE;
+
     const StreamTypeConsole = 0;
     const StreamTypeReader  = 1;
     const StreamTypePrinter = 2;
@@ -140,7 +144,7 @@
       const printerText = printerFrame.contentDocument.getElementsByTagName("body")[0];
       printerContainer.style.left = "120px";
       printerContainer.style.top = "60px";
-      printerContainer.style.width = "1080px";
+      printerContainer.style.width = "1428px";
       printerFrameContainer.style.height = "640px";
       printerFrame.style.width = "100%";
       printerFrame.style.height = "100%";
@@ -321,6 +325,9 @@
             streams[key].data        = "";
             streams[key].nextIndex   = 0;
             streams[key].recordCount = 0;
+            if (streamType === StreamTypePrinter) {
+              streams[key].lineNum = 0;
+            }
           }
           let stream = streams[key];
           if (len === 0) stream.isEOI = true;
@@ -340,39 +347,41 @@
               if (line.length < 1) continue;
               let fe = line.charAt(0);
               line = line.substring(1);
+              let nwsi = line.search(/\S\s*$/);
+              line = line.substring(0, nwsi + 1).replace(/</g, "&lt;").replace(/>/g, "&gt;");
               switch (fe) {
+              case "0":
+                stream.lineNum += 2;
+                break;
               case "1":
-                if (printerText.textContent.search(/\S/) === -1) {
-                  printerText.textContent = "";
-                  stream.recordCount = 0;
-                }
-                if (printerText.textContent.length > 0) {
-                  while ((++stream.recordCount % 66) !== 0) {
-                    printerText.textContent += "\n";
-                  }
+                if (stream.lineNum > 0) {
+                  stream.lineNum = Math.floor((stream.lineNum + LINES_PER_PAGE) / LINES_PER_PAGE) * LINES_PER_PAGE;
                 }
                 break;
-              case "0":
-                printerText.textContent += "\n\n";
-                stream.recordCount += 1;
+              case "2":
+                stream.lineNum = Math.floor((stream.lineNum + LINES_PER_PAGE) / LINES_PER_PAGE) * LINES_PER_PAGE;
+                stream.lineNum -= 3;
                 break;
               case "+":
-                printerText.textContent += "\r";
+                // No line space
                 break;
               case "-":
-                printerText.textContent += "\n\n\n";
-                stream.recordCount += 2;
+                stream.lineNum += 3;
                 break;
+              case "Q":
+              case "R":
               case "S":
               case "T":
                 continue;
               default:
-                printerText.textContent += "\n";
+                stream.lineNum += 1;
                 break;
               }
-              printerText.textContent += line;
+              let topOffset = stream.lineNum * FONT_HEIGHT;
+              $(printerText).append(`<div id="L${stream.lineNum}" class="printer-line" style="top:${topOffset}px">${line}</div>`);
               stream.recordCount += 1;
-              printerText.scrollIntoView(false);
+              let lineElem = printerFrame.contentDocument.getElementById(`L${stream.lineNum}`);
+              lineElem.scrollIntoView(false);
             }
             if (isPrinterVisible === false) {
               $(printerContainer).show();

@@ -140,56 +140,22 @@ class Hasp {
     }
   }
 
-  processPostPrint(record, param) {
-    let fe = " ";
-    if (param >= 0 && param < 0x20) {
-      if (param === 0) {
-        fe = "+";
-      }
-      else if (param < 0x10) { // Space NN lines after print
-        param &= 0x03;
-        if (param === 3) {
-          fe = "-";
-        }
-        else if (param === 2) {
-          fe = "0";
-        }
-      }
-      else  { // Skip to channel NNNN after print
-        param &= 0x0f;
-        if (param === 1) {
-          fe = "1";
-        }
-      }
+  processFormatControl(stream, record, param) {
+    let prefix = "";
+    let cc = param;
+    if ((param & 0x20) === 0) { // post-print, use last SRCB
+      cc = stream.lastSRCB;
+      stream.lastSRCB = param;
     }
-    return `${record}\n${fe}`;
-  }
-
-  processPrePrint(record, param) {
-    let fe = " ";
-    switch ((param >> 4) & 0x03) {
-    case 0: // Suppress space or post-print carriage control
-      if ((param & 0x0f) === 0) { // Suppress space
-        fe = "+";
-      }
-      break;
-    case 2: // Space immediately NN spaces
-      switch (param & 0x03) {
-      case 3:
-        fe = "-";
-        break;
-      case 2:
-        fe = "0";
-        break;
-      }
-      break;
-    case 3: // Skip immediately to channel NN
-      if ((param & 0x03) === 1) { // Page eject
-        fe = "1";
-      }
-      break;
+    else if (stream.lastSRCB !== 0) {
+      prefix = `${this.translateSrcbToFe(stream.lastSRCB)} \n`;
+      stream.lastSRCB = 0;
     }
-    return `${fe}${record}\n`;
+    else {
+      stream.lastSRCB = 0;
+    }
+    let res = `${prefix}${this.translateSrcbToFe(cc)}${record}\n`;
+    return (/^\+\s*$/.test(res)) ? "" : res;
   }
 
   provideBlock() {
@@ -312,6 +278,13 @@ class Hasp {
           // an RCB that is also 0
           //
           if (typeof this.handlers.data === "function") {
+            if (recordType === Hasp.RecordType_PrintRecord
+                && typeof this.hasp[key] !== "undefined"
+                && typeof this.hasp[key].lastSRCB !== "undefined"
+                && this.hasp[key].lastSRCB !== 0
+                && typeof this.handlers.data === "function") {
+              this.handlers.data(Hasp.StreamTypes[recordType], streamId, "\n");
+            }
             this.handlers.data(Hasp.StreamTypes[recordType], streamId, null);
             delete this.hasp[key].recordCount;
           }
@@ -337,19 +310,12 @@ class Hasp {
         }
         this.log(str);
         if (recordType === Hasp.RecordType_PrintRecord) {
-          if (typeof this.hasp[key].isPostPrint === "undefined") this.hasp[key].isPostPrint = true;
-          const isPostPrint = this.hasp[key].isPostPrint;
           if (typeof this.hasp[key].recordCount === "undefined") {
             this.hasp[key].recordCount = 0;
-            if (isPostPrint) str = ` ${str}`;
+            this.hasp[key].lastSRCB = 0;
           }
-          if (isPostPrint) {
-            str = this.processPostPrint(str, srcb & 0x7f);
-          }
-          else {
-            str = this.processPrePrint(str, srcb & 0x7f);
-          }
-          this.hasp[key].recordCount += 1;
+          str = this.processFormatControl(this.hasp[key], str, srcb & 0x3f);
+          if (str !== "") this.hasp[key].recordCount += 1;
         }
         else if (recordType === Hasp.RecordType_PunchRecord) {
           str += "\n";
@@ -465,6 +431,46 @@ class Hasp {
       this.queueBlock(block);
       if (typeof this.handlers.connect === "function") this.handlers.connect();
     });
+  }
+
+  translateSrcbToFe(srcb) {
+    let fe = " ";
+    if ((srcb & 0x10) !== 0) { // Skip to channel
+      const channel = srcb & 0x0f;
+      switch (channel) {
+      case 1:
+        fe = "1";
+        break;
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+        fe = String.fromCharCode("3".charCodeAt(0) + (6 - channel));
+        break;
+      case 12:
+        fe = "2";
+        break;
+      }
+    }
+    else { // Line space
+      switch (srcb & 0x03) {
+      case 0:
+        fe = "+";
+        break;
+      case 1:
+      default:
+        fe = " ";
+        break;
+      case 2:
+        fe = "0";
+        break;
+      case 3:
+        fe = "-";
+        break;
+      }
+    }
+    return fe;
   }
 }
 

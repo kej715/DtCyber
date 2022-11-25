@@ -514,12 +514,14 @@ typedef struct scb
     struct tcb      *tp;
     BatchParams     params;
     u32             recordCount;
+    u8              lastSRCB;
     bool            isDiscardingRecords;
     bool            isStarted;
     bool            isWaitingPTI;
     bool            isPruFragmentComplete;
     int             pruFragmentSize;
     u8              *pruFragment;
+    u8              *pruFragment2;
     NpuQueue        uplineQ;
     } Scb;
 
