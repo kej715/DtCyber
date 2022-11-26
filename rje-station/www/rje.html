@@ -380,8 +380,10 @@
               let topOffset = stream.lineNum * FONT_HEIGHT;
               $(printerText).append(`<div id="L${stream.lineNum}" class="printer-line" style="top:${topOffset}px">${line}</div>`);
               stream.recordCount += 1;
-              let lineElem = printerFrame.contentDocument.getElementById(`L${stream.lineNum}`);
-              lineElem.scrollIntoView(false);
+              if (stream.lineNum % 11 === 0) {
+                let lineElem = printerFrame.contentDocument.getElementById(`L${stream.lineNum}`);
+                lineElem.scrollIntoView(false);
+              }
             }
             if (isPrinterVisible === false) {
               $(printerContainer).show();
@@ -389,6 +391,8 @@
               isPrinterVisible = true;
             }
             if (stream.isEOI) {
+              let lineElem = printerFrame.contentDocument.getElementById(`L${stream.lineNum}`);
+              if (lineElem !== null) lineElem.scrollIntoView(false);
               const blob = new Blob([stream.data], {type: "text/plain"});
               const fileSaver = document.getElementById("print-file-saver");
               const blobUrl = URL.createObjectURL(blob);
