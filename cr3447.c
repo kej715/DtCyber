@@ -744,7 +744,7 @@ void cr3447PostProcess(char *fname, int channelNo, int equipmentNo, char *params
     **  Locate the device control block.
     */
 
-    dp = channelFindDevice((u8)channelNo, DtCr405);
+    dp = channelFindDevice((u8)channelNo, DtCr3447);
     if (dp == NULL)
         {
         return;
@@ -1271,12 +1271,6 @@ static void cr3447NextCard(DevSlot *up, CrContext *cc)
         fclose(up->fcb[0]);
         up->fcb[0] = NULL;
         cc->status = StCr3447Eof;
-
-        sprintf(outBuf, "(cr3447 ) End of Deck '%s' reached on channel %o equipment %o\n",
-                cc->curFileName,
-                up->channel->id,
-                up->eqNo);
-        opDisplay(outBuf);
 
         /*
         **  At end of file, it is assumed that ALL decks have been

@@ -4,6 +4,8 @@
 **            (c) 2017       Steven Zoppi 22-Oct-2017
 **                           Added Ascii and ANSI support
 **                           Added subdirectory support
+**            (c) 2022       Kevin Jordan 02-Dec-2022
+**                           Redesign to expose format effectors properly
 **
 **  Name: lp3000.c
 **
@@ -148,8 +150,8 @@
 #define Fc3555MaintStatus        00065
 #define Fc3555ClearMaint         00066
 
-//  Lines Per Page
-#define LpInchesPerPage          00011                  //  Standard 11 x 14 forms
+//  Maximum number of characters per line
+#define MaxLineSize              140
 
 /*
 **      Status reply
@@ -188,26 +190,17 @@ typedef struct lpContext
     bool             isPrinted;
     bool             keepInt;
 
-    /*
-    **  (SZoppi) 22-Oct-2017
-    **      These extensions are to properly simulate the behavior of the
-    **      line printers.  Line space handling (pre and post) messes with
-    **      translation to proper PDF format (the new purpose for this).
-    */
-    u8               extSpaceOpt;       //  Spacing option (<>0 = PostPrintMode)
-    u8               extLPI;            //  Lines Per Inch 6 or 8 (usually)
-    u8               extLPP;            //  Number of Lines per Printed Page
-    //      at 8 LPI * 11" = 88 LPP
-    //      at 6 LPI * 11" = 66 LPP
-    u8               extCurLine;        //  current page position
+    u8               prePrintFunc;       //  last pre-print function (0 = no pre-print function specified)
+    u8               postPrintFunc;      //  last post-print function (0 = no post-print function specified)
+    bool             doAutoEject;        //  auto-eject pages
+    bool             doSuppress;         //  suppress next post-print spacing op
+    u8               lpi;                //  Lines Per Inch 6 or 8 (usually)
+    PpWord           line[MaxLineSize];  //  buffered line
+    u8               linePos;            //  current line position
 
-    //  Todo: Verify that the use of this doesn't
-    //        overflow over a long operating window
-    bool             extUseANSI;         //  use ANSI/ASA Carriage-control characters
-    bool             extBurst;           //  bursting option for forced segmentation at EOJ
-    bool             extSuppress;        //  suppress next post-print spacing op
-    bool             extPostPrint;       //  all spacing occurs in post-print mode
-    char             extPath[MaxFSPath]; //  preserve the device folder path
+    bool             doUseANSI;          //  use ANSI/ASA Carriage-control characters
+    bool             doBurst;            //  bursting option for forced segmentation at EOJ
+    char             path[MaxFSPath];    //  preserve the device folder path
     } LpContext;
 
 
@@ -220,10 +213,14 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
 static FcStatus lp3000Func(PpWord funcCode);
 static void lp3000Io(void);
 static void lp3000Activate(void);
-void lp3000RemovePaper(char *params);
 static void lp3000Disconnect(void);
-static void lp3000DebugData(void);
-static char *lp3000Func2String(PpWord funcCode);
+static void lp3000PrintANSI(LpContext *lc, FILE *fcb);
+static void lp3000PrintASCII(LpContext *lc, FILE *fcb);
+
+#if DEBUG
+static void lp3000DebugData(LpContext *lc);
+static char *lp3000Func2String(LpContext *lc, PpWord funcCode);
+#endif
 
 /*
 **  ----------------
@@ -237,14 +234,41 @@ static char *lp3000Func2String(PpWord funcCode);
 **  -----------------
 */
 
-static LpContext *firstUnit;
-static LpContext *lastUnit;
+static LpContext *firstUnit = NULL;
+static LpContext *lastUnit  = NULL;
+
+static u8 postPrintEffectors[] = {
+    'H', // advance to channel 1
+    'G', // advance to channel 2
+    'F', // advance to channel 3
+    'E', // advance to channel 4
+    'D', // advance to channel 5
+    'C', // advance to channel 6
+    'I', // advance to channel 7
+    'J', // advance to channel 8
+    'K', // advance to channel 9
+    'L', // advance to channel 10
+    'M', // advance to channel 11
+    'N'  // advance to channel 12
+};
+
+static u8 prePrintEffectors[] = {
+    '8', // advance to channel 1
+    '7', // advance to channel 2
+    '6', // advance to channel 3
+    '5', // advance to channel 4
+    '4', // advance to channel 5
+    '3', // advance to channel 6
+    '9', // advance to channel 7
+    'X', // advance to channel 8
+    'Y', // advance to channel 9
+    'Z', // advance to channel 10
+    'W', // advance to channel 11
+    'U'  // advance to channel 12
+};
 
 #if DEBUG
 static FILE *lp3000Log = NULL;
-#define MaxLine    1000
-static PpWord lineData[MaxLine];
-static int    linePos = 0;
 #endif
 
 /*
@@ -444,44 +468,40 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
         }
 
     up->context[0] = (void *)lc;
-    lc->flags      = flags;
-
-    /*
-    **  SZoppi: Extensions
-    */
-    lc->extSpaceOpt  = FcPrintSingle;   //  Default Single Space
-    lc->extLPI       = 6;               //  Default Page Length
-    lc->extLPP       = LpInchesPerPage * lc->extLPI;
-    lc->extCurLine   = 1;               //  1 = Initialized
-    lc->extSuppress  = FALSE;           //  Clear Suppress Print
-    lc->extPostPrint = TRUE;            //  Post-Print Mode by Default
-    lc->extBurst     = isBursting;      //  Whether or not we force segmentation at EOJ
-    lc->extUseANSI   = isANSI;          //  Indicate how to handle Carriage Control
-    lc->channelNo    = channelNo;
-    lc->unitNo       = unitNo;
-    lc->eqNo         = eqNo;
-    lc->extPath[0]   = '\0';
+    lc->flags         = flags;
+    lc->lpi           = 6;               //  Default print density
+    lc->linePos       = 0;
+    lc->prePrintFunc  = 0;
+    lc->postPrintFunc = 0;
+    lc->doAutoEject   = FALSE;           //  Clear auto-eject
+    lc->doSuppress    = FALSE;           //  Clear suppress space
+    lc->doBurst       = isBursting;      //  Whether or not we force segmentation at EOJ
+    lc->doUseANSI     = isANSI;          //  Indicate how to handle Carriage Control
+    lc->channelNo     = channelNo;
+    lc->unitNo        = unitNo;
+    lc->eqNo          = eqNo;
+    lc->path[0]       = '\0';
 
     /*
     **  Remember the device Path for future fopen calls
     */
     if (devicePath == NULL)
         {
-        lc->extPath[0] = '\0';
+        lc->path[0] = '\0';
         }
     else
         {
-        strcpy(lc->extPath, devicePath);
-        if (lc->extPath[0] != '\0')
+        strcpy(lc->path, devicePath);
+        if (lc->path[0] != '\0')
             {
-            strcat(lc->extPath, "/");
+            strcat(lc->path, "/");
             }
         }
 
     /*
     **  Open the device file.
     */
-    sprintf(fName, "%sLP5xx_C%02o_E%o", lc->extPath, channelNo, eqNo);
+    sprintf(fName, "%sLP5xx_C%02o_E%o", lc->path, channelNo, eqNo);
 
     up->fcb[0] = fopen(fName, "w");
     if (up->fcb[0] == NULL)
@@ -500,7 +520,7 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
            channelNo, eqNo, fName);
 
     /*
-    **  Link into list of lp1612 Line Printer units.
+    **  Link into list of Line Printer units.
     */
     if (lastUnit == NULL)
         {
@@ -536,20 +556,16 @@ void lp3000ShowStatus()
 
     while (lc)
         {
-        sprintf(outBuf, "    >   CH %02o EQ %02o UN %02o LP%d/%d (%s) %i_lpi %i_lpp line %i %s Suppress(%s) PostPrint(%s) Path '%s'\n",
+        sprintf(outBuf, "    >   CH %02o EQ %02o UN %02o LP%d/%d (%s) %i_lpi %s Path '%s'\n",
                 lc->channelNo,
                 lc->eqNo,
                 lc->unitNo,
                 (lc->flags & Lp3000Type3555) ? 3555 : 3152,
                 (lc->flags & Lp3000Type501) ? 501 : 512,
-                lc->extUseANSI ? "ANSI " : "ASCII",
-                lc->extLPI,
-                lc->extLPP,
-                lc->extCurLine,
-                lc->extBurst ? "Burst" : "NoBurst",
-                lc->extSuppress ? "ON" : "Off",
-                lc->extPostPrint ? "ON" : "Off",
-                lc->extPath);
+                lc->doUseANSI ? "ANSI " : "ASCII",
+                lc->lpi,
+                lc->doBurst ? "Burst" : "NoBurst",
+                lc->path);
         opDisplay(outBuf);
         lc = lc->nextUnit;
         }
@@ -566,17 +582,17 @@ void lp3000ShowStatus()
 **------------------------------------------------------------------------*/
 void lp3000RemovePaper(char *params)
     {
-    int channelNo;
+    int       channelNo;
     time_t    currentTime;
     DevSlot   *dp;
-    int equipmentNo;
-    char fName[MaxFSPath+128];
-    char fNameNew[MaxFSPath+128];
-    int iSuffix;
+    int       equipmentNo;
+    char      fName[MaxFSPath+128];
+    char      fNameNew[MaxFSPath+128];
+    int       iSuffix;
     LpContext *lc;
-    int numParam;
-    char outBuf[MaxFSPath*2+300];
-    bool renameOK;
+    int       numParam;
+    char      outBuf[MaxFSPath*2+300];
+    bool      renameOK;
     struct tm t;
 
     /*
@@ -621,7 +637,7 @@ void lp3000RemovePaper(char *params)
         }
 
     lc = (LpContext *)dp->context[0];
-    sprintf(fName, "%sLP5xx_C%02o_E%o", lc->extPath, channelNo, equipmentNo);
+    sprintf(fName, "%sLP5xx_C%02o_E%o", lc->path, channelNo, equipmentNo);
 
     renameOK = FALSE;
 
@@ -673,7 +689,7 @@ void lp3000RemovePaper(char *params)
                 time(&currentTime);
                 t = *localtime(&currentTime);
                 sprintf(fNameNew, "%sLP5xx_%04d%02d%02d_%02d%02d%02d_%02d.txt",
-                        lc->extPath,
+                        lc->path,
                         t.tm_year + 1900,
                         t.tm_mon + 1,
                         t.tm_mday,
@@ -737,24 +753,21 @@ static FcStatus lp3000Func(PpWord funcCode)
     unsigned int channelId;
     unsigned int deviceId;
 
-    //  SZoppi: this can happen if something goes wrong in the open
-    //          and the file fails to be properly re-opened.
-    if (active3000Device->fcb[0] == NULL)
+    fcb = active3000Device->fcb[0];
+    lc  = (LpContext *)active3000Device->context[0];
+
+    /*
+    **  This can happen if something goes wrong in the open and the file fails
+    **  to be properly re-opened.
+    */
+    if (fcb == NULL)
         {
         fprintf(stderr, "(lp3000 ) lp3000Func: FCB is Null on channel %o equipment %o\n",
                 active3000Device->channel->id,
                 active3000Device->eqNo);
 
-        return (FcProcessed);
+        return FcProcessed;
         }
-
-    fcb = active3000Device->fcb[0];
-    lc  = (LpContext *)active3000Device->context[0];
-
-    /*
-    **  Note that we don't emulate the VFU, so all VFU control codes
-    **  are implemented as NOPs.
-    */
 
 #if DEBUG
     fprintf(lp3000Log, "\n%06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
@@ -762,44 +775,30 @@ static FcStatus lp3000Func(PpWord funcCode)
             activePpu->id,
             activeDevice->channel->id,
             funcCode,
-            lp3000Func2String(funcCode));
+            lp3000Func2String(lc, funcCode));
 #endif
 
     //  Start with the common codes
-    //  20171022: This section includes the "pre-print" carriage controls
 
     switch (funcCode)
         {
     case FcPrintNoSpace:
-        lc->extSuppress = TRUE;
-
-        return (FcProcessed);
+        lc->doSuppress = TRUE;
+        return FcProcessed;
 
     case FcPrintAutoEject:
-
-        return (FcProcessed);
+        if (lc->doUseANSI && lc->doAutoEject == FALSE) fputs("R\n", fcb);
+        lc->doAutoEject = TRUE;
+        return FcProcessed;
 
     case Fc6681MasterClear:
-
-        /*
-        **  SZoppi: Extensions
-        */
-        lc->extSpaceOpt  = FcPrintSingle;           //  Default Single Space
-        lc->extLPI       = 6;                       //  Default Page Length
-        lc->extLPP       = LpInchesPerPage * lc->extLPI;
-        lc->extCurLine   = 1;                       //  1 = Initialized
-        lc->extSuppress  = FALSE;                   //  Clear Suppress Print
-        lc->extPostPrint = TRUE;                    //  Post-Print Mode by Default
-        if (lc->extUseANSI)
-            {
-            fputc('1', fcb);
-            }
-        else
-            {
-            fputc('\f', fcb);
-            }
-
-        return (FcProcessed);
+        lc->lpi           = 6;
+        lc->linePos       = 0;
+        lc->prePrintFunc  = 0;
+        lc->postPrintFunc = 0;
+        lc->doAutoEject   = FALSE;
+        lc->doSuppress    = FALSE;
+        return FcProcessed;
 
     case FcPrintRelease:
         // clear all interrupt conditions
@@ -808,111 +807,34 @@ static FcStatus lp3000Func(PpWord funcCode)
         // Release is sent at end of job, so flush the print file
         if (lc->isPrinted)
             {
-            fflush(fcb);
-            channelId = (int)active3000Device->channel->id;
-            deviceId  = (int)active3000Device->eqNo;
-            sprintf(dispLpDevId, "%o,%o", channelId, deviceId);
-            if (lc->extBurst)
+            if (lc->doUseANSI == FALSE)
                 {
+                fputc('\f', fcb);
+                }
+            fflush(fcb);
+            if (lc->doBurst)
+                {
+                channelId = (int)active3000Device->channel->id;
+                deviceId  = (int)active3000Device->eqNo;
+                sprintf(dispLpDevId, "%o,%o", channelId, deviceId);
                 lp3000RemovePaper(dispLpDevId);
                 }
             lc->isPrinted = FALSE;
             }
-
-        return (FcProcessed);
+        return FcProcessed;
 
     case FcPrintSingle:
-        lc->extSpaceOpt = FcPrintSingle;
-        if (lc->extUseANSI)
-            {
-            if (!lc->extPostPrint)
-                {
-                //  if we are not post-print spacing,
-                //  then we space pre-print
-                fputs("\n ", fcb);
-                lc->extCurLine++;
-                }
-            }
-        else
-            {
-            fputc('\n', fcb);
-            lc->extCurLine++;
-            }
-
-
-#if DEBUG
-        lp3000DebugData();
-#endif
-
-        return (FcProcessed);
-
-    case FcPrintLastLine:
-        //  Treat last-line codes as a single blank line
-        //  ToDo:   This will need to be reimplemented when
-        //          we have the current line counters working.
-        if (lc->extUseANSI)
-            {
-            fputs("\n ", fcb);
-            lc->extCurLine++;
-            }
-        else
-            {
-            fputc('\n', fcb);
-            lc->extCurLine++;
-            }
-
-#if DEBUG
-        lp3000DebugData();
-#endif
-
-        return (FcProcessed);
-
-    case FcPrintEject:
-        // Turn eject into a formfeed character
-        lc->extCurLine = 1;
-
-        if (lc->extUseANSI)
-            {
-            fputs("\n1", fcb);
-            }
-        else
-            {
-            fputc('\f', fcb);
-            }
-#if DEBUG
-        lp3000DebugData();
-#endif
-
-        return (FcProcessed);
-
     case FcPrintDouble:
-        lc->extSpaceOpt = FcPrintDouble;
-
-        if (lc->extUseANSI)
-            {
-            if (!lc->extPostPrint)
-                {
-                fputs("\n0", fcb);
-                lc->extCurLine += 2;
-                }
-            }
-        else
-            {
-            fputs("\n\n", fcb);
-            lc->extCurLine += 2;
-            }
-
-#if DEBUG
-        lp3000DebugData();
-#endif
-
-        return (FcProcessed);
+    case FcPrintLastLine:
+    case FcPrintEject:
+        lc->prePrintFunc = funcCode;
+        return FcProcessed;
 
     case Fc6681Output:
         if (lc->flags & Lp3555FillImageMem)
             {
             // Tweak the function code to tell I/O handler to toss this data
-            funcCode++;
+            funcCode += 1;
             // Now clear the flag
             lc->flags &= ~Lp3555FillImageMem;
             }
@@ -934,13 +856,11 @@ static FcStatus lp3000Func(PpWord funcCode)
         // Update interrupt summary flag in unit block
         dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
         active3000Device->fcode = funcCode;
-
-        return (FcAccepted);
+        return FcAccepted;
 
     case Fc6681DevStatusReq:
         active3000Device->fcode = funcCode;
-
-        return (FcAccepted);
+        return FcAccepted;
         }
 
     if (lc->flags & Lp3000Type3555)             // This is LP3555
@@ -949,47 +869,27 @@ static FcStatus lp3000Func(PpWord funcCode)
             {
         default:
             fprintf(stderr, "(lp3000 ) Unknown LP3555 function %04o\n", funcCode);
-
-            return (FcProcessed);
-
-        case Fc3555CondClearFormat:
-
-            return (FcProcessed);
+            return FcProcessed;
 
         case Fc3555Sel8Lpi:
-            lc->extLPI = 8;
-            lc->extLPP = LpInchesPerPage * lc->extLPI;
-
-            return (FcProcessed);
+            if (lc->doUseANSI && lc->lpi != 8) fputs("T\n", fcb);
+            lc->lpi = 8;
+            return FcProcessed;
 
         case Fc3555Sel6Lpi:
-            lc->extLPI = 6;
-            lc->extLPP = LpInchesPerPage * lc->extLPI;
-
-            return (FcProcessed);
-
-        case Fc3555SelExtArray:
-        case Fc3555ClearExtArray:
-        case Fc3555SelIntError:
-        case Fc3555RelIntError:
-        case Fc3555ReloadMemEnable:
-
-            return (FcProcessed);
+            if (lc->doUseANSI && lc->lpi != 6) fputs("S\n", fcb);
+            lc->lpi = 6;
+            return FcProcessed;
 
         case Fc3555ClearFormat:
-
-            /*
-            **  SZoppi: Extensions
-            */
-            lc->extSpaceOpt = FcPrintSingle;            //  Non-Zero = Print-Then-Space
-                                                        //  (Post-Print Spacing)
-            lc->extLPI       = 6;                       //  Default Page Length
-            lc->extLPP       = LpInchesPerPage * lc->extLPI;
-            lc->extSuppress  = FALSE;
-            lc->extSpaceOpt  = FcPrintSingle;
-            lc->extPostPrint = TRUE;
-
-            return (FcProcessed);
+            if (lc->doUseANSI) fputs("Q\n", fcb);
+        case Fc3555CondClearFormat:
+            lc->prePrintFunc  = 0;
+            lc->postPrintFunc = 0;
+            lc->lpi           = 6;
+            lc->doAutoEject   = FALSE;
+            lc->doSuppress    = FALSE;
+            return FcProcessed;
 
         case Fc3555PostVFU1:
         case Fc3555PostVFU2:
@@ -1003,14 +903,12 @@ static FcStatus lp3000Func(PpWord funcCode)
         case Fc3555PostVFU10:
         case Fc3555PostVFU11:
         case Fc3555PostVFU12:
-
-            return (FcProcessed);
+            lc->postPrintFunc = funcCode;
+            return FcProcessed;
 
         case Fc3555SelectPreprint:
-            // Zero Function Code
-            lc->extPostPrint = FALSE;
-
-            return (FcProcessed);
+            lc->postPrintFunc = 0;
+            return FcProcessed;
 
         case Fc3555PreVFU1:
         case Fc3555PreVFU2:
@@ -1024,18 +922,14 @@ static FcStatus lp3000Func(PpWord funcCode)
         case Fc3555PreVFU10:
         case Fc3555PreVFU11:
         case Fc3555PreVFU12:
-        case Fc3555MaintStatus:
-        case Fc3555ClearMaint:
-
-            // All of the above are NOPs
-            return (FcProcessed);
+            lc->prePrintFunc = funcCode;
+            return FcProcessed;
 
         case Fc3555FillMemory:
             // Remember that we saw this function, but this doesn't actually
             // start any I/O yet.
             lc->flags |= Lp3555FillImageMem;
-
-            return (FcProcessed);
+            return FcProcessed;
 
         case Fc3555SelIntReady:
             // Enable next int.  If an I/O was done since the last
@@ -1055,15 +949,13 @@ static FcStatus lp3000Func(PpWord funcCode)
                 }
             // Update interrupt summary flag in unit block
             dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
-
-            return (FcProcessed);
+            return FcProcessed;
 
         case Fc3555RelIntReady:
             lc->flags &= ~(Lp3000IntReadyEna | Lp3000IntReady);
             // Update interrupt summary flag in unit block
             dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
-
-            return (FcProcessed);
+            return FcProcessed;
 
         case Fc3555SelIntEnd:
             lc->flags |= Lp3000IntEnd | Lp3000IntEndEna;
@@ -1077,15 +969,23 @@ static FcStatus lp3000Func(PpWord funcCode)
                 }
             // Update interrupt summary flag in unit block
             dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
-
-            return (FcProcessed);
+            return FcProcessed;
 
         case Fc3555RelIntEnd:
             lc->flags &= ~(Lp3000IntEndEna | Lp3000IntEnd);
             // Update interrupt summary flag in unit block
             dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
+            return FcProcessed;
 
-            return (FcProcessed);
+        case Fc3555SelExtArray:
+        case Fc3555ClearExtArray:
+        case Fc3555SelIntError:
+        case Fc3555RelIntError:
+        case Fc3555ReloadMemEnable:
+        case Fc3555MaintStatus:
+        case Fc3555ClearMaint:
+            // All of the above are no-ops
+            return FcProcessed;
             }
         }
     else        // This is LP3152
@@ -1094,13 +994,15 @@ static FcStatus lp3000Func(PpWord funcCode)
             {
         default:
             fprintf(stderr, "(lp3000 ) Unknown LP3152 function %04o\n", funcCode);
-
-            return (FcProcessed);
+            return FcProcessed;
 
         case Fc3152ClearFormat:
-            lc->extPostPrint = TRUE;
-
-            return (FcProcessed);
+            lc->prePrintFunc  = 0;
+            lc->postPrintFunc = 0;
+            lc->lpi           = 6;
+            lc->doAutoEject   = FALSE;
+            lc->doSuppress    = FALSE;
+            return FcProcessed;
 
         case Fc3152PostVFU1:
         case Fc3152PostVFU2:
@@ -1108,13 +1010,12 @@ static FcStatus lp3000Func(PpWord funcCode)
         case Fc3152PostVFU4:
         case Fc3152PostVFU5:
         case Fc3152PostVFU6:
-
-            return (FcProcessed);
+            lc->postPrintFunc = funcCode;
+            return FcProcessed;
 
         case Fc3152SelectPreprint:
-            lc->extPostPrint = FALSE;
-
-            return (FcProcessed);
+            lc->postPrintFunc = 0;
+            return FcProcessed;
 
         case Fc3152PreVFU1:
         case Fc3152PreVFU2:
@@ -1122,12 +1023,8 @@ static FcStatus lp3000Func(PpWord funcCode)
         case Fc3152PreVFU4:
         case Fc3152PreVFU5:
         case Fc3152PreVFU6:
-        case Fc3152SelIntError:
-        case Fc3152RelIntError:
-        case Fc3152Release2:
-
-            // All of the above are NOPs
-            return (FcProcessed);
+            lc->prePrintFunc = funcCode;
+            return FcProcessed;
 
         case Fc3152SelIntReady:
             // Enable next int.  If an I/O was done since the last
@@ -1147,15 +1044,13 @@ static FcStatus lp3000Func(PpWord funcCode)
                 }
             // Update interrupt summary flag in unit block
             dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
-
-            return (FcProcessed);
+            return FcProcessed;
 
         case Fc3152RelIntReady:
             lc->flags &= ~(Lp3000IntReadyEna | Lp3000IntReady);
             // Update interrupt summary flag in unit block
             dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
-
-            return (FcProcessed);
+            return FcProcessed;
 
         case Fc3152SelIntEnd:
             lc->flags |= Lp3000IntEnd | Lp3000IntEndEna;
@@ -1169,21 +1064,25 @@ static FcStatus lp3000Func(PpWord funcCode)
                 }
             // Update interrupt summary flag in unit block
             dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
-
-            return (FcProcessed);
+            return FcProcessed;
 
         case Fc3152RelIntEnd:
             lc->flags &= ~(Lp3000IntEndEna | Lp3000IntEnd);
             // Update interrupt summary flag in unit block
             dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
+            return FcProcessed;
 
-            return (FcProcessed);
+        case Fc3152SelIntError:
+        case Fc3152RelIntError:
+        case Fc3152Release2:
+            // All of the above are no-ops
+            return FcProcessed;
             }
         }
 
     active3000Device->fcode = funcCode;
 
-    return (FcAccepted);
+    return FcAccepted;
     }
 
 /*--------------------------------------------------------------------------
@@ -1196,22 +1095,7 @@ static FcStatus lp3000Func(PpWord funcCode)
 **------------------------------------------------------------------------*/
 static void lp3000Io(void)
     {
-    FILE      *fcb;
-    LpContext *lc;
-
-    //  SZoppi: this can happen if something goes wrong in the open
-    //          and the file fails to be properly re-opened.
-    if (active3000Device->fcb[0] == NULL)
-        {
-        fprintf(stderr, "(lp3000 ) lp3000Io: FCB is Null on channel %o equipment %o\n",
-                active3000Device->channel->id,
-                active3000Device->eqNo);
-
-        return;
-        }
-
-    fcb = active3000Device->fcb[0];
-    lc  = (LpContext *)active3000Device->context[0];
+    LpContext *lc = (LpContext *)active3000Device->context[0];
 
     /*
     **  Process printer I/O.
@@ -1225,22 +1109,20 @@ static void lp3000Io(void)
         if (activeChannel->full)
             {
 #if DEBUG
-            if (linePos < MaxLine)
-                {
-                lineData[linePos++] = activeChannel->data & Mask12;
-                }
+            if (lc->linePos % 16 == 0) fputs("\n   ", lp3000Log);
+            fprintf(lp3000Log, " %04o", activeChannel->data);
 #endif
-
-            if (lc->flags & Lp3000Type501)
+            if (lc->linePos < MaxLineSize)
                 {
-                // 501 printer, output display code
-                fputc(bcdToAscii[(activeChannel->data >> 6) & Mask6], fcb);
-                fputc(bcdToAscii[activeChannel->data & Mask6], fcb);
-                }
-            else
-                {
-                // 512 printer, output ASCII
-                fputc(activeChannel->data & 0377, fcb);
+                if (lc->flags & Lp3000Type501)
+                    {
+                    lc->line[lc->linePos++] = bcdToAscii[(activeChannel->data >> 6) & Mask6];
+                    lc->line[lc->linePos++] = bcdToAscii[activeChannel->data & Mask6];
+                    }
+                else
+                    {
+                    lc->line[lc->linePos++] = activeChannel->data & 0377;
+                    }
                 }
             activeChannel->full = FALSE;
             lc->isPrinted       = TRUE;
@@ -1255,9 +1137,7 @@ static void lp3000Io(void)
 
     case Fc6681DevStatusReq:
         // Indicate ready plus whatever interrupts are enabled
-        activeChannel->data = StPrintReady |
-                              (lc->flags &
-                               (StPrintIntReady | StPrintIntEnd));
+        activeChannel->data     = StPrintReady | (lc->flags & (StPrintIntReady | StPrintIntEnd));
         activeChannel->full     = TRUE;
         active3000Device->fcode = 0;
         break;
@@ -1289,152 +1169,357 @@ static void lp3000Disconnect(void)
     FILE      *fcb = active3000Device->fcb[0];
     LpContext *lc  = (LpContext *)active3000Device->context[0];
 
-    //  SZoppi: this can happen if something goes wrong in the open
-    //          and the file fails to be properly re-opened.
-    if (active3000Device->fcb[0] == NULL)
+    //
+    //  This can happen if something goes wrong in the open and the file fails
+    //  to be properly re-opened.
+    //
+    if (fcb == NULL)
         {
-        fprintf(stderr, "(lp3000 ) lp3000Disconnect: FCB is Null on channel %o equipment %o\n",
+        fprintf(stderr, "(lp3000 ) lp3000Disconnect: FCB is null on channel %o equipment %o\n",
                 active3000Device->channel->id,
                 active3000Device->eqNo);
 
         return;
         }
 
-
     if (active3000Device->fcode == Fc6681Output)
         {
-        if (lc->extSuppress)
-            {
-            //  20171022: There was no LineFeed Action expected so
-            //            we use Carriage Return Only for NON-ASA
-            //            otherwise the default is a line-end.
-            if (lc->extUseANSI)
-                {
-                fputs("\n+", fcb);
-                }
-            else
-                {
-                fputc('\r', fcb);
-                }
-            lc->extSuppress = FALSE;
-            }
-        else if (lc->extPostPrint)
-            {
-            /*
-            **  20171022: We perform post-print actions here if needed
-            */
-            switch (lc->extSpaceOpt)
-                {
-            case FcPrintDouble:
-                if (lc->extUseANSI)
-                    {
-                    //  We simply terminate the existing line
-                    fputs("\n0", fcb);
-                    }
-                else
-                    {
-                    fputs("\n\n", fcb);
-                    }
 #if DEBUG
-                lp3000DebugData();
+        lp3000DebugData(lc);
 #endif
-                lc->extCurLine += 2;
-                break;
-
-            case FcPrintSingle:
-            default:
-                //  At the end of every "Normal" line -
-                //  we do a line end
-                if (lc->extUseANSI)
-                    {
-                    fputs("\n ", fcb);
-                    }
-                else
-                    {
-                    fputc('\n', fcb);
-                    }
-                lc->extCurLine++;
-
-#if DEBUG
-                lp3000DebugData();
-#endif
-                break;
-                }
-            lc->extSpaceOpt = FcPrintSingle;
+        if (lc->doUseANSI)
+            {
+            lp3000PrintANSI(lc, fcb);
             }
         else
             {
-            // TODO: This is an experimental flag to help me debug.
-            //       Although it should never happen - we look for it.
-            fputc('\t', fcb);
+            lp3000PrintASCII(lc, fcb);
             }
-
-#if DEBUG
-        lp3000DebugData();
-#endif
+        lc->linePos             = 0;
         active3000Device->fcode = 0;
         }
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Dump raw line data.
+**  Purpose:        Print a buffered line in ANSI mode.
 **
 **  Parameters:     Name        Description.
+**                  lc          pointer to line printer context
+**                  fcb         pointer to printer file descriptor
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void lp3000DebugData(void)
+static void lp3000PrintANSI(LpContext *lc, FILE *fcb)
     {
-#if DEBUG
+    u8 i;
+
+    if (lc->prePrintFunc != 0)
+        {
+        switch (lc->prePrintFunc)
+            {
+        default:
+            break;
+        case FcPrintSingle:
+            fputc('0', fcb);
+            break;
+        case FcPrintDouble:
+            fputc('-', fcb);
+            break;
+        case FcPrintLastLine:
+            fputc('2', fcb);
+            break;
+        case FcPrintEject:
+            fputc('1', fcb);
+            break;
+        case FcPrintNoSpace:
+            fputc('+', fcb);
+            break;
+            }
+        if (lc->flags & Lp3000Type3555)
+            {
+            switch (lc->prePrintFunc)
+                {
+            default:
+                break;
+            case Fc3555PreVFU1:
+            case Fc3555PreVFU2:
+            case Fc3555PreVFU3:
+            case Fc3555PreVFU4:
+            case Fc3555PreVFU5:
+            case Fc3555PreVFU6:
+            case Fc3555PreVFU7:
+            case Fc3555PreVFU8:
+            case Fc3555PreVFU9:
+            case Fc3555PreVFU10:
+            case Fc3555PreVFU11:
+            case Fc3555PreVFU12:
+                fputc(prePrintEffectors[lc->prePrintFunc - Fc3555PreVFU1], fcb);
+                break;
+                }
+            }
+        else
+            {
+            switch (lc->prePrintFunc)
+                {
+            default:
+                break;
+            case Fc3152PreVFU1:
+            case Fc3152PreVFU2:
+            case Fc3152PreVFU3:
+            case Fc3152PreVFU4:
+            case Fc3152PreVFU5:
+            case Fc3152PreVFU6:
+                fputc(prePrintEffectors[lc->prePrintFunc - Fc3152PreVFU1], fcb);
+                break;
+                }
+            }
+        lc->prePrintFunc = 0;
+        }
+    else if (lc->doSuppress)
+        {
+        fputc(' ', fcb);
+        lc->prePrintFunc = FcPrintNoSpace;
+        lc->doSuppress   = FALSE;
+        }
+    else if (lc->postPrintFunc != 0)
+        {
+        if (lc->flags & Lp3000Type3555)
+            {
+            switch (lc->postPrintFunc)
+                {
+            default:
+                break;
+            case Fc3555PostVFU1:
+            case Fc3555PostVFU2:
+            case Fc3555PostVFU3:
+            case Fc3555PostVFU4:
+            case Fc3555PostVFU5:
+            case Fc3555PostVFU6:
+            case Fc3555PostVFU7:
+            case Fc3555PostVFU8:
+            case Fc3555PostVFU9:
+            case Fc3555PostVFU10:
+            case Fc3555PostVFU11:
+            case Fc3555PostVFU12:
+                fputc(postPrintEffectors[lc->postPrintFunc - Fc3555PostVFU1], fcb);
+                break;
+                }
+            }
+        else
+            {
+            switch (lc->postPrintFunc)
+                {
+            default:
+                break;
+            case Fc3152PostVFU1:
+            case Fc3152PostVFU2:
+            case Fc3152PostVFU3:
+            case Fc3152PostVFU4:
+            case Fc3152PostVFU5:
+            case Fc3152PostVFU6:
+                fputc(postPrintEffectors[lc->postPrintFunc - Fc3152PostVFU1], fcb);
+                break;
+                }
+            }
+        }
+    else
+        {
+        fputc(' ', fcb);
+        }
+    for (i = 0; i < lc->linePos; i++)
+        {
+        fputc(lc->line[i], fcb);
+        }
+     fputc('\n', fcb);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Print a buffered line in ASCII mode.
+**
+**  Parameters:     Name        Description.
+**                  lc          pointer to line printer context
+**                  fcb         pointer to printer file descriptor
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void lp3000PrintASCII(LpContext *lc, FILE *fcb)
+    {
     int i;
 
-    if (linePos == 0)
+    if (lc->prePrintFunc != 0)
         {
-        return;
-        }
-
-    for (i = 0; i < linePos; i++)
-        {
-        if (i % 16 == 0)
+        switch (lc->prePrintFunc)
             {
-            fputc('\n', lp3000Log);
+        case FcPrintLastLine:
+        default:
+            break;
+        case FcPrintSingle:
+            fputc('\n', fcb);
+            break;
+        case FcPrintDouble:
+            fputs("\n\n", fcb);
+            break;
+        case FcPrintEject:
+            fputc('\f', fcb);
+            break;
             }
-
-        //        fprintf(lp3000Log, " %04o", lineData[i]);
-        fprintf(lp3000Log, "%c%c", bcdToAscii[(lineData[i] >> 6) & Mask6], bcdToAscii[(lineData[i] >> 0) & Mask6]);
+        lc->prePrintFunc = 0;
         }
+    for (i = 0; i < lc->linePos; i++)
+        {
+        fputc(lc->line[i], fcb);
+        }
+    if (lc->doSuppress)
+        {
+        fputc('\r', fcb);
+        lc->doSuppress = FALSE;
+        }
+    else
+        {
+        fputc('\n', fcb);
+        }
+    }
 
-    fputc('\n', lp3000Log);
+#if DEBUG
+/*--------------------------------------------------------------------------
+**  Purpose:        Dump raw line data.
+**
+**  Parameters:     Name        Description.
+**                  lc          pointer to line printer context
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void lp3000DebugData(LpContext *lc)
+    {
+    int i;
 
-    linePos = 0;
-#endif
+    if (lc->linePos > 0)
+        {
+        fprintf(lp3000Log, "\n    prePrintFunc:%04o  postPrintFunc:%04o  doSuppress:%s",
+            lc->prePrintFunc, lc->postPrintFunc, lc->doSuppress ? "TRUE" : "FALSE");
+        for (i = 0; i < lc->linePos; i++)
+            {
+            if (i % 136 == 0)
+                {
+                fputc('\n', lp3000Log);
+                }
+            fputc(lc->line[i], lp3000Log);
+            }
+        fputc('\n', lp3000Log);
+        }
     }
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert function code to string.
 **
 **  Parameters:     Name        Description.
+**                  lc          pointer to line printer context
 **                  funcCode    function code
 **
 **  Returns:        String equivalent of function code.
 **
 **------------------------------------------------------------------------*/
-static char *lp3000Func2String(PpWord funcCode)
+static char *lp3000Func2String(LpContext *lc, PpWord funcCode)
     {
     static char buf[40];
 
-#if DEBUG
     switch (funcCode)
         {
-    //    case Fc669FormatUnit             : return "Fc669FormatUnit";
-    default:
-        break;
+    default: break;
+    case FcPrintRelease               : return "FcPrintRelease";
+    case FcPrintSingle                : return "FcPrintSingle";
+    case FcPrintDouble                : return "FcPrintDouble";
+    case FcPrintLastLine              : return "FcPrintLastLine";
+    case FcPrintEject                 : return "FcPrintEject";
+    case FcPrintAutoEject             : return "FcPrintAutoEject";
+    case FcPrintNoSpace               : return "FcPrintNoSpace";
+    case Fc6681MasterClear            : return "Fc6681MasterClear";
+    case Fc6681Output                 : return "Fc6681Output";
+    case Fc6681DevStatusReq           : return "Fc6681DevStatusReq";
         }
-#endif
-    sprintf(buf, "(lp3000 ) Unknown Function: %04o", funcCode);
+    if (lc->flags & Lp3000Type3555)             // This is LP3555
+        {
+        switch (funcCode)
+            {
+        default: break;
+        case Fc3555CondClearFormat    : return "Fc3555CondClearFormat";
+        case Fc3555Sel8Lpi            : return "Fc3555Sel8Lpi";
+        case Fc3555Sel6Lpi            : return "Fc3555Sel6Lpi";
+        case Fc3555FillMemory         : return "Fc3555FillMemory";
+        case Fc3555SelExtArray        : return "Fc3555SelExtArray";
+        case Fc3555ClearExtArray      : return "Fc3555ClearExtArray";
+        case Fc3555SelIntReady        : return "Fc3555SelIntReady";
+        case Fc3555RelIntReady        : return "Fc3555RelIntReady";
+        case Fc3555SelIntEnd          : return "Fc3555SelIntEnd";
+        case Fc3555RelIntEnd          : return "Fc3555RelIntEnd";
+        case Fc3555SelIntError        : return "Fc3555SelIntError";
+        case Fc3555RelIntError        : return "Fc3555RelIntError";
+        case Fc3555ReloadMemEnable    : return "Fc3555ReloadMemEnable";
+        case Fc3555ClearFormat        : return "Fc3555ClearFormat";
+        case Fc3555PostVFU1           : return "Fc3555PostVFU1";
+        case Fc3555PostVFU2           : return "Fc3555PostVFU2";
+        case Fc3555PostVFU3           : return "Fc3555PostVFU3";
+        case Fc3555PostVFU4           : return "Fc3555PostVFU4";
+        case Fc3555PostVFU5           : return "Fc3555PostVFU5";
+        case Fc3555PostVFU6           : return "Fc3555PostVFU6";
+        case Fc3555PostVFU7           : return "Fc3555PostVFU7";
+        case Fc3555PostVFU8           : return "Fc3555PostVFU8";
+        case Fc3555PostVFU9           : return "Fc3555PostVFU9";
+        case Fc3555PostVFU10          : return "Fc3555PostVFU10";
+        case Fc3555PostVFU11          : return "Fc3555PostVFU11";
+        case Fc3555PostVFU12          : return "Fc3555PostVFU12";
+        case Fc3555SelectPreprint     : return "Fc3555SelectPreprint";
+        case Fc3555PreVFU1            : return "Fc3555PreVFU1";
+        case Fc3555PreVFU2            : return "Fc3555PreVFU2";
+        case Fc3555PreVFU3            : return "Fc3555PreVFU3";
+        case Fc3555PreVFU4            : return "Fc3555PreVFU4";
+        case Fc3555PreVFU5            : return "Fc3555PreVFU5";
+        case Fc3555PreVFU6            : return "Fc3555PreVFU6";
+        case Fc3555PreVFU7            : return "Fc3555PreVFU7";
+        case Fc3555PreVFU8            : return "Fc3555PreVFU8";
+        case Fc3555PreVFU9            : return "Fc3555PreVFU9";
+        case Fc3555PreVFU10           : return "Fc3555PreVFU10";
+        case Fc3555PreVFU11           : return "Fc3555PreVFU11";
+        case Fc3555PreVFU12           : return "Fc3555PreVFU12";
+        case Fc3555MaintStatus        : return "Fc3555MaintStatus";
+        case Fc3555ClearMaint         : return "Fc3555ClearMaint";
+            }
+        }
+    else
+        {
+        switch (funcCode)
+            {
+        default: break;
+        case Fc3152ClearFormat        : return "Fc3152ClearFormat";
+        case Fc3152PostVFU1           : return "Fc3152PostVFU1";
+        case Fc3152PostVFU2           : return "Fc3152PostVFU2";
+        case Fc3152PostVFU3           : return "Fc3152PostVFU3";
+        case Fc3152PostVFU4           : return "Fc3152PostVFU4";
+        case Fc3152PostVFU5           : return "Fc3152PostVFU5";
+        case Fc3152PostVFU6           : return "Fc3152PostVFU6";
+        case Fc3152SelectPreprint     : return "Fc3152SelectPreprint";
+        case Fc3152PreVFU1            : return "Fc3152PreVFU1";
+        case Fc3152PreVFU2            : return "Fc3152PreVFU2";
+        case Fc3152PreVFU3            : return "Fc3152PreVFU3";
+        case Fc3152PreVFU4            : return "Fc3152PreVFU4";
+        case Fc3152PreVFU5            : return "Fc3152PreVFU5";
+        case Fc3152PreVFU6            : return "Fc3152PreVFU6";
+        case Fc3152SelIntReady        : return "Fc3152SelIntReady";
+        case Fc3152RelIntReady        : return "Fc3152RelIntReady";
+        case Fc3152SelIntEnd          : return "Fc3152SelIntEnd";
+        case Fc3152RelIntEnd          : return "Fc3152RelIntEnd";
+        case Fc3152SelIntError        : return "Fc3152SelIntError";
+        case Fc3152RelIntError        : return "Fc3152RelIntError";
+        case Fc3152Release2           : return "Fc3152Release2";
+            }
+        }
+    sprintf(buf, "Unknown Function: %04o", funcCode);
 
     return (buf);
     }
+#endif
 
 /*---------------------------  End Of File  ------------------------------*/

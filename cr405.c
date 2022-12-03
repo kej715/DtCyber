@@ -1126,12 +1126,6 @@ static void cr405NextCard(DevSlot *dp)
         fclose(dp->fcb[0]);
         dp->fcb[0] = NULL;
 
-        sprintf(outBuf, "(cr405  ) End of Deck '%s' reached on channel %o equipment %o\n",
-                cc->curFileName,
-                dp->channel->id,
-                dp->eqNo);
-        opDisplay(outBuf);
-
         /*
         **  At end of file, it is assumed that ALL decks have been
         **  passed through the preprocessor and therefore have
