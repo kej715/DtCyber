@@ -1529,7 +1529,7 @@ static void mt669Io(void)
         return;
         }
 
-    activeChannel->delayStatus = 3;
+    activeChannel->delayStatus = 5;
 
     /*
     **  Setup selected unit context.
