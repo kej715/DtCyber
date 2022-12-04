@@ -222,14 +222,14 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     */
     if (up->context[0] != NULL)
         {
-        fprintf(stderr,"(cp3446 ) Only one CP3446 unit is possible per equipment\n");
+        fprintf(stderr, "(cp3446 ) Only one CP3446 unit is possible per equipment\n");
         exit(1);
         }
 
     cc = calloc(1, sizeof(CpContext));
     if (cc == NULL)
         {
-        fprintf(stderr,"(cp3446 ) Failed to allocate CP3446 context block\n");
+        fprintf(stderr, "(cp3446 ) Failed to allocate CP3446 context block\n");
         exit(1);
         }
 
@@ -264,7 +264,7 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     up->fcb[0] = fopen(fname, "w");
     if (up->fcb[0] == NULL)
         {
-        printf(stderr,"(cp3446 ) Failed to open %s\n", fname);
+        fprintf(stderr, "(cp3446 ) Failed to open %s\n", fname);
         exit(1);
         }
 
@@ -280,7 +280,7 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         else if (strcmp(deviceType, "026") != 0)
             {
-            fprintf(stderr,"(cp3446 ) Unrecognized card code name '%s'\n", deviceType);
+            fprintf(stderr, "(cp3446 ) Unrecognized card code name '%s'\n", deviceType);
             exit(1);
             }
         }
@@ -383,7 +383,7 @@ void cp3446RemoveCards(char *params)
     dp = dcc6681FindDevice((u8)channelNo, (u8)equipmentNo, DtCp3446);
     if (dp == NULL)
         {
-        sprintf(outBuf,"(cp3446 ) No card punch on channel %o and equipment %o\n", channelNo, equipmentNo);
+        sprintf(outBuf, "(cp3446 ) No card punch on channel %o and equipment %o\n", channelNo, equipmentNo);
         opDisplay(outBuf);
 
         return;
@@ -400,7 +400,7 @@ void cp3446RemoveCards(char *params)
     if (dp->fcb[0] == NULL)
         {
         renameOK = TRUE;        //  Since nothing was open - we're not renaming
-        sprintf(outBuf,"(cp3446 ) cp3446RemoveCards: FCB is Null on channel %o equipment %o\n",
+        sprintf(outBuf, "(cp3446 ) cp3446RemoveCards: FCB is Null on channel %o equipment %o\n",
                dp->channel->id,
                dp->eqNo);
         opDisplay(outBuf);
@@ -413,7 +413,7 @@ void cp3446RemoveCards(char *params)
 
         if (ftell(dp->fcb[0]) == 0)
             {
-            sprintf(outBuf,"(cp3446 ) No cards have been punched on channel %o and equipment %o\n", channelNo, equipmentNo);
+            sprintf(outBuf, "(cp3446 ) No cards have been punched on channel %o and equipment %o\n", channelNo, equipmentNo);
             opDisplay(outBuf);
 
             return;
@@ -452,7 +452,7 @@ void cp3446RemoveCards(char *params)
                 renameOK = TRUE;
                 break;
                 }
-            sprintf(outBuf,"(cp3446 ) Could not rename '%s' to '%s' - %s (retrying)\n", fname, fnameNew, strerror(errno));
+            sprintf(outBuf, "(cp3446 ) Could not rename '%s' to '%s' - %s (retrying)\n", fname, fnameNew, strerror(errno));
             opDisplay(outBuf);
             }
         }
@@ -467,12 +467,12 @@ void cp3446RemoveCards(char *params)
     */
     if (dp->fcb[0] == NULL)
         {
-        sprintf(outBuf,"(cp3446 ) Failed to open %s\n", fname);
+        sprintf(outBuf, "(cp3446 ) Failed to open %s\n", fname);
         opDisplay(outBuf);
         return;
         }
 
-        sprintf(outBuf,"(cp3446 ) Cards removed and available on '%s'\n", fnameNew);
+        sprintf(outBuf, "(cp3446 ) Cards removed and available on '%s'\n", fnameNew);
         opDisplay(outBuf);
     }
 
@@ -617,14 +617,14 @@ static void cp3446Io(void)
     CpContext *cc;
     char      c;
     PpWord    p;
-    char        outBuf[400];
+    char      outBuf[400];
 
     cc = (CpContext *)active3000Device->context[0];
 
     switch (active3000Device->fcode)
         {
     default:
-        sprintf(outBuf,"(cp3446 ) Unexpected IO for function %04o\n", active3000Device->fcode);
+        sprintf(outBuf, "(cp3446 ) Unexpected IO for function %04o\n", active3000Device->fcode);
         opDisplay(outBuf);
         break;
 
@@ -930,7 +930,6 @@ void cp3446ShowStatus()
         {
         return;
         }
-
 
     opDisplay("\n    > Card Punch (cp3446) Status:\n");
 
