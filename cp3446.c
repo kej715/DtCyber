@@ -186,6 +186,7 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     PpWord       hol;
     DevSlot      *up;
 
+
     /*
     **  When we are called, "deviceParams" is a space terminated string
     **  at the end of the INI entry.
@@ -221,14 +222,14 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     */
     if (up->context[0] != NULL)
         {
-        fprintf(stderr, "(cp3446 ) Only one CP3446 unit is possible per equipment\n");
+        fprintf(stderr,"(cp3446 ) Only one CP3446 unit is possible per equipment\n");
         exit(1);
         }
 
     cc = calloc(1, sizeof(CpContext));
     if (cc == NULL)
         {
-        fprintf(stderr, "(cp3446 ) Failed to allocate CP3446 context block\n");
+        fprintf(stderr,"(cp3446 ) Failed to allocate CP3446 context block\n");
         exit(1);
         }
 
@@ -263,7 +264,7 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     up->fcb[0] = fopen(fname, "w");
     if (up->fcb[0] == NULL)
         {
-        fprintf(stderr, "(cp3446 ) Failed to open %s\n", fname);
+        printf(stderr,"(cp3446 ) Failed to open %s\n", fname);
         exit(1);
         }
 
@@ -279,12 +280,12 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         else if (strcmp(deviceType, "026") != 0)
             {
-            fprintf(stderr, "(cp3446 ) Unrecognized card code name '%s'\n", deviceType);
+            fprintf(stderr,"(cp3446 ) Unrecognized card code name '%s'\n", deviceType);
             exit(1);
             }
         }
 
-    fprintf(stdout, "(cp3446 ) Card code selected '%s'\n", (charset == asciiTo029) ? "029" : "026");
+    printf("(cp3446 ) Card code selected '%s'\n", (charset == asciiTo029) ? "029" : "026");
 
     memset(cc->convTable, ' ', sizeof(cc->convTable));
     for (int i = 040; i < 0177; i++)
@@ -343,6 +344,7 @@ void cp3446RemoveCards(char *params)
     char        fname[MaxFSPath+64];
     char        fnameNew[MaxFSPath+64];
     static char msgBuf[80] = "";
+    char        outBuf[400];
 
     bool renameOK;
 
@@ -356,21 +358,21 @@ void cp3446RemoveCards(char *params)
     */
     if (numParam != 2)
         {
-        printf("(cp3446 ) Not enough or invalid parameters\n");
+        opDisplay("(cp3446 ) Not enough or invalid parameters\n");
 
         return;
         }
 
     if ((channelNo < 0) || (channelNo >= MaxChannels))
         {
-        printf("(cp3446 ) Invalid channel no\n");
+        opDisplay("(cp3446 ) Invalid channel no\n");
 
         return;
         }
 
     if ((equipmentNo < 0) || (equipmentNo >= MaxEquipment))
         {
-        printf("(cp3446 ) Invalid equipment no\n");
+        opDisplay("(cp3446 ) Invalid equipment no\n");
 
         return;
         }
@@ -381,7 +383,8 @@ void cp3446RemoveCards(char *params)
     dp = dcc6681FindDevice((u8)channelNo, (u8)equipmentNo, DtCp3446);
     if (dp == NULL)
         {
-        printf("(cp3446 ) No card punch on channel %o and equipment %o\n", channelNo, equipmentNo);
+        sprintf(outBuf,"(cp3446 ) No card punch on channel %o and equipment %o\n", channelNo, equipmentNo);
+        opDisplay(outBuf);
 
         return;
         }
@@ -397,9 +400,10 @@ void cp3446RemoveCards(char *params)
     if (dp->fcb[0] == NULL)
         {
         renameOK = TRUE;        //  Since nothing was open - we're not renaming
-        printf("(cp3446 ) cp3446RemoveCards: FCB is Null on channel %o equipment %o\n",
+        sprintf(outBuf,"(cp3446 ) cp3446RemoveCards: FCB is Null on channel %o equipment %o\n",
                dp->channel->id,
                dp->eqNo);
+        opDisplay(outBuf);
         //  proceed to attempt to open a new FCB
         }
     else
@@ -409,7 +413,8 @@ void cp3446RemoveCards(char *params)
 
         if (ftell(dp->fcb[0]) == 0)
             {
-            printf("(cp3446 ) No cards have been punched on channel %o and equipment %o\n", channelNo, equipmentNo);
+            sprintf(outBuf,"(cp3446 ) No cards have been punched on channel %o and equipment %o\n", channelNo, equipmentNo);
+            opDisplay(outBuf);
 
             return;
             }
@@ -447,7 +452,8 @@ void cp3446RemoveCards(char *params)
                 renameOK = TRUE;
                 break;
                 }
-            printf("(cp3446 ) Could not rename '%s' to '%s' - %s (retrying)\n", fname, fnameNew, strerror(errno));
+            sprintf(outBuf,"(cp3446 ) Could not rename '%s' to '%s' - %s (retrying)\n", fname, fnameNew, strerror(errno));
+            opDisplay(outBuf);
             }
         }
 
@@ -461,12 +467,13 @@ void cp3446RemoveCards(char *params)
     */
     if (dp->fcb[0] == NULL)
         {
-        printf("(cp3446 ) Failed to open %s\n", fname);
-
+        sprintf(outBuf,"(cp3446 ) Failed to open %s\n", fname);
+        opDisplay(outBuf);
         return;
         }
 
-    printf("(cp3446 ) Cards removed and available on '%s'\n", fnameNew);
+        sprintf(outBuf,"(cp3446 ) Cards removed and available on '%s'\n", fnameNew);
+        opDisplay(outBuf);
     }
 
 /*
@@ -610,13 +617,15 @@ static void cp3446Io(void)
     CpContext *cc;
     char      c;
     PpWord    p;
+    char        outBuf[400];
 
     cc = (CpContext *)active3000Device->context[0];
 
     switch (active3000Device->fcode)
         {
     default:
-        printf("(cp3446 ) Unexpected IO for function %04o\n", active3000Device->fcode);
+        sprintf(outBuf,"(cp3446 ) Unexpected IO for function %04o\n", active3000Device->fcode);
+        opDisplay(outBuf);
         break;
 
     case 0:
