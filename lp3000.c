@@ -92,7 +92,7 @@
 #define Fc3152PostVFU4           00014
 #define Fc3152PostVFU5           00015
 #define Fc3152PostVFU6           00016
-#define Fc3152SelectPreprint     00020
+#define Fc3152SelectPrePrint     00020
 #define Fc3152PreVFU1            00021
 #define Fc3152PreVFU2            00022
 #define Fc3152PreVFU3            00023
@@ -134,7 +134,7 @@
 #define Fc3555PostVFU10          00042
 #define Fc3555PostVFU11          00043
 #define Fc3555PostVFU12          00044
-#define Fc3555SelectPreprint     00050
+#define Fc3555SelectPrePrint     00050
 #define Fc3555PreVFU1            00051
 #define Fc3555PreVFU2            00052
 #define Fc3555PreVFU3            00053
@@ -150,7 +150,16 @@
 #define Fc3555MaintStatus        00065
 #define Fc3555ClearMaint         00066
 
-//  Maximum number of characters per line
+/*  
+**  Output rendering modes
+*/
+#define ModeCDC                  0
+#define ModeANSI                 1
+#define ModeASCII                2
+
+/*
+**  Maximum number of characters per line
+*/
 #define MaxLineSize              140
 
 /*
@@ -189,6 +198,7 @@ typedef struct lpContext
     u16              flags;
     bool             isPrinted;
     bool             keepInt;
+    u8               renderingMode;      //  one of ModeCDC, modeANSI, or mode ASCII
 
     u8               prePrintFunc;       //  last pre-print function (0 = no pre-print function specified)
     u8               postPrintFunc;      //  last post-print function (0 = no post-print function specified)
@@ -198,7 +208,6 @@ typedef struct lpContext
     PpWord           line[MaxLineSize];  //  buffered line
     u8               linePos;            //  current line position
 
-    bool             doUseANSI;          //  use ANSI/ASA Carriage-control characters
     bool             doBurst;            //  bursting option for forced segmentation at EOJ
     char             path[MaxFSPath];    //  preserve the device folder path
     } LpContext;
@@ -209,17 +218,20 @@ typedef struct lpContext
 **  Private Function Prototypes
 **  ---------------------------
 */
-static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams);
+static void     lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams);
 static FcStatus lp3000Func(PpWord funcCode);
-static void lp3000Io(void);
-static void lp3000Activate(void);
-static void lp3000Disconnect(void);
-static void lp3000PrintANSI(LpContext *lc, FILE *fcb);
-static void lp3000PrintASCII(LpContext *lc, FILE *fcb);
+static void     lp3000Io(void);
+static void     lp3000Activate(void);
+static void     lp3000Disconnect(void);
+static char    *lp3000FeForPostPrint(LpContext *lc, u8 func);
+static char    *lp3000FeForPrePrint(LpContext *lc, u8 func);
+static void     lp3000PrintANSI(LpContext *lc, FILE *fcb);
+static void     lp3000PrintASCII(LpContext *lc, FILE *fcb);
+static void     lp3000PrintCDC(LpContext *lc, FILE *fcb);
 
 #if DEBUG
-static void lp3000DebugData(LpContext *lc);
-static char *lp3000Func2String(LpContext *lc, PpWord funcCode);
+static void     lp3000DebugData(LpContext *lc);
+static char    *lp3000Func2String(LpContext *lc, PpWord funcCode);
 #endif
 
 /*
@@ -237,34 +249,55 @@ static char *lp3000Func2String(LpContext *lc, PpWord funcCode);
 static LpContext *firstUnit = NULL;
 static LpContext *lastUnit  = NULL;
 
-static u8 postPrintEffectors[] = {
-    'H', // advance to channel 1
-    'G', // advance to channel 2
-    'F', // advance to channel 3
-    'E', // advance to channel 4
-    'D', // advance to channel 5
-    'C', // advance to channel 6
-    'I', // advance to channel 7
-    'J', // advance to channel 8
-    'K', // advance to channel 9
-    'L', // advance to channel 10
-    'M', // advance to channel 11
-    'N'  // advance to channel 12
+static char *postPrintCdcEffectors[] = {
+    "H", // advance to channel 1
+    "G", // advance to channel 2
+    "F", // advance to channel 3
+    "E", // advance to channel 4
+    "D", // advance to channel 5
+    "C", // advance to channel 6
+    "I", // advance to channel 7
+    "J", // advance to channel 8
+    "K", // advance to channel 9
+    "L", // advance to channel 10
+    "M", // advance to channel 11
+    "N"  // advance to channel 12
 };
 
-static u8 prePrintEffectors[] = {
-    '8', // advance to channel 1
-    '7', // advance to channel 2
-    '6', // advance to channel 3
-    '5', // advance to channel 4
-    '4', // advance to channel 5
-    '3', // advance to channel 6
-    '9', // advance to channel 7
-    'X', // advance to channel 8
-    'Y', // advance to channel 9
-    'Z', // advance to channel 10
-    'W', // advance to channel 11
-    'U'  // advance to channel 12
+static char *prePrintAnsiEffectors[] = {
+    "1", // advance to channel 1
+    "2", // advance to channel 2
+    "3", // advance to channel 3
+    "4", // advance to channel 4
+    "5", // advance to channel 5
+    "6", // advance to channel 6
+    "7", // advance to channel 7
+    "8", // advance to channel 8
+    "9", // advance to channel 9
+    "A", // advance to channel 10
+    "B", // advance to channel 11
+    "C"  // advance to channel 12
+};
+
+static char *prePrintCdcEffectors[] = {
+    "8", // advance to channel 1
+    "7", // advance to channel 2
+    "6", // advance to channel 3
+    "5", // advance to channel 4
+    "4", // advance to channel 5
+    "3", // advance to channel 6
+    "9", // advance to channel 7
+    "X", // advance to channel 8
+    "Y", // advance to channel 9
+    "Z", // advance to channel 10
+    "W", // advance to channel 11
+    "U"  // advance to channel 12
+};
+
+static char *renderingModes[] = {
+    "CDC",
+    "ANSI",
+    "ASCII"
 };
 
 #if DEBUG
@@ -350,10 +383,10 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
     char      *deviceType;
     u16       flags;
     char      fName[MaxFSPath];
-    bool      isANSI;
     bool      isBursting;
     LpContext *lc;
     char      *lpTypeName;
+    u8        mode;
     DevSlot   *up;
 
 #if DEBUG
@@ -377,33 +410,37 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
     **
     **      <DeviceType>   (NULL(="3555")|"3555"|"3152")
     **      <devicePath>
-    **      <OutputMode>   ("ASCII"|"ANSI")
+    **      <OutputMode>   ("CDC"|"ANSI"|"ASCII")
     **      <BurstingMode> ("Burst"|"NoBurst")
     **
     */
     deviceType = strtok(deviceParams, ", "); //  "3555" | "3152"
     devicePath = strtok(NULL, ", ");         //  Get the Path (subdirectory)
-    deviceMode = strtok(NULL, ", ");         //  pick up "ansi" or "ascii" flag
+    deviceMode = strtok(NULL, ", ");         //  pick up "cdc", "ansi", or "ascii"
     burstMode  = strtok(NULL, ", ");         //  Indication for bursting
 
-    isANSI = TRUE;
+    mode = ModeCDC;
     if (deviceMode != NULL)
         {
-        if (strcasecmp(deviceMode, "ansi") == 0)
+        if (strcasecmp(deviceMode, "cdc") == 0)
             {
-            isANSI = TRUE;
+            mode = ModeCDC;
+            }
+        else if (strcasecmp(deviceMode, "ansi") == 0)
+            {
+            mode = ModeANSI;
             }
         else if (strcasecmp(deviceMode, "ascii") == 0)
             {
-            isANSI = FALSE;
+            mode = ModeASCII;
             }
         else
             {
-            fprintf(stderr, "(lp3000 ) %s Unrecognized TRANSLATION mode '%s'\n", lpTypeName, deviceMode);
+            fprintf(stderr, "(lp3000 ) %s Unrecognized output rendering mode '%s'\n", lpTypeName, deviceMode);
             exit(1);
             }
         }
-    fprintf(stdout, "(lp3000 ) %s Translation mode '%s'\n", lpTypeName, isANSI ? "ANSI" : "ASCII");
+    fprintf(stdout, "(lp3000 ) %s Output rendering mode '%s'\n", lpTypeName, renderingModes[mode]);
 
     /*
     **  This is an optional parameter, therefore the default prevails
@@ -476,7 +513,7 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
     lc->doAutoEject   = FALSE;           //  Clear auto-eject
     lc->doSuppress    = FALSE;           //  Clear suppress space
     lc->doBurst       = isBursting;      //  Whether or not we force segmentation at EOJ
-    lc->doUseANSI     = isANSI;          //  Indicate how to handle Carriage Control
+    lc->renderingMode = mode;            //  Indicate how to handle Carriage Control
     lc->channelNo     = channelNo;
     lc->unitNo        = unitNo;
     lc->eqNo          = eqNo;
@@ -513,11 +550,10 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
     /*
     **  Print a friendly message.
     */
-    printf("(lp3000 ) %s LP%d/%d initialised on channel %o equipment %o filename '%s'\n",
-           isANSI ? "ANSI" : "ASCII",
+    printf("(lp3000 ) LP%d/%d initialised on channel %o equipment %o mode %s filename '%s'\n",
            (flags & Lp3000Type3555) ? 3555 : 3152,
            (flags & Lp3000Type501) ? 501 : 512,
-           channelNo, eqNo, fName);
+           channelNo, eqNo, renderingModes[mode], fName);
 
     /*
     **  Link into list of Line Printer units.
@@ -556,13 +592,13 @@ void lp3000ShowStatus()
 
     while (lc)
         {
-        sprintf(outBuf, "    >   CH %02o EQ %02o UN %02o LP%d/%d (%s) %i_lpi %s Path '%s'\n",
+        sprintf(outBuf, "    >   CH %02o EQ %02o UN %02o LP%d/%d %s mode %i lpi %s path '%s'\n",
                 lc->channelNo,
                 lc->eqNo,
                 lc->unitNo,
                 (lc->flags & Lp3000Type3555) ? 3555 : 3152,
                 (lc->flags & Lp3000Type501) ? 501 : 512,
-                lc->doUseANSI ? "ANSI " : "ASCII",
+                renderingModes[lc->renderingMode],
                 lc->lpi,
                 lc->doBurst ? "Burst" : "NoBurst",
                 lc->path);
@@ -787,7 +823,7 @@ static FcStatus lp3000Func(PpWord funcCode)
         return FcProcessed;
 
     case FcPrintAutoEject:
-        if (lc->doUseANSI && lc->doAutoEject == FALSE) fputs("R\n", fcb);
+        if (lc->renderingMode != ModeASCII && lc->doAutoEject == FALSE) fputs("R\n", fcb);
         lc->doAutoEject = TRUE;
         return FcProcessed;
 
@@ -807,7 +843,7 @@ static FcStatus lp3000Func(PpWord funcCode)
         // Release is sent at end of job, so flush the print file
         if (lc->isPrinted)
             {
-            if (lc->doUseANSI == FALSE)
+            if (lc->renderingMode == ModeASCII)
                 {
                 fputc('\f', fcb);
                 }
@@ -827,6 +863,11 @@ static FcStatus lp3000Func(PpWord funcCode)
     case FcPrintDouble:
     case FcPrintLastLine:
     case FcPrintEject:
+        if (lc->prePrintFunc != 0)
+            {
+            fputs(lp3000FeForPrePrint(lc, lc->prePrintFunc), fcb);
+            fputc('\n', fcb);
+            }
         lc->prePrintFunc = funcCode;
         return FcProcessed;
 
@@ -872,19 +913,23 @@ static FcStatus lp3000Func(PpWord funcCode)
             return FcProcessed;
 
         case Fc3555Sel8Lpi:
-            if (lc->doUseANSI && lc->lpi != 8) fputs("T\n", fcb);
+            if (lc->renderingMode != ModeASCII && lc->lpi != 8) fputs("T\n", fcb);
             lc->lpi = 8;
             return FcProcessed;
 
         case Fc3555Sel6Lpi:
-            if (lc->doUseANSI && lc->lpi != 6) fputs("S\n", fcb);
+            if (lc->renderingMode != ModeASCII && lc->lpi != 6) fputs("S\n", fcb);
             lc->lpi = 6;
             return FcProcessed;
 
         case Fc3555ClearFormat:
-            if (lc->doUseANSI) fputs("Q\n", fcb);
-        case Fc3555CondClearFormat:
+            if (lc->renderingMode != ModeASCII) fputs("Q\n", fcb);
             lc->prePrintFunc  = 0;
+        case Fc3555CondClearFormat:
+            if (lc->renderingMode != ModeANSI)
+                {
+                lc->prePrintFunc  = 0;
+                }
             lc->postPrintFunc = 0;
             lc->lpi           = 6;
             lc->doAutoEject   = FALSE;
@@ -906,7 +951,7 @@ static FcStatus lp3000Func(PpWord funcCode)
             lc->postPrintFunc = funcCode;
             return FcProcessed;
 
-        case Fc3555SelectPreprint:
+        case Fc3555SelectPrePrint:
             lc->postPrintFunc = 0;
             return FcProcessed;
 
@@ -1013,7 +1058,7 @@ static FcStatus lp3000Func(PpWord funcCode)
             lc->postPrintFunc = funcCode;
             return FcProcessed;
 
-        case Fc3152SelectPreprint:
+        case Fc3152SelectPrePrint:
             lc->postPrintFunc = 0;
             return FcProcessed;
 
@@ -1187,13 +1232,18 @@ static void lp3000Disconnect(void)
 #if DEBUG
         lp3000DebugData(lc);
 #endif
-        if (lc->doUseANSI)
+        switch (lc->renderingMode)
             {
+        default:
+        case ModeCDC:
+            lp3000PrintCDC(lc, fcb);
+            break;
+        case ModeANSI:
             lp3000PrintANSI(lc, fcb);
-            }
-        else
-            {
+            break;
+        case ModeASCII:
             lp3000PrintASCII(lc, fcb);
+            break;
             }
         lc->linePos             = 0;
         active3000Device->fcode = 0;
@@ -1216,65 +1266,22 @@ static void lp3000PrintANSI(LpContext *lc, FILE *fcb)
 
     if (lc->prePrintFunc != 0)
         {
-        switch (lc->prePrintFunc)
+        fputs(lp3000FeForPrePrint(lc, lc->prePrintFunc), fcb);
+        if (lc->doSuppress)
             {
-        default:
-            break;
-        case FcPrintSingle:
-            fputc('0', fcb);
-            break;
-        case FcPrintDouble:
-            fputc('-', fcb);
-            break;
-        case FcPrintLastLine:
-            fputc('2', fcb);
-            break;
-        case FcPrintEject:
-            fputc('1', fcb);
-            break;
-        case FcPrintNoSpace:
-            fputc('+', fcb);
-            break;
+            lc->prePrintFunc = FcPrintNoSpace;
+            lc->doSuppress   = FALSE;
             }
-        if (lc->flags & Lp3000Type3555)
+        else if (lc->postPrintFunc != 0)
             {
-            switch (lc->prePrintFunc)
-                {
-            default:
-                break;
-            case Fc3555PreVFU1:
-            case Fc3555PreVFU2:
-            case Fc3555PreVFU3:
-            case Fc3555PreVFU4:
-            case Fc3555PreVFU5:
-            case Fc3555PreVFU6:
-            case Fc3555PreVFU7:
-            case Fc3555PreVFU8:
-            case Fc3555PreVFU9:
-            case Fc3555PreVFU10:
-            case Fc3555PreVFU11:
-            case Fc3555PreVFU12:
-                fputc(prePrintEffectors[lc->prePrintFunc - Fc3555PreVFU1], fcb);
-                break;
-                }
+            lc->prePrintFunc = (lc->flags & Lp3000Type3555)
+                ? (lc->postPrintFunc - Fc3555PostVFU1) + Fc3555PreVFU1
+                : (lc->postPrintFunc - Fc3152PostVFU1) + Fc3152PreVFU1;
             }
         else
             {
-            switch (lc->prePrintFunc)
-                {
-            default:
-                break;
-            case Fc3152PreVFU1:
-            case Fc3152PreVFU2:
-            case Fc3152PreVFU3:
-            case Fc3152PreVFU4:
-            case Fc3152PreVFU5:
-            case Fc3152PreVFU6:
-                fputc(prePrintEffectors[lc->prePrintFunc - Fc3152PreVFU1], fcb);
-                break;
-                }
+            lc->prePrintFunc = 0;
             }
-        lc->prePrintFunc = 0;
         }
     else if (lc->doSuppress)
         {
@@ -1284,44 +1291,10 @@ static void lp3000PrintANSI(LpContext *lc, FILE *fcb)
         }
     else if (lc->postPrintFunc != 0)
         {
-        if (lc->flags & Lp3000Type3555)
-            {
-            switch (lc->postPrintFunc)
-                {
-            default:
-                break;
-            case Fc3555PostVFU1:
-            case Fc3555PostVFU2:
-            case Fc3555PostVFU3:
-            case Fc3555PostVFU4:
-            case Fc3555PostVFU5:
-            case Fc3555PostVFU6:
-            case Fc3555PostVFU7:
-            case Fc3555PostVFU8:
-            case Fc3555PostVFU9:
-            case Fc3555PostVFU10:
-            case Fc3555PostVFU11:
-            case Fc3555PostVFU12:
-                fputc(postPrintEffectors[lc->postPrintFunc - Fc3555PostVFU1], fcb);
-                break;
-                }
-            }
-        else
-            {
-            switch (lc->postPrintFunc)
-                {
-            default:
-                break;
-            case Fc3152PostVFU1:
-            case Fc3152PostVFU2:
-            case Fc3152PostVFU3:
-            case Fc3152PostVFU4:
-            case Fc3152PostVFU5:
-            case Fc3152PostVFU6:
-                fputc(postPrintEffectors[lc->postPrintFunc - Fc3152PostVFU1], fcb);
-                break;
-                }
-            }
+        fputc(' ', fcb);
+        lc->prePrintFunc = (lc->flags & Lp3000Type3555)
+            ? (lc->postPrintFunc - Fc3555PostVFU1) + Fc3555PreVFU1
+            : (lc->postPrintFunc - Fc3152PostVFU1) + Fc3152PreVFU1;
         }
     else
         {
@@ -1350,21 +1323,7 @@ static void lp3000PrintASCII(LpContext *lc, FILE *fcb)
 
     if (lc->prePrintFunc != 0)
         {
-        switch (lc->prePrintFunc)
-            {
-        case FcPrintLastLine:
-        default:
-            break;
-        case FcPrintSingle:
-            fputc('\n', fcb);
-            break;
-        case FcPrintDouble:
-            fputs("\n\n", fcb);
-            break;
-        case FcPrintEject:
-            fputc('\f', fcb);
-            break;
-            }
+        fputs(lp3000FeForPrePrint(lc, lc->prePrintFunc), fcb);
         lc->prePrintFunc = 0;
         }
     for (i = 0; i < lc->linePos; i++)
@@ -1379,6 +1338,230 @@ static void lp3000PrintASCII(LpContext *lc, FILE *fcb)
     else
         {
         fputc('\n', fcb);
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Print a buffered line in CDC mode.
+**
+**  Parameters:     Name        Description.
+**                  lc          pointer to line printer context
+**                  fcb         pointer to printer file descriptor
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void lp3000PrintCDC(LpContext *lc, FILE *fcb)
+    {
+    u8 i;
+
+    if (lc->prePrintFunc != 0)
+        {
+        fputs(lp3000FeForPrePrint(lc, lc->prePrintFunc), fcb);
+        if (lc->doSuppress)
+            {
+            lc->prePrintFunc = FcPrintNoSpace;
+            lc->doSuppress   = FALSE;
+            }
+        else
+            {
+            lc->prePrintFunc = 0;
+            }
+        }
+    else if (lc->doSuppress)
+        {
+        fputc(' ', fcb);
+        lc->prePrintFunc = FcPrintNoSpace;
+        lc->doSuppress   = FALSE;
+        }
+    else if (lc->postPrintFunc != 0)
+        {
+        fputs(lp3000FeForPostPrint(lc, lc->postPrintFunc), fcb);
+        }
+    else
+        {
+        fputc(' ', fcb);
+        }
+    for (i = 0; i < lc->linePos; i++)
+        {
+        fputc(lc->line[i], fcb);
+        }
+     fputc('\n', fcb);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Return the format effector for a post-print function.
+**
+**  Parameters:     Name        Description.
+**                  lc          pointer to line printer context
+**                  func        function number
+**
+**  Returns:        Format effector string.
+**
+**------------------------------------------------------------------------*/
+static char *lp3000FeForPostPrint(LpContext *lc, u8 func)
+    {
+    switch (lc->renderingMode)
+        {
+    case ModeCDC:
+        if (lc->flags & Lp3000Type3555)
+            {
+            switch (func)
+                {
+            default              : return "";
+            case Fc3555PostVFU1  :
+            case Fc3555PostVFU2  :
+            case Fc3555PostVFU3  :
+            case Fc3555PostVFU4  :
+            case Fc3555PostVFU5  :
+            case Fc3555PostVFU6  :
+            case Fc3555PostVFU7  :
+            case Fc3555PostVFU8  :
+            case Fc3555PostVFU9  :
+            case Fc3555PostVFU10 :
+            case Fc3555PostVFU11 :
+            case Fc3555PostVFU12 :
+                return postPrintCdcEffectors[lc->postPrintFunc - Fc3555PostVFU1];
+                }
+            }
+        else
+            {
+            switch (func)
+                {
+            default              : return "";
+            case Fc3152PostVFU1  :
+            case Fc3152PostVFU2  :
+            case Fc3152PostVFU3  :
+            case Fc3152PostVFU4  :
+            case Fc3152PostVFU5  :
+            case Fc3152PostVFU6  :
+                return postPrintCdcEffectors[lc->postPrintFunc - Fc3152PostVFU1];
+                }
+            }
+    case ModeANSI:
+    case ModeASCII:
+    default:
+        return ""; // print nothing in ASCII mode
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Return the format effector for a pre-print function.
+**
+**  Parameters:     Name        Description.
+**                  lc          pointer to line printer context
+**                  func        function number
+**
+**  Returns:        Format effector string.
+**
+**------------------------------------------------------------------------*/
+static char *lp3000FeForPrePrint(LpContext *lc, u8 func)
+    {
+    switch (lc->renderingMode)
+        {
+    default:
+    case ModeCDC:
+        if (lc->flags & Lp3000Type3555)
+            {
+            switch (func)
+                {
+            default              : return " ";
+            case FcPrintSingle   : return "0";
+            case FcPrintDouble   : return "-";
+            case FcPrintLastLine : return "2";
+            case FcPrintEject    : return "1";
+            case FcPrintNoSpace  : return "+";
+            case Fc3555PreVFU1   :
+            case Fc3555PreVFU2   :
+            case Fc3555PreVFU3   :
+            case Fc3555PreVFU4   :
+            case Fc3555PreVFU5   :
+            case Fc3555PreVFU6   :
+            case Fc3555PreVFU7   :
+            case Fc3555PreVFU8   :
+            case Fc3555PreVFU9   :
+            case Fc3555PreVFU10  :
+            case Fc3555PreVFU11  :
+            case Fc3555PreVFU12  :
+                return prePrintCdcEffectors[lc->prePrintFunc - Fc3555PreVFU1];
+                }
+            }
+        else
+            {
+            switch (lc->prePrintFunc)
+                {
+            default              : return " ";
+            case FcPrintSingle   : return "0";
+            case FcPrintDouble   : return "-";
+            case FcPrintLastLine : return "2";
+            case FcPrintEject    : return "1";
+            case FcPrintNoSpace  : return "+";
+            case Fc3152PreVFU1   :
+            case Fc3152PreVFU2   :
+            case Fc3152PreVFU3   :
+            case Fc3152PreVFU4   :
+            case Fc3152PreVFU5   :
+            case Fc3152PreVFU6   :
+                return prePrintCdcEffectors[lc->prePrintFunc - Fc3152PreVFU1];
+                }
+            }
+        break;
+
+    case ModeANSI:
+        if (lc->flags & Lp3000Type3555)
+            {
+            switch (func)
+                {
+            default              : return " ";
+            case FcPrintSingle   : return "0";
+            case FcPrintDouble   : return "-";
+            case FcPrintLastLine : return "C";
+            case FcPrintEject    : return "1";
+            case FcPrintNoSpace  : return "+";
+            case Fc3555PreVFU1   :
+            case Fc3555PreVFU2   :
+            case Fc3555PreVFU3   :
+            case Fc3555PreVFU4   :
+            case Fc3555PreVFU5   :
+            case Fc3555PreVFU6   :
+            case Fc3555PreVFU7   :
+            case Fc3555PreVFU8   :
+            case Fc3555PreVFU9   :
+            case Fc3555PreVFU10  :
+            case Fc3555PreVFU11  :
+            case Fc3555PreVFU12  :
+                return prePrintAnsiEffectors[lc->prePrintFunc - Fc3555PreVFU1];
+                }
+            }
+        else
+            {
+            switch (lc->prePrintFunc)
+                {
+            default              : return " ";
+            case FcPrintSingle   : return "0";
+            case FcPrintDouble   : return "-";
+            case FcPrintLastLine : return "C";
+            case FcPrintEject    : return "1";
+            case FcPrintNoSpace  : return "+";
+            case Fc3152PreVFU1   :
+            case Fc3152PreVFU2   :
+            case Fc3152PreVFU3   :
+            case Fc3152PreVFU4   :
+            case Fc3152PreVFU5   :
+            case Fc3152PreVFU6   :
+                return prePrintAnsiEffectors[lc->prePrintFunc - Fc3152PreVFU1];
+                }
+            }
+        break;
+
+    case ModeASCII:
+        switch (func)
+            {
+        default            : return "";
+        case FcPrintSingle : return "\n";
+        case FcPrintDouble : return "\n\n";
+        case FcPrintEject  : return "\f";
+            }
         }
     }
 
@@ -1471,7 +1654,7 @@ static char *lp3000Func2String(LpContext *lc, PpWord funcCode)
         case Fc3555PostVFU10          : return "Fc3555PostVFU10";
         case Fc3555PostVFU11          : return "Fc3555PostVFU11";
         case Fc3555PostVFU12          : return "Fc3555PostVFU12";
-        case Fc3555SelectPreprint     : return "Fc3555SelectPreprint";
+        case Fc3555SelectPrePrint     : return "Fc3555SelectPrePrint";
         case Fc3555PreVFU1            : return "Fc3555PreVFU1";
         case Fc3555PreVFU2            : return "Fc3555PreVFU2";
         case Fc3555PreVFU3            : return "Fc3555PreVFU3";
@@ -1500,7 +1683,7 @@ static char *lp3000Func2String(LpContext *lc, PpWord funcCode)
         case Fc3152PostVFU4           : return "Fc3152PostVFU4";
         case Fc3152PostVFU5           : return "Fc3152PostVFU5";
         case Fc3152PostVFU6           : return "Fc3152PostVFU6";
-        case Fc3152SelectPreprint     : return "Fc3152SelectPreprint";
+        case Fc3152SelectPrePrint     : return "Fc3152SelectPrePrint";
         case Fc3152PreVFU1            : return "Fc3152PreVFU1";
         case Fc3152PreVFU2            : return "Fc3152PreVFU2";
         case Fc3152PreVFU3            : return "Fc3152PreVFU3";
