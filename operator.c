@@ -3176,7 +3176,7 @@ static void opCmdIdle(bool help, char *cmdParams)
             }
         else
             {
-            sprintf(opOutBuf,"    > OS handler: %s\n",osType);
+            sprintf(opOutBuf, "    > OS handler: %s\n", osType);
             opDisplay(opOutBuf);
             }
 #ifdef WIN32
