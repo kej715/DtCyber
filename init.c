@@ -697,25 +697,33 @@ static void initCyber(char *config)
 #endif
 
     /*
-    **  Get optional operating system class. If not specified, use "none".
-    **  Set idle loop detector function based upon operating system class.
+    **  Get optional operating system type. If not specified, use "none".
+    **  Set idle loop detector function based upon operating system type.
     */
     initGetString("ostype", "none", osType, 16);
     if (strcasecmp(osType, "none") == 0)
         {
         idleDetector = &idleDetectorNone;
         }
-    if (strcasecmp(osType, "nos") == 0)
+    else if (strcasecmp(osType, "nos") == 0)
         {
         idleDetector = &idleDetectorNOS;
         }
-    if (strcasecmp(osType, "mace") == 0)
+    else if (strcasecmp(osType, "nosbe") == 0)
+        {
+        idleDetector = &idleDetectorNOSBE;
+        }
+    else if (strcasecmp(osType, "kronos") == 0)
+        {
+        idleDetector = &idleDetectorNOS;
+        }
+    else if (strcasecmp(osType, "mace") == 0)
         {
         idleDetector = &idleDetectorMACE;
         }
-    if (strcasecmp(osType, "nosbe") == 0)
+    else
         {
-        idleDetector = &idleDetectorNOSBE;
+        fprintf(stderr, "(init   ) WARNING: Unrecognized operating system type: '%s'\n", startupFile);
         }
 
     /*

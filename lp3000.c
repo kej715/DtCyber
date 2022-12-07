@@ -451,7 +451,7 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
         {
         if (strcasecmp(burstMode, "burst") == 0)
             {
-            if (strcasecmp(osType, "nos") == 0)
+            if (strcasecmp(osType, "nos") == 0 || strcasecmp(osType, "kronos") == 0)
                 {
                 isBursting = TRUE;
                 }
