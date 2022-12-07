@@ -695,6 +695,11 @@ static void initCyber(char *config)
     initGetInteger("idletime", 60, &dummyInt);
     idleTime = (u32)dummyInt;
 #endif
+
+    /*
+    **  Get optional operating system class. If not specified, use "none".
+    **  Set idle loop detector function based upon operating system class.
+    */
     initGetString("ostype", "none", osType, 16);
     if (strcasecmp(osType, "none") == 0)
         {
