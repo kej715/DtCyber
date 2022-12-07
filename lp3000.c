@@ -219,12 +219,12 @@ typedef struct lpContext
 **  ---------------------------
 */
 static void     lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceParams);
+static char    *lp3000FeForPostPrint(LpContext *lc, u8 func);
+static char    *lp3000FeForPrePrint(LpContext *lc, u8 func);
 static FcStatus lp3000Func(PpWord funcCode);
 static void     lp3000Io(void);
 static void     lp3000Activate(void);
 static void     lp3000Disconnect(void);
-static char    *lp3000FeForPostPrint(LpContext *lc, u8 func);
-static char    *lp3000FeForPrePrint(LpContext *lc, u8 func);
 static void     lp3000PrintANSI(LpContext *lc, FILE *fcb);
 static void     lp3000PrintASCII(LpContext *lc, FILE *fcb);
 static void     lp3000PrintCDC(LpContext *lc, FILE *fcb);
@@ -449,10 +449,16 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
     isBursting = FALSE;
     if (burstMode != NULL)
         {
-        isBursting  = TRUE;
         if (strcasecmp(burstMode, "burst") == 0)
             {
-            isBursting = TRUE;
+            if (strcasecmp(osType, "nos") == 0)
+                {
+                isBursting = TRUE;
+                }
+            else
+                {
+                fprintf(stderr, "(lp3000 ) %s WARNING: BURST mode ignored; applies only to NOS operating systems\n", lpTypeName);
+                }
             }
         else if (strcasecmp(burstMode, "noburst") == 0)
             {
@@ -677,11 +683,13 @@ void lp3000RemovePaper(char *params)
 
     renameOK = FALSE;
 
-    //  SZoppi: this can happen if something goes wrong in the open
-    //          and the file fails to be properly re-opened.
+    //
+    //  This can happen if something goes wrong in the open and the file fails
+    //  to be properly re-opened.
+    //
     if (dp->fcb[0] == NULL)
         {
-        fprintf(stderr, "(lp3000 ) lp3000RemovePaper: FCB is Null on channel %o equipment %o\n",
+        fprintf(stderr, "(lp3000 ) lp3000RemovePaper: FCB is null on channel %o equipment %o\n",
                dp->channel->id,
                dp->eqNo);
         //  proceed to attempt to open a new FCB
@@ -798,7 +806,7 @@ static FcStatus lp3000Func(PpWord funcCode)
     */
     if (fcb == NULL)
         {
-        fprintf(stderr, "(lp3000 ) lp3000Func: FCB is Null on channel %o equipment %o\n",
+        fprintf(stderr, "(lp3000 ) lp3000Func: FCB is null on channel %o equipment %o\n",
                 active3000Device->channel->id,
                 active3000Device->eqNo);
 
@@ -839,24 +847,17 @@ static FcStatus lp3000Func(PpWord funcCode)
     case FcPrintRelease:
         // clear all interrupt conditions
         lc->flags &= ~(StPrintIntReady | StPrintIntEnd);
+        fflush(fcb);
 
         // Release is sent at end of job, so flush the print file
-        if (lc->isPrinted)
+        if (lc->isPrinted && lc->doBurst)
             {
-            if (lc->renderingMode == ModeASCII)
-                {
-                fputc('\f', fcb);
-                }
-            fflush(fcb);
-            if (lc->doBurst)
-                {
-                channelId = (int)active3000Device->channel->id;
-                deviceId  = (int)active3000Device->eqNo;
-                sprintf(dispLpDevId, "%o,%o", channelId, deviceId);
-                lp3000RemovePaper(dispLpDevId);
-                }
-            lc->isPrinted = FALSE;
+            channelId = (int)active3000Device->channel->id;
+            deviceId  = (int)active3000Device->eqNo;
+            sprintf(dispLpDevId, "%o,%o", channelId, deviceId);
+            lp3000RemovePaper(dispLpDevId);
             }
+        lc->isPrinted = FALSE;
         return FcProcessed;
 
     case FcPrintSingle:
@@ -1441,7 +1442,7 @@ static char *lp3000FeForPostPrint(LpContext *lc, u8 func)
     case ModeANSI:
     case ModeASCII:
     default:
-        return ""; // print nothing in ASCII mode
+        return ""; // print nothing in ANSI and ASCII modes
         }
     }
 
