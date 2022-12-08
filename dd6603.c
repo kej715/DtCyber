@@ -246,6 +246,7 @@ void dd6603Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     DiskParam *diskP;
     FILE      *fcb;
     char      fname[MaxFSPath];
+    char      *opt;
 
 #if DEBUG
     if (dd6603Log == NULL)
@@ -278,7 +279,9 @@ void dd6603Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         }
     else
         {
-        strcpy(fname, strchr(deviceName, ','));
+        opt = strchr(deviceName, ',');
+        if (opt != NULL) *opt++ = '\0';
+        strcpy(fname, deviceName);
         }
 
     fcb = fopen(fname, "r+b");
