@@ -455,9 +455,10 @@ extern char osType[];
 
 bool idleCheckBusy();
 bool idleDetectorNone(CpuContext *ctx);
+bool idleDetectorCOS(CpuContext *ctx);   /* COS */
+bool idleDetectorMACE(CpuContext *ctx);  /* KRONOS1 or MACE, possibly SCOPE too) */
 bool idleDetectorNOS(CpuContext *ctx);   /* KRONOS2.1 - NOS 2.8.7 */
 bool idleDetectorNOSBE(CpuContext *ctx); /* NOS/BE (only tested with TUB) */
-bool idleDetectorMACE(CpuContext *ctx);  /* KRONOS1 or MACE, possibly SCOPE too) */
 void idleThrottle(CpuContext *ctx);
 
 #endif /* PROTO_H */

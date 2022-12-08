@@ -392,6 +392,25 @@ bool idleDetectorNone(CpuContext *ctx)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        COS idle cycle detector
+**
+**  Parameters:     Name        Description.
+**                  ctx         Cpu context to check for idle.
+**
+**  Returns:        TRUE if in idle, FALSE if not.
+**
+**------------------------------------------------------------------------*/
+bool idleDetectorCOS(CpuContext *ctx)
+    {
+    if ((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 020))
+        {
+        return TRUE;
+        }
+
+    return FALSE;
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        NOS idle cycle detector
 **
 **  Parameters:     Name        Description.

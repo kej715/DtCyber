@@ -721,6 +721,10 @@ static void initCyber(char *config)
         {
         idleDetector = &idleDetectorMACE;
         }
+    else if (strcasecmp(osType, "cos") == 0)
+        {
+        idleDetector = &idleDetectorCOS;
+        }
     else
         {
         fprintf(stderr, "(init   ) WARNING: Unrecognized operating system type: '%s'\n", startupFile);
