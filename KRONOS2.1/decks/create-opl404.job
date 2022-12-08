@@ -1,0 +1,26 @@
+~*
+~*  This job copies OPL404 from tape, applies a set of mods,
+~*  and writes the modified OPL to a direct access in the
+~*  catalog of user INSTALL.
+~*
+OPL404.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,7777.
+$PURGE,OPL404/NA.
+$DEFINE,OPL404/CT=PU,M=R.
+$ASSIGN,${1},TAPE,LB=KU,F=I.
+$COPY,TAPE,OPL.
+$COPY,INPUT,MODS.
+$REWIND,OPL,MODS.
+$MODIFY,C=0,N=OPL404,LO=E,F,Z./*READ,MODS,*
+***
+*** OPL404 COMPLETE
+***
+EXIT.
+***
+*** OPL404 FAILED
+***
+~eor
+THTLX01
+~include ../mods/TELEX/THTLX01.mod

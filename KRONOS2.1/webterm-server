@@ -1,0 +1,17 @@
+#!/bin/sh
+# start and stop the web terminal server
+cd webterm
+
+case "$1" in
+  start)
+        node ../../webterm/webterm-server -p webterm.pid config.json >webterm.log 2>&1 &
+	;;
+  stop)
+        kill `cat webterm.pid`
+	;;
+  *)
+	echo "Usage: $0 {start|stop}"
+	exit 1
+esac
+
+exit 0

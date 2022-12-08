@@ -1,0 +1,206 @@
+<p>
+Use the NEW and TEXT commands to create a SYMPL source file, use the SYMPL command to compile it, use the LOAD
+command to link it with an assembly language module, and use the EXECUTE command to run the executable file
+produced. Note that the SYMPL language has no built-in I/O capability, so a small assembly language module is
+created to provide for output. The NEW, TEXT, MODIFY, and COMPASS commands are used in creating the assembly
+language module.
+</p>
+<p>
+First, create the assembly language module:
+</p>
+<pre>
+     /NEW,SOURCE
+     /TEXT
+       <i>Enter assembly language module source code
+       Exit TEXT mode by pressing Control-C key</i>
+     PACK,SOURCE
+     /MODIFY,P=0,N=NPL,C=0,F,LO=E,Z./*CREATE SOURCE
+     /ATTACH,OPL=OPL404/UN=INSTALL
+     /MODIFY,P=NPL,LO=E,Z./*EDIT IOMOD
+     /RFL,100000
+     /COMPASS,I,L=0,S=SYSTEXT,S=IOTEXT
+</pre>
+<p>
+Next, create the SYMPL program, link it with the assembly language module, and run the executable produced:
+</p>
+<pre>
+     /NEW,<i>filename</i>/ND
+     /TEXT
+     PACK,<i>filename</i>
+     /SYMPL,I=<i>filename</i>,L=0
+     /LGO
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/COMPASS_v3_Reference_Manual.60492600.1979_.pdf" target="_blank">
+   COMPASS Version 3 Reference Manual
+   </a>
+  </li>
+  <li>
+   <a href="http://www.bitsavers.org/pdf/cdc/Tom_Hunter_Scans/Modify_RefMan_Sept85.pdf" target="_blank">
+   MODIFY Reference Manual
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/Sympl_Version_1_Reference_Manual.60496400F.1980.pdf" target="_blank">
+   SYMPL Version 1 Reference Manual
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/KRONOS_Batch_Users_Reference_Manual.59150600A.Feb1970.pdf" target="_blank">
+   Control Data 6000 Series Time-Sharing Kronos Batch User's Reference Manual
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,source
+W^/$
+D500
+Ltext
+WENTER TEXT MODE
+W\\r
+D500
+I500 \\r =====
+IOMOD
+          IDENT  IOMOD
+          ENTRY  FLUSH
+          ENTRY  OUT
+          SYSCOM B1
+
+*CALL COMCCDD
+
+ OBUFL    EQU    301B        OUTPUT BUFFER LENGTH
+
+**        OUT(I, V)
+*
+*         OUTPUT TWO DECIMAL NUMBERS, AN INDEX AND A VALUE
+*
+*           I - INDEX
+*           V - VALUE
+*
+
+ OUT      SUBR
+          SB1    1
+          SA2    A1+B1       ADDRESS OF V
+          SA1    X1          I
+          SA2    X2          V
+          BX6    X1
+          BX7    X2
+          SA7    V           SAVE V
+          RJ     CDD         CONVERT I TO DECIMAL DIGITS
+          LX6    6           ENSURE THAT THERE'S A BLANK TO THE RIGHT
+          WRITEO O           AND OUTPUT
+          SA1    V
+          BX6    X1
+          RJ     CDD         CONVERT V TO DECIMAL
+          BX6    X4          USE THE LEFT-JUSTIFIED RESULT
+          WRITEO O           AND OUTPUT IT
+          BX6    X6-X6       OUTPUT END OF LINE
+          WRITEO O
+          EQ     OUTX
+
+**        FLUSH
+*
+*         FLUSH OUTPUT BUFFER
+*
+
+ FLUSH    SUBR
+          SB1    1
+          WRITER O           WRITE END OF RECORD
+          EQ     FLUSHX
+
+ V        BSS    1
+
+ O        BSS    0
+ OUTPUT   FILEB  OBUF,OBUFL
+ OBUF     BSS    OBUFL
+
+          END    IOMOD
+=====
+S\x03
+WEXIT TEXT MODE
+D1000
+Lpack,source
+W/$
+D500
+Smodify,p=0,n=npl,c=0,f,lo=e,z./*create source
+D500
+L
+WMODIFICATION COMPLETE
+W/$
+D500
+Sattach,opl=opl404/un=install
+D500
+L
+W/$
+D500
+Smodify,p=npl,lo=e,z./*oplfile opl/*edit iomod
+D500
+L
+WMODIFICATION COMPLETE
+W/$
+D500
+Srfl,100000
+L
+W/$
+D500
+Scompass,i,l=0,s=systext,s=iotext
+D500
+L
+WCPU SECONDS  ASSEMBLY TIME
+W/$
+D2000
+Lnew,fib/nd
+W/$
+D500
+Ltext
+WENTER TEXT MODE
+W\\r
+D500
+I500 \\r =====
+PRGM FIB;
+#------------------------------------------------------#
+#  CALCULATE AND PRINT THE FIRST 10 FIBONACCI NUMBERS  #
+#------------------------------------------------------#
+BEGIN
+
+  XREF
+    BEGIN
+    PROC FLUSH;   # FLUSH OUTPUT BUFFER              #
+    PROC OUT;     # OUTPUT FIBONACCI INDEX AND VALUE #
+    END
+
+  ITEM I1     U = 0;
+  ITEM I2     U = 1;
+  ITEM I3     U;
+  ITEM N      U;
+
+  FOR N = 1 STEP 1 UNTIL 10 DO
+  BEGIN
+    OUT(N, I2);
+    I3 = I1 + I2;
+    I1 = I2;
+    I2 = I3;
+  END
+
+  FLUSH;
+
+END
+TERM
+=====
+S\x03
+WEXIT TEXT MODE
+D1000
+Lpack,fib
+W/$
+D500
+Ssympl,i=fib,l=0
+D500
+L
+W REQUIRED .*WORDS SCM
+W/$
+D500
+Llgo
+W/$

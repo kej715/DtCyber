@@ -1,0 +1,23 @@
+L
+:top:W(USER|PASSWORD|RECOVER|IDLE|IMPROPER)
+T${0} IDLE done
+T${0} USER username
+T${0} PASSWORD password
+T${0} RECOVER recover
+T${0} IMPROPER improper
+Gdone
+:improper:WTRY\x20AGAIN.
+Gtop
+:username:WNUMBER:\x20
+D1000
+Lguest
+Gtop
+:password:WXXXXXXXX
+D1000
+Lguest
+Gtop
+:recover:WSYSTEM:
+D1000
+Lfull
+W^/$
+:done:

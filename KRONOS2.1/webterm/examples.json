@@ -1,0 +1,22 @@
+[
+  {"name":"COBOL",
+   "id":"cobol",
+   "desc":"Create and run a COBOL program",
+   "defn":"/machines/kronos/scripts/cobol.txt"
+  },
+  {"name":"COMPASS",
+   "id":"compass",
+   "desc":"Create and run a Cyber assembly language program",
+   "defn":"/machines/kronos/scripts/compass.txt"
+  },
+  {"name":"FORTRAN IV",
+   "id":"ftn4",
+   "desc":"Create and run a FORTRAN 66 program",
+   "defn":"/machines/kronos/scripts/ftn4.txt"
+  },
+  {"name":"SYMPL",
+   "id":"sympl",
+   "desc":"Create and run a SYMPL program",
+   "defn":"/machines/kronos/scripts/sympl.txt"
+  }
+]

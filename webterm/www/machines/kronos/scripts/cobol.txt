@@ -1,0 +1,83 @@
+<p>
+Use the NEW and TEXT commands to create a COBOL program, compile it using the COBOL5 command, and run the
+executable file produced.
+</p>
+<pre>
+     /NEW,<i>filename</i>
+     /TEXT
+       <i>Enter program source code
+       Exit TEXT mode by pressing Control-C key</i>
+     PACK,<i>filename</i>
+     /RFL,100000
+     /COBOL,I=<i>filename</i>,L=0
+</pre>
+<p>References:
+ <ul>
+  <li>
+  <a href="http://bitsavers.trailing-edge.com/pdf/cdc/cyber/lang/cobol/60191200_COBOL_Reference_Jun67.pdf" target="_blank">
+   COBOL Reference Manual"
+   </a>
+  </li>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/KRONOS_Batch_Users_Reference_Manual.59150600A.Feb1970.pdf" target="_blank">
+   Control Data 6000 Series Time-Sharing Kronos Batch User's Reference Manual
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,fib
+W/$
+D500
+Ltext
+WENTER TEXT MODE
+W\\r
+D500
+I500 \\r =====
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. FIB.
+      *
+      *  CALCULATE THE FIRST 10 FIBONACCI NUMBERS
+      *
+       ENVIRONMENT DIVISION.
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01  I1          PIC 9(5) VALUE 0.
+       01  I2          PIC 9(5) VALUE 1.
+       01  I3          PIC 9(5).
+       01  N           PIC 9(5).
+       01  FIB-INDEX   PIC Z(3)9.
+       01  FIB-NUMBER  PIC Z(5)9.
+       PROCEDURE DIVISION.
+       000-START-PROGRAM.
+           PERFORM 100-COMPUTE-FIBONACCI VARYING N FROM 1 BY 1
+               UNTIL N > 10.
+           STOP RUN.
+       100-COMPUTE-FIBONACCI.
+           MOVE  N TO FIB-INDEX.
+           MOVE I2 TO FIB-NUMBER.
+           DISPLAY FIB-INDEX FIB-NUMBER.
+           ADD  I1, I2 GIVING I3.
+           MOVE I2 TO I1.
+           MOVE I3 TO I2.
+=====
+S\x03
+WEXIT TEXT MODE
+D1000
+Lpack,fib
+W/$
+D500
+Srfl,100000
+D500
+L
+W/$
+Scobol,i=fib,l=0
+D500
+L
+WEND COBOL
+W/$
+D500
+Slgo
+D500
+L
+W/

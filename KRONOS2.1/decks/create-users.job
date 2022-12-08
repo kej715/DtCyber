@@ -1,0 +1,52 @@
+USERS.
+USER,INSTALL,INSTALL.
+COPYBR,INPUT,USERS.
+REPLACE,USERS.
+***
+*** USERS COMPLETE
+***
+EXIT.
+***
+*** USERS FAILED
+***
+~eor
+/INSTALL,
+    FUI =          1,
+     PW =    INSTALL,
+     AW =        ALL,
+     CC =        77B,
+     CM =        77B,
+     CP =        77B,
+     CS =          7,
+     DB =          7,
+     DF =        77B,
+     DS =          7,
+     EC =        77B,
+     FC =          7,
+     FS =          7,
+     IS =      BATCH,
+     LP =        77B,
+     MS =        77B,
+     MT =          7,
+     NF =          7,
+     OF =          7,
+     RP =          7,
+     SL =        77B,
+     TL =        77B,
+/GUEST,
+     FUI =       32B,
+     PW =      GUEST,
+     CC =        40B,
+     CM =        77B,
+     CP =        40B,
+     DB =          2,
+     DF =        40B,
+     EC =        77B,
+     IS =      BATCH,
+     LP =        40B,
+     MS =        77B,
+     MT =          2,
+     OF =          2,
+     RP =          7,
+     SL =        40B,
+     TL =        40B,

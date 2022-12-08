@@ -1,0 +1,19 @@
+{
+  "port": 8004,
+  "httpRoot": "../../webterm/www",
+  "machines":
+  [
+    {
+      "id": "m04",
+      "title": "KRONOS 2.1",
+      "host": "127.0.0.1",
+      "port": 6677,
+      "protocol": "raw",
+      "terminal": "aterm.html?m=m04&t=KRONOS%202.1&r=45&c=80",
+      "overview": "@overview.json",
+      "login-script":"/machines/kronos/scripts/login.txt",
+      "examples": "@examples.json",
+      "keys": "@tektronix-keys.json"
+    }
+  ]
+}
