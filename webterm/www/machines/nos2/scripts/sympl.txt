@@ -39,6 +39,7 @@ Next, create the SYMPL program, link it with the assembly language module, and r
    <a href="http://www.bitsavers.org/pdf/cdc/Tom_Hunter_Scans/Modify_RefMan_Sept85.pdf" target="_blank">
    MODIFY Reference Manual
    </a>
+  </li>
   <li>
    <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
    NOS 2 Reference Set Volume 3 System Commands
@@ -145,9 +146,9 @@ W ENTER TEXT MODE
 W\\r
 I250 \\r =====
 PRGM FIB;
-#-------------------------------------------------------#
-#  CALCULATE AND PRINTS THE FIRST 10 FIBONACCI NUMBERS  #
-#-------------------------------------------------------#
+#------------------------------------------------------#
+#  CALCULATE AND PRINT THE FIRST 10 FIBONACCI NUMBERS  #
+#------------------------------------------------------#
 BEGIN
 
   XREF

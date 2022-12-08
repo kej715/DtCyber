@@ -15,9 +15,9 @@ First, create the assembly language module:
        Exit TEXT mode by pressing Control-C key</i>
      PACK,SOURCE
      /MODIFY,P=0,N=NPL,C=0,F,LO=E,Z./*CREATE SOURCE
-     /ATTACH,OPL=OPL871/UN=INSTALL
+     /ATTACH,OPL=OPL485/UN=INSTALL
      /MODIFY,P=NPL,LO=E,Z./*EDIT IOMOD
-     /COMPASS,I,S=SYSTEXT,S=PSSTEXT
+     /COMPASS,I,L=0,S=SYSTEXT,S=PSSTEXT
 </pre>
 <p>
 Next, create the SYMPL program, link it with the assembly language module, and run the executable produced:
@@ -41,6 +41,7 @@ Next, create the SYMPL program, link it with the assembly language module, and r
    <a href="http://www.bitsavers.org/pdf/cdc/Tom_Hunter_Scans/Modify_RefMan_Sept85.pdf" target="_blank">
    MODIFY Reference Manual
    </a>
+  </li>
   <li>
    <a href="http://bitsavers.trailing-edge.com/pdf/cdc/cyber/nos/60435400M_NOS_Version_1_Reference_Manual_Volume_1_Dec80.pdf" target="_blank">
    NOS Version 1 Reference Manual
@@ -156,9 +157,9 @@ W\\r
 D500
 I500 \\r =====
 PRGM FIB;
-#-------------------------------------------------------#
-#  CALCULATE AND PRINTS THE FIRST 10 FIBONACCI NUMBERS  #
-#-------------------------------------------------------#
+#------------------------------------------------------#
+#  CALCULATE AND PRINT THE FIRST 10 FIBONACCI NUMBERS  #
+#------------------------------------------------------#
 BEGIN
 
   XREF
