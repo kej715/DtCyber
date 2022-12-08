@@ -7,7 +7,8 @@ or **git lfs checkout** to pull the actual binary content from GitHub.
 
 After obtaining the full *.bz2* files, you will need to use a tool such as
 **bunzip2** to expand them into their original *.tap* forms before *DtCyber* will
-recognize them as proper tape images.
+recognize them as proper tape images. The automated installer in the parent
+directory, `install.js`, will expand them automatically too.
 
 Note that these tape images are made available by permission of BT Federal under
 provisions of the
