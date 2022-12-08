@@ -28,7 +28,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG 1
 
 /*
 **  -------------
@@ -71,12 +71,12 @@
 */
 
 #define FcPrintSelect          00600
-#define FcPrintSingleSpace     00601
-#define FcPrintDoubleSpace     00602
+#define FcPrintSingle          00601
+#define FcPrintDouble          00602
 #define FcPrintMoveChannel7    00603
-#define FcPrintMoveTOF         00604
+#define FcPrintEject           00604
 #define FcPrintPrint           00605
-#define FcPrintSuppressLF      00606
+#define FcPrintNoSpace         00606
 #define FcPrintStatusReq       00607
 #define FcPrintClearFormat     00610
 #define FcPrintFormat1         00611
@@ -625,11 +625,11 @@ static FcStatus lp1612Func(PpWord funcCode)
         lc->linePos = 0;
         break;
 
-    case FcPrintSingleSpace:
-    case FcPrintDoubleSpace:
+    case FcPrintSingle:
+    case FcPrintDouble:
     case FcPrintMoveChannel7:
-    case FcPrintMoveTOF:
-        if (lc->prePrintFunc != 0)
+    case FcPrintEject:
+        if (lc->prePrintFunc != 0 && lc->prePrintFunc != FcPrintNoSpace)
             {
             fputs(lp1612FeForPrePrint(lc, lc->prePrintFunc), fcb);
             fputc('\n', fcb);
@@ -638,7 +638,7 @@ static FcStatus lp1612Func(PpWord funcCode)
         fflush(fcb);
         break;
 
-    case FcPrintSuppressLF:
+    case FcPrintNoSpace:
         lc->doSuppress = TRUE;
         break;
 
@@ -647,10 +647,6 @@ static FcStatus lp1612Func(PpWord funcCode)
         break;
 
     case FcPrintClearFormat:
-        if (lc->renderingMode != ModeANSI)
-            {
-            lc->prePrintFunc  = 0;
-            }
         lc->postPrintFunc = 0;
         lc->doSuppress    = FALSE;
         break;
@@ -751,45 +747,36 @@ static void lp1612Disconnect(void)
 **------------------------------------------------------------------------*/
 static void lp1612PrintANSI(LpContext *lc, FILE *fcb)
     {
-    u8 i;
+    char *fe;
+    u8   i;
 
+    fe = NULL;
     if (lc->prePrintFunc != 0)
         {
-        fputs(lp1612FeForPrePrint(lc, lc->prePrintFunc), fcb);
-        if (lc->doSuppress)
-            {
-            lc->prePrintFunc = FcPrintSuppressLF;
-            lc->doSuppress   = FALSE;
-            }
-        else if (lc->postPrintFunc != 0 && lc->postPrintFunc != FcPrintFormat1)
-            {
-            lc->prePrintFunc = lc->postPrintFunc;
-            }
-        else
-            {
-            lc->prePrintFunc = 0;
-            }
+        fe = lp1612FeForPrePrint(lc, lc->prePrintFunc);
         }
-    else if (lc->doSuppress)
+    if (lc->doSuppress)
         {
-        fputc(' ', fcb);
-        lc->prePrintFunc = FcPrintSuppressLF;
-        lc->doSuppress   = FALSE;
-        }
-    else if (lc->postPrintFunc != 0 && lc->postPrintFunc != FcPrintFormat1)
-        {
-        fputc(' ', fcb);
-        lc->prePrintFunc = lc->postPrintFunc;
+        lc->prePrintFunc = FcPrintNoSpace;
         }
     else
         {
-        fputc(' ', fcb);
+        lc->prePrintFunc = 0;
         }
-    for (i = 0; i < lc->linePos; i++)
+    if (lc->postPrintFunc != 0 && lc->postPrintFunc != FcPrintFormat1 && lc->doSuppress == FALSE)
         {
-        fputc(lc->line[i], fcb);
+        lc->prePrintFunc = lc->postPrintFunc;
         }
-     fputc('\n', fcb);
+    lc->doSuppress = FALSE;
+    if (fe == NULL || *fe != '+' || lc->linePos > 0)
+        {
+        fputs(fe != NULL ? fe : " ", fcb);
+        for (i = 0; i < lc->linePos; i++)
+            {
+            fputc(lc->line[i], fcb);
+            }
+        fputc('\n', fcb);
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -838,40 +825,52 @@ static void lp1612PrintASCII(LpContext *lc, FILE *fcb)
 **------------------------------------------------------------------------*/
 static void lp1612PrintCDC(LpContext *lc, FILE *fcb)
     {
-    u8 i;
+    u8   i;
+    char *postFE;
+    char *preFE;
 
+    postFE = NULL;
+    preFE  = NULL;
     if (lc->prePrintFunc != 0)
         {
-        fputs(lp1612FeForPrePrint(lc, lc->prePrintFunc), fcb);
-        if (lc->doSuppress)
-            {
-            lc->prePrintFunc = FcPrintSuppressLF;
-            lc->doSuppress   = FALSE;
-            }
-        else
-            {
-            lc->prePrintFunc = 0;
-            }
+        preFE = lp1612FeForPrePrint(lc, lc->prePrintFunc);
         }
-    else if (lc->doSuppress)
+    if (lc->doSuppress)
         {
-        fputc(' ', fcb);
-        lc->prePrintFunc = FcPrintSuppressLF;
-        lc->doSuppress   = FALSE;
-        }
-    else if (lc->postPrintFunc != 0)
-        {
-        fputs(lp1612FeForPostPrint(lc, lc->postPrintFunc), fcb);
+        lc->prePrintFunc = FcPrintNoSpace;
         }
     else
         {
+        lc->prePrintFunc = 0;
+        }
+    if (lc->postPrintFunc != 0 && lc->postPrintFunc != FcPrintFormat1 && lc->doSuppress == FALSE)
+        {
+        postFE = lp1612FeForPostPrint(lc, lc->postPrintFunc);
+        }
+    lc->doSuppress = FALSE;
+    if (preFE != NULL)
+        {
+        if (*preFE == '+' && lc->linePos < 1 && postFE == NULL) return;
+        fputs(preFE, fcb);
+        if (postFE != NULL) fputc('\n', fcb);
+        }
+    if (postFE != NULL)
+        {
+        fputs(postFE, fcb);
+        }
+    if (preFE == NULL && postFE == NULL)
+        {
         fputc(' ', fcb);
+        if (lc->doSuppress)
+            {
+            lc->prePrintFunc = FcPrintNoSpace;
+            }
         }
     for (i = 0; i < lc->linePos; i++)
         {
         fputc(lc->line[i], fcb);
         }
-     fputc('\n', fcb);
+    fputc('\n', fcb);
     }
 
 /*--------------------------------------------------------------------------
@@ -927,11 +926,11 @@ static char *lp1612FeForPrePrint(LpContext *lc, PpWord func)
         switch (func)
             {
         default                  : return " ";
-        case FcPrintSingleSpace  : return "0";
-        case FcPrintDoubleSpace  : return "-";
+        case FcPrintSingle       : return "0";
+        case FcPrintDouble       : return "-";
         case FcPrintMoveChannel7 : return "2";
-        case FcPrintMoveTOF      : return "1";
-        case FcPrintSuppressLF   : return "+";
+        case FcPrintEject        : return "1";
+        case FcPrintNoSpace      : return "+";
             }
         break;
 
@@ -939,11 +938,11 @@ static char *lp1612FeForPrePrint(LpContext *lc, PpWord func)
         switch (func)
             {
         default                  : return " ";
-        case FcPrintSingleSpace  : return "0";
-        case FcPrintDoubleSpace  : return "-";
+        case FcPrintSingle       : return "0";
+        case FcPrintDouble       : return "-";
         case FcPrintMoveChannel7 : return "7";
-        case FcPrintMoveTOF      : return "1";
-        case FcPrintSuppressLF   : return "+";
+        case FcPrintEject        : return "1";
+        case FcPrintNoSpace      : return "+";
         case FcPrintFormat1:
         case FcPrintFormat2:
         case FcPrintFormat3:
@@ -957,10 +956,10 @@ static char *lp1612FeForPrePrint(LpContext *lc, PpWord func)
     case ModeASCII:
         switch (func)
             {
-        default                  : return "";
-        case FcPrintSingleSpace  : return "\n";
-        case FcPrintDoubleSpace  : return "\n\n";
-        case FcPrintMoveTOF      : return "\f";
+        default            : return "";
+        case FcPrintSingle : return "\n";
+        case FcPrintDouble : return "\n\n";
+        case FcPrintEject  : return "\f";
             }
         break;
         }
@@ -1013,12 +1012,12 @@ static char *lp1612Func2String(PpWord funcCode)
         {
     default: break;
     case FcPrintSelect       : return "FcPrintSelect";
-    case FcPrintSingleSpace  : return "FcPrintSingleSpace";
-    case FcPrintDoubleSpace  : return "FcPrintDoubleSpace";
+    case FcPrintSingle       : return "FcPrintSingle";
+    case FcPrintDouble       : return "FcPrintDouble";
     case FcPrintMoveChannel7 : return "FcPrintMoveChannel7";
-    case FcPrintMoveTOF      : return "FcPrintMoveTOF";
+    case FcPrintEject        : return "FcPrintEject";
     case FcPrintPrint        : return "FcPrintPrint";
-    case FcPrintSuppressLF   : return "FcPrintSuppressLF";
+    case FcPrintNoSpace      : return "FcPrintNoSpace";
     case FcPrintStatusReq    : return "FcPrintStatusReq";
     case FcPrintClearFormat  : return "FcPrintClearFormat";
     case FcPrintFormat1      : return "FcPrintFormat1";

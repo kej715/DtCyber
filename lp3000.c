@@ -61,15 +61,15 @@
 // General
 
 // Flags stored in the context field:
-#define Lp3000Type501         00001
-#define Lp3000Type512         00002
-#define Lp3000Type3152        00010
-#define Lp3000Type3555        00020
-#define Lp3555FillImageMem    00100
-#define Lp3000IntReady        00200     // Same code as int status bit
-#define Lp3000IntEnd          00400     // ditto
-#define Lp3000IntReadyEna     02000
-#define Lp3000IntEndEna       04000
+#define Lp3000Type501            00001
+#define Lp3000Type512            00002
+#define Lp3000Type3152           00010
+#define Lp3000Type3555           00020
+#define Lp3555FillImageMem       00100
+#define Lp3000IntReady           00200     // Same code as int status bit
+#define Lp3000IntEnd             00400     // ditto
+#define Lp3000IntReadyEna        02000
+#define Lp3000IntEndEna          04000
 
 /*
 **      Function codes
@@ -864,7 +864,7 @@ static FcStatus lp3000Func(PpWord funcCode)
     case FcPrintDouble:
     case FcPrintLastLine:
     case FcPrintEject:
-        if (lc->prePrintFunc != 0)
+        if (lc->prePrintFunc != 0 && lc->prePrintFunc != FcPrintNoSpace)
             {
             fputs(lp3000FeForPrePrint(lc, lc->prePrintFunc), fcb);
             fputc('\n', fcb);
@@ -924,13 +924,9 @@ static FcStatus lp3000Func(PpWord funcCode)
             return FcProcessed;
 
         case Fc3555ClearFormat:
-            if (lc->renderingMode != ModeASCII) fputs("Q\n", fcb);
-            lc->prePrintFunc  = 0;
+            if (lc->renderingMode != ModeASCII
+                && (lc->lpi != 6 || lc->doAutoEject)) fputs("Q\n", fcb);
         case Fc3555CondClearFormat:
-            if (lc->renderingMode != ModeANSI)
-                {
-                lc->prePrintFunc  = 0;
-                }
             lc->postPrintFunc = 0;
             lc->lpi           = 6;
             lc->doAutoEject   = FALSE;
@@ -1043,7 +1039,7 @@ static FcStatus lp3000Func(PpWord funcCode)
             return FcProcessed;
 
         case Fc3152ClearFormat:
-            lc->prePrintFunc  = 0;
+            if (lc->renderingMode != ModeASCII && lc->doAutoEject) fputs("Q\n", fcb);
             lc->postPrintFunc = 0;
             lc->lpi           = 6;
             lc->doAutoEject   = FALSE;
@@ -1263,49 +1259,38 @@ static void lp3000Disconnect(void)
 **------------------------------------------------------------------------*/
 static void lp3000PrintANSI(LpContext *lc, FILE *fcb)
     {
-    u8 i;
+    char *fe;
+    u8   i;
 
+    fe = NULL;
     if (lc->prePrintFunc != 0)
         {
-        fputs(lp3000FeForPrePrint(lc, lc->prePrintFunc), fcb);
-        if (lc->doSuppress)
-            {
-            lc->prePrintFunc = FcPrintNoSpace;
-            lc->doSuppress   = FALSE;
-            }
-        else if (lc->postPrintFunc != 0)
-            {
-            lc->prePrintFunc = (lc->flags & Lp3000Type3555)
-                ? (lc->postPrintFunc - Fc3555PostVFU1) + Fc3555PreVFU1
-                : (lc->postPrintFunc - Fc3152PostVFU1) + Fc3152PreVFU1;
-            }
-        else
-            {
-            lc->prePrintFunc = 0;
-            }
+        fe = lp3000FeForPrePrint(lc, lc->prePrintFunc);
         }
-    else if (lc->doSuppress)
+    if (lc->doSuppress)
         {
-        fputc(' ', fcb);
         lc->prePrintFunc = FcPrintNoSpace;
-        lc->doSuppress   = FALSE;
         }
-    else if (lc->postPrintFunc != 0)
+    else
         {
-        fputc(' ', fcb);
+        lc->prePrintFunc = 0;
+        }
+    if (lc->postPrintFunc != 0 && lc->doSuppress == FALSE)
+        {
         lc->prePrintFunc = (lc->flags & Lp3000Type3555)
             ? (lc->postPrintFunc - Fc3555PostVFU1) + Fc3555PreVFU1
             : (lc->postPrintFunc - Fc3152PostVFU1) + Fc3152PreVFU1;
         }
-    else
+    lc->doSuppress = FALSE;
+    if (fe == NULL || *fe != '+' || lc->linePos > 0)
         {
-        fputc(' ', fcb);
+        fputs(fe != NULL ? fe : " ", fcb);
+        for (i = 0; i < lc->linePos; i++)
+            {
+            fputc(lc->line[i], fcb);
+            }
+        fputc('\n', fcb);
         }
-    for (i = 0; i < lc->linePos; i++)
-        {
-        fputc(lc->line[i], fcb);
-        }
-     fputc('\n', fcb);
     }
 
 /*--------------------------------------------------------------------------
@@ -1354,40 +1339,52 @@ static void lp3000PrintASCII(LpContext *lc, FILE *fcb)
 **------------------------------------------------------------------------*/
 static void lp3000PrintCDC(LpContext *lc, FILE *fcb)
     {
-    u8 i;
+    u8   i;
+    char *postFE;
+    char *preFE;
 
+    postFE = NULL;
+    preFE  = NULL;
     if (lc->prePrintFunc != 0)
         {
-        fputs(lp3000FeForPrePrint(lc, lc->prePrintFunc), fcb);
-        if (lc->doSuppress)
-            {
-            lc->prePrintFunc = FcPrintNoSpace;
-            lc->doSuppress   = FALSE;
-            }
-        else
-            {
-            lc->prePrintFunc = 0;
-            }
+        preFE = lp3000FeForPrePrint(lc, lc->prePrintFunc);
         }
-    else if (lc->doSuppress)
+    if (lc->doSuppress)
         {
-        fputc(' ', fcb);
         lc->prePrintFunc = FcPrintNoSpace;
-        lc->doSuppress   = FALSE;
-        }
-    else if (lc->postPrintFunc != 0)
-        {
-        fputs(lp3000FeForPostPrint(lc, lc->postPrintFunc), fcb);
         }
     else
         {
+        lc->prePrintFunc = 0;
+        }
+    if (lc->postPrintFunc != 0 && lc->doSuppress == FALSE)
+        {
+        postFE = lp3000FeForPostPrint(lc, lc->postPrintFunc);
+        }
+    lc->doSuppress = FALSE;
+    if (preFE != NULL)
+        {
+        if (*preFE == '+' && lc->linePos < 1 && postFE == NULL) return;
+        fputs(preFE, fcb);
+        if (postFE != NULL) fputc('\n', fcb);
+        }
+    if (postFE != NULL)
+        {
+        fputs(postFE, fcb);
+        }
+    if (preFE == NULL && postFE == NULL)
+        {
         fputc(' ', fcb);
+        if (lc->doSuppress)
+            {
+            lc->prePrintFunc = FcPrintNoSpace;
+            }
         }
     for (i = 0; i < lc->linePos; i++)
         {
         fputc(lc->line[i], fcb);
         }
-     fputc('\n', fcb);
+    fputc('\n', fcb);
     }
 
 /*--------------------------------------------------------------------------
