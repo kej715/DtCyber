@@ -11,14 +11,22 @@ This repository also provides automation and artifacts intended to make it easy 
 anyone to build the simulator and run historic software on it.
 
 Visit these subdirectories to find artifacts and information enabling you to install
-operating systems on *DtCyber* after building it:
+various operating systems on *DtCyber* after building it:
 
-- [NOS2.8.7](NOS2.8.7) : NOS 2.8.7 was the last operating system formally released
-by CDC for its Cyber 170 series supercomputers.
-- [NOS1.3](NOS1.3) : the NOS 1.3 operating system and a corresponding version of
-PLATO.
+- [COS](COS) : the Chippewa Operating System (COS) was one of the first operating
+systems created by Control Data for CDC 6000 series computer systems.
 - [HUSTLER](HUSTLER) : a derivative of the SCOPE operating system implemented and
 originally deployed at Michigan State University.
+- [KRONOS2.1](KRONOS2.1) : KRONOS 2.1 was the logical ancestor of NOS 1 and a logical
+descendent of COS. It supports interactive access and batch operation.
+- [NOS1.3](NOS1.3) : the NOS 1.3 operating system was a logical descendent of KRONOS.
+The instance provided here supports interactive access, local and remote batch
+operation, and a version of
+[PLATO](https://en.wikipedia.org/wiki/PLATO_%40computer_system%41).
+- [NOS2.8.7](NOS2.8.7) : NOS 2.8.7 was the last operating system formally released
+by CDC for its Cyber 170 series supercomputers. In addition to supporting interactive
+access and local and remote batch operation, the instance provided here supports a
+very rich collection of programming languages and data communication features.
 
 Visit the [doc](doc) directory to find the somewhat outdated *Basic Operation* guide
 for *DtCyber*. This guide is oriented toward operation of an older version of the
