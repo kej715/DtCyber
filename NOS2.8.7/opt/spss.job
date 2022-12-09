@@ -71,6 +71,7 @@ $REVERT,NOLIST.
 */
 ~include ../mods/SPSS/BANNER.mod
 ~include ../mods/SPSS/LPI6.mod
+~include ../mods/SPSS/MINCM.mod
 ~eor
 USAGE DATA
 NEW FILE
