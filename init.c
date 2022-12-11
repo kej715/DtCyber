@@ -39,7 +39,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#endif 
+#endif
 
 #include "const.h"
 #include "types.h"
@@ -65,6 +65,53 @@
 **  Private Typedef and Structure Definitions
 **  -----------------------------------------
 */
+typedef struct initVal
+    {
+    char *valName;                          /* Value name */
+    char *sectionName;                      /* Section Group Name */
+    char *valStatus;                        /* Status String */
+    } InitVal;
+static InitVal sectVals[] =
+    {
+    "CEJ/MEJ",                       "cyber", "Valid",
+    "channels",                      "cyber", "Deprecated",
+    "clock",                         "cyber", "Valid",
+    "cmFile",                        "cyber", "Deprecated",
+    "cpus",                          "cyber", "Valid",
+    "deadstart",                     "cyber", "Valid",
+    "displayName",                   "cyber", "Valid",
+    "ecsbanks",                      "cyber", "Valid",
+    "ecsFile",                       "cyber", "Deprecated",
+    "equipment",                     "cyber", "Valid",
+    "esmbanks",                      "cyber", "Valid",
+    "helpers",                       "cyber", "Valid",
+    "idle",                          "cyber", "Valid",
+    "idlecycles",                    "cyber", "Valid",
+    "idletime",                      "cyber", "Valid",
+    "memory",                        "cyber", "Valid",
+    "model",                         "cyber", "Valid",
+    "npuConnections",                "cyber", "Valid",
+    "operator",                      "cyber", "Valid",
+    "ostype",                        "cyber", "Valid",
+    "persistDir",                    "cyber", "Valid",
+    "platoconns",                    "cyber", "Valid",
+    "platoport",                     "cyber", "Valid",
+    "pps",                           "cyber", "Valid",
+    "setMhz",                        "cyber", "Valid",
+    "telnetconns",                   "cyber", "Valid",
+    "telnetport",                    "cyber", "Valid",
+    "trace",                         "cyber", "Valid",
+
+    "cdcnetNode",                    "npu",   "Valid",
+    "cdcnetPrivilegedTcpPortOffset", "npu",   "Valid",
+    "cdcnetPrivilegedUdpPortOffset", "npu",   "Valid",
+    "couplerNode",                   "npu",   "Valid",
+    "hostID",                        "npu",   "Valid",
+    "npuNode",                       "npu",   "Valid",
+    "terminals",                     "npu",   "Valid",
+
+    NULL,                            NULL,    NULL
+    };
 
 /*
 **  ---------------------------
@@ -362,25 +409,82 @@ static void initCyber(char *config)
     long pps;
     long setMHz;
 
+    /*-------------------START OF PRECHECK-------------------*/
+
+    /*
+     *  Pre-Check all of the parameters of this section
+     */
     if (!initOpenSection(config))
         {
         fprintf(stderr, "(init   ) Required section [%s] not found in %s\n", config, startupFile);
         exit(1);
         }
 
+    int     lineNo = 0;
+    char    *line;
+    char    *token;
+    InitVal *curVal;
+    bool    goodToken = TRUE;
+    int     numErrors = 0;
+
+    while ((line = initGetNextLine()) != NULL)
+        {
+        lineNo += 1;
+        token   = strtok(line, "=");
+        if (strlen(token) > 2)
+            {
+            goodToken = FALSE;
+            for (curVal = sectVals; curVal->valName != NULL; curVal++)
+                {
+                if (strncasecmp(curVal->sectionName, "cyber", 5) == 0)
+                    {
+                    if (strncasecmp(curVal->valName, token, strlen(token)) == 0)
+                        {
+                        goodToken = TRUE;
+                        fprintf(stderr, "(init   ) Section [%s], relative line %05d, value '%s'(%s) (file '%s')\n",
+                                config, lineNo, token == NULL ? "NULL" : token, curVal->valStatus, startupFile);
+                        break;
+                        }
+                    }
+                }
+            if (!goodToken)
+                {
+                fprintf(stderr, "(init   ) Section [%s], relative line %05d, invalid configuration value '%s' in file '%s'\n",
+                        config, lineNo, token == NULL ? "NULL" : token, startupFile);
+                numErrors++;
+                }
+            }
+        }
+
+    if (numErrors > 0)
+        {
+        fprintf(stderr, "(init   ) Section [%s], Correct the %d error(s) in '%s' and restart.\n",
+                config, numErrors, startupFile);
+        exit(1);
+        }
+
+    /*-------------------END OF PRECHECK-------------------*/
+
+    if (!initOpenSection(config))
+        {
+        fprintf(stderr, "(init   ) Required section [%s] not found in '%s'\n", config, startupFile);
+        exit(1);
+        }
+    lineNo = 0;
+
     /*
     **  Check for obsolete keywords and abort if found.
     */
     if (initGetOctal("channels", 020, &chCount))
         {
-        fprintf(stderr, "(init   ) ***WARNING*** Entry 'channels' obsolete in section [%s] in %s,\n", config, startupFile);
+        fprintf(stderr, "(init   ) ***WARNING*** Entry 'channels' obsolete in section [%s] in '%s',\n", config, startupFile);
         fprintf(stderr, "                        channel count is determined from PP count.\n");
         exit(1);
         }
 
     if (initGetString("cmFile", "", dummy, sizeof(dummy)))
         {
-        fprintf(stderr, "(init   ) ***WARNING*** Entry 'cmFile' obsolete in section [%s] in %s,\n", config, startupFile);
+        fprintf(stderr, "(init   ) ***WARNING*** Entry 'cmFile' obsolete in section [%s] in '%s',\n", config, startupFile);
         fprintf(stderr, "                        please use 'persistDir' instead.\n");
         exit(1);
         }
@@ -426,7 +530,7 @@ static void initCyber(char *config)
         {
 //        modelType = ModelCyber840A;
 //        features = featuresCyber840A;
-        fprintf(stderr, "(init   ) Model CYBER840A was experimental and is no longer supported in %s,\n", startupFile);
+        fprintf(stderr, "(init   ) Model CYBER840A was experimental and is no longer supported in '%s',\n", startupFile);
         exit(1);
         }
     else if (stricmp(model, "CYBER865") == 0)
@@ -436,7 +540,7 @@ static void initCyber(char *config)
         }
     else
         {
-        fprintf(stderr, "(init   ) Entry 'model' specified unsupported mainframe %s in section [%s] in %s\n", model, config, startupFile);
+        fprintf(stderr, "(init   ) Entry 'model' specified unsupported mainframe %s in section [%s] in '%s'\n", model, config, startupFile);
         exit(1);
         }
 
@@ -452,7 +556,7 @@ static void initCyber(char *config)
     (void)initGetOctal("memory", 01000000, &memory);
     if (memory < 040000)
         {
-        fprintf(stderr, "(init   ) Entry 'memory' less than 40000B in section [%s] in %s\n", config, startupFile);
+        fprintf(stderr, "(init   ) Entry 'memory' less than 40000B in section [%s] in '%s'\n", config, startupFile);
         exit(1);
         }
 
@@ -463,7 +567,7 @@ static void initCyber(char *config)
             && (memory != 03000000)
             && (memory != 04000000))
             {
-            fprintf(stderr, "(init   ) Cyber 170-865 memory must be configured in 262K increments in section [%s] in %s\n", config, startupFile);
+            fprintf(stderr, "(init   ) Cyber 170-865 memory must be configured in 262K increments in section [%s] in '%s'\n", config, startupFile);
             exit(1);
             }
         }
@@ -480,7 +584,7 @@ static void initCyber(char *config)
         break;
 
     default:
-        fprintf(stderr, "(init   ) Entry 'ecsbanks' invalid in section [%s] in %s - correct values are 0, 1, 2, 4, 8 or 16\n", config, startupFile);
+        fprintf(stderr, "(init   ) Entry 'ecsbanks' invalid in section [%s] in '%s' - correct values are 0, 1, 2, 4, 8 or 16\n", config, startupFile);
         exit(1);
         }
 
@@ -496,24 +600,24 @@ static void initCyber(char *config)
         break;
 
     default:
-        fprintf(stderr, "(init   ) Entry 'esmbanks' invalid in section [%s] in %s - correct values are 0, 1, 2, 4, 8 or 16\n", config, startupFile);
+        fprintf(stderr, "(init   ) Entry 'esmbanks' invalid in section [%s] in '%s' - correct values are 0, 1, 2, 4, 8 or 16\n", config, startupFile);
         exit(1);
         }
 
     if ((ecsBanks != 0) && (esmBanks != 0))
         {
-        fprintf(stderr, "(init   ) You can't have both 'ecsbanks' and 'esmbanks' in section [%s] in %s\n", config, startupFile);
+        fprintf(stderr, "(init   ) You can't have both 'ecsbanks' and 'esmbanks' in section [%s] in '%s'\n", config, startupFile);
         exit(1);
         }
 
-     /*
-     **  Determine the number of CPU's to use.
-     */
-    initGetInteger ("cpus", 1, &cpus);
-    if (cpus < 1 || cpus > MaxCpus)
+    /*
+    **  Determine the number of CPUs to use.
+    */
+    initGetInteger("cpus", 1, &cpus);
+    if ((cpus < 1) || (cpus > MaxCpus))
         {
-        fprintf (stderr, "(init   ) Entry 'cpus' invalid in section [%s] in %s -- correct values are 1 or 2\n", config, startupFile);
-        exit (1);
+        fprintf(stderr, "(init   ) Entry 'cpus' invalid in section [%s] in '%s' -- correct values are 1 or 2\n", config, startupFile);
+        exit(1);
         }
     cpuCount = (int)cpus;
 
@@ -526,21 +630,21 @@ static void initCyber(char *config)
         struct stat s;
         if (stat(persistDir, &s) != 0)
             {
-            fprintf(stderr, "(init   ) Entry 'persistDir' in section [%s] in %s\n", config, startupFile);
+            fprintf(stderr, "(init   ) Entry 'persistDir' in section [%s] in '%s'\n", config, startupFile);
             fprintf(stderr, "          specifies non-existing directory '%s'.\n", persistDir);
             exit(1);
             }
 
         if ((s.st_mode & S_IFDIR) == 0)
             {
-            fprintf(stderr, "(init   ) Entry 'persistDir' in section [%s] in %s\n", config, startupFile);
+            fprintf(stderr, "(init   ) Entry 'persistDir' in section [%s] in '%s'\n", config, startupFile);
             fprintf(stderr, "          '%s' is not a directory.\n", persistDir);
             exit(1);
             }
         }
     else
         {
-        fprintf(stderr, "(init   ) Entry 'persistDir' was not found in section [%s] in %s\n", config, startupFile);
+        fprintf(stderr, "(init   ) Entry 'persistDir' was not found in section [%s] in '%s'\n", config, startupFile);
         exit(1);
         }
 
@@ -548,6 +652,7 @@ static void initCyber(char *config)
     **  Initialise CPU.
     */
     cpuInit(model, memory, ecsBanks + esmBanks, ecsBanks != 0 ? ECS : ESM);
+    fprintf(stdout, "(init   ) Successfully Configured Model %s with %d CPUs with %d banks of %s.\n", model, cpuCount, ecsBanks + esmBanks, ecsBanks != 0 ? "ESM" : "ECS");
 
     /*
     **  Determine number of PPs and initialise PP subsystem.
@@ -555,7 +660,7 @@ static void initCyber(char *config)
     (void)initGetOctal("pps", 012, &pps);
     if ((pps != 012) && (pps != 024))
         {
-        fprintf(stderr, "(init   ) Entry 'pps' invalid in section [%s] in %s - supported values are 012 or 024 (octal)\n", config, startupFile);
+        fprintf(stderr, "(init   ) Entry 'pps' invalid in section [%s] in '%s' - supported values are 012 or 024 (octal)\n", config, startupFile);
         exit(1);
         }
 
@@ -580,7 +685,7 @@ static void initCyber(char *config)
     */
     if (!initGetString("deadstart", "", deadstart, sizeof(deadstart)))
         {
-        fprintf(stderr, "(init   ) Required entry 'deadstart' in section [%s] not found in %s\n", config, startupFile);
+        fprintf(stderr, "(init   ) Required entry 'deadstart' in section [%s] not found in '%s'\n", config, startupFile);
         exit(1);
         }
 
@@ -588,6 +693,7 @@ static void initCyber(char *config)
     **  Get cycle counter speed in MHz.
     */
     (void)initGetInteger("setMhz", 0, &setMHz);
+    fprintf(stdout, "(init   ) %d MHz set.\n", setMHz);
 
     /*
     **  Get clock increment value and initialise clock.
@@ -595,6 +701,7 @@ static void initCyber(char *config)
     (void)initGetInteger("clock", 0, &clockIncrement);
 
     rtcInit((u8)clockIncrement, setMHz);
+    fprintf(stdout, "(init   ) %d Clock Increment Set.\n", clockIncrement);
 
     /*
     **  Initialise optional Interlock Register on channel 15.
@@ -643,7 +750,7 @@ static void initCyber(char *config)
     */
     if (!initGetString("equipment", "", equipment, sizeof(equipment)))
         {
-        fprintf(stderr, "(init   ) Required entry 'equipment' in section [%s] not found in %s\n", config, startupFile);
+        fprintf(stderr, "(init   ) Required entry 'equipment' in section [%s] not found in '%s'\n", config, startupFile);
         exit(1);
         }
 
@@ -655,32 +762,37 @@ static void initCyber(char *config)
         traceMask = (u32)mask;
         }
 
+    fprintf(stdout, "(init   ) 0x%08x Tracing Mask Set.\n", traceMask);
+
+
     /*
     **  Get optional Telnet port number. If not specified, use default value.
     */
     initGetInteger("telnetport", 5000, &port);
     mux6676TelnetPort = (u16)port;
+    fprintf(stdout, "(init   ) mux6676 Telnet Port %d Set.\n", mux6676TelnetPort);
 
     /*
     **  Get optional max Telnet connections. If not specified, use default value.
     */
     initGetInteger("telnetconns", 4, &conns);
     mux6676TelnetConns = (u16)conns;
+    fprintf(stdout, "(init   ) mux6676 Telnet Connections (max) %d Set.\n", mux6676TelnetConns);
 
     /* Get Idle loop settings */
     idle = FALSE;
     initGetString("idle", "off", dummy, sizeof(dummy));
-    if (strcasecmp(dummy, "on") == 0
-        || strcasecmp(dummy, "true") == 0
-        || strcasecmp(dummy, "1") == 0)
+    if ((strcasecmp(dummy, "on") == 0)
+        || (strcasecmp(dummy, "true") == 0)
+        || (strcasecmp(dummy, "1") == 0))
         {
         idle = TRUE;
         }
-    else if (strcasecmp(dummy, "off") != 0
-             && strcasecmp(dummy, "false") != 0
-             && strcasecmp(dummy, "0") != 0)
+    else if ((strcasecmp(dummy, "off") != 0)
+             && (strcasecmp(dummy, "false") != 0)
+             && (strcasecmp(dummy, "0") != 0))
         {
-        fprintf(stderr, "(init   ) Invalid value for 'idle' in section [%s] of %s\n", config, startupFile);
+        fprintf(stderr, "(init   ) Invalid value for 'idle' in section [%s] of '%s'\n", config, startupFile);
         exit(1);
         }
 #if defined(_WIN32)
@@ -695,6 +807,7 @@ static void initCyber(char *config)
     initGetInteger("idletime", 60, &dummyInt);
     idleTime = (u32)dummyInt;
 #endif
+    fprintf(stdout, "(init   ) Idle %s every %d Cycles for %d Milliseconds.\n", idle ? "ON" : "OFF", idleTrigger, idleTime);
 
     /*
     **  Get optional operating system type. If not specified, use "none".
@@ -730,17 +843,21 @@ static void initCyber(char *config)
         fprintf(stderr, "(init   ) WARNING: Unrecognized operating system type: '%s'\n", startupFile);
         }
 
+    fprintf(stdout, "(init   ) Operating System Type = '%s'.\n", osType);
+
     /*
     **  Get optional Plato port number. If not specified, use default value.
     */
     initGetInteger("platoport", 5004, &port);
     platoPort = (u16)port;
+    fprintf(stdout, "(init   ) PLATO Port = %d.\n", platoPort);
 
     /*
     **  Get optional max Plato connections. If not specified, use default value.
     */
     initGetInteger("platoconns", 4, &conns);
     platoConns = (u16)conns;
+    fprintf(stdout, "(init   ) PLATO Connections = %d.\n", platoConns);
     }
 
 /*--------------------------------------------------------------------------
@@ -788,9 +905,64 @@ static void initNpuConnections(void)
         return;
         }
 
+    /*-------------------START OF PRECHECK-------------------*/
+
+/*
+ *  Pre-Check all of the parameters of this section
+ */
     if (!initOpenSection(npuConnections))
         {
-        fprintf(stderr, "(init   ) Section [%s] not found in %s\n", npuConnections, startupFile);
+        fprintf(stderr, "(init   ) Required section [%s] not found in '%s'\n", npuConnections, startupFile);
+        exit(1);
+        }
+
+    InitVal *curVal;
+    bool    goodToken = TRUE;
+    int     numErrors = 0;
+
+    lineNo = 0;
+    while ((line = initGetNextLine()) != NULL)
+        {
+        lineNo += 1;
+        token   = strtok(line, "=");
+        if (strlen(token) > 2)
+            {
+            goodToken = FALSE;
+            for (curVal = sectVals; curVal->valName != NULL; curVal++)
+                {
+                if (strncasecmp(curVal->sectionName, "npu", 5) == 0)
+                    {
+                    if (strncasecmp(curVal->valName, token, strlen(token)) == 0)
+                        {
+                        goodToken = TRUE;
+                        fprintf(stderr, "(init   ) Section [%s], relative line %05d, value '%s'(%s) (file '%s')\n",
+                                npuConnections, lineNo, token == NULL ? "NULL" : token, curVal->valStatus, startupFile);
+                        break;
+                        }
+                    }
+                }
+            if (!goodToken)
+                {
+                fprintf(stderr, "(init   ) Section [%s], relative line %05d, invalid configuration value '%s'(%s) in '%s'\n",
+                        npuConnections, lineNo, token == NULL ? "NULL" : token, curVal->valStatus, startupFile);
+                numErrors++;
+                }
+            }
+        }
+
+    if (numErrors > 0)
+        {
+        fprintf(stderr, "(init   ) Section [%s], Correct the %d error(s) in '%s' and restart.\n",
+                npuConnections, numErrors, startupFile);
+        exit(1);
+        }
+
+    /*-------------------END OF PRECHECK-------------------*/
+
+
+    if (!initOpenSection(npuConnections))
+        {
+        fprintf(stderr, "(init   ) Section [%s] not found in '%s'\n", npuConnections, startupFile);
         exit(1);
         }
 
@@ -799,6 +971,7 @@ static void initNpuConnections(void)
     */
     (void)initGetString("hostID", "CYBER", npuNetHostID, HostIdSize);
     initToUpperCase(npuNetHostID);
+    fprintf(stderr, "(init   ) NPU Network Host ID is '%s'\n", npuNetHostID);
 
     /*
     **  Get host IP address
@@ -806,10 +979,11 @@ static void initNpuConnections(void)
     (void)initGetString("hostIP", "127.0.0.1", strValue, sizeof(strValue));
     if (initParseIpAddress(strValue, &npuNetHostIP, NULL) == FALSE)
         {
-        fprintf(stderr, "(init   ) Invalid 'hostIP' value %s in section [%s] of %s - correct values are IPv4 addresses\n",
+        fprintf(stderr, "(init   ) Invalid 'hostIP' value %s in section [%s] of '%s' - correct values are IPv4 addresses\n",
                 strValue, npuConnections, startupFile);
         exit(1);
         }
+    fprintf(stderr, "(init   ) NPU Network Host IP Address is '%s'\n", strValue);
 
     /*
     **  Get optional coupler node number. If not specified, use default value of 1.
@@ -817,11 +991,12 @@ static void initNpuConnections(void)
     initGetInteger("couplerNode", 1, &networkValue);
     if ((networkValue < 1) || (networkValue > 255))
         {
-        fprintf(stderr, "(init   ) Invalid 'couplerNode' value %ld in section [%s] of %s - correct values are 1..255\n",
+        fprintf(stderr, "(init   ) Invalid 'couplerNode' value %ld in section [%s] of '%s' - correct values are 1..255\n",
                 networkValue, npuConnections, startupFile);
         exit(1);
         }
     npuSvmCouplerNode = (u8)networkValue;
+    fprintf(stderr, "(init   ) NPU Network Coupler Node Value is %d\n", npuSvmCouplerNode);
 
     /*
     **  Get optional NPU node number. If not specified, use default value of 2.
@@ -829,11 +1004,12 @@ static void initNpuConnections(void)
     initGetInteger("npuNode", 2, &networkValue);
     if ((networkValue < 1) || (networkValue > 255))
         {
-        fprintf(stderr, "(init   ) Invalid 'npuNode' value %ld in section [%s] of %s - correct values are 1..255\n",
+        fprintf(stderr, "(init   ) Invalid 'npuNode' value %ld in section [%s] of '%s' - correct values are 1..255\n",
                 networkValue, npuConnections, startupFile);
         exit(1);
         }
     npuSvmNpuNode = (u8)networkValue;
+    fprintf(stderr, "(init   ) NPU Network Node Value is %d\n", npuSvmNpuNode);
 
     /*
     **  Get optional CDCNet node number. If not specified, use default value of 255.
@@ -841,11 +1017,12 @@ static void initNpuConnections(void)
     initGetInteger("cdcnetNode", 255, &networkValue);
     if ((networkValue < 1) || (networkValue > 255))
         {
-        fprintf(stderr, "(init   ) Invalid 'cdcnetNode' value %ld in section [%s] of %s - correct values are 1..255\n",
+        fprintf(stderr, "(init   ) Invalid 'cdcnetNode' value %ld in section [%s] of '%s' - correct values are 1..255\n",
                 networkValue, npuConnections, startupFile);
         exit(1);
         }
     cdcnetNode = (u8)networkValue;
+    fprintf(stderr, "(init   ) CDC Network Node Value is %d\n", cdcnetNode);
 
     /*
     **  Get optional privileged TCP and UDP port offsets for CDCNet TCP/IP passive connections. If not specified,
@@ -854,27 +1031,29 @@ static void initNpuConnections(void)
     initGetInteger("cdcnetPrivilegedTcpPortOffset", 6600, &networkValue);
     if ((networkValue < 0) || (networkValue > 64000))
         {
-        fprintf(stderr, "(init   ) Invalid 'cdcnetPrivilegedTcpPortOffset' value %ld in section [%s] of %s - correct values are 0..64000\n",
+        fprintf(stderr, "(init   ) Invalid 'cdcnetPrivilegedTcpPortOffset' value %ld in section [%s] of '%s' - correct values are 0..64000\n",
                 networkValue, npuConnections, startupFile);
         exit(1);
         }
     cdcnetPrivilegedTcpPortOffset = (u16)networkValue;
+    fprintf(stderr, "(init   ) CDC Network Privileged TCP Port Offset is %d\n", cdcnetPrivilegedTcpPortOffset);
 
     initGetInteger("cdcnetPrivilegedUdpPortOffset", 6600, &networkValue);
     if ((networkValue < 0) || (networkValue > 64000))
         {
-        fprintf(stderr, "(init   ) Invalid 'cdcnetPrivilegedUdpPortOffset' value %ld in section [%s] of %s - correct values are 0..64000\n",
+        fprintf(stderr, "(init   ) Invalid 'cdcnetPrivilegedUdpPortOffset' value %ld in section [%s] of '%s' - correct values are 0..64000\n",
                 networkValue, npuConnections, startupFile);
         exit(1);
         }
     cdcnetPrivilegedUdpPortOffset = (u16)networkValue;
+    fprintf(stderr, "(init   ) CDC Network Privileged UDP Port Offset is %d\n", cdcnetPrivilegedUdpPortOffset);
 
     /*
     **  Process all equipment entries.
     */
     if (!initOpenSection(npuConnections))
         {
-        fprintf(stderr, "(init   ) Section [%s] not found in %s\n", npuConnections, startupFile);
+        fprintf(stderr, "(init   ) Section [%s] not found in '%s'\n", npuConnections, startupFile);
         exit(1);
         }
 
@@ -889,7 +1068,7 @@ static void initNpuConnections(void)
         token = strtok(line, ",=");
         if (token == NULL)
             {
-            fprintf(stderr, "(init   ) Invalid syntax in section [%s] of %s, relative line %d\n",
+            fprintf(stderr, "(init   ) Invalid syntax in section [%s] of '%s', relative line %05d\n",
                     npuConnections, startupFile, lineNo);
             exit(1);
             }
@@ -935,18 +1114,22 @@ static void initNpuConnections(void)
             **     <remote-name>   Name of node to which to connect for LIP and NJE
             **     <remote-port>   TCP port number to which Reverse HASP, NJE, or LIP will connect
             */
+            fprintf(stderr, "(init   ) TERMINALS Definition: (Line %d) ", lineNo);
+
             token = strtok(NULL, ",");
             if ((token == NULL) || !isdigit(token[0]))
                 {
-                fprintf(stderr, "(init   ) Invalid TCP port number %s in section [%s] of %s, relative line %d\n",
+                fprintf(stderr, "(init   ) Invalid TCP port number %s in section [%s] of '%s', relative line %05d\n",
                         token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
                 exit(1);
                 }
 
             tcpPort = strtol(token, NULL, 10);
+            fprintf(stderr, "TCP Port %d, ", tcpPort);
+
             if (tcpPort > 65535)
                 {
-                fprintf(stderr, "(init   ) Invalid TCP port number %ld in section [%s] of %s, relative line %d\n",
+                fprintf(stderr, "(init   ) Invalid TCP port number %ld in section [%s] of '%s', relative line %05d\n",
                         tcpPort, npuConnections, startupFile, lineNo);
                 exit(1);
                 }
@@ -957,20 +1140,22 @@ static void initNpuConnections(void)
             token = strtok(NULL, ",");
             if ((token == NULL) || !isxdigit(token[0]))
                 {
-                fprintf(stderr, "(init   ) Invalid CLA port number %s in section [%s] of %s, relative line %d\n",
+                fprintf(stderr, "(init   ) Invalid CLA port number %s in section [%s] of '%s', relative line %05d\n",
                         token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
                 exit(1);
                 }
 
             networkValue = strtol(token, NULL, 16);
+
             if ((networkValue < 1) || (networkValue > 255))
                 {
-                fprintf(stderr, "(init   ) Invalid CLA port number %ld in section [%s] of %s, relative line %d\n",
+                fprintf(stderr, "(init   ) Invalid CLA port number %ld in section [%s] of '%s', relative line %05d\n",
                         networkValue, npuConnections, startupFile, lineNo);
                 fprintf(stderr, "(init   ) CLA port numbers must be between 01 and FF, and expressed in hexadecimal\n");
                 exit(1);
                 }
             claPort = (u8)networkValue;
+            fprintf(stderr, "CLA Port %d, ", claPort);
 
             /*
             **  Parse number of connections on this port.
@@ -978,19 +1163,21 @@ static void initNpuConnections(void)
             token = strtok(NULL, ",");
             if ((token == NULL) || !isdigit(token[0]))
                 {
-                fprintf(stderr, "(init   ) Invalid number of connections %s in section [%s] of %s, relative line %d\n",
+                fprintf(stderr, "(init   ) Invalid number of connections %s in section [%s] of '%s', relative line %05d\n",
                         token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
                 exit(1);
                 }
             networkValue = strtol(token, NULL, 10);
+
             if ((networkValue < 0) || (networkValue > 100))
                 {
-                fprintf(stderr, "(init   ) Invalid number of connections %ld in section [%s] of %s, relative line %d\n",
+                fprintf(stderr, "(init   ) Invalid number of connections %ld in section [%s] of '%s', relative line %05d\n",
                         networkValue, npuConnections, startupFile, lineNo);
                 fprintf(stderr, "(init   ) Connection count must be between 0 and 100\n");
                 exit(1);
                 }
             numConns = (int)networkValue;
+            fprintf(stderr, "Connections Permitted %d, ", numConns);
 
             /*
             **  Parse NPU connection type.
@@ -998,12 +1185,13 @@ static void initNpuConnections(void)
             token = strtok(NULL, ", ");
             if (token == NULL)
                 {
-                fprintf(stderr, "(init   ) Invalid NPU connection type %s in section [%s] of %s, relative line %d\n",
+                fprintf(stderr, "(init   ) Invalid NPU connection type %s in section [%s] of '%s', relative line %05d\n",
                         token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
                 exit(1);
                 }
             destHostAddr = NULL;
             blockSize    = DefaultBlockSize;
+            fprintf(stderr, "Connection Type %s, ", token);
 
             if (strcmp(token, "raw") == 0)
                 {
@@ -1036,15 +1224,16 @@ static void initNpuConnections(void)
                         blockSize = strtol(token + 1, NULL, 10);
                         if ((blockSize < MinBlockSize) || (blockSize > MaxBlockSize))
                             {
-                            fprintf(stderr, "(init   ) Invalid block size %ld in section [%s] of %s, relative line %d\n",
+                            fprintf(stderr, "(init   ) Invalid block size %ld in section [%s] of '%s', relative line %05d\n",
                                     blockSize, npuConnections, startupFile, lineNo);
                             fprintf(stderr, "(init   ) Block size must be between %d and %d\n", MinBlockSize, MaxBlockSize);
                             exit(1);
                             }
+                        fprintf(stderr, "Block Size %d, ", blockSize);
                         }
                     else
                         {
-                        fprintf(stderr, "(init   ) Invalid HASP block size specification '%s' in section [%s] of %s, relative line %d\n",
+                        fprintf(stderr, "(init   ) Invalid HASP block size specification '%s' in section [%s] of '%s', relative line %05d\n",
                                 token, npuConnections, startupFile, lineNo);
                         exit(1);
                         }
@@ -1059,26 +1248,28 @@ static void initNpuConnections(void)
                 token    = strtok(NULL, ", ");
                 if (token == NULL)
                     {
-                    fprintf(stderr, "(init   ) Missing remote host address in section [%s] of %s, relative line %d\n",
+                    fprintf(stderr, "(init   ) Missing remote host address in section [%s] of '%s', relative line %05d\n",
                             npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 destHostAddr = token;
                 if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
                     {
-                    fprintf(stderr, "(init   ) Invalid Reverse HASP address '%s' in section [%s] of %s, relative line %d\n",
+                    fprintf(stderr, "(init   ) Invalid Reverse HASP address '%s' in section [%s] of '%s', relative line %05d\n",
                             destHostAddr, npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 if (destHostPort == 0)
                     {
-                    fprintf(stderr, "(init   ) Missing port number on Reverse HASP address '%s' in section [%s] of %s, relative line %d\n",
+                    fprintf(stderr, "(init   ) Missing port number on Reverse HASP address '%s' in section [%s] of '%s', relative line %05d\n",
                             destHostAddr, npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 destHostName = destHostAddr;
-                blockSize    = DefaultRevHaspBlockSize;
-                token        = strtok(NULL, " ");
+                fprintf(stderr, "Destination Host %s, ", destHostName);
+
+                blockSize = DefaultRevHaspBlockSize;
+                token     = strtok(NULL, " ");
                 if (token != NULL)
                     {
                     if ((*token == 'B') || (*token == 'b'))
@@ -1086,7 +1277,7 @@ static void initNpuConnections(void)
                         blockSize = strtol(token + 1, NULL, 10);
                         if ((blockSize < MinBlockSize) || (blockSize > MaxBlockSize))
                             {
-                            fprintf(stderr, "(init   ) Invalid block size %ld in section [%s] of %s, relative line %d\n",
+                            fprintf(stderr, "(init   ) Invalid block size %ld in section [%s] of '%s', relative line %05d\n",
                                     blockSize, npuConnections, startupFile, lineNo);
                             fprintf(stderr, "(init   ) Block size must be between %d and %d\n", MinBlockSize, MaxBlockSize);
                             exit(1);
@@ -1094,10 +1285,11 @@ static void initNpuConnections(void)
                         }
                     else
                         {
-                        fprintf(stderr, "(init   ) Invalid Reverse HASP block size specification '%s' in section [%s] of %s, relative line %d\n",
+                        fprintf(stderr, "(init   ) Invalid Reverse HASP block size specification '%s' in section [%s] of '%s', relative line %05d\n",
                                 token, npuConnections, startupFile, lineNo);
                         exit(1);
                         }
+                    fprintf(stderr, "Block Size %d, ", blockSize);
                     }
                 }
             else if (strcmp(token, "nje") == 0)
@@ -1108,7 +1300,7 @@ static void initNpuConnections(void)
                 */
                 if (numConns != 1)
                     {
-                    fprintf(stderr, "(init   ) Invalid port count on NJE definition (must be 1) in section [%s] of %s, relative line %d\n",
+                    fprintf(stderr, "(init   ) Invalid port count on NJE definition (must be 1) in section [%s] of '%s', relative line %05d\n",
                             npuConnections, startupFile, lineNo);
                     exit(1);
                     }
@@ -1116,25 +1308,27 @@ static void initNpuConnections(void)
                 token    = strtok(NULL, ", ");
                 if (token == NULL)
                     {
-                    fprintf(stderr, "(init   ) Missing remote NJE node address in section [%s] of %s, relative line %d\n",
+                    fprintf(stderr, "(init   ) Missing remote NJE node address in section [%s] of '%s', relative line %05d\n",
                             npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 destHostAddr = token;
                 if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
                     {
-                    fprintf(stderr, "(init   ) Invalid remote NJE node address %s in section [%s] of %s, relative line %d\n",
+                    fprintf(stderr, "(init   ) Invalid remote NJE node address %s in section [%s] of '%s', relative line %05d\n",
                             destHostAddr, npuConnections, startupFile, lineNo);
                     exit(1);
                     }
+                fprintf(stderr, "Destination Host %s, ", destHostAddr);
                 if (destHostPort == 0)
                     {
                     destHostPort = 175;                    // default NJE/TCP port number
                     }
+                fprintf(stderr, "Destination Port %d, ", destHostPort);
                 token = strtok(NULL, ", ");
                 if (token == NULL)
                     {
-                    fprintf(stderr, "(init   ) Missing remote NJE node name in section [%s] of %s, relative line %d\n",
+                    fprintf(stderr, "(init   ) Missing remote NJE node name in section [%s] of '%s', relative line %05d\n",
                             npuConnections, startupFile, lineNo);
                     exit(1);
                     }
@@ -1151,25 +1345,27 @@ static void initNpuConnections(void)
                         blockSize = strtol(token + 1, NULL, 10);
                         if (blockSize < MinNjeBlockSize)
                             {
-                            fprintf(stderr, "(init   ) Invalid block size %ld in section [%s] of %s, relative line %d\n",
+                            fprintf(stderr, "(init   ) Invalid block size %ld in section [%s] of '%s', relative line %05d\n",
                                     blockSize, npuConnections, startupFile, lineNo);
                             fprintf(stderr, "(init   ) Block size must be at least %d\n", MinNjeBlockSize);
                             exit(1);
                             }
+                        fprintf(stderr, "Block Size %d, ", blockSize);
                         }
                     else if ((*token == 'P') || (*token == 'p'))
                         {
                         pingInterval = strtol(token + 1, NULL, 10);
                         if (pingInterval < 0)
                             {
-                            fprintf(stderr, "(init   ) Invalid ping interval %ld in section [%s] of %s, relative line %d\n",
+                            fprintf(stderr, "(init   ) Invalid ping interval %ld in section [%s] of '%s', relative line %05d\n",
                                     pingInterval, npuConnections, startupFile, lineNo);
                             exit(1);
                             }
+                        fprintf(stderr, "Ping Interval %d, ", pingInterval);
                         }
                     else if (initParseIpAddress(token, &localHostIP, NULL) == FALSE)
                         {
-                        fprintf(stderr, "(init   ) Invalid local NJE node address %s in section [%s] of %s, relative line %d\n",
+                        fprintf(stderr, "(init   ) Invalid local NJE node address %s in section [%s] of '%s', relative line %05d\n",
                                 token, npuConnections, startupFile, lineNo);
                         exit(1);
                         }
@@ -1183,7 +1379,7 @@ static void initNpuConnections(void)
                 */
                 if (numConns != 1)
                     {
-                    fprintf(stderr, "(init   ) Invalid port count on trunk definition (must be 1) in section [%s] of %s, relative line %d\n",
+                    fprintf(stderr, "(init   ) Invalid port count on trunk definition (must be 1) in section [%s] of '%s', relative line %05d\n",
                             npuConnections, startupFile, lineNo);
                     exit(1);
                     }
@@ -1191,45 +1387,50 @@ static void initNpuConnections(void)
                 token    = strtok(NULL, ", ");
                 if (token == NULL)
                     {
-                    fprintf(stderr, "(init   ) Missing remote host address on trunk definition in section [%s] of %s, relative line %d\n",
+                    fprintf(stderr, "(init   ) Missing remote host address on trunk definition in section [%s] of '%s', relative line %05d\n",
                             npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 destHostAddr = token;
+                fprintf(stderr, "Destination Host Address %s, ", destHostAddr);
                 if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
                     {
-                    fprintf(stderr, "(init   ) Invalid remote host IP address %s on trunk definition in section [%s] of %s, relative line %d\n",
+                    fprintf(stderr, "(init   ) Invalid remote host IP address %s on trunk definition in section [%s] of '%s', relative line %05d\n",
                             destHostAddr, npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 token = strtok(NULL, ", ");
                 if (token == NULL)
                     {
-                    fprintf(stderr, "(init   ) Missing remote node name on trunk definition in section [%s] of %s, relative line %d\n",
+                    fprintf(stderr, "(init   ) Missing remote node name on trunk definition in section [%s] of '%s', relative line %05d\n",
                             npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 destHostName = token;
                 initToUpperCase(destHostName);
+                fprintf(stderr, "Destination Host Name %s, ", destHostName);
+
                 token = strtok(NULL, " ");
                 if (token == NULL)
                     {
-                    fprintf(stderr, "(init   ) Missing coupler node number on trunk definition in section [%s] of %s, relative line %d\n",
+                    fprintf(stderr, "(init   ) Missing coupler node number on trunk definition in section [%s] of '%s', relative line %05d\n",
                             npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 networkValue = strtol(token, NULL, 10);
+
                 if ((networkValue < 1) || (networkValue > 255))
                     {
-                    fprintf(stderr, "(init   ) Invalid coupler node number %ld on trunk definition in section [%s] of %s, relative line %d\n",
+                    fprintf(stderr, "(init   ) Invalid coupler node number %ld on trunk definition in section [%s] of '%s', relative line %05d\n",
                             networkValue, npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 destNode = (u8)networkValue;
+                fprintf(stderr, "Coupler Node %d, ", destNode);
                 }
             else
                 {
-                fprintf(stderr, "(init   ) Invalid NPU connection type %s in section [%s] of %s, relative line %d\n",
+                fprintf(stderr, "(init   ) Invalid NPU connection type %s in section [%s] of '%s', relative line %05d\n",
                         token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
                 fprintf(stderr, "(init   ) NPU connection types must be one of: hasp, nje, pterm, raw, rhasp, rs232, telnet\n");
                 exit(1);
@@ -1239,6 +1440,8 @@ static void initNpuConnections(void)
             **  Setup NPU connection type.
             */
             rc = npuNetRegisterConnType(tcpPort, claPort, numConns, connType, &ncbp);
+            fprintf(stderr, "Registered (rc=%d).\n", rc);
+
             if (rc == NpuNetRegOk)
                 {
                 switch (connType)
@@ -1260,7 +1463,7 @@ static void initNpuConnections(void)
                             }
                         else
                             {
-                            fprintf(stderr, "(init   ) Unrecognized keyword \"%s\" on terminal definition in section [%s] of %s, relative line %d\n",
+                            fprintf(stderr, "(init   ) Unrecognized keyword \"%s\" on terminal definition in section [%s] of '%s', relative line %05d\n",
                                     token, npuConnections, startupFile, lineNo);
                             exit(1);
                             }
@@ -1279,7 +1482,7 @@ static void initNpuConnections(void)
                     ncbp->hostName = (char *)malloc(len);
                     if (ncbp->hostName == NULL)
                         {
-                        fprintf(stderr, "(init   ) Failed to register terminal (out of memory) in section [%s] of %s, relative line %d\n",
+                        fprintf(stderr, "(init   ) Failed to register terminal (out of memory) in section [%s] of '%s', relative line %05d\n",
                                 npuConnections, startupFile, lineNo);
                         exit(1);
                         }
@@ -1327,27 +1530,27 @@ static void initNpuConnections(void)
                 break;
 
             case NpuNetRegOvfl:
-                fprintf(stderr, "(init   ) Too many terminal and trunk definitions (max of %d), in section [%s] of %s, relative line %d\n",
+                fprintf(stderr, "(init   ) Too many terminal and trunk definitions (max of %d), in section [%s] of '%s', relative line %05d\n",
                         MaxTermDefs, npuConnections, startupFile, lineNo);
                 exit(1);
 
             case NpuNetRegDupTcp:
-                fprintf(stderr, "(init   ) Duplicate TCP port %ld for terminal definition in section [%s] of %s, relative line %d\n",
+                fprintf(stderr, "(init   ) Duplicate TCP port %ld for terminal definition in section [%s] of '%s', relative line %05d\n",
                         tcpPort, npuConnections, startupFile, lineNo);
                 exit(1);
 
             case NpuNetRegDupCla:
-                fprintf(stderr, "(init   ) Duplicate CLA port in terminal set starting with 0x%02x for connection type %s in section [%s] of %s, relative line %d\n",
+                fprintf(stderr, "(init   ) Duplicate CLA port in terminal set starting with 0x%02x for connection type %s in section [%s] of '%s', relative line %05d\n",
                         claPort, token, npuConnections, startupFile, lineNo);
                 exit(1);
 
             case NpuNetRegNoMem:
-                fprintf(stderr, "(init   ) Failed to register terminals (out of memory) in section [%s] of %s, relative line %d\n",
+                fprintf(stderr, "(init   ) Failed to register terminals (out of memory) in section [%s] of '%s', relative line %05d\n",
                         npuConnections, startupFile, lineNo);
                 exit(1);
 
             default:
-                fprintf(stderr, "(init   ) Failed to register terminals (unexpected rc=%d) in section [%s] of %s, relative line %d\n",
+                fprintf(stderr, "(init   ) Failed to register terminals (unexpected rc=%d) in section [%s] of '%s', relative line %05d\n",
                         rc, npuConnections, startupFile, lineNo);
                 exit(1);
                 }
@@ -1374,18 +1577,69 @@ static void initEquipment(void)
     u8   deviceIndex;
     int  lineNo;
 
+
     if (!initOpenSection(equipment))
         {
-        fprintf(stderr, "(init   ) Required section [%s] not found in %s\n", equipment, startupFile);
+        fprintf(stderr, "(init   ) Required section [%s] not found in '%s'\n", equipment, startupFile);
         exit(1);
         }
 
-    printf("(init   ) Loading Equipment Section [%s] from %s\n", equipment, startupFile);
+    printf("(init   ) Loading Equipment Section [%s] from '%s'\n", equipment, startupFile);
+
+    /*-------------------START OF PRECHECK-------------------*/
+
+    /*
+     *  Pre-Check all of the parameters of this section
+     */
+
+    bool goodToken = TRUE;
+    int  numErrors = 0;
+
+    lineNo = 0;
+    while ((line = initGetNextLine()) != NULL)
+        {
+        lineNo += 1;
+        token   = strtok(line, ",");
+        if (strlen(token) > 2)
+            {
+            goodToken = FALSE;
+
+            for (deviceIndex = 0; deviceIndex < deviceCount; deviceIndex++)
+                {
+                if (strncasecmp(token, deviceDesc[deviceIndex].id, strlen(deviceDesc[deviceIndex].id)) == 0)
+                    {
+                    goodToken = TRUE;
+                    fprintf(stderr, "(init   ) Section [%s], relative line %05d, value '%s'(%s) (file '%s')\n",
+                            equipment, lineNo, token == NULL ? "NULL" : token, deviceDesc[deviceIndex].id, startupFile);
+                    break;
+                    }
+                }
+
+            if (!goodToken)
+                {
+                fprintf(stderr, "(init   ) Section [%s], relative line %05d, invalid configuration value '%s' in '%s'\n",
+                        equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
+                numErrors++;
+                }
+            }
+        }
+
+    if (numErrors > 0)
+        {
+        fprintf(stderr, "(init   ) Section [%s], Correct the %d error(s) in %s and restart.\n",
+                equipment, numErrors, startupFile);
+        exit(1);
+        }
+
+    /*-------------------END OF PRECHECK-------------------*/
+
+
+    initOpenSection(equipment);
 
     /*
     **  Process all equipment entries.
     */
-    lineNo = -1;
+    lineNo = 0;
     while ((line = initGetNextLine()) != NULL)
         {
         lineNo += 1;
@@ -1394,6 +1648,7 @@ static void initEquipment(void)
         **  Parse device type.
         */
         token = strtok(line, ",");
+
         if ((token == NULL) || (strlen(token) < 2))
             {
             fprintf(stderr, "(init   ) Section [%s], relative line %d, invalid device type %s in %s\n",
@@ -1403,7 +1658,7 @@ static void initEquipment(void)
 
         for (deviceIndex = 0; deviceIndex < deviceCount; deviceIndex++)
             {
-            if (strcmp(token, deviceDesc[deviceIndex].id) == 0)
+            if (strncasecmp(token, deviceDesc[deviceIndex].id, strlen(deviceDesc[deviceIndex].id)) == 0)
                 {
                 break;
                 }

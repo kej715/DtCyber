@@ -305,6 +305,7 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     DevSlot   *dp;
     PortParam *mp;
     long      port;
+    long      connCount;
     u8        i;
 
     dp               = channelAttach(channelNo, eqNo, DtTpm);
@@ -316,8 +317,8 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
 
     if (params != NULL)
         {
-        cp = strchr(params, ',');
-        if (cp != NULL) *cp = '\0';
+        //  Parse the TCP Port Number
+        cp = strtok(params, ", ");
         port = strtol(params, NULL, 10);
         if (port < 1 || port > 65535)
             {
@@ -325,7 +326,17 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
             exit(1);
             }
         telnetPort = (u16)port;
+        //  Parse the TCP Port Count
+        
+        cp = strtok(NULL,", ");
+        connCount = strtol(cp, NULL, 10);
+        if (connCount < 1 || connCount > 100)
+        {
+            fprintf(stderr, "(tpmux  ) Invalid TCP connection count in TPM definition: %ld\n", connCount);
+            exit(1);
         }
+        telnetConns = (u16)connCount;
+    }
 
     mp = calloc(1, sizeof(PortParam) * telnetConns);
     if (mp == NULL)
@@ -356,7 +367,7 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     /*
     **  Print a friendly message.
     */
-    printf("(tpmux  ) Two port MUX initialised on channel %o\n", channelNo);
+    printf("(tpmux  ) Two port MUX initialised on channel %o, telnet port %d, %d connections.\n", channelNo, telnetPort, telnetConns);
     }
 
 /*--------------------------------------------------------------------------

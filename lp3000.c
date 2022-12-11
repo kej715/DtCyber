@@ -869,7 +869,7 @@ static FcStatus lp3000Func(PpWord funcCode)
             fputs(lp3000FeForPrePrint(lc, lc->prePrintFunc), fcb);
             fputc('\n', fcb);
             }
-        lc->prePrintFunc = funcCode;
+        lc->prePrintFunc = (u8) funcCode;
         return FcProcessed;
 
     case Fc6681Output:
@@ -945,7 +945,7 @@ static FcStatus lp3000Func(PpWord funcCode)
         case Fc3555PostVFU10:
         case Fc3555PostVFU11:
         case Fc3555PostVFU12:
-            lc->postPrintFunc = funcCode;
+            lc->postPrintFunc = (u8) funcCode;
             return FcProcessed;
 
         case Fc3555SelectPrePrint:
@@ -964,7 +964,7 @@ static FcStatus lp3000Func(PpWord funcCode)
         case Fc3555PreVFU10:
         case Fc3555PreVFU11:
         case Fc3555PreVFU12:
-            lc->prePrintFunc = funcCode;
+            lc->prePrintFunc = (u8) funcCode;
             return FcProcessed;
 
         case Fc3555FillMemory:
@@ -1052,7 +1052,7 @@ static FcStatus lp3000Func(PpWord funcCode)
         case Fc3152PostVFU4:
         case Fc3152PostVFU5:
         case Fc3152PostVFU6:
-            lc->postPrintFunc = funcCode;
+            lc->postPrintFunc = (u8) funcCode;
             return FcProcessed;
 
         case Fc3152SelectPrePrint:
@@ -1065,7 +1065,7 @@ static FcStatus lp3000Func(PpWord funcCode)
         case Fc3152PreVFU4:
         case Fc3152PreVFU5:
         case Fc3152PreVFU6:
-            lc->prePrintFunc = funcCode;
+            lc->prePrintFunc = (u8) funcCode;
             return FcProcessed;
 
         case Fc3152SelIntReady:
