@@ -294,19 +294,18 @@ static u16 telnetConns = 2;
 **                  eqNo        equipment number
 **                  unitNo      unit number
 **                  channelNo   channel number the device is attached to
-**                  deviceName  optional device file name
+**                  params      optional device parameters
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
+void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     {
+    char      *cp;
     DevSlot   *dp;
     PortParam *mp;
+    long      port;
     u8        i;
-
-    (void)eqNo;
-    (void)deviceName;
 
     dp               = channelAttach(channelNo, eqNo, DtTpm);
     dp->activate     = tpMuxActivate;
@@ -314,6 +313,19 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     dp->func         = tpMuxFunc;
     dp->io           = tpMuxIo;
     dp->selectedUnit = -1;
+
+    if (params != NULL)
+        {
+        cp = strchr(params, ',');
+        if (cp != NULL) *cp = '\0';
+        port = strtol(params, NULL, 10);
+        if (port < 1 || port > 65535)
+            {
+            fprintf(stderr, "(tpmux  ) Invalid TCP port number in TPM definition: %ld\n", port);
+            exit(1);
+            }
+        telnetPort = (u16)port;
+        }
 
     mp = calloc(1, sizeof(PortParam) * telnetConns);
     if (mp == NULL)
