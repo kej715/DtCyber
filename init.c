@@ -822,7 +822,7 @@ static void initCyber(char *config)
     initGetInteger("idletime", 60, &dummyInt);
     idleTime = (u32)dummyInt;
 #endif
-    fprintf(stdout, "(init   ) Idle %s every %d Cycles for %d Milliseconds.\n", idle ? "ON" : "OFF", idleTrigger, idleTime);
+    fprintf(stdout, "(init   ) Idle %s every %d cycles for %d microseconds.\n", idle ? "on" : "off", idleTrigger, idleTime);
 
     /*
     **  Get optional operating system type. If not specified, use "none".
@@ -1147,7 +1147,7 @@ static void initNpuConnections(void)
                 }
 
             tcpPort = strtol(token, NULL, 10);
-            fprintf(stderr, "TCP port %ld, ", tcpPort);
+            fprintf(stderr, "TCP port %5ld, ", tcpPort);
 
             if (tcpPort > 65535)
                 {
@@ -1177,7 +1177,7 @@ static void initNpuConnections(void)
                 exit(1);
                 }
             claPort = (u8)networkValue;
-            fprintf(stderr, "CLA port %d, ", claPort);
+            fprintf(stderr, "CLA port %02x, ", claPort);
 
             /*
             **  Parse number of connections on this port.
@@ -1199,7 +1199,7 @@ static void initNpuConnections(void)
                 exit(1);
                 }
             numConns = (int)networkValue;
-            fprintf(stderr, "Connections permitted %d, ", numConns);
+            fprintf(stderr, "Connections permitted %2d, ", numConns);
 
             /*
             **  Parse NPU connection type.
@@ -1213,7 +1213,7 @@ static void initNpuConnections(void)
                 }
             destHostAddr = NULL;
             blockSize    = DefaultBlockSize;
-            fprintf(stderr, "Connection type %s, ", token);
+            fprintf(stderr, "Connection type %6s, ", token);
 
             if (strcmp(token, "raw") == 0)
                 {
