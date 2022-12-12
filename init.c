@@ -107,6 +107,7 @@ static InitVal sectVals[] =
     "cdcnetPrivilegedUdpPortOffset", "npu",   "Valid",
     "couplerNode",                   "npu",   "Valid",
     "hostID",                        "npu",   "Valid",
+    "hostIP",                        "npu",   "Valid",
     "npuNode",                       "npu",   "Valid",
     "terminals",                     "npu",   "Valid",
 
@@ -441,7 +442,7 @@ static void initCyber(char *config)
                     if (strcasecmp(curVal->valName, token) == 0)
                         {
                         goodToken = TRUE;
-                        fprintf(stderr, "(init   ) Section [%s], relative line %03d, value '%s'(%s) (file '%s')\n",
+                        fprintf(stderr, "(init   ) Section [%s], relative line %03d, '%s'(%s) (file '%s')\n",
                                 config, lineNo, token == NULL ? "NULL" : token, curVal->valStatus, startupFile);
                         break;
                         }
@@ -449,7 +450,7 @@ static void initCyber(char *config)
                 }
             if (!goodToken)
                 {
-                fprintf(stderr, "(init   ) Section [%s], relative line %03d, invalid or deprecated configuration value '%s' in file '%s'\n",
+                fprintf(stderr, "(init   ) Section [%s], relative line %03d, invalid or deprecated configuration keyword '%s' in file '%s'\n",
                         config, lineNo, token == NULL ? "NULL" : token, startupFile);
                 numErrors++;
                 }
@@ -770,7 +771,7 @@ static void initCyber(char *config)
         traceMask = (u32)mask;
         }
 
-    fprintf(stdout, "(init   ) 0x%08x Tracing Mask Set.\n", traceMask);
+    fprintf(stdout, "(init   ) 0x%08x Tracing mask set.\n", traceMask);
 
 
     /*
@@ -780,7 +781,7 @@ static void initCyber(char *config)
     mux6676TelnetPort = (u16)port;
     if (port != 5000)
         {
-        fprintf(stdout, "(init   ) mux6676 Telnet Port %d Set. (*** Note: deprecated ***)\n", mux6676TelnetPort);
+        fprintf(stdout, "(init   ) mux6676 Telnet port %d set. (*** Note: deprecated ***)\n", mux6676TelnetPort);
         }
 
     /*
@@ -790,7 +791,7 @@ static void initCyber(char *config)
     mux6676TelnetConns = (u16)conns;
     if (conns != 4)
         {
-        fprintf(stdout, "(init   ) mux6676 Telnet Connections (max) %d Set. (*** Note: deprecated ***)\n", mux6676TelnetConns);
+        fprintf(stdout, "(init   ) mux6676 Telnet connections (max) %d Set. (*** Note: deprecated ***)\n", mux6676TelnetConns);
         }
 
     /* Get Idle loop settings */
@@ -857,7 +858,7 @@ static void initCyber(char *config)
         fprintf(stderr, "(init   ) WARNING: Unrecognized operating system type: '%s'\n", startupFile);
         }
 
-    fprintf(stdout, "(init   ) Operating System Type = '%s'.\n", osType);
+    fprintf(stdout, "(init   ) Operating system type = '%s'.\n", osType);
 
     /*
     **  Get optional Plato port number. If not specified, use default value.
@@ -866,7 +867,7 @@ static void initCyber(char *config)
     platoPort = (u16)port;
     if (port != 5004)
         {
-        fprintf(stdout, "(init   ) PLATO Port = %d. (*** Note: deprecated ***)\n", platoPort);
+        fprintf(stdout, "(init   ) PLATO port = %d. (*** Note: deprecated ***)\n", platoPort);
         }
 
     /*
@@ -876,7 +877,7 @@ static void initCyber(char *config)
     platoConns = (u16)conns;
     if (conns != 4)
         {
-        fprintf(stdout, "(init   ) PLATO Connections = %d. (*** Note: deprecated ***)\n", platoConns);
+        fprintf(stdout, "(init   ) PLATO connections = %d. (*** Note: deprecated ***)\n", platoConns);
         }
     }
 
@@ -955,7 +956,7 @@ static void initNpuConnections(void)
                     if (strcasecmp(curVal->valName, token) == 0)
                         {
                         goodToken = TRUE;
-                        fprintf(stderr, "(init   ) Section [%s], relative line %03d, value '%s'(%s) (file '%s')\n",
+                        fprintf(stderr, "(init   ) Section [%s], relative line %03d, '%s'(%s) (file '%s')\n",
                                 npuConnections, lineNo, token == NULL ? "NULL" : token, curVal->valStatus, startupFile);
                         break;
                         }
@@ -963,8 +964,9 @@ static void initNpuConnections(void)
                 }
             if (!goodToken)
                 {
-                fprintf(stderr, "(init   ) Section [%s], relative line %03d, invalid or deprecated configuration value '%s'(%s) in '%s'\n",
-                        npuConnections, lineNo, token == NULL ? "NULL" : token, curVal->valStatus, startupFile);
+                fprintf(stderr, "(init   ) Section [%s], relative line %03d, invalid or deprecated configuration keyword '%s'(%s) in '%s'\n",
+                        npuConnections, lineNo, token == NULL ? "NULL" : token,
+                        curVal->valStatus == NULL ? "Invalid" : curVal->valStatus, startupFile);
                 numErrors++;
                 }
             }
@@ -1147,7 +1149,7 @@ static void initNpuConnections(void)
             tcpPort = strtol(token, NULL, 10);
             fprintf(stderr, "TCP port %ld, ", tcpPort);
 
-            if ((tcpPort < 1) || (tcpPort > 65535))
+            if (tcpPort > 65535)
                 {
                 fprintf(stderr, "(init   ) Invalid TCP port number %ld in section [%s] of '%s', relative line %03d\n",
                         tcpPort, npuConnections, startupFile, lineNo);
@@ -1175,7 +1177,7 @@ static void initNpuConnections(void)
                 exit(1);
                 }
             claPort = (u8)networkValue;
-            fprintf(stderr, "CLA Port %d, ", claPort);
+            fprintf(stderr, "CLA port %d, ", claPort);
 
             /*
             **  Parse number of connections on this port.
@@ -1211,7 +1213,7 @@ static void initNpuConnections(void)
                 }
             destHostAddr = NULL;
             blockSize    = DefaultBlockSize;
-            fprintf(stderr, "Connection Type %s, ", token);
+            fprintf(stderr, "Connection type %s, ", token);
 
             if (strcmp(token, "raw") == 0)
                 {
@@ -1286,7 +1288,7 @@ static void initNpuConnections(void)
                     exit(1);
                     }
                 destHostName = destHostAddr;
-                fprintf(stderr, "Destination Host %s, ", destHostName);
+                fprintf(stderr, "Destination host %s, ", destHostName);
 
                 blockSize = DefaultRevHaspBlockSize;
                 token     = strtok(NULL, " ");
@@ -1339,12 +1341,12 @@ static void initNpuConnections(void)
                             destHostAddr, npuConnections, startupFile, lineNo);
                     exit(1);
                     }
-                fprintf(stderr, "Destination Host %s, ", destHostAddr);
+                fprintf(stderr, "Destination host %s, ", destHostAddr);
                 if (destHostPort == 0)
                     {
                     destHostPort = 175;                    // default NJE/TCP port number
                     }
-                fprintf(stderr, "Destination Port %d, ", destHostPort);
+                fprintf(stderr, "Destination port %d, ", destHostPort);
                 token = strtok(NULL, ", ");
                 if (token == NULL)
                     {
@@ -1412,7 +1414,7 @@ static void initNpuConnections(void)
                     exit(1);
                     }
                 destHostAddr = token;
-                fprintf(stderr, "Destination Host Address %s, ", destHostAddr);
+                fprintf(stderr, "Destination host address %s, ", destHostAddr);
                 if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
                     {
                     fprintf(stderr, "(init   ) Invalid remote host IP address %s on trunk definition in section [%s] of '%s', relative line %03d\n",
@@ -1428,7 +1430,7 @@ static void initNpuConnections(void)
                     }
                 destHostName = token;
                 initToUpperCase(destHostName);
-                fprintf(stderr, "Destination Host Name %s, ", destHostName);
+                fprintf(stderr, "Destination host name %s, ", destHostName);
 
                 token = strtok(NULL, " ");
                 if (token == NULL)
@@ -1629,15 +1631,15 @@ static void initEquipment(void)
                 if (strcasecmp(token, deviceDesc[deviceIndex].id) == 0)
                     {
                     goodToken = TRUE;
-                    fprintf(stderr, "(init   ) Section [%s], relative line %03d, value '%s'(%s) (file '%s')\n",
-                            equipment, lineNo, token == NULL ? "NULL" : token, deviceDesc[deviceIndex].id, startupFile);
+                    fprintf(stderr, "(init   ) Section [%s], relative line %03d, '%s'(Valid) (file '%s')\n",
+                            equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
                     break;
                     }
                 }
 
             if (!goodToken)
                 {
-                fprintf(stderr, "(init   ) Section [%s], relative line %03d, invalid configuration value '%s' in '%s'\n",
+                fprintf(stderr, "(init   ) Section [%s], relative line %03d, invalid device type '%s' in '%s'\n",
                         equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
                 numErrors++;
                 }
