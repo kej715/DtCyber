@@ -301,7 +301,6 @@ static u16 telnetConns = 2;
 **------------------------------------------------------------------------*/
 void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     {
-    char      *cp;
     DevSlot   *dp;
     PortParam *mp;
     long      port;
@@ -317,7 +316,6 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     if (params != NULL)
         {
         //  Parse the TCP Port Number
-        cp = strtok(params, ", ");
         port = strtol(params, NULL, 10);
         if (port < 1 || port > 65535)
             {
