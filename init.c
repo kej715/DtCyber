@@ -392,8 +392,8 @@ int initOpenOperatorSection(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void initCyber(char* config)
-{
+static void initCyber(char *config)
+    {
     long clockIncrement;
     long conns;
     long cpus;
@@ -415,91 +415,91 @@ static void initCyber(char* config)
      *  Pre-Check all of the parameters of this section
      */
     if (!initOpenSection(config))
-    {
+        {
         fprintf(stderr, "(init   ) Required section [%s] not found in %s\n", config, startupFile);
         exit(1);
-    }
+        }
 
     int     lineNo = 0;
-    char* line;
-    char* token;
-    InitVal* curVal;
+    char    *line;
+    char    *token;
+    InitVal *curVal;
     bool    goodToken = TRUE;
     int     numErrors = 0;
 
     while ((line = initGetNextLine()) != NULL)
-    {
-        lineNo += 1;
-        token = strtok(line, "=");
-        if (strlen(token) > 2)
         {
+        lineNo += 1;
+        token   = strtok(line, "=");
+        if (strlen(token) > 2)
+            {
             goodToken = FALSE;
             for (curVal = sectVals; curVal->valName != NULL; curVal++)
-            {
-                if (strncasecmp(curVal->sectionName, "cyber", 5) == 0)
                 {
-                    if (strcasecmp(curVal->valName, token) == 0)
+                if (strcasecmp(curVal->sectionName, "cyber") == 0)
                     {
+                    if (strcasecmp(curVal->valName, token) == 0)
+                        {
                         goodToken = TRUE;
                         fprintf(stderr, "(init   ) Section [%s], relative line %03d, value '%s'(%s) (file '%s')\n",
-                            config, lineNo, token == NULL ? "NULL" : token, curVal->valStatus, startupFile);
+                                config, lineNo, token == NULL ? "NULL" : token, curVal->valStatus, startupFile);
                         break;
+                        }
                     }
                 }
-            }
             if (!goodToken)
-            {
+                {
                 fprintf(stderr, "(init   ) Section [%s], relative line %03d, invalid or deprecated configuration value '%s' in file '%s'\n",
-                    config, lineNo, token == NULL ? "NULL" : token, startupFile);
+                        config, lineNo, token == NULL ? "NULL" : token, startupFile);
                 numErrors++;
+                }
             }
         }
-    }
 
     if (numErrors > 0)
-    {
+        {
         fprintf(stderr, "(init   ) Section [%s], Correct the %d error(s) in '%s' and restart.\n",
-            config, numErrors, startupFile);
+                config, numErrors, startupFile);
         exit(1);
-    }
+        }
 
     /*-------------------END OF PRECHECK-------------------*/
 
     if (!initOpenSection(config))
-    {
+        {
         fprintf(stderr, "(init   ) Required section [%s] not found in '%s'\n", config, startupFile);
         exit(1);
-    }
+        }
     lineNo = 0;
 
     /*
     **  Check for obsolete keywords and abort if found.
     */
     if (initGetOctal("channels", 020, &chCount))
-    {
+        {
         fprintf(stderr, "(init   ) ***WARNING*** Entry 'channels' obsolete in section [%s] in '%s',\n", config, startupFile);
         fprintf(stderr, "                        channel count is determined from PP count.\n");
         exit(1);
-    }
+        }
 
     if (initGetString("cmFile", "", dummy, sizeof(dummy)))
-    {
+        {
         fprintf(stderr, "(init   ) ***WARNING*** Entry 'cmFile' obsolete in section [%s] in '%s',\n", config, startupFile);
         fprintf(stderr, "                        please use 'persistDir' instead.\n");
         exit(1);
-    }
+        }
 
     if (initGetString("ecsFile", "", dummy, sizeof(dummy)))
-    {
+        {
         fprintf(stderr, "(init   ) ***WARNING*** Entry 'ecsFile' obsolete in section [%s] in %s,\n", config, startupFile);
         fprintf(stderr, "                        please use 'persistDir' instead.\n");
         exit(1);
-    }
+        }
 
     if (initGetString("displayName", "DtCyber Console", displayName, sizeof(displayName)))
-    {
+        {
         fprintf(stderr, "(init   ) Consoles will be labeled '%s',\n", displayName);
-    }
+        }
 
     /*
     **  Determine mainframe model and setup feature structure.
@@ -507,74 +507,74 @@ static void initCyber(char* config)
     (void)initGetString("model", "6400", model, sizeof(model));
 
     if (stricmp(model, "6400") == 0)
-    {
+        {
         modelType = Model6400;
-        features = features6400;
-    }
+        features  = features6400;
+        }
     else if (stricmp(model, "CYBER73") == 0)
-    {
+        {
         modelType = ModelCyber73;
-        features = featuresCyber73;
-    }
+        features  = featuresCyber73;
+        }
     else if (stricmp(model, "CYBER173") == 0)
-    {
+        {
         modelType = ModelCyber173;
-        features = featuresCyber173;
-    }
+        features  = featuresCyber173;
+        }
     else if (stricmp(model, "CYBER175") == 0)
-    {
+        {
         modelType = ModelCyber175;
-        features = featuresCyber175;
-    }
+        features  = featuresCyber175;
+        }
     else if (stricmp(model, "CYBER840A") == 0)
-    {
+        {
         //        modelType = ModelCyber840A;
         //        features = featuresCyber840A;
         fprintf(stderr, "(init   ) Model CYBER840A was experimental and is no longer supported in '%s',\n", startupFile);
         exit(1);
-    }
+        }
     else if (stricmp(model, "CYBER865") == 0)
-    {
+        {
         modelType = ModelCyber865;
-        features = featuresCyber865;
-    }
+        features  = featuresCyber865;
+        }
     else
-    {
+        {
         fprintf(stderr, "(init   ) Entry 'model' specified unsupported mainframe %s in section [%s] in '%s'\n", model, config, startupFile);
         exit(1);
-    }
+        }
 
     (void)initGetInteger("CEJ/MEJ", 1, &enableCejMej);
     if (enableCejMej == 0)
-    {
+        {
         features |= HasNoCejMej;
-    }
+        }
 
     /*
     **  Determine CM size and ECS banks.
     */
     (void)initGetOctal("memory", 01000000, &memory);
     if (memory < 040000)
-    {
+        {
         fprintf(stderr, "(init   ) Entry 'memory' less than 40000B in section [%s] in '%s'\n", config, startupFile);
         exit(1);
-    }
+        }
 
     if (modelType == ModelCyber865)
-    {
+        {
         if ((memory != 01000000)
             && (memory != 02000000)
             && (memory != 03000000)
             && (memory != 04000000))
-        {
+            {
             fprintf(stderr, "(init   ) Cyber 170-865 memory must be configured in 262K increments in section [%s] in '%s'\n", config, startupFile);
             exit(1);
+            }
         }
-    }
 
     (void)initGetInteger("ecsbanks", 0, &ecsBanks);
     switch (ecsBanks)
-    {
+        {
     case 0:
     case 1:
     case 2:
@@ -586,11 +586,11 @@ static void initCyber(char* config)
     default:
         fprintf(stderr, "(init   ) Entry 'ecsbanks' invalid in section [%s] in '%s' - correct values are 0, 1, 2, 4, 8 or 16\n", config, startupFile);
         exit(1);
-    }
+        }
 
     (void)initGetInteger("esmbanks", 0, &esmBanks);
     switch (esmBanks)
-    {
+        {
     case 0:
     case 1:
     case 2:
@@ -602,23 +602,23 @@ static void initCyber(char* config)
     default:
         fprintf(stderr, "(init   ) Entry 'esmbanks' invalid in section [%s] in '%s' - correct values are 0, 1, 2, 4, 8 or 16\n", config, startupFile);
         exit(1);
-    }
+        }
 
     if ((ecsBanks != 0) && (esmBanks != 0))
-    {
+        {
         fprintf(stderr, "(init   ) You can't have both 'ecsbanks' and 'esmbanks' in section [%s] in '%s'\n", config, startupFile);
         exit(1);
-    }
+        }
 
     /*
     **  Determine the number of CPUs to use.
     */
     initGetInteger("cpus", 1, &cpus);
     if ((cpus < 1) || (cpus > MaxCpus))
-    {
+        {
         fprintf(stderr, "(init   ) Entry 'cpus' invalid in section [%s] in '%s' -- correct values are 1 or 2\n", config, startupFile);
         exit(1);
-    }
+        }
     cpuCount = (int)cpus;
 
     /*
@@ -626,40 +626,40 @@ static void initCyber(char* config)
     **  and check if directory exists.
     */
     if (initGetString("persistDir", "", persistDir, sizeof(persistDir)))
-    {
+        {
         struct stat s;
         if (stat(persistDir, &s) != 0)
-        {
+            {
             fprintf(stderr, "(init   ) Entry 'persistDir' in section [%s] in '%s'\n", config, startupFile);
             fprintf(stderr, "          specifies non-existing directory '%s'.\n", persistDir);
             exit(1);
-        }
+            }
 
         if ((s.st_mode & S_IFDIR) == 0)
-        {
+            {
             fprintf(stderr, "(init   ) Entry 'persistDir' in section [%s] in '%s'\n", config, startupFile);
             fprintf(stderr, "          '%s' is not a directory.\n", persistDir);
             exit(1);
+            }
         }
-    }
     else
-    {
+        {
         fprintf(stderr, "(init   ) Entry 'persistDir' was not found in section [%s] in '%s'\n", config, startupFile);
         exit(1);
-    }
+        }
 
     /*
     **  Initialise CPU.
     */
     cpuInit(model, memory, ecsBanks + esmBanks, ecsBanks != 0 ? ECS : ESM);
     if (ecsBanks + esmBanks == 0)
-    {
+        {
         fprintf(stdout, "(init   ) Successfully Configured Model %s with %d CPUs.\n", model, cpuCount);
-    }
+        }
     else
-    {
+        {
         fprintf(stdout, "(init   ) Successfully Configured Model %s with %d CPUs with %ld banks of %s.\n", model, cpuCount, ecsBanks + esmBanks, ecsBanks != 0 ? "ESM" : "ECS");
-    }
+        }
 
 
     /*
@@ -950,7 +950,7 @@ static void initNpuConnections(void)
             goodToken = FALSE;
             for (curVal = sectVals; curVal->valName != NULL; curVal++)
                 {
-                if (strncasecmp(curVal->sectionName, "npu", 5) == 0)
+                if (strcasecmp(curVal->sectionName, "npu") == 0)
                     {
                     if (strcasecmp(curVal->valName, token) == 0)
                         {
@@ -991,7 +991,7 @@ static void initNpuConnections(void)
     */
     (void)initGetString("hostID", "CYBER", npuNetHostID, HostIdSize);
     initToUpperCase(npuNetHostID);
-    fprintf(stderr, "(init   ) LIP Network Host ID is '%s'\n", npuNetHostID);
+    fprintf(stderr, "(init   ) LIP host ID is '%s'\n", npuNetHostID);
 
     /*
     **  Get host IP address
@@ -1003,7 +1003,7 @@ static void initNpuConnections(void)
                 strValue, npuConnections, startupFile);
         exit(1);
         }
-    fprintf(stderr, "(init   ) Local host IP Address is '%s'\n", strValue);
+    fprintf(stderr, "(init   ) Local host IP address is '%s'\n", strValue);
 
     /*
     **  Get optional coupler node number. If not specified, use default value of 1.
@@ -1016,7 +1016,7 @@ static void initNpuConnections(void)
         exit(1);
         }
     npuSvmCouplerNode = (u8)networkValue;
-    fprintf(stderr, "(init   ) Host Coupler Node Value is %d\n", npuSvmCouplerNode);
+    fprintf(stderr, "(init   ) Host coupler node value is %d\n", npuSvmCouplerNode);
 
     /*
     **  Get optional NPU node number. If not specified, use default value of 2.
@@ -1029,7 +1029,7 @@ static void initNpuConnections(void)
         exit(1);
         }
     npuSvmNpuNode = (u8)networkValue;
-    fprintf(stderr, "(init   ) NPU Node Value is %d\n", npuSvmNpuNode);
+    fprintf(stderr, "(init   ) NPU node value is %d\n", npuSvmNpuNode);
 
     /*
     **  Get optional CDCNet node number. If not specified, use default value of 255.
@@ -1042,7 +1042,7 @@ static void initNpuConnections(void)
         exit(1);
         }
     cdcnetNode = (u8)networkValue;
-    fprintf(stderr, "(init   ) CDCNet Node Value is %d\n", cdcnetNode);
+    fprintf(stderr, "(init   ) CDCNet node value is %d\n", cdcnetNode);
 
     /*
     **  Get optional privileged TCP and UDP port offsets for CDCNet TCP/IP passive connections. If not specified,
@@ -1056,7 +1056,7 @@ static void initNpuConnections(void)
         exit(1);
         }
     cdcnetPrivilegedTcpPortOffset = (u16)networkValue;
-    fprintf(stderr, "(init   ) TCP Privileged Port Offset is %d\n", cdcnetPrivilegedTcpPortOffset);
+    fprintf(stderr, "(init   ) TCP privileged port offset is %d\n", cdcnetPrivilegedTcpPortOffset);
 
     initGetInteger("cdcnetPrivilegedUdpPortOffset", 6600, &networkValue);
     if ((networkValue < 0) || (networkValue > 64000))
@@ -1066,7 +1066,7 @@ static void initNpuConnections(void)
         exit(1);
         }
     cdcnetPrivilegedUdpPortOffset = (u16)networkValue;
-    fprintf(stderr, "(init   ) UDP Privileged Port Offset is %d\n", cdcnetPrivilegedUdpPortOffset);
+    fprintf(stderr, "(init   ) UDP privileged port offset is %d\n", cdcnetPrivilegedUdpPortOffset);
 
     /*
     **  Process all equipment entries.
@@ -1147,7 +1147,7 @@ static void initNpuConnections(void)
             tcpPort = strtol(token, NULL, 10);
             fprintf(stderr, "TCP port %ld, ", tcpPort);
 
-            if (tcpPort < 1 || tcpPort > 65535)
+            if ((tcpPort < 1) || (tcpPort > 65535))
                 {
                 fprintf(stderr, "(init   ) Invalid TCP port number %ld in section [%s] of '%s', relative line %03d\n",
                         tcpPort, npuConnections, startupFile, lineNo);
@@ -1678,7 +1678,7 @@ static void initEquipment(void)
 
         for (deviceIndex = 0; deviceIndex < deviceCount; deviceIndex++)
             {
-            if (strncasecmp(token, deviceDesc[deviceIndex].id, strlen(deviceDesc[deviceIndex].id)) == 0)
+            if (strcasecmp(token, deviceDesc[deviceIndex].id) == 0)
                 {
                 break;
                 }
