@@ -515,7 +515,7 @@ static BOOL GetDevicePath()
 
         if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
             {
-            printf("(pci_channel_win32) SetupDiGetDeviceInterfaceDetail failed, Error: %d", GetLastError());
+            printf("(pci_channel_win32) SetupDiGetDeviceInterfaceDetail failed, Error: %d", (int)GetLastError());
 
             return FALSE;
             }
@@ -544,7 +544,7 @@ static BOOL GetDevicePath()
 
         if (!status)
             {
-            printf("(pci_channel_win32) SetupDiGetDeviceInterfaceDetail failed, Error: %d", GetLastError());
+            printf("(pci_channel_win32) SetupDiGetDeviceInterfaceDetail failed, Error: %d", (int)GetLastError());
 
             return status;
             }
@@ -565,7 +565,7 @@ static BOOL GetDevicePath()
 
         if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
             {
-            printf("(pci_channel_win32) SetupDiGetDeviceRegistryProperty failed, Error: %d", GetLastError());
+            printf("(pci_channel_win32) SetupDiGetDeviceRegistryProperty failed, Error: %d", (int)GetLastError());
 
             return FALSE;
             }
@@ -587,7 +587,7 @@ static BOOL GetDevicePath()
                                                   NULL);
         if (!status)
             {
-            printf("(pci_channel_win32) SetupDiGetDeviceRegistryProperty failed, Error: %d", GetLastError());
+            printf("(pci_channel_win32) SetupDiGetDeviceRegistryProperty failed, Error: %d", (int)GetLastError());
             free(DeviceName);
 
             return status;
@@ -673,7 +673,7 @@ static BOOL GetDevicePath()
 
     if (!status)
         {
-        printf("(pci_channel_win32) SetupDiEnumDeviceInterfaces failed, Error: %d", GetLastError());
+        printf("(pci_channel_win32) SetupDiEnumDeviceInterfaces failed, Error: %d", (int)GetLastError());
 
         return status;
         }
@@ -690,7 +690,7 @@ static BOOL GetDevicePath()
 
     if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
         {
-        printf("(pci_channel_win32) SetupDiGetDeviceInterfaceDetail failed, Error: %d", GetLastError());
+        printf("(pci_channel_win32) SetupDiGetDeviceInterfaceDetail failed, Error: %d", (int)GetLastError());
 
         return FALSE;
         }
@@ -717,7 +717,7 @@ static BOOL GetDevicePath()
                                              &DeviceInfoData);
     if (!status)
         {
-        printf("(pci_channel_win32) SetupDiGetDeviceInterfaceDetail failed, Error: %d", GetLastError());
+        printf("(pci_channel_win32) SetupDiGetDeviceInterfaceDetail failed, Error: %d", (int)GetLastError());
 
         return status;
         }
@@ -764,7 +764,7 @@ static BOOL GetDeviceHandle()
         if (hDevice == INVALID_HANDLE_VALUE)
             {
             status = FALSE;
-            printf("(pci_channel_win32) CreateFile failed.  Error:%d", GetLastError());
+            printf("(pci_channel_win32) CreateFile failed.  Error: %d", (int)GetLastError());
             }
         }
 

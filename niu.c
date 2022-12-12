@@ -442,6 +442,8 @@ static void niuInit(void)
         exit(1);
         }
 
+    fprintf(stdout, "(niu    ) Listening on port %d (%d connections permitted).\n", platoPort, platoConns);
+
 #if REAL_TIMING
     frameStart = FALSE;
 #endif

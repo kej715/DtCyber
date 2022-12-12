@@ -316,8 +316,8 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
 
     if (params != NULL)
         {
-        cp = strchr(params, ',');
-        if (cp != NULL) *cp = '\0';
+        //  Parse the TCP Port Number
+        cp = strtok(params, ", ");
         port = strtol(params, NULL, 10);
         if (port < 1 || port > 65535)
             {
@@ -325,7 +325,7 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
             exit(1);
             }
         telnetPort = (u16)port;
-        }
+    }
 
     mp = calloc(1, sizeof(PortParam) * telnetConns);
     if (mp == NULL)
@@ -356,7 +356,7 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     /*
     **  Print a friendly message.
     */
-    printf("(tpmux  ) Two port MUX initialised on channel %o\n", channelNo);
+    printf("(tpmux  ) Two port MUX initialised on channel %o, telnet port %d.\n", channelNo, telnetPort);
     }
 
 /*--------------------------------------------------------------------------

@@ -147,6 +147,8 @@ void windowInit(void)
     {
     DWORD  dwThreadId;
     HANDLE hThread;
+    int    thPriority = 0;
+
 
     /*
     **  Create display list pool.
@@ -171,8 +173,18 @@ void windowInit(void)
 
     if (hThread == NULL)
         {
-        MessageBox(NULL, "(window_win32) Thread creation failed", "Error", MB_OK);
+        MessageBox(NULL, "Operator Window Thread Creation Failed.", "dtCyber/window_win32", MB_OK + MB_ICONERROR);
         exit(1);
+        }
+
+    thPriority = GetThreadPriority(hThread);
+    if (!SetThreadPriority(hThread, THREAD_PRIORITY_ABOVE_NORMAL))
+        {
+        if (MessageBox(NULL, "Could Not Set Thread Priority. Continue?", "dtCyber/window_win32",
+                       MB_YESNO + MB_ICONQUESTION + MB_DEFBUTTON1) == MB_DEFBUTTON2)
+            {
+            exit(1);
+            }
         }
     }
 
