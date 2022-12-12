@@ -441,7 +441,7 @@ static void initCyber(char* config)
                     if (strcasecmp(curVal->valName, token) == 0)
                     {
                         goodToken = TRUE;
-                        fprintf(stderr, "(init   ) Section [%s], relative line %05d, value '%s'(%s) (file '%s')\n",
+                        fprintf(stderr, "(init   ) Section [%s], relative line %03d, value '%s'(%s) (file '%s')\n",
                             config, lineNo, token == NULL ? "NULL" : token, curVal->valStatus, startupFile);
                         break;
                     }
@@ -449,7 +449,7 @@ static void initCyber(char* config)
             }
             if (!goodToken)
             {
-                fprintf(stderr, "(init   ) Section [%s], relative line %05d, invalid or deprecated configuration value '%s' in file '%s'\n",
+                fprintf(stderr, "(init   ) Section [%s], relative line %03d, invalid or deprecated configuration value '%s' in file '%s'\n",
                     config, lineNo, token == NULL ? "NULL" : token, startupFile);
                 numErrors++;
             }
@@ -658,7 +658,7 @@ static void initCyber(char* config)
     }
     else
     {
-        fprintf(stdout, "(init   ) Successfully Configured Model %s with %d CPUs with %d banks of %s.\n", model, cpuCount, ecsBanks + esmBanks, ecsBanks != 0 ? "ESM" : "ECS");
+        fprintf(stdout, "(init   ) Successfully Configured Model %s with %d CPUs with %ld banks of %s.\n", model, cpuCount, ecsBanks + esmBanks, ecsBanks != 0 ? "ESM" : "ECS");
     }
 
 
@@ -701,7 +701,7 @@ static void initCyber(char* config)
     **  Get cycle counter speed in MHz.
     */
     (void)initGetInteger("setMhz", 0, &setMHz);
-    fprintf(stdout, "(init   ) %d MHz set.\n", setMHz);
+    fprintf(stdout, "(init   ) %ld MHz set.\n", setMHz);
 
     /*
     **  Get clock increment value and initialise clock.
@@ -709,7 +709,7 @@ static void initCyber(char* config)
     (void)initGetInteger("clock", 0, &clockIncrement);
 
     rtcInit((u8)clockIncrement, setMHz);
-    fprintf(stdout, "(init   ) %d Clock Increment Set.\n", clockIncrement);
+    fprintf(stdout, "(init   ) %ld Clock increment set.\n", clockIncrement);
 
     /*
     **  Initialise optional Interlock Register on channel 15.
@@ -943,7 +943,7 @@ static void initNpuConnections(void)
                     if (strcasecmp(curVal->valName, token) == 0)
                         {
                         goodToken = TRUE;
-                        fprintf(stderr, "(init   ) Section [%s], relative line %05d, value '%s'(%s) (file '%s')\n",
+                        fprintf(stderr, "(init   ) Section [%s], relative line %03d, value '%s'(%s) (file '%s')\n",
                                 npuConnections, lineNo, token == NULL ? "NULL" : token, curVal->valStatus, startupFile);
                         break;
                         }
@@ -951,7 +951,7 @@ static void initNpuConnections(void)
                 }
             if (!goodToken)
                 {
-                fprintf(stderr, "(init   ) Section [%s], relative line %05d, invalid or deprecated configuration value '%s'(%s) in '%s'\n",
+                fprintf(stderr, "(init   ) Section [%s], relative line %03d, invalid or deprecated configuration value '%s'(%s) in '%s'\n",
                         npuConnections, lineNo, token == NULL ? "NULL" : token, curVal->valStatus, startupFile);
                 numErrors++;
                 }
@@ -1076,7 +1076,7 @@ static void initNpuConnections(void)
         token = strtok(line, ",=");
         if (token == NULL)
             {
-            fprintf(stderr, "(init   ) Invalid syntax in section [%s] of '%s', relative line %05d\n",
+            fprintf(stderr, "(init   ) Invalid syntax in section [%s] of '%s', relative line %03d\n",
                     npuConnections, startupFile, lineNo);
             exit(1);
             }
@@ -1122,22 +1122,22 @@ static void initNpuConnections(void)
             **     <remote-name>   Name of node to which to connect for LIP and NJE
             **     <remote-port>   TCP port number to which Reverse HASP, NJE, or LIP will connect
             */
-            fprintf(stderr, "(init   ) Terminals Definition: (Line %05d) ", lineNo);
+            fprintf(stderr, "(init   ) Terminals Definition: (Line %03d) ", lineNo);
 
             token = strtok(NULL, ",");
             if ((token == NULL) || !isdigit(token[0]))
                 {
-                fprintf(stderr, "(init   ) Invalid TCP port number %s in section [%s] of '%s', relative line %05d\n",
+                fprintf(stderr, "(init   ) Invalid TCP port number %s in section [%s] of '%s', relative line %03d\n",
                         token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
                 exit(1);
                 }
 
             tcpPort = strtol(token, NULL, 10);
-            fprintf(stderr, "TCP Port %d, ", tcpPort);
+            fprintf(stderr, "TCP port %ld, ", tcpPort);
 
-            if (tcpPort > 65535)
+            if (tcpPort < 1 || tcpPort > 65535)
                 {
-                fprintf(stderr, "(init   ) Invalid TCP port number %ld in section [%s] of '%s', relative line %05d\n",
+                fprintf(stderr, "(init   ) Invalid TCP port number %ld in section [%s] of '%s', relative line %03d\n",
                         tcpPort, npuConnections, startupFile, lineNo);
                 exit(1);
                 }
@@ -1148,7 +1148,7 @@ static void initNpuConnections(void)
             token = strtok(NULL, ",");
             if ((token == NULL) || !isxdigit(token[0]))
                 {
-                fprintf(stderr, "(init   ) Invalid CLA port number %s in section [%s] of '%s', relative line %05d\n",
+                fprintf(stderr, "(init   ) Invalid CLA port number %s in section [%s] of '%s', relative line %03d\n",
                         token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
                 exit(1);
                 }
@@ -1157,7 +1157,7 @@ static void initNpuConnections(void)
 
             if ((networkValue < 1) || (networkValue > 255))
                 {
-                fprintf(stderr, "(init   ) Invalid CLA port number %ld in section [%s] of '%s', relative line %05d\n",
+                fprintf(stderr, "(init   ) Invalid CLA port number %ld in section [%s] of '%s', relative line %03d\n",
                         networkValue, npuConnections, startupFile, lineNo);
                 fprintf(stderr, "(init   ) CLA port numbers must be between 01 and FF, and expressed in hexadecimal\n");
                 exit(1);
@@ -1171,7 +1171,7 @@ static void initNpuConnections(void)
             token = strtok(NULL, ",");
             if ((token == NULL) || !isdigit(token[0]))
                 {
-                fprintf(stderr, "(init   ) Invalid number of connections %s in section [%s] of '%s', relative line %05d\n",
+                fprintf(stderr, "(init   ) Invalid number of connections %s in section [%s] of '%s', relative line %03d\n",
                         token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
                 exit(1);
                 }
@@ -1179,7 +1179,7 @@ static void initNpuConnections(void)
 
             if ((networkValue < 0) || (networkValue > 100))
                 {
-                fprintf(stderr, "(init   ) Invalid number of connections %ld in section [%s] of '%s', relative line %05d\n",
+                fprintf(stderr, "(init   ) Invalid number of connections %ld in section [%s] of '%s', relative line %03d\n",
                         networkValue, npuConnections, startupFile, lineNo);
                 fprintf(stderr, "(init   ) Connection count must be between 0 and 100\n");
                 exit(1);
@@ -1193,7 +1193,7 @@ static void initNpuConnections(void)
             token = strtok(NULL, ", ");
             if (token == NULL)
                 {
-                fprintf(stderr, "(init   ) Invalid NPU connection type %s in section [%s] of '%s', relative line %05d\n",
+                fprintf(stderr, "(init   ) Invalid NPU connection type %s in section [%s] of '%s', relative line %03d\n",
                         token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
                 exit(1);
                 }
@@ -1232,16 +1232,16 @@ static void initNpuConnections(void)
                         blockSize = strtol(token + 1, NULL, 10);
                         if ((blockSize < MinBlockSize) || (blockSize > MaxBlockSize))
                             {
-                            fprintf(stderr, "(init   ) Invalid block size %ld in section [%s] of '%s', relative line %05d\n",
+                            fprintf(stderr, "(init   ) Invalid block size %ld in section [%s] of '%s', relative line %03d\n",
                                     blockSize, npuConnections, startupFile, lineNo);
                             fprintf(stderr, "(init   ) Block size must be between %d and %d\n", MinBlockSize, MaxBlockSize);
                             exit(1);
                             }
-                        fprintf(stderr, "Block Size %d, ", blockSize);
+                        fprintf(stderr, "Block size %ld, ", blockSize);
                         }
                     else
                         {
-                        fprintf(stderr, "(init   ) Invalid HASP block size specification '%s' in section [%s] of '%s', relative line %05d\n",
+                        fprintf(stderr, "(init   ) Invalid HASP block size specification '%s' in section [%s] of '%s', relative line %03d\n",
                                 token, npuConnections, startupFile, lineNo);
                         exit(1);
                         }
@@ -1256,20 +1256,20 @@ static void initNpuConnections(void)
                 token    = strtok(NULL, ", ");
                 if (token == NULL)
                     {
-                    fprintf(stderr, "(init   ) Missing remote host address in section [%s] of '%s', relative line %05d\n",
+                    fprintf(stderr, "(init   ) Missing remote host address in section [%s] of '%s', relative line %03d\n",
                             npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 destHostAddr = token;
                 if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
                     {
-                    fprintf(stderr, "(init   ) Invalid Reverse HASP address '%s' in section [%s] of '%s', relative line %05d\n",
+                    fprintf(stderr, "(init   ) Invalid Reverse HASP address '%s' in section [%s] of '%s', relative line %03d\n",
                             destHostAddr, npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 if (destHostPort == 0)
                     {
-                    fprintf(stderr, "(init   ) Missing port number on Reverse HASP address '%s' in section [%s] of '%s', relative line %05d\n",
+                    fprintf(stderr, "(init   ) Missing port number on Reverse HASP address '%s' in section [%s] of '%s', relative line %03d\n",
                             destHostAddr, npuConnections, startupFile, lineNo);
                     exit(1);
                     }
@@ -1285,7 +1285,7 @@ static void initNpuConnections(void)
                         blockSize = strtol(token + 1, NULL, 10);
                         if ((blockSize < MinBlockSize) || (blockSize > MaxBlockSize))
                             {
-                            fprintf(stderr, "(init   ) Invalid block size %ld in section [%s] of '%s', relative line %05d\n",
+                            fprintf(stderr, "(init   ) Invalid block size %ld in section [%s] of '%s', relative line %03d\n",
                                     blockSize, npuConnections, startupFile, lineNo);
                             fprintf(stderr, "(init   ) Block size must be between %d and %d\n", MinBlockSize, MaxBlockSize);
                             exit(1);
@@ -1293,11 +1293,11 @@ static void initNpuConnections(void)
                         }
                     else
                         {
-                        fprintf(stderr, "(init   ) Invalid Reverse HASP block size specification '%s' in section [%s] of '%s', relative line %05d\n",
+                        fprintf(stderr, "(init   ) Invalid Reverse HASP block size specification '%s' in section [%s] of '%s', relative line %03d\n",
                                 token, npuConnections, startupFile, lineNo);
                         exit(1);
                         }
-                    fprintf(stderr, "Block Size %d, ", blockSize);
+                    fprintf(stderr, "Block size %ld, ", blockSize);
                     }
                 }
             else if (strcmp(token, "nje") == 0)
@@ -1308,7 +1308,7 @@ static void initNpuConnections(void)
                 */
                 if (numConns != 1)
                     {
-                    fprintf(stderr, "(init   ) Invalid port count on NJE definition (must be 1) in section [%s] of '%s', relative line %05d\n",
+                    fprintf(stderr, "(init   ) Invalid port count on NJE definition (must be 1) in section [%s] of '%s', relative line %03d\n",
                             npuConnections, startupFile, lineNo);
                     exit(1);
                     }
@@ -1316,14 +1316,14 @@ static void initNpuConnections(void)
                 token    = strtok(NULL, ", ");
                 if (token == NULL)
                     {
-                    fprintf(stderr, "(init   ) Missing remote NJE node address in section [%s] of '%s', relative line %05d\n",
+                    fprintf(stderr, "(init   ) Missing remote NJE node address in section [%s] of '%s', relative line %03d\n",
                             npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 destHostAddr = token;
                 if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
                     {
-                    fprintf(stderr, "(init   ) Invalid remote NJE node address %s in section [%s] of '%s', relative line %05d\n",
+                    fprintf(stderr, "(init   ) Invalid remote NJE node address %s in section [%s] of '%s', relative line %03d\n",
                             destHostAddr, npuConnections, startupFile, lineNo);
                     exit(1);
                     }
@@ -1336,7 +1336,7 @@ static void initNpuConnections(void)
                 token = strtok(NULL, ", ");
                 if (token == NULL)
                     {
-                    fprintf(stderr, "(init   ) Missing remote NJE node name in section [%s] of '%s', relative line %05d\n",
+                    fprintf(stderr, "(init   ) Missing remote NJE node name in section [%s] of '%s', relative line %03d\n",
                             npuConnections, startupFile, lineNo);
                     exit(1);
                     }
@@ -1353,27 +1353,27 @@ static void initNpuConnections(void)
                         blockSize = strtol(token + 1, NULL, 10);
                         if (blockSize < MinNjeBlockSize)
                             {
-                            fprintf(stderr, "(init   ) Invalid block size %ld in section [%s] of '%s', relative line %05d\n",
+                            fprintf(stderr, "(init   ) Invalid block size %ld in section [%s] of '%s', relative line %03d\n",
                                     blockSize, npuConnections, startupFile, lineNo);
                             fprintf(stderr, "(init   ) Block size must be at least %d\n", MinNjeBlockSize);
                             exit(1);
                             }
-                        fprintf(stderr, "Block Size %d, ", blockSize);
+                        fprintf(stderr, "Block size %ld, ", blockSize);
                         }
                     else if ((*token == 'P') || (*token == 'p'))
                         {
                         pingInterval = strtol(token + 1, NULL, 10);
                         if (pingInterval < 0)
                             {
-                            fprintf(stderr, "(init   ) Invalid ping interval %ld in section [%s] of '%s', relative line %05d\n",
+                            fprintf(stderr, "(init   ) Invalid ping interval %ld in section [%s] of '%s', relative line %03d\n",
                                     pingInterval, npuConnections, startupFile, lineNo);
                             exit(1);
                             }
-                        fprintf(stderr, "Ping Interval %d, ", pingInterval);
+                        fprintf(stderr, "Ping interval %ld, ", pingInterval);
                         }
                     else if (initParseIpAddress(token, &localHostIP, NULL) == FALSE)
                         {
-                        fprintf(stderr, "(init   ) Invalid local NJE node address %s in section [%s] of '%s', relative line %05d\n",
+                        fprintf(stderr, "(init   ) Invalid local NJE node address %s in section [%s] of '%s', relative line %03d\n",
                                 token, npuConnections, startupFile, lineNo);
                         exit(1);
                         }
@@ -1387,7 +1387,7 @@ static void initNpuConnections(void)
                 */
                 if (numConns != 1)
                     {
-                    fprintf(stderr, "(init   ) Invalid port count on trunk definition (must be 1) in section [%s] of '%s', relative line %05d\n",
+                    fprintf(stderr, "(init   ) Invalid port count on trunk definition (must be 1) in section [%s] of '%s', relative line %03d\n",
                             npuConnections, startupFile, lineNo);
                     exit(1);
                     }
@@ -1395,7 +1395,7 @@ static void initNpuConnections(void)
                 token    = strtok(NULL, ", ");
                 if (token == NULL)
                     {
-                    fprintf(stderr, "(init   ) Missing remote host address on trunk definition in section [%s] of '%s', relative line %05d\n",
+                    fprintf(stderr, "(init   ) Missing remote host address on trunk definition in section [%s] of '%s', relative line %03d\n",
                             npuConnections, startupFile, lineNo);
                     exit(1);
                     }
@@ -1403,14 +1403,14 @@ static void initNpuConnections(void)
                 fprintf(stderr, "Destination Host Address %s, ", destHostAddr);
                 if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
                     {
-                    fprintf(stderr, "(init   ) Invalid remote host IP address %s on trunk definition in section [%s] of '%s', relative line %05d\n",
+                    fprintf(stderr, "(init   ) Invalid remote host IP address %s on trunk definition in section [%s] of '%s', relative line %03d\n",
                             destHostAddr, npuConnections, startupFile, lineNo);
                     exit(1);
                     }
                 token = strtok(NULL, ", ");
                 if (token == NULL)
                     {
-                    fprintf(stderr, "(init   ) Missing remote node name on trunk definition in section [%s] of '%s', relative line %05d\n",
+                    fprintf(stderr, "(init   ) Missing remote node name on trunk definition in section [%s] of '%s', relative line %03d\n",
                             npuConnections, startupFile, lineNo);
                     exit(1);
                     }
@@ -1421,7 +1421,7 @@ static void initNpuConnections(void)
                 token = strtok(NULL, " ");
                 if (token == NULL)
                     {
-                    fprintf(stderr, "(init   ) Missing coupler node number on trunk definition in section [%s] of '%s', relative line %05d\n",
+                    fprintf(stderr, "(init   ) Missing coupler node number on trunk definition in section [%s] of '%s', relative line %03d\n",
                             npuConnections, startupFile, lineNo);
                     exit(1);
                     }
@@ -1429,7 +1429,7 @@ static void initNpuConnections(void)
 
                 if ((networkValue < 1) || (networkValue > 255))
                     {
-                    fprintf(stderr, "(init   ) Invalid coupler node number %ld on trunk definition in section [%s] of '%s', relative line %05d\n",
+                    fprintf(stderr, "(init   ) Invalid coupler node number %ld on trunk definition in section [%s] of '%s', relative line %03d\n",
                             networkValue, npuConnections, startupFile, lineNo);
                     exit(1);
                     }
@@ -1438,7 +1438,7 @@ static void initNpuConnections(void)
                 }
             else
                 {
-                fprintf(stderr, "(init   ) Invalid NPU connection type %s in section [%s] of '%s', relative line %05d\n",
+                fprintf(stderr, "(init   ) Invalid NPU connection type %s in section [%s] of '%s', relative line %03d\n",
                         token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
                 fprintf(stderr, "(init   ) NPU connection types must be one of: hasp, nje, pterm, raw, rhasp, rs232, telnet\n");
                 exit(1);
@@ -1471,7 +1471,7 @@ static void initNpuConnections(void)
                             }
                         else
                             {
-                            fprintf(stderr, "(init   ) Unrecognized keyword \"%s\" on terminal definition in section [%s] of '%s', relative line %05d\n",
+                            fprintf(stderr, "(init   ) Unrecognized keyword \"%s\" on terminal definition in section [%s] of '%s', relative line %03d\n",
                                     token, npuConnections, startupFile, lineNo);
                             exit(1);
                             }
@@ -1490,7 +1490,7 @@ static void initNpuConnections(void)
                     ncbp->hostName = (char *)malloc(len);
                     if (ncbp->hostName == NULL)
                         {
-                        fprintf(stderr, "(init   ) Failed to register terminal (out of memory) in section [%s] of '%s', relative line %05d\n",
+                        fprintf(stderr, "(init   ) Failed to register terminal (out of memory) in section [%s] of '%s', relative line %03d\n",
                                 npuConnections, startupFile, lineNo);
                         exit(1);
                         }
@@ -1538,27 +1538,27 @@ static void initNpuConnections(void)
                 break;
 
             case NpuNetRegOvfl:
-                fprintf(stderr, "(init   ) Too many terminal and trunk definitions (max of %d), in section [%s] of '%s', relative line %05d\n",
+                fprintf(stderr, "(init   ) Too many terminal and trunk definitions (max of %d), in section [%s] of '%s', relative line %03d\n",
                         MaxTermDefs, npuConnections, startupFile, lineNo);
                 exit(1);
 
             case NpuNetRegDupTcp:
-                fprintf(stderr, "(init   ) Duplicate TCP port %ld for terminal definition in section [%s] of '%s', relative line %05d\n",
+                fprintf(stderr, "(init   ) Duplicate TCP port %ld for terminal definition in section [%s] of '%s', relative line %03d\n",
                         tcpPort, npuConnections, startupFile, lineNo);
                 exit(1);
 
             case NpuNetRegDupCla:
-                fprintf(stderr, "(init   ) Duplicate CLA port in terminal set starting with 0x%02x for connection type %s in section [%s] of '%s', relative line %05d\n",
+                fprintf(stderr, "(init   ) Duplicate CLA port in terminal set starting with 0x%02x for connection type %s in section [%s] of '%s', relative line %03d\n",
                         claPort, token, npuConnections, startupFile, lineNo);
                 exit(1);
 
             case NpuNetRegNoMem:
-                fprintf(stderr, "(init   ) Failed to register terminals (out of memory) in section [%s] of '%s', relative line %05d\n",
+                fprintf(stderr, "(init   ) Failed to register terminals (out of memory) in section [%s] of '%s', relative line %03d\n",
                         npuConnections, startupFile, lineNo);
                 exit(1);
 
             default:
-                fprintf(stderr, "(init   ) Failed to register terminals (unexpected rc=%d) in section [%s] of '%s', relative line %05d\n",
+                fprintf(stderr, "(init   ) Failed to register terminals (unexpected rc=%d) in section [%s] of '%s', relative line %03d\n",
                         rc, npuConnections, startupFile, lineNo);
                 exit(1);
                 }
@@ -1617,7 +1617,7 @@ static void initEquipment(void)
                 if (strcasecmp(token, deviceDesc[deviceIndex].id) == 0)
                     {
                     goodToken = TRUE;
-                    fprintf(stderr, "(init   ) Section [%s], relative line %05d, value '%s'(%s) (file '%s')\n",
+                    fprintf(stderr, "(init   ) Section [%s], relative line %03d, value '%s'(%s) (file '%s')\n",
                             equipment, lineNo, token == NULL ? "NULL" : token, deviceDesc[deviceIndex].id, startupFile);
                     break;
                     }
@@ -1625,7 +1625,7 @@ static void initEquipment(void)
 
             if (!goodToken)
                 {
-                fprintf(stderr, "(init   ) Section [%s], relative line %05d, invalid configuration value '%s' in '%s'\n",
+                fprintf(stderr, "(init   ) Section [%s], relative line %03d, invalid configuration value '%s' in '%s'\n",
                         equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
                 numErrors++;
                 }
