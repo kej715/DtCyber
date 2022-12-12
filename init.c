@@ -778,14 +778,20 @@ static void initCyber(char* config)
     */
     initGetInteger("telnetport", 5000, &port);
     mux6676TelnetPort = (u16)port;
-    fprintf(stdout, "(init   ) mux6676 Telnet Port %d Set. (*** Note: deprecated ***)\n", mux6676TelnetPort);
+    if (port != 5000)
+        {
+        fprintf(stdout, "(init   ) mux6676 Telnet Port %d Set. (*** Note: deprecated ***)\n", mux6676TelnetPort);
+        }
 
     /*
     **  Get optional max Telnet connections. If not specified, use default value.
     */
     initGetInteger("telnetconns", 4, &conns);
     mux6676TelnetConns = (u16)conns;
-    fprintf(stdout, "(init   ) mux6676 Telnet Connections (max) %d Set. (*** Note: deprecated ***)\n", mux6676TelnetConns);
+    if (conns != 4)
+        {
+        fprintf(stdout, "(init   ) mux6676 Telnet Connections (max) %d Set. (*** Note: deprecated ***)\n", mux6676TelnetConns);
+        }
 
     /* Get Idle loop settings */
     idle = FALSE;
@@ -858,14 +864,20 @@ static void initCyber(char* config)
     */
     initGetInteger("platoport", 5004, &port);
     platoPort = (u16)port;
-    fprintf(stdout, "(init   ) PLATO Port = %d. (*** Note: deprecated ***)\n", platoPort);
+    if (port != 5004)
+        {
+        fprintf(stdout, "(init   ) PLATO Port = %d. (*** Note: deprecated ***)\n", platoPort);
+        }
 
     /*
     **  Get optional max Plato connections. If not specified, use default value.
     */
     initGetInteger("platoconns", 4, &conns);
     platoConns = (u16)conns;
-    fprintf(stdout, "(init   ) PLATO Connections = %d. (*** Note: deprecated ***)\n", platoConns);
+    if (conns != 4)
+        {
+        fprintf(stdout, "(init   ) PLATO Connections = %d. (*** Note: deprecated ***)\n", platoConns);
+        }
     }
 
 /*--------------------------------------------------------------------------
