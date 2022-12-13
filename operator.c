@@ -707,10 +707,11 @@ static int opReadLine(char *buf, int size)
     char *bp;
     char c;
     OpCmdStackEntry *ep;
-    int err;
+    int  err;
     char *limit;
     char *line;
-    int n;
+    int  lineNo;
+    int  n;
 
     while (opActive)
         {
@@ -739,7 +740,7 @@ static int opReadLine(char *buf, int size)
                 }
             else if (ep->in == -1)
                 {
-                line = initGetNextLine();
+                line = initGetNextLine(&lineNo);
                 if (line == NULL)
                     {
                     n = 0;

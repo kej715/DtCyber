@@ -543,6 +543,7 @@ static void startHelpers(void)
     {
     char command[200];
     char *line;
+    int  lineNo = 0;
     int  rc;
 
     if (initOpenHelpersSection() != 1)
@@ -550,7 +551,7 @@ static void startHelpers(void)
         return;
         }
 
-    while ((line = initGetNextLine()) != NULL)
+    while ((line = initGetNextLine(&lineNo)) != NULL)
         {
         sprintf(command, "%s start", line);
         rc = runHelper(command);
@@ -577,6 +578,7 @@ static void stopHelpers(void)
     {
     char command[200];
     char *line;
+    int  lineNo = 0;
     int  rc;
 
     if (initOpenHelpersSection() != 1)
@@ -584,7 +586,7 @@ static void stopHelpers(void)
         return;
         }
 
-    while ((line = initGetNextLine()) != NULL)
+    while ((line = initGetNextLine(&lineNo)) != NULL)
         {
         sprintf(command, "%s stop", line);
         rc = runHelper(command);

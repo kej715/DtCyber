@@ -177,11 +177,11 @@ bool fsCreateThread(fswContext *parms);
 /*
 **  init.c
 */
-void initStartup(char *config, char *configFile);
-u32 initConvertEndian(u32 value);
-char * initGetNextLine(void);
-int initOpenHelpersSection(void);
-int initOpenOperatorSection(void);
+void  initStartup(char *config, char *configFile);
+u32   initConvertEndian(u32 value);
+char *initGetNextLine(int *lineNo);
+int   initOpenHelpersSection(void);
+int   initOpenOperatorSection(void);
 
 /*
 **  interlock_channel.c
