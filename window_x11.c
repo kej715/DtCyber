@@ -297,31 +297,34 @@ void windowTerminate(void)
 **------------------------------------------------------------------------*/
 void *windowThread(void *param)
     {
-    GC                gc;
-    KeySym            key;
-    KeySym            modList[2];
-    Pixmap            pixmap;
-    XEvent            event;
-    XWMHints          wmhints;
-    int               screen, depth;
-    char              text[30];
-    unsigned long     fg, bg;
-    int               len;
     XWindowAttributes a;
-    XColor            b, c;
-    static int        refreshCount = 0;
-    char              str[2]       = " ";
+    XColor            b;
+    unsigned long     bg;
+    XColor            c;
     DispList          *curr;
+    int               depth;
     DispList          *end;
+    XEvent            event;
+    unsigned long     fg;
+    GC                gc;
+    bool              isMeta;
+    KeySym            key;
+    int               len;
     u8                oldFont = 0;
-    Atom              targetProperty;
+    Pixmap            pixmap;
+    static int        refreshCount = 0;
     Atom              retAtom;
-    Atom              wmDeleteWindow;
     int               retFormat;
-    int               retStatus;
-    unsigned long     retRemaining;
     unsigned long     retLength;
+    unsigned long     retRemaining;
+    int               retStatus;
+    int               screen;
+    char              str[2] = " ";
+    Atom              targetProperty;
+    char              text[30];
     int               usageDisplayCount = 0;
+    Atom              wmDeleteWindow;
+    XWMHints          wmhints;
 
     /*
     **  Open the X11 display.
@@ -396,29 +399,6 @@ void *windowThread(void *param)
     XSetForeground(disp, gc, fg);
 
     /*
-    **  Create mappings of some ALT-key combinations to strings.
-    */
-    modList[0] = XK_Meta_L;
-    XRebindKeysym(disp, '0', modList, 1, (u8 *)"$0", 2);
-    XRebindKeysym(disp, '1', modList, 1, (u8 *)"$1", 2);
-    XRebindKeysym(disp, '2', modList, 1, (u8 *)"$2", 2);
-    XRebindKeysym(disp, '3', modList, 1, (u8 *)"$3", 2);
-    XRebindKeysym(disp, '4', modList, 1, (u8 *)"$4", 2);
-    XRebindKeysym(disp, '5', modList, 1, (u8 *)"$5", 2);
-    XRebindKeysym(disp, '6', modList, 1, (u8 *)"$6", 2);
-    XRebindKeysym(disp, '7', modList, 1, (u8 *)"$7", 2);
-    XRebindKeysym(disp, '8', modList, 1, (u8 *)"$8", 2);
-    XRebindKeysym(disp, '9', modList, 1, (u8 *)"$9", 2);
-    XRebindKeysym(disp, 'c', modList, 1, (u8 *)"$c", 2);
-    XRebindKeysym(disp, 'C', modList, 1, (u8 *)"$c", 2);
-    XRebindKeysym(disp, 'e', modList, 1, (u8 *)"$e", 2);
-    XRebindKeysym(disp, 'E', modList, 1, (u8 *)"$e", 2);
-    XRebindKeysym(disp, 'x', modList, 1, (u8 *)"$x", 2);
-    XRebindKeysym(disp, 'X', modList, 1, (u8 *)"$x", 2);
-    XRebindKeysym(disp, 'p', modList, 1, (u8 *)"$p", 2);
-    XRebindKeysym(disp, 'P', modList, 1, (u8 *)"$p", 2);
-
-    /*
     **  Initialise input.
     */
     wmhints.flags = InputHint;
@@ -446,6 +426,7 @@ void *windowThread(void *param)
     **  Window thread loop.
     */
     displayActive = TRUE;
+    isMeta        = FALSE;
     while (displayActive)
         {
         /*
@@ -539,86 +520,92 @@ void *windowThread(void *param)
 
             case KeyPress:
                 len = XLookupString((XKeyEvent *)&event, text, 10, &key, 0);
-                if (len == 1)
+                if (len < 1)
                     {
-                    ppKeyIn = text[0];
-                    sleepMsec(5);
+                    if (key == XK_Meta_L)
+                        {
+                        isMeta = TRUE;
+                        }
                     }
-                else if ((len == 2) && (text[0] == '$'))
+                else if (len == 1)
                     {
-                    switch (text[1])
-                    {
-                    case '0':
-                    case '1':
-                    case '2':
-                    case '3':
-                    case '4':
-                    case '5':
-                    case '6':
-                    case '7':
-                    case '8':
-                    case '9':
-                        traceMask ^= (1 << (text[1] - '0'));
-                        break;
-
-                    case 'c':
-                        traceMask ^= (1 << 14);
-                        break;
-
-                    case 'e':
-                        traceMask ^= (1 << 15);
-                        break;
-
-                    case 'x':
-                        if (traceMask == 0)
-                            {
-                            traceMask = ~0;
-                            }
-                        else
-                            {
-                            traceMask = 0;
-                            }
-                        break;
-
-                    case 'p':
-                        if (lpClipToKeyboardPtr != NULL)
-                            {
-                            /*
-                            **  Ignore paste request when a previous one is still executing.
-                            */
+                    if (isMeta == FALSE)
+                        {
+                        ppKeyIn = text[0];
+                        sleepMsec(5);
+                        }
+                    else
+                        {
+                        switch (text[0])
+                        {
+                        case '0':
+                        case '1':
+                        case '2':
+                        case '3':
+                        case '4':
+                        case '5':
+                        case '6':
+                        case '7':
+                        case '8':
+                        case '9':
+                            traceMask ^= (1 << (text[0] - '0'));
                             break;
-                            }
 
-                        if (targetProperty == None)
-                            {
-                            /*
-                            **  The paste operation atom has not been created. This is bad, but
-                            **  not fatal, so we silently ignore paste requests.
-                            */
+                        case 'c':
+                            traceMask ^= (1 << 14);
                             break;
-                            }
 
-                        /*
-                        **  Request the server to send an event to the present owner of the selection,
-                        **  asking the owner to convert the data in the selection to the required type.
-                        */
-                        XConvertSelection(disp, XA_PRIMARY, XA_STRING, targetProperty, window, event.xbutton.time);
-                        break;
-                    }
+                        case 'e':
+                            traceMask ^= (1 << 15);
+                            break;
+
+                        case 'x':
+                            if (traceMask == 0)
+                                {
+                                traceMask = ~0;
+                                }
+                            else
+                                {
+                                traceMask = 0;
+                                }
+                            break;
+
+                        case 'p':
+                            if (lpClipToKeyboardPtr != NULL)
+                                {
+                                /*
+                                **  Ignore paste request when a previous one is still executing.
+                                */
+                                break;
+                                }
+
+                            if (targetProperty == None)
+                                {
+                                /*
+                                **  The paste operation atom has not been created. This is bad, but
+                                **  not fatal, so we silently ignore paste requests.
+                                */
+                                break;
+                                }
+
+                            /*
+                            **  Request the server to send an event to the present owner of the selection,
+                            **  asking the owner to convert the data in the selection to the required type.
+                            */
+                            XConvertSelection(disp, XA_PRIMARY, XA_STRING, targetProperty, window, event.xbutton.time);
+                            break;
+                        }
+                        ppKeyIn = 0;
+                        }
                     }
                 break;
 
             case KeyRelease:
                 len = XLookupString((XKeyEvent *)&event, text, 10, &key, 0);
-                if (len == 1)
+                if ((len < 1) && (key == XK_Meta_L))
                     {
-                    switch (text[0])
-                    {
-                    default:
-                        break;
+                    isMeta = FALSE;
                     }
-                    }
-
                 break;
 
             case SelectionNotify:
