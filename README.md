@@ -10,8 +10,8 @@ supports the [Nostalgic Computing Center](http://www.nostalgiccomputing.org).
 This repository also provides automation and artifacts intended to make it easy for
 anyone to build the simulator and run historic software on it.
 
-Visit these subdirectories to find artifacts and information enabling you to install
-various operating systems on *DtCyber* after building it:
+Visit these subdirectories and repositories to find artifacts and information
+enabling you to install various operating systems on *DtCyber* after building it:
 
 - [COS](COS) : the Chippewa Operating System (COS) was one of the first operating
 systems created by Control Data for CDC 6000 series computer systems.
@@ -27,11 +27,17 @@ operation, and a version of
 by CDC for its Cyber 170 series supercomputers. In addition to supporting interactive
 access and local and remote batch operation, the instance provided here supports a
 very rich collection of programming languages and data communication features.
+- [NOS/BE](https://github.com/bug400/NOSBE712) : the NOS/BE operation system was a
+descendent of COS and SCOPE. It was designed primarily for batch operation but also
+supported interactive access. Additional documentation about building a NOS/BE system
+can be found [here](https://cdc.sjzoppi.com/doku.php?id=members:nosbe:building_nos_be_level_712_from_scratch)
+on the [CDC Community site](https://cdc.sjzoppi.com/doku.php?id=start),
+and a ready-to-run NOS/BE package can be found
+[here](https://cdc.sjzoppi.com/doku.php?id=members:nosbe:use_a_ready_to_run_nos_be_l_712_system).
 
-Visit the [doc](doc) directory to find the somewhat outdated *Basic Operation* guide
-for *DtCyber*. This guide is oriented toward operation of an older version of the
-operating system. Nevertheless, most of the basic concepts apply to NOS 2.8.7 and
-NOS 1.3, and most information about operating *DtCyber* itself still applies.
+Information about configuring and operating *DtCyber* can be found
+[here](https://cdc.sjzoppi.com/doku.php?id=dtcyber:v5.8.sz:start) on the
+[CDC Community site](https://cdc.sjzoppi.com/doku.php?id=start).
 
 Visit the [CDC documentation archives at Bitsavers](http://bitsavers.trailing-edge.com/pdf/cdc/)
 for a wealth of preserved documentation on Control Data hardware and software. In
