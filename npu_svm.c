@@ -227,13 +227,31 @@ static u8 blockTerminateConnection[] =
 
 static enum
     {
-    StIdle,
+    StIdle = 0,
     StWaitSupervision,
     StReady,
     }
 svmState = StIdle;
 
+static char *svmStates[] = {
+    "StIdle",
+    "StWaitSupervision",
+    "StReady"
+};
+
 static u8 oldRegLevel = 0;
+
+/*
+**  Table of terminal connection state names, indexed by terminal
+**  connection state value (TermConnState).
+*/
+static char *termConnStates[] = {
+    "StTermIdle",
+    "StTermRequestConnection",
+    "StTermHostConnected",
+    "StTermRequestDisconnect",
+    "StTermRequestTerminate"
+};
 
 /*
 **  Table of functions that notify TIPs of terminal connection,
@@ -407,7 +425,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
         /*
         **  Service message must be at least DN/SN/0/BSN/PFC/SFC.
         */
-        npuLogMessage("(npu_svm) Short message in state %d", svmState);
+        npuLogMessage("(npu_svm) Short message in state %s", svmStates[svmState]);
 
         /*
         **  Release downline buffer and return.
@@ -480,7 +498,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             {
             if (svmState != StWaitSupervision)
                 {
-                npuLogMessage("(npu_svm) Unexpected Supervision Reply in state %d", svmState);
+                npuLogMessage("(npu_svm) Unexpected Supervision Reply in state %s", svmStates[svmState]);
                 break;
                 }
 
@@ -492,7 +510,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             }
         else
             {
-            npuLogMessage("(npu_svm) Unexpected message %02X/%02X in state %d", block[BlkOffPfc], block[BlkOffSfc], svmState);
+            npuLogMessage("(npu_svm) Unexpected message %02X/%02X in state %s", block[BlkOffPfc], block[BlkOffSfc], svmStates[svmState]);
             }
         break;
 
@@ -503,7 +521,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             }
         else
             {
-            npuLogMessage("(npu_svm) Unexpected message %02X/%02X in state %d", block[BlkOffPfc], block[BlkOffSfc], svmState);
+            npuLogMessage("(npu_svm) Unexpected message %02X/%02X in state %s", block[BlkOffPfc], block[BlkOffSfc], svmStates[svmState]);
             }
         break;
 
@@ -565,7 +583,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
     case PfcICN:
         if (tp->state != StTermRequestConnection)
             {
-            npuLogMessage("(npu_svm) Unexpected Terminal Connection Reply in state %d", tp->state);
+            npuLogMessage("(npu_svm) Unexpected Terminal Connection Reply in state %s", termConnStates[tp->state]);
             break;
             }
 
@@ -660,8 +678,8 @@ void npuSvmSendDiscRequest(Tcb *tp)
     switch (tp->state)
         {
     case StTermRequestConnection: // indicates awaiting response to terminal connection request
-        fprintf(stderr, "(npu_svm) Warning - disconnect request issued for %.7s in state %d\n",
-                tp->termName, tp->state);
+        fprintf(stderr, "(npu_svm) Warning - disconnect request issued for %.7s in state %s\n",
+                tp->termName, termConnStates[tp->state]);
 
     // fall through
     case StTermHostConnected:     // terminal is connected
@@ -682,8 +700,8 @@ void npuSvmSendDiscRequest(Tcb *tp)
     case StTermIdle:              // terminal is not yet configured or connected
     case StTermRequestDisconnect: // terminal disconnection has been requested
     case StTermRequestTerminate:  // connection termination has been requested
-        fprintf(stderr, "(npu_svm) Warning - disconnect request ignored for %.7s in state %d\n",
-                tp->termName, tp->state);
+        fprintf(stderr, "(npu_svm) Warning - disconnect request ignored for %.7s in state %s\n",
+                tp->termName, termConnStates[tp->state]);
         break;
 
     default:
