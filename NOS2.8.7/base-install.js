@@ -54,7 +54,13 @@ for (const baseTape of baseTapes) {
 
 if (isCompletedStep("init")) {
   promise = promise
-  .then(() => dtc.start())
+  .then(() => dtc.start({
+    detached: true,
+    stdio:    [0, "ignore", 2],
+    unref:    false
+  }))
+  .then(() => dtc.sleep(2000))
+  .then(() => dtc.connect())
   .then(() => dtc.expect([ {re:/Operator> $/} ]))
   .then(() => dtc.console("idle off"))
   .then(() => dtc.say("DtCyber started using default profile"))
@@ -64,7 +70,13 @@ if (isCompletedStep("init")) {
 }
 else {
   promise = promise
-  .then(() => dtc.start(["manual"]))
+  .then(() => dtc.start(["manual"], {
+    detached: true,
+    stdio:    [0, "ignore", 2],
+    unref:    false
+  }))
+  .then(() => dtc.sleep(2000))
+  .then(() => dtc.connect())
   .then(() => dtc.expect([ {re:/Operator> $/} ]))
   .then(() => dtc.console("idle off"))
   .then(() => dtc.say("DtCyber started using manual profile"))
