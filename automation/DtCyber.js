@@ -193,6 +193,9 @@ class DtCyber {
    */
   connect(port) {
     const me = this;
+    if (typeof me.isConnected !== "undefined" && me.isConnected) {
+      return Promise.resolve();
+    }
     if (typeof port === "undefined") {
       if (typeof this.operatorPort === "undefined") {
         let path = null;
@@ -220,41 +223,53 @@ class DtCyber {
       port = this.operatorPort;
     }
     this.streamMgrs.dtCyber = new DtCyberStreamMgr();
-    const doConnect = callback => {
-      me.socket = net.createConnection({port:port, host:"127.0.0.1"}, () => {
-        me.isConnected = true;
-        callback(null);
-      });
-      me.streamMgrs.dtCyber.setOutputStream(me.socket);
-      me.socket.on("data", data => {
-        me.streamMgrs.dtCyber.appendData(data);
-      });
-      me.socket.on("close", () => {
-        if (me.isConnected && me.isExitOnClose) {
-          console.log(`${new Date().toLocaleTimeString()} DtCyber disconnected`);
-          process.exit(0);
-        }
-        me.isConnected = false;
-      });
-      me.socket.on("error", err => {
-        if (me.isConnected) {
-          console.log(`${new Date().toLocaleTimeString()} ${err}`);
-        }
-        else if (Date.now() >= me.connectDeadline) {
-          callback(err);
-        }
-        else {
-          setTimeout(() => {
-            doConnect(callback);
-          }, 500);
-        }
-      });
-    };
     return new Promise((resolve, reject) => {
-      me.connectDeadline = Date.now() + 2000;
       me.isConnected = false;
       me.isExitOnClose = true;
-      doConnect(err => {
+      const doConnect = (deadline, callback) => {
+        if (me.isConnected) return null;
+        try {
+          me.socket = net.createConnection({port:port, host:"127.0.0.1"}, () => {
+            me.isConnected = true;
+            callback(null);
+          });
+        }
+        catch (err) {
+          if (Date.now() > deadline) {
+            callback(err);
+          }
+          else {
+            setTimeout(() => {
+              doConnect(deadline, callback);
+            }, 500);
+          }
+        }
+        me.streamMgrs.dtCyber.setOutputStream(me.socket);
+        me.socket.on("data", data => {
+          me.streamMgrs.dtCyber.appendData(data);
+        });
+        me.socket.on("close", () => {
+          if (me.isConnected && me.isExitOnClose) {
+            console.log(`${new Date().toLocaleTimeString()} DtCyber disconnected`);
+            process.exit(0);
+          }
+          me.isConnected = false;
+        });
+        me.socket.on("error", err => {
+          if (me.isConnected) {
+            console.log(`${new Date().toLocaleTimeString()} ${err}`);
+          }
+          else if (Date.now() > deadline) {
+            callback(err);
+          }
+          else {
+            setTimeout(() => {
+              doConnect(deadline, callback);
+            }, 500);
+          }
+        });
+      };
+      doConnect(Date.now() + 5000, err => {
         if (err === null) {
           resolve();
         }
@@ -362,10 +377,17 @@ class DtCyber {
     const me = this;
     return new Promise((resolve, reject) => {
       me.isExitOnClose = false;
-      me.socket.end(() => {
-        me.socket.destroy();
+      if (typeof me.socket !== "undefined"
+          && typeof me.socket.destroyed !== "undefined"
+          && me.socket.destroyed === false) {
+        me.socket.end(() => {
+          me.socket.destroy();
+          resolve();
+        });
+      }
+      else {
         resolve();
-      });
+      }
     });
   }
 
@@ -707,6 +729,73 @@ class DtCyber {
       {re:/Invalid/,                          fn:new Error(`Invalid: ${cmd}`)},
       {re:/Operator> /}
     ]);
+  }
+
+  /*
+   * postJob
+   *
+   * Submit a job to the local mainframe using the NOS 2 HTTP server and
+   * wait for the associated job to complete. See description of waitJob
+   * for information about the expected format of the card deck.
+   *
+   * Arguments:
+   *   job      - string or array representing the job
+   *   hostname - optional hostname or IP address of the HTTP server (default: localhost)
+   *
+   * Returns:
+   *   A promise that is resolved when the job is complete. The job's
+   *   output is provided as the promise's result value.
+   */
+  postJob(job, hostname) {
+    if (Array.isArray(job)) {
+      job = job.join("\n") + "\n";
+    }
+    if (typeof hostname === "undefined") hostname = "127.0.0.1";
+    let match = /^([^,.(])/.exec(job);
+    const jobName = match[1];
+    const options = {
+      hostname: hostname,
+      port: 80,
+      path: "/",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/vnd.cdc-job",
+        "Content-Length": job.length
+      }
+    };
+    return new Promise((resolve, reject) => {
+      let text = "";
+      const req = http.request(options, res => {
+        res.setEncoding("utf8");
+        res.on("data", chunk => {
+          text += chunk;
+        });
+        res.on("end", () => {
+          text = text.replaceAll("\r\n", "\n");
+          let dayfile,output;
+          const eor = text.lastIndexOf("~eor\n");
+          if (eor >= 0) {
+            output  = text.substring(0, eor);
+            dayfile = text.substring(eor + 5);
+          }
+          else {
+            output  = "";
+            dayfile = output;
+          }
+          if (dayfile.indexOf(`*** ${jobName} FAILED`) >= 0) {
+            reject(new Error(`${jobName} failed`));
+          }
+          else {
+            resolve(output);
+          }
+        });
+      });
+      req.on("error", err => {
+        reject(err);
+      });
+      req.write(job);
+      req.end();
+    });
   }
 
   /*
