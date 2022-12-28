@@ -8,6 +8,11 @@ const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
+let newMID         = null;  // new machine identifer
+let oldMID         = null;  // old machine identifer
+let productRecords = [];    // textual records to edit into PRODUCT file
+let props          = {};    // properties read from property file arguments
+
 /*
  * asciiToCdc
  *
@@ -257,6 +262,145 @@ const getSystemRecord = (rid, options) => {
 };
 
 /*
+ * processCmrdProps
+ *
+ * Process properties defined in CMRDECK sections of property files.
+ *
+ * Returns:
+ *  A promise that is resolved when all CMRD properties have been processed.
+ *  The global array productRecords is updated to include the CMRD record
+ *  to be edited into the PRODUCT file, if any.
+ */
+const processCmrdProps = () => {
+  if (typeof props["CMRDECK"] !== "undefined") {
+    return dtc.say("Edit CMRD01")
+    .then(() => getSystemRecord("CMRD01"))
+    .then(cmrd01 => {
+      for (const prop of props["CMRDECK"]) {
+        let ei = prop.indexOf("=");
+        if (ei < 0) {
+          throw new Error(`Invalid CMRDECK definition: \"${prop}\"`);
+        }
+        let key   = prop.substring(0, ei).trim().toUpperCase();
+        let value = prop.substring(ei + 1).trim().toUpperCase();
+        if (value.endsWith(".")) value = value.substring(0, value.length - 1).trim();
+        let si = 0;
+        while (si < cmrd01.length) {
+          let ni = cmrd01.indexOf("\n", si);
+          if (ni < 0) ni = cmrd01.length - 1;
+          let ei = cmrd01.indexOf("=", si);
+          if (ei < ni && ei > 0 && cmrd01.substring(si, ei).trim() === key) {
+            if (key === "MID") {
+              newMID = value;
+              oldMID = cmrd01.substring(ei + 1, ni).trim();
+              if (oldMID.endsWith(".")) oldMID = oldMID.substring(0, oldMID.length - 1).trim();
+            }
+            cmrd01 = `${cmrd01.substring(0, si)}${key}=${value}.\n${cmrd01.substring(ni + 1)}`;
+            break;
+          }
+          si = ni + 1;
+        }
+        if (si >= cmrd01.length) {
+          cmrd01 += `${key}=${value}\n`;
+        }
+      }
+      productRecords.push(cmrd01);
+      return Promise.resolve();
+    });
+  }
+  else {
+    return Promise.resolve();
+  }
+};
+
+/*
+ * processEqpdProps
+ *
+ * Process properties defined in EQPDECK sections of property files.
+ *
+ * Returns:
+ *  A promise that is resolved when all EQPD properties have been processed.
+ *  The global array productRecords is updated to include the EQPD record
+ *  to be edited into the PRODUCT file, if any.
+ */
+const processEqpdProps = () => {
+  if (typeof props["EQPDECK"] !== "undefined") {
+    return dtc.say("Edit EQPD01")
+    .then(() => getSystemRecord("EQPD01"))
+    .then(eqpd01 => {
+      for (const prop of props["EQPDECK"]) {
+        let ei = prop.indexOf("=");
+        if (ei < 0) {
+          throw new Error(`Invalid EQPDECK definition: \"${prop}\"`);
+        }
+        let key   = prop.substring(0, ei).trim().toUpperCase();
+        let value = prop.substring(ei + 1).trim().toUpperCase();
+        let si = 0;
+        let isEQyet = false;
+        let isPFyet = false;
+        while (si < eqpd01.length) {
+          let ni = eqpd01.indexOf("\n", si);
+          if (ni < 0) ni = eqpd01.length - 1;
+          let ei = eqpd01.indexOf("=", si);
+          if (ei < ni && ei > 0) {
+            let eqpdKey = eqpd01.substring(si, ei).trim();
+            if (eqpdKey.startsWith("EQ")) {
+              isEQyet = true;
+            }
+            if (eqpdKey === "PF") {
+              isPFyet = true;
+            }
+            if (eqpdKey === key) {
+              if (key === "PF") {
+                let ci = value.indexOf(",");
+                if (ci < 0) {
+                  throw new Error(`Invalid EQPDECK definition: \"${prop}\"`);
+                }
+                let propPFN = parseInt(value.substring(0, ci).trim());
+                ci = eqpd01.indexOf(",", ei + 1);
+                let eqpdPFN = parseInt(eqpd01.substring(ei + 1, ci).trim());
+                if (propPFN === eqpdPFN) {
+                  eqpd01 = `${eqpd01.substring(0, si)}${key}=${value}\n${eqpd01.substring(ni + 1)}`;
+                  break;
+                }
+                else if (propPFN < eqpdPFN) {
+                  eqpd01 = `${eqpd01.substring(0, si)}${key}=${value}\n${eqpd01.substring(si)}`;
+                  break;
+                }
+              }
+              else {
+                eqpd01 = `${eqpd01.substring(0, si)}${key}=${value}\n${eqpd01.substring(ni + 1)}`;
+                break;
+              }
+            }
+            else if (isEQyet && key.startsWith("EQ") && !eqpdKey.startsWith("*")) {
+              if (!eqpdKey.startsWith("EQ")
+                  || parseInt(key.substring(2)) < parseInt(eqpdKey.substring(2))) {
+                eqpd01 = `${eqpd01.substring(0, si)}${key}=${value}\n${eqpd01.substring(si)}`;
+                break;
+              }
+            }
+            else if (isPFyet && key === "PF" && !eqpdKey.startsWith("*") && eqpdKey !== "REMOVE") {
+              eqpd01 = `${eqpd01.substring(0, si)}${key}=${value}\n${eqpd01.substring(si)}`;
+              break;
+            }
+          }
+          si = ni + 1;
+        }
+        if (si >= eqpd01.length) {
+          eqpd01 += `${key}=${value}\n`;
+        }
+      }
+      productRecords.push(eqpd01);
+      return Promise.resolve();
+    });
+  }
+  else {
+    return Promise.resolve();
+  }
+};
+
+/*
  * replaceFile
  *
  * Replace a file on the running system.
@@ -313,220 +457,123 @@ const submitJob = (body, options) => {
   return dtc.postJob(`${jobname}.\n$USER,${username},${password}.\n${body}`, hostname);
 };
 
-//
-//  Read the property files, if any, and build the property object from them
-//
-
-let propFiles = [];
-for (const filePath of process.argv.slice(2)) {
-  propFiles.push(filePath);
-}
-if (propFiles.length < 1) {
-  if (fs.existsSync("site.cfg")) {
-    propFiles.push("site.cfg");
+/*
+ * updateLIDConf
+ *
+ * Update the LID configuration file to include new/updated LID definitions, if any.
+ *
+ * Returns:
+ *  A promise that is resolved when the LID configuration file has been updated.
+ */
+const updateLIDConf = () => {
+  if (typeof props["LIDS"] !== "undefined") {
+    let promise = Promise.resolve();
+    let mid = newMID;
+    if (mid === null) {
+      promise = getSystemRecord("CMRD01")
+      .then(cmrd01 => {
+        for (const defn of cmrd01.split("\n")) {
+          if (defn.trim().startsWith("MID")) {
+            const tokens = defn.split("=");
+            if (tokens.length > 1) {
+              mid = tokens[1].trim();
+              return Promise.resolve();
+            }
+          }
+        }
+        mid = "01";
+        return Promise.resolve();
+      });
+    }
+    return promise
+    .then(() => dtc.say(`Update LIDCM${mid}`))
+    .then(() => {
+      //
+      // Build an object representing the contents of the LIDCMxx file.
+      // Start with the PID and LID definition of the local host.
+      //
+      let lidConf = {};
+      let currentPid = `M${mid}`;
+      lidConf[currentPid] = {
+        pid: {
+          PID: currentPid,
+          MFTYPE: "NOS2"
+        },
+        lids: {}
+      };
+      lidConf[currentPid].lids[currentPid] = {
+        LID: currentPid
+      };
+      //
+      // Update the object to include PID's and LID's in the LIDS property.
+      //
+      for (const defn of props["LIDS"]) {
+        let tokens = defn.trim().toUpperCase().split(/[,.]/);
+        if (tokens.length < 2) continue;
+        let attrs = {};
+        for (const attr of tokens.slice(1)) {
+          const ei = attr.indexOf("=");
+          if (ei > 0) {
+            attrs[attr.substring(0, ei).trim()] = attr.substring(ei + 1).trim();
+          }
+        }
+        if (tokens[0] === "NPID" && typeof attrs["PID"] !== "undefined") {
+          currentPid = attrs["PID"];
+          lidConf[currentPid] = {
+            pid: attrs,
+            lids: {}
+          };
+        }
+        else if (tokens[0] === "NLID" && currentPid !== null && typeof attrs["LID"] !== "undefined") {
+          lidConf[currentPid].lids[attrs["LID"]] = attrs;
+        }
+      }
+      //
+      // Generate new contents of the LIDCMxx file from the updated object.
+      //
+      let lidText = `LIDCM${mid}\n`;
+      for (const pid of Object.keys(lidConf).sort()) {
+        let pidAttrs = lidConf[pid].pid;
+        lidText += `NPID,PID=${pid}`;
+        for (const pidAttrKey of Object.keys(pidAttrs)) {
+          if (pidAttrKey !== "PID") {
+            lidText += `,${pidAttrKey}=${pidAttrs[pidAttrKey]}`;
+          }
+        }
+        lidText += ".\n";
+        let lids = lidConf[pid].lids;
+        for (const lid of Object.keys(lids)) {
+          lidText += `NLID,LID=${lid}`;
+          for (const lidAttrKey of Object.keys(lids[lid])) {
+            if (lidAttrKey !== "LID") {
+              lidText += `,${lidAttrKey}=${lids[lid][lidAttrKey]}`;
+            }
+          }
+          lidText += ".\n";
+        }
+      }
+      return lidText;
+    })
+    .then(text => replaceFile(`LIDCM${mid}`, text))
+    .then(() => utilities.moveFile(dtc, `LIDCM${mid}`, 1, 377777));
   }
   else {
-    process.exit(0); // No property files specified
-  }
-}
-
-let props = {};
-for (const configFilePath of propFiles) {
-  if (!fs.existsSync(configFilePath)) {
-    process.stdout.write(`${configFilePath} does not exist\n`);
-    process.exit(1);
-  }
-  const lines = fs.readFileSync(configFilePath, "utf8");
-  let sectionKey = "";
-
-  for (let line of lines.split("\n")) {
-    line = line.trim();
-    if (line.length < 1 || /^[;#*]/.test(line)) continue;
-    if (line.startsWith("[")) {
-      let bi = line.indexOf("]");
-      if (bi < 0) {
-        process.stderr.write(`Invalid section key in ${configFilePath}: \"${line}\"\n`);
-        process.exit(1);
-      }
-      sectionKey = line.substring(1, bi).trim().toUpperCase();
-    }
-    else if (sectionKey !== "") {
-      if (typeof props[sectionKey] === "undefined") {
-        props[sectionKey] = [];
-      }
-      props[sectionKey].push(line);
-    }
-    else {
-      process.stderr.write(`Property defined before first section key: \"${line}\"\n`);
-      process.exit(1);
-    }
-  }
-}
-
-let newMID = null;
-let oldMID = null;
-let productRecords = [];
-
-let promise = awaitService(80, 60)
-.then(() => dtc.connect())
-.then(() => dtc.expect([ {re:/Operator> $/} ]))
-.then(() => dtc.attachPrinter("LP5xx_C12_E5"));
-
-//
-//  If a CMRDECK section is defined, zrrange to update CMRD01 in the PRODUCT file.
-//
-if (typeof props["CMRDECK"] !== "undefined") {
-  promise = promise
-  .then(() => dtc.say("Edit CMRD01"))
-  .then(() => getSystemRecord("CMRD01"))
-  .then(cmrd01 => {
-    for (const prop of props["CMRDECK"]) {
-      let ei = prop.indexOf("=");
-      if (ei < 0) {
-        throw new Error(`Invalid CMRDECK definition: \"${prop}\"`);
-      }
-      let key   = prop.substring(0, ei).trim().toUpperCase();
-      let value = prop.substring(ei + 1).trim().toUpperCase();
-      if (value.endsWith(".")) value = value.substring(0, value.length - 1).trim();
-      let si = 0;
-      while (si < cmrd01.length) {
-        let ni = cmrd01.indexOf("\n", si);
-        if (ni < 0) ni = cmrd01.length - 1;
-        let ei = cmrd01.indexOf("=", si);
-        if (ei < ni && ei > 0 && cmrd01.substring(si, ei).trim() === key) {
-          if (key === "MID") {
-            newMID = value;
-            oldMID = cmrd01.substring(ei + 1, ni).trim();
-            if (oldMID.endsWith(".")) oldMID = oldMID.substring(0, oldMID.length - 1).trim();
-          }
-          cmrd01 = `${cmrd01.substring(0, si)}${key}=${value}.\n${cmrd01.substring(ni + 1)}`;
-          break;
-        }
-        si = ni + 1;
-      }
-      if (si >= cmrd01.length) {
-        cmrd01 += `${key}=${value}\n`;
-      }
-    }
-    productRecords.push(cmrd01);
     return Promise.resolve();
-  });
-}
-//
-//  If an EQPDECK section is defined, zrrange to update EQPD01 in the PRODUCT file.
-//
-if (typeof props["EQPDECK"] !== "undefined") {
-  promise = promise
-  .then(() => dtc.say("Edit EQPD01"))
-  .then(() => getSystemRecord("EQPD01"))
-  .then(eqpd01 => {
-    for (const prop of props["EQPDECK"]) {
-      let ei = prop.indexOf("=");
-      if (ei < 0) {
-        throw new Error(`Invalid EQPDECK definition: \"${prop}\"`);
-      }
-      let key   = prop.substring(0, ei).trim().toUpperCase();
-      let value = prop.substring(ei + 1).trim().toUpperCase();
-      let si = 0;
-      let isEQyet = false;
-      let isPFyet = false;
-      while (si < eqpd01.length) {
-        let ni = eqpd01.indexOf("\n", si);
-        if (ni < 0) ni = eqpd01.length - 1;
-        let ei = eqpd01.indexOf("=", si);
-        if (ei < ni && ei > 0) {
-          let eqpdKey = eqpd01.substring(si, ei).trim();
-          if (eqpdKey.startsWith("EQ")) {
-            isEQyet = true;
-          }
-          if (eqpdKey === "PF") {
-            isPFyet = true;
-          }
-          if (eqpdKey === key) {
-            if (key === "PF") {
-              let ci = value.indexOf(",");
-              if (ci < 0) {
-                throw new Error(`Invalid EQPDECK definition: \"${prop}\"`);
-              }
-              let propPFN = parseInt(value.substring(0, ci).trim());
-              ci = eqpd01.indexOf(",", ei + 1);
-              let eqpdPFN = parseInt(eqpd01.substring(ei + 1, ci).trim());
-              if (propPFN === eqpdPFN) {
-                eqpd01 = `${eqpd01.substring(0, si)}${key}=${value}\n${eqpd01.substring(ni + 1)}`;
-                break;
-              }
-              else if (propPFN < eqpdPFN) {
-                eqpd01 = `${eqpd01.substring(0, si)}${key}=${value}\n${eqpd01.substring(si)}`;
-                break;
-              }
-            }
-            else {
-              eqpd01 = `${eqpd01.substring(0, si)}${key}=${value}\n${eqpd01.substring(ni + 1)}`;
-              break;
-            }
-          }
-          else if (isEQyet && key.startsWith("EQ") && !eqpdKey.startsWith("*")) {
-            if (!eqpdKey.startsWith("EQ")
-                || parseInt(key.substring(2)) < parseInt(eqpdKey.substring(2))) {
-              eqpd01 = `${eqpd01.substring(0, si)}${key}=${value}\n${eqpd01.substring(si)}`;
-              break;
-            }
-          }
-          else if (isPFyet && key === "PF" && !eqpdKey.startsWith("*") && eqpdKey !== "REMOVE") {
-            eqpd01 = `${eqpd01.substring(0, si)}${key}=${value}\n${eqpd01.substring(si)}`;
-            break;
-          }
-        }
-        si = ni + 1;
-      }
-      if (si >= eqpd01.length) {
-        eqpd01 += `${key}=${value}\n`;
-      }
-    }
-    productRecords.push(eqpd01);
-    return Promise.resolve();
-  });
-}
-
-promise = promise
-.then(() => {
-  let innerPromise = Promise.resolve();
-  //
-  // If replacement records for the system file have been defined, edit the
-  // PRODUCT file to replace them.
-  //
-  if (productRecords.length > 0) {
-    const job = [
-      "$SETTL,*.",
-      "$SETJSL,*.",
-      "$SETASL,*.",
-      "$ATTACH,PRODUCT/M=W,WB.",
-      "$COPY,INPUT,LGO.",
-      "$LIBEDIT,P=PRODUCT,B=LGO,I=0,LO=EM,C."
-    ];
-    const options = {
-      jobname: "UPDPROD",
-      data:    `${productRecords.join("~eor\n")}`
-    };
-    innerPromise = innerPromise
-    .then(() => dtc.say("Update PRODUCT"))
-    .then(() => submitJob(job, options))
-    .then(output => {
-      for (const line of output.split("\n")) {
-        console.log(`${new Date().toLocaleTimeString()}   ${line}`);
-      }
-      return Promise.resolve();
-    });
   }
-  //
-  // If a new machine ID is defined, create a new
-  // LIDCMxx file for it under UI 377777, and modify
-  // the OUTCALL definition of the TCP/IP gateway in
-  // LCF file to reflect the new ID.
-  //
+};
+
+/*
+ * updateMachineID
+ *
+ * Create/Update the LIDCMxx file and modify the NDL configuration to reflect the machine's
+ * new identifier, if any.
+ *
+ * Returns:
+ *  A promise that is resolved when the machine identifier has been updated.
+ */
+const updateMachineID = () => {
   if (oldMID !== newMID) {
-    innerPromise = innerPromise
-    .then(() => dtc.say(`Create LIDCM${newMID}`))
+    return dtc.say(`Create LIDCM${newMID}`)
     .then(() => getFile(`LIDCM${oldMID}/UN=SYSTEMX`))
     .then(text => {
       text = text.replace(`LIDCM${oldMID}`, `LIDCM${newMID}`);
@@ -572,111 +619,70 @@ promise = promise
     })
     .then(() => dtc.runJob(12, 4, "decks/compile-ndlopl.job"));
   }
-  //
-  // If LIDs have been defined, update the LIDCMxx file
-  // to include them.
-  //
-  if (typeof props["LIDS"] !== "undefined") {
-    innerPromise = innerPromise
-    .then(() => dtc.say(`Update LIDCM${newMID}`))
-    .then(() => getFile(`LIDCM${newMID}/UN=SYSTEMX`))
-    .then(text => {
-      //
-      // Build an object representing the contents of the
-      // LIDCMxx file.
-      //
-      let lidConf = {};
-      let currentPid = null;
-      for (const defn of text.split("\n")) {
-        let tokens = defn.trim().split(/[,.]/);
-        if (tokens.length < 2) continue;
-        let attrs = {};
-        for (const attr of tokens.slice(1)) {
-          const ei = attr.indexOf("=");
-          if (ei > 0) {
-            attrs[attr.substring(0, ei).trim()] = attr.substring(ei + 1).trim();
-          }
-        }
-        if (tokens[0] === "NPID" && typeof attrs["PID"] !== "undefined") {
-          currentPid = attrs["PID"];
-          lidConf[currentPid] = {
-            pid: attrs,
-            lids: {}
-          };
-        }
-        else if (tokens[0] === "NLID" && currentPid !== null && typeof attrs["LID"] !== "undefined") {
-          lidConf[currentPid].lids[attrs["LID"]] = attrs;
-        }
-      }
-      //
-      // Update the object to include PID's and LID's in the LIDS property.
-      //
-      for (const defn of props["LIDS"]) {
-        let tokens = defn.trim().toUpperCase().split(/[,.]/);
-        if (tokens.length < 2) continue;
-        let attrs = {};
-        for (const attr of tokens.slice(1)) {
-          const ei = attr.indexOf("=");
-          if (ei > 0) {
-            attrs[attr.substring(0, ei).trim()] = attr.substring(ei + 1).trim();
-          }
-        }
-        if (tokens[0] === "NPID" && typeof attrs["PID"] !== "undefined") {
-          currentPid = attrs["PID"];
-          lidConf[currentPid] = {
-            pid: attrs,
-            lids: {}
-          };
-        }
-        else if (tokens[0] === "NLID" && currentPid !== null && typeof attrs["LID"] !== "undefined") {
-          lidConf[currentPid].lids[attrs["LID"]] = attrs;
-        }
-      }
-      //
-      // Generate new contents of the LIDCMxx file from the updated object.
-      //
-      let lidText = `LIDCM${newMID}\n`;
-      for (const pid of Object.keys(lidConf)) {
-        let pidAttrs = lidConf[pid].pid;
-        if (typeof pidAttrs["DELETE"] !== "undefined" && pidAttrs["DELETE"] === "YES") continue;
-        lidText += `NPID,PID=${pid}`;
-        for (const pidAttrKey of Object.keys(pidAttrs)) {
-          if (pidAttrKey !== "PID") {
-            lidText += `,${pidAttrKey}=${pidAttrs[pidAttrKey]}`;
-          }
-        }
-        lidText += ".\n";
-        let lids = lidConf[pid].lids;
-        for (const lid of Object.keys(lids)) {
-          lidText += `NLID,LID=${lid}`;
-          for (const lidAttrKey of Object.keys(lids[lid])) {
-            if (lidAttrKey !== "LID") {
-              lidText += `,${lidAttrKey}=${lids[lid][lidAttrKey]}`;
-            }
-          }
-          lidText += ".\n";
-        }
-      }
-      return lidText;
-    })
-    .then(text => replaceFile(`LIDCM${newMID}`, text))
-    .then(() => utilities.moveFile(dtc, `LIDCM${newMID}`, 1, 377777));
+  else {
+    return Promise.resolve();
   }
-  //
-  // If a new machine ID is defined, or additional TCP/IP hosts
-  // have been defined, update the TCPHOST file accordingly.
-  //
+};
+
+/*
+ * updateProductRecords
+ *
+ * Update the PRODUCT file to include any new or modified records that have
+ * been defined.
+ *
+ * Returns:
+ *  A promise that is resolved when the PRODUCT file has been updated.
+ */
+const updateProductRecords = () => {
+  if (productRecords.length > 0) {
+    const job = [
+      "$SETTL,*.",
+      "$SETJSL,*.",
+      "$SETASL,*.",
+      "$ATTACH,PRODUCT/M=W,WB.",
+      "$COPY,INPUT,LGO.",
+      "$LIBEDIT,P=PRODUCT,B=LGO,I=0,LO=EM,C."
+    ];
+    const options = {
+      jobname: "UPDPROD",
+      data:    `${productRecords.join("~eor\n")}`
+    };
+    return dtc.say("Update PRODUCT")
+    .then(() => submitJob(job, options))
+    .then(output => {
+      for (const line of output.split("\n")) {
+        console.log(`${new Date().toLocaleTimeString()}   ${line.substring(1)}`);
+      }
+      return Promise.resolve();
+    });
+  }
+  else {
+    return Promise.resolve();
+  }
+};
+
+/*
+ * updateTcpHosts
+ *
+ * Update the TCPHOST file to reference the local machine ID and to include any
+ * additional hosts defined by the HOSTS property, if any.
+ *
+ * Returns:
+ *  A promise that is resolved when the TCPHOST file has been updated.
+ */
+const updateTcpHosts = () => {
   if (oldMID !== newMID || typeof props["HOSTS"] !== "undefined") {
-    innerPromise = innerPromise
-    .then(() => dtc.say("Update TCPHOST"))
+    return dtc.say("Update TCPHOST")
     .then(() => getFile("TCPHOST", {username:"NETADMN",password:"NETADMN"}))
     .then(text => {
       text = cdcToAscii(text);
-      const regex = new RegExp(`LOCALHOST_${oldMID}`, "i");
-      while (true) {
-        let si = text.search(regex);
-        if (si < 0) break;
-        text = `${text.substring(0, si)}LOCALHOST_${newMID}${text.substring(si + 12)}`;
+      if (oldMID !== newMID) {
+        const regex = new RegExp(`LOCALHOST_${oldMID}`, "i");
+        while (true) {
+          let si = text.search(regex);
+          if (si < 0) break;
+          text = `${text.substring(0, si)}LOCALHOST_${newMID}${text.substring(si + 12)}`;
+        }
       }
       const pid = `M${oldMID}`;
       let hosts = {};
@@ -703,34 +709,106 @@ promise = promise
         }
       }
       text = "";
-      for (const key of Object.keys(hosts)) {
+      for (const key of Object.keys(hosts).sort()) {
         text += `${hosts[key]}\n`;
       }
       return asciiToCdc(text);
     })
     .then(text => replaceFile("TCPHOST", text, {username:"NETADMN",password:"NETADMN"}));
   }
-  return innerPromise;
-});
+  else {
+    return Promise.resolve();
+  }
+};
+
+/*
+ * updateTcpResolver
+ *
+ * If a RESOLVER property is defined, create/update the TCPRSLV file to reflect the TCP/IP
+ * resource resolver defined by it.
+ *
+ * Returns:
+ *  A promise that is resolved when the TCPHOST file has been updated.
+ */
+const updateTcpResolver = () => {
+  if (typeof props["RESOLVER"] !== "undefined") {
+    const job = [
+      "$CHANGE,TCPRSLV/CT=PU,M=R,AC=Y."
+    ];
+    const options = {
+      jobname: "MAKEPUB",
+      username: "NETADMN",
+      password: "NETADMN"
+    };
+    return dtc.say("Create/Update TCPRSLV")
+    .then(text => replaceFile("TCPRSLV", asciiToCdc(`${props["RESOLVER"].join("\n")}\n`), {username:"NETADMN",password:"NETADMN"}))
+    .then(() => submitJob(job, options));
+  }
+  else {
+    return Promise.resolve();
+  }
+};
+
 //
-//  If a RESOLVER section is defined, save/replace the TCPRSLV file under NETADMN.
+//  Read the property files, if any, and build the property object from them
 //
-if (typeof props["RESOLVER"] !== "undefined") {
-  const job = [
-    "$CHANGE,TCPRSLV/CT=PU,M=R,AC=Y."
-  ];
-  const options = {
-    jobname: "CHANGE",
-    username: "NETADMN",
-    password: "NETADMN"
-  };
-  promise = promise
-  .then(() => dtc.say("Create/Update TCPRSLV"))
-  .then(text => replaceFile("TCPRSLV", asciiToCdc(`${props["RESOLVER"].join("\n")}\n`), {username:"NETADMN",password:"NETADMN"}))
-  .then(() => submitJob(job, options));
+
+let propFiles = [];
+for (const filePath of process.argv.slice(2)) {
+  propFiles.push(filePath);
+}
+if (propFiles.length < 1) {
+  if (fs.existsSync("site.cfg")) {
+    propFiles.push("site.cfg");
+  }
+  else {
+    process.exit(0); // No property files specified
+  }
 }
 
-promise
+for (const configFilePath of propFiles) {
+  if (!fs.existsSync(configFilePath)) {
+    process.stdout.write(`${configFilePath} does not exist\n`);
+    process.exit(1);
+  }
+  const lines = fs.readFileSync(configFilePath, "utf8");
+  let sectionKey = "";
+
+  for (let line of lines.split("\n")) {
+    line = line.trim();
+    if (line.length < 1 || /^[;#*]/.test(line)) continue;
+    if (line.startsWith("[")) {
+      let bi = line.indexOf("]");
+      if (bi < 0) {
+        process.stderr.write(`Invalid section key in ${configFilePath}: \"${line}\"\n`);
+        process.exit(1);
+      }
+      sectionKey = line.substring(1, bi).trim().toUpperCase();
+    }
+    else if (sectionKey !== "") {
+      if (typeof props[sectionKey] === "undefined") {
+        props[sectionKey] = [];
+      }
+      props[sectionKey].push(line);
+    }
+    else {
+      process.stderr.write(`Property defined before first section key: \"${line}\"\n`);
+      process.exit(1);
+    }
+  }
+}
+
+awaitService(80, 60)
+.then(() => dtc.connect())
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => processCmrdProps())
+.then(() => processEqpdProps())
+.then(() => updateProductRecords())
+.then(() => updateMachineID())
+.then(() => updateLIDConf())
+.then(() => updateTcpHosts())
+.then(() => updateTcpResolver())
 .then(() => dtc.say("Reconfiguration complete"))
 .then(() => {
   process.exit(0);
