@@ -52,6 +52,13 @@ see console interaction, jobs submitted via the virtual card reader, and *DtCybe
 shutting down and restarting a number of times to install the base NOS 2.8.7 operating
 system and all of the currently available optional products.
 
+Various system configuration parameters may be customized by defining customized values
+in a file named `site.cfg`. The installation process looks for this file and, if found,
+automatically executes the `reconfigure.js` script to apply its contents and produce a
+customized system configuration. See section
+[Customizing the NOS 2.8.7 Configuration](#reconfig), below, for details. If `site.cfg`
+is not found, `install.js` produces a system with a generic configuration.
+
 After `install.js` completes, NOS 2.8.7 and all currently available optional products
 will be fully installed and ready to use, and the system will be left running.
 CYBIS, the Cyber Instruction System, will also be installed, but it must be started
@@ -388,8 +395,11 @@ products, or none of the optional products, you may accomplish this by specifyin
 | Windows:     | `node install basic`      |
 
 The `basic` option causes `install.js` to install a minimal NOS 2.8.7 system without any
-optional products. To install optional products atop the basic system, use the
-`install_product` command, as in:
+optional products. However, if the file `site.cfg` exists, the `reconfigure.js` script
+will be called to apply its contents. This enables the basic system to have a
+customized configuration.
+
+To install optional products atop the basic system, use the `install_product` command, as in:
 
 >Operator> `install lang`
 
