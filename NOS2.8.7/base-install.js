@@ -54,7 +54,13 @@ for (const baseTape of baseTapes) {
 
 if (isCompletedStep("init")) {
   promise = promise
-  .then(() => dtc.start())
+  .then(() => dtc.start({
+    detached: true,
+    stdio:    [0, "ignore", 2],
+    unref:    false
+  }))
+  .then(() => dtc.sleep(2000))
+  .then(() => dtc.connect())
   .then(() => dtc.expect([ {re:/Operator> $/} ]))
   .then(() => dtc.console("idle off"))
   .then(() => dtc.say("DtCyber started using default profile"))
@@ -64,7 +70,13 @@ if (isCompletedStep("init")) {
 }
 else {
   promise = promise
-  .then(() => dtc.start(["manual"]))
+  .then(() => dtc.start(["manual"], {
+    detached: true,
+    stdio:    [0, "ignore", 2],
+    unref:    false
+  }))
+  .then(() => dtc.sleep(2000))
+  .then(() => dtc.connect())
   .then(() => dtc.expect([ {re:/Operator> $/} ]))
   .then(() => dtc.console("idle off"))
   .then(() => dtc.say("DtCyber started using manual profile"))
@@ -118,6 +130,14 @@ if (isCompletedStep("nam-init") === false) {
   .then(() => dtc.runJob(12, 4, "decks/update-namstrt.job"))
   .then(() => dtc.say("Create the TCPHOST file ..."))
   .then(() => dtc.runJob(12, 4, "decks/create-tcphost.job"))
+  .then(() => dtc.say("Set NETOPS password and security count ..."))
+  .then(() => dtc.dsd("X.MODVAL(OP=Z)/NETOPS,PW=NETOPSX,SC=77B"))
+  .then(() => dtc.say("Start NAMNOGO to initialize NAM ..."))
+  .then(() => dtc.dsd("NANOGO."))
+  .then(() => dtc.sleep(5000))
+  .then(() => dtc.dsd("CFO,NAM.UN=NETOPS,PW=NETOPSX"))
+  .then(() => dtc.sleep(1000))
+  .then(() => dtc.dsd("CFO,NAM.GO"))
   .then(() => {
     addCompletedStep("nam-init");
     return Promise.resolve();
@@ -138,7 +158,12 @@ if (isCompletedStep("termlib-update") === false) {
 if (isCompletedStep("add-guest") === false) {
   promise = promise
   .then(() => dtc.say("Add a non-privileged GUEST user ..."))
-  .then(() => dtc.dsd("X.MS(VALUSER,LIMITED,GUEST,GUEST)"))
+  .then(() => dtc.runJob(12, 4, "decks/create-guest.job"))
+  .then(() => dtc.dis([
+    "GET,GESTUSR.",
+    "PURGE,GESTUSR.",
+    "MODVAL,FA,I=GESTUSR,OP=U."
+  ], "GESTMDV", 1))
   .then(() => {
     addCompletedStep("add-guest");
     return Promise.resolve();
@@ -192,6 +217,47 @@ if (isMountTapes) {
     "[UNLOAD,52.",
     "[UNLOAD,53."
   ]));
+}
+
+if (fs.existsSync("site.cfg") && isCompletedStep("site-config") === false) {
+  promise = promise
+  .then(() => dtc.say("Apply site configuration (site.cfg) ..."))
+  if (fs.existsSync("opt/installed.json") === false
+      || JSON.parse(fs.readFileSync("opt/installed.json", "utf8")).indexOf("ncctcp") < 0) {
+    promise = promise
+    .then(() => dtc.disconnect())
+    .then(() => dtc.say("Install NCC TCP applications ..."))
+    .then(() => dtc.exec("node", ["install-product", "ncctcp"]))
+    .then(() => dtc.connect())
+    .then(() => dtc.expect([ {re:/Operator> $/} ]));
+  }
+  promise = promise
+  .then(() => dtc.say("SYSEDIT HTTP server into running system ..."))
+  .then(() => dtc.dis([
+    "ATTACH,PRODUCT.",
+    "GTR,PRODUCT,HTF.ABS/HTF",
+    "SYSEDIT,B=HTF."
+  ], "SYSEDHT", 1))
+  .then(() => dtc.say("Start HTTP server ..."))
+  .then(() => dtc.dsd("X.NAMI(RS=HT)"))
+  .then(() => dtc.disconnect())
+  .then(() => dtc.exec("node", ["reconfigure"]))
+  .then(() => dtc.say("Make a new deadstart tape ..."))
+  .then(() => dtc.exec("node", ["make-ds-tape"]))
+  .then(() => {
+    if (fs.existsSync("tapes/ods.tap")) {
+      fs.unlinkSync("tapes/ods.tap");
+    }
+    fs.renameSync("tapes/ds.tap", "tapes/ods.tap");
+    fs.renameSync("tapes/newds.tap", "tapes/ds.tap");
+    return Promise.resolve();
+  })
+  .then(() => {
+    addCompletedStep("site-config");
+    return Promise.resolve();
+  })
+  .then(() => dtc.connect())
+  .then(() => dtc.expect([ {re:/Operator> $/} ]));
 }
 
 promise = promise

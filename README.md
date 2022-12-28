@@ -68,8 +68,12 @@ For example, to build the simulator on MacOS, execute the following command:
 
 >`make -f Makefile.macosx all`
 
-The `all` target builds both *dtcyber* (the mainframe simulator) and *stk* (the
-StorageTek 4400 automated cartridge tape system simulator). If you want to build only *dtcyber*, execute either of the following commands:
+The `all` target builds *dtcyber* (the mainframe simulator) and various supporting tools
+and *helper* programs. You should specify the `all` target the very first time you run
+`make`, especially if you intend to run installers for the operating systems mentioned
+above. This will ensure that supporting tools are installed and initialized properly.
+Thereafter, if you want to build only the *dtcyber* executable, execute either of the
+following commands:
 
 > `make -f Makefile.macosx dtcyber`
 

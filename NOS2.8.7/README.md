@@ -33,11 +33,12 @@ file).
 
 ## Installation Steps
 1. If not done already, use the appropriate *Makefile* in this directory's parent
-directory to build *DtCyber* and produce the *dtcyber* executable. For Windows, a
-Visual Studio solution file is available. On Windows, you will also need to execute
-`npm install` manually in folders `automation`, `rje-station`, `stk`, and `webterm`.
+directory, and specify the `all` target to build *DtCyber* and produce the *dtcyber*
+executable with supporting tools. For Windows, a Visual Studio solution file is
+available. On Windows, you will also need to execute `npm install` manually in folders
+`automation`, `rje-station`, `stk`, and `webterm`.
 2. Start the automated installation by executing the following command. On
-Windows, you will probably need to enable the *dtcyber* application to use TCP ports
+Windows, you might need to enable the *dtcyber* application to use TCP ports
 21, 22, and 23 too.
 
 | OS           | Command             |
@@ -208,6 +209,8 @@ display the full list of individual products available. The command can be used 
 install specific products by name or whole categories of products.
 - `make_ds_tape` (alias `mdt`) : creates a new deadstart tape that includes products
 installed by `install_product`.
+- `reconfigure` : applies customized system configuration parameters. See
+[Customizing the NOS 2.8.7 Configuration](#reconfig) for details.
 - `shutdown` : initiates graceful shutdown of the system.
 - `sync_tms` : synchronizes the NOS Tape Management System catalog with the
 cartridge tape definitions specified in the `volumes.json` configuration file
@@ -397,6 +400,124 @@ In case a basic installation is interrupted before completing successfully, use 
 |--------------|------------------------------------|
 | Linux/MacOS: | `sudo node install basic continue` |
 | Windows:     | `node install basic continue`      |
+
+## <a id="reconfig"></a>Customizing the NOS 2.8.7 Configuration
+Various parameters of the NOS 2.8.7 system configuration may be changed or added to
+accommodate personal preferences or local needs. For example:
+- Definitions in the system CMR deck may be updated to change parameters such as the
+machine identifier or system name.
+- Definitions may be updated or added to the system equipment deck to add peripheral
+equipment or change their parameters.
+- It is possible to define fully the system's PID/LID configuration.
+- The system's IP address may be defined.
+- The TCP/IP hosts statically known to the system may be defined.
+- The TCP/IP resource resolver configuration may be defined.
+- etc.
+
+A script named `reconfigure.js` applies customized configuration. It accepts zero or
+more command line arguments, each of which is taken as the pathname of a file
+containing configuration parameter definitions. If no command line arguments are
+provided, the script looks for a file named `site.cfg` in the current working
+directory, and if no such file exists, the script does nothing.
+
+The simplest way to use the script is to define all customized configuration parameters
+in a file named `site.cfg` and then invoke the script, as in:
+
+```
+node reconfigure
+```
+
+Each file of configuration parameters may contain one or more sections. Each section
+begins with a name delimited by `[` and `]` characters (like *DtCyber's* `cyber.ini`
+file). For example, here is a section named `CMRDECK`:
+
+```
+[CMRDECK]
+MID=AX
+NAME=MAX - CYBER 865 WITH CYBIS
+```
+
+The following section names are recognized:
+
+### [CMRDECK]
+Defines parameters to be edited into the system's primary CMR deck, CMRD01. Any CMR deck
+entry defined in the
+[NOS 2 Analysis Handbook](http://bitsavers.trailing-edge.com/pdf/cdc/cyber/nos2/60459300U_NOS_2_Analysis_Handbook_Jul94.pdf)
+may be specified in this section. If an MID entry is included, `reconfigure.js` will
+ensure that all other system configuration parameters dependent upon the MID value
+are also updated. This includes LID table definitions, TCPHOST file definitions, etc.
+
+### [EQPDECK]
+Defines parameters to be edited into the system's primary equipment deck, EQPD01. Any
+equipment deck entry defined in the
+[NOS 2 Analysis Handbook](http://bitsavers.trailing-edge.com/pdf/cdc/cyber/nos2/60459300U_NOS_2_Analysis_Handbook_Jul94.pdf)
+may be specified in this section. Example:
+
+```
+[EQPDECK]
+EQ015=DL,UN=1,CH=11,ST=OFF.
+REMOVE=014,015.
+```
+
+### [HOSTS]
+Defines the IP addresses and names of hosts in the TCP/IP network. These are edited
+into the system's TCPHOST file in the catalog of user NETADMN. The definitions may
+include the special entry for the local NOS 2.8.7 host, and this entry can be
+used to define the NOS 2.8.7 system's public IP address. The special entry for the
+local NOS 2.8.7 host is the entry that includes the alias `LOCALHOST_id` where `id`
+is the 2-character machine identifier of the host (as defined by MID in the CMR deck).
+Example:
+
+```
+[HOSTS]
+192.168.0.17 max.nostalgiccomputing.org max LOCALHOST_AX
+192.168.0.19 min.nostalgiccomputing.org min LOCALHOST_IN
+192.168.1.2  vax1.nostalgiccomputing.com vax1
+192.168.1.3  vax2.nostalgiccomputing.com vax2
+192.168.1.4  rsx11m.nostalgiccomputing.com rsx11m
+192.168.1.5  tops20.nostalgiccomputing.com tops20 pdp10
+192.168.2.2  bsd211.nostalgiccomputing.com bsd211 pdp11
+```
+
+### [LIDS]
+Defines the physical identifiers (PID's) and logical identifiers (LID's) known to the
+system. These are used by various NOS subsystems to identify hosts in the network and
+to route jobs and data between them. For example, PID's and LID's can be specified on
+the `ST` parameter of the NOS `ROUTE` command to specify on which host a job should
+execute or to which host a file should be sent. The QTF and PTF applications and
+subsystems such as CRS, NJF, RHF, SSF, and TLF use PID's and LID's to identify where jobs and files should be routed. 
+
+This section may include any entry allowed in a `LIDCMid` file. See the *LID/RHF
+Configuration Files* chapter of the
+[NOS 2 Analysis Handbook](http://bitsavers.trailing-edge.com/pdf/cdc/cyber/nos2/60459300U_NOS_2_Analysis_Handbook_Jul94.pdf)
+for details. Example:
+
+```
+[LIDS]
+NPID,PID=MAX,MFTYPE=NOS2.
+NLID,LID=MAX.
+NLID,LID=COS,AT=STOREF.
+NLID,LID=HNT,AT=STOREF.
+NLID,LID=MVS,AT=STOREF.
+NLID,LID=PR1,AT=STOREF.
+NLID,LID=ULT,AT=STOREF.
+NLID,LID=VX1,AT=STOREF.
+NLID,LID=VX2,AT=STOREF.
+NPID,PID=MIN,MFTYPE=NOS2.
+NLID,LID=MIN.
+NLID,LID=CMS,AT=STOREF.
+```
+
+### [RESOLVER]
+Defines the TCP/IP resource resolver configuration. This is saved as the file named
+TCPRSLV in the catalog of user NETADMN. The resource resolver is used by some
+applications to look up the IP addresses of hosts dynamically. Example:
+
+```
+[RESOLVER]
+search nostalgiccomputing.org
+nameserver 192.168.0.19
+```
 
 ## A Note About Anti-Virus Software
 The installation scripts automatically download tape images and other files, as
