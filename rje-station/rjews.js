@@ -67,7 +67,7 @@ const generateDefaultResponse = (req, res) => {
   res.write(    '<script src="js/jquery-3.3.1.min.js"></script>');
   res.write(  "</head>");
   res.write(  "<body>");
-  res.write(    "<h1>Available Systems</h1>");
+  res.write(    "<h1>Available RJE Services</h1>");
   res.write(    '<ul id="machines" class="machine-list"></ul>');
 
   for (const key of Object.keys(machineMap)) {

@@ -16,12 +16,12 @@
       "keys": "@cybis-keys.json"
     },
     {
-      "id": "m01",
-      "title": "NOS 2.8.7",
+      "id": "iaf",
+      "title": "IAF on NOS 2.8.7",
       "host": "127.0.0.1",
       "port": 23,
       "protocol": "telnet",
-      "terminal": "aterm.html?m=m01&t=NOS%202.8.7&r=45&c=80&a=1",
+      "terminal": "aterm.html?m=iaf&t=IAF%20on%20NOS%202.8.7&r=45&c=80&a=1",
       "overview": "@overview.json",
       "login-script":"/machines/nos2/scripts/login.txt",
       "file-transfer-scripts": "@file-transfer-scripts.json",
