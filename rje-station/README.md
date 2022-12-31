@@ -61,7 +61,7 @@ The contents of a typical configuration file look like this:
   "debug": false,
   "protocol":"hasp",
   "host":"localhost",
-  "port":2555
+  "port":2553
 }
 ```
 
