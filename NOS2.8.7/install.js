@@ -135,7 +135,7 @@ else {
     fs.writeFileSync("opt/installed.json", JSON.stringify(installedProductSet));
   }
   dtc.say(`${isContinueInstall ? "Continue" : "Begin"} ${isBasicInstall ? "basic" : "full"} installation of NOS 2.8.7 ...`)
-  then(() => {
+  .then(() => {
     return isContinueInstall ? dtc.exec("node", ["base-install", "continue"]) : dtc.exec("node", ["base-install"]);
   })
   .then(() => dtc.say(`Deadstart ${isBasicInstall ? "basic installed system" : "system to install optional products"} ...`))
