@@ -896,33 +896,31 @@ class DtCyber {
     if (typeof isExitAfterShutdown === "undefined") {
       isExitAfterShutdown = true;
     }
-    let promise = me.say("Starting shutdown sequence ...")
+    return me.say("Starting shutdown sequence ...")
     .then(() => me.dsd("[UNLOCK."))
     .then(() => me.dsd("CHECK#2000#"))
     .then(() => me.sleep(20000))
     .then(() => me.dsd("STEP."))
     .then(() => me.sleep(2000))
-    .then(() => new Promise((resolve, reject) => {
+    .then(() => {
       me.isExitOnClose = isExitAfterShutdown;
-      resolve();
-    }))
+      return Promise.resolve();
+    })
     .then(() => me.send("shutdown"))
     .then(() => me.expect([{ re: /Goodbye for now/ }]))
-    .then(() => me.say("Shutdown complete"));
-    if (isExitAfterShutdown === false) {
-      promise = promise
-      .then(() => new Promise((resolve, reject) => {
-        if (typeof me.dtCyberChild !== "undefined" && me.dtCyberChild.exitCode === null) {
+    .then(() => me.say("Shutdown complete"))
+    .then(() => {
+      if (isExitAfterShutdown || typeof me.dtCyberChild === "undefined" || me.dtCyberChild.exitCode !== null) {
+        return Promise.resolve();
+      }
+      else {
+        return new Promise((resolve, reject) => {
           me.shutdownResolver = () => {
             resolve();
           };
-        }
-        else {
-          resolve();
-        }
-      }));
-    }
-    return promise;
+        });
+      }
+    });
   }
 
   /*
