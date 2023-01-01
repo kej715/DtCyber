@@ -600,16 +600,23 @@ class DtCyber {
    *                    otherwise, an error is indicated
    *   strmId   - optional string identifying the stream to which patterns
    *              are applied. If omitted, the default is "dtCyber".
+   *   observer - optional callback to which all data received will
+   *              be sent.
    *
    * Returns:
    *   A promise that is resolved when a match is indicated.
    */
-  expect(patterns, strmId) {
+  expect(patterns, strmId, observer) {
     const me = this;
+    if (typeof strmid === "function" && typeof observer === "undefined") {
+      observer = strmid;
+      strmid = undefined;
+    }
     return new Promise((resolve, reject) => {
       let str = "";
       let mgr = me.getStreamMgr(strmId);
       mgr.startConsumer(data => {
+        if (typeof observer === "function") observer(data);
         if (str.length > 8192) {
           str = str.substring(str.length - 8192);
         }
@@ -810,12 +817,17 @@ class DtCyber {
    *   eq        - equipment number of the reader on the channel
    *   deck      - pathname of the card deck to be loaded
    *   jobParams - optional parameters substituted into the card deck
+   *   observer  - optional callback to which all data received will be sent
    *
    * Returns:
    *   A promise that is resolved when the job has completed.
    */
-  runJob(ch, eq, deck, jobParams) {
+  runJob(ch, eq, deck, jobParams, observer) {
     const me = this;
+    if (typeof jobParams === "function" && typeof observer === "undefined") {
+      observer = jobParams;
+      jobParams = undefined;
+    }
     return new Promise((resolve, reject) => {
       try {
         const lines = fs.readFileSync(deck, {encoding:"utf8"}).split("\n");
@@ -834,7 +846,7 @@ class DtCyber {
             deck = `${deck},${jobParams}`;
           }
           me.loadJob(ch, eq, deck)
-          .then(() => me.waitJob(jobName))
+          .then(() => me.waitJob(jobName, observer))
           .then(() => { resolve(); })
           .catch(err => { reject(err); });
         }
@@ -1089,18 +1101,19 @@ class DtCyber {
    * Normally, "jobname" is the jobname as specified by the job's job card.
    *
    * Arguments:
-   *   jobName - jobname of the job to watch (normally the name specified on the
-   *             job card)
+   *   jobName  - jobname of the job to watch (normally the name specified on the
+   *              job card)
+   *   observer - optional callback to which all data received will be sent
    *
    * Returns:
    *   A promise that is resolved when the job completes successfully (i.e., when
    *   it issues the dayfile message "*** jobName COMPLETE").
    */
-  waitJob(jobName) {
+  waitJob(jobName, observer) {
     return this.expect([
       {re:new RegExp(`\\*\\*\\* ${jobName} FAILED`, "i"), fn:new Error(`${jobName} failed`)},
       {re:new RegExp(`\\*\\*\\* ${jobName} COMPLETE`, "i")}
-    ], "printer");
+    ], "printer", observer);
   }
 
   /*

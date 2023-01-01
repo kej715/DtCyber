@@ -38,16 +38,6 @@ const cmdExtensions = [
     }
   },
   {
-    names: ["shutdown"],
-    desc:  "'shutdown' shutdown the system gracefully and exit",
-    fn:    (dtc, args) => {
-      return dtc.shutdown()
-      .then(() => {
-        process.exit(0);
-      });
-    }
-  },
-  {
     names: ["reconfigure", "rcfg"],
     desc:  "'reconfigure [pathname...]' apply site-defined configuration parameters",
     fn:    (dtc, args) => {
@@ -58,6 +48,16 @@ const cmdExtensions = [
         : ["reconfigure"]))
       .then(() => dtc.connect())
       .then(() => dtc.expect([ {re:/Operator> $/} ]));
+    }
+  },
+  {
+    names: ["shutdown"],
+    desc:  "'shutdown' shutdown the system gracefully and exit",
+    fn:    (dtc, args) => {
+      return dtc.shutdown()
+      .then(() => {
+        process.exit(0);
+      });
     }
   },
   {

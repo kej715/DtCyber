@@ -192,30 +192,6 @@ const cdcToAscii = displayCode => {
 };
 
 /*
- * findProperty
- *
- * Find a property in a section of the configuration object.
- *
- * Arguments:
- *   sectionKey - the name of the section to search
- *   propName   - the name of the property to find
- *
- * Result:
- *   the property value, or null if the property is not found
- */
-const findProperty = (sectionKey, propName) => {
-  propName = propName.toUpperCase();
-  if (typeof props[sectionKey] === "undefined") return null;
-  for (const prop of props[sectionKey]) {
-    let ei = prop.indexOf("=");
-    if (ei >= 0 && propName === prop.substring(0, ei).trim().toUpperCase()) {
-      return prop.substring(ei + 1).trim();
-    }
-  }
-  return null;
-};
-
-/*
  * getFile
  *
  * Obtain a file from the running system.
