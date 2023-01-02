@@ -269,7 +269,7 @@ class DtCyber {
           }
         });
       };
-      doConnect(Date.now() + 5000, err => {
+      doConnect(Date.now() + 10000, err => {
         if (err === null) {
           resolve();
         }
