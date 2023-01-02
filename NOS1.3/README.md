@@ -1,8 +1,8 @@
 # Installing NOS 1.3
 This directory tree contains a collection of artifacts facilitating the installation
-from scratch of the NOS 1.3 operating system on *DtCyber*. This distribution of the
+of the NOS 1.3 operating system on *DtCyber*. This distribution of the
 NOS 1.3 operating system is based upon a customized version preserved from Florida
-State Universsity. Following the instructions, below, will produce a working instance
+State University. Following the instructions, below, will produce a working instance
 of the operating system that supports:
 
 - Batch job submission via a simulated card reader
@@ -43,13 +43,19 @@ Visual Studio solution file is available. On Windows, you will also need to exec
 
 >`node install`
 
-The process initiated by the *node* command will take some time to complete, perhaps
-as much as 15 - 20 minutes, depending upon your host system's speed. You will see
-*DtCyber* start, and NOS 1.3 will be deadstarted and installed. The system will be
-left running as a background process when installation is complete, and the command
-window will be left at the DtCyber `Operator> ` prompt. Enter the `exit` command or
-the `shutdown` command to shutdown the system gracefully when you have finished
-playing with it, and you are ready to shut it down.
+The process initiated by the *node* command in this case will download a preconfigured,
+ready-to-run image of NOS 1.3 and activate it. Various system configuration parameters
+may be customized by defining customized values in a file named `site.cfg`. The
+installation process looks for this file and, if found, automatically executes the
+`reconfigure.js` script to apply its contents and produce a customized system
+configuration. See section [Customizing the NOS 1.3 Configuration](#reconfig), below,
+for details. If `site.cfg` is not found, `install.js` simply leaves the default
+configuration in place.
+
+The system will be left running as a background process when installation is complete,
+and the command window will be left at the DtCyber `Operator> ` prompt. Enter the `exit`
+command or the `shutdown` command to shutdown the system gracefully when you have
+finished playing with it, and you are ready to shut it down.
 
 To start *DtCyber* and NOS 1.3 again in the future, enter the following command:
 
@@ -68,8 +74,9 @@ extended to include the following:
 - `exit` : exits the operator interface and initiates graceful shutdown of the
 system.
 - `make_ds_tape` (alias `mdt`) : creates a new deadstart tape.
+- `reconfigure` : applies customized system configuration parameters. See
+[Customizing the NOS 1.3 Configuration](#reconfig) for details.
 - `shutdown` : initiates graceful shutdown of the system.
-
 
 ## Login
 You may log into the system using your web browser. *DtCyber* is configured to
@@ -189,10 +196,76 @@ you want it to interoperate with an IBM HASP service such as JES2 or RSCS runnin
 the Hercules IBM mainframe emulator, you must modify TIELINE and rebuild it. A job
 is available for doing this. See the **Customization** section, below, for details.
 
-## Customization
+## Installing a Full System from Scratch
+It is possible to install a full NOS 1.3 from scratch by specifying the `full` option
+when calling the `install.js` script, as in:
+
+```
+node install full
+```
+
+The ready-to-run NOS 1.3 image that is downloaded and activated by default is created in
+this way. Note that this option can take as much as twenty minutes or more,
+depending upon the speed and capacity of your host system.
+
+If the file `site.cfg` exists, the `reconfigure.js` script will be called to apply its
+contents. This enables the full, installed-from-scratch system to have a customized
+configuration.
+
+## Installing a Minimal System
+If you prefer to install a minimal NOS 1.3 system without PLATO, you may accomplish this
+by specifying the `basic` option when calling the `install.js` script, as in:
+
+```
+node install basic
+```
+
+The `basic` option causes `install.js` to install a minimal NOS 1.3 system from
+scratch without PLATO. However, if the file `site.cfg` exists, the `reconfigure.js`
+script will be called to apply its contents. This enables the basic system to have a
+customized configuration.
+
+## <a id="reconfig"></a>Customizing the NOS 1.3 Configuration
+Various parameters of the NOS 1.3 system configuration may be changed or added to
+accommodate personal preferences or local needs. In particular, definitions may be
+updated or added in the system CMR deck to change parameters such as the machine
+identifier or system name, to add peripheral equipment, or change peripheral
+equipment parameters.
+
+A script named `reconfigure.js` applies customized configuration. It accepts zero or
+more command line arguments, each of which is taken as the pathname of a file
+containing configuration parameter definitions. If no command line arguments are
+provided, the script looks for a file named `site.cfg` in the current working
+directory, and if no such file exists, the script does nothing.
+
+The simplest way to use the script is to define all customized configuration parameters
+in a file named `site.cfg` and then invoke the script, as in:
+
+```
+node reconfigure
+```
+
+Each file of configuration parameters may contain one or more sections. Each section
+begins with a name delimited by `[` and `]` characters (like *DtCyber's* `cyber.ini`
+file). Currently, only a section named `CMRDECK` is recognized, and it defines
+parameters to be edited into the system's primary CMR deck, CMRDECK. Any CMR deck
+entry defined in the
+[NOS 1 Installation Handbook](http://bitsavers.trailing-edge.com/pdf/cdc/cyber/nos/60435700D_NOS_Version_1_Installation_Handbook_Jul1976.pdf)
+may be specified in the section. Example:
+
+
+```
+[CMRDECK]
+MID=OE.
+NAME=MOE - CYBER 173 WITH PLATO
+```
+
+The following section names are recognized:
+
+## Source Code Customization
 After running `install.js`, the NOS 1.3 system has the artifacts needed to
-facilitate customization. In particular, the catalog of user `INSTALL` (UI=1)
-contains the following files:
+facilitate customization of the system's source code. In particular, the catalog of user
+`INSTALL` (UI=1) contains the following files:
 
 - **OPL485** : a *MODIFY* program library containing the source code of the operating
 system and various utility programs. Modsets have been pre-applied to correspond with
@@ -240,9 +313,10 @@ All of these jobs automatically edit the executables they produce into the file 
 `SYSTEM` in the catalog of user **INSTALL**. 
 
 ## Creating a New Deadstart Tape  
-The customization jobs insert the binaries they produce into the direct access file
-named `SYSTEM` in the catalog of user `INSTALL`. To create a new deadstart tape that includes the contents of `SYSTEM`, execute the following command at the `Operator> `
-prompt:
+The `reconfigure.js` tool and customization jobs insert the binaries they produce into
+the direct access file named `SYSTEM` in the catalog of user `INSTALL`. To create a new
+deadstart tape that includes the contents of `SYSTEM`, execute the following command at
+the `Operator> ` prompt:
 
 >Operator> `make_ds_tape`
 
