@@ -153,7 +153,16 @@ else {
   }
   
   promise = promise
-  .then(() => startSystem(["manual"]))
+  .then(() => dtc.start(["manual"], {
+    detached: true,
+    stdio:    [0, "ignore", 2],
+    unref:    false
+  }))
+  .then(() => dtc.sleep(5000))
+  .then(() => dtc.connect())
+  .then(() => dtc.expect([{ re: /Operator> $/ }]))
+  .then(() => dtc.console("idle off"))
+  .then(() => dtc.attachPrinter("LP5xx_C11_E5"))
   .then(() => dtc.dsd([
     "",
     "]!",
