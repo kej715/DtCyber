@@ -215,7 +215,8 @@ else {
     //  apply configuration customizations to the installed system.
     //
     if (fs.existsSync("site.cfg")) {
-      return dtc.disconnect()
+      return dtc.unmount(13, 0, 0)
+      .then(() => dtc.disconnect())
       .then(() => dtc.exec("node", ["reconfigure"]))
       .then(() => dtc.say("Make a new deadstart tape ..."))
       .then(() => dtc.exec("node", ["make-ds-tape"]))
