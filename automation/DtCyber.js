@@ -892,6 +892,20 @@ class DtCyber {
   }
 
   /*
+   * setExitOnClose
+   *
+   * Sets the indicator that determines whether the caller will exit automatically
+   * when DtCyber closes its operator command connection. Normally, DtCyber closes
+   * the connection only when it exits.
+   *
+   * Arguments:
+   *   isExitOnClose - true if the caller should exit on close, false otherwise
+   */
+  setExitOnClose(isExitOnClose) {
+    this.isExitOnClose = isExitOnClose;
+  }
+
+  /*
    * shutdown
    *
    * Execute a command sequence to shutdown DtCyber gracefully.

@@ -1,6 +1,6 @@
 # Installing KRONOS 2.1
 This directory tree contains a collection of artifacts facilitating the installation
-from scratch of the KRONOS 2.1 operating system on *DtCyber*. Following the instructions, below, will produce a working instance of the operating system that supports:
+of the KRONOS 2.1 operating system on *DtCyber*. Following the instructions, below, will produce a working instance of the operating system that supports:
 
 - Batch job submission via a simulated card reader
 - Interactive login via your favorite Telnet client
@@ -35,21 +35,27 @@ Visual Studio solution file is available. On Windows, you will also need to exec
 
 >`node install`
 
-The process initiated by the *node* command should take less than 5 minutes to complete,
-depending upon your host system's speed. You will see *DtCyber* start, and KRONOS 2.1
-will be deadstarted and installed. The system will be left running as a background
-process when installation is complete, and the command window will be left at the
-*DtCyber* `Operator> ` prompt. Enter the `exit` command or the `shutdown` command to
-shutdown the system gracefully when you have finished playing with it, and you are ready
-to shut it down.
+The process initiated by the *node* command in this case will download a preconfigured,
+ready-to-run image of KRONOS 2.1 and activate it. Various system configuration
+parameters may be customized by defining customized values in a file named `site.cfg`.
+The installation process looks for this file and, if found, automatically executes the
+`reconfigure.js` script to apply its contents and produce a customized system
+configuration. See section [Customizing the KRONOS 2.1 Configuration](#reconfig), below,
+for details. If `site.cfg` is not found, `install.js` simply leaves the default
+configuration in place.
+
+The system will be left running as a background process when installation is complete,
+and the command window will be left at the DtCyber `Operator> ` prompt. Enter the `exit`
+command or the `shutdown` command to shutdown the system gracefully when you have
+finished playing with it, and you are ready to shut it down.
 
 To start *DtCyber* and KRONOS 2.1 again in the future, enter the following command:
 
 >`node start`
 
-That's it. You have a fully operational Control Data Cyber 173 supercomputer
-running the KRONOS 2.1 operating system, complete with COBOL, FORTRAN IV, SYMPL,
-and COMPASS assembly language. Welcome back to supercomputing in the 1970's!
+That's it. You have a fully operational Control Data Cyber 173 mainframe computer
+system running the KRONOS 2.1 operating system, complete with COBOL, FORTRAN IV, SYMPL,
+and COMPASS assembly language. Welcome back to *big-iron* computing in the 1970's!
 
 ## Operator Command Extensions
 When installation completes successfully, and also when DtCyber is started using 
@@ -58,6 +64,10 @@ extended to include the following:
 
 - `exit` : exits the operator interface and initiates graceful shutdown of the
 system.
+- `make_ds_tape` (alias `mdt`) : creates a new deadstart tape from the file SYSTEM in
+the catalog of user INSTALL.
+- `reconfigure` (alias `rcfg`) : applies customized system configuration parameters. See
+[Customizing the KRONOS 2.1 Configuration](#reconfig) for details.
 - `shutdown` : initiates graceful shutdown of the system.
 
 
@@ -70,7 +80,7 @@ request your web browser to open the following URL:
 >`http://localhost:8004`
 
 it will display a page showing the systems served by the web server, and this will
-include only the KRONOS 2.1 system itself. When you click on the `m04` link associated
+include only the KRONOS 2.1 system itself. When you click on the `telex` link associated
 with the system, a browser-based ANSI X.364 (DEC VT-100 family) terminal emulator will
 launch, and you will be invited to login.
 
@@ -90,11 +100,57 @@ character mode. The browser-based terminal emulator operates in a compatible mod
 default. When you see the **/** prompt, the operating system is ready for you to enter
 commands.
 
-## Customization
-After running `install.js`, the KRONOS 1.3 system has the artifacts needed to
-facilitate customization. In particular, the catalog of user `INSTALL` (UI=1)
-contains the following file:
+## Installing a Full System from Scratch
+It is possible to install a full KRONOS 2.1 system from scratch by specifying the `full`
+option when calling the `install.js` script, as in:
+
+```
+node install full
+```
+
+The ready-to-run KRONOS 2.1 image that is downloaded and activated by default is created
+in this way. Note that this option can take as much as ten minutes or more,
+depending upon the speed and capacity of your host system.
+
+If the file `site.cfg` exists, the `reconfigure.js` script will be called to apply its
+contents. This enables the full, installed-from-scratch system to have a customized
+configuration.
+
+## <a id="reconfig"></a>Customizing the KRONOS 2.1 Configuration
+Various parameters of the KRONOS 2.1 system configuration may be changed or added to
+accommodate personal preferences or local needs. In particular, definitions may be
+updated or added in the system CMR deck to change parameters such as the system name,
+to add peripheral equipment, or to change peripheral equipment parameters.
+
+A script named `reconfigure.js` applies customized configuration. It accepts zero or
+more command line arguments, each of which is taken as the pathname of a file
+containing configuration parameter definitions. If no command line arguments are
+provided, the script looks for a file named `site.cfg` in the current working
+directory, and if no such file exists, the script does nothing.
+
+The simplest way to use the script is to define all customized configuration parameters
+in a file named `site.cfg` and then invoke the script, as in:
+
+```
+node reconfigure
+```
+
+Each file of configuration parameters may contain one or more sections. Each section
+begins with a name delimited by `[` and `]` characters (like *DtCyber's* `cyber.ini`
+file). Currently, only a section named `CMRDECK` is recognized, and it defines
+parameters to be edited into the system's primary CMR deck, CMRDECK. Example:
+
+```
+[CMRDECK]
+NAME=KRONOS 2.1 ON CYBER 173.
+```
+
+## Source Code Customization
+After running `install.js`, the KRONOS 2.1 system has the artifacts needed to
+facilitate customization of the operating system source code. In particular, the catalog
+of user `INSTALL` (UI=1) contains the following files:
 
 - **OPL404** : a *MODIFY* program library containing the source code of the operating
 system and various utility programs. Modsets have been pre-applied to correspond with
 executables on the supplied deadstart tape.
+- **SYSTEM** : a working copy of the system's deadstart file.
