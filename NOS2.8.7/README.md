@@ -83,7 +83,7 @@ it will display a page showing the systems served by the web server, and this wi
 include the NOS 2.8.7 system itself and the CYBIS subsystem running on it. When you
 click on the link associated with either of these systems, an appropriate browser-based
 terminal emulator will launch, and you will be invited to login. For example, when
-you click on the link for system `m01` (the NOS 2.8.7 system itself), an ANSI X.364
+you click on the link for system `iaf` (the NOS 2.8.7 system itself), an ANSI X.364
 (DEC VT-100 family) terminal emulator will launch. When you click on the link for
 `cybis`, a PLATO terminal emulator will launch.
 
@@ -163,7 +163,7 @@ card decks (i.e., batch jobs) to submit for execution on the host.
 You may also request the browser-based RJE station emulator for NOS 2.8.7 directly by
 entering the following URL:
 
->`http://localhost:8085/rje.html?m=m01&t=RBF%20on%20NOS%202.8.7`
+>`http://localhost:8085/rje.html?m=rbf&t=RBF%20on%20NOS%202.8.7`
 
 An RJE command line interface is available as well. The RJI CLI can be started using
 the following commands on Linux/MacOS:
@@ -212,7 +212,7 @@ display the full list of individual products available. The command can be used 
 install specific products by name or whole categories of products.
 - `make_ds_tape` (alias `mdt`) : creates a new deadstart tape that includes products
 installed by `install_product`.
-- `reconfigure` : applies customized system configuration parameters. See
+- `reconfigure` (alias `rcfg`) : applies customized system configuration parameters. See
 [Customizing the NOS 2.8.7 Configuration](#reconfig) for details.
 - `shutdown` : initiates graceful shutdown of the system.
 - `sync_tms` : synchronizes the NOS Tape Management System catalog with the

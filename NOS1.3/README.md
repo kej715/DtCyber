@@ -73,8 +73,9 @@ extended to include the following:
 
 - `exit` : exits the operator interface and initiates graceful shutdown of the
 system.
-- `make_ds_tape` (alias `mdt`) : creates a new deadstart tape.
-- `reconfigure` : applies customized system configuration parameters. See
+- `make_ds_tape` (alias `mdt`) : creates a new deadstart tape from the file SYSTEM in
+the catalog of user INSTALL.
+- `reconfigure` (alias `rcfg`) : applies customized system configuration parameters. See
 [Customizing the NOS 1.3 Configuration](#reconfig) for details.
 - `shutdown` : initiates graceful shutdown of the system.
 
@@ -90,7 +91,7 @@ it will display a page showing the systems served by the web server, and this wi
 include the NOS 1.3 system itself and the PLATO subsystem running on it. When you
 click on the link associated with either of these systems, an appropriate browser-based
 terminal emulator will launch, and you will be invited to login. For example, when
-you click on the link for system `m03` (the NOS 1.3 system itself), an ANSI X.364
+you click on the link for system `telex` (the NOS 1.3 system itself), an ANSI X.364
 (DEC VT-100 family) terminal emulator will launch. When you click on the link for
 `plato`, a PLATO terminal emulator will launch.
 
@@ -154,7 +155,7 @@ card decks (i.e., batch jobs) to submit for execution on the host.
 You may also request the browser-based RJE station emulator for NOS 1.3 directly by
 entering the following URL:
 
->`http://localhost:8085/rje.html?m=m03&t=EI200%20on%20NOS%201.3`
+>`http://localhost:8085/rje.html?m=ei200&t=EI200%20on%20NOS%201.3`
 
 An RJE command line interface is available as well. The RJI CLI can be started using
 the following commands on Linux/MacOS:
@@ -229,7 +230,7 @@ customized configuration.
 Various parameters of the NOS 1.3 system configuration may be changed or added to
 accommodate personal preferences or local needs. In particular, definitions may be
 updated or added in the system CMR deck to change parameters such as the machine
-identifier or system name, to add peripheral equipment, or change peripheral
+identifier or system name, to add peripheral equipment, or to change peripheral
 equipment parameters.
 
 A script named `reconfigure.js` applies customized configuration. It accepts zero or
@@ -253,19 +254,16 @@ entry defined in the
 [NOS 1 Installation Handbook](http://bitsavers.trailing-edge.com/pdf/cdc/cyber/nos/60435700D_NOS_Version_1_Installation_Handbook_Jul1976.pdf)
 may be specified in the section. Example:
 
-
 ```
 [CMRDECK]
 MID=OE.
 NAME=MOE - CYBER 173 WITH PLATO
 ```
 
-The following section names are recognized:
-
 ## Source Code Customization
 After running `install.js`, the NOS 1.3 system has the artifacts needed to
-facilitate customization of the system's source code. In particular, the catalog of user
-`INSTALL` (UI=1) contains the following files:
+facilitate customization of the operating system source code. In particular, the catalog
+of user `INSTALL` (UI=1) contains the following files:
 
 - **OPL485** : a *MODIFY* program library containing the source code of the operating
 system and various utility programs. Modsets have been pre-applied to correspond with
