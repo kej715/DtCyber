@@ -1,0 +1,18 @@
+~*
+~*  This job creates a new deadstart tape. It copies the direct access file
+~*  SYSTEM in the catalog of user INSTALL to a tape.
+~*
+MAKEDST.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,7777.
+$ATTACH,SYSTEM/NA.
+$ASSIGN,${1},TAPE,LB=KU,F=I,PO=W.
+$COPY,SYSTEM,TAPE.
+***
+*** MAKEDST COMPLETE
+***
+EXIT.
+***
+*** MAKEDST FAILED
+***
