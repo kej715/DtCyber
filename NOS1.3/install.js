@@ -83,7 +83,7 @@ if (isReadyToRunInstall) {
     fs.unlinkSync("./nos13rtr.zip");
   }
   dtc.say("Download NOS 1.3 ready-to-run package ...")
-  .then(() => dtc.wget("https://www.dropbox.com/s/gd4baxxzx3q9369/nos13rtr.zip?dl=1", ".", (byteCount, contentLength) => {
+  .then(() => dtc.wget("https://www.dropbox.com/s/v4ves0gqdubdni2/nos13rtr.zip?dl=1", ".", (byteCount, contentLength) => {
     maxProgressLen = reportProgress(byteCount, contentLength, maxProgressLen);
   }))
   .then(() => clearProgress(maxProgressLen))
