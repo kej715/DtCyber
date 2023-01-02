@@ -139,8 +139,6 @@ if (isReadyToRunInstall) {
 }
 //
 // Either a basic or full install from scratch has been requested.
-// Empty the tape image cache in case a download failure occurred during
-// a previous run and one or more tape images are incomplete.
 //
 else {
 
