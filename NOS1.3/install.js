@@ -153,10 +153,7 @@ else {
   }
   
   promise = promise
-  .then(() => dtc.start(["manual"]))
-  .then(() => dtc.expect([ {re:/Operator> $/} ]))
-  .then(() => dtc.say("DtCyber started"))
-  .then(() => dtc.attachPrinter("LP5xx_C11_E5"))
+  .then(() => startSystem(["manual"]))
   .then(() => dtc.dsd([
     "",
     "]!",
