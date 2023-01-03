@@ -17,6 +17,19 @@ const cmdExtensions = [
     }
   },
   {
+    names: ["reconfigure", "rcfg"],
+    desc:  "'reconfigure [pathname...]' apply site-defined configuration parameters",
+    fn:    (dtc, args) => {
+      return dtc.disconnect()
+      .then(() => dtc.exec("node",
+        typeof args !== "undefined" && args.length > 0
+        ? ["reconfigure"].concat(args.split(" "))
+        : ["reconfigure"]))
+      .then(() => dtc.connect())
+      .then(() => dtc.expect([ {re:/Operator> $/} ]));
+    }
+  },
+  {
     names: ["shutdown"],
     desc:  "'shutdown' shutdown the system gracefully and exit",
     fn:    (dtc, args) => {

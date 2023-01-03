@@ -269,7 +269,7 @@ class DtCyber {
           }
         });
       };
-      doConnect(Date.now() + 5000, err => {
+      doConnect(Date.now() + 10000, err => {
         if (err === null) {
           resolve();
         }
@@ -600,16 +600,23 @@ class DtCyber {
    *                    otherwise, an error is indicated
    *   strmId   - optional string identifying the stream to which patterns
    *              are applied. If omitted, the default is "dtCyber".
+   *   observer - optional callback to which all data received will
+   *              be sent.
    *
    * Returns:
    *   A promise that is resolved when a match is indicated.
    */
-  expect(patterns, strmId) {
+  expect(patterns, strmId, observer) {
     const me = this;
+    if (typeof strmid === "function" && typeof observer === "undefined") {
+      observer = strmid;
+      strmid = undefined;
+    }
     return new Promise((resolve, reject) => {
       let str = "";
       let mgr = me.getStreamMgr(strmId);
       mgr.startConsumer(data => {
+        if (typeof observer === "function") observer(data);
         if (str.length > 8192) {
           str = str.substring(str.length - 8192);
         }
@@ -810,12 +817,17 @@ class DtCyber {
    *   eq        - equipment number of the reader on the channel
    *   deck      - pathname of the card deck to be loaded
    *   jobParams - optional parameters substituted into the card deck
+   *   observer  - optional callback to which all data received will be sent
    *
    * Returns:
    *   A promise that is resolved when the job has completed.
    */
-  runJob(ch, eq, deck, jobParams) {
+  runJob(ch, eq, deck, jobParams, observer) {
     const me = this;
+    if (typeof jobParams === "function" && typeof observer === "undefined") {
+      observer = jobParams;
+      jobParams = undefined;
+    }
     return new Promise((resolve, reject) => {
       try {
         const lines = fs.readFileSync(deck, {encoding:"utf8"}).split("\n");
@@ -834,7 +846,7 @@ class DtCyber {
             deck = `${deck},${jobParams}`;
           }
           me.loadJob(ch, eq, deck)
-          .then(() => me.waitJob(jobName))
+          .then(() => me.waitJob(jobName, observer))
           .then(() => { resolve(); })
           .catch(err => { reject(err); });
         }
@@ -880,6 +892,20 @@ class DtCyber {
   }
 
   /*
+   * setExitOnClose
+   *
+   * Sets the indicator that determines whether the caller will exit automatically
+   * when DtCyber closes its operator command connection. Normally, DtCyber closes
+   * the connection only when it exits.
+   *
+   * Arguments:
+   *   isExitOnClose - true if the caller should exit on close, false otherwise
+   */
+  setExitOnClose(isExitOnClose) {
+    this.isExitOnClose = isExitOnClose;
+  }
+
+  /*
    * shutdown
    *
    * Execute a command sequence to shutdown DtCyber gracefully.
@@ -896,33 +922,31 @@ class DtCyber {
     if (typeof isExitAfterShutdown === "undefined") {
       isExitAfterShutdown = true;
     }
-    let promise = me.say("Starting shutdown sequence ...")
+    return me.say("Starting shutdown sequence ...")
     .then(() => me.dsd("[UNLOCK."))
     .then(() => me.dsd("CHECK#2000#"))
     .then(() => me.sleep(20000))
     .then(() => me.dsd("STEP."))
     .then(() => me.sleep(2000))
-    .then(() => new Promise((resolve, reject) => {
+    .then(() => {
       me.isExitOnClose = isExitAfterShutdown;
-      resolve();
-    }))
+      return Promise.resolve();
+    })
     .then(() => me.send("shutdown"))
     .then(() => me.expect([{ re: /Goodbye for now/ }]))
-    .then(() => me.say("Shutdown complete"));
-    if (isExitAfterShutdown === false) {
-      promise = promise
-      .then(() => new Promise((resolve, reject) => {
-        if (typeof me.dtCyberChild !== "undefined" && me.dtCyberChild.exitCode === null) {
+    .then(() => me.say("Shutdown complete"))
+    .then(() => {
+      if (isExitAfterShutdown || typeof me.dtCyberChild === "undefined" || me.dtCyberChild.exitCode !== null) {
+        return Promise.resolve();
+      }
+      else {
+        return new Promise((resolve, reject) => {
           me.shutdownResolver = () => {
             resolve();
           };
-        }
-        else {
-          resolve();
-        }
-      }));
-    }
-    return promise;
+        });
+      }
+    });
   }
 
   /*
@@ -1091,18 +1115,19 @@ class DtCyber {
    * Normally, "jobname" is the jobname as specified by the job's job card.
    *
    * Arguments:
-   *   jobName - jobname of the job to watch (normally the name specified on the
-   *             job card)
+   *   jobName  - jobname of the job to watch (normally the name specified on the
+   *              job card)
+   *   observer - optional callback to which all data received will be sent
    *
    * Returns:
    *   A promise that is resolved when the job completes successfully (i.e., when
    *   it issues the dayfile message "*** jobName COMPLETE").
    */
-  waitJob(jobName) {
+  waitJob(jobName, observer) {
     return this.expect([
       {re:new RegExp(`\\*\\*\\* ${jobName} FAILED`, "i"), fn:new Error(`${jobName} failed`)},
       {re:new RegExp(`\\*\\*\\* ${jobName} COMPLETE`, "i")}
-    ], "printer");
+    ], "printer", observer);
   }
 
   /*

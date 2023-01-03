@@ -1,6 +1,6 @@
 # Installing NOS 2.8.7
 This directory tree contains a collection of artifacts facilitating the installation
-from scratch of the NOS 2.8.7 operating system on *DtCyber*.
+of the NOS 2.8.7 operating system on *DtCyber*. 
 Following these instructions should produce a working instance of the
 operating system that supports batch job submission via a simulated card reader
 as well as interactive login via your favorite Telnet client.
@@ -46,18 +46,14 @@ Windows, you might need to enable the *dtcyber* application to use TCP ports
 | Linux/MacOS: | `sudo node install` |
 | Windows:     | `node install`      |
 
-The process initiated by the *node* command will take some time to complete, perhaps as
-much as two hours or more, depending upon your host system's speed and load. You will
-see console interaction, jobs submitted via the virtual card reader, and *DtCyber*
-shutting down and restarting a number of times to install the base NOS 2.8.7 operating
-system and all of the currently available optional products.
-
-Various system configuration parameters may be customized by defining customized values
-in a file named `site.cfg`. The installation process looks for this file and, if found,
-automatically executes the `reconfigure.js` script to apply its contents and produce a
-customized system configuration. See section
-[Customizing the NOS 2.8.7 Configuration](#reconfig), below, for details. If `site.cfg`
-is not found, `install.js` produces a system with a generic configuration.
+The process initiated by the *node* command in this case will download a generic,
+ready-to-run image of NOS 2.8.7 and activate it. Various system configuration parameters
+may be customized by defining customized values in a file named `site.cfg`. The
+installation process looks for this file and, if found, automatically executes the
+`reconfigure.js` script to apply its contents and produce a customized system
+configuration. See section [Customizing the NOS 2.8.7 Configuration](#reconfig), below,
+for details. If `site.cfg` is not found, `install.js` simply leaves the generic
+configuration in place.
 
 After `install.js` completes, NOS 2.8.7 and all currently available optional products
 will be fully installed and ready to use, and the system will be left running.
@@ -87,7 +83,7 @@ it will display a page showing the systems served by the web server, and this wi
 include the NOS 2.8.7 system itself and the CYBIS subsystem running on it. When you
 click on the link associated with either of these systems, an appropriate browser-based
 terminal emulator will launch, and you will be invited to login. For example, when
-you click on the link for system `m01` (the NOS 2.8.7 system itself), an ANSI X.364
+you click on the link for system `iaf` (the NOS 2.8.7 system itself), an ANSI X.364
 (DEC VT-100 family) terminal emulator will launch. When you click on the link for
 `cybis`, a PLATO terminal emulator will launch.
 
@@ -167,7 +163,7 @@ card decks (i.e., batch jobs) to submit for execution on the host.
 You may also request the browser-based RJE station emulator for NOS 2.8.7 directly by
 entering the following URL:
 
->`http://localhost:8085/rje.html?m=m01&t=RBF%20on%20NOS%202.8.7`
+>`http://localhost:8085/rje.html?m=rbf&t=RBF%20on%20NOS%202.8.7`
 
 An RJE command line interface is available as well. The RJI CLI can be started using
 the following commands on Linux/MacOS:
@@ -216,7 +212,7 @@ display the full list of individual products available. The command can be used 
 install specific products by name or whole categories of products.
 - `make_ds_tape` (alias `mdt`) : creates a new deadstart tape that includes products
 installed by `install_product`.
-- `reconfigure` : applies customized system configuration parameters. See
+- `reconfigure` (alias `rcfg`) : applies customized system configuration parameters. See
 [Customizing the NOS 2.8.7 Configuration](#reconfig) for details.
 - `shutdown` : initiates graceful shutdown of the system.
 - `sync_tms` : synchronizes the NOS Tape Management System catalog with the
@@ -351,11 +347,11 @@ use `git pull` to update the lists in your local repository clone, and then use
 `install all` to install them.
 
 ## Creating a New Deadstart Tape  
-Jobs initiated by `install_product` insert the binaries they produce into the
-direct access file named `PRODUCT` in the catalog of user `INSTALL`, and they also
-update the file named `DIRFILE` to specify the system libraries with which the
-binaries are associated. To create a new deadstart tape that includes the contents
-of `PRODUCT`, execute the following command:
+The `reconfigure.js` tool and jobs initiated by `install_product` insert the binaries
+they produce into the direct access file named `PRODUCT` in the catalog of user
+`INSTALL`, and they also update the file named `DIRFILE` to specify the system libraries
+with which the binaries are associated. To create a new deadstart tape that includes the
+contents of `PRODUCT`, execute the following command:
 
 >Operator> `make_ds_tape`
 
@@ -384,6 +380,24 @@ To restart the system using the new deadstart tape, use the `start.js` script, a
 | Linux/MacOS: | `sudo node start` |
 | Windows:     | `node start`      |
 
+## Installing a Full System from Scratch
+It is possible to install a full NOS 2.8.7 from scratch by specifying the `full` option
+when calling the `install.js` script, as in:
+
+| OS           | Commands                 |
+|--------------|--------------------------|
+| Linux/MacOS: | `sudo node install full` |
+| Windows:     | `node install full`      |
+
+The generic, ready-to-run NOS 2.8.7 image that is downloaded and activated by default
+is created in this way. Note that this option can take as much as three hours or more,
+depending upon the speed and capacity of your host system. All optional products are
+installed, one by one, and this involves building most of them from source code.
+
+If the file `site.cfg` exists, the `reconfigure.js` script will be called to apply its
+contents. This enables the full, installed-from-scratch system to have a customized
+configuration.
+
 ## Installing a Minimal System
 If you prefer to install a minimal NOS 2.8.7 system with a subset of optional
 products, or none of the optional products, you may accomplish this by specifying the
@@ -394,10 +408,10 @@ products, or none of the optional products, you may accomplish this by specifyin
 | Linux/MacOS: | `sudo node install basic` |
 | Windows:     | `node install basic`      |
 
-The `basic` option causes `install.js` to install a minimal NOS 2.8.7 system without any
-optional products. However, if the file `site.cfg` exists, the `reconfigure.js` script
-will be called to apply its contents. This enables the basic system to have a
-customized configuration.
+The `basic` option causes `install.js` to install a minimal NOS 2.8.7 system from
+scratch without any optional products. However, if the file `site.cfg` exists, the
+`reconfigure.js` script will be called to apply its contents. This enables the basic
+system to have a customized configuration.
 
 To install optional products atop the basic system, use the `install_product` command, as in:
 
@@ -443,7 +457,7 @@ file). For example, here is a section named `CMRDECK`:
 
 ```
 [CMRDECK]
-MID=AX
+MID=AX.
 NAME=MAX - CYBER 865 WITH CYBIS
 ```
 
