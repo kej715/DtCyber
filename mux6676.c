@@ -166,6 +166,9 @@ u16 mux6676TelnetConns;
 **  Private Variables
 **  -----------------
 */
+static char connectingMsg[]   = "\r\nConnecting to host - please wait ...";
+static char noPortsAvailMsg[] = "\r\nNo free ports available - please try again later.\r\n";
+
 #if DEBUG_6671
 static FILE *mux6671Log = NULL;
 #endif
@@ -973,6 +976,10 @@ static void mux667xCheckIo(MuxParam *mp)
 #else
                 fcntl(availablePort->connFd, F_SETFL, O_NONBLOCK);
 #endif
+                if (availablePort->mux->type == DtMux6676)
+                    {
+                    send(fd, connectingMsg, strlen(connectingMsg), 0);
+                    }
 #if DEBUG_NETIO
 #if DEBUG_6671
                 if (availablePort->mux->type == DtMux6671)
@@ -992,6 +999,10 @@ static void mux667xCheckIo(MuxParam *mp)
                 }
             else
                 {
+                if (mp->type == DtMux6676)
+                    {
+                    send(fd, noPortsAvailMsg, strlen(noPortsAvailMsg), 0);
+                    }
 #if defined(_WIN32)
                 closesocket(fd);
 #else
