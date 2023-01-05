@@ -1,0 +1,23 @@
+~*
+~*  This job compiles and installs the network definition
+~*  file of the local host. NAM will use this new definition
+~*  upon its next startup.
+~*
+COMPHCF.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$GET,HCFSRC/UN=NETADMN.
+$ATTACH,PRODUCT.
+$GTR,PRODUCT,HCFP.ABS/HCFP
+HCFP,I=HCFSRC.
+$REPLACE,HCFFILE.
+***
+*** COMPHCF COMPLETE
+***
+EXIT.
+***
+*** COMPHCF FAILED
+***
