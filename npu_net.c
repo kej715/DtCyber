@@ -935,8 +935,10 @@ static int npuNetCreateConnections(void)
             break;
 
         case ConnTypeTrunk:
-        case ConnTypeRevHasp:
         case ConnTypeNje:
+            if (ncbp->hostAddr.sin_port == 0) continue; // listen-only
+            // fall through
+        case ConnTypeRevHasp:
             switch (ncbp->state)
             {
             case StConnInit:

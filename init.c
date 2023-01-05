@@ -1347,11 +1347,6 @@ static void initNpuConnections(void)
                     exit(1);
                     }
                 fprintf(stderr, "Destination host %s, ", destHostAddr);
-                if (destHostPort == 0)
-                    {
-                    destHostPort = 175;                    // default NJE/TCP port number
-                    }
-                fprintf(stderr, "Destination port %d, ", destHostPort);
                 token = strtok(NULL, ", ");
                 if (token == NULL)
                     {
