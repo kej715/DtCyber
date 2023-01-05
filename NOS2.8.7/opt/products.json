@@ -51,6 +51,84 @@
     ]
   },
   {
+    "category": "cybis",
+    "desc": "CYBIS - Cyber Instructional System.",
+    "products": [
+      {
+        "name": "cybis",
+        "pre": [
+          "cybis-ndl.job",
+          "../decks/compile-ndlopl.job",
+          "cybis-eqpd.job",
+          "../make-ds-tape.js",
+          "cybis-newds.pre",
+          "cybis-start.job",
+          "cybis-start.pre",
+          "cybis-users.job",
+          "cybis-users.pre",
+          "cybis-mount-bin.pre"
+        ],
+        "post": [
+          "cybis-enable.job",
+          "cybis.post"
+        ],
+        "lib": 74,
+        "records": "TEXT/CONFIG-PP/EPE",
+        "url": "https://www.dropbox.com/s/jiythdoifn1f6bm/cybis-bin.tap?dl=1",
+        "desc": "CYBIS",
+        "depends": ["ses"]
+      }, 
+      {
+          "name": "cybis-lessons",
+          "desc": "CYBIS Exposed courseware and updates to group s",
+          "pre": ["cybis-lessons-mkfiles.pre",
+          "cybis-lessons-load.pre"],
+          "post": ["cybis-lessons.post"],
+          "depends": ["cybis"]
+      }
+    ]
+  },
+  {
+    "category": "database",
+    "desc": "CDC database software",
+    "products": [
+      {
+        "name": "cdcs2",
+        "pre": "nos.pre",
+        "post": [
+          "nos.post",
+          "cdcs2-users.job",
+          "cdcs2.post"
+        ],
+        "lib": 14,
+        "records": "ULIB/DMSLIB,ABS/CDCS2-OVL/DB$B20B",
+        "examples": [
+          "cdcs-create-schema.job",
+          "cdcs-cobol-subschema.job",
+          "cdcs-ftn-subschema.job",
+          "cdcs-qu-subschema.job",
+          "cdcs-create-md.job",
+          "cdcs-dbrec.job",
+          "cdcs-start.post"
+        ],
+        "desc": "CYBER Database Control System Version 2",
+        "depends": ["qu3"]
+      },
+      {
+        "name": "qu3",
+        "pre": "nos.pre",
+        "post": "nos.post",
+        "lib": 47,
+        "records": "ULIB/DMSLIB,ABS/QU-OVL/QU0700",
+        "examples": [
+          "qu3.pre",
+          "qu3.job"
+        ],
+        "desc": "Query Update Utility Version 3"
+      }
+    ]
+  },
+  {
     "category": "datacomm",
     "desc": "Data communication products",
     "products": [
@@ -75,6 +153,24 @@
         "depends": ["ses"]
       },
       {
+        "name": "njf",
+        "pre": [
+          "njf-mods.job",
+          "njf-ndl.job",
+          "../decks/compile-ndlopl.job",
+          "njf-create-hcf.job"
+        ],
+        "post": [
+          "njf-compile-hcf.job",
+          "njf-users.job",
+          "njf.post"
+        ],
+        "lib": 75,
+        "records": "PP/JFM-PROC/DSKRECV",
+        "url": "https://www.dropbox.com/s/oejtd05qkvqhk9u/NOSL700NJEF.tap?dl=1",
+        "desc": "Network Job Entry Facility"
+      },
+      {
         "name": "rbf5",
         "pre": "nos.pre",
         "post": [
@@ -90,6 +186,31 @@
     ]
   },
   {
+    "category": "graphics",
+    "desc": "Graphics and engineering software",
+    "products": [
+      {
+        "name": "gplot",
+        "post": [
+          "gplot-proc.job",
+          "gplot.post"
+        ],
+        "lib": 73,
+        "records": "PROC/GPLOT",
+        "url": "https://www.dropbox.com/s/l342xe61dqq8aw5/gplot.tap?dl=1",
+        "desc": "GPLOT and ULCC DIMFILM graphics library"
+      },
+      {
+        "name": "icem",
+        "pre": "icem.pre",
+        "post": "icem.post",
+        "lib": 0,
+        "url": "https://www.dropbox.com/s/1ufg3504xizju0l/icem.zip?dl=1",
+        "desc": "ICEM Design/Drafting and GPL compiler"
+      }
+    ]
+  },
+  {
     "category": "lang",
     "desc": "Programming languages and toolchains",
     "products": [
@@ -101,6 +222,36 @@
         "desc": "ALGOL 5 (ALGOL 60)"
       },
       {
+        "name": "algol68",
+        "lib": 65,
+        "records": "TEXT/A68-ULIB/A68LIB",
+        "url": "https://www.dropbox.com/s/6uo27ja4r9twaxj/algol68.tap?dl=1",
+        "desc": "ALGOL 68"
+      },
+      {
+        "name": "pascal4",
+        "lib": 43,
+        "records": "ABS/PASCAL,ULIB/PASCLIB",
+        "desc": "PASCAL-6000 V4.1.0 - replaces PASCAL/170",
+        "depends": ["pascal4-pf"]
+      },
+      {
+        "name": "pascal4-pf",
+        "post": [
+          "pascal4-pf-proc.job",
+          "pascal4-pf.post"
+        ],
+        "url": "https://www.dropbox.com/s/wsgz02lnrtayfiq/PASCAL6000V410.tap?dl=1",
+        "desc": "PASCAL-6000 V4.1.0 - retains PASCAL/170, installs PASCAL4 on UN=LIBRARY only"
+      },
+      {
+        "name": "pl1",
+        "lib": 66,
+        "records": "ABS/PLI-ULIB/PLILIB",
+        "url": "https://www.dropbox.com/s/twbq0xpmkjoakzj/pl1.tap?dl=1",
+        "desc": "PL/I"
+      },
+      {
         "name": "ses",
         "pre": [
           "ses-users.job",
@@ -110,6 +261,22 @@
         "records": "ABS/SES-ABS/EDT",
         "url": "https://www.dropbox.com/s/ome99ezh4jhz108/SES.tap?dl=1",
         "desc": "CYBIL and Software Engineering Services tools"
+      },
+      {
+        "name": "snobol",
+        "post": "snobol.post",
+        "lib": 68,
+        "records": "ABS/SNOBOL",
+        "url": "https://www.dropbox.com/s/4q4thkaghi19sro/snobol.tap?dl=1",
+        "desc": "CAL 6000 SNOBOL"
+      },
+      {
+        "name": "utlisp",
+        "post": "utlisp.post",
+        "lib": 69,
+        "records": "ABS/LISP",
+        "url": "https://www.dropbox.com/s/0wcq8e7m379ivyw/utlisp.tap?dl=1",
+        "desc": "University of Texas LISP"
       }
     ]
   },
@@ -122,6 +289,26 @@
         "lib": 70,
         "records": "PP/EYE-PP/DUD",
         "desc": "NOS Console Games (EYE, KAL, LIFE, LUNAR, MIC, PAC, SNK, TTT)"
+      },
+      {
+        "name": "i8080",
+        "post": [
+          "i8080-proc.job",
+          "i8080.post"
+        ],
+        "lib": 73,
+        "records": "PROC/CPM80-PROC/PLM80",
+        "url": "https://www.dropbox.com/s/ovgysfxbgpl18am/i8080.tap?dl=1",
+        "desc": "Intel 8080 cross-tools (CPM80, INTRP80, MAC80, PLM80)",
+        "depends": ["ses"]
+      },
+      {
+        "name": "spss",
+        "post": "spss.post",
+        "lib": 73,
+        "records": "PROC/SPSS",
+        "url": "https://www.dropbox.com/s/2eo63elqvhi0vwg/NOSSPSS6000V9.tap?dl=1",
+        "desc": "SPSS-6000 V9 - Statistical Package for the Social Sciences"
       }
     ]
   }
