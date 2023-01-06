@@ -65,12 +65,134 @@
 **  Private Typedef and Structure Definitions
 **  -----------------------------------------
 */
+typedef struct initConnType
+    {
+    char *name;
+    int  ordinal;
+    } InitConnType;
+
+typedef struct initLine
+    {
+    struct initLine *next;
+    char *sourceFile;
+    int lineNo;
+    char *text;
+    } InitLine;
+
+typedef struct initSection
+    {
+    struct initSection *next;
+    char *name;
+    InitLine *lines;
+    InitLine *curLine;
+    } InitSection;
+
 typedef struct initVal
     {
     char *valName;                          /* Value name */
     char *sectionName;                      /* Section Group Name */
     char *valStatus;                        /* Status String */
     } InitVal;
+
+/*
+**  ---------------------------
+**  Private Function Prototypes
+**  ---------------------------
+*/
+static void initAddLine(InitSection *section, char *fileName, int lineNo, char *text);
+static void initCyber(char *config);
+static InitSection *initFindSection(char *name);
+static void initHelpers(void);
+static void initNpuConnections(void);
+static void initOperator(void);
+static void initEquipment(void);
+static void initDeadstart(void);
+static int  initLookupConnType(char *connType);
+static int  initLookupDeviceType(char *deviceType);
+static bool initOpenSection(char *name);
+static int  initParseEquipmentDefn(char *defn, char *file, char *section, int lineNo,
+    u8 *eqNo, u8 *unitNo, u8 *channelNo, char **deviceParams);
+static int initParseTerminalDefn(char *defn, char *file, char *section, int lineNo,
+    u16 *tcpPort, u8 *claPort, u8 *claPortCount, char **remainder);
+static bool initGetOctal(char *entry, int defValue, long *value);
+static bool initGetInteger(char *entry, int defValue, long *value);
+static bool initGetString(char *entry, char *defString, char *str, int strLen);
+static bool initParseIpAddress(char *ipStr, u32 *ip, u16 *port);
+static void initReadStartupFile(FILE *fcb, char *fileName);
+static void initToUpperCase(char *str);
+
+/*
+**  ----------------
+**  Public Variables
+**  ----------------
+*/
+bool          bigEndian;
+extern u16    deadstartPanel[];
+extern u8     deadstartCount;
+ModelFeatures features;
+ModelType     modelType;
+char          persistDir[256];
+char          displayName[32];
+
+/*
+**  -----------------
+**  Private Variables
+**  -----------------
+*/
+static long chCount = 040; // will be adjusted if PP count specified as 012
+static InitSection *curSection;
+static char deadstart[80];
+static union
+    {
+    u32 number;
+    u8  bytes[4];
+    }
+endianCheck;
+static char equipment[80];
+static char helpers[80];
+static char npuConnections[80];
+static char operator[80];
+static InitSection *sections = NULL;
+static char *startupFile = "cyber.ini";
+
+static ModelFeatures features6400     = (IsSeries6x00);
+static ModelFeatures featuresCyber73  = (IsSeries70 | HasInterlockReg | HasCMU);
+static ModelFeatures featuresCyber173 =
+    (IsSeries170 | HasStatusAndControlReg | HasCMU);
+static ModelFeatures featuresCyber175 =
+    (IsSeries170 | HasStatusAndControlReg | HasInstructionStack | HasIStackPrefetch | Has175Float);
+static ModelFeatures featuresCyber840A =
+    (IsSeries800 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasMaintenanceChannel | HasCMU | HasChannelFlag
+     | HasErrorFlag | HasRelocationRegLong | HasMicrosecondClock | HasInstructionStack | HasIStackPrefetch);
+static ModelFeatures featuresCyber865 =
+    (IsSeries800 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasStatusAndControlReg
+     | HasRelocationRegShort | HasMicrosecondClock | HasInstructionStack | HasIStackPrefetch | Has175Float);
+
+static InitConnType connTypes[] =
+    {
+    "telnet",  ConnTypeTelnet,
+    "raw",     ConnTypeRaw,
+    "pterm",   ConnTypePterm,
+    "hasp",    ConnTypeHasp,
+    "rhasp",   ConnTypeRevHasp,
+    "nje",     ConnTypeNje,
+    "trunk",   ConnTypeTrunk,
+    "rs232",   ConnTypeRs232,
+    NULL,      -1
+    };
+
+static char *connTypeNames[] = // indexed by ordinal
+    {
+    "raw",
+    "pterm",
+    "rs232",
+    "telnet",
+    "hasp",
+    "rhasp",
+    "nje",
+    "trunk"
+    };
+
 static InitVal sectVals[] =
     {
     "CEJ/MEJ",                       "cyber", "Valid",
@@ -115,71 +237,6 @@ static InitVal sectVals[] =
     };
 
 /*
-**  ---------------------------
-**  Private Function Prototypes
-**  ---------------------------
-*/
-static void initCyber(char *config);
-static void initHelpers(void);
-static void initNpuConnections(void);
-static void initOperator(void);
-static void initEquipment(void);
-static void initDeadstart(void);
-static bool initOpenSection(char *name);
-static bool initGetOctal(char *entry, int defValue, long *value);
-static bool initGetInteger(char *entry, int defValue, long *value);
-static bool initGetString(char *entry, char *defString, char *str, int strLen);
-static bool initParseIpAddress(char *ipStr, u32 *ip, u16 *port);
-static void initToUpperCase(char *str);
-
-/*
-**  ----------------
-**  Public Variables
-**  ----------------
-*/
-bool          bigEndian;
-extern u16    deadstartPanel[];
-extern u8     deadstartCount;
-ModelFeatures features;
-ModelType     modelType;
-char          persistDir[256];
-char          displayName[32];
-
-/*
-**  -----------------
-**  Private Variables
-**  -----------------
-*/
-static FILE *fcb;
-static long sectionStart;
-static char *startupFile = "cyber.ini";
-static char deadstart[80];
-static char equipment[80];
-static char helpers[80];
-static char npuConnections[80];
-static char operator[80];
-static long chCount;
-static union
-    {
-    u32 number;
-    u8  bytes[4];
-    }
-endianCheck;
-
-static ModelFeatures features6400     = (IsSeries6x00);
-static ModelFeatures featuresCyber73  = (IsSeries70 | HasInterlockReg | HasCMU);
-static ModelFeatures featuresCyber173 =
-    (IsSeries170 | HasStatusAndControlReg | HasCMU);
-static ModelFeatures featuresCyber175 =
-    (IsSeries170 | HasStatusAndControlReg | HasInstructionStack | HasIStackPrefetch | Has175Float);
-static ModelFeatures featuresCyber840A =
-    (IsSeries800 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasMaintenanceChannel | HasCMU | HasChannelFlag
-     | HasErrorFlag | HasRelocationRegLong | HasMicrosecondClock | HasInstructionStack | HasIStackPrefetch);
-static ModelFeatures featuresCyber865 =
-    (IsSeries800 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasStatusAndControlReg
-     | HasRelocationRegShort | HasMicrosecondClock | HasInstructionStack | HasIStackPrefetch | Has175Float);
-
-/*
  **--------------------------------------------------------------------------
  **
  **  Public Functions
@@ -192,23 +249,43 @@ static ModelFeatures featuresCyber865 =
 **
 **  Parameters:     Name        Description.
 **                  config      name of the section to run
+**                  configFile  pathname of startup file
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
 void initStartup(char *config, char *configFile)
     {
-    startupFile = configFile;
+    char *dp;
+    FILE *fcb;
+    static char overlayFile[MaxFSPath];
+    char *sp;
+
+    /*
+    **  Check for the existance of a startup overlay file. If one exits,
+    **  read it first. This will ensure that its definitions take precedence
+    **  over definitions in the explicit startup file.
+    */
+    for (dp = overlayFile, sp = configFile; *sp != '\0'; dp++, sp++) *dp = *sp;
+    strcpy(dp, ".overlay");
+    fcb = fopen(overlayFile, "rb");
+    if (fcb != NULL)
+        {
+        initReadStartupFile(fcb, overlayFile);
+        fclose(fcb);
+        }
 
     /*
     **  Open startup file.
     */
-    fcb = fopen(startupFile, "rb");
+    fcb = fopen(configFile, "rb");
     if (fcb == NULL)
         {
-        perror(startupFile);
+        perror(configFile);
         exit(1);
         }
+    initReadStartupFile(fcb, configFile);
+    fclose(fcb);
 
     /*
     **  Determine endianness of the host.
@@ -232,6 +309,8 @@ void initStartup(char *config, char *configFile)
 #else
     printf("[Version Build Date: %s %s (RELEASE)]\n\n", __DATE__, __TIME__);
 #endif
+
+    curSection = NULL;
 
     initCyber(config);
     initDeadstart();
@@ -278,58 +357,13 @@ u32 initConvertEndian(u32 value)
 char *initGetNextLine(int *lineNo)
     {
     static char lineBuffer[MaxLine];
-    char        *cp;
-    bool        blank;
 
-    /*
-    **  Get next lineBuffer.
-    */
-    do
-        {
-        if ((fgets(lineBuffer, MaxLine, fcb) == NULL)
-            || (lineBuffer[0] == '['))
-            {
-            /*
-            **  End-of-file or end-of-section - return failure.
-            */
-            return (NULL);
-            }
+    if (curSection == NULL || curSection->curLine == NULL) return NULL;
+    strcpy(lineBuffer, curSection->curLine->text);
+    startupFile = curSection->curLine->sourceFile;
+    *lineNo = curSection->curLine->lineNo;
+    curSection->curLine = curSection->curLine->next;
 
-        /*
-        **  Determine if this line consists only of whitespace or comment and
-        **  replace all whitespace by proper space.
-        */
-        blank = TRUE;
-        for (cp = lineBuffer; *cp != 0; cp++)
-            {
-            if (blank && (*cp == ';'))
-                {
-                *lineNo += 1;
-                break;
-                }
-            else if (*cp == '\n')
-                {
-                *cp = '\0';
-                *lineNo += 1;
-                }
-            else if (*cp == '\r')
-                {
-                *cp = '\0';
-                }
-            else if (isspace(*cp))
-                {
-                *cp = ' ';
-                }
-            else
-                {
-                blank = FALSE;
-                }
-            }
-        } while (blank);
-
-    /*
-    **  Found a non-blank line - return to caller.
-    */
     return (lineBuffer);
     }
 
@@ -429,6 +463,8 @@ static void initCyber(char *config)
         fprintf(stderr, "(init   ) Required section [%s] not found in %s\n", config, startupFile);
         exit(1);
         }
+    
+    printf("(init   ) Loading root section [%s] from %s\n", config, startupFile);
 
     int     lineNo = 0;
     char    *line;
@@ -450,16 +486,16 @@ static void initCyber(char *config)
                     if (strcasecmp(curVal->valName, token) == 0)
                         {
                         goodToken = TRUE;
-                        fprintf(stderr, "(init   ) Section [%s], relative line %2d, '%s'(%s) (file '%s')\n",
-                                config, lineNo, token == NULL ? "NULL" : token, curVal->valStatus, startupFile);
+                        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: %-12s %s\n",
+                                startupFile, config, lineNo, token == NULL ? "NULL" : token, curVal->valStatus);
                         break;
                         }
                     }
                 }
             if (!goodToken)
                 {
-                fprintf(stderr, "(init   ) Section [%s], relative line %2d, invalid or deprecated configuration keyword '%s' in file '%s'\n",
-                        config, lineNo, token == NULL ? "NULL" : token, startupFile);
+                fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: invalid or deprecated configuration keyword '%s'\n",
+                        startupFile, config, lineNo, token == NULL ? "NULL" : token);
                 numErrors++;
                 }
             }
@@ -467,8 +503,8 @@ static void initCyber(char *config)
 
     if (numErrors > 0)
         {
-        fprintf(stderr, "(init   ) Section [%s], Correct the %d error(s) in '%s' and restart.\n",
-                config, numErrors, startupFile);
+        fprintf(stderr, "(init   ) Correct the %d error(s) in section '[%s]' of '%s' and restart.\n",
+                numErrors, config, startupFile);
         exit(1);
         }
 
@@ -486,21 +522,21 @@ static void initCyber(char *config)
     */
     if (initGetOctal("channels", 020, &chCount))
         {
-        fprintf(stderr, "(init   ) ***WARNING*** Entry 'channels' obsolete in section [%s] in '%s',\n", config, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: ***WARNING*** Entry 'channels' is obsolete\n", startupFile, config);
         fprintf(stderr, "                        channel count is determined from PP count.\n");
         exit(1);
         }
 
     if (initGetString("cmFile", "", dummy, sizeof(dummy)))
         {
-        fprintf(stderr, "(init   ) ***WARNING*** Entry 'cmFile' obsolete in section [%s] in '%s',\n", config, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: ***WARNING*** Entry 'cmFile' is obsolete\n", startupFile, config);
         fprintf(stderr, "                        please use 'persistDir' instead.\n");
         exit(1);
         }
 
     if (initGetString("ecsFile", "", dummy, sizeof(dummy)))
         {
-        fprintf(stderr, "(init   ) ***WARNING*** Entry 'ecsFile' obsolete in section [%s] in %s,\n", config, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: ***WARNING*** Entry 'ecsFile' is obsolete\n", startupFile, config);
         fprintf(stderr, "                        please use 'persistDir' instead.\n");
         exit(1);
         }
@@ -539,7 +575,8 @@ static void initCyber(char *config)
         {
         //        modelType = ModelCyber840A;
         //        features = featuresCyber840A;
-        fprintf(stderr, "(init   ) Model CYBER840A was experimental and is no longer supported in '%s',\n", startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: model CYBER840A was experimental and is no longer supported\n",
+            startupFile, config);
         exit(1);
         }
     else if (stricmp(model, "CYBER865") == 0)
@@ -549,7 +586,8 @@ static void initCyber(char *config)
         }
     else
         {
-        fprintf(stderr, "(init   ) Entry 'model' specified unsupported mainframe %s in section [%s] in '%s'\n", model, config, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: 'model' specified unsupported mainframe type '%s'\n",
+            config, startupFile, model);
         exit(1);
         }
 
@@ -565,7 +603,7 @@ static void initCyber(char *config)
     (void)initGetOctal("memory", 01000000, &memory);
     if (memory < 040000)
         {
-        fprintf(stderr, "(init   ) Entry 'memory' less than 40000B in section [%s] in '%s'\n", config, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'memory' less than 40000B\n", startupFile, config);
         exit(1);
         }
 
@@ -576,7 +614,7 @@ static void initCyber(char *config)
             && (memory != 03000000)
             && (memory != 04000000))
             {
-            fprintf(stderr, "(init   ) Cyber 170-865 memory must be configured in 262K increments in section [%s] in '%s'\n", config, startupFile);
+            fprintf(stderr, "(init   ) file '%s' section [%s]: Cyber 170-865 memory must be configured in 262K increments\n", startupFile, config);
             exit(1);
             }
         }
@@ -593,7 +631,7 @@ static void initCyber(char *config)
         break;
 
     default:
-        fprintf(stderr, "(init   ) Entry 'ecsbanks' invalid in section [%s] in '%s' - correct values are 0, 1, 2, 4, 8 or 16\n", config, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'ecsbanks' invalid - correct values are 0, 1, 2, 4, 8 or 16\n", startupFile, config);
         exit(1);
         }
 
@@ -609,13 +647,13 @@ static void initCyber(char *config)
         break;
 
     default:
-        fprintf(stderr, "(init   ) Entry 'esmbanks' invalid in section [%s] in '%s' - correct values are 0, 1, 2, 4, 8 or 16\n", config, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'esmbanks' invalid - correct values are 0, 1, 2, 4, 8 or 16\n", startupFile, config);
         exit(1);
         }
 
     if ((ecsBanks != 0) && (esmBanks != 0))
         {
-        fprintf(stderr, "(init   ) You can't have both 'ecsbanks' and 'esmbanks' in section [%s] in '%s'\n", config, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: 'ecsbanks' and 'esmbanks' are mutually exclusive\n", startupFile, config);
         exit(1);
         }
 
@@ -625,7 +663,7 @@ static void initCyber(char *config)
     initGetInteger("cpus", 1, &cpus);
     if ((cpus < 1) || (cpus > MaxCpus))
         {
-        fprintf(stderr, "(init   ) Entry 'cpus' invalid in section [%s] in '%s' -- correct values are 1 or 2\n", config, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'cpus' invalid - correct values are 1 or 2\n", startupFile, config);
         exit(1);
         }
     cpuCount = (int)cpus;
@@ -639,21 +677,21 @@ static void initCyber(char *config)
         struct stat s;
         if (stat(persistDir, &s) != 0)
             {
-            fprintf(stderr, "(init   ) Entry 'persistDir' in section [%s] in '%s'\n", config, startupFile);
-            fprintf(stderr, "          specifies non-existing directory '%s'.\n", persistDir);
+            fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'persistDir' specifies non-existing directory '%s'\n",
+                startupFile, config, persistDir);
             exit(1);
             }
 
         if ((s.st_mode & S_IFDIR) == 0)
             {
-            fprintf(stderr, "(init   ) Entry 'persistDir' in section [%s] in '%s'\n", config, startupFile);
-            fprintf(stderr, "          '%s' is not a directory.\n", persistDir);
+            fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'persistDir' specifies '%s' which is not a directory\n",
+                startupFile, config, persistDir);
             exit(1);
             }
         }
     else
         {
-        fprintf(stderr, "(init   ) Entry 'persistDir' was not found in section [%s] in '%s'\n", config, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'persistDir' is missing\n", startupFile, config);
         exit(1);
         }
 
@@ -667,7 +705,7 @@ static void initCyber(char *config)
         }
     else
         {
-        fprintf(stdout, "(init   ) Successfully Configured Model %s with %d CPUs with %ld banks of %s.\n", model, cpuCount, ecsBanks + esmBanks, ecsBanks != 0 ? "ESM" : "ECS");
+        fprintf(stdout, "(init   ) Successfully Configured Model %s with %d CPUs and %ld banks of %s.\n", model, cpuCount, ecsBanks + esmBanks, ecsBanks != 0 ? "ESM" : "ECS");
         }
 
 
@@ -677,7 +715,7 @@ static void initCyber(char *config)
     (void)initGetOctal("pps", 012, &pps);
     if ((pps != 012) && (pps != 024))
         {
-        fprintf(stderr, "(init   ) Entry 'pps' invalid in section [%s] in '%s' - supported values are 012 or 024 (octal)\n", config, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'pps' invalid - supported values are 012 or 024\n", startupFile, config);
         exit(1);
         }
 
@@ -702,7 +740,7 @@ static void initCyber(char *config)
     */
     if (!initGetString("deadstart", "", deadstart, sizeof(deadstart)))
         {
-        fprintf(stderr, "(init   ) Required entry 'deadstart' in section [%s] not found in '%s'\n", config, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s] Required entry 'deadstart' is missing\n", startupFile, config);
         exit(1);
         }
 
@@ -767,7 +805,7 @@ static void initCyber(char *config)
     */
     if (!initGetString("equipment", "", equipment, sizeof(equipment)))
         {
-        fprintf(stderr, "(init   ) Required entry 'equipment' in section [%s] not found in '%s'\n", config, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: Required entry 'equipment' is missing\n", startupFile, config);
         exit(1);
         }
 
@@ -815,7 +853,7 @@ static void initCyber(char *config)
              && (strcasecmp(dummy, "false") != 0)
              && (strcasecmp(dummy, "0") != 0))
         {
-        fprintf(stderr, "(init   ) Invalid value for 'idle' in section [%s] of '%s'\n", config, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid value for 'idle' - must be one of 'on' or 'off'\n", startupFile, config);
         exit(1);
         }
 #if defined(_WIN32)
@@ -863,7 +901,8 @@ static void initCyber(char *config)
         }
     else
         {
-        fprintf(stderr, "(init   ) WARNING: Unrecognized operating system type: '%s'\n", startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: WARNING: Unrecognized operating system type: '%s'\n",
+            startupFile, config, osType);
         }
 
     fprintf(stdout, "(init   ) Operating system type = '%s'.\n", osType);
@@ -899,13 +938,14 @@ static void initCyber(char *config)
 **------------------------------------------------------------------------*/
 static void initNpuConnections(void)
     {
-    long         blockSize;
-    int          claPort;
+    int          blockSize;
+    u8           claPort;
+    char         *cp;
     char         *line;
     char         *token;
-    long         tcpPort;
-    int          numConns;
-    u8           connType;
+    u16          tcpPort;
+    u8           numConns;
+    int          connType;
     int          len;
     int          lineNo;
     Ncb          *ncbp;
@@ -916,11 +956,12 @@ static void initNpuConnections(void)
     char         *destHostName;
     u8           destNode;
     u32          localHostIP;
-    long         networkValue;
     Pcb          *pcbp;
     long         pingInterval;
     TermRecoType recoType;
+    char         *remainder;
     char         strValue[256];
+    long         val;
 
     npuNetPreset();
 
@@ -936,14 +977,16 @@ static void initNpuConnections(void)
 
     /*-------------------START OF PRECHECK-------------------*/
 
-/*
- *  Pre-Check all of the parameters of this section
- */
+    /*
+     *  Pre-Check all of the parameters of this section
+     */
     if (!initOpenSection(npuConnections))
         {
         fprintf(stderr, "(init   ) Required section [%s] not found in '%s'\n", npuConnections, startupFile);
         exit(1);
         }
+    
+    printf("(init   ) Loading NPU section [%s] from %s\n", npuConnections, startupFile);
 
     InitVal *curVal;
     bool    goodToken = TRUE;
@@ -963,17 +1006,17 @@ static void initNpuConnections(void)
                     if (strcasecmp(curVal->valName, token) == 0)
                         {
                         goodToken = TRUE;
-                        fprintf(stderr, "(init   ) Section [%s], relative line %2d, '%s'(%s) (file '%s')\n",
-                                npuConnections, lineNo, token == NULL ? "NULL" : token, curVal->valStatus, startupFile);
+                        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: %-12s %s\n",
+                                startupFile, npuConnections, lineNo, token == NULL ? "NULL" : token, curVal->valStatus);
                         break;
                         }
                     }
                 }
             if (!goodToken)
                 {
-                fprintf(stderr, "(init   ) Section [%s], relative line %2d, invalid or deprecated configuration keyword '%s'(%s) in '%s'\n",
-                        npuConnections, lineNo, token == NULL ? "NULL" : token,
-                        curVal->valStatus == NULL ? "Invalid" : curVal->valStatus, startupFile);
+                fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: invalid or deprecated configuration keyword %-12s %s\n",
+                        startupFile, npuConnections, lineNo, token == NULL ? "NULL" : token,
+                        curVal->valStatus == NULL ? "Invalid" : curVal->valStatus);
                 numErrors++;
                 }
             }
@@ -981,8 +1024,8 @@ static void initNpuConnections(void)
 
     if (numErrors > 0)
         {
-        fprintf(stderr, "(init   ) Section [%s], Correct the %d error(s) in '%s' and restart.\n",
-                npuConnections, numErrors, startupFile);
+        fprintf(stderr, "(init   ) Correct the %d error(s) in section '[%s]' of '%s' and restart.\n",
+                numErrors, npuConnections, startupFile);
         exit(1);
         }
 
@@ -1008,8 +1051,8 @@ static void initNpuConnections(void)
     (void)initGetString("hostIP", "127.0.0.1", strValue, sizeof(strValue));
     if (initParseIpAddress(strValue, &npuNetHostIP, NULL) == FALSE)
         {
-        fprintf(stderr, "(init   ) Invalid 'hostIP' value %s in section [%s] of '%s' - correct values are IPv4 addresses\n",
-                strValue, npuConnections, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'hostIP' value %s - correct values are IPv4 addresses\n",
+                startupFile, npuConnections, strValue);
         exit(1);
         }
     fprintf(stderr, "(init   ) Local host IP address is '%s'\n", strValue);
@@ -1017,64 +1060,64 @@ static void initNpuConnections(void)
     /*
     **  Get optional coupler node number. If not specified, use default value of 1.
     */
-    initGetInteger("couplerNode", 1, &networkValue);
-    if ((networkValue < 1) || (networkValue > 255))
+    initGetInteger("couplerNode", 1, &val);
+    if ((val < 1) || (val > 255))
         {
-        fprintf(stderr, "(init   ) Invalid 'couplerNode' value %ld in section [%s] of '%s' - correct values are 1..255\n",
-                networkValue, npuConnections, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'couplerNode' value %ld - correct values are 1..255\n",
+                startupFile, npuConnections, val);
         exit(1);
         }
-    npuSvmCouplerNode = (u8)networkValue;
+    npuSvmCouplerNode = (u8)val;
     fprintf(stderr, "(init   ) Host coupler node value is %d\n", npuSvmCouplerNode);
 
     /*
     **  Get optional NPU node number. If not specified, use default value of 2.
     */
-    initGetInteger("npuNode", 2, &networkValue);
-    if ((networkValue < 1) || (networkValue > 255))
+    initGetInteger("npuNode", 2, &val);
+    if ((val < 1) || (val > 255))
         {
-        fprintf(stderr, "(init   ) Invalid 'npuNode' value %ld in section [%s] of '%s' - correct values are 1..255\n",
-                networkValue, npuConnections, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'npuNode' value %ld - correct values are 1..255\n",
+                startupFile, npuConnections, val);
         exit(1);
         }
-    npuSvmNpuNode = (u8)networkValue;
+    npuSvmNpuNode = (u8)val;
     fprintf(stderr, "(init   ) NPU node value is %d\n", npuSvmNpuNode);
 
     /*
     **  Get optional CDCNet node number. If not specified, use default value of 255.
     */
-    initGetInteger("cdcnetNode", 255, &networkValue);
-    if ((networkValue < 1) || (networkValue > 255))
+    initGetInteger("cdcnetNode", 255, &val);
+    if ((val < 1) || (val > 255))
         {
-        fprintf(stderr, "(init   ) Invalid 'cdcnetNode' value %ld in section [%s] of '%s' - correct values are 1..255\n",
-                networkValue, npuConnections, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'cdcnetNode' value %ld - correct values are 1..255\n",
+                startupFile, npuConnections, val);
         exit(1);
         }
-    cdcnetNode = (u8)networkValue;
+    cdcnetNode = (u8)val;
     fprintf(stderr, "(init   ) CDCNet node value is %d\n", cdcnetNode);
 
     /*
     **  Get optional privileged TCP and UDP port offsets for CDCNet TCP/IP passive connections. If not specified,
     **  use default value of 6600.
     */
-    initGetInteger("cdcnetPrivilegedTcpPortOffset", 6600, &networkValue);
-    if ((networkValue < 0) || (networkValue > 64000))
+    initGetInteger("cdcnetPrivilegedTcpPortOffset", 6600, &val);
+    if ((val < 0) || (val > 64000))
         {
-        fprintf(stderr, "(init   ) Invalid 'cdcnetPrivilegedTcpPortOffset' value %ld in section [%s] of '%s' - correct values are 0..64000\n",
-                networkValue, npuConnections, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'cdcnetPrivilegedTcpPortOffset' value %ld - correct values are 0..64000\n",
+                startupFile, npuConnections, val);
         exit(1);
         }
-    cdcnetPrivilegedTcpPortOffset = (u16)networkValue;
+    cdcnetPrivilegedTcpPortOffset = (u16)val;
     fprintf(stderr, "(init   ) TCP privileged port offset is %d\n", cdcnetPrivilegedTcpPortOffset);
 
-    initGetInteger("cdcnetPrivilegedUdpPortOffset", 6600, &networkValue);
-    if ((networkValue < 0) || (networkValue > 64000))
+    initGetInteger("cdcnetPrivilegedUdpPortOffset", 6600, &val);
+    if ((val < 0) || (val > 64000))
         {
-        fprintf(stderr, "(init   ) Invalid 'cdcnetPrivilegedUdpPortOffset' value %ld in section [%s] of '%s' - correct values are 0..64000\n",
-                networkValue, npuConnections, startupFile);
+        fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'cdcnetPrivilegedUdpPortOffset' value %ld - correct values are 0..64000\n",
+                startupFile, npuConnections, val);
         exit(1);
         }
-    cdcnetPrivilegedUdpPortOffset = (u16)networkValue;
+    cdcnetPrivilegedUdpPortOffset = (u16)val;
     fprintf(stderr, "(init   ) UDP privileged port offset is %d\n", cdcnetPrivilegedUdpPortOffset);
 
     /*
@@ -1092,16 +1135,13 @@ static void initNpuConnections(void)
         /*
         **  Parse initial keyword
         */
-        token = strtok(line, ",=");
-        if (token == NULL)
-            {
-            fprintf(stderr, "(init   ) Invalid syntax in section [%s] of '%s', relative line %2d\n",
-                    npuConnections, startupFile, lineNo);
-            exit(1);
-            }
+        for (cp = line; *cp != '\0' && *cp != ',' && *cp != '='; cp++)
+            ;
+        *cp = '\0';
 
-        if (strcmp(token, "terminals") == 0)
+        if (strcasecmp(line, "terminals") == 0)
             {
+            *cp = '=';
             /*
             ** Parse terminals definition.  Syntax is:
             **
@@ -1141,217 +1181,175 @@ static void initNpuConnections(void)
             **     <remote-name>   Name of node to which to connect for LIP and NJE
             **     <remote-port>   TCP port number to which Reverse HASP, NJE, or LIP will connect
             */
-            fprintf(stderr, "(init   ) Section [%s], relative line %2d, Terminals ", npuConnections, lineNo);
+            connType = initParseTerminalDefn(line, startupFile, npuConnections, lineNo,
+                &tcpPort, &claPort, &numConns, &remainder);
+            fprintf(stderr, "(init   ) [%s] line %2d: %6s TCP port %5d CLA port 0x%02x port count %3d",
+                npuConnections, lineNo, connTypeNames[connType], tcpPort, claPort, numConns);
 
-            token = strtok(NULL, ",");
-            if ((token == NULL) || !isdigit(token[0]))
+            rc = npuNetRegisterConnType(tcpPort, claPort, numConns, connType, &ncbp);
+            switch (rc)
                 {
-                fprintf(stderr, "\n(init   ) Invalid TCP port number %s in section [%s] of '%s', relative line %2d\n",
-                        token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
+            case NpuNetRegOk:
+                // no errors detected, do nothing
+                break;
+
+            case NpuNetRegOvfl:
+                fprintf(stderr, "\n(init   )   Too many terminal and trunk definitions (max of %d)\n", MaxTermDefs);
+                exit(1);
+
+            case NpuNetRegDupTcp:
+                fprintf(stderr, "\n(init   )   Duplicate TCP port %d\n", tcpPort);
+                exit(1);
+
+            case NpuNetRegDupCla:
+                fputs("\n(init   )   Duplicate CLA port\n", stderr);
+                exit(1);
+
+            case NpuNetRegNoMem:
+                fputs("\n(init   )   Failed to register terminals, out of memory\n", stderr);
+                exit(1);
+
+            default:
+                fprintf(stderr, "\n(init   )   Failed to register terminals, unexpected error %d\n", rc);
                 exit(1);
                 }
 
-            tcpPort = strtol(token, NULL, 10);
-            fprintf(stderr, "TCP port %5ld, ", tcpPort);
-
-            if (tcpPort > 65535)
-                {
-                fprintf(stderr, "\n(init   ) Invalid TCP port number %ld in section [%s] of '%s', relative line %2d\n",
-                        tcpPort, npuConnections, startupFile, lineNo);
-                exit(1);
-                }
-
-            /*
-            **  Parse starting CLA port number
-            */
-            token = strtok(NULL, ",");
-            if ((token == NULL) || !isxdigit(token[0]))
-                {
-                fprintf(stderr, "\n(init   ) Invalid CLA port number %s in section [%s] of '%s', relative line %2d\n",
-                        token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
-                exit(1);
-                }
-
-            networkValue = strtol(token, NULL, 16);
-
-            if ((networkValue < 1) || (networkValue > 255))
-                {
-                fprintf(stderr, "\n(init   ) Invalid CLA port number %ld in section [%s] of '%s', relative line %2d\n",
-                        networkValue, npuConnections, startupFile, lineNo);
-                fprintf(stderr, "(init   ) CLA port numbers must be between 01 and FF, and expressed in hexadecimal\n");
-                exit(1);
-                }
-            claPort = (u8)networkValue;
-            fprintf(stderr, "CLA port %02x, ", claPort);
-
-            /*
-            **  Parse number of connections on this port.
-            */
-            token = strtok(NULL, ",");
-            if ((token == NULL) || !isdigit(token[0]))
-                {
-                fprintf(stderr, "\n(init   ) Invalid number of connections %s in section [%s] of '%s', relative line %2d\n",
-                        token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
-                exit(1);
-                }
-            networkValue = strtol(token, NULL, 10);
-
-            if ((networkValue < 0) || (networkValue > 100))
-                {
-                fprintf(stderr, "\n(init   ) Invalid number of connections %ld in section [%s] of '%s', relative line %2d\n",
-                        networkValue, npuConnections, startupFile, lineNo);
-                fprintf(stderr, "(init   ) Connection count must be between 0 and 100\n");
-                exit(1);
-                }
-            numConns = (int)networkValue;
-            fprintf(stderr, "Connections allowed %2d, ", numConns);
-
-            /*
-            **  Parse NPU connection type.
-            */
-            token = strtok(NULL, ", ");
-            if (token == NULL)
-                {
-                fprintf(stderr, "\n(init   ) Invalid NPU connection type %s in section [%s] of '%s', relative line %2d\n",
-                        token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
-                exit(1);
-                }
             destHostAddr = NULL;
             blockSize    = DefaultBlockSize;
-            fprintf(stderr, "Connection type %6s, ", token);
 
-            if (strcmp(token, "raw") == 0)
+            switch (connType)
                 {
-                connType = ConnTypeRaw;
-                }
-            else if (strcmp(token, "pterm") == 0)
-                {
-                connType = ConnTypePterm;
-                }
-            else if (strcmp(token, "rs232") == 0)
-                {
-                connType = ConnTypeRs232;
-                }
-            else if (strcmp(token, "telnet") == 0)
-                {
-                connType = ConnTypeTelnet;
-                }
-            else if (strcmp(token, "hasp") == 0)
-                {
+            case ConnTypeRaw:
+            case ConnTypePterm:
+            case ConnTypeRs232:
+            case ConnTypeTelnet:
+                token = strtok(remainder, " ");
+                if (token != NULL)
+                    {
+                    if (strcasecmp(token, "auto") == 0)
+                        {
+                        recoType = TermRecoAuto;
+                        }
+                    else if (strcasecmp(token, "xauto") == 0)
+                        {
+                        recoType = TermRecoXauto;
+                        }
+                    else
+                        {
+                        fprintf(stderr, "\n(init   )   Unrecognized keyword '%s'\n", token);
+                        exit(1);
+                        }
+                    while (numConns-- > 0)
+                        {
+                        pcbp = npuNetFindPcb(claPort++);
+                        pcbp->controls.async.recoType = recoType;
+                        }
+                    }
+                break;
+
+            case ConnTypeHasp:
                 /*
                 **  terminals=<local-port>,<cla-port>,<connections>,hasp[,<block-size>]
                 */
-                connType  = ConnTypeHasp;
                 blockSize = DefaultHaspBlockSize;
-                token     = strtok(NULL, " ");
+                token     = strtok(remainder, " ");
                 if (token != NULL)
                     {
                     if ((*token == 'B') || (*token == 'b'))
                         {
-                        blockSize = strtol(token + 1, NULL, 10);
-                        if ((blockSize < MinBlockSize) || (blockSize > MaxBlockSize))
+                        val = strtol(token + 1, NULL, 10);
+                        if ((val < MinBlockSize) || (val > MaxBlockSize))
                             {
-                            fprintf(stderr, "\n(init   ) Invalid block size %ld in section [%s] of '%s', relative line %2d\n",
-                                    blockSize, npuConnections, startupFile, lineNo);
-                            fprintf(stderr, "(init   ) Block size must be between %d and %d\n", MinBlockSize, MaxBlockSize);
+                            fprintf(stderr, "\n(init   )   Invalid block size %ld - correct block sizes are %d .. %d\n",
+                                val, MinBlockSize, MaxBlockSize);
                             exit(1);
                             }
-                        fprintf(stderr, "Block size %ld, ", blockSize);
+                        blockSize = (int)val;
                         }
                     else
                         {
-                        fprintf(stderr, "\n(init   ) Invalid HASP block size specification '%s' in section [%s] of '%s', relative line %2d\n",
-                                token, npuConnections, startupFile, lineNo);
+                        fprintf(stderr, "\n(init   )   Invalid block size specification '%s'\n", token);
                         exit(1);
                         }
                     }
-                }
-            else if (strcmp(token, "rhasp") == 0)
-                {
+                pcbp = npuNetFindPcb(claPort);
+                pcbp->controls.hasp.blockSize = blockSize;
+                fprintf(stderr, ", block size %4d", blockSize);
+                break;
+
+            case ConnTypeRevHasp:
                 /*
                 **   terminals=<local-port>,<cla-port>,<connections>,rhasp,<remote-ip>:<remote-port>[,<block-size>]
                 */
-                connType = ConnTypeRevHasp;
-                token    = strtok(NULL, ", ");
+                token    = strtok(remainder, ", ");
                 if (token == NULL)
                     {
-                    fprintf(stderr, "\n(init   ) Missing remote host address in section [%s] of '%s', relative line %2d\n",
-                            npuConnections, startupFile, lineNo);
+                    fputs("\n(init   )   Missing remote host address\n", stderr);
                     exit(1);
                     }
                 destHostAddr = token;
                 if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
                     {
-                    fprintf(stderr, "\n(init   ) Invalid Reverse HASP address '%s' in section [%s] of '%s', relative line %2d\n",
-                            destHostAddr, npuConnections, startupFile, lineNo);
+                    fprintf(stderr, "\n(init   )   Invalid Reverse HASP address '%s'\n", destHostAddr);
                     exit(1);
                     }
                 if (destHostPort == 0)
                     {
-                    fprintf(stderr, "\n(init   ) Missing port number on Reverse HASP address '%s' in section [%s] of '%s', relative line %2d\n",
-                            destHostAddr, npuConnections, startupFile, lineNo);
+                    fprintf(stderr, "\n(init   )   Missing port number on Reverse HASP address '%s'\n", destHostAddr);
                     exit(1);
                     }
                 destHostName = destHostAddr;
-                fprintf(stderr, "Destination host %s, ", destHostName);
-
                 blockSize = DefaultRevHaspBlockSize;
                 token     = strtok(NULL, " ");
                 if (token != NULL)
                     {
                     if ((*token == 'B') || (*token == 'b'))
                         {
-                        blockSize = strtol(token + 1, NULL, 10);
-                        if ((blockSize < MinBlockSize) || (blockSize > MaxBlockSize))
+                        val = strtol(token + 1, NULL, 10);
+                        if ((val < MinBlockSize) || (val > MaxBlockSize))
                             {
-                            fprintf(stderr, "\n(init   ) Invalid block size %ld in section [%s] of '%s', relative line %2d\n",
-                                    blockSize, npuConnections, startupFile, lineNo);
-                            fprintf(stderr, "(init   ) Block size must be between %d and %d\n", MinBlockSize, MaxBlockSize);
+                            fprintf(stderr, "\n(init   )   Invalid block size %ld - correct block sizes are %d .. %d\n",
+                                val, MinBlockSize, MaxBlockSize);
                             exit(1);
                             }
+                        blockSize = (int)val;
                         }
                     else
                         {
-                        fprintf(stderr, "\n(init   ) Invalid Reverse HASP block size specification '%s' in section [%s] of '%s', relative line %2d\n",
-                                token, npuConnections, startupFile, lineNo);
+                        fprintf(stderr, "\n(init   )   Invalid Reverse HASP block size specification '%s'\n", token);
                         exit(1);
                         }
-                    fprintf(stderr, "Block size %ld, ", blockSize);
                     }
-                }
-            else if (strcmp(token, "nje") == 0)
-                {
+                fprintf(stderr, ", block size %4d", blockSize);
+                fprintf(stderr, ", destination host %s", destHostName);
+                break;
+
+            case ConnTypeNje:
                 /*
                 **   terminals=<local-port>,<cla-port>,1,nje,<remote-ip>:<remote-port>,<remote-name> ...
                 **       [,<local-ip>][,<block-size>]
                 */
                 if (numConns != 1)
                     {
-                    fprintf(stderr, "\n(init   ) Invalid port count on NJE definition (must be 1) in section [%s] of '%s', relative line %2d\n",
-                            npuConnections, startupFile, lineNo);
+                    fputs("\n(init   )   Invalid port count on NJE definition (must be 1)\n", stderr);
                     exit(1);
                     }
-                connType = ConnTypeNje;
-                token    = strtok(NULL, ", ");
+                token = strtok(remainder, ", ");
                 if (token == NULL)
                     {
-                    fprintf(stderr, "\n(init   ) Missing remote NJE node address in section [%s] of '%s', relative line %2d\n",
-                            npuConnections, startupFile, lineNo);
+                    fputs("\n(init   )   Missing remote NJE node address\n", stderr);
                     exit(1);
                     }
                 destHostAddr = token;
                 if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
                     {
-                    fprintf(stderr, "\n(init   ) Invalid remote NJE node address %s in section [%s] of '%s', relative line %2d\n",
-                            destHostAddr, npuConnections, startupFile, lineNo);
+                    fprintf(stderr, "\n(init   )   Invalid remote NJE node address %s\n", destHostAddr);
                     exit(1);
                     }
-                fprintf(stderr, "Destination host %s, ", destHostAddr);
                 token = strtok(NULL, ", ");
                 if (token == NULL)
                     {
-                    fprintf(stderr, "\n(init   ) Missing remote NJE node name in section [%s] of '%s', relative line %2d\n",
-                            npuConnections, startupFile, lineNo);
+                    fputs("\n(init   )   Missing remote NJE node name\n", stderr);
                     exit(1);
                     }
                 destHostName = token;
@@ -1364,218 +1362,139 @@ static void initNpuConnections(void)
                     {
                     if ((*token == 'B') || (*token == 'b'))
                         {
-                        blockSize = strtol(token + 1, NULL, 10);
-                        if (blockSize < MinNjeBlockSize)
+                        val = strtol(token + 1, NULL, 10);
+                        if (val < MinNjeBlockSize)
                             {
-                            fprintf(stderr, "\n(init   ) Invalid block size %ld in section [%s] of '%s', relative line %2d\n",
-                                    blockSize, npuConnections, startupFile, lineNo);
-                            fprintf(stderr, "(init   ) Block size must be at least %d\n", MinNjeBlockSize);
+                            fprintf(stderr, "\n(init   )   Invalid block size %ld - correct block size is at least %d\n",
+                                    val, MinNjeBlockSize);
                             exit(1);
                             }
-                        fprintf(stderr, "Block size %ld, ", blockSize);
+                        blockSize = (int)val;
                         }
                     else if ((*token == 'P') || (*token == 'p'))
                         {
                         pingInterval = strtol(token + 1, NULL, 10);
                         if (pingInterval < 0)
                             {
-                            fprintf(stderr, "\n(init   ) Invalid ping interval %ld in section [%s] of '%s', relative line %2d\n",
-                                    pingInterval, npuConnections, startupFile, lineNo);
+                            fprintf(stderr, "\n(init   )   Invalid ping interval %ld\n", pingInterval);
                             exit(1);
                             }
-                        fprintf(stderr, "Ping interval %ld, ", pingInterval);
                         }
                     else if (initParseIpAddress(token, &localHostIP, NULL) == FALSE)
                         {
-                        fprintf(stderr, "\n(init   ) Invalid local NJE node address %s in section [%s] of '%s', relative line %2d\n",
-                                token, npuConnections, startupFile, lineNo);
+                        fprintf(stderr, "\n(init   )   Invalid local NJE node address %s\n", token);
                         exit(1);
                         }
                     token = strtok(NULL, ", ");
                     }
-                }
-            else if (strcmp(token, "trunk") == 0)
-                {
+                fprintf(stderr, ", block size %4d", blockSize);
+                fprintf(stderr, ", destination host %s/%s", destHostName, destHostAddr);
+                fprintf(stderr, ", source address %d.%d.%d.%d",
+                    (localHostIP >> 24) & 0xff,
+                    (localHostIP >> 16) & 0xff,
+                    (localHostIP >> 8) & 0xff,
+                     localHostIP & 0xff);
+                fprintf(stderr, ", ping interval %ld", pingInterval);
+                break;
+
+            case ConnTypeTrunk:
                 /*
                 **   terminals=<local-port>,<cla-port>,1,trunk,<remote-ip>:<remote-port>,<remote-name>,<coupler-node>
                 */
                 if (numConns != 1)
                     {
-                    fprintf(stderr, "\n(init   ) Invalid port count on trunk definition (must be 1) in section [%s] of '%s', relative line %2d\n",
-                            npuConnections, startupFile, lineNo);
+                    fputs("\n(init   )   Invalid port count - must be 1\n", stderr);
                     exit(1);
                     }
-                connType = ConnTypeTrunk;
-                token    = strtok(NULL, ", ");
+                token    = strtok(remainder, ", ");
                 if (token == NULL)
                     {
-                    fprintf(stderr, "\n(init   ) Missing remote host address on trunk definition in section [%s] of '%s', relative line %2d\n",
-                            npuConnections, startupFile, lineNo);
+                    fputs("\n(init   )   Missing remote host address\n", stderr);
                     exit(1);
                     }
                 destHostAddr = token;
-                fprintf(stderr, "Destination host address %s, ", destHostAddr);
                 if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
                     {
-                    fprintf(stderr, "\n(init   ) Invalid remote host IP address %s on trunk definition in section [%s] of '%s', relative line %2d\n",
-                            destHostAddr, npuConnections, startupFile, lineNo);
+                    fprintf(stderr, "\n(init   )   Invalid remote host IP address %s\n", destHostAddr);
                     exit(1);
                     }
                 token = strtok(NULL, ", ");
                 if (token == NULL)
                     {
-                    fprintf(stderr, "\n(init   ) Missing remote node name on trunk definition in section [%s] of '%s', relative line %2d\n",
-                            npuConnections, startupFile, lineNo);
+                    fputs("\n(init   )   Missing remote node name\n", stderr);
                     exit(1);
                     }
                 destHostName = token;
                 initToUpperCase(destHostName);
-                fprintf(stderr, "Destination host name %s, ", destHostName);
 
                 token = strtok(NULL, " ");
                 if (token == NULL)
                     {
-                    fprintf(stderr, "\n(init   ) Missing coupler node number on trunk definition in section [%s] of '%s', relative line %2d\n",
-                            npuConnections, startupFile, lineNo);
+                    fputs("\n(init   )   Missing coupler node number\n", stderr);
                     exit(1);
                     }
-                networkValue = strtol(token, NULL, 10);
+                val = strtol(token, NULL, 10);
 
-                if ((networkValue < 1) || (networkValue > 255))
+                if ((val < 1) || (val > 255))
                     {
-                    fprintf(stderr, "\n(init   ) Invalid coupler node number %ld on trunk definition in section [%s] of '%s', relative line %2d\n",
-                            networkValue, npuConnections, startupFile, lineNo);
+                    fprintf(stderr, "\n(init   )   Invalid coupler node number %ld\n", val);
                     exit(1);
                     }
-                destNode = (u8)networkValue;
-                fprintf(stderr, "Coupler node %d, ", destNode);
-                }
-            else
-                {
-                fprintf(stderr, "\n(init   ) Invalid NPU connection type %s in section [%s] of '%s', relative line %2d\n",
-                        token == NULL ? "NULL" : token, npuConnections, startupFile, lineNo);
-                fprintf(stderr, "(init   ) NPU connection types must be one of: hasp, nje, pterm, raw, rhasp, rs232, telnet\n");
-                exit(1);
+                destNode = (u8)val;
+                fprintf(stderr, ", coupler node %d", destNode);
+                fprintf(stderr, ", destination host %s/%s", destHostName, destHostAddr);
+                break;
                 }
 
-            /*
-            **  Setup NPU connection type.
-            */
-            rc = npuNetRegisterConnType(tcpPort, claPort, numConns, connType, &ncbp);
-
-            if (rc == NpuNetRegOk)
+            switch (connType)
                 {
-                switch (connType)
+            case ConnTypeRevHasp:
+            case ConnTypeNje:
+            case ConnTypeTrunk:
+                len            = strlen(destHostName) + 1;
+                ncbp->hostName = (char *)malloc(len);
+                if (ncbp->hostName == NULL)
                     {
-                case ConnTypeRaw:
-                case ConnTypePterm:
-                case ConnTypeRs232:
-                case ConnTypeTelnet:
-                    token = strtok(NULL, " ");
-                    if (token != NULL)
+                    fputs("\n(init   )   Out of memory\n", stderr);
+                    exit(1);
+                    }
+                memcpy(ncbp->hostName, destHostName, len);
+                memset(&ncbp->hostAddr, 0, sizeof(ncbp->hostAddr));
+                ncbp->hostAddr.sin_family      = AF_INET;
+                ncbp->hostAddr.sin_addr.s_addr = htonl(destHostIP);
+                ncbp->hostAddr.sin_port        = htons(destHostPort);
+                if (connType == ConnTypeNje)
+                    {
+                    pcbp = npuNetFindPcb(claPort);
+                    pcbp->controls.nje.blockSize    = (int)blockSize;
+                    pcbp->controls.nje.pingInterval = (int)pingInterval;
+                    pcbp->controls.nje.localIP      = localHostIP;
+                    pcbp->controls.nje.remoteIP     = destHostIP;
+                    pcbp->controls.nje.inputBuf     = (u8 *)malloc(pcbp->controls.nje.blockSize);
+                    if (pcbp->controls.nje.inputBuf == NULL)
                         {
-                        if (strcasecmp(token, "auto") == 0)
-                            {
-                            recoType = TermRecoAuto;
-                            }
-                        else if (strcasecmp(token, "xauto") == 0)
-                            {
-                            recoType = TermRecoXauto;
-                            }
-                        else
-                            {
-                            fprintf(stderr, "\n(init   ) Unrecognized keyword \"%s\" on terminal definition in section [%s] of '%s', relative line %2d\n",
-                                    token, npuConnections, startupFile, lineNo);
-                            exit(1);
-                            }
-                        while (numConns-- > 0)
-                            {
-                            pcbp = npuNetFindPcb(claPort++);
-                            pcbp->controls.async.recoType = recoType;
-                            }
-                        }
-                    break;
-
-                case ConnTypeRevHasp:
-                case ConnTypeNje:
-                case ConnTypeTrunk:
-                    len            = strlen(destHostName) + 1;
-                    ncbp->hostName = (char *)malloc(len);
-                    if (ncbp->hostName == NULL)
-                        {
-                        fprintf(stderr, "\n(init   ) Failed to register terminal (out of memory) in section [%s] of '%s', relative line %2d\n",
-                                npuConnections, startupFile, lineNo);
+                        fputs("\n(init   )   Out of memory\n", stderr);
                         exit(1);
                         }
-                    memcpy(ncbp->hostName, destHostName, len);
-                    memset(&ncbp->hostAddr, 0, sizeof(ncbp->hostAddr));
-                    ncbp->hostAddr.sin_family      = AF_INET;
-                    ncbp->hostAddr.sin_addr.s_addr = htonl(destHostIP);
-                    ncbp->hostAddr.sin_port        = htons(destHostPort);
-                    if (connType == ConnTypeNje)
+                    pcbp->controls.nje.outputBuf = (u8 *)malloc(pcbp->controls.nje.blockSize);
+                    if (pcbp->controls.nje.outputBuf == NULL)
                         {
-                        pcbp = npuNetFindPcb(claPort);
-                        pcbp->controls.nje.blockSize    = (int)blockSize;
-                        pcbp->controls.nje.pingInterval = (int)pingInterval;
-                        pcbp->controls.nje.localIP      = localHostIP;
-                        pcbp->controls.nje.remoteIP     = destHostIP;
-                        pcbp->controls.nje.inputBuf     = (u8 *)malloc(pcbp->controls.nje.blockSize);
-                        if (pcbp->controls.nje.inputBuf == NULL)
-                            {
-                            fputs("(init   ) Out of memory, failed to allocate input buffer for NJE\n", stderr);
-                            exit(1);
-                            }
-                        pcbp->controls.nje.outputBuf = (u8 *)malloc(pcbp->controls.nje.blockSize);
-                        if (pcbp->controls.nje.outputBuf == NULL)
-                            {
-                            fputs("(init   ) Out of memory, failed to allocate output buffer for NJE\n", stderr);
-                            exit(1);
-                            }
+                        fputs("\n(init   )   Out of memory\n", stderr);
+                        exit(1);
                         }
-                    else if (connType == ConnTypeTrunk)
-                        {
-                        pcbp = npuNetFindPcb(claPort);
-                        pcbp->controls.lip.remoteNode = destNode;
-                        }
-                    break;
-
-                case ConnTypeHasp:
-                    pcbp = npuNetFindPcb(claPort);
-                    pcbp->controls.hasp.blockSize = blockSize;
-                    break;
                     }
-                fputs("Registered.\n", stderr);
-                }
-            switch (rc)
-                {
-            case NpuNetRegOk:
+                else if (connType == ConnTypeTrunk)
+                    {
+                    pcbp = npuNetFindPcb(claPort);
+                    pcbp->controls.lip.remoteNode = destNode;
+                    }
                 break;
 
-            case NpuNetRegOvfl:
-                fprintf(stderr, "\n(init   ) Too many terminal and trunk definitions (max of %d), in section [%s] of '%s', relative line %2d\n",
-                        MaxTermDefs, npuConnections, startupFile, lineNo);
-                exit(1);
-
-            case NpuNetRegDupTcp:
-                fprintf(stderr, "\n(init   ) Duplicate TCP port %ld for terminal definition in section [%s] of '%s', relative line %2d\n",
-                        tcpPort, npuConnections, startupFile, lineNo);
-                exit(1);
-
-            case NpuNetRegDupCla:
-                fprintf(stderr, "\n(init   ) Duplicate CLA port in terminal set starting with 0x%02x for connection type %s in section [%s] of '%s', relative line %2d\n",
-                        claPort, token, npuConnections, startupFile, lineNo);
-                exit(1);
-
-            case NpuNetRegNoMem:
-                fprintf(stderr, "\n(init   ) Failed to register terminals (out of memory) in section [%s] of '%s', relative line %2d\n",
-                        npuConnections, startupFile, lineNo);
-                exit(1);
-
             default:
-                fprintf(stderr, "\n(init   ) Failed to register terminals (unexpected rc=%d) in section [%s] of '%s', relative line %2d\n",
-                        rc, npuConnections, startupFile, lineNo);
-                exit(1);
+                break;
                 }
+
+            fputs("\n", stderr);
             }
         }
     }
@@ -1592,13 +1511,12 @@ static void initEquipment(void)
     {
     char *line;
     char *token;
-    char *deviceName;
-    int  eqNo;
-    int  unitNo;
-    int  channelNo;
-    u8   deviceIndex;
+    char *deviceParams;
+    u8   eqNo;
+    u8   unitNo;
+    u8   channelNo;
+    int  deviceIndex;
     int  lineNo;
-
 
     if (!initOpenSection(equipment))
         {
@@ -1606,54 +1524,50 @@ static void initEquipment(void)
         exit(1);
         }
 
-    printf("(init   ) Loading Equipment Section [%s] from '%s'\n", equipment, startupFile);
+    printf("(init   ) Loading equipment section [%s] from '%s'\n", equipment, startupFile);
 
     /*-------------------START OF PRECHECK-------------------*/
 
     /*
-     *  Pre-Check all of the parameters of this section
+     *  Pre-Check that all of the entries in this section name
+     *  valid equipment types.
      */
-
-    bool goodToken = TRUE;
     int  numErrors = 0;
-
     lineNo = 0;
+
     while ((line = initGetNextLine(&lineNo)) != NULL)
         {
         token = strtok(line, ",");
-        if (strlen(token) > 2)
+        if (token != NULL)
             {
-            goodToken = FALSE;
-
-            for (deviceIndex = 0; deviceIndex < deviceCount; deviceIndex++)
+            if (initLookupDeviceType(token) >= 0)
                 {
-                if (strcasecmp(token, deviceDesc[deviceIndex].id) == 0)
-                    {
-                    goodToken = TRUE;
-                    fprintf(stderr, "(init   ) Section [%s], relative line %2d, '%s'(Valid) (file '%s')\n",
-                            equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
-                    break;
-                    }
+                fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: %-10s Valid\n",
+                        startupFile, equipment, lineNo, token == NULL ? "NULL" : token);
                 }
-
-            if (!goodToken)
+            else
                 {
-                fprintf(stderr, "(init   ) Section [%s], relative line %2d, invalid device type '%s' in '%s'\n",
-                        equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
+                fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: invalid device type '%s'\n",
+                        startupFile, equipment, lineNo, token == NULL ? "NULL" : token);
                 numErrors++;
                 }
+            }
+        else
+            {
+            fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: invalid device definition '%s'\n",
+                startupFile, equipment, lineNo, token == NULL ? "NULL" : line);
+            numErrors++;
             }
         }
 
     if (numErrors > 0)
         {
-        fprintf(stderr, "(init   ) Section [%s], Correct the %d error(s) in %s and restart.\n",
-                equipment, numErrors, startupFile);
+        fprintf(stderr, "(init   ) Correct the %d error(s) in section '[%s]' of '%s' and restart.\n",
+                numErrors, equipment, startupFile);
         exit(1);
         }
 
     /*-------------------END OF PRECHECK-------------------*/
-
 
     initOpenSection(equipment);
 
@@ -1664,88 +1578,229 @@ static void initEquipment(void)
     while ((line = initGetNextLine(&lineNo)) != NULL)
         {
         /*
-        **  Parse device type.
+        **  Parse device type and lookup device index.
         */
-        token = strtok(line, ",");
-
-        if ((token == NULL) || (strlen(token) < 2))
-            {
-            fprintf(stderr, "(init   ) Section [%s], relative line %d, invalid device type %s in %s\n",
-                    equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
-            exit(1);
-            }
-
-        for (deviceIndex = 0; deviceIndex < deviceCount; deviceIndex++)
-            {
-            if (strcasecmp(token, deviceDesc[deviceIndex].id) == 0)
-                {
-                break;
-                }
-            }
-
-        if (deviceIndex == deviceCount)
-            {
-            fprintf(stderr, "(init   ) Section [%s], relative line %d, unknown device %s in %s\n",
-                    equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
-            exit(1);
-            }
-
-        /*
-        **  Parse equipment number.
-        */
-        token = strtok(NULL, ",");
-        if ((token == NULL) || (strlen(token) != 1) || !isoctal(token[0]))
-            {
-            fprintf(stderr, "(init   ) Section [%s], relative line %d, invalid equipment no %s in %s\n",
-                    equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
-            exit(1);
-            }
-
-        eqNo = strtol(token, NULL, 8);
-
-        /*
-        **  Parse unit number.
-        */
-        token = strtok(NULL, ",");
-        if ((token == NULL) || !isoctal(token[0]))
-            {
-            fprintf(stderr, "(init   ) Section [%s], relative line %d, invalid unit count %s in %s\n",
-                    equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
-            exit(1);
-            }
-
-        unitNo = strtol(token, NULL, 8);
-
-        /*
-        **  Parse channel number.
-        */
-        token = strtok(NULL, ", ");
-        if ((token == NULL) || (strlen(token) != 2) || !isoctal(token[0]) || !isoctal(token[1]))
-            {
-            fprintf(stderr, "(init   ) Section [%s], relative line %d, invalid channel no %s in %s\n",
-                    equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
-            exit(1);
-            }
-
-        channelNo = strtol(token, NULL, 8);
-
-        if ((channelNo < 0) || (channelNo >= chCount))
-            {
-            fprintf(stderr, "(init   ) Section [%s], relative line %d, channel no %s not permitted in %s\n",
-                    equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
-            exit(1);
-            }
-
-        /*
-        **  Parse optional file name.
-        */
-        deviceName = strtok(NULL, " ");
-
+        deviceIndex = initParseEquipmentDefn(line, startupFile, equipment, lineNo,
+            &eqNo, &unitNo, &channelNo, &deviceParams);
         /*
         **  Initialise device.
         */
-        deviceDesc[deviceIndex].init((u8)eqNo, (u8)unitNo, (u8)channelNo, deviceName);
+        deviceDesc[deviceIndex].init(eqNo, unitNo, channelNo, deviceParams);
         }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Parse an equipment definition.
+**
+**  Parameters:     Name         Description.
+**                  defn         text of the definition
+**                  file         name of file containing definition
+**                  section      name of section containing definition
+**                  lineNo       line number of the definition within its
+**                               source section
+**                  eqNo         parsed equipment number (output parameter)
+**                  unitNo       parsed unit number (output parameter)
+**                  channelNo    parsed channel number (output parameter)
+**                  deviceParams pointer to device parameter string
+**
+**  Returns:        Device index
+**
+**------------------------------------------------------------------------*/
+static int initParseEquipmentDefn(char *defn, char *file, char *section, int lineNo,
+                                  u8 *eqNo, u8 *unitNo, u8 *channelNo, char **deviceParams)
+    {
+    char *token;
+    u8   deviceIndex;
+
+    /*
+    **  Parse device type and lookup device index.
+    */
+    token = strtok(defn, ",");
+    if (token != NULL)
+        {
+        deviceIndex = initLookupDeviceType(token);
+        if (deviceIndex < 0)
+            {
+            fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: invalid device type '%s'\n",
+                    file, section, lineNo, token == NULL ? "NULL" : token);
+            exit(1);
+            }
+        }
+    else
+        {
+        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: invalid device definition '%s'\n",
+            file, section, lineNo, token == NULL ? "NULL" : defn);
+        exit(1);
+        }
+
+    /*
+    **  Parse equipment number.
+    */
+    token = strtok(NULL, ",");
+    if ((token == NULL) || (strlen(token) != 1) || !isoctal(token[0]))
+        {
+        fprintf(stderr, "(init   ) file '%s' section [%s] line %d: invalid equipment number %s\n",
+                file, section, lineNo, token == NULL ? "NULL" : token);
+        exit(1);
+        }
+
+    *eqNo = (u8)strtol(token, NULL, 8);
+
+    /*
+    **  Parse unit number.
+    */
+    token = strtok(NULL, ",");
+    if ((token == NULL) || !isoctal(token[0]))
+        {
+        fprintf(stderr, "(init   ) file '%s' section [%s] line %d: invalid unit number %s\n",
+                file, section, lineNo, token == NULL ? "NULL" : token);
+        exit(1);
+        }
+
+    *unitNo = (u8)strtol(token, NULL, 8);
+
+    /*
+    **  Parse channel number.
+    */
+    token = strtok(NULL, ", ");
+    if ((token == NULL) || (strlen(token) != 2) || !isoctal(token[0]) || !isoctal(token[1]))
+        {
+        fprintf(stderr, "(init   ) file '%s' section [%s] line %d: invalid channel number %s\n",
+                file, section, lineNo, token == NULL ? "NULL" : token);
+        exit(1);
+        }
+
+    *channelNo = (u8)strtol(token, NULL, 8);
+    if ((*channelNo < 0) || (*channelNo >= chCount))
+        {
+        fprintf(stderr, "(init   ) file '%s' section [%s] line %d: invalid channel number %s\n",
+                file, section, lineNo, token == NULL ? "NULL" : token);
+        exit(1);
+        }
+
+    /*
+    **  Parse optional file name.
+    */
+    *deviceParams = strtok(NULL, " ");
+
+    return deviceIndex;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Parse a terminal definition.
+**
+**  Parameters:     Name         Description.
+**                  defn         text of the definition
+**                  file         name of file containing definition
+**                  section      name of section containing definition
+**                  lineNo       line number of the definition within its
+**                               source section
+**                  
+**                  tcpPort      TCP listening port number (output parameter)
+**                  claPort      CLA port number (output parameter)
+**                  claPortCount CLA port count (output parameter)
+**                  remainder    pointer to remaining parameter string
+**
+**  Returns:        Connection type
+**
+**------------------------------------------------------------------------*/
+static int initParseTerminalDefn(char *defn, char *file, char *section, int lineNo,
+                                 u16 *tcpPort, u8 *claPort, u8 *claPortCount,
+                                 char **remainder)
+    {
+    int  connType;
+    char *token;
+    long val;
+
+    token = strtok(defn, ",=");
+    if (token == NULL || strcasecmp(token, "terminals") != 0)
+        {
+        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid terminal definition '%s'\n",
+            file, section, lineNo, token == NULL ? "NULL" : token);
+        exit(1);
+        }
+
+    token = strtok(NULL, ",");
+    if ((token == NULL) || !isdigit(token[0]))
+        {
+        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid TCP port number %s\n",
+            file, section, lineNo, token == NULL ? "NULL" : token);
+        exit(1);
+        }
+
+    val = strtol(token, NULL, 10);
+    if (val > 65535)
+        {
+        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid TCP port number %ld\n",
+            file, section, lineNo, val);
+        exit(1);
+        }
+    *tcpPort = (u16)val;
+
+    /*
+    **  Parse starting CLA port number
+    */
+    token = strtok(NULL, ",");
+    if ((token == NULL) || !isxdigit(token[0]))
+        {
+        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid CLA port number %s\n",
+            file, section, lineNo, token == NULL ? "NULL" : token);
+        exit(1);
+        }
+
+    val = strtol(token, NULL, 16);
+    if ((val < 1) || (val > 255))
+        {
+        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid CLA port number %ld\n",
+            file, section, lineNo, val);
+        fprintf(stderr, "(init   ) CLA port numbers must be between 0x01 and 0xFF, expressed in hexadecimal\n");
+        exit(1);
+        }
+    *claPort = (u8)val;
+
+    /*
+    **  Parse number of connections on this port.
+    */
+    token = strtok(NULL, ",");
+    if ((token == NULL) || !isdigit(token[0]))
+        {
+        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid number of connections %s\n",
+            file, section, lineNo, token == NULL ? "NULL" : token);
+        exit(1);
+        }
+
+    val = strtol(token, NULL, 10);
+    if ((val < 0) || (val > 100))
+        {
+        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid number of connections %ld\n",
+            file, section, lineNo, val);
+        fprintf(stderr, "(init   ) Connection count must be between 0 and 100\n");
+        exit(1);
+        }
+    *claPortCount = (u8)val;
+
+    /*
+    **  Parse NPU connection type.
+    */
+    token = strtok(NULL, ", ");
+    if (token == NULL)
+        {
+        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid NPU connection type %s\n",
+            file, section, lineNo, token == NULL ? "NULL" : token);
+        exit(1);
+        }
+    connType = initLookupConnType(token);
+    if (connType == -1)
+        {
+        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid NPU connection type %s\n",
+            file, section, lineNo, token);
+        fprintf(stderr, "(init   ) NPU connection types must be one of: hasp, nje, pterm, raw, rhasp, rs232, telnet\n");
+        exit(1);
+        }
+
+    *remainder = strtok(NULL, " ");
+
+    return connType;
     }
 
 /*--------------------------------------------------------------------------
@@ -1770,7 +1825,7 @@ static void initDeadstart(void)
         exit(1);
         }
 
-    printf("(init   ) Loading DeadStart Section [%s] from %s\n", deadstart, startupFile);
+    printf("(init   ) Loading deadstart section [%s] from %s\n", deadstart, startupFile);
 
     /*
     **  Process all deadstart panel switches.
@@ -1787,8 +1842,8 @@ static void initDeadstart(void)
             || !isoctal(token[0]) || !isoctal(token[1])
             || !isoctal(token[2]) || !isoctal(token[3]))
             {
-            fprintf(stderr, "(init   ) Section [%s], relative line %d, invalid deadstart setting %s in %s\n",
-                    deadstart, lineNo, token == NULL ? "NULL" : token, startupFile);
+            fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: invalid deadstart setting %s\n",
+                    startupFile, deadstart, lineNo, token == NULL ? "NULL" : token);
             exit(1);
             }
 
@@ -1877,43 +1932,16 @@ static void initOperator(void)
 **------------------------------------------------------------------------*/
 static bool initOpenSection(char *name)
     {
-    char lineBuffer[MaxLine];
-    char section[40];
-    u8   sectionLength = (u8)strlen(name) + 2;
-
-    /*
-    **  Build section label.
-    */
-    strcpy(section, "[");
-    strcat(section, name);
-    strcat(section, "]");
-
-    /*
-    **  Reset to beginning.
-    */
-    fseek(fcb, 0, SEEK_SET);
-
-    /*
-    **  Try to find section header.
-    */
-    do
+    curSection = initFindSection(name);
+    if (curSection != NULL)
         {
-        if (fgets(lineBuffer, MaxLine, fcb) == NULL)
-            {
-            /*
-            **  End-of-file - return failure.
-            */
-            return (FALSE);
-            }
-        //  20200905 (SJZ): Case Insensitive Comparison
-        } while (strncasecmp(lineBuffer, section, sectionLength) != 0);
-
-    /*
-    **  Remember start of section and return success.
-    */
-    sectionStart = ftell(fcb);
-
-    return (TRUE);
+        curSection->curLine = curSection->lines;
+        return TRUE;
+        }
+    else
+        {
+        return FALSE;
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -2005,6 +2033,8 @@ static bool initGetString(char *entry, char *defString, char *str, int strLen)
     int  lineNo;
     char *pos;
 
+    if (curSection == NULL) return FALSE;
+
     /*
     **  Leave room for zero terminator.
     */
@@ -2013,7 +2043,7 @@ static bool initGetString(char *entry, char *defString, char *str, int strLen)
     /*
     **  Reset to begin of section.
     */
-    fseek(fcb, sectionStart, SEEK_SET);
+    curSection->curLine = curSection->lines;
 
     /*
     **  Try to find entry.
@@ -2033,7 +2063,6 @@ static bool initGetString(char *entry, char *defString, char *str, int strLen)
             */
             return (FALSE);
             }
-        //  20200905 (SJZ): Case Insensitive Comparison
         } while (strncasecmp(line, entry, entryLength) != 0);
 
     /*
@@ -2157,6 +2186,267 @@ static bool initParseIpAddress(char *ipStr, u32 *ip, u16 *port)
         }
 
     return (FALSE);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Read a startup configuration file and build a section
+**                  chain from it
+**
+**  Parameters:     Name        Description.
+**                  fcb         pointer to open file control block
+**                  fileName    name of the file
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void initReadStartupFile(FILE *fcb, char *fileName)
+    {
+    char *cp;
+    InitSection *curSection;
+    char *lastNb;
+    static char lineBuffer[MaxLine];
+    int lineNo;
+    InitSection *section;
+    char *sp;
+
+    curSection = NULL;
+    lineNo = 0;
+
+    while (fgets(lineBuffer, sizeof(lineBuffer), fcb) != NULL)
+        {
+        lineNo += 1;
+        cp = lineBuffer;
+        if (*cp == '[')
+            {
+            sp = ++cp;
+            while (TRUE)
+                {
+                if (*cp == ']')
+                    {
+                    break;
+                    }
+                else if (*cp == '\0' || isspace(*cp))
+                    {
+                    *cp = '\0';
+                    fprintf(stderr, "(init   ) Invalid section identifier starting with [\"%s\" in %s\n", sp, fileName);
+                    exit(1);
+                    }
+                else
+                    {
+                    cp += 1;
+                    }
+                }
+            *cp = '\0';
+            curSection = initFindSection(sp);
+            if (curSection == NULL)
+                {
+                curSection = (InitSection *)calloc(1, sizeof(InitSection));
+                if (curSection != NULL)
+                    {
+                    curSection->next = sections;
+                    sections = curSection;
+                    curSection->name = (char *)malloc(strlen(sp) + 1);
+                    if (curSection->name != NULL)
+                        {
+                        strcpy(curSection->name, sp);
+                        }
+                    }
+                if (curSection == NULL || curSection->name == NULL)
+                    {
+                    fputs("(init   ) Failed to allocate section structure\n", stderr);
+                    exit(1);
+                    }
+                }
+            lineNo = 0;
+            }
+        else
+            {
+            while (isspace(*cp)) cp += 1;
+            if (*cp == '\0' || *cp == ';') continue; // empty line or comment
+            sp = lastNb = cp++;
+            while (*cp != '\0')
+                {
+                if (*cp == '\n' || *cp == '\r') break;
+                if (isspace(*cp))
+                    {
+                    *cp = ' ';
+                    }
+                else
+                    {
+                    lastNb = cp;
+                    }
+                cp += 1;
+                }
+            *(lastNb + 1) = '\0';
+            initAddLine(curSection, fileName, lineNo, sp);
+            }
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Add a line to the list of lines in a section
+**
+**  Parameters:     Name        Description.
+**                  section     point to section structure
+**                  fileName    name of file from which line was read
+**                  lineNo      line number of the line within the section
+**                  text        the text of the line
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void initAddLine(InitSection *section, char *fileName, int lineNo, char *text)
+    {
+    u8       chNo1, chNo2;
+    char     c;
+    u8       claPort1, claPort2;
+    u8       claPortCount;
+    int      connType;
+    char     *cp;
+    InitLine *cursor;
+    int      deviceIndex;
+    char     *params1, *params2;
+    u8       eqNo1, eqNo2;
+    InitLine *line;
+    char     lineBuffer[MaxLine];
+    u16      tcpPort;
+    u8       unitNo1, unitNo2;
+
+    for (cp = text; *cp != '\0' && *cp != ',' && *cp != '='; cp++)
+        ;
+    c = *cp;
+    *cp = '\0';
+    if (strcasecmp(text, "terminals") == 0)
+        {
+        *cp = c;
+        strcpy(lineBuffer, text);
+        connType = initParseTerminalDefn(lineBuffer, fileName, section->name, lineNo,
+            &tcpPort, &claPort1, &claPortCount, &params1);
+        //
+        //  If a terminal definition specifying the same CLA port already exists,
+        //  ignore this definition and allow the previous one to prevail.
+        //
+        for (line = section->lines; line != NULL; line = line->next)
+            {
+            if (strncasecmp(line->text, "terminals", 9) != 0
+                || strcmp(fileName, line->sourceFile) == 0) continue;
+            strcpy(lineBuffer, line->text);
+            connType = initParseTerminalDefn(lineBuffer, line->sourceFile, section->name, line->lineNo,
+                &tcpPort, &claPort2, &claPortCount, &params2);
+            if (claPort1 == claPort2) return;
+            }
+        }
+    else if (initLookupDeviceType(text) >= 0)
+        {
+        *cp = c;
+        strcpy(lineBuffer, text);
+        deviceIndex = initParseEquipmentDefn(lineBuffer, fileName, section->name, lineNo,
+            &eqNo1, &unitNo1, &chNo1, &params1);
+        //
+        //  If an equipment definition specifying the same equipment, unit, and channel
+        //  number already exists, ignore this definition and allow the previous one to prevail.
+        //
+        for (line = section->lines; line != NULL; line = line->next)
+            {
+            if (strcmp(fileName, line->sourceFile) == 0) continue;
+            strcpy(lineBuffer, line->text);
+            deviceIndex = initParseEquipmentDefn(lineBuffer, line->sourceFile, section->name, line->lineNo,
+                &eqNo2, &unitNo2, &chNo2, &params2);
+            if (chNo1 == chNo2 && eqNo1 == eqNo2 && unitNo1 == unitNo2) return;
+            }
+        }
+    else
+        {
+        *cp = c;
+        }
+
+    line = (InitLine *)calloc(1, sizeof(InitLine));
+    if (line != NULL)
+        {
+        line->sourceFile = fileName;
+        line->lineNo = lineNo;
+        line->text = (char *)malloc(strlen(text) + 1);
+        if (line->text != NULL)
+            {
+            strcpy(line->text, text);
+            }
+        if (line == NULL || line->text == NULL)
+            {
+            fputs("(init   ) Failed to allocate section structure\n", stderr);
+            exit(1);
+            }
+        }
+    if (section->lines == NULL)
+        {
+        section->lines = line;
+        }
+    else
+        {
+        cursor = section->lines;
+        while (cursor->next != NULL) cursor = cursor->next;
+        cursor->next = line;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Find a named section in the section list
+**
+**  Parameters:     Name        Description.
+**                  name        the section name to find
+**
+**  Returns:        Pointer to section structure, or NULL if not found.
+**
+**------------------------------------------------------------------------*/
+static InitSection *initFindSection(char *name)
+    {
+    InitSection *section;
+
+    for (section = sections; section != NULL; section = section->next)
+        {
+        if (strcasecmp(section->name, name) == 0) return section;
+        }
+    return NULL;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Lookup the ordinal of a connection type identifier
+**
+**  Parameters:     Name        Description.
+**                  connType    the connection type identifier
+**
+**  Returns:        oridinal of connection type, or -1 if type not recognized
+**
+**------------------------------------------------------------------------*/
+static int initLookupConnType(char *connType)
+    {
+    int i;
+
+    for (i = 0; connTypes[i].name != NULL; i++)
+        {
+        if (strcasecmp(connType, connTypes[i].name) == 0)
+            return connTypes[i].ordinal;
+        }
+    return -1;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Lookup the device index of a device type
+**
+**  Parameters:     Name        Description.
+**                  deviceType  the type to lookup
+**
+**  Returns:        index of device type, or -1 if device type not found
+**
+**------------------------------------------------------------------------*/
+static int initLookupDeviceType(char *deviceType)
+    {
+    int deviceIndex;
+
+    for (deviceIndex = 0; deviceIndex < deviceCount; deviceIndex++)
+        {
+        if (strcasecmp(deviceType, deviceDesc[deviceIndex].id) == 0) return deviceIndex;
+        }
+    return -1;
     }
 
 /*--------------------------------------------------------------------------
