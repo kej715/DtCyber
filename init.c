@@ -256,8 +256,9 @@ static InitVal sectVals[] =
 **------------------------------------------------------------------------*/
 void initStartup(char *config, char *configFile)
     {
-    char *dp;
+    char *cp;
     FILE *fcb;
+    int len;
     static char overlayFile[MaxFSPath];
     char *sp;
 
@@ -266,8 +267,18 @@ void initStartup(char *config, char *configFile)
     **  read it first. This will ensure that its definitions take precedence
     **  over definitions in the explicit startup file.
     */
-    for (dp = overlayFile, sp = configFile; *sp != '\0'; dp++, sp++) *dp = *sp;
-    strcpy(dp, ".overlay");
+    cp = strrchr(configFile, '.');
+    if (cp != NULL)
+        {
+        len = cp - configFile;
+        }
+    else
+        {
+        len = strlen(configFile);
+        }
+    memcpy(overlayFile, configFile, len);
+    strcpy(overlayFile + len, ".ovl");
+
     fcb = fopen(overlayFile, "rb");
     if (fcb != NULL)
         {
