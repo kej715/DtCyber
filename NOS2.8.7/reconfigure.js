@@ -207,11 +207,11 @@ const cdcToAscii = displayCode => {
 const getFile = (filename, options) => {
   const job = [
     `$GET,FILE=${filename}.`,
-    "$COPY,FILE."
+    "$COPYSBF,FILE."
   ];
   if (typeof options === "undefined") options = {};
   options.jobname = "GETFILE";
-  return submitJob(job, options);
+  return dtc.createJobWithOutput(12, 4, job, options);
 };
 
 /*
@@ -230,11 +230,13 @@ const getFile = (filename, options) => {
 const getSystemRecord = (rid, options) => {
   const job = [
     "$COMMON,SYSTEM.",
-    `$GTR,SYSTEM,OUTPUT.${rid}`,
+    `$GTR,SYSTEM,REC.${rid}`,
+    "$REWIND,REC.",
+    "$COPYSBF,REC."
   ];
   if (typeof options === "undefined") options = {};
   options.jobname = "GTRSYS";
-  return submitJob(job, options);
+  return dtc.createJobWithOutput(12, 4, job, options);
 };
 
 /*
@@ -392,150 +394,12 @@ const processEqpdProps = () => {
 const replaceFile = (filename, data, options) => {
   const job = [
     `$COPY,INPUT,FILE.`,
-    `$REPLACE,FILE=${filename}.`,
+    `$REPLACE,FILE=${filename}.`
   ];
   if (typeof options === "undefined") options = {};
   options.jobname = "REPFILE";
   options.data    = data;
-  return submitJob(job, options);
-};
-
-/*
- * submitJob
- *
- * Submit a job to the running system.
- *
- * Arguments:
- *   body    - body of the job
- *   options - optional object providing parameters such as
- *             job nqme, credentials, data, and HTTP hostname
- *
- * Returns:
- *   A promise that is resolved when the job has completed.
- *   The value of the promise is the job output.
- */
-const submitJob = (body, options) => {
-  let jobname  = "JOB";
-  let username = "INSTALL";
-  let password = "INSTALL";
-  let hostname = "127.0.0.1";
-  let data     = null;
-  if (typeof options === "object") {
-    if (typeof options.jobname  === "string") jobname  = options.jobname ;
-    if (typeof options.username === "string") username = options.username;
-    if (typeof options.password === "string") password = options.password;
-    if (typeof options.hostname === "string") hostname = options.hostname;
-    if (typeof options.data     === "string") data     = options.data;
-  }
-  if (Array.isArray(body)) body = body.join("\n") + "\n";
-  body += `$EXIT.\n*** ${jobname} FAILED\n`;
-  if (data !== null) body += `~eor\n${data}`;
-  return dtc.postJob(`${jobname}.\n$USER,${username},${password}.\n${body}`, hostname);
-};
-
-/*
- * updateLIDConf
- *
- * Update the LID configuration file to include new/updated LID definitions, if any.
- *
- * Returns:
- *  A promise that is resolved when the LID configuration file has been updated.
- */
-const updateLIDConf = () => {
-  if (typeof props["LIDS"] !== "undefined") {
-    let promise = Promise.resolve();
-    let mid = newMID;
-    if (mid === null) {
-      promise = getSystemRecord("CMRD01")
-      .then(cmrd01 => {
-        for (const defn of cmrd01.split("\n")) {
-          if (defn.trim().startsWith("MID")) {
-            const tokens = defn.split("=");
-            if (tokens.length > 1) {
-              mid = tokens[1].trim();
-              return Promise.resolve();
-            }
-          }
-        }
-        mid = "01";
-        return Promise.resolve();
-      });
-    }
-    return promise
-    .then(() => dtc.say(`Update LIDCM${mid}`))
-    .then(() => {
-      //
-      // Build an object representing the contents of the LIDCMxx file.
-      // Start with the PID and LID definition of the local host.
-      //
-      let lidConf = {};
-      let currentPid = `M${mid}`;
-      lidConf[currentPid] = {
-        pid: {
-          PID: currentPid,
-          MFTYPE: "NOS2"
-        },
-        lids: {}
-      };
-      lidConf[currentPid].lids[currentPid] = {
-        LID: currentPid
-      };
-      //
-      // Update the object to include PID's and LID's in the LIDS property.
-      //
-      for (const defn of props["LIDS"]) {
-        let tokens = defn.trim().toUpperCase().split(/[,.]/);
-        if (tokens.length < 2) continue;
-        let attrs = {};
-        for (const attr of tokens.slice(1)) {
-          const ei = attr.indexOf("=");
-          if (ei > 0) {
-            attrs[attr.substring(0, ei).trim()] = attr.substring(ei + 1).trim();
-          }
-        }
-        if (tokens[0] === "NPID" && typeof attrs["PID"] !== "undefined") {
-          currentPid = attrs["PID"];
-          lidConf[currentPid] = {
-            pid: attrs,
-            lids: {}
-          };
-        }
-        else if (tokens[0] === "NLID" && currentPid !== null && typeof attrs["LID"] !== "undefined") {
-          lidConf[currentPid].lids[attrs["LID"]] = attrs;
-        }
-      }
-      //
-      // Generate new contents of the LIDCMxx file from the updated object.
-      //
-      let lidText = `LIDCM${mid}\n`;
-      for (const pid of Object.keys(lidConf).sort()) {
-        let pidAttrs = lidConf[pid].pid;
-        lidText += `NPID,PID=${pid}`;
-        for (const pidAttrKey of Object.keys(pidAttrs)) {
-          if (pidAttrKey !== "PID") {
-            lidText += `,${pidAttrKey}=${pidAttrs[pidAttrKey]}`;
-          }
-        }
-        lidText += ".\n";
-        let lids = lidConf[pid].lids;
-        for (const lid of Object.keys(lids)) {
-          lidText += `NLID,LID=${lid}`;
-          for (const lidAttrKey of Object.keys(lids[lid])) {
-            if (lidAttrKey !== "LID") {
-              lidText += `,${lidAttrKey}=${lids[lid][lidAttrKey]}`;
-            }
-          }
-          lidText += ".\n";
-        }
-      }
-      return lidText;
-    })
-    .then(text => replaceFile(`LIDCM${mid}`, text))
-    .then(() => utilities.moveFile(dtc, `LIDCM${mid}`, 1, 377777));
-  }
-  else {
-    return Promise.resolve();
-  }
+  return dtc.createJobWithOutput(12, 4, job, options);
 };
 
 /*
@@ -591,7 +455,7 @@ const updateMachineID = () => {
         password: "NETADMN",
         data:     `${data.join("\n")}\n`
       };
-      return submitJob(job, options);
+      return dtc.createJobWithOutput(12, 4,, job, options);
     })
     .then(() => dtc.runJob(12, 4, "decks/compile-ndlopl.job"));
   }
@@ -624,10 +488,10 @@ const updateProductRecords = () => {
       data:    `${productRecords.join("~eor\n")}`
     };
     return dtc.say("Update PRODUCT")
-    .then(() => submitJob(job, options))
+    .then(() => dtc.createJobWithOutput(12, 4, job, options))
     .then(output => {
       for (const line of output.split("\n")) {
-        console.log(`${new Date().toLocaleTimeString()}   ${line.substring(1)}`);
+        console.log(`${new Date().toLocaleTimeString()}   ${line}`);
       }
       return Promise.resolve();
     });
@@ -718,7 +582,7 @@ const updateTcpResolver = () => {
     };
     return dtc.say("Create/Update TCPRSLV")
     .then(text => replaceFile("TCPRSLV", asciiToCdc(`${props["RESOLVER"].join("\n")}\n`), {username:"NETADMN",password:"NETADMN"}))
-    .then(() => submitJob(job, options));
+    .then(() => dtc.createJobWithOutput(12, 4, job, options));
   }
   else {
     return Promise.resolve();
@@ -747,31 +611,7 @@ for (const configFilePath of propFiles) {
     process.stdout.write(`${configFilePath} does not exist\n`);
     process.exit(1);
   }
-  const lines = fs.readFileSync(configFilePath, "utf8");
-  let sectionKey = "";
-
-  for (let line of lines.split("\n")) {
-    line = line.trim();
-    if (line.length < 1 || /^[;#*]/.test(line)) continue;
-    if (line.startsWith("[")) {
-      let bi = line.indexOf("]");
-      if (bi < 0) {
-        process.stderr.write(`Invalid section key in ${configFilePath}: \"${line}\"\n`);
-        process.exit(1);
-      }
-      sectionKey = line.substring(1, bi).trim().toUpperCase();
-    }
-    else if (sectionKey !== "") {
-      if (typeof props[sectionKey] === "undefined") {
-        props[sectionKey] = [];
-      }
-      props[sectionKey].push(line);
-    }
-    else {
-      process.stderr.write(`Property defined before first section key: \"${line}\"\n`);
-      process.exit(1);
-    }
-  }
+  dtc.readPropertyFile(configFilePath, props);
 }
 
 awaitService(80, 60)
@@ -782,7 +622,6 @@ awaitService(80, 60)
 .then(() => processEqpdProps())
 .then(() => updateProductRecords())
 .then(() => updateMachineID())
-.then(() => updateLIDConf())
 .then(() => updateTcpHosts())
 .then(() => updateTcpResolver())
 .then(() => dtc.say("Reconfiguration complete"))

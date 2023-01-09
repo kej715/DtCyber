@@ -154,16 +154,11 @@
       },
       {
         "name": "njf",
-        "pre": [
-          "njf-mods.job",
-          "njf-ndl.job",
-          "../decks/compile-ndlopl.job",
-          "njf-create-hcf.job"
-        ],
+        "pre": "njf-mods.job",
         "post": [
-          "njf-compile-hcf.job",
           "njf-users.job",
-          "njf.post"
+          "njf.post",
+          "../njf-configure.js"
         ],
         "lib": 75,
         "records": "PP/JFM-PROC/DSKRECV",

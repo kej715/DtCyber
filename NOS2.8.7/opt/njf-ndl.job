@@ -25,13 +25,4 @@ EXIT.
 *** NJFNDL FAILED
 ***
 ~eor
-NJF
-*IDENT NJF
-*DECK NETCFG
-*D 123,124
-LI02P30: LINE      PORT=30,LTYPE=S2,TIPTYPE=TT13.
-         TE02P30:  TERMDEV,STIP=USER,TC=TC29,DT=CON,ABL=7,
-                           DBZ=1020,UBZ=11,DBL=7,UBL=12,XBZ=400,
-                           HN=1,AUTOCON.
-*D 229,230
-TE02P30: USER,     NJFUSER.
+~include ../mods/NJF/NDL.mod

@@ -222,24 +222,6 @@ if (isMountTapes) {
 if (fs.existsSync("site.cfg") && isCompletedStep("site-config") === false) {
   promise = promise
   .then(() => dtc.say("Apply site configuration (site.cfg) ..."))
-  if (fs.existsSync("opt/installed.json") === false
-      || JSON.parse(fs.readFileSync("opt/installed.json", "utf8")).indexOf("ncctcp") < 0) {
-    promise = promise
-    .then(() => dtc.disconnect())
-    .then(() => dtc.say("Install NCC TCP applications ..."))
-    .then(() => dtc.exec("node", ["install-product", "ncctcp"]))
-    .then(() => dtc.connect())
-    .then(() => dtc.expect([ {re:/Operator> $/} ]));
-  }
-  promise = promise
-  .then(() => dtc.say("SYSEDIT HTTP server into running system ..."))
-  .then(() => dtc.dis([
-    "ATTACH,PRODUCT.",
-    "GTR,PRODUCT,HTF.ABS/HTF",
-    "SYSEDIT,B=HTF."
-  ], "SYSEDHT", 1))
-  .then(() => dtc.say("Start HTTP server ..."))
-  .then(() => dtc.dsd("X.NAMI(RS=HT)"))
   .then(() => dtc.disconnect())
   .then(() => dtc.exec("node", ["reconfigure"]))
   .then(() => dtc.say("Make a new deadstart tape ..."))

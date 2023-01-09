@@ -298,6 +298,82 @@ class DtCyber {
   }
 
   /*
+   * createJobWithOutput
+   *
+   * Load a card deck on a specified card reader, wait for the associated
+   * job to complete, and return its output.
+   *
+   * Note that this method creates a temporary file named "$$$.job" in the
+   * current working directory. This file contains the full card deck that
+   * is loaded on the card reader. It is deleted automatically when the job
+   * completes successfully.
+   *
+   * Arguments:
+   *   ch       - channel number of the channel to which the reader is attached
+   *   eq       - equipment number of the reader on the channel
+   *   body     - body of the job (not including job and USER commands, these
+   *              are added automatically, based upon options)
+   *   options  - optional object providing parameters such as
+   *              job nqme, credentials, and job data
+   *
+   * Returns:
+   *   A promise that is resolved when the job has completed.
+   *   The value of the promise is the job output.
+   */
+  createJobWithOutput(ch, eq, body, options) {
+    const me     = this;
+    let jobname  = "JOB";
+    let username = "INSTALL";
+    let password = "INSTALL";
+    let data     = null;
+    if (typeof options === "object") {
+      if (typeof options.jobname  === "string") jobname  = options.jobname ;
+      if (typeof options.username === "string") username = options.username;
+      if (typeof options.password === "string") password = options.password;
+      if (typeof options.data     === "string") data     = options.data;
+    }
+    const beginOutput = ` *** ${jobname} BEGIN OUTPUT ***`;
+    const endOutput   = ` *** ${jobname} END OUTPUT ***`;
+    if (Array.isArray(body)) body = body.join("\n") + "\n";
+    let job = `${jobname}.\n$USER,${username},${password}.\n`
+      + `$NOTE,OUTPUT,NR./${beginOutput}\n`
+      + body
+      + `$NOTE,OUTPUT,NR./${endOutput}\n`
+      + `$PACK,OUTPUT.\n*** ${jobname} COMPLETE\n`
+      + "EXIT.\n$NOEXIT.\n$SKIPEI,OUTPUT.\n"
+      + `$NOTE,OUTPUT,NR./${endOutput}\n`
+      + `$PACK,OUTPUT.\n*** ${jobname} FAILED\n`;
+    if (data !== null) job += `~eor\n${data}`;
+    fs.writeFileSync("decks/$$$.job", job);
+    return new Promise((resolve, reject) => {
+      let output = "";
+      me.runJob(ch, eq, "decks/$$$.job", data => {
+        output += data;
+      })
+      .then(() => {
+        fs.unlinkSync("decks/$$$.job");
+        let bi = output.indexOf(beginOutput);
+        if (bi >= 0) {
+          output = output.substring(bi + beginOutput.length);
+          bi = output.indexOf("\n");
+          output = output.substring(bi + 1);
+        }
+        let ei = output.indexOf(endOutput);
+        if (ei >= 0) {
+          output = output.substring(0, ei);
+        }
+        let lines = output.split("\n");
+        lines = lines.slice(0, lines.length - 1);
+        let result = "";
+        for (const line of lines) {
+          result += line.substring(1) + "\n";
+        }
+        resolve(result);
+      });
+    });
+  }
+
+  /*
    * dis
    *
    * Call DIS, provide it with a sequence of commands to execute, and then drop DIS. 
@@ -803,6 +879,45 @@ class DtCyber {
       req.write(job);
       req.end();
     });
+  }
+
+  /*
+   * readPropertyFile
+   *
+   * Read and parse a property file containing customized configuration
+   * property definitions. The file may contain multiple sections, each
+   * headed by a name, as in:
+   *
+   *    [sectionname]
+   *
+   * Arguments:
+   *   pathname  - pathname of property file
+   *   props     - object that will be updated with parsed definitions
+   */
+  readPropertyFile(pathname, props) {
+    const lines = fs.readFileSync(pathname, "utf8");
+    let sectionKey = "";
+
+    for (let line of lines.split("\n")) {
+      line = line.trim();
+      if (line.length < 1 || /^[;#*]/.test(line)) continue;
+      if (line.startsWith("[")) {
+        let bi = line.indexOf("]");
+        if (bi < 0) {
+          throw new Error(`Invalid section key: \"${line}\"`);
+        }
+        sectionKey = line.substring(1, bi).trim();
+      }
+      else if (sectionKey !== "") {
+        if (typeof props[sectionKey] === "undefined") {
+          props[sectionKey] = [];
+        }
+        props[sectionKey].push(line);
+      }
+      else {
+        throw new Error(`Property defined before first section key: \"${line}\"`);
+      }
+    }
   }
 
   /*

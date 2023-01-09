@@ -9,62 +9,16 @@ const DtCyber = require("../../automation/DtCyber");
 
 const dtc = new DtCyber();
 
-//
-// If a site configuration file exists, and it has a CMRDECK
-// section with an MID definition, use that definition.
-// Otherwise, use the default machine ID, "01".
-//
-let mid = "01";
-if (fs.existsSync("site.cfg")) {
-  let props = {};
-  const lines = fs.readFileSync("site.cfg", "utf8");
-  let sectionKey = "";
-  for (let line of lines.split("\n")) {
-    line = line.trim();
-    if (line.length < 1 || /^[;#*]/.test(line)) continue;
-    if (line.startsWith("[")) {
-      let bi = line.indexOf("]");
-      if (bi < 0) continue;
-      sectionKey = line.substring(1, bi).trim().toUpperCase();
-    }
-    else if (sectionKey !== "") {
-      if (typeof props[sectionKey] === "undefined") {
-        props[sectionKey] = [];
-      }
-      props[sectionKey].push(line);
-    }
-  }
-  if (typeof props["CMRDECK"] !== "undefined") {
-    for (let line of props["CMRDECK"]) {
-      line = line.toUpperCase();
-      let ei = line.indexOf("=");
-      if (ei < 0) continue;
-      let key   = line.substring(0, ei).trim();
-      let value = line.substring(ei + 1).trim();
-      if (key === "MID") {
-        mid = value;
-        break;
-      }
-    }
-  }
-}
-
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => dtc.dis([
-  "GET,NJF,HCFFILE,NJFUSRS.",
-  "PURGE,NJF,HCFFILE,NJFUSRS.",
+  "GET,NJF,NJFUSRS.",
+  "PURGE,NJF,NJFUSRS.",
   "SUI,377777.",
   "REPLACE,NJF.",
-  "PURGE,HCFFILE/NA.",
-  "DEFINE,HCF=HCFFILE/CT=PU,M=R.",
-  "COPY,HCFFILE,HCF.",
-  "PERMIT,HCFFILE,INSTALL=W.",
-  `PERMIT,LIDCM${mid},INSTALL=W.`,
   "MODVAL,FA,I=NJFUSRS,OP=U."
 ], "NJFPOST", 1))
-.then(() => dtc.runJob(12, 4, "opt/njf-update-lids.job", mid))
 .then(() => dtc.runJob(12, 4, "opt/enable-subsys.job", "NJF"))
 .then(() => {
   process.exit(0);
