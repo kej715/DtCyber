@@ -100,7 +100,7 @@ if (typeof customProps["NETWORK"] !== "undefined") {
     else if (key === "NJENODE") {
       //
       //  njeNode=<nodename>,<software>,<lid>,<public-addr>,<link>
-      //     [,<local-address>[,B<block-size>][,P<poll-interval>]]
+      //     [,<local-address>[,B<block-size>][,P<ping-interval>]]
       let items = value.split(",");
       if (items.length >= 5) {
         let nodeName = items.shift();
@@ -119,7 +119,7 @@ if (typeof customProps["NETWORK"] !== "undefined") {
             node.blockSize = parseInt(item.substring(1));
           }
           else if (item.startsWith("P")) {
-            node.pollInterval = parseInt(item.substring(1));
+            node.pingInterval = parseInt(item.substring(1));
           }
         }
         topology[nodeName] = node;
@@ -365,8 +365,8 @@ for (const node of adjacentNodes) {
     termDefn += `,B${node.blockSize}`;
   else
     termDefn += ",B8192";
-  if (typeof node.pollInterval !== "undefined")
-    termDefn += `,P${node.pollInterval}`;
+  if (typeof node.pingInterval !== "undefined")
+    termDefn += `,P${node.pingInterval}`;
   ovlText.push(termDefn);
 }
 ovlProps["npu.nos287"] = ovlText;
