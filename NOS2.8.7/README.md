@@ -228,6 +228,7 @@ body of the email should contain these lines:
 ```
 node: <requested-node-name>
 link: <node-name-of-neighbor>
+mid: <machine-id>
 publicAddress: <IP-address-and-port>
 software: <name-of-nje-software>
 ```
@@ -235,10 +236,18 @@ software: <name-of-nje-software>
 must begin with a letter and can be up to 8 alphanumeric characters in length.
 - **link** : Optional. This is the name of the NJE node to which your node will connect
 in order to join the network. The **link** node must have a public address, and its
-administrator must agree to have it serve as your **link* node. If this parameter is
+administrator must agree to have it serve as your **link** node. If this parameter is
 not provided, the default is `NCCMAX`.
+- **mid** : Optional. Every *DtCyber* node in the network needs a unique 2-character
+machine identifier. If you prefer a specific machine identifier for your machine, you
+may request it using this parameter. However, if the identifier is already registered
+to another node, you will need to choose a different one, or omit this parameter, and a
+unique machine identifier will be generated and assigned to your node. The
+[topology file](files/nje-topology.json) reflects all currently registered machine
+identifiers in the `lid` properties of nodes. The `lid` property of a NOS node will be
+a 2-character machine identifier prefaced by the letter `M`, e.g., `M23`.
 - **publicAddress** : Optional. If your NJE node has a fixed IP address that can be
-reached from other nodes on the internet, then you may register it using this
+reached from other nodes on the internet, then you may register the address using this
 attribute. This will enable other nodes to connect to your node and use it as their
 **link** node, if you agree to this arrangement. It will also enable your **link**
 node to initiate connections to your node. If this parameter is not provided, your
