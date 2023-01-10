@@ -19,6 +19,7 @@ real Control Data computer systems back in the 1980's and 90's.
 - [Login](#login)
 - [Remote Job Entry](#rje)
 - [Network Job Entry](#nje)
+- &nbsp;&nbsp;&nbsp;&nbsp;[Using NJE](#usingnje)
 - [Shutdown and Restart](#shutdown)
 - [Operator Command Extensions](#opext)
 - [Continuing an Interrupted Installation](#continuing)
@@ -308,6 +309,80 @@ As the network topology is likely to change and expand over time, you should exe
 [topology file](files/nje-topology.json) is current, and when it changes, you should
 execute steps 4 and 5, above, to apply and activate the changes.
 
+### <a id="usingnje"></a>Using NJE
+NJE (Network Job Entry) enables you to submit a batch job from one system in the
+network to another, and the job's output will be returned automatically to the origin
+system. NJE also enables you to send data files between users on different systems. An
+NJE network is a peer-to-peer network, i.e., every node in the network has the same
+capabilities to send and receive jobs and files.
+
+An NJE network is also a store-and-forward network. This means that you can submit a
+job, or send a file, to any node in the network without your local host's needing to be
+connected directly to all other nodes. If the target system of a job or file is not
+directly connected to your local host, your local host will route it to a directly
+connected peer that is closer to the destination and that peer will repeat the process,
+recursively, until the job or file reaches the target system.
+
+`NJF` (Network Job Facility) is the subsystem that provides NJE for NOS. It includes a
+command, `NJROUTE`, that enables you to send jobs and files to any node in the NJE
+network. The basic syntax of the command is:
+
+```
+NJROUTE,lfn,DC=dc,DNN=destnode[,DRN=destuser].
+```
+
+where:
+- *lfn* : local file containing job or data to send
+- *dc* : disposition code, e.g., one of IN, TO, PR, or PU. IN sends the file as a job
+and causes its output to be returned to a local printer. TO sends the file as a job and
+causes its output to be returned to the NOS wait queue. PR sends the file as print
+data (i.e., text with lines up to 132 characters in length). PU sends the file as punch
+data (i.e., text with lines up to 80 characters in length).
+- *destnode* : name of the destination node
+- *destuser* : optional username of user to whom file is sent
+
+Example:
+```
+NJROUTE,MYJOB,DC=TO,DNN=NCCMAX.
+```
+
+`NJF` also provides interactive utilities enabling you to send/receive large
+files and binary files. These utilities automatically encode/decode the files as
+needed so that they may be sent/received safely as punch files. The utilities are:
+
+- *NETSEND* : encodes and sends a file to a specified user on a specified node.
+- *NETRECV* : decodes a received file. Typically, the `QGET` command is used to retrieve
+a received file from the NOS punch queue, and then `NETRECV` is used to decode it.
+
+The utilities are implemented as interactive CCL procedures, and they provide
+context-sensitive help. For example, if you call `NETSEND` as in,
+
+```
+NETSEND?
+```
+
+it will provide help information to guide you in providing the parameters that it
+needs.
+
+The ordinary `ROUTE` command may also be used to send jobs and files to nodes in the
+NJE network. However, `ROUTE` requires you to specify the destination node by using
+its `ST` parameter to provide the 3-character PID or LID assigned to the node.
+Typically, the PID's/LID's configured on your local system will be those associated
+with directly connected nodes only, so `ROUTE` will be limited to sending jobs and files
+to directly connected nodes only.
+
+In addition, `ROUTE` requires you to specify the destination username by using its `UN`
+parameter. The `UN` parameter is limited to 7 characters in length. This doesn't create
+a problem for NOS-to-NOS file transfers, but it might prevent you from sending a file to
+a user on a directly connected IBM node where usernames can be up to 8 characters in
+length.
+
+Example:
+
+```
+ROUTE,MYJOB,DC=TO,ST=MAX.
+``` 
+
 ## <a id="shutdown"></a>Shutdown and Restart
 When the installation completes, NOS 2.8.7 will be running, and the command window will
 be left at the DtCyber `Operator> ` prompt. Enter the `exit` command or the `shutdown`
@@ -432,7 +507,7 @@ This category includes data communication software.
 |---------|-------------|
 | [kermit](https://www.dropbox.com/s/p819tmvs91veoiv/kermit.tap?dl=1) | Kermit file exchange utility |
 | [ncctcp](https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1) | TCP/IP Applications (HTTP, NSQUERY, REXEC, SMTP) |
-| [njf](https://www.dropbox.com/s/oejtd05qkvqhk9u/NOSL700NJEF.tap?dl=1) | Network Job Entry Facility |
+| [njf](https://www.dropbox.com/s/oejtd05qkvqhk9u/NOSL700NJEF.tap?dl=1) | Network Job Facility |
 | rbf5    | Remote Batch Facility Version 5 |
 
 ### Category *graphics*
