@@ -350,9 +350,10 @@ NJROUTE,MYJOB,DC=TO,DNN=NCCMAX.
 files and binary files. These utilities automatically encode/decode the files as
 needed so that they may be sent/received safely as punch files. The utilities are:
 
-- *NETSEND* : encodes and sends a file to a specified user on a specified node.
-- *NETRECV* : decodes a received file. Typically, the `QGET` command is used to retrieve
-a received file from the NOS punch queue, and then `NETRECV` is used to decode it.
+- **NETSEND** : encodes and sends a file to a specified user on a specified node.
+- **NETRECV** : decodes a received file. Typically, the `QGET` command is used to
+retrieve a received file from the NOS punch queue, and then `NETRECV` is used to decode
+it.
 
 The utilities are implemented as interactive CCL procedures, and they provide
 context-sensitive help. For example, if you call `NETSEND` as in,
