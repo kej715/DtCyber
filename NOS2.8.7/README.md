@@ -269,7 +269,7 @@ link: NEXTDOOR
 publicAddress: 128.153.17.31:175
 ```
 
-The file `NOS2.8.7/files/nje-topology.json` in this GitHub repository will be updated
+The [topology file](files/nje-topology.json) in this GitHub repository will be updated
 in response to your registration request. In addition, an email reply will be sent to
 you confirming the registration and providing a set of properties to be edited into your
 site configuration file, `NOS2.8.7/site.cfg`. The property definitions will look like:
@@ -281,9 +281,9 @@ MID=23
 hostID=SYZYGY
 ```
 
-These properties combined with the updated NJE topology file provide all of the
-information needed to add your node with its unique name to the public NJE network.
-To apply the information, follow these steps:
+These properties combined with the updated NJE [topology file](files/nje-topology.json)
+provide all of the information needed to add your node with its unique name to the
+public NJE network. To apply the information, follow these steps:
 
 1. Execute `git pull` to update your repository, including the updated topology
 definition.
@@ -302,6 +302,11 @@ PID's and LID's for adjacent NJE nodes, and it will update the *DtCyber* configu
 to include definitions for NJE terminal(s).
 5. Shutdown the system and re-deadstart it. This will activate the updated NDL, HCF,
 and PID/LID configurations.
+
+As the network topology is likely to change and expand over time, you should execute
+`git pull` periodically to ensure that your copy of the
+[topology file](files/nje-topology.json) is current, and when it changes, you should
+execute steps 4 and 5, above, to apply and activate the changes.
 
 ## <a id="shutdown"></a>Shutdown and Restart
 When the installation completes, NOS 2.8.7 will be running, and the command window will
