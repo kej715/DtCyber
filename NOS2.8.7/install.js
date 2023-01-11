@@ -65,7 +65,7 @@ if (isReadyToRunInstall) {
     fs.unlinkSync("./nos287rtr.zip");
   }
   dtc.say("Download NOS 2.8.7 ready-to-run package ...")
-  .then(() => dtc.wget("https://www.dropbox.com/s/4hkjqmc5wp0ixus/nos287rtr.zip?dl=1", ".", (byteCount, contentLength) => {
+  .then(() => dtc.wget("https://www.dropbox.com/s/88ozv7u1qlpc27j/nos287rtr.zip?dl=1", ".", (byteCount, contentLength) => {
     maxProgressLen = utilities.reportProgress(byteCount, contentLength, maxProgressLen);
   }))
   .then(() => utilities.clearProgress(maxProgressLen))
