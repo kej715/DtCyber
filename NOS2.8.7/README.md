@@ -301,13 +301,16 @@ configuration to include NJE terminal(s), it will update your system's NJF host
 configuration file, it will update your system's PID/LID configuration to include
 PID's and LID's for adjacent NJE nodes, and it will update the *DtCyber* configuration
 to include definitions for NJE terminal(s).
-5. Shutdown the system and re-deadstart it. This will activate the updated NDL, HCF,
-and PID/LID configurations.
+5. Use the `make_ds_tape` command (or `node make-ds-tape`) to createreate a new
+deadstart tape, then shutdown and re-deadstart the system using the new tape. This will
+activate the system's new machine identifer, NDL, NCF, and PID/LID configurations. See
+[Creating a New Deadstart Tape](#newds) for details.
 
 As the network topology is likely to change and expand over time, you should execute
 `git pull` periodically to ensure that your copy of the
 [topology file](files/nje-topology.json) is current, and when it changes, you should
-execute steps 4 and 5, above, to apply and activate the changes.
+execute `njf_configure` (or `node njf-configure`) to apply the changes, then shutdown
+and re-deadstart to activate them.
 
 ### <a id="usingnje"></a>Using NJE
 NJE (Network Job Entry) enables you to submit a batch job from one system in the
@@ -551,11 +554,11 @@ use `git pull` to update the lists in your local repository clone, and then use
 `install all` to install them.
 
 ## <a id="newds"></a>Creating a New Deadstart Tape  
-The `reconfigure.js` tool and jobs initiated by `install_product` insert the binaries
-they produce into the direct access file named `PRODUCT` in the catalog of user
-`INSTALL`, and they also update the file named `DIRFILE` to specify the system libraries
-with which the binaries are associated. To create a new deadstart tape that includes the
-contents of `PRODUCT`, execute the following command:
+The `reconfigure.js` and `njf-configure.js` tools and jobs initiated by
+`install_product` insert the records they produce into the direct access file named
+`PRODUCT` in the catalog of user `INSTALL`, and they also update the file named
+`DIRFILE` to specify the system libraries with which the binaries are associated. To
+create a new deadstart tape that includes the contents of `PRODUCT`, execute the following command:
 
 >Operator> `make_ds_tape`
 
