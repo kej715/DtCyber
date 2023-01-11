@@ -1,7 +1,6 @@
 ~*
-~*  This job compiles and installs the network definition
-~*  file of the local host. NAM will use this new definition
-~*  upon its next startup.
+~*  This job compiles the NJF host configuration file source
+~*  and saves the HCFFILE produced.
 ~*
 COMPHCF.
 $USER,INSTALL,INSTALL.
