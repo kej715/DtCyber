@@ -1,0 +1,37 @@
+{
+  "NCCMAX": {
+    "desc": "CDC Cyber 865 at the Nostalgic Computing Center",
+    "os": "NOS 2.8.7",
+    "software": "NJEF",
+    "lid": "MAX",
+    "publicAddress": "98.0.40.244:175"
+  },
+  "NCCMVS": {
+    "desc": "IBM 3033 at the Nostalgic Computing Center",
+    "os": "MVS 3.8j",
+    "software": "NJE38",
+    "link": "NCCMAX",
+    "lid": "MVS"
+  },
+  "NCCCMS": {
+    "desc": "IBM 4381 at the Nostalgic Computing Center",
+    "os": "VM/CMS 6.0",
+    "software": "RSCS",
+    "link": "NCCMVS",
+    "lid": "CMS"
+  },
+  "NCCMIN": {
+    "desc": "CDC Cyber 175 at the Nostalgic Computing Center",
+    "os": "NOS 2.8.7",
+    "software": "NJEF",
+    "link": "NCCCMS",
+    "lid": "MIN"
+  },
+  "NCCM01": {
+    "desc": "CDC Mainframe demonstration system",
+    "os": "NOS 2.8.7",
+    "software": "NJEF",
+    "link": "NCCMAX",
+    "lid": "M01"
+  }
+}

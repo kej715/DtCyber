@@ -1,0 +1,28 @@
+~*
+~*  This job updates the NDLMODS file to include definitions
+~*  for NJF.
+~*
+NJFNDL.
+$USER,NETADMN,NETADMN.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$COPY,INPUT,MODS.
+$REWIND,MODS.
+$GET,NDLMODS/NA.
+$IF,FILE(NDLMODS,AS),EDIT.
+$  LIBEDIT,P=NDLMODS,B=MODS,I=0,C.
+$  REPLACE,NDLMODS.
+$ELSE,EDIT.
+$  SAVE,MODS=NDLMODS.
+$ENDIF,EDIT.
+***
+*** NJFNDL COMPLETE
+***
+EXIT.
+***
+*** NJFNDL FAILED
+***
+~eor
+~include ../mods/NJF/NDL.mod

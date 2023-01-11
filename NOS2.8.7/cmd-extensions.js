@@ -38,6 +38,16 @@ const cmdExtensions = [
     }
   },
   {
+    names: ["njf_configure", "njfc"],
+    desc:  "'njf_configure' update the NJF configuration",
+    fn:    (dtc, args) => {
+      return dtc.disconnect()
+      .then(() => dtc.exec("node", ["njf-configure"]))
+      .then(() => dtc.connect())
+      .then(() => dtc.expect([ {re:/Operator> $/} ]));
+    }
+  },
+  {
     names: ["reconfigure", "rcfg"],
     desc:  "'reconfigure [pathname...]' apply site-defined configuration parameters",
     fn:    (dtc, args) => {

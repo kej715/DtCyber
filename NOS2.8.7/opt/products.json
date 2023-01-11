@@ -153,6 +153,19 @@
         "depends": ["ses"]
       },
       {
+        "name": "njf",
+        "pre": "njf-mods.job",
+        "post": [
+          "njf-users.job",
+          "njf.post",
+          "../njf-configure.js"
+        ],
+        "lib": 75,
+        "records": "PP/JFM-PROC/DSKRECV",
+        "url": "https://www.dropbox.com/s/oejtd05qkvqhk9u/NOSL700NJEF.tap?dl=1",
+        "desc": "Network Job Entry Facility"
+      },
+      {
         "name": "rbf5",
         "pre": "nos.pre",
         "post": [

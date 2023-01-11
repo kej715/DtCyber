@@ -3,9 +3,12 @@
 // Install ICEM Design/Drafting in APPLLIB catalog
 //
 
-const DtCyber = require("../../automation/DtCyber");
+const DtCyber   = require("../../automation/DtCyber");
+const utilities = require("./utilities");
 
 const dtc = new DtCyber();
+
+let maxProgressLen = 0;
 
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
@@ -24,6 +27,17 @@ dtc.connect()
   "[UNLOAD,52.",
   "[!"
 ]))
+.then(() => dtc.wget("https://www.dropbox.com/s/ycx2ax1n6nsbi2z/spacelab.tap?dl=1", "opt/tapes", (byteCount, contentLength) => {
+  maxProgressLen = utilities.reportProgress(byteCount, contentLength, maxProgressLen);
+}))
+.then(() => utilities.clearProgress(maxProgressLen))
+.then(() => dtc.mount(13, 0, 1, "opt/tapes/spacelab.tap"))
+.then(() => dtc.dis([
+  "ASSIGN,51,TAPE,D=GE,LB=KL,F=I,PO=R.",
+  "PURGE,ICEMDB/NA.",
+  "DEFINE,ICEMDB/CT=PU,AC=Y,M=W.",
+  "COPY,TAPE,ICEMDB."
+], "ICEMDB", 377774))
 .then(() => {
   process.exit(0);
 })

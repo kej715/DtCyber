@@ -30,7 +30,7 @@ const getSystemRecord = (rid, options) => {
   ];
   if (typeof options === "undefined") options = {};
   options.jobname = "GTRSYS";
-  return submitJob(job, options);
+  return dtc.createJobWithOutput(11, 4, job, options);
 };
 
 /*
@@ -121,72 +121,6 @@ const processCmrdProps = () => {
 };
 
 /*
- * submitJob
- *
- * Submit a job to the running system.
- *
- * Arguments:
- *   body     - body of the job
- *   options  - optional object providing parameters such as
- *              job nqme, credentials, data, and HTTP hostname
- *
- * Returns:
- *   A promise that is resolved when the job has completed.
- *   The value of the promise is the job output.
- */
-const submitJob = (body, options) => {
-  let jobname  = "JOB";
-  let username = "INSTALL";
-  let password = "INSTALL";
-  let data     = null;
-  if (typeof options === "object") {
-    if (typeof options.jobname  === "string") jobname  = options.jobname ;
-    if (typeof options.username === "string") username = options.username;
-    if (typeof options.password === "string") password = options.password;
-    if (typeof options.data     === "string") data     = options.data;
-  }
-  const beginOutput = ` *** ${jobname} BEGIN OUTPUT ***`;
-  const endOutput   = ` *** ${jobname} END OUTPUT ***`;
-  if (Array.isArray(body)) body = body.join("\n") + "\n";
-  let job = `${jobname}.\n$USER,${username},${password}.\n`
-    + `$NOTE,OUTPUT,NR./${beginOutput}\n`
-    + body
-    + `$NOTE,OUTPUT,NR./${endOutput}\n`
-    + `$PACK,OUTPUT.\n*** ${jobname} COMPLETE\n`
-    + "$EXIT.\n$NOEXIT.\n$SKIPEI,OUTPUT.\n"
-    + `$NOTE,OUTPUT,NR./${endOutput}\n`
-    + `$PACK,OUTPUT.\n*** ${jobname} FAILED\n`;
-  if (data !== null) job += `~eor\n${data}`;
-  fs.writeFileSync("decks/$$$.job", job);
-  return new Promise((resolve, reject) => {
-    let output = "";
-    dtc.runJob(11, 4, "decks/$$$.job", data => {
-      output += data;
-    })
-    .then(() => {
-      fs.unlinkSync("decks/$$$.job");
-      let bi = output.indexOf(beginOutput);
-      if (bi >= 0) {
-        output = output.substring(bi + beginOutput.length);
-        bi = output.indexOf("\n");
-        output = output.substring(bi + 1);
-      }
-      let ei = output.indexOf(endOutput);
-      if (ei >= 0) {
-        output = output.substring(0, ei);
-      }
-      let lines = output.split("\n");
-      lines = lines.slice(0, lines.length - 1);
-      let result = "";
-      for (const line of lines) {
-        result += line.substring(1) + "\n";
-      }
-      resolve(result);
-    });
-  });
-};
-
-/*
  * updateSystemRecords
  *
  * Update the SYSTEM file to include any new or modified records that have
@@ -211,7 +145,7 @@ const updateSystemRecords = () => {
       data:    `${systemRecords.join("~eor\n")}`
     };
     return dtc.say("Update SYSTEM file")
-    .then(() => submitJob(job, options))
+    .then(() => dtc.createJobWithOutput(11, 4, job, options))
     .then(output => {
       return Promise.resolve();
     });
