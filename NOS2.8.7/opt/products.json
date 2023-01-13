@@ -153,6 +153,19 @@
         "depends": ["ses"]
       },
       {
+        "name": "mailer",
+        "pre": "mailer-mods.job",
+        "post": [
+          "mailer-iaf.job",
+          "mailer-init.job",
+          "mailer.post"
+        ],
+        "lib": 76,
+        "records": "PP/MLR-PROC/MAILPRC",
+        "url": "https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1",
+        "desc": "UMass Mailer"
+      },
+      {
         "name": "njf",
         "pre": "njf-mods.job",
         "post": [
