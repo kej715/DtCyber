@@ -1,0 +1,39 @@
+#!/usr/bin/env node
+//
+// Run MLRCRDB procedure created by mailer-sysproc.job. This
+// creates the MAILDB fast attach file, if it doesn't exist
+// already, and updates SYSPROC to execute the IMF,ADD
+// command.
+//
+
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.dsd([
+  "[IDLE,IAF.",
+  "#1000#[!"
+]))
+.then(() => dtc.dis([
+  "ATTACH,P=PRODUCT.",
+  `GTR,P,LGO.ABS/IMF,DBEDIT`,
+  "#2000#SYSEDIT,B=LGO."
+], 1))
+.then(() => dtc.sleep(30000))
+.then(() => dtc.dsd("[IAF."))
+.then(() => dtc.dis([
+  "GET,MLRCRDB.",
+  "PURGE,MLRCRDB.",
+  "SUI,377777.",
+  "MLRCRDB."
+], 1))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});
