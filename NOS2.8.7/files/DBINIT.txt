@@ -1,0 +1,488 @@
+      PROGRAM DBINIT
+
+C$    COLLATE(FIXED)
+
+      IMPLICIT INTEGER (A-Z)
+
+      CHARACTER ERROR   * 50
+      CHARACTER FILENAM * 7
+      CHARACTER LINE    * 80
+      CHARACTER PARAM   * 10
+      CHARACTER VALUE   * 10
+
+      PARAMETER (MAXMGRS = 4)
+
+      DIMENSION MGRS    (MAXMGRS)
+      DIMENSION NETID   (8)
+      DIMENSION NETIDCV (2)
+      DIMENSION RECORD  (32)
+
+      PARAMETER (ASET = -18)
+      PARAMETER (ACLR = -19)
+      PARAMETER (NNIU = -1)
+      PARAMETER (NONN = -14)
+      PARAMETER (NOUN = -15)
+      PARAMETER (UNIU = -2)
+
+***   INITMLC - INITIALIZE THE MAILER CONFIGURATION
+*
+
+***   CONGIURATION RECORD FORMAT
+*
+*     WORD    CONTENTS
+*
+*       0     TIME ZONE
+*       1     FORMS CODE
+*       2     QUEUE NAME (PR, PU, ETC.)
+*       3     WAS QUEUE ID: NOW ALWAYS ZERO (AS OF 7/11/86)
+*       4     WAS NETWORK ID(1): ZERO AS OF 7/24/87
+*       5     WAS NETWORK ID(2): ZERO AS OF 7/24/87
+*       6     DEFAULT NOTESFILE FILE-NAME
+*       7     DEFAULT NOTESFILE PACKNAME
+*       8     MASTER USERNAME
+*       9     MASTER PACKNAME
+*      10     HELP-FILE FILE-NAME
+*      11     HELP-FILE PASSWORD
+*      12     HELP-TOPIC FILE-NAME
+*      13     HELP-TOPIC PASSWORD
+*      14     LOG-FILE FILE-NAME
+*      15     LOG-FILE PASSWORD
+*
+*
+*      ALL FIELDS ARE LEFT-JUSTIFIED WITH BINARY ZERO FILL TO THE
+*      RIGHT.
+
+***   CONFIGURATION PARAMETER DEFINITIONS
+*
+*     LINES ARE READ FROM A SPECIFIED CONFIGURATION FILE. IF END OF
+*     FILE IS ENCOUNTERED BEFORE ALL PARAMETERS ARE READ, DEFAULT
+*     VALUES ARE USED FOR THE REMAINING PARAMETERS.
+*
+*     PARAMETERS READ FROM THE FILE ARE: 
+*
+*     LINE SIZE    IN PANEL   CONTENTS
+*
+*        1   80    NETID      LOCAL HOST NAME
+*        2    3    ZONE       LOCAL TIME ZONE
+*        3    2    FORMS      NETWORK MAIL FORMS-CODE
+*        4    2    QUEUE      NETWORK MAIL QUEUE
+*        5    7    DMAILFN    DEFAULT NOTESFILE NAME
+*        6    7    DMAILPN    DEFAULT NOTESFILE PACKNAME
+*        7    7    MASTUN     MASTER MAILER USERNAME
+*        8    7    MASTPN     MASTER MAILER PACKNAME
+*        9    7    HELPFN     HELP-FILE FILE NAME
+*       10    7    HTOPFN     HELP-TOPIC FILE NAME
+*       11    7    LOGFN      LOG-FILE NAME
+
+      CALL SYSORG (STATUS)
+      IF (STATUS .EQ. 0) THEN
+        ERROR = 'SECURITY VIOLATION'
+        GOTO 1000
+      ENDIF
+
+C     ***
+C     *** PROCESS COMMAND LINE ARGUMENTS
+C     ***
+
+      MGRSN   = 0
+      FILENAM = ' '
+   10 CONTINUE
+      CALL GETPARM (PARAM, VALUE, STATUS)
+      IF (STATUS .EQ. -1) GOTO 20
+      IF (STATUS .EQ. 1) THEN
+        ERROR = 'PARAMETERS MUST NOT BE EQUIVALENCED'
+        GOTO 1000
+      ENDIF
+      IF (PARAM .EQ. 'CF') THEN
+        FILENAM = VALUE(1:7)
+        GOTO 10
+      ELSEIF (PARAM .EQ. 'MANAGER') THEN
+        IF (MGRSN .LT. MAXMGRS) THEN
+          MGRSN = MGRSN + 1
+          READ (VALUE, '(A10)') MGRS(MGRSN)
+          CALL DBZFW (MGRS(MGRSN))
+        ELSE
+          ERROR = 'TOO MANY MANAGERS'
+          GOTO 1000
+        ENDIF
+      ELSE
+        ERROR = 'INVALID PARAMETER - ' // PARAM
+        GOTO 1000
+      ENDIF
+
+   20 CONTINUE
+      IF (MGRSN .EQ. 0) THEN
+        MGRS(1) = L"MAILER"
+        MGRS(2) = L"INSTALL"
+        MGRSN = 2
+      ENDIF
+
+C     *
+C     * PRESET VARIABLES WITH DEFAULT VALUES
+C     *
+
+      ZONE     = "EST"
+      FORMS    = "OM"
+      QUEUE    = "WT"
+      NETID(1) = "M01.NOSTAL"
+      NETID(2) = "GICCOMPUTI"
+      NETID(3) = "NG.ORG    "
+      DO 100 I = 4, 8
+        NETID(I)  = " "
+  100 CONTINUE
+      DMAILFN  = "MAILBOX"
+      DMAILPN  = "0"
+      MASTUN   = "LIBRARY"
+      MASTPN   = "0"
+      HELPFN   = "MAILHLP"
+      HELPPW   = " "
+      HTOPFN   = "MAILTPC"
+      HTOPPW   = " "
+      LOGFN    = "MAILLOG"
+      LOGPW    = " "
+      ERROR    = ' '
+
+*
+*     OPEN SPECIFIED CONFIGRATION FILE AND READ ITS CONTENTS
+*
+      IF (FILENAM .NE. ' ') THEN
+
+        OPEN (1, IOSTAT=STATUS, ERR=200, FILE=FILENAM, STATUS='OLD')
+        IF (STATUS .EQ. 0) GOTO 300
+
+  200   CONTINUE
+        ERROR = 'FAILED TO OPEN ' // FILENAM
+        GOTO 1000
+
+  300   CONTINUE
+
+        READ (1,    '(A)', END=400) LINE
+        READ (LINE, '(8A10)'      ) NETID
+
+        READ (1,    '(A)', END=400) LINE
+        READ (LINE, '(A3)'        ) ZONE
+
+        READ (1,    '(A)', END=400) LINE
+        READ (LINE, '(A2)'        ) FORMS
+
+        READ (1,    '(A)', END=400) LINE
+        READ (LINE, '(A2)'        ) QUEUE
+
+        READ (1,    '(A)', END=400) LINE
+        READ (LINE, '(A7)'        ) DMAILFN
+
+        READ (1,    '(A)', END=400) LINE
+        READ (LINE, '(A7)'        ) DMAILPN
+
+        READ (1,    '(A)', END=400) LINE
+        READ (LINE, '(A7)'        ) MASTUN
+
+        READ (1,    '(A)', END=400) LINE
+        READ (LINE, '(A7)'        ) MASTPN
+
+        READ (1,    '(A)', END=400) LINE
+        READ (LINE, '(A7)'        ) HELPFN
+
+        READ (1,    '(A)', END=400) LINE
+        READ (LINE, '(A7)'        ) HTOPFN
+
+        READ (1,    '(A)', END=400) LINE
+        READ (LINE, '(A7)'        ) LOGFN
+
+C       * VALIDATE THE FORMS FIELD
+
+  400   CONTINUE
+
+        CH1 = FORMS .AND. MASK(6)
+        CH2 = SHIFT (FORMS, 6) .AND. MASK(6)
+        IF (CH1.LT.L"A" .OR. CH1.GT.L"9" .OR.
+     +      CH2.LT.L"A" .OR. CH1.GT.L"9") THEN
+          ERROR = 'FORMS CODE MUST BE TWO CHARACTERS; A..Z, 0..9'
+          GO TO 1000
+        ENDIF
+
+      ENDIF
+
+C     * CALCULATE CASE VECTOR OF NETID
+
+      BITIDX = 1
+      DO 510 I = 1, 8
+        WORD = NETID(I)
+        DO 500 J = 1, 10
+          WORD = SHIFT(WORD, 6)
+          C    = WORD .AND. O"77"
+          IF (C .GE. R"A" .AND. C .LE. R"Z") THEN
+            CALL SETBIT (NETIDCV, BITIDX, .TRUE.)
+          ELSE
+            CALL SETBIT (NETIDCV, BITIDX, .FALSE.)
+          ENDIF
+          BITIDX = BITIDX + 1
+  500   CONTINUE
+  510 CONTINUE
+
+C     * PLACE UPDATED VALUES IN THE RECORD
+
+      CALL DBZFW (ZONE)
+        RECORD (17 + 0)  = ZONE
+      CALL DBZFW (FORMS)
+        RECORD (17 + 1)  = FORMS
+      CALL DBZFW (QUEUE)
+        RECORD (17 + 2)  = QUEUE
+      RECORD (17 + 3)  = 0
+      CALL DBZFS(NETID, 8)
+        RECORD (17 + 4) = 0
+        RECORD (17 + 5) = 0
+        DO 600 I = 1, 8
+          RECORD (4 + I) = NETID(I)
+  600   CONTINUE
+        RECORD (13) = NETIDCV(1)
+        RECORD (14) = NETIDCV(2)
+      CALL DBZFW (DMAILFN)
+        RECORD (17 + 6)  = DMAILFN
+      CALL DBZFW (DMAILPN)
+        RECORD (17 + 7)  = DMAILPN
+      CALL DBZFW (MASTUN)
+        RECORD (17 + 8)  = MASTUN
+      CALL DBZFW (MASTPN)
+        RECORD (17 + 9)  = MASTPN
+      CALL DBZFW (HELPFN)
+        RECORD (17 + 10) = HELPFN
+      CALL DBZFW (HELPPW)
+        RECORD (17 + 11) = HELPPW
+      CALL DBZFW (HTOPFN)
+        RECORD (17 + 12) = HTOPFN
+      CALL DBZFW (HTOPPW)
+        RECORD (17 + 13) = HTOPPW
+      CALL DBZFW (LOGFN)
+        RECORD (17 + 14) = LOGFN
+      CALL DBZFW (LOGPW)
+        RECORD (17 + 15) = LOGPW
+
+C     ***
+C     *** OPEN DATABASE IN PRESET MODE
+C     ***
+
+      CALL DBOPEN ("PRESET", STATUS)
+      IF (STATUS .NE. 0) THEN
+        CALL TRANERR (STATUS, ERROR)
+        GOTO 1000
+      ENDIF
+
+C     ***
+C     *** PRESET DATABASE
+C     ***
+
+      CALL DBPRS (STATUS)
+      IF (STATUS .NE. 0) THEN
+        CALL TRANERR (STATUS, ERROR)
+        GOTO 1000
+      ENDIF
+
+C     ***
+C     *** CLOSE DATABASE
+C     ***
+
+      CALL DBCLOSE (STATUS)
+      IF (STATUS .NE. 0) THEN
+        CALL TRANERR (STATUS, ERROR)
+        GOTO 1000
+      ENDIF
+
+C     ***
+C     *** ADD MANAGER RECORDS FOR USERNAMES "MAILER" AND "INSTALL"
+C     ***
+
+      DO 700 I = 1, MGRSN
+        CALL ADDMGR (MGRS(I), ERROR)
+        IF (ERROR .NE. ' ') GOTO 1000
+  700 CONTINUE
+
+C     ***
+C     *** CREATE THE MAILER SITE CONFIGURATION RECORD
+C     ***
+
+      ORDINAL = 0
+      USERNAM = L"MAILER"
+      CALL DBADD (L"MLRSITE", NETID, USERNAM, ORDINAL, NETIDCV,
+     +            RECORD, STATUS)
+      IF (STATUS.EQ.NNIU .OR. STATUS.EQ.UNIU) THEN
+        ERROR = 'SOMEONE ELSE JUST SNUCK IN AND CREATED THE RECORD'
+      ELSEIF (STATUS .NE. 0) THEN
+        CALL TRANERR (STATUS, ERROR)
+      ENDIF
+
+ 1000 CONTINUE
+      IF (ERROR .NE. ' ') THEN
+        CALL REMARK(ERROR)
+        CALL ABORT
+      ENDIF
+
+      CALL REMARK ('MAILER DATABASE INITIALIZED')
+      CALL ENDRUN
+
+      END
+      SUBROUTINE ADDMGR (USERNAM, ERROR)
+
+      IMPLICIT INTEGER (A-Z)
+
+      DIMENSION CASEVEC (2)
+      DIMENSION NICKNAM (8)
+      DIMENSION RECORD  (32)
+
+      CHARACTER ERROR*50
+
+      PARAMETER (UNIU = -1)
+
+***   ADDMGR - ADD A MANAGER RECORD TO THE DATABASE
+*
+*     ENTRY  USERNAM = USERNAME OF MANAGER TO ADD
+*            MANAGER = 1 IF USER IS TO BE A MANAGER MANAGER
+*            MAILER  = 1 IF USER IS TO BE A MAILER MANAGER
+*            BITNET  = 1 IF USER IS TO BE A BITNET MANAGER
+*
+*     EXIT   ERROR   = ERROR MESSAGE CHARACTER STRING
+*                    = ' ' IF NO ERROR
+
+C     ***
+C     *** PRESET PARAMETERS
+C     ***
+
+C     * SET NICKNAME TO ZERO
+
+      DO 100 I = 1, 8
+        NICKNAM (I) = 0
+  100 CONTINUE
+      CASEVEC (1) = 0
+      CASEVEC (2) = 0
+
+C     * PRESET RECORD'S DEPENDENT PORTION
+C        FIRST THREE ARE FLAGS FOR MANAGER, MAILER, BITNET
+
+      RECORD (17 + 0) = 1
+      RECORD (17 + 1) = 1
+      RECORD (17 + 2) = 1
+      RECORD (17 + 3) = L"SYSTEMX"
+      DO 200 I = 4, 15
+        RECORD (17 + I) = 0
+  200 CONTINUE
+
+C     ***
+C     *** ADD RECORD TO DATABASE
+C     ***
+
+      CALL DBADD (L"CDBMAN", NICKNAM, USERNAM, ORDINAL,
+     +            CASEVEC, RECORD, STATUS)
+
+C     * RETURN ERROR, IF ANY
+
+      IF (STATUS .EQ. UNIU) THEN
+        ERROR = 'THERE IS ALREADY A MANAGER WITH THAT USERNAME'
+      ELSEIF (STATUS .NE. 0) THEN
+        CALL TRANERR (STATUS, ERROR)
+      ELSE
+        ERROR = ' '
+      ENDIF
+
+      END
+      SUBROUTINE SETBIT (VECTOR, INDEX, VALUE)
+
+***   SETBIT - SET A BIT IN A PACKED ARRAY OF BITS
+
+      IMPLICIT INTEGER (A - Z)
+
+      DIMENSION VECTOR (*)
+      LOGICAL   VALUE
+
+      M = SHIFT (1, 59 - MOD (INDEX - 1, 60))
+      I = (INDEX - 1) / 60 + 1
+      VECTOR(I) = VECTOR(I) .AND. -M
+      IF ( VALUE ) VECTOR(I) = VECTOR(I) .OR. M
+      END
+      SUBROUTINE TRANERR (STATUS, ERROR)
+
+      IMPLICIT INTEGER (A-Z)
+
+      DIMENSION ERRMSG (5)
+
+      CHARACTER ERROR * (*)
+
+***   TRANERR - TRANSLATE ERROR CODE TO TEXT STRING
+*
+*     ENTRY  STATUS = DATABASE ERROR CODE
+*
+*     EXIT   ERROR  = 50-CHARACTER ERROR STRING
+
+
+      CALL DBETEXT (STATUS, ERRMSG)
+      WRITE (ERROR, '(5A10)') ERRMSG
+
+      END
+          IDENT  ABORT
+
+          ENTRY  ABORT
+          ENTRY  ENDRUN
+
+***       ABORT - ABORT CALLING JOB
+*
+*         ENTRY  NO PARAMETERS
+*
+*         EXIT   NO EXIT
+
+ ABORT    PS
+          SB1    1
+          ABORT
+
+***       ENDRUN - TERMINATE CALLING JOB
+*
+*              ENDRUN WILL TERMINATE THE CALLING JOB NORMALLY.  THE
+*         ERROR FLAG WILL NOT BE SET.  THE FORTRAN MEMORY/CPU STAT-
+*         ISTICS MESSAGE WILL NOT BE DISPLAYED.
+*
+*
+*         ENTRY  NO PARAMETERS
+*
+*         EXIT   NO EXIT
+
+ ENDRUN   PS
+          ENDRUN
+
+          END
+          IDENT  SYSORG
+
+          ENTRY  SYSORG
+
+***       SYSORG - DETERMINE SYSTEM ORIGIN STATUS
+*
+*         CALL SYSORG (STATUS)
+*
+*         EXIT   STATUS = 1 IF USER HAS SYSTEM ORIGIN PRIVILEGES
+*                       = 0 OTHERWISE
+
+
+ SYSORG   PS
+          SB1    1
+          LX5    X1          (X5) = AP-LIST ADDRESS
+          GETSPS SYSA
+          SA2    SYSA
+          SX6    B1
+          ZR     X2,SYS1     IF USER HAS SYSTEM ORIGIN PRIVILEGES
+          MX6    0
+ SYS1     SA6    X5
+          EQ     SYSORG
+
+
+ SYSA     CON    0
+
+          END
+          IDENT  ZZZHLOE
+
+          ENTRY  RFL=
+          ENTRY  SSJ=
+
+ SSJ=     EQU    0
+
+          USE    //
+ RFL=     EQU    *
+          USE    *
+
+          END
