@@ -52,15 +52,13 @@ for (let line of iniProps["npu.nos287"]) {
 //
 let customProps = {};
 let mid = "01";
-if (fs.existsSync("site.cfg")) {
-  dtc.readPropertyFile("site.cfg", customProps);
-  if (typeof customProps["CMRDECK"] !== "undefined") {
-    for (let line of customProps["CMRDECK"]) {
-      line = line.toUpperCase();
-      let match = line.match(/^MID=([^.]*)/);
-      if (match !== null) {
-        mid = match[1].trim();
-      }
+dtc.readPropertyFile(customProps);
+if (typeof customProps["CMRDECK"] !== "undefined") {
+  for (let line of customProps["CMRDECK"]) {
+    line = line.toUpperCase();
+    let match = line.match(/^MID=([^.]*)/);
+    if (match !== null) {
+      mid = match[1].trim();
     }
   }
 }

@@ -6,6 +6,13 @@
     "lid": "MAX",
     "publicAddress": "98.0.40.244:175"
   },
+  "NCCMED": {
+    "desc": "CDC Cyber 865 development system at the Nostalgic Computing Center",
+    "os": "NOS 2.8.7",
+    "software": "NJEF",
+    "link": "NCCMAX",
+    "lid": "MED"
+  },
   "NCCMVS": {
     "desc": "IBM 3033 at the Nostalgic Computing Center",
     "os": "MVS 3.8j",

@@ -157,7 +157,7 @@
         "pre": "mailer-mods.job",
         "post": [
           "mailer-iaf.job",
-          "mailer-init.job",
+          "mailer-users.job",
           "mailer.post"
         ],
         "lib": 76,

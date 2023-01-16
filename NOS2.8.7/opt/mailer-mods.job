@@ -25,5 +25,3 @@ EXIT.
 ***
 ~eor
 ~include ../mods/IAF/MAILER.mod
-~eor
-~include ../mods/MLR/VFPMFIX.mod
