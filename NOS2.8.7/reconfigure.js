@@ -8,7 +8,9 @@ const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
+let newHostID      = null;  // new network host identifier
 let newMID         = null;  // new machine identifer
+let oldHostID      = null;  // old network host identifier
 let oldMID         = null;  // old machine identifer
 let productRecords = [];    // textual records to edit into PRODUCT file
 let props          = {};    // properties read from property file arguments
@@ -103,6 +105,25 @@ const getSystemRecord = (rid, options) => {
   if (typeof options === "undefined") options = {};
   options.jobname = "GTRSYS";
   return dtc.createJobWithOutput(12, 4, job, options);
+};
+
+/*
+ * isInstalled
+ *
+ * Determine whether a specified produce has been installed.
+ *
+ * Arguments:
+ *   product - name of product
+ *
+ * Returns:
+ *   TRUE if product is installed
+ */
+const isInstalled = product => {
+  if (fs.existsSync("opt/installed.json")) {
+    const installedProductSet = JSON.parse(fs.readFileSync("opt/installed.json", "utf8"));
+    return installedProductSet.indexOf(product) >= 0;
+  }
+  return false;
 };
 
 /*
@@ -245,6 +266,44 @@ const processEqpdProps = () => {
 };
 
 /*
+ * processNetworkProps
+ *
+ * Process properties defined in NETWORK sections of property files.
+ *
+ * Returns:
+ *  A promise that is resolved when all NETWORK properties have been processed.
+ */
+const processNetworkProps = () => {
+  let iniProps = {};
+  dtc.readPropertyFile("cyber.ini", iniProps);
+  if (fs.existsSync("cyber.ovl")) {
+    dtc.readPropertyFile("cyber.ovl", iniProps);
+  }
+  for (let line of iniProps["npu.nos287"]) {
+    let ei = line.indexOf("=");
+    if (ei < 0) continue;
+    let key   = line.substring(0, ei).trim();
+    let value = line.substring(ei + 1).trim();
+    if (key.toUpperCase() === "HOSTID") {
+      oldHostID = line.substring(ei + 1).trim();
+    }
+  }
+  if (typeof props["NETWORK"] !== "undefined") {
+    for (const prop of props["NETWORK"]) {
+      let ei = prop.indexOf("=");
+      if (ei < 0) {
+        throw new Error(`Invalid NETWORK definition: \"${prop}\"`);
+      }
+      let key   = prop.substring(0, ei).trim();
+      if (key.toUpperCase() === "HOSTID") {
+        newHostID = prop.substring(ei + 1).trim();
+      }
+    }
+  }
+  return Promise.resolve();
+};
+
+/*
  * replaceFile
  *
  * Replace a file on the running system.
@@ -377,35 +436,38 @@ const updateProductRecords = () => {
  *  A promise that is resolved when the TCPHOST file has been updated.
  */
 const updateTcpHosts = () => {
-  if (oldMID !== newMID || typeof props["HOSTS"] !== "undefined") {
+
+  if (oldMID === newMID && oldHostID === newHostID && typeof props["HOSTS"] === "undefined") {
+    return Promise.resolve();
+  }
+  else {
     return dtc.say("Update TCPHOST")
     .then(() => getFile("TCPHOST", {username:"NETADMN",password:"NETADMN"}))
     .then(text => {
-      text = dtc.cdcToAscii(text);
-      if (oldMID !== newMID) {
-        const regex = new RegExp(`LOCALHOST_${oldMID}`, "i");
-        while (true) {
-          let si = text.search(regex);
-          if (si < 0) break;
-          text = `${text.substring(0, si)}LOCALHOST_${newMID}${text.substring(si + 12)}`;
-        }
-      }
-      const pid = `M${oldMID}`;
       let hosts = {};
+      let pid = `M${oldMID.toUpperCase()}`;
+      let hid = oldHostID.toUpperCase();
+      let lcl = `LOCALHOST_${oldMID.toUpperCase()}`;
+      text = dtc.cdcToAscii(text);
       for (const line of text.split("\n")) {
         if (/^[0-9]/.test(line)) {
           const tokens = line.split(/\s+/);
           if (tokens.length < 2) continue;
           for (let i = 1; i < tokens.length; i++) {
-            if (tokens[i].toUpperCase() === pid) {
+            let token = tokens[i].toUpperCase();
+            if (token === pid && newMID !== null) {
               tokens[i] = `M${newMID}`;
+            else if (token === hid && newHostID !== null) {
+              tokens[i] = newHostID;
+            else if (token === lcl && newMID !== null) {
+              tokens[i] = `LOCALHOST_${newMID}`;
             }
           }
           hosts[tokens[1].toUpperCase()] = tokens.join(" ");
         }
       }
       if (typeof props["HOSTS"] !== "undefined") {
-        for (const defn of props["HOSTS"].split("\n")) {
+        for (const defn of props["HOSTS"]) {
           if (/^[0-9]/.test(defn)) {
             const tokens = defn.split(/\s+/);
             if (tokens.length > 1) {
@@ -421,9 +483,6 @@ const updateTcpHosts = () => {
       return dtc.asciiToCdc(text);
     })
     .then(text => replaceFile("TCPHOST", text, {username:"NETADMN",password:"NETADMN"}));
-  }
-  else {
-    return Promise.resolve();
   }
 };
 
@@ -486,10 +545,18 @@ awaitService(80, 60)
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => processCmrdProps())
 .then(() => processEqpdProps())
+.then(() => processNetworkProps())
 .then(() => updateProductRecords())
 .then(() => updateMachineID())
 .then(() => updateTcpHosts())
 .then(() => updateTcpResolver())
+.then(() => dtc.disconnect())
+.then(() => {
+  return isInstalled("njf") ? dtc.exec("node", ["njf-configure"]) : Promise.resolve();
+})
+.then(() => {
+  return isInstalled("mailer") ? dtc.exec("node", ["mailer-configure"]) : Promise.resolve();
+})
 .then(() => dtc.say("Reconfiguration complete"))
 .then(() => {
   process.exit(0);

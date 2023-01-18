@@ -133,7 +133,7 @@ dtc.connect()
     }
   }
 })
-.then(() => dtc.say(`    Host name is ${mailerHostId.toLowerCase()}, time zone is ${timeZone}`))
+.then(() => dtc.say(`    Host network ID is ${mailerHostId.toLowerCase()}, time zone is ${timeZone}`))
 .then(() => dtc.say("    SYSEDIT IMF and DBCFG into system"))
 .then(() => dtc.dsd([
   "[IDLE,IAF.",
