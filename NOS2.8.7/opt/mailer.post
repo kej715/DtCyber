@@ -133,15 +133,15 @@ dtc.connect()
     }
   }
 })
-.then(() => dtc.say(`    Host name is ${mailerHostId.toLowerCase()}`))
-.then(() => dtc.say("    SYSEDIT IMF and DBINIT into system"))
+.then(() => dtc.say(`    Host name is ${mailerHostId.toLowerCase()}, time zone is ${timeZone}`))
+.then(() => dtc.say("    SYSEDIT IMF and DBCFG into system"))
 .then(() => dtc.dsd([
   "[IDLE,IAF.",
   "#1000#[!"
 ]))
 .then(() => dtc.dis([
   "ATTACH,P=PRODUCT.",
-  `GTR,P,LGO.ABS/IMF,DBINIT`,
+  `GTR,P,LGO.ABS/IMF,DBCFG`,
   "#2000#SYSEDIT,B=LGO."
 ], 1))
 .then(() => dtc.sleep(30000))
