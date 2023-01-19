@@ -8,68 +8,12 @@ const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
+let newHostID      = null;  // new network host identifier
 let newMID         = null;  // new machine identifer
+let oldHostID      = null;  // old network host identifier
 let oldMID         = null;  // old machine identifer
 let productRecords = [];    // textual records to edit into PRODUCT file
 let props          = {};    // properties read from property file arguments
-
-/*
- * asciiToCdc
- *
- * Translate ASCII to CDC 6/12 display code.
- *
- * Arguments:
- *   ascii - the ASCII to convert
- *
- * Returns:
- *   CDC 6/12 display code
- */
-const asciiToCdc = ascii => {
-  let result = "";
-  let i = 0;
-
-  while (i < ascii.length) {
-    let c = ascii.charAt(i++);
-    switch (c) {
-    case "a": result += "^A"; break;
-    case "b": result += "^B"; break;
-    case "c": result += "^C"; break;
-    case "d": result += "^D"; break;
-    case "e": result += "^E"; break;
-    case "f": result += "^F"; break;
-    case "g": result += "^G"; break;
-    case "h": result += "^H"; break;
-    case "i": result += "^I"; break;
-    case "j": result += "^J"; break;
-    case "k": result += "^K"; break;
-    case "l": result += "^L"; break;
-    case "m": result += "^M"; break;
-    case "n": result += "^N"; break;
-    case "o": result += "^O"; break;
-    case "p": result += "^P"; break;
-    case "q": result += "^Q"; break;
-    case "r": result += "^R"; break;
-    case "s": result += "^S"; break;
-    case "t": result += "^T"; break;
-    case "u": result += "^U"; break;
-    case "v": result += "^V"; break;
-    case "w": result += "^W"; break;
-    case "x": result += "^X"; break;
-    case "y": result += "^Y"; break;
-    case "z": result += "^Z"; break;
-    case "{": result += "^0"; break;
-    case "|": result += "^1"; break;
-    case "}": result += "^2"; break;
-    case "~": result += "^3"; break;
-    case "@": result += "@A"; break;
-    case "^": result += "@B"; break;
-    case ":": result += "@D"; break;
-    case "`": result += "@G"; break;
-    default:  result += c   ; break;
-    }
-  }
-  return result;
-};
 
 /*
  * awaitService
@@ -114,82 +58,6 @@ const awaitService = (port, maxWaitTime) => {
     testService();
   });
 }
-
-/*
- * cdcToAscii 
- *
- * Translate CDC 6/12 display code to ASCII.
- *
- * Arguments:
- *   displayCode - the display code to convert
- *
- * Returns:
- *   ASCII result
- */
-const cdcToAscii = displayCode => {
-  let result = "";
-  let i = 0;
-
-  while (i < displayCode.length) {
-    let c = displayCode.charAt(i++);
-    if (c === "^" && i < displayCode.length) {
-      c = displayCode.charAt(i++);
-      switch (c) {
-      case "A": result += "a"; break;
-      case "B": result += "b"; break;
-      case "C": result += "c"; break;
-      case "D": result += "d"; break;
-      case "E": result += "e"; break;
-      case "F": result += "f"; break;
-      case "G": result += "g"; break;
-      case "H": result += "h"; break;
-      case "I": result += "i"; break;
-      case "J": result += "j"; break;
-      case "K": result += "k"; break;
-      case "L": result += "l"; break;
-      case "M": result += "m"; break;
-      case "N": result += "n"; break;
-      case "O": result += "o"; break;
-      case "P": result += "p"; break;
-      case "Q": result += "q"; break;
-      case "R": result += "r"; break;
-      case "S": result += "s"; break;
-      case "T": result += "t"; break;
-      case "U": result += "u"; break;
-      case "V": result += "v"; break;
-      case "W": result += "w"; break;
-      case "X": result += "x"; break;
-      case "Y": result += "y"; break;
-      case "Z": result += "z"; break;
-      case "0": result += "{"; break;
-      case "1": result += "|"; break;
-      case "2": result += "}"; break;
-      case "3": result += "~"; break;
-      default:
-        result += "^";
-        i -= 1;
-        break;
-      }
-    }
-    else if (c === "@" && i < displayCode.length) {
-      c = displayCode.charAt(i++);
-      switch (c) {
-      case "A": result += "@"; break;
-      case "B": result += "^"; break;
-      case "D": result += ":"; break;
-      case "G": result += "`"; break;
-      default:
-        result += "@";
-        i -= 1;
-        break;
-      }
-    }
-    else {
-      result += c;
-    }
-  }
-  return result;
-};
 
 /*
  * getFile
@@ -237,6 +105,25 @@ const getSystemRecord = (rid, options) => {
   if (typeof options === "undefined") options = {};
   options.jobname = "GTRSYS";
   return dtc.createJobWithOutput(12, 4, job, options);
+};
+
+/*
+ * isInstalled
+ *
+ * Determine whether a specified produce has been installed.
+ *
+ * Arguments:
+ *   product - name of product
+ *
+ * Returns:
+ *   TRUE if product is installed
+ */
+const isInstalled = product => {
+  if (fs.existsSync("opt/installed.json")) {
+    const installedProductSet = JSON.parse(fs.readFileSync("opt/installed.json", "utf8"));
+    return installedProductSet.indexOf(product) >= 0;
+  }
+  return false;
 };
 
 /*
@@ -379,6 +266,44 @@ const processEqpdProps = () => {
 };
 
 /*
+ * processNetworkProps
+ *
+ * Process properties defined in NETWORK sections of property files.
+ *
+ * Returns:
+ *  A promise that is resolved when all NETWORK properties have been processed.
+ */
+const processNetworkProps = () => {
+  let iniProps = {};
+  dtc.readPropertyFile("cyber.ini", iniProps);
+  if (fs.existsSync("cyber.ovl")) {
+    dtc.readPropertyFile("cyber.ovl", iniProps);
+  }
+  for (let line of iniProps["npu.nos287"]) {
+    let ei = line.indexOf("=");
+    if (ei < 0) continue;
+    let key   = line.substring(0, ei).trim();
+    let value = line.substring(ei + 1).trim();
+    if (key.toUpperCase() === "HOSTID") {
+      oldHostID = line.substring(ei + 1).trim();
+    }
+  }
+  if (typeof props["NETWORK"] !== "undefined") {
+    for (const prop of props["NETWORK"]) {
+      let ei = prop.indexOf("=");
+      if (ei < 0) {
+        throw new Error(`Invalid NETWORK definition: \"${prop}\"`);
+      }
+      let key   = prop.substring(0, ei).trim();
+      if (key.toUpperCase() === "HOSTID") {
+        newHostID = prop.substring(ei + 1).trim();
+      }
+    }
+  }
+  return Promise.resolve();
+};
+
+/*
  * replaceFile
  *
  * Replace a file on the running system.
@@ -511,28 +436,31 @@ const updateProductRecords = () => {
  *  A promise that is resolved when the TCPHOST file has been updated.
  */
 const updateTcpHosts = () => {
-  if (oldMID !== newMID || typeof props["HOSTS"] !== "undefined") {
+
+  if (oldMID === newMID && oldHostID === newHostID && typeof props["HOSTS"] === "undefined") {
+    return Promise.resolve();
+  }
+  else {
     return dtc.say("Update TCPHOST")
     .then(() => getFile("TCPHOST", {username:"NETADMN",password:"NETADMN"}))
     .then(text => {
-      text = cdcToAscii(text);
-      if (oldMID !== newMID) {
-        const regex = new RegExp(`LOCALHOST_${oldMID}`, "i");
-        while (true) {
-          let si = text.search(regex);
-          if (si < 0) break;
-          text = `${text.substring(0, si)}LOCALHOST_${newMID}${text.substring(si + 12)}`;
-        }
-      }
-      const pid = `M${oldMID}`;
       let hosts = {};
+      let pid = `M${oldMID.toUpperCase()}`;
+      let hid = oldHostID.toUpperCase();
+      let lcl = `LOCALHOST_${oldMID.toUpperCase()}`;
+      text = dtc.cdcToAscii(text);
       for (const line of text.split("\n")) {
         if (/^[0-9]/.test(line)) {
           const tokens = line.split(/\s+/);
           if (tokens.length < 2) continue;
           for (let i = 1; i < tokens.length; i++) {
-            if (tokens[i].toUpperCase() === pid) {
+            let token = tokens[i].toUpperCase();
+            if (token === pid && newMID !== null) {
               tokens[i] = `M${newMID}`;
+            else if (token === hid && newHostID !== null) {
+              tokens[i] = newHostID;
+            else if (token === lcl && newMID !== null) {
+              tokens[i] = `LOCALHOST_${newMID}`;
             }
           }
           hosts[tokens[1].toUpperCase()] = tokens.join(" ");
@@ -552,12 +480,9 @@ const updateTcpHosts = () => {
       for (const key of Object.keys(hosts).sort()) {
         text += `${hosts[key]}\n`;
       }
-      return asciiToCdc(text);
+      return dtc.asciiToCdc(text);
     })
     .then(text => replaceFile("TCPHOST", text, {username:"NETADMN",password:"NETADMN"}));
-  }
-  else {
-    return Promise.resolve();
   }
 };
 
@@ -581,7 +506,7 @@ const updateTcpResolver = () => {
       password: "NETADMN"
     };
     return dtc.say("Create/Update TCPRSLV")
-    .then(text => replaceFile("TCPRSLV", asciiToCdc(`${props["RESOLVER"].join("\n")}\n`), {username:"NETADMN",password:"NETADMN"}))
+    .then(text => replaceFile("TCPRSLV", dtc.asciiToCdc(`${props["RESOLVER"].join("\n")}\n`), {username:"NETADMN",password:"NETADMN"}))
     .then(() => dtc.createJobWithOutput(12, 4, job, options));
   }
   else {
@@ -620,10 +545,18 @@ awaitService(80, 60)
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => processCmrdProps())
 .then(() => processEqpdProps())
+.then(() => processNetworkProps())
 .then(() => updateProductRecords())
 .then(() => updateMachineID())
 .then(() => updateTcpHosts())
 .then(() => updateTcpResolver())
+.then(() => dtc.disconnect())
+.then(() => {
+  return isInstalled("njf") ? dtc.exec("node", ["njf-configure"]) : Promise.resolve();
+})
+.then(() => {
+  return isInstalled("mailer") ? dtc.exec("node", ["mailer-configure"]) : Promise.resolve();
+})
 .then(() => dtc.say("Reconfiguration complete"))
 .then(() => {
   process.exit(0);

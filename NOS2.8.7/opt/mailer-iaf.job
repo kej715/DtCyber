@@ -1,0 +1,17 @@
+~*
+~*  This job rebuilds IAF to include support for UMass Mailer.
+~*
+IAFMLR.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$BEGIN,IAF,INSTALL,USERF=MODS871.
+***
+*** IAFMLR COMPLETE
+***
+EXIT.
+***
+*** IAFMLR FAILED
+***

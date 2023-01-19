@@ -1,0 +1,167 @@
+#!/usr/bin/env node
+//
+// Run MLRCRDB procedure created by mailer-sysproc.job. This
+// creates the MAILDB fast attach file, if it doesn't exist
+// already, and updates SYSPROC to execute the IMF,ADD
+// command.
+//
+
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+const getFile = (filename, options) => {
+  const job = [
+    `$GET,FILE=${filename}.`,
+    "$COPYSBF,FILE."
+  ];
+  if (typeof options === "undefined") options = {};
+  options.jobname = "GETFILE";
+  return dtc.createJobWithOutput(12, 4, job, options);
+};
+
+const isDST = () => {
+    const d   = new Date();
+    const jul = new Date(d.getFullYear(), 6, 1).getTimezoneOffset();
+    return jul === d.getTimezoneOffset();    
+};
+
+let stdTimeZones = {
+  "-0800":"PST",
+  "-0700":"MST",
+  "-0600":"CST",
+  "-0500":"EST",
+  "-0400":"AST",
+  "-0330":"NST",
+  "+0000":"GMT",
+  "+0100":"CET",
+  "+0200":"EET"
+};
+
+let dstTimeZones = {
+  "-0700":"PDT",
+  "-0600":"MDT",
+  "-0500":"CDT",
+  "-0400":"EDT",
+  "-0300":"ADT",
+  "-0230":"NDT",
+  "+0000":"GMT",
+  "+0100":"BST",
+  "+0200":"CET",
+  "+0300":"EET"
+};
+
+let customProps = {};
+let mid = "01";
+dtc.readPropertyFile(customProps);
+if (typeof customProps["CMRDECK"] !== "undefined") {
+  for (let line of customProps["CMRDECK"]) {
+    line = line.toUpperCase();
+    let match = line.match(/^MID=([^.]*)/);
+    if (match !== null) {
+      mid = match[1].trim();
+    }
+  }
+}
+
+let mailerHostId = `M${mid}`;
+if (typeof customProps["NETWORK"] !== "undefined") {
+  for (let line of customProps["NETWORK"]) {
+    line = line.toUpperCase();
+    let match = line.match(/^HOSTID=([^.]*)/);
+    if (match !== null) {
+      mailerHostId = match[1].trim();
+    }
+  }
+}
+
+let timeZone = "GMT";
+const date = new Date();
+let match = date.toString().match(/GMT([-+][0-9]{4})/);
+if (match !== null) {
+  let offset = match[1];
+  if (isDST()) {
+    if (typeof dstTimeZones[offset] !== "undefined") {
+      timeZone = dstTimeZones[offset];
+    }
+  }
+  else if (typeof stdTimeZones[offset] !== "undefined") {
+    timeZone = stdTimeZones[offset];
+  }
+}
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.say("    Discover host name"))
+.then(() => getFile("TCPHOST", {username:"NETADMN",password:"NETADMN"}))
+.then(text => {
+  //
+  // Find host domain name in TCPHOST or [HOSTS] section of custom props
+  //
+  text = dtc.cdcToAscii(text);
+  const hostIdPattern = new RegExp(`LOCALHOST_${mid}`, "i");
+  for (let line of text.split("\n")) {
+    line = line.trim();
+    if (/^[0-9]/.test(line) && hostIdPattern.test(line)) {
+      const tokens = line.split(/\s+/).slice(1);
+      mailerHostId = tokens[0];
+      if (mailerHostId.indexOf(".") < 0) {
+        for (const token of tokens) {
+          if (token.indexOf(".") >= 0) {
+            mailerHostId = token;
+            break;
+          }
+        }
+      }
+    }
+  }
+  if (typeof customProps["HOSTS"] !== "undefined") {
+    for (const defn of customProps["HOSTS"].split("\n")) {
+      if (/^[0-9]/.test(defn) && hostIdPattern.test(defn)) {
+        const tokens = defn.split(/\s+/).slice(1);
+        mailerHostId = tokens[0];
+        if (mailerHostId.indexOf(".") < 0) {
+          for (const token of tokens) {
+            if (token.indexOf(".") >= 0) {
+              mailerHostId = token;
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+})
+.then(() => dtc.say(`    Host network ID is ${mailerHostId.toLowerCase()}, time zone is ${timeZone}`))
+.then(() => dtc.say("    SYSEDIT IMF and DBCFG into system"))
+.then(() => dtc.dsd([
+  "[IDLE,IAF.",
+  "#1000#[!"
+]))
+.then(() => dtc.dis([
+  "ATTACH,P=PRODUCT.",
+  `GTR,P,LGO.ABS/IMF,DBCFG`,
+  "#2000#SYSEDIT,B=LGO."
+], 1))
+.then(() => dtc.sleep(30000))
+.then(() => dtc.dsd("[IAF."))
+.then(() => dtc.say("    Upload and run procedure to initialize MAILER database and create MAILER user"))
+.then(() => dtc.runJob(12, 4, "opt/mailer-init.job", [mailerHostId, timeZone]))
+.then(() => dtc.dis([
+  "GET,MLRCRDB,MLRUSRS,MAILHLP,MAILTPC.",
+  "PURGE,MLRCRDB,MLRUSRS,MAILHLP,MAILTPC.",
+  "SUI,377776.",
+  "PURGE,MAILHLP,MAILTPC/NA.",
+  "SAVE,MAILHLP,MAILTPC/CT=PU,AC=Y,M=R.",
+  "SUI,377777.",
+  "MODVAL,FA,I=MLRUSRS,OP=U.",
+  "MLRCRDB."
+], 1))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

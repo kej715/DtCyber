@@ -1,0 +1,38 @@
+~*
+~*  This job saves a CCL procedure that will be run by
+~*  DIS to create and initialize the MAILDB fast attach file
+~*  and arrange for it to be added to the system's fast
+~*  attach table at deadstart time.
+~*
+MLRCFG.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$COPY,INPUT,MLRCFG.
+$REPLACE,MLRCFG.
+***
+*** MLRCFG COMPLETE
+***
+EXIT.
+***
+*** MLRCFG FAILED
+***
+~eor
+.PROC,MLRCFG.
+$COMMON,SYSTEM.
+$NOEXIT.
+$GTR,SYSTEM,DBCFG.ABS/DBCFG
+$ONEXIT.
+$IF,.NOT.FILE(DBCFG,AS),SYSED.
+$  SUI,1.
+$  ATTACH,PRODUCT.
+$  GTR,PRODUCT,DBCFG.ABS/DBCFG
+$  SYSEDIT,B=DBCFG.
+$ENDIF,SYSED.
+$RETURN,DBCFG.
+$DBCFG,I=CFG,OP=U.
+$REVERT.
+.DATA,CFG.
+${1}

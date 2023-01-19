@@ -121,6 +121,64 @@ class DtCyber {
   }
 
   /*
+   * asciiToCdc
+   *
+   * Translate ASCII to CDC 6/12 display code.
+   *
+   * Arguments:
+   *   ascii - the ASCII to convert
+   *
+   * Returns:
+   *   CDC 6/12 display code
+   */
+  asciiToCdc(ascii) {
+    let result = "";
+    let i = 0;
+  
+    while (i < ascii.length) {
+      let c = ascii.charAt(i++);
+      switch (c) {
+      case "a": result += "^A"; break;
+      case "b": result += "^B"; break;
+      case "c": result += "^C"; break;
+      case "d": result += "^D"; break;
+      case "e": result += "^E"; break;
+      case "f": result += "^F"; break;
+      case "g": result += "^G"; break;
+      case "h": result += "^H"; break;
+      case "i": result += "^I"; break;
+      case "j": result += "^J"; break;
+      case "k": result += "^K"; break;
+      case "l": result += "^L"; break;
+      case "m": result += "^M"; break;
+      case "n": result += "^N"; break;
+      case "o": result += "^O"; break;
+      case "p": result += "^P"; break;
+      case "q": result += "^Q"; break;
+      case "r": result += "^R"; break;
+      case "s": result += "^S"; break;
+      case "t": result += "^T"; break;
+      case "u": result += "^U"; break;
+      case "v": result += "^V"; break;
+      case "w": result += "^W"; break;
+      case "x": result += "^X"; break;
+      case "y": result += "^Y"; break;
+      case "z": result += "^Z"; break;
+      case "{": result += "^0"; break;
+      case "|": result += "^1"; break;
+      case "}": result += "^2"; break;
+      case "~": result += "^3"; break;
+      case "@": result += "@A"; break;
+      case "^": result += "@B"; break;
+      case ":": result += "@D"; break;
+      case "`": result += "@G"; break;
+      default:  result += c   ; break;
+      }
+    }
+    return result;
+  }
+
+  /*
    * attachPrinter
    *
    * Instantiates a PrinterStreamMgr to begin monitoring a file to which DtCyber's line printer
@@ -173,6 +231,82 @@ class DtCyber {
         reject(err);
       }
     });
+  }
+
+  /*
+   * cdcToAscii
+   *
+   * Translate CDC 6/12 display code to ASCII.
+   *
+   * Arguments:
+   *   displayCode - the display code to convert
+   *
+   * Returns:
+   *   ASCII result
+   */
+  cdcToAscii(displayCode) {
+    let result = "";
+    let i = 0;
+  
+    while (i < displayCode.length) {
+      let c = displayCode.charAt(i++);
+      if (c === "^" && i < displayCode.length) {
+        c = displayCode.charAt(i++);
+        switch (c) {
+        case "A": result += "a"; break;
+        case "B": result += "b"; break;
+        case "C": result += "c"; break;
+        case "D": result += "d"; break;
+        case "E": result += "e"; break;
+        case "F": result += "f"; break;
+        case "G": result += "g"; break;
+        case "H": result += "h"; break;
+        case "I": result += "i"; break;
+        case "J": result += "j"; break;
+        case "K": result += "k"; break;
+        case "L": result += "l"; break;
+        case "M": result += "m"; break;
+        case "N": result += "n"; break;
+        case "O": result += "o"; break;
+        case "P": result += "p"; break;
+        case "Q": result += "q"; break;
+        case "R": result += "r"; break;
+        case "S": result += "s"; break;
+        case "T": result += "t"; break;
+        case "U": result += "u"; break;
+        case "V": result += "v"; break;
+        case "W": result += "w"; break;
+        case "X": result += "x"; break;
+        case "Y": result += "y"; break;
+        case "Z": result += "z"; break;
+        case "0": result += "{"; break;
+        case "1": result += "|"; break;
+        case "2": result += "}"; break;
+        case "3": result += "~"; break;
+        default:
+          result += "^";
+          i -= 1;
+          break;
+        }
+      }
+      else if (c === "@" && i < displayCode.length) {
+        c = displayCode.charAt(i++);
+        switch (c) {
+        case "A": result += "@"; break;
+        case "B": result += "^"; break;
+        case "D": result += ":"; break;
+        case "G": result += "`"; break;
+        default:
+          result += "@";
+          i -= 1;
+          break;
+        }
+      }
+      else {
+        result += c;
+      }
+    }
+    return result;
   }
 
   /*
@@ -891,10 +1025,19 @@ class DtCyber {
    *    [sectionname]
    *
    * Arguments:
-   *   pathname  - pathname of property file
+   *   pathname  - optional pathname of property file, default is "site.cfg"
    *   props     - object that will be updated with parsed definitions
    */
   readPropertyFile(pathname, props) {
+    if (typeof pathname !== "string") {
+      if (fs.existsSync("site.cfg")) {
+        props = pathname;
+        pathname = "site.cfg";
+      }
+      else {
+        return;
+      }
+    }
     const lines = fs.readFileSync(pathname, "utf8");
     let sectionKey = "";
 
