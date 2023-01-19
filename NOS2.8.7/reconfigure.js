@@ -457,8 +457,10 @@ const updateTcpHosts = () => {
             let token = tokens[i].toUpperCase();
             if (token === pid && newMID !== null) {
               tokens[i] = `M${newMID}`;
+            }
             else if (token === hid && newHostID !== null) {
               tokens[i] = newHostID;
+            }
             else if (token === lcl && newMID !== null) {
               tokens[i] = `LOCALHOST_${newMID}`;
             }
