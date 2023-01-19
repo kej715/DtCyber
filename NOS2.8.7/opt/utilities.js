@@ -10,6 +10,7 @@ const utilities = {
     .then(() => dtc.runJob(12, 4, "opt/move-proc.job"))
     .then(() => dtc.dis([
       "GET,MOVPROC.",
+      "PURGE,MOVPROC.",
       `MOVPROC,${fileName},${toUi}.`
     ], fromUi))
     .then(() => dtc.waitJob("MOVE"));
