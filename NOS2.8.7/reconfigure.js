@@ -380,7 +380,7 @@ const updateMachineID = () => {
         password: "NETADMN",
         data:     `${data.join("\n")}\n`
       };
-      return dtc.createJobWithOutput(12, 4,, job, options);
+      return dtc.createJobWithOutput(12, 4, job, options);
     })
     .then(() => dtc.runJob(12, 4, "decks/compile-ndlopl.job"));
   }
