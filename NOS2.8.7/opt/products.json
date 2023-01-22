@@ -166,6 +166,20 @@
         "desc": "UMass Mailer"
       },
       {
+        "name": "netmail",
+        "post": [
+          "netmail-maillib.job",
+          "netmail-post.job",
+          "../netmail-configure.js",
+          "netmail.post"
+        ],
+        "lib": 76,
+        "records": "ABS/DBMAN-ABS/OBXLATE",
+        "url": "https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1",
+        "desc": "UMass Mailer network router",
+        "depends": ["mailer", "njf", "ncctcp"]
+      },
+      {
         "name": "njf",
         "pre": "njf-mods.job",
         "post": [
@@ -309,6 +323,12 @@
         "url": "https://www.dropbox.com/s/ovgysfxbgpl18am/i8080.tap?dl=1",
         "desc": "Intel 8080 cross-tools (CPM80, INTRP80, MAC80, PLM80)",
         "depends": ["ses"]
+      },
+      {
+        "name": "skedulr",
+        "lib": 73,
+        "records": "ABS/SKEDULR",
+        "desc": "Task scheduling utility (like Unix cron)"
       },
       {
         "name": "spss",

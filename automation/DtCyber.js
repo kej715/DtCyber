@@ -2,6 +2,7 @@ const bz2           = require("unbzip2-stream");
 const child_process = require("child_process");
 const extract       = require("extract-zip");
 const fs            = require("fs");
+const ftp           = require("ftp");
 const http          = require("http");
 const https         = require("https");
 const net           = require("net");
@@ -461,8 +462,9 @@ class DtCyber {
     let password = "INSTALL";
     let data     = null;
     if (typeof options === "object") {
-      if (typeof options.jobname  === "string") jobname  = options.jobname ;
+      if (typeof options.jobname  === "string") jobname  = options.jobname;
       if (typeof options.username === "string") username = options.username;
+      if (typeof options.user     === "string") username = options.user;
       if (typeof options.password === "string") password = options.password;
       if (typeof options.data     === "string") data     = options.data;
     }
@@ -1012,6 +1014,71 @@ class DtCyber {
       });
       req.write(job);
       req.end();
+    });
+  }
+
+  /*
+   * putFile
+   *
+   * Use FTP to upload a file to a permanent file catalog on NOS 2.
+   *
+   * Arguments:
+   *   name     - the file name to create on NOS 2
+   *   text     - string or array representing the content of the file
+   *   options  - optional object providing FTP parameters, e.g., user, password,
+   *              host, and port
+   *
+   * Returns:
+   *   A promise that is resolved when the transfer is complete.
+   */
+  putFile(name, text, options) {
+    if (typeof options === "undefined") {
+      options = {
+        user: "INSTALL",
+        password: "INSTALL",
+        host: "127.0.0.1",
+        port: 21
+      }
+    }
+    if (typeof options.host === "undefined") {
+      options.host = "127.0.0.1"
+    }
+    if (typeof options.username !== "undefined"
+        && typeof options.user === "undefined") {
+      options.user = options.username;
+    }
+    if (Array.isArray(text)) {
+      text = text.join("\r\n") + "\r\n";
+    }
+    else if (text.indexOf("\r\n") < 0) {
+      text = text.replaceAll("\n", "\r\n");
+    }
+    return new Promise((resolve, reject) => {
+      const client = new ftp();
+      client.on("ready", () => {
+        client.ascii(err => {
+          if (err) {
+            reject(err);
+          }
+          else {
+            client.put(Buffer.from(text), name, err => {
+              if (err) {
+                reject(err);
+              }
+              else {
+                client.logout(err => {
+                  client.end();
+                  resolve();
+                });
+              }
+            });
+          }
+        });
+      });
+      client.on("error", err => {
+        reject(err);
+      });
+      client.connect(options);
     });
   }
 

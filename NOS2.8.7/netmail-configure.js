@@ -33,7 +33,8 @@ const replaceFile = (filename, text, opts) => {
   else {
     options.data = dtc.asciiToCdc(text);
   }
-  return dtc.createJobWithOutput(12, 4, body, options);
+  return dtc.say(`  ${filename}`)
+  .then(() => dtc.createJobWithOutput(12, 4, body, options));
 }
 
 dtc.connect()
@@ -77,7 +78,8 @@ dtc.connect()
     routes.push(`:nick.${alias} :route.DC=WT,UN=NETOPS,FC=ID,SCL=SY SMTP`);
   }
   routes.push(":nick.system :route.DC=WT,UN=NETOPS,FC=ID,SCL=SY SMTP");
-  return dtc.putFile("MAILRTE/IA", routes, mailerOpts);
+  return dtc.say("  MAILRTE")
+  .then(() => dtc.putFile("MAILRTE/IA", routes, mailerOpts));
 })
 .then(() => {
   //
@@ -92,7 +94,8 @@ dtc.connect()
     routes.push(`:nick.${alias} :ccl.$BEGIN,MAILER,SYSTEM SMTP`)
   }
   routes.push(":nick.system :ccl.$BEGIN,SYSTEM,SYSTEM SMTP");
-  return dtc.putFile("DOMNRTE/IA", routes, mailerOpts);
+  return dtc.say("  DOMNRTE")
+  .then(() => dtc.putFile("DOMNRTE/IA", routes, mailerOpts));
 })
 .then(() => {
   //
@@ -107,7 +110,8 @@ dtc.connect()
   for (const alias of hostAliases) {
     routes.push(`:nick.${alias} :route.DC=WT,UN=NETOPS,FC=IX,SCL=SY SMTP`);
   }
-  return dtc.putFile("BITNRTE/IA", routes, mailerOpts);
+  return dtc.say("  BITNRTE")
+  .then (() => dtc.putFile("BITNRTE/IA", routes, mailerOpts));
 })
 .then(() => {
   //
@@ -121,7 +125,8 @@ dtc.connect()
   for (const alias of hostAliases) {
     routes.push(`:nick.${alias} :route.DC=WT,UN=NETOPS,FC=ID,SCL=SY SMTP`);
   }
-  return dtc.putFile("IBXLRTE/IA", routes, mailerOpts);
+  return dtc.say("  IBXLRTE")
+  .then (() => dtc.putFile("IBXLRTE/IA", routes, mailerOpts));
 })
 .then(() => {
   //
@@ -135,7 +140,8 @@ dtc.connect()
   for (const alias of hostAliases) {
     routes.push(`:nick.${alias} :route.DC=WT,UN=NETOPS,FC=ID,SCL=SY SMTP`);
   }
-  return dtc.putFile("OBXLRTE/IA", routes, mailerOpts);
+  return dtc.say("  OBXLRTE")
+  .then (() => dtc.putFile("OBXLRTE/IA", routes, mailerOpts));
 })
 .then(() => {
   //
@@ -156,8 +162,10 @@ dtc.connect()
       routes.push(`:nick.${name} :njroute.BITNET BITNET`);
     }
   }
-  return dtc.putFile("WORLD/IA", routes, mailerOpts);
+  return dtc.say("  WORLD")
+  .then(() => dtc.putFile("WORLD/IA", routes, mailerOpts));
 })
+.then(() => dtc.say("Permit artifacts to SYSTEMX"))
 .then(() => dtc.runJob(12, 4, "opt/netmail-permit.job"))
 .then(() => dtc.say("MAILER network routing configuration completed successfully"))
 .then(() => {

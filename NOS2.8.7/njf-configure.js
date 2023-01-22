@@ -23,29 +23,6 @@ const DtCyber = require("../automation/DtCyber");
 const dtc = new DtCyber();
 
 //
-// Read and parse the cyber.ini file to obtain the coupler and
-// NPU node numbers. These will be used in generating NDL
-// definitions.
-//
-let iniProps = {};
-dtc.readPropertyFile("cyber.ini", iniProps);
-let couplerNode = 1;
-let npuNode     = 2;
-for (let line of iniProps["npu.nos287"]) {
-  line = line.toUpperCase();
-  let ei = line.indexOf("=");
-  if (ei < 0) continue;
-  let key   = line.substring(0, ei).trim();
-  let value = line.substring(ei + 1).trim();
-  if (key === "COUPLERNODE") {
-    couplerNode = value;
-  }
-  else if (key === "NPUNODE") {
-    npuNode = value;
-  }
-}
-
-//
 // If a site configuration file exists, and it has a CMRDECK
 // section with an MID definition, use that definition.
 // Otherwise, use the default machine ID, "01".
@@ -64,6 +41,36 @@ if (typeof customProps["CMRDECK"] !== "undefined") {
 }
 
 //
+// Read and parse the cyber.ini file to obtain the coupler and
+// NPU node numbers. These will be used in generating NDL
+// definitions.
+//
+let iniProps = {};
+dtc.readPropertyFile("cyber.ini", iniProps);
+if (fs.existsSync("cyber.ovl")) {
+  dtc.readPropertyFile("cyber.ovl", iniProps);
+}
+let couplerNode = 1;
+let npuNode     = 2;
+let hostID      = `NCCM${mid}`;
+for (let line of iniProps["npu.nos287"]) {
+  line = line.toUpperCase();
+  let ei = line.indexOf("=");
+  if (ei < 0) continue;
+  let key   = line.substring(0, ei).trim();
+  let value = line.substring(ei + 1).trim();
+  if (key === "COUPLERNODE") {
+    couplerNode = value;
+  }
+  else if (key === "NPUNODE") {
+    npuNode = value;
+  }
+  else if (key === "HOSTID") {
+    hostID = value;
+  }
+}
+
+//
 // Read the public network topology definition
 //
 const topology = JSON.parse(fs.readFileSync("files/nje-topology.json"));
@@ -72,7 +79,6 @@ const topology = JSON.parse(fs.readFileSync("files/nje-topology.json"));
 // Update topology and network parameters to reflect customizations, if any.
 //
 let defaultRoute  = "NCCMAX";
-let hostID        = `NCCM${mid}`;
 let nextPort      = 0x30;
 let portCount     = 16;
 

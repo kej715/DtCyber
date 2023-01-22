@@ -13,74 +13,7 @@ let newMID         = null;  // new machine identifer
 let oldHostID      = null;  // old network host identifier
 let oldMID         = null;  // old machine identifer
 let productRecords = [];    // textual records to edit into PRODUCT file
-let props          = {};    // properties read from property file arguments
-
-/*
- * awaitService
- *
- * Wait for a TCP service to become available.
- *
- * Arguments:
- *   port        - the port on which to wait
- *   maxWaitTime - maximum number of seconds to wait
- *
- * Returns:
- *   A promise that is fulfilled when the service is available,
- *   or rejected if the maximum wait time is exceeded.
- */
-const awaitService = (port, maxWaitTime) => {
-  const deadline = Date.now() + (maxWaitTime * 1000);
-  let   attempts = 0;
-  return new Promise((resolve, reject) => {
-    const testService = () => {
-      if (Date.now() > deadline) {
-        reject(new Error(`Service at port ${port} is unavailable`));
-      }
-      else {
-        try {
-          attempts += 1;
-          if (attempts > 1) {
-            process.stdout.write(`\r${new Date().toLocaleTimeString()} Attempt ${attempts} : connecting to port ${port}\r`);
-          }
-          const socket = net.createConnection({port:port, host:"127.0.0.1"}, () => {
-            socket.end();
-            resolve();
-          });
-          socket.on("error", err => {
-            setTimeout(() => { testService(); }, 5000);
-          });
-        }
-        catch (err) {
-          setTimeout(() => { testService(); }, 5000);
-        }
-      }
-    };
-    testService();
-  });
-}
-
-/*
- * getFile
- *
- * Obtain a file from the running system.
- *
- * Arguments:
- *   filename - file name (e.g., LIDCM01/UN=SYSTEMX)
- *   options  - optional object providing job credentials and HTTP hostname
- *
- * Returns:
- *   A promise that is resolved when the file contents have been returned.
- *   The value of the promise is the file contents.
- */
-const getFile = (filename, options) => {
-  const job = [
-    `$GET,FILE=${filename}.`,
-    "$COPYSBF,FILE."
-  ];
-  if (typeof options === "undefined") options = {};
-  options.jobname = "GETFILE";
-  return dtc.createJobWithOutput(12, 4, job, options);
-};
+let customProps    = {};    // properties read from site.cfg
 
 /*
  * getSystemRecord
@@ -108,25 +41,6 @@ const getSystemRecord = (rid, options) => {
 };
 
 /*
- * isInstalled
- *
- * Determine whether a specified produce has been installed.
- *
- * Arguments:
- *   product - name of product
- *
- * Returns:
- *   TRUE if product is installed
- */
-const isInstalled = product => {
-  if (fs.existsSync("opt/installed.json")) {
-    const installedProductSet = JSON.parse(fs.readFileSync("opt/installed.json", "utf8"));
-    return installedProductSet.indexOf(product) >= 0;
-  }
-  return false;
-};
-
-/*
  * processCmrdProps
  *
  * Process properties defined in CMRDECK sections of property files.
@@ -137,11 +51,11 @@ const isInstalled = product => {
  *  to be edited into the PRODUCT file, if any.
  */
 const processCmrdProps = () => {
-  if (typeof props["CMRDECK"] !== "undefined") {
+  if (typeof customProps["CMRDECK"] !== "undefined") {
     return dtc.say("Edit CMRD01")
     .then(() => getSystemRecord("CMRD01"))
     .then(cmrd01 => {
-      for (const prop of props["CMRDECK"]) {
+      for (const prop of customProps["CMRDECK"]) {
         let ei = prop.indexOf("=");
         if (ei < 0) {
           throw new Error(`Invalid CMRDECK definition: \"${prop}\"`);
@@ -189,11 +103,11 @@ const processCmrdProps = () => {
  *  to be edited into the PRODUCT file, if any.
  */
 const processEqpdProps = () => {
-  if (typeof props["EQPDECK"] !== "undefined") {
+  if (typeof customProps["EQPDECK"] !== "undefined") {
     return dtc.say("Edit EQPD01")
     .then(() => getSystemRecord("EQPD01"))
     .then(eqpd01 => {
-      for (const prop of props["EQPDECK"]) {
+      for (const prop of customProps["EQPDECK"]) {
         let ei = prop.indexOf("=");
         if (ei < 0) {
           throw new Error(`Invalid EQPDECK definition: \"${prop}\"`);
@@ -288,8 +202,8 @@ const processNetworkProps = () => {
       oldHostID = line.substring(ei + 1).trim();
     }
   }
-  if (typeof props["NETWORK"] !== "undefined") {
-    for (const prop of props["NETWORK"]) {
+  if (typeof customProps["NETWORK"] !== "undefined") {
+    for (const prop of customProps["NETWORK"]) {
       let ei = prop.indexOf("=");
       if (ei < 0) {
         throw new Error(`Invalid NETWORK definition: \"${prop}\"`);
@@ -339,7 +253,7 @@ const replaceFile = (filename, data, options) => {
 const updateMachineID = () => {
   if (oldMID !== newMID) {
     return dtc.say(`Create LIDCM${newMID}`)
-    .then(() => getFile(`LIDCM${oldMID}/UN=SYSTEMX`))
+    .then(() => utilities.getFile(dtc, `LIDCM${oldMID}/UN=SYSTEMX`))
     .then(text => {
       text = text.replace(`LIDCM${oldMID}`, `LIDCM${newMID}`);
       regex = new RegExp(`[LP]ID=M${oldMID}[,.]`);
@@ -437,12 +351,12 @@ const updateProductRecords = () => {
  */
 const updateTcpHosts = () => {
 
-  if (oldMID === newMID && oldHostID === newHostID && typeof props["HOSTS"] === "undefined") {
+  if (oldMID === newMID && oldHostID === newHostID && typeof customProps["HOSTS"] === "undefined") {
     return Promise.resolve();
   }
   else {
     return dtc.say("Update TCPHOST")
-    .then(() => getFile("TCPHOST", {username:"NETADMN",password:"NETADMN"}))
+    .then(() => utilities.getFile(dtc, "TCPHOST", {username:"NETADMN",password:"NETADMN"}))
     .then(text => {
       let hosts = {};
       let pid = `M${oldMID.toUpperCase()}`;
@@ -468,8 +382,8 @@ const updateTcpHosts = () => {
           hosts[tokens[1].toUpperCase()] = tokens.join(" ");
         }
       }
-      if (typeof props["HOSTS"] !== "undefined") {
-        for (const defn of props["HOSTS"]) {
+      if (typeof customProps["HOSTS"] !== "undefined") {
+        for (const defn of customProps["HOSTS"]) {
           if (/^[0-9]/.test(defn)) {
             const tokens = defn.split(/\s+/);
             if (tokens.length > 1) {
@@ -498,7 +412,7 @@ const updateTcpHosts = () => {
  *  A promise that is resolved when the TCPHOST file has been updated.
  */
 const updateTcpResolver = () => {
-  if (typeof props["RESOLVER"] !== "undefined") {
+  if (typeof customProps["RESOLVER"] !== "undefined") {
     const job = [
       "$CHANGE,TCPRSLV/CT=PU,M=R,AC=Y."
     ];
@@ -508,7 +422,7 @@ const updateTcpResolver = () => {
       password: "NETADMN"
     };
     return dtc.say("Create/Update TCPRSLV")
-    .then(text => replaceFile("TCPRSLV", dtc.asciiToCdc(`${props["RESOLVER"].join("\n")}\n`), {username:"NETADMN",password:"NETADMN"}))
+    .then(text => replaceFile("TCPRSLV", dtc.asciiToCdc(`${customProps["RESOLVER"].join("\n")}\n`), {username:"NETADMN",password:"NETADMN"}))
     .then(() => dtc.createJobWithOutput(12, 4, job, options));
   }
   else {
@@ -516,33 +430,9 @@ const updateTcpResolver = () => {
   }
 };
 
-//
-//  Read the property files, if any, and build the property object from them
-//
+dtc.readPropertyFile(customProps);
 
-let propFiles = [];
-for (const filePath of process.argv.slice(2)) {
-  propFiles.push(filePath);
-}
-if (propFiles.length < 1) {
-  if (fs.existsSync("site.cfg")) {
-    propFiles.push("site.cfg");
-  }
-  else {
-    process.exit(0); // No property files specified
-  }
-}
-
-for (const configFilePath of propFiles) {
-  if (!fs.existsSync(configFilePath)) {
-    process.stdout.write(`${configFilePath} does not exist\n`);
-    process.exit(1);
-  }
-  dtc.readPropertyFile(configFilePath, props);
-}
-
-awaitService(80, 60)
-.then(() => dtc.connect())
+dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => processCmrdProps())
@@ -554,10 +444,13 @@ awaitService(80, 60)
 .then(() => updateTcpResolver())
 .then(() => dtc.disconnect())
 .then(() => {
-  return isInstalled("njf") ? dtc.exec("node", ["njf-configure"]) : Promise.resolve();
+  return utilities.isInstalled("njf") ? dtc.exec("node", ["njf-configure"]) : Promise.resolve();
 })
 .then(() => {
-  return isInstalled("mailer") ? dtc.exec("node", ["mailer-configure"]) : Promise.resolve();
+  return utilities.isInstalled("mailer") ? dtc.exec("node", ["mailer-configure"]) : Promise.resolve();
+})
+.then(() => {
+  return utilities.isInstalled("netmail") ? dtc.exec("node", ["netmail-configure"]) : Promise.resolve();
 })
 .then(() => dtc.say("Reconfiguration complete"))
 .then(() => {
