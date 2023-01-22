@@ -1,0 +1,1756 @@
+SKEDULR.
+$USER,INSTALL,INSTALL.
+$SETTL,*.
+$SETJSL,*.
+$SETASL,*.
+$ATTACH,OPL=OPL871.
+$COMPASS,L=0,S=NOSTEXT,S=PSSTEXT.
+$LOAD,LGO.
+$NOGO,ABS,SKEDULR.
+$ATTACH,PRODUCT,DIRFILE/M=W,WB.
+$REWIND,ABS.
+$NOTE,DIR.+SKEDULR+*ADD LIB${1},ABS/SKEDULR
+$LIBEDIT,P=PRODUCT,B=ABS,I=0,C.
+$LIBEDIT,P=DIRFILE,B=DIR,I=0,C.
+***
+*** SKEDULR COMPLETE
+***
+EXIT.
+***
+*** SKEDULR FAILED
+***
+~eor
+          IDENT   SKEDULR                                                SKEDULR     2
+          ENTRY   SKEDULR                                                SKEDULR     3
+          SYSCOM  B1                                                     SKEDULR     4
+          SST                                                            DIM0337    14
+ PRIVATE  SPACE  15,35                                                   ASSYTAG     2
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  ASSYTAG     3
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  ASSYTAG     4
+*                                                                     *  ASSYTAG     5
+*                                                                     *  ASSYTAG     6
+*                                                                     *  CPYCOM      9
+          SPACE  2                                                       CPYC34998   5
+          COMMENT  CONTROL DATA PROPRIETARY NOTICE                       CPYC34998   6
+          COMMENT  COPYRIGHT CONTROL DATA CORPORATION,1981               CPYC34998   7
+*                                                                        CPYC34998   8
+*                CONTAINED HEREIN IS MATERIAL WHICH IS CONFIDENTAL OR    CPYC34998   9
+*                OTHERWISE PROPRIETARY TO CONTROL DATA CORPORATION       CMLA422BB   6
+*                AND IS AUTHORIZED FOR REPRODUCTION OR USE ONLY UNDER    CMLA422BB   7
+*                THE TERMS OF THE SOFTWARE LICENSE FOR CONTROL DATA      CMLA422BB   8
+*                SOFTWARE PRODUCTS OR OTHER APPLICABLE CONTROL DATA      CMLA422BB   9
+*                CONTRACT. THIS NOTICE MUST BE ATTACHED TO THE OUTSIDE   CMLA422BB  10
+*                OF THE MEDIA CONTAINING ANY AUTHORIZED COMPLETE OR      CMLA422BB  11
+*                PARTIAL COPY, MODIFICATION OR DERIVATE.                 CMLA422BB  12
+*                                                                        CPYC34998  17
+*                THIS IS AN ENGINEERING SERVICES PROPRIETARY DOCUMENT/   CMLA422BB  13
+*                PRODUCT.                                                CMLA422BB  14
+*                                                                        CPYC34998  20
+          EJECT                                                          CPYC34998  21
+          COMMENT - CONTROL DATA PROPRIETARY PRODUCT.                 *  ASSYTAG     8
+          COMMENT - MAINTENANCE SOFTWARE.                             *  ASSYTAG     9
+*                                                                     *  ASSYTAG    10
+*         REPRODUCTION IN WHOLE OR IN PART WITHOUT EXPRESS            *  ASSYTAG    11
+*         WRITTEN PERMISSION OF CONTROL DATA CORPORATION              *  ASSYTAG    12
+*         IS STRICTLY PROHIBITED.                                     *  ASSYTAG    13
+*                                                                     *  ASSYTAG    14
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  ASSYTAG    15
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  ASSYTAG    16
+ PRIVATE  EJECT                                                          ASSYTAG    17
+          TITLE  ASSEMBLY TAG DEFINES (COMMON DECK)                      ASSYTAG    18
+***       COMMON DECK /ASSYTAG/ SETS SYSTEM NAME TAGS FOR CONDITIONAL    ASSYTAG    19
+*         ASSEMBLY OF CODE IN COMPASS PROGRAMS.  EACH SPECIFIC TABLE IS  ASSYTAG    20
+*         CREATED ACCORDING TO *DEFINE DIRECTIVES IN THE UPDATE RUN.     ASSYTAG    21
+*                                                                        ASSYTAG    22
+ NOS28    SPACE  2                                                       CMLA207D  207
+***       THIS TABLE WAS GENERATED DUE TO AN UPDATE DIRECTIVE OF         CMLA207D  208
+*         *DEFINE,NOS28                                                  CMLA207D  209
+*                                                                        CMLA207D  210
+ KRONOS   EQU    0                                                       CMLA207D  211
+ KRONOS20 EQU    0                                                       CMLA207D  212
+ KRONOS21 EQU    0                                                       CMLA207D  213
+ KRONOS22 EQU    0                                                       CMLA207D  214
+ NOS      EQU    1                                                       CMLA207D  215
+ NOS1     EQU    0                                                       CMLA207D  216
+ NOS2     EQU    0                                                       CMLA207D  217
+ NOS3     EQU    0                                                       CMLA207D  218
+ NOS4     EQU    0                                                       CMLA207D  219
+ NOS5     EQU    0                                                       CMLA207D  220
+ NOS6     EQU    0                                                       CMLA207D  221
+ NOS23    EQU    0                                                       CMLA207D  222
+ NOS24    EQU    0                                                       CMLA207D  223
+ NOS25    EQU    0                                                       CMLA207D  224
+ NOS26    EQU    0                                                       CMLA207D  225
+ NOS27    EQU    0                                                       CMLA207D  226
+ NOS28    EQU    1                                                       CMLA207D  227
+ NOS29    EQU    0                                                       CMLA207D  228
+ NOS7     EQU    0                                                       CMLA207D  229
+ SCOPE    EQU    0                                                       CMLA207D  230
+ SCOPE32  EQU    0                                                       CMLA207D  231
+ SCOPE33  EQU    0                                                       CMLA207D  232
+ SCOPE341 EQU    0                                                       CMLA207D  233
+ SCOPE342 EQU    0                                                       CMLA207D  234
+ SCOPE343 EQU    0                                                       CMLA207D  235
+ SCOPE344 EQU    0                                                       CMLA207D  236
+ NOSBE    EQU    0                                                       CMLA207D  237
+ NOSBE1   EQU    0                                                       CMLA207D  238
+ NOSBE2   EQU    0                                                       CMLA207D  239
+ NOSBE3   EQU    0                                                       CMLA207D  240
+ NOSBE4   EQU    0                                                       CMLA207D  241
+ NOSBE5   EQU    0                                                       CMLA207D  242
+ NOSBE6   EQU    0                                                       CMLA207D  243
+*         THIS IS THE END OF TABLE NOS28                                 CMLA207D  244
+ MOS      EQU    0                                                       ASSYTAG   510
+*         THIS IS THE LAST CARD IN COMMON DECK  /ASSYTAG/                ASSYTAG   512
+          TITLE  SKEDULR - SUBMIT FILE SCHEDULER                         SKEDULR     5
+                                                                         SKEDULR     6
+***                                                                      SKEDULR     7
+*    AUTHOR                                                              SKEDULR     8
+*    ------                                                              SKEDULR     9
+*                                                                        SKEDULR    10
+*         J.E. SIPPER        79/06/07                                    SKEDULR    11
+*         CONSULTANT, ENGINEERING SERVICES                               SKEDULR    12
+*         SOUTHEAST REGION                                               SKEDULR    13
+*                                                                        SKEDULR    14
+*         MODIFIED FOR NOS/BE OPERATION                                  SKEDULR    15
+*                                                                        SKEDULR    16
+*         D.M. ANDERSON      79/08/08                                    SKEDULR    17
+*         SYSTEMS ENGINEER, ENGINEERING SERVICES                         SKEDULR    18
+*         SOUTHEAST REGION                                               SKEDULR    19
+*                                                                        SKEDULR    20
+*    OVERVIEW                                                            SKEDULR    21
+*    --------                                                            SKEDULR    22
+*                                                                        SKEDULR    23
+*         SKEDULR WILL SCHEDULE SUBMIT FILES FOR EXECUTION BASED ON      SKEDULR    25
+*         THE CONTENTS OF AN INDIRECT ACCESS PERMENANT FILE CALLED       SKEDULR    26
+*         JOBS (IF SYMBOL  MMF  IS DEFINED, THE JOBS FILE WILL BE        SKEDULR    27
+*         JOBSXX - XX IS CHARACTERS OBTAINED FROM THE OPERATING SYSTEM   SKEDULR    28
+*         MACHINE ID.  THIS ID IS A ONE OR TWO-CHARACTER DISPLAY-CODE    SKEDULR    29
+*         VALUE.  IF THESE CHARACTERS WERE T1, THEN THE JOBS FILE        SKEDULR    30
+*         WOULD BE JOBST1.  IF THE MACHINE ID WAS T, THEN THE JOBS       SKEDULR    31
+*         FILE WOULD BE JOBST.  IN A MULTI-MAINFRAME ENVIRONMENT, THIS   SKEDULR    32
+*         TECHNIQUE ALLOWS THE SKEDULR TO BE COMMON TO ALL SYSTEMS       SKEDULR    33
+*         WITH DIFFERENT JOBS FILES ESTABLISHED FOR EACH SYSTEM IN       SKEDULR    34
+*         THE NETWORK).                                                  SKEDULR    35
+*                                                                        SKEDULR    42
+*         THE JOBS FILE MUST CONTAIN RUN DIRECTIVES THAT DEFINE          SKEDULR    43
+*         SUBMIT FILES TO SCHEDULE PLUS THE DAY-OF-THE-WEEK AND          SKEDULR    45
+*         TIME-OF-THE-DAY THE FILE IS TO BE SUBMITTED.  THIS FILE        SKEDULR    50
+*         IS IN 80 COLUMN LINE IMAGES, STARTING IN COLUMN 1, IN THE      SKEDULR    51
+*         FOLLOWING FORMAT;                                              SKEDULR    52
+*                                                                        SKEDULR    53
+*            RUN LFN WHEN AT TIME,TIME,TIME....                          SKEDULR    54
+*                --- ----    ---- ---- ----                              SKEDULR    55
+*                                                                        CML0836     6
+*         OR                                                             CML0836     7
+*                                                                        CML0836     8
+*            1RUN LFN WHEN AT TIME,TIME,TIME....                         CML0836     9
+*                 --- ----    ---- ---- ----                             CML0836    10
+*                                                                        SKEDULR    56
+*            LFN  = INDIRECT ACCESS PERMANENT FILE NAME OF THE           SKEDULR    58
+*                   SUBMIT FILE TO BE SCHEDULED (1-7 CHARACTERS)         SKEDULR    59
+*                                                                        SKEDULR    65
+*            WHEN = DESCRIPTION OF THE DAY THE JOB IS TO BE SCHEDULED.   SKEDULR    66
+*                   A NUMBER OF SYNTAXS EXIST TO ALLOW A JOB TO BE RUN   SKEDULR    67
+*                   DAILY, WEEKLY, MONTHLY, YEARLY OR ANY COMBINATION    SKEDULR    68
+*                   OF THESE.  THE FOLLOWING KEYWORDS ARE POSSIBLE;      SKEDULR    69
+*                                                                        SKEDULR    70
+*                     DAILY                                              SKEDULR    71
+*                     WEEKDAYS      - (MONDAY-FRIDAY)                    SKEDULR    72
+*                     WEEKENDS      - (SATURDAY-SUNDAY)                  SKEDULR    73
+*                     SUNDAY - SATURDAY                                  SKEDULR    74
+*                     MONTHLY (X)   - X = DAY OF THE MONTH 1-31          SKEDULR    75
+*                     MONTHLY (Y Z) - Y = FIRST-FIFTH, Z=DAY OF THE      SKEDULR    76
+*                                     WEEK (FIRST MONDAY)                SKEDULR    77
+*                     MONTHLY (LAST DAY) - LAST DAY OF THE MONTH         SKEDULR    78
+*                     JANUARY-DECEMBER (X) - X = DAY OF THE MONTH        SKEDULR    79
+*                                     EXAMPLE;  JUNE (15)                SKEDULR    80
+*                     JANUARY-DECEMBER (Y Z) - Y = FIRST-FIFTH, Z =      SKEDULR    81
+*                                     DAY OF THE WEEK (SECOND TUESDAY)   SKEDULR    82
+*                                                                        SKEDULR    83
+*            TIME = TIME OF DAY THE JOB IS TO BE SUBMITTED (0000 -       SKEDULR    84
+*                   2359 - HOUR AND MINUTES WITH NO SEPERATION). IF      SKEDULR    85
+*                   THE JOB IS TO BE SUBMITTED MORE THAN ONCE PER DAY,   SKEDULR    86
+*                   MULTIPLE TIMES CAN BE SPECIFIED.                     SKEDULR    87
+*                                                                        CML0836    11
+*         RUN DIRECTIVES WILL CAUSE SKEDULR TO ALLOW MULTIPLE RUNS OF    CML0836    12
+*         THE SAME TASK NAME TO "CATCH UP" IN THE EVENT OF SYSTEM DOWN   CML0836    13
+*         TIME OR OTHER DELAYS.                                          CML0836    14
+*                                                                        CML0836    15
+*         1RUN DIRECTIVES WILL CAUSE SKEDULR TO ALLOW THE TASK TO ONLY   CML0836    16
+*         BE RUN ONCE DURING EACH SKEDULR SCAN CYCLE. THI IS USED IF     CML0836    17
+*         FOR EXAMPLE YOU HAVE A TASK THAT NEEDS TO BE RUN EVERY 30      CML0836    18
+*         MINUTES DURING THE DAY SHIFT BUT DOES NOT NEED TO RUN SEVERAL  CML0836    19
+*         TIMES IN A SHORT PERIOD TO CATCH UP.                           CML0836    20
+*                                                                        CML0836    21
+*         IT IS POSSIBLE TO MIX RUN AND 1RUN DIRECTIVES. THEY CONTINUE   CML0836    22
+*         TO BE SCANNED SEQUENTIALLY FOR PROPER SELECTION CRITERIA. IF   CML0836    23
+*         A RUN COMMAND IS ENTERED FRO A TASK FOLLOWED BY A 1RUN COMMAND CML0836    24
+*         FOR THE SAME TASK THE 1RUN COMMAND WILL BE IGNORED IF THE TASK CML0836    25
+*         WAS STARTED BECAUSE OF THE RUN COMMAND.                        CML0836    26
+*                                                                        CML0836    27
+*    WARNING...............                                              CML0836    28
+*         THIS CHANGE HAS A PROBLEM IF MORE THAN 100 DIFFERENT TASKS     CML0836    29
+*         ARE STARTED DURING THE SAME SKEDULR CYCLE. THE FIRST 99        CML0836    30
+*         TASKS WILL BE CHECKED FOR A MATCH ALONG WITH THE LAST TASK     CML0836    31
+*         THAT WAS SKEDULED.                                             CML0836    32
+*                                                                        SKEDULR    88
+*         SINGLE BLANKS, PERIODS OR COMMAS CAN BE USED AFTER EACH WORD   SKEDULR    89
+*         OR TIME ENTRY, BUT TWO BLANKS TERMINATE THE RUN DIRECTIVE.     SKEDULR    90
+*         REMAINING COLUMNS, IF ANY, CAN BE USED FOR DOCUMENTATION IF    SKEDULR    91
+*         DESIRED.                                                       SKEDULR    92
+*                                                                        SKEDULR    93
+*         EXAMPLES:                                                      SKEDULR    94
+*                                                                        SKEDULR    95
+*            RUN HPASUM DAILY AT 0830                                    SKEDULR    96
+*            RUN REGEN01 DAILY AT 0800,1000,1200,1400,1600,1800,2000     SKEDULR    97
+*            RUN TASK1 WEEKDAYS AT 0300                                  SKEDULR    98
+*            RUN TASK2 WEEKENDS AT 0900                                  SKEDULR    99
+*            RUN D44020A MONDAY AT 1915   *RUN D44 ON EST 20             SKEDULR   100
+*            RUN HPAMON MONTHLY (15) AT 1000                             SKEDULR   101
+*            RUN FTP015A MONTHLY (FIRST MONDAY) AT 1100                  SKEDULR   102
+*            RUN WRAPUP MONTHLY (LAST DAY) AT 2300                       SKEDULR   103
+*            RUN CAMSRUN JULY (15) AT 0800                               SKEDULR   104
+*            RUN CAMS JULY (FIRST WEDNESDAY) AT 0900                     SKEDULR   105
+*                                                                        SKEDULR   106
+*            1RUN PLOTMOV DAILY AT 0700,0730,0800,0830,0900,0930,1000    CML0836    33
+*            1RUN PLOTMOV DAILY AT 1030,1100,1130,1200,1230,1300,1330    CML0836    34
+*            1RUN PLOTMOV DAILY AT 1400,1430,1500,1530,1600,1630,1700    CML0836    35
+*                                                                        SKEDULR   107
+*                                                                        SKEDULR   108
+*         THE JOB TO SUBMIT CAN BE IN TWO FORMATS.  IF THE FIRST CARD    SKEDULR   109
+*         IMAGE OF THE FILE IS  /JOB  , SCHEDULR WILL CREATE A NEW       SKEDULR   110
+*         FILE TO BE SUBMITTED, ELIMINATING THE   /JOB  STATEMENT AND    SKEDULR   111
+*         REPLACING ANY  /EOR  AND  /EOF  STATEMENTS WITH END-OF-RECORD  SKEDULR   112
+*         OR END-OF-FILE.  SEQUENCE NUMBERS ARE NOT ALLOWED SINCE THEY   SKEDULR   113
+*         ARE NOT REMOVED.  HOWEVER, THE /NOSEQ CARD MAY BE USED, AND    SKEDULR   114
+*         IF PRESENT, IT IS DISCARDED.                                   SKEDULR   115
+*                                                                        SKEDULR   116
+*           NOTE:  THE /NOSEQ CARD SHOULD BE USED IF THE JOB IS TO BE    SKEDULR   117
+*                  SUBMITTED BY SKEDULR AS WELL AS SUBMITTED TO THE      SKEDULR   118
+*                  INPUT QUEUE WITH SYSTEM CONTROL CARDS.  WITHOUT       SKEDULR   119
+*                  THE /NOSEQ CARD, THE MANUAL SUBMIT COULD CAUSE DATA   SKEDULR   120
+*                  CARDS WITHIN THE JOB WHICH HAVE NUMBERS IN THE        SKEDULR   121
+*                  FIRST FEW COLUMNS TO BE REARRANGED SUCH THAT THE      SKEDULR   122
+*                  NUMBERS, THOUGHT TO BE SEQUENCE NUMBERS, WILL BE      SKEDULR   123
+*                  REMOVED.                                              SKEDULR   124
+*                                                                        SKEDULR   125
+*         THE SECOND FORMAT DOES NOT CONTAIN THE  / CONTROL STATEMENTS   SKEDULR   126
+*         AND WILL BE SUBMITTED DIRECTLY FOR EXECUTION WITHOUT ANY       SKEDULR   127
+*         PROCESSING BY SKEDULR.                                         SKEDULR   128
+*                                                                        SKEDULR   129
+*                                                                        SKEDULR   130
+*    DESCRIPTION                                                         SKEDULR   131
+*    -----------                                                         SKEDULR   132
+*                                                                        SKEDULR   133
+*         SKEDULR SPENDS MOST OF ITS TIME ROLLED OUT, WAITING FOR A      SKEDULR   135
+*         CALCULATED PERIOD OF TIME TO EXPIRE BEFORE BEING ROLLED IN     SKEDULR   136
+*         TO PROCESS THE JOBS FILE.  AFTER SCHEDULING THE REQUESTED      SKEDULR   137
+*         TASKS, SKEDULR ROLLS AGAIN FOR A PERIOD OF FIFTEEN             SKEDULR   138
+*         MINUTES OR UNTIL THE NEXT JOB NEEDS TO BE SCHEDULED, WHICH     SKEDULR   139
+*         EVER IS LESS.  BY HAVING A MAXIMUM ROLLOUT TIME OF FIFTEEN     SKEDULR   140
+*         MINUTES, A NEW OR MODIFIED JOBS FILE CAN BE PUT INTO EFFECT    SKEDULR   141
+*         WITHIN 15 MINUTES OF BEING CREATED.                            SKEDULR   142
+*                                                                        SKEDULR   152
+*         PRIOR TO EXECUTING SKEDULR, PERMANENT FILES MUST BE CREATED    SKEDULR   153
+*         FOR THE FOLLOWING;                                             SKEDULR   154
+*                                                                        SKEDULR   155
+*         . JOBS  - THE FILE THAT CONTAINS RUN DIRECTIVES OF JOBS TO BE  SKEDULR   156
+*                   SCHEDULED BY SKEDULR.                                SKEDULR   157
+*                                                                        SKEDULR   158
+*         . PERMANENT FILES OF JOBS TO SCHEDULE                          SKEDULR   159
+*                                                                        SKEDULR   160
+*                                                                        SKEDULR   194
+*         IF TWO OR MORE COPIES OF SKEDULR WERE IN OPERATION AT THE      SKEDULR   195
+*         SAME TIME, JOBS WOULD BE SCHEDULED MULTIPLE TIMES.  TO         SKEDULR   196
+*         PREVENT MULTIPLE COPIES OF SKEDULR FROM RUNNING, AN INDIRECT   SKEDULR   197
+*         ACCESS PERMANENT FILE IS USED AS AN INTERLOCK (DIRECT ACCESS   SKEDULR   198
+*         FILE IS NOT USED SO THAT DISK SPACE CAN BE CONSERVED).  A      SKEDULR   199
+*         DEFAULT FILE NAME OF  TFILE  IS USED AS THE INTERLOCK FILE.    SKEDULR   200
+*         IF THE USER WISHES TO USE SOME OTHER NAME FOR THIS FILE, THE   SKEDULR   201
+*         PROCEDURE DESCRIBED IN THE INSTALLATION SECTION SHOULD BE      SKEDULR   202
+*         USED.                                                          SKEDULR   203
+*                                                                        SKEDULR   204
+*           CAUTION: TFILE OR THE FILE NAME SPECIFIED AS TFILE SHOULD    SKEDULR   205
+*                    NEVER BE USED FOR ANY OTHER PURPOSE.  ANY USER      SKEDULR   206
+*                    DATA PLACED ON THIS FILE WILL BE DESTROYED BY       SKEDULR   207
+*                    SKEDULR.                                            SKEDULR   208
+*                                                                        SKEDULR   209
+*         THE FOLLOWING REPRESENTS A TYPICAL RUN OF SKEDULR UNDER NOS.   SKEDULR   210
+*         THIS JOB WOULD NORMALLY BE EXECUTED AFTER EACH LEVEL 0         SKEDULR   211
+*         DEADSTART IF A PREVIOUS COPY OF SKEDULR WAS NOT RECOVERED      SKEDULR   212
+*         IN THE QUEUES.  THE SKEDULR SHOULD NORMALLY BE RECOVERED       SKEDULR   213
+*         AUTOMATICALLY ON ALL OTHER LEVELS OF DEADSTART.  DUE TO THE    SKEDULR   214
+*         PROTECTION PROVIDED TO INSURE MULTIPLE COPIES ARE NOT IN       SKEDULR   215
+*         EXECUTION AT THE SAME TIME, THE USER CAN NORMALLY START        SKEDULR   216
+*         ANOTHER COPY OF SKEDULR AFTER A DEADSTART IF IN DOUBT ABOUT    SKEDULR   217
+*         IT BEING RECOVERED IN THE QUEUES.  IF A COPY IS ALREADY IN     SKEDULR   218
+*         EXECUTION, THE SECOND COPY TERMINATES WITH A MESSAGE THAT      SKEDULR   219
+*         INDICATES MULTIPLE COPIES EXISTED.                             SKEDULR   220
+*                                                                        SKEDULR   221
+*            JOB CARD.              (INSURE TIME LIMIT IS INFINITY)      SKEDULR   222
+*            USER AND CHARGE CARDS AS NECESSARY.                         SKEDULR   223
+*            GET,SKEDULR.                                                SKEDULR   224
+*            SKEDULR.                                                    SKEDULR   225
+*            6/7/8/9                                                     SKEDULR   226
+*                                                                        SKEDULR   227
+*         IF THE NOS OPERATING SYSTEM IS NOS 1.6 OR GREATER, THE CHARGE  SKEDULR   228
+*         CARD SHOULD INCLUDE A PARAMETER THAT CAUSES SKEDULR TO         SKEDULR   229
+*         EXECUTE IN THE SAME JOB CLASS AS THE NETWORK SUPERVISORS.      SKEDULR   230
+*         THIS INSURES THAT SKEDULR HAS A HIGH PRIORITY AND ACCURATELY   SKEDULR   231
+*         SCHEDULES JOBS ON TIME.  FOR OLDER SYSTEMS, A HIGH QUEUE       SKEDULR   232
+*         PRIORITY AND SMALL FIELD LENGTH ARE USED TO INSURE ACCURATE    SKEDULR   233
+*         SCHEDULING.  HOWEVER, IN A HEAVILY LOADED SYSTEM, SCHEDULING   SKEDULR   234
+*         WITHIN A FEW MINUTES OF THE REQUESTED TIME CANNOT BE           SKEDULR   235
+*         GUARENTEED ALTHOUGH ALL TESTING HAS BEEN SUCCESSFUL.           SKEDULR   236
+*                                                                        SKEDULR   237
+*                                                                        SKEDULR   239
+*         ANY NUMBER OF JOBS CAN BE SCHEDULED BY SKEDULR SINCE THE JOBS  SKEDULR   240
+*         FILE IS READ AND PROCESSED TO END-OF-INFORMATION.              SKEDULR   241
+*                                                                        SKEDULR   242
+*                                                                        SKEDULR   243
+*    INSTALLATION                                                        SKEDULR   244
+*    ------------                                                        SKEDULR   245
+*                                                                        SKEDULR   246
+*         SKEDULR NEED NOT BE INSTALLED INTO THE CUSTOMER DEADSTART      SKEDULR   247
+*         TAPE - IT CAN BE EXECUTED FROM A USER FILE.  THE SOURCE        SKEDULR   248
+*         MUST BE EXTRACTED FROM THE CML TAPE USING UPDATE, ASSEMBLED    SKEDULR   249
+*         INTO BINARY USING COMPASS AND SAVED FOR LATER EXECUTION        SKEDULR   250
+*         EITHER AS A PERMANENT FILE OR ON PUNCHED CARDS.  THERE ARE     SKEDULR   251
+*         A NUMBER OF OPTIONS THAT CAN/MUST BE INVOKED DURING THE        SKEDULR   252
+*         UPDATE RUN.                                                    SKEDULR   253
+*                                                                        SKEDULR   254
+*         . SINCE SKEDULR EXECUTES ON BOTH NOS AND NOSBE, THE USER       SKEDULR   255
+*           MUST DEFINE THE TARGET SYSTEM AS FOLLOWS;                    SKEDULR   256
+*                                                                        SKEDULR   257
+*               *DEFINE,NOS,(NOSVERSION)  (FOR NOS OPERATION SEE BELOW)  CMLA465A    8
+*               *DEFINE,NOSBE,NOBE6       (FOR NOSBE OPERATION)          CMLA465A    9
+*                                                                        SKEDULR   260
+*         . IF SKEDULR IS TO BE USED IN NOS, THE USER MUST DEFINE        SKEDULR   261
+*           WHICH VERSION OF NOS IS BEING USED (SKEDULR USES DIFFERENT   SKEDULR   262
+*           FEATURES OF THE SYSTEM BASED UPON THE SYSTEM LEVEL).         SKEDULR   263
+*                                                                        SKEDULR   264
+*         . AS OF CML L179 SKEDULR MAKES A CALL TO COMMON DECK ASSYTAG   CMLA465A   10
+*           FOR THE ASSEMBLY DEFINES. THE FOLLOWING DEFINES MUST BE IN   CMLA465A   11
+*           THE CORRECT FORMAT TO GET THE PROPER BINARY COMPILED FOR     CMLA465A   12
+*           NOS. SEE DEFINE FOR NOSBE ABOVE.                             CMLA465A   13
+*                                                                        CMLA465A   14
+*               *DEFINE,NOS,(NOSVERSION)                                 CMLA465A   15
+*                           WHERE (NOSVERSION) =                         CMLA465A   16
+*                           NOS1 (IF THE SYSTEM IS NOS 1.0 OR NOS 1.1.)  CMLA465A   17
+*                           NOS2 (IF THE SYSTEM IS NOS 1.2)              CMLA465A   18
+*                           NOS3 (IF THE SYSTEM IS NOS 1.3)              CMLA465A   19
+*                           NOS4 (IF THE SYSTEM IS NOS 1.4)              CMLA465A   20
+*                           NOS6 (IF THE SYSTEM IS NOS 2.0 THROUGH 2.2)  CMLA465A   21
+*                           NOS23 (IF THE SYSTEM IS NOS 2.3)             CMLA465A   22
+*                           NOS24 (IF THE SYSTEM IS NOS 2.4)             CMLA465A   23
+*                           NOS25 (IF THE SYSTEM IS NOS 2.5)             CMLA465A   24
+*                           NOS26 (IF THE SYSTEM IS NOS 2.6)             CMLA465A   25
+*                                                                        CMLA465A   26
+*         . IF THE USER WISHES TO USE A DIFFERENT FILE NAME FOR TFILE,   SKEDULR   270
+*           THE FOLLOWING UPDATE CORRECTION IS REQUIRED.                 SKEDULR   271
+*                                                                        SKEDULR   272
+*               *INSERT,SKEDULR.6                                        SKEDULR   273
+*                TFPFN    MICRO  1,,*XXXXX*   (XXXXX= PFN FOR TFILE)     SKEDULR   274
+*                                                                        SKEDULR   275
+*         . IF THE USER WISHES TO USE A PERMANENT FILE ID OTHER THAN     SKEDULR   276
+*           THE DEFAULT (CDCCE), THE FOLLOWING UPDATE CORRECTION IS      SKEDULR   277
+*           REQUIRED (FOR NOSBE USE ONLY).                               SKEDULR   278
+*                                                                        SKEDULR   279
+*               *INSERT,SKEDULR.6                                        SKEDULR   280
+*                PFILEID  MICRO  1,,*XXXXX*   (XXXXX= NEW ID)            SKEDULR   281
+*                                                                        SKEDULR   282
+*         . IF SKEDULR IS TO BE USED IN A NOS MULTI-MAINFRAME SYSTEM     SKEDULR   283
+*           AND SHARE A COMMON COPY OF THE SKEDULR BINARY BETWEEN THE    SKEDULR   284
+*           SYSTEMS (BUT USE UNIQUE JOBS FILES FOR EACH SYSTEM) THE      SKEDULR   285
+*           FOLLOWING UPDATE CORRECTION IS REQUIRED.                     SKEDULR   286
+*                                                                        SKEDULR   287
+*               *DEFINE,MMF                                              SKEDULR   288
+*                                                                        SKEDULR   289
+*         A TYPICAL NOS INSTALLATION DECK WOULD BE AS FOLLOWS (NOTE      SKEDULR   290
+*         THAT YOUR UPDATE OPTIONS COULD BE DIFFERENT).                  SKEDULR   291
+*                                                                        SKEDULR   292
+*           JOB AND ACCOUNT CARDS AS REQUIRED.                           SKEDULR   293
+*           REQUEST CARD FOR CML TAPE AS FILE NAME CML.                  SKEDULR   294
+*           ATTACH CARD FOR SYSTEM OPL FILE.                             SKEDULR   295
+*           UPDATE(Q,P=CML)                                              SKEDULR   296
+*           RFL,60000.                                                   SKEDULR   297
+*           COMPASS(I,X,S=NOSTEXT,B=SKEDULR)                             CML0446A    7
+*           SAVE,SKEDULR.                                                SKEDULR   299
+*           7/8/9  (EOR)                                                 SKEDULR   300
+*           *IDENT,$DEF$                                                 SKEDULR   301
+*           *DEFINE,NOS,NOS1,MMF       (MULTI-MAINFRAME NOS 1.1 SITE)    SKEDULR   302
+*           *INSERT,SKEDULR.6                                            SKEDULR   303
+*            TFPFN    MICRO  1,,*ILOCK*    (NEW FILE NAME FOR TFILE)     SKEDULR   304
+*           *COMPILE,SKEDULR                                             SKEDULR   305
+*           6/7/8/9  (EOF)                                               SKEDULR   306
+*                                                                        SKEDULR   307
+*                                                                        SKEDULR   308
+*         A TYPICAL NOSBE INSTALLATION DECK WOULD BE AS FOLLOWS (NOTE    SKEDULR   309
+*         THAT YOUR UPDATE OPTIONS COULD BE DIFFERENT).                  SKEDULR   310
+*                                                                        SKEDULR   311
+*           JOB AND ACCOUNT CARDS AS REQUIRED.                           SKEDULR   312
+*           REQUEST CARD FOR CML TAPE AS FILE NAME CML.                  SKEDULR   313
+*           REQUEST,SKEDULR,*PF.                                         SKEDULR   314
+*           UPDATE(Q,P=CML)                                              SKEDULR   315
+*           RFL,100000.                                                  SKEDULR   316
+*           COMPASS(I,B=SKEDULR,S=SCPTEXT,S=PFMTEXT,S=IPTEXT)            DIM0337    16
+*           CATALOG(SKEDULR,ID=MYID,RP=999)                              SKEDULR   318
+*           7/8/9  (EOR)                                                 SKEDULR   319
+*           *IDENT,$DEF$                                                 SKEDULR   320
+*           *DEFINE,NOSBE,NOSBE6          (FOR NOSBE SITE)               CMLA465A   27
+*           *INSERT,SKEDULR.6                                            SKEDULR   322
+*            TFPFN   MICRO  1,,*ILOCK*    (NEW FILE NAME FOR TFILE)      SKEDULR   323
+*            PFILEID MICRO  1,,*MYID*     (NEW PERMANENT FILE ID)        SKEDULR   324
+*           *COMPILE,SKEDULR                                             SKEDULR   325
+*           6/7/8/9  (EOF)                                               SKEDULR   326
+*                                                                        SKEDULR   327
+*                                                                        SKEDULR   328
+*                                                                        SKEDULR   329
+*         THE FOLLOWING STEPS ARE PERFORMED BY SKEDULR TO ACCOMPLISH THE SKEDULR   330
+*         DESIRED JOB SCHEDULING TASK.                                   SKEDULR   331
+                                                                         SKEDULR   332
+          IFEQ   NOSBE,1                                                 CMLA465A   28
+                                                                         SKEDULR   334
+*                                                                        SKEDULR   335
+*         EQUATES AND MICROS FOR NOS/BE                                  SKEDULR   336
+                                                                         SKEDULR   337
+*         TFPFN    -  PERMANENT FILE NAME FOR TIME FILE                  SKEDULR   338
+                                                                         SKEDULR   339
+          IF -MIC,TFPFN,1                                                SKED35045   7
+ TFPFN    MICRO  1,,*TFILE*                                              DIM0341    12
+                                                                         SKEDULR   341
+*         PERMANENT FILE ID FOR ALL SKEDULR PERMANENT FILES              SKEDULR   342
+                                                                         SKEDULR   343
+          IF -MIC,PFILEID,1                                              SKED33141   6
+ PFILEID  MICRO  1,,*CDCCE*                                              DIM0341    14
+                                                                         DIM0337    17
+*         ORDER OF NOSBE DATE ENTRY MADE BY THE OPERATOR (MDY)           DIM0337    18
+                                                                         DIM0337    19
+ D1       MICRO  1,1, "IP.YMD"                                           DIM0337    20
+ D2       MICRO  2,1, "IP.YMD"                                           DIM0337    21
+ D3       MICRO  3,1, "IP.YMD"                                           DIM0337    22
+                                                                         SKEDULR   345
+*         FDBS FOR FILES                                                 SKEDULR   346
+                                                                         SKEDULR   347
+TASKFDB   FDB    DUMMY,DUMMY,ID="PFILEID"                                SKEDULR   348
+TFFDB     FDB    TFILE,"TFPFN",ID="PFILEID"                              SKEDULR   349
+                                                                         SKEDULR   350
+*         REQUEST PARAMETER BLOCKS FOR FILES                             SKEDULR   351
+                                                                         SKEDULR   352
+REQPAR    VFD    42/7CQUEFILE,18/0                                       SKEDULR   353
+          VFD    3/0,3/2,24/0,3/2,27/0                                   SKEDULR   354
+          BSSZ   2                                                       SKEDULR   355
+TFREQ     VFD    30/5CTFILE,30/0                                         SKEDULR   356
+          VFD    30/2,3/2,27/0                                           SKEDULR   357
+          BSSZ   2                                                       SKEDULR   358
+                                                                         SKEDULR   359
+*         ROUTE PARAMETER BLOCK FOR TASK FILES                           SKEDULR   360
+                                                                         SKEDULR   361
+ROUTPAR   VFD    42/7CQUEFILE,18/0                                       SKEDULR   362
+          VFD    24/0,12/2CIN,24/400120B                                 SKEDULR   363
+          BSSZ   3                                                       SKEDULR   364
+          ENDIF                                                          CMLA465A   29
+*         FETS FOR FILES                                                 SKEDULR   366
+                                                                         SKEDULR   367
+          IFEQ   NOS,1                                                   CMLA465A   30
+          IF -MIC,TFPFN,1                                                SKEDULR   369
+ TFPFN    MICRO 1,,*TFILE*   PERMANENT FILE NAME FOR TIME FILE           SKEDULR   370
+*                                                                        SKEDULR   371
+ LIST     FILEC  OUTBUF,LOUTB,(WSA=CLINE,LCLINE)                         SKEDULR   372
+ JOBS     FILEC  BUFIN,LIN,XL,(WSA=KEY,LKEY)                             SKEDULR   373
+ TASK     FILEC  BUFTASK,LTASK,XL,(WSA=CLINE,LCLINE)                     SKEDULR   374
+ TASKA    FILEC  BUFOUT,LBOUT,XL,(WSA=CLINE,LCLINE)                      SKEDULR   375
+ TFILE    FILEC  TBUF,LTBUF,XL,PFN="TFPFN",(WSA=CLINE,LCLINE)            SKEDULR   376
+*                                                                        SKEDULR   377
+ OPL      XTEXT  COMCMAC                                                 SKEDULR   378
+ OPL      XTEXT  COMCQFM                                                 SKEDULR   379
+ OPL      XTEXT  COMCSYS                                                 SKEDULR   380
+ OPL      XTEXT  COMSEVT                                                 CML0446A    8
+          IFEQ   NOS+NOS1,1,1                                            CMLA465A   31
+ OPL      XTEXT  COMCCMD                                                 SKEDULR   382
+          ENDIF                                                          CMLA465A   32
+          IFEQ   NOSBE,1                                                 CMLA465A   33
+ OUTPUT   FILEC  OUTBUF,LOUTB,(WSA=CLINE,LCLINE)                         SKEDULR   385
+JOBS      FILEC  BUFIN,LIN,(WSA=KEY,LKEY)                                SKEDULR   386
+TASK      FILEC  BUFTASK,LTASK,(WSA=CLINE,LCLINE)                        SKEDULR   387
+ QUEFILE  FILEC  BUFQUE,LQUE,(WSA=CLINE,LCLINE)                          SKE034607   6
+TFILE     FILEB  BUFIN,LIN                                               SKEDULR   389
+          ENDIF                                                          CMLA465A   34
+          EJECT                                                          SKEDULR   391
+                                                                         SKEDULR   392
+          IFEQ   NOS,1                                                   CMLA465A   35
+***    1. ON INITIAL ENTRY, GET THE TIME OF DAY FROM THE SYSTEM AND      SKEDULR   394
+*         CONVERT IT TO MINUTES PAST MIDNIGHT.  SAVE THIS TIME AS THE    SKEDULR   395
+*         CURRENT TIME AS WELL AS THE PREVIOUS TIME.  GET THE MACHINE    SKEDULR   396
+*         ID AND ADD IT TO THE JOBS FILE NAME TO CREATE THE TRUE         SKEDULR   397
+*         JOBS FILE NAME (JOBSXX) IF SYMBOL  MMF  IS DEFINED.            SKEDULR   398
+*                                                                        SKEDULR   399
+*         VERIFY THAT ANOTHER COPY OF SKEDULR IS NOT RUNNING.  THIS IS   SKEDULR   400
+*         PERFORMED BY CREATING AN INDIRECT ACCESS PERMANENT FILE WITH   SKEDULR   401
+*         THE CURRENT DATE AND TIME STAMP, WAITING 30 MINUTES TO ALLOW   SKEDULR   402
+*         ANOTHER COPY OF SKEDULR TO MODIFY THE STAMP, READING THE       SKEDULR   403
+*         FILE AND DETERMINING IF IT HAS BEEN CHANGED.  IF IT HAS,       SKEDULR   404
+*         THIS COPY IS TERMINATED.  OTHERWISE, IT IS ASSUMED THAT WE     SKEDULR   405
+*         ARE THE MASTER COPY AND ALL OTHER COPIES WILL TERMINATE        SKEDULR   406
+*         THEMSELVES DUE TO OUR CHANGING THE TIME STAMP.                 SKEDULR   407
+          ENDIF                                                          CMLA465A   36
+          IFEQ   NOSBE,1                                                 CMLA465A   37
+***    1. ATTEMPT TO ATTACH THE TIME FILE AND READ THE LAST DATE AND     SKEDULR   410
+*         TIME SKEDULR WAS EXECUTED.  IF THE FILE IS NOT AVAILABLE,      SKEDULR   411
+*         OR IF IT HAS BEEN MORE THAN ONE HOUR SINCE SKEDULR WAS         SKEDULR   412
+*         EXECUTED (TIME FILE PROBABLY NOT CURRENT), SET THE PREVIOUS    SKEDULR   413
+*         TIME TO THE CURRENT TIME.  IF THE FILE IS AVAILABLE AND THE    SKEDULR   414
+*         SKEDULR WAS EXECUTED WITHIN THE PAST HOUR, SET THE PREVIOUS    SKEDULR   415
+*         TIME TO THE TIME INDICATED FROM THE TIME FILE.                 SKEDULR   416
+          ENDIF                                                          CMLA465A   38
+                                                                         SKEDULR   418
+ SKEDULR  SB1    1                                                       SKEDULR   419
+          IFEQ   NOSBE,1                                                 CMLA465A   39
+          ATTACH TFFDB,RC    GET THE TIME FILE                           SKEDULR   421
+          SA1    TFFDB+2     ISOLATE RETURN STATUS                       SKEDULR   422
+          MX0    9                                                       SKEDULR   423
+          LX1    59-17                                                   SKEDULR   424
+          BX1    X0*X1                                                   SKEDULR   425
+          NZ     X1,STEP1B   IF ATTACH WAS NOT SUCCESSFUL                SKEDULR   426
+          READ   TFILE,RECALL    PRIME THE TFILE BUFFER                  SKEDULR   427
+          SA1    BUFIN       GET THE PREVIOUS TIME                       SKEDULR   428
+          BX7    X1                                                      SKEDULR   429
+          SA7    PTIME       AND SAVE IT                                 SKEDULR   430
+          JDATE  JDAY        GET JULIAN DATE                             SKEDULR   431
+          RJ     TIME        GET CURRENT TIME PAST MIDNIGHT              SKEDULR   432
+          SA1    JDAY        CURRENT DATE                                SKEDULR   433
+          SA2    BUFIN+1     LAST DAY SKEDULR WAS RUN                    SKEDULR   434
+          IX1    X1-X2                                                   SKEDULR   435
+          ZR     X1,STEP1    IF SAME DAY                                 SKEDULR   436
+          SX1    X1-1                                                    SKEDULR   437
+          NZ     X1,STEP1B   IF MORE THAN ONE DAY DIFFERENCE             SKEDULR   438
+ STEP1    SA1    BUFIN       LAST TIME SKEDULR WAS RUN                   SKEDULR   439
+          IX2    X6-X1       CURRENT TIME - LAST RUN TIME                SKEDULR   440
+          PL     X2,STEP1A   IF NO CLOCK WRAP ARROUND                    SKEDULR   441
+          SX6    X6+1439     CURRENT TIME + 23 HOURS AND 59 MINUTES      SKE033941   9
+          IX2    X6-X1                                                   SKEDULR   443
+ STEP1A   SX2    X2-180                                                  SKE033940  11
+          NG     X2,STEP2    IF SKEDULR WAS RUN WITHIN LAST 3 HOURS      SKE033940  12
+ STEP1B   BSS    0                                                       SKEDULR   446
+          ENDIF                                                          CMLA465A   40
+          RJ     TIME        GET CURRENT TIME TO X6                      SKEDULR   448
+          SA6    CTIME       SAVE AS CURRENT TIME                        SKEDULR   449
+          SA6    PTIME       SAVE AS PREVIOUS TIME                       SKEDULR   450
+                                                                         SKEDULR   451
+          IFEQ   NOS,1                                                   CMLA465A   41
+          GETJN  JSN         SAVE THIS JSN                               CML0868     6
+          SA1    JSN                                                     CML0868     7
+          BX6    X1                                                      CML0868     8
+          SA6    CLINE+2                                                 CML0868     9
+          IFEQ   NOS+NOS1+NOS2+NOS3+NOS4,2,1                             CMLA465A   42
+          SETQP  0           SET QUEUE PRIORITY TO MAXIMUM               SKEDULR   453
+          SETPR  100B        SET CPU PRIORITY TO MAXIMUM                 SKEDULR   454
+*                                                                        SKEDULR   464
+          REWIND TFILE,RECALL                                            SKEDULR   465
+          CLOCK  PDAY        CURRENT TIME                                SKEDULR   466
+          DATE   CLINE+1     CURRENT TIME                                SKEDULR   467
+          SA1    PDAY                                                    SKEDULR   468
+          BX6    X1                                                      SKEDULR   469
+          SA6    CLINE                                                   SKEDULR   470
+          WRITEC TFILE,CLINE,9  RECORD THE CURRENT DATE/TIME             SKEDULR   471
+          WRITER TFILE,RECALL                                            SKEDULR   472
+          REPLACE TFILE                                                  SKEDULR   473
+          SX7    30*60       ROLLOUT FOR 30 MINUTES                      SKEDULR   474
+          SA1    OUTTIME                                                 SKEDULR   475
+          MX0    48                                                      SKEDULR   476
+          BX1    X0*X1                                                   SKEDULR   477
+          BX7    X1+X7                                                   SKEDULR   478
+          SA7    A1                                                      SKEDULR   479
+          ROLLOUT OUTTIME                                                SKEDULR   480
+          GET    TFILE       DETERMINE IF TIME HAS BEEN CHANGED          SKEDULR   481
+          READ   TFILE,RECALL                                            SKEDULR   482
+          READC  TFILE,CLINE,9                                           SKEDULR   483
+          SA1    PDAY                                                    SKEDULR   484
+          SA2    CLINE                                                   SKEDULR   485
+          BX1    X1-X2                                                   SKEDULR   486
+          NZ     X1,STEP1    SKIP IF NOT ALONE                           CML0868    10
+          SA1    JSN         CHECK FOR SAME JSN                          CML0868    11
+          SA2    CLINE+2                                                 CML0868    12
+          BX1    X1-X2                                                   CML0868    13
+          ZR     X1,STEP2    SKIP IF ALONE                               CML0868    14
+ STEP1    BSS    0                                                       CML0868    15
+          MESSAGE MSG3,3,RECALL  REPORT MULTIPLE COPIES RUNNING          SKEDULR   488
+          ENDRUN                                                         SKEDULR   489
+                                                                         SKEDULR   490
+          ENDIF                                                          CMLA465A   43
+                                                                         SKEDULR   492
+***    2. GET THE CURRENT TIME OF DAY, CONVERT IT TO MINUTES PAST MID-   SKEDULR   493
+*         NIGHT AND SAVE IT AS THE CURRENT TIME.                         SKEDULR   494
+                                                                         SKEDULR   495
+ STEP2    RJ     TIME        GET CURRENT TIME TO X6                      SKEDULR   496
+          SA1    PTIME                                                   SKEDULR   497
+          MX7    0                                                       SKE033941  10
+          SA7    WRAP        CLEAR CLOCK WRAP AROUND FLAG                SKE033941  11
+          SA7    JCOUNT      SET JOB COUNT TO ZERO                       CML0836    36
+          IX2    X6-X1                                                   SKEDULR   498
+          PL     X2,STEP2A   IF CLOCK HAS NOT WRAPPED                    SKEDULR   499
+          MX7    1                                                       SKE033941  12
+          SA7    WRAP        SET CLOCK WRAP AROUND FLAG                  SKE033941  13
+ STEP2A   SA6    CTIME       SAVE AS CURRENT TIME                        SKEDULR   501
+          IFEQ   NOS,1                                                   CMLA465A   44
+          SX6    24*60                                                   SKEDULR   503
+          SA6    TTIME       SET TARGET TIME FOR NEXT ROLLIN HIGH        SKEDULR   504
+          ENDIF                                                          CMLA465A   45
+                                                                         SKEDULR   506
+***    3. GET THE CURRENT JULIAN DATE AND CALCULATE THE CURRENT          SKEDULR   507
+*         DAY OF THE WEEK (SUNDAY - SATURDAY) AND SAVE IT.               SKEDULR   508
+                                                                         SKEDULR   509
+          JDATE  JDAY                                                    SKEDULR   510
+          SA1    JDAY        JULIAN DATE                                 SKEDULR   511
+          SB1    1                                                       SKEDULR   512
+          MX0    -18         DAY MASK                                    SKEDULR   513
+          BX1    -X0*X1      GET RID OF JULIAN YEAR                      SKEDULR   514
+          SX2    333333B                                                 SKEDULR   515
+          IX1    X1-X2       CONVERT DISPLAY CODED DECIMAL TO OCTAL      SKEDULR   516
+          SX0    77B         MASK                                        SKEDULR   517
+          BX2    X1*X0       THIRD DIGIT                                 SKEDULR   518
+          AX1    6                                                       SKEDULR   519
+          BX3    X1*X0       SECOND DIGIT                                SKEDULR   520
+          AX1    6                                                       SKEDULR   521
+          BX4    X1*X0       FIRST DIGIT                                 SKEDULR   522
+          SX1    100                                                     SKEDULR   523
+          IX4    X4*X1       CONVERT DECIMAL TO OCTAL                    SKEDULR   524
+          SX1    10                                                      SKEDULR   525
+          IX3    X3*X1                                                   SKEDULR   526
+          IX6    X2+X3                                                   SKEDULR   527
+          IX6    X6+X4       JULIAN DAY IN OCTAL                         SKEDULR   528
+          SA1    JDAY        CONVERT JULIAN YEAR TO OCTAL                SKEDULR   529
+          SX2    3333B                                                   SKEDULR   530
+          AX1    18                                                      SKEDULR   531
+          IX1    X1-X2                                                   SKEDULR   532
+          BX4    X1*X0       SECOND DIGIT                                SKEDULR   533
+          AX1    6                                                       SKEDULR   534
+          BX1    X1*X0       FIRST DIGIT                                 SKEDULR   535
+          SX2    10                                                      SKEDULR   536
+          IX1    X1*X2                                                   SKEDULR   537
+          IX3    X4+X1       JULIAN YEAR (YEAR-2000) IN OCTAL            SKEDULR   538
+          SX0    3                                                       SKEDULR   539
+          SX7    28          NUMBER OF DAYS NORMALLY IN FEBRUARY         SKEDULR   540
+          BX4    X0*X3                                                   SKEDULR   541
+          NZ     X4,STEP3    IF THIS IS NOT LEAP YEAR                    SKEDULR   542
+          SX7    X7+B1       INDICATE 29 DAYS IN FEBRUARY                SKEDULR   543
+ STEP3    SA7    FEB         STORE CORRECT NUMBER OF DAYS IN FEBRUARY    SKEDULR   544
+          SX3    X3-01       YEAR - 01 (LAST LEAP YEAR + 1)              SKEDULR   545
+          SX4    X3+0        ADD 2001 FIRST DAY OF THE YEAR BIAS         SKEDULR   546
+          AX3    2           (YEAR-01)/4 = NUMPER OF LEAP YEARS          SKEDULR   547
+          IX4    X4+X3       ADJUSTED DAY RELATIVE TO 2001               SKEDULR   548
+          IX4    X4+X6       ADD CURRENT DAY OF YEAR                     SKEDULR   549
+          SB5    7                                                       SKEDULR   550
+          SB4    X4                                                      SKEDULR   551
+ STEP3A   LT     B4,B5,STEP3B  IF DAY FOUND                              SKEDULR   552
+          SB4    B4-B5                                                   SKEDULR   553
+          EQ     STEP3A                                                  SKEDULR   554
+                                                                         SKEDULR   555
+ STEP3B   SX6    B4+B1       DAY OF WEEK = 1-7                           SKEDULR   556
+          SA5    WRAP                                                    CML0176     8
+          ZR     X5,STEP3E   IF CLOCK HAS NOT WRAPPED                    CML0176     9
+          SA1    BDAY                                                    CML0176    10
+          SX7    X1-1        SET PREVIOUS DAY OF MONTH                   CML0176    11
+          NZ     X7,STEP3D   IF MONTH HAS NOT WRAPPED                    CML0176    12
+          SA2    BMONTH                                                  CML0176    13
+          SX7    X2-1        SET PREVIOUS MONTH                          CML0176    14
+          NZ     X7,STEP3C   IF YEAR HAS NOT WRAPPED                     CML0176    15
+          SX7    12                                                      CML0176    16
+ STEP3C   SA7    A2          SET PREVIOUS MONTH                          CML0176    17
+          SB2    X7-1                                                    CML0176    18
+          SA2    NDAYS+B2    DETERMINE PREVIOUS DAY                      CML0176    19
+          BX7    X2                                                      CML0176    20
+ STEP3D   SA7    A1          STORE PREVIOUS DAY                          CML0176    21
+          SX6    B4          SET PREVIOUS DAY OF THE WEEK                CML0176    22
+          NZ     X6,STEP3E                                               CML0176    23
+          SX6    B5                                                      CMLA324     6
+ STEP3E   BSS    0                                                       CML0176    24
+          SA6    CDAY        SAVE AS CURRENT DAY                         SKEDULR   557
+                                                                         SKEDULR   558
+          IFEQ   NOS,1                                                   CMLA465A   46
+***    4. RETURN THE JOBS FILE, GET IT AGAIN AND READ IT TO THE JOBS     SKEDULR   560
+*         BUFFER.  THIS STEP ALLOWS THE JOBS FILE TO BE MODIFIED AT      SKEDULR   561
+*         ANY TIME AND PUT INTO EFFECT IMMEDIATELY.                      SKEDULR   562
+                                                                         SKEDULR   563
+          GET     JOBS                                                   SKEDULR   564
+          ENDIF                                                          CMLA465A   47
+          IFEQ   NOSBE,1                                                 CMLA465A   48
+***    4. READ THE JOBS FILE INTO THE JOBS BUFFER.                       SKEDULR   567
+                                                                         SKEDULR   568
+          ENDIF                                                          CMLA465A   49
+          REWIND  JOBS,RECALL                                            SKEDULR   570
+          READ  JOBS,RECALL  PRIME THE BUFFER                            SKEDULR   571
+          SX6    B0                                                      SKEDULR   572
+          SA6    EMPTY       SET JOBS FILE EMPTY FLAG                    SKEDULR   573
+                                                                         SKEDULR   574
+***    5. PROCESS EACH RUN DIRECTIVE TO DETERMINE IF IT IS TIME TO       SKEDULR   575
+*         SUBMIT ANY FILES.  SUBMIT ALL JOBS WHOSE DATE AGREES WITH      SKEDULR   576
+*         THE CURRENT DAY OF THE WEEK AND WHOSE TIME FALLS WITHIN THE    SKEDULR   577
+*         BOUNDARY OF PREVIOUS TIME TO CURRENT TIME.                     SKEDULR   578
+*         IF AN INVALID ENTRY IS FOUND IN THE JOBS FILE, IT IS PRINTED   SKEDULR   579
+*         AS AN ILLEGAL RUN DIRECTIVE AND THE NEXT DIRECTIVE IS          SKEDULR   580
+*         PROCESSED.                                                     SKEDULR   581
+*                                                                        SKEDULR   582
+*           NOTE:  SINCE SKEDULR ONLY PROCESSES A RUN DIRECTIVE TO       SKEDULR   583
+*                  THE POINT REQUIRED TO DETERMINE IF THE JOB IS TO      SKEDULR   584
+*                  BE SCHEDULED TODAY OR NOT, SOME ILLEGAL SYNTAXS       SKEDULR   585
+*                  WILL NOT BE REPORTED UNTIL THE MONTH OR DAY THEY      SKEDULR   586
+*                  SHOULD BE SCHEDULED.  FOR EXAMPLE, JANUARY(32)        SKEDULR   587
+*                  WOULD NOT BE REPORTED UNTIL JANUARY.  MONDAY AT       SKEDULR   588
+*                  2500 WOULD NOT BE REPORTED AN ERROR UNTIL MONDAY.     SKEDULR   589
+*                  IN ADDITION, DUE TO THE LEFT TO RIGHT SCANNING        SKEDULR   590
+*                  TECHNIQUE USED BY SKEDULR, AN INVALID TIME ENTRY ON   SKEDULR   591
+*                  A RUN DIRECTIVE TERMINATES ANY FURTHER SCANNING OF    SKEDULR   592
+*                  THAT DIRECTIVE.  HOWEVER, VALID TIME ENTRIES THAT     SKEDULR   593
+*                  APPEAR TO THE LEFT OF THE INVALID ENTRY WILL BE       SKEDULR   594
+*                  SCHEDULED NORMALLY.                                   SKEDULR   595
+                                                                         SKEDULR   596
+          IFEQ   NOS,1                                                   CMLA465A   50
+ STEP5    READC  JOBS,KEY,9  READ A LINE FROM THE JOBS FILE              SKEDULR   598
+          ENDIF                                                          CMLA465A   51
+          IFEQ   NOSBE,1                                                 CMLA465A   52
+ STEP5    READIN JOBS                                                    SKEDULR   601
+          ENDIF                                                          CMLA465A   53
+          ZR     X1,STEP5AA  IF NOT EOR/EOF ON JOBS FILE                 CML0176    25
+          SA1    WRAP                                                    CML0176    26
+          ZR     X1,STEP6    IF CLOCK HAS NOT WRAPPED                    CML0176    27
+          SX6    B0                                                      CML0176    28
+          SA6    A1          CLEAR CLOCK WRAP FLAG                       CML0176    29
+          SA6    PTIME       SET PREVIOUS TIME TO MIDNIGHT               CML0176    30
+          EQ     STEP2       PERFORM SECOND CYCLE                        CML0176    31
+ STEP5AA  BSS    0                                                       CML0176    32
+          RJ     CRACK       CRACK THE RUN DIRECTIVE JUST READ           SKEDULR   604
+          MX6    48                                                      SKEDULR   605
+          SA6    EMPTY       INDICATE JOBS FILE NOT EMPTY                SKEDULR   606
+          SA1    CRKBUF      FIRST ITEM                                  SKEDULR   607
+          MX6    0           PRESET SWITCH TO ZERO FOR 1RUN              CML0836    37
+          SA2    D1RUN       CHECK FOR 1RUN                              CML0836    38
+          BX3    X1-X2                                                   CML0836    39
+          ZR     X3,STEP5AB  SKIP IF 1RUN                                CML0836    40
+          SX6    X3          SET SWITCH TO NON-ZERO FOR RUN              CML0836    41
+          SA2    DRUN                                                    SKEDULR   608
+          BX3    X1-X2                                                   SKEDULR   609
+          NZ     X3,STEP5Z   IF NOT A RUN DIRECTIVE                      SKEDULR   610
+ STEP5AB  SA6    SWITCH      SET THE SWITCH                              CML0836    42
+          SA1    A1+B1       SECOND ITEM                                 CML0836    43
+          ZR     X1,STEP5Z   IF ILLEGAL FILE NAME                        SKEDULR   612
+          MX0    42                                                      SKEDULR   613
+          BX1    -X0*X1                                                  SKEDULR   614
+          NZ     X1,STEP5Z   IF FILE NAME IS TOO LONG                    SKEDULR   615
+          SA1    A1+B1       THIRD ITEM                                  SKEDULR   616
+*                                                                        SKEDULR   617
+*         DETERMINE IF JOB IS TO BE RUN DAILY OR ON A SPECIFIC           SKEDULR   618
+*         DAY OF THE WEEK (SUNDAY-SATURDAY), WEEKDAYS OR WEEKENDS.       SKEDULR   619
+*                                                                        SKEDULR   620
+          SB2    B0                                                      SKEDULR   621
+          SB3    LDAYS                                                   SKEDULR   622
+ STEP5A   SA2    B2+DAYS                                                 SKEDULR   623
+          BX3    X2-X1                                                   SKEDULR   624
+          ZR     X3,STEP5K   IF VALID DAY                                SKEDULR   625
+          SB2    B2+B1                                                   SKEDULR   626
+          NE     B2,B3,STEP5A  IF ALL DAYS NOT SCANNED                   SKEDULR   627
+*                                                                        SKEDULR   628
+*         NOT DAILY OR A SPECIFIC DAY OF THE WEEK.  DETERMINE IF IT      SKEDULR   629
+*         IS TO BE RUN MONTHLY.                                          SKEDULR   630
+*                                                                        SKEDULR   631
+          SA2    DMONTH                                                  SKEDULR   632
+          BX3    X2-X1                                                   SKEDULR   633
+          ZR     X3,STEP5D   IF MONTHLY                                  SKEDULR   634
+*                                                                        SKEDULR   635
+*         NOT MONTHLY.  DETERMINE IF A SPECIFIC MONTH IS SPECIFIED.      SKEDULR   636
+*                                                                        SKEDULR   637
+          SB2    B0                                                      SKEDULR   638
+          SB3    LMONTHS                                                 SKEDULR   639
+ STEP5B   SA2    B2+MONTHS                                               SKEDULR   640
+          BX3    X2-X1                                                   SKEDULR   641
+          ZR     X3,STEP5C   IF JANUARY - DECEMBER                       SKEDULR   642
+          SB2    B2+B1                                                   SKEDULR   643
+          NE     B2,B3,STEP5B  IF ALL MONTHS NOT SCANNED                 SKEDULR   644
+          EQ     STEP5Z      IF ILLEGAL SYNTAX                           SKEDULR   645
+                                                                         SKEDULR   646
+*                                                                        SKEDULR   647
+*         IT IS TO BE RUN ON A SPECIFIC MONTH.  DETERMINE IF IT IS       SKEDULR   648
+*         THIS MONTH.                                                    SKEDULR   649
+*                                                                        SKEDULR   650
+ STEP5C   SA2    BMONTH      CURRENT MONTH IN BINARY                     SKEDULR   651
+          SB2    B2+B1                                                   SKEDULR   652
+          SB7    X2                                                      SKEDULR   653
+          SB2    B7-B2                                                   SKEDULR   654
+          NE     B2,B0,STEP5  IF MONTHS DO NOT MATCH                     SKEDULR   655
+*                                                                        SKEDULR   656
+*         IT IS TO BE RUN THIS MONTH.  DETERMINE IF THE DAY OF THE       SKEDULR   657
+*         MONTH IS SPECIFIED AS FIRST-FIFTH SUNDAY-SATURDAY.             SKEDULR   658
+*                                                                        SKEDULR   659
+ STEP5D   SA1    A1+B1       NEXT ITEM FROM CRKBUF                       SKEDULR   660
+          SX1    X1-1R(                                                  SKEDULR   661
+          NZ     X1,STEP5Z   IF NOT (                                    SKEDULR   662
+          SA1    A1+B1       NEXT ITEM FROM CRKBUF                       SKEDULR   663
+          SB2    B0                                                      SKEDULR   664
+          SB3    LWEEKS                                                  SKEDULR   665
+ STEP5E   SA2    B2+WEEKS                                                SKEDULR   666
+          BX3    X2-X1                                                   SKEDULR   667
+          ZR     X3,STEP5G   IF FIRST-FIFTH                              SKEDULR   668
+          SB2    B2+B1                                                   SKEDULR   669
+          NE     B2,B3,STEP5E  IF ALL WEEKS NOT SCANNED                  SKEDULR   670
+*                                                                        SKEDULR   671
+*         DETERMINE IF THE JOB IS TO BE RUN MONTHLY (LAST DAY).          SKEDULR   672
+*                                                                        SKEDULR   673
+          SA2    DLAST                                                   SKEDULR   674
+          BX3    X2-X1                                                   SKEDULR   675
+          NZ     X3,STEP5EA  IF NOT LAST                                 SKEDULR   676
+          SA1    A1+B1       NEXT ITEM FROM CRKBUF                       SKEDULR   677
+          SA2    DDAY                                                    SKEDULR   678
+          BX3    X2-X1                                                   SKEDULR   679
+          NZ     X3,STEP5Z   ILLEGAL SYNTAX IF NOT DAY                   SKEDULR   680
+          SA2    BMONTH      DETERMINE THE NUMBER OF DAYS IN THIS MONTH  SKEDULR   681
+          SB2    X2-1                                                    SKEDULR   682
+          SA3    NDAYS+B2                                                SKEDULR   683
+          EQ     STEP5FA     GO SEE IF TODAY IS THE DAY                  SKEDULR   684
+*                                                                        SKEDULR   685
+*         THE JOB IS TO BE RUN THIS MONTH, BUT THE DAY IS NOT            SKEDULR   686
+*         SPECIFIED AS FIRST-FIFTH SUNDAY-SATURDAY OR AS LAST DAY.       SKEDULR   687
+*         DETERMINE IF A SPECIFIC DAY OF THE MONTH IS SPECIFIED.         SKEDULR   688
+*                                                                        SKEDULR   689
+ STEP5EA  SX0    77B                                                     SKEDULR   690
+          LX1    6                                                       SKEDULR   691
+          BX2    X1*X0       FIRST DIGIT OF DAY OF THE MONTH             SKEDULR   692
+          SX3    X2-33B                                                  SKEDULR   693
+          NG     X3,STEP5Z   IF NOT A NUMBER                             SKEDULR   694
+          SX4    X2-45B                                                  SKEDULR   695
+          PL     X4,STEP5Z   IF NOT 0-9                                  SKEDULR   696
+          LX1    6                                                       SKEDULR   697
+          BX2    X1*X0                                                   SKEDULR   698
+          ZR     X2,STEP5F   IF ONLY ONE DIGIT                           SKEDULR   699
+          SX2    X2-33B                                                  SKEDULR   700
+          NG     X2,STEP5Z   IF NOT A NUMBER                             SKEDULR   701
+          SX5    X2-10                                                   SKEDULR   702
+          PL     X5,STEP5Z   IF GREATER THAN 9                           SKEDULR   703
+          SX5    10                                                      SKEDULR   704
+          IX3    X3*X5       CONVERT DECIMAL TO OCTAL                    SKEDULR   705
+          LX1    6                                                       SKEDULR   706
+          BX1    X1*X0                                                   SKEDULR   707
+          NZ     X1,STEP5Z   IF DAY IS .GT. 2 DIGITS                     SKEDULR   708
+*                                                                        SKEDULR   709
+*         A SPECIFIC DAY OF THE MONTH IS SPECIFIED.  DETERMINE IF IT     SKEDULR   710
+*         IS TODAY.                                                      SKEDULR   711
+*                                                                        SKEDULR   712
+ STEP5F   IX3    X2+X3       DAY OF THE MONTH IN OCTAL                   SKEDULR   713
+          ZR     X3,STEP5Z   IF DAY=0, IT IS ILLEGAL                     SKEDULR   714
+          SA2    BMONTH                                                  SKEDULR   715
+          SB4    X2-1                                                    SKEDULR   716
+          SA2    NDAYS+B4    NUMBER OF DAYS IN THIS MONTH                SKEDULR   717
+          IX2    X3-X2                                                   SKEDULR   718
+          ZR     X2,STEP5FA  IF LAST DAY OF THE MONTH                    SKEDULR   719
+          PL     X2,STEP5Z   IF DAY REQUESTED .GT. DAYS IN MONTH         SKEDULR   720
+ STEP5FA  SA2    BDAY                                                    SKEDULR   721
+          BX2    X2-X3                                                   SKEDULR   722
+          NZ     X2,STEP5    IF DAY OF THE MONTH DOES NOT MATCH          SKEDULR   723
+          EQ     STEP5J                                                  SKEDULR   724
+                                                                         SKEDULR   725
+*                                                                        SKEDULR   726
+*         THE JOB IS TO BE RUN THIS MONTH ON SOME FIRST-FIFTH DAY OF     SKEDULR   727
+*         THE WEEK.  DETERMINE WHICH DAY OF THE WEEK.                    SKEDULR   728
+*                                                                        SKEDULR   729
+ STEP5G   SB4    B1                                                      SKEDULR   730
+          SB5    LDAYS-2                                                 SKEDULR   731
+          SA1    A1+B1       NEXT ITEM FROM CRKBUF                       SKEDULR   732
+ STEP5H   SA2    B4+DAYS                                                 SKEDULR   733
+          BX3    X2-X1                                                   SKEDULR   734
+          ZR     X3,STEP5I   IF DAY OF THE WEEK FOUND                    SKEDULR   735
+          SB4    B4+B1                                                   SKEDULR   736
+          NE     B4,B5,STEP5H  IF ALL DAYS OF THE WEEK NOT SCANNED       SKEDULR   737
+          EQ     STEP5Z       IF ILLEGAL SYNTAX                          SKEDULR   738
+                                                                         SKEDULR   739
+*                                                                        SKEDULR   740
+*         THE SPECIFIC FIRST-FIFTH DAY OF THE WEEK HAS BEEN FOUND.       SKEDULR   741
+*         DETERMINE IF TODAY IS THE DAY.                                 SKEDULR   742
+*                                                                        SKEDULR   743
+ STEP5I   SA2    CDAY                                                    SKEDULR   744
+          SB7    X2                                                      SKEDULR   745
+          SB4    B7-B4                                                   SKEDULR   746
+          NE     B4,B0,STEP5  IF DAY DOES NOT MATCH CURRENT DAY          SKEDULR   747
+          SX3    B2           FIRST-FIFTH                                SKEDULR   748
+          SX4    7                                                       SKEDULR   749
+          IX5    X3*X4                                                   SKEDULR   750
+          SB2    X5+B1                                                   SKEDULR   751
+          SB3    B2+6                                                    SKEDULR   752
+          SA2    BDAY         BINARY DAY OF THE MONTH                    SKEDULR   753
+          SB4    X2                                                      SKEDULR   754
+          LT     B4,B2,STEP5  IF NOT IN THE RANGE OF FIRST-FIFTH         SKEDULR   755
+          GT     B4,B3,STEP5  IF NOT IN THE RANGE OF FIRST-FIFTH         SKEDULR   756
+*                                                                        SKEDULR   757
+*         THE JOB IS TO BE RUN TODAY.  VERIFY THAT THE TERMINATION       SKEDULR   758
+*         SYNTAX IS CORRECT.                                             SKEDULR   759
+*                                                                        SKEDULR   760
+ STEP5J   SA1    A1+B1        NEXT ITEM FROM CRKBUF                      SKEDULR   761
+          SX2    X1-1R)                                                  SKEDULR   762
+          ZR     X2,STEP5L    IF NEXT ITEM IS )                          SKEDULR   763
+          EQ     STEP5Z       IF ILLEGAL SYNTAX                          SKEDULR   764
+                                                                         SKEDULR   765
+*                                                                        SKEDULR   766
+*         THE JOB IS TO BE RUN DAILY, ON A SPECIFIC DAY OF THE WEEK,     SKEDULR   767
+*         WEEKDAYS OR WEEKENDS.  DETERMINE IF TODAY IS THE DAY.          SKEDULR   768
+*                                                                        SKEDULR   769
+ STEP5K   EQ     B0,B2,STEP5L  IF JOB TO BE RUN DAILY                    SKEDULR   770
+          SA2    CDAY        CURRENT DAY OF THE WEEK                     SKEDULR   771
+          SX3    B2                                                      SKEDULR   772
+          BX3    X2-X3                                                   SKEDULR   773
+          ZR     X3,STEP5L   IF IT IS TO BE RUN TODAY                    SKEDULR   774
+          SB2    B2-8                                                    SKEDULR   775
+          SX2    X2-1                                                    SKEDULR   776
+          EQ     B0,B2,STEP5KA  IF WEEKDAYS REQUESTED                    SKEDULR   777
+          NE     B2,B1,STEP5    IF NOT WEEKEND, TRY NEXT JOB             DIM0338     8
+          ZR     X2,STEP5L   IF WEEKENDS AND TODAY IS SUNDAY             SKEDULR   778
+          SX2    X2-6                                                    SKEDULR   779
+          ZR     X2,STEP5L   IF WEEKENDS AND TODAY IS SATURDAY           SKEDULR   780
+          EQ     STEP5       TODAY IS NOT THE DAY                        SKEDULR   781
+                                                                         SKEDULR   782
+ STEP5KA  ZR     X2,STEP5    IF WEEKDAYS AND TODAY IS SUNDAY             SKEDULR   783
+          SX2    X2-6                                                    SKEDULR   784
+          ZR     X2,STEP5    IF WEEKDAYS AND TODAY IS SATURDAY           SKEDULR   785
+                                                                         SKEDULR   786
+*                                                                        SKEDULR   787
+*         THE JOB IS TO BE RUN TODAY.  DETERMINE IF IT IS TIME TO        SKEDULR   788
+*         RUN IT.                                                        SKEDULR   789
+*                                                                        SKEDULR   790
+ STEP5L   SA1    A1+B1                                                   SKEDULR   791
+          SA2    DAT                                                     SKEDULR   792
+          BX3    X1-X2                                                   SKEDULR   793
+          NZ     X3,STEP5Z   IF NEXT ITEM IS NOT -AT-                    SKEDULR   794
+          SA2    A1+B1       NEXT ITEM FROM CRKBUF                       SKEDULR   795
+          ZR     X2,STEP5Z   IF NO TIME SPECIFIED                        SKEDULR   796
+ STEP5M   SA1    A1+B1       GET TIME TO RUN                             SKEDULR   797
+          ZR     X1,STEP5    IF NO MORE TIMES SPECIFIED                  SKEDULR   798
+          LX1    24                                                      SKEDULR   799
+          SX0    77B         DIGIT MASK                                  SKEDULR   800
+          BX2    X1*X0       LAST DIGIT                                  SKEDULR   801
+          SX3    X2-33B                                                  SKEDULR   802
+          NG     X3,STEP5Z   IF ILLEGAL DIGIT                            SKEDULR   803
+          SX7    X2-45B                                                  SKEDULR   804
+          PL     X7,STEP5Z   IF ILLEGAL DIGIT                            SKEDULR   805
+          AX1    6                                                       SKEDULR   806
+          BX2    X1*X0       THIRD DIGIT                                 SKEDULR   807
+          SX4    X2-33B                                                  SKEDULR   808
+          NG     X4,STEP5Z   IF ILLEGAL DIGIT                            SKEDULR   809
+          SX7    X2-45B                                                  SKEDULR   810
+          PL     X7,STEP5Z   IF ILLEGAL DIGIT                            SKEDULR   811
+          AX1    6                                                       SKEDULR   812
+          BX2    X1*X0       SECOND DIGIT                                SKEDULR   813
+          SX5    X2-33B                                                  SKEDULR   814
+          NG     X5,STEP5Z   IF ILLEGAL DIGIT                            SKEDULR   815
+          SX7    X2-45B                                                  SKEDULR   816
+          PL     X7,STEP5Z   IF ILLEGAL DIGIT                            SKEDULR   817
+          AX1    6                                                       SKEDULR   818
+          BX2    X1*X0       FIRST DIGIT                                 SKEDULR   819
+          SX6    X2-33B                                                  SKEDULR   820
+          NG     X6,STEP5Z   IF ILLEGAL DIGIT                            SKEDULR   821
+          SX7    X2-45B                                                  SKEDULR   822
+          PL     X7,STEP5Z   IF ILLEGAL DIGIT                            SKEDULR   823
+          AX1    6                                                       SKEDULR   824
+          NZ     X1,STEP5Z   IF ILLEGAL TIME                             SKEDULR   825
+          SX2    10                                                      SKEDULR   826
+          IX4    X4*X2                                                   SKEDULR   827
+          IX4    X4+X3       MINUTES                                     SKEDULR   828
+          IX6    X6*X2                                                   SKEDULR   829
+          IX6    X6+X5       HOURS                                       SKEDULR   830
+          SX2    X6-24                                                   SKEDULR   831
+          PL     X2,STEP5Z   IF ILLEGAL HOUR                             SKEDULR   832
+          SX2    X4-60                                                   SKEDULR   833
+          PL     X2,STEP5Z   IF ILLEGAL MINUTES                          SKEDULR   834
+          SX2    60                                                      SKEDULR   835
+          IX6    X6*X2       CONVERT HOURS TO MINUTES                    SKEDULR   836
+          IX6    X6+X4       ADD MINUTES                                 SKEDULR   837
+          NZ     X6,STEP5N   IF NOT 0000 HOURS                           SKEDULR   838
+          SX6    24*60       SET TIME TO 2400 HOURS                      SKEDULR   839
+ STEP5N   SA2    PTIME       PREVIOUS ROLLIN TIME                        SKEDULR   840
+          SA3    CTIME       CURRENT TIME                                SKEDULR   841
+          SA4    WRAP                                                    SKE033941  14
+          IX2    X2-X6       PREVIOUS ROLLIN TIME - REQUESTED TIME       SKEDULR   842
+          ZR     X4,STEP5N1  IF NO CLOCK WRAP AROUND SINCE LAST RUN      SKE033941  15
+          NG     X2,STEP5N2  REQUESTED TIME .GT. PREVIOUS, SCHEDULE      SKE033941  16
+          IX5    X3-X6       CURRENT TIME - REQUESTED RUN TIME           SKE033941  17
+          PL     X5,STEP5N2  REQUESTED TIME .LE. CURRENT, SCHEDULE       SKE033941  18
+          EQ     STEP5M      NOT TIME TO SCHEDULE YET                    SKE033941  19
+                                                                         SKE033941  20
+          IFEQ   NOS,1                                                   CMLA465A   54
+ STEP5N1  ZR     X2,STEP5M   IF JOB WAS SCHEDULED LAST TIME              SKE033941  21
+          PL     X2,STEP5W   IF NOT IN TIME RANGE TO EXECUTE             SKEDULR   845
+          IX5    X3-X6       CURRENT TIME - REQUESTED RUN TIME           SKEDULR   846
+          NG     X5,STEP5W   IF NOT IN TIME RANGE TO EXECUTE             SKEDULR   847
+          ENDIF                                                          CMLA465A   55
+          IFEQ   NOSBE,1                                                 CMLA465A   56
+ STEP5N1  PL     X2,STEP5M   JOB WAS SCHEDULED PREVIOUSLY                SKE033941  22
+          IX5    X3-X6       CURRENT TIME - REQUESTED TIME               SKEDULR   851
+          NG     X5,STEP5M   NOT TIME TO SCHEDULE YET                    SKEDULR   852
+          ENDIF                                                          CMLA465A   57
+*                                                                        SKEDULR   854
+*         IT IS TIME TO SCHEDULE THIS JOB, SO DO IT.                     SKEDULR   855
+*                                                                        SKEDULR   856
+ STEP5N2  SA2    CRKBUF+1    SUBMIT FILE NAME                            SKE033941  23
+          SX3    B1                                                      SKEDULR   858
+          BX6    X2+X3                                                   SKEDULR   859
+          SA6    TASK        STORE FILE NAME                             SKEDULR   860
+          IFEQ   NOS+NOS1,1,3                                            CMLA465A   58
+          MX0    42                                                      SKEDULR   863
+          BX6    X0*X6                                                   SKEDULR   864
+          SA6    ROUTEP      SAVE FILE NAME IN ROUTE PARAMETER BLOCK     SKEDULR   865
+*                                                                        CML0836    44
+*         DETERMINE IF THIS JOB HAS BEEN PREVIOUSLY ROUTED TO THE INPUT  CML0836    45
+*         QUEUE DURING THIS TIME CYCLE OF SKEDULR.                       CML0836    46
+*                                                                        CML0836    47
+          SA2    JCOUNT      GET COUNT OF JOBS ROUTED FOR THIS CYCLE     CML0836    48
+          SB1    1                                                       CML0836    49
+          SB3    X2                                                      CML0836    50
+          ZR     B3,STEP5N4  FIRST JOB TO BE ROUTED                      CML0836    51
+          SB4    B3          HOLD JOB COUNT                              CML0836    52
+ STEP5N3  SA3    JTABLE-1+B4 GET NEXT JOB NAME                           CML0836    53
+          SB4    B4-B1                                                   CML0836    54
+          BX3    X6-X3                                                   CML0836    55
+          ZR     X3,STEP5N6  MATCH FOUND.. GO CHECK 1RUN SWITCH          CML0836    56
+          NZ     B4,STEP5N3  SEARCH NOT COMPLETE YET                     CML0836    57
+ STEP5N4  SB3    B3+B1       INCREMENT JOB COUNTER                       CML0836    58
+          SX7    B3                                                      CML0836    59
+          SB4    99          CHECK TABLE LIMIT                           CML0836    60
+          GT     B3,B4,STEP5N5   QUIT INCREMENTING TABLE INDEX           CML0836    61
+          SA7    A2                                                      CML0836    62
+ STEP5N5  SA6    B3+JTABLE-1 SAVE NEW JOB NAME SENT                      CML0836    63
+          EQ     STEP5N7     GO START THE TASK                           CML0836    64
+ STEP5N6  SA2    SWITCH      CHECK 1RUN SWITCH                           CML0836    65
+          ZR     X2,STEP5M   TASK ALREADY RUN ON THIS CYCLE SO SKIP TASK CML0836    66
+ STEP5N7  BSS    0                                                       CML0836    67
+          ENDIF                                                          CMLA465A   59
+          IFEQ   NOSBE,1                                                 CMLA465A   60
+          SA2    CRKBUF+1    SUBMIT FILE NAME                            CMLA766     6
+          BX6    X2          FILE NAME MINUS COMPLETE BIT                SKEDULR   868
+          SA6    ROUTPAR+3   JOB NAME TO ROUTE PARAMETER BLOCK           SKEDULR   869
+          SA6    TASKFDB     LOGICAL FILE NAME TO FDB                    SKEDULR   870
+          SA6    TASKFDB-4   PERMANENT FILE NAME TO FDB                  SKEDULR   871
+          SX7    BUFTASK     SET IN = OUT FOR ...                        SKEDULR   872
+          SA7    TASK+2      TASK FILE                                   SKEDULR   873
+          SA7    A7+B1                                                   SKEDULR   874
+          SX7    BUFQUE                                                  DIM0341    16
+          SA7    QUEFILE+2   AND QUEFILE                                 SKEDULR   875
+          SA7    A7+B1                                                   SKEDULR   876
+          ENDIF                                                          CMLA465A   61
+          SX6    A1                                                      SKEDULR   878
+          SA6    SAVEA1      SAVE CURRENT POINTER TO CRKBUF              SKEDULR   879
+          IFEQ   NOS,1                                                   CMLA465A   62
+          GET    TASK,TASK                                               SKEDULR   881
+*                                                                        SKEDULR   882
+*         SET THE JOB ORIGIN OF THE SUBMIT FILE TO SYSTEM OR LOCAL       SKEDULR   883
+*         BATCH BASED ON THE ORIGIN OF SKEDULR.                          SKEDULR   884
+*                                                                        SKEDULR   885
+          GETJO  ORIGIN                                                  SKEDULR   886
+          SB1    1                                                       SKEDULR   887
+          SA1    ORIGIN                                                  SKEDULR   888
+          SX6    B1                                                      SKEDULR   889
+          NZ     X1,STEP5O   IF NOT SYSTEM ORIGIN                        SKEDULR   890
+          SX6    B0                                                      SKEDULR   891
+ STEP5O   SA6    TASK+6      SET FILE TYPE TO SYSTEM OR LOCAL BATCH      SKEDULR   892
+          SA6    TASKA+6                                                 SKEDULR   893
+*                                                                        SKEDULR   894
+*         DETERMINE IF THE SUBMIT FILE CONTAINS /JOB, /NOSEQ, /EOR       SKEDULR   895
+*         OR /EOF STATEMENTS.  IF SO, REMOVE THEM.                       SKEDULR   896
+*                                                                        SKEDULR   897
+          OPEN   TASK,READ,RECALL                                        SKEDULR   898
+          REWIND TASK,RECALL                                             SKEDULR   899
+          READ   TASK,RECALL   PRIME THE BUFFER                          SKEDULR   900
+          READC  TASK,CLINE,9  READ FIRST LINE                           SKEDULR   901
+          SA1    CLINE                                                   SKEDULR   902
+          SA2    DJOB                                                    SKEDULR   903
+          MX0    24          FOUR CHARACTER MASK                         SKEDULR   904
+          BX1    X0*X1                                                   SKEDULR   905
+          BX2    X2-X1                                                   SKEDULR   906
+          NZ     X2,STEP5S   IF FIRST CARD IS NOT /JOB                   SKEDULR   907
+          OPEN   TASKA,WRITE,RECALL                                      SKEDULR   908
+ STEP5P   READC  TASK,CLINE,9                                            SKEDULR   909
+          NG     X1,STEP5R   IF EOR/EOF                                  SKEDULR   910
+          NZ     X1,STEP5R   IF END OF RECORD                            CML0067     6
+          SA1    CLINE                                                   SKEDULR   911
+          SA2    DEOR                                                    SKEDULR   912
+          SA3    DEOF                                                    SKEDULR   913
+          SA4    DNOSEQ                                                  SKEDULR   914
+          MX0    36                                                      SKEDULR   915
+          BX1    X0*X1                                                   SKEDULR   916
+          BX4    X1-X4                                                   SKEDULR   917
+          ZR     X4,STEP5P   SKIP THIS CARD IF /NOSEQ CARD               SKEDULR   918
+          MX0    24          FOUR CHARACTER MASK                         SKEDULR   919
+          BX1    X0*X1                                                   SKEDULR   920
+          BX4    X1-X2                                                   SKEDULR   921
+          ZR     X4,STEP5Q   IF /EOR                                     SKEDULR   922
+          BX4    X1-X3                                                   SKEDULR   923
+          ZR     X4,STEP5R   IF /EOF                                     SKEDULR   924
+          WRITEC TASKA,CLINE,9   WRITE THE LINE AS-IS                    SKEDULR   925
+          EQ     STEP5P      CONTINUE TO END-OF-RECORD/FILE              SKEDULR   926
+                                                                         SKEDULR   927
+ STEP5Q   WRITER TASKA,RECALL   WRITE AN END-OF-RECORD                   SKEDULR   928
+          EQ     STEP5P      CONTINUE TO END-OF-RECORD/FILE              SKEDULR   929
+                                                                         SKEDULR   930
+ STEP5R   WRITEF TASKA,RECALL   WRITE AN END-OF-FILE                     SKEDULR   931
+          REWIND TASKA,RECALL                                            SKEDULR   932
+          IFEQ   NOS+NOS1,2,8                                            CMLA465A   63
+          SUBMIT TASKA       SUBMIT THE ALTERNATE TASK FILE              SKEDULR   934
+          SA1    TASKA+6                                                 SKEDULR   935
+          BX6    X1                                                      SKEDULR   936
+          SA6    TASK+6      SAVE JOB NAME ASSIGNED TO THE TASK          SKEDULR   937
+          EQ     STEP5T                                                  SKEDULR   938
+                                                                         SKEDULR   939
+ STEP5S   REWIND TASK,RECALL                                             SKEDULR   940
+          SUBMIT TASK                                                    SKEDULR   941
+          IFEQ   NOS+NOS1,1,5                                            CMLA465A   64
+          SA1    TASKA                                                   SKEDULR   943
+          MX0    42                                                      SKEDULR   944
+          BX6    X0*X1                                                   SKEDULR   945
+          SA6    ROUTEP      SAVE FILE NAME IN ROUTE PARAMETER BLOCK     SKEDULR   946
+ STEP5S   SX0    1S11        FORCED ORIGIN FLAG                          CML0400     6
+          SA1    ROUTEP      ROUTE PARAMETER                             CML0400     7
+          BX6    X0+X1       ADD FLAG                                    CML0400     8
+          SA6    ROUTEP      RESTORE PARAM                               CML0400     9
+          ROUTE  ROUTEP,RECALL  ROUTE JOB TO INPUT QUEUE                 CML0400    10
+          ENDIF                                                          CMLA465A   65
+          IFEQ   NOSBE,1                                                 CMLA465A   66
+          ATTACH TASKFDB     GET THE TASK PERMANENT FILE                 SKEDULR   950
+          REQUEST  REQPAR,RECALL  GET A FILE ON THE QUE SET              SKEDULR   951
+          REWIND  TASK,RECALL                                            SKEDULR   952
+          READ   TASK,RECALL FILL THE BUFFER FROM THE TASK FILE          SKEDULR   953
+          READIN TASK        FILL THE WORKING BUFFER                     SKEDULR   954
+          SA1    CLINE                                                   SKEDULR   955
+          SA2    DJOB                                                    SKEDULR   956
+          MX0    24                                                      SKEDULR   957
+          BX1    X0*X1       MASK FIRST 4 CHARACTERS READ                SKEDULR   958
+          BX6    X2-X1                                                   SKEDULR   959
+          SA6    JOBFLAG     SET/CLEAR THE /JOB FLAG                     SKEDULR   960
+          ZR     X6,STEP5NB  IF FIRST CARD IS /JOB, READ NEXT CARD       SKEDULR   961
+ STEP5NA  WRITOUT QUEFILE    WRITE WHAT WAS READ TO THE QUEFILE          SKEDULR   962
+ STEP5NB  READIN TASK                                                    SKEDULR   963
+          NG     X1,STEP5ND  IF END OF INFORMATION                       SKEDULR   964
+          NZ     X1,STEP5NC  IF END OF RECORD                            SKEDULR   965
+          SA1    JOBFLAG                                                 SKEDULR   966
+          NZ     X1,STEP5NA  IF NOT TESTING FOR /EOR OR /EOF CARDS       SKEDULR   967
+          SA1    CLINE                                                   SKEDULR   968
+          SA2    DEOR                                                    SKEDULR   969
+          SA3    DEOF                                                    SKEDULR   970
+          SA4    DNOSEQ                                                  SKEDULR   971
+          MX0    36                                                      SKEDULR   972
+          BX1    X0*X1                                                   SKEDULR   973
+          BX4    X1-X4                                                   SKEDULR   974
+          ZR     X4,STEP5NB  SKIP THIS CARD IF /NOSEQ CARD               SKEDULR   975
+          MX0    24                                                      SKEDULR   976
+          BX1    X0*X1                                                   SKEDULR   977
+          BX4    X1-X3                                                   SKEDULR   978
+          ZR     X4,STEP5ND  IF /EOF CARD                                SKEDULR   979
+          BX4    X1-X2                                                   SKEDULR   980
+          NZ     X4,STEP5NA  IF NOT /EOR CARD                            SKEDULR   981
+ STEP5NC  WRITER QUEFILE,,RECALL  WRITE AN END-OF-RECORD ON QUEFILE      SKEDULR   982
+          EQ     STEP5NB     READ NEXT RECORD FROM TASK FILE             SKEDULR   983
+                                                                         SKEDULR   984
+ STEP5ND  WRITEF QUEFILE,RECALL  WRITE THE EOF ON QUEFILE                SKEDULR   985
+          CLOSE  TASK,RETURN,RECALL  RETURN THE TASK FILE                SKEDULR   986
+          ROUTE  ROUTPAR,RECALL  SEND THE TASK TO THE INPUT QUE          SKEDULR   987
+          ENDIF                                                          CMLA465A   67
+          IFEQ   NOS,1,1                                                 CMLA465A   68
+ STEP5T   SA1    TASK        FILE NAME SUBMITTED                         SKEDULR   990
+          MX0    42                                                      SKEDULR   991
+          BX1    X0*X1       FILE NAME LESS COMPLETE BIT AND STATUS      SKEDULR   992
+          SX2    55B         BLANK                                       SKEDULR   993
+          SB1    1                                                       SKEDULR   994
+          SB2    B0                                                      SKEDULR   995
+          SB3    10          NUMBER OF CHARACTERS/WORD                   SKEDULR   996
+          SX0    77B         CHARACTER MASK                              SKEDULR   997
+ STEP5U   LX1    6                                                       SKEDULR   998
+          BX3    X1*X0                                                   SKEDULR   999
+          NZ     X3,STEP5V   IF A NON-ZERO CHARACTER                     SKEDULR  1000
+          BX1    X1+X2       CONVERT 00 CHARACTERS TO BLANKS             SKEDULR  1001
+ STEP5V   SB2    B2+B1                                                   SKEDULR  1002
+          NE     B2,B3,STEP5U   IF ALL CHARACTERS NOT DONE               SKEDULR  1003
+          LX1    54                                                      SKEDULR  1004
+          BX6    X1                                                      SKEDULR  1005
+          SA6    MSG1+3      SAVE NAME OF JOB SUBMITTED                  SKEDULR  1006
+          DATE   MSG1        ADD CURRENT DATE TO MESSAGE                 SKEDULR  1007
+          CLOCK  MSG1+1      ADD CURRENT TIME OF DAY TO MESSAGE          SKEDULR  1008
+          IFEQ   NOS,1                                                   CMLA465A   69
+          IFEQ   NOS+NOS1,2,1                                            CMLA465A   70
+          SA1    TASK+6      GET JOB NAME ASSIGNED TO THE TASK           SKEDULR  1011
+          IFEQ   NOS+NOS1,1,1                                            CMLA465A   71
+          SA1    ROUTEP      GET JOB NAME ASSIGNED TO TASK               SKEDULR  1013
+          ENDIF                                                          CMLA465A   72
+          IFEQ   NOSBE,1                                                 CMLA465A   73
+          SA1    ROUTPAR     GET JOB NAME ASSIGNED TO THE TASK           SKEDULR  1016
+          ENDIF                                                          CMLA465A   74
+          SA2    MSG1+4                                                  SKEDULR  1018
+          MX0    42                                                      SKEDULR  1019
+          BX1    X0*X1       MASK FILE NAME                              SKEDULR  1020
+          MX0    18                                                      SKEDULR  1021
+          BX2    X0*X2       MASK FILLER                                 SKEDULR  1022
+          LX1    60-18       POSITION FILE NAME TO LOWER WORD            SKEDULR  1023
+          BX6    X1+X2       FORM TOTAL ENTRY                            SKEDULR  1024
+          SA6    A2          SAVE ENTRY IN MESSAGE                       SKEDULR  1025
+          SA1    MSG1                                                    SKEDULR  1026
+          RJ     PRINT       PRINT MSG1                                  SKEDULR  1027
+          IFEQ   NOSBE,1                                                 CMLA465A   75
+          SA1    REQPAR      MASK OFF COMPLETE BIT FROM...               SKEDULR  1029
+          MX0    42                                                      SKEDULR  1030
+          BX6    X1*X0                                                   SKEDULR  1031
+          SA6    A1          REQUEST PARAMETER BLOCK                     SKEDULR  1032
+          SA6    ROUTPAR     AND ROUTE PARAMETER BLOCK                   SKEDULR  1033
+          ENDIF                                                          CMLA465A   76
+          SA1    SAVEA1      RESTORE POINTER TO CRKBUF                   SKEDULR  1035
+          SA1    X1                                                      SKEDULR  1036
+          SB1    1                                                       SKEDULR  1037
+          EQ     STEP5M      CONTINUE SCANNING THE CURRENT ENTRY         SKEDULR  1038
+          IFEQ   NOS,1                                                   CMLA465A   77
+                                                                         SKEDULR  1040
+ STEP5W   SA4    TTIME       NEXT CALCULATED ROLLIN TIME                 SKEDULR  1041
+          IX5    X6-X3       REQUESTED TIME - CURRENT TIME               SKEDULR  1042
+          NG     X5,STEP5M   IF CURRENT TIME IS .GT. REQUEST             SKEDULR  1043
+          IX5    X4-X6       ROLLIN TIME - REQUESTED TIME                SKEDULR  1044
+          NG     X5,STEP5M   IF CURRENT ROLLIN TIME IS STILL SMALLEST    SKEDULR  1045
+          SA6    A4          SAVE CURRENT REQUEST AS NEW ROLLIN TIME     SKEDULR  1046
+          EQ     STEP5M      PROCESS NEXT TIME ENTRY FOR THIS TASK       SKEDULR  1047
+          ENDIF                                                          CMLA465A   78
+                                                                         SKEDULR  1049
+ STEP5Z   DATE   MSG2                                                    SKEDULR  1050
+          CLOCK  MSG2+1                                                  SKEDULR  1051
+          SA1    MSG2                                                    SKEDULR  1052
+          RJ     PRINT       PRINT MSG2 - INVALID RUN MESSAGE            SKEDULR  1053
+          SA1    XKEY                                                    SKEDULR  1054
+          RJ     PRINT       PRINT THE INVALID DIRECTIVE                 SKEDULR  1055
+          SX6    77B                                                     SKEDULR  1056
+          SA6    ERRFLAG     INDICATE ERRORS REPORTED TO OUTPUT          SKEDULR  1057
+          EQ     STEP5       READ NEXT LINE FROM JOBS FILE               SKEDULR  1058
+                                                                         SKEDULR  1059
+***   6. SET PREVIOUS TIME TO CURRENT TIME AND WRITE DATE/TIME STAMP     SKEDULR  1061
+*        ON TFILE TO TERMINATE ANY OTHER COPIES OF SKEDULR THAT MIGHT    SKEDULR  1062
+*        BE EXECUTING.  PRINT THE OUTPUT FILE IF ERRORS OCCURRED ON      SKEDULR  1063
+*        THIS PASS.  THEN ROLLOUT FOR 15 MINUTES OR THE TIME             SKEDULR  1064
+*        BETWEEN NOW AND THE NEXT REQUEST, WHICHEVER IS SMALLEST.        SKEDULR  1065
+*        WHEN EXECUTION IS RESUMED, GO TO STEP 2.                        SKEDULR  1066
+                                                                         SKEDULR  1073
+ STEP6    SA1    EMPTY       JOBS FILE EMPTY FLAG                        SKEDULR  1074
+          NZ     X1,STEP6AA  IF JOBS FILE IS NOT EMPTY                   SKEDULR  1075
+          SA1    MSG4                                                    SKEDULR  1076
+          RJ     PRINT       INDICATE NO JOBS TO BE SCHEDULED            SKEDULR  1077
+          MX6    48                                                      SKEDULR  1078
+          SA6    ERRFLAG     SET ERROR FLAG TO FORCE PRINTING OUTPUT     SKEDULR  1079
+ STEP6AA  SA1    CTIME                                                   SKEDULR  1080
+          BX6    X1                                                      SKEDULR  1081
+          SX1    X1-1440                                                 SKEDULR  1082
+          NZ     X1,STEP6A   IF NOT 2400 HOURS                           SKEDULR  1083
+          SX6    B0          SET IT TO 0000 HOURS                        SKEDULR  1084
+          IFEQ   NOS,1                                                   CMLA465A   79
+ STEP6A   SA6    PTIME                                                   SKEDULR  1086
+          NZ     X6,STEP6B   IF NOT MIDNIGHT                             SKEDULR  1087
+          SX7    2*60        SET TO ROLLIN IN 2 MINUTES                  SKEDULR  1088
+          EQ     STEP6C                                                  SKEDULR  1089
+                                                                         SKEDULR  1090
+ STEP6B   SA1    TTIME       NEXT CALCULATED ROLLIN TIME                 SKEDULR  1091
+          IX1    X1-X6       ROLLIN TIME - CURRENT TIME                  SKEDULR  1092
+          SX2    X1-15                                                   SKEDULR  1093
+          SX7    15*60       PREPARE FOR 15 MINUTES LATER ROLLIN         SKEDULR  1094
+          PL     X2,STEP6C   IF ROLLIN TIME .GT. 15 MINUTES              SKEDULR  1095
+          SX7    60                                                      SKEDULR  1096
+          IX7    X7*X1       CONVERT TIME TO SECONDS                     SKEDULR  1097
+ STEP6C   SA1    OUTTIME                                                 SKEDULR  1098
+          MX0    48                                                      SKEDULR  1099
+          BX1    X0*X1       SAVE ALL BUT THE TIME                       SKEDULR  1100
+          BX7    X1+X7                                                   SKEDULR  1101
+          SA7    A1          SAVE NEW ROLLOUT TIME                       SKEDULR  1102
+          REWIND  TFILE,RECALL                                           SKEDULR  1103
+          DATE    CLINE                                                  SKEDULR  1104
+          CLOCK   CLINE+1                                                SKEDULR  1105
+          WRITEC  TFILE,CLINE,9   PUT NEW DATE/TIME STAMP ON TIME FILE   SKEDULR  1106
+          WRITER  TFILE,RECALL                                           SKEDULR  1107
+          REPLACE TFILE                                                  SKEDULR  1108
+          SA1    ERRFLAG                                                 SKEDULR  1109
+          ZR     X1,STEP6D   IF NO ERRORS RECORDED ON OUTPUT             SKEDULR  1110
+          CLOSE  LIST,NR,RECALL                                          SKEDULR  1111
+          IFEQ   NOS+NOS1,2,1                                            CMLA465A   80
+          RELEASE  LIST,PRINT                                            SKEDULR  1113
+          IFEQ   NOS+NOS1,1,5                                            CMLA465A   81
+          SA1    ROUTEL                                                  SKEDULR  1115
+          MX0    48                                                      SKEDULR  1116
+          BX6    X0*X1       CLEAR COMPLETION BIT                        SKEDULR  1117
+          SA6    ROUTEL                                                  SKEDULR  1118
+          ROUTE  ROUTEL,RECALL  ROUTE LIST FILE TO OUTPUT                SKEDULR  1119
+*                                                                        SKEDULR  1120
+          OPEN  LIST,WRITE,RECALL                                        SKEDULR  1121
+ STEP6D   ROLLOUT OUTTIME                                                SKEDULR  1122
+          MX6    0                                                       SKED40505   8
+          SA6    ERRFLAG     CLEAR ERROR FLAG                            SKED40505   9
+          EQ     STEP2                                                   SKEDULR  1123
+          ENDIF                                                          CMLA465A   82
+          IFEQ   NOSBE,1                                                 CMLA465A   83
+STEP6A    SA6    BUFIN       PUT THE TIME IN THE BUFFER                  SKEDULR  1126
+          PURGE  TFFDB,RC    PURGE THE OLD TIME FILE                     SKEDULR  1127
+          CLOSE  TFILE,RETURN,RECALL                                     SKEDULR  1128
+          SX7    BUFIN                                                   SKEDULR  1129
+          SA7    TFILE+3     SET OUT = FIRST                             SKEDULR  1130
+          SX7    X7+2        SET IN = FIRST + 2                          SKEDULR  1131
+          SA7    TFILE+2                                                 SKEDULR  1132
+          JDATE  BUFIN+1     PUT CURRENT DATE INTO TIME FILE BUFFER      SKEDULR  1133
+          REQUEST  TFREQ,RECALL  GET A PERM FILE FOR TIME FILE           SKEDULR  1134
+          WRITEF  TFILE,RECALL   WRITE THE TIME TO THE NEW TIME FILE     SKEDULR  1135
+          CATALOG  TFFDB     AND CATALOG IT                              SKEDULR  1136
+          MX0    -1                                                      DIM0339    16
+ STEP6A1  SA1    TFFDB       WAIT FOR COMPLETE BIT TO SET                DIM0339    17
+          BX1    -X0*X1                                                  DIM0339    18
+          ZR     X1,STEP6A1  IF NOT COMPLETE                             DIM0339    19
+          CLOSE  TFILE,RETURN,RECALL   RETURN PERMANENT FILES            DIM0339    20
+          CLOSE  JOBS,RETURN,RECALL                                      DIM0339    21
+          SA1    ERRFLAG                                                 SKEDULR  1137
+          NZ     X1,STEP6B   SAVE THE OUTPUT IF DAYFILE ENTRIES          SKEDULR  1138
+          SYSTEM  APR,,,9    KILL THE OUTPUT AND DAYFILE                 SKEDULR  1139
+ STEP6B   ENDRUN             AND GO AWAY                                 SKEDULR  1140
+          ENDIF                                                          CMLA465A   84
+          TITLE  COMMON SUBROUTINES                                      SKEDULR  1142
+          EJECT                                                          SKEDULR  1143
+**                                                                       SKEDULR  1144
+*         CRACK - CRACK CHARACTER STRING                                 SKEDULR  1145
+*                                                                        SKEDULR  1146
+*         J.E. SIPPER  76/12/08.                                         SKEDULR  1147
+*                                                                        SKEDULR  1148
+*         CRACK A CHARACTER STRING INTO A WORD STRING.  THE              SKEDULR  1149
+*         FOLLOWING ARE CONSIDERED DELIMITERS, TERMINATE A               SKEDULR  1150
+*         STRING AND ARE CONSIDERED SEPERATE DATA ITEMS.                 SKEDULR  1151
+*                                                                        SKEDULR  1152
+*           +  -  *  /  (  )  $  =                                       SKEDULR  1153
+*                                                                        SKEDULR  1154
+*         THE FOLLOWING ARE CONSIDERED DELIMETERS FOR A STRING,          SKEDULR  1155
+*         BUT ARE DISCARDED THEMSELVES.                                  SKEDULR  1156
+*                                                                        SKEDULR  1157
+*                 BLANK   COMMA    PERIOD                                SKEDULR  1158
+*                                                                        SKEDULR  1159
+*         TWO BLANKS IN A ROW OR A ZERO BYTE TERMINATE THE CRACK.        SKEDULR  1160
+*         CRACK WILL ALSO TERMINATE AFTER 9 SOURCE WORDS HAVE BEEN       SKEDULR  1161
+*         CRACKED.                                                       SKEDULR  1162
+*                                                                        SKEDULR  1163
+*         DELIMITERS THAT ARE STORED AS DATA ITEMS THEMSELVES ARE        SKEDULR  1164
+*         RIGHT JUSTIFIED ZERO FILLED IN THE WORD STRING EXCEPT FOR      SKEDULR  1165
+*         THE + AND - WHICH ARE LEFT JUSTIFIED.  ALL OTHER DELIMITER     SKEDULR  1166
+*         ITEMS ARE LEFT JUSTIFIED, ZERO FILLED.                         SKEDULR  1167
+*                                                                        SKEDULR  1168
+*         ENTRY   DATA STRING TO BE CRACKED IS IN KEY BUFFER.            SKEDULR  1169
+*                                                                        SKEDULR  1170
+*         EXIT    WORD STRING IS IN CRKBUF WITH A ZERO WORD AT THE END   SKEDULR  1171
+*                 OF THE STRING.                                         SKEDULR  1172
+*                                                                        SKEDULR  1173
+*         ROUTINES CALLED - NONE                                         SKEDULR  1174
+*                                                                        SKEDULR  1175
+*         DATA AREAS USED - KEY    - INPUT LINE IMAGE                    SKEDULR  1176
+*                           CRKBUF - STORAGE FOR CRACKED DATA            SKEDULR  1177
+*                                                                        SKEDULR  1178
+*         USES    A - 1, 4, 5, 6, 7                                      SKEDULR  1179
+*                 X - 1, 2, 3, 4, 5, 6, 7                                SKEDULR  1180
+*                 B - 1, 2, 3, 5, 6, 7                                   SKEDULR  1181
+*                                                                        SKEDULR  1182
+*         MESSAGES -  NONE                                               SKEDULR  1183
+*                                                                        SKEDULR  1184
+*         THE FOLLOWING REGISTERS ARE USED THROUGHOUT CRACK FOR THE      SKEDULR  1185
+*         FOLLOWING FUNCTIONS;                                           SKEDULR  1186
+*                                                                        SKEDULR  1187
+*                                     X4 = CHARACTER MASK.               SKEDULR  1188
+*           B5 = BLANK COUNTER.       X5 = CHARACTER CTR(SHIFT CNT)      SKEDULR  1189
+*           B6 = COMMA/PERIOD COUNTER X6 = ACCUMULATED DATA WORD.        SKEDULR  1190
+*           B7 = INDEX TO CRKBUF.     X7 = DATA MODE FLAG.               SKEDULR  1191
+*                                                                        SKEDULR  1192
+*                                                                        SKEDULR  1193
+*       STEP 1 - CLEAR/SET COUNTERS, THEN STEP 2.                        SKEDULR  1194
+*                                                                        SKEDULR  1195
+*                                                                        SKEDULR  1196
+ CRACK    DATA   0           ENTRY/EXIT                                  SKEDULR  1197
+          SB1    1                                                       SKEDULR  1198
+          SB2    KEY         FWA OF DATA TO CRACK                        SKEDULR  1199
+          SB3    B0          SHIFT COUNT TO POSITION 1ST WORD            SKEDULR  1200
+          SB4    20          NUMBER OF WORDS TO CRACK                    SKEDULR  1201
+          SX7    B2+8        SAVE TERMINATING SOURCE ADDRESS             SKEDULR  1202
+          SA7    CRKA                                                    SKEDULR  1203
+          SB5    B0          CLEAR BLANK COUNTER                         SKEDULR  1204
+          SB6    B0          CLEAR COMMA/PERIOD COUNTER                  SKEDULR  1205
+          SB7    CRKBUF      SET INDEX TO CRKBUF                         SKEDULR  1206
+          SX4    77B         SET CHARACTER MASK                          SKEDULR  1207
+          SX5    54          SET CHARACTER SHIFT COUNTER                 SKEDULR  1208
+          MX6    0           CLEAR DATA WORD                             SKEDULR  1209
+          MX7    0           CLEAR DATA MODE FLAG                        SKEDULR  1210
+          SA1    B2          GET FIRST DATA WORD                         SKEDULR  1211
+                                                                         SKEDULR  1212
+*                                                                        SKEDULR  1213
+*       STEP 2 - GET A CHARACTER. GO TO STEP 6 IF A SPECIAL TERMINATOR   SKEDULR  1214
+*                TO STEP 9 IF A BLANK TERMINATOR, TO STEP 3 IF A COMMA   SKEDULR  1215
+*                OR PERIOD, OR TO STEP 5 IF DATA.                        SKEDULR  1216
+*                                                                        SKEDULR  1217
+ CRK1     SB3    B3+6                                                    SKEDULR  1218
+          SX3    B3-66                                                   SKEDULR  1219
+          NZ     X3,CRK2     IF ALL CHARACTERS NOT USED FROM THIS WORD   SKEDULR  1220
+          SB3    6           RESET SHIFT COUNT FOR FIRST CHARACTER       SKEDULR  1221
+          SB2    B2+B1       INCREMENT POINTER TO DATA                   SKEDULR  1222
+          SA1    B2          GET NEXT DATA WORD                          SKEDULR  1223
+          SA3    CRKA                                                    SKEDULR  1224
+          SX2    B2                                                      SKEDULR  1225
+          BX3    X3-X2                                                   SKEDULR  1226
+          NZ     X3,CRK2     IF TERMINAL ADDRESS HAS NOT BEEN REACHED    SKEDULR  1227
+          SB4    B1          SET TERMINAL COUNT                          SKEDULR  1228
+          EQ     CRK3        STORE CURRENT WORD AND EXIT                 SKEDULR  1229
+                                                                         SKEDULR  1230
+ CRK2     LX2    B3,X1                                                   SKEDULR  1231
+          BX2    X2*X4       GET A CHARACTER                             SKEDULR  1232
+          ZR     X2,CRK11    IF A ZERO CHARACTER THE SAME AS A BLANK     SKEDULR  1233
+          SX3    X2-1R+                                                  SKEDULR  1234
+          NG     X3,CRK10    IF NOT A TERMINATOR                         SKEDULR  1235
+          SX3    X2-1R                                                   SKEDULR  1236
+          ZR     X3,CRK11    IF A BLANK                                  SKEDULR  1237
+          NG     X3,CRK6     IF A SPECIAL TERMINATOR                     SKEDULR  1238
+          SX3    X2-1R.-1                                                SKEDULR  1239
+          PL     X3,CRK10    IF NOT A TERMINATOR                         SKEDULR  1240
+                                                                         SKEDULR  1241
+*       STEP 3 - BUMP COMMA/PERIOD COUNTER, AND CLEAR BLANK COUNTER.     SKEDULR  1242
+*                THEN STEP 10 IF NOT TWO OR MORE IN A ROW, ELSE STEP 4.  SKEDULR  1243
+*                                                                        SKEDULR  1244
+          SB6    B6+B1       BUMP COMMA/PERIOD COUNTER                   SKEDULR  1245
+          SB5    B0          CLEAR BLANK COUNTER                         SKEDULR  1246
+          EQ     B6,B1,CRK12 IF NOT TWO OR MORE IN A ROW                 SKEDULR  1247
+          SX6    1R0         DATA = 0                                    SKEDULR  1248
+          LX6    59-5                                                    SKEDULR  1249
+                                                                         SKEDULR  1250
+*       STEP 4 - STORE DATA WORD AND BUMP POINTERS. CLEAR DATA MODE AND  SKEDULR  1251
+*                THE DATA WORD.                                          SKEDULR  1252
+*                                                                        SKEDULR  1253
+ CRK3     SA6    B7          STORE DATA WORD                             SKEDULR  1254
+          SB7    B7+B1       BUMP POINTER TO CRKBUF                      SKEDULR  1255
+          MX7    0           CLEAR DATA MODE FLAG                        SKEDULR  1256
+          MX6    0           CLEAR DATA WORD                             SKEDULR  1257
+          SX5    54          RESET SHIFT COUNT                           SKEDULR  1258
+                                                                         SKEDULR  1259
+*       STEP 5 - DETERMINE IF ALL WORDS REQUESTED HAVE BEEN CRACKED OR   SKEDULR  1260
+*                IF CRKBUF IS FULL. IF NEITHER, THEN STEP 2 TO GET NEXT  SKEDULR  1261
+*                CHARACTER.                                              SKEDULR  1262
+*                                                                        SKEDULR  1263
+ CRK4     SB4    B4-B1                                                   SKEDULR  1264
+          LE     B4,B0,CRK5  IF ALL DONE                                 SKEDULR  1265
+          SX3    B7-CRKBUF-LCRKBUF                                       SKEDULR  1266
+          NG     X3,CRK1     IF BUFFER IS NOT FULL                       SKEDULR  1267
+                                                                         SKEDULR  1268
+*       STEP 6 - ZERO NEXT WORD IN CRKBUF AND EXIT.                      SKEDULR  1269
+*                                                                        SKEDULR  1270
+ CRK5     MX6    0                                                       SKEDULR  1271
+          SA6    B7                                                      SKEDULR  1272
+          EQ     CRACK                                                   SKEDULR  1273
+                                                                         SKEDULR  1274
+*       STEP 7 - A SPECIAL TERMINATOR HAS BEEN DETECTED. STORE CURRENT   SKEDULR  1275
+*                WORD IF DATA MODE AND BUMP POINTERS.                    SKEDULR  1276
+*                                                                        SKEDULR  1277
+ CRK6     ZR     X7,CRK7     IF NOT DATA MODE                            SKEDULR  1278
+          SA6    B7                                                      SKEDULR  1279
+          SB7    B7+B1       INCREMENT CRKBUF POINTER                    SKEDULR  1280
+          MX6    0           CLEAR DATA WORD                             SKEDULR  1281
+          SX5    54          RESET SHIFT COUNT                           SKEDULR  1282
+          SB4    B4-B1       DECREMENT WORDS TO CRACK                    SKEDULR  1283
+ CRK7     SX3    X2-1R+                                                  SKEDULR  1284
+          ZR     X3,CRK8     IF +                                        SKEDULR  1285
+          SX3    X2-1R-                                                  SKEDULR  1286
+          NZ     X3,CRK9     IF NOT -                                    SKEDULR  1287
+ CRK8     LX2    59-5        POSITION + OR - TO UPPER BYTE               SKEDULR  1288
+ CRK9     BX6    X6+X2                                                   SKEDULR  1289
+          SA6    B7          STORE CHARACTER                             SKEDULR  1290
+          SB7    B7+B1       ADVANCE P                                   SKEDULR  1291
+          MX7    0           CLEAR DATA MODE                             SKEDULR  1292
+          SB5    B0          CLEAR BLANK COUNTER                         SKEDULR  1293
+          SB6    B0          CLEAR COMMA/PERIOD COUNTER                  SKEDULR  1294
+          MX6    0           CLEAR DATA WORD                             SKEDULR  1295
+          EQ     CRK4        TO DETERMINE IF ALL WORDS ARE DONE          SKEDULR  1296
+                                                                         SKEDULR  1297
+*      STEP 8 -  A NORMAL CHARACTER HAS BEEN FOUND.  CLEAR BLANK AND     SKEDULR  1298
+*                COMMA/PERIOD CTR, SET DATA MODE, AND ADD CHARACTER TO   SKEDULR  1299
+*                DATA STRING. IF THE DATA WORD IS NOT FULL, THEN STEP 2  SKEDULR  1300
+*                TO GET NEXT CHARACTER. OTHERWISE, STEP 4 TO STORE DATA  SKEDULR  1301
+*                ITEM.                                                   SKEDULR  1302
+*                                                                        SKEDULR  1303
+ CRK10    SB5    B0          CLEAR BLANK CTR                             SKEDULR  1304
+          SB6    X5          CHARACTER SHIFT COUNT                       SKEDULR  1305
+          SX7    B1          SET DATA MODE                               SKEDULR  1306
+          LX2    B6,X2       POSITION CHARACTER                          SKEDULR  1307
+          SB6    B0          CLEAR COMMA/PERIOD COUNTER                  SKEDULR  1308
+          BX6    X6+X2       ADD CHARACTER TO STRING                     SKEDULR  1309
+          SX5    X5-6        DECREMENT CHARACTER COUNTER                 SKEDULR  1310
+          PL     X5,CRK1     IF NOT FULL WORD                            SKEDULR  1311
+          SX5    54          RESET CHARACTER SHIFT COUNT                 SKEDULR  1312
+          EQ     CRK3        TO STORE DATA WORD                          SKEDULR  1313
+                                                                         SKEDULR  1314
+*      STEP 9 -  A BLANK HAS BEEN DETECTED.  BUMP THE BLANK CTR.         SKEDULR  1315
+*                                                                        SKEDULR  1316
+ CRK11    SB5    B5+B1                                                   SKEDULR  1317
+                                                                         SKEDULR  1318
+*      STEP 10 - IF DATA MODE THEN STEP 4 TO STORE DATA WORD. IF NOT     SKEDULR  1319
+*                STEP 5 IF TWO BLANKS IN A ROW, OTHERWISE, STEP 2        SKEDULR  1320
+*                TO GET NEXT CHARACTER.                                  SKEDULR  1321
+*                                                                        SKEDULR  1322
+ CRK12    NZ     X7,CRK3     IF DATA MODE                                SKEDULR  1323
+          SX3    B5-2                                                    SKEDULR  1324
+          NG     X3,CRK1     IF NOT TWO OR MORE BLANKS                   SKEDULR  1325
+          EQ     CRK5        TO ZERO FILL LAST WORD AND EXIT             SKEDULR  1326
+                                                                         SKEDULR  1327
+          IFEQ   NOSBE,1                                                 CMLA465A   85
+          EJECT                                                          SKEDULR  1329
+**                                                                       SKEDULR  1330
+*         CV6 - CONVERT TWO DIGIT DECIMAL DISPLAY CODED NUMBER           SKEDULR  1331
+*               TO BINARY.                                               SKEDULR  1332
+*                                                                        SKEDULR  1333
+*         ENTRY  X1 = DIGITS TO CONVERT(BITS 53-42)                      SKEDULR  1334
+*                                                                        SKEDULR  1335
+*         EXIT   X6 = BINARY NUMBER                                      SKEDULR  1336
+*                X1 = SHIFTED LEFT EIGHTEEN PLACES                       SKEDULR  1337
+*                                                                        SKEDULR  1338
+*         REGISTERS USED                                                 SKEDULR  1339
+*         X - 0,1,2,3,6                                                  SKEDULR  1340
+*         A - NONE                                                       SKEDULR  1341
+*         B - NONE                                                       SKEDULR  1342
+*                                                                        SKEDULR  1343
+CV6       DATA   0                                                       SKEDULR  1344
+          MX0    6                                                       SKEDULR  1345
+          LX0    6                                                       SKEDULR  1346
+          LX1    12                                                      SKEDULR  1347
+          SX3    1R0                                                     SKEDULR  1348
+          BX2    X1*X0       TENS DIGIT TO X2                            SKEDULR  1349
+          IX6    X2-X3       REMOVE DISPLAY CODE BIAS                    SKEDULR  1350
+          SX2    10                                                      SKEDULR  1351
+          IX6    X2*X6       MULTIPLY BY 10                              SKEDULR  1352
+          LX1    6                                                       SKEDULR  1353
+          BX2    X1*X0       ONES DIGIT TO X2                            SKEDULR  1354
+          IX2    X2-X3       REMOVE DISPLAY CODE BIAS                    SKEDULR  1355
+          IX6    X6+X2       ADD ONES AND TENS                           SKEDULR  1356
+          EQ     CV6         EXIT                                        SKEDULR  1357
+          ENDIF                                                          CMLA465A   86
+          EJECT                                                          SKEDULR  1359
+                                                                         SKEDULR  1360
+**                                                                       SKEDULR  1361
+*         PRINT SUBROUTINE                                               SKEDULR  1362
+*                                                                        SKEDULR  1363
+*         J.E. SIPPER     79/06/07                                       SKEDULR  1364
+*                                                                        SKEDULR  1365
+*         SEND THE MESSAGE POINTED TO BY (A1) TO THE OUTPUT FILE.        SKEDULR  1366
+*                                                                        SKEDULR  1367
+*         ENTRY - (A1) POINTS TO MESSAGE TO BE PRINTED.                  SKEDULR  1368
+*                                                                        SKEDULR  1369
+*         EXIT  - MESSAGE PRINTED.                                       SKEDULR  1370
+*                                                                        SKEDULR  1371
+*         ROUTINES CALLED - NONE                                         SKEDULR  1372
+*                                                                        SKEDULR  1373
+*         USES  - A - 1, 7                                               SKEDULR  1374
+*                 X - 1, 7                                               SKEDULR  1375
+*                 B - 1, 2, 3                                            SKEDULR  1376
+*                                                                        SKEDULR  1377
+ PRINT    BSSZ   1                                                       SKEDULR  1378
+          SB1    1                                                       SKEDULR  1379
+          SB2    CLINE                                                   SKEDULR  1380
+          SB3    CLINE+9                                                 SKEDULR  1381
+ PRINT1   BX7    X1                                                      SKEDULR  1382
+          SA7    B2          MOVE MESSAGE TO CLINE BUFFER                SKEDULR  1383
+          SB2    B2+B1                                                   SKEDULR  1384
+          SA1    A1+B1                                                   SKEDULR  1385
+          NE     B2,B3,PRINT1  IF ALL WORDS NOT MOVED                    SKEDULR  1386
+          IFEQ   NOS,1,2                                                 CMLA465A   87
+          WRITEC LIST,CLINE,9                                            SKEDULR  1388
+          WRITER LIST,RECALL  WRITE LINE TO LIST FILE                    SKEDULR  1389
+          IFEQ   NOSBE,1,2                                               CMLA465A   88
+          WRITOUT OUTPUT                                                 SKEDULR  1391
+          WRITER OUTPUT,,RECALL  WRITE LINE TO OUTPUT                    SKEDULR  1392
+          EQ     PRINT       EXIT                                        SKEDULR  1393
+          EJECT                                                          SKEDULR  1394
+                                                                         SKEDULR  1395
+**                                                                       SKEDULR  1396
+*         TIME SUBROUTINE                                                SKEDULR  1397
+*                                                                        SKEDULR  1398
+*         J.E. SIPPER     79/06/07                                       SKEDULR  1399
+*                                                                        SKEDULR  1400
+*         GET THE BINARY TIME-OF-DAY FROM THE SYSTEM AND CONVERT IT      SKEDULR  1402
+*         TO MINUTES PAST MIDNIGHT.  SAVE CURRENT BINARY DAY OF          SKEDULR  1403
+*         THE MONTH AND MONTH.                                           SKEDULR  1404
+*                                                                        SKEDULR  1410
+*         ENTRY  - NONE                                                  SKEDULR  1411
+*                                                                        SKEDULR  1412
+*         EXIT   - (X6)     = MINUTES PAST MIDNIGHT                      SKEDULR  1413
+*                  (BDAY)   = BINARY DAY OF THE MONTH                    SKEDULR  1414
+*                  (BMONTH) = BINARY MONTH OF THE YEAR                   SKEDULR  1415
+*                                                                        SKEDULR  1416
+*         ROUTINES CALLED - NONE                                         SKEDULR  1418
+*                                                                        SKEDULR  1423
+*         USES    A - 1, 7                                               SKEDULR  1424
+*                 X - 0, 1, 2, 3, 6, 7                                   SKEDULR  1425
+*                 B - NONE                                               SKEDULR  1426
+*                                                                        SKEDULR  1427
+ TIME     BSSZ   1                                                       SKEDULR  1428
+          IFEQ   NOS,1                                                   CMLA465A   89
+          PDATE  DAYTIME                                                 SKEDULR  1430
+          SA1    DAYTIME                                                 SKEDULR  1431
+          SX0    77B         TIME MASK                                   SKEDULR  1432
+          AX1    6           GET RID OF SECONDS                          SKEDULR  1433
+          BX2    X1*X0       MINUTES                                     SKEDULR  1434
+          AX1    6           GET RID OF MINUTES                          SKEDULR  1435
+          BX3    X1*X0       HOURS                                       SKEDULR  1436
+          SX6    60                                                      SKEDULR  1437
+          IX6    X6*X3       CONVERT HOURS TO MINUTES                    SKEDULR  1438
+          IX6    X6+X2       TOTAL MINUTES PAST MIDNIGHT                 SKEDULR  1439
+          AX1    6                                                       SKEDULR  1440
+          BX7    X0*X1                                                   SKEDULR  1441
+          SA7    BDAY        SAVE BINARY DAY OF THE MONTH                SKEDULR  1442
+          AX1    6                                                       SKEDULR  1443
+          BX7    X0*X1                                                   SKEDULR  1444
+          SA7    BMONTH      SAVE BINARY MONTH OF THE YEAR               SKEDULR  1445
+          ENDIF                                                          CMLA465A   90
+          IFEQ   NOSBE,1                                                 CMLA465A   91
+          DATE   DAYTIME     GET THE DATE                                SKEDULR  1448
+          SA1    DAYTIME                                                 SKEDULR  1449
+          RJ     CV6         CONVERT FIRST PARAMETER                     DIM0337    23
+          SA6    "D1"        AND SAVE IT IN YEAR, MONTH OR DAY           DIM0337    24
+          RJ     CV6         CONVERT SECOND PARAMETER                    DIM0337    25
+          SA6    "D2"        AND SAVE IT IN YEAR, MONTH OR DAY           DIM0337    26
+          RJ     CV6         CONVERT THIRD PARAMETER                     DIM0337    27
+          SA6    "D3"        AND SAVE IT IN YEAR, MONTH OR DAY           DIM0337    28
+          CLOCK  DAYTIME     GET THE TIME OF DAY FROM THE SYSTEM         SKEDULR  1454
+          SA1    DAYTIME                                                 SKEDULR  1455
+          RJ     CV6         CONVERT HOURS                               SKEDULR  1456
+          BX7    X6          SAVE HOURS IN X7                            SKEDULR  1457
+          RJ     CV6         CONVERT MINUTES                             SKEDULR  1458
+          SX3    60                                                      SKEDULR  1459
+          IX7    X7*X3       CONVERT HOURS TO MINUTES                    SKEDULR  1460
+          IX6    X6+X7       TOTAL MINUTES PAST MIDNIGHT                 SKEDULR  1461
+          ENDIF                                                          CMLA465A   92
+          EQ     TIME        EXIT WITH TIME IN X6                        SKEDULR  1463
+          EJECT                                                          SKEDULR  1464
+         TITLE  BUFFERS AND DEFINED DATA ITEMS                           SKEDULR  1465
+                                                                         SKEDULR  1466
+*         BUFFERS                                                        SKEDULR  1467
+                                                                         SKEDULR  1468
+ BUFIN    BSSZ   65          INPUT BUFFER FOR JOBS                       SKEDULR  1469
+ LIN      EQU    *-BUFIN                                                 SKEDULR  1470
+ XKEY     VFD    60/10L             BLANKS FOR PRINTING KEY BUFFER       SKEDULR  1471
+ KEY      BSSZ   9           WORKING STORAGE BUFFER FOR JOBS             SKEDULR  1472
+ LKEY     EQU    *-KEY                                                   SKEDULR  1473
+ BUFTASK  BSSZ   65          BUFFER FOR SUBMIT FILES                     SKEDULR  1474
+ LTASK    EQU    *-BUFTASK                                               SKEDULR  1475
+          IFEQ   NOSBE,1,2                                               CMLA465A   93
+ BUFQUE   BSSZ   65          BUFFER FOR SUBMIT FILES                     DIM0341    18
+ LQUE     EQU    *-BUFQUE                                                DIM0341    19
+ BUFOUT   BSSZ   65          BUFFER FOR ALTERNATE TASK FILE              SKEDULR  1476
+ LBOUT    EQU    *-BUFOUT                                                SKEDULR  1477
+ OUTBUF   BSSZ   65          BUFFER FOR OUTPUT FILE                      SKEDULR  1478
+ LOUTB    EQU    *-OUTBUF                                                SKEDULR  1479
+          IFEQ   NOS,1,2                                                 CMLA465A   94
+ TBUF     BSSZ   65          BUFFER FOR TFILE                            SKEDULR  1481
+ LTBUF    EQU    *-TBUF                                                  SKEDULR  1482
+ CLINE    BSSZ   9           WORKING STORAGE FOR SUBMIT FILE             SKEDULR  1483
+ LCLINE   EQU    *-CLINE                                                 SKEDULR  1484
+ BDAY     BSSZ   1           BINARY DAY OF THE MONTH                     SKEDULR  1485
+ BMONTH   BSSZ   1           BINARY MONTH OF THE YEAR                    SKEDULR  1486
+ BYEAR    BSSZ   1           BINARY YEAR                                 DIM0337    29
+ D        EQU    BDAY                                                    DIM0337    30
+ M        EQU    BMONTH                                                  DIM0337    31
+ Y        EQU    BYEAR                                                   DIM0337    32
+ CDAY     BSSZ   1           CURRENT DAY-OF-THE-WEEK                     SKEDULR  1487
+ CRKBUF   BSSZ   20                                                      SKEDULR  1488
+ LCRKBUF  EQU    *-CRKBUF    LENGTH OF CRACK BUFFER                      SKEDULR  1489
+ CRKA     BSSZ   1           BUFFER FOR TERMINATING ADDRESS              SKEDULR  1490
+ CTIME    BSSZ   1           CURRENT TIME (MINUTES PAST MIDNIGHT)        SKEDULR  1491
+ DAYTIME  BSSZ   1           CURRENT DATE AND TIME IN BINARY             SKEDULR  1492
+ EMPTY    BSSZ   1           JOBS FILE EMPTY FLAG                        SKEDULR  1493
+ ERRFLAG  BSSZ   1            ERRORS REPORTED TO OUTPUT FLAG             SKEDULR  1494
+ ID       BSSZ   1           SYSTEM ID                                   SKEDULR  1495
+ JDAY     BSSZ   1           CURRENT JULIAN DATE                         SKEDULR  1496
+          IFEQ   NOS,1,1                                                 CML0868    16
+ JSN      BSSZ   1           JSN OF THIS JOB                             CML0868    17
+          IFEQ   NOSBE,1,1                                               CMLA465A   95
+ JOBFLAG  BSSZ   1           FLAG TO INDICATE /JOB CARD PRESENT          SKEDULR  1498
+          ENDIF                                                          CMLA465A   96
+          IFEQ   NOS,1                                                   CMLA465A   97
+ ORIGIN   BSSZ   1           ORIGIN FLAG FOR SKEDULR                     SKEDULR  1501
+          IFEQ   NOS+NOS1,1,6                                            CMLA465A   98
+ ROUTEP   BSSZ   1           ROUTE PARAMETER BLOCK (RETAIN ORDER)        SKEDULR  1503
+          VFD    24/0,12/2RIN,6/2,18/400422B     OPTIONS                 SKEDULR  1504
+          BSSZ   3           END OF PARAMETER BLOCK                      SKEDULR  1505
+ ROUTEL   VFD    48/4LLIST,12/0  ROUTE PARAM. BLOCK (RETAIN ORDER)       SKEDULR  1506
+          VFD    24/0,12/2RLP,6/2,18/422B    OPTIONS                     SKEDULR  1507
+          BSSZ   3            END OF PARAMETER BLOCK FOR LIST            SKEDULR  1508
+*                                                                        SKEDULR  1509
+ PDAY     BSSZ   1           CURRENT DAY/TIME STAMP                      SKEDULR  1510
+          ENDIF                                                          CMLA465A   99
+          IFEQ   NOS+NOS1+NOS2+NOS3+NOS4+NOSBE+NOSBE4+NOSBE5+NOSBE6,2,1  CMLA465A  100
+ OUTTIME  VFD    30/0,12/7700B,18/60*2    ROLLOUT TIME                   SKEDULR  1512
+          IFEQ   NOS+NOS1+NOS2+NOS3+NOS4,1,1                             CMLA465A  101
+ OUTTIME  VFD    30/0,18/EXTM,12/60*2   ROLLOUT TIME                     CML0446A   11
+ PTIME    BSSZ    1          PREVIOUS TIME SKEDULR WAS EXECUTED          SKEDULR  1513
+ SAVEA1   BSSZ    1          SAVE BUFFER FOR A1                          SKEDULR  1514
+          IFEQ   NOS,1                                                   CMLA465A  102
+ TTIME    BSSZ    1          TARGET ROLLIN TIME                          SKEDULR  1516
+          ENDIF                                                          CMLA465A  103
+ WRAP     BSSZ   1           CLOCK WRAP AROUND FLAG                      SKE033941  24
+ DAT      VFD    60/2LAT                                                 SKEDULR  1518
+ DDAY     VFD    60/3LDAY                                                SKEDULR  1519
+ DEOF     VFD    60/4L/EOF                                               SKEDULR  1520
+ DEOR     VFD    60/4L/EOR                                               SKEDULR  1521
+ DJOB     VFD    60/4L/JOB                                               SKEDULR  1522
+ DLAST    VFD    60/4LLAST                                               SKEDULR  1523
+ DMONTH   VFD    60/7LMONTHLY                                            SKEDULR  1524
+ DNOSEQ   VFD    60/6L/NOSEQ                                             SKEDULR  1525
+ DRUN     VFD    60/3LRUN                                                SKEDULR  1526
+ D1RUN    VFD    60/4L1RUN                                               CML0836    68
+*                                                                        SKEDULR  1527
+*         THE FOLLOWING TABLES (DAYS, MONTHS AND WEEKS) MUST             SKEDULR  1528
+*         BE KEPT IN ORDER.                                              SKEDULR  1529
+*                                                                        SKEDULR  1530
+ DAYS     VFD    60/5LDAILY                                              SKEDULR  1531
+          VFD    60/6LSUNDAY                                             SKEDULR  1532
+          VFD    60/6LMONDAY                                             SKEDULR  1533
+          VFD    60/7LTUESDAY                                            SKEDULR  1534
+          VFD    60/9LWEDNESDAY                                          SKEDULR  1535
+          VFD    60/8LTHURSDAY                                           SKEDULR  1536
+          VFD    60/6LFRIDAY                                             SKEDULR  1537
+          VFD    60/8LSATURDAY                                           SKEDULR  1538
+          VFD    60/8LWEEKDAYS                                           SKEDULR  1539
+          VFD    60/8LWEEKENDS                                           SKEDULR  1540
+ LDAYS    EQU    *-DAYS                                                  SKEDULR  1541
+                                                                         SKEDULR  1542
+ MONTHS   VFD    60/7LJANUARY                                            SKEDULR  1543
+          VFD    60/8LFEBRUARY                                           SKEDULR  1544
+          VFD    60/5LMARCH                                              SKEDULR  1545
+          VFD    60/5LAPRIL                                              SKEDULR  1546
+          VFD    60/3LMAY                                                SKEDULR  1547
+          VFD    60/4LJUNE                                               SKEDULR  1548
+          VFD    60/4LJULY                                               SKEDULR  1549
+          VFD    60/6LAUGUST                                             SKEDULR  1550
+          VFD    60/9LSEPTEMBER                                          SKEDULR  1551
+          VFD    60/7LOCTOBER                                            SKEDULR  1552
+          VFD    60/8LNOVEMBER                                           SKEDULR  1553
+          VFD    60/8LDECEMBER                                           SKEDULR  1554
+ LMONTHS  EQU    *-MONTHS                                                SKEDULR  1555
+                                                                         SKEDULR  1556
+ WEEKS    VFD    60/5LFIRST                                              SKEDULR  1557
+          VFD    60/6LSECOND                                             SKEDULR  1558
+          VFD    60/5LTHIRD                                              SKEDULR  1559
+          VFD    60/6LFOURTH                                             SKEDULR  1560
+          VFD    60/5LFIFTH                                              SKEDULR  1561
+ LWEEKS   EQU    *-WEEKS                                                 SKEDULR  1562
+                                                                         SKEDULR  1563
+ NDAYS    DATA   31          NUMBER OF DAYS IN EACH MONTH (JAN-DEC)      SKEDULR  1564
+ FEB      DATA   28                                                      SKEDULR  1565
+          DATA   31                                                      SKEDULR  1566
+          DATA   30                                                      SKEDULR  1567
+          DATA   31                                                      SKEDULR  1568
+          DATA   30                                                      SKEDULR  1569
+          DATA   31                                                      SKEDULR  1570
+          DATA   31                                                      SKEDULR  1571
+          DATA   30                                                      SKEDULR  1572
+          DATA   31                                                      SKEDULR  1573
+          DATA   30                                                      SKEDULR  1574
+          DATA   31                                                      SKEDULR  1575
+                                                                         SKEDULR  1576
+ MSG1     DIS    ,* XX/XX/XX. XX.XX.XX. SUBMITTED XXXXXXXXX = XXXXXXX*   SKEDULR  1577
+ MSG2     DIS    ,* XX/XX/XX. XX.XX.XX. SKIPPED INVALID RUN DIRECTIVE*   SKEDULR  1578
+          IFEQ   NOS,1,1                                                 CMLA465A  104
+ MSG3     DIS   ,* MULTIPLE COPIES OF SKEDULR - THIS ONE TERMINATED*     SKEDULR  1580
+ MSG4     DIS    ,* WARNING- JOBS FILE EMPTY- NO JOBS TO SCHEDULE*       SKEDULR  1581
+          DATA   0                                                       SKEDULR  1582
+ SWITCH   BSS    1           1RUN SWITCH SET FOR EACH DIRECTIVE          CML0836    69
+*                            ZERO = 1RUN AND NON-ZERO = RUN              CML0836    70
+ JCOUNT   BSSZ   1                                                       CML0836    71
+ JTABLE   BSS    100                                                     CML0836    72
+          END    SKEDULR                                                 SKEDULR  1583

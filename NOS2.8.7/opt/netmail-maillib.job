@@ -1,0 +1,22 @@
+~*
+~*  This job installs the UMass Mailer network router utility
+~*  library in the catalog of the MAILER user account.
+~*
+MAILLIB.
+$USER,MAILER,MAILER.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$PURGE,MLRDB/NA.
+$RECLAIM,DB=MLRDB,Z./LIST,UN=MAILER,TN=MAILER
+$RECLAIM,DB=MLRDB,Z./LOAD,UN=MAILER,PF=MAILLIB
+$PERMIT,MAILLIB,SYSTEMX.
+$PURGE,MLRDB.
+***
+*** MAILLIB COMPLETE
+***
+EXIT.
+***
+*** MAILLIB FAILED
+***
