@@ -326,6 +326,7 @@
       },
       {
         "name": "skedulr",
+        "post": "skedulr.post",
         "lib": 73,
         "records": "ABS/SKEDULR",
         "desc": "Task scheduling utility (like Unix cron)"

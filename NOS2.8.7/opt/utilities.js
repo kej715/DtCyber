@@ -164,14 +164,17 @@ const utilities = {
     return false;
   },
 
-  moveFile: (dtc, fileName, fromUi, toUi) => {
-    return dtc.say(`Move ${fileName} from UI ${fromUi} to UI ${toUi}`)
-    .then(() => dtc.runJob(12, 4, "opt/move-proc.job"))
-    .then(() => dtc.dis([
+  moveFile: (dtc, fileName, fromUi, toUi, opts) => {
+    if (typeof opts === "undefined") opts = "/CT=PU,AC=Y";
+    let cmds = [
       "GET,MOVPROC.",
-      "PURGE,MOVPROC.",
-      `MOVPROC,${fileName},${toUi}.`
-    ], fromUi))
+      "PURGE,MOVPROC."
+    ];
+    if (fromUi !== 1) cmds.push(`SUI,${fromUi}.`);
+    cmds.push(`MOVPROC,${fileName},${toUi}.`);
+    return dtc.say(`Move ${fileName} from UI ${fromUi} to UI ${toUi}`)
+    .then(() => dtc.runJob(12, 4, "opt/move-proc.job", opts))
+    .then(() => dtc.dis(cmds, 1))
     .then(() => dtc.waitJob("MOVE"));
   },
 
