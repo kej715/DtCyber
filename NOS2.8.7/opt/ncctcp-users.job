@@ -17,4 +17,10 @@ EXIT.
   AW=ALL,
   AP=NUL,
   AP=IAF,
-  IS=BATCH
+  IS=BATCH,
+/REXEC,
+  FUI=101B,
+  PW=REXECX,
+  RL=ALL,
+  AW=ALL,
+  AP=NUL
