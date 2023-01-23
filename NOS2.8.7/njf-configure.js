@@ -104,7 +104,7 @@ if (typeof customProps["NETWORK"] !== "undefined") {
     else if (key === "NJENODE") {
       //
       //  njeNode=<nodename>,<software>,<lid>,<public-addr>,<link>
-      //     [,<local-address>[,B<block-size>][,P<ping-interval>]]
+      //     [,<local-address>][,B<block-size>][,P<ping-interval>][,<mailer-address>]
       let items = value.split(",");
       if (items.length >= 5) {
         let nodeName = items.shift();
@@ -124,6 +124,9 @@ if (typeof customProps["NETWORK"] !== "undefined") {
           }
           else if (item.startsWith("P")) {
             node.pingInterval = parseInt(item.substring(1));
+          }
+          else if (item.indexOf("@") > 0) {
+            node.mailer = item;
           }
         }
         topology[nodeName] = node;

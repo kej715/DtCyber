@@ -1032,6 +1032,9 @@ class DtCyber {
    *   A promise that is resolved when the transfer is complete.
    */
   putFile(name, text, options) {
+    const me = this;
+    const retryDelay = 5;
+    const maxRetries = 5;
     if (typeof options === "undefined") {
       options = {
         user: "INSTALL",
@@ -1053,22 +1056,34 @@ class DtCyber {
     else if (text.indexOf("\r\n") < 0) {
       text = text.replaceAll("\n", "\r\n");
     }
-    return new Promise((resolve, reject) => {
+    const sender = (tryNo, callback) => {
+      const retry = () => {
+        console.log(`${new Date().toLocaleTimeString()} FTP attempt ${tryNo} of ${maxRetries} for ${name} failed`);
+        if (tryNo <= maxRetries) {
+          console.log(`${new Date().toLocaleTimeString()}   retrying after ${retryDelay} seconds ...`);
+          setTimeout(() => {
+            sender(tryNo + 1, callback);
+          }, retryDelay * 1000);
+        }
+        else {
+          callback(err);
+        }
+      };
       const client = new ftp();
       client.on("ready", () => {
         client.ascii(err => {
           if (err) {
-            reject(err);
+            retry();
           }
           else {
             client.put(Buffer.from(text), name, err => {
               if (err) {
-                reject(err);
+                retry();
               }
               else {
                 client.logout(err => {
                   client.end();
-                  resolve();
+                  callback();
                 });
               }
             });
@@ -1076,9 +1091,19 @@ class DtCyber {
         });
       });
       client.on("error", err => {
-        reject(err);
+        retry();
       });
       client.connect(options);
+    };
+    return new Promise((resolve, reject) => {
+      sender(1, err => {
+        if (err) {
+          reject(err);
+        }
+        else {
+          resolve();
+        }
+      });
     });
   }
 

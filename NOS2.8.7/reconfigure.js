@@ -452,7 +452,11 @@ dtc.connect()
 .then(() => {
   return utilities.isInstalled("netmail") ? dtc.exec("node", ["netmail-configure"]) : Promise.resolve();
 })
+.then(() => dtc.exec("node", ["make-ds-tape"]))
 .then(() => dtc.say("Reconfiguration complete"))
 .then(() => {
+  console.log("------------------------------------------------------------");
+  console.log("Shutdown the system, rename tapes/newds.tap to tapes/ds.tap,");
+  console.log("then restart DtCyber to activate the new configuration.");
   process.exit(0);
 });

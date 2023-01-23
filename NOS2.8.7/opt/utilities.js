@@ -56,7 +56,7 @@ const utilities = {
       let customProps = {};
       dtc.readPropertyFile(customProps);
       if (typeof customProps["HOSTS"] !== "undefined") {
-        for (const defn of customProps["HOSTS"].split("\n")) {
+        for (const defn of customProps["HOSTS"]) {
           if (/^[0-9]/.test(defn) && pattern.test(defn)) {
             hostRecord = defn;
             break;
