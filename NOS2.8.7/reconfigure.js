@@ -398,7 +398,7 @@ const updateTcpHosts = () => {
       }
       return dtc.asciiToCdc(text);
     })
-    .then(text => replaceFile("TCPHOST", text, {username:"NETADMN",password:"NETADMN"}));
+    .then(text => dtc.putFile("TCPHOST/IA", text, {username:"NETADMN",password:"NETADMN"}));
   }
 };
 
