@@ -1,0 +1,300 @@
+      PROGRAM DBADDU
+
+C$    COLLATE(FIXED)
+
+      IMPLICIT INTEGER (A-Z)
+
+      CHARACTER CH
+      CHARACTER ERROR   * 50
+      CHARACTER FILENAM * 7
+      CHARACTER LINE1   * 80
+      CHARACTER LINE2   * 80
+      CHARACTER PARAM   * 10
+      CHARACTER VALUE   * 10
+
+      PARAMETER (NNIU = -1)
+      PARAMETER (UNIU = -2)
+
+      DIMENSION CASEVEC (2)
+      DIMENSION FORWARD (8)
+      DIMENSION NICKNAM (8)
+      DIMENSION RECORD  (32)
+
+      LOGICAL   ISLOWER
+
+***   DBADDU - ADD USER RECORDS TO THE MAILER DATABASE.
+
+      CALL SYSORG (STATUS)
+      IF (STATUS .EQ. 0) THEN
+        ERROR = 'SECURITY VIOLATION'
+        GOTO 9999
+      ENDIF
+
+C     ***
+C     *** PROCESS COMMAND LINE ARGUMENTS
+C     ***
+
+      FILENAM = 'INPUT'
+  100 CONTINUE
+      CALL GETPARM (PARAM, VALUE, STATUS)
+      IF (STATUS .EQ. -1) GOTO 200
+      IF (PARAM .EQ. 'I') THEN
+        IF (STATUS .EQ. 1) THEN
+          FILENAM = 'INPUT'
+        ELSE
+          FILENAM = VALUE(1:7)
+        ENDIF
+      ELSE
+        ERROR = 'INVALID PARAMETER - ' // PARAM
+        GOTO 9999
+      ENDIF
+      GOTO 100
+
+  200 CONTINUE
+      OPEN (1, IOSTAT=STATUS, ERR=300, FILE=FILENAM, STATUS='OLD')
+      IF (STATUS .EQ. 0) GOTO 400
+
+  300 CONTINUE
+      ERROR = 'FAILED TO OPEN ' // FILENAM
+      GOTO 9999
+
+C     ***
+C     *** READ AND PROCESS PAIRS OF LINES FROM THE INPUT FILE.
+C     *** THE FIRST LINE IN EACH PAIR IS A USERNAME, AND THE
+C     *** SECOND LINE IS THE MAILER NICKNAME TO BE REGISTERED
+C     *** FOR THE USERNAME.
+C     ***
+
+  400 CONTINUE
+      READ (1,    '(A)', END=700) LINE1
+      READ (LINE1,'(A10)'       ) USERNAM
+      LINE1L = 0
+      DO 401 I = 1, 80
+        IF (LINE1(I:I) .NE. ' ') LINE1L = I
+  401 CONTINUE
+
+      READ (1,    '(A)', END=700) LINE2
+      LINE2L = 0
+      DO 402 I = 1, 80
+        IF (LINE2(I:I) .NE. ' ') LINE2L = I
+  402 CONTINUE
+      CASEVEC (1) = 0
+      CASEVEC (2) = 0
+      L1 = 1
+      L2 = 1
+      ISLOWER = .FALSE.
+  410 IF (L1 .LE. 80) THEN
+        CH = LINE2(L1:L1)
+        L1 = L1 + 1
+        IF (CH .EQ. '^') THEN
+          ISLOWER = .TRUE.
+          GOTO 410
+        ELSEIF (CH .GE. 'A' .AND. CH .LE. 'Z') THEN
+          LINE2(L2:L2) = CH
+          CALL SETBIT (CASEVEC, L2, ISLOWER)
+          ISLOWER = .FALSE.
+        ELSE
+          LINE2(L2:L2) = CH
+          CALL SETBIT (CASEVEC, L2, .FALSE.)
+          ISLOWER = .FALSE.
+        ENDIF
+        L2 = L2 + 1
+        GOTO 410
+      ENDIF
+  420 CONTINUE
+      IF (L2 .LE. 80) THEN
+        LINE2(L2:L2) = ' '
+        L2 = L2 + 1
+        GOTO 420
+      ENDIF
+
+      READ (LINE2,'(8A10)') NICKNAM
+
+      PACKNAM = L"0"
+      UN      = 0
+      MBOXNAM = L"MAILBOX"
+      LINELIM = 0
+      MBLIST  = 0
+      CBLIST  = 0
+      USETYPE = 0
+      GROUP   = 0
+      DO 500 I = 1, 8
+        FORWARD (I) = 0
+  500 CONTINUE
+
+      CALL DBZFW (USERNAM)
+      IF (USERNAM .EQ. 0) THEN
+        ERROR = 'USERNAME MISSING'
+        GO TO 9999
+      ENDIF
+
+      CALL DBZFS (NICKNAM, 8)
+      IF (NICKNAM (1) .EQ. 0) THEN
+        ERROR = 'NICKNAME MISSING'
+        GO TO 9999
+      ENDIF
+
+C     * PLACE ENTERED VALUES IN RECORD
+
+      RECORD (17 + 0) = GROUP
+      RECORD (17 + 1) = MBOXNAM
+      RECORD (17 + 2) = UN
+      RECORD (17 + 3) = PACKNAM
+      CALL ENCRYPT (USERNAM, RECORD (17 + 4))
+      DO 600 I = 1, 8
+  600   RECORD (17 + 4 + I) = FORWARD (I)
+      RECORD(17 + 13) = 0
+      RECORD(17 + 14) = 0
+
+      WORD15      = SHIFT (USETYPE, 57)
+      WORD15      = WORD15 .AND. -SHIFT (1, 56) .OR.
+     +              SHIFT (MBLIST .AND. 1, 56)
+      WORD15      = WORD15 .AND. -SHIFT (1, 55) .OR.
+     +              SHIFT (CBLIST .AND. 1, 55)
+      WORD15      = WORD15 .AND. MASK(30) .OR. LINELIM
+      RECORD (17 + 15) = WORD15
+
+C     * ATTEMPT TO ADD THE RECORD
+
+      ORDINAL = 0
+      CALL DBADD (L"MAILER", NICKNAM, USERNAM, ORDINAL, CASEVEC,
+     +            RECORD, STATUS)
+
+C     * PROCESS ERROR, IF ANY
+
+      IF (STATUS .EQ. UNIU) THEN
+        CALL REMARK ('USERNAME IN USE - ' // LINE1(1:LINE1L))
+      ELSEIF (STATUS .EQ. NNIU) THEN
+        CALL REMARK ('NICKNAME IN USE - ' // LINE2(1:LINE2L))
+      ELSEIF (STATUS .NE. 0) THEN
+        CALL TRANERR (STATUS, ERROR)
+        CALL REMARK (ERROR)
+      ELSE
+        CALL REMARK ('  ADDED ' // LINE1(1:LINE1L))
+        CALL REMARK ('        ' // LINE2(1:LINE2L))
+      ENDIF
+
+      GOTO 400
+
+  700 CONTINUE
+      CALL ENDRUN
+      
+ 9999 CONTINUE
+      CALL REMARK(ERROR)
+      CALL ABORT
+
+      END
+      SUBROUTINE SETBIT (VECTOR, INDEX, VALUE)
+
+***   SETBIT - SET A BIT IN A PACKED ARRAY OF BITS
+
+      IMPLICIT INTEGER (A - Z)
+
+      DIMENSION VECTOR (*)
+      LOGICAL   VALUE
+
+      M = SHIFT (1, 59 - MOD (INDEX - 1, 60))
+      I = (INDEX - 1) / 60 + 1
+      VECTOR(I) = VECTOR(I) .AND. -M
+      IF ( VALUE ) VECTOR(I) = VECTOR(I) .OR. M
+      END
+      SUBROUTINE ENCRYPT (FROM, TO)
+
+      IMPLICIT INTEGER (A-Z)
+
+***   ENCRYPT A MAILER-RECORD PASSWORD
+*
+*     EXIT   TO   = ENCRYPTED PASSWORD
+
+      KEY = O"123456"
+      TO = (FROM .XOR. (.NOT.KEY)) .AND. MASK(42)
+
+      END
+      SUBROUTINE TRANERR (STATUS, ERROR)
+
+      IMPLICIT INTEGER (A-Z)
+
+      DIMENSION ERRMSG (5)
+
+      CHARACTER ERROR * (*)
+
+***   TRANERR - TRANSLATE ERROR CODE TO TEXT STRING
+*
+*     ENTRY  STATUS = DATABASE ERROR CODE
+*
+*     EXIT   ERROR  = 50-CHARACTER ERROR STRING
+
+
+      CALL DBETEXT (STATUS, ERRMSG)
+      WRITE (ERROR, '(5A10)') ERRMSG
+
+      END
+          IDENT  ABORT
+
+          ENTRY  ABORT
+          ENTRY  ENDRUN
+
+***       ABORT - ABORT CALLING JOB
+*
+*         ENTRY  NO PARAMETERS
+*
+*         EXIT   NO EXIT
+
+ ABORT    PS
+          SB1    1
+          ABORT
+
+***       ENDRUN - TERMINATE CALLING JOB
+*
+*              ENDRUN WILL TERMINATE THE CALLING JOB NORMALLY.  THE
+*         ERROR FLAG WILL NOT BE SET.  THE FORTRAN MEMORY/CPU STAT-
+*         ISTICS MESSAGE WILL NOT BE DISPLAYED.
+*
+*
+*         ENTRY  NO PARAMETERS
+*
+*         EXIT   NO EXIT
+
+ ENDRUN   PS
+          ENDRUN
+
+          END
+          IDENT  SYSORG
+
+          ENTRY  SYSORG
+
+***       SYSORG - DETERMINE SYSTEM ORIGIN STATUS
+*
+*         CALL SYSORG (STATUS)
+*
+*         EXIT   STATUS = 1 IF USER HAS SYSTEM ORIGIN PRIVILEGES
+*                       = 0 OTHERWISE
+
+
+ SYSORG   PS
+          SB1    1
+          LX5    X1          (X5) = AP-LIST ADDRESS
+          GETSPS SYSA
+          SA2    SYSA
+          SX6    B1
+          ZR     X2,SYS1     IF USER HAS SYSTEM ORIGIN PRIVILEGES
+          MX6    0
+ SYS1     SA6    X5
+          EQ     SYSORG
+
+
+ SYSA     CON    0
+
+          END
+          IDENT  ZZZHLOE
+
+          ENTRY  RFL=
+          ENTRY  SSJ=
+
+ SSJ=     EQU    0
+
+          USE    //
+ RFL=     EQU    *
+          USE    *
+
+          END
