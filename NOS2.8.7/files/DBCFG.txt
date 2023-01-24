@@ -33,9 +33,9 @@ C$    COLLATE(FIXED)
 *
 *     COMMAND SYNTAX -
 *
-*       DBCFG[,CF=LFN][,MANAGER=USERNAM...][,OP=X]
+*       DBCFG[,I=LFN][,MANAGER=USERNAM...][,OP=X]
 *
-*         CF      - CONFIGURATION FILE NAME
+*         I       - INPUT FILE NAME
 *         MANAGER - USERNAME OF MANAGER MANAGER
 *         OP      - I = INITIALIZE (DEFAULT)
 *                   U = UPDATE
@@ -60,7 +60,6 @@ C$    COLLATE(FIXED)
 *      13     HELP-TOPIC PASSWORD
 *      14     LOG-FILE FILE-NAME
 *      15     LOG-FILE PASSWORD
-*
 *
 *      ALL FIELDS ARE LEFT-JUSTIFIED WITH BINARY ZERO FILL TO THE
 *      RIGHT.

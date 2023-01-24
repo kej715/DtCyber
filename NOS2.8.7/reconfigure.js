@@ -450,7 +450,24 @@ dtc.connect()
   return utilities.isInstalled("mailer") ? dtc.exec("node", ["mailer-configure"]) : Promise.resolve();
 })
 .then(() => {
-  return utilities.isInstalled("netmail") ? dtc.exec("node", ["netmail-configure"]) : Promise.resolve();
+  if (utilities.isInstalled("netmail")) {
+    return dtc.exec("node", ["netmail-configure"])
+    .then(() => {
+      if (oldHostID !== newHostID && newHostID !== null) {
+        return dtc.connect()
+        .then(() => dtc.expect([ {re:/Operator> $/} ]))
+        .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+        .then(() => dtc.runJob(12, 4, "opt/netmail-reregister-addresses.job", [oldHostID, newHostID]))
+        .then(() => dtc.disconnect());
+      }
+      else {
+        return Promise.resolve();
+      }
+    });
+  }
+  else {
+    return Promise.resolve();
+  }
 })
 .then(() => dtc.exec("node", ["make-ds-tape"]))
 .then(() => dtc.say("Reconfiguration complete"))

@@ -41,6 +41,20 @@ dtc.connect()
   "SUI,377777.",
   "REPLACE,SYSPROC."
 ], 1))
+.then(() => dtc.say("    SYSEDIT DBMAN into system"))
+.then(() => dtc.dsd([
+  "[IDLE,IAF.",
+  "#1000#[!"
+]))
+.then(() => dtc.dis([
+  "ATTACH,P=PRODUCT.",
+  `GTR,P,LGO.ABS/DBMAN`,
+  "#2000#SYSEDIT,B=LGO."
+], 1))
+.then(() => dtc.sleep(30000))
+.then(() => dtc.dsd("[IAF."))
+.then(() => dtc.say("    Register address translations for principal users and services"))
+.then(() => dtc.runJob(12, 4, "opt/netmail-register-addresses.job", utilities.getHostId(dtc)))
 .then(() => {
   process.exit(0);
 })

@@ -25,7 +25,7 @@ dtc.connect()
 ]))
 .then(() => dtc.dis([
   "ATTACH,P=PRODUCT.",
-  `GTR,P,LGO.ABS/IMF,DBCFG`,
+  `GTR,P,LGO.ABS/IMF,DBCFG,DBADDU`,
   "#2000#SYSEDIT,B=LGO."
 ], 1))
 .then(() => dtc.sleep(30000))
