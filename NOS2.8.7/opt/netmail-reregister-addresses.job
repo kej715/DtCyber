@@ -1,0 +1,26 @@
+~*
+~*  This job calls the DBMAN utility to re-register email address translations
+~*  for various principal users and services after the host identifier has
+~*  changed.
+~*
+REGISTR.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$DBMAN.
+***
+*** REGISTR COMPLETE
+***
+EXIT.
+***
+*** REGISTR FAILED
+***
+~eor
+CHANGE NAME=SYSDEV  PATH="S^Y^SD^E^V@A${1}"          PW=INSTALL -
+                 NEWPATH="S^Y^SD^E^V@A${2}"
+CHANGE NAME=POSTMAS PATH="P^O^S^T^M^A^S^T^E^R@A${1}" PW=MAILER -
+                 NEWPATH="P^O^S^T^M^A^S^T^E^R@A${2}"
+CHANGE NAME=GUEST   PATH="G^U^E^S^T@A${1}"           PW=GUEST -
+                 NEWPATH="G^U^E^S^T@A${2}"
