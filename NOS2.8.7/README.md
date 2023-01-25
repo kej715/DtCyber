@@ -8,18 +8,20 @@ operating system that supports:
 - Batch job submission via a simulated card reader
 - Remote job entry (RJE)
 - Network job entry (NJE)
+- E-mail
 
 Substantial automation has been provided in order to make the installation process
 as easy as possible. In fact, it's nearly trivial compared to what was possible on
 real Control Data computer systems back in the 1980's and 90's.
 
-## Index
+## Table of Contents
 - [Prerequisites](#prereq)
 - [Installation Steps](#steps)
 - [Login](#login)
 - [Remote Job Entry](#rje)
 - [Network Job Entry](#nje)
 - &nbsp;&nbsp;&nbsp;&nbsp;[Using NJE](#usingnje)
+- [UMass Mailer](#email)
 - [Shutdown and Restart](#shutdown)
 - [Operator Command Extensions](#opext)
 - [Continuing an Interrupted Installation](#continuing)
@@ -232,6 +234,7 @@ link: <node-name-of-neighbor>
 mid: <machine-id>
 publicAddress: <IP-address-and-port>
 software: <name-of-nje-software>
+mailer: <mail-server-address>
 ```
 - **node** : Required. This is the name you want to be registered for your NJE node. It
 must begin with a letter and can be up to 8 alphanumeric characters in length.
@@ -261,6 +264,10 @@ NJE protocol on your node. `NJEF` is the software that implements the NJE protoc
 NOS 2.8.7, and this is the default software name. Other names accepted are `NJE38`
 (NJE software of the IBM MVS operating system), `RSCS` (NJE software of the IBM VM/CMS
 operating system), and `JNET` (NJE software of the DEC VAX/VMS operating system).
+- **mailer** : Optional. This specifies the NJE name and address of a BSMTP (Batch
+Simple Mail Transfer Protocol) server running on your NJE node. The default for a
+NOS 2.8.7 system running NJEF and the [UMass Mailer](#email) is `MAILER@node`, where
+*node* is the name of your NJE node.
 
 Example:
 
@@ -294,22 +301,20 @@ if the file doesn't exist already, or edit them into the existing file.
 `reconfigure` command at the `Operator>` prompt. Otherwise, execute the command
 `node reconfigure` in the NOS2.8.7 directory. This will apply the new machine
 identifier (MID in [CMRDECK] section) to your NOS system's configuration.
-4. If you have started *DtCyber* using the `node start` command, enter the
-`njf_configure` command at the `Operator>` prompt. Otherwise, execute the command
-`node njf-configure` in the NOS2.8.7 directory. This will update your system's NDL
-configuration to include NJE terminal(s), it will update your system's NJF host
-configuration file, it will update your system's PID/LID configuration to include
-PID's and LID's for adjacent NJE nodes, and it will update the *DtCyber* configuration
-to include definitions for NJE terminal(s).
-5. Use the `make_ds_tape` command (or `node make-ds-tape`) to createreate a new
-deadstart tape, then shutdown and re-deadstart the system using the new tape. This will
-activate the system's new machine identifer, NDL, NCF, and PID/LID configurations. See
-[Creating a New Deadstart Tape](#newds) for details.
+It will also update your system's NDL configuration to include NJE terminal(s), it will
+update your system's NJF host configuration file, it will update your system's PID/LID
+configuration to include PID's and LID's for adjacent NJE nodes, it will update the
+UMass Mailer configuration to enable exchanging e-mail with any new NJE or TCP/IP
+nodes, and it will update the *DtCyber* configuration to include definitions for NJE
+terminal(s). Finally, `reconfigure` will create a new deadstart tape.
+4. Shutdown and re-deadstart the system using the new deadstart tape. This will
+activate the system's new machine identifer, NDL, NCF, PID/LID, and e-mail routing
+configurations.
 
 As the network topology is likely to change and expand over time, you should execute
 `git pull` periodically to ensure that your copy of the
 [topology file](files/nje-topology.json) is current, and when it changes, you should
-execute `njf_configure` (or `node njf-configure`) to apply the changes, then shutdown
+execute `reconfigure` (or `node reconfigure`) to apply the changes, then shutdown
 and re-deadstart to activate them.
 
 ### <a id="usingnje"></a>Using NJE
@@ -386,6 +391,21 @@ Example:
 ```
 ROUTE,MYJOB,DC=TO,ST=MAX.
 ``` 
+
+## <a id="email"></a>UMass Mailer
+The UMass Mailer consists of two products: `mailer` and `netmail`. These are both
+installed and active in a default installation of NOS 2.8.7. The product named `mailer`
+provides the base user interface for e-mail and, by itself, enables e-mail messages
+to be exchanged between users within a single NOS system. The product named `netmail`
+adds support for routing e-mail between systems using NJE and SMTP.
+
+The `netmail` component uses NJE by default to route e-mail between NOS 2.8.7 systems,
+and other systems supporting NJE as an e-mail transport. For example, IBM VM/CMS systems
+running on the Hercules IBM 370 emulator and VAX/VMS systems running on the SimH VAX
+emulator support e-mail and are capable of using NJE as an e-mail network transport.
+All such NOS 2.8.7, VM/CMS, and VAX/VMS systems defined in the
+[NJE topology](files/nje-topology.json) are accessible from the UMass Mailer when
+the `netmail` component is installed.
 
 ## <a id="shutdown"></a>Shutdown and Restart
 When the installation completes, NOS 2.8.7 will be running, and the command window will
@@ -510,7 +530,11 @@ This category includes data communication software.
 | Product | Description |
 |---------|-------------|
 | [kermit](https://www.dropbox.com/s/p819tmvs91veoiv/kermit.tap?dl=1) | Kermit file exchange utility |
+| [mailer](https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1) | UMass Mailer,
+base e-mail system |
 | [ncctcp](https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1) | TCP/IP Applications (HTTP, NSQUERY, REXEC, SMTP) |
+| [netmail](https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1) | UMass Mailer,
+network mail router |
 | [njf](https://www.dropbox.com/s/oejtd05qkvqhk9u/NOSL700NJEF.tap?dl=1) | Network Job Facility |
 | rbf5    | Remote Batch Facility Version 5 |
 
@@ -547,6 +571,7 @@ category.
 |---------|-------------|
 | cgames  | NOS Console Games (EYE, KAL, LIFE, LUNAR, MIC, PAC, SNK, TTT) |
 | [i8080](https://www.dropbox.com/s/ovgysfxbgpl18am/i8080.tap?dl=1) | Intel 8080 tools (CPM80, INTRP80, MAC80, PLM80) |
+| skedulr | Task scheduler (similar to *cron* in Linux/Unix systems) |
 | [spss](https://www.dropbox.com/s/2eo63elqvhi0vwg/NOSSPSS6000V9.tap?dl=1) | SPSS-6000 V9 - Statistical Package for the Social Sciences |
 
 These lists will grow, so revisit this page to see what new products have been added,
@@ -646,27 +671,25 @@ equipment or change their parameters.
 - Private nodes in a local NJE network may be defined.
 - etc.
 
-A script named `reconfigure.js` applies customized configuration. It accepts zero or
-more command line arguments, each of which is taken as the pathname of a file
-containing configuration parameter definitions. If no command line arguments are
-provided, the script looks for a file named `site.cfg` in the current working
-directory, and if no such file exists, the script does nothing.
+A script named `reconfigure.js` applies customized configuration. The script looks for a
+file named `site.cfg` in the current working directory. This file is where all
+customized system configuration parameters are expected to be defined. The script
+is called as in:
 
-The simplest way to use the script is to define all customized configuration parameters
-in a file named `site.cfg` and then invoke the script, as in:
+| OS           | Commands                           |
+|--------------|-------------------------|
+| Linux/MacOS: | `sudo node reconfigure` |
+| Windows:     | `node reconfigure`      |
 
-```
-node reconfigure
-```
 
-Each file of configuration parameters may contain one or more sections. Each section
-begins with a name delimited by `[` and `]` characters (like *DtCyber's* `cyber.ini`
-file). For example, here is a section named `CMRDECK`:
+`site.cfg` may contain one or more sections. Each section begins with a name delimited
+by `[` and `]` characters (like *DtCyber's* `cyber.ini` file). For example, here is a
+section named `CMRDECK`:
 
 ```
 [CMRDECK]
 MID=AX.
-NAME=MAX - CYBER 865 WITH CYBIS
+NAME=NCCMAX - CYBER 865 WITH CYBIS
 ```
 
 The following section names are recognized:
@@ -702,14 +725,23 @@ Example:
 
 ```
 [HOSTS]
-192.168.0.17 max.nostalgiccomputing.org max LOCALHOST_AX
-192.168.0.19 min.nostalgiccomputing.org min LOCALHOST_IN
-192.168.1.2  vax1.nostalgiccomputing.com vax1
-192.168.1.3  vax2.nostalgiccomputing.com vax2
-192.168.1.4  rsx11m.nostalgiccomputing.com rsx11m
-192.168.1.5  tops20.nostalgiccomputing.com tops20 pdp10
-192.168.2.2  bsd211.nostalgiccomputing.com bsd211 pdp11
+192.168.0.17 nccmax max.nostalgiccomputing.org max LOCALHOST_AX
+192.168.0.19 nccmin min.nostalgiccomputing.org min LOCALHOST_IN
+192.168.1.2  vax1 vax1.nostalgiccomputing.com
+192.168.1.3  vax2 vax2.nostalgiccomputing.com
+192.168.1.4  rsx11m rsx11m.nostalgiccomputing.com
+192.168.1.5  tops20 tops20.nostalgiccomputing.com pdp10
+192.168.2.2  bsd211 bsd211.nostalgiccomputing.com pdp11 mail-relay
 ```
+
+When the [HOSTS] section defines hosts other than the local NOS 2.8.7 host and
+hosts defined in the NJE topology, the UMass Mailer is configured to use TCP/IP and
+the SMTP protocol to exchange e-mail with them. In order for the UMass Mailer to be
+able to send e-mail to destinations using TCP/IP and SMTP, one of the hosts in
+the [HOSTS] section must be defined with the alias `mail-relay`. The UMass Mailer will
+send all SMTP-based mail to that host, and that host is expected to be capable of
+forwarding it to other SMTP-based hosts, as needed. Typically, Unix hosts are capable
+of serving as mail relays.
 
 ### <a id="network"></a>[NETWORK]
 Defines private routes and the names of hosts in the CDC and NJE (Network Job Entry)
@@ -724,7 +756,7 @@ configuration file) files as well as *DtCyber's* `cyber.ovl` file. Example:
 ```
 [NETWORK]
 hostID=MYNODE
-njeNode=LOCALMVS,RSCS,LMV,192.168.1.3:175,MYNODE
+njeNode=LOCALCMS,RSCS,CMS,192.168.1.3:175,MYNODE,B8192,MAILER@LOCALCMS
 ```
 
 The entries that may occur in the `[NETWORK]` section include:
@@ -744,22 +776,24 @@ private NJE network (i.e., a node that is not registered in the public topology,
 [files/nje-topology.json](files/nje-topology.json). The general syntax of this entry
 is:
 
-    njeNode=*nodename*,*software*,*lid*,*public-addr*,*link*[,*local-addr*[,B*block-size*][,P*ping-interval*]]
+    njeNode=*nodename*,*software*,*lid*,*public-addr*,*link*[,*local-addr*[,B*block-size*][,P*ping-interval*][,*mailer-address*]
     
     | Parameter     | Description |
     |---------------|-------------|
     | nodename      | The unique 1 - 8 character name of the node. |
     | software      | The name of the NJE software used by the node; one of NJEF, RSCS, NJE38, or JNET. |
     | lid           | The unique, 3-character logical identifier assigned to the node. |
-    | public-addr   | The public IP address and TCP port number on which the node listens for NJE connections. The format is `ipaddress:portnumber`, e.g., 192.168.1.3:175. |
+    | public-addr   | The public IP address and TCP port number on which the node listens for NJE connections. The format is `ipaddress:portnumber`, e.g., 192.168.1.3:175. If the node does not have a public address, 0.0.0.0:0 is specified. |
     | link          | The name of the NJE node that serves as the defined node's primary link to the NJE network. |
     | local-addr    | Optional IP address of the defined node. If specified, this address will be used by the defined node to identify itself to its NJE peers. If omitted, an appropriate default will be chosen based upon the defined system's physical TCP network configuration. |
     | block-size    | Optional block size, in bytes, to use in communicating with peers. The default is 8192. |
     | ping-interval | Optional ping interval, in seconds, to use in keeping the NJE connection alive. The default is 600 (i.e., 10 minutes). |
+    | mailer-address | Optional address of a BSMTP mail server, in the form
+`mailername@nodename`, e.g., MAILER@NCCMAX. |
 
     Example:
     
-    `njeNode=LOCALMVS,RSCS,LMV,192.168.1.3:175,MYNODE`
+    `njeNode=LOCALCMS,RSCS,CMS,192.168.1.3:175,MYNODE,B8192,MAILER@LOCALCMS`
     
 - **njePorts** : Specifies the range of CLA ports that will be used in defining terminals for use by NJF in the NOS NDL. The general syntax of this entry is:
 
