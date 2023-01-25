@@ -223,10 +223,12 @@ connect will be rejected. Your system will continue to try establishing a connec
 NCCMAX until the other system disconnects, and then NCCMAX will be able to accept your
 system's connection request.
 
-To avoid competing with other hobbyists, you may request to register your system with
-a unique node name in the public NJE network. Registration is accomplished by sending an
-email to admin@nostalgiccomputing.org with a subject of `NJE registration request`. The
-body of the email should contain these lines:
+To avoid competing with other hobbyists for access to NCCMAX, and to enroll your
+NOS 2.8.7 system in the NJE-based e-mail network (see [UMass Mailer](#email), below),
+you may request to register your system with a unique node name in the public NJE
+network. Registration is accomplished by sending an email to
+admin@nostalgiccomputing.org with a subject of `NJE registration request`. The body of
+the email should contain these lines:
 
 ```
 node: <requested-node-name>
@@ -406,6 +408,21 @@ emulator support e-mail and are capable of using NJE as an e-mail network transp
 All such NOS 2.8.7, VM/CMS, and VAX/VMS systems defined in the
 [NJE topology](files/nje-topology.json) are accessible from the UMass Mailer when
 the `netmail` component is installed.
+
+During the 1980's and early 1990's, [BITNet](https://en.wikipedia.org/wiki/BITNET)
+interconnected hundreds of mainly academic institutions around the world. It was based
+upon NJE and served as the principal international network for exchanging email and
+files between users until the mid 1990's when it was obsoleted by the Internet.
+
+*DtCyber* running NOS 2.8.7 with `NJE` and the `UMass Mailer` recreates the BITNet
+experience. You may enroll your instance of NOS 2.8.7 in a reborn BITNet by requesting
+a unique node name for it (see [Network Job Entry](#nje), above) and then running the
+`reconfigure.js` tool to activate the node name
+(see [Customizing the NOS 2.8.7 Configuration](#reconfig), below). Note also that
+NJE node NCCMAX at the [Nostalgic Computing Center](https://www.nostalgiccomputing.org)
+serves as a hub for NOS 2.8.7 systems interconnected by NJE, and it is also connected
+to [HNET](http://moshix.dynu.net), so enrolling your system in the NJE-based *DtCyber*
+network can also provide it with access to HNET.
 
 ## <a id="shutdown"></a>Shutdown and Restart
 When the installation completes, NOS 2.8.7 will be running, and the command window will
