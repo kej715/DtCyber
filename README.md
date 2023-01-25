@@ -30,10 +30,10 @@ very rich collection of programming languages and data communication features.
 - [NOS/BE](https://github.com/bug400/NOSBE712) : the NOS/BE operation system was a
 descendent of COS and SCOPE. It was designed primarily for batch operation but also
 supported interactive access. Additional documentation about building a NOS/BE system
-can be found [here](https://cdc.sjzoppi.com/doku.php?id=members:nosbe:building_nos_be_level_712_from_scratch)
+can be found [here](https://cdc.sjzoppi.com/doku.php?id=nosbe:building_nos_be_level_712_from_scratch)
 on the [CDC Community site](https://cdc.sjzoppi.com/doku.php?id=start),
 and a ready-to-run NOS/BE package can be found
-[here](https://cdc.sjzoppi.com/doku.php?id=members:nosbe:use_a_ready_to_run_nos_be_l_712_system).
+[here](https://cdc.sjzoppi.com/doku.php?id=nosbe:use_a_ready_to_run_nos_be_l_712_system).
 
 Information about configuring and operating *DtCyber* can be found
 [here](https://cdc.sjzoppi.com/doku.php?id=dtcyber:v5.8.sz:start) on the
