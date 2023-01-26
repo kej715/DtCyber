@@ -1,17 +1,16 @@
 <p>
 The University of Massachusetts (UMass) created an e-mail system for Control Data Cyber 170 systems. It was known as
 the UMass Mailer, and it was widely distributed to universities with Cyber 170 systems in North America and Europe.
-It enabled these systems to exchange e-mail using a variety of data communication protocols. The UMass Mailer is installed
-on the Cyber 865 and 175 at the Nostalgic Computing Center. It enables these systems to exchange e-mail with each other
-as well as the TOPS-20, VAX/VMS, RSX-11M-Plus, Ultrix, and 2.11BSD Unix systems at the NCC.
+It enabled these systems to exchange e-mail using a variety of data communication protocols.
 </p>
 <p>
 Use the MAIL command to enter the UMass Mailer utility and list the headers of e-mail messages in the user's mailbox.
-If the mailbox is not empty, read the first message.  Next, compose and send an e-mail message to the Guest user on the
-TOPS-20 system and to the Guest user on the IBM 4381. One copy of the message will be sent via
-<a href="https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol" target="_blank">SMTP</a> to the TOPS-20 system
-where it will be delivered directly to the Guest user there. A second copy of the message will be sent via
-<a href="https://en.wikipedia.org/wiki/BITNET" target="_blank">NJE</a> to the Guest user on the IBM 4381.
+If the mailbox is not empty, read the first message.  Next, compose and send an e-mail message to the e-mail
+reflector service on host NCCMAX at the <a href="http://www.nostalgiccomputing.org">Nostalgic Computing Center</a>.
+The message will be sent via <a href="https://en.wikipedia.org/wiki/BITNET" target="_blank">NJE</a>. The reflector
+should reply automatically within a few minutes.
+</p>
+<p>
 Exit from the mail utility when done.
 </p>
 <pre>
@@ -57,19 +56,19 @@ L
 :send:WType \\? for help at any prompt!
 W>\x20
 D2000
-Ssend guest@tops20, guest@ncccms
+Ssend reflect@nccmax
 D1000
 L
 WSubject>\x20
 D1000
-SHello from NOS
+SHello there
 D1000
 L
 W]\x20
 D1000
 I500 ]\x20 =====
-Hi, this message originated from a Control Data supercomputer running
-the NOS operating system.
+Hi, this message originated from a NOS 2 system on the public NJE
+network. It was sent to the e-mail reflector on host NCCMAX.
 
 Cheers!
 =====

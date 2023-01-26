@@ -1,5 +1,5 @@
 <p>
-Use the NEW and TEXT commands to create a job that will be sent for execution to host NCCMAX
+Use FSE, the full screen editor, to create a job that will be sent for execution to host NCCMAX
 at the <a href="http://www.nostalgiccomputing.org">Nostalgic Computing Center</a>.
 Use the NJROUTE command to enqueue it for transmission across the NJE network. Use the DC=TO parameter
 on the NJROUTE command to cause the output returned from the job to be placed in the wait queue. 
@@ -11,12 +11,10 @@ and then use the QGET command to retrieve the output from the wait queue. Use th
 to display it.
 </p>
 <pre>
-     /NEW,<i>filename</i>
-     /TEXT
+     /FSE,<i>filename</i>
        <i>Enter contents of file.
-       Exit TEXT mode by pressing Control-T key</i>
-     /COPY,<i>filename</i>,CPY
-     /NJROUTE,CPY,DC=TO,DNN=NCCMAX
+       Exit FSE by pressing function key F8</i>
+     /NJROUTE,<i>filename</i>,DC=TO,DNN=NCCMAX
      /STATUS,UJN
         :
         :
@@ -33,16 +31,20 @@ to display it.
  </ul>
 </p>
 ~~~~
-Lnew,job
+Lreturn,job,fibonac
 W^/$
-Ltext
-W ENTER TEXT MODE
-W\\r
-I250 \\r =====
+Lscreen,webtrm
+W^/$
+Sfse,job
+D2000
+L
+W\x1b\\[43;1H
+D1000
+I1000 \\n =====
 FIBONAC.
 USER,GUEST,PUBL1C.
 FTN5,GO.
-/*EOR
+(EOR)
       PROGRAM FIB
 C
 C  CALCULATE FIRST 10 FIBONACCI NUMBERS
@@ -58,15 +60,12 @@ C
 10    CONTINUE
       END
 =====
-S\x14
-W EXIT TEXT MODE
+D2000
+KF8
 W^/$
 D1000
-I500 / =====
-copy,job,cpy
-njroute,cpy,dc=pu,dnn=nccmax
-=====
-D1000
+Lnjroute,job,dc=to,dnn=nccmax
+W^/$
 :status:Sstatus,ujn=fibonac
 D2000
 L
