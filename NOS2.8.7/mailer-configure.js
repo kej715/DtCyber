@@ -16,7 +16,7 @@ const timeZone = utilities.getTimeZone();
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
-.then(() => dtc.say("Upload and run procedure to configure MAILER database"))
+.then(() => dtc.say("Upload and run procedure to configure MAILER database ..."))
 .then(() => dtc.say(`  Host ID is ${hostId.toLowerCase()}, time zone is ${timeZone}`))
 .then(() => dtc.runJob(12, 4, "opt/mailer-cfg.job", [hostId, timeZone]))
 .then(() => dtc.dis([

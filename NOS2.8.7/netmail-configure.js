@@ -40,7 +40,7 @@ let hostAliases = [`${hostId}.BITNET`];
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
-.then(() => dtc.say("Discover host aliases"))
+.then(() => dtc.say("Discover host aliases ..."))
 .then(() => utilities.getHostRecord(dtc))
 .then(record => {
   const names = record.toUpperCase().split(/\s+/).slice(1);
@@ -53,7 +53,7 @@ dtc.connect()
   }
   return Promise.resolve();
 })
-.then(() => dtc.say("Create routing and address translation artifacts"))
+.then(() => dtc.say("Create routing and address translation artifacts ..."))
 .then(() => replaceFile("ZONE",    `${timeZone}\n`,      mailerOpts))
 .then(() => replaceFile("HOSTNOD", `${hostId}\n`,        mailerOpts))
 .then(() => replaceFile("HOSTALI", hostAliases,          mailerOpts))
@@ -234,7 +234,7 @@ dtc.connect()
   return dtc.say("  WORLD")
   .then(() => dtc.putFile("WORLD/IA", routes, mailerOpts));
 })
-.then(() => dtc.say("Permit artifacts to SYSTEMX"))
+.then(() => dtc.say("Permit artifacts to SYSTEMX ..."))
 .then(() => dtc.runJob(12, 4, "opt/netmail-permit.job"))
 .then(() => dtc.say("MAILER network routing configuration completed successfully"))
 .then(() => {

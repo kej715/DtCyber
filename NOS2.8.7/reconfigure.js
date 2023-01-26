@@ -52,7 +52,7 @@ const getSystemRecord = (rid, options) => {
  */
 const processCmrdProps = () => {
   if (typeof customProps["CMRDECK"] !== "undefined") {
-    return dtc.say("Edit CMRD01")
+    return dtc.say("Edit CMRD01 ...")
     .then(() => getSystemRecord("CMRD01"))
     .then(cmrd01 => {
       for (const prop of customProps["CMRDECK"]) {
@@ -104,7 +104,7 @@ const processCmrdProps = () => {
  */
 const processEqpdProps = () => {
   if (typeof customProps["EQPDECK"] !== "undefined") {
-    return dtc.say("Edit EQPD01")
+    return dtc.say("Edit EQPD01 ...")
     .then(() => getSystemRecord("EQPD01"))
     .then(eqpd01 => {
       for (const prop of customProps["EQPDECK"]) {
@@ -252,7 +252,7 @@ const replaceFile = (filename, data, options) => {
  */
 const updateMachineID = () => {
   if (oldMID !== newMID) {
-    return dtc.say(`Create LIDCM${newMID}`)
+    return dtc.say(`Create LIDCM${newMID} ...`)
     .then(() => utilities.getFile(dtc, `LIDCM${oldMID}/UN=SYSTEMX`))
     .then(text => {
       text = text.replace(`LIDCM${oldMID}`, `LIDCM${newMID}`);
@@ -326,7 +326,7 @@ const updateProductRecords = () => {
       jobname: "UPDPROD",
       data:    `${productRecords.join("~eor\n")}`
     };
-    return dtc.say("Update PRODUCT")
+    return dtc.say("Update PRODUCT ...")
     .then(() => dtc.createJobWithOutput(12, 4, job, options))
     .then(output => {
       for (const line of output.split("\n")) {
@@ -355,7 +355,7 @@ const updateTcpHosts = () => {
     return Promise.resolve();
   }
   else {
-    return dtc.say("Update TCPHOST")
+    return dtc.say("Update TCPHOST ...")
     .then(() => utilities.getFile(dtc, "TCPHOST", {username:"NETADMN",password:"NETADMN"}))
     .then(text => {
       let hosts = {};
@@ -396,9 +396,20 @@ const updateTcpHosts = () => {
       for (const key of Object.keys(hosts).sort()) {
         text += `${hosts[key]}\n`;
       }
-      return dtc.asciiToCdc(text);
+      return text;
     })
-    .then(text => dtc.putFile("TCPHOST/IA", text, {username:"NETADMN",password:"NETADMN"}));
+    .then(text => {
+      const job = [
+        "$CHANGE,TCPHOST/CT=PU,M=R,AC=Y."
+      ];
+      const options = {
+        jobname: "MAKEPUB",
+        username: "NETADMN",
+        password: "NETADMN"
+      };
+      return dtc.putFile("TCPHOST/IA", text, {username:"NETADMN",password:"NETADMN"})
+      .then(() => dtc.createJobWithOutput(12, 4, job, options));
+    });
   }
 };
 
@@ -409,7 +420,7 @@ const updateTcpHosts = () => {
  * resource resolver defined by it.
  *
  * Returns:
- *  A promise that is resolved when the TCPHOST file has been updated.
+ *  A promise that is resolved when the TCPRSLV file has been updated.
  */
 const updateTcpResolver = () => {
   if (typeof customProps["RESOLVER"] !== "undefined") {
@@ -421,8 +432,8 @@ const updateTcpResolver = () => {
       username: "NETADMN",
       password: "NETADMN"
     };
-    return dtc.say("Create/Update TCPRSLV")
-    .then(text => replaceFile("TCPRSLV", dtc.asciiToCdc(`${customProps["RESOLVER"].join("\n")}\n`), {username:"NETADMN",password:"NETADMN"}))
+    return dtc.say("Create/Update TCPRSLV ...")
+    .then(() => dtc.putFile("TCPRSLV/IA", `${customProps["RESOLVER"].join("\n")}\n`, {username:"NETADMN",password:"NETADMN"}))
     .then(() => dtc.createJobWithOutput(12, 4, job, options));
   }
   else {
@@ -440,7 +451,6 @@ dtc.connect()
 .then(() => processNetworkProps())
 .then(() => updateProductRecords())
 .then(() => updateMachineID())
-.then(() => updateTcpHosts())
 .then(() => updateTcpResolver())
 .then(() => dtc.disconnect())
 .then(() => {
@@ -453,27 +463,34 @@ dtc.connect()
   if (utilities.isInstalled("netmail")) {
     return dtc.exec("node", ["netmail-configure"])
     .then(() => {
-      if (oldHostID !== newHostID && newHostID !== null) {
-        return dtc.connect()
-        .then(() => dtc.expect([ {re:/Operator> $/} ]))
-        .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
-        .then(() => dtc.runJob(12, 4, "opt/netmail-reregister-addresses.job", [oldHostID, newHostID]))
-        .then(() => dtc.disconnect());
-      }
-      else {
-        return Promise.resolve();
-      }
+      return (oldHostID !== newHostID && newHostID !== null)
+        ? dtc.connect()
+          .then(() => dtc.expect([ {re:/Operator> $/} ]))
+          .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+          .then(() => dtc.say("Update e-mail address registrations ..."))
+          .then(() => dtc.runJob(12, 4, "opt/netmail-reregister-addresses.job", [oldHostID, newHostID]))
+          .then(() => dtc.disconnect())
+        : Promise.resolve();
     });
   }
   else {
     return Promise.resolve();
   }
 })
-.then(() => dtc.exec("node", ["make-ds-tape"]))
+.then(() => dtc.connect())
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => updateTcpHosts())
 .then(() => dtc.say("Reconfiguration complete"))
 .then(() => {
-  console.log("------------------------------------------------------------");
-  console.log("Shutdown the system, rename tapes/newds.tap to tapes/ds.tap,");
-  console.log("then restart DtCyber to activate the new configuration.");
+  console.log("-----------------------------------------------------------------");
+  console.log("To activate the updated configuration, make a new deadstart tape,");
+  console.log("shutdown the system, rename tapes/newds.tap to tapes/ds.tap, and");
+  console.log("then restart DtCyber.");
+  console.log("-----------------------------------------------------------------");
   process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
 });

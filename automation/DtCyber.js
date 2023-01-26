@@ -362,7 +362,10 @@ class DtCyber {
       me.isConnected = false;
       me.isExitOnClose = true;
       const doConnect = (deadline, callback) => {
-        if (me.isConnected) return null;
+        if (me.isConnected) {
+          callback(null);
+          return;
+        }
         try {
           me.socket = net.createConnection({port:port, host:"127.0.0.1"}, () => {
             me.isConnected = true;
@@ -378,6 +381,7 @@ class DtCyber {
               doConnect(deadline, callback);
             }, 500);
           }
+          return;
         }
         me.streamMgrs.dtCyber.setOutputStream(me.socket);
         me.socket.on("data", data => {
@@ -389,6 +393,10 @@ class DtCyber {
             process.exit(0);
           }
           me.isConnected = false;
+          if (typeof me.socketCloseCallback === "function") {
+            me.socketCloseCallback();
+            me.socketCloseCallback = undefined;
+          }
         });
         me.socket.on("error", err => {
           if (me.isConnected) {
@@ -592,10 +600,11 @@ class DtCyber {
       if (typeof me.socket !== "undefined"
           && typeof me.socket.destroyed !== "undefined"
           && me.socket.destroyed === false) {
-        me.socket.end(() => {
+        me.socketCloseCallback = () => {
           me.socket.destroy();
           resolve();
-        });
+        };
+        me.socket.end();
       }
       else {
         resolve();
@@ -1034,7 +1043,7 @@ class DtCyber {
   putFile(name, text, options) {
     const me = this;
     const retryDelay = 5;
-    const maxRetries = 5;
+    const maxRetries = 10;
     if (typeof options === "undefined") {
       options = {
         user: "INSTALL",
@@ -1057,9 +1066,9 @@ class DtCyber {
       text = text.replaceAll("\n", "\r\n");
     }
     const sender = (tryNo, callback) => {
-      const retry = () => {
-        console.log(`${new Date().toLocaleTimeString()} FTP attempt ${tryNo} of ${maxRetries} for ${name} failed`);
+      const retry = err => {
         if (tryNo <= maxRetries) {
+          console.log(`${new Date().toLocaleTimeString()} FTP attempt ${tryNo} of ${maxRetries} for ${name} failed`);
           console.log(`${new Date().toLocaleTimeString()}   retrying after ${retryDelay} seconds ...`);
           setTimeout(() => {
             sender(tryNo + 1, callback);
@@ -1073,12 +1082,12 @@ class DtCyber {
       client.on("ready", () => {
         client.ascii(err => {
           if (err) {
-            retry();
+            retry(err);
           }
           else {
             client.put(Buffer.from(text), name, err => {
               if (err) {
-                retry();
+                retry(err);
               }
               else {
                 client.logout(err => {
@@ -1091,7 +1100,7 @@ class DtCyber {
         });
       });
       client.on("error", err => {
-        retry();
+        retry(err);
       });
       client.connect(options);
     };
