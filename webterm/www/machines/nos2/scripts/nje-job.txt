@@ -1,0 +1,86 @@
+<p>
+Use the NEW and TEXT commands to create a job that will be sent for execution to host NCCMAX
+at the <a href="http://www.nostalgiccomputing.org">Nostalgic Computing Center</a>.
+Use the NJROUTE command to enqueue it for transmission across the NJE network. Use the DC=TO parameter
+on the NJROUTE command to cause the output returned from the job to be placed in the wait queue. 
+Specify the DNN parameter to identify the destination host.
+</p>
+<p>
+After the job is submitted, use the STATUS command to watch for the job's output to be returned,
+and then use the QGET command to retrieve the output from the wait queue. Use the LIST command
+to display it.
+</p>
+<pre>
+     /NEW,<i>filename</i>
+     /TEXT
+       <i>Enter contents of file.
+       Exit TEXT mode by pressing Control-T key</i>
+     /COPY,<i>filename</i>,CPY
+     /NJROUTE,CPY,DC=TO,DNN=NCCMAX
+     /STATUS,UJN
+        :
+        :
+     /QGET,UJN=<i>jobname</i>
+     /LIST,F=<i>jobname</i>
+</pre>
+<p>References:
+ <ul>
+  <li>
+   <a href="http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf" target="_blank">
+   NOS 2 Reference Set Volume 3 System Commands
+   </a>
+  </li>
+ </ul>
+</p>
+~~~~
+Lnew,job
+W^/$
+Ltext
+W ENTER TEXT MODE
+W\\r
+I250 \\r =====
+FIBONAC.
+USER,GUEST,PUBL1C.
+FTN5,GO.
+/*EOR
+      PROGRAM FIB
+C
+C  CALCULATE FIRST 10 FIBONACCI NUMBERS
+C
+      I1 = 0
+      I2 = 1
+
+      DO 10 N = 1, 10
+        PRINT *, N, ': ', I2
+        I3 = I1 + I2
+        I1 = I2
+        I2 = I3
+10    CONTINUE
+      END
+=====
+S\x14
+W EXIT TEXT MODE
+W^/$
+D1000
+I500 / =====
+copy,job,cpy
+njroute,cpy,dc=pu,dnn=nccmax
+=====
+D1000
+:status:Sstatus,ujn=fibonac
+D2000
+L
+WFIBONAC\x20\x20(INPUT QUEUE|WAIT QUEUE|NOT FOUND)
+T${0} (WAIT\x20QUEUE) qget
+W^/$
+D3000
+Gstatus
+:qget:W^/$
+Sqget,ujn=fibonac
+D500
+L
+W^/$
+Slist,f=fibonac
+D2000
+L
+W^/$
