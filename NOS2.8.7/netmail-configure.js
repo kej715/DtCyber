@@ -4,16 +4,65 @@
 // used in email routing and address translation.
 //
 
-const fs        = require("fs");
-const DtCyber   = require("../automation/DtCyber");
-const utilities = require("./opt/utilities");
+const fs          = require("fs");
+const DtCyber     = require("../automation/DtCyber");
+const utilities   = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
-const hostId     = utilities.getHostId(dtc).toUpperCase();
-const mailerOpts = {username:"MAILER",password:"MAILER"};
-const mid        = utilities.getMachineId(dtc);
-const timeZone   = utilities.getTimeZone();
+const hostId      = utilities.getHostId(dtc).toUpperCase();
+const mailerOpts  = {username:"MAILER",password:"MAILER"};
+const mid         = utilities.getMachineId(dtc);
+const timeZone    = utilities.getTimeZone();
+
+const customProps = {};
+dtc.readPropertyFile(customProps);
+
+//
+// Acquire NJE topology and add/replace NJE node definitions
+// from custom properties, if any
+//
+const topology    = JSON.parse(fs.readFileSync("files/nje-topology.json"));
+if (typeof customProps["NETWORK"] !== "undefined") {
+  for (let line of customProps["NETWORK"]) {
+    line = line.toUpperCase();
+    let ei = line.indexOf("=");
+    if (ei < 0) continue;
+    let key   = line.substring(0, ei).trim();
+    let value = line.substring(ei + 1).trim();
+    if (key === "NJENODE") {
+      //
+      //  njeNode=<nodename>,<software>,<lid>,<public-addr>,<link>
+      //     [,<local-address>][,B<block-size>][,P<ping-interval>][,<mailer-address>]
+      let items = value.split(",");
+      if (items.length >= 5) {
+        let nodeName = items.shift();
+        let node = {
+          software: items.shift(),
+          lid: items.shift(),
+          publicAddress: items.shift(),
+          link: items.shift()
+        };
+        if (items.length > 0) {
+          node.localAddress = items.shift();
+        }
+        while (items.length > 0) {
+          let item = items.shift();
+          if (item.startsWith("B")) {
+            node.blockSize = parseInt(item.substring(1));
+          }
+          else if (item.startsWith("P")) {
+            node.pingInterval = parseInt(item.substring(1));
+          }
+          else if (item.indexOf("@") > 0) {
+            node.mailer = item;
+          }
+        }
+        topology[nodeName] = node;
+      }
+    }
+  }
+}
 
 const replaceFile = (filename, text, opts) => {
   let options = {
@@ -66,10 +115,10 @@ dtc.connect()
   return replaceFile("OBXLALI", aliasDefns, mailerOpts);
 })
 .then(() => {
-  //
-  // Routes for outbound messages sent from MAILER
-  //
   let routes = [
+    "*",
+    "* Routes for outbound messages sent from MAILER",
+    "*",
     ":nick.*DEFAULT* :route.DC=WT,UN=NETOPS,FC=OX,SCL=SY  BSMTP",
     ":nick.*<>*      :route.DC=WT,UN=MAILER,FC=UK,UJN=UNKNOWN  RFC822",
     `:nick.${hostId} :route.DC=WT,UN=NETOPS,FC=ID,SCL=SY SMTP`
@@ -82,10 +131,10 @@ dtc.connect()
   .then(() => dtc.putFile("MAILRTE/IA", routes, mailerOpts));
 })
 .then(() => {
-  //
-  // Routes within the local domain
-  //
   let routes = [
+    "*",
+    "* Routes within the local domain",
+    "*",
     ":nick.*DEFAULT* :njroute.BITNET BITNET",
     ":nick.*<>*      :route.DC=WT,UN=MAILER,FC=UK,UJN=UNKNOWN  RFC822",
     `:nick.${hostId} :ccl.$BEGIN,MAILER,SYSTEM SMTP`
@@ -98,11 +147,11 @@ dtc.connect()
   .then(() => dtc.putFile("DOMNRTE/IA", routes, mailerOpts));
 })
 .then(() => {
-  //
-  // Routes for messages received from BITNet for destinations in
-  // the local domain
-  //
   let routes = [
+    "*",
+    "* Routes for messages received from BITNet for destinations in",
+    "* the local domain",
+    "*",
     ":nick.*DEFAULT* :njroute.BITNET BITNET",
     ":nick.*<>*      :route.DC=WT,UN=MAILER,FC=UK,UJN=UNKNOWN  RFC822",
     `:nick.${hostId} :route.DC=WT,UN=NETOPS,FC=IX,SCL=SY SMTP`
@@ -114,10 +163,10 @@ dtc.connect()
   .then (() => dtc.putFile("BITNRTE/IA", routes, mailerOpts));
 })
 .then(() => {
-  //
-  // Routes for messages that have undergone inbound address translation.
-  //
   let routes = [
+    "*",
+    "* Routes for messages that have undergone inbound address translation.",
+    "*",
     ":nick.*DEFAULT* :route.DC=WT,UN=NETOPS,FC=ID,SCL=SY SMTP",
     ":nick.*<>*      :route.DC=WT,UN=MAILER,FC=UK,UJN=UNKNOWN  RFC822",
     `:nick.${hostId} :route.DC=WT,UN=NETOPS,FC=ID,SCL=SY SMTP`
@@ -129,10 +178,10 @@ dtc.connect()
   .then (() => dtc.putFile("IBXLRTE/IA", routes, mailerOpts));
 })
 .then(() => {
-  //
-  // Routes for messages that have undergone outbound address translation.
-  //
   let routes = [
+    "*",
+    "* Routes for messages that have undergone outbound address translation.",
+    "*",
     ":nick.*DEFAULT* :njroute.BITNET BITNET",
     ":nick.*<>*      :route.DC=WT,UN=MAILER,FC=UK,UJN=UNKNOWN  RFC822",
     `:nick.${hostId} :route.DC=WT,UN=NETOPS,FC=IX,SCL=SY SMTP`
@@ -144,59 +193,34 @@ dtc.connect()
   .then (() => dtc.putFile("OBXLRTE/IA", routes, mailerOpts));
 })
 .then(() => {
-  //
-  // Routes for destinations in BITNet and Internet
-  //
-  let routes        = [];
-  const topology    = JSON.parse(fs.readFileSync("files/nje-topology.json"));
-  const customProps = {};
-  dtc.readPropertyFile(customProps);
-  //
-  // 1. Add/replace NJE node definitions from custom properties
-  //
-  if (typeof customProps["NETWORK"] !== "undefined") {
-    for (let line of customProps["NETWORK"]) {
-      line = line.toUpperCase();
-      let ei = line.indexOf("=");
-      if (ei < 0) continue;
-      let key   = line.substring(0, ei).trim();
-      let value = line.substring(ei + 1).trim();
-      if (key === "NJENODE") {
-        //
-        //  njeNode=<nodename>,<software>,<lid>,<public-addr>,<link>
-        //     [,<local-address>][,B<block-size>][,P<ping-interval>][,<mailer-address>]
-        let items = value.split(",");
-        if (items.length >= 5) {
-          let nodeName = items.shift();
-          let node = {
-            software: items.shift(),
-            lid: items.shift(),
-            publicAddress: items.shift(),
-            link: items.shift()
-          };
-          if (items.length > 0) {
-            node.localAddress = items.shift();
-          }
-          while (items.length > 0) {
-            let item = items.shift();
-            if (item.startsWith("B")) {
-              node.blockSize = parseInt(item.substring(1));
-            }
-            else if (item.startsWith("P")) {
-              node.pingInterval = parseInt(item.substring(1));
-            }
-            else if (item.indexOf("@") > 0) {
-              node.mailer = item;
-            }
-          }
-          topology[nodeName] = node;
-        }
-      }
+  let routes = [
+    "*",
+    "* Routes for destinations reached by NJE",
+    "*"
+  ];
+  const names = Object.keys(topology).sort();
+  for (const name of names) {
+    if (name === hostId) continue;
+    let node = topology[name];
+    if (typeof node.mailer !== "undefined") {
+      routes.push(`:nick.${name} :mailer.${node.mailer} BSMTP`);
+    }
+    else if (node.software === "NJEF") {
+      routes.push(`:nick.${name} :mailer.MAILER@${name} BSMTP`);
+    }
+    else {
+      routes.push(`:nick.${name} :njroute.BITNET BITNET`);
     }
   }
-  //
-  // 2. Create routes for SMTP destinations defined in HOSTS property
-  //
+  return dtc.say("  NJERTE")
+  .then(() => dtc.putFile("NJERTE/IA", routes, mailerOpts));
+})
+.then(() => {
+  let routes = [
+    "*",
+    "* Routes for destinations reached by SMTP",
+    "*"
+  ];
   if (typeof customProps["HOSTS"] !== "undefined") {
     for (const defn of customProps["HOSTS"]) {
       if (/^[0-9]/.test(defn)) {
@@ -214,25 +238,8 @@ dtc.connect()
       }
     }
   }
-  //
-  // 3. Create routes for NJE destinations defined in topology
-  //
-  const names = Object.keys(topology).sort();
-  for (const name of names) {
-    if (name === hostId) continue;
-    let node = topology[name];
-    if (typeof node.mailer !== "undefined") {
-      routes.push(`:nick.${name} :mailer.${node.mailer} BSMTP`);
-    }
-    else if (node.software === "NJEF") {
-      routes.push(`:nick.${name} :mailer.MAILER@${name} BSMTP`);
-    }
-    else {
-      routes.push(`:nick.${name} :njroute.BITNET BITNET`);
-    }
-  }
-  return dtc.say("  WORLD")
-  .then(() => dtc.putFile("WORLD/IA", routes, mailerOpts));
+  return dtc.say("  SMTPRTE")
+  .then(() => dtc.putFile("SMTPRTE/IA", routes, mailerOpts));
 })
 .then(() => dtc.say("Permit artifacts to SYSTEMX ..."))
 .then(() => dtc.runJob(12, 4, "opt/netmail-permit.job"))
