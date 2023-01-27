@@ -35,7 +35,7 @@
    "id":"confer",
    "desc":"Demonstrate the Cyber CONFERencing application",
    "defn":"/machines/nos2/scripts/confer.txt",
-   "depends":"mailer"
+   "depends":"confer"
   },
   {"name":"COS - Batch Job",
    "id":"cos-job",
