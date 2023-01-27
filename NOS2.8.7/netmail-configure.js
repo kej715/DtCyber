@@ -135,10 +135,10 @@ dtc.connect()
   let routes = [
     ":nick.*DEFAULT* :njroute.BITNET BITNET",
     ":nick.*<>*      :route.DC=WT,UN=MAILER,FC=UK,UJN=UNKNOWN  RFC822",
-    `:nick.${hostId} :route.DC=WT,UN=NETOPS,FC=ID,SCL=SY SMTP`
+    `:nick.${hostId} :route.DC=WT,UN=NETOPS,FC=IX,SCL=SY SMTP`
   ];
   for (const alias of hostAliases) {
-    routes.push(`:nick.${alias} :route.DC=WT,UN=NETOPS,FC=ID,SCL=SY SMTP`);
+    routes.push(`:nick.${alias} :route.DC=WT,UN=NETOPS,FC=IX,SCL=SY SMTP`);
   }
   return dtc.say("  OBXLRTE")
   .then (() => dtc.putFile("OBXLRTE/IA", routes, mailerOpts));
