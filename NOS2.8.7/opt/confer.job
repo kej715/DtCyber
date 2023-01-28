@@ -1,0 +1,28 @@
+~*
+~*  This job installs the CONFER multi-user conferencing
+~*  application from the UMass Mailer product tape.
+~*  It edits the CONFER binary into the PRODUCT file
+~*  and adds a directive to the DIRFILE file specifying
+~*  the deadstart file library number of CONFER.
+~*
+CONFER.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$ATTACH,PRODUCT,DIRFILE/M=W,WB.
+$PURGE,MLRDB/NA.
+$RECLAIM,DB=MLRDB,Z./LIST,UN=MAILER,TN=MAILER
+$RECLAIM,DB=MLRDB,Z./COPY,UN=MAILER,PF=*/CONFER
+$LIBEDIT,P=PRODUCT,B=CONFER,I=0,C.
+$NOTE,DIR.+CONFER+*ADD LIB${1},ABS/CONFER
+$LIBEDIT,P=DIRFILE,B=DIR,I=0,C.
+$PURGE,MLRDB/NA.
+***
+*** CONFER COMPLETE
+***
+EXIT.
+***
+*** CONFER FAILED
+***
