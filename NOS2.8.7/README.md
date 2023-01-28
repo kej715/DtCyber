@@ -744,8 +744,7 @@ Example:
 
 ```
 [HOSTS]
-192.168.0.17 nccmax max.nostalgiccomputing.org max LOCALHOST_AX
-192.168.0.19 nccmin min.nostalgiccomputing.org min LOCALHOST_IN
+192.168.0.17 nccmax nccmax.nostalgiccomputing.org max LOCALHOST_AX STK
 192.168.1.2  vax1 vax1.nostalgiccomputing.com
 192.168.1.3  vax2 vax2.nostalgiccomputing.com
 192.168.1.4  rsx11m rsx11m.nostalgiccomputing.com
