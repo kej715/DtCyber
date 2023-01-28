@@ -133,6 +133,15 @@
     "desc": "Data communication products",
     "products": [
       {
+        "name": "confer",
+        "post": "confer-namstrt.job",
+        "lib": 76,
+        "records": "ABS/CONFER",
+        "url": "https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1",
+        "desc": "UMass multi-user CONFERencing application",
+        "depends": ["mailer"]
+      },
+      {
         "name": "kermit",
         "post": "kermit.post",
         "lib": 71,
