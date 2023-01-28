@@ -295,10 +295,10 @@ These properties combined with the updated NJE [topology file](files/nje-topolog
 provide all of the information needed to add your node with its unique name to the
 public NJE network. To apply the information, follow these steps:
 
-1. Execute `git pull` to update your repository, including the updated topology
-definition.
-2. Save the property definitions in the email reply to the file `NOS2.8.7/site.cfg`,
+1. Save the property definitions in the email reply to the file `NOS2.8.7/site.cfg`,
 if the file doesn't exist already, or edit them into the existing file.
+2. Execute `git pull` to update your repository. The update will include a new
+topology definition for your node.
 3. If you have started *DtCyber* using the `node start` command, enter the
 `reconfigure` command at the `Operator>` prompt. Otherwise, execute the command
 `node reconfigure` in the NOS2.8.7 directory. This will apply the new machine
@@ -308,10 +308,15 @@ update your system's NJF host configuration file, it will update your system's P
 configuration to include PID's and LID's for adjacent NJE nodes, it will update the
 UMass Mailer configuration to enable exchanging e-mail with any new NJE or TCP/IP
 nodes, and it will update the *DtCyber* configuration to include definitions for NJE
-terminal(s). Finally, `reconfigure` will create a new deadstart tape.
-4. Shutdown and re-deadstart the system using the new deadstart tape. This will
-activate the system's new machine identifer, NDL, NCF, PID/LID, and e-mail routing
-configurations.
+terminal(s).
+4. If you have started *DtCyber* using the `node start` command, enter the
+`make_ds_tape` command at the `Operator>` prompt. Otherwise, execute the command
+`node make-ds-tape` in the NOS2.8.7 directory. This will create a new deadstart
+tape that includes changes made in step 3. The new deadstart tape image will be
+in file NOS2.8.7/tapes/newds.tap.
+5. Shutdown the system, rename NOS2.8.7/tapes/newds.tap to NOS2.8.7/tapes/ds.tap, and
+restart *DtCyber*. This will activate the system's new machine identifer, NDL, NCF,
+PID/LID, and e-mail routing configurations.
 
 As the network topology is likely to change and expand over time, you should execute
 `git pull` periodically to ensure that your copy of the
