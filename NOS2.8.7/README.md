@@ -546,6 +546,7 @@ This category includes data communication software.
 
 | Product | Description |
 |---------|-------------|
+| [confer](https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1) | UMass multi-user CONFERencing application |
 | [kermit](https://www.dropbox.com/s/p819tmvs91veoiv/kermit.tap?dl=1) | Kermit file exchange utility |
 | [mailer](https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1) | UMass Mailer,
 base e-mail system |
@@ -686,6 +687,7 @@ equipment or change their parameters.
 - The TCP/IP resource resolver configuration may be defined.
 - The NJE node name of the local host may be defined.
 - Private nodes in a local NJE network may be defined.
+- Internet e-mail domains may be declared.
 - etc.
 
 A script named `reconfigure.js` applies customized configuration. The script looks for a
@@ -805,8 +807,7 @@ is:
     | local-addr    | Optional IP address of the defined node. If specified, this address will be used by the defined node to identify itself to its NJE peers. If omitted, an appropriate default will be chosen based upon the defined system's physical TCP network configuration. |
     | block-size    | Optional block size, in bytes, to use in communicating with peers. The default is 8192. |
     | ping-interval | Optional ping interval, in seconds, to use in keeping the NJE connection alive. The default is 600 (i.e., 10 minutes). |
-    | mailer-address | Optional address of a BSMTP mail server, in the form
-`mailername@nodename`, e.g., MAILER@NCCMAX. |
+    | mailer-address | Optional address of a BSMTP mail server, in the form `mailername@nodename`, e.g., **MAILER@NCCMAX** |
 
     Example:
     
@@ -821,6 +822,16 @@ is:
     equivalent to:
     
     `njePorts=0x30,16`
+    
+- **smtpDomain** : Identifies an internet domain name or suffix to which e-mail will
+be routed using the TCP/IP SMTP protocol. Examples:
+
+```
+    smtpDomain=.com
+    smtpDomain=.org
+    smtpDomain=.net
+    smtpDomain=local.host.org
+```
 
 ### <a id="resolver"></a>[RESOLVER]
 Defines the TCP/IP resource resolver configuration. This is saved as the file named

@@ -196,7 +196,8 @@ dtc.connect()
   let routes = [
     "*",
     "* Routes for destinations reached by NJE",
-    "*"
+    "*",
+    ":nick..BITNET :njroute.BITNET BITNET"
   ];
   const names = Object.keys(topology).sort();
   for (const name of names) {
@@ -221,6 +222,13 @@ dtc.connect()
     "* Routes for destinations reached by SMTP",
     "*"
   ];
+  
+  let domains = ["at" ,"au" ,"ca" ,"ch" ,"com","de" ,"edu","es" ,"fr" ,"gb" ,
+                 "ie" ,"il" ,"it" ,"jp" ,"mil","net","org","oz" ,"uk" ,"us"];
+  let smtpRoutes = {};
+  for (const dom of domains) {
+    smtpRoutes[`.${dom}`] = `:nick..${dom} :route.DC=WT,UN=NETOPS,FC=SM,SCL=SY SMTP`;
+  }
   if (typeof customProps["HOSTS"] !== "undefined") {
     for (const defn of customProps["HOSTS"]) {
       if (/^[0-9]/.test(defn)) {
@@ -231,12 +239,30 @@ dtc.connect()
               && hostAliases.indexOf(ucname) < 0
               && typeof topology[ucname] === "undefined"
               && ucname !== "STK"
+              && ucname !== "MAIL-RELAY"
               && ucname.startsWith("LOCALHOST_") === false) {
-            routes.push(`:nick.${name} :route.DC=WT,UN=NETOPS,FC=SM,SCL=SY SMTP`);
+            smtpRoutes[name] = `:nick.${name} :route.DC=WT,UN=NETOPS,FC=SM,SCL=SY SMTP`;
           }
         }
       }
     }
+  }
+  if (typeof customProps["NETWORK"] !== "undefined") {
+    for (let line of customProps["NETWORK"]) {
+      let ei = line.indexOf("=");
+      if (ei < 0) continue;
+      let key   = line.substring(0, ei).trim();
+      let value = line.substring(ei + 1).trim();
+      if (key.toUpperCase() === "SMTPDOMAIN") {
+        //
+        //  smtpDomain=<domainname>
+        //
+        smtpRoutes[value] = `:nick.${value} :route.DC=WT,UN=NETOPS,FC=SM,SCL=SY SMTP`;
+      }
+    }
+  }
+  for (const dom of Object.keys(smtpRoutes).sort()) {
+    routes.push(smtpRoutes[dom]);
   }
   return dtc.say("  SMTPRTE")
   .then(() => dtc.putFile("SMTPRTE/IA", routes, mailerOpts));
