@@ -1062,8 +1062,13 @@ class DtCyber {
     if (Array.isArray(text)) {
       text = text.join("\r\n") + "\r\n";
     }
-    else if (text.indexOf("\r\n") < 0) {
-      text = text.replaceAll("\n", "\r\n");
+    else {
+      if (text.endsWith("\n")) text = text.substring(0, text.length - 1);
+      const lines = text.split("\n");
+      text = "";
+      for (const line of lines) {
+        text += line.endsWith("\r") ? line + "\n" : line + "\r\n";
+      }
     }
     const sender = (tryNo, callback) => {
       const retry = err => {
