@@ -22,6 +22,7 @@ real Control Data computer systems back in the 1980's and 90's.
 - [Network Job Entry](#nje)
 - &nbsp;&nbsp;&nbsp;&nbsp;[Using NJE](#usingnje)
 - [UMass Mailer](#email)
+- &nbsp;&nbsp;&nbsp;&nbsp;[E-mail Reflector](#reflector)
 - [Shutdown and Restart](#shutdown)
 - [Operator Command Extensions](#opext)
 - [Continuing an Interrupted Installation](#continuing)
@@ -406,21 +407,17 @@ provides the base user interface for e-mail and, by itself, enables e-mail messa
 to be exchanged between users within a single NOS system. The product named `netmail`
 adds support for routing e-mail between systems using NJE and SMTP.
 
-The `netmail` component uses NJE by default to route e-mail between NOS 2.8.7 systems,
-and other systems supporting NJE as an e-mail transport. For example, IBM VM/CMS systems
-running on the Hercules IBM 370 emulator and VAX/VMS systems running on the SimH VAX
-emulator support e-mail and are capable of using NJE as an e-mail network transport.
-All such NOS 2.8.7, VM/CMS, and VAX/VMS systems defined in the
-[NJE topology](files/nje-topology.json) are accessible from the UMass Mailer when
-the `netmail` component is installed.
+The `netmail` component is configured to use NJE for routing e-mail to systems defined
+in the [NJE topology file](files/nje-topology.json). This includes NOS 2.8.7 systems,
+IBM VM/CMS systems running on the Hercules IBM 370 emulator, and VAX/VMS systems running
+on the SimH VAX emulator. It reproduces the
+[BITNet](https://en.wikipedia.org/wiki/BITNET) experience of the 1980's and early
+1990's. During that period, the NJE-based BITNet network connected hundreds of mainly
+academic institutions around the world and enabled its users to exchange e-mail and
+files. BITNet was the predominant world-wide e-mail network until the Internet obsoleted
+it around the mid-1990's.
 
-During the 1980's and early 1990's, [BITNet](https://en.wikipedia.org/wiki/BITNET)
-interconnected hundreds of mainly academic institutions around the world. It was based
-upon NJE and served as the principal international network for exchanging email and
-files between users until the mid 1990's when it was obsoleted by the Internet.
-
-*DtCyber* running NOS 2.8.7 with `NJE` and the `UMass Mailer` recreates the BITNet
-experience. You may enroll your instance of NOS 2.8.7 in a reborn BITNet by requesting
+You may enroll your instance of NOS 2.8.7 in a reborn BITNet by requesting
 a unique node name for it (see [Network Job Entry](#nje), above) and then running the
 `reconfigure.js` tool to activate the node name
 (see [Customizing the NOS 2.8.7 Configuration](#reconfig), below). Note also that
@@ -428,6 +425,28 @@ NJE node NCCMAX at the [Nostalgic Computing Center](https://www.nostalgiccomputi
 serves as a hub for NOS 2.8.7 systems interconnected by NJE, and it is also connected
 to [HNET](http://moshix.dynu.net), so enrolling your system in the NJE-based *DtCyber*
 network can also provide it with access to HNET.
+
+The `netmail` component is also configured to use
+[SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol) for routing e-mail
+to systems defined in the [[HOSTS]](#hosts) section of the `site.cfg` file and in
+`smtpDomain` definitions within the [[NETWORK]](#network) section of the same file.
+This enables the UMass Mailer to exchange e-mail with other systems that support SMTP
+on a local area network.
+
+## <a id="reflector"></a>E-mail Reflector
+The UMass Mailer supports an e-mail reflector. E-mail messages addressed to a system's
+relector will be reflected back to the sender. This enables users to test whether a
+node in the network is online and processing e-mail. For example, to test whether
+node NCCMAX is online and processing e-mail, you may use the UMass Mailer on your
+machine to address an e-mail message to:
+
+    `Reflect@NCCMAX`
+
+The UMass Mailer on NCCMAX will reply automatically to this message. Be patient, as the
+reply could take as many as 10 minutes to arrive.
+
+Every ready-to-run instance of NOS 2.8.7 installed using these instructions, and any
+that are installed manually with the `netmail` component, have an e-mail reflector.
 
 ## <a id="shutdown"></a>Shutdown and Restart
 When the installation completes, NOS 2.8.7 will be running, and the command window will
