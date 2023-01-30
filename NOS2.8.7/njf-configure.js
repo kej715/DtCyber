@@ -4,7 +4,7 @@
 //
 //  1. NDL modset defining the terminals used by NJF
 //  2. The source for the NJF host configuration file
-//  3. PID/LID definitions for adjacent NJE nodes
+//  3. PID/LID definitions for NJE nodes with LIDs defined
 //  4. Update of cyber.ovl file to include terminal
 //     definitions for DtCyber
 //
@@ -14,7 +14,7 @@
 //  2. The host configuration file is compiled, and the
 //     resulting HCFFILE is moved to SYSTEMX.
 //  3. The LIDCMid file is updated to add PIDs/LIDs of
-//     adjacent nodes
+//     nodes with LIDs
 //
 
 const fs      = require("fs");
@@ -163,7 +163,10 @@ let terminalDefns = [];
 let userDefns     = [];
 let lineNumber    = 1;
 let routingNode   = null;
-let adjacentNodes = [];
+
+let adjacentNodes               = {};
+let nonadjacentNodesWithLids    = {};
+let nonadjacentNodesWithoutLids = {};
 
 const appendTerminalDefn = node => {
   terminalDefns = terminalDefns.concat([
@@ -175,14 +178,36 @@ const appendTerminalDefn = node => {
   ]);
 };
 
+const calculateRoute = node => {
+  if (typeof node.route === "undefined") {
+    for (const adjacentNode of Object.values(adjacentNodes)) {
+      if (adjacentNode.id === node.link) {
+        node.route = adjacentNode.id;
+        return node.route;
+      }
+    }
+    if (typeof node.link !== "undefined" && node.link !== hostID) {
+      const route = calculateRoute(topology[node.link]);
+      if (route !== null) node.route = route;
+      return route;
+    }
+    else {
+      return null;
+    }
+  }
+  else {
+    return node.route;
+  }
+};
+
 if (typeof topology[hostID].link !== "undefined") {
-  routingNode = topology[topology[hostID].link];
-  adjacentNodes.push(routingNode);
-  const portNum = `${nextPort.toString(16)}`;
-  routingNode.id           = topology[hostID].link;
-  routingNode.terminalName = `TE${npuNode}P${portNum}`;
-  routingNode.claPort      = portNum;
-  routingNode.lineNumber   = lineNumber++;
+  routingNode                   = topology[topology[hostID].link];
+  const portNum                 = `${nextPort.toString(16)}`;
+  routingNode.id                = topology[hostID].link;
+  routingNode.terminalName      = `TE${npuNode}P${portNum}`;
+  routingNode.claPort           = portNum;
+  routingNode.lineNumber        = lineNumber++;
+  adjacentNodes[routingNode.id] = routingNode;
   appendTerminalDefn(routingNode);
   userDefns.push(`${routingNode.terminalName}: USER,     NJFUSER.`);
   nextPort  += 1;
@@ -191,19 +216,34 @@ if (typeof topology[hostID].link !== "undefined") {
 }
 for (const key of Object.keys(topology)) {
   let node = topology[key];
-  if (node.link === hostID && portCount > 0) {
-    adjacentNodes.push(node);
-    const portNum = `${nextPort.toString(16)}`;
-    node.id           = key;
-    node.terminalName = `TE${npuNode}P${portNum}`;
-    node.claPort      = portNum;
-    node.lineNumber   = lineNumber++;
+  node.id = key;
+  if (node.link === hostID) {
+    if (portCount < 1) throw new Error("Insufficient number of NJE ports defined");
+    adjacentNodes[key] = node;
+    const portNum      = `${nextPort.toString(16)}`;
+    node.terminalName  = `TE${npuNode}P${portNum}`;
+    node.claPort       = portNum;
+    node.lineNumber    = lineNumber++;
     appendTerminalDefn(node);
     userDefns.push(`${node.terminalName}: USER,     NJFUSER.`);
     nextPort  += 1;
     portCount -= 1;
   }
 }
+for (const key of Object.keys(topology)) {
+  let node = topology[key];
+  if (key !== hostID && typeof adjacentNodes[key] === "undefined") {
+    const route = calculateRoute(node);
+    if (route === null) node.route = defaultRoute;
+    if (typeof node.lid !== "undefined" && node.lid !== "" && node.lid !== null) {
+      nonadjacentNodesWithLids[key] = node;
+    }
+    else {
+      nonadjacentNodesWithoutLids[key] = node;
+    }
+  }
+}
+
 const ndlModset = [
   "NJF",
   "*IDENT NJF",
@@ -224,24 +264,6 @@ fs.writeFileSync("mods/NJF/NDL.mod", ndlModset.join("\n"));
 let hcfSource     = [];
 let nodeNumber    = 1;
 
-const calculateRoute = (node) => {
-  if (typeof node.route !== "undefined") return node.route;
-  for (const adjacentNode of adjacentNodes) {
-    if (adjacentNode.id === node.link) {
-      node.route = adjacentNode.id;
-      return adjacentNode.id;
-    }
-  }
-  if (typeof node.link !== "undefined" && node.link !== hostID) {
-    const route = calculateRoute(topology[node.link]);
-    if (route !== null) node.route = route;
-    return route;
-  }
-  else {
-    return null;
-  }
-};
-
 //  1. Generate local system's node definition
 hcfSource = hcfSource.concat([
   "*",
@@ -253,62 +275,92 @@ hcfSource = hcfSource.concat([
 nodeNumber += 1;
 
 //  2. Generate definitions of adjacent nodes
-if (adjacentNodes.length > 0) {
+hcfSource = hcfSource.concat([
+  "*",
+  "*  ADJACENT NJE NODES",
+  "*"
+]);
+let names = Object.keys(adjacentNodes).sort();
+for (const name of names) {
+  let node = adjacentNodes[name];
+  if (typeof node.lid === "undefined" || node.lid === "" || node.lid === null)
+    throw new Error(`Adjcent node ${node.id} does not have a LID`);
+  node.nodeNumber = nodeNumber++;
+  hcfSource.push(
+    `NODE,${node.nodeNumber},${node.id},${node.lid},,${node.software === "NJEF" ? "CDC" : "IBM "},NET,JOB.`
+  );
+}
+
+//  3. Generate definitions for non-adjacent nodes with LIDs
+names = Object.keys(nonadjacentNodesWithLids).sort();
+if (names.length > 0) {
   hcfSource = hcfSource.concat([
     "*",
-    "*  ADJACENT NJE NODES",
+    "*  NON-ADJACENT NJE NODES WITH LIDS",
     "*"
   ]);
-  for (const node of adjacentNodes) {
+  for (const name of names) {
+    let node = nonadjacentNodesWithLids[name];
     node.nodeNumber = nodeNumber++;
     hcfSource.push(
       `NODE,${node.nodeNumber},${node.id},${node.lid},,${node.software === "NJEF" ? "CDC" : "IBM "},NET,JOB.`
     );
   }
-
-//  3. Generate line and auto-start line definitions
   hcfSource = hcfSource.concat([
     "*",
-    "*  NETWORK LINE DEFINITIONS",
+    "*  PATHS TO NON-ADJACENT NJE NODES WITH LIDS",
     "*"
   ]);
-  for (const node of adjacentNodes) {
+  for (const name of names) {
+    let node = nonadjacentNodesWithLids[name];
+    node.nodeNumber = nodeNumber++;
     hcfSource.push(
-      `LNE,${node.lineNumber},${node.terminalName},1000.`
-    );
-  }
-  hcfSource = hcfSource.concat([
-    "*",
-    "*  AUTO-START DIRECTIVES",
-    "*"
-  ]);
-  for (const node of adjacentNodes) {
-    hcfSource.push(
-      `ASLNE,${node.lineNumber},ST1,SR1${node.software === "NJEF" ? ",JT1,JR1" : ""}.`
+      `PATH,${node.id},${node.route}.`
     );
   }
 }
 
-//  4. Generate FAMILY sattements for routing to non-adjacent nodes.
-//     Associate each non-adjacent node with the closes adjacent node
-//     through which the non-adjacent node may be reached.
-let nonadjacentNodes = [];
-for (const key of Object.keys(topology)) {
-  let node = topology[key];
-  if (key !== hostID && node.link !== hostID) {
-    node.id = key;
-    const route = calculateRoute(node);
-    if (route !== null) nonadjacentNodes.push(node);
-  }
+//  4. Generate line definitions
+hcfSource = hcfSource.concat([
+  "*",
+  "*  NETWORK LINE DEFINITIONS",
+  "*"
+]);
+names = Object.keys(adjacentNodes).sort();
+for (const name of names) {
+  let node = adjacentNodes[name];
+  hcfSource.push(
+    `LNE,${node.lineNumber},${node.terminalName},1000.`
+  );
 }
-if (nonadjacentNodes.length > 0) {
+
+//  5. Generate auto-start line definitions
+hcfSource = hcfSource.concat([
+  "*",
+  "*  AUTO-START DIRECTIVES",
+  "*"
+]);
+names = Object.keys(adjacentNodes).sort();
+for (const name of names) {
+  let node = adjacentNodes[name];
+  hcfSource.push(
+    `ASLNE,${node.lineNumber},ST1,SR1${node.software === "NJEF" ? ",JT1,JR1" : ""}.`
+  );
+}
+
+//  6. Generate FAMILY sattements for routing to non-adjacent nodes without LIDs.
+//     Associate each non-adjacent node with the closest adjacent node through which
+//     the non-adjacent node may be reached.
+names = Object.keys(nonadjacentNodesWithoutLids).sort();
+if (names.length > 0) {
   hcfSource = hcfSource.concat([
     "*",
-    "*  ROUTES TO NON-ADJACENT NODES",
+    "*  ROUTES TO NON-ADJACENT NODES WITHOUT LIDS",
     "*"
   ]);
   let n = 1;
-  for (const node of nonadjacentNodes) {
+  for (const name of names) {
+    let node = nonadjacentNodesWithoutLids[name];
     hcfSource.push(
       `FAMILY,${node.id},NET${n++},${topology[node.route].lid},${node.route}.`
     );
@@ -350,7 +402,9 @@ if (typeof localNode.publicAddress !== "undefined") {
     defaultLocalIP = parts[0];
   }
 }
-for (const node of adjacentNodes) {
+names = Object.keys(adjacentNodes).sort();
+for (const name of names) {
+  let node       = adjacentNodes[name];
   let localIP    = defaultLocalIP;
   let listenPort = 175;
   if (typeof node.localAddress !== "undefined") {
@@ -467,7 +521,8 @@ dtc.connect()
     }
   }
   //
-  // Create/update PID and LID definitions from the adjacent nodes list
+  // Create/update PID and LID definitions from the list of adjacent nodes
+  // and the list non-adjacent nodes with LIDs
   //
   let localPid = {
     MFTYPE: "NOS2",
@@ -475,25 +530,34 @@ dtc.connect()
   };
   localPid.lids[`M${mid}`] = `NLID,LID=M${mid}.`;
   lidConf[`M${mid}`] = localPid;
-  for (const node of adjacentNodes) {
-    if (typeof node.lid !== "undefined") {
-      localPid.lids[node.lid] = `NLID,LID=${node.lid},AT=STOREF.`;
-      let mfType = "UNKNOWN";
-      if (node.software === "NJEF")
-        mfType = "NOS2";
-      else if (node.software === "RSCS")
-        mfType = "CMS";
-      else if (node.software === "NJE38")
-        mfType = "MVS";
-      else if (node.software === "JNET")
-        mfType = "VMS";
-      let remotePid = {
-        MFTYPE: mfType,
-        lids: {}
-      };
-      remotePid.lids[node.lid] = `NLID,LID=${node.lid}.`;
-      lidConf[node.lid] = remotePid;
-    }
+  for (const node of Object.values(adjacentNodes)) {
+    let lid = node.lid;
+    localPid.lids[lid] = `NLID,LID=${lid},AT=STOREF.`;
+    let mfType = "UNKNOWN";
+    if (node.software === "NJEF")
+      mfType = "NOS2";
+    else if (node.software === "RSCS")
+      mfType = "CMS";
+    else if (node.software === "NJE38")
+      mfType = "MVS";
+    else if (node.software === "JNET")
+      mfType = "VMS";
+    let remotePid = {
+      MFTYPE: mfType,
+      lids: {}
+    };
+    remotePid.lids[lid] = `NLID,LID=${lid}.`;
+    lidConf[lid] = remotePid;
+  }
+  for (const node of Object.values(nonadjacentNodesWithLids)) {
+    let lid = node.lid;
+    if (typeof node.route === "undefined"
+        || node.route === null
+        || typeof adjacentNodes[node.route] === "undefined"
+        || typeof lidConf[adjacentNodes[node.route].lid] === "undefined")
+      throw new Error (`Nonadjacent node ${node.id} does not have a route`);
+    let remotePid = lidConf[adjacentNodes[node.route].lid];
+    remotePid.lids[lid] = `NLID,LID=${lid},AT=STOREF.`;
   }
   //
   // Create new/updated LIDCMid file
