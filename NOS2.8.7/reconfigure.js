@@ -8,12 +8,12 @@ const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
-let newHostID      = null;  // new network host identifier
-let newMID         = null;  // new machine identifer
-let oldHostID      = null;  // old network host identifier
-let oldMID         = null;  // old machine identifer
-let productRecords = [];    // textual records to edit into PRODUCT file
-let customProps    = {};    // properties read from site.cfg
+let newHostID      = null;     // new network host identifier
+let newMID         = null;     // new machine identifer
+let oldHostID      = "NCCM01"; // old network host identifier
+let oldMID         = "01";     // old machine identifer
+let productRecords = [];       // textual records to edit into PRODUCT file
+let customProps    = {};       // properties read from site.cfg
 
 /*
  * getSystemRecord
@@ -251,7 +251,7 @@ const replaceFile = (filename, data, options) => {
  *  A promise that is resolved when the machine identifier has been updated.
  */
 const updateMachineID = () => {
-  if (oldMID !== newMID) {
+  if (oldMID !== newMID && newMID !== null) {
     return dtc.say(`Create LIDCM${newMID} ...`)
     .then(() => utilities.getFile(dtc, `LIDCM${oldMID}/UN=SYSTEMX`))
     .then(text => {
@@ -351,7 +351,9 @@ const updateProductRecords = () => {
  */
 const updateTcpHosts = () => {
 
-  if (oldMID === newMID && oldHostID === newHostID && typeof customProps["HOSTS"] === "undefined") {
+  if ((oldMID === newMID || newMID === null)
+      && (oldHostID === newHostID || newHostID === null)
+      && typeof customProps["HOSTS"] === "undefined") {
     return Promise.resolve();
   }
   else {
