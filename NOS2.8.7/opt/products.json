@@ -163,9 +163,7 @@
       },
       {
         "name": "mailer",
-        "pre": "mailer-mods.job",
         "post": [
-          "mailer-iaf.job",
           "mailer-users.job",
           "mailer.post"
         ],

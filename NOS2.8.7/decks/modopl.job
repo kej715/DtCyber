@@ -53,6 +53,12 @@ EXIT.
 ~eor
 ~include ../mods/NOS/NCCTMKP.mod
 ~eor
+~include ../mods/NOS/NJDSP1.mod
+~eor
+~include ../mods/NOS/NJSDSP.mod
+~eor
+~include ../mods/NOS/NJSSSE.mod
+~eor
 ~include ../mods/NOS/NS2797.mod
 ~eor
 ~include ../mods/NOS/TL0VJ1.mod
