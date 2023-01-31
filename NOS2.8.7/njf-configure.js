@@ -501,16 +501,19 @@ dtc.connect()
 })
 .then(output => {
   let currentPid = null;
-  let lines = output.split("\n").slice(1);
+  let lines      = output.split("\n").slice(1);
+  let comments   = [];
   for (const line of lines) {
     if (line.startsWith("NPID,")) {
       let match = line.match(/NPID,PID=([^,]*),MFTYPE=([^,.]*)/);
       if (match !== null) {
         currentPid = match[1];
         lidConf[currentPid] = {
+          comments: comments,
           MFTYPE: match[2],
           lids: {}
         };
+        comments = [];
       }
     }
     else if (line.startsWith("NLID,") && currentPid !== null) {
@@ -518,13 +521,18 @@ dtc.connect()
       if (match !== null) {
         lidConf[currentPid].lids[match[1]] = line;
       }
+      comments = [];
+    }
+    else if (line.startsWith("*")) {
+      comments.push(line);
     }
   }
   //
   // Create/update PID and LID definitions from the list of adjacent nodes
-  // and the list non-adjacent nodes with LIDs
+  // and the list of non-adjacent nodes with LIDs
   //
   let localPid = {
+    comments: ["*", `* ${hostID} - LOCAL NODE`, "*"],
     MFTYPE: "NOS2",
     lids: {}
   };
@@ -537,17 +545,18 @@ dtc.connect()
     if (node.software === "NJEF")
       mfType = "NOS2";
     else if (node.software === "RSCS")
-      mfType = "CMS";
+      mfType = "VM/CMS";
     else if (node.software === "NJE38")
       mfType = "MVS";
     else if (node.software === "JNET")
       mfType = "VMS";
-    let remotePid = {
+    let adjacentPid = {
+      comments: ["*", `* ${node.id} - ADJACENT NJE NODE`, "*"],
       MFTYPE: mfType,
       lids: {}
     };
-    remotePid.lids[lid] = `NLID,LID=${lid}.`;
-    lidConf[lid] = remotePid;
+    adjacentPid.lids[lid] = `NLID,LID=${lid}.`;
+    lidConf[lid] = adjacentPid;
   }
   for (const node of Object.values(nonadjacentNodesWithLids)) {
     let lid = node.lid;
@@ -556,8 +565,9 @@ dtc.connect()
         || typeof adjacentNodes[node.route] === "undefined"
         || typeof lidConf[adjacentNodes[node.route].lid] === "undefined")
       throw new Error (`Nonadjacent node ${node.id} does not have a route`);
-    let remotePid = lidConf[adjacentNodes[node.route].lid];
-    remotePid.lids[lid] = `NLID,LID=${lid},AT=STOREF.`;
+    let adjacentPid = lidConf[adjacentNodes[node.route].lid];
+    adjacentPid.lids[lid] = `NLID,LID=${lid}.`;
+    localPid.lids[lid]    = `NLID,LID=${lid},AT=STOREF.`;
   }
   //
   // Create new/updated LIDCMid file
@@ -568,6 +578,10 @@ dtc.connect()
   const pids = Object.keys(lidConf).sort();
   for (const pid of pids) {
     let pidDefn = lidConf[pid];
+    if (pid === "NVE" && pidDefn.MFTYPE === "NOSVE") continue; // remove superfluous NVE definition
+    if (typeof pidDefn.comments !== "undefined" && pidDefn.comments.length > 0) {
+      lidText = lidText.concat(pidDefn.comments);
+    }
     lidText.push(`NPID,PID=${pid},MFTYPE=${pidDefn.MFTYPE}.`);
     let lids = Object.keys(pidDefn.lids).sort();
     for (const lid of lids) {
