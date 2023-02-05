@@ -22,3 +22,5 @@ EXIT.
 ~include ../mods/NJF/NCCNJFL.mod
 ~eor
 ~include ../mods/NJF/BITNET.mod
+~eor
+~include ../mods/NJF/SAFFIX.mod

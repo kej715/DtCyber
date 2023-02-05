@@ -269,7 +269,7 @@ hcfSource = hcfSource.concat([
   "*",
   "*  LOCAL NJE NODE",
   "*",
-  `NODE,${nodeNumber},${hostID},M${mid},,CDC,NET,JOB.`,
+  `NODE,${nodeNumber},${hostID},M${mid},,IBM ,NET,JOB.`,
   `OWNNODE,${nodeNumber},CYBER,NETOPS.`
 ]);
 nodeNumber += 1;
@@ -287,7 +287,7 @@ for (const name of names) {
     throw new Error(`Adjcent node ${node.id} does not have a LID`);
   node.nodeNumber = nodeNumber++;
   hcfSource.push(
-    `NODE,${node.nodeNumber},${node.id},${node.lid},,${node.software === "NJEF" ? "CDC" : "IBM "},NET,JOB.`
+    `NODE,${node.nodeNumber},${node.id},${node.lid},,IBM ,NET,JOB.`
   );
 }
 
@@ -303,7 +303,7 @@ if (names.length > 0) {
     let node = nonadjacentNodesWithLids[name];
     node.nodeNumber = nodeNumber++;
     hcfSource.push(
-      `NODE,${node.nodeNumber},${node.id},${node.lid},,${node.software === "NJEF" ? "CDC" : "IBM "},NET,JOB.`
+      `NODE,${node.nodeNumber},${node.id},${node.lid},,IBM ,NET,JOB.`
     );
   }
   hcfSource = hcfSource.concat([
