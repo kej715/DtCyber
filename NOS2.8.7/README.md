@@ -460,7 +460,9 @@ node in the network is online and processing e-mail. For example, to test whethe
 node NCCMAX is online and processing e-mail, you may use the UMass Mailer on your
 machine to address an e-mail message to:
 
-    `Reflect@NCCMAX`
+```
+     Reflect@NCCMAX
+```
 
 The UMass Mailer on NCCMAX will reply automatically to this message. Be patient, as the
 reply could take as many as 10 minutes to arrive.
