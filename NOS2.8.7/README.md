@@ -332,7 +332,7 @@ system. NJE also enables you to send data files between users on different syste
 NJE network is a peer-to-peer network, i.e., every node in the network has the same
 capabilities to send and receive jobs and files.
 
-An NJE network is also a store-and-forward network. This means that you can submit a
+An NJE network is a *store-and-forward* network. This means that you can submit a
 job, or send a file, to any node in the network without your local host's needing to be
 connected directly to all other nodes. If the target system of a job or file is not
 directly connected to your local host, your local host will route it to a directly
@@ -360,6 +360,26 @@ data (i.e., text with lines up to 80 characters in length).
 Example:
 ```
 NJROUTE,MYJOB,DC=TO,DNN=NCCMAX.
+```
+
+Note that the public NJE network is a network fundamentally based upon IBM-defined
+protocols and principles. In particular, a job submitted from one CDC system to another
+across the network needs to begin with a couple of cards resembling the initial cards of
+an IBM job. These are discarded by the NJF subsystem on the destination host before
+the job is submitted to the input queue. In addition, an end-of-record mark is indicated
+by a line consisting of the string `/*EOR`. For example, a job sent from one CDC system
+to another might look like:
+
+```
+/*
+//HELLO
+HELLO.
+USER,GUEST,GUEST.
+FTN5,GO.
+/*EOR
+      PROGRAM HELLO
+      PRINT *, ' HELLO WORLD!'
+      END
 ```
 
 `NJF` also provides interactive utilities enabling you to send/receive large
