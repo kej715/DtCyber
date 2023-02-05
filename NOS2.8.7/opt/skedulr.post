@@ -1,0 +1,56 @@
+#!/usr/bin/env node
+//
+// Update SYSPROC to launch the SKEDULR job, and move SKEDULR
+// artifacts to catalog of SYSTEMX.
+//
+
+const DtCyber   = require("../../automation/DtCyber");
+const utilities = require("./utilities");
+
+const dtc = new DtCyber();
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => utilities.moveFile(dtc, "SKEDULR", 1, 377777, ""))
+.then(() => utilities.moveFile(dtc, "LOGMGR",  1, 377777, ""))
+.then(() => utilities.moveFile(dtc, "JOBS",    1, 377777, ""))
+.then(() => dtc.say("  Update SYSPROC to launch SKEDULR job ..."))
+.then(() => dtc.dis([
+  "GET,SYSPROC/NA.",
+  "IF,.NOT.FILE(SYSPROC,AS),L1.",
+  "NOTE,SYSPROC./.PROC,SYSPROC.",
+  "ENDIF,L1.",
+  "SUI,1.",
+  "REPLACE,SYSPROC."
+], "GETSYSP"))
+.then(() => utilities.getFile(dtc, "SYSPROC"))
+.then(text => {
+  const start = "* START SKEDULR\n";
+  const end   = "* END SKEDULR\n";
+  let si = text.indexOf(start);
+  if (si >= 0) {
+    let ei = text.indexOf(end);
+    if (ei >= 0) {
+      text = `${text.substring(0, si)}${text.substring(ei + end.length)}`;
+    }
+  }
+  text += start
+       +  "$GET,SKEDULR.\n"
+       +  "$ROUTE,SKEDULR,DC=NO,OT=SYOT.\n"
+       +  end;
+  return dtc.putFile("SYSPROC/IA,CS=DIS", text);
+})
+.then(() => dtc.dis([
+  "GET,SYSPROC.",
+  "PURGE,SYSPROC.",
+  "SUI,377777.",
+  "REPLACE,SYSPROC."
+], 1))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

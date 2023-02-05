@@ -1,0 +1,24 @@
+~*
+~*  This job calls the DBMAN utility to register email address translations
+~*  for various principal users and services.
+~*
+REGISTR.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$DBMAN.
+***
+*** REGISTR COMPLETE
+***
+EXIT.
+***
+*** REGISTR FAILED
+***
+~eor
+ADD NAME=SYSDEV  PATH="S^Y^SD^E^V@A${1}"          PW=INSTALL
+ADD NAME=POSTMAS PATH="P^O^S^T^M^A^S^T^E^R@A${1}" PW=MAILER
+ADD NAME=GUEST   PATH="G^U^E^S^T@A${1}"           PW=GUEST
+ADD NAME=REFLECT PATH="R^E^F^L^E^C^T@ASYSTEM"     PW=REFLECT -
+    COMMENT="M^E^S^S^A^G^E R^E^F^L^E^C^T^O^R"

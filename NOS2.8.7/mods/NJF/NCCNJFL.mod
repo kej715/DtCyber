@@ -5,8 +5,8 @@ NCCNJFL
 */
 *DECK,COMXNJF
 *D,NJ24200.1
-      DEF MAXACN$       # 8 #;       # MAXIMUM CONNECTION NUMBER #
+      DEF MAXACN$       # 32 #;      # MAXIMUM CONNECTION NUMBER #
 *D,134,135
-      DEF MAXNODE$      # 16 #;      # MAX NUMBER OF NODES #
-      DEF MAXPATH$      # 15 #;      # MAX NUMBER OF PATH ENTRIES #
+      DEF MAXNODE$      # 64 #;      # MAX NUMBER OF NODES #
+      DEF MAXPATH$      # 63 #;      # MAX NUMBER OF PATH ENTRIES #
 *EDIT,COMXNJF

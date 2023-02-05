@@ -1,6 +1,5 @@
 ~*
-~*  This job updates the MODS871 and NJFU700 files to include modsets
-~*  for NJF.
+~*  This job creates/replaces the NJFU700 file that include modsets for NJF.
 ~*
 NJFMODS.
 $USER,INSTALL,INSTALL.
@@ -8,15 +7,6 @@ $NORERUN.
 $SETTL,*.
 $SETASL,*.
 $SETJSL,*.
-$COPYBR,INPUT,NOSMODS,3.
-$REWIND,NOSMODS.
-$GET,MODS871/NA.
-$IF,FILE(MODS871,AS),EDIT.
-$  LIBEDIT,P=MODS871,B=NOSMODS,I=0,C.
-$  REPLACE,MODS871.
-$ELSE,EDIT.
-$  SAVE,NOSMODS=MODS871.
-$ENDIF,EDIT.
 $COPY,INPUT,NJFU700.
 $REPLACE,NJFU700.
 ***
@@ -27,14 +17,10 @@ EXIT.
 *** NJFMODS FAILED
 ***
 ~eor
-~include ../mods/NJF/NJSSSE.mod
-~eor
-~include ../mods/NJF/NJSDSP.mod
-~eor
-~include ../mods/NJF/NJDSP1.mod
-~eor
 ~include ../mods/NJF/NCCNJFI.mod
 ~eor
 ~include ../mods/NJF/NCCNJFL.mod
 ~eor
 ~include ../mods/NJF/BITNET.mod
+~eor
+~include ../mods/NJF/SAFFIX.mod

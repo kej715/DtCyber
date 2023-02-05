@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 //
-// Move NJF startup procedure and host configuration file to SYSTEMX,
-// add MAX to the PID/LID configuration, and create NJF user account.
+// Move NJF startup procedure to SYSTEMX, create NJF user account,
+//  and enable NJF subsystem.
 //
 
 const fs      = require("fs");

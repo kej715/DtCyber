@@ -133,6 +133,15 @@
     "desc": "Data communication products",
     "products": [
       {
+        "name": "confer",
+        "post": "confer-namstrt.job",
+        "lib": 76,
+        "records": "ABS/CONFER",
+        "url": "https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1",
+        "desc": "UMass multi-user CONFERencing application",
+        "depends": ["mailer"]
+      },
+      {
         "name": "kermit",
         "post": "kermit.post",
         "lib": 71,
@@ -154,9 +163,7 @@
       },
       {
         "name": "mailer",
-        "pre": "mailer-mods.job",
         "post": [
-          "mailer-iaf.job",
           "mailer-users.job",
           "mailer.post"
         ],
@@ -164,6 +171,20 @@
         "records": "PP/MLR-PROC/MAILPRC",
         "url": "https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1",
         "desc": "UMass Mailer"
+      },
+      {
+        "name": "netmail",
+        "post": [
+          "netmail-maillib.job",
+          "netmail-post.job",
+          "../netmail-configure.js",
+          "netmail.post"
+        ],
+        "lib": 76,
+        "records": "ABS/DBMAN-ABS/OBXLATE",
+        "url": "https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1",
+        "desc": "UMass Mailer network router",
+        "depends": ["mailer", "njf", "ncctcp"]
       },
       {
         "name": "njf",
@@ -309,6 +330,13 @@
         "url": "https://www.dropbox.com/s/ovgysfxbgpl18am/i8080.tap?dl=1",
         "desc": "Intel 8080 cross-tools (CPM80, INTRP80, MAC80, PLM80)",
         "depends": ["ses"]
+      },
+      {
+        "name": "skedulr",
+        "post": "skedulr.post",
+        "lib": 73,
+        "records": "ABS/SKEDULR",
+        "desc": "Task scheduling utility (like Unix cron)"
       },
       {
         "name": "spss",

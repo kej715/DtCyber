@@ -24,6 +24,7 @@
     "desc": "IBM 4381 at the Nostalgic Computing Center",
     "os": "VM/CMS 6.0",
     "software": "RSCS",
+    "mailer": "MAILER@NCCCMS",
     "link": "NCCMVS",
     "lid": "CMS"
   },

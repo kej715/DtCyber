@@ -36,3 +36,4 @@ $DBCFG,I=CFG,OP=U.
 $REVERT.
 .DATA,CFG.
 ${1}
+${2}

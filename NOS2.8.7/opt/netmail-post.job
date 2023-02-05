@@ -1,0 +1,26 @@
+~*
+~*  This job installs the CCL POST procedure and the job that launches it
+~*  in the catalog of MAILER and permits it to SYSTEMX.
+~*
+INSPOST.
+$USER,MAILER,MAILER.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$COPYBR,INPUT,NETMAIL.
+$COPY,INPUT,POST.
+$REPLACE,NETMAIL,POST.
+$PERMIT,NETMAIL,SYSTEMX.
+$PERMIT,POST,SYSTEMX.
+***
+*** INSPOST COMPLETE
+***
+EXIT.
+***
+*** INSPOST FAILED
+***
+~eor
+~include ../files/NETMAIL.txt
+~eor
+~include ../files/POST.txt

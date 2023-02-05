@@ -1,0 +1,20 @@
+~*
+~*  This job makes UMass Mailer network router routing and address
+~*  translation artifacts public.
+~*
+MAKEPUB.
+$USER,MAILER,MAILER.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$CHANGE,HOSTNOD,HOSTALI,HOSTSVR,OBXLALI,OBXLRTE/CT=PU,M=R.
+$CHANGE,MAILRTE,DOMNRTE,BITNRTE,IBXLRTE/CT=PU,M=R.
+$CHANGE,NJERTE,SMTPRTE,ZONE/CT=PU,M=R.
+***
+*** MAKEPUB COMPLETE
+***
+EXIT.
+***
+*** MAKEPUB FAILED
+***

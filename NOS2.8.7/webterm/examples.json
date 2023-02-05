@@ -35,7 +35,7 @@
    "id":"confer",
    "desc":"Demonstrate the Cyber CONFERencing application",
    "defn":"/machines/nos2/scripts/confer.txt",
-   "depends":"mailer"
+   "depends":"confer"
   },
   {"name":"COS - Batch Job",
    "id":"cos-job",
@@ -59,7 +59,7 @@
    "id":"email",
    "desc":"List, read, and send e-mail messages",
    "defn":"/machines/nos2/scripts/email.txt",
-   "depends":"mailer"
+   "depends":"netmail"
   },
   {"name":"FORTRAN IV",
    "id":"ftn4",
@@ -110,6 +110,12 @@
    "id":"nje-send",
    "desc":"Send a file to a user of another host on the NJE network",
    "defn":"/machines/nos2/scripts/nje-send.txt",
+   "depends":"njf"
+  },
+  {"name":"NJE - submit job",
+   "id":"nje-job",
+   "desc":"Submit a job to another host on the NJE network",
+   "defn":"/machines/nos2/scripts/nje-job.txt",
    "depends":"njf"
   },
   {"name":"Pascal",

@@ -2,6 +2,7 @@ const bz2           = require("unbzip2-stream");
 const child_process = require("child_process");
 const extract       = require("extract-zip");
 const fs            = require("fs");
+const ftp           = require("ftp");
 const http          = require("http");
 const https         = require("https");
 const net           = require("net");
@@ -361,7 +362,10 @@ class DtCyber {
       me.isConnected = false;
       me.isExitOnClose = true;
       const doConnect = (deadline, callback) => {
-        if (me.isConnected) return null;
+        if (me.isConnected) {
+          callback(null);
+          return;
+        }
         try {
           me.socket = net.createConnection({port:port, host:"127.0.0.1"}, () => {
             me.isConnected = true;
@@ -377,6 +381,7 @@ class DtCyber {
               doConnect(deadline, callback);
             }, 500);
           }
+          return;
         }
         me.streamMgrs.dtCyber.setOutputStream(me.socket);
         me.socket.on("data", data => {
@@ -388,6 +393,10 @@ class DtCyber {
             process.exit(0);
           }
           me.isConnected = false;
+          if (typeof me.socketCloseCallback === "function") {
+            me.socketCloseCallback();
+            me.socketCloseCallback = undefined;
+          }
         });
         me.socket.on("error", err => {
           if (me.isConnected) {
@@ -461,8 +470,9 @@ class DtCyber {
     let password = "INSTALL";
     let data     = null;
     if (typeof options === "object") {
-      if (typeof options.jobname  === "string") jobname  = options.jobname ;
+      if (typeof options.jobname  === "string") jobname  = options.jobname;
       if (typeof options.username === "string") username = options.username;
+      if (typeof options.user     === "string") username = options.user;
       if (typeof options.password === "string") password = options.password;
       if (typeof options.data     === "string") data     = options.data;
     }
@@ -590,10 +600,11 @@ class DtCyber {
       if (typeof me.socket !== "undefined"
           && typeof me.socket.destroyed !== "undefined"
           && me.socket.destroyed === false) {
-        me.socket.end(() => {
+        me.socketCloseCallback = () => {
           me.socket.destroy();
           resolve();
-        });
+        };
+        me.socket.end();
       }
       else {
         resolve();
@@ -1012,6 +1023,101 @@ class DtCyber {
       });
       req.write(job);
       req.end();
+    });
+  }
+
+  /*
+   * putFile
+   *
+   * Use FTP to upload a file to a permanent file catalog on NOS 2.
+   *
+   * Arguments:
+   *   name     - the file name to create on NOS 2
+   *   text     - string or array representing the content of the file
+   *   options  - optional object providing FTP parameters, e.g., user, password,
+   *              host, and port
+   *
+   * Returns:
+   *   A promise that is resolved when the transfer is complete.
+   */
+  putFile(name, text, options) {
+    const me = this;
+    const retryDelay = 5;
+    const maxRetries = 10;
+    if (typeof options === "undefined") {
+      options = {
+        user: "INSTALL",
+        password: "INSTALL",
+        host: "127.0.0.1",
+        port: 21
+      }
+    }
+    if (typeof options.host === "undefined") {
+      options.host = "127.0.0.1"
+    }
+    if (typeof options.username !== "undefined"
+        && typeof options.user === "undefined") {
+      options.user = options.username;
+    }
+    if (Array.isArray(text)) {
+      text = text.join("\r\n") + "\r\n";
+    }
+    else {
+      if (text.endsWith("\n")) text = text.substring(0, text.length - 1);
+      const lines = text.split("\n");
+      text = "";
+      for (const line of lines) {
+        text += line.endsWith("\r") ? line + "\n" : line + "\r\n";
+      }
+    }
+    const sender = (tryNo, callback) => {
+      const retry = err => {
+        if (tryNo <= maxRetries) {
+          console.log(`${new Date().toLocaleTimeString()} FTP attempt ${tryNo} of ${maxRetries} for ${name} failed`);
+          console.log(`${new Date().toLocaleTimeString()}   retrying after ${retryDelay} seconds ...`);
+          setTimeout(() => {
+            sender(tryNo + 1, callback);
+          }, retryDelay * 1000);
+        }
+        else {
+          callback(err);
+        }
+      };
+      const client = new ftp();
+      client.on("ready", () => {
+        client.ascii(err => {
+          if (err) {
+            retry(err);
+          }
+          else {
+            client.put(Buffer.from(text), name, err => {
+              if (err) {
+                retry(err);
+              }
+              else {
+                client.logout(err => {
+                  client.end();
+                  callback();
+                });
+              }
+            });
+          }
+        });
+      });
+      client.on("error", err => {
+        retry(err);
+      });
+      client.connect(options);
+    };
+    return new Promise((resolve, reject) => {
+      sender(1, err => {
+        if (err) {
+          reject(err);
+        }
+        else {
+          resolve();
+        }
+      });
     });
   }
 

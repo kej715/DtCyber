@@ -3,6 +3,10 @@
 ~*  NETOPS to prevent NAM from starting network applications
 ~*  that are not used or configured for the local system.
 ~*
+~*  Note: the parameter passed in the "~include" directive
+~*        specifies the local time zone and is used by the
+~*        SMTP server application (SMTPS).
+~*
 UPDNMST.
 $USER,INSTALL,INSTALL.
 $NORERUN.
@@ -22,4 +26,4 @@ EXIT.
 *** UPDNMST FAILED
 ***
 ~eor
-~include ../files/NAMSTRT-update.txt
+~include ../files/NAMSTRT-update.txt,${1}
