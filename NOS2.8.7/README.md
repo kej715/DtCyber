@@ -19,8 +19,10 @@ real Control Data computer systems back in the 1980's and 90's.
 - [Installation Steps](#steps)
 - [Login](#login)
 - [Remote Job Entry](#rje)
+- &nbsp;&nbsp;&nbsp;&nbsp;[TieLine Facility (TLF)](#tlf)
 - [Network Job Entry](#nje)
 - &nbsp;&nbsp;&nbsp;&nbsp;[Using NJE](#usingnje)
+- &nbsp;&nbsp;&nbsp;&nbsp;[NJF vs TLF](#njf-vs-tlf)
 - [UMass Mailer](#email)
 - &nbsp;&nbsp;&nbsp;&nbsp;[E-mail Reflector](#reflector)
 - [Shutdown and Restart](#shutdown)
@@ -212,6 +214,56 @@ node rjecli examples\nos2.json
 
 For more information about RJE, see the [README](rje-station) file in the `rje-station`
 directory.
+
+### <a id="tlf"></a>TieLine Facility (TLF)
+NOS 2.8.7 also supports TLF, the TieLine Facility. TLF enables NOS 2.8.7 to connect
+to other mainframes and play the role of RJE station. For example, TLF enables
+NOS 2.8.7 running on *DtCyber* to connect to an IBM MVS/JES2 or IBM VM/CMS/RSCS
+system running on the *Hercules* IBM mainframe emulator. NOS 2.8.7 acts as an RJE
+station in these cases, enabling users of NOS to send batch jobs to the IBM
+systems, and the IBM systems will return the output of these jobs to NOS.
+
+TLF associates a LID (Logical IDentifier) with each mainframe to which it can connect.
+Users specify these LID's in `ROUTE` commands or on job cards in order to indicate
+that jobs should be sent by TLF to other mainframes. In addition, TLF automatically
+interprets the first line of each job as a NOS jobcard and removes it before sending the
+job to another mainframe. This allows the LID to be specified on the jobcard, enabling
+the NOS `SUBMIT` command, for example, to be used for submitting *foreign* jobs for
+execution.
+
+For example, suppose that an IBM MVS/JES2 system running on the *Hercules* IBM mainframe
+emulator is connected to *DtCyber*, and the LID *MVS* is associated with it. A job file
+for this system might look like:
+
+```
+HELLO,ST=MVS.
+//FIBFORTH      JOB  USER=GUEST,PASSWORD=PUBL1C,CLASS=A,MSGCLASS=A
+//FIBONACI      EXEC FORTHCLG,REGION.FORT=384K
+//FORT.SYSLIN   DD   UNIT=SYSDA
+//FORT.SYSABEND DD   SYSOUT=A
+//FORT.SYSIN    DD   *
+      WRITE(6, 10)
+ 10   FORMAT(12H HELLO WORLD)
+      STOP
+      END
+//
+```
+
+The `ST` (STation) parameter in the first line of the file (i.e., the jobcard) specifies
+that the job is intended to run on the system with LID `MVS`. If either the NOS `ROUTE`
+or `SUBMIT` command is used to submit the file for execution, TLF will process it. TLF
+will send it to the IBM MVS/JES2 system for execution. When the job completes, the
+MVS/JES2 system will return its output to TLF, and TLF will place it in the appropriate
+NOS queue(s) (e.g., print, punch, and/or wait queues).
+
+For example, to submit the job for execution and cause its output to be returned to the
+wait queue, a user could enter the following command:
+
+```
+ROUTE,lfn,DC=TO
+```
+
+See the [[NETWORK]](#network) section, below, for details about configuring TLF.
 
 ## <a id="nje"></a>Network Job Entry
 The system listens for NJE (network job entry) connections on TCP port 175 by default,
@@ -418,7 +470,32 @@ Example:
 
 ```
 ROUTE,MYJOB,DC=TO,ST=MAX.
-``` 
+```
+
+### <id="njf-vs-tlf"></a>NJF vs TLF
+Both NJF and TLF can send jobs from NOS 2.8.7 to other mainframes for execution, so
+why use one instead of the other? NJF uses the NJE protocol to communicate with other
+systems, and TLF uses the HASP protocol. NJE is a kind of HASP next generation. NJE
+establishes a symmetrical peer relationship between two participating systems, while
+HASP defines one participant to be a *station* and the other to be a *host*. NJE
+allows both participants to send jobs and/or files to each other, while HASP allows
+only a *station* to send jobs to a *host* and a *host* to send output to a *station*.
+
+Ordinarily, if two systems support NJE, they would not need to use HASP to communicate
+with each other too. However, the NJE implementations currently supported by MVS
+and VM/CMS systems running on the *Hercules* IBM mainframe emulator are incomplete as
+they support only exchanging print and punch files; they do not currently support
+exchanging job files. TLF on NOS 2.8.7 closes this gap.
+
+When both NJF and TLF are configured to run on NOS 2.8.7, NJF can be used for exchanging
+data files and e-mail with IBM systems, and TLF can be used for sending jobs to them.
+TLF can also receive jobs from IBM systems. When an IBM system sends a file on a TLF
+punch stream, TLF will handle the file as a job and place it in the NOS input queue
+instead of placing it in the NOS punch queue. Because TLF uses HASP, and HASP does
+not enable a *station* to send output to a *host*, the output produced from a job
+received by TLF on a punch stream cannot be routed automatically back to the originating
+IBM system. Instead, it will be routed to the NOS output queue and printed on a NOS
+printer (or punched on a NOS card punch).
 
 ## <a id="email"></a>UMass Mailer
 The UMass Mailer consists of two products: `mailer` and `netmail`. These are both
@@ -594,13 +671,12 @@ This category includes data communication software.
 |---------|-------------|
 | [confer](https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1) | UMass multi-user CONFERencing application |
 | [kermit](https://www.dropbox.com/s/p819tmvs91veoiv/kermit.tap?dl=1) | Kermit file exchange utility |
-| [mailer](https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1) | UMass Mailer,
-base e-mail system |
+| [mailer](https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1) | UMass Mailer, base e-mail system |
 | [ncctcp](https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1) | TCP/IP Applications (HTTP, NSQUERY, REXEC, SMTP) |
-| [netmail](https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1) | UMass Mailer,
-network mail router |
+| [netmail](https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1) | UMass Mailer, network mail router |
 | [njf](https://www.dropbox.com/s/oejtd05qkvqhk9u/NOSL700NJEF.tap?dl=1) | Network Job Facility |
 | rbf5    | Remote Batch Facility Version 5 |
+| [tlf](https://www.dropbox.com/s/r5qbucmw6qye8vl/tieline.tap?dl=1) | TieLine Facility |
 
 ### Category *graphics*
 This category includes graphics and CAD/CAM software.
@@ -877,6 +953,35 @@ be routed using the TCP/IP SMTP protocol. Examples:
     smtpDomain=.net
     smtpDomain=local.host.org
 ```
+- **tlfNode** : Defines the name and routing information for a TLF node. The general
+syntax of this entry is:
+
+    tlfNode=*nodename*,*lid*,*spooler*,*addr*[,B*block-size*][,R*remote-id*][,P*password*]
+    
+    | Parameter     | Description |
+    |---------------|-------------|
+    | nodename      | The name of the node. |
+    | lid           | The unique, 3-character logical identifier assigned to the node. |
+    | spooler       | The type of output spooler used by the node; one of JES2, NOS, PRIME, or RSCS. |
+
+    | addr   | The IP address and TCP port number on which the node listens for HASP connections. The format is `ipaddress:portnumber`, e.g., 192.168.1.3:175. |
+    | block-size    | Optional block size, in bytes, to use in communicating with peers. The default is 400. |
+    | remote-id | Optional login identifier that TLF will present to the node when it connects. The default is that no login identifier is sent. |
+    | password | Optional password that TLF will present to the node when it connects. The default is that no password is sent. |
+
+    Example:
+    
+    `tlfNode=NCCMVS,MVS,JES2,192.168.0.17:37803,R001`
+    
+- **tlfPorts** : Specifies the range of CLA ports that will be used in defining terminals for use by TLF in the NOS NDL. The general syntax of this entry is:
+
+    tlfPorts=*cla-port-number*,*port-count*
+    
+    Where *cla-port-number* is the number of the first CLA port to be used, and
+    *port-count* defines the maximum number of ports to be used. The default is
+    equivalent to:
+    
+    `tlfPorts=0x28,8`
 
 ### <a id="resolver"></a>[RESOLVER]
 Defines the TCP/IP resource resolver configuration. This is saved as the file named
