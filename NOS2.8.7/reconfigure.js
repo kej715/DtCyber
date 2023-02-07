@@ -479,6 +479,9 @@ dtc.connect()
     return Promise.resolve();
   }
 })
+.then(() => {
+  return utilities.isInstalled("tlf") ? dtc.exec("node", ["tlf-configure"]) : Promise.resolve();
+})
 .then(() => dtc.connect())
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))

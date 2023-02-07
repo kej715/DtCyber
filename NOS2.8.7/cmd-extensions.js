@@ -38,7 +38,7 @@ const cmdExtensions = [
     }
   },
   {
-    names: ["njf_configure", "njfc"],
+    names: ["njf_configure", "ncfg"],
     desc:  "'njf_configure' update the NJF configuration",
     fn:    (dtc, args) => {
       return dtc.disconnect()
@@ -76,6 +76,16 @@ const cmdExtensions = [
     fn:    (dtc, args) => {
       return dtc.disconnect()
       .then(() => dtc.exec("node", ["sync-tms"]))
+      .then(() => dtc.connect())
+      .then(() => dtc.expect([ {re:/Operator> $/} ]));
+    }
+  },
+  {
+    names: ["tlf_configure", "tcfg"],
+    desc:  "'tlf_configure' update the TLF configuration",
+    fn:    (dtc, args) => {
+      return dtc.disconnect()
+      .then(() => dtc.exec("node", ["tlf-configure"]))
       .then(() => dtc.connect())
       .then(() => dtc.expect([ {re:/Operator> $/} ]));
     }
