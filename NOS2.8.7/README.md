@@ -960,13 +960,12 @@ syntax of this entry is:
     
     | Parameter     | Description |
     |---------------|-------------|
-    | nodename      | The name of the node. |
+    | nodename      | The human-readable name assigned to the node. |
     | lid           | The unique, 3-character logical identifier assigned to the node. |
     | spooler       | The type of output spooler used by the node; one of JES2, NOS, PRIME, or RSCS. |
-
-    | addr   | The IP address and TCP port number on which the node listens for HASP connections. The format is `ipaddress:portnumber`, e.g., 192.168.1.3:175. |
+    | addr   | The IP address and TCP port number on which the node listens for HASP connections. The format is `ipaddress:portnumber`, e.g., 192.168.0.17:37803. |
     | block-size    | Optional block size, in bytes, to use in communicating with peers. The default is 400. |
-    | remote-id | Optional login identifier that TLF will present to the node when it connects. The default is that no login identifier is sent. |
+    | remote-id | Optional login identifier that TLF will present to the node when it connects. A typical value for MVS/JES2 is a 3-digit identifier like `001`. A typical value for VM/CMS/RSCS is a 2-digit identifier like `01`. The value to specify depends upon the target host's configuration. The default is that no login identifier is sent. |
     | password | Optional password that TLF will present to the node when it connects. The default is that no password is sent. |
 
     Example:
