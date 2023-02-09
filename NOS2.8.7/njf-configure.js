@@ -78,7 +78,7 @@ const topology = JSON.parse(fs.readFileSync("files/nje-topology.json"));
 //
 // Update topology and network parameters to reflect customizations, if any.
 //
-let defaultRoute  = "NCCMAX";
+let defaultRoute  = null;
 let nextPort      = 0x30;
 let portCount     = 16;
 
@@ -141,17 +141,20 @@ if (typeof customProps["NETWORK"] !== "undefined") {
 }
 
 //
-// Add a node definition to the topology for the local host, unless it
-// is already defined in the topology.
+// Verify that the local node is defined in the topology, and finalize
+// the default route.
 //
 if (typeof topology[hostID] === "undefined") {
-  let node = {
-    os: "NOS 2.8.7",
-    software: "NJEF",
-    lid: `M${mid}`
-  };
-  if (defaultRoute !== hostID) node.link = defaultRoute;
-  topology[hostID] = node;
+  throw new Error(`Local node ${hostID} is undefined`);
+}
+let localNode = topology[hostID];
+if (defaultRoute === null) {
+  if (typeof localNode.link !== "undefined") {
+    defaultRoute = localNode.link;
+  }
+  else {
+    defaultRoute = hostID;
+  }
 }
 
 //
@@ -394,7 +397,6 @@ if (typeof ovlProps["npu.nos287"] !== "undefined") {
     }
   }
 }
-let localNode = topology[hostID];
 let defaultLocalIP = null;
 if (typeof localNode.publicAddress !== "undefined") {
   let parts = localNode.publicAddress.split(":");
@@ -487,119 +489,8 @@ dtc.connect()
   "COPY,HCFFILE,HCF.",
   "PERMIT,HCFFILE,INSTALL=W."
 ], "MOVEHCF", 1))
-.then(() => dtc.say(`Create/update LIDCM${mid} ...`))
-.then(() => {
-  let job = [
-    `$GET,F=LIDCM${mid}/UN=SYSTEMX,NA.`,
-    "$IF,.NOT.FILE(F,AS),M01.",
-    "$  GET,F=LIDCM01/UN=SYSTEMX.",
-    "$ENDIF,M01.",
-    "$COPYSBF,F."
-  ];
-  let options = {jobname:"GETFILE"};
-  return dtc.createJobWithOutput(12, 4, job, options);
-})
-.then(output => {
-  let currentPid = null;
-  let lines      = output.split("\n").slice(1);
-  let comments   = [];
-  for (const line of lines) {
-    if (line.startsWith("NPID,")) {
-      let match = line.match(/NPID,PID=([^,]*),MFTYPE=([^,.]*)/);
-      if (match !== null) {
-        currentPid = match[1];
-        lidConf[currentPid] = {
-          comments: comments,
-          MFTYPE: match[2],
-          lids: {}
-        };
-        comments = [];
-      }
-    }
-    else if (line.startsWith("NLID,") && currentPid !== null) {
-      let match = line.match(/NLID,LID=([^,]*)/);
-      if (match !== null) {
-        lidConf[currentPid].lids[match[1]] = line;
-      }
-      comments = [];
-    }
-    else if (line.startsWith("*")) {
-      comments.push(line);
-    }
-  }
-  //
-  // Create/update PID and LID definitions from the list of adjacent nodes
-  // and the list of non-adjacent nodes with LIDs
-  //
-  let localPid = {
-    comments: ["*", `* ${hostID} - LOCAL NODE`, "*"],
-    MFTYPE: "NOS2",
-    lids: {}
-  };
-  localPid.lids[`M${mid}`] = `NLID,LID=M${mid}.`;
-  lidConf[`M${mid}`] = localPid;
-  for (const node of Object.values(adjacentNodes)) {
-    let lid = node.lid;
-    localPid.lids[lid] = `NLID,LID=${lid},AT=STOREF.`;
-    let mfType = "UNKNOWN";
-    if (node.software === "NJEF")
-      mfType = "NOS2";
-    else if (node.software === "RSCS")
-      mfType = "VM/CMS";
-    else if (node.software === "NJE38")
-      mfType = "MVS";
-    else if (node.software === "JNET")
-      mfType = "VMS";
-    let adjacentPid = {
-      comments: ["*", `* ${node.id} - ADJACENT NJE NODE`, "*"],
-      MFTYPE: mfType,
-      lids: {}
-    };
-    adjacentPid.lids[lid] = `NLID,LID=${lid}.`;
-    lidConf[lid] = adjacentPid;
-  }
-  for (const node of Object.values(nonadjacentNodesWithLids)) {
-    let lid = node.lid;
-    if (typeof node.route === "undefined"
-        || node.route === null
-        || typeof adjacentNodes[node.route] === "undefined"
-        || typeof lidConf[adjacentNodes[node.route].lid] === "undefined")
-      throw new Error (`Nonadjacent node ${node.id} does not have a route`);
-    let adjacentPid = lidConf[adjacentNodes[node.route].lid];
-    adjacentPid.lids[lid] = `NLID,LID=${lid}.`;
-    localPid.lids[lid]    = `NLID,LID=${lid},AT=STOREF.`;
-  }
-  //
-  // Create new/updated LIDCMid file
-  //
-  let lidText = [
-    `LIDCM${mid}`
-  ];
-  const pids = Object.keys(lidConf).sort();
-  for (const pid of pids) {
-    let pidDefn = lidConf[pid];
-    if (pid === "NVE" && pidDefn.MFTYPE === "NOSVE") continue; // remove superfluous NVE definition
-    if (typeof pidDefn.comments !== "undefined" && pidDefn.comments.length > 0) {
-      lidText = lidText.concat(pidDefn.comments);
-    }
-    lidText.push(`NPID,PID=${pid},MFTYPE=${pidDefn.MFTYPE}.`);
-    let lids = Object.keys(pidDefn.lids).sort();
-    for (const lid of lids) {
-      lidText.push(pidDefn.lids[lid]);
-    }
-  }
-  lidText.push("");
-
-  return replaceFile(`LIDCM${mid}`, lidText.join("\n"));
-})
-.then(() => dtc.say(`Move LIDCM${mid} to SYSTEMX ...`))
-.then(() => dtc.dis([
-  `GET,LIDCM${mid}.`,
-  `PURGE,LIDCM${mid}.`,
-  "SUI,377777.",
-  `REPLACE,LIDCM${mid}.`,
-  `PERMIT,LIDCM${mid},INSTALL=W.`
-], "MOVELID", 1))
+.then(() => dtc.disconnect())
+.then(() => dtc.exec("node", ["lid-configure"]))
 .then(() => dtc.say("NJF configuration completed successfully"))
 .then(() => {
   process.exit(0);

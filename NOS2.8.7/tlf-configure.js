@@ -293,8 +293,6 @@ const replaceFile = (filename, data, options) => {
   return dtc.createJobWithOutput(12, 4, job, options);
 };
 
-let lidConf = {};
-
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
@@ -322,89 +320,8 @@ dtc.connect()
       "PURGE,TCFFILE/NA.",
       "SAVE,TCFFILE/CT=PU,AC=N,M=R."
     ], "MOVETCF", 1))
-    .then(() => dtc.say(`Create/update LIDCM${mid} ...`))
-    .then(() => {
-      let job = [
-        `$GET,F=LIDCM${mid}/UN=SYSTEMX,NA.`,
-        "$IF,.NOT.FILE(F,AS),M01.",
-        "$  GET,F=LIDCM01/UN=SYSTEMX.",
-        "$ENDIF,M01.",
-        "$COPYSBF,F."
-      ];
-      let options = {jobname:"GETFILE"};
-      return dtc.createJobWithOutput(12, 4, job, options);
-    })
-    .then(output => {
-      let currentPid = null;
-      let lines      = output.split("\n").slice(1);
-      let comments   = [];
-      for (const line of lines) {
-        if (line.startsWith("NPID,")) {
-          let match = line.match(/NPID,PID=([^,]*),MFTYPE=([^,.]*)/);
-          if (match !== null) {
-            currentPid = match[1];
-            lidConf[currentPid] = {
-              comments: comments,
-              MFTYPE: match[2],
-              lids: {}
-            };
-            comments = [];
-          }
-        }
-        else if (line.startsWith("NLID,") && currentPid !== null) {
-          let match = line.match(/NLID,LID=([^,]*)/);
-          if (match !== null) {
-            lidConf[currentPid].lids[match[1]] = line;
-          }
-          comments = [];
-        }
-        else if (line.startsWith("*")) {
-          comments.push(line);
-        }
-      }
-      //
-      // Create/update PID and LID definitions from the list of TLF nodes
-      //
-      for (const node of nodes) {
-        let pid = {
-          comments: ["*", `* ${node.name} - TLF NODE`, "*"],
-          MFTYPE: node.mfType,
-          lids: {}
-        };
-        pid.lids[node.lid] = `NLID,LID=${node.lid}.`;
-        lidConf[node.lid] = pid;
-      }
-      //
-      // Create new/updated LIDCMid file
-      //
-      let lidText = [
-        `LIDCM${mid}`
-      ];
-      const pids = Object.keys(lidConf).sort();
-      for (const pid of pids) {
-        let pidDefn = lidConf[pid];
-        if (pid === "NVE" && pidDefn.MFTYPE === "NOSVE") continue; // remove superfluous NVE definition
-        if (typeof pidDefn.comments !== "undefined" && pidDefn.comments.length > 0) {
-          lidText = lidText.concat(pidDefn.comments);
-        }
-        lidText.push(`NPID,PID=${pid},MFTYPE=${pidDefn.MFTYPE}.`);
-        let lids = Object.keys(pidDefn.lids).sort();
-        for (const lid of lids) {
-          lidText.push(pidDefn.lids[lid]);
-        }
-      }
-      lidText.push("");
-
-      return replaceFile(`LIDCM${mid}`, lidText.join("\n"));
-    })
-    .then(() => dtc.say(`Move LIDCM${mid} to SYSTEMX ...`))
-    .then(() => dtc.dis([
-      `GET,LIDCM${mid}.`,
-      `PURGE,LIDCM${mid}.`,
-      "SUI,377777.",
-      `REPLACE,LIDCM${mid}.`,
-      `PERMIT,LIDCM${mid},INSTALL=W.`
-    ], "MOVELID", 1));
+    .then(() => dtc.disconnect())
+    .then(() => dtc.exec("node", ["lid-configure"]));
   }
   else {
     return dtc.say("Purge TLF configuration file ...")
