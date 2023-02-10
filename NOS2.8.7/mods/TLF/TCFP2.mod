@@ -1,0 +1,34 @@
+TCFP2
+*IDENT    TCFP2  ALT.        87/06/08.
+*/        ****   NOS 2 OS.
+*/        ****   TL20042.
+*/        ****   REQUIRES - NONE.
+*/        ****   TIELINE/NP V2.
+*/        ****   PSR LEVEL 596+.
+*/        *****  PROBLEM - *TCFP* ALLOWS DUPLICATE CONSOLE
+*/        NAMES IN THE *LINES* SECTION. 
+*/
+*/        SOLUTION - INCREMENT THE LINE TABLE FWA POINTER BY
+*/        ONE TO POSITION THE POINTER TO THE FIRST CONSOLE
+*/        NAME AND BLANK FILL THE CONSOLE NAME BEFORE CHECKING
+*/        FOR DUPLICATE NAMES.
+*DECK     TCFP
+*D,1017,1022
+*D,1026,1028
+          PL     X1,VCN2     IF CONSOLE NAME LENGTH ERROR
+*D,1030,1031
+          BX1    X5 
+          RJ     SFN         SPACE FILL CONSOLE NAME
+          MX0    42 
+          BX6    X0*X6
+          ZR     X5,VCNX     IF CONSOLE NAME NOT SPECIFIED
+          SB2    TLIN+1      SET LINE TABLE FWA
+*D,1036,1039
+          NG     X2,VCNX     IF ALL LINES PROCESSED
+          SA3    B2+         GET NEXT CONSOLE NAME
+          BX3    X3-X6
+          BX3    X0*X3
+          SB2    B2+.TLINE   ADVANCE LINE TABLE ADDRESS
+          NZ     X3,VCN1     IF NOT DUPLICATE CONSOLE NAME
+ VCN2     MX6    0           CONSOLE NAME ERROR
+*/        END OF MODSET.

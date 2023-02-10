@@ -2294,32 +2294,44 @@ void npuHaspPresetPcb(Pcb *pcbp)
     pcbp->controls.hasp.outBuf                = NULL;
     memset(&pcbp->controls.hasp.consoleStream.uplineQ, 0, sizeof(NpuQueue));
 
-    if (pcbp->ncbp->connType == ConnTypeHasp)
+    for (i = 0; i < MaxHaspStreams; ++i)
         {
-        for (i = 0; i < MaxHaspStreams; ++i)
-            {
-            scbp = &pcbp->controls.hasp.readerStreams[i];
-            memset(&scbp->uplineQ, 0, sizeof(NpuQueue));
+        scbp = &pcbp->controls.hasp.readerStreams[i];
+        memset(&scbp->uplineQ, 0, sizeof(NpuQueue));
 
-            scbp = &pcbp->controls.hasp.printStreams[i];
+        scbp = &pcbp->controls.hasp.printStreams[i];
+        if (pcbp->ncbp->connType == ConnTypeHasp)
+            {
             scbp->pruFragment = (u8 *)malloc(MaxBuffer);
             if (scbp->pruFragment == NULL)
                 {
                 fprintf(stderr, "Failed to allocate PRU fragment buffer for HASP print stream\n");
                 exit(1);
                 }
-            scbp->pruFragment2 = NULL;
-            memset(&scbp->uplineQ, 0, sizeof(NpuQueue));
+            }
+        else
+            {
+            scbp->pruFragment = NULL;
+            }
+        scbp->pruFragment2 = NULL;
+        memset(&scbp->uplineQ, 0, sizeof(NpuQueue));
 
-            scbp = &pcbp->controls.hasp.punchStreams[i];
+        scbp = &pcbp->controls.hasp.punchStreams[i];
+        if (pcbp->ncbp->connType == ConnTypeHasp)
+            {
             scbp->pruFragment = (u8 *)malloc(MaxBuffer);
             if (scbp->pruFragment == NULL)
                 {
                 fprintf(stderr, "Failed to allocate PRU fragment buffer for HASP punch stream\n");
                 exit(1);
                 }
-            memset(&scbp->uplineQ, 0, sizeof(NpuQueue));
             }
+        else
+            {
+            scbp->pruFragment = NULL;
+            }
+        scbp->pruFragment2 = NULL;
+        memset(&scbp->uplineQ, 0, sizeof(NpuQueue));
         }
     npuHaspResetPcb(pcbp);
     }

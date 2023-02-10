@@ -1,0 +1,19 @@
+NCCTCFP
+*IDENT    NCCTCFP    KEJ. 20/08/01
+*/
+*/ ADD SUPPORT FOR *RSCS* AND *PRIME* AS REMOTE SPOOLER TYPES
+*/
+*DECK     TCFP
+*D,324,325
+          VFD    48/0LRSCS,12/.HTI1      IBM/RSCS 
+          VFD    48/0LPRIME,12/.HTI2     PRIME/RJE
+*D,352,353
+          DHTV   2,(HFRI)       IBM/RSCS
+          DHTV   2,(HFRI)       PRIME/RJE
+*D,387,388
+          VFD    60/0LRSCS   IBM/RSCS
+          VFD    60/0LPRIME  PRIME/RJE
+*D,408,409
+          DSTV   1,(LFXP)       IBM/RSCS
+          DSTV   0,(LFXP)       PRIME/RJE
+*/        END OF MODSET.

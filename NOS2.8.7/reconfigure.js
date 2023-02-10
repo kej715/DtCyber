@@ -2,8 +2,6 @@
 
 const DtCyber   = require("../automation/DtCyber");
 const fs        = require("fs");
-const http      = require("http");
-const net       = require("net");
 const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
@@ -478,6 +476,9 @@ dtc.connect()
   else {
     return Promise.resolve();
   }
+})
+.then(() => {
+  return utilities.isInstalled("tlf") ? dtc.exec("node", ["tlf-configure"]) : Promise.resolve();
 })
 .then(() => dtc.connect())
 .then(() => dtc.expect([ {re:/Operator> $/} ]))

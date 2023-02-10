@@ -1,0 +1,22 @@
+~*
+~*  This job compiles the TLF configuration file source
+~*  and saves the TCFFILE produced.
+~*
+COMPTCF.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$GET,TCFSRC/UN=NETADMN.
+$ATTACH,PRODUCT.
+$GTR,PRODUCT,TCFP.ABS/TCFP
+TCFP,I=TCFSRC.
+$REPLACE,TCFFILE.
+***
+*** COMPTCF COMPLETE
+***
+EXIT.
+***
+*** COMPTCF FAILED
+***
