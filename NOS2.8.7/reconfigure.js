@@ -6,12 +6,13 @@ const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
+let crsLid         = "COS";    // default CRS LID
+let customProps    = {};       // properties read from site.cfg
 let newHostID      = null;     // new network host identifier
 let newMID         = null;     // new machine identifer
 let oldHostID      = "NCCM01"; // old network host identifier
 let oldMID         = "01";     // old machine identifer
 let productRecords = [];       // textual records to edit into PRODUCT file
-let customProps    = {};       // properties read from site.cfg
 
 /*
  * getSystemRecord
@@ -197,7 +198,7 @@ const processNetworkProps = () => {
     let key   = line.substring(0, ei).trim();
     let value = line.substring(ei + 1).trim();
     if (key.toUpperCase() === "HOSTID") {
-      oldHostID = line.substring(ei + 1).trim();
+      oldHostID = line.substring(ei + 1).trim().toUpperCase();
     }
   }
   if (typeof customProps["NETWORK"] !== "undefined") {
@@ -206,9 +207,18 @@ const processNetworkProps = () => {
       if (ei < 0) {
         throw new Error(`Invalid NETWORK definition: \"${prop}\"`);
       }
-      let key   = prop.substring(0, ei).trim();
-      if (key.toUpperCase() === "HOSTID") {
-        newHostID = prop.substring(ei + 1).trim();
+      let key = prop.substring(0, ei).trim().toUpperCase();
+      if (key === "HOSTID") {
+        newHostID = prop.substring(ei + 1).trim().toUpperCase();
+      }
+      else if (key === "CRAYSTATION") {
+        //
+        //  crayStation=<name>,<lid>,<channelNo>,<addr>[,S<station-id>][,C<cray-id>]
+        //
+        let items = value.split(",");
+        if (items.length >= 4) {
+          crsLid = items[1].toUpperCase();
+        }
       }
     }
   }
@@ -479,6 +489,15 @@ dtc.connect()
 })
 .then(() => {
   return utilities.isInstalled("tlf") ? dtc.exec("node", ["tlf-configure"]) : Promise.resolve();
+})
+.then(() => {
+  if (utilities.isInstalled("crs") && crsLid !== "COS") {
+    return dtc.say("Rebuild CRS ...")
+    .then(() => dtc.exec("node", ["install-product","-f","crs"]));
+  }
+  else {
+    return Promise.resolve();
+  }
 })
 .then(() => dtc.connect())
 .then(() => dtc.expect([ {re:/Operator> $/} ]))

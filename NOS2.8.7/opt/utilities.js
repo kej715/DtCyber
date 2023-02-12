@@ -9,6 +9,46 @@ const utilities = {
     return Promise.resolve();
   },
 
+  enableSubsystem: (dtc, name, cp) => {
+    const job = [
+      "$ATTACH,PRODUCT/WB.",
+      "$NOEXIT.",
+      "$GTR,PRODUCT,IPRD01.IPRD01",
+      "$ONEXIT.",
+      "$IF,.NOT.FILE(IPRD01,AS),GTRSYS.",
+      "$  COMMON,SYSTEM.",
+      "$  GTR,SYSTEM,IPRD01.IPRD01",
+      "$ENDIF,GTRSYS.",
+      "$REWIND,IPRD01.",
+      "$COPYSBF,IPRD01."
+    ];
+    return dtc.createJobWithOutput(12, 4, job, {jobname:"GETIPRD"})
+    .then(iprd01 => {
+      let si = 0;
+      while (si < iprd01.length) {
+        let ni = iprd01.indexOf("\n", si);
+        if (ni < 0) ni = iprd01.length;
+        let line = iprd01.substring(si, ni).trim();
+        if (line === `DISABLE,${name}.` || line.startsWith(`ENABLE,${name},`)) {
+          iprd01 = `${iprd01.substring(0, si)}ENABLE,${name},${cp.toString(8)}.\n${iprd01.substring(ni + 1)}`;
+          break;
+        }
+        si = ni + 1;
+      }
+      const job = [
+        "$COPY,INPUT,IPRD01.",
+        "$REWIND,IPRD01.",
+        "$ATTACH,PRODUCT/M=W,WB.",
+        "$LIBEDIT,P=PRODUCT,B=IPRD01,I=0,C."
+      ];
+      const options = {
+        jobname: "UPDIPRD",
+        data:    iprd01
+      };
+      return dtc.createJobWithOutput(12, 4, job, options);
+    });
+  },
+
   getHostDomainName: dtc => {
     return utilities.getHostRecord(dtc)
     .then(record => {
