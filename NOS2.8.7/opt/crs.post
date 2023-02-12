@@ -1,0 +1,192 @@
+#!/usr/bin/env node
+//
+// Determine the station identifier and channel number associated with
+// the Cray Station FEI equipment. Initiate a job that adds an equipment
+// deck entry for the FEI, create the CRS subsystem startup procedure,
+// create user accounts used by the subsystem, enable the subsystem, and
+// run lid-configure.js to configure the station's PID and LID.
+//
+// However, if the Cray station is not defined in the site.cfg file, do
+// nothing.
+//
+
+const DtCyber   = require("../../automation/DtCyber");
+const fs        = require("fs");
+const utilities = require("./utilities");
+
+const dtc = new DtCyber();
+
+let customProps = {};
+dtc.readPropertyFile(customProps);
+
+let addr      = null;
+let channel   = -1;
+let stationId = "FE";
+
+if (typeof customProps["NETWORK"] !== "undefined") {
+  for (let line of customProps["NETWORK"]) {
+    line = line.toUpperCase();
+    let ei = line.indexOf("=");
+    if (ei < 0) continue;
+    let key   = line.substring(0, ei).trim();
+    let value = line.substring(ei + 1).trim();
+    if (key === "CRAYSTATION") {
+      //
+      //  crayStation=<name>,<lid>,<channelNo>,<addr>[,S<station-id>][,C<cray-id>]
+      //
+      let items = value.split(",");
+      if (items.length >= 4) {
+        channel = parseInt(items[2], 8);
+        addr    = items[3];
+      }
+      for (let i = 4; i < items.length; i++) {
+        if (items[i].startsWith("S")) {
+          stationId = items[i].substring(1);
+        }
+      }
+    }
+  }
+}
+
+if (channel === -1) process.exit(0);
+
+//
+// If an overlay file exists, read it, and insert a definition for the
+// Cray Station FEI equipment. If an overlay file does not exist, create
+// a new one containing the FEI definition.
+//
+let ovlProps = {};
+if (fs.existsSync("cyber.ovl")) {
+  dtc.readPropertyFile("cyber.ovl", ovlProps);
+}
+let ovlText = [];
+if (typeof ovlProps["equipment.nos287"] !== "undefined") {
+  for (const line of ovlProps["equipment.nos287"]) {
+    let items = line.split(",");
+    if (items.length < 4 || items[0].trim().toUpperCase() !== "FEI") {
+      ovlText.push(line);
+    }
+  }
+}
+ovlText.push(`FEI,0,0,${channel.toString(8)},${addr}`);
+ovlProps["equipment.nos287"] = ovlText;
+
+let lines = [];
+for (const key of Object.keys(ovlProps)) {
+  lines.push(`[${key}]`);
+  for (const line of ovlProps[key]) {
+    lines.push(`${line}`);
+  }
+}
+lines.push("");
+
+fs.writeFileSync("cyber.ovl", lines.join("\n"));
+
+let estOrdinal = 0;
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.say("Edit EQPD01 to add CZ (Cray Station) equipment ..."))
+.then(() => {
+  const job = [
+    "$ATTACH,PRODUCT/WB.",
+    "$NOEXIT.",
+    "$GTR,PRODUCT,EQPD01.EQPD01",
+    "$ONEXIT.",
+    "$IF,.NOT.FILE(EQPD01,AS),GTRSYS.",
+    "$  COMMON,SYSTEM.",
+    `$  GTR,SYSTEM,EQPD01.EQPD01`,
+    "$ENDIF,GTRSYS.",
+    "$REWIND,EQPD01.",
+    "$COPYSBF,EQPD01."
+  ];
+  return dtc.createJobWithOutput(12, 4, job, {jobname:"EQPD01"});
+})
+.then(eqpd01 => {
+  if (channel < 8) {
+    channel = `0${channel}`;
+  }
+  else {
+    channel = channel.toString(8);
+  }
+  let isEQyet = false;
+  let maxEqNo = -1;
+  let si      = 0;
+  while (si < eqpd01.length) {
+    let ni = eqpd01.indexOf("\n", si);
+    if (ni < 0) ni = eqpd01.length - 1;
+    let ei = eqpd01.indexOf("=", si);
+    if (ei < ni && ei > 0) {
+      let key = eqpd01.substring(si, ei).trim();
+      if (key.startsWith("EQ")) {
+        isEQyet = true;
+        if (/^=\*\*,W0=000040..000003320000,W1=0\.$/.test(eqpd01.substring(ei, ni).trim())) {
+          estOrdinal = parseInt(key.substring(2), 8);
+          eqpd01 = `${eqpd01.substring(0, ei)}=**,W0=000040${channel}000003320000,W1=0.\n${eqpd01.substring(ni + 1)}`;
+          break;
+        }
+        let eqNo = parseInt(key.substring(2), 8);
+        if (eqNo > maxEqNo) maxEqNo = eqNo;
+      }
+      else if (isEQyet) {
+        let eqNo = (maxEqNo + 8) & 0770;
+        estOrdinal = eqNo;
+        if (eqNo < 010) {
+          eqNo = `00${eqNo}`;
+        }
+        else if (eqNo < 0100) {
+          eqNo = `0${eqNo.toString(8)}`;
+        }
+        else {
+          eqNo = eqNo.toString(8);
+        }
+        eqpd01 = `${eqpd01.substring(0, si)}EQ${eqNo}=**,W0=000040${channel}000003320000,W1=0.\n${eqpd01.substring(si)}`;
+        break;
+      }
+    }
+    si = ni + 1;
+  }
+  const job = [
+    "$COPY,INPUT,EQPD01.",
+    "$REWIND,EQPD01.",
+    "$ATTACH,PRODUCT/M=W,WB.",
+    "$LIBEDIT,P=PRODUCT,B=EQPD01,I=0,C."
+  ];
+  const options = {
+    jobname: "UPDEQPD",
+    data: eqpd01
+  };
+  return dtc.createJobWithOutput(12, 4, job, options);
+})
+.then(() => dtc.say("Create CRS startup procedure ..."))
+.then(() => {
+  const job = [
+    "$COPY,INPUT,CRS.",
+    "$REPLACE,CRS."
+  ];
+  const options = {
+    jobname: "MAKECRS",
+    data: `.PROC,CRS.\nCRSTAT,EST=${estOrdinal.toString(8)},ID=${stationId}.\n`
+  };
+  return dtc.createJobWithOutput(12, 4, job, options);
+})
+.then(() => dtc.say("Move startup procedure to SYSTEMX and create CRS users ..."))
+.then(() => dtc.dis([
+  "GET,CRS,CRSUSRS.",
+  "PURGE,CRS,CRSUSRS.",
+  "SUI,377777.",
+  "REPLACE,CRS.",
+  "MODVAL,FA,I=CRSUSRS,OP=U."
+], "CRSPOST", 1))
+.then(() => dtc.say("Enable CRS subsystem ..."))
+.then(() => utilities.enableSubsystem(dtc, "CRS", -8))
+.then(() => dtc.disconnect())
+.then(() => dtc.exec("node", ["lid-configure"]))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

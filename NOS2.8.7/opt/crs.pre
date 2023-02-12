@@ -1,0 +1,55 @@
+#!/usr/bin/env node
+//
+// Create modset for building CRS. Determine the LID that will be
+// associated with the linked Cray supercomputer.
+//
+
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+let customProps = {};
+dtc.readPropertyFile(customProps);
+
+let lid       = "COS";
+let stationId = "FE";
+let crayId    = "C1";
+
+if (typeof customProps["NETWORK"] !== "undefined") {
+  for (let line of customProps["NETWORK"]) {
+    line = line.toUpperCase();
+    let ei = line.indexOf("=");
+    if (ei < 0) continue;
+    let key   = line.substring(0, ei).trim();
+    let value = line.substring(ei + 1).trim();
+    if (key === "CRAYSTATION") {
+      //
+      //  crayStation=<name>,<lid>,<channelNo>,<addr>[,S<station-id>][,C<cray-id>]
+      //
+      let items = value.split(",");
+      if (items.length >= 4) {
+        lid = items[1];
+      }
+      for (let i = 4; i < items.length; i++) {
+        if (items[i].startsWith("S")) {
+          stationId = items[i].substring(1);
+        }
+        else if (items[i].startsWith("C")) {
+          crayId = items[i].substring(1);
+        }
+      }
+    }
+  }
+}
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.runJob(12, 4, "opt/crs-create-mods.job", [lid, stationId, crayId]))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

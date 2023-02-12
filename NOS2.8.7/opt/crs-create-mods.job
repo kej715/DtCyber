@@ -1,0 +1,25 @@
+~*
+~*  This job creates a file containing site modifications to the
+~*  CRS source library. Three parameters are passed to it:
+~*
+~*  ${1} - LID assigned to the station
+~*  ${2} - the frontend ID, as known to COS (usually "FE")
+~*  ${3} - the Cray mainframe ID, as known to COS (usually "C1")
+~*
+CRSMODS.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$COPYBR,INPUT,CRSMODS.
+$REPLACE,CRSMODS.
+***
+*** CRSMODS COMPLETE
+***
+EXIT.
+***
+*** CRSMODS FAILED
+***
+~eor
+~include ../mods/CRS/SITEMOD.mod,${1},${2},${3}
