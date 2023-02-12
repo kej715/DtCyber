@@ -4,8 +4,9 @@
 // and enable TLF subsystem.
 //
 
-const fs      = require("fs");
-const DtCyber = require("../../automation/DtCyber");
+const DtCyber   = require("../../automation/DtCyber");
+const fs        = require("fs");
+const utilities = require("./utilities");
 
 const dtc = new DtCyber();
 
@@ -19,7 +20,7 @@ dtc.connect()
   "REPLACE,TLF.",
   "MODVAL,FA,I=TLFUSRS,OP=U."
 ], "TLFPOST", 1))
-.then(() => dtc.runJob(12, 4, "opt/enable-subsys.job", "TLF"))
+.then(() => utilities.enableSubsystem(dtc, "TLF", -7))
 .then(() => {
   process.exit(0);
 })
