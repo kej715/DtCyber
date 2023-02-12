@@ -152,7 +152,8 @@
         "lib": 78,
         "records": "ABS/CRSTAT-ABS/CSUBMIT",
         "url": "https://www.dropbox.com/s/olr1hz6ys5mavjt/cray-station.tap?dl=1",
-        "desc": "Cray Station"
+        "desc": "Cray Station",
+        "depends": ["pascal4"]
       },
       {
         "name": "kermit",
