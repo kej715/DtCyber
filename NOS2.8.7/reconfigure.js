@@ -6,7 +6,7 @@ const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
-let crsLid         = "COS";    // default CRS LID
+let crsChannel     = -1;       // channel used by CRS FEI
 let customProps    = {};       // properties read from site.cfg
 let newHostID      = null;     // new network host identifier
 let newMID         = null;     // new machine identifer
@@ -217,7 +217,7 @@ const processNetworkProps = () => {
         //
         let items = value.split(",");
         if (items.length >= 4) {
-          crsLid = items[1].toUpperCase();
+          crsChannel = parseInt(items[2], 8);
         }
       }
     }
@@ -491,7 +491,7 @@ dtc.connect()
   return utilities.isInstalled("tlf") ? dtc.exec("node", ["tlf-configure"]) : Promise.resolve();
 })
 .then(() => {
-  if (utilities.isInstalled("crs") && crsLid !== "COS") {
+  if (utilities.isInstalled("crs") && crsChannel !== -1) {
     return dtc.say("Rebuild CRS ...")
     .then(() => dtc.exec("node", ["install-product","-f","crs"]));
   }
