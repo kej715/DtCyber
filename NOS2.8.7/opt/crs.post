@@ -171,6 +171,8 @@ dtc.connect()
   };
   return dtc.createJobWithOutput(12, 4, job, options);
 })
+.then(() => dtc.say("Upload CRS user definitions ..."))
+.then(() => dtc.runJob(12, 4, "opt/crs-users.job"))
 .then(() => dtc.say("Move startup procedure to SYSTEMX and create CRS users ..."))
 .then(() => dtc.dis([
   "GET,CRS,CRSUSRS.",

@@ -207,9 +207,10 @@ const processNetworkProps = () => {
       if (ei < 0) {
         throw new Error(`Invalid NETWORK definition: \"${prop}\"`);
       }
-      let key = prop.substring(0, ei).trim().toUpperCase();
+      let key   = prop.substring(0, ei).trim().toUpperCase();
+      let value = prop.substring(ei + 1).trim();
       if (key === "HOSTID") {
-        newHostID = prop.substring(ei + 1).trim().toUpperCase();
+        newHostID = value.toUpperCase();
       }
       else if (key === "CRAYSTATION") {
         //

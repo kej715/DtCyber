@@ -145,7 +145,6 @@
         "name": "crs",
         "pre": "crs.pre",
         "post": [
-          "crs-users.job",
           "crs.post",
           "crs-namstrt.job"
         ],

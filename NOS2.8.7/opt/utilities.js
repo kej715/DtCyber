@@ -29,7 +29,9 @@ const utilities = {
         let ni = iprd01.indexOf("\n", si);
         if (ni < 0) ni = iprd01.length;
         let line = iprd01.substring(si, ni).trim();
-        if (line === `DISABLE,${name}.` || line.startsWith(`ENABLE,${name},`)) {
+        if (line === `DISABLE,${name}.`
+            || line.startsWith(`DISABLE,${name},`)
+            || line.startsWith(`ENABLE,${name},`)) {
           iprd01 = `${iprd01.substring(0, si)}ENABLE,${name},${cp.toString(8)}.\n${iprd01.substring(ni + 1)}`;
           break;
         }
