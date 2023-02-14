@@ -9,8 +9,9 @@ operating system that supports:
 - Remote job entry (RJE)
 - Network job entry (NJE)
 - E-mail
+- Cray supercomputer interaction
 
-Substantial automation has been provided in order to make the installation process
+Automation has been provided in order to make the installation process
 as easy as possible. In fact, it's nearly trivial compared to what was possible on
 real Control Data computer systems back in the 1980's and 90's.
 
@@ -25,6 +26,7 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;[NJF vs TLF](#njf-vs-tlf)
 - [UMass Mailer](#email)
 - &nbsp;&nbsp;&nbsp;&nbsp;[E-mail Reflector](#reflector)
+- [Cray Station](#cray)
 - [Shutdown and Restart](#shutdown)
 - [Operator Command Extensions](#opext)
 - [Continuing an Interrupted Installation](#continuing)
@@ -37,6 +39,14 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;[[EQPDECK]](#eqpdeck)
 - &nbsp;&nbsp;&nbsp;&nbsp;[[HOSTS]](#hosts)
 - &nbsp;&nbsp;&nbsp;&nbsp;[[NETWORK]](#network)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[crayStation](#crayStation)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[defaultRoute](#defaultRoute)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[hostID](#hostID)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[njeNode](#njeNode)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[njePorts](#njePorts)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[smtpDomain](#smtpDomain)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfNode](#tlfNode)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfPorts](#tlfPorts)
 - &nbsp;&nbsp;&nbsp;&nbsp;[[RESOLVER]](#resolver)
 - [A Note About Anti-Virus Software](#virus)
 
@@ -218,18 +228,21 @@ directory.
 ### <a id="tlf"></a>TieLine Facility (TLF)
 NOS 2.8.7 also supports TLF, the TieLine Facility. TLF enables NOS 2.8.7 to connect
 to other mainframes and play the role of RJE station. For example, TLF enables
-NOS 2.8.7 running on *DtCyber* to connect to an IBM MVS/JES2 or IBM VM/CMS/RSCS
-system running on the *Hercules* IBM mainframe emulator. NOS 2.8.7 acts as an RJE
-station in these cases, enabling users of NOS to send batch jobs to the IBM
-systems, and the IBM systems will return the output of these jobs to NOS.
+NOS 2.8.7 running on *DtCyber* to connect to an IBM MVS/JES2
+(e.g., [TK4-](https://wotho.ethz.ch/tk4-/)) or
+IBM VM/CMS/RSCS (e.g., [VM370CE](http://www.vm370.org/VM/V1R1.2))
+system running on the [Hercules](https://github.com/SDL-Hercules-390/hyperion) IBM
+mainframe emulator. NOS 2.8.7 acts as an RJE station in these cases, enabling users of
+NOS to send batch jobs to the IBM systems, and the IBM systems will return the output
+of these jobs to NOS. 
 
 TLF associates a LID (Logical IDentifier) with each mainframe to which it can connect.
 Users specify these LID's in `ROUTE` commands or on job cards in order to indicate
 that jobs should be sent by TLF to other mainframes. In addition, TLF automatically
-interprets the first line of each job as a NOS jobcard and removes it before sending the
-job to another mainframe. This allows the LID to be specified on the jobcard, enabling
-the NOS `SUBMIT` command, for example, to be used for submitting *foreign* jobs for
-execution.
+interprets the first line of each job as a NOS jobcard and removes it before sending
+the job to another mainframe. This allows the LID to be specified on the jobcard,
+enabling the NOS `SUBMIT` command, for example, to be used for submitting *foreign*
+jobs for execution.
 
 For example, suppose that an IBM MVS/JES2 system running on the *Hercules* IBM mainframe
 emulator is connected to *DtCyber*, and the LID *MVS* is associated with it. A job file
@@ -547,6 +560,48 @@ reply could take as many as 10 minutes to arrive.
 Every ready-to-run instance of NOS 2.8.7 installed using these instructions, and any
 that are installed manually with the `netmail` component, have an e-mail reflector.
 
+## <a id="cray"></a>Cray Station
+NOS 2.8.7 supports the `Cray Station` subsystem (CRS), and this enables it to interact
+with a Cray supercomputer. The implementation in *DtCyber* interoperates with Andras
+Tantos' [Cray-XMP emulator](https://github.com/andrastantos/cray-sim) running the COS
+1.17 operating system. The `Cray Station` software supports exchange of jobs and files,
+and it also supports interactive login to COS 1.17 via the NOS 2.8.7 application named
+`ICF` (Interactive Cray Facility).
+
+The ready-to-run NOS 2.8.7 package does not have CRS enabled by default as enabling
+CRS requires some site-specific configuration. This is accomplished by adding a
+`crayStation` entry to the `[NETWORK]` section of `site.cfg`, the site configuration
+file. For example:
+
+```
+crayStation=NCCXMP,XMP,24,192.168.0.28:9000,SFE,CC1
+```
+
+The entry, above, specifies the following:
+
+| Parameter Value | Meaning           |
+|--------------|-------------------|
+| NCCXMP | Name assigned to the Cray Station interface (used only in configuration file comments) |
+| XMP    | LID (Logical IDentifier) associated with the Cray Station interface |
+| 24     | The channel to which the Cray frontend device is attached |
+| 192.168.0.28:9000 | The TCP address on which the Cray supercomputer emulator listens for station connections |
+| SFE    | The station identifier, as known to the Cray mainframe, is `FE` |
+| CC1    | The Cray mainframe identifier, as known to the Cray mainframe, is `C1` |
+
+See [Customizing the NOS 2.8.7 Configuration](#reconfig) for additional details about
+site-specific configuration.
+
+To configure and activate the Cray Station subsystem, perform the following steps:
+
+1. Add a `crayStation` entry like the example, above, to the `[NETWORK]` section of
+the `site.cfg` file
+2. If *DtCyber* was started using `node start`, run the `reconfigure.js` tool by
+executing the command `reconfigure` at the `Operator>` prompt. Otherwise, run the
+tool by executing the command `node reconfigure`.
+3. Create a new deadstart tape by executing `make_ds_tape` at the `Operator>` prompt
+(or by executing `node make-ds-tape`).
+4. Shutdown the system, rename `newds.tap` to `ds.tap`, and re-deadstart the system.
+
 ## <a id="shutdown"></a>Shutdown and Restart
 When the installation completes, NOS 2.8.7 will be running, and the command window will
 be left at the DtCyber `Operator> ` prompt. Enter the `exit` command or the `shutdown`
@@ -670,6 +725,7 @@ This category includes data communication software.
 | Product | Description |
 |---------|-------------|
 | [confer](https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1) | UMass multi-user CONFERencing application |
+| [crs](https://www.dropbox.com/s/olr1hz6ys5mavjt/cray-station.tap?dl=1) | Cray Station subsystem |
 | [kermit](https://www.dropbox.com/s/p819tmvs91veoiv/kermit.tap?dl=1) | Kermit file exchange utility |
 | [mailer](https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1) | UMass Mailer, base e-mail system |
 | [ncctcp](https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1) | TCP/IP Applications (HTTP, NSQUERY, REXEC, SMTP) |
@@ -901,20 +957,45 @@ njeNode=LOCALCMS,RSCS,CMS,192.168.1.3:175,MYNODE,B8192,MAILER@LOCALCMS
 
 The entries that may occur in the `[NETWORK]` section include:
 
-- **defaultRoute** : Specifies the name of the NJE node to which jobs and files should
-be routed by default. Typically, this is the name of the adjacent node serving as the
-local system's primary link to the public NJE network. Example:
+- <a id="crayStation"></a>**crayStation** : Activates the Cray Station interface and
+defines parameters associated with it. The general syntax of this entry is:
+
+    crayStation=*name*,*lid*,*channel*,*addr*,[,S*station-id*][,C*cray-id*]
+    
+    | Parameter     | Description |
+    |---------------|-------------|
+    | name          | The name assigned to the interface. This is used in comments generated in configuration information about the interface |
+    | lid           | The unique, 3-character logical identifier assigned to the interface. This is used in commands that route files and jobs to the Cray mainframe connected by the interface. |
+    | channel | The number of the DtCyber channel to which the Cray frontend interface is connected. |
+    | addr | The IP address and TCP port number on which the Cray mainframe emulator listens for connections. |
+    | station-id | Optional. Specifies the 2-character identifier by which the station is known to the Cray mainframe. The default is `FE`. |
+    | cray-id | Optional. Specifies the 2-character identifier by which the Cray mainframe is known to the Cray mainframe itself. The default is `C1`. |
+    
+	Example:
+	
+	`crayStation=NCCXMP,XMP,24,192.168.0.28:9000`
+
+- <a id="defaultRoute"></a>**defaultRoute** : Specifies the name of the NJE node to
+which jobs and files should be routed by default. Typically, this is the name of the
+adjacent node serving as the local system's primary link to the public NJE network.
+Example:
 
     `defaultRoute=NCCMAX`
     
-- **hostID** : Specifies the 1 - 8 character node name of the local host. Example:
+	Ordinarily, this entry is needed only when an NJE node has multiple adjacent
+	neighbors, so one of them needs to be designated as the node to which files
+	will be sent when the route to a destination cannot be calculated autommatically
+	using the [topology file](files/nje-topology.json).
+    
+- <a id="hostID"></a>**hostID** : Specifies the 1 - 8 character node name of the local
+host. Example:
 
     `hostID=MYNODE`
 
-- **njeNode** : Defines the name and routing information for an NJE node within a
-private NJE network (i.e., a node that is not registered in the public topology,
-[files/nje-topology.json](files/nje-topology.json). The general syntax of this entry
-is:
+- <a id="njeNode"></a>**njeNode** : Defines the name and routing information for an NJE
+node within a private NJE network (i.e., a node that is not registered in the public
+topology, [files/nje-topology.json](files/nje-topology.json). The general syntax of
+this entry is:
 
     njeNode=*nodename*,*software*,*lid*,*public-addr*,*link*[,*local-addr*[,B*block-size*][,P*ping-interval*][,*mailer-address*]
     
@@ -934,7 +1015,9 @@ is:
     
     `njeNode=LOCALCMS,RSCS,CMS,192.168.1.3:175,MYNODE,B8192,MAILER@LOCALCMS`
     
-- **njePorts** : Specifies the range of CLA ports that will be used in defining terminals for use by NJF in the NOS NDL. The general syntax of this entry is:
+- <a id="njePorts"></a>**njePorts** : Specifies the range of CLA ports that will be
+used in defining terminals for use by NJF in the NOS NDL. The general syntax of this
+entry is:
 
     njePorts=*cla-port-number*,*port-count*
     
@@ -944,8 +1027,8 @@ is:
     
     `njePorts=0x30,16`
     
-- **smtpDomain** : Identifies an internet domain name or suffix to which e-mail will
-be routed using the TCP/IP SMTP protocol. Examples:
+- <a id="smtpDomain"></a>**smtpDomain** : Identifies an internet domain name or suffix
+to which e-mail will be routed using the TCP/IP SMTP protocol. Examples:
 
 ```
     smtpDomain=.com
@@ -953,8 +1036,8 @@ be routed using the TCP/IP SMTP protocol. Examples:
     smtpDomain=.net
     smtpDomain=local.host.org
 ```
-- **tlfNode** : Defines the name and routing information for a TLF node. The general
-syntax of this entry is:
+- <a id="tlfNode"></a>**tlfNode** : Defines the name and routing information for a TLF
+node. The general syntax of this entry is:
 
     tlfNode=*nodename*,*lid*,*spooler*,*addr*[,B*block-size*][,R*remote-id*][,P*password*]
     
@@ -972,7 +1055,9 @@ syntax of this entry is:
     
     `tlfNode=NCCMVS,MVS,JES2,192.168.0.17:37803,R001`
     
-- **tlfPorts** : Specifies the range of CLA ports that will be used in defining terminals for use by TLF in the NOS NDL. The general syntax of this entry is:
+- <a id="tlfPorts"></a>**tlfPorts** : Specifies the range of CLA ports that will be
+used in defining terminals for use by TLF in the NOS NDL. The general syntax of this
+entry is:
 
     tlfPorts=*cla-port-number*,*port-count*
     
