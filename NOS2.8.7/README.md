@@ -1053,7 +1053,7 @@ node. The general syntax of this entry is:
 
     Example:
     
-    `tlfNode=NCCMVS,MVS,JES2,192.168.0.17:37803,R001`
+    `tlfNode=NCCJES2,JES,JES2,192.168.0.17:37803,R001`
     
 - <a id="tlfPorts"></a>**tlfPorts** : Specifies the range of CLA ports that will be
 used in defining terminals for use by TLF in the NOS NDL. The general syntax of this
