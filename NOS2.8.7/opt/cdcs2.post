@@ -3,7 +3,8 @@
 // Create CDCS user account
 //
 
-const DtCyber = require("../../automation/DtCyber");
+const DtCyber   = require("../../automation/DtCyber");
+const utilities = require("./utilities");
 
 const dtc = new DtCyber();
 
@@ -17,7 +18,7 @@ dtc.connect()
   "REPLACE,CDC.",
   "MODVAL,FA,I=CDCUSRS,OP=U."
 ], "CDCMODV", 1))
-.then(() => dtc.runJob(12, 4, "opt/enable-subsys.job", "CDC"))
+.then(() => utilities.enableSubsystem(dtc, "CDC", -4))
 .then(() => {
   process.exit(0);
 })

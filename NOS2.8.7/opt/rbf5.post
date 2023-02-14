@@ -4,7 +4,8 @@
 // and enable the RBF subsystem.
 //
 
-const DtCyber = require("../../automation/DtCyber");
+const DtCyber   = require("../../automation/DtCyber");
+const utilities = require("./utilities");
 
 const dtc = new DtCyber();
 
@@ -17,7 +18,7 @@ dtc.connect()
   "MODVAL,FA,I=RBFUSRS,OP=U."
 ], "RBFMODV", 1))
 .then(() => dtc.runJob(12, 4, "opt/rbf5-namstrt.job"))
-.then(() => dtc.runJob(12, 4, "opt/enable-subsys.job", "RBF"))
+.then(() => utilities.enableSubsystem(dtc, "RBF", -5))
 .then(() => {
   process.exit(0);
 })

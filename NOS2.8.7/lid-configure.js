@@ -13,6 +13,7 @@ const dtc = new DtCyber();
 let adjacentNodes    = {};
 let nonadjacentNodes = {};
 
+const isCrsInstalled = utilities.isInstalled("crs");
 const isNjfInstalled = utilities.isInstalled("njf");
 const isTlfInstalled = utilities.isInstalled("tlf");
 
@@ -90,6 +91,7 @@ let topology = isNjfInstalled ? JSON.parse(fs.readFileSync("files/nje-topology.j
 // Customizations include locally defined NJE and TLF nodes.
 //
 const mfTypeTable = {
+  COS:   "COS",
   JES2:  "MVS",
   JNET:  "VAX/VMS",
   NJEF:  "NOS2",
@@ -111,6 +113,24 @@ if (typeof customProps["NETWORK"] !== "undefined") {
     if (key === "HOSTID") {
       hostID = value;
     }
+    else if (key === "CRAYSTATION" && isCrsInstalled) {
+      //
+      //  crayStation=<name>,<lid>,<channelNo>,<addr>[,S<station-id>][,C<cray-id>]
+      //
+      let items = value.split(",");
+      if (items.length >= 4) {
+        const nodeName = items.shift();
+        const node = {
+          id: nodeName,
+          type: "CRS",
+          software: "COS",
+          lid: items[0],
+          addr: items[2],
+          link: hostID
+        };
+        topology[nodeName] = node;
+      }
+    }
     else if (key === "DEFAULTROUTE" && isNjfInstalled) {
       defaultRoute = value;
     }
@@ -120,8 +140,8 @@ if (typeof customProps["NETWORK"] !== "undefined") {
       //     [,<local-address>][,B<block-size>][,P<ping-interval>][,<mailer-address>]
       let items = value.split(",");
       if (items.length >= 5) {
-        let nodeName = items.shift();
-        let node = {
+        const nodeName = items.shift();
+        const node = {
           id: nodeName,
           software: items.shift(),
           lid: items.shift(),
@@ -137,8 +157,8 @@ if (typeof customProps["NETWORK"] !== "undefined") {
       //    [,R<remote-id>][,P<password>][,B<block-size>]
       let items = value.split(",");
       if (items.length >= 4) {
-        let nodeName = items.shift();
-        let node = {
+        const nodeName = items.shift();
+        const node = {
           id: nodeName,
           type: "TLF",
           lid: items.shift(),
@@ -267,7 +287,9 @@ dtc.connect()
   lidConf[`M${mid}`] = localPid;
   for (const node of Object.values(adjacentNodes)) {
     let lid = node.lid;
-    localPid.lids[lid] = `NLID,LID=${lid},AT=STOREF.`;
+    if (node.type !== "CRS") {
+      localPid.lids[lid] = `NLID,LID=${lid},AT=STOREF.`;
+    }
     let adjacentPid = {
       comments: ["*", `* ${node.id} - ADJACENT ${(typeof node.type !== "undefined") ? node.type : "NJE"} NODE`, "*"],
       mfType: node.mfType,

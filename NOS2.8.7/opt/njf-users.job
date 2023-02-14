@@ -10,7 +10,7 @@ EXIT.
 *** NJFUSRS FAILED
 ***
 ~eor
-/NJF,    ,
+/NJF,
   PW=NJFX,
   RL=ALL,
   AW=ALL,

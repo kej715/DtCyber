@@ -4,8 +4,9 @@
 // and enable NJF subsystem.
 //
 
-const fs      = require("fs");
-const DtCyber = require("../../automation/DtCyber");
+const DtCyber   = require("../../automation/DtCyber");
+const fs        = require("fs");
+const utilities = require("./utilities");
 
 const dtc = new DtCyber();
 
@@ -19,7 +20,7 @@ dtc.connect()
   "REPLACE,NJF.",
   "MODVAL,FA,I=NJFUSRS,OP=U."
 ], "NJFPOST", 1))
-.then(() => dtc.runJob(12, 4, "opt/enable-subsys.job", "NJF"))
+.then(() => utilities.enableSubsystem(dtc, "NJF", -6))
 .then(() => {
   process.exit(0);
 })

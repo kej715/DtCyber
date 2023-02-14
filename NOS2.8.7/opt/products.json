@@ -142,6 +142,19 @@
         "depends": ["mailer"]
       },
       {
+        "name": "crs",
+        "pre": "crs.pre",
+        "post": [
+          "crs.post",
+          "crs-namstrt.job"
+        ],
+        "lib": 78,
+        "records": "ABS/CRSTAT-ABS/CSUBMIT",
+        "url": "https://www.dropbox.com/s/olr1hz6ys5mavjt/cray-station.tap?dl=1",
+        "desc": "Cray Station",
+        "depends": ["pascal4"]
+      },
+      {
         "name": "kermit",
         "post": "kermit.post",
         "lib": 71,
