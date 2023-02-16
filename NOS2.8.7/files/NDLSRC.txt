@@ -16,8 +16,8 @@ NCFFILE: NFILE.
 *     - - - -        - - - - - -     - - - -                   *
 *     COUPLER        CP<CN><PID>     CP01M01                   *
 *     LINE           LI<NN>P<PN>     LI02P09                   *
-*     LOGICAL LINK   LL<CN>N<NN>     LL01C03                   *
-*                    LL<CN>C<CN>     LL01N02                   *
+*     LOGICAL LINK   LL<CN>N<NN>     LL01N02                   *
+*                    LL<CN>C<CN>     LL01C03                   *
 *     NPU            NP<NN>          NP02                      *
 *     DEVICE         CO<NN>P<PN>     CO02P34   (CONSOLE)       *
 *                    CR<NN>P<PN>     CR02P34   (CARD READER)   *
