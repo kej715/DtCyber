@@ -149,7 +149,7 @@ dtc.connect()
 .then(() => {
   let routes = [
     "*",
-    "* Routes for messages received from BITNet for destinations in",
+    "* Routes for messages received from NJE and SMTP for destinations in",
     "* the local domain",
     "*",
     ":nick.*DEFAULT* :njroute.BITNET BITNET",
