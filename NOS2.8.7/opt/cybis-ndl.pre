@@ -1,0 +1,71 @@
+#!/usr/bin/env node
+//
+// Modify the NDL file to include CYBIS/PLATO terminals.
+//
+
+const DtCyber   = require("../../automation/DtCyber");
+const fs        = require("fs");
+const utilities = require("./utilities");
+
+
+const dtc = new DtCyber();
+
+const couplerNode = utilities.getCouplerNode(dtc);
+const mid         = utilities.getMachineId(dtc);
+const npuNode     = utilities.getNpuNode(dtc);
+
+const toHex = value => {
+  return value < 16 ? `0${value.toString(16)}` : value.toString(16);
+};
+
+let ndlModset = [
+  "CYBIS",
+  "*IDENT CYBIS",
+  "*DECK NETCFG",
+  "*D 85,86",
+  `LI${toHex(npuNode)}P:   GROUP,    PORT=14,L9600,NI=16.`,
+  `         TE${toHex(npuNode)}P:    TERMDEV,TASX364,AUTOCON,HN=${couplerNode},ABL=7.`,
+  "*I 196",
+  "CYBUSER: DEFINE,   MFAM=CYBER,MUSER=SYS,MAPPL=CYBIS."
+];
+
+ndlModset.push("*D 220,221");
+for (let port = 0x14; port <= 0x23; port++) {
+  ndlModset.push(`TE${toHex(npuNode)}P${toHex(port)}: USER,     CYBUSER.`);
+}
+ndlModset.push("");
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.say("Update NDL with CYBIS terminal definitions ..."))
+.then(() => {
+  const job = [
+    "$GET,NDLMODS/NA.",
+    "$IF,FILE(NDLMODS,AS),EDIT.",
+    "$  COPY,INPUT,MOD.",
+    "$  REWIND,MOD.",
+    "$  LIBEDIT,P=NDLMODS,B=MOD,I=0,C.",
+    "$ELSE,EDIT.",
+    "$  COPY,INPUT,NDLMODS.",
+    "$ENDIF,EDIT.",
+    "$REPLACE,NDLMODS."
+  ];
+  const options = {
+    jobname:  "RHPNDL",
+    username: "NETADMN",
+    password: "NETADMN",
+    data:     `${ndlModset.join("\n")}\n`
+  };
+  return dtc.createJobWithOutput(12, 4, job, options);
+})
+.then(() => dtc.say("Compile updated NDL ..."))
+.then(() => dtc.runJob(12, 4, "decks/compile-ndlopl.job", [mid]))
+.then(() => dtc.say("CYBIS terminals added to NDL successfully"))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});
