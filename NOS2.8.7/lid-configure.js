@@ -4,11 +4,15 @@
 // configuration.
 //
 
-const fs        = require("fs");
 const DtCyber   = require("../automation/DtCyber");
+const fs        = require("fs");
 const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
+
+const mid            = utilities.getMachineId(dtc);
+const hostID         = utilities.getHostId(dtc);
+const rhpTopology    = utilities.getRhpTopology(dtc);
 
 let adjacentNodes    = {};
 let nonadjacentNodes = {};
@@ -30,7 +34,7 @@ const calculateRoute = node => {
       }
     }
     if (typeof node.link !== "undefined" && node.link !== hostID) {
-      const route = calculateRoute(topology[node.link]);
+      const route = calculateRoute(njeTopology[node.link]);
       if (route !== null) node.route = route;
       return route;
     }
@@ -44,47 +48,9 @@ const calculateRoute = node => {
 };
 
 //
-// If a site configuration file exists, and it has a CMRDECK
-// section with an MID definition, use that definition.
-// Otherwise, use the default machine ID, "01".
+// Read the public NJE topology definition
 //
-let customProps = {};
-let mid = "01";
-dtc.readPropertyFile(customProps);
-if (typeof customProps["CMRDECK"] !== "undefined") {
-  for (let line of customProps["CMRDECK"]) {
-    line = line.toUpperCase();
-    let match = line.match(/^MID=([^.]*)/);
-    if (match !== null) {
-      mid = match[1].trim();
-    }
-  }
-}
-
-//
-// Read and parse the cyber.ini file to obtain the host ID.
-//
-let iniProps = {};
-dtc.readPropertyFile("cyber.ini", iniProps);
-if (fs.existsSync("cyber.ovl")) {
-  dtc.readPropertyFile("cyber.ovl", iniProps);
-}
-let hostID = `NCCM${mid}`;
-for (let line of iniProps["npu.nos287"]) {
-  line = line.toUpperCase();
-  let ei = line.indexOf("=");
-  if (ei < 0) continue;
-  let key   = line.substring(0, ei).trim();
-  let value = line.substring(ei + 1).trim();
-  if (key === "HOSTID") {
-    hostID = value;
-  }
-}
-
-//
-// Read the public network topology definition
-//
-let topology = isNjfInstalled ? JSON.parse(fs.readFileSync("files/nje-topology.json")) : {};
+let njeTopology = isNjfInstalled ? JSON.parse(fs.readFileSync("files/nje-topology.json")) : {};
 
 //
 // Update topology and network parameters to reflect customizations, if any.
@@ -103,6 +69,7 @@ const mfTypeTable = {
 
 let defaultRoute  = null;
 
+const customProps = utilities.getCustomProperties(dtc);
 if (typeof customProps["NETWORK"] !== "undefined") {
   for (let line of customProps["NETWORK"]) {
     line = line.toUpperCase();
@@ -110,10 +77,7 @@ if (typeof customProps["NETWORK"] !== "undefined") {
     if (ei < 0) continue;
     let key   = line.substring(0, ei).trim();
     let value = line.substring(ei + 1).trim();
-    if (key === "HOSTID") {
-      hostID = value;
-    }
-    else if (key === "CRAYSTATION" && isCrsInstalled) {
+    if (key === "CRAYSTATION" && isCrsInstalled) {
       //
       //  crayStation=<name>,<lid>,<channelNo>,<addr>[,S<station-id>][,C<cray-id>]
       //
@@ -128,7 +92,7 @@ if (typeof customProps["NETWORK"] !== "undefined") {
           addr: items[2],
           link: hostID
         };
-        topology[nodeName] = node;
+        njeTopology[nodeName] = node;
       }
     }
     else if (key === "DEFAULTROUTE" && isNjfInstalled) {
@@ -148,7 +112,7 @@ if (typeof customProps["NETWORK"] !== "undefined") {
           addr: items.shift(),
           link: items.shift()
         }
-        topology[nodeName] = node;
+        njeTopology[nodeName] = node;
       }
     }
     else if (key === "TLFNODE" && isTlfInstalled) {
@@ -165,7 +129,7 @@ if (typeof customProps["NETWORK"] !== "undefined") {
           software: items.shift(),
           link: hostID
         };
-        topology[nodeName] = node;
+        njeTopology[nodeName] = node;
       }
     }
   }
@@ -174,15 +138,15 @@ if (typeof customProps["NETWORK"] !== "undefined") {
 // Verify that the local node is defined in the topology, and finalize
 // the default route.
 //
-if (typeof topology[hostID] === "undefined") {
-  topology[hostID] = {
+if (typeof njeTopology[hostID] === "undefined") {
+  njeTopology[hostID] = {
     id: hostID,
     software: "NOS",
     lid: `M${mid}`
   };
-  if (defaultRoute !== null) topology[hostID].link = defaultRoute;
+  if (defaultRoute !== null) njeTopology[hostID].link = defaultRoute;
 }
-let localNode = topology[hostID];
+let localNode = njeTopology[hostID];
 if (defaultRoute === null) {
   if (typeof localNode.link !== "undefined") {
     defaultRoute = localNode.link;
@@ -196,17 +160,17 @@ if (defaultRoute === null) {
 // Build tables of adjacent and non-adjacent nodes with LIDs
 //
 localNode.id = hostID;
-if (typeof localNode.link !== "undefined" && typeof topology[localNode.link] != "undefined") {
-  let linkNode = topology[localNode.link];
+if (typeof localNode.link !== "undefined" && typeof njeTopology[localNode.link] != "undefined") {
+  let linkNode = njeTopology[localNode.link];
   let mfType = mfTypeTable[linkNode.software];
   if (typeof mfType === "undefined") mfType = "UNKNOWN";
   linkNode.mfType = mfType;
   adjacentNodes[localNode.link] = linkNode;
 }
 
-const nodeNames = Object.keys(topology);
+let nodeNames = Object.keys(njeTopology);
 for (const nodeName of nodeNames) {
-  let node = topology[nodeName];
+  let node = njeTopology[nodeName];
   node.id = nodeName;
   if (node.link === hostID) {
     let mfType = mfTypeTable[node.software];
@@ -216,6 +180,18 @@ for (const nodeName of nodeNames) {
   }
   else if (typeof node.lid !== "undefined" && nodeName !== hostID) {
     nonadjacentNodes[nodeName] = node;
+  }
+}
+
+nodeNames = Object.keys(rhpTopology[hostID].links);
+for (const nodeName of nodeNames) {
+  let node = rhpTopology[nodeName];
+  node.id     = nodeName;
+  node.type   = "RHP";
+  node.mfType = "NOS2";
+  adjacentNodes[nodeName] = node;
+  if (typeof nonadjacentNodes[nodeName] !== "undefined") {
+    delete nonadjacentNodes[nodeName];
   }
 }
 
@@ -287,7 +263,7 @@ dtc.connect()
   lidConf[`M${mid}`] = localPid;
   for (const node of Object.values(adjacentNodes)) {
     let lid = node.lid;
-    if (node.type !== "CRS") {
+    if (node.type !== "CRS" && node.type !== "RHP") {
       localPid.lids[lid] = `NLID,LID=${lid},AT=STOREF.`;
     }
     let adjacentPid = {

@@ -17,10 +17,17 @@
 //     nodes with LIDs
 //
 
-const fs      = require("fs");
-const DtCyber = require("../automation/DtCyber");
+const DtCyber   = require("../automation/DtCyber");
+const fs        = require("fs");
+const utilities = require("./opt/utilities");
+
 
 const dtc = new DtCyber();
+
+const couplerNode = utilities.getCouplerNode(dtc);
+const mid         = utilities.getMachineId(dtc);
+const hostID      = utilities.getHostId(dtc);
+const npuNode     = utilities.getNpuNode(dtc);
 
 const spoolerTypes = {
   JES2: {
@@ -41,61 +48,18 @@ const spoolerTypes = {
   }
 };
 
-//
-// If a site configuration file exists, and it has a CMRDECK
-// section with an MID definition, use that definition.
-// Otherwise, use the default machine ID, "01".
-//
-let customProps = {};
-let mid = "01";
-dtc.readPropertyFile(customProps);
-if (typeof customProps["CMRDECK"] !== "undefined") {
-  for (let line of customProps["CMRDECK"]) {
-    line = line.toUpperCase();
-    let match = line.match(/^MID=([^.]*)/);
-    if (match !== null) {
-      mid = match[1].trim();
-    }
-  }
-}
-
-//
-// Read and parse the cyber.ini file to obtain the coupler and
-// NPU node numbers. These will be used in generating NDL
-// definitions.
-//
-let iniProps = {};
-dtc.readPropertyFile("cyber.ini", iniProps);
-if (fs.existsSync("cyber.ovl")) {
-  dtc.readPropertyFile("cyber.ovl", iniProps);
-}
-let couplerNode = 1;
-let npuNode     = 2;
-let hostID      = `NCCM${mid}`;
-for (let line of iniProps["npu.nos287"]) {
-  line = line.toUpperCase();
-  let ei = line.indexOf("=");
-  if (ei < 0) continue;
-  let key   = line.substring(0, ei).trim();
-  let value = line.substring(ei + 1).trim();
-  if (key === "COUPLERNODE") {
-    couplerNode = value;
-  }
-  else if (key === "NPUNODE") {
-    npuNode = value;
-  }
-  else if (key === "HOSTID") {
-    hostID = value;
-  }
-}
+const toHex = value => {
+  return value < 16 ? `0${value.toString(16)}` : value.toString(16);
+};
 
 //
 // Update network parameters to reflect customizations, if any.
 //
-let nextPort      = 0x28;
-let nodes         = [];
-let portCount     = 8;
+let nextPort  = 0x28;
+let nodes     = [];
+let portCount = 8;
 
+const customProps = utilities.getCustomProperties(dtc);
 if (typeof customProps["NETWORK"] !== "undefined") {
   for (let line of customProps["NETWORK"]) {
     line = line.toUpperCase();
@@ -103,16 +67,7 @@ if (typeof customProps["NETWORK"] !== "undefined") {
     if (ei < 0) continue;
     let key   = line.substring(0, ei).trim();
     let value = line.substring(ei + 1).trim();
-    if (key === "HOSTID") {
-      hostID = value;
-    }
-    else if (key === "COUPLERNODE") {
-      couplerNode = value;
-    }
-    else if (key === "NPUNODE") {
-      npuNode = value;
-    }
-    else if (key === "TLFNODE") {
+    if (key === "TLFNODE") {
       //
       //  tlfNode=<name>,<lid>,<spooler>,<addr>
       //    [,R<remote-id>][,P<password>][,B<block-size>]
@@ -159,27 +114,26 @@ if (typeof customProps["NETWORK"] !== "undefined") {
 // Generate an NDL modset. Define a terminal for the local system's default
 // route and for each node explicitly linked to the local system.
 //
-if (npuNode < 10) npuNode = `0${npuNode}`;
 let terminalDefns = [];
 let userDefns     = [];
 
 const appendTerminalDefn = node => {
   terminalDefns = terminalDefns.concat([
     `*  ${node.name}`,
-    `LI${npuNode}P${node.claPort}: LINE      PORT=${node.claPort},LTYPE=S2,TIPTYPE=TT12.`,
+    `LI${toHex(npuNode)}P${node.claPort}: LINE      PORT=${node.claPort},LTYPE=S2,TIPTYPE=TT12.`,
     "         TERMINAL  TC=TC28,STIP=USER.",
     `         ${node.console}:  DEVICE,REVHASP,HN=${couplerNode},DT=CON,ABL=2,DBZ=120,PW=120.`,
-    `         CR${npuNode}P${node.claPort}:  DEVICE,REVHASP,HN=${couplerNode},DT=CR,DO=1,TA=1,ABL=3,DBZ=810,`,
+    `         CR${toHex(npuNode)}P${node.claPort}:  DEVICE,REVHASP,HN=${couplerNode},DT=CR,DO=1,TA=1,ABL=3,DBZ=810,`,
     "                 PW=137.",
-    `         LP${npuNode}P${node.claPort}:  DEVICE,REVHASP,HN=${couplerNode},DT=LP,DO=1,TA=1,ABL=0,DBZ=0.`,
-    `         PL${npuNode}P${node.claPort}:  DEVICE,REVHASP,HN=${couplerNode},DT=PL,DO=1,TA=1,ABL=0,DBZ=0.`
+    `         LP${toHex(npuNode)}P${node.claPort}:  DEVICE,REVHASP,HN=${couplerNode},DT=LP,DO=1,TA=1,ABL=0,DBZ=0.`,
+    `         PL${toHex(npuNode)}P${node.claPort}:  DEVICE,REVHASP,HN=${couplerNode},DT=PL,DO=1,TA=1,ABL=0,DBZ=0.`
   ]);
 };
 for (const node of nodes) {
   if (portCount < 1) throw new Error("Insufficient number of TLF ports defined");
-  const portNum      = `${nextPort.toString(16)}`;
-  node.claPort       = portNum;
-  node.console       = `CO${npuNode}P${node.claPort}`;
+  const portNum = toHex(nextPort);
+  node.claPort  = portNum;
+  node.console  = `CO${toHex(npuNode)}P${node.claPort}`;
   appendTerminalDefn(node);
   userDefns.push(`${node.console}: USER,     TLFUSER.`);
   nextPort  += 1;
@@ -246,7 +200,7 @@ if (fs.existsSync("cyber.ovl")) {
 let ovlText = [
   `hostID=${hostID}`,
   `couplerNode=${couplerNode}`,
-  `npuNode=${parseInt(npuNode, 10)}`
+  `npuNode=${npuNode}`
 ];
 if (typeof ovlProps["npu.nos287"] !== "undefined") {
   for (const line of ovlProps["npu.nos287"]) {
@@ -261,7 +215,7 @@ if (typeof ovlProps["npu.nos287"] !== "undefined") {
   }
 }
 for (const node of nodes) {
-  let termDefn = `terminals=0,0x${node.claPort.toString(16)},1,rhasp,${node.addr}`;
+  let termDefn = `terminals=0,0x${node.claPort},1,rhasp,${node.addr}`;
   if (typeof node.blockSize !== "undefined") termDefn += `,B${node.blockSize}`;
   ovlText.push(termDefn);
 }
@@ -299,7 +253,7 @@ dtc.connect()
 .then(() => dtc.say("Update NDL with TLF terminal definitions ..."))
 .then(() => dtc.runJob(12, 4, "opt/tlf-ndl.job"))
 .then(() => dtc.say("Compile updated NDL ..."))
-.then(() => dtc.runJob(12, 4, "decks/compile-ndlopl.job"))
+.then(() => dtc.runJob(12, 4, "decks/compile-ndlopl.job", [mid]))
 .then(() => {
   if (nodes.length > 0) {
     return dtc.say("Create/update TLF configuration file ...")

@@ -207,6 +207,7 @@ if (linkNames.length > 0) {
       `*   NPU NP${toHex(node.npuNode)},                                                  *`,
       "*                                                              *",
       "****************************************************************",
+      "",
       `NP${toHex(node.npuNode)}:    NPU,      NODE=${node.npuNode},VARIANT=SM1,DMP=NO.`,
       `         SUPLINK,  LLNAME=LL${toHex(node.couplerNode)}N${toHex(node.npuNode)}.`,
       "",
@@ -222,6 +223,11 @@ if (linkNames.length > 0) {
         ndlModset.push(`         ${linkName1}:  LOGLINK, NCNAME=CP${toHex(peer.couplerNode)}${peer.lid}.`);
       }
     }
+    ndlModset = ndlModset.concat([
+      "",
+      `LI${toHex(node.npuNode)}P03: LINE,     PORT=03,L9600.`,
+      `         TE${toHex(node.npuNode)}P03:  TERMDEV, TASX364.`
+    ]);
   }
 }
 
@@ -336,38 +342,38 @@ for (const key of Object.keys(ovlProps)) {
 ovlLines.push("");
 
 if (edits > 0) {
-  fs.writeFileSync("RHPNDL.mod", ndlModset.join("\n"));
   dtc.connect()
   .then(() => dtc.expect([ {re:/Operator> $/} ]))
   .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
   .then(() => dtc.say("Update NDL with RHP topology definitions ..."))
   .then(() => {
-      const job = [
-        "$GET,NDLMODS/NA.",
-        "$IF,FILE(NDLMODS,AS),EDIT.",
-        "$  COPY,INPUT,MOD.",
-        "$  REWIND,MOD.",
-        "$  LIBEDIT,P=NDLMODS,B=MOD,I=0,C.",
-        "$ELSE,EDIT.",
-        "$  COPY,INPUT,NDLMODS.",
-        "$ENDIF,EDIT.",
-        "$REPLACE,NDLMODS."
-      ];
-      const options = {
-        jobname:  "RHPMOD",
-        username: "NETADMN",
-        password: "NETADMN",
-        data:     `${ndlModset.join("\n")}\n`
-      };
-      return dtc.createJobWithOutput(12, 4, job, options);
+    const job = [
+      "$GET,NDLMODS/NA.",
+      "$IF,FILE(NDLMODS,AS),EDIT.",
+      "$  COPY,INPUT,MOD.",
+      "$  REWIND,MOD.",
+      "$  LIBEDIT,P=NDLMODS,B=MOD,I=0,C.",
+      "$ELSE,EDIT.",
+      "$  COPY,INPUT,NDLMODS.",
+      "$ENDIF,EDIT.",
+      "$REPLACE,NDLMODS."
+    ];
+    const options = {
+      jobname:  "RHPNDL",
+      username: "NETADMN",
+      password: "NETADMN",
+      data:     `${ndlModset.join("\n")}\n`
+    };
+    return dtc.createJobWithOutput(12, 4, job, options);
   })
   .then(() => dtc.say("Compile updated NDL ..."))
-  .then(() => dtc.runJob(12, 4, "decks/compile-ndlopl.job"))
+  .then(() => dtc.runJob(12, 4, "decks/compile-ndlopl.job", [mid]))
+  .then(() => dtc.disconnect())
   .then(() => dtc.exec("node", ["lid-configure"]))
   .then(() => {
     fs.writeFileSync("cyber.ovl", ovlLines.join("\n"));
     return Promise.resolve();
-  });
+  })
   .then(() => dtc.say("RHP configuration completed successfully"))
   .then(() => {
     process.exit(0);

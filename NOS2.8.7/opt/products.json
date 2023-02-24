@@ -57,8 +57,7 @@
       {
         "name": "cybis",
         "pre": [
-          "cybis-ndl.job",
-          "../decks/compile-ndlopl.job",
+          "cybis-ndl.pre",
           "cybis-eqpd.job",
           "../make-ds-tape.js",
           "cybis-newds.pre",
@@ -224,6 +223,16 @@
         "records": "ABS/RBF2P0-OVL/RBF0200",
         "examples": "rbf5-restart.post",
         "desc": "Remote Batch Facility Version 5"
+      },
+      {
+        "name": "rhp",
+        "pre": "nos.pre",
+        "post": [
+          "nos.post"
+        ],
+        "lib": 51,
+        "records": "ABS/MFLINK-PROC/QTF",
+        "desc": "Remote Host Products (QTF/PTF)"
       },
       {
         "name": "tlf",
