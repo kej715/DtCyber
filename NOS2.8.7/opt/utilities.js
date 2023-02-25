@@ -60,9 +60,12 @@ const utilities = {
   getCustomProperties: dtc => {
     if (typeof utilities.customProperties === "undefined") {
       utilities.customProperties = {};
-      let pathname = "site.cfg";
-      if (!fs.existsSync(pathname)) pathname = "../site.cfg";
-      dtc.readPropertyFile(pathname, utilities.customProperties);
+      if (fs.existsSync("site.cfg")) {
+        dtc.readPropertyFile("site.cfg", utilities.customProperties);
+      }
+      else if (fs.existsSync("../site.cfg")) {
+        dtc.readPropertyFile("../site.cfg", utilities.customProperties);
+      }
     }
     return utilities.customProperties;
   },
