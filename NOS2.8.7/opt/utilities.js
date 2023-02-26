@@ -264,6 +264,10 @@ const utilities = {
       else {
         utilities.njeTopology = {};
       }
+      for (const name of Object.keys(utilities.njeTopology)) {
+        let node = utilities.njeTopology[name];
+        node.id = name;
+      }
       utilities.adjacentNjeNodes               = {};
       utilities.nonadjacentNjeNodesWithLids    = {};
       utilities.nonadjacentNjeNodesWithoutLids = {};
@@ -297,6 +301,8 @@ const utilities = {
             if (items.length >= 5) {
               let nodeName = items.shift();
               let node = {
+                id: nodeName,
+                type: "NJE",
                 software: items.shift(),
                 lid: items.shift(),
                 publicAddress: items.shift(),
@@ -322,13 +328,21 @@ const utilities = {
           }
         }
       }
+      if (typeof topology[hostID] === "undefined") {
+        topology[hostID] = {
+          id: hostID,
+          type: "NJE",
+          software: "NJEF",
+          lid: `M${mid}`
+        };
+        if (utilities.defaultNjeRoute !== null) topology[hostID].link = utilities.defaultNjeRoute;
+      }
       if (typeof topology[hostID].link !== "undefined") {
         let routingNode = topology[topology[hostID].link];
         utilities.adjacentNjeNodes[topology[hostID].link] = routingNode;
       }
       for (const key of Object.keys(topology).sort()) {
         let node = topology[key];
-        node.id = key;
         if (node.link === hostID) {
           utilities.adjacentNjeNodes[key] = node;
         }
@@ -408,7 +422,9 @@ const utilities = {
       }
     }
     let localNode = {
-      name: hostId,
+      id: hostId,
+      type: "RHP",
+      software: "NOS",
       lid: `M${mid}`,
       addr: "127.0.0.1:2550",
       couplerNode: couplerNode,
@@ -431,11 +447,13 @@ const utilities = {
           let items = value.split(",");
           if (items.length >= 7) {
             let node = {
-              name: items.shift(),
+              id: items.shift(),
               lid: items.shift(),
               addr: items.shift(),
               couplerNode: parseInt(items.shift()),
               npuNode: parseInt(items.shift()),
+              type: "RHP",
+              software: "NOS",
               links: {}
             };
             while (items.length >= 2) {
@@ -445,7 +463,7 @@ const utilities = {
             if (items.length > 0) {
               throw new Error(`Invalid rhpNode definition: CLA port missing for link ${items.shift()}`);
             }
-            utilities.rhpTopology[node.name] = node;
+            utilities.rhpTopology[node.id] = node;
           }
         }
       }
@@ -557,6 +575,7 @@ const utilities = {
           if (items.length >= 4) {
             let node = {
               id: items.shift(),
+              type: "TLF",
               lid: items.shift(),
               spooler: items.shift(),
               addr: items.shift(),

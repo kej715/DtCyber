@@ -51,7 +51,7 @@ let ci = localNode.addr.indexOf(":");
 let localPort = parseInt(ci === -1 ? localNode.addr : localNode.addr.substring(ci + 1));
 for (const nodeName of Object.keys(localNode.links)) {
   let node = topology[nodeName];
-  ovlText.push(`terminals=${localPort},0x${toHex(localNode.links[nodeName])},1,trunk,${node.addr},${node.name},${node.couplerNode}`);
+  ovlText.push(`terminals=${localPort},0x${toHex(localNode.links[nodeName])},1,trunk,${node.addr},${node.id},${node.couplerNode}`);
 }
 ovlProps["npu.nos287"] = ovlText;
 
