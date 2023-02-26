@@ -164,7 +164,7 @@ const utilities = {
   getHostId: dtc => {
     if (typeof utilities.hostId !== "undefined") return utilities.hostId;
     const iniProps = utilities.getIniProperties(dtc);
-    const pattern = /^HOSTID=([^.]*)/i;
+    const pattern  = /^HOSTID=([^.]*)/i;
     let hostId = null;
     if (typeof iniProps["npu.nos287"] !== "undefined") {
       for (let line of iniProps["npu.nos287"]) {
@@ -187,6 +187,7 @@ const utilities = {
       }
     }
     utilities.hostId = hostId !== null ? hostId : `M${utilities.getMachineId(dtc)}`;
+    utilities.hostId = utilities.hostId.toUpperCase();
     return utilities.hostId;
   },
 

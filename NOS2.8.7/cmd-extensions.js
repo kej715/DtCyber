@@ -38,7 +38,18 @@ const cmdExtensions = [
     }
   },
   {
-    names: ["njf_configure", "ncfg"],
+    names: ["mail_configure", "mailc"],
+    desc:  "'mail_configure' update the e-mail configuration",
+    fn:    (dtc, args) => {
+      return dtc.disconnect()
+      .then(() => dtc.exec("node", ["mailer-configure"]))
+      .then(() => dtc.exec("node", ["netmail-configure"]))
+      .then(() => dtc.connect())
+      .then(() => dtc.expect([ {re:/Operator> $/} ]));
+    }
+  },
+  {
+    names: ["njf_configure", "njfc"],
     desc:  "'njf_configure' update the NJF configuration",
     fn:    (dtc, args) => {
       return dtc.disconnect()
@@ -56,6 +67,16 @@ const cmdExtensions = [
         typeof args !== "undefined" && args.length > 0
         ? ["reconfigure"].concat(args.split(" "))
         : ["reconfigure"]))
+      .then(() => dtc.connect())
+      .then(() => dtc.expect([ {re:/Operator> $/} ]));
+    }
+  },
+  {
+    names: ["rhp_configure", "rhpc"],
+    desc:  "'rhp_configure' update the RHP configuration",
+    fn:    (dtc, args) => {
+      return dtc.disconnect()
+      .then(() => dtc.exec("node", ["rhp-configure"]))
       .then(() => dtc.connect())
       .then(() => dtc.expect([ {re:/Operator> $/} ]));
     }
@@ -81,7 +102,7 @@ const cmdExtensions = [
     }
   },
   {
-    names: ["tlf_configure", "tcfg"],
+    names: ["tlf_configure", "tlfc"],
     desc:  "'tlf_configure' update the TLF configuration",
     fn:    (dtc, args) => {
       return dtc.disconnect()

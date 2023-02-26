@@ -4,65 +4,20 @@
 // used in email routing and address translation.
 //
 
-const fs          = require("fs");
 const DtCyber     = require("../automation/DtCyber");
+const fs          = require("fs");
 const utilities   = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
-const hostId      = utilities.getHostId(dtc).toUpperCase();
+const hostId      = utilities.getHostId(dtc);
 const mailerOpts  = {username:"MAILER",password:"MAILER"};
 const mid         = utilities.getMachineId(dtc);
 const timeZone    = utilities.getTimeZone();
+const topology    = utilities.getNjeTopology(dtc);
 
 const customProps = {};
 dtc.readPropertyFile(customProps);
-
-//
-// Acquire NJE topology and add/replace NJE node definitions
-// from custom properties, if any
-//
-const topology    = JSON.parse(fs.readFileSync("files/nje-topology.json"));
-if (typeof customProps["NETWORK"] !== "undefined") {
-  for (let line of customProps["NETWORK"]) {
-    line = line.toUpperCase();
-    let ei = line.indexOf("=");
-    if (ei < 0) continue;
-    let key   = line.substring(0, ei).trim();
-    let value = line.substring(ei + 1).trim();
-    if (key === "NJENODE") {
-      //
-      //  njeNode=<nodename>,<software>,<lid>,<public-addr>,<link>
-      //     [,<local-address>][,B<block-size>][,P<ping-interval>][,<mailer-address>]
-      let items = value.split(",");
-      if (items.length >= 5) {
-        let nodeName = items.shift();
-        let node = {
-          software: items.shift(),
-          lid: items.shift(),
-          publicAddress: items.shift(),
-          link: items.shift()
-        };
-        if (items.length > 0) {
-          node.localAddress = items.shift();
-        }
-        while (items.length > 0) {
-          let item = items.shift();
-          if (item.startsWith("B")) {
-            node.blockSize = parseInt(item.substring(1));
-          }
-          else if (item.startsWith("P")) {
-            node.pingInterval = parseInt(item.substring(1));
-          }
-          else if (item.indexOf("@") > 0) {
-            node.mailer = item;
-          }
-        }
-        topology[nodeName] = node;
-      }
-    }
-  }
-}
 
 const replaceFile = (filename, text, opts) => {
   let options = {
