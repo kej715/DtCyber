@@ -44,6 +44,7 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[hostID](#hostID)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[njeNode](#njeNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[njePorts](#njePorts)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[rhpNode](#rhpNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[smtpDomain](#smtpDomain)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfNode](#tlfNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfPorts](#tlfPorts)
@@ -941,19 +942,31 @@ forwarding it to other SMTP-based hosts, as needed. Typically, Unix hosts are ca
 of serving as mail relays.
 
 ### <a id="network"></a>[NETWORK]
-Defines private routes and the names of hosts in the CDC and NJE (Network Job Entry)
-networks. In particular, the node name of the local host is defined in this section
-when the local host is registered in the public NJE network. This enables the NJF
-configuration tool, `njf-configure.js`, to recognize the local host in the public
-network topology definition, [files/nje-topology.json](files/nje-topology.json).
+Defines site-specific routing information and parameters related to data communication
+and networking. The configuration of various NOS 2.8.7 data communication subsystems
+derives from this section. This includes:
 
-Definitions in this section are edited into the NOS system's NDL and HCF (NJF host
-configuration file) files as well as *DtCyber's* `cyber.ovl` file. Example:
+- **Host ID**. The identifier of the local NOS 2.8.7 host.
+- **RHP**. Information defining the topology of a network of mainframes running
+NOS 2.8.7 and interconnected by Control Data's `RHP` (Remote Host Products) data
+communication protocols.
+- **NJE**. Information defining private routes in a network of mainframes
+interconnected by IBM's `NJE` (Network Job Entry) data communication protocol.
+- **HASP**. Information about mainframes to which NOS 2.8.7 can connect using
+IBM's `HASP` data communication protocol.
+- **SMTP**. Information about e-mail destinations that can be reached using the
+TCP/IP `Simple Mail Transfer Protocol`.
+- **CRS**. Configuration information for the `Cray Station` interface.
+
+Example:
 
 ```
 [NETWORK]
-hostID=MYNODE
-njeNode=LOCALCMS,RSCS,CMS,192.168.1.3:175,MYNODE,B8192,MAILER@LOCALCMS
+hostID=MARS
+rhpNode=MARS,MAR,localhost:2551,1,2,VENUS,1
+rhpNode=VENUS,MVE,192.168.0.17:2551,3,4,MARS,1
+crayStation=CRAYXMP,XMP,24,192.168.0.28:9001,SFE,CC1
+tlfNode=JES2,JES,JES2,192.168.0.17:37803,R001
 ```
 
 The entries that may occur in the `[NETWORK]` section include:
@@ -983,15 +996,15 @@ Example:
 
     `defaultRoute=NCCMAX`
     
-	Ordinarily, this entry is needed only when an NJE node has multiple adjacent
-	neighbors, so one of them needs to be designated as the node to which files
-	will be sent when the route to a destination cannot be calculated autommatically
-	using the [topology file](files/nje-topology.json).
+	Ordinarily, this entry is needed only when an NJE node has multiple directly
+	connectted neighbors, so one of them needs to be designated as the node to which
+	files will be sent when the route to a destination cannot be calculated
+	autommatically using the [topology file](files/nje-topology.json).
     
 - <a id="hostID"></a>**hostID** : Specifies the 1 - 8 character node name of the local
 host. Example:
 
-    `hostID=MYNODE`
+    `hostID=MARS`
 
 - <a id="njeNode"></a>**njeNode** : Defines the name and routing information for an NJE
 node within a private NJE network (i.e., a node that is not registered in the public
@@ -1016,9 +1029,9 @@ this entry is:
     
     `njeNode=LOCALCMS,RSCS,CMS,192.168.1.3:175,MYNODE,B8192,MAILER@LOCALCMS`
     
-- <a id="njePorts"></a>**njePorts** : Specifies the range of CLA ports that will be
-used in defining terminals for use by NJF in the NOS NDL. The general syntax of this
-entry is:
+- <a id="njePorts"></a>**njePorts** : Specifies the range of CLA ports on the local
+NPU that will be used in defining terminals for use by NJF in the NOS NDL. The general
+syntax of this entry is:
 
     njePorts=*cla-port-number*,*port-count*
     
@@ -1028,6 +1041,26 @@ entry is:
     
     `njePorts=0x30,16`
     
+- <a id="rhpNode"></a>**rhpNode** : Defines the name and linkage information for a node
+in a Control Data `Remote Host Products` network. RHP provides the QTF (Queued file
+Transfer Facility) and PTF (Permanent file Transfer Facility) applications that enable
+NOS 2.8.7 systems to exchange jobs and files. The general syntax of this entry is:
+
+    rhpNode=*nodename*,*lid*,*addr*,*coupler-node*,*npu-node*,*peername*,*cla-port*[,*peername*,*cla-port*...]
+    
+    | Parameter     | Description |
+    |---------------|-------------|
+    | nodename      | The name assigned to the node. |
+    | lid           | The unique, 3-character logical identifier assigned to the node. |
+    | addr          | The IP address and TCP port number on which the node listens for RHP connections. The format is `ipaddress:portnumber`, e.g., 192.168.0.17:2551. |
+    | coupler-node  | The node number of the channel coupler that links the node's NPU to its mainframe. Essentially, this is the RHP node number of the mainframe |
+    | npu-node      | The node number of the node's NPU itself. |
+    | peername      | The name of a peer to which the mainframe is directly linked. This must match the *nodename* parameter of another *rhpNode* definition |
+    | cla-port      | The number of the CLA port on the mainframe's NPU that is used for communicating with the peer. |
+    
+Note that multiple *peername*/*cla-port* pairs may be defined to indicate that a node
+is connected to multiple peers.
+
 - <a id="smtpDomain"></a>**smtpDomain** : Identifies an internet domain name or suffix
 to which e-mail will be routed using the TCP/IP SMTP protocol. Examples:
 

@@ -402,9 +402,23 @@ dtc.connect()
 .then(() => updateLIDCMxx())
 .then(() => updateTcpResolver())
 .then(() => dtc.disconnect())
-.then(() => dtc.exec("node", ["rhp-configure"]))
+.then(() => dtc.exec("node", ["opt/rhp-update-ndl"]))
 .then(() => {
-  return utilities.isInstalled("njf") ? dtc.exec("node", ["njf-configure"]) : Promise.resolve();
+  return utilities.isInstalled("cybis") ? dtc.exec("node", ["opt/cybis-update-ndl"]) : Promise.resolve();
+})
+.then(() => {
+  return utilities.isInstalled("njf") ? dtc.exec("node", ["opt/njf-update-ndl"]) : Promise.resolve();
+})
+.then(() => {
+  return utilities.isInstalled("tlf") ? dtc.exec("node", ["opt/tlf-update-ndl"]) : Promise.resolve();
+})
+.then(() => dtc.exec("node", ["compile-ndl"]))
+.then(() => dtc.exec("node", ["rhp-configure", "-ndl"]))
+.then(() => {
+  return utilities.isInstalled("njf") ? dtc.exec("node", ["njf-configure", "-ndl"]) : Promise.resolve();
+})
+.then(() => {
+  return utilities.isInstalled("tlf") ? dtc.exec("node", ["tlf-configure", "-ndl"]) : Promise.resolve();
 })
 .then(() => {
   return utilities.isInstalled("mailer") ? dtc.exec("node", ["mailer-configure"]) : Promise.resolve();
@@ -426,9 +440,6 @@ dtc.connect()
   else {
     return Promise.resolve();
   }
-})
-.then(() => {
-  return utilities.isInstalled("tlf") ? dtc.exec("node", ["tlf-configure"]) : Promise.resolve();
 })
 .then(() => {
   if (utilities.isInstalled("crs") && crsChannel !== -1) {

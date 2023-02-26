@@ -57,7 +57,8 @@
       {
         "name": "cybis",
         "pre": [
-          "cybis-ndl.pre",
+          "cybis-update-ndl.js",
+          "../compile-ndl.js",
           "cybis-eqpd.job",
           "../make-ds-tape.js",
           "cybis-newds.pre",
@@ -202,9 +203,9 @@
         "name": "njf",
         "pre": "njf-mods.job",
         "post": [
+          "../njf-configure.js",
           "njf-users.job",
-          "njf.post",
-          "../njf-configure.js"
+          "njf.post"
         ],
         "lib": 75,
         "records": "PP/JFM-PROC/DSKRECV",
