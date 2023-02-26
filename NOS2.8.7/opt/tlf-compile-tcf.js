@@ -15,11 +15,13 @@ dtc.connect()
 .then(() => dtc.runJob(12, 4, "opt/tlf-compile-tcf.job"))
 .then(() => dtc.say("Move TCFFILE to NETADMN ..."))
 .then(() => dtc.dis([
-  "GET,TCFFILE.",
+  "GET,TCFFILE/NA.",
+  "IF,FILE(TCFFILE,AS),MOVE.
   "PURGE,TCFFILE.",
   "SUI,25.",
   "PURGE,TCFFILE/NA.",
-  "SAVE,TCFFILE/CT=PU,AC=N,M=R."
+  "SAVE,TCFFILE/CT=PU,AC=N,M=R.",
+  "ENDIF,MOVE.
 ], "MOVETCF", 1))
 .then(() => {
   process.exit(0);
