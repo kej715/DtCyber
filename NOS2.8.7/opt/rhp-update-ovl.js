@@ -55,9 +55,16 @@ for (const nodeName of Object.keys(localNode.links)) {
 }
 ovlProps["npu.nos287"] = ovlText;
 
-ovlProps["sysinfo"] = [
-  `MID=${mid}`
-];
+ovlText = [];
+if (typeof ovlProps["sysinfo"] !== "undefined") {
+  for (const line of ovlProps["sysinfo"]) {
+    if (!line.startsWith("MID=")) {
+      ovlText.push(line);
+    }
+  }
+}
+ovlText.push(`MID=${mid}`);
+ovlProps["sysinfo"] = ovlText;
 
 let ovlLines = [];
 for (const key of Object.keys(ovlProps)) {

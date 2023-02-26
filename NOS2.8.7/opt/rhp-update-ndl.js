@@ -223,7 +223,7 @@ if (linkNames.length > 0) {
 // Modify the LCFFILE declaration and TCP/IP Gateway OUTCALL definition if the coupler node, NPU node,
 // or machine ID are changing.
 //
-if (isNodeChange || isMidChange) {
+if (isNodeChange || isMidChange || linkNames.length > 1) {
   edits += 1;
   ndlModset = ndlModset.concat([
     "*D 139",

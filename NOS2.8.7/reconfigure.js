@@ -6,7 +6,6 @@ const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
-let crsChannel     = -1;       // channel used by CRS FEI
 let newHostID      = null;     // new network host identifier
 let newMID         = null;     // new machine identifer
 let oldHostID      = "NCCM01"; // old network host identifier
@@ -15,6 +14,14 @@ let productRecords = [];       // textual records to edit into PRODUCT file
 
 const customProps  = utilities.getCustomProperties(dtc);
 const iniProps     = utilities.getIniProperties(dtc);
+
+let oldCrsInfo = {
+  lid:       "COS",
+  channel:   -1,
+  stationId: "FE",
+  crayId:    "C1"
+};
+let newCrsInfo = {};
 
 /*
  * processCmrdProps
@@ -164,13 +171,28 @@ const processEqpdProps = () => {
  *  A promise that is resolved when all NETWORK properties have been processed.
  */
 const processNetworkProps = () => {
-  for (let line of iniProps["npu.nos287"]) {
+  for (const line of iniProps["npu.nos287"]) {
     let ei = line.indexOf("=");
     if (ei < 0) continue;
-    let key   = line.substring(0, ei).trim();
+    let key   = line.substring(0, ei).trim().toUpperCase();
     let value = line.substring(ei + 1).trim();
-    if (key.toUpperCase() === "HOSTID") {
-      oldHostID = line.substring(ei + 1).trim().toUpperCase();
+    if (key === "HOSTID") {
+      oldHostID = value.toUpperCase();
+    }
+  }
+  if (typeof iniProps["sysinfo"] !== "undefined") {
+    for (const line of iniProps["sysinfo"]) {
+      let ei = line.indexOf("=");
+      if (ei < 0) continue;
+      let key   = line.substring(0, ei).trim().toUpperCase();
+      let value = line.substring(ei + 1).trim();
+      if (key === "CRS") {
+        let items = value.split(",");
+        oldCrsInfo.lid       = items[0];
+        oldCrsInfo.channel   = parseInt(items[1], 8);
+        oldCrsInfo.stationId = items[2];
+        oldCrsInfo.crayId    = items[3];
+      }
     }
   }
   if (typeof customProps["NETWORK"] !== "undefined") {
@@ -190,7 +212,18 @@ const processNetworkProps = () => {
         //
         let items = value.split(",");
         if (items.length >= 4) {
-          crsChannel = parseInt(items[2], 8);
+          newCrsInfo.lid       = items[1];
+          newCrsInfo.channel   = parseInt(items[2], 8);
+          newCrsInfo.stationId = "FE";
+          newCrsInfo.crayId    = "C1";
+          for (let i = 4; i < items.length; i++) {
+            if (items[i].startsWith("C")) {
+              newCrsInfo.crayId = items[i].substring(1);
+            }
+            else if (items[i].startsWith("S")) {
+              newCrsInfo.stationId = items[i].substring(1);
+            }
+          }
         }
       }
     }
@@ -442,13 +475,19 @@ dtc.connect()
   }
 })
 .then(() => {
-  if (utilities.isInstalled("crs") && crsChannel !== -1) {
-    return dtc.say("Rebuild CRS ...")
-    .then(() => dtc.exec("node", ["install-product","-f","crs"]));
+  if (utilities.isInstalled("crs")) {
+    if (   oldCrsInfo.lid       !== newCrsInfo.lid
+        || oldCrsInfo.stationId !== newCrsInfo.stationId
+        || oldCrsInfo.crayId    !== newCrsInfo.crayId) {
+      return dtc.say("Rebuild CRS ...")
+      .then(() => dtc.exec("node", ["install-product","-f","crs"]));
+    }
+    else if (oldCrsInfo.channel !== newCrsInfo.channel) {
+      return dtc.say("Update CRS ...")
+      .then(() => dtc.exec("node", ["opt/crs.post"]));
+    }
   }
-  else {
-    return Promise.resolve();
-  }
+  return Promise.resolve();
 })
 .then(() => dtc.connect())
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
