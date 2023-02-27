@@ -26,6 +26,8 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;[NJF vs TLF](#njf-vs-tlf)
 - [UMass Mailer](#email)
 - &nbsp;&nbsp;&nbsp;&nbsp;[E-mail Reflector](#reflector)
+- [NOS to NOS networking (RHP - Remote Host Products)](#rhp)
+- &nbsp;&nbsp;&nbsp;&nbsp;[Using RHP](#usingrhp)
 - [Cray Station](#cray)
 - [Shutdown and Restart](#shutdown)
 - [Operator Command Extensions](#opext)
@@ -525,8 +527,7 @@ on the SimH VAX emulator. It reproduces the
 [BITNet](https://en.wikipedia.org/wiki/BITNET) experience of the 1980's and early
 1990's. During that period, the NJE-based BITNet network connected hundreds of mainly
 academic institutions around the world and enabled its users to exchange e-mail and
-files. BITNet was the predominant world-wide e-mail network until the Internet obsoleted
-it around the mid-1990's.
+files. BITNet was the predominant world-wide e-mail network until the Internet obsoleted it around the mid-1990's.
 
 You may enroll your instance of NOS 2.8.7 in a reborn BITNet by requesting
 a unique node name for it (see [Network Job Entry](#nje), above) and then running the
@@ -560,6 +561,129 @@ reply could take as many as 10 minutes to arrive.
 
 Every ready-to-run instance of NOS 2.8.7 installed using these instructions, and any
 that are installed manually with the `netmail` component, have an e-mail reflector.
+
+## <a id="rhp"></a>NOS to NOS networking (RHP - Remote Host Products)
+NOS 2 systems can communicate with each other using data communication protocols
+created by Control Data. For example, the NPU's of two mainframes running NOS 2 can
+be connected to each other, and this type of connection can be used to exchange
+queued and permanent files between the systems. It can also be used more generally
+for application to application communication between mainframes.
+
+A point-to-point link between two NPU's is called a trunk. In a real environment,
+a trunk was established by connecting a physical data communication port on one NPU to
+a physical data communication port on the other NPU using a cable. Ordinarily, this
+was a synchronous serial connection operating at 19.2 Kbps, or perhaps even 56 Kbps.
+
+In a DtCyber environment, a virtual data communication port on one NPU is connected to a virtual data communication port on the other NPU using TCP/IP. Consequently, a
+trunk between two DtCyber systems operates at modern networking speeds. It is an
+effective substitute for Control Data's RHF/LCN (Remote Host Facility / Loosely Coupled
+Network) technology of the 1970's and 1980's which operated at 50 Mbps.
+
+The nodes in an RHP network were NPU's and hosts. A real Control Data mainframe
+could be connected via channels to multiple NPU's. These were treated as point-to-point
+network links. The NPU end of a channel was assigned a unique address, and the host end
+of the channel was also assigned a unique address. These addresses were 8-bit numbers
+in the range 1-255, and they were called *node numbers*.
+
+DtCyber supports only one NPU (or MDI) connected by channel to a mainframe. This
+conceptually simplifies RHP configuration a bit in a DtCyber environment. In
+particular, it simplifies assignment of RHP network addresses (i.e., node numbers).
+Each NPU (or MDI) must be assigned one unique node number, and each mainframe must be
+assigned one unique number. The node number assigned to a mainframe is called a
+*coupler node number* (it *couples* the mainframe to the network).
+
+RHP-based NOS to NOS networking is configured and activated by adding `rhpNode`
+definitions to the `[NETWORK]` section of the `site.cfg` file. For example, the
+following definitions describe a link between two NOS 2 systems from the perspective
+of the host identified as `NCCM01`:
+
+```
+[NETWORK]
+hostID=NCCM01
+rhpNode=NCCM01,M01,192.168.0.17:2550,1,2,NCCM02,1
+rhpNode=NCCM02,M02,192.168.0.19:2550,3,4,NCCM01,1
+```
+The parameter values specified in the first `rhpNode` definition are:
+
+| Parameter Value | Meaning           |
+|--------------|-------------------|
+| NCCM01 | Identifier of the host being described |
+| M01    | 3-character NOS LID (Logical Identifier) assigned to the host. Ordinarily, this is the same as the host's PID (Physical Identifier) which is the letter `M` followed by the host's 2-character machine identifier. |
+| 192.168.0.17:2550 | The TCP address on which the host listens for RHP connections |
+| 1 | The node number assigned to the mainframe (i.e., the host coupler node number) |
+| 2 | The node number assigned to the mainframe's NPU |
+| NCCM02 | The identifier of a host to which the host is linked |
+| 1 | The NPU port number on NCCM01's NPU used for creating the trunk to NCCM02's NPU |
+
+The second `rhpNode` definition specifies information about host NCCM02. 
+
+The site.cfg file associated with NCCM02's instance of DtCyber would look nearly
+identical, except for the `hostID` definition:
+
+```
+[NETWORK]
+hostID=NCCM02
+rhpNode=NCCM01,M01,192.168.0.17:2550,1,2,NCCM02,1
+rhpNode=NCCM02,M02,192.168.0.19:2550,3,4,NCCM01,1
+```
+Note that the rightmost elements of an `rhpNode` definition are pairs of host
+identifiers and NPU port numbers, and more than one such pair can occur in a
+definition. This enables describing the topologies of networks having more than
+two hosts. For example, the following definitions describe an RHP network of three NOS
+hosts where each host is directly connected to the other two hosts:
+
+```
+[NETWORK]
+hostID=NCCM01
+rhpNode=NCCM01,M01,192.168.0.29:2550,1,2,NCCM02,1,NCCM03,2
+rhpNode=NCCM02,M02,192.168.0.17:2550,3,4,NCCM01,1,NCCM03,2
+rhpNode=NCCM03,M03,192.168.0.19:2550,5,6,NCCM01,1,NCCM02,2
+
+```
+### <a id="usingrhp"></a>Using RHP
+RHP (Remote Host Products) enables you to exchange jobs, queued files, and permanent
+files between NOS 2 systems. Furthermore, if you send a job from one system to another,
+RHP will arrange for the job's output to be returned automatically to the originating
+system. RHP will preserve all file structure and content in files sent between NOS 2
+systems.
+
+Use the `ST` parameter of the NOS `ROUTE` command to send a job or queued file to
+another system. For example:
+
+```
+ROUTE,lfn,DC=TO,ST=M02.
+```
+
+will cause file *lfn* to be sent to execute on the host with logical identifier `M02`.
+Because `DC=TO` is specified, job's output will be returned to the originating system's
+wait queue. If `DC=IN` had been specified instead, the job's output would be returned
+to the originating system's print queue.
+
+Similarly, to send a file to the wait queue of a specific user on another host, you
+could execute a command such as:
+
+```
+ROUTE,lfn,DC=WT,ST=M02,UN=usernam.
+```
+Use the NOS `MFLINK` command to send or retrieve permanent files from other hosts.
+You can also use `MFLINK` to delete permanent files on other hosts. For example, to
+send a file to another host and save it as a permanent file, use `MFLINK` as in:
+
+```
+MFLINK,lfn,ST=M02
+* USER,usernam,passwor
+* SAVE,pfn
+*
+```
+To retrieve a file:
+```
+MFLINK,lfn,ST=M02
+* USER,usernam,passwor
+* GET,pfn
+*
+```
+See [NOS 2 Reference Set Volume 3 System Commands](http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf)
+for more details about the `ROUTE` and `MFLINK` commands.
 
 ## <a id="cray"></a>Cray Station
 NOS 2.8.7 supports the `Cray Station` subsystem (CRS), and this enables it to interact
@@ -630,16 +754,24 @@ on the system. Use `install help` to display the general syntax of the command
 including options and a list of *categories* recognized by it. Use `install list` to
 display the full list of individual products available. The command can be used to
 install specific products by name or whole categories of products.
+- `mail_configure` (alias `mailc`) : applies the NJE topology definition and customized
+configuration parameters to the UMass Mailer and e-mail routing system.
+See [UMass Mailer](#mailer) for details.
 - `make_ds_tape` (alias `mdt`) : creates a new deadstart tape that includes products
 installed by `install_product`.
-- `reconfigure` (alias `rcfg`) : applies customized system configuration parameters. See
-[Customizing the NOS 2.8.7 Configuration](#reconfig) for details.
 - `njf_configure` (alias `njfc`) : applies the NJE topology definition and customized
 configuration parameters to the system. See [Network Job Entry](#nje) for details.
+- `reconfigure` (alias `rcfg`) : applies all customized system configuration
+parameters including mail, NJE, RHP, and TLF parameters.
+See [Customizing the NOS 2.8.7 Configuration](#reconfig) for details.
+- `rhp_configure` (alias `rhpc`) : applies the RHP topology definitions and customized
+configuration parameters to the system. See [Remote Host Products](#rhp) for details.
 - `shutdown` : initiates graceful shutdown of the system.
 - `sync_tms` : synchronizes the NOS Tape Management System catalog with the
 cartridge tape definitions specified in the `volumes.json` configuration file
 found in the `stk` directory. See [stk/README.md](../stk/README.md) for details.
+- `tlf_configure` (alias `tlfc`) : applies the TLF node definitions and customized
+configuration parameters to the system. See [TieLine Facility](#tlf) for details.
 
 ## <a id="continuing"></a>Continuing an Interrupted Installation
 The installation process tracks its progress and can continue from its last successful
