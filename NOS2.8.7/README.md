@@ -355,7 +355,7 @@ site configuration file, `NOS2.8.7/site.cfg`. The property definitions will look
 
 ```
 [CMRDECK]
-MID=23
+MID=23.
 [NETWORK]
 hostID=SYZYGY
 ```
@@ -594,37 +594,44 @@ assigned one unique number. The node number assigned to a mainframe is called a
 
 RHP-based NOS to NOS networking is configured and activated by adding `rhpNode`
 definitions to the `[NETWORK]` section of the `site.cfg` file. For example, the
-following definitions describe a link between two NOS 2 systems from the perspective
-of the host identified as `NCCM01`:
+following `site.cfg` describes a network of two NOS 2 systems from the perspective
+of the host identified as `NCCM11` with machine ID `11`:
 
 ```
+[CMRDECK]
+MID=11.
+NAME=MAINFRAME ELEVEN
 [NETWORK]
-hostID=NCCM01
-rhpNode=NCCM01,M01,192.168.0.17:2550,1,2,NCCM02,1
-rhpNode=NCCM02,M02,192.168.0.19:2550,3,4,NCCM01,1
+hostID=NCCM11
+rhpNode=NCCM11,M11,192.168.0.17:2550,1,2,NCCM12,1
+rhpNode=NCCM12,M12,192.168.0.19:2550,3,4,NCCM11,1
 ```
 The parameter values specified in the first `rhpNode` definition are:
 
 | Parameter Value | Meaning           |
 |--------------|-------------------|
-| NCCM01 | Identifier of the host being described |
-| M01    | 3-character NOS LID (Logical Identifier) assigned to the host. Ordinarily, this is the same as the host's PID (Physical Identifier) which is the letter `M` followed by the host's 2-character machine identifier. |
+| NCCM11 | Identifier of the host being described |
+| M11    | 3-character NOS LID (Logical Identifier) assigned to the host. Ordinarily, this is the same as the host's PID (Physical Identifier) which is the letter `M` followed by the host's 2-character machine identifier, as defined by the MID value in the [CMRDECK] section. |
 | 192.168.0.17:2550 | The TCP address on which the host listens for RHP connections |
 | 1 | The node number assigned to the mainframe (i.e., the host coupler node number) |
 | 2 | The node number assigned to the mainframe's NPU |
-| NCCM02 | The identifier of a host to which the host is linked |
-| 1 | The NPU port number on NCCM01's NPU used for creating the trunk to NCCM02's NPU |
+| NCCM12 | The identifier of a host to which host NCCM11 is linked |
+| 1 | The NPU port number on NCCM11's NPU used for creating the trunk to NCCM12's NPU |
 
-The second `rhpNode` definition specifies information about host NCCM02. 
+The second `rhpNode` definition specifies information about host NCCM12. 
 
-The site.cfg file associated with NCCM02's instance of DtCyber would look nearly
-identical, except for the `hostID` definition:
+The site.cfg file associated with NCCM02's instance of DtCyber would look like the
+following. Note that the `rhpNode` definitions are identical to the ones in NCCM11's
+site.cfg file because they describe the same network.
 
 ```
+[CMRDECK]
+MID=12.
+NAME=MAINFRAME TWELVE
 [NETWORK]
-hostID=NCCM02
-rhpNode=NCCM01,M01,192.168.0.17:2550,1,2,NCCM02,1
-rhpNode=NCCM02,M02,192.168.0.19:2550,3,4,NCCM01,1
+hostID=NCCM12
+rhpNode=NCCM11,M11,192.168.0.17:2550,1,2,NCCM12,1
+rhpNode=NCCM12,M12,192.168.0.19:2550,3,4,NCCM11,1
 ```
 Note that the rightmost elements of an `rhpNode` definition are pairs of host
 identifiers and NPU port numbers, and more than one such pair can occur in a
@@ -633,11 +640,14 @@ two hosts. For example, the following definitions describe an RHP network of thr
 hosts where each host is directly connected to the other two hosts:
 
 ```
+[CMRDECK]
+MID=11.
+NAME=MAINFRAME ELEVEN
 [NETWORK]
-hostID=NCCM01
-rhpNode=NCCM01,M01,192.168.0.29:2550,1,2,NCCM02,1,NCCM03,2
-rhpNode=NCCM02,M02,192.168.0.17:2550,3,4,NCCM01,1,NCCM03,2
-rhpNode=NCCM03,M03,192.168.0.19:2550,5,6,NCCM01,1,NCCM02,2
+hostID=NCCM11
+rhpNode=NCCM11,M11,192.168.0.29:2550,1,2,NCCM12,1,NCCM13,2
+rhpNode=NCCM12,M12,192.168.0.17:2550,3,4,NCCM11,1,NCCM13,2
+rhpNode=NCCM13,M13,192.168.0.19:2550,5,6,NCCM11,1,NCCM12,2
 
 ```
 ### <a id="usingrhp"></a>Using RHP

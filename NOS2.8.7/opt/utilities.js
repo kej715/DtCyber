@@ -274,6 +274,7 @@ const utilities = {
       utilities.nonadjacentNjeNodesWithoutLids = {};
  
       const hostID    = utilities.getHostId(dtc);
+      const mid       = utilities.getMachineId(dtc);
       let   topology  = utilities.njeTopology;
       let   nextPort  = 0x30;
       let   portCount = 16;
