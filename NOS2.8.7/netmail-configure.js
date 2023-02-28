@@ -174,6 +174,22 @@ dtc.connect()
 .then(() => {
   let routes = [
     "*",
+    "* Routes for destinations reached by RHP",
+    "*"
+  ];
+  const topology = utilities.getRhpTopology(dtc);
+  const names = Object.keys(topology).sort();
+  for (const name of names) {
+    if (name === hostId) continue;
+    let node = topology[name];
+    routes.push(`:nick.${name} :route.DC=WT,UN=NETOPS,FC=IS,SCL=SY,ST=${node.lid} SMTP`);
+  }
+  return dtc.say("  RHPRTE")
+  .then(() => dtc.putFile("RHPRTE/IA", routes, mailerOpts));
+})
+.then(() => {
+  let routes = [
+    "*",
     "* Routes for destinations reached by SMTP",
     "*"
   ];
