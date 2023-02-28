@@ -51,6 +51,7 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfNode](#tlfNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfPorts](#tlfPorts)
 - &nbsp;&nbsp;&nbsp;&nbsp;[[RESOLVER]](#resolver)
+- [Customized Configuration Examples](#cfgexamples)
 - [A Note About Anti-Virus Software](#virus)
 
 ## <a id="prereq"></a>Prerequisites
@@ -1251,6 +1252,78 @@ applications to look up the IP addresses of hosts dynamically. Example:
 ```
 [RESOLVER]
 search nostalgiccomputing.org
+nameserver 192.168.0.19
+```
+
+## <a id="cfgexamples"></a>Customized Configuration Examples
+The following example of the content of a `site.cfg` file defines a NOS machine
+identifier and network host identifier for a machine, e.g., perhaps after registering
+the machine in the public NJE network:
+
+```
+[CMRDECK]
+MID=17.
+[NETWORK]
+hostID=CECCNOS1
+```
+
+The following example builds upon the previous example by adding a definition for a
+HASP connection to an IBM MVS/JES2 system:
+
+```
+[CMRDECK]
+MID=17.
+[NETWORK]
+hostID=CECCNOS1
+tlfNode=NCCJES2,JES,JES2,192.168.0.17:37803,R001
+```
+
+The following example adds definitions describing an RHP network of three nodes:
+
+```
+[CMRDECK]
+MID=17.
+[NETWORK]
+hostID=CECCNOS1
+rhpNode=CECCNOS1,M17,84.0.25.17:2550,1,2,NCCMAX,1,UCCVENUS,2
+rhpNode=NCCMAX,MAX,98.0.40.244:2550,3,4,CECCNOS1,1,UCCVENUS,2
+rhpNode=UCCVENUS,M23,128.172.3.7:2550,5,6,CECCNOS1,2,NCCMAX,1
+tlfNode=NCCJES2,JES,JES2,192.168.0.17:37803,R001
+```
+
+The following example adds a Cray Station interface:
+
+```
+[CMRDECK]
+MID=17.
+[NETWORK]
+hostID=CECCNOS1
+rhpNode=CECCNOS1,M17,84.0.25.17:2550,1,2,NCCMAX,1,UCCVENUS,2
+rhpNode=NCCMAX,MAX,98.0.40.244:2550,3,4,CECCNOS1,1,UCCVENUS,2
+rhpNode=UCCVENUS,M23,128.172.3.7:2550,5,6,CECCNOS1,2,NCCMAX,1
+tlfNode=NCCJES2,JES,JES2,192.168.0.17:37803,R001
+crayStation=CECCXMP,XMP,24,192.168.0.28:9001
+```
+
+The following example adds TCP/IP host definitions and a DNS resolver definition:
+
+```
+[CMRDECK]
+MID=17.
+[NETWORK]
+hostID=CECCNOS1
+rhpNode=CECCNOS1,M17,84.0.25.17:2550,1,2,NCCMAX,1,UCCVENUS,2
+rhpNode=NCCMAX,MAX,98.0.40.244:2550,3,4,CECCNOS1,1,UCCVENUS,2
+rhpNode=UCCVENUS,M23,128.172.3.7:2550,5,6,CECCNOS1,2,NCCMAX,1
+tlfNode=NCCJES2,JES,JES2,192.168.0.17:37803,R001
+crayStation=CECCXMP,XMP,24,192.168.0.28:9001
+[HOSTS]
+192.168.0.29 ceccnos1 nos1 nos1.cecc.org LOCALHOST_17 STK
+192.168.1.2  vax1 vax1.cecc.org
+192.168.2.2  bsd bsd.cecc.org mail-relay
+192.168.2.3  unicos unicos.cecc.org
+[RESOLVER]
+search cecc.org
 nameserver 192.168.0.19
 ```
 
