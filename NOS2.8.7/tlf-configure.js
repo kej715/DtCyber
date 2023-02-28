@@ -18,8 +18,11 @@
 //
 
 const DtCyber   = require("../automation/DtCyber");
+const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
+
+const topology = utilities.getTlfTopology(dtc);
 
 dtc.say("Start TLF configuration ...")
 .then(() => {
@@ -32,9 +35,16 @@ dtc.say("Start TLF configuration ...")
   }
 })
 .then(() => dtc.exec("node", ["opt/tlf-generate-tcf"]))
-.then(() => dtc.exec("node", ["opt/tlf-compile-tcf"]))
-.then(() => dtc.exec("node", ["opt/tlf-update-ovl"]))
-.then(() => dtc.exec("node", ["lid-configure"]))
+.then(() => {
+  if (Object.keys(topology).length > 0) {
+    return dtc.exec("node", ["opt/tlf-compile-tcf"])
+    .then(() => dtc.exec("node", ["opt/tlf-update-ovl"]))
+    .then(() => dtc.exec("node", ["lid-configure"]));
+  }
+  else {
+    return Promise.resolve();
+  }
+})
 .then(() => dtc.say("TLF configuration completed successfully"))
 .then(() => {
   process.exit(0);
