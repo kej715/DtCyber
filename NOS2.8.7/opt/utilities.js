@@ -37,6 +37,25 @@ const utilities = {
     .then(() => dtc.runJob(12, 4, "decks/compile-ndlopl.job", [mid]));
   },
 
+  deleteNDLmod: (dtc, modname) => {
+    const job = [
+      "$GET,NDLMODS/NA.",
+      "$IF,FILE(NDLMODS,AS),EDIT.",
+      "$  NOEXIT.",
+      `$  LIBEDIT,P=NDLMODS,N=0,C,Z.+*DELETE ${modname}`,
+      "$  ONEXIT.",
+      "$  REPLACE,NDLMODS.",
+      "$ENDIF,EDIT."
+    ];
+    const options = {
+      jobname:  "DELMOD",
+      username: "NETADMN",
+      password: "NETADMN"
+    };
+    return dtc.say("Update NDL ...")
+    .then(() => dtc.createJobWithOutput(12, 4, job, options));
+  },
+
   enableSubsystem: (dtc, name, cp) => {
     const job = [
       "$ATTACH,PRODUCT/WB.",

@@ -21,43 +21,10 @@ const toHex = value => {
   return value < 16 ? `0${value.toString(16)}` : value.toString(16);
 };
 
-//
-// Determine current machine ID, coupler node, and npu node from cyber.ini and cyber.ovl files.
-//
-const iniProps = utilities.getIniProperties(dtc);
-let currentCouplerNode = 1;
-let currentMid         = "01";
-let currentNpuNode     = 2;
-if (typeof iniProps["sysinfo"] !== "undefined") {
-  for (const line of iniProps["sysinfo"]) {
-    let ei = line.indexOf("=");
-    if (ei < 0) continue;
-    let key   = line.substring(0, ei).trim().toUpperCase();
-    let value = line.substring(ei + 1).trim().toUpperCase();
-    if (key === "MID") {
-      currentMid = value;
-    }
-  }
-}
-if (typeof iniProps["npu.nos287"] !== "undefined") {
-  for (const line of iniProps["npu.nos287"]) {
-    let ei = line.indexOf("=");
-    if (ei < 0) continue;
-    let key   = line.substring(0, ei).trim().toUpperCase();
-    let value = line.substring(ei + 1).trim();
-    if (key === "COUPLERNODE") {
-      currentCouplerNode = parseInt(value);
-    }
-    else if (key === "NPUNODE") {
-      currentNpuNode = parseInt(value);
-    }
-  }
-}
-
-const isCouplerNodeChange = currentCouplerNode  !== couplerNode;
-const isMidChange         = currentMid          !== mid;
-const isNpuNodeChange     = currentNpuNode      !== npuNode;
-const isNodeChange        = isCouplerNodeChange ||  isNpuNodeChange;
+const isCouplerNodeChange = couplerNode !== 1;
+const isMidChange         = mid         !== "01";
+const isNpuNodeChange     = npuNode     !== 2;
+const isNodeChange        = isCouplerNodeChange || isNpuNodeChange;
 
 //
 // Generate an NDL modset if the machine identifier, coupler node, or NPU node are changing,
@@ -223,7 +190,7 @@ if (linkNames.length > 0) {
 // Modify the LCFFILE declaration and TCP/IP Gateway OUTCALL definition if the coupler node, NPU node,
 // or machine ID are changing.
 //
-if (isNodeChange || isMidChange || linkNames.length > 1) {
+if (isNodeChange || isMidChange || linkNames.length > 0) {
   edits += 1;
   ndlModset = ndlModset.concat([
     "*D 139",
@@ -240,7 +207,7 @@ if (isNodeChange || isMidChange || linkNames.length > 1) {
 //
 // Generate INCALL and OUTCALL definitions for QTFS and PTFS if at least one other node is linked to the local node.
 //
-if (linkNames.length > 1) {
+if (linkNames.length > 0) {
   edits += 1;
   ndlModset = ndlModset.concat([
     "*D 184,185",
@@ -280,20 +247,23 @@ if (isNpuNodeChange) {
   }
 }
 
-if (edits > 0) {
-  dtc.connect()
-  .then(() => dtc.expect([ {re:/Operator> $/} ]))
-  .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
-  .then(() => dtc.say("Generate NDL for RHP topology ..."))
-  .then(() => utilities.updateNDL(dtc, ndlModset))
-  .then(() => {
-    process.exit(0);
-  })
-  .catch(err => {
-    console.log(err);
-    process.exit(1);
-  });
-}
-else {
-  console.log(`${new Date().toLocaleTimeString()} No NDL modifications needed for RHP`);
-}
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => {
+  if (edits > 0) {
+    return dtc.say("Generate NDL for RHP topology ...")
+    .then(() => utilities.updateNDL(dtc, ndlModset));
+  }
+  else {
+    return dtc.say("Remove RHP mod from NDL ...")
+    .then(() => utilities.deleteNDLmod(dtc, "RHP"));
+  }
+})
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});
