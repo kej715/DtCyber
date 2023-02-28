@@ -39,7 +39,7 @@ const mfTypeTable = {
   RSCS:  "VM/CMS"
 };
 
-let topology      = {};
+let topology = {};
 
 if (isCrsInstalled) {
   const customProps = utilities.getCustomProperties(dtc);
@@ -78,6 +78,7 @@ if (isTlfInstalled) {
   for (const name of Object.keys(tlfTopology)) {
     let node       = tlfTopology[name];
     node.link      = hostID;
+    node.route     = hostID;
     topology[name] = node;
   }
 }
@@ -145,11 +146,12 @@ let nodeNames = Object.keys(topology);
 for (const nodeName of nodeNames) {
   let node = topology[nodeName];
   if (node.id !== hostID) {
-    if (node.link === hostID) {
+    if (node.link === hostID
+        || (typeof node.links !== "undefined" && typeof node.links[hostID] !== "undefined")) {
       node.mfType = getMfType(node);
       adjacentNodes[nodeName] = node;
     }
-    else if (typeof node.lid !== "undefined") {
+    else if (typeof node.lid !== "undefined" && node.id !== localNode.link) {
       if (typeof node.route === "undefined") {
         node.route = defaultRoute;
       }
@@ -165,48 +167,7 @@ dtc.connect()
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => dtc.say(`Create/update LIDCM${mid} ...`))
 .then(() => {
-  let job = [
-    `$GET,F=LIDCM${mid}/UN=SYSTEMX,NA.`,
-    "$IF,.NOT.FILE(F,AS),M01.",
-    "$  GET,F=LIDCM01/UN=SYSTEMX.",
-    "$ENDIF,M01.",
-    "$COPYSBF,F."
-  ];
-  let options = {jobname:"GETFILE"};
-  return dtc.createJobWithOutput(12, 4, job, options);
-})
-.then(output => {
-  let   currentPid = null;
-  let   lines      = output.split("\n").slice(1);
-  const myPid      = `M${mid}`;
-  let   comments   = [];
-  for (const line of lines) {
-    if (line.startsWith("NPID,")) {
-      let match = line.match(/NPID,PID=([^,]*),MFTYPE=([^,.]*)/);
-      if (match !== null) {
-        currentPid = match[1];
-        lidConf[currentPid] = {
-          comments: comments,
-          mfType: match[2],
-          lids: {}
-        };
-        comments = [];
-      }
-    }
-    else if (line.startsWith("NLID,") && currentPid !== null) {
-      let match = line.match(/NLID,LID=([^,]*)/);
-      if (match !== null) {
-        let lid = match[1];
-        if (lid !== myPid || currentPid === myPid) {
-          lidConf[currentPid].lids[match[1]] = line;
-        }
-      }
-      comments = [];
-    }
-    else if (line.startsWith("*")) {
-      comments.push(line);
-    }
-  }
+  const myPid = `M${mid}`;
   //
   // Create/update PID and LID definitions from the lists of adjacent
   // and nonadjacent nodes.
@@ -234,8 +195,10 @@ dtc.connect()
   for (const node of Object.values(nonadjacentNodes)) {
     if (typeof node.route === "undefined" || node.route === null) continue;
     let lid = node.lid;
-    let adjacentPid = lidConf[adjacentNodes[node.route].lid];
-    adjacentPid.lids[lid] = `NLID,LID=${lid}.`;
+    if (node.route !== hostID) {
+      let adjacentPid = lidConf[adjacentNodes[node.route].lid];
+      adjacentPid.lids[lid] = `NLID,LID=${lid}.`;
+    }
     localPid.lids[lid]    = `NLID,LID=${lid},AT=STOREF.`;
   }
   //

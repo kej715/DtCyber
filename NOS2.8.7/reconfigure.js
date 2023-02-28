@@ -475,7 +475,7 @@ dtc.connect()
   }
 })
 .then(() => {
-  if (utilities.isInstalled("crs")) {
+  if (utilities.isInstalled("crs") && typeof newCrsInfo.lid !== "undefined") {
     if (   oldCrsInfo.lid       !== newCrsInfo.lid
         || oldCrsInfo.stationId !== newCrsInfo.stationId
         || oldCrsInfo.crayId    !== newCrsInfo.crayId) {
