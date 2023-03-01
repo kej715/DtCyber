@@ -1000,23 +1000,29 @@ In case a basic installation is interrupted before completing successfully, use 
 
 ## <a id="reconfig"></a>Customizing the NOS 2.8.7 Configuration
 Various parameters of the NOS 2.8.7 system configuration may be changed or added to
-accommodate personal preferences or local needs. For example:
+accommodate local requirements and personal preferences. For example:
 - Definitions in the system CMR deck may be updated to change parameters such as the
-machine identifier or system name.
+machine identifier and system name.
 - Definitions may be updated or added to the system equipment deck to add peripheral
 equipment or change their parameters.
 - The system's IP address may be defined.
 - The TCP/IP hosts statically known to the system may be defined.
 - The TCP/IP resource resolver configuration may be defined.
-- The NJE node name of the local host may be defined.
+- The network node name of the local host may be defined.
 - Private nodes in a local NJE network may be defined.
+- Networks of NOS 2 hosts supporting CDC Remote Hosts Products protocols may be
+described.
+- Remote hosts to which the local host may connect using HASP may be defined. 
 - Internet e-mail domains may be declared.
+- The Cray Station interface may be configured and activated.
 - etc.
 
-A script named `reconfigure.js` applies customized configuration. The script looks for a
+A tool named `reconfigure.js` applies customized configuration. The tool looks for a
 file named `site.cfg` in the current working directory. This file is where all
-customized system configuration parameters are expected to be defined. The script
-is called as in:
+customized system configuration parameters are expected to be defined. If *DtCyber*
+is started using the command `node start`, the tool may be called by entering the
+command `reconfigure` at the *DtCyber* `Operator>` prompt. Otherwise, the tool
+may be called as in:
 
 | OS           | Commands                           |
 |--------------|-------------------------|
@@ -1121,7 +1127,7 @@ defines parameters associated with it. The general syntax of this entry is:
     
     | Parameter     | Description |
     |---------------|-------------|
-    | name          | The name assigned to the interface. This is used in comments generated in configuration information about the interface |
+    | name          | The name assigned to the interface. |
     | lid           | The unique, 3-character logical identifier assigned to the interface. This is used in commands that route files and jobs to the Cray mainframe connected by the interface. |
     | channel | The number of the DtCyber channel to which the Cray frontend interface is connected. |
     | addr | The IP address and TCP port number on which the Cray mainframe emulator listens for connections. |
@@ -1211,7 +1217,7 @@ to which e-mail will be routed using the TCP/IP SMTP protocol. Examples:
     smtpDomain=.com
     smtpDomain=.org
     smtpDomain=.net
-    smtpDomain=local.host.org
+    smtpDomain=some.host.org
 ```
 - <a id="tlfNode"></a>**tlfNode** : Defines the name and routing information for a TLF
 node. The general syntax of this entry is:
