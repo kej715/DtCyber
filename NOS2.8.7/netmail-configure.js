@@ -60,7 +60,7 @@ dtc.connect()
 .then(() => dtc.say("Create routing and address translation artifacts ..."))
 .then(() => replaceFile("ZONE",    `${timeZone}\n`,      mailerOpts))
 .then(() => replaceFile("HOSTNOD", `${hostId}\n`,        mailerOpts))
-.then(() => replaceFile("HOSTALI", hostAliases,          mailerOpts))
+.then(() => replaceFile("HOSTALI",  hostAliases,         mailerOpts))
 .then(() => replaceFile("HOSTSVR", `Server@${hostId}\n`, mailerOpts))
 .then(() => {
   let aliasDefns = [];
@@ -171,7 +171,9 @@ dtc.connect()
   return dtc.say("  NJERTE")
   .then(() => dtc.putFile("NJERTE/IA", routes, mailerOpts));
 })
-.then(() => {
+.then(() => utilities.getFile(dtc, "TCPHOST/UN=NETADMN"))
+.then(text => {
+  text = dtc.cdcToAscii(text);
   let routes = [
     "*",
     "* Routes for destinations reached by RHP",
@@ -182,7 +184,36 @@ dtc.connect()
   for (const name of names) {
     if (name === hostId) continue;
     let node = topology[name];
-    routes.push(`:nick.${name} :route.DC=WT,UN=NETOPS,FC=IS,SCL=SY,ST=${node.lid} SMTP`);
+    routes.push(`:nick.${name} :route.DC=WT,UN=NETOPS,FC=IX,SCL=SY,ST=${node.lid} SMTP`);
+    let hostRecord = null;
+    for (let line of text.split("\n")) {
+      line = line.trim();
+      if (/^[0-9]/.test(line)) {
+        const tokens = line.toUpperCase().split(/\s+/);
+        if (tokens.indexOf(name) !== -1) {
+          hostRecord = line;
+        }
+      }
+    }
+    const customProps = utilities.getCustomProperties(dtc);
+    if (typeof customProps["HOSTS"] !== "undefined") {
+      for (let defn of customProps["HOSTS"]) {
+        if (/^[0-9]/.test(defn)) {
+          const tokens = defn.toUpperCase().split(/\s+/);
+          if (tokens.indexOf(name) !== -1) {
+            hostRecord = defn;
+          }
+        }
+      }
+    }
+    if (hostRecord !== null) {
+      let aliases = [];
+      for (const token of hostRecord.split(/\s+/).slice(1)) {
+        if (token.toUpperCase() !== name) {
+          routes.push(`:nick.${token} :route.DC=WT,UN=NETOPS,FC=IX,SCL=SY,ST=${node.lid} SMTP`);
+        }
+      }
+    }
   }
   return dtc.say("  RHPRTE")
   .then(() => dtc.putFile("RHPRTE/IA", routes, mailerOpts));
