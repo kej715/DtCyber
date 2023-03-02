@@ -4,87 +4,25 @@
 // configuration.
 //
 
-const fs        = require("fs");
 const DtCyber   = require("../automation/DtCyber");
+const fs        = require("fs");
 const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
+
+const mid            = utilities.getMachineId(dtc);
+const hostID         = utilities.getHostId(dtc);
+const njeTopology    = utilities.getNjeTopology(dtc);
+const rhpTopology    = utilities.getRhpTopology(dtc);
+const tlfTopology    = utilities.getTlfTopology(dtc);
 
 let adjacentNodes    = {};
 let nonadjacentNodes = {};
 
 const isCrsInstalled = utilities.isInstalled("crs");
 const isNjfInstalled = utilities.isInstalled("njf");
+const isRhpInstalled = utilities.isInstalled("rhp");
 const isTlfInstalled = utilities.isInstalled("tlf");
-
-//
-// Utility function to calculate the adjacent node nearest to a
-// nonadjacent one.
-//
-const calculateRoute = node => {
-  if (typeof node.route === "undefined") {
-    for (const adjacentNode of Object.values(adjacentNodes)) {
-      if (adjacentNode.id === node.link) {
-        node.route = adjacentNode.id;
-        return node.route;
-      }
-    }
-    if (typeof node.link !== "undefined" && node.link !== hostID) {
-      const route = calculateRoute(topology[node.link]);
-      if (route !== null) node.route = route;
-      return route;
-    }
-    else {
-      return null;
-    }
-  }
-  else {
-    return node.route;
-  }
-};
-
-//
-// If a site configuration file exists, and it has a CMRDECK
-// section with an MID definition, use that definition.
-// Otherwise, use the default machine ID, "01".
-//
-let customProps = {};
-let mid = "01";
-dtc.readPropertyFile(customProps);
-if (typeof customProps["CMRDECK"] !== "undefined") {
-  for (let line of customProps["CMRDECK"]) {
-    line = line.toUpperCase();
-    let match = line.match(/^MID=([^.]*)/);
-    if (match !== null) {
-      mid = match[1].trim();
-    }
-  }
-}
-
-//
-// Read and parse the cyber.ini file to obtain the host ID.
-//
-let iniProps = {};
-dtc.readPropertyFile("cyber.ini", iniProps);
-if (fs.existsSync("cyber.ovl")) {
-  dtc.readPropertyFile("cyber.ovl", iniProps);
-}
-let hostID = `NCCM${mid}`;
-for (let line of iniProps["npu.nos287"]) {
-  line = line.toUpperCase();
-  let ei = line.indexOf("=");
-  if (ei < 0) continue;
-  let key   = line.substring(0, ei).trim();
-  let value = line.substring(ei + 1).trim();
-  if (key === "HOSTID") {
-    hostID = value;
-  }
-}
-
-//
-// Read the public network topology definition
-//
-let topology = isNjfInstalled ? JSON.parse(fs.readFileSync("files/nje-topology.json")) : {};
 
 //
 // Update topology and network parameters to reflect customizations, if any.
@@ -101,72 +39,59 @@ const mfTypeTable = {
   RSCS:  "VM/CMS"
 };
 
-let defaultRoute  = null;
+let topology = {};
 
-if (typeof customProps["NETWORK"] !== "undefined") {
-  for (let line of customProps["NETWORK"]) {
-    line = line.toUpperCase();
-    let ei = line.indexOf("=");
-    if (ei < 0) continue;
-    let key   = line.substring(0, ei).trim();
-    let value = line.substring(ei + 1).trim();
-    if (key === "HOSTID") {
-      hostID = value;
-    }
-    else if (key === "CRAYSTATION" && isCrsInstalled) {
-      //
-      //  crayStation=<name>,<lid>,<channelNo>,<addr>[,S<station-id>][,C<cray-id>]
-      //
-      let items = value.split(",");
-      if (items.length >= 4) {
-        const nodeName = items.shift();
-        const node = {
-          id: nodeName,
-          type: "CRS",
-          software: "COS",
-          lid: items[0],
-          addr: items[2],
-          link: hostID
-        };
-        topology[nodeName] = node;
-      }
-    }
-    else if (key === "DEFAULTROUTE" && isNjfInstalled) {
-      defaultRoute = value;
-    }
-    else if (key === "NJENODE" && isNjfInstalled) {
-      //
-      //  njeNode=<nodename>,<software>,<lid>,<public-addr>,<link>
-      //     [,<local-address>][,B<block-size>][,P<ping-interval>][,<mailer-address>]
-      let items = value.split(",");
-      if (items.length >= 5) {
-        const nodeName = items.shift();
-        const node = {
-          id: nodeName,
-          software: items.shift(),
-          lid: items.shift(),
-          addr: items.shift(),
-          link: items.shift()
+if (isCrsInstalled) {
+  const customProps = utilities.getCustomProperties(dtc);
+  if (typeof customProps["NETWORK"] !== "undefined") {
+    for (let line of customProps["NETWORK"]) {
+      line = line.toUpperCase();
+      let ei = line.indexOf("=");
+      if (ei < 0) continue;
+      let key   = line.substring(0, ei).trim();
+      let value = line.substring(ei + 1).trim();
+      if (key === "CRAYSTATION" && isCrsInstalled) {
+        //
+        //  crayStation=<name>,<lid>,<channelNo>,<addr>[,S<station-id>][,C<cray-id>]
+        //
+        let items = value.split(",");
+        if (items.length >= 4) {
+          const nodeName = items.shift();
+          const node = {
+            id: nodeName,
+            type: "CRS",
+            software: "COS",
+            lid: items[0],
+            addr: items[2],
+            link: hostID
+          };
+          topology[nodeName] = node;
         }
-        topology[nodeName] = node;
       }
     }
-    else if (key === "TLFNODE" && isTlfInstalled) {
-      //
-      //  tlfNode=<name>,<lid>,<spooler>,<addr>
-      //    [,R<remote-id>][,P<password>][,B<block-size>]
-      let items = value.split(",");
-      if (items.length >= 4) {
-        const nodeName = items.shift();
-        const node = {
-          id: nodeName,
-          type: "TLF",
-          lid: items.shift(),
-          software: items.shift(),
-          link: hostID
-        };
-        topology[nodeName] = node;
-      }
+  }
+}
+
+let defaultRoute = null;
+
+if (isTlfInstalled) {
+  for (const name of Object.keys(tlfTopology)) {
+    let node       = tlfTopology[name];
+    node.link      = hostID;
+    node.route     = hostID;
+    topology[name] = node;
+  }
+}
+if (isNjfInstalled) {
+  defaultRoute  = utilities.getDefaultNjeRoute();
+  for (const name of Object.keys(njeTopology)) {
+    topology[name] = njeTopology[name];
+  }
+}
+if (isRhpInstalled) {
+  for (const name of Object.keys(rhpTopology)) {
+    if (name !== hostID) {
+      topology[name] = rhpTopology[name];
     }
   }
 }
@@ -177,6 +102,7 @@ if (typeof customProps["NETWORK"] !== "undefined") {
 if (typeof topology[hostID] === "undefined") {
   topology[hostID] = {
     id: hostID,
+    type: "RHP",
     software: "NOS",
     lid: `M${mid}`
   };
@@ -192,40 +118,45 @@ if (defaultRoute === null) {
   }
 }
 
+const getMfType = node => {
+  let mfType = "UNKNOWN";
+  if (typeof node.software !== "undefined") {
+    mfType = mfTypeTable[node.software];
+  }
+  else if (node.type === "RHP") {
+    mfType = "NOS2";
+  }
+  else if (node.type === "TLF") {
+    mfType = mfTypeTable[node.spooler];
+  }
+  return (typeof mfType !== "undefined") ? mfType : "UNKNOWN";
+};
+
 //
 // Build tables of adjacent and non-adjacent nodes with LIDs
 //
-localNode.id = hostID;
-if (typeof localNode.link !== "undefined" && typeof topology[localNode.link] != "undefined") {
+if (typeof localNode.link !== "undefined"
+    && typeof topology[localNode.link] != "undefined"
+    && localNode.link !== hostID) {
   let linkNode = topology[localNode.link];
-  let mfType = mfTypeTable[linkNode.software];
-  if (typeof mfType === "undefined") mfType = "UNKNOWN";
-  linkNode.mfType = mfType;
-  adjacentNodes[localNode.link] = linkNode;
+  linkNode.mfType = getMfType(linkNode);
+  adjacentNodes[linkNode.id] = linkNode;
 }
-
-const nodeNames = Object.keys(topology);
+let nodeNames = Object.keys(topology);
 for (const nodeName of nodeNames) {
   let node = topology[nodeName];
-  node.id = nodeName;
-  if (node.link === hostID) {
-    let mfType = mfTypeTable[node.software];
-    if (typeof mfType === "undefined") mfType = "UNKNOWN";
-    node.mfType = mfType;
-    adjacentNodes[nodeName] = node;
-  }
-  else if (typeof node.lid !== "undefined" && nodeName !== hostID) {
-    nonadjacentNodes[nodeName] = node;
-  }
-}
-
-//
-// Calculate routes for nonadjacent nodes
-//
-for (const node of Object.values(nonadjacentNodes)) {
-  node.route = calculateRoute(node);
-  if (typeof node.route === "undefined" || node.route === null) {
-    node.route = defaultRoute;
+  if (node.id !== hostID) {
+    if (node.link === hostID
+        || (typeof node.links !== "undefined" && typeof node.links[hostID] !== "undefined")) {
+      node.mfType = getMfType(node);
+      adjacentNodes[nodeName] = node;
+    }
+    else if (typeof node.lid !== "undefined" && node.id !== localNode.link) {
+      if (typeof node.route === "undefined") {
+        node.route = defaultRoute;
+      }
+      nonadjacentNodes[nodeName] = node;
+    }
   }
 }
 
@@ -236,44 +167,7 @@ dtc.connect()
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => dtc.say(`Create/update LIDCM${mid} ...`))
 .then(() => {
-  let job = [
-    `$GET,F=LIDCM${mid}/UN=SYSTEMX,NA.`,
-    "$IF,.NOT.FILE(F,AS),M01.",
-    "$  GET,F=LIDCM01/UN=SYSTEMX.",
-    "$ENDIF,M01.",
-    "$COPYSBF,F."
-  ];
-  let options = {jobname:"GETFILE"};
-  return dtc.createJobWithOutput(12, 4, job, options);
-})
-.then(output => {
-  let currentPid = null;
-  let lines      = output.split("\n").slice(1);
-  let comments   = [];
-  for (const line of lines) {
-    if (line.startsWith("NPID,")) {
-      let match = line.match(/NPID,PID=([^,]*),MFTYPE=([^,.]*)/);
-      if (match !== null) {
-        currentPid = match[1];
-        lidConf[currentPid] = {
-          comments: comments,
-          mfType: match[2],
-          lids: {}
-        };
-        comments = [];
-      }
-    }
-    else if (line.startsWith("NLID,") && currentPid !== null) {
-      let match = line.match(/NLID,LID=([^,]*)/);
-      if (match !== null) {
-        lidConf[currentPid].lids[match[1]] = line;
-      }
-      comments = [];
-    }
-    else if (line.startsWith("*")) {
-      comments.push(line);
-    }
-  }
+  const myPid = `M${mid}`;
   //
   // Create/update PID and LID definitions from the lists of adjacent
   // and nonadjacent nodes.
@@ -283,11 +177,11 @@ dtc.connect()
     mfType: "NOS2",
     lids: {}
   };
-  localPid.lids[`M${mid}`] = `NLID,LID=M${mid}.`;
-  lidConf[`M${mid}`] = localPid;
+  localPid.lids[myPid] = `NLID,LID=${myPid}.`;
+  lidConf[myPid]       = localPid;
   for (const node of Object.values(adjacentNodes)) {
     let lid = node.lid;
-    if (node.type !== "CRS") {
+    if (node.type !== "CRS" && node.type !== "RHP") {
       localPid.lids[lid] = `NLID,LID=${lid},AT=STOREF.`;
     }
     let adjacentPid = {
@@ -301,8 +195,10 @@ dtc.connect()
   for (const node of Object.values(nonadjacentNodes)) {
     if (typeof node.route === "undefined" || node.route === null) continue;
     let lid = node.lid;
-    let adjacentPid = lidConf[adjacentNodes[node.route].lid];
-    adjacentPid.lids[lid] = `NLID,LID=${lid}.`;
+    if (node.route !== hostID) {
+      let adjacentPid = lidConf[adjacentNodes[node.route].lid];
+      adjacentPid.lids[lid] = `NLID,LID=${lid}.`;
+    }
     localPid.lids[lid]    = `NLID,LID=${lid},AT=STOREF.`;
   }
   //
@@ -348,11 +244,11 @@ dtc.connect()
     }
   }
   let job = [
-    `$COPY,INPUT,FILE.`,
-    `$REPLACE,FILE=LIDCM${mid}.`
+    `$COPY,INPUT,LIDCM${mid}.`,
+    `$REPLACE,LIDCM${mid}.`
   ];
   let options = {
-    jobname: "REPFILE",
+    jobname: "REPLIDC",
     data: lidText
   };
   return promise

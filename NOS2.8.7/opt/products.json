@@ -57,8 +57,8 @@
       {
         "name": "cybis",
         "pre": [
-          "cybis-ndl.job",
-          "../decks/compile-ndlopl.job",
+          "cybis-update-ndl.js",
+          "../compile-ndl.js",
           "cybis-eqpd.job",
           "../make-ds-tape.js",
           "cybis-newds.pre",
@@ -203,9 +203,9 @@
         "name": "njf",
         "pre": "njf-mods.job",
         "post": [
+          "../njf-configure.js",
           "njf-users.job",
-          "njf.post",
-          "../njf-configure.js"
+          "njf.post"
         ],
         "lib": 75,
         "records": "PP/JFM-PROC/DSKRECV",
@@ -224,6 +224,16 @@
         "records": "ABS/RBF2P0-OVL/RBF0200",
         "examples": "rbf5-restart.post",
         "desc": "Remote Batch Facility Version 5"
+      },
+      {
+        "name": "rhp",
+        "pre": "nos.pre",
+        "post": [
+          "nos.post"
+        ],
+        "lib": 51,
+        "records": "ABS/MFLINK-PROC/QTF",
+        "desc": "Remote Host Products (QTF/PTF)"
       },
       {
         "name": "tlf",

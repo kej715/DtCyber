@@ -6,38 +6,22 @@ const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
-let crsChannel     = -1;       // channel used by CRS FEI
-let customProps    = {};       // properties read from site.cfg
 let newHostID      = null;     // new network host identifier
 let newMID         = null;     // new machine identifer
 let oldHostID      = "NCCM01"; // old network host identifier
 let oldMID         = "01";     // old machine identifer
 let productRecords = [];       // textual records to edit into PRODUCT file
 
-/*
- * getSystemRecord
- *
- * Obtain a record from the system file of the running system.
- *
- * Arguments:
- *   rid     - record id (e.g., CMRD01 or PROC/XYZZY)
- *   options - optional object providing job credentials and HTTP hostname
- *
- * Returns:
- *   A promise that is resolved when the record has been returned.
- *   The value of the promise is the record contents.
- */
-const getSystemRecord = (rid, options) => {
-  const job = [
-    "$COMMON,SYSTEM.",
-    `$GTR,SYSTEM,REC.${rid}`,
-    "$REWIND,REC.",
-    "$COPYSBF,REC."
-  ];
-  if (typeof options === "undefined") options = {};
-  options.jobname = "GTRSYS";
-  return dtc.createJobWithOutput(12, 4, job, options);
+const customProps  = utilities.getCustomProperties(dtc);
+const iniProps     = utilities.getIniProperties(dtc);
+
+let oldCrsInfo = {
+  lid:       "COS",
+  channel:   -1,
+  stationId: "FE",
+  crayId:    "C1"
 };
+let newCrsInfo = {};
 
 /*
  * processCmrdProps
@@ -52,7 +36,7 @@ const getSystemRecord = (rid, options) => {
 const processCmrdProps = () => {
   if (typeof customProps["CMRDECK"] !== "undefined") {
     return dtc.say("Edit CMRD01 ...")
-    .then(() => getSystemRecord("CMRD01"))
+    .then(() => utilities.getSystemRecord(dtc, "CMRD01"))
     .then(cmrd01 => {
       for (const prop of customProps["CMRDECK"]) {
         let ei = prop.indexOf("=");
@@ -104,7 +88,7 @@ const processCmrdProps = () => {
 const processEqpdProps = () => {
   if (typeof customProps["EQPDECK"] !== "undefined") {
     return dtc.say("Edit EQPD01 ...")
-    .then(() => getSystemRecord("EQPD01"))
+    .then(() => utilities.getSystemRecord(dtc, "EQPD01"))
     .then(eqpd01 => {
       for (const prop of customProps["EQPDECK"]) {
         let ei = prop.indexOf("=");
@@ -187,18 +171,28 @@ const processEqpdProps = () => {
  *  A promise that is resolved when all NETWORK properties have been processed.
  */
 const processNetworkProps = () => {
-  let iniProps = {};
-  dtc.readPropertyFile("cyber.ini", iniProps);
-  if (fs.existsSync("cyber.ovl")) {
-    dtc.readPropertyFile("cyber.ovl", iniProps);
-  }
-  for (let line of iniProps["npu.nos287"]) {
+  for (const line of iniProps["npu.nos287"]) {
     let ei = line.indexOf("=");
     if (ei < 0) continue;
-    let key   = line.substring(0, ei).trim();
+    let key   = line.substring(0, ei).trim().toUpperCase();
     let value = line.substring(ei + 1).trim();
-    if (key.toUpperCase() === "HOSTID") {
-      oldHostID = line.substring(ei + 1).trim().toUpperCase();
+    if (key === "HOSTID") {
+      oldHostID = value.toUpperCase();
+    }
+  }
+  if (typeof iniProps["sysinfo"] !== "undefined") {
+    for (const line of iniProps["sysinfo"]) {
+      let ei = line.indexOf("=");
+      if (ei < 0) continue;
+      let key   = line.substring(0, ei).trim().toUpperCase();
+      let value = line.substring(ei + 1).trim();
+      if (key === "CRS") {
+        let items = value.split(",");
+        oldCrsInfo.lid       = items[0];
+        oldCrsInfo.channel   = parseInt(items[1], 8);
+        oldCrsInfo.stationId = items[2];
+        oldCrsInfo.crayId    = items[3];
+      }
     }
   }
   if (typeof customProps["NETWORK"] !== "undefined") {
@@ -218,7 +212,18 @@ const processNetworkProps = () => {
         //
         let items = value.split(",");
         if (items.length >= 4) {
-          crsChannel = parseInt(items[2], 8);
+          newCrsInfo.lid       = items[1];
+          newCrsInfo.channel   = parseInt(items[2], 8);
+          newCrsInfo.stationId = "FE";
+          newCrsInfo.crayId    = "C1";
+          for (let i = 4; i < items.length; i++) {
+            if (items[i].startsWith("C")) {
+              newCrsInfo.crayId = items[i].substring(1);
+            }
+            else if (items[i].startsWith("S")) {
+              newCrsInfo.stationId = items[i].substring(1);
+            }
+          }
         }
       }
     }
@@ -251,15 +256,14 @@ const replaceFile = (filename, data, options) => {
 };
 
 /*
- * updateMachineID
+ * updateLIDCMxx
  *
- * Create/Update the LIDCMxx file and modify the NDL configuration to reflect the machine's
- * new identifier, if any.
+ * Create/Update the LIDCMxx file to reflect the machine's new identifier, if any.
  *
  * Returns:
- *  A promise that is resolved when the machine identifier has been updated.
+ *  A promise that is resolved when the LIDCMxx file has been updated.
  */
-const updateMachineID = () => {
+const updateLIDCMxx = () => {
   if (oldMID !== newMID && newMID !== null) {
     return dtc.say(`Create LIDCM${newMID} ...`)
     .then(() => utilities.getFile(dtc, `LIDCM${oldMID}/UN=SYSTEMX`))
@@ -274,38 +278,7 @@ const updateMachineID = () => {
       return text;
     })
     .then(text => replaceFile(`LIDCM${newMID}`, text))
-    .then(() => utilities.moveFile(dtc, `LIDCM${newMID}`, 1, 377777))
-    .then(() => dtc.say("Modify TCP/IP gateway OUTCALL statement in NDL ..."))
-    .then(() => {
-      const data = [
-        "TCPGWID",
-        "*IDENT TCPGWID",
-        "*DECK NETCFG",
-        "*D 181,182",
-        `OUTCALL,NAME1=TCPIPGW,NAME2=H${newMID},SNODE=1,DNODE=255,NETOSD=DDV,`,
-        `        ABL=7,DBL=7,DBZ=2000,UBL=7,UBZ=18,SERVICE=GW_TCPIP_M${newMID}.`,
-        "*EDIT NETCFG"
-      ];
-      const job = [
-        "$GET,NDLMODS/NA.",
-        "$IF,FILE(NDLMODS,AS),EDIT.",
-        "$  COPY,INPUT,MOD.",
-        "$  REWIND,MOD.",
-        "$  LIBEDIT,P=NDLMODS,B=MOD,I=0,C.",
-        "$ELSE,EDIT.",
-        "$  COPY,INPUT,NDLMODS.",
-        "$ENDIF,EDIT.",
-        "$REPLACE,NDLMODS."
-      ];
-      const options = {
-        jobname:  "TCPGWID",
-        username: "NETADMN",
-        password: "NETADMN",
-        data:     `${data.join("\n")}\n`
-      };
-      return dtc.createJobWithOutput(12, 4, job, options);
-    })
-    .then(() => dtc.runJob(12, 4, "decks/compile-ndlopl.job"));
+    .then(() => utilities.moveFile(dtc, `LIDCM${newMID}`, 1, 377777));
   }
   else {
     return Promise.resolve();
@@ -452,8 +425,6 @@ const updateTcpResolver = () => {
   }
 };
 
-dtc.readPropertyFile(customProps);
-
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
@@ -461,11 +432,26 @@ dtc.connect()
 .then(() => processEqpdProps())
 .then(() => processNetworkProps())
 .then(() => updateProductRecords())
-.then(() => updateMachineID())
+.then(() => updateLIDCMxx())
 .then(() => updateTcpResolver())
 .then(() => dtc.disconnect())
+.then(() => dtc.exec("node", ["opt/rhp-update-ndl"]))
 .then(() => {
-  return utilities.isInstalled("njf") ? dtc.exec("node", ["njf-configure"]) : Promise.resolve();
+  return utilities.isInstalled("cybis") ? dtc.exec("node", ["opt/cybis-update-ndl"]) : Promise.resolve();
+})
+.then(() => {
+  return utilities.isInstalled("njf") ? dtc.exec("node", ["opt/njf-update-ndl"]) : Promise.resolve();
+})
+.then(() => {
+  return utilities.isInstalled("tlf") ? dtc.exec("node", ["opt/tlf-update-ndl"]) : Promise.resolve();
+})
+.then(() => dtc.exec("node", ["compile-ndl"]))
+.then(() => dtc.exec("node", ["rhp-configure", "-ndl"]))
+.then(() => {
+  return utilities.isInstalled("njf") ? dtc.exec("node", ["njf-configure", "-ndl"]) : Promise.resolve();
+})
+.then(() => {
+  return utilities.isInstalled("tlf") ? dtc.exec("node", ["tlf-configure", "-ndl"]) : Promise.resolve();
 })
 .then(() => {
   return utilities.isInstalled("mailer") ? dtc.exec("node", ["mailer-configure"]) : Promise.resolve();
@@ -489,16 +475,19 @@ dtc.connect()
   }
 })
 .then(() => {
-  return utilities.isInstalled("tlf") ? dtc.exec("node", ["tlf-configure"]) : Promise.resolve();
-})
-.then(() => {
-  if (utilities.isInstalled("crs") && crsChannel !== -1) {
-    return dtc.say("Rebuild CRS ...")
-    .then(() => dtc.exec("node", ["install-product","-f","crs"]));
+  if (utilities.isInstalled("crs") && typeof newCrsInfo.lid !== "undefined") {
+    if (   oldCrsInfo.lid       !== newCrsInfo.lid
+        || oldCrsInfo.stationId !== newCrsInfo.stationId
+        || oldCrsInfo.crayId    !== newCrsInfo.crayId) {
+      return dtc.say("Rebuild CRS ...")
+      .then(() => dtc.exec("node", ["install-product","-f","crs"]));
+    }
+    else if (oldCrsInfo.channel !== newCrsInfo.channel) {
+      return dtc.say("Update CRS ...")
+      .then(() => dtc.exec("node", ["opt/crs.post"]));
+    }
   }
-  else {
-    return Promise.resolve();
-  }
+  return Promise.resolve();
 })
 .then(() => dtc.connect())
 .then(() => dtc.expect([ {re:/Operator> $/} ]))

@@ -21,6 +21,8 @@ dtc.readPropertyFile(customProps);
 
 let addr      = null;
 let channel   = -1;
+let crayId    = "C1";
+let lid       = "COS"
 let stationId = "FE";
 
 if (typeof customProps["NETWORK"] !== "undefined") {
@@ -36,11 +38,15 @@ if (typeof customProps["NETWORK"] !== "undefined") {
       //
       let items = value.split(",");
       if (items.length >= 4) {
+        lid     = items[1];
         channel = parseInt(items[2], 8);
         addr    = items[3];
       }
       for (let i = 4; i < items.length; i++) {
-        if (items[i].startsWith("S")) {
+        if (items[i].startsWith("C")) {
+          crayId = items[i].substring(1);
+        }
+        else if (items[i].startsWith("S")) {
           stationId = items[i].substring(1);
         }
       }
@@ -71,6 +77,17 @@ if (typeof ovlProps["equipment.nos287"] !== "undefined") {
 ovlText.push(`FEI,0,0,${channel.toString(8)},${addr}`);
 ovlProps["equipment.nos287"] = ovlText;
 
+ovlText = [];
+if (typeof ovlProps["sysinfo"] !== "undefined") {
+  for (const line of ovlProps["sysinfo"]) {
+    if (!line.startsWith("CRS=")) {
+      ovlText.push(line);
+    }
+  }
+}
+ovlText.push(`CRS=${lid},${channel.toString(8)},${stationId},${crayId}`);
+ovlProps["sysinfo"] = ovlText;
+
 let lines = [];
 for (const key of Object.keys(ovlProps)) {
   lines.push(`[${key}]`);
@@ -88,21 +105,7 @@ dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => dtc.say("Edit EQPD01 to add CZ (Cray Station) equipment ..."))
-.then(() => {
-  const job = [
-    "$ATTACH,PRODUCT/WB.",
-    "$NOEXIT.",
-    "$GTR,PRODUCT,EQPD01.EQPD01",
-    "$ONEXIT.",
-    "$IF,.NOT.FILE(EQPD01,AS),GTRSYS.",
-    "$  COMMON,SYSTEM.",
-    `$  GTR,SYSTEM,EQPD01.EQPD01`,
-    "$ENDIF,GTRSYS.",
-    "$REWIND,EQPD01.",
-    "$COPYSBF,EQPD01."
-  ];
-  return dtc.createJobWithOutput(12, 4, job, {jobname:"EQPD01"});
-})
+.then(() => utilities.getSystemRecord(dtc, "EQPD01"))
 .then(eqpd01 => {
   if (channel < 8) {
     channel = `0${channel}`;

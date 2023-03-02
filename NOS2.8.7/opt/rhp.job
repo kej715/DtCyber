@@ -1,0 +1,20 @@
+~*
+~*  This job builds the RHP (QTF/PTF) product.
+~*
+RHP.
+$USER,INSTALL,INSTALL.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$NOEXIT.
+$TMSDEF,TO=F.
+$ONEXIT.
+$BEGIN,RHP,INSTALL,SUBSYS=NAM.
+***
+*** RHP COMPLETE
+***
+EXIT.
+***
+*** RHP FAILED
+***

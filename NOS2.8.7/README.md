@@ -26,6 +26,8 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;[NJF vs TLF](#njf-vs-tlf)
 - [UMass Mailer](#email)
 - &nbsp;&nbsp;&nbsp;&nbsp;[E-mail Reflector](#reflector)
+- [NOS to NOS networking (RHP - Remote Host Products)](#rhp)
+- &nbsp;&nbsp;&nbsp;&nbsp;[Using RHP](#usingrhp)
 - [Cray Station](#cray)
 - [Shutdown and Restart](#shutdown)
 - [Operator Command Extensions](#opext)
@@ -44,10 +46,12 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[hostID](#hostID)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[njeNode](#njeNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[njePorts](#njePorts)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[rhpNode](#rhpNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[smtpDomain](#smtpDomain)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfNode](#tlfNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfPorts](#tlfPorts)
 - &nbsp;&nbsp;&nbsp;&nbsp;[[RESOLVER]](#resolver)
+- [Customized Configuration Examples](#cfgexamples)
 - [A Note About Anti-Virus Software](#virus)
 
 ## <a id="prereq"></a>Prerequisites
@@ -352,7 +356,7 @@ site configuration file, `NOS2.8.7/site.cfg`. The property definitions will look
 
 ```
 [CMRDECK]
-MID=23
+MID=23.
 [NETWORK]
 hostID=SYZYGY
 ```
@@ -524,8 +528,7 @@ on the SimH VAX emulator. It reproduces the
 [BITNet](https://en.wikipedia.org/wiki/BITNET) experience of the 1980's and early
 1990's. During that period, the NJE-based BITNet network connected hundreds of mainly
 academic institutions around the world and enabled its users to exchange e-mail and
-files. BITNet was the predominant world-wide e-mail network until the Internet obsoleted
-it around the mid-1990's.
+files. BITNet was the predominant world-wide e-mail network until the Internet obsoleted it around the mid-1990's.
 
 You may enroll your instance of NOS 2.8.7 in a reborn BITNet by requesting
 a unique node name for it (see [Network Job Entry](#nje), above) and then running the
@@ -559,6 +562,139 @@ reply could take as many as 10 minutes to arrive.
 
 Every ready-to-run instance of NOS 2.8.7 installed using these instructions, and any
 that are installed manually with the `netmail` component, have an e-mail reflector.
+
+## <a id="rhp"></a>NOS to NOS networking (RHP - Remote Host Products)
+NOS 2 systems can communicate with each other using data communication protocols
+created by Control Data. For example, the NPU's of two mainframes running NOS 2 can
+be connected to each other, and this type of connection can be used to exchange
+queued and permanent files between the systems. It can also be used more generally
+for application to application communication between mainframes.
+
+A point-to-point link between two NPU's is called a trunk. In a real environment,
+a trunk was established by connecting a physical data communication port on one NPU to
+a physical data communication port on the other NPU using a cable. Ordinarily, this
+was a synchronous serial connection operating at 19.2 Kbps, or perhaps even 56 Kbps.
+
+In a DtCyber environment, a virtual data communication port on one NPU is connected to a virtual data communication port on the other NPU using TCP/IP. Consequently, a
+trunk between two DtCyber systems operates at modern networking speeds. It is an
+effective substitute for Control Data's RHF/LCN (Remote Host Facility / Loosely Coupled
+Network) technology of the 1970's and 1980's which operated at 50 Mbps.
+
+The nodes in an RHP network were NPU's and hosts. A real Control Data mainframe
+could be connected via channels to multiple NPU's. These were treated as point-to-point
+network links. The NPU end of a channel was assigned a unique address, and the host end
+of the channel was also assigned a unique address. These addresses were 8-bit numbers
+in the range 1-255, and they were called *node numbers*.
+
+DtCyber supports only one NPU (or MDI) connected by channel to a mainframe. This
+conceptually simplifies RHP configuration a bit in a DtCyber environment. In
+particular, it simplifies assignment of RHP network addresses (i.e., node numbers).
+Each NPU (or MDI) must be assigned one unique node number, and each mainframe must be
+assigned one unique number. The node number assigned to a mainframe is called a
+*coupler node number* (it *couples* the mainframe to the network).
+
+RHP-based NOS to NOS networking is configured and activated by adding `rhpNode`
+definitions to the `[NETWORK]` section of the `site.cfg` file. For example, the
+following `site.cfg` describes a network of two NOS 2 systems from the perspective
+of the host identified as `NCCM11` with machine ID `11`:
+
+```
+[CMRDECK]
+MID=11.
+NAME=MAINFRAME ELEVEN
+[NETWORK]
+hostID=NCCM11
+rhpNode=NCCM11,M11,192.168.0.17:2550,1,2,NCCM12,1
+rhpNode=NCCM12,M12,192.168.0.19:2550,3,4,NCCM11,1
+```
+The parameter values specified in the first `rhpNode` definition are:
+
+| Parameter Value | Meaning           |
+|--------------|-------------------|
+| NCCM11 | Identifier of the host being described |
+| M11    | 3-character NOS LID (Logical Identifier) assigned to the host. Ordinarily, this is the same as the host's PID (Physical Identifier) which is the letter `M` followed by the host's 2-character machine identifier, as defined by the MID value in the [CMRDECK] section. |
+| 192.168.0.17:2550 | The TCP address on which the host listens for RHP connections |
+| 1 | The node number assigned to the mainframe (i.e., the host coupler node number) |
+| 2 | The node number assigned to the mainframe's NPU |
+| NCCM12 | The identifier of a host to which host NCCM11 is linked |
+| 1 | The NPU port number on NCCM11's NPU used for creating the trunk to NCCM12's NPU |
+
+The second `rhpNode` definition specifies information about host NCCM12. 
+
+The site.cfg file associated with NCCM02's instance of DtCyber would look like the
+following. Note that the `rhpNode` definitions are identical to the ones in NCCM11's
+site.cfg file because they describe the same network.
+
+```
+[CMRDECK]
+MID=12.
+NAME=MAINFRAME TWELVE
+[NETWORK]
+hostID=NCCM12
+rhpNode=NCCM11,M11,192.168.0.17:2550,1,2,NCCM12,1
+rhpNode=NCCM12,M12,192.168.0.19:2550,3,4,NCCM11,1
+```
+Note that the rightmost elements of an `rhpNode` definition are pairs of host
+identifiers and NPU port numbers, and more than one such pair can occur in a
+definition. This enables describing the topologies of networks having more than
+two hosts. For example, the following definitions describe an RHP network of three NOS
+hosts where each host is directly connected to the other two hosts:
+
+```
+[CMRDECK]
+MID=11.
+NAME=MAINFRAME ELEVEN
+[NETWORK]
+hostID=NCCM11
+rhpNode=NCCM11,M11,192.168.0.29:2550,1,2,NCCM12,1,NCCM13,2
+rhpNode=NCCM12,M12,192.168.0.17:2550,3,4,NCCM11,1,NCCM13,2
+rhpNode=NCCM13,M13,192.168.0.19:2550,5,6,NCCM11,1,NCCM12,2
+
+```
+### <a id="usingrhp"></a>Using RHP
+RHP (Remote Host Products) enables you to exchange jobs, queued files, and permanent
+files between NOS 2 systems. Furthermore, if you send a job from one system to another,
+RHP will arrange for the job's output to be returned automatically to the originating
+system. RHP will preserve all file structure and content in files sent between NOS 2
+systems.
+
+Use the `ST` parameter of the NOS `ROUTE` command to send a job or queued file to
+another system. For example:
+
+```
+ROUTE,lfn,DC=TO,ST=M02.
+```
+
+will cause file *lfn* to be sent to execute on the host with logical identifier `M02`.
+Because `DC=TO` is specified, job's output will be returned to the originating system's
+wait queue. If `DC=IN` had been specified instead, the job's output would be returned
+to the originating system's print queue.
+
+Similarly, to send a file to the wait queue of a specific user on another host, you
+could execute a command such as:
+
+```
+ROUTE,lfn,DC=WT,ST=M02,UN=usernam.
+```
+Use the NOS `MFLINK` command to send or retrieve permanent files from other hosts.
+You can also use `MFLINK` to delete permanent files on other hosts. For example, to
+send a file to another host and save it as a permanent file, use `MFLINK` as in:
+
+```
+MFLINK,lfn,ST=M02
+* USER,usernam,passwor
+* SAVE,pfn
+*
+```
+To retrieve a file:
+```
+MFLINK,lfn,ST=M02
+* USER,usernam,passwor
+* GET,pfn
+*
+```
+See [NOS 2 Reference Set Volume 3 System Commands](http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf)
+for more details about the `ROUTE` and `MFLINK` commands.
 
 ## <a id="cray"></a>Cray Station
 NOS 2.8.7 supports the `Cray Station` subsystem (CRS), and this enables it to interact
@@ -629,16 +765,24 @@ on the system. Use `install help` to display the general syntax of the command
 including options and a list of *categories* recognized by it. Use `install list` to
 display the full list of individual products available. The command can be used to
 install specific products by name or whole categories of products.
+- `mail_configure` (alias `mailc`) : applies the NJE topology definition and customized
+configuration parameters to the UMass Mailer and e-mail routing system.
+See [UMass Mailer](#mailer) for details.
 - `make_ds_tape` (alias `mdt`) : creates a new deadstart tape that includes products
 installed by `install_product`.
-- `reconfigure` (alias `rcfg`) : applies customized system configuration parameters. See
-[Customizing the NOS 2.8.7 Configuration](#reconfig) for details.
 - `njf_configure` (alias `njfc`) : applies the NJE topology definition and customized
 configuration parameters to the system. See [Network Job Entry](#nje) for details.
+- `reconfigure` (alias `rcfg`) : applies all customized system configuration
+parameters including mail, NJE, RHP, and TLF parameters.
+See [Customizing the NOS 2.8.7 Configuration](#reconfig) for details.
+- `rhp_configure` (alias `rhpc`) : applies the RHP topology definitions and customized
+configuration parameters to the system. See [Remote Host Products](#rhp) for details.
 - `shutdown` : initiates graceful shutdown of the system.
 - `sync_tms` : synchronizes the NOS Tape Management System catalog with the
 cartridge tape definitions specified in the `volumes.json` configuration file
 found in the `stk` directory. See [stk/README.md](../stk/README.md) for details.
+- `tlf_configure` (alias `tlfc`) : applies the TLF node definitions and customized
+configuration parameters to the system. See [TieLine Facility](#tlf) for details.
 
 ## <a id="continuing"></a>Continuing an Interrupted Installation
 The installation process tracks its progress and can continue from its last successful
@@ -732,6 +876,7 @@ This category includes data communication software.
 | [netmail](https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1) | UMass Mailer, network mail router |
 | [njf](https://www.dropbox.com/s/oejtd05qkvqhk9u/NOSL700NJEF.tap?dl=1) | Network Job Facility |
 | rbf5    | Remote Batch Facility Version 5 |
+| rhp     | Remote Host Products (QTF/PTF)  |
 | [tlf](https://www.dropbox.com/s/r5qbucmw6qye8vl/tieline.tap?dl=1) | TieLine Facility |
 
 ### Category *graphics*
@@ -855,23 +1000,29 @@ In case a basic installation is interrupted before completing successfully, use 
 
 ## <a id="reconfig"></a>Customizing the NOS 2.8.7 Configuration
 Various parameters of the NOS 2.8.7 system configuration may be changed or added to
-accommodate personal preferences or local needs. For example:
+accommodate local requirements and personal preferences. For example:
 - Definitions in the system CMR deck may be updated to change parameters such as the
-machine identifier or system name.
+machine identifier and system name.
 - Definitions may be updated or added to the system equipment deck to add peripheral
 equipment or change their parameters.
 - The system's IP address may be defined.
 - The TCP/IP hosts statically known to the system may be defined.
 - The TCP/IP resource resolver configuration may be defined.
-- The NJE node name of the local host may be defined.
+- The network node name of the local host may be defined.
 - Private nodes in a local NJE network may be defined.
+- Networks of NOS 2 hosts supporting CDC Remote Hosts Products protocols may be
+described.
+- Remote hosts to which the local host may connect using HASP may be defined. 
 - Internet e-mail domains may be declared.
+- The Cray Station interface may be configured and activated.
 - etc.
 
-A script named `reconfigure.js` applies customized configuration. The script looks for a
+A tool named `reconfigure.js` applies customized configuration. The tool looks for a
 file named `site.cfg` in the current working directory. This file is where all
-customized system configuration parameters are expected to be defined. The script
-is called as in:
+customized system configuration parameters are expected to be defined. If *DtCyber*
+is started using the command `node start`, the tool may be called by entering the
+command `reconfigure` at the *DtCyber* `Operator>` prompt. Otherwise, the tool
+may be called as in:
 
 | OS           | Commands                           |
 |--------------|-------------------------|
@@ -940,19 +1091,31 @@ forwarding it to other SMTP-based hosts, as needed. Typically, Unix hosts are ca
 of serving as mail relays.
 
 ### <a id="network"></a>[NETWORK]
-Defines private routes and the names of hosts in the CDC and NJE (Network Job Entry)
-networks. In particular, the node name of the local host is defined in this section
-when the local host is registered in the public NJE network. This enables the NJF
-configuration tool, `njf-configure.js`, to recognize the local host in the public
-network topology definition, [files/nje-topology.json](files/nje-topology.json).
+Defines site-specific routing information and parameters related to data communication
+and networking. The configuration of various NOS 2.8.7 data communication subsystems
+derives from this section. This includes:
 
-Definitions in this section are edited into the NOS system's NDL and HCF (NJF host
-configuration file) files as well as *DtCyber's* `cyber.ovl` file. Example:
+- **Host ID**. The identifier of the local NOS 2.8.7 host.
+- **RHP**. Information defining the topology of a network of mainframes running
+NOS 2.8.7 and interconnected by Control Data's `RHP` (Remote Host Products) data
+communication protocols.
+- **NJE**. Information defining private routes in a network of mainframes
+interconnected by IBM's `NJE` (Network Job Entry) data communication protocol.
+- **HASP**. Information about mainframes to which NOS 2.8.7 can connect using
+IBM's `HASP` data communication protocol.
+- **SMTP**. Information about e-mail destinations that can be reached using the
+TCP/IP `Simple Mail Transfer Protocol`.
+- **CRS**. Configuration information for the `Cray Station` interface.
+
+Example:
 
 ```
 [NETWORK]
-hostID=MYNODE
-njeNode=LOCALCMS,RSCS,CMS,192.168.1.3:175,MYNODE,B8192,MAILER@LOCALCMS
+hostID=MARS
+rhpNode=MARS,MAR,localhost:2551,1,2,VENUS,1
+rhpNode=VENUS,MVE,192.168.0.17:2551,3,4,MARS,1
+crayStation=CRAYXMP,XMP,24,192.168.0.28:9001,SFE,CC1
+tlfNode=JES2,JES,JES2,192.168.0.17:37803,R001
 ```
 
 The entries that may occur in the `[NETWORK]` section include:
@@ -964,7 +1127,7 @@ defines parameters associated with it. The general syntax of this entry is:
     
     | Parameter     | Description |
     |---------------|-------------|
-    | name          | The name assigned to the interface. This is used in comments generated in configuration information about the interface |
+    | name          | The name assigned to the interface. |
     | lid           | The unique, 3-character logical identifier assigned to the interface. This is used in commands that route files and jobs to the Cray mainframe connected by the interface. |
     | channel | The number of the DtCyber channel to which the Cray frontend interface is connected. |
     | addr | The IP address and TCP port number on which the Cray mainframe emulator listens for connections. |
@@ -982,15 +1145,15 @@ Example:
 
     `defaultRoute=NCCMAX`
     
-	Ordinarily, this entry is needed only when an NJE node has multiple adjacent
-	neighbors, so one of them needs to be designated as the node to which files
-	will be sent when the route to a destination cannot be calculated autommatically
-	using the [topology file](files/nje-topology.json).
+	Ordinarily, this entry is needed only when an NJE node has multiple directly
+	connectted neighbors, so one of them needs to be designated as the node to which
+	files will be sent when the route to a destination cannot be calculated
+	autommatically using the [topology file](files/nje-topology.json).
     
 - <a id="hostID"></a>**hostID** : Specifies the 1 - 8 character node name of the local
 host. Example:
 
-    `hostID=MYNODE`
+    `hostID=MARS`
 
 - <a id="njeNode"></a>**njeNode** : Defines the name and routing information for an NJE
 node within a private NJE network (i.e., a node that is not registered in the public
@@ -1015,9 +1178,9 @@ this entry is:
     
     `njeNode=LOCALCMS,RSCS,CMS,192.168.1.3:175,MYNODE,B8192,MAILER@LOCALCMS`
     
-- <a id="njePorts"></a>**njePorts** : Specifies the range of CLA ports that will be
-used in defining terminals for use by NJF in the NOS NDL. The general syntax of this
-entry is:
+- <a id="njePorts"></a>**njePorts** : Specifies the range of CLA ports on the local
+NPU that will be used in defining terminals for use by NJF in the NOS NDL. The general
+syntax of this entry is:
 
     njePorts=*cla-port-number*,*port-count*
     
@@ -1027,6 +1190,26 @@ entry is:
     
     `njePorts=0x30,16`
     
+- <a id="rhpNode"></a>**rhpNode** : Defines the name and linkage information for a node
+in a Control Data `Remote Host Products` network. RHP provides the QTF (Queued file
+Transfer Facility) and PTF (Permanent file Transfer Facility) applications that enable
+NOS 2.8.7 systems to exchange jobs and files. The general syntax of this entry is:
+
+    rhpNode=*nodename*,*lid*,*addr*,*coupler-node*,*npu-node*,*peername*,*cla-port*[,*peername*,*cla-port*...]
+    
+    | Parameter     | Description |
+    |---------------|-------------|
+    | nodename      | The name assigned to the node. |
+    | lid           | The unique, 3-character logical identifier assigned to the node. |
+    | addr          | The IP address and TCP port number on which the node listens for RHP connections. The format is `ipaddress:portnumber`, e.g., 192.168.0.17:2551. |
+    | coupler-node  | The node number of the channel coupler that links the node's NPU to its mainframe. Essentially, this is the RHP node number of the mainframe |
+    | npu-node      | The node number of the node's NPU itself. |
+    | peername      | The name of a peer to which the mainframe is directly linked. This must match the *nodename* parameter of another *rhpNode* definition |
+    | cla-port      | The number of the CLA port on the mainframe's NPU that is used for communicating with the peer. |
+    
+Note that multiple *peername*/*cla-port* pairs may be defined to indicate that a node
+is connected to multiple peers.
+
 - <a id="smtpDomain"></a>**smtpDomain** : Identifies an internet domain name or suffix
 to which e-mail will be routed using the TCP/IP SMTP protocol. Examples:
 
@@ -1034,7 +1217,7 @@ to which e-mail will be routed using the TCP/IP SMTP protocol. Examples:
     smtpDomain=.com
     smtpDomain=.org
     smtpDomain=.net
-    smtpDomain=local.host.org
+    smtpDomain=some.host.org
 ```
 - <a id="tlfNode"></a>**tlfNode** : Defines the name and routing information for a TLF
 node. The general syntax of this entry is:
@@ -1075,6 +1258,78 @@ applications to look up the IP addresses of hosts dynamically. Example:
 ```
 [RESOLVER]
 search nostalgiccomputing.org
+nameserver 192.168.0.19
+```
+
+## <a id="cfgexamples"></a>Customized Configuration Examples
+The following example of the content of a `site.cfg` file defines a NOS machine
+identifier and network host identifier for a machine, e.g., perhaps after registering
+the machine in the public NJE network:
+
+```
+[CMRDECK]
+MID=17.
+[NETWORK]
+hostID=CECCNOS1
+```
+
+The following example builds upon the previous example by adding a definition for a
+HASP connection to an IBM MVS/JES2 system:
+
+```
+[CMRDECK]
+MID=17.
+[NETWORK]
+hostID=CECCNOS1
+tlfNode=NCCJES2,JES,JES2,192.168.0.17:37803,R001
+```
+
+The following example adds definitions describing an RHP network of three nodes:
+
+```
+[CMRDECK]
+MID=17.
+[NETWORK]
+hostID=CECCNOS1
+rhpNode=CECCNOS1,M17,84.0.25.17:2550,1,2,NCCMAX,1,UCCVENUS,2
+rhpNode=NCCMAX,MAX,98.0.40.244:2550,3,4,CECCNOS1,1,UCCVENUS,2
+rhpNode=UCCVENUS,M23,128.172.3.7:2550,5,6,CECCNOS1,2,NCCMAX,1
+tlfNode=NCCJES2,JES,JES2,192.168.0.17:37803,R001
+```
+
+The following example adds a Cray Station interface:
+
+```
+[CMRDECK]
+MID=17.
+[NETWORK]
+hostID=CECCNOS1
+rhpNode=CECCNOS1,M17,84.0.25.17:2550,1,2,NCCMAX,1,UCCVENUS,2
+rhpNode=NCCMAX,MAX,98.0.40.244:2550,3,4,CECCNOS1,1,UCCVENUS,2
+rhpNode=UCCVENUS,M23,128.172.3.7:2550,5,6,CECCNOS1,2,NCCMAX,1
+tlfNode=NCCJES2,JES,JES2,192.168.0.17:37803,R001
+crayStation=CECCXMP,XMP,24,192.168.0.28:9001
+```
+
+The following example adds TCP/IP host definitions and a DNS resolver definition:
+
+```
+[CMRDECK]
+MID=17.
+[NETWORK]
+hostID=CECCNOS1
+rhpNode=CECCNOS1,M17,84.0.25.17:2550,1,2,NCCMAX,1,UCCVENUS,2
+rhpNode=NCCMAX,MAX,98.0.40.244:2550,3,4,CECCNOS1,1,UCCVENUS,2
+rhpNode=UCCVENUS,M23,128.172.3.7:2550,5,6,CECCNOS1,2,NCCMAX,1
+tlfNode=NCCJES2,JES,JES2,192.168.0.17:37803,R001
+crayStation=CECCXMP,XMP,24,192.168.0.28:9001
+[HOSTS]
+192.168.0.29 ceccnos1 nos1 nos1.cecc.org LOCALHOST_17 STK
+192.168.1.2  vax1 vax1.cecc.org
+192.168.2.2  bsd bsd.cecc.org mail-relay
+192.168.2.3  unicos unicos.cecc.org
+[RESOLVER]
+search cecc.org
 nameserver 192.168.0.19
 ```
 

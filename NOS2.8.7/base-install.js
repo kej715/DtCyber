@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-const fs        = require("fs");
 const DtCyber   = require("../automation/DtCyber");
+const fs        = require("fs");
 const utilities = require("./opt/utilities");
 
 const baseTapes = ["ds.tap", "nos287-1.tap", "nos287-2.tap", "nos287-3.tap"];
@@ -125,7 +125,7 @@ if (isCompletedStep("nam-init") === false) {
   promise = promise
   .then(() => dtc.say("Create and compile the NDL file ..."))
   .then(() => dtc.runJob(12, 4, "decks/create-ndlopl.job"))
-  .then(() => dtc.runJob(12, 4, "decks/compile-ndlopl.job"))
+  .then(() => dtc.runJob(12, 4, "decks/compile-ndlopl.job", ["01"]))
   .then(() => dtc.say("Update the NAMSTRT file ..."))
   .then(() => dtc.dis("PERMIT,NAMSTRT,INSTALL=W.", 377772))
   .then(() => dtc.runJob(12, 4, "decks/update-namstrt.job", utilities.getTimeZone()))
