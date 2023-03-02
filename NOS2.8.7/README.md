@@ -9,6 +9,7 @@ operating system that supports:
 - Remote job entry (RJE)
 - Network job entry (NJE)
 - E-mail
+- NOS-to-NOS networking
 - Cray supercomputer interaction
 
 Automation has been provided in order to make the installation process
