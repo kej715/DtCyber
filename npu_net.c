@@ -943,7 +943,7 @@ static int npuNetCreateConnections(void)
                 if (fd == -1)
 #endif
                     {
-                    fprintf(stderr, "(npu_net) Failed to initiate connection to: %s\n", ncbp->hostName);
+                    npuLogMessage("(npu_net) Failed to initiate connection to: %s\n", ncbp->hostName);
                     continue;
                     }
                 else // connection in progress
