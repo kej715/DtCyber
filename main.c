@@ -97,6 +97,7 @@ u32  readerScanSecs = 3;
 bool idle = FALSE;   /* Idle loop detection */
 u32  idleTrigger;    /* sleep every <idletrigger> cycles of the idle loop */
 u32  idleTime;       /* microseconds to sleep when idle */
+char ipAddress[16];
 char osType[16];
 bool (*idleDetector)(CpuContext *) = &idleDetectorNone;
 

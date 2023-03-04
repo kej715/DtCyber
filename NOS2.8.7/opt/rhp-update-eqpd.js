@@ -14,7 +14,7 @@ const couplerNode = utilities.getCouplerNode(dtc);
 //
 // Determine current coupler node
 //
-const iniProps = utilities.getIniProperties(dtc);
+const iniProps = dtc.getIniProperties(dtc);
 let currentCouplerNode = 1;
 if (typeof iniProps["npu.nos287"] !== "undefined") {
   for (const line of iniProps["npu.nos287"]) {

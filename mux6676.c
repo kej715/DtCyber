@@ -240,9 +240,6 @@ void mux6676Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
 **------------------------------------------------------------------------*/
 static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
     {
-#if defined(_WIN32)
-    u_long blockEnable = 1;
-#endif
     char               *cp;
     DevSlot            *dp;
     u8                 g;
@@ -254,10 +251,8 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
     char               *mts;
     int                n;
     int                numParam;
-    int                optEnable = 1;
     int                portCount;
     PortParam          *pp;
-    struct sockaddr_in server;
 
     dp = channelAttach(channelNo, eqNo, muxType);
 
@@ -353,38 +348,12 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
             /*
             **  Create socket, bind to specified port, and begin listening for connections
             */
-            gp->listenFd = socket(AF_INET, SOCK_STREAM, 0);
-            if (gp->listenFd < 0)
-                {
-                fprintf(stderr, "(mux6676) Can't create socket for %s on port %d\n", mts, listenPort);
-                exit(1);
-                }
-            /*
-            **  Accept will block if client drops connection attempt between select and accept.
-            **  We can't block so make listening socket non-blocking to avoid this condition.
-            */
+            gp->listenFd = netCreateListener(listenPort);
 #if defined(_WIN32)
-            ioctlsocket(gp->listenFd, FIONBIO, &blockEnable);
+            if (gp->listenFd == INVALID_SOCKET)
 #else
-            fcntl(gp->listenFd, F_SETFL, O_NONBLOCK);
+            if (gp->listenFd == -1)
 #endif
-            /*
-            **  Bind to configured TCP port number
-            */
-            setsockopt(gp->listenFd, SOL_SOCKET, SO_REUSEADDR, (void *)&optEnable, sizeof(optEnable));
-            memset(&server, 0, sizeof(server));
-            server.sin_family      = AF_INET;
-            server.sin_addr.s_addr = inet_addr("0.0.0.0");
-            server.sin_port        = htons(listenPort);
-            if (bind(gp->listenFd, (struct sockaddr *)&server, sizeof(server)) < 0)
-                {
-                fprintf(stderr, "(mux6676) Can't bind to listen socket for %s on port %d\n", mts, listenPort);
-                exit(1);
-                }
-            /*
-            **  Start listening for new connections on this TCP port number
-            */
-            if (listen(gp->listenFd, 5) < 0)
                 {
                 fprintf(stderr, "(mux6676) Can't listen for %s on port %d\n", mts, listenPort);
                 exit(1);
@@ -1003,11 +972,7 @@ static void mux667xCheckIo(MuxParam *mp)
                     {
                     send(fd, noPortsAvailMsg, strlen(noPortsAvailMsg), 0);
                     }
-#if defined(_WIN32)
-                closesocket(fd);
-#else
-                close(fd);
-#endif
+                netCloseConnection(fd);
                 }
             }
         }
@@ -1049,11 +1014,7 @@ static bool mux667xInputRequired(MuxParam *mp)
 **------------------------------------------------------------------------*/
 static void mux667xClose(PortParam *pp)
     {
-#if defined(_WIN32)
-    closesocket(pp->connFd);
-#else
-    close(pp->connFd);
-#endif
+    netCloseConnection(pp->connFd);
     pp->connFd    = 0;
     pp->active    = FALSE;
     pp->inInIdx   = 0;

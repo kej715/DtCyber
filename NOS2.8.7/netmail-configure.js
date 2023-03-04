@@ -209,7 +209,11 @@ dtc.connect()
     if (hostRecord !== null) {
       let aliases = [];
       for (const token of hostRecord.split(/\s+/).slice(1)) {
-        if (token.toUpperCase() !== name) {
+        let ucname = token.toUpperCase();
+        if (   ucname !== name
+            && ucname !== "STK"
+            && ucname !== "MAIL-RELAY"
+            && ucname.startsWith("LOCALHOST_") === false) {
           routes.push(`:nick.${token} :route.DC=WT,UN=NETOPS,FC=IX,SCL=SY,ST=${node.lid} SMTP`);
         }
       }

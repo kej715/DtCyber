@@ -224,28 +224,14 @@ if (fs.existsSync("site.cfg") && isCompletedStep("site-config") === false) {
   promise = promise
   .then(() => dtc.say("Apply site configuration (site.cfg) ..."))
   .then(() => dtc.disconnect())
-  .then(() => dtc.exec("node", ["reconfigure"]))
-  .then(() => dtc.say("Make a new deadstart tape ..."))
-  .then(() => dtc.exec("node", ["make-ds-tape"]))
-  .then(() => {
-    if (fs.existsSync("tapes/ods.tap")) {
-      fs.unlinkSync("tapes/ods.tap");
-    }
-    fs.renameSync("tapes/ds.tap", "tapes/ods.tap");
-    fs.renameSync("tapes/newds.tap", "tapes/ds.tap");
-    return Promise.resolve();
-  })
-  .then(() => {
-    addCompletedStep("site-config");
-    return Promise.resolve();
-  })
-  .then(() => dtc.connect())
-  .then(() => dtc.expect([ {re:/Operator> $/} ]));
+  .then(() => dtc.exec("node", ["reconfigure"]));
 }
 
 promise = promise
 .then(() => dtc.say("Base installation completed successfully"))
-.then(() => dtc.shutdown())
+.then(() => {
+  process.exit(0);
+})
 .catch(err => {
   console.log(`Error caught: ${err}`);
   process.exit(1);

@@ -13,7 +13,20 @@ let oldMID         = "01";     // old machine identifer
 let productRecords = [];       // textual records to edit into PRODUCT file
 
 const customProps  = utilities.getCustomProperties(dtc);
-const iniProps     = utilities.getIniProperties(dtc);
+const iniProps     = dtc.getIniProperties(dtc);
+
+let oldIpAddress = "127.0.0.1";
+if (typeof iniProps["cyber"] !== "undefined") {
+  for (const line of iniProps["cyber"]) {
+    let ei = line.indexOf("=");
+    if (ei === -1) continue;
+    let key = line.substring(0, ei).trim().toUpperCase();
+    if (key === "IPADDRESS") {
+      oldIpAddress = line.substring(ei + 1).trim();
+    }
+  }
+}
+let newIpAddress = oldIpAddress;
 
 let oldCrsInfo = {
   lid:       "COS",
@@ -493,13 +506,71 @@ dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => updateTcpHosts())
+.then(() => dtc.disconnect())
+.then(() => dtc.say("Make a new deadstart tape ..."))
+.then(() => dtc.exec("node", ["make-ds-tape"]))
+.then(() => dtc.say("Shutdown the system to re-deadstart using the new tape ..."))
+.then(() => dtc.connect())
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.say("Update cyber.ovl ..."))
+.then(() => utilities.getHostRecord(dtc))
+.then(hostRecord => {
+  const tokens = hostRecord.split(/\s+/);
+  newIpAddress = tokens[0];
+  if (newIpAddress !== oldIpAddress) {
+    let ovlProps = {};
+    if (fs.existsSync("cyber.ovl")) {
+      dtc.readPropertyFile("cyber.ovl", ovlProps);
+    }
+    let ovlText = [];
+    if (typeof ovlProps["cyber"] !== "undefined") {
+      for (const line of ovlProps["cyber"]) {
+        if (!line.startsWith("ipAddress=")) {
+          ovlText.push(line);
+        }
+      }
+    }
+    ovlText.push(`ipAddress=${newIpAddress}`);
+    ovlProps["cyber"] = ovlText;
+
+    let lines = [];
+    for (const key of Object.keys(ovlProps)) {
+      lines.push(`[${key}]`);
+      for (const line of ovlProps[key]) {
+        lines.push(`${line}`);
+      }
+    }
+    lines.push("");
+
+    fs.writeFileSync("cyber.ovl", lines.join("\n"));
+  }
+  return Promise.resolve();
+})
+.then(() => dtc.say("Shutdown the system to re-deadstart using the new tape ..."))
+.then(() => dtc.shutdown(false))
+.then(() => {
+  if (fs.existsSync("tapes/ods.tap")) {
+    fs.unlinkSync("tapes/ods.tap");
+  }
+  fs.renameSync("tapes/ds.tap", "tapes/ods.tap");
+  fs.renameSync("tapes/newds.tap", "tapes/ds.tap");
+  return Promise.resolve();
+})
+.then(() => dtc.say("Deadstart using the new tape ..."))
+.then(() => dtc.start({
+    detached: true,
+    stdio:    [0, "ignore", 2],
+    unref:    false
+}))
+.then(() => dtc.sleep(5000))
+.then(() => dtc.connect(newIpAddress))
+.then(() => dtc.expect([{ re: /Operator> $/ }]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.expect([{ re: /QUEUE FILE UTILITY COMPLETE/ }], "printer"))
+.then(() => dtc.say("Deadstart complete"))
 .then(() => dtc.say("Reconfiguration complete"))
 .then(() => {
-  console.log("-----------------------------------------------------------------");
-  console.log("To activate the updated configuration, make a new deadstart tape,");
-  console.log("shutdown the system, rename tapes/newds.tap to tapes/ds.tap, and");
-  console.log("then restart DtCyber.");
-  console.log("-----------------------------------------------------------------");
   process.exit(0);
 })
 .catch(err => {

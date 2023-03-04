@@ -818,11 +818,6 @@ static void dsa311CheckIo(Dsa311Context *cp)
 
 #if defined(_WIN32)
     u_long blockEnable = 1;
-    int    optLen;
-    int    optVal;
-#else
-    socklen_t optLen;
-    int       optVal;
 #endif
     int            rc;
     fd_set         readFds;
@@ -857,23 +852,8 @@ static void dsa311CheckIo(Dsa311Context *cp)
             {
             return;
             }
-#if defined(_WIN32)
-        optLen = sizeof(optVal);
-        rc     = getsockopt(cp->fd, SOL_SOCKET, SO_ERROR, (char *)&optVal, &optLen);
-#else
-        optLen = (socklen_t)sizeof(optVal);
-        rc     = getsockopt(cp->fd, SOL_SOCKET, SO_ERROR, &optVal, &optLen);
-#endif
-        if (rc < 0)
-            {
-#if DEBUG
-            fprintf(dsa311Log, "\n%010lu failed to get socket status", elapsedTime);
-#endif
-            dsa311CloseConnection(cp);
-
-            return;
-            }
-        else if (optVal != 0) // connection failed
+        rc = netGetErrorStatus(cp->fd);
+        if (rc != 0) // connection failed
             {
 #if DEBUG
             fprintf(dsa311Log, "\n%010lu failed to connect", elapsedTime);
@@ -959,11 +939,7 @@ static void dsa311CheckIo(Dsa311Context *cp)
 **------------------------------------------------------------------------*/
 static void dsa311CloseConnection(Dsa311Context *cp)
     {
-#if defined(_WIN32)
-    closesocket(cp->fd);
-#else
-    close(cp->fd);
-#endif
+    netCloseConnection(cp->fd);
     cp->fd = 0;
     cp->nextConnectAttempt = time(0) + (time_t)ConnectionRetryInterval;
     cp->majorState         = StDsa311MajDisconnected;
@@ -983,32 +959,18 @@ static void dsa311CloseConnection(Dsa311Context *cp)
 **------------------------------------------------------------------------*/
 static void dsa311InitiateConnection(Dsa311Context *cp)
     {
-#if defined(_WIN32)
-    u_long blockEnable = 1;
-#endif
-    int optEnable = 1;
-    int rc;
-
     cp->nextConnectAttempt = time(0) + (time_t)ConnectionRetryInterval;
-    cp->fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    cp->fd = netInitiateConnection((struct sockaddr *)&cp->serverAddr);
 #if defined(_WIN32)
     if (cp->fd == INVALID_SOCKET)
+#else
+    if (cp->fd == -1)
+#endif
         {
 #if DEBUG
-        fprintf(dsa311Log, "\n%010lu failed to create socket", elapsedTime);
+        fprintf(dsa311Log, "\n%010lu failed to initiate connection", elapsedTime);
 #endif
-
         return;
-        }
-    setsockopt(cp->fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
-    ioctlsocket(cp->fd, FIONBIO, &blockEnable);
-    rc = connect(cp->fd, (struct sockaddr *)&cp->serverAddr, sizeof(cp->serverAddr));
-    if ((rc == SOCKET_ERROR) && (WSAGetLastError() != WSAEWOULDBLOCK))
-        {
-#if DEBUG
-        fprintf(dsa311Log, "\n%010lu connect request failed", elapsedTime);
-#endif
-        closesocket(cp->fd);
         }
     else // connection in progress
         {
@@ -1017,33 +979,6 @@ static void dsa311InitiateConnection(Dsa311Context *cp)
 #endif
         cp->majorState = StDsa311MajConnecting;
         }
-#else
-    if (cp->fd < 0)
-        {
-#if DEBUG
-        fprintf(dsa311Log, "\n%010lu failed to create socket", elapsedTime);
-#endif
-
-        return;
-        }
-    setsockopt(cp->fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
-    fcntl(cp->fd, F_SETFL, O_NONBLOCK);
-    rc = connect(cp->fd, (struct sockaddr *)&cp->serverAddr, sizeof(cp->serverAddr));
-    if ((rc < 0) && (errno != EINPROGRESS))
-        {
-#if DEBUG
-        fprintf(dsa311Log, "\n%010lu connect request failed", elapsedTime);
-#endif
-        close(cp->fd);
-        }
-    else // connection in progress
-        {
-#if DEBUG
-        fprintf(dsa311Log, "\n%010lu connection initiated", elapsedTime);
-#endif
-        cp->majorState = StDsa311MajConnecting;
-        }
-#endif
     }
 
 /*--------------------------------------------------------------------------

@@ -331,20 +331,35 @@ class DtCyber {
     if (typeof me.isConnected !== "undefined" && me.isConnected) {
       return Promise.resolve();
     }
-    if (typeof port === "undefined") {
-      if (typeof this.operatorPort === "undefined") {
-        let path = null;
-        for (const p of ["./cyber.ini", "../cyber.ini"]) {
-          if (fs.existsSync(p)) {
-            path = p;
-            break;
+    const props = this.getIniProperties();
+    let   host  = null;
+    if (typeof port !== "undefined") {
+      const ci = port.indexOf(":");
+      if (ci !== -1) {
+        host = port.substring(0, ci).trim();
+        port = parseInt(port.substring(ci + 1));
+      }
+      else if (port.indexOf(".") !== -1) {
+        host = port;
+        port = undefined;
+      }
+    }
+    if (host === null) {
+      host = "127.0.0.1";
+      if (typeof props["cyber"] !== "undefined") {
+        for (const line of props["cyber"]) {
+          let ei = line.indexOf("=");
+          if (ei === -1) continue;
+          let key = line.substring(0, ei).trim().toUpperCase();
+          if (key === "IPADDRESS") {
+            host = line.substring(ei + 1).trim();
           }
         }
-        if (path === null) {
-          throw new Error("cyber.ini not found");
-        }
-        const lines = fs.readFileSync(path, "utf8").split("\n");
-        for (const line of lines) {
+      }
+    }
+    if (typeof port === "undefined") {
+      if (typeof this.operatorPort === "undefined" && typeof props["operator.nos287"] !== "undefined") {
+        for (const line of props["operator.nos287"]) {
           let result = /^\s*set_operator_port\s+([0-9]+)/.exec(line);
           if (result !== null) {
             this.operatorPort = parseInt(result[1]);
@@ -367,7 +382,7 @@ class DtCyber {
           return;
         }
         try {
-          me.socket = net.createConnection({port:port, host:"127.0.0.1"}, () => {
+          me.socket = net.createConnection({port:port, host:host}, () => {
             me.isConnected = true;
             callback(null);
           });
@@ -888,6 +903,37 @@ class DtCyber {
       if (fs.existsSync(path)) return path;
     }
     return null;
+  }
+
+  /*
+   * getIniProperties
+   *
+   * Open and read the cyber.ini and cyber.ovl files and return
+   * an object reflecting the merged set of properties.
+   *
+   * Returns:
+   *   The merged properties.
+   */
+  getIniProperties() {
+    if (typeof this.iniProperties === "undefined") {
+      this.iniProperties = {};
+      let path = null;
+      for (const p of ["./cyber.ini", "../cyber.ini"]) {
+        if (fs.existsSync(p)) {
+          path = p;
+          break;
+        }
+      }
+      if (path === null) {
+        throw new Error("cyber.ini not found");
+      }
+      this.readPropertyFile(path, this.iniProperties);
+      path = path.substring(0, path.lastIndexOf(".")) + ".ovl";
+      if (fs.existsSync(path)) {
+        this.readPropertyFile(path, this.iniProperties);
+      }
+    }
+    return this.iniProperties;
   }
 
   /*

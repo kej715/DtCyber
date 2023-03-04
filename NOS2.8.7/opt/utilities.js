@@ -182,7 +182,7 @@ const utilities = {
 
   getHostId: dtc => {
     if (typeof utilities.hostId !== "undefined") return utilities.hostId;
-    const iniProps = utilities.getIniProperties(dtc);
+    const iniProps = dtc.getIniProperties(dtc);
     const pattern  = /^HOSTID=([^.]*)/i;
     let hostId = null;
     if (typeof iniProps["npu.nos287"] !== "undefined") {
@@ -238,22 +238,6 @@ const utilities = {
       }
       return hostRecord;
     });
-  },
-
-  getIniProperties: dtc => {
-    if (typeof utilities.iniProperties === "undefined") {
-      utilities.iniProperties = {};
-      let pathname = "cyber.ini";
-      if (!fs.existsSync(pathname)) pathname = "../cyber.ini";
-      dtc.readPropertyFile(pathname, utilities.iniProperties);
-      if (fs.existsSync("cyber.ovl")) {
-        dtc.readPropertyFile("cyber.ovl", utilities.iniProperties);
-      }
-      else if (fs.existsSync("../cyber.ovl")) {
-        dtc.readPropertyFile("../cyber.ovl", utilities.iniProperties);
-      }
-    }
-    return utilities.iniProperties;
   },
 
   getMachineId: dtc => {
@@ -424,7 +408,7 @@ const utilities = {
     utilities.rhpTopology = {};
     const hostId    = utilities.getHostId(dtc);
     const mid       = utilities.getMachineId(dtc);
-    const iniProps  = utilities.getIniProperties(dtc);
+    const iniProps  = dtc.getIniProperties(dtc);
     let couplerNode = 1;
     let npuNode     = 2;
     if (typeof iniProps["npu.nos287"] !== "undefined") {
@@ -695,8 +679,8 @@ const utilities = {
       password: "NETADMN",
       data:     modset
     };
-    return dtc.say("Update NDL ...")
-    .then(() => dtc.createJobWithOutput(12, 4, job, options));
+    return dtc.createJobWithOutput(12, 4, job, options)
+    .then(() => dtc.say("NDL updated"));
   }
 };
 

@@ -138,15 +138,16 @@ else {
   .then(() => {
     return isContinueInstall ? dtc.exec("node", ["base-install", "continue"]) : dtc.exec("node", ["base-install"]);
   })
-  .then(() => dtc.say(`Deadstart ${isBasicInstall ? "basic installed system" : "system to install optional products"} ...`))
-  .then(() => startSystem())
+  .then(() => dtc.connect())
+  .then(() => dtc.expect([{ re: /Operator> $/ }]))
+  .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
   .then(() => {
     if (isBasicInstall) {
       return Promise.resolve();
     }
     else {
       const installCmd = isContinueInstall ? ["install-product", "all"] : ["install-product", "-f", "all"];
-      return dtc.say("Begin installing optional products ...")
+      return dtc.say(`${isContinueInstall ? "Continue" : "Begin"} installing optional products ...`)
       .then(() => dtc.disconnect())
       .then(() => dtc.exec("node", installCmd))
       .then(() => {

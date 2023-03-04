@@ -288,10 +288,8 @@ void msufrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     bool               isTelnet;
     int                listenPort;
     int                numParam;
-    int                optEnable = 1;
     int                portCount;
     PortContext        *pp;
-    struct sockaddr_in server;
 
 #if DEBUG
     if (msufrendLog == NULL)
@@ -392,43 +390,14 @@ void msufrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     /*
     **  Create socket, bind to specified port, and begin listening for connections
     */
-    activeFrend->listenFd = socket(AF_INET, SOCK_STREAM, 0);
-    if (activeFrend->listenFd < 0)
+    activeFrend->listenFd = netCreateListener(activeFrend->listenPort);
+#if defined(_WIN32)
+    if (activeFrend->listenFd == INVALID_SOCKET)
+#else
+    if (activeFrend->listenFd == -1)
+#endif
         {
         fprintf(stderr, "(msufrend) Can't create socket on port %d\n", activeFrend->listenPort);
-        exit(1);
-        }
-
-    /*
-    **  Accept will block if client drops connection attempt between select and accept.
-    **  We can't block so make listening socket non-blocking to avoid this condition.
-    */
-#if defined(_WIN32)
-    ioctlsocket(activeFrend->listenFd, FIONBIO, &blockEnable);
-#else
-    fcntl(activeFrend->listenFd, F_SETFL, O_NONBLOCK);
-#endif
-
-    /*
-    **  Bind to configured TCP port number
-    */
-    setsockopt(activeFrend->listenFd, SOL_SOCKET, SO_REUSEADDR, (void *)&optEnable, sizeof(optEnable));
-    memset(&server, 0, sizeof(server));
-    server.sin_family      = AF_INET;
-    server.sin_addr.s_addr = inet_addr("0.0.0.0");
-    server.sin_port        = htons(activeFrend->listenPort);
-    if (bind(activeFrend->listenFd, (struct sockaddr *)&server, sizeof(server)) < 0)
-        {
-        fprintf(stderr, "(msufrend) Can't bind to listen socket on port %d\n", activeFrend->listenPort);
-        exit(1);
-        }
-
-    /*
-    **  Start listening for new connections on this TCP port number
-    */
-    if (listen(activeFrend->listenFd, 5) < 0)
-        {
-        fprintf(stderr, "(msufrend) Can't listen on port %d\n", activeFrend->listenPort);
         exit(1);
         }
 
@@ -2313,11 +2282,7 @@ static void DRPCON(HalfWord callingConn, u8 connType, HalfWord numPortOrSock)
     pp = activeFrend->ports + (callingConn - 1);
     if (pp != NULL)
         {
-#if defined(_WIN32)
-        closesocket(pp->fd);
-#else
-        close(pp->fd);
-#endif
+        netCloseConnection(pp->fd);
         pp->active = FALSE;
         }
     }
@@ -3060,11 +3025,7 @@ static void processIncomingConnection()
         {
         char *sorry = "\r\nSorry, all sockets are in use. Please try again later.";
         int n = send(fd, (unsigned char *)sorry, strlen(sorry), 0);
-#if defined(_WIN32)
-        closesocket(fd);
-#else
-        close(fd);
-#endif
+        netCloseConnection(fd);
         }
     }
 

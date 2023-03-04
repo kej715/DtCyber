@@ -463,6 +463,7 @@ static void *opThread(void *param)
     OpCmd *cp;
     char  cmd[256];
     OpCmdStackEntry *ep;
+    bool  isNetConnClosed;
     int   len;
     char  name[80];
     int   newIn;
@@ -528,7 +529,8 @@ static void *opThread(void *param)
                 }
             else
                 {
-                opCmdStackPtr -= 1;
+                isNetConnClosed = FALSE;
+                opCmdStackPtr  -= 1;
                 while (opCmdStackPtr > 0)
                     {
                     ep = &opCmdStack[opCmdStackPtr];
@@ -538,14 +540,12 @@ static void *opThread(void *param)
                         }
                     else
                         {
-#if defined(_WIN32)
-                        closesocket(ep->netConn);
-#else
-                        close(ep->netConn);
-#endif
+                        netCloseConnection(ep->netConn);
+                        isNetConnClosed = TRUE;
                         }
                     opCmdStackPtr -= 1;
                     }
+                if (isNetConnClosed) opStartListening(opListenPort);
                 continue;
                 }
             }
@@ -769,7 +769,6 @@ static int opReadLine(char *buf, int size)
                         continue;
                         }
                     fprintf(stderr, "Unexpected error while reading operator input: %d\n", err);
-                    closesocket(ep->netConn);
 #else
                     if (errno == EWOULDBLOCK)
                         {
@@ -777,11 +776,11 @@ static int opReadLine(char *buf, int size)
                         continue;
                         }
                     perror("Unexpected error while reading operator input");
-                    close(ep->netConn);
 #endif
+                    netCloseConnection(ep->netConn);
                     opStartListening(opListenPort);
                     }
-                    return -1;
+                return -1;
                 }
             else if (n == 0)
                 {
@@ -792,11 +791,7 @@ static int opReadLine(char *buf, int size)
                     }
                 if (ep->netConn != 0)
                     {
-#if defined(_WIN32)
-                    closesocket(ep->netConn);
-#else
-                    close(ep->netConn);
-#endif
+                    netCloseConnection(ep->netConn);
                     opStartListening(opListenPort);
                     }
                 else if (ep->in != -1)
@@ -944,11 +939,7 @@ static void opAcceptConnection(void)
         if (opCmdStackPtr + 1 >= MaxCmdStkSize)
             {
             opDisplay("    > Too many nested operator input sources\n");
-#if defined(_WIN32)
-            closesocket(acceptFd);
-#else
-            close(acceptFd);
-#endif
+            netCloseConnection(acceptFd);
             return;
             }
         setsockopt(acceptFd, SOL_SOCKET, SO_KEEPALIVE, (void*)&optEnable, sizeof(optEnable));
@@ -959,11 +950,7 @@ static void opAcceptConnection(void)
 #endif
         opDisplay("\nOperator connection accepted\n");
         opCmdStackPtr += 1;
-#if defined(WIN32)
-        closesocket(opListenHandle);
-#else
-        close(opListenHandle);
-#endif
+        netCloseConnection(opListenHandle);
         opListenHandle                    = 0;
         opCmdStack[opCmdStackPtr].netConn = acceptFd;
         opCmdStack[opCmdStackPtr].in      = 0;
@@ -1563,11 +1550,7 @@ static void opCmdSetOperatorPort(bool help, char *cmdParams)
         }
     if (opListenHandle != 0)
         {
-#if defined(_WIN32)
-        closesocket(opListenHandle);
-#else
-        close(opListenHandle);
-#endif
+        netCloseConnection(opListenHandle);
         opListenHandle = 0;
         if (port == 0)
             {
@@ -1602,74 +1585,21 @@ static void opHelpSetOperatorPort(void)
 **------------------------------------------------------------------------*/
 static int opStartListening(int port)
     {
-#if defined(_WIN32)
-    u_long blockEnable = 1;
-#endif
-    int                optEnable = 1;
-    struct sockaddr_in server;
-
     if (port <= 0) return FALSE;
 
     /*
-    **  Create TCP socket and bind to specified port.
+    **  Start listening for new connections
     */
-    opListenHandle = socket(AF_INET, SOCK_STREAM, 0);
-    if (opListenHandle < 0)
-        {
-        sprintf(opOutBuf, "    > Failed to create socket for port %d\n", port);
-        opDisplay(opOutBuf);
-        opListenHandle = 0;
-
-        return FALSE;
-        }
-
-    /*
-    **  Accept will block if client drops connection attempt between select and accept.
-    **  We can't block so make listening socket non-blocking to avoid this condition.
-    */
+    opListenHandle = netCreateListener(port);
 #if defined(_WIN32)
-    ioctlsocket(opListenHandle, FIONBIO, &blockEnable);
+    if (opListenHandle == INVALID_SOCKET)
 #else
-    fcntl(opListenHandle, F_SETFL, O_NONBLOCK);
+    if (opListenHandle == -1)
 #endif
-
-    /*
-    **  Bind to configured TCP port number
-    */
-    setsockopt(opListenHandle, SOL_SOCKET, SO_REUSEADDR, (void *)&optEnable, sizeof(optEnable));
-    memset(&server, 0, sizeof(server));
-    server.sin_family      = AF_INET;
-    server.sin_addr.s_addr = inet_addr("0.0.0.0");
-    server.sin_port        = htons(port);
-
-    if (bind(opListenHandle, (struct sockaddr *)&server, sizeof(server)) < 0)
-        {
-        sprintf(opOutBuf, "    > Failed to bind to listen socket for port %d\n", port);
-        opDisplay(opOutBuf);
-#if defined(_WIN32)
-        closesocket(opListenHandle);
-#else
-        close(opListenHandle);
-#endif
-        opListenHandle = 0;
-
-        return FALSE;
-        }
-
-    /*
-    **  Start listening for new connections on this TCP port number
-    */
-    if (listen(opListenHandle, 1) < 0)
         {
         sprintf(opOutBuf, "    > Failed to listen on port %d\n", port);
         opDisplay(opOutBuf);
-#if defined(_WIN32)
-        closesocket(opListenHandle);
-#else
-        close(opListenHandle);
-#endif
         opListenHandle = 0;
-
         return FALSE;
         }
 

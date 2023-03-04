@@ -26,8 +26,28 @@
 **--------------------------------------------------------------------------
 */
 
+#include <memory.h>
 #include <time.h>
+#include <sys/types.h>
+#include "const.h"
 #include "types.h"
+
+#if defined(__FreeBSD__)
+#include <sys/socket.h>
+#include <netinet/in.h>
+#endif
+
+#if defined(_WIN32)
+#include <winsock.h>
+#else
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#endif
 
 /*
 **  --------------------
@@ -269,6 +289,23 @@ void mux6671Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void mux6676Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 
 /*
+**  net_util.c
+*/
+#if defined(_WIN32)
+void   netCloseConnection(SOCKET sd);
+SOCKET netCreateListener(int port);
+SOCKET netCreateSocket(int port, bool isReuse);
+int    netGetErrorStatus(SOCKET sd);
+SOCKET netInitiateConnection(struct sockaddr *sap);
+#else
+void   netCloseConnection(int sd);
+int    netCreateListener(int port);
+int    netCreateSocket(int port, bool isReuse);
+int    netGetErrorStatus(int sd);
+int    netInitiateConnection(struct sockaddr *sap);
+#endif
+
+/*
 **  niu.c
 */
 typedef void niuProcessOutput(int, u32);
@@ -451,6 +488,7 @@ extern bool idle;
 extern bool (*idleDetector)(CpuContext *ctx);
 extern u32  idleTime;
 extern u32  idleTrigger;
+extern char ipAddress[];
 extern char osType[];
 
 bool idleCheckBusy();
