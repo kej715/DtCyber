@@ -906,6 +906,16 @@ class DtCyber {
   }
 
   /*
+   * flushCache
+   *
+   * Flush all cached data to force re-reading/re-calculating.
+   */
+  flushCache() {
+    this.operatorPort = undefined;
+    this.iniProperties = undefined;
+  }
+
+  /*
    * getIniProperties
    *
    * Open and read the cyber.ini and cyber.ovl files and return

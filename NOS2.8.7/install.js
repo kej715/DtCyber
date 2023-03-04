@@ -85,7 +85,11 @@ if (isReadyToRunInstall) {
     //
     if (fs.existsSync("site.cfg")) {
       return dtc.disconnect()
-      .then(() => dtc.exec("node", ["reconfigure"]));
+      .then(() => dtc.exec("node", ["reconfigure"]))
+      .then(() => dtc.flushCache())
+      .then(() => dtc.connect())
+      .then(() => dtc.expect([{ re: /Operator> $/ }]))
+      .then(() => dtc.attachPrinter("LP5xx_C12_E5"));
     }
     else {
       return Promise.resolve();
