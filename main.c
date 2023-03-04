@@ -318,6 +318,8 @@ int main(int argc, char **argv)
     */
     stopHelpers();
 
+    opDisplay("Goodbye for now.\n\n");
+
     exit(0);
     }
 

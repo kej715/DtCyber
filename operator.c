@@ -1700,7 +1700,7 @@ static void opCmdShutdown(bool help, char *cmdParams)
     emulationActive = FALSE;
     opActive        = FALSE;
 
-    sprintf(opOutBuf, "\nThanks for using %s\nGoodbye for now.\n\n", DtCyberVersion);
+    sprintf(opOutBuf, "\nThanks for using %s\n", DtCyberVersion);
     opDisplay(opOutBuf);
     }
 

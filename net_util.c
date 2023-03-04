@@ -23,6 +23,7 @@
 **
 **--------------------------------------------------------------------------
 */
+#define DEBUG 1
 
 
 /*
@@ -147,6 +148,9 @@ int    netCreateListener(int port)
     */
     if (listen(sd, 5) == -1)
         {
+#if DEBUG
+        perror("(net_util) listen");
+#endif
 #if defined(_WIN32)
         closesocket(sd);
         return INVALID_SOCKET;
@@ -209,6 +213,9 @@ int    netCreateSocket(int port, bool isReuse)
     srcAddr.sin_port        = htons(port);
     if (bind(sd, (struct sockaddr *)&srcAddr, sizeof(srcAddr)) == -1)
         {
+#if DEBUG
+        perror("(net_util) bind");
+#endif
 #if defined(_WIN32)
         closesocket(sd);
         return INVALID_SOCKET;
@@ -292,6 +299,9 @@ int    netInitiateConnection(struct sockaddr *sap)
     rc = connect(sd, sap, sizeof(*sap));
     if ((rc == SOCKET_ERROR) && (WSAGetLastError() != WSAEWOULDBLOCK))
         {
+#if DEBUG
+        perror("(net_util) connect");
+#endif
         closesocket(sd);
         return INVALID_SOCKET;
         }
@@ -300,6 +310,9 @@ int    netInitiateConnection(struct sockaddr *sap)
     rc = connect(sd, sap, sizeof(*sap));
     if ((rc == -1) && (errno != EINPROGRESS))
         {
+#if DEBUG
+        perror("(net_util) connect");
+#endif
         close(sd);
         return -1;
         }

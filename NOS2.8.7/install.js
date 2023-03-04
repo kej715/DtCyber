@@ -85,23 +85,7 @@ if (isReadyToRunInstall) {
     //
     if (fs.existsSync("site.cfg")) {
       return dtc.disconnect()
-      .then(() => dtc.exec("node", ["reconfigure"]))
-      .then(() => dtc.say("Make a new deadstart tape ..."))
-      .then(() => dtc.exec("node", ["make-ds-tape"]))
-      .then(() => {
-        if (fs.existsSync("tapes/ods.tap")) {
-          fs.unlinkSync("tapes/ods.tap");
-        }
-        fs.renameSync("tapes/ds.tap", "tapes/ods.tap");
-        fs.renameSync("tapes/newds.tap", "tapes/ds.tap");
-        return Promise.resolve();
-      })
-      .then(() => dtc.connect())
-      .then(() => dtc.expect([{ re: /Operator> $/ }]))
-      .then(() => dtc.say("Shutdown and re-deadstart using the new tape"))
-      .then(() => dtc.shutdown(false))
-      .then(() => dtc.sleep(5000))
-      .then(() => startSystem());
+      .then(() => dtc.exec("node", ["reconfigure"]));
     }
     else {
       return Promise.resolve();
