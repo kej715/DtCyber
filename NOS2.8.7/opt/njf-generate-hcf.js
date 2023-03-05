@@ -9,9 +9,10 @@ const utilities = require("./utilities");
 
 const dtc = new DtCyber();
 
-const mid      = utilities.getMachineId(dtc);
-const hostID   = utilities.getHostId(dtc);
-const topology = utilities.getNjeTopology(dtc);
+const mid         = utilities.getMachineId(dtc);
+const hostID      = utilities.getHostId(dtc);
+const njeTopology = utilities.getNjeTopology(dtc);
+const rhpTopology = utilities.getRhpTopology(dtc);
 
 let hcfSource  = [];
 let nodeNumber = 1;
@@ -34,13 +35,17 @@ hcfSource = hcfSource.concat([
 ]);
 let names = Object.keys(utilities.getAdjacentNjeNodes(dtc)).sort();
 for (const name of names) {
-  let node = topology[name];
+  let node = njeTopology[name];
   if (typeof node.lid === "undefined" || node.lid === "" || node.lid === null) {
     throw new Error(`Adjcent node ${node.id} does not have a LID`);
   }
+  let lid = node.lid;
+  if (typeof rhpTopology[name] !== "undefined" && rhpTopology[name].lid === lid) {
+    lid = `N${lid.substring(1)}`;
+  }
   node.nodeNumber = nodeNumber++;
   hcfSource.push(
-    `NODE,${node.nodeNumber},${node.id},${node.lid},,IBM ,NET,JOB.`
+    `NODE,${node.nodeNumber},${node.id},${lid},,IBM ,NET,JOB.`
   );
 }
 
@@ -53,10 +58,14 @@ if (names.length > 0) {
     "*"
   ]);
   for (const name of names) {
-    let node = topology[name];
+    let node = njeTopology[name];
     node.nodeNumber = nodeNumber++;
+    let lid = node.lid;
+    if (typeof rhpTopology[name] !== "undefined" && rhpTopology[name].lid === lid) {
+      lid = `N${lid.substring(1)}`;
+    }
     hcfSource.push(
-      `NODE,${node.nodeNumber},${node.id},${node.lid},,IBM ,NET,JOB.`
+      `NODE,${node.nodeNumber},${node.id},${lid},,IBM ,NET,JOB.`
     );
   }
   hcfSource = hcfSource.concat([
@@ -65,7 +74,7 @@ if (names.length > 0) {
     "*"
   ]);
   for (const name of names) {
-    let node = topology[name];
+    let node = njeTopology[name];
     node.nodeNumber = nodeNumber++;
     hcfSource.push(
       `PATH,${node.id},${node.route}.`
@@ -81,7 +90,7 @@ hcfSource = hcfSource.concat([
 ]);
 names = Object.keys(utilities.getAdjacentNjeNodes(dtc)).sort();
 for (const name of names) {
-  let node = topology[name];
+  let node = njeTopology[name];
   hcfSource.push(
     `LNE,${node.lineNumber},${node.terminalName},1000.`
   );
@@ -94,7 +103,7 @@ hcfSource = hcfSource.concat([
   "*"
 ]);
 for (const name of names) {
-  let node = topology[name];
+  let node = njeTopology[name];
   hcfSource.push(
     `ASLNE,${node.lineNumber},ST1,SR1${node.software === "NJEF" ? ",JT1,JR1" : ""}.`
   );
@@ -112,9 +121,13 @@ if (names.length > 0) {
   ]);
   let n = 1;
   for (const name of names) {
-    let node = topology[name];
+    let node = njeTopology[name];
+    let lid = njeTopology[node.route].lid;
+    if (typeof rhpTopology[node.route] !== "undefined" && rhpTopology[node.route].lid === lid) {
+      lid = `N${lid.substring(1)}`;
+    }
     hcfSource.push(
-      `FAMILY,${node.id},NET${n++},${topology[node.route].lid},${node.route}.`
+      `FAMILY,${node.id},NET${n++},${lid},${node.route}.`
     );
   }
 }
