@@ -331,7 +331,6 @@ class DtCyber {
     if (typeof me.isConnected !== "undefined" && me.isConnected) {
       return Promise.resolve();
     }
-    const props = this.getIniProperties();
     let   host  = null;
     if (typeof port !== "undefined") {
       const ci = port.indexOf(":");
@@ -345,19 +344,10 @@ class DtCyber {
       }
     }
     if (host === null) {
-      host = "127.0.0.1";
-      if (typeof props["cyber"] !== "undefined") {
-        for (const line of props["cyber"]) {
-          let ei = line.indexOf("=");
-          if (ei === -1) continue;
-          let key = line.substring(0, ei).trim().toUpperCase();
-          if (key === "IPADDRESS") {
-            host = line.substring(ei + 1).trim();
-          }
-        }
-      }
+      host = this.getHostIpAddress();;
     }
     if (typeof port === "undefined") {
+      const props = this.getIniProperties();
       if (typeof this.operatorPort === "undefined" && typeof props["operator.nos287"] !== "undefined") {
         for (const line of props["operator.nos287"]) {
           let result = /^\s*set_operator_port\s+([0-9]+)/.exec(line);
@@ -916,6 +906,30 @@ class DtCyber {
   }
 
   /*
+   * getHostIpAddress
+   *
+   * Determine DtCyber's current IP address.
+   *
+   * Returns:
+   *   Current IP address.
+   */
+  getHostIpAddress() {
+    const props = this.getIniProperties();
+    let ipAddress = "127.0.0.1";
+    if (typeof props["cyber"] !== "undefined") {
+      for (const line of props["cyber"]) {
+        let ei = line.indexOf("=");
+        if (ei === -1) continue;
+        let key = line.substring(0, ei).trim().toUpperCase();
+        if (key === "IPADDRESS") {
+          ipAddress = line.substring(ei + 1).trim();
+        }
+      }
+    }
+    return ipAddress;
+  }
+
+  /*
    * getIniProperties
    *
    * Open and read the cyber.ini and cyber.ovl files and return
@@ -1034,7 +1048,7 @@ class DtCyber {
     if (Array.isArray(job)) {
       job = job.join("\n") + "\n";
     }
-    if (typeof hostname === "undefined") hostname = "127.0.0.1";
+    if (typeof hostname === "undefined") hostname = this.getHostIpAddress();
     let match = /^([^,.(])/.exec(job);
     const jobName = match[1];
     const options = {
@@ -1104,12 +1118,12 @@ class DtCyber {
       options = {
         user: "INSTALL",
         password: "INSTALL",
-        host: "127.0.0.1",
+        host: this.getHostIpAddress(),
         port: 21
       }
     }
     if (typeof options.host === "undefined") {
-      options.host = "127.0.0.1"
+      options.host = this.getHostIpAddress();
     }
     if (typeof options.username !== "undefined"
         && typeof options.user === "undefined") {

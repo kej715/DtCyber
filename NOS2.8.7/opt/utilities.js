@@ -218,7 +218,7 @@ const utilities = {
       //
       text           = dtc.cdcToAscii(text);
       const mid      = utilities.getMachineId(dtc);
-      let hostRecord = `127.0.0.1 M${mid} LOCALHOST_${mid}`;
+      let hostRecord = `${dtc.getHostIpAddress()} M${mid} LOCALHOST_${mid}`;
       const pattern  = new RegExp(`LOCALHOST_${mid}`, "i");
       for (let line of text.split("\n")) {
         line = line.trim();
@@ -269,8 +269,9 @@ const utilities = {
         utilities.njeTopology = {};
       }
       for (const name of Object.keys(utilities.njeTopology)) {
-        let node = utilities.njeTopology[name];
-        node.id = name;
+        let node  = utilities.njeTopology[name];
+        node.id   = name;
+        node.type = "NJE";
       }
       utilities.adjacentNjeNodes               = {};
       utilities.nonadjacentNjeNodesWithLids    = {};
@@ -431,7 +432,7 @@ const utilities = {
       type: "RHP",
       software: "NOS",
       lid: `M${mid}`,
-      addr: "127.0.0.1:2550",
+      addr: `${dtc.getHostIpAddress()}:2550`,
       couplerNode: couplerNode,
       npuNode: npuNode,
       links: {}
