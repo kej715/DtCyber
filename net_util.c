@@ -146,7 +146,7 @@ int    netCreateListener(int port)
     /*
     **  Start listening for new connections on this TCP port number
     */
-    if (listen(sd, 5) == -1)
+    if (listen(sd, 10) == -1)
         {
 #if DEBUG
         perror("(net_util) listen");
