@@ -248,7 +248,7 @@ int    netCreateSocket(int port, bool isReuse)
 #if defined(_WIN32)
 int netGetErrorStatus(SOCKET sd)
     {
-    int optlen;
+    int optLen;
 #else
 int netGetErrorStatus(int sd)
     {
