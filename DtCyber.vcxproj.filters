@@ -196,6 +196,9 @@
     <ClCompile Include="msufrend.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="net_util.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="const.h">
