@@ -139,7 +139,7 @@ int    netCreateListener(int port)
 
 #if defined(_WIN32)
     if (sd == INVALID_SOCKET) return sd;
-#sle
+#else
     if (sd == -1) return sd;
 #endif
 
