@@ -198,7 +198,7 @@ int    netCreateSocket(int port, bool isReuse)
     sd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 #if defined(_WIN32)
     if (sd == INVALID_SOCKET) return sd;
-#sle
+#else
     if (sd == -1) return sd;
 #endif
 
