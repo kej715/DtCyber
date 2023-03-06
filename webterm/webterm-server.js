@@ -434,21 +434,28 @@ const readConfigObject = path => {
   log(`read configuration file ${path}`);
   let configObj = JSON.parse(fs.readFileSync(path));
   for (const key of Object.keys(configObj)) {
+    let value = configObj[key];
+    if (typeof value === "string" && value.startsWith("%")) {
+      const tokens = value.substring(1).split("|");
+      let path = tokens[0].startsWith("/") ? tokens[0] : `${baseDir}${tokens[0]}`;
+      configObj[key] = readConfigProperty(path, tokens[1], tokens[2], tokens[3]);
+      value = configObj[key];
+    }
     if (key === "machines") {
-      let machines = configObj[key];
+      let machines = value;
       for (const machine of machines) {
         if (typeof machine === "string") { // relative pathname of machine definition
           machine = readConfigObject(machine.startsWith("/") ? machine : `${baseDir}${machine}`);
         }
         for (const key of Object.keys(machine)) {
-          let val = machine[key];
-          if (typeof val === "string") {
-            if (val.startsWith("@")) {
-              val = val.substring(1);
-              machine[key] = readConfigObject(val.startsWith("/") ? val : `${baseDir}${val}`);
+          let prop = machine[key];
+          if (typeof prop === "string") {
+            if (prop.startsWith("@")) {
+              prop = prop.substring(1);
+              machine[key] = readConfigObject(prop.startsWith("/") ? prop : `${baseDir}${prop}`);
             }
-            else if (val.startsWith("%")) {
-              const tokens = val.substring(1).split("|");
+            else if (prop.startsWith("%")) {
+              const tokens = prop.substring(1).split("|");
               let path = tokens[0].startsWith("/") ? tokens[0] : `${baseDir}${tokens[0]}`;
               machine[key] = readConfigProperty(path, tokens[1], tokens[2], tokens[3]);
             }
@@ -457,9 +464,8 @@ const readConfigObject = path => {
       }
     }
     else if (key === "httpRoot") {
-      let httpRoot = configObj[key];
-      if (os.type().startsWith("Windows")) httpRoot = httpRoot.replaceAll("\\", "/");
-      configObj[key] = httpRoot.startsWith("/") ? httpRoot : `${baseDir}${httpRoot}`;
+      if (os.type().startsWith("Windows")) value = value.replaceAll("\\", "/");
+      configObj[key] = value.startsWith("/") ? value : `${baseDir}${value}`;
     }
   }
   return configObj;
@@ -572,9 +578,10 @@ const httpServer = http.createServer((req, res) => {
   }
 });
 
-let port = config.port ? config.port : 8080;
-httpServer.listen(port);
-log(`Listening on port ${port}`);
+let host = typeof config.host !== "undefined" ? config.host : "0.0.0.0";
+let port = typeof config.port !== "undefined" ? config.port : 8080;
+httpServer.listen({host:host, port:port});
+log(`Listening on address ${host}:${port}`);
 if (typeof config.httpRoot === "undefined") config.httpRoot = "www";
 log(`HTTP root ${config.httpRoot}`);
 

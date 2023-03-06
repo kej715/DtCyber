@@ -60,7 +60,7 @@ The contents of a typical configuration file look like this:
 {
   "debug": false,
   "protocol":"hasp",
-  "host":"localhost",
+  "host":"127.0.0.1",
   "port":2553
 }
 ```
@@ -93,6 +93,30 @@ IBM MVS and CMS hosts.
 - **mode4.siteId** : specifies the MODE4 layer site identifier (aka site address)
 of the RJE station. Valid values are in the range 0x70 - 0x7f. The default value
 is `0x7a`.
+
+Note also that values of the top-level properties, such as the `host` property, may be
+specified as special references to values in other property files such as `cyber.ini`
+files. The general syntax of these special references is:
+
+```
+"%<pathname>|<section-name>|<property-name>|<default-value>"
+```
+
+where *pathname* is the relative pathname (relative to the RJE configuration file) of
+the target property file, *section-name* is the name of the target section in the
+property file, *property-name* is the name of the target property, and *default-value*
+is the value to use when the property file, section, or named property cannot be found.
+
+Example:
+
+```
+{
+  "debug": false,
+  "protocol":"hasp",
+  "host":"%../../NOS1.3/cyber.ini|cyber|ipAddress|127.0.0.1",
+  "port":2553
+}
+```
 
 ### Using rjecli
 When **rjecli** starts, it attempts to connect to the RJE host service specified by the `host` and `port` properties defined in the configuration file. When the

@@ -211,32 +211,48 @@ const utilities = {
   },
 
   getHostRecord: dtc => {
+    return utilities.getHosts(dtc)
+    .then(hosts => {
+      //
+      // Find host record among TCPHOST and [HOSTS] section of custom props
+      //
+      const mid       = utilities.getMachineId(dtc);
+      const localhost = `LOCALHOST_${mid}`;
+      for (const ipAddress of Object.keys(hosts)) {
+        let names = hosts[ipAddress];
+        for (const name of names) {
+          if (name.toUpperCase() === localhost) {
+            return `${ipAddress} ${names.join(" ")}`;
+          }
+        }
+      }
+      return `${dtc.getHostIpAddress()} M${mid} ${localhost}`;
+    });
+  },
+
+  getHosts: dtc => {
+    if (typeof utilities.hosts !== "undefined") return utilities.hosts;
+    utilities.hosts = {};
     return utilities.getFile(dtc, "TCPHOST/UN=NETADMN")
     .then(text => {
-      //
-      // Find host record in TCPHOST or [HOSTS] section of custom props
-      //
-      text           = dtc.cdcToAscii(text);
-      const mid      = utilities.getMachineId(dtc);
-      let hostRecord = `${dtc.getHostIpAddress()} M${mid} LOCALHOST_${mid}`;
-      const pattern  = new RegExp(`LOCALHOST_${mid}`, "i");
+      text = dtc.cdcToAscii(text);
       for (let line of text.split("\n")) {
         line = line.trim();
-        if (/^[0-9]/.test(line) && pattern.test(line)) {
-          hostRecord = line;
-          break;
+        if (/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/.test(line)) {
+          let tokens = line.split(/\s+/);
+          utilities.hosts[tokens[0]] = tokens.slice(1);
         }
       }
       const customProps = utilities.getCustomProperties(dtc);
       if (typeof customProps["HOSTS"] !== "undefined") {
         for (const defn of customProps["HOSTS"]) {
-          if (/^[0-9]/.test(defn) && pattern.test(defn)) {
-            hostRecord = defn;
-            break;
+          if (/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/.test(defn)) {
+            let tokens = defn.split(/\s+/);
+            utilities.hosts[tokens[0]] = tokens.slice(1);
           }
         }
       }
-      return hostRecord;
+      return utilities.hosts;
     });
   },
 

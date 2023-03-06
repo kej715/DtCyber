@@ -1,4 +1,5 @@
 {
+  "host":"%../../NOS2.8.7/cyber.ini|cyber|ipAddress|0.0.0.0",
   "port":8085,
   "httpRoot":"www",
   "machines":[

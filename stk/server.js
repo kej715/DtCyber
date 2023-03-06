@@ -1,6 +1,7 @@
 const fs = require("fs");
 const Global = require("./global");
 const http = require("http");
+const os = require("os");
 const process = require("process");
 const ProgramRegistry = require("./registry");
 const PortMapper = require("./portmapper");
@@ -9,14 +10,56 @@ const url = require("url");
 
 process.title = "STK4400";
 
+const readConfigFile = path => {
+  if (os.type().startsWith("Windows")) path = path.replaceAll("\\", "/");
+  let si = path.lastIndexOf("/");
+  const baseDir = (si >= 0) ? path.substring(0, si + 1) : "";
+  let configObj = JSON.parse(fs.readFileSync(path));
+  for (const key of Object.keys(configObj)) {
+    let value = configObj[key];
+    if (typeof value === "string" && value.startsWith("%")) {
+      const tokens = value.substring(1).split("|");
+      let path = tokens[0].startsWith("/") ? tokens[0] : `${baseDir}${tokens[0]}`;
+      configObj[key] = readConfigProperty(path, tokens[1], tokens[2], tokens[3]);
+    }
+    else {
+      configObj[key] = value;
+    }
+  }
+  return configObj;
+};
+
+const readConfigProperty = (path, sectionName, propertyName, defaultValue) => {
+  if (path.endsWith(".ini")) {
+    const val = readConfigProperty(path.substring(0, path.lastIndexOf(".")) + ".ovl", sectionName, propertyName, null);
+    if (val !== null) return val;
+  }
+  if (!fs.existsSync(path)) return defaultValue;
+  const lines = fs.readFileSync(path, "utf8").split("\n");
+  let i = 0;
+  const sectionStart = `[${sectionName}]`;
+  while (i < lines.length) {
+    if (lines[i++].trim() === sectionStart) break;
+  }
+  while (i < lines.length) {
+    let line = lines[i++].trim();
+    if (line.startsWith("[")) break;
+    let ei = line.indexOf("=");
+    if (ei === -1) continue;
+    let key = line.substring(0, ei).trim();
+    if (key === propertyName) return line.substring(ei + 1).trim();
+  }
+  return defaultValue;
+};
+
 fs.writeFileSync("pid", `${process.pid}\n`);
 console.log(`${new Date().toLocaleString()} PID is ${process.pid}`);
 
 const configFile = (process.argv.length > 2) ? process.argv[2] : "config.json";
-const config = JSON.parse(fs.readFileSync(configFile));
+const config = readConfigFile(configFile);
 
 const volumesFile = (process.argv.length > 3) ? process.argv[3] : "volumes.json";
-let volumeMap = JSON.parse(fs.readFileSync(volumesFile));
+let volumeMap = readConfigFile(volumesFile);
 
 Global.programRegistry = new ProgramRegistry();
 if (config.debug) Global.programRegistry.setDebug(config.debug);
@@ -28,16 +71,25 @@ if (config.foreignPortMapper) {
 }
 else {
   const portMapper = new PortMapper();
-  if (config.portMapperUdpPort) portMapper.setUdpPort(config.portMapperUdpPort);
+  portMapper.setUdpAddress({
+    host: typeof config.portMapperUdpHost !== "undefined" ? config.portMapperUdpHost : "0.0.0.0",
+    port: typeof config.portMapperUdpPort !== "undefined" ? config.portMapperUdpPort : 111
+  });
   if (config.debug) portMapper.setDebug(config.debug);
-  console.log(`${new Date().toLocaleString()} Start built-in portmapper on UDP port ${portMapper.udpPort}`);
+  console.log(`${new Date().toLocaleString()} Start built-in portmapper on UDP address ${portMapper.udpHost}:${portMapper.udpPort}`);
   portMapper.start();
 }
 
 const stkcsi = new StkCSI();
+stkcsi.setTapeServerAddress({
+  host: typeof config.tapeServerHost !== "undefined" ? config.tapeServerHost : "0.0.0.0",
+  port: typeof config.tapeServerPort !== "undefined" ? config.tapeServerPort : 4400
+});
+stkcsi.setTapeRobotAddress({
+  host: typeof config.tapeRobotHost !== "undefined" ? config.tapeRobotHost : "0.0.0.0",
+  port: typeof config.tapeRobotPort !== "undefined" ? config.tapeRobotPort : StkCSI.RPC_PORT
+});
 stkcsi.setVolumeMap(volumeMap);
-if (config.tapeServerPort)  stkcsi.setTapeServerPort(config.tapeServerPort);
-if (config.tapeRobotPort)   stkcsi.setTapeRobotPort(config.tapeRobotPort);
 if (config.tapeCacheRoot)   stkcsi.setTapeCacheRoot(config.tapeCacheRoot);
 if (config.tapeLibraryRoot) stkcsi.setTapeLibraryRoot(config.tapeLibraryRoot);
 if (config.debug)           stkcsi.setDebug(config.debug);
@@ -123,14 +175,15 @@ const httpServer = http.createServer((req, res) => {
   }
 });
 
-const httpServerPort = config.httpServerPort ? config.httpServerPort : 4480;
-httpServer.listen(httpServerPort);
-console.log(`${new Date().toLocaleString()} HTTP server listening on port ${httpServerPort}`);
+const httpServerHost = typeof config.httpServerHost !== "undefined" ? config.httpServerHost : "0.0.0.0";
+const httpServerPort = typeof config.httpServerPort !== "undefined" ? config.httpServerPort : 4480;
+httpServer.listen({host:httpServerHost, port:httpServerPort});
+console.log(`${new Date().toLocaleString()} HTTP server listening on address ${httpServerHost}:${httpServerPort}`);
 
 fs.watch(volumesFile, (eventType, filename) => {
   if (eventType === "change") {
     try {
-      let volumeMap = JSON.parse(fs.readFileSync(filename));
+      let volumeMap = readConfigFile(filename);
       Object.keys(volumeMap).forEach(key => {
         if (typeof stkcsi.volumeMap[key] !== "undefined") {
           let volume = volumeMap[key];

@@ -372,21 +372,27 @@ const readConfigFile = path => {
   const baseDir = (si >= 0) ? path.substring(0, si + 1) : "";
   let configObj = JSON.parse(fs.readFileSync(path));
   for (const key of Object.keys(configObj)) {
+    let value = configObj[key];
     if (key === "machines") {
-      for (const machine of configObj[key]) {
+      for (const machine of value) {
         machineMap[machine.id] = machine;
         for (const propName of Object.keys(machine)) {
-          let val = machine[propName];
-          if (typeof val === "string" && val.startsWith("%")) {
-            const tokens = val.substring(1).split("|");
+          let prop = machine[propName];
+          if (typeof prop === "string" && prop.startsWith("%")) {
+            const tokens = prop.substring(1).split("|");
             let path = tokens[0].startsWith("/") ? tokens[0] : `${baseDir}${tokens[0]}`;
             machine[propName] = readConfigProperty(path, tokens[1], tokens[2], tokens[3]);
           }
         }
       }
     }
+    else if (typeof value === "string" && value.startsWith("%")) {
+      const tokens = value.substring(1).split("|");
+      let path = tokens[0].startsWith("/") ? tokens[0] : `${baseDir}${tokens[0]}`;
+      config[key] = readConfigProperty(path, tokens[1], tokens[2], tokens[3]);
+    }
     else {
-      config[key] = configObj[key];
+      config[key] = value;
     }
   }
 };
@@ -473,7 +479,8 @@ process.title = "rjews";
 
 fs.writeFileSync(pidFile, `${process.pid}\n`);
 log(`PID is ${process.pid}`);
-let port = config.port ? config.port : 8080;
+const host = typeof config.host !== "undefined" ? config.host : "0.0.0.0";
+const port = typeof config.port !== "undefined" ? config.port : 8080;
 
 const httpServer = http.createServer((req, res) => {
   if (req.method === "GET") {
@@ -495,8 +502,8 @@ const httpServer = http.createServer((req, res) => {
   }
 });
 
-httpServer.listen(port);
-log(`Listening on port ${port}`);
+httpServer.listen({host:host, port:port});
+log(`Listening on address ${host}:${port}`);
 if (typeof config.httpRoot === "undefined") config.httpRoot = "www";
 log(`HTTP root ${config.httpRoot}`);
 

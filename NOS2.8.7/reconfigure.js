@@ -6,14 +6,19 @@ const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
-let newHostID      = null;     // new network host identifier
-let newMID         = null;     // new machine identifer
-let oldHostID      = "NCCM01"; // old network host identifier
-let oldMID         = "01";     // old machine identifer
-let productRecords = [];       // textual records to edit into PRODUCT file
+let newHostID      = null;        // new network host identifier
+let newMID         = null;        // new machine identifer
+let oldHostID      = "NCCM01";    // old network host identifier
+let oldMID         = "01";        // old machine identifer
+let productRecords = [];          // textual records to edit into PRODUCT file
 
 const customProps  = utilities.getCustomProperties(dtc);
 const iniProps     = dtc.getIniProperties(dtc);
+let ovlProps       = {};
+if (fs.existsSync("cyber.ovl")) {
+  dtc.readPropertyFile("cyber.ovl", ovlProps);
+}
+
 
 let oldIpAddress = "127.0.0.1";
 if (typeof iniProps["cyber"] !== "undefined") {
@@ -506,23 +511,14 @@ dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => updateTcpHosts())
-.then(() => dtc.disconnect())
-.then(() => dtc.say("Make a new deadstart tape ..."))
-.then(() => dtc.exec("node", ["make-ds-tape"]))
-.then(() => dtc.say("Shutdown the system to re-deadstart using the new tape ..."))
-.then(() => dtc.connect())
-.then(() => dtc.expect([ {re:/Operator> $/} ]))
-.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
-.then(() => dtc.say("Update cyber.ovl ..."))
 .then(() => utilities.getHostRecord(dtc))
 .then(hostRecord => {
   const tokens = hostRecord.split(/\s+/);
   newIpAddress = tokens[0];
   if (newIpAddress !== oldIpAddress) {
-    let ovlProps = {};
-    if (fs.existsSync("cyber.ovl")) {
-      dtc.readPropertyFile("cyber.ovl", ovlProps);
-    }
+    //
+    // Create/update [cyber] section to define ipAddress
+    //
     let ovlText = [];
     if (typeof ovlProps["cyber"] !== "undefined") {
       for (const line of ovlProps["cyber"]) {
@@ -534,6 +530,145 @@ dtc.connect()
     ovlText.push(`ipAddress=${newIpAddress}`);
     ovlProps["cyber"] = ovlText;
 
+    //
+    // Create/update [manual] section to define ipAddress
+    //
+    ovlText = [];
+    if (typeof ovlProps["manual"] !== "undefined") {
+      for (const line of ovlProps["manual"]) {
+        if (!line.startsWith("ipAddress=")) {
+          ovlText.push(line);
+        }
+      }
+    }
+    ovlText.push(`ipAddress=${newIpAddress}`);
+    ovlProps["manual"] = ovlText;
+  }
+  return Promise.resolve();
+})
+.then(() => utilities.getHosts(dtc))
+.then(hosts => {
+  //
+  // Update Automated Cartridge Tape device definitions in cyber.ovl and
+  // equipment deck if the tape server's address or the drive path has
+  // changed.
+  //
+  let oldStkHost     = "127.0.0.1";
+  let oldStkModule   = 0;
+  let oldStkPanel    = 0;
+  let oldStkDrive    = 0
+  if (typeof iniProps["equipment.nos287"] !== "undefined") {
+    for (const line of iniProps["equipment.nos287"]) {
+      if (line.startsWith("MT5744,")) {
+        let tokens    = line.split(",");
+        oldStkHost    = tokens[4].substring(0, tokens[4].indexOf(":"));
+        let drivePath = tokens[4].substring(tokens[4].indexOf("/") + 1);
+        let match     = drivePath.match(/^M([0-7]+)P([0-7]+)D([0-7]+)$/);
+        if (match !== null) {
+          oldStkModule = parseInt(match[1], 8);
+          oldStkPanel  = parseInt(match[2], 8);
+          oldStkDrive  = parseInt(match[3], 8);
+          break;
+        }
+      }
+    }
+  }
+  let newStkHost = oldStkHost;
+  for (const ipAddress of Object.keys(hosts)) {
+    for (const name of hosts[ipAddress]) {
+      if (name.toUpperCase() === "STK") {
+        newStkHost = ipAddress;
+        break;
+      }
+    }
+  }
+  let newStkModule = oldStkModule;
+  let newStkPanel  = oldStkPanel;
+  let newStkDrive  = oldStkDrive;
+  if (typeof customProps["NETWORK"] !== "undefined") {
+    for (const line of customProps["NETWORK"]) {
+      let ei = line.indexOf("=");
+      if (ei === -1) continue;
+      let key = line.substring(0, ei).trim().toUpperCase();
+      if (key === "STKDRIVEPATH") {
+        let drivePath = line.substring(ei + 1).trim().toUpperCase();
+        let match     = drivePath.match(/^M([0-7]+)P([0-7]+)D([0-7]+)$/);
+        if (match !== null) {
+          newStkModule = parseInt(match[1], 8);
+          newStkPanel  = parseInt(match[2], 8);
+          newStkDrive  = parseInt(match[3], 8);
+          break;
+        }
+      }
+    }
+  }
+  const isPathChange = newStkModule !== oldStkModule
+    || newStkPanel !== oldStkPanel
+    || newStkDrive !== oldStkDrive;
+  if (newStkHost !== oldStkHost || isPathChange) {
+    //
+    // Create/update [equipment.nos287] section to define MT5744 entries
+    //
+    let ovlText = [];
+    if (typeof ovlProps["equipment.nos287"] !== "undefined") {
+      for (const line of ovlProps["equipment.nos287"]) {
+        if (!line.startsWith("MT5744,")) {
+          ovlText.push(line);
+        }
+      }
+    }
+    for (let i = 0; i < 4; i++) {
+      ovlText.push(`MT5744,0,${i},23,${newStkHost}:4400/M${newStkModule.toString(8)}P${newStkPanel.toString(8)}D${(newStkDrive + i).toString(8)}`);
+    }
+    ovlProps["equipment.nos287"] = ovlText;
+  }
+  if (isPathChange) {
+    //
+    // Update equipment deck
+    //
+    return dtc.say("Update automated cartridge tape equipment definition in EQPD01 ...")
+    .then(() => dtc.utilities.getSystemRecord(dtc, "EQPD01"))
+    .then(eqpd01 => {
+      eqpd01 = eqpd01.replace(/EQ060=AT-4,UN=0,CH=23,LS=[0-7]+,PA=[0-7]+,DR=[0-7]+\./,
+        `EQ060=AT-4,UN=0,CH=23,LS=${newStkModule.toString(8)},PA=${newStkPanel.toString(8)},DR=${(newStkDrive + i).toString(8)}.`);
+      const job = [
+        "$COPY,INPUT,EQPD01.",
+        "$REWIND,EQPD01.",
+        "$ATTACH,PRODUCT/M=W,WB.",
+        "$LIBEDIT,P=PRODUCT,B=EQPD01,I=0,C."
+      ];
+      const options = {
+        jobname: "UPDEQPD",
+        data: eqpd01
+      };
+      return dtc.createJobWithOutput(12, 4, job, options);
+    });
+  }
+  else {
+    return Promise.resolve();
+  }
+})
+.then(() => dtc.say("Make a new deadstart tape ..."))
+.then(() => dtc.disconnect())
+.then(() => dtc.exec("node", ["make-ds-tape"]))
+.then(() => dtc.connect())
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.say("Shutdown the system to re-deadstart using the new tape ..."))
+.then(() => dtc.shutdown(false))
+.then(() => dtc.sleep(5000))
+.then(() => dtc.say("Rename tapes/newds.tap to tapes/ds.tap ..."))
+.then(() => {
+  if (fs.existsSync("tapes/ods.tap")) {
+    fs.unlinkSync("tapes/ods.tap");
+  }
+  fs.renameSync("tapes/ds.tap", "tapes/ods.tap");
+  fs.renameSync("tapes/newds.tap", "tapes/ds.tap");
+  return Promise.resolve();
+})
+.then(() => {
+  let keys = Object.keys(ovlProps);
+  if (keys.length > 0) {
     let lines = [];
     for (const key of Object.keys(ovlProps)) {
       lines.push(`[${key}]`);
@@ -542,20 +677,12 @@ dtc.connect()
       }
     }
     lines.push("");
-
     fs.writeFileSync("cyber.ovl", lines.join("\n"));
+    return dtc.say("Create/update cyber.ovl ...");
   }
-  return Promise.resolve();
-})
-.then(() => dtc.say("Shutdown the system to re-deadstart using the new tape ..."))
-.then(() => dtc.shutdown(false))
-.then(() => {
-  if (fs.existsSync("tapes/ods.tap")) {
-    fs.unlinkSync("tapes/ods.tap");
+  else {
+    return Promise.resolve();
   }
-  fs.renameSync("tapes/ds.tap", "tapes/ods.tap");
-  fs.renameSync("tapes/newds.tap", "tapes/ds.tap");
-  return Promise.resolve();
 })
 .then(() => dtc.say("Deadstart using the new tape ..."))
 .then(() => dtc.start({

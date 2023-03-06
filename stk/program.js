@@ -83,12 +83,14 @@ class Program {
     this.isDebug = isDebug;
   }
 
-  setTcpPort(port) {
-    this.tcpPort = port;
+  setTcpAddress(address) {
+    this.tcpHost = address.host;
+    this.tcpPort = address.port;
   }
 
-  setUdpPort(port) {
-    this.udpPort = port;
+  setUdpAddress(address) {
+    this.udpHost = address.host;
+    this.udpPort = address.port;
   }
 
   debugLog(msg) {
@@ -168,6 +170,7 @@ class Program {
     this.socket.on('message', (msg, rinfo) => {
       this.debugLog(`received UDP packet from ${rinfo.address}:${rinfo.port}`);
       let rpcCall = this.extractCall(msg);
+      rpcCall.address = rinfo.address;
       this.debugLog(`    xid ${rpcCall.xid}, mtype ${rpcCall.mtype}, rpcvers ${rpcCall.rpcvers}, prog ${rpcCall.prog}, vers ${rpcCall.vers}, proc: ${rpcCall.proc}`);
       if (rpcCall.mtype !== Program.CALL) {
         this.debugLog("message type is not RPC CALL");
@@ -184,7 +187,12 @@ class Program {
       this.debugLog(`RPC prog ${this.prog} vers ${this.vers} listening on ${address.address}:${address.port}`);
     });
 
-    this.socket.bind(this.udpPort);
+    if (typeof this.udpHost === "undefined" || this.udpHost === "0.0.0.0") {
+      this.socket.bind(this.udpPort);
+    }
+    else {
+      this.socket.bind({address:this.udpHost, port:this.udpPort});
+    }
   }
 
   start() {

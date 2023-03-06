@@ -11,6 +11,7 @@ class PortMapper extends Program {
 
   constructor() {
     super(PortMapper.PROGRAM, PortMapper.VERSION);
+    this.udpHost = "0.0.0.0";
     this.udpPort = 111;
   }
 
@@ -65,10 +66,10 @@ class PortMapper extends Program {
       Global.programRegistry.registerProgram(program);
     }
     if (prot === Const.IPPROTO_UDP) {
-      program.setUdpPort(port);
+      program.setUdpAddress({host:rpcCall.address, port:port});
     }
     else if (prot === Const.IPPROTO_TCP) {
-      program.setTcpPort(port);
+      program.setTcpAddress({host:rpcCall.address, port:port});
     }
     rpcReply.appendEnum(Program.SUCCESS);
     rpcReply.appendBoolean(result);
@@ -92,7 +93,8 @@ class PortMapper extends Program {
     let program = Global.programRegistry.lookupProgram(prog, vers);
     if (typeof program === "object" && typeof program.udpPort !== "undefined") {
       let rpc = new RPC();
-      rpc.callProcedure("127.0.0.1", Const.IPPROTO_UDP, program.udpPort, prog, vers, proc, args, reply => {
+      let ipAddress = program.udpHost === "0.0.0.0" ? "127.0.0.1" : program.udpHost;
+      rpc.callProcedure(ipAddress, Const.IPPROTO_UDP, program.udpPort, prog, vers, proc, args, reply => {
         if (reply.isSuccess) {
           rpcReply.appendEnum(Program.SUCCESS);
           rpcReply.appendUnsignedInt(program.udpPort);
@@ -130,8 +132,9 @@ class PortMapper extends Program {
     callback(rpcReply);
   }
  
-  setUdpPort(udpPort) {
-    this.udpPort = udpPort;
+  setUdpAddress(udpAddress) {
+    this.udpHost = udpAddress.host;
+    this.udpPort = udpAddress.port;
   }
 }
 

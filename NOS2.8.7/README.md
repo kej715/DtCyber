@@ -49,6 +49,7 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[njePorts](#njePorts)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[rhpNode](#rhpNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[smtpDomain](#smtpDomain)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[stkDrivePath](#stkDrivePath)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfNode](#tlfNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfPorts](#tlfPorts)
 - &nbsp;&nbsp;&nbsp;&nbsp;[[RESOLVER]](#resolver)
@@ -1066,30 +1067,42 @@ REMOVE=014,015.
 ### <a id="hosts"></a>[HOSTS]
 Defines the IP addresses and names of hosts in the TCP/IP network. These are edited
 into the system's TCPHOST file in the catalog of user NETADMN. The definitions may
-include the special entry for the local NOS 2.8.7 host, and this entry can be
-used to define the NOS 2.8.7 system's public IP address. The special entry for the
-local NOS 2.8.7 host is the entry that includes the alias `LOCALHOST_id` where `id`
-is the 2-character machine identifier of the host (as defined by MID in the CMR deck).
+include special entries for NOS 2.8.7 hosts. These include an alias of the form:
+
+```
+LOCALHOST_xx
+```
+
+where *xx* is the 2-character machine identifier (i.e., `MID` value in `CMRDECK`) of
+the respective NOS 2.8.7 system. At least one entry in the system's TCPHOST file
+(or this [HOSTS] section) must include this special alias for the local NOS 2.8.7
+system. This entry enables the NOS system to discover its own IP address.
+
+In addition, one entry in the TCPHOST file (or this [HOSTS] section) must include
+the special alias `STK`. This enables the NOS 2.8.7 system to discover the
+IP address of the StorageTek tape server and RPC ONC port mapper.
+
+To enable the UMass Mailer to use the SMTP e-mail protocol for routing messages to
+other SMTP-based hosts, the TCPHOST file (or this [HOSTS] section) should also include
+one entry that has the special alias `mail-relay`. This informs the UMass Mailer
+where to send e-mail for SMTP-based hosts. It assumes that the machine with this alias
+is capable of relaying mail to other SMTP-based destinations. Typically, Unix hosts
+are capable of serving as SMTP mail relays.
+
 Example:
 
 ```
 [HOSTS]
 192.168.0.17 nccmax nccmax.nostalgiccomputing.org max LOCALHOST_AX STK
-192.168.1.2  vax1 vax1.nostalgiccomputing.com
-192.168.1.3  vax2 vax2.nostalgiccomputing.com
+192.168.0.29 nccmed nccmed.nostalgiccomputing.org med LOCALHOST_ED
+192.168.0.19 nccmin nccmin.nostalgiccomputing.org min LOCALHOST_IN
+192.168.1.2  vax1   vax1.nostalgiccomputing.com
+192.168.1.3  vax2   vax2.nostalgiccomputing.com
 192.168.1.4  rsx11m rsx11m.nostalgiccomputing.com
 192.168.1.5  tops20 tops20.nostalgiccomputing.com pdp10
 192.168.2.2  bsd211 bsd211.nostalgiccomputing.com pdp11 mail-relay
+192.168.2.3  unicos unicos.nostalgiccomputing.com sv1
 ```
-
-When the [HOSTS] section defines hosts other than the local NOS 2.8.7 host and
-hosts defined in the NJE topology, the UMass Mailer is configured to use TCP/IP and
-the SMTP protocol to exchange e-mail with them. In order for the UMass Mailer to be
-able to send e-mail to destinations using TCP/IP and SMTP, one of the hosts in
-the [HOSTS] section must be defined with the alias `mail-relay`. The UMass Mailer will
-send all SMTP-based mail to that host, and that host is expected to be capable of
-forwarding it to other SMTP-based hosts, as needed. Typically, Unix hosts are capable
-of serving as mail relays.
 
 ### <a id="network"></a>[NETWORK]
 Defines site-specific routing information and parameters related to data communication
@@ -1115,7 +1128,7 @@ Example:
 hostID=MARS
 rhpNode=MARS,MAR,localhost:2551,1,2,VENUS,1
 rhpNode=VENUS,MVE,192.168.0.17:2551,3,4,MARS,1
-crayStation=CRAYXMP,XMP,24,192.168.0.28:9001,SFE,CC1
+crayStation=CRAYXMP,XMP,24,192.168.0.28:9001
 tlfNode=JES2,JES,JES2,192.168.0.17:37803,R001
 ```
 
@@ -1208,7 +1221,7 @@ NOS 2.8.7 systems to exchange jobs and files. The general syntax of this entry i
     | peername      | The name of a peer to which the mainframe is directly linked. This must match the *nodename* parameter of another *rhpNode* definition |
     | cla-port      | The number of the CLA port on the mainframe's NPU that is used for communicating with the peer. |
     
-Note that multiple *peername*/*cla-port* pairs may be defined to indicate that a node
+	Note that multiple *peername*/*cla-port* pairs may be defined to indicate that a node
 is connected to multiple peers.
 
 - <a id="smtpDomain"></a>**smtpDomain** : Identifies an internet domain name or suffix
@@ -1220,6 +1233,27 @@ to which e-mail will be routed using the TCP/IP SMTP protocol. Examples:
     smtpDomain=.net
     smtpDomain=some.host.org
 ```
+
+- <a id="stkDrivePath"></a>**stkDrivePath** : Defines the path of the first automated
+cartridge tape drive used by this NOS 2.8.7 system on the StorageTek 4400 tape server.
+The default is:
+```
+    M0P0D0
+```
+meaning Module 0, Panel 0, Drive 0. The module, panel, and drive numbers are octal
+values. Module numbers may range between 0 and 17, panel numbers may range between
+0 and 13, and drive numbers may range between 0 and 3.
+
+	When a StorageTek 4400 tape server is shared amongst a set of NOS 2.8.7 systems in an
+RHP network, each system in the network needs to have a unique drive path (i.e.,
+systems may share the tape server as a whole and its library of tapes, but they can not
+share individual tape drives). Typically, it is sufficient to assign a unique
+panel value to each NOS system. Example:
+
+```
+    stkDrivePath=M0P1D0
+```
+
 - <a id="tlfNode"></a>**tlfNode** : Defines the name and routing information for a TLF
 node. The general syntax of this entry is:
 
@@ -1312,7 +1346,9 @@ tlfNode=NCCJES2,JES,JES2,192.168.0.17:37803,R001
 crayStation=CECCXMP,XMP,24,192.168.0.28:9001
 ```
 
-The following example adds TCP/IP host definitions and a DNS resolver definition:
+The following example adds TCP/IP host definitions and a DNS resolver definition.
+Two or more of the *DtCyber* systems might run on the same physical host machine (e.g.,
+by using TUN/TAP or similar interfaces), and the [HOSTS] section enables them to share a StorageTek 4400 tape server running on the system that is hosting the machine `ceccnos2`.
 
 ```
 [CMRDECK]
@@ -1324,11 +1360,14 @@ rhpNode=NCCMAX,MAX,98.0.40.244:2550,3,4,CECCNOS1,1,UCCVENUS,2
 rhpNode=UCCVENUS,M23,128.172.3.7:2550,5,6,CECCNOS1,2,NCCMAX,1
 tlfNode=NCCJES2,JES,JES2,192.168.0.17:37803,R001
 crayStation=CECCXMP,XMP,24,192.168.0.28:9001
+stkDrivePath=M0P1D0
 [HOSTS]
-192.168.0.29 ceccnos1 nos1 nos1.cecc.org LOCALHOST_17 STK
-192.168.1.2  vax1 vax1.cecc.org
-192.168.2.2  bsd bsd.cecc.org mail-relay
-192.168.2.3  unicos unicos.cecc.org
+192.168.1.1 ceccnos1 nos1 nos1.cecc.org LOCALHOST_17
+192.168.1.2 ceccnos2 nos1 nos1.cecc.org LOCALHOST_19 STK
+192.168.1.3 ceccnos3 nos1 nos1.cecc.org LOCALHOST_23
+192.168.2.1 vax1 vax1.cecc.org
+192.168.2.2 bsd bsd.cecc.org mail-relay
+192.168.2.3 unicos unicos.cecc.org
 [RESOLVER]
 search cecc.org
 nameserver 192.168.0.19
