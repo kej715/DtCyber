@@ -530,7 +530,7 @@ dtc.connect()
       let ovlText = [tapmgrPath];
       if (typeof ovlProps["helpers.nos287"] !== "undefined") {
         for (const line of ovlProps["helpers.nos287"]) {
-          if (line !== tapmgrPath)) {
+          if (line !== tapmgrPath) {
             ovlText.push(line);
           }
         }
