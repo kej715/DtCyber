@@ -331,7 +331,7 @@ class DtCyber {
     if (typeof me.isConnected !== "undefined" && me.isConnected) {
       return Promise.resolve();
     }
-    let   host  = null;
+    let host  = null;
     if (typeof port !== "undefined") {
       const ci = port.indexOf(":");
       if (ci !== -1) {
@@ -348,12 +348,26 @@ class DtCyber {
     }
     if (typeof port === "undefined") {
       const props = this.getIniProperties();
-      if (typeof this.operatorPort === "undefined" && typeof props["operator.nos287"] !== "undefined") {
-        for (const line of props["operator.nos287"]) {
-          let result = /^\s*set_operator_port\s+([0-9]+)/.exec(line);
-          if (result !== null) {
-            this.operatorPort = parseInt(result[1]);
-            break;
+      if (typeof this.operatorPort === "undefined") {
+        let operatorSection = null;
+        if (typeof props["cyber"] !== "undefined") {
+          for (const line of props["cyber"]) {
+            let ei = line.indexOf("=");
+            if (ei === -1) continue;
+            let key = line.substring(0, ei).trim().toUpperCase();
+            if (key === "OPERATOR") {
+              operatorSection = line.substring(ei + 1).trim();
+              break;
+            }
+          }
+        }
+        if (operatorSection !== null && typeof props[operatorSection] !== "undefined") {
+          for (const line of props[operatorSection]) {
+            let result = /^\s*set_operator_port\s+([0-9]+)/.exec(line);
+            if (result !== null) {
+              this.operatorPort = parseInt(result[1]);
+              break;
+            }
           }
         }
         if (typeof this.operatorPort === "undefined") {
