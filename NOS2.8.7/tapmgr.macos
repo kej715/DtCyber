@@ -1,0 +1,26 @@
+#!/bin/sh
+# start and stop a TAP interface
+# 
+# Args:
+#   $1 - TAP device name
+#   $2 - IP address
+#   $3 - start/stop
+
+case "$3" in
+  start)
+        cmds='echo $$ > tapmgr.pid'
+        cmds="$cmds; exec 4<>/dev/$1; ifconfig $1 inet $2 netmask 255.255.255.0 up"
+        cmds=$cmds'; while [ $? = 0 ]; do sleep 5; kill -0 `cat tapmgr.pid` 2>/dev/null; done'
+        sh -c "($cmds)" &
+        # Delay to provide time for creating the interface
+        sleep 2
+	;;
+  stop)
+        kill `cat tapmgr.pid`
+	;;
+  *)
+	echo "Usage: $0 tapdev ipaddress {start|stop}"
+	exit 1
+esac
+
+exit 0
