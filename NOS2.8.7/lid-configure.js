@@ -43,31 +43,23 @@ let topology = {};
 
 if (isCrsInstalled) {
   const customProps = utilities.getCustomProperties(dtc);
-  if (typeof customProps["NETWORK"] !== "undefined") {
-    for (let line of customProps["NETWORK"]) {
-      line = line.toUpperCase();
-      let ei = line.indexOf("=");
-      if (ei < 0) continue;
-      let key   = line.substring(0, ei).trim();
-      let value = line.substring(ei + 1).trim();
-      if (key === "CRAYSTATION" && isCrsInstalled) {
-        //
-        //  crayStation=<name>,<lid>,<channelNo>,<addr>[,S<station-id>][,C<cray-id>]
-        //
-        let items = value.split(",");
-        if (items.length >= 4) {
-          const nodeName = items.shift();
-          const node = {
-            id: nodeName,
-            type: "CRS",
-            software: "COS",
-            lid: items[0],
-            addr: items[2],
-            link: hostID
-          };
-          topology[nodeName] = node;
-        }
-      }
+  let value = utilities.getPropertyValue(customProps, "NETWORK", "crayStation", null);
+  if (value !== null) {
+    //
+    //  crayStation=<name>,<lid>,<channelNo>,<addr>[,S<station-id>][,C<cray-id>]
+    //
+    let items = value.split(",");
+    if (items.length >= 4) {
+      const nodeName = items.shift();
+      const node = {
+        id: nodeName,
+        type: "CRS",
+        software: "COS",
+        lid: items[0],
+        addr: items[2],
+        link: hostID
+      };
+      topology[nodeName] = node;
     }
   }
 }

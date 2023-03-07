@@ -2,6 +2,7 @@
 
 const DtCyber   = require("../automation/DtCyber");
 const fs        = require("fs");
+const os        = require("os");
 const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
@@ -20,17 +21,7 @@ if (fs.existsSync("cyber.ovl")) {
 }
 
 
-let oldIpAddress = "127.0.0.1";
-if (typeof iniProps["cyber"] !== "undefined") {
-  for (const line of iniProps["cyber"]) {
-    let ei = line.indexOf("=");
-    if (ei === -1) continue;
-    let key = line.substring(0, ei).trim().toUpperCase();
-    if (key === "IPADDRESS") {
-      oldIpAddress = line.substring(ei + 1).trim();
-    }
-  }
-}
+let oldIpAddress = utilities.getPropertyValue(iniProps, "cyber", "ipAddress", "127.0.0.1");
 let newIpAddress = oldIpAddress;
 
 let oldCrsInfo = {
@@ -40,6 +31,12 @@ let oldCrsInfo = {
   crayId:    "C1"
 };
 let newCrsInfo = {};
+
+const tapMgrs = {
+  Darwin:     "./tapmgr.macos",
+  Linux:      "./tapmgr.linux",
+  Windows_NT: "./tapmgr.win"
+};
 
 /*
  * processCmrdProps
@@ -189,59 +186,33 @@ const processEqpdProps = () => {
  *  A promise that is resolved when all NETWORK properties have been processed.
  */
 const processNetworkProps = () => {
-  for (const line of iniProps["npu.nos287"]) {
-    let ei = line.indexOf("=");
-    if (ei < 0) continue;
-    let key   = line.substring(0, ei).trim().toUpperCase();
-    let value = line.substring(ei + 1).trim();
-    if (key === "HOSTID") {
-      oldHostID = value.toUpperCase();
-    }
+  oldHostID = utilities.getPropertyValue(iniProps,    "npu.nos287", "hostID", oldHostID);
+  newHostID = utilities.getPropertyValue(customProps, "NETWORK",    "hostID", newHostID);
+  let value = utilities.getPropertyValue(iniProps,    "sysinfo",    "CRS",    null);
+  if (value !== null) {
+    let items = value.split(",");
+    oldCrsInfo.lid       = items[0];
+    oldCrsInfo.channel   = parseInt(items[1], 8);
+    oldCrsInfo.stationId = items[2];
+    oldCrsInfo.crayId    = items[3];
   }
-  if (typeof iniProps["sysinfo"] !== "undefined") {
-    for (const line of iniProps["sysinfo"]) {
-      let ei = line.indexOf("=");
-      if (ei < 0) continue;
-      let key   = line.substring(0, ei).trim().toUpperCase();
-      let value = line.substring(ei + 1).trim();
-      if (key === "CRS") {
-        let items = value.split(",");
-        oldCrsInfo.lid       = items[0];
-        oldCrsInfo.channel   = parseInt(items[1], 8);
-        oldCrsInfo.stationId = items[2];
-        oldCrsInfo.crayId    = items[3];
-      }
-    }
-  }
-  if (typeof customProps["NETWORK"] !== "undefined") {
-    for (const prop of customProps["NETWORK"]) {
-      let ei = prop.indexOf("=");
-      if (ei < 0) {
-        throw new Error(`Invalid NETWORK definition: \"${prop}\"`);
-      }
-      let key   = prop.substring(0, ei).trim().toUpperCase();
-      let value = prop.substring(ei + 1).trim();
-      if (key === "HOSTID") {
-        newHostID = value.toUpperCase();
-      }
-      else if (key === "CRAYSTATION") {
-        //
-        //  crayStation=<name>,<lid>,<channelNo>,<addr>[,S<station-id>][,C<cray-id>]
-        //
-        let items = value.split(",");
-        if (items.length >= 4) {
-          newCrsInfo.lid       = items[1];
-          newCrsInfo.channel   = parseInt(items[2], 8);
-          newCrsInfo.stationId = "FE";
-          newCrsInfo.crayId    = "C1";
-          for (let i = 4; i < items.length; i++) {
-            if (items[i].startsWith("C")) {
-              newCrsInfo.crayId = items[i].substring(1);
-            }
-            else if (items[i].startsWith("S")) {
-              newCrsInfo.stationId = items[i].substring(1);
-            }
-          }
+  value = utilities.getPropertyValue(customProps, "NETWORK", "crayStation", null);
+  if (value !== null) {
+    //
+    //  crayStation=<name>,<lid>,<channelNo>,<addr>[,S<station-id>][,C<cray-id>]
+    //
+    let items = value.split(",");
+    if (items.length >= 4) {
+      newCrsInfo.lid       = items[1];
+      newCrsInfo.channel   = parseInt(items[2], 8);
+      newCrsInfo.stationId = "FE";
+      newCrsInfo.crayId    = "C1";
+      for (let i = 4; i < items.length; i++) {
+        if (items[i].startsWith("C")) {
+          newCrsInfo.crayId = items[i].substring(1);
+        }
+        else if (items[i].startsWith("S")) {
+          newCrsInfo.stationId = items[i].substring(1);
         }
       }
     }
@@ -405,7 +376,7 @@ const updateTcpHosts = () => {
         "$CHANGE,TCPHOST/CT=PU,M=R,AC=Y."
       ];
       const options = {
-        jobname: "MAKEPUB",
+        jobname:  "MAKEPUB",
         username: "NETADMN",
         password: "NETADMN"
       };
@@ -546,6 +517,29 @@ dtc.connect()
   }
   return Promise.resolve();
 })
+.then(() => {
+  //
+  // If the [NETWORK] section of site.cfg includes a "networkInterface" definition
+  // identifying a TAP interface, update cyber.ovl to define a corresponding helper
+  // command.
+  //
+  let ifc = utilities.getPropertyValue(customProps, "NETWORK", "networkInterface", null);
+  if (ifc !== null && /^tap[0-9]+$/.test(ifc)) {
+    let tapmgrPath = tapMgrs[os.type()];
+    if (typeof tapmgrPath !== "undefined") {
+      let ovlText = [tapmgrPath];
+      if (typeof ovlProps["helpers.nos287"] !== "undefined") {
+        for (const line of ovlProps["helpers.nos287"]) {
+          if (line !== tapmgrPath)) {
+            ovlText.push(line);
+          }
+        }
+      }
+      ovlProps["helpers.nos287"] = ovlText;
+    }
+  }
+  return Promise.resolve();
+})
 .then(() => utilities.getHosts(dtc))
 .then(hosts => {
   //
@@ -585,21 +579,13 @@ dtc.connect()
   let newStkModule = oldStkModule;
   let newStkPanel  = oldStkPanel;
   let newStkDrive  = oldStkDrive;
-  if (typeof customProps["NETWORK"] !== "undefined") {
-    for (const line of customProps["NETWORK"]) {
-      let ei = line.indexOf("=");
-      if (ei === -1) continue;
-      let key = line.substring(0, ei).trim().toUpperCase();
-      if (key === "STKDRIVEPATH") {
-        let drivePath = line.substring(ei + 1).trim().toUpperCase();
-        let match     = drivePath.match(/^M([0-7]+)P([0-7]+)D([0-7]+)$/);
-        if (match !== null) {
-          newStkModule = parseInt(match[1], 8);
-          newStkPanel  = parseInt(match[2], 8);
-          newStkDrive  = parseInt(match[3], 8);
-          break;
-        }
-      }
+  let drivePath = utilities.getPropertyValue(customProps, "NETWORK", "stkDrivePath", null);
+  if (drivePath !== null) {
+    let match = drivePath.match(/^M([0-7]+)P([0-7]+)D([0-7]+)$/i);
+    if (match !== null) {
+      newStkModule = parseInt(match[1], 8);
+      newStkPanel  = parseInt(match[2], 8);
+      newStkDrive  = parseInt(match[3], 8);
     }
   }
   const isPathChange = newStkModule !== oldStkModule

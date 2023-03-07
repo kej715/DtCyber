@@ -420,6 +420,23 @@ const utilities = {
     return rhpTopology[hostId].npuNode;
   },
 
+  getPropertyValue: (propertyObject, sectionName, propertyName, defaultValue) => {
+    propertyName = propertyName.toUpperCase();
+    let value = defaultValue;
+    if (typeof propertyObject[sectionName] !== "undefined") {
+      for (const line of propertyObject[sectionName]) {
+        let ei = line.indexOf("=");
+        if (ei === -1) continue;
+        let key = line.substring(0, ei).trim().toUpperCase();
+        if (key === propertyName) {
+          value = line.substring(ei + 1).trim();
+          break;
+        }
+      }
+    }
+    return value;
+  },
+
   getRhpTopology: dtc => {
     if (typeof utilities.rhpTopology !== "undefined") return utilities.rhpTopology;
     utilities.rhpTopology = {};

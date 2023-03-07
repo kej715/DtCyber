@@ -45,6 +45,7 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[crayStation](#crayStation)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[defaultRoute](#defaultRoute)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[hostID](#hostID)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[networkInterface](#networkInterface)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[njeNode](#njeNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[njePorts](#njePorts)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[rhpNode](#rhpNode)
@@ -1106,20 +1107,23 @@ Example:
 
 ### <a id="network"></a>[NETWORK]
 Defines site-specific routing information and parameters related to data communication
-and networking. The configuration of various NOS 2.8.7 data communication subsystems
-derives from this section. This includes:
+and networking. The configuration and operation of various NOS 2.8.7 data communication
+subsystems derives from this section. This includes:
 
+- **CRS**. Configuration information for the `Cray Station` interface.
+- **HASP**. Information about mainframes to which NOS 2.8.7 can connect using
+IBM's `HASP` data communication protocol.
 - **Host ID**. The identifier of the local NOS 2.8.7 host.
+- **NJE**. Information defining private routes in a network of mainframes
+interconnected by IBM's `NJE` (Network Job Entry) data communication protocol.
 - **RHP**. Information defining the topology of a network of mainframes running
 NOS 2.8.7 and interconnected by Control Data's `RHP` (Remote Host Products) data
 communication protocols.
-- **NJE**. Information defining private routes in a network of mainframes
-interconnected by IBM's `NJE` (Network Job Entry) data communication protocol.
-- **HASP**. Information about mainframes to which NOS 2.8.7 can connect using
-IBM's `HASP` data communication protocol.
 - **SMTP**. Information about e-mail destinations that can be reached using the
 TCP/IP `Simple Mail Transfer Protocol`.
-- **CRS**. Configuration information for the `Cray Station` interface.
+- **STK**. Information about the StorageTek 4400 cartridge tape server.
+- **TAP**. Declaration of a TAP network adapter interface used by the host computer
+to support *DtCyber's* data communication.
 
 Example:
 
@@ -1160,14 +1164,23 @@ Example:
     `defaultRoute=NCCMAX`
     
 	Ordinarily, this entry is needed only when an NJE node has multiple directly
-	connectted neighbors, so one of them needs to be designated as the node to which
+	connected neighbors, so one of them needs to be designated as the node to which
 	files will be sent when the route to a destination cannot be calculated
-	autommatically using the [topology file](files/nje-topology.json).
+	automatically using the [topology file](files/nje-topology.json).
     
 - <a id="hostID"></a>**hostID** : Specifies the 1 - 8 character node name of the local
 host. Example:
 
     `hostID=MARS`
+    
+- <a id="networkInterface"></a>**networkInterface** : Defines the name of the network
+interface used by the host computer to support *DtCyber's* data communication.
+Ordinarily, this needs to be specified only when *DtCyber's* IP address differs from
+the IP address of the host computer on which it is running. See the description of
+the [[HOSTS]](#hosts) section for details about defining *DtCyber's* IP address.
+Example:
+
+    `networkInterface=tap0`
 
 - <a id="njeNode"></a>**njeNode** : Defines the name and routing information for an NJE
 node within a private NJE network (i.e., a node that is not registered in the public
