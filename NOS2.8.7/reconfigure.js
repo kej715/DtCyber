@@ -33,9 +33,9 @@ let oldCrsInfo = {
 let newCrsInfo = {};
 
 const tapMgrs = {
-  Darwin:     "./tapmgr.macos",
-  Linux:      "./tapmgr.linux",
-  Windows_NT: "./tapmgr.win"
+  Darwin:     "../ifcmgrs/tapmgr.macos",
+  Linux:      "../ifcmgrs/tapmgr.linux",
+  Windows_NT: "../ifcmgrs/tapmgr.win"
 };
 
 /*
@@ -520,22 +520,38 @@ dtc.connect()
 .then(() => {
   //
   // If the [NETWORK] section of site.cfg includes a "networkInterface" definition
-  // identifying a TAP interface, update cyber.ovl to define a corresponding helper
-  // command.
+  // identifying a TAP interface, update cyber.ovl to include a corresponding
+  // definition.
   //
   let ifc = utilities.getPropertyValue(customProps, "NETWORK", "networkInterface", null);
-  if (ifc !== null && /^tap[0-9]+$/.test(ifc)) {
+  if (ifc !== null) {
     let tapmgrPath = tapMgrs[os.type()];
-    if (typeof tapmgrPath !== "undefined") {
-      let ovlText = [tapmgrPath];
-      if (typeof ovlProps["helpers.nos287"] !== "undefined") {
-        for (const line of ovlProps["helpers.nos287"]) {
-          if (line !== tapmgrPath) {
+    let ci = ifc.indexOf(",");
+    if (ci !== -1) {
+      tapmgrPath = ifc.substring(ci + 1).trim();
+      ifc = ifc.substring(0, ci).trim();
+    }
+    if ( /^tap[0-9]+$/.test(ifc) && typeof tapmgrPath !== "undefined") {
+      let ovlText = [];
+      if (typeof ovlProps["cyber"] !== "undefined") {
+        for (const line of ovlProps["cyber"]) {
+          if (!line.startsWith("networkInterface=")) {
             ovlText.push(line);
           }
         }
       }
-      ovlProps["helpers.nos287"] = ovlText;
+      ovlText.push(`networkInterface=${ifc},${tapmgrPath}`);
+      ovlProps["cyber"] = ovlText;
+      ovlText = [];
+      if (typeof ovlProps["manual"] !== "undefined") {
+        for (const line of ovlProps["manual"]) {
+          if (!line.startsWith("networkInterface=")) {
+            ovlText.push(line);
+          }
+        }
+      }
+      ovlText.push(`networkInterface=${ifc},${tapmgrPath}`);
+      ovlProps["manual"] = ovlText;
     }
   }
   return Promise.resolve();

@@ -75,7 +75,6 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
-static int runHelper(char* command);
 static void startHelpers(void);
 static void stopHelpers(void);
 static void tracePpuCalls(void);
@@ -98,6 +97,8 @@ bool idle = FALSE;   /* Idle loop detection */
 u32  idleTrigger;    /* sleep every <idletrigger> cycles of the idle loop */
 u32  idleTime;       /* microseconds to sleep when idle */
 char ipAddress[16];
+char networkInterface[16];
+char networkInterfaceMgr[64];
 char osType[16];
 bool (*idleDetector)(CpuContext *) = &idleDetectorNone;
 
@@ -166,9 +167,6 @@ int main(int argc, char **argv)
     sigaction(SIGPIPE, &act, NULL);
 #endif
 
-    (void)argc;
-    (void)argv;
-
     /*
     **  20171110: SZoppi - Added Filesystem Watcher Support
     **  Setup exit handling.
@@ -193,11 +191,11 @@ int main(int argc, char **argv)
     /*
     **  Allow optional command line parameter to specify section to run in "cyber.ini".
     */
-    if (argc == 3)
+    if (argc > 2)
         {
         initStartup(argv[1], argv[2]);
         }
-    else if (argc == 2)
+    else if (argc > 1)
         {
         if ((stricmp(argv[1], "-?") == 0) | (stricmp(argv[1], "/?") == 0))
             {
@@ -473,14 +471,6 @@ bool idleDetectorMACE(CpuContext *ctx)
     return FALSE;
     }
 
-/*
- **--------------------------------------------------------------------------
- **
- **  Private Functions
- **
- **--------------------------------------------------------------------------
- */
-
  /*--------------------------------------------------------------------------
  **  Purpose:        Run a helper process.
  **
@@ -490,7 +480,7 @@ bool idleDetectorMACE(CpuContext *ctx)
  **  Returns:        0 if successful, error code otherwise.
  **
  **------------------------------------------------------------------------*/
-static int runHelper(char *command)
+int runHelper(char *command)
     {
 #if defined (_WIN32)
     char *dp;
@@ -534,6 +524,15 @@ static int runHelper(char *command)
     return system(command);
 #endif
     }
+
+/*
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Start helper processes.
 **
@@ -584,22 +583,33 @@ static void stopHelpers(void)
     int  lineNo = 0;
     int  rc;
 
-    if (initOpenHelpersSection() != 1)
+    if (initOpenHelpersSection() == 1)
         {
-        return;
+        while ((line = initGetNextLine(&lineNo)) != NULL)
+            {
+            sprintf(command, "%s stop", line);
+            rc = runHelper(command);
+            if (rc == 0)
+                {
+                printf("\n(main) Stopped helper: %s\n", line);
+                }
+            else
+                {
+                printf("\n(main) Failed to stop helper \"%s\", rc = %d\n", line, rc);
+                }
+            }
         }
-
-    while ((line = initGetNextLine(&lineNo)) != NULL)
+    if (strlen(networkInterfaceMgr) > 0)
         {
-        sprintf(command, "%s stop", line);
+        sprintf(command, "%s %s %s stop", networkInterfaceMgr, networkInterface, ipAddress);
         rc = runHelper(command);
         if (rc == 0)
             {
-            printf("\n(main) Stopped helper: %s\n", line);
+            printf("\n(main) Stopped helper: %s\n", networkInterfaceMgr);
             }
         else
             {
-            printf("\n(main) Failed to stop helper \"%s\", rc = %d\n", line, rc);
+            printf("\n(main) Failed to stop helper \"%s\", rc = %d\n", networkInterfaceMgr, rc);
             }
         }
     fflush(stdout);

@@ -452,6 +452,7 @@ static void initCyber(char *config)
     {
     long clockIncrement;
     long conns;
+    char *cp;
     long cpus;
     char dummy[256];
     long dummyInt;
@@ -463,6 +464,7 @@ static void initCyber(char *config)
     char model[40];
     long port;
     long pps;
+    int  rc;
     long setMHz;
 
     /*-------------------START OF PRECHECK-------------------*/
@@ -842,6 +844,48 @@ static void initCyber(char *config)
         exit(1);
         }
     fprintf(stdout, "(init   ) IP address is '%s'\n", ipAddress);
+
+    /*
+    **  Get optional network interface name of DtCyber.
+    */
+    networkInterface[0]    = '\0';
+    networkInterfaceMgr[0] = '\0';
+    initGetString("networkinterface", "", dummy, sizeof(dummy));
+    if (strlen(dummy) > 0)
+        {
+        char cmd[128];
+
+        cp = dummy;
+        while (*cp != '\0' && *cp != ',') cp += 1;
+        if (*cp == ',')
+            {
+            *cp++ = '\0';
+            }
+        else
+            {
+            cp = "./ifcmgr";
+            }
+        if (strlen(dummy) > 16)
+            {
+            fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'networkInterface' value %s\n",
+                    startupFile, config, dummy);
+            exit(1);
+            }
+        strcpy(networkInterface,    dummy);
+        strcpy(networkInterfaceMgr, cp);
+        fprintf(stdout, "(init   ) Network interface is         '%s'\n", networkInterface);
+        sprintf(cmd, "%s %s %s start", networkInterfaceMgr, networkInterface, ipAddress);
+        rc = runHelper(cmd);
+        if (rc == 0)
+            {
+            printf("(init   ) Started helper: %s\n", networkInterfaceMgr);
+            }
+        else
+            {
+            fprintf(stderr, "(init   ) Failed to start %s, rc=%d'\n", networkInterfaceMgr, rc);
+            exit(1);
+            }
+        }
 
     /*
     **  Get optional Telnet port number. If not specified, use default value.

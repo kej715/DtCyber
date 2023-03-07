@@ -37,6 +37,8 @@
 */
 #if defined(_WIN32)
 
+#define HOST_OS_TYPE       "windows"
+
 /*
 **  MS Win32 systems
 */

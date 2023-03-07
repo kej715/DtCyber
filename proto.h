@@ -230,6 +230,11 @@ void logInit(void);
 void logError(char *file, int line, char *fmt, ...);
 
 /*
+**  main.c
+*/
+int runHelper(char* command);
+
+/*
 **  maintenance_channel.c
 */
 void mchInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
@@ -489,6 +494,8 @@ extern bool (*idleDetector)(CpuContext *ctx);
 extern u32  idleTime;
 extern u32  idleTrigger;
 extern char ipAddress[];
+extern char networkInterface[];
+extern char networkInterfaceMgr[];
 extern char osType[];
 
 bool idleCheckBusy();
