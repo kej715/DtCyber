@@ -874,12 +874,12 @@ static void initCyber(char *config)
             }
         strcpy(networkInterface,    dummy);
         strcpy(networkInterfaceMgr, cp);
-        fprintf(stdout, "(init   ) Network interface is         '%s'\n", networkInterface);
+        fprintf(stdout, "(init   ) Network interface is '%s'\n", networkInterface);
         sprintf(cmd, "%s %s %s start", networkInterfaceMgr, networkInterface, ipAddress);
         rc = runHelper(cmd);
         if (rc == 0)
             {
-            printf("(init   ) Started helper: %s\n", networkInterfaceMgr);
+            fprintf(stdout, "(init   ) Started helper:      %s %s %s\n", networkInterfaceMgr, networkInterface, ipAddress);
             }
         else
             {

@@ -1,5 +1,10 @@
 #!/bin/sh
-# start and stop a TAP interface
+#
+# Start and stop a TAP interface on MacOS
+#
+# Assumes that tuntaposx has been installed, e.g., using Tunnelblick:
+#
+#     https://tunnelblick.net/index.html
 # 
 # Args:
 #   $1 - TAP device name
@@ -10,6 +15,7 @@ case "$3" in
   start)
         cmds='echo $$ > tapmgr.pid'
         cmds="$cmds; exec 4<>/dev/$1; ifconfig $1 inet $2 netmask 255.255.255.0 up"
+        cmds="$cmds; route add -host $2 -interface $1"
         cmds=$cmds'; while [ $? = 0 ]; do sleep 5; kill -0 `cat tapmgr.pid` 2>/dev/null; done'
         sh -c "($cmds)" &
         # Delay to provide time for creating the interface
