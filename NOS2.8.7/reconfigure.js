@@ -15,14 +15,8 @@ let productRecords = [];          // textual records to edit into PRODUCT file
 
 const customProps  = utilities.getCustomProperties(dtc);
 const iniProps     = dtc.getIniProperties(dtc);
-let ovlProps       = {};
-if (fs.existsSync("cyber.ovl")) {
-  dtc.readPropertyFile("cyber.ovl", ovlProps);
-}
-
-
-let oldIpAddress = utilities.getPropertyValue(iniProps, "cyber", "ipAddress", "127.0.0.1");
-let newIpAddress = oldIpAddress;
+let   ovlProps     = {};
+let   newIpAddress = "127.0.0.1";
 
 let oldCrsInfo = {
   lid:       "COS",
@@ -478,6 +472,13 @@ dtc.connect()
   }
   return Promise.resolve();
 })
+.then(() => {
+  utilities.purgeCache();
+  if (fs.existsSync("cyber.ovl")) {
+    dtc.readPropertyFile("cyber.ovl", ovlProps);
+  }
+  return Promise.resolve();
+})
 .then(() => dtc.connect())
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
@@ -486,6 +487,7 @@ dtc.connect()
 .then(hostRecord => {
   const tokens = hostRecord.split(/\s+/);
   newIpAddress = tokens[0];
+  let oldIpAddress = utilities.getPropertyValue(iniProps, "cyber", "ipAddress", "127.0.0.1");
   if (newIpAddress !== oldIpAddress) {
     //
     // Create/update [cyber] section to define ipAddress

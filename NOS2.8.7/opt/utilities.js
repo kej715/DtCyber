@@ -127,19 +127,8 @@ const utilities = {
   getDefaultNjeRoute: dtc => {
     if (typeof utilities.defaultNjeRoute === "undefined") {
       const customProps = utilities.getCustomProperties(dtc);
-      if (typeof customProps["NETWORK"] !== "undefined") {
-        for (let line of customProps["NETWORK"]) {
-          line = line.trim().toUpperCase();
-          let ei = line.indexOf("=");
-          if (ei < 0) continue;
-          let key   = line.substring(0, ei).trim();
-          let value = line.substring(ei + 1).trim();
-          if (key === "DEFAULTROUTE") {
-            utilities.defaultNjeRoute = value;
-          }
-        }
-      }
-      if (typeof utilities.defaultNjeRoute === "undefined") {
+      utilities.defaultNjeRoute = utilities.getPropertyValue(customProps, "NETWORK", "defaultRoute", null);
+      if (typeof utilities.defaultNjeRoute === null) {
         const hostID = utilities.getHostId(dtc);
         let localNode = utilities.njeTopology[hostID];
         if (typeof localNode.link !== "undefined") {
@@ -149,6 +138,7 @@ const utilities = {
           utilities.defaultNjeRoute = hostID;
         }
       }
+      utilities.defaultNjeRoute = utilities.defaultNjeRoute.toUpperCase();
     }
     return utilities.defaultNjeRoute;
   },
@@ -183,30 +173,10 @@ const utilities = {
   getHostId: dtc => {
     if (typeof utilities.hostId !== "undefined") return utilities.hostId;
     const iniProps = dtc.getIniProperties(dtc);
-    const pattern  = /^HOSTID=([^.]*)/i;
-    let hostId = null;
-    if (typeof iniProps["npu.nos287"] !== "undefined") {
-      for (let line of iniProps["npu.nos287"]) {
-        line = line.trim();
-        let match = line.match(pattern);
-        if (match !== null) {
-          hostId = match[1].trim();
-        }
-      }
-    }
+    let hostId = utilities.getPropertyValue(iniProps, "npu.nos287", "hostID", null);
     const customProps = utilities.getCustomProperties(dtc);
-    if (typeof customProps["NETWORK"] !== "undefined") {
-      for (let line of customProps["NETWORK"]) {
-        line = line.trim();
-        let match = line.match(pattern);
-        if (match !== null) {
-          hostId = match[1].trim();
-          break;
-        }
-      }
-    }
-    utilities.hostId = hostId !== null ? hostId : `M${utilities.getMachineId(dtc)}`;
-    utilities.hostId = utilities.hostId.toUpperCase();
+    hostId = utilities.getPropertyValue(customProps, "NETWORK", "hostID", hostId);
+    utilities.hostId = hostId !== null ? hostId.toUpperCase() : `M${utilities.getMachineId(dtc)}`;
     return utilities.hostId;
   },
 
@@ -259,17 +229,8 @@ const utilities = {
   getMachineId: dtc => {
     if (typeof utilities.machineId !== "undefined") return utilities.machineId;
     const customProps = utilities.getCustomProperties(dtc);
-    if (typeof customProps["CMRDECK"] !== "undefined") {
-      for (let line of customProps["CMRDECK"]) {
-        line = line.trim().toUpperCase();
-        let match = line.match(/^MID=([^.]*)/);
-        if (match !== null) {
-          utilities.machineId = match[1].trim();
-          return utilities.machineId;
-        }
-      }
-    }
-    utilities.machineId = "01";
+    let mid = utilities.getPropertyValue(customProps, "CMRDECK", "MID", "01");
+    utilities.machineId = mid.substring(0, 2).toUpperCase();
     return utilities.machineId;
   },
 
@@ -443,23 +404,8 @@ const utilities = {
     const hostId    = utilities.getHostId(dtc);
     const mid       = utilities.getMachineId(dtc);
     const iniProps  = dtc.getIniProperties(dtc);
-    let couplerNode = 1;
-    let npuNode     = 2;
-    if (typeof iniProps["npu.nos287"] !== "undefined") {
-      for (let line of iniProps["npu.nos287"]) {
-        line = line.trim().toUpperCase();
-        let ei = line.indexOf("=");
-        if (ei < 0) continue;
-        let key   = line.substring(0, ei).trim();
-        let value = line.substring(ei + 1).trim();
-        if (key === "COUPLERNODE") {
-          couplerNode = parseInt(value);
-        }
-        else if (key === "NPUNODE") {
-          npuNode = parseInt(value);
-        }
-      }
-    }
+    let couplerNode = parseInt(utilities.getPropertyValue(iniProps, "npu.nos287", "couplerNode", "1"));
+    let npuNode     = parseInt(utilities.getPropertyValue(iniProps, "npu.nos287", "npuNode",     "2"));
     let localNode = {
       id: hostId,
       type: "RHP",
@@ -678,6 +624,21 @@ const utilities = {
     .then(() => dtc.runJob(12, 4, "opt/move-proc.job", opts))
     .then(() => dtc.dis(cmds, 1))
     .then(() => dtc.waitJob("MOVE"));
+  },
+
+  purgeCache: () => {
+    delete utilities.adjacentNjeNodes;
+    delete utilities.customProperties;
+    delete utilities.defaultNjeRoute;
+    delete utilities.hostId;
+    delete utilities.hosts;
+    delete utilities.machineId;
+    delete utilities.njeTopology;
+    delete utilities.nonadjacentNjeNodesWithLids;
+    delete utilities.nonadjacentNjeNodesWithoutLids;
+    delete utilities.rhpTopology;
+    delete utilities.timeZone;
+    delete utilities.tlfTopology;
   },
 
   reportProgress: (byteCount, contentLength, maxProgressLen) => {
