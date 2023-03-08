@@ -29,7 +29,7 @@ let newCrsInfo = {};
 const tapMgrs = {
   Darwin:     "../ifcmgrs/tapmgr.macos",
   Linux:      "../ifcmgrs/tapmgr.linux",
-  Windows_NT: "../ifcmgrs/tapmgr.win"
+  Windows_NT: "../ifcmgrs/tapmgr.bat"
 };
 
 /*

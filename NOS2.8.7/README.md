@@ -1182,7 +1182,7 @@ the [[HOSTS]](#hosts) section for details about defining *DtCyber's* IP address.
     | Parameter | Description |
     |-----------|-------------|
     | device    | The name of the network interface device on the host computer, e.g. `tap0`. |
-    | manager   | Optional pathname of a command or script that will be used for starting and stopping the interface. The default is `../ifcmgrs/tapmgr.os-type` where `os-type` is one of `linux`, `macos`, or `win`, depending upon the type of operating system on which *DtCyber* is running |
+    | manager   | Optional pathname of a command or script that will be used for starting and stopping the interface. The default is `../ifcmgrs/tapmgr.type` where `type` is one of `bat`, `linux`, or `macos`, depending upon the type of operating system on which *DtCyber* is running |
 
 	Example:
 
