@@ -128,7 +128,7 @@ const utilities = {
     if (typeof utilities.defaultNjeRoute === "undefined") {
       const customProps = utilities.getCustomProperties(dtc);
       utilities.defaultNjeRoute = utilities.getPropertyValue(customProps, "NETWORK", "defaultRoute", null);
-      if (typeof utilities.defaultNjeRoute === null) {
+      if (utilities.defaultNjeRoute === null) {
         const hostID = utilities.getHostId(dtc);
         let localNode = utilities.njeTopology[hostID];
         if (typeof localNode.link !== "undefined") {
