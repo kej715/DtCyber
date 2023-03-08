@@ -213,6 +213,7 @@ static InitVal sectVals[] =
     "ipAddress",                     "cyber", "Valid",
     "memory",                        "cyber", "Valid",
     "model",                         "cyber", "Valid",
+    "networkInterface",              "cyber", "Valid",
     "npuConnections",                "cyber", "Valid",
     "operator",                      "cyber", "Valid",
     "ostype",                        "cyber", "Valid",
