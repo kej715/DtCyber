@@ -1071,12 +1071,19 @@ LOCALHOST_id
 
 where *id* is the 2-character machine identifier (i.e., `MID` value in `[CMRDECK]`) of
 the respective NOS 2.8.7 system. At least one entry in the system's TCPHOST file
-(or this [HOSTS] section) must include this special alias for the local NOS 2.8.7
+(or this `[HOSTS]` section) must include this special alias for the local NOS 2.8.7
 system. This entry enables the NOS system to discover its own IP address.
+
+**The entry with the special `LOCALHOST_id` alias also informs *DtCyber* of its IP
+address, and it is the source IP address to which *DtCyber* will bind all of its
+network sockets.** See also the [networkInterface](#networkInterface) definition in the
+[[NETWORK]](#network) section. The [networkInterface](#networkInterface) definition
+informs *DtCyber* of a command that it can execute to automatically start/stop a
+network interface supplying this IP address.
 
 In addition, one entry in the `TCPHOST` file (or this `[HOSTS]` section) must include
 the special alias `STK`. This enables the NOS 2.8.7 system to discover the
-IP address of the StorageTek tape server and RPC ONC port mapper.
+IP address of the StorageTek 4400 cartridge tape server and RPC ONC port mapper.
 
 To enable the UMass Mailer to use the SMTP e-mail protocol for routing messages to
 other SMTP-based hosts, the `TCPHOST` file (or this `[HOSTS]` section) should also
@@ -1172,8 +1179,9 @@ host. Example:
 interface used by the host computer to support *DtCyber's* data communication and,
 optionally, the command to be called for starting and stopping the interface.
 Ordinarily, this needs to be specified only when *DtCyber's* IP address differs from
-the IP address of the host computer on which it is running. See the description of
-the [[HOSTS]](#hosts) section for details about defining *DtCyber's* IP address.
+the primary IP address of the host computer on which it is running, and it is
+necessary or desirable to start/stop the interface dynamically. See the description
+of the [[HOSTS]](#hosts) section for details about defining *DtCyber's* IP address.
 
 	The general syntax of this entry is:
 
@@ -1182,7 +1190,7 @@ the [[HOSTS]](#hosts) section for details about defining *DtCyber's* IP address.
     | Parameter | Description |
     |-----------|-------------|
     | device    | The name of the network interface device on the host computer, e.g. `tap0`. |
-    | manager   | Optional pathname of a command or script that will be used for starting and stopping the interface. The default is `../ifcmgrs/tapmgr.type` where `type` is one of `bat`, `linux`, or `macos`, depending upon the type of operating system on which *DtCyber* is running |
+    | manager   | Optional pathname of a command or script that will be called to start and stop the interface. The default is `../ifcmgrs/tapmgr.type` where `type` is one of `bat`, `linux`, or `macos`, depending upon the type of operating system on which *DtCyber* is running. *DtCyber* will pass the interface device name and IP address (from the [HOSTS] section) as parameters. |
 
 	Example:
 
