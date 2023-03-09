@@ -2,10 +2,6 @@
 #
 # Start and stop a TAP interface on Linux
 #
-# Assumes that tuntaposx has been installed, e.g., using Tunnelblick:
-#
-#     https://tunnelblick.net/index.html
-# 
 # Args:
 #   $1 - TAP device name
 #   $2 - IP address
@@ -19,7 +15,7 @@ case "$3" in
         route add -host $2 dev $1
 	;;
   stop)
-        ip tuntap delete $1
+        ip tuntap delete mode tap $1
 	;;
   *)
 	echo "Usage: $0 tapdev ipaddress {start|stop}"
