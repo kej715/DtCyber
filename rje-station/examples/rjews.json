@@ -22,7 +22,7 @@
     {
     "id":"ei200-kronos",
     "title":"EI200 on KRONOS 2.1 (Cyber 173)",
-    "host":"127.0.0.1",
+    "host":"%../../KRONOS2.1/cyber.ini|cyber|ipAddress|127.0.0.1",
     "port":6678,
     "name":"GUEST",
     "password":"GUEST",
