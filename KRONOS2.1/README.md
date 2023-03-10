@@ -4,6 +4,7 @@ of the KRONOS 2.1 operating system on *DtCyber*. Following the instructions, bel
 
 - Batch job submission via a simulated card reader
 - Interactive login via your favorite Telnet client
+- Remote job entry via [rjecli](../rje-station)
 
 Substantial automation has been provided to make the installation process
 as easy as possible. In fact, it's nearly trivial compared to what was possible on
@@ -99,6 +100,58 @@ INSTALL is a privileged account, and GUEST is an unprivileged one. When KRONOS 2
 character mode. The browser-based terminal emulator operates in a compatible mode by
 default. When you see the **/** prompt, the operating system is ready for you to enter
 commands.
+
+## Remote Job Entry
+The system listens for RJE (remote job entry) connections on TCP port 6678. You
+can use [rjecli](../rje-station) and [rjews](../rje-station) to connect to this port and
+submit batch jobs via the KRONOS 2.1 *EI200* subsystem. The RJE data communication
+protocol supported by KRONOS 2.1 is *MODE4*. The example
+[kronos.json](../rje-station/examples/) and
+[rjews.json](../rje-station/examples/) configuration files condition
+[rjecli](../rje-station) and [rjews](../rje-station), respectively, to use *MODE4* to
+connect and interact with KRONOS 2.1.
+
+*DtCyber* is configured to start a special web service that supports browser-based
+RJE access to the KRONOS 2.1 system. The web service listens for connections on TCP port
+8085. When you request your web browser to open the following URL:
+
+>`http://localhost:8085`
+
+it will display a page showing the RJE hosts served by the web service, and this will
+include the KRONOS 2.1 system. It will also indicate that it can provide access to the
+[NOS 2.8.7](../NOS2.8.7) and [NOS 1.3](../NOS1.3) systems. However, all of these systems
+must be running concurrently in order for you to be able to select all of them
+successfully.
+
+When you click on the link associated with any of these systems, a browser-based
+RJE station emulator will launch, and you will be presented with its console window.
+The console window displays operator messages sent by the RJE host to the RJE station.
+It also enables you to enter station operator commands to send to the host, and it
+provides a user interface for loading the station's virtual card reader with virtual
+card decks (i.e., batch jobs) to submit for execution on the host.
+
+You may also request the browser-based RJE station emulator for KRONOS 2.1 directly by
+entering the following URL:
+
+>`http://localhost:8085/rje.html?m=ei200-kronos&t=EI200%20on%20KRONOS%202.1`
+
+An RJE command line interface is available as well. The RJI CLI can be started using
+the following commands on Linux/MacOS:
+
+>```
+cd rje-station
+node rjecli examples/kronos.json
+```
+
+On Windows:
+
+>```
+cd rje-station
+node rjecli examples\kronos.json
+```
+
+For more information about RJE, see the [README](rje-station) file in the `rje-station`
+directory.
 
 ## Installing a Full System from Scratch
 It is possible to install a full KRONOS 2.1 system from scratch by specifying the `full`

@@ -141,11 +141,11 @@ RJE access to the NOS 1.3 system. The web service listens for connections on TCP
 
 it will display a page showing the RJE hosts served by the web service, and this will
 include the NOS 1.3 system. It will also indicate that it can provide access to the
-[NOS 2.8.7](../NOS2.8.7) system. However, both the NOS 1.3 and the NOS 2.8.7 system must
-be running concurrently (see [Remote Batch Networking(#rbn), below) in order for you to
-be able to select both successfully.
+[NOS 2.8.7](../NOS2.8.7) and [KRONOS 2.1](../KRONOS2.1) systems. However, all of these
+systems must be running concurrently (see [Remote Batch Networking(#rbn), below) in
+order for you to be able to select all of them successfully.
 
-When you click on the link associated with either of these systems, a browser-based
+When you click on the link associated with any of these systems, a browser-based
 RJE station emulator will launch, and you will be presented with its console window.
 The console window displays operator messages sent by the RJE host to the RJE station.
 It also enables you to enter station operator commands to send to the host, and it
@@ -155,7 +155,7 @@ card decks (i.e., batch jobs) to submit for execution on the host.
 You may also request the browser-based RJE station emulator for NOS 1.3 directly by
 entering the following URL:
 
->`http://localhost:8085/rje.html?m=ei200&t=EI200%20on%20NOS%201.3`
+>`http://localhost:8085/rje.html?m=ei200-nos1&t=EI200%20on%20NOS%201.3`
 
 An RJE command line interface is available as well. The RJI CLI can be started using
 the following commands on Linux/MacOS:
