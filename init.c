@@ -210,8 +210,10 @@ static InitVal sectVals[] =
     "idle",                          "cyber", "Valid",
     "idlecycles",                    "cyber", "Valid",
     "idletime",                      "cyber", "Valid",
+    "ipAddress",                     "cyber", "Valid",
     "memory",                        "cyber", "Valid",
     "model",                         "cyber", "Valid",
+    "networkInterface",              "cyber", "Valid",
     "npuConnections",                "cyber", "Valid",
     "operator",                      "cyber", "Valid",
     "ostype",                        "cyber", "Valid",
@@ -229,7 +231,7 @@ static InitVal sectVals[] =
     "cdcnetPrivilegedUdpPortOffset", "npu",   "Valid",
     "couplerNode",                   "npu",   "Valid",
     "hostID",                        "npu",   "Valid",
-    "hostIP",                        "npu",   "Valid",
+    "hostIP",                        "npu",   "Deprecated",
     "npuNode",                       "npu",   "Valid",
     "terminals",                     "npu",   "Valid",
 
@@ -451,6 +453,7 @@ static void initCyber(char *config)
     {
     long clockIncrement;
     long conns;
+    char *cp;
     long cpus;
     char dummy[256];
     long dummyInt;
@@ -462,6 +465,7 @@ static void initCyber(char *config)
     char model[40];
     long port;
     long pps;
+    int  rc;
     long setMHz;
 
     /*-------------------START OF PRECHECK-------------------*/
@@ -830,6 +834,59 @@ static void initCyber(char *config)
 
     fprintf(stdout, "(init   ) 0x%08x Tracing mask set.\n", traceMask);
 
+    /*
+    **  Get optional IP address of DtCyber. If not specified, use "0.0.0.0".
+    */
+    initGetString("ipaddress", "0.0.0.0", ipAddress, 16);
+    if (initParseIpAddress(strcmp(ipAddress, "0.0.0.0") == 0 ? "127.0.0.1" : ipAddress, &npuNetHostIP, NULL) == FALSE)
+        {
+        fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'ipAddress' value %s - correct values are IPv4 addresses\n",
+                startupFile, config, ipAddress);
+        exit(1);
+        }
+    fprintf(stdout, "(init   ) IP address is '%s'\n", ipAddress);
+
+    /*
+    **  Get optional network interface name of DtCyber.
+    */
+    networkInterface[0]    = '\0';
+    networkInterfaceMgr[0] = '\0';
+    initGetString("networkinterface", "", dummy, sizeof(dummy));
+    if (strlen(dummy) > 0)
+        {
+        char cmd[128];
+
+        cp = dummy;
+        while (*cp != '\0' && *cp != ',') cp += 1;
+        if (*cp == ',')
+            {
+            *cp++ = '\0';
+            }
+        else
+            {
+            cp = "./ifcmgr";
+            }
+        if (strlen(dummy) > 16)
+            {
+            fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'networkInterface' value %s\n",
+                    startupFile, config, dummy);
+            exit(1);
+            }
+        strcpy(networkInterface,    dummy);
+        strcpy(networkInterfaceMgr, cp);
+        fprintf(stdout, "(init   ) Network interface is '%s'\n", networkInterface);
+        sprintf(cmd, "%s %s %s start", networkInterfaceMgr, networkInterface, ipAddress);
+        rc = runHelper(cmd);
+        if (rc == 0)
+            {
+            fprintf(stdout, "(init   ) Started helper:      %s %s %s\n", networkInterfaceMgr, networkInterface, ipAddress);
+            }
+        else
+            {
+            fprintf(stderr, "(init   ) Failed to start %s, rc=%d'\n", networkInterfaceMgr, rc);
+            exit(1);
+            }
+        }
 
     /*
     **  Get optional Telnet port number. If not specified, use default value.
@@ -916,7 +973,7 @@ static void initCyber(char *config)
             startupFile, config, osType);
         }
 
-    fprintf(stdout, "(init   ) Operating system type = '%s'.\n", osType);
+    fprintf(stdout, "(init   ) Operating system type is '%s'.\n", osType);
 
     /*
     **  Get optional Plato port number. If not specified, use default value.
@@ -1054,19 +1111,7 @@ static void initNpuConnections(void)
     */
     (void)initGetString("hostID", "CYBER", npuNetHostID, HostIdSize);
     initToUpperCase(npuNetHostID);
-    fprintf(stderr, "(init   ) LIP host ID is '%s'\n", npuNetHostID);
-
-    /*
-    **  Get host IP address
-    */
-    (void)initGetString("hostIP", "127.0.0.1", strValue, sizeof(strValue));
-    if (initParseIpAddress(strValue, &npuNetHostIP, NULL) == FALSE)
-        {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'hostIP' value %s - correct values are IPv4 addresses\n",
-                startupFile, npuConnections, strValue);
-        exit(1);
-        }
-    fprintf(stderr, "(init   ) Local host IP address is '%s'\n", strValue);
+    fprintf(stderr, "(init   ) Network host ID is '%s'\n", npuNetHostID);
 
     /*
     **  Get optional coupler node number. If not specified, use default value of 1.
@@ -1183,7 +1228,7 @@ static void initNpuConnections(void)
             **     <cla-port>      Starting CLA port number on NPU, in hexadecimal, must match NDL definition
             **     <coupler-node>  Coupler node number of DtCyber host at other end of trunk
             **     <connections>   Maximum number of concurrent connections to accept for port
-            **     <local-ip>      IP address to use in NJE connections for local host (value of hostIP
+            **     <local-ip>      IP address to use in NJE connections for local host (value of ipAddress
             **                     config entry used by default)
             **     <local-port>    Local TCP port number on which to listen for connections (0 for no listening
             **                     port, e.g., rhasp)

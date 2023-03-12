@@ -6,7 +6,7 @@
     {
       "id": "telex",
       "title": "TELEX on KRONOS 2.1",
-      "host": "127.0.0.1",
+      "host": "%../cyber.ini|cyber|ipAddress|127.0.0.1",
       "port": 6677,
       "protocol": "raw",
       "terminal": "aterm.html?m=telex&t=TELEX%20on%20KRONOS%202.1&r=45&c=80",

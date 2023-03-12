@@ -219,10 +219,12 @@ class StkCSI extends Program {
     this.driveMap = {};
     this.volumeMap = {};
     this.freeCells = 16;
+    this.udpHost = "0.0.0.0";
     this.udpPort = StkCSI.RPC_PORT;
     this.tapeCacheRoot = "./cache";
     this.tapeLibraryRoot = "./tapes";
     this.tapeServerClients = [];
+    this.tapeServerHost = "0.0.0.0";
     this.tapeServerPort = 4400;
   }
 
@@ -1187,12 +1189,14 @@ class StkCSI extends Program {
     this.tapeLibraryRoot = fs.realpathSync(tapeLibraryRoot);
   }
 
-  setTapeRobotPort(tapeRobotPort) {
-    this.udpPort = tapeRobotPort;
+  setTapeRobotAddress(tapeRobotAddress) {
+    this.udpHost = tapeRobotAddress.host;
+    this.udpPort = tapeRobotAddress.port;
   }
 
-  setTapeServerPort(tapeServerPort) {
-    this.tapeServerPort = tapeServerPort;
+  setTapeServerAddress(tapeServerAddress) {
+    this.tapeServerHost = tapeServerAddress.host;
+    this.tapeServerPort = tapeServerAddress.port;
   }
 
   setVolumeMap(volumeMap) {
@@ -1220,10 +1224,10 @@ class StkCSI extends Program {
         console.log(`${new Date().toLocaleString()} ${client.remoteAddress}:${client.remotePort} ${err}`);
       });
     });
-    tapeServer.listen(this.tapeServerPort, () => {
+    tapeServer.listen({host:this.tapeServerHost, port:this.tapeServerPort}, () => {
       console.log(`${new Date().toLocaleString()} Tape library located at ${this.tapeLibraryRoot}`);
       console.log(`${new Date().toLocaleString()} Tape cache located at ${this.tapeCacheRoot}`);
-      console.log(`${new Date().toLocaleString()} Tape server listening on port ${this.tapeServerPort}`);
+      console.log(`${new Date().toLocaleString()} Tape server listening on address ${this.tapeServerHost}:${this.tapeServerPort}`);
     });
   }
 }

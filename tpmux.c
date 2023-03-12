@@ -621,11 +621,9 @@ static void *tpMuxThread(void *param)
     {
     DevSlot            *dp = (DevSlot *)param;
     int                listenFd;
-    struct sockaddr_in server;
     struct sockaddr_in from;
     PortParam          *mp;
     u8                 i;
-    int                reuse = 1;
 
 #if defined(_WIN32)
     int fromLen;
@@ -633,39 +631,14 @@ static void *tpMuxThread(void *param)
     socklen_t fromLen;
 #endif
 
-    /*
-    **  Create TCP socket and bind to specified port.
-    */
-    listenFd = socket(AF_INET, SOCK_STREAM, 0);
-    if (listenFd < 0)
-        {
-        printf("(tpmux  ) Can't create socket\n");
+    listenFd = netCreateListener(telnetPort);
 #if defined(_WIN32)
-        return;
+    if (listenFd == INVALID_SOCKET)
 #else
-        return (NULL);
+    if (listenFd == -1)
 #endif
-        }
-
-    setsockopt(listenFd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse));
-    memset(&server, 0, sizeof(server));
-    server.sin_family      = AF_INET;
-    server.sin_addr.s_addr = inet_addr("0.0.0.0");
-    server.sin_port        = htons(telnetPort);
-
-    if (bind(listenFd, (struct sockaddr *)&server, sizeof(server)) < 0)
         {
-        printf("(tpmux  ) tpMux: Can't bind to socket\n");
-#if defined(_WIN32)
-        return;
-#else
-        return (NULL);
-#endif
-        }
-
-    if (listen(listenFd, 5) < 0)
-        {
-        printf("(tpmux  ) Can't listen\n");
+        fprintf(stderr, "(tpmux  ) Can't listen on port %d\n", telnetPort);
 #if defined(_WIN32)
         return;
 #else
@@ -707,7 +680,9 @@ static void *tpMuxThread(void *param)
         **  Mark connection as active.
         */
         mp->active = TRUE;
+#if DEBUG
         printf("(tpmux  ) Received connection on port %d\n", mp->id);
+#endif
         }
 
 #if !defined(_WIN32)
@@ -750,26 +725,22 @@ static int tpMuxCheckInput(PortParam *mp)
             }
         else
             {
-#if defined(_WIN32)
-            closesocket(mp->connFd);
-#else
-            close(mp->connFd);
-#endif
+            netCloseConnection(mp->connFd);
             mp->active = FALSE;
+#if DEBUG
             printf("(tpmux  ) Connection dropped on port %d\n", mp->id);
+#endif
 
             return (-1);
             }
         }
     else if (FD_ISSET(mp->connFd, &exceptFds))
         {
-#if defined(_WIN32)
-        closesocket(mp->connFd);
-#else
-        close(mp->connFd);
-#endif
+        netCloseConnection(mp->connFd);
         mp->active = FALSE;
+#if DEBUG
         printf("(tpmux  ) Connection dropped on port %d\n", mp->id);
+#endif
 
         return (-1);
         }

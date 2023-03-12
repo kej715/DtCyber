@@ -367,22 +367,62 @@ const processStaticRequest = (req, res, url) => {
 };
 
 const readConfigFile = path => {
+  if (os.type().startsWith("Windows")) path = path.replaceAll("\\", "/");
+  let si = path.lastIndexOf("/");
+  const baseDir = (si >= 0) ? path.substring(0, si + 1) : "";
   let configObj = JSON.parse(fs.readFileSync(path));
   for (const key of Object.keys(configObj)) {
+    let value = configObj[key];
     if (key === "machines") {
-      for (const machine of configObj[key]) {
+      for (const machine of value) {
         machineMap[machine.id] = machine;
+        for (const propName of Object.keys(machine)) {
+          let prop = machine[propName];
+          if (typeof prop === "string" && prop.startsWith("%")) {
+            const tokens = prop.substring(1).split("|");
+            let path = tokens[0].startsWith("/") ? tokens[0] : `${baseDir}${tokens[0]}`;
+            machine[propName] = readConfigProperty(path, tokens[1], tokens[2], tokens[3]);
+          }
+        }
       }
     }
+    else if (typeof value === "string" && value.startsWith("%")) {
+      const tokens = value.substring(1).split("|");
+      let path = tokens[0].startsWith("/") ? tokens[0] : `${baseDir}${tokens[0]}`;
+      config[key] = readConfigProperty(path, tokens[1], tokens[2], tokens[3]);
+    }
     else {
-      config[key] = configObj[key];
+      config[key] = value;
     }
   }
-}
+};
+
+const readConfigProperty = (path, sectionName, propertyName, defaultValue) => {
+  if (path.endsWith(".ini")) {
+    const val = readConfigProperty(path.substring(0, path.lastIndexOf(".")) + ".ovl", sectionName, propertyName, null);
+    if (val !== null) return val;
+  }
+  if (!fs.existsSync(path)) return defaultValue;
+  const lines = fs.readFileSync(path, "utf8").split("\n");
+  let i = 0;
+  const sectionStart = `[${sectionName}]`;
+  while (i < lines.length) {
+    if (lines[i++].trim() === sectionStart) break;
+  }
+  while (i < lines.length) {
+    let line = lines[i++].trim();
+    if (line.startsWith("[")) break;
+    let ei = line.indexOf("=");
+    if (ei === -1) continue;
+    let key = line.substring(0, ei).trim();
+    if (key === propertyName) return line.substring(ei + 1).trim();
+  }
+  return defaultValue;
+};
 
 const sendData = (connection, streamType, streamId, data) => {
   connection.ws.sendUTF(`${streamType} ${streamId} ${data.length} ${data}`);
-}
+};
 
 const usage = exitCode => {
   process.stderr.write("usage: node rjews [-h][--help][-p path][-v][--version] [path ...]\n");
@@ -439,7 +479,8 @@ process.title = "rjews";
 
 fs.writeFileSync(pidFile, `${process.pid}\n`);
 log(`PID is ${process.pid}`);
-let port = config.port ? config.port : 8080;
+const host = typeof config.host !== "undefined" ? config.host : "0.0.0.0";
+const port = typeof config.port !== "undefined" ? config.port : 8080;
 
 const httpServer = http.createServer((req, res) => {
   if (req.method === "GET") {
@@ -461,8 +502,8 @@ const httpServer = http.createServer((req, res) => {
   }
 });
 
-httpServer.listen(port);
-log(`Listening on port ${port}`);
+httpServer.listen({host:host, port:port});
+log(`Listening on address ${host}:${port}`);
 if (typeof config.httpRoot === "undefined") config.httpRoot = "www";
 log(`HTTP root ${config.httpRoot}`);
 
@@ -471,7 +512,7 @@ for (const key of Object.keys(machineMap)) {
   let machine = machineMap[key];
   let id = key;
   while (id.length < 8) id += " ";
-  log(`  ${id} : ${machine.title ? machine.title : ""}`);
+  log(`  ${id} : ${machine.title ? machine.title : ""} (${machine.host}:${machine.port})`);
 }
 
 for (const key of Object.keys(machineMap)) {

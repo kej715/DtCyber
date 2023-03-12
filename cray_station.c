@@ -477,11 +477,7 @@ static void csFeiCloseConnection(FeiParam *feip)
     fprintf(csFeiLog, "\n%010u Close connection on socket %d to %s:%u", traceSequenceNo,
             feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port));
 #endif
-#if defined(_WIN32)
-    closesocket(feip->fd);
-#else
-    close(feip->fd);
-#endif
+    netCloseConnection(feip->fd);
     feip->fd    = 0;
     feip->state = StCsFeiDisconnected;
     feip->nextConnectionAttempt = getSeconds() + (time_t)ConnectionRetryInterval;
@@ -606,94 +602,18 @@ static void csFeiInitiateConnection(FeiParam *feip)
         return;
         }
     feip->nextConnectionAttempt = currentTime + ConnectionRetryInterval;
-
-    fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    fd = netInitiateConnection((struct sockaddr *)&feip->serverAddr);
 #if defined(_WIN32)
-    //  -------------------------------
-    //       Windows socket setup
-    //  -------------------------------
     if (fd == INVALID_SOCKET)
-        {
-        fprintf(stderr, "(crayfei) Failed to create socket for host: %s\n", feip->serverName);
-
-        return;
-        }
-    if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable)) < 0)
-        {
-#if DEBUG
-        fprintf(csFeiLog, "\n%010u Failed to set KEEPALIVE option on socket %d to %s:%u, %s", traceSequenceNo,
-                fd, feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
-#endif
-        closesocket(fd);
-
-        return;
-        }
-    if (ioctlsocket(fd, FIONBIO, &blockEnable) < 0)
-        {
-#if DEBUG
-        fprintf(csFeiLog, "\n%010u Failed to set non-blocking I/O on socket %d to %s:%u, %s", traceSequenceNo,
-                fd, feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
-#endif
-        closesocket(fd);
-
-        return;
-        }
-    rc = connect(fd, (struct sockaddr *)&feip->serverAddr, sizeof(feip->serverAddr));
-    if ((rc == SOCKET_ERROR) && (WSAGetLastError() != WSAEWOULDBLOCK))
-        {
-#if DEBUG
-        fprintf(csFeiLog, "\n%010u Failed to connect to %s:%u, %s", traceSequenceNo,
-                feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
-#endif
-        closesocket(fd);
-        }
-    else // connection in progress
-        {
-        feip->fd    = fd;
-        feip->state = StCsFeiConnecting;
-#if DEBUG
-        fprintf(csFeiLog, "\n%010u Initiated connection on socket %d to %s:%u", traceSequenceNo,
-                feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port));
-#endif
-        }
 #else
-    //  -------------------------------
-    //     non-Windows socket setup
-    //  -------------------------------
-    if (fd < 0)
-        {
-        fprintf(stderr, "(crayfei) Failed to create socket for host: %s\n", feip->serverName);
-
-        return;
-        }
-    if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable)) < 0)
-        {
-#if DEBUG
-        fprintf(csFeiLog, "\n%010u Failed to set KEEPALIVE option on socket %d to %s:%u, %s", traceSequenceNo,
-                fd, feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
+    if (fd == -1)
 #endif
-        close(fd);
-
-        return;
-        }
-    if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
         {
 #if DEBUG
-        fprintf(csFeiLog, "\n%010u Failed to set non-blocking I/O on socket %d to %s:%u, %s", traceSequenceNo,
-                fd, feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
-#endif
-        close(fd);
-
-        return;
-        }
-    rc = connect(fd, (struct sockaddr *)&feip->serverAddr, sizeof(feip->serverAddr));
-    if ((rc < 0) && (errno != EINPROGRESS))
-        {
-#if DEBUG
-        fprintf(csFeiLog, "\n%010u Failed to connect to %s:%u, %s", traceSequenceNo,
+        fprintf(csFeiLog, "\n%010u Failed to initiate connection to %s:%u, %s", traceSequenceNo,
                 feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
 #endif
-        close(fd);
+        netCloseConnection(fd);
         }
     else // connection in progress
         {
@@ -704,7 +624,6 @@ static void csFeiInitiateConnection(FeiParam *feip)
                 feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port));
 #endif
         }
-#endif // not _WIN32
     }
 
 /*--------------------------------------------------------------------------
@@ -1173,37 +1092,14 @@ static void csFeiSendData(FeiParam *feip)
 **------------------------------------------------------------------------*/
 static bool csFeiSetupConnection(FeiParam *feip)
     {
-#if defined(_WIN32)
-    int optLen;
-    int optVal;
-#else
-    socklen_t optLen;
-    int       optVal;
-#endif
     int rc;
 
-#if defined(_WIN32)
-    optLen = sizeof(optVal);
-    rc     = getsockopt(feip->fd, SOL_SOCKET, SO_ERROR, (char *)&optVal, &optLen);
-#else
-    optLen = (socklen_t)sizeof(optVal);
-    rc     = getsockopt(feip->fd, SOL_SOCKET, SO_ERROR, &optVal, &optLen);
-#endif
-    if (rc < 0)
+    rc = netGetErrorStatus(feip->fd);
+    if (rc != 0) // connection failed
         {
 #if DEBUG
-        fprintf(csFeiLog, "\n%010u Failed to query socket options on socket %d for %s:%u, %s", traceSequenceNo,
-                feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(errno));
-#endif
-        csFeiCloseConnection(feip);
-
-        return FALSE;
-        }
-    else if (optVal != 0) // connection failed
-        {
-#if DEBUG
-        fprintf(csFeiLog, "\n%010u Failed to connect on socket %d to %s:%u, %s", traceSequenceNo,
-                feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port), strerror(optVal));
+        fprintf(csFeiLog, "\n%010u Failed to connect on socket %d to %s:%u", traceSequenceNo,
+                feip->fd, feip->serverName, ntohs(feip->serverAddr.sin_port));
 #endif
         csFeiCloseConnection(feip);
 

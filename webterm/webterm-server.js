@@ -428,34 +428,70 @@ const readConfigFile = path => {
 };
 
 const readConfigObject = path => {
-    if (os.type().startsWith("Windows")) path = path.replaceAll("\\", "/");
-  let i = path.lastIndexOf("/");
-  const baseDir = (i >= 0) ? path.substring(0, path.lastIndexOf("/") + 1) : "";
+  if (os.type().startsWith("Windows")) path = path.replaceAll("\\", "/");
+  let si = path.lastIndexOf("/");
+  const baseDir = (si >= 0) ? path.substring(0, si + 1) : "";
   log(`read configuration file ${path}`);
   let configObj = JSON.parse(fs.readFileSync(path));
   for (const key of Object.keys(configObj)) {
+    let value = configObj[key];
+    if (typeof value === "string" && value.startsWith("%")) {
+      const tokens = value.substring(1).split("|");
+      let path = tokens[0].startsWith("/") ? tokens[0] : `${baseDir}${tokens[0]}`;
+      configObj[key] = readConfigProperty(path, tokens[1], tokens[2], tokens[3]);
+      value = configObj[key];
+    }
     if (key === "machines") {
-      let machines = configObj[key];
+      let machines = value;
       for (const machine of machines) {
         if (typeof machine === "string") { // relative pathname of machine definition
           machine = readConfigObject(machine.startsWith("/") ? machine : `${baseDir}${machine}`);
         }
         for (const key of Object.keys(machine)) {
-          let val = machine[key];
-          if (typeof val === "string" && val.startsWith("@")) {
-            val = val.substring(1);
-            machine[key] = readConfigObject(val.startsWith("/") ? val : `${baseDir}${val}`);
+          let prop = machine[key];
+          if (typeof prop === "string") {
+            if (prop.startsWith("@")) {
+              prop = prop.substring(1);
+              machine[key] = readConfigObject(prop.startsWith("/") ? prop : `${baseDir}${prop}`);
+            }
+            else if (prop.startsWith("%")) {
+              const tokens = prop.substring(1).split("|");
+              let path = tokens[0].startsWith("/") ? tokens[0] : `${baseDir}${tokens[0]}`;
+              machine[key] = readConfigProperty(path, tokens[1], tokens[2], tokens[3]);
+            }
           }
         }
       }
     }
     else if (key === "httpRoot") {
-      let httpRoot = configObj[key];
-      if (os.type().startsWith("Windows")) httpRoot = httpRoot.replaceAll("\\", "/");
-      configObj[key] = httpRoot.startsWith("/") ? httpRoot : `${baseDir}${httpRoot}`;
+      if (os.type().startsWith("Windows")) value = value.replaceAll("\\", "/");
+      configObj[key] = value.startsWith("/") ? value : `${baseDir}${value}`;
     }
   }
   return configObj;
+};
+
+const readConfigProperty = (path, sectionName, propertyName, defaultValue) => {
+  if (path.endsWith(".ini")) {
+    const val = readConfigProperty(path.substring(0, path.lastIndexOf(".")) + ".ovl", sectionName, propertyName, null);
+    if (val !== null) return val;
+  }
+  if (!fs.existsSync(path)) return defaultValue;
+  const lines = fs.readFileSync(path, "utf8").split("\n");
+  let i = 0;
+  const sectionStart = `[${sectionName}]`;
+  while (i < lines.length) {
+    if (lines[i++].trim() === sectionStart) break;
+  }
+  while (i < lines.length) {
+    let line = lines[i++].trim();
+    if (line.startsWith("[")) break;
+    let ei = line.indexOf("=");
+    if (ei === -1) continue;
+    let key = line.substring(0, ei).trim();
+    if (key === propertyName) return line.substring(ei + 1).trim();
+  }
+  return defaultValue;
 };
 
 const usage = exitCode => {
@@ -519,7 +555,7 @@ for (const key of Object.keys(machineMap)) {
   let machine = machineMap[key];
   let id = key;
   while (id.length < 8) id += " ";
-  log(`  ${id} : ${machine.title ? machine.title : ""}`);
+  log(`  ${id} : ${machine.title ? machine.title : ""} (${machine.host}:${machine.port})`);
 }
 
 const httpServer = http.createServer((req, res) => {
@@ -542,9 +578,10 @@ const httpServer = http.createServer((req, res) => {
   }
 });
 
-let port = config.port ? config.port : 8080;
-httpServer.listen(port);
-log(`Listening on port ${port}`);
+let host = typeof config.host !== "undefined" ? config.host : "0.0.0.0";
+let port = typeof config.port !== "undefined" ? config.port : 8080;
+httpServer.listen({host:host, port:port});
+log(`Listening on address ${host}:${port}`);
 if (typeof config.httpRoot === "undefined") config.httpRoot = "www";
 log(`HTTP root ${config.httpRoot}`);
 

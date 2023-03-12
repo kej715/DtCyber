@@ -353,13 +353,8 @@ void niuSetOutputHandler(niuProcessOutput *h, int stat)
 **------------------------------------------------------------------------*/
 static void niuInit(void)
     {
-#if defined(_WIN32)
-    u_long blockEnable = 1;
-#endif
     u8                 i;
-    int                optEnable = 1;
     PortParam          *pp;
-    struct sockaddr_in server;
 
 #if DEBUG_PP || DEBUG_NET
     if (niuLog == NULL)
@@ -400,43 +395,14 @@ static void niuInit(void)
     ioTurns    = IoTurnsPerPoll - 1;
 
     /*
-    **  Create socket, bind to specified port, and begin listening for connections
+    **  Start listening for new connections on the configured PLATO port number
     */
-    listenFd = socket(AF_INET, SOCK_STREAM, 0);
-    if (listenFd < 0)
-        {
-        fprintf(stderr, "(niu    ) Can't create socket for NIU on port %d\n", platoPort);
-        exit(1);
-        }
-
-    /*
-    **  Accept will block if client drops connection attempt between select and accept.
-    **  We can't block so make listening socket non-blocking to avoid this condition.
-    */
+    listenFd = netCreateListener(platoPort);
 #if defined(_WIN32)
-    ioctlsocket(listenFd, FIONBIO, &blockEnable);
+    if (listenFd == INVALID_SOCKET)
 #else
-    fcntl(listenFd, F_SETFL, O_NONBLOCK);
+    if (listenFd == -1)
 #endif
-
-    /*
-    **  Bind to configured TCP port number
-    */
-    setsockopt(listenFd, SOL_SOCKET, SO_REUSEADDR, (void *)&optEnable, sizeof(optEnable));
-    memset(&server, 0, sizeof(server));
-    server.sin_family      = AF_INET;
-    server.sin_addr.s_addr = inet_addr("0.0.0.0");
-    server.sin_port        = htons(platoPort);
-    if (bind(listenFd, (struct sockaddr *)&server, sizeof(server)) < 0)
-        {
-        fprintf(stderr, "(niu    ) Can't bind to listen socket for NIU on port %d\n", platoPort);
-        exit(1);
-        }
-
-    /*
-    **  Start listening for new connections on this TCP port number
-    */
-    if (listen(listenFd, 5) < 0)
         {
         fprintf(stderr, "(niu    ) Can't listen for NIU on port %d\n", platoPort);
         exit(1);
@@ -781,16 +747,15 @@ static void niuDisconnect(void)
 **------------------------------------------------------------------------*/
 static void niuCheckIo(void)
     {
-    PortParam *availablePort;
-
+    PortParam      *availablePort;
 #if defined(_WIN32)
-    u_long blockEnable = 1;
+    u_long         blockEnable = 1;
 #endif
     struct sockaddr_in from;
 #if defined(_WIN32)
-    int fromLen;
+    int            fromLen;
 #else
-    socklen_t fromLen;
+    socklen_t      fromLen;
 #endif
     int            i;
     int            maxFd;
@@ -944,11 +909,7 @@ static void niuCheckIo(void)
 **------------------------------------------------------------------------*/
 static void niuClose(PortParam *pp)
     {
-#if defined(_WIN32)
-    closesocket(pp->connFd);
-#else
-    close(pp->connFd);
-#endif
+    netCloseConnection(pp->connFd);
     pp->active = FALSE;
 #if DEBUG_NET
     fprintf(niuLog, "\n%010u connection closed on port %02o",

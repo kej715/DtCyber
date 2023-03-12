@@ -66,7 +66,7 @@ The following example illustrates what a configuration file looks like:
     {
       "id": "cybis",
       "title": "CYBIS on NOS 2.8.7",
-      "host": "localhost",
+      "host": "%../cyber.ini|cyber|ipAddress|127.0.0.1",
       "port": 8005,
       "protocol": "raw",
       "terminal": "pterm.html?m=cybis&t=CYBIS%20on%20NOS%202.8.7",
@@ -78,7 +78,7 @@ The following example illustrates what a configuration file looks like:
     {
       "id": "m01",
       "title": "NOS 2.8.7",
-      "host": "localhost",
+      "host": "%../cyber.ini|cyber|ipAddress|127.0.0.1",
       "port": 23,
       "protocol": "telnet",
       "terminal": "aterm.html?m=m01&t=NOS%202.8.7&r=45&c=80&a=1",
@@ -162,6 +162,19 @@ If the value of a property begins with the character "@", then the string follow
 the "@" character is taken as the pathname of a file containing JSON syntax. The file
 is read and parsed, and the resulting Javascript object or array is set as the value of
 the property.
+
+If the value of a property begins with the character "%", then the string following
+the "%" character is taken as a special reference to a property in another property file
+such as `cyber.ini`. The general syntax of these special references is:
+
+```
+"%<pathname>|<section-name>|<property-name>|<default-value>"
+```
+
+where *pathname* is the relative pathname (relative to the webterm configuration file)
+of the target property file, *section-name* is the name of the target section in the
+property file, *property-name* is the name of the target property, and *default-value*
+is the value to use when the property file, section, or named property cannot be found.
 
 ### <a id="examples"></a> examples
 The **examples** property of a machine definition is an array of objects, and each

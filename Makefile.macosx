@@ -72,6 +72,7 @@ OBJS    =   cdcnet.o                \
             mt669.o                 \
             mt679.o                 \
             mux6676.o               \
+            net_util.o              \
             niu.o                   \
             npu_async.o             \
             npu_bip.o               \

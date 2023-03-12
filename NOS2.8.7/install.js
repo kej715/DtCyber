@@ -86,22 +86,10 @@ if (isReadyToRunInstall) {
     if (fs.existsSync("site.cfg")) {
       return dtc.disconnect()
       .then(() => dtc.exec("node", ["reconfigure"]))
-      .then(() => dtc.say("Make a new deadstart tape ..."))
-      .then(() => dtc.exec("node", ["make-ds-tape"]))
-      .then(() => {
-        if (fs.existsSync("tapes/ods.tap")) {
-          fs.unlinkSync("tapes/ods.tap");
-        }
-        fs.renameSync("tapes/ds.tap", "tapes/ods.tap");
-        fs.renameSync("tapes/newds.tap", "tapes/ds.tap");
-        return Promise.resolve();
-      })
+      .then(() => dtc.flushCache())
       .then(() => dtc.connect())
       .then(() => dtc.expect([{ re: /Operator> $/ }]))
-      .then(() => dtc.say("Shutdown and re-deadstart using the new tape"))
-      .then(() => dtc.shutdown(false))
-      .then(() => dtc.sleep(5000))
-      .then(() => startSystem());
+      .then(() => dtc.attachPrinter("LP5xx_C12_E5"));
     }
     else {
       return Promise.resolve();
@@ -138,15 +126,16 @@ else {
   .then(() => {
     return isContinueInstall ? dtc.exec("node", ["base-install", "continue"]) : dtc.exec("node", ["base-install"]);
   })
-  .then(() => dtc.say(`Deadstart ${isBasicInstall ? "basic installed system" : "system to install optional products"} ...`))
-  .then(() => startSystem())
+  .then(() => dtc.connect())
+  .then(() => dtc.expect([{ re: /Operator> $/ }]))
+  .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
   .then(() => {
     if (isBasicInstall) {
       return Promise.resolve();
     }
     else {
       const installCmd = isContinueInstall ? ["install-product", "all"] : ["install-product", "-f", "all"];
-      return dtc.say("Begin installing optional products ...")
+      return dtc.say(`${isContinueInstall ? "Continue" : "Begin"} installing optional products ...`)
       .then(() => dtc.disconnect())
       .then(() => dtc.exec("node", installCmd))
       .then(() => {

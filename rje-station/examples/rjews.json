@@ -1,18 +1,19 @@
 {
+  "host":"%../../NOS2.8.7/cyber.ini|cyber|ipAddress|0.0.0.0",
   "port":8085,
   "httpRoot":"www",
   "machines":[
     {
     "id":"rbf",
     "title":"RBF on NOS 2.8.7 (Cyber 865)",
-    "host":"127.0.0.1",
+    "host":"%../../NOS2.8.7/cyber.ini|cyber|ipAddress|127.0.0.1",
     "port":2553,
     "protocol":"hasp"
     },
     {
     "id":"ei200-nos1",
     "title":"EI200 on NOS 1.3 (Cyber 173)",
-    "host":"127.0.0.1",
+    "host":"%../../NOS1.3/cyber.ini|cyber|ipAddress|127.0.0.1",
     "port":6671,
     "name":"GUEST",
     "password":"GUEST",
@@ -21,7 +22,7 @@
     {
     "id":"ei200-kronos",
     "title":"EI200 on KRONOS 2.1 (Cyber 173)",
-    "host":"127.0.0.1",
+    "host":"%../../KRONOS2.1/cyber.ini|cyber|ipAddress|127.0.0.1",
     "port":6678,
     "name":"GUEST",
     "password":"GUEST",

@@ -277,6 +277,7 @@
     <ClCompile Include="mt669.c" />
     <ClCompile Include="mt679.c" />
     <ClCompile Include="mux6676.c" />
+    <ClCompile Include="net_util.c" />
     <ClCompile Include="niu.c" />
     <ClCompile Include="npu_async.c" />
     <ClCompile Include="npu_bip.c" />

@@ -14,30 +14,9 @@ const hostId      = utilities.getHostId(dtc);
 const mailerOpts  = {username:"MAILER",password:"MAILER"};
 const mid         = utilities.getMachineId(dtc);
 const timeZone    = utilities.getTimeZone();
-const topology    = utilities.getNjeTopology(dtc);
 
 const customProps = {};
 dtc.readPropertyFile(customProps);
-
-const replaceFile = (filename, text, opts) => {
-  let options = {
-    jobname:  "PUTFILE",
-    username: opts.username,
-    password: opts.password
-  };
-  const body = [
-    `$COPY,INPUT,${filename}.`,
-    `$REPLACE,${filename}.`
-  ];
-  if (Array.isArray(text)) {
-    options.data = dtc.asciiToCdc(text.join("\n") + "\n");
-  }
-  else {
-    options.data = dtc.asciiToCdc(text);
-  }
-  return dtc.say(`  ${filename}`)
-  .then(() => dtc.createJobWithOutput(12, 4, body, options));
-}
 
 let hostAliases = [`${hostId}.BITNET`];
 
@@ -58,51 +37,63 @@ dtc.connect()
   return Promise.resolve();
 })
 .then(() => dtc.say("Create routing and address translation artifacts ..."))
-.then(() => replaceFile("ZONE",    `${timeZone}\n`,      mailerOpts))
-.then(() => replaceFile("HOSTNOD", `${hostId}\n`,        mailerOpts))
-.then(() => replaceFile("HOSTALI",  hostAliases,         mailerOpts))
-.then(() => replaceFile("HOSTSVR", `Server@${hostId}\n`, mailerOpts))
-.then(() => {
-  let aliasDefns = [];
+.then(() => utilities.getFile(dtc, "TCPHOST/UN=NETADMN"))
+.then(hostsText => {
+  hostsText = dtc.cdcToAscii(hostsText);
+  let proc = [
+    ".PROC,TABLES.",
+    "$REPLACE,HOSTNOD,HOSTALI,HOSTSVR,OBXLALI,OBXLRTE.",
+    "$REPLACE,MAILRTE,DOMNRTE,BITNRTE,IBXLRTE.",
+    "$REPLACE,NJERTE,RHPRTE,SMTPRTE,ZONE.",
+    "$CHANGE,HOSTNOD,HOSTALI,HOSTSVR,OBXLALI,OBXLRTE/CT=PU,M=R.",
+    "$CHANGE,MAILRTE,DOMNRTE,BITNRTE,IBXLRTE/CT=PU,M=R.",
+    "$CHANGE,NJERTE,RHPRTE,SMTPRTE,ZONE/CT=PU,M=R.",
+    ".DATA,ZONE.",
+    `${timeZone}`,
+    ".DATA,HOSTNOD.",
+    `${hostId}`,
+    ".DATA,HOSTSVR.",
+    `Server@${hostId}`
+  ];
+
+  proc.push(".DATA,HOSTALI.");
+  proc = proc.concat(hostAliases);
+
+  proc.push(".DATA,OBXLALI.");
   for (const alias of hostAliases) {
-    aliasDefns.push(`${alias} ${hostId}`);
+    proc.push(`${alias} ${hostId}`);
   }
-  return replaceFile("OBXLALI", aliasDefns, mailerOpts);
-})
-.then(() => {
-  let routes = [
+
+  proc.push(".DATA,MAILRTE.");
+  proc = proc.concat([
     "*",
     "* Routes for outbound messages sent from MAILER",
     "*",
     ":nick.*DEFAULT* :route.DC=WT,UN=NETOPS,FC=OX,SCL=SY  BSMTP",
     ":nick.*<>*      :route.DC=WT,UN=MAILER,FC=UK,UJN=UNKNOWN  RFC822",
     `:nick.${hostId} :route.DC=WT,UN=NETOPS,FC=ID,SCL=SY SMTP`
-  ];
+  ]);
   for (const alias of hostAliases) {
-    routes.push(`:nick.${alias} :route.DC=WT,UN=NETOPS,FC=ID,SCL=SY SMTP`);
+    proc.push(`:nick.${alias} :route.DC=WT,UN=NETOPS,FC=ID,SCL=SY SMTP`);
   }
-  routes.push(":nick.system :route.DC=WT,UN=NETOPS,FC=ID,SCL=SY SMTP");
-  return dtc.say("  MAILRTE")
-  .then(() => dtc.putFile("MAILRTE/IA", routes, mailerOpts));
-})
-.then(() => {
-  let routes = [
+  proc.push(":nick.system :route.DC=WT,UN=NETOPS,FC=ID,SCL=SY SMTP");
+
+  proc.push(".DATA,DOMNRTE.");
+  proc = proc.concat([
     "*",
     "* Routes within the local domain",
     "*",
     ":nick.*DEFAULT* :njroute.BITNET BITNET",
     ":nick.*<>*      :route.DC=WT,UN=MAILER,FC=UK,UJN=UNKNOWN  RFC822",
     `:nick.${hostId} :ccl.$BEGIN,MAILER,SYSTEM SMTP`
-  ];
+  ]);
   for (const alias of hostAliases) {
-    routes.push(`:nick.${alias} :ccl.$BEGIN,MAILER,SYSTEM SMTP`)
+    proc.push(`:nick.${alias} :ccl.$BEGIN,MAILER,SYSTEM SMTP`)
   }
-  routes.push(":nick.system :ccl.$BEGIN,SYSTEM,SYSTEM SMTP");
-  return dtc.say("  DOMNRTE")
-  .then(() => dtc.putFile("DOMNRTE/IA", routes, mailerOpts));
-})
-.then(() => {
-  let routes = [
+  proc.push(":nick.system :ccl.$BEGIN,SYSTEM,SYSTEM SMTP");
+
+  proc.push(".DATA,BITNRTE.");
+  proc = proc.concat([
     "*",
     "* Routes for messages received from NJE and SMTP for destinations in",
     "* the local domain",
@@ -110,83 +101,74 @@ dtc.connect()
     ":nick.*DEFAULT* :njroute.BITNET BITNET",
     ":nick.*<>*      :route.DC=WT,UN=MAILER,FC=UK,UJN=UNKNOWN  RFC822",
     `:nick.${hostId} :route.DC=WT,UN=NETOPS,FC=IX,SCL=SY SMTP`
-  ];
+  ]);
   for (const alias of hostAliases) {
-    routes.push(`:nick.${alias} :route.DC=WT,UN=NETOPS,FC=IX,SCL=SY SMTP`);
+    proc.push(`:nick.${alias} :route.DC=WT,UN=NETOPS,FC=IX,SCL=SY SMTP`);
   }
-  return dtc.say("  BITNRTE")
-  .then (() => dtc.putFile("BITNRTE/IA", routes, mailerOpts));
-})
-.then(() => {
-  let routes = [
+
+  proc.push(".DATA,IBXLRTE.");
+  proc = proc.concat([
     "*",
     "* Routes for messages that have undergone inbound address translation.",
     "*",
     ":nick.*DEFAULT* :route.DC=WT,UN=NETOPS,FC=ID,SCL=SY SMTP",
     ":nick.*<>*      :route.DC=WT,UN=MAILER,FC=UK,UJN=UNKNOWN  RFC822",
     `:nick.${hostId} :route.DC=WT,UN=NETOPS,FC=ID,SCL=SY SMTP`
-  ];
+  ]);
   for (const alias of hostAliases) {
-    routes.push(`:nick.${alias} :route.DC=WT,UN=NETOPS,FC=ID,SCL=SY SMTP`);
+    proc.push(`:nick.${alias} :route.DC=WT,UN=NETOPS,FC=ID,SCL=SY SMTP`);
   }
-  return dtc.say("  IBXLRTE")
-  .then (() => dtc.putFile("IBXLRTE/IA", routes, mailerOpts));
-})
-.then(() => {
-  let routes = [
+
+  proc.push(".DATA,OBXLRTE.");
+  proc = proc.concat([
     "*",
     "* Routes for messages that have undergone outbound address translation.",
     "*",
     ":nick.*DEFAULT* :njroute.BITNET BITNET",
     ":nick.*<>*      :route.DC=WT,UN=MAILER,FC=UK,UJN=UNKNOWN  RFC822",
     `:nick.${hostId} :route.DC=WT,UN=NETOPS,FC=IX,SCL=SY SMTP`
-  ];
+  ]);
   for (const alias of hostAliases) {
-    routes.push(`:nick.${alias} :route.DC=WT,UN=NETOPS,FC=IX,SCL=SY SMTP`);
+    proc.push(`:nick.${alias} :route.DC=WT,UN=NETOPS,FC=IX,SCL=SY SMTP`);
   }
-  return dtc.say("  OBXLRTE")
-  .then (() => dtc.putFile("OBXLRTE/IA", routes, mailerOpts));
-})
-.then(() => {
-  let routes = [
+
+  proc.push(".DATA,NJERTE.");
+  proc = proc.concat([
     "*",
     "* Routes for destinations reached by NJE",
     "*",
     ":nick..BITNET :njroute.BITNET BITNET"
-  ];
-  const names = Object.keys(topology).sort();
+  ]);
+  const njeTopology = utilities.getNjeTopology(dtc);
+  let names = Object.keys(njeTopology).sort();
   for (const name of names) {
     if (name === hostId) continue;
-    let node = topology[name];
+    let node = njeTopology[name];
     if (typeof node.mailer !== "undefined") {
-      routes.push(`:nick.${name} :mailer.${node.mailer} BSMTP`);
+      proc.push(`:nick.${name} :mailer.${node.mailer} BSMTP`);
     }
     else if (node.software === "NJEF") {
-      routes.push(`:nick.${name} :mailer.MAILER@${name} BSMTP`);
+      proc.push(`:nick.${name} :mailer.MAILER@${name} BSMTP`);
     }
     else {
-      routes.push(`:nick.${name} :njroute.BITNET BITNET`);
+      proc.push(`:nick.${name} :njroute.BITNET BITNET`);
     }
   }
-  return dtc.say("  NJERTE")
-  .then(() => dtc.putFile("NJERTE/IA", routes, mailerOpts));
-})
-.then(() => utilities.getFile(dtc, "TCPHOST/UN=NETADMN"))
-.then(text => {
-  text = dtc.cdcToAscii(text);
-  let routes = [
+
+  proc.push(".DATA,RHPRTE.");
+  proc = proc.concat([
     "*",
     "* Routes for destinations reached by RHP",
     "*"
-  ];
-  const topology = utilities.getRhpTopology(dtc);
-  const names = Object.keys(topology).sort();
+  ]);
+  const rhpTopology = utilities.getRhpTopology(dtc);
+  names = Object.keys(rhpTopology).sort();
   for (const name of names) {
     if (name === hostId) continue;
-    let node = topology[name];
-    routes.push(`:nick.${name} :route.DC=WT,UN=NETOPS,FC=IX,SCL=SY,ST=${node.lid} SMTP`);
+    let node = rhpTopology[name];
+    proc.push(`:nick.${name} :route.DC=WT,UN=NETOPS,FC=IX,SCL=SY,ST=${node.lid} SMTP`);
     let hostRecord = null;
-    for (let line of text.split("\n")) {
+    for (let line of hostsText.split("\n")) {
       line = line.trim();
       if (/^[0-9]/.test(line)) {
         const tokens = line.toUpperCase().split(/\s+/);
@@ -209,21 +191,23 @@ dtc.connect()
     if (hostRecord !== null) {
       let aliases = [];
       for (const token of hostRecord.split(/\s+/).slice(1)) {
-        if (token.toUpperCase() !== name) {
-          routes.push(`:nick.${token} :route.DC=WT,UN=NETOPS,FC=IX,SCL=SY,ST=${node.lid} SMTP`);
+        let ucname = token.toUpperCase();
+        if (   ucname !== name
+            && ucname !== "STK"
+            && ucname !== "MAIL-RELAY"
+            && ucname.startsWith("LOCALHOST_") === false) {
+          proc.push(`:nick.${token} :route.DC=WT,UN=NETOPS,FC=IX,SCL=SY,ST=${node.lid} SMTP`);
         }
       }
     }
   }
-  return dtc.say("  RHPRTE")
-  .then(() => dtc.putFile("RHPRTE/IA", routes, mailerOpts));
-})
-.then(() => {
-  let routes = [
+
+  proc.push(".DATA,SMTPRTE.");
+  proc = proc.concat([
     "*",
     "* Routes for destinations reached by SMTP",
     "*"
-  ];
+  ]);
   
   let domains = ["at" ,"au" ,"ca" ,"ch" ,"com","de" ,"edu","es" ,"fr" ,"gb" ,
                  "ie" ,"il" ,"it" ,"jp" ,"mil","net","org","oz" ,"uk" ,"us"];
@@ -239,7 +223,8 @@ dtc.connect()
           let ucname = name.toUpperCase();
           if (ucname !== hostId
               && hostAliases.indexOf(ucname) < 0
-              && typeof topology[ucname] === "undefined"
+              && typeof njeTopology[ucname] === "undefined"
+              && typeof rhpTopology[ucname] === "undefined"
               && ucname !== "STK"
               && ucname !== "MAIL-RELAY"
               && ucname.startsWith("LOCALHOST_") === false) {
@@ -264,13 +249,24 @@ dtc.connect()
     }
   }
   for (const dom of Object.keys(smtpRoutes).sort()) {
-    routes.push(smtpRoutes[dom]);
+    proc.push(smtpRoutes[dom]);
   }
-  return dtc.say("  SMTPRTE")
-  .then(() => dtc.putFile("SMTPRTE/IA", routes, mailerOpts));
+
+  let options = {
+    jobname:  "TABLES",
+    username: "MAILER",
+    password: "MAILER",
+  };
+  const job = [
+    "$GET,TBLPROC.",
+    "$PURGE,TBLPROC.",
+    "TBLPROC."
+  ];
+  
+  return dtc.say("Upload MAILER routing tables ...")
+  .then(() => dtc.putFile("TBLPROC/IA", proc, mailerOpts))
+  .then(() => dtc.createJobWithOutput(12, 4, job, options));
 })
-.then(() => dtc.say("Permit artifacts to SYSTEMX ..."))
-.then(() => dtc.runJob(12, 4, "opt/netmail-permit.job"))
 .then(() => dtc.say("MAILER network routing configuration completed successfully"))
 .then(() => {
   process.exit(0);

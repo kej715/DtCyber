@@ -1,9 +1,13 @@
 {
 "debug": false,
-"httpServerPort": 4480,
+"httpServerHost":    "%../NOS2.8.7/cyber.ini|cyber|ipAddress|0.0.0.0",
+"httpServerPort":    4480,
+"portMapperUdpHost": "%../NOS2.8.7/cyber.ini|cyber|ipAddress|0.0.0.0",
 "portMapperUdpPort": 111,
-"tapeRobotPort": 4400,
-"tapeServerPort": 4400,
-"tapeLibraryRoot": "tapes",
-"tapeCacheRoot": "tapes/cache"
+"tapeRobotHost":     "%../NOS2.8.7/cyber.ini|cyber|ipAddress|0.0.0.0",
+"tapeRobotPort":     4400,
+"tapeServerHost":    "%../NOS2.8.7/cyber.ini|cyber|ipAddress|0.0.0.0",
+"tapeServerPort":    4400,
+"tapeLibraryRoot":   "tapes",
+"tapeCacheRoot":     "tapes/cache"
 }

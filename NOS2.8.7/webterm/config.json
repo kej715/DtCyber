@@ -1,4 +1,5 @@
 {
+  "host": "%../cyber.ini|cyber|ipAddress|0.0.0.0",
   "port": 8001,
   "httpRoot": "../../webterm/www",
   "machines":
@@ -6,7 +7,7 @@
     {
       "id": "cybis",
       "title": "CYBIS on NOS 2.8.7",
-      "host": "127.0.0.1",
+      "host": "%../cyber.ini|cyber|ipAddress|127.0.0.1",
       "port": 8005,
       "protocol": "raw",
       "terminal": "pterm.html?m=cybis&t=CYBIS%20on%20NOS%202.8.7",
@@ -18,7 +19,7 @@
     {
       "id": "iaf",
       "title": "IAF on NOS 2.8.7",
-      "host": "127.0.0.1",
+      "host": "%../cyber.ini|cyber|ipAddress|127.0.0.1",
       "port": 23,
       "protocol": "telnet",
       "terminal": "aterm.html?m=iaf&t=IAF%20on%20NOS%202.8.7&r=45&c=80&a=1",

@@ -331,24 +331,43 @@ class DtCyber {
     if (typeof me.isConnected !== "undefined" && me.isConnected) {
       return Promise.resolve();
     }
+    let host  = null;
+    if (typeof port !== "undefined") {
+      const ci = port.indexOf(":");
+      if (ci !== -1) {
+        host = port.substring(0, ci).trim();
+        port = parseInt(port.substring(ci + 1));
+      }
+      else if (port.indexOf(".") !== -1) {
+        host = port;
+        port = undefined;
+      }
+    }
+    if (host === null) {
+      host = this.getHostIpAddress();;
+    }
     if (typeof port === "undefined") {
+      const props = this.getIniProperties();
       if (typeof this.operatorPort === "undefined") {
-        let path = null;
-        for (const p of ["./cyber.ini", "../cyber.ini"]) {
-          if (fs.existsSync(p)) {
-            path = p;
-            break;
+        let operatorSection = null;
+        if (typeof props["cyber"] !== "undefined") {
+          for (const line of props["cyber"]) {
+            let ei = line.indexOf("=");
+            if (ei === -1) continue;
+            let key = line.substring(0, ei).trim().toUpperCase();
+            if (key === "OPERATOR") {
+              operatorSection = line.substring(ei + 1).trim();
+              break;
+            }
           }
         }
-        if (path === null) {
-          throw new Error("cyber.ini not found");
-        }
-        const lines = fs.readFileSync(path, "utf8").split("\n");
-        for (const line of lines) {
-          let result = /^\s*set_operator_port\s+([0-9]+)/.exec(line);
-          if (result !== null) {
-            this.operatorPort = parseInt(result[1]);
-            break;
+        if (operatorSection !== null && typeof props[operatorSection] !== "undefined") {
+          for (const line of props[operatorSection]) {
+            let result = /^\s*set_operator_port\s+([0-9]+)/.exec(line);
+            if (result !== null) {
+              this.operatorPort = parseInt(result[1]);
+              break;
+            }
           }
         }
         if (typeof this.operatorPort === "undefined") {
@@ -367,7 +386,7 @@ class DtCyber {
           return;
         }
         try {
-          me.socket = net.createConnection({port:port, host:"127.0.0.1"}, () => {
+          me.socket = net.createConnection({port:port, host:host}, () => {
             me.isConnected = true;
             callback(null);
           });
@@ -891,6 +910,71 @@ class DtCyber {
   }
 
   /*
+   * flushCache
+   *
+   * Flush all cached data to force re-reading/re-calculating.
+   */
+  flushCache() {
+    this.operatorPort = undefined;
+    this.iniProperties = undefined;
+  }
+
+  /*
+   * getHostIpAddress
+   *
+   * Determine DtCyber's current IP address.
+   *
+   * Returns:
+   *   Current IP address.
+   */
+  getHostIpAddress() {
+    const props = this.getIniProperties();
+    let ipAddress = "127.0.0.1";
+    if (typeof props["cyber"] !== "undefined") {
+      for (const line of props["cyber"]) {
+        let ei = line.indexOf("=");
+        if (ei === -1) continue;
+        let key = line.substring(0, ei).trim().toUpperCase();
+        if (key === "IPADDRESS") {
+          ipAddress = line.substring(ei + 1).trim();
+        }
+      }
+    }
+    return ipAddress;
+  }
+
+  /*
+   * getIniProperties
+   *
+   * Open and read the cyber.ini and cyber.ovl files and return
+   * an object reflecting the merged set of properties.
+   *
+   * Returns:
+   *   The merged properties.
+   */
+  getIniProperties() {
+    if (typeof this.iniProperties === "undefined") {
+      this.iniProperties = {};
+      let path = null;
+      for (const p of ["./cyber.ini", "../cyber.ini"]) {
+        if (fs.existsSync(p)) {
+          path = p;
+          break;
+        }
+      }
+      if (path === null) {
+        throw new Error("cyber.ini not found");
+      }
+      this.readPropertyFile(path, this.iniProperties);
+      path = path.substring(0, path.lastIndexOf(".")) + ".ovl";
+      if (fs.existsSync(path)) {
+        this.readPropertyFile(path, this.iniProperties);
+      }
+    }
+    return this.iniProperties;
+  }
+
+  /*
    * getStreamMgr
    *
    * Look up a registered stream manager by identifier.
@@ -978,7 +1062,7 @@ class DtCyber {
     if (Array.isArray(job)) {
       job = job.join("\n") + "\n";
     }
-    if (typeof hostname === "undefined") hostname = "127.0.0.1";
+    if (typeof hostname === "undefined") hostname = this.getHostIpAddress();
     let match = /^([^,.(])/.exec(job);
     const jobName = match[1];
     const options = {
@@ -1048,12 +1132,12 @@ class DtCyber {
       options = {
         user: "INSTALL",
         password: "INSTALL",
-        host: "127.0.0.1",
+        host: this.getHostIpAddress(),
         port: 21
       }
     }
     if (typeof options.host === "undefined") {
-      options.host = "127.0.0.1"
+      options.host = this.getHostIpAddress();
     }
     if (typeof options.username !== "undefined"
         && typeof options.user === "undefined") {

@@ -1,0 +1,25 @@
+#!/bin/sh
+#
+# Start and stop a TAP interface on Linux
+#
+# Args:
+#   $1 - TAP device name
+#   $2 - IP address
+#   $3 - start/stop
+
+case "$3" in
+  start)
+        ip tuntap add mode tap $1
+        ip link set dev $1 up
+        ifconfig $1 inet $2 netmask 255.255.255.0 up
+        route add -host $2 dev $1
+	;;
+  stop)
+        ip tuntap delete mode tap $1
+	;;
+  *)
+	echo "Usage: $0 tapdev ipaddress {start|stop}"
+	exit 1
+esac
+
+exit 0

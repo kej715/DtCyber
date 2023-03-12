@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 //
-// Update PID/LID deefinitions in the LIDCMxx file to reflect NJE and TLF
+// Update PID/LID deefinitions in the LIDCMxx file to reflect RHP, NJE, and TLF
 // configuration.
 //
 
@@ -43,31 +43,23 @@ let topology = {};
 
 if (isCrsInstalled) {
   const customProps = utilities.getCustomProperties(dtc);
-  if (typeof customProps["NETWORK"] !== "undefined") {
-    for (let line of customProps["NETWORK"]) {
-      line = line.toUpperCase();
-      let ei = line.indexOf("=");
-      if (ei < 0) continue;
-      let key   = line.substring(0, ei).trim();
-      let value = line.substring(ei + 1).trim();
-      if (key === "CRAYSTATION" && isCrsInstalled) {
-        //
-        //  crayStation=<name>,<lid>,<channelNo>,<addr>[,S<station-id>][,C<cray-id>]
-        //
-        let items = value.split(",");
-        if (items.length >= 4) {
-          const nodeName = items.shift();
-          const node = {
-            id: nodeName,
-            type: "CRS",
-            software: "COS",
-            lid: items[0],
-            addr: items[2],
-            link: hostID
-          };
-          topology[nodeName] = node;
-        }
-      }
+  let value = utilities.getPropertyValue(customProps, "NETWORK", "crayStation", null);
+  if (value !== null) {
+    //
+    //  crayStation=<name>,<lid>,<channelNo>,<addr>[,S<station-id>][,C<cray-id>]
+    //
+    let items = value.split(",");
+    if (items.length >= 4) {
+      const nodeName = items.shift();
+      const node = {
+        id: nodeName,
+        type: "CRS",
+        software: "COS",
+        lid: items[0],
+        addr: items[2],
+        link: hostID
+      };
+      topology[nodeName] = node;
     }
   }
 }
@@ -90,9 +82,12 @@ if (isNjfInstalled) {
 }
 if (isRhpInstalled) {
   for (const name of Object.keys(rhpTopology)) {
-    if (name !== hostID) {
-      topology[name] = rhpTopology[name];
+    if (name === hostID) continue;
+    let node = rhpTopology[name];
+    if (typeof topology[name] !== "undefined" && topology[name].type === "NJE" && node.lid === topology[name].lid) {
+      node.njeLid = `N${node.lid.substring(1)}`;
     }
+    topology[name] = node;
   }
 }
 //
@@ -190,6 +185,9 @@ dtc.connect()
       lids: {}
     };
     adjacentPid.lids[lid] = `NLID,LID=${lid}.`;
+    if (typeof node.njeLid !== "undefined") {
+      adjacentPid.lids[node.njeLid] = `NLID,LID=${node.njeLid}.`;
+    }
     lidConf[lid] = adjacentPid;
   }
   for (const node of Object.values(nonadjacentNodes)) {
@@ -198,6 +196,9 @@ dtc.connect()
     if (node.route !== hostID) {
       let adjacentPid = lidConf[adjacentNodes[node.route].lid];
       adjacentPid.lids[lid] = `NLID,LID=${lid}.`;
+      if (typeof node.njeLid !== "undefined") {
+        adjacentPid.lids[node.njeLid] = `NLID,LID=${node.njeLid}.`;
+      }
     }
     localPid.lids[lid]    = `NLID,LID=${lid},AT=STOREF.`;
   }
@@ -233,7 +234,7 @@ dtc.connect()
   // If a previously created LIDCMxx file exists, and it is less than an hour old,
   // and its contents are identical to the newly generated text, then assume that
   // it does not need to be saved on the host again. For example, this can happen
-  // when reconfigure.js is run and both NJF and TLF are installed.
+  // when reconfigure.js is run and more than one of NJF, RHP, or TLF are installed.
   //
   if (fs.existsSync(fileName)) {
     const stat = fs.statSync(fileName);

@@ -45,10 +45,12 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[crayStation](#crayStation)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[defaultRoute](#defaultRoute)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[hostID](#hostID)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[networkInterface](#networkInterface)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[njeNode](#njeNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[njePorts](#njePorts)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[rhpNode](#rhpNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[smtpDomain](#smtpDomain)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[stkDrivePath](#stkDrivePath)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfNode](#tlfNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfPorts](#tlfPorts)
 - &nbsp;&nbsp;&nbsp;&nbsp;[[RESOLVER]](#resolver)
@@ -379,21 +381,14 @@ update your system's NJF host configuration file, it will update your system's P
 configuration to include PID's and LID's for adjacent NJE nodes, it will update the
 UMass Mailer configuration to enable exchanging e-mail with any new NJE or TCP/IP
 nodes, and it will update the *DtCyber* configuration to include definitions for NJE
-terminal(s).
-4. If you have started *DtCyber* using the `node start` command, enter the
-`make_ds_tape` command at the `Operator>` prompt. Otherwise, execute the command
-`node make-ds-tape` in the NOS2.8.7 directory. This will create a new deadstart
-tape that includes changes made in step 3. The new deadstart tape image will be
-in file NOS2.8.7/tapes/newds.tap.
-5. Shutdown the system, rename NOS2.8.7/tapes/newds.tap to NOS2.8.7/tapes/ds.tap, and
-restart *DtCyber*. This will activate the system's new machine identifer, NDL, NCF,
-PID/LID, and e-mail routing configurations.
+terminal(s). Finally, it will create a new deadstart tape, and then it will shutdown
+the system and re-deadstart it to use the new tape. This will activate the system's new
+machine identifer, NDL, NCF, PID/LID, and e-mail routing configurations.
 
 As the network topology is likely to change and expand over time, you should execute
 `git pull` periodically to ensure that your copy of the
 [topology file](files/nje-topology.json) is current, and when it changes, you should
-execute `reconfigure` (or `node reconfigure`) to apply the changes, then shutdown
-and re-deadstart to activate them.
+execute `reconfigure` (or `node reconfigure`) to apply and activate the changes.
 
 ### <a id="usingnje"></a>Using NJE
 NJE (Network Job Entry) enables you to submit a batch job from one system in the
@@ -735,9 +730,6 @@ the `site.cfg` file
 2. If *DtCyber* was started using `node start`, run the `reconfigure.js` tool by
 executing the command `reconfigure` at the `Operator>` prompt. Otherwise, run the
 tool by executing the command `node reconfigure`.
-3. Create a new deadstart tape by executing `make_ds_tape` at the `Operator>` prompt
-(or by executing `node make-ds-tape`).
-4. Shutdown the system, rename `newds.tap` to `ds.tap`, and re-deadstart the system.
 
 ## <a id="shutdown"></a>Shutdown and Restart
 When the installation completes, NOS 2.8.7 will be running, and the command window will
@@ -774,7 +766,8 @@ installed by `install_product`.
 - `njf_configure` (alias `njfc`) : applies the NJE topology definition and customized
 configuration parameters to the system. See [Network Job Entry](#nje) for details.
 - `reconfigure` (alias `rcfg`) : applies all customized system configuration
-parameters including mail, NJE, RHP, and TLF parameters.
+parameters including mail, NJE, RHP, and TLF parameters, creates a new deadstart tape,
+shuts down, and then re-deadstarts the system to activate the updated configuration.
 See [Customizing the NOS 2.8.7 Configuration](#reconfig) for details.
 - `rhp_configure` (alias `rhpc`) : applies the RHP topology definitions and customized
 configuration parameters to the system. See [Remote Host Products](#rhp) for details.
@@ -921,11 +914,11 @@ use `git pull` to update the lists in your local repository clone, and then use
 `install all` to install them.
 
 ## <a id="newds"></a>Creating a New Deadstart Tape  
-The `reconfigure.js` and `njf-configure.js` tools and jobs initiated by
-`install_product` insert the records they produce into the direct access file named
-`PRODUCT` in the catalog of user `INSTALL`, and they also update the file named
-`DIRFILE` to specify the system libraries with which the binaries are associated. To
-create a new deadstart tape that includes the contents of `PRODUCT`, execute the following command:
+The `install_product` tool and the various configuration management tools insert
+the records they produce into the direct access file named `PRODUCT` in the catalog of
+user `INSTALL`, and some tools also update the file named `DIRFILE` to specify the
+system libraries with which the binaries are associated. To create a new deadstart tape
+that includes the contents of `PRODUCT`, execute the following command:
 
 >Operator> `make_ds_tape`
 
@@ -966,7 +959,7 @@ when calling the `install.js` script, as in:
 The generic, ready-to-run NOS 2.8.7 image that is downloaded and activated by default
 is created in this way. Note that this option can take as much as three hours or more,
 depending upon the speed and capacity of your host system. All optional products are
-installed, one by one, and this involves building most of them from source code.
+installed, one by one, and this involves building many of them from source code.
 
 If the file `site.cfg` exists, the `reconfigure.js` script will be called to apply its
 contents. This enables the full, installed-from-scratch system to have a customized
@@ -990,6 +983,10 @@ system to have a customized configuration.
 To install optional products atop the basic system, use the `install_product` command, as in:
 
 >Operator> `install lang`
+
+or
+
+>Operator> `install ncctcp`
 
 In case a basic installation is interrupted before completing successfully, use the
 `continue` option to proceed from the point of interruption, as in:
@@ -1066,47 +1063,69 @@ REMOVE=014,015.
 ### <a id="hosts"></a>[HOSTS]
 Defines the IP addresses and names of hosts in the TCP/IP network. These are edited
 into the system's TCPHOST file in the catalog of user NETADMN. The definitions may
-include the special entry for the local NOS 2.8.7 host, and this entry can be
-used to define the NOS 2.8.7 system's public IP address. The special entry for the
-local NOS 2.8.7 host is the entry that includes the alias `LOCALHOST_id` where `id`
-is the 2-character machine identifier of the host (as defined by MID in the CMR deck).
+include special entries for NOS 2.8.7 hosts. These include an alias of the form:
+
+```
+LOCALHOST_id
+```
+
+where *id* is the 2-character machine identifier (i.e., `MID` value in `[CMRDECK]`) of
+the respective NOS 2.8.7 system. At least one entry in the system's TCPHOST file
+(or this `[HOSTS]` section) must include this special alias for the local NOS 2.8.7
+system. This entry enables the NOS system to discover its own IP address.
+
+**The entry with the special `LOCALHOST_id` alias also informs *DtCyber* of its IP
+address, and it is the source IP address to which *DtCyber* will bind all of its
+network sockets.** See also the [networkInterface](#networkInterface) definition in the
+[[NETWORK]](#network) section. The [networkInterface](#networkInterface) definition
+informs *DtCyber* of a command that it can execute to automatically start/stop a
+network interface supplying this IP address.
+
+In addition, one entry in the `TCPHOST` file (or this `[HOSTS]` section) must include
+the special alias `STK`. This enables the NOS 2.8.7 system to discover the
+IP address of the StorageTek 4400 cartridge tape server and RPC ONC port mapper.
+
+To enable the UMass Mailer to use the SMTP e-mail protocol for routing messages to
+other SMTP-based hosts, the `TCPHOST` file (or this `[HOSTS]` section) should also
+include one entry that has the special alias `mail-relay`. This informs the
+UMass Mailer where to send e-mail for SMTP-based hosts. It assumes that the machine
+with this alias is capable of relaying mail to other SMTP-based destinations.
+Typically, Unix hosts are capable of serving as SMTP mail relays.
+
 Example:
 
 ```
 [HOSTS]
 192.168.0.17 nccmax nccmax.nostalgiccomputing.org max LOCALHOST_AX STK
-192.168.1.2  vax1 vax1.nostalgiccomputing.com
-192.168.1.3  vax2 vax2.nostalgiccomputing.com
+192.168.0.29 nccmed nccmed.nostalgiccomputing.org med LOCALHOST_ED
+192.168.0.19 nccmin nccmin.nostalgiccomputing.org min LOCALHOST_IN
+192.168.1.2  vax1   vax1.nostalgiccomputing.com
+192.168.1.3  vax2   vax2.nostalgiccomputing.com
 192.168.1.4  rsx11m rsx11m.nostalgiccomputing.com
 192.168.1.5  tops20 tops20.nostalgiccomputing.com pdp10
 192.168.2.2  bsd211 bsd211.nostalgiccomputing.com pdp11 mail-relay
+192.168.2.3  unicos unicos.nostalgiccomputing.com sv1
 ```
-
-When the [HOSTS] section defines hosts other than the local NOS 2.8.7 host and
-hosts defined in the NJE topology, the UMass Mailer is configured to use TCP/IP and
-the SMTP protocol to exchange e-mail with them. In order for the UMass Mailer to be
-able to send e-mail to destinations using TCP/IP and SMTP, one of the hosts in
-the [HOSTS] section must be defined with the alias `mail-relay`. The UMass Mailer will
-send all SMTP-based mail to that host, and that host is expected to be capable of
-forwarding it to other SMTP-based hosts, as needed. Typically, Unix hosts are capable
-of serving as mail relays.
 
 ### <a id="network"></a>[NETWORK]
 Defines site-specific routing information and parameters related to data communication
-and networking. The configuration of various NOS 2.8.7 data communication subsystems
-derives from this section. This includes:
+and networking. The configuration and operation of various NOS 2.8.7 data communication
+subsystems derives from this section. This includes:
 
+- **CRS**. Configuration information for the `Cray Station` interface.
+- **HASP**. Information about mainframes to which NOS 2.8.7 can connect using
+IBM's `HASP` data communication protocol.
 - **Host ID**. The identifier of the local NOS 2.8.7 host.
+- **Network Interface**. Declaration of a network interface used by the host computer
+to support *DtCyber's* data communication.
+- **NJE**. Information defining private routes in a network of mainframes
+interconnected by IBM's `NJE` (Network Job Entry) data communication protocol.
 - **RHP**. Information defining the topology of a network of mainframes running
 NOS 2.8.7 and interconnected by Control Data's `RHP` (Remote Host Products) data
 communication protocols.
-- **NJE**. Information defining private routes in a network of mainframes
-interconnected by IBM's `NJE` (Network Job Entry) data communication protocol.
-- **HASP**. Information about mainframes to which NOS 2.8.7 can connect using
-IBM's `HASP` data communication protocol.
 - **SMTP**. Information about e-mail destinations that can be reached using the
 TCP/IP `Simple Mail Transfer Protocol`.
-- **CRS**. Configuration information for the `Cray Station` interface.
+- **STK**. Information about the StorageTek 4400 cartridge tape server.
 
 Example:
 
@@ -1115,7 +1134,7 @@ Example:
 hostID=MARS
 rhpNode=MARS,MAR,localhost:2551,1,2,VENUS,1
 rhpNode=VENUS,MVE,192.168.0.17:2551,3,4,MARS,1
-crayStation=CRAYXMP,XMP,24,192.168.0.28:9001,SFE,CC1
+crayStation=CRAYXMP,XMP,24,192.168.0.28:9001
 tlfNode=JES2,JES,JES2,192.168.0.17:37803,R001
 ```
 
@@ -1147,14 +1166,35 @@ Example:
     `defaultRoute=NCCMAX`
     
 	Ordinarily, this entry is needed only when an NJE node has multiple directly
-	connectted neighbors, so one of them needs to be designated as the node to which
+	connected neighbors, so one of them needs to be designated as the node to which
 	files will be sent when the route to a destination cannot be calculated
-	autommatically using the [topology file](files/nje-topology.json).
+	automatically using the [topology file](files/nje-topology.json).
     
 - <a id="hostID"></a>**hostID** : Specifies the 1 - 8 character node name of the local
 host. Example:
 
     `hostID=MARS`
+    
+- <a id="networkInterface"></a>**networkInterface** : Defines the name of the network
+interface used by the host computer to support *DtCyber's* data communication and,
+optionally, the command to be called for starting and stopping the interface.
+Ordinarily, this needs to be specified only when *DtCyber's* IP address differs from
+the primary IP address of the host computer on which it is running, and it is
+necessary or desirable to start/stop the interface dynamically. See the description
+of the [[HOSTS]](#hosts) section for details about defining *DtCyber's* IP address.
+
+	The general syntax of this entry is:
+
+	networkInterface=*device*[,*manager*]
+	
+    | Parameter | Description |
+    |-----------|-------------|
+    | device    | The name of the network interface device on the host computer, e.g. `tap0`. |
+    | manager   | Optional pathname of a command or script that will be called to start and stop the interface. The default is `../ifcmgrs/tapmgr.type` where `type` is one of `bat`, `linux`, or `macos`, depending upon the type of operating system on which *DtCyber* is running. *DtCyber* will pass the interface device name and IP address (from the [HOSTS] section) as parameters. |
+
+	Example:
+
+    `networkInterface=tap0`
 
 - <a id="njeNode"></a>**njeNode** : Defines the name and routing information for an NJE
 node within a private NJE network (i.e., a node that is not registered in the public
@@ -1208,7 +1248,7 @@ NOS 2.8.7 systems to exchange jobs and files. The general syntax of this entry i
     | peername      | The name of a peer to which the mainframe is directly linked. This must match the *nodename* parameter of another *rhpNode* definition |
     | cla-port      | The number of the CLA port on the mainframe's NPU that is used for communicating with the peer. |
     
-Note that multiple *peername*/*cla-port* pairs may be defined to indicate that a node
+	Note that multiple *peername*/*cla-port* pairs may be defined to indicate that a node
 is connected to multiple peers.
 
 - <a id="smtpDomain"></a>**smtpDomain** : Identifies an internet domain name or suffix
@@ -1220,6 +1260,27 @@ to which e-mail will be routed using the TCP/IP SMTP protocol. Examples:
     smtpDomain=.net
     smtpDomain=some.host.org
 ```
+
+- <a id="stkDrivePath"></a>**stkDrivePath** : Defines the path of the first automated
+cartridge tape drive used by this NOS 2.8.7 system on the StorageTek 4400 tape server.
+The default is:
+```
+    M0P0D0
+```
+meaning Module 0, Panel 0, Drive 0. The module, panel, and drive numbers are octal
+values. Module numbers may range between 0 and 17, panel numbers may range between
+0 and 13, and drive numbers may range between 0 and 3.
+
+	When a StorageTek 4400 tape server is shared amongst a set of NOS 2.8.7 systems in an
+RHP network, each system in the network needs to have a unique drive path (i.e.,
+systems may share the tape server as a whole and its library of tapes, but they can not
+share individual tape drives). Typically, it is sufficient to assign a unique
+panel value to each NOS system. Example:
+
+```
+    stkDrivePath=M0P1D0
+```
+
 - <a id="tlfNode"></a>**tlfNode** : Defines the name and routing information for a TLF
 node. The general syntax of this entry is:
 
@@ -1312,23 +1373,34 @@ tlfNode=NCCJES2,JES,JES2,192.168.0.17:37803,R001
 crayStation=CECCXMP,XMP,24,192.168.0.28:9001
 ```
 
-The following example adds TCP/IP host definitions and a DNS resolver definition:
+The following example adds TCP/IP host definitions, a network interface declaration,
+and a DNS resolver definition. One or more of the other *DtCyber* systems indicated by
+the `LOCALHOST_id` entries might run on the same physical host machine, and those
+machines `site.cfg` files would also have `networkInterface` definitions identifying
+the names of the network interfaces they use. If the three instances of *DtCyber*
+share the same content of the [HOSTS] section, then they would all share the
+StorageTek 4400 tape server running on the system that is hosting the machine named
+`CECCNOS2`.
 
 ```
 [CMRDECK]
 MID=17.
 [NETWORK]
 hostID=CECCNOS1
+networkInterface=tap0
 rhpNode=CECCNOS1,M17,84.0.25.17:2550,1,2,NCCMAX,1,UCCVENUS,2
 rhpNode=NCCMAX,MAX,98.0.40.244:2550,3,4,CECCNOS1,1,UCCVENUS,2
 rhpNode=UCCVENUS,M23,128.172.3.7:2550,5,6,CECCNOS1,2,NCCMAX,1
 tlfNode=NCCJES2,JES,JES2,192.168.0.17:37803,R001
 crayStation=CECCXMP,XMP,24,192.168.0.28:9001
+stkDrivePath=M0P1D0
 [HOSTS]
-192.168.0.29 ceccnos1 nos1 nos1.cecc.org LOCALHOST_17 STK
-192.168.1.2  vax1 vax1.cecc.org
-192.168.2.2  bsd bsd.cecc.org mail-relay
-192.168.2.3  unicos unicos.cecc.org
+192.168.1.1 ceccnos1 nos1 nos1.cecc.org LOCALHOST_17
+192.168.1.2 ceccnos2 nos1 nos1.cecc.org LOCALHOST_19 STK
+192.168.1.3 ceccnos3 nos1 nos1.cecc.org LOCALHOST_23
+192.168.2.1 vax1 vax1.cecc.org
+192.168.2.2 bsd bsd.cecc.org mail-relay
+192.168.2.3 unicos unicos.cecc.org
 [RESOLVER]
 search cecc.org
 nameserver 192.168.0.19

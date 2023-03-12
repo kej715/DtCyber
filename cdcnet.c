@@ -552,11 +552,7 @@ void cdcnetReset(void)
         {
         if (pp->connFd != 0)
             {
-#if defined(_WIN32)
-            closesocket(pp->connFd);
-#else
-            close(pp->connFd);
-#endif
+            netCloseConnection(pp->connFd);
             pp->connFd        = 0;
             pp->dstPort       = 0;
             pp->tcpGcbOrdinal = 0;
@@ -854,7 +850,6 @@ void cdcnetCheckStatus(void)
     u16                localPort;
     int                n;
     int                optEnable = 1;
-    int                optVal;
     u32                peerAddr;
     u16                peerPort;
     Pccb               *pp;
@@ -870,12 +865,10 @@ void cdcnetCheckStatus(void)
     u_long blockEnable = 1;
     int    fromLen;
     SOCKET maxFd;
-    int    optLen;
 #else
     int       fd;
     socklen_t fromLen;
     int       maxFd;
-    socklen_t optLen;
 #endif
 
     FD_ZERO(&readFds);
@@ -900,11 +893,7 @@ void cdcnetCheckStatus(void)
 #if DEBUG
                 fprintf(cdcnetLog, "Unassigned listen port timeout, port=%d\n", pp->dstPort);
 #endif
-#if defined(_WIN32)
-                closesocket(pp->connFd);
-#else
-                close(pp->connFd);
-#endif
+                netCloseConnection(pp->connFd);
                 pp->dstPort = 0;
                 pp->connFd  = 0;
                 }
@@ -1101,11 +1090,7 @@ void cdcnetCheckStatus(void)
                 {
                 if (!cdcnetGetEndpoints(fd, &localAddr, &localPort, &peerAddr, &peerPort))
                     {
-#if defined(_WIN32)
-                    closesocket(fd);
-#else
-                    close(fd);
-#endif
+                    netCloseConnection(fd);
                     continue;
                     }
 
@@ -1135,11 +1120,7 @@ void cdcnetCheckStatus(void)
 #if DEBUG
                     fprintf(cdcnetLog, "Close listening socket, port=%d, CN=%02X\n", pp->dstPort, gp->cn);
 #endif
-#if defined(_WIN32)
-                    closesocket(pp->connFd);
-#else
-                    close(pp->connFd);
-#endif
+                    netCloseConnection(pp->connFd);
                     pp->dstPort = 0;
                     pp->srcPort = 0;
                     pp->connFd  = 0;
@@ -1198,40 +1179,14 @@ void cdcnetCheckStatus(void)
         case StTcpConnecting:
             if (FD_ISSET(gp->connFd, &writeFds))
                 {
-#if defined(_WIN32)
-                optLen = sizeof(optVal);
-                rc     = getsockopt(gp->connFd, SOL_SOCKET, SO_ERROR, (char *)&optVal, &optLen);
-#else
-                optLen = (socklen_t)sizeof(optVal);
-                rc     = getsockopt(gp->connFd, SOL_SOCKET, SO_ERROR, &optVal, &optLen);
-#endif
-                if (rc < 0)
-                    {
-#if DEBUG
-                    fprintf(cdcnetLog, "Failed to get socket status for %s:%u, CN=%02X\n",
-                            gp->dstIpAddress, gp->dstPort, gp->cn);
-#endif
-#if defined(_WIN32)
-                    closesocket(gp->connFd);
-#else
-                    close(gp->connFd);
-#endif
-                    gp->connFd      = 0;
-                    gp->tcpUdpState = StTcpUdpIdle;
-                    gp->reasonCode  = tcp_internal_error;
-                    gp->gwState     = StGwError;
-                    }
-                else if (optVal != 0) // connection failed
+                rc = netGetErrorStatus(gp->connFd);
+                if (rc != 0) // connection failed
                     {
 #if DEBUG
                     fprintf(cdcnetLog, "Failed to connect to %s:%u, CN=%02X\n",
                             gp->dstIpAddress, gp->dstPort, gp->cn);
 #endif
-#if defined(_WIN32)
-                    closesocket(gp->connFd);
-#else
-                    close(gp->connFd);
-#endif
+                    netCloseConnection(gp->connFd);
                     gp->connFd      = 0;
                     gp->tcpUdpState = StTcpUdpIdle;
                     gp->reasonCode  = tcp_host_unreachable;
@@ -1257,11 +1212,7 @@ void cdcnetCheckStatus(void)
                     }
                 else
                     {
-#if defined(_WIN32)
-                    closesocket(gp->connFd);
-#else
-                    close(gp->connFd);
-#endif
+                    netCloseConnection(gp->connFd);
                     gp->connFd      = 0;
                     gp->tcpUdpState = StTcpUdpIdle;
                     gp->reasonCode  = tcp_host_unreachable;
@@ -1273,11 +1224,7 @@ void cdcnetCheckStatus(void)
 #if DEBUG
                 fprintf(cdcnetLog, "Connect to %s:%u timed out, CN=%02X\n", gp->dstIpAddress, gp->dstPort, gp->cn);
 #endif
-#if defined(_WIN32)
-                closesocket(gp->connFd);
-#else
-                close(gp->connFd);
-#endif
+                netCloseConnection(gp->connFd);
                 gp->connFd      = 0;
                 gp->tcpUdpState = StTcpUdpIdle;
                 gp->reasonCode  = tcp_host_unreachable;
@@ -1605,11 +1552,7 @@ static void cdcnetCloseConnection(Gcb *gp)
 
     if (gp->connFd != 0)
         {
-#if defined(_WIN32)
-        closesocket(gp->connFd);
-#else
-        close(gp->connFd);
-#endif
+        netCloseConnection(gp->connFd);
         gp->connFd = 0;
         }
 
@@ -1621,11 +1564,7 @@ static void cdcnetCloseConnection(Gcb *gp)
 #if DEBUG
             fprintf(cdcnetLog, "Close listening socket, port=%d, CN=%02X\n", pp->dstPort, gp->cn);
 #endif
-#if defined(_WIN32)
-            closesocket(pp->connFd);
-#else
-            close(pp->connFd);
-#endif
+            netCloseConnection(pp->connFd);
             pp->dstPort = 0;
             pp->connFd  = 0;
             }
@@ -2062,49 +2001,6 @@ static void cdcnetPutU32ToMessage(u32 value, u8 *mp)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Create a non-blocking TCP socket.
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        Socket descriptor
-**                  -1 if socket cannot be created
-**
-**------------------------------------------------------------------------*/
-#if defined(_WIN32)
-static SOCKET cdcnetCreateTcpSocket()
-#else
-static int cdcnetCreateTcpSocket()
-#endif
-    {
-#if defined(_WIN32)
-    SOCKET fd;
-    u_long blockEnable = 1;
-#else
-    int fd;
-#endif
-    int optEnable = 1;
-
-    fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-#if defined(_WIN32)
-    if (fd == INVALID_SOCKET)
-        {
-        return -1;
-        }
-    setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
-    ioctlsocket(fd, FIONBIO, &blockEnable);
-#else
-    if (fd < 0)
-        {
-        return -1;
-        }
-    setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
-    fcntl(fd, F_SETFL, O_NONBLOCK);
-#endif
-
-    return (fd);
-    }
-
-/*--------------------------------------------------------------------------
 **  Purpose:        Queue a TCP block for upline transfer.
 **
 **  Parameters:     Name        Description.
@@ -2223,11 +2119,7 @@ static bool cdcnetTcpAbortCurrentConnectionHandler(Gcb *gp, NpuBuffer *bp)
 #endif
     if (gp->connFd != 0)
         {
-#if defined(_WIN32)
-        closesocket(gp->connFd);
-#else
-        close(gp->connFd);
-#endif
+        netCloseConnection(gp->connFd);
         gp->connFd = 0;
         }
     gp->tcpUdpState = StTcpUdpIdle;
@@ -2279,24 +2171,19 @@ static bool cdcnetTcpActiveConnectHandler(Gcb *gp, NpuBuffer *bp)
 
     if (gp->tcpUdpState == StTcpUdpIdle)
         {
-        gp->connFd = cdcnetCreateTcpSocket();
-        if (gp->connFd == -1)
-            {
-            cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_no_resources);
-
-            return (TRUE);
-            }
         hostAddr.sin_addr.s_addr = htonl(dstAddr);
         hostAddr.sin_family      = AF_INET;
         hostAddr.sin_port        = htons(gp->dstPort);
-        rc = connect(gp->connFd, (struct sockaddr *)&hostAddr, sizeof(hostAddr));
+        gp->connFd = netInitiateConnection((struct sockaddr *)&hostAddr);
 #if defined(_WIN32)
-        if ((rc == SOCKET_ERROR) && (WSAGetLastError() != WSAEWOULDBLOCK))
+        if (gp->connFd == INVALID_SOCKET)
+#else
+        if (gp->connFd == -1)
+#endif
             {
 #if DEBUG
-            fprintf(cdcnetLog, "Failed to connect to host: %s:%u, CN=%02X\n", gp->dstIpAddress, gp->dstPort, gp->cn);
+            fprintf(cdcnetLog, "Failed to initiate connection to host: %s:%u, CN=%02X\n", gp->dstIpAddress, gp->dstPort, gp->cn);
 #endif
-            closesocket(gp->connFd);
             gp->connFd = 0;
             status     = tcp_host_unreachable;
             }
@@ -2309,26 +2196,6 @@ static bool cdcnetTcpActiveConnectHandler(Gcb *gp, NpuBuffer *bp)
             gp->tcpUdpState = StTcpConnecting;
             gp->deadline    = getSeconds() + 60;
             }
-#else
-        if ((rc < 0) && (errno != EINPROGRESS))
-            {
-#if DEBUG
-            fprintf(cdcnetLog, "Failed to connect to host %s:%u, %s, CN=%02X\n",
-                    gp->dstIpAddress, gp->dstPort, strerror(errno), gp->cn);
-#endif
-            close(gp->connFd);
-            gp->connFd = 0;
-            status     = tcp_host_unreachable;
-            }
-        else     // connection in progress
-            {
-#if DEBUG
-            fprintf(cdcnetLog, "Initiated connection to host: %s:%u, CN=%02X\n", gp->dstIpAddress, gp->dstPort, gp->cn);
-#endif
-            gp->tcpUdpState = StTcpConnecting;
-            gp->deadline    = getSeconds() + 60;
-            }
-#endif
         }
 
     cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, status);
@@ -2439,31 +2306,18 @@ static bool cdcnetTcpPassiveConnectHandler(Gcb *gp, NpuBuffer *bp)
             return (TRUE);
             }
 
-        pp->connFd = cdcnetCreateTcpSocket();
-        if (pp->connFd == -1)
-            {
-            cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_no_resources);
-
-            return (TRUE);
-            }
-
         pp->srcPort       = gp->srcPort;
         pp->dstPort       = gp->dstPort;
         pp->tcpGcbOrdinal = gp->ordinal;
-        setsockopt(pp->connFd, SOL_SOCKET, SO_REUSEADDR, (void *)&optEnable, sizeof(optEnable));
-        memset(&server, 0, sizeof(server));
-        server.sin_family      = AF_INET;
-        server.sin_addr.s_addr = inet_addr("0.0.0.0");
 
         while (TRUE)
             {
-            server.sin_port = htons(pp->dstPort);
-
-            if (bind(pp->connFd, (struct sockaddr *)&server, sizeof(server)) == 0)
-                {
-                break;
-                }
-
+            pp->connFd = netCreateListener(pp->dstPort);
+#if defined(_WIN32)
+            if (pp->connFd != INVALID_SOCKET) break;
+#else
+            if (pp->connFd != -1) break;
+#endif
 #if DEBUG
             fprintf(cdcnetLog, "Can't bind to listening socket on port %d, %s, CN=%02X\n",
                     pp->dstPort, strerror(errno), gp->cn);
@@ -2480,38 +2334,14 @@ static bool cdcnetTcpPassiveConnectHandler(Gcb *gp, NpuBuffer *bp)
                 {
                 pp->dstPort       = 0;
                 pp->tcpGcbOrdinal = 0;
-#if defined(_WIN32)
-                closesocket(pp->connFd);
-#else
-                close(pp->connFd);
-#endif
+                netCloseConnection(pp->connFd);
+                pp->connFd        = 0;
                 cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_internal_error);
 
                 return (TRUE);
                 }
             }
-
         gp->dstPort = pp->dstPort;
-
-        /*
-        **  Start listening for new connections on this TCP port number
-        */
-        if (listen(pp->connFd, 10) < 0)
-            {
-#if DEBUG
-            fprintf(cdcnetLog, "Can't listen, %s, CN=%02X\n", strerror(errno), gp->cn);
-#endif
-            pp->dstPort       = 0;
-            pp->tcpGcbOrdinal = 0;
-#if defined(_WIN32)
-            closesocket(pp->connFd);
-#else
-            close(pp->connFd);
-#endif
-            cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_internal_error);
-
-            return (TRUE);
-            }
 #if DEBUG
         fprintf(cdcnetLog, "Listening for connections on port %d, CN=%02X\n", gp->dstPort, gp->cn);
 #endif
@@ -2590,11 +2420,7 @@ static bool cdcnetTcpDisconnectHandler(Gcb *gp, NpuBuffer *bp)
 #if DEBUG
                 fprintf(cdcnetLog, "Close listening socket, port=%d, CN=%02X\n", pp->dstPort, gp->cn);
 #endif
-#if defined(_WIN32)
-                closesocket(pp->connFd);
-#else
-                close(pp->connFd);
-#endif
+                netCloseConnection(pp->connFd);
                 pp->dstPort = 0;
                 pp->srcPort = 0;
                 pp->connFd  = 0;
@@ -2614,11 +2440,7 @@ static bool cdcnetTcpDisconnectHandler(Gcb *gp, NpuBuffer *bp)
         fprintf(cdcnetLog, "Close socket, source addr=%s:%d, dest addr=%s:%d, CN=%02X\n",
                 gp->srcIpAddress, gp->srcPort, gp->dstIpAddress, gp->dstPort, gp->cn);
 #endif
-#if defined(_WIN32)
-        closesocket(gp->connFd);
-#else
-        close(gp->connFd);
-#endif
+        netCloseConnection(gp->connFd);
         gp->connFd = 0;
         }
 
@@ -3047,11 +2869,7 @@ static bool cdcnetUdpBindAddress(Gcb *gp, NpuBuffer *bp)
         fprintf(cdcnetLog, "Can't bind to UDP socket on port %d, %s, CN=%02X\n",
                 port, strerror(errno), gp->cn);
 #endif
-#if defined(_WIN32)
-        closesocket(gp->connFd);
-#else
-        close(gp->connFd);
-#endif
+        netCloseConnection(gp->connFd);
         gp->connFd = 0;
         npuBipBufRelease(bp);
 
@@ -3061,11 +2879,7 @@ static bool cdcnetUdpBindAddress(Gcb *gp, NpuBuffer *bp)
     if (getsockname(gp->connFd, (struct sockaddr *)&server, &addrLen) != 0)
         {
         fprintf(stderr, "CDCNet: Failed to get local UDP socket name: %s\n", strerror(errno));
-#if defined(_WIN32)
-        closesocket(gp->connFd);
-#else
-        close(gp->connFd);
-#endif
+        netCloseConnection(gp->connFd);
         gp->connFd = 0;
 
         return FALSE;

@@ -49,12 +49,16 @@ This file provides the simulator's base configuration. Its contents look like th
 ```
 {
 "debug": false,
-"httpServerPort": 4480,
+"httpServerHost":    "%../NOS2.8.7/cyber.ini|cyber|ipAddress|0.0.0.0",
+"httpServerPort":    4480,
+"portMapperUdpHost": "%../NOS2.8.7/cyber.ini|cyber|ipAddress|0.0.0.0",
 "portMapperUdpPort": 111,
-"tapeRobotPort": 4400,
-"tapeServerPort": 4400,
-"tapeLibraryRoot": "tapes",
-"tapeCacheRoot": "tapes/cache"
+"tapeRobotHost":     "%../NOS2.8.7/cyber.ini|cyber|ipAddress|0.0.0.0",
+"tapeRobotPort":     4400,
+"tapeServerHost":    "%../NOS2.8.7/cyber.ini|cyber|ipAddress|0.0.0.0",
+"tapeServerPort":    4400,
+"tapeLibraryRoot":   "tapes",
+"tapeCacheRoot":     "tapes/cache"
 }
 ```
 
@@ -62,24 +66,35 @@ The properties defined in `config.json` are:
 - **debug** : if set to *true*, the simulator will log verbose debug information to
 the console (stdout).
 - **foreignPortMapper** : specifies the host name or address of a foreign ONC RPC
-portmapper. When this property is specified, **portMapperUdpPort** is ignored, and
-the simulator does not start its built-in portmapper. Instead, it calls the
-specified foreign portmapper to register its remotely callable procedures. Specify
-this property if the machine on which you are running the simulator has a portmapper
-running already and does not need the simulator to start its built-in one. For
-example, if the machine is running *NFS* or *rpcbind*, it has a portmapper running
-already, and you should specify **foreignPortMapper** with a value of
+portmapper. When this property is specified, **portMapperUdpHost** and
+**portMapperUdpPort** are ignored, and the simulator does not start its built-in
+portmapper. Instead, it calls the specified foreign portmapper to register its remotely
+callable procedures. Specify this property if the machine on which you are running the
+simulator has a portmapper running already and does not need the simulator to start its
+built-in one. For example, if the machine is running *NFS* or *rpcbind*, it has a
+portmapper running already, and you should specify **foreignPortMapper** with a value of
 **"127.0.0.1"**.
+- **httpServerHost** : specifies the IP address on which the simulator's web service
+will listen for connections. The default is `0.0.0.0` (i.e., attempt to listen on
+all interfaces).
 - **httpServerPort** : specifies the TCP port on which the simulator's web service
 will listen for connections. The default is TCP port `4480`.
-- **portMapperUdpPort** : The simulator implements an ONC RPC portmapper, and this
-property specifies the UDP port on which it will listen for ONC RPC portmapper
-requests. The default is UDP port `111`. On most systems, UDP port 111 is a
-privileged port, so the simulator will need to be run using *sudo* on a Linux,
+- **portMapperUdpHost** : The simulator implements an ONC RPC portmapper, and this
+property specifies the IP address on which it will listen for ONC RPC portmapper
+requests. The default is `0.0.0.0` (i.e., attempt to listen on all interfaces).
+- **portMapperUdpPort** : specifies the UDP port on which it will listen for ONC RPC
+portmapper requests. The default is UDP port `111`. On most systems, UDP port 111 is a
+privileged port, so the simulator will need to be run using *sudo* on a Linux host,
 for example, in order for it to bind successfully to this port number.
+- **tapeRobotHost** : specifies the IP address on which the simulator will listen
+for ONC RPC calls from *DtCyber* to mount and dismount tapes. The default is
+`0.0.0.0` (i.e., attempt to listen on all interfaces).
 - **tapeRobotPort** : specifies the UDP port on which the simulator will listen
 for ONC RPC calls from *DtCyber* to mount and dismount tapes. The default is UDP port
 `4400`.
+- **tapeServerHost** : specifies the IP address on which the simulator will listen
+for channel connections from *DtCyber*. The default is `0.0.0.0` (i.e., attempt to
+listen on all interfaces).
 - **tapeServerPort** : specifies the TCP port on which the simulator will listen
 for channel connections from *DtCyber*. The default is TCP port `4400`.
 - **tapeLibraryRoot** : specifies the pathname of the directory in which the
@@ -87,6 +102,20 @@ simulator will find locally-managed tape volume images. The default is `./tapes`
 - **tapeCacheRoot** : specifies the pathname of the directory in which the
 simulator will cache tape volume images downloaded automatically from the web. The
 default is `./cache`.
+
+If the value of a property begins with the character "%", then the string following
+the "%" character is taken as a special reference to a property in another property file
+such as `cyber.ini`. The general syntax of these special references is:
+
+```
+"%<pathname>|<section-name>|<property-name>|<default-value>"
+```
+
+where *pathname* is the relative pathname (relative to the webterm configuration file)
+of the target property file, *section-name* is the name of the target section in the
+property file, *property-name* is the name of the target property, and *default-value*
+is the value to use when the property file, section, or named property cannot be found.
+
 
 ### volumes.json
 This file defines all of the tape volumes known to the simulator. Typical contents

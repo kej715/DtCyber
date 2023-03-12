@@ -811,11 +811,7 @@ static void mt5744CloseTapeServerConnection(TapeParam *tp)
     fprintf(mt5744Log, "\n%010u Close connection on socket %d to %s:%u for CH:%02o u:%d", traceSequenceNo,
             tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
 #endif
-#if defined(_WIN32)
-    closesocket(tp->fd);
-#else
-    close(tp->fd);
-#endif
+    netCloseConnection(tp->fd);
     tp->fd                    = 0;
     tp->isReady               = FALSE;
     tp->isBusy                = FALSE;
@@ -835,35 +831,14 @@ static void mt5744CloseTapeServerConnection(TapeParam *tp)
 **------------------------------------------------------------------------*/
 static void mt5744ConnectCallback(TapeParam *tp)
     {
-#if defined(_WIN32)
-    int optLen;
-    int optVal;
-#else
-    socklen_t optLen;
-    int       optVal;
-#endif
     int rc;
 
-#if defined(_WIN32)
-    optLen = sizeof(optVal);
-    rc     = getsockopt(tp->fd, SOL_SOCKET, SO_ERROR, (char *)&optVal, &optLen);
-#else
-    optLen = (socklen_t)sizeof(optVal);
-    rc     = getsockopt(tp->fd, SOL_SOCKET, SO_ERROR, &optVal, &optLen);
-#endif
-    if (rc < 0)
+    rc = netGetErrorStatus(tp->fd);
+    if (rc != 0) // connection failed
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%010u Failed to query socket options on socket %d for %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
-                tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
-#endif
-        mt5744CloseTapeServerConnection(tp);
-        }
-    else if (optVal != 0) // connection failed
-        {
-#if DEBUG
-        fprintf(mt5744Log, "\n%010u Failed to connect on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
-                tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(optVal));
+        fprintf(mt5744Log, "\n%010u Failed to connect on socket %d to %s:%u for CH:%02o u:%d", traceSequenceNo,
+                tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
 #endif
         mt5744CloseTapeServerConnection(tp);
         }
@@ -1278,16 +1253,11 @@ static FcStatus mt5744Func(PpWord funcCode)
 static void mt5744InitiateConnection(TapeParam *tp)
     {
     time_t currentTime;
-
 #if defined(_WIN32)
     SOCKET fd;
-    u_long blockEnable = 1;
 #else
-    int fd;
-    int optVal;
+    int    fd;
 #endif
-    int optEnable = 1;
-    int rc;
 
     currentTime = getSeconds();
     if (tp->nextConnectionAttempt > currentTime)
@@ -1296,93 +1266,18 @@ static void mt5744InitiateConnection(TapeParam *tp)
         }
     tp->nextConnectionAttempt = currentTime + ConnectionRetryInterval;
 
-    fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    fd = netInitiateConnection((struct sockaddr *)&tp->serverAddr);
 #if defined(_WIN32)
-    //  -------------------------------
-    //       Windows socket setup
-    //  -------------------------------
     if (fd == INVALID_SOCKET)
-        {
-        fprintf(stderr, "(mt5744 ) Failed to create socket for host: %s\n", tp->serverName);
-
-        return;
-        }
-    if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable)) < 0)
-        {
-#if DEBUG
-        fprintf(mt5744Log, "\n%010u Failed to set KEEPALIVE option on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
-                fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
-#endif
-        closesocket(fd);
-
-        return;
-        }
-    if (ioctlsocket(fd, FIONBIO, &blockEnable) < 0)
-        {
-#if DEBUG
-        fprintf(mt5744Log, "\n%010u Failed to set non-blocking I/O on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
-                fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
-#endif
-        closesocket(fd);
-
-        return;
-        }
-    rc = connect(fd, (struct sockaddr *)&tp->serverAddr, sizeof(tp->serverAddr));
-    if ((rc == SOCKET_ERROR) && (WSAGetLastError() != WSAEWOULDBLOCK))
-        {
-#if DEBUG
-        fprintf(mt5744Log, "\n%010u Failed to connect to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
-                tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
-#endif
-        closesocket(fd);
-        }
-    else // connection in progress
-        {
-        tp->fd    = fd;
-        tp->state = StAcsConnecting;
-#if DEBUG
-        fprintf(mt5744Log, "\n%010u Initiated connection on socket %d to %s:%u for CH:%02o u%d", traceSequenceNo,
-                tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
-#endif
-        }
 #else
-    //  -------------------------------
-    //     non-Windows socket setup
-    //  -------------------------------
-    if (fd < 0)
-        {
-        fprintf(stderr, "MT5744: Failed to create socket for host: %s\n", tp->serverName);
-
-        return;
-        }
-    if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable)) < 0)
-        {
-#if DEBUG
-        fprintf(mt5744Log, "\n%010u Failed to set KEEPALIVE option on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
-                fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
+    if (fd == -1)
 #endif
-        close(fd);
-
-        return;
-        }
-    if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
         {
 #if DEBUG
-        fprintf(mt5744Log, "\n%010u Failed to set non-blocking I/O on socket %d to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
-                fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
-#endif
-        close(fd);
-
-        return;
-        }
-    rc = connect(fd, (struct sockaddr *)&tp->serverAddr, sizeof(tp->serverAddr));
-    if ((rc < 0) && (errno != EINPROGRESS))
-        {
-#if DEBUG
-        fprintf(mt5744Log, "\n%010u Failed to connect to %s:%u for CH:%02o u%d, %s", traceSequenceNo,
+        fprintf(mt5744Log, "\n%010u Failed to initiate connection to %s:%u for CH:%02o u:%d, %s", traceSequenceNo,
                 tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo, strerror(errno));
 #endif
-        close(fd);
+        netCloseConnection(fd);
         }
     else // connection in progress
         {
@@ -1393,7 +1288,6 @@ static void mt5744InitiateConnection(TapeParam *tp)
                 tp->fd, tp->serverName, ntohs(tp->serverAddr.sin_port), tp->channelNo, tp->unitNo);
 #endif
         }
-#endif // not _WIN32
     }
 
 /*--------------------------------------------------------------------------
