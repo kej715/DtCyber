@@ -50,6 +50,10 @@ class Mode4 {
   static StateSOH = 0;
   static StateETX = 1;
 
+  static ReaderStateIdle   = 0
+  static ReaderStateBusy   = 1
+  static ReaderStateWaitE1 = 2
+
   static MsgTypePoll       = 0x05;
   static MsgTypeAck        = 0x06;
   static MsgTypeAlert      = 0x07;
@@ -83,6 +87,7 @@ class Mode4 {
     this.lowWaterMark = 32;
     this.queuedCards = [];
     this.queuedMessages = [];
+    this.readerState = Mode4.ReaderStateIdle;
     this.siteId = 0x7a;
     this.streams = {};
     this.translator = new Translator();
@@ -149,13 +154,25 @@ class Mode4 {
     const msgType = message[2];
     switch (msgType) {
     case Mode4.MsgTypePoll:
-      if (this.queuedMessages.length > 0) {
-        const message = this.queuedMessages.shift();
-        this.write(message, stationId);
-        this.checkReadiness();
-      }
-      else if (this.isPrintStreamActive) {
+      if (this.isPrintStreamActive) {
         this.write([Mode4.MsgTypeRead].concat([Mode4.ESC,Mode4.E3]), stationId);
+      }
+      else if (this.queuedMessages.length > 0 && this.readerState === Mode4.ReaderStateIdle) {
+        this.write(this.queuedMessages.shift(), stationId);
+      }
+      else if (this.queuedCards.length > 0) {
+        if (this.readerState === Mode4.ReaderStateIdle) {
+          this.write([Mode4.MsgTypeRead].concat(this.translator.toBcd("READ")).concat(Mode4.EOL).concat([Mode4.ESC,Mode4.E1]), stationId);
+          this.readerState = Mode4.ReaderStateBusy;
+        }
+        else {
+          const message = this.queuedCards.shift();
+          this.write(message, stationId);
+          if (message[message.length - 2] === Mode4.ESC && message[message.length - 1] === Mode4.E2) {
+            this.readerState = Mode4.ReaderStateWaitE1;
+          }
+        }
+        this.checkReadiness();
       }
       else {
         this.write([Mode4.MsgTypeReject], this.lastWriteStationId & 0xfe);
@@ -208,24 +225,21 @@ class Mode4 {
         }
       }
       if (this.isPrintStreamActive && E !== 2) {
-        if (typeof this.handlers.data === "function")
-          this.handlers.data(RJE.StreamType_Printer, 1, null);
+        if (typeof this.handlers.data === "function") this.handlers.data(RJE.StreamType_Printer, 1, null);
         this.isPrintStreamActive = false;
       }
       switch (E) {
       case 1:
-        if (text.length > 0 && typeof this.handlers.data === "function")
-          this.handlers.data(RJE.StreamType_Console, 1, text);
+        if (text.length > 0 && typeof this.handlers.data === "function") this.handlers.data(RJE.StreamType_Console, 1, text);
+        if (this.readerState === Mode4.ReaderStateWaitE1) {
+          this.readerState = Mode4.ReaderStateIdle;
+        }
         break;
       case 2:
         this.isPrintStreamActive = true;
-        if (typeof this.handlers.data === "function")
-          this.handlers.data(RJE.StreamType_Printer, 1, text);
+        if (typeof this.handlers.data === "function") this.handlers.data(RJE.StreamType_Printer, 1, text);
         break;
       case 3:
-        if (this.queuedCards.length > 0) {
-          this.queueMessage(this.queuedCards.shift());
-        }
         break;
       }
       this.write([Mode4.MsgTypeAck], stationId);
@@ -252,7 +266,6 @@ class Mode4 {
 
   requestToSend(streamId) {
     if (typeof this.handlers.pti === "function") {
-      this.command("READ");
       this.handlers.pti(RJE.StreamType_Reader, streamId);
     }
   }
@@ -261,6 +274,7 @@ class Mode4 {
     let buf = [];
     this.cardCount = 0;
     this.cardBlock = [];
+    this.readSent  = false;
     readable.on("data", data => {
       for (const b of data) buf.push(b);
       let limit = buf.indexOf(0x0a);
