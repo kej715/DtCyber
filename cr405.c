@@ -98,7 +98,7 @@
 #define StCr405EOF            00002
 #define StCr405CompareErr     00004
 
-#define Cr405MaxDecks         10
+#define Cr405MaxDecks         128
 
 /*
 **  -----------------------
@@ -129,9 +129,9 @@ typedef struct cr405Context
     int                 outDeck;
     char                *decks[Cr405MaxDecks];
 
-    char                curFileName[MaxFSPath];
-    char                dirInput[MaxFSPath];
-    char                dirOutput[MaxFSPath];
+    char                *curFileName;
+    char                *dirInput;
+    char                *dirOutput;
     int                 seqNum;
     bool                isWatched;
     } Cr405Context;
@@ -188,20 +188,16 @@ static Cr405Context *lastCr405  = NULL;
 **------------------------------------------------------------------------*/
 void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
-    DevSlot      *dp;
     Cr405Context *cc;
-
-    (void)deviceName;
-
-    fswContext *threadParms;
-
-    //  Extensions for Filesystem Watcher
-    char        *xlateTable;
-    char        *crInput;
-    char        *crOutput;
-    char        *tokenAuto;
-    bool        watchRequested;
-    struct stat s;
+    char         *crInput;
+    char         *crOutput;
+    DevSlot      *dp;
+    int          len;
+    struct stat  s;
+    fswContext   *threadParms;
+    char         *tokenAuto;
+    bool         watchRequested;
+    char         *xlateTable;
 
     /*
     **  For FileSystem Watcher
@@ -315,9 +311,9 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     tokenAuto  = strtok(NULL, ", ");
 
     /*
-    **  Process the Request for FileSystem Watcher
+    **  Process the request for file system watcher
     */
-    watchRequested = TRUE;     // Default = Run Filewatcher Thread
+    watchRequested = TRUE;     // Default = uun filewatcher thread
     if (tokenAuto != NULL)
         {
         if (strcasecmp(tokenAuto, "noauto") == 0)
@@ -343,17 +339,16 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     cc->channelNo = channelNo;
     cc->eqNo      = eqNo;
     cc->unitNo    = unitNo;
-
-    strcpy(cc->dirInput, "");
-    strcpy(cc->dirOutput, "");
+    cc->dirInput  = NULL;
+    cc->dirOutput = NULL;
 
     if (xlateTable != NULL)
         {
-        if (strcmp(xlateTable, "029") == 0)
+        if (strcasecmp(xlateTable, "029") == 0)
             {
             cc->table = asciiTo029;
             }
-        else if ((strcmp(xlateTable, "026") != 0)
+        else if ((strcasecmp(xlateTable, "026") != 0)
                  && (strcmp(xlateTable, "*") != 0)
                  && (strcmp(xlateTable, "") != 0))
             {
@@ -371,7 +366,7 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     **  supplied through the ini file to be correct from the start.
     */
 
-    if ((crOutput != NULL) && (crOutput[0] != '*'))
+    if ((crOutput != NULL) && (strcmp(crOutput, "*") != 0))
         {
         if (stat(crOutput, &s) != 0)
             {
@@ -384,18 +379,24 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             fprintf(stderr, "(cr405  ) The Output location specified '%s' is not a directory.\n", crOutput);
             exit(1);
             }
-        strcpy(threadParms->outDoneDir, crOutput);
-        strcpy(cc->dirOutput, crOutput);
+        len = strlen(crOutput);
+        threadParms->outDoneDir = (char *)calloc(len + 1, 1);
+        cc->dirOutput           = (char *)calloc(len + 1, 1);
+        if (threadParms->outDoneDir == NULL || cc->dirOutput == NULL)
+            {
+            fputs("(cr405  ) Failed to allocate storage for output directory path\n", stderr);
+            exit(1);
+            }
+        memcpy(threadParms->outDoneDir, crOutput, len);
+        memcpy(cc->dirOutput, crOutput, len);
         fprintf(stdout, "(cr405  ) Submissions will be preserved in '%s'.\n", crOutput);
         }
     else
         {
-        threadParms->outDoneDir[0] = '\0';
-        cc->dirOutput[0]           = '\0';
         fputs("(cr405  ) Submissions will be purged after processing.\n", stdout);
         }
 
-    if ((crInput != NULL) && (crInput[0] != '*'))
+    if ((crInput != NULL) && (strcmp(crInput, "*") != 0))
         {
         if (stat(crInput, &s) != 0)
             {
@@ -416,8 +417,16 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         **  The Card Reader Context needs to remember what directory
         **  will supply the input files so more can be found at EOD.
         */
-        strcpy(threadParms->inWatchDir, crInput);
-        strcpy(cc->dirInput, crInput);
+        len = strlen(crInput);
+        threadParms->inWatchDir = (char *)calloc(len + 1, 1);
+        cc->dirInput            = (char *)calloc(len + 1, 1);
+        if (threadParms->inWatchDir == NULL || cc->dirInput == NULL)
+            {
+            fputs("(cr405  ) Failed to allocate storage for input directory path\n", stderr);
+            exit(1);
+            }
+        memcpy(threadParms->inWatchDir, crInput, len);
+        memcpy(cc->dirInput, crInput, len);
 
         threadParms->eqNo      = eqNo;
         threadParms->unitNo    = unitNo;
@@ -577,9 +586,6 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, char *params)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-
-//TODO: Fixup Code Logic for Max Decks Queued
-
 void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params)
     {
     Cr405Context  *cc;
@@ -595,7 +601,7 @@ void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params)
     //  Safety check, we only respond if the first
     //  character of the filename is an asterisk '*'
 
-    if (fname[0] != '*')
+    if (*fname != '*')
         {
         sprintf(outBuf, "(cr405  ) GetNextDeck called with improper parameter '%s'.\n", fname);
         opDisplay(outBuf);
@@ -640,11 +646,7 @@ void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params)
     **  simply means: "Pick the next oldest file
     **  found in the input directory.
     */
-
-    //  If the input directory isn't specified, we cannot trust the
-    //  contents of the input file so the feature isn't used.
-
-    if (cc->dirInput[0] == '\0')
+    if (cc->dirInput == NULL)
         {
         opDisplay("(cr405  ) No card reader directory has been specified on the device declaration.\n");
         opDisplay("(cr405  ) The 'Load Next Deck' request is ignored.\n");
@@ -661,20 +663,14 @@ void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params)
     **  asterisk with the name of the found file.
     **  and continue processing.
     */
-
     do
         {
         curDirEntry = readdir(curDir);
-        if (curDirEntry == NULL)
-            {
-            continue;
-            }
+        if (curDirEntry == NULL) break;
 
         //  Pop over the dot (.) directories
-        if (curDirEntry->d_name[0] == '.')
-            {
-            continue;
-            }
+        if (curDirEntry->d_name[0] == '.') continue;
+
         sprintf(strWork, "%s/%s", cc->dirInput, curDirEntry->d_name);
         stat(strWork, &s);
         if (fOldest[0] == '\0')
@@ -691,9 +687,10 @@ void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params)
                 }
             }
         } while (curDirEntry != NULL);
+
     if (fOldest[0] != '\0')
         {
-        sprintf(outBuf, "(cr405  ) Dequeueing Unprocessed File '%s' from '%s'.\n", fOldest, cc->dirInput);
+        sprintf(outBuf, "(cr405  ) Dequeueing unprocessed file '%s' from '%s'.\n", fOldest, cc->dirInput);
         opDisplay(outBuf);
 
         /*
@@ -750,11 +747,9 @@ void cr405PostProcess(char *fname, int channelNo, int equipmentNo, char *params)
 
     cc = (Cr405Context *)(dp->context[0]);
 
-    bool hasNoInputDir = (cc->dirInput[0] == '\0');
-
-    if (hasNoInputDir)
+    if (cc->dirInput == NULL)
         {
-        sprintf(outBuf, "(cr405  ) Submitted Deck '%s' Processing Complete.\n", fname);
+        sprintf(outBuf, "(cr405  ) Submitted deck '%s' processing complete.\n", fname);
         opDisplay(outBuf);
         return;
         }
@@ -786,11 +781,8 @@ static void cr405SwapInOut(Cr405Context *cc, char *fName)
     char fnwork[MaxFSPath*2+32] = "";
     char outBuf[MaxFSPath*2+128];
 
-    bool hasNoOutputDir = (cc->dirOutput[0] == '\0');
-    bool hasNoInputDir  = (cc->dirInput[0] == '\0');
-
     //  If either directory isn't specified, just ignore the rename.
-    if (hasNoInputDir || hasNoOutputDir)
+    if (cc->dirOutput == NULL || cc->dirInput == NULL)
         {
         return;
         }
@@ -802,14 +794,7 @@ static void cr405SwapInOut(Cr405Context *cc, char *fName)
     **
     **  Don't touch any files that aren't from the input directory
     */
-
-    bool isFromInput = (
-        strncmp(
-            fName, cc->dirInput,
-            strlen(cc->dirInput)
-            ) == 0);
-
-    if (!isFromInput)
+    if (strncmp(fName, cc->dirInput, strlen(cc->dirInput)) != 0)
         {
         return;
         }
@@ -833,7 +818,7 @@ static void cr405SwapInOut(Cr405Context *cc, char *fName)
 
         if (rename(fName, fnwork) == 0)
             {
-            sprintf(outBuf, "(cr405  ) Deck '%s' moved to '%s'. (Input Preserved)\n",
+            sprintf(outBuf, "(cr405  ) Deck '%s' moved to '%s'. (Input preserved)\n",
                     fName + strlen(cc->dirInput) + 1,
                     fnwork);
             opDisplay(outBuf);
@@ -842,16 +827,16 @@ static void cr405SwapInOut(Cr405Context *cc, char *fName)
             }
         else
             {
-            sprintf(outBuf, "(cr3447 ) Rename Failure on '%s' - (%s). Retrying (%d)...\n",
+            sprintf(outBuf, "(cr3447 ) Rename failure on '%s' - (%s). Retrying (%d)...\n",
                     fName + strlen(cc->dirInput) + 1,
                     strerror(errno),
                     fnindex);
             opDisplay(outBuf);
             }
-        fnindex++;
+        fnindex += 1;
         if (fnindex > 999)
             {
-            sprintf(outBuf, "(cr3447 ) Rename Failure on '%s' to '%s'(Retries > 999)\n", fName, fnwork);
+            sprintf(outBuf, "(cr3447 ) Rename failure on '%s' to '%s' (retries > 999)\n", fName, fnwork);
             opDisplay(outBuf);
             break;
             }
@@ -876,24 +861,41 @@ void cr405ShowStatus()
         return;
         }
 
-    opDisplay("\n    > Card Reader (cr405) Status:\n");
+    opDisplay("\n    > Card reader (cr405) status:\n");
 
     while (cp)
         {
-        sprintf(outBuf, "    > CH %02o EQ %02o UN %02o Col %02i Seq:%i File '%s'\n",
+        if (cp->curFileName != NULL)
+            {
+            sprintf(outBuf, "    > CH %02o EQ %02o UN %02o Col %02i Seq:%i File '%s'\n",
                 cp->channelNo,
                 cp->eqNo,
                 cp->unitNo,
                 cp->col,
                 cp->seqNum,
                 cp->curFileName);
+            }
+        else
+            {
+            sprintf(outBuf, "    > CH %02o EQ %02o UN %02o Col %02i Seq:%i\n",
+                cp->channelNo,
+                cp->eqNo,
+                cp->unitNo,
+                cp->col,
+                cp->seqNum);
+            }
         opDisplay(outBuf);
 
         if (cp->isWatched)
             {
-            sprintf(outBuf, "    >   Autoloading from '%s' to '%s'\n",
-                    cp->dirInput,
-                    cp->dirOutput);
+            if (cp->dirOutput != NULL)
+                {
+                sprintf(outBuf, "    >   Autoloading from '%s' to '%s'\n", cp->dirInput, cp->dirOutput);
+                }
+            else
+                {
+                sprintf(outBuf, "    >   Autoloading from '%s'\n", cp->dirInput);
+                }
             opDisplay(outBuf);
             }
 
@@ -1055,7 +1057,7 @@ static bool cr405StartNextDeck(DevSlot *dp, Cr405Context *cc)
         dp->fcb[0] = fopen(fname, "r");
         if (dp->fcb[0] != NULL)
             {
-            strcpy(cc->curFileName, fname);
+            cc->curFileName = fname;
             cr405NextCard(dp);
             sprintf(outBuf, "Cards '%s' loaded on card reader C%o,E%o\n", cc->curFileName, cc->channelNo, cc->eqNo);
             opDisplay(outBuf);
@@ -1066,6 +1068,7 @@ static bool cr405StartNextDeck(DevSlot *dp, Cr405Context *cc)
         free(fname);
         cc->outDeck = (cc->outDeck + 1) % Cr405MaxDecks;
         }
+    cc->curFileName = NULL;
     dp->fcb[0] = NULL;
 
     return FALSE;
@@ -1090,7 +1093,6 @@ static void cr405NextCard(DevSlot *dp)
     int          j;
     char         outBuf[MaxFSPath+128];
     int          value;
-
 
     if (dp->fcb[0] == NULL)
         {
@@ -1145,15 +1147,10 @@ static void cr405NextCard(DevSlot *dp)
             opDisplay(outBuf);
             }
 
-        free(cc->decks[cc->outDeck]);
+        free(cc->curFileName);
         cc->outDeck = (cc->outDeck + 1) % Cr405MaxDecks;
 
-        if (cr405StartNextDeck(dp, cc))
-            {
-            return;
-            }
-
-        cc->curFileName[0] = '\0';
+        cr405StartNextDeck(dp, cc);
 
         return;
         } // if (cp == NULL)

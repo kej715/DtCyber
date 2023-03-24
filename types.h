@@ -131,8 +131,8 @@ typedef struct
     u8   unitNo;                        /* unit number */
     u8   channelNo;                     /* channel number */
     int  devType;                       /* device type */
-    char inWatchDir[MaxFSPath];         /* input directory "hopper" */
-    char outDoneDir[MaxFSPath];         /* processed directory "hopper" */
+    char *inWatchDir;                   /* input directory "hopper" */
+    char *outDoneDir;                   /* processed directory "hopper" */
     // void (*LoadCards)(char* fname, int channelNo, int equipmentNo, FILE* out, char* params);     /* address of load routine */
     } fswContext;
 

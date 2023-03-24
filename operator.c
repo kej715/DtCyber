@@ -1883,7 +1883,7 @@ void opCmdLoadCards(bool help, char *cmdParams)
         return;
         }
 
-    if (fname[0] == 0)
+    if (fname[0] == '\0')
         {
         opDisplay("    > Invalid file name\n");
 
@@ -1905,18 +1905,15 @@ void opCmdLoadCards(bool help, char *cmdParams)
     **  Calls to xxxxGetNextDeck leave 'fname' unmodified unless
     **  a suitable file is found.
     */
-
-    if (fname[0] == '*')
+    if (strcmp(fname, "*") == 0)
         {
         cr405GetNextDeck(fname, channelNo, equipmentNo, cmdParams);
         }
-
-    if (fname[0] == '*')
+    if (strcmp(fname, "*") == 0)
         {
         cr3447GetNextDeck(fname, channelNo, equipmentNo, cmdParams);
         }
-
-    if (fname[0] == '*')
+    if (strcmp(fname, "*") == 0)
         {
         opDisplay("    > No decks available to process.\n");
 
@@ -1961,21 +1958,13 @@ void opCmdLoadCards(bool help, char *cmdParams)
         }
     if (statBuf.st_size == 0)
         {
-        sprintf(opOutBuf, "    > Skipping Zero-Length file '%s' (Removing '%s')\n", fname, newDeck);
+        sprintf(opOutBuf, "    > Skipping empty file '%s', and deleting '%s'\n", fname, newDeck);
         opDisplay(opOutBuf);
         unlink(newDeck);
 
         return;
         }
 
-    /*
-    **  If an input directory was specified (but there was no
-    **  output directory) then we need to give the card reader
-    **  a chance to clean up the dedicated input directory.
-    **
-    **  This event should trigger the filesystem monitor thread
-    **  (if active) and prompt it to load the next deck.
-    */
     cr405PostProcess(fname, channelNo, equipmentNo, cmdParams);
     cr3447PostProcess(fname, channelNo, equipmentNo, cmdParams);
 

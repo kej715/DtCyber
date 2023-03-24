@@ -234,7 +234,7 @@ static void *fsWatchThread(void * parms)
     int  retval           = 0;
     char lpDir[MaxFSPath] = { "" };
     //      Just need to be large enough to hold the unit spec.
-    char crDevId[16] = "";
+    char crDevId[16];
 
     struct dirent *curDirEntry;
     DIR           *curDir;
@@ -315,7 +315,7 @@ static void *fsWatchThread(void * parms)
             curDirEntry = readdir(curDir);
             if (curDirEntry == NULL)
                 {
-                continue;
+                break;
                 }
             //  Pop over the dot (.) directories
             if (curDirEntry->d_name[0] == '.')
