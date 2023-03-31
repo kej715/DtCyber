@@ -96,6 +96,12 @@ typedef struct opCmdStackEntry
     char cwd[CwdPathSize];
     } OpCmdStackEntry;
 
+typedef struct opNetTypeEntry
+    {
+    char *name;
+    void (*handler)();
+    } OpNetTypeEntry;
+
 /*
 **  ---------------------------
 **  Private Function Prototypes
@@ -135,6 +141,8 @@ static void opHelpHelp(void);
 static void opCmdHelpAll(bool help, char *cmdParams);
 static void opHelpHelpAll(void);
 
+static void opCmdIdle(bool help, char *cmdParams);
+
 static void opHelpLoadCards(void);
 static int opPrepCards(char *fname, FILE *fcb);
 
@@ -144,24 +152,10 @@ static void opHelpLoadDisk(void);
 static void opCmdLoadTape(bool help, char *cmdParams);
 static void opHelpLoadTape(void);
 
+static void opCmdPause(bool help, char *cmdParams);
+static void opHelpPause(void);
+
 static void opCmdPrompt(void);
-
-static void opCmdShowState(bool help, char *cmdParams);
-static void opCmdShowStateCP(u8 cpMask);
-static void opCmdShowStatePP(u32 ppMask);
-static void opHelpShowState(void);
-
-static void opCmdShowAll(bool help, char *cmdParams);
-static void opHelpShowAll(void);
-
-static void opCmdShowTape(bool help, char *cmdParams);
-static void opHelpShowTape(void);
-
-static void opCmdUnloadDisk(bool help, char *cmdParams);
-static void opHelpUnloadDisk(void);
-
-static void opCmdUnloadTape(bool help, char *cmdParams);
-static void opHelpUnloadTape(void);
 
 static void opCmdRemoveCards(bool help, char *cmdParams);
 static void opHelpRemoveCards(void);
@@ -178,14 +172,8 @@ static void opHelpSetKeyWaitInterval(void);
 static void opCmdSetOperatorPort(bool help, char *cmdParams);
 static void opHelpSetOperatorPort(void);
 
-static void opCmdShutdown(bool help, char *cmdParams);
-static void opHelpShutdown(void);
-
-static void opCmdPause(bool help, char *cmdParams);
-static void opHelpPause(void);
-
-static void opCmdShowUnitRecord(bool help, char *cmdParams);
-static void opHelpShowUnitRecord(void);
+static void opCmdShowAll(bool help, char *cmdParams);
+static void opHelpShowAll(void);
 
 static void opCmdShowDisk(bool help, char *cmdParams);
 static void opHelpShowDisk(void);
@@ -193,12 +181,33 @@ static void opHelpShowDisk(void);
 static void opCmdShowEquipment(bool help, char *cmdParams);
 static void opHelpShowEquipment(void);
 
+static void opCmdShowNetwork(bool help, char *cmdParams);
+static void opHelpShowNetwork(void);
+
+static void opCmdShowState(bool help, char *cmdParams);
+static void opCmdShowStateCP(u8 cpMask);
+static void opCmdShowStatePP(u32 ppMask);
+static void opHelpShowState(void);
+
+static void opCmdShowTape(bool help, char *cmdParams);
+static void opHelpShowTape(void);
+
+static void opCmdShowUnitRecord(bool help, char *cmdParams);
+static void opHelpShowUnitRecord(void);
+
 static void opCmdShowVersion(bool help, char *cmdParams);
 static void opHelpShowVersion(void);
 
-static void opDisplayVersion(void);
+static void opCmdShutdown(bool help, char *cmdParams);
+static void opHelpShutdown(void);
 
-static void opCmdIdle(bool help, char *cmdParams);
+static void opCmdUnloadDisk(bool help, char *cmdParams);
+static void opHelpUnloadDisk(void);
+
+static void opCmdUnloadTape(bool help, char *cmdParams);
+static void opHelpUnloadTape(void);
+
+static void opDisplayVersion(void);
 
 /*
 **  ----------------
@@ -230,6 +239,7 @@ static OpCmd decode[] =
     "se",                    opCmdShowEquipment,
     "ski",                   opCmdSetKeyInterval,
     "skwi",                  opCmdSetKeyWaitInterval,
+    "sn",                    opCmdShowNetwork,
     "sop",                   opCmdSetOperatorPort,
     "ss",                    opCmdShowState,
     "st",                    opCmdShowTape,
@@ -244,12 +254,13 @@ static OpCmd decode[] =
     "load_tape",             opCmdLoadTape,
     "remove_cards",          opCmdRemoveCards,
     "remove_paper",          opCmdRemovePaper,
+    "set_key_interval",      opCmdSetKeyInterval,
+    "set_key_wait_interval", opCmdSetKeyWaitInterval,
+    "set_operator_port",     opCmdSetOperatorPort,
     "show_all",              opCmdShowAll,
     "show_disk",             opCmdShowDisk,
     "show_equipment",        opCmdShowEquipment,
-    "set_key_wait_interval", opCmdSetKeyWaitInterval,
-    "set_key_interval",      opCmdSetKeyInterval,
-    "set_operator_port",     opCmdSetOperatorPort,
+    "show_network",          opCmdShowNetwork,
     "show_state",            opCmdShowState,
     "show_tape",             opCmdShowTape,
     "show_unitrecord",       opCmdShowUnitRecord,
@@ -264,6 +275,19 @@ static OpCmd decode[] =
     "pause",                 opCmdPause,
     "idle",                  opCmdIdle,
     NULL,                    NULL
+    };
+
+static OpNetTypeEntry netTypes[] =
+    {
+    "cdcnet",  NULL,
+    "crs",     csFeiShowStatus,
+    "dsa311",  dsa311ShowStatus,
+    "msu",     msufrendShowStatus,
+    "mux",     mux6676ShowStatus,
+    "niu",     niuShowStatus,
+    "npu",     npuNetShowStatus,
+    "tpm",     tpMuxShowStatus,
+    NULL,      NULL
     };
 
 static void            (*opCmdFunction)(bool help, char *cmdParams);
@@ -1465,7 +1489,7 @@ static void opCmdSetKeyInterval(bool help, char *cmdParams)
 static void opHelpSetKeyInterval(void)
     {
     opDisplay("    > 'set_key_interval <millisecs>' set the interval between key entries to the system console.\n");
-    sprintf(opOutBuf, "    > [Current Key Interval is %ld msec.]\n", opKeyInterval);
+    sprintf(opOutBuf, "    > [Current key interval is %ld msec.]\n", opKeyInterval);
     opDisplay(opOutBuf);
     }
 
@@ -1507,7 +1531,7 @@ static void opCmdSetKeyWaitInterval(bool help, char *cmdParams)
 static void opHelpSetKeyWaitInterval(void)
     {
     opDisplay("    > 'set_keywait_interval <millisecs>' set the interval between keyboard scans of the emulated system console.\n");
-    sprintf(opOutBuf, "    > [Current Key Wait Interval is %ld msec.]\n", opKeyWaitInterval);
+    sprintf(opOutBuf, "    > [Current key wait interval is %ld msec.]\n", opKeyWaitInterval);
     opDisplay(opOutBuf);
     }
 
@@ -2225,7 +2249,7 @@ static void opCmdLoadDisk(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) == 0)
         {
-        printf("    > No parameters supplied.\n");
+        opDisplay("    > No parameters supplied.\n");
         opHelpLoadDisk();
 
         return;
@@ -2307,7 +2331,7 @@ static void opCmdLoadTape(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) == 0)
         {
-        printf("    > No parameters supplied.\n");
+        opDisplay("    > No parameters supplied.\n");
         opHelpLoadTape();
 
         return;
@@ -2874,7 +2898,7 @@ static void opCmdShowUnitRecord(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) != 0)
         {
-        sprintf(opOutBuf, "    > No Parameters Expected.\n");
+        sprintf(opOutBuf, "    > No parameters expected.\n");
         opDisplay(opOutBuf);
         opHelpShowUnitRecord();
 
@@ -2930,7 +2954,7 @@ static void opHelpShowDisk(void)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Show status of all Equipment
+**  Purpose:        Show status of all equipment
 **
 **  Parameters:     Name        Description.
 **                  help        Request only help on this command.
@@ -2967,7 +2991,78 @@ static void opCmdShowEquipment(bool help, char *cmdParams)
 
 static void opHelpShowEquipment(void)
     {
-    printf("    > 'show_equipment' show status of all attached equipment.\n");
+    opDisplay("    > 'show_equipment' show status of all attached equipment.\n");
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Show status of data communication interfaces
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdShowNetwork(bool help, char *cmdParams)
+    {
+    OpNetTypeEntry *entry;
+    char *token;
+
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpShowNetwork();
+
+        return;
+        }
+
+    /*
+    **  Check parameters and process command.
+    */
+    if (strlen(cmdParams) != 0)
+        {
+        for (token = strtok(cmdParams, ", "); token != NULL; token = strtok(NULL, ", "))
+            {
+            for (entry = netTypes; entry->name != NULL && strcasecmp(token, entry->name) != 0; entry++)
+                ;
+            if (entry->name != NULL)
+                {
+                if (entry->handler != NULL)
+                    (*entry->handler)();
+                }
+            else
+                {
+                sprintf(opOutBuf, "    > Unrecognized network type: %s\n", token);
+                opDisplay(opOutBuf);
+                return;
+                }
+            }
+        }
+    else
+        {
+        for (entry = netTypes; entry->name != NULL; entry++)
+            {
+            if (entry->handler != NULL)
+                (*entry->handler)();
+            }
+        }
+    }
+
+static void opHelpShowNetwork(void)
+    {
+    OpNetTypeEntry *entry;
+
+    opDisplay("    > 'show_network [<net-type>[,<net-type>...]]' show status of data communication interfaces.\n");
+    opDisplay("    >    <net-type> : ");
+    for (entry = netTypes; entry->name != NULL; entry++)
+        {
+        if (entry != netTypes) opDisplay(" | ");
+        opDisplay(entry->name);
+        }
+    opDisplay("\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -3125,13 +3220,13 @@ static void opCmdIdle(bool help, char *cmdParams)
 
     if (numParam != 2)
         {
-        sprintf(opOutBuf, "    > 2 Parameters Expected - %u Provided\n", numParam);
+        sprintf(opOutBuf, "    > 2 parameters expected - %u provided\n", numParam);
         opDisplay(opOutBuf);
         return;
         }
     if ((newtrigger < 1) || (newsleep < 1))
         {
-        sprintf(opOutBuf, "    > No Parameters Provided (1 or 2 Expected)\n");
+        sprintf(opOutBuf, "    > No parameters provided (1 or 2 expected)\n");
         opDisplay(opOutBuf);
         return;
         }
@@ -3160,7 +3255,7 @@ static void opDisplayVersion(void)
     sprintf(opOutBuf, "\n     %s", DtCyberLicense); opDisplay(opOutBuf);
     sprintf(opOutBuf, "\n     %s", DtCyberLicenseDetails); opDisplay(opOutBuf);
     opDisplay("\n--------------------------------------------------------------------------------");
-    sprintf(opOutBuf, "\n     Build Date: %s", DtCyberBuildDate); opDisplay(opOutBuf);
+    sprintf(opOutBuf, "\n     Build date: %s", DtCyberBuildDate); opDisplay(opOutBuf);
     opDisplay("\n--------------------------------------------------------------------------------");
     opDisplay("\n");
     }

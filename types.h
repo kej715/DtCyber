@@ -103,6 +103,14 @@ typedef u8  PpByte;                     /* 6 bit PP word */
 typedef u64 CpWord;                     /* 60 bit CPU word */
 
 /*
+**  Format used in displaying status of data communication interfaces (operator interface).
+**
+**  Fields, left to right, are:
+**    local TCP address, peer TCP address, connection type (e.g., async, hasp, nje, etc.), connection state
+*/
+#define FMTNETSTATUS "%-21s %-21s %-8s %s"
+
+/*
 **  Function code processing status.
 */
 typedef enum

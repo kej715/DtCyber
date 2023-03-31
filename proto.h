@@ -126,6 +126,7 @@ void cr3447ShowStatus();
 **  cray_station.c
 */
 void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void csFeiShowStatus();
 
 /*
 **  dd6603.c
@@ -169,6 +170,7 @@ void deadStart(void);
 **  dsa311.c
 */
 void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void dsa311ShowStatus();
 
 /*
 **  dump.c
@@ -248,6 +250,7 @@ void mdiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 **  msufrend.c
 */
 void msufrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void msufrendShowStatus();
 
 /*
 **  mt362x.c
@@ -292,6 +295,7 @@ void mt5744ShowTapeStatus();
 */
 void mux6671Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void mux6676Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void mux6676ShowStatus();
 
 /*
 **  net_util.c
@@ -301,12 +305,16 @@ void   netCloseConnection(SOCKET sd);
 SOCKET netCreateListener(int port);
 SOCKET netCreateSocket(int port, bool isReuse);
 int    netGetErrorStatus(SOCKET sd);
+char  *netGetLocalTcpAddress(SOCKET sd);
+char  *netGetPeerTcpAddress(SOCKET sd);
 SOCKET netInitiateConnection(struct sockaddr *sap);
 #else
 void   netCloseConnection(int sd);
 int    netCreateListener(int port);
 int    netCreateSocket(int port, bool isReuse);
 int    netGetErrorStatus(int sd);
+char  *netGetLocalTcpAddress(int sd);
+char  *netGetPeerTcpAddress(int sd);
 int    netInitiateConnection(struct sockaddr *sap);
 #endif
 
@@ -319,13 +327,14 @@ void niuOutInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 bool niuPresent(void);
 void niuLocalKey(u16 key, int stat);
 void niuSetOutputHandler(niuProcessOutput *h, int stat);
-
+void niuShowStatus();
 
 /*
 **  npu.c
 */
 void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 int npuBipBufCount(void);
+void npuNetShowStatus();
 
 /*
 **  operator.c
@@ -389,6 +398,7 @@ void sleepUsec(u64 usec);
 **  tpmux.c
 */
 void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void tpMuxShowStatus();
 
 /*
 **  trace.c

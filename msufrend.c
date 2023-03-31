@@ -187,21 +187,25 @@ typedef struct portContext
 
 typedef struct frendContext
     {
-    int         listenPort;
-    SOCKET      listenFd;
-    int         portCount;
-    bool        doesTelnet;           /* TRUE if Telnet protocol enabled */
-    int         ioTurns;
-    PortContext *ports;               /* one per supported terminal */
-    ByteAddr    addr;                 /* Next byte (not halfword) address to read or write.
-                                       * However, when this is set via the 6CA, the bottom
-                                       * bit is cleared, because the memory interface between
-                                       * FREND and the Cyber specifies addresses halfword addresses */
-    bool        nextIsSecond;         /* true if the next byte of I/O is the second in a sequence.
-                                       * This is used for READ-AND-SET, which transfers 2 bytes
-                                       * but which is not supposed to change the address register. */
-    u8          mem[MAX_FREND_BYTES]; /* Contents of FREND memory, in bytes.
-                                       * The 7/32 stored in most-significant-byte-first format */
+    struct frendContext *next;
+    int                 listenPort;
+    SOCKET              listenFd;
+    int                 portCount;
+    bool                doesTelnet;           /* TRUE if Telnet protocol enabled */
+    int                 ioTurns;
+    u8                  channelNo;
+    u8                  eqNo;
+    u8                  unitNo;
+    PortContext         *ports;               /* one per supported terminal */
+    ByteAddr            addr;                 /* Next byte (not halfword) address to read or write.
+                                               * However, when this is set via the 6CA, the bottom
+                                               * bit is cleared, because the memory interface between
+                                               * FREND and the Cyber specifies addresses halfword addresses */
+    bool                nextIsSecond;         /* true if the next byte of I/O is the second in a sequence.
+                                               * This is used for READ-AND-SET, which transfers 2 bytes
+                                               * but which is not supposed to change the address register. */
+    u8                  mem[MAX_FREND_BYTES]; /* Contents of FREND memory, in bytes.
+                                               * The 7/32 stored in most-significant-byte-first format */
     FrendAddr fwaMISC;
     FrendAddr fwaFPCOM;
     FrendAddr fwaBF80;
@@ -251,6 +255,8 @@ static void      setHalfWord(FrendAddr addr, HalfWord half);
 **  -----------------
 */
 static FrendContext *activeFrend = NULL;
+static FrendContext *firstFrend  = NULL;
+static FrendContext *lastFrend   = NULL;
 
 #if DEBUG
 static FILE *msufrendLog = NULL;
@@ -356,9 +362,22 @@ void msufrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
         exit(1);
         }
     dp->context[0]          = activeFrend;
+    if (firstFrend == NULL)
+        {
+        firstFrend = activeFrend;
+        }
+    else
+        {
+        lastFrend->next = activeFrend;
+        }
+    lastFrend = activeFrend;
+
     activeFrend->listenPort = listenPort;
     activeFrend->portCount  = portCount + RESERVED_PORTS;
     activeFrend->doesTelnet = isTelnet;
+    activeFrend->channelNo  = channelNo;
+    activeFrend->eqNo       = eqNo;
+    activeFrend->unitNo     = unitNo;
     activeFrend->ioTurns    = IoTurnsPerPoll - 1;
     activeFrend->ports      = (PortContext *)calloc(activeFrend->portCount, sizeof(PortContext));
     if (activeFrend->ports == NULL)
@@ -406,6 +425,44 @@ void msufrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     */
     printf("(msufrend) initialised on channel %o equipment %o, ports %d, TCP port %d\n",
            channelNo, eqNo, portCount, activeFrend->listenPort);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Show mux status (operator interface).
+**
+**  Parameters:     Name        Description.
+**
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void msufrendShowStatus()
+    {
+    FrendContext *fp;
+    int          i;
+    char         outBuf[400];
+    PortContext  *pp;
+
+    for (fp = firstFrend; fp != NULL; fp = fp->next)
+        {
+        if (fp->listenFd > 0)
+            {
+            sprintf(outBuf, "(msu    ) C%02o E%02o     ",  fp->channelNo, fp->eqNo);
+            opDisplay(outBuf);
+            sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(fp->listenFd), "", "frend", "listening");
+            opDisplay(outBuf);
+            for (i = 0, pp = fp->ports; i < fp->portCount; i++, pp++)
+                {
+                if (pp->active && pp->fd > 0)
+                    {
+                    sprintf(outBuf, "(msu    )         P%02o ",  pp->id);
+                    opDisplay(outBuf);
+                    sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(pp->fd), netGetPeerTcpAddress(pp->fd), "frend", "connected");
+                    opDisplay(outBuf);
+                    }
+                }
+            }
+        }
     }
 
 /*--------------------------------------------------------------------------
