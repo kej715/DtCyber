@@ -133,7 +133,6 @@ typedef struct diskParam
     i32              cylinder;
     PpWord           generalStatus[5];
     PpWord           detailedStatus[20];
-    u8               diskNo;
     u8               unitNo;
     PpWord           emAddress[2];
     PpWord           writeParams[4];
@@ -166,7 +165,6 @@ static char * dd885_42Func2String(PpWord funcCode);
 **  Private Variables
 **  -----------------
 */
-static int       diskCount  = 0;
 static DiskParam *firstDisk = NULL;
 static DiskParam *lastDisk  = NULL;
 
@@ -310,7 +308,6 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         exit(1);
         }
 
-    dp->diskNo = diskCount++;
     dp->unitNo = unitNo;
 
     /*
@@ -524,11 +521,10 @@ static FcStatus dd885_42Func(PpWord funcCode)
     dd885_42LogFlush();
     if (dp != NULL)
         {
-        fprintf(dd885_42Log, "\n%06d PP:%02o CH:%02o DSK:%d f:%04o T:%-25s   c:%3d t:%2d s:%2d  >   ",
+        fprintf(dd885_42Log, "\n%06d PP:%02o CH:%02o f:%04o T:%-25s   c:%3d t:%2d s:%2d  >   ",
                 traceSequenceNo,
                 activePpu->id,
                 activeDevice->channel->id,
-                dp->diskNo,
                 funcCode,
                 dd885_42Func2String(funcCode),
                 dp->cylinder,
@@ -1147,11 +1143,10 @@ static bool dd885_42Read(DiskParam *dp, FILE *fcb)
     data = dp->buffer.data;
 
 #if DEBUG
-    fprintf(dd885_42Log, "\n%06d PP:%02o CH:%02o DSK:%d f:%04o T:%-25s   c:%3d t:%2d s:%2d em:%08o >   ",
+    fprintf(dd885_42Log, "\n%06d PP:%02o CH:%02o f:%04o T:%-25s   c:%3d t:%2d s:%2d em:%08o >   ",
             traceSequenceNo,
             activePpu->id,
             activeDevice->channel->id,
-            dp->diskNo,
             Fc885_42Read,
             dd885_42Func2String(Fc885_42Read),
             dp->cylinder,
@@ -1205,11 +1200,10 @@ static bool dd885_42Write(DiskParam *dp, FILE *fcb)
     data = dp->buffer.data;
 
 #if DEBUG
-    fprintf(dd885_42Log, "\n%06d PP:%02o CH:%02o DSK:%d f:%04o T:%-25s   c:%3d t:%2d s:%2d em:%08o flags:%04o link:%04o >   ",
+    fprintf(dd885_42Log, "\n%06d PP:%02o CH:%02o f:%04o T:%-25s   c:%3d t:%2d s:%2d em:%08o flags:%04o link:%04o >   ",
             traceSequenceNo,
             activePpu->id,
             activeDevice->channel->id,
-            dp->diskNo,
             Fc885_42Write,
             dd885_42Func2String(Fc885_42Write),
             dp->cylinder,
@@ -1319,19 +1313,16 @@ void dd885_42ShowDiskStatus()
         return;
         }
 
-    opDisplay("\n    > dd885-42 Disk Status:\n");
-
     while (dp)
         {
-        sprintf(outBuf, "    >   #%02d. CH %02o EQ %02o UN %02o DT %s CYL 0x%06x TRK 0x%06o FN '%s'\n",
-                dp->diskNo,
+        sprintf(outBuf, "    >   %-7s C%02o E%02o U%02o   %-16s (Cyl 0x%06x Trk 0x%06o)\n",
+                "885-42",
                 dp->channelNo,
                 dp->eqNo,
                 dp->unitNo,
-                "885-42",
+                dp->fileName,
                 dp->cylinder,
-                dp->track,
-                dp->fileName);
+                dp->track);
         opDisplay(outBuf);
         dp = dp->nextDisk;
         }

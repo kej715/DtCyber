@@ -500,36 +500,37 @@ void mt5744ShowTapeStatus()
 
     while (tp)
         {
+        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", "5744", tp->channelNo, tp->eqNo, tp->unitNo);
         sprintf(outBuf, "(mt5744 ) MT5744 on %o,%o,%o", tp->channelNo, tp->eqNo, tp->unitNo);
         opDisplay(outBuf);
         switch (tp->state)
             {
         case StAcsDisconnected:
-            opDisplay("  (disconnected)\n");
+            opDisplay("   (disconnected)\n");
             break;
 
         case StAcsConnecting:
-            opDisplay("  (connecting)\n");
+            opDisplay("   (connecting)\n");
             break;
 
         case StAcsRegistering:
-            opDisplay("  (registering)\n");
+            opDisplay("   (registering)\n");
             break;
 
         case StAcsReady:
             if (tp->volumeName[0])
                 {
-                sprintf(outBuf, ",%s,%s\n", tp->isWriteEnabled ? "w" : "r", tp->volumeName);
+                sprintf(outBuf, " %s %s\n", tp->isWriteEnabled ? "w" : "r", tp->volumeName);
                 opDisplay(outBuf);
                 }
             else
                 {
-                opDisplay("  (idle)\n");
+                opDisplay("   (idle)\n");
                 }
             break;
 
         default:
-            opDisplay("  (unknown state)\n");
+            opDisplay("   (unknown state)\n");
             break;
             }
 

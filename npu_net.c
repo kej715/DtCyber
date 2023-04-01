@@ -718,7 +718,7 @@ void npuNetShowStatus()
     Pcb      *pcbp;
     char     peerAddress[24];
     u16      port;
-    char     outBuf[400];
+    char     outBuf[200];
 
     dp = NULL;
     for (channelNo = 0; channelNo < MaxChannels; channelNo++)
@@ -726,13 +726,13 @@ void npuNetShowStatus()
         dp = channelFindDevice(channelNo, DtMdi);
         if (dp != NULL)
             {
-            dts = "mdi    ";
+            dts = "MDI    ";
             break;
             }
         dp = channelFindDevice(channelNo, DtNpu);
         if (dp != NULL)
             {
-            dts = "npu    ";
+            dts = "2550   ";
             break;
             }
         }
@@ -753,7 +753,7 @@ void npuNetShowStatus()
         case ConnTypeTrunk:
             if (ncbp->lstnFd > 0)
                 {
-                sprintf(outBuf, "(%s) %-7s     "FMTNETSTATUS"\n", dts, chEqStr, netGetLocalTcpAddress(ncbp->lstnFd), "",
+                sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS"\n", dts, chEqStr, netGetLocalTcpAddress(ncbp->lstnFd), "",
                     connTypes[ncbp->connType], "listening");
                 opDisplay(outBuf);
                 chEqStr[0] = '\0';
@@ -761,24 +761,24 @@ void npuNetShowStatus()
             break;
 
         case ConnTypeRevHasp:
+            ipAddr = ntohl(ncbp->hostAddr.sin_addr.s_addr);
+            port   = ntohs(ncbp->hostAddr.sin_port);
+            sprintf(peerAddress, "%d.%d.%d.%d:%d",
+              (ipAddr >> 24) & 0xff,
+              (ipAddr >> 16) & 0xff,
+              (ipAddr >>  8) & 0xff,
+              ipAddr         & 0xff,
+              port);
             if (ncbp->state == StConnConnecting)
                 {
-                sprintf(outBuf, "(%s) %-7s     "FMTNETSTATUS"\n", dts, chEqStr, netGetLocalTcpAddress(ncbp->connFd),
-                    netGetPeerTcpAddress(ncbp->connFd), connTypes[ncbp->connType], "connecting");
+                sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS"\n", dts, chEqStr, netGetLocalTcpAddress(ncbp->connFd),
+                    peerAddress, connTypes[ncbp->connType], "connecting");
                 opDisplay(outBuf);
                 chEqStr[0] = '\0';
                 }
             else if (ncbp->state != StConnConnected)
                 {
-                ipAddr = ntohl(ncbp->hostAddr.sin_addr.s_addr);
-                port   = ntohs(ncbp->hostAddr.sin_port);
-                sprintf(peerAddress, "%d.%d.%d.%d:%d",
-                  (ipAddr >> 24) & 0xff,
-                  (ipAddr >> 16) & 0xff,
-                  (ipAddr >>  8) & 0xff,
-                  ipAddr         & 0xff,
-                  port);
-                sprintf(outBuf, "(%s) %-7s     "FMTNETSTATUS"\n", dts, chEqStr, ipAddress, peerAddress,
+                sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS"\n", dts, chEqStr, ipAddress, peerAddress,
                     connTypes[ncbp->connType], "disconnected");
                 opDisplay(outBuf);
                 chEqStr[0] = '\0';
@@ -794,7 +794,7 @@ void npuNetShowStatus()
         pcbp = &pcbs[i];
         if (pcbp->ncbp != NULL && pcbp->connFd > 0)
             {
-            sprintf(outBuf, "(%s) %-7s P%02x "FMTNETSTATUS"\n", dts, chEqStr, pcbp->claPort, netGetLocalTcpAddress(pcbp->connFd),
+            sprintf(outBuf, "    >   %-8s %-7s P%02x "FMTNETSTATUS"\n", dts, chEqStr, pcbp->claPort, netGetLocalTcpAddress(pcbp->connFd),
                 netGetPeerTcpAddress(pcbp->connFd), connTypes[pcbp->ncbp->connType], "connected"),
             opDisplay(outBuf);
             chEqStr[0] = '\0';

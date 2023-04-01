@@ -311,7 +311,7 @@ char *netGetLocalTcpAddress(int sd)
         }
     else
         {
-        return "<unknown>";
+        return "";
         }
     }
 
@@ -358,7 +358,7 @@ char *netGetPeerTcpAddress(int sd)
         }
     else
         {
-        return "<unknown>";
+        return "";
         }
     }
 

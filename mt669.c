@@ -766,23 +766,20 @@ void mt669UnloadTape(char *params)
 void mt669ShowTapeStatus()
     {
     TapeParam *tp = firstTape;
-    int       i   = 0;
     char      outBuf[MaxFSPath+128];
-
-    opDisplay("\n    > Magnetic Tape (mt669) Status:\n");
 
     while (tp)
         {
-        sprintf(outBuf, "    >  #%02d. MT669     CH %02o EQ %02o UN %02o", i, tp->channelNo, tp->eqNo, tp->unitNo);
+        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", "669", tp->channelNo, tp->eqNo, tp->unitNo);
         opDisplay(outBuf);
         if (tp->unitReady)
             {
-            sprintf(outBuf, ",%c,%s\n", tp->ringIn ? 'w' : 'r', tp->fileName);
+            sprintf(outBuf, " %c %s\n", tp->ringIn ? 'w' : 'r', tp->fileName);
             opDisplay(outBuf);
             }
         else
             {
-            opDisplay("  (idle)\n");
+            opDisplay("   (idle)\n");
             }
 
         tp = tp->nextTape;

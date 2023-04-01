@@ -279,7 +279,7 @@ static OpCmd decode[] =
 
 static OpNetTypeEntry netTypes[] =
     {
-    "cdcnet",  NULL,
+    "cdcnet",  cdcnetShowStatus,
     "crs",     csFeiShowStatus,
     "dsa311",  dsa311ShowStatus,
     "msu",     msufrendShowStatus,
@@ -2772,6 +2772,9 @@ static void opCmdShowTape(bool help, char *cmdParams)
         return;
         }
 
+    opDisplay("\n    > Magnetic Tape Status:");
+    opDisplay("\n    > ---------------------\n");
+
     mt669ShowTapeStatus();
     mt679ShowTapeStatus();
     mt362xShowTapeStatus();
@@ -2944,7 +2947,11 @@ static void opCmdShowDisk(bool help, char *cmdParams)
         return;
         }
 
+    opDisplay("\n    > Disk Drive Status:");
+    opDisplay("\n    > ------------------\n");
+
     dd8xxShowDiskStatus();
+    dd885_42ShowDiskStatus();
     dd6603ShowDiskStatus();
     }
 
@@ -2986,6 +2993,9 @@ static void opCmdShowEquipment(bool help, char *cmdParams)
         return;
         }
 
+    opDisplay("\n    > Channel Context Display:");
+    opDisplay("\n    > ------------------------\n");
+
     channelDisplayContext();
     }
 
@@ -3022,6 +3032,10 @@ static void opCmdShowNetwork(bool help, char *cmdParams)
     /*
     **  Check parameters and process command.
     */
+
+    opDisplay("\n    > Data Communication Interface Status:");
+    opDisplay("\n    > ------------------------------------\n");
+
     if (strlen(cmdParams) != 0)
         {
         for (token = strtok(cmdParams, ", "); token != NULL; token = strtok(NULL, ", "))
@@ -3146,6 +3160,7 @@ static void opCmdShowAll(bool help, char *cmdParams)
     opCmdShowDisk(help, cmdParams);
     opCmdShowTape(help, cmdParams);
     opCmdShowUnitRecord(help, cmdParams);
+    opCmdShowNetwork(help, cmdParams);
     }
 
 static void opHelpShowAll(void)

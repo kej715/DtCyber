@@ -79,6 +79,11 @@ void channelStep(void);
 void channelDisplayContext();
 
 /*
+**  cdcnet.c
+*/
+void cdcnetShowStatus(void);
+
+/*
 **  console.c
 */
 void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);

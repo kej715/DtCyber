@@ -423,29 +423,31 @@ void dsa311ShowStatus()
     {
     Dsa311Context *cp;
     u32           ipAddr;
-    char          outBuf[400];
+    char          outBuf[200];
     char          peerAddress[24];
     u16           port;
 
     for (cp = firstMux; cp != NULL; cp = cp->next)
         {
-        sprintf(outBuf, "(dsa311 ) C%02o E%02o U%02o ",  cp->channelNo, cp->eqNo, cp->unitNo);
+        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o ", "3266/311", cp->channelNo, cp->eqNo, cp->unitNo);
         opDisplay(outBuf);
+
+        ipAddr = ntohl(cp->serverAddr.sin_addr.s_addr);
+        port   = ntohs(cp->serverAddr.sin_port);
+        sprintf(peerAddress, "%d.%d.%d.%d:%d",
+          (ipAddr >> 24) & 0xff,
+          (ipAddr >> 16) & 0xff,
+          (ipAddr >>  8) & 0xff,
+          ipAddr         & 0xff,
+          port);
+
         switch (cp->majorState)
             {
         case StDsa311MajDisconnected:
-            ipAddr = ntohl(cp->serverAddr.sin_addr.s_addr);
-            port   = ntohs(cp->serverAddr.sin_port);
-            sprintf(peerAddress, "%d.%d.%d.%d:%d",
-              (ipAddr >> 24) & 0xff,
-              (ipAddr >> 16) & 0xff,
-              (ipAddr >>  8) & 0xff,
-              ipAddr         & 0xff,
-              port);
             sprintf(outBuf, FMTNETSTATUS"\n", ipAddress, peerAddress, "rhasp", "disconnected");
             break;
         case StDsa311MajConnecting:
-            sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(cp->fd), netGetPeerTcpAddress(cp->fd), "rhasp", "connecting");
+            sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(cp->fd), peerAddress, "rhasp", "connecting");
             break;
         case StDsa311MajConnected:
             sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(cp->fd), netGetPeerTcpAddress(cp->fd), "rhasp", "connected");

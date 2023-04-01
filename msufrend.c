@@ -440,14 +440,14 @@ void msufrendShowStatus()
     {
     FrendContext *fp;
     int          i;
-    char         outBuf[400];
+    char         outBuf[200];
     PortContext  *pp;
 
     for (fp = firstFrend; fp != NULL; fp = fp->next)
         {
         if (fp->listenFd > 0)
             {
-            sprintf(outBuf, "(msu    ) C%02o E%02o     ",  fp->channelNo, fp->eqNo);
+            sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "MSUFrEnd", fp->channelNo, fp->eqNo);
             opDisplay(outBuf);
             sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(fp->listenFd), "", "frend", "listening");
             opDisplay(outBuf);

@@ -139,12 +139,9 @@ void channelDisplayContext()
     u8      i;
     char    outBuf[64];
 
-    opDisplay("\n\n Channel Context Display\n ------- ------- -------\n\n");
-
-    //                  00 Deadstart Panel............. (01) Attached: 00 Files: 00
-    opDisplay("    > CH First Device Type........... (DT)  # Devices    # Files\n");
-    opDisplay("    > -- ---------------------------- ---- ------------ ---------\n");
-    opDisplay("    >\n");
+    //             >   00 Deadstart Panel                (01)     1           
+    opDisplay("    >   Ch First Device Type              (DT) # Devices # Files\n");
+    opDisplay("    >   -- ------------------------------ ---- --------- -------\n");
 
     for (ch = 0; ch < channelCount; ch++)
         {
@@ -154,110 +151,138 @@ void channelDisplayContext()
             switch (dp->devType)
                 {
             case DtNone:
-                devTypeName = "None .......................";
+                devTypeName = "None";
                 break;
 
             case DtDeadStartPanel:
-                devTypeName = "Deadstart Panel.............";
+                devTypeName = "Deadstart Panel";
                 break;
 
             case DtMt607:
-                devTypeName = "Magnetic Tape 607...........";
+                devTypeName = "Magnetic Tape 607";
                 break;
 
             case DtMt669:
-                devTypeName = "Magnetic Tape 669...........";
+                devTypeName = "Magnetic Tape 669";
+                break;
+
+            case DtMt5744:
+                devTypeName = "Cartridge Tape 5744";
                 break;
 
             case DtDd6603:
-                devTypeName = "Disk Device 6603............";
+                devTypeName = "Disk Device 6603";
                 break;
 
             case DtDd8xx:
-                devTypeName = "Disk Device 8xx.............";
+                devTypeName = "Disk Device 8xx";
+                break;
+
+            case DtDd885_42:
+                devTypeName = "Disk Device 885-42";
                 break;
 
             case DtCr405:
-                devTypeName = "Card Reader 405.............";
+                devTypeName = "Card Reader 405";
                 break;
 
             case DtLp1612:
-                devTypeName = "Line Printer 1612...........";
+                devTypeName = "Line Printer 1612";
                 break;
 
             case DtLp5xx:
-                devTypeName = "Line Printer 5xx............";
+                devTypeName = "Line Printer 5xx";
                 break;
 
             case DtRtc:
-                devTypeName = "Realtime Clock..............";
+                devTypeName = "Realtime Clock";
                 break;
 
             case DtConsole:
-                devTypeName = "Console.....................";
+                devTypeName = "Console";
+                break;
+
+            case DtMux6671:
+                devTypeName = "Multiplexer 6671";
                 break;
 
             case DtMux6676:
-                devTypeName = "Multiplexer 6676............";
+                devTypeName = "Multiplexer 6676";
+                break;
+
+            case DtDsa311:
+                devTypeName = "Digital Serial Adapter 311";
                 break;
 
             case DtCp3446:
-                devTypeName = "Card Punch 3446.............";
+                devTypeName = "Card Punch 3446";
                 break;
 
             case DtCr3447:
-                devTypeName = "Card Reader 3447............";
+                devTypeName = "Card Reader 3447";
                 break;
 
             case DtDcc6681:
-                devTypeName = "Data Channel Converter 6681.";
+                devTypeName = "Data Channel Converter 6681";
                 break;
 
             case DtTpm:
-                devTypeName = "Two Port Multiplexer........";
+                devTypeName = "Two Port Multiplexer";
                 break;
 
             case DtDdp:
-                devTypeName = "Distributive Data Path......";
+                devTypeName = "Distributive Data Path";
                 break;
 
             case DtNiu:
-                devTypeName = "Network Interface Unit......";
+                devTypeName = "Network Interface Unit";
                 break;
 
             case DtMt679:
-                devTypeName = "Magnetic Tape 679...........";
+                devTypeName = "Magnetic Tape 679";
+                break;
+
+            case DtMdi:
+                devTypeName = "Mainframe Device Interface";
                 break;
 
             case DtNpu:
-                devTypeName = "Network Processor Unit......";
+                devTypeName = "Network Processor Unit";
+                break;
+
+            case DtMSUFrend:
+                devTypeName = "MSU Front End";
                 break;
 
             case DtMt362x:
-                devTypeName = "Magnetic Tape 362x..........";
+                devTypeName = "Magnetic Tape 362x";
                 break;
 
             case DtMch:
-                devTypeName = "Maintenance Channel.........";
+                devTypeName = "Maintenance Channel";
                 break;
 
             case DtStatusControlRegister:
-                devTypeName = "Status Control Register.....";
+                devTypeName = "Status Control Register";
                 break;
 
             case DtInterlockRegister:
-                devTypeName = "Interlock Register..........";
+                devTypeName = "Interlock Register";
                 break;
 
             case DtPciChannel:
-                devTypeName = "PCI Channel.................";
+                devTypeName = "PCI Channel";
+                break;
+
+            case DtCsFei:
+                devTypeName = "Cray Station FEI";
                 break;
 
             default:
-                devTypeName = "Unknown Device..............";
+                devTypeName = "Unknown Device";
                 break;
                 }
-            sprintf(outBuf, "    > %02o %s (%02o)",
+            sprintf(outBuf, "    >   %02o %-30s (%02o)",
                     channel[ch].id,
                     devTypeName,
                     dp->devType
@@ -281,22 +306,18 @@ void channelDisplayContext()
 
             if (devNum > 0)
                 {
-                sprintf(outBuf, " Attached: %02i", devNum);
+                sprintf(outBuf, " %6d   ", devNum);
                 opDisplay(outBuf);
                 }
             else
                 {
-                opDisplay(" ------------");
+                opDisplay("          ");
                 }
 
             if (devFCB > 0)
                 {
-                sprintf(outBuf, " Files: %02i", devFCB);
+                sprintf(outBuf, " %4d", devFCB);
                 opDisplay(outBuf);
-                }
-            else
-                {
-                opDisplay(" ---------");
                 }
             opDisplay("\n");
             }

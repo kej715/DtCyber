@@ -217,7 +217,6 @@ typedef struct diskParam
     i32              sectorSize;
     DiskSize         size;
     u16              detailedStatus[20];
-    u8               diskNo;
     u8               unitNo;
     u8               diskType;
     PpWord           buffer[SectorSize];
@@ -259,7 +258,6 @@ static void     dd8xxWritePacked(DiskParam *dp, FILE *fcb, PpWord data);
 **  Private Variables
 **  -----------------
 */
-static int    diskCount = 0;
 static PpWord mySector[SectorSize];
 
 static DiskParam *firstDisk = NULL;
@@ -692,7 +690,6 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
 
     dp->device    = ds;
     dp->size      = *size;
-    dp->diskNo    = diskCount++;
     dp->diskType  = diskType;
     dp->unitNo    = unitNo;
     dp->eqNo      = eqNo;
@@ -1003,11 +1000,10 @@ static FcStatus dd8xxFunc(PpWord funcCode)
     dd8xxLogFlush();
     if (dp != NULL)
         {
-        fprintf(dd8xxLog, "\n(dd8xx  ) %06d PP:%02o CH:%02o DSK:%d f:%04o T:%-25s   c:%3d t:%2d s:%2d  >   ",
+        fprintf(dd8xxLog, "\n(dd8xx  ) %06d PP:%02o CH:%02o f:%04o T:%-25s   c:%3d t:%2d s:%2d  >   ",
                 traceSequenceNo,
                 activePpu->id,
                 activeDevice->channel->id,
-                dp->diskNo,
                 funcCode,
                 dd8xxFunc2String(funcCode),
                 dp->cylinder,
@@ -2287,27 +2283,22 @@ void dd8xxShowDiskStatus()
         return;
         }
 
-    opDisplay("\n    > Disk Drive (dd8xx) Status:\n");
-
     while (dp)
         {
-        sprintf(outBuf, "    >   #%02d. CH %02o EQ %02o UN %02o DT %s CYL 0x%06x TRK 0x%06o",
-                dp->diskNo,
+        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o",
+                dp->diskType == DiskType844 ? "844" : "855",
                 dp->channelNo,
                 dp->eqNo,
-                dp->unitNo,
-                dp->diskType == DiskType844 ? "844" : "855",
-                dp->cylinder,
-                dp->track);
+                dp->unitNo);
         opDisplay(outBuf);
         if (*dp->fileName != '\0')
             {
-            sprintf(outBuf, " FN '%s'\n", dp->fileName);
+            sprintf(outBuf, "   %-16s (Cyl 0x%06x Trk 0x%06o)\n", dp->fileName, dp->cylinder, dp->track);
             opDisplay(outBuf);
             }
         else
             {
-            opDisplay(" (unmounted)\n");
+            opDisplay("   (unmounted)\n");
             }
         dp = dp->nextDisk;
         }
