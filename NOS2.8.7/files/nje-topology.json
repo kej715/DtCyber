@@ -4,7 +4,7 @@
     "os": "NOS 2.8.7",
     "software": "NJEF",
     "lid": "MAX",
-    "publicAddress": "98.0.40.244:175"
+    "publicAddress": "98.0.39.204:175"
   },
   "NCCMED": {
     "desc": "CDC Cyber 865 development system at the Nostalgic Computing Center",
@@ -41,5 +41,12 @@
     "software": "NJEF",
     "link": "NCCMAX",
     "lid": "M01"
+  },
+  "NOSTH1": {
+    "desc": "Nick Glazzard's node",
+    "os": "NOS 2.8.7",
+    "software": "NJEF",
+    "link": "NCCMAX",
+    "lid": "MT1"
   }
 }
