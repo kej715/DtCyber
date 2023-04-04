@@ -501,7 +501,6 @@ void mt5744ShowTapeStatus()
     while (tp)
         {
         sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", "5744", tp->channelNo, tp->eqNo, tp->unitNo);
-        sprintf(outBuf, "(mt5744 ) MT5744 on %o,%o,%o", tp->channelNo, tp->eqNo, tp->unitNo);
         opDisplay(outBuf);
         switch (tp->state)
             {

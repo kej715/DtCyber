@@ -141,6 +141,7 @@ typedef struct lpContext
     u8                   linePos;            //  current line position
 
     char                 path[MaxFSPath];
+    char                 curFileName[MaxFSPath+128];
     } LpContext;
 
 /*
@@ -228,12 +229,11 @@ static FILE *lp1612Log = NULL;
 **------------------------------------------------------------------------*/
 void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
-    char          *deviceMode;
-    char          *devicePath;
-    DevSlot       *dp;
-    char          fname[MaxFSPath];
+    char      *deviceMode;
+    char      *devicePath;
+    DevSlot   *dp;
     LpContext *lc;
-    u8            mode;
+    u8        mode;
 
 #if DEBUG
     if (lp1612Log == NULL)
@@ -332,12 +332,12 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Open the device file.
     */
-    sprintf(fname, "%sLP1612_C%02o", lc->path, channelNo);
-    dp->fcb[0] = fopen(fname, "w+t");
+    sprintf(lc->curFileName, "%sLP1612_C%02o", lc->path, channelNo);
+    dp->fcb[0] = fopen(lc->curFileName, "w+t");
 
     if (dp->fcb[0] == NULL)
         {
-        fprintf(stderr, "(lp1612 ) Failed to open %s\n", fname);
+        fprintf(stderr, "(lp1612 ) Failed to open %s\n", lc->curFileName);
         exit(1);
         }
 
@@ -345,7 +345,7 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     **  Print a friendly message.
     */
     printf("(lp1612 ) Iinitialised on channel %o equipment %o mode %s filename '%s'\n",
-           channelNo, eqNo, renderingModes[mode], fname);
+           channelNo, eqNo, renderingModes[mode], lc->curFileName);
 
     /*
     **  Link into list of lp1612 Line Printer units.
@@ -372,26 +372,22 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 void lp1612ShowStatus()
     {
-    LpContext *lc = firstLp1612;
-    char          outBuf[MaxFSPath+128];
+    LpContext *lc;
+    char      outBuf[MaxFSPath+128];
 
     if (lc == NULL)
         {
         return;
         }
 
-    opDisplay("\n    > Line Printer (lp1612) Status:\n");
-
-    while (lc)
+    for (lc = firstLp1612; lc != NULL; lc = lc->nextUnit)
         {
-        sprintf(outBuf, "    > CH %02o EQ %02o UN %02o mode %s path '%s'\n",
-                lc->channelNo,
-                lc->eqNo,
-                lc->unitNo,
-                renderingModes[lc->renderingMode],
-                lc->path);
+        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", "1612", lc->channelNo, lc->eqNo, lc->unitNo);
         opDisplay(outBuf);
-        lc = lc->nextUnit;
+        sprintf(outBuf, "   %-20s (mode ", lc->curFileName);
+        opDisplay(outBuf);
+        opDisplay(renderingModes[lc->renderingMode]);
+        opDisplay(")\n");
         }
     }
 
@@ -406,17 +402,16 @@ void lp1612ShowStatus()
 **------------------------------------------------------------------------*/
 void lp1612RemovePaper(char *params)
     {
-    int     channelNo;
-    time_t  currentTime;
-    DevSlot *dp;
-    int     equipmentNo;
-    char    fName[MaxFSPath+128];
-    char    fNameNew[MaxFSPath+128];
-    int     iSuffix;
+    int       channelNo;
+    time_t    currentTime;
+    DevSlot   *dp;
+    int       equipmentNo;
+    char      fNameNew[MaxFSPath+128];
+    int       iSuffix;
     LpContext *lc;
-    int     numParam;
-    char     outBuf[MaxFSPath*2+300];
-    bool     renameOK;
+    int       numParam;
+    char      outBuf[MaxFSPath*2+300];
+    bool      renameOK;
     struct tm t;
 
     /*
@@ -458,7 +453,6 @@ void lp1612RemovePaper(char *params)
         }
 
     lc = (LpContext *)dp->context[0];
-    sprintf(fName, "%sLP1612_C%02o", lc->path, channelNo);
 
     renameOK = FALSE;
 
@@ -491,13 +485,13 @@ void lp1612RemovePaper(char *params)
 
         if (numParam > 2)
             {
-            if (rename(fName, fNameNew) == 0)
+            if (rename(lc->curFileName, fNameNew) == 0)
                 {
                 renameOK = TRUE;
                 }
             else
                 {
-                sprintf(outBuf, "(lp1612 ) Rename Failure '%s' to '%s' - (%s).\n", fName, fNameNew, strerror(errno));
+                sprintf(outBuf, "(lp1612 ) Rename Failure '%s' to '%s' - (%s).\n", lc->curFileName, fNameNew, strerror(errno));
                 opDisplay(outBuf);
                 }
             }
@@ -520,14 +514,14 @@ void lp1612RemovePaper(char *params)
                         t.tm_sec,
                         iSuffix);
 
-                if (rename(fName, fNameNew) == 0)
+                if (rename(lc->curFileName, fNameNew) == 0)
                     {
                     renameOK = TRUE;
                     break;
                     }
 
                 fprintf(stderr, "(lp1612 ) Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
-                        fName,
+                        lc->curFileName,
                         fNameNew,
                         strerror(errno),
                         iSuffix);
@@ -538,14 +532,14 @@ void lp1612RemovePaper(char *params)
     /*
     **  Open the device file.
     */
-    dp->fcb[0] = fopen(fName, renameOK ? "w" : "a");
+    dp->fcb[0] = fopen(lc->curFileName, renameOK ? "w" : "a");
 
     /*
     **  Check if the open succeeded.
     */
     if (dp->fcb[0] == NULL)
         {
-        fprintf(stderr, "(lp1612 ) Failed to open %s\n", fName);
+        fprintf(stderr, "(lp1612 ) Failed to open %s\n", lc->curFileName);
 
         return;
         }

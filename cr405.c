@@ -853,7 +853,7 @@ static void cr405SwapInOut(Cr405Context *cc, char *fName)
 **------------------------------------------------------------------------*/
 void cr405ShowStatus()
     {
-    Cr405Context *cp = firstCr405;
+    Cr405Context *cp;
     char         outBuf[MaxFSPath*2+64];
 
     if (cp == NULL)
@@ -861,45 +861,25 @@ void cr405ShowStatus()
         return;
         }
 
-    opDisplay("\n    > Card reader (cr405) status:\n");
-
-    while (cp)
+    for (cp = firstCr405; cp != NULL; cp = cp->nextUnit)
         {
-        if (cp->curFileName != NULL)
-            {
-            sprintf(outBuf, "    > CH %02o EQ %02o UN %02o Col %02i Seq:%i File '%s'\n",
-                cp->channelNo,
-                cp->eqNo,
-                cp->unitNo,
-                cp->col,
-                cp->seqNum,
-                cp->curFileName);
-            }
-        else
-            {
-            sprintf(outBuf, "    > CH %02o EQ %02o UN %02o Col %02i Seq:%i\n",
-                cp->channelNo,
-                cp->eqNo,
-                cp->unitNo,
-                cp->col,
-                cp->seqNum);
-            }
+        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", "405", cp->channelNo, cp->eqNo, cp->unitNo);
         opDisplay(outBuf);
-
+        sprintf(outBuf, "   %-20s", cp->curFileName != NULL ? cp->curFileName : "");
+        opDisplay(outBuf);
+        sprintf(outBuf, " (seq %d", cp->seqNum);
+        opDisplay(outBuf);
         if (cp->isWatched)
             {
+            sprintf(outBuf, ", in %s/", cp->dirInput);
+            opDisplay(outBuf);
             if (cp->dirOutput != NULL)
                 {
-                sprintf(outBuf, "    >   Autoloading from '%s' to '%s'\n", cp->dirInput, cp->dirOutput);
+                sprintf(outBuf, ", out %s/", cp->dirOutput);
+                opDisplay(outBuf);
                 }
-            else
-                {
-                sprintf(outBuf, "    >   Autoloading from '%s'\n", cp->dirInput);
-                }
-            opDisplay(outBuf);
             }
-
-        cp = cp->nextUnit;
+        opDisplay(")\n");
         }
     }
 

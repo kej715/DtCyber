@@ -394,7 +394,7 @@ void tpMuxShowStatus()
 
     if (listenFd <= 0) return;
 
-    sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "TpMux", mux->channel->id, mux->eqNo);
+    sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "2pMux", mux->channel->id, mux->eqNo);
     opDisplay(outBuf);
     sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(listenFd), "", "async", "listening");
     opDisplay(outBuf);
@@ -403,7 +403,7 @@ void tpMuxShowStatus()
         {
         if (pp->active && pp->connFd > 0)
             {
-            sprintf(outBuf, "    >   %-8s         P%02o ", "TpMux", pp->id);
+            sprintf(outBuf, "    >   %-8s         P%02o ", "2pMux", pp->id);
             opDisplay(outBuf);
             sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), "async", "connected");
             opDisplay(outBuf);

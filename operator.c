@@ -2907,6 +2907,10 @@ static void opCmdShowUnitRecord(bool help, char *cmdParams)
 
         return;
         }
+
+    opDisplay("\n    > Unit Record Equipment Status:");
+    opDisplay("\n    > -----------------------------\n");
+
     cr3447ShowStatus();
     cr405ShowStatus();
     cp3446ShowStatus();

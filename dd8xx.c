@@ -2286,14 +2286,14 @@ void dd8xxShowDiskStatus()
     while (dp)
         {
         sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o",
-                dp->diskType == DiskType844 ? "844" : "855",
+                dp->diskType == DiskType844 ? "844" : "885",
                 dp->channelNo,
                 dp->eqNo,
                 dp->unitNo);
         opDisplay(outBuf);
         if (*dp->fileName != '\0')
             {
-            sprintf(outBuf, "   %-16s (Cyl 0x%06x Trk 0x%06o)\n", dp->fileName, dp->cylinder, dp->track);
+            sprintf(outBuf, "   %-20s (cyl 0x%06x trk 0x%06o)\n", dp->fileName, dp->cylinder, dp->track);
             opDisplay(outBuf);
             }
         else

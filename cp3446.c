@@ -111,7 +111,6 @@ typedef struct cpContext
     u8               channelNo;
     u8               eqNo;
     u8               unitNo;
-
     bool             binary;
     bool             rawCard;
     int              intMask;
@@ -122,6 +121,7 @@ typedef struct cpContext
     u32              getCardCycle;
     char             card[322];
     char             extPath[MaxFSPath];
+    char             curFileName[MaxFSPath];
     } CpContext;
 
 
@@ -182,7 +182,6 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
     CpContext    *cc;
     const PpWord *charset;
-    char         fname[MaxFSPath];
     PpWord       hol;
     DevSlot      *up;
 
@@ -259,12 +258,12 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Open the device file.
     */
-    sprintf(fname, "%sCP3446_C%02o_E%o", cc->extPath, channelNo, eqNo);
+    sprintf(cc->curFileName, "%sCP3446_C%02o_E%o", cc->extPath, channelNo, eqNo);
 
-    up->fcb[0] = fopen(fname, "w");
+    up->fcb[0] = fopen(cc->curFileName, "w");
     if (up->fcb[0] == NULL)
         {
-        fprintf(stderr, "(cp3446 ) Failed to open %s\n", fname);
+        fprintf(stderr, "(cp3446 ) Failed to open %s\n", cc->curFileName);
         exit(1);
         }
 
@@ -303,7 +302,7 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     printf("(cp3446 ) Initialised on channel %o equipment %o filename '%s' type '%s'\n",
            channelNo,
            eqNo,
-           fname,
+           cc->curFileName,
            (charset == asciiTo029) ? "029" : "026");
 
     /*
@@ -341,7 +340,6 @@ void cp3446RemoveCards(char *params)
     int isuffix;
 
     struct tm   t;
-    char        fname[MaxFSPath+64];
     char        fnameNew[MaxFSPath+64];
     static char msgBuf[80] = "";
     char        outBuf[400];
@@ -393,7 +391,6 @@ void cp3446RemoveCards(char *params)
     **  Close the old device file.
     */
     cc = (CpContext *)(dp->context[0]);
-    sprintf(fname, "%sCP3446_C%02o_E%o", cc->extPath, channelNo, equipmentNo);
 
     //  SZoppi: this can happen if something goes wrong in the open
     //          and the file fails to be properly re-opened.
@@ -447,12 +444,12 @@ void cp3446RemoveCards(char *params)
                     t.tm_min,
                     t.tm_sec,
                     isuffix);
-            if (rename(fname, fnameNew) != 0)
+            if (rename(cc->curFileName, fnameNew) != 0)
                 {
                 renameOK = TRUE;
                 break;
                 }
-            sprintf(outBuf, "(cp3446 ) Could not rename '%s' to '%s' - %s (retrying)\n", fname, fnameNew, strerror(errno));
+            sprintf(outBuf, "(cp3446 ) Could not rename '%s' to '%s' - %s (retrying)\n", cc->curFileName, fnameNew, strerror(errno));
             opDisplay(outBuf);
             }
         }
@@ -460,14 +457,14 @@ void cp3446RemoveCards(char *params)
     /*
     **  Open the device file.
     */
-    dp->fcb[0] = fopen(fname, renameOK ? "w" : "a");
+    dp->fcb[0] = fopen(cc->curFileName, renameOK ? "w" : "a");
 
     /*
     **  Check if the open succeeded.
     */
     if (dp->fcb[0] == NULL)
         {
-        sprintf(outBuf, "(cp3446 ) Failed to open %s\n", fname);
+        sprintf(outBuf, "(cp3446 ) Failed to open %s\n", cc->curFileName);
         opDisplay(outBuf);
         return;
         }
@@ -931,21 +928,15 @@ void cp3446ShowStatus()
         return;
         }
 
-    opDisplay("\n    > Card Punch (cp3446) Status:\n");
-
-    while (cp)
+    for (cp = firstUnit; cp != NULL; cp = cp->nextUnit)
         {
-        sprintf(outBuf, "    >   CH %02o EQ %02o UN %02o Col %02i Mode(%s) RAW(%s) Path '%s'\n",
-                cp->channelNo,
-                cp->eqNo,
-                cp->unitNo,
-                cp->col,
-                cp->binary ? "Char " : "Bin  ",
-                cp->rawCard ? "Yes" : "No ",
-                cp->extPath);
+        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", "3446", cp->channelNo, cp->eqNo, cp->unitNo);
         opDisplay(outBuf);
-
-        cp = cp->nextUnit;
+        sprintf(outBuf, "   %-20s (", cp->curFileName);
+        opDisplay(outBuf);
+        opDisplay(cp->binary ? "bin" : "char");
+        if (cp->rawCard) opDisplay(", raw");
+        opDisplay(")\n");
         }
     }
 

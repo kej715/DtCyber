@@ -610,7 +610,7 @@ void dd6603ShowDiskStatus()
         }
     while (dp)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o   %-16ss (Hd %02o Sec 0x%06x Trk 0x%06o)\n",
+        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o   %-20s (hd %02o sec 0x%06x trk 0x%06o)\n",
                 "6603",
                 dp->channelNo,
                 dp->eqNo,

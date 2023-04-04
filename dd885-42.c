@@ -1315,7 +1315,7 @@ void dd885_42ShowDiskStatus()
 
     while (dp)
         {
-        sprintf(outBuf, "    >   %-7s C%02o E%02o U%02o   %-16s (Cyl 0x%06x Trk 0x%06o)\n",
+        sprintf(outBuf, "    >   %-7s C%02o E%02o U%02o   %-20s (cyl 0x%06x trk 0x%06o)\n",
                 "885-42",
                 dp->channelNo,
                 dp->eqNo,

@@ -1337,7 +1337,7 @@ void cdcnetShowStatus(void)
         {
         if (pp->connFd != 0)
             {
-            sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS"\n", "cdcnet", chEqStr, netGetLocalTcpAddress(pp->connFd), "",
+            sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS"\n", "CDCNet", chEqStr, netGetLocalTcpAddress(pp->connFd), "",
                 "tcp", "listening");
             opDisplay(outBuf);
             chEqStr[0] = '\0';
@@ -1379,7 +1379,7 @@ void cdcnetShowStatus(void)
             state = "unknown";
             break;
             }
-        sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS"\n", "cdcnet", chEqStr, netGetLocalTcpAddress(gp->connFd),
+        sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS"\n", "CDCNet", chEqStr, netGetLocalTcpAddress(gp->connFd),
             netGetPeerTcpAddress(gp->connFd), gp->connType == TypeUdp ? "udp" : "tcp", state);
         opDisplay(outBuf);
         chEqStr[0] = '\0';
