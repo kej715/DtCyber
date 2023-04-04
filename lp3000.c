@@ -586,14 +586,9 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
 **------------------------------------------------------------------------*/
 void lp3000ShowStatus()
     {
-    LpContext *lc = firstUnit;
+    LpContext *lc;
     char      lpType[10];
     char      outBuf[MaxFSPath+128];
-
-    if (lc == NULL)
-        {
-        return;
-        }
 
     for (lc = firstUnit; lc != NULL; lc = lc->nextUnit)
         {

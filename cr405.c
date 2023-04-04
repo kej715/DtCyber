@@ -856,11 +856,6 @@ void cr405ShowStatus()
     Cr405Context *cp;
     char         outBuf[MaxFSPath*2+64];
 
-    if (cp == NULL)
-        {
-        return;
-        }
-
     for (cp = firstCr405; cp != NULL; cp = cp->nextUnit)
         {
         sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", "405", cp->channelNo, cp->eqNo, cp->unitNo);

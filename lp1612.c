@@ -375,11 +375,6 @@ void lp1612ShowStatus()
     LpContext *lc;
     char      outBuf[MaxFSPath+128];
 
-    if (lc == NULL)
-        {
-        return;
-        }
-
     for (lc = firstLp1612; lc != NULL; lc = lc->nextUnit)
         {
         sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", "1612", lc->channelNo, lc->eqNo, lc->unitNo);

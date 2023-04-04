@@ -862,11 +862,6 @@ void cr3447ShowStatus()
     CrContext *cp;
     char      outBuf[MaxFSPath*2+64];
 
-    if (cp == NULL)
-        {
-        return;
-        }
-
     for (cp = firstCr3447; cp != NULL; cp = cp->nextUnit)
         {
         sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", "3447", cp->channelNo, cp->eqNo, cp->unitNo);

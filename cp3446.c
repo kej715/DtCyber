@@ -920,13 +920,8 @@ static char *cp3446Func2String(PpWord funcCode)
 **------------------------------------------------------------------------*/
 void cp3446ShowStatus()
     {
-    CpContext *cp = firstUnit;
-    char outBuf[MaxFSPath+128];
-
-    if (cp == NULL)
-        {
-        return;
-        }
+    CpContext *cp;
+    char      outBuf[MaxFSPath+128];
 
     for (cp = firstUnit; cp != NULL; cp = cp->nextUnit)
         {
