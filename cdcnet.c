@@ -1297,6 +1297,95 @@ void cdcnetCheckStatus(void)
         }
     }
 
+/*--------------------------------------------------------------------------
+**  Purpose:        Display CDCNet Gateway data communication statue (operator interface).
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cdcnetShowStatus(void)
+    {
+    u8      channelNo;
+    char    chEqStr[8];
+    DevSlot *dp;
+    int     i;
+    Pccb    *pp;
+    Gcb     *gp;
+    char    outBuf[200];
+    char    *state;
+
+    if (cdcnetGcbCount < 1)
+        {
+        return;
+        }
+    dp = NULL;
+    for (channelNo = 0; channelNo < MaxChannels; channelNo++)
+        {
+        dp = channelFindDevice(channelNo, DtMdi);
+        if (dp != NULL) break;
+        }
+    if (dp == NULL) return;
+
+    sprintf(chEqStr, "C%02o E%02o",  dp->channel->id, dp->eqNo);
+
+    /*
+    **  Iterate through all Pccbs.
+    */
+    for (i = 0, pp = cdcnetPccbs; i < cdcnetPccbCount; i++, pp++)
+        {
+        if (pp->connFd != 0)
+            {
+            sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS"\n", "CDCNet", chEqStr, netGetLocalTcpAddress(pp->connFd), "",
+                "tcp", "listening");
+            opDisplay(outBuf);
+            chEqStr[0] = '\0';
+            }
+        }
+
+    /*
+    **  Iterate through all Gcbs.
+    */
+    for (i = 0, gp = cdcnetGcbs; i < cdcnetGcbCount; i++, gp++)
+        {
+        if (gp->gwState == StGwIdle || gp->connType == TypeTcpPassive)
+            {
+            continue;
+            }
+        switch (gp->tcpUdpState)
+            {
+        case StTcpUdpIdle:
+            continue;
+        case StTcpConnecting:
+            state = "connecting";
+            break;
+        case StTcpIndicatingConnection:
+            state = "indicating connection";
+            break;
+        case StTcpListening:
+            state = "listening";
+            break;
+        case StTcpConnected:
+            state = "connected";
+            break;
+        case StTcpDisconnecting:
+            state = "disconnecting";
+            break;
+        case StUdpBound:
+            state = "bound";
+            break;
+        default:
+            state = "unknown";
+            break;
+            }
+        sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS"\n", "CDCNet", chEqStr, netGetLocalTcpAddress(gp->connFd),
+            netGetPeerTcpAddress(gp->connFd), gp->connType == TypeUdp ? "udp" : "tcp", state);
+        opDisplay(outBuf);
+        chEqStr[0] = '\0';
+        }
+    }
+
 /*
  **--------------------------------------------------------------------------
  **

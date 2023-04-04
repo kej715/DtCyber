@@ -210,6 +210,7 @@ typedef struct lpContext
 
     bool             doBurst;            //  bursting option for forced segmentation at EOJ
     char             path[MaxFSPath];    //  preserve the device folder path
+    char             curFileName[MaxFSPath+128];
     } LpContext;
 
 
@@ -382,7 +383,6 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
     char      *devicePath;
     char      *deviceType;
     u16       flags;
-    char      fName[MaxFSPath];
     bool      isBursting;
     LpContext *lc;
     char      *lpTypeName;
@@ -544,12 +544,12 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
     /*
     **  Open the device file.
     */
-    sprintf(fName, "%sLP5xx_C%02o_E%o", lc->path, channelNo, eqNo);
+    sprintf(lc->curFileName, "%sLP5xx_C%02o_E%o", lc->path, channelNo, eqNo);
 
-    up->fcb[0] = fopen(fName, "w");
+    up->fcb[0] = fopen(lc->curFileName, "w");
     if (up->fcb[0] == NULL)
         {
-        fprintf(stderr, "(lp3000 ) Failed to open %s\n", fName);
+        fprintf(stderr, "(lp3000 ) Failed to open %s\n", lc->curFileName);
         exit(1);
         }
 
@@ -559,7 +559,7 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
     printf("(lp3000 ) LP%d/%d initialised on channel %o equipment %o mode %s filename '%s'\n",
            (flags & Lp3000Type3555) ? 3555 : 3152,
            (flags & Lp3000Type501) ? 501 : 512,
-           channelNo, eqNo, renderingModes[mode], fName);
+           channelNo, eqNo, renderingModes[mode], lc->curFileName);
 
     /*
     **  Link into list of Line Printer units.
@@ -586,30 +586,22 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
 **------------------------------------------------------------------------*/
 void lp3000ShowStatus()
     {
-    LpContext *lc = firstUnit;
+    LpContext *lc;
+    char      lpType[10];
     char      outBuf[MaxFSPath+128];
 
-    if (lc == NULL)
+    for (lc = firstUnit; lc != NULL; lc = lc->nextUnit)
         {
-        return;
-        }
-
-    opDisplay("\n    > Line Printer (lp3000) Status:\n");
-
-    while (lc)
-        {
-        sprintf(outBuf, "    >   CH %02o EQ %02o UN %02o LP%d/%d %s mode %i lpi %s path '%s'\n",
-                lc->channelNo,
-                lc->eqNo,
-                lc->unitNo,
-                (lc->flags & Lp3000Type3555) ? 3555 : 3152,
-                (lc->flags & Lp3000Type501) ? 501 : 512,
-                renderingModes[lc->renderingMode],
-                lc->lpi,
-                lc->doBurst ? "Burst" : "NoBurst",
-                lc->path);
+        sprintf(lpType, "%s/%s", (lc->flags & Lp3000Type3555) ? "3555" : "3152", (lc->flags & Lp3000Type501) ? "501" : "512");
+        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", lpType, lc->channelNo, lc->eqNo, lc->unitNo);
         opDisplay(outBuf);
-        lc = lc->nextUnit;
+        sprintf(outBuf, "   %-20s (mode ", lc->curFileName);
+        opDisplay(outBuf);
+        opDisplay(renderingModes[lc->renderingMode]);
+        sprintf(outBuf, ", %d lpi", lc->lpi);
+        opDisplay(outBuf);
+        if (lc->doBurst) opDisplay(", burst");
+        opDisplay(")\n");
         }
     }
 
@@ -628,7 +620,6 @@ void lp3000RemovePaper(char *params)
     time_t    currentTime;
     DevSlot   *dp;
     int       equipmentNo;
-    char      fName[MaxFSPath+128];
     char      fNameNew[MaxFSPath+128];
     int       iSuffix;
     LpContext *lc;
@@ -679,8 +670,6 @@ void lp3000RemovePaper(char *params)
         }
 
     lc = (LpContext *)dp->context[0];
-    sprintf(fName, "%sLP5xx_C%02o_E%o", lc->path, channelNo, equipmentNo);
-
     renameOK = FALSE;
 
     //
@@ -713,13 +702,13 @@ void lp3000RemovePaper(char *params)
 
         if (numParam > 2)
             {
-            if (rename(fName, fNameNew) == 0)
+            if (rename(lc->curFileName, fNameNew) == 0)
                 {
                 renameOK = TRUE;
                 }
             else
                 {
-                sprintf(outBuf, "(lp3000 ) Rename Failure '%s' to '%s' - (%s).\n", fName, fNameNew, strerror(errno));
+                sprintf(outBuf, "(lp3000 ) Rename Failure '%s' to '%s' - (%s).\n", lc->curFileName, fNameNew, strerror(errno));
                 opDisplay(outBuf);
                 }
             }
@@ -742,13 +731,13 @@ void lp3000RemovePaper(char *params)
                         t.tm_sec,
                         iSuffix);
 
-                if (rename(fName, fNameNew) == 0)
+                if (rename(lc->curFileName, fNameNew) == 0)
                     {
                     renameOK = TRUE;
                     break;
                     }
                 fprintf(stderr, "(lp3000 ) Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
-                        fName,
+                        lc->curFileName,
                         fNameNew,
                         strerror(errno),
                         iSuffix);
@@ -761,14 +750,14 @@ void lp3000RemovePaper(char *params)
     */
 
     //  Just append to the old file if the rename didn't happen correctly
-    dp->fcb[0] = fopen(fName, renameOK ? "w" : "a");
+    dp->fcb[0] = fopen(lc->curFileName, renameOK ? "w" : "a");
 
     /*
     **  Check if the open succeeded.
     */
     if (dp->fcb[0] == NULL)
         {
-        fprintf(stderr, "Failed to open %s\n", fName);
+        fprintf(stderr, "Failed to open %s\n", lc->curFileName);
 
         return;
         }

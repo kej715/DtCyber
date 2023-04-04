@@ -150,22 +150,26 @@ typedef struct buffer
 
 typedef struct dsa311Context
     {
-    Dsa311MajorState   majorState;
-    Dsa311InputState   inputState;
-    Dsa311OutputState  outputState;
-    struct sockaddr_in serverAddr;
+    struct dsa311Context *next;
+    u8                   channelNo;
+    u8                   eqNo;
+    u8                   unitNo;
+    Dsa311MajorState     majorState;
+    Dsa311InputState     inputState;
+    Dsa311OutputState    outputState;
+    struct sockaddr_in   serverAddr;
 #if defined(_WIN32)
-    SOCKET             fd;
+    SOCKET               fd;
 #else
-    int                fd;
+    int                  fd;
 #endif
-    int                ioTurns;
-    time_t             nextConnectAttempt;
-    bool               isRTS;
-    u16                crc;
-    Buffer             sktInBuf;
-    Buffer             ppInBuf;
-    Buffer             sktOutBuf;
+    int                  ioTurns;
+    time_t               nextConnectAttempt;
+    bool                 isRTS;
+    u16                  crc;
+    Buffer               sktInBuf;
+    Buffer               ppInBuf;
+    Buffer               sktOutBuf;
     } Dsa311Context;
 
 /*
@@ -207,6 +211,9 @@ static void dsa311LogFlush(void);
 static u64 baseTime;
 static u64 elapsedTime;
 #endif
+
+static Dsa311Context *firstMux = NULL;
+static Dsa311Context *lastMux  = NULL;
 
 /*
 **  Table for CRC-16 based upon polynomial x^16 + x^15 + x^2 + 1
@@ -335,10 +342,22 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
         fprintf(stderr, "(dsa311 ) Failed to allocate DSA311 context block\n");
         exit(1);
         }
+    if (firstMux == NULL)
+        {
+        firstMux = cp;
+        }
+    else
+        {
+        lastMux->next = cp;
+        }
+    lastMux = cp;
 
     dp->context[unitNo]     = (void *)cp;
     dp->context[unitNo + 1] = (void *)cp;
     cp->majorState          = StDsa311MajDisconnected;
+    cp->channelNo           = channelNo;
+    cp->eqNo                = eqNo;
+    cp->unitNo              = unitNo;
     cp->ioTurns             = IoTurnsPerPoll - 1;
     cp->nextConnectAttempt  = 0;
     cp->fd             = 0;
@@ -390,6 +409,55 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     */
     printf("(dsa311 ) Initialised on channel %o equipment %o unit %o\n",
            channelNo, eqNo, unitNo);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Show NIU status (operator interface).
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void dsa311ShowStatus()
+    {
+    Dsa311Context *cp;
+    u32           ipAddr;
+    char          outBuf[200];
+    char          peerAddress[24];
+    u16           port;
+
+    for (cp = firstMux; cp != NULL; cp = cp->next)
+        {
+        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o ", "3266/311", cp->channelNo, cp->eqNo, cp->unitNo);
+        opDisplay(outBuf);
+
+        ipAddr = ntohl(cp->serverAddr.sin_addr.s_addr);
+        port   = ntohs(cp->serverAddr.sin_port);
+        sprintf(peerAddress, "%d.%d.%d.%d:%d",
+          (ipAddr >> 24) & 0xff,
+          (ipAddr >> 16) & 0xff,
+          (ipAddr >>  8) & 0xff,
+          ipAddr         & 0xff,
+          port);
+
+        switch (cp->majorState)
+            {
+        case StDsa311MajDisconnected:
+            sprintf(outBuf, FMTNETSTATUS"\n", ipAddress, peerAddress, "rhasp", "disconnected");
+            break;
+        case StDsa311MajConnecting:
+            sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(cp->fd), peerAddress, "rhasp", "connecting");
+            break;
+        case StDsa311MajConnected:
+            sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(cp->fd), netGetPeerTcpAddress(cp->fd), "rhasp", "connected");
+            break;
+        default:
+            strcpy(outBuf, "\n");
+            break;
+            }
+        opDisplay(outBuf);
+        }
     }
 
 /*

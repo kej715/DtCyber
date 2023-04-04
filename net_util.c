@@ -269,6 +269,100 @@ int netGetErrorStatus(int sd)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Get the local IP address and port number of a socket.
+**
+**  Parameters:     Name        Description.
+**                  sd          socket descriptor
+**
+**  Returns:        IP address and port number as a string
+**
+**------------------------------------------------------------------------*/
+#if defined(_WIN32)
+char *netGetLocalTcpAddress(SOCKET sd)
+#else
+char *netGetLocalTcpAddress(int sd)
+#endif
+    {
+    struct sockaddr_in hostAddr;
+    u32                ipAddr;
+    static char        outBuf[32];
+    u16                port;
+    int                rc;
+
+#if defined(_WIN32)
+    int addrLen;
+#else
+    socklen_t addrLen;
+#endif
+
+    addrLen = sizeof(hostAddr);
+    rc      = getsockname(sd, (struct sockaddr *)&hostAddr, &addrLen);
+    if (rc == 0)
+        {
+        ipAddr = ntohl(hostAddr.sin_addr.s_addr);
+        port   = ntohs(hostAddr.sin_port);
+        sprintf(outBuf, "%d.%d.%d.%d:%d",
+          (ipAddr >> 24) & 0xff,
+          (ipAddr >> 16) & 0xff,
+          (ipAddr >>  8) & 0xff,
+          ipAddr         & 0xff,
+          port);
+        return outBuf;
+        }
+    else
+        {
+        return "";
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Get the peer IP address and port number of a socket.
+**
+**  Parameters:     Name        Description.
+**                  sd          socket descriptor
+**
+**  Returns:        IP address and port number as a string
+**
+**------------------------------------------------------------------------*/
+#if defined(_WIN32)
+char *netGetPeerTcpAddress(SOCKET sd)
+#else
+char *netGetPeerTcpAddress(int sd)
+#endif
+    {
+    struct sockaddr_in hostAddr;
+    u32                ipAddr;
+    static char        outBuf[32];
+    u16                port;
+    int                rc;
+
+#if defined(_WIN32)
+    int addrLen;
+#else
+    socklen_t addrLen;
+#endif
+
+    addrLen = sizeof(hostAddr);
+    rc      = getpeername(sd, (struct sockaddr *)&hostAddr, &addrLen);
+    if (rc == 0)
+        {
+        ipAddr = ntohl(hostAddr.sin_addr.s_addr);
+        port   = ntohs(hostAddr.sin_port);
+        sprintf(outBuf, "%d.%d.%d.%d:%d",
+          (ipAddr >> 24) & 0xff,
+          (ipAddr >> 16) & 0xff,
+          (ipAddr >>  8) & 0xff,
+          ipAddr         & 0xff,
+          port);
+        return outBuf;
+        }
+    else
+        {
+        return "";
+        }
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Initiate a connection to a TCP service.
 **
 **  Parameters:     Name        Description.

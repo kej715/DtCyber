@@ -668,24 +668,22 @@ void mt362xUnloadTape(char *params)
 void mt362xShowTapeStatus()
     {
     TapeParam *tp = firstTape;
-    int       i   = 0;
     char      outBuf[MaxFSPath+128];
-
-    opDisplay("\n    > Magnetic Tape (mt679) Status:\n");
+    char      type[10];
 
     while (tp)
         {
-        i = i + 1;
-        sprintf(outBuf, "    >  #%02d. MT362x-%d CH %02o EQ %02o UN %02o", i, tp->tracks, tp->channelNo, tp->eqNo, tp->unitNo);
+        sprintf(type, "362x-%d", tp->tracks);
+        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", type, tp->channelNo, tp->eqNo, tp->unitNo);
         opDisplay(outBuf);
         if (tp->unitReady)
             {
-            sprintf(outBuf, ",%c,%s\n", tp->ringIn ? 'w' : 'r', tp->fileName);
+            sprintf(outBuf, " %c %s\n", tp->ringIn ? 'w' : 'r', tp->fileName);
             opDisplay(outBuf);
             }
         else
             {
-            opDisplay("  (idle)\n");
+            opDisplay("   (idle)\n");
             }
 
         tp = tp->nextTape;

@@ -859,57 +859,29 @@ static void cr3447SwapInOut(CrContext *cc, char *fName)
 **------------------------------------------------------------------------*/
 void cr3447ShowStatus()
     {
-    CrContext *cp = firstCr3447;
+    CrContext *cp;
     char      outBuf[MaxFSPath*2+64];
 
-    if (cp == NULL)
+    for (cp = firstCr3447; cp != NULL; cp = cp->nextUnit)
         {
-        return;
-        }
-
-    opDisplay("\n    > Card reader (cr3447) status:\n");
-
-    while (cp)
-        {
-        if (cp->curFileName != NULL)
-            {
-            sprintf(outBuf, "    >   CH %02o EQ %02o UN %02o Col %02i Mode(%s) Raw(%s) Seq:%i File '%s'\n",
-                cp->channelNo,
-                cp->eqNo,
-                cp->unitNo,
-                cp->col,
-                cp->binary ? "Char" : "Bin ",
-                cp->rawCard ? "Yes" : "No ",
-                cp->seqNum,
-                cp->curFileName);
-            }
-        else
-            {
-            sprintf(outBuf, "    >   CH %02o EQ %02o UN %02o Col %02i Mode(%s) Raw(%s) Seq:%i\n",
-                cp->channelNo,
-                cp->eqNo,
-                cp->unitNo,
-                cp->col,
-                cp->binary ? "Char" : "Bin ",
-                cp->rawCard ? "Yes" : "No ",
-                cp->seqNum);
-            }
+        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", "3447", cp->channelNo, cp->eqNo, cp->unitNo);
         opDisplay(outBuf);
-
+        sprintf(outBuf, "   %-20s (", cp->curFileName != NULL ? cp->curFileName : "");
+        opDisplay(outBuf);
+        opDisplay(cp->binary ? "bin" : "char");
+        if (cp->rawCard) opDisplay(", raw");
+        sprintf(outBuf, ", seq %d", cp->seqNum);
         if (cp->isWatched)
             {
+            sprintf(outBuf, ", in %s/", cp->dirInput);
+            opDisplay(outBuf);
             if (cp->dirOutput != NULL)
                 {
-                sprintf(outBuf, "    >   Autoloading from '%s' to '%s'\n", cp->dirInput, cp->dirOutput);
+                sprintf(outBuf, ", out %s/", cp->dirOutput);
+                opDisplay(outBuf);
                 }
-            else
-                {
-                sprintf(outBuf, "    >   Autoloading from '%s'\n", cp->dirInput);
-                }
-            opDisplay(outBuf);
             }
-
-        cp = cp->nextUnit;
+        opDisplay(")\n");
         }
     }
 

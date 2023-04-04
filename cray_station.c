@@ -190,7 +190,10 @@ typedef struct feiLcpParams
 */
 typedef struct feiParam
     {
+    struct feiParam    *next;
     FeiState           state;
+    u8                 channelNo;
+    u8                 eqNo;
     time_t             nextConnectionAttempt;
     char               *serverName;
     struct sockaddr_in serverAddr;
@@ -245,6 +248,9 @@ static void csFeiLogPpBuffer(FeiParam *feip);
 **  Private Variables
 **  -----------------
 */
+
+static FeiParam *firstFei = NULL;
+static FeiParam *lastFei  = NULL;
 
 #if DEBUG
 static FILE *csFeiLog = NULL;
@@ -319,6 +325,18 @@ void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         exit(1);
         }
     dp->controllerContext       = feip;
+    if (firstFei == NULL)
+        {
+        firstFei = feip;
+        }
+    else
+        {
+        lastFei->next = feip;
+        }
+    lastFei = feip;
+
+    feip->channelNo             = channelNo;
+    feip->eqNo                  = eqNo;
     feip->state                 = StCsFeiDisconnected;
     feip->nextConnectionAttempt = 0;
     feip->fd = 0;
@@ -363,6 +381,62 @@ void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     */
     printf("(crayfei) Cray Station FEI initialised on channel %o equipment %o unit %o for Cray computer simulator at %s:%d\n",
            channelNo, eqNo, unitNo, feip->serverName, serverPort);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Show Cray FEI status (operator interface).
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void csFeiShowStatus()
+    {
+    FeiParam *feip;
+    u32      ipAddr;
+    char     outBuf[200];
+    char     peerAddress[24];
+    u16      port;
+
+    for (feip = firstFei; feip != NULL; feip = feip->next)
+        {
+        sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "CrayFEI", feip->channelNo, feip->eqNo);
+        opDisplay(outBuf);
+
+        ipAddr = ntohl(feip->serverAddr.sin_addr.s_addr);
+        port   = ntohs(feip->serverAddr.sin_port);
+        sprintf(peerAddress, "%d.%d.%d.%d:%d",
+          (ipAddr >> 24) & 0xff,
+          (ipAddr >> 16) & 0xff,
+          (ipAddr >>  8) & 0xff,
+          ipAddr         & 0xff,
+          port);
+
+        switch (feip->state)
+            {
+        case StCsFeiDisconnected:
+            sprintf(outBuf, FMTNETSTATUS"\n", ipAddress, peerAddress, "crs", "disconnected");
+            break;
+        case StCsFeiConnecting:
+            sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(feip->fd), peerAddress, "crs", "connecting");
+            break;
+        case StCsFeiSendLCP:
+        case StCsFeiSendSubsegment:
+        case StCsFeiRecvLCPLen:
+        case StCsFeiRecvLCP1:
+        case StCsFeiRecvLCP2:
+        case StCsFeiRecvSubsegmentLen:
+        case StCsFeiRecvSubsegment1:
+        case StCsFeiRecvSubsegment2:
+            sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(feip->fd), netGetPeerTcpAddress(feip->fd), "crs", "connected");
+            break;
+        default:
+            strcpy(outBuf, "\n");
+            break;
+            }
+        opDisplay(outBuf);
+        }
     }
 
 /*

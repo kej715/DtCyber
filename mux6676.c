@@ -123,12 +123,15 @@ typedef struct portParam
 
 typedef struct muxParam
     {
-    char      name[20];
-    int       type;
-    int       portCount;
-    int       ioTurns;
-    PortGroup portGroups[MaxPortGroups];
-    PortParam *ports;
+    struct muxParam *next;
+    char            name[20];
+    int             type;
+    u8              channelNo;
+    u8              eqNo;
+    int             portCount;
+    int             ioTurns;
+    PortGroup       portGroups[MaxPortGroups];
+    PortParam       *ports;
     } MuxParam;
 
 /*
@@ -166,8 +169,11 @@ u16 mux6676TelnetConns;
 **  Private Variables
 **  -----------------
 */
-static char connectingMsg[]   = "\r\nConnecting to host - please wait ...";
-static char noPortsAvailMsg[] = "\r\nNo free ports available - please try again later.\r\n";
+MuxParam *firstMux = NULL;
+MuxParam *lastMux  = NULL;
+
+static char connectingMsg[] = "\r\nConnecting to host - please wait ...";
+static char noPortsMsg[]    = "\r\nNo free ports available - please try again later.\r\n";
 
 #if DEBUG_6671
 static FILE *mux6671Log = NULL;
@@ -220,6 +226,69 @@ void mux6676Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     {
     mux667xInit(eqNo, channelNo, DtMux6676, params);
     }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Show mux status (operator interface).
+**
+**  Parameters:     Name        Description.
+**
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void mux6676ShowStatus()
+    {
+    char      *cts;
+    int       g;
+    int       i;
+    PortGroup *gp;
+    MuxParam  *mp;
+    char      *mts;
+    char      outBuf[200];
+    PortParam *pp;
+
+    for (mp = firstMux; mp != NULL; mp = mp->next)
+        {
+        if (mp->type == DtMux6676)
+            {
+            mts = "6676";
+            cts = "async";
+            }
+        else
+            {
+            mts = "6671";
+            cts = "mode4";
+            }
+        for (g = 0, gp = &mp->portGroups[0]; g < MaxPortGroups && gp->portCount > 0; g++, gp++)
+            {
+            if (gp->listenFd > 0)
+                {
+                sprintf(outBuf, "    >   %-8s C%02o E%02o     ",  mts, mp->channelNo, mp->eqNo);
+                opDisplay(outBuf);
+                sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(gp->listenFd), "", cts, "listening");
+                opDisplay(outBuf);
+                for (i = 0, pp = mp->ports + gp->portIndex; i < gp->portCount; i++, pp++)
+                    {
+                    if (pp->active && pp->connFd > 0)
+                        {
+                        sprintf(outBuf, "    >   %-8s         P%02o ",  mts, pp->id);
+                        opDisplay(outBuf);
+                        sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), cts, "connected");
+                        opDisplay(outBuf);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+/*
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise 667x terminal multiplexer.
@@ -289,8 +358,20 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
         fprintf(stderr, "(mux6676) Failed to allocate %s context block\n", mts);
         exit(1);
         }
+    if (firstMux == NULL)
+        {
+        firstMux = mp;
+        }
+    else
+        {
+        lastMux->next = mp;
+        }
+    lastMux  = mp;
+
     sprintf(mp->name, "%s_CH%02o_EQ%02o", mts, channelNo, eqNo);
     mp->type       = muxType;
+    mp->channelNo  = channelNo;
+    mp->eqNo       = eqNo;
     mp->ioTurns    = IoTurnsPerPoll - 1;
     if (params == NULL)
         {
@@ -311,7 +392,7 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
             else if (muxType == DtMux6676)
                 {
                 listenPort = mux6676TelnetPort;
-                portCount  = mux6676TelnetConns;
+                portCount  = maxPorts;
                 }
             else
                 {
@@ -321,7 +402,7 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
             }
         else if (numParam < 2)
             {
-            portCount = ((muxType == DtMux6676) ? mux6676TelnetConns : 16) - mp->portCount;
+            portCount = maxPorts - mp->portCount;
             }
         if (listenPort < 0 || listenPort > 65535)
             {
@@ -790,8 +871,7 @@ static void mux667xCheckIo(MuxParam *mp)
 
     FD_ZERO(&readFds);
     FD_ZERO(&writeFds);
-    maxFd         = 0;
-    availablePort = NULL;
+    maxFd = 0;
 
     for (i = 0, pp = mp->ports; i < mp->portCount; i++, pp++)
         {
@@ -970,7 +1050,7 @@ static void mux667xCheckIo(MuxParam *mp)
                 {
                 if (mp->type == DtMux6676)
                     {
-                    send(fd, noPortsAvailMsg, strlen(noPortsAvailMsg), 0);
+                    send(fd, noPortsMsg, strlen(noPortsMsg), 0);
                     }
                 netCloseConnection(fd);
                 }

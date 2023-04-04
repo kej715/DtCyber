@@ -134,11 +134,11 @@ u16 platoConns;
 */
 static int              currInPort;
 static u32              currOutput;
-static DevSlot          *in;
+static DevSlot          *in = NULL;
 static int              ioTurns = IoTurnsPerPoll - 1;
-static DevSlot          *out;
+static DevSlot          *out = NULL;
 static int              lastInPort;
-static int              listenFd;
+static int              listenFd = 0;
 static LocalRing        localInput[NiuLocalStations];
 static int              obytes;
 static niuProcessOutput *outputHandler[NiuLocalStations];
@@ -332,6 +332,40 @@ void niuSetOutputHandler(niuProcessOutput *h, int stat)
         exit(1);
         }
     outputHandler[stat] = h;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Show NIU status (operator interface).
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void niuShowStatus()
+    {
+    int       g;
+    int       i;
+    char      outBuf[200];
+    PortParam *pp;
+
+    if (listenFd > 0)
+        {
+        sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "NIU", in->channel->id, in->eqNo);
+        opDisplay(outBuf);
+        sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(listenFd), "", "plato", "listening");
+        opDisplay(outBuf);
+        for (i = 0, pp = portVector; i < platoConns; i++, pp++)
+            {
+            if (pp->active && pp->connFd > 0)
+                {
+                sprintf(outBuf, "    >   %-8s         P%02o ", "NIU", pp->id);
+                opDisplay(outBuf);
+                sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), "plato", "connected");
+                opDisplay(outBuf);
+                }
+            }
+        }
     }
 
 /*
@@ -911,6 +945,7 @@ static void niuClose(PortParam *pp)
     {
     netCloseConnection(pp->connFd);
     pp->active = FALSE;
+    pp->connFd = 0;
 #if DEBUG_NET
     fprintf(niuLog, "\n%010u connection closed on port %02o",
             traceSequenceNo, pp->id);
