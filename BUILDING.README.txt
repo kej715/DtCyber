@@ -10,3 +10,14 @@ In older Ubuntu versions and older X11s in general, there used to be the fonts
 To use these fonts on modern installations, you MUST also install xfonts-base, AND (xfonts-75dpi OR xfonts-100dpi)
 and log off/on again to ensure that the X11 fonts server is refreshed.
 
+============================
+BUILDING dtCYBER on MAC/OSX.
+============================
+
+For recent versions of OSX (e.g. OSX 10.8 or later):
+
+Before making dtCyber on OSX you need to install the XQuartz X11 server from
+https://www.xquartz.org else the build will fail with missing X11 header files.
+
+XQuartz must also be running before starting dtCyber else the startup will fail as the X11 display server
+can not be found.
