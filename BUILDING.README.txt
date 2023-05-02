@@ -10,3 +10,53 @@ In older Ubuntu versions and older X11s in general, there used to be the fonts
 To use these fonts on modern installations, you MUST also install xfonts-base, AND (xfonts-75dpi OR xfonts-100dpi)
 and log off/on again to ensure that the X11 fonts server is refreshed.
 
+====================================
+BUILDING dtCYBER on Raspberry Pi OS
+====================================
+
+Suggested steps BEFORE cloning and making dtCyber listed below.
+
+Based on starting with clean default image of 23 bit Raspberry Pi OS with desktop.
+
+Last tested with Pi OS Bullseye, released February 21st 2023. However, none of the steps below is known to be OS version
+dependent so should work with 64bit OS and later OS releases.
+
+Lest tested with Kevin Jordan's repo at https://github.com/kej715/DtCyber
+
+Update, upgrade and reboot
+	sudo apt-get update -y
+	sudo apt dist-upgrade -y
+	sudo reboot
+
+Install any display drivers or VNC server now.
+
+Check if 32 bit or 64 bit (to use correct makefile later):
+	uname -m
+
+Install git-lfs (else you will not be able to clone the dtCyber repo)
+	sudo apt-get install git-lfs
+
+Install Node 16.x, and check version
+	curl -sSL https://deb.nodesource.com/setup_16.x | sudo bash -
+	sudo apt-get install -y nodejs
+	node -v
+
+Install X11 development and fonts, and reboot to load fonts
+	sudo apt-get install libx11-dev x11-utils xfonts-base xfonts-75dpi xfonts-100dpi xfonts-utils
+	sudo reboot
+
+Clone repo
+	git clone <dtCyber repo of your choice>
+
+Switch to dtcyber directory and build (change ‘make’ below for 64 bit)
+	cd DtCyber
+	make -f Makefile.linux64-armv8
+
+Execute
+	npm install
+manually in three folders: automation, rje-station, stk, and webterm.
+
+Change directory to the CDC OS version desired, and use ‘sudo node ….’ following README to install and run CDC OS.
+
+
+
