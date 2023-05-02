@@ -82,6 +82,9 @@ following commands:
 To build *dtcyber* on Windows, open the solution file (*DtCyber.sln*) in Visual
 Studio and build the project defined by it.
 
+Additional per platform build information (Linux, OSX, Raspberry Pi) is 
+in [BUILDING.README.txt](BUILDING.README.txt).
+
 ## Contributing
 See [CONTRIBUTING.md](CONTRIBUTING.md) for information about contributing new
 features, enhancements, and bug fixes to the simulator.
