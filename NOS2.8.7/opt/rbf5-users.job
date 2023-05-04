@@ -19,4 +19,6 @@ EXIT.
   PW=RJE2,
   RL=ALL,
   AP=NUL,
+  AP=RBF,
+/INSTALL,
   AP=RBF
