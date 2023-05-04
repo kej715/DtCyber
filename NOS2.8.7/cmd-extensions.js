@@ -44,6 +44,10 @@ const cmdExtensions = [
       return dtc.disconnect()
       .then(() => dtc.exec("node", ["mailer-configure"]))
       .then(() => dtc.exec("node", ["netmail-configure"]))
+      .then(() => {
+        dtc.flushCache();
+        return Promise.resolve();
+      })
       .then(() => dtc.connect())
       .then(() => dtc.expect([ {re:/Operator> $/} ]));
     }
@@ -54,6 +58,10 @@ const cmdExtensions = [
     fn:    (dtc, args) => {
       return dtc.disconnect()
       .then(() => dtc.exec("node", ["njf-configure"]))
+      .then(() => {
+        dtc.flushCache();
+        return Promise.resolve();
+      })
       .then(() => dtc.connect())
       .then(() => dtc.expect([ {re:/Operator> $/} ]));
     }
@@ -67,6 +75,10 @@ const cmdExtensions = [
         typeof args !== "undefined" && args.length > 0
         ? ["reconfigure"].concat(args.split(" "))
         : ["reconfigure"]))
+      .then(() => {
+        dtc.flushCache();
+        return Promise.resolve();
+      })
       .then(() => dtc.connect())
       .then(() => dtc.expect([ {re:/Operator> $/} ]));
     }
@@ -77,6 +89,10 @@ const cmdExtensions = [
     fn:    (dtc, args) => {
       return dtc.disconnect()
       .then(() => dtc.exec("node", ["rhp-configure"]))
+      .then(() => {
+        dtc.flushCache();
+        return Promise.resolve();
+      })
       .then(() => dtc.connect())
       .then(() => dtc.expect([ {re:/Operator> $/} ]));
     }
