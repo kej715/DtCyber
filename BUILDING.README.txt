@@ -30,13 +30,16 @@ Suggested steps BEFORE cloning and making dtCyber listed below.
 
 Based on starting with clean default image of 32 or 64 bit Raspberry Pi OS with desktop.
 
-Last tested with Pi OS Bullseye 32 bit, released February 21st 2023.
-However, none of the steps below is known to be OS version dependent so should work with 64bit OS and later
-Rpi OS releases.
+Tested with Pi OS Bullseye 32 bit, released February 21st 2023.
+Tested with Kevin Jordan's repo at https://github.com/kej715/DtCyber
+Tested on: Rpi model 3B,
 
-Lest tested with Kevin Jordan's repo at https://github.com/kej715/DtCyber
+Notes:
+    1. Does not work on original Raspberry Pi Zero. Changes will be needed to support ARM6 CPU.
+    2. However, none of the steps below is known to be OS version dependent so should work with 64bit OS and later
+       Rpi OS releases.
 
-Tested on: Rpi model 3B
+Steps ...
 
 Update, upgrade and reboot
 	sudo apt-get update -y
@@ -45,13 +48,10 @@ Update, upgrade and reboot
 
 Install any display drivers or VNC server now.
 
-Check if 32 bit or 64 bit (to use correct makefile later):
-	uname -m
-
 Install git-lfs (else you will not be able to clone the dtCyber repo)
 	sudo apt-get install git-lfs
 
-Install Node 16.x, and check version
+Install Node 16.x
 	curl -sSL https://deb.nodesource.com/setup_16.x | sudo bash -
 	sudo apt-get install -y nodejs
 	node -v
