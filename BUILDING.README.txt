@@ -67,8 +67,10 @@ Switch to dtcyber directory and build (change ‘make’ below for 64 bit)
 	cd DtCyber
 	make -f Makefile.linux64-armv8
 
+Continue with normal setup ....
+
 Execute
 	npm install
-manually in three folders: automation, rje-station, stk, and webterm.
+manually in four folders: automation, rje-station, stk, and webterm.
 
 Change directory to the CDC OS version desired, and use ‘sudo node ….’ following README to install and run CDC OS.
