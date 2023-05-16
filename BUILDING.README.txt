@@ -30,7 +30,7 @@ Suggested steps BEFORE cloning and making dtCyber listed below.
 
 Based on starting with clean default image of 32 or 64 bit Raspberry Pi OS with desktop.
 
-Tested with Pi OS Bullseye 32 bit, released February 21st 2023.
+Tested with Pi OS Bullseye 32 bit, released May 3rd 2023.
 Tested with Kevin Jordan's repo at https://github.com/kej715/DtCyber
 Tested on: Rpi model 3B,
 
@@ -41,20 +41,25 @@ Notes:
 
 Steps ...
 
-Update, upgrade and reboot
+Update, upgrade and reboot:
 	sudo apt-get update -y
 	sudo apt dist-upgrade -y
 	sudo reboot
 
 Install any display drivers or VNC server now.
 
-Install git-lfs (else you will not be able to clone the dtCyber repo)
+Install git-lfs (else you will not be able to clone the dtCyber repo):
 	sudo apt-get install git-lfs
 
-Install Node 16.x
+Either install Node 16.x (all Rpi models except older models based on ARM6):
 	curl -sSL https://deb.nodesource.com/setup_16.x | sudo bash -
 	sudo apt-get install -y nodejs
 	node -v
+
+Or install Node 16.x for older ARM6 (i.e. for original Pi Zero)
+    wget https://unofficial-builds.nodejs.org/download/release/v16.20.0/node-v16.20.0-linux-armv6l.tar.xz
+    tar xvfJ node-v16.20.0-linux-armv6l.tar.xz
+    sudo cp -R node-v16.20.0-linux-armv6l/* /usr/local
 
 Install X11 development and required fonts, and reboot to load fonts
 	sudo apt-get install libx11-dev x11-utils xfonts-base xfonts-75dpi xfonts-100dpi xfonts-utils
@@ -74,3 +79,15 @@ Execute
 manually in four folders: automation, rje-station, stk, and webterm.
 
 Change directory to the CDC OS version desired, and use ‘sudo node ….’ following README to install and run CDC OS.
+
+===== Notes for Original Pi Zero =======
+
+Install unofficial build of NodeJS for Arm6
+    wget https://unofficial-builds.nodejs.org/download/release/v16.20.0/node-v16.20.0-linux-armv6l.tar.xz
+    tar xvfJ node-v16.20.0-linux-armv6l.tar.xz
+    sudo cp -R node-v16.20.0-linux-armv6l/* /usr/local
+    node -v
+
+Aside - if you want to see the build flags enabled by the native build use:
+    gcc -march=native -E -v - </dev/null 2>&1 | grep cc1
+
