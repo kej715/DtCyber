@@ -118,7 +118,8 @@ class PrinterStreamMgr {
 class DtCyber {
 
   constructor() {
-    this.streamMgrs = {};
+    this.streamMgrs     = {};
+    this.iniMainSection = "cyber";
   }
 
   /*
@@ -333,14 +334,16 @@ class DtCyber {
     }
     let host  = null;
     if (typeof port !== "undefined") {
-      const ci = port.indexOf(":");
-      if (ci !== -1) {
-        host = port.substring(0, ci).trim();
-        port = parseInt(port.substring(ci + 1));
-      }
-      else if (port.indexOf(".") !== -1) {
-        host = port;
-        port = undefined;
+      if (typeof port === "string") {
+        const ci = port.indexOf(":");
+        if (ci !== -1) {
+          host = port.substring(0, ci).trim();
+          port = parseInt(port.substring(ci + 1));
+        }
+        else if (port.indexOf(".") !== -1) {
+          host = port;
+          port = undefined;
+        }
       }
     }
     if (host === null) {
@@ -350,8 +353,8 @@ class DtCyber {
       const props = this.getIniProperties();
       if (typeof this.operatorPort === "undefined") {
         let operatorSection = null;
-        if (typeof props["cyber"] !== "undefined") {
-          for (const line of props["cyber"]) {
+        if (typeof props[this.iniMainSection] !== "undefined") {
+          for (const line of props[this.iniMainSection]) {
             let ei = line.indexOf("=");
             if (ei === -1) continue;
             let key = line.substring(0, ei).trim().toUpperCase();
@@ -930,8 +933,8 @@ class DtCyber {
   getHostIpAddress() {
     const props = this.getIniProperties();
     let ipAddress = "127.0.0.1";
-    if (typeof props["cyber"] !== "undefined") {
-      for (const line of props["cyber"]) {
+    if (typeof props[this.iniMainSection] !== "undefined") {
+      for (const line of props[this.iniMainSection]) {
         let ei = line.indexOf("=");
         if (ei === -1) continue;
         let key = line.substring(0, ei).trim().toUpperCase();
@@ -1351,6 +1354,18 @@ class DtCyber {
    */
   setExitOnClose(isExitOnClose) {
     this.isExitOnClose = isExitOnClose;
+  }
+
+  /*
+   * setIniMainSection
+   *
+   * Sets the name of the main section of the cyber.ini properties file.
+   *
+   * Arguments:
+   *   name - name to set
+   */
+  setIniMainSection(name) {
+    this.iniMainSection = name;
   }
 
   /*

@@ -485,7 +485,7 @@ Example:
 ROUTE,MYJOB,DC=TO,ST=MAX.
 ```
 
-### <id="njf-vs-tlf"></a>NJF vs TLF
+### <a id="njf-vs-tlf"></a>NJF vs TLF
 Both NJF and TLF can send jobs from NOS 2.8.7 to other mainframes for execution, so
 why use one instead of the other? NJF uses the NJE protocol to communicate with other
 systems, and TLF uses the HASP protocol. NJE is a kind of HASP next generation. NJE

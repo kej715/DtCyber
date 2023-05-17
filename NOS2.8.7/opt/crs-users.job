@@ -15,4 +15,6 @@ EXIT.
   RL=ALL,
   AW=ALL,
   AP=NUL,
+  AP=ICF,
+/INSTALL,
   AP=ICF
