@@ -16,78 +16,77 @@ BUILDING dtCYBER on MAC/OSX.
 
 For recent versions of OSX (e.g. OSX 10.8 or later):
 
-Before making dtCyber on OSX you need to install the XQuartz X11 server from
+Before making dtCyber on any recent OSX you need to install the XQuartz X11 server from
 https://www.xquartz.org else the build will fail with missing X11 header files.
 
-XQuartz must also be running before starting dtCyber else the startup will fail as the X11 display server
+XQuartz must also be running and the XQuartz shall used to start dtCyber else the startup will fail as the X11 display server
 can not be found.
+
+Running 'node start' may require sudo.
 
 ====================================
 BUILDING dtCYBER on Raspberry Pi OS
 ====================================
 
-Suggested steps BEFORE cloning and making dtCyber listed below.
+Background:
+    Based on starting with clean default image of 32 or 64 bit Raspberry Pi OS with desktop.
+        No benefit seen with 64 bit OS version.
 
-Based on starting with clean default image of 32 or 64 bit Raspberry Pi OS with desktop.
+    Tested with Pi OS Bullseye 32 bit, released May 3rd 2023.
+    Tested with Kevin Jordan's repo at https://github.com/kej715/DtCyber
+    Tested on: Pi model 3B, 3B+, 4B, Zero 2 W
+        See notes below if you want to run on older ARM7 or ARM 6 models
 
-Tested with Pi OS Bullseye 32 bit, released May 3rd 2023.
-Tested with Kevin Jordan's repo at https://github.com/kej715/DtCyber
-Tested on: Rpi model 3B,
-
-Notes:
-    1. Does not work on original Raspberry Pi Zero. Changes will be needed to support ARM6 CPU.
-    2. However, none of the steps below is known to be OS version dependent so should work with 64bit OS and later
-       Rpi OS releases.
-
-Steps ...
+Suggested steps ...
 
 Update, upgrade and reboot:
 	sudo apt-get update -y
 	sudo apt dist-upgrade -y
 	sudo reboot
 
-Install any display drivers or VNC server now.
+Install and test any display drivers or VNC server now.
 
 Install git-lfs (else you will not be able to clone the dtCyber repo):
 	sudo apt-get install git-lfs
 
-Either install Node 16.x (all Rpi models except older models based on ARM6):
+Install Node 16.x:
 	curl -sSL https://deb.nodesource.com/setup_16.x | sudo bash -
 	sudo apt-get install -y nodejs
 	node -v
 
-Or install Node 16.x for older ARM6 (i.e. for original Pi Zero)
-    wget https://unofficial-builds.nodejs.org/download/release/v16.20.0/node-v16.20.0-linux-armv6l.tar.xz
-    tar xvfJ node-v16.20.0-linux-armv6l.tar.xz
-    sudo cp -R node-v16.20.0-linux-armv6l/* /usr/local
-
-Install X11 development and required fonts, and reboot to load fonts
+Install X11 development and required fonts, and critically reboot to load fonts
 	sudo apt-get install libx11-dev x11-utils xfonts-base xfonts-75dpi xfonts-100dpi xfonts-utils
 	sudo reboot
 
 Clone repo
 	git clone <dtCyber repo of your choice>
 
-Switch to dtcyber directory and build (change ‘make’ below for 64 bit)
+Continue with normal setup .... E.g. Switch to dtcyber directory and build
 	cd DtCyber
-	make -f Makefile.linux64-armv8
+	make -f Makefile.linux64-armv8 all
+	...
+	Remember to make 'all' to install the NodeJS library
 
-Continue with normal setup ....
 
-Execute
-	npm install
-manually in four folders: automation, rje-station, stk, and webterm.
+===== Notes for Older Models of Raspberry Pi =======
 
-Change directory to the CDC OS version desired, and use ‘sudo node ….’ following README to install and run CDC OS.
+FYI, DtCyber will run on the original Pi Zero but is very slow to both compile and run, and
+the console flickers. However, if you want to try ...
 
-===== Notes for Original Pi Zero =======
+ARM6: Raspberry Pi 1 Model A, A+, B, B+ and Zero (Single-core ARM1176JZF-S)
 
-Install unofficial build of NodeJS for Arm6
-    wget https://unofficial-builds.nodejs.org/download/release/v16.20.0/node-v16.20.0-linux-armv6l.tar.xz
-    tar xvfJ node-v16.20.0-linux-armv6l.tar.xz
-    sudo cp -R node-v16.20.0-linux-armv6l/* /usr/local
-    node -v
+    1. Install unofficial build of NodeJS for Arm6. E.g.
+        wget https://unofficial-builds.nodejs.org/download/release/v16.20.0/node-v16.20.0-linux-armv6l.tar.xz
+        tar xvfJ node-v16.20.0-linux-armv6l.tar.xz
+        sudo cp -R node-v16.20.0-linux-armv6l/* /usr/local
+        node -v
 
-Aside - if you want to see the build flags enabled by the native build use:
-    gcc -march=native -E -v - </dev/null 2>&1 | grep cc1
+    2. Set the cflags on the Makefile to do best build for this CPU (this woks well on most all Linux machines)
+        CFLAGS  = -O3 -I. $(INCL) $(EXTRACFLAGS) -std=gnu99 -march=native -mcpu=native -mtune=native
 
+Arm 7: Raspberry Pi 2 Model B (Quad-core ARM Cortex-A7)
+
+    Provided you have installed the ARM7 version of NodeJS you need only change the CFLAGS as above.
+
+Note, however, if you follow the steps for ARM6 above you can swap the SD card between any Pi
+and just 'make ... clean', 'make ... all' to rebuild the code for the installed CPU.
