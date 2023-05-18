@@ -10,19 +10,18 @@ In older Ubuntu versions and older X11s in general, there used to be the fonts
 To use these fonts on modern installations, you MUST also install xfonts-base, AND (xfonts-75dpi OR xfonts-100dpi)
 and log off/on again to ensure that the X11 fonts server is refreshed.
 
+Depending on Linux version you may also find the step-by-step install onto a Raspberry Pi below helpful.
+
 ============================
 BUILDING dtCYBER on MAC/OSX.
 ============================
 
 For recent versions of OSX (e.g. OSX 10.8 or later):
 
-Before making dtCyber on any recent OSX you need to install the XQuartz X11 server from
-https://www.xquartz.org else the build will fail with missing X11 header files.
+    Before making dtCyber on any recent OSX you need to install the XQuartz X11 server from
+    https://www.xquartz.org else the build will fail with missing X11 header files.
 
-XQuartz must also be running and the XQuartz shall used to start dtCyber else the startup will fail as the X11 display server
-can not be found.
-
-Running 'node start' may require sudo.
+Running 'node start' may require sudo
 
 ====================================
 BUILDING dtCYBER on Raspberry Pi OS
@@ -30,12 +29,13 @@ BUILDING dtCYBER on Raspberry Pi OS
 
 Background:
     Based on starting with clean default image of 32 or 64 bit Raspberry Pi OS with desktop.
-        No benefit seen with 64 bit OS version.
+        No benefit seen with 64-bit OS version.
 
     Tested with Pi OS Bullseye 32 bit, released May 3rd 2023.
     Tested with Kevin Jordan's repo at https://github.com/kej715/DtCyber
     Tested on: Pi model 3B, 3B+, 4B, Zero 2 W
-        See notes below if you want to run on older ARM7 or ARM 6 models
+        The Pi Zero 2 W runs dtCyber well and is good value at US $15
+        See notes below if you want to run on older ARM7 or ARM 6 models of the Pi
 
 Suggested steps ...
 
@@ -58,15 +58,14 @@ Install X11 development and required fonts, and critically reboot to load fonts
 	sudo apt-get install libx11-dev x11-utils xfonts-base xfonts-75dpi xfonts-100dpi xfonts-utils
 	sudo reboot
 
-Clone repo
-	git clone <dtCyber repo of your choice>
-
-Continue with normal setup .... E.g. Switch to dtcyber directory and build
+Continue with normal setup ... E.g. Git clone repo and switch to dtcyber directory and build
+    git clone <dtCyber repo of your choice>
 	cd DtCyber
 	make -f Makefile.linux64-armv8 all
 	...
 	Remember to make 'all' to install the NodeJS library
 
+Running 'node start' may require sudo
 
 ===== Notes for Older Models of Raspberry Pi =======
 
@@ -81,12 +80,12 @@ ARM6: Raspberry Pi 1 Model A, A+, B, B+ and Zero (Single-core ARM1176JZF-S)
         sudo cp -R node-v16.20.0-linux-armv6l/* /usr/local
         node -v
 
-    2. Set the cflags on the Makefile to do best build for this CPU (this woks well on most all Linux machines)
+    2. Set the cflags on the Makefile to do best build for this CPU (this works well on almost all Linux machines)
         CFLAGS  = -O3 -I. $(INCL) $(EXTRACFLAGS) -std=gnu99 -march=native -mcpu=native -mtune=native
 
 Arm 7: Raspberry Pi 2 Model B (Quad-core ARM Cortex-A7)
 
-    Provided you have installed the ARM7 version of NodeJS you need only change the CFLAGS as above.
+    1. Provided you have installed the ARM7 version of NodeJS you need only change the CFLAGS as above.
 
-Note, however, if you follow the steps for ARM6 above you can swap the SD card between any Pi
-and just 'make ... clean', 'make ... all' to rebuild the code for the installed CPU.
+Note, however, if you follow the steps for ARM6 build above with the CFLAGS change you can swap the SD
+card between any Pi and just 'make ... clean', 'make ... all' to rebuild the code for the installed CPU.
