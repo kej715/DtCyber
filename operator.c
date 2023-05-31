@@ -1414,14 +1414,12 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
             break;
             }
         cp += 1;
-        sleepMsec(opKeyInterval);
-        // 20220609: sjz Removing this - because the above should be "it" // opWaitKeyConsume();
+        opWaitKeyConsume();
         }
     if (*cp != '!')
         {
         opKeyIn = '\r';
-        sleepMsec(opKeyInterval);
-        // 20220609: sjz Removing this - because the above should be "it" // opWaitKeyConsume();
+        opWaitKeyConsume();
         }
     }
 
@@ -1445,7 +1443,7 @@ static void opHelpEnterKeys(void)
 
 static void opWaitKeyConsume()
     {
-    while (opKeyIn != 0 || ppKeyIn != 0)
+    while (opKeyIn != 0)
         {
         sleepMsec(opKeyWaitInterval);
         }
