@@ -46,6 +46,13 @@ Update, upgrade and reboot:
 
 Install and test any display drivers or VNC server now.
 
+Increase swap size (only strictly necessary for 512K and 1GB memory, but just do it).
+    sudo dphys-swapfile swapoff
+    sudo nano /etc/dphys-swapfile
+	    Edit CONF_SWAPSIZE=100 -> CONF_SWAPSIZE=1024
+    sudo dphys-swapfile setup
+    sudo dphys-swapfile swapon
+
 Install git-lfs (else you will not be able to clone the dtCyber repo):
 	sudo apt-get install git-lfs
 
