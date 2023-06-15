@@ -78,3 +78,5 @@ EXIT.
 ~include ../mods/NOS/XULBTAP.mod
 ~eor
 ~include ../mods/NOS/XXATFTO.mod
+~eor
+~include ../mods/NOS/0PIMSFX.mod
