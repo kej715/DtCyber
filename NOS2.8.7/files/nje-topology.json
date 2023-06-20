@@ -1,4 +1,18 @@
 {
+  "D13MD1": {
+    "desc": "William Schaub's secondary node",
+    "os": "NOS 2.8.7",
+    "software": "NJEF",
+    "link": "D13MD2",
+    "lid": "MD1"
+  },
+  "D13MD2": {
+    "desc": "William Schaub's primary node",
+    "os": "NOS 2.8.7",
+    "software": "NJEF",
+    "link": "NCCMAX",
+    "lid": "MD2"
+  },
   "NCCMAX": {
     "desc": "CDC Cyber 865 at the Nostalgic Computing Center",
     "os": "NOS 2.8.7",
