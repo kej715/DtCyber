@@ -43,7 +43,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG    0
+#define DEBUG    1
 
 /*
 **  -------------
@@ -422,7 +422,7 @@ void npuNjeTryOutput(Pcb *pcbp)
                 break;
                 }
             }
-        if (tcbp->state == StTermHostConnected)
+        if (tcbp->state == StTermConnected)
             {
             npuNjeTransmitQueuedBlocks(pcbp);
             }
@@ -1013,25 +1013,22 @@ void npuNjeNotifyTermConnect(Tcb *tcbp)
         fprintf(npuNjeLog, "Port %02x: no network connection, disconnect terminal %.7s\n",
                 tcbp->pcbp->claPort, tcbp->termName);
 #endif
-        npuSvmDiscRequestTerminal(tcbp);
+        npuSvmSendDiscRequest(tcbp);
         }
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Handles a terminal disconnect request from SVM.
+**  Purpose:        Handles a terminal disconnect event from SVM.
 **
 **  Parameters:     Name        Description.
-**                  tcbp        pointer to TCB of terminal disconnecting
+**                  tcbp        pointer to TCB of disconnected terminal
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
 void npuNjeNotifyTermDisconnect(Tcb *tcbp)
     {
-#if DEBUG
-    fprintf(npuNjeLog, "Port %02x: disconnect terminal %.7s\n", tcbp->pcbp->claPort, tcbp->termName);
-#endif
-    npuSvmSendDiscRequest(tcbp);
+    // nothing to be done
     }
 
 /*--------------------------------------------------------------------------
@@ -1371,7 +1368,7 @@ static void npuNjeCloseConnection(Pcb *pcbp)
     tcbp = npuNjeFindTcb(pcbp);
     if (tcbp != NULL)
         {
-        npuSvmDiscRequestTerminal(tcbp);
+        npuSvmSendDiscRequest(tcbp);
         }
     npuNetCloseConnection(pcbp);
     }
@@ -1809,7 +1806,7 @@ static void npuNjeSendUplineBlock(Pcb *pcbp, NpuBuffer *bp, u8 *dp, u8 blockType
     npuBipQueueAppend(bp, &pcbp->controls.nje.uplineQ);
 
     tcbp = npuNjeFindTcb(pcbp);
-    if ((tcbp != NULL) && (tcbp->state == StTermHostConnected))
+    if ((tcbp != NULL) && (tcbp->state == StTermConnected))
         {
         npuNjeTransmitQueuedBlocks(pcbp);
         }
