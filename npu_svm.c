@@ -628,7 +628,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
     case PfcICN:
         if (tp->state != StTermRequestConnection)
             {
-            npuLogMessage("(npu_svm) Unexpected Terminal Connection Reply in state %s", termConnStates[tp->state]);
+            npuLogMessage("(npu_svm) Unexpected terminal connection reply in state %s", termConnStates[tp->state]);
             break;
             }
 
@@ -795,12 +795,8 @@ void npuSvmSendDiscRequest(Tcb *tp)
 
     switch (tp->state)
         {
-    case StTermRequestConnection: // indicates awaiting response to terminal connection request
-        fprintf(stderr, "(npu_svm) Warning - disconnect request issued for %.7s in state %s\n",
-                tp->termName, termConnStates[tp->state]);
-
-    // fall through
-    case StTermConnected:     // terminal is connected
+    case StTermRequestConnection: // awaiting response to terminal connection request
+    case StTermConnected:         // terminal is connected
         /*
         **  Clean up flow control state and discard any pending output.
         */
