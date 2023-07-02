@@ -483,6 +483,12 @@
     "desc": "Chicago, IL",
     "link": "NCCMAX"
   },
+  "ZVM72MSH":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "Houston, TX",
+    "link": "NCCMAX"
+  },
   "ZW01":{
     "os": "VM/370",
     "software": "RSCS",
