@@ -145,6 +145,18 @@ static bool npuSvmRequestTerminalConnection(Tcb *tp);
 u8 npuSvmCouplerNode = 1;
 u8 npuSvmNpuNode     = 2;
 
+/*
+**  Table of terminal connection state names, indexed by terminal
+**  connection state value (TermConnState).
+*/
+char *npuSvmTermStates[] = {
+    "Idle",
+    "Request Connection",
+    "Connected",
+    "NPU Request Disconnect",
+    "Host Request Disconnect"
+};
+
 extern void (*npuHipResetFunc)(void);
 
 /*
@@ -242,18 +254,6 @@ static char *svmStates[] = {
 };
 
 static u8 oldRegLevel = 0;
-
-/*
-**  Table of terminal connection state names, indexed by terminal
-**  connection state value (TermConnState).
-*/
-static char *termConnStates[] = {
-    "StTermIdle",
-    "StTermRequestConnection",
-    "StTermConnected",
-    "StTermNpuRequestDisconnect",
-    "StTermHostRequestDisconnect"
-};
 
 /*
 **  Table of functions that notify TIPs of terminal connection,
@@ -371,7 +371,7 @@ void npuSvmReset(void)
 void npuSvmNotifyTermDisconnect(Tcb *tp)
     {
 #if DEBUG
-    fprintf(npuSvmLog, "Notify TIP of %.7s disconnect in state %s\n", tp->termName, termConnStates[tp->state]);
+    fprintf(npuSvmLog, "Notify TIP of %.7s disconnect in state %s\n", tp->termName, npuSvmTermStates[tp->state]);
 #endif
 
     notifyTermDisconnect[tp->pcbp->ncbp->connType](tp);
@@ -628,7 +628,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
     case PfcICN:
         if (tp->state != StTermRequestConnection)
             {
-            npuLogMessage("(npu_svm) Unexpected terminal connection reply in state %s", termConnStates[tp->state]);
+            npuLogMessage("(npu_svm) Unexpected terminal connection reply in state %s", npuSvmTermStates[tp->state]);
             break;
             }
 
@@ -656,7 +656,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
         if (block[BlkOffSfc] == SfcTA)
             {
 #if DEBUG
-            fprintf(npuSvmLog, "TCN/TA/R received for %.7s in state %s\n", tp->termName, termConnStates[tp->state]);
+            fprintf(npuSvmLog, "TCN/TA/R received for %.7s in state %s\n", tp->termName, npuSvmTermStates[tp->state]);
 #endif
             /*
             **  Host requests terminal disconnection.
@@ -677,7 +677,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
         else if (block[BlkOffSfc] == (SfcTA | SfcResp))
             {
 #if DEBUG
-            fprintf(npuSvmLog, "TCN/TA/N received for %.7s in state %s\n", tp->termName, termConnStates[tp->state]);
+            fprintf(npuSvmLog, "TCN/TA/N received for %.7s in state %s\n", tp->termName, npuSvmTermStates[tp->state]);
 #endif
             if (tp->state == StTermNpuRequestDisconnect)
                 {
@@ -690,7 +690,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
                 }
             else
                 {
-                npuLogMessage("(npu_svm) Unexpected TCN/TA/N for CN %d received in state %s", cn, termConnStates[tp->state]);
+                npuLogMessage("(npu_svm) Unexpected TCN/TA/N for CN %d received in state %s", cn, npuSvmTermStates[tp->state]);
                 }
             }
         else
@@ -729,7 +729,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
 void npuSvmProcessTermBlock(Tcb *tp)
     {
 #if DEBUG
-    fprintf(npuSvmLog, "Process TERM block for %.7s in state %s\n", tp->termName, termConnStates[tp->state]);
+    fprintf(npuSvmLog, "Process TERM block for %.7s in state %s\n", tp->termName, npuSvmTermStates[tp->state]);
 #endif
 
     if (tp->state == StTermHostRequestDisconnect)
@@ -771,7 +771,7 @@ void npuSvmProcessTermBlock(Tcb *tp)
 void npuSvmSendDiscReply(Tcb *tp)
     {
 #if DEBUG
-    fprintf(npuSvmLog, "Send TCN/TA/N for %.7s in state %s\n", tp->termName, termConnStates[tp->state]);
+    fprintf(npuSvmLog, "Send TCN/TA/N for %.7s in state %s\n", tp->termName, npuSvmTermStates[tp->state]);
 #endif
 
     responseTerminateConnection[BlkOffP3] = tp->cn;
@@ -790,7 +790,7 @@ void npuSvmSendDiscReply(Tcb *tp)
 void npuSvmSendDiscRequest(Tcb *tp)
     {
 #if DEBUG
-    fprintf(npuSvmLog, "Send TCN/TA/R for %.7s in state %s\n", tp->termName, termConnStates[tp->state]);
+    fprintf(npuSvmLog, "Send TCN/TA/R for %.7s in state %s\n", tp->termName, npuSvmTermStates[tp->state]);
 #endif
 
     switch (tp->state)
@@ -814,8 +814,10 @@ void npuSvmSendDiscRequest(Tcb *tp)
     case StTermIdle:                   // terminal is not yet configured or connected
     case StTermNpuRequestDisconnect:   // disconnection has been requested by NPU/MDI
     case StTermHostRequestDisconnect:  // disconnection has been requested by host
-        fprintf(stderr, "(npu_svm) Warning - disconnect request ignored for %.7s in state %s\n",
-                tp->termName, termConnStates[tp->state]);
+#if DEBUG
+        fprintf(npuSvmLog, "Warning - disconnect request ignored for %.7s in state %s\n",
+                tp->termName, npuSvmTermStates[tp->state]);
+#endif
         break;
 
     default:
@@ -851,7 +853,7 @@ bool npuSvmIsReady(void)
 void npuSvmSendTermBlock(Tcb *tp)
     {
 #if DEBUG
-    fprintf(npuSvmLog, "Send TERM block for %.7s in state %s\n", tp->termName, termConnStates[tp->state]);
+    fprintf(npuSvmLog, "Send TERM block for %.7s in state %s\n", tp->termName, npuSvmTermStates[tp->state]);
 #endif
 
     blockTerminateConnection[BlkOffCN] = tp->cn;
