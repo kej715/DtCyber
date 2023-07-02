@@ -716,11 +716,11 @@ typedef struct tipParams
 */
 typedef enum
     {
-    StTermIdle = 0,            // not configured or connected
-    StTermRequestConnection,   // connection request sent
-    StTermHostConnected,       // configured and connected
-    StTermRequestDisconnect,   // disconnect request sent
-    StTermRequestTerminate     // connection terminate block sent
+    StTermIdle = 0,             // not configured or connected
+    StTermRequestConnection,    // connection request sent
+    StTermConnected,            // configured and connected
+    StTermNpuRequestDisconnect, // disconnect request sent
+    StTermHostRequestDisconnect // connection terminate block sent
     } TermConnState;
 
 /*
@@ -825,11 +825,12 @@ void npuBipNotifyUplineSent(void);
 void npuSvmInit(void);
 void npuSvmReset(void);
 void npuSvmNotifyHostRegulation(u8 regLevel);
+void npuSvmNotifyTermDisconnect(Tcb *tp);
 void npuSvmProcessBuffer(NpuBuffer *bp);
+void npuSvmProcessTermBlock(Tcb *tp);
 bool npuSvmConnectTerminal(Pcb *pp);
-void npuSvmDiscRequestTerminal(Tcb *tp);
-void npuSvmDiscReplyTerminal(Tcb *tp);
 bool npuSvmIsReady(void);
+void npuSvmSendDiscReply(Tcb *tp);
 void npuSvmSendDiscRequest(Tcb *tp);
 void npuSvmSendTermBlock(Tcb *tp);
 

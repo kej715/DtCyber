@@ -487,6 +487,7 @@ extern u16                 npuNetTcpConns;
 extern u16                 npuNetTelnetPort;
 extern u8                  npuSvmCouplerNode;
 extern u8                  npuSvmNpuNode;
+extern char                *npuSvmTermStates[];
 extern volatile bool       opActive;
 extern char                opKeyIn;
 extern long                opKeyInterval;

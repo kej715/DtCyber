@@ -56,5 +56,455 @@
     "software": "NJEF",
     "link": "NCCMAX",
     "lid": "MT1"
+  },
+  "AEARN":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "10-Oct-2019 12:00:00",
+    "link": "NCCMAX"
+  },
+  "ALIJKU12":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "Austria",
+    "link": "NCCMAX"
+  },
+  "ALIJKU14":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "Austria",
+    "link": "NCCMAX"
+  },
+  "ALIJKU15":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "Austria",
+    "link": "NCCMAX"
+  },
+  "ALIJKU21":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "Austria",
+    "link": "NCCMAX"
+  },
+  "ALIJKU65":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "Austria",
+    "link": "NCCMAX"
+  },
+  "ARCHVM":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "Craig, NC",
+    "link": "NCCMAX"
+  },
+  "AUSSIE2":{
+    "os": "Sinenomine NJE",
+    "software": "Unknown",
+    "desc": "Marist, NY",
+    "link": "NCCMAX"
+  },
+  "BEARN":{
+    "os": "VM/370r5",
+    "software": "RSCS",
+    "desc": "Berlin, Germany",
+    "link": "NCCMAX"
+  },
+  "BILHA":{
+    "os": "VAX/VMS 5.0",
+    "software": "JNET",
+    "desc": "Chicago, IL",
+    "link": "NCCMAX"
+  },
+  "BTP":{
+    "os": "openVMS 8.4",
+    "software": "JNET",
+    "desc": "Dublin, Ireland",
+    "link": "NCCMAX"
+  },
+  "BTP":{
+    "os": "openVMS 8.4",
+    "software": "JNET",
+    "desc": "Dublin, Ireland",
+    "link": "NCCMAX"
+  },
+  "CEARN":{
+    "os": "VM/370r5",
+    "software": "RSCS",
+    "desc": "Zurich, Switzerland",
+    "link": "NCCMAX"
+  },
+  "CEARN":{
+    "os": "VM/370r5",
+    "software": "RSCS",
+    "desc": "Zurich, Switzerland",
+    "link": "NCCMAX"
+  },
+  "CHPDR":{
+    "os": "Linux",
+    "software": "FUNETNJE",
+    "desc": "Stockholdm, Sweden",
+    "link": "NCCMAX"
+  },
+  "CHZETH3C":{
+    "os": "Linux",
+    "software": "FUNETNJE",
+    "desc": "Zurich",
+    "link": "NCCMAX"
+  },
+  "CLOUDY":{
+    "os": "OpenVMS 7.3",
+    "software": "JNET",
+    "desc": "Germantown, MD",
+    "link": "NCCMAX"
+  },
+  "DEARN":{
+    "os": "VM/370r5",
+    "software": "RSCS",
+    "desc": "Berlin, Germany",
+    "link": "NCCMAX"
+  },
+  "DEARN":{
+    "os": "VM/370r5",
+    "software": "RSCS",
+    "desc": "Berlin, Germany",
+    "link": "NCCMAX"
+  },
+  "DEBEMVS1":{
+    "os": "MVS 3.8j",
+    "software": "NJE38",
+    "desc": "Berlin, Germany",
+    "link": "NCCMAX"
+  },
+  "DESWAMVS":{
+    "os": "MVS 3.8 NJE38",
+    "software": "NJE38",
+    "desc": "Germany",
+    "link": "NCCMAX"
+  },
+  "DMUPEJ3A":{
+    "os": "VM/370r5",
+    "software": "RSCS",
+    "desc": "Munich, Germany",
+    "link": "NCCMAX"
+  },
+  "DMUPEJ3B":{
+    "os": "VM/370r5",
+    "software": "RSCS",
+    "desc": "Munich, Germany",
+    "link": "NCCMAX"
+  },
+  "DRNBRX3":{
+    "os": "VM/370r5",
+    "software": "RSCS",
+    "desc": "Berlin, Germany",
+    "link": "NCCMAX"
+  },
+  "DRNMIG1A":{
+    "os": "VM/370r5",
+    "software": "RSCS",
+    "desc": "Berlin, Germany",
+    "link": "NCCMAX"
+  },
+  "DRNMIG3A":{
+    "os": "VM/370r5",
+    "software": "RSCS",
+    "desc": "Berlin, Germany",
+    "link": "NCCMAX"
+  },
+  "FEDACH":{
+    "os": "Linux",
+    "software": "FUNETNJE",
+    "desc": "Germantown, MD",
+    "link": "NCCMAX"
+  },
+  "FRYJLX1":{
+    "os": "Linux",
+    "software": "FUNETNJE",
+    "desc": "France",
+    "link": "NCCMAX"
+  },
+  "GAVMATL":{
+    "os": "VM/370 R6 RSCS",
+    "software": "RSCS",
+    "desc": "Atlanta, GA",
+    "link": "NCCMAX"
+  },
+  "HOUCICS":{
+    "os": "MVS 3.8",
+    "software": "NJE38",
+    "desc": "Chicago,IL",
+    "link": "NCCMAX"
+  },
+  "HOUMVS1":{
+    "os": "MVS 3.8j 8505",
+    "software": "NJE38",
+    "desc": "Chicago, Illinois",
+    "link": "NCCMAX"
+  },
+  "HOUMVS2":{
+    "os": "MVS 3.8j 8505",
+    "software": "NJE38",
+    "desc": "Chicago, Illinois",
+    "link": "NCCMAX"
+  },
+  "HOUSP1":{
+    "os": "MVS/3.8",
+    "software": "NJE38",
+    "desc": "Chicago,IL",
+    "link": "NCCMAX"
+  },
+  "HOUSP2":{
+    "os": "MVS/3.8",
+    "software": "NJE38",
+    "desc": "Chicago,IL",
+    "link": "NCCMAX"
+  },
+  "HOUVAX1":{
+    "os": "openVMS 7.3",
+    "software": "JNET",
+    "desc": "Chicago, Illinois",
+    "link": "NCCMAX"
+  },
+  "IMPVAX":{
+    "os": "OpenVMS 7.3",
+    "software": "JNET",
+    "desc": "Germantown, MD",
+    "link": "NCCMAX"
+  },
+  "IRLEARN":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "Dublin, Ireland",
+    "link": "NCCMAX"
+  },
+  "MDSDMV1":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "GERMANTWON,MD",
+    "link": "NCCMAX"
+  },
+  "MOSHIX":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "Chicago, Illinois",
+    "link": "NCCMAX"
+  },
+  "MOSHIX2":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "Chicago, Illinois",
+    "link": "NCCMAX"
+  },
+  "MOSHIX5":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "Cloud",
+    "link": "NCCMAX"
+  },
+  "MSHPRD1":{
+    "os": "vm/370",
+    "software": "Unknown",
+    "desc": "Chicago, Illinois",
+    "link": "NCCMAX"
+  },
+  "MSHPRD2":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "Chicago, Illinois",
+    "link": "NCCMAX"
+  },
+  "N00DLE":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "Iowa",
+    "link": "NCCMAX"
+  },
+  "NJEVX1":{
+    "os": "OpenVMS 7.3",
+    "software": "JNET",
+    "desc": "Germantown, MD",
+    "link": "NCCMAX"
+  },
+  "NJEVX2":{
+    "os": "OpenVMS 7.3",
+    "software": "JNET",
+    "desc": "Germantown, MD",
+    "link": "NCCMAX"
+  },
+  "NLGERVM":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "The Netherlands",
+    "link": "NCCMAX"
+  },
+  "NLHKX1":{
+    "os": "OS/VS2 MVS 3.8 NJE38",
+    "software": "Unknown",
+    "desc": "The Netherlands",
+    "link": "NCCMAX"
+  },
+  "PARODLX1":{
+    "os": "Linux",
+    "software": "FUNETNJE",
+    "desc": "Pennsilvania",
+    "link": "NCCMAX"
+  },
+  "QCOCAL":{
+    "os": "OpenVMS 7.3",
+    "software": "JNET",
+    "desc": "Germantown, MD",
+    "link": "NCCMAX"
+  },
+  "RELAY":{
+    "os": "Linux",
+    "software": "FUNETNJE",
+    "desc": "NYC",
+    "link": "NCCMAX"
+  },
+  "RELAYB":{
+    "os": "Linux",
+    "software": "FUNETNJE",
+    "desc": "Chicago",
+    "link": "NCCMAX"
+  },
+  "RELAYD":{
+    "os": "Sine Nomine NJE",
+    "software": "Unknown",
+    "desc": "Chicago",
+    "link": "NCCMAX"
+  },
+  "SAMVM1":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "Sammarish, WA",
+    "link": "NCCMAX"
+  },
+  "SELXM1":{
+    "os": "Linux",
+    "software": "LinuxNJE",
+    "desc": "Stockholm, Sweden",
+    "link": "NCCMAX"
+  },
+  "SELXM2":{
+    "os": "Linux",
+    "software": "LinuxNJE",
+    "desc": "Stockholm, Sweden",
+    "link": "NCCMAX"
+  },
+  "SELXM3":{
+    "os": "Linux",
+    "software": "LinuxNJE",
+    "desc": "Stockholm, Sweden",
+    "link": "NCCMAX"
+  },
+  "SEVMM1":{
+    "os": "Linux",
+    "software": "LinuxNJE",
+    "desc": "Stockholm, Sweden",
+    "link": "NCCMAX"
+  },
+  "TANJPVM1":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "Tokyo,Japan",
+    "link": "NCCMAX"
+  },
+  "TSTVAX":{
+    "os": "OpenVMS 7.3",
+    "software": "JNET",
+    "desc": "Germantown, MD",
+    "link": "NCCMAX"
+  },
+  "TSVMSA":{
+    "os": "VAX/VMS 7.3",
+    "software": "JNET",
+    "desc": "Chicago, IL",
+    "link": "NCCMAX"
+  },
+  "TSVMSA":{
+    "os": "VAX/VMS 7.3",
+    "software": "JNET",
+    "desc": "Chicago, IL",
+    "link": "NCCMAX"
+  },
+  "TSVMST":{
+    "os": "VAX/VMS 7.3",
+    "software": "JNET",
+    "desc": "Chicago, IL",
+    "link": "NCCMAX"
+  },
+  "TSVMST":{
+    "os": "VAX/VMS 7.3",
+    "software": "JNET",
+    "desc": "Chicago, IL",
+    "link": "NCCMAX"
+  },
+  "TSVMSZ":{
+    "os": "VAX/VMS 7.3",
+    "software": "JNET",
+    "desc": "Chicago, IL",
+    "link": "NCCMAX"
+  },
+  "UKCOLMVS":{
+    "os": "MVS 3.8 NJE38",
+    "software": "NJE38",
+    "desc": "UK",
+    "link": "NCCMAX"
+  },
+  "VAXSTN":{
+    "os": "OpenVMS 7.3",
+    "software": "JNET",
+    "desc": "Germantown, MD",
+    "link": "NCCMAX"
+  },
+  "WABMVS":{
+    "os": "MVS 3.8 NJE38",
+    "software": "NJE38",
+    "desc": "USA",
+    "link": "NCCMAX"
+  },
+  "WABNET":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "12-Nov-2019 12:00:00",
+    "link": "NCCMAX"
+  },
+  "WABPI":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "12-Nov-2019 12:00:00",
+    "link": "NCCMAX"
+  },
+  "ZILPAH":{
+    "os": "VAX/VMS 4.7",
+    "software": "JNET",
+    "desc": "Chicago, IL",
+    "link": "NCCMAX"
+  },
+  "ZVM72MSH":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "Houston, TX",
+    "link": "NCCMAX"
+  },
+  "ZW01":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "12-Nov-2019 12:00:00",
+    "link": "NCCMAX"
+  },
+  "ZW14I":{
+    "os": "VM/370",
+    "software": "RSCS",
+    "desc": "12-Nov-2019 12:00:00",
+    "link": "NCCMAX"
+  },
+  "ZW15":{
+    "os": "VM/370 r6",
+    "software": "RSCS",
+    "desc": "Craig, NC",
+    "link": "NCCMAX"
   }
 }

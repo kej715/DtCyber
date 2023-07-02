@@ -1937,6 +1937,7 @@ bool npuHaspNotifyNetConnect(Pcb *pcbp, bool isPassive)
 **------------------------------------------------------------------------*/
 void npuHaspNotifyNetDisconnect(Pcb *pcbp)
     {
+    int i;
     Tcb *tp;
 
 #if DEBUG
@@ -1945,7 +1946,7 @@ void npuHaspNotifyNetDisconnect(Pcb *pcbp)
     tp = pcbp->controls.hasp.consoleStream.tp;
     if (tp != NULL)
         {
-        npuSvmDiscRequestTerminal(tp);
+        npuSvmSendDiscRequest(tp);
         }
     npuNetCloseConnection(pcbp);
     }
@@ -2015,7 +2016,7 @@ void npuHaspNotifyTermConnect(Tcb *tp)
 
     if (pcbp->connFd <= 0)
         {
-        npuSvmDiscRequestTerminal(tp);
+        npuSvmSendDiscRequest(tp);
 #if DEBUG
         fprintf(npuHaspLog, "Port %02x: no network connection, disconnect stream %d (%.7s)\n",
                 pcbp->claPort, streamId, tp->termName);
@@ -2059,7 +2060,7 @@ void npuHaspNotifyTermConnect(Tcb *tp)
             fprintf(npuHaspLog, "Port %02x: attempt to initialize stream for invalid device type %u\n",
                     pcbp->claPort, deviceType);
 #endif
-            npuSvmDiscRequestTerminal(tp);
+            npuSvmSendDiscRequest(tp);
             break;
             }
         }
@@ -2069,7 +2070,7 @@ void npuHaspNotifyTermConnect(Tcb *tp)
         fprintf(npuHaspLog, "Port %02x: attempt to initialize invalid stream id %u\n",
                 pcbp->claPort, streamId);
 #endif
-        npuSvmDiscRequestTerminal(tp);
+        npuSvmSendDiscRequest(tp);
         }
     if (scbp != NULL)
         {
@@ -2082,10 +2083,10 @@ void npuHaspNotifyTermConnect(Tcb *tp)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Handles a terminal disconnect request from SVM.
+**  Purpose:        Handles a terminal disconnect event from SVM.
 **
 **  Parameters:     Name        Description.
-**                  tp          pointer to TCB of stream disconnecting
+**                  tp          pointer to TCB of disconnected stream
 **
 **  Returns:        Nothing.
 **
@@ -2098,45 +2099,42 @@ void npuHaspNotifyTermDisconnect(Tcb *tp)
 
     pcbp = tp->pcbp;
 
-    tp2 = pcbp->controls.hasp.consoleStream.tp;
-    if (tp2 != NULL)
+    if (tp->deviceType == DtCONSOLE)
         {
+        for (i = 0; i < MaxHaspStreams; ++i)
+            {
+            tp2 = pcbp->controls.hasp.readerStreams[i].tp;
+            if (tp2 != NULL)
+                {
 #if DEBUG
-        fprintf(npuHaspLog, "Port %02x: disconnect stream %d (%.7s)\n", pcbp->claPort,
-                tp2->streamId, tp2->termName);
+                fprintf(npuHaspLog, "Port %02x: disconnect stream %d (%.7s)\n", pcbp->claPort,
+                        tp2->streamId, tp2->termName);
 #endif
-        npuSvmSendDiscRequest(tp2);
+                npuSvmSendDiscRequest(tp2);
+                }
+            tp2 = pcbp->controls.hasp.printStreams[i].tp;
+            if (tp2 != NULL)
+                {
+#if DEBUG
+                fprintf(npuHaspLog, "Port %02x: disconnect stream %d (%.7s)\n", pcbp->claPort,
+                        tp2->streamId, tp2->termName);
+#endif
+                npuSvmSendDiscRequest(tp2);
+                }
+            tp2 = pcbp->controls.hasp.punchStreams[i].tp;
+            if (tp2 != NULL)
+                {
+#if DEBUG
+                fprintf(npuHaspLog, "Port %02x: disconnect stream %d (%.7s)\n", pcbp->claPort,
+                        tp2->streamId, tp2->termName);
+#endif
+                npuSvmSendDiscRequest(tp2);
+                }
+            }
         }
-
-    for (i = 0; i < MaxHaspStreams; ++i)
+    else
         {
-        tp2 = pcbp->controls.hasp.readerStreams[i].tp;
-        if (tp2 != NULL)
-            {
-#if DEBUG
-            fprintf(npuHaspLog, "Port %02x: disconnect stream %d (%.7s)\n", pcbp->claPort,
-                    tp2->streamId, tp2->termName);
-#endif
-            npuSvmSendDiscRequest(tp2);
-            }
-        tp2 = pcbp->controls.hasp.printStreams[i].tp;
-        if (tp2 != NULL)
-            {
-#if DEBUG
-            fprintf(npuHaspLog, "Port %02x: disconnect stream %d (%.7s)\n", pcbp->claPort,
-                    tp2->streamId, tp2->termName);
-#endif
-            npuSvmSendDiscRequest(tp2);
-            }
-        tp2 = pcbp->controls.hasp.punchStreams[i].tp;
-        if (tp2 != NULL)
-            {
-#if DEBUG
-            fprintf(npuHaspLog, "Port %02x: disconnect stream %d (%.7s)\n", pcbp->claPort,
-                    tp2->streamId, tp2->termName);
-#endif
-            npuSvmSendDiscRequest(tp2);
-            }
+        npuHaspCloseStream(tp);
         }
     }
 
@@ -2406,7 +2404,7 @@ static void npuHaspCloseConnection(Pcb *pcbp)
 #endif
     if (pcbp->controls.hasp.consoleStream.tp != NULL)
         {
-        npuSvmDiscRequestTerminal(pcbp->controls.hasp.consoleStream.tp);
+        npuSvmSendDiscRequest(pcbp->controls.hasp.consoleStream.tp);
         }
     npuNetCloseConnection(pcbp);
     }
@@ -3857,7 +3855,7 @@ static void npuHaspTransmitQueuedBlocks(Tcb *tp)
     NpuBuffer *bp;
     Scb       *scbp;
 
-    if (tp != NULL && tp->state == StTermHostConnected)
+    if (tp != NULL && tp->state == StTermConnected)
         {
         scbp = tp->scbp;
         while (tp->uplineBlockLimit > 0

@@ -569,7 +569,7 @@ void npuNetDisconnected(Tcb *tp)
     **  Cleanup connection.
     */
     npuNetSetMaxCN(tp->cn);
-    npuLogMessage("(npu_net) Connection dropped on port %d", tp->pcbp->claPort);
+    npuLogMessage("(npu_net) Connection %02x dropped on port %d", tp->cn, tp->pcbp->claPort);
     }
 
 /*--------------------------------------------------------------------------
