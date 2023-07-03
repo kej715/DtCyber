@@ -1,4 +1,11 @@
 {
+  "CHNE0001": {
+    "desc": "Pedro Almeida's node",
+    "os": "NOS 2.8.7",
+    "software": "NJEF",
+    "link": "NCCMAX",
+    "lid": "MCH"
+  },
   "D13MD2": {
     "desc": "William Schaub's primary node",
     "os": "NOS 2.8.7",
