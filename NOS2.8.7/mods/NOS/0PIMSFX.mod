@@ -43,4 +43,3 @@
           LDM    FSN  SET FACTORY SECTOR NUMBER
           STD    T7 
 */        END OF MODSET *0PIMSFX*.
-~eor
