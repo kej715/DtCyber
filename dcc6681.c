@@ -419,14 +419,14 @@ static FcStatus dcc6681Func(PpWord funcCode)
         rc = (active3000Device->func)(funcCode);
         if (rc == FcDeclined)
             {
-            mp->status = StFc6681IntReject;
+            mp->status = StFc6681Reject;
+            return FcProcessed;
             }
         else
             {
             mp->status = StFc6681Ready;
+            return rc;
             }
-
-        return (rc);
         }
 
     mp->status = StFc6681IntReject;
