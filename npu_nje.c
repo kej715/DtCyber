@@ -1578,7 +1578,7 @@ static Pcb *npuNjeFindPcbForCr(char *rhost, u32 rip, char *ohost, u32 oip)
             && (strcasecmp(npuNetHostID, ohost) == 0)
             && (pcbp->controls.nje.remoteIP == rip
                 || pcbp->controls.nje.remoteIP == 0)
-            && (pcbp->controls.nje.localIP == oip))
+/*          && (pcbp->controls.nje.localIP == oip) */ )
             {
             return pcbp;
             }
