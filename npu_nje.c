@@ -330,13 +330,13 @@ static u8 SYN_NAK[] =
 **  Special non-transparent NAM messages
 */
 static char *ApplicationFailed       = "APPLICATION FAILED.";
-static int  ApplicationFailedLen     = 19;
+#define     ApplicationFailedLen       19
 static char *ApplicationNotPresent   = "APPLICATION NOT PRESENT.";
-static int  ApplicationNotPresentLen = 24;
+#define     ApplicationNotPresentLen   24
 static char *ApplicationBusy         = "APPLICATION BUSY";
-static int  ApplicationBusyLen       = 16;
-static char *LoggedOut   = "LOGGED OUT.";
-static int  LoggedOutLen = 11;
+#define     ApplicationBusyLen         16
+static char *LoggedOut               = "LOGGED OUT.";
+#define     LoggedOutLen               11
 
 /*
  **--------------------------------------------------------------------------
@@ -978,10 +978,16 @@ bool npuNjeNotifyNetConnect(Pcb *pcbp, bool isPassive)
 **------------------------------------------------------------------------*/
 void npuNjeNotifyNetDisconnect(Pcb *pcbp)
     {
+    Tcb *tcbp;
+
+    tcbp = npuNjeFindTcb(pcbp);
+    if (tcbp == NULL || tcbp->state == StTermConnected || time(0) > pcbp->controls.nje.deadline)
+        {
 #if DEBUG
-    fprintf(npuNjeLog, "Port %02x: network disconnection indication\n", pcbp->claPort);
+        fprintf(npuNjeLog, "Port %02x: network disconnection indication\n", pcbp->claPort);
 #endif
-    npuNjeCloseConnection(pcbp);
+        npuNjeCloseConnection(pcbp);
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -1083,6 +1089,7 @@ void npuNjeResetPcb(Pcb *pcbp)
     pcbp->controls.nje.lastDownlineRCB  = 0;
     pcbp->controls.nje.lastDownlineSRCB = 0;
     pcbp->controls.nje.retries          = 0;
+    pcbp->controls.nje.deadline         = (time_t)0;
     pcbp->controls.nje.lastXmit         = (time_t)0;
     pcbp->controls.nje.inputBufPtr      = pcbp->controls.nje.inputBuf;
     pcbp->controls.nje.outputBufPtr     = pcbp->controls.nje.outputBuf;
@@ -1510,6 +1517,7 @@ static bool npuNjeConnectTerminal(Pcb *pcbp)
     tcbp = npuNjeFindTcb(pcbp);
     if (tcbp == NULL)
         {
+        pcbp->controls.nje.deadline = time(0) + (time_t)10;
         return npuSvmConnectTerminal(pcbp);
         }
     else

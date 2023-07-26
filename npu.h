@@ -584,6 +584,7 @@ typedef struct njecb
     u8           lastDownlineRCB;  // last downline RCB processed
     u8           lastDownlineSRCB; // last downline SRCB processed
     int          retries;          // count of upline block retransmission attempts
+    time_t       deadline;         // terminal connection deadline
     time_t       lastXmit;         // timestamp of last data transmission to peer
     int          pingInterval;     // interval in seconds between pings during idle periods
     u8           *inputBuf;        // NJE/TCP block input buffer
