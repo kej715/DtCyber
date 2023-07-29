@@ -814,10 +814,8 @@ void npuSvmSendDiscRequest(Tcb *tp)
     case StTermIdle:                   // terminal is not yet configured or connected
     case StTermNpuRequestDisconnect:   // disconnection has been requested by NPU/MDI
     case StTermHostRequestDisconnect:  // disconnection has been requested by host
-#if DEBUG
-        fprintf(npuSvmLog, "Warning - disconnect request ignored for %.7s in state %s\n",
+        fprintf(stderr, "Warning - disconnect request ignored for %.7s in state %s\n",
                 tp->termName, npuSvmTermStates[tp->state]);
-#endif
         break;
 
     default:
