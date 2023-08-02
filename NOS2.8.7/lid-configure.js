@@ -186,7 +186,7 @@ dtc.connect()
     };
     adjacentPid.lids[lid] = `NLID,LID=${lid}.`;
     if (typeof node.njeLid !== "undefined") {
-      adjacentPid.lids[node.njeLid] = `NLID,LID=${node.njeLid}.`;
+      adjacentPid.lids[node.njeLid] = `NLID,LID=${node.njeLid},ENABLED=NO.`;
     }
     lidConf[lid] = adjacentPid;
   }
