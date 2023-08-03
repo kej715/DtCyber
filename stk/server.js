@@ -137,7 +137,13 @@ const httpServer = http.createServer((req, res) => {
               body += `,F=${(typeof volume.format !== "undefined") ? volume.format : "I"}`;
               body += `,LB=${(typeof volume.labeled !== "undefined" && volume.labeled) ? "KL" : "KU"}`;
               body += `,M=${(typeof volume.readOnly !== "undefined" && !volume.readOnly) ? "WRITE" : "READ"}`;
-              body += ",GO\n";
+              if (typeof volume.avsns !== "undefined") {
+                body += "\n";
+                for (const avsn of volume.avsns) {
+                  body += `,AVSN=${avsn}`;
+                }
+              }
+              body += "\nGO\n";
               body += "GO\n";
             }
           }
