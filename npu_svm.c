@@ -686,7 +686,10 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
                 **  Reset connection state.
                 */
                 tp->state = StTermIdle;
-                npuNetSetMaxCN(tp->cn);
+                /*
+                **  and disconnect the network.
+                */
+                npuNetDisconnected(tp);
                 }
             else
                 {
@@ -738,6 +741,7 @@ void npuSvmProcessTermBlock(Tcb *tp)
         **  Host has echoed a TERM block sent previously, now send an TCN/TA/N to host.
         */
         npuSvmSendDiscReply(tp);
+        npuSvmNotifyTermDisconnect(tp);
         tp->state = StTermIdle;
         /*
         **  and disconnect the network.

@@ -1948,7 +1948,10 @@ void npuHaspNotifyNetDisconnect(Pcb *pcbp)
         {
         npuSvmSendDiscRequest(tp);
         }
-    npuNetCloseConnection(pcbp);
+    else
+        {
+        npuNetCloseConnection(pcbp);
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -2406,7 +2409,10 @@ static void npuHaspCloseConnection(Pcb *pcbp)
         {
         npuSvmSendDiscRequest(pcbp->controls.hasp.consoleStream.tp);
         }
-    npuNetCloseConnection(pcbp);
+    else
+        {
+        npuNetCloseConnection(pcbp);
+        }
     }
 
 /*--------------------------------------------------------------------------
