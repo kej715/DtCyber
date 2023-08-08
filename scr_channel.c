@@ -333,11 +333,25 @@ static void scrExecute(PpWord func)
                 scrSetBit(scrRegister, 0263);
                 break;
 
-            case 010000000:
+            case 010000000: // 875
                 scrSetBit(scrRegister, 0260);
                 scrSetBit(scrRegister, 0261);
                 scrClrBit(scrRegister, 0262);
                 scrClrBit(scrRegister, 0263);
+                break;
+
+            case 014000000: // 875
+                scrSetBit(scrRegister, 0260);
+                scrSetBit(scrRegister, 0261);
+                scrSetBit(scrRegister, 0262);
+                scrClrBit(scrRegister, 0263);
+                break;
+
+            case 020000000: // 875
+                scrSetBit(scrRegister, 0260);
+                scrSetBit(scrRegister, 0261);
+                scrSetBit(scrRegister, 0262);
+                scrSetBit(scrRegister, 0263);
                 break;
 
             default:
