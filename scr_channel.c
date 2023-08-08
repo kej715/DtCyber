@@ -333,6 +333,13 @@ static void scrExecute(PpWord func)
                 scrSetBit(scrRegister, 0263);
                 break;
 
+            case 010000000:
+                scrSetBit(scrRegister, 0260);
+                scrSetBit(scrRegister, 0261);
+                scrClrBit(scrRegister, 0262);
+                scrClrBit(scrRegister, 0263);
+                break;
+
             default:
                 scrClrBit(scrRegister, 0260);
                 scrClrBit(scrRegister, 0261);
@@ -348,14 +355,19 @@ static void scrExecute(PpWord func)
         if (modelType == ModelCyber865)
             {
             /*
-            **  Enable "is a 865 or 875" bit.
-            */
-            scrSetBit(scrRegister, 0264);
-
-            /*
-            **  Disable "is a 875" bit.
-            */
-            scrClrBit(scrRegister, 0265);
+             *  If memory is greater than 4000000B set 170M-875
+             */
+            if (cpuMaxMemory > 04000000)
+                {
+                scrSetBit(scrRegister, 0214); // 170M-875 status
+                scrClrBit(scrRegister, 0264); // 865 status
+                scrSetBit(scrRegister, 0265); // 875 status
+                }
+            else
+                {
+                scrSetBit(scrRegister, 0264); // 865 status
+                scrClrBit(scrRegister, 0265); // 875 status
+                }
 
             /*
             **  Enable or disable "has CP1" bit.

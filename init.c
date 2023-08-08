@@ -627,7 +627,8 @@ static void initCyber(char *config)
         if ((memory != 01000000)
             && (memory != 02000000)
             && (memory != 03000000)
-            && (memory != 04000000))
+            && (memory != 04000000)
+            && (memory != 010000000))
             {
             fprintf(stderr, "(init   ) file '%s' section [%s]: Cyber 170-865 memory must be configured in 262K increments\n", startupFile, config);
             exit(1);
