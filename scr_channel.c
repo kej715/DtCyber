@@ -327,10 +327,20 @@ static void scrExecute(PpWord func)
                 break;
 
             case 04000000:
-                scrSetBit(scrRegister, 0260);
-                scrSetBit(scrRegister, 0261);
-                scrSetBit(scrRegister, 0262);
-                scrSetBit(scrRegister, 0263);
+                if ((features & IsCyber875) != 0)
+                    {
+                    scrSetBit(scrRegister, 0260);
+                    scrClrBit(scrRegister, 0261);
+                    scrClrBit(scrRegister, 0262);
+                    scrClrBit(scrRegister, 0263);
+                    }
+                else
+                    {
+                    scrSetBit(scrRegister, 0260);
+                    scrSetBit(scrRegister, 0261);
+                    scrSetBit(scrRegister, 0262);
+                    scrSetBit(scrRegister, 0263);
+                    }
                 break;
 
             case 010000000: // 875
@@ -368,10 +378,7 @@ static void scrExecute(PpWord func)
     case 017:
         if (modelType == ModelCyber865)
             {
-            /*
-             *  If memory is greater than 4000000B set 170M-875
-             */
-            if (cpuMaxMemory > 04000000)
+            if ((features & IsCyber875) != 0)
                 {
                 scrSetBit(scrRegister, 0214); // 170M-875 status
                 scrClrBit(scrRegister, 0264); // 865 status

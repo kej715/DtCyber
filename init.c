@@ -167,6 +167,10 @@ static ModelFeatures featuresCyber840A =
 static ModelFeatures featuresCyber865 =
     (IsSeries800 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasStatusAndControlReg
      | HasRelocationRegShort | HasMicrosecondClock | HasInstructionStack | HasIStackPrefetch | Has175Float);
+static ModelFeatures featuresCyber875 =
+    (IsSeries800 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasStatusAndControlReg
+     | HasRelocationRegShort | HasMicrosecondClock | HasInstructionStack | HasIStackPrefetch | Has175Float
+     | IsCyber875);
 
 static InitConnType connTypes[] =
     {
@@ -599,6 +603,11 @@ static void initCyber(char *config)
         modelType = ModelCyber865;
         features  = featuresCyber865;
         }
+    else if (stricmp(model, "CYBER875") == 0)
+        {
+        modelType = ModelCyber865;
+        features  = featuresCyber875;
+        }
     else
         {
         fprintf(stderr, "(init   ) file '%s' section [%s]: 'model' specified unsupported mainframe type '%s'\n",
@@ -636,9 +645,17 @@ static void initCyber(char *config)
                 startupFile, config);
             exit(1);
             }
-        if (memory > 04000000)
+        if (memory > 04000000 && (features & IsCyber875) == 0)
             {
+            fputs("(init   ) Model coerced to CYBER875 due to memory size\n", stdout);
             strcpy(model, "CYBER875");
+            features = featuresCyber875;
+            }
+        else if (memory < 04000000 && (features & IsCyber875) != 0)
+            {
+            fputs("(init   ) Model coerced to CYBER865 due to memory size\n", stdout);
+            strcpy(model, "CYBER865");
+            features = featuresCyber865;
             }
         }
 
