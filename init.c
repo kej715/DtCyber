@@ -636,6 +636,10 @@ static void initCyber(char *config)
                 startupFile, config);
             exit(1);
             }
+        if (memory > 04000000)
+            {
+            strcpy(model, "CYBER875");
+            }
         }
 
     (void)initGetInteger("ecsbanks", 0, &ecsBanks);
@@ -720,11 +724,11 @@ static void initCyber(char *config)
     cpuInit(model, memory, ecsBanks + esmBanks, ecsBanks != 0 ? ECS : ESM);
     if (ecsBanks + esmBanks == 0)
         {
-        fprintf(stdout, "(init   ) Successfully Configured Model %s with %d CPUs.\n", model, cpuCount);
+        fprintf(stdout, "(init   ) Successfully configured model %s with %d CPUs.\n", model, cpuCount);
         }
     else
         {
-        fprintf(stdout, "(init   ) Successfully Configured Model %s with %d CPUs and %ld banks of %s.\n", model, cpuCount, ecsBanks + esmBanks, ecsBanks != 0 ? "ESM" : "ECS");
+        fprintf(stdout, "(init   ) Successfully configured model %s with %d CPUs and %ld banks of %s.\n", model, cpuCount, ecsBanks + esmBanks, ecsBanks != 0 ? "ESM" : "ECS");
         }
 
 
