@@ -167,6 +167,10 @@ static ModelFeatures featuresCyber840A =
 static ModelFeatures featuresCyber865 =
     (IsSeries800 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasStatusAndControlReg
      | HasRelocationRegShort | HasMicrosecondClock | HasInstructionStack | HasIStackPrefetch | Has175Float);
+static ModelFeatures featuresCyber875 =
+    (IsSeries800 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasStatusAndControlReg
+     | HasRelocationRegShort | HasMicrosecondClock | HasInstructionStack | HasIStackPrefetch | Has175Float
+     | IsCyber875);
 
 static InitConnType connTypes[] =
     {
@@ -599,6 +603,11 @@ static void initCyber(char *config)
         modelType = ModelCyber865;
         features  = featuresCyber865;
         }
+    else if (stricmp(model, "CYBER875") == 0)
+        {
+        modelType = ModelCyber865;
+        features  = featuresCyber875;
+        }
     else
         {
         fprintf(stderr, "(init   ) file '%s' section [%s]: 'model' specified unsupported mainframe type '%s'\n",
@@ -627,10 +636,26 @@ static void initCyber(char *config)
         if ((memory != 01000000)
             && (memory != 02000000)
             && (memory != 03000000)
-            && (memory != 04000000))
+            && (memory != 04000000)
+            && (memory != 010000000)
+            && (memory != 014000000)
+            && (memory != 020000000))
             {
-            fprintf(stderr, "(init   ) file '%s' section [%s]: Cyber 170-865 memory must be configured in 262K increments\n", startupFile, config);
+            fprintf(stderr, "(init   ) file '%s' section [%s]: Cyber 865 memory must be configured in 262K increments, and Cyber 875 memory must be configured in 1024K increments\n",
+                startupFile, config);
             exit(1);
+            }
+        if (memory > 04000000 && (features & IsCyber875) == 0)
+            {
+            fputs("(init   ) Model coerced to CYBER875 due to memory size\n", stdout);
+            strcpy(model, "CYBER875");
+            features = featuresCyber875;
+            }
+        else if (memory < 04000000 && (features & IsCyber875) != 0)
+            {
+            fputs("(init   ) Model coerced to CYBER865 due to memory size\n", stdout);
+            strcpy(model, "CYBER865");
+            features = featuresCyber865;
             }
         }
 
@@ -716,11 +741,11 @@ static void initCyber(char *config)
     cpuInit(model, memory, ecsBanks + esmBanks, ecsBanks != 0 ? ECS : ESM);
     if (ecsBanks + esmBanks == 0)
         {
-        fprintf(stdout, "(init   ) Successfully Configured Model %s with %d CPUs.\n", model, cpuCount);
+        fprintf(stdout, "(init   ) Successfully configured model %s with %d CPUs.\n", model, cpuCount);
         }
     else
         {
-        fprintf(stdout, "(init   ) Successfully Configured Model %s with %d CPUs and %ld banks of %s.\n", model, cpuCount, ecsBanks + esmBanks, ecsBanks != 0 ? "ESM" : "ECS");
+        fprintf(stdout, "(init   ) Successfully configured model %s with %d CPUs and %ld banks of %s.\n", model, cpuCount, ecsBanks + esmBanks, ecsBanks != 0 ? "ESM" : "ECS");
         }
 
 
