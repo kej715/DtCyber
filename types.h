@@ -278,6 +278,7 @@ typedef enum
     IsSeries70             = 0x02000000,
     IsSeries170            = 0x04000000,
     IsSeries800            = 0x08000000,
+    IsCyber875             = 0x10000000,
     } ModelFeatures;
 
 typedef enum
