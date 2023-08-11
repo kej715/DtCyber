@@ -1366,7 +1366,7 @@ static void npuNjeCloseConnection(Pcb *pcbp)
     fprintf(npuNjeLog, "Port %02x: close connection\n", pcbp->claPort);
 #endif
     tcbp = npuNjeFindTcb(pcbp);
-    if (tcbp != NULL)
+    if (tcbp != NULL && tcbp->state != StTermIdle)
         {
         npuSvmSendDiscRequest(tcbp);
         }

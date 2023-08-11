@@ -680,11 +680,6 @@ void npuNetCheckStatus(void)
             if (pcbp->inputCount <= 0)
                 {
                 notifyNetDisconnect[pcbp->ncbp->connType](pcbp);
-                if (pcbp->ncbp != NULL
-                    && (pcbp->ncbp->state == StConnConnecting || pcbp->ncbp->state == StConnConnected))
-                    {
-                    pcbp->ncbp->state = StConnDisconnecting;
-                    }
                 continue;
                 }
             processUplineData[pcbp->ncbp->connType](pcbp);
