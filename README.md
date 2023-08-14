@@ -30,14 +30,14 @@ very rich collection of programming languages and data communication features.
 - [NOS/BE](https://github.com/bug400/NOSBE712) : the NOS/BE operation system was a
 descendent of COS and SCOPE. It was designed primarily for batch operation but also
 supported interactive access. Additional documentation about building a NOS/BE system
-can be found [here](https://cdc.sjzoppi.com/doku.php?id=nosbe:building_nos_be_level_712_from_scratch)
-on the [CDC Community site](https://cdc.sjzoppi.com/doku.php?id=start),
+can be found [here](https://codex.retro1.org/cdc:nosbe:building_nos_be_level_712_from_scratch)
+on the [CDC Community site](https://codex.retro1.org/cdc:start),
 and a ready-to-run NOS/BE package can be found
-[here](https://cdc.sjzoppi.com/doku.php?id=nosbe:use_a_ready_to_run_nos_be_l_712_system).
+[here](https://codex.retro1.org/cdc:nosbe:use_a_ready_to_run_nos_be_l_712_system).
 
 Information about configuring and operating *DtCyber* can be found
-[here](https://cdc.sjzoppi.com/doku.php?id=dtcyber:v5.8.sz:start) on the
-[CDC Community site](https://cdc.sjzoppi.com/doku.php?id=start).
+[here](https://codex.retro1.org/cdc:dtcyber:v5.8.sz:start) on the
+[CDC Community site](https://codex.retro1.org/cdc:start).
 
 Visit the [CDC documentation archives at Bitsavers](http://bitsavers.trailing-edge.com/pdf/cdc/)
 for a wealth of preserved documentation on Control Data hardware and software. In
