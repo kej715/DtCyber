@@ -721,13 +721,17 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                             }
                         break;
 
+                    case NjeStatusDLE_ACK0:
+                        // Ignore idle block
+                        break;
+
                     case NjeStatusNothingUploaded:
                         // Retransmitted blocks were probably detected, so remain in this state
                         break;
 
                     default:
 #if DEBUG
-                        fprintf(npuNjeLog, "Port %02x: expecting <DLE><ACK0> or <SYN><NAK>, received status %d\n",
+                        fprintf(npuNjeLog, "Port %02x: expecting <SOH><ENQ> or <SYN><NAK>, received status %d\n",
                                 pcbp->claPort, status);
 #endif
                         npuNjeCloseConnection(pcbp);
