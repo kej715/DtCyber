@@ -627,6 +627,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                     pcbp->connFd             = 0;
                     pcbp->controls.nje.state = StNjeDisconnected;
                     pcbp = pcbp2;
+                    dp   = pcbp->controls.nje.inputBufPtr;
                     }
                 if (r == 0)
                     {
