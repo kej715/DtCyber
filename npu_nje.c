@@ -554,8 +554,9 @@ void npuNjeProcessUplineData(Pcb *pcbp)
     npuNjeLogFlush();
 #endif
 
-    sp    = pcbp->inputData;
-    dp    = pcbp->controls.nje.inputBufPtr;
+    sp = pcbp->inputData;
+    dp = pcbp->controls.nje.inputBufPtr;
+
     if (dp + pcbp->inputCount > pcbp->controls.nje.inputBuf + pcbp->controls.nje.inputBufSize)
         {
         fprintf(stderr, "Port %02x: NJE input buffer overflow, data discarded\n", pcbp->claPort);
@@ -1295,11 +1296,11 @@ static int npuNjeAppendRecords(Pcb *pcbp, u8 *bp, int len, u8 blockType)
         if ((rcb == RCB_GCR) && (srcb == SRCB_InitialSignon) && pcbp->controls.nje.isPassive)
             {
 #if DEBUG
-            fprintf(npuNjeLog, "Port %02x: downline initial signon detected while connection is in passive state\n",
+            fprintf(npuNjeLog, "Port %02x: downline initial signon detected and discarded while connection is in passive state\n",
                     pcbp->claPort);
 #endif
 
-            return NjeErrProtocolError;
+            return NjeStatusOk;
             }
 
         /*
