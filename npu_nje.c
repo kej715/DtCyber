@@ -613,7 +613,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                 else if (pcbp2->claPort == pcbp->claPort)
                     {
                     tcbp = npuNjeFindTcb(pcbp);
-                    if ((tcbp != NULL) && (tcbp->state != StTermIdle))
+                    if (tcbp != NULL)
                         {
                         r = CrNakAttemptingActiveOpen;
                         }
@@ -1046,8 +1046,8 @@ bool npuNjeNotifyNetConnect(Pcb *pcbp, bool isPassive)
         if (pcbp->controls.nje.state != StNjeDisconnected)
             {
 #if DEBUG
-            fprintf(npuNjeLog, "Port %02x: port is already connected in state %d\n", pcbp->claPort,
-                    pcbp->controls.nje.state);
+            fprintf(npuNjeLog, "Port %02x: port is already connected in state %s\n", pcbp->claPort,
+                    NjeConnStates[pcbp->controls.nje.state]);
 #endif
             pcbp->ncbp->nextConnectionAttempt = getSeconds() + (time_t)(24 * 60 * 60);
 
@@ -1691,15 +1691,16 @@ static Tcb *npuNjeFindTcb(Pcb *pcbp)
     int i;
     Tcb *tcbp;
 
-    if (pcbp->controls.nje.tp != NULL)
+    tcbp = pcbp->controls.nje.tp;
+    if (tcbp != NULL && tcbp->state != StTermIdle && tcbp->pcbp == pcbp)
         {
-        return pcbp->controls.nje.tp;
+        return tcbp;
         }
 
     for (i = 1; i < MaxTcbs; i++)
         {
         tcbp = &npuTcbs[i];
-        if ((tcbp->state != StTermIdle) && (tcbp->pcbp == pcbp))
+        if (tcbp->state != StTermIdle && tcbp->pcbp == pcbp)
             {
             pcbp->controls.nje.tp = tcbp;
 
