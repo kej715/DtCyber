@@ -43,7 +43,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG    0
+#define DEBUG    1
 
 /*
 **  -------------
@@ -202,6 +202,16 @@
 #define CrNakTemporaryFailure        0x04
 
 #if DEBUG
+static char *NjeConnStates[] = {
+    "StNjeDisconnected",
+    "StNjeRcvOpen",
+    "StNjeRcvSOH_ENQ",
+    "StNjeSndOpen",
+    "StNjeRcvAck",
+    "StNjeRcvSignon",
+    "StNjeRcvResponseSignon",
+    "StNjeExchangeData"
+    };
 static char *CrNakReasons[] =
     {
     "",
@@ -542,13 +552,13 @@ void npuNjeProcessUplineData(Pcb *pcbp)
 #if DEBUG
     if (pcbp->controls.nje.state > StNjeRcvOpen)
         {
-        fprintf(npuNjeLog, "Port %02x: TCP data received from %s, state=%d\n",
-                pcbp->claPort, pcbp->ncbp->hostName, pcbp->controls.nje.state);
+        fprintf(npuNjeLog, "Port %02x: TCP data received from %s, state %s\n",
+                pcbp->claPort, pcbp->ncbp->hostName, NjeConnStates[pcbp->controls.nje.state]);
         }
     else
         {
-        fprintf(npuNjeLog, "Port %02x: TCP data received, state=%d\n",
-                pcbp->claPort, pcbp->controls.nje.state);
+        fprintf(npuNjeLog, "Port %02x: TCP data received, state %s\n",
+                pcbp->claPort, NjeConnStates[pcbp->controls.nje.state]);
         }
     npuNjeLogBytes(pcbp->inputData, pcbp->inputCount, EBCDIC);
     npuNjeLogFlush();
@@ -622,13 +632,14 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                     fprintf(npuNjeLog, "Port %02x: connection reassigned to port %02x\n", pcbp->claPort, pcbp2->claPort);
 #endif
                     npuNjeResetPcb(pcbp2);
-                    pcbp2->connFd = pcbp->connFd;
+                    pcbp2->connFd                 = pcbp->connFd;
+                    pcbp2->controls.nje.state     = pcbp->controls.nje.state;
                     pcbp2->controls.nje.isPassive = pcbp->controls.nje.isPassive;
                     pcbp2->controls.nje.lastXmit  = pcbp->controls.nje.lastXmit;
-                    pcbp->connFd             = 0;
-                    pcbp->controls.nje.state = StNjeDisconnected;
-                    pcbp = pcbp2;
-                    dp   = pcbp->controls.nje.inputBufPtr;
+                    pcbp->connFd                  = 0;
+                    pcbp->controls.nje.state      = StNjeDisconnected;
+                    pcbp                          = pcbp2;
+                    dp                            = pcbp->controls.nje.inputBufPtr;
                     }
                 if (r == 0)
                     {
