@@ -1453,11 +1453,11 @@ static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive)
     /*
     **  Initialize the connection and mark it as active.
     */
+    pcbp->connFd = connFd;
     if (notifyNetConnect[ncbp->connType](pcbp, isPassive))
         {
         npuNetSendConsoleMsg(connFd, ncbp->connType, connectingMsg);
-        pcbp->connFd = connFd;
-        ncbp->state  = StConnConnected;
+        pcbp->ncbp->state = StConnConnected;
 
         return TRUE;
         }
@@ -1468,11 +1468,15 @@ static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive)
     */
     npuNetSendConsoleMsg(connFd, ncbp->connType, abortMsg);
     netCloseConnection(connFd);
-    if (isPassive == FALSE)
+    if (isPassive)
+        {
+        ncbp->state = StConnInit;
+        }
+    else
         {
         ncbp->connFd = 0;
+        ncbp->state  = StConnBusy;
         }
-    ncbp->state = StConnInit;
 
     return FALSE;
     }
