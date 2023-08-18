@@ -61,15 +61,16 @@
 // General
 
 // Flags stored in the context field:
-#define Lp3000Type501            00001
-#define Lp3000Type512            00002
-#define Lp3000Type3152           00010
-#define Lp3000Type3555           00020
-#define Lp3555FillImageMem       00100
-#define Lp3000IntReady           00200     // Same code as int status bit
-#define Lp3000IntEnd             00400     // ditto
-#define Lp3000IntReadyEna        02000
-#define Lp3000IntEndEna          04000
+#define Lp3000Type501           000001
+#define Lp3000Type512           000002
+#define Lp3000Type3152          000010
+#define Lp3000Type3555          000020
+#define Lp3555FillImageMem      000100
+#define Lp3000IntReady          000200     // Same code as int status bit
+#define Lp3000IntEnd            000400     // ditto
+#define Lp3000IntReadyEna       002000
+#define Lp3000IntEndEna         004000
+#define Lp3000ExtArray          010000
 
 /*
 **      Function codes
@@ -831,6 +832,7 @@ static FcStatus lp3000Func(PpWord funcCode)
         lc->postPrintFunc = 0;
         lc->doAutoEject   = FALSE;
         lc->doSuppress    = FALSE;
+        lc->flags        &= ~Lp3000ExtArray;
         return FcProcessed;
 
     case FcPrintRelease:
@@ -900,7 +902,7 @@ static FcStatus lp3000Func(PpWord funcCode)
             {
         default:
             fprintf(stderr, "(lp3000 ) Unknown LP3555 function %04o\n", funcCode);
-            return FcProcessed;
+            return FcDeclined;
 
         case Fc3555Sel8Lpi:
             if (lc->renderingMode != ModeASCII && lc->lpi != 8) fputs("T\n", fcb);
@@ -1009,7 +1011,13 @@ static FcStatus lp3000Func(PpWord funcCode)
             return FcProcessed;
 
         case Fc3555SelExtArray:
+            lc->flags |= Lp3000ExtArray;
+            return FcProcessed;
+
         case Fc3555ClearExtArray:
+            lc->flags &= ~Lp3000ExtArray;
+            return FcProcessed;
+
         case Fc3555SelIntError:
         case Fc3555RelIntError:
         case Fc3555ReloadMemEnable:
@@ -1024,8 +1032,16 @@ static FcStatus lp3000Func(PpWord funcCode)
         switch (funcCode)
             {
         default:
-            fprintf(stderr, "(lp3000 ) Unknown LP3152 function %04o\n", funcCode);
-            return FcProcessed;
+            //
+            // 1IO in KRONOS and NOS issues Fc3555SelectPrePrint to test whether the
+            // controller is 3152 or 3555, so avoid cluttering the console with messages
+            // due to this "normal" behavior.
+            //
+            if (funcCode != Fc3555SelectPrePrint)
+                {
+                fprintf(stderr, "(lp3000 ) Unknown LP3152 function %04o\n", funcCode);
+                }
+            return FcDeclined;
 
         case Fc3152ClearFormat:
             if (lc->renderingMode != ModeASCII && lc->doAutoEject) fputs("Q\n", fcb);
@@ -1145,14 +1161,14 @@ static void lp3000Io(void)
 #endif
             if (lc->linePos < MaxLineSize)
                 {
-                if (lc->flags & Lp3000Type501)
+                if (lc->flags & Lp3000ExtArray)
                     {
-                    lc->line[lc->linePos++] = bcdToAscii[(activeChannel->data >> 6) & Mask6];
-                    lc->line[lc->linePos++] = bcdToAscii[activeChannel->data & Mask6];
+                    lc->line[lc->linePos++] = activeChannel->data & 0377;
                     }
                 else
                     {
-                    lc->line[lc->linePos++] = activeChannel->data & 0377;
+                    lc->line[lc->linePos++] = bcdToAscii[(activeChannel->data >> 6) & Mask6];
+                    lc->line[lc->linePos++] = bcdToAscii[activeChannel->data & Mask6];
                     }
                 }
             activeChannel->full = FALSE;

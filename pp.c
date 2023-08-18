@@ -689,8 +689,7 @@ static void ppOpPSN24(void)     // 24
             /*
             **  LRD.
             */
-//            activePpu->regR  = (u32)(activePpu->mem[opD    ] & Mask4 ) << 18; // 875
-            activePpu->regR  = (u32)(activePpu->mem[opD] & Mask3) << 18;      // 865
+            activePpu->regR  = (u32)(activePpu->mem[opD    ] & Mask4 ) << 18;
             activePpu->regR |= (u32)(activePpu->mem[opD + 1] & Mask12) << 6;
             }
         else if ((features & HasRelocationRegLong) != 0)
@@ -698,7 +697,7 @@ static void ppOpPSN24(void)     // 24
             /*
             **  LRD.
             */
-            activePpu->regR  = (u32)(activePpu->mem[opD] & Mask10) << 18;
+            activePpu->regR  = (u32)(activePpu->mem[opD    ] & Mask10) << 18;
             activePpu->regR |= (u32)(activePpu->mem[opD + 1] & Mask12) << 6;
             }
         }
@@ -717,17 +716,16 @@ static void ppOpPSN25(void)     // 25
             /*
             **  SRD.
             */
-//            activePpu->mem[opD    ] = (PpWord)(activePpu->regR >> 18) & Mask4; // 875
-            activePpu->mem[opD]     = (PpWord)(activePpu->regR >> 18) & Mask3; // 865
-            activePpu->mem[opD + 1] = (PpWord)(activePpu->regR >> 6) & Mask12;
+            activePpu->mem[opD    ] = (PpWord)(activePpu->regR >> 18) & Mask4;
+            activePpu->mem[opD + 1] = (PpWord)(activePpu->regR >>  6) & Mask12;
             }
         else if ((features & HasRelocationRegLong) != 0)
             {
             /*
             **  SRD.
             */
-            activePpu->mem[opD]     = (PpWord)(activePpu->regR >> 18) & Mask10;
-            activePpu->mem[opD + 1] = (PpWord)(activePpu->regR >> 6) & Mask12;
+            activePpu->mem[opD    ] = (PpWord)(activePpu->regR >> 18) & Mask10;
+            activePpu->mem[opD + 1] = (PpWord)(activePpu->regR >>  6) & Mask12;
             }
         }
 

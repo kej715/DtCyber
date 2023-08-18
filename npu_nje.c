@@ -330,13 +330,13 @@ static u8 SYN_NAK[] =
 **  Special non-transparent NAM messages
 */
 static char *ApplicationFailed       = "APPLICATION FAILED.";
-static int  ApplicationFailedLen     = 19;
+#define     ApplicationFailedLen       19
 static char *ApplicationNotPresent   = "APPLICATION NOT PRESENT.";
-static int  ApplicationNotPresentLen = 24;
+#define     ApplicationNotPresentLen   24
 static char *ApplicationBusy         = "APPLICATION BUSY";
-static int  ApplicationBusyLen       = 16;
-static char *LoggedOut   = "LOGGED OUT.";
-static int  LoggedOutLen = 11;
+#define     ApplicationBusyLen         16
+static char *LoggedOut               = "LOGGED OUT.";
+#define     LoggedOutLen               11
 
 /*
  **--------------------------------------------------------------------------
@@ -422,7 +422,7 @@ void npuNjeTryOutput(Pcb *pcbp)
                 break;
                 }
             }
-        if (tcbp->state == StTermHostConnected)
+        if (tcbp->state == StTermConnected)
             {
             npuNjeTransmitQueuedBlocks(pcbp);
             }
@@ -978,10 +978,16 @@ bool npuNjeNotifyNetConnect(Pcb *pcbp, bool isPassive)
 **------------------------------------------------------------------------*/
 void npuNjeNotifyNetDisconnect(Pcb *pcbp)
     {
+    Tcb *tcbp;
+
+    tcbp = npuNjeFindTcb(pcbp);
+    if (tcbp == NULL || tcbp->state == StTermConnected || time(0) > pcbp->controls.nje.deadline)
+        {
 #if DEBUG
-    fprintf(npuNjeLog, "Port %02x: network disconnection indication\n", pcbp->claPort);
+        fprintf(npuNjeLog, "Port %02x: network disconnection indication\n", pcbp->claPort);
 #endif
-    npuNjeCloseConnection(pcbp);
+        npuNjeCloseConnection(pcbp);
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -1013,25 +1019,22 @@ void npuNjeNotifyTermConnect(Tcb *tcbp)
         fprintf(npuNjeLog, "Port %02x: no network connection, disconnect terminal %.7s\n",
                 tcbp->pcbp->claPort, tcbp->termName);
 #endif
-        npuSvmDiscRequestTerminal(tcbp);
+        npuSvmSendDiscRequest(tcbp);
         }
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Handles a terminal disconnect request from SVM.
+**  Purpose:        Handles a terminal disconnect event from SVM.
 **
 **  Parameters:     Name        Description.
-**                  tcbp        pointer to TCB of terminal disconnecting
+**                  tcbp        pointer to TCB of disconnected terminal
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
 void npuNjeNotifyTermDisconnect(Tcb *tcbp)
     {
-#if DEBUG
-    fprintf(npuNjeLog, "Port %02x: disconnect terminal %.7s\n", tcbp->pcbp->claPort, tcbp->termName);
-#endif
-    npuSvmSendDiscRequest(tcbp);
+    // nothing to be done
     }
 
 /*--------------------------------------------------------------------------
@@ -1086,6 +1089,7 @@ void npuNjeResetPcb(Pcb *pcbp)
     pcbp->controls.nje.lastDownlineRCB  = 0;
     pcbp->controls.nje.lastDownlineSRCB = 0;
     pcbp->controls.nje.retries          = 0;
+    pcbp->controls.nje.deadline         = (time_t)0;
     pcbp->controls.nje.lastXmit         = (time_t)0;
     pcbp->controls.nje.inputBufPtr      = pcbp->controls.nje.inputBuf;
     pcbp->controls.nje.outputBufPtr     = pcbp->controls.nje.outputBuf;
@@ -1371,7 +1375,7 @@ static void npuNjeCloseConnection(Pcb *pcbp)
     tcbp = npuNjeFindTcb(pcbp);
     if (tcbp != NULL)
         {
-        npuSvmDiscRequestTerminal(tcbp);
+        npuSvmSendDiscRequest(tcbp);
         }
     npuNetCloseConnection(pcbp);
     }
@@ -1513,6 +1517,7 @@ static bool npuNjeConnectTerminal(Pcb *pcbp)
     tcbp = npuNjeFindTcb(pcbp);
     if (tcbp == NULL)
         {
+        pcbp->controls.nje.deadline = time(0) + (time_t)10;
         return npuSvmConnectTerminal(pcbp);
         }
     else
@@ -1573,7 +1578,7 @@ static Pcb *npuNjeFindPcbForCr(char *rhost, u32 rip, char *ohost, u32 oip)
             && (strcasecmp(npuNetHostID, ohost) == 0)
             && (pcbp->controls.nje.remoteIP == rip
                 || pcbp->controls.nje.remoteIP == 0)
-            && (pcbp->controls.nje.localIP == oip))
+/*          && (pcbp->controls.nje.localIP == oip) */ )
             {
             return pcbp;
             }
@@ -1809,7 +1814,7 @@ static void npuNjeSendUplineBlock(Pcb *pcbp, NpuBuffer *bp, u8 *dp, u8 blockType
     npuBipQueueAppend(bp, &pcbp->controls.nje.uplineQ);
 
     tcbp = npuNjeFindTcb(pcbp);
-    if ((tcbp != NULL) && (tcbp->state == StTermHostConnected))
+    if ((tcbp != NULL) && (tcbp->state == StTermConnected))
         {
         npuNjeTransmitQueuedBlocks(pcbp);
         }

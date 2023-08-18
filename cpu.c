@@ -1813,14 +1813,17 @@ static u32 cpuSubtract18(u32 op1, u32 op2)
 **------------------------------------------------------------------------*/
 static void cpuUemWord(CpuContext *activeCpu, bool writeToUem)
     {
+    bool isExpandedAddress;
     u32 uemAddress;
+
+    isExpandedAddress = (activeCpu->exitMode & EmFlagExpandedAddress) != 0;
 
     /*
     **  Calculate source or destination addresses.
     */
-    if ((activeCpu->exitMode & EmFlagExpandedAddress) != 0)
+    if (isExpandedAddress)
         {
-        uemAddress = (u32)(activeCpu->regX[activeCpu->opK] & Mask24);
+        uemAddress = (u32)(activeCpu->regX[activeCpu->opK] & Mask30);
         }
     else
         {
@@ -1866,14 +1869,20 @@ static void cpuUemWord(CpuContext *activeCpu, bool writeToUem)
     */
     if (writeToUem)
         {
-        if ((uemAddress < cpuMaxMemory) && ((uemAddress & (3 << 21)) == 0))
+        if (uemAddress < cpuMaxMemory)
             {
-            cpMem[uemAddress++] = activeCpu->regX[activeCpu->opJ] & Mask60;
+            if ((isExpandedAddress == FALSE && (uemAddress & (3 << 21)) == 0)
+                || (isExpandedAddress == TRUE && (uemAddress & (1 << 28)) == 0))
+                {
+                cpMem[uemAddress++] = activeCpu->regX[activeCpu->opJ] & Mask60;
+                }
             }
         }
     else
         {
-        if ((uemAddress >= cpuMaxMemory) || ((uemAddress & (3 << 21)) != 0))
+        if ((uemAddress >= cpuMaxMemory)
+            || (isExpandedAddress == FALSE && (uemAddress & (3 << 21)) != 0)
+            || (isExpandedAddress == TRUE && (uemAddress & (1 << 28)) != 0))
             {
             /*
             **  If bits 21 or 22 are non-zero, zero Xj.
@@ -2019,7 +2028,7 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
     u32  uemAddress;
     u32  cmAddress;
     u32  flEcs;
-    bool isFlagRegister;
+    bool isExpandedAddress;
     bool isZeroFill;
     u32  raEcs;
 
@@ -2033,31 +2042,26 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
         return;
         }
 
-    isZeroFill     = FALSE; // for Cyber 865/875
-    isFlagRegister = FALSE; // flag register applies to ECS/ESM only
+    isZeroFill        = FALSE;
+    isExpandedAddress = (activeCpu->exitMode & EmFlagExpandedAddress) != 0;
 
     /*
     **  Calculate word count, source and destination addresses.
     */
     wordCount = cpuAdd18(activeCpu->regB[activeCpu->opJ], activeCpu->opAddress);
 
-    if (((features & IsSeries800) != 0)
-        && ((activeCpu->exitMode & EmFlagExpandedAddress) != 0))
+    if (((features & IsSeries800) != 0) && isExpandedAddress)
         {
-        uemAddress     = (u32)(activeCpu->regX[0] & Mask30);
-        raEcs          = (u32)(activeCpu->regRaEcs & Mask24);
-        flEcs          = (u32)(activeCpu->regFlEcs & Mask30);
-        isFlagRegister = (activeCpu->regX[0] & (1 << 29)) != 0
-                         && (activeCpu->regFlEcs & (1 << 29)) != 0;
+        uemAddress = (u32)(activeCpu->regX[0] & Mask30);
+        raEcs      = (u32)(activeCpu->regRaEcs & Mask24);
+        flEcs      = (u32)(activeCpu->regFlEcs & Mask30);
         isZeroFill = (modelType == ModelCyber865) && (((activeCpu->regX[0] + activeCpu->regRaEcs) & (01 << 28)) != 0);
         }
     else
         {
-        uemAddress     = (u32)(activeCpu->regX[0] & Mask24);
-        raEcs          = (u32)(activeCpu->regRaEcs & Mask21);
-        flEcs          = (u32)(activeCpu->regFlEcs & Mask23);
-        isFlagRegister = (activeCpu->regX[0] & (1 << 23)) != 0
-                         && (activeCpu->regFlEcs & (1 << 23)) != 0;
+        uemAddress = (u32)(activeCpu->regX[0] & Mask24);
+        raEcs      = (u32)(activeCpu->regRaEcs & Mask21);
+        flEcs      = (u32)(activeCpu->regFlEcs & Mask23);
         isZeroFill = (modelType == ModelCyber865) && (((activeCpu->regX[0] + activeCpu->regRaEcs) & (03 << 21)) != 0);
         }
 
@@ -2083,8 +2087,7 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
     */
     if (((wordCount & Sign18) != 0)
         || (activeCpu->regFlCm < cmAddress + wordCount)
-        || (flEcs < uemAddress + wordCount)
-        || isFlagRegister)
+        || (flEcs < uemAddress + wordCount))
         {
 #if EMDEBUG
         fprintf(emLog, "   UEM AddressOutOfRange: EM %010o  FLE %010o  CM %06o  FL %08o  Words %d\n",
@@ -2135,7 +2138,9 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
         {
         while (wordCount--)
             {
-            if ((uemAddress >= cpuMaxMemory) || ((uemAddress & (3 << 21)) != 0))
+            if ((uemAddress >= cpuMaxMemory)
+                || (isExpandedAddress == TRUE && (uemAddress & (1 << 28)) != 0)
+                || (isExpandedAddress == FALSE && (uemAddress & (3 << 21)) != 0))
                 {
                 /*
                 **  If bits 21 or 22 are non-zero, error exit to lower

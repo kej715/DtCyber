@@ -12,7 +12,7 @@ directory, `start.js`, will expand them automatically too.
 
 Note that these tape images are made available by permission of BT Federal under
 provisions of the
-[BT Federal Permit](https://cdc.sjzoppi.com/doku.php?id=b_t_permit).
+[BT Federal Permit](https://codex.retro1.org/cdc:b_t_permit).
 BT Federal has given permission to hobbyists, researchers and museums to freely use
 and share CDC material. The only restriction is that this material cannot be used
 commercially. Previous time limits no longer apply.

@@ -55,7 +55,7 @@ promise = promise
   "#1000#",
   "#2000#GO",
   "#20000#OFF",
-  "#45000#D%mon%%day%96",
+  "#65000#D%mon%%day%96",
   "#1500#T%hour%%min%%sec%",
   "#1000#3.GO",
   "#1000#ATT.",

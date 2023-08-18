@@ -516,7 +516,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 
     case BtHTBLK:
     case BtHTMSG:
-        if (tp->state == StTermHostConnected)
+        if (tp->state == StTermConnected)
             {
             last = (block[BlkOffBTBSN] & BlkMaskBT) == BtHTMSG;
             switch (tp->tipType)
@@ -567,33 +567,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
         break;
 
     case BtHTTERM:
-        if (tp->state == StTermRequestTerminate)
-            {
-            /*
-            **  Host has echoed our TERM block, now send the TCN/TA/N to host.
-            */
-            npuSvmDiscReplyTerminal(tp);
-            tp->state = StTermIdle;
-
-            /*
-            **  Finally disconnect the network.
-            */
-            npuNetDisconnected(tp);
-            }
-        else if (tp->state == StTermRequestDisconnect)
-            {
-            /*
-            **  Echo TERM block.
-            */
-            npuSvmSendTermBlock(tp);
-            tp->state = StTermIdle;
-            }
-#if DEBUG
-        else
-            {
-            fprintf(npuTipLog, "Unexpected TERM block on connection %u (%.7s), state %d\n", cn, tp->termName, tp->state);
-            }
-#endif
+        npuSvmProcessTermBlock(tp);
         break;
 
     case BtHTICMD:

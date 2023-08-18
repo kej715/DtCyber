@@ -762,7 +762,7 @@ void npuAsyncProcessUplineData(Pcb *pcbp)
     Tcb *tp;
 
     tp = npuAsyncFindTcb(pcbp);
-    if ((tp == NULL) || (tp->state != StTermHostConnected))
+    if ((tp == NULL) || (tp->state != StTermConnected))
         {
         return;
         }
@@ -861,7 +861,7 @@ void npuAsyncNotifyNetDisconnect(Pcb *pcbp)
     tp = npuAsyncFindTcb(pcbp);
     if (tp != NULL)
         {
-        npuSvmDiscRequestTerminal(tp);
+        npuSvmSendDiscRequest(tp);
         }
 
     /*
@@ -895,17 +895,17 @@ void npuAsyncNotifyTermConnect(Tcb *tp)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Handles a terminal disconnect request from SVM.
+**  Purpose:        Handles a terminal disconnect event from SVM.
 **
 **  Parameters:     Name        Description.
-**                  tp          pointer to TCB of terminal disconnecting
+**                  tp          pointer to TCB of disconnected terminal
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
 void npuAsyncNotifyTermDisconnect(Tcb *tp)
     {
-    npuSvmSendDiscRequest(tp);
+    // Nothing to be done
     }
 
 /*
