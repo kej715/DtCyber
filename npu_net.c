@@ -1468,14 +1468,15 @@ static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive)
     */
     npuNetSendConsoleMsg(connFd, ncbp->connType, abortMsg);
     netCloseConnection(connFd);
+    pcbp->connFd = 0;
     if (isPassive)
         {
-        ncbp->state = StConnInit;
+        pcbp->ncbp->state = StConnInit;
         }
     else
         {
-        ncbp->connFd = 0;
-        ncbp->state  = StConnBusy;
+        pcbp->ncbp->connFd = 0;
+        pcbp->ncbp->state  = StConnBusy;
         }
 
     return FALSE;

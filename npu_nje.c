@@ -385,7 +385,7 @@ void npuNjeTryOutput(Pcb *pcbp)
         if (currentTime - pcbp->controls.nje.lastXmit > MaxWaitTime)
             {
 #if DEBUG
-            fprintf(npuNjeLog, "Port %02x: timeout in state %d\n", pcbp->claPort, pcbp->controls.nje.state);
+            fprintf(npuNjeLog, "Port %02x: timeout in state %s\n", pcbp->claPort, NjeConnStates[pcbp->controls.nje.state]);
 #endif
             npuNjeCloseConnection(pcbp);
 
@@ -636,8 +636,10 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                     pcbp2->controls.nje.state     = pcbp->controls.nje.state;
                     pcbp2->controls.nje.isPassive = pcbp->controls.nje.isPassive;
                     pcbp2->controls.nje.lastXmit  = pcbp->controls.nje.lastXmit;
+                    pcbp2->ncbp->state            = pcbp->ncbp->state;
                     pcbp->connFd                  = 0;
                     pcbp->controls.nje.state      = StNjeDisconnected;
+                    pcbp->ncbp->state             = StConnInit;
                     pcbp                          = pcbp2;
                     dp                            = pcbp->controls.nje.inputBufPtr;
                     }
@@ -1029,9 +1031,9 @@ bool npuNjeNotifyNetConnect(Pcb *pcbp, bool isPassive)
     fprintf(npuNjeLog, "Port %02x: %s network connection indication\n", pcbp->claPort,
             isPassive ? "passive" : "active");
 #endif
-    npuNjeResetPcb(pcbp);
     if (isPassive)
         {
+        npuNjeResetPcb(pcbp);
         pcbp->controls.nje.isPassive = TRUE;
         pcbp->controls.nje.state     = StNjeRcvOpen;
         }
@@ -1053,6 +1055,7 @@ bool npuNjeNotifyNetConnect(Pcb *pcbp, bool isPassive)
 
             return FALSE;
             }
+        npuNjeResetPcb(pcbp);
         pcbp->controls.nje.state = StNjeSndOpen;
         }
     pcbp->controls.nje.lastXmit = getSeconds();
@@ -1168,6 +1171,19 @@ void npuNjeResetPcb(Pcb *pcbp)
     NpuBuffer *bp;
     Tcb       *tcbp;
 
+    while ((bp = npuBipQueueExtract(&pcbp->controls.nje.uplineQ)) != NULL)
+        {
+        npuBipBufRelease(bp);
+        }
+    tcbp = npuNjeFindTcb(pcbp);
+    if (tcbp != NULL)
+        {
+        while ((bp = npuBipQueueExtract(&tcbp->outputQ)) != NULL)
+            {
+            npuBipBufRelease(bp);
+            }
+        }
+
     pcbp->controls.nje.state            = StNjeDisconnected;
     pcbp->controls.nje.tp               = (Tcb *)NULL;
     pcbp->controls.nje.isPassive        = FALSE;
@@ -1181,18 +1197,6 @@ void npuNjeResetPcb(Pcb *pcbp)
     pcbp->controls.nje.outputBufPtr     = pcbp->controls.nje.outputBuf;
     pcbp->controls.nje.ttrp             = NULL;
 
-    while ((bp = npuBipQueueExtract(&pcbp->controls.nje.uplineQ)) != NULL)
-        {
-        npuBipBufRelease(bp);
-        }
-    tcbp = npuNjeFindTcb(pcbp);
-    if (tcbp != NULL)
-        {
-        while ((bp = npuBipQueueExtract(&tcbp->outputQ)) != NULL)
-            {
-            npuBipBufRelease(bp);
-            }
-        }
 #if DEBUG
     fprintf(npuNjeLog, "Port %02x: reset PCB\n", pcbp->claPort);
 #endif
@@ -1459,7 +1463,7 @@ static void npuNjeCloseConnection(Pcb *pcbp)
     fprintf(npuNjeLog, "Port %02x: close connection\n", pcbp->claPort);
 #endif
     tcbp = npuNjeFindTcb(pcbp);
-    if (tcbp != NULL && tcbp->state != StTermIdle)
+    if (tcbp != NULL && tcbp->state == StTermConnected)
         {
         npuSvmSendDiscRequest(tcbp);
         }
