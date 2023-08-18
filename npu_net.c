@@ -720,7 +720,7 @@ void npuNetCheckStatus(void)
 void npuNetShowStatus()
     {
     u8       channelNo;
-    char     chEqStr[8];
+    char     chEqStr[10];
     DevSlot *dp;
     char     *dts;
     u8       eqNo;
