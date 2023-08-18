@@ -278,7 +278,6 @@ static int npuNjeUploadBlock(Pcb *pcbp, u8 *blkp, int size, u8 *rcb, u8 *srcb);
 static void npuNjeLogBytes(u8 *bytes, int len, CharEncoding encoding);
 static void npuNjeLogFlush(void);
 static void npuNjePrintStackTrace(FILE *fp);
-
 #endif
 
 /*
@@ -655,8 +654,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                     else
                         {
 #if DEBUG
-                        fprintf(npuNjeLog, "Port %02x: failed to issue terminal connection request\n",
-                                pcbp->claPort);
+                        fprintf(npuNjeLog, "Port %02x: failed to issue terminal connection request\n", pcbp->claPort);
 #endif
                         r = CrNakTemporaryFailure;
                         }
@@ -706,8 +704,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                         if (npuNjeSend(pcbp, SOH_ENQ, sizeof(SOH_ENQ)) == sizeof(SOH_ENQ))
                             {
 #if DEBUG
-                            fprintf(npuNjeLog, "Port %02x: send upline request to connect terminal\n",
-                                    pcbp->claPort);
+                            fprintf(npuNjeLog, "Port %02x: send upline request to connect terminal\n", pcbp->claPort);
 #endif
                             if (npuNjeConnectTerminal(pcbp))
                                 {
@@ -722,8 +719,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                             else
                                 {
 #if DEBUG
-                                fprintf(npuNjeLog, "Port %02x: failed to issue terminal connection request\n",
-                                        pcbp->claPort);
+                                fprintf(npuNjeLog, "Port %02x: failed to issue terminal connection request\n", pcbp->claPort);
 #endif
                                 npuNjeCloseConnection(pcbp);
                                 dp = pcbp->controls.nje.inputBufPtr;
@@ -798,8 +794,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                     else
                         {
 #if DEBUG
-                        fprintf(npuNjeLog, "Port %02x: failed to issue terminal connection request\n",
-                                pcbp->claPort);
+                        fprintf(npuNjeLog, "Port %02x: failed to issue terminal connection request\n", pcbp->claPort);
 #endif
                         npuNjeCloseConnection(pcbp);
                         dp = pcbp->controls.nje.inputBufPtr;
@@ -1099,15 +1094,13 @@ void npuNjeNotifyTermConnect(Tcb *tcbp)
         {
         tcbp->uplineBlockLimit = tcbp->params.fvUBL;
 #if DEBUG
-        fprintf(npuNjeLog, "Port %02x: upline block limit %d\n", tcbp->pcbp->claPort,
-                tcbp->uplineBlockLimit);
+        fprintf(npuNjeLog, "Port %02x: upline block limit %d\n", tcbp->pcbp->claPort, tcbp->uplineBlockLimit);
 #endif
         }
     else
         {
 #if DEBUG
-        fprintf(npuNjeLog, "Port %02x: no network connection, disconnect terminal %.7s\n",
-                tcbp->pcbp->claPort, tcbp->termName);
+        fprintf(npuNjeLog, "Port %02x: no network connection, disconnect terminal %.7s\n", tcbp->pcbp->claPort, tcbp->termName);
 #endif
         npuSvmSendDiscRequest(tcbp);
         }
@@ -1619,7 +1612,6 @@ static bool npuNjeConnectTerminal(Pcb *pcbp)
 #if DEBUG
         fprintf(npuNjeLog, "Port %02x: already associated with a TCB\n", pcbp->claPort);
 #endif
-
         return FALSE;
         }
     }
@@ -1816,6 +1808,7 @@ static int npuNjeSend(Pcb *pcbp, u8 *dp, int len)
 
     n = send(pcbp->connFd, dp, len, 0);
     pcbp->controls.nje.lastXmit = getSeconds();
+
 #if DEBUG
     if (n > 0)
         {
