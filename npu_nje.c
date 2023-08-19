@@ -575,11 +575,11 @@ void npuNjeProcessUplineData(Pcb *pcbp)
         {
         *dp++ = *sp++;
         }
-    pcbp->controls.nje.inputBufPtr = dp;
+    pcbp->controls.nje.inputBufPtr = limit = dp;
     dp = pcbp->controls.nje.inputBuf;
     done = FALSE;
 
-    while (dp < pcbp->controls.nje.inputBufPtr && done == FALSE)
+    while (dp < limit && done == FALSE)
         {
         switch (pcbp->controls.nje.state)
             {
@@ -588,14 +588,14 @@ void npuNjeProcessUplineData(Pcb *pcbp)
 #if DEBUG
             fprintf(npuNjeLog, "Port %02x: disconnected, data discarded\n", pcbp->claPort);
 #endif
-            dp = pcbp->controls.nje.inputBufPtr;
+            dp = limit;
             break;
 
         case StNjeRcvOpen:
             /*
             **  Expect and process an OPEN control record
             */
-            if ((pcbp->controls.nje.inputBufPtr - dp) < CrLength)
+            if ((limit - dp) < CrLength)
                 {
                 done = TRUE;
                 }
@@ -641,6 +641,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                     pcbp->ncbp->state             = StConnInit;
                     pcbp                          = pcbp2;
                     dp                            = pcbp->controls.nje.inputBufPtr;
+                    limit                         = pcbp->controls.nje.inputBufPtr;
                     }
                 if (r == 0)
                     {
@@ -663,7 +664,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                     || (r != 0))
                     {
                     npuNjeCloseConnection(pcbp);
-                    dp = pcbp->controls.nje.inputBufPtr;
+                    dp = limit;
                     }
                 }
             else
@@ -672,7 +673,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                 fprintf(npuNjeLog, "Port %02x: expecting OPEN\n", pcbp->claPort);
 #endif
                 npuNjeCloseConnection(pcbp);
-                dp = pcbp->controls.nje.inputBufPtr;
+                dp = limit;
                 }
             break;
 
@@ -680,7 +681,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
             /*
             **  Expect <SOH><ENQ> or <SYN><NAK> after sending ACK control record
             */
-            dp = npuNjeCollectBlock(pcbp, dp, pcbp->controls.nje.inputBufPtr, &isComplete, &size, &status);
+            dp = npuNjeCollectBlock(pcbp, dp, limit, &isComplete, &size, &status);
             if (isComplete)
                 {
                 if (status == 0)
@@ -696,7 +697,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                         else
                             {
                             npuNjeCloseConnection(pcbp);
-                            dp = pcbp->controls.nje.inputBufPtr;
+                            dp = limit;
                             }
                         break;
 
@@ -722,13 +723,13 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                                 fprintf(npuNjeLog, "Port %02x: failed to issue terminal connection request\n", pcbp->claPort);
 #endif
                                 npuNjeCloseConnection(pcbp);
-                                dp = pcbp->controls.nje.inputBufPtr;
+                                dp = limit;
                                 }
                             }
                         else
                             {
                             npuNjeCloseConnection(pcbp);
-                            dp = pcbp->controls.nje.inputBufPtr;
+                            dp = limit;
                             }
                         break;
 
@@ -746,7 +747,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                                 pcbp->claPort, status);
 #endif
                         npuNjeCloseConnection(pcbp);
-                        dp = pcbp->controls.nje.inputBufPtr;
+                        dp = limit;
                         break;
                         }
                     }
@@ -756,7 +757,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                     fprintf(npuNjeLog, "Port %02x: block collection error %d\n", pcbp->claPort, status);
 #endif
                     npuNjeCloseConnection(pcbp);
-                    dp = pcbp->controls.nje.inputBufPtr;
+                    dp = limit;
                     }
                 }
             else // isComplete == FALSE
@@ -769,7 +770,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
             /*
             **  Expect and process an ACK or NAK control record
             */
-            if ((pcbp->controls.nje.inputBufPtr - dp) < CrLength)
+            if ((limit - dp) < CrLength)
                 {
                 done = TRUE;
                 }
@@ -797,13 +798,13 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                         fprintf(npuNjeLog, "Port %02x: failed to issue terminal connection request\n", pcbp->claPort);
 #endif
                         npuNjeCloseConnection(pcbp);
-                        dp = pcbp->controls.nje.inputBufPtr;
+                        dp = limit;
                         }
                     }
                 else
                     {
                     npuNjeCloseConnection(pcbp);
-                    dp = pcbp->controls.nje.inputBufPtr;
+                    dp = limit;
                     }
                 }
             else if (memcmp(dp, CrTypeNak, 8) == 0)
@@ -814,7 +815,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                 fprintf(npuNjeLog, "Port %02x: OPEN request denied: %s\n", pcbp->claPort, CrNakReasons[r]);
 #endif
                 npuNjeCloseConnection(pcbp);
-                dp = pcbp->controls.nje.inputBufPtr;
+                dp = limit;
                 delay = (time_t)((getMilliseconds() % 5) + 3);
                 // Arrange to attempt reconnection after a relatively short and random-ish interval
 #if DEBUG
@@ -828,7 +829,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                 fprintf(npuNjeLog, "Port %02x: expecting ACK or NAK\n", pcbp->claPort);
 #endif
                 npuNjeCloseConnection(pcbp);
-                dp = pcbp->controls.nje.inputBufPtr;
+                dp = limit;
                 }
             break;
 
@@ -862,7 +863,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                         fprintf(npuNjeLog, "Port %02x: expecting initial signon\n", pcbp->claPort);
 #endif
                         npuNjeCloseConnection(pcbp);
-                        dp = pcbp->controls.nje.inputBufPtr;
+                        dp = limit;
                         }
                     }
                 else
@@ -871,7 +872,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                     fprintf(npuNjeLog, "Port %02x: expecting initial signon\n", pcbp->claPort);
 #endif
                     npuNjeCloseConnection(pcbp);
-                    dp = pcbp->controls.nje.inputBufPtr;
+                    dp = limit;
                     }
                 }
             else // isComplete == FALSE
@@ -905,7 +906,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                         fprintf(npuNjeLog, "Port %02x: expecting response signon\n", pcbp->claPort);
 #endif
                         npuNjeCloseConnection(pcbp);
-                        dp = pcbp->controls.nje.inputBufPtr;
+                        dp = limit;
                         }
                     }
                 else
@@ -914,7 +915,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                     fprintf(npuNjeLog, "Port %02x: expecting response signon\n", pcbp->claPort);
 #endif
                     npuNjeCloseConnection(pcbp);
-                    dp = pcbp->controls.nje.inputBufPtr;
+                    dp = limit;
                     }
                 }
             else // isComplete == FALSE
@@ -940,7 +941,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                                 pcbp->claPort, status);
 #endif
                         npuNjeCloseConnection(pcbp);
-                        dp = pcbp->controls.nje.inputBufPtr;
+                        dp = limit;
                         }
                     }
                 else
@@ -950,7 +951,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                             pcbp->claPort, status);
 #endif
                     npuNjeCloseConnection(pcbp);
-                    dp = pcbp->controls.nje.inputBufPtr;
+                    dp = limit;
                     }
                 }
             else // isComplete == FALSE
@@ -963,7 +964,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
 #if DEBUG
             fprintf(npuNjeLog, "Invalid NJE state: %d\n", pcbp->controls.nje.state);
 #endif
-            dp = pcbp->controls.nje.inputBufPtr;
+            dp = limit;
             break;
             }
         }
@@ -1492,7 +1493,8 @@ static u8 *npuNjeCloseDownlineBlock(Pcb *pcbp, u8 *dp)
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Collects a complete NJE/TCP block from network input.
-**                  The block is collected in the PCB input buffer.
+**                  The block is collected at the beginning of the PCB input
+**                  buffer.
 **
 **  Parameters:     Name        Description.
 **                  pcbp        Pointer to PCB
@@ -1570,8 +1572,8 @@ static u8 *npuNjeCollectBlock(Pcb *pcbp, u8 *start, u8 *limit, bool *isComplete,
     if (currentBlockSize >= njeBlockSize)
         {
         ibp     = pcbp->controls.nje.inputBuf;
-        ibLimit = ibp + njeBlockSize;
-        dp      = ibp + TtbLength;
+        ibLimit = start + njeBlockSize;
+        dp      = start + TtbLength;
         while (dp + TtrLength < ibLimit)
             {
             recLen = (*(dp + TtrOffLength) << 8) | *(dp + TtrOffLength + 1);
