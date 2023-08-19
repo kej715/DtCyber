@@ -46,6 +46,13 @@ Update, upgrade and reboot:
 
 Install and test any display drivers or VNC server now.
 
+Increase swap size (only strictly necessary for 512K and 1GB memory, but just do it).
+    sudo dphys-swapfile swapoff
+    sudo nano /etc/dphys-swapfile
+	    Edit CONF_SWAPSIZE=100 -> CONF_SWAPSIZE=1024
+    sudo dphys-swapfile setup
+    sudo dphys-swapfile swapon
+
 Install git-lfs (else you will not be able to clone the dtCyber repo):
 	sudo apt-get install git-lfs
 
@@ -65,7 +72,17 @@ Continue with normal setup ... E.g. Git clone repo and switch to dtcyber directo
 	...
 	Remember to make 'all' to install the NodeJS library
 
-Running 'node start' may require sudo
+Notes:
+    1) Running 'node start' may require sudo
+    2) Note on most Pi you will need to edit the 'cyber.ini' file for the appropriate
+        OS version you are starting to slow down the key entry to allow the date and time to
+        be set correctly. For example on emulated NOS2.8.7 on Pi 2 Zero W the following revised
+        values may work better (some further tweaking needed):
+                set_operator_port 6662 (unchanged)
+                set_key_wait_interval 500
+                enter_keys #4000#
+                enter_keys #25000#%year%%mon%%day%
+                enter_keys #3000#%hour%%min%%sec%
 
 ===== Notes for Older Models of Raspberry Pi =======
 
