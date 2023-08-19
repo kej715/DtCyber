@@ -386,6 +386,7 @@ typedef enum
     StConnInit = 0,
     StConnConnecting,
     StConnConnected,
+    StConnDisconnecting,
     StConnBusy
     } ConnectionState;
 
@@ -584,10 +585,10 @@ typedef struct njecb
     u8           lastDownlineRCB;  // last downline RCB processed
     u8           lastDownlineSRCB; // last downline SRCB processed
     int          retries;          // count of upline block retransmission attempts
-    time_t       deadline;         // terminal connection deadline
     time_t       lastXmit;         // timestamp of last data transmission to peer
     int          pingInterval;     // interval in seconds between pings during idle periods
     u8           *inputBuf;        // NJE/TCP block input buffer
+    int          inputBufSize;     // input buffer size
     u8           *inputBufPtr;     // pointer to next storage location
     u8           *outputBuf;       // NJE/TCP block output buffer
     u8           *outputBufPtr;    // pointer to next storage location

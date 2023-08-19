@@ -1551,7 +1551,8 @@ static void initNpuConnections(void)
                     pcbp->controls.nje.pingInterval = (int)pingInterval;
                     pcbp->controls.nje.localIP      = localHostIP;
                     pcbp->controls.nje.remoteIP     = destHostIP;
-                    pcbp->controls.nje.inputBuf     = (u8 *)malloc(pcbp->controls.nje.blockSize);
+                    pcbp->controls.nje.inputBufSize = pcbp->controls.nje.blockSize * 2;
+                    pcbp->controls.nje.inputBuf     = (u8 *)malloc(pcbp->controls.nje.inputBufSize);
                     if (pcbp->controls.nje.inputBuf == NULL)
                         {
                         fputs("\n(init   )   Out of memory\n", stderr);

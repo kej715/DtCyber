@@ -686,7 +686,10 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
                 **  Reset connection state.
                 */
                 tp->state = StTermIdle;
-                npuNetSetMaxCN(tp->cn);
+                /*
+                **  and disconnect the network.
+                */
+                npuNetDisconnected(tp);
                 }
             else
                 {
@@ -738,6 +741,7 @@ void npuSvmProcessTermBlock(Tcb *tp)
         **  Host has echoed a TERM block sent previously, now send an TCN/TA/N to host.
         */
         npuSvmSendDiscReply(tp);
+        npuSvmNotifyTermDisconnect(tp);
         tp->state = StTermIdle;
         /*
         **  and disconnect the network.
@@ -795,7 +799,6 @@ void npuSvmSendDiscRequest(Tcb *tp)
 
     switch (tp->state)
         {
-    case StTermRequestConnection: // awaiting response to terminal connection request
     case StTermConnected:         // terminal is connected
         /*
         **  Clean up flow control state and discard any pending output.
@@ -809,9 +812,14 @@ void npuSvmSendDiscRequest(Tcb *tp)
         requestTerminateConnection[BlkOffP3] = tp->cn;
         npuBipRequestUplineCanned(requestTerminateConnection, sizeof(requestTerminateConnection));
         tp->state = StTermNpuRequestDisconnect;
+        if (tp->pcbp != NULL && tp->pcbp->ncbp != NULL)
+            {
+            tp->pcbp->ncbp->state = StConnDisconnecting;
+            }
         break;
 
     case StTermIdle:                   // terminal is not yet configured or connected
+    case StTermRequestConnection:      // awaiting response to terminal connection request
     case StTermNpuRequestDisconnect:   // disconnection has been requested by NPU/MDI
     case StTermHostRequestDisconnect:  // disconnection has been requested by host
         fprintf(stderr, "Warning - disconnect request ignored for %.7s in state %s\n",

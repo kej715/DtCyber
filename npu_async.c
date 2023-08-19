@@ -863,11 +863,13 @@ void npuAsyncNotifyNetDisconnect(Pcb *pcbp)
         {
         npuSvmSendDiscRequest(tp);
         }
-
-    /*
-    **  Close socket and reset PCB.
-    */
-    npuNetCloseConnection(pcbp);
+    else
+        {
+        /*
+        **  Close socket and reset PCB.
+        */
+        npuNetCloseConnection(pcbp);
+        }
     }
 
 /*--------------------------------------------------------------------------

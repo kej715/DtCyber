@@ -120,6 +120,17 @@ u8   npuNetMaxCN      = 0;
 static char abortMsg[]        = "\r\nConnection aborted\r\n";
 static char connectingMsg[]   = "\r\nConnecting to host - please wait ...";
 static char connectedMsg[]    = "\r\nConnected\r\n";
+static char *connStates[]     =
+    {
+    //
+    // Indexed by connection type
+    //
+    "idle",          // StConnInit
+    "connecting",    // StConnConnecting
+    "connected",     // StConnConnected
+    "disconnecting", // StConnDisconnecting
+    "busy"           // StConnBusy
+    };
 static char *connTypes[]      =
     {
     //
@@ -646,7 +657,8 @@ void npuNetCheckStatus(void)
     while (pollIndex <= npuNetMaxClaPort)
         {
         pcbp = &pcbs[pollIndex++];
-        if (pcbp->connFd <= 0)
+        if (pcbp->connFd <= 0
+            || (pcbp->ncbp != NULL && pcbp->ncbp->state == StConnDisconnecting))
             {
             continue;
             }
@@ -708,7 +720,7 @@ void npuNetCheckStatus(void)
 void npuNetShowStatus()
     {
     u8       channelNo;
-    char     chEqStr[8];
+    char     chEqStr[10];
     DevSlot *dp;
     char     *dts;
     u8       eqNo;
@@ -795,7 +807,7 @@ void npuNetShowStatus()
         if (pcbp->ncbp != NULL && pcbp->connFd > 0)
             {
             sprintf(outBuf, "    >   %-8s %-7s P%02x "FMTNETSTATUS"\n", dts, chEqStr, pcbp->claPort, netGetLocalTcpAddress(pcbp->connFd),
-                netGetPeerTcpAddress(pcbp->connFd), connTypes[pcbp->ncbp->connType], "connected"),
+                netGetPeerTcpAddress(pcbp->connFd), connTypes[pcbp->ncbp->connType], connStates[pcbp->ncbp->state]),
             opDisplay(outBuf);
             chEqStr[0] = '\0';
             }
@@ -1441,11 +1453,11 @@ static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive)
     /*
     **  Initialize the connection and mark it as active.
     */
+    pcbp->connFd = connFd;
     if (notifyNetConnect[ncbp->connType](pcbp, isPassive))
         {
         npuNetSendConsoleMsg(connFd, ncbp->connType, connectingMsg);
-        pcbp->connFd = connFd;
-        ncbp->state  = StConnConnected;
+        pcbp->ncbp->state = StConnConnected;
 
         return TRUE;
         }
@@ -1456,11 +1468,16 @@ static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive)
     */
     npuNetSendConsoleMsg(connFd, ncbp->connType, abortMsg);
     netCloseConnection(connFd);
-    if (isPassive == FALSE)
+    pcbp->connFd = 0;
+    if (isPassive)
         {
-        ncbp->connFd = 0;
+        pcbp->ncbp->state = StConnInit;
         }
-    ncbp->state = StConnInit;
+    else
+        {
+        pcbp->ncbp->connFd = 0;
+        pcbp->ncbp->state  = StConnBusy;
+        }
 
     return FALSE;
     }
