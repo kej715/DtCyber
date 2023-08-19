@@ -1572,8 +1572,8 @@ static u8 *npuNjeCollectBlock(Pcb *pcbp, u8 *start, u8 *limit, bool *isComplete,
     if (currentBlockSize >= njeBlockSize)
         {
         ibp     = pcbp->controls.nje.inputBuf;
-        ibLimit = start + njeBlockSize;
-        dp      = start + TtbLength;
+        ibLimit = ibp + njeBlockSize;
+        dp      = ibp + TtbLength;
         while (dp + TtrLength < ibLimit)
             {
             recLen = (*(dp + TtrOffLength) << 8) | *(dp + TtrOffLength + 1);
