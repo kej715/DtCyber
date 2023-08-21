@@ -809,12 +809,22 @@ class BaseTerminal {
    *            Two parameters are passed to the tracing function:
    *              direction : "R" for receive, "S" for send
    *              data      : the data received or sent
+   *   strip  - an optional boolean argument, normally used with the default tracing
+   *            function. If true, parity bits are stripped from bytes sent and
+   *            received before logging them.
    */
-  setTracer(tracer) {
+  setTracer(tracer, strip) {
+    this.tracerDoesStrip = false;
     if (typeof tracer === "function") {
       this.tracer = tracer;
+      if (typeof strip === "boolean") {
+        this.tracerDoesStrip = strip;
+      }
     }
     else {
+      if (typeof tracer === "boolean" && typeof strip === "undefined") {
+        this.tracerDoesStrip = tracer;
+      }
       let lastDirection = null;
       let text = "";
       process.on("exit", code => {
@@ -835,6 +845,7 @@ class BaseTerminal {
         let s = "";
         for (let i = 0; i < data.length; i++) {
           let b = data[i];
+          if (this.tracerDoesStrip) b &= 0x7f;
           if (b < 0x10) {
             s += `<0${b.toString(16)}>`;
             if (b === 0x0a) s += "\n";
@@ -975,8 +986,8 @@ class CybisTerminal extends BaseTerminal {
     .then(() => this.send(`${password}\r`))
     .then(() => this.expect([
       { re: /Incorrect password/, fn: "Incorrect password" },
-      { re: /Choose a lesson/ },
-      { re: /You have not changed your password in the last.*Press LAB.*, or NEXT to continue\./,
+      { re: /Choose a lesson.*HELP available/ },
+      { re: /You have not changed your password in the last.*Press LAB.*or NEXT to continue\./,
         fn: () => {
               this.sendKeyDirect("Enter", false, false, false, 500);
               return true;

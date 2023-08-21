@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
+const DtCyber  = require("../../automation/DtCyber");
 const Terminal = require("../../automation/Terminal");
 
+const dtc  = new DtCyber();
 const term = new Terminal.CybisTerminal();
 const cybdevpat = [
   { re: /currently being edited/, fn: "Account is being edited by someone else" },
@@ -11,7 +13,7 @@ const cybdevpat = [
   { re: /Select new file type/, fn: () => { term.log("Select new file type"); return false; } }
 ];
 /* make a normal PLATO group the short way */
-function makegroup(name, author, masterfile, parts, names) {
+const makegroup = (name, author, masterfile, parts, names) => {
   const grouppat = [
     { re: /Enter new file name/, fn: () => { term.log(`makegroup name = ${name}`); term.send(`${name}\r`); return true; } },
     { re: /Already a file/, fn: "Already a file with this name" },
@@ -29,7 +31,7 @@ function makegroup(name, author, masterfile, parts, names) {
 }
 
 /* make a normal PLATO group the long way */
-function makegroup_long(name, masterfile, author, signons, datasignons, datarecords) {
+const makegroup_long = (name, masterfile, author, signons, datasignons, datarecords) => {
   const grouppat = [
     { re: /Enter new file name/, fn: () => { term.log(`makegroup_long name = ${name}`); term.send(`${name}\r`); return true; } },
     { re: /Already a file/, fn: "Already a file with this name" },
@@ -47,7 +49,7 @@ function makegroup_long(name, masterfile, author, signons, datasignons, datareco
 }
 
 /* make a PLM group */
-function makePLMgroup(name, masterfile, parts, names) {
+const makePLMgroup = (name, masterfile, parts, names) => {
   const grouppat = [
     { re: /Enter new file name/, fn: () => { term.log(`makePLMgroup name = ${name}`); term.send(`${name}\r`); return true; } },
     { re: /Already a file/, fn: "Already a file with this name" },
@@ -64,7 +66,7 @@ function makePLMgroup(name, masterfile, parts, names) {
 }
 
 /* make an instructor file */
-function makeinstructor(name, masterfile, parts) {
+const makeinstructor = (name, masterfile, parts) => {
   const instpat = [
     { re: /Enter new file name/, fn: () => { term.log(`makeinstructor name = ${name}`); term.send(`${name}\r`); return true; } },
     { re: /Already a file/, fn: "Already a file with this name" },
@@ -79,7 +81,7 @@ function makeinstructor(name, masterfile, parts) {
 }
 
 /* make PLM curriculum */
-function makePLMcurriculum(name, masterfile, parts) {
+const makePLMcurriculum = (name, masterfile, parts) => {
   const PLMcurpat = [
     { re: /Enter new file name/, fn: () => { term.log(`makePLMcurriculum name = ${name}`); term.send(`${name}\r`); return true; } },
     { re: /Already a file/, fn: "Already a file with this name" },
@@ -93,7 +95,7 @@ function makePLMcurriculum(name, masterfile, parts) {
 }
 
 /* make code file */
-function makecode(name, masterfile, parts) {
+const makecode = (name, masterfile, parts) => {
   const codepat = [
     { re: /Enter new file name/, fn: () => { term.log(`makecode name = ${name}`); term.send(`${name}\r`); return true; } },
     { re: /Already a file/, fn: "Already a file with this name" },
@@ -105,8 +107,11 @@ function makecode(name, masterfile, parts) {
   term.send("k");
   return term.expect(codepat);
 }
+const ipAddress = dtc.getHostIpAddress();
+term.setKeyInterval(250);
+term.setTracer(true);
 term.emulator.setDebug(false);
-term.connect(8005)
+term.connect(`${ipAddress}:8005`)
   .then(() => term.say("Connected"))
   .then(() => term.say("Login ..."))
   .then(() => term.login("admin", "s", "passme"))

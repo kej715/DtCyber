@@ -8,16 +8,13 @@ const dtc = new DtCyber();
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
-.then(() => dtc.say("idle IAF"))
+.then(() => dtc.say("Idle IAF"))
+.then(() => dtc.dsd(["IDLE,IAF."]))
+.then(() => dtc.say("Enable CYBIS"))
 .then(() => dtc.dsd([
-  "IDLE,IAF.",
-  "SUB."
-]))
-.then(() => dtc.sleep(2000))
-.then(() => dtc.dsd("ENABLE,CYB"))
-.then(() => dtc.sleep(2000))
-.then(() => dtc.dsd([
-  "END",
+  "SUB.",
+  "#2000#ENABLE,CYB",
+  "#2000#END",
   "AB",
 ]))
 .then(() => dtc.say("SYSEDIT CYBIS"))
@@ -27,5 +24,14 @@ dtc.connect()
 ], "CYBSE", 1))
 .then(() => dtc.say("Starting CYBIS ..."))
 .then(() => dtc.dsd(["CYBIS."]))
-.then(() => dtc.sleep(20000))
-.then(() => process.exit(0))
+.then(() => dtc.say("Wait for CYBIS to initialize ..."))
+.then(() => dtc.sleep(30000))
+.then(() => dtc.say("Restarting IAF ..."))
+.then(() => dtc.dsd(["IAF."]))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

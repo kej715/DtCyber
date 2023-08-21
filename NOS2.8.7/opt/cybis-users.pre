@@ -29,6 +29,7 @@ dtc.connect()
 .then(() => dtc.wget("https://steubentech.com/CYBIS/CYBIS-src-additions.tap", "opt/tapes", (byteCount, contentLength) => {
   maxProgressLen = utilities.reportProgress(byteCount, contentLength, maxProgressLen);
 }))
+.then(() => utilities.clearProgress(maxProgressLen))
 .then(() => dtc.say("Load CYBIS development tools and PL's archive into catalog of PLATO ..."))
 .then(() => dtc.dsd([
   "[UNLOAD,51.",
