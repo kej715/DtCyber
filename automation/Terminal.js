@@ -207,6 +207,7 @@ class BaseTerminal {
 
   constructor(emulator) {
     this.minimumKeyInterval = 0;
+    this.isDebug = false;
     this.emulator = emulator;
     this.machine = new Machine(null);
     this.machine.setTerminal(this.emulator);
@@ -487,10 +488,15 @@ class BaseTerminal {
    *                      recognize an intermediate pattern in the stream
    *                      and continue looking for other patterns. 
    *                    if a function, the function is executed, and its
-   *                      boolean result determines whether to continue
-   *                      matching. If the function is associated with a
-   *                      timeout value, and the function returns false, the
-   *                      returned promise is rejected.
+   *                      result determines whether to continue matching.
+   *                      If the result is boolean, the boolean result
+   *                      value directly indicates whether matching will
+   *                      continue. If the result is a promise, a match is
+   *                      indicated and the promise returned by expect is
+   *                      resolved when the promise returned by the called
+   *                      function resolves. If the function is associated
+   *                      with a timeout value, and the function returns
+   *                      false, the returned promise is rejected.
    *                    if omitted, a match is indicated, and the returned
    *                      promise is resolved.
    *                    otherwise, an error is indicated, and the returned
@@ -560,13 +566,32 @@ class BaseTerminal {
         }
         str += data;
         for (let pattern of patterns) {
+          if (this.isDebug) {
+            this.log(`expect ${pattern.re} ==> ${str}`);
+          }
           let si = str.search(pattern.re);
           if (si >= 0) {
+            if (this.isDebug) {
+              this.log(`  match at ${si} ${str.substring(si)}`);
+            }
             str = str.substring(si + 1);
             if (typeof pattern.fn === "function") {
               try {
-                if (pattern.fn()) return true;
-                resolve();
+                let res = pattern.fn();
+                if (typeof res === "boolean") {
+                  if (res) {
+                    return true;
+                  }
+                  else {
+                    resolve();
+                  }
+                }
+                else if (res instanceof Promise) {
+                  resolve(res);
+                }
+                else {
+                  reject(new Error(res));
+                }
               }
               catch(err) {
                 reject(err);
@@ -765,6 +790,19 @@ class BaseTerminal {
       .then(() => this.sleep(delay));
     }
     return promise;
+  }
+
+  /*
+   * setDebug
+   *
+   * Switch debugging mode on/off.
+   *
+   * Arguments
+   *   isDebug - true to switch debugging mode on
+   */
+  setDebug(isDebug) {
+    this.isDebug = isDebug;
+    this.emulator.setDebug(isDebug);
   }
 
   /*
@@ -974,22 +1012,37 @@ class CybisTerminal extends BaseTerminal {
    *   A promise that is reolved when the login is complete.
    */
   login(user, group, password) {
-    return this.expect([{ re: /Enter your user name/ }])
+    return this.expect([
+      { re: 15, fn: () => {
+              this.sendKeyDirect("Enter", false, false, false);
+              return true;
+            }
+      },
+      { re: /Press  NEXT  to begin/, fn: () => {
+              this.sendKeyDirect("Enter", false, false, false, 1000);
+              return true;
+            }
+      },
+      { re: /USER ACCESS NOT POSSIBLE/, fn:"CYBIS is currently rejecting logins"},
+      { re: /Enter your user name, and then press NEXT/ }
+    ])
     .then(() => this.sleep(1000))
-    .then(() => this.send(`${user}\r`))
-    .then(() => this.expect([{ re: /Enter your user group/ }]))
+    .then(() => this.send(user))
+    .then(() => this.send("\r"))
+    .then(() => this.expect([{ re: /Enter your user group, and then press NEXT/ }]))
     .then(() => this.sleep(1000))
     .then(() => this.send(group))
     .then(() => this.sendKey("S", true, true, false))
-    .then(() => this.expect([{ re: /password/ }]))
+    .then(() => this.expect([{ re: /Enter your password, then press NEXT/ }]))
     .then(() => this.sleep(1000))
-    .then(() => this.send(`${password}\r`))
+    .then(() => this.send(password))
+    .then(() => this.send("\r"))
     .then(() => this.expect([
       { re: /Incorrect password/, fn: "Incorrect password" },
       { re: /Choose a lesson.*HELP available/ },
-      { re: /You have not changed your password in the last.*Press LAB.*or NEXT to continue\./,
+      { re: /You have not changed your password in the last.*NEXT to continue/,
         fn: () => {
-              this.sendKeyDirect("Enter", false, false, false, 500);
+              this.sendKeyDirect("Enter", false, false, false, 1000);
               return true;
             }
       }
