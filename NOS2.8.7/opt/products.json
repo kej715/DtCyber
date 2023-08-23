@@ -55,7 +55,7 @@
     "desc": "CYBIS - Cyber Instructional System.",
     "products": [
       {
-        "name": "cybis",
+        "name": "cybis-base",
         "pre": [
           "cybis-update-ndl.js",
           "../compile-ndl.js",
@@ -84,7 +84,7 @@
           "pre": ["cybis-lessons-mkfiles.pre",
           "cybis-lessons-load.pre"],
           "post": ["cybis-lessons.post"],
-          "depends": ["cybis"]
+          "depends": ["cybis-base"]
       }
     ]
   },
