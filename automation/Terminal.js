@@ -1013,29 +1013,40 @@ class CybisTerminal extends BaseTerminal {
    */
   login(user, group, password) {
     return this.expect([
-      { re: 15, fn: () => {
-              this.sendKeyDirect("Enter", false, false, false);
-              return true;
-            }
-      },
       { re: /Press  NEXT  to begin/, fn: () => {
               this.sendKeyDirect("Enter", false, false, false, 1000);
               return true;
             }
       },
       { re: /USER ACCESS NOT POSSIBLE/, fn:"CYBIS is currently rejecting logins"},
-      { re: /Enter your user name, and then press NEXT/ }
+      { re: /Enter your user name, and then press NEXT/ },
+      { re: 15, fn: () => {
+//              this.sendKeyDirect("Enter", false, false, false);
+              this.sendKeyDirect("S", true, false, false);
+              return true;
+            }
+      }
     ])
     .then(() => this.sleep(1000))
     .then(() => this.send(user))
+    .then(() => this.sleep(1000))
     .then(() => this.send("\r"))
-    .then(() => this.expect([{ re: /Enter your user group, and then press NEXT/ }]))
+    .then(() => this.expect([
+      { re: /Enter your user group, and then press NEXT/ },
+      { re: 15, fn: () => {
+              this.sendKeyDirect("Enter", false, false, false);
+              return true;
+            }
+      }
+    ]))
     .then(() => this.sleep(1000))
     .then(() => this.send(group))
-    .then(() => this.sendKey("S", true, true, false))
+    .then(() => this.sleep(1000))
+    .then(() => this.send("\r"))
     .then(() => this.expect([{ re: /Enter your password, then press NEXT/ }]))
     .then(() => this.sleep(1000))
     .then(() => this.send(password))
+    .then(() => this.sleep(1000))
     .then(() => this.send("\r"))
     .then(() => this.expect([
       { re: /Incorrect password/, fn: "Incorrect password" },
@@ -1043,6 +1054,11 @@ class CybisTerminal extends BaseTerminal {
       { re: /You have not changed your password in the last.*NEXT to continue/,
         fn: () => {
               this.sendKeyDirect("Enter", false, false, false, 1000);
+              return true;
+            }
+      },
+      { re: 15, fn: () => {
+              this.sendKeyDirect("Enter", false, false, false);
               return true;
             }
       }
