@@ -8,7 +8,7 @@ const Terminal = require("../../automation/Terminal");
 const dtc  = new DtCyber();
 const term = new Terminal.CybisTerminal();
 
-const keyInterval = 250;
+const keyInterval = 500;
 
 const send = s => {
   if (s.length < 1) return;
@@ -87,7 +87,7 @@ const makegroup_long = (name, masterfile, author, signons, datasignons, datareco
     { re: /-of data records and/, fn: () => { term.log(`makegroup_long datarecords = ${datarecords}`); send(`${datarecords}\r`); return true; } },
     { re: /Press NEXT to proceed/, fn: () => { term.log("makegroup_long press NEXT to proceed"); send("\r"); return true; } },
     { re: /File created/, fn: () => { term.log("makegroup_long File created pressing NEXT"); send("\r"); return true; } },
-    { re: /Disk pack not loaded/, fn: `Disk pack not loaded for masterfile ${masterfile}` },
+//    { re: /Disk pack not loaded/, fn: `Disk pack not loaded for masterfile ${masterfile}` },
     { re: /Select new file type/ }
   ];
   return term.send("c")
@@ -179,7 +179,7 @@ term.connect(`${ipAddress}:8005`)
   .then(() => term.send("\r"))
   .then(() => term.expect([{ re: /SYSTEM MODE.*Choose a lesson.*HELP available/ }]))
   .then(() => term.say("system login detected"))
-  .then(() => term.sleep(1000))
+  .then(() => term.sleep(2000))
   .then(() => term.send("cybdeva\r"))
   .then(() => term.expect(cybdevpat))
   .then(() => term.say("ready to create files"))

@@ -708,12 +708,8 @@ class BaseTerminal {
         key = "Delete";
       }
       promise = promise === null
-      ? this.sendKey(key, isShift, isCtrl, isAlt)
-      : promise.then(() => this.sendKey(key, isShift, isCtrl, isAlt));
-      if (this.minimumKeyInterval > 0) {
-        promise = promise
-        .then(() => this.sleep(this.minimumKeyInterval));
-      }
+      ? this.sendKey(key, isShift, isCtrl, isAlt, this.minimumKeyInterval)
+      : promise.then(() => this.sendKey(key, isShift, isCtrl, isAlt, this.minimumKeyInterval));
     }
     return promise;
   }
@@ -729,14 +725,17 @@ class BaseTerminal {
    *   isShift - true if shift keypress indication
    *   isCtrl  - true if control keypress indication
    *   isAlt   - true if alt keypress indication
+   *   delay   - optional delay in milliseconds before sending key
    *
    * Returns:
    *   A promise that is resolved when the key has been sent.
    */
-  sendKey(key, isShift, isCtrl, isAlt) {
+  sendKey(key, isShift, isCtrl, isAlt, delay) {
     let promise = new Promise((resolve, reject) => {
-      this.sendKeyDirect(key, isShift, isCtrl, isAlt);
-      resolve();
+      setTimeout(() => {
+        this.sendKeyDirect(key, isShift, isCtrl, isAlt);
+        resolve();
+      }, (typeof delay === "undefined") ? 0 : delay);
     });
     return promise;
   }
@@ -1021,16 +1020,15 @@ class CybisTerminal extends BaseTerminal {
       { re: /USER ACCESS NOT POSSIBLE/, fn:"CYBIS is currently rejecting logins"},
       { re: /Enter your user name, and then press NEXT/ },
       { re: 15, fn: () => {
-//              this.sendKeyDirect("Enter", false, false, false);
               this.sendKeyDirect("S", true, false, false);
+              this.sendKeyDirect("Enter", false, false, false, 2000);
               return true;
             }
       }
     ])
-    .then(() => this.sleep(1000))
+    .then(() => this.sleep(2000))
     .then(() => this.send(user))
-    .then(() => this.sleep(1000))
-    .then(() => this.send("\r"))
+    .then(() => this.sendKey("Enter", false, false, false, 1000))
     .then(() => this.expect([
       { re: /Enter your user group, and then press NEXT/ },
       { re: 15, fn: () => {
@@ -1039,21 +1037,19 @@ class CybisTerminal extends BaseTerminal {
             }
       }
     ]))
-    .then(() => this.sleep(1000))
+    .then(() => this.sleep(2000))
     .then(() => this.send(group))
-    .then(() => this.sleep(1000))
-    .then(() => this.send("\r"))
+    .then(() => this.sendKey("Enter", false, false, false, 1000))
     .then(() => this.expect([{ re: /Enter your password, then press NEXT/ }]))
-    .then(() => this.sleep(1000))
+    .then(() => this.sleep(2000))
     .then(() => this.send(password))
-    .then(() => this.sleep(1000))
-    .then(() => this.send("\r"))
+    .then(() => this.sendKey("Enter", false, false, false, 1000))
     .then(() => this.expect([
       { re: /Incorrect password/, fn: "Incorrect password" },
       { re: /Choose a lesson.*HELP available/ },
       { re: /You have not changed your password in the last.*NEXT to continue/,
         fn: () => {
-              this.sendKeyDirect("Enter", false, false, false, 1000);
+              this.sendKeyDirect("Enter", false, false, false, 2000);
               return true;
             }
       },
