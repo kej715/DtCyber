@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const DEBUG = true;
+const DEBUG = false;
 
 const DtCyber  = require("../../automation/DtCyber");
 const Terminal = require("../../automation/Terminal");
@@ -8,60 +8,59 @@ const Terminal = require("../../automation/Terminal");
 const dtc  = new DtCyber();
 const term = new Terminal.CybisTerminal();
 
-const keyInterval = 500;
+const keyInterval = 250;
 
 const send = s => {
-  if (s.length < 1) return;
-  let key = s.charAt(0);
-  let cc = s.charCodeAt(0);
-  s = s.substring(1);
-  let isShift = false;
-  let isCtrl = false;
-  if (cc < 0x20) {
-    switch (cc) {
-    case 0x08:
-      key = "Backspace";
-      break;
-    case 0x09:
-      key = "Tab";
-      break;
-    case 0x0d:
-      key = "Enter";
-      break;
-    case 0x1b:
-      key = "Escape";
-      break;
-    default:
-      isCtrl = true;
-      break;
+  for (let i = 0; i < s.length; i++) {
+    let key = s.charAt(i);
+    let cc = s.charCodeAt(i);
+    let isShift = false;
+    let isCtrl = false;
+    if (cc < 0x20) {
+      switch (cc) {
+      case 0x08:
+        key = "Backspace";
+        break;
+      case 0x09:
+        key = "Tab";
+        break;
+      case 0x0d:
+        key = "Enter";
+        break;
+      case 0x1b:
+        key = "Escape";
+        break;
+      default:
+        key = String.fromCharCode(cc + 0x60);
+        isCtrl = true;
+        break;
+      }
     }
+    else if (cc >= 0x41 && cc <= 0x5a) {
+      isShift = true;
+    }
+    else if (cc === 0x7f) {
+      key = "Delete";
+    }
+    term.sendKeyDirect(key, isShift, isCtrl, false, (key === "Enter") ? keyInterval * 4 : keyInterval);
   }
-  else if (cc >= 0x41 && cc <= 0x5a) {
-    isShift = true;
-  }
-  else if (cc === 0x7f) {
-    key = "Delete";
-  }
-  setTimeout(() => {
-    term.sendKeyDirect(key, isShift, isCtrl, false);
-    send(s);
-  }, (key === "Enter") ? keyInterval * 4 : keyInterval);
 };
 
 const cybdevpat = [
   { re: /currently being edited/, fn: "Account is being edited by someone else" },
   { re: /Account last changed on/, fn: () => { term.log("Account last changed"); send("\r\r"); return true; } },
   { re: /ACCOUNT EDITOR/, fn: () => { term.log("account editor"); send("\r"); return true; } },
-  { re: /File management options/, fn: () => { term.log("File management options"); send("1\r"); return true; } },
+  { re: /File management options/, fn: () => { term.log("File management options"); send("1"); return true; } },
   { re: /Select new file type/, fn: () => { term.log("Select new file type"); return false; } }
 ];
 /* make a normal PLATO group the short way */
 const makegroup = (name, author, masterfile, parts, names) => {
   const grouppat = [
+    { re: /File management options/, fn: () => { term.log("File management options"); send("1"); return true; } },
     { re: /Enter new file name/, fn: () => { term.log(`makegroup name = ${name}`); send(`${name}\r`); return true; } },
-    { re: /Already a file/, fn: "Already a file with this name" },
+    { re: /Already a file with this name/, fn: () => { term.log(`${name} already exists`); send("\x02"); return false; } },
     { re: /Enter masterfile/, fn: () => { term.log(`makegroup masterfile = ${masterfile}`); send(`${masterfile}\r`); return true; } },
-    { re: /Allow author records/, fn: () => { term.log(`makegroup author = ${author}`); send(`${author}\r`); return true; } },
+    { re: /Allow author records/, fn: () => { term.log(`makegroup author = ${author}`); send(`${author}`); return true; } },
     { re: /Press DATA to enter/, fn: () => { term.log("makegroup sent DATA key"); send("\x04"); return true; } },
     { re: /Enter number of parts/, fn: () => { term.log(`makegroup parts = ${parts}`); send(`${parts}\r`); return true; } },
     { re: /Enter number of names/, fn: () => { term.log(`makegroup names = ${names}`); send(`${names}\r`); return true; } },
@@ -78,16 +77,17 @@ const makegroup = (name, author, masterfile, parts, names) => {
 /* make a normal PLATO group the long way */
 const makegroup_long = (name, masterfile, author, signons, datasignons, datarecords) => {
   const grouppat = [
+    { re: /File management options/, fn: () => { term.log("File management options"); send("1"); return true; } },
     { re: /Enter new file name/, fn: () => { term.log(`makegroup_long name = ${name}`); send(`${name}\r`); return true; } },
-    { re: /Already a file/, fn: "Already a file with this name" },
+    { re: /Already a file with this name/, fn: () => { term.log(`${name} already exists`); send("\x02"); return false; } },
     { re: /Enter masterfile/, fn: () => { term.log(`makegroup_long masterfile = ${masterfile}`); send(`${masterfile}\r`); return true; } },
-    { re: /Allow author records/, fn: () => { term.log(`makegroup_long author = ${author}`); send(`${author}\r`); return true; } },
+    { re: /Allow author records/, fn: () => { term.log(`makegroup_long author = ${author}`); send(`${author}`); return true; } },
     { re: /Press DATA to enter/, fn: () => { term.log(`makegroup_long signons = ${signons}`); send(`${signons}\r`); return true; } },
     { re: /-of data signons/, fn: () => { term.log(`makegroup_long datasignons = ${datasignons}`); send(`${datasignons}\r`); return true; } },
     { re: /-of data records and/, fn: () => { term.log(`makegroup_long datarecords = ${datarecords}`); send(`${datarecords}\r`); return true; } },
     { re: /Press NEXT to proceed/, fn: () => { term.log("makegroup_long press NEXT to proceed"); send("\r"); return true; } },
     { re: /File created/, fn: () => { term.log("makegroup_long File created pressing NEXT"); send("\r"); return true; } },
-//    { re: /Disk pack not loaded/, fn: `Disk pack not loaded for masterfile ${masterfile}` },
+    { re: /Disk pack not loaded/, fn: `Disk pack not loaded for masterfile ${masterfile}` },
     { re: /Select new file type/ }
   ];
   return term.send("c")
@@ -98,8 +98,9 @@ const makegroup_long = (name, masterfile, author, signons, datasignons, datareco
 /* make a PLM group */
 const makePLMgroup = (name, masterfile, parts, names) => {
   const grouppat = [
+    { re: /File management options/, fn: () => { term.log("File management options"); send("1"); return true; } },
     { re: /Enter new file name/, fn: () => { term.log(`makePLMgroup name = ${name}`); send(`${name}\r`); return true; } },
-    { re: /Already a file/, fn: "Already a file with this name" },
+    { re: /Already a file with this name/, fn: () => { term.log(`${name} already exists`); send("\x02"); return false; } },
     { re: /Enter masterfile/, fn: () => { term.log(`makePLMgroup masterfile = ${masterfile}`); send(`${masterfile}\r`); return true; } },
     { re: /Use PLMROUTER or/, fn: () => { term.log("makePLMgroup sending p key"); send("p"); return true; } },
     { re: /Enter number of parts/, fn: () => { term.log(`makePLMgroup parts = ${parts}`); send(`${parts}\r`); return true; } },
@@ -117,8 +118,9 @@ const makePLMgroup = (name, masterfile, parts, names) => {
 /* make an instructor file */
 const makeinstructor = (name, masterfile, parts) => {
   const instpat = [
+    { re: /File management options/, fn: () => { term.log("File management options"); send("1"); return true; } },
     { re: /Enter new file name/, fn: () => { term.log(`makeinstructor name = ${name}`); send(`${name}\r`); return true; } },
-    { re: /Already a file/, fn: "Already a file with this name" },
+    { re: /Already a file with this name/, fn: () => { term.log(`${name} already exists`); send("\x02"); return false; } },
     { re: /Enter masterfile/, fn: () => { term.log(`makeinstructor masterfile = ${masterfile}`); send(`${masterfile}\r`); return true; } },
     { re: /Enter number of parts/, fn: () => { term.log(`makeinstructor parts = ${parts}`); send(`${parts}\r`); return true; } },
     { re: /File created/, fn: () => { term.log("makeinstructor File created pressing NEXT"); send("\r"); return true; } },
@@ -134,8 +136,9 @@ const makeinstructor = (name, masterfile, parts) => {
 /* make PLM curriculum */
 const makePLMcurriculum = (name, masterfile, parts) => {
   const PLMcurpat = [
+    { re: /File management options/, fn: () => { term.log("File management options"); send("1"); return true; } },
     { re: /Enter new file name/, fn: () => { term.log(`makePLMcurriculum name = ${name}`); send(`${name}\r`); return true; } },
-    { re: /Already a file/, fn: "Already a file with this name" },
+    { re: /Already a file with this name/, fn: () => { term.log(`${name} already exists`); send("\x02"); return false; } },
     { re: /Enter masterfile/, fn: () => { term.log(`makePLMcurriculum masterfile = ${masterfile}`); send(`${masterfile}\r`); return true; } },
     { re: /Enter number of parts/, fn: () => { term.log(`makePLMcurriculum parts = ${parts}`); send(`${parts}\r`); return true; } },
     { re: /File created/, fn: () => { term.log("makePLMcurriculum File created pressing NEXT"); send("\r"); return true; } },
@@ -150,8 +153,9 @@ const makePLMcurriculum = (name, masterfile, parts) => {
 /* make code file */
 const makecode = (name, masterfile, parts) => {
   const codepat = [
+    { re: /File management options/, fn: () => { term.log("File management options"); send("1"); return true; } },
     { re: /Enter new file name/, fn: () => { term.log(`makecode name = ${name}`); send(`${name}\r`); return true; } },
-    { re: /Already a file/, fn: "Already a file with this name" },
+    { re: /Already a file with this name/, fn: () => { term.log(`${name} already exists`); send("\x02"); return false; } },
     { re: /Enter masterfile/, fn: () => { term.log(`makecode masterfile = ${masterfile}`); send(`${masterfile}\r`); return true; } },
     { re: /Enter number of parts/, fn: () => { term.log(`makecode parts = ${parts}`); send(`${parts}\r`); return true; } },
     { re: /File created/, fn: () => { term.log("makecode File created pressing NEXT"); send("\r"); return true; } },

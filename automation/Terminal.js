@@ -208,6 +208,7 @@ class BaseTerminal {
   constructor(emulator) {
     this.minimumKeyInterval = 0;
     this.isDebug = false;
+    this.keyQueue = [];
     this.emulator = emulator;
     this.machine = new Machine(null);
     this.machine.setTerminal(this.emulator);
@@ -566,15 +567,13 @@ class BaseTerminal {
         }
         str += data;
         for (let pattern of patterns) {
-          if (this.isDebug) {
-            this.log(`expect ${pattern.re} ==> ${str}`);
-          }
-          let si = str.search(pattern.re);
-          if (si >= 0) {
+          let match = str.match(pattern.re);
+          if (match !== null) {
             if (this.isDebug) {
-              this.log(`  match at ${si} ${str.substring(si)}`);
+              this.log(`expect ${pattern.re} match at ${match.index} of ${str}`);
+              this.log(`  ${match[0]}`);
             }
-            str = str.substring(si + 1);
+            str = str.substring(match.index + match[0].length);
             if (typeof pattern.fn === "function") {
               try {
                 let res = pattern.fn();
@@ -675,42 +674,61 @@ class BaseTerminal {
    *   A promise that is resolved when the string has been sent.
    */
   send(s) {
-    let promise = null;
-    let isAlt = false;
-    for (let i = 0; i < s.length; i++) {
-      let key = s.charAt(i);
-      let cc = s.charCodeAt(i);
-      let isShift = false;
-      let isCtrl = false;
-      if (cc < 0x20) {
-        switch (cc) {
-        case 0x08:
-          key = "Backspace";
-          break;
-        case 0x09:
-          key = "Tab";
-          break;
-        case 0x0d:
-          key = "Enter";
-          break;
-        case 0x1b:
-          key = "Escape";
-          break;
-        default:
-          isCtrl = true;
-          break;
+    const wasQueueEmpty = this.keyQueue.length < 1;
+    const limit = s.length - 1;
+    const promise = new Promise((resolve, reject) => {
+      for (let i = 0; i < s.length; i++) {
+        let key = s.charAt(i);
+        let cc = s.charCodeAt(i);
+        let isShift = false;
+        let isCtrl = false;
+        if (cc < 0x20) {
+          switch (cc) {
+          case 0x08:
+            key = "Backspace";
+            break;
+          case 0x09:
+            key = "Tab";
+            break;
+          case 0x0d:
+            key = "Enter";
+            break;
+          case 0x1b:
+            key = "Escape";
+            break;
+          default:
+            isCtrl = true;
+            break;
+          }
+        }
+        else if (cc >= 0x41 && cc <= 0x5a) {
+          isShift = true;
+        }
+        else if (cc === 0x7f) {
+          key = "Delete";
+        }
+        if (i < limit) {
+          this.keyQueue.push({
+            key: key,
+            isShift: isShift,
+            isCtrl: isCtrl,
+            isAlt: false,
+            delay: this.minimumKeyInterval
+          });
+        }
+        else {
+          this.keyQueue.push({
+            key: key,
+            isShift: isShift,
+            isCtrl: isCtrl,
+            isAlt: false,
+            delay: this.minimumKeyInterval,
+            resolver: resolve
+          });
         }
       }
-      else if (cc >= 0x41 && cc <= 0x5a) {
-        isShift = true;
-      }
-      else if (cc === 0x7f) {
-        key = "Delete";
-      }
-      promise = promise === null
-      ? this.sendKey(key, isShift, isCtrl, isAlt, this.minimumKeyInterval)
-      : promise.then(() => this.sendKey(key, isShift, isCtrl, isAlt, this.minimumKeyInterval));
-    }
+    });
+    if (wasQueueEmpty) this.startSendingKeys();
     return promise;
   }
 
@@ -731,12 +749,17 @@ class BaseTerminal {
    *   A promise that is resolved when the key has been sent.
    */
   sendKey(key, isShift, isCtrl, isAlt, delay) {
-    let promise = new Promise((resolve, reject) => {
-      setTimeout(() => {
-        this.sendKeyDirect(key, isShift, isCtrl, isAlt);
-        resolve();
-      }, (typeof delay === "undefined") ? 0 : delay);
+    const promise = new Promise((resolve, reject) => {
+      this.keyQueue.push({
+        key: key,
+        isShift: isShift,
+        isCtrl: isCtrl,
+        isAlt: isAlt,
+        delay: delay,
+        resolver: resolve
+      });
     });
+    if (this.keyQueue.length === 1) this.startSendingKeys();
     return promise;
   }
 
@@ -754,14 +777,14 @@ class BaseTerminal {
    *   delay   - optional delay in milliseconds before sending key
    */
   sendKeyDirect(key, isShift, isCtrl, isAlt, delay) {
-    if (typeof delay === "undefined") {
-      this.emulator.processKeyboardEvent(key, isShift, isCtrl, isAlt);
-    }
-    else {
-      setTimeout(() => {
-        this.emulator.processKeyboardEvent(key, isShift, isCtrl, isAlt);
-      }, delay);
-    }
+    this.keyQueue.push({
+      key: key,
+      isShift: isShift,
+      isCtrl: isCtrl,
+      isAlt: isAlt,
+      delay: delay
+    });
+    if (this.keyQueue.length === 1) this.startSendingKeys();
   }
 
   /*
@@ -920,6 +943,32 @@ class BaseTerminal {
   sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
+
+  /*
+   * startSendingKeys
+   *
+   * Begin sending keystroke definitions that have been added to the keystroke queue.
+   */
+  startSendingKeys() {
+    while (this.keyQueue.length > 0) {
+      let head  = this.keyQueue[0];
+      let delay = (typeof head.delay === "number") ? head.delay : 0;
+      if (delay > 0) {
+        setTimeout(() => {
+          this.emulator.processKeyboardEvent(head.key, head.isShift, head.isCtrl, head.isAlt);
+          this.keyQueue = this.keyQueue.slice(1);
+          if (typeof head.resolver === "function") head.resolver();
+          if (this.keyQueue.length > 0) this.startSendingKeys();
+        }, delay);
+        return;
+      }
+      else {
+        this.emulator.processKeyboardEvent(head.key, head.isShift, head.isCtrl, head.isAlt);
+        this.keyQueue = this.keyQueue.slice(1);
+        if (typeof head.resolver === "function") head.resolver();
+      }
+    }
+  }
 }
 
 /*
@@ -1020,7 +1069,7 @@ class CybisTerminal extends BaseTerminal {
       { re: /USER ACCESS NOT POSSIBLE/, fn:"CYBIS is currently rejecting logins"},
       { re: /Enter your user name, and then press NEXT/ },
       { re: 15, fn: () => {
-              this.sendKeyDirect("S", true, false, false);
+              this.sendKeyDirect("S", true, true, false);
               this.sendKeyDirect("Enter", false, false, false, 2000);
               return true;
             }
@@ -1047,7 +1096,7 @@ class CybisTerminal extends BaseTerminal {
     .then(() => this.expect([
       { re: /Incorrect password/, fn: "Incorrect password" },
       { re: /Choose a lesson.*HELP available/ },
-      { re: /You have not changed your password in the last.*NEXT to continue/,
+      { re: /You have not changed your password in the last [0-9]+ days.*NEXT to continue/,
         fn: () => {
               this.sendKeyDirect("Enter", false, false, false, 2000);
               return true;
