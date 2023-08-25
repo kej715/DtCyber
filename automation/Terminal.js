@@ -538,7 +538,8 @@ class BaseTerminal {
         intervalId = setInterval(() => {
           me.streamMgr.clearInputStream();
           try {
-            if (timeout.fn() === false) {
+            let res = timeout.fn();
+            if (res !== true) {
               //
               // When the timeout function returns false, this
               // indicates that the consumer should not be applied
@@ -548,9 +549,12 @@ class BaseTerminal {
               // the consumer will continue to be applied to received
               // text.
               //
+              // If the timeout function returns a string, the promise
+              // is rejected with the string as an error message.
+              //
               clearTimeout(intervalId);
               me.streamMgr.endConsumer();
-              reject(new Error("Timeout"));
+              reject(new Error(typeof res === "string" ? res : "Timeout"));
             }
           }
           catch (err) {
@@ -1060,6 +1064,16 @@ class CybisTerminal extends BaseTerminal {
    *   A promise that is reolved when the login is complete.
    */
   login(user, group, password) {
+    let retries = 0;
+    const retryFn = item => {
+      if (++retries < 5) {
+        this.sendKeyDirect("Enter", false, false, false);
+        return true;
+      }
+      else {
+        return `CYBIS failed to ask for ${item}`;
+      }
+    };
     return this.expect([
       { re: /Press  NEXT  to begin/, fn: () => {
               this.sendKeyDirect("Enter", false, false, false, 1000);
@@ -1067,29 +1081,23 @@ class CybisTerminal extends BaseTerminal {
             }
       },
       { re: /USER ACCESS NOT POSSIBLE/, fn:"CYBIS is currently rejecting logins"},
-      { re: /Enter your user name, and then press NEXT/ },
-      { re: 15, fn: () => {
-              this.sendKeyDirect("S", true, true, false);
-              this.sendKeyDirect("Enter", false, false, false, 2000);
-              return true;
-            }
-      }
+      { re: /Enter your user name, and then press NEXT/, fn: () => { retries = 0; return false; } },
+      { re: 10, fn: () => retryFn("user name") }
     ])
     .then(() => this.sleep(2000))
     .then(() => this.send(user))
     .then(() => this.sendKey("Enter", false, false, false, 1000))
     .then(() => this.expect([
-      { re: /Enter your user group, and then press NEXT/ },
-      { re: 15, fn: () => {
-              this.sendKeyDirect("Enter", false, false, false);
-              return true;
-            }
-      }
+      { re: /Enter your user group, and then press NEXT/, fn: () => { retries = 0; return false; } },
+      { re: 10, fn: () => retryFn("user group") }
     ]))
     .then(() => this.sleep(2000))
     .then(() => this.send(group))
     .then(() => this.sendKey("Enter", false, false, false, 1000))
-    .then(() => this.expect([{ re: /Enter your password, then press NEXT/ }]))
+    .then(() => this.expect([
+      { re: /Enter your password, then press NEXT/, fn: () => { retries = 0; return false; } },
+      { re: 10, fn: () => retryFn("password") }
+    ]))
     .then(() => this.sleep(2000))
     .then(() => this.send(password))
     .then(() => this.sendKey("Enter", false, false, false, 1000))
@@ -1102,11 +1110,7 @@ class CybisTerminal extends BaseTerminal {
               return true;
             }
       },
-      { re: 15, fn: () => {
-              this.sendKeyDirect("Enter", false, false, false);
-              return true;
-            }
-      }
+      { re: 10, fn: () => retryFn("lesson") }
     ]));
   }
 }

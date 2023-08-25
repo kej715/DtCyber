@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const DEBUG = false;
+const DEBUG = true;
 
 const DtCyber  = require("../../automation/DtCyber");
 const Terminal = require("../../automation/Terminal");

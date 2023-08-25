@@ -149,7 +149,26 @@ class PTerm {
   debug(message, bytes) {
     if (this.isDebug) {
       if (bytes) {
-        console.log(`${message}: [${this.toHex(bytes).join(" ")}]`);
+        while (bytes.length > 16) {
+          let slice = bytes.slice(0, 16);
+          bytes = bytes.slice(16);
+          let hex = this.toHex(slice).join(" ");
+          let asc = "";
+          for (const b of slice) {
+            asc += (b >= 0x20 && b < 0x7f) ? String.fromCharCode(b) : ".";
+          }
+          console.log(`${message}: | ${hex} | ${asc} |`);
+        }
+        if (bytes.length > 0) {
+          let hex = this.toHex(bytes).join(" ");
+          for (let i = bytes.length; i < 16; i++) hex += "   ";
+          let asc = "";
+          for (const b of bytes) {
+            asc += (b >= 0x20 && b < 0x7f) ? String.fromCharCode(b) : ".";
+          }
+          for (let i = bytes.length; i < 16; i++) asc += " ";
+          console.log(`${message}: | ${hex} | ${asc} |`);
+        }
       }
       else {
         console.log(message);
@@ -246,7 +265,17 @@ class PTerm {
       this.debug("send", bytes);
       let buffer = new Uint8Array(bytes.length);
       for (let i = 0; i < bytes.length; i++) {
+        buffer[i] = bytes[i] & 0x7f;
+        /*
+         * The following code is commented out. The PLATO
+         * terminal spec says that all data should be exchanged
+         * with even parity. However, PNI ignores parity, and
+         * the C++ implementation of Pterm does not send it,
+         * so this implementation doesn't send it anymore either.
+
         buffer[i] = this.parityMap[bytes[i] & 0x7f];
+
+         */
       }
       this.uplineDataSender(buffer);
     }

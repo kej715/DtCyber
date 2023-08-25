@@ -1235,9 +1235,10 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
     /*
     **  Process transparent input.
     */
-    while (len--)
+    while (len > 0)
         {
         ch = *dp++;
+        len -= 1;
 
         if (tp->params.fvEchoplex)
             {
