@@ -501,6 +501,7 @@ extern PpSlot              *ppu;
 extern u8                  ppuCount;
 extern u32                 readerScanSecs;
 extern u32                 rtcClock;
+extern bool                rtcClockIsCurrent;
 extern u32                 traceMask;
 extern u32                 traceSequenceNo;
 
