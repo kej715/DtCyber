@@ -78,7 +78,8 @@ static u64 rtcGetTick(void);
 **  Public Variables
 **  ----------------
 */
-u32 rtcClock = 0;
+u32  rtcClock          = 0;
+bool rtcClockIsCurrent = TRUE;
 
 
 /*
@@ -116,8 +117,6 @@ static u64 startTime;
 void rtcInit(u8 increment, u32 setMHz)
     {
     DevSlot *dp;
-
-    (void)setMHz;
 
     dp = channelAttach(ChClock, 0, DtRtc);
 
@@ -160,7 +159,14 @@ void rtcInit(u8 increment, u32 setMHz)
 **------------------------------------------------------------------------*/
 void rtcTick(void)
     {
-    rtcClock += rtcIncrement;
+    if (rtcIncrement == 0)
+        {
+        rtcReadUsCounter();
+        }
+    else
+        {
+        rtcClock += rtcIncrement;
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -219,6 +225,8 @@ double rtcStopTimer(void)
 **
 **------------------------------------------------------------------------*/
 
+#if defined(_WIN32)
+
 #define MaxMicroseconds    400.0L
 
 void rtcReadUsCounter(void)
@@ -264,6 +272,11 @@ void rtcReadUsCounter(void)
         {
         delayedMicroseconds = microseconds - MaxMicroseconds;
         microseconds        = MaxMicroseconds;
+        rtcClockIsCurrent   = FALSE;
+        }
+    else
+        {
+        rtcClockIsCurrent   = TRUE;
         }
 
     result   = floor(microseconds);
@@ -271,6 +284,53 @@ void rtcReadUsCounter(void)
 
     rtcClock += (u32)result;
     }
+
+#else
+
+#define MaxMicroseconds    1000
+
+void rtcReadUsCounter(void)
+    {
+    static bool   first = TRUE;
+    static u64    old   = 0;
+    u64           new;
+    u64           difference;
+
+    if (rtcIncrement != 0)
+        {
+        return;
+        }
+
+    if (first)
+        {
+        first = FALSE;
+        old   = rtcGetTick();
+        }
+
+    new = rtcGetTick();
+
+    if (new < old)
+        {
+        /* Ignore ticks if they go backward */
+        return;
+        }
+
+    difference = new - old;
+    if (difference > MaxMicroseconds)
+        {
+        difference = MaxMicroseconds;
+        rtcClockIsCurrent   = FALSE;
+        }
+    else
+        {
+        rtcClockIsCurrent   = FALSE;
+        }
+
+    old      += difference;
+    rtcClock += (u32)difference;
+    }
+
+#endif
 
 /*
  **--------------------------------------------------------------------------
@@ -402,14 +462,6 @@ static u64 rtcGetTick(void)
 
 #else
 
-/*--------------------------------------------------------------------------
-**  Purpose:        Low-level microsecond tick functions.
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
 static bool rtcInitTick(void)
     {
     printf("(rtc    ) No high resolution hardware clock, using emulation cycle counter\n");

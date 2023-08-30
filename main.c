@@ -270,6 +270,7 @@ int main(int argc, char **argv)
         /*
         **  Execute PP, CPU and RTC.
         */
+        rtcTick();
         ppStep();
 
         cpuStep(cpus);
@@ -278,7 +279,6 @@ int main(int argc, char **argv)
         cpuStep(cpus);
 
         channelStep();
-        rtcTick();
 
         idleThrottle(cpus);
 
@@ -342,7 +342,7 @@ void idleThrottle(CpuContext *ctx)
                 {
                 if (ctx->id == 0)
                     {
-                    if (idleCheckBusy())
+                    if (idleCheckBusy() || rtcClockIsCurrent == FALSE)
                         {
                         return;
                         }

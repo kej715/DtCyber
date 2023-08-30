@@ -207,6 +207,8 @@ class BaseTerminal {
 
   constructor(emulator) {
     this.minimumKeyInterval = 0;
+    this.isDebug = false;
+    this.keyQueue = [];
     this.emulator = emulator;
     this.machine = new Machine(null);
     this.machine.setTerminal(this.emulator);
@@ -487,10 +489,15 @@ class BaseTerminal {
    *                      recognize an intermediate pattern in the stream
    *                      and continue looking for other patterns. 
    *                    if a function, the function is executed, and its
-   *                      boolean result determines whether to continue
-   *                      matching. If the function is associated with a
-   *                      timeout value, and the function returns false, the
-   *                      returned promise is rejected.
+   *                      result determines whether to continue matching.
+   *                      If the result is boolean, the boolean result
+   *                      value directly indicates whether matching will
+   *                      continue. If the result is a promise, a match is
+   *                      indicated and the promise returned by expect is
+   *                      resolved when the promise returned by the called
+   *                      function resolves. If the function is associated
+   *                      with a timeout value, and the function returns
+   *                      false, the returned promise is rejected.
    *                    if omitted, a match is indicated, and the returned
    *                      promise is resolved.
    *                    otherwise, an error is indicated, and the returned
@@ -531,7 +538,8 @@ class BaseTerminal {
         intervalId = setInterval(() => {
           me.streamMgr.clearInputStream();
           try {
-            if (timeout.fn() === false) {
+            let res = timeout.fn();
+            if (res !== true) {
               //
               // When the timeout function returns false, this
               // indicates that the consumer should not be applied
@@ -541,9 +549,12 @@ class BaseTerminal {
               // the consumer will continue to be applied to received
               // text.
               //
+              // If the timeout function returns a string, the promise
+              // is rejected with the string as an error message.
+              //
               clearTimeout(intervalId);
               me.streamMgr.endConsumer();
-              reject(new Error("Timeout"));
+              reject(new Error(typeof res === "string" ? res : "Timeout"));
             }
           }
           catch (err) {
@@ -560,13 +571,30 @@ class BaseTerminal {
         }
         str += data;
         for (let pattern of patterns) {
-          let si = str.search(pattern.re);
-          if (si >= 0) {
-            str = str.substring(si + 1);
+          let match = str.match(pattern.re);
+          if (match !== null) {
+            if (this.isDebug) {
+              this.log(`expect ${pattern.re} match at ${match.index} of ${str}`);
+              this.log(`  ${match[0]}`);
+            }
+            str = str.substring(match.index + match[0].length);
             if (typeof pattern.fn === "function") {
               try {
-                if (pattern.fn()) return true;
-                resolve();
+                let res = pattern.fn();
+                if (typeof res === "boolean") {
+                  if (res) {
+                    return true;
+                  }
+                  else {
+                    resolve();
+                  }
+                }
+                else if (res instanceof Promise) {
+                  resolve(res);
+                }
+                else {
+                  reject(new Error(res));
+                }
               }
               catch(err) {
                 reject(err);
@@ -633,7 +661,7 @@ class BaseTerminal {
    *   A promise that is resolved when the message has been displayed.
    */
   say(message) {
-    this.log(`${new Date().toLocaleTimeString()} ${message}`);
+    this.log(message);
     return Promise.resolve();
   }
 
@@ -650,46 +678,61 @@ class BaseTerminal {
    *   A promise that is resolved when the string has been sent.
    */
   send(s) {
-    let promise = null;
-    let isAlt = false;
-    for (let i = 0; i < s.length; i++) {
-      let key = s.charAt(i);
-      let cc = s.charCodeAt(i);
-      let isShift = false;
-      let isCtrl = false;
-      if (cc < 0x20) {
-        switch (cc) {
-        case 0x08:
-          key = "Backspace";
-          break;
-        case 0x09:
-          key = "Tab";
-          break;
-        case 0x0d:
-          key = "Enter";
-          break;
-        case 0x1b:
-          key = "Escape";
-          break;
-        default:
-          isCtrl = true;
-          break;
+    const wasQueueEmpty = this.keyQueue.length < 1;
+    const limit = s.length - 1;
+    const promise = new Promise((resolve, reject) => {
+      for (let i = 0; i < s.length; i++) {
+        let key = s.charAt(i);
+        let cc = s.charCodeAt(i);
+        let isShift = false;
+        let isCtrl = false;
+        if (cc < 0x20) {
+          switch (cc) {
+          case 0x08:
+            key = "Backspace";
+            break;
+          case 0x09:
+            key = "Tab";
+            break;
+          case 0x0d:
+            key = "Enter";
+            break;
+          case 0x1b:
+            key = "Escape";
+            break;
+          default:
+            isCtrl = true;
+            break;
+          }
+        }
+        else if (cc >= 0x41 && cc <= 0x5a) {
+          isShift = true;
+        }
+        else if (cc === 0x7f) {
+          key = "Delete";
+        }
+        if (i < limit) {
+          this.keyQueue.push({
+            key: key,
+            isShift: isShift,
+            isCtrl: isCtrl,
+            isAlt: false,
+            delay: this.minimumKeyInterval
+          });
+        }
+        else {
+          this.keyQueue.push({
+            key: key,
+            isShift: isShift,
+            isCtrl: isCtrl,
+            isAlt: false,
+            delay: this.minimumKeyInterval,
+            resolver: resolve
+          });
         }
       }
-      else if (cc >= 0x41 && cc <= 0x5a) {
-        isShift = true;
-      }
-      else if (cc === 0x7f) {
-        key = "Delete";
-      }
-      promise = promise === null
-      ? this.sendKey(key, isShift, isCtrl, isAlt)
-      : promise.then(() => this.sendKey(key, isShift, isCtrl, isAlt));
-      if (this.minimumKeyInterval > 0) {
-        promise = promise
-        .then(() => this.sleep(this.minimumKeyInterval));
-      }
-    }
+    });
+    if (wasQueueEmpty) this.startSendingKeys();
     return promise;
   }
 
@@ -704,15 +747,23 @@ class BaseTerminal {
    *   isShift - true if shift keypress indication
    *   isCtrl  - true if control keypress indication
    *   isAlt   - true if alt keypress indication
+   *   delay   - optional delay in milliseconds before sending key
    *
    * Returns:
    *   A promise that is resolved when the key has been sent.
    */
-  sendKey(key, isShift, isCtrl, isAlt) {
-    let promise = new Promise((resolve, reject) => {
-      this.sendKeyDirect(key, isShift, isCtrl, isAlt);
-      resolve();
+  sendKey(key, isShift, isCtrl, isAlt, delay) {
+    const promise = new Promise((resolve, reject) => {
+      this.keyQueue.push({
+        key: key,
+        isShift: isShift,
+        isCtrl: isCtrl,
+        isAlt: isAlt,
+        delay: delay,
+        resolver: resolve
+      });
     });
+    if (this.keyQueue.length === 1) this.startSendingKeys();
     return promise;
   }
 
@@ -730,14 +781,14 @@ class BaseTerminal {
    *   delay   - optional delay in milliseconds before sending key
    */
   sendKeyDirect(key, isShift, isCtrl, isAlt, delay) {
-    if (typeof delay === "undefined") {
-      this.emulator.processKeyboardEvent(key, isShift, isCtrl, isAlt);
-    }
-    else {
-      setTimeout(() => {
-        this.emulator.processKeyboardEvent(key, isShift, isCtrl, isAlt);
-      }, delay);
-    }
+    this.keyQueue.push({
+      key: key,
+      isShift: isShift,
+      isCtrl: isCtrl,
+      isAlt: isAlt,
+      delay: delay
+    });
+    if (this.keyQueue.length === 1) this.startSendingKeys();
   }
 
   /*
@@ -765,6 +816,19 @@ class BaseTerminal {
       .then(() => this.sleep(delay));
     }
     return promise;
+  }
+
+  /*
+   * setDebug
+   *
+   * Switch debugging mode on/off.
+   *
+   * Arguments
+   *   isDebug - true to switch debugging mode on
+   */
+  setDebug(isDebug) {
+    this.isDebug = isDebug;
+    this.emulator.setDebug(isDebug);
   }
 
   /*
@@ -809,12 +873,22 @@ class BaseTerminal {
    *            Two parameters are passed to the tracing function:
    *              direction : "R" for receive, "S" for send
    *              data      : the data received or sent
+   *   strip  - an optional boolean argument, normally used with the default tracing
+   *            function. If true, parity bits are stripped from bytes sent and
+   *            received before logging them.
    */
-  setTracer(tracer) {
+  setTracer(tracer, strip) {
+    this.tracerDoesStrip = false;
     if (typeof tracer === "function") {
       this.tracer = tracer;
+      if (typeof strip === "boolean") {
+        this.tracerDoesStrip = strip;
+      }
     }
     else {
+      if (typeof tracer === "boolean" && typeof strip === "undefined") {
+        this.tracerDoesStrip = tracer;
+      }
       let lastDirection = null;
       let text = "";
       process.on("exit", code => {
@@ -835,6 +909,7 @@ class BaseTerminal {
         let s = "";
         for (let i = 0; i < data.length; i++) {
           let b = data[i];
+          if (this.tracerDoesStrip) b &= 0x7f;
           if (b < 0x10) {
             s += `<0${b.toString(16)}>`;
             if (b === 0x0a) s += "\n";
@@ -871,6 +946,32 @@ class BaseTerminal {
    */
   sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /*
+   * startSendingKeys
+   *
+   * Begin sending keystroke definitions that have been added to the keystroke queue.
+   */
+  startSendingKeys() {
+    while (this.keyQueue.length > 0) {
+      let head  = this.keyQueue[0];
+      let delay = (typeof head.delay === "number") ? head.delay : 0;
+      if (delay > 0) {
+        setTimeout(() => {
+          this.emulator.processKeyboardEvent(head.key, head.isShift, head.isCtrl, head.isAlt);
+          this.keyQueue = this.keyQueue.slice(1);
+          if (typeof head.resolver === "function") head.resolver();
+          if (this.keyQueue.length > 0) this.startSendingKeys();
+        }, delay);
+        return;
+      }
+      else {
+        this.emulator.processKeyboardEvent(head.key, head.isShift, head.isCtrl, head.isAlt);
+        this.keyQueue = this.keyQueue.slice(1);
+        if (typeof head.resolver === "function") head.resolver();
+      }
+    }
   }
 }
 
@@ -963,25 +1064,53 @@ class CybisTerminal extends BaseTerminal {
    *   A promise that is reolved when the login is complete.
    */
   login(user, group, password) {
-    return this.expect([{ re: /Enter your user name/ }])
-    .then(() => this.sleep(1000))
-    .then(() => this.send(`${user}\r`))
-    .then(() => this.expect([{ re: /Enter your user group/ }]))
-    .then(() => this.sleep(1000))
-    .then(() => this.send(group))
-    .then(() => this.sendKey("S", true, true, false))
-    .then(() => this.expect([{ re: /password/ }]))
-    .then(() => this.sleep(1000))
-    .then(() => this.send(`${password}\r`))
-    .then(() => this.expect([
-      { re: /Incorrect password/, fn: "Incorrect password" },
-      { re: /Choose a lesson/ },
-      { re: /You have not changed your password in the last.*Press LAB.*, or NEXT to continue\./,
-        fn: () => {
-              this.sendKeyDirect("Enter", false, false, false, 500);
+    let retries = 0;
+    const retryFn = item => {
+      if (++retries < 5) {
+        this.sendKeyDirect("Enter", false, false, false);
+        return true;
+      }
+      else {
+        return `CYBIS failed to ask for ${item}`;
+      }
+    };
+    return this.expect([
+      { re: /Press  NEXT  to begin/, fn: () => {
+              this.sendKeyDirect("Enter", false, false, false, 1000);
               return true;
             }
-      }
+      },
+      { re: /USER ACCESS NOT POSSIBLE/, fn:"CYBIS is currently rejecting logins"},
+      { re: /Enter your user name, and then press NEXT/, fn: () => { retries = 0; return false; } },
+      { re: 10, fn: () => retryFn("user name") }
+    ])
+    .then(() => this.sleep(2000))
+    .then(() => this.send(user))
+    .then(() => this.sendKey("Enter", false, false, false, 1000))
+    .then(() => this.expect([
+      { re: /Enter your user group, and then press NEXT/, fn: () => { retries = 0; return false; } },
+      { re: 10, fn: () => retryFn("user group") }
+    ]))
+    .then(() => this.sleep(2000))
+    .then(() => this.send(group))
+    .then(() => this.sendKey("Enter", false, false, false, 1000))
+    .then(() => this.expect([
+      { re: /Enter your password, then press NEXT/, fn: () => { retries = 0; return false; } },
+      { re: 10, fn: () => retryFn("password") }
+    ]))
+    .then(() => this.sleep(2000))
+    .then(() => this.send(password))
+    .then(() => this.sendKey("Enter", false, false, false, 1000))
+    .then(() => this.expect([
+      { re: /Incorrect password/, fn: "Incorrect password" },
+      { re: /Choose a lesson.*HELP available/ },
+      { re: /You have not changed your password in the last [0-9]+ days.*NEXT to continue/,
+        fn: () => {
+              this.sendKeyDirect("Enter", false, false, false, 2000);
+              return true;
+            }
+      },
+      { re: 10, fn: () => retryFn("lesson") }
     ]));
   }
 }

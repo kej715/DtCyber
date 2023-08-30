@@ -1042,6 +1042,7 @@ class DtCyber {
       {re:/Failed to open/,                   fn:new Error(`Failed to open ${tape}`)},
       {re:/Not enough or invalid parameters/, fn:new Error(`Not enough or invalid parameters: ${cmd}`)},
       {re:/Invalid/,                          fn:new Error(`Invalid: ${cmd}`)},
+      {re:/Unit.*not unloaded/,               fn:new Error(`Unit ${unit} not unloaded`)},
       {re:/Operator> /}
     ]);
   }

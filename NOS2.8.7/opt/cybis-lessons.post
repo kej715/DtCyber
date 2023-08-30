@@ -7,12 +7,17 @@ const dtc = new DtCyber();
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
-.then(() => dtc.say("Stop CYBIS, Start IAF"))
+.then(() => dtc.say("Stop CYBIS"))
 .then(() => dtc.dsd([
-"K,MAS1.",
-"K.STOP.",
-"[ab",
-"IAF."
+  "K,MAS1.",
+  "K.STOP.",
+  "[ab"
 ]))
 .then(() => dtc.sleep(2000))
-.then(() => process.exit(0))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

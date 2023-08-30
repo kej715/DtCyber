@@ -10,16 +10,21 @@ let maxProgressLen = 0;
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.say("Load CYBIS product tape ..."))
-.then(() => dtc.say("Download CYBIS update bin tape"))
-.then(() => dtc.wget("https://steubentech.com/CYBIS/CYBIS-BINS-Development.tap","opt/tapes", (byteCount, contentLength) => {
-  maxProgressLen = utilities.reportProgress(byteCount, contentLength, maxProgressLen);
-}))
-.then(() => utilities.clearProgress(maxProgressLen))
 .then(() => dtc.dsd([
   "[UNLOAD,51.",
   "[!"
 ]))
 .then(() => dtc.mount(13, 0, 1, "opt/tapes/cybis-bin.tap"))
+.then(() => dtc.say("Download CYBIS update bin tape"))
+.then(() => dtc.wget("https://steubentech.com/CYBIS/CYBIS-BINS-Development.tap","opt/tapes", (byteCount, contentLength) => {
+  maxProgressLen = utilities.reportProgress(byteCount, contentLength, maxProgressLen);
+}))
+.then(() => utilities.clearProgress(maxProgressLen))
+.then(() => dtc.say("Load CYBIS update bin tape ..."))
+.then(() => dtc.dsd([
+  "[UNLOAD,52.",
+  "[!"
+]))
 .then(() => dtc.mount(13, 0, 2, "opt/tapes/CYBIS-BINS-Development.tap"))
 .then(() => dtc.sleep(5000))
 .then(() => {

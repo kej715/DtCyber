@@ -3305,7 +3305,7 @@ static void cpOp01(CpuContext *activeCpu)
             /*
             **  RC  Xj
             */
-            rtcReadUsCounter();
+            //rtcReadUsCounter();
             activeCpu->regX[activeCpu->opJ] = rtcClock;
             }
         else
