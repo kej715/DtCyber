@@ -661,7 +661,7 @@ class BaseTerminal {
    *   A promise that is resolved when the message has been displayed.
    */
   say(message) {
-    this.log(`${new Date().toLocaleTimeString()} ${message}`);
+    this.log(message);
     return Promise.resolve();
   }
 
