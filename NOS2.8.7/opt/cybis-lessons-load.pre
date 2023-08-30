@@ -10,12 +10,12 @@ let maxProgressLen = 0;
 dtc.connect()
   .then(() => dtc.expect([{ re: /Operator> $/ }]))
   .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
-  .then(() => dtc.say("Load CYBIS lesson  tape ..."))
-  .then(() => dtc.say("Download CYBIS lesson tape"))
+  .then(() => dtc.say("Download CYBIS lesson tape ..."))
   .then(() => dtc.wget("https://steubentech.com/CYBIS/CYBIS-lessons.tap", "opt/tapes", (byteCount, contentLength) => {
     maxProgressLen = utilities.reportProgress(byteCount, contentLength, maxProgressLen);
   }))
   .then(() => utilities.clearProgress(maxProgressLen))
+  .then(() => dtc.say("Load CYBIS lesson tape ..."))
   .then(() => dtc.dsd([
     "[UNLOAD,51.",
     "[!"
