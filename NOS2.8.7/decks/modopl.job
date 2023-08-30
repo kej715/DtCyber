@@ -37,6 +37,8 @@ EXIT.
 ~eor
 ~include ../mods/NOS/CPUM245.mod
 ~eor
+~include ../mods/NOS/FIXCLOK.mod
+~eor
 ~include ../mods/NOS/IAFMLR.mod
 ~eor
 ~include ../mods/NOS/NCC6676.mod
