@@ -10,4 +10,4 @@
           VFD    42D/0LINSTALL,18D/1
           VFD    42D/0LGUEST,18D/32
 *D 90
-*EDIT SYSUi
+*EDIT SYSUI
