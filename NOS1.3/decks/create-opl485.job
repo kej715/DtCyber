@@ -24,6 +24,9 @@ EXIT.
 *** OPL485 FAILED
 ***
 ~eor
+FIXCLOK
+~include ../mods/NOS/FIXCLOK.mod
+~eor
 NCCAUTO
 ~include ../mods/AUTO/1DS.mod
 ~eor
