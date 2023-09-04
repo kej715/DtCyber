@@ -1,5 +1,5 @@
 ~*
-~*  This job creates/replaces the NJFU700 file that include modsets for NJF.
+~*  This job creates/replaces the NJFU700 file that includes modsets for NJF.
 ~*
 NJFMODS.
 $USER,INSTALL,INSTALL.
@@ -24,3 +24,5 @@ EXIT.
 ~include ../mods/NJF/BITNET.mod
 ~eor
 ~include ../mods/NJF/SAFFIX.mod
+~eor
+~include ../mods/NJF/USERMSG.mod
