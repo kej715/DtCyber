@@ -1,0 +1,14 @@
+NJMSG.
+USER,INSTALL,INSTALL.
+FTN5,OPT.
+LIBRARY,NETIO.
+LGO.
+***
+*** NJMSG COMPLETE
+***
+EXIT.
+***
+*** NJMSG FAILED
+***
+~eor
+~include ../files/NJMSG.txt
