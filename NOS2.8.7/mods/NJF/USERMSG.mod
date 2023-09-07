@@ -23,7 +23,7 @@ USERMSG
         ITEM TARS3      C<02>;       # IGNORED #
         ITEM TADNODE    C<08>;       # DESTINATION NODE NAME # 
         ITEM TATEXTL    U<12>;       # MESSAGE TEXT LENGTH #
-        ITEM TATEXT     C<80>;       # MESSAGE TEXT #
+        ITEM TATEXT     C<130>;      # MESSAGE TEXT #
         END
 *EDIT COMYCBD
 */
@@ -37,10 +37,10 @@ USERMSG
         ITEM LPT$RS1    U<03>;       # RESERVED #
 *I 304
         ITEM LPT$ANM    C<07>;       # A-A PEER NAME #
-        ITEM LPT$RS2    U<17>;       # RESERVED #
-        ITEM LPT$A2A    B<01>;       # A-A CONNECTION #
+        ITEM LPT$ABN    U<18>;       # APPLICATION BLOCK NUMBER #
         ITEM LPT$OUSER  C<08>;       # ORIGIN USER ID #
-        ITEM LPT$RS3    U<12>;       # RESERVED #
+        ITEM LPT$RS3    U<11>;       # RESERVED #
+        ITEM LPT$A2A    B<01>;       # A-A CONNECTION #
 *EDIT COMYLIT
 */
 *DECK COMYUDP
@@ -89,9 +89,10 @@ USERMSG
         LPT$QTX[ACN]   = 0;          # CLEAR QUEUE TABLE INDEX #
         LPT$CFG[ACN]   = FALSE;      # CLEAR TERMINAL CONFIG FLAG #
         LPT$NXT[ACN]   = FALSE;      # CLEAR NEXT-TO-TRANSMIT FLAG #
-        LPT$A2A[ACN]   = TRUE;       # SET A2A FLAG #
         LPT$ANM[ACN]   = CONTNM[0];  # SET A-A PEER NAME #
+        LPT$ABN[ACN]   = 0;          # INITIALIZE APP BLOCK NUMBER #
         LPT$OUSER[ACN] = "        "; # SET A-A USER ID #
+        LPT$A2A[ACN]   = TRUE;       # SET A2A FLAG #
         CONCNT = CONCNT + 1;         # INCREMENT CONNECTION COUNT #
         RCODE = S"NORMAL";           # SET REPSONSE CODE #
         SMPRSP(RTYPE,RCODE);         # SEND NORMAL REPLY #
@@ -195,9 +196,12 @@ USERMSG
 */
 *DECK UDP
 *I 23
+        PROC BLDABH;                 # BUILD APP BLOCK HEADER #
         PROC GETEQA;                 # GET EMPTY CMD QUEUE BUFFER #
 *I 24
         PROC MESSAGE;                # ISSUE DAYFILE MESSAGE #
+*I 25
+        PROC NETPUT;                 # SEND BLOCK TO *NIP* #
 *I 27
         PROC ZFILL;                  # ZERO FILL ARRAY #
 *I 37
@@ -216,7 +220,7 @@ USERMSG
         BEGIN
         ITEM A2A$TXT    C<40> =
           [
-          " AAAAAAA C OOOOOOOO DDDDDDDD NNNNNNNN",
+          " AAAAAAA M OOOOOOOO DDDDDDDD NNNNNNNN",
           ];
         ITEM A2A$ZBT    U<12> = [1(0)];
         ITEM A2A$FL1    C<01,A2A$TXT>;  # FILLER #
@@ -230,6 +234,14 @@ USERMSG
         ITEM A2A$FL5    C<01,+>;        # FILLER #
         ITEM A2A$NODE   C<08,+>;        # DESTINATION NODE #
         END
+
+      ARRAY A2ARSP [0:0] U;
+        BEGIN
+        ITEM RSP$TYPE   C<01>;          # RESPONSE TYPE #
+        ITEM RSP$CODE   U<54>;          # RESPONSE CODE #
+        END
+
+      ARRAY DLHA [0:0]    U;;        # APPLICATION BLOCK HEADER #
 *D NJV2057.7
           GOTO A2A;                  # PROCESS A-A INPUT #
 *I 80
@@ -260,6 +272,9 @@ A2A:
 
         LPT$OUSER[ACN] = TAOUSER;
 
+        RSP$TYPE = "S";
+        RSP$CODE = 0; # PRESET SUCCESS #
+
         IF TACMD EQ "I"
         THEN
           BEGIN
@@ -274,7 +289,7 @@ A2A:
              CIT$OBI[0] EQ MSGMAX$ - 1   # OUTPUT BUFFER FULL #
           THEN
             BEGIN
-            # RESPOND RESOURCE EXHAUSTION #
+            RSP$CODE = 2; # RESOURCE EXHAUSTION #
             END
           ELSE
             BEGIN
@@ -302,8 +317,99 @@ A2A:
           END
         ELSE # UNRECOGNIZED REQUEST #
           BEGIN
-          # RESPOND BAD REQUEST #
+          RSP$CODE = 1; # BAD REQUEST #
           END
+
+        LPT$ABN[ACN] = (LPT$ABN[ACN] + 1) LAN O"777777";
+        P<ABH$> = LOC(DLHA[0]);          # SET *ABH* POINTER #
+        ABHWRD  = 0;                     # CLEAR HEADER WORD #
+        ABHABT  = BLKTYPE"MSGBLK";       # SET BLOCK TYPE #
+        ABHADR  = ACN;                   # SET CONNECTION NUMBER #
+        ABHABN  = LPT$ABN[ACN];          # SET BLOCK NUMBER #
+        ABHACT  = CT60XP$;               # SET CHARACTER TYPE #
+        ABHTLC  = 1;                     # SET TEXT LENGTH #
+        NETPUT(DLHA[0],A2ARSP[0]);
+
         MESSAGE(A2AMSG[0],USRDF$);
 
         END  # A-A INPUT LOOP #
+*/
+*DECK UDPMDP
+*I 29
+        PROC NETPUT;                 # SEND BLOCK TO *NIP* #
+*I 38
+*CALLC COMYABH
+*I 40
+*CALLC COMYLIT
+*I NJ24000.11
+      ITEM A2ASENT      U;
+      ITEM ACN          U;
+      ITEM FNODE        C(10);       # FROM NODE #
+      ITEM FUSER        C(10);       # FROM USER #
+      ITEM SPOS         I;           # SAVED START POSITION #
+      ITEM TUSER        C(10);       # TO USER #
+
+      ARRAY DLHA [0:0]  U;;          # APPLICATION BLOCK HEADER #
+      ARRAY MSGBUF [0:19] U;;        # DOWNLINE MESSAGE BUFFER #
+*I 57
+      FNODE = " ";
+      FUSER = " ";
+      TUSER = " ";
+
+*D NJ24000.16
+      CVTESN(FADDR,8,FNODE);         # CONVERT FROM NODE NAME #
+*D NJ24000.18
+      C<1,8>CMDTXT = FNODE;          # INSERT FROM NODE NAME #
+*D NJ24000.34,NJ24000.35
+        CVTESN(FADDR,8,TUSER);       # CONVERT TSO/VM ID #
+        C<TPOS,9>CMDTXT = TUSER;     # INSERT USER ID IN MESSAGE #
+*D NJ24000.44
+        FPOS = FPOS + 8;             # SKIP TIME STAMP #
+        EPOS = EPOS + 8;             # LEN DOESNT INCLUDE TIME STAMP #
+*I NJ24000.45
+
+      IF SBA$TXT[BCMDTYP$] LAN X"08" NQ 0
+      THEN                           # FROM USER EXISTS #
+        BEGIN
+        FADDR = LOC(SBA$TXT[FPOS]);
+        CVTESN(FADDR,8,FUSER);       # CONVERT FRON USER #
+        FPOS = FPOS + 8;
+        END
+*I NJ24000.68
+
+      SPOS = TPOS;
+*I NJ24000.76
+
+      IF TUSER NQ "          "
+      THEN
+        BEGIN
+        A2ASENT = 0;
+        SLOWFOR ACN = MINACN$ STEP 1
+          UNTIL MAXACN$
+        DO
+          BEGIN
+          IF C<0,8>TUSER EQ LPT$OUSER[ACN]
+          THEN
+            BEGIN
+            P<UTA$> = LOC(MSGBUF[0]);
+            TACMD   = "M";
+            TAOUSER = FUSER;
+            TADUSER = TUSER;
+            TADNODE = FNODE;
+            TATEXTL = TPOS - SPOS;
+            C<0,TATEXTL>TATEXT = C<SPOS,TATEXTL>CMDTXT;
+            LPT$ABN[ACN] = (LPT$ABN[ACN] + 1) LAN O"777777";
+            P<ABH$> = LOC(DLHA[0]);       # SET *ABH* POINTER #
+            ABHWRD  = 0;                  # CLEAR HEADER WORD #
+            ABHABT  = BLKTYPE"MSGBLK";    # SET BLOCK TYPE #
+            ABHADR  = ACN;                # SET CONNECTION NUMBER #
+            ABHABN  = LPT$ABN[ACN];       # SET BLOCK NUMBER #
+            ABHACT  = CT60XP$;            # SET CHARACTER TYPE #
+            ABHTLC  = ((TATEXTL+9)/10)+3; # SET TEXT LENGTH #
+            NETPUT(DLHA[0],MSGBUF[0]);
+            A2ASENT = A2ASENT + 1;
+            END
+          END
+        END
+*/
+*/      END OF MODSET
