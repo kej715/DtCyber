@@ -375,6 +375,10 @@ A2A:
         CVTESN(FADDR,8,FUSER);       # CONVERT FRON USER #
         FPOS = FPOS + 8;
         END
+*D NJ24000.48
+        WHILE BLANKS AND FPOS LS EPOS
+*/ DON'T IGNORE NULL MESSAGES
+*D NJ24000.63,NJ24000.68
 *I NJ24000.68
 
       SPOS = TPOS;
@@ -391,6 +395,7 @@ A2A:
           IF C<0,8>TUSER EQ LPT$OUSER[ACN]
           THEN
             BEGIN
+            ZFILL(MSGBUF[0],20);
             P<UTA$> = LOC(MSGBUF[0]);
             TACMD   = "M";
             TAOUSER = FUSER;
