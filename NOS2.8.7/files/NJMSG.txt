@@ -1,50 +1,81 @@
+NJMSG
       PROGRAM NJMSG
 
 C$    COLLATE(FIXED)
 
       IMPLICIT INTEGER (A-Z)
-      DIMENSION HDR(10),NIT(10,12),TA(400)
+      DIMENSION HDR(10),NIT(10,12),TA(20)
       DIMENSION MSG(10)
       DATA MSG/"THE QUICK ","BROWN FOX ",
      +         "JUMPED OVE","R THE LAZY",
      +         " DOG"/
 
-      ACN = CONNECT(HDR,"AP1",1)
-      CALL SETUID(HDR,ACN,"GUEST")
-C
-C     INTERACT WITH NJF
-C
+      CALL NJMOPEN(HDR,ACN,RC,"AP1",1)
+      IF (RC.NE.0) THEN
+        CALL DISPLA('FAILED TO CONNECT TO NJF, RC =',RC)
+        CALL NJMABT
+      ENDIF
+      CALL NJMUID(HDR,ACN,RC,NJMUSER())
+      IF (RC.NE.0) THEN
+        CALL DISPLA('FAILED TO SET UID, RC =',RC)
+        CALL NJMABT
+      ENDIF
       L = 0
-      SLEEP = 10
- 20   CONTINUE
-      L = L + 1
-      IF (L.GT.5) GOTO 30
-      CALL SEND(HDR,ACN,"GUEST","NCCCMS",MSG,44)
-      HDR(5) = SHIFT(400,48).OR.SHIFT(SLEEP,30)
-      CALL QTGET(TA)
-      RC = SHIFT(HDR(5),-12).AND.(O"77")
-      CALL DISPLA('QTGET  RC =', RC)
+ 10   CONTINUE
+      CALL NJMPOLL(HDR,CN,RC,10,TA,20)
       IF (RC.EQ.0) THEN
-C       DATA RECEIVED
-        GO TO 20
+        IF ((TA(1).AND.MASK(6)).EQ.L"S") THEN
+          IF ((TA(1).AND.-MASK(6)).NE.0) THEN
+            CALL DISPLA('REQUEST FAILED, RC =',RC)
+            CALL NJMABT
+          ENDIF
+        ELSEIF ((TA(1).AND.MASK(6)).EQ.L"M") THEN
+          FUSER = SHIFT(TA(1),6).AND.MASK(48)
+          TUSER = TA(2)
+          FNODE = TA(3).AND.MASK(48)
+          TEXTL = TA(3).AND.-MASK(48)
+          PRINT 11,FUSER,FNODE,TUSER,TEXTL
+ 11       FORMAT(1X,A8,' AT ',A8,' TO ',A8,' LEN ',I3)
+          WORDS = (TEXTL + 9) / 10
+          DO 13 I = 1,WORDS
+            PRINT 12,TA(I + 3),TA(I + 3)
+ 12         FORMAT(1X,A10,' ',O20)
+ 13       CONTINUE
+        ELSE
+          CALL REMARK('UNRECOGNIZED MESSAGE TYPE')
+        ENDIF
+        L = L + 1
+        IF (L.GT.3) GOTO 10
+        CALL NJMSEND(HDR,ACN,RC,"HERC01","NCCMVS",MSG,44)
+        IF (RC.NE.0) THEN
+          CALL DISPLA('FAILED TO SEND MESSAGE, RC =',RC)
+          CALL NJMABT
+        ENDIF
+        GO TO 10
       ELSE IF (RC.EQ.1) THEN
-        GO TO 20
+        GO TO 10
       ELSE IF (RC.EQ.6) THEN
         CALL REMARK('CONNECTION ENDED')
-        GO TO 30
+        GO TO 20
       ELSE IF (RC.EQ.13) THEN
         CALL REMARK('CONNECTION REJECTED')
-        GO TO 30
+        GO TO 20
       ELSE
-        CALL ABORT
+        CALL DISPLA('UNRECOGNIZED QTRM STATUS ', RC)
+        CALL NJMABT
       ENDIF
 
- 30   CONTINUE
+ 20   CONTINUE
 
       END
-      FUNCTION CONNECT(HDR,ANAME,NC)
+          IDENT  NJMABT
+          ENTRY  NJMABT
+ NJMABT   BSS    1
+          ABORT
+          END
+      SUBROUTINE NJMOPEN(HDR,ACN,RC,ANAME,NC)
       IMPLICIT INTEGER (A-Z)
-      DIMENSION HDR(10)
+      DIMENSION HDR(10),TA(20)
 
       HDR(1) = (ANAME.AND.MASK(42)).OR.SHIFT(1,12).OR.NC
       HDR(4) = 1
@@ -54,43 +85,43 @@ C     ESTABLISH COMMUNICATION WITH NAM
 C
       CALL QTOPEN(HDR)
       RC = SHIFT(HDR(5),-12).AND.(O"77")
-      CALL DISPLA('QTOPEN RC =', RC)
-      IF (RC.NE.0) THEN
-        CALL REMARK('NETON FAILED')
-        CALL ABORT
-      ENDIF
+      IF (RC.NE.0) RETURN
 C
 C     CONNECT TO NJF
 C
       HDR(7) = MASK(42).AND.7HNJF
       CALL QTLINK
 
-      SLEEP = 10
  10   CONTINUE
-      HDR(5) = SHIFT(400,48).OR.SHIFT(SLEEP,30)
-      CALL QTGET(TA)
-      RC = SHIFT(HDR(5),-12).AND.(O"77")
-      CALL DISPLA('QTGET  RC =', RC)
+      CALL NJMPOLL(HDR,ACN,RC,10,TA,20)
       IF (RC.EQ.1.OR.RC.EQ.0) THEN
         GO TO 10
       ELSE IF (RC.EQ.14) THEN
-        ACN = SHIFT(HDR(5),-18).AND.O"7777"
-        CALL DISPLA('CONNECTED, ACN =',ACN)
-        CONNECT = ACN
-      ELSE
-        CALL ABORT
+        RC = 0
       ENDIF
 
       END
-      SUBROUTINE SEND(HDR,ACN,USER,NODE,TEXT,TEXTL)
-
+      SUBROUTINE NJMPOLL(HDR,ACN,RC,SLEEP,TA,TAL)
       IMPLICIT INTEGER (A-Z)
-      DIMENSION HDR(10),TA(10),TEXT(*)
+      DIMENSION HDR(10),TA(*)
 
+      HDR(5) = SHIFT(TAL,48).OR.SHIFT(SLEEP,30)
+      CALL QTGET(TA)
+      CALL NJMSTAT(HDR,ACN,RC)
+
+      END
+      SUBROUTINE NJMSEND(HDR,ACN,RC,RECIP,NODE,TEXT,TEXTL)
+      IMPLICIT INTEGER (A-Z)
+      DIMENSION HDR(10),TA(20),TEXT(*)
+      COMMON /NJM/ USER
       DATA MSK /O"77777777777777007777"/
 
-      TA(1) = L"M".OR.(SHIFT("GUEST",54).AND.-MASK(6))
-      TA(2) = USER
+      IF (USER.EQ." ") THEN
+        USER = NJMUSER()
+      ENDIF
+
+      TA(1) = L"M".OR.(SHIFT(USER,54).AND.-MASK(6))
+      TA(2) = RECIP
       TA(3) = (NODE.AND.MASK(48)).OR.TEXTL
       WORDS = (TEXTL + 9) / 10
       DO 10 I = 1,WORDS
@@ -99,25 +130,44 @@ C
       HDR(1) = (HDR(1).AND.MSK).OR.SHIFT(1,12)
       HDR(5) = SHIFT(400,48).OR.SHIFT(WORDS+3,36).OR.SHIFT(ACN,18)
       CALL QTPUT(TA)
-      RC = SHIFT(HDR(5),-12).AND.(O"77")
-      CALL DISPLA('QTPUT  ACN=', ACN)
-      CALL DISPLA('QTPUT  RC =', RC)
+      CALL NJMSTAT(HDR,IGN,RC)
 
       END
-      SUBROUTINE SETUID(HDR,ACN,UID)
+      SUBROUTINE NJMSTAT(HDR,ACN,RC)
+      IMPLICIT INTEGER (A-Z)
+      DIMENSION HDR(10)
+
+      RC  = SHIFT(HDR(5),-12).AND.O"77"
+      ACN = SHIFT(HDR(5),-18).AND.O"7777"
+
+      END
+      SUBROUTINE NJMUID(HDR,ACN,RC,UID)
 
       IMPLICIT INTEGER (A-Z)
       DIMENSION HDR(10),TA(2)
-
+      COMMON /NJM/ USER
+      DATA USER /" "/
       DATA MSK /O"77777777777777007777"/
 
+      USER  = UID
       TA(1) = L"I".OR.(SHIFT(UID,54).AND.-MASK(6))
       TA(2) = 0
       HDR(1) = (HDR(1).AND.MSK).OR.SHIFT(1,12)
       HDR(5) = SHIFT(400,48).OR.SHIFT(2,36).OR.SHIFT(ACN,18)
       CALL QTPUT(TA)
-      RC = SHIFT(HDR(5),-12).AND.(O"77")
-      CALL DISPLA('QTPUT  ACN=', ACN)
-      CALL DISPLA('QTPUT  RC =', RC)
+      CALL NJMSTAT(HDR,IGN,RC)
 
       END
+          IDENT  NJMUSER
+          ENTRY  NJMUSER
+*CALL COMCSFN
+ NJMUSER  BSS    1
+          SB1    1
+          USERNUM UN
+          SA1    UN
+          RJ     SFN
+          EQ     NJMUSER
+
+ UN       BSS    1
+
+          END
