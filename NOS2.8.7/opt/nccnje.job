@@ -1,0 +1,48 @@
+~*
+~*  This job builds the NCC NJE utilities and supporting
+~*  library. It edits the binaries into the PRODUCT file
+~*  and adds directives to the DIRFILE file specifying that
+~*  ULIB/NJMLIB should be inserted into library 4, and the
+~*  deadstart file library number of the NJEF applications.
+~*
+NJUTIL.
+$USER,INSTALL,INSTALL.
+$COPYBR,INPUT,LIBSRC.
+$COPYBR,INPUT,APPSRC.
+$COPYBR,INPUT,DIR,2.
+$REWIND,LIBSRC,APPSRC.
+$MODIFY,P=0,N=NPL,C=0,F,LO=E,Z./*CREATE LIBSRC
+$ATTACH,OPL=OPL871/UN=INSTALL.
+$MODIFY,P=NPL,LO=E,Z./*OPLFILE OPL/*EDIT NJMLIB
+$FTN5,I,OPT,S=SYSTEXT,S=PSSTEXT.
+$LIBGEN,P=NJMLIB,F=LGO.
+$RETURN,SOURCE,LGO.
+$FTN5,I=APPSRC,OPT.
+$LIBRARY,NJMLIB,NETIO.
+$LOAD,LGO.
+$NOGO,NJMSG,NJMSG,$ARG=$.
+$REWIND,LGO.
+$REWIND,NJMLIB,NJMSG.
+$COPYBR,NJMSG,LGO.
+$COPY,NJMLIB,LGO.
+$ATTACH,PRODUCT,DIRFILE/M=W,WB.
+$LIBEDIT,P=PRODUCT,B=LGO,I=0,C.
+$LIBEDIT,P=DIRFILE,B=DIR,I=0,C.
+***
+*** NJUTIL COMPLETE
+***
+EXIT.
+***
+*** NJUTIL FAILED
+***
+~eor
+~include ../files/NJMLIB.txt
+~eor
+~include ../files/NJMSG.txt
+~eor
+NJMLIB
+*ADD LIB4,ULIB/NJMLIB
+~eor
+NCCNJE
+*ADD LIB${1},ABS/NJMSG
+
