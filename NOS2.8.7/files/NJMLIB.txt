@@ -381,7 +381,15 @@ C
           SA1    UN
           RJ     SFN
           EQ     NJMGETU
-
  UN       BSS    1
-
+          END
+          IDENT  NJMTIME
+          ENTRY  NJMTIME
+ NJMTIME  BSS    1
+          SB1    1
+          RTIME  TIME
+          SA1    TIME
+          BX6    X1
+          EQ     NJMTIME
+ TIME     BSS    1
           END
