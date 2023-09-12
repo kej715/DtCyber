@@ -43,6 +43,10 @@ const ndlModset = [
   "*D 123,124"]
   .concat(terminalDefns)
   .concat([
+  "*I 163",
+  "NJU:     APPL,     MXCOPYS=15."
+  ])
+  .concat([
   "*D 229,230"
   ])
   .concat(userDefns);
