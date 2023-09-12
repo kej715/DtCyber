@@ -91,6 +91,13 @@ C$    COLLATE(FIXED)
       TEXTL = LNSP
 
       END
+      SUBROUTINE NJMCLOS
+C
+C     NJMCLOS - CLOSE COMMUNICATIONS WITH THE NETWORK
+C
+      CALL QTCLOSE
+
+      END
       SUBROUTINE NJMCONN(HDR,ACN,RC)
 C
 C     NJMCONN - CREATE A CONNECTION TO NJF
@@ -369,11 +376,24 @@ C
       END
           IDENT  NJMABT
           ENTRY  NJMABT
+
+**
+*         NJMABT - ABORT THE PROGRAM
+*
+
  NJMABT   BSS    1
           ABORT
           END
           IDENT  NJMGETU
           ENTRY  NJMGETU
+
+**
+*         NJMGETU - GET THE CURRENT USERNAME
+*
+*         EXIT
+*           X6 - CURRENT USERNAME, SPACE-FILLED
+*
+
 *CALL COMCSFN
  NJMGETU  BSS    1
           SB1    1
@@ -383,13 +403,23 @@ C
           EQ     NJMGETU
  UN       BSS    1
           END
-          IDENT  NJMTIME
-          ENTRY  NJMTIME
- NJMTIME  BSS    1
+          IDENT  NJMSECS
+          ENTRY  NJMSECS
+
+**
+*         NJMSECS - GET SECONDS SINCE DEADSTART
+*
+*         EXIT
+*           X6 - SECONDS SINCE DEADSTART
+*
+
+ NJMSECS  BSS    1
           SB1    1
           RTIME  TIME
           SA1    TIME
-          BX6    X1
-          EQ     NJMTIME
+          MX0    24D
+          BX6    X0*X1
+          LX6    24D
+          EQ     NJMSECS
  TIME     BSS    1
           END

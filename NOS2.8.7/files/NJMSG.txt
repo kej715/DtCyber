@@ -3,7 +3,9 @@ C
 C     NJMSG - SEND A MESSAGE AND WAIT FOR A RESPONSE
 C
 C     COMMAND LINE PARAMETERS
+C       I - NAME OF LOCAL FILE CONTAINING TEXT TO SEND
 C       N - NAME OF DESTINATION NODE
+C       O - NAME OF LOCAL FILE TO WHICH TO WRITE OUTPUT
 C       U - NAME OF DESTINATION USER OR SERVICE
 C       W - MAXIMUM SECONDS TO WAIT FOR RESPONSE (DEFAULT 5)
 C
@@ -11,21 +13,27 @@ C     TEXT TO BE SENT FOLLOWS COMMAND TERMINATOR.
 C
       IMPLICIT INTEGER (A-Z)
       DIMENSION HDR(10),NIT(10,12),TA(20)
-      CHARACTER*1   MTYPE
-      CHARACTER*8   OUSER,ONODE,DUSER,DNODE
+      CHARACTER*1   CH,MTYPE
+      CHARACTER*8   DNODE,DUSER,IFNAME,OFNAME,ONODE,OUSER
       CHARACTER*10  ARG,ARGV(20)
       CHARACTER*150 TEXT
 
-      DUSER = ' '
-      DNODE = ' '
-      WAIT  = 5
+      DUSER  = ' '
+      DNODE  = ' '
+      IFNAME = ' '
+      OFNAME = 'OUTPUT'
+      WAIT   = 5
 
       CALL NJMARGS(ARGC,ARGV,TEXT,TEXTL)
 
       DO 10 I = 2,ARGC
         ARG = ARGV(I)
-        IF (ARG(1:2).EQ.'N=') THEN
+        IF (ARG(1:2).EQ.'I=') THEN
+          IFNAME = ARG(3:10)
+        ELSEIF (ARG(1:2).EQ.'N=') THEN
           DNODE = ARG(3:10)
+        ELSEIF (ARG(1:2).EQ.'O=') THEN
+          OFNAME = ARG(3:10)
         ELSEIF (ARG(1:2).EQ.'U=') THEN
           DUSER = ARG(3:10)
         ELSEIF (ARG(1:2).EQ.'W=') THEN
@@ -44,12 +52,16 @@ C
         CALL REMARK('MISSING PARAMETER N=')
         CALL NJMABT
       ENDIF
-      IF (TEXTL.LT.1) THEN
-        CALL REMARK('NO MESSAGE TEXT PROVIDED')
-        CALL NJMABT
+
+      OPEN(1,FILE=OFNAME,STATUS='UNKNOWN')
+
+      IF (IFNAME.NE.' ') THEN
+        OPEN(2,FILE=IFNAME,STATUS='OLD')
+        READ(2,'(A)') TEXT
+        TEXTL = NBLEN(TEXT)
       ENDIF
 
-      CALL NJMOPEN(HDR,RC,"AP1",1)
+      CALL NJMOPEN(HDR,RC,"NJU",1)
       IF (RC.NE.0) THEN
         CALL DISPLA('FAILED TO OPEN COMMUNICATION, RC =',RC)
         CALL NJMABT
@@ -59,15 +71,24 @@ C
         CALL DISPLA('FAILED TO CONNECT TO NJF, RC =',RC)
         CALL NJMABT
       ENDIF
-      CALL NJMSEND(HDR,ACN,RC,'*',DUSER,DNODE,TEXT(1:TEXTL))
-      IF (RC.NE.0) THEN
-        CALL DISPLA('FAILED TO SEND MESSAGE, RC =',RC)
-        CALL NJMABT
+
+      IF (TEXTL.GT.0) THEN
+        CALL NJMSEND(HDR,ACN,RC,'*',DUSER,DNODE,TEXT(1:TEXTL))
+        IF (RC.NE.0) THEN
+          CALL DISPLA('FAILED TO SEND MESSAGE, RC =',RC)
+          CALL NJMABT
+        ENDIF
+      ELSE
+        CALL NJMSETU(HDR,ACN,RC,'*')
+        IF (RC.NE.0) THEN
+          CALL DISPLA('FAILED TO SET USERNAME, RC =',RC)
+          CALL NJMABT
+        ENDIF
       ENDIF
-      T     = SHIFT(NJMTIME(),-36).AND.O"77777777"
-      DLINE = T + WAIT
+
+      DLINE = NJMSECS() + WAIT
  20   CONTINUE
-      T = SHIFT(NJMTIME(),-36).AND.O"77777777"
+      T = NJMSECS()
       CALL NJMPOLL(HDR,CN,RC,DLINE - T,TA,20)
       IF (RC.EQ.0) THEN
         CALL NJMRECV(TA,MTYPE,OUSER,ONODE,DUSER,TEXT,TEXTL,RC)
@@ -77,15 +98,17 @@ C
             CALL NJMABT
           ENDIF
         ELSEIF (MTYPE.EQ.'M') THEN
-          PRINT 21,OUSER,ONODE,DUSER,TEXTL
+          WRITE(1,21) OUSER(1:NBLEN(OUSER)),
+     +                ONODE(1:NBLEN(ONODE)),
+     +                DUSER(1:NBLEN(DUSER)),
+     +                TEXTL
  21       FORMAT(' FROM ',A,' AT ',A,' TO ',A,' LEN ',I3)
-          PRINT '(1X,A)',TEXT(1:TEXTL)
+          WRITE(1,'(1X,A)') TEXT(1:TEXTL)
         ENDIF
-        T     = SHIFT(NJMTIME(),-36).AND.O"77777777"
-        DLINE = T + WAIT
+        DLINE = NJMSECS() + WAIT
         GO TO 20
       ELSE IF (RC.EQ.1) THEN
-        T = SHIFT(NJMTIME(),-36).AND.O"77777777"
+        T = NJMSECS()
         IF (T.GE.DLINE) GOTO 30
         GO TO 20
       ELSE IF (RC.EQ.6) THEN
@@ -100,6 +123,23 @@ C
       ENDIF
 
  30   CONTINUE
+      CALL NJMCLOS
+
+      END
+      FUNCTION NBLEN(STR)
+      IMPLICIT INTEGER (A-Z)
+      CHARACTER STR*(*)
+
+      L = LEN(STR)
+ 10   CONTINUE
+      IF (L.GT.0) THEN
+        IF (STR(L:L).EQ.' ') THEN
+          L = L - 1
+          GOTO 10
+        ENDIF
+      ENDIF
+
+      NBLEN = L
 
       END
           IDENT  ARG
