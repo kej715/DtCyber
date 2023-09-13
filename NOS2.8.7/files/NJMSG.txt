@@ -1,15 +1,27 @@
       PROGRAM NJMSG
 C
-C     NJMSG - SEND A MESSAGE AND WAIT FOR A RESPONSE
+C     NJMSG - SEND NJE MESSAGES AND/OR WAIT FOR RESPONSES
+C
+C     NJMSG ENABLES A CALLER TO SEND ONE OR MORE NJE MESSAGES AND,
+C     OPTIONALLY, WAIT FOR RESPONSES. A MESSAGE TO SEND MAY BE
+C     SPECIFIED ON THE COMMAND LINE FOLLOWING THE COMMAND TERMINATOR,
+C     OR ONE OR MORE MESSAGES TO SEND MAY BE SPECIFIED IN AN INPUT
+C     FILE, ONE PER LINE. THE NAMES OF THE DESTINATION USER AND NODE
+C     MAY BE SPECIFIED IN FORMAL COMMAND LINE PARAMETERS OR AS THE
+C     FIRST TOEKN FOLLOWING THE COMMAND TERMINATOR.
+C
+C     SYNOPSIS
+C       NJMSG[,F=USER][,I=LFN][,N=NODE][,O=LFN][,U=USER] ...
+C         [,W=SECS].[USER@NODE][MESSAGE TEXT]
 C
 C     COMMAND LINE PARAMETERS
-C       I - NAME OF LOCAL FILE CONTAINING TEXT TO SEND
+C       F - NAME OF ORIGINATING USER (DEFAULT IS CALLER'S USERNAME)
+C       I - NAME OF LOCAL FILE CONTAINING MESSAGES TO SEND
 C       N - NAME OF DESTINATION NODE
 C       O - NAME OF LOCAL FILE TO WHICH TO WRITE OUTPUT
+C            O=0 SUPPRESSES OUTPUT
 C       U - NAME OF DESTINATION USER OR SERVICE
 C       W - MAXIMUM SECONDS TO WAIT FOR RESPONSE (DEFAULT 5)
-C
-C     TEXT TO BE SENT FOLLOWS COMMAND TERMINATOR.
 C
       IMPLICIT INTEGER (A-Z)
       DIMENSION HDR(10),NIT(10,1),TA(20)
@@ -23,13 +35,24 @@ C
       IFNAME = ' '
       MSGC   = 0
       OFNAME = 'OUTPUT'
+      OUSER  = '*'
       WAIT   = 5
 
+      DO 1 I = 1,10
+        HDR(I) = 0
+ 1    CONTINUE
+
+C     ----------------------------------------------------------------
+C
+C     PARSE COMMAND LINE ARGUMENTS
+C
       CALL NJMARGS(ARGC,ARGV,TEXT,TEXTL)
 
       DO 10 I = 2,ARGC
         ARG = ARGV(I)
-        IF (ARG(1:2).EQ.'I=') THEN
+        IF (ARG(1:2).EQ.'F=') THEN
+          OUSER = ARG(3:10)
+        ELSEIF (ARG(1:2).EQ.'I=') THEN
           IFNAME = ARG(3:10)
         ELSEIF (ARG(1:2).EQ.'N=') THEN
           DNODE = ARG(3:10)
@@ -45,16 +68,63 @@ C
         ENDIF
  10   CONTINUE
 
+C
+C     IF NEITHER U= NOR N= WERE SPECIFIED, LOOK FOR
+C     USER@NODE AFTER COMMAND TERMINATOR
+C
+      IF (DUSER.EQ.' '.AND.DNODE.EQ.' ') THEN
+        TI  = 1
+        ATI = 0
+ 20     CONTINUE
+        IF (TI.LE.TEXTL) THEN
+          CH = TEXT(TI:TI)
+          IF (CH.EQ.'@') THEN
+            ATI = TI
+          ELSEIF (CH.EQ.' ') THEN
+            GOTO 30
+          ENDIF
+          TI = TI + 1
+          GOTO 20
+        ENDIF
+ 30     CONTINUE
+        IF (ATI.GT.0) THEN
+          NI   = ATI + 1
+          ULEN = ATI - 1
+          NLEN = TI - NI
+          IF (ATI.GT.8) THEN
+            CALL REMARK('INVALID DESTINATION USER - '//
+     +                  TEXT(1:ULEN))
+          ENDIF
+          DUSER = TEXT(1:ULEN)
+          IF (NLEN.GT.0) THEN
+            IF (NLEN.GT.8) THEN
+              CALL REMARK('INVALID DESTINATION NODE - '//
+     +                    TEXT(NI:NI+NLEN-1))
+            ENDIF
+            DNODE = TEXT(NI:NI+NLEN-1)
+          ENDIF
+          IF (TI.LE.TEXTL) THEN
+            TI    = TI + 1
+            TEXT  = TEXT(TI:TEXTL)
+            TEXTL = (TEXTL - TI) + 1
+          ELSE
+            TEXTL = 0
+          ENDIF
+        ENDIF
+      ENDIF
+
       IF (DUSER.EQ.' ') THEN
-        CALL REMARK('MISSING PARAMETER U=')
+        CALL REMARK('DESTINATION USER NOT SPECIFIED')
         CALL NJMABT
       ENDIF
       IF (DNODE.EQ.' ') THEN
-        CALL REMARK('MISSING PARAMETER N=')
+        CALL REMARK('DESTINATION NODE NOT SPECIFIED')
         CALL NJMABT
       ENDIF
 
-      OPEN(1,FILE=OFNAME,STATUS='UNKNOWN')
+      IF (OFNAME.NE.'0') THEN
+        OPEN(1,FILE=OFNAME,STATUS='UNKNOWN')
+      ENDIF
 
       IF (IFNAME.NE.' ') THEN
         OPEN(2,FILE=IFNAME,STATUS='OLD')
@@ -62,6 +132,10 @@ C
         TEXTL = NBLEN(TEXT)
       ENDIF
 
+C     ----------------------------------------------------------------
+C
+C     OPEN COMMUNICATION WITH THE NETWORK AND CONNECT TO *NJF*
+C
       CALL NJMOPEN(HDR,RC,"NJU",1)
       IF (RC.NE.0) THEN
         CALL DISPLA('FAILED TO OPEN COMMUNICATION, RC =',RC)
@@ -73,25 +147,42 @@ C
         CALL NJMABT
       ENDIF
 
+C     ----------------------------------------------------------------
+C
+C     IF MESSAGE WAS SPECIFIED ON COMMAND LINE OR IN INPUT FILE,
+C     SEND IT
+C
       IF (TEXTL.GT.0) THEN
-        CALL NJMSEND(HDR,ACN,RC,'*',DUSER,DNODE,TEXT(1:TEXTL))
+        CALL NJMSEND(HDR,ACN,RC,OUSER,DUSER,DNODE,TEXT(1:TEXTL))
         IF (RC.NE.0) THEN
           CALL DISPLA('FAILED TO SEND MESSAGE, RC =',RC)
           CALL NJMABT
         ENDIF
         MSGC = MSGC + 1
+
+C     ----------------------------------------------------------------
+C
+C     ELSE, REGISTER OUR IDENTITY TO LISTEN FOR INCOMING MESSAGES
+C
       ELSE
-        CALL NJMSETU(HDR,ACN,RC,'*')
+        CALL NJMSETU(HDR,ACN,RC,OUSER)
         IF (RC.NE.0) THEN
           CALL DISPLA('FAILED TO SET USERNAME, RC =',RC)
           CALL NJMABT
         ENDIF
       ENDIF
 
+C     ----------------------------------------------------------------
+C
+C     ENTER MAIN LOOP. LISTEN FOR INCOMING MESSAGES AND SEND MESSAGES
+C     FROM THE INPUT FILE (IF INPUT FILE SPECIFIED). EXIT LOOP WHEN
+C     NO NETWORK COMMUNICATION OCCORRED FOR THE MAXIMUM SPECIFIED
+C     WAITING TIME.
+C
       DLINE = NJMSECS() + WAIT
- 20   CONTINUE
+ 40   CONTINUE
       T = NJMSECS()
-      IF (DLINE.GT.T) THEN
+      IF (DLINE.GT.T.OR.IFNAME.NE.' ') THEN
         SLEEP = DLINE - T
         IF (SLEEP.LE.0) THEN
           SLEEP = 1
@@ -99,6 +190,9 @@ C
           SLEEP = 30
         ENDIF
         CALL NJMPOLL(HDR,CN,RC,SLEEP,TA,20)
+C
+C       RC=0 - MESSAGE RECEIVED
+C
         IF (RC.EQ.0) THEN
           CALL NJMRECV(TA,MTYPE,OUSER,ONODE,DUSER,TEXT,TEXTL,RC)
           IF (MTYPE.EQ.'S') THEN
@@ -109,53 +203,78 @@ C
               CALL DISPLA('REQUEST FAILED, RC =',RC)
               CALL NJMABT
             ENDIF
-          ELSEIF (MTYPE.EQ.'M') THEN
-            WRITE(1,21) OUSER(1:NBLEN(OUSER)),
+          ELSEIF (MTYPE.EQ.'M'.AND.OFNAME.NE.'0') THEN
+            WRITE(1,41) OUSER(1:NBLEN(OUSER)),
      +                  ONODE(1:NBLEN(ONODE)),
      +                  DUSER(1:NBLEN(DUSER)),
      +                  TEXTL
- 21         FORMAT(' FROM ',A,' AT ',A,' TO ',A,' LEN ',I3)
+ 41         FORMAT(' FROM ',A,' AT ',A,' TO ',A,' LEN ',I3)
             WRITE(1,'(1X,A)') TEXT(1:TEXTL)
           ENDIF
           DLINE = NJMSECS() + WAIT
-          GO TO 20
-        ELSE IF (RC.EQ.1) THEN
- 30       CONTINUE
+        ENDIF
+C
+C       RC=1 - NO NETWORK ACTIVITY
+C
+        IF (RC.EQ.0.OR.RC.EQ.1) THEN
+          ABL = NIT(4,ACN).AND.-MASK(54)
+ 50       CONTINUE
           IF (IFNAME.NE.' ') THEN
-            IF ((NIT(4,ACN).AND.-MASK(54)).GT.0) THEN
-              READ(2,'(A)',END=40) TEXT
+C
+C           SEND ONLY IF THE CURRENT BLOCK LIMIT ALLOWS IT
+C
+            IF (ABL.GT.0) THEN
+              READ(2,'(A)',END=60) TEXT
               TEXTL = NBLEN(TEXT)
-              CALL NJMSEND(HDR,ACN,RC,'*',DUSER,DNODE,TEXT(1:TEXTL))
+              CALL NJMSEND(HDR,ACN,RC,OUSER,DUSER,DNODE,TEXT(1:TEXTL))
               IF (RC.NE.0) THEN
                 CALL DISPLA('FAILED TO SEND MESSAGE, RC =',RC)
                 CALL NJMABT
               ENDIF
+              ABL  = ABL - 1
               MSGC = MSGC + 1
               IF (MOD(MSGC,8).EQ.0) THEN
-                CALL DELAY(1)
-                DLINE  = NJMSECS() + WAIT
-                GOTO 20
+C
+C               GIVE THE NETWORK A SHORT REST AFTER EACH BATCH
+C               OF MESSAGES
+C
+                CALL DELAY(2)
+                DLINE = NJMSECS() + WAIT
+                GOTO 40
               ENDIF
-              GOTO 30
- 40           CONTINUE
+              GOTO 50
+ 60           CONTINUE
               IFNAME = ' '
             ENDIF
-            DLINE  = NJMSECS() + WAIT
+            DLINE = NJMSECS() + WAIT
           ENDIF
-          GO TO 20
-        ELSE IF (RC.EQ.6) THEN
+          GO TO 40
+C
+C       RC=6 - CONNECTION WITH *NJF* CLOSED
+C
+        ELSEIF (RC.EQ.6) THEN
           CALL REMARK('CONNECTION ENDED')
-          GO TO 50
-        ELSE IF (RC.EQ.13) THEN
+          GO TO 70
+C
+C       RC=9  - NETWORK IS SHUTTING DOWN
+C       RC=10 - ALL NETWORK COMMUNICATION ENDED
+C
+        ELSEIF (RC.EQ.9.OR.RC.EQ.10) THEN
+          CALL REMARK('NETWORK SHUTTING DOWN')
+          GO TO 70
+C
+C       RC=13 - CONNECTION TO *NJF* REJECTED
+C
+        ELSEIF (RC.EQ.13) THEN
           CALL REMARK('CONNECTION REJECTED')
-          GO TO 50
+          GO TO 70
         ELSE
           CALL DISPLA('UNRECOGNIZED STATUS ', RC)
           CALL NJMABT
         ENDIF
       ENDIF
 
- 50   CONTINUE
+ 70   CONTINUE
       CALL NJMCLOS
 
       END
