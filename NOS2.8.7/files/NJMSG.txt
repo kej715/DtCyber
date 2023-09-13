@@ -184,14 +184,15 @@ C
       T = NJMSECS()
       IF (DLINE.GT.T.OR.IFNAME.NE.' ') THEN
         SLEEP = DLINE - T
-        IF (SLEEP.LE.0) THEN
-          SLEEP = 1
+        IF (SLEEP.LT.0) THEN
+          SLEEP = 0
         ELSEIF (SLEEP.GT.30) THEN
           SLEEP = 30
         ENDIF
+ 41     CONTINUE
         CALL NJMPOLL(HDR,CN,RC,SLEEP,TA,20)
 C
-C       RC=0 - MESSAGE RECEIVED
+C       RC=0 - MESSAGE WAITING TO BE PROCESSED
 C
         IF (RC.EQ.0) THEN
           CALL NJMRECV(TA,MTYPE,OUSER,ONODE,DUSER,TEXT,TEXTL,RC)
@@ -204,19 +205,19 @@ C
               CALL NJMABT
             ENDIF
           ELSEIF (MTYPE.EQ.'M'.AND.OFNAME.NE.'0') THEN
-            WRITE(1,41) OUSER(1:NBLEN(OUSER)),
+            WRITE(1,42) OUSER(1:NBLEN(OUSER)),
      +                  ONODE(1:NBLEN(ONODE)),
      +                  DUSER(1:NBLEN(DUSER)),
      +                  TEXTL
- 41         FORMAT(' FROM ',A,' AT ',A,' TO ',A,' LEN ',I3)
+ 42         FORMAT(' FROM ',A,' AT ',A,' TO ',A,' LEN ',I3)
             WRITE(1,'(1X,A)') TEXT(1:TEXTL)
           ENDIF
-          DLINE = NJMSECS() + WAIT
-        ENDIF
+          SLEEP = 0
+          GOTO 41
 C
-C       RC=1 - NO NETWORK ACTIVITY
+C       RC=1 - NO MESSAGES WAITING TO BE PROCESSED
 C
-        IF (RC.EQ.0.OR.RC.EQ.1) THEN
+        ELSEIF (RC.EQ.1) THEN
           ABL = NIT(4,ACN).AND.-MASK(54)
  50       CONTINUE
           IF (IFNAME.NE.' ') THEN
@@ -233,12 +234,12 @@ C
               ENDIF
               ABL  = ABL - 1
               MSGC = MSGC + 1
-              IF (MOD(MSGC,8).EQ.0) THEN
+              IF (MOD(MSGC,4).EQ.0) THEN
 C
 C               GIVE THE NETWORK A SHORT REST AFTER EACH BATCH
 C               OF MESSAGES
 C
-                CALL DELAY(2)
+                CALL DELAY(1)
                 DLINE = NJMSECS() + WAIT
                 GOTO 40
               ENDIF
@@ -260,7 +261,7 @@ C       RC=9  - NETWORK IS SHUTTING DOWN
 C       RC=10 - ALL NETWORK COMMUNICATION ENDED
 C
         ELSEIF (RC.EQ.9.OR.RC.EQ.10) THEN
-          CALL REMARK('NETWORK SHUTTING DOWN')
+          CALL REMARK('NETWORK SHUTDOWN')
           GO TO 70
 C
 C       RC=13 - CONNECTION TO *NJF* REJECTED
