@@ -6,6 +6,8 @@ USERMSG
 */  NODES.
 */
 *DECK COMXNJF
+*D 156
+      DEF MAXCMD$       # 100 #;     # MAX NUMBER OF QUEUED COMMANDS #
 *I 238
       DEF A2ALN$        # 2 #;       # A-A APPLICATION LIST NUMBER #
 *EDIT COMXNJF
@@ -216,25 +218,6 @@ USERMSG
       ITEM QADDR        I;           # COMMAND QUEUE ADDRESS #
 *I 45
 
-      ARRAY A2AMSG [0:0] U;
-        BEGIN
-        ITEM A2A$TXT    C<40> =
-          [
-          " AAAAAAA M OOOOOOOO DDDDDDDD NNNNNNNN",
-          ];
-        ITEM A2A$ZBT    U<12> = [1(0)];
-        ITEM A2A$FL1    C<01,A2A$TXT>;  # FILLER #
-        ITEM A2A$ANM    C<07,+>;        # APPLICATION NAME #
-        ITEM A2A$FL2    C<01,+>;        # FILLER #
-        ITEM A2A$CMD    C<01,+>;        # COMMAND (I/M/C) #
-        ITEM A2A$FL3    C<01,+>;        # FILLER #
-        ITEM A2A$OUSR   C<08,+>;        # ORIGIN USER #
-        ITEM A2A$FL4    C<01,+>;        # FILLER #
-        ITEM A2A$DUSR   C<08,+>;        # DESTINATION USER #
-        ITEM A2A$FL5    C<01,+>;        # FILLER #
-        ITEM A2A$NODE   C<08,+>;        # DESTINATION NODE #
-        END
-
       ARRAY A2ARSP [0:0] U;
         BEGIN
         ITEM RSP$TYPE   C<01>;          # RESPONSE TYPE #
@@ -266,22 +249,13 @@ A2A:
 
         P<UTA$>     = LOC(ULTA[0]);
         ACN         = ABHADR[0];     # EXTRACT CONNECTION NUMBER #
-        A2A$ANM[0]  = LPT$ANM[ACN];  # LOG COMMAND #
-        A2A$CMD[0]  = TACMD;
-        A2A$OUSR[0] = TAOUSER;
 
         LPT$OUSER[ACN] = TAOUSER;
 
         RSP$TYPE = "S";
         RSP$CODE = 0; # PRESET SUCCESS #
 
-        IF TACMD EQ "I"
-        THEN
-          BEGIN
-          A2A$DUSR[0] = "        ";
-          A2A$NODE[0] = "        ";
-          END
-        ELSE IF TACMD EQ "M"             # SEND MESSAGE #
+        IF TACMD EQ "M"             # SEND MESSAGE #
         THEN
           BEGIN
           GETEQA(QADDR);                 # GET EMPTY CMD QUEUE BUFFER #
@@ -311,11 +285,10 @@ A2A:
             CIT$OBI[0] = CIT$OBI[0] + 1; # MOVE OUTPUT POINTER # 
             CQH$PRI[0] = X"77";          # SET PRIORITY #
             CQH$TYP[0] = X"08";          # HAS SENDING USER ID #
-            A2A$DUSR[0] = TADUSER;
-            A2A$NODE[0] = TADNODE;
             END
           END
-        ELSE # UNRECOGNIZED REQUEST #
+        ELSE IF TACMD NQ "I"  # UNRECOGNIZED REQUEST #
+        THEN
           BEGIN
           RSP$CODE = 1; # BAD REQUEST #
           END
@@ -329,8 +302,6 @@ A2A:
         ABHACT  = CT60XP$;               # SET CHARACTER TYPE #
         ABHTLC  = 1;                     # SET TEXT LENGTH #
         NETPUT(DLHA[0],A2ARSP[0]);
-
-        MESSAGE(A2AMSG[0],USRDF$);
 
         END  # A-A INPUT LOOP #
 */

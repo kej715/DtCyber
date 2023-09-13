@@ -12,7 +12,7 @@ C
 C     TEXT TO BE SENT FOLLOWS COMMAND TERMINATOR.
 C
       IMPLICIT INTEGER (A-Z)
-      DIMENSION HDR(10),NIT(10,12),TA(20)
+      DIMENSION HDR(10),NIT(10,1),TA(20)
       CHARACTER*1   CH,MTYPE
       CHARACTER*8   DNODE,DUSER,IFNAME,OFNAME,ONODE,OUSER
       CHARACTER*10  ARG,ARGV(20)
@@ -21,6 +21,7 @@ C
       DUSER  = ' '
       DNODE  = ' '
       IFNAME = ' '
+      MSGC   = 0
       OFNAME = 'OUTPUT'
       WAIT   = 5
 
@@ -78,6 +79,7 @@ C
           CALL DISPLA('FAILED TO SEND MESSAGE, RC =',RC)
           CALL NJMABT
         ENDIF
+        MSGC = MSGC + 1
       ELSE
         CALL NJMSETU(HDR,ACN,RC,'*')
         IF (RC.NE.0) THEN
@@ -89,40 +91,71 @@ C
       DLINE = NJMSECS() + WAIT
  20   CONTINUE
       T = NJMSECS()
-      CALL NJMPOLL(HDR,CN,RC,DLINE - T,TA,20)
-      IF (RC.EQ.0) THEN
-        CALL NJMRECV(TA,MTYPE,OUSER,ONODE,DUSER,TEXT,TEXTL,RC)
-        IF (MTYPE.EQ.'S') THEN
-          IF (RC.NE.0) THEN
-            CALL DISPLA('REQUEST FAILED, RC =',RC)
-            CALL NJMABT
-          ENDIF
-        ELSEIF (MTYPE.EQ.'M') THEN
-          WRITE(1,21) OUSER(1:NBLEN(OUSER)),
-     +                ONODE(1:NBLEN(ONODE)),
-     +                DUSER(1:NBLEN(DUSER)),
-     +                TEXTL
- 21       FORMAT(' FROM ',A,' AT ',A,' TO ',A,' LEN ',I3)
-          WRITE(1,'(1X,A)') TEXT(1:TEXTL)
+      IF (DLINE.GT.T) THEN
+        SLEEP = DLINE - T
+        IF (SLEEP.LE.0) THEN
+          SLEEP = 1
+        ELSEIF (SLEEP.GT.30) THEN
+          SLEEP = 30
         ENDIF
-        DLINE = NJMSECS() + WAIT
-        GO TO 20
-      ELSE IF (RC.EQ.1) THEN
-        T = NJMSECS()
-        IF (T.GE.DLINE) GOTO 30
-        GO TO 20
-      ELSE IF (RC.EQ.6) THEN
-        CALL REMARK('CONNECTION ENDED')
-        GO TO 30
-      ELSE IF (RC.EQ.13) THEN
-        CALL REMARK('CONNECTION REJECTED')
-        GO TO 30
-      ELSE
-        CALL DISPLA('UNRECOGNIZED STATUS ', RC)
-        CALL NJMABT
+        CALL NJMPOLL(HDR,CN,RC,SLEEP,TA,20)
+        IF (RC.EQ.0) THEN
+          CALL NJMRECV(TA,MTYPE,OUSER,ONODE,DUSER,TEXT,TEXTL,RC)
+          IF (MTYPE.EQ.'S') THEN
+            IF (RC.EQ.2) THEN
+              CALL REMARK('NJE RESOURCES EXHAUSTED')
+              CALL NJMABT
+            ELSEIF (RC.NE.0) THEN
+              CALL DISPLA('REQUEST FAILED, RC =',RC)
+              CALL NJMABT
+            ENDIF
+          ELSEIF (MTYPE.EQ.'M') THEN
+            WRITE(1,21) OUSER(1:NBLEN(OUSER)),
+     +                  ONODE(1:NBLEN(ONODE)),
+     +                  DUSER(1:NBLEN(DUSER)),
+     +                  TEXTL
+ 21         FORMAT(' FROM ',A,' AT ',A,' TO ',A,' LEN ',I3)
+            WRITE(1,'(1X,A)') TEXT(1:TEXTL)
+          ENDIF
+          DLINE = NJMSECS() + WAIT
+          GO TO 20
+        ELSE IF (RC.EQ.1) THEN
+ 30       CONTINUE
+          IF (IFNAME.NE.' ') THEN
+            IF ((NIT(4,ACN).AND.-MASK(54)).GT.0) THEN
+              READ(2,'(A)',END=40) TEXT
+              TEXTL = NBLEN(TEXT)
+              CALL NJMSEND(HDR,ACN,RC,'*',DUSER,DNODE,TEXT(1:TEXTL))
+              IF (RC.NE.0) THEN
+                CALL DISPLA('FAILED TO SEND MESSAGE, RC =',RC)
+                CALL NJMABT
+              ENDIF
+              MSGC = MSGC + 1
+              IF (MOD(MSGC,8).EQ.0) THEN
+                CALL DELAY(1)
+                DLINE  = NJMSECS() + WAIT
+                GOTO 20
+              ENDIF
+              GOTO 30
+ 40           CONTINUE
+              IFNAME = ' '
+            ENDIF
+            DLINE  = NJMSECS() + WAIT
+          ENDIF
+          GO TO 20
+        ELSE IF (RC.EQ.6) THEN
+          CALL REMARK('CONNECTION ENDED')
+          GO TO 50
+        ELSE IF (RC.EQ.13) THEN
+          CALL REMARK('CONNECTION REJECTED')
+          GO TO 50
+        ELSE
+          CALL DISPLA('UNRECOGNIZED STATUS ', RC)
+          CALL NJMABT
+        ENDIF
       ENDIF
 
- 30   CONTINUE
+ 50   CONTINUE
       CALL NJMCLOS
 
       END
@@ -139,10 +172,27 @@ C
         ENDIF
       ENDIF
 
+      IF (L.LT.1.AND.LEN(STR).GT.0) L = 1
       NBLEN = L
 
       END
           IDENT  ARG
           ENTRY  ARG=
  ARG=     BSS    0
+          END
+          IDENT  DELAY
+          ENTRY  DELAY
+
+ DELAY    BSS    1
+          SA3    DELA
+          SA2    X1
+          MX0    48
+          BX6    X0*X3
+          BX6    X6+X2
+          SA6    A3
+          ROLLOUT DELA
+          EQ      DELAY
+
+ DELA     VFD     27/0,21/20000B,12/0
+
           END
