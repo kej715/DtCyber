@@ -41,7 +41,7 @@ USERMSG
         ITEM LPT$ANM    C<07>;       # A-A PEER NAME #
         ITEM LPT$ABN    U<18>;       # APPLICATION BLOCK NUMBER #
         ITEM LPT$OUSER  C<08>;       # ORIGIN USER ID #
-        ITEM LPT$RS3    U<11>;       # RESERVED #
+        ITEM LPT$RS2    U<11>;       # RESERVED #
         ITEM LPT$A2A    B<01>;       # A-A CONNECTION #
 *EDIT COMYLIT
 */
@@ -247,15 +247,15 @@ A2A:
           RETURN;                    # EXIT #
           END
 
-        P<UTA$>     = LOC(ULTA[0]);
-        ACN         = ABHADR[0];     # EXTRACT CONNECTION NUMBER #
+        P<UTA$>  = LOC(ULTA[0]);
+        ACN      = ABHADR[0];        # EXTRACT CONNECTION NUMBER #
 
         LPT$OUSER[ACN] = TAOUSER;
 
         RSP$TYPE = "S";
         RSP$CODE = 0; # PRESET SUCCESS #
 
-        IF TACMD EQ "M"             # SEND MESSAGE #
+        IF TACMD EQ "M"              # SEND MESSAGE #
         THEN
           BEGIN
           GETEQA(QADDR);                 # GET EMPTY CMD QUEUE BUFFER #
