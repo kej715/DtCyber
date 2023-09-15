@@ -158,7 +158,6 @@ C
           CALL DISPLA('FAILED TO SEND MESSAGE, RC =',RC)
           CALL NJMABT
         ENDIF
-        MSGC = MSGC + 1
 
 C     ----------------------------------------------------------------
 C
@@ -171,6 +170,7 @@ C
           CALL NJMABT
         ENDIF
       ENDIF
+      MSGC = MSGC + 1
 
 C     ----------------------------------------------------------------
 C
@@ -182,7 +182,7 @@ C
       DLINE = NJMSECS() + WAIT
  40   CONTINUE
       T = NJMSECS()
-      IF (DLINE.GT.T.OR.IFNAME.NE.' ') THEN
+      IF (DLINE.GT.T.OR.IFNAME.NE.' '.OR.MSGC.GT.0) THEN
         SLEEP = DLINE - T
         IF (SLEEP.LT.0) THEN
           SLEEP = 0
@@ -197,10 +197,12 @@ C
         IF (RC.EQ.0) THEN
           CALL NJMRECV(TA,MTYPE,OUSER,ONODE,DUSER,TEXT,TEXTL,RC)
           IF (MTYPE.EQ.'S') THEN
-            IF (RC.EQ.2) THEN
+            IF (RC.EQ.0) THEN
+              IF (MSGC.GT.0) MSGC = MSGC - 1
+            ELSEIF (RC.EQ.2) THEN
               CALL REMARK('NJE RESOURCES EXHAUSTED')
               CALL NJMABT
-            ELSEIF (RC.NE.0) THEN
+            ELSE
               CALL DISPLA('REQUEST FAILED, RC =',RC)
               CALL NJMABT
             ENDIF
@@ -219,13 +221,13 @@ C       RC=1 - NO MESSAGES WAITING TO BE PROCESSED
 C
         ELSEIF (RC.EQ.1) THEN
           ABL = NIT(4,ACN).AND.-MASK(54)
- 50       CONTINUE
           IF (IFNAME.NE.' ') THEN
 C
-C           SEND ONLY IF THE CURRENT BLOCK LIMIT ALLOWS IT
+C           SEND ONLY IF THE CURRENT BLOCK LIMIT ALLOWS IT AND NO
+C           PREVIOUSLY SENT MESSAGES ARE UNACKNOWLEDGED
 C
-            IF (ABL.GT.0) THEN
-              READ(2,'(A)',END=60) TEXT
+            IF (ABL.GT.0.AND.MSGC.LT.1) THEN
+              READ(2,'(A)',END=50) TEXT
               TEXTL = NBLEN(TEXT)
               CALL NJMSEND(HDR,ACN,RC,OUSER,DUSER,DNODE,TEXT(1:TEXTL))
               IF (RC.NE.0) THEN
@@ -234,17 +236,9 @@ C
               ENDIF
               ABL  = ABL - 1
               MSGC = MSGC + 1
-              IF (MOD(MSGC,4).EQ.0) THEN
-C
-C               GIVE THE NETWORK A SHORT REST AFTER EACH BATCH
-C               OF MESSAGES
-C
-                CALL DELAY(1)
-                DLINE = NJMSECS() + WAIT
-                GOTO 40
-              ENDIF
-              GOTO 50
- 60           CONTINUE
+              DLINE = NJMSECS() + WAIT
+              GOTO 40
+ 50           CONTINUE
               IFNAME = ' '
             ENDIF
             DLINE = NJMSECS() + WAIT
@@ -262,12 +256,6 @@ C       RC=10 - ALL NETWORK COMMUNICATION ENDED
 C
         ELSEIF (RC.EQ.9.OR.RC.EQ.10) THEN
           CALL REMARK('NETWORK SHUTDOWN')
-          GO TO 70
-C
-C       RC=13 - CONNECTION TO *NJF* REJECTED
-C
-        ELSEIF (RC.EQ.13) THEN
-          CALL REMARK('CONNECTION REJECTED')
           GO TO 70
         ELSE
           CALL DISPLA('UNRECOGNIZED STATUS ', RC)
@@ -299,20 +287,4 @@ C
           IDENT  ARG
           ENTRY  ARG=
  ARG=     BSS    0
-          END
-          IDENT  DELAY
-          ENTRY  DELAY
-
- DELAY    BSS    1
-          SA3    DELA
-          SA2    X1
-          MX0    48
-          BX6    X0*X3
-          BX6    X6+X2
-          SA6    A3
-          ROLLOUT DELA
-          EQ      DELAY
-
- DELA     VFD     27/0,21/20000B,12/0
-
           END
