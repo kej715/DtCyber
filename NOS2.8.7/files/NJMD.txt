@@ -3,18 +3,28 @@ C
 C     NJMD - NJE MESSAGE DAEMON
 C
 C     NJMD ENABLES NETWORK SERVICES TO BE BUILT ATOP NJE MESSAGING.
-C     IT PROVIDES A BUILT-IN ECHO SERVICE AND A FACILITY FROM
+C     IT PROVIDES A BUILT-IN INFO SERVICE AND A FACILITY FROM
 C     WHICH OTHER SERVICES CAN BE IMPLEMENTED. THE FACILITY
 C     IS BASED UPON A CONFIGURATION FILE. EACH LINE OF THE
-C     CONFIGURATION FILE DEFINES THE NAME OF A SERVICE AND
-C     A COMMAND TO BE EXECUTED WHENEVER A MESSAGE IS RECEIVED
-C     FOR THE SERVICE. USUALLY, THE COMMAND IS A CALL TO A
-C     CCL PROCEDURE. NJMD CREATES AND SUBMITS A BATCH JOB
-C     THAT CALLS THE COMMAND. TWO PARAMETERS ARE PASSED TO
-C     THE COMMAND:
+C     CONFIGURATION FILE HAS THREE SPACE-DELIMITED FIELDS, AS
+C     FOLLOWS
 C
-C       1. THE ORIGINATING USERNAME (1 - 8 CHARACTERS)
-C       2. THE ORIGINATING NJE NODE NAME (1 - 8 CHARACTERS)
+C       1. NAME OF THE SERVICE (1 - 8 CHARACTERS)
+C       2. COMMAND TO EXECUTE (1 - 80 CHARACTERS)
+C       3. USERNAME AND PASSWORD (SEPARATED BY COMMA)
+C
+C     THE SPECIFIED COMMAND IS EXECUTED WHENEVER A MESSAGE IS
+C     RECEIVED FOR THE SERVICE. USUALLY, THE COMMAND IS A CALL TO
+C     A CCL PROCEDURE. NJMD CREATES AND SUBMITS A BATCH JOB THAT
+C     CALLS THE COMMAND. THE USERNAME AND PASSWORD OF THE JOB
+C     ARE DEFINED BY THE THIRD FIELD IN THE CONFIGURATION FILE
+C     ENTRY.
+C
+C     THREE  PARAMETERS ARE PASSED TO THE COMMAND:
+C
+C       1. THE DESTINATION SERVICE NAME (1 - 8 CHARACTERS)
+C       2. THE ORIGINATING USERNAME (1 - 8 CHARACTERS)
+C       3. THE ORIGINATING NJE NODE NAME (1 - 8 CHARACTERS)
 C
 C     THE TEXT OF THE NJE MESSAGE FROM THE ORIGINATING USER
 C     IS PROVIDED AS THE SUBMITTED JOB'S INPUT FILE.
@@ -26,22 +36,41 @@ C     COMMAND LINE PARAMETERS
 C       CF - NAME OF LOCAL FILE CONTAINING SERVICE DEFINITIONS
 C
       IMPLICIT INTEGER (A-Z)
+      PARAMETER (MAXARGS = 20)
+      PARAMETER (MAXFLDS =  3)
       PARAMETER (MAXSVCS = 20)
-      DIMENSION HDR(10),NIT(10,MAXSVCS),TA(20)
-      CHARACTER*1   CH,MTYPE
+      PARAMETER (TALEN   = 20)
+
+      INTEGER       HDR(10),NIT(10,MAXSVCS),TA(TALEN)
+      COMMON /NET/  HDR,NIT
+      INTEGER       INISECS,TSTAMP(2)
+      COMMON /TIME/ INISECS,TSTAMP
+
+      CHARACTER*10  ARG,ARGV(MAXARGS)
       CHARACTER*7   CFNAME
-      CHARACTER*8   DNODE,DUSER,ONODE,OUSER
-      CHARACTER*10  ARG,ARGV(20)
-      CHARACTER*8   SVCNAMS(MAXSVCS)
+      CHARACTER*1   CH
+      CHARACTER*8   DNODE,DUSER
+      INTEGER       FLDENDS(MAXFLDS),FLDFSTS(MAXFLDS)
+      CHARACTER*1   MTYPE
+      CHARACTER*8   ONODE,OUSER
+      CHARACTER*8   SNAME
+      INTEGER       SVCACNS(MAXSVCS)
+      CHARACTER*15  SVCAUTH(MAXSVCS)
+      INTEGER       SVCC
       CHARACTER*80  SVCCMDS(MAXSVCS)
-      DIMENSION     SVCACNS(MAXSVCS)
+      CHARACTER*8   SVCNAMS(MAXSVCS)
       CHARACTER*150 TEXT
+      COMMON /SVCC   / SVCC,SVCACNS
+      COMMON /SVCDEFS/ SVCAUTH,SVCCMDS,SVCNAMS
 
       CFNAME = ' '
 
       DO 1 I = 1,10
         HDR(I) = 0
  1    CONTINUE
+
+      CALL GETTS(TSTAMP)
+      INISECS = NJMSECS()
 
 C     ----------------------------------------------------------------
 C
@@ -59,9 +88,7 @@ C
         ENDIF
  10   CONTINUE
       
-      SVCS          = 1
-      SVCNAMS(SVCS) = 'ECHO'
-      SVCCMDS(SVCS) = '*'
+      SVCC          = 0
 
       IF (CFNAME.NE.' ') THEN
 C
@@ -71,41 +98,68 @@ C
         LN   = 1
         OPEN(1,FILE=CFNAME,STATUS='OLD')
  20     CONTINUE
-        READ(1,'(A)',END=50) TEXT
-        CI = 1
+        READ(1,'(A)',END=60) TEXT
+        CI    = 1
+        FI    = 0
+        TEXTL = NBLEN(TEXT)
+C
+C       SKIP BLANKS UNTIL BEGINNING OF NEXT FIELD
+C
  30     CONTINUE
-        IF (CI.LE.LEN(TEXT)) THEN
-          IF (TEXT(CI:CI).NE.' ') THEN
+        IF (CI.LE.TEXTL) THEN
+          IF (TEXT(CI:CI).EQ.' ') THEN
             CI = CI + 1
             GOTO 30
           ENDIF
         ENDIF
-        IF (CI.GT.LEN(TEXT)) THEN
+        IF (CI.GT.TEXTL) GOTO 50
+        FI = FI + 1
+        IF (FI.GT.MAXFLDS) THEN
           WRITE(TEXT,'(I2)') LN
           CALL REMARK('INVALID SERVICE DEFINITION IN LINE '//TEXT(1:2))
           CALL NJMABT
         ENDIF
-        SVCS = SVCS + 1
-        IF (SVCS.GT.MAXSVCS) THEN
+        FLDFSTS(FI) = CI
+C
+C       FIND END OF FIELD
+C
+ 40     CONTINUE
+        IF (CI.LE.TEXTL) THEN
+          IF (TEXT(CI:CI).NE.' ') THEN
+            CI = CI + 1
+            GOTO 40
+          ENDIF
+        ENDIF
+        FLDENDS(FI) = CI - 1
+        GOTO 30
+
+ 50     CONTINUE
+        IF (FI.LT.MAXFLDS) THEN
+          WRITE(TEXT,'(I2)') LN
+          CALL REMARK('INVALID SERVICE DEFINITION IN LINE '//TEXT(1:2))
+          CALL NJMABT
+        ENDIF
+        SNL = FLDENDS(1) - FLDFSTS(1) + 1
+        CDL = FLDENDS(2) - FLDFSTS(2) + 1
+        ATL = FLDENDS(3) - FLDFSTS(3) + 1
+        IF (SNL.GT.8.OR.CDL.GT.80.OR.ATL.GT.15) THEN
+          WRITE(TEXT,'(I2)') LN
+          CALL REMARK('INVALID SERVICE DEFINITION IN LINE '//TEXT(1:2))
+          CALL NJMABT
+        ENDIF
+        SVCC = SVCC + 1
+        IF (SVCC.GT.MAXSVCS) THEN
           CALL REMARK('TOO MANY SERVICE DEFINITIONS')
           CALL NJMABT
         ENDIF
-        SVCNAMS(SVCS) = TEXT(1:CI - 1)
- 40     CONTINUE
-        CI = CI + 1
-        IF (CI.LE.LEN(TEXT)) THEN
-          IF (TEXT(CI:CI).EQ.' ') GOTO 40
-        ENDIF
-        IF (CI.GT.LEN(TEXT)) THEN
-          WRITE(TEXT,'(I2)') LN
-          CALL REMARK('INVALID SERVICE DEFINITION IN LINE '//TEXT(1:2))
-          CALL NJMABT
-        ENDIF
-        SVCCMDS(SVCS) = TEXT(CI:LEN(TEXT))
+        SVCNAMS(SVCC) = TEXT(FLDFSTS(1):FLDENDS(1))
+        SVCCMDS(SVCC) = TEXT(FLDFSTS(2):FLDENDS(2))
+        SVCAUTH(SVCC) = TEXT(FLDFSTS(3):FLDENDS(3))
         LN = LN + 1
         GOTO 20
 
- 50     CONTINUE
+ 60     CONTINUE
+        CLOSE(1)
  
       ENDIF
 
@@ -113,7 +167,7 @@ C     ----------------------------------------------------------------
 C
 C     OPEN COMMUNICATION WITH THE NETWORK
 C
-      CALL NJMOPEN(HDR,RC,"NJU",1)
+      CALL NJMOPEN(HDR,RC,"NJU",MAXSVCS)
       IF (RC.NE.0) THEN
         CALL REMARK('FAILED TO OPEN COMMUNICATION, RC='//TEXT(1:2))
         CALL NJMABT
@@ -124,7 +178,10 @@ C
 C     CREATE A CONNECTION TO *NJF* FOR EACH SERVICE AND BEGIN
 C     LISTENING FOR MESSAGES
 C
-      DO 70 I = 1,SVCS
+      I = 1
+ 70   CONTINUE
+      IF (I.LE.SVCC) THEN
+        SNAME = SVCNAMS(I)
         CALL NJMCONN(HDR,ACN,RC)
         IF (RC.NE.0) THEN
           IF (RC.EQ.13) RC = SHIFT(HDR(5),-6).AND.O"77"
@@ -132,82 +189,347 @@ C
           CALL REMARK('FAILED TO CONNECT TO NJF, RC='//TEXT(1:2))
           CALL NJMABT
         ENDIF
-        SVCACNS(I) = ACN
-        CALL NJMSETU(HDR,ACN,RC,SVCNAMS(I))
+        CALL NJMRGST(HDR,ACN,RC,SNAME)
         IF (RC.NE.0) THEN
           WRITE(TEXT,'(I2)') RC
-          CALL REMARK('FAILED TO REGISTER SERVICE '//SVCNAMS(I)//
+          CALL REMARK('FAILED TO REGISTER SERVICE '//SNAME//
      +                ', RC='//TEXT(1:2))
           CALL NJMABT
         ENDIF
- 60     CONTINUE
-        CALL NJMPOLL(HDR,CN,RC,5,TA,20)
+ 80     CONTINUE
+        CALL NJMPOLL(HDR,CN,RC,5,TA,TALEN)
         IF (RC.EQ.0) THEN
-          IF (CN.NE.ACN) GOTO 60
+          IF (CN.NE.ACN) GOTO 80
           CALL NJMRECV(TA,MTYPE,OUSER,ONODE,DUSER,TEXT,TEXTL,RC)
-          IF (MTYPE.NE.'S') GOTO 60
-          IF (RC.NE.0) THEN
-            WRITE(TEXT,'(I2)') RC
-            CALL REMARK('FAILED TO REGISTER SERVICE '//SVCNAMS(I)//
-     +                  ', RC='//TEXT(1:2))
-            CALL NJMABT
+          IF (MTYPE.NE.'S') GOTO 80
+          IF (RC.EQ.0) THEN
+            CALL REMARK('SERVICE REGISTERED - '//SNAME)
+            SVCACNS(I) = ACN
+            I = I + 1
+            GOTO 70
           ENDIF
-          CALL REMARK('SERVICE REGISTERED - '//SVCNAMS(I))
+          IF (RC.NE.0) THEN
+          ENDIF
+          CALL REMARK('SERVICE REGISTERED - '//SNAME)
         ELSEIF (RC.EQ.1) THEN
-          GOTO 60
-        ELSE
-          CALL DISPLA('FAILED TO REGISTER SERVICE, RC=',RC)
-          CALL NJMABT
+          GOTO 80
         ENDIF
-
- 70   CONTINUE
+        WRITE(TEXT,'(I2)') RC
+        CALL REMARK('FAILED TO REGISTER SERVICE '//SNAME//
+     +              ', RC='//TEXT(1:2))
+        CALL NJMABT
+      ENDIF
 
 C     ----------------------------------------------------------------
 C
 C     ENTER MAIN LOOP. LISTEN FOR INCOMING MESSAGES AND DISPATCH THEM
 C     TO SERVICES.
 C
- 80   CONTINUE
-      CALL NJMPOLL(HDR,ACN,RC,5,TA,20)
+ 90   CONTINUE
+      CALL NJMPOLL(HDR,ACN,RC,5,TA,TALEN)
 C
 C     RC=0 - MESSAGE RECEIVED
 C
       IF (RC.EQ.0) THEN
         CALL NJMRECV(TA,MTYPE,OUSER,ONODE,DUSER,TEXT,TEXTL,RC)
         IF (MTYPE.EQ.'M') THEN
-          PRINT 82, OUSER(1:NBLEN(OUSER)),
-     +                ONODE(1:NBLEN(ONODE)),
-     +                DUSER(1:NBLEN(DUSER)),
-     +                TEXTL
- 82       FORMAT(' FROM ',A,' AT ',A,' TO ',A,' LEN ',I3)
-          PRINT '(1X,A)', TEXT(1:TEXTL)
+          CALL DSPATCH(OUSER,ONODE,DUSER,TEXT,TEXTL)
         ENDIF
-        GOTO 80
+        GOTO 90
 C
 C     RC=1 - NO NETWORK ACTIVITY
 C
       ELSEIF (RC.EQ.1) THEN
-        GOTO 80
+        GOTO 90
 C
 C     RC=6 - CONNECTION WITH *NJF* CLOSED
 C
       ELSEIF (RC.EQ.6) THEN
         CALL REMARK('CONNECTION ENDED')
-        GO TO 90
+        GO TO 100
 C
 C     RC=9  - NETWORK IS SHUTTING DOWN
 C     RC=10 - ALL NETWORK COMMUNICATION ENDED
 C
       ELSEIF (RC.EQ.9.OR.RC.EQ.10) THEN
         CALL REMARK('NETWORK SHUTDOWN')
-        GO TO 90
+        GO TO 100
       ELSE
         CALL DISPLA('UNRECOGNIZED STATUS ', RC)
         CALL NJMABT
       ENDIF
 
- 90   CONTINUE
+ 100  CONTINUE
       CALL NJMCLOS
+
+      END
+      SUBROUTINE DSPATCH(OUSER,ONODE,SNAME,TEXT,TEXTL)
+      IMPLICIT INTEGER (A-Z)
+      PARAMETER (MAXSVCS = 20)
+
+      CHARACTER*8   OUSER,ONODE,SNAME
+      CHARACTER     TEXT*(*)
+      INTEGER       SVCC
+      INTEGER       SVCACNS(MAXSVCS)
+      CHARACTER*15  SVCAUTH(MAXSVCS)
+      CHARACTER*80  SVCCMDS(MAXSVCS)
+      CHARACTER*8   SVCNAMS(MAXSVCS)
+      COMMON /SVCC   / SVCC,SVCACNS
+      COMMON /SVCDEFS/ SVCAUTH,SVCCMDS,SVCNAMS
+
+      I = 1
+ 10   CONTINUE
+      IF (I.LE.SVCC) THEN
+        IF (SNAME.EQ.SVCNAMS(I)) GOTO 20
+        I = I + 1
+        GOTO 10
+      ENDIF
+
+ 20   CONTINUE
+      IF (I.GT.SVCC) THEN
+        CALL REMARK('UNRECOGNIZED SERVICE - '//SNAME)
+        CALL NJMABT
+      ENDIF
+
+      ATL = NBLEN(SVCAUTH(I))
+      CDL = NBLEN(SVCCMDS(I))
+      ONL = NBLEN(ONODE)
+      OUL = NBLEN(OUSER)
+      SNL = NBLEN(SNAME)
+
+      IF (CDL.EQ.1.AND.SVCCMDS(I)(1:1).EQ.'*') THEN
+        IF (SNAME.EQ.'INFO') THEN
+          CALL INFO(SVCACNS(I),OUSER,ONODE,SNAME,SVCAUTH(I)(1:ATL),
+     +              TEXT,TEXTL)
+        ELSE
+          CALL REMARK('UNRECOGNIZED BUILTIN SERVICE - '//SNAME)
+          CALL NJMABT
+        ENDIF
+        RETURN
+      ENDIF
+
+      OPEN(1,FILE='ZZZZJOB',STATUS='NEW')
+      WRITE(1,'(A)') SNAME(1:SNL)//'.'
+      WRITE(1,'(A)') '$USER,'//SVCAUTH(I)(1:ATL)//'.'
+      WRITE(1,'(A)') SVCCMDS(I)(1:CDL)//',' //
+     +               '$'//SNAME(1:SNL)//'$,'//
+     +               '$'//OUSER(1:OUL)//'$,'//
+     +               '$'//ONODE(1:ONL)//'$.'
+      CLOSE(1)
+      OPEN(1,FILE='ZZZZJOB',STATUS='OLD')
+      WRITE(1,'(A)') TEXT(1:TEXTL)
+      CLOSE(1)
+
+      CALL SUBMIT(L"ZZZZJOB")
+
+      END
+      SUBROUTINE INFO(ACN,OUSER,ONODE,SNAME,AUTH,TEXT,TEXTL)
+C$    COLLATE(FIXED)
+      IMPLICIT INTEGER (A-Z)
+      PARAMETER (MAXSVCS = 20)
+      PARAMETER (SPM  = 60)
+      PARAMETER (SPH  = (SPM * 60))
+      PARAMETER (SPD  = (SPH * 24))
+
+      INTEGER       HDR(10),NIT(10,MAXSVCS)
+      COMMON /NET/  HDR,NIT
+      INTEGER       INISECS,TSTAMP(2)
+      COMMON /TIME/ INISECS,TSTAMP
+
+      CHARACTER*15  AUTH
+      CHARACTER*1   CH
+      INTEGER       CURTIME(2)
+      LOGICAL       ISFIRST
+      INTEGER       MSGC
+      CHARACTER*10  NVAL
+      CHARACTER*8   ONODE,OUSER
+      CHARACTER*20  OSVER
+      CHARACTER     RCTEXT*2
+      INTEGER       REQC
+      CHARACTER*8   SNAME
+      CHARACTER*80  STR,SSTR
+      CHARACTER     TEXT*(*)
+      CHARACTER*40  TITLE
+      INTEGER       VERBUF(7)
+      SAVE          MSGC,REQC
+      DATA          MSGC/0/
+      DATA          REQC/0/
+
+      REQC = REQC + 1
+
+      ATL = NBLEN(AUTH)
+      ONL = NBLEN(ONODE)
+      OUL = NBLEN(OUSER)
+      SNL = NBLEN(SNAME)
+
+      OPEN(1,FILE='ZZZZJOB',STATUS='NEW')
+      WRITE(1,'(A)') SNAME(1:SNL)//'.'
+      WRITE(1,'(A)') '$USER,'//AUTH(1:ATL)//'.'
+      WRITE(1,'(A)') '$NJMSG,'//
+     +               'F='//SNAME(1:SNL)//','//
+     +               'N='//ONODE(1:ONL)//','//
+     +               'U='//OUSER(1:OUL)//','//
+     +               'I=INPUT,W=0.'
+      CLOSE(1)
+
+      OPEN(1,FILE='ZZZZJOB',STATUS='OLD')
+
+      IMSGC = MSGC
+
+      IF (TEXT(1:TEXTL).EQ.'/INFO') THEN
+        CALL SYSVER(VERBUF)
+        CI = 1
+        DO 20 I = 1,4
+          WORD = VERBUF(I)
+          DO 10 J = 1,10
+            WORD = SHIFT(WORD,6)
+            CH   = CHAR(WORD.AND.-MASK(54))
+            TITLE(CI:CI) = CH
+            CI = CI + 1
+ 10       CONTINUE
+ 20     CONTINUE
+
+        CI = 1
+        DO 40 I = 5,6
+          WORD = VERBUF(I)
+          DO 30 J = 1,10
+            WORD = SHIFT(WORD,6)
+            CH   = CHAR(WORD.AND.-MASK(54))
+            OSVER(CI:CI) = CH
+            CI = CI + 1
+ 30       CONTINUE
+ 40     CONTINUE
+
+        WRITE(1,'(A)') '   TITLE: '//TITLE(1:NBLEN(TITLE))
+        WRITE(1,'(A)') '      OS: '//OSVER(1:NBLEN(OSVER))
+        WRITE(1,'(A)') 'SOFTWARE: NJEF 2.5, NJMD 1.0'
+        MSGC = MSGC + 3
+      ENDIF
+
+      IF (TEXT(1:TEXTL).EQ.'/TIME'.OR.TEXT(1:TEXTL).EQ.'/INFO') THEN
+        CI = 1
+        DO 60 I = 1,2
+          WORD = TSTAMP(I)
+          DO 50 J = 1,10
+            WORD = SHIFT(WORD,6)
+            STR(CI:CI) = CHAR(WORD.AND.-MASK(54))
+            CI = CI + 1
+ 50       CONTINUE
+ 60     CONTINUE
+        WRITE(1,'(A,A)') ' STARTED: ',STR(2:20)
+        MSGC = MSGC + 1
+
+        CALL GETTS(CURTIME)
+        CI = 1
+        DO 80 I = 1,2
+          WORD = CURTIME(I)
+          DO 70 J = 1,10
+            WORD = SHIFT(WORD,6)
+            STR(CI:CI) = CHAR(WORD.AND.-MASK(54))
+            CI = CI + 1
+ 70       CONTINUE
+ 80     CONTINUE
+        WRITE(1,'(A,A)') '     NOW: ',STR(2:20)
+        MSGC = MSGC + 1
+
+        SECS  = NJMSECS() - INISECS
+        DAYS  = SECS / SPD
+        SECS  = MOD(SECS,SPD)
+        HOURS = SECS / SPH
+        SECS  = MOD(SECS,SPH)
+        MINS  = SECS / SPM
+        SECS  = MOD(SECS,SPM)
+        STR   = '  UPTIME: '
+        STRL  = NBLEN(STR) + 1
+        ISFIRST = .TRUE.
+        IF (DAYS.GT.0) THEN
+          IF (DAYS.GT.1) THEN
+            WRITE(NVAL,'(I4)') DAYS
+            CALL TRIM(NVAL,FIRST,LAST)
+            SSTR = STR(1:STRL)//NVAL(FIRST:LAST)//' DAYS'
+          ELSE
+            SSTR = STR(1:STRL)//'1 DAY'
+          ENDIF
+          STR  = SSTR
+          STRL = NBLEN(STR)
+          ISFIRST = .FALSE.
+        ENDIF
+        IF (HOURS.GT.0) THEN
+          IF (.NOT.ISFIRST) THEN
+            SSTR = STR(1:STRL)//', '
+            STR  = SSTR
+            STRL = STRL + 2
+          ENDIF
+          IF (HOURS.GT.1) THEN
+            WRITE(NVAL,'(I2)') HOURS
+            CALL TRIM(NVAL,FIRST,LAST)
+            SSTR = STR(1:STRL)//NVAL(FIRST:LAST)//' HOURS'
+          ELSE
+            SSTR = STR(1:STRL)//'1 HOUR'
+          ENDIF
+          STR  = SSTR
+          STRL = NBLEN(STR)
+          ISFIRST = .FALSE.
+        ENDIF
+        IF (MINS.GT.0) THEN
+          IF (.NOT.ISFIRST) THEN
+            SSTR = STR(1:STRL)//', '
+            STR  = SSTR
+            STRL = STRL + 2
+          ENDIF
+          IF (MINS.GT.1) THEN
+            WRITE(NVAL,'(I2)') MINS
+            CALL TRIM(NVAL,FIRST,LAST)
+            SSTR = STR(1:STRL)//NVAL(FIRST:LAST)//' MINUTES'
+          ELSE
+            SSTR = STR(1:STRL)//'1 MINUTE'
+          ENDIF
+          STR  = SSTR
+          STRL = NBLEN(STR)
+          ISFIRST = .FALSE.
+        ENDIF
+        IF (SECS.GT.0) THEN
+          IF (.NOT.ISFIRST) THEN
+            SSTR = STR(1:STRL)//', '
+            STR  = SSTR
+            STRL = STRL + 2
+          ENDIF
+          IF (SECS.GT.1) THEN
+            WRITE(NVAL,'(I2)') SECS
+            CALL TRIM(NVAL,FIRST,LAST)
+            SSTR = STR(1:STRL)//NVAL(FIRST:LAST)//' SECONDS'
+          ELSE
+            SSTR = STR(1:STRL)//'1 SECOND'
+          ENDIF
+          STR  = SSTR
+          STRL = NBLEN(STR)
+        ENDIF
+      
+        WRITE(1,'(A)') STR(1:STRL)
+        MSGC = MSGC + 1
+      ENDIF
+
+      IF (TEXT(1:TEXTL).EQ.'/STATS'.OR.TEXT(1:TEXTL).EQ.'/INFO') THEN
+        MSGC = MSGC + 2
+        WRITE(NVAL,'(I4)') REQC
+        CALL TRIM(NVAL,FIRST,LAST)
+        WRITE(1,'(A,A)') 'REQUESTS: ',NVAL(FIRST:LAST)
+        WRITE(NVAL,'(I4)') MSGC
+        CALL TRIM(NVAL,FIRST,LAST)
+        WRITE(1,'(A,A)') 'MESSAGES: ',NVAL(FIRST:LAST)
+      ENDIF
+
+      IF (IMSGC.EQ.MSGC.OR.TEXT(1:TEXTL).EQ.'/HELP') THEN
+        WRITE(1,'(A)') 'COMMANDS AVAILABLE: '
+        WRITE(1,'(A)') '  /HELP  : SHOW THIS HELP'
+        WRITE(1,'(A)') '  /INFO  : SHOW ALL AVAILABLE INFO'
+        WRITE(1,'(A)') '  /STATS : SHOW STATISTICS'
+        WRITE(1,'(A)') '  /TIME  : SHOW START TIME AND UPTIME'
+      ENDIF
+
+      CLOSE(1)
+
+      CALL SUBMIT(L"ZZZZJOB")
 
       END
       FUNCTION NBLEN(STR)
@@ -227,7 +549,94 @@ C
       NBLEN = L
 
       END
+      SUBROUTINE TRIM(STR,FIRST,LAST)
+      IMPLICIT INTEGER (A-Z)
+
+      CHARACTER STR*(*)
+
+      LAST  = NBLEN(STR)
+      FIRST = 1
+ 10   CONTINUE
+      IF (FIRST.LE.LAST) THEN
+        IF (STR(FIRST:FIRST).EQ.' ') THEN
+          FIRST = FIRST + 1
+          GOTO 10
+        ENDIF
+      ENDIF
+
+      IF (FIRST.GT.LAST) FIRST = LAST
+
+      END
           IDENT  ARG
           ENTRY  ARG=
  ARG=     BSS    0
+          END
+          IDENT  GETTS
+          ENTRY  GETTS
+**
+*         GETTS - GET CURRENT DATE AND TIME
+*
+*         ARGUMENTS
+*           X1 - ADDRESS OF BLOCK TO RECEIVE RESULT
+*
+
+ GETTS    BSS    1
+          SB1    1
+          BX6    X1          SAVE RESULT ADDRESS
+          SA6    GETA
+          DATE   X1
+          SA1    GETA
+          SX1    X1+B1
+          CLOCK  X1
+          EQ     GETTS
+
+ GETA     BSS    1
+
+          END
+          IDENT  SUBMIT
+          ENTRY  SUBMIT
+**
+*         SUBMIT - SUBMIT A FILE TO THE INPUT QUEUE
+*
+*         ARGUMENTS
+*           X1 - ADDRESS OF FILE NAME
+*
+
+ SUBMIT   BSS    1
+          SA2    X1          GET FILE NAME
+          MX0    42D
+          BX6    X0*X2
+          SA6    SUBA
+          ROUTE  SUBA,R
+          EQ     SUBMIT
+
+ SUBA     VFD    42/0LFILENAM,18/0
+          VFD    12/0,12/1000B,12/2HNO,6/0,18/402022B
+          VFD    60/0
+          VFD    60/0
+          VFD    60/0
+          VFD    60/0
+          VFD    60/0
+          END
+          IDENT  SYSVER
+          ENTRY  SYSVER
+**
+*         SYSVER - GET SYSTEM TITLE AND VERSION
+*
+*         ARGUMENTS
+*           X1 - ADDRESS OF BLOCK TO RECEIVE RESULT
+*
+
+ SYSVER   BSS    1
+          SA2    SYSA
+          MX0    42D
+          BX1    -X0*X1
+          BX6    X0*X2
+          BX6    X6+X1
+          SA6    A2
+          VERSION SYSA
+          EQ     SYSVER
+
+ SYSA     VFD    1/1,11/30D,12/0,12/0,6/0,18/0
+
           END

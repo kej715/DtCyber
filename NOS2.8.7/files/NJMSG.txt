@@ -24,11 +24,13 @@ C       U - NAME OF DESTINATION USER OR SERVICE
 C       W - MAXIMUM SECONDS TO WAIT FOR RESPONSE (DEFAULT 5)
 C
       IMPLICIT INTEGER (A-Z)
-      DIMENSION HDR(10),NIT(10,1),TA(20)
+      PARAMETER (MAXARGS = 20)
+      PARAMETER (TALEN   = 20)
+      DIMENSION HDR(10),NIT(10,1),TA(TALEN)
       CHARACTER*1   CH,MTYPE
       CHARACTER*8   DNODE,DUSER,IFNAME,OFNAME,ONODE,OUSER
-      CHARACTER*10  ARG,ARGV(20)
-      CHARACTER*150 TEXT
+      CHARACTER*10  ARG,ARGV(MAXARGS)
+      CHARACTER*150 ITEXT,OTEXT
 
       DUSER  = ' '
       DNODE  = ' '
@@ -46,7 +48,7 @@ C     ----------------------------------------------------------------
 C
 C     PARSE COMMAND LINE ARGUMENTS
 C
-      CALL NJMARGS(ARGC,ARGV,TEXT,TEXTL)
+      CALL NJMARGS(ARGC,ARGV,OTEXT,OTEXTL)
 
       DO 10 I = 2,ARGC
         ARG = ARGV(I)
@@ -76,8 +78,8 @@ C
         TI  = 1
         ATI = 0
  20     CONTINUE
-        IF (TI.LE.TEXTL) THEN
-          CH = TEXT(TI:TI)
+        IF (TI.LE.OTEXTL) THEN
+          CH = OTEXT(TI:TI)
           IF (CH.EQ.'@') THEN
             ATI = TI
           ELSEIF (CH.EQ.' ') THEN
@@ -93,22 +95,22 @@ C
           NLEN = TI - NI
           IF (ATI.GT.8) THEN
             CALL REMARK('INVALID DESTINATION USER - '//
-     +                  TEXT(1:ULEN))
+     +                  OTEXT(1:ULEN))
           ENDIF
-          DUSER = TEXT(1:ULEN)
+          DUSER = OTEXT(1:ULEN)
           IF (NLEN.GT.0) THEN
             IF (NLEN.GT.8) THEN
               CALL REMARK('INVALID DESTINATION NODE - '//
-     +                    TEXT(NI:NI+NLEN-1))
+     +                    OTEXT(NI:NI+NLEN-1))
             ENDIF
-            DNODE = TEXT(NI:NI+NLEN-1)
+            DNODE = OTEXT(NI:NI+NLEN-1)
           ENDIF
-          IF (TI.LE.TEXTL) THEN
-            TI    = TI + 1
-            TEXT  = TEXT(TI:TEXTL)
-            TEXTL = (TEXTL - TI) + 1
+          IF (TI.LE.OTEXTL) THEN
+            TI     = TI + 1
+            OTEXT  = OTEXT(TI:OTEXTL)
+            OTEXTL = (OTEXTL - TI) + 1
           ELSE
-            TEXTL = 0
+            OTEXTL = 0
           ENDIF
         ENDIF
       ENDIF
@@ -128,8 +130,8 @@ C
 
       IF (IFNAME.NE.' ') THEN
         OPEN(2,FILE=IFNAME,STATUS='OLD')
-        READ(2,'(A)') TEXT
-        TEXTL = NBLEN(TEXT)
+        READ(2,'(A)') OTEXT
+        OTEXTL = NBLEN(OTEXT)
       ENDIF
 
 C     ----------------------------------------------------------------
@@ -152,8 +154,8 @@ C
 C     IF MESSAGE WAS SPECIFIED ON COMMAND LINE OR IN INPUT FILE,
 C     SEND IT
 C
-      IF (TEXTL.GT.0) THEN
-        CALL NJMSEND(HDR,ACN,RC,OUSER,DUSER,DNODE,TEXT(1:TEXTL))
+      IF (OTEXTL.GT.0) THEN
+        CALL NJMSEND(HDR,ACN,RC,OUSER,DUSER,DNODE,OTEXT(1:OTEXTL))
         IF (RC.NE.0) THEN
           CALL DISPLA('FAILED TO SEND MESSAGE, RC =',RC)
           CALL NJMABT
@@ -164,9 +166,9 @@ C
 C     ELSE, REGISTER OUR IDENTITY TO LISTEN FOR INCOMING MESSAGES
 C
       ELSE
-        CALL NJMSETU(HDR,ACN,RC,OUSER)
+        CALL NJMRGST(HDR,ACN,RC,OUSER)
         IF (RC.NE.0) THEN
-          CALL DISPLA('FAILED TO SET USERNAME, RC =',RC)
+          CALL DISPLA('FAILED TO REGISTER USER, RC =',RC)
           CALL NJMABT
         ENDIF
       ENDIF
@@ -190,29 +192,34 @@ C
           SLEEP = 30
         ENDIF
  41     CONTINUE
-        CALL NJMPOLL(HDR,CN,RC,SLEEP,TA,20)
+        CALL NJMPOLL(HDR,CN,RC,SLEEP,TA,TALEN)
 C
 C       RC=0 - MESSAGE WAITING TO BE PROCESSED
 C
         IF (RC.EQ.0) THEN
-          CALL NJMRECV(TA,MTYPE,OUSER,ONODE,DUSER,TEXT,TEXTL,RC)
+          CALL NJMRECV(TA,MTYPE,OUSER,ONODE,DUSER,ITEXT,ITEXTL,RC)
           IF (MTYPE.EQ.'S') THEN
             IF (RC.EQ.0) THEN
               IF (MSGC.GT.0) MSGC = MSGC - 1
             ELSEIF (RC.EQ.2) THEN
-              CALL REMARK('NJE RESOURCES EXHAUSTED')
-              CALL NJMABT
+C
+C             NJE RESOURCES EXHAUSTED, SO ROLLOUT FOR A
+C             SHORT WHILE, AND THEN TRY AGAIN
+C
+              CALL ROLLOUT(2)
+              CALL NJMSEND(HDR,ACN,RC,OUSER,DUSER,DNODE,OTEXT(1:OTEXTL))
+              IF (RC.NE.0) THEN
+                CALL DISPLA('FAILED TO SEND MESSAGE, RC =',RC)
+                CALL NJMABT
+              ENDIF
+              DLINE = NJMSECS() + WAIT
             ELSE
               CALL DISPLA('REQUEST FAILED, RC =',RC)
               CALL NJMABT
             ENDIF
-          ELSEIF (MTYPE.EQ.'M'.AND.OFNAME.NE.'0') THEN
-            WRITE(1,42) OUSER(1:NBLEN(OUSER)),
-     +                  ONODE(1:NBLEN(ONODE)),
-     +                  DUSER(1:NBLEN(DUSER)),
-     +                  TEXTL
- 42         FORMAT(' FROM ',A,' AT ',A,' TO ',A,' LEN ',I3)
-            WRITE(1,'(1X,A)') TEXT(1:TEXTL)
+          ELSEIF (MTYPE.EQ.'M'.AND.OFNAME.NE.'0'.AND.ITEXTL.GT.0) THEN
+            WRITE(1,'(1X,A)') ITEXT(1:ITEXTL)
+            DLINE = NJMSECS() + WAIT
           ENDIF
           SLEEP = 0
           GOTO 41
@@ -227,9 +234,9 @@ C           SEND ONLY IF THE CURRENT BLOCK LIMIT ALLOWS IT AND NO
 C           PREVIOUSLY SENT MESSAGES ARE UNACKNOWLEDGED
 C
             IF (ABL.GT.0.AND.MSGC.LT.1) THEN
-              READ(2,'(A)',END=50) TEXT
-              TEXTL = NBLEN(TEXT)
-              CALL NJMSEND(HDR,ACN,RC,OUSER,DUSER,DNODE,TEXT(1:TEXTL))
+              READ(2,'(A)',END=50) OTEXT
+              OTEXTL = NBLEN(OTEXT)
+              CALL NJMSEND(HDR,ACN,RC,OUSER,DUSER,DNODE,OTEXT(1:OTEXTL))
               IF (RC.NE.0) THEN
                 CALL DISPLA('FAILED TO SEND MESSAGE, RC =',RC)
                 CALL NJMABT
@@ -287,4 +294,20 @@ C
           IDENT  ARG
           ENTRY  ARG=
  ARG=     BSS    0
+          END
+          IDENT  ROLLOUT
+          ENTRY  ROLLOUT
+ ROLLOUT  BSS    1
+          SB1    1
+          SA3    ROLA
+          MX0    48D
+          SA2    X1
+          BX6    X0*X3
+          BX6    X6+X2
+          SA6    ROLA
+          ROLLOUT ROLA
+          EQ     ROLLOUT
+
+ ROLA     VFD    27/0,21/20000,12/0
+
           END

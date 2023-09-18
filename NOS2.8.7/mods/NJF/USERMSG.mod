@@ -41,7 +41,9 @@ USERMSG
         ITEM LPT$ANM    C<07>;       # A-A PEER NAME #
         ITEM LPT$ABN    U<18>;       # APPLICATION BLOCK NUMBER #
         ITEM LPT$OUSER  C<08>;       # ORIGIN USER ID #
-        ITEM LPT$RS2    U<11>;       # RESERVED #
+        ITEM LPT$ABL    U<03>;       # A-A APP BLOCK LIMIT #
+        ITEM LPT$OBC    U<03>;       # A-A OUTSTANDING BLOCK COUNT #
+        ITEM LPT$RS2    U<05>;       # RESERVED #
         ITEM LPT$A2A    B<01>;       # A-A CONNECTION #
 *EDIT COMYLIT
 */
@@ -92,7 +94,9 @@ USERMSG
         LPT$CFG[ACN]   = FALSE;      # CLEAR TERMINAL CONFIG FLAG #
         LPT$NXT[ACN]   = FALSE;      # CLEAR NEXT-TO-TRANSMIT FLAG #
         LPT$ANM[ACN]   = CONTNM[0];  # SET A-A PEER NAME #
-        LPT$ABN[ACN]   = 0;          # INITIALIZE APP BLOCK NUMBER #
+        LPT$ABN[ACN]   = 0;          # INIT APP BLOCK NUMBER #
+        LPT$ABL[ACN]   = CONABL[0];  # INIT APP BLOCK LIMIT #
+        LPT$OBC[ACN]   = 0;          # INIT OUTSTANDING BLOCK COUNT #
         LPT$OUSER[ACN] = "        "; # SET A-A USER ID #
         LPT$A2A[ACN]   = TRUE;       # SET A2A FLAG #
         CONCNT = CONCNT + 1;         # INCREMENT CONNECTION COUNT #
@@ -132,7 +136,16 @@ USERMSG
           IF LPT$A2A[ACN]
           THEN
             BEGIN
-            IF PFCSFC EQ FCINIT
+            IF PFCSFC EQ FCACK
+            THEN
+              BEGIN
+              IF LPT$OBC[ACN] GR 0
+              THEN
+                BEGIN
+                LPT$OBC[ACN] = LPT$OBC[ACN] - 1;
+                END
+              END
+            ELSE IF PFCSFC EQ FCINIT
             THEN
               BEGIN
               RTYPE = S"INITIALIZE";     # SET RESPONSE TYPE #
@@ -142,7 +155,8 @@ USERMSG
             ELSE IF PFCSFC EQ CONENDN
             THEN
               BEGIN
-              LPT$A2A[ACN] = FALSE;      # CLEAR A-A FLAG #
+              LPT$A2A[ACN]   = FALSE;    # CLEAR A-A FLAG AND USER  #
+              LPT$OUSER[ACN] = "        "; 
               CONCNT = CONCNT - 1;       # DECREMENT CONNECTION COUNT #
               A2A$ANM[0] = LPT$ANM[ACN]; # LOG DISCONNECTION #
               MESSAGE(A2AMSG[0],USRDF$);
@@ -213,8 +227,11 @@ USERMSG
 *CALLC COMYLIT
 *CALLC COMYNIT
 *I 43
+      ITEM A2ASENT      U;           # COUNT OF A-A MESSAGES SENT #
       ITEM ACN          U;           # APPLICATION CONNECTION NUMBER #
+      ITEM ACN2         U;           # APPLICATION CONNECTION NUMBER #
 *I 44
+      ITEM TEXTL        U;           # MESSAGE TEXT LENGTH #
       ITEM QADDR        I;           # COMMAND QUEUE ADDRESS #
 *I 45
 
@@ -249,6 +266,7 @@ A2A:
 
         P<UTA$>  = LOC(ULTA[0]);
         ACN      = ABHADR[0];        # EXTRACT CONNECTION NUMBER #
+        TEXTL    = ABHTLC[0];        # EXTRACT TEXT LENGTH #
 
         LPT$OUSER[ACN] = TAOUSER;
 
@@ -258,33 +276,85 @@ A2A:
         IF TACMD EQ "M"              # SEND MESSAGE #
         THEN
           BEGIN
-          GETEQA(QADDR);                 # GET EMPTY CMD QUEUE BUFFER #
-          IF QADDR EQ 0 OR               # BUFFER UNAVAILABLE #
-             CIT$OBI[0] EQ MSGMAX$ - 1   # OUTPUT BUFFER FULL #
+          IF TADNODE EQ OWNNODE          # MESSAGE FOR THIS NODE #
           THEN
             BEGIN
-            RSP$CODE = 2; # RESOURCE EXHAUSTION #
+            #
+            *  PASS 1. ENSURE THAT SUFFICIENT RESOURCES ARE
+            *  AVAILABLE TO SEND MESSAGE TO ALL RECIPIENTS
+            #
+            SLOWFOR ACN2 = MINACN$ STEP 1
+              UNTIL MAXACN$
+            DO
+              BEGIN
+              IF LPT$A2A[ACN2] AND
+                 TADUSER EQ LPT$OUSER[ACN2] AND
+                 LPT$OBC[ACN2] GQ LPT$ABL[ACN2]
+              THEN
+                BEGIN
+                RSP$CODE = 2; # RESOURCE EXHAUSTION #
+                END
+              END
+            #
+            *  PASS 2. SEND NESSAGES IF SUFFICIENT RESOURCES
+            *  ARE AVAILABLE
+            #
+            IF RSP$CODE EQ 0
+            THEN
+              BEGIN
+              A2ASENT = 0;
+              SLOWFOR ACN2 = MINACN$ STEP 1
+                UNTIL MAXACN$
+              DO
+                BEGIN
+                IF LPT$A2A[ACN2] AND TADUSER EQ LPT$OUSER[ACN2]
+                THEN
+                  BEGIN
+                  LPT$ABN[ACN2] = (LPT$ABN[ACN2] + 1) LAN O"777777";
+                  P<ABH$> = LOC(DLHA[0]);  # SET *ABH* POINTER #
+                  ABHWRD  = 0;             # CLEAR HEADER WORD #
+                  ABHABT  = BLKTYPE"MSGBLK"; # SET BLOCK TYPE #
+                  ABHADR  = ACN2;          # SET CONNECTION NUMBER #
+                  ABHABN  = LPT$ABN[ACN2]; # SET BLOCK NUMBER #
+                  ABHACT  = CT60XP$;       # SET CHARACTER TYPE #
+                  ABHTLC  = TEXTL;         # SET TEXT LENGTH #
+                  NETPUT(DLHA[0],ULTA[0]);
+                  LPT$OBC[ACN2] = LPT$OBC[ACN2] + 1;
+                  A2ASENT = A2ASENT + 1;
+                  END
+                END
+              END
             END
-          ELSE
+          ELSE                           # MESSAGE FOR REMOTE NODE #
             BEGIN
-            P<CQH$> = QADDR;             # SET *CQH$* POINTER #
-            ZFILL(CQH$[0],CQBL$);        # CLEAR COMMAND BUFFER #
-            CQH$TXT[0] = TRUE;           # SET TEXT COMMAND FLAG #
-            CQH$APO[0] = TRUE;           # SET APP ORIGINATED FLAG #
-            CQH$FNN[0] = OWNNODE;        # SET COMMAND ORIGIN NODE #
-            CQH$LEN[0] = 80;             # SET COMMAND LENGTH #
-            CQH$FNN[0] = TADNODE;        # SET DESTINATION NODE NAME #
-            B<0,8>CQH$LO1[0] = X"10";    # SET FOR ALL CONSOLES #
-            B<16,8>CQH$LO1[0] = X"01";
-            CQH$USR[0] = TADUSER;        # SET DEST USER ID # 
-            CQH$FLB[0] = X"20";          # SET FLAG BYTE FOR USER #
-            P<COUT$> = COUTP$;           # SET *COUT$* POINTER #
-            C<0,8>COUT$TXT[CIT$OBI[0]] = TAOUSER; # SET SENDER #
-            C<8,TATEXTL>COUT$TXT[CIT$OBI[0]] = TATEXT;
-            COUT$LEN[CIT$OBI[0]] = TATEXTL + 8;
-            CIT$OBI[0] = CIT$OBI[0] + 1; # MOVE OUTPUT POINTER # 
-            CQH$PRI[0] = X"77";          # SET PRIORITY #
-            CQH$TYP[0] = X"08";          # HAS SENDING USER ID #
+            GETEQA(QADDR);               # GET EMPTY CMD QUEUE BUFFER #
+            IF QADDR EQ 0 OR             # BUFFER UNAVAILABLE #
+               CIT$OBI[0] EQ MSGMAX$ - 1 # OUTPUT BUFFER FULL #
+            THEN
+              BEGIN
+              RSP$CODE = 2; # RESOURCE EXHAUSTION #
+              END
+            ELSE
+              BEGIN
+              P<CQH$> = QADDR;           # SET *CQH$* POINTER #
+              ZFILL(CQH$[0],CQBL$);      # CLEAR COMMAND BUFFER #
+              CQH$TXT[0] = TRUE;         # SET TEXT COMMAND FLAG #
+              CQH$APO[0] = TRUE;         # SET APP ORIGINATED FLAG #
+              CQH$FNN[0] = OWNNODE;      # SET COMMAND ORIGIN NODE #
+              CQH$LEN[0] = 80;           # SET COMMAND LENGTH #
+              CQH$FNN[0] = TADNODE;      # SET DESTINATION NODE NAME #
+              B<0,8>CQH$LO1[0] = X"10";  # SET FOR ALL CONSOLES #
+              B<16,8>CQH$LO1[0] = X"01";
+              CQH$USR[0] = TADUSER;      # SET DEST USER ID # 
+              CQH$FLB[0] = X"20";        # SET FLAG BYTE FOR USER #
+              P<COUT$> = COUTP$;         # SET *COUT$* POINTER #
+              C<0,8>COUT$TXT[CIT$OBI[0]] = TAOUSER; # SET SENDER #
+              C<8,TATEXTL>COUT$TXT[CIT$OBI[0]] = TATEXT;
+              COUT$LEN[CIT$OBI[0]] = TATEXTL + 8;
+              CIT$OBI[0] = CIT$OBI[0] + 1; # MOVE OUTPUT POINTER # 
+              CQH$PRI[0] = X"77";        # SET PRIORITY #
+              CQH$TYP[0] = X"08";        # HAS SENDING USER ID #
+              END
             END
           END
         ELSE IF TACMD NQ "I"  # UNRECOGNIZED REQUEST #
@@ -302,6 +372,7 @@ A2A:
         ABHACT  = CT60XP$;               # SET CHARACTER TYPE #
         ABHTLC  = 1;                     # SET TEXT LENGTH #
         NETPUT(DLHA[0],A2ARSP[0]);
+        LPT$OBC[ACN] = LPT$OBC[ACN] + 1;
 
         END  # A-A INPUT LOOP #
 */
@@ -363,27 +434,32 @@ A2A:
           UNTIL MAXACN$
         DO
           BEGIN
-          IF C<0,8>TUSER EQ LPT$OUSER[ACN]
+          IF LPT$A2A[ACN] AND C<0,8>TUSER EQ LPT$OUSER[ACN]
           THEN
             BEGIN
-            ZFILL(MSGBUF[0],20);
-            P<UTA$> = LOC(MSGBUF[0]);
-            TACMD   = "M";
-            TAOUSER = FUSER;
-            TADUSER = TUSER;
-            TADNODE = FNODE;
-            TATEXTL = TPOS - SPOS;
-            C<0,TATEXTL>TATEXT = C<SPOS,TATEXTL>CMDTXT;
-            LPT$ABN[ACN] = (LPT$ABN[ACN] + 1) LAN O"777777";
-            P<ABH$> = LOC(DLHA[0]);       # SET *ABH* POINTER #
-            ABHWRD  = 0;                  # CLEAR HEADER WORD #
-            ABHABT  = BLKTYPE"MSGBLK";    # SET BLOCK TYPE #
-            ABHADR  = ACN;                # SET CONNECTION NUMBER #
-            ABHABN  = LPT$ABN[ACN];       # SET BLOCK NUMBER #
-            ABHACT  = CT60XP$;            # SET CHARACTER TYPE #
-            ABHTLC  = ((TATEXTL+9)/10)+3; # SET TEXT LENGTH #
-            NETPUT(DLHA[0],MSGBUF[0]);
-            A2ASENT = A2ASENT + 1;
+            IF LPT$OBC[ACN] LS LPT$ABL[ACN]
+            THEN
+              BEGIN
+              ZFILL(MSGBUF[0],20);
+              P<UTA$> = LOC(MSGBUF[0]);
+              TACMD   = "M";
+              TAOUSER = FUSER;
+              TADUSER = TUSER;
+              TADNODE = FNODE;
+              TATEXTL = TPOS - SPOS;
+              C<0,TATEXTL>TATEXT = C<SPOS,TATEXTL>CMDTXT;
+              LPT$ABN[ACN] = (LPT$ABN[ACN] + 1) LAN O"777777";
+              P<ABH$> = LOC(DLHA[0]);       # SET *ABH* POINTER #
+              ABHWRD  = 0;                  # CLEAR HEADER WORD #
+              ABHABT  = BLKTYPE"MSGBLK";    # SET BLOCK TYPE #
+              ABHADR  = ACN;                # SET CONNECTION NUMBER #
+              ABHABN  = LPT$ABN[ACN];       # SET BLOCK NUMBER #
+              ABHACT  = CT60XP$;            # SET CHARACTER TYPE #
+              ABHTLC  = ((TATEXTL+9)/10)+3; # SET TEXT LENGTH #
+              NETPUT(DLHA[0],MSGBUF[0]);
+              LPT$OBC[ACN] = LPT$OBC[ACN] + 1;
+              A2ASENT = A2ASENT + 1;
+              END
             END
           END
         END
