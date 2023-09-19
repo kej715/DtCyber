@@ -1,0 +1,17 @@
+~*
+~*  This job saves the NJMD configuration file and procedure
+~*  library in the catalog of user NJF.
+~*
+NJMDST.
+$USER,INSTALL,INSTALL.
+$COPY,INPUT,JOBNJMD.
+$REPLACE,JOBNJMD.
+***
+*** NJMDST COMPLETE
+***
+EXIT.
+***
+*** NJMDST FAILED
+***
+~eor
+~include ../files/NJMD-start.txt
