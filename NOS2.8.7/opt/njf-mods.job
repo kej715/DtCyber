@@ -17,6 +17,8 @@ EXIT.
 *** NJFMODS FAILED
 ***
 ~eor
+~include ../mods/NJF/VERSION.mod
+~eor
 ~include ../mods/NJF/NCCNJFI.mod
 ~eor
 ~include ../mods/NJF/NCCNJFL.mod
