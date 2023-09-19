@@ -268,6 +268,7 @@ C
       PARAMETER (MAXSVCS = 20)
 
       CHARACTER*8   OUSER,ONODE,SNAME
+      CHARACTER*20  MSG
       CHARACTER     TEXT*(*)
       INTEGER       SVCC
       INTEGER       SVCACNS(MAXSVCS)
@@ -290,6 +291,10 @@ C
         CALL REMARK('UNRECOGNIZED SERVICE - '//SNAME)
         CALL NJMABT
       ENDIF
+
+      MSG = TEXT(1:MIN(TEXTL,20))
+      CALL REMARK(OUSER//' '//ONODE//' '//SNAME//' '//
+     +            MSG(1:NBLEN(MSG)))
 
       ATL = NBLEN(SVCAUTH(I))
       CDL = NBLEN(SVCCMDS(I))
@@ -402,7 +407,7 @@ C$    COLLATE(FIXED)
 
         WRITE(1,'(A)') '   TITLE: '//TITLE(1:NBLEN(TITLE))
         WRITE(1,'(A)') '      OS: '//OSVER(1:NBLEN(OSVER))
-        WRITE(1,'(A)') 'SOFTWARE: NJEF 2.5, NJMD 1.0'
+        WRITE(1,'(A)') 'SOFTWARE: NJEF 2.7.1, NJMD 1.0'
         MSGC = MSGC + 3
       ENDIF
 
