@@ -175,6 +175,11 @@
       },
       {
         "name": "nccnje",
+        "post": [
+          "nccnje-cf-files.job",
+          "nccnje-upload-start.job",
+          "nccnje-update-namstrt.post"
+        ],
         "lib": 75,
         "records": "ABS/NJMSG,ULIB/NJMLIB",
         "desc": "Nostalgic Computing Center NJE Utilities",
