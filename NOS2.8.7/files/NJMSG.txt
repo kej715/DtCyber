@@ -271,7 +271,10 @@ C
       ENDIF
 
  70   CONTINUE
+      IF (OFNAME.NE.'0') CLOSE(1)
       CALL NJMCLOS
+      CALL REMARK(ARGV(1)(1:NBLEN(ARGV(1)))//' COMPLETE.')
+      CALL ENDRUN
 
       END
       FUNCTION NBLEN(STR)
@@ -294,6 +297,12 @@ C
           IDENT  ARG
           ENTRY  ARG=
  ARG=     BSS    0
+          END
+          IDENT  ENDRUN
+          ENTRY  ENDRUN
+ ENDRUN   BSS    1
+          ENDRUN
+          EQ     ENDRUN
           END
           IDENT  ROLLOUT
           ENTRY  ROLLOUT
