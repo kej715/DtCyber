@@ -1,16 +1,18 @@
 #!/usr/bin/env node
 
-const DtCyber   = require("../automation/DtCyber");
-const fs        = require("fs");
-const utilities = require("./opt/utilities");
+const DtCyber = require("../automation/DtCyber");
 
 const dtc = new DtCyber();
 
-dtc.say("Load system source tapes ...")
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.say("Load system source tapes ..."))
 .then(() => dtc.dsd([
   "[UNLOAD,51.",
   "[UNLOAD,52.",
-  "[UNLOAD,53."
+  "[UNLOAD,53.",
+  "[!"
 ]))
 .then(() => dtc.mount(13, 0, 1, "tapes/nos287-1.tap"))
 .then(() => dtc.mount(13, 0, 2, "tapes/nos287-2.tap"))
