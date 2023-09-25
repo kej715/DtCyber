@@ -164,6 +164,7 @@ USERMSG
             ELSE IF PFCSFC EQ CONCB
             THEN
               BEGIN
+              LPT$OUSER[ACN] = "        "; 
               P<ABH$> = LOC(SMHA[0]);    # SET *ABH* POINTER #
               ABHWRD[0] = 0;             # CLEAR HEADER WORD #
               ABHABT[0] = BLKTYPE"SUPMSG"; # SET BLOCK TYPE #
@@ -289,6 +290,7 @@ A2A:
               BEGIN
               IF LPT$A2A[ACN2] AND
                  TADUSER EQ LPT$OUSER[ACN2] AND
+                 LPT$OUSER[ACN2] NQ "        " AND
                  LPT$OBC[ACN2] GQ LPT$ABL[ACN2]
               THEN
                 BEGIN
@@ -307,7 +309,9 @@ A2A:
                 UNTIL MAXACN$
               DO
                 BEGIN
-                IF LPT$A2A[ACN2] AND TADUSER EQ LPT$OUSER[ACN2]
+                IF LPT$A2A[ACN2] AND
+                   TADUSER EQ LPT$OUSER[ACN2] AND
+                   LPT$OUSER[ACN2] NQ "        "
                 THEN
                   BEGIN
                   LPT$ABN[ACN2] = (LPT$ABN[ACN2] + 1) LAN O"777777";
@@ -434,7 +438,9 @@ A2A:
           UNTIL MAXACN$
         DO
           BEGIN
-          IF LPT$A2A[ACN] AND C<0,8>TUSER EQ LPT$OUSER[ACN]
+          IF LPT$A2A[ACN] AND
+             C<0,8>TUSER EQ LPT$OUSER[ACN] AND
+             LPT$OUSER[ACN] NQ "        "
           THEN
             BEGIN
             IF LPT$OBC[ACN] LS LPT$ABL[ACN]
