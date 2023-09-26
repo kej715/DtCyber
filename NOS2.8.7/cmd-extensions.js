@@ -53,6 +53,20 @@ const cmdExtensions = [
     }
   },
   {
+    names: ["modopl"],
+    desc:  "'modopl' update OPL871 with local modsets",
+    fn:    (dtc, args) => {
+      return dtc.disconnect()
+      .then(() => dtc.exec("node", ["modopl"]))
+      .then(() => {
+        dtc.flushCache();
+        return Promise.resolve();
+      })
+      .then(() => dtc.connect())
+      .then(() => dtc.expect([ {re:/Operator> $/} ]));
+    }
+  },
+  {
     names: ["njf_configure", "njfc"],
     desc:  "'njf_configure' update the NJF configuration",
     fn:    (dtc, args) => {

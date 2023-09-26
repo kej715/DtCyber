@@ -1,0 +1,322 @@
+      PROGRAM NJMSG
+C
+C     NJMSG - SEND NJE MESSAGES AND/OR WAIT FOR RESPONSES
+C
+C     NJMSG ENABLES A CALLER TO SEND ONE OR MORE NJE MESSAGES AND,
+C     OPTIONALLY, WAIT FOR RESPONSES. A MESSAGE TO SEND MAY BE
+C     SPECIFIED ON THE COMMAND LINE FOLLOWING THE COMMAND TERMINATOR,
+C     OR ONE OR MORE MESSAGES TO SEND MAY BE SPECIFIED IN AN INPUT
+C     FILE, ONE PER LINE. THE NAMES OF THE DESTINATION USER AND NODE
+C     MAY BE SPECIFIED IN FORMAL COMMAND LINE PARAMETERS OR AS THE
+C     FIRST TOEKN FOLLOWING THE COMMAND TERMINATOR.
+C
+C     SYNOPSIS
+C       NJMSG[,F=USER][,I=LFN][,N=NODE][,O=LFN][,U=USER] ...
+C         [,W=SECS].[USER@NODE][MESSAGE TEXT]
+C
+C     COMMAND LINE PARAMETERS
+C       F - NAME OF ORIGINATING USER (DEFAULT IS CALLER'S USERNAME)
+C       I - NAME OF LOCAL FILE CONTAINING MESSAGES TO SEND
+C       N - NAME OF DESTINATION NODE
+C       O - NAME OF LOCAL FILE TO WHICH TO WRITE OUTPUT
+C            O=0 SUPPRESSES OUTPUT
+C       U - NAME OF DESTINATION USER OR SERVICE
+C       W - MAXIMUM SECONDS TO WAIT FOR RESPONSE (DEFAULT 10)
+C
+      IMPLICIT INTEGER (A-Z)
+      PARAMETER (MAXARGS = 20)
+      PARAMETER (TALEN   = 20)
+      DIMENSION HDR(10),NIT(10,1),TA(TALEN)
+      CHARACTER*1   CH,MTYPE
+      CHARACTER*8   DNODE,DUSER,IFNAME,OFNAME,ONODE,OUSER
+      CHARACTER*10  ARG,ARGV(MAXARGS)
+      CHARACTER*150 ITEXT,OTEXT
+
+      DUSER  = ' '
+      DNODE  = ' '
+      IFNAME = ' '
+      MSGC   = 0
+      OFNAME = 'OUTPUT'
+      OUSER  = '*'
+      WAIT   = 10 
+
+      DO 1 I = 1,10
+        HDR(I) = 0
+ 1    CONTINUE
+
+C     ----------------------------------------------------------------
+C
+C     PARSE COMMAND LINE ARGUMENTS
+C
+      CALL NJMARGS(ARGC,ARGV,OTEXT,OTEXTL)
+
+      DO 10 I = 2,ARGC
+        ARG = ARGV(I)
+        IF (ARG(1:2).EQ.'F=') THEN
+          OUSER = ARG(3:10)
+        ELSEIF (ARG(1:2).EQ.'I=') THEN
+          IFNAME = ARG(3:10)
+        ELSEIF (ARG(1:2).EQ.'N=') THEN
+          DNODE = ARG(3:10)
+        ELSEIF (ARG(1:2).EQ.'O=') THEN
+          OFNAME = ARG(3:10)
+        ELSEIF (ARG(1:2).EQ.'U=') THEN
+          DUSER = ARG(3:10)
+        ELSEIF (ARG(1:2).EQ.'W=') THEN
+          READ(ARG(3:10),'(I8)') WAIT
+        ELSE
+          CALL REMARK('INVALID PARAMETER '//ARG(1:2))
+          CALL NJMABT
+        ENDIF
+ 10   CONTINUE
+
+C
+C     IF NEITHER U= NOR N= WERE SPECIFIED, LOOK FOR
+C     USER@NODE AFTER COMMAND TERMINATOR
+C
+      IF (DUSER.EQ.' '.AND.DNODE.EQ.' ') THEN
+        TI  = 1
+        ATI = 0
+ 20     CONTINUE
+        IF (TI.LE.OTEXTL) THEN
+          CH = OTEXT(TI:TI)
+          IF (CH.EQ.'@') THEN
+            ATI = TI
+          ELSEIF (CH.EQ.' ') THEN
+            GOTO 30
+          ENDIF
+          TI = TI + 1
+          GOTO 20
+        ENDIF
+ 30     CONTINUE
+        IF (ATI.GT.0) THEN
+          NI   = ATI + 1
+          ULEN = ATI - 1
+          NLEN = TI - NI
+          IF (ATI.GT.8) THEN
+            CALL REMARK('INVALID DESTINATION USER - '//
+     +                  OTEXT(1:ULEN))
+          ENDIF
+          DUSER = OTEXT(1:ULEN)
+          IF (NLEN.GT.0) THEN
+            IF (NLEN.GT.8) THEN
+              CALL REMARK('INVALID DESTINATION NODE - '//
+     +                    OTEXT(NI:NI+NLEN-1))
+            ENDIF
+            DNODE = OTEXT(NI:NI+NLEN-1)
+          ENDIF
+          IF (TI.LE.OTEXTL) THEN
+            TI     = TI + 1
+            OTEXT  = OTEXT(TI:OTEXTL)
+            OTEXTL = (OTEXTL - TI) + 1
+          ELSE
+            OTEXTL = 0
+          ENDIF
+        ENDIF
+      ENDIF
+
+      IF (DUSER.EQ.' ') THEN
+        CALL REMARK('DESTINATION USER NOT SPECIFIED')
+        CALL NJMABT
+      ENDIF
+      IF (DNODE.EQ.' ') THEN
+        CALL REMARK('DESTINATION NODE NOT SPECIFIED')
+        CALL NJMABT
+      ENDIF
+
+      IF (OFNAME.NE.'0') THEN
+        OPEN(1,FILE=OFNAME,STATUS='UNKNOWN')
+      ENDIF
+
+      IF (IFNAME.NE.' ') THEN
+        OPEN(2,FILE=IFNAME,STATUS='OLD')
+        READ(2,'(A)') OTEXT
+        OTEXTL = NBLEN(OTEXT)
+      ENDIF
+
+C     ----------------------------------------------------------------
+C
+C     OPEN COMMUNICATION WITH THE NETWORK AND CONNECT TO *NJF*
+C
+      CALL NJMOPEN(HDR,RC,"NJU",1)
+      IF (RC.NE.0) THEN
+        CALL DISPLA('FAILED TO OPEN COMMUNICATION, RC =',RC)
+        CALL NJMABT
+      ENDIF
+      CALL NJMCONN(HDR,ACN,RC)
+      IF (RC.NE.0) THEN
+        CALL DISPLA('FAILED TO CONNECT TO NJF, RC =',RC)
+        CALL NJMABT
+      ENDIF
+
+C     ----------------------------------------------------------------
+C
+C     IF MESSAGE WAS SPECIFIED ON COMMAND LINE OR IN INPUT FILE,
+C     SEND IT
+C
+      IF (OTEXTL.GT.0) THEN
+        CALL NJMSEND(HDR,ACN,RC,OUSER,DUSER,DNODE,OTEXT(1:OTEXTL))
+        IF (RC.NE.0) THEN
+          CALL DISPLA('FAILED TO SEND MESSAGE, RC =',RC)
+          CALL NJMABT
+        ENDIF
+
+C     ----------------------------------------------------------------
+C
+C     ELSE, REGISTER OUR IDENTITY TO LISTEN FOR INCOMING MESSAGES
+C
+      ELSE
+        CALL NJMRGST(HDR,ACN,RC,OUSER)
+        IF (RC.NE.0) THEN
+          CALL DISPLA('FAILED TO REGISTER USER, RC =',RC)
+          CALL NJMABT
+        ENDIF
+      ENDIF
+      MSGC = MSGC + 1
+
+C     ----------------------------------------------------------------
+C
+C     ENTER MAIN LOOP. LISTEN FOR INCOMING MESSAGES AND SEND MESSAGES
+C     FROM THE INPUT FILE (IF INPUT FILE SPECIFIED). EXIT LOOP WHEN
+C     NO NETWORK COMMUNICATION OCCORRED FOR THE MAXIMUM SPECIFIED
+C     WAITING TIME.
+C
+      DLINE = NJMSECS() + WAIT
+ 40   CONTINUE
+      T = NJMSECS()
+      IF (DLINE.GT.T.OR.IFNAME.NE.' '.OR.MSGC.GT.0) THEN
+        SLEEP = DLINE - T
+        IF (SLEEP.LT.0) THEN
+          SLEEP = 0
+        ELSEIF (SLEEP.GT.30) THEN
+          SLEEP = 30
+        ENDIF
+ 41     CONTINUE
+        CALL NJMPOLL(HDR,CN,RC,SLEEP,TA,TALEN)
+C
+C       RC=0 - MESSAGE WAITING TO BE PROCESSED
+C
+        IF (RC.EQ.0) THEN
+          CALL NJMRECV(TA,MTYPE,OUSER,ONODE,DUSER,ITEXT,ITEXTL,RC)
+          IF (MTYPE.EQ.'S') THEN
+            IF (RC.EQ.0) THEN
+              IF (MSGC.GT.0) MSGC = MSGC - 1
+            ELSEIF (RC.EQ.2) THEN
+C
+C             NJE RESOURCES EXHAUSTED, SO ROLLOUT FOR A
+C             SHORT WHILE, AND THEN TRY AGAIN
+C
+              CALL ROLLOUT(2)
+              CALL NJMSEND(HDR,ACN,RC,OUSER,DUSER,DNODE,OTEXT(1:OTEXTL))
+              IF (RC.NE.0) THEN
+                CALL DISPLA('FAILED TO SEND MESSAGE, RC =',RC)
+                CALL NJMABT
+              ENDIF
+              DLINE = NJMSECS() + WAIT
+            ELSE
+              CALL DISPLA('REQUEST FAILED, RC =',RC)
+              CALL NJMABT
+            ENDIF
+          ELSEIF (MTYPE.EQ.'M'.AND.OFNAME.NE.'0'.AND.ITEXTL.GT.0) THEN
+            WRITE(1,'(1X,A)') ITEXT(1:ITEXTL)
+            DLINE = NJMSECS() + WAIT
+          ENDIF
+          SLEEP = 0
+          GOTO 41
+C
+C       RC=1 - NO MESSAGES WAITING TO BE PROCESSED
+C
+        ELSEIF (RC.EQ.1) THEN
+          ABL = NIT(4,ACN).AND.-MASK(54)
+          IF (IFNAME.NE.' ') THEN
+C
+C           SEND ONLY IF THE CURRENT BLOCK LIMIT ALLOWS IT AND NO
+C           PREVIOUSLY SENT MESSAGES ARE UNACKNOWLEDGED
+C
+            IF (ABL.GT.0.AND.MSGC.LT.1) THEN
+              READ(2,'(A)',END=50) OTEXT
+              OTEXTL = NBLEN(OTEXT)
+              CALL NJMSEND(HDR,ACN,RC,OUSER,DUSER,DNODE,OTEXT(1:OTEXTL))
+              IF (RC.NE.0) THEN
+                CALL DISPLA('FAILED TO SEND MESSAGE, RC =',RC)
+                CALL NJMABT
+              ENDIF
+              ABL  = ABL - 1
+              MSGC = MSGC + 1
+              DLINE = NJMSECS() + WAIT
+              GOTO 40
+ 50           CONTINUE
+              IFNAME = ' '
+            ENDIF
+            DLINE = NJMSECS() + WAIT
+          ENDIF
+          GO TO 40
+C
+C       RC=6 - CONNECTION WITH *NJF* CLOSED
+C
+        ELSEIF (RC.EQ.6) THEN
+          CALL REMARK('CONNECTION ENDED')
+          GO TO 70
+C
+C       RC=9  - NETWORK IS SHUTTING DOWN
+C       RC=10 - ALL NETWORK COMMUNICATION ENDED
+C
+        ELSEIF (RC.EQ.9.OR.RC.EQ.10) THEN
+          CALL REMARK('NETWORK SHUTDOWN')
+          GO TO 70
+        ELSE
+          CALL DISPLA('UNRECOGNIZED STATUS ', RC)
+          CALL NJMABT
+        ENDIF
+      ENDIF
+
+ 70   CONTINUE
+      IF (OFNAME.NE.'0') CLOSE(1)
+      CALL NJMCLOS
+      CALL REMARK(ARGV(1)(1:NBLEN(ARGV(1)))//' COMPLETE.')
+      CALL ENDRUN
+
+      END
+      FUNCTION NBLEN(STR)
+      IMPLICIT INTEGER (A-Z)
+      CHARACTER STR*(*)
+
+      L = LEN(STR)
+ 10   CONTINUE
+      IF (L.GT.0) THEN
+        IF (STR(L:L).EQ.' ') THEN
+          L = L - 1
+          GOTO 10
+        ENDIF
+      ENDIF
+
+      IF (L.LT.1.AND.LEN(STR).GT.0) L = 1
+      NBLEN = L
+
+      END
+          IDENT  ARG
+          ENTRY  ARG=
+ ARG=     BSS    0
+          END
+          IDENT  ENDRUN
+          ENTRY  ENDRUN
+ ENDRUN   BSS    1
+          ENDRUN
+          EQ     ENDRUN
+          END
+          IDENT  ROLLOUT
+          ENTRY  ROLLOUT
+ ROLLOUT  BSS    1
+          SB1    1
+          SA3    ROLA
+          MX0    48D
+          SA2    X1
+          BX6    X0*X3
+          BX6    X6+X2
+          SA6    ROLA
+          ROLLOUT ROLA
+          EQ     ROLLOUT
+
+ ROLA     VFD    27/0,21/20000,12/0
+
+          END

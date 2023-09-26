@@ -163,6 +163,29 @@
         "desc": "Kermit file exchange utility"
       },
       {
+        "name": "mailer",
+        "post": [
+          "mailer-users.job",
+          "mailer.post"
+        ],
+        "lib": 76,
+        "records": "PP/MLR-PROC/MAILPRC",
+        "url": "https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1",
+        "desc": "UMass Mailer"
+      },
+      {
+        "name": "nccnje",
+        "post": [
+          "nccnje-cf-files.job",
+          "nccnje-upload-start.job",
+          "nccnje-update-namstrt.post"
+        ],
+        "lib": 75,
+        "records": "ABS/NJMSG,ULIB/NJMLIB",
+        "desc": "Nostalgic Computing Center NJE Utilities",
+        "depends": ["njf"]
+      },
+      {
         "name": "ncctcp",
         "post": [
           "ncctcp-users.job",
@@ -173,17 +196,6 @@
         "url": "https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1",
         "desc": "Nostalgic Computing Center TCP/IP Applications",
         "depends": ["ses"]
-      },
-      {
-        "name": "mailer",
-        "post": [
-          "mailer-users.job",
-          "mailer.post"
-        ],
-        "lib": 76,
-        "records": "PP/MLR-PROC/MAILPRC",
-        "url": "https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1",
-        "desc": "UMass Mailer"
       },
       {
         "name": "netmail",

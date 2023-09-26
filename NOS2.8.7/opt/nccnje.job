@@ -1,0 +1,55 @@
+~*
+~*  This job builds the NCC NJE utilities and supporting
+~*  library. It edits the binaries into the PRODUCT file
+~*  and adds directives to the DIRFILE file specifying that
+~*  ULIB/NJMLIB should be inserted into library 4, and the
+~*  deadstart file library number of the NJEF applications.
+~*
+NJUTIL.
+$USER,INSTALL,INSTALL.
+$COPYBR,INPUT,LIBSRC.
+$COPYBR,INPUT,NJMSRC.
+$COPYBR,INPUT,NJDSRC.
+$COPYBR,INPUT,DIR,2.
+$REWIND,LIBSRC,NJMSRC,NJDSRC.
+$MODIFY,P=0,N=NPL,C=0,F,LO=E,Z./*CREATE LIBSRC
+$ATTACH,OPL=OPL871/UN=INSTALL.
+$MODIFY,P=NPL,LO=E,Z./*OPLFILE OPL/*EDIT NJMLIB
+$FTN5,I,S=SYSTEXT,S=PSSTEXT.
+$LIBGEN,P=NJMLIB,F=LGO.
+$LIBRARY,NJMLIB,NETIO.
+$RETURN,LGO.
+$FTN5,I=NJMSRC,S=SYSTEXT,S=PSSTEXT.
+$LOAD,LGO.
+$NOGO,NJMSG,NJMSG,$ARG=$.
+$RETURN,LGO.
+$FTN5,I=NJDSRC,S=SYSTEXT,S=PSSTEXT.
+$LOAD,LGO.
+$NOGO,NJMD,NJMD,$ARG=$.
+$RETURN,LGO.
+$REWIND,NJMLIB,NJMSG,NJMD.
+$COPYBR,NJMD,LGO.
+$COPYBR,NJMSG,LGO.
+$COPY,NJMLIB,LGO.
+$ATTACH,PRODUCT,DIRFILE/M=W,WB.
+$LIBEDIT,P=PRODUCT,B=LGO,I=0,C.
+$LIBEDIT,P=DIRFILE,B=DIR,I=0,C.
+***
+*** NJUTIL COMPLETE
+***
+EXIT.
+***
+*** NJUTIL FAILED
+***
+~eor
+~include ../files/NJMLIB.txt
+~eor
+~include ../files/NJMSG.txt
+~eor
+~include ../files/NJMD.txt
+~eor
+NJMLIB
+*ADD LIB4,ULIB/NJMLIB
+~eor
+NCCNJE
+*ADD LIB${1},ABS/NJMD,ABS/NJMSG

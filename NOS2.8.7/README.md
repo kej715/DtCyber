@@ -24,6 +24,7 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;[TieLine Facility (TLF)](#tlf)
 - [Network Job Entry](#nje)
 - &nbsp;&nbsp;&nbsp;&nbsp;[Using NJE](#usingnje)
+- &nbsp;&nbsp;&nbsp;&nbsp;[NJE Services](#njeservices)
 - &nbsp;&nbsp;&nbsp;&nbsp;[NJF vs TLF](#njf-vs-tlf)
 - [UMass Mailer](#email)
 - &nbsp;&nbsp;&nbsp;&nbsp;[E-mail Reflector](#reflector)
@@ -393,16 +394,16 @@ execute `reconfigure` (or `node reconfigure`) to apply and activate the changes.
 ### <a id="usingnje"></a>Using NJE
 NJE (Network Job Entry) enables you to submit a batch job from one system in the
 network to another, and the job's output will be returned automatically to the origin
-system. NJE also enables you to send data files between users on different systems. An
-NJE network is a peer-to-peer network, i.e., every node in the network has the same
-capabilities to send and receive jobs and files.
+system. NJE also enables you to send messages and data files between users on different
+systems. An NJE network is a peer-to-peer network, i.e., every node in the network has the
+same capabilities to send and receive jobs, messages, and files.
 
 An NJE network is a *store-and-forward* network. This means that you can submit a
-job, or send a file, to any node in the network without your local host's needing to be
-connected directly to all other nodes. If the target system of a job or file is not
-directly connected to your local host, your local host will route it to a directly
-connected peer that is closer to the destination and that peer will repeat the process,
-recursively, until the job or file reaches the target system.
+job, or send a message or file, to any node in the network without your local host's
+needing to be connected directly to all other nodes. If the target system of a job,
+message, or file is not directly connected to your local host, your local host will route
+it to a directly connected peer that is closer to the destination and that peer will repeat
+the process, recursively, until the job, message, or file reaches the target system.
 
 `NJF` (Network Job Facility) is the subsystem that provides NJE for NOS. It includes a
 command, `NJROUTE`, that enables you to send jobs and files to any node in the NJE
@@ -485,14 +486,119 @@ Example:
 ROUTE,MYJOB,DC=TO,ST=MAX.
 ```
 
+NJF also provides a command named `NJMSG` that enables users to send short messages across
+the NJE network, where each such message is a single line of text limited to about 130
+characters in length. The general syntax of the command is:
+
+```
+NJMSG[,F=origuser][,I=ilfn][,N=destnode][,O=olfn][,U=destuser][,W=secs].[user@node][message text]
+```
+where:
+- *origuser* : optional 1 - 8 character name of the originating user or service, default is the NOS username of the calling user.
+- *ilfn* : optional name of a local input file. If this argument is specified, the text of the message to be sent is read from the specified local file. If the file contains more than one line, multiple messages will be sent, one per line.
+- *destnode* : optional 1 - 8 character name of the destination NJE node. If this argument is omitted, the destination user and node names must be specified after the command terminator.
+- *olfn* : optional name of a local output file. If this argument is specified, any messages received from the destination node will be written to the specified local file. Otherwise, any messages received will be written to OUTPUT. Specifying *O=0* suppresses output.
+- *destuser* : optional 1 - 8 charaacter name of the destination user or service. If this argument is omitted, the destination user/service and node names must be specified after the command terminator.
+- *secs* : maximum number of seconds to wait for response messages after sending message(s). The default is 10.
+- *user@node* : if the **N=** and **U=** arguments are not provided, the first token after the command terminator is assumed to have the form `user@node`, and it is taken as the specification of the destination user/service and node names to which messages will be sent.
+- *message text* : if the **I=** argument is not provided, the message to be sent is taken from text following the command terminator.
+
+Examples:
+```
+NJMSG.INFO@NCCMAX /INFO
+NJMSG.GUEST@NCCM01 HELLO, ARE YOU THERE?
+NJMSG,U=GUEST,N=NCCM01,I=MSGS,W=0.
+```
+
+The first example sends the message `/INFO` to a service (presumably) named `INFO` on NJE node `NCCMAX`, and it waits 10 seconds for a response. The second example sends the message
+`HELLO, ARE YOU THERE?` to a user named `GUEST` on NJE node `NCCM01`, and it waits 10
+seconds for a response. The third example sends possibly multiple messages (one per line)
+from the local file named `MSGS` to a user named `GUEST` on NJE node `NCCM01`, and it does
+not wait for responses.
+
+### <a id="njeservices"></a>NJE Services
+Network services may be built using NJE's messaging capability, and two such services are
+provided by the default installation of NOS 2.8.7. The services are named `ECHO` and
+`INFO`. `ECHO` is a service that simply echoes each message it receives back to the
+sender. It can be used to test that a NOS 2.8.7 node is available on the NJE network. For
+example, to send a message to the `ECHO` service on node `NCCMAX`, enter the following
+command:
+
+```
+NJMSG.ECHO@NCCMAX PLEASE ECHO ME
+```
+
+The `INFO` service provides information about the NOS 2.8.7 system on which it is running.
+It accepts some simple commands and responds by sending corresponding information. All
+commands begin with the character **/**. Send it a `HELP` command to see what commands it
+accepts, as in:
+
+```
+NJMSG.INFO@NCCMAX /HELP
+```
+
+The response will look like:
+```
+ COMMANDS AVAILABLE:
+   /HELP  : SHOW THIS HELP
+   /INFO  : SHOW ALL AVAILABLE INFO
+   /STATS : SHOW STATISTICS
+   /TIME  : SHOW START TIME AND UPTIME
+```
+
+To obtain all available information about node `NCCMAX`, enter the following command:
+```
+NJMSG.INFO@NCCMAX /INFO
+```
+and the response will look like:
+```
+    TITLE: (MAX)IMUM - CYBER 875.
+       OS: NOS 2.8.7 871/871.
+ SOFTWARE: NJEF 2.7.1, NJMD 1.0
+  STARTED: 23/09/21. 21.26.07.
+      NOW: 23/09/26. 10.47.04.
+   UPTIME: 4 DAYS, 13 HOURS, 20 MINUTES, 57 SECONDS
+ REQUESTS: 34
+ MESSAGES: 181
+```
+
+A NOS application named `NJMD` (NJE Messaging Daemon) implements NJE services, and it
+supports creation of custom services. Two files named `NJMDCF` and `NJMDLIB` in the catalog
+of username `NJF` provide `NJMD`'s configuration. `NJMDCF` defines each service, with one
+service definition per line. Each line has three fields, as follows:
+
+- *name*. The first field defines the 1 - 8 character name of the service.
+- *command*. The second field specifies the command that implements the service. Ordinarily, it is a `BEGIN` command that calls a CCL procedure found in `NJMDLIB`.
+- *authentication*. The username and password to be used in executing the command.
+
+Each time `NJMD` receives a message for a service it supports, it creates and submits a
+batch job to respond to the message. The username and password for the batch job are taken
+from the *authentication* field of the service's entry in `NJMDCF`. The primary command
+executed by the batch job is taken from the *command* field of the entry, and `NJMD`
+arranges to pass three arguments to it:
+
+- 1) the name of the service itself
+- 2) the name of the originating user
+- 3) the name of the originating NJE node.
+
+`NJMD` also arranges to provide the text of the message as the job's `INPUT` file.
+
+Typically, the command implementing the service will read and process the `INPUT` file and
+write its response to an output file. It will then use the `NJMSG` command to return its
+response to the originating user.
+
+As an example, the `ECHO` service is defined as a CCL procedure. Its source code can be
+found in procedure library `NJMDLIB` (a file in the catalog of username `NJF`).
+
 ### <a id="njf-vs-tlf"></a>NJF vs TLF
 Both NJF and TLF can send jobs from NOS 2.8.7 to other mainframes for execution, so
 why use one instead of the other? NJF uses the NJE protocol to communicate with other
 systems, and TLF uses the HASP protocol. NJE is a kind of HASP next generation. NJE
 establishes a symmetrical peer relationship between two participating systems, while
 HASP defines one participant to be a *station* and the other to be a *host*. NJE
-allows both participants to send jobs and/or files to each other, while HASP allows
-only a *station* to send jobs to a *host* and a *host* to send output to a *station*.
+allows both participants to send jobs, messages, and/or files to each other, while HASP
+allows only a *station* to send jobs to a *host* and a *host* to send output to a
+*station*, and HASP does not support messaging.
 
 Ordinarily, if two systems support NJE, they would not need to use HASP to communicate
 with each other too. However, the NJE implementations currently supported by MVS

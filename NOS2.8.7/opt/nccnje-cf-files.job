@@ -1,0 +1,24 @@
+~*
+~*  This job saves the NJMD configuration file and procedure
+~*  library in the catalog of user NJF.
+~*
+NJMDCF.
+$USER,NJF,NJFX.
+$COPYBR,INPUT,NJMDCF.
+$COPY,INPUT,NJMDLIB.
+$REPLACE,NJMDCF,NJMDLIB.
+***
+*** NJMDCF COMPLETE
+***
+EXIT.
+***
+*** NJMDCF FAILED
+***
+~eor
+INFO *                  NJF,NJFX
+ECHO BEGIN,ECHO,NJMDLIB NJF,NJFX
+~eor
+.PROC,ECHO,SNAME,OUSER,ONODE.
+$COPY,INPUT,MSG.
+$REWIND,MSG.
+$NJMSG,F=SNAME,N=ONODE,U=OUSER,I=MSG,W=0.

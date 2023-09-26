@@ -1,0 +1,92 @@
+#!/usr/bin/env node
+
+const DEBUG = false;
+
+const DtCyber  = require("../../automation/DtCyber");
+const Terminal = require("../../automation/Terminal");
+
+const dtc  = new DtCyber();
+const term = new Terminal.AnsiTerminal();
+
+const ipAddress = dtc.getHostIpAddress();
+term.connect(`${ipAddress}:23`)
+  .then(() => term.say("Connected"))
+  .then(() => term.say("Login ..."))
+  .then(() => term.loginNOS2("", "INSTALL", "INSTALL"))
+  .then(() => term.say("logged in"))
+  .then(() => term.send("GET,NAMSTRT/UN=NETOPS\r"))
+  .then(() => term.expect([{ re: /\// }]))
+  .then(() => term.say("Got NAMSTRT"))
+  .then(() => term.say("Edit NAMSTRT ..."))
+  .then(() => term.send("XEDIT,NAMSTRT\r"))
+  .then(() => term.expect([{ re: /\?\? / }]))
+  .then(() => term.say("Remove any existing references to JOBNJMD ..."))
+  .then(() => term.send("D/JOB(JOBNJMD/*\r"))
+  .then(() => term.expect([{ re: /END OF FILE/ }]))
+  .then(() => term.say("Insert reference to JOBNJMD in INIT record ..."))
+  .then(() => term.send("L/JOB(JOBREX/\r"))
+  .then(() => term.expect([{ re: /\?\? / }]))
+  .then(() => term.send("I1\r"))
+  .then(() => term.expect([{ re: /\? / }]))
+  .then(() => term.send("JOB(JOBNJMD,NJ,SY,NS)\r"))
+  .then(() => term.expect([{ re: /\?\? / }]))
+  .then(() => term.say("Insert reference to JOBNJMD in RESTRT record ..."))
+  .then(() => term.send("L/JOB(JOBREX/\r"))
+  .then(() => term.expect([{ re: /\?\? / }]))
+  .then(() => term.send("I1\r"))
+  .then(() => term.expect([{ re: /\? / }]))
+  .then(() => term.send("JOB(JOBNJMD,NJ,SY,NS)\r"))
+  .then(() => term.expect([{ re: /\?\? / }]))
+  .then(() => term.say("Insert reference to JOBNJMD in RECOVR record ..."))
+  .then(() => term.send("L/JOB(JOBREX/\r"))
+  .then(() => term.expect([{ re: /\?\? / }]))
+  .then(() => term.send("I1\r"))
+  .then(() => term.expect([{ re: /\? / }]))
+  .then(() => term.send("JOB(JOBNJMD,NJ,SY,NS)\r"))
+  .then(() => term.expect([{ re: /\?\? / }]))
+  .then(() => term.say("Insert reference to JOBNJMD in MULTI record ..."))
+  .then(() => term.send("L/JOB(JOBREX/\r"))
+  .then(() => term.expect([{ re: /\?\? / }]))
+  .then(() => term.send("I1\r"))
+  .then(() => term.expect([{ re: /\? / }]))
+  .then(() => term.send("JOB(JOBNJMD,NJ,SY,NS)\r"))
+  .then(() => term.expect([{ re: /\?\? / }]))
+  .then(() => term.say("Insert reference to JOBNJMD in MINIT record ..."))
+  .then(() => term.send("L/JOB(JOBREX/\r"))
+  .then(() => term.expect([{ re: /\?\? / }]))
+  .then(() => term.send("I1\r"))
+  .then(() => term.expect([{ re: /\? / }]))
+  .then(() => term.send("JOB(JOBNJMD,NJ,SY,NS)\r"))
+  .then(() => term.expect([{ re: /\?\? / }]))
+  .then(() => term.say("Insert reference to JOBNJMD in MRECOV record ..."))
+  .then(() => term.send("L/JOB(JOBREX/\r"))
+  .then(() => term.expect([{ re: /\?\? / }]))
+  .then(() => term.send("I1\r"))
+  .then(() => term.expect([{ re: /\? / }]))
+  .then(() => term.send("JOB(JOBNJMD,NJ,SY,NS)\r"))
+  .then(() => term.expect([{ re: /\?\? / }]))
+  .then(() => term.say("Exit editor ..."))
+  .then(() => term.send("Q\r"))
+  .then(() => term.expect([{ re: /\// }]))
+  .then(() => term.send("GET,JOBNJMD\r"))
+  .then(() => term.expect([{ re: /\// }]))
+  .then(() => term.say("Got JOBNJMD"))
+  .then(() => term.say("Add/replace JOBNJMD record in NAMSTRT"))
+  .then(() => term.send("LIBEDIT,P=NAMSTRT,B=JOBNJMD,I=0,C\r"))
+  .then(() => term.expect([{ re: /\// }]))
+  .then(() => term.send("REPLACE,NAMSTRT/UN=NETOPS\r"))
+  .then(() => term.expect([{ re: /\// }]))
+  .then(() => term.say("Replaced NAMSTRT"))
+  .then(() => term.send("PURGE,JOBNJMD\r"))
+  .then(() => term.expect([{ re: /\// }]))
+  .then(() => term.say("Purged JOBNJMD"))
+  .then(() => term.send("LOGOUT\r"))
+  .then(() => term.expect([{ re: /CHARACTERS=/ }]))
+  .then(() => term.say("Logged out"))
+  .then(() => {
+    process.exit(0);
+  })
+  .catch(err => {
+    console.log(err);
+    process.exit(1);
+  });

@@ -1,0 +1,434 @@
+NJMLIB
+      SUBROUTINE NJMARGS(ARGC,ARGV,TEXT,TEXTL)
+C
+C     NJMARGS - PARSE COMMAND LINE
+C
+C       ARGC  - (OUT) NUMBER OF ARGUMENTS
+C       ARGV  - (OUT) PARSED ARGUMENT VECTOR
+C       TEXT  - (OUT) TEXT AFTER COMMAND TERMINATOR
+C       TEXTL - (OUT) LENGTH OF TEXT
+C
+C$    COLLATE(FIXED)
+      IMPLICIT INTEGER (A-Z)
+      DIMENSION MEM(1)
+      CHARACTER*10 ARGV(*)
+      CHARACTER ARG*10
+      CHARACTER CH*1
+      CHARACTER CMD*80
+      CHARACTER TEXT*(*)
+
+      CCDR = O"70"
+      CMDL = 0
+      DO 20 I = 1,8
+        WORD = MEM(CCDR - LOCF(MEM(1)) + I)
+        DO 10 J = 1,10
+          IF (WORD.NE.0) THEN
+            WORD = SHIFT(WORD,6)
+            C    = WORD.AND.-MASK(54)
+            WORD = WORD.AND.MASK(54)
+            CMDL = CMDL + 1
+            CMD(CMDL:CMDL) = CHAR(C)
+          ENDIF
+ 10     CONTINUE
+ 20   CONTINUE
+
+ 30   CONTINUE
+      IF (CMDL.GT.0.AND.CMD(CMDL:CMDL).EQ.':') THEN
+        CMDL = CMDL - 1
+        GOTO 30
+      ENDIF
+
+      ARGC = 0
+      CI = 1
+
+ 40   CONTINUE
+      IF (CI.LE.CMDL) THEN
+        CH = CMD(CI:CI)
+        CI = CI + 1
+        IF (CH.EQ.' '.OR.CH.EQ.','.OR.CH.EQ.'(') GOTO 40
+        IF (CH.EQ.'.'.OR.CH.EQ.')') GOTO 60
+        AI   = 0
+        LNSP = 0
+ 50     CONTINUE
+        IF (AI.LT.10) THEN
+          AI = AI + 1
+          ARG(AI:AI) = CH
+          IF (CH.NE.' ') LNSP = AI
+        ENDIF
+        IF (CI.LE.CMDL) THEN
+          CH = CMD(CI:CI)
+          CI = CI + 1
+          IF (CH.EQ.','
+     +        .OR.CH.EQ.'('
+     +        .OR.CH.EQ.'.'
+     +        .OR.CH.EQ.')') THEN
+            IF (LNSP.GT.0) THEN
+              ARGC = ARGC + 1
+              ARGV(ARGC) = ARG(1:LNSP)
+            ENDIF
+            IF (CH.EQ.'.'.OR.CH.EQ.')') GOTO 60
+            GOTO 40
+          ELSE
+            GOTO 50
+          ENDIF
+        ENDIF
+      ENDIF
+
+ 60   CONTINUE
+
+      TI   = 0
+      LNSP = 0
+ 70   CONTINUE
+      IF (CI.LE.CMDL) THEN
+        CH = CMD(CI:CI)
+        CI = CI + 1
+        TI = TI + 1
+        TEXT(TI:TI) = CH
+        IF (CH.NE.' ') LNSP = TI
+        GOTO 70
+      ENDIF
+
+      TEXTL = LNSP
+
+      END
+      SUBROUTINE NJMCLOS
+C
+C     NJMCLOS - CLOSE COMMUNICATIONS WITH THE NETWORK
+C
+      CALL QTCLOSE
+
+      END
+      SUBROUTINE NJMCONN(HDR,ACN,RC)
+C
+C     NJMCONN - CREATE A CONNECTION TO NJF
+C
+C       HDR   - (IN)  NETWORK COMMUNICATION HEADER ARRAY
+C       ACN   - (OUT) APPLICATION CONNECTION NUMBER
+C       RC    - (OUT) RETURN CODE (0 INDICATES SUCCESS)
+C
+      IMPLICIT INTEGER (A-Z)
+      DIMENSION HDR(10), TA(20)
+
+      HDR(7) = MASK(42).AND.7HNJF
+      CALL QTLINK
+      CALL NJMSTAT(HDR,ACN,RC)
+      IF (RC.NE.0) RETURN
+
+ 10   CONTINUE
+      CALL NJMPOLL(HDR,ACN,RC,10,TA,20)
+      IF (RC.EQ.1.OR.RC.EQ.0) THEN
+        GO TO 10
+      ELSE IF (RC.EQ.14) THEN
+        RC = 0
+      ENDIF
+
+      END
+      SUBROUTINE NJMOPEN(HDR,RC,ANAME,NC)
+C
+C     NJMOPEN - OPEN COMMUNICATIONS WITH THE NETWORK
+C
+C       HDR   - (IN)  NETWORK COMMUNICATION HEADER ARRAY
+C       RC    - (OUT) RETURN CODE (0 INDICATES SUCCESS)
+C       ANAME - (IN)  NETWORK APPLICATION NAME
+C       NC    - (IN)  MAXIMUM NUMBER OF CONNECTIONS TO SUPPORT
+C
+      IMPLICIT INTEGER (A-Z)
+      DIMENSION HDR(10)
+
+      HDR(1) = (ANAME.AND.MASK(42)).OR.SHIFT(1,12).OR.NC
+      HDR(4) = 1
+      HDR(5) = SHIFT(400,48)
+C
+C     ESTABLISH COMMUNICATION WITH NAM
+C
+      CALL QTOPEN(HDR)
+      RC = SHIFT(HDR(5),-12).AND.(O"77")
+
+      END
+      SUBROUTINE NJMPOLL(HDR,ACN,RC,SLEEP,TA,TAL)
+C
+C     NJMPOLL - POLL THE NETWORK FOR ACTIVITY
+C
+C       HDR   - (IN)  NETWORK COMMUNICATION HEADER ARRAY
+C       ACN   - (OUT) APPLICATION CONNECTION NUMBER
+C       RC    - (OUT) RETURN CODE
+C                       0 INDICATES SUCCESS
+C                       1 INDICATES NO ACTIVITY
+C                       6 INDICATES CONNECTION ENDED
+C                      13 INDICATES CONNECTION REJECTED
+C                      14 INDICATES CONNECTION ACCEPTED
+C       SLEEP - (IN)  MAXIMUM SECONDS TO WAIT FOR ACTIVITY
+C       TA    - (OUT) TEXT AREA TO RECEIVE DATA
+C       TAL   - (OUT) NUMBER OF WORDS RECEIVED
+C
+      IMPLICIT INTEGER (A-Z)
+      DIMENSION HDR(10),TA(*)
+
+      IF (SLEEP.LT.0.OR.SLEEP.GT.4095) SLEEP = 4095
+      IF (SLEEP.EQ.0.OR.SLEEP.GT.30) THEN
+        HDR(5) = SHIFT(TAL,48)
+        HDR(6) = SLEEP
+      ELSE
+        HDR(5) = SHIFT(TAL,48).OR.SHIFT(SLEEP,30)
+      ENDIF
+      CALL QTGET(TA)
+      CALL NJMSTAT(HDR,ACN,RC)
+
+      END
+      SUBROUTINE NJMRECV(TA,MTYPE,OUSER,FNODE,DUSER,TEXT,TEXTL,RC)
+C
+C     NJMRECV - RECEIVE AND DECODE A NETWORK MESSAGE
+C
+C       TA    - (IN)  TEXT AREA CONTAINING RAW RECEIVED DATA
+C       MTYPE - (OUT) MESSAGE TYPE
+C                      'M' INDICATES MESSAGE
+C                      'S' INDICATES STATUS
+C       OUSER - (OUT) NAME OF ORIGIN USER OR SERVICE
+C       FNODE - (OUT) NAME OF ORIGIN NODE
+C       DUSER - (OUT) NAME OF DESTINATION USER OR SERVICE
+C       TEXT  - (OUT) TEXT OF RECEIVED MESSAGE
+C       TEXTL - (OUT) LENGTH OF TEXT (NUMBER OF CHARACTERS)
+C       RC    - (OUT) RETURN CODE ASSOCIATED WITH STATUS MESSAGE
+C                       0 INDICATES SUCCESS
+C                       1 INDICATES BAD REQUEST
+C                       2 INDICATES RESOURCE EXHAUSTION
+C
+C$    COLLATE(FIXED)
+      IMPLICIT INTEGER (A-Z)
+      DIMENSION TA(*)
+      CHARACTER*1 MTYPE
+      CHARACTER*8 FNODE,OUSER,DUSER
+      CHARACTER TEXT*(*)
+
+      MTYPE = CHAR(SHIFT(TA(1),6).AND.-MASK(54))
+      IF (MTYPE.EQ.'S') THEN
+        TEXTL = 0
+        RC    = TA(1).AND.-MASK(6)
+      ELSEIF (MTYPE.EQ.'M') THEN
+        RC = 0
+        VAL = SHIFT(TA(1),6)
+        DO 10 I = 1,8
+          VAL = SHIFT(VAL,6)
+          OUSER(I:I) = CHAR(VAL.AND.-MASK(54))
+ 10     CONTINUE
+        VAL = TA(2)
+        DO 20 I = 1,8
+          VAL = SHIFT(VAL,6)
+          DUSER(I:I) = CHAR(VAL.AND.-MASK(54))
+ 20     CONTINUE
+        VAL = TA(3)
+        DO 30 I = 1,8
+          VAL = SHIFT(VAL,6)
+          FNODE(I:I) = CHAR(VAL.AND.-MASK(54))
+ 30     CONTINUE
+        TEXTL  = TA(3).AND.-MASK(48)
+        WORDS = (TEXTL + 9) / 10
+        CI    = 1
+        DO 50 W = 1,WORDS
+          WORD = TA(W + 3)
+          DO 40 I = 1,10
+            WORD = SHIFT(WORD,6)
+            TEXT(CI:CI) = CHAR(WORD.AND.-MASK(54))
+            CI = CI + 1
+ 40       CONTINUE
+ 50     CONTINUE
+      ELSE
+        CALL REMARK('UNRECOGNIZED MESSAGE TYPE '//MTYPE)
+        RC = -1
+      ENDIF
+      END
+      SUBROUTINE NJMSEND(HDR,ACN,RC,OUSER,DUSER,NODE,TEXT)
+C
+C     NJMSEND - SEND A MESSAGE TO A REMOTE USER OR SERVICE
+C
+C       HDR   - (IN)  NETWORK COMMUNICATION HEADER ARRAY
+C       ACN   - (IN)  APPLICATION CONNECTION NUMBER ON WHICH TO SEND
+C       RC    - (OUT) RETURN CODE (0 INDICATES SUCCESS)
+C       OUSER - (IN)  NAME OF ORIGINATING USER OR SERVICE
+C       DUSER - (IN)  NAME OF DESTINATION USER OR SERVICE
+C       NODE  - (IN)  NAME OF DESTINATION NJE NODE
+C       TEXT  - (IN)  THE TEXT TO SEND
+C
+C$    COLLATE(FIXED)
+      IMPLICIT INTEGER (A-Z)
+      DIMENSION HDR(10),TA(20)
+      CHARACTER NODE*(*),OUSER*(*),DUSER*(*),TEXT*(*)
+      DATA MSK /O"77777777777777007777"/
+
+      IF (OUSER.EQ.'*') THEN
+        USER = NJMGETU()
+      ELSE
+        L = LEN(OUSER)
+        IF (L.GT.8) L = 8
+        USER = 0
+        DO 10 I = 1,L
+          USER = SHIFT(USER,6).OR.ICHAR(OUSER(I:I))
+ 10     CONTINUE
+ 11     CONTINUE
+        IF (L.LT.10) THEN
+          USER = SHIFT(USER,6).OR.R" "
+          L = L + 1
+          GOTO 11
+        ENDIF
+      ENDIF
+
+      TA(1) = L"M".OR.(SHIFT(USER,54).AND.-MASK(6))
+
+      TA(2) = 0
+      L = LEN(DUSER)
+      IF (L.GT.8) L = 8
+      DO 20 I = 1,L
+        TA(2) = SHIFT(TA(2),6).OR.ICHAR(DUSER(I:I))
+ 20   CONTINUE
+ 21   CONTINUE
+      IF (L.LT.8) THEN
+        TA(2) = SHIFT(TA(2),6).OR.R" "
+        L = L + 1
+        GOTO 21
+      ENDIF
+      TA(2) = SHIFT(TA(2),12)
+
+      TA(3) = 0
+      L = LEN(NODE)
+      IF (L.GT.8) L = 8
+      DO 30 I = 1,L
+        TA(3) = SHIFT(TA(3),6).OR.ICHAR(NODE(I:I))
+ 30   CONTINUE
+ 31   CONTINUE
+      IF (L.LT.8) THEN
+        TA(3) = SHIFT(TA(3),6).OR.R" "
+        L = L + 1
+        GOTO 31
+      ENDIF
+      L = LEN(TEXT)
+      TA(3) = SHIFT(TA(3),12).OR.L
+
+      CI  = 1
+      TAI = 3
+      I   = 0
+ 40   CONTINUE
+      IF (CI.LE.L) THEN
+        IF (I.EQ.0) THEN
+          TAI = TAI + 1
+          TA(TAI) = 0
+        ENDIF
+        TA(TAI) = SHIFT(TA(TAI),6).OR.ICHAR(TEXT(CI:CI))
+        CI = CI + 1
+        I  =  I + 1
+        IF (I.GE.10) I = 0
+        GOTO 40
+      ENDIF
+      IF (I.LT.10) THEN
+        TA(TAI) = SHIFT(TA(TAI),6 * (10 - I))
+      ENDIF
+
+      HDR(1) = (HDR(1).AND.MSK).OR.SHIFT(1,12)
+      HDR(5) = SHIFT(TAI,48).OR.SHIFT(TAI,36).OR.SHIFT(ACN,18)
+      CALL QTPUT(TA)
+      CALL NJMSTAT(HDR,IGN,RC)
+
+      END
+      SUBROUTINE NJMRGST(HDR,ACN,RC,OUSER)
+C
+C     NJMRGST - REGISTER USER OR SERVICE ID ASSOCIATED WITH CONNECTION
+C
+C       HDR   - (IN)  NETWORK COMMUNICATION HEADER ARRAY
+C       ACN   - (IN)  APPLICATION CONNECTION NUMBER
+C       RC    - (OUT) RETURN CODE (0 INDICATES SUCCESS)
+C       OUSER - (IN)  THE USER ID TO ASSOCIATE
+C
+C$    COLLATE(FIXED)
+      IMPLICIT INTEGER (A-Z)
+      DIMENSION HDR(10),TA(2)
+      CHARACTER OUSER*(*)
+      DATA MSK /O"77777777777777007777"/
+
+      IF (OUSER.EQ.'*') THEN
+        USER = NJMGETU()
+      ELSE
+        USER = 0
+        L = LEN(OUSER)
+        IF (L.GT.8) L = 8
+        DO 10 I = 1,L
+          USER = SHIFT(USER,6).OR.ICHAR(OUSER(I:I))
+ 10     CONTINUE
+ 11     CONTINUE
+        IF (L.LT.10) THEN
+          USER = SHIFT(USER,6).OR.R" "
+          L = L + 1
+          GOTO 11
+        ENDIF
+      ENDIF
+      TA(1)   = L"I".OR.(SHIFT(USER,54).AND.-MASK(6))
+      TA(2)   = 0
+      HDR(1)  = (HDR(1).AND.MSK).OR.SHIFT(1,12)
+      HDR(5)  = SHIFT(2,48).OR.SHIFT(2,36).OR.SHIFT(ACN,18)
+      CALL QTPUT(TA)
+      CALL NJMSTAT(HDR,IGN,RC)
+
+      END
+      SUBROUTINE NJMSTAT(HDR,ACN,RC)
+C
+C     NJMSTAT - EXTRACT CONNECTION NuMBER AND RETURN CODE FROM
+C               NETWORK COMMUNICATION HEADER
+C
+C       HDR   - (IN)  NETWORK COMMUNICATION HEADER ARRAY
+C       ACN   - (OUT) APPLICATION CONNECTION NUMBER
+C       RC    - (OUT) RETURN CODE
+C
+      IMPLICIT INTEGER (A-Z)
+      DIMENSION HDR(10)
+
+      RC  = SHIFT(HDR(5),-12).AND.O"77"
+      ACN = SHIFT(HDR(5),-18).AND.O"7777"
+
+      END
+          IDENT  NJMABT
+          ENTRY  NJMABT
+
+**
+*         NJMABT - ABORT THE PROGRAM
+*
+
+ NJMABT   BSS    1
+          ABORT
+          END
+          IDENT  NJMGETU
+          ENTRY  NJMGETU
+
+**
+*         NJMGETU - GET THE CURRENT USERNAME
+*
+*         EXIT
+*           X6 - CURRENT USERNAME, SPACE-FILLED
+*
+
+*CALL COMCSFN
+ NJMGETU  BSS    1
+          SB1    1
+          USERNUM UN
+          SA1    UN
+          RJ     SFN
+          EQ     NJMGETU
+ UN       BSS    1
+          END
+          IDENT  NJMSECS
+          ENTRY  NJMSECS
+
+**
+*         NJMSECS - GET SECONDS SINCE DEADSTART
+*
+*         EXIT
+*           X6 - SECONDS SINCE DEADSTART
+*
+
+ NJMSECS  BSS    1
+          SB1    1
+          RTIME  TIME
+          SA1    TIME
+          MX0    24D
+          BX6    X0*X1
+          LX6    24D
+          EQ     NJMSECS
+ TIME     BSS    1
+          END
