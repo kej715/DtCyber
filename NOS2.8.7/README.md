@@ -19,6 +19,7 @@ real Control Data computer systems back in the 1980's and 90's.
 ## Table of Contents
 - [Prerequisites](#prereq)
 - [Installation Steps](#steps)
+- &nbsp;&nbsp;&nbsp;&nbsp;[Other Installation Options](#installopts)
 - [Login](#login)
 - [Remote Job Entry](#rje)
 - &nbsp;&nbsp;&nbsp;&nbsp;[TieLine Facility (TLF)](#tlf)
@@ -38,6 +39,7 @@ real Control Data computer systems back in the 1980's and 90's.
 - [Creating a New Deadstart Tape](#newds)
 - [Installing a Full System from Scratch](#instfull)
 - [Installing a Minimal System](#instmin)
+- [Upgrading Cyber 865 to Cyber 875](#upgrade875)
 - [Customizing the NOS 2.8.7 Configuration](#reconfig)
 - &nbsp;&nbsp;&nbsp;&nbsp;[[CMRDECK]](#cmrdeck)
 - &nbsp;&nbsp;&nbsp;&nbsp;[[EQPDECK]](#eqpdeck)
@@ -120,6 +122,37 @@ FORTRAN IV and V, LISP, PASCAL, PL/1, SNOBOL, SPSS, SYMPL, COMPASS assembly lang
 and various other goodies including CYBIS, ICEM (an early CAD/CAM system), CDCS (a
 relational database subsystem), and GPLOT (a graphics package). Welcome back to
 supercomputing in the 1980's!
+
+### <a id="installopts"></a>Other Installation Options
+The installation tool provides options for installing other variants of the operating system, including installation of fully customized sets of programming languages and other
+features. The general syntax of a call to the tool is:
+
+```
+[sudo] node install [basic | full | (readytorun | rtr) [<image name>]][(continue | cont)]
+  basic      : install a basic system from scratch without any optional products
+  full       : install a full system from scratch with all optional products
+  readytorun : (alias rtr) install a ready-to-run system image
+               <image name> is one of:
+                 nos287-full-865 : (default) full NOS 2.8.7 system running on a Cyber 865
+                 nos287-full-875 : full NOS 2.8.7 system running on a Cyber 875
+  continue   : (alias cont) continue basic or full installation from last point of interruption
+```
+
+See [Installing a Minimal System](#instmin) for a description of the `basic` option, and see [Installing a Full System from Scratch](#instfull) for a description of the `full` option.
+
+The default option is `readytorun` (alias `rtr`). This option downloads and installs a
+previously created system image by name. The names of currently available images are
+shown in the table, below. The name of the default image is `nos287-full-865`.
+
+| Name            | Description                                                      |
+|-----------------|------------------------------------------------------------------|
+| nos287&minus;full&minus;865 | This image includes all available programming languages and other features, and it runs on a fully configured **Cyber 865** mainframe. **This is the default system image.** |
+| nos287&minus;full&minus;875 | This image includes all available programming languages and other features, and it runs on a fully configured **Cyber 875** mainframe. |
+
+Example:
+```
+sudo node install rtr nos287-full-875
+```
 
 ## <a id="login"></a>Login
 You may log into the system using your web browser. *DtCyber* is configured to
@@ -577,9 +610,9 @@ from the *authentication* field of the service's entry in `NJMDCF`. The primary 
 executed by the batch job is taken from the *command* field of the entry, and `NJMD`
 arranges to pass three arguments to it:
 
-- 1) the name of the service itself
-- 2) the name of the originating user
-- 3) the name of the originating NJE node.
+1. the name of the service itself
+2. the name of the originating user
+3. the name of the originating NJE node.
 
 `NJMD` also arranges to provide the text of the message as the job's `INPUT` file.
 
@@ -869,6 +902,7 @@ configuration parameters to the UMass Mailer and e-mail routing system.
 See [UMass Mailer](#mailer) for details.
 - `make_ds_tape` (alias `mdt`) : creates a new deadstart tape that includes products
 installed by `install_product`.
+- `modopl` : applies all local modifications to the NOS system source library, `OPL871`. This command is particularly useful when new operating system modifications have been added to the DtCyber repository, and you want to update a previously installed system to include them.
 - `njf_configure` (alias `njfc`) : applies the NJE topology definition and customized
 configuration parameters to the system. See [Network Job Entry](#nje) for details.
 - `reconfigure` (alias `rcfg`) : applies all customized system configuration
@@ -972,6 +1006,7 @@ This category includes data communication software.
 | [crs](https://www.dropbox.com/s/olr1hz6ys5mavjt/cray-station.tap?dl=1) | Cray Station subsystem |
 | [kermit](https://www.dropbox.com/s/p819tmvs91veoiv/kermit.tap?dl=1) | Kermit file exchange utility |
 | [mailer](https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1) | UMass Mailer, base e-mail system |
+| nccnje  | Messaging service extensions for `njf` |
 | [ncctcp](https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1) | TCP/IP Applications (HTTP, NSQUERY, REXEC, SMTP) |
 | [netmail](https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1) | UMass Mailer, network mail router |
 | [njf](https://www.dropbox.com/s/oejtd05qkvqhk9u/NOSL700NJEF.tap?dl=1) | Network Job Facility |
@@ -1101,6 +1136,28 @@ In case a basic installation is interrupted before completing successfully, use 
 |--------------|------------------------------------|
 | Linux/MacOS: | `sudo node install basic continue` |
 | Windows:     | `node install basic continue`      |
+
+## <a id="upgrade875"></a>Upgrading Cyber 865 to Cyber 875
+The `basic` and `full` installation options create systems that run on a Cyber 865 machine
+with a full complement of central memory (1M words). Ordinarily, this is sufficient for
+most hobbyist usage. A Cyber 875, however, can be configured with four times as
+much central memory as a Cyber 865 (4M words vs 1M words). In cases where CYBIS will be
+running and/or it is desirable to support a large number of concurrent batch and/or
+interactive jobs, a Cyber 875 will probably deliver better performance than an 865.
+
+It is possible to upgrade a Cyber 865 image to a Cyber 875 image by running the
+`upgrade-to-875` tool, as in:
+
+| OS           | Commands                   |
+|--------------|----------------------------|
+| Linux/MacOS: | `sudo node upgrade-to-875` |
+| Windows:     | `node upgrade-to-875`      |
+
+Run this tool when *DtCyber* is **not** already running. The tool will modify the
+*DtCyber* and NOS 2.8.7 configurations to run on a Cyber 875. In the process of making
+the necessary changes, it will deadstart the machine a couple of times, and it will leave
+the system running as a Cyber 875. Subsequent deadstarts will bring the system up as a
+Cyber 875 as well.
 
 ## <a id="reconfig"></a>Customizing the NOS 2.8.7 Configuration
 Various parameters of the NOS 2.8.7 system configuration may be changed or added to
