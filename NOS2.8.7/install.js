@@ -10,9 +10,29 @@ const dtc = new DtCyber();
 let isBasicInstall      = false;
 let isContinueInstall   = false;
 let isReadyToRunInstall = true;
+let imageName           = "nos287-full-865";
 
-for (let arg of process.argv.slice(2)) {
-  arg = arg.toLowerCase();
+const imageMap = {
+  "nos287-full-865": "https://www.dropbox.com/s/4tey61kc0sa7swu/nos287rtr-full-865.zip?dl=1",
+  "nos287-full-875": "https://www.dropbox.com/scl/fi/0z0wxoxd2j30ko4evlvii/nos287rtr-full-875.zip?rlkey=bgxojr3ulhkj47ctrs2lp1rrk&dl=1"
+};
+
+const usage = () => {
+  process.stderr.write(`Unrecognized argument: ${arg}\n`);
+  process.stderr.write("Usage: node install [basic | full | (readytorun | rtr) [<image name>]][(continue | cont)]\n");
+  process.stderr.write("  basic      : install a basic system without any optional products\n");
+  process.stderr.write("  full       : install a full system with all optional products\n");
+  process.stderr.write("  readytorun : (alias rtr) install a ready-to-run system image\n");
+  process.stderr.write("               <image name> is one of:\n");
+  process.stderr.write("                 nos287-full-865 : (default) full NOS 2.8.7 system running on a Cyber 865\n");
+  process.stderr.write("                 nos287-full-875 : full NOS 2.8.7 system running on a Cyber 875\n");
+  process.stderr.write("  continue   : (alias cont) continue basic or full installation from last point of interruption\n");
+  process.exit(1);
+};
+
+let i = 2;
+while (i < process.argv.length) {
+  arg = process.argv[i++].toLowerCase();
   if (arg === "basic") {
     isBasicInstall      = true;
     isReadyToRunInstall = false;
@@ -24,14 +44,16 @@ for (let arg of process.argv.slice(2)) {
     isBasicInstall      = false;
     isReadyToRunInstall = false;
   }
-  else if (arg === "readytorun") {
+  else if (arg === "rtr" || arg === "readytorun") {
     isBasicInstall      = false;
     isReadyToRunInstall = true;
+    if (i < process.argv.length) {
+      imageName = process.argv[i++];
+      if (typeof imageMap[imageName] === "undefined") usage();
+    }
   }
   else {
-    process.stderr.write(`Unrecognized argument: ${arg}\n`);
-    process.stderr.write("Usage: node install [basic | full | readytorun][continue]\n");
-    process.exit(1);
+    usage();
   }
 }
 
@@ -60,19 +82,21 @@ const startSystem = () => {
 // and then exit.
 //
 if (isReadyToRunInstall) {
+  const imageFile = `${imageName}.zip`;
+  const imagePath = `./${imageFile}`;
   let maxProgressLen = 0;
-  if (fs.existsSync("./nos287rtr.zip")) {
-    fs.unlinkSync("./nos287rtr.zip");
+  if (fs.existsSync(imagePath)) {
+    fs.unlinkSync(imagePath);
   }
-  dtc.say("Download NOS 2.8.7 ready-to-run package ...")
-  .then(() => dtc.wget("https://www.dropbox.com/s/4tey61kc0sa7swu/nos287rtr.zip?dl=1", ".", (byteCount, contentLength) => {
+  dtc.say(`Download NOS 2.8.7 ready-to-run package (${imageName}) ...`)
+  .then(() => dtc.wget(imageMap[imageName], ".", imageFile, (byteCount, contentLength) => {
     maxProgressLen = utilities.reportProgress(byteCount, contentLength, maxProgressLen);
   }))
   .then(() => utilities.clearProgress(maxProgressLen))
   .then(() => dtc.say("Expand NOS 2.8.7 ready-to-run package ..."))
-  .then(() => dtc.unzip("./nos287rtr.zip", "."))
+  .then(() => dtc.unzip(imagePath, "."))
   .then(() => {
-    fs.unlinkSync("./nos287rtr.zip");
+    fs.unlinkSync(imagePath);
     return Promise.resolve();
   })
   .then(() => dtc.say("Installation of ready-to-run NOS 2.8.7 system complete"))
