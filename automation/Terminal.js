@@ -454,7 +454,7 @@ class BaseTerminal {
   /*
    * disconnect
    *
-   * Disconnect from the DtCyber operator interface, usually with intention to
+   * Disconnect from the DtCyber terminal interface, usually with intention to
    * perform work after disconnecting and possibly re-connecting later.
    *
    * Returns:
