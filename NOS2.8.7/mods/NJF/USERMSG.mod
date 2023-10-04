@@ -239,7 +239,8 @@ USERMSG
       ARRAY A2ARSP [0:0] U;
         BEGIN
         ITEM RSP$TYPE   C<01>;          # RESPONSE TYPE #
-        ITEM RSP$CODE   U<54>;          # RESPONSE CODE #
+        ITEM RSP$RSVD   U<48>;          # RESERVED      #
+        ITEM RSP$CODE   U<06>;          # RESPONSE CODE #
         END
 
       ARRAY DLHA [0:0]    U;;        # APPLICATION BLOCK HEADER #
@@ -344,7 +345,6 @@ A2A:
               ZFILL(CQH$[0],CQBL$);      # CLEAR COMMAND BUFFER #
               CQH$TXT[0] = TRUE;         # SET TEXT COMMAND FLAG #
               CQH$APO[0] = TRUE;         # SET APP ORIGINATED FLAG #
-              CQH$FNN[0] = OWNNODE;      # SET COMMAND ORIGIN NODE #
               CQH$LEN[0] = 80;           # SET COMMAND LENGTH #
               CQH$FNN[0] = TADNODE;      # SET DESTINATION NODE NAME #
               B<0,8>CQH$LO1[0] = X"10";  # SET FOR ALL CONSOLES #
