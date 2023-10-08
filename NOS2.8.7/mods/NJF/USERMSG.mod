@@ -47,6 +47,12 @@ USERMSG
         ITEM LPT$A2A    B<01>;       # A-A CONNECTION #
 *EDIT COMYLIT
 */
+*DECK COMYMSC
+*I 49
+
+      ITEM CFRACN       U;           # ACN OF *CONFER* CONNECTION #
+*EDIT COMYMSC
+*/
 *DECK COMYUDP
 *I 16
       DEF ULTA2L$       # 410 #;     # UPLINE A-A TEXT LENGTH WORDS #
@@ -65,6 +71,10 @@ USERMSG
           C<8,MSGL>TEXTA =           # MOVE MSG TO TEXTA #
 *D 186
           MSGL = MSGL + 8;           # INCREASE MSG LENGTH #
+*/
+*DECK PRSMSC
+*I 58
+      CFRACN = 0;                    # CLEAR *CONFER* ACN #
 */
 *DECK SMPREQ
 *I 29
@@ -102,6 +112,11 @@ USERMSG
         CONCNT = CONCNT + 1;         # INCREMENT CONNECTION COUNT #
         RCODE = S"NORMAL";           # SET REPSONSE CODE #
         SMPRSP(RTYPE,RCODE);         # SEND NORMAL REPLY #
+        IF LPT$ANM[ACN] EQ "CONFER"
+        THEN
+          BEGIN
+          CFRACN = ACN;
+          END
         A2A$ANM[0] = LPT$ANM[ACN];   # LOG CONNECTION #
         MESSAGE(A2AMSG[0],USRDF$);
         RETURN;                      # EXIT #
@@ -158,6 +173,11 @@ USERMSG
               LPT$A2A[ACN]   = FALSE;    # CLEAR A-A FLAG AND USER  #
               LPT$OUSER[ACN] = "        "; 
               CONCNT = CONCNT - 1;       # DECREMENT CONNECTION COUNT #
+              IF LPT$ANM[ACN] EQ "CONFER"
+              THEN
+                BEGIN
+                CFRACN = 0;
+                END
               A2A$ANM[0] = LPT$ANM[ACN]; # LOG DISCONNECTION #
               MESSAGE(A2AMSG[0],USRDF$);
               END
@@ -328,6 +348,29 @@ A2A:
                   A2ASENT = A2ASENT + 1;
                   END
                 END
+              IF A2ASENT EQ 0 AND CFRACN NQ 0
+              THEN
+                BEGIN
+                IF LPT$OBC[CFRACN] LS LPT$ABL[CFRACN]
+                THEN
+                  BEGIN
+                  LPT$ABN[CFRACN] =
+                    (LPT$ABN[CFRACN] + 1) LAN O"777777";
+                  P<ABH$> = LOC(DLHA[0]);  # SET *ABH* POINTER #
+                  ABHWRD  = 0;             # CLEAR HEADER WORD #
+                  ABHABT  = BLKTYPE"MSGBLK"; # SET BLOCK TYPE #
+                  ABHADR  = CFRACN;        # SET CONNECTION NUMBER #
+                  ABHABN  = LPT$ABN[CFRACN]; # SET BLOCK NUMBER #
+                  ABHACT  = CT60XP$;       # SET CHARACTER TYPE #
+                  ABHTLC  = TEXTL;         # SET TEXT LENGTH #
+                  NETPUT(DLHA[0],ULTA[0]);
+                  LPT$OBC[CFRACN] = LPT$OBC[CFRACN] + 1;
+                  END
+                ELSE
+                  BEGIN
+                  RSP$CODE = 2; # RESOURCE EXHAUSTION #
+                  END
+                END
               END
             END
           ELSE                           # MESSAGE FOR REMOTE NODE #
@@ -387,6 +430,7 @@ A2A:
 *CALLC COMYABH
 *I 40
 *CALLC COMYLIT
+*CALLC COMYMSC
 *I NJ24000.11
       ITEM A2ASENT      U;
       ITEM ACN          U;
@@ -467,6 +511,30 @@ A2A:
               A2ASENT = A2ASENT + 1;
               END
             END
+          END
+        IF A2ASENT EQ 0 AND
+           CFRACN NQ 0 AND
+           LPT$OBC[CFRACN] LS LPT$ABL[CFRACN]
+        THEN
+          BEGIN
+          ZFILL(MSGBUF[0],20);
+          P<UTA$> = LOC(MSGBUF[0]);
+          TACMD   = "M";
+          TAOUSER = FUSER;
+          TADUSER = TUSER;
+          TADNODE = FNODE;
+          TATEXTL = TPOS - SPOS;
+          C<0,TATEXTL>TATEXT = C<SPOS,TATEXTL>CMDTXT;
+          LPT$ABN[CFRACN] = (LPT$ABN[CFRACN] + 1) LAN O"777777";
+          P<ABH$> = LOC(DLHA[0]);       # SET *ABH* POINTER #
+          ABHWRD  = 0;                  # CLEAR HEADER WORD #
+          ABHABT  = BLKTYPE"MSGBLK";    # SET BLOCK TYPE #
+          ABHADR  = CFRACN;             # SET CONNECTION NUMBER #
+          ABHABN  = LPT$ABN[CFRACN];    # SET BLOCK NUMBER #
+          ABHACT  = CT60XP$;            # SET CHARACTER TYPE #
+          ABHTLC  = ((TATEXTL+9)/10)+3; # SET TEXT LENGTH #
+          NETPUT(DLHA[0],MSGBUF[0]);
+          LPT$OBC[CFRACN] = LPT$OBC[CFRACN] + 1;
           END
         END
 */
