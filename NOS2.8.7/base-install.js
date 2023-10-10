@@ -114,6 +114,8 @@ if (isCompletedStep("sysgen-full") === false) {
   .then(() => dtc.mount(13, 0, 3, "tapes/nos287-3.tap"))
   .then(() => dtc.dsd("X.SYSGEN(FULL)"))
   .then(() => dtc.expect([ {re:/E N D   F U L L/} ], "printer"))
+  .then(() => dtc.say("Update privileges of INSTALL ..."))
+  .then(() => dtc.dsd("X.MODVAL(OP=Z)/INSTALL,AP=CONFER"))
   .then(() => dtc.say("SYSGEN(FULL) complete"))
   .then(() => {
     addCompletedStep("sysgen-full");
