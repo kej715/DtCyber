@@ -686,8 +686,27 @@ static void initCyber(char *config)
     case 16:
         break;
 
+    case 32:
+    case 64:
+    case 128:
+        if (modelType != ModelCyber865)
+            {
+            fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'esmbanks' invalid - values greater than 16 valid for CPU models CYBER865 and CYBER875 only\n",
+                startupFile, config);
+            exit(1);
+            }
+        break;
+
     default:
-        fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'esmbanks' invalid - correct values are 0, 1, 2, 4, 8 or 16\n", startupFile, config);
+        if (modelType == ModelCyber865)
+            {
+            fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'esmbanks' invalid - correct values are 0, 1, 2, 4, 8, 16, 32, 64 or 128\n",
+                startupFile, config);
+            }
+        else
+            {
+            fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'esmbanks' invalid - correct values are 0, 1, 2, 4, 8 or 16\n", startupFile, config);
+            }
         exit(1);
         }
 
