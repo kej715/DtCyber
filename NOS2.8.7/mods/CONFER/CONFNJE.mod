@@ -12,6 +12,8 @@ CONFNJE
 (*                                                                      *)
 (* INTERFACE TO NJF AND NJE 'CHAT' SERVICE ADDED BY KEVIN JORDAN IN     *)
 (* SEPTEMBER OF 2023.                                                   *)
+*I 87
+(*$I'PFM'  PERMANENT FILE MANAGER. *)
 *D 111
   CFR$C_CONFER_VERSION = 'VERSION 1.1';
 *D 125
@@ -212,6 +214,10 @@ TYPE
   NETWORK_MESSAGE: CFR$T_NAM_VARIANT_MESSAGE;
 *I 1660
 
+(* NAME OF THIS NJE NODE                                                *)
+
+  CFR$V_THIS_NODE: CFR$T_CHARS_8;
+
 (* PSEUDO-USERNAME ASSIGNED TO MEMBERS CONNECTED VIA NJE                *)
 
   CFR$V_NETWORK_USERNAME: CFR$T_CHARS_7;
@@ -244,6 +250,18 @@ TYPE
   CFR$V_NJF_QUEUE_TAIL = NIL;
 
   CFR$V_NJF_UNACKD_MSGS = 0;
+*I 1808
+
+(************************************************************************)
+(*                                                                      *)
+(* EXTERNAL REFERENCES TO PASCAL PACKAGES                               *)
+(*                                                                      *)
+(************************************************************************)
+
+PROCEDURE OPEN
+  (VAR         F: TEXT;
+            NAME: ALFA;
+       OPENWRITE: BOOLEAN); EXTERN;
 *D 1824
   (VAR MESSAGE: CFR$T_NAM_VARIANT_MESSAGE);  FORTRAN;
 *D 1828
@@ -1460,6 +1478,7 @@ VAR
   DEST_USER: CFR$T_CHARS_8;
   ERROR: CFR$T_CANNED_MESSAGE;
   I: INTEGER;
+  IS_CHAT_ORIGIN: BOOLEAN;
   MP: CFR$P_MEMBER_DESCRIPTOR;
   NET_MESSAGE: CFR$T_NAM_VARIANT_MESSAGE;
   NODE: CFR$T_CHARS_8;
@@ -1505,18 +1524,16 @@ BEGIN
       NODE := NJF_MESSAGE.NJF_MESSAGE.NODE;
       DEST_USER := NJF_MESSAGE.NJF_MESSAGE.DESTINATION_USER;
 
-      IF ORIGIN_USER = CFR$C_CHAT_USERNAME THEN
+      IS_CHAT_ORIGIN := ORIGIN_USER = CFR$C_CHAT_USERNAME;
+
+      IF (IS_CHAT_ORIGIN AND (NODE = CFR$V_THIS_NODE)) OR
+         (IS_CHAT_ORIGIN AND (DEST_USER = CFR$C_CHAT_USERNAME)) THEN
         BEGIN
-
-        (* A SIMPLE STRATEGY IS USED IN AVOIDING POSSIBLE FEEDBACK *)
-        (* LOOPS -- IGNORE ANY MESSAGES RECEIVED FROM USERS WITH   *)
-        (* USERNAMES MATCHING THE USERNAME OF THE CHAT SERVUCE.    *)
-
           LOG_TIME_STAMP;
           WRITELN ('      POSSIBLE LOOP DETECTED: FROM = ', ORIGIN_USER,
-                   ', TO = ', DEST_USER, ', AT = ', NODE);
+                   ', AT = ', NODE, ', TO = ', DEST_USER);
         END
-      ELSE
+      ELSE IF ORIGIN_USER <> '        ' THEN
         BEGIN
           FOR I := 1 TO NJF_MESSAGE.NJF_MESSAGE.TEXT_LENGTH DO
             NET_MESSAGE.WIDE_ASCII [I] :=
@@ -1698,6 +1715,23 @@ END; (* HANDLE_NJF_INPUT *)
             NEXT_QUEUE_ENTRY := NIL; (* TERMINATE LOOP *)
             END;
         END;
+    END;
+*I 10474
+  CH: CHAR;
+  F: TEXT;
+*I 10500
+
+(* DISCOVER NAME OF THIS NJE NODE *)
+
+  PF ('GET,HOSTNOD/UN=MAILER');
+  OPEN (F, 'HOSTNOD   ', FALSE);
+  CFR$V_THIS_NODE := CFR$C_CHARS_8;
+  I := 1;
+  WHILE (I <= 8) AND NOT EOLN (F) DO
+    BEGIN
+    READ (F, CH);
+    CFR$V_THIS_NODE [I] := CH;
+    I := I + 1;
     END;
 *I 10636
 
