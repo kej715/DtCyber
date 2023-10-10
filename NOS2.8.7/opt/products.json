@@ -139,7 +139,7 @@
         "records": "ABS/CONFER",
         "url": "https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1",
         "desc": "UMass multi-user CONFERencing application",
-        "depends": ["mailer"]
+        "depends": ["mailer","pascal4"]
       },
       {
         "name": "crs",
