@@ -26,6 +26,7 @@ real Control Data computer systems back in the 1980's and 90's.
 - [Network Job Entry](#nje)
 - &nbsp;&nbsp;&nbsp;&nbsp;[Using NJE](#usingnje)
 - &nbsp;&nbsp;&nbsp;&nbsp;[NJE Services](#njeservices)
+- &nbsp;&nbsp;&nbsp;&nbsp;[CONFER and NJE-based Chat](#confer)
 - &nbsp;&nbsp;&nbsp;&nbsp;[NJF vs TLF](#njf-vs-tlf)
 - [UMass Mailer](#email)
 - &nbsp;&nbsp;&nbsp;&nbsp;[E-mail Reflector](#reflector)
@@ -622,6 +623,80 @@ response to the originating user.
 
 As an example, the `ECHO` service is defined as a CCL procedure. Its source code can be
 found in procedure library `NJMDLIB` (a file in the catalog of username `NJF`).
+
+### <a id="confer"></a>CONFER and NJE-based Chat
+`CONFER` is a NOS network application implemented in the mid-1980's by the University of
+Massachusetts (UMass).
+UMass distributed it freely to many other universities and research institutions around the
+world. It was intended to provide online teleconferencing services (hence, its name),
+although it's probably more easily recognized now as a *group chat* application.
+
+Originally, `CONFER` supported only local users, i.e., users connected directly to a NOS
+system via local interactive terminals attached to NPU's or CDCNet. Since the original
+implementation, however, `CONFER` has been enhanced to use the NJE messaging services
+exposed by `NJF`. This enables `CONFER` to serve as a network group chat application.
+
+One way to access `CONFER` is to log into NOS 2.8.7 as usual, then use the `HELLO` command
+to exit `IAF` and enter `CONFER`, as in:
+
+```
+HELLO,CONFER
+```
+
+`CONFER` will present a welcome dialog and invite you to begin interacting with it. For
+example, to send a public message to everyone in your conference, simply enter the text
+you want to send, then enter an empty line to send it. To send a personal message to a
+specific user, use the `/whisper` (abbreviated `/w`) command, as in:
+
+```
+What are your plans today?
+/w Name of User
+```
+
+The `/whisper` command can also be used to send a message to a specific user on another
+host in the NJE network, as in:
+
+```
+What are your plans today?
+/w Guest@NCCMAX
+```
+
+Note the syntax in this case: *username***@***nodename*, where *username* is the 1 - 8
+character username of the remote NJE user, and *nodename* is the 1 - 8 character name
+of the NJE user's host computer system.
+
+While you are logged into `CONFER`, users logged into other hosts in the NJE network may
+send personal messages to you too. They address you using your NOS login username and the
+NJE node name of your NOS 2.8.7 system. For example, if you are logged into `CONFER` as
+username `GUEST`, and your system's NJE node name is `NOSHOBBY`, a user of an IBM VM/CMS
+system running RSCS could send you a personal message by entering the following command:
+
+```
+smsg rscs m noshobby guest What's up, doc?
+```
+
+Users on other NJE nodes may also send public messages and commands to `CONFER` by
+addressing them to the service named `CHAT` at your host's NJE node name. For example, a
+user on an IBM VM/CMS node running RSCS could send a public message to users of `CONFER`
+on node `NCCMAX` by entering the following command:
+
+```
+smsg rscs m nccmax chat Is anyone attending the symposium this weekend?
+```
+
+Commands begin with the character **/**. To ask for help information from `CONFER` on
+node `NCCMAX`, an IBM VM/CMS user would enter the following command:
+
+```
+smsg rscs m nccmax chat /help
+```
+
+Similarly, a user of a remote NOS 2.8.7 system could ask for information about who is
+using `CONFER` on node `NCCMAX` by entering the following command:
+
+```
+NJMSG.CHAT@NCCMAX /SHOW
+```
 
 ### <a id="njf-vs-tlf"></a>NJF vs TLF
 Both NJF and TLF can send jobs from NOS 2.8.7 to other mainframes for execution, so
