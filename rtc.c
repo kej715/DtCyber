@@ -323,7 +323,7 @@ void rtcReadUsCounter(void)
         }
     else
         {
-        rtcClockIsCurrent   = FALSE;
+        rtcClockIsCurrent   = TRUE;
         }
 
     old      += difference;
