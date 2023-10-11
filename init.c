@@ -691,9 +691,8 @@ static void initCyber(char *config)
     case 128:
         if (modelType != ModelCyber865)
             {
-            fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'esmbanks' invalid - values greater than 16 valid for CPU models CYBER865 and CYBER875 only\n",
+            fprintf(stderr, "(init   ) WARNING - file '%s' section [%s]: Entry 'esmbanks' - only CPU models CYBER865 and CYBER875 can fully access more than 16 banks of ESM\n",
                 startupFile, config);
-            exit(1);
             }
         break;
 
