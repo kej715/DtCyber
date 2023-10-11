@@ -200,7 +200,6 @@ static void cpOp77(CpuContext *activeCpu);
 CpWord       *cpMem;
 int          cpuCount = 1;
 CpuContext   *cpus;
-volatile u32 ecsFlagRegister;
 CpWord       *extMem;
 u32          cpuMaxMemory;
 u32          extMaxMemory;
@@ -212,6 +211,9 @@ u32          extMaxMemory;
 */
 static FILE   *cmHandle;
 static FILE   *ecsHandle;
+
+static volatile u32 ecsFlagRegister = 0;
+static volatile u8 ecs16Kx4bitFlagRegisters[16384];
 
 static volatile int monitorCpu = -1;
 
@@ -328,6 +330,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
     {
     int cpuNum;
     u32 extBanksSize = 0;
+    int i;
 
     /*
     **  Allocate configured central memory.
@@ -452,6 +455,14 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
             cpuCreateThread(cpuNum);
             }
         }
+
+    /*
+    **  Initialize 16K x 4-bit EM flag registers. Currently, only models 865 and 875
+    **  have this feature.
+    */
+
+    for (i = 0; i < sizeof(ecs16Kx4bitFlagRegisters); i++)
+         ecs16Kx4bitFlagRegisters[i] = 0;
 
     /*
     **  Print a friendly message.
@@ -757,58 +768,106 @@ void cpuStep(CpuContext *activeCpu)
 **------------------------------------------------------------------------*/
 bool cpuEcsFlagRegister(u32 ecsAddress)
     {
-    u32  flagFunction = (ecsAddress >> 21) & Mask3;
-    u32  flagWord     = ecsAddress & Mask18;
+    u32  flagFunction;
+    u16  flagRegisterAddress;
+    u32  flagWord;
+    bool isExtendedFlag;
     bool result;
 
     result = TRUE;
+
     cpuAcquireMutex(&flagRegMutex);
-
-    switch (flagFunction)
+    if (((ecsAddress & (1 << 29)) != 0 && (ecsAddress & (1 << 20)) != 0))
         {
-    case 4:
-        /*
-        **  Ready/Select.
-        */
-        if ((ecsFlagRegister & flagWord) != 0)
+        flagFunction        = (ecsAddress >> 18) & Mask5;
+        flagRegisterAddress = (ecsAddress >>  4) & Mask14;
+        flagWord            =  ecsAddress & Mask4;
+        switch (flagFunction)
             {
+        case 006:
             /*
-            **  Error exit.
+            **  Zero/Select.
             */
-            result = FALSE;
+            if (ecsFlagRegister == 0)
+                {
+                ecs16Kx4bitFlagRegisters[flagRegisterAddress] = flagWord;
+                }
+            else
+                {
+                /*
+                **  Error exit.
+                */
+                result = FALSE;
+                }
+            break;
+
+        case 025:
+            /*
+            **  Detected Error Status.
+            **
+            **  DtCyber doesn't currently generate or detect any errors
+            **  in the ESM side door channel.
+            */
+            break;
+
+        case 026:
+            /*
+            **  Equality Status.
+            */
+            result = ecs16Kx4bitFlagRegisters[flagRegisterAddress] == flagWord;
+            break;
             }
-        else
+        }
+    else
+        {
+        flagFunction = (ecsAddress >> 21) & Mask2;
+        flagWord     =  ecsAddress & Mask18;
+        switch (flagFunction)
             {
+        case 0:
+            /*
+            **  Ready/Select.
+            */
+            if ((ecsFlagRegister & flagWord) != 0)
+                {
+                /*
+                **  Error exit.
+                */
+                result = FALSE;
+                }
+            else
+                {
+                ecsFlagRegister |= flagWord;
+                }
+            break;
+
+        case 1:
+            /*
+            **  Selective set.
+            */
             ecsFlagRegister |= flagWord;
-            }
-        break;
+            break;
 
-    case 5:
-        /*
-        **  Selective set.
-        */
-        ecsFlagRegister |= flagWord;
-        break;
-
-    case 6:
-        /*
-        **  Status.
-        */
-        if ((ecsFlagRegister & flagWord) != 0)
-            {
+        case 2:
             /*
-            **  Error exit.
+            **  Status.
             */
-            result = FALSE;
-            }
-        break;
+            if ((ecsFlagRegister & flagWord) != 0)
+                {
+                /*
+                **  Error exit.
+                */
+                result = FALSE;
+                }
+            break;
 
-    case 7:
-        /*
-        **  Selective clear,
-        */
-        ecsFlagRegister = (ecsFlagRegister & ~flagWord) & Mask18;
-        break;
+        case 3:
+            /*
+            **  Selective clear,
+            */
+            ecsFlagRegister = (ecsFlagRegister & ~flagWord) & Mask18;
+            break;
+            }
         }
 
     cpuReleaseMutex(&flagRegMutex);

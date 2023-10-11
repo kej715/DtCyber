@@ -182,6 +182,7 @@
 #define Mask10                     01777
 #define Mask11                     03777
 #define Mask12                     07777
+#define Mask14                     037777
 #define Mask15                     077777
 #define Mask17                     0377777
 #define Mask18                     0777777
