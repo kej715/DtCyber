@@ -197,12 +197,13 @@ static void cpOp77(CpuContext *activeCpu);
 **  Public Variables
 **  ----------------
 */
+u32          cpuMaxMemory;
 CpWord       *cpMem;
 int          cpuCount = 1;
 CpuContext   *cpus;
-CpWord       *extMem;
-u32          cpuMaxMemory;
 u32          extMaxMemory;
+CpWord       *extMem;
+ExtMemory    extMemType = ECS;
 
 /*
 **  -----------------
@@ -366,6 +367,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
         }
 
     extMaxMemory = emBanks * extBanksSize;
+    extMemType   = emType;
 
     /*
     **  Optionally read in persistent CM and ECS contents.
@@ -774,9 +776,14 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
     bool isExtendedFlag;
     bool result;
 
+#if EMDEBUG
+    fprintf(emLog, "ECS flag register address: EM %010o\n", ecsAddress);
+#endif
+
     result = TRUE;
 
     cpuAcquireMutex(&flagRegMutex);
+
     if (((ecsAddress & (1 << 29)) != 0 && (ecsAddress & (1 << 20)) != 0))
         {
         flagFunction        = (ecsAddress >> 18) & Mask5;
@@ -788,7 +795,11 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
             /*
             **  Zero/Select.
             */
-            if (ecsFlagRegister == 0)
+#if EMDEBUG
+            fprintf(emLog, "    Zero/Select: addr %05o, flag register %02o, flag word %02o\n",
+               flagRegisterAddress, ecs16Kx4bitFlagRegisters[flagRegisterAddress], flagWord);
+#endif
+            if (ecs16Kx4bitFlagRegisters[flagRegisterAddress] == 0)
                 {
                 ecs16Kx4bitFlagRegisters[flagRegisterAddress] = flagWord;
                 }
@@ -808,12 +819,19 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
             **  DtCyber doesn't currently generate or detect any errors
             **  in the ESM side door channel.
             */
+#if EMDEBUG
+            fprintf(emLog, "    Detected Error Status: addr %05o, flag word %02o\n", flagRegisterAddress, flagWord);
+#endif
             break;
 
         case 026:
             /*
             **  Equality Status.
             */
+#if EMDEBUG
+            fprintf(emLog, "    Equality Status: addr %05o, flag register %02o, flag word %02o\n",
+               flagRegisterAddress, ecs16Kx4bitFlagRegisters[flagRegisterAddress], flagWord);
+#endif
             result = ecs16Kx4bitFlagRegisters[flagRegisterAddress] == flagWord;
             break;
             }
@@ -828,6 +846,9 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
             /*
             **  Ready/Select.
             */
+#if EMDEBUG
+            fprintf(emLog, "    Ready/Select: flag register %06o, flag word %06o\n", ecsFlagRegister, flagWord);
+#endif
             if ((ecsFlagRegister & flagWord) != 0)
                 {
                 /*
@@ -843,8 +864,11 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
 
         case 1:
             /*
-            **  Selective set.
+            **  Selective Set.
             */
+#if EMDEBUG
+            fprintf(emLog, "    Selective Set: flag register %06o, flag word %06o\n", ecsFlagRegister, flagWord);
+#endif
             ecsFlagRegister |= flagWord;
             break;
 
@@ -852,6 +876,9 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
             /*
             **  Status.
             */
+#if EMDEBUG
+            fprintf(emLog, "    Status: flag register %06o, flag word %06o\n", ecsFlagRegister, flagWord);
+#endif
             if ((ecsFlagRegister & flagWord) != 0)
                 {
                 /*
@@ -863,8 +890,11 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
 
         case 3:
             /*
-            **  Selective clear,
+            **  Selective Clear,
             */
+#if EMDEBUG
+            fprintf(emLog, "    Selective Clear: flag register %06o, flag word %06o\n", ecsFlagRegister, flagWord);
+#endif
             ecsFlagRegister = (ecsFlagRegister & ~flagWord) & Mask18;
             break;
             }
@@ -894,6 +924,10 @@ bool cpuDdpTransfer(u32 ecsAddress, CpWord *data, bool writeToEcs)
     */
     if (ecsAddress >= extMaxMemory)
         {
+#if EMDEBUG
+        fprintf(emLog, "DDP AddressOutOfRange on %s: EM addr %010o  EM size %010o\n",
+            writeToEcs ? "write" : "read", ecsAddress, extMaxMemory);
+#endif
         /*
         **  Abort.
         */
@@ -2007,6 +2041,11 @@ static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
     if (flEcs <= ecsAddress)
         {
         activeCpu->exitCondition |= EcAddressOutOfRange;
+#if EMDEBUG
+        fprintf(emLog, "   ECS AddressOutOfRange: EM %010o  FLE %010o  %s word\n",
+                ecsAddress, flEcs, writeToEcs ? "write" : "read");
+        dumpXP(activeCpu, 020, 017);
+#endif
         if ((activeCpu->exitMode & EmAddressOutOfRange) != 0)
             {
             /*
@@ -2053,7 +2092,7 @@ static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
             **  Zero Xj, then full exit to next instruction word.
             */
             activeCpu->regX[activeCpu->opJ] = 0;
-            activeCpu->regP      = (activeCpu->regP + 1) & Mask18;
+            activeCpu->regP                 = (activeCpu->regP + 1) & Mask18;
             cpuFetchOpWord(activeCpu);
             }
         else if (ecsAddress >= cpuMaxMemory)
@@ -2083,13 +2122,14 @@ static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
 **------------------------------------------------------------------------*/
 static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
     {
-    u32  wordCount;
-    u32  uemAddress;
+    u32  absUemAddr;
     u32  cmAddress;
     u32  flEcs;
     bool isExpandedAddress;
     bool isZeroFill;
     u32  raEcs;
+    u32  uemAddress;
+    u32  wordCount;
 
     /*
     **  Instruction must be located in the upper 30 bits.
@@ -2107,21 +2147,25 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
     /*
     **  Calculate word count, source and destination addresses.
     */
-    wordCount = cpuAdd18(activeCpu->regB[activeCpu->opJ], activeCpu->opAddress);
+    wordCount  = cpuAdd18(activeCpu->regB[activeCpu->opJ], activeCpu->opAddress);
+    absUemAddr = activeCpu->regX[0] + activeCpu->regRaEcs;
 
     if (((features & IsSeries800) != 0) && isExpandedAddress)
         {
         uemAddress = (u32)(activeCpu->regX[0] & Mask30);
         raEcs      = (u32)(activeCpu->regRaEcs & Mask24);
         flEcs      = (u32)(activeCpu->regFlEcs & Mask30);
-        isZeroFill = (modelType == ModelCyber865) && (((activeCpu->regX[0] + activeCpu->regRaEcs) & (01 << 28)) != 0);
+        isZeroFill = modelType == ModelCyber865
+                     && ((absUemAddr & (3 << 28)) == (1 << 28));
         }
     else
         {
         uemAddress = (u32)(activeCpu->regX[0] & Mask24);
         raEcs      = (u32)(activeCpu->regRaEcs & Mask21);
         flEcs      = (u32)(activeCpu->regFlEcs & Mask23);
-        isZeroFill = (modelType == ModelCyber865) && (((activeCpu->regX[0] + activeCpu->regRaEcs) & (03 << 21)) != 0);
+        isZeroFill = modelType == ModelCyber865
+                     && (((absUemAddr & (5 << 21)) == (1 << 21))
+                         || ((absUemAddr & (3 << 22)) == (1 << 22)));
         }
 
     if ((activeCpu->exitMode & EmFlagEnhancedBlockCopy) != 0)
@@ -2140,6 +2184,12 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
         {
         wordCount = 0;
         }
+
+#if EMDEBUG
+    fprintf(emLog, "UEM %s: EM %010o  RAE %010o, FLE %010o  CM %06o  FL %08o  Words %d  zero fill %d\n",
+            writeToUem ? "write" : " read",
+            uemAddress, raEcs, flEcs, cmAddress, activeCpu->regFlCm, wordCount, isZeroFill);
+#endif
 
     /*
     **  Check for positive word count, CM and UEM range.
@@ -2276,11 +2326,13 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
 **------------------------------------------------------------------------*/
 static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
     {
+    u32  absEcsAddr;
     u32  wordCount;
     u32  ecsAddress;
     u32  cmAddress;
     u32  flEcs;
     bool isFlagRegister;
+    bool isMaintenance;
     bool isZeroFill;
     u32  raEcs;
 
@@ -2295,6 +2347,7 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
         }
 
     isFlagRegister = FALSE;
+    isMaintenance  = FALSE; // for Cyber 865/875
     isZeroFill     = FALSE; // for Cyber 865/875
 
     /*
@@ -2310,7 +2363,19 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
         flEcs          = (u32)(activeCpu->regFlEcs & Mask30);
         isFlagRegister = (activeCpu->regX[0] & (1 << 29)) != 0
                          && (activeCpu->regFlEcs & (1 << 29)) != 0;
-        isZeroFill = (modelType == ModelCyber865) && (((activeCpu->regX[0] + activeCpu->regRaEcs) & (021 << 24)) != 0);
+        if (isFlagRegister == FALSE && modelType == ModelCyber865)
+            {
+            absEcsAddr = activeCpu->regX[0] + activeCpu->regRaEcs;
+            if ((absEcsAddr & (037 << 25)) == (010 << 25)
+                || (absEcsAddr & (0275 << 22)) == (4 << 22))
+                {
+                isZeroFill = TRUE;
+                }
+            else if ((absEcsAddr & (0375 << 22)) == (5 << 22))
+                {
+                isMaintenance = TRUE;
+                }
+            }
         }
     else
         {
@@ -2319,7 +2384,18 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
         flEcs          = (u32)(activeCpu->regFlEcs & Mask23);
         isFlagRegister = (activeCpu->regX[0] & (1 << 23)) != 0
                          && (activeCpu->regFlEcs & (1 << 23)) != 0;
-        isZeroFill = (modelType == ModelCyber865) && (((activeCpu->regX[0] + activeCpu->regRaEcs) & (01 << 21)) != 0);
+        if (isFlagRegister == FALSE && modelType == ModelCyber865)
+            {
+            absEcsAddr = activeCpu->regX[0] + activeCpu->regRaEcs;
+            if ((absEcsAddr & (7 << 21)) == (1 << 21))
+                {
+                isZeroFill = TRUE;
+                }
+            else if ((absEcsAddr & (03 << 22)) == (1 << 22))
+                {
+                isMaintenance = TRUE;
+                }
+            }
         }
 
     if (((features & IsSeries800) != 0)
@@ -2331,6 +2407,14 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
         {
         cmAddress = activeCpu->regA[0] & Mask18;
         }
+
+#if EMDEBUG
+    fprintf(emLog, "ECS %s: EM %010o  RAE %010o, FLE %010o  CM %06o  FL %08o  Words %d\n",
+            writeToEcs ? "write" : " read",
+            ecsAddress, raEcs, flEcs, cmAddress, activeCpu->regFlCm, wordCount);
+    fprintf(emLog, "           flag reg %d  maintenance %d  zero fill %d\n",
+            isFlagRegister, isMaintenance, isZeroFill);
+#endif
 
     /*
     **  Check if this is a flag register access.
@@ -2347,6 +2431,22 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
             return;
             }
 
+        /*
+        **  Normal exit.
+        */
+        activeCpu->regP = (activeCpu->regP + 1) & Mask18;
+        cpuFetchOpWord(activeCpu);
+
+        return;
+        }
+
+    /*
+    **  Check if this is a maintenance operation.
+    **
+    **  DtCyber doesn't currently implement maintenance operations.
+    */
+    if (isMaintenance)
+        {
         /*
         **  Normal exit.
         */
