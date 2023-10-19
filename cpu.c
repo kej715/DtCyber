@@ -23,7 +23,9 @@
 **--------------------------------------------------------------------------
 */
 
-#define EMDEBUG 0
+#define DEBUG_DDP 0
+#define DEBUG_ECS 0
+#define DEBUG_UEM 0
 
 /*
 **  -------------
@@ -222,7 +224,7 @@ static volatile int monitorCpu = -1;
 static int skipStep = 0;
 #endif
 
-#if EMDEBUG
+#if DEBUG_ECS || DEBUG_UEM || DEBUG_DDP
 static FILE *emLog = NULL;
 #endif
 
@@ -471,7 +473,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
     */
     printf("(cpu    ) CPU model %s initialised (%d CPU%s, CM: %o, ECS: %o)\n",
            model, cpuCount, cpuCount > 1 ? "'s" : "", cpuMaxMemory, extMaxMemory);
-#if EMDEBUG
+#if DEBUG_ECS || DEBUG_UEM || DEBUG_DDP
     if (emLog == NULL)
         {
         emLog = fopen("emlog.txt", "wt");
@@ -776,8 +778,8 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
     bool isExtendedFlag;
     bool result;
 
-#if EMDEBUG
-    fprintf(emLog, "ECS flag register address: EM %010o\n", ecsAddress);
+#if DEBUG_ECS
+    fprintf(emLog, "\nECS flag register address: EM %010o", ecsAddress);
 #endif
 
     result = TRUE;
@@ -795,8 +797,8 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
             /*
             **  Zero/Select.
             */
-#if EMDEBUG
-            fprintf(emLog, "    Zero/Select: addr %05o, flag register %02o, flag word %02o\n",
+#if DEBUG_ECS
+            fprintf(emLog, "\n    Zero/Select: addr %05o, flag register %02o, flag word %02o",
                flagRegisterAddress, ecs16Kx4bitFlagRegisters[flagRegisterAddress], flagWord);
 #endif
             if (ecs16Kx4bitFlagRegisters[flagRegisterAddress] == 0)
@@ -819,8 +821,8 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
             **  DtCyber doesn't currently generate or detect any errors
             **  in the ESM side door channel.
             */
-#if EMDEBUG
-            fprintf(emLog, "    Detected Error Status: addr %05o, flag word %02o\n", flagRegisterAddress, flagWord);
+#if DEBUG_ECS
+            fprintf(emLog, "\n    Detected Error Status: addr %05o, flag word %02o", flagRegisterAddress, flagWord);
 #endif
             break;
 
@@ -828,8 +830,8 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
             /*
             **  Equality Status.
             */
-#if EMDEBUG
-            fprintf(emLog, "    Equality Status: addr %05o, flag register %02o, flag word %02o\n",
+#if DEBUG_ECS
+            fprintf(emLog, "\n    Equality Status: addr %05o, flag register %02o, flag word %02o",
                flagRegisterAddress, ecs16Kx4bitFlagRegisters[flagRegisterAddress], flagWord);
 #endif
             result = ecs16Kx4bitFlagRegisters[flagRegisterAddress] == flagWord;
@@ -846,8 +848,8 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
             /*
             **  Ready/Select.
             */
-#if EMDEBUG
-            fprintf(emLog, "    Ready/Select: flag register %06o, flag word %06o\n", ecsFlagRegister, flagWord);
+#if DEBUG_ECS
+            fprintf(emLog, "\n    Ready/Select: flag register %06o, flag word %06o", ecsFlagRegister, flagWord);
 #endif
             if ((ecsFlagRegister & flagWord) != 0)
                 {
@@ -866,8 +868,8 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
             /*
             **  Selective Set.
             */
-#if EMDEBUG
-            fprintf(emLog, "    Selective Set: flag register %06o, flag word %06o\n", ecsFlagRegister, flagWord);
+#if DEBUG_ECS
+            fprintf(emLog, "\n    Selective Set: flag register %06o, flag word %06o", ecsFlagRegister, flagWord);
 #endif
             ecsFlagRegister |= flagWord;
             break;
@@ -876,8 +878,8 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
             /*
             **  Status.
             */
-#if EMDEBUG
-            fprintf(emLog, "    Status: flag register %06o, flag word %06o\n", ecsFlagRegister, flagWord);
+#if DEBUG_ECS
+            fprintf(emLog, "\n    Status: flag register %06o, flag word %06o", ecsFlagRegister, flagWord);
 #endif
             if ((ecsFlagRegister & flagWord) != 0)
                 {
@@ -892,8 +894,8 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
             /*
             **  Selective Clear,
             */
-#if EMDEBUG
-            fprintf(emLog, "    Selective Clear: flag register %06o, flag word %06o\n", ecsFlagRegister, flagWord);
+#if DEBUG_ECS
+            fprintf(emLog, "\n    Selective Clear: flag register %06o, flag word %06o", ecsFlagRegister, flagWord);
 #endif
             ecsFlagRegister = (ecsFlagRegister & ~flagWord) & Mask18;
             break;
@@ -924,14 +926,14 @@ bool cpuDdpTransfer(u32 ecsAddress, CpWord *data, bool writeToEcs)
     */
     if (ecsAddress >= extMaxMemory)
         {
-#if EMDEBUG
-        fprintf(emLog, "DDP AddressOutOfRange on %s: EM addr %010o  EM size %010o\n",
+#if DEBUG_DDP
+        fprintf(emLog, "\nDDP AddressOutOfRange on %s: EM addr %010o  EM size %010o",
             writeToEcs ? "write" : "read", ecsAddress, extMaxMemory);
 #endif
         /*
         **  Abort.
         */
-        return (FALSE);
+        return FALSE;
         }
 
     /*
@@ -949,7 +951,7 @@ bool cpuDdpTransfer(u32 ecsAddress, CpWord *data, bool writeToEcs)
     /*
     **  Normal accept.
     */
-    return (TRUE);
+    return TRUE;
     }
 
 /*
@@ -1303,7 +1305,7 @@ static void cpuExchangeJump(CpuContext *activeCpu, u32 address, bool doChangeMod
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-#if EMDEBUG
+#if DEBUG_ECS || DEBUG_UEM
 static char cmRegAstr[24];
 
 static char *readCmRegA(CpuContext *activeCpu, int regNum)
@@ -1332,44 +1334,46 @@ static char *readCmRegA(CpuContext *activeCpu, int regNum)
 
 static void dumpXP(CpuContext *activeCpu, int before, int after)
     {
+    u32    abs;
     int    i;
-    u32    p;
+    u32    rel;
     CpWord word;
 
-    fprintf(emLog, "            Monitor mode: %d\n", activeCpu->isMonitorMode);
-    fprintf(emLog, "   Expanded Address mode: %d\n", (features & IsSeries800) != 0
+    fprintf(emLog, "\n            Monitor mode: %d", activeCpu->isMonitorMode);
+    fprintf(emLog, "\n   Expanded Address mode: %d", (features & IsSeries800) != 0
             && (activeCpu->exitMode & EmFlagExpandedAddress) != 0);
-    fprintf(emLog, "Enhanced Block Copy mode: %d\n\n", (features & IsSeries800) != 0
+    fprintf(emLog, "\nEnhanced Block Copy mode: %d\n", (features & IsSeries800) != 0
             && (activeCpu->exitMode & EmFlagEnhancedBlockCopy) != 0);
 
     i = 0;
-    fprintf(emLog, "P       %06o  A%d %06o [%s]  B%d %06o\n", activeCpu->regP, i, activeCpu->regA[i], readCmRegA(activeCpu, i), i, activeCpu->regB[i]);
+    fprintf(emLog, "\nP       %06o  A%d %06o [%s]  B%d %06o", activeCpu->regP, i, activeCpu->regA[i], readCmRegA(activeCpu, i), i, activeCpu->regB[i]);
     i++;
-    fprintf(emLog, "RA    %08o  A%d %06o [%s]  B%d %06o\n", activeCpu->regRaCm, i, activeCpu->regA[i], readCmRegA(activeCpu, i), i, activeCpu->regB[i]);
+    fprintf(emLog, "\nRA    %08o  A%d %06o [%s]  B%d %06o", activeCpu->regRaCm, i, activeCpu->regA[i], readCmRegA(activeCpu, i), i, activeCpu->regB[i]);
     i++;
-    fprintf(emLog, "FL    %08o  A%d %06o [%s]  B%d %06o\n", activeCpu->regFlCm, i, activeCpu->regA[i], readCmRegA(activeCpu, i), i, activeCpu->regB[i]);
+    fprintf(emLog, "\nFL    %08o  A%d %06o [%s]  B%d %06o", activeCpu->regFlCm, i, activeCpu->regA[i], readCmRegA(activeCpu, i), i, activeCpu->regB[i]);
     i++;
-    fprintf(emLog, "EM    %08o  A%d %06o [%s]  B%d %06o\n", activeCpu->exitMode, i, activeCpu->regA[i], readCmRegA(activeCpu, i), i, activeCpu->regB[i]);
+    fprintf(emLog, "\nEM    %08o  A%d %06o [%s]  B%d %06o", activeCpu->exitMode, i, activeCpu->regA[i], readCmRegA(activeCpu, i), i, activeCpu->regB[i]);
     i++;
-    fprintf(emLog, "RAE   %08o  A%d %06o [%s]  B%d %06o\n", activeCpu->regRaEcs, i, activeCpu->regA[i], readCmRegA(activeCpu, i), i, activeCpu->regB[i]);
+    fprintf(emLog, "\nRAE   %08o  A%d %06o [%s]  B%d %06o", activeCpu->regRaEcs, i, activeCpu->regA[i], readCmRegA(activeCpu, i), i, activeCpu->regB[i]);
     i++;
-    fprintf(emLog, "FLE %010o  A%d %06o [%s]  B%d %06o\n", activeCpu->regFlEcs, i, activeCpu->regA[i], readCmRegA(activeCpu, i), i, activeCpu->regB[i]);
+    fprintf(emLog, "\nFLE %010o  A%d %06o [%s]  B%d %06o", activeCpu->regFlEcs, i, activeCpu->regA[i], readCmRegA(activeCpu, i), i, activeCpu->regB[i]);
     i++;
-    fprintf(emLog, "MA    %08o  A%d %06o [%s]  B%d %06o\n", activeCpu->regMa, i, activeCpu->regA[i], readCmRegA(activeCpu, i), i, activeCpu->regB[i]);
+    fprintf(emLog, "\nMA    %08o  A%d %06o [%s]  B%d %06o", activeCpu->regMa, i, activeCpu->regA[i], readCmRegA(activeCpu, i), i, activeCpu->regB[i]);
     i++;
-    fprintf(emLog, "                A%d %06o [%s]  B%d %06o\n\n", i, activeCpu->regA[i], readCmRegA(activeCpu, i), i, activeCpu->regB[i]);
+    fprintf(emLog, "\n                A%d %06o [%s]  B%d %06o\n", i, activeCpu->regA[i], readCmRegA(activeCpu, i), i, activeCpu->regB[i]);
     i++;
 
     for (i = 0; i < 8; i++)
         {
-        fprintf(emLog, "X%d  " FMT60_020o "\n", i, activeCpu->regX[i]);
+        fprintf(emLog, "\nX%d  " FMT60_020o, i, activeCpu->regX[i]);
         }
     fputs("\n", emLog);
-    p = (activeCpu->regP >= before) ? (activeCpu->regP + activeCpu->regRaCm) - before : activeCpu->regRaCm;
+    abs = (activeCpu->regP >= before) ? (activeCpu->regP + activeCpu->regRaCm) - before : activeCpu->regRaCm;
+    rel = abs - activeCpu->regRaCm;
     for (i = 0; i <= before + after; i++)
         {
-        word = cpMem[p + i];
-        fprintf(emLog, "%06o: %05lo %05lo %05lo %05lo\n", p + i,
+        word = cpMem[abs + i];
+        fprintf(emLog, "\n%06o: %05lo %05lo %05lo %05lo", rel + i,
                 (word >> 45) & 077777,
                 (word >> 30) & 077777,
                 (word >> 15) & 077777,
@@ -1906,29 +1910,46 @@ static u32 cpuSubtract18(u32 op1, u32 op2)
 **------------------------------------------------------------------------*/
 static void cpuUemWord(CpuContext *activeCpu, bool writeToUem)
     {
+    u32  absUemAddr;
+    u32  flEcs;
     bool isExpandedAddress;
-    u32 uemAddress;
+    u32  raEcs;
+    u32  uemAddress;
 
     isExpandedAddress = (activeCpu->exitMode & EmFlagExpandedAddress) != 0;
 
-    /*
-    **  Calculate source or destination addresses.
-    */
+    uemAddress = (u32)(activeCpu->regX[activeCpu->opK] & Mask30);
+
     if (isExpandedAddress)
         {
-        uemAddress = (u32)(activeCpu->regX[activeCpu->opK] & Mask30);
+        raEcs      = (u32)(activeCpu->regRaEcs & Mask24);
+        flEcs      = (u32)(activeCpu->regFlEcs & Mask30);
+        absUemAddr = uemAddress + raEcs;
         }
     else
         {
-        uemAddress = (u32)(activeCpu->regX[activeCpu->opK] & Mask21);
+        raEcs      = (u32)(activeCpu->regRaEcs & Mask21);
+        flEcs      = (u32)(activeCpu->regFlEcs & Mask23);
+        absUemAddr = uemAddress + raEcs;
         }
+
+#if DEBUG_UEM
+    fprintf(emLog, "\nUEM %s one  : %010o  RAE %010o, FLE %010o",
+        writeToUem ? "write" : "read ", uemAddress, raEcs, flEcs);
+    if (isExpandedAddress) fputs("  exp", emLog);
+#endif
 
     /*
     **  Check for UEM range.
     */
-    if (activeCpu->regFlEcs <= uemAddress)
+    if (flEcs <= uemAddress)
         {
         activeCpu->exitCondition |= EcAddressOutOfRange;
+#if DEBUG_UEM
+        fprintf(emLog, "\n   UEM AddressOutOfRange: %010o  FLE %010o  %s word",
+                uemAddress, flEcs, writeToUem ? "write" : "read");
+        dumpXP(activeCpu, 020, 017);
+#endif
         if ((activeCpu->exitMode & EmAddressOutOfRange) != 0)
             {
             /*
@@ -1953,39 +1974,33 @@ static void cpuUemWord(CpuContext *activeCpu, bool writeToUem)
         }
 
     /*
-    **  Add base address.
-    */
-    uemAddress += activeCpu->regRaEcs;
-
-    /*
     **  Perform the transfer.
     */
     if (writeToUem)
         {
-        if (uemAddress < cpuMaxMemory)
+        if (absUemAddr < cpuMaxMemory)
             {
-            if ((isExpandedAddress == FALSE && (uemAddress & (3 << 21)) == 0)
-                || (isExpandedAddress == TRUE && (uemAddress & (1 << 28)) == 0))
-                {
-                cpMem[uemAddress++] = activeCpu->regX[activeCpu->opJ] & Mask60;
-                }
+            cpMem[absUemAddr] = activeCpu->regX[activeCpu->opJ] & Mask60;
             }
+#if DEBUG_UEM
+        else
+            {
+            fprintf(emLog, "  overflow (%010o >= %010o)", absUemAddr, cpuMaxMemory);
+            }
+#endif
         }
     else
         {
-        if ((uemAddress >= cpuMaxMemory)
-            || (isExpandedAddress == FALSE && (uemAddress & (3 << 21)) != 0)
-            || (isExpandedAddress == TRUE && (uemAddress & (1 << 28)) != 0))
+        if (absUemAddr < cpuMaxMemory)
             {
-            /*
-            **  If bits 21 or 22 are non-zero, zero Xj.
-            */
-            activeCpu->regX[activeCpu->opJ] = 0;
+            activeCpu->regX[activeCpu->opJ] = cpMem[absUemAddr] & Mask60;
             }
+#if DEBUG_UEM
         else
             {
-            activeCpu->regX[activeCpu->opJ] = cpMem[uemAddress] & Mask60;
+            fprintf(emLog, "  overflow (%010o >= %010o)", absUemAddr, cpuMaxMemory);
             }
+#endif
         }
     }
 
@@ -2002,9 +2017,13 @@ static void cpuUemWord(CpuContext *activeCpu, bool writeToUem)
 **------------------------------------------------------------------------*/
 static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
     {
+    u32  absEcsAddr;
     u32  ecsAddress;
     u32  flEcs;
-    bool isZeroFill;
+    bool isExpandedAddress;
+    bool isFlagRegister = FALSE;
+    bool isMaintenance  = FALSE;
+    bool isZeroFill     = FALSE;
     u32  raEcs;
 
     /*
@@ -2016,24 +2035,57 @@ static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
 
         return;
         }
+    
+    isExpandedAddress = (activeCpu->exitMode & EmFlagExpandedAddress) != 0;
 
-    isZeroFill = FALSE;
+    ecsAddress = (u32)(activeCpu->regX[activeCpu->opK] & Mask30);
 
-    if (((features & IsSeries800) != 0)
-        && ((activeCpu->exitMode & EmFlagExpandedAddress) != 0))
+    if (isExpandedAddress)
         {
-        ecsAddress = (u32)(activeCpu->regX[activeCpu->opK] & Mask30);
-        raEcs      = (u32)(activeCpu->regRaEcs & Mask24);
-        flEcs      = (u32)(activeCpu->regFlEcs & Mask30);
-        isZeroFill = (modelType == ModelCyber865) && (((activeCpu->regX[activeCpu->opK] + activeCpu->regRaEcs) & (021 << 24)) != 0);
+        raEcs          = (u32)(activeCpu->regRaEcs & Mask24);
+        flEcs          = (u32)(activeCpu->regFlEcs & Mask30);
+        absEcsAddr     = ecsAddress + raEcs;
+        isFlagRegister = (ecsAddress & (1 << 29)) != 0
+                         && (activeCpu->regFlEcs & (1 << 29)) != 0;
+        if (isFlagRegister == FALSE && modelType == ModelCyber865)
+            {
+            if ((absEcsAddr & (5 << 22)) == (4 << 22)
+                || (absEcsAddr & (3 << 28)) == (1 << 28))
+                {
+                isZeroFill = TRUE;
+                }
+            else if ((absEcsAddr & (5 << 22)) == (5 << 22))
+                {
+                isMaintenance = TRUE;
+                }
+            }
         }
     else
         {
-        ecsAddress = (u32)(activeCpu->regX[activeCpu->opK] & Mask24);
-        raEcs      = (u32)(activeCpu->regRaEcs & Mask21);
-        flEcs      = (u32)(activeCpu->regFlEcs & Mask23);
-        isZeroFill = (modelType == ModelCyber865) && (((activeCpu->regX[activeCpu->opK] + activeCpu->regRaEcs) & (01 << 21)) != 0);
+        raEcs          = (u32)(activeCpu->regRaEcs & Mask21);
+        flEcs          = (u32)(activeCpu->regFlEcs & Mask23);
+        absEcsAddr     = ecsAddress + raEcs;
+        isFlagRegister = (ecsAddress & (1 << 23)) != 0
+                         && (activeCpu->regFlEcs & (1 << 23)) != 0;
+        if (isFlagRegister == FALSE && modelType == ModelCyber865)
+            {
+            if ((absEcsAddr & (7 << 21)) == (1 << 21))
+                {
+                isZeroFill = TRUE;
+                }
+            else if ((absEcsAddr & (3 << 22)) == (1 << 22))
+                {
+                isMaintenance = TRUE;
+                }
+            }
         }
+
+#if DEBUG_ECS
+    fprintf(emLog, "\nECS %s one  : %010o  RAE %010o, FLE %010o",
+        writeToEcs ? "write" : "read ", ecsAddress, raEcs, flEcs);
+    if (isExpandedAddress) fputs("  exp", emLog);
+    if (isZeroFill)        fputs("  zero fill", emLog);
+#endif
 
     /*
     **  Check for ECS range.
@@ -2041,8 +2093,8 @@ static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
     if (flEcs <= ecsAddress)
         {
         activeCpu->exitCondition |= EcAddressOutOfRange;
-#if EMDEBUG
-        fprintf(emLog, "   ECS AddressOutOfRange: EM %010o  FLE %010o  %s word\n",
+#if DEBUG_ECS
+        fprintf(emLog, "\n   ECS AddressOutOfRange: %010o  FLE %010o  %s word",
                 ecsAddress, flEcs, writeToEcs ? "write" : "read");
         dumpXP(activeCpu, 020, 017);
 #endif
@@ -2070,24 +2122,33 @@ static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
         }
 
     /*
-    **  Add base address.
-    */
-    ecsAddress += raEcs;
-
-    /*
     **  Perform the transfer.
     */
     if (writeToEcs)
         {
-        if (ecsAddress < extMaxMemory)
+        if (isZeroFill || absEcsAddr >= extMaxMemory)
             {
-            extMem[ecsAddress] = activeCpu->regX[activeCpu->opJ] & Mask60;
+#if DEBUG_ECS
+            if (isZeroFill == FALSE) fprintf(emLog, "  overflow (%010o >= %010o)", absEcsAddr, extMaxMemory);
+#endif
+            /*
+            **  No transfer and full exit to next instruction word.
+            */
+            activeCpu->regP = (activeCpu->regP + 1) & Mask18;
+            cpuFetchOpWord(activeCpu);
+            }
+        else
+            {
+            extMem[absEcsAddr] = activeCpu->regX[activeCpu->opJ] & Mask60;
             }
         }
     else
         {
-        if (isZeroFill)
+        if (isZeroFill || absEcsAddr >= extMaxMemory)
             {
+#if DEBUG_ECS
+            if (isZeroFill == FALSE) fprintf(emLog, "  overflow (%010o >= %010o)", absEcsAddr, extMaxMemory);
+#endif
             /*
             **  Zero Xj, then full exit to next instruction word.
             */
@@ -2095,16 +2156,9 @@ static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
             activeCpu->regP                 = (activeCpu->regP + 1) & Mask18;
             cpuFetchOpWord(activeCpu);
             }
-        else if (ecsAddress >= cpuMaxMemory)
-            {
-            /*
-            **  Zero Xj.
-            */
-            activeCpu->regX[activeCpu->opJ] = 0;
-            }
         else
             {
-            activeCpu->regX[activeCpu->opJ] = extMem[ecsAddress] & Mask60;
+            activeCpu->regX[activeCpu->opJ] = extMem[absEcsAddr] & Mask60;
             }
         }
     }
@@ -2141,28 +2195,28 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
         return;
         }
 
-    isZeroFill        = FALSE;
     isExpandedAddress = (activeCpu->exitMode & EmFlagExpandedAddress) != 0;
+
+    uemAddress = (u32)(activeCpu->regX[0] & Mask30);
 
     /*
     **  Calculate word count, source and destination addresses.
     */
     wordCount  = cpuAdd18(activeCpu->regB[activeCpu->opJ], activeCpu->opAddress);
-    absUemAddr = activeCpu->regX[0] + activeCpu->regRaEcs;
 
     if (((features & IsSeries800) != 0) && isExpandedAddress)
         {
-        uemAddress = (u32)(activeCpu->regX[0] & Mask30);
         raEcs      = (u32)(activeCpu->regRaEcs & Mask24);
         flEcs      = (u32)(activeCpu->regFlEcs & Mask30);
+        absUemAddr = uemAddress + raEcs;
         isZeroFill = modelType == ModelCyber865
                      && ((absUemAddr & (3 << 28)) == (1 << 28));
         }
     else
         {
-        uemAddress = (u32)(activeCpu->regX[0] & Mask24);
         raEcs      = (u32)(activeCpu->regRaEcs & Mask21);
-        flEcs      = (u32)(activeCpu->regFlEcs & Mask23);
+        flEcs      = (u32)(activeCpu->regFlEcs & Mask24);
+        absUemAddr = uemAddress + raEcs;
         isZeroFill = modelType == ModelCyber865
                      && (((absUemAddr & (5 << 21)) == (1 << 21))
                          || ((absUemAddr & (3 << 22)) == (1 << 22)));
@@ -2185,10 +2239,12 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
         wordCount = 0;
         }
 
-#if EMDEBUG
-    fprintf(emLog, "UEM %s: EM %010o  RAE %010o, FLE %010o  CM %06o  FL %08o  Words %d  zero fill %d\n",
-            writeToUem ? "write" : " read",
-            uemAddress, raEcs, flEcs, cmAddress, activeCpu->regFlCm, wordCount, isZeroFill);
+#if DEBUG_UEM
+    fprintf(emLog, "\nUEM block %s: %010o  RAE %010o, FLE %010o  CM %07o  RA %08o  FL %08o  Words %d",
+            writeToUem ? "write" : "read ",
+            uemAddress, raEcs, flEcs, cmAddress, activeCpu->regRaCm, activeCpu->regFlCm, wordCount);
+    if (isExpandedAddress) fputs("  exp", emLog);
+    if (isZeroFill)        fputs("  zero fill", emLog);
 #endif
 
     /*
@@ -2198,8 +2254,8 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
         || (activeCpu->regFlCm < cmAddress + wordCount)
         || (flEcs < uemAddress + wordCount))
         {
-#if EMDEBUG
-        fprintf(emLog, "   UEM AddressOutOfRange: EM %010o  FLE %010o  CM %06o  FL %08o  Words %d\n",
+#if DEBUG_UEM
+        fprintf(emLog, "\n   UEM AddressOutOfRange: EM %010o  FLE %010o  CM %06o  FL %08o  Words %d",
                 uemAddress, flEcs, cmAddress, activeCpu->regFlCm, wordCount);
         dumpXP(activeCpu, 020, 017);
 #endif
@@ -2238,8 +2294,6 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
     cmAddress  = cpuAddRa(activeCpu, cmAddress);
     cmAddress %= cpuMaxMemory;
 
-    uemAddress += raEcs;
-
     /*
     **  Perform the transfer.
     */
@@ -2247,18 +2301,15 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
         {
         while (wordCount--)
             {
-            if ((uemAddress >= cpuMaxMemory)
-                || (isExpandedAddress == TRUE && (uemAddress & (1 << 28)) != 0)
-                || (isExpandedAddress == FALSE && (uemAddress & (3 << 21)) != 0))
+            if (absUemAddr >= cpuMaxMemory)
                 {
-                /*
-                **  If bits 21 or 22 are non-zero, error exit to lower
-                **  30 bits of instruction word.
-                */
+#if DEBUG_UEM
+                fprintf(emLog, "  overflow (%010o >= %010o)", absUemAddr, cpuMaxMemory);
+#endif
                 return;
                 }
 
-            cpMem[uemAddress++] = cpMem[cmAddress] & Mask60;
+            cpMem[absUemAddr++] = cpMem[cmAddress] & Mask60;
 
             /*
             **  Increment CM address.
@@ -2273,21 +2324,24 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
 
         while (wordCount--)
             {
-            if (isZeroFill || (uemAddress >= cpuMaxMemory))
+            if (isZeroFill || (absUemAddr >= cpuMaxMemory))
                 {
+#if DEBUG_UEM
+                if (isZeroFill == FALSE)
+                    {
+                    fprintf(emLog, "  overflow (%010o >= %010o)", absUemAddr, cpuMaxMemory);
+                    isZeroFill = TRUE;
+                    }
+#endif
                 /*
-                **  If bits 21 or 22 are non-zero, zero CM, but take error exit
-                **  to lower 30 bits once zeroing is finished.
-                ** >>>>>>>>>>>> manual says to only do this when the condition is true on instruction start <<<<<<<<<<<<<<<<
-                ** >>>>>>>>>>>> NOS 2 now works by specifiying an address > cpuMaxMemory with bit 24 set?!? <<<<<<<<<<<<<<<<
-                ** >>>>>>>>>>>> Maybe the manual is wrong about bits 21/22 and it should be bit 24 instead? <<<<<<<<<<<<<<<<
+                **  Zero CM, but take error exit to lower 30 bits once zeroing is finished.
                 */
                 cpMem[cmAddress] = 0;
                 takeErrorExit    = TRUE;
                 }
             else
                 {
-                cpMem[cmAddress] = cpMem[uemAddress++] & Mask60;
+                cpMem[cmAddress] = cpMem[absUemAddr++] & Mask60;
                 }
 
             /*
@@ -2331,6 +2385,7 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
     u32  ecsAddress;
     u32  cmAddress;
     u32  flEcs;
+    bool isExpandedAddress;
     bool isFlagRegister;
     bool isMaintenance;
     bool isZeroFill;
@@ -2346,32 +2401,33 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
         return;
         }
 
-    isFlagRegister = FALSE;
-    isMaintenance  = FALSE; // for Cyber 865/875
-    isZeroFill     = FALSE; // for Cyber 865/875
+    ecsAddress = (u32)(activeCpu->regX[0] & Mask30);
+
+    isExpandedAddress = ((features & IsSeries800) != 0)
+        && ((activeCpu->exitMode & EmFlagExpandedAddress) != 0);
+    isFlagRegister    = FALSE;
+    isMaintenance     = FALSE; // for Cyber 865/875
+    isZeroFill        = FALSE; // for Cyber 865/875
 
     /*
     **  Calculate word count, source and destination addresses.
     */
     wordCount = cpuAdd18(activeCpu->regB[activeCpu->opJ], activeCpu->opAddress);
 
-    if (((features & IsSeries800) != 0)
-        && ((activeCpu->exitMode & EmFlagExpandedAddress) != 0))
+    if (isExpandedAddress)
         {
-        ecsAddress     = (u32)(activeCpu->regX[0] & Mask30);
         raEcs          = (u32)(activeCpu->regRaEcs & Mask24);
         flEcs          = (u32)(activeCpu->regFlEcs & Mask30);
-        isFlagRegister = (activeCpu->regX[0] & (1 << 29)) != 0
-                         && (activeCpu->regFlEcs & (1 << 29)) != 0;
+        absEcsAddr     = ecsAddress + raEcs;
+        isFlagRegister = (ecsAddress & (1 << 29)) != 0 && (flEcs & (1 << 29)) != 0;
         if (isFlagRegister == FALSE && modelType == ModelCyber865)
             {
-            absEcsAddr = activeCpu->regX[0] + activeCpu->regRaEcs;
-            if ((absEcsAddr & (037 << 25)) == (010 << 25)
-                || (absEcsAddr & (0275 << 22)) == (4 << 22))
+            if ((absEcsAddr & (5 << 22)) == (4 << 22)
+                || (absEcsAddr & (3 << 28)) == (1 << 28))
                 {
                 isZeroFill = TRUE;
                 }
-            else if ((absEcsAddr & (0375 << 22)) == (5 << 22))
+            else if ((absEcsAddr & (5 << 22)) == (5 << 22))
                 {
                 isMaintenance = TRUE;
                 }
@@ -2379,19 +2435,17 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
         }
     else
         {
-        ecsAddress     = (u32)(activeCpu->regX[0] & Mask24);
         raEcs          = (u32)(activeCpu->regRaEcs & Mask21);
-        flEcs          = (u32)(activeCpu->regFlEcs & Mask23);
-        isFlagRegister = (activeCpu->regX[0] & (1 << 23)) != 0
-                         && (activeCpu->regFlEcs & (1 << 23)) != 0;
+        flEcs          = (u32)(activeCpu->regFlEcs & Mask24);
+        absEcsAddr     = ecsAddress + raEcs;
+        isFlagRegister = (ecsAddress & (1 << 23)) != 0 && (flEcs & (1 << 23)) != 0;
         if (isFlagRegister == FALSE && modelType == ModelCyber865)
             {
-            absEcsAddr = activeCpu->regX[0] + activeCpu->regRaEcs;
             if ((absEcsAddr & (7 << 21)) == (1 << 21))
                 {
                 isZeroFill = TRUE;
                 }
-            else if ((absEcsAddr & (03 << 22)) == (1 << 22))
+            else if ((absEcsAddr & (3 << 22)) == (1 << 22))
                 {
                 isMaintenance = TRUE;
                 }
@@ -2401,26 +2455,25 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
     if (((features & IsSeries800) != 0)
         && ((activeCpu->exitMode & EmFlagEnhancedBlockCopy) != 0))
         {
-        cmAddress = (u32)((activeCpu->regX[0] >> 30) & Mask24);
+        cmAddress = (u32)((activeCpu->regX[0] >> 30) & Mask30);
         }
     else
         {
         cmAddress = activeCpu->regA[0] & Mask18;
         }
 
-#if EMDEBUG
-    fprintf(emLog, "ECS %s: EM %010o  RAE %010o, FLE %010o  CM %06o  FL %08o  Words %d\n",
-            writeToEcs ? "write" : " read",
-            ecsAddress, raEcs, flEcs, cmAddress, activeCpu->regFlCm, wordCount);
-    fprintf(emLog, "           flag reg %d  maintenance %d  zero fill %d\n",
-            isFlagRegister, isMaintenance, isZeroFill);
+#if DEBUG_ECS
+    fprintf(emLog, "\nECS block %s: %010o  RAE %010o, FLE %010o  CM %07o  RA %08o  FL %08o  Words %d",
+            writeToEcs ? "write" : "read ",
+            ecsAddress, raEcs, flEcs, cmAddress, activeCpu->regRaCm, activeCpu->regFlCm, wordCount);
+    if (isExpandedAddress) fputs("  exp", emLog);
+    if (isFlagRegister)    fputs("  flag", emLog);
+    if (isZeroFill)        fputs("  zero fill", emLog);
+    if (isMaintenance)     fputs("  maint", emLog);
 #endif
 
     /*
     **  Check if this is a flag register access.
-    **
-    **  The ECS book (60225100) says that a flag register reference occurs
-    **  when bit 23 is set in the relative address AND in the ECS FL.
     **
     **  Note that the ECS RA is NOT added to the relative address.
     */
@@ -2471,8 +2524,8 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
         || (activeCpu->regFlCm < cmAddress + wordCount)
         || (flEcs < ecsAddress + wordCount))
         {
-#if EMDEBUG
-        fprintf(emLog, "   ECS AddressOutOfRange: EM %010o  FLE %010o  CM %06o  FL %08o  Words %d\n",
+#if DEBUG_ECS
+        fprintf(emLog, "\n   ECS AddressOutOfRange: EM %010o  FLE %010o  CM %06o  FL %08o  Words %d",
                 ecsAddress, flEcs, cmAddress, activeCpu->regFlCm, wordCount);
         dumpXP(activeCpu, 020, 017);
 #endif
@@ -2511,8 +2564,6 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
     cmAddress  = cpuAddRa(activeCpu, cmAddress);
     cmAddress %= cpuMaxMemory;
 
-    ecsAddress += raEcs;
-
     /*
     **  Perform the transfer.
     */
@@ -2520,15 +2571,22 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
         {
         while (wordCount--)
             {
-            if (ecsAddress >= extMaxMemory)
+            if (absEcsAddr >= extMaxMemory)
                 {
+#if DEBUG_ECS
+                if (isZeroFill == FALSE)
+                    {
+                    fprintf(emLog, "  overflow (%010o >= %010o)", absEcsAddr, extMaxMemory);
+                    isZeroFill = TRUE;
+                    }
+#endif
                 /*
                 **  Error exit to lower 30 bits of instruction word.
                 */
                 return;
                 }
 
-            extMem[ecsAddress++] = cpMem[cmAddress] & Mask60;
+            extMem[absEcsAddr++] = cpMem[cmAddress] & Mask60;
 
             /*
             **  Increment CM address.
@@ -2543,8 +2601,15 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
 
         while (wordCount--)
             {
-            if (isZeroFill || (ecsAddress >= extMaxMemory))
+            if (isZeroFill || (absEcsAddr >= extMaxMemory))
                 {
+#if DEBUG_ECS
+                if (isZeroFill == FALSE)
+                    {
+                    fprintf(emLog, "  overflow (%010o >= %010o)", absEcsAddr, extMaxMemory);
+                    isZeroFill = TRUE;
+                    }
+#endif
                 /*
                 **  Zero CM, but take error exit to lower 30 bits once zeroing is finished.
                 */
@@ -2553,7 +2618,7 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
                 }
             else
                 {
-                cpMem[cmAddress] = extMem[ecsAddress++] & Mask60;
+                cpMem[cmAddress] = extMem[absEcsAddr++] & Mask60;
                 }
 
             /*
