@@ -736,7 +736,7 @@ dtc.connect()
       "#1000#]!",
       "#1000#INITIALIZE,AL,6.",
       "#1000#GO.",
-      "#5000#%year%%mon%%day%",
+      "#7500#%year%%mon%%day%",
       "#3000#%hour%%min%%sec%"
     ]));
   }
