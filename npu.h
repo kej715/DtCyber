@@ -386,7 +386,6 @@ typedef enum
     StConnInit = 0,
     StConnConnecting,
     StConnConnected,
-    StConnDisconnecting,
     StConnBusy
     } ConnectionState;
 

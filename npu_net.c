@@ -128,7 +128,6 @@ static char *connStates[]     =
     "idle",          // StConnInit
     "connecting",    // StConnConnecting
     "connected",     // StConnConnected
-    "disconnecting", // StConnDisconnecting
     "busy"           // StConnBusy
     };
 static char *connTypes[]      =
@@ -657,8 +656,7 @@ void npuNetCheckStatus(void)
     while (pollIndex <= npuNetMaxClaPort)
         {
         pcbp = &pcbs[pollIndex++];
-        if (pcbp->connFd <= 0
-            || (pcbp->ncbp != NULL && pcbp->ncbp->state == StConnDisconnecting))
+        if (pcbp->connFd <= 0)
             {
             continue;
             }

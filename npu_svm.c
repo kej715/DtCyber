@@ -812,18 +812,14 @@ void npuSvmSendDiscRequest(Tcb *tp)
         requestTerminateConnection[BlkOffP3] = tp->cn;
         npuBipRequestUplineCanned(requestTerminateConnection, sizeof(requestTerminateConnection));
         tp->state = StTermNpuRequestDisconnect;
-        if (tp->pcbp != NULL && tp->pcbp->ncbp != NULL)
-            {
-            tp->pcbp->ncbp->state = StConnDisconnecting;
-            }
         break;
 
     case StTermIdle:                   // terminal is not yet configured or connected
     case StTermRequestConnection:      // awaiting response to terminal connection request
-    case StTermNpuRequestDisconnect:   // disconnection has been requested by NPU/MDI
     case StTermHostRequestDisconnect:  // disconnection has been requested by host
         fprintf(stderr, "Warning - disconnect request ignored for %.7s in state %s\n",
                 tp->termName, npuSvmTermStates[tp->state]);
+    case StTermNpuRequestDisconnect:   // disconnection has been requested by NPU/MDI
         break;
 
     default:
