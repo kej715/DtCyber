@@ -7,6 +7,7 @@ const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
+let emEqOrdinal    = 6;           // ESM equipment ordinal
 let newHostID      = null;        // new network host identifier
 let newMID         = null;        // new machine identifer
 let oldHostID      = "NCCM01";    // old network host identifier
@@ -95,71 +96,97 @@ const processCmrdProps = () => {
  *  to be edited into the PRODUCT file, if any.
  */
 const processEqpdProps = () => {
-  if (typeof customProps["EQPDECK"] !== "undefined") {
+  if (typeof customProps["EQPDECK"] !== "undefined"
+      || (oldMID !== newMID && newMID !== null)) {
     return dtc.say("Edit EQPD01 ...")
     .then(() => utilities.getSystemRecord(dtc, "EQPD01"))
     .then(eqpd01 => {
-      for (const prop of customProps["EQPDECK"]) {
-        let ei = prop.indexOf("=");
-        if (ei < 0) {
-          throw new Error(`Invalid EQPDECK definition: \"${prop}\"`);
+      if (oldMID !== newMID && newMID !== null) {
+        //
+        //  Check for XM entry in existing equipment deck
+        //
+        let updatedDeck = [];
+        for (const line of eqpd01.split("\n")) {
+          if (line.startsWith("XM=")) {
+            let fields = line.split(",");
+            updatedDeck.push(`XM=${newMID},${fields.slice(1).join(",")}`);
+          }
+          else {
+            updatedDeck.push(line);
+          }
         }
-        let key   = prop.substring(0, ei).trim().toUpperCase();
-        let value = prop.substring(ei + 1).trim().toUpperCase();
-        let si = 0;
-        let isEQyet = false;
-        let isPFyet = false;
-        while (si < eqpd01.length) {
-          let ni = eqpd01.indexOf("\n", si);
-          if (ni < 0) ni = eqpd01.length - 1;
-          let ei = eqpd01.indexOf("=", si);
-          if (ei < ni && ei > 0) {
-            let eqpdKey = eqpd01.substring(si, ei).trim();
-            if (eqpdKey.startsWith("EQ")) {
-              isEQyet = true;
+        eqpd01 = updatedDeck.join("\n");
+      }
+      //
+      //  Edit equipment deck to include new/updated entries
+      //
+      
+      if (typeof customProps["EQPDECK"] !== "undefined") {
+        for (const prop of customProps["EQPDECK"]) {
+          let ei = prop.indexOf("=");
+          if (ei < 0) {
+            ei = prop.indexOf(",");
+            if (ei < 0) {
+              throw new Error(`Invalid EQPDECK definition: \"${prop}\"`);
             }
-            if (eqpdKey === "PF") {
-              isPFyet = true;
-            }
-            if (eqpdKey === key) {
-              if (key === "PF") {
-                let ci = value.indexOf(",");
-                if (ci < 0) {
-                  throw new Error(`Invalid EQPDECK definition: \"${prop}\"`);
+          }
+          let key   = prop.substring(0, ei).trim().toUpperCase();
+          let value = prop.substring(ei + 1).trim().toUpperCase();
+          let si = 0;
+          let isEQyet = false;
+          let isPFyet = false;
+          while (si < eqpd01.length) {
+            let ni = eqpd01.indexOf("\n", si);
+            if (ni < 0) ni = eqpd01.length - 1;
+            let ei = eqpd01.indexOf("=", si);
+            if (ei < ni && ei > 0) {
+              let eqpdKey = eqpd01.substring(si, ei).trim();
+              if (eqpdKey.startsWith("EQ")) {
+                isEQyet = true;
+              }
+              else if (eqpdKey === "PF") {
+                isPFyet = true;
+              }
+              if (eqpdKey === key) {
+                if (key === "PF") {
+                  let ci = value.indexOf(",");
+                  if (ci < 0) {
+                    throw new Error(`Invalid EQPDECK definition: \"${prop}\"`);
+                  }
+                  let propPFN = parseInt(value.substring(0, ci).trim());
+                  ci = eqpd01.indexOf(",", ei + 1);
+                  let eqpdPFN = parseInt(eqpd01.substring(ei + 1, ci).trim());
+                  if (propPFN === eqpdPFN) {
+                    eqpd01 = `${eqpd01.substring(0, si)}${key}=${value}\n${eqpd01.substring(ni + 1)}`;
+                    break;
+                  }
+                  else if (propPFN < eqpdPFN) {
+                    eqpd01 = `${eqpd01.substring(0, si)}${key}=${value}\n${eqpd01.substring(si)}`;
+                    break;
+                  }
                 }
-                let propPFN = parseInt(value.substring(0, ci).trim());
-                ci = eqpd01.indexOf(",", ei + 1);
-                let eqpdPFN = parseInt(eqpd01.substring(ei + 1, ci).trim());
-                if (propPFN === eqpdPFN) {
+                else {
                   eqpd01 = `${eqpd01.substring(0, si)}${key}=${value}\n${eqpd01.substring(ni + 1)}`;
                   break;
                 }
-                else if (propPFN < eqpdPFN) {
+              }
+              else if (isEQyet && key.startsWith("EQ") && !eqpdKey.startsWith("*")) {
+                if (!eqpdKey.startsWith("EQ")
+                    || parseInt(key.substring(2)) < parseInt(eqpdKey.substring(2))) {
                   eqpd01 = `${eqpd01.substring(0, si)}${key}=${value}\n${eqpd01.substring(si)}`;
                   break;
                 }
               }
-              else {
-                eqpd01 = `${eqpd01.substring(0, si)}${key}=${value}\n${eqpd01.substring(ni + 1)}`;
-                break;
-              }
-            }
-            else if (isEQyet && key.startsWith("EQ") && !eqpdKey.startsWith("*")) {
-              if (!eqpdKey.startsWith("EQ")
-                  || parseInt(key.substring(2)) < parseInt(eqpdKey.substring(2))) {
+              else if (isPFyet && key === "PF" && !eqpdKey.startsWith("*") && eqpdKey !== "REMOVE") {
                 eqpd01 = `${eqpd01.substring(0, si)}${key}=${value}\n${eqpd01.substring(si)}`;
                 break;
               }
             }
-            else if (isPFyet && key === "PF" && !eqpdKey.startsWith("*") && eqpdKey !== "REMOVE") {
-              eqpd01 = `${eqpd01.substring(0, si)}${key}=${value}\n${eqpd01.substring(si)}`;
-              break;
-            }
+            si = ni + 1;
           }
-          si = ni + 1;
-        }
-        if (si >= eqpd01.length) {
-          eqpd01 += `${key}=${value}\n`;
+          if (si >= eqpd01.length) {
+            eqpd01 += `${prop.toUpperCase()}\n`;
+          }
         }
       }
       productRecords.push(eqpd01);
@@ -689,15 +716,42 @@ dtc.connect()
   }
 })
 .then(() => dtc.say("Deadstart using the new tape ..."))
-.then(() => dtc.start({
-    detached: true,
-    stdio:    [0, "ignore", 2],
-    unref:    false
-}))
-.then(() => dtc.sleep(5000))
-.then(() => dtc.connect(newIpAddress))
-.then(() => dtc.expect([{ re: /Operator> $/ }]))
-.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => {
+  if (oldMID !== newMID && newMID !== null) {
+    return dtc.start(["manual"], {
+      detached: true,
+      stdio:    [0, "ignore", 2],
+      unref:    false
+    })
+    .then(() => dtc.sleep(5000))
+    .then(() => dtc.connect(newIpAddress))
+    .then(() => dtc.expect([{ re: /Operator> $/ }]))
+    .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+    .then(() => dtc.dsd([
+      "O!",
+      "#1000#P!",
+      "#1000#D=YES",
+      "#1000#",
+      "#5000#NEXT.",
+      "#1000#]!",
+      "#1000#INITIALIZE,AL,6.",
+      "#1000#GO.",
+      "#7500#%year%%mon%%day%",
+      "#3000#%hour%%min%%sec%"
+    ]));
+  }
+  else {
+    return dtc.start({
+      detached: true,
+      stdio:    [0, "ignore", 2],
+      unref:    false
+    })
+    .then(() => dtc.sleep(5000))
+    .then(() => dtc.connect(newIpAddress))
+    .then(() => dtc.expect([{ re: /Operator> $/ }]))
+    .then(() => dtc.attachPrinter("LP5xx_C12_E5"));
+  }
+})
 .then(() => dtc.expect([{ re: /QUEUE FILE UTILITY COMPLETE/ }], "printer"))
 .then(() => dtc.say("Deadstart complete"))
 .then(() => dtc.say("Reconfiguration complete"))

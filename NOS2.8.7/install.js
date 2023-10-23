@@ -14,7 +14,8 @@ let imageName           = "nos287-full-865";
 
 const imageMap = {
   "nos287-full-865": "https://www.dropbox.com/s/4tey61kc0sa7swu/nos287rtr-full-865.zip?dl=1",
-  "nos287-full-875": "https://www.dropbox.com/scl/fi/0z0wxoxd2j30ko4evlvii/nos287rtr-full-875.zip?rlkey=bgxojr3ulhkj47ctrs2lp1rrk&dl=1"
+  "nos287-full-875": "https://www.dropbox.com/scl/fi/0z0wxoxd2j30ko4evlvii/nos287rtr-full-875.zip?rlkey=bgxojr3ulhkj47ctrs2lp1rrk&dl=1",
+  "nos287-full-875-beast": "https://www.dropbox.com/scl/fi/15wl0zf55y2azt6tpbtkv/nos287rtr-full-875-beast.zip?rlkey=jmfckxm8mt8jxpxsn0vocwr9x&dl=1"
 };
 
 const usage = () => {
@@ -24,8 +25,10 @@ const usage = () => {
   process.stderr.write("  full       : install a full system with all optional products\n");
   process.stderr.write("  readytorun : (alias rtr) install a ready-to-run system image\n");
   process.stderr.write("               <image name> is one of:\n");
-  process.stderr.write("                 nos287-full-865 : (default) full NOS 2.8.7 system running on a Cyber 865\n");
-  process.stderr.write("                 nos287-full-875 : full NOS 2.8.7 system running on a Cyber 875\n");
+  process.stderr.write("                 nos287-full-865       : full NOS 2.8.7 system running on a Cyber 865 (default)\n");
+  process.stderr.write("                 nos287-full-875       : full NOS 2.8.7 system running on a Cyber 875\n");
+  process.stderr.write("                 nos287-full-875-beast : full NOS 2.8.7 system running on a Cyber 875\n");
+  process.stderr.write("                                         with 16M ESM and 885-42 disks\n");
   process.stderr.write("  continue   : (alias cont) continue basic or full installation from last point of interruption\n");
   process.exit(1);
 };

@@ -134,8 +134,10 @@ features. The general syntax of a call to the tool is:
   full       : install a full system from scratch with all optional products
   readytorun : (alias rtr) install a ready-to-run system image
                <image name> is one of:
-                 nos287-full-865 : (default) full NOS 2.8.7 system running on a Cyber 865
-                 nos287-full-875 : full NOS 2.8.7 system running on a Cyber 875
+                 nos287-full-865       : full NOS 2.8.7 system running on a Cyber 865 (default)
+                 nos287-full-875       : full NOS 2.8.7 system running on a Cyber 875
+                 nos287-full-875-beast : full NOS 2.8.7 system running on a Cyber 875
+                                         with 16M ESM and four 885-42 disks
   continue   : (alias cont) continue basic or full installation from last point of interruption
 ```
 
@@ -147,8 +149,9 @@ shown in the table, below. The name of the default image is `nos287-full-865`.
 
 | Name            | Description                                                      |
 |-----------------|------------------------------------------------------------------|
-| nos287&minus;full&minus;865 | This image includes all available programming languages and other features, and it runs on a fully configured **Cyber 865** mainframe. **This is the default system image.** |
-| nos287&minus;full&minus;875 | This image includes all available programming languages and other features, and it runs on a fully configured **Cyber 875** mainframe. |
+| nos287&minus;full&minus;865 | This image includes all available programming languages and other features, and it runs on a **Cyber 865** mainframe with a full complement (2M words) of central memory and 2M words of ESM. **This is the default system image.** |
+| nos287&minus;full&minus;875 | This image includes all available programming languages and other features, and it runs on a **Cyber 875** mainframe with a full complement (4M words) of central memory and 2M words of ESM. |
+| nos287&minus;full&minus;875&minus;beast | This image includes all available programming languages and other features, and it runs on a **Cyber 875** mainframe with a full complement (4M words) of central memory, 16M words of ESM, and four 885-42 buffered disk drives. |
 
 Example:
 ```

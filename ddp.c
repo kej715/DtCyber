@@ -49,10 +49,13 @@
 #define FcDdpWriteECS          05002
 #define FcDdpStatus            05004
 #define FcDdpMasterClear       05010
-#define FcDdpClearMaintMode    05020
-#define FcDdpClearDdpPort      05030
-#define FcDdpFlagRegister      05040
-#define FcDdpSelectEsmMode     05404
+#define FcDdpClearMaintMode    05020  // DC145
+#define FcDdpMaintModeRead     05021  // DC145
+#define FcDdpMaintModeWrite    05022  // DC145
+#define FcDdpClearDdpPort      05030  // DC145
+#define FcDdpFlagRegister      05040  // DC145
+#define FcDdpReadOne           05041  // DC145
+#define FcDdpSelectEsmMode     05404  // DC145
 
 /*
 **      Status reply flags
@@ -150,10 +153,6 @@ void ddpInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     DevSlot    *dp;
     DdpContext *dc;
 
-    (void)eqNo;
-    (void)unitNo;
-    (void)deviceName;
-
     if (extMaxMemory == 0)
         {
         fprintf(stderr, "(ddp    ) Cannot configure DDP, no ECS configured\n");
@@ -205,6 +204,8 @@ static FcStatus ddpFunc(PpWord funcCode)
 
     dc = (DdpContext *)(activeDevice->context[0]);
 
+    funcCode &= 07077;
+
 #if DEBUG
     fprintf(ddpLog, "\n(ddp    ) %06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
             traceSequenceNo,
@@ -223,11 +224,14 @@ static FcStatus ddpFunc(PpWord funcCode)
         break;
 
     case FcDdpWriteECS:
+    case FcDdpMaintModeWrite:
         dc->curword = 0;
 
     case FcDdpReadECS:
+    case FcDdpReadOne:
     case FcDdpStatus:
     case FcDdpFlagRegister:
+    case FcDdpMaintModeRead:
         dc->abyte           = 0;
         dc->dbyte           = 0;
         dc->addr            = 0;
@@ -255,10 +259,30 @@ static FcStatus ddpFunc(PpWord funcCode)
 **
 **  Returns:        Nothing.
 **
+**  Notes:
+**
+**  For the DC135 (used with ECS):
+**    - Maintenance mode is selected on read when when bit 21 is set in the ECS address
+**    - One word is read when bit 22 is set in the ECS address
+**    - A flag register reference occurs on read when bit 23 is set in the ECS address
+**
+**  For the DC145 (used with ESM):
+**    It's not clear what should occur when high address bits are set as this DDP
+**    model has explicit functions for handling maintenance mode, one word reads,
+**    and flag register references. When ESM size is greater than 2M words, NOS 2
+**    seems to expect that bits 21, 22, 23 are -NOT- special. For backward compatibility
+**    with previous versions of DtCyber, bits 21 - 23 will continue to be handled as
+**    special -UNLESS- ESM size is greater than 2M words.
+**
 **------------------------------------------------------------------------*/
 static void ddpIo(void)
     {
+    u32        addr;
     DdpContext *dc;
+    bool       isFlagReg = FALSE;
+    bool       isMaint   = FALSE;
+    bool       isRead    = FALSE;
+    bool       isReadOne = FALSE;
 
     dc = (DdpContext *)(activeDevice->context[0]);
 
@@ -281,8 +305,13 @@ static void ddpIo(void)
         break;
 
     case FcDdpReadECS:
-    case FcDdpWriteECS:
+    case FcDdpReadOne:
     case FcDdpFlagRegister:
+    case FcDdpMaintModeRead:
+        isRead = TRUE;
+
+    case FcDdpWriteECS:
+    case FcDdpMaintModeWrite:
         if (dc->abyte < 2)
             {
             /*
@@ -302,17 +331,22 @@ static void ddpIo(void)
                 fprintf(ddpLog, " ECS addr: %08o Data: ", dc->addr);
 #endif
 
-                if ((activeDevice->fcode == FcDdpReadECS) || (activeDevice->fcode == FcDdpFlagRegister))
+                if (isRead)
                     {
                     /*
                     **  Delay a bit before we set channel full.
                     */
                     dc->endaddrcycle = cycles;
 
-                    /*
-                    **  A flag register reference occurs when bit 23 is set in address.
-                    */
-                    if (((dc->addr & DdpAddrFlagReg) != 0) || (activeDevice->fcode == FcDdpFlagRegister))
+                    if (extMemType == ECS || extMaxMemory <= 2*1024*1024)
+                        {
+                        isFlagReg = (dc->addr & DdpAddrFlagReg) != 0;
+                        }
+                    else
+                        {
+                        isFlagReg = activeDevice->fcode == FcDdpFlagRegister;
+                        }
+                    if (isFlagReg)
                         {
 #if DEBUG
                         fputs("(flag register operation: ", ddpLog);
@@ -342,11 +376,21 @@ static void ddpIo(void)
                         {
                         dc->dbyte = -1;
 #if DEBUG
-                        if ((dc->addr & DdpAddrReadOne) != 0)
+                        if (extMemType == ECS || extMaxMemory <= 2*1024*1024)
+                            {
+                            isReadOne = (dc->addr & DdpAddrReadOne) != 0;
+                            isMaint   = (dc->addr & DdpAddrMaint)   != 0;
+                            }
+                        else
+                            {
+                            isReadOne = activeDevice->fcode == FcDdpReadOne;
+                            isMaint   = activeDevice->fcode == FcDdpMaintModeRead;
+                            }
+                        if (isReadOne)
                             {
                             fputs("(one reference) ", ddpLog);
                             }
-                        else if ((dc->addr & DdpAddrMaint) != 0)
+                        else if (isMaint)
                             {
                             fputs("(maintenance mode) ", ddpLog);
                             }
@@ -358,16 +402,28 @@ static void ddpIo(void)
             break;
             }
 
-        if (activeDevice->fcode == FcDdpReadECS)
+        if (isRead)
             {
             if (!activeChannel->full && (cycles - dc->endaddrcycle > 20))
                 {
+                if (extMemType == ECS || extMaxMemory <= 2*1024*1024)
+                    {
+                    isReadOne = (dc->addr & DdpAddrReadOne) != 0;
+                    isMaint   = (dc->addr & DdpAddrMaint)   != 0;
+                    addr      = dc->addr & Mask21;
+                    }
+                else
+                    {
+                    isReadOne = activeDevice->fcode == FcDdpReadOne;
+                    isMaint   = activeDevice->fcode == FcDdpMaintModeRead;
+                    addr      = dc->addr & Mask24;
+                    }
                 if (dc->dbyte == -1)
                     {
                     /*
                     **  Fetch next 60 bits from ECS.
                     */
-                    if (cpuDdpTransfer(dc->addr & Mask21, &dc->curword, FALSE))
+                    if (cpuDdpTransfer(addr, &dc->curword, FALSE))
                         {
                         dc->stat = StDdpAccept;
                         }
@@ -399,7 +455,7 @@ static void ddpIo(void)
                 dc->curword <<= 12;
                 if (++dc->dbyte == 5)
                     {
-                    if ((dc->addr & DdpAddrReadOne) != 0)
+                    if (isReadOne)
                         {
                         activeChannel->discAfterInput = TRUE;
                         }
@@ -425,7 +481,7 @@ static void ddpIo(void)
                 /*
                 **  Write next 60 bit to ECS.
                 */
-                if (!cpuDdpTransfer(dc->addr, &dc->curword, TRUE))
+                if (activeDevice->fcode != FcDdpMaintModeWrite && !cpuDdpTransfer(dc->addr, &dc->curword, TRUE))
                     {
 #if DEBUG
                     fputs(" abort", ddpLog);

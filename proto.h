@@ -475,6 +475,7 @@ extern bool                emulationActive;
 extern const char          extBcdToAscii[64];
 extern u32                 extMaxMemory;
 extern CpWord              *extMem;
+extern ExtMemory           extMemType;
 extern ModelFeatures       features;
 extern ModelType           modelType;
 extern u16                 mux6676TelnetConns;
