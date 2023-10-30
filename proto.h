@@ -306,6 +306,7 @@ void mux6676ShowStatus();
 **  net_util.c
 */
 #if defined(_WIN32)
+SOCKET netAcceptConnection(SOCKET sd);
 void   netCloseConnection(SOCKET sd);
 SOCKET netCreateListener(int port);
 SOCKET netCreateSocket(int port, bool isReuse);
@@ -314,6 +315,7 @@ char  *netGetLocalTcpAddress(SOCKET sd);
 char  *netGetPeerTcpAddress(SOCKET sd);
 SOCKET netInitiateConnection(struct sockaddr *sap);
 #else
+int    netAcceptConnection(int sd);
 void   netCloseConnection(int sd);
 int    netCreateListener(int port);
 int    netCreateSocket(int port, bool isReuse);

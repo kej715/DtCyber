@@ -927,20 +927,17 @@ static void npuNetSendConsoleMsg(int connFd, int connType, char *msg)
 **------------------------------------------------------------------------*/
 static int npuNetAcceptConnections(fd_set *selectFds, int maxFd)
     {
+#if defined(_WIN32)
+    SOCKET             acceptFd;
+#else
     int                acceptFd;
+#endif
     fd_set             acceptFds;
-    struct sockaddr_in from;
     int                i;
     int                n;
     Ncb                *ncbp;
     int                rc;
     struct timeval     timeout;
-
-#if defined(_WIN32)
-    int fromLen;
-#else
-    socklen_t fromLen;
-#endif
 
     timeout.tv_sec  = 1;
     timeout.tv_usec = 0;
@@ -950,7 +947,7 @@ static int npuNetAcceptConnections(fd_set *selectFds, int maxFd)
     rc = select(maxFd + 1, &acceptFds, NULL, NULL, &timeout);
     if (rc < 0)
         {
-        fprintf(stderr, "NET: select returned unexpected %d\n", rc);
+        fprintf(stderr, "(npu_net) select returned unexpected %d\n", rc);
         sleepMsec(1000);
         }
     else if (rc < 1)
@@ -976,13 +973,12 @@ static int npuNetAcceptConnections(fd_set *selectFds, int maxFd)
         case ConnTypeTrunk:
             if ((ncbp->lstnFd > 0) && FD_ISSET(ncbp->lstnFd, &acceptFds))
                 {
-                fromLen  = sizeof(from);
-                acceptFd = accept(ncbp->lstnFd, (struct sockaddr *)&from, &fromLen);
-                if (acceptFd < 0)
-                    {
-                    fputs("(npu_net) spurious connection attempt\n", stderr);
-                    }
-                else if (npuNetProcessNewConnection(acceptFd, ncbp, TRUE))
+                acceptFd = netAcceptConnection(ncbp->lstnFd);
+#if defined(_WIN32)
+                if (acceptFd != INVALID_SOCKET && npuNetProcessNewConnection(acceptFd, ncbp, TRUE))
+#else
+                if (acceptFd >= 0 && npuNetProcessNewConnection(acceptFd, ncbp, TRUE))
+#endif
                     {
                     n += 1;
                     }

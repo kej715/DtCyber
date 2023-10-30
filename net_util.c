@@ -54,6 +54,7 @@
 **  Private Constants
 **  -----------------
 */
+#define MaxListenBacklog 100
 
 /*
 **  -----------------------
@@ -92,6 +93,47 @@
  **
  **--------------------------------------------------------------------------
  */
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Accepts a network connection
+**
+**  Parameters:     Name        Description.
+**                  sd          socket descriptor
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+#if defined(_WIN32)
+SOCKET netAcceptConnection(SOCKET sd)
+    {
+    SOCKET             acceptFd;
+    struct sockaddr_in from;
+    int                fromLen;
+
+    fromLen  = sizeof(from);
+    acceptFd = accept(sd, (struct sockaddr *)&from, &fromLen);
+    if (acceptFd == INVALID_SOCKET)
+        {
+        fprintf(stderr, "(net_util) accept failed, rc=%d\n", WSAGetLastError());
+        }
+    return acceptFd;
+    }
+#else
+int netAcceptConnection(int sd)
+    {
+    int                acceptFd;
+    struct sockaddr_in from;
+    socklen_t          fromLen;
+
+    fromLen  = sizeof(from);
+    acceptFd = accept(sd, (struct sockaddr *)&from, &fromLen);
+    if (acceptFd < 0)
+        {
+        perror("(net_util) accept");
+        }
+    return acceptFd;
+    }
+#endif
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Closes a network connection
@@ -146,7 +188,7 @@ int    netCreateListener(int port)
     /*
     **  Start listening for new connections on this TCP port number
     */
-    if (listen(sd, 10) == -1)
+    if (listen(sd, MaxListenBacklog) == -1)
         {
 #if DEBUG
         perror("(net_util) listen");
