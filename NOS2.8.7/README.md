@@ -55,6 +55,8 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[rhpNode](#rhpNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[smtpDomain](#smtpDomain)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[stkDrivePath](#stkDrivePath)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[haspTerminal](#haspTerminal)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[haspPorts](#haspPorts)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfNode](#tlfNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfPorts](#tlfPorts)
 - &nbsp;&nbsp;&nbsp;&nbsp;[[RESOLVER]](#resolver)
@@ -1521,6 +1523,34 @@ panel value to each NOS system. Example:
 ```
     stkDrivePath=M0P1D0
 ```
+
+- <a id="haspTerminal"></a>**haspTerminal** : Defines the name and connection information
+for a HASP terminal. Two generic HASP terminals are defined in the base system, and this
+entry allows you to define additional ones. The general syntax of this entry is:
+
+    haspTerminal=*username*,*tcp-port*[,B*block-size*]
+    
+    | Parameter  | Description |
+    |------------|-------------|
+    | username   | The username associated with the terminal. |
+    | tcp-port   | The TCP port on which DtCyber will listen for connections to this terminal. |
+    | block-size | Optional block size, in bytes, to use in communicating with peers. The default is 400. |
+
+    Example:
+    
+    `haspTerminal=MOE,2555`
+    
+- <a id="haspPorts"></a>**haspPorts** : Specifies the range of CLA ports that will be
+used in defining additional HASP terminals for use by RBF in the NOS NDL. The general
+syntax of this entry is:
+
+    haspPorts=*cla-port-number*,*port-count*
+    
+    Where *cla-port-number* is the number of the first CLA port to be used, and
+    *port-count* defines the maximum number of ports to be used. The default is
+    equivalent to:
+    
+    `haspPorts=0x26,2`
 
 - <a id="tlfNode"></a>**tlfNode** : Defines the name and routing information for a TLF
 node. The general syntax of this entry is:
