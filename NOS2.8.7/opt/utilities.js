@@ -153,6 +153,58 @@ const utilities = {
     return dtc.createJobWithOutput(12, 4, job, options);
   },
 
+  getHaspTerminals: dtc => {
+
+    if (typeof utilities.haspTerminals !== "undefined") return utilities.haspTerminals;
+
+    const customProps     = utilities.getCustomProperties(dtc);
+    let   nextPort        = 0x26;
+    let   portCount       = 2;
+    utilities.haspTerminals = {};
+
+    if (typeof customProps["NETWORK"] !== "undefined") {
+      for (let line of customProps["NETWORK"]) {
+        line = line.toUpperCase();
+        let ei = line.indexOf("=");
+        if (ei < 0) continue;
+        let key   = line.substring(0, ei).trim();
+        let value = line.substring(ei + 1).trim();
+        if (key === "HASPTERMINAL") {
+          //
+          //  haspTerminal=<name>,<tcp-port>,[,B<block-size>]
+          //
+          let items = value.split(",");
+          if (items.length >= 2) {
+            let terminal = {
+              id:         items.shift(),
+              tcpPort:    parseInt(items.shift()),
+              blockSize: 400
+            };
+            while (items.length > 0) {
+              let item = items.shift();
+              if (item.startsWith("B")) {
+                terminal.blockSize = parseInt(item.substring(1));
+              }
+            }
+            utilities.haspTerminals[terminal.id] = terminal;
+          }
+        }
+        else if (key === "HASPPORTS") {
+          let items = value.split(",");
+          if (items.length > 0) nextPort  = parseInt(items.shift());
+          if (items.length > 0) portCount = parseInt(items.shift());
+        }
+      }
+    }
+    const terminalNames = Object.keys(utilities.haspTerminals).sort();
+    for (const name of terminalNames) {
+      if (portCount < 1) throw new Error("Insufficient number of HASP ports defined");
+      utilities.haspTerminals[name].claPort = nextPort++;
+      portCount -= 1;
+    }
+    return utilities.haspTerminals;
+  },
+
   getHostDomainName: dtc => {
     return utilities.getHostRecord(dtc)
     .then(record => {

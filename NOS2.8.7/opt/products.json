@@ -230,7 +230,8 @@
         "post": [
           "nos.post",
           "rbf5-users.job",
-          "rbf5.post"
+          "rbf5.post",
+          "../rbf-configure.js"
         ],
         "lib": 48,
         "records": "ABS/RBF2P0-OVL/RBF0200",

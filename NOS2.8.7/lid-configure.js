@@ -29,14 +29,15 @@ const isTlfInstalled = utilities.isInstalled("tlf");
 // Customizations include locally defined NJE and TLF nodes.
 //
 const mfTypeTable = {
-  COS:   "COS",
-  JES2:  "MVS",
-  JNET:  "VAX/VMS",
-  NJEF:  "NOS2",
-  NJE38: "MVS",
-  NOS:   "NOS2",
-  PRIME: "PRIME",
-  RSCS:  "VM/CMS"
+  COS:     "COS",
+  HUJINET: "UNIX",
+  JES2:    "MVS",
+  JNET:    "VAX/VMS",
+  NJEF:    "NOS2",
+  NJE38:   "MVS",
+  NOS:     "NOS2",
+  PRIME:   "PRIME",
+  RSCS:    "VM/CMS"
 };
 
 let topology = {};

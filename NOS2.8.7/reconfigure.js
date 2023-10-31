@@ -447,10 +447,13 @@ dtc.connect()
 .then(() => dtc.disconnect())
 .then(() => dtc.exec("node", ["opt/rhp-update-ndl"]))
 .then(() => {
-  return utilities.isInstalled("cybis") ? dtc.exec("node", ["opt/cybis-update-ndl"]) : Promise.resolve();
+  return utilities.isInstalled("cybis-base") ? dtc.exec("node", ["opt/cybis-update-ndl"]) : Promise.resolve();
 })
 .then(() => {
   return utilities.isInstalled("njf") ? dtc.exec("node", ["opt/njf-update-ndl"]) : Promise.resolve();
+})
+.then(() => {
+  return utilities.isInstalled("rbf5") ? dtc.exec("node", ["opt/rbf5-update-ndl"]) : Promise.resolve();
 })
 .then(() => {
   return utilities.isInstalled("tlf") ? dtc.exec("node", ["opt/tlf-update-ndl"]) : Promise.resolve();
@@ -459,6 +462,9 @@ dtc.connect()
 .then(() => dtc.exec("node", ["rhp-configure", "-ndl"]))
 .then(() => {
   return utilities.isInstalled("njf") ? dtc.exec("node", ["njf-configure", "-ndl"]) : Promise.resolve();
+})
+.then(() => {
+  return utilities.isInstalled("rbf5") ? dtc.exec("node", ["rbf-configure", "-ndl"]) : Promise.resolve();
 })
 .then(() => {
   return utilities.isInstalled("tlf") ? dtc.exec("node", ["tlf-configure", "-ndl"]) : Promise.resolve();
