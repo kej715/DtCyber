@@ -15,7 +15,8 @@ let imageName           = "nos287-full-865";
 const imageMap = {
   "nos287-full-865": "https://www.dropbox.com/s/4tey61kc0sa7swu/nos287rtr-full-865.zip?dl=1",
   "nos287-full-875": "https://www.dropbox.com/scl/fi/0z0wxoxd2j30ko4evlvii/nos287rtr-full-875.zip?rlkey=bgxojr3ulhkj47ctrs2lp1rrk&dl=1",
-  "nos287-full-875-beast": "https://www.dropbox.com/scl/fi/15wl0zf55y2azt6tpbtkv/nos287rtr-full-875-beast.zip?rlkey=jmfckxm8mt8jxpxsn0vocwr9x&dl=1"
+  "nos287-full-875-beast": "https://www.dropbox.com/scl/fi/15wl0zf55y2azt6tpbtkv/nos287rtr-full-875-beast.zip?rlkey=jmfckxm8mt8jxpxsn0vocwr9x&dl=1",
+  "nos287-most-175": "https://www.dropbox.com/scl/fi/0y0yycmilzytrjp0febyy/nos287rtr-most-175.zip?rlkey=zbagqkdzvst9p7t1m94oa5pp8&dl=1"
 };
 
 const usage = () => {
@@ -29,6 +30,8 @@ const usage = () => {
   process.stderr.write("                 nos287-full-875       : full NOS 2.8.7 system running on a Cyber 875\n");
   process.stderr.write("                 nos287-full-875-beast : full NOS 2.8.7 system running on a Cyber 875\n");
   process.stderr.write("                                         with 16M ESM and 885-42 disks\n");
+  process.stderr.write("                 nos287-most-175       : full NOS 2.8.7 system (except CYBIS) running\n");
+  process.stderr.write("                                         on a Cyber 175 with 885-42 disks\n");
   process.stderr.write("  continue   : (alias cont) continue basic or full installation from last point of interruption\n");
   process.exit(1);
 };
