@@ -68,211 +68,211 @@
     "os": "VM/370",
     "software": "RSCS",
     "desc": "10-Oct-2019 12:00:00",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "ALIJKU12":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "Austria",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "ALIJKU14":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "Austria",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "ALIJKU15":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "Austria",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "ALIJKU21":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "Austria",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "ALIJKU65":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "Austria",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "ARCHVM":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "Craig, NC",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "AUSSIE2":{
     "os": "Sinenomine NJE",
     "software": "Unknown",
     "desc": "Marist, NY",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "BEARN":{
     "os": "VM/370r5",
     "software": "RSCS",
     "desc": "Berlin, Germany",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "BILHA":{
     "os": "VAX/VMS 5.0",
     "software": "JNET",
     "desc": "Chicago, IL",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "BTP":{
     "os": "openVMS 8.4",
     "software": "JNET",
     "desc": "Dublin, Ireland",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "BTP":{
     "os": "openVMS 8.4",
     "software": "JNET",
     "desc": "Dublin, Ireland",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "CEARN":{
     "os": "VM/370r5",
     "software": "RSCS",
     "desc": "Zurich, Switzerland",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "CEARN":{
     "os": "VM/370r5",
     "software": "RSCS",
     "desc": "Zurich, Switzerland",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "CHPDR":{
     "os": "Linux",
     "software": "FUNETNJE",
     "desc": "Stockholdm, Sweden",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "CHZETH3C":{
     "os": "Linux",
     "software": "FUNETNJE",
     "desc": "Zurich",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "CLOUDY":{
     "os": "OpenVMS 7.3",
     "software": "JNET",
     "desc": "Germantown, MD",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "DEARN":{
     "os": "VM/370r5",
     "software": "RSCS",
     "desc": "Berlin, Germany",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "DEBEMVS1":{
     "os": "MVS 3.8j",
     "software": "NJE38",
     "desc": "Berlin, Germany",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "DESWAMVS":{
     "os": "MVS 3.8 NJE38",
     "software": "NJE38",
     "desc": "Germany",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "DMUPEJ3A":{
     "os": "VM/370r5",
     "software": "RSCS",
     "desc": "Munich, Germany",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "DMUPEJ3B":{
     "os": "VM/370r5",
     "software": "RSCS",
     "desc": "Munich, Germany",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "DRNBRX3":{
     "os": "VM/370r5",
     "software": "RSCS",
     "desc": "Berlin, Germany",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "DRNMIG1A":{
     "os": "VM/370r5",
     "software": "RSCS",
     "desc": "Berlin, Germany",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "DRNMIG3A":{
     "os": "VM/370r5",
     "software": "RSCS",
     "desc": "Berlin, Germany",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "FEDACH":{
     "os": "Linux",
     "software": "FUNETNJE",
     "desc": "Germantown, MD",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "FRYJLX1":{
     "os": "Linux",
     "software": "FUNETNJE",
     "desc": "France",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "GAVMATL":{
     "os": "VM/370 R6 RSCS",
     "software": "RSCS",
     "desc": "Atlanta, GA",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "HOUCICS":{
     "os": "MVS 3.8",
     "software": "NJE38",
     "desc": "Chicago,IL",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "HOUMVS1":{
     "os": "MVS 3.8j 8505",
     "software": "NJE38",
     "desc": "Chicago, Illinois",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "HOUMVS2":{
     "os": "MVS 3.8j 8505",
     "software": "NJE38",
     "desc": "Chicago, Illinois",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "HOUSP1":{
     "os": "MVS/3.8",
     "software": "NJE38",
     "desc": "Chicago,IL",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "HOUSP2":{
     "os": "MVS/3.8",
     "software": "NJE38",
     "desc": "Chicago,IL",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "HOUVAX1":{
     "os": "openVMS 7.3",
     "software": "JNET",
     "desc": "Chicago, Illinois",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "IMPVAX":{
     "os": "OpenVMS 7.3",
     "software": "JNET",
     "desc": "Germantown, MD",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "IRLEARN":{
     "os": "VM/370",
@@ -285,229 +285,229 @@
     "os": "VM/370",
     "software": "RSCS",
     "desc": "GERMANTWON,MD",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "MOSHIX":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "Chicago, Illinois",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "MOSHIX2":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "Chicago, Illinois",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "MOSHIX5":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "Cloud",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "MSHPRD1":{
     "os": "vm/370",
     "software": "Unknown",
     "desc": "Chicago, Illinois",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "MSHPRD2":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "Chicago, Illinois",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "N00DLE":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "Iowa",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "NJEVX1":{
     "os": "OpenVMS 7.3",
     "software": "JNET",
     "desc": "Germantown, MD",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "NJEVX2":{
     "os": "OpenVMS 7.3",
     "software": "JNET",
     "desc": "Germantown, MD",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "NLGERVM":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "The Netherlands",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "NLHKX1":{
     "os": "OS/VS2 MVS 3.8 NJE38",
     "software": "Unknown",
     "desc": "The Netherlands",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "PARODLX1":{
     "os": "Linux",
     "software": "FUNETNJE",
     "desc": "Pennsilvania",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "QCOCAL":{
     "os": "OpenVMS 7.3",
     "software": "JNET",
     "desc": "Germantown, MD",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "RELAY":{
     "os": "Linux",
     "software": "FUNETNJE",
     "desc": "NYC",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "RELAYB":{
     "os": "Linux",
     "software": "FUNETNJE",
     "desc": "Chicago",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "RELAYD":{
     "os": "Sine Nomine NJE",
     "software": "Unknown",
     "desc": "Chicago",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "SAMVM1":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "Sammarish, WA",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "SELXM1":{
     "os": "Linux",
     "software": "LinuxNJE",
     "desc": "Stockholm, Sweden",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "SELXM2":{
     "os": "Linux",
     "software": "LinuxNJE",
     "desc": "Stockholm, Sweden",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "SELXM3":{
     "os": "Linux",
     "software": "LinuxNJE",
     "desc": "Stockholm, Sweden",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "SEVMM1":{
     "os": "Linux",
     "software": "LinuxNJE",
     "desc": "Stockholm, Sweden",
-    "link": "NCCMAX",
-    "lid": "HNT"
+    "link": "ZVM72MSH"
   },
   "TANJPVM1":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "Tokyo,Japan",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "TSTVAX":{
     "os": "OpenVMS 7.3",
     "software": "JNET",
     "desc": "Germantown, MD",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "TSVMSA":{
     "os": "VAX/VMS 7.3",
     "software": "JNET",
     "desc": "Chicago, IL",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "TSVMSA":{
     "os": "VAX/VMS 7.3",
     "software": "JNET",
     "desc": "Chicago, IL",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "TSVMST":{
     "os": "VAX/VMS 7.3",
     "software": "JNET",
     "desc": "Chicago, IL",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "TSVMST":{
     "os": "VAX/VMS 7.3",
     "software": "JNET",
     "desc": "Chicago, IL",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "TSVMSZ":{
     "os": "VAX/VMS 7.3",
     "software": "JNET",
     "desc": "Chicago, IL",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "UKCOLMVS":{
     "os": "MVS 3.8 NJE38",
     "software": "NJE38",
     "desc": "UK",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "VAXSTN":{
     "os": "OpenVMS 7.3",
     "software": "JNET",
     "desc": "Germantown, MD",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "WABMVS":{
     "os": "MVS 3.8 NJE38",
     "software": "NJE38",
     "desc": "USA",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "WABNET":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "12-Nov-2019 12:00:00",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "WABPI":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "12-Nov-2019 12:00:00",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "ZILPAH":{
     "os": "VAX/VMS 4.7",
     "software": "JNET",
     "desc": "Chicago, IL",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "ZVM72MSH":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "Houston, TX",
-    "link": "SEVMM1"
+    "link": "NCCMAX",
+    "lid": "HNT"
   },
   "ZW01":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "12-Nov-2019 12:00:00",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "ZW14I":{
     "os": "VM/370",
     "software": "RSCS",
     "desc": "12-Nov-2019 12:00:00",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   },
   "ZW15":{
     "os": "VM/370 r6",
     "software": "RSCS",
     "desc": "Craig, NC",
-    "link": "SEVMM1"
+    "link": "ZVM72MSH"
   }
 }
