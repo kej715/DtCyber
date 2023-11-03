@@ -48,6 +48,8 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;[[NETWORK]](#network)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[crayStation](#crayStation)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[defaultRoute](#defaultRoute)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[haspPorts](#haspPorts)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[haspTerminal](#haspTerminal)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[hostID](#hostID)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[networkInterface](#networkInterface)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[njeNode](#njeNode)
@@ -55,8 +57,6 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[rhpNode](#rhpNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[smtpDomain](#smtpDomain)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[stkDrivePath](#stkDrivePath)
-- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[haspTerminal](#haspTerminal)
-- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[haspPorts](#haspPorts)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfNode](#tlfNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfPorts](#tlfPorts)
 - &nbsp;&nbsp;&nbsp;&nbsp;[[RESOLVER]](#resolver)
@@ -1510,15 +1510,33 @@ to which e-mail will be routed using the TCP/IP SMTP protocol. Examples:
 
 - <a id="stkDrivePath"></a>**stkDrivePath** : Defines the path of the first automated
 cartridge tape drive used by this NOS 2.8.7 system on the StorageTek 4400 tape server.
+Optionally, also devices the TCP port on which the tape server listens for connections.
+The general syntax of the entry is:
+
+    stkDrivePath=[*tcp-port*/]M*module*P*panel*D*drive*
+    
+    | Parameter | Description |
+    |-----------|-------------|
+    | tcp-port  | The TCP port on which the StorageTek 4400 tape server listens for connections. Ths parameter is optional, and the default is 4400 |
+    | module | The module number of the first tape drive used by this system (0 - 17 octal) |
+    | panel  | The panel number of the first tape drive used by this system (0 - 13 octal) |
+    | drive  | The drive number of the first tape drive used by this system (0 - 3) |
+
 The default is:
 ```
-    M0P0D0
+    stkDrivePath=4400/M0P0D0
 ```
-meaning Module 0, Panel 0, Drive 0. The module, panel, and drive numbers are octal
-values. Module numbers may range between 0 and 17, panel numbers may range between
-0 and 13, and drive numbers may range between 0 and 3.
+meaning the tape server listens for connections on TCP port 4400, and the first automated
+cartridge tape drive used by this system is Module 0, Panel 0, Drive 0. The module, panel,
+and drive numbers are octal values. Module numbers may range between 0 and 17, panel
+numbers may range between 0 and 13, and drive numbers may range between 0 and 3.
 
-	When a StorageTek 4400 tape server is shared amongst a set of NOS 2.8.7 systems in an
+The host on which the StorageTek 4400 tape server is running is defined by an entry in
+the NOS 2.8.7 TCPHOST file, located in the catalog of user NETADMN. The entry having a
+host alias **STK** identifies the host where the tape server is running. The default
+is the local host (i.e., the host on which *DtCyber* itself is running). See also [[HOSTS]](#hosts) because this section, when present, defines the contents of the TCPHOST file.
+
+When a StorageTek 4400 tape server is shared amongst a set of NOS 2.8.7 systems in an
 RHP network, each system in the network needs to have a unique drive path (i.e.,
 systems may share the tape server as a whole and its library of tapes, but they can not
 share individual tape drives). Typically, it is sufficient to assign a unique

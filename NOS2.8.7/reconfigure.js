@@ -15,7 +15,7 @@ let oldMID         = "01";        // old machine identifer
 let productRecords = [];          // textual records to edit into PRODUCT file
 
 const customProps  = utilities.getCustomProperties(dtc);
-const iniProps     = dtc.getIniProperties(dtc);
+const iniProps     = dtc.getIniProperties();
 let   ovlProps     = {};
 let   newIpAddress = "127.0.0.1";
 
@@ -599,6 +599,7 @@ dtc.connect()
   // changed.
   //
   let oldStkHost     = "127.0.0.1";
+  let oldStkPort     = 4400;
   let oldStkModule   = 0;
   let oldStkPanel    = 0;
   let oldStkDrive    = 0
@@ -606,8 +607,11 @@ dtc.connect()
     for (const line of iniProps["equipment.nos287"]) {
       if (line.startsWith("MT5744,")) {
         let tokens    = line.split(",");
-        oldStkHost    = tokens[4].substring(0, tokens[4].indexOf(":"));
-        let drivePath = tokens[4].substring(tokens[4].indexOf("/") + 1);
+        let ci        = tokens[4].indexOf(":");
+        let si        = tokens[4].indexOf("/");
+        oldStkHost    = tokens[4].substring(0, ci);
+        oldStkPort    = parseInt(tokens[4].substring(ci + 1, si));
+        let drivePath = tokens[4].substring(si + 1);
         let match     = drivePath.match(/^M([0-7]+)P([0-7]+)D([0-7]+)$/);
         if (match !== null) {
           oldStkModule = parseInt(match[1], 8);
@@ -619,10 +623,12 @@ dtc.connect()
     }
   }
   let newStkHost = oldStkHost;
+  let newStkPort = oldStkPort;
   for (const ipAddress of Object.keys(hosts)) {
     for (const name of hosts[ipAddress]) {
       if (name.toUpperCase() === "STK") {
         newStkHost = ipAddress;
+        if (newStkHost !== oldStkHost) newStkPort = 4400;
         break;
       }
     }
@@ -632,6 +638,11 @@ dtc.connect()
   let newStkDrive  = oldStkDrive;
   let drivePath = utilities.getPropertyValue(customProps, "NETWORK", "stkDrivePath", null);
   if (drivePath !== null) {
+    let si = drivePath.indexOf("/");
+    if (si >= 0) {
+      newStkPort = parseInt(drivePath.substring(0, si));
+      drivePath = drivePath.substring(si + 1);
+    }
     let match = drivePath.match(/^M([0-7]+)P([0-7]+)D([0-7]+)$/i);
     if (match !== null) {
       newStkModule = parseInt(match[1], 8);
@@ -642,7 +653,7 @@ dtc.connect()
   const isPathChange = newStkModule !== oldStkModule
     || newStkPanel !== oldStkPanel
     || newStkDrive !== oldStkDrive;
-  if (newStkHost !== oldStkHost || isPathChange) {
+  if (newStkHost !== oldStkHost || newStkPort !== oldStkPort || isPathChange) {
     //
     // Create/update [equipment.nos287] section to define MT5744 entries
     //
@@ -655,7 +666,7 @@ dtc.connect()
       }
     }
     for (let i = 0; i < 4; i++) {
-      ovlText.push(`MT5744,0,${i},23,${newStkHost}:4400/M${newStkModule.toString(8)}P${newStkPanel.toString(8)}D${(newStkDrive + i).toString(8)}`);
+      ovlText.push(`MT5744,0,${i},23,${newStkHost}:${newStkPort}/M${newStkModule.toString(8)}P${newStkPanel.toString(8)}D${(newStkDrive + i).toString(8)}`);
     }
     ovlProps["equipment.nos287"] = ovlText;
   }
@@ -664,10 +675,10 @@ dtc.connect()
     // Update equipment deck
     //
     return dtc.say("Update automated cartridge tape equipment definition in EQPD01 ...")
-    .then(() => dtc.utilities.getSystemRecord(dtc, "EQPD01"))
+    .then(() => utilities.getSystemRecord(dtc, "EQPD01"))
     .then(eqpd01 => {
       eqpd01 = eqpd01.replace(/EQ060=AT-4,UN=0,CH=23,LS=[0-7]+,PA=[0-7]+,DR=[0-7]+\./,
-        `EQ060=AT-4,UN=0,CH=23,LS=${newStkModule.toString(8)},PA=${newStkPanel.toString(8)},DR=${(newStkDrive + i).toString(8)}.`);
+        `EQ060=AT-4,UN=0,CH=23,LS=${newStkModule.toString(8)},PA=${newStkPanel.toString(8)},DR=${(newStkDrive).toString(8)}.`);
       const job = [
         "$COPY,INPUT,EQPD01.",
         "$REWIND,EQPD01.",
