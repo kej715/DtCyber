@@ -24,6 +24,8 @@ const isNjfInstalled = utilities.isInstalled("njf");
 const isRhpInstalled = utilities.isInstalled("rhp");
 const isTlfInstalled = utilities.isInstalled("tlf");
 
+const customProps    = utilities.getCustomProperties(dtc);
+
 //
 // Update topology and network parameters to reflect customizations, if any.
 // Customizations include locally defined NJE and TLF nodes.
@@ -40,10 +42,23 @@ const mfTypeTable = {
   RSCS:    "VM/CMS"
 };
 
+const getMfType = node => {
+  let mfType = "UNKNOWN";
+  if (typeof node.software !== "undefined") {
+    mfType = mfTypeTable[node.software];
+  }
+  else if (node.type === "RHP") {
+    mfType = "NOS2";
+  }
+  else if (node.type === "TLF") {
+    mfType = mfTypeTable[node.spooler];
+  }
+  return (typeof mfType !== "undefined") ? mfType : "UNKNOWN";
+};
+
 let topology = {};
 
 if (isCrsInstalled) {
-  const customProps = utilities.getCustomProperties(dtc);
   let value = utilities.getPropertyValue(customProps, "NETWORK", "crayStation", null);
   if (value !== null) {
     //
@@ -114,19 +129,34 @@ if (defaultRoute === null) {
   }
 }
 
-const getMfType = node => {
-  let mfType = "UNKNOWN";
-  if (typeof node.software !== "undefined") {
-    mfType = mfTypeTable[node.software];
+//
+//  Get explicitly defined store-and-forward nodes, if any.
+//  
+let safNodes = {};
+
+if (typeof customProps["NETWORK"] !== "undefined") {
+  for (let line of customProps["NETWORK"]) {
+    line = line.toUpperCase();
+    let ei = line.indexOf("=");
+    if (ei < 0) continue;
+    let key   = line.substring(0, ei).trim();
+    let value = line.substring(ei + 1).trim();
+    if (key === "SAFNODE") {
+      //
+      //  safNode=<host-id>,<relay-host-id>,<lid>
+      //
+      let items = value.split(",");
+      if (items.length >= 3) {
+        let node = {
+          id: items.shift(),
+          relayHost: items.shift(),
+          lid: items.shift()
+        };
+        safNodes[node.id] = node;
+      }
+    }
   }
-  else if (node.type === "RHP") {
-    mfType = "NOS2";
-  }
-  else if (node.type === "TLF") {
-    mfType = mfTypeTable[node.spooler];
-  }
-  return (typeof mfType !== "undefined") ? mfType : "UNKNOWN";
-};
+}
 
 //
 // Build tables of adjacent and non-adjacent nodes with LIDs
@@ -147,7 +177,9 @@ for (const nodeName of nodeNames) {
       node.mfType = getMfType(node);
       adjacentNodes[nodeName] = node;
     }
-    else if (typeof node.lid !== "undefined" && node.id !== localNode.link) {
+    else if (typeof safNodes[node.id] === "undefined"
+             && typeof node.lid !== "undefined"
+             && node.id !== localNode.link) {
       if (typeof node.route === "undefined") {
         node.route = defaultRoute;
       }
@@ -202,6 +234,14 @@ dtc.connect()
       }
     }
     localPid.lids[lid]    = `NLID,LID=${lid},AT=STOREF.`;
+  }
+  for (const node of Object.values(safNodes)) {
+    if (typeof adjacentNodes[node.relayHost] !== "undefined") {
+      let lid = node.lid;
+      let adjacentPid = lidConf[adjacentNodes[node.relayHost].lid];
+      adjacentPid.lids[lid] = `NLID,LID=${lid}.`;
+      localPid.lids[lid]    = `NLID,LID=${lid},AT=STOREF.`;
+    }
   }
   //
   // Create new/updated LIDCMid file

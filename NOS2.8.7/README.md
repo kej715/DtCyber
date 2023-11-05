@@ -55,6 +55,7 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[njeNode](#njeNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[njePorts](#njePorts)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[rhpNode](#rhpNode)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[safNode](#safNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[smtpDomain](#smtpDomain)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[stkDrivePath](#stkDrivePath)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfNode](#tlfNode)
@@ -1417,6 +1418,34 @@ Example:
 	files will be sent when the route to a destination cannot be calculated
 	automatically using the [topology file](files/nje-topology.json).
     
+- <a id="haspPorts"></a>**haspPorts** : Specifies the range of CLA ports that will be
+used in defining additional HASP terminals for use by RBF in the NOS NDL. The general
+syntax of this entry is:
+
+    haspPorts=*cla-port-number*,*port-count*
+    
+    Where *cla-port-number* is the number of the first CLA port to be used, and
+    *port-count* defines the maximum number of ports to be used. The default is
+    equivalent to:
+    
+    `haspPorts=0x26,2`
+    
+- <a id="haspTerminal"></a>**haspTerminal** : Defines the name and connection information
+for a HASP terminal. Two generic HASP terminals are defined in the base system, and this
+entry allows you to define additional ones. The general syntax of this entry is:
+
+    haspTerminal=*username*,*tcp-port*[,B*block-size*]
+    
+    | Parameter  | Description |
+    |------------|-------------|
+    | username   | The username associated with the terminal. |
+    | tcp-port   | The TCP port on which DtCyber will listen for connections to this terminal. |
+    | block-size | Optional block size, in bytes, to use in communicating with peers. The default is 400. |
+
+    Example:
+    
+    `haspTerminal=MOE,2555`
+    
 - <a id="hostID"></a>**hostID** : Specifies the 1 - 8 character node name of the local
 host. Example:
 
@@ -1498,6 +1527,26 @@ NOS 2.8.7 systems to exchange jobs and files. The general syntax of this entry i
 	Note that multiple *peername*/*cla-port* pairs may be defined to indicate that a node
 is connected to multiple peers.
 
+- <a id="safNode"></a>**safNode** : Defines the name and routing information for a
+*store-and-forward* node. A store-and-forward node is a node that is reached by forwarding
+files to an adjacent node serving as an intermediate relay. Ordinarily, the relay node
+is an RHP node defined in an [rhpNode](#rhpNode) entry. Often, the store-and-forward node
+is a TLF node or a Cray station directly connected to the relay node.
+
+	The general syntax of this entry is:
+
+    safNode=*nodename*,*relay-node*,*lid*
+
+    | Parameter     | Description |
+    |---------------|-------------|
+    | nodename      | The name assigned to the store-and-forward node. |
+    | relay-node    | The name assigned to the intermediate relay node through which the sotre-and-forward node is reached. |
+    | lid           | The unique, 3-character logical identifier assigned to the store-and-forward node. |
+
+    Example:
+    
+    `safNode=NCCCMS,NCCMIN,CMS`
+    
 - <a id="smtpDomain"></a>**smtpDomain** : Identifies an internet domain name or suffix
 to which e-mail will be routed using the TCP/IP SMTP protocol. Examples:
 
@@ -1545,34 +1594,6 @@ panel value to each NOS system. Example:
 ```
     stkDrivePath=M0P1D0
 ```
-
-- <a id="haspTerminal"></a>**haspTerminal** : Defines the name and connection information
-for a HASP terminal. Two generic HASP terminals are defined in the base system, and this
-entry allows you to define additional ones. The general syntax of this entry is:
-
-    haspTerminal=*username*,*tcp-port*[,B*block-size*]
-    
-    | Parameter  | Description |
-    |------------|-------------|
-    | username   | The username associated with the terminal. |
-    | tcp-port   | The TCP port on which DtCyber will listen for connections to this terminal. |
-    | block-size | Optional block size, in bytes, to use in communicating with peers. The default is 400. |
-
-    Example:
-    
-    `haspTerminal=MOE,2555`
-    
-- <a id="haspPorts"></a>**haspPorts** : Specifies the range of CLA ports that will be
-used in defining additional HASP terminals for use by RBF in the NOS NDL. The general
-syntax of this entry is:
-
-    haspPorts=*cla-port-number*,*port-count*
-    
-    Where *cla-port-number* is the number of the first CLA port to be used, and
-    *port-count* defines the maximum number of ports to be used. The default is
-    equivalent to:
-    
-    `haspPorts=0x26,2`
 
 - <a id="tlfNode"></a>**tlfNode** : Defines the name and routing information for a TLF
 node. The general syntax of this entry is:
