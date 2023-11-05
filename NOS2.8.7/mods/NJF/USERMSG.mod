@@ -508,8 +508,8 @@ A2A:
               ABHTLC  = ((TATEXTL+9)/10)+3; # SET TEXT LENGTH #
               NETPUT(DLHA[0],MSGBUF[0]);
               LPT$OBC[ACN] = LPT$OBC[ACN] + 1;
-              A2ASENT = A2ASENT + 1;
               END
+            A2ASENT = A2ASENT + 1;
             END
           END
         IF A2ASENT EQ 0 AND
