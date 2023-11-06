@@ -18,7 +18,7 @@ EXIT.
   AP=IAF,
   IS=BATCH,
 /CDCS,
-  PW={../site.cfg:PASSWORDS:CDCS:CDCS},
+  PW=${../site.cfg:PASSWORDS:CDCS:CDCS},
   RL=ALL,
   AW=ALL,
   AP=NUL,
