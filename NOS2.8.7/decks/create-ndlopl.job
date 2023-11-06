@@ -4,7 +4,7 @@
 ~*  contains the network definition of the local host.
 ~*
 NDLOPL.
-$USER,NETADMN,NETADMN.
+$USER,NETADMN,${../site.cfg:PASSWORDS:NETADMN:NETADMN}.
 $NORERUN.
 $SETTL,*.
 $SETASL,*.

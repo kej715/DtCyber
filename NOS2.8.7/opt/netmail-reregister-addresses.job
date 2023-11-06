@@ -4,7 +4,7 @@
 ~*  changed.
 ~*
 REGISTR.
-$USER,INSTALL,INSTALL.
+$USER,INSTALL,${../site.cfg:PASSWORDS:INSTALL:INSTALL}.
 $NORERUN.
 $SETTL,*.
 $SETASL,*.
@@ -18,9 +18,9 @@ EXIT.
 *** REGISTR FAILED
 ***
 ~eor
-CHANGE NAME=SYSDEV  PATH="S^Y^SD^E^V@A${1}"          PW=INSTALL -
+CHANGE NAME=SYSDEV  PATH="S^Y^SD^E^V@A${1}"          PW=${../site.cfg:PASSWORDS:INSTALL:INSTALL} -
                  NEWPATH="S^Y^SD^E^V@A${2}"
-CHANGE NAME=POSTMAS PATH="P^O^S^T^M^A^S^T^E^R@A${1}" PW=MAILER -
+CHANGE NAME=POSTMAS PATH="P^O^S^T^M^A^S^T^E^R@A${1}" PW=${../site.cfg:PASSWORDS:MAILER:MAILER} -
                  NEWPATH="P^O^S^T^M^A^S^T^E^R@A${2}"
-CHANGE NAME=GUEST   PATH="G^U^E^S^T@A${1}"           PW=GUEST -
+CHANGE NAME=GUEST   PATH="G^U^E^S^T@A${1}"           PW=${../site.cfg:PASSWORDS:GUEST:GUEST} -
                  NEWPATH="G^U^E^S^T@A${2}"

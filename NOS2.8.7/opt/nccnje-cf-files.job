@@ -3,7 +3,7 @@
 ~*  library in the catalog of user NJF.
 ~*
 NJMDCF.
-$USER,NJF,NJFX.
+$USER,NJF,${../site.cfg:PASSWORDS:NJF:NJFX}.
 $COPYBR,INPUT,NJMDCF.
 $COPY,INPUT,NJMDLIB.
 $REPLACE,NJMDCF,NJMDLIB.

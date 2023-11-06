@@ -6,7 +6,7 @@
 ~*  after the operating system is first installed.
 ~*
 IBUILD.
-$USER,INSTALL,INSTALL.
+$USER,INSTALL,${../site.cfg:PASSWORDS:INSTALL:INSTALL}.
 $NORERUN.
 $SETTL,*.
 $SETASL,*.

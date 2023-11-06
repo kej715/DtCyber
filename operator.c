@@ -2008,11 +2008,228 @@ static void opHelpLoadCards(void)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Interpolate a parameter reference into a card image.
+**
+**  Parameters:     Name        Description.
+**                  srcp        Pointer to pointer to parameter reference in source card image
+**                  dstp        Pointer to pointer to destination (interpolated) card image
+**                  argc        Count of actual parameters
+**                  argv        Pointers to actual parameter values
+**
+**  Returns:        source and destination pointers updated
+**
+**------------------------------------------------------------------------*/
+static void opInterpolateParam(char **srcp, char **dstp, int argc, char *argv[])
+    {
+    int  argi;
+    char *dfltVal;
+    int  dfltValLen;
+    char *dp;
+    char *sp;
+
+    sp         = *srcp + 2;
+    dp         = *dstp;
+    argi       = 0;
+    dfltVal    = "";
+    dfltValLen = 0;
+
+    while (isdigit(*sp))
+        {
+        argi = (argi * 10) + (*sp++ - '0');
+        }
+    if (*sp == ':')
+        {
+        dfltVal = ++sp;
+        while (*sp != '}' && *sp != '\0')
+            {
+            sp += 1;
+            }
+        dfltValLen = sp - dfltVal;
+        }
+    if (*sp == '}')
+        {
+        *srcp = sp + 1;
+        argi -= 1;
+        if ((argi >= 0) && (argi < argc))
+            {
+            sp = argv[argi];
+            while (*sp != '\0')
+                {
+                *dp++ = *sp++;
+                }
+            }
+        else
+            {
+            while (dfltValLen-- > 0)
+                {
+                *dp++ = *dfltVal++;
+                }
+            }
+        }
+    else
+        {
+        *dp++ = '$';
+        *dp++ = '{';
+        *srcp = *srcp + 2;
+        }
+    *dstp = dp;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Interpolate a property reference into a card image.
+**
+**  Parameters:     Name        Description.
+**                  srcp        Pointer to pointer to property reference in source card image
+**                  dstp        Pointer to pointer to destination (interpolated) card image
+**                  srcPath     Pathname of file containing source card image
+**
+**  Returns:        source and destination pointers updated
+**
+**------------------------------------------------------------------------*/
+static void opInterpolateProp(char **srcp, char **dstp, char *srcPath)
+    {
+    char *cp;
+    char *dfltVal;
+    int  dfltValLen;
+    char delim;
+    char *dp;
+    FILE *fp;
+    char *pp;
+    char propFilePath[256];
+    char propFilePath2[300];
+    char propName[64];
+    char sbuf[400];
+    char sectionName[64];
+    int  sectionNameLen;
+    char *sp;
+
+    sp         = *srcp + 2;
+    dp         = *dstp;
+    dfltVal    = "";
+    dfltValLen = 0;
+
+    pp = propFilePath;
+    while (*sp != ':' && *sp != '}' && *sp != '\0')
+        {
+        *pp++ = *sp++;
+        }
+    *pp = '\0';
+
+    pp = sectionName;
+    if (*sp == ':')
+        {
+        sp += 1;
+        while (*sp != ':' && *sp != '}' && *sp != '\0')
+            {
+            *pp++ = *sp++;
+            }
+        }
+    *pp = '\0';
+    sectionNameLen = pp - sectionName;
+
+    pp = propName;
+    if (*sp == ':')
+        {
+        sp += 1;
+        while (*sp != ':' && *sp != '}' && *sp != '\0')
+            {
+            *pp++ = *sp++;
+            }
+        }
+    *pp = '\0';
+
+    if (*sp == ':')
+        {
+        sp += 1;
+        dfltVal = sp;
+        while (*sp != '}' && *sp != '\0') sp += 1;
+        dfltValLen = sp - dfltVal;
+        }
+    
+    if (*sp == '}' && propName[0] != '\0' && sectionName[0] != '\0' && propFilePath[0] != '\0')
+        {
+        *srcp = sp + 1;
+#if defined(_WIN32)
+        opToUnixPath(propFilePath);
+#endif
+        pp = propFilePath;
+        if (opIsAbsolutePath(propFilePath) == FALSE)
+            {
+            cp = strrchr(srcPath, '/');
+            if (cp != NULL)
+                {
+                *cp = '\0';
+                sprintf(propFilePath2, "%s/%s", srcPath, propFilePath);
+                *cp = '/';
+                pp = propFilePath2;
+                }
+            }
+        fp = fopen(pp, "r");
+        if (fp != NULL)
+            {
+            //
+            //  First, locate the named section in the property file
+            //
+            sp = NULL;
+            while (TRUE)
+                {
+                sp = fgets(sbuf, sizeof(sbuf), fp);
+                if (sp == NULL) break;
+                if (*sp == '['
+                    && memcmp(sp + 1, sectionName, sectionNameLen) == 0
+                    && *(sp + sectionNameLen + 1) == ']') break;
+                }
+            if (sp != NULL) // named section found
+                {
+                //
+                //  Search section for named property
+                //
+                while (TRUE)
+                    {
+                    sp = fgets(sbuf, sizeof(sbuf), fp);
+                    if (sp == NULL || *sp == '[') break;
+                    cp = strchr(sp, '=');
+                    if (cp == NULL) continue;
+                    *cp++ = '\0';
+                    if (strcmp(propName, sp) == 0)
+                        {
+                        while (*cp != '\n' && *cp != '\0')
+                            {
+                            *dp++ = *cp++;
+                            }
+                        *dstp = dp;
+                        fclose(fp);
+                        return;
+                        }
+                    }
+                }
+            fclose(fp);
+            }
+        //
+        //  Property file not found, or property not found in property file,
+        //  so interpolate the default value.
+        //
+        while (dfltValLen-- > 0)
+            {
+            *dp++ = *dfltVal++;
+            }
+        *dstp = dp;
+        return;
+        }
+
+    *dp++ = '$';
+    *dp++ = '{';
+    *dstp = dp;
+    *srcp = *srcp + 2;
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Preprocess a card file
 **
 **                  The specified source file is read, nested "~include"
 **                  directives are detected and processed recursively,
-**                  and embedded parameter references are interpolated.
+**                  and embedded parameter and property references are
+**                  interpolated.
 **
 **  Parameters:     Name        Description.
 **                  str         Source file path and optional parameters
@@ -2025,12 +2242,9 @@ static void opHelpLoadCards(void)
 static int opPrepCards(char *str, FILE *fcb)
     {
     int  argc;
-    int  argi;
     char *argv[MaxCardParams];
     char *cp;
     char dbuf[400];
-    char *dfltVal;
-    int  dfltValLen;
     char *dp;
     FILE *in;
     char *lastnb;
@@ -2098,55 +2312,37 @@ static int opPrepCards(char *str, FILE *fcb)
             }
 
         /*
-        **  Scan the source line for parameter references and interpolate
-        **  any found. A parameter reference has the form "${n}" where "n"
-        **  is an integer greater than 0.
+        **  Scan the source line for parameter and property references and interpolate
+        **  any found. A parameter reference has one of the forms:
+        **
+        **    ${n[:defv]}
+        **    ${path:sect:name[:defv]}
+        **
+        **  where
+        **       n  is an integer greater than 0 representing a parameter number
+        **    path  is the pathname of a property file
+        **    sect  is the name of a section within the property file
+        **    name  is a property name
+        **    defv  is an optional default value
         */
         dp = dbuf;
         while (*sp != '\0')
             {
-            if ((*sp == '$') && (*(sp + 1) == '{') && isdigit(*(sp + 2)))
+            if ((*sp == '$') && (*(sp + 1) == '{'))
                 {
-                argi       = 0;
-                dfltVal    = "";
-                dfltValLen = 0;
-                cp         = sp + 2;
-                while (isdigit(*cp))
+                if (isdigit(*(sp + 2)))
                     {
-                    argi = (argi * 10) + (*cp++ - '0');
+                    opInterpolateParam(&sp, &dp, argc, argv);
                     }
-                if (*cp == ':')
+                else
                     {
-                    dfltVal = ++cp;
-                    while (*cp != '}' && *cp != '\0')
-                        {
-                        cp += 1;
-                        }
-                    dfltValLen = cp - dfltVal;
-                    }
-                if (*cp == '}')
-                    {
-                    sp    = cp + 1;
-                    argi -= 1;
-                    if ((argi >= 0) && (argi < argc))
-                        {
-                        cp = argv[argi];
-                        while (*cp != '\0')
-                            {
-                            *dp++ = *cp++;
-                            }
-                        }
-                    else
-                        {
-                        while (dfltValLen-- > 0)
-                            {
-                            *dp++ = *dfltVal++;
-                            }
-                        }
-                    continue;
+                    opInterpolateProp(&sp, &dp, path);
                     }
                 }
-            *dp++ = *sp++;
+            else
+                {
+                *dp++ = *sp++;
+                }
             }
         *dp = '\0';
 

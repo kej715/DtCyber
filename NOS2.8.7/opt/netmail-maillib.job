@@ -3,7 +3,7 @@
 ~*  library in the catalog of the MAILER user account.
 ~*
 MAILLIB.
-$USER,MAILER,MAILER.
+$USER,MAILER,${../site.cfg:PASSWORDS:MAILER:MAILER}.
 $NORERUN.
 $SETTL,*.
 $SETASL,*.

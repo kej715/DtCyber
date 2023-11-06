@@ -6,7 +6,7 @@
 ~*  number of the ALGOL5 executable and overlays.
 ~*
 ALGOL5.
-$USER,INSTALL,INSTALL.
+$USER,INSTALL,${../site.cfg:PASSWORDS:INSTALL:INSTALL}.
 $NORERUN.
 $SETTL,*.
 $SETASL,*.

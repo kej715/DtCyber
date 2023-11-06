@@ -3,7 +3,7 @@
 ~*  NOS HTTP server.
 ~*
 WWWINDX.
-$USER,WWW,WWWX.
+$USER,WWW,${../site.cfg:PASSWORDS:WWW:WWWX}.
 $NORERUN.
 $SETTL,*.
 $SETASL,*.

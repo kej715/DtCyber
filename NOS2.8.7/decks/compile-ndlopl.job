@@ -4,7 +4,7 @@
 ~*  upon its next startup.
 ~*
 COMPNDL.
-$USER,NETADMN,NETADMN.
+$USER,NETADMN,${../site.cfg:PASSWORDS:NETADMN:NETADMN}.
 $NORERUN.
 $SETTL,*.
 $SETASL,*.
