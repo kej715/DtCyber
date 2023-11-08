@@ -19,7 +19,11 @@ const customProps    = utilities.getCustomProperties(dtc);
 const iniProps       = dtc.getIniProperties();
 let   ovlProps       = {};
 let   newIpAddress   = "127.0.0.1";
-let   passwordMap    = JSON.parse(fs.readFileSync("opt/password-map.json", "utf8"));
+let   passwordMap    = {};
+
+if (fs.existsSync("opt/password-map.json")) {
+  passwordMap = JSON.parse(fs.readFileSync("opt/password-map.json", "utf8"));
+}
 
 let oldCrsInfo = {
   lid:       "COS",
