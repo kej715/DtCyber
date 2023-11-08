@@ -111,6 +111,7 @@ if (isCompletedStep("sysgen-full") === false) {
   isMountTapes = true;
   const systemxPw = utilities.getPropertyValue(customProps, "PASSWORDS", "SYSTEMX", "SYSTEMX");
   const installPw = utilities.getPropertyValue(customProps, "PASSWORDS", "INSTALL", "INSTALL");
+  const netadmnPw = utilities.getPropertyValue(customProps, "PASSWORDS", "NETADMN", "NETADMN");
   promise = promise
   .then(() => dtc.say("Start SYSGEN(FULL) ..."))
   .then(() => dtc.mount(13, 0, 1, "tapes/nos287-1.tap"))
@@ -133,6 +134,12 @@ if (isCompletedStep("sysgen-full") === false) {
     return (installPw === "INSTALL")
            ? dtc.dsd("X.MODVAL(OP=Z)/INSTALL,AP=CONFER")
            : dtc.dsd(`X.MODVAL(OP=Z)/INSTALL,PW=${installPw},AP=CONFER`);
+  })
+  .then(() => {
+    return (netadmnPw === "NETADMN")
+           ? Promise.resolve()
+           : dtc.say("Update password of NETADMN ...")
+             .then(() => dtc.dsd(`X.MODVAL(OP=Z)/NETADMN,PW=${netadmnPw}`));
   })
   .then(() => {
     addCompletedStep("sysgen-full");
