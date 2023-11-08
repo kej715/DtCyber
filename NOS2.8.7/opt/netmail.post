@@ -33,7 +33,10 @@ dtc.connect()
        +  "$GET,NETMAIL/UN=MAILER.\n"
        +  "$ROUTE,NETMAIL,DC=NO,OT=SYOT.\n"
        +  end;
-  return dtc.putFile("SYSPROC/IA,CS=DIS", text);
+  return dtc.putFile("SYSPROC/IA,CS=DIS", text, {
+    username: "INSTALL",
+    password: utilities.getPropertyValue(utilities.getCustomProperties(dtc),"PASSWORDS","INSTALL","INSTALL")
+  });
 })
 .then(() => dtc.dis([
   "GET,SYSPROC.",
