@@ -9,10 +9,11 @@ const utilities = require("./utilities");
 
 const dtc = new DtCyber();
 
-const mid       = utilities.getMachineId(dtc);
-const npuNode   = utilities.getNpuNode(dtc);
-const topology  = utilities.getTlfTopology(dtc);
-const nodeNames = Object.keys(topology).sort();
+const customProps = utilities.getCustomProperties(dtc);
+const mid         = utilities.getMachineId(dtc);
+const npuNode     = utilities.getNpuNode(dtc);
+const topology    = utilities.getTlfTopology(dtc);
+const nodeNames   = Object.keys(topology).sort();
 
 const toHex = value => {
   return value < 16 ? `0${value.toString(16)}` : value.toString(16);
@@ -67,7 +68,7 @@ dtc.connect()
       const options = {
         jobname:  "TCFSRC",
         username: "NETADMN",
-        password: "NETADMN",
+        password: utilities.getPropertyValue(customProps, "PASSWORDS", "NETADMN", "NETADMN"),
         data:     tcfSource.join("\n")
       };
       return dtc.createJobWithOutput(12, 4, job, options);

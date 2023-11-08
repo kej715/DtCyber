@@ -12,10 +12,8 @@ dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => dtc.dis([
-  "GET,CDC,CDCUSRS.",
-  "PURGE,CDC,CDCUSRS.",
-  "SUI,377777.",
-  "REPLACE,CDC.",
+  "GET,CDCUSRS.",
+  "PURGE,CDCUSRS.",
   "MODVAL,FA,I=CDCUSRS,OP=U."
 ], "CDCMODV", 1))
 .then(() => utilities.enableSubsystem(dtc, "CDC", -4))

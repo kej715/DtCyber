@@ -1,7 +1,7 @@
 [
   {
     "category": "base",
-    "desc": "Standard CDC products provided in base system. These products are are pre-built and included on the initial deadstart tape.",
+    "desc": "Standard CDC products provided in the base system. These products are are pre-built and included on the initial deadstart tape.",
     "shortDesc": "Pre-installed CDC software products",
     "products": [
       {
@@ -24,7 +24,10 @@
         "pre": "nos.pre",
         "post": "nos.post",
         "lib": 39,
-        "desc": "Network Access Method"
+        "desc": "Network Access Method",
+        "users": {
+          "NETOPS":["nam5-update-netops-pw.js"]
+        }
       },
       {
         "name": "nos",
@@ -97,6 +100,8 @@
         "pre": "nos.pre",
         "post": [
           "nos.post",
+          "cdcs2-start.job",
+          "cdcs2-start.post",
           "cdcs2-users.job",
           "cdcs2.post"
         ],
@@ -112,7 +117,13 @@
           "cdcs-start.post"
         ],
         "desc": "CYBER Database Control System Version 2",
-        "depends": ["qu3"]
+        "depends": ["qu3"],
+        "users": {
+          "DBCNTLX":[
+            "cdcs2-start.job",
+            "cdcs2-start.post"
+          ]
+        }
       },
       {
         "name": "qu3",
@@ -183,7 +194,14 @@
         "lib": 75,
         "records": "ABS/NJMSG,ULIB/NJMLIB",
         "desc": "Nostalgic Computing Center NJE Utilities",
-        "depends": ["njf"]
+        "depends": ["njf"],
+        "users": {
+          "NJF":[
+            "nccnje-cf-files.job",
+            "nccnje-upload-start.job",
+            "nccnje-update-namstrt.post"
+          ]
+        }
       },
       {
         "name": "ncctcp",
@@ -195,7 +213,11 @@
         "records": "ULIB/CCTCPIO-ABS/SMTPS",
         "url": "https://www.dropbox.com/s/m172wagepk3lig6/ncctcp.tap?dl=1",
         "desc": "Nostalgic Computing Center TCP/IP Applications",
-        "depends": ["ses"]
+        "depends": ["ses"],
+        "users": {
+          "REXEC":["ncctcp-update-www-pw.js"],
+          "WWW":  ["ncctcp-update-rexec-pw.js"]
+        }
       },
       {
         "name": "netmail",
@@ -209,7 +231,13 @@
         "records": "ABS/DBMAN-ABS/OBXLATE",
         "url": "https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1",
         "desc": "UMass Mailer network router",
-        "depends": ["mailer", "njf", "ncctcp"]
+        "depends": ["mailer", "njf", "ncctcp"],
+        "users": {
+          "MAILER":[
+            "netmail-post.job",
+            "netmail-reregister-addresses.job"
+          ]
+        }
       },
       {
         "name": "njf",

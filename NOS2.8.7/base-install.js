@@ -8,6 +8,8 @@ const baseTapes = ["ds.tap", "nos287-1.tap", "nos287-2.tap", "nos287-3.tap"];
 
 const dtc = new DtCyber();
 
+const customProps = utilities.getCustomProperties(dtc);
+
 let isContinueInstall = false;
 
 for (let arg of process.argv.slice(2)) {
@@ -107,6 +109,8 @@ let isMountTapes = false;
 
 if (isCompletedStep("sysgen-full") === false) {
   isMountTapes = true;
+  const systemxPw = utilities.getPropertyValue(customProps, "PASSWORDS", "SYSTEMX", "SYSTEMX");
+  const installPw = utilities.getPropertyValue(customProps, "PASSWORDS", "INSTALL", "INSTALL");
   promise = promise
   .then(() => dtc.say("Start SYSGEN(FULL) ..."))
   .then(() => dtc.mount(13, 0, 1, "tapes/nos287-1.tap"))
@@ -114,9 +118,22 @@ if (isCompletedStep("sysgen-full") === false) {
   .then(() => dtc.mount(13, 0, 3, "tapes/nos287-3.tap"))
   .then(() => dtc.dsd("X.SYSGEN(FULL)"))
   .then(() => dtc.expect([ {re:/E N D   F U L L/} ], "printer"))
-  .then(() => dtc.say("Update privileges of INSTALL ..."))
-  .then(() => dtc.dsd("X.MODVAL(OP=Z)/INSTALL,AP=CONFER"))
   .then(() => dtc.say("SYSGEN(FULL) complete"))
+  .then(() => {
+    if (systemxPw !== "SYSTEMX") {
+      return dtc.say("Update password of SYSTEMX ...")
+      .then(() => dtc.dsd(`X.MODVAL(OP=Z)/SYSTEMX,PW=${systemxPw}`));
+    }
+    else {
+      return Promise.resolve();
+    }
+  })
+  .then(() => dtc.say("Update privileges of INSTALL ..."))
+  .then(() => {
+    return (installPw === "INSTALL")
+           ? dtc.dsd("X.MODVAL(OP=Z)/INSTALL,AP=CONFER")
+           : dtc.dsd(`X.MODVAL(OP=Z)/INSTALL,PW=${installPw},AP=CONFER`);
+  })
   .then(() => {
     addCompletedStep("sysgen-full");
     return Promise.resolve();
@@ -124,6 +141,7 @@ if (isCompletedStep("sysgen-full") === false) {
 }
 
 if (isCompletedStep("nam-init") === false) {
+  const netopsPw = utilities.getPropertyValue(customProps, "PASSWORDS", "NETOPS", "NETOPSX");
   promise = promise
   .then(() => dtc.say("Create and compile the NDL file ..."))
   .then(() => dtc.runJob(12, 4, "decks/create-ndlopl.job"))
@@ -134,11 +152,11 @@ if (isCompletedStep("nam-init") === false) {
   .then(() => dtc.say("Create the TCPHOST file ..."))
   .then(() => dtc.runJob(12, 4, "decks/create-tcphost.job"))
   .then(() => dtc.say("Set NETOPS password and security count ..."))
-  .then(() => dtc.dsd("X.MODVAL(OP=Z)/NETOPS,PW=NETOPSX,SC=77B"))
+  .then(() => dtc.dsd(`X.MODVAL(OP=Z)/NETOPS,PW=${netopsPw},SC=77B`))
   .then(() => dtc.say("Start NAMNOGO to initialize NAM ..."))
   .then(() => dtc.dsd("NANOGO."))
   .then(() => dtc.sleep(5000))
-  .then(() => dtc.dsd("CFO,NAM.UN=NETOPS,PW=NETOPSX"))
+  .then(() => dtc.dsd(`CFO,NAM.UN=NETOPS,PW=${netopsPw}`))
   .then(() => dtc.sleep(1000))
   .then(() => dtc.dsd("CFO,NAM.GO"))
   .then(() => {

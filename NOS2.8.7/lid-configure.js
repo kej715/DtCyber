@@ -291,6 +291,8 @@ dtc.connect()
   ];
   let options = {
     jobname: "REPLIDC",
+    username: "INSTALL",
+    password: utilities.getPropertyValue(customProps, "PASSWORDS", "INSTALL", "INSTALL"),
     data: lidText
   };
   return promise

@@ -16,8 +16,7 @@ const utilities = require("./utilities");
 
 const dtc = new DtCyber();
 
-let customProps = {};
-dtc.readPropertyFile(customProps);
+let customProps = utilities.getCustomProperties(dtc);
 
 let addr      = null;
 let channel   = -1;
@@ -158,6 +157,8 @@ dtc.connect()
   ];
   const options = {
     jobname: "UPDEQPD",
+    username: "INSTALL",
+    password: utilities.getPropertyValue(customProps, "PASSWORDS", "INSTALL", "INSTALL"),
     data: eqpd01
   };
   return dtc.createJobWithOutput(12, 4, job, options);
@@ -170,6 +171,8 @@ dtc.connect()
   ];
   const options = {
     jobname: "MAKECRS",
+    username: "INSTALL",
+    password: utilities.getPropertyValue(customProps, "PASSWORDS", "INSTALL", "INSTALL"),
     data: `.PROC,CRS.\nCRSTAT,EST=${estOrdinal.toString(8)},ID=${stationId}.\n`
   };
   return dtc.createJobWithOutput(12, 4, job, options);
