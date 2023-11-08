@@ -109,9 +109,6 @@ let isMountTapes = false;
 
 if (isCompletedStep("sysgen-full") === false) {
   isMountTapes = true;
-  const systemxPw = utilities.getPropertyValue(customProps, "PASSWORDS", "SYSTEMX", "SYSTEMX");
-  const installPw = utilities.getPropertyValue(customProps, "PASSWORDS", "INSTALL", "INSTALL");
-  const netadmnPw = utilities.getPropertyValue(customProps, "PASSWORDS", "NETADMN", "NETADMN");
   promise = promise
   .then(() => dtc.say("Start SYSGEN(FULL) ..."))
   .then(() => dtc.mount(13, 0, 1, "tapes/nos287-1.tap"))
@@ -121,13 +118,41 @@ if (isCompletedStep("sysgen-full") === false) {
   .then(() => dtc.expect([ {re:/E N D   F U L L/} ], "printer"))
   .then(() => dtc.say("SYSGEN(FULL) complete"))
   .then(() => {
-    if (systemxPw !== "SYSTEMX") {
-      return dtc.say("Update password of SYSTEMX ...")
-      .then(() => dtc.dsd(`X.MODVAL(OP=Z)/SYSTEMX,PW=${systemxPw}`));
-    }
-    else {
-      return Promise.resolve();
-    }
+    addCompletedStep("sysgen-full");
+    return Promise.resolve();
+  });
+}
+
+if (isCompletedStep("sysgen-source") === false) {
+  promise = promise
+  .then(() => dtc.say("Start SYSGEN(SOURCE) ..."));
+  if (isMountTapes === false) {
+    isMountTapes = true;
+    promise = promise
+    .then(() => dtc.mount(13, 0, 1, "tapes/nos287-1.tap"))
+    .then(() => dtc.mount(13, 0, 2, "tapes/nos287-2.tap"))
+    .then(() => dtc.mount(13, 0, 3, "tapes/nos287-3.tap"));
+  }
+  promise = promise
+  .then(() => dtc.dsd("[X.SYSGEN(SOURCE)"))
+  .then(() => dtc.expect([ {re:/E N D   S O U R C E/} ], "printer"))
+  .then(() => dtc.say("SYSGEN(SOURCE) complete"))
+  .then(() => {
+    addCompletedStep("sysgen-source");
+    return Promise.resolve();
+  });
+}
+
+if (isCompletedStep("update-passwords") === false) {
+  const systemxPw = utilities.getPropertyValue(customProps, "PASSWORDS", "SYSTEMX", "SYSTEMX");
+  const installPw = utilities.getPropertyValue(customProps, "PASSWORDS", "INSTALL", "INSTALL");
+  const netadmnPw = utilities.getPropertyValue(customProps, "PASSWORDS", "NETADMN", "NETADMN");
+  promise = promise
+  .then(() => {
+    return (systemxPw === "SYSTEMX")
+           ? Promise.resolve()
+           : dtc.say("Update password of SYSTEMX ...")
+             .then(() => dtc.dsd(`X.MODVAL(OP=Z)/SYSTEMX,PW=${systemxPw}`));
   })
   .then(() => dtc.say("Update privileges of INSTALL ..."))
   .then(() => {
@@ -142,7 +167,7 @@ if (isCompletedStep("sysgen-full") === false) {
              .then(() => dtc.dsd(`X.MODVAL(OP=Z)/NETADMN,PW=${netadmnPw}`));
   })
   .then(() => {
-    addCompletedStep("sysgen-full");
+    addCompletedStep("update-passwords");
     return Promise.resolve();
   });
 }
@@ -194,26 +219,6 @@ if (isCompletedStep("add-guest") === false) {
   ], "GESTMDV", 1))
   .then(() => {
     addCompletedStep("add-guest");
-    return Promise.resolve();
-  });
-}
-
-if (isCompletedStep("sysgen-source") === false) {
-  promise = promise
-  .then(() => dtc.say("Start SYSGEN(SOURCE) ..."));
-  if (isMountTapes === false) {
-    isMountTapes = true;
-    promise = promise
-    .then(() => dtc.mount(13, 0, 1, "tapes/nos287-1.tap"))
-    .then(() => dtc.mount(13, 0, 2, "tapes/nos287-2.tap"))
-    .then(() => dtc.mount(13, 0, 3, "tapes/nos287-3.tap"));
-  }
-  promise = promise
-  .then(() => dtc.dsd("[X.SYSGEN(SOURCE)"))
-  .then(() => dtc.expect([ {re:/E N D   S O U R C E/} ], "printer"))
-  .then(() => dtc.say("SYSGEN(SOURCE) complete"))
-  .then(() => {
-    addCompletedStep("sysgen-source");
     return Promise.resolve();
   });
 }
