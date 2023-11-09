@@ -11,8 +11,8 @@ dtc.connect()
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => dtc.say("Start CYBIS ..."))
 .then(() => dtc.dsd(["CYBIS."]))
-.then(() => dtc.say("Wait for CYBIS to initialize ..."))
-.then(() => dtc.sleep(30000))
+.then(() => dtc.say("Wait for CYBIS to fully initialize ..."))
+.then(() => dtc.sleep(45000))
 .then(() => {
   process.exit(0);
 })
