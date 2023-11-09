@@ -60,6 +60,7 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[stkDrivePath](#stkDrivePath)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfNode](#tlfNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[tlfPorts](#tlfPorts)
+- &nbsp;&nbsp;&nbsp;&nbsp;[[PASSWORDS]](#passwords)
 - &nbsp;&nbsp;&nbsp;&nbsp;[[RESOLVER]](#resolver)
 - [Customized Configuration Examples](#cfgexamples)
 - [A Note About Anti-Virus Software](#virus)
@@ -1625,6 +1626,66 @@ entry is:
     equivalent to:
     
     `tlfPorts=0x28,8`
+
+### <a id="passwords"></a>[PASSWORDS]
+Enables passwords of user accounts in the NOS 2.8.7 system to be re/defined. Each line of
+this section specifies a username and the password to be defined for it. The general syntax
+of each line is:
+
+*username*=*password*
+
+The following example illustrates how the section can be used to customize the passwords
+associated with usernames in a system. All of the usernames defined in a full, ready-to-run
+system are shown along with the default passwords defined for each of them. To redefine
+the passwords used in an installed system, you may copy this example to a `[PASSWORDS]`
+section in your `site.cfg` file, edit the passwords that you want to change, then run
+the `reconfigure.js` tool to change the edited passwords while the system is running.
+
+Additionally, if a `[PASSWORDS]` section occurs in a `site.cfg` file that exists when a
+ready-to-run system is first installed using the `install.js` tool with the `rtr` option,
+the indicated password changes will be applied when `install.js` calls `reconfigure.js`
+implicitly. Furthermore, if you use `install.js` to install a system from scratch (i.e., by
+specifying the `full` option), the customized passwords will be applied during the scratch
+installation.
+
+Example:
+```
+[PASSWORDS]
+BCSCRAY=CRAYOPN
+CDCS=CDCS
+CYBIS=CYBIS
+CYBISMF=CYBISMF
+DBCNTLX=DBCNTLX
+GUEST=GUEST
+INSTALL=INSTALL
+NETADMN=NETADMN
+NETOPS=NETOPSX
+MAILER=MAILER
+NJF=NJFX
+PLATO=PLATO
+PLATOMF=PLATOMF
+PRINT01=PRINT01
+PRINT02=PRINT02
+PRINT03=PRINT03
+PRINT04=PRINT04
+PRINT05=PRINT05
+PRINT06=PRINT06
+PRINT07=PRINT07
+PRINT08=PRINT08
+PRINT09=PRINT09
+PRINT10=PRINT10
+PRINT11=PRINT11
+PRINT12=PRINT12
+PRINTS=PRINTS
+REXEC=REXECX
+RJE1=RJE1
+RJE2=RJE2
+SES=SESX
+SYS=SYSX
+SYSTEMX=SYSTEMX
+TIELINE=TIELINE
+WWW=WWWX
+```
 
 ### <a id="resolver"></a>[RESOLVER]
 Defines the TCP/IP resource resolver configuration. This is saved as the file named
