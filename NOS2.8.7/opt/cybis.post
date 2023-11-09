@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-//SYSEDIT CYBIS into the running system and start it in preparation for the cybis-lessons
-//install steps.
+//
+// Start CYBIS in preparation for the cybis-lessons install steps.
+//
 const DtCyber = require("../../automation/DtCyber");
 
 const dtc = new DtCyber();
@@ -8,26 +9,10 @@ const dtc = new DtCyber();
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
-.then(() => dtc.say("Idle IAF"))
-.then(() => dtc.dsd(["IDLE,IAF."]))
-.then(() => dtc.say("Enable CYBIS"))
-.then(() => dtc.dsd([
-  "SUB.",
-  "#2000#ENABLE,CYB",
-  "#2000#END",
-  "AB",
-]))
-.then(() => dtc.say("SYSEDIT CYBIS"))
-.then(() => dtc.dis([
-  "ATTACH,CYBBIN.",
-  "SYSEDIT,B=CYBBIN,L=OUTPUT."
-], "CYBSE", 1))
-.then(() => dtc.say("Starting CYBIS ..."))
+.then(() => dtc.say("Start CYBIS ..."))
 .then(() => dtc.dsd(["CYBIS."]))
 .then(() => dtc.say("Wait for CYBIS to initialize ..."))
 .then(() => dtc.sleep(30000))
-.then(() => dtc.say("Restarting IAF ..."))
-.then(() => dtc.dsd(["IAF."]))
 .then(() => {
   process.exit(0);
 })

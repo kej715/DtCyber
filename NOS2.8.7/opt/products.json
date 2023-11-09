@@ -63,8 +63,6 @@
           "cybis-update-ndl.js",
           "../compile-ndl.js",
           "cybis-eqpd.job",
-          "../make-ds-tape.js",
-          "cybis-newds.pre",
           "cybis-start.job",
           "cybis-start.pre",
           "cybis-users.job",
@@ -73,6 +71,8 @@
         ],
         "post": [
           "cybis-enable.job",
+          "../make-ds-tape.js",
+          "cybis-newds.pre",
           "cybis.post"
         ],
         "lib": 74,
@@ -84,8 +84,10 @@
       {
           "name": "cybis-lessons",
           "desc": "CYBIS Exposed courseware and updates to group s",
-          "pre": ["cybis-lessons-mkfiles.pre",
-          "cybis-lessons-load.pre"],
+          "pre": [
+            "cybis-lessons-mkfiles.pre",
+            "cybis-lessons-load.pre"
+          ],
           "post": ["cybis-lessons.post"],
           "depends": ["cybis-base"]
       }
