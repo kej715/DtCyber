@@ -14,8 +14,9 @@ const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
-const terminals = utilities.getHaspTerminals(dtc);
-const names     = Object.keys(terminals);
+const customProps  = utilities.getCustomProperties(dtc);
+const terminals    = utilities.getHaspTerminals(dtc);
+const names        = Object.keys(terminals);
 
 if (names.length < 1) process.exit(0);
 
@@ -36,7 +37,7 @@ dtc.say("Start RBF configuration ...")
 .then(() => {
   let job = [
     "RBFUSRS.",
-    "USER,INSTALL,INSTALL.",
+    `USER,INSTALL,${utilities.getPropertyValue(customProps, "PASSWORDS", "INSTALL", "INSTALL")}.`,
     "COPYBR,INPUT,RBFUSRS.",
     "REPLACE,RBFUSRS.",
     "***",

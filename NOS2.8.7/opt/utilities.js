@@ -50,7 +50,7 @@ const utilities = {
     const options = {
       jobname:  "DELMOD",
       username: "NETADMN",
-      password: "NETADMN"
+      password: utilities.getPropertyValue(utilities.getCustomProperties(dtc), "PASSWORDS", "NETADMN", "NETADMN")
     };
     return dtc.say("Update NDL ...")
     .then(() => dtc.createJobWithOutput(12, 4, job, options));
@@ -69,7 +69,12 @@ const utilities = {
       "$REWIND,IPRD01.",
       "$COPYSBF,IPRD01."
     ];
-    return dtc.createJobWithOutput(12, 4, job, {jobname:"GETIPRD"})
+    const options = {
+      jobname: "GETIPRD",
+      username: "INSTALL",
+      password: utilities.getPropertyValue(utilities.getCustomProperties(dtc), "PASSWORDS", "INSTALL", "INSTALL")
+    };
+    return dtc.createJobWithOutput(12, 4, job, options)
     .then(iprd01 => {
       let si = 0;
       while (si < iprd01.length) {
@@ -92,6 +97,8 @@ const utilities = {
       ];
       const options = {
         jobname: "UPDIPRD",
+        username: "INSTALL",
+        password: utilities.getPropertyValue(utilities.getCustomProperties(dtc), "PASSWORDS", "INSTALL", "INSTALL"),
         data:    iprd01
       };
       return dtc.createJobWithOutput(12, 4, job, options);
@@ -126,8 +133,7 @@ const utilities = {
 
   getDefaultNjeRoute: dtc => {
     if (typeof utilities.defaultNjeRoute === "undefined") {
-      const customProps = utilities.getCustomProperties(dtc);
-      utilities.defaultNjeRoute = utilities.getPropertyValue(customProps, "NETWORK", "defaultRoute", null);
+      utilities.defaultNjeRoute = utilities.getPropertyValue(utilities.getCustomProperties(dtc), "NETWORK", "defaultRoute", null);
       if (utilities.defaultNjeRoute === null) {
         const hostID = utilities.getHostId(dtc);
         let localNode = utilities.njeTopology[hostID];
@@ -150,6 +156,10 @@ const utilities = {
     ];
     if (typeof options === "undefined") options = {};
     options.jobname = "GETFILE";
+    if (typeof options.username === "undefined" && typeof options.user === "undefined") {
+      options.username = "INSTALL";
+      options.password = utilities.getPropertyValue(utilities.getCustomProperties(dtc), "PASSWORDS", "INSTALL", "INSTALL");
+    }
     return dtc.createJobWithOutput(12, 4, job, options);
   },
 
@@ -226,8 +236,7 @@ const utilities = {
     if (typeof utilities.hostId !== "undefined") return utilities.hostId;
     const iniProps = dtc.getIniProperties(dtc);
     let hostId = utilities.getPropertyValue(iniProps, "npu.nos287", "hostID", null);
-    const customProps = utilities.getCustomProperties(dtc);
-    hostId = utilities.getPropertyValue(customProps, "NETWORK", "hostID", hostId);
+    hostId = utilities.getPropertyValue(utilities.getCustomProperties(dtc), "NETWORK", "hostID", hostId);
     utilities.hostId = hostId !== null ? hostId.toUpperCase() : `M${utilities.getMachineId(dtc)}`;
     return utilities.hostId;
   },
@@ -280,8 +289,7 @@ const utilities = {
 
   getMachineId: dtc => {
     if (typeof utilities.machineId !== "undefined") return utilities.machineId;
-    const customProps = utilities.getCustomProperties(dtc);
-    let mid = utilities.getPropertyValue(customProps, "CMRDECK", "MID", "01");
+    let mid = utilities.getPropertyValue(utilities.getCustomProperties(dtc), "CMRDECK", "MID", "01");
     utilities.machineId = mid.substring(0, 2).toUpperCase();
     return utilities.machineId;
   },
@@ -523,6 +531,10 @@ const utilities = {
     ];
     if (typeof options === "undefined") options = {};
     options.jobname = "GTRSYS";
+    if (typeof options.username === "undefined" && typeof options.user === "undefined") {
+      options.username = "INSTALL";
+      options.password = utilities.getPropertyValue(utilities.getCustomProperties(dtc), "PASSWORDS", "INSTALL", "INSTALL");
+    }
     return dtc.createJobWithOutput(12, 4, job, options);
   },
 
@@ -723,7 +735,7 @@ const utilities = {
     const options = {
       jobname:  "UPDNDL",
       username: "NETADMN",
-      password: "NETADMN",
+      password: utilities.getPropertyValue(utilities.getCustomProperties(dtc), "PASSWORDS", "NETADMN", "NETADMN"),
       data:     modset
     };
     return dtc.createJobWithOutput(12, 4, job, options)

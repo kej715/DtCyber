@@ -7,17 +7,37 @@ const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
-let emEqOrdinal    = 6;           // ESM equipment ordinal
-let newHostID      = null;        // new network host identifier
-let newMID         = null;        // new machine identifer
-let oldHostID      = "NCCM01";    // old network host identifier
-let oldMID         = "01";        // old machine identifer
-let productRecords = [];          // textual records to edit into PRODUCT file
+let doRcfgPasswords = true;
 
-const customProps  = utilities.getCustomProperties(dtc);
-const iniProps     = dtc.getIniProperties();
-let   ovlProps     = {};
-let   newIpAddress = "127.0.0.1";
+for (let arg of process.argv.slice(2)) {
+  arg = arg.toLowerCase();
+  if (arg === "-pw") {
+    doRcfgPasswords = false;
+  }
+  else {
+    process.stderr.write(`Unrecognized argument: ${arg}\n`);
+    process.stderr.write("Usage: node reconfigure [-pw]\n");
+    process.exit(1);
+  }
+}
+
+let emEqOrdinal      = 6;           // ESM equipment ordinal
+let newHostID        = null;        // new network host identifier
+let newMID           = null;        // new machine identifer
+let oldHostID        = "NCCM01";    // old network host identifier
+let oldMID           = "01";        // old machine identifer
+let productRecords   = [];          // textual records to edit into PRODUCT file
+let updatedPasswords = [];          // list of passwords that have been updated
+
+const customProps    = utilities.getCustomProperties(dtc);
+const iniProps       = dtc.getIniProperties();
+let   ovlProps       = {};
+let   newIpAddress   = "127.0.0.1";
+let   passwordMap    = {};
+
+if (fs.existsSync("opt/password-map.json")) {
+  passwordMap = JSON.parse(fs.readFileSync("opt/password-map.json", "utf8"));
+}
 
 let oldCrsInfo = {
   lid:       "COS",
@@ -242,6 +262,81 @@ const processNetworkProps = () => {
 };
 
 /*
+ * processPasswordChanges
+ *
+ * Process properties defined in PASSWORDS sections of property files. Detect passwords
+ * that have been updated since the last reconfiguration, and synchronize the associated
+ * password definitions and references in the running system.
+ *
+ * Returns:
+ *  A promise that is resolved when all password changes have been processed.
+ */
+const processPasswordChanges = () => {
+  if (doRcfgPasswords && typeof customProps["PASSWORDS"] !== "undefined") {
+    for (const pwDefn of customProps["PASSWORDS"]) {
+      let ei = pwDefn.indexOf("=");
+      if (ei > 0) {
+        let un = pwDefn.substring(0, ei).toUpperCase().trim();
+        let pw = pwDefn.substring(ei + 1).toUpperCase().trim();
+        if (typeof passwordMap[un] === "undefined" || passwordMap[un] !== pw) {
+          updatedPasswords.push(un);
+          passwordMap[un] = pw;
+        }
+      }
+    }
+    if (updatedPasswords.length > 0) {
+      const products = JSON.parse(fs.readFileSync("opt/products.json", "utf8"));
+      let installedProducts = [];
+      if (fs.existsSync("opt/installed.json")) {
+        installedProducts = JSON.parse(fs.readFileSync("opt/installed.json", "utf8"));
+      }
+      let processors = {};
+      for (const category of products) {
+        for (const prodDefn of category.products) {
+          if (typeof prodDefn.users !== "undefined" && utilities.isInstalled(prodDefn.name)) {
+            for (const un of Object.keys(prodDefn.users)) {
+              if (updatedPasswords.indexOf(un) >= 0) {
+                if (typeof processors[un] === "undefined") processors[un] = [];
+                processors[un] = processors[un].concat(prodDefn.users[un]);
+              }
+            }
+          }
+        }
+      }
+      let promise = dtc.say("Update passwords ...");
+      for (const un of updatedPasswords) {
+        promise = promise
+        .then(() => dtc.say(`  ${un}`))
+        .then(() => dtc.dsd(`X.MODVAL(OP=Z)/${un},PW=${passwordMap[un]}`));
+      }
+      for (const un of Object.keys(processors).sort()) {
+        for (const item of processors[un]) {
+          if (item.endsWith(".job")) {
+            promise = promise
+              .then(() => dtc.say(`Run job opt/${item} ...`))
+              .then(() => dtc.runJob(12, 4, `opt/${item}`));
+          }
+          else {
+            promise = promise
+            .then(() => dtc.say(`Run command "node opt/${item}" ...`))
+            .then(() => dtc.disconnect())
+            .then(() => dtc.exec("node", [`opt/${item}`]))
+            .then(() => dtc.connect())
+            .then(() => dtc.expect([ {re:/Operator> $/} ]));
+          }
+        }
+      }
+      return promise
+      .then(() => {
+        fs.writeFileSync("opt/password-map.json", JSON.stringify(passwordMap));
+        return Promise.resolve();
+      });
+    }
+  }
+  return Promise.resolve();
+};
+
+/*
  * replaceFile
  *
  * Replace a file on the running system.
@@ -262,6 +357,10 @@ const replaceFile = (filename, data, options) => {
   if (typeof options === "undefined") options = {};
   options.jobname = "REPFILE";
   options.data    = data;
+  if (typeof options.username === "undefined" && typeof options.user === "undefined") {
+    options.username = "INSTALL";
+    options.password = utilities.getPropertyValue(customProps, "PASSWORDS", "INSTALL", "INSTALL");
+  }
   return dtc.createJobWithOutput(12, 4, job, options);
 };
 
@@ -316,6 +415,8 @@ const updateProductRecords = () => {
     ];
     const options = {
       jobname: "UPDPROD",
+      username: "INSTALL",
+      password: utilities.getPropertyValue(customProps, "PASSWORDS", "INSTALL", "INSTALL"),
       data:    `${productRecords.join("~eor\n")}`
     };
     return dtc.say("Update PRODUCT ...")
@@ -350,7 +451,7 @@ const updateTcpHosts = () => {
   }
   else {
     return dtc.say("Update TCPHOST ...")
-    .then(() => utilities.getFile(dtc, "TCPHOST", {username:"NETADMN",password:"NETADMN"}))
+    .then(() => utilities.getFile(dtc, "TCPHOST", {username:"NETADMN",password:utilities.getPropertyValue(customProps, "PASSWORDS", "NETADMN", "NETADMN")}))
     .then(text => {
       let hosts = {};
       let pid = `M${oldMID.toUpperCase()}`;
@@ -396,12 +497,13 @@ const updateTcpHosts = () => {
       const job = [
         "$CHANGE,TCPHOST/CT=PU,M=R,AC=Y."
       ];
+      const netadmnPw = utilities.getPropertyValue(customProps, "PASSWORDS", "NETADMN", "NETADMN");
       const options = {
         jobname:  "MAKEPUB",
         username: "NETADMN",
-        password: "NETADMN"
+        password: netadmnPw
       };
-      return dtc.putFile("TCPHOST/IA", text, {username:"NETADMN",password:"NETADMN"})
+      return dtc.putFile("TCPHOST/IA", text, {username:"NETADMN",password:netadmnPw})
       .then(() => dtc.createJobWithOutput(12, 4, job, options));
     });
   }
@@ -421,13 +523,14 @@ const updateTcpResolver = () => {
     const job = [
       "$CHANGE,TCPRSLV/CT=PU,M=R,AC=Y."
     ];
+    const netadmnPw = utilities.getPropertyValue(customProps, "PASSWORDS", "NETADMN", "NETADMN");
     const options = {
       jobname: "MAKEPUB",
       username: "NETADMN",
-      password: "NETADMN"
+      password: netadmnPw
     };
     return dtc.say("Create/Update TCPRSLV ...")
-    .then(() => dtc.putFile("TCPRSLV/IA", `${customProps["RESOLVER"].join("\n")}\n`, {username:"NETADMN",password:"NETADMN"}))
+    .then(() => dtc.putFile("TCPRSLV/IA", `${customProps["RESOLVER"].join("\n")}\n`, {username:"NETADMN",password:netadmnPw}))
     .then(() => dtc.createJobWithOutput(12, 4, job, options));
   }
   else {
@@ -438,6 +541,7 @@ const updateTcpResolver = () => {
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => processPasswordChanges())
 .then(() => processCmrdProps())
 .then(() => processEqpdProps())
 .then(() => processNetworkProps())
@@ -494,7 +598,8 @@ dtc.connect()
   if (utilities.isInstalled("crs") && typeof newCrsInfo.lid !== "undefined") {
     if (   oldCrsInfo.lid       !== newCrsInfo.lid
         || oldCrsInfo.stationId !== newCrsInfo.stationId
-        || oldCrsInfo.crayId    !== newCrsInfo.crayId) {
+        || oldCrsInfo.crayId    !== newCrsInfo.crayId
+        || updatedPasswords.indexOf("BCSCRAY") >= 0) {
       return dtc.say("Rebuild CRS ...")
       .then(() => dtc.exec("node", ["install-product","-f","crs"]));
     }
@@ -687,6 +792,8 @@ dtc.connect()
       ];
       const options = {
         jobname: "UPDEQPD",
+        username: "INSTALL",
+        password: utilities.getPropertyValue(customProps, "PASSWORDS", "INSTALL", "INSTALL"),
         data: eqpd01
       };
       return dtc.createJobWithOutput(12, 4, job, options);

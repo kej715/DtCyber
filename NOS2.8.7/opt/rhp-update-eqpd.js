@@ -9,6 +9,7 @@ const utilities = require("./utilities");
 
 const dtc = new DtCyber();
 
+const customProps = utilities.getCustomProperties(dtc);
 const couplerNode = utilities.getCouplerNode(dtc);
 
 //
@@ -56,6 +57,8 @@ if (currentCouplerNode !== couplerNode) {
     ];
     const options = {
       jobname: "EQPDUPD",
+      username: "INSTALL",
+      password: utilities.getPropertyValue(customProps, "PASSWORDS", "INSTALL", "INSTALL"),
       data:    eqpd01
     };
     return dtc.createJobWithOutput(12, 4, job, options);

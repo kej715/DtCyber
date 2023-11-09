@@ -24,7 +24,7 @@ let promise = dtc.connect()
 .then(() => dtc.say("Shutdown to prepare for activating CYBIS disk packs ..."))
 .then(() => dtc.shutdown(false))
 .then(() => dtc.sleep(5000))
-.then(() => new Promise((resolve, reject) => {
+.then(() => {
   if (fs.existsSync("disks/cybis-packs.zip")) {
     fs.unlinkSync("disks/cybis-packs.zip");
   }
@@ -36,8 +36,8 @@ let promise = dtc.connect()
       fs.unlinkSync(`disks/${pack}.bz2`)
     }
   }
-  resolve();
-}))
+  return Promise.resolve();
+})
 .then(() => dtc.say("Get CYBIS disk pack archive ..."))
 .then(() => dtc.wget("https://www.dropbox.com/s/wdk53d825fmbkt0/cybis-packs.zip?dl=1", "disks", (byteCount, contentLength) => {
   maxProgressLen = utilities.reportProgress(byteCount, contentLength, maxProgressLen);
@@ -45,18 +45,18 @@ let promise = dtc.connect()
 .then(() => utilities.clearProgress(maxProgressLen))
 .then(() => dtc.say("Expand CYBIS disk pack archive ..."))
 .then(() => dtc.unzip("disks/cybis-packs.zip", "disks"))
-.then(() => new Promise((resolve, reject) => {
+.then(() => {
   fs.unlinkSync("disks/cybis-packs.zip");
-  resolve();
-}));
+  return Promise.resolve();
+});
 for (const pack of packList) {
   promise = promise
   .then(() => dtc.say(`Decompress ${pack} image ...`))
   .then(() => dtc.bunzip2(`disks/${pack}.bz2`, `disks/${pack}`))
-  .then(() => new Promise((resolve, reject) => {
+  .then(() => {
     fs.unlinkSync(`disks/${pack}.bz2`);
-    resolve();
-  }));
+    return Promise.resolve();
+  });
 }
 promise = promise
 .then(() => dtc.say("Save previous deadstart tape and rename new one ..."))
@@ -66,6 +66,7 @@ promise = promise
   }
   fs.renameSync("tapes/ds.tap", "tapes/ods.tap");
   fs.renameSync("tapes/newds.tap", "tapes/ds.tap");
+  return Promise.resolve();
 })
 .then(() => dtc.say("Deadstart using new tape with CYBIS disk packs activated ..."))
 .then(() => dtc.start({

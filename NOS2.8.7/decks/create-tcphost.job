@@ -3,7 +3,7 @@
 ~*  applications such as FTP.
 ~*
 TCPHOST.
-$USER,NETADMN,NETADMN.
+$USER,NETADMN,${../site.cfg:PASSWORDS:NETADMN:NETADMN}.
 $NORERUN.
 $SETTL,*.
 $SETASL,*.

@@ -4,6 +4,7 @@ const cmdExtensions = require("./cmd-extensions");
 const DtCyber       = require("../automation/DtCyber");
 const fs            = require("fs");
 const Terminal      = require("../automation/Terminal");
+const utilities     = require("./opt/utilities");
 
 const dtc  = new DtCyber();
 const term = new Terminal.AnsiTerminal();
@@ -88,7 +89,7 @@ dtc.start(["manual"], {
 .then(() => dtc.sleep(10000))
 .then(() => term.connect(`${ipAddress}:23`))
 .then(() => term.say("Login ..."))
-.then(() => term.loginNOS2("", "INSTALL", "INSTALL"))
+.then(() => term.loginNOS2("", "INSTALL", utilities.getPropertyValue(utilities.getCustomProperties(),"PASSWORDS","INSTALL","INSTALL")))
 .then(() => term.say("Logged in"))
 .then(() => term.send("COMMON,SYSTEM\r"))
 .then(() => term.expect([{ re: /\// }]))

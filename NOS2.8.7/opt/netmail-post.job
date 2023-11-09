@@ -3,7 +3,7 @@
 ~*  in the catalog of MAILER and permits it to SYSTEMX.
 ~*
 INSPOST.
-$USER,MAILER,MAILER.
+$USER,MAILER,${../site.cfg:PASSWORDS:MAILER:MAILER}.
 $NORERUN.
 $SETTL,*.
 $SETASL,*.

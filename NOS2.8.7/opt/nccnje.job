@@ -6,7 +6,7 @@
 ~*  deadstart file library number of the NJEF applications.
 ~*
 NJUTIL.
-$USER,INSTALL,INSTALL.
+$USER,INSTALL,${../site.cfg:PASSWORDS:INSTALL:INSTALL}.
 $COPYBR,INPUT,LIBSRC.
 $COPYBR,INPUT,NJMSRC.
 $COPYBR,INPUT,NJDSRC.

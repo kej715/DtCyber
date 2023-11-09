@@ -100,7 +100,7 @@
 */
 *D BLDTSK.729,BLDTSK.730
           DIS    ,*CTASK,T7777.*
-          DIS    ,*USER,BCSCRAY,CRAYOPN.*
+          DIS    ,*USER,BCSCRAY,${../../site.cfg:PASSWORDS:BCSCRAY:CRAYOPN}.*
 */
 */  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 */  *                                                                 *

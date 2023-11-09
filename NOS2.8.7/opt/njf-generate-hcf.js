@@ -9,6 +9,7 @@ const utilities = require("./utilities");
 
 const dtc = new DtCyber();
 
+const customProps = utilities.getCustomProperties(dtc);
 const mid         = utilities.getMachineId(dtc);
 const hostID      = utilities.getHostId(dtc);
 const njeTopology = utilities.getNjeTopology(dtc);
@@ -146,7 +147,7 @@ dtc.connect()
   const options = {
     jobname:  "HCFSRC",
     username: "NETADMN",
-    password: "NETADMN",
+    password: utilities.getPropertyValue(customProps, "PASSWORDS", "NETADMN", "NETADMN"),
     data:     hcfSource.join("\n")
   };
   return dtc.createJobWithOutput(12, 4, job, options);

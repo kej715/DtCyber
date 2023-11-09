@@ -10,15 +10,15 @@ const utilities   = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
+const customProps = utilities.getCustomProperties(dtc);
 const hostId      = utilities.getHostId(dtc);
-const mailerOpts  = {username:"MAILER",password:"MAILER"};
 const mid         = utilities.getMachineId(dtc);
 const timeZone    = utilities.getTimeZone();
-
-const customProps = {};
-dtc.readPropertyFile(customProps);
-
-let hostAliases = [`${hostId}.BITNET`];
+const mailerOpts  = {
+  username:"MAILER",
+  password:utilities.getPropertyValue(customProps, "PASSWORDS", "MAILER", "MAILER")
+};
+let hostAliases   = [`${hostId}.BITNET`];
 
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
@@ -255,7 +255,7 @@ dtc.connect()
   let options = {
     jobname:  "TABLES",
     username: "MAILER",
-    password: "MAILER",
+    password: utilities.getPropertyValue(customProps, "PASSWORDS", "MAILER", "MAILER")
   };
   const job = [
     "$GET,TBLPROC.",

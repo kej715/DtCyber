@@ -12,11 +12,45 @@ let isContinueInstall   = false;
 let isReadyToRunInstall = true;
 let imageName           = "nos287-full-865";
 
+//
+//  URL map of ready-to-run images
+//
 const imageMap = {
-  "nos287-full-865": "https://www.dropbox.com/s/4tey61kc0sa7swu/nos287rtr-full-865.zip?dl=1",
-  "nos287-full-875": "https://www.dropbox.com/scl/fi/0z0wxoxd2j30ko4evlvii/nos287rtr-full-875.zip?rlkey=bgxojr3ulhkj47ctrs2lp1rrk&dl=1",
+  "nos287-full-865":       "https://www.dropbox.com/s/4tey61kc0sa7swu/nos287rtr-full-865.zip?dl=1",
+  "nos287-full-875":       "https://www.dropbox.com/scl/fi/0z0wxoxd2j30ko4evlvii/nos287rtr-full-875.zip?rlkey=bgxojr3ulhkj47ctrs2lp1rrk&dl=1",
   "nos287-full-875-beast": "https://www.dropbox.com/scl/fi/15wl0zf55y2azt6tpbtkv/nos287rtr-full-875-beast.zip?rlkey=jmfckxm8mt8jxpxsn0vocwr9x&dl=1",
-  "nos287-most-175": "https://www.dropbox.com/scl/fi/0y0yycmilzytrjp0febyy/nos287rtr-most-175.zip?rlkey=zbagqkdzvst9p7t1m94oa5pp8&dl=1"
+  "nos287-most-175":       "https://www.dropbox.com/scl/fi/0y0yycmilzytrjp0febyy/nos287rtr-most-175.zip?rlkey=zbagqkdzvst9p7t1m94oa5pp8&dl=1"
+};
+
+//
+//  Map of default passwords by username. These are the passwords defined
+//  in the ready-to-run images, and they are the default passwords that
+//  are used when a site.cfg file with a [PASSWORDS] section has not yet
+//  been applied.
+//
+let passwordMap = {
+  "BCSCRAY": "CRAYOPN",
+  "CDCS":    "CDCS",
+  "CYBIS":   "CYBIS",
+  "CYBISMF": "CYBISMF",
+  "DBCNTLX": "DBCNTLX",
+  "GUEST":   "GUEST",
+  "INSTALL": "INSTALL",
+  "NETADMN": "NETADMN",
+  "NETOPS":  "NETOPSX",
+  "MAILER":  "MAILER",
+  "NJF":     "NJFX",
+  "PLATO":   "PLATO",
+  "PLATOMF": "PLATOMF",
+  "PRINTS":  "PRINTS",
+  "REXEC":   "REXECX",
+  "RJE1":    "RJE1",
+  "RJE2":    "RJE2",
+  "SES":     "SESX",
+  "SYS":     "SYSX",
+  "SYSTEMX": "SYSTEMX",
+  "TIELINE": "TIELINE",
+  "WWW":     "WWWX"
 };
 
 const usage = () => {
@@ -110,6 +144,10 @@ if (isReadyToRunInstall) {
   .then(() => startSystem())
   .then(() => {
     //
+    //  Initialize the password map with default values
+    //
+    fs.writeFileSync("opt/password-map.json", JSON.stringify(passwordMap));
+    //
     //  If the file site.cfg exists, run the reconfiguration tool to
     //  apply configuration customizations to the installed system.
     //
@@ -198,6 +236,21 @@ else {
     }
   })
   .then(() => dtc.console("idle on"))
+  .then(() => {
+    if (fs.existsSync("site.cfg")) {
+      const customProps  = utilities.getCustomProperties(dtc);
+      if (typeof customProps["PASSWORDS"] !== "undefined") {
+        for (const defn of customProps["PASSWORDS"]) {
+          let ei = defn.indexOf("=");
+          if (ei > 0) {
+            passwordMap[defn.substring(0, ei).toUpperCase()] = defn.substring(ei + 1).toUpperCase();
+          }
+        }
+      }
+    }
+    fs.writeFileSync("opt/password-map.json", JSON.stringify(passwordMap));
+    return Promise.resolve();
+  })
   .then(() => dtc.say(`${isBasicInstall ? "Basic" : "Full"} installation of NOS 2.8.7 complete`))
   .then(() => dtc.say("Enter 'exit' command to exit and shutdown gracefully"))
   .then(() => dtc.engageOperator(cmdExtensions))

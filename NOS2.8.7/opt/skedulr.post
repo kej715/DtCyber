@@ -39,7 +39,10 @@ dtc.connect()
        +  "$GET,SKEDULR.\n"
        +  "$ROUTE,SKEDULR,DC=NO,OT=SYOT.\n"
        +  end;
-  return dtc.putFile("SYSPROC/IA,CS=DIS", text);
+  return dtc.putFile("SYSPROC/IA,CS=DIS", text, {
+    username: "INSTALL",
+    password: utilities.getPropertyValue(utilities.getCustomProperties(dtc),"PASSWORDS","INSTALL","INSTALL")
+  });
 })
 .then(() => dtc.dis([
   "GET,SYSPROC.",
