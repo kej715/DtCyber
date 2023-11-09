@@ -89,7 +89,7 @@ dtc.start(["manual"], {
 .then(() => dtc.sleep(10000))
 .then(() => term.connect(`${ipAddress}:23`))
 .then(() => term.say("Login ..."))
-.then(() => term.loginNOS2("", "INSTALL", utilities.getPropertyValue(utilities.getCustomProperties(),"PASSWORDS"."INSTALL","INSTALL")))
+.then(() => term.loginNOS2("", "INSTALL", utilities.getPropertyValue(utilities.getCustomProperties(),"PASSWORDS","INSTALL","INSTALL")))
 .then(() => term.say("Logged in"))
 .then(() => term.send("COMMON,SYSTEM\r"))
 .then(() => term.expect([{ re: /\// }]))
