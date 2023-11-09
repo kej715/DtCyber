@@ -62,7 +62,7 @@
         "pre": [
           "cybis-update-ndl.js",
           "../compile-ndl.js",
-          "cybis-eqpd.job",
+          "cybis-eqp-ipr.job",
           "cybis-start.job",
           "cybis-start.pre",
           "cybis-users.job",
@@ -70,7 +70,6 @@
           "cybis-mount-bin.pre"
         ],
         "post": [
-          "cybis-enable.job",
           "../make-ds-tape.js",
           "cybis-newds.post",
           "cybis.post"

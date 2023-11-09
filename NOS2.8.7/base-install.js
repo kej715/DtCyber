@@ -252,6 +252,17 @@ if (isMountTapes) {
   ]));
 }
 
+if (fs.existsSync("site.cfg") && isCompletedStep("site-config") === false) {
+  promise = promise
+  .then(() => dtc.say("Apply site configuration (site.cfg) ..."))
+  .then(() => dtc.disconnect())
+  .then(() => dtc.exec("node", ["reconfigure"]))
+  .then(() => {
+    addCompletedStep("site-config");
+    return Promise.resolve();
+  });
+}
+
 promise = promise
 .then(() => dtc.say("Base installation completed successfully"))
 .then(() => {
