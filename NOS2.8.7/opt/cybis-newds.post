@@ -1,0 +1,90 @@
+#!/usr/bin/env node
+//
+// Shutdown and re-deadstart using new deadstart tape
+//
+
+const fs        = require("fs");
+const DtCyber   = require("../../automation/DtCyber");
+const utilities = require("./utilities");
+
+const packList = [
+  "DQ20_BINARY",
+  "DQ21_CYB0",
+  "DQ22_CYB1",
+  "DQ23_PUB0",
+  "DQ24_PUB1",
+  "DQ25_UOL"
+];
+
+const dtc = new DtCyber();
+
+let maxProgressLen = 0;
+let promise = dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.say("Shutdown to prepare for activating CYBIS disk packs ..."))
+.then(() => dtc.shutdown(false))
+.then(() => dtc.sleep(5000))
+.then(() => {
+  if (fs.existsSync("disks/cybis-packs.zip")) {
+    fs.unlinkSync("disks/cybis-packs.zip");
+  }
+  for (const pack of packList) {
+    if (fs.existsSync(`disks/${pack}`)) {
+      fs.unlinkSync(`disks/${pack}`)
+    }
+    if (fs.existsSync(`disks/${pack}.bz2`)) {
+      fs.unlinkSync(`disks/${pack}.bz2`)
+    }
+  }
+  return Promise.resolve();
+})
+.then(() => dtc.say("Get CYBIS disk pack archive ..."))
+.then(() => dtc.wget("https://www.dropbox.com/s/wdk53d825fmbkt0/cybis-packs.zip?dl=1", "disks", (byteCount, contentLength) => {
+  maxProgressLen = utilities.reportProgress(byteCount, contentLength, maxProgressLen);
+}))
+.then(() => utilities.clearProgress(maxProgressLen))
+.then(() => dtc.say("Expand CYBIS disk pack archive ..."))
+.then(() => dtc.unzip("disks/cybis-packs.zip", "disks"))
+.then(() => {
+  fs.unlinkSync("disks/cybis-packs.zip");
+  return Promise.resolve();
+});
+for (const pack of packList) {
+  promise = promise
+  .then(() => dtc.say(`Decompress ${pack} image ...`))
+  .then(() => dtc.bunzip2(`disks/${pack}.bz2`, `disks/${pack}`))
+  .then(() => {
+    fs.unlinkSync(`disks/${pack}.bz2`);
+    return Promise.resolve();
+  });
+}
+promise = promise
+.then(() => dtc.say("Save previous deadstart tape and rename new one ..."))
+.then(() => {
+  if (fs.existsSync("tapes/ods.tap")) {
+    fs.unlinkSync("tapes/ods.tap");
+  }
+  fs.renameSync("tapes/ds.tap", "tapes/ods.tap");
+  fs.renameSync("tapes/newds.tap", "tapes/ds.tap");
+  return Promise.resolve();
+})
+.then(() => dtc.say("Deadstart using new tape with CYBIS disk packs activated ..."))
+.then(() => dtc.start({
+  detached: true,
+  stdio:    [0, "ignore", 2],
+  unref:    false
+}))
+.then(() => dtc.sleep(5000))
+.then(() => dtc.connect())
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.console("idle off"))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.expect([{ re: /QUEUE FILE UTILITY COMPLETE/ }], "printer"))
+.then(() => dtc.say("Deadstart complete"))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});
