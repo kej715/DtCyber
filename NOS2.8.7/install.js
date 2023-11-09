@@ -240,7 +240,7 @@ else {
     if (fs.existsSync("site.cfg")) {
       const customProps  = utilities.getCustomProperties(dtc);
       if (typeof customProps["PASSWORDS"] !== "undefined") {
-        for (const defn of customProps["PASSWORDS"].split("\n")) {
+        for (const defn of customProps["PASSWORDS"]) {
           let ei = defn.indexOf("=");
           if (ei > 0) {
             passwordMap[defn.substring(0, ei).toUpperCase()] = defn.substring(ei + 1).toUpperCase();
