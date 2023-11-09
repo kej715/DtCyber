@@ -4,7 +4,7 @@ const cmdExtensions = require("./cmd-extensions");
 const DtCyber       = require("../automation/DtCyber");
 const fs            = require("fs");
 const Terminal      = require("../automation/Terminal");
-const utilities     = require("opt/utilities");
+const utilities     = require("./opt/utilities");
 
 const dtc  = new DtCyber();
 const term = new Terminal.AnsiTerminal();
