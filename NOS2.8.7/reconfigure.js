@@ -7,6 +7,20 @@ const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
+let doRcfgPasswords = true;
+
+for (let arg of process.argv.slice(2)) {
+  arg = arg.toLowerCase();
+  if (arg === "-pw") {
+    doRcfgPasswords = false;
+  }
+  else {
+    process.stderr.write(`Unrecognized argument: ${arg}\n`);
+    process.stderr.write("Usage: node reconfigure [-pw]\n");
+    process.exit(1);
+  }
+}
+
 let emEqOrdinal      = 6;           // ESM equipment ordinal
 let newHostID        = null;        // new network host identifier
 let newMID           = null;        // new machine identifer
@@ -258,7 +272,7 @@ const processNetworkProps = () => {
  *  A promise that is resolved when all password changes have been processed.
  */
 const processPasswordChanges = () => {
-  if (typeof customProps["PASSWORDS"] !== "undefined") {
+  if (doRcfgPasswords && typeof customProps["PASSWORDS"] !== "undefined") {
     for (const pwDefn of customProps["PASSWORDS"]) {
       let ei = pwDefn.indexOf("=");
       if (ei > 0) {

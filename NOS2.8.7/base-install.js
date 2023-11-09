@@ -256,7 +256,7 @@ if (fs.existsSync("site.cfg") && isCompletedStep("site-config") === false) {
   promise = promise
   .then(() => dtc.say("Apply site configuration (site.cfg) ..."))
   .then(() => dtc.disconnect())
-  .then(() => dtc.exec("node", ["reconfigure"]))
+  .then(() => dtc.exec("node", ["reconfigure", "-pw"]))
   .then(() => {
     addCompletedStep("site-config");
     return Promise.resolve();
