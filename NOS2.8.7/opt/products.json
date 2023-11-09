@@ -72,7 +72,7 @@
         "post": [
           "cybis-enable.job",
           "../make-ds-tape.js",
-          "cybis-newds.pre",
+          "cybis-newds.post",
           "cybis.post"
         ],
         "lib": 74,
