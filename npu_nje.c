@@ -619,11 +619,14 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                     }
                 else if (pcbp2->connFd > 0)
                     {
-#if DEBUG
-                    fprintf(npuNjeLog, "Port %02x: close connection due to active link conflict\n", pcbp2->claPort);
-#endif
                     r = CrNakLinkActive;
-                    npuNetCloseConnection(pcbp2);
+                    if ((getSeconds() - pcbp2->controls.nje.lastXmit) >= 600)
+                        {
+#if DEBUG
+                        fprintf(npuNjeLog, "Port %02x: close connection due to inactivity and active link conflict\n", pcbp2->claPort);
+#endif
+                        npuNetCloseConnection(pcbp2);
+                        }
                     }
                 else
                     {
