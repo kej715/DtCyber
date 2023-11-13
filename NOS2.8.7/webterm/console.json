@@ -1,0 +1,15 @@
+{
+  "port": 18001,
+  "httpRoot": "../../webterm/www",
+  "machines":
+  [
+    {
+      "id": "console",
+      "title": "NOS 2.8.7",
+      "host": "%../cyber.ini|cyber|ipAddress|127.0.0.1",
+      "port": 16612,
+      "protocol": "raw",
+      "terminal": "console.html?m=console&t=NOS%202.8.7"
+    }
+  ]
+}
