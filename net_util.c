@@ -100,7 +100,7 @@
 **  Parameters:     Name        Description.
 **                  sd          socket descriptor
 **
-**  Returns:        Nothing.
+**  Returns:        network descriptor, or invalid socket indication on error.
 **
 **------------------------------------------------------------------------*/
 #if defined(_WIN32)

@@ -32,9 +32,9 @@
 **  ----------------
 */
 #ifdef _DEBUG
-#define DtCyberVersion      "Desktop CYBER 5.7.49 (Debug)   "
+#define DtCyberVersion      "Desktop CYBER 5.7.50 (Debug)   "
 #else
-#define DtCyberVersion      "Desktop CYBER 5.7.49 (Release) "
+#define DtCyberVersion      "Desktop CYBER 5.7.50 (Release) "
 #endif
 
 #define DtCyberBuildDate    __DATE__ " " __TIME__
@@ -158,6 +158,11 @@
 #define MaxFSPath    4096       //  Go for the larger, Linux Default
 #endif
 
+/*
+**  Console Screen Ordinals and Offsets
+*/
+#define LeftScreen        0
+#define RightScreen       1
 
 #if CcLargeWin32Screen == 1
 #define OffLeftScreen     010

@@ -125,6 +125,9 @@ static bool opIsAbsolutePath(char *path);
 static int  opReadLine(char *buf, int size);
 static int  opStartListening(int port);
 
+static void opCmdDisconnectConsole(bool help, char *cmdParams);
+static void opHelpDisconnectConsole(void);
+
 static void opCmdDumpMemory(bool help, char *cmdParams);
 static void opCmdDumpCM(int fwa, int count);
 static void opCmdDumpEM(int fwa, int count);
@@ -225,6 +228,7 @@ volatile bool opPaused = FALSE;
 static OpCmd decode[] =
     {
     "d",                     opCmdDumpMemory,
+    "dc",                    opCmdDisconnectConsole,
     "dm",                    opCmdDumpMemory,
     "e",                     opCmdEnterKeys,
     "ek",                    opCmdEnterKeys,
@@ -247,6 +251,7 @@ static OpCmd decode[] =
     "sv",                    opCmdShowVersion,
     "ud",                    opCmdUnloadDisk,
     "ut",                    opCmdUnloadTape,
+    "disconnect_console",    opCmdDisconnectConsole,
     "dump_memory",           opCmdDumpMemory,
     "enter_keys",            opCmdEnterKeys,
     "load_cards",            opCmdLoadCards,
@@ -280,6 +285,7 @@ static OpCmd decode[] =
 static OpNetTypeEntry netTypes[] =
     {
     "cdcnet",  cdcnetShowStatus,
+    "console", consoleShowStatus,
     "crs",     csFeiShowStatus,
     "dsa311",  dsa311ShowStatus,
     "msu",     msufrendShowStatus,
@@ -1066,6 +1072,47 @@ static bool opIsAbsolutePath(char *path)
 
 #endif
     return FALSE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Disconnect Remote Console
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdDisconnectConsole(bool help, char *cmdParams)
+    {
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpDisconnectConsole();
+
+        return;
+        }
+
+    /*
+    **  Check parameters and process command.
+    */
+    if (strlen(cmdParams) != 0)
+        {
+        opDisplay("    > No parameters expected\n");
+        opHelpDisconnectConsole();
+
+        return;
+        }
+
+    consoleCloseRemote();
+    }
+
+static void opHelpDisconnectConsole(void)
+    {
+    opDisplay("    > 'disconnect_console' disconnect a remote console and return control to local console.\n");
     }
 
 /*--------------------------------------------------------------------------

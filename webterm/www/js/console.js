@@ -24,6 +24,7 @@ class CyberConsole {
     // Console screen offsets
     //
     this.SCREEN_GAP      = 40;
+    this.SCREEN_MARGIN   = 20;
 
     //
     // Console stream commands
@@ -85,9 +86,9 @@ class CyberConsole {
       this.fontWidths.push(fontWidth);
     }
     this.screenWidth  = this.fontWidths[this.SMALL_FONT] * 64;
-    this.screenHeight = this.fontHeights[this.SMALL_FONT] * 66;
-    this.canvasWidth  = (this.screenWidth * 2) + this.SCREEN_GAP;
-    this.canvasHeight = this.screenHeight;
+    this.screenHeight = this.fontHeights[this.SMALL_FONT] * 64;
+    this.canvasWidth  = (this.screenWidth * 2) + this.SCREEN_GAP + (this.SCREEN_MARGIN * 2);
+    this.canvasHeight = this.screenHeight + (this.SCREEN_MARGIN * 2);
   }
 
   setFont(font) {
@@ -182,7 +183,7 @@ class CyberConsole {
     this.offscreenContext.fillStyle = this.fgndColor;
     this.state        = this.ST_TEXT;
     this.x            = 0;
-    this.xOffset      = 0;
+    this.xOffset      = this.SCREEN_MARGIN;
     this.y            = 0;
   }
 
@@ -293,7 +294,7 @@ class CyberConsole {
         break;
 
       case this.ST_COLLECT_SCREEN:
-        this.xOffset = (b === 1) ? this.screenWidth + this.SCREEN_GAP : 0;
+        this.xOffset = (b === 1) ? this.screenWidth + this.SCREEN_GAP + this.SCREEN_MARGIN : this.SCREEN_MARGIN;
         this.state = this.ST_TEXT;
         break;
 

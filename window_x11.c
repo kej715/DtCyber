@@ -91,7 +91,6 @@ static volatile bool   displayActive = FALSE;
 static u8              currentFont;
 static i16             currentX;
 static i16             currentY;
-static u16             oldCurrentY;
 static DispList        display[ListSize];
 static u32             listEnd;
 static Font            hSmallFont;
@@ -99,7 +98,6 @@ static Font            hMediumFont;
 static Font            hLargeFont;
 static int             width;
 static int             height;
-static bool            refresh = FALSE;
 static pthread_mutex_t mutexDisplay;
 static Display         *disp;
 static Window          window;
@@ -188,12 +186,6 @@ void windowSetX(u16 x)
 void windowSetY(u16 y)
     {
     currentY = 0777 - y;
-    if (oldCurrentY > currentY)
-        {
-        refresh = TRUE;
-        }
-
-    oldCurrentY = currentY;
     }
 
 /*--------------------------------------------------------------------------
@@ -236,31 +228,6 @@ void windowQueue(u8 ch)
     **  Release display list.
     */
     pthread_mutex_unlock(&mutexDisplay);
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Update window.
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-void windowUpdate(void)
-    {
-    refresh = TRUE;
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Poll the keyboard (dummy for X11)
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        Nothing
-**
-**------------------------------------------------------------------------*/
-void windowGetChar(void)
-    {
     }
 
 /*--------------------------------------------------------------------------
@@ -499,7 +466,6 @@ void *windowThread(void *param)
 
             case MappingNotify:
                 XRefreshKeyboardMapping((XMappingEvent *)&event);
-                refresh = TRUE;
                 break;
 
             case ConfigureNotify:
@@ -515,7 +481,6 @@ void *windowThread(void *param)
                     }
 
                 XFillRectangle(disp, pixmap, gc, 0, 0, width, height);
-                refresh = TRUE;
                 break;
 
             case KeyPress:
@@ -641,9 +606,6 @@ void *windowThread(void *param)
                 }
             }
 
-        /*
-        **  Process any refresh request.
-        */
         XSetForeground(disp, gc, fg);
 
         XSetFont(disp, gc, hSmallFont);
@@ -696,6 +658,16 @@ void *windowThread(void *param)
             **  Display pause message.
             */
             static char opMessage[] = "Emulation paused";
+            XSetFont(disp, gc, hLargeFont);
+            oldFont = FontLarge;
+            XDrawString(disp, pixmap, gc, 20, 256, opMessage, strlen(opMessage));
+            }
+        else if (consoleIsRemoteActive())
+            {
+            /*
+            **  Display indication that rmeote console is active.
+            */
+            static char opMessage[] = "Remote console active";
             XSetFont(disp, gc, hLargeFont);
             oldFont = FontLarge;
             XDrawString(disp, pixmap, gc, 20, 256, opMessage, strlen(opMessage));
@@ -769,7 +741,6 @@ void *windowThread(void *param)
         listEnd  = 0;
         currentX = -1;
         currentY = -1;
-        refresh  = FALSE;
 
         /*
         **  Release display list.
