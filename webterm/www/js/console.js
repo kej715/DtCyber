@@ -52,7 +52,7 @@ class CyberConsole {
     this.currentFont       = this.SMALL_FONT;
     this.fgndColor         = "lightgreen";
     this.fontFamily        = "Lucida Typewriter";
-    this.fontHeights       = [2, 10, 20, 40];
+    this.fontHeights       = [0, 10, 20, 40];
     this.offscreenCanvas   = null;
     this.offscreenContext  = null;
     this.onscreenCanvas    = null;
@@ -203,7 +203,7 @@ class CyberConsole {
 
   displayNotification(font, x, y, s) {
     this.stop();
-    this.currentFont = font;
+    this.setFont(font);
     this.x           = x;
     this.xOffset     = 0;
     this.y           = y;
@@ -299,7 +299,7 @@ class CyberConsole {
         break;
 
       case this.ST_COLLECT_FONT:
-        this.currentFont = b;
+        this.setFont(b);
         this.state = this.ST_TEXT;
         break;
 
