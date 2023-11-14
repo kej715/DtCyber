@@ -21,6 +21,7 @@ real Control Data computer systems back in the 1980's and 90's.
 - [Installation Steps](#steps)
 - &nbsp;&nbsp;&nbsp;&nbsp;[Other Installation Options](#installopts)
 - [Login](#login)
+- [Web Console](#web-console)
 - [Remote Job Entry](#rje)
 - &nbsp;&nbsp;&nbsp;&nbsp;[TieLine Facility (TLF)](#tlf)
 - [Network Job Entry](#nje)
@@ -226,6 +227,28 @@ The following CYBIS users are available:
 | fortrancob| ccrm     | none     | Cyber Record Manager combined course  |
 | fortran   | cfortran | none     | Cyber FORTRAN lessons                 |
 | cobol     | ccobol   | none     | Cyber COBOL lessons                   |
+
+## <a id="web-console"></a>Web Console
+*DtCyber* is configured to start a special web server that supports a browser-based user
+interface to the system console. For the NOS 2.8.7 system, this web server listens for
+connections on TCP port 18001. When you request your web browser to open the following
+URL:
+
+```
+http://localhost:18001
+```
+
+it will display a page showing the systems served by the web-based console server. Ordinarily,
+one system will be shown, and it represents access to the system console of the NOS 2.8.7
+system. When you click on the link associated with the NOS 2.8.7 system, a browser-based
+console emulator will launch, and the local console window (either the X-Windows interface on
+Linux/Unix, or the Windows interface on Microsoft operating systems) will suspend after
+issuing a message indicating *Remote console active*.
+
+You may use the browser-based interface to interact with the system in the same way that you
+use the local console interface. The NOS 2.8.7 system itself cannot distinguish between the
+two forms of user interface. When you close the browser window in which the system console
+interface is running, control will revert automatically to the local console user interface.
 
 ## <a id="rje"></a>Remote Job Entry
 The system listens for RJE (remote job entry) connections on TCP port 2553. You
@@ -1072,7 +1095,7 @@ deadstart tape. However, you may re-install them (e.g., after customization), if
 
 | Product | Description |
 |---------|-------------|
-| [cybis](https://www.dropbox.com/s/jiythdoifn1f6bm/cybis-bin.tap?dl=1)                         | Cyber Instructional System                     |
+| [cybis-base](https://www.dropbox.com/s/jiythdoifn1f6bm/cybis-bin.tap?dl=1)                         | The base Cyber Instructional System                     |
 | [cybis-lessons](https://drive.google.com/drive/u/0/folders/1SY86n39EfFrX3T8scaoltRr_XMjjZiAb) | Additonal lesson content and patches for CYBIS |
 
 ### Category *database*
