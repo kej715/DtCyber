@@ -506,6 +506,8 @@ const usage = exitCode => {
 let configFiles = [];
 let pidFile = null;
 
+process.title = "webterm-server";
+
 let i = 2;
 while (i < process.argv.length) {
   let arg = process.argv[i++];
@@ -518,6 +520,14 @@ while (i < process.argv.length) {
     case "-p":
       if (i < process.argv.length && process.argv[i].charAt(0) !== "-" && pidFile === null) {
         pidFile = process.argv[i++];
+      }
+      else {
+        usage(1);
+      }
+      break;
+    case "-t":
+      if (i < process.argv.length && process.argv[i].charAt(0) !== "-") {
+        process.title = process.argv[i++];
       }
       else {
         usage(1);
@@ -544,8 +554,6 @@ if (pidFile === null) pidFile = "webterm.pid";
 for (const path of configFiles) {
   readConfigFile(path);
 }
-
-process.title = "webterm-server";
 
 fs.writeFileSync(pidFile, `${process.pid}\n`);
 log(`PID is ${process.pid}`);
