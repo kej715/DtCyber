@@ -125,6 +125,9 @@ static bool opIsAbsolutePath(char *path);
 static int  opReadLine(char *buf, int size);
 static int  opStartListening(int port);
 
+static void opCmdDisconnectConsole(bool help, char *cmdParams);
+static void opHelpDisconnectConsole(void);
+
 static void opCmdDumpMemory(bool help, char *cmdParams);
 static void opCmdDumpCM(int fwa, int count);
 static void opCmdDumpEM(int fwa, int count);
@@ -201,6 +204,12 @@ static void opHelpShowVersion(void);
 static void opCmdShutdown(bool help, char *cmdParams);
 static void opHelpShutdown(void);
 
+static void opCmdStartHelpers(bool help, char *cmdParams);
+static void opHelpStartHelpers(void);
+
+static void opCmdStopHelpers(bool help, char *cmdParams);
+static void opHelpStopHelpers(void);
+
 static void opCmdUnloadDisk(bool help, char *cmdParams);
 static void opHelpUnloadDisk(void);
 
@@ -225,6 +234,7 @@ volatile bool opPaused = FALSE;
 static OpCmd decode[] =
     {
     "d",                     opCmdDumpMemory,
+    "dc",                    opCmdDisconnectConsole,
     "dm",                    opCmdDumpMemory,
     "e",                     opCmdEnterKeys,
     "ek",                    opCmdEnterKeys,
@@ -243,10 +253,13 @@ static OpCmd decode[] =
     "sop",                   opCmdSetOperatorPort,
     "ss",                    opCmdShowState,
     "st",                    opCmdShowTape,
+    "starth",                opCmdStartHelpers,
+    "stoph",                 opCmdStopHelpers,
     "sur",                   opCmdShowUnitRecord,
     "sv",                    opCmdShowVersion,
     "ud",                    opCmdUnloadDisk,
     "ut",                    opCmdUnloadTape,
+    "disconnect_console",    opCmdDisconnectConsole,
     "dump_memory",           opCmdDumpMemory,
     "enter_keys",            opCmdEnterKeys,
     "load_cards",            opCmdLoadCards,
@@ -265,6 +278,8 @@ static OpCmd decode[] =
     "show_tape",             opCmdShowTape,
     "show_unitrecord",       opCmdShowUnitRecord,
     "show_version",          opCmdShowVersion,
+    "start_helpers",         opCmdStartHelpers,
+    "stop_helpers",          opCmdStopHelpers,
     "unload_disk",           opCmdUnloadDisk,
     "unload_tape",           opCmdUnloadTape,
     "?",                     opCmdHelp,
@@ -280,6 +295,7 @@ static OpCmd decode[] =
 static OpNetTypeEntry netTypes[] =
     {
     "cdcnet",  cdcnetShowStatus,
+    "console", consoleShowStatus,
     "crs",     csFeiShowStatus,
     "dsa311",  dsa311ShowStatus,
     "msu",     msufrendShowStatus,
@@ -1066,6 +1082,47 @@ static bool opIsAbsolutePath(char *path)
 
 #endif
     return FALSE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Disconnect Remote Console
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdDisconnectConsole(bool help, char *cmdParams)
+    {
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpDisconnectConsole();
+
+        return;
+        }
+
+    /*
+    **  Check parameters and process command.
+    */
+    if (strlen(cmdParams) != 0)
+        {
+        opDisplay("    > No parameters expected\n");
+        opHelpDisconnectConsole();
+
+        return;
+        }
+
+    consoleCloseRemote();
+    }
+
+static void opHelpDisconnectConsole(void)
+    {
+    opDisplay("    > 'disconnect_console' disconnect a remote console and return control to local console.\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -3367,7 +3424,6 @@ static void opHelpShowAll(void)
     opDisplay("    > 'show_all'\n");
     }
 
-
 /*--------------------------------------------------------------------------
 **  Purpose:        control NOS idle loop throttle.
 **
@@ -3449,6 +3505,89 @@ static void opCmdIdle(bool help, char *cmdParams)
     opDisplay(opOutBuf);
     }
 
+/*--------------------------------------------------------------------------
+**  Purpose:        Start helper processes
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdStartHelpers(bool help, char *cmdParams)
+    {
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpStartHelpers();
+
+        return;
+        }
+
+    /*
+    **  Check parameters and process command.
+    */
+    if (strlen(cmdParams) != 0)
+        {
+        opDisplay("    > No parameters expected\n");
+        opHelpStartHelpers();
+
+        return;
+        }
+
+    startHelpers();
+    }
+
+static void opHelpStartHelpers(void)
+    {
+    opDisplay("    > 'starth'       start dtCyber helper processes.\n");
+    opDisplay("    > 'start_helpers'\n");
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Stop helper processes
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdStopHelpers(bool help, char *cmdParams)
+    {
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpStopHelpers();
+
+        return;
+        }
+
+    /*
+    **  Check parameters and process command.
+    */
+    if (strlen(cmdParams) != 0)
+        {
+        opDisplay("    > No parameters expected\n");
+        opHelpStopHelpers();
+
+        return;
+        }
+
+    stopHelpers();
+    }
+
+static void opHelpStopHelpers(void)
+    {
+    opDisplay("    > 'stoph'        stop dtCyber helper processes.\n");
+    opDisplay("    > 'stop_helpers'\n");
+    }
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Display the DtCyber Version

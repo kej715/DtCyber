@@ -101,6 +101,28 @@ character mode. The browser-based terminal emulator operates in a compatible mod
 default. When you see the **/** prompt, the operating system is ready for you to enter
 commands.
 
+## Web Console
+*DtCyber* is configured to start a special web server that supports a browser-based user
+interface to the system console. For the KRONOS 2.1 system, this web server listens for
+connections on TCP port 18004. When you request your web browser to open the following
+URL:
+
+```
+http://localhost:18004
+```
+
+it will display a page showing the systems served by the web-based console server. Ordinarily,
+one system will be shown, and it represents access to the system console of the KRONOS 2.1
+system. When you click on the link associated with the KRONOS 2.1 system, a browser-based
+console emulator will launch, and the local console window (either the X-Windows interface on
+Linux/Unix, or the Windows interface on Microsoft operating systems) will suspend after
+issuing a message indicating *Remote console active*.
+
+You may use the browser-based interface to interact with the system in the same way that you
+use the local console interface. The KRONOS 2.1 system itself cannot distinguish between the
+two forms of user interface. When you close the browser window in which the system console
+interface is running, control will revert automatically to the local console user interface.
+
 ## Remote Job Entry
 The system listens for RJE (remote job entry) connections on TCP port 6678. You
 can use [rjecli](../rje-station) and [rjews](../rje-station) to connect to this port and

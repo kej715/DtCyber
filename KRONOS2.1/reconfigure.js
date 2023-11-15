@@ -276,9 +276,11 @@ for (const configFilePath of propFiles) {
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E6"))
+.then(() => dtc.console("idle off"))
 .then(() => processCmrdProps())
 .then(() => updateSystemRecords())
 .then(() => dtc.say("Reconfiguration complete"))
+.then(() => dtc.console("idle on"))
 .then(() => {
   process.exit(0);
 });

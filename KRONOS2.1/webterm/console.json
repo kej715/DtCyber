@@ -1,0 +1,15 @@
+{
+  "port": 18004,
+  "httpRoot": "../../webterm/www",
+  "machines":
+  [
+    {
+      "id": "console",
+      "title": "KRONOS 2.1",
+      "host": "%../cyber.ini|cyber|ipAddress|127.0.0.1",
+      "port": 46612,
+      "protocol": "raw",
+      "terminal": "console.html?m=console&t=KRONOS%202.1"
+    }
+  ]
+}

@@ -86,7 +86,10 @@ void cdcnetShowStatus(void);
 /*
 **  console.c
 */
+void consoleCloseRemote(void);
 void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+bool consoleIsRemoteActive(void);
+void consoleShowStatus(void);
 
 /*
 **  cpu.c
@@ -239,7 +242,9 @@ void logError(char *file, int line, char *fmt, ...);
 /*
 **  main.c
 */
-int runHelper(char* command);
+int  runHelper(char* command);
+void startHelpers(void);
+void stopHelpers(void);
 
 /*
 **  maintenance_channel.c
@@ -432,8 +437,6 @@ void windowSetFont(u8 font);
 void windowSetX(u16 x);
 void windowSetY(u16 y);
 void windowQueue(u8 ch);
-void windowUpdate(void);
-void windowGetChar(void);
 void windowTerminate(void);
 
 /*

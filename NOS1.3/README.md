@@ -123,6 +123,28 @@ PLATO logins supported by the system include:
 
 *admin* is a privileged login. *guest* is an author in the *guests* course/group.
 
+## Web Console
+*DtCyber* is configured to start a special web server that supports a browser-based user
+interface to the system console. For the NOS 1.3 system, this web server listens for
+connections on TCP port 18003. When you request your web browser to open the following
+URL:
+
+```
+http://localhost:18003
+```
+
+it will display a page showing the systems served by the web-based console server. Ordinarily,
+one system will be shown, and it represents access to the system console of the NOS 1.3
+system. When you click on the link associated with the NOS 1.3 system, a browser-based
+console emulator will launch, and the local console window (either the X-Windows interface on
+Linux/Unix, or the Windows interface on Microsoft operating systems) will suspend after
+issuing a message indicating *Remote console active*.
+
+You may use the browser-based interface to interact with the system in the same way that you
+use the local console interface. The NOS 1.3 system itself cannot distinguish between the
+two forms of user interface. When you close the browser window in which the system console
+interface is running, control will revert automatically to the local console user interface.
+
 ## Remote Job Entry
 The system listens for RJE (remote job entry) connections on TCP port 6671. You
 can use [rjecli](../rje-station) and [rjews](../rje-station) to connect to this port and

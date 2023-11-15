@@ -922,11 +922,11 @@ static void initCyber(char *config)
         rc = runHelper(cmd);
         if (rc == 0)
             {
-            fprintf(stdout, "(init   ) Started helper:      %s %s %s\n", networkInterfaceMgr, networkInterface, ipAddress);
+            fprintf(stdout, "(helper ) Started: %s %s %s\n", networkInterfaceMgr, networkInterface, ipAddress);
             }
         else
             {
-            fprintf(stderr, "(init   ) Failed to start %s, rc=%d'\n", networkInterfaceMgr, rc);
+            fprintf(stderr, "(helper ) Failed to start \"%s\", rc=%d'\n", networkInterfaceMgr, rc);
             exit(1);
             }
         }

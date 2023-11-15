@@ -264,30 +264,6 @@ void windowQueue(u8 ch)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Update window.
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-void windowUpdate(void)
-    {
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Poll the keyboard (dummy for X11)
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        Nothing
-**
-**------------------------------------------------------------------------*/
-void windowGetChar(void)
-    {
-    }
-
-/*--------------------------------------------------------------------------
 **  Purpose:        Terminate console window.
 **
 **  Parameters:     Name        Description.
@@ -891,6 +867,14 @@ void windowDisplay(HWND hWnd)
         oldFont = FontLarge;
         TextOut(hdcMem, (0 * ScaleX) / 10, (256 * ScaleY) / 10, opMessage, strlen(opMessage));
         }
+    else if (consoleIsRemoteActive())
+        {
+        static char opMessage[] = "Remote console active";
+        hfntOld = SelectObject(hdcMem, hLargeFont);
+        oldFont = FontLarge;
+        TextOut(hdcMem, (0 * ScaleX) / 10, (256 * ScaleY) / 10, opMessage, strlen(opMessage));
+        }
+
 
     SelectObject(hdcMem, hPen);
 

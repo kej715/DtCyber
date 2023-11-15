@@ -541,6 +541,7 @@ const updateTcpResolver = () => {
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.console("idle off"))
 .then(() => processPasswordChanges())
 .then(() => processCmrdProps())
 .then(() => processEqpdProps())
@@ -851,6 +852,7 @@ dtc.connect()
     .then(() => dtc.connect(newIpAddress))
     .then(() => dtc.expect([{ re: /Operator> $/ }]))
     .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+    .then(() => dtc.console("idle off"))
     .then(() => dtc.dsd([
       "O!",
       "#1000#P!",
@@ -862,23 +864,29 @@ dtc.connect()
       "#1000#GO.",
       "#7500#%year%%mon%%day%",
       "#3000#%hour%%min%%sec%"
-    ]));
+    ]))
+    .then(() => dtc.expect([{ re: /QUEUE FILE UTILITY COMPLETE/ }], "printer"))
+    .then(() => dtc.say("Shutdown the system and deadstart again with helpers activated ..."))
+    .then(() => dtc.shutdown(false))
+    .then(() => dtc.sleep(5000));
   }
   else {
-    return dtc.start({
-      detached: true,
-      stdio:    [0, "ignore", 2],
-      unref:    false
-    })
-    .then(() => dtc.sleep(5000))
-    .then(() => dtc.connect(newIpAddress))
-    .then(() => dtc.expect([{ re: /Operator> $/ }]))
-    .then(() => dtc.attachPrinter("LP5xx_C12_E5"));
+    return Promise.resolve();
   }
 })
+.then(() => dtc.start({
+  detached: true,
+  stdio:    [0, "ignore", 2],
+  unref:    false
+}))
+.then(() => dtc.sleep(5000))
+.then(() => dtc.connect(newIpAddress))
+.then(() => dtc.expect([{ re: /Operator> $/ }]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => dtc.expect([{ re: /QUEUE FILE UTILITY COMPLETE/ }], "printer"))
 .then(() => dtc.say("Deadstart complete"))
 .then(() => dtc.say("Reconfiguration complete"))
+.then(() => dtc.console("idle on"))
 .then(() => {
   process.exit(0);
 })
