@@ -59,6 +59,7 @@ class CyberConsole {
     this.state             = this.ST_TEXT;
     this.x                 = 0;
     this.y                 = 0;
+    this.yPointOffset      = Math.round(this.SCREEN_MARGIN / 2);
 
     //
     // Calculate font information
@@ -151,7 +152,7 @@ class CyberConsole {
     this.onscreenCanvas.setAttribute("contenteditable", "true");
     this.offscreenCanvas = new OffscreenCanvas(this.canvasWidth, this.canvasHeight);
     this.offscreenContext = this.offscreenCanvas.getContext("2d");
-    this.offscreenContext.textBaseline = "top";
+    this.offscreenContext.textBaseline = "bottom";
     this.reset();
     this.clearScreen();
 
@@ -205,7 +206,7 @@ class CyberConsole {
     this.stop();
     this.setFont(font);
     this.x           = x;
-    this.xOffset     = 0;
+    this.xOffset     = this.SCREEN_MARGIN;
     this.y           = y;
     this.state       = this.ST_TEXT;
     this.clearScreen();
@@ -219,13 +220,14 @@ class CyberConsole {
   }
 
   drawChar(b) {
-    this.offscreenContext.fillText(String.fromCharCode(b), this.x + this.xOffset, this.y);
+    this.offscreenContext.fillText(String.fromCharCode(b), this.x + this.xOffset, this.y + this.SCREEN_MARGIN);
   }
 
   drawPoint() {
     let x = this.x + this.xOffset;
-    this.offscreenContext.clearRect(x, this.y, 2, 2);
-    this.offscreenContext.fillRect(x, this.y, 2, 2);
+    let y = this.y + this.yPointOffset;
+    this.offscreenContext.clearRect(x, y, 2, 2);
+    this.offscreenContext.fillRect(x, y, 2, 2);
   }
 
   renderText(data) {
