@@ -242,7 +242,9 @@ void logError(char *file, int line, char *fmt, ...);
 /*
 **  main.c
 */
-int runHelper(char* command);
+int  runHelper(char* command);
+void startHelpers(void);
+void stopHelpers(void);
 
 /*
 **  maintenance_channel.c

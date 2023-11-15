@@ -75,8 +75,6 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
-static void startHelpers(void);
-static void stopHelpers(void);
 static void tracePpuCalls(void);
 static void waitTerminationMessage(void);
 
@@ -541,7 +539,7 @@ int runHelper(char *command)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void startHelpers(void)
+void startHelpers(void)
     {
     char command[200];
     char *line;
@@ -559,11 +557,11 @@ static void startHelpers(void)
         rc = runHelper(command);
         if (rc == 0)
             {
-            printf("(main   ) Started helper: %s\n", line);
+            printf("(helper ) Started: %s\n", line);
             }
         else
             {
-            printf("(main   ) Failed to start helper \"%s\", rc = %d\n", line, rc);
+            printf("(helper ) Failed to start \"%s\", rc = %d\n", line, rc);
             }
         }
     }
@@ -576,7 +574,7 @@ static void startHelpers(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void stopHelpers(void)
+void stopHelpers(void)
     {
     char command[200];
     char *line;
@@ -591,11 +589,11 @@ static void stopHelpers(void)
             rc = runHelper(command);
             if (rc == 0)
                 {
-                printf("\n(main) Stopped helper: %s\n", line);
+                printf("\n(helper ) Stopped: %s\n", line);
                 }
             else
                 {
-                printf("\n(main) Failed to stop helper \"%s\", rc = %d\n", line, rc);
+                printf("\n(helper ) Failed to stop \"%s\", rc = %d\n", line, rc);
                 }
             }
         }
@@ -605,11 +603,11 @@ static void stopHelpers(void)
         rc = runHelper(command);
         if (rc == 0)
             {
-            printf("\n(main) Stopped helper: %s\n", networkInterfaceMgr);
+            printf("\n(helper ) Stopped: %s\n", networkInterfaceMgr);
             }
         else
             {
-            printf("\n(main) Failed to stop helper \"%s\", rc = %d\n", networkInterfaceMgr, rc);
+            printf("\n(helper ) Failed to stop \"%s\", rc = %d\n", networkInterfaceMgr, rc);
             }
         }
     fflush(stdout);

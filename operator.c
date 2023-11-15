@@ -204,6 +204,12 @@ static void opHelpShowVersion(void);
 static void opCmdShutdown(bool help, char *cmdParams);
 static void opHelpShutdown(void);
 
+static void opCmdStartHelpers(bool help, char *cmdParams);
+static void opHelpStartHelpers(void);
+
+static void opCmdStopHelpers(bool help, char *cmdParams);
+static void opHelpStopHelpers(void);
+
 static void opCmdUnloadDisk(bool help, char *cmdParams);
 static void opHelpUnloadDisk(void);
 
@@ -247,6 +253,8 @@ static OpCmd decode[] =
     "sop",                   opCmdSetOperatorPort,
     "ss",                    opCmdShowState,
     "st",                    opCmdShowTape,
+    "starth",                opCmdStartHelpers,
+    "stoph",                 opCmdStopHelpers,
     "sur",                   opCmdShowUnitRecord,
     "sv",                    opCmdShowVersion,
     "ud",                    opCmdUnloadDisk,
@@ -270,6 +278,8 @@ static OpCmd decode[] =
     "show_tape",             opCmdShowTape,
     "show_unitrecord",       opCmdShowUnitRecord,
     "show_version",          opCmdShowVersion,
+    "start_helpers",         opCmdStartHelpers,
+    "stop_helpers",          opCmdStopHelpers,
     "unload_disk",           opCmdUnloadDisk,
     "unload_tape",           opCmdUnloadTape,
     "?",                     opCmdHelp,
@@ -3414,7 +3424,6 @@ static void opHelpShowAll(void)
     opDisplay("    > 'show_all'\n");
     }
 
-
 /*--------------------------------------------------------------------------
 **  Purpose:        control NOS idle loop throttle.
 **
@@ -3496,6 +3505,89 @@ static void opCmdIdle(bool help, char *cmdParams)
     opDisplay(opOutBuf);
     }
 
+/*--------------------------------------------------------------------------
+**  Purpose:        Start helper processes
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdStartHelpers(bool help, char *cmdParams)
+    {
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpStartHelpers();
+
+        return;
+        }
+
+    /*
+    **  Check parameters and process command.
+    */
+    if (strlen(cmdParams) != 0)
+        {
+        opDisplay("    > No parameters expected\n");
+        opHelpStartHelpers();
+
+        return;
+        }
+
+    startHelpers();
+    }
+
+static void opHelpStartHelpers(void)
+    {
+    opDisplay("    > 'starth'       start dtCyber helper processes.\n");
+    opDisplay("    > 'start_helpers'\n");
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Stop helper processes
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdStopHelpers(bool help, char *cmdParams)
+    {
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpStopHelpers();
+
+        return;
+        }
+
+    /*
+    **  Check parameters and process command.
+    */
+    if (strlen(cmdParams) != 0)
+        {
+        opDisplay("    > No parameters expected\n");
+        opHelpStopHelpers();
+
+        return;
+        }
+
+    stopHelpers();
+    }
+
+static void opHelpStopHelpers(void)
+    {
+    opDisplay("    > 'stoph'        stop dtCyber helper processes.\n");
+    opDisplay("    > 'stop_helpers'\n");
+    }
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Display the DtCyber Version
