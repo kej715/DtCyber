@@ -36,32 +36,22 @@ dtc.say("Start RBF configuration ...")
 .then(() => dtc.say("Create users for RBF terminals ..."))
 .then(() => {
   let job = [
-    "RBFUSRS.",
-    `USER,INSTALL,${utilities.getPropertyValue(customProps, "PASSWORDS", "INSTALL", "INSTALL")}.`,
     "COPYBR,INPUT,RBFUSRS.",
-    "REPLACE,RBFUSRS.",
-    "***",
-    "*** RBFUSRS COMPLETE",
-    "***",
-    "EXIT.",
-    "***",
-    "*** RBFUSRS FAILED",
-    "***",
-    "~eor"
+    "REPLACE,RBFUSRS."
   ];
   let userDefns = [];
   for (const name of names) {
     let pw = (name.length < 4) ? `${name}X` : name;
-    userDefns.push(`/${name},PW=${pw},RL=ALL,AP=NUL,AP=RBF`);
+    userDefns.push(`/${name},PW=${utilities.getPropertyValue(customProps, "PASSWORDS", name, pw)},RL=ALL,AP=NUL,AP=RBF`);
   }
-  job = `${job.join("\n")}\n${userDefns.join(",\n")}\n`;
-  fs.writeFileSync("decks/$$$.job", job);
-  return dtc.runJob(12, 4, "decks/$$$.job")
-  .then(() => {
-    fs.unlinkSync("decks/$$$.job");
-    return Promise.resolve();
-  })
-  .then(() => dtc.dis([
+  const options = {
+    jobname: "RBFUSRS",
+    username: "INSTALL",
+    password: utilities.getPropertyValue(customProps, "PASSWORDS", "INSTALL", "INSTALL"),
+    data: userDefns.join(",\n") + "\n"
+  };
+  return dtc.createJobWithOutput(12, 4, job, options)
+  .then(output => dtc.dis([
     "GET,RBFUSRS.",
     "PURGE,RBFUSRS.",
     "MODVAL,FA,I=RBFUSRS,OP=U."
