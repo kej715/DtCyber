@@ -3,10 +3,16 @@
 **  Copyright (c) 2023, Kevin Jordan
 **
 **  console.js
-**    This class implements a Cyber console emulator.
+**    This module provides classes that emulate the Cyber console.
 **
 **--------------------------------------------------------------------------
 */
+
+/*
+ *  CyberConsole
+ *
+ *  This class emulates the Cyber console in 2d space.
+ */
 
 class CyberConsole {
 
@@ -105,6 +111,10 @@ class CyberConsole {
     return this.onscreenCanvas;
   }
 
+  getContext() {
+    return this.onscreenCanvas.getContext("bitmaprenderer");
+  }
+
   getWidth() {
     return this.onscreenCanvas.width;
   }
@@ -141,9 +151,20 @@ class CyberConsole {
     }
   }
 
+  /*
+   *  createScreen
+   *
+   *  There are two drawing canvasses and associated contexts:
+   *  1. The "on screen" canvas/context which is mapped to a visible HTML canvas.
+   *     This uses a bitmaprenderer context and is not drawn into directly.
+   *  2. The "off screen" canvas/context into which things are drawn using standard
+   *     HTML 5 functions.
+   *  Every 100ms, a bitmap is created from "off screen" context and transferred
+   *  to the "on screen" context.
+   */
   createScreen() {
     this.onscreenCanvas = document.createElement("canvas");
-    this.onscreenContext = this.onscreenCanvas.getContext("bitmaprenderer");
+    this.onscreenContext = this.getContext();
     this.onscreenCanvas.width = this.canvasWidth;
     this.onscreenCanvas.height = this.canvasHeight;
     this.onscreenCanvas.style.cursor = "default";
@@ -312,8 +333,133 @@ class CyberConsole {
     }
   }
 }
-//
-// The following lines enable this file to be used as a Node.js module.
-//
-if (typeof module === "undefined") module = {};
-module.exports = CyberConsole;
+
+/*
+ *  CyberConsole3D
+ *
+ *  This class emulates the Cyber console in 3d space. It uses Babylon.js to
+ *  implement 3d graphics.
+ */
+
+class CyberConsole3D extends CyberConsole {
+
+  constructor(babylon) {
+    super();
+    this.babylon = babylon;
+    this.engine = null;
+    this.scene = null;
+  }
+
+  /*
+   *  createScene - Create the scene (what we want Babylon.js to render).
+   */
+  createScene () {
+    const me = this;
+    let scene = new this.babylon.Scene(this.engine);
+
+    // Apply post-rendering image processing tweaks.
+    scene.imageProcessingConfiguration.contrast = 1.1;
+    scene.imageProcessingConfiguration.exposure = 1.0;
+    scene.imageProcessingConfiguration.toneMappingEnabled = false;
+
+    // Add a camera and a light. Let the pointer cotrol the camera.
+    let camera = new this.babylon.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 10, new this.babylon.Vector3(0, 0, 0), scene);
+    camera.minZ = 0.04;
+    camera.maxZ = 100.0;
+    camera.attachControl(this.onscreenCanvas, true);
+
+    let light = new this.babylon.HemisphericLight("light", new this.babylon.Vector3(1, 1, 0), scene);
+
+    // Create a plane for the terminal screen
+    let plane = this.babylon.MeshBuilder.CreatePlane("plane", { size: 5 }, scene);
+
+    // Create a dynamic texture incorporating the HTML canvas.
+    let texture = new this.babylon.DynamicTexture("dynamicTexture", this.offscreenCanvas, scene, false);
+
+    // Apply the dynamic texture to the plane
+    let material = new this.babylon.StandardMaterial("material", scene);
+    material.emissiveTexture = texture;
+    material.diffuseColor = new this.babylon.Color3(0.2,0.2,0.2);
+    //material.ambientTexture = texture;
+    plane.material = material;
+
+    // Update the texture from the off screen drawing at a regular interval.
+    setInterval(() => {
+      texture.update();  // Update the texture, thereby displaying the last drawn frame.
+      me.clearScreen();  // Clear the last drawn frame ready for new input.
+    }, 120);
+
+    // Position the camera to face the plane
+    camera.setTarget(plane.position);
+    camera.radius = 5; // Adjust the camera distance
+
+    return scene;
+  }
+
+  /*
+   *  createScreen
+   *
+   *  There are two drawing canvasses and associated contexts:
+   *  1. The "on screen" canvas/context which can be used by the Babylon.js render engine.
+   *     This uses a WebGL context and is not drawn into directly.
+   *  2. The "off screen" canvas/context into which things are drawn using standard
+   *     HTML 5 functions.
+   *  Every 100ms, the "off screen" context is transferred to a texture mapped on a
+   *  3D plane, which is rendered by Babylon.js.
+   */
+  createScreen() {
+    super.createScreen();
+  }
+
+  displayNotification(font, x, y, s) {
+    this.setFont(font);
+    this.x           = x;
+    this.xOffset     = 0;
+    this.y           = y;
+    this.state       = this.ST_TEXT;
+    this.clearScreen();
+    for (const line of s.split("\n")) {
+      this.renderText(line);
+      this.x  = x;
+      this.y += this.fontHeights[this.currentFont];
+    }
+  }
+
+  getContext() {
+    return this.onscreenCanvas.getContext("webgl");
+  }
+
+  getEngine() {
+    return this.engine;
+  }
+
+  start() {
+
+    const me = this;
+
+    // Initialise Babylon.js mechansims.
+    const initFunction = async function() {
+
+      const asyncCreateEngine = async function() {
+        return new me.babylon.Engine(me.onscreenCanvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false});
+      };
+ 
+      // Wait for the rendering engine to become available, then create the scene.
+      me.engine = await asyncCreateEngine();
+      me.scene = me.createScene(); // create the scene that will be rendered
+    };
+
+    // After initialisation, start the rendering loop.
+    initFunction().then(() => {
+      me.engine.runRenderLoop(() => {
+        if (me.scene && me.scene.activeCamera) {  // If we have a scene and a camera, render the scene.
+          me.scene.render();
+        }
+      });
+    });
+  }
+
+  stop() {
+    // No-op in 3d context
+  }
+}
