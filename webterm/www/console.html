@@ -75,7 +75,13 @@
       });
       $(document).ajaxError((event, jqxhr, settings, thrownError) => {
         if (settings.url === url) {
-          cyberConsole.displayNotification(1, 128, 128, `${jqxhr.responseText}\n\n   Failed to connect to ${title}`);
+          cyberConsole.displayNotification(1, 128, 128, `${jqxhr.responseText}\n\n   Failed to connect to ${title}\n\n   Press any key to try again ...`);
+          cyberConsole.setUplineDataSender(data => {
+            cyberConsole.reset();
+            url = machine.createConnection();
+            cyberConsole.setUplineDataSender(uplineDataSender);
+            cyberConsole.start();
+          });
         }
       });
       $(window).bind("beforeunload", () => {

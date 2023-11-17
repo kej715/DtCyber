@@ -80,24 +80,27 @@
       cyberConsole.setUplineDataSender(uplineDataSender);
       cyberConsole.start();
 
-      // Display message on disconnect. This has not yet been tested.
       machine.setDisconnectListener(() => {
         console.log('Disconnect.');
         cyberConsole.displayNotification(1, 128, 128, `Disconnected from ${title}.\n\n   Press any key to reconnect ...`);
         cyberConsole.setUplineDataSender(data => {
-              
           cyberConsole.reset();
-              
+          cyberConsole.stopNotification();
           url = machine.createConnection();
           cyberConsole.setUplineDataSender(uplineDataSender);
         });
       });
 
-      // Ajax error (?), this has not been tested.
       $(document).ajaxError((event, jqxhr, settings, thrownError) => {
         console.log('Ajax error.');
         if (settings.url === url) {
-          cyberConsole.displayNotification(1, 128, 128, `${jqxhr.responseText}\n\n   Failed to connect to ${title}`);
+          cyberConsole.displayNotification(1, 128, 128, `${jqxhr.responseText}\n\n   Failed to connect to ${title}\n\n   Press any key to try again ...`);
+          cyberConsole.setUplineDataSender(data => {
+            cyberConsole.reset();
+            cyberConsole.stopNotification();
+            url = machine.createConnection();
+            cyberConsole.setUplineDataSender(uplineDataSender);
+          });
         }
       });
         

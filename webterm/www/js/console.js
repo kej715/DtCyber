@@ -12,6 +12,14 @@
  *  CyberConsole
  *
  *  This class emulates the Cyber console in 2d space.
+ *
+ *  It uses two drawing canvasses and associated contexts:
+ *  1. The "on screen" canvas/context which is mapped to a visible HTML canvas.
+ *     This uses a bitmaprenderer context and is not drawn into directly.
+ *  2. The "off screen" canvas/context into which things are drawn using standard
+ *     HTML 5 functions.
+ *  Every 100ms, a bitmap is created from "off screen" context and transferred
+ *  to the "on screen" context.
  */
 
 class CyberConsole {
@@ -154,13 +162,8 @@ class CyberConsole {
   /*
    *  createScreen
    *
-   *  There are two drawing canvasses and associated contexts:
-   *  1. The "on screen" canvas/context which is mapped to a visible HTML canvas.
-   *     This uses a bitmaprenderer context and is not drawn into directly.
-   *  2. The "off screen" canvas/context into which things are drawn using standard
-   *     HTML 5 functions.
-   *  Every 100ms, a bitmap is created from "off screen" context and transferred
-   *  to the "on screen" context.
+   *  Create the on and off screen canvasses and associated contexts, and 
+   *  establish event listeners.
    */
   createScreen() {
     this.onscreenCanvas = document.createElement("canvas");
@@ -338,7 +341,13 @@ class CyberConsole {
  *  CyberConsole3D
  *
  *  This class emulates the Cyber console in 3d space. It uses Babylon.js to
- *  implement 3d graphics.
+ *  implement 3d graphics using two drawing canvasses and associated contexts:
+ *  1. The "on screen" canvas/context which can be used by the Babylon.js render engine.
+ *     This uses a WebGL context and is not drawn into directly.
+ *  2. The "off screen" canvas/context into which things are drawn using standard
+ *     HTML 5 functions.
+ *  Every 100ms, the "off screen" context is transferred to a texture mapped on a
+ *  3D plane, which is rendered by Babylon.js.
  */
 
 class CyberConsole3D extends CyberConsole {
@@ -387,7 +396,7 @@ class CyberConsole3D extends CyberConsole {
     setInterval(() => {
       texture.update();  // Update the texture, thereby displaying the last drawn frame.
       me.clearScreen();  // Clear the last drawn frame ready for new input.
-    }, 120);
+    }, 100);
 
     // Position the camera to face the plane
     camera.setTarget(plane.position);
@@ -396,32 +405,27 @@ class CyberConsole3D extends CyberConsole {
     return scene;
   }
 
-  /*
-   *  createScreen
-   *
-   *  There are two drawing canvasses and associated contexts:
-   *  1. The "on screen" canvas/context which can be used by the Babylon.js render engine.
-   *     This uses a WebGL context and is not drawn into directly.
-   *  2. The "off screen" canvas/context into which things are drawn using standard
-   *     HTML 5 functions.
-   *  Every 100ms, the "off screen" context is transferred to a texture mapped on a
-   *  3D plane, which is rendered by Babylon.js.
-   */
-  createScreen() {
-    super.createScreen();
+  displayNotification(font, x, y, s) {
+    const lines = s.split("\n");
+    this.setFont(font);
+    this.notificationInterval = setInterval(() => {
+      this.x           = x;
+      this.xOffset     = 0;
+      this.y           = y;
+      this.state       = this.ST_TEXT;
+      this.clearScreen();
+      for (const line of s.split("\n")) {
+        this.renderText(line);
+        this.x  = x;
+        this.y += this.fontHeights[this.currentFont];
+      }
+    }, 50);
   }
 
-  displayNotification(font, x, y, s) {
-    this.setFont(font);
-    this.x           = x;
-    this.xOffset     = 0;
-    this.y           = y;
-    this.state       = this.ST_TEXT;
-    this.clearScreen();
-    for (const line of s.split("\n")) {
-      this.renderText(line);
-      this.x  = x;
-      this.y += this.fontHeights[this.currentFont];
+  stopNotification() {
+    if (this.notificationInterval) {
+      clearInterval(this.notificationInterval);
+      this.notificationInterval = null;
     }
   }
 
