@@ -354,9 +354,11 @@ class CyberConsole3D extends CyberConsole {
 
   constructor(babylon) {
     super();
-    this.babylon = babylon;
-    this.engine = null;
-    this.scene = null;
+    this.babylon     = babylon;
+    this.engine      = null;
+    this.environMap  = "room-1.env";
+    this.glbFileName = "a-opt-cc545.glb";
+    this.scene       = null;
   }
 
   /*
@@ -366,31 +368,63 @@ class CyberConsole3D extends CyberConsole {
     const me = this;
     let scene = new this.babylon.Scene(this.engine);
 
-    // Apply post-rendering image processing tweaks.
-    scene.imageProcessingConfiguration.contrast = 1.1;
-    scene.imageProcessingConfiguration.exposure = 1.0;
-    scene.imageProcessingConfiguration.toneMappingEnabled = false;
+    // This is required for compatibility with objects created in Blender.
+    // Also seems to turn on Euler rotations instead of using Quaternions.
+    scene.useRightHandedSystem = true;
 
-    // Add a camera and a light. Let the pointer cotrol the camera.
+    // Apply post-rendering image processing tweaks. Do not use for now.
+    //scene.imageProcessingConfiguration.contrast = 1.1;
+    //scene.imageProcessingConfiguration.exposure = 1.0;
+    //scene.imageProcessingConfiguration.toneMappingEnabled = false;
+
+    // Add a camera. Let the pointer control the camera.
     let camera = new this.babylon.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 10, new this.babylon.Vector3(0, 0, 0), scene);
-    camera.minZ = 0.04;
-    camera.maxZ = 100.0;
+    camera.minZ = 0.04; // Clip planes for better Z behaviour.
+    camera.maxZ = 10.0;
+    camera.fov = 0.4;   // Radians = about 23 degrees ~ 80mm on 35mm camera. Default 0.8 is too wide for this.
     camera.attachControl(this.onscreenCanvas, true);
 
-    let light = new this.babylon.HemisphericLight("light", new this.babylon.Vector3(1, 1, 0), scene);
-
-    // Create a plane for the terminal screen
-    let plane = this.babylon.MeshBuilder.CreatePlane("plane", { size: 5 }, scene);
+    // Add lighting.
+    let light = new this.babylon.HemisphericLight("light", new this.babylon.Vector3(1.5, 2, 3), scene);
+    scene.environmentTexture = new this.babylon.CubeTexture(`3d/${this.environMap}`, scene);  // Needs more thought!
 
     // Create a dynamic texture incorporating the HTML canvas.
     let texture = new this.babylon.DynamicTexture("dynamicTexture", this.offscreenCanvas, scene, false);
 
-    // Apply the dynamic texture to the plane
-    let material = new this.babylon.StandardMaterial("material", scene);
+    // Create a material with an emissive texture set to the dynamic texture.
+    // Adjust texture coordinates to center the display.
+    let material = new this.babylon.PBRMaterial("material", scene);
     material.emissiveTexture = texture;
-    material.diffuseColor = new this.babylon.Color3(0.2,0.2,0.2);
-    //material.ambientTexture = texture;
-    plane.material = material;
+    material.emissiveTexture.uOffset = -0.25 // more negative => bigger right shift.
+    material.emissiveTexture.uScale  = 1.5;  // bigger scale => smaller text.
+    material.emissiveTexture.vOffset = 1.2   // > 1 because vScale must be negative.
+    material.emissiveTexture.vScale  = -1.4; // negative to compensate for right handed coordinate system in model.
+    material.emissiveColor = new this.babylon.Color3(100,100,100); // With PBR, should multiply with emissive texture. Why such big value s needed?
+    material.diffuseColor = new this.babylon.Color3(1,1,1);
+    material.environmentIntensity = 0.02;    // Bit of reflected environment in screen glass.
+
+    // Load the CC545 model.
+    let baseUrl = document.location.pathname;
+    let si = baseUrl.lastIndexOf("/");
+    baseUrl = baseUrl.substring(0, si + 1);
+    this.babylon.SceneLoader.ImportMesh("", baseUrl, `3d/${this.glbFileName}`, scene, newMeshes => {
+      newMeshes[0].scaling = new me.babylon.Vector3(1.0, 1.0, 1.0);
+      newMeshes[0].position.x = 0.0;
+      newMeshes[0].position.y = 0.0;
+      newMeshes[0].position.z = 0.0;
+                                          
+      newMeshes[0].rotation.x = 0.0;
+      newMeshes[0].rotation.y = 3.1415926; // right handed / left handed c.s. issue again.
+      newMeshes[0].rotation.z = 0.0;
+                                          
+      for (const mesh of newMeshes) {
+        // The DisplaySurface is cc545_primitive7 in a-opt-cc545.glb ...
+        // Assign the material with the dynamic texture to that.
+        if (mesh.name === "cc545_primitive7") {
+          mesh.material = material;
+        }
+      } // over meshes
+    }); // ImportMesh() ends.
 
     // Update the texture from the off screen drawing at a regular interval.
     setInterval(() => {
@@ -398,9 +432,12 @@ class CyberConsole3D extends CyberConsole {
       me.clearScreen();  // Clear the last drawn frame ready for new input.
     }, 100);
 
-    // Position the camera to face the plane
-    camera.setTarget(plane.position);
-    camera.radius = 5; // Adjust the camera distance
+    // Position the camera.
+    camera.setTarget(new this.babylon.Vector3(0.0, 0.11, 0.0)); // Where to look at initially.
+    camera.radius = 1.0;                                        // Initial camera distance = 1 meter.
+    camera.wheelDeltaPercentage = 0.05;                         // Maybe imptove mouse wheel speed.
+    camera.upperRadiusLimit = 5.0;                              // Maximum distance from target.
+    camera.lowerRadiusLimit = 0.5; //-5.0;                      // Minimum distace from target.
 
     return scene;
   }
