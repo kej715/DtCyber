@@ -5,7 +5,7 @@
   [
     {
       "id": "nos287",
-      "title": "NOS 2.8.7",
+      "title": "NOS 2.8.7 (2D)",
       "host": "%../cyber.ini|cyber|ipAddress|127.0.0.1",
       "port": 16612,
       "protocol": "raw",
@@ -13,7 +13,7 @@
     },
     {
       "id": "nos287-3d",
-      "title": "NOS 2.8.7",
+      "title": "NOS 2.8.7 (3D)",
       "host": "%../cyber.ini|cyber|ipAddress|127.0.0.1",
       "port": 16612,
       "protocol": "raw",

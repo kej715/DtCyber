@@ -5,7 +5,7 @@
   [
     {
       "id": "kronos21",
-      "title": "KRONOS 2.1",
+      "title": "KRONOS 2.1 (2D)",
       "host": "%../cyber.ini|cyber|ipAddress|127.0.0.1",
       "port": 46612,
       "protocol": "raw",
@@ -13,7 +13,7 @@
     },
     {
       "id": "kronos21-3d",
-      "title": "KRONOS 2.1",
+      "title": "KRONOS 2.1 (3D)",
       "host": "%../cyber.ini|cyber|ipAddress|127.0.0.1",
       "port": 46612,
       "protocol": "raw",
