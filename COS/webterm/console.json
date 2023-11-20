@@ -1,0 +1,23 @@
+{
+  "port": 18002,
+  "httpRoot": "../../webterm/www",
+  "machines":
+  [
+    {
+      "id": "cos",
+      "title": "COS (2D)",
+      "host": "%../cyber.ini|cyber|ipAddress|127.0.0.1",
+      "port": 26612,
+      "protocol": "raw",
+      "terminal": "console.html?m=cos&t=COS"
+    },
+    {
+      "id": "cos-3d",
+      "title": "COS (3D)",
+      "host": "%../cyber.ini|cyber|ipAddress|127.0.0.1",
+      "port": 26612,
+      "protocol": "raw",
+      "terminal": "console3d.html?m=cos-3d&t=COS"
+    }
+  ]
+}
