@@ -368,6 +368,9 @@ class CyberConsole3D extends CyberConsole {
     const me = this;
     let scene = new this.babylon.Scene(this.engine);
 
+    // Try to need less coffee when double click selecting.
+    this.babylon.Scene.DoubleClickDelay = 500; // ms
+
     // This is required for compatibility with objects created in Blender.
     // Also seems to turn on Euler rotations instead of using Quaternions.
     scene.useRightHandedSystem = true;
@@ -399,11 +402,12 @@ class CyberConsole3D extends CyberConsole {
     material.emissiveTexture.uScale  = 1.5;  // bigger scale => smaller text.
     material.emissiveTexture.vOffset = 1.2   // > 1 because vScale must be negative.
     material.emissiveTexture.vScale  = -1.4; // negative to compensate for right handed coordinate system in model.
-    material.emissiveColor = new this.babylon.Color3(100,100,100); // With PBR, should multiply with emissive texture. Why such big value s needed?
+    material.emissiveColor = new this.babylon.Color3(100,100,100); // With PBR, should multiply with emissive texture. Why such big values needed?
     material.diffuseColor = new this.babylon.Color3(1,1,1);
     material.environmentIntensity = 0.02;    // Bit of reflected environment in screen glass.
 
     // Load the CC545 model.
+    let rockerPosition = 0;
     let baseUrl = document.location.pathname;
     let si = baseUrl.lastIndexOf("/");
     baseUrl = baseUrl.substring(0, si + 1);
@@ -418,11 +422,57 @@ class CyberConsole3D extends CyberConsole {
       newMeshes[0].rotation.z = 0.0;
                                           
       for (const mesh of newMeshes) {
-        // The DisplaySurface is cc545_primitive7 in a-opt-cc545.glb ...
-        // Assign the material with the dynamic texture to that.
-        if (mesh.name === "cc545_primitive7") {
+        // Assign the material with the dynamic texture to the DisplaySurface.
+        if (mesh.name === "DisplaySurface") {
           mesh.material = material;
         }
+
+        // Hide Left and Right positioned rocker switch models. Center is default.
+        if ((mesh.name === "RockerInnerLeft") || (mesh.name === "RockerInnerRight")) {
+          mesh.setEnabled(false);
+        }
+
+        // Change active rocker switch model on double click pick of any rocker switch model.
+        if ((mesh.name === "RockerInnerCenter") || (mesh.name === "RockerInnerLeft") || (mesh.name === "RockerInnerRight")) {
+          mesh.actionManager = new me.babylon.ActionManager(scene);
+          mesh.actionManager.registerAction(
+            new me.babylon.ExecuteCodeAction(
+              me.babylon.ActionManager.OnDoublePickTrigger, evt => {
+                let meshNow = evt.meshUnderPointer;
+                rockerPosition += 1;
+                if (rockerPosition > 2) {
+                  rockerPosition = 0;
+                }
+
+                // Show and hide appropriate rocker switch models.
+                // Adjust texture coordinates so only selected display is visible.
+                let rockerCenter = scene.getMeshByName("RockerInnerCenter");
+                let rockerLeft = scene.getMeshByName("RockerInnerLeft");
+                let rockerRight = scene.getMeshByName("RockerInnerRight");
+                if (rockerPosition == 0) { // Center
+                  rockerCenter.setEnabled(true);
+                  rockerLeft.setEnabled(false);
+                  rockerRight.setEnabled(false);
+                  material.emissiveTexture.uOffset = -0.25 // Shift for A and B both visible.
+                  material.emissiveTexture.uScale  = 1.5;  // Scale for A and B both visible.
+                }
+                if (rockerPosition == 1) { // Left
+                  rockerCenter.setEnabled(false);
+                  rockerLeft.setEnabled(true);
+                  rockerRight.setEnabled(false);
+                  material.emissiveTexture.uOffset = -0.16 // Shift for only A visible.
+                  material.emissiveTexture.uScale  = 0.75; // Scale so A fills width.
+                }
+                if (rockerPosition == 2) { // Right
+                  rockerCenter.setEnabled(false);
+                  rockerLeft.setEnabled(false);
+                  rockerRight.setEnabled(true);
+                  material.emissiveTexture.uOffset = 0.35  // Shift for only B visible.
+                  material.emissiveTexture.uScale  = 0.75; // Scale so B fills width.
+                }
+              }) // lambda ends.
+          ); // registerAction ends.
+        } // For a rocker mesh.
       } // over meshes
     }); // ImportMesh() ends.
 
@@ -435,9 +485,9 @@ class CyberConsole3D extends CyberConsole {
     // Position the camera.
     camera.setTarget(new this.babylon.Vector3(0.0, 0.11, 0.0)); // Where to look at initially.
     camera.radius = 1.0;                                        // Initial camera distance = 1 meter.
-    camera.wheelDeltaPercentage = 0.05;                         // Maybe imptove mouse wheel speed.
+    camera.wheelDeltaPercentage = 0.05;                         // Maybe improve mouse wheel speed.
     camera.upperRadiusLimit = 5.0;                              // Maximum distance from target.
-    camera.lowerRadiusLimit = 0.5; //-5.0;                      // Minimum distace from target.
+    camera.lowerRadiusLimit = 0.5;                              // Minimum distace from target.
 
     return scene;
   }
