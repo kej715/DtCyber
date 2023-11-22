@@ -49,6 +49,7 @@ class CyberConsole {
     this.CMD_SET_Y_HIGH    = 0x83;
     this.CMD_SET_SCREEN    = 0x84;
     this.CMD_SET_FONT_TYPE = 0x85;
+    this.CMD_END_OF_FRAME  = 0xff;
 
     //
     // Console states
@@ -212,22 +213,7 @@ class CyberConsole {
     this.y            = 0;
   }
 
-  start() {
-    const me = this;
-    let iteration = 0;
-    this.timer = setInterval(() => {
-      const bitmap = me.offscreenCanvas.transferToImageBitmap();
-      me.onscreenContext.transferFromImageBitmap(bitmap);
-      me.clearScreen();
-    }, 1000/10);
-  }
-
-  stop() {
-    clearInterval(this.timer);
-  }
-
   displayNotification(font, x, y, s) {
-    this.stop();
     this.setFont(font);
     this.x           = x;
     this.xOffset     = this.SCREEN_MARGIN;
@@ -239,8 +225,7 @@ class CyberConsole {
       this.x  = x;
       this.y += this.fontHeights[this.currentFont];
     }
-    const bitmap = this.offscreenCanvas.transferToImageBitmap();
-    this.onscreenContext.transferFromImageBitmap(bitmap);
+    this.updateScreen();
   }
 
   drawChar(b) {
@@ -302,6 +287,9 @@ class CyberConsole {
           case this.CMD_SET_FONT_TYPE:
             this.state = this.ST_COLLECT_FONT;
             break;
+          case this.CMD_END_OF_FRAME:
+            this.updateScreen();
+            break;
           default:
             // ignore the byte
             break;
@@ -335,6 +323,11 @@ class CyberConsole {
       }
     }
   }
+
+  updateScreen() {
+    this.onscreenContext.transferFromImageBitmap(this.offscreenCanvas.transferToImageBitmap());
+    this.clearScreen();
+  }
 }
 
 /*
@@ -359,6 +352,34 @@ class CyberConsole3D extends CyberConsole {
     this.environMap  = "room-1.env";
     this.glbFileName = "a-opt-cc545.glb";
     this.scene       = null;
+  }
+
+  createScreen() {
+
+    super.createScreen();
+
+    const me = this;
+
+    // Initialise Babylon.js mechansims.
+    const initFunction = async function() {
+
+      const asyncCreateEngine = async function() {
+        return new me.babylon.Engine(me.onscreenCanvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false});
+      };
+
+      // Wait for the rendering engine to become available, then create the scene.
+      me.engine = await asyncCreateEngine();
+      me.scene = me.createScene(); // create the scene that will be rendered
+    };
+
+    // After initialisation, start the rendering loop.
+    initFunction().then(() => {
+      me.engine.runRenderLoop(() => {
+        if (me.scene && me.scene.activeCamera) {  // If we have a scene and a camera, render the scene.
+          me.scene.render();
+        }
+      });
+    });
   }
 
   /*
@@ -392,12 +413,12 @@ class CyberConsole3D extends CyberConsole {
     scene.environmentTexture = new this.babylon.CubeTexture(`3d/${this.environMap}`, scene);  // Needs more thought!
 
     // Create a dynamic texture incorporating the HTML canvas.
-    let texture = new this.babylon.DynamicTexture("dynamicTexture", this.offscreenCanvas, scene, false);
+    this.texture = new this.babylon.DynamicTexture("dynamicTexture", this.offscreenCanvas, scene, false);
 
     // Create a material with an emissive texture set to the dynamic texture.
     // Adjust texture coordinates to center the display.
     let material = new this.babylon.PBRMaterial("material", scene);
-    material.emissiveTexture = texture;
+    material.emissiveTexture = this.texture;
     material.emissiveTexture.uOffset = -0.25 // more negative => bigger right shift.
     material.emissiveTexture.uScale  = 1.5;  // bigger scale => smaller text.
     material.emissiveTexture.vOffset = 1.2   // > 1 because vScale must be negative.
@@ -476,12 +497,6 @@ class CyberConsole3D extends CyberConsole {
       } // over meshes
     }); // ImportMesh() ends.
 
-    // Update the texture from the off screen drawing at a regular interval.
-    setInterval(() => {
-      texture.update();  // Update the texture, thereby displaying the last drawn frame.
-      me.clearScreen();  // Clear the last drawn frame ready for new input.
-    }, 100);
-
     // Position the camera.
     camera.setTarget(new this.babylon.Vector3(0.0, 0.11, 0.0)); // Where to look at initially.
     camera.radius = 1.0;                                        // Initial camera distance = 1 meter.
@@ -492,30 +507,6 @@ class CyberConsole3D extends CyberConsole {
     return scene;
   }
 
-  displayNotification(font, x, y, s) {
-    const lines = s.split("\n");
-    this.setFont(font);
-    this.notificationInterval = setInterval(() => {
-      this.x           = x;
-      this.xOffset     = 0;
-      this.y           = y;
-      this.state       = this.ST_TEXT;
-      this.clearScreen();
-      for (const line of s.split("\n")) {
-        this.renderText(line);
-        this.x  = x;
-        this.y += this.fontHeights[this.currentFont];
-      }
-    }, 50);
-  }
-
-  stopNotification() {
-    if (this.notificationInterval) {
-      clearInterval(this.notificationInterval);
-      this.notificationInterval = null;
-    }
-  }
-
   getContext() {
     return this.onscreenCanvas.getContext("webgl");
   }
@@ -524,33 +515,8 @@ class CyberConsole3D extends CyberConsole {
     return this.engine;
   }
 
-  start() {
-
-    const me = this;
-
-    // Initialise Babylon.js mechansims.
-    const initFunction = async function() {
-
-      const asyncCreateEngine = async function() {
-        return new me.babylon.Engine(me.onscreenCanvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false});
-      };
- 
-      // Wait for the rendering engine to become available, then create the scene.
-      me.engine = await asyncCreateEngine();
-      me.scene = me.createScene(); // create the scene that will be rendered
-    };
-
-    // After initialisation, start the rendering loop.
-    initFunction().then(() => {
-      me.engine.runRenderLoop(() => {
-        if (me.scene && me.scene.activeCamera) {  // If we have a scene and a camera, render the scene.
-          me.scene.render();
-        }
-      });
-    });
-  }
-
-  stop() {
-    // No-op in 3d context
+  updateScreen() {
+    this.texture.update(); // Update the texture, thereby displaying the last drawn frame.
+    this.clearScreen();    // Clear the last drawn frame ready for new input.
   }
 }

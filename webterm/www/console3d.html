@@ -78,7 +78,6 @@
         machine.send(data);
       };
       cyberConsole.setUplineDataSender(uplineDataSender);
-      cyberConsole.start();
 
       machine.setDisconnectListener(() => {
         console.log('Disconnect.');

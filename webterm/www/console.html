@@ -58,7 +58,6 @@
       machine.setReceivedDataHandler(data => {
         cyberConsole.renderText(data);
       });
-      cyberConsole.start();
       let url = machine.createConnection();
       const uplineDataSender = data => {
         machine.send(data);
@@ -70,7 +69,6 @@
           cyberConsole.reset();
           url = machine.createConnection();
           cyberConsole.setUplineDataSender(uplineDataSender);
-          cyberConsole.start();
         });
       });
       $(document).ajaxError((event, jqxhr, settings, thrownError) => {
@@ -80,7 +78,6 @@
             cyberConsole.reset();
             url = machine.createConnection();
             cyberConsole.setUplineDataSender(uplineDataSender);
-            cyberConsole.start();
           });
         }
       });
