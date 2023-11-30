@@ -23,8 +23,9 @@
     </div>
     <script>
     $(document).ready(() => {
-      let machineId = "unknown";
-      let title = "CYBER Console 3D";
+      let machineId       = "unknown";
+      let refreshInterval = 10;
+      let title           = "CYBER Console 3D";
       let qs = window.location.search;
       if (qs && qs.length > 1) {
         qs.substr(1).split("&").forEach(param => {
@@ -33,6 +34,9 @@
             switch (nvp[0]) {
             case "m": // machine name
               machineId = nvp[1];
+              break;
+            case "r": // refresh interval (1/100 seconds)
+              refreshInterval = parseInt(nvp[1]);
               break;
             case "t": // title
               title = decodeURIComponent(nvp[1]);
@@ -77,7 +81,13 @@
       const uplineDataSender = data => {
         machine.send(data);
       };
+      const refreshIntervalSetter = rps => {
+        setTimeout(() => {
+          machine.send(new Uint8Array([0x80, rps, 0x81]));
+        }, 100);
+      };
       cyberConsole.setUplineDataSender(uplineDataSender);
+      refreshIntervalSetter(refreshInterval);
 
       machine.setDisconnectListener(() => {
         console.log('Disconnect.');
@@ -87,6 +97,7 @@
           cyberConsole.stopNotification();
           url = machine.createConnection();
           cyberConsole.setUplineDataSender(uplineDataSender);
+          refreshIntervalSetter(refreshInterval);
         });
       });
 

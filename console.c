@@ -95,6 +95,7 @@
 #define FontTypeMedium               2
 #define FontTypeLarge                3
 
+#define InfiniteRefreshInterval      ((u64)1000*60*60*24*365)
 #define MaxCycleDataEntries          5
 
 /*
@@ -159,8 +160,8 @@ static u8        consoleEqNo;
 static CycleData *currentCycleData;
 static int       currentCycleDataIndex = 0;
 static CycleData cycleDataSequences[MaxCycleDataEntries];
-static u16       minRefreshInterval    = 100;
-static u64       earliestCycleFlush    = 0;
+static u64       minRefreshInterval;
+static u64       earliestCycleFlush;
 
 static u8        currentFontType       = FontTypeSmall;
 static u8        currentScreen         = 0xff;
@@ -523,6 +524,8 @@ static void consoleAcceptConnection(void)
         {
         connFd = netAcceptConnection(listenFd);
         consoleInitCycleData();
+        minRefreshInterval = InfiniteRefreshInterval;
+        earliestCycleFlush = getMilliseconds() + minRefreshInterval;
         }
     }
 
@@ -626,6 +629,7 @@ static void consoleFlushCycleData(int first, int limit)
                     outBufIn = n;
                     }
                 earliestCycleFlush = currentTime + minRefreshInterval;
+                consoleInitCycleData();
                 }
             n = send(connFd, outBuf, outBufIn, 0);
             if (n > 0)
@@ -650,9 +654,6 @@ static void consoleFlushCycleData(int first, int limit)
                     }
                 earliestCycleFlush = currentTime + minRefreshInterval;
                 }
-            }
-        if (limit > first)
-            {
             consoleInitCycleData();
             }
         }
@@ -670,8 +671,6 @@ static void consoleInitCycleData(void)
     {
     memset(cycleDataSequences, 0, sizeof(cycleDataSequences));
     currentCycleDataIndex = 0;
-    minRefreshInterval    = 100;
-    earliestCycleFlush    = 0;
     currentCycleData      = &cycleDataSequences[0];
     cycleDataIn           = cycleDataOut = 0;
     }
@@ -686,6 +685,7 @@ static void consoleInitCycleData(void)
 **------------------------------------------------------------------------*/
 static void consoleNetIo(void)
     {
+    u8             ch;
     int            n;
     fd_set         readFds;
     struct timeval timeout;
@@ -698,7 +698,27 @@ static void consoleNetIo(void)
 
     if (ppKeyIn == 0 && inBufOut < inBufIn)
         {
-        ppKeyIn = inBuf[inBufOut++];
+        ch = inBuf[inBufOut++];
+        if (ch == 0x80) // set minimum refresh interval
+            {
+            if (inBufOut < inBufIn)
+                {
+                minRefreshInterval = inBuf[inBufOut++] * 10;
+                if (minRefreshInterval == 0) minRefreshInterval = InfiniteRefreshInterval;
+                earliestCycleFlush = getMilliseconds() + minRefreshInterval;
+                }
+            else
+                {
+                inBufOut -= 1;
+                }
+            return;
+            }
+        else if (ch == 0x81)
+            {
+            earliestCycleFlush = 0;
+            return;
+            }
+        ppKeyIn = ch;
         if (inBufOut >= inBufIn) inBufIn = inBufOut = 0;
         }
     if (n > 0 && inBufIn < InBufSize && FD_ISSET(connFd, &readFds))
