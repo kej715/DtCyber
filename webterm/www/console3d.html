@@ -84,7 +84,7 @@
       const refreshIntervalSetter = rps => {
         setTimeout(() => {
           machine.send(new Uint8Array([0x80, rps, 0x81]));
-        }, 100);
+        }, 500);
       };
       cyberConsole.setUplineDataSender(uplineDataSender);
       refreshIntervalSetter(refreshInterval);
