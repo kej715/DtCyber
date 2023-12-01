@@ -24,7 +24,7 @@
     <script>
     $(document).ready(() => {
       let machineId       = "unknown";
-      let refreshInterval = 10;
+      let refreshInterval = 20;
       let title           = "CYBER Console 3D";
       let qs = window.location.search;
       if (qs && qs.length > 1) {
@@ -94,7 +94,6 @@
         cyberConsole.displayNotification(1, 128, 128, `Disconnected from ${title}.\n\n   Press any key to reconnect ...`);
         cyberConsole.setUplineDataSender(data => {
           cyberConsole.reset();
-          cyberConsole.stopNotification();
           url = machine.createConnection();
           cyberConsole.setUplineDataSender(uplineDataSender);
           refreshIntervalSetter(refreshInterval);
@@ -107,7 +106,6 @@
           cyberConsole.displayNotification(1, 128, 128, `${jqxhr.responseText}\n\n   Failed to connect to ${title}\n\n   Press any key to try again ...`);
           cyberConsole.setUplineDataSender(data => {
             cyberConsole.reset();
-            cyberConsole.stopNotification();
             url = machine.createConnection();
             cyberConsole.setUplineDataSender(uplineDataSender);
           });
