@@ -62,17 +62,14 @@
       machine.setReceivedDataHandler(data => {
         cyberConsole.renderText(data);
       });
+      machine.setConnectListener(() => {
+        machine.send(new Uint8Array([0x80, refreshInterval, 0x81]));
+      });
       let url = machine.createConnection();
       const uplineDataSender = data => {
         machine.send(data);
       };
-      const refreshIntervalSetter = rps => {
-        setTimeout(() => {
-          machine.send(new Uint8Array([0x80, rps, 0x81]));
-        }, 500);
-      };
       cyberConsole.setUplineDataSender(uplineDataSender);
-      refreshIntervalSetter(refreshInterval);
 
       machine.setDisconnectListener(() => {
         cyberConsole.displayNotification(1, 128, 128, `Disconnected from ${title}.\n\n   Press any key to reconnect ...`);
@@ -80,7 +77,6 @@
           cyberConsole.reset();
           url = machine.createConnection();
           cyberConsole.setUplineDataSender(uplineDataSender);
-          refreshIntervalSetter(refreshInterval);
         });
       });
       $(document).ajaxError((event, jqxhr, settings, thrownError) => {

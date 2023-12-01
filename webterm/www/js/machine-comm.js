@@ -35,6 +35,15 @@ class Machine {
     }
   }
 
+  setConnectListener(callback) {
+    if (this.savedState) {
+      this.savedState.connectListener = callback;
+    }
+    else {
+      this.connectListener = callback;
+    }
+  }
+
   setDisconnectListener(callback) {
     if (this.savedState) {
       this.savedState.disconnectListener = callback;
@@ -56,6 +65,10 @@ class Machine {
     return this.terminal;
   }
 
+  getWebSocket() {
+    return this.ws;
+  }
+
   registerButton(name, btn) {
     this.buttons[name] = btn;
   }
@@ -73,7 +86,7 @@ class Machine {
       me.ws.binaryType = "arraybuffer";
       me.sender = data => {
         me.ws.send(data);
-      }
+      };
       me.ws.onmessage = evt => {
         let ary;
         if (evt.data instanceof ArrayBuffer) {
@@ -108,6 +121,11 @@ class Machine {
         }
         else if (me.debug) {
           console.log(`Received data handler is ${typeof me.receivedDataHandler}`);
+        }
+      };
+      me.ws.onopen = evt => {
+        if (typeof me.connectListener === "function") {
+          me.connectListener();
         }
       };
       me.ws.onclose = () => {
@@ -185,6 +203,7 @@ class Machine {
       else {
         this.savedState = {
           receivedDataHandler: this.receivedDataHandler,
+          connectListener: this.connectListener,
           disconnectListener: this.disconnectListener,
           callback: callback
         };
@@ -202,6 +221,7 @@ class Machine {
       }
       else {
         this.receivedDataHandler = this.savedState.receivedDataHandler;
+        this.connectListener = this.savedState.connectListener;
         this.disconnectListener = this.savedState.disconnectListener;
       }
       if (this.savedState.callback) {
