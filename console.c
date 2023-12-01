@@ -25,13 +25,14 @@
 **    earlier by Paul Koning. He observed that most PP programs interacting
 **    with the console perform a display refresh cycle, then they poll the
 **    keyboard for input, then they repeat. Consequently, the strategy
-**    employed here is to compute an inexpensive checksum against the X/Y
+**    employed here is to compute an inexpensive checksum against X/Y
 **    coordinate positions starting from a keyboard input check. If a match
 **    is found for a previously computed checksum, a refresh cycle is
 **    detected, and console output data accumulated between the matching
-**    checksums is flushed to the remote console. In addition, accumulated
-**    data is flushed after it has been held for a maximum amount of time,
-**    and a remote console may specify what that maximum amount of time is.
+**    checksums is eligible to be sent to the remote console. The frequency
+**    at which eligible data is actually sent dpends upon the setting of
+**    a minimum refresh interval which is specified by the remote console
+**    client.
 **
 **--------------------------------------------------------------------------
 */
