@@ -154,6 +154,9 @@ static void     consoleUpdateChecksum(u16 datum);
 **  Private Variables
 **  -----------------
 */
+static bool      doOpenConsoleWindow   = TRUE;
+static bool      isConsoleWindowOpen   = FALSE;
+
 static u8        consoleChannelNo;
 static u8        consoleEqNo;
 
@@ -207,6 +210,7 @@ void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     int     consolePort;
     DevSlot *dp;
     int     n;
+    char    str[40];
 
     consoleChannelNo = channelNo;
     consoleEqNo      = eqNo;
@@ -221,7 +225,7 @@ void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
 
     if (params != NULL)
         {
-        n = sscanf(params, "%d", &consolePort);
+        n = sscanf(params, "%d,%s", &consolePort, str);
         if (n < 1)
             {
             fputs("(console) TCP port missing from CO6612 definition\n", stderr);
@@ -231,6 +235,18 @@ void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
             {
             fprintf(stderr, "(console) Invalid TCP port number in CO6612 definition: %d\n", consolePort);
             exit(1);
+            }
+        if (n > 1)
+            {
+            if (strcasecmp(str, "nowin") == 0)
+                {
+                doOpenConsoleWindow = FALSE;
+                }
+            else if (strcasecmp(str, "win") != 0)
+                {
+                fprintf(stderr, "(console) Unrecognized parameter in CO6612 definition: %s\n", str);
+                exit(1);
+                }
             }
         listenFd = netCreateListener(consolePort);
         if (listenFd == INVALID_SOCKET)
@@ -244,9 +260,13 @@ void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     consoleInitCycleData();
 
     /*
-    **  Initialise (X)Windows environment.
+    **  Open console window, if enabled.
     */
-    windowInit();
+    if (doOpenConsoleWindow)
+        {
+        windowInit();
+        isConsoleWindowOpen = TRUE;
+        }
 
     /*
     **  Print a friendly message.
@@ -271,6 +291,40 @@ void consoleCloseRemote(void)
         cycleDataIn = cycleDataOut = 0;
         inBufIn     = inBufOut     = 0;
         outBufIn    = 0;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Close the local console window.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void consoleCloseWindow(void)
+    {
+    if (isConsoleWindowOpen)
+        {
+        windowTerminate();
+        isConsoleWindowOpen = FALSE;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Open the local console window.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void consoleOpenWindow(void)
+    {
+    if (isConsoleWindowOpen == FALSE)
+        {
+        windowInit();
+        isConsoleWindowOpen = TRUE;
         }
     }
 
@@ -524,6 +578,7 @@ static void consoleAcceptConnection(void)
         {
         connFd = netAcceptConnection(listenFd);
         consoleInitCycleData();
+        consoleQueueCmd(CmdSetScreen, currentScreen);
         minRefreshInterval = InfiniteRefreshInterval;
         earliestCycleFlush = getMilliseconds() + minRefreshInterval;
         }
@@ -630,6 +685,7 @@ static void consoleFlushCycleData(int first, int limit)
                     }
                 earliestCycleFlush = currentTime + minRefreshInterval;
                 consoleInitCycleData();
+                consoleQueueCmd(CmdSetScreen, currentScreen);
                 }
             n = send(connFd, outBuf, outBufIn, 0);
             if (n > 0)
@@ -655,6 +711,7 @@ static void consoleFlushCycleData(int first, int limit)
                 earliestCycleFlush = currentTime + minRefreshInterval;
                 }
             consoleInitCycleData();
+            consoleQueueCmd(CmdSetScreen, currentScreen);
             }
         }
     }
@@ -752,7 +809,7 @@ static void consoleQueueChar(u8 ch)
     {
     if (connFd == INVALID_SOCKET)
         {
-        windowQueue(ch);
+        if (isConsoleWindowOpen) windowQueue(ch);
         }
     else if (cycleDataIn >= CycleDataLimit)
         {
@@ -805,7 +862,7 @@ static void consoleSetFontType(u8 fontType)
     {
     if (connFd == INVALID_SOCKET)
         {
-        windowSetFont(fontSizes[fontType]);
+        if (isConsoleWindowOpen) windowSetFont(fontSizes[fontType]);
         }
     else if (currentFontType != fontType)
         {
@@ -827,6 +884,7 @@ static void consoleSetScreen(u8 screen)
     {
     if (currentScreen != screen)
         {
+        consoleUpdateChecksum(screen);
         consoleQueueCmd(CmdSetScreen, screen);
         }
     currentScreen = screen;
@@ -846,7 +904,7 @@ static void consoleSetX(u16 x)
     consoleUpdateChecksum(x);
     if (connFd == INVALID_SOCKET)
         {
-        windowSetX(x + xOffsets[currentScreen]);
+        if (isConsoleWindowOpen) windowSetX(x + xOffsets[currentScreen]);
         }
     else if (x > 0xff)
         {
@@ -872,7 +930,7 @@ static void consoleSetY(u16 y)
     consoleUpdateChecksum(y);
     if (connFd == INVALID_SOCKET)
         {
-        windowSetY(y);
+        if (isConsoleWindowOpen) windowSetY(y);
         }
     else if (y > 0xff)
         {

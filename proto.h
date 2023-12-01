@@ -87,8 +87,10 @@ void cdcnetShowStatus(void);
 **  console.c
 */
 void consoleCloseRemote(void);
+void consoleCloseWindow(void);
 void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 bool consoleIsRemoteActive(void);
+void consoleOpenWindow(void);
 void consoleShowStatus(void);
 
 /*

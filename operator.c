@@ -125,8 +125,11 @@ static bool opIsAbsolutePath(char *path);
 static int  opReadLine(char *buf, int size);
 static int  opStartListening(int port);
 
-static void opCmdDisconnectConsole(bool help, char *cmdParams);
-static void opHelpDisconnectConsole(void);
+static void opCmdCloseConsoleWindow(bool help, char *cmdParams);
+static void opHelpCloseConsoleWindow(void);
+
+static void opCmdDiscRemoteConsole(bool help, char *cmdParams);
+static void opHelpDiscRemoteConsole(void);
 
 static void opCmdDumpMemory(bool help, char *cmdParams);
 static void opCmdDumpCM(int fwa, int count);
@@ -154,6 +157,9 @@ static void opHelpLoadDisk(void);
 
 static void opCmdLoadTape(bool help, char *cmdParams);
 static void opHelpLoadTape(void);
+
+static void opCmdOpenConsoleWindow(bool help, char *cmdParams);
+static void opHelpOpenConsoleWindow(void);
 
 static void opCmdPause(bool help, char *cmdParams);
 static void opHelpPause(void);
@@ -233,17 +239,19 @@ volatile bool opPaused = FALSE;
 */
 static OpCmd decode[] =
     {
+    "ccw",                   opCmdCloseConsoleWindow,
     "d",                     opCmdDumpMemory,
-    "dc",                    opCmdDisconnectConsole,
+    "drc",                   opCmdDiscRemoteConsole,
     "dm",                    opCmdDumpMemory,
     "e",                     opCmdEnterKeys,
     "ek",                    opCmdEnterKeys,
     "lc",                    opCmdLoadCards,
     "ld",                    opCmdLoadDisk,
     "lt",                    opCmdLoadTape,
+    "ocw",                   opCmdOpenConsoleWindow,
+    "p",                     opCmdPause,
     "rc",                    opCmdRemoveCards,
     "rp",                    opCmdRemovePaper,
-    "p",                     opCmdPause,
     "sa",                    opCmdShowAll,
     "sd",                    opCmdShowDisk,
     "se",                    opCmdShowEquipment,
@@ -259,12 +267,14 @@ static OpCmd decode[] =
     "sv",                    opCmdShowVersion,
     "ud",                    opCmdUnloadDisk,
     "ut",                    opCmdUnloadTape,
-    "disconnect_console",    opCmdDisconnectConsole,
+    "close_console_window",  opCmdCloseConsoleWindow,
+    "disconnect_remote_console", opCmdDiscRemoteConsole,
     "dump_memory",           opCmdDumpMemory,
     "enter_keys",            opCmdEnterKeys,
     "load_cards",            opCmdLoadCards,
     "load_disk",             opCmdLoadDisk,
     "load_tape",             opCmdLoadTape,
+    "open_console_window",   opCmdOpenConsoleWindow,
     "remove_cards",          opCmdRemoveCards,
     "remove_paper",          opCmdRemovePaper,
     "set_key_interval",      opCmdSetKeyInterval,
@@ -1085,7 +1095,7 @@ static bool opIsAbsolutePath(char *path)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Disconnect Remote Console
+**  Purpose:        Close Console Window
 **
 **  Parameters:     Name        Description.
 **                  help        Request only help on this command.
@@ -1094,14 +1104,14 @@ static bool opIsAbsolutePath(char *path)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void opCmdDisconnectConsole(bool help, char *cmdParams)
+static void opCmdCloseConsoleWindow(bool help, char *cmdParams)
     {
     /*
     **  Process help request.
     */
     if (help)
         {
-        opHelpDisconnectConsole();
+        opHelpCloseConsoleWindow();
 
         return;
         }
@@ -1112,7 +1122,48 @@ static void opCmdDisconnectConsole(bool help, char *cmdParams)
     if (strlen(cmdParams) != 0)
         {
         opDisplay("    > No parameters expected\n");
-        opHelpDisconnectConsole();
+        opHelpCloseConsoleWindow();
+
+        return;
+        }
+
+    consoleCloseWindow();
+    }
+
+static void opHelpCloseConsoleWindow(void)
+    {
+    opDisplay("    > 'close_console_window' close the local console window.\n");
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Disconnect Remote Console
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdDiscRemoteConsole(bool help, char *cmdParams)
+    {
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpDiscRemoteConsole();
+
+        return;
+        }
+
+    /*
+    **  Check parameters and process command.
+    */
+    if (strlen(cmdParams) != 0)
+        {
+        opDisplay("    > No parameters expected\n");
+        opHelpDiscRemoteConsole();
 
         return;
         }
@@ -1120,9 +1171,9 @@ static void opCmdDisconnectConsole(bool help, char *cmdParams)
     consoleCloseRemote();
     }
 
-static void opHelpDisconnectConsole(void)
+static void opHelpDiscRemoteConsole(void)
     {
-    opDisplay("    > 'disconnect_console' disconnect a remote console and return control to local console.\n");
+    opDisplay("    > 'disconnect_remote_console' disconnect a remote console and return control to local console.\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -1683,6 +1734,47 @@ static int opStartListening(int port)
         }
 
     return TRUE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Open Console Window
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdOpenConsoleWindow(bool help, char *cmdParams)
+    {
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpOpenConsoleWindow();
+
+        return;
+        }
+
+    /*
+    **  Check parameters and process command.
+    */
+    if (strlen(cmdParams) != 0)
+        {
+        opDisplay("    > No parameters expected\n");
+        opHelpOpenConsoleWindow();
+
+        return;
+        }
+
+    consoleOpenWindow();
+    }
+
+static void opHelpOpenConsoleWindow(void)
+    {
+    opDisplay("    > 'open_console_window' open the local console window.\n");
     }
 
 /*--------------------------------------------------------------------------
