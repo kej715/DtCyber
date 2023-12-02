@@ -308,6 +308,11 @@ void mux6676Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void mux6676ShowStatus();
 
 /*
+** cci_hip.c
+*/
+void cciHipTerminate();
+
+/*
 **  net_util.c
 */
 #if defined(_WIN32)
@@ -347,6 +352,11 @@ void niuShowStatus();
 void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 int npuBipBufCount(void);
 void npuNetShowStatus();
+
+/*
+** cci_hip.c
+*/
+void cciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 
 /*
 **  operator.c
@@ -492,6 +502,7 @@ extern u32                 npuNetHostIP;
 extern u16                 npuNetTcpConns;
 extern u16                 npuNetTelnetPort;
 extern u8                  npuSvmCouplerNode;
+extern NpuSoftware         npuSw;
 extern u8                  npuSvmNpuNode;
 extern char                *npuSvmTermStates[];
 extern volatile bool       opActive;

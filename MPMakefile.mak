@@ -182,6 +182,7 @@ OBJ=obj
 HDRS    =   const.h                 \
             cyber_channel_linux.h   \
             npu.h                   \
+            cci.h                   \
             proto.h                 \
             types.h
 
@@ -225,6 +226,7 @@ OBJS    =   $(addprefix $(OBJ)/,    \
             mt669.o                 \
             mt679.o                 \
             mux6676.o               \
+            net_util.o              \
             niu.o                   \
             npu_async.o             \
             npu_bip.o               \
@@ -235,6 +237,10 @@ OBJS    =   $(addprefix $(OBJ)/,    \
             npu_nje.o               \
             npu_svm.o               \
             npu_tip.o               \
+            cci_hip.o               \
+            cci_svm.o               \
+            cci_tip.o               \
+            cci_async.o             \
             operator.o              \
             pci_channel_linux.o     \
             pci_console_linux.o     \

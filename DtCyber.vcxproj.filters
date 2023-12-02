@@ -199,6 +199,18 @@
     <ClCompile Include="net_util.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cci_async.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cci_hip.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cci_svm.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cci_tip.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="const.h">
@@ -229,6 +241,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="version.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cci.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

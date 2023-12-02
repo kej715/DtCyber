@@ -32,6 +32,7 @@ CFLAGS  = -O2 -I. $(INCL) -std=gnu99
 HDRS    =   const.h                 \
             cyber_channel_linux.h   \
             npu.h                   \
+            cci.h                   \
             proto.h                 \
             types.h
 
@@ -81,6 +82,10 @@ OBJS    =   cdcnet.o                \
             npu_nje.o               \
             npu_svm.o               \
             npu_tip.o               \
+            cci_hip.o               \
+            cci_svm.o               \
+            cci_tip.o               \
+            cci_async.o             \
             operator.o              \
             pci_channel_linux.o     \
             pci_console_linux.o     \
