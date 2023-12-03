@@ -345,13 +345,34 @@ class CyberConsole {
 
 class CyberConsole3D extends CyberConsole {
 
+  //
+  // Console types
+  //
+  static CC545       = 0;
+  static CO6602      = 1;
+
   constructor(babylon) {
     super();
     this.babylon     = babylon;
+    this.consoleType = CyberConsole3D.CC545;
     this.engine      = null;
     this.environMap  = "room-1.env";
     this.glbFileName = "a-opt-cc545.glb";
     this.scene       = null;
+  }
+
+  setConsoleType(type) {
+    switch (type) {
+    case CyberConsole3D.CC545:
+      this.glbFileName = "a-opt-cc545.glb";
+      break;
+    case CyberConsole3D.CO6602:
+      this.glbFileName = "a-opt-co6602.glb";
+      break;
+    default:
+      throw new Error(`Unknown console type: ${type}`);
+    }
+    this.consoleType = type;
   }
 
   createScreen() {
@@ -398,14 +419,14 @@ class CyberConsole3D extends CyberConsole {
 
     // Apply post-rendering image processing tweaks. Do not use for now.
     //scene.imageProcessingConfiguration.contrast = 1.1;
-    //scene.imageProcessingConfiguration.exposure = 1.0;
+    //scene.imageProcessingConfiguration.exposure = 0.8;
     //scene.imageProcessingConfiguration.toneMappingEnabled = false;
 
     // Add a camera. Let the pointer control the camera.
     let camera = new this.babylon.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 10, new this.babylon.Vector3(0, 0, 0), scene);
     camera.minZ = 0.04; // Clip planes for better Z behaviour.
     camera.maxZ = 10.0;
-    camera.fov = 0.4;   // Radians = about 23 degrees ~ 80mm on 35mm camera. Default 0.8 is too wide for this.
+    camera.fov  = 0.4;  // Radians = about 23 degrees ~ 80mm on 35mm camera. Default 0.8 is too wide for this.
     camera.attachControl(this.onscreenCanvas, true);
 
     // Add lighting.
@@ -419,15 +440,22 @@ class CyberConsole3D extends CyberConsole {
     // Adjust texture coordinates to center the display.
     let material = new this.babylon.PBRMaterial("material", scene);
     material.emissiveTexture = this.texture;
-    material.emissiveTexture.uOffset = -0.25 // more negative => bigger right shift.
-    material.emissiveTexture.uScale  = 1.5;  // bigger scale => smaller text.
-    material.emissiveTexture.vOffset = 1.2   // > 1 because vScale must be negative.
-    material.emissiveTexture.vScale  = -1.4; // negative to compensate for right handed coordinate system in model.
+    material.emissiveTexture.uOffset = -0.25; // more negative => bigger right shift.
+    material.emissiveTexture.uScale  = 1.5;   // bigger scale => smaller text.
+    material.emissiveTexture.vOffset = 1.2;   // > 1 because vScale must be negative.
+    material.emissiveTexture.vScale  = -1.4;  // negative to compensate for right handed coordinate system in model.
     material.emissiveColor = new this.babylon.Color3(100,100,100); // With PBR, should multiply with emissive texture. Why such big values needed?
     material.diffuseColor = new this.babylon.Color3(1,1,1);
-    material.environmentIntensity = 0.02;    // Bit of reflected environment in screen glass.
+    material.environmentIntensity = 0.02;     // Bit of reflected environment in screen glass.
 
-    // Load the CC545 model.
+    // Load the model.
+    // NOTE: At present there are two models with different geometry including different texture mapped
+    //       and / or pickable objects:
+    //  CC545: Texture on: DisplaySurface;  Pickables: RockerInnerCenter, RockerInnerLeft, RockerInnerRight; File: a-opt-cc545.glb
+    // CO6602: Texture on: DisplaySurfaceL, DisplaySurfaceR; Pickables: None; File: a-opt-co6602.glb
+    // The two models need different Y rotations and initial "look-at" positions.
+    // However, apart from the model file name, no other changes are needed in this code. The name is currently hardcoded.
+
     let rockerPosition = 0;
     let baseUrl = document.location.pathname;
     let si = baseUrl.lastIndexOf("/");
@@ -439,12 +467,22 @@ class CyberConsole3D extends CyberConsole {
       newMeshes[0].position.z = 0.0;
                                           
       newMeshes[0].rotation.x = 0.0;
+      switch (this.consoleType) {
+      case CyberConsole3D.CC545:
+        newMeshes[0].rotation.y = 3.1415926; // right handed / left handed c.s. issue again.
+        break;
+      case CyberConsole3D.CO6602:
+        newMeshes[0].rotation.y = 3.1415926/2.0;
+        break;
+      }
       newMeshes[0].rotation.y = 3.1415926; // right handed / left handed c.s. issue again.
       newMeshes[0].rotation.z = 0.0;
                                           
       for (const mesh of newMeshes) {
         // Assign the material with the dynamic texture to the DisplaySurface.
-        if (mesh.name === "DisplaySurface") {
+        if (mesh.name === "DisplaySurface"
+            || mesh.name === "DisplaySurfaceL"
+            || mesh.name === "DisplaySurfaceR") {
           mesh.material = material;
         }
 
@@ -498,7 +536,14 @@ class CyberConsole3D extends CyberConsole {
     }); // ImportMesh() ends.
 
     // Position the camera.
-    camera.setTarget(new this.babylon.Vector3(0.0, 0.11, 0.0)); // Where to look at initially.
+    switch (this.consoleType) {
+    case CyberConsole3D.CC545:
+      camera.setTarget(new this.babylon.Vector3(0.0, 0.11, 0.0)); // Where to look at initially. CC545
+      break;
+    case CyberConsole3D.CO6602:
+      camera.setTarget(new this.babylon.Vector3(0.025, 0.34, 0.0)); // Where to look at initially. CO6602
+      break;
+    }
     camera.radius = 1.0;                                        // Initial camera distance = 1 meter.
     camera.wheelDeltaPercentage = 0.05;                         // Maybe improve mouse wheel speed.
     camera.upperRadiusLimit = 5.0;                              // Maximum distance from target.

@@ -22,7 +22,11 @@
       <div id="console-container" class="content-container top left-floater right-padded zindex-1"></div>
     </div>
     <script>
+    const CC545  = 0;
+    const CO6602 = 1;
+    const CO6612 = 2;
     $(document).ready(() => {
+      let consoleType     = CC545;
       let machineId       = "unknown";
       let refreshInterval = 20;
       let title           = "CYBER Console 3D";
@@ -32,6 +36,19 @@
           var nvp = param.split("=");
           if (nvp.length > 1) {
             switch (nvp[0]) {
+            case "c": // console type
+              switch (parseInt(nvp[1])) {
+              case 545:
+                consoleType = CC545;
+                break;
+              case 6602:
+                consoleType = CO6602;
+                break;
+              case 6612:
+                consoleType = CO6612;
+                break;
+              }
+              break;
             case "m": // machine name
               machineId = nvp[1];
               break;
@@ -61,6 +78,7 @@
       };
 
       const cyberConsole = new CyberConsole3D(BABYLON);
+      cyberConsole.setConsoleType(consoleType);
       cyberConsole.createScreen();
 
       consoleContainer.empty();
