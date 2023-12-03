@@ -61,13 +61,19 @@ USERMSG
 *EDIT COMYUDP
 */
 *DECK CMD
+*D 223
+          IF NOT CQH$APO
+          THEN
+            BEGIN
+            CQH$FLB[0] = CQH$FLB[0] LAN X"7F"; # CLEAR COMMAND BIT #
+            END
 *D 238
           ELSE IF NOT CQH$APO        # PROCESS CMD TEXT #
           THEN
 */
 *DECK CMDOUT
 *D 183,184
-          C<0,8>TEXTA =C<1,8>TIME;   # SET TIME IN MSG #
+          C<0,8>TEXTA = C<1,8>TIME;  # SET TIME IN MSG #
           C<8,MSGL>TEXTA =           # MOVE MSG TO TEXTA #
 *D 186
           MSGL = MSGL + 8;           # INCREASE MSG LENGTH #
@@ -404,6 +410,42 @@ A2A:
               END
             END
           END
+        ELSE IF TACMD EQ "C"         # SEND COMMAND #
+        THEN
+          BEGIN
+          IF TADNODE NQ OWNNODE          # MESSAGE FOR REMOTE NODE #
+          THEN
+            BEGIN
+            GETEQA(QADDR);               # GET EMPTY CMD QUEUE BUFFER #
+            IF QADDR EQ 0 OR             # BUFFER UNAVAILABLE #
+               CIT$OBI[0] EQ MSGMAX$ - 1 # OUTPUT BUFFER FULL #
+            THEN
+              BEGIN
+              RSP$CODE = 2; # RESOURCE EXHAUSTION #
+              END
+            ELSE
+              BEGIN
+              P<CQH$> = QADDR;           # SET *CQH$* POINTER #
+              ZFILL(CQH$[0],CQBL$);      # CLEAR COMMAND BUFFER #
+              CQH$TXT[0] = TRUE;         # SET TEXT COMMAND FLAG #
+              CQH$APO[0] = TRUE;         # SET APP ORIGINATED FLAG #
+              CQH$LEN[0] = TATEXTL;      # SET COMMAND LENGTH #
+              CQH$FNN[0] = TADNODE;      # SET DESTINATION NODE NAME #
+              CQH$USR[0] = TAOUSER;      # SET ORIGIN USER ID #
+              CQH$FLB[0] = X"A0";        # SET FLAG BYTE #
+              P<COUT$> = COUTP$;         # SET *COUT$* POINTER #
+              C<0,TATEXTL>COUT$TXT[CIT$OBI[0]] = TATEXT;
+              COUT$LEN[CIT$OBI[0]] = TATEXTL;
+              CIT$OBI[0] = CIT$OBI[0] + 1; # MOVE OUTPUT POINTER #
+              CQH$TYP[0] = X"00";        # SET PRIORITY #
+              CQH$PRI[0] = X"77";        # SET PRIORITY #
+              END
+            END
+          ELSE
+            BEGIN
+            RSP$CODE = 1; # BAD REQUEST - COMMAND FOR THIS NODE #
+            END
+          END
         ELSE IF TACMD NQ "I"  # UNRECOGNIZED REQUEST #
         THEN
           BEGIN
@@ -462,7 +504,7 @@ A2A:
       THEN                           # FROM USER EXISTS #
         BEGIN
         FADDR = LOC(SBA$TXT[FPOS]);
-        CVTESN(FADDR,8,FUSER);       # CONVERT FRON USER #
+        CVTESN(FADDR,8,FUSER);       # CONVERT FROM USER #
         FPOS = FPOS + 8;
         END
 *D NJ24000.48
@@ -535,6 +577,12 @@ A2A:
           ABHTLC  = ((TATEXTL+9)/10)+3; # SET TEXT LENGTH #
           NETPUT(DLHA[0],MSGBUF[0]);
           LPT$OBC[CFRACN] = LPT$OBC[CFRACN] + 1;
+          END
+
+        IF A2ASENT GR 0 OR CFRACN NQ 0
+        THEN
+          BEGIN
+          RETURN; # AVOID DAYFILE AND K-DISPLAY #
           END
         END
 */
