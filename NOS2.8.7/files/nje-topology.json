@@ -130,18 +130,6 @@
     "desc": "Dublin, Ireland",
     "link": "ZVM72MSH"
   },
-  "BTP":{
-    "os": "openVMS 8.4",
-    "software": "JNET",
-    "desc": "Dublin, Ireland",
-    "link": "ZVM72MSH"
-  },
-  "CEARN":{
-    "os": "VM/370r5",
-    "software": "RSCS",
-    "desc": "Zurich, Switzerland",
-    "link": "ZVM72MSH"
-  },
   "CEARN":{
     "os": "VM/370r5",
     "software": "RSCS",
