@@ -554,35 +554,45 @@ Example:
 ROUTE,MYJOB,DC=TO,ST=MAX.
 ```
 
-NJF also provides a command named `NJMSG` that enables users to send short messages across
-the NJE network, where each such message is a single line of text limited to about 130
-characters in length. The general syntax of the command is:
+NJF also provides commands named `NJCMD` and `NJMSG`. These commands enable users to send
+commands and short messages, respectively, across the NJE network to remote services and
+users. In each case, such commands and messages comprise of a single line of text with
+a maximum length of about 130 characters. The general syntax of the commands is:
 
+```
+NJCMD[,F=origuser][,I=ilfn][,N=destnode][,O=olfn][,W=secs].[node][command text]
+```
 ```
 NJMSG[,F=origuser][,I=ilfn][,N=destnode][,O=olfn][,U=destuser][,W=secs].[user@node][message text]
 ```
+
 where:
 - *origuser* : optional 1 - 8 character name of the originating user or service, default is the NOS username of the calling user.
-- *ilfn* : optional name of a local input file. If this argument is specified, the text of the message to be sent is read from the specified local file. If the file contains more than one line, multiple messages will be sent, one per line.
+- *ilfn* : optional name of a local input file. If this argument is specified, the text of the command or message to be sent is read from the specified local file. If the file contains more than one line, multiple commands or messages will be sent, one per line.
 - *destnode* : optional 1 - 8 character name of the destination NJE node. If this argument is omitted, the destination user and node names must be specified after the command terminator.
 - *olfn* : optional name of a local output file. If this argument is specified, any messages received from the destination node will be written to the specified local file. Otherwise, any messages received will be written to OUTPUT. Specifying *O=0* suppresses output.
-- *destuser* : optional 1 - 8 charaacter name of the destination user or service. If this argument is omitted, the destination user/service and node names must be specified after the command terminator.
+- *destuser* : optional 1 - 8 charaacter name of the destination user or service. If this argument is omitted, the destination user/service and node names must be specified after the command terminator. Note that this parameter pertains only to `NJMSG` because NJE messages may be addressed to specific users or services. By contrast, NJE commands are processed directly by the NJE subsystem of the destination node, so `NJCMD` does not require a destination user or service name to be supplied.
 - *secs* : maximum number of seconds to wait for response messages after sending message(s). The default is 10.
-- *user@node* : if the **N=** and **U=** arguments are not provided, the first token after the command terminator is assumed to have the form `user@node`, and it is taken as the specification of the destination user/service and node names to which messages will be sent.
-- *message text* : if the **I=** argument is not provided, the message to be sent is taken from text following the command terminator.
+- *node* or *user@node* : if the **N=** and **U=** arguments are not provided, the first token after the command terminator is assumed to have the form `node` for `NJCMD` and `user@node` for `NJMSG`, and it is taken as the specification of the destination user/service and node names to which commands or messages will be sent.
+- *message text* : if the **I=** argument is not provided, the command or message to be sent
+is taken from text following the command terminator.
 
 Examples:
 ```
 NJMSG.INFO@NCCMAX /INFO
 NJMSG.GUEST@NCCM01 HELLO, ARE YOU THERE?
 NJMSG,U=GUEST,N=NCCM01,I=MSGS,W=0.
+
+NJCMD.RELAY INFO
+NJCMD,N=NCCCMS.CPQ TIME
 ```
 
 The first example sends the message `/INFO` to a service (presumably) named `INFO` on NJE node `NCCMAX`, and it waits 10 seconds for a response. The second example sends the message
 `HELLO, ARE YOU THERE?` to a user named `GUEST` on NJE node `NCCM01`, and it waits 10
 seconds for a response. The third example sends possibly multiple messages (one per line)
 from the local file named `MSGS` to a user named `GUEST` on NJE node `NCCM01`, and it does
-not wait for responses.
+not wait for responses. The fourth example sends the command `INFO` to NJE node `RELAY`, and
+the last example sends the command `CPQ TIME` to NJE node `NCCCMS`.
 
 ### <a id="njeservices"></a>NJE Services
 Network services may be built using NJE's messaging capability, and two such services are
