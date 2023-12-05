@@ -46,6 +46,7 @@ C$    COLLATE(FIXED)
         CH = CMD(CI:CI)
         CI = CI + 1
         IF (CH.EQ.' '.OR.CH.EQ.','.OR.CH.EQ.'(') GOTO 40
+        IF (CH.EQ.'$'.AND.ARGC.LT.1) GOTO 40
         IF (CH.EQ.'.'.OR.CH.EQ.')') GOTO 60
         AI   = 0
         LNSP = 0
