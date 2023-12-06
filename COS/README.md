@@ -45,3 +45,23 @@ To start *DtCyber* and COS again in the future, enter the same command:
 
 That's it. You have a fully operational Control Data Cyber 6400 supercomputer
 running the COS operating system. Welcome back to supercomputing in the 1960's!
+
+## Web Console
+*DtCyber* is configured to start a special web server that supports browser-based user
+interfaces to the system console. For the COS system, this web server listens for
+connections on TCP port 18002. When you request your web browser to open the following
+URL:
+
+>`http://localhost:18002`
+
+it will display a page showing the systems served by the web-based console server and the
+types of service provided. Ordinarily, two entries will be shown, and they represent two
+types of access to the system console of the COS system. One provides a 2-dimensional
+representation of the console, and the other provides a 3-dimensional one. When you click on either link, a browser-based console emulator will launch, and the local console window
+(either the X-Windows interface on Linux/Unix, or the Windows interface on Microsoft operating
+systems) will suspend after issuing a message indicating *Remote console active*.
+
+You may use the browser-based interface to interact with the system in the same way that you
+use the local console interface. The COS system itself cannot distinguish between the
+two forms of user interface. When you close the browser window in which the system console
+interface is running, control will revert automatically to the local console user interface.
