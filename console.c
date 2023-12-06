@@ -34,6 +34,50 @@
 **    a minimum refresh interval which is specified by the remote console
 **    client.
 **
+**  Remote console streams format:
+**    The data stream transmitted by DtCyber to a remote console consists
+**    of intermixed control information and characters to be displayed. The
+**    data stream received by DtCyber from a remote console may contain
+**    intermixed control information and characters representing console
+**    keystrokes. In both cases, control information is distinguished from
+**    displayable characters or keystrokes by examining the sign bit of
+**    each byte. When the sign bit is set, the byte represents control
+**    information.
+**
+**    The control codes transmitted by DtCyber in the remote console output
+**    stream are defined as follows:
+**
+**      0x80 : Set small X coordinate. One parameter byte follows. The new
+**             X coordinate is exactly the value in the parameter byte.
+**      0x81 : Set Y small coordinate. One parameter byte follows. The new
+**             Y coordinate is exactly the value in the parameter byte.
+**      0x82 : Set large X coordinate. One parameter byte follows. The new
+**             X coordinate is 256 + the value in the parameter byte.
+**      0x83 : Set large Y coordinate. One parameter byte follows. The new
+**             Y coordinate is 256 + the value in the parameter byte.
+**      0x84 : Set screen. One parameter byte follows:
+**             0 = left screen, 1 = right screen
+**      0x85 : Set font type. One parameter byte follows:
+**             0 = dot mode, 1 = small font, 2 = medium font, 3 = large font
+**      0xFF : End of frame. Data between occurrences of this control code
+**             represent one console display refresh cycle.
+**
+**    The control codes recognized by DtCyber in the remote console input
+**    stream are defined as follows:
+**
+**      0x80 : Set refresh interval. One parameter byte follows. The parameter byte
+**             defines the refresh interval in units of 0.01 seconds. However, if the
+**             value is 0, the automatic transmission of refresh cycles is disabled.
+**      0x81 : Send frame immediately. Causes the next frame to be sent immediately.
+**             Thereafter, frames are sent according to the current refresh interval.
+**             This control code can be used to poll for frames (e.g., when refresh
+**             interval set to 0) or to force frames to be sent at any time.
+**
+**    Note that when a remote console connection is first established, the default
+**    refresh interval is 0. Consequently, no frames will be sent until a non-0
+**    refresh interval is set by sending the 0x80 control code, or the 0x81 control
+**    code is sent to poll for a frame explicitly.
+**
 **--------------------------------------------------------------------------
 */
 
