@@ -20,6 +20,64 @@
 **  version 3 along with this program in file "license-gpl-3.0.txt".
 **  If not, see <http://www.gnu.org/licenses/gpl-3.0.txt>.
 **
+**  About remote console support:
+**    Remote consoles are supported using a derivative of a strategy devised
+**    by Paul Koning for detecting refresh cycles. Paul observed that most
+**    PP programs interacting with the console refresh the two screens,
+**    then they poll the keyboard for input, then they repeat. Consequently,
+**    the strategy employed here is to compute an inexpensive checksum
+**    against X/Y coordinate positions starting from a keyboard input check.
+**    If a match is found for a previously computed checksum, a refresh cycle
+**    is detected, and console output data accumulated between the matching
+**    checksums is eligible to be sent to the remote console. The frequency
+**    at which eligible data is actually sent depends upon the setting of
+**    a minimum refresh interval which is specified by the remote console
+**    client.
+**
+**  Remote console streams format:
+**    The data stream transmitted by DtCyber to a remote console consists
+**    of intermixed control information and characters to be displayed. The
+**    data stream received by DtCyber from a remote console may contain
+**    intermixed control information and characters representing console
+**    keystrokes. In both cases, control information is distinguished from
+**    displayable characters or keystrokes by examining the sign bit of
+**    each byte. When the sign bit is set, the byte represents control
+**    information.
+**
+**    The control codes transmitted by DtCyber in the remote console output
+**    stream are defined as follows:
+**
+**      0x80 : Set small X coordinate. One parameter byte follows. The new
+**             X coordinate is exactly the value in the parameter byte.
+**      0x81 : Set Y small coordinate. One parameter byte follows. The new
+**             Y coordinate is exactly the value in the parameter byte.
+**      0x82 : Set large X coordinate. One parameter byte follows. The new
+**             X coordinate is 256 + the value in the parameter byte.
+**      0x83 : Set large Y coordinate. One parameter byte follows. The new
+**             Y coordinate is 256 + the value in the parameter byte.
+**      0x84 : Set screen. One parameter byte follows:
+**             0 = left screen, 1 = right screen
+**      0x85 : Set font type. One parameter byte follows:
+**             0 = dot mode, 1 = small font, 2 = medium font, 3 = large font
+**      0xFF : End of frame. Data between occurrences of this control code
+**             represent one console display refresh cycle.
+**
+**    The control codes recognized by DtCyber in the remote console input
+**    stream are defined as follows:
+**
+**      0x80 : Set refresh interval. One parameter byte follows. The parameter byte
+**             defines the refresh interval in units of 0.01 seconds. However, if the
+**             value is 0, the automatic transmission of refresh cycles is disabled.
+**      0x81 : Send frame immediately. Causes the next frame to be sent immediately.
+**             Thereafter, frames are sent according to the current refresh interval.
+**             This control code can be used to poll for frames (e.g., when refresh
+**             interval set to 0) or to force frames to be sent at any time.
+**
+**    Note that when a remote console connection is first established, the default
+**    refresh interval is 0. Consequently, no frames will be sent until a non-0
+**    refresh interval is set by sending the 0x80 control code, or the 0x81 control
+**    code is sent to poll for a frame explicitly.
+**
 **--------------------------------------------------------------------------
 */
 
@@ -64,8 +122,10 @@
 #define Fc6612Sel32CharRight     07101
 #define Fc6612Sel16CharRight     07102
 
+#define CycleDataBufSize         16384
+#define CycleDataLimit           (CycleDataBufSize-1)
 #define InBufSize                 1024
-#define OutBufSize                8192
+#define OutBufSize               16384
 
 #define CmdSetXLow                0x80
 #define CmdSetYLow                0x81
@@ -73,11 +133,15 @@
 #define CmdSetYHigh               0x83
 #define CmdSetScreen              0x84
 #define CmdSetFontType            0x85
+#define CmdEndFrame               0xFF
 
 #define FontTypeDot                  0
 #define FontTypeSmall                1
 #define FontTypeMedium               2
 #define FontTypeLarge                3
+
+#define InfiniteRefreshInterval      ((u64)1000*60*60*24*365)
+#define MaxCycleDataEntries          5
 
 /*
 **  -----------------------
@@ -94,6 +158,13 @@
 **  Private Typedef and Structure Definitions
 **  -----------------------------------------
 */
+typedef struct cycleData
+    {
+    int         sum1;           /* Fletcher checksum accumulators */
+    int         sum2;
+    int         first;          /* Index of first accumulated byte in display sequence */
+    int         limit;          /* Index of last + 1 accumulated byte in sequence */
+    } CycleData;
 
 /*
 **  ---------------------------
@@ -102,15 +173,20 @@
 */
 static void     consoleAcceptConnection(void);
 static void     consoleActivate(void);
+static void     consoleCheckDisplayCycle(void);
 static FcStatus consoleFunc(PpWord funcCode);
 static void     consoleDisconnect(void);
+static void     consoleFlushCycleData(int first, int limit);
+static void     consoleInitCycleData(void);
 static void     consoleIo(void);
 static void     consoleNetIo(void);
 static void     consoleSetFontType(u8 fontType);
 static void     consoleSetScreen(u8 screen);
 static void     consoleSetX(u16 x);
 static void     consoleSetY(u16 y);
-static void     consoleQueue(u8 ch);
+static void     consoleQueueChar(u8 ch);
+static void     consoleQueueCmd(u8 cmd, u8 parm);
+static void     consoleUpdateChecksum(u16 datum);
 
 /*
 **  ----------------
@@ -123,23 +199,36 @@ static void     consoleQueue(u8 ch);
 **  Private Variables
 **  -----------------
 */
-static u8     consoleChannelNo;
-static u8     consoleEqNo;
+static bool      doOpenConsoleWindow   = TRUE;
+static bool      isConsoleWindowOpen   = FALSE;
 
-static u8     currentFontType  = FontTypeSmall;
-static u8     currentScreen    = 0xff;
-static u8     fontSizes[4]     = { FontDot, FontSmall, FontMedium, FontLarge };
-static u16    xOffsets[2]      = { OffLeftScreen, OffRightScreen };
+static u8        consoleChannelNo;
+static u8        consoleEqNo;
 
-static SOCKET connFd           = INVALID_SOCKET;
-static SOCKET listenFd         = INVALID_SOCKET;
+static CycleData *currentCycleData;
+static int       currentCycleDataIndex = 0;
+static CycleData cycleDataSequences[MaxCycleDataEntries];
+static u64       minRefreshInterval;
+static u64       earliestCycleFlush;
 
-static u8     consoleInBuf[InBufSize];
-static int    consoleInBufIn   = 0;
-static int    consoleInBufOut  = 0;
+static u8        currentFontType       = FontTypeSmall;
+static u8        currentScreen         = 0xff;
+static u8        fontSizes[4]          = { FontDot, FontSmall, FontMedium, FontLarge };
+static u16       xOffsets[2]           = { OffLeftScreen, OffRightScreen };
 
-static u8     consoleOutBuf[OutBufSize];
-static int    consoleOutBufIn  = 0;
+static SOCKET    connFd                = INVALID_SOCKET;
+static SOCKET    listenFd              = INVALID_SOCKET;
+
+static u8        cycleDataBuf[CycleDataBufSize];
+static int       cycleDataIn           = 0;
+static int       cycleDataOut          = 0;
+
+static u8        inBuf[InBufSize];
+static int       inBufIn               = 0;
+static int       inBufOut              = 0;
+
+static u8        outBuf[OutBufSize];
+static int       outBufIn              = 0;
 
 /*
  **--------------------------------------------------------------------------
@@ -166,6 +255,7 @@ void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     int     consolePort;
     DevSlot *dp;
     int     n;
+    char    str[40];
 
     consoleChannelNo = channelNo;
     consoleEqNo      = eqNo;
@@ -180,7 +270,7 @@ void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
 
     if (params != NULL)
         {
-        n = sscanf(params, "%d", &consolePort);
+        n = sscanf(params, "%d,%s", &consolePort, str);
         if (n < 1)
             {
             fputs("(console) TCP port missing from CO6612 definition\n", stderr);
@@ -191,6 +281,18 @@ void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
             fprintf(stderr, "(console) Invalid TCP port number in CO6612 definition: %d\n", consolePort);
             exit(1);
             }
+        if (n > 1)
+            {
+            if (strcasecmp(str, "nowin") == 0)
+                {
+                doOpenConsoleWindow = FALSE;
+                }
+            else if (strcasecmp(str, "win") != 0)
+                {
+                fprintf(stderr, "(console) Unrecognized parameter in CO6612 definition: %s\n", str);
+                exit(1);
+                }
+            }
         listenFd = netCreateListener(consolePort);
         if (listenFd == INVALID_SOCKET)
             {
@@ -200,10 +302,16 @@ void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
         fprintf(stdout, "(console) Listening for connections on port %d\n", consolePort);
         }
 
+    consoleInitCycleData();
+
     /*
-    **  Initialise (X)Windows environment.
+    **  Open console window, if enabled.
     */
-    windowInit();
+    if (doOpenConsoleWindow)
+        {
+        windowInit();
+        isConsoleWindowOpen = TRUE;
+        }
 
     /*
     **  Print a friendly message.
@@ -224,9 +332,44 @@ void consoleCloseRemote(void)
     if (connFd != INVALID_SOCKET)
         {
         netCloseConnection(connFd);
-        connFd = INVALID_SOCKET;
-        consoleInBufIn  = consoleInBufOut  = 0;
-        consoleOutBufIn = 0;
+        connFd      = INVALID_SOCKET;
+        cycleDataIn = cycleDataOut = 0;
+        inBufIn     = inBufOut     = 0;
+        outBufIn    = 0;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Close the local console window.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void consoleCloseWindow(void)
+    {
+    if (isConsoleWindowOpen)
+        {
+        windowTerminate();
+        isConsoleWindowOpen = FALSE;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Open the local console window.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void consoleOpenWindow(void)
+    {
+    if (isConsoleWindowOpen == FALSE)
+        {
+        windowInit();
+        isConsoleWindowOpen = TRUE;
         }
     }
 
@@ -398,8 +541,8 @@ static void consoleIo(void)
                 }
             else
                 {
-                consoleQueue(consoleToAscii[(activeChannel->data >> 6) & Mask6]);
-                consoleQueue(consoleToAscii[(activeChannel->data >> 0) & Mask6]);
+                consoleQueueChar(consoleToAscii[(activeChannel->data >> 6) & Mask6]);
+                consoleQueueChar(consoleToAscii[(activeChannel->data >> 0) & Mask6]);
                 }
 
             activeChannel->full = FALSE;
@@ -420,7 +563,7 @@ static void consoleIo(void)
                     **  Vertical coordinate.
                     */
                     consoleSetY((u16)(activeChannel->data & Mask9));
-                    consoleQueue('.');
+                    consoleQueueChar('.');
                     }
                 else
                     {
@@ -436,6 +579,7 @@ static void consoleIo(void)
         break;
 
     case Fc6612SelKeyIn:
+        consoleCheckDisplayCycle();
         activeChannel->data   = 0;
         activeChannel->full   = TRUE;
         activeChannel->status = 0;
@@ -478,6 +622,10 @@ static void consoleAcceptConnection(void)
     if (n > 0)
         {
         connFd = netAcceptConnection(listenFd);
+        consoleInitCycleData();
+        consoleQueueCmd(CmdSetScreen, currentScreen);
+        minRefreshInterval = InfiniteRefreshInterval;
+        earliestCycleFlush = getMilliseconds() + minRefreshInterval;
         }
     }
 
@@ -491,6 +639,46 @@ static void consoleAcceptConnection(void)
 **------------------------------------------------------------------------*/
 static void consoleActivate(void)
     {
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Send output to remote console if display cycle detected
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing
+**
+**------------------------------------------------------------------------*/
+static void consoleCheckDisplayCycle(void)
+    {
+    CycleData *cdp;
+    int i;
+
+    if (connFd == INVALID_SOCKET) return;
+
+    //
+    // Search backward for a matching checksum. A cycle is detected if a
+    // match is found.
+    //
+    for (i = currentCycleDataIndex - 1; i >= 0; i--)
+        {
+        cdp = &cycleDataSequences[i];
+        if (cdp->sum1 == currentCycleData->sum1 && cdp->sum2 == currentCycleData->sum2)
+            {
+            cycleDataBuf[cycleDataIn++] = CmdEndFrame;
+            currentCycleData->limit = cycleDataIn;
+            consoleFlushCycleData(cdp->limit, currentCycleData->limit);
+            currentCycleDataIndex = -1;
+            break;
+            }
+        }
+    if (currentCycleDataIndex + 1 < MaxCycleDataEntries)
+       {
+       currentCycleDataIndex += 1;
+       currentCycleData = &cycleDataSequences[currentCycleDataIndex];
+       memset(currentCycleData, 0, sizeof(CycleData));
+       currentCycleData->first = currentCycleData->limit = cycleDataIn;
+       }
     }
 
 /*--------------------------------------------------------------------------
@@ -509,26 +697,84 @@ static void consoleDisconnect(void)
 **  Purpose:        Flush remote console output buffer.
 **
 **  Parameters:     Name        Description.
+**                  first       index of first character to flush from
+**                              output buffer
+**                  limit       index+1 of last character to flush from
+**                              output buffer
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void consoleNetFlush(void)
+static void consoleFlushCycleData(int first, int limit)
     {
+    u64 currentTime;
     int n;
 
-    if (consoleOutBufIn > 0)
+    if (connFd != INVALID_SOCKET)
         {
-        n = send(connFd, consoleOutBuf, consoleOutBufIn, 0);
-        if (n > 0)
+        currentTime = getMilliseconds();;
+        if (outBufIn > 0)
             {
-            if (n < consoleOutBufIn)
+            if (limit > first && currentTime >= earliestCycleFlush)
                 {
-                memcpy(consoleOutBuf, &consoleOutBuf[n], consoleOutBufIn - n);
+                n = limit - first;
+                if (outBufIn + n <= OutBufSize)
+                    {
+                    memcpy(&outBuf[outBufIn], &cycleDataBuf[first], n);
+                    outBufIn += n;
+                    }
+                else // output buffer overflow -- replace contents with latest cycle data
+                    {
+                    memcpy(outBuf, &cycleDataBuf[first], n);
+                    outBufIn = n;
+                    }
+                earliestCycleFlush = currentTime + minRefreshInterval;
+                consoleInitCycleData();
+                consoleQueueCmd(CmdSetScreen, currentScreen);
                 }
-            consoleOutBufIn -= n;
+            n = send(connFd, outBuf, outBufIn, 0);
+            if (n > 0)
+                {
+                if (n < outBufIn)
+                    {
+                    memcpy(outBuf, &outBuf[n], outBufIn - n);
+                    }
+                outBufIn -= n;
+                }
+            }
+        else if (limit > first)
+            {
+            if (currentTime >= earliestCycleFlush)
+                {
+                n = send(connFd, &cycleDataBuf[first], limit - first, 0);
+                if (n < limit - first)
+                    {
+                    if (n < 0) n = 0;
+                    memcpy(outBuf, &cycleDataBuf[first + n], (limit - first) - n);
+                    outBufIn = n;
+                    }
+                earliestCycleFlush = currentTime + minRefreshInterval;
+                }
+            consoleInitCycleData();
+            consoleQueueCmd(CmdSetScreen, currentScreen);
             }
         }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Initialize cycle data collection.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        nothing
+**
+**------------------------------------------------------------------------*/
+static void consoleInitCycleData(void)
+    {
+    memset(cycleDataSequences, 0, sizeof(cycleDataSequences));
+    currentCycleDataIndex = 0;
+    currentCycleData      = &cycleDataSequences[0];
+    cycleDataIn           = cycleDataOut = 0;
     }
 
 /*--------------------------------------------------------------------------
@@ -541,6 +787,7 @@ static void consoleNetFlush(void)
 **------------------------------------------------------------------------*/
 static void consoleNetIo(void)
     {
+    u8             ch;
     int            n;
     fd_set         readFds;
     struct timeval timeout;
@@ -551,31 +798,51 @@ static void consoleNetIo(void)
     timeout.tv_usec = 0;
     n = select(connFd + 1, &readFds, NULL, NULL, &timeout);
 
-    if (ppKeyIn == 0 && consoleInBufOut < consoleInBufIn)
+    if (ppKeyIn == 0 && inBufOut < inBufIn)
         {
-        ppKeyIn = consoleInBuf[consoleInBufOut++];
-        if (consoleInBufOut >= consoleInBufIn) consoleInBufIn = consoleInBufOut = 0;
+        ch = inBuf[inBufOut++];
+        if (ch == 0x80) // set minimum refresh interval
+            {
+            if (inBufOut < inBufIn)
+                {
+                minRefreshInterval = inBuf[inBufOut++] * 10;
+                if (minRefreshInterval == 0) minRefreshInterval = InfiniteRefreshInterval;
+                earliestCycleFlush = getMilliseconds() + minRefreshInterval;
+                }
+            else
+                {
+                inBufOut -= 1;
+                }
+            return;
+            }
+        else if (ch == 0x81)
+            {
+            earliestCycleFlush = 0;
+            return;
+            }
+        ppKeyIn = ch;
+        if (inBufOut >= inBufIn) inBufIn = inBufOut = 0;
         }
-    if (n > 0 && consoleInBufIn < InBufSize && FD_ISSET(connFd, &readFds))
+    if (n > 0 && inBufIn < InBufSize && FD_ISSET(connFd, &readFds))
         {
-        n = recv(connFd, &consoleInBuf[consoleInBufIn], InBufSize - consoleInBufIn, 0);
+        n = recv(connFd, &inBuf[inBufIn], InBufSize - inBufIn, 0);
         if (n <= 0)
             {
             consoleCloseRemote();
             }
         else
             {
-            consoleInBufIn += n;
+            inBufIn += n;
             }
         }
-    if (connFd != INVALID_SOCKET && consoleOutBufIn >= (OutBufSize / 2))
+    if (outBufIn > 0)
         {
-        consoleNetFlush();
+        consoleFlushCycleData(0, 0);
         }
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Queue characters.
+**  Purpose:        Queue a character.
 **
 **  Parameters:     Name        Description.
 **                  ch          character to be queued.
@@ -583,15 +850,46 @@ static void consoleNetIo(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void consoleQueue(u8 ch)
+static void consoleQueueChar(u8 ch)
     {
     if (connFd == INVALID_SOCKET)
         {
-        windowQueue(ch);
+        if (isConsoleWindowOpen) windowQueue(ch);
         }
-    else if (consoleOutBufIn < OutBufSize)
+    else if (cycleDataIn >= CycleDataLimit)
         {
-        consoleOutBuf[consoleOutBufIn++] = ch & 0x7f;
+        cycleDataBuf[cycleDataIn++] = CmdEndFrame;
+        consoleFlushCycleData(0, cycleDataIn);
+        }
+    else if (currentCycleData->limit > 0)
+        {
+        cycleDataBuf[cycleDataIn++] = ch;
+        currentCycleData->limit = cycleDataIn;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Queue a console command and parameter.
+**
+**  Parameters:     Name        Description.
+**                  cmd         command to be queued.
+**                  parm        parameter of the command
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void consoleQueueCmd(u8 cmd, u8 parm)
+    {
+    if (connFd != INVALID_SOCKET)
+        {
+        if (cycleDataIn + 1 >= CycleDataLimit)
+            {
+            cycleDataBuf[cycleDataIn++] = CmdEndFrame;
+            consoleFlushCycleData(0, cycleDataIn);
+            }
+        cycleDataBuf[cycleDataIn++] = cmd;
+        cycleDataBuf[cycleDataIn++] = parm;
+        currentCycleData->limit = cycleDataIn;
         }
     }
 
@@ -609,12 +907,11 @@ static void consoleSetFontType(u8 fontType)
     {
     if (connFd == INVALID_SOCKET)
         {
-        windowSetFont(fontSizes[fontType]);
+        if (isConsoleWindowOpen) windowSetFont(fontSizes[fontType]);
         }
-    else if (currentFontType != fontType && consoleOutBufIn < OutBufSize - 1)
+    else if (currentFontType != fontType)
         {
-        consoleOutBuf[consoleOutBufIn++] = CmdSetFontType;
-        consoleOutBuf[consoleOutBufIn++] = fontType;
+        consoleQueueCmd(CmdSetFontType, fontType);
         }
     currentFontType = fontType;
     }
@@ -630,10 +927,10 @@ static void consoleSetFontType(u8 fontType)
 **------------------------------------------------------------------------*/
 static void consoleSetScreen(u8 screen)
     {
-    if (currentScreen != screen && consoleOutBufIn < OutBufSize - 1)
+    if (currentScreen != screen)
         {
-        consoleOutBuf[consoleOutBufIn++] = CmdSetScreen;
-        consoleOutBuf[consoleOutBufIn++] = screen;
+        consoleUpdateChecksum(screen);
+        consoleQueueCmd(CmdSetScreen, screen);
         }
     currentScreen = screen;
     }
@@ -649,22 +946,18 @@ static void consoleSetScreen(u8 screen)
 **------------------------------------------------------------------------*/
 static void consoleSetX(u16 x)
     {
+    consoleUpdateChecksum(x);
     if (connFd == INVALID_SOCKET)
         {
-        windowSetX(x + xOffsets[currentScreen]);
+        if (isConsoleWindowOpen) windowSetX(x + xOffsets[currentScreen]);
         }
-    else if (consoleOutBufIn < OutBufSize - 1)
+    else if (x > 0xff)
         {
-        if (x > 0xff)
-            {
-            consoleOutBuf[consoleOutBufIn++] = CmdSetXHigh;
-            consoleOutBuf[consoleOutBufIn++] = x & 0xff;
-            }
-        else
-            {
-            consoleOutBuf[consoleOutBufIn++] = CmdSetXLow;
-            consoleOutBuf[consoleOutBufIn++] = x;
-            }
+        consoleQueueCmd(CmdSetXHigh, x & 0xff);
+        }
+    else
+        {
+        consoleQueueCmd(CmdSetXLow, x);
         }
     }
 
@@ -679,23 +972,34 @@ static void consoleSetX(u16 x)
 **------------------------------------------------------------------------*/
 static void consoleSetY(u16 y)
     {
+    consoleUpdateChecksum(y);
     if (connFd == INVALID_SOCKET)
         {
-        windowSetY(y);
+        if (isConsoleWindowOpen) windowSetY(y);
         }
-    else if (consoleOutBufIn < OutBufSize - 1)
+    else if (y > 0xff)
         {
-        if (y > 0xff)
-            {
-            consoleOutBuf[consoleOutBufIn++] = CmdSetYHigh;
-            consoleOutBuf[consoleOutBufIn++] = y & 0xff;
-            }
-        else
-            {
-            consoleOutBuf[consoleOutBufIn++] = CmdSetYLow;
-            consoleOutBuf[consoleOutBufIn++] = y;
-            }
+        consoleQueueCmd(CmdSetYHigh, y & 0xff);
         }
+    else
+        {
+        consoleQueueCmd(CmdSetYLow, y);
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Update Fletcher checksum.
+**
+**  Parameters:     Name        Description.
+**                  datum       datum with which to update checksum
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void consoleUpdateChecksum(u16 datum)
+    {
+    currentCycleData->sum1 += datum;
+    currentCycleData->sum2 += currentCycleData->sum1;
     }
 
 /*---------------------------  End Of File  ------------------------------*/

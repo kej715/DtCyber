@@ -92,6 +92,7 @@ static u8              currentFont;
 static i16             currentX;
 static i16             currentY;
 static DispList        display[ListSize];
+static pthread_t       displayThread;
 static u32             listEnd;
 static Font            hSmallFont;
 static Font            hMediumFont;
@@ -125,7 +126,6 @@ static u8              clipToKeyboardDelay  = 0;
 void windowInit(void)
     {
     int            rc;
-    pthread_t      thread;
     pthread_attr_t attr;
 
     /*
@@ -142,7 +142,8 @@ void windowInit(void)
     **  Create POSIX thread with default attributes.
     */
     pthread_attr_init(&attr);
-    rc = pthread_create(&thread, &attr, windowThread, NULL);
+    rc = pthread_create(&displayThread, &attr, windowThread, NULL);
+    displayActive = TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -240,10 +241,11 @@ void windowQueue(u8 ch)
 **------------------------------------------------------------------------*/
 void windowTerminate(void)
     {
-    printf("Shutting down window thread\n");
-    displayActive = FALSE;
-    sleep(1);
-    printf("Shutting down main thread\n");
+    if (displayActive)
+        {
+        displayActive = FALSE;
+        pthread_join(displayThread, NULL);
+        }
     }
 
 /*
@@ -392,8 +394,8 @@ void *windowThread(void *param)
     /*
     **  Window thread loop.
     */
-    displayActive = TRUE;
-    isMeta        = FALSE;
+    isMeta = FALSE;
+
     while (displayActive)
         {
         /*
@@ -774,6 +776,7 @@ void *windowThread(void *param)
     XFreePixmap(disp, pixmap);
     XDestroyWindow(disp, window);
     XCloseDisplay(disp);
+    pthread_mutex_destroy(&mutexDisplay);
     pthread_exit(NULL);
     }
 

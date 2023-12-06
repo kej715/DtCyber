@@ -116,10 +116,12 @@ void windowDisplay(HWND hWnd);
 **  -----------------
 */
 static u8          currentFont;
-static i16         currentX = -1;
-static i16         currentY = -1;
+static i16         currentX              = -1;
+static i16         currentY              = -1;
+static bool        displayActive         = FALSE;
 static DispList    display[ListSize];
 static u32         listEnd;
+static HANDLE      hThread;
 static HWND        hWnd;
 static HFONT       hSmallFont            = 0;
 static HFONT       hMediumFont           = 0;
@@ -146,9 +148,7 @@ static BOOL        shifted               = FALSE;
 void windowInit(void)
     {
     DWORD  dwThreadId;
-    HANDLE hThread;
     int    thPriority = 0;
-
 
     /*
     **  Create display list pool.
@@ -186,6 +186,8 @@ void windowInit(void)
             exit(1);
             }
         }
+
+    displayActive = TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -273,8 +275,12 @@ void windowQueue(u8 ch)
 **------------------------------------------------------------------------*/
 void windowTerminate(void)
     {
-    SendMessage(hWnd, WM_DESTROY, 0, 0);
-    Sleep(100);
+    if (displayActive)
+        {
+        SendMessage(hWnd, WM_DESTROY, 0, 0);
+        WaitForSingleObject(hThread, INFINITE);
+        displayActive = FALSE;
+        }
     }
 
 /*

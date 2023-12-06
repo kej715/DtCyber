@@ -6,6 +6,7 @@ const ftp           = require("ftp");
 const http          = require("http");
 const https         = require("https");
 const net           = require("net");
+const os            = require("os");
 
 /*
  * DtCyberStreamMgr
@@ -740,6 +741,7 @@ class DtCyber {
                   process.stdout.write(`    > ${name}\n`);
                 }
               }
+              process.stdout.write(`    > !\n`);
             }
             else {
               let cmdDefn = null;
@@ -754,10 +756,52 @@ class DtCyber {
                 mgr.write("\n");
                 break;
               }
+              else if (rest === "!") {
+                process.stdout.write(`\n    > '![command]' execute external system command, or enter shell if no command specified\n`);
+                mgr.write("\n");
+                break;
+              }
             }
           }
           else if (cmdToken === "set_operator_port" || cmdToken === "sop") {
             process.stdout.write("Command ignored; cannot change operator port while connected to it\n");
+            break;
+          }
+          else if (cmdToken.startsWith("!")) {
+            me.disconnect()
+            .then(() => {
+              let options = {shell: true, stdio: [0, 1, 2]};
+              let tokens  = [];
+              if (line === "!") { // launch a subshell
+                options.shell = false;
+                tokens = (os.platform() === "win32") ? ["cmd"] : ["sh", "-i"];
+              }
+              else {
+                tokens = line.substring(1).trim().split(/\s+/);
+              }
+              return new Promise((resolve, reject) => {
+                process.stdin.pause();
+                const child = child_process.spawn(tokens[0], tokens.slice(1), options);
+                child.on("exit", (code, signal) => {
+                  process.stdin.resume();
+                  resolve();
+                });
+                child.on("error", err => {
+                  process.stdin.resume();
+                  resolve();
+                });
+              });
+            })
+            .then(() => me.connect())
+            .then(() => me.expect([ {re:/Operator> $/} ]))
+            .then(() => {
+              mgr = me.getStreamMgr();
+              mgr.startConsumer(data => {
+                process.stdout.write(data);
+                return true;
+              });
+              mgr.write("\n");
+            });
             break;
           }
           mgr.write(`${line}\n`);
@@ -781,7 +825,7 @@ class DtCyber {
    *   args    - array of arguments for the command
    *   options - optional object providing child_process.spawn options
    *             If omitted, the default options are:
-   *               {shell: true, stdio: ["pipe", process.stdout, process.stderr]}
+   *               {shell: true, stdio: [0, 1, 2]}
    *
    * Returns:
    *   A promise that is resolved when a detached process has started, or when

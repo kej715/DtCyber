@@ -229,21 +229,19 @@ The following CYBIS users are available:
 | cobol     | ccobol   | none     | Cyber COBOL lessons                   |
 
 ## <a id="web-console"></a>Web Console
-*DtCyber* is configured to start a special web server that supports a browser-based user
-interface to the system console. For the NOS 2.8.7 system, this web server listens for
+*DtCyber* is configured to start a special web server that supports browser-based user
+interfaces to the system console. For the NOS 2.8.7 system, this web server listens for
 connections on TCP port 18001. When you request your web browser to open the following
 URL:
 
-```
-http://localhost:18001
-```
+>`http://localhost:18001`
 
-it will display a page showing the systems served by the web-based console server. Ordinarily,
-one system will be shown, and it represents access to the system console of the NOS 2.8.7
-system. When you click on the link associated with the NOS 2.8.7 system, a browser-based
-console emulator will launch, and the local console window (either the X-Windows interface on
-Linux/Unix, or the Windows interface on Microsoft operating systems) will suspend after
-issuing a message indicating *Remote console active*.
+it will display a page showing the systems served by the web-based console server and the
+types of service provided. Ordinarily, two entries will be shown, and they represent two
+types of access to the system console of the NOS 2.8.7 system. One provides a 2-dimensional
+representation of the console, and the other provides a 3-dimensional one. When you click on either link, a browser-based console emulator will launch, and the local console window
+(either the X-Windows interface on Linux/Unix, or the Windows interface on Microsoft operating
+systems) will suspend after issuing a message indicating *Remote console active*.
 
 You may use the browser-based interface to interact with the system in the same way that you
 use the local console interface. The NOS 2.8.7 system itself cannot distinguish between the
