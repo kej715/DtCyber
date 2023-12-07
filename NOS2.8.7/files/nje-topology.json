@@ -19,7 +19,7 @@
     "os": "NOS 2.8.7",
     "software": "NJEF",
     "lid": "MAX",
-    "publicAddress": "98.0.39.204:175"
+    "publicAddress": "98.0.36.170:175"
   },
   "NCCMED": {
     "desc": "CDC Cyber 865 development system at the Nostalgic Computing Center",
