@@ -339,8 +339,8 @@ class CyberConsole {
  *     This uses a WebGL context and is not drawn into directly.
  *  2. The "off screen" canvas/context into which things are drawn using standard
  *     HTML 5 functions.
- *  Every 100ms, the "off screen" context is transferred to a texture mapped on a
- *  3D plane, which is rendered by Babylon.js.
+ *  At the end of each frame received from DtCyber, the "off screen" context is
+ *  transferred to a texture mapped on a 3D plane, which is rendered by Babylon.js.
  */
 
 class CyberConsole3D extends CyberConsole {
