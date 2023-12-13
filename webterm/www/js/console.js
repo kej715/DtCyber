@@ -475,7 +475,6 @@ class CyberConsole3D extends CyberConsole {
         newMeshes[0].rotation.y = 3.1415926/2.0;
         break;
       }
-      newMeshes[0].rotation.y = 3.1415926; // right handed / left handed c.s. issue again.
       newMeshes[0].rotation.z = 0.0;
                                           
       for (const mesh of newMeshes) {
@@ -538,16 +537,16 @@ class CyberConsole3D extends CyberConsole {
     // Position the camera.
     switch (this.consoleType) {
     case CyberConsole3D.CC545:
-      camera.setTarget(new this.babylon.Vector3(0.0, 0.11, 0.0)); // Where to look at initially. CC545
+      camera.setTarget(new this.babylon.Vector3(0.0, 0.11, 0.0));   // Where to look at initially. CC545
       break;
     case CyberConsole3D.CO6602:
       camera.setTarget(new this.babylon.Vector3(0.025, 0.34, 0.0)); // Where to look at initially. CO6602
       break;
     }
-    camera.radius = 1.0;                                        // Initial camera distance = 1 meter.
-    camera.wheelDeltaPercentage = 0.05;                         // Maybe improve mouse wheel speed.
-    camera.upperRadiusLimit = 5.0;                              // Maximum distance from target.
-    camera.lowerRadiusLimit = 0.5;                              // Minimum distace from target.
+    camera.radius = 1.0;                // Initial camera distance = 1 meter.
+    camera.wheelDeltaPercentage = 0.05; // Maybe improve mouse wheel speed.
+    camera.upperRadiusLimit = 5.0;      // Maximum distance from target.
+    camera.lowerRadiusLimit = 0.5;      // Minimum distace from target.
 
     return scene;
   }
