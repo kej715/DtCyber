@@ -33,6 +33,7 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;[E-mail Reflector](#reflector)
 - [NOS to NOS networking (RHP - Remote Host Products)](#rhp)
 - &nbsp;&nbsp;&nbsp;&nbsp;[Using RHP](#usingrhp)
+- [TCP/IP Applications](#tcpip)
 - [Cray Station](#cray)
 - [Shutdown and Restart](#shutdown)
 - [Operator Command Extensions](#opext)
@@ -947,6 +948,18 @@ MFLINK,lfn,ST=M02
 ```
 See [NOS 2 Reference Set Volume 3 System Commands](http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf)
 for more details about the `ROUTE` and `MFLINK` commands.
+
+## <a id="tcpip"></a>TCP/IP Applications
+NOS 2.8.7 supports the TCP/IP data communication protocol suite and various client and server
+applications that use it. These include:
+
+- **DNS lookup utility**. Included in the *ncctcp* product provided by the Nostalgic Computing Center.
+- **FTP client and server**. Provided by CDC and included in the standard NOS 2.8.7 release materials.
+- **HTTP server**. Included in the *ncctcp* product provided by the Nostalgic Computing Center.
+- **REXEC client and server**. Included in the *ncctcp* product provided by the Nostalgic Computing Center.
+- **SMTP client and server**. Included in the *ncctcp* product provided by the Nostalgic Computing Center.
+
+See [TCP/IP Applications](TCPIP.md) for details.
 
 ## <a id="cray"></a>Cray Station
 NOS 2.8.7 supports the `Cray Station` subsystem (CRS), and this enables it to interact
