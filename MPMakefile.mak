@@ -30,7 +30,7 @@
   ####   #    #   ####           #    #  #    #  #    #  ######
 
 #	The LIST of the projects to be built
-PROJECTS = dtcyber automation/node_modules stk/node_modules webterm/node_modules rje-station/node_modules
+PROJECTS = dtcyber automation/node_modules stk/node_modules webterm/node_modules webterm/www/js/node_modules rje-station/node_modules
 
 #	When calling other makefiles, they must be named the 
 #	same as this one ...
@@ -268,6 +268,9 @@ stk/node_modules:
 webterm/node_modules:
 	$(MAKE) -f $(THISMAKEFILE) -C webterm
 
+webterm/www/js/node_modules:
+	$(MAKE) -f $(THISMAKEFILE) -C webterm/www/js
+
 
 #------------------------------------------------------------------------------
 #	Recipe to Ensure that the subdirectories exist
@@ -308,6 +311,7 @@ clean:
 	$(MAKE) -C rje-station clean;
 	$(MAKE) -C stk clean;
 	$(MAKE) -C webterm clean
+	$(MAKE) -C webterm/www/js clean
 
 .PHONY: info
 info:
