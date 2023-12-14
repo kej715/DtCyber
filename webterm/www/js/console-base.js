@@ -62,7 +62,7 @@ class CyberConsoleBase {
         //
         // Base font information
         //
-        this.fontWidths = [1, 1, 1, 1];
+        this.fontWidths = [2, 8, 16, 32];
     }
 
     //
@@ -76,12 +76,12 @@ class CyberConsoleBase {
         console.log("Char: " + b)
     }
 
-    setFont(b) {
-        console.log("Font: " + b)
+    setFont(font) {
+        this.currentFont = font;
     }
 
     setScreen(b) {
-        console.log("Font: " + b)
+        console.log("Screen: " + b)
     }
 
     updateScreen() {
@@ -145,11 +145,13 @@ class CyberConsoleBase {
                     break;
 
                 case this.ST_COLLECT_X:
+                    console.log('Raw X: ' + ((this.x + b)))
                     this.x = Math.round((this.x + b) * this.xRatio);
                     this.state = this.ST_TEXT;
                     break;
 
                 case this.ST_COLLECT_Y:
+                    console.log('Raw Y: ' + ((this.y + b)) + ' ' + (0o777 - (this.y + b)))
                     this.y = Math.round((0o777 - (this.y + b)) * this.yRatio);
                     this.state = this.ST_TEXT;
                     break;
@@ -171,3 +173,5 @@ class CyberConsoleBase {
         }
     }
 }
+
+module.exports = CyberConsoleBase;

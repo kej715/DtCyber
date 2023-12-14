@@ -22,6 +22,9 @@
  *  to the "on screen" context.
  */
 
+
+import CyberConsoleBase from "./console-base";
+
 class CyberConsole extends CyberConsoleBase {
 
   constructor() {
