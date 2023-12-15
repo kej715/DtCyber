@@ -391,6 +391,14 @@
     "desc": "Miscellaneous software packages",
     "products": [
       {
+        "name": "chess",
+        "post": "chess.post",
+        "lib": 70,
+        "records": "PROC/CHESS",
+        "url": "https://www.dropbox.com/scl/fi/4kuwf7keau3z0ff1tdn5d/chess49.tap?rlkey=uq9b5x9la3twuiiwpkae6trhr&dl=1",
+        "desc": "CHESS 4.9 - historic Chess game"
+      },
+      {
         "name": "cgames",
         "lib": 70,
         "records": "PP/EYE-PP/DUD",

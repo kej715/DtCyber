@@ -33,6 +33,7 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;[E-mail Reflector](#reflector)
 - [NOS to NOS networking (RHP - Remote Host Products)](#rhp)
 - &nbsp;&nbsp;&nbsp;&nbsp;[Using RHP](#usingrhp)
+- [TCP/IP Applications](#tcpip)
 - [Cray Station](#cray)
 - [Shutdown and Restart](#shutdown)
 - [Operator Command Extensions](#opext)
@@ -948,6 +949,18 @@ MFLINK,lfn,ST=M02
 See [NOS 2 Reference Set Volume 3 System Commands](http://bitsavers.trailing-edge.com/pdf/cdc/Tom_Hunter_Scans/NOS_2_Reference_Set_Vol_3_System_Commands_60459680L_Dec88.pdf)
 for more details about the `ROUTE` and `MFLINK` commands.
 
+## <a id="tcpip"></a>TCP/IP Applications
+NOS 2.8.7 supports the TCP/IP data communication protocol suite and various client and server
+applications that use it. These include:
+
+- **DNS lookup utility**. Included in the *ncctcp* product provided by the Nostalgic Computing Center.
+- **FTP client and server**. Provided by CDC and included in the standard NOS 2.8.7 release materials.
+- **HTTP server**. Included in the *ncctcp* product provided by the Nostalgic Computing Center.
+- **REXEC client and server**. Included in the *ncctcp* product provided by the Nostalgic Computing Center.
+- **SMTP client and server**. Included in the *ncctcp* product provided by the Nostalgic Computing Center.
+
+See [TCP/IP Applications](TCPIP.md) for details.
+
 ## <a id="cray"></a>Cray Station
 NOS 2.8.7 supports the `Cray Station` subsystem (CRS), and this enables it to interact
 with a Cray supercomputer. The implementation in *DtCyber* interoperates with Andras
@@ -1163,6 +1176,7 @@ category.
 | Product | Description |
 |---------|-------------|
 | cgames  | NOS Console Games (EYE, KAL, LIFE, LUNAR, MIC, PAC, SNK, TTT) |
+| [chess](https://www.dropbox.com/scl/fi/4kuwf7keau3z0ff1tdn5d/chess49.tap?rlkey=uq9b5x9la3twuiiwpkae6trhr&dl=1) | CHESS 4.9 - [historic Chess game](https://www.chessprogramming.org/Chess_%28Program%29) |
 | [i8080](https://www.dropbox.com/s/ovgysfxbgpl18am/i8080.tap?dl=1) | Intel 8080 tools (CPM80, INTRP80, MAC80, PLM80) |
 | skedulr | Task scheduler (similar to *cron* in Linux/Unix systems) |
 | [spss](https://www.dropbox.com/s/2eo63elqvhi0vwg/NOSSPSS6000V9.tap?dl=1) | SPSS-6000 V9 - Statistical Package for the Social Sciences |
