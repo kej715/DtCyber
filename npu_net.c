@@ -768,6 +768,12 @@ void npuNetShowStatus()
             dts = "2550   ";
             break;
             }
+        dp = channelFindDevice(channelNo, DtHcp);
+        if (dp != NULL)
+            {
+            dts = "HCP    ";
+            break;
+            }
         }
     if (dp == NULL) return;
 
