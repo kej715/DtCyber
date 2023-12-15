@@ -313,6 +313,7 @@ void mux6676ShowStatus();
 ** cci_hip.c
 */
 void cciHipTerminate();
+void cciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 
 /*
 **  net_util.c
@@ -354,11 +355,6 @@ void niuShowStatus();
 void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 int npuBipBufCount(void);
 void npuNetShowStatus();
-
-/*
-** cci_hip.c
-*/
-void cciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 
 /*
 **  operator.c

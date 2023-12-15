@@ -292,7 +292,7 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
         fprintf(npuAsyncLog, "Port %02x: Telnet data received from %.7s, size %d\n", pcbp->claPort, 
             tp->termName, pcbp->inputCount);
         }
-        else
+    else
         {
         fprintf(npuAsyncLog, "Port %02x: Telnet data received, size %d\n", pcbp->claPort, 
             pcbp->inputCount);
@@ -497,12 +497,12 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
         {
         send(pcbp->connFd, tnOutBuf, tnOutPtr - tnOutBuf, 0);
 #if DEBUG
-        if(tp != NULL)
+        if (tp != NULL)
             {
             fprintf(npuAsyncLog, "Port %02x: Telnet options sent to %.7s, size %ld\n", pcbp->claPort, 
                 tp->termName, tnOutPtr - tnOutBuf);
             } 
-            else
+        else
             {
             fprintf(npuAsyncLog, "Port %02x: Telnet options sent, size %ld\n", pcbp->claPort, 
                 tnOutPtr - tnOutBuf);

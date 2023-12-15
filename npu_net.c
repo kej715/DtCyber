@@ -674,7 +674,7 @@ void npuNetCheckStatus(void)
             }
         if (pcbp->cciWaitForTcb)
             {
-            if(getSeconds()-pcbp->cciTcbWaitStart > CciWaitForTcbTimeout) 
+            if (getSeconds() - pcbp->cciTcbWaitStart > CciWaitForTcbTimeout) 
                 {
                 npuNetSendConsoleMsg(pcbp->connFd, pcbp->ncbp->connType, tcbNotConfiguredMsg);
                 netCloseConnection(pcbp->connFd);
@@ -1471,9 +1471,9 @@ static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive)
     **  Initialize the connection and mark it as active.
     */
     pcbp->connFd = connFd;
-    if(pcbp->cciWaitForTcb)
+    if (pcbp->cciWaitForTcb)
         {
-        pcbp->cciTcbWaitStart= getSeconds();
+        pcbp->cciTcbWaitStart = getSeconds();
         }
     if (notifyNetConnect[ncbp->connType](pcbp, isPassive))
         {

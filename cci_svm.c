@@ -613,7 +613,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
         ** We only support tip type TTY with autorecognition at the moment
         */
 /*
- *          if(block[BlkOffTt] != 0x88)
+ *          if (block[BlkOffTt] != 0x88)
  *              {
  #if DEBUG
  *                  fprintf(stderr,"(cci_svm) port: %u illegal terminal type %u\n",port,block[BlkOffTt]);

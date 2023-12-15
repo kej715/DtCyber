@@ -133,7 +133,7 @@ ModelFeatures features;
 ModelType     modelType;
 char          persistDir[256];
 char          displayName[32];
-NpuSoftware   npuSw=SwUndefined;
+NpuSoftware   npuSw = SwUndefined;
 
 /*
 **  -----------------

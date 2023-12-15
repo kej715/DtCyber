@@ -356,7 +356,7 @@ void mdiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*  
     ** set HCP software type, exit if npuSw is not SwUndefined
     */
-    if(npuSw != SwUndefined)
+    if (npuSw != SwUndefined)
         {
         fprintf(stderr, "(cci_hip) CCP and CCI devices are mutually exclusive\n");
         exit(1);

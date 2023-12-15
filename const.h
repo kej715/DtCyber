@@ -117,7 +117,7 @@
 #define DtMux6671                  29
 #define DtDsa311                   30
 #define DtMSUFrend                 31
-#define DtHcp                      40
+#define DtHcp                      32
 
 /*
 **  Special channels.
