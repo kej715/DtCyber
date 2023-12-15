@@ -10,6 +10,7 @@ Index
 * [Build](#build)
 * [Configuration](#configuration)
 * [Theory of Operation](#theory-of-operation)
+* [Implementation](#implementation)
 * [Installation](#installation)
 * [Compatibility](#compatibility)
 * [References](#references)
@@ -143,7 +144,13 @@ Telnet Connect:
     <------ user input   ------------- send upline data                        <----- user input  --------- enter login data
     ------- system Output -----------> send downline data                      ------ system output ------> 
                                                                                ....
-                                                                               Note: a LOGOUT does not terminate the connection
+                                                                               Note: after a LOGOUT the connection is
+                                                                               terminated after a few minutes of inactivity
+    ------- delete terminal SM ------> remover terminal configuration
+    <------ terminal deleted SM ------
+    ------- disconnect line SM ------> LS: inoperative, wait for ring
+    <------ line disconnected SM -----
+                                                                               
 
 Telnet Disconnect:
 
@@ -181,7 +188,23 @@ Operator Command LINEON,&lt;est&gt;,&lt;line&gt;
      ------- Enable Line SM -----------> clear line disabled flag
      <------ Line Enabled SM ----------- LS: inoperative, wait for ring
 
-                                        
+
+Implementation
+--------------
+An attempt was made to use as much code as possible from the existing CCP implementation and at the same time to intervene as little as possible in the flow logic of CCP.
+CCI and CCP can only run mutually exclusive. A global variable <em>npuSw</em> controls wheter CCI or CCP is being executed. In the routines used jointly by CCI and CCP, the system-specific subprograms are called via function pointers.
+
+Beyond that, the CCI code was only modified in the following cases:
+
+* npu.h: some CCI specific variables were added to the TCB structure, which have no effect, if CCP is running.
+
+* init.c: The minimum value of coulper node was changed to 0, which is required for a singele CCI NPU configuration.
+
+* npu_async.c: Make *npuAsyncLog global, because it is also used in cci_async. Modify debug output statement to consider the case, that a TCP has not yet been configured.
+
+* npu_net.c: Some changes were needed to consider that no TCB exists at that time, when a telnet connection is currently being established (see above). This required some additional variables in the PCB structure which have no effect, if CCP is running.
+
+
 Installation
 ------------
 The cci branch of the [NOSBE712 Repository](https://github.com/bug400/NOSBE712/tree/cci) contains an environment to build and run a NOS/BE 1.5 Level 712 system with CCI and INTERCOM. The deadstart tape generated with this environment also includes faked load modules for the 255X HCP.
@@ -198,6 +221,7 @@ The cci branch of the DtCyber fork was tested successfully (including according 
 * Linux 64 armv8-a (Debian Bookworm)
 * MacOS 10.15
 * Linux 32 (Debian Bookworm, only RTR NOS1 and NOS2 systems used for regression tests)
+* FreeBBSD 32bit, clang (only RTR NOS2 system used for regression test. Crash in dsa311.c while booting NOS1 rtr, also happened in main branch dtcyber) 
 
 Regression tests included Telnet login and remote batch processing with rjecli.
 
