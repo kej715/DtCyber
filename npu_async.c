@@ -49,6 +49,7 @@
 #include "types.h"
 #include "proto.h"
 #include "npu.h"
+#include "cci.h"
 
 /*
 **  -----------------
@@ -127,6 +128,9 @@ static void npuAsyncPrintStackTrace(FILE *fp);
 **  Public Variables
 **  ----------------
 */
+#if DEBUG
+FILE *npuAsyncLog = NULL;
+#endif
 
 /*
 **  -----------------
@@ -166,10 +170,36 @@ static u8 blockResetConnection[] =
     };
 
 #if DEBUG
-static FILE *npuAsyncLog = NULL;
 static char npuAsyncLogBuf[LogLineLength + 1];
 static int  npuAsyncLogBytesCol = 0;
 #endif
+
+/*  
+** Function tables to interface to either CCP or CCI functions
+*/ 
+static bool (*svmConnectTerminal[])(Pcb *bp ) =
+    {
+    npuSvmConnectTerminal,
+    cciSvmConnectTerminal
+    };
+
+static void (*svmSendDiscRequest[])(Tcb *tp ) =
+    {
+    npuSvmSendDiscRequest,
+    cciSvmSendDiscRequest
+    };
+
+static void (*tipNotifySent[])(Tcb *tp, u8 blockSeqNo) =
+    {
+    npuTipNotifySent,
+    cciTipNotifySent
+    };
+
+static void (*asyncProcessUplineNormal[])(Tcb *tp ) =
+    {
+    npuAsyncProcessUplineNormal,
+    cciAsyncProcessUplineNormal,
+    };
 
 /*
  **--------------------------------------------------------------------------
@@ -257,7 +287,16 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
     lp         = sp + pcbp->inputCount;
 
 #if DEBUG
-    fprintf(npuAsyncLog, "Port %02x: Telnet data received from %.7s, size %d\n", pcbp->claPort, tp->termName, pcbp->inputCount);
+    if (tp != NULL)
+        {
+        fprintf(npuAsyncLog, "Port %02x: Telnet data received from %.7s, size %d\n", pcbp->claPort, 
+            tp->termName, pcbp->inputCount);
+        }
+        else
+        {
+        fprintf(npuAsyncLog, "Port %02x: Telnet data received, size %d\n", pcbp->claPort, 
+            pcbp->inputCount);
+        }
     npuAsyncLogBytes(pcbp->inputData, pcbp->inputCount);
     npuAsyncLogFlush();
 #endif
@@ -458,7 +497,16 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
         {
         send(pcbp->connFd, tnOutBuf, tnOutPtr - tnOutBuf, 0);
 #if DEBUG
-        fprintf(npuAsyncLog, "Port %02x: Telnet options sent to %.7s, size %ld\n", pcbp->claPort, tp->termName, tnOutPtr - tnOutBuf);
+        if(tp != NULL)
+            {
+            fprintf(npuAsyncLog, "Port %02x: Telnet options sent to %.7s, size %ld\n", pcbp->claPort, 
+                tp->termName, tnOutPtr - tnOutBuf);
+            } 
+            else
+            {
+            fprintf(npuAsyncLog, "Port %02x: Telnet options sent, size %ld\n", pcbp->claPort, 
+                tnOutPtr - tnOutBuf);
+            }
         npuAsyncLogBytes(tnOutBuf, tnOutPtr - tnOutBuf);
         npuAsyncLogFlush();
 #endif
@@ -695,7 +743,7 @@ void npuAsyncTryOutput(Pcb *pcbp)
             */
             if (bp->blockSeqNo != 0)
                 {
-                npuTipNotifySent(tp, bp->blockSeqNo);
+                tipNotifySent[npuSw](tp, bp->blockSeqNo);
                 }
 
             npuBipBufRelease(bp);
@@ -887,7 +935,7 @@ void npuAsyncProcessUplineData(Pcb *pcbp)
         }
     else
         {
-        npuAsyncProcessUplineNormal(tp);
+        asyncProcessUplineNormal[npuSw](tp);
         }
 
     /*
@@ -966,7 +1014,7 @@ bool npuAsyncNotifyNetConnect(Pcb *pcbp, bool isPassive)
     fprintf(npuAsyncLog, "Port %02x: request terminal connection\n", pcbp->claPort);
 #endif
 
-    return npuSvmConnectTerminal(pcbp);
+    return svmConnectTerminal[npuSw](pcbp);
     }
 
 /*--------------------------------------------------------------------------
@@ -988,7 +1036,7 @@ void npuAsyncNotifyNetDisconnect(Pcb *pcbp)
 #if DEBUG
         fprintf(npuAsyncLog, "Port %02x: terminal %.7s disconnected\n", pcbp->claPort, tp->termName);
 #endif
-        npuSvmSendDiscRequest(tp);
+        svmSendDiscRequest[npuSw](tp);
         }
     else
         {
