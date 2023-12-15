@@ -324,7 +324,7 @@ void cciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Returns:        nothing
 **
 **------------------------------------------------------------------------*/
-void cciHipTerminate(void)
+void cciHipTerminate(DevSlot *dp)
     {
 #if (DEBUG > 0)
     if (cciLog != NULL)

@@ -312,7 +312,7 @@ void mux6676ShowStatus();
 /*
 ** cci_hip.c
 */
-void cciHipTerminate();
+void cciHipTerminate(DevSlot *dp);
 void cciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 
 /*
