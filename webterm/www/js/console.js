@@ -350,6 +350,7 @@ class CyberConsole3D extends CyberConsole {
   //
   static CC545       = 0;
   static CO6602      = 1;
+  static CO6612      = 2;
 
   constructor(babylon) {
     super();
@@ -368,6 +369,9 @@ class CyberConsole3D extends CyberConsole {
       break;
     case CyberConsole3D.CO6602:
       this.glbFileName = "a-opt-co6602.glb";
+      break;
+    case CyberConsole3D.CO6612:
+      this.glbFileName = "a-opt-co6612.glb";
       break;
     default:
       throw new Error(`Unknown console type: ${type}`);
@@ -472,6 +476,7 @@ class CyberConsole3D extends CyberConsole {
         newMeshes[0].rotation.y = 3.1415926; // right handed / left handed c.s. issue again.
         break;
       case CyberConsole3D.CO6602:
+      case CyberConsole3D.CO6612:
         newMeshes[0].rotation.y = 3.1415926/2.0;
         break;
       }
@@ -541,6 +546,9 @@ class CyberConsole3D extends CyberConsole {
       break;
     case CyberConsole3D.CO6602:
       camera.setTarget(new this.babylon.Vector3(0.025, 0.34, 0.0)); // Where to look at initially. CO6602
+      break;
+    case CyberConsole3D.CO6612:
+      camera.setTarget(new this.babylon.Vector3(0.02, 0.30, 0.0));  // Where to look at initially. CO6612
       break;
     }
     camera.radius = 1.0;                // Initial camera distance = 1 meter.
