@@ -1144,6 +1144,16 @@ This category includes data communication software.
 | rhp     | Remote Host Products (QTF/PTF)  |
 | [tlf](https://www.dropbox.com/s/r5qbucmw6qye8vl/tieline.tap?dl=1) | TieLine Facility |
 
+### Category *games*
+This category includes games. In most cases, the games run on the system console. In some
+cases (e.g., Chess games), the games can also be run at an ordinary user terminal.
+
+| Product  | Description |
+|----------|-------------|
+| cgames   | NOS Console Games (EYE, KAL, LIFE, LUNAR, MIC, PAC, SNK, TTT) |
+| [chess46 ](https://www.dropbox.com/scl/fi/amc8hurdu7q5ijx9yy85w/chess46.tap?rlkey=5jinr6rzowzk2p43lzhdtcbok&dl=1) | CHESS 4.6 - [historic Chess game](https://www.chessprogramming.org/Chess_%28Program%29) |
+| [chess49 ](https://www.dropbox.com/scl/fi/4kuwf7keau3z0ff1tdn5d/chess49.tap?rlkey=uq9b5x9la3twuiiwpkae6trhr&dl=1) | CHESS 4.9 - [historic Chess game](https://www.chessprogramming.org/Chess_%28Program%29) |
+
 ### Category *graphics*
 This category includes graphics and CAD/CAM software.
 
@@ -1175,8 +1185,6 @@ category.
 
 | Product | Description |
 |---------|-------------|
-| cgames  | NOS Console Games (EYE, KAL, LIFE, LUNAR, MIC, PAC, SNK, TTT) |
-| [chess](https://www.dropbox.com/scl/fi/4kuwf7keau3z0ff1tdn5d/chess49.tap?rlkey=uq9b5x9la3twuiiwpkae6trhr&dl=1) | CHESS 4.9 - [historic Chess game](https://www.chessprogramming.org/Chess_%28Program%29) |
 | [i8080](https://www.dropbox.com/s/ovgysfxbgpl18am/i8080.tap?dl=1) | Intel 8080 tools (CPM80, INTRP80, MAC80, PLM80) |
 | skedulr | Task scheduler (similar to *cron* in Linux/Unix systems) |
 | [spss](https://www.dropbox.com/s/2eo63elqvhi0vwg/NOSSPSS6000V9.tap?dl=1) | SPSS-6000 V9 - Statistical Package for the Social Sciences |
