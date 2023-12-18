@@ -7,12 +7,10 @@ Index
 
 * [Description](#description)
 * [Features](#features)
-* [Build](#build)
 * [Configuration](#configuration)
 * [Theory of Operation](#theory-of-operation)
 * [Implementation](#implementation)
 * [Installation](#installation)
-* [Compatibility](#compatibility)
 * [References](#references)
 * [Acknowledgements](#acknowledgements)
 
@@ -31,14 +29,9 @@ multiple INTERCOM sessions can be opened. However, INTERCOM does not allow  a us
 A Telnet client is needed to connect to the CCI emulation.
 
 
-Build
------
-Check out the "cci-aync" branch of this repository and build DtCyber "as usual".
-
-
 Configuration
 -------------
-In cyber.ini:
+In cyber.ini (equipment section):
 
      HCP,<eq>,<un>,<ch>
 
@@ -48,15 +41,15 @@ Example: configure the CCI HCP on channel 7
 
 NOS/BE CMR equipment table configuration :
 
-     FE,CH=<ch>,<EQP>=<eq>
+     FE,CH=<ch>,<EQP>=<eq>,<ESTO>=<esto>
 
-Example: configure the CCI HCP as equipment 30 in the CMR equipment table
+Example: configure the CCI HCP, channel 7, port 0 as equipment ordinal 30 in the CMR equipment table
 
      FE,CH=7,ESTO=30
 
 The DtCyber Telnet network access is configured in the npuConnections section of the cyber.ini file.
 
-Example: allow up to 8 Telnet connections on port 6610, using CLA ports 1-8
+Example: allow up to 8 Telnet connections on port 6610, using CLA ports 1 - 8
 
      [npu.nosbe]
      couplerNode=0
@@ -132,8 +125,7 @@ Telnet Connect:
      HOST                                         HCP                                                       Telnet Client
                                         process connection request,            <----- connect to port ---   Telnet <hostname> <port>
                                         find free CLA port,set wait flag,
-                                        do not use CLA ports of disabled
-                                        lines
+                                        skip CLA ports of disabled lines
      <----- line status SM ------------ LS: operational
      ------ configure terminal SM ----> configure terminal, clear                                   
                                         CLA port wait flag and                 <----- Telnet negotiation --
@@ -144,9 +136,9 @@ Telnet Connect:
     <------ user input   ------------- send upline data                        <----- user input  --------- enter login data
     ------- system Output -----------> send downline data                      ------ system output ------> 
                                                                                ....
-                                                                               Note: after a LOGOUT the connection is
-                                                                               terminated after a few minutes of inactivity
-    ------- delete terminal SM ------> remover terminal configuration
+                                                                               Note: after a LOGOUT the connection is terminated
+                                                                               automatically after a few minutes of inactivity
+    ------- delete terminal SM ------> remover terminal configuration                                       close session
     <------ terminal deleted SM ------
     ------- disconnect line SM ------> LS: inoperative, wait for ring
     <------ line disconnected SM -----
@@ -172,7 +164,7 @@ Operator Command LINEOFF,&lt;est&gt;,&lt;line&gt;, Telnet session active:
      <----- line disable SM ----------- LS: inoperative                                     
                                         
                                         
-Operator Command LINEOFF,&lt;est&gt;,&lt;line&gt; Telnet session not active:
+Operator Command LINEOFF,&lt;est&gt;,&lt;line&gt;, Telnet session not active:
 
 
      HOST                                         HCP                                                       Telnet Client
@@ -194,36 +186,23 @@ Implementation
 An attempt was made to use as much code as possible from the existing CCP implementation and at the same time to intervene as little as possible in the flow logic of CCP.
 CCI and CCP can only run mutually exclusive. A global variable <em>npuSw</em> controls wheter CCI or CCP is being executed. In the routines used jointly by CCI and CCP, the system-specific subprograms are called via function pointers.
 
-Beyond that, the CCI code was only modified in the following cases:
+Beyond that, the CCP code was only modified in the following cases:
 
 * npu.h: some CCI specific variables were added to the TCB structure, which have no effect, if CCP is running.
 
 * init.c: The minimum value of coulper node was changed to 0, which is required for a singele CCI NPU configuration.
 
-* npu_async.c: Make *npuAsyncLog global, because it is also used in cci_async. Modify debug output statement to consider the case, that a TCP has not yet been configured.
+* npu_async.c: Make *npuAsyncLog global, because it is also used in cci_async.c. Modify debug output statement to consider the case, that a TCB has not yet been configured.
 
 * npu_net.c: Some changes were needed to consider that no TCB exists at that time, when a telnet connection is currently being established (see above). This required some additional variables in the PCB structure which have no effect, if CCP is running.
 
 
 Installation
 ------------
-The cci branch of the [NOSBE712 Repository](https://github.com/bug400/NOSBE712/tree/cci) contains an environment to build and run a NOS/BE 1.5 Level 712 system with CCI and INTERCOM. The deadstart tape generated with this environment also includes faked load modules for the 255X HCP.
+The [NOSBE712 Repository](https://github.com/bug400/NOSBE712) contains an environment to build and run a NOS/BE 1.5 Level 712 system with CCI and INTERCOM. The deadstart tape generated with this environment also includes faked load modules for the 255X HCP. See 
+[How to build NOS/BE 1.5 Level 712 from Scratch](https://codex.retro1.org/cdc:nosbe:building_nos_be_level_712_from_scratch) how to proceed.
 
-See [How to build NOS/BE 1.5 Level 712 from Scratch](https://codex.retro1.org/cdc:nosbe:building_nos_be_level_712_from_scratch) how to proceed. There is no ready to run NOS/BE INTERCOM system at the moment.
-
-
-Compatibility
--------------
-The cci branch of the DtCyber fork was tested successfully (including according to the CONTRIBUTING.md file) on the following platforms:
-
-* Windows 10, VS 2022
-* Linux 64 (Debian Bookworm)
-* Linux 64 armv8-a (Debian Bookworm)
-* MacOS 10.15
-* Linux 32 (Debian Bookworm, only RTR NOS1 and NOS2 systems used for regression tests)
-* FreeBBSD 32bit, clang (only RTR NOS2 system used for regression test. Crash in dsa311.c while booting NOS1 rtr, also happened in main branch dtcyber) 
-
-Regression tests included Telnet login and remote batch processing with rjecli.
+There are ready to run NOS/BE INTERCOM systems available, see [How to use a ready to run NOS/BE Level 712 system](https://codex.retro1.org/cdc:nosbe:use_a_ready_to_run_nos_be_l_712_system).
 
 
 References
