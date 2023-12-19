@@ -17,9 +17,9 @@
       <div id="console-container" class="content-container top left-floater right-padded zindex-1"></div>
     </div>
     <script>
-    const CC545  = 0;
-    const CO6602 = 1;
-    const CO6612 = 2;
+    const CC545 = 0;
+    const DD60A = 1;
+    const DD60B = 2;
     $(document).ready(() => {
       let consoleType     = CC545;
       let machineId       = "unknown";
@@ -28,19 +28,19 @@
       let qs = window.location.search;
       if (qs && qs.length > 1) {
         qs.substr(1).split("&").forEach(param => {
-          var nvp = param.split("=");
+          let nvp = param.split("=");
           if (nvp.length > 1) {
             switch (nvp[0]) {
             case "c": // console type
-              switch (parseInt(nvp[1])) {
-              case 545:
+              switch (nvp[1].toUpperCase()) {
+              case "CC545":
                 consoleType = CC545;
                 break;
-              case 6602:
-                consoleType = CO6602;
+              case "DD60A":
+                consoleType = DD60A;
                 break;
-              case 6612:
-                consoleType = CO6612;
+              case "DD60B":
+                consoleType = DD60B;
                 break;
               }
               break;

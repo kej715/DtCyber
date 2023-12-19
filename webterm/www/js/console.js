@@ -349,8 +349,8 @@ class CyberConsole3D extends CyberConsole {
   // Console types
   //
   static CC545       = 0;
-  static CO6602      = 1;
-  static CO6612      = 2;
+  static DD60A       = 1;
+  static DD60B       = 2;
 
   constructor(babylon) {
     super();
@@ -367,11 +367,11 @@ class CyberConsole3D extends CyberConsole {
     case CyberConsole3D.CC545:
       this.glbFileName = "a-opt-cc545.glb";
       break;
-    case CyberConsole3D.CO6602:
-      this.glbFileName = "a-opt-co6602.glb";
+    case CyberConsole3D.DD60A:
+      this.glbFileName = "a-opt-dd60a.glb";
       break;
-    case CyberConsole3D.CO6612:
-      this.glbFileName = "a-opt-co6612.glb";
+    case CyberConsole3D.DD60B:
+      this.glbFileName = "a-opt-dd60b.glb";
       break;
     default:
       throw new Error(`Unknown console type: ${type}`);
@@ -453,10 +453,11 @@ class CyberConsole3D extends CyberConsole {
     material.environmentIntensity = 0.02;     // Bit of reflected environment in screen glass.
 
     // Load the model.
-    // NOTE: At present there are two models with different geometry including different texture mapped
+    // NOTE: At present there are three models with different geometry including different texture mapped
     //       and / or pickable objects:
-    //  CC545: Texture on: DisplaySurface;  Pickables: RockerInnerCenter, RockerInnerLeft, RockerInnerRight; File: a-opt-cc545.glb
-    // CO6602: Texture on: DisplaySurfaceL, DisplaySurfaceR; Pickables: None; File: a-opt-co6602.glb
+    // CC545: Texture on: DisplaySurface;  Pickables: RockerInnerCenter, RockerInnerLeft, RockerInnerRight; File: a-opt-cc545.glb
+    // DD60A: Texture on: DisplaySurfaceL, DisplaySurfaceR; Pickables: None; File: a-opt-dd60a.glb
+    // DD60B: Texture on: DisplaySurfaceL, DisplaySurfaceR; Pickables: None; File: a-opt-dd60b.glb
     // The two models need different Y rotations and initial "look-at" positions.
     // However, apart from the model file name, no other changes are needed in this code. The name is currently hardcoded.
 
@@ -475,8 +476,8 @@ class CyberConsole3D extends CyberConsole {
       case CyberConsole3D.CC545:
         newMeshes[0].rotation.y = 3.1415926; // right handed / left handed c.s. issue again.
         break;
-      case CyberConsole3D.CO6602:
-      case CyberConsole3D.CO6612:
+      case CyberConsole3D.DD60A:
+      case CyberConsole3D.DD60B:
         newMeshes[0].rotation.y = 3.1415926/2.0;
         break;
       }
@@ -544,11 +545,11 @@ class CyberConsole3D extends CyberConsole {
     case CyberConsole3D.CC545:
       camera.setTarget(new this.babylon.Vector3(0.0, 0.11, 0.0));   // Where to look at initially. CC545
       break;
-    case CyberConsole3D.CO6602:
-      camera.setTarget(new this.babylon.Vector3(0.025, 0.34, 0.0)); // Where to look at initially. CO6602
+    case CyberConsole3D.DD60A:
+      camera.setTarget(new this.babylon.Vector3(0.025, 0.34, 0.0)); // Where to look at initially. DD60A
       break;
-    case CyberConsole3D.CO6612:
-      camera.setTarget(new this.babylon.Vector3(0.02, 0.30, 0.0));  // Where to look at initially. CO6612
+    case CyberConsole3D.DD60B:
+      camera.setTarget(new this.babylon.Vector3(0.02, 0.30, 0.0));  // Where to look at initially. DD60B
       break;
     }
     camera.radius = 1.0;                // Initial camera distance = 1 meter.

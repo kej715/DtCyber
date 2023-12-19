@@ -17,7 +17,7 @@
       "host": "%../cyber.ini|cyber|ipAddress|127.0.0.1",
       "port": 46612,
       "protocol": "raw",
-      "terminal": "console3d.html?m=kronos21-3d&t=KRONOS%202.1&c=6612"
+      "terminal": "console3d.html?m=kronos21-3d&t=KRONOS%202.1&c=dd60b"
     }
   ]
 }
