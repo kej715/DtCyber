@@ -115,4 +115,4 @@ const cosScreenTestDataBase64 = [
     "TklVIE9VVFBVVCBSRVNFUlZFRIAAgZ0zMC4gAAAAAC4ggEhTWVNURU0gUy4ggJAAAC4ggKg3Nzc3LiA3Nzc3LiCCAAAughD/"
 ]
 
-module.exports = cosScreenTestDataBase64;
+module.exports = cosScreenTestDataBase64

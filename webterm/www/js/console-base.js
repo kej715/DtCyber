@@ -88,8 +88,13 @@ class CyberConsoleBase {
         console.log("Update")
     }
 
-    renderText(data) {
+    reset() {
+        this.state        = this.ST_TEXT;
+        this.x            = 0;
+        this.y            = 0;
+    }
 
+    renderText(data) {
         if (typeof data === "string") {
             let ab = new Uint8Array(data.length);
             for (let i = 0; i < data.length; i++) {
@@ -145,13 +150,13 @@ class CyberConsoleBase {
                     break;
 
                 case this.ST_COLLECT_X:
-                    console.log('Raw X: ' + ((this.x + b)))
+                    // console.log('Raw X: ' + ((this.x + b)))
                     this.x = Math.round((this.x + b) * this.xRatio);
                     this.state = this.ST_TEXT;
                     break;
 
                 case this.ST_COLLECT_Y:
-                    console.log('Raw Y: ' + ((this.y + b)) + ' ' + (0o777 - (this.y + b)))
+                    // console.log('Raw Y: ' + ((this.y + b)) + ' ' + (0o777 - (this.y + b)))
                     this.y = Math.round((0o777 - (this.y + b)) * this.yRatio);
                     this.state = this.ST_TEXT;
                     break;
@@ -174,4 +179,4 @@ class CyberConsoleBase {
     }
 }
 
-module.exports = CyberConsoleBase;
+module.exports = CyberConsoleBase

@@ -185,12 +185,10 @@ class CyberConsole extends CyberConsoleBase {
   }
 
   reset() {
+    super.reset()
     this.setFont(this.SMALL_FONT);
     this.offscreenContext.fillStyle = this.fgndColor;
-    this.state        = this.ST_TEXT;
-    this.x            = 0;
     this.xOffset      = this.SCREEN_MARGIN;
-    this.y            = 0;
   }
 
   displayNotification(font, x, y, s) {
