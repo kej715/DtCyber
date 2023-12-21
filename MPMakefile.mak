@@ -30,7 +30,7 @@
   ####   #    #   ####           #    #  #    #  #    #  ######
 
 #	The LIST of the projects to be built
-PROJECTS = dtcyber automation/node_modules stk/node_modules webterm/node_modules rje-station/node_modules
+PROJECTS = dtcyber automation/node_modules stk/node_modules webterm/node_modules webterm/www/js/node_modules rje-station/node_modules
 
 #	When calling other makefiles, they must be named the 
 #	same as this one ...
@@ -182,6 +182,7 @@ OBJ=obj
 HDRS    =   const.h                 \
             cyber_channel_linux.h   \
             npu.h                   \
+            cci.h                   \
             proto.h                 \
             types.h
 
@@ -225,6 +226,7 @@ OBJS    =   $(addprefix $(OBJ)/,    \
             mt669.o                 \
             mt679.o                 \
             mux6676.o               \
+            net_util.o              \
             niu.o                   \
             npu_async.o             \
             npu_bip.o               \
@@ -235,6 +237,10 @@ OBJS    =   $(addprefix $(OBJ)/,    \
             npu_nje.o               \
             npu_svm.o               \
             npu_tip.o               \
+            cci_hip.o               \
+            cci_svm.o               \
+            cci_tip.o               \
+            cci_async.o             \
             operator.o              \
             pci_channel_linux.o     \
             pci_console_linux.o     \
@@ -267,6 +273,9 @@ stk/node_modules:
 
 webterm/node_modules:
 	$(MAKE) -f $(THISMAKEFILE) -C webterm
+
+webterm/www/js/node_modules:
+	$(MAKE) -f $(THISMAKEFILE) -C webterm/www/js
 
 
 #------------------------------------------------------------------------------
@@ -308,6 +317,7 @@ clean:
 	$(MAKE) -C rje-station clean;
 	$(MAKE) -C stk clean;
 	$(MAKE) -C webterm clean
+	$(MAKE) -C webterm/www/js clean
 
 .PHONY: info
 info:

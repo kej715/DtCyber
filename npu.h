@@ -641,6 +641,9 @@ typedef struct pcb
     Ncb          *ncbp;                   // pointer to network connection control block
     u8           *inputData;              // buffer for data received from network
     int          inputCount;              // number of bytes in buffer
+    bool         cciIsDisabled;           // line for port is disabled by operator
+    bool         cciWaitForTcb;           // wait until terminal is configured
+    time_t       cciTcbWaitStart;         // start time to determine timeout for tcb getting ready
     PortControls controls;                // TIP-dependent controls
 #if defined(_WIN32)
     SOCKET       connFd;                  // connected socket descriptor
@@ -734,6 +737,11 @@ typedef struct tcb
     */
     TermConnState state;
     u8            cn;
+    u8            cciPort;
+    u8            cciClusterAddress;  // CA
+    u8            cciTerminalAddress; // TA
+    u8            cciDeviceType;      // DT
+    u8            ln;
     Pcb           *pcbp;
     Scb           *scbp;
     bool          active;

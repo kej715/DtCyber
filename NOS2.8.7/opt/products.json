@@ -292,6 +292,34 @@
     ]
   },
   {
+    "category": "games",
+    "desc": "Games",
+    "products": [
+      {
+        "name": "cgames",
+        "lib": 70,
+        "records": "PP/EYE-PP/DUD",
+        "desc": "NOS Console Games (EYE, KAL, LIFE, LUNAR, MIC, PAC, SNK, TTT)"
+      },
+      {
+        "name": "chess46",
+        "post": "chess46.post",
+        "lib": 70,
+        "records": "PROC/CHESS",
+        "url": "https://www.dropbox.com/scl/fi/amc8hurdu7q5ijx9yy85w/chess46.tap?rlkey=5jinr6rzowzk2p43lzhdtcbok&dl=1",
+        "desc": "CHESS 4.6"
+      },
+      {
+        "name": "chess49",
+        "post": "chess49.post",
+        "lib": 70,
+        "records": "PROC/CHESS",
+        "url": "https://www.dropbox.com/scl/fi/4kuwf7keau3z0ff1tdn5d/chess49.tap?rlkey=uq9b5x9la3twuiiwpkae6trhr&dl=1",
+        "desc": "CHESS 4.9"
+      }
+    ]
+  },
+  {
     "category": "graphics",
     "desc": "Graphics and engineering software",
     "products": [
@@ -390,20 +418,6 @@
     "category": "misc",
     "desc": "Miscellaneous software packages",
     "products": [
-      {
-        "name": "chess",
-        "post": "chess.post",
-        "lib": 70,
-        "records": "PROC/CHESS",
-        "url": "https://www.dropbox.com/scl/fi/4kuwf7keau3z0ff1tdn5d/chess49.tap?rlkey=uq9b5x9la3twuiiwpkae6trhr&dl=1",
-        "desc": "CHESS 4.9 - historic Chess game"
-      },
-      {
-        "name": "cgames",
-        "lib": 70,
-        "records": "PP/EYE-PP/DUD",
-        "desc": "NOS Console Games (EYE, KAL, LIFE, LUNAR, MIC, PAC, SNK, TTT)"
-      },
       {
         "name": "i8080",
         "post": [

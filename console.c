@@ -186,6 +186,7 @@ static void     consoleSetX(u16 x);
 static void     consoleSetY(u16 y);
 static void     consoleQueueChar(u8 ch);
 static void     consoleQueueCmd(u8 cmd, u8 parm);
+static void     consoleQueueCurState(void);
 static void     consoleUpdateChecksum(u16 datum);
 
 /*
@@ -212,7 +213,10 @@ static u64       minRefreshInterval;
 static u64       earliestCycleFlush;
 
 static u8        currentFontType       = FontTypeSmall;
+static u16       currentIncrement      = 8;
 static u8        currentScreen         = 0xff;
+static u16       currentX              = 0;
+static u16       currentY              = 0;
 static u8        fontSizes[4]          = { FontDot, FontSmall, FontMedium, FontLarge };
 static u16       xOffsets[2]           = { OffLeftScreen, OffRightScreen };
 
@@ -623,7 +627,7 @@ static void consoleAcceptConnection(void)
         {
         connFd = netAcceptConnection(listenFd);
         consoleInitCycleData();
-        consoleQueueCmd(CmdSetScreen, currentScreen);
+        consoleQueueCurState();
         minRefreshInterval = InfiniteRefreshInterval;
         earliestCycleFlush = getMilliseconds() + minRefreshInterval;
         }
@@ -730,7 +734,7 @@ static void consoleFlushCycleData(int first, int limit)
                     }
                 earliestCycleFlush = currentTime + minRefreshInterval;
                 consoleInitCycleData();
-                consoleQueueCmd(CmdSetScreen, currentScreen);
+                consoleQueueCurState();
                 }
             n = send(connFd, outBuf, outBufIn, 0);
             if (n > 0)
@@ -756,7 +760,7 @@ static void consoleFlushCycleData(int first, int limit)
                 earliestCycleFlush = currentTime + minRefreshInterval;
                 }
             consoleInitCycleData();
-            consoleQueueCmd(CmdSetScreen, currentScreen);
+            consoleQueueCurState();
             }
         }
     }
@@ -856,16 +860,20 @@ static void consoleQueueChar(u8 ch)
         {
         if (isConsoleWindowOpen) windowQueue(ch);
         }
-    else if (cycleDataIn >= CycleDataLimit)
+    else
         {
-        cycleDataBuf[cycleDataIn++] = CmdEndFrame;
-        consoleFlushCycleData(0, cycleDataIn);
+        if (cycleDataIn >= CycleDataLimit)
+            {
+            cycleDataBuf[cycleDataIn++] = CmdEndFrame;
+            consoleFlushCycleData(0, cycleDataIn);
+            }
+        if (currentCycleData->limit > 0)
+            {
+            cycleDataBuf[cycleDataIn++] = ch;
+            currentCycleData->limit = cycleDataIn;
+            }
         }
-    else if (currentCycleData->limit > 0)
-        {
-        cycleDataBuf[cycleDataIn++] = ch;
-        currentCycleData->limit = cycleDataIn;
-        }
+    currentX += currentIncrement;
     }
 
 /*--------------------------------------------------------------------------
@@ -894,6 +902,37 @@ static void consoleQueueCmd(u8 cmd, u8 parm)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Queue current display state.
+**
+**  Parameters:     Name        Description.
+**                  ch          character to be queued.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void consoleQueueCurState(void)
+    {
+    consoleQueueCmd(CmdSetScreen, currentScreen);
+    consoleQueueCmd(CmdSetFontType, currentFontType);
+    if (currentX > 0xff)
+        {
+        consoleQueueCmd(CmdSetXHigh, currentX & 0xff);
+        }
+    else
+        {
+        consoleQueueCmd(CmdSetXLow, currentX);
+        }
+    if (currentY > 0xff)
+        {
+        consoleQueueCmd(CmdSetYHigh, currentY & 0xff);
+        }
+    else
+        {
+        consoleQueueCmd(CmdSetYLow, currentY);
+        }
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Set font type.
 **
 **  Parameters:     Name        Description.
@@ -912,6 +951,23 @@ static void consoleSetFontType(u8 fontType)
     else if (currentFontType != fontType)
         {
         consoleQueueCmd(CmdSetFontType, fontType);
+        }
+    switch (fontType)
+        {
+        case FontTypeDot:
+            currentIncrement = 1;
+            break;
+        case FontTypeSmall:
+            currentIncrement = 8;
+            break;
+        case FontTypeMedium:
+            currentIncrement = 16;
+            break;
+        case FontTypeLarge:
+            currentIncrement = 32;
+            break;
+        default:
+            break;
         }
     currentFontType = fontType;
     }
@@ -959,6 +1015,7 @@ static void consoleSetX(u16 x)
         {
         consoleQueueCmd(CmdSetXLow, x);
         }
+    currentX = x;
     }
 
 /*--------------------------------------------------------------------------
@@ -985,6 +1042,7 @@ static void consoleSetY(u16 y)
         {
         consoleQueueCmd(CmdSetYLow, y);
         }
+    currentY = y;
     }
 
 /*--------------------------------------------------------------------------

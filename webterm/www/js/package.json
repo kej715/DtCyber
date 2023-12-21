@@ -1,0 +1,17 @@
+{
+  "name": "console3d",
+  "version": "1.0.0",
+  "description": "Support for 3-D rendering",
+  "main": "console.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "babylonjs": "~6.31.0",
+    "babylonjs-loaders": "~6.31.0",
+    "babylonjs-materials": "~6.31.0",
+    "babylonjs-procedural-textures": "~6.31.0"
+  }
+}

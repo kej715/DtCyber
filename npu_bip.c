@@ -46,6 +46,7 @@
 #include "types.h"
 #include "proto.h"
 #include "npu.h"
+#include "cci.h"
 
 /*
 **  -----------------
@@ -100,6 +101,35 @@ static enum
     BipDownDataHigh,
     }
 bipState = BipIdle;
+
+
+/*
+** Function tables to interface to either CCP or CCI functions
+*/
+
+static bool (*hipDownlineBlock[])(NpuBuffer *np  ) =
+    {
+    npuHipDownlineBlock,
+    cciHipDownlineBlock
+    };
+
+static bool (*hipUplineBlock[])(NpuBuffer *np  ) =
+    {
+    npuHipUplineBlock,
+    cciHipUplineBlock
+    };
+
+static void (*svmProcessBuffer[])(NpuBuffer *np ) =
+    {
+    npuSvmProcessBuffer,
+    cciSvmProcessBuffer
+    };
+
+static void (*tipProcessBuffer[])(NpuBuffer *np, int priority) =
+    {
+    npuTipProcessBuffer,
+    cciTipProcessBuffer
+    };
 
 /*
  **--------------------------------------------------------------------------
@@ -430,7 +460,7 @@ bool npuBipQueueNotEmpty(NpuQueue *queue)
 void npuBipNotifyServiceMessage(void)
     {
     bipDownlineBuffer = npuBipBufGet();
-    if (npuHipDownlineBlock(bipDownlineBuffer))
+    if (hipDownlineBlock[npuSw](bipDownlineBuffer))
         {
         bipState = BipDownSvm;
         }
@@ -453,7 +483,7 @@ void npuBipNotifyServiceMessage(void)
 void npuBipNotifyData(int priority)
     {
     bipDownlineBuffer = npuBipBufGet();
-    if (npuHipDownlineBlock(bipDownlineBuffer))
+    if (hipDownlineBlock[npuSw](bipDownlineBuffer))
         {
         bipState = BipDownDataLow + priority;
         }
@@ -479,7 +509,7 @@ void npuBipRetryInput(void)
     */
     if (bipUplineBuffer != NULL)
         {
-        npuHipUplineBlock(bipUplineBuffer);
+        hipUplineBlock[npuSw](bipUplineBuffer);
         }
     }
 
@@ -510,15 +540,15 @@ void npuBipNotifyDownlineReceived(void)
         switch (bipState)
             {
         case BipDownSvm:
-            npuSvmProcessBuffer(bp);
+            svmProcessBuffer[npuSw](bp);
             break;
 
         case BipDownDataLow:
-            npuTipProcessBuffer(bp, 0);
+            tipProcessBuffer[npuSw](bp, 0);
             break;
 
         case BipDownDataHigh:
-            npuTipProcessBuffer(bp, 1);
+            tipProcessBuffer[npuSw](bp, 1);
             break;
             }
         }
@@ -538,7 +568,7 @@ void npuBipNotifyDownlineReceived(void)
     */
     if (bipUplineBuffer != NULL)
         {
-        npuHipUplineBlock(bipUplineBuffer);
+        hipUplineBlock[npuSw](bipUplineBuffer);
         }
     }
 
@@ -564,7 +594,7 @@ void npuBipAbortDownlineReceived(void)
     */
     if (bipUplineBuffer != NULL)
         {
-        npuHipUplineBlock(bipUplineBuffer);
+        hipUplineBlock[npuSw](bipUplineBuffer);
         }
     }
 
@@ -595,7 +625,7 @@ void npuBipRequestUplineTransfer(NpuBuffer *bp)
 
     if (bipState == BipIdle)
         {
-        npuHipUplineBlock(bipUplineBuffer);
+        hipUplineBlock[npuSw](bipUplineBuffer);
         }
     }
 
@@ -639,7 +669,7 @@ void npuBipNotifyUplineSent(void)
     bipUplineBuffer = npuBipQueueExtract(bipUplineQueue);
     if (bipUplineBuffer != NULL)
         {
-        npuHipUplineBlock(bipUplineBuffer);
+        hipUplineBlock[npuSw](bipUplineBuffer);
         }
     }
 

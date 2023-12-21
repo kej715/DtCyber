@@ -44,6 +44,7 @@
 #include "types.h"
 #include "proto.h"
 #include "npu.h"
+#include "cci.h"
 #include <sys/types.h>
 #include <memory.h>
 #include <time.h>
@@ -147,6 +148,7 @@ static char *connTypes[]      =
 static char networkDownMsg[]  = "\r\nNetwork going down - connection aborted\r\n";
 static char notReadyMsg[]     = "\r\nHost not ready to accept connections - please try again later.\r\n";
 static char noPortsAvailMsg[] = "\r\nNo free ports available - please try again later.\r\n";
+static char tcbNotConfiguredMsg[] = "\r\nCould not configure tcb - please try again later.\r\n";
 
 static Pcb  pcbs[MaxClaPorts];
 static bool isPcbsPreset = FALSE;
@@ -261,6 +263,16 @@ static void (*tryOutput[])(Pcb *pcbp) =
     npuNjeTryOutput,    // ConnTypeNje
     npuLipTryOutput     // ConnTypeTrunk
     };
+
+/*
+** Function tables to interface to either CCP or CCI functions
+*/
+static bool (*svmIsReady[])() =
+    {
+    npuSvmIsReady,
+    cciSvmIsReady
+    };
+
 
 /*
  **--------------------------------------------------------------------------
@@ -660,6 +672,17 @@ void npuNetCheckStatus(void)
             {
             continue;
             }
+        if (pcbp->cciWaitForTcb)
+            {
+            if (getSeconds() - pcbp->cciTcbWaitStart > CciWaitForTcbTimeout) 
+                {
+                npuNetSendConsoleMsg(pcbp->connFd, pcbp->ncbp->connType, tcbNotConfiguredMsg);
+                netCloseConnection(pcbp->connFd);
+                pcbp->connFd = 0;
+                pcbp->ncbp->state = StConnInit;
+                }
+            continue;
+            }
 
         /*
         **  Handle network traffic.
@@ -743,6 +766,12 @@ void npuNetShowStatus()
         if (dp != NULL)
             {
             dts = "2550   ";
+            break;
+            }
+        dp = channelFindDevice(channelNo, DtHcp);
+        if (dp != NULL)
+            {
+            dts = "HCP    ";
             break;
             }
         }
@@ -1023,7 +1052,7 @@ static int npuNetCreateConnections(void)
     /*
     **  Attempt to create connections only when NAM is ready.
     */
-    if (!npuSvmIsReady())
+    if (!svmIsReady[npuSw]())
         {
         return 0;
         }
@@ -1371,7 +1400,7 @@ static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive)
     /*
     **  Check if the host is ready to accept connections.
     */
-    if (!npuSvmIsReady())
+    if (!svmIsReady[npuSw]())
         {
         /*
         **  Tell the user.
@@ -1394,7 +1423,7 @@ static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive)
     limit = ncbp->claPort + ncbp->numPorts;
     for (i = ncbp->claPort; i < limit; i++)
         {
-        if (pcbs[i].connFd < 1)
+        if (pcbs[i].connFd < 1 && (! pcbs[i].cciIsDisabled))
             {
             pcbp = &pcbs[i];
             break;
@@ -1448,6 +1477,10 @@ static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive)
     **  Initialize the connection and mark it as active.
     */
     pcbp->connFd = connFd;
+    if (pcbp->cciWaitForTcb)
+        {
+        pcbp->cciTcbWaitStart = getSeconds();
+        }
     if (notifyNetConnect[ncbp->connType](pcbp, isPassive))
         {
         npuNetSendConsoleMsg(connFd, ncbp->connType, connectingMsg);

@@ -133,6 +133,7 @@ ModelFeatures features;
 ModelType     modelType;
 char          persistDir[256];
 char          displayName[32];
+NpuSoftware   npuSw = SwUndefined;
 
 /*
 **  -----------------
@@ -1160,7 +1161,7 @@ static void initNpuConnections(void)
     **  Get optional coupler node number. If not specified, use default value of 1.
     */
     initGetInteger("couplerNode", 1, &val);
-    if ((val < 1) || (val > 255))
+    if ((val < 0) || (val > 255))
         {
         fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'couplerNode' value %ld - correct values are 1..255\n",
                 startupFile, npuConnections, val);

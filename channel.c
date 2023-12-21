@@ -278,6 +278,10 @@ void channelDisplayContext()
                 devTypeName = "Cray Station FEI";
                 break;
 
+            case DtHcp:
+                devTypeName = "CCI HCP Unit";
+                break;
+
             default:
                 devTypeName = "Unknown Device";
                 break;
@@ -362,6 +366,10 @@ void channelTerminate(void)
             if (dp->devType == DtMt679)
                 {
                 mt679Terminate(dp);
+                }
+            if (dp->devType == DtHcp)
+                {
+                cciHipTerminate(dp);
                 }
 
             /*

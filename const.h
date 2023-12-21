@@ -32,9 +32,9 @@
 **  ----------------
 */
 #ifdef _DEBUG
-#define DtCyberVersion      "Desktop CYBER 5.7.51 (Debug)   "
+#define DtCyberVersion      "Desktop CYBER 5.7.52 (Debug)   "
 #else
-#define DtCyberVersion      "Desktop CYBER 5.7.51 (Release) "
+#define DtCyberVersion      "Desktop CYBER 5.7.52 (Release) "
 #endif
 
 #define DtCyberBuildDate    __DATE__ " " __TIME__
@@ -117,6 +117,7 @@
 #define DtMux6671                  29
 #define DtDsa311                   30
 #define DtMSUFrend                 31
+#define DtHcp                      32
 
 /*
 **  Special channels.

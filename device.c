@@ -92,6 +92,7 @@ DevDesc deviceDesc[] =
     "TPM",      tpMuxInit,
     "DDP",      ddpInit,
     "NPU",      npuInit,
+    "HCP",      cciInit,
     "MDI",      mdiInit,
     "FEI",      csFeiInit,
     "NIU-IN",   niuInInit,

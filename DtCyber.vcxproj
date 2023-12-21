@@ -241,6 +241,10 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="cci_async.c" />
+    <ClCompile Include="cci_hip.c" />
+    <ClCompile Include="cci_svm.c" />
+    <ClCompile Include="cci_tip.c" />
     <ClCompile Include="cdcnet.c" />
     <ClCompile Include="channel.c" />
     <ClCompile Include="charset.c" />
@@ -318,6 +322,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="cci.h" />
     <ClInclude Include="const.h" />
     <ClInclude Include="cyber_channel_linux.h" />
     <ClInclude Include="cyber_channel_win32.h" />

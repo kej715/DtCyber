@@ -3,15 +3,10 @@
     <title>CYBER Console</title>
     <link rel="icon" type="image/png" href="images/ncc.png">
     <link rel="stylesheet" href="css/styles.css" />
-
-    <!-- Babylon.js -->
-    <script src="https://cdn.babylonjs.com/babylon.js"></script>
-    <script src="https://cdn.babylonjs.com/materialsLibrary/babylonjs.materials.min.js"></script>
-    <script src="https://cdn.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.min.js"></script>
-    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.js"></script>
-    <script src="https://cdn.babylonjs.com/serializers/babylonjs.serializers.min.js"></script>
-    <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
-    
+    <script src="js/node_modules/babylonjs/babylon.js"></script>
+    <script src="js/node_modules/babylonjs-materials/babylonjs.materials.min.js"></script>
+    <script src="js/node_modules/babylonjs-procedural-textures/babylonjs.proceduralTextures.min.js"></script>
+    <script src="js/node_modules/babylonjs-loaders/babylonjs.loaders.js"></script>
     <script src="js/jquery-3.3.1.min.js"></script>
     <script src="js/console.js"></script>
     <script src="js/machine-comm.js"></script>
@@ -22,9 +17,9 @@
       <div id="console-container" class="content-container top left-floater right-padded zindex-1"></div>
     </div>
     <script>
-    const CC545  = 0;
-    const CO6602 = 1;
-    const CO6612 = 2;
+    const CC545 = 0;
+    const DD60A = 1;
+    const DD60B = 2;
     $(document).ready(() => {
       let consoleType     = CC545;
       let machineId       = "unknown";
@@ -33,19 +28,19 @@
       let qs = window.location.search;
       if (qs && qs.length > 1) {
         qs.substr(1).split("&").forEach(param => {
-          var nvp = param.split("=");
+          let nvp = param.split("=");
           if (nvp.length > 1) {
             switch (nvp[0]) {
             case "c": // console type
-              switch (parseInt(nvp[1])) {
-              case 545:
+              switch (nvp[1].toUpperCase()) {
+              case "CC545":
                 consoleType = CC545;
                 break;
-              case 6602:
-                consoleType = CO6602;
+              case "DD60A":
+                consoleType = DD60A;
                 break;
-              case 6612:
-                consoleType = CO6612;
+              case "DD60B":
+                consoleType = DD60B;
                 break;
               }
               break;
