@@ -1,4 +1,4 @@
-const CyberConsoleBase = require('../../www/js/console-base')
+let CyberConsoleBase = require("../../www/js/console-base");
 
 class CyberConsoleText extends CyberConsoleBase {
 

@@ -23,8 +23,6 @@
  */
 
 
-import CyberConsoleBase from "./console-base";
-
 class CyberConsole extends CyberConsoleBase {
 
   constructor() {
@@ -89,7 +87,7 @@ class CyberConsole extends CyberConsoleBase {
   }
 
   setScreen(screenNumber) {
-    this.xOffset = (b === 1) ? this.screenWidth + this.SCREEN_GAP + this.SCREEN_MARGIN : this.SCREEN_MARGIN;
+    this.xOffset = (screenNumber === 1) ? this.screenWidth + this.SCREEN_GAP + this.SCREEN_MARGIN : this.SCREEN_MARGIN;
   }
 
   setUplineDataSender(callback) {

@@ -13,7 +13,7 @@ class BasicTerminalKitConsole {
         // Console offsets
         //
         this.SCREEN_WIDTH_COLUMNS = 64;
-        this.SCREEN_GAP_COLUMNS = 2;
+        this.SCREEN_GAP_COLUMNS = 4;
         //
         // Screen control
         //
@@ -29,7 +29,6 @@ class BasicTerminalKitConsole {
     // Core function: put
     put(x, y, char, fg = 'brightgreen', bg = 'black') {
         this.screenBuffer.put({x: x + this.screenOffsetColumns, y: y, attr: {color: fg, bgColor: bg}}, char);
-        //this.screenBuffer.put({x: x + this.screenOffsetColumns, y: y}, char);
     }
 
     clearScreenBuffer() {
@@ -41,12 +40,6 @@ class BasicTerminalKitConsole {
                 bgColor: 'black'
             }
         });
-        // for (let x = 0; x <  this.terminal.width; x++) {
-        //     for (let y = 0; y <  this.terminal.height; y++) {
-        //         this.put(x, y, ' ', 'brightblue', 'grey')
-        //     }
-        // }
-
     }
 
     update() {
