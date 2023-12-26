@@ -1,0 +1,25 @@
+#!/usr/bin/env node
+//
+// Copy CHESS executables and overlay files to LIBRARY catalog
+//
+
+const DtCyber = require("../../automation/DtCyber");
+
+const dtc = new DtCyber();
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.dis([
+  "GET,CHESS35,CHESMVS.",
+  "PURGE,CHESS35,CHESMVS.",
+  "SUI,377776.",
+  "PURGE,CHESS35,CH35MVS/NA.",
+  "SAVE,CHESS35,CHESMVS=CH35MVS/CT=PU,AC=Y."
+], 1))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});

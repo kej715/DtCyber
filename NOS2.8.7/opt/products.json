@@ -302,6 +302,22 @@
         "desc": "NOS Console Games (EYE, KAL, LIFE, LUNAR, MIC, PAC, SNK, TTT)"
       },
       {
+        "name": "chess30",
+        "post": "chess30.post",
+        "lib": 70,
+        "records": "PROC/CHESS",
+        "url": "https://www.dropbox.com/scl/fi/8hkccuwebfa8ebzq82130/chess30.tap?rlkey=m06hk1pg6oy50et1679p22pew&dl=1",
+        "desc": "CHESS 3.0"
+      },
+      {
+        "name": "chess35",
+        "post": "chess35.post",
+        "lib": 70,
+        "records": "PROC/CHESS",
+        "url": "https://www.dropbox.com/scl/fi/iomq72j2f67vibltpefzx/chess35.tap?rlkey=qnxgybhq5l60wkzhqiil6to2n&dl=1",
+        "desc": "CHESS 3.5"
+      },
+      {
         "name": "chess46",
         "post": "chess46.post",
         "lib": 70,
