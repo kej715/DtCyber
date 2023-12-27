@@ -153,7 +153,9 @@ class Machine {
             }
             this.client.write(data);
         } else {
-            console.error('Attempted to send data on a closed connection.');
+            if (this.debug) {
+                console.error('Attempted to send data on a closed connection.');
+            }
         }
     }
 

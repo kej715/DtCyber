@@ -62,6 +62,10 @@ class CyberConsoleBase {
         //
         this.fontWidths = [2, 8, 16, 32];
         this.fontHeights = [0, 10, 20, 40];
+        //
+        // Callbacks
+        //
+        this.uplineDataSender = null;
     }
 
     //
@@ -84,6 +88,13 @@ class CyberConsoleBase {
     }
 
     clearScreen() {
+    }
+
+    //
+    // Real functions
+    //
+    setUplineDataSender(callback) {
+        this.uplineDataSender = callback;
     }
 
     reset() {
@@ -188,7 +199,39 @@ class CyberConsoleBase {
         }
         this.updateScreen();
     }
+
+    processKeyboardEvent(keyStr, shiftKey, ctrlKey, altKey) {
+        let sendStr = "";
+        //
+        // Handle non-special keys
+        //
+        if (keyStr.length < 2) { // non-special key
+            if (ctrlKey === false && altKey === false) {
+                sendStr = keyStr;
+            }
+        }
+            //
+            // Handle special keys
+        //
+        else {
+            switch (keyStr.toUpperCase()) {
+                case "BACKSPACE":
+                case "DELETE":
+                    sendStr = "\b";
+                    break;
+                case "ENTER":
+                    sendStr = "\r";
+                    break;
+                default: // ignore the key
+                    break;
+            }
+        }
+        if (sendStr.length > 0 && this.uplineDataSender) {
+            this.uplineDataSender(sendStr);
+        }
+    }
 }
+
 
 //
 // The following lines enable this file to be used as a Node.js module.

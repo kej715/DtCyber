@@ -89,10 +89,6 @@ class CyberConsole extends CyberConsoleBase {
     this.xOffset = (screenNumber === 1) ? this.screenWidth + this.SCREEN_GAP + this.SCREEN_MARGIN : this.SCREEN_MARGIN;
   }
 
-  setUplineDataSender(callback) {
-    this.uplineDataSender = callback;
-  }
-
   getCanvas() {
     return this.onscreenCanvas;
   }
@@ -103,38 +99,6 @@ class CyberConsole extends CyberConsoleBase {
 
   getWidth() {
     return this.onscreenCanvas.width;
-  }
-
-  processKeyboardEvent(keyStr, shiftKey, ctrlKey, altKey) {
-    let sendStr = "";
-    //
-    // Handle non-special keys
-    //
-    if (keyStr.length < 2) { // non-special key
-      if (ctrlKey === false && altKey === false) {
-        sendStr = keyStr;
-      }
-    }
-    //
-    // Handle special keys
-    //
-    else {
-
-      switch (keyStr) {
-      case "Backspace":
-      case "Delete":
-        sendStr = "\b";
-        break;
-      case "Enter":
-        sendStr = "\r";
-        break;
-      default: // ignore the key
-        break;
-      }
-    }
-    if (sendStr.length > 0 && this.uplineDataSender) {
-      this.uplineDataSender(sendStr);
-    }
   }
 
   /*

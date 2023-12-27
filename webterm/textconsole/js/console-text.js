@@ -8,7 +8,6 @@ class CyberConsoleText extends CyberConsoleBase {
         this.xRatio = 1;
         this.yRatio = 1;
         this.fontWidths = [2, 8, 16, 32];
-        this.uplineDataSender = null;
         this.charHeight = 11;
         this.charWidth = 8;
         //
@@ -18,8 +17,8 @@ class CyberConsoleText extends CyberConsoleBase {
         //
         // Console offsets
         //
-        this.SCREEN_GAP      = 40;
-        this.SCREEN_MARGIN   = 20;
+        this.SCREEN_GAP = 40;
+        this.SCREEN_MARGIN = 20;
         this.SCREEN_WIDTH_COLUMNS = 64;
         this.SCREEN_GAP_COLUMNS = 4;
         //
@@ -28,7 +27,7 @@ class CyberConsoleText extends CyberConsoleBase {
         this.screenBuffer = null;
         this.screenOffsetColumns = 0
         //
-        // Callbacks
+        // Shutdown
         //
         this.shutdownListener = null;
     }
@@ -38,7 +37,9 @@ class CyberConsoleText extends CyberConsoleBase {
     }
 
     put(x, y, char, fg = 'brightgreen', bg = 'black') {
-        this.screenBuffer.put({x: x + this.screenOffsetColumns, y: y, attr: {color: fg, bgColor: bg}}, char);
+        if (this.screenBuffer) {
+            this.screenBuffer.put({x: x + this.screenOffsetColumns, y: y, attr: {color: fg, bgColor: bg}}, char);
+        }
     }
 
     createScreenBuffer() {
@@ -76,22 +77,27 @@ class CyberConsoleText extends CyberConsoleBase {
         this.screenOffsetColumns = screenNumber === 0 ? 0 : this.SCREEN_WIDTH_COLUMNS + this.SCREEN_GAP_COLUMNS;
     }
 
-    updateScreen() {
-        this.screenBuffer.draw({delta: true});
+    clearScreen() {
+        if (this.screenBuffer) {
+            this.screenBuffer.fill({
+                char: ' ',
+                attr: {
+                    color: 'brightgreen',
+                    bgColor: 'black'
+                }
+            });
+        }
     }
 
-    clearScreen() {
-        this.screenBuffer.fill({
-            char: ' ',
-            attr: {
-                color: 'brightgreen',
-                bgColor: 'black'
-            }
-        });
+    updateScreen() {
+        if (this.screenBuffer) {
+            this.screenBuffer.draw({delta: true});
+            this.clearScreen();
+        }
     }
 
     shutdown() {
-        this.terminal.clear();
+        this.screenBuffer = null;
         this.terminal.fullscreen(false);
         this.terminal.hideCursor(false);
     }
@@ -100,36 +106,33 @@ class CyberConsoleText extends CyberConsoleBase {
         // Ensures console cleaned up
         this.terminal.processExit(0);
     }
+
     createScreen() {
         this.createScreenBuffer(); // Create initial screen buffer
 
         // Event listener for terminal resize
-
-        let me = this
-
-        this.terminal.on('resize', function (width, height) {
-            me.screenBuffer.resize({width: width, height: height, x: 0, y: 0})
-            me.clearScreen();
-            me.screenBuffer.draw({delta: false});
+        this.terminal.on('resize', (width, height) => {
+            if (this.screenBuffer) {
+                this.screenBuffer.resize({width: width, height: height, x: 0, y: 0})
+                this.clearScreen();
+                this.screenBuffer.draw({delta: false});
+            }
         });
 
-        this.terminal.grabInput({mouse: 'button'});
+        this.terminal.grabInput({});
 
-        this.terminal.on('key', function (key, matches, data) {
+        this.terminal.on('key', (key, matches, data) => {
             switch (key) {
                 // TODO fix up terminal to work for CDC
                 case 'CTRL_C' :
-                    if (me.shutdownListener) {
-                        me.shutdownListener();
+                    if (this.shutdownListener) {
+                        this.shutdownListener();
+                    } else {
+                        this.processExit();
                     }
                     break;
                 default:
-                    // Echo anything else
-                    // me.terminal.noFormat(
-                    //     Buffer.isBuffer(data.code) ?
-                    //         data.code :
-                    //         String.fromCharCode(data.code)
-                    // );
+                    this.processKeyboardEvent(key, false, false, false);
                     break;
             }
         });
@@ -140,10 +143,6 @@ class CyberConsoleText extends CyberConsoleBase {
 
     reset() {
         super.reset()
-    }
-
-    setUplineDataSender(callback) {
-        this.uplineDataSender = callback;
     }
 }
 
