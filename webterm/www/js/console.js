@@ -41,7 +41,6 @@ class CyberConsole extends CyberConsoleBase {
     this.currentFont       = this.SMALL_FONT;
     this.fgndColor         = "lightgreen";
     this.fontFamily        = "Lucida Typewriter";
-    this.fontHeights       = [0, 10, 20, 40];
     this.offscreenCanvas   = null;
     this.offscreenContext  = null;
     this.onscreenCanvas    = null;
@@ -187,21 +186,6 @@ class CyberConsole extends CyberConsoleBase {
     this.setFont(this.SMALL_FONT);
     this.offscreenContext.fillStyle = this.fgndColor;
     this.xOffset      = this.SCREEN_MARGIN;
-  }
-
-  displayNotification(font, x, y, s) {
-    this.setFont(font);
-    this.x           = x;
-    this.xOffset     = this.SCREEN_MARGIN;
-    this.y           = y;
-    this.state       = this.ST_TEXT;
-    this.clearScreen();
-    for (const line of s.split("\n")) {
-      this.renderText(line);
-      this.x  = x;
-      this.y += this.fontHeights[this.currentFont];
-    }
-    this.updateScreen();
   }
 
   drawChar(b) {

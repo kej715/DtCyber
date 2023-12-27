@@ -11,7 +11,7 @@ class Machine {
         this.client = null;
         this.isConnect = false;
         this.allowReconnect = true;
-        this.reconnectInterval = 5000; // Reconnect interval in milliseconds
+        this.reconnectInterval = 1000; // Reconnect interval in milliseconds
         this.reconnecting = false; // To track if reconnection is in progress
 
         this.connectListener = null;
@@ -28,9 +28,9 @@ class Machine {
         this.disconnectListener = callback;
     }
 
-    // setReconnectStartListener(callback) {
-    //     this.reconnectStartListener = callback;
-    // }
+    setReconnectStartListener(callback) {
+        this.reconnectStartListener = callback;
+    }
 
     setReceivedDataHandler(receivedDataHandler) {
         this.receivedDataHandler = receivedDataHandler;
@@ -126,7 +126,6 @@ class Machine {
                 if (this.debug) {
                     console.error('Reconnection attempt failed:', error);
                 }
-                // Optionally, you can implement a strategy to handle repeated reconnection failures
             } finally {
                 this.reconnecting = false;
             }

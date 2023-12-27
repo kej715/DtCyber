@@ -19,6 +19,11 @@ class CyberConsoleBase {
 
     constructor() {
         //
+        // Console screen offsets
+        //
+        this.SCREEN_GAP = 0;
+        this.SCREEN_MARGIN = 0;
+        //
         // Font sizes
         //
         this.DOT_FONT = 0;
@@ -46,14 +51,7 @@ class CyberConsoleBase {
         //
         // Base Console emulation properties
         //
-        // this.bgndColor         = "black";
         this.currentFont = this.SMALL_FONT;
-        // this.fgndColor         = "lightgreen";
-        // this.fontFamily        = "Lucida Typewriter";
-        // this.fontHeights       = [0, 10, 20, 40];
-        // this.offscreenCanvas   = null;
-        // this.offscreenContext  = null;
-        // this.onscreenCanvas    = null;
         this.state = this.ST_TEXT;
         this.x = 0;
         this.y = 0;
@@ -63,17 +61,16 @@ class CyberConsoleBase {
         // Base font information
         //
         this.fontWidths = [2, 8, 16, 32];
+        this.fontHeights = [0, 10, 20, 40];
     }
 
     //
     // Virtual functions
     //
     drawPoint() {
-        console.log("Point")
     }
 
     drawChar(b) {
-        console.log("Char: " + b)
     }
 
     setFont(font) {
@@ -81,17 +78,18 @@ class CyberConsoleBase {
     }
 
     setScreen(b) {
-        console.log("Screen: " + b)
     }
 
     updateScreen() {
-        console.log("Update")
+    }
+
+    clearScreen() {
     }
 
     reset() {
-        this.state        = this.ST_TEXT;
-        this.x            = 0;
-        this.y            = 0;
+        this.state = this.ST_TEXT;
+        this.x = 0;
+        this.y = 0;
     }
 
     renderText(data) {
@@ -150,13 +148,11 @@ class CyberConsoleBase {
                     break;
 
                 case this.ST_COLLECT_X:
-                    // console.log('Raw X: ' + ((this.x + b)))
                     this.x = Math.round((this.x + b) * this.xRatio);
                     this.state = this.ST_TEXT;
                     break;
 
                 case this.ST_COLLECT_Y:
-                    // console.log('Raw Y: ' + ((this.y + b)) + ' ' + (0o777 - (this.y + b)))
                     this.y = Math.round((0o777 - (this.y + b)) * this.yRatio);
                     this.state = this.ST_TEXT;
                     break;
@@ -177,7 +173,23 @@ class CyberConsoleBase {
             }
         }
     }
+
+    displayNotification(font, x, y, s) {
+        this.setFont(font);
+        this.setScreen(0)
+        this.x = x;
+        this.y = y;
+        this.state = this.ST_TEXT;
+        this.clearScreen();
+        for (const line of s.split("\n")) {
+            this.renderText(line);
+            this.x = x;
+            this.y += this.fontHeights[this.currentFont];
+        }
+        this.updateScreen();
+    }
 }
+
 //
 // The following lines enable this file to be used as a Node.js module.
 //
