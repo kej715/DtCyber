@@ -8,7 +8,7 @@ class CyberConsoleText extends CyberConsoleBase {
         this.xRatio = 1;
         this.yRatio = 1;
         this.fontWidths = [2, 8, 16, 32];
-        this.charHeight = 11;
+        this.charHeight = 10;
         this.charWidth = 8;
         //
         // Terminal instance

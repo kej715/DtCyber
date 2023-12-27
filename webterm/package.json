@@ -9,6 +9,7 @@
   "author": "Kevin Jordan",
   "license": "Apache-2.0",
   "dependencies": {
+    "commander": "^11.1.0",
     "mime": "^3.0.0",
     "terminal-kit": "^3.0.1",
     "websocket": "^1.0.34"

@@ -13,22 +13,40 @@
 **    Text mode console for DtCyber using the webterm infrastructure
  */
 
-const CyberConsoleText = require('./textconsole/js/console-text')
-const Machine = require('./textconsole/js/machine-tcp')
+const { program } = require('commander');
+const CyberConsoleText = require('./textconsole/js/console-text');
+const Machine = require('./textconsole/js/machine-tcp');
 
 function main() {
-    let url = 'localhost';
-    let port = 16612;
-    let refreshInterval = 20; // 1/100 sec
+    program
+        .description('Text mode version of the Cyber Console for CLI use')
+        .option('-u, --url <url>', 'The URL to connect to', 'localhost')
+        .option('-p, --port <port>', 'The port number', (value) => {
+            const parsedPort = parseInt(value, 10);
+            if (isNaN(parsedPort) || parsedPort <= 0 || parsedPort > 65535) {
+                throw new Error('Port must be an integer between 1 and 65535.');
+            }
+            return parsedPort;
+        }, 16612)
+        .option('-r, --refresh <interval>', 'The refresh interval in 1/100 sec', (value) => {
+            const parsedInterval = parseInt(value, 10);
+            if (isNaN(parsedInterval) || parsedInterval < 1 || parsedInterval > 100) {
+                throw new Error('Interval must be an integer between 1 and 100.');
+            }
+            return parsedInterval;
+        }, 20)
+        .option('-m, --machine-id <id>', 'Machine ID', 'nos287')
+        .parse(process.argv);
+
+    const options = program.opts();
+
     let isRunning = true;
+    let title = `${options.machineId} (${options.url}:${options.port},  refresh: ${options.refresh})`;
 
-    const machineId = "nos287";
-    this.title = `${machineId} (${url}:${port})`
-
-    let cyberConsole = new CyberConsoleText()
+    let cyberConsole = new CyberConsoleText();
     cyberConsole.createScreen();
 
-    const machine = new Machine(machineId, url, port);
+    const machine = new Machine(options.machineId, options.url, options.port);
 
     machine.setReceivedDataHandler(data => {
         if (isRunning) {
@@ -38,16 +56,16 @@ function main() {
 
     machine.setConnectListener(() => {
         cyberConsole.displayNotification(1, 128, 128, `Connected`);
-        machine.send(new Uint8Array([0x80, refreshInterval, 0x81]));
+        machine.send(new Uint8Array([0x80, options.refresh, 0x81]));
     });
 
     machine.setDisconnectListener(() => {
         cyberConsole.displayNotification(1, 128, 128,
-            `Disconnected from ${this.title}.\n\n   Wait for automatic reconnect...\n\n   Check machine is running\n\n   Enter control-C to exit`);
+            `Disconnected from ${title}.\n\n   Wait for automatic reconnect...\n\n   Check machine is running\n\n   Enter control-C to exit`);
     });
 
     machine.setReconnectStartListener(() => {
-        cyberConsole.displayNotification(1, 128, 128, `Waiting for connection to ${this.title}.\n\n   Please wait...`);
+        cyberConsole.displayNotification(1, 128, 128, `Waiting for connection to ${title}...\n\n   Please wait...`);
     });
 
     cyberConsole.setUplineDataSender(data => {
@@ -67,7 +85,7 @@ function main() {
         }, 500);
     });
 
-    cyberConsole.displayNotification(1, 128, 128, `Connecting to ${this.title}.\n\n   Please wait ...`);
+    cyberConsole.displayNotification(1, 128, 128, `Connecting to ${title}.\n\n   Please wait ...`);
     machine.createConnection();
 }
 
