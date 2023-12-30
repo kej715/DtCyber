@@ -76,22 +76,38 @@ class CyberConsoleText extends CyberConsoleBase {
       noFill: false
     });
     this.clearScreen();
-    this.screenBuffer.draw({delta: false});
+    this.drawAllScreen();
   }
 
+
+  drawAllScreen() {
+    if (this.screenBuffer) {
+      this.screenBuffer.draw({delta: false});
+    }
+  }
 
   drawPoint() {
     // Not supported
   }
 
+
+  /*
+      this.MEDIUM_FONT = 2;
+    this.LARGE_FONT = 3;
+   */
+
   drawChar(b) {
     let xCharGrid = Math.floor(this.x / this.charWidth);
     let yCharGrid = Math.floor(this.y / this.charHeight);
     this.put(xCharGrid, yCharGrid, String.fromCharCode(b))
-  }
-
-  setFont(b) {
-    // console.log(">Font: " + b)
+    if (this.currentFont === this.SMALL_FONT) {
+    } else if (this.currentFont === this.MEDIUM_FONT) {
+      this.put(xCharGrid + 1, yCharGrid, ' ')
+    } else if (this.currentFont === this.LARGE_FONT) {
+      this.put(xCharGrid + 1, yCharGrid, ' ')
+      this.put(xCharGrid + 2, yCharGrid, ' ')
+      this.put(xCharGrid + 3, yCharGrid, ' ')
+    }
   }
 
   setScreen(screenNumber) {
@@ -136,16 +152,19 @@ class CyberConsoleText extends CyberConsoleBase {
       if (this.screenBuffer) {
         this.screenBuffer.resize({width: width, height: height, x: 0, y: 0})
         this.clearScreen();
-        this.screenBuffer.draw({delta: false});
+        this.drawAllScreen();
       }
     });
 
     this.terminal.grabInput({});
 
-    this.terminal.on('key', (key, matches, data) => {
+    this.terminal.on('key', (key /*, matches, data*/ ) => {
       switch (key) {
-        // TODO fix up terminal to work for CDC
+        case 'CTRL_R' :
+          this.drawAllScreen();
+          break;
         case 'CTRL_C' :
+        case 'CTRL_D' :
           if (this.shutdownListener) {
             this.shutdownListener();
           } else {

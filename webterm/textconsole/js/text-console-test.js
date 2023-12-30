@@ -13,8 +13,7 @@
 **    Text mode console for DtCyber using the webterm infrastructure
  */
 
-const CyberConsoleText = require('./textconsole/js/console-text')
-const Machine = require('./textconsole/js/machine-tcp')
+const CyberConsoleText = require('./console-text')
 const fs = require('fs');
 
 function extractWebSocketPackets(harFilePath) {
@@ -53,7 +52,7 @@ function extractWebsocketMessages(webSocketPackets) {
 
 function main() {
     // const harFilePath = 'testdata/nos287_running.har';
-    const harFilePath = 'testdata/nos287.har';
+    const harFilePath = '../../testdata/nos287.har';
     const webSocketPackets = extractWebSocketPackets(harFilePath);
     let receivedMessagesBase64 = extractWebsocketMessages(webSocketPackets);
 
