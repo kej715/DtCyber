@@ -22,44 +22,18 @@
  *  to the "on screen" context.
  */
 
-class CyberConsole {
+
+class CyberConsole extends CyberConsoleBase {
 
   constructor() {
 
-    //
-    // Font sizes
-    //
-    this.DOT_FONT        = 0;
-    this.SMALL_FONT      = 1;
-    this.MEDIUM_FONT     = 2;
-    this.LARGE_FONT      = 3;
+    super();
 
     //
     // Console screen offsets
     //
     this.SCREEN_GAP      = 40;
     this.SCREEN_MARGIN   = 20;
-
-    //
-    // Console stream commands
-    //
-    this.CMD_SET_X_LOW     = 0x80;
-    this.CMD_SET_Y_LOW     = 0x81;
-    this.CMD_SET_X_HIGH    = 0x82;
-    this.CMD_SET_Y_HIGH    = 0x83;
-    this.CMD_SET_SCREEN    = 0x84;
-    this.CMD_SET_FONT_TYPE = 0x85;
-    this.CMD_END_OF_FRAME  = 0xff;
-
-    //
-    // Console states
-    //
-    this.ST_TEXT           = 0;
-    this.ST_COLLECT_SCREEN = 1;
-    this.ST_COLLECT_FONT   = 2;
-    this.ST_COLLECT_X      = 3;
-    this.ST_COLLECT_Y      = 4;
-
     //
     // Console emulation properties
     //
@@ -67,7 +41,6 @@ class CyberConsole {
     this.currentFont       = this.SMALL_FONT;
     this.fgndColor         = "lightgreen";
     this.fontFamily        = "Lucida Typewriter";
-    this.fontHeights       = [0, 10, 20, 40];
     this.offscreenCanvas   = null;
     this.offscreenContext  = null;
     this.onscreenCanvas    = null;
@@ -112,8 +85,8 @@ class CyberConsole {
     this.offscreenContext.font = this.fonts[font];
   }
 
-  setUplineDataSender(callback) {
-    this.uplineDataSender = callback;
+  setScreen(screenNumber) {
+    this.xOffset = (screenNumber === 1) ? this.screenWidth + this.SCREEN_GAP + this.SCREEN_MARGIN : this.SCREEN_MARGIN;
   }
 
   getCanvas() {
@@ -126,38 +99,6 @@ class CyberConsole {
 
   getWidth() {
     return this.onscreenCanvas.width;
-  }
-
-  processKeyboardEvent(keyStr, shiftKey, ctrlKey, altKey) {
-    let sendStr = "";
-    //
-    // Handle non-special keys
-    //
-    if (keyStr.length < 2) { // non-special key
-      if (ctrlKey === false && altKey === false) {
-        sendStr = keyStr;
-      }
-    }
-    //
-    // Handle special keys
-    //
-    else {
-
-      switch (keyStr) {
-      case "Backspace":
-      case "Delete":
-        sendStr = "\b";
-        break;
-      case "Enter":
-        sendStr = "\r";
-        break;
-      default: // ignore the key
-        break;
-      }
-    }
-    if (sendStr.length > 0 && this.uplineDataSender) {
-      this.uplineDataSender(sendStr);
-    }
   }
 
   /*
@@ -205,27 +146,10 @@ class CyberConsole {
   }
 
   reset() {
+    super.reset()
     this.setFont(this.SMALL_FONT);
     this.offscreenContext.fillStyle = this.fgndColor;
-    this.state        = this.ST_TEXT;
-    this.x            = 0;
     this.xOffset      = this.SCREEN_MARGIN;
-    this.y            = 0;
-  }
-
-  displayNotification(font, x, y, s) {
-    this.setFont(font);
-    this.x           = x;
-    this.xOffset     = this.SCREEN_MARGIN;
-    this.y           = y;
-    this.state       = this.ST_TEXT;
-    this.clearScreen();
-    for (const line of s.split("\n")) {
-      this.renderText(line);
-      this.x  = x;
-      this.y += this.fontHeights[this.currentFont];
-    }
-    this.updateScreen();
   }
 
   drawChar(b) {
@@ -237,91 +161,6 @@ class CyberConsole {
     let y = this.y + this.yPointOffset;
     this.offscreenContext.clearRect(x, y, 2, 2);
     this.offscreenContext.fillRect(x, y, 2, 2);
-  }
-
-  renderText(data) {
-
-    if (typeof data === "string") {
-      let ab = new Uint8Array(data.length);
-      for (let i = 0; i < data.length; i++) {
-        ab[i] = data.charCodeAt(i) & 0xff;
-      }
-      data = ab;
-    }
-
-    for (let i = 0; i < data.byteLength; i++) {
-      let b = data[i];
-      switch (this.state) {
-      case this.ST_TEXT:
-        if (b < 0x80) {
-          if (this.currentFont === this.DOT_FONT) {
-            this.drawPoint();
-          }
-          else {
-            if (b < 0x20) b = 0x20;
-            this.drawChar(b);
-            this.x += this.fontWidths[this.currentFont];
-          }
-        }
-        else {
-          switch (b) {
-          case this.CMD_SET_X_LOW:
-            this.x = 0;
-            this.state = this.ST_COLLECT_X;
-            break;
-          case this.CMD_SET_Y_LOW:
-            this.y = 0;
-            this.state = this.ST_COLLECT_Y;
-            break;
-          case this.CMD_SET_X_HIGH:
-            this.x = 256;
-            this.state = this.ST_COLLECT_X;
-            break;
-          case this.CMD_SET_Y_HIGH:
-            this.y = 256;
-            this.state = this.ST_COLLECT_Y;
-            break;
-          case this.CMD_SET_SCREEN:
-            this.state = this.ST_COLLECT_SCREEN;
-            break;
-          case this.CMD_SET_FONT_TYPE:
-            this.state = this.ST_COLLECT_FONT;
-            break;
-          case this.CMD_END_OF_FRAME:
-            this.updateScreen();
-            break;
-          default:
-            // ignore the byte
-            break;
-          }
-        }
-        break;
-
-      case this.ST_COLLECT_X:
-        this.x = Math.round((this.x + b) * this.xRatio);
-        this.state = this.ST_TEXT;
-        break;
-
-      case this.ST_COLLECT_Y:
-        this.y = Math.round((0o777 - (this.y + b)) * this.yRatio);
-        this.state = this.ST_TEXT;
-        break;
-
-      case this.ST_COLLECT_SCREEN:
-        this.xOffset = (b === 1) ? this.screenWidth + this.SCREEN_GAP + this.SCREEN_MARGIN : this.SCREEN_MARGIN;
-        this.state = this.ST_TEXT;
-        break;
-
-      case this.ST_COLLECT_FONT:
-        this.setFont(b);
-        this.state = this.ST_TEXT;
-        break;
-
-      default:
-        // ignore byte
-        break;
-      }
-    }
   }
 
   updateScreen() {
