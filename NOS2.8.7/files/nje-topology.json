@@ -265,6 +265,7 @@
   "IRLEARN":{
     "os": "VM/370",
     "software": "RSCS",
+    "mailer": "MAILER@IRLEARN",
     "desc": "Dublin, Ireland",
     "link": "NCCMAX",
     "lid": "IRL"
