@@ -14,6 +14,13 @@
     "lid": "MD2",
     "publicAddress": "194.195.215.201:175"
   },
+  "NAIAC": {
+    "desc": "David Asta's node",
+    "os": "NOS 2.8.7",
+    "software": "NJEF",
+    "link": "NCCMAX",
+    "lid": "MNA"
+  },
   "NCCMAX": {
     "desc": "CDC Cyber 865 at the Nostalgic Computing Center",
     "os": "NOS 2.8.7",
