@@ -1661,7 +1661,8 @@ class DtCyber {
     if (typeof filename === "function") {
       progress = filename;
     }
-    const pathname = new URL(url).pathname;
+    let urlObj = new URL(url);
+    const pathname = urlObj.pathname;
     if (typeof filename === "undefined" || typeof filename === "function") {
       const li = pathname.lastIndexOf("/");
       filename = pathname.substring((li >= 0) ? li + 1 : 0);
@@ -1681,8 +1682,9 @@ class DtCyber {
         fs.unlinkSync(cachePath);
       }
       const strm = fs.createWriteStream(cachePath, { mode: 0o644 });
-      const svc = url.startsWith("https:") ? https : http;
-      svc.get(url, res => {
+      const svc = urlObj.protocol === "https:" ? https : http;
+      if (urlObj.hostname === "localhost") urlObj.hostname = "127.0.0.1";
+      svc.get(urlObj, res => {
         let contentLength = -1;
         if (typeof res.headers["content-length"] !== "undefined") {
           contentLength = parseInt(res.headers["content-length"]);
@@ -1706,8 +1708,8 @@ class DtCyber {
               fs.unlinkSync(cachePath);
               let location = res.headers.location;
               if (location.startsWith("/")) {
-                const pi = url.indexOf(pathname);
-                location = `${url.substring(0, pi)}${location}`;
+                urlObj.pathname = location;
+                location = urlObj.href;
               }
               me.wget(location, cacheDir, filename, progress)
               .then(path => { resolve(path); })

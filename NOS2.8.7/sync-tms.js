@@ -8,7 +8,7 @@ const dtc = new DtCyber();
 const props = dtc.getIniProperties(dtc);
 const equipment = props["equipment.nos287"];
 let tapeHost = "127.0.0.1";
-for (const line of iniProps["equipment.nos287"]) {
+for (const line of props["equipment.nos287"]) {
   if (line.startsWith("MT5744,")) {
     let tokens = line.split(",");
     let ci     = tokens[4].indexOf(":");
