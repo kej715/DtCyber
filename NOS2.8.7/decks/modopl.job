@@ -43,6 +43,8 @@ EXIT.
 ~eor
 ~include ../mods/NOS/NCC6676.mod
 ~eor
+~include ../mods/NOS/NCCAUI.mod
+~eor
 ~include ../mods/NOS/NCCAPPS.mod
 ~eor
 ~include ../mods/NOS/NCCCLDT.mod

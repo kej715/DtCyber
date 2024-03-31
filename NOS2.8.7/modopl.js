@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 
 const DtCyber = require("../automation/DtCyber");
+const fs      = require("fs");
 
 const dtc = new DtCyber();
+
+const nosTapes = ["nos287-1.tap", "nos287-2.tap", "nos287-3.tap"];
 
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
@@ -14,9 +17,20 @@ dtc.connect()
   "[UNLOAD,53.",
   "[!"
 ]))
-.then(() => dtc.mount(13, 0, 1, "tapes/nos287-1.tap"))
-.then(() => dtc.mount(13, 0, 2, "tapes/nos287-2.tap"))
-.then(() => dtc.mount(13, 0, 3, "tapes/nos287-3.tap"))
+.then(() => {
+  let promise = Promise.resolve();
+  let unit = 1;
+  for (const nosTape of nosTapes) {
+    if (!fs.existsSync(`tapes/${nosTape}`)) {
+      promise = promise
+      .then(() => dtc.say(`Decompress tapes/${nosTape}.bz2 to tapes/${nosTape} ...`))
+      .then(() => dtc.bunzip2(`tapes/${nosTape}.bz2`, `tapes/${nosTape}`));
+    }
+    promise = promise
+    .then(() => dtc.mount(13, 0, unit++, `tapes/${nosTape}`))
+  }
+  return promise;
+})
 .then(() => dtc.say("Run job to load and update OPL871 with local mods ..."))
 .then(() => dtc.runJob(12, 4, "decks/modopl.job"))
 .then(() => dtc.say("Unload system source tapes ..."))
