@@ -81,6 +81,8 @@
 **--------------------------------------------------------------------------
 */
 
+#define DEBUG 0
+
 /*
 **  -------------
 **  Include Files
@@ -153,6 +155,12 @@
 #define SOCKET int
 #endif
 
+#if DEBUG
+#define HexColumn(x)      (3 * (x) + 4)
+#define AsciiColumn(x)    (HexColumn(16) + 2 + (x))
+#define LogLineLength     (AsciiColumn(16))
+#endif
+
 /*
 **  -----------------------------------------
 **  Private Typedef and Structure Definitions
@@ -188,6 +196,11 @@ static void     consoleQueueChar(u8 ch);
 static void     consoleQueueCmd(u8 cmd, u8 parm);
 static void     consoleQueueCurState(void);
 static void     consoleUpdateChecksum(u16 datum);
+#if DEBUG
+static char *consoleCmdToString(u8 cmd);
+static void consoleLogBytes(u8 *bytes, int len);
+static void consoleLogFlush(void);
+#endif
 
 /*
 **  ----------------
@@ -234,6 +247,13 @@ static int       inBufOut              = 0;
 static u8        outBuf[OutBufSize];
 static int       outBufIn              = 0;
 
+#if DEBUG
+static FILE *consoleLog   = NULL;
+static char consoleLogBuf[LogLineLength + 1];
+static int  consoleLogBytesCol = 0;
+static bool queueCharLast = FALSE;
+#endif
+
 /*
  **--------------------------------------------------------------------------
  **
@@ -260,6 +280,13 @@ void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     DevSlot *dp;
     int     n;
     char    str[40];
+
+#if DEBUG
+    if (consoleLog == NULL)
+        {
+        consoleLog = fopen("consolelog.txt", "wt");
+        }
+#endif
 
     consoleChannelNo = channelNo;
     consoleEqNo      = eqNo;
@@ -669,6 +696,11 @@ static void consoleCheckDisplayCycle(void)
         cdp = &cycleDataSequences[i];
         if (cdp->sum1 == currentCycleData->sum1 && cdp->sum2 == currentCycleData->sum2)
             {
+#if DEBUG
+            if (queueCharLast) fputs("\n", consoleLog);
+            fputs("cycle detected\n", consoleLog);
+            queueCharLast = FALSE;
+#endif
             cycleDataBuf[cycleDataIn++] = CmdEndFrame;
             currentCycleData->limit = cycleDataIn;
             consoleFlushCycleData(cdp->limit, currentCycleData->limit);
@@ -682,6 +714,7 @@ static void consoleCheckDisplayCycle(void)
        currentCycleData = &cycleDataSequences[currentCycleDataIndex];
        memset(currentCycleData, 0, sizeof(CycleData));
        currentCycleData->first = currentCycleData->limit = cycleDataIn;
+       consoleQueueCurState();
        }
     }
 
@@ -712,11 +745,18 @@ static void consoleDisconnect(void)
 static void consoleFlushCycleData(int first, int limit)
     {
     u64 currentTime;
+    int len;
     int n;
 
     if (connFd != INVALID_SOCKET)
         {
         currentTime = getMilliseconds();;
+#if DEBUG
+        if (queueCharLast) fputs("\n", consoleLog);
+        fprintf(consoleLog, "flush: first %d, limit %d, outBufIn %d, currentTime %lu, earliestCycleFlush %lu\n",
+            first, limit, outBufIn, currentTime, earliestCycleFlush);
+        queueCharLast = FALSE;
+#endif
         if (outBufIn > 0)
             {
             if (limit > first && currentTime >= earliestCycleFlush)
@@ -739,6 +779,9 @@ static void consoleFlushCycleData(int first, int limit)
             n = send(connFd, outBuf, outBufIn, 0);
             if (n > 0)
                 {
+#if DEBUG
+                consoleLogBytes(outBuf, n);
+#endif
                 if (n < outBufIn)
                     {
                     memcpy(outBuf, &outBuf[n], outBufIn - n);
@@ -750,12 +793,19 @@ static void consoleFlushCycleData(int first, int limit)
             {
             if (currentTime >= earliestCycleFlush)
                 {
-                n = send(connFd, &cycleDataBuf[first], limit - first, 0);
-                if (n < limit - first)
+                len = limit - first;
+                n = send(connFd, &cycleDataBuf[first], len, 0);
+#if DEBUG
+                if (n > 0) consoleLogBytes(&cycleDataBuf[first], n);
+#endif
+                if (n < len)
                     {
-                    if (n < 0) n = 0;
-                    memcpy(outBuf, &cycleDataBuf[first + n], (limit - first) - n);
-                    outBufIn = n;
+                    if (n > 0)
+                        {
+                        len -= n;
+                        memcpy(outBuf, &cycleDataBuf[first + n], len);
+                        outBufIn = len;
+                        }
                     }
                 earliestCycleFlush = currentTime + minRefreshInterval;
                 }
@@ -872,6 +922,10 @@ static void consoleQueueChar(u8 ch)
             cycleDataBuf[cycleDataIn++] = ch;
             currentCycleData->limit = cycleDataIn;
             }
+#if DEBUG
+        fprintf(consoleLog, "%02x ", ch);
+        queueCharLast = TRUE;
+#endif
         }
     currentX += currentIncrement;
     }
@@ -898,6 +952,11 @@ static void consoleQueueCmd(u8 cmd, u8 parm)
         cycleDataBuf[cycleDataIn++] = cmd;
         cycleDataBuf[cycleDataIn++] = parm;
         currentCycleData->limit = cycleDataIn;
+#if DEBUG
+        if (queueCharLast) fputs("\n", consoleLog);
+        fprintf(consoleLog, "queueCmd: %s %02x\n", consoleCmdToString(cmd), parm);
+        queueCharLast = FALSE;
+#endif
         }
     }
 
@@ -1059,5 +1118,74 @@ static void consoleUpdateChecksum(u16 datum)
     currentCycleData->sum1 += datum;
     currentCycleData->sum2 += currentCycleData->sum1;
     }
+
+#if DEBUG
+static char *consoleCmdToString(u8 cmd)
+    {
+    static char buf[8];
+
+    switch (cmd)
+        {
+    case CmdSetXLow:     return "setXLow";
+    case CmdSetYLow:     return "setYLow";
+    case CmdSetXHigh:    return "setXHigh";
+    case CmdSetYHigh:    return "setYHigh";
+    case CmdSetScreen:   return "setScreen";
+    case CmdSetFontType: return "setFontType";
+    case CmdEndFrame:    return "endFrame";
+    default:
+        sprintf(buf, "%02x", cmd);
+        return buf;
+        }
+    }
+
+static void consoleLogFlush(void)
+    {
+    if (consoleLogBytesCol > 0)
+        {
+        fprintf(consoleLog, "%s\n", consoleLogBuf);
+        fflush(consoleLog);
+        }
+    consoleLogBytesCol = 0;
+    memset(consoleLogBuf, ' ', LogLineLength);
+    consoleLogBuf[LogLineLength] = '\0';
+    }
+
+static void consoleLogBytes(u8 *bytes, int len)
+    {
+    int  ascCol;
+    u8   b;
+    u8   c;
+    char hex[3];
+    int  hexCol;
+    int  i;
+
+    consoleLogBytesCol = 0;
+    consoleLogFlush(); // initialize the log buffer
+    ascCol = AsciiColumn(consoleLogBytesCol);
+    hexCol = HexColumn(consoleLogBytesCol);
+
+    for (i = 0; i < len; i++)
+        {
+        b = c = bytes[i];
+        if ((b < 0x20) || (b >= 0x7f))
+            {
+            c = '.';
+            }
+        sprintf(hex, "%02x", b);
+        memcpy(consoleLogBuf + hexCol, hex, 2);
+        hexCol += 3;
+        consoleLogBuf[ascCol++] = c;
+        if (++consoleLogBytesCol >= 16)
+            {
+            consoleLogFlush();
+            ascCol = AsciiColumn(consoleLogBytesCol);
+            hexCol = HexColumn(consoleLogBytesCol);
+            }
+        }
+    consoleLogFlush();
+    }
+
+#endif
 
 /*---------------------------  End Of File  ------------------------------*/
