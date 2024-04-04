@@ -1742,6 +1742,18 @@ TIELINE=TIELINE
 WWW=WWWX
 ```
 
+Note that the following usernames are associated with user indices having values greater than or equal to 377770B.
+The system does not allow users to log into these accounts interactively, nor can they be used for running ordinary
+batch jobs. A job may be run from these usernames only if it is initiated from the system console as a system origin job.
+Consequently, there is little to be gained from changing the passwords of these accounts.
+
+```
+CYBISMF
+NETOPS
+PLATOMF
+SYSTEMX
+```
+
 ### <a id="resolver"></a>[RESOLVER]
 Defines the TCP/IP resource resolver configuration. This is saved as the file named
 TCPRSLV in the catalog of user NETADMN. The resource resolver is used by some

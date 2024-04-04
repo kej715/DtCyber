@@ -70,6 +70,7 @@
           "cybis-mount-bin.pre"
         ],
         "post": [
+          "cybis-update-setpun.job",
           "../make-ds-tape.js",
           "cybis-newds.post",
           "cybis.post"
@@ -78,7 +79,10 @@
         "records": "TEXT/CONFIG-PP/EPE",
         "url": "https://www.dropbox.com/s/jiythdoifn1f6bm/cybis-bin.tap?dl=1",
         "desc": "CYBIS",
-        "depends": ["ses"]
+        "depends": ["ses"],
+        "users": {
+          "PLATOMF":["cybis-update-setpun.job"]
+        }
       }, 
       {
           "name": "cybis-lessons",
