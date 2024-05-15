@@ -22,13 +22,11 @@ const toHex = value => {
 let terminalDefns = [];
 let userDefns     = [];
 
-const terminalNames = Object.keys(terminals).sort();
-if (terminalNames.length < 1) process.exit(0);
-for (const name of terminalNames) {
-  let terminal  = terminals[name];
+if (terminals.length < 1) process.exit(0);
+for (const terminal of terminals) {
   let console   = `CO${toHex(npuNode)}P${toHex(terminal.claPort)}`;
   terminalDefns = terminalDefns.concat([
-    `*  ${name}`,
+    `*  ${terminal.id}`,
     `LI${toHex(npuNode)}P${toHex(terminal.claPort)}: LINE      PORT=${toHex(terminal.claPort)},LTYPE=S2,TIPTYPE=HASP.`,
     "         TERMINAL  TC=HPRE,RIC=YES.",
     `         ${console}:  DEVICE,DT=CON,HN=${couplerNode},PW=0,AUTOCON.`,
@@ -37,7 +35,7 @@ for (const name of terminalNames) {
     `         PU${toHex(npuNode)}P${toHex(terminal.claPort)}:  DEVICE,DT=CP,STREAM=1.`,
     ""
   ]);
-  userDefns.push(`${console}: USER,     RBFUSER,MUSER=${name}.`);
+  userDefns.push(`${console}: USER,     RBFUSER,MUSER=${terminal.id}.`);
 }
 
 const ndlModset = [

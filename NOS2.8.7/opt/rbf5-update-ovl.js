@@ -49,16 +49,15 @@ if (typeof ovlProps["npu.nos287"] !== "undefined") {
     }
   }
 }
-const terminalNames = Object.keys(terminals).sort();
-if (terminalNames.length > 0) {
+if (terminals.length > 0) {
   i = 0;
-  while (i < terminalNames.length) {
-    let terminal  = terminals[terminalNames[i++]];
+  while (i < terminals.length) {
+    let terminal  = terminals[i++];
     let claPort   = terminal.claPort;
     if (typeof terminal.blockSize === "undefined") terminal.blockSize = 400;
     let count     = 1;
-    while (i < terminalNames.length) {
-      let nextTerminal = terminals[terminalNames[i]];
+    while (i < terminals.length) {
+      let nextTerminal = terminals[i];
       if (typeof nextTerminal.blockSize === "undefined") nextTerminal.blockSize = 400;
       if (terminal.tcpPort === nextTerminal.tcpPort
           && (claPort + 1) === nextTerminal.claPort

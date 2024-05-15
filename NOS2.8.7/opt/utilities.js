@@ -167,10 +167,10 @@ const utilities = {
 
     if (typeof utilities.haspTerminals !== "undefined") return utilities.haspTerminals;
 
-    const customProps     = utilities.getCustomProperties(dtc);
-    let   nextPort        = 0x26;
-    let   portCount       = 2;
-    utilities.haspTerminals = {};
+    const customProps = utilities.getCustomProperties(dtc);
+    let   nextPort    = 0x26;
+    let   portCount   = 2;
+    let   terminals   = [];
 
     if (typeof customProps["NETWORK"] !== "undefined") {
       for (let line of customProps["NETWORK"]) {
@@ -186,8 +186,8 @@ const utilities = {
           let items = value.split(",");
           if (items.length >= 2) {
             let terminal = {
-              id:         items.shift(),
-              tcpPort:    parseInt(items.shift()),
+              id:        items.shift(),
+              tcpPort:   parseInt(items.shift()),
               blockSize: 400
             };
             while (items.length > 0) {
@@ -196,7 +196,7 @@ const utilities = {
                 terminal.blockSize = parseInt(item.substring(1));
               }
             }
-            utilities.haspTerminals[terminal.id] = terminal;
+            terminals.push(terminal);
           }
         }
         else if (key === "HASPPORTS") {
@@ -206,12 +206,31 @@ const utilities = {
         }
       }
     }
-    const terminalNames = Object.keys(utilities.haspTerminals).sort();
-    for (const name of terminalNames) {
+    terminals.sort((t1, t2) => {
+      let p1 = t1.tcpPort;
+      let p2 = t2.tcpPort;
+      if (p1 < p2) {
+        return -1;
+      }
+      else if (p1 > p2) {
+        return 1;
+      }
+      else if (t1.id.toUpperCase() < t2.id.toUpperCase()) {
+        return -1;
+      }
+      else if (t1.id.toUpperCase() > t2.id.toUpperCase()) {
+        return 1;
+      }
+      else {
+        return 0;
+      }
+    });
+    for (const terminal of terminals) {
       if (portCount < 1) throw new Error("Insufficient number of HASP ports defined");
-      utilities.haspTerminals[name].claPort = nextPort++;
+      terminal.claPort = nextPort++;
       portCount -= 1;
     }
+    utilities.haspTerminals = terminals;
     return utilities.haspTerminals;
   },
 

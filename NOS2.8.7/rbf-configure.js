@@ -16,9 +16,8 @@ const dtc = new DtCyber();
 
 const customProps  = utilities.getCustomProperties(dtc);
 const terminals    = utilities.getHaspTerminals(dtc);
-const names        = Object.keys(terminals);
 
-if (names.length < 1) process.exit(0);
+if (terminals.length < 1) process.exit(0);
 
 dtc.say("Start RBF configuration ...")
 .then(() => {
@@ -40,7 +39,8 @@ dtc.say("Start RBF configuration ...")
     "REPLACE,RBFUSRS."
   ];
   let userDefns = [];
-  for (const name of names) {
+  for (const terminal of terminals) {
+    let name = terminal.id;
     let pw = (name.length < 4) ? `${name}X` : name;
     userDefns.push(`/${name},PW=${utilities.getPropertyValue(customProps, "PASSWORDS", name, pw)},RL=ALL,AP=NUL,AP=RBF`);
   }
