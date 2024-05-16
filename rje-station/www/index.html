@@ -1,0 +1,85 @@
+<html>
+  <head>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="icon" type="image/png" href="images/ncc.png" />
+    <script src="js/jquery-3.3.1.min.js"></script>
+  </head>
+  <body>
+    <h1>RJE Services</h1>
+    <div id="diagnostic" class="diagnostic"></div>
+    <table id="machines" class="machine-table">
+      <tr id="heading">
+        <th>ID</th><th>Available</th><th>Description</th>
+      </tr>
+    </table>
+    <script>
+    let machineMap = {};
+    const getMachineMap = callback => {
+      const req = new XMLHttpRequest();
+      req.onload = evt => {
+        if (req.status === 200) {
+          callback(JSON.parse(req.responseText));
+        }
+        else {
+          callback(`${req.status} ${req.statusText}`);
+        }
+      };
+      req.open("GET", "/machines", true);
+      req.send();
+    };
+    const update = () => {
+      getMachineMap(res => {
+        if (typeof res === "object") {
+          for (const name of Object.keys(res)) {
+            let machine = res[name];
+            if (typeof machineMap[name] !== "undefined" && machine.curConnections !== machineMap[name].curConnections) {
+              machineMap[name] = machine;
+              let row = document.getElementById(name);
+              let availCount = machine.maxConnections - machine.curConnections;
+              let availText = `${availCount} of ${machine.maxConnections}`;
+              let link = `rje.html?m=${machine.id}&t=${encodeURIComponent(machine.title)}`;
+              if (availCount > 0) {
+                row.innerHTML = `<td><a href="${link}" onclick="return handleClick();" target="_blank">${name}</a></td><td>${availText}</td><td>${machine.title}</td>`;
+              }
+              else {
+                row.innerHTML = `<td>${name}</td><td>none</td><td>${machine.title}</td>`;
+              }
+            }
+          }
+        }
+      });
+    };
+    const handleClick = () => {
+      setTimeout(update, 2500);
+      return true;
+    };
+    const diagElem = document.getElementById("diagnostic");
+    const machElem = document.getElementById("machines");
+    getMachineMap(res => {
+      if (typeof res === "string") {
+        diag.innerHTML = res;
+      }
+      else {
+        machineMap = res;
+        const names = Object.keys(machineMap).sort();
+        for (const name of names) {
+          let machine = machineMap[name];
+          let row = document.createElement("tr");
+          row.id = name;
+          machElem.append(row);
+          let availCount = machine.maxConnections - machine.curConnections;
+          let availText = `${availCount} of ${machine.maxConnections}`;
+          let link = `rje.html?m=${machine.id}&t=${encodeURIComponent(machine.title)}`;
+          if (availCount > 0) {
+            row.innerHTML = `<td><a href="${link}" onclick="return handleClick();" target="_blank">${name}</a></td><td>${availText}</td><td>${machine.title}</td>`;
+          }
+          else {
+            row.innerHTML = `<td>${name}</td><td>none</td><td>${machine.title}</td>`;
+          }
+        }
+      }
+    });
+    setInterval(update, 5000);
+    </script>
+  </body>
+</html>
