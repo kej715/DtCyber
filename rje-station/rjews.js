@@ -68,7 +68,7 @@ const generateDefaultResponse = (req, res) => {
   res.write(  "</head>");
   res.write(  "<body>");
   res.write(    "<h1>Available RJE Services</h1>");
-  res.write(    '<ul id="machines" class="machine-list"></ul>');
+  res.write(    '<ul id="machines" class="machine-list">');
 
   for (const key of Object.keys(machineMap)) {
     let machine = machineMap[key];
@@ -154,6 +154,7 @@ const processMachinesRequest = (req, res, query) => {
         connection.lastAction = Date.now();
         res.writeHead(200, {"Content-Type":"text/plain"});
         res.end(connection.id.toString());
+        machine.curConnections += 1;
         logHttpRequest(req, 200);
       });
 
@@ -193,6 +194,7 @@ const processMachinesRequest = (req, res, query) => {
           stream.isReady = false;
           delete stream.stream;
         }
+        machine.curConnections -= 1;
         log(`${machine.id} : ${key} done`);
       });
 
@@ -209,6 +211,7 @@ const processMachinesRequest = (req, res, query) => {
           logHttpRequest(req, 500);
         }
         connection.isConnected = false;
+        machine.curConnections -= 1;
       });
 
       connection.service.on("pti", (streamType, streamId) => {
@@ -235,6 +238,10 @@ const processMachinesRequest = (req, res, query) => {
       res.end();
       logHttpRequest(req, 404);
     }
+  }
+  else if (Object.keys(query).length < 1) {
+    res.writeHead(200, {"Content-Type":"application/json"});
+    res.end(JSON.stringify(machineMap));
   }
   else {
     res.writeHead(400);
@@ -384,6 +391,8 @@ const readConfigFile = path => {
             machine[propName] = readConfigProperty(path, tokens[1], tokens[2], tokens[3]);
           }
         }
+        if (typeof machine.maxConnections === "undefined") machine.maxConnections = 1;
+        machine.curConnections = 0;
       }
     }
     else if (typeof value === "string" && value.startsWith("%")) {
@@ -578,6 +587,7 @@ wsServer.on("request", req => {
           connection.isConnected = false;
           connection.service.end();
           delete connection.ws;
+          machineMap[connection.machineName].curConnections -= 1;
         });
       }
       else {

@@ -266,6 +266,8 @@ log messages.
 sent to the RJE host service. The default is none.
 - **password** : specifies the password used in the *SIGNON* request sent to the RJE
 host service. The default is none.
+- **maxConnections** : the maximum number of concurrent connections supported by the service on its TCP port.
+The default is *1*.
 - **port** : the TCP port number on which the RJE host service is listening for connections. The default is *2553*.
 - **protocol** : specifies the name of the RJE data communication protocol to use in
 communicating with the RJE host service. Accepted values are *hasp* and *mode4*. The

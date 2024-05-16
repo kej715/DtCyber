@@ -107,6 +107,10 @@
 .left-floater {
   float: left;
 }
+.machine-table, th, td {
+  padding: 2px 5px 2px 5px;
+  text-align: left;
+}
 .printer-background {
   background-image: url("fanfold-716x528.jpg");
   background-blend-mode: lighten;
