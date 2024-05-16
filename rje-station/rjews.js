@@ -151,10 +151,10 @@ const processMachinesRequest = (req, res, query) => {
       connection.service.on("connect", () => {
         log(`Connected to ${machine.protocol} service on ${connection.machineName} at ${machine.host}:${machine.port}`);
         connection.isConnected = true;
+        machine.curConnections += 1;
         connection.lastAction = Date.now();
         res.writeHead(200, {"Content-Type":"text/plain"});
         res.end(connection.id.toString());
-        machine.curConnections += 1;
         logHttpRequest(req, 200);
       });
 
@@ -205,13 +205,20 @@ const processMachinesRequest = (req, res, query) => {
           connection.ws.close();
           delete connection.ws;
         }
-        else if (connection.isConnected === false) {
-          res.writeHead(500, {"Content-Type":"text/plain"});
-          res.end(err.toString());
-          logHttpRequest(req, 500);
+        else if (connection.isConnected) {
+          connection.isConnected = false;
+          machine.curConnections -= 1;
         }
-        connection.isConnected = false;
-        machine.curConnections -= 1;
+        else {
+          try {
+            res.writeHead(500, {"Content-Type":"text/plain"});
+            res.end(err.toString());
+            logHttpRequest(req, 500);
+          }
+          catch (err) {
+            log(`Warning on connection ${connection.id} : ${err}`);
+          }
+        }
       });
 
       connection.service.on("pti", (streamType, streamId) => {
