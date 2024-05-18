@@ -1,0 +1,48 @@
+~*
+~*  This job updates the ZZSYSGU procedure under SYSTEMX to
+~*  align possibly customized passwords.
+~*
+ZZSYSGU.
+$USER,INSTALL,${../site.cfg:PASSWORDS:INSTALL:INSTALL}.
+$NORERUN.
+$SETTL,*.
+$SETASL,*.
+$SETJSL,*.
+$COPY,INPUT,ZZSYSGU.
+$REPLACE,ZZSYSGU/UN=SYSTEMX.
+***
+*** ZZSYSGU COMPLETE
+***
+EXIT.
+***
+*** ZZSYSGU FAILED
+***
+~eor
+.PROC,USER*I,
+P1      ' USERNAME                             '=(*F),
+.
+
+.IF, ($P1$ .EQ. $INSTALL$) .$USER(INSTALL,${../site.cfg:PASSWORDS:INSTALL:INSTALL})
+.IF, ($P1$ .EQ. $LIBRARY$) .$USER(LIBRARY,${../site.cfg:PASSWORDS:LIBRARY:LIBRARY})
+.IF, ($P1$ .EQ. $SYSTEMX$) .$USER(SYSTEMX,${../site.cfg:PASSWORDS:SYSTEMX:SYSTEMX})
+.IF, ($P1$ .EQ. $MANUALS$) .$USER(MANUALS,${../site.cfg:PASSWORDS:MANUALS:MANUALS})
+.IF, ($P1$ .EQ. $NETOPS$ ) .$USER(NETOPS,${../site.cfg:PASSWORDS:NETOPS:NETOPSX})
+.IF, ($P1$ .EQ. $NETADMN$) .$USER(NETADMN,${../site.cfg:PASSWORDS:NETADMN:NETADMN})
+.IF, ($P1$ .EQ. $KB100DC$) .$USER(KB100DC,${../site.cfg:PASSWORDS:KB100DC:TAFPASS})
+.IF, ($P1$ .EQ. $APL0$   ) .$USER(APL0,${../site.cfg:PASSWORDS:APL0:APL0})
+.IF, ($P1$ .EQ. $APL1$   ) .$USER(APL1,${../site.cfg:PASSWORDS:APL1:APL1})
+.IF, ($P1$ .EQ. $CDCCE$  ) .$USER(CDCCE,${../site.cfg:PASSWORDS:CDCCE:CDCCE})
+.IF, ($P1$ .EQ. $CDCCE2$ ) .$USER(CDCCE2,${../site.cfg:PASSWORDS:CDCCE2:CDCCE2})
+.IF, ($P1$ .EQ. $SSPOT$  ) .$USER(SSPOT,${../site.cfg:PASSWORDS:SSPOT:STATION})
+.IF, ($P1$ .EQ. $SUBFAM0$) .$USER(SUBFAM0,${../site.cfg:PASSWORDS:SUBFAM0:SUBFAM0})
+.IF, ($P1$ .EQ. $NVE$    ) .$USER(NVE,${../site.cfg:PASSWORDS:NVE:NVEX})
+
+$REVERT(NOLIST)
+$EXIT.
+****************************************
+*   AN ERROR OCCURRED WHILE EXECUTING
+*       A USER CARD FOR USERNAME
+*            *** P1 ***
+*  PLEASE CHECK YOUR VALIDATION FILE
+****************************************
+$REVERT(ABORT)
