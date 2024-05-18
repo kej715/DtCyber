@@ -327,6 +327,9 @@ const processPasswordChanges = () => {
         }
       }
       return promise
+      .then(() => dtc.say("Update ZZSYSGU ..."))
+      .then(() => dtc.dsd("X.PERMIT(ZZSYSGU,INSTALL=W)"))
+      .then(() => dtc.runJob(12, 4, "decks/update-zzsysgu.job"))
       .then(() => {
         fs.writeFileSync("opt/password-map.json", JSON.stringify(passwordMap));
         return Promise.resolve();

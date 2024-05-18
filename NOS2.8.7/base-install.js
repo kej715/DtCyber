@@ -167,6 +167,16 @@ if (isCompletedStep("update-passwords") === false) {
              .then(() => dtc.dsd(`X.MODVAL(OP=Z)/NETADMN,PW=${netadmnPw}`));
   })
   .then(() => {
+    if (typeof customProps["PASSWORDS"] !== "undefined") {
+      return dtc.say("Update ZZSYSGU ...")
+      .then(() => dtc.dsd("X.PERMIT(ZZSYSGU,INSTALL=W)"))
+      .then(() => dtc.runJob(12, 4, "decks/update-zzsysgu.job"));
+    }
+    else {
+      return Promise.resolve();
+    }
+  })
+  .then(() => {
     addCompletedStep("update-passwords");
     return Promise.resolve();
   });
