@@ -194,7 +194,6 @@ const processMachinesRequest = (req, res, query) => {
           stream.isReady = false;
           delete stream.stream;
         }
-        machine.curConnections -= 1;
         log(`${machine.id} : ${key} done`);
       });
 
@@ -634,6 +633,7 @@ setInterval(() => {
       }
       if (typeof connection.service !== "undefined") connection.service.end();
       connection.isConnected = false;
+      machineMap[connection.machineName].curConnections -= 1;
     }
   }
 }, 10000);
