@@ -3528,22 +3528,24 @@ static void opHelpShowAll(void)
 **------------------------------------------------------------------------*/
 static void opCmdIdle(bool help, char *cmdParams)
     {
-    int          numParam;
-    unsigned int newtrigger;
-    unsigned int newsleep;
+    int numParam;
+    u32 newThreshold;
+    u32 newTrigger;
+    u32 newSleep;
 
     if (help)
         {
-        opDisplay("    > Idle Loop Throttle\n");
-        opDisplay("    > idle <on|off>                   turn NOS idle loop throttle on/off\n");
-        opDisplay("    > idle <num_cycles>,<sleep_time>  set number of cycles before sleep and sleep time\n");
+        opDisplay("    > System Idle Detection\n");
+        opDisplay("    > idle <on|off>                   turn idle detection on/off\n");
+        opDisplay("    > idle <num_cycles>,<sleep_time>  set number of CPU idle cycles before sleep and sleep time\n");
+        opDisplay("    > idle B<num_buffers>             set threshold of allocated network buffers indicating NPU/MDI busy\n");
 
         return;
         }
 
     if (strlen(cmdParams) == 0)
         {
-        sprintf(opOutBuf, "    > Idle loop throttling: %s\n", idle ? "ON" : "OFF");
+        sprintf(opOutBuf, "    > Idle loop detection: %s\n", idle ? "ON" : "OFF");
         opDisplay(opOutBuf);
         if (idleDetector == &idleDetectorNone)
             {
@@ -3556,12 +3558,14 @@ static void opCmdIdle(bool help, char *cmdParams)
             opDisplay(opOutBuf);
             }
 #ifdef WIN32
-        sprintf(opOutBuf, "    > Sleep every %u cycles for %u milliseconds.\n", idleTrigger, idleTime);
+        sprintf(opOutBuf, "    > Sleep every %u cycles for %u milliseconds\n", idleTrigger, idleTime);
         opDisplay(opOutBuf);
 #else
-        sprintf(opOutBuf, "usleep every %u cycles for %u usec\n", idleTrigger, idleTime);
+        sprintf(opOutBuf, "    > Sleep every %u cycles for %u usec\n", idleTrigger, idleTime);
         opDisplay(opOutBuf);
 #endif
+        sprintf(opOutBuf, "    > NPU/MDI is busy when %d or more network buffers active\n", idleNetBufs);
+        opDisplay(opOutBuf);
 
         return;
         }
@@ -3577,24 +3581,40 @@ static void opCmdIdle(bool help, char *cmdParams)
 
         return;
         }
-    numParam = sscanf(cmdParams, "%u,%u", &newtrigger, &newsleep);
+    if (*cmdParams == 'B' || *cmdParams == 'b')
+        {
+        numParam = sscanf(cmdParams + 1, "%u", &newThreshold);
+        if (numParam < 1)
+            {
+            sprintf(opOutBuf, "    > Buffer count missing\n");
+            opDisplay(opOutBuf);
+            return;
+            }
+        idleNetBufs = newThreshold;
+        sprintf(opOutBuf, "    > NPU/MDI is busy when %d or more network buffers active\n", idleNetBufs);
+        opDisplay(opOutBuf);
+        }
+    else
+        {
+        numParam = sscanf(cmdParams, "%u,%u", &newTrigger, &newSleep);
 
-    if (numParam != 2)
-        {
-        sprintf(opOutBuf, "    > 2 parameters expected - %u provided\n", numParam);
+        if (numParam != 2)
+            {
+            sprintf(opOutBuf, "    > 2 parameters expected - %u provided\n", numParam);
+            opDisplay(opOutBuf);
+            return;
+            }
+        if ((newTrigger < 1) || (newSleep < 1))
+            {
+            sprintf(opOutBuf, "    > No parameters provided (1 or 2 expected)\n");
+            opDisplay(opOutBuf);
+            return;
+            }
+        idleTrigger = (u32)newTrigger;
+        idleTime    = (u32)newSleep;
+        sprintf(opOutBuf, "    > Sleep will now occur every %u cycles for %u milliseconds.\n", idleTrigger, idleTime);
         opDisplay(opOutBuf);
-        return;
         }
-    if ((newtrigger < 1) || (newsleep < 1))
-        {
-        sprintf(opOutBuf, "    > No parameters provided (1 or 2 expected)\n");
-        opDisplay(opOutBuf);
-        return;
-        }
-    idleTrigger = (u32)newtrigger;
-    idleTime    = (u32)newsleep;
-    sprintf(opOutBuf, "    > Sleep will now occur every %u cycles for %u milliseconds.\n", idleTrigger, idleTime);
-    opDisplay(opOutBuf);
     }
 
 /*--------------------------------------------------------------------------

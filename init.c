@@ -207,28 +207,28 @@ static InitVal sectVals[] =
     "cpus",                          "cyber", "Valid",
     "deadstart",                     "cyber", "Valid",
     "displayName",                   "cyber", "Valid",
-    "ecsbanks",                      "cyber", "Valid",
+    "ecsBanks",                      "cyber", "Valid",
     "ecsFile",                       "cyber", "Deprecated",
     "equipment",                     "cyber", "Valid",
-    "esmbanks",                      "cyber", "Valid",
+    "esmBanks",                      "cyber", "Valid",
     "helpers",                       "cyber", "Valid",
     "idle",                          "cyber", "Valid",
-    "idlecycles",                    "cyber", "Valid",
-    "idletime",                      "cyber", "Valid",
+    "idleCycles",                    "cyber", "Valid",
+    "idleTime",                      "cyber", "Valid",
     "ipAddress",                     "cyber", "Valid",
     "memory",                        "cyber", "Valid",
     "model",                         "cyber", "Valid",
     "networkInterface",              "cyber", "Valid",
     "npuConnections",                "cyber", "Valid",
     "operator",                      "cyber", "Valid",
-    "ostype",                        "cyber", "Valid",
+    "osType",                        "cyber", "Valid",
     "persistDir",                    "cyber", "Valid",
-    "platoconns",                    "cyber", "Deprecated",
-    "platoport",                     "cyber", "Deprecated",
+    "platoConns",                    "cyber", "Deprecated",
+    "platoPort",                     "cyber", "Deprecated",
     "pps",                           "cyber", "Valid",
     "setMhz",                        "cyber", "Valid",
-    "telnetconns",                   "cyber", "Deprecated",
-    "telnetport",                    "cyber", "Deprecated",
+    "telnetConns",                   "cyber", "Deprecated",
+    "telnetPort",                    "cyber", "Deprecated",
     "trace",                         "cyber", "Valid",
 
     "cdcnetNode",                    "npu",   "Valid",
@@ -237,6 +237,7 @@ static InitVal sectVals[] =
     "couplerNode",                   "npu",   "Valid",
     "hostID",                        "npu",   "Valid",
     "hostIP",                        "npu",   "Deprecated",
+    "idleNetBufs",                   "npu",   "Valid",
     "npuNode",                       "npu",   "Valid",
     "terminals",                     "npu",   "Valid",
 
@@ -980,7 +981,16 @@ static void initCyber(char *config)
     initGetInteger("idletime", 60, &dummyInt);
     idleTime = (u32)dummyInt;
 #endif
-    fprintf(stdout, "(init   ) Idle %s every %d cycles for %d microseconds.\n", idle ? "on" : "off", idleTrigger, idleTime);
+     
+    if (idle)
+        {
+        fprintf(stdout, "(init   ) Idle every %d cycles for %d microseconds.\n",
+            idleTrigger, idleTime);
+        }
+    else
+        {
+        fputs("(init   ) Idle off.\n", stdout);
+        }
 
     /*
     **  Get optional operating system type. If not specified, use "none".
@@ -1219,6 +1229,14 @@ static void initNpuConnections(void)
         }
     cdcnetPrivilegedUdpPortOffset = (u16)val;
     fprintf(stderr, "(init   ) UDP privileged port offset is %d\n", cdcnetPrivilegedUdpPortOffset);
+
+    /*
+    **  Get optional threshold value of network buffer backlog indicating that the NPU/MDI
+    **  is busy.
+    */
+    initGetInteger("idleNetBufs", 4, &val);
+    idleNetBufs = (u32)val;
+    fprintf(stderr, "(init   ) Idle network buffer threshold is %d\n", idleNetBufs);
 
     /*
     **  Process all equipment entries.

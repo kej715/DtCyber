@@ -321,6 +321,19 @@ NpuBuffer *npuBipBufGet(void)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Report whether the network is busy.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        TRUE if the network is busy.
+**
+**------------------------------------------------------------------------*/
+bool npuBipIsBusy(void)
+    {
+    return (NumBuffs - bufCount) >= idleNetBufs;
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Free NPU buffer back to pool.
 **
 **  Parameters:     Name        Description.
