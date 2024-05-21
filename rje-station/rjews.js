@@ -590,10 +590,12 @@ wsServer.on("request", req => {
         });
         ws.on("close", (reason, description) => {
           logWsRequest(`${req.remoteAddress} close /connections/${id} (${connection.machineName})`);
-          connection.isConnected = false;
           connection.service.end();
           delete connection.ws;
-          machineMap[connection.machineName].curConnections -= 1;
+          if (connection.isConnected) {
+            connection.isConnected = false;
+            machineMap[connection.machineName].curConnections -= 1;
+          }
         });
       }
       else {
