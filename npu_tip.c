@@ -407,6 +407,18 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 
         return;
         }
+#if DEBUG
+    {
+    int i;
+    fprintf(npuTipLog, "Connection %u received block type %02x, PFC %02x, SFC %02x\n   ",
+            cn, block[BlkOffBTBSN] & BlkMaskBT, block[BlkOffPfc], block[BlkOffSfc]);
+    for (i = 0; i < bp->numBytes; i++)
+        {
+        fprintf(npuTipLog, " %02x", bp->data[i]);
+        }
+    fputs("\n", npuTipLog);
+    }
+#endif
 
     switch (block[BlkOffBTBSN] & BlkMaskBT)
         {
@@ -427,7 +439,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 
     case BtHTCMD:
         switch (block[BlkOffPfc])
-        {
+            {
         case PfcCTRL:
             if (block[BlkOffSfc] == SfcCHAR)
                 {
@@ -471,6 +483,23 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
                 }
             break;
 
+        case PfcTO:
+            /*
+            **  The TO (Terminate Output) command is sent to HASP print and punch streams to indicate
+            **  that an operator has requested an output to terminate.  Normally, the SFC will be SfcMARK.
+            */
+            if (tp->tipType == TtHASP)
+                {
+                npuHaspNotifyTerminateOutput(tp, block[BlkOffSfc]);
+                }
+#if DEBUG
+            else
+                {
+                fputs("Unexpected TO command for non-HASP connection\n", npuTipLog);
+                }
+#endif
+            break;
+
         case PfcSI:
             /*
             **  The SI (Start Input) command is sent to HASP card reader streams to indicate
@@ -483,24 +512,14 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 #if DEBUG
             else
                 {
-                fprintf(npuTipLog, "Unexpected SI command for non-HASP connection %u, PFC/SFC %02x/%02x\n",
-                        cn, block[BlkOffPfc], block[BlkOffSfc]);
+                fputs("Unexpected SI command for non-HASP connection\n", npuTipLog);
                 }
 #endif
             break;
 
         default:
 #if DEBUG
-                {
-                int i;
-                fprintf(npuTipLog, "Unrecognized command received on connection %u, %02x/%02x\n   ",
-                        cn, block[BlkOffPfc], block[BlkOffSfc]);
-                for (i = 0; i < bp->numBytes; i++)
-                    {
-                    fprintf(stderr, " %02x", bp->data[i]);
-                    }
-                fputs("\n", stderr);
-                }
+            fputs("Unrecognized TIP command\n", npuTipLog);
 #endif
             break;
         }
@@ -597,15 +616,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 
     default:
 #if DEBUG
-            {
-            int i;
-            fprintf(npuTipLog, "Unrecognized block type: %02X\n   ", block[BlkOffBTBSN] & BlkMaskBT);
-            for (i = 0; i < bp->numBytes; i++)
-                {
-                fprintf(npuTipLog, " %02x", block[i]);
-                }
-            fputs("\n", npuTipLog);
-            }
+        fputs("Unrecognized block type\n", npuTipLog);
 #endif
         break;
         }
@@ -629,7 +640,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 void npuTipSetupTerminalClass(Tcb *tp, u8 tc)
     {
 #if DEBUG
-    fprintf(npuTipLog, "Set terminal class of connection %u to %u\n", tp->cn, tc);
+    fprintf(npuTipLog, "Connection %u set terminal class to %u\n", tp->cn, tc);
 #endif
 
     switch (tc)
@@ -1903,7 +1914,7 @@ static void npuTipLogFnFv(Tcb *tp, u8 fn, u8 fv)
         kw = kbuf;
         break;
         }
-    fprintf(npuTipLog, "Set terminal parameter, connection %u, %s=<%02x>\n", tp->cn, kw, fv);
+    fprintf(npuTipLog, "Connection %u set terminal parameter %s=<%02x>\n", tp->cn, kw, fv);
     }
 
 #endif

@@ -109,7 +109,7 @@
 #define   SfcCHG                   0x00 // change
 
 #define PfcBF                      0xC3 // batch file characteristics
-//#define SfcCHG     0x00       // change
+//        SfcCHG                   0x00 // change
 
 #define PfcTO                      0xC4 // terminate output marker
 #define   SfcMARK                  0x00 // marker
@@ -129,10 +129,11 @@
 #define   SfcNR                    0x04 // not ready
 
 #define PfcOS                      0xC8 // output stopped
-//#define SfcBI      0x01       // batch interrupt
+//        SfcBI                    0x01 // batch interrupt
 #define   SfcPM                    0x02 // printer message
 #define   SfcFLF                   0x03 // file limit
-//#define SfcNR      0x04       // not ready
+//        SfcNR                    0x04 // not ready
+#define   SfcNVF                   0x05 // stopped by NVF
 
 #define PfcAD                      0xC9 // accounting data
 #define   SfcEOI                   0x01 // EOI processed
@@ -140,10 +141,10 @@
 #define   SfcTF                    0x03 // terminal failure
 
 #define PfcBI                      0xCA // break indication marker
-//#define SfcMARK    0x00       // marker
+//        SfcMARK                  0x00 // marker
 
 #define PfcRO                      0xCB // resume output marker
-//#define SfcMARK    0x00       // marker
+//        SfcMARK                  0x00 // marker
 
 #define PfcFT                      0xCC // A - A using PRU type data
 #define   SfcON                    0x00 // turn on PRU mode
@@ -517,6 +518,7 @@ typedef struct scb
     u8              lastSRCB;
     bool            isDiscardingRecords;
     bool            isStarted;
+    bool            isTerminateRequested;
     bool            isWaitingPTI;
     bool            isPruFragmentComplete;
     int             pruFragmentSize;
@@ -905,6 +907,7 @@ void npuHaspNotifyNetDisconnect(Pcb *pcbp);
 void npuHaspNotifyStartInput(Tcb *tp, u8 sfc);
 void npuHaspNotifyTermConnect(Tcb *tp);
 void npuHaspNotifyTermDisconnect(Tcb *tp);
+void npuHaspNotifyTerminateOutput(Tcb *tp, u8 sfc);
 void npuHaspPresetPcb(Pcb *pcbp);
 void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last);
 void npuHaspProcessUplineData(Pcb *pcbp);
