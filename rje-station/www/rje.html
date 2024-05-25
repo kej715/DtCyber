@@ -68,9 +68,16 @@
         Job Composer 
         <img id="composer-close-button" class="right-justified-button" src="images/close-16x16.png"/>
       </div>
-      <textarea id="composer-text" class="composer-text" placeholder="Enter job commands and data"
-                rows="20" cols="80" autocomplete="off" autocorrect="off" spellcheck="false">
-      </textarea>
+      <table class="composer-table">
+        <tr>
+          <td>
+            <textarea id="composer-text" class="composer-text" placeholder="Enter job commands and data"
+                      rows="20" cols="80" autocomplete="off" autocorrect="off" spellcheck="false">
+            </textarea>
+          </td>
+          <td id="sample-jobs-container"></td>
+        </tr>
+      </table>
       <div class="button-container">
         <button id="send-job-button" class="button right-floater" type="button">Send Job</button>
       </div>
@@ -276,6 +283,7 @@
         if (typeof err === "undefined") {
           consoleText.textContent = `Connected to ${title}\n`;
           consoleText.scrollIntoView(false);
+          loadSampleJobList();
         }
         else {
           consoleText.textContent += `\n${err}\n\n   Failed to connect to ${title}.\n\n   Press any key to try again ...`;
@@ -574,6 +582,37 @@
           });
         }, 1000);
       });
+    };
+    const loadSample = url => {
+      const req = new XMLHttpRequest();
+      req.onload = evt => {
+        if (req.status === 200) {
+          const composerText = document.getElementById("composer-text");
+          composerText.value = req.responseText;
+        }
+      };
+      req.open("GET", url, true);
+      req.send();
+      return false;
+    };
+    const loadSampleJobList = () => {
+      const req = new XMLHttpRequest();
+      req.onload = evt => {
+        if (req.status === 200) {
+          const machineDefn = JSON.parse(req.responseText);
+          if (typeof machineDefn.sampleJobs !== "undefined") {
+            let html = '<div class="title">Sample Jobs</div><ul>';
+            for (const sample of machineDefn.sampleJobs) {
+              html += `<li><a href="${sample.url}" onClick="return loadSample('${sample.url}');">${sample.title}</a></li>`;
+            }
+            html += "</ul>";
+            const sampleJobsContainer = document.getElementById("sample-jobs-container");
+            sampleJobsContainer.innerHTML = html;
+          }
+        }
+      };
+      req.open("GET", `/machine/${machineId}`, true);
+      req.send();
     };
 
     const transmitCardDeck = (machine, streamId, cardDeck, textElem, callback) => {

@@ -57,6 +57,14 @@
   margin-left: 5px;
   width: 80px;
 }
+.composer-table {
+  background: cornsilk;
+  margin: 0px;
+  padding: 0px;
+}
+.composer-table tr td {
+  top: 0px;
+}
 .composer-text {
   display: block;
   background: cornsilk;
