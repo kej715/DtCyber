@@ -8,7 +8,11 @@
     "title":"RBF on NOS 2.8.7 (Cyber 865)",
     "host":"%../../NOS2.8.7/cyber.ini|cyber|ipAddress|127.0.0.1",
     "port":2553,
-    "protocol":"hasp"
+    "protocol":"hasp",
+    "commandHelp":"/help/rbf.html",
+    "sampleJobs": [
+        {"title":"FTN5: Generate Fibonacci Series", "url":"/samples/nos2-fib.job"}
+      ]
     },
     {
     "id":"ei200-nos1",
@@ -17,7 +21,10 @@
     "port":6671,
     "name":"GUEST",
     "password":"GUEST",
-    "protocol":"mode4"
+    "protocol":"mode4",
+    "sampleJobs": [
+        {"title":"FTN: Generate Fibonacci Series", "url":"/samples/nos1-fib.job"}
+      ]
     },
     {
     "id":"ei200-kronos",
@@ -26,7 +33,10 @@
     "port":6678,
     "name":"GUEST",
     "password":"GUEST",
-    "protocol":"mode4"
+    "protocol":"mode4",
+    "sampleJobs": [
+        {"title":"FTN: Generate Fibonacci Series", "url":"/samples/kronos-fib.job"}
+      ]
     }
   ]
 }

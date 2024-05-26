@@ -21,6 +21,7 @@
           <div class="command-input-container">
             <div class="command-input-label">Command:</div>
             <input id="console-command" class="command-input" type="text"></input>
+            <button id="command-help-button" class="button right-justified" type="button" style="display:none;">Help</button>
           </div>
         </div>
         <div class="reader-dialog-content">
@@ -35,6 +36,13 @@
           <button id="show-composer-button" class="button right-floater right-margin" type="button">Compose Job</button>
         </div>
       </div>
+    </div>
+    <div id="command-help-container" class="draggable bordered">
+      <div id="command-help-header" class="frame-header">
+        Help
+        <img id="command-help-close-button" class="right-justified-button" src="images/close-16x16.png"/>
+      </div>
+      <div id="command-help-text" class="command-help-content"></div>
     </div>
     <div id="printer-container" class="draggable bordered">
       <div class="frame-header">
@@ -122,6 +130,19 @@
       if (ms <  10) name += "0";
       name += `${ms}.txt`;
       return name;
+    };
+
+    const loadSample = url => {
+      const req = new XMLHttpRequest();
+      req.onload = evt => {
+        if (req.status === 200) {
+          const composerText = document.getElementById("composer-text");
+          composerText.value = req.responseText;
+        }
+      };
+      req.open("GET", url, true);
+      req.send();
+      return false;
     };
 
     const main = () => {
@@ -212,12 +233,29 @@
         containerStack.promote(readerContainer);
       });
 
+      const commandHelpContainer = document.getElementById("command-help-container");
+      const commandHelpHeader = document.getElementById("command-help-header");
+      const commandHelpCloseButton = document.getElementById("command-help-close-button");
+      commandHelpContainer.style.right = "100px";
+      commandHelpContainer.style.top = "100px";
+      commandHelpContainer.style.width = "720px";
+      commandHelpContainer.style.height = "320px";
+      const commandHelpDragMgr = new DraggableManager();
+      commandHelpDragMgr.activate(commandHelpContainer, commandHelpHeader);
+      $(commandHelpContainer).hide();
+      let isCommandHelpVisible = false;
+      $(commandHelpCloseButton).click(() => {
+        $(commandHelpContainer).hide();
+        isCommandHelpVisible = false;
+      });
+      containerStack.push(commandHelpContainer);
+
       const composerContainer = document.getElementById("composer-container");
       const composerHeader = document.getElementById("composer-header");
       const composerCloseButton = document.getElementById("composer-close-button");
       const composerText = document.getElementById("composer-text");
       composerText.value = "";
-      composerContainer.style.left = "200px";
+      composerContainer.style.right = "200px";
       composerContainer.style.top = "200px";
       const composerDragMgr = new DraggableManager();
       composerDragMgr.activate(composerContainer, composerHeader);
@@ -283,7 +321,16 @@
         if (typeof err === "undefined") {
           consoleText.textContent = `Connected to ${title}\n`;
           consoleText.scrollIntoView(false);
-          loadSampleJobList();
+          loadMachineDefn(res => {
+            if (typeof res === "object") {
+              if (typeof res.commandHelp !== "undefined") {
+                renderCommandHelp(res.commandHelp);
+              }
+              if (typeof res.sampleJobs !== "undefined") {
+                renderSampleJobs(res.sampleJobs);
+              }
+            }
+          });
         }
         else {
           consoleText.textContent += `\n${err}\n\n   Failed to connect to ${title}.\n\n   Press any key to try again ...`;
@@ -582,60 +629,74 @@
           });
         }, 1000);
       });
-    };
-    const loadSample = url => {
-      const req = new XMLHttpRequest();
-      req.onload = evt => {
-        if (req.status === 200) {
-          const composerText = document.getElementById("composer-text");
-          composerText.value = req.responseText;
-        }
-      };
-      req.open("GET", url, true);
-      req.send();
-      return false;
-    };
-    const loadSampleJobList = () => {
-      const req = new XMLHttpRequest();
-      req.onload = evt => {
-        if (req.status === 200) {
-          const machineDefn = JSON.parse(req.responseText);
-          if (typeof machineDefn.sampleJobs !== "undefined") {
-            let html = '<div class="title">Sample Jobs</div><ul>';
-            for (const sample of machineDefn.sampleJobs) {
-              html += `<li><a href="${sample.url}" onClick="return loadSample('${sample.url}');">${sample.title}</a></li>`;
-            }
-            html += "</ul>";
-            const sampleJobsContainer = document.getElementById("sample-jobs-container");
-            sampleJobsContainer.innerHTML = html;
-          }
-        }
-      };
-      req.open("GET", `/machine/${machineId}`, true);
-      req.send();
-    };
 
-    const transmitCardDeck = (machine, streamId, cardDeck, textElem, callback) => {
-      if (cardDeck.length > 0) {
-        let si = cardDeck.indexOf("\n");
-        if (si < 0) {
-          si = cardDeck.length;
-          cardDeck += "\n";
+      const renderCommandHelp = url => {
+        const helpButton = document.getElementById("command-help-button");
+        $(helpButton).show();
+        $(helpButton).click(() => {
+          const req = new XMLHttpRequest();
+          req.onload = evt => {
+            if (req.status === 200) {
+              const helpText = document.getElementById("command-help-text");
+              helpText.innerHTML = req.responseText;
+              if (isCommandHelpVisible === false) {
+                $(commandHelpContainer).show();
+                containerStack.promote(commandHelpContainer);
+                isCommandHelpVisible = true;
+              }
+            }
+          };
+          req.open("GET", url, true);
+          req.send();
+        });
+      };
+
+      const renderSampleJobs = sampleJobs => {
+        let html = '<div class="title">Sample Jobs</div><ul>';
+        for (const sample of sampleJobs) {
+          html += `<li><a href="${sample.url}" onClick="return loadSample('${sample.url}');">${sample.title}</a></li>`;
         }
-        si += 1;
-        let card = cardDeck.substring(0, si);
-        textElem.textContent = card;
-        textElem.scrollIntoView(true);
-        machine.send(`${StreamTypeReader} ${streamId} ${card.length} ${card}`);
-        cardDeck = cardDeck.substring(si);
-        setTimeout(() => {
-          transmitCardDeck(machine, streamId, cardDeck, textElem, callback);
-        }, 25);
-      }
-      else {
-        machine.send(`${StreamTypeReader} ${streamId} 0 `);
-        if (typeof callback === "function") callback();
-      }
+        html += "</ul>";
+        const sampleJobsContainer = document.getElementById("sample-jobs-container");
+        sampleJobsContainer.innerHTML = html;
+      };
+
+      const loadMachineDefn = callback => {
+        const req = new XMLHttpRequest();
+        req.onload = evt => {
+          if (req.status === 200) {
+            callback(JSON.parse(req.responseText));
+          }
+          else {
+            callback(`${req.status} ${req.statusText}`);
+          }
+        };
+        req.open("GET", `/machine/${machineId}`, true);
+        req.send();
+      };
+
+      const transmitCardDeck = (machine, streamId, cardDeck, textElem, callback) => {
+        if (cardDeck.length > 0) {
+          let si = cardDeck.indexOf("\n");
+          if (si < 0) {
+            si = cardDeck.length;
+            cardDeck += "\n";
+          }
+          si += 1;
+          let card = cardDeck.substring(0, si);
+          textElem.textContent = card;
+          textElem.scrollIntoView(true);
+          machine.send(`${StreamTypeReader} ${streamId} ${card.length} ${card}`);
+          cardDeck = cardDeck.substring(si);
+          setTimeout(() => {
+            transmitCardDeck(machine, streamId, cardDeck, textElem, callback);
+          }, 25);
+        }
+        else {
+          machine.send(`${StreamTypeReader} ${streamId} 0 `);
+          if (typeof callback === "function") callback();
+        }
+      };
     };
 
     $(document).ready(() => {
