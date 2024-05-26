@@ -22,6 +22,7 @@
     "name":"GUEST",
     "password":"GUEST",
     "protocol":"mode4",
+    "commandHelp":"/help/ei200.html",
     "sampleJobs": [
         {"title":"FTN: Generate Fibonacci Series", "url":"/samples/nos1-fib.job"}
       ]
@@ -34,6 +35,7 @@
     "name":"GUEST",
     "password":"GUEST",
     "protocol":"mode4",
+    "commandHelp":"/help/ei200.html",
     "sampleJobs": [
         {"title":"FTN: Generate Fibonacci Series", "url":"/samples/kronos-fib.job"}
       ]
