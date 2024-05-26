@@ -1,0 +1,26 @@
+<div class="title">EI200 Commands</div>
+<table class="command-help-table">
+  <tr>
+    <td><b>AGAIN</b> | <b>A</b>,<i>nnn</i></td><td>Backspace print file <i>nnn</i> (octal) sectors,
+                                                   or rewind if <i>nnn</i> is 0.</td>
+  <tr>
+    <td><b>CONTINUE</b> | <b>C</b></td><td>Resume printing after suspend or interrupt.</td>
+  <tr>
+    <td><b>DROP</b> | <b>D</b>,<i>sn</i></td><td>Drop job with sequence number <i>sn</i>.</td>
+  <tr>
+    <td><b>END</b> | <b>E</b>,LP</td><td>Stop currently printing file and drop it.</td>
+  <tr>
+    <td><b>END</b> | <b>E</b>,CR</td><td>Terminate job deck begin read, and release it from mass storage.</td>
+  <tr>
+    <td><b>GO</b> | <b>G</b></td><td>Restart card reading after suspension.</td>
+  <tr>
+    <td><b>IGNORE</b> | <b>I</b></td><td>Ignore interrupt key.</td>
+  <tr>
+    <td><b>LOGIN</b> | <b>L</b>,<i>id</i></td><td>Identify the terminal to the system. This command must be issued
+                                                  prior to any other action at the terminal. <i>id</i> is the
+                                                  user number for the terminal.</td>
+  <tr>
+    <td><b>READ</b> | <b>R</b></td><td>Begin reading cards, or perform a <b>GO</b> function if reading in progress.</td>
+  <tr>
+    <td><b>SUSPEND</b> | <b>S</b></td><td>Halt a currently printing file and hold its position until further commands are given.</td>
+</table>
