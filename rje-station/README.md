@@ -54,7 +54,7 @@ Execute the following command to start rjecli:
 host service is located. The configuration file can also define other optional 
 parameters. The default pathname of the configuration file is `./config.json`.
 
-The contents of a typical configuration file look like this:
+The contents of a typical configuration file looks like this:
 
 ```
 {
@@ -216,7 +216,7 @@ as the port number on which it will listen for browser connections, as well as
 information about the RJE hosts (machines) to which it can create connections. The
 default pathname of the configuration file is `./rjews.json`.
 
-The contents of a typical configuration file look like this:
+The contents of a typical configuration file looks like this:
 
 ```
 {
@@ -237,7 +237,12 @@ The contents of a typical configuration file look like this:
     "title":"RBF on NOS 2.8.7 (Cyber 865)",
     "host":"localhost",
     "port":2553,
-    "protocol":"hasp"
+    "protocol":"hasp",
+    "commandHelp":"/help/rbf.html",
+    "sampleJobs":[
+      {"title":"FTN5: Generate Fibonacci Series","url":"/samples/fib.job"},
+      {"title":"COBOL: Produce accounting report","url":"/samples/acct.job"}
+    ]
     }
   ]
 }
@@ -255,6 +260,10 @@ can be defined for each are described in
 [machine configurartion properties](#rjews-machine), below.
 
 #### <a id="rjews-machine"></a>Machine Configuration Properties
+- **commandHelp** : specifies the URL of a file containing help information about the
+operator commands that may be entered on the RJE console. The content of the file may be
+HTML, e.g., an HTML table describing commands that are recognized. The URL is relative to the
+**httpRoot** defined above.
 - **debug** : if set to *true*, **rjews** will log debugging information to the console
 for the machine. The default is *false*. This also sets the default values of the
 **bsc.debug** and **hasp.debug** properties.
@@ -266,12 +275,17 @@ log messages.
 sent to the RJE host service. The default is none.
 - **password** : specifies the password used in the *SIGNON* request sent to the RJE
 host service. The default is none.
-- **maxConnections** : the maximum number of concurrent connections supported by the service on its TCP port.
-The default is *1*.
+- **maxConnections** : the maximum number of concurrent connections supported by the service
+on its TCP port. The default is *1*.
 - **port** : the TCP port number on which the RJE host service is listening for connections. The default is *2553*.
 - **protocol** : specifies the name of the RJE data communication protocol to use in
 communicating with the RJE host service. Accepted values are *hasp* and *mode4*. The
-default is *hasp*. 
+default is *hasp*.
+- **sampleJobs** : Specifies an array of objects, each of which defines a sample job that can
+be loaded into the job composer window supported by the web-based RJE user interface (see
+[Using rjews](#using-rjews), below. Each object contains two properties: **title** defining
+the name of the sample job, and **url** defining the URL of a file containing the sample job,
+where the URL is relative to the **httpRoot** property defined above.
 - **title** : specifies a string providing a brief title or description of the machine.
 This title/description is presented to users in windows titles and console messages. 
 - **bsc** : an optional object defining configuration properties specific to the BSC data communication layer.
@@ -290,7 +304,7 @@ IBM MVS and CMS hosts.
 of the RJE station. Valid values are in the range 0x70 - 0x7f. The default value
 is `0x7a`.
 
-### Using rjews
+### <a id="using-rjews"></a>Using rjews
 When **rjews** starts, it begins listening for browser connection requests on the
 port number defined in its [configuration](#rjews-config). For example, if the port
 number is defined as 8085, a user on the local machine may enter the following URL

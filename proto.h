@@ -354,6 +354,7 @@ void niuShowStatus();
 */
 void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 int npuBipBufCount(void);
+bool npuBipIsBusy(void);
 void npuNetShowStatus();
 
 /*
@@ -523,6 +524,7 @@ extern u32                 traceSequenceNo;
 /* Idle Loop throttle */
 extern bool idle;
 extern bool (*idleDetector)(CpuContext *ctx);
+extern u32  idleNetBufs;
 extern u32  idleTime;
 extern u32  idleTrigger;
 extern char ipAddress[];

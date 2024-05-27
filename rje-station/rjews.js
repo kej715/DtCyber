@@ -194,7 +194,6 @@ const processMachinesRequest = (req, res, query) => {
           stream.isReady = false;
           delete stream.stream;
         }
-        machine.curConnections -= 1;
         log(`${machine.id} : ${key} done`);
       });
 
@@ -591,10 +590,12 @@ wsServer.on("request", req => {
         });
         ws.on("close", (reason, description) => {
           logWsRequest(`${req.remoteAddress} close /connections/${id} (${connection.machineName})`);
-          connection.isConnected = false;
           connection.service.end();
           delete connection.ws;
-          machineMap[connection.machineName].curConnections -= 1;
+          if (connection.isConnected) {
+            connection.isConnected = false;
+            machineMap[connection.machineName].curConnections -= 1;
+          }
         });
       }
       else {
@@ -634,6 +635,7 @@ setInterval(() => {
       }
       if (typeof connection.service !== "undefined") connection.service.end();
       connection.isConnected = false;
+      machineMap[connection.machineName].curConnections -= 1;
     }
   }
 }, 10000);

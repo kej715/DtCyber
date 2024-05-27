@@ -1,0 +1,23 @@
+FIBONAC.
+USER,GUEST,GUEST.
+MAP,OFF.
+FTN,GO.
+REWIND,TAPE1.
+COPY,TAPE1,OUTPUT.
+~eor
+      PROGRAM FIB(TAPE1)
+C
+C     CALCULATE THE FIRST 10 FIBONACCI NUMBERS
+C
+      I1 = 0
+      I2 = 1
+C
+      DO 10 N = 1, 10
+        WRITE(1,5) N, I2
+ 5      FORMAT(1X, I2, 1X, I5)
+        I3 = I1 + I2
+        I1 = I2
+        I2 = I3
+ 10   CONTINUE
+      STOP
+      END

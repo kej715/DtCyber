@@ -92,6 +92,7 @@ u32  cycles;
 u32  readerScanSecs = 3;
 
 bool idle = FALSE;   /* Idle loop detection */
+u32  idleNetBufs;    /* threshold of network buffers in use indicating network is busy */
 u32  idleTrigger;    /* sleep every <idletrigger> cycles of the idle loop */
 u32  idleTime;       /* microseconds to sleep when idle */
 char ipAddress[16];
@@ -340,7 +341,7 @@ void idleThrottle(CpuContext *ctx)
                 {
                 if (ctx->id == 0)
                     {
-                    if (idleCheckBusy() || rtcClockIsCurrent == FALSE)
+                    if (idleCheckBusy() || npuBipIsBusy() || rtcClockIsCurrent == FALSE)
                         {
                         return;
                         }
@@ -356,7 +357,7 @@ void idleThrottle(CpuContext *ctx)
 **
 **  Parameters:     None.
 **
-**  Returns:        TRUE for busy FALSE for not busy.
+**  Returns:        TRUE for busy, FALSE for not busy.
 **
 **------------------------------------------------------------------------*/
 bool idleCheckBusy()
