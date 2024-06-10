@@ -1237,69 +1237,47 @@ class Tn3270 {
         case this.ORDER_SF:  // Start Field
           if (i < data.length) {
             let fieldAttr = data[i++];
-            let field = this.getFieldForAddress(this.bufferAddress);
-            let currentFieldAttr = field.attribute;
-            if (this.fieldAddresses.indexOf(this.bufferAddress) === -1) {
-              this.fieldAddresses.push(this.bufferAddress);
-              this.fieldAddresses.sort((a, b) => a - b);
-            }
-            // Field attributes don't have any character attributes
-            this.drawChar(" ", this.bufferAddress, this.defaultFgndColor, this.defaultBgndColor, 0);
-            this.buffer[this.bufferAddress] = fieldAttr;
-            if (this.isDebug) {
-              this.debug(`........SF ${this.bufferAddress} ${this.getRowColStr(this.bufferAddress)} : ${this.getFieldAttrStr(fieldAttr)}`);
-              if (this.debugFields) {
-                for (let i = 0; i < this.fieldAddresses.length; i++) {
-                  let f = this.getFieldForAddress(this.fieldAddresses[i]);
-                  this.debug(`........   field[${i}]: ${f.address} ${this.getRowColStr(f.address)} size=${f.size} ${this.getFieldAttrStr(f.attribute)}`);
-                }
-              }
-            }
-            this.bufferAddress = (this.bufferAddress + 1) % this.buffer.length;
-            //
-            // If the display attribute value is changing, rewrite all characters of the
-            // new/updated field to reflect the new value.
-            //
-            if (((fieldAttr ^ currentFieldAttr) & this.FA_DISPLAY_MASK) !== 0) {
-              let bufferAddress = this.bufferAddress;
-              field = this.getFieldForAddress(bufferAddress);
-              let charAttrs = this.charAttrs[bufferAddress];
-              let fgndColor = this.lookupColor(charAttrs.color);
-              let bgndColor = this.defaultBgndColor;
-              let highlights = this.calculateHighlights(field, charAttrs);
-              this.debug(`........   display attribute value change, redraw ${field.size} chars`);
-              for (let i = 0; i < field.size; i++) {
-                let a = this.ebcdicToAscii[this.buffer[bufferAddress]];
-                if (a < 0x20 || a > 0x7e) a = 0x20;
-                if ((fieldAttr & this.FA_DISPLAY_MASK) !== this.FA_NONDISPLAY) {
-                  this.drawChar(String.fromCharCode(a), bufferAddress, fgndColor, bgndColor, highlights);
-                }
-                else {
-                  this.drawChar(" ", bufferAddress, fgndColor, bgndColor, highlights);
-                }
-                bufferAddress = (bufferAddress + 1) % this.buffer.length;
-              }
-            }
+            this.debug(`........SF ${this.bufferAddress} ${this.getRowColStr(this.bufferAddress)} : ${this.getFieldAttrStr(fieldAttr)}`);
+            this.startField(fieldAttr);
           }
           break;
         case this.ORDER_SFE: // Start Field Extended
           if (i < data.length && (i + data[i] * 2) < data.length) {
             let n = data[i++];
             let attrs = [];
-            while (n > 0) {
-              attrs.push[{type:data[i], value:data[i + 1]}];
+            while (n-- > 0) {
+              attrs.push({type:data[i], value:data[i + 1]});
               i += 2;
-              n -= 1;
             }
-            // TODO: finish this
             if (this.isDebug) {
               let pairs = [];
-              for (let pair of attrs) {
+              for (const pair of attrs) {
                 pairs.push(`<${pair.type.toString(16)}>=<${pair.value.toString(16)}>`);
               }
               this.debug(`........SFE ${this.bufferAddress} ${this.getRowColStr(this.bufferAddress)} : ${pairs.join(",")}`);
             }
-            else console.log("ORDER_SFE received");
+            let fieldAttr = 0;
+            let highlight = 0;
+            let color     = 0;
+            for (const pair of attrs) {
+              switch (pair.type) {
+              case 0xc0: // field attribute
+                fieldAttr = pair.value;
+                break;
+              case 0x41: // extended highlighting
+                highlight = pair.value;
+                break;
+              case 0x42: // foreground color
+                color = pair.value;
+                break;
+              default:
+                console.log(`Unsupported attribute type 0x${attrType.toString(16)} received in SFE order`);
+                break;
+              }
+            }
+            this.startField(fieldAttr);
+            this.currentCharAttrs.highlight = highlight;
+            this.currentCharAttrs.color = color;
           }
           break;
         case this.ORDER_SBA: // Set Buffer Address
@@ -1917,6 +1895,49 @@ class Tn3270 {
     default:
       this.debug(`Unrecognized 3270 command: 0x${cmd.toString(16)}`);
       break;
+    }
+  }
+
+  startField(fieldAttr) {
+    let field = this.getFieldForAddress(this.bufferAddress);
+    let currentFieldAttr = field.attribute;
+    if (this.fieldAddresses.indexOf(this.bufferAddress) === -1) {
+      this.fieldAddresses.push(this.bufferAddress);
+      this.fieldAddresses.sort((a, b) => a - b);
+    }
+    // Field attributes don't have any character attributes
+    this.drawChar(" ", this.bufferAddress, this.defaultFgndColor, this.defaultBgndColor, 0);
+    this.buffer[this.bufferAddress] = fieldAttr;
+    if (this.debugFields) {
+      for (let i = 0; i < this.fieldAddresses.length; i++) {
+        let f = this.getFieldForAddress(this.fieldAddresses[i]);
+        this.debug(`........   field[${i}]: ${f.address} ${this.getRowColStr(f.address)} size=${f.size} ${this.getFieldAttrStr(f.attribute)}`);
+      }
+    }
+    this.bufferAddress = (this.bufferAddress + 1) % this.buffer.length;
+    //
+    // If the display attribute value is changing, rewrite all characters of the
+    // new/updated field to reflect the new value.
+    //
+    if (((fieldAttr ^ currentFieldAttr) & this.FA_DISPLAY_MASK) !== 0) {
+      let bufferAddress = this.bufferAddress;
+      field = this.getFieldForAddress(bufferAddress);
+      let charAttrs = this.charAttrs[bufferAddress];
+      let fgndColor = this.lookupColor(charAttrs.color);
+      let bgndColor = this.defaultBgndColor;
+      let highlights = this.calculateHighlights(field, charAttrs);
+      this.debug(`........   display attribute value change, redraw ${field.size} chars`);
+      for (let i = 0; i < field.size; i++) {
+        let a = this.ebcdicToAscii[this.buffer[bufferAddress]];
+        if (a < 0x20 || a > 0x7e) a = 0x20;
+        if ((fieldAttr & this.FA_DISPLAY_MASK) !== this.FA_NONDISPLAY) {
+          this.drawChar(String.fromCharCode(a), bufferAddress, fgndColor, bgndColor, highlights);
+        }
+        else {
+          this.drawChar(" ", bufferAddress, fgndColor, bgndColor, highlights);
+        }
+        bufferAddress = (bufferAddress + 1) % this.buffer.length;
+      }
     }
   }
 }
