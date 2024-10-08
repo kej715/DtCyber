@@ -4,7 +4,16 @@ const child_process = require("child_process");
 const fs = require("fs");
 const DtCyber = require("../automation/DtCyber");
 
-const baseProducts = ["atf","iaf","nam5","nos","tcph"];
+//
+// Base products are products pre-installed on the base deadstart tape or
+// products that must be installed explicitly by name with the "-f" option.
+// For example, "cos-tools" must be installed explicitly because it depends
+// upon the CRS product -and- a Cray X-MP system must be running and linked
+// to the NOS system; otherwise, the product installer will hang waiting
+// for the Cray system to be linked.
+//
+const baseProducts = ["atf","iaf","nam5","nos","tcph", "cos-tools"];
+
 let installedProductSet = [];
 let productSet = [];
 
@@ -275,7 +284,7 @@ for (let i = 2; i < process.argv.length; i++) {
     isSysedit = true;
     break;
   case "+s":
-    isSysedit = true;
+    isSysedit = false;
     break;
   case "all":
     for (const category of products) {
