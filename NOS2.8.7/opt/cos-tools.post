@@ -1,0 +1,29 @@
+#!/usr/bin/env node
+//
+// Create public CRAY utility procedure library and save it in
+// the LIBRARY catalog.
+//
+
+const DtCyber   = require("../../automation/DtCyber");
+const fs        = require("fs");
+const utilities = require("./utilities");
+
+const dtc = new DtCyber();
+
+dtc.connect()
+.then(() => dtc.expect([ {re:/Operator> $/} ]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.dis([
+  "GET,CRAY.",
+  "GTR,CRAY,PLIB.PROC/CAL,FTN,QGET",
+  "SUI,377776.",
+  "PURGE,CRAY/NA.",
+  "SAVE,PLIB=CRAY/CT=PU,AC=Y."
+], "COSPOST", 1))
+.then(() => {
+  process.exit(0);
+})
+.catch(err => {
+  console.log(err);
+  process.exit(1);
+});
