@@ -17,6 +17,9 @@ if (process.argv.length < 3) usage();
 const dtc = new DtCyber();
 
 let job = [
+  "$NOEXIT.",
+  "$TMSDEF,TO=F.",
+  "$ONEXIT.",
   "$ATTACH,COSTLDB/NA.",
   "$IF,.NOT.FILE(COSTLDB,AS),CREATE.",
   "  $RECLAIM,DB=COSTLDB,Z./LIST,TN=COSTLS",
