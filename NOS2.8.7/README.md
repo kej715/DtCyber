@@ -35,6 +35,7 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;[Using RHP](#usingrhp)
 - [TCP/IP Applications](#tcpip)
 - [Cray Station](#cray)
+- &nbsp;&nbsp;&nbsp;&nbsp;[COS Tools](#cos-tools)
 - [Shutdown and Restart](#shutdown)
 - [Operator Command Extensions](#opext)
 - [Continuing an Interrupted Installation](#continuing)
@@ -999,6 +1000,98 @@ the `site.cfg` file
 2. If *DtCyber* was started using `node start`, run the `reconfigure.js` tool by
 executing the command `reconfigure` at the `Operator>` prompt. Otherwise, run the
 tool by executing the command `node reconfigure`.
+
+### <a id="cos-tools"></a>COS Tools
+NOS 2.8.7 supports an optionally installed product named `cos-tools`. This product is _not_
+installed by default. It requires _Cray Station_ to be installed, configured, activated, and
+connected to a Cray X-MP system running COS 1.17.
+
+Use the `install-product.js` tool to install the `cos-tools` product. If *DtCyber* was
+started using `node start`, run the `install-product.js` tool by executing the command
+`install -f cos-tools` at the `Operator>` prompt. Otherwise, run the tool by executing the
+command `node install-product -f cos-tools`.
+
+Installing `cos-tools` causes the following to occur:
+
+- A collection of tools and utilities (see details, below) is installed on the connected
+Cray X-MP system.
+- A CCL procedure library named `CRAY` is saved in the catalog of user INSTALL. This
+library contains handy procedures for performing tasks such as transferring files to the
+Cray X-MP system, installing software there, assembling/compiling programs there, etc. Further details are provided, below.
+- A CCL procedure library named `CRAY` is saved in the LIBRARY catalog. This library is
+a subset of the one installed in INSTALL's catalog. However, it is publicly available to all
+other users of the NOS 2.8.7 system.
+
+The COS 1.17 operating system image provided with Andras Tantos'
+[Cray-XMP emulator](https://github.com/andrastantos/cray-sim) was recovered from a physical
+disk originally installed on an actual Cray X-MP computer. This is the only surviving COS 1.17
+image currently known to exist. It includes the base operating system. Unfortunately, it does
+not include any programming language compilers, and it also lacks many useful commands
+supported by COS.
+
+The `cos-tools` product provides reproductions of many of these missing features. These
+reproductions originate from the GitHub [COS Tools](https://github.com/kej715/COS-Tools)
+repository. The tools and utilities installed by `cos-tools` on the Cray X-MP system include:
+
+- __CAL__ : Cray Assembly Language assembler
+- __DASM__ : a disassembler
+- __KFTC__ : FORTRAN 77 compiler
+- __LDR__ : linking loader
+- __LIB__ : library manager
+- __CHARGES__ : utility run automatically by COS at the end of each job to report resource consumption information
+- __COPYD__ : copies blocked datasets
+- __COPYF__ : copies files of blocked datasets
+- __COPYR__ : copies records of blocked datasets
+- __NOTE__ : writes text to a dataset
+- __SKIPD__ : skips blocked datasets
+- __SKIPF__ : skips files of blocked datasets
+- __SKIPR__ : skips records of blocked datasets
+
+Visit the [COS Tools](https://github.com/kej715/COS-Tools) repository for additional details.
+
+The `CRAY` CCL procedure library installed in the catalog of INSTALL includes the following
+interactive CCL procedures:
+
+- __AUDIT__ : produces a listing of all permanent files stored on the Cray X-MP system
+- __CAL__ : assembles, links, and executes an assembly language program on the Cray X-MP system
+- __DELETE__ : deletes a permanent file stored on the Cray X-MP system
+- __FTN__ : compiles, links, and executes a FORTRAN 77 program on the Cray X-MP system
+- __INSTALL__ : installs an executable file as a command on the Cray X-MP system
+- __QGET__ : retrieves a file from the NOS wait queue and converts it from 8/12 ASCII encoding to 6/12 extended display code
+- __REPLACE__ : replaces a permanent file on the Cray X-MP system
+- __RUN__ : transfers an executable file to the Cray X-MP system and runs it there
+- __SAVE__ : saves a permanent file on the Cray X-MP system
+
+The `CRAY` CCL procedure library installed in the LIBRARY catalog includes the __CAL__,
+__FTN__, and __QGET__ procedures described above.
+
+For example, after installing the `cos-tools` product, a file on NOS 2.8.7 named `HELLO` containing a FORTRAN 77 program may be sent to the Cray X-MP system to be compiled and
+executed there by entering the following NOS command:
+
+```
+BEGIN,FTN,CRAY,I=HELLO.
+```
+
+This will submit a job to the Cray X-MP, and the job's output will be returned to the user's
+wait queue. The output may be retrieved from the wait queue and converted to 6/12 Extended
+Display Code by entering:
+
+```
+BEGIN,QGET,CRAY,<jsn>.
+```
+
+where *&lt;jsn&gt;* is the JSN of the output file returned to the wait queue.
+
+#### install-cos-tool
+Due to an intermittent bug not yet resolved, files sent from NOS to COS occasionally arrive
+on COS in a corrupted state. After installing the `cos-tools` product, if an attempt to
+execute one of the COS tools listed above results in COS reporting `BLOCK NUMBER ERROR`, this
+is an indication that the bug has occurred. A reliable workaround is to reinstall the
+corrupted tool, and this can be accomplished easily using the `install-cos-tool.js` tool.
+
+If *DtCyber* was started using `node start`, run the `install-cos-tool.js` tool by executing
+the command `!node install-cos-tool toolname` at the `Operator>` prompt. Otherwise, run the tool by executing the command `node install-cos-tool toolname`. In either of these cases,
+*toolname* is the name of the tool to be re-installed (e.g., __cal__ or __kftc__).
 
 ## <a id="shutdown"></a>Shutdown and Restart
 When the installation completes, NOS 2.8.7 will be running, and the command window will
