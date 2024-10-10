@@ -1226,6 +1226,7 @@ This category includes data communication software.
 | Product | Description |
 |---------|-------------|
 | [confer](https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1) | UMass multi-user CONFERencing application |
+| [cos-tools](https://www.dropbox.com/scl/fi/4wisss3zo5ydnpagk50ko/cos-tools.tap?rlkey=t9qtypvv6u1bjt6yfljnq2i71&dl=1) | Programming tools and utilities for COS 1.17 (Cray Operating System) |
 | [crs](https://www.dropbox.com/s/olr1hz6ys5mavjt/cray-station.tap?dl=1) | Cray Station subsystem |
 | [kermit](https://www.dropbox.com/s/p819tmvs91veoiv/kermit.tap?dl=1) | Kermit file exchange utility |
 | [mailer](https://www.dropbox.com/s/y2yumlzqjc4qva8/massmail.tap?dl=1) | UMass Mailer, base e-mail system |
