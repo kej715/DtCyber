@@ -16,6 +16,9 @@ if (process.argv.length < 3) usage();
 
 const dtc = new DtCyber();
 
+const libraries = [ "CLIB","EMLIB","INTFLIB","IOLIB","RTLIB","SYSLIB" ];
+const extDiskBins = [ "AUDIT" ];
+
 let job = [
   "$NOEXIT.",
   "$TMSDEF,TO=F.",
@@ -26,9 +29,27 @@ let job = [
   "$ENDIF,CREATE."
 ];
 let tools = process.argv.slice(2);
-job.push(`$RECLAIM,DB=COSTLDB,Z./LOAD,TN=COSTLS,RP=Y,PF=*/${tools.join(",")}`);
-for (const tool of tools) {
-  job.push(`$BEGIN,INSTALL,CRAY,${tool},DC=BC.`);
+let tapeFiles = [];
+for (let tool of tools) {
+  tool = tool.toUpperCase();
+  if (extDiskBins.indexOf(tool) < 0) {
+    tapeFiles.push(tool);
+  }
+}
+if (tapeFiles.length > 0) {
+  job.push(`$RECLAIM,DB=COSTLDB,Z./LOAD,TN=COSTLS,RP=Y,PF=*/${tapeFiles.join(",")}`);
+}
+for (let tool of tools) {
+  tool = tool.toUpperCase();
+  if (libraries.indexOf(tool) >= 0) {
+    job.push(`$BEGIN,REPLACE,CRAY,${tool},DC=BC.`);
+  }
+  else if (extDiskBins.indexOf(tool) >= 0) {
+    job.push(`$BEGIN,INSTALL,CRAY,${tool},DC=BC,EXT=YES.`);
+  }
+  else {
+    job.push(`$BEGIN,INSTALL,CRAY,${tool},DC=BC.`);
+  }
 }
 const options = {
   jobname:  "COSTOOL",
