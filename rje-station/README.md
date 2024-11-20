@@ -27,6 +27,9 @@ addition, two applications are provided:
 These applications enable users to submit batch jobs to RBF on NOS2, EI200 on NOS1,
 JES2 on IBM MVS, and RSCS on IBM VM/CMS.
 
+Furthermore, *rjews* provides a [web service API](#rjews-api) that may be used in
+implementing custom-built RJE applications.
+
 ## Installing rjecli and rjews
 Execute the following command from this directory to install the applications:
 
@@ -355,3 +358,140 @@ will create a uniquely named file in the browser's downloads directory containin
 
 The [examples](examples) directory contains an example `rjews.json` configuration file
 for *rjews* and example card decks (job files) for the CDC NOS and IBM MVS operating systems.
+
+### <a id="rjews-api"></a>rjews API
+
+**rjews** exposes a web service API that may be used in developing custom-built RJE
+applications. The API has two principal interfaces:
+
+* **HTTP interface**. HTTP GET requests may be used to obtain information about the RJE
+services offered by **rjews**, including the names of each of these services. HTTP GET
+requests may also be used to request connection numbers for these services.
+* **WebSocket interface**. Having requested a connection number for a specific RJE service,
+an application may then use a WebSocket to establish a connection with that RJE service and
+interact with it. For example, jobs may be submitted by sending card deck images across the
+WebSocket interface, and output from jobs is received across the WebSocket interface.
+
+        **Note**: Libraries providing API's for making HTTP requests and for managing and
+        interacting with WebSockets can easily be found for most modern programming languages
+        and frameworks, including Python, Node.js, JAVA, C++, etc.
+
+To discover information about the RJE services offered by **rjews**, an application creates
+an HTTP connection to the HTTP port number defined in the **rjews** configuration file (e.g., port 8085). It then sends an HTTP GET request specifying the following URL:
+```
+/machines
+```
+The same request can be issued interactively from a web browser by entering a URL that looks
+like:
+```
+http://localhost:8085/machines
+```
+**rjews** will respond with a nested JSON object describing all of the services offered.
+The object will contain a property for each service. The name of the property describing a
+service will be the name of the service itself. The property's value will be an object
+describing details about the service. For example, the response to a `/machines` request
+might look like:
+```
+{
+  "max":{
+    "id":"max",
+    "title":"RBF on NOS 2.8.7 (Cyber 865)",
+    "host":"192.168.1.238",
+    "port":2556,
+    "protocol":"hasp",
+    "maxConnections":4,
+    "curConnections":0,
+    "commandHelp":"/help/rbf.html",
+    "sampleJobs":[
+      {"title":"FTN5: Generate Fibonacci Series",
+       "url":"/samples/ncc-nos2-fib.job"},
+      {"title":"Cray X-MP: Compile and run on Cray X-MP supercomputer",
+       "url":"/samples/ncc-cos-fib.job"}
+    ]
+  },
+  "moe":{
+    "id":"moe",
+    "title":"EI200 on NOS 1.3 (Cyber 173)",
+    "host":"192.168.1.38",
+    "port":6671,
+    "name":"GUEST",
+    "password":"GUEST",
+    "protocol":"mode4",
+    "maxConnections":1,
+    "curConnections":0,
+    "commandHelp":"/help/ei200.html",
+    "sampleJobs":[
+      {"title":"FTN: Generate Fibonacci Series",
+       "url":"/samples/ncc-nos1-fib.job"}
+    ]
+  }
+}
+```
+This describes two RJE services named *max* and *moe*. *max* is a HASP service running on
+NOS 2.8.7, and *moe* is a MODE4 service running on NOS 1.3.
+
+Connecting to these services involves requesting a connection number and then using that
+connection number to connect to a WebSocket associated with it. To request a connection
+number, an application sends an HTTP GET request to **rjews** specifying a URL that looks
+like:
+```
+/machines?machine=max
+```
+This requests a connection number for the service named *max*. **rjews** will respond with
+a simple number in plain text (content type *text/plain*), e.g.:
+```
+0
+```
+The application then uses this to create a WebSocket connection using a WebSocket URL that
+looks like:
+```
+ws://localhost:8085/connections/0
+```
+where the **0** in **/connections/0** reflects the connection number returned in the HTTP
+response previously received.
+
+As soon as the WebSocket connection is established, the application may begin using it to
+interact with the RJE service. Typically, the RJE service will send login banner messages
+almost immediately after the connection is established, and these will arrive on the RJE
+console stream. This is particularly true for RJE connections established with RBF on NOS 2.
+
+Every message exchanged between the application and **rjews** on the WebSocket connection
+has four fields, defined as follows:
+```
+<stream-type> <stream-id> <content-length> <content>
+```
+* **&lt;stream-type&gt;** One of the numbers *0*, *1*, *2*, or *3*. *0* indicates that the
+content is associated with a console stream, *1* indicates that the content is associated with a card reader stream, *2* indicates a line printer stream, and *3* indicates a punch stream.
+* **&lt;stream-id&gt;** Identifies the stream number. Valid values are typically in the range
+1..7. HASP services can have 1 to 7 card reader streams, 1 to 7 line printer streams, and
+1 to 7 punch streams. However, they usually have only one of each. MODE4 connections have only
+one card reader and one line printer stream. Both HASP and MODE4 have one console stream.
+* **&lt;content-length&gt;** An integer value indicating the length, in number of characters,
+of the content field that follows. A value of 0 indicates end of file. It must be sent by the
+application to indicate the end of a card deck (i.e., end of job being sent). It is sent by
+**rjews** to indicate the end of a print or punch file.
+* **&lt;content&gt;** The content. Each record within the content is terminated by a newline
+character (ASCII &lt;LF&gt;).
+
+Note also that the four fields are delimited from each other by a blank (ASCII &lt;SP&gt;),
+and this applies to the end-of-file indication too. Specifially, the content length value of
+**0** that indicates end-of-file must be followed by a blank.
+
+For example, a message received from **rjews** on a console stream would look like:
+```
+0 1 13 PLEASE LOGIN<LF>
+```
+Note that *&lt;LF&gt;*, above, represents a newline character.
+
+Similarly, a command sent by an application to **rjews** on a console stream would look like:
+```
+0 1 12 DISPLAY,DEV<LF>
+```
+A card image sent by an application to **rjews** on a card reader stream would look like:
+```
+1 1 9 CATLIST.<LF>
+```
+It is acceptable to send multiple card images as the content of a single message.
+
+To terminate a session with **rjews**, the application simply closes the WebSocket
+connection.
