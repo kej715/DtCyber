@@ -1091,7 +1091,24 @@ corrupted tool, and this can be accomplished easily using the `install-cos-tool.
 
 If *DtCyber* was started using `node start`, run the `install-cos-tool.js` tool by executing
 the command `!node install-cos-tool toolname` at the `Operator>` prompt. Otherwise, run the tool by executing the command `node install-cos-tool toolname`. In either of these cases,
-*toolname* is the name of the tool to be re-installed (e.g., __cal__ or __kftc__).
+*toolname* is the name of the tool or library file to be re-installed, e.g.:
+```
+node install-cos-tool cal
+```
+You may also specify a list of tool/library names separated by spaces, and all will be
+installed. For example:
+```
+node install-cos-tool cal ldr intflib
+```
+Another currently unresolved issue is that when COS is re-deadstarted on the Cray X-MP system,
+permanent files other than installed commands are not recovered properly. In particular,
+library files installed by the `cos-tools` product installer are not recovered automatically.
+The `install-cos-tool.js` tool provides a command line option, `-libs`, to facilitate
+re-installing all of the unrecovered permanent files. Thus, after re-deadstarting COS, execute
+`install-cos-tool.js` as follows:
+```
+node install-cos-tool -libs
+```
 
 ## <a id="shutdown"></a>Shutdown and Restart
 When the installation completes, NOS 2.8.7 will be running, and the command window will
