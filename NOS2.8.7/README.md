@@ -1100,15 +1100,6 @@ installed. For example:
 ```
 node install-cos-tool cal ldr intflib
 ```
-Another currently unresolved issue is that when COS is re-deadstarted on the Cray X-MP system,
-permanent files other than installed commands are not recovered properly. In particular,
-library files installed by the `cos-tools` product installer are not recovered automatically.
-The `install-cos-tool.js` tool provides a command line option, `-libs`, to facilitate
-re-installing all of the unrecovered permanent files. Thus, after re-deadstarting COS, execute
-`install-cos-tool.js` as follows:
-```
-node install-cos-tool -libs
-```
 
 ## <a id="shutdown"></a>Shutdown and Restart
 When the installation completes, NOS 2.8.7 will be running, and the command window will
