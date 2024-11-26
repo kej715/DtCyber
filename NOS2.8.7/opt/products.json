@@ -162,7 +162,6 @@
         "post": [
           "cos-tools-proclib.job",
           "cos-tools-utils.job",
-          "cos-tools-gencat.job",
           "cos-tools.post",
           "cos-tools-cleanup.job"
         ],
