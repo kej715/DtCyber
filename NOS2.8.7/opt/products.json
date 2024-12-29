@@ -162,6 +162,7 @@
         "post": [
           "cos-tools-proclib.job",
           "cos-tools-utils.job",
+          "cos-tools-lisp.job",
           "cos-tools.post",
           "cos-tools-cleanup.job"
         ],

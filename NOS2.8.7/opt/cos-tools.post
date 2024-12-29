@@ -15,7 +15,7 @@ dtc.connect()
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => dtc.dis([
   "GET,CRAY.",
-  "GTR,CRAY,PLIB.PROC/CAL,FTN,QGET",
+  "GTR,CRAY,PLIB.PROC/CAL,FTN,LISP,QGET",
   "SUI,377776.",
   "PURGE,CRAY/NA.",
   "SAVE,PLIB=CRAY/CT=PU,AC=Y."
