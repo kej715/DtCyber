@@ -1017,16 +1017,17 @@ Installing `cos-tools` causes the following to occur:
 Cray X-MP system.
 - A CCL procedure library named `CRAY` is saved in the catalog of user INSTALL. This
 library contains handy procedures for performing tasks such as transferring files to the
-Cray X-MP system, installing software there, assembling/compiling programs there, etc. Further details are provided, below.
-- A CCL procedure library named `CRAY` is saved in the LIBRARY catalog. This library is
-a subset of the one installed in INSTALL's catalog. However, it is publicly available to all
-other users of the NOS 2.8.7 system.
+Cray X-MP system, installing software there, assembling/compiling/running programs there, etc.
+Further details are provided, below.
+- A CCL procedure library named `CRAY` is saved in the LIBRARY catalog. This procedure library
+is a subset of the one installed in INSTALL's catalog. However, it is publicly available to
+all other users of the NOS 2.8.7 system.
 
 The COS 1.17 operating system image provided with Andras Tantos'
 [Cray-XMP emulator](https://github.com/andrastantos/cray-sim) was recovered from a physical
 disk originally installed on an actual Cray X-MP computer. This is the only surviving COS 1.17
-image currently known to exist. It includes the base operating system. Unfortunately, it does
-not include any programming language compilers, and it also lacks many useful commands
+image currently known to exist. It includes the base operating system only. Unfortunately, it
+does not include any programming language compilers, and it also lacks many useful commands
 supported by COS.
 
 The `cos-tools` product provides reproductions of many of these missing features. These
@@ -1038,6 +1039,7 @@ repository. The tools and utilities installed by `cos-tools` on the Cray X-MP sy
 - __KFTC__ : FORTRAN 77 compiler
 - __LDR__ : linking loader
 - __LIB__ : library manager
+- __LISPF4__ : interpreter of the InterLisp dialect of the LISP programming language
 - __CHARGES__ : utility run automatically by COS at the end of each job to report resource consumption information
 - __COPYD__ : copies blocked datasets
 - __COPYF__ : copies files of blocked datasets
@@ -1057,13 +1059,14 @@ interactive CCL procedures:
 - __DELETE__ : deletes a permanent file stored on the Cray X-MP system
 - __FTN__ : compiles, links, and executes a FORTRAN 77 program on the Cray X-MP system
 - __INSTALL__ : installs an executable file as a command on the Cray X-MP system
+- __LISP__ : runs a LISP session on the Cray X-MP system
 - __QGET__ : retrieves a file from the NOS wait queue and converts it from 8/12 ASCII encoding to 6/12 extended display code
 - __REPLACE__ : replaces a permanent file on the Cray X-MP system
 - __RUN__ : transfers an executable file to the Cray X-MP system and runs it there
 - __SAVE__ : saves a permanent file on the Cray X-MP system
 
 The `CRAY` CCL procedure library installed in the LIBRARY catalog includes the __CAL__,
-__FTN__, and __QGET__ procedures described above.
+__FTN__, __LISP__, and __QGET__ procedures described above.
 
 For example, after installing the `cos-tools` product, a file on NOS 2.8.7 named `HELLO` containing a FORTRAN 77 program may be sent to the Cray X-MP system to be compiled and
 executed there by entering the following NOS command:
@@ -1071,7 +1074,6 @@ executed there by entering the following NOS command:
 ```
 BEGIN,FTN,CRAY,I=HELLO.
 ```
-
 This will submit a job to the Cray X-MP, and the job's output will be returned to the user's
 wait queue. The output may be retrieved from the wait queue and converted to 6/12 Extended
 Display Code by entering:
@@ -1079,27 +1081,36 @@ Display Code by entering:
 ```
 BEGIN,QGET,CRAY,<jsn>.
 ```
-
 where *&lt;jsn&gt;* is the JSN of the output file returned to the wait queue.
 
-#### install-cos-tool
-Due to an intermittent bug not yet resolved, files sent from NOS to COS occasionally arrive
-on COS in a corrupted state. After installing the `cos-tools` product, if an attempt to
-execute one of the COS tools listed above results in COS reporting `BLOCK NUMBER ERROR`, this
-is an indication that the bug has occurred. A reliable workaround is to reinstall the
-corrupted tool, and this can be accomplished easily using the `install-cos-tool.js` tool.
+The __FTN__ procedure also supports sending a data input file along with a FORTRAN program
+(e.g., to be read as input by the program). For example:
+```
+BEGIN,FTN,CRAY,I=HELLO,D=HLODATA.
+```
+In this case, the contents of HLODATA will be associated with the __$IN__ dataset on COS.
+To send a data file and associate it with a different local dataset on COS (e.g., to be
+opened using a FORTRAN _OPEN_ statement), use the __DN__ parameter to provide the name of
+the local dataset. For example:
+```
+BEGIN,FTN,CRAY,I=HELLO,D=HLODATA,DN=DATA.
+```
+The __LISP__ procedure operates similarly. To run a __LISP__ session on COS, call the
+procedure as in:
+```
+BEGIN,LISP,CRAY,I=EXPRS.
+```
+where _EXPRS_ is a NOS file containing expressions to be read and executed by the LISP
+interpreter. Output of the LISP job will be returned by default to the user's wait queue, and
+the __QGET__ procedure can then be used to retrieve it.
 
-If *DtCyber* was started using `node start`, run the `install-cos-tool.js` tool by executing
-the command `!node install-cos-tool toolname` at the `Operator>` prompt. Otherwise, run the tool by executing the command `node install-cos-tool toolname`. In either of these cases,
-*toolname* is the name of the tool or library file to be re-installed, e.g.:
-```
-node install-cos-tool cal
-```
-You may also specify a list of tool/library names separated by spaces, and all will be
-installed. For example:
-```
-node install-cos-tool cal ldr intflib
-```
+The __LISP__ procedure also accepts a __D__ parameter. This can be used to specify the name
+of a NOS file that will be sent to COS along with the LISP job. The contents of the NOS file
+will be copied to a local dataset with the same name on the COS side. Features of LISP can
+then be used to open and read the file.
+
+Note also that, as a general rule, all text files sent to COS using these procedures are
+assumed to be encoded in 6/12 Extended Display Code, so they may contain mixed case.
 
 ## <a id="shutdown"></a>Shutdown and Restart
 When the installation completes, NOS 2.8.7 will be running, and the command window will
