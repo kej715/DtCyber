@@ -1603,17 +1603,20 @@ syntax of this entry is:
 for a HASP terminal. Two generic HASP terminals are defined in the base system, and this
 entry allows you to define additional ones. The general syntax of this entry is:
 
-    haspTerminal=*username*,*tcp-port*[,B*block-size*]
+    haspTerminal=*username*,*tcp-port*[,B*block-size*][,T*terminal-class*]
     
     | Parameter  | Description |
     |------------|-------------|
     | username   | The username associated with the terminal. |
     | tcp-port   | The TCP port on which DtCyber will listen for connections to this terminal. |
     | block-size | Optional block size, in bytes, to use in communicating with peers. The default is 400. |
+    | terminal-class | Optional terminal class name. Usually one of **HPRE** or **HASP**. **HPRE** is the default and specifies that the HASP station supports pre-print format control. **HASP** specifies that the HASP station supports only post-print format control. |
 
-    Example:
+    Examples:
     
     `haspTerminal=MOE,2555`
+    
+    `haspTerminal=PST,2557,THASP`
     
 - <a id="hostID"></a>**hostID** : Specifies the 1 - 8 character node name of the local
 host. Example:
