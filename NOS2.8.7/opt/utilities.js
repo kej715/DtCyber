@@ -181,19 +181,25 @@ const utilities = {
         let value = line.substring(ei + 1).trim();
         if (key === "HASPTERMINAL") {
           //
-          //  haspTerminal=<name>,<tcp-port>,[,B<block-size>]
+          //  haspTerminal=<name>,<tcp-port>,[,B<block-size>][,T<terminal-class>]
+          //
+          //    <terminal-class> : usually one of HASP or HPRE
           //
           let items = value.split(",");
           if (items.length >= 2) {
             let terminal = {
               id:        items.shift(),
               tcpPort:   parseInt(items.shift()),
+              termClass: "HPRE",
               blockSize: 400
             };
             while (items.length > 0) {
               let item = items.shift();
               if (item.startsWith("B")) {
                 terminal.blockSize = parseInt(item.substring(1));
+              }
+              else if (item.startsWith("T")) {
+                terminal.termClass = item.substring(1).toUpperCase();
               }
             }
             terminals.push(terminal);

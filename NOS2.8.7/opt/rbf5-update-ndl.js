@@ -28,7 +28,7 @@ for (const terminal of terminals) {
   terminalDefns = terminalDefns.concat([
     `*  ${terminal.id}`,
     `LI${toHex(npuNode)}P${toHex(terminal.claPort)}: LINE      PORT=${toHex(terminal.claPort)},LTYPE=S2,TIPTYPE=HASP.`,
-    "         TERMINAL  TC=HPRE,RIC=YES.",
+    `         TERMINAL  TC=${terminal.termClass},RIC=YES.`,
     `         ${console}:  DEVICE,DT=CON,HN=${couplerNode},PW=0,AUTOCON.`,
     `         CR${toHex(npuNode)}P${toHex(terminal.claPort)}:  DEVICE,DT=CR,STREAM=1.`,
     `         LP${toHex(npuNode)}P${toHex(terminal.claPort)}:  DEVICE,DT=LP,STREAM=1,SDT=A9,PW=132.`,
