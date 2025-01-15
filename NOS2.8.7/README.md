@@ -1649,7 +1649,7 @@ node within a private NJE network (i.e., a node that is not registered in the pu
 topology, [files/nje-topology.json](files/nje-topology.json). The general syntax of
 this entry is:
 
-    njeNode=*nodename*,*software*,*lid*,*public-addr*,*link*[,*local-addr*[,B*block-size*][,P*ping-interval*][,*mailer-address*]
+    njeNode=*nodename*,*software*,*lid*,*public-addr*,*link*[,*local-addr*][,B*block-size*][,P*ping-interval*][,*mailer-address*]
     
     | Parameter     | Description |
     |---------------|-------------|
@@ -1658,10 +1658,10 @@ this entry is:
     | lid           | The unique, 3-character logical identifier assigned to the node. |
     | public-addr   | The public IP address and TCP port number on which the node listens for NJE connections. The format is `ipaddress:portnumber`, e.g., 192.168.1.3:175. If the node does not have a public address, 0.0.0.0:0 is specified. |
     | link          | The name of the NJE node that serves as the defined node's primary link to the NJE network. |
-    | local-addr    | Optional IP address of the defined node. If specified, this address will be used by the defined node to identify itself to its NJE peers. If omitted, an appropriate default will be chosen based upon the defined system's physical TCP network configuration. |
-    | block-size    | Optional block size, in bytes, to use in communicating with peers. The default is 8192. |
+    | local-addr    | Optional IP address of the local node. If specified, this address will be used by the local node to identify itself to the defined node. If omitted, an appropriate default will be chosen based upon the local system's physical TCP network configuration. |
+    | block-size    | Optional block size, in bytes, to use in communicating with the defined node. The default is 8192. |
     | ping-interval | Optional ping interval, in seconds, to use in keeping the NJE connection alive. The default is 600 (i.e., 10 minutes). |
-    | mailer-address | Optional address of a BSMTP mail server, in the form `mailername@nodename`, e.g., **MAILER@NCCMAX** |
+    | mailer-address | Optional address of a BSMTP mail server on the defined node, in the form `mailername@nodename`, e.g., **MAILER@NCCMAX** |
 
     Example:
     
