@@ -66,6 +66,13 @@ class Bsc {
         const b = this.receivedData.shift();
         switch (this.state) {
         //
+        // Discard any data possibly received while in
+        // disconnected state.
+        //
+        case Bsc.StateDisconnected:
+          this.receivedData = [];
+          break;
+        //
         // Wait for <DLE> in response to <SOH><ENQ>.
         // <SYN> is accepted and discarded.
         //
