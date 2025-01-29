@@ -61,6 +61,8 @@
 #include <netdb.h>
 #endif
 
+#define DEBUG             0
+
 /*
 **  -----------------
 **  Private Constants
@@ -1194,10 +1196,15 @@ static bool npuNetCreateListeningSocket(Ncb *ncbp)
     if (sd == -1)
 #endif
         {
-        fprintf(stderr, "(npu_net) Can't create socket for port %d\n", ncbs->tcpPort);
+        fprintf(stderr, "(npu_net) Can't create listener for port %d\n", ncbp->tcpPort);
         return FALSE;
         }
     ncbp->lstnFd = sd;
+
+#if DEBUG >= 2
+    fprintf(stderr, "(npu_net) created listener for port %d\n", ncbp->tcpPort);
+#endif
+
 
     return TRUE;
     }
@@ -1279,6 +1286,15 @@ static void *npuNetThread(void *param)
 
     FD_ZERO(&listenFds);
 
+#if DEBUG >= 2
+    fprintf(stderr, "npuNetThread has %d Ncbs to check\n", numNcbs);
+    for (i = 0; i < numNcbs; i++)
+        {
+        ncbp = &ncbs[i];
+	fprintf(stderr, "npuNetThread .. (%d), type %d, port %d\n", i, ncbp->connType, ncbp->tcpPort);
+	}
+#endif
+
     /*
     **  Create a listening socket for every configured connection type that listens
     **  for connections.
@@ -1286,6 +1302,9 @@ static void *npuNetThread(void *param)
     for (i = 0; i < numNcbs; i++)
         {
         ncbp = &ncbs[i];
+#if DEBUG >= 2
+	fprintf(stderr, "npuNetThread checking Ncb %d, type %d, port %d\n", i, ncbp->connType, ncbp->tcpPort);
+#endif
         switch (ncbp->connType)
             {
         case ConnTypeTrunk:
@@ -1328,14 +1347,6 @@ static void *npuNetThread(void *param)
                     {
                     maxFd = ncbp->lstnFd;
                     }
-                }
-            else
-                {
-#if defined(_WIN32)
-                return;
-#else
-                return NULL;
-#endif
                 }
             break;
 

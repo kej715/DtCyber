@@ -177,13 +177,23 @@ int    netCreateListener(int port)
     int    sd;
 #endif
 
+#if DEBUG
+    char debug_buffer[80];
+#endif
+
     sd = netCreateSocket(port, TRUE);
 
 #if defined(_WIN32)
-    if (sd == INVALID_SOCKET) return sd;
+    if (sd == INVALID_SOCKET)
 #else
-    if (sd == -1) return sd;
+    if (sd == -1)
 #endif
+        {
+#if DEBUG
+        fprintf(stderr, "(net_util) netCreateSocket could not create socket\n");
+#endif
+        return sd;
+        }
 
     /*
     **  Start listening for new connections on this TCP port number
@@ -191,7 +201,8 @@ int    netCreateListener(int port)
     if (listen(sd, MaxListenBacklog) == -1)
         {
 #if DEBUG
-        perror("(net_util) listen");
+        sprintf(debug_buffer, "(net_util) netCreateSocket listen on port %d failed", port);
+        perror(debug_buffer);
 #endif
 #if defined(_WIN32)
         closesocket(sd);
@@ -201,6 +212,10 @@ int    netCreateListener(int port)
         return -1;
 #endif
         }
+
+#if DEBUG >= 2
+    fprintf(stderr, "(net_util) netCreateSocket listen on port %d succeeded\n", port);
+#endif
 
     return sd;
     }
@@ -237,6 +252,10 @@ int    netCreateSocket(int port, bool isReuse)
     int       sd;
 #endif
 
+#if DEBUG
+    char debug_buffer[80];
+#endif
+
     sd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 #if defined(_WIN32)
     if (sd == INVALID_SOCKET) return sd;
@@ -256,7 +275,8 @@ int    netCreateSocket(int port, bool isReuse)
     if (bind(sd, (struct sockaddr *)&srcAddr, sizeof(srcAddr)) == -1)
         {
 #if DEBUG
-        perror("(net_util) bind");
+        sprintf(debug_buffer, "(net_util) netCreateSocket bind to %s:%d", ipAddress, port);
+        perror(debug_buffer);
 #endif
 #if defined(_WIN32)
         closesocket(sd);
@@ -275,6 +295,9 @@ int    netCreateSocket(int port, bool isReuse)
     fcntl(sd, F_SETFL, O_NONBLOCK);
 #endif
 
+#if DEBUG >= 2
+    fprintf(stderr, "(net_util) netCreateSocket to %s:%d successful\n", ipAddress, port);
+#endif
     return sd;
     }
 
@@ -428,6 +451,10 @@ int    netInitiateConnection(struct sockaddr *sap)
     int       sd;
 #endif
 
+#if DEBUG
+    char debug_buffer[80];
+#endif
+
     sd = netCreateSocket(0, FALSE);
 
 #if defined(_WIN32)
@@ -452,6 +479,10 @@ int    netInitiateConnection(struct sockaddr *sap)
         close(sd);
         return -1;
         }
+#endif
+
+#if DEBUG >= 2
+    fprintf(stderr, "(net_util) connect succeeded\n");
 #endif
 
     return sd;
