@@ -724,6 +724,7 @@ typedef enum
     {
     StTermIdle = 0,             // not configured or connected
     StTermRequestConnection,    // connection request sent
+    StTermConnecting,           // connecting but not necessarily fully initialized
     StTermConnected,            // configured and connected
     StTermNpuRequestDisconnect, // disconnect request sent
     StTermHostRequestDisconnect // connection terminate block sent

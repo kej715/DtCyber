@@ -32,15 +32,15 @@
 **  ----------------
 */
 #ifdef _DEBUG
-#define DtCyberVersion      "Desktop CYBER 5.7.54 (Debug)   "
+#define DtCyberVersion      "Desktop CYBER 5.7.55 (Debug)   "
 #else
-#define DtCyberVersion      "Desktop CYBER 5.7.54 (Release) "
+#define DtCyberVersion      "Desktop CYBER 5.7.55 (Release) "
 #endif
 
 #define DtCyberBuildDate    __DATE__ " " __TIME__
 #define DtCyberCopyright    "Copyright (c) 2011-2017 Tom Hunter \n \
     Portions Copyright:\n \
-        (c) 2018-2022 Kevin Jordan\n \
+        (c) 2018-2025 Kevin Jordan\n \
         (c) 2011-2022 Paul Koning\n \
         (c) 2017-2022 Steven Zoppi\n \
         (c) 2006-2022 Mark Rustad\n \

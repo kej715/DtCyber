@@ -566,7 +566,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
         else
             {
             /*
-            **  Handle possible race condition while disconnecting. Acknowledge any
+            **  Handle possible race condition while not fully connected. Acknowledge any
             **  packets arriving during this time, but discard the contents.
             */
             blockAck[BlkOffCN]     = block[BlkOffCN];

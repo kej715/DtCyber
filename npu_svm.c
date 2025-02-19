@@ -152,6 +152,7 @@ u8 npuSvmNpuNode     = 2;
 char *npuSvmTermStates[] = {
     "Idle",
     "Request Connection",
+    "Connecting",
     "Connected",
     "NPU Request Disconnect",
     "Host Request Disconnect"
@@ -634,9 +635,13 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
 
         if (block[BlkOffSfc] == (SfcTE | SfcResp))
             {
-            tp->state = StTermConnected;
+            tp->state = StTermConnecting;
             notifyTermConnect[tp->pcbp->ncbp->connType](tp);
-            npuNetConnected(tp);
+            if (tp->state == StTermConnecting)
+                {
+                tp->state = StTermConnected;
+                npuNetConnected(tp);
+                }
             }
         else if (block[BlkOffSfc] == (SfcTE | SfcErr))
             {
@@ -661,7 +666,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             /*
             **  Host requests terminal disconnection.
             */
-            if (tp->state == StTermConnected)
+            if (tp->state == StTermConnected || tp->state == StTermConnecting)
                 {
                 /*
                 **  Send a TERM block. The host will reply with a TERM block.
@@ -799,6 +804,7 @@ void npuSvmSendDiscRequest(Tcb *tp)
 
     switch (tp->state)
         {
+    case StTermConnecting:        // terminal is connecting
     case StTermConnected:         // terminal is connected
         /*
         **  Clean up flow control state and discard any pending output.

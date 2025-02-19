@@ -340,6 +340,7 @@ void cciSvmSendDiscRequest(Tcb *tp)
 
     switch (tp->state)
         {
+    case StTermConnecting:        // terminal is connecting
     case StTermConnected:         // terminal is connected
         /*
         **  Clean up flow control state and discard any pending output.
@@ -855,7 +856,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
             break;
             }
 
-        if (tp->state == StTermConnected)
+        if (tp->state == StTermConnected || tp->state == StTermConnecting)
             {
             /*
             ** Host requests disconnect, output message to terminal
