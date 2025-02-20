@@ -14,13 +14,27 @@
     "lid": "MD2",
     "publicAddress": "194.195.215.201:175"
   },
+  "HELENA": {
+    "desc": "Dutch Owen's VM/CMS node",
+    "os": "VM/CMS 6.0",
+    "software": "RSCS",
+    "mailer": "MAILER@HELENA",
+    "link": "ISADORA"
+  },
   "ISADORA": {
-    "desc": "Dutch Owen's node",
+    "desc": "Dutch Owen's CDC Cyber 875 node",
     "os": "NOS 2.8.7",
     "software": "NJEF",
     "link": "NCCMAX",
     "lid": "MIS",
     "publicAddress": "45.36.10.158:175"
+  },
+  "MEDUSA": {
+    "desc": "Dutch Owen's VM/CMS node",
+    "os": "VM/CMS 6.0",
+    "software": "RSCS",
+    "mailer": "MAILER@MEDUSA",
+    "link": "ISADORA"
   },
   "NAIAC": {
     "desc": "David Asta's node",
