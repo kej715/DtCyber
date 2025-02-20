@@ -126,7 +126,7 @@ static char connectedMsg[]    = "\r\nConnected\r\n";
 static char *connStates[]     =
     {
     //
-    // Indexed by connection type
+    // Indexed by connection state
     //
     "idle",          // StConnInit
     "connecting",    // StConnConnecting
@@ -386,13 +386,13 @@ void npuNetCloseConnection(Pcb *pcbp)
     {
     Ncb *ncbp;
 
-    if ((pcbp != NULL) && (pcbp->connFd > 0))
+    if (pcbp != NULL)
         {
-        netCloseConnection(pcbp->connFd);
+        if (pcbp->connFd > 0) netCloseConnection(pcbp->connFd);
         ncbp = pcbp->ncbp;
         if (ncbp != NULL)
             {
-            if ((pcbp->connFd == ncbp->connFd) || (ncbp->state == StConnBusy))
+            if (pcbp->connFd == ncbp->connFd || ncbp->state == StConnBusy)
                 {
                 ncbp->state = StConnInit;
                 ncbp->nextConnectionAttempt = getSeconds() + (time_t)ConnectionRetryInterval;

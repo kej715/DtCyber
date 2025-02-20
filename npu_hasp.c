@@ -3286,6 +3286,7 @@ static void npuHaspResetScb(Scb *scbp)
             {
             npuBipBufRelease(bp);
             }
+        scbp->tp = NULL;
         }
     while ((bp = npuBipQueueExtract(&scbp->uplineQ)) != NULL)
         {
@@ -3953,7 +3954,6 @@ static void npuHaspTransmitQueuedBlocks(Tcb *tp)
             npuHaspLogFlush();
 #endif
             }
-
         }
     }
 
