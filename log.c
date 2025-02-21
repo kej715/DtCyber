@@ -1,6 +1,7 @@
 /*--------------------------------------------------------------------------
 **
 **  Copyright (c) 2003-2011, Tom Hunter
+**                2024-2025, Steve Zoppi
 **
 **  Name: log.c
 **
@@ -36,6 +37,16 @@
 #include "types.h"
 #include "proto.h"
 
+#if defined(_WIN32)
+#include <io.h>
+#include <windows.h>
+#else
+#include <unistd.h>
+#include <errno.h>
+#include <time.h>
+#endif
+
+
 /*
 **  -----------------
 **  Private Constants
@@ -59,7 +70,7 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
-
+void dtNow(char* dtOutBuf, int buflen);
 /*
 **  ----------------
 **  Public Variables
@@ -71,7 +82,8 @@
 **  Private Variables
 **  -----------------
 */
-static FILE *logF;
+static FILE *logF = NULL;
+static char *LogFN = "dtcyber_log.txt";
 
 /*
  **--------------------------------------------------------------------------
@@ -91,10 +103,14 @@ static FILE *logF;
 **------------------------------------------------------------------------*/
 void logInit(void)
     {
-    logF = fopen("log.txt", "wt");
+    //  Don't do anything if it's already open
+    if (logF != NULL) {
+        return;
+    }
+    logF = fopen(LogFN, "wt");
     if (logF == NULL)
         {
-        fprintf(stderr, "(log    ) can't open log file");
+        fprintf(stderr, "(log    ) can't open log file %s", LogFN);
         }
     }
 
@@ -112,6 +128,11 @@ void logInit(void)
 **------------------------------------------------------------------------*/
 void logError(char *file, int line, char *fmt, ...)
     {
+    if (logF == NULL)
+    {
+        logInit();
+    }
+
     va_list param;
 
     va_start(param, fmt);
@@ -121,5 +142,118 @@ void logError(char *file, int line, char *fmt, ...)
     fprintf(logF, "\n");
     fflush(logF);
     }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Retrieve the current Date and Time
+**
+**  Parameters:     Name        Description.
+**                  dtOutBuf    Output Buffer
+**                  buflen      Maximum Length of Output Buffer
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void dtNow(char* dtOutBuf, int buflen)
+{
+#if defined(_WIN32)
+    SYSTEMTIME dt;
+    GetLocalTime(&dt);
+    sprintf_s(dtOutBuf, buflen, 
+        "%04d-%02d-%02d %02d:%02d:%02d", 
+        dt.wYear, dt.wMonth, dt.wDay, dt.wHour, dt.wMinute, dt.wSecond);
+#else
+    time_t    rawtime;
+    struct tm* info;
+
+    if (opCmdStackPtr != 0
+        && opCmdStack[opCmdStackPtr].netConn == 0
+        && opCmdStack[opCmdStackPtr].in != -1) return;
+
+    time(&rawtime);
+    info = localtime(&rawtime);
+    strftime(dtOutBuf, buflen, "%Y-%m-%d %H:%M:%S", info);
+#endif
+
+}
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Get the Current Date/Time and prepend it to the msg.
+**
+**  Parameters:     Name        Description.
+**                  file        A string pointing to the full name of the 
+**                              C file raising the error.
+**                  line        The line number which is raising the error.
+**                  fmt         The format String to which the variadic
+**                              parameters ... are applied.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void logdtError(char* file, int line, char* fmt, ...)
+{
+
+    va_list param;
+    char* ixpos; 
+#define buflen 32
+    char dtOutBuf[buflen];
+    char dtFnBuf[128];
+
+
+#if defined(_WIN32)
+    dtNow(dtOutBuf, sizeof(dtOutBuf));
+#else
+    dtNow(dtOutBuf, buflen);
+#endif
+
+    if (logF == NULL) {
+        logInit();
+    }
+
+    fprintf(stderr, "%s ", dtOutBuf);
+    fprintf(logF, "%s ", dtOutBuf);
+
+    ixpos = strrchr(file, '\\');
+    if (ixpos == NULL)
+    {
+        ixpos = strrchr(file, '/');
+    }
+    if (ixpos == NULL)
+    {
+        ixpos = file;
+    }
+    else
+    {
+        ixpos += 1;
+    }
+
+    strcpy(dtFnBuf, ixpos);
+    ixpos = strrchr(dtFnBuf, '.');
+    if (ixpos == NULL)
+    {
+        ixpos = dtFnBuf;
+    }
+    else
+    {
+        ixpos[0] = '\0';
+    }
+
+    //  Print the origin of the message
+    fprintf(stderr, "(%s:%d) ", dtFnBuf, line);
+    fprintf(logF, "(%s:%d) ", dtFnBuf, line);
+
+    va_start(param, fmt);
+    vfprintf(stderr, fmt, param);
+    vfprintf(logF, fmt, param);
+    va_end(param);
+    ixpos = strrchr( fmt, '\n');
+    if (ixpos == NULL) {
+    fprintf(stderr, "\n");
+    fprintf(logF, "\n");
+    }
+
+    fflush(stderr);
+    fflush(logF);
+}
+
 
 /*---------------------------  End Of File  ------------------------------*/

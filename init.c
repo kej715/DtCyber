@@ -53,6 +53,38 @@
 */
 #define MaxLine    512
 
+//  Console display parameters.
+
+#ifdef WIN32
+#define FontName    "Lucida Console"
+#define DefaultFontLarge 24
+#define DefaultFontMedium 12
+#define DefaultFontSmall 8
+#else
+#define FontName    "lucidatypewriter"
+#define DefaultFontLarge 24
+#define DefaultFontMedium 14
+#define DefaultFontSmall 10
+#endif
+
+#define DefaultBG  RGB(0, 0, 0)
+#define DefaultFG  RGB(0, 255, 0)
+
+
+#define DefaultHeightLarge 30
+#define DefaultHeightMedium 20
+#define DefaultHeightSmall 15
+
+#define DefaultHeightPX 800
+#define DefaultWidthPX 1100
+
+#define DefaultScaleX 10
+#define DefaultScaleY 12
+
+#define DefaultTimerRate 100
+
+
+
 /*
 **  -----------------------
 **  Private Macro Functions
@@ -102,6 +134,7 @@ typedef struct initVal
 static void initAddLine(InitSection *section, char *fileName, int lineNo, char *text);
 static void initCyber(char *config);
 static InitSection *initFindSection(char *name);
+static void initConsole(void);
 static void initHelpers(void);
 static void initNpuConnections(void);
 static void initOperator(void);
@@ -115,6 +148,7 @@ static int  initParseEquipmentDefn(char *defn, char *file, char *section, int li
 static int initParseTerminalDefn(char *defn, char *file, char *section, int lineNo,
     u16 *tcpPort, u8 *claPort, u8 *claPortCount, char **remainder);
 static bool initGetOctal(char *entry, int defValue, long *value);
+static bool initGetHex(char* entry, int defValue, long* value);
 static bool initGetInteger(char *entry, int defValue, long *value);
 static bool initGetString(char *entry, char *defString, char *str, int strLen);
 static bool initParseIpAddress(char *ipStr, u32 *ip, u16 *port);
@@ -149,6 +183,7 @@ static union
     u8  bytes[4];
     }
 endianCheck;
+static char console[80];
 static char equipment[80];
 static char helpers[80];
 static char npuConnections[80];
@@ -204,6 +239,7 @@ static InitVal sectVals[] =
     "channels",                      "cyber", "Deprecated",
     "clock",                         "cyber", "Valid",
     "cmFile",                        "cyber", "Deprecated",
+    "console",                       "cyber", "Valid",
     "cpus",                          "cyber", "Valid",
     "deadstart",                     "cyber", "Valid",
     "displayName",                   "cyber", "Valid",
@@ -241,6 +277,22 @@ static InitVal sectVals[] =
     "npuNode",                       "npu",   "Valid",
     "terminals",                     "npu",   "Valid",
 
+    "fontName",                      "cons",  "Valid",
+    "colorBG",                       "cons",  "Valid",
+    "colorFG",                       "cons",  "Valid",
+    "fontSmallHeight",               "cons",  "Valid",
+    "fontMediumHeight",              "cons",  "Valid",
+    "fontLargeHeight",               "cons",  "Valid",
+    "fontSmall",                     "cons",  "Valid",
+    "fontMedium",                    "cons",  "Valid",
+    "fontLarge",                     "cons",  "Valid",
+    "scaleX",                        "cons",  "Valid",
+    "scaleY",                        "cons",  "Valid",
+    "timerRate",                     "cons",  "Valid",
+    "widthPX",                       "cons",  "Valid",
+    "heightPX",                      "cons",  "Valid",
+
+
     NULL,                            NULL,    NULL
     };
 
@@ -271,18 +323,18 @@ void initStartup(char *config, char *configFile)
     char *sp;
 
     /*
-    **  Check for the existance of a startup overlay file. If one exits,
+    **  Check for the existence of a startup overlay file. If one exits,
     **  read it first. This will ensure that its definitions take precedence
     **  over definitions in the explicit startup file.
     */
     cp = strrchr(configFile, '.');
     if (cp != NULL)
         {
-        len = cp - configFile;
+        len = (int)(cp - configFile);
         }
     else
         {
-        len = strlen(configFile);
+        len = (int)strlen(configFile);
         }
     memcpy(overlayFile, configFile, len);
     strcpy(overlayFile + len, ".ovl");
@@ -290,6 +342,7 @@ void initStartup(char *config, char *configFile)
     fcb = fopen(overlayFile, "rb");
     if (fcb != NULL)
         {
+        printf("(init   ) Reading Configuration Overlay File '%s'\n\n", overlayFile);
         initReadStartupFile(fcb, overlayFile);
         fclose(fcb);
         }
@@ -297,6 +350,7 @@ void initStartup(char *config, char *configFile)
     /*
     **  Open startup file.
     */
+    printf("(init   ) Reading Configuration File '%s'\n\n", configFile);
     fcb = fopen(configFile, "rb");
     if (fcb == NULL)
         {
@@ -332,6 +386,7 @@ void initStartup(char *config, char *configFile)
     curSection = NULL;
 
     initCyber(config);
+    initConsole();
     initDeadstart();
     initNpuConnections();
     initEquipment();
@@ -437,6 +492,34 @@ int initOpenOperatorSection(void)
         return -1;
         }
     }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Open the console section.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        -1 if error
+**                   0 if section not defined
+**                   1 if section opened
+**
+**------------------------------------------------------------------------*/
+int initOpenConsoleSection(void)
+{
+    if (strlen(console) == 0)
+    {
+        return 0;
+    }
+    else if (initOpenSection(console))
+    {
+        return 1;
+    }
+    else
+    {
+        return -1;
+    }
+}
+
+
 
 /*
  **--------------------------------------------------------------------------
@@ -846,6 +929,11 @@ static void initCyber(char *config)
         }
 
     /*
+    **  Get optional console section name.
+    */
+    initGetString("console", "", console, sizeof(console));
+
+    /*
     **  Get optional helpers section name.
     */
     initGetString("helpers", "", helpers, sizeof(helpers));
@@ -1050,6 +1138,246 @@ static void initCyber(char *config)
         }
     }
 
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Read and process [console] startup file section.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void initConsole(void)
+{
+    /* Set Defaults */
+    colorBG = DefaultBG;
+    colorFG = DefaultFG;
+    strcpy(fontName, FontName);
+
+    fontHeightLarge = DefaultHeightLarge;
+    fontHeightMedium = DefaultHeightMedium;
+    fontHeightSmall = DefaultHeightSmall;
+
+    fontLarge = DefaultFontLarge;
+    fontMedium = DefaultFontMedium;
+    fontSmall = DefaultFontSmall;
+
+    heightPX = DefaultHeightPX;
+    widthPX = DefaultWidthPX;
+
+    scaleX = DefaultScaleX;
+    scaleY = DefaultScaleY;
+
+    timerRate = DefaultTimerRate;
+
+
+    /*-------------------START OF PRECHECK-------------------*/
+
+    /*
+    *  Pre-Check all of the parameters of this section
+    */
+
+    if (!initOpenConsoleSection())
+    {
+        logdtError(LogErrorLocation, "Optional 'console' section [%s] not found in %s\n", console, startupFile);
+        return;
+    }
+
+    printf("(init   ) Loading console section [%s] from %s\n", console, startupFile);
+
+    int      lineNo = 0;
+    char*    line;
+    char*    token;
+    InitVal* curVal;
+    bool     goodToken = TRUE;
+    int      numErrors = 0;
+    int      ratio = 0;
+
+    while ((line = initGetNextLine(&lineNo)) != NULL)
+    {
+        token = strtok(line, "=");
+        if (strlen(token) > 2)
+        {
+            goodToken = FALSE;
+            for (curVal = sectVals; curVal->valName != NULL; curVal++)
+            {
+                if (strcasecmp(curVal->sectionName, "cons") == 0)
+                {
+                    if (strcasecmp(curVal->valName, token) == 0)
+                    {
+                        goodToken = TRUE;
+                        logdtError(LogErrorLocation, "file '%s' section [%s] line %2d: %-12s %s\n",
+                            startupFile, console, lineNo, token == NULL ? "NULL" : token, curVal->valStatus);
+                        break;
+                    }
+                }
+            }
+            if (!goodToken)
+            {
+                logdtError(LogErrorLocation, "file '%s' section [%s] line %2d: invalid or deprecated configuration keyword '%s'\n",
+                    startupFile, console, lineNo, token == NULL ? "NULL" : token);
+                numErrors++;
+            }
+        }
+    }
+
+    if (numErrors > 0)
+    {
+        logdtError(LogErrorLocation, "Correct the %d error(s) in section '[%s]' of '%s' and restart.\n",
+            numErrors, console, startupFile);
+        exit(1);
+    }
+
+    /*-------------------END OF PRECHECK-------------------*/
+
+    // Reopen the section
+    initOpenConsoleSection();
+    lineNo = 0;
+
+
+    if (initGetString("fontName", FontName, fontName, sizeof(fontName)))
+    {
+        logdtError(LogErrorLocation, "Font Name '%s' will be loaded\n", fontName);
+    }
+
+    (void)initGetHex("colorBG", DefaultBG, &colorBG);
+    (void)initGetHex("colorFG", DefaultFG, &colorFG);
+    //  Convert to RGB
+    if (colorBG != DefaultBG)
+    {
+        colorBG = RGB(colorBG >> 16 & 0xff, colorBG >> 8 & 0xff, colorBG & 0xff);
+    }
+    //  Convert to RGB
+    if (colorFG != DefaultFG)
+    {
+        colorFG = RGB(colorFG >> 16 & 0xff, colorFG >> 8 & 0xff, colorFG & 0xff);
+    }
+    if (colorBG == colorFG)
+    {
+        colorBG = DefaultBG;
+        colorFG = DefaultFG;
+    }
+    printf("(init   )         [colorBG]=%06x\n", colorBG);
+    printf("(init   )         [colorFG]=%06x\n", colorFG);
+
+
+    (void)initGetInteger("fontSmall", DefaultFontSmall, &fontSmall);
+    (void)initGetInteger("fontMedium", DefaultFontMedium, &fontMedium);
+    (void)initGetInteger("fontLarge", DefaultFontLarge, &fontLarge);
+    if (fontSmall < 8)
+    {
+        logdtError(LogErrorLocation, "file '%s' section [%s]: 'fontSmall' must be greater than or equal to 8.\n", startupFile, console);
+        numErrors += 1;
+    }
+
+    if (fontSmall > fontMedium)
+    {
+        logdtError(LogErrorLocation, "file '%s' section [%s]: 'fontSmall' must be smaller than 'fontMedium'\n", startupFile, console);
+        numErrors += 1;
+    }
+    if (fontMedium > fontLarge)
+    {
+        logdtError(LogErrorLocation, "file '%s' section [%s]: 'fontMedium' must be smaller than 'fontLarge'\n", startupFile, console);
+        numErrors += 1;
+    }
+    if (fontLarge > 48)
+    {
+        logdtError(LogErrorLocation, "file '%s' section [%s]: 'fontLarge' must be less than or equal to 48.\n", startupFile, console);
+        numErrors += 1;
+    }
+    printf("(init   )         [fontSmall]=%d\n", fontSmall);
+    printf("(init   )         [fontMedium]=%d\n", fontMedium);
+    printf("(init   )         [fontLarge]=%d\n", fontLarge);
+
+
+
+    (void)initGetInteger("fontSmallHeight", DefaultHeightSmall, &fontHeightSmall);
+    (void)initGetInteger("fontMediumHeight", DefaultHeightMedium, &fontHeightMedium);
+    (void)initGetInteger("fontLargeHeight", DefaultHeightLarge, &fontHeightLarge);
+    if (fontHeightSmall < 8)
+    {
+        logdtError(LogErrorLocation, "file '%s' section [%s]: 'fontSmallHeight' must be greater than or equal to 8.\n", startupFile, console);
+        numErrors += 1;
+    }
+
+    if (fontHeightSmall > fontHeightMedium)
+    {
+        logdtError(LogErrorLocation, "file '%s' section [%s]: 'fontSmallHeight' must be smaller than 'fontMediumHeight'\n", startupFile, console);
+        numErrors += 1;
+    }
+    if (fontHeightMedium > fontHeightLarge)
+    {
+        logdtError(LogErrorLocation, "file '%s' section [%s]: 'fontHeightMedium' must be smaller than 'fontHeightLarge'\n", startupFile, console);
+        numErrors += 1;
+    }
+    if (fontHeightLarge > 48)
+    {
+        logdtError(LogErrorLocation, "file '%s' section [%s]: 'fontHeightLarge' must be less than or equal to 48.\n", startupFile, console);
+        numErrors += 1;
+    }
+
+    printf("(init   )         [fontSmallHeight]=%d\n", fontHeightSmall);
+    printf("(init   )         [fontMediumHeight]=%d\n", fontHeightMedium);
+    printf("(init   )         [fontLargeHeight]=%d\n", fontHeightLarge);
+
+
+    (void)initGetInteger("scaleX", DefaultScaleX, &scaleX);
+    (void)initGetInteger("scaleY", DefaultScaleY, &scaleY);
+    if (scaleX < 6 || scaleX > 20)
+    {
+        logdtError(LogErrorLocation, "file '%s' section [%s]: 'scaleX' must be between or equal to 6 and 20.\n", startupFile, console);
+        numErrors += 1;
+    }
+    if (scaleY < 6 || scaleY > 20)
+    {
+        logdtError(LogErrorLocation, "file '%s' section [%s]: 'scaleY' must be between or equal to 6 and 20.\n", startupFile, console);
+        numErrors += 1;
+    }
+
+    (void)initGetInteger("timerRate", DefaultTimerRate, &timerRate);
+    if (timerRate < 50 || timerRate > 200)
+    {
+        logdtError(LogErrorLocation, "file '%s' section [%s]: 'timerRate' must be between or equal to 50 and 200.\n", startupFile, console);
+        numErrors += 1;
+    }
+    printf("(init   )         [scaleX]=%d\n", scaleX);
+    printf("(init   )         [scaleY]=%d\n", scaleY);
+
+
+
+    (void)initGetInteger("widthPX", DefaultWidthPX, &widthPX);
+    (void)initGetInteger("heightPX", DefaultHeightPX, &heightPX);
+    if (widthPX < 800 || widthPX > 2560)
+    {
+        logdtError(LogErrorLocation, "file '%s' section [%s]: 'widthPX' must be between or equal to 800 and 2560.\n", startupFile, console);
+        numErrors += 1;
+    }
+    if (heightPX < 600 || heightPX > 1920)
+    {
+        logdtError(LogErrorLocation, "file '%s' section [%s]: 'heightPX' must be between or equal to 600 and 1920.\n", startupFile, console);
+        numErrors += 1;
+    }
+    ratio = (int)((float)heightPX / (float)widthPX * 100.0);
+    if (ratio < 56 || ratio > 100)
+    {
+        logdtError(LogErrorLocation, 
+            "(init   ) file '%s' section [%s]: the ratio of 'heightPX' to 'widthPX' must be between 56%% (16:9) and 100%% (1:1). \n",
+            startupFile, console);
+        logdtError(LogErrorLocation,
+            "(init   ) Ratio of heightPX (%d) to widthPX (%d) is %d%%.", heightPX, widthPX, ratio);
+        numErrors += 1;
+    }
+    printf("(init   )         [heightPX]=%d\n", heightPX);
+    printf("(init   )         [widthPX]=%d\n", widthPX);
+
+    if (numErrors > 0)
+    {
+        logdtError(LogErrorLocation, "Correct the %d error(s) in section '[%s]' of '%s' and restart.\n",
+            numErrors, console, startupFile);
+        exit(1);
+    }
+}
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Read and process NPU definitions.
 **
@@ -1082,7 +1410,6 @@ static void initNpuConnections(void)
     long         pingInterval;
     TermRecoType recoType;
     char         *remainder;
-    char         strValue[256];
     long         val;
 
     npuNetPreset();
@@ -1569,7 +1896,7 @@ static void initNpuConnections(void)
             case ConnTypeRevHasp:
             case ConnTypeNje:
             case ConnTypeTrunk:
-                len            = strlen(destHostName) + 1;
+                len = (int)(strlen(destHostName) + 1);
                 ncbp->hostName = (char *)malloc(len);
                 if (ncbp->hostName == NULL)
                     {
@@ -2099,6 +2426,48 @@ static bool initGetOctal(char *entry, int defValue, long *value)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Locate hexadecimal entry within section and return value.
+**
+**  Parameters:     Name        Description.
+**                  entry       entry name
+**                  defValue    default value
+**                  value       pointer to return value
+**
+**  Returns:        TRUE if entry was found, FALSE otherwise.
+**
+**------------------------------------------------------------------------*/
+static bool initGetHex(char* entry, int defValue, long* value)
+{
+    char buffer[40];
+
+    //  Get the next entry
+    if (!initGetString(entry, "", buffer, sizeof(buffer)))
+    {
+        /*
+        **  Return default value.
+        */
+        *value = defValue;
+        return (FALSE);
+    }
+    //  It must be valid Hexadecimal
+    if (buffer[strspn(buffer, "0123456789abcdefABCDEF")] == 0)
+    {
+        /*
+        **  Convert octal string to value.
+        */
+        *value = strtol(buffer, NULL, 16);
+        return (TRUE);
+    } 
+
+    /*
+    **  Return default value.
+    */
+    *value = defValue;
+    return (FALSE);
+}
+
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Locate integer entry within section and return value.
 **
 **  Parameters:     Name        Description.
@@ -2325,7 +2694,6 @@ static void initReadStartupFile(FILE *fcb, char *fileName)
     char *lastNb;
     static char lineBuffer[MaxLine];
     int lineNo;
-    InitSection *section;
     char *sp;
 
     curSection = NULL;

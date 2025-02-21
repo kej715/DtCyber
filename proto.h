@@ -240,6 +240,8 @@ void lp3000ShowStatus();
 */
 void logInit(void);
 void logError(char *file, int line, char *fmt, ...);
+void logdtError(char* file, int line, char* fmt, ...);
+
 
 /*
 **  main.c
@@ -474,6 +476,8 @@ extern bool                bigEndian;
 extern const char          cdcToAscii[64];
 extern ChSlot              *channel;
 extern u8                  channelCount;
+extern long                colorBG;                         // Console
+extern long                colorFG;                         // Console
 extern const char          consoleToAscii[64];
 extern CpWord              *cpMem;
 extern CpuContext          *cpus;
@@ -491,6 +495,14 @@ extern u32                 extMaxMemory;
 extern CpWord              *extMem;
 extern ExtMemory           extMemType;
 extern ModelFeatures       features;
+extern long                fontHeightLarge;                 // Console
+extern long                fontHeightMedium;                // Console
+extern long                fontHeightSmall;                 // Console
+extern long                fontLarge;                       // Console
+extern long                fontMedium;                      // Console
+extern long                fontSmall;                       // Console
+extern CHAR                fontName[LF_FACESIZE];           // Console
+extern long                heightPX;                        // Console
 extern ModelType           modelType;
 extern u16                 mux6676TelnetConns;
 extern u16                 mux6676TelnetPort;
@@ -518,8 +530,13 @@ extern u8                  ppuCount;
 extern u32                 readerScanSecs;
 extern u32                 rtcClock;
 extern bool                rtcClockIsCurrent;
+extern long                scaleX;                          // Console
+extern long                scaleY;                          // Console
+extern long                timerRate;                       // Console
 extern u32                 traceMask;
 extern u32                 traceSequenceNo;
+extern long                widthPX;                         // Console
+
 
 /* Idle Loop throttle */
 extern bool idle;
