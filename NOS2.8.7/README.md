@@ -380,8 +380,12 @@ publicAddress: <IP-address-and-port>
 software: <name-of-nje-software>
 mailer: <mail-server-address>
 ```
-- **node** : Required. This is the name you want to be registered for your NJE node. It
-must begin with a letter and can be up to 8 alphanumeric characters in length.
+- **node** : Required. This is the name you want to be registered for your NJE node. It should
+be in the form *llooommm*, where *ll* is the 2-letter country code, province, or state
+abbreviation reflecting the location of your node (e.g., GB, DE, TX, ME), *ooo* is a
+3-letter identifier of your node's operating system (e.g., NOS, MVS, VMS, CMS), and *mmm*
+is a 3-letter identifier of your choice (e.g., the PID/LID of your NOS 2.8.7 system). For example, a NOS 2.8.7 system located in the US state of Maine and having a machine
+identifier (see **mid**, below) of EL might have MENOSMEL as its NJE node name.
 - **link** : Optional. This is the name of the NJE node to which your node will connect
 in order to join the network. The **link** node must have a public address, and its
 administrator must agree to have it serve as your **link** node. If this parameter is
