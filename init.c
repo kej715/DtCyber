@@ -56,32 +56,32 @@
 //  Console display parameters.
 
 #ifdef WIN32
-#define FontName    "Lucida Console"
-#define DefaultFontLarge 24
-#define DefaultFontMedium 12
-#define DefaultFontSmall 8
+#define FontName               "Lucida Console"
+#define DefaultFontLarge       24
+#define DefaultFontMedium      12
+#define DefaultFontSmall       8
 #else
-#define FontName    "lucidatypewriter"
-#define DefaultFontLarge 24
-#define DefaultFontMedium 14
-#define DefaultFontSmall 10
+#define FontName               "lucidatypewriter"
+#define DefaultFontLarge       24
+#define DefaultFontMedium      14
+#define DefaultFontSmall       10
 #endif
 
-#define DefaultBG  RGB(0, 0, 0)
-#define DefaultFG  RGB(0, 255, 0)
+#define DefaultBG              RGB(0, 0, 0)
+#define DefaultFG              RGB(0, 255, 0)
 
 
-#define DefaultHeightLarge 30
-#define DefaultHeightMedium 20
-#define DefaultHeightSmall 15
+#define DefaultHeightLarge     30
+#define DefaultHeightMedium    20
+#define DefaultHeightSmall     15
 
-#define DefaultHeightPX 800
-#define DefaultWidthPX 1100
+#define DefaultHeightPX        800
+#define DefaultWidthPX         1100
 
-#define DefaultScaleX 10
-#define DefaultScaleY 12
+#define DefaultScaleX          10
+#define DefaultScaleY          12
 
-#define DefaultTimerRate 100
+#define DefaultTimerRate       100
 
 
 
@@ -106,17 +106,17 @@ typedef struct initConnType
 typedef struct initLine
     {
     struct initLine *next;
-    char *sourceFile;
-    int lineNo;
-    char *text;
+    char            *sourceFile;
+    int             lineNo;
+    char            *text;
     } InitLine;
 
 typedef struct initSection
     {
     struct initSection *next;
-    char *name;
-    InitLine *lines;
-    InitLine *curLine;
+    char               *name;
+    InitLine           *lines;
+    InitLine           *curLine;
     } InitSection;
 
 typedef struct initVal
@@ -132,24 +132,24 @@ typedef struct initVal
 **  ---------------------------
 */
 static void initAddLine(InitSection *section, char *fileName, int lineNo, char *text);
+static void initConsole(void);
 static void initCyber(char *config);
 static InitSection *initFindSection(char *name);
-static void initConsole(void);
 static void initHelpers(void);
 static void initNpuConnections(void);
 static void initOperator(void);
 static void initEquipment(void);
 static void initDeadstart(void);
-static int  initLookupConnType(char *connType);
-static int  initLookupDeviceType(char *deviceType);
+static int initLookupConnType(char *connType);
+static int initLookupDeviceType(char *deviceType);
 static bool initOpenSection(char *name);
-static int  initParseEquipmentDefn(char *defn, char *file, char *section, int lineNo,
-    u8 *eqNo, u8 *unitNo, u8 *channelNo, char **deviceParams);
+static int initParseEquipmentDefn(char *defn, char *file, char *section, int lineNo,
+                                  u8 *eqNo, u8 *unitNo, u8 *channelNo, char **deviceParams);
 static int initParseTerminalDefn(char *defn, char *file, char *section, int lineNo,
-    u16 *tcpPort, u8 *claPort, u8 *claPortCount, char **remainder);
-static bool initGetOctal(char *entry, int defValue, long *value);
-static bool initGetHex(char* entry, int defValue, long* value);
+                                 u16 *tcpPort, u8 *claPort, u8 *claPortCount, char **remainder);
+static bool initGetHex(char *entry, int defValue, long *value);
 static bool initGetInteger(char *entry, int defValue, long *value);
+static bool initGetOctal(char *entry, int defValue, long *value);
 static bool initGetString(char *entry, char *defString, char *str, int strLen);
 static bool initParseIpAddress(char *ipStr, u32 *ip, u16 *port);
 static void initReadStartupFile(FILE *fcb, char *fileName);
@@ -174,22 +174,21 @@ NpuSoftware   npuSw = SwUndefined;
 **  Private Variables
 **  -----------------
 */
-static long chCount = 040; // will be adjusted if PP count specified as 012
+static long        chCount = 040; // will be adjusted if PP count specified as 012
 static InitSection *curSection;
-static char deadstart[80];
+static char        deadstart[80];
 static union
     {
     u32 number;
     u8  bytes[4];
-    }
-endianCheck;
-static char console[80];
-static char equipment[80];
-static char helpers[80];
-static char npuConnections[80];
-static char operator[80];
-static InitSection *sections = NULL;
-static char *startupFile = "cyber.ini";
+    } endianCheck;
+static char        console[80];
+static char        equipment[80];
+static char        helpers[80];
+static char        npuConnections[80];
+static char        operator[80];
+static InitSection *sections    = NULL;
+static char        *startupFile = "cyber.ini";
 
 static ModelFeatures features6400     = (IsSeries6x00);
 static ModelFeatures featuresCyber73  = (IsSeries70 | HasInterlockReg | HasCMU);
@@ -210,15 +209,15 @@ static ModelFeatures featuresCyber875 =
 
 static InitConnType connTypes[] =
     {
-    "telnet",  ConnTypeTelnet,
-    "raw",     ConnTypeRaw,
-    "pterm",   ConnTypePterm,
-    "hasp",    ConnTypeHasp,
-    "rhasp",   ConnTypeRevHasp,
-    "nje",     ConnTypeNje,
-    "trunk",   ConnTypeTrunk,
-    "rs232",   ConnTypeRs232,
-    NULL,      -1
+    "telnet", ConnTypeTelnet,
+    "raw",    ConnTypeRaw,
+    "pterm",  ConnTypePterm,
+    "hasp",   ConnTypeHasp,
+    "rhasp",  ConnTypeRevHasp,
+    "nje",    ConnTypeNje,
+    "trunk",  ConnTypeTrunk,
+    "rs232",  ConnTypeRs232,
+    NULL, -1
     };
 
 static char *connTypeNames[] = // indexed by ordinal
@@ -235,65 +234,65 @@ static char *connTypeNames[] = // indexed by ordinal
 
 static InitVal sectVals[] =
     {
-    "CEJ/MEJ",                       "cyber", "Valid",
-    "channels",                      "cyber", "Deprecated",
-    "clock",                         "cyber", "Valid",
-    "cmFile",                        "cyber", "Deprecated",
-    "console",                       "cyber", "Valid",
-    "cpus",                          "cyber", "Valid",
-    "deadstart",                     "cyber", "Valid",
-    "displayName",                   "cyber", "Valid",
-    "ecsBanks",                      "cyber", "Valid",
-    "ecsFile",                       "cyber", "Deprecated",
-    "equipment",                     "cyber", "Valid",
-    "esmBanks",                      "cyber", "Valid",
-    "helpers",                       "cyber", "Valid",
-    "idle",                          "cyber", "Valid",
-    "idleCycles",                    "cyber", "Valid",
-    "idleTime",                      "cyber", "Valid",
-    "ipAddress",                     "cyber", "Valid",
-    "memory",                        "cyber", "Valid",
-    "model",                         "cyber", "Valid",
-    "networkInterface",              "cyber", "Valid",
-    "npuConnections",                "cyber", "Valid",
-    "operator",                      "cyber", "Valid",
-    "osType",                        "cyber", "Valid",
-    "persistDir",                    "cyber", "Valid",
-    "platoConns",                    "cyber", "Deprecated",
-    "platoPort",                     "cyber", "Deprecated",
-    "pps",                           "cyber", "Valid",
-    "setMhz",                        "cyber", "Valid",
-    "telnetConns",                   "cyber", "Deprecated",
-    "telnetPort",                    "cyber", "Deprecated",
-    "trace",                         "cyber", "Valid",
+    "CEJ/MEJ",                       "cyber",   "Valid",
+    "channels",                      "cyber",   "Deprecated",
+    "clock",                         "cyber",   "Valid",
+    "cmFile",                        "cyber",   "Deprecated",
+    "console",                       "cyber",   "Valid",
+    "cpus",                          "cyber",   "Valid",
+    "deadstart",                     "cyber",   "Valid",
+    "displayName",                   "cyber",   "Valid",
+    "ecsBanks",                      "cyber",   "Valid",
+    "ecsFile",                       "cyber",   "Deprecated",
+    "equipment",                     "cyber",   "Valid",
+    "esmBanks",                      "cyber",   "Valid",
+    "helpers",                       "cyber",   "Valid",
+    "idle",                          "cyber",   "Valid",
+    "idleCycles",                    "cyber",   "Valid",
+    "idleTime",                      "cyber",   "Valid",
+    "ipAddress",                     "cyber",   "Valid",
+    "memory",                        "cyber",   "Valid",
+    "model",                         "cyber",   "Valid",
+    "networkInterface",              "cyber",   "Valid",
+    "npuConnections",                "cyber",   "Valid",
+    "operator",                      "cyber",   "Valid",
+    "osType",                        "cyber",   "Valid",
+    "persistDir",                    "cyber",   "Valid",
+    "platoConns",                    "cyber",   "Deprecated",
+    "platoPort",                     "cyber",   "Deprecated",
+    "pps",                           "cyber",   "Valid",
+    "setMhz",                        "cyber",   "Valid",
+    "telnetConns",                   "cyber",   "Deprecated",
+    "telnetPort",                    "cyber",   "Deprecated",
+    "trace",                         "cyber",   "Valid",
 
-    "cdcnetNode",                    "npu",   "Valid",
-    "cdcnetPrivilegedTcpPortOffset", "npu",   "Valid",
-    "cdcnetPrivilegedUdpPortOffset", "npu",   "Valid",
-    "couplerNode",                   "npu",   "Valid",
-    "hostID",                        "npu",   "Valid",
-    "hostIP",                        "npu",   "Deprecated",
-    "idleNetBufs",                   "npu",   "Valid",
-    "npuNode",                       "npu",   "Valid",
-    "terminals",                     "npu",   "Valid",
+    "cdcnetNode",                    "npu",     "Valid",
+    "cdcnetPrivilegedTcpPortOffset", "npu",     "Valid",
+    "cdcnetPrivilegedUdpPortOffset", "npu",     "Valid",
+    "couplerNode",                   "npu",     "Valid",
+    "hostID",                        "npu",     "Valid",
+    "hostIP",                        "npu",     "Deprecated",
+    "idleNetBufs",                   "npu",     "Valid",
+    "npuNode",                       "npu",     "Valid",
+    "terminals",                     "npu",     "Valid",
 
-    "fontName",                      "cons",  "Valid",
-    "colorBG",                       "cons",  "Valid",
-    "colorFG",                       "cons",  "Valid",
-    "fontSmallHeight",               "cons",  "Valid",
-    "fontMediumHeight",              "cons",  "Valid",
-    "fontLargeHeight",               "cons",  "Valid",
-    "fontSmall",                     "cons",  "Valid",
-    "fontMedium",                    "cons",  "Valid",
-    "fontLarge",                     "cons",  "Valid",
-    "scaleX",                        "cons",  "Valid",
-    "scaleY",                        "cons",  "Valid",
-    "timerRate",                     "cons",  "Valid",
-    "widthPX",                       "cons",  "Valid",
-    "heightPX",                      "cons",  "Valid",
+    "colorBG",                       "console", "Valid",
+    "colorFG",                       "console", "Valid",
+    "fontLarge",                     "console", "Valid",
+    "fontLargeHeight",               "console", "Valid",
+    "fontMedium",                    "console", "Valid",
+    "fontMediumHeight",              "console", "Valid",
+    "fontName",                      "console", "Valid",
+    "fontSmall",                     "console", "Valid",
+    "fontSmallHeight",               "console", "Valid",
+    "heightPX",                      "console", "Valid",
+    "scaleX",                        "console", "Valid",
+    "scaleY",                        "console", "Valid",
+    "timerRate",                     "console", "Valid",
+    "widthPX",                       "console", "Valid",
 
 
-    NULL,                            NULL,    NULL
+    NULL,                            NULL,      NULL
     };
 
 /*
@@ -316,11 +315,10 @@ static InitVal sectVals[] =
 **------------------------------------------------------------------------*/
 void initStartup(char *config, char *configFile)
     {
-    char *cp;
-    FILE *fcb;
-    int len;
+    char        *cp;
+    FILE        *fcb;
+    int         len;
     static char overlayFile[MaxFSPath];
-    char *sp;
 
     /*
     **  Check for the existence of a startup overlay file. If one exits,
@@ -432,10 +430,13 @@ char *initGetNextLine(int *lineNo)
     {
     static char lineBuffer[MaxLine];
 
-    if (curSection == NULL || curSection->curLine == NULL) return NULL;
+    if ((curSection == NULL) || (curSection->curLine == NULL))
+        {
+        return NULL;
+        }
     strcpy(lineBuffer, curSection->curLine->text);
-    startupFile = curSection->curLine->sourceFile;
-    *lineNo = curSection->curLine->lineNo;
+    startupFile         = curSection->curLine->sourceFile;
+    *lineNo             = curSection->curLine->lineNo;
     curSection->curLine = curSection->curLine->next;
 
     return (lineBuffer);
@@ -504,22 +505,20 @@ int initOpenOperatorSection(void)
 **
 **------------------------------------------------------------------------*/
 int initOpenConsoleSection(void)
-{
+    {
     if (strlen(console) == 0)
-    {
+        {
         return 0;
-    }
+        }
     else if (initOpenSection(console))
-    {
+        {
         return 1;
-    }
+        }
     else
-    {
+        {
         return -1;
+        }
     }
-}
-
-
 
 /*
  **--------------------------------------------------------------------------
@@ -567,7 +566,7 @@ static void initCyber(char *config)
         fprintf(stderr, "(init   ) Required section [%s] not found in %s\n", config, startupFile);
         exit(1);
         }
-    
+
     printf("(init   ) Loading root section [%s] from %s\n", config, startupFile);
 
     int     lineNo = 0;
@@ -579,7 +578,7 @@ static void initCyber(char *config)
 
     while ((line = initGetNextLine(&lineNo)) != NULL)
         {
-        token   = strtok(line, "=");
+        token = strtok(line, "=");
         if (strlen(token) > 2)
             {
             goodToken = FALSE;
@@ -730,13 +729,13 @@ static void initCyber(char *config)
                 startupFile, config);
             exit(1);
             }
-        if (memory > 04000000 && (features & IsCyber875) == 0)
+        if ((memory > 04000000) && ((features & IsCyber875) == 0))
             {
             fputs("(init   ) Model coerced to CYBER875 due to memory size\n", stdout);
             strcpy(model, "CYBER875");
             features = featuresCyber875;
             }
-        else if (memory < 04000000 && (features & IsCyber875) != 0)
+        else if ((memory < 04000000) && ((features & IsCyber875) != 0))
             {
             fputs("(init   ) Model coerced to CYBER865 due to memory size\n", stdout);
             strcpy(model, "CYBER865");
@@ -971,7 +970,7 @@ static void initCyber(char *config)
     **  Get optional IP address of DtCyber. If not specified, use "0.0.0.0".
     */
     initGetString("ipaddress", "0.0.0.0", ipAddress, 16);
-    if (initParseIpAddress(strcmp(ipAddress, "0.0.0.0") == 0 ? "127.0.0.1" : ipAddress, &npuNetHostIP, NULL) == FALSE)
+    if (initParseIpAddress((strcmp(ipAddress, "0.0.0.0") == 0)? "127.0.0.1" : ipAddress, &npuNetHostIP, NULL) == FALSE)
         {
         fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'ipAddress' value %s - correct values are IPv4 addresses\n",
                 startupFile, config, ipAddress);
@@ -990,7 +989,10 @@ static void initCyber(char *config)
         char cmd[128];
 
         cp = dummy;
-        while (*cp != '\0' && *cp != ',') cp += 1;
+        while (*cp != '\0' && *cp != ',')
+            {
+            cp += 1;
+            }
         if (*cp == ',')
             {
             *cp++ = '\0';
@@ -1005,7 +1007,7 @@ static void initCyber(char *config)
                     startupFile, config, dummy);
             exit(1);
             }
-        strcpy(networkInterface,    dummy);
+        strcpy(networkInterface, dummy);
         strcpy(networkInterfaceMgr, cp);
         fprintf(stdout, "(init   ) Network interface is '%s'\n", networkInterface);
         sprintf(cmd, "%s %s %s start", networkInterfaceMgr, networkInterface, ipAddress);
@@ -1069,11 +1071,11 @@ static void initCyber(char *config)
     initGetInteger("idletime", 60, &dummyInt);
     idleTime = (u32)dummyInt;
 #endif
-     
+
     if (idle)
         {
         fprintf(stdout, "(init   ) Idle every %d cycles for %d microseconds.\n",
-            idleTrigger, idleTime);
+                idleTrigger, idleTime);
         }
     else
         {
@@ -1138,7 +1140,6 @@ static void initCyber(char *config)
         }
     }
 
-
 /*--------------------------------------------------------------------------
 **  Purpose:        Read and process [console] startup file section.
 **
@@ -1148,22 +1149,22 @@ static void initCyber(char *config)
 **
 **------------------------------------------------------------------------*/
 static void initConsole(void)
-{
+    {
     /* Set Defaults */
     colorBG = DefaultBG;
     colorFG = DefaultFG;
     strcpy(fontName, FontName);
 
-    fontHeightLarge = DefaultHeightLarge;
+    fontHeightLarge  = DefaultHeightLarge;
     fontHeightMedium = DefaultHeightMedium;
-    fontHeightSmall = DefaultHeightSmall;
+    fontHeightSmall  = DefaultHeightSmall;
 
-    fontLarge = DefaultFontLarge;
+    fontLarge  = DefaultFontLarge;
     fontMedium = DefaultFontMedium;
-    fontSmall = DefaultFontSmall;
+    fontSmall  = DefaultFontSmall;
 
     heightPX = DefaultHeightPX;
-    widthPX = DefaultWidthPX;
+    widthPX  = DefaultWidthPX;
 
     scaleX = DefaultScaleX;
     scaleY = DefaultScaleY;
@@ -1174,59 +1175,60 @@ static void initConsole(void)
     /*-------------------START OF PRECHECK-------------------*/
 
     /*
-    *  Pre-Check all of the parameters of this section
-    */
+     *  Pre-Check all of the parameters of this section
+     */
 
     if (!initOpenConsoleSection())
-    {
-        logdtError(LogErrorLocation, "Optional 'console' section [%s] not found in %s\n", console, startupFile);
+        {
+        logDtError(LogErrorLocation, "Optional 'console' section [%s] not found in %s\n", console, startupFile);
+
         return;
-    }
+        }
 
     printf("(init   ) Loading console section [%s] from %s\n", console, startupFile);
 
-    int      lineNo = 0;
-    char*    line;
-    char*    token;
-    InitVal* curVal;
-    bool     goodToken = TRUE;
-    int      numErrors = 0;
-    int      ratio = 0;
+    int     lineNo = 0;
+    char    *line;
+    char    *token;
+    InitVal *curVal;
+    bool    goodToken = TRUE;
+    int     numErrors = 0;
+    int     ratio     = 0;
 
     while ((line = initGetNextLine(&lineNo)) != NULL)
-    {
+        {
         token = strtok(line, "=");
         if (strlen(token) > 2)
-        {
+            {
             goodToken = FALSE;
             for (curVal = sectVals; curVal->valName != NULL; curVal++)
-            {
-                if (strcasecmp(curVal->sectionName, "cons") == 0)
                 {
-                    if (strcasecmp(curVal->valName, token) == 0)
+                if (strcasecmp(curVal->sectionName, "console") == 0)
                     {
+                    if (strcasecmp(curVal->valName, token) == 0)
+                        {
                         goodToken = TRUE;
-                        logdtError(LogErrorLocation, "file '%s' section [%s] line %2d: %-12s %s\n",
-                            startupFile, console, lineNo, token == NULL ? "NULL" : token, curVal->valStatus);
+                        logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: %-12s %s\n",
+                                   startupFile, console, lineNo, token == NULL ? "NULL" : token, curVal->valStatus);
                         break;
+                        }
                     }
                 }
-            }
             if (!goodToken)
-            {
-                logdtError(LogErrorLocation, "file '%s' section [%s] line %2d: invalid or deprecated configuration keyword '%s'\n",
-                    startupFile, console, lineNo, token == NULL ? "NULL" : token);
+                {
+                logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: invalid or deprecated configuration keyword '%s'\n",
+                           startupFile, console, lineNo, token == NULL ? "NULL" : token);
                 numErrors++;
+                }
             }
         }
-    }
 
     if (numErrors > 0)
-    {
-        logdtError(LogErrorLocation, "Correct the %d error(s) in section '[%s]' of '%s' and restart.\n",
-            numErrors, console, startupFile);
+        {
+        logDtError(LogErrorLocation, "Correct the %d error(s) in section '[%s]' of '%s' and restart.\n",
+                   numErrors, console, startupFile);
         exit(1);
-    }
+        }
 
     /*-------------------END OF PRECHECK-------------------*/
 
@@ -1236,27 +1238,27 @@ static void initConsole(void)
 
 
     if (initGetString("fontName", FontName, fontName, sizeof(fontName)))
-    {
-        logdtError(LogErrorLocation, "Font Name '%s' will be loaded\n", fontName);
-    }
+        {
+        logDtError(LogErrorLocation, "Font Name '%s' will be loaded\n", fontName);
+        }
 
     (void)initGetHex("colorBG", DefaultBG, &colorBG);
     (void)initGetHex("colorFG", DefaultFG, &colorFG);
     //  Convert to RGB
     if (colorBG != DefaultBG)
-    {
+        {
         colorBG = RGB(colorBG >> 16 & 0xff, colorBG >> 8 & 0xff, colorBG & 0xff);
-    }
+        }
     //  Convert to RGB
     if (colorFG != DefaultFG)
-    {
+        {
         colorFG = RGB(colorFG >> 16 & 0xff, colorFG >> 8 & 0xff, colorFG & 0xff);
-    }
+        }
     if (colorBG == colorFG)
-    {
+        {
         colorBG = DefaultBG;
         colorFG = DefaultFG;
-    }
+        }
     printf("(init   )         [colorBG]=%06x\n", colorBG);
     printf("(init   )         [colorFG]=%06x\n", colorFG);
 
@@ -1265,26 +1267,26 @@ static void initConsole(void)
     (void)initGetInteger("fontMedium", DefaultFontMedium, &fontMedium);
     (void)initGetInteger("fontLarge", DefaultFontLarge, &fontLarge);
     if (fontSmall < 8)
-    {
-        logdtError(LogErrorLocation, "file '%s' section [%s]: 'fontSmall' must be greater than or equal to 8.\n", startupFile, console);
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s]: 'fontSmall' must be greater than or equal to 8.\n", startupFile, console);
         numErrors += 1;
-    }
+        }
 
     if (fontSmall > fontMedium)
-    {
-        logdtError(LogErrorLocation, "file '%s' section [%s]: 'fontSmall' must be smaller than 'fontMedium'\n", startupFile, console);
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s]: 'fontSmall' must be smaller than 'fontMedium'\n", startupFile, console);
         numErrors += 1;
-    }
+        }
     if (fontMedium > fontLarge)
-    {
-        logdtError(LogErrorLocation, "file '%s' section [%s]: 'fontMedium' must be smaller than 'fontLarge'\n", startupFile, console);
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s]: 'fontMedium' must be smaller than 'fontLarge'\n", startupFile, console);
         numErrors += 1;
-    }
+        }
     if (fontLarge > 48)
-    {
-        logdtError(LogErrorLocation, "file '%s' section [%s]: 'fontLarge' must be less than or equal to 48.\n", startupFile, console);
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s]: 'fontLarge' must be less than or equal to 48.\n", startupFile, console);
         numErrors += 1;
-    }
+        }
     printf("(init   )         [fontSmall]=%d\n", fontSmall);
     printf("(init   )         [fontMedium]=%d\n", fontMedium);
     printf("(init   )         [fontLarge]=%d\n", fontLarge);
@@ -1295,26 +1297,26 @@ static void initConsole(void)
     (void)initGetInteger("fontMediumHeight", DefaultHeightMedium, &fontHeightMedium);
     (void)initGetInteger("fontLargeHeight", DefaultHeightLarge, &fontHeightLarge);
     if (fontHeightSmall < 8)
-    {
-        logdtError(LogErrorLocation, "file '%s' section [%s]: 'fontSmallHeight' must be greater than or equal to 8.\n", startupFile, console);
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s]: 'fontSmallHeight' must be greater than or equal to 8.\n", startupFile, console);
         numErrors += 1;
-    }
+        }
 
     if (fontHeightSmall > fontHeightMedium)
-    {
-        logdtError(LogErrorLocation, "file '%s' section [%s]: 'fontSmallHeight' must be smaller than 'fontMediumHeight'\n", startupFile, console);
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s]: 'fontSmallHeight' must be smaller than 'fontMediumHeight'\n", startupFile, console);
         numErrors += 1;
-    }
+        }
     if (fontHeightMedium > fontHeightLarge)
-    {
-        logdtError(LogErrorLocation, "file '%s' section [%s]: 'fontHeightMedium' must be smaller than 'fontHeightLarge'\n", startupFile, console);
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s]: 'fontHeightMedium' must be smaller than 'fontHeightLarge'\n", startupFile, console);
         numErrors += 1;
-    }
+        }
     if (fontHeightLarge > 48)
-    {
-        logdtError(LogErrorLocation, "file '%s' section [%s]: 'fontHeightLarge' must be less than or equal to 48.\n", startupFile, console);
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s]: 'fontHeightLarge' must be less than or equal to 48.\n", startupFile, console);
         numErrors += 1;
-    }
+        }
 
     printf("(init   )         [fontSmallHeight]=%d\n", fontHeightSmall);
     printf("(init   )         [fontMediumHeight]=%d\n", fontHeightMedium);
@@ -1323,23 +1325,23 @@ static void initConsole(void)
 
     (void)initGetInteger("scaleX", DefaultScaleX, &scaleX);
     (void)initGetInteger("scaleY", DefaultScaleY, &scaleY);
-    if (scaleX < 6 || scaleX > 20)
-    {
-        logdtError(LogErrorLocation, "file '%s' section [%s]: 'scaleX' must be between or equal to 6 and 20.\n", startupFile, console);
+    if ((scaleX < 6) || (scaleX > 20))
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s]: 'scaleX' must be between or equal to 6 and 20.\n", startupFile, console);
         numErrors += 1;
-    }
-    if (scaleY < 6 || scaleY > 20)
-    {
-        logdtError(LogErrorLocation, "file '%s' section [%s]: 'scaleY' must be between or equal to 6 and 20.\n", startupFile, console);
+        }
+    if ((scaleY < 6) || (scaleY > 20))
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s]: 'scaleY' must be between or equal to 6 and 20.\n", startupFile, console);
         numErrors += 1;
-    }
+        }
 
     (void)initGetInteger("timerRate", DefaultTimerRate, &timerRate);
-    if (timerRate < 50 || timerRate > 200)
-    {
-        logdtError(LogErrorLocation, "file '%s' section [%s]: 'timerRate' must be between or equal to 50 and 200.\n", startupFile, console);
+    if ((timerRate < 50) || (timerRate > 200))
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s]: 'timerRate' must be between or equal to 50 and 200.\n", startupFile, console);
         numErrors += 1;
-    }
+        }
     printf("(init   )         [scaleX]=%d\n", scaleX);
     printf("(init   )         [scaleY]=%d\n", scaleY);
 
@@ -1347,36 +1349,36 @@ static void initConsole(void)
 
     (void)initGetInteger("widthPX", DefaultWidthPX, &widthPX);
     (void)initGetInteger("heightPX", DefaultHeightPX, &heightPX);
-    if (widthPX < 800 || widthPX > 2560)
-    {
-        logdtError(LogErrorLocation, "file '%s' section [%s]: 'widthPX' must be between or equal to 800 and 2560.\n", startupFile, console);
+    if ((widthPX < 800) || (widthPX > 2560))
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s]: 'widthPX' must be between or equal to 800 and 2560.\n", startupFile, console);
         numErrors += 1;
-    }
-    if (heightPX < 600 || heightPX > 1920)
-    {
-        logdtError(LogErrorLocation, "file '%s' section [%s]: 'heightPX' must be between or equal to 600 and 1920.\n", startupFile, console);
+        }
+    if ((heightPX < 600) || (heightPX > 1920))
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s]: 'heightPX' must be between or equal to 600 and 1920.\n", startupFile, console);
         numErrors += 1;
-    }
+        }
     ratio = (int)((float)heightPX / (float)widthPX * 100.0);
-    if (ratio < 56 || ratio > 100)
-    {
-        logdtError(LogErrorLocation, 
-            "(init   ) file '%s' section [%s]: the ratio of 'heightPX' to 'widthPX' must be between 56%% (16:9) and 100%% (1:1). \n",
-            startupFile, console);
-        logdtError(LogErrorLocation,
-            "(init   ) Ratio of heightPX (%d) to widthPX (%d) is %d%%.", heightPX, widthPX, ratio);
+    if ((ratio < 56) || (ratio > 100))
+        {
+        logDtError(LogErrorLocation,
+                   "file '%s' section [%s]: the ratio of 'heightPX' to 'widthPX' must be between 56%% (16:9) and 100%% (1:1). \n",
+                   startupFile, console);
+        logDtError(LogErrorLocation,
+                   "Ratio of heightPX (%d) to widthPX (%d) is %d%%.", heightPX, widthPX, ratio);
         numErrors += 1;
-    }
+        }
     printf("(init   )         [heightPX]=%d\n", heightPX);
     printf("(init   )         [widthPX]=%d\n", widthPX);
 
     if (numErrors > 0)
-    {
-        logdtError(LogErrorLocation, "Correct the %d error(s) in section '[%s]' of '%s' and restart.\n",
-            numErrors, console, startupFile);
+        {
+        logDtError(LogErrorLocation, "Correct the %d error(s) in section '[%s]' of '%s' and restart.\n",
+                   numErrors, console, startupFile);
         exit(1);
+        }
     }
-}
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Read and process NPU definitions.
@@ -1434,7 +1436,7 @@ static void initNpuConnections(void)
         fprintf(stderr, "(init   ) Required section [%s] not found in '%s'\n", npuConnections, startupFile);
         exit(1);
         }
-    
+
     printf("(init   ) Loading NPU section [%s] from %s\n", npuConnections, startupFile);
 
     InitVal *curVal;
@@ -1444,7 +1446,7 @@ static void initNpuConnections(void)
     lineNo = 0;
     while ((line = initGetNextLine(&lineNo)) != NULL)
         {
-        token   = strtok(line, "=");
+        token = strtok(line, "=");
         if (strlen(token) > 2)
             {
             goodToken = FALSE;
@@ -1581,12 +1583,14 @@ static void initNpuConnections(void)
         **  Parse initial keyword
         */
         for (cp = line; *cp != '\0' && *cp != ',' && *cp != '='; cp++)
-            ;
+            {
+            }
         *cp = '\0';
 
         if (strcasecmp(line, "terminals") == 0)
             {
             *cp = '=';
+
             /*
             ** Parse terminals definition.  Syntax is:
             **
@@ -1627,7 +1631,7 @@ static void initNpuConnections(void)
             **     <remote-port>   TCP port number to which Reverse HASP, NJE, or LIP will connect
             */
             connType = initParseTerminalDefn(line, startupFile, npuConnections, lineNo,
-                &tcpPort, &claPort, &numConns, &remainder);
+                                             &tcpPort, &claPort, &numConns, &remainder);
             fprintf(stderr, "(init   ) [%s] line %2d: %6s TCP port %5d CLA port 0x%02x port count %3d",
                 npuConnections, lineNo, connTypeNames[connType], tcpPort, claPort, numConns);
 
@@ -1726,7 +1730,7 @@ static void initNpuConnections(void)
                 /*
                 **   terminals=<local-port>,<cla-port>,<connections>,rhasp,<remote-ip>:<remote-port>[,<block-size>]
                 */
-                token    = strtok(remainder, ", ");
+                token = strtok(remainder, ", ");
                 if (token == NULL)
                     {
                     fputs("\n(init   )   Missing remote host address\n", stderr);
@@ -1744,8 +1748,8 @@ static void initNpuConnections(void)
                     exit(1);
                     }
                 destHostName = destHostAddr;
-                blockSize = DefaultRevHaspBlockSize;
-                token     = strtok(NULL, " ");
+                blockSize    = DefaultRevHaspBlockSize;
+                token        = strtok(NULL, " ");
                 if (token != NULL)
                     {
                     if ((*token == 'B') || (*token == 'b'))
@@ -1851,7 +1855,7 @@ static void initNpuConnections(void)
                     fputs("\n(init   )   Invalid port count - must be 1\n", stderr);
                     exit(1);
                     }
-                token    = strtok(remainder, ", ");
+                token = strtok(remainder, ", ");
                 if (token == NULL)
                     {
                     fputs("\n(init   )   Missing remote host address\n", stderr);
@@ -1896,7 +1900,7 @@ static void initNpuConnections(void)
             case ConnTypeRevHasp:
             case ConnTypeNje:
             case ConnTypeTrunk:
-                len = (int)(strlen(destHostName) + 1);
+                len            = (int)(strlen(destHostName) + 1);
                 ncbp->hostName = (char *)malloc(len);
                 if (ncbp->hostName == NULL)
                     {
@@ -1978,7 +1982,8 @@ static void initEquipment(void)
      *  Pre-Check that all of the entries in this section name
      *  valid equipment types.
      */
-    int  numErrors = 0;
+    int numErrors = 0;
+
     lineNo = 0;
 
     while ((line = initGetNextLine(&lineNo)) != NULL)
@@ -2027,7 +2032,8 @@ static void initEquipment(void)
         **  Parse device type and lookup device index.
         */
         deviceIndex = initParseEquipmentDefn(line, startupFile, equipment, lineNo,
-            &eqNo, &unitNo, &channelNo, &deviceParams);
+                                             &eqNo, &unitNo, &channelNo, &deviceParams);
+
         /*
         **  Initialise device.
         */
@@ -2141,7 +2147,7 @@ static int initParseEquipmentDefn(char *defn, char *file, char *section, int lin
 **                  section      name of section containing definition
 **                  lineNo       line number of the definition within its
 **                               source section
-**                  
+**
 **                  tcpPort      TCP listening port number (output parameter)
 **                  claPort      CLA port number (output parameter)
 **                  claPortCount CLA port count (output parameter)
@@ -2159,7 +2165,7 @@ static int initParseTerminalDefn(char *defn, char *file, char *section, int line
     long val;
 
     token = strtok(defn, ",=");
-    if (token == NULL || strcasecmp(token, "terminals") != 0)
+    if ((token == NULL) || (strcasecmp(token, "terminals") != 0))
         {
         fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid terminal definition '%s'\n",
             file, section, lineNo, token == NULL ? "NULL" : token);
@@ -2216,7 +2222,7 @@ static int initParseTerminalDefn(char *defn, char *file, char *section, int line
         }
 
     val = strtol(token, NULL, 10);
-    if ((val < 0) || (val > 100))
+    if ((val < 1) || (val > 100))
         {
         fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid number of connections %ld\n",
             file, section, lineNo, val);
@@ -2382,6 +2388,7 @@ static bool initOpenSection(char *name)
     if (curSection != NULL)
         {
         curSection->curLine = curSection->lines;
+
         return TRUE;
         }
     else
@@ -2436,36 +2443,38 @@ static bool initGetOctal(char *entry, int defValue, long *value)
 **  Returns:        TRUE if entry was found, FALSE otherwise.
 **
 **------------------------------------------------------------------------*/
-static bool initGetHex(char* entry, int defValue, long* value)
-{
+static bool initGetHex(char *entry, int defValue, long *value)
+    {
     char buffer[40];
 
     //  Get the next entry
     if (!initGetString(entry, "", buffer, sizeof(buffer)))
-    {
+        {
         /*
         **  Return default value.
         */
         *value = defValue;
+
         return (FALSE);
-    }
+        }
     //  It must be valid Hexadecimal
     if (buffer[strspn(buffer, "0123456789abcdefABCDEF")] == 0)
-    {
+        {
         /*
         **  Convert octal string to value.
         */
         *value = strtol(buffer, NULL, 16);
+
         return (TRUE);
-    } 
+        }
 
     /*
     **  Return default value.
     */
     *value = defValue;
-    return (FALSE);
-}
 
+    return (FALSE);
+    }
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Locate integer entry within section and return value.
@@ -2521,7 +2530,10 @@ static bool initGetString(char *entry, char *defString, char *str, int strLen)
     int  lineNo;
     char *pos;
 
-    if (curSection == NULL) return FALSE;
+    if (curSection == NULL)
+        {
+        return FALSE;
+        }
 
     /*
     **  Leave room for zero terminator.
@@ -2689,20 +2701,20 @@ static bool initParseIpAddress(char *ipStr, u32 *ip, u16 *port)
 **------------------------------------------------------------------------*/
 static void initReadStartupFile(FILE *fcb, char *fileName)
     {
-    char *cp;
+    char        *cp;
     InitSection *curSection;
-    char *lastNb;
+    char        *lastNb;
     static char lineBuffer[MaxLine];
-    int lineNo;
-    char *sp;
+    int         lineNo;
+    char        *sp;
 
     curSection = NULL;
-    lineNo = 0;
+    lineNo     = 0;
 
     while (fgets(lineBuffer, sizeof(lineBuffer), fcb) != NULL)
         {
         lineNo += 1;
-        cp = lineBuffer;
+        cp      = lineBuffer;
         if (*cp == '[')
             {
             sp = ++cp;
@@ -2712,7 +2724,7 @@ static void initReadStartupFile(FILE *fcb, char *fileName)
                     {
                     break;
                     }
-                else if (*cp == '\0' || isspace(*cp))
+                else if ((*cp == '\0') || isspace(*cp))
                     {
                     *cp = '\0';
                     fprintf(stderr, "(init   ) Invalid section identifier starting with [\"%s\" in %s\n", sp, fileName);
@@ -2723,7 +2735,7 @@ static void initReadStartupFile(FILE *fcb, char *fileName)
                     cp += 1;
                     }
                 }
-            *cp = '\0';
+            *cp        = '\0';
             curSection = initFindSection(sp);
             if (curSection == NULL)
                 {
@@ -2731,14 +2743,14 @@ static void initReadStartupFile(FILE *fcb, char *fileName)
                 if (curSection != NULL)
                     {
                     curSection->next = sections;
-                    sections = curSection;
+                    sections         = curSection;
                     curSection->name = (char *)malloc(strlen(sp) + 1);
                     if (curSection->name != NULL)
                         {
                         strcpy(curSection->name, sp);
                         }
                     }
-                if (curSection == NULL || curSection->name == NULL)
+                if ((curSection == NULL) || (curSection->name == NULL))
                     {
                     fputs("(init   ) Failed to allocate section structure\n", stderr);
                     exit(1);
@@ -2748,12 +2760,21 @@ static void initReadStartupFile(FILE *fcb, char *fileName)
             }
         else
             {
-            while (isspace(*cp)) cp += 1;
-            if (*cp == '\0' || *cp == ';') continue; // empty line or comment
+            while (isspace(*cp))
+                {
+                cp += 1;
+                }
+            if ((*cp == '\0') || (*cp == ';'))
+                {
+                continue;                            // empty line or comment
+                }
             sp = lastNb = cp++;
             while (*cp != '\0')
                 {
-                if (*cp == '\n' || *cp == '\r') break;
+                if ((*cp == '\n') || (*cp == '\r'))
+                    {
+                    break;
+                    }
                 if (isspace(*cp))
                     {
                     *cp = ' ';
@@ -2800,27 +2821,34 @@ static void initAddLine(InitSection *section, char *fileName, int lineNo, char *
     u8       unitNo1, unitNo2;
 
     for (cp = text; *cp != '\0' && *cp != ',' && *cp != '='; cp++)
-        ;
-    c = *cp;
+        {
+        }
+    c   = *cp;
     *cp = '\0';
     if (strcasecmp(text, "terminals") == 0)
         {
         *cp = c;
         strcpy(lineBuffer, text);
         connType = initParseTerminalDefn(lineBuffer, fileName, section->name, lineNo,
-            &tcpPort, &claPort1, &claPortCount, &params1);
+                                         &tcpPort, &claPort1, &claPortCount, &params1);
         //
         //  If a terminal definition specifying the same CLA port already exists,
         //  ignore this definition and allow the previous one to prevail.
         //
         for (line = section->lines; line != NULL; line = line->next)
             {
-            if (strncasecmp(line->text, "terminals", 9) != 0
-                || strcmp(fileName, line->sourceFile) == 0) continue;
+            if ((strncasecmp(line->text, "terminals", 9) != 0)
+                || (strcmp(fileName, line->sourceFile) == 0))
+                {
+                continue;
+                }
             strcpy(lineBuffer, line->text);
             connType = initParseTerminalDefn(lineBuffer, line->sourceFile, section->name, line->lineNo,
-                &tcpPort, &claPort2, &claPortCount, &params2);
-            if (claPort1 == claPort2) return;
+                                             &tcpPort, &claPort2, &claPortCount, &params2);
+            if (claPort1 == claPort2)
+                {
+                return;
+                }
             }
         }
     else if (initLookupDeviceType(text) >= 0)
@@ -2828,18 +2856,24 @@ static void initAddLine(InitSection *section, char *fileName, int lineNo, char *
         *cp = c;
         strcpy(lineBuffer, text);
         deviceIndex = initParseEquipmentDefn(lineBuffer, fileName, section->name, lineNo,
-            &eqNo1, &unitNo1, &chNo1, &params1);
+                                             &eqNo1, &unitNo1, &chNo1, &params1);
         //
         //  If an equipment definition specifying the same equipment, unit, and channel
         //  number already exists, ignore this definition and allow the previous one to prevail.
         //
         for (line = section->lines; line != NULL; line = line->next)
             {
-            if (strcmp(fileName, line->sourceFile) == 0) continue;
+            if (strcmp(fileName, line->sourceFile) == 0)
+                {
+                continue;
+                }
             strcpy(lineBuffer, line->text);
             deviceIndex = initParseEquipmentDefn(lineBuffer, line->sourceFile, section->name, line->lineNo,
-                &eqNo2, &unitNo2, &chNo2, &params2);
-            if (chNo1 == chNo2 && eqNo1 == eqNo2 && unitNo1 == unitNo2) return;
+                                                 &eqNo2, &unitNo2, &chNo2, &params2);
+            if ((chNo1 == chNo2) && (eqNo1 == eqNo2) && (unitNo1 == unitNo2))
+                {
+                return;
+                }
             }
         }
     else
@@ -2851,13 +2885,13 @@ static void initAddLine(InitSection *section, char *fileName, int lineNo, char *
     if (line != NULL)
         {
         line->sourceFile = fileName;
-        line->lineNo = lineNo;
-        line->text = (char *)malloc(strlen(text) + 1);
+        line->lineNo     = lineNo;
+        line->text       = (char *)malloc(strlen(text) + 1);
         if (line->text != NULL)
             {
             strcpy(line->text, text);
             }
-        if (line == NULL || line->text == NULL)
+        if ((line == NULL) || (line->text == NULL))
             {
             fputs("(init   ) Failed to allocate section structure\n", stderr);
             exit(1);
@@ -2870,7 +2904,10 @@ static void initAddLine(InitSection *section, char *fileName, int lineNo, char *
     else
         {
         cursor = section->lines;
-        while (cursor->next != NULL) cursor = cursor->next;
+        while (cursor->next != NULL)
+            {
+            cursor = cursor->next;
+            }
         cursor->next = line;
         }
     }
@@ -2890,8 +2927,12 @@ static InitSection *initFindSection(char *name)
 
     for (section = sections; section != NULL; section = section->next)
         {
-        if (strcasecmp(section->name, name) == 0) return section;
+        if (strcasecmp(section->name, name) == 0)
+            {
+            return section;
+            }
         }
+
     return NULL;
     }
 
@@ -2911,8 +2952,11 @@ static int initLookupConnType(char *connType)
     for (i = 0; connTypes[i].name != NULL; i++)
         {
         if (strcasecmp(connType, connTypes[i].name) == 0)
+            {
             return connTypes[i].ordinal;
+            }
         }
+
     return -1;
     }
 
@@ -2931,8 +2975,12 @@ static int initLookupDeviceType(char *deviceType)
 
     for (deviceIndex = 0; deviceIndex < deviceCount; deviceIndex++)
         {
-        if (strcasecmp(deviceType, deviceDesc[deviceIndex].id) == 0) return deviceIndex;
+        if (strcasecmp(deviceType, deviceDesc[deviceIndex].id) == 0)
+            {
+            return deviceIndex;
+            }
         }
+
     return -1;
     }
 

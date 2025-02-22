@@ -70,7 +70,8 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
-void dtNow(char* dtOutBuf, int buflen);
+static void dtNow(char *dtOutBuf, int buflen);
+
 /*
 **  ----------------
 **  Public Variables
@@ -82,8 +83,8 @@ void dtNow(char* dtOutBuf, int buflen);
 **  Private Variables
 **  -----------------
 */
-static FILE *logF = NULL;
-static char *LogFN = "dtcyber_log.txt";
+static FILE *logF  = NULL;
+static char *LogFN = "dtcyberlog.txt";
 
 /*
  **--------------------------------------------------------------------------
@@ -104,9 +105,10 @@ static char *LogFN = "dtcyber_log.txt";
 void logInit(void)
     {
     //  Don't do anything if it's already open
-    if (logF != NULL) {
+    if (logF != NULL)
+        {
         return;
-    }
+        }
     logF = fopen(LogFN, "wt");
     if (logF == NULL)
         {
@@ -129,9 +131,9 @@ void logInit(void)
 void logError(char *file, int line, char *fmt, ...)
     {
     if (logF == NULL)
-    {
+        {
         logInit();
-    }
+        }
 
     va_list param;
 
@@ -153,34 +155,36 @@ void logError(char *file, int line, char *fmt, ...)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void dtNow(char* dtOutBuf, int buflen)
-{
+static void dtNow(char *dtOutBuf, int buflen)
+    {
 #if defined(_WIN32)
     SYSTEMTIME dt;
     GetLocalTime(&dt);
-    sprintf_s(dtOutBuf, buflen, 
-        "%04d-%02d-%02d %02d:%02d:%02d", 
-        dt.wYear, dt.wMonth, dt.wDay, dt.wHour, dt.wMinute, dt.wSecond);
+    sprintf_s(dtOutBuf, buflen,
+              "%04d-%02d-%02d %02d:%02d:%02d",
+              dt.wYear, dt.wMonth, dt.wDay, dt.wHour, dt.wMinute, dt.wSecond);
 #else
     time_t    rawtime;
-    struct tm* info;
+    struct tm *info;
 
-    if (opCmdStackPtr != 0
-        && opCmdStack[opCmdStackPtr].netConn == 0
-        && opCmdStack[opCmdStackPtr].in != -1) return;
+    if ((opCmdStackPtr != 0)
+        && (opCmdStack[opCmdStackPtr].netConn == 0)
+        && (opCmdStack[opCmdStackPtr].in != -1))
+        {
+        return;
+        }
 
     time(&rawtime);
     info = localtime(&rawtime);
     strftime(dtOutBuf, buflen, "%Y-%m-%d %H:%M:%S", info);
 #endif
-
-}
+    }
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Get the Current Date/Time and prepend it to the msg.
 **
 **  Parameters:     Name        Description.
-**                  file        A string pointing to the full name of the 
+**                  file        A string pointing to the full name of the
 **                              C file raising the error.
 **                  line        The line number which is raising the error.
 **                  fmt         The format String to which the variadic
@@ -189,12 +193,12 @@ void dtNow(char* dtOutBuf, int buflen)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void logdtError(char* file, int line, char* fmt, ...)
-{
-
+void logDtError(char *file, int line, char *fmt, ...)
+    {
     va_list param;
-    char* ixpos; 
-#define buflen 32
+    char    *ixpos;
+
+#define buflen    32
     char dtOutBuf[buflen];
     char dtFnBuf[128];
 
@@ -205,37 +209,38 @@ void logdtError(char* file, int line, char* fmt, ...)
     dtNow(dtOutBuf, buflen);
 #endif
 
-    if (logF == NULL) {
+    if (logF == NULL)
+        {
         logInit();
-    }
+        }
 
     fprintf(stderr, "%s ", dtOutBuf);
     fprintf(logF, "%s ", dtOutBuf);
 
     ixpos = strrchr(file, '\\');
     if (ixpos == NULL)
-    {
+        {
         ixpos = strrchr(file, '/');
-    }
+        }
     if (ixpos == NULL)
-    {
+        {
         ixpos = file;
-    }
+        }
     else
-    {
+        {
         ixpos += 1;
-    }
+        }
 
     strcpy(dtFnBuf, ixpos);
     ixpos = strrchr(dtFnBuf, '.');
     if (ixpos == NULL)
-    {
+        {
         ixpos = dtFnBuf;
-    }
+        }
     else
-    {
+        {
         ixpos[0] = '\0';
-    }
+        }
 
     //  Print the origin of the message
     fprintf(stderr, "(%s:%d) ", dtFnBuf, line);
@@ -245,15 +250,15 @@ void logdtError(char* file, int line, char* fmt, ...)
     vfprintf(stderr, fmt, param);
     vfprintf(logF, fmt, param);
     va_end(param);
-    ixpos = strrchr( fmt, '\n');
-    if (ixpos == NULL) {
-    fprintf(stderr, "\n");
-    fprintf(logF, "\n");
-    }
+    ixpos = strrchr(fmt, '\n');
+    if (ixpos == NULL)
+        {
+        fprintf(stderr, "\n");
+        fprintf(logF, "\n");
+        }
 
     fflush(stderr);
     fflush(logF);
-}
-
+    }
 
 /*---------------------------  End Of File  ------------------------------*/

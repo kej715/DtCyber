@@ -142,7 +142,7 @@ void windowInit(void)
     **  Create POSIX thread with default attributes.
     */
     pthread_attr_init(&attr);
-    rc = pthread_create(&displayThread, &attr, windowThread, NULL);
+    rc            = pthread_create(&displayThread, &attr, windowThread, NULL);
     displayActive = TRUE;
     }
 
@@ -301,7 +301,7 @@ void *windowThread(void *param)
     disp = XOpenDisplay(0);
     if (disp == (Display *)NULL)
         {
-        logdtError(LogErrorLocation, "Could not open display\n");
+        logDtError(LogErrorLocation, "Could not open display\n");
         exit(1);
         }
 

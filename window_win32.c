@@ -49,7 +49,7 @@
 // useful for more stable screen shots
 // #define ListSize            10000
 
-#define TIMER_ID            1
+#define TIMER_ID    1
 
 /*
 **  -----------------------
@@ -99,9 +99,9 @@ void windowDisplay(HWND hWnd);
 **  -----------------
 */
 static u8          currentFont;
-static i16         currentX              = -1;
-static i16         currentY              = -1;
-static bool        displayActive         = FALSE;
+static i16         currentX      = -1;
+static i16         currentY      = -1;
+static bool        displayActive = FALSE;
 static DispList    display[ListSize];
 static u32         listEnd;
 static HANDLE      hThread;
@@ -130,8 +130,8 @@ static BOOL        shifted               = FALSE;
 **------------------------------------------------------------------------*/
 void windowInit(void)
     {
-    DWORD  dwThreadId;
-    int    thPriority = 0;
+    DWORD dwThreadId;
+    int   thPriority = 0;
 
     /*
     **  Create display list pool.
@@ -372,17 +372,17 @@ static BOOL windowCreate(void)
         NULL);                  // window-creation data
 #else
     hWnd = CreateWindow(
-        "CONSOLE",              // Registered class name
-        windowName,             // window name
-        (WS_OVERLAPPEDWINDOW | WS_EX_COMPOSITED | WS_CLIPSIBLINGS | WS_CLIPCHILDREN),    // window style
-        CW_USEDEFAULT,          // horizontal position of window
-        CW_USEDEFAULT,          // vertical position of window
-        widthPX,                // window width
-        heightPX,               // window height
-        NULL,                   // handle to parent or owner window
-        NULL,                   // menu handle or child identifier
-        0,                      // handle to application instance
-        NULL);                  // window-creation data
+        "CONSOLE",                                                                    // Registered class name
+        windowName,                                                                   // window name
+        (WS_OVERLAPPEDWINDOW | WS_EX_COMPOSITED | WS_CLIPSIBLINGS | WS_CLIPCHILDREN), // window style
+        CW_USEDEFAULT,                                                                // horizontal position of window
+        CW_USEDEFAULT,                                                                // vertical position of window
+        widthPX,                                                                      // window width
+        heightPX,                                                                     // window height
+        NULL,                                                                         // handle to parent or owner window
+        NULL,                                                                         // menu handle or child identifier
+        0,                                                                            // handle to application instance
+        NULL);                                                                        // window-creation data
 #endif
 
     if (!hWnd)
@@ -878,15 +878,15 @@ void windowDisplay(HWND hWnd)
             if (oldFont == fontSmall)
                 {
                 SelectObject(hdcMem, hSmallFont);
-            }
+                }
 
             if (oldFont == fontMedium)
-            {
+                {
                 SelectObject(hdcMem, hMediumFont);
-            }
+                }
 
             if (oldFont == fontLarge)
-            {
+                {
                 SelectObject(hdcMem, hLargeFont);
                 }
             }
