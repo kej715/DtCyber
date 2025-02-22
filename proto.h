@@ -238,9 +238,9 @@ void lp3000ShowStatus();
 /*
 **  log.c
 */
-void logInit(void);
+void logDtError(char* file, int line, char* fmt, ...);
 void logError(char *file, int line, char *fmt, ...);
-void logdtError(char* file, int line, char* fmt, ...);
+void logInit(void);
 
 
 /*
@@ -501,7 +501,7 @@ extern long                fontHeightSmall;                 // Console
 extern long                fontLarge;                       // Console
 extern long                fontMedium;                      // Console
 extern long                fontSmall;                       // Console
-extern CHAR                fontName[LF_FACESIZE];           // Console
+extern char                fontName[];                      // Console
 extern long                heightPX;                        // Console
 extern ModelType           modelType;
 extern u16                 mux6676TelnetConns;

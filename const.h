@@ -32,9 +32,9 @@
 **  ----------------
 */
 #ifdef _DEBUG
-#define DtCyberVersion      "Desktop CYBER 5.7.55 (Debug)   "
+#define DtCyberVersion      "Desktop CYBER 5.7.56 (Debug)   "
 #else
-#define DtCyberVersion      "Desktop CYBER 5.7.55 (Release) "
+#define DtCyberVersion      "Desktop CYBER 5.7.56 (Release) "
 #endif
 
 #define DtCyberBuildDate    __DATE__ " " __TIME__
@@ -146,6 +146,13 @@
 #define FontMedium                 16
 #define FontSmall                  8
 #define FontDot                    0
+
+#if defined(_WIN32)
+#define MaxFontNameSize LF_FACESIZE
+#else
+#define MaxFontNameSize 64
+#endif
+
 
 
 /*

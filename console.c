@@ -217,7 +217,7 @@ long fontHeightSmall;                 // Console
 long fontLarge;                       // Console
 long fontMedium;                      // Console
 long fontSmall;                       // Console
-CHAR fontName[LF_FACESIZE];           // Console
+char fontName[MaxFontNameSize+1];     // Console
 long heightPX;                        // Console
 long scaleX;                          // Console
 long scaleY;                          // Console

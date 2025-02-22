@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------
 **
-**  Copyright (c) 2003-2011, Tom Hunter
+**  Copyright (c) 2003-2025, Tom Hunter, Kevin Jordan, Steven Zoppi
 **
 **  Name: init.c
 **
@@ -61,6 +61,7 @@
 #define DefaultFontMedium      12
 #define DefaultFontSmall       8
 #else
+#define RGB(R,G,B) ((R<<16)|(G<<8)|B)
 #define FontName               "lucidatypewriter"
 #define DefaultFontLarge       24
 #define DefaultFontMedium      14
@@ -69,7 +70,6 @@
 
 #define DefaultBG              RGB(0, 0, 0)
 #define DefaultFG              RGB(0, 255, 0)
-
 
 #define DefaultHeightLarge     30
 #define DefaultHeightMedium    20
@@ -82,8 +82,6 @@
 #define DefaultScaleY          12
 
 #define DefaultTimerRate       100
-
-
 
 /*
 **  -----------------------
@@ -1237,7 +1235,7 @@ static void initConsole(void)
     lineNo = 0;
 
 
-    if (initGetString("fontName", FontName, fontName, sizeof(fontName)))
+    if (initGetString("fontName", FontName, fontName, MaxFontNameSize))
         {
         logDtError(LogErrorLocation, "Font Name '%s' will be loaded\n", fontName);
         }
@@ -1259,8 +1257,8 @@ static void initConsole(void)
         colorBG = DefaultBG;
         colorFG = DefaultFG;
         }
-    printf("(init   )         [colorBG]=%06x\n", colorBG);
-    printf("(init   )         [colorFG]=%06x\n", colorFG);
+    printf("(init   )         [colorBG]=%06lx\n", colorBG);
+    printf("(init   )         [colorFG]=%06lx\n", colorFG);
 
 
     (void)initGetInteger("fontSmall", DefaultFontSmall, &fontSmall);
@@ -1287,9 +1285,9 @@ static void initConsole(void)
         logDtError(LogErrorLocation, "file '%s' section [%s]: 'fontLarge' must be less than or equal to 48.\n", startupFile, console);
         numErrors += 1;
         }
-    printf("(init   )         [fontSmall]=%d\n", fontSmall);
-    printf("(init   )         [fontMedium]=%d\n", fontMedium);
-    printf("(init   )         [fontLarge]=%d\n", fontLarge);
+    printf("(init   )         [fontSmall]=%ld\n", fontSmall);
+    printf("(init   )         [fontMedium]=%ld\n", fontMedium);
+    printf("(init   )         [fontLarge]=%ld\n", fontLarge);
 
 
 
@@ -1318,10 +1316,9 @@ static void initConsole(void)
         numErrors += 1;
         }
 
-    printf("(init   )         [fontSmallHeight]=%d\n", fontHeightSmall);
-    printf("(init   )         [fontMediumHeight]=%d\n", fontHeightMedium);
-    printf("(init   )         [fontLargeHeight]=%d\n", fontHeightLarge);
-
+    printf("(init   )         [fontSmallHeight]=%ld\n", fontHeightSmall);
+    printf("(init   )         [fontMediumHeight]=%ld\n", fontHeightMedium);
+    printf("(init   )         [fontLargeHeight]=%ld\n", fontHeightLarge);
 
     (void)initGetInteger("scaleX", DefaultScaleX, &scaleX);
     (void)initGetInteger("scaleY", DefaultScaleY, &scaleY);
@@ -1342,10 +1339,8 @@ static void initConsole(void)
         logDtError(LogErrorLocation, "file '%s' section [%s]: 'timerRate' must be between or equal to 50 and 200.\n", startupFile, console);
         numErrors += 1;
         }
-    printf("(init   )         [scaleX]=%d\n", scaleX);
-    printf("(init   )         [scaleY]=%d\n", scaleY);
-
-
+    printf("(init   )         [scaleX]=%ld\n", scaleX);
+    printf("(init   )         [scaleY]=%ld\n", scaleY);
 
     (void)initGetInteger("widthPX", DefaultWidthPX, &widthPX);
     (void)initGetInteger("heightPX", DefaultHeightPX, &heightPX);
@@ -1369,8 +1364,8 @@ static void initConsole(void)
                    "Ratio of heightPX (%d) to widthPX (%d) is %d%%.", heightPX, widthPX, ratio);
         numErrors += 1;
         }
-    printf("(init   )         [heightPX]=%d\n", heightPX);
-    printf("(init   )         [widthPX]=%d\n", widthPX);
+    printf("(init   )         [heightPX]=%ld\n", heightPX);
+    printf("(init   )         [widthPX]=%ld\n", widthPX);
 
     if (numErrors > 0)
         {

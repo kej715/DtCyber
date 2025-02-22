@@ -167,13 +167,6 @@ static void dtNow(char *dtOutBuf, int buflen)
     time_t    rawtime;
     struct tm *info;
 
-    if ((opCmdStackPtr != 0)
-        && (opCmdStack[opCmdStackPtr].netConn == 0)
-        && (opCmdStack[opCmdStackPtr].in != -1))
-        {
-        return;
-        }
-
     time(&rawtime);
     info = localtime(&rawtime);
     strftime(dtOutBuf, buflen, "%Y-%m-%d %H:%M:%S", info);
@@ -201,7 +194,6 @@ void logDtError(char *file, int line, char *fmt, ...)
 #define buflen    32
     char dtOutBuf[buflen];
     char dtFnBuf[128];
-
 
 #if defined(_WIN32)
     dtNow(dtOutBuf, sizeof(dtOutBuf));
