@@ -28,6 +28,7 @@
 **  Include Files
 **  -------------
 */
+
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,26 +48,8 @@
 #define ListSize    5000
 // useful for more stable screen shots
 // #define ListSize            10000
-#define FontName    "Lucida Console"
-// #define FontName            "Sax Mono"
-// #define FontName         "Lekton Mono"
-#if CcLargeWin32Screen == 1
-#define FontSmallHeight     15
-#define FontMediumHeight    20
-#define FontLargeHeight     30
-#define ScaleX              11
-#define ScaleY              18
-#else
-#define FontSmallHeight     13
-#define FontMediumHeight    16
-#define FontLargeHeight     20
-#define ScaleX              10
-#define ScaleY              12
-#endif
 
-#define TIMER_ID            1
-#define TIMER_RATE          100
-//#define TIMER_RATE      1
+#define TIMER_ID    1
 
 /*
 **  -----------------------
@@ -99,9 +82,9 @@ typedef enum displaymode
 */
 static void windowThread(void);
 ATOM windowRegisterClass(HINSTANCE hInstance);
-BOOL windowCreate(void);
+static BOOL windowCreate(void);
 static void windowClipboard(HWND hWnd);
-LRESULT CALLBACK windowProcedure(HWND, UINT, WPARAM, LPARAM);
+static LRESULT CALLBACK windowProcedure(HWND, UINT, WPARAM, LPARAM);
 void windowDisplay(HWND hWnd);
 
 /*
@@ -116,9 +99,9 @@ void windowDisplay(HWND hWnd);
 **  -----------------
 */
 static u8          currentFont;
-static i16         currentX              = -1;
-static i16         currentY              = -1;
-static bool        displayActive         = FALSE;
+static i16         currentX      = -1;
+static i16         currentY      = -1;
+static bool        displayActive = FALSE;
 static DispList    display[ListSize];
 static u32         listEnd;
 static HANDLE      hThread;
@@ -147,8 +130,8 @@ static BOOL        shifted               = FALSE;
 **------------------------------------------------------------------------*/
 void windowInit(void)
     {
-    DWORD  dwThreadId;
-    int    thPriority = 0;
+    DWORD dwThreadId;
+    int   thPriority = 0;
 
     /*
     **  Create display list pool.
@@ -381,25 +364,25 @@ static BOOL windowCreate(void)
         WS_OVERLAPPEDWINDOW,    // window style
         CW_USEDEFAULT,          // horizontal position of window
         0,                      // vertical position of window
-        1280,                   // window width
-        1024,                   // window height
+        widthPX,                // window width
+        heightPX,               // window height
         NULL,                   // handle to parent or owner window
         NULL,                   // menu handle or child identifier
         0,                      // handle to application instance
         NULL);                  // window-creation data
 #else
     hWnd = CreateWindow(
-        "CONSOLE",              // Registered class name
-        windowName,             // window name
-        WS_OVERLAPPEDWINDOW,    // window style
-        CW_USEDEFAULT,          // horizontal position of window
-        CW_USEDEFAULT,          // vertical position of window
-        1080,                   // window width
-        680,                    // window height
-        NULL,                   // handle to parent or owner window
-        NULL,                   // menu handle or child identifier
-        0,                      // handle to application instance
-        NULL);                  // window-creation data
+        "CONSOLE",                                                                    // Registered class name
+        windowName,                                                                   // window name
+        (WS_OVERLAPPEDWINDOW | WS_EX_COMPOSITED | WS_CLIPSIBLINGS | WS_CLIPCHILDREN), // window style
+        CW_USEDEFAULT,                                                                // horizontal position of window
+        CW_USEDEFAULT,                                                                // vertical position of window
+        widthPX,                                                                      // window width
+        heightPX,                                                                     // window height
+        NULL,                                                                         // handle to parent or owner window
+        NULL,                                                                         // menu handle or child identifier
+        0,                                                                            // handle to application instance
+        NULL);                                                                        // window-creation data
 #endif
 
     if (!hWnd)
@@ -410,7 +393,7 @@ static BOOL windowCreate(void)
     ShowWindow(hWnd, SW_SHOW);
     UpdateWindow(hWnd);
 
-    SetTimer(hWnd, TIMER_ID, TIMER_RATE, NULL);
+    SetTimer(hWnd, TIMER_ID, timerRate, NULL);
 
     return TRUE;
     }
@@ -494,56 +477,56 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
         break;
 
     case WM_CREATE:
-        hPen = CreatePen(PS_SOLID, 1, RGB(0, 255, 0));
+        hPen = CreatePen(PS_SOLID, 1, colorFG);
         if (!hPen)
             {
             MessageBox(GetFocus(),
-                       "Unable to get green pen",
+                       "Unable to get foreground pen",
                        "(window_win32) CreatePen Error",
                        MB_OK);
             }
 
         memset(&lfTmp, 0, sizeof(lfTmp));
         lfTmp.lfPitchAndFamily = FIXED_PITCH;
-        strcpy(lfTmp.lfFaceName, FontName);
+        strcpy(lfTmp.lfFaceName, fontName);
         lfTmp.lfWeight       = FW_THIN;
         lfTmp.lfOutPrecision = OUT_TT_PRECIS;
-        lfTmp.lfHeight       = FontSmallHeight;
+        lfTmp.lfHeight       = fontHeightSmall;
         hSmallFont           = CreateFontIndirect(&lfTmp);
         if (!hSmallFont)
             {
             MessageBox(GetFocus(),
-                       "Unable to get font in 15 point",
+                       "Unable to get small height font ",
                        "(window_win32) CreateFont Error",
                        MB_OK);
             }
 
         memset(&lfTmp, 0, sizeof(lfTmp));
         lfTmp.lfPitchAndFamily = FIXED_PITCH;
-        strcpy(lfTmp.lfFaceName, FontName);
+        strcpy(lfTmp.lfFaceName, fontName);
         lfTmp.lfWeight       = FW_THIN;
         lfTmp.lfOutPrecision = OUT_TT_PRECIS;
-        lfTmp.lfHeight       = FontMediumHeight;
+        lfTmp.lfHeight       = fontHeightMedium;
         hMediumFont          = CreateFontIndirect(&lfTmp);
         if (!hMediumFont)
             {
             MessageBox(GetFocus(),
-                       "Unable to get font in 20 point",
+                       "Unable to get medium height font ",
                        "(window_win32) CreateFont Error",
                        MB_OK);
             }
 
         memset(&lfTmp, 0, sizeof(lfTmp));
         lfTmp.lfPitchAndFamily = FIXED_PITCH;
-        strcpy(lfTmp.lfFaceName, FontName);
+        strcpy(lfTmp.lfFaceName, fontName);
         lfTmp.lfWeight       = FW_THIN;
         lfTmp.lfOutPrecision = OUT_TT_PRECIS;
-        lfTmp.lfHeight       = FontLargeHeight;
+        lfTmp.lfHeight       = fontHeightLarge;
         hLargeFont           = CreateFontIndirect(&lfTmp);
         if (!hLargeFont)
             {
             MessageBox(GetFocus(),
-                       "Unable to get font in 30 point",
+                       "Unable to get large height font ",
                        "(window_win32) CreateFont Error",
                        MB_OK);
             }
@@ -722,7 +705,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
         break;
 
     case WM_CHAR:
-        ppKeyIn = wParam;
+        ppKeyIn = (char)wParam;
         break;
 
     default:
@@ -747,7 +730,7 @@ void windowDisplay(HWND hWnd)
     char     str[2]       = " ";
     DispList *curr;
     DispList *end;
-    u8       oldFont = 0;
+    long     oldFont = 0;
 
     RECT        rect;
     PAINTSTRUCT ps;
@@ -780,7 +763,7 @@ void windowDisplay(HWND hWnd)
     */
     hbmOld = SelectObject(hdcMem, hbmMem);
 
-    hBrush = CreateSolidBrush(RGB(0, 0, 0));
+    hBrush = CreateSolidBrush(colorBG);
     FillRect(hdcMem, &rect, hBrush);
     if (displayModeNeedsErase)
         {
@@ -790,11 +773,11 @@ void windowDisplay(HWND hWnd)
     DeleteObject(hBrush);
 
     SetBkMode(hdcMem, TRANSPARENT);
-    SetBkColor(hdcMem, RGB(0, 0, 0));
-    SetTextColor(hdcMem, RGB(0, 255, 0));
+    SetBkColor(hdcMem, colorBG);
+    SetTextColor(hdcMem, colorFG);
 
     hfntOld = SelectObject(hdcMem, hSmallFont);
-    oldFont = FontSmall;
+    oldFont = fontSmall;
 
 #if CcCycleTime
         {
@@ -870,15 +853,15 @@ void windowDisplay(HWND hWnd)
         {
         static char opMessage[] = "(window_win32) Emulation paused";
         hfntOld = SelectObject(hdcMem, hLargeFont);
-        oldFont = FontLarge;
-        TextOut(hdcMem, (0 * ScaleX) / 10, (256 * ScaleY) / 10, opMessage, strlen(opMessage));
+        oldFont = fontLarge;
+        TextOut(hdcMem, (0 * scaleX) / 10, (256 * scaleY) / 10, opMessage, (int)strlen(opMessage));
         }
     else if (consoleIsRemoteActive())
         {
         static char opMessage[] = "Remote console active";
         hfntOld = SelectObject(hdcMem, hLargeFont);
-        oldFont = FontLarge;
-        TextOut(hdcMem, (0 * ScaleX) / 10, (256 * ScaleY) / 10, opMessage, strlen(opMessage));
+        oldFont = fontLarge;
+        TextOut(hdcMem, (0 * scaleX) / 10, (256 * scaleY) / 10, opMessage, (int)strlen(opMessage));
         }
 
 
@@ -892,30 +875,30 @@ void windowDisplay(HWND hWnd)
             {
             oldFont = curr->fontSize;
 
-            switch (oldFont)
+            if (oldFont == fontSmall)
                 {
-            case FontSmall:
                 SelectObject(hdcMem, hSmallFont);
-                break;
+                }
 
-            case FontMedium:
+            if (oldFont == fontMedium)
+                {
                 SelectObject(hdcMem, hMediumFont);
-                break;
+                }
 
-            case FontLarge:
+            if (oldFont == fontLarge)
+                {
                 SelectObject(hdcMem, hLargeFont);
-                break;
                 }
             }
 
         if (curr->fontSize == FontDot)
             {
-            SetPixel(hdcMem, (curr->xPos * ScaleX) / 10, (curr->yPos * ScaleY) / 10 + 30, RGB(0, 255, 0));
+            SetPixel(hdcMem, (curr->xPos * scaleX) / 10, (curr->yPos * scaleY) / 10 + 30, colorFG);
             }
         else
             {
             str[0] = curr->ch;
-            TextOut(hdcMem, (curr->xPos * ScaleX) / 10, (curr->yPos * ScaleY) / 10 + 20, str, 1);
+            TextOut(hdcMem, (curr->xPos * scaleX) / 10, (curr->yPos * scaleY) / 10 + 20, str, 1);
             }
         }
 
@@ -945,21 +928,21 @@ void windowDisplay(HWND hWnd)
 
     case ModeLeft:
         StretchBlt(ps.hdc,
-                   rect.left + (rect.right - rect.left) / 2 - 512 * ScaleY / 10 / 2, rect.top,
-                   512 * ScaleY / 10, rect.bottom - rect.top,
+                   rect.left + (rect.right - rect.left) / 2 - 512 * scaleY / 10 / 2, rect.top,
+                   512 * scaleY / 10, rect.bottom - rect.top,
                    hdcMem,
                    OffLeftScreen, 0,
-                   512 * ScaleX / 10 + FontLarge, rect.bottom - rect.top,
+                   512 * scaleX / 10 + fontLarge, rect.bottom - rect.top,
                    SRCCOPY);
         break;
 
     case ModeRight:
         StretchBlt(ps.hdc,
-                   rect.left + (rect.right - rect.left) / 2 - 512 * ScaleY / 10 / 2, rect.top,
-                   512 * ScaleY / 10, rect.bottom - rect.top,
+                   rect.left + (rect.right - rect.left) / 2 - 512 * scaleY / 10 / 2, rect.top,
+                   512 * scaleY / 10, rect.bottom - rect.top,
                    hdcMem,
                    OffRightScreen, 0,
-                   512 * ScaleX / 10 + FontLarge, rect.bottom - rect.top,
+                   512 * scaleX / 10 + fontLarge, rect.bottom - rect.top,
                    SRCCOPY);
         break;
         }

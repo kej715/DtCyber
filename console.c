@@ -208,6 +208,22 @@ static void consoleLogFlush(void);
 **  ----------------
 */
 
+
+long colorBG;                         // Console
+long colorFG;                         // Console
+long fontHeightLarge;                 // Console
+long fontHeightMedium;                // Console
+long fontHeightSmall;                 // Console
+long fontLarge;                       // Console
+long fontMedium;                      // Console
+long fontSmall;                       // Console
+CHAR fontName[LF_FACESIZE];           // Console
+long heightPX;                        // Console
+long scaleX;                          // Console
+long scaleY;                          // Console
+long timerRate;                       // Console
+long widthPX;                         // Console
+
 /*
 **  -----------------
 **  Private Variables
@@ -649,7 +665,7 @@ static void consoleAcceptConnection(void)
     FD_SET(listenFd, &readFds);
     timeout.tv_sec  = 0;
     timeout.tv_usec = 0;
-    n = select(listenFd + 1, &readFds, NULL, NULL, &timeout);
+    n = select((int)(listenFd + 1), &readFds, NULL, NULL, &timeout);
     if (n > 0)
         {
         connFd = netAcceptConnection(listenFd);
@@ -850,7 +866,7 @@ static void consoleNetIo(void)
     FD_SET(connFd, &readFds);
     timeout.tv_sec  = 0;
     timeout.tv_usec = 0;
-    n = select(connFd + 1, &readFds, NULL, NULL, &timeout);
+    n = select((int)(connFd + 1), &readFds, NULL, NULL, &timeout);
 
     if (ppKeyIn == 0 && inBufOut < inBufIn)
         {
@@ -975,19 +991,19 @@ static void consoleQueueCurState(void)
     consoleQueueCmd(CmdSetFontType, currentFontType);
     if (currentX > 0xff)
         {
-        consoleQueueCmd(CmdSetXHigh, currentX & 0xff);
+        consoleQueueCmd(CmdSetXHigh, (u8)(currentX & 0xff));
         }
     else
         {
-        consoleQueueCmd(CmdSetXLow, currentX);
+        consoleQueueCmd(CmdSetXLow, (u8)currentX);
         }
     if (currentY > 0xff)
         {
-        consoleQueueCmd(CmdSetYHigh, currentY & 0xff);
+        consoleQueueCmd(CmdSetYHigh, (u8)(currentY & 0xff));
         }
     else
         {
-        consoleQueueCmd(CmdSetYLow, currentY);
+        consoleQueueCmd(CmdSetYLow, (u8)currentY);
         }
     }
 
@@ -1068,11 +1084,11 @@ static void consoleSetX(u16 x)
         }
     else if (x > 0xff)
         {
-        consoleQueueCmd(CmdSetXHigh, x & 0xff);
+        consoleQueueCmd(CmdSetXHigh, (u8)(x & 0xff));
         }
     else
         {
-        consoleQueueCmd(CmdSetXLow, x);
+        consoleQueueCmd(CmdSetXLow, (u8)x);
         }
     currentX = x;
     }
@@ -1095,11 +1111,11 @@ static void consoleSetY(u16 y)
         }
     else if (y > 0xff)
         {
-        consoleQueueCmd(CmdSetYHigh, y & 0xff);
+        consoleQueueCmd(CmdSetYHigh, (u8)(y & 0xff));
         }
     else
         {
-        consoleQueueCmd(CmdSetYLow, y);
+        consoleQueueCmd(CmdSetYLow, (u8)y);
         }
     currentY = y;
     }

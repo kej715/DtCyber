@@ -142,7 +142,7 @@ void windowInit(void)
     **  Create POSIX thread with default attributes.
     */
     pthread_attr_init(&attr);
-    rc = pthread_create(&displayThread, &attr, windowThread, NULL);
+    rc            = pthread_create(&displayThread, &attr, windowThread, NULL);
     displayActive = TRUE;
     }
 
@@ -301,7 +301,7 @@ void *windowThread(void *param)
     disp = XOpenDisplay(0);
     if (disp == (Display *)NULL)
         {
-        fprintf(stderr, "Could not open display\n");
+        logDtError(LogErrorLocation, "Could not open display\n");
         exit(1);
         }
 
@@ -329,6 +329,8 @@ void *windowThread(void *param)
     **  Set window and icon titles.
     */
     char windowTitle[132];
+    char xfontName[132];
+    char tfontName[42] = "-*-%s-medium-*-*-*-%d-*-*-*-*-*-*-*\0";
 
     windowTitle[0] = '\0';
     strcat(windowTitle, displayName);
@@ -353,9 +355,13 @@ void *windowThread(void *param)
     /*
     **  Load three Cyber fonts.
     */
-    hSmallFont  = XLoadFont(disp, "-*-lucidatypewriter-medium-*-*-*-10-*-*-*-*-*-*-*\0");
-    hMediumFont = XLoadFont(disp, "-*-lucidatypewriter-medium-*-*-*-14-*-*-*-*-*-*-*\0");
-    hLargeFont  = XLoadFont(disp, "-*-lucidatypewriter-medium-*-*-*-24-*-*-*-*-*-*-*\0");
+
+    sprintf(xfontName, tfontName, fontName, fontSmall);
+    hSmallFont = XLoadFont(disp, xfontName);
+    sprintf(xfontName, tfontName, fontName, fontMedium);
+    hMediumFont = XLoadFont(disp, xfontName);
+    sprintf(xfontName, tfontName, fontName, fontLarge);
+    hLargeFont = XLoadFont(disp, xfontName);
 
     /*
     **  Setup fore- and back-ground colors.
@@ -611,7 +617,7 @@ void *windowThread(void *param)
         XSetForeground(disp, gc, fg);
 
         XSetFont(disp, gc, hSmallFont);
-        oldFont = FontSmall;
+        oldFont = fontSmall;
 
 #if CcCycleTime
             {
@@ -661,7 +667,7 @@ void *windowThread(void *param)
             */
             static char opMessage[] = "Emulation paused";
             XSetFont(disp, gc, hLargeFont);
-            oldFont = FontLarge;
+            oldFont = fontLarge;
             XDrawString(disp, pixmap, gc, 20, 256, opMessage, strlen(opMessage));
             }
         else if (consoleIsRemoteActive())
@@ -671,7 +677,7 @@ void *windowThread(void *param)
             */
             static char opMessage[] = "Remote console active";
             XSetFont(disp, gc, hLargeFont);
-            oldFont = FontLarge;
+            oldFont = fontLarge;
             XDrawString(disp, pixmap, gc, 20, 256, opMessage, strlen(opMessage));
             }
 
@@ -688,7 +694,7 @@ void *windowThread(void *param)
             static char usageMessage1[] = "Please don't just close the window, but instead first cleanly halt the operating system and";
             static char usageMessage2[] = "then use the 'shutdown' command in the operator interface to terminate the emulation.";
             XSetFont(disp, gc, hMediumFont);
-            oldFont = FontMedium;
+            oldFont = fontMedium;
             XDrawString(disp, pixmap, gc, 20, 256, usageMessage1, strlen(usageMessage1));
             XDrawString(disp, pixmap, gc, 20, 275, usageMessage2, strlen(usageMessage2));
             listEnd            = 0;
@@ -712,15 +718,15 @@ void *windowThread(void *param)
 
                 switch (oldFont)
                     {
-                case FontSmall:
+                case fontSmall:
                     XSetFont(disp, gc, hSmallFont);
                     break;
 
-                case FontMedium:
+                case fontMedium:
                     XSetFont(disp, gc, hMediumFont);
                     break;
 
-                case FontLarge:
+                case fontLarge:
                     XSetFont(disp, gc, hLargeFont);
                     break;
                     }
