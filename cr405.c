@@ -257,13 +257,13 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     if (eqNo != 0)
         {
-        fprintf(stderr, "(cr405  ) Invalid equipment number - hardwired to equipment number 0\n");
+        logDtError(LogErrorLocation, "Invalid equipment number - hardwired to equipment number 0\n");
         exit(1);
         }
 
     if (unitNo != 0)
         {
-        fprintf(stderr, "(cr405  ) Invalid unit number - hardwired to unit number 0\n");
+        logDtError(LogErrorLocation, "Invalid unit number - hardwired to unit number 0\n");
         exit(1);
         }
 
@@ -280,14 +280,14 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     */
     if (dp->context[0] != NULL)
         {
-        fprintf(stderr, "(cr405  ) Only one unit is possible per equipment\n");
+        logDtError(LogErrorLocation, "Only one unit is possible per equipment\n");
         exit(1);
         }
 
     cc = calloc(1, sizeof(Cr405Context));
     if (cc == NULL)
         {
-        fprintf(stderr, "(cr405  ) Failed to allocate context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate context block\n");
         exit(1);
         }
 
@@ -296,7 +296,7 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     threadParms = calloc(1, sizeof(fswContext));    //  Need to check for null result
     if (cc == NULL)
         {
-        fprintf(stderr, "(cr405  ) Failed to allocate CR3447 FileWatcher Context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate CR3447 FileWatcher Context block\n");
         exit(1);
         }
 
@@ -322,7 +322,7 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         else if ((strcasecmp(tokenAuto, "auto") != 0) && (strcasecmp(tokenAuto, "*") != 0))
             {
-            fprintf(stderr, "(cr405  ) Unrecognized Automation Type '%s'\n", tokenAuto);
+            logDtError(LogErrorLocation, "Unrecognized Automation Type '%s'\n", tokenAuto);
             exit(1);
             }
         }
@@ -352,7 +352,7 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
                  && (strcmp(xlateTable, "*") != 0)
                  && (strcmp(xlateTable, "") != 0))
             {
-            fprintf(stderr, "(cr405  ) Unrecognized card code name %s\n", xlateTable);
+            logDtError(LogErrorLocation, "Unrecognized card code name %s\n", xlateTable);
             exit(1);
             }
         }
@@ -370,19 +370,19 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         {
         if (stat(crOutput, &s) != 0)
             {
-            fprintf(stderr, "(cr405  ) The Output location specified '%s' does not exist.\n", crOutput);
+            logDtError(LogErrorLocation, "The Output location specified '%s' does not exist.\n", crOutput);
             exit(1);
             }
 
         if ((s.st_mode & S_IFDIR) == 0)
             {
-            fprintf(stderr, "(cr405  ) The Output location specified '%s' is not a directory.\n", crOutput);
+            logDtError(LogErrorLocation, "The Output location specified '%s' is not a directory.\n", crOutput);
             exit(1);
             }
-        len = strlen(crOutput);
+        len = (int)strlen(crOutput);
         threadParms->outDoneDir = (char *)calloc(len + 1, 1);
         cc->dirOutput           = (char *)calloc(len + 1, 1);
-        if (threadParms->outDoneDir == NULL || cc->dirOutput == NULL)
+        if ((threadParms->outDoneDir == NULL) || (cc->dirOutput == NULL))
             {
             fputs("(cr405  ) Failed to allocate storage for output directory path\n", stderr);
             exit(1);
@@ -400,13 +400,13 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         {
         if (stat(crInput, &s) != 0)
             {
-            fprintf(stderr, "(cr405  ) The Input location specified '%s' does not exist.\n", crInput);
+            logDtError(LogErrorLocation, "The Input location specified '%s' does not exist.\n", crInput);
             exit(1);
             }
 
         if ((s.st_mode & S_IFDIR) == 0)
             {
-            fprintf(stderr, "(cr405  ) The Input location specified '%s' is not a directory.\n", crInput);
+            logDtError(LogErrorLocation, "The Input location specified '%s' is not a directory.\n", crInput);
             exit(1);
             }
         //  We only care about the "Auto" "NoAuto" flag if there is a good input location
@@ -417,10 +417,10 @@ void cr405Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         **  The Card Reader Context needs to remember what directory
         **  will supply the input files so more can be found at EOD.
         */
-        len = strlen(crInput);
+        len = (int)strlen(crInput);
         threadParms->inWatchDir = (char *)calloc(len + 1, 1);
         cc->dirInput            = (char *)calloc(len + 1, 1);
-        if (threadParms->inWatchDir == NULL || cc->dirInput == NULL)
+        if ((threadParms->inWatchDir == NULL) || (cc->dirInput == NULL))
             {
             fputs("(cr405  ) Failed to allocate storage for input directory path\n", stderr);
             exit(1);
@@ -515,7 +515,7 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, char *params)
     Cr405Context *cc;
     DevSlot      *dp;
     int          len;
-    char         outBuf[MaxFSPath+128];
+    char         outBuf[MaxFSPath + 128];
     struct stat  s;
     char         *sp;
 
@@ -547,12 +547,13 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, char *params)
         {
         sprintf(outBuf, "(cr405  ) Requested file '%s' not found. (%s).\n", fname, strerror(errno));
         opDisplay(outBuf);
+
         return;
         }
 
     //  Enqueue the file in the chain of pending files
 
-    len = strlen(fname) + 1;
+    len = (int)strlen(fname) + 1;
     sp  = (char *)malloc(len);
     memcpy(sp, fname, len);
     cc->decks[cc->inDeck] = sp;
@@ -592,11 +593,11 @@ void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params)
     DIR           *curDir;
     struct dirent *curDirEntry;
     DevSlot       *dp;
-    char          fOldest[MaxFSPath*2+2] = "";
-    char          outBuf[MaxFSPath*2+128];
+    char          fOldest[MaxFSPath * 2 + 2] = "";
+    char          outBuf[MaxFSPath * 2 + 128];
     struct stat   s;
-    char          strWork[MaxFSPath*2+2] = "";
-    time_t        tOldest            = 0;
+    char          strWork[MaxFSPath * 2 + 2] = "";
+    time_t        tOldest = 0;
 
     //  Safety check, we only respond if the first
     //  character of the filename is an asterisk '*'
@@ -605,6 +606,7 @@ void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params)
         {
         sprintf(outBuf, "(cr405  ) GetNextDeck called with improper parameter '%s'.\n", fname);
         opDisplay(outBuf);
+
         return;
         }
 
@@ -666,10 +668,16 @@ void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params)
     do
         {
         curDirEntry = readdir(curDir);
-        if (curDirEntry == NULL) break;
+        if (curDirEntry == NULL)
+            {
+            break;
+            }
 
         //  Pop over the dot (.) directories
-        if (curDirEntry->d_name[0] == '.') continue;
+        if (curDirEntry->d_name[0] == '.')
+            {
+            continue;
+            }
 
         sprintf(strWork, "%s/%s", cc->dirInput, curDirEntry->d_name);
         stat(strWork, &s);
@@ -733,7 +741,7 @@ void cr405PostProcess(char *fname, int channelNo, int equipmentNo, char *params)
     {
     Cr405Context *cc;
     DevSlot      *dp;
-    char         outBuf[MaxFSPath*2+128];
+    char         outBuf[MaxFSPath * 2 + 128];
 
     /*
     **  Locate the device control block.
@@ -751,6 +759,7 @@ void cr405PostProcess(char *fname, int channelNo, int equipmentNo, char *params)
         {
         sprintf(outBuf, "(cr405  ) Submitted deck '%s' processing complete.\n", fname);
         opDisplay(outBuf);
+
         return;
         }
 
@@ -778,11 +787,11 @@ void cr405PostProcess(char *fname, int channelNo, int equipmentNo, char *params)
 **------------------------------------------------------------------------*/
 static void cr405SwapInOut(Cr405Context *cc, char *fName)
     {
-    char fnwork[MaxFSPath*2+32] = "";
-    char outBuf[MaxFSPath*2+128];
+    char fnwork[MaxFSPath * 2 + 32] = "";
+    char outBuf[MaxFSPath * 2 + 128];
 
     //  If either directory isn't specified, just ignore the rename.
-    if (cc->dirOutput == NULL || cc->dirInput == NULL)
+    if ((cc->dirOutput == NULL) || (cc->dirInput == NULL))
         {
         return;
         }
@@ -854,7 +863,7 @@ static void cr405SwapInOut(Cr405Context *cc, char *fName)
 void cr405ShowStatus()
     {
     Cr405Context *cp;
-    char         outBuf[MaxFSPath*2+64];
+    char         outBuf[MaxFSPath * 2 + 64];
 
     for (cp = firstCr405; cp != NULL; cp = cp->nextUnit)
         {
@@ -1024,7 +1033,7 @@ static void cr405Disconnect(void)
 static bool cr405StartNextDeck(DevSlot *dp, Cr405Context *cc)
     {
     char *fname;
-    char outBuf[MaxFSPath+128];
+    char outBuf[MaxFSPath + 128];
 
     while (cc->outDeck != cc->inDeck)
         {
@@ -1036,15 +1045,16 @@ static bool cr405StartNextDeck(DevSlot *dp, Cr405Context *cc)
             cr405NextCard(dp);
             sprintf(outBuf, "Cards '%s' loaded on card reader C%o,E%o\n", cc->curFileName, cc->channelNo, cc->eqNo);
             opDisplay(outBuf);
+
             return TRUE;
             }
-        fprintf(stderr, "Failed to open card deck '%s'\n", fname);
+        logDtError(LogErrorLocation, "Failed to open card deck '%s'\n", fname);
         unlink(fname);
         free(fname);
         cc->outDeck = (cc->outDeck + 1) % Cr405MaxDecks;
         }
     cc->curFileName = NULL;
-    dp->fcb[0] = NULL;
+    dp->fcb[0]      = NULL;
 
     return FALSE;
     }
@@ -1066,7 +1076,7 @@ static void cr405NextCard(DevSlot *dp)
     char         *cp;
     int          i;
     int          j;
-    char         outBuf[MaxFSPath+128];
+    char         outBuf[MaxFSPath + 128];
     int          value;
 
     if (dp->fcb[0] == NULL)

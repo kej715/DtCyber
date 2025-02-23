@@ -718,14 +718,17 @@ void *windowThread(void *param)
                 case FontSmall:
                     XSetFont(disp, gc, hSmallFont);
                     break;
+
                 case FontMedium:
                     XSetFont(disp, gc, hMediumFont);
                     break;
+
                 case FontLarge:
                     XSetFont(disp, gc, hLargeFont);
                     break;
                     }
                 }
+
             /*
             **  Draw dot or character.
             */

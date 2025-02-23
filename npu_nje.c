@@ -60,7 +60,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#endif 
+#endif
 
 #include <errno.h>
 #include <stdio.h>
@@ -202,7 +202,8 @@
 #define CrNakTemporaryFailure        0x04
 
 #if DEBUG
-static char *NjeConnStates[] = {
+static char *NjeConnStates[] =
+    {
     "StNjeDisconnected",
     "StNjeRcvOpen",
     "StNjeRcvSOH_ENQ",
@@ -278,6 +279,7 @@ static int npuNjeUploadBlock(Pcb *pcbp, u8 *blkp, int size, u8 *rcb, u8 *srcb);
 static void npuNjeLogBytes(u8 *bytes, int len, CharEncoding encoding);
 static void npuNjeLogFlush(void);
 static void npuNjePrintStackTrace(FILE *fp);
+
 #endif
 
 /*
@@ -499,7 +501,7 @@ void npuNjeProcessDownlineData(Tcb *tcbp, NpuBuffer *bp, bool last)
                 {
                 dp += 1;
                 }
-            len = dp - start;
+            len = (int)(dp - start);
             if (((len > ApplicationFailedLen) && (memcmp(ApplicationFailed, start + 1, ApplicationFailedLen) == 0))
                 || ((len > ApplicationNotPresentLen) && (memcmp(ApplicationNotPresent, start + 1, ApplicationNotPresentLen) == 0))
                 || ((len > ApplicationBusyLen) && (memcmp(ApplicationBusy, start + 1, ApplicationBusyLen) == 0))
@@ -568,7 +570,8 @@ void npuNjeProcessUplineData(Pcb *pcbp)
 
     if (dp + pcbp->inputCount > pcbp->controls.nje.inputBuf + pcbp->controls.nje.inputBufSize)
         {
-        fprintf(stderr, "Port %02x: NJE input buffer overflow, data discarded\n", pcbp->claPort);
+        logDtError(LogErrorLocation, "Port %02x: NJE input buffer overflow, data discarded\n", pcbp->claPort);
+
         return;
         }
     while (pcbp->inputCount-- > 0)
@@ -576,7 +579,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
         *dp++ = *sp++;
         }
     pcbp->controls.nje.inputBufPtr = limit = dp;
-    dp = pcbp->controls.nje.inputBuf;
+    dp   = pcbp->controls.nje.inputBuf;
     done = FALSE;
 
     while (dp < limit && done == FALSE)
@@ -602,7 +605,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
             else if (memcmp(dp, CrTypeOpen, 8) == 0)
                 {
                 npuNjeParseControlRecord(dp + 8, rhost, &rip, ohost, &oip, &r);
-                dp += CrLength;
+                dp   += CrLength;
                 pcbp2 = npuNjeFindPcbForCr(rhost, rip, ohost, oip);
                 r     = 0;
                 if (pcbp2 == NULL)
@@ -691,7 +694,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                     {
                     status = npuNjeUploadBlock(pcbp, pcbp->controls.nje.inputBuf, size, &rcb, &srcb);
                     switch (status)
-                        {
+                    {
                     case NjeStatusSOH_ENQ:
                         if (npuNjeSend(pcbp, DLE_ACK0, sizeof(DLE_ACK0)) == sizeof(DLE_ACK0))
                             {
@@ -752,7 +755,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                         npuNjeCloseConnection(pcbp);
                         dp = limit;
                         break;
-                        }
+                    }
                     }
                 else
                     {
@@ -818,7 +821,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                 fprintf(npuNjeLog, "Port %02x: OPEN request denied: %s\n", pcbp->claPort, CrNakReasons[r]);
 #endif
                 npuNjeCloseConnection(pcbp);
-                dp = limit;
+                dp    = limit;
                 delay = (time_t)((getMilliseconds() % 5) + 3);
                 // Arrange to attempt reconnection after a relatively short and random-ish interval
 #if DEBUG
@@ -979,9 +982,9 @@ void npuNjeProcessUplineData(Pcb *pcbp)
         {
         if (dp > pcbp->controls.nje.inputBuf)
             {
-            size = pcbp->controls.nje.inputBufPtr - dp;
-            sp = dp;
-            dp = pcbp->controls.nje.inputBuf;
+            size = (int)(pcbp->controls.nje.inputBufPtr - dp);
+            sp   = dp;
+            dp   = pcbp->controls.nje.inputBuf;
             while (size-- > 0)
                 {
                 *dp++ = *sp++;
@@ -1141,7 +1144,7 @@ void npuNjePresetPcb(Pcb *pcbp)
         npuNjeLog = fopen("njelog.txt", "wt");
         if (npuNjeLog == NULL)
             {
-            fprintf(stderr, "njelog.txt - aborting\n");
+            logDtError(LogErrorLocation, "njelog.txt - aborting\n");
             exit(1);
             }
         npuNjeLogFlush();    // initialize log buffer
@@ -1326,7 +1329,7 @@ static int npuNjeAppendRecords(Pcb *pcbp, u8 *bp, int len, u8 blockType)
         **  If insufficient space remains in the output buffer to append the
         **  record, flush the buffer downline, and start a new one.
         */
-        bufLen = dp - pcbp->controls.nje.outputBuf;
+        bufLen = (int)(dp - pcbp->controls.nje.outputBuf);
         if (bufLen + maxBytesNeeded + TtrLength + 32 > pcbp->controls.nje.blockSize)
             {
             *dp++ = 0x00; // end of block RCB
@@ -1342,7 +1345,7 @@ static int npuNjeAppendRecords(Pcb *pcbp, u8 *bp, int len, u8 blockType)
             {
             npuNjePrepareOutput(pcbp);
             dp     = pcbp->controls.nje.outputBufPtr;
-            bufLen = dp - pcbp->controls.nje.outputBuf;
+            bufLen = (int)(dp - pcbp->controls.nje.outputBuf);
             }
 
         /*
@@ -1360,7 +1363,7 @@ static int npuNjeAppendRecords(Pcb *pcbp, u8 *bp, int len, u8 blockType)
         **  maximum negotiated block size, close the current block and start a
         **  new one.
         **/
-        blockLen = dp - (pcbp->controls.nje.ttrp + TtrLength);
+        blockLen = (int)(dp - (pcbp->controls.nje.ttrp + TtrLength));
         if (blockLen + maxBytesNeeded + 8 > pcbp->controls.nje.maxRecordSize)
             {
             dp = npuNjeCloseDownlineBlock(pcbp, dp);
@@ -1390,7 +1393,7 @@ static int npuNjeAppendRecords(Pcb *pcbp, u8 *bp, int len, u8 blockType)
             {
             while (bp < recLimit)
                 {
-                nBytes = recLimit - bp;
+                nBytes = (int)(recLimit - bp);
                 if (nBytes > 63)
                     {
                     nBytes = 63;
@@ -1460,7 +1463,7 @@ static void npuNjeCloseConnection(Pcb *pcbp)
     fprintf(npuNjeLog, "Port %02x: close connection\n", pcbp->claPort);
 #endif
     tcbp = npuNjeFindTcb(pcbp);
-    if (tcbp != NULL && tcbp->state == StTermConnected)
+    if ((tcbp != NULL) && (tcbp->state == StTermConnected))
         {
         npuSvmSendDiscRequest(tcbp);
         }
@@ -1534,7 +1537,7 @@ static u8 *npuNjeCollectBlock(Pcb *pcbp, u8 *start, u8 *limit, bool *isComplete,
     dp = pcbp->controls.nje.inputBuf;
     while (sp < limit && currentBlockSize < TtbLength)
         {
-        *dp++ = *sp++;
+        *dp++             = *sp++;
         currentBlockSize += 1;
         }
     if (currentBlockSize < TtbLength)
@@ -1556,6 +1559,7 @@ static u8 *npuNjeCollectBlock(Pcb *pcbp, u8 *start, u8 *limit, bool *isComplete,
 #endif
         *status     = NjeErrBlockTooLong;
         *isComplete = TRUE;
+
         return start;
         }
 
@@ -1564,7 +1568,7 @@ static u8 *npuNjeCollectBlock(Pcb *pcbp, u8 *start, u8 *limit, bool *isComplete,
     */
     while (sp < limit && currentBlockSize < njeBlockSize)
         {
-        *dp++ = *sp++;
+        *dp++             = *sp++;
         currentBlockSize += 1;
         }
 
@@ -1586,8 +1590,9 @@ static u8 *npuNjeCollectBlock(Pcb *pcbp, u8 *start, u8 *limit, bool *isComplete,
                 *ibp++ = *dp++;
                 }
             }
-        *size = ibp - pcbp->controls.nje.inputBuf;
+        *size       = (int)(ibp - pcbp->controls.nje.inputBuf);
         *isComplete = TRUE;
+
         return sp;
         }
 
@@ -1617,6 +1622,7 @@ static bool npuNjeConnectTerminal(Pcb *pcbp)
 #if DEBUG
         fprintf(npuNjeLog, "Port %02x: already associated with a TCB\n", pcbp->claPort);
 #endif
+
         return FALSE;
         }
     }
@@ -1667,9 +1673,9 @@ static Pcb *npuNjeFindPcbForCr(char *rhost, u32 rip, char *ohost, u32 oip)
             && (pcbp->ncbp->connType == ConnTypeNje)
             && (strcasecmp(pcbp->ncbp->hostName, rhost) == 0)
             && (strcasecmp(npuNetHostID, ohost) == 0)
-            && (pcbp->controls.nje.remoteIP == rip
-                || pcbp->controls.nje.remoteIP == 0)
-/*          && (pcbp->controls.nje.localIP == oip) */ )
+            && ((pcbp->controls.nje.remoteIP == rip)
+                || (pcbp->controls.nje.remoteIP == 0))
+/*          && (pcbp->controls.nje.localIP == oip) */)
             {
             return pcbp;
             }
@@ -1693,7 +1699,7 @@ static Tcb *npuNjeFindTcb(Pcb *pcbp)
     Tcb *tcbp;
 
     tcbp = pcbp->controls.nje.tp;
-    if (tcbp != NULL && tcbp->state != StTermIdle && tcbp->pcbp == pcbp)
+    if ((tcbp != NULL) && (tcbp->state != StTermIdle) && (tcbp->pcbp == pcbp))
         {
         return tcbp;
         }
@@ -1701,7 +1707,7 @@ static Tcb *npuNjeFindTcb(Pcb *pcbp)
     for (i = 1; i < MaxTcbs; i++)
         {
         tcbp = &npuTcbs[i];
-        if (tcbp->state != StTermIdle && tcbp->pcbp == pcbp)
+        if ((tcbp->state != StTermIdle) && (tcbp->pcbp == pcbp))
             {
             pcbp->controls.nje.tp = tcbp;
 
@@ -1728,11 +1734,11 @@ static void npuNjeFlushOutput(Pcb *pcbp)
     npuNjeSetTtrLength(pcbp);
     memset(pcbp->controls.nje.outputBufPtr, 0, TtrLength); // Append end of buffer TTR
     pcbp->controls.nje.outputBufPtr += TtrLength;
-    bufLen = pcbp->controls.nje.outputBufPtr - pcbp->controls.nje.outputBuf;
+    bufLen = (int)(pcbp->controls.nje.outputBufPtr - pcbp->controls.nje.outputBuf);
     pcbp->controls.nje.outputBuf[TtbOffLength]     = bufLen >> 8;
     pcbp->controls.nje.outputBuf[TtbOffLength + 1] = bufLen & 0xff;
     npuNetSend(npuNjeFindTcb(pcbp), pcbp->controls.nje.outputBuf,
-               pcbp->controls.nje.outputBufPtr - pcbp->controls.nje.outputBuf);
+               (int)(pcbp->controls.nje.outputBufPtr - pcbp->controls.nje.outputBuf));
     pcbp->controls.nje.outputBufPtr     = pcbp->controls.nje.outputBuf;
     pcbp->controls.nje.ttrp             = NULL;
     pcbp->controls.nje.lastDownlineRCB  = 0;
@@ -1858,7 +1864,7 @@ static bool npuNjeSendControlRecord(Pcb *pcbp, u8 *crp, char *localName, u32 loc
     bp = buffer;
     memcpy(bp, crp, 8);
     bp += 8;
-    len = strlen(localName);
+    len = (int)strlen(localName);
     npuNjeAsciiToEbcdic((u8 *)localName, bp, (len < 9) ? len : 8);
     bp += len;
     while (len++ < 8)
@@ -1869,7 +1875,7 @@ static bool npuNjeSendControlRecord(Pcb *pcbp, u8 *crp, char *localName, u32 loc
     *bp++ = (localIP >> 16) & 0xff;
     *bp++ = (localIP >> 8) & 0xff;
     *bp++ = localIP & 0xff;
-    len   = strlen(peerName);
+    len   = (int)strlen(peerName);
     npuNjeAsciiToEbcdic((u8 *)peerName, bp, (len < 9) ? len : 8);
     bp += len;
     while (len++ < 8)
@@ -1903,7 +1909,7 @@ static void npuNjeSendUplineBlock(Pcb *pcbp, NpuBuffer *bp, u8 *dp, u8 blockType
 
     bp->data[BlkOffBTBSN] = blockType;
     bp->data[BlkOffDbc]   = DbcTransparent;
-    bp->numBytes          = dp - bp->data;
+    bp->numBytes          = (u16)(dp - bp->data);
     npuBipQueueAppend(bp, &pcbp->controls.nje.uplineQ);
 
     tcbp = npuNjeFindTcb(pcbp);
@@ -1929,7 +1935,7 @@ static void npuNjeSetTtrLength(Pcb *pcbp)
     u8  *ttrp;
 
     ttrp   = pcbp->controls.nje.ttrp;
-    recLen = pcbp->controls.nje.outputBufPtr - (ttrp + TtrLength);
+    recLen = (int)(pcbp->controls.nje.outputBufPtr - (ttrp + TtrLength));
     *(ttrp + TtrOffLength)     = recLen >> 8;
     *(ttrp + TtrOffLength + 1) = recLen & 0xff;
     }
@@ -2043,7 +2049,7 @@ static int npuNjeUploadBlock(Pcb *pcbp, u8 *blkp, int size, u8 *rcb, u8 *srcb)
 
     while (ibp < ibLimit)
         {
-        len = ibLimit - ibp;
+        len = (int)(ibLimit - ibp);
         if (len < 2)
             {
 #if DEBUG

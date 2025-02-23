@@ -103,7 +103,7 @@ void channelInit(u8 count)
     channel      = calloc(MaxChannels, sizeof(ChSlot));
     if (channel == NULL)
         {
-        fprintf(stderr, "(channel) Failed to allocate channel control blocks\n");
+        logDtError(LogErrorLocation, "Failed to allocate channel control blocks\n");
         exit(1);
         }
 
@@ -478,7 +478,7 @@ DevSlot *channelAttach(u8 channelNo, u8 eqNo, u8 devType)
     device = calloc(1, sizeof(DevSlot));
     if (device == NULL)
         {
-        fprintf(stderr, "(channel) Failed to allocate control block for Channel %d\n", channelNo);
+        logDtError(LogErrorLocation, "Failed to allocate control block for Channel %d\n", channelNo);
         exit(1);
         }
 

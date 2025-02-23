@@ -591,7 +591,7 @@ void cdcnetProcessDownlineData(NpuBuffer *bp)
         cdcnetLog = fopen("cdcnetlog.txt", "wt");
         if (cdcnetLog == NULL)
             {
-            fprintf(stderr, "cdcnetlog.txt - aborting\n");
+            logDtError(LogErrorLocation, "Cannot Open cdcnetlog.txt - aborting\n");
             exit(1);
             }
         cdcnetLogFlush();    // initialize log buffer
@@ -1072,7 +1072,7 @@ void cdcnetCheckStatus(void)
 
     timeout.tv_sec  = 0;
     timeout.tv_usec = 0;
-    readySockets    = select(maxFd + 1, &readFds, &writeFds, NULL, &timeout);
+    readySockets    = select((int)(maxFd + 1), &readFds, &writeFds, NULL, &timeout);
 
     if (readySockets < 1)
         {
@@ -1298,7 +1298,7 @@ void cdcnetCheckStatus(void)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Display CDCNet Gateway data communication statue (operator interface).
+**  Purpose:        Display CDCNet Gateway data communication status (operator interface).
 **
 **  Parameters:     Name        Description.
 **
@@ -1324,11 +1324,17 @@ void cdcnetShowStatus(void)
     for (channelNo = 0; channelNo < MaxChannels; channelNo++)
         {
         dp = channelFindDevice(channelNo, DtMdi);
-        if (dp != NULL) break;
+        if (dp != NULL)
+            {
+            break;
+            }
         }
-    if (dp == NULL) return;
+    if (dp == NULL)
+        {
+        return;
+        }
 
-    sprintf(chEqStr, "C%02o E%02o",  dp->channel->id, dp->eqNo);
+    sprintf(chEqStr, "C%02o E%02o", dp->channel->id, dp->eqNo);
 
     /*
     **  Iterate through all Pccbs.
@@ -1337,8 +1343,8 @@ void cdcnetShowStatus(void)
         {
         if (pp->connFd != 0)
             {
-            sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS"\n", "CDCNet", chEqStr, netGetLocalTcpAddress(pp->connFd), "",
-                "tcp", "listening");
+            sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS "\n", "CDCNet", chEqStr, netGetLocalTcpAddress(pp->connFd), "",
+                    "tcp", "listening");
             opDisplay(outBuf);
             chEqStr[0] = '\0';
             }
@@ -1349,7 +1355,7 @@ void cdcnetShowStatus(void)
     */
     for (i = 0, gp = cdcnetGcbs; i < cdcnetGcbCount; i++, gp++)
         {
-        if (gp->gwState == StGwIdle || gp->connType == TypeTcpPassive)
+        if ((gp->gwState == StGwIdle) || (gp->connType == TypeTcpPassive))
             {
             continue;
             }
@@ -1357,30 +1363,37 @@ void cdcnetShowStatus(void)
             {
         case StTcpUdpIdle:
             continue;
+
         case StTcpConnecting:
             state = "connecting";
             break;
+
         case StTcpIndicatingConnection:
             state = "indicating connection";
             break;
+
         case StTcpListening:
             state = "listening";
             break;
+
         case StTcpConnected:
             state = "connected";
             break;
+
         case StTcpDisconnecting:
             state = "disconnecting";
             break;
+
         case StUdpBound:
             state = "bound";
             break;
+
         default:
             state = "unknown";
             break;
             }
-        sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS"\n", "CDCNet", chEqStr, netGetLocalTcpAddress(gp->connFd),
-            netGetPeerTcpAddress(gp->connFd), gp->connType == TypeUdp ? "udp" : "tcp", state);
+        sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS "\n", "CDCNet", chEqStr, netGetLocalTcpAddress(gp->connFd),
+                netGetPeerTcpAddress(gp->connFd), gp->connType == TypeUdp ? "udp" : "tcp", state);
         opDisplay(outBuf);
         chEqStr[0] = '\0';
         }
@@ -1603,7 +1616,7 @@ static bool cdcnetGetEndpoints(int sd, u32 *localAddr, u16 *localPort,
         }
     else
         {
-        fprintf(stderr, "CDCNet: Failed to get local socket name: %s\n", strerror(errno));
+        logDtError(LogErrorLocation, "CDCNet: Failed to get local socket name: %s\n", strerror(errno));
 
         return (FALSE);
         }
@@ -1617,7 +1630,7 @@ static bool cdcnetGetEndpoints(int sd, u32 *localAddr, u16 *localPort,
         }
     else
         {
-        fprintf(stderr, "CDCNet: Failed to get peer socket name: %s\n", strerror(errno));
+        logDtError(LogErrorLocation, "CDCNet: Failed to get peer socket name: %s\n", strerror(errno));
 
         return (FALSE);
         }
@@ -1702,7 +1715,7 @@ static void cdcnetSendBack(Gcb *gp, NpuBuffer *bp, u8 bsn)
     *mp++ = gp->cn;                              // CN
     *mp++ = BlkOffBTBSN | (bsn << BlkShiftBSN);  // BT=Back | BSN
 
-    bp->numBytes = mp - bp->data;
+    bp->numBytes = (u16)(mp - bp->data);
     bp->offset   = 0;
 
     npuBipRequestUplineTransfer(bp);
@@ -1734,7 +1747,7 @@ static void cdcnetSendInitiateConnectionResponse(NpuBuffer *bp, u8 cn, u8 rc)
     *mp++ = cn;
     *mp++ = rc;
 
-    bp->numBytes = mp - bp->data;
+    bp->numBytes = (u16)(mp - bp->data);
     bp->offset   = 0;
 
     npuBipRequestUplineTransfer(bp);
@@ -1768,7 +1781,7 @@ static bool cdcnetSendInitializeConnectionRequest(Gcb *gp)
     *mp++ = gp->cn;                         // CN
     *mp++ = BtHTRINIT;                      // Initialize request
 
-    bp->numBytes = mp - bp->data;
+    bp->numBytes = (u16)(mp - bp->data);
 
     npuBipRequestUplineTransfer(bp);
 
@@ -1796,7 +1809,7 @@ static void cdcnetSendInitializeConnectionResponse(NpuBuffer *bp, Gcb *gp)
     *mp++ = gp->cn;                         // CN
     *mp++ = BtHTNINIT;                      // Initialize response
 
-    bp->numBytes = mp - bp->data;
+    bp->numBytes = (u16)(mp - bp->data);
     bp->offset   = 0;
 
     npuBipRequestUplineTransfer(bp);
@@ -1823,7 +1836,7 @@ static void cdcnetSendTerminateConnectionBlock(NpuBuffer *bp, u8 cn)
     *mp++ = cn;                // CN
     *mp++ = BtHTTERM;          // BT=TERM
 
-    bp->numBytes = mp - bp->data;
+    bp->numBytes = (u16)(mp - bp->data);
     bp->offset   = 0;
 
     npuBipRequestUplineTransfer(bp);
@@ -1853,7 +1866,7 @@ static void cdcnetSendTerminateConnectionRequest(NpuBuffer *bp, u8 cn)
     *mp++ = 0x08;              // SFC: Terminate connection
     *mp++ = cn;
 
-    bp->numBytes = mp - bp->data;
+    bp->numBytes = (u16)(mp - bp->data);
     bp->offset   = 0;
 
     npuBipRequestUplineTransfer(bp);
@@ -1883,7 +1896,7 @@ static void cdcnetSendTerminateConnectionResponse(NpuBuffer *bp, u8 cn)
     *mp++ = SfcResp | 0x08;    // SFC: Terminate connection
     *mp++ = cn;
 
-    bp->numBytes = mp - bp->data;
+    bp->numBytes = (u16)(mp - bp->data);
     bp->offset   = 0;
 
     npuBipRequestUplineTransfer(bp);
@@ -2233,7 +2246,6 @@ static bool cdcnetTcpActiveConnectHandler(Gcb *gp, NpuBuffer *bp)
     u8                 *dp;
     u32                dstAddr;
     struct sockaddr_in hostAddr;
-    int                rc;
     u32                srcAddr;
     TcpGwStatus        status;
 
@@ -2305,14 +2317,13 @@ static bool cdcnetTcpActiveConnectHandler(Gcb *gp, NpuBuffer *bp)
 **------------------------------------------------------------------------*/
 static bool cdcnetTcpPassiveConnectHandler(Gcb *gp, NpuBuffer *bp)
     {
-    u8                 *dp;
-    u32                dstAddr;
-    u16                dstPort;
-    int                optEnable = 1;
-    Pccb               *pp;
-    struct sockaddr_in server;
-    u32                srcAddr;
-    TcpGwStatus        status;
+    u8          *dp;
+    u32         dstAddr;
+    u16         dstPort;
+    int         optEnable = 1;
+    Pccb        *pp;
+    u32         srcAddr;
+    TcpGwStatus status;
 
     gp->connType  = TypeTcpPassive;
     gp->tcpSapId  = cdcnetGetIdFromMessage(bp->data + BlkOffTcpPCTcpSapId);
@@ -2403,9 +2414,15 @@ static bool cdcnetTcpPassiveConnectHandler(Gcb *gp, NpuBuffer *bp)
             {
             pp->connFd = netCreateListener(pp->dstPort);
 #if defined(_WIN32)
-            if (pp->connFd != INVALID_SOCKET) break;
+            if (pp->connFd != INVALID_SOCKET)
+                {
+                break;
+                }
 #else
-            if (pp->connFd != -1) break;
+            if (pp->connFd != -1)
+                {
+                break;
+                }
 #endif
 #if DEBUG
             fprintf(cdcnetLog, "Can't bind to listening socket on port %d, %s, CN=%02X\n",
@@ -2424,7 +2441,7 @@ static bool cdcnetTcpPassiveConnectHandler(Gcb *gp, NpuBuffer *bp)
                 pp->dstPort       = 0;
                 pp->tcpGcbOrdinal = 0;
                 netCloseConnection(pp->connFd);
-                pp->connFd        = 0;
+                pp->connFd = 0;
                 cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_internal_error);
 
                 return (TRUE);
@@ -2967,7 +2984,7 @@ static bool cdcnetUdpBindAddress(Gcb *gp, NpuBuffer *bp)
     addrLen = sizeof(server);
     if (getsockname(gp->connFd, (struct sockaddr *)&server, &addrLen) != 0)
         {
-        fprintf(stderr, "CDCNet: Failed to get local UDP socket name: %s\n", strerror(errno));
+        logDtError(LogErrorLocation, "CDCNet: Failed to get local UDP socket name: %s\n", strerror(errno));
         netCloseConnection(gp->connFd);
         gp->connFd = 0;
 
@@ -3091,7 +3108,7 @@ static void cdcnetUdpSendUplineData(Gcb *gp)
 
     recvSize = sizeof(bp->data) - BlkOffUdpDataIndData;
     len      = sizeof(client);
-    n        = recvfrom(gp->connFd, bp->data + BlkOffUdpDataIndData, recvSize, 0, (struct sockaddr*)&client, &len);
+    n        = recvfrom(gp->connFd, bp->data + BlkOffUdpDataIndData, recvSize, 0, (struct sockaddr *)&client, &len);
     if (n < 1)
         {
 #if DEBUG
@@ -3105,6 +3122,7 @@ static void cdcnetUdpSendUplineData(Gcb *gp)
             }
 #endif
         npuBipBufRelease(bp);
+
         return;
         }
     ipAddress = ntohl(client.sin_addr.s_addr);

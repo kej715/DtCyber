@@ -42,7 +42,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#endif 
+#endif
 
 
 #include "const.h"
@@ -208,7 +208,7 @@ void npuLipPresetPcb(Pcb *pcbp)
         npuLipLog = fopen("liplog.txt", "wt");
         if (npuLipLog == NULL)
             {
-            fprintf(stderr, "liplog.txt - aborting\n");
+            logDtError(LogErrorLocation, "liplog.txt - aborting\n");
             exit(1);
             }
         npuLipLogFlush(); // initialize log buffer
@@ -318,8 +318,8 @@ void npuLipProcessUplineData(Pcb *pcbp)
                                              | pcbp->inputData[pcbp->controls.lip.inputIndex++];
             if (pcbp->controls.lip.blockLength > MaxBuffer)
                 {
-                fprintf(stderr, "(npu_lip) Invalid block length %d received from %s\n",
-                        pcbp->controls.lip.blockLength, pcbp->ncbp->hostName);
+                logDtError(LogErrorLocation, "(npu_lip) Invalid block length %d received from %s\n",
+                           pcbp->controls.lip.blockLength, pcbp->ncbp->hostName);
 #if DEBUG
                 fprintf(npuLipLog, "Port %02x: invalid block length %d received from %s\n", pcbp->claPort,
                         pcbp->controls.lip.blockLength, pcbp->ncbp->hostName);
@@ -338,7 +338,7 @@ void npuLipProcessUplineData(Pcb *pcbp)
             break;
 
         case StTrunkRcvBlockContent:
-            stagingCount   = pcbp->controls.lip.stagingBufPtr - pcbp->controls.lip.stagingBuf;
+            stagingCount   = (int)(pcbp->controls.lip.stagingBufPtr - pcbp->controls.lip.stagingBuf);
             inputRemainder = pcbp->inputCount - pcbp->controls.lip.inputIndex;
             n = (stagingCount + inputRemainder <= pcbp->controls.lip.blockLength)
                 ? inputRemainder : pcbp->controls.lip.blockLength - stagingCount;
@@ -472,7 +472,7 @@ void npuLipProcessDownlineData(NpuBuffer *bp)
                 return;
                 }
             }
-        fprintf(stderr, "(npu_lip) Block received for unknown or disconnected node %02x\n", dn);
+        logDtError(LogErrorLocation, "(npu_lip) Block received for unknown or disconnected node %02x\n", dn);
 #if DEBUG
         fprintf(npuLipLog, "Block received for unknown or disconnected node: %02x\n", dn);
 #endif
@@ -580,7 +580,7 @@ static bool npuLipProcessConnectRequest(Pcb *pcbp)
     **  Parse peer name.
     */
     token = strtok(NULL, " \r\n");
-    len   = strlen(token);
+    len   = (int)strlen(token);
     if ((token == NULL) || (len >= sizeof(hostID)))
         {
         return FALSE;
@@ -845,7 +845,7 @@ static bool npuLipActivateTrunk(Pcb *pcbp)
     *mp++ = 0x01;                           // SFC: Logical link
     *mp++ = 0x0f;                           // NS=1, CS=1, Regulation level=3
 
-    bp->numBytes = mp - bp->data;
+    bp->numBytes = (int)(mp - bp->data);
 
     npuBipRequestUplineTransfer(bp);
 
@@ -887,7 +887,7 @@ static bool npuLipDeactivateTrunk(Pcb *pcbp)
     *mp++ = 0x01;                           // SFC: Logical link
     *mp++ = 0x0c;                           // NS=1, CS=1, Regulation level=0
 
-    bp->numBytes = mp - bp->data;
+    bp->numBytes = (int)(mp - bp->data);
 
     npuBipRequestUplineTransfer(bp);
 
@@ -1033,8 +1033,8 @@ static void npuLipSendQueuedData(Pcb *pcbp)
             if (n < 0)
                 {
                 npuBipBufRelease(bp);
-                fprintf(stderr, "(npu_lip) Failed to send whole block length to %s\n",
-                        pcbp->ncbp->hostName);
+                logDtError(LogErrorLocation, "(npu_lip) Failed to send whole block length to %s\n",
+                           pcbp->ncbp->hostName);
                 npuLipNotifyNetDisconnect(pcbp);
 
                 return;

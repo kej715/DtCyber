@@ -81,7 +81,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -112,38 +112,38 @@
 /*
 **  CDC 6612 console functions and status codes.
 */
-#define Fc6612Sel64CharLeft      07000
-#define Fc6612Sel32CharLeft      07001
-#define Fc6612Sel16CharLeft      07002
+#define Fc6612Sel64CharLeft        07000
+#define Fc6612Sel32CharLeft        07001
+#define Fc6612Sel16CharLeft        07002
 
-#define Fc6612Sel512DotsLeft     07010
-#define Fc6612Sel512DotsRight    07110
-#define Fc6612SelKeyIn           07020
+#define Fc6612Sel512DotsLeft       07010
+#define Fc6612Sel512DotsRight      07110
+#define Fc6612SelKeyIn             07020
 
-#define Fc6612Sel64CharRight     07100
-#define Fc6612Sel32CharRight     07101
-#define Fc6612Sel16CharRight     07102
+#define Fc6612Sel64CharRight       07100
+#define Fc6612Sel32CharRight       07101
+#define Fc6612Sel16CharRight       07102
 
-#define CycleDataBufSize         16384
-#define CycleDataLimit           (CycleDataBufSize-1)
-#define InBufSize                 1024
-#define OutBufSize               16384
+#define CycleDataBufSize           16384
+#define CycleDataLimit             (CycleDataBufSize - 1)
+#define InBufSize                  1024
+#define OutBufSize                 16384
 
-#define CmdSetXLow                0x80
-#define CmdSetYLow                0x81
-#define CmdSetXHigh               0x82
-#define CmdSetYHigh               0x83
-#define CmdSetScreen              0x84
-#define CmdSetFontType            0x85
-#define CmdEndFrame               0xFF
+#define CmdSetXLow                 0x80
+#define CmdSetYLow                 0x81
+#define CmdSetXHigh                0x82
+#define CmdSetYHigh                0x83
+#define CmdSetScreen               0x84
+#define CmdSetFontType             0x85
+#define CmdEndFrame                0xFF
 
-#define FontTypeDot                  0
-#define FontTypeSmall                1
-#define FontTypeMedium               2
-#define FontTypeLarge                3
+#define FontTypeDot                0
+#define FontTypeSmall              1
+#define FontTypeMedium             2
+#define FontTypeLarge              3
 
-#define InfiniteRefreshInterval      ((u64)1000*60*60*24*365)
-#define MaxCycleDataEntries          5
+#define InfiniteRefreshInterval    ((u64)1000 * 60 * 60 * 24 * 365)
+#define MaxCycleDataEntries        5
 
 /*
 **  -----------------------
@@ -151,14 +151,14 @@
 **  -----------------------
 */
 #if !defined(_WIN32)
-#define INVALID_SOCKET -1
-#define SOCKET int
+#define INVALID_SOCKET    -1
+#define SOCKET            int
 #endif
 
 #if DEBUG
 #define HexColumn(x)      (3 * (x) + 4)
 #define AsciiColumn(x)    (HexColumn(16) + 2 + (x))
-#define LogLineLength     (AsciiColumn(16))
+#define LogLineLength    (AsciiColumn(16))
 #endif
 
 /*
@@ -168,10 +168,10 @@
 */
 typedef struct cycleData
     {
-    int         sum1;           /* Fletcher checksum accumulators */
-    int         sum2;
-    int         first;          /* Index of first accumulated byte in display sequence */
-    int         limit;          /* Index of last + 1 accumulated byte in sequence */
+    int sum1;                   /* Fletcher checksum accumulators */
+    int sum2;
+    int first;                  /* Index of first accumulated byte in display sequence */
+    int limit;                  /* Index of last + 1 accumulated byte in sequence */
     } CycleData;
 
 /*
@@ -196,10 +196,12 @@ static void     consoleQueueChar(u8 ch);
 static void     consoleQueueCmd(u8 cmd, u8 parm);
 static void     consoleQueueCurState(void);
 static void     consoleUpdateChecksum(u16 datum);
+
 #if DEBUG
 static char *consoleCmdToString(u8 cmd);
 static void consoleLogBytes(u8 *bytes, int len);
 static void consoleLogFlush(void);
+
 #endif
 
 /*
@@ -217,7 +219,7 @@ long fontHeightSmall;                 // Console
 long fontLarge;                       // Console
 long fontMedium;                      // Console
 long fontSmall;                       // Console
-char fontName[MaxFontNameSize+1];     // Console
+char fontName[MaxFontNameSize + 1];   // Console
 long heightPX;                        // Console
 long scaleX;                          // Console
 long scaleY;                          // Console
@@ -323,9 +325,9 @@ void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
             fputs("(console) TCP port missing from CO6612 definition\n", stderr);
             exit(1);
             }
-        if (consolePort < 1 || consolePort > 65535)
+        if ((consolePort < 1) || (consolePort > 65535))
             {
-            fprintf(stderr, "(console) Invalid TCP port number in CO6612 definition: %d\n", consolePort);
+            logDtError(LogErrorLocation, "Invalid TCP port number in CO6612 definition: %d\n", consolePort);
             exit(1);
             }
         if (n > 1)
@@ -336,14 +338,14 @@ void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
                 }
             else if (strcasecmp(str, "win") != 0)
                 {
-                fprintf(stderr, "(console) Unrecognized parameter in CO6612 definition: %s\n", str);
+                logDtError(LogErrorLocation, "Unrecognized parameter in CO6612 definition: %s\n", str);
                 exit(1);
                 }
             }
         listenFd = netCreateListener(consolePort);
         if (listenFd == INVALID_SOCKET)
             {
-            fprintf(stderr, "(console) Failed to listen for TCP connections on port %d\n", consolePort);
+            logDtError(LogErrorLocation, "Failed to listen for TCP connections on port %d\n", consolePort);
             exit(1);
             }
         fprintf(stdout, "(console) Listening for connections on port %d\n", consolePort);
@@ -443,19 +445,19 @@ bool consoleIsRemoteActive(void)
 **------------------------------------------------------------------------*/
 void consoleShowStatus(void)
     {
-    char      outBuf[200];
+    char outBuf[200];
 
     if (listenFd != INVALID_SOCKET)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o     ",  "6612", consoleChannelNo, consoleEqNo);
+        sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "6612", consoleChannelNo, consoleEqNo);
         opDisplay(outBuf);
-        sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(listenFd), "", "console", "listening");
+        sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(listenFd), "", "console", "listening");
         opDisplay(outBuf);
         if (connFd != INVALID_SOCKET)
             {
-            sprintf(outBuf, "    >   %-8s             ",  "6612");
+            sprintf(outBuf, "    >   %-8s             ", "6612");
             opDisplay(outBuf);
-            sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(connFd), netGetPeerTcpAddress(connFd), "console", "connected");
+            sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(connFd), netGetPeerTcpAddress(connFd), "console", "connected");
             opDisplay(outBuf);
             }
         }
@@ -480,7 +482,7 @@ void consoleShowStatus(void)
 **------------------------------------------------------------------------*/
 static FcStatus consoleFunc(PpWord funcCode)
     {
-    if (listenFd != INVALID_SOCKET && connFd == INVALID_SOCKET)
+    if ((listenFd != INVALID_SOCKET) && (connFd == INVALID_SOCKET))
         {
         consoleAcceptConnection();
         }
@@ -644,7 +646,10 @@ static void consoleIo(void)
         break;
         }
 
-    if (connFd != INVALID_SOCKET) consoleNetIo();
+    if (connFd != INVALID_SOCKET)
+        {
+        consoleNetIo();
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -699,9 +704,12 @@ static void consoleActivate(void)
 static void consoleCheckDisplayCycle(void)
     {
     CycleData *cdp;
-    int i;
+    int       i;
 
-    if (connFd == INVALID_SOCKET) return;
+    if (connFd == INVALID_SOCKET)
+        {
+        return;
+        }
 
     //
     // Search backward for a matching checksum. A cycle is detected if a
@@ -710,28 +718,31 @@ static void consoleCheckDisplayCycle(void)
     for (i = currentCycleDataIndex - 1; i >= 0; i--)
         {
         cdp = &cycleDataSequences[i];
-        if (cdp->sum1 == currentCycleData->sum1 && cdp->sum2 == currentCycleData->sum2)
+        if ((cdp->sum1 == currentCycleData->sum1) && (cdp->sum2 == currentCycleData->sum2))
             {
 #if DEBUG
-            if (queueCharLast) fputs("\n", consoleLog);
+            if (queueCharLast)
+                {
+                fputs("\n", consoleLog);
+                }
             fputs("cycle detected\n", consoleLog);
             queueCharLast = FALSE;
 #endif
             cycleDataBuf[cycleDataIn++] = CmdEndFrame;
-            currentCycleData->limit = cycleDataIn;
+            currentCycleData->limit     = cycleDataIn;
             consoleFlushCycleData(cdp->limit, currentCycleData->limit);
             currentCycleDataIndex = -1;
             break;
             }
         }
     if (currentCycleDataIndex + 1 < MaxCycleDataEntries)
-       {
-       currentCycleDataIndex += 1;
-       currentCycleData = &cycleDataSequences[currentCycleDataIndex];
-       memset(currentCycleData, 0, sizeof(CycleData));
-       currentCycleData->first = currentCycleData->limit = cycleDataIn;
-       consoleQueueCurState();
-       }
+        {
+        currentCycleDataIndex += 1;
+        currentCycleData       = &cycleDataSequences[currentCycleDataIndex];
+        memset(currentCycleData, 0, sizeof(CycleData));
+        currentCycleData->first = currentCycleData->limit = cycleDataIn;
+        consoleQueueCurState();
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -766,16 +777,19 @@ static void consoleFlushCycleData(int first, int limit)
 
     if (connFd != INVALID_SOCKET)
         {
-        currentTime = getMilliseconds();;
+        currentTime = getMilliseconds();
 #if DEBUG
-        if (queueCharLast) fputs("\n", consoleLog);
+        if (queueCharLast)
+            {
+            fputs("\n", consoleLog);
+            }
         fprintf(consoleLog, "flush: first %d, limit %d, outBufIn %d, currentTime %lu, earliestCycleFlush %lu\n",
-            first, limit, outBufIn, currentTime, earliestCycleFlush);
+                first, limit, outBufIn, currentTime, earliestCycleFlush);
         queueCharLast = FALSE;
 #endif
         if (outBufIn > 0)
             {
-            if (limit > first && currentTime >= earliestCycleFlush)
+            if ((limit > first) && (currentTime >= earliestCycleFlush))
                 {
                 n = limit - first;
                 if (outBufIn + n <= OutBufSize)
@@ -810,9 +824,12 @@ static void consoleFlushCycleData(int first, int limit)
             if (currentTime >= earliestCycleFlush)
                 {
                 len = limit - first;
-                n = send(connFd, &cycleDataBuf[first], len, 0);
+                n   = send(connFd, &cycleDataBuf[first], len, 0);
 #if DEBUG
-                if (n > 0) consoleLogBytes(&cycleDataBuf[first], n);
+                if (n > 0)
+                    {
+                    consoleLogBytes(&cycleDataBuf[first], n);
+                    }
 #endif
                 if (n < len)
                     {
@@ -868,7 +885,7 @@ static void consoleNetIo(void)
     timeout.tv_usec = 0;
     n = select((int)(connFd + 1), &readFds, NULL, NULL, &timeout);
 
-    if (ppKeyIn == 0 && inBufOut < inBufIn)
+    if ((ppKeyIn == 0) && (inBufOut < inBufIn))
         {
         ch = inBuf[inBufOut++];
         if (ch == 0x80) // set minimum refresh interval
@@ -876,24 +893,32 @@ static void consoleNetIo(void)
             if (inBufOut < inBufIn)
                 {
                 minRefreshInterval = inBuf[inBufOut++] * 10;
-                if (minRefreshInterval == 0) minRefreshInterval = InfiniteRefreshInterval;
+                if (minRefreshInterval == 0)
+                    {
+                    minRefreshInterval = InfiniteRefreshInterval;
+                    }
                 earliestCycleFlush = getMilliseconds() + minRefreshInterval;
                 }
             else
                 {
                 inBufOut -= 1;
                 }
+
             return;
             }
         else if (ch == 0x81)
             {
             earliestCycleFlush = 0;
+
             return;
             }
         ppKeyIn = ch;
-        if (inBufOut >= inBufIn) inBufIn = inBufOut = 0;
+        if (inBufOut >= inBufIn)
+            {
+            inBufIn = inBufOut = 0;
+            }
         }
-    if (n > 0 && inBufIn < InBufSize && FD_ISSET(connFd, &readFds))
+    if ((n > 0) && (inBufIn < InBufSize) && FD_ISSET(connFd, &readFds))
         {
         n = recv(connFd, &inBuf[inBufIn], InBufSize - inBufIn, 0);
         if (n <= 0)
@@ -924,7 +949,10 @@ static void consoleQueueChar(u8 ch)
     {
     if (connFd == INVALID_SOCKET)
         {
-        if (isConsoleWindowOpen) windowQueue(ch);
+        if (isConsoleWindowOpen)
+            {
+            windowQueue(ch);
+            }
         }
     else
         {
@@ -936,7 +964,7 @@ static void consoleQueueChar(u8 ch)
         if (currentCycleData->limit > 0)
             {
             cycleDataBuf[cycleDataIn++] = ch;
-            currentCycleData->limit = cycleDataIn;
+            currentCycleData->limit     = cycleDataIn;
             }
 #if DEBUG
         fprintf(consoleLog, "%02x ", ch);
@@ -967,9 +995,12 @@ static void consoleQueueCmd(u8 cmd, u8 parm)
             }
         cycleDataBuf[cycleDataIn++] = cmd;
         cycleDataBuf[cycleDataIn++] = parm;
-        currentCycleData->limit = cycleDataIn;
+        currentCycleData->limit     = cycleDataIn;
 #if DEBUG
-        if (queueCharLast) fputs("\n", consoleLog);
+        if (queueCharLast)
+            {
+            fputs("\n", consoleLog);
+            }
         fprintf(consoleLog, "queueCmd: %s %02x\n", consoleCmdToString(cmd), parm);
         queueCharLast = FALSE;
 #endif
@@ -1021,7 +1052,10 @@ static void consoleSetFontType(u8 fontType)
     {
     if (connFd == INVALID_SOCKET)
         {
-        if (isConsoleWindowOpen) windowSetFont(fontSizes[fontType]);
+        if (isConsoleWindowOpen)
+            {
+            windowSetFont(fontSizes[fontType]);
+            }
         }
     else if (currentFontType != fontType)
         {
@@ -1029,20 +1063,24 @@ static void consoleSetFontType(u8 fontType)
         }
     switch (fontType)
         {
-        case FontTypeDot:
-            currentIncrement = 1;
-            break;
-        case FontTypeSmall:
-            currentIncrement = 8;
-            break;
-        case FontTypeMedium:
-            currentIncrement = 16;
-            break;
-        case FontTypeLarge:
-            currentIncrement = 32;
-            break;
-        default:
-            break;
+    case FontTypeDot:
+        currentIncrement = 1;
+        break;
+
+    case FontTypeSmall:
+        currentIncrement = 8;
+        break;
+
+    case FontTypeMedium:
+        currentIncrement = 16;
+        break;
+
+    case FontTypeLarge:
+        currentIncrement = 32;
+        break;
+
+    default:
+        break;
         }
     currentFontType = fontType;
     }
@@ -1080,7 +1118,10 @@ static void consoleSetX(u16 x)
     consoleUpdateChecksum(x);
     if (connFd == INVALID_SOCKET)
         {
-        if (isConsoleWindowOpen) windowSetX(x + xOffsets[currentScreen]);
+        if (isConsoleWindowOpen)
+            {
+            windowSetX(x + xOffsets[currentScreen]);
+            }
         }
     else if (x > 0xff)
         {
@@ -1107,7 +1148,10 @@ static void consoleSetY(u16 y)
     consoleUpdateChecksum(y);
     if (connFd == INVALID_SOCKET)
         {
-        if (isConsoleWindowOpen) windowSetY(y);
+        if (isConsoleWindowOpen)
+            {
+            windowSetY(y);
+            }
         }
     else if (y > 0xff)
         {
@@ -1142,15 +1186,30 @@ static char *consoleCmdToString(u8 cmd)
 
     switch (cmd)
         {
-    case CmdSetXLow:     return "setXLow";
-    case CmdSetYLow:     return "setYLow";
-    case CmdSetXHigh:    return "setXHigh";
-    case CmdSetYHigh:    return "setYHigh";
-    case CmdSetScreen:   return "setScreen";
-    case CmdSetFontType: return "setFontType";
-    case CmdEndFrame:    return "endFrame";
+    case CmdSetXLow:
+        return "setXLow";
+
+    case CmdSetYLow:
+        return "setYLow";
+
+    case CmdSetXHigh:
+        return "setXHigh";
+
+    case CmdSetYHigh:
+        return "setYHigh";
+
+    case CmdSetScreen:
+        return "setScreen";
+
+    case CmdSetFontType:
+        return "setFontType";
+
+    case CmdEndFrame:
+        return "endFrame";
+
     default:
         sprintf(buf, "%02x", cmd);
+
         return buf;
         }
     }

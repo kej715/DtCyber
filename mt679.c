@@ -334,7 +334,7 @@ void mt679Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
                 cp->convFileHandle = fopen(fileName, "w+b");
                 if (cp->convFileHandle == NULL)
                     {
-                    fprintf(stderr, "(mt679  ) Failed to create MT679 backing file\n");
+                    logDtError(LogErrorLocation, "Failed to create MT679 backing file\n");
                     exit(1);
                     }
                 }
@@ -347,7 +347,7 @@ void mt679Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     tp = calloc(1, sizeof(TapeParam));
     if (tp == NULL)
         {
-        fprintf(stderr, "(mt679  ) Failed to allocate MT679 context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate MT679 context block\n");
         exit(1);
         }
 
@@ -376,7 +376,7 @@ void mt679Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         fcb = fopen(deviceName, "rb");
         if (fcb == NULL)
             {
-            fprintf(stderr, "(mt679  ) Failed to open %s\n", deviceName);
+            logDtError(LogErrorLocation, "Failed to open %s\n", deviceName);
             exit(1);
             }
 
@@ -432,7 +432,7 @@ void mt679Terminate(DevSlot *dp)
             || (fwrite(cp->readConv, 1, sizeof(cp->readConv), cp->convFileHandle) != sizeof(cp->readConv))
             || (fwrite(cp->packedConv, 1, sizeof(cp->packedConv), cp->convFileHandle) != sizeof(cp->packedConv)))
             {
-            fprintf(stderr, "(mt679  ) Error writing MT679 backing file\n");
+            logDtError(LogErrorLocation, "Error writing MT679 backing file\n");
             }
 
         fclose(cp->convFileHandle);
@@ -473,6 +473,7 @@ void mt679LoadTape(char *params)
     if (numParam != 5)
         {
         opDisplay("(mt679  ) Not enough or invalid parameters\n");
+
         return;
         }
 
@@ -521,6 +522,7 @@ void mt679LoadTape(char *params)
         {
         sprintf(outBuf, "(mt679  ) Unit %d not allocated\n", unitNo);
         opDisplay(outBuf);
+
         return;
         }
 
@@ -531,6 +533,7 @@ void mt679LoadTape(char *params)
         {
         sprintf(outBuf, "(mt679  ) Unit %d not unloaded\n", unitNo);
         opDisplay(outBuf);
+
         return;
         }
 
@@ -559,6 +562,7 @@ void mt679LoadTape(char *params)
         {
         sprintf(outBuf, "(mt679  ) Failed to open %s\n", str);
         opDisplay(outBuf);
+
         return;
         }
 
@@ -644,6 +648,7 @@ void mt679UnloadTape(char *params)
         {
         sprintf(outBuf, "(mt679  ) Unit %d not allocated\n", unitNo);
         opDisplay(outBuf);
+
         return;
         }
 
@@ -654,6 +659,7 @@ void mt679UnloadTape(char *params)
         {
         sprintf(outBuf, "(mt679  ) Unit %d not loaded\n", unitNo);
         opDisplay(outBuf);
+
         return;
         }
 
@@ -695,7 +701,7 @@ void mt679UnloadTape(char *params)
 void mt679ShowTapeStatus()
     {
     TapeParam *tp = firstTape;
-    char      outBuf[MaxFSPath+128];
+    char      outBuf[MaxFSPath + 128];
 
     while (tp)
         {
@@ -1234,7 +1240,7 @@ static FcStatus mt679Func(PpWord funcCode)
         return (FcProcessed);
 
     case Fc679CtrledBackspace:
-        logError(LogErrorLocation, "(mt679  ) channel %02o - unsupported function: %04o", activeChannel->id, (u32)funcCode);
+        logDtError(LogErrorLocation, "channel %02o - unsupported function: %04o", activeChannel->id, (u32)funcCode);
 
         return (FcProcessed);
 
@@ -1299,7 +1305,7 @@ static FcStatus mt679Func(PpWord funcCode)
         if (tp == NULL)
             {
             activeDevice->selectedUnit = -1;
-            logError(LogErrorLocation, "(mt679  ) channel %02o - invalid select: %04o", activeChannel->id, (u32)funcCode);
+            logDtError(LogErrorLocation, "channel %02o - invalid select: %04o", activeChannel->id, (u32)funcCode);
 
             return (FcDeclined);
             }
@@ -1346,7 +1352,7 @@ static FcStatus mt679Func(PpWord funcCode)
         if ((tp == NULL) || !tp->unitReady)
             {
             activeDevice->selectedUnit = -1;
-            logError(LogErrorLocation, "(mt679  ) channel %02o - invalid select: %04o", activeChannel->id, (u32)funcCode);
+            logDtError(LogErrorLocation, "channel %02o - invalid select: %04o", activeChannel->id, (u32)funcCode);
 
             return (FcDeclined);
             }
@@ -1474,7 +1480,7 @@ static FcStatus mt679Func(PpWord funcCode)
         if ((unitNo != -1) && tp->unitReady && tp->ringIn)
             {
             // ? would be nice to truncate somehow
-            logError(LogErrorLocation, "(mt679  ) channel %02o - unsupported function: %04o", activeChannel->id, (u32)funcCode);
+            logDtError(LogErrorLocation, "channel %02o - unsupported function: %04o", activeChannel->id, (u32)funcCode);
             }
 
         return (FcProcessed);
@@ -1580,8 +1586,12 @@ static void mt679Io(void)
     switch (activeDevice->fcode)
         {
     default:
-        logError(LogErrorLocation, "(mt679  ) channel %02o - unsupported function code: %04o",
-                 activeChannel->id, activeDevice->fcode);
+        logDtError(LogErrorLocation, "channel %02o - unsupported function code: %04o",
+                   activeChannel->id, activeDevice->fcode);
+        break;
+
+    case Fc679ClearUnit:
+        //  This performs no function but needs to be accounted-for.
         break;
 
     case Fc679FormatUnit:
@@ -1951,7 +1961,7 @@ static void mt679FlushWrite(void)
             ip   += 2;
             }
 
-        recLen0 = rp - rawBuffer;
+        recLen0 = (u32)(rp - rawBuffer);
 
         if ((recLen2 & 1) != 0)
             {
@@ -1979,7 +1989,7 @@ static void mt679FlushWrite(void)
             ip   += 1;
             }
 
-        recLen0 = rp - rawBuffer;
+        recLen0 = (u32)(rp - rawBuffer);
         if (cp->oddFrameCount)
             {
             recLen0 -= 1;
@@ -2074,7 +2084,7 @@ static void mt679PackAndConvert(u32 recLen)
             *op++ = ((c2 << 8) | (c3 >> 0)) & Mask12;
             }
 
-        activeDevice->recordLength = op - tp->ioBuffer;
+        activeDevice->recordLength = (PpWord)(op - tp->ioBuffer);
 
         switch (recLen % 3)
         {
@@ -2121,7 +2131,7 @@ static void mt679PackAndConvert(u32 recLen)
                 }
             }
 
-        activeDevice->recordLength = op - tp->ioBuffer;
+        activeDevice->recordLength = (PpWord)(op - tp->ioBuffer);
 
         if ((recLen % 2) != 0)
             {
@@ -2164,7 +2174,7 @@ static void mt679FuncRead(void)
     /*
     **  Read and verify TAP record length header.
     */
-    len = fread(&recLen0, sizeof(recLen0), 1, activeDevice->fcb[unitNo]);
+    len = (u32)fread(&recLen0, sizeof(recLen0), 1, activeDevice->fcb[unitNo]);
 
     if (len != 1)
         {
@@ -2201,7 +2211,7 @@ static void mt679FuncRead(void)
     */
     if (recLen1 > MaxByteBuf)
         {
-        logError(LogErrorLocation, "(mt679  ) channel %02o - tape record too long: %d", activeChannel->id, recLen1);
+        logDtError(LogErrorLocation, "channel %02o - tape record too long: %d", activeChannel->id, recLen1);
         tp->alert     = TRUE;
         tp->errorCode = EcDiagnosticError;
 
@@ -2226,11 +2236,11 @@ static void mt679FuncRead(void)
     /*
     **  Read and verify the actual raw data.
     */
-    len = fread(rawBuffer, 1, recLen1, activeDevice->fcb[unitNo]);
+    len = (u32)fread(rawBuffer, 1, recLen1, activeDevice->fcb[unitNo]);
 
     if (recLen1 != (u32)len)
         {
-        logError(LogErrorLocation, "(mt679  ) channel %02o - short tape record read: %d", activeChannel->id, len);
+        logDtError(LogErrorLocation, "channel %02o - short tape record read: %d", activeChannel->id, len);
         tp->alert     = TRUE;
         tp->errorCode = EcDiagnosticError;
 
@@ -2240,11 +2250,11 @@ static void mt679FuncRead(void)
     /*
     **  Read and verify the TAP record length trailer.
     */
-    len = fread(&recLen2, sizeof(recLen2), 1, activeDevice->fcb[unitNo]);
+    len = (u32)fread(&recLen2, sizeof(recLen2), 1, activeDevice->fcb[unitNo]);
 
     if (len != 1)
         {
-        logError(LogErrorLocation, "(mt679  ) channel %02o - missing tape record trailer", activeChannel->id);
+        logDtError(LogErrorLocation, "channel %02o - missing tape record trailer", activeChannel->id);
         tp->alert     = TRUE;
         tp->errorCode = EcDiagnosticError;
 
@@ -2272,7 +2282,7 @@ static void mt679FuncRead(void)
             }
         else
             {
-            logError(LogErrorLocation, "(mt679  ) channel %02o - invalid tape record trailer: %d", activeChannel->id, recLen2);
+            logDtError(LogErrorLocation, "channel %02o - invalid tape record trailer: %d", activeChannel->id, recLen2);
             tp->alert     = TRUE;
             tp->errorCode = EcDiagnosticError;
 
@@ -2339,12 +2349,12 @@ static void mt679FuncReadBkw(void)
     **  record trailer).
     */
     fseek(activeDevice->fcb[unitNo], -4, SEEK_CUR);
-    len = fread(&recLen0, sizeof(recLen0), 1, activeDevice->fcb[unitNo]);
+    len = (u32)fread(&recLen0, sizeof(recLen0), 1, activeDevice->fcb[unitNo]);
     fseek(activeDevice->fcb[unitNo], -4, SEEK_CUR);
 
     if (len != 1)
         {
-        logError(LogErrorLocation, "(mt679  ) channel %02o - missing tape record trailer", activeChannel->id);
+        logDtError(LogErrorLocation, "channel %02o - missing tape record trailer", activeChannel->id);
         tp->alert     = TRUE;
         tp->errorCode = EcDiagnosticError;
 
@@ -2368,7 +2378,7 @@ static void mt679FuncReadBkw(void)
     */
     if (recLen1 > MaxByteBuf)
         {
-        logError(LogErrorLocation, "(mt679  ) channel %02o - tape record too long: %d", activeChannel->id, recLen1);
+        logDtError(LogErrorLocation, "channel %02o - tape record too long: %d", activeChannel->id, recLen1);
         tp->alert     = TRUE;
         tp->errorCode = EcDiagnosticError;
 
@@ -2387,11 +2397,11 @@ static void mt679FuncReadBkw(void)
         /*
         **  Read and verify the TAP record header.
         */
-        len = fread(&recLen2, sizeof(recLen2), 1, activeDevice->fcb[unitNo]);
+        len = (u32)fread(&recLen2, sizeof(recLen2), 1, activeDevice->fcb[unitNo]);
 
         if (len != 1)
             {
-            logError(LogErrorLocation, "(mt679  ) channel %02o - missing TAP record header", activeChannel->id);
+            logDtError(LogErrorLocation, "channel %02o - missing TAP record header", activeChannel->id);
             tp->alert     = TRUE;
             tp->errorCode = EcDiagnosticError;
 
@@ -2405,11 +2415,11 @@ static void mt679FuncReadBkw(void)
             */
             position -= 1;
             fseek(activeDevice->fcb[unitNo], position, SEEK_SET);
-            len = fread(&recLen2, sizeof(recLen2), 1, activeDevice->fcb[unitNo]);
+            len = (u32)fread(&recLen2, sizeof(recLen2), 1, activeDevice->fcb[unitNo]);
 
             if ((len != 1) || (recLen0 != recLen2))
                 {
-                logError(LogErrorLocation, "(mt679  ) channel %02o - invalid record length2: %d %08X != %08X", activeChannel->id, len, recLen0, recLen2);
+                logDtError(LogErrorLocation, "channel %02o - invalid record length2: %d %08X != %08X", activeChannel->id, len, recLen0, recLen2);
                 tp->alert     = TRUE;
                 tp->errorCode = EcDiagnosticError;
 
@@ -2420,11 +2430,11 @@ static void mt679FuncReadBkw(void)
         /*
         **  Read and verify the actual raw data.
         */
-        len = fread(rawBuffer, 1, recLen1, activeDevice->fcb[unitNo]);
+        len = (u32)fread(rawBuffer, 1, recLen1, activeDevice->fcb[unitNo]);
 
         if (recLen1 != (u32)len)
             {
-            logError(LogErrorLocation, "(mt679  ) channel %02o - short tape record read: %d", activeChannel->id, len);
+            logDtError(LogErrorLocation, "channel %02o - short tape record read: %d", activeChannel->id, len);
             tp->alert     = TRUE;
             tp->errorCode = EcDiagnosticError;
 
@@ -2506,7 +2516,7 @@ static void mt679FuncForespace(void)
     /*
     **  Read and verify TAP record length header.
     */
-    len = fread(&recLen0, sizeof(recLen0), 1, activeDevice->fcb[unitNo]);
+    len = (u32)fread(&recLen0, sizeof(recLen0), 1, activeDevice->fcb[unitNo]);
 
     if (len != 1)
         {
@@ -2543,7 +2553,7 @@ static void mt679FuncForespace(void)
     */
     if (recLen1 > MaxByteBuf)
         {
-        logError(LogErrorLocation, "(mt679  ) channel %02o - tape record too long: %d", activeChannel->id, recLen1);
+        logDtError(LogErrorLocation, "channel %02o - tape record too long: %d", activeChannel->id, recLen1);
         tp->alert     = TRUE;
         tp->errorCode = EcDiagnosticError;
 
@@ -2570,7 +2580,7 @@ static void mt679FuncForespace(void)
     */
     if (fseek(activeDevice->fcb[unitNo], recLen1, SEEK_CUR) != 0)
         {
-        logError(LogErrorLocation, "(mt679  ) channel %02o - short tape record read: %d", activeChannel->id, len);
+        logDtError(LogErrorLocation, "channel %02o - short tape record read: %d", activeChannel->id, len);
         tp->alert     = TRUE;
         tp->errorCode = EcDiagnosticError;
 
@@ -2580,11 +2590,11 @@ static void mt679FuncForespace(void)
     /*
     **  Read and verify the TAP record length trailer.
     */
-    len = fread(&recLen2, sizeof(recLen2), 1, activeDevice->fcb[unitNo]);
+    len = (u32)fread(&recLen2, sizeof(recLen2), 1, activeDevice->fcb[unitNo]);
 
     if (len != 1)
         {
-        logError(LogErrorLocation, "(mt679  ) channel %02o - missing tape record trailer", activeChannel->id);
+        logDtError(LogErrorLocation, "channel %02o - missing tape record trailer", activeChannel->id);
         tp->alert     = TRUE;
         tp->errorCode = EcDiagnosticError;
 
@@ -2612,7 +2622,7 @@ static void mt679FuncForespace(void)
             }
         else
             {
-            logError(LogErrorLocation, "(mt679  ) channel %02o - invalid tape record trailer: %d", activeChannel->id, recLen2);
+            logDtError(LogErrorLocation, "channel %02o - invalid tape record trailer: %d", activeChannel->id, recLen2);
             tp->alert     = TRUE;
             tp->errorCode = EcDiagnosticError;
 
@@ -2661,12 +2671,12 @@ static void mt679FuncBackspace(void)
     **  record trailer).
     */
     fseek(activeDevice->fcb[unitNo], -4, SEEK_CUR);
-    len = fread(&recLen0, sizeof(recLen0), 1, activeDevice->fcb[unitNo]);
+    len = (u32)fread(&recLen0, sizeof(recLen0), 1, activeDevice->fcb[unitNo]);
     fseek(activeDevice->fcb[unitNo], -4, SEEK_CUR);
 
     if (len != 1)
         {
-        logError(LogErrorLocation, "(mt679  ) channel %02o - missing tape record trailer", activeChannel->id);
+        logDtError(LogErrorLocation, "channel %02o - missing tape record trailer", activeChannel->id);
         tp->alert     = TRUE;
         tp->errorCode = EcDiagnosticError;
 
@@ -2690,7 +2700,7 @@ static void mt679FuncBackspace(void)
     */
     if (recLen1 > MaxByteBuf)
         {
-        logError(LogErrorLocation, "(mt679  ) channel %02o - tape record too long: %d", activeChannel->id, recLen1);
+        logDtError(LogErrorLocation, "channel %02o - tape record too long: %d", activeChannel->id, recLen1);
         tp->alert     = TRUE;
         tp->errorCode = EcDiagnosticError;
 
@@ -2709,11 +2719,11 @@ static void mt679FuncBackspace(void)
         /*
         **  Read and verify the TAP record header.
         */
-        len = fread(&recLen2, sizeof(recLen2), 1, activeDevice->fcb[unitNo]);
+        len = (u32)fread(&recLen2, sizeof(recLen2), 1, activeDevice->fcb[unitNo]);
 
         if (len != 1)
             {
-            logError(LogErrorLocation, "(mt679  ) channel %02o - missing TAP record header", activeChannel->id);
+            logDtError(LogErrorLocation, "channel %02o - missing TAP record header", activeChannel->id);
             tp->alert     = TRUE;
             tp->errorCode = EcDiagnosticError;
 
@@ -2727,11 +2737,11 @@ static void mt679FuncBackspace(void)
             */
             position -= 1;
             fseek(activeDevice->fcb[unitNo], position, SEEK_SET);
-            len = fread(&recLen2, sizeof(recLen2), 1, activeDevice->fcb[unitNo]);
+            len = (u32)fread(&recLen2, sizeof(recLen2), 1, activeDevice->fcb[unitNo]);
 
             if ((len != 1) || (recLen0 != recLen2))
                 {
-                logError(LogErrorLocation, "(mt679  ) channel %02o - invalid record length2: %d %08X != %08X", activeChannel->id, len, recLen0, recLen2);
+                logDtError(LogErrorLocation, "channel %02o - invalid record length2: %d %08X != %08X", activeChannel->id, len, recLen0, recLen2);
                 tp->alert     = TRUE;
                 tp->errorCode = EcDiagnosticError;
 

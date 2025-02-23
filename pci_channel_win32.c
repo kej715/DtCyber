@@ -175,14 +175,14 @@ void pciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     pci = calloc(1, sizeof(PciParam));
     if (pci == NULL)
         {
-        fprintf(stderr, "(pci_channel_win32) Failed to allocate PCI channel context block\n");
+        logDtError(LogErrorLocation, "(pci_channel_win32) Failed to allocate PCI channel context block\n");
         exit(1);
         }
 
     retValue = GetDeviceHandle();
     if (!retValue)
         {
-        fprintf(stderr, "(pci_channel_win32) Can't open CYBER channel interface.\n");
+        logDtError(LogErrorLocation, "(pci_channel_win32) Can't open CYBER channel interface.\n");
         exit(1);
         }
 

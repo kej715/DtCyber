@@ -151,7 +151,7 @@
 #define Fc3555MaintStatus        00065
 #define Fc3555ClearMaint         00066
 
-/*  
+/*
 **  Output rendering modes
 */
 #define ModeCDC                  0
@@ -211,7 +211,7 @@ typedef struct lpContext
 
     bool             doBurst;            //  bursting option for forced segmentation at EOJ
     char             path[MaxFSPath];    //  preserve the device folder path
-    char             curFileName[MaxFSPath+128];
+    char             curFileName[MaxFSPath + 128];
     } LpContext;
 
 
@@ -234,6 +234,7 @@ static void     lp3000PrintCDC(LpContext *lc, FILE *fcb);
 #if DEBUG
 static void     lp3000DebugData(LpContext *lc);
 static char    *lp3000Func2String(LpContext *lc, PpWord funcCode);
+
 #endif
 
 /*
@@ -251,7 +252,8 @@ static char    *lp3000Func2String(LpContext *lc, PpWord funcCode);
 static LpContext *firstUnit = NULL;
 static LpContext *lastUnit  = NULL;
 
-static char *postPrintCdcEffectors[] = {
+static char *postPrintCdcEffectors[] =
+    {
     "H", // advance to channel 1
     "G", // advance to channel 2
     "F", // advance to channel 3
@@ -264,9 +266,10 @@ static char *postPrintCdcEffectors[] = {
     "L", // advance to channel 10
     "M", // advance to channel 11
     "N"  // advance to channel 12
-};
+    };
 
-static char *prePrintAnsiEffectors[] = {
+static char *prePrintAnsiEffectors[] =
+    {
     "1", // advance to channel 1
     "2", // advance to channel 2
     "3", // advance to channel 3
@@ -279,9 +282,10 @@ static char *prePrintAnsiEffectors[] = {
     "A", // advance to channel 10
     "B", // advance to channel 11
     "C"  // advance to channel 12
-};
+    };
 
-static char *prePrintCdcEffectors[] = {
+static char *prePrintCdcEffectors[] =
+    {
     "8", // advance to channel 1
     "7", // advance to channel 2
     "6", // advance to channel 3
@@ -294,13 +298,14 @@ static char *prePrintCdcEffectors[] = {
     "Z", // advance to channel 10
     "W", // advance to channel 11
     "U"  // advance to channel 12
-};
+    };
 
-static char *renderingModes[] = {
+static char *renderingModes[] =
+    {
     "CDC",
     "ANSI",
     "ASCII"
-};
+    };
 
 #if DEBUG
 static FILE *lp3000Log = NULL;
@@ -437,7 +442,7 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
             }
         else
             {
-            fprintf(stderr, "(lp3000 ) %s Unrecognized output rendering mode '%s'\n", lpTypeName, deviceMode);
+            logDtError(LogErrorLocation, "%s Unrecognized output rendering mode '%s'\n", lpTypeName, deviceMode);
             exit(1);
             }
         }
@@ -452,13 +457,13 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
         {
         if (strcasecmp(burstMode, "burst") == 0)
             {
-            if (strcasecmp(osType, "nos") == 0 || strcasecmp(osType, "kronos") == 0)
+            if ((strcasecmp(osType, "nos") == 0) || (strcasecmp(osType, "kronos") == 0))
                 {
                 isBursting = TRUE;
                 }
             else
                 {
-                fprintf(stderr, "(lp3000 ) %s WARNING: BURST mode ignored; applies only to NOS operating systems\n", lpTypeName);
+                logDtError(LogErrorLocation, "%s WARNING: BURST mode ignored; applies only to NOS operating systems\n", lpTypeName);
                 }
             }
         else if (strcasecmp(burstMode, "noburst") == 0)
@@ -467,14 +472,14 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
             }
         else
             {
-            fprintf(stderr, "(lp3000 ) %s Unrecognized BURST mode '%s'\n", lpTypeName, burstMode);
+            logDtError(LogErrorLocation, "%s Unrecognized BURST mode '%s'\n", lpTypeName, burstMode);
             exit(1);
             }
         }
     fprintf(stdout, "(lp3000 ) %s Burst mode '%s'\n", lpTypeName, isBursting ? "Bursting" : "Non-Bursting");
 
-    if (deviceType == NULL
-        || strcmp(deviceType, "3555") == 0)
+    if ((deviceType == NULL)
+        || (strcmp(deviceType, "3555") == 0))
         {
         flags |= Lp3000Type3555;
         }
@@ -484,7 +489,7 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
         }
     else
         {
-        fprintf(stderr, "(lp3000 ) Unrecognized %s controller type %s\n", lpTypeName, deviceType);
+        logDtError(LogErrorLocation, "Unrecognized %s controller type %s\n", lpTypeName, deviceType);
         exit(1);
         }
 
@@ -500,18 +505,18 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
     */
     if (up->context[0] != NULL)
         {
-        fprintf(stderr, "(lp3000 ) Only one LP5xx unit is possible per equipment\n");
+        logDtError(LogErrorLocation, "Only one LP5xx unit is possible per equipment\n");
         exit(1);
         }
 
     lc = (LpContext *)calloc(1, sizeof(LpContext));
     if (lc == NULL)
         {
-        fprintf(stderr, "(lp3000 ) Failed to allocate LP5xx context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate LP5xx context block\n");
         exit(1);
         }
 
-    up->context[0] = (void *)lc;
+    up->context[0]    = (void *)lc;
     lc->flags         = flags;
     lc->lpi           = 6;               //  Default print density
     lc->linePos       = 0;
@@ -550,7 +555,7 @@ static void lp3000Init(u16 lpType, u8 eqNo, u8 unitNo, u8 channelNo, char *devic
     up->fcb[0] = fopen(lc->curFileName, "w");
     if (up->fcb[0] == NULL)
         {
-        fprintf(stderr, "(lp3000 ) Failed to open %s\n", lc->curFileName);
+        logDtError(LogErrorLocation, "Failed to open %s\n", lc->curFileName);
         exit(1);
         }
 
@@ -589,7 +594,7 @@ void lp3000ShowStatus()
     {
     LpContext *lc;
     char      lpType[10];
-    char      outBuf[MaxFSPath+128];
+    char      outBuf[MaxFSPath + 128];
 
     for (lc = firstUnit; lc != NULL; lc = lc->nextUnit)
         {
@@ -601,7 +606,10 @@ void lp3000ShowStatus()
         opDisplay(renderingModes[lc->renderingMode]);
         sprintf(outBuf, ", %d lpi", lc->lpi);
         opDisplay(outBuf);
-        if (lc->doBurst) opDisplay(", burst");
+        if (lc->doBurst)
+            {
+            opDisplay(", burst");
+            }
         opDisplay(")\n");
         }
     }
@@ -621,11 +629,11 @@ void lp3000RemovePaper(char *params)
     time_t    currentTime;
     DevSlot   *dp;
     int       equipmentNo;
-    char      fNameNew[MaxFSPath+128];
+    char      fNameNew[MaxFSPath + 128];
     int       iSuffix;
     LpContext *lc;
     int       numParam;
-    char      outBuf[MaxFSPath*2+300];
+    char      outBuf[MaxFSPath * 2 + 300];
     bool      renameOK;
     struct tm t;
 
@@ -670,7 +678,7 @@ void lp3000RemovePaper(char *params)
         return;
         }
 
-    lc = (LpContext *)dp->context[0];
+    lc       = (LpContext *)dp->context[0];
     renameOK = FALSE;
 
     //
@@ -679,9 +687,9 @@ void lp3000RemovePaper(char *params)
     //
     if (dp->fcb[0] == NULL)
         {
-        fprintf(stderr, "(lp3000 ) lp3000RemovePaper: FCB is null on channel %o equipment %o\n",
-               dp->channel->id,
-               dp->eqNo);
+        logDtError(LogErrorLocation, "lp3000RemovePaper: FCB is null on channel %o equipment %o\n",
+                   dp->channel->id,
+                   dp->eqNo);
         //  proceed to attempt to open a new FCB
         }
     else
@@ -692,6 +700,7 @@ void lp3000RemovePaper(char *params)
             {
             sprintf(outBuf, "(lp3000 ) No output has been written on channel %o and equipment %o\n", channelNo, equipmentNo);
             opDisplay(outBuf);
+
             return;
             }
 
@@ -737,11 +746,11 @@ void lp3000RemovePaper(char *params)
                     renameOK = TRUE;
                     break;
                     }
-                fprintf(stderr, "(lp3000 ) Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
-                        lc->curFileName,
-                        fNameNew,
-                        strerror(errno),
-                        iSuffix);
+                logDtError(LogErrorLocation, "Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
+                           lc->curFileName,
+                           fNameNew,
+                           strerror(errno),
+                           iSuffix);
                 }
             }
         }
@@ -758,7 +767,7 @@ void lp3000RemovePaper(char *params)
     */
     if (dp->fcb[0] == NULL)
         {
-        fprintf(stderr, "Failed to open %s\n", lc->curFileName);
+        logDtError(LogErrorLocation, "Failed to open %s\n", lc->curFileName);
 
         return;
         }
@@ -796,9 +805,9 @@ static FcStatus lp3000Func(PpWord funcCode)
     */
     if (fcb == NULL)
         {
-        fprintf(stderr, "(lp3000 ) lp3000Func: FCB is null on channel %o equipment %o\n",
-                active3000Device->channel->id,
-                active3000Device->eqNo);
+        logDtError(LogErrorLocation, "lp3000Func: FCB is null on channel %o equipment %o\n",
+                   active3000Device->channel->id,
+                   active3000Device->eqNo);
 
         return FcProcessed;
         }
@@ -818,11 +827,16 @@ static FcStatus lp3000Func(PpWord funcCode)
         {
     case FcPrintNoSpace:
         lc->doSuppress = TRUE;
+
         return FcProcessed;
 
     case FcPrintAutoEject:
-        if (lc->renderingMode != ModeASCII && lc->doAutoEject == FALSE) fputs("R\n", fcb);
+        if ((lc->renderingMode != ModeASCII) && (lc->doAutoEject == FALSE))
+            {
+            fputs("R\n", fcb);
+            }
         lc->doAutoEject = TRUE;
+
         return FcProcessed;
 
     case Fc6681MasterClear:
@@ -833,6 +847,7 @@ static FcStatus lp3000Func(PpWord funcCode)
         lc->doAutoEject   = FALSE;
         lc->doSuppress    = FALSE;
         lc->flags        &= ~Lp3000ExtArray;
+
         return FcProcessed;
 
     case FcPrintRelease:
@@ -849,18 +864,20 @@ static FcStatus lp3000Func(PpWord funcCode)
             lp3000RemovePaper(dispLpDevId);
             }
         lc->isPrinted = FALSE;
+
         return FcProcessed;
 
     case FcPrintSingle:
     case FcPrintDouble:
     case FcPrintLastLine:
     case FcPrintEject:
-        if (lc->prePrintFunc != 0 && lc->prePrintFunc != FcPrintNoSpace)
+        if ((lc->prePrintFunc != 0) && (lc->prePrintFunc != FcPrintNoSpace))
             {
             fputs(lp3000FeForPrePrint(lc, lc->prePrintFunc), fcb);
             fputc('\n', fcb);
             }
         lc->prePrintFunc = (u8)funcCode;
+
         return FcProcessed;
 
     case Fc6681Output:
@@ -889,10 +906,12 @@ static FcStatus lp3000Func(PpWord funcCode)
         // Update interrupt summary flag in unit block
         dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
         active3000Device->fcode = funcCode;
+
         return FcAccepted;
 
     case Fc6681DevStatusReq:
         active3000Device->fcode = funcCode;
+
         return FcAccepted;
         }
 
@@ -901,27 +920,41 @@ static FcStatus lp3000Func(PpWord funcCode)
         switch (funcCode)
             {
         default:
-            fprintf(stderr, "(lp3000 ) Unknown LP3555 function %04o\n", funcCode);
+            logDtError(LogErrorLocation, "Unknown LP3555 function %04o\n", funcCode);
+
             return FcDeclined;
 
         case Fc3555Sel8Lpi:
-            if (lc->renderingMode != ModeASCII && lc->lpi != 8) fputs("T\n", fcb);
+            if ((lc->renderingMode != ModeASCII) && (lc->lpi != 8))
+                {
+                fputs("T\n", fcb);
+                }
             lc->lpi = 8;
+
             return FcProcessed;
 
         case Fc3555Sel6Lpi:
-            if (lc->renderingMode != ModeASCII && lc->lpi != 6) fputs("S\n", fcb);
+            if ((lc->renderingMode != ModeASCII) && (lc->lpi != 6))
+                {
+                fputs("S\n", fcb);
+                }
             lc->lpi = 6;
+
             return FcProcessed;
 
         case Fc3555ClearFormat:
-            if (lc->renderingMode != ModeASCII
-                && (lc->lpi != 6 || lc->doAutoEject)) fputs("Q\n", fcb);
+            if ((lc->renderingMode != ModeASCII)
+                && ((lc->lpi != 6) || lc->doAutoEject))
+                {
+                fputs("Q\n", fcb);
+                }
+
         case Fc3555CondClearFormat:
             lc->postPrintFunc = 0;
             lc->lpi           = 6;
             lc->doAutoEject   = FALSE;
             lc->doSuppress    = FALSE;
+
             return FcProcessed;
 
         case Fc3555PostVFU1:
@@ -937,10 +970,12 @@ static FcStatus lp3000Func(PpWord funcCode)
         case Fc3555PostVFU11:
         case Fc3555PostVFU12:
             lc->postPrintFunc = (u8)funcCode;
+
             return FcProcessed;
 
         case Fc3555SelectPrePrint:
             lc->postPrintFunc = 0;
+
             return FcProcessed;
 
         case Fc3555PreVFU1:
@@ -956,12 +991,14 @@ static FcStatus lp3000Func(PpWord funcCode)
         case Fc3555PreVFU11:
         case Fc3555PreVFU12:
             lc->prePrintFunc = (u8)funcCode;
+
             return FcProcessed;
 
         case Fc3555FillMemory:
             // Remember that we saw this function, but this doesn't actually
             // start any I/O yet.
             lc->flags |= Lp3555FillImageMem;
+
             return FcProcessed;
 
         case Fc3555SelIntReady:
@@ -982,12 +1019,14 @@ static FcStatus lp3000Func(PpWord funcCode)
                 }
             // Update interrupt summary flag in unit block
             dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
+
             return FcProcessed;
 
         case Fc3555RelIntReady:
             lc->flags &= ~(Lp3000IntReadyEna | Lp3000IntReady);
             // Update interrupt summary flag in unit block
             dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
+
             return FcProcessed;
 
         case Fc3555SelIntEnd:
@@ -1002,20 +1041,24 @@ static FcStatus lp3000Func(PpWord funcCode)
                 }
             // Update interrupt summary flag in unit block
             dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
+
             return FcProcessed;
 
         case Fc3555RelIntEnd:
             lc->flags &= ~(Lp3000IntEndEna | Lp3000IntEnd);
             // Update interrupt summary flag in unit block
             dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
+
             return FcProcessed;
 
         case Fc3555SelExtArray:
             lc->flags |= Lp3000ExtArray;
+
             return FcProcessed;
 
         case Fc3555ClearExtArray:
             lc->flags &= ~Lp3000ExtArray;
+
             return FcProcessed;
 
         case Fc3555SelIntError:
@@ -1039,16 +1082,21 @@ static FcStatus lp3000Func(PpWord funcCode)
             //
             if (funcCode != Fc3555SelectPrePrint)
                 {
-                fprintf(stderr, "(lp3000 ) Unknown LP3152 function %04o\n", funcCode);
+                logDtError(LogErrorLocation, "Unknown LP3152 function %04o\n", funcCode);
                 }
+
             return FcDeclined;
 
         case Fc3152ClearFormat:
-            if (lc->renderingMode != ModeASCII && lc->doAutoEject) fputs("Q\n", fcb);
+            if ((lc->renderingMode != ModeASCII) && lc->doAutoEject)
+                {
+                fputs("Q\n", fcb);
+                }
             lc->postPrintFunc = 0;
             lc->lpi           = 6;
             lc->doAutoEject   = FALSE;
             lc->doSuppress    = FALSE;
+
             return FcProcessed;
 
         case Fc3152PostVFU1:
@@ -1058,10 +1106,12 @@ static FcStatus lp3000Func(PpWord funcCode)
         case Fc3152PostVFU5:
         case Fc3152PostVFU6:
             lc->postPrintFunc = (u8)funcCode;
+
             return FcProcessed;
 
         case Fc3152SelectPrePrint:
             lc->postPrintFunc = 0;
+
             return FcProcessed;
 
         case Fc3152PreVFU1:
@@ -1071,6 +1121,7 @@ static FcStatus lp3000Func(PpWord funcCode)
         case Fc3152PreVFU5:
         case Fc3152PreVFU6:
             lc->prePrintFunc = (u8)funcCode;
+
             return FcProcessed;
 
         case Fc3152SelIntReady:
@@ -1091,12 +1142,14 @@ static FcStatus lp3000Func(PpWord funcCode)
                 }
             // Update interrupt summary flag in unit block
             dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
+
             return FcProcessed;
 
         case Fc3152RelIntReady:
             lc->flags &= ~(Lp3000IntReadyEna | Lp3000IntReady);
             // Update interrupt summary flag in unit block
             dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
+
             return FcProcessed;
 
         case Fc3152SelIntEnd:
@@ -1111,12 +1164,14 @@ static FcStatus lp3000Func(PpWord funcCode)
                 }
             // Update interrupt summary flag in unit block
             dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
+
             return FcProcessed;
 
         case Fc3152RelIntEnd:
             lc->flags &= ~(Lp3000IntEndEna | Lp3000IntEnd);
             // Update interrupt summary flag in unit block
             dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
+
             return FcProcessed;
 
         case Fc3152SelIntError:
@@ -1156,7 +1211,10 @@ static void lp3000Io(void)
         if (activeChannel->full)
             {
 #if DEBUG
-            if (lc->linePos % 16 == 0) fputs("\n   ", lp3000Log);
+            if (lc->linePos % 16 == 0)
+                {
+                fputs("\n   ", lp3000Log);
+                }
             fprintf(lp3000Log, " %04o", activeChannel->data);
 #endif
             if (lc->linePos < MaxLineSize)
@@ -1222,9 +1280,9 @@ static void lp3000Disconnect(void)
     //
     if (fcb == NULL)
         {
-        fprintf(stderr, "(lp3000 ) lp3000Disconnect: FCB is null on channel %o equipment %o\n",
-                active3000Device->channel->id,
-                active3000Device->eqNo);
+        logDtError(LogErrorLocation, "lp3000Disconnect: FCB is null on channel %o equipment %o\n",
+                   active3000Device->channel->id,
+                   active3000Device->eqNo);
 
         return;
         }
@@ -1240,9 +1298,11 @@ static void lp3000Disconnect(void)
         case ModeCDC:
             lp3000PrintCDC(lc, fcb);
             break;
+
         case ModeANSI:
             lp3000PrintANSI(lc, fcb);
             break;
+
         case ModeASCII:
             lp3000PrintASCII(lc, fcb);
             break;
@@ -1280,14 +1340,14 @@ static void lp3000PrintANSI(LpContext *lc, FILE *fcb)
         {
         lc->prePrintFunc = 0;
         }
-    if (lc->postPrintFunc != 0 && lc->doSuppress == FALSE)
+    if ((lc->postPrintFunc != 0) && (lc->doSuppress == FALSE))
         {
         lc->prePrintFunc = (lc->flags & Lp3000Type3555)
             ? (lc->postPrintFunc - Fc3555PostVFU1) + Fc3555PreVFU1
             : (lc->postPrintFunc - Fc3152PostVFU1) + Fc3152PreVFU1;
         }
     lc->doSuppress = FALSE;
-    if (fe == NULL || *fe != '+' || lc->linePos > 0)
+    if ((fe == NULL) || (*fe != '+') || (lc->linePos > 0))
         {
         fputs(fe != NULL ? fe : " ", fcb);
         for (i = 0; i < lc->linePos; i++)
@@ -1362,22 +1422,28 @@ static void lp3000PrintCDC(LpContext *lc, FILE *fcb)
         {
         lc->prePrintFunc = 0;
         }
-    if (lc->postPrintFunc != 0 && lc->doSuppress == FALSE)
+    if ((lc->postPrintFunc != 0) && (lc->doSuppress == FALSE))
         {
         postFE = lp3000FeForPostPrint(lc, lc->postPrintFunc);
         }
     lc->doSuppress = FALSE;
     if (preFE != NULL)
         {
-        if (*preFE == '+' && lc->linePos < 1 && postFE == NULL) return;
+        if ((*preFE == '+') && (lc->linePos < 1) && (postFE == NULL))
+            {
+            return;
+            }
         fputs(preFE, fcb);
-        if (postFE != NULL) fputc('\n', fcb);
+        if (postFE != NULL)
+            {
+            fputc('\n', fcb);
+            }
         }
     if (postFE != NULL)
         {
         fputs(postFE, fcb);
         }
-    if (preFE == NULL && postFE == NULL)
+    if ((preFE == NULL) && (postFE == NULL))
         {
         fputc(' ', fcb);
         if (lc->doSuppress)
@@ -1410,37 +1476,42 @@ static char *lp3000FeForPostPrint(LpContext *lc, u8 func)
         if (lc->flags & Lp3000Type3555)
             {
             switch (func)
-                {
-            default              : return "";
-            case Fc3555PostVFU1  :
-            case Fc3555PostVFU2  :
-            case Fc3555PostVFU3  :
-            case Fc3555PostVFU4  :
-            case Fc3555PostVFU5  :
-            case Fc3555PostVFU6  :
-            case Fc3555PostVFU7  :
-            case Fc3555PostVFU8  :
-            case Fc3555PostVFU9  :
-            case Fc3555PostVFU10 :
-            case Fc3555PostVFU11 :
-            case Fc3555PostVFU12 :
+            {
+            default:
+                return "";
+
+            case Fc3555PostVFU1:
+            case Fc3555PostVFU2:
+            case Fc3555PostVFU3:
+            case Fc3555PostVFU4:
+            case Fc3555PostVFU5:
+            case Fc3555PostVFU6:
+            case Fc3555PostVFU7:
+            case Fc3555PostVFU8:
+            case Fc3555PostVFU9:
+            case Fc3555PostVFU10:
+            case Fc3555PostVFU11:
+            case Fc3555PostVFU12:
                 return postPrintCdcEffectors[lc->postPrintFunc - Fc3555PostVFU1];
-                }
+            }
             }
         else
             {
             switch (func)
-                {
-            default              : return "";
-            case Fc3152PostVFU1  :
-            case Fc3152PostVFU2  :
-            case Fc3152PostVFU3  :
-            case Fc3152PostVFU4  :
-            case Fc3152PostVFU5  :
-            case Fc3152PostVFU6  :
+            {
+            default:
+                return "";
+
+            case Fc3152PostVFU1:
+            case Fc3152PostVFU2:
+            case Fc3152PostVFU3:
+            case Fc3152PostVFU4:
+            case Fc3152PostVFU5:
+            case Fc3152PostVFU6:
                 return postPrintCdcEffectors[lc->postPrintFunc - Fc3152PostVFU1];
-                }
             }
+            }
+
     case ModeANSI:
     case ModeASCII:
     default:
@@ -1467,46 +1538,70 @@ static char *lp3000FeForPrePrint(LpContext *lc, u8 func)
         if (lc->flags & Lp3000Type3555)
             {
             switch (func)
-                {
-            default              : return " ";
-            case FcPrintSingle   : return "0";
-            case FcPrintDouble   : return "-";
-            case FcPrintLastLine : return "2";
-            case FcPrintEject    : return "1";
-            case FcPrintNoSpace  : return "+";
-            case Fc3555PreVFU1   :
-            case Fc3555PreVFU2   :
-            case Fc3555PreVFU3   :
-            case Fc3555PreVFU4   :
-            case Fc3555PreVFU5   :
-            case Fc3555PreVFU6   :
-            case Fc3555PreVFU7   :
-            case Fc3555PreVFU8   :
-            case Fc3555PreVFU9   :
-            case Fc3555PreVFU10  :
-            case Fc3555PreVFU11  :
-            case Fc3555PreVFU12  :
+            {
+            default:
+                return " ";
+
+            case FcPrintSingle:
+                return "0";
+
+            case FcPrintDouble:
+                return "-";
+
+            case FcPrintLastLine:
+                return "2";
+
+            case FcPrintEject:
+                return "1";
+
+            case FcPrintNoSpace:
+                return "+";
+
+            case Fc3555PreVFU1:
+            case Fc3555PreVFU2:
+            case Fc3555PreVFU3:
+            case Fc3555PreVFU4:
+            case Fc3555PreVFU5:
+            case Fc3555PreVFU6:
+            case Fc3555PreVFU7:
+            case Fc3555PreVFU8:
+            case Fc3555PreVFU9:
+            case Fc3555PreVFU10:
+            case Fc3555PreVFU11:
+            case Fc3555PreVFU12:
                 return prePrintCdcEffectors[lc->prePrintFunc - Fc3555PreVFU1];
-                }
+            }
             }
         else
             {
             switch (lc->prePrintFunc)
-                {
-            default              : return " ";
-            case FcPrintSingle   : return "0";
-            case FcPrintDouble   : return "-";
-            case FcPrintLastLine : return "2";
-            case FcPrintEject    : return "1";
-            case FcPrintNoSpace  : return "+";
-            case Fc3152PreVFU1   :
-            case Fc3152PreVFU2   :
-            case Fc3152PreVFU3   :
-            case Fc3152PreVFU4   :
-            case Fc3152PreVFU5   :
-            case Fc3152PreVFU6   :
+            {
+            default:
+                return " ";
+
+            case FcPrintSingle:
+                return "0";
+
+            case FcPrintDouble:
+                return "-";
+
+            case FcPrintLastLine:
+                return "2";
+
+            case FcPrintEject:
+                return "1";
+
+            case FcPrintNoSpace:
+                return "+";
+
+            case Fc3152PreVFU1:
+            case Fc3152PreVFU2:
+            case Fc3152PreVFU3:
+            case Fc3152PreVFU4:
+            case Fc3152PreVFU5:
+            case Fc3152PreVFU6:
                 return prePrintCdcEffectors[lc->prePrintFunc - Fc3152PreVFU1];
-                }
+            }
             }
         break;
 
@@ -1514,61 +1609,93 @@ static char *lp3000FeForPrePrint(LpContext *lc, u8 func)
         if (lc->flags & Lp3000Type3555)
             {
             switch (func)
-                {
-            default              : return " ";
-            case FcPrintSingle   : return "0";
-            case FcPrintDouble   : return "-";
-            case FcPrintLastLine : return "C";
-            case FcPrintEject    : return "1";
-            case FcPrintNoSpace  : return "+";
-            case Fc3555PreVFU1   :
-            case Fc3555PreVFU2   :
-            case Fc3555PreVFU3   :
-            case Fc3555PreVFU4   :
-            case Fc3555PreVFU5   :
-            case Fc3555PreVFU6   :
-            case Fc3555PreVFU7   :
-            case Fc3555PreVFU8   :
-            case Fc3555PreVFU9   :
-            case Fc3555PreVFU10  :
-            case Fc3555PreVFU11  :
-            case Fc3555PreVFU12  :
+            {
+            default:
+                return " ";
+
+            case FcPrintSingle:
+                return "0";
+
+            case FcPrintDouble:
+                return "-";
+
+            case FcPrintLastLine:
+                return "C";
+
+            case FcPrintEject:
+                return "1";
+
+            case FcPrintNoSpace:
+                return "+";
+
+            case Fc3555PreVFU1:
+            case Fc3555PreVFU2:
+            case Fc3555PreVFU3:
+            case Fc3555PreVFU4:
+            case Fc3555PreVFU5:
+            case Fc3555PreVFU6:
+            case Fc3555PreVFU7:
+            case Fc3555PreVFU8:
+            case Fc3555PreVFU9:
+            case Fc3555PreVFU10:
+            case Fc3555PreVFU11:
+            case Fc3555PreVFU12:
                 return prePrintAnsiEffectors[lc->prePrintFunc - Fc3555PreVFU1];
-                }
+            }
             }
         else
             {
             switch (lc->prePrintFunc)
-                {
-            default              : return " ";
-            case FcPrintSingle   : return "0";
-            case FcPrintDouble   : return "-";
-            case FcPrintLastLine : return "C";
-            case FcPrintEject    : return "1";
-            case FcPrintNoSpace  : return "+";
-            case Fc3152PreVFU1   :
-            case Fc3152PreVFU2   :
-            case Fc3152PreVFU3   :
-            case Fc3152PreVFU4   :
-            case Fc3152PreVFU5   :
-            case Fc3152PreVFU6   :
+            {
+            default:
+                return " ";
+
+            case FcPrintSingle:
+                return "0";
+
+            case FcPrintDouble:
+                return "-";
+
+            case FcPrintLastLine:
+                return "C";
+
+            case FcPrintEject:
+                return "1";
+
+            case FcPrintNoSpace:
+                return "+";
+
+            case Fc3152PreVFU1:
+            case Fc3152PreVFU2:
+            case Fc3152PreVFU3:
+            case Fc3152PreVFU4:
+            case Fc3152PreVFU5:
+            case Fc3152PreVFU6:
                 return prePrintAnsiEffectors[lc->prePrintFunc - Fc3152PreVFU1];
-                }
+            }
             }
         break;
 
     case ModeASCII:
         switch (func)
-            {
-        default            : return "";
-        case FcPrintSingle : return "\n";
-        case FcPrintDouble : return "\n\n";
-        case FcPrintEject  : return "\f";
-            }
+        {
+        default:
+            return "";
+
+        case FcPrintSingle:
+            return "\n";
+
+        case FcPrintDouble:
+            return "\n\n";
+
+        case FcPrintEject:
+            return "\f";
+        }
         }
     }
 
 #if DEBUG
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Dump raw line data.
 **
@@ -1585,7 +1712,7 @@ static void lp3000DebugData(LpContext *lc)
     if (lc->linePos > 0)
         {
         fprintf(lp3000Log, "\n    prePrintFunc:%04o  postPrintFunc:%04o  doSuppress:%s",
-            lc->prePrintFunc, lc->postPrintFunc, lc->doSuppress ? "TRUE" : "FALSE");
+                lc->prePrintFunc, lc->postPrintFunc, lc->doSuppress ? "TRUE" : "FALSE");
         for (i = 0; i < lc->linePos; i++)
             {
             if (i % 136 == 0)
@@ -1614,98 +1741,246 @@ static char *lp3000Func2String(LpContext *lc, PpWord funcCode)
 
     switch (funcCode)
         {
-    default: break;
-    case FcPrintRelease               : return "FcPrintRelease";
-    case FcPrintSingle                : return "FcPrintSingle";
-    case FcPrintDouble                : return "FcPrintDouble";
-    case FcPrintLastLine              : return "FcPrintLastLine";
-    case FcPrintEject                 : return "FcPrintEject";
-    case FcPrintAutoEject             : return "FcPrintAutoEject";
-    case FcPrintNoSpace               : return "FcPrintNoSpace";
-    case Fc6681MasterClear            : return "Fc6681MasterClear";
-    case Fc6681Output                 : return "Fc6681Output";
-    case Fc6681DevStatusReq           : return "Fc6681DevStatusReq";
+    default:
+        break;
+
+    case FcPrintRelease:
+        return "FcPrintRelease";
+
+    case FcPrintSingle:
+        return "FcPrintSingle";
+
+    case FcPrintDouble:
+        return "FcPrintDouble";
+
+    case FcPrintLastLine:
+        return "FcPrintLastLine";
+
+    case FcPrintEject:
+        return "FcPrintEject";
+
+    case FcPrintAutoEject:
+        return "FcPrintAutoEject";
+
+    case FcPrintNoSpace:
+        return "FcPrintNoSpace";
+
+    case Fc6681MasterClear:
+        return "Fc6681MasterClear";
+
+    case Fc6681Output:
+        return "Fc6681Output";
+
+    case Fc6681DevStatusReq:
+        return "Fc6681DevStatusReq";
         }
     if (lc->flags & Lp3000Type3555)             // This is LP3555
         {
         switch (funcCode)
             {
-        default: break;
-        case Fc3555CondClearFormat    : return "Fc3555CondClearFormat";
-        case Fc3555Sel8Lpi            : return "Fc3555Sel8Lpi";
-        case Fc3555Sel6Lpi            : return "Fc3555Sel6Lpi";
-        case Fc3555FillMemory         : return "Fc3555FillMemory";
-        case Fc3555SelExtArray        : return "Fc3555SelExtArray";
-        case Fc3555ClearExtArray      : return "Fc3555ClearExtArray";
-        case Fc3555SelIntReady        : return "Fc3555SelIntReady";
-        case Fc3555RelIntReady        : return "Fc3555RelIntReady";
-        case Fc3555SelIntEnd          : return "Fc3555SelIntEnd";
-        case Fc3555RelIntEnd          : return "Fc3555RelIntEnd";
-        case Fc3555SelIntError        : return "Fc3555SelIntError";
-        case Fc3555RelIntError        : return "Fc3555RelIntError";
-        case Fc3555ReloadMemEnable    : return "Fc3555ReloadMemEnable";
-        case Fc3555ClearFormat        : return "Fc3555ClearFormat";
-        case Fc3555PostVFU1           : return "Fc3555PostVFU1";
-        case Fc3555PostVFU2           : return "Fc3555PostVFU2";
-        case Fc3555PostVFU3           : return "Fc3555PostVFU3";
-        case Fc3555PostVFU4           : return "Fc3555PostVFU4";
-        case Fc3555PostVFU5           : return "Fc3555PostVFU5";
-        case Fc3555PostVFU6           : return "Fc3555PostVFU6";
-        case Fc3555PostVFU7           : return "Fc3555PostVFU7";
-        case Fc3555PostVFU8           : return "Fc3555PostVFU8";
-        case Fc3555PostVFU9           : return "Fc3555PostVFU9";
-        case Fc3555PostVFU10          : return "Fc3555PostVFU10";
-        case Fc3555PostVFU11          : return "Fc3555PostVFU11";
-        case Fc3555PostVFU12          : return "Fc3555PostVFU12";
-        case Fc3555SelectPrePrint     : return "Fc3555SelectPrePrint";
-        case Fc3555PreVFU1            : return "Fc3555PreVFU1";
-        case Fc3555PreVFU2            : return "Fc3555PreVFU2";
-        case Fc3555PreVFU3            : return "Fc3555PreVFU3";
-        case Fc3555PreVFU4            : return "Fc3555PreVFU4";
-        case Fc3555PreVFU5            : return "Fc3555PreVFU5";
-        case Fc3555PreVFU6            : return "Fc3555PreVFU6";
-        case Fc3555PreVFU7            : return "Fc3555PreVFU7";
-        case Fc3555PreVFU8            : return "Fc3555PreVFU8";
-        case Fc3555PreVFU9            : return "Fc3555PreVFU9";
-        case Fc3555PreVFU10           : return "Fc3555PreVFU10";
-        case Fc3555PreVFU11           : return "Fc3555PreVFU11";
-        case Fc3555PreVFU12           : return "Fc3555PreVFU12";
-        case Fc3555MaintStatus        : return "Fc3555MaintStatus";
-        case Fc3555ClearMaint         : return "Fc3555ClearMaint";
+        default:
+            break;
+
+        case Fc3555CondClearFormat:
+            return "Fc3555CondClearFormat";
+
+        case Fc3555Sel8Lpi:
+            return "Fc3555Sel8Lpi";
+
+        case Fc3555Sel6Lpi:
+            return "Fc3555Sel6Lpi";
+
+        case Fc3555FillMemory:
+            return "Fc3555FillMemory";
+
+        case Fc3555SelExtArray:
+            return "Fc3555SelExtArray";
+
+        case Fc3555ClearExtArray:
+            return "Fc3555ClearExtArray";
+
+        case Fc3555SelIntReady:
+            return "Fc3555SelIntReady";
+
+        case Fc3555RelIntReady:
+            return "Fc3555RelIntReady";
+
+        case Fc3555SelIntEnd:
+            return "Fc3555SelIntEnd";
+
+        case Fc3555RelIntEnd:
+            return "Fc3555RelIntEnd";
+
+        case Fc3555SelIntError:
+            return "Fc3555SelIntError";
+
+        case Fc3555RelIntError:
+            return "Fc3555RelIntError";
+
+        case Fc3555ReloadMemEnable:
+            return "Fc3555ReloadMemEnable";
+
+        case Fc3555ClearFormat:
+            return "Fc3555ClearFormat";
+
+        case Fc3555PostVFU1:
+            return "Fc3555PostVFU1";
+
+        case Fc3555PostVFU2:
+            return "Fc3555PostVFU2";
+
+        case Fc3555PostVFU3:
+            return "Fc3555PostVFU3";
+
+        case Fc3555PostVFU4:
+            return "Fc3555PostVFU4";
+
+        case Fc3555PostVFU5:
+            return "Fc3555PostVFU5";
+
+        case Fc3555PostVFU6:
+            return "Fc3555PostVFU6";
+
+        case Fc3555PostVFU7:
+            return "Fc3555PostVFU7";
+
+        case Fc3555PostVFU8:
+            return "Fc3555PostVFU8";
+
+        case Fc3555PostVFU9:
+            return "Fc3555PostVFU9";
+
+        case Fc3555PostVFU10:
+            return "Fc3555PostVFU10";
+
+        case Fc3555PostVFU11:
+            return "Fc3555PostVFU11";
+
+        case Fc3555PostVFU12:
+            return "Fc3555PostVFU12";
+
+        case Fc3555SelectPrePrint:
+            return "Fc3555SelectPrePrint";
+
+        case Fc3555PreVFU1:
+            return "Fc3555PreVFU1";
+
+        case Fc3555PreVFU2:
+            return "Fc3555PreVFU2";
+
+        case Fc3555PreVFU3:
+            return "Fc3555PreVFU3";
+
+        case Fc3555PreVFU4:
+            return "Fc3555PreVFU4";
+
+        case Fc3555PreVFU5:
+            return "Fc3555PreVFU5";
+
+        case Fc3555PreVFU6:
+            return "Fc3555PreVFU6";
+
+        case Fc3555PreVFU7:
+            return "Fc3555PreVFU7";
+
+        case Fc3555PreVFU8:
+            return "Fc3555PreVFU8";
+
+        case Fc3555PreVFU9:
+            return "Fc3555PreVFU9";
+
+        case Fc3555PreVFU10:
+            return "Fc3555PreVFU10";
+
+        case Fc3555PreVFU11:
+            return "Fc3555PreVFU11";
+
+        case Fc3555PreVFU12:
+            return "Fc3555PreVFU12";
+
+        case Fc3555MaintStatus:
+            return "Fc3555MaintStatus";
+
+        case Fc3555ClearMaint:
+            return "Fc3555ClearMaint";
             }
         }
     else
         {
         switch (funcCode)
             {
-        default: break;
-        case Fc3152ClearFormat        : return "Fc3152ClearFormat";
-        case Fc3152PostVFU1           : return "Fc3152PostVFU1";
-        case Fc3152PostVFU2           : return "Fc3152PostVFU2";
-        case Fc3152PostVFU3           : return "Fc3152PostVFU3";
-        case Fc3152PostVFU4           : return "Fc3152PostVFU4";
-        case Fc3152PostVFU5           : return "Fc3152PostVFU5";
-        case Fc3152PostVFU6           : return "Fc3152PostVFU6";
-        case Fc3152SelectPrePrint     : return "Fc3152SelectPrePrint";
-        case Fc3152PreVFU1            : return "Fc3152PreVFU1";
-        case Fc3152PreVFU2            : return "Fc3152PreVFU2";
-        case Fc3152PreVFU3            : return "Fc3152PreVFU3";
-        case Fc3152PreVFU4            : return "Fc3152PreVFU4";
-        case Fc3152PreVFU5            : return "Fc3152PreVFU5";
-        case Fc3152PreVFU6            : return "Fc3152PreVFU6";
-        case Fc3152SelIntReady        : return "Fc3152SelIntReady";
-        case Fc3152RelIntReady        : return "Fc3152RelIntReady";
-        case Fc3152SelIntEnd          : return "Fc3152SelIntEnd";
-        case Fc3152RelIntEnd          : return "Fc3152RelIntEnd";
-        case Fc3152SelIntError        : return "Fc3152SelIntError";
-        case Fc3152RelIntError        : return "Fc3152RelIntError";
-        case Fc3152Release2           : return "Fc3152Release2";
+        default:
+            break;
+
+        case Fc3152ClearFormat:
+            return "Fc3152ClearFormat";
+
+        case Fc3152PostVFU1:
+            return "Fc3152PostVFU1";
+
+        case Fc3152PostVFU2:
+            return "Fc3152PostVFU2";
+
+        case Fc3152PostVFU3:
+            return "Fc3152PostVFU3";
+
+        case Fc3152PostVFU4:
+            return "Fc3152PostVFU4";
+
+        case Fc3152PostVFU5:
+            return "Fc3152PostVFU5";
+
+        case Fc3152PostVFU6:
+            return "Fc3152PostVFU6";
+
+        case Fc3152SelectPrePrint:
+            return "Fc3152SelectPrePrint";
+
+        case Fc3152PreVFU1:
+            return "Fc3152PreVFU1";
+
+        case Fc3152PreVFU2:
+            return "Fc3152PreVFU2";
+
+        case Fc3152PreVFU3:
+            return "Fc3152PreVFU3";
+
+        case Fc3152PreVFU4:
+            return "Fc3152PreVFU4";
+
+        case Fc3152PreVFU5:
+            return "Fc3152PreVFU5";
+
+        case Fc3152PreVFU6:
+            return "Fc3152PreVFU6";
+
+        case Fc3152SelIntReady:
+            return "Fc3152SelIntReady";
+
+        case Fc3152RelIntReady:
+            return "Fc3152RelIntReady";
+
+        case Fc3152SelIntEnd:
+            return "Fc3152SelIntEnd";
+
+        case Fc3152RelIntEnd:
+            return "Fc3152RelIntEnd";
+
+        case Fc3152SelIntError:
+            return "Fc3152SelIntError";
+
+        case Fc3152RelIntError:
+            return "Fc3152RelIntError";
+
+        case Fc3152Release2:
+            return "Fc3152Release2";
             }
         }
     sprintf(buf, "Unknown Function: %04o", funcCode);
 
     return (buf);
     }
+
 #endif
 
 /*---------------------------  End Of File  ------------------------------*/

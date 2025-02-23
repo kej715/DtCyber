@@ -241,6 +241,7 @@ typedef struct
     u8            opK;                  /* K field (first 3 bits only) */
     u32           opAddress;            /* K field (18 bits) */
     bool          floatException;       /* TRUE if CPU detected float exception */
+
     /*
     **  Instruction word stack.
     */
@@ -248,7 +249,7 @@ typedef struct
     u32           iwAddress[MaxIwStack];
     bool          iwValid[MaxIwStack];
     u8            iwRank;
-    volatile u32 idleCycles;            /* Counter for how many times we've seen the idle loop */
+    volatile u32  idleCycles;           /* Counter for how many times we've seen the idle loop */
     } CpuContext;
 
 /*
@@ -297,8 +298,8 @@ typedef enum
     ESM
     } ExtMemory;
 
-typedef enum 
-    {   
+typedef enum
+    {
     SwCCP = 0,
     SwCCI,
     SwUndefined

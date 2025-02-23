@@ -128,7 +128,7 @@ void scrInit(u8 channelNo)
     dp->context[0] = calloc(StatusAndControlWords, sizeof(PpWord));
     if (dp->context[0] == NULL)
         {
-        fprintf(stderr, "(scr_channel) Failed to allocate Status/Control Register context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate Status/Control Register context block\n");
         exit(1);
         }
 

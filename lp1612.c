@@ -99,14 +99,14 @@
 /*
 **  Output rendering modes
 */
-#define ModeCDC                  0
-#define ModeANSI                 1
-#define ModeASCII                2
+#define ModeCDC                0
+#define ModeANSI               1
+#define ModeASCII              2
 
 /*
 **  Maximum number of characters per line
 */
-#define MaxLineSize              120
+#define MaxLineSize            120
 
 /*
 **  -----------------------
@@ -128,20 +128,20 @@ typedef struct lpContext
     /*
     **  Info for show_tape operator command.
     */
-    struct lpContext    *nextUnit;
-    u8                   channelNo;
-    u8                   eqNo;
-    u8                   unitNo;
+    struct lpContext *nextUnit;
+    u8               channelNo;
+    u8               eqNo;
+    u8               unitNo;
 
-    u8                   renderingMode;
-    PpWord               prePrintFunc;       //  last pre-print function (0 = no pre-print function specified)
-    PpWord               postPrintFunc;      //  last post-print function (0 = no post-print function specified)
-    bool                 doSuppress;         //  suppress next post-print spacing op
-    PpWord               line[MaxLineSize];  //  buffered line
-    u8                   linePos;            //  current line position
+    u8               renderingMode;
+    PpWord           prePrintFunc;           //  last pre-print function (0 = no pre-print function specified)
+    PpWord           postPrintFunc;          //  last post-print function (0 = no post-print function specified)
+    bool             doSuppress;             //  suppress next post-print spacing op
+    PpWord           line[MaxLineSize];      //  buffered line
+    u8               linePos;                //  current line position
 
-    char                 path[MaxFSPath];
-    char                 curFileName[MaxFSPath+128];
+    char             path[MaxFSPath];
+    char             curFileName[MaxFSPath + 128];
     } LpContext;
 
 /*
@@ -162,6 +162,7 @@ static void     lp1612PrintCDC(LpContext *lc, FILE *fcb);
 #if DEBUG
 static void lp1612DebugData(LpContext *lc);
 static char *lp1612Func2String(PpWord funcCode);
+
 #endif
 
 /*
@@ -179,29 +180,32 @@ static char *lp1612Func2String(PpWord funcCode);
 static LpContext *firstLp1612 = NULL;
 static LpContext *lastLp1612  = NULL;
 
-static char *prePrintAnsiEffectors[] = {
+static char *prePrintAnsiEffectors[] =
+    {
     " ", // print format 1
     "2", // print format 2
     "3", // print format 3
     "4", // print format 4
     "5", // print format 5
     "6", // print format 6
-};
+    };
 
-static char *postPrintCdcEffectors[] = {
+static char *postPrintCdcEffectors[] =
+    {
     " ", // print format 1
     "G", // print format 2
     "F", // print format 3
     "E", // print format 4
     "D", // print format 5
     "C", // print format 6
-};
+    };
 
-static char *renderingModes[] = {
+static char *renderingModes[] =
+    {
     "CDC",
     "ANSI",
     "ASCII"
-};
+    };
 
 #if DEBUG
 static FILE *lp1612Log = NULL;
@@ -244,13 +248,13 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     if (eqNo != 0)
         {
-        fprintf(stderr, "(lp1612 ) Invalid equipment number - LP1612 is hardwired to equipment number 0\n");
+        logDtError(LogErrorLocation, "Invalid equipment number - LP1612 is hardwired to equipment number 0\n");
         exit(1);
         }
 
     if (unitNo != 0)
         {
-        fprintf(stderr, "(lp1612 ) Invalid unit number - LP1612 is hardwired to unit number 0\n");
+        logDtError(LogErrorLocation, "Invalid unit number - LP1612 is hardwired to unit number 0\n");
         exit(1);
         }
 
@@ -264,7 +268,7 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     lc = (LpContext *)calloc(1, sizeof(LpContext));
     if (lc == NULL)
         {
-        fprintf(stderr, "(lp1612 ) Failed to allocate LP1612 context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate LP1612 context block\n");
         exit(1);
         }
 
@@ -301,7 +305,7 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         else
             {
-            fprintf(stderr, "(lp1612 ) Unrecognized output rendering mode '%s'\n", deviceMode);
+            logDtError(LogErrorLocation, "Unrecognized output rendering mode '%s'\n", deviceMode);
             exit(1);
             }
         }
@@ -337,7 +341,7 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     if (dp->fcb[0] == NULL)
         {
-        fprintf(stderr, "(lp1612 ) Failed to open %s\n", lc->curFileName);
+        logDtError(LogErrorLocation, "Failed to open %s\n", lc->curFileName);
         exit(1);
         }
 
@@ -373,7 +377,7 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 void lp1612ShowStatus()
     {
     LpContext *lc;
-    char      outBuf[MaxFSPath+128];
+    char      outBuf[MaxFSPath + 128];
 
     for (lc = firstLp1612; lc != NULL; lc = lc->nextUnit)
         {
@@ -401,11 +405,11 @@ void lp1612RemovePaper(char *params)
     time_t    currentTime;
     DevSlot   *dp;
     int       equipmentNo;
-    char      fNameNew[MaxFSPath+128];
+    char      fNameNew[MaxFSPath + 128];
     int       iSuffix;
     LpContext *lc;
     int       numParam;
-    char      outBuf[MaxFSPath*2+300];
+    char      outBuf[MaxFSPath * 2 + 300];
     bool      renameOK;
     struct tm t;
 
@@ -455,9 +459,9 @@ void lp1612RemovePaper(char *params)
     //          and the file fails to be properly re-opened.
     if (dp->fcb[0] == NULL)
         {
-        fprintf(stderr, "(lp1612 ) lp1612RemovePaper: FCB is null on channel %o equipment %o\n",
-                dp->channel->id,
-                dp->eqNo);
+        logDtError(LogErrorLocation, "RemovePaper: FCB is null on channel %o equipment %o\n",
+                   dp->channel->id,
+                   dp->eqNo);
         //  proceed to attempt to open a new FCB
         }
     else
@@ -515,11 +519,11 @@ void lp1612RemovePaper(char *params)
                     break;
                     }
 
-                fprintf(stderr, "(lp1612 ) Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
-                        lc->curFileName,
-                        fNameNew,
-                        strerror(errno),
-                        iSuffix);
+                logDtError(LogErrorLocation, "Rename Failure '%s' to '%s' - (%s). Retrying (%d)...\n",
+                           lc->curFileName,
+                           fNameNew,
+                           strerror(errno),
+                           iSuffix);
                 }
             }
         }
@@ -534,7 +538,7 @@ void lp1612RemovePaper(char *params)
     */
     if (dp->fcb[0] == NULL)
         {
-        fprintf(stderr, "(lp1612 ) Failed to open %s\n", lc->curFileName);
+        logDtError(LogErrorLocation, "Failed to open %s\n", lc->curFileName);
 
         return;
         }
@@ -557,8 +561,8 @@ void lp1612RemovePaper(char *params)
 **------------------------------------------------------------------------*/
 static FcStatus lp1612Func(PpWord funcCode)
     {
-    LpContext *lc = (LpContext *)activeDevice->context[0];
-    FILE *fcb         = activeDevice->fcb[0];
+    LpContext *lc  = (LpContext *)activeDevice->context[0];
+    FILE      *fcb = activeDevice->fcb[0];
 
     //
     //  This can happen if something goes wrong in the open and the file fails
@@ -566,9 +570,9 @@ static FcStatus lp1612Func(PpWord funcCode)
     //
     if (fcb == NULL)
         {
-        fprintf(stderr, "(lp1612 ) lp1612Io: FCB is null on channel %o equipment %o\n",
-                activeDevice->channel->id,
-                activeDevice->eqNo);
+        logDtError(LogErrorLocation, "Io: FCB is null on channel %o equipment %o\n",
+                   activeDevice->channel->id,
+                   activeDevice->eqNo);
 
         return FcProcessed;
         }
@@ -597,7 +601,7 @@ static FcStatus lp1612Func(PpWord funcCode)
         lp1612DebugData(lc);
 #endif
         switch (lc->renderingMode)
-            {
+        {
         default:
         case ModeCDC:
             lp1612PrintCDC(lc, fcb);
@@ -610,7 +614,7 @@ static FcStatus lp1612Func(PpWord funcCode)
         case ModeASCII:
             lp1612PrintASCII(lc, fcb);
             break;
-            }
+        }
         lc->linePos = 0;
         break;
 
@@ -618,7 +622,7 @@ static FcStatus lp1612Func(PpWord funcCode)
     case FcPrintDouble:
     case FcPrintMoveChannel7:
     case FcPrintEject:
-        if (lc->prePrintFunc != 0 && lc->prePrintFunc != FcPrintNoSpace)
+        if ((lc->prePrintFunc != 0) && (lc->prePrintFunc != FcPrintNoSpace))
             {
             fputs(lp1612FeForPrePrint(lc, lc->prePrintFunc), fcb);
             fputc('\n', fcb);
@@ -663,8 +667,8 @@ static FcStatus lp1612Func(PpWord funcCode)
 **------------------------------------------------------------------------*/
 static void lp1612Io(void)
     {
-    LpContext *lc = (LpContext *)activeDevice->context[0];
-    FILE *fcb         = activeDevice->fcb[0];
+    LpContext *lc  = (LpContext *)activeDevice->context[0];
+    FILE      *fcb = activeDevice->fcb[0];
 
     //
     //  This can happen if something goes wrong in the open and the file fails
@@ -672,9 +676,9 @@ static void lp1612Io(void)
     //
     if (fcb == NULL)
         {
-        fprintf(stderr, "(lp1612 ) lp1612Io: FCB is null on channel %o equipment %o\n",
-                activeDevice->channel->id,
-                activeDevice->eqNo);
+        logDtError(LogErrorLocation, "Io: FCB is null on channel %o equipment %o\n",
+                   activeDevice->channel->id,
+                   activeDevice->eqNo);
 
         return;
         }
@@ -689,8 +693,11 @@ static void lp1612Io(void)
     else if (activeChannel->full)
         {
 #if DEBUG
-       if (lc->linePos % 16 == 0) fputs("\n   ", lp1612Log);
-       fprintf(lp1612Log, " %04o", activeChannel->data);
+        if (lc->linePos % 16 == 0)
+            {
+            fputs("\n   ", lp1612Log);
+            }
+        fprintf(lp1612Log, " %04o", activeChannel->data);
 #endif
         if (lc->linePos < MaxLineSize)
             {
@@ -752,12 +759,12 @@ static void lp1612PrintANSI(LpContext *lc, FILE *fcb)
         {
         lc->prePrintFunc = 0;
         }
-    if (lc->postPrintFunc != 0 && lc->postPrintFunc != FcPrintFormat1 && lc->doSuppress == FALSE)
+    if ((lc->postPrintFunc != 0) && (lc->postPrintFunc != FcPrintFormat1) && (lc->doSuppress == FALSE))
         {
         lc->prePrintFunc = lc->postPrintFunc;
         }
     lc->doSuppress = FALSE;
-    if (fe == NULL || *fe != '+' || lc->linePos > 0)
+    if ((fe == NULL) || (*fe != '+') || (lc->linePos > 0))
         {
         fputs(fe != NULL ? fe : " ", fcb);
         for (i = 0; i < lc->linePos; i++)
@@ -832,22 +839,28 @@ static void lp1612PrintCDC(LpContext *lc, FILE *fcb)
         {
         lc->prePrintFunc = 0;
         }
-    if (lc->postPrintFunc != 0 && lc->postPrintFunc != FcPrintFormat1 && lc->doSuppress == FALSE)
+    if ((lc->postPrintFunc != 0) && (lc->postPrintFunc != FcPrintFormat1) && (lc->doSuppress == FALSE))
         {
         postFE = lp1612FeForPostPrint(lc, lc->postPrintFunc);
         }
     lc->doSuppress = FALSE;
     if (preFE != NULL)
         {
-        if (*preFE == '+' && lc->linePos < 1 && postFE == NULL) return;
+        if ((*preFE == '+') && (lc->linePos < 1) && (postFE == NULL))
+            {
+            return;
+            }
         fputs(preFE, fcb);
-        if (postFE != NULL) fputc('\n', fcb);
+        if (postFE != NULL)
+            {
+            fputc('\n', fcb);
+            }
         }
     if (postFE != NULL)
         {
         fputs(postFE, fcb);
         }
-    if (preFE == NULL && postFE == NULL)
+    if ((preFE == NULL) && (postFE == NULL))
         {
         fputc(' ', fcb);
         if (lc->doSuppress)
@@ -878,8 +891,10 @@ static char *lp1612FeForPostPrint(LpContext *lc, PpWord func)
         {
     case ModeCDC:
         switch (func)
-            {
-        default            : return "";
+        {
+        default:
+            return "";
+
         case FcPrintFormat1:
         case FcPrintFormat2:
         case FcPrintFormat3:
@@ -887,8 +902,9 @@ static char *lp1612FeForPostPrint(LpContext *lc, PpWord func)
         case FcPrintFormat5:
         case FcPrintFormat6:
             return postPrintCdcEffectors[lc->postPrintFunc - FcPrintFormat1];
-            }
+        }
         break;
+
     case ModeANSI:
     case ModeASCII:
     default:
@@ -913,25 +929,48 @@ static char *lp1612FeForPrePrint(LpContext *lc, PpWord func)
     default:
     case ModeCDC:
         switch (func)
-            {
-        default                  : return " ";
-        case FcPrintSingle       : return "0";
-        case FcPrintDouble       : return "-";
-        case FcPrintMoveChannel7 : return "2";
-        case FcPrintEject        : return "1";
-        case FcPrintNoSpace      : return "+";
-            }
+        {
+        default:
+            return " ";
+
+        case FcPrintSingle:
+            return "0";
+
+        case FcPrintDouble:
+            return "-";
+
+        case FcPrintMoveChannel7:
+            return "2";
+
+        case FcPrintEject:
+            return "1";
+
+        case FcPrintNoSpace:
+            return "+";
+        }
         break;
 
     case ModeANSI:
         switch (func)
-            {
-        default                  : return " ";
-        case FcPrintSingle       : return "0";
-        case FcPrintDouble       : return "-";
-        case FcPrintMoveChannel7 : return "7";
-        case FcPrintEject        : return "1";
-        case FcPrintNoSpace      : return "+";
+        {
+        default:
+            return " ";
+
+        case FcPrintSingle:
+            return "0";
+
+        case FcPrintDouble:
+            return "-";
+
+        case FcPrintMoveChannel7:
+            return "7";
+
+        case FcPrintEject:
+            return "1";
+
+        case FcPrintNoSpace:
+            return "+";
+
         case FcPrintFormat1:
         case FcPrintFormat2:
         case FcPrintFormat3:
@@ -939,22 +978,30 @@ static char *lp1612FeForPrePrint(LpContext *lc, PpWord func)
         case FcPrintFormat5:
         case FcPrintFormat6:
             return prePrintAnsiEffectors[lc->postPrintFunc - FcPrintFormat1];
-            }
+        }
         break;
 
     case ModeASCII:
         switch (func)
-            {
-        default            : return "";
-        case FcPrintSingle : return "\n";
-        case FcPrintDouble : return "\n\n";
-        case FcPrintEject  : return "\f";
-            }
+        {
+        default:
+            return "";
+
+        case FcPrintSingle:
+            return "\n";
+
+        case FcPrintDouble:
+            return "\n\n";
+
+        case FcPrintEject:
+            return "\f";
+        }
         break;
         }
     }
 
 #if DEBUG
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Dump raw line data.
 **
@@ -971,7 +1018,7 @@ static void lp1612DebugData(LpContext *lc)
     if (lc->linePos > 0)
         {
         fprintf(lp1612Log, "\n    prePrintFunc:%04o  postPrintFunc:%04o  doSuppress:%s",
-            lc->prePrintFunc, lc->postPrintFunc, lc->doSuppress ? "TRUE" : "FALSE");
+                lc->prePrintFunc, lc->postPrintFunc, lc->doSuppress ? "TRUE" : "FALSE");
         for (i = 0; i < lc->linePos; i++)
             {
             if (i % 136 == 0)
@@ -999,27 +1046,59 @@ static char *lp1612Func2String(PpWord funcCode)
 
     switch (funcCode)
         {
-    default: break;
-    case FcPrintSelect       : return "FcPrintSelect";
-    case FcPrintSingle       : return "FcPrintSingle";
-    case FcPrintDouble       : return "FcPrintDouble";
-    case FcPrintMoveChannel7 : return "FcPrintMoveChannel7";
-    case FcPrintEject        : return "FcPrintEject";
-    case FcPrintPrint        : return "FcPrintPrint";
-    case FcPrintNoSpace      : return "FcPrintNoSpace";
-    case FcPrintStatusReq    : return "FcPrintStatusReq";
-    case FcPrintClearFormat  : return "FcPrintClearFormat";
-    case FcPrintFormat1      : return "FcPrintFormat1";
-    case FcPrintFormat2      : return "FcPrintFormat2";
-    case FcPrintFormat3      : return "FcPrintFormat3";
-    case FcPrintFormat4      : return "FcPrintFormat4";
-    case FcPrintFormat5      : return "FcPrintFormat5";
-    case FcPrintFormat6      : return "FcPrintFormat6";
+    default:
+        break;
+
+    case FcPrintSelect:
+        return "FcPrintSelect";
+
+    case FcPrintSingle:
+        return "FcPrintSingle";
+
+    case FcPrintDouble:
+        return "FcPrintDouble";
+
+    case FcPrintMoveChannel7:
+        return "FcPrintMoveChannel7";
+
+    case FcPrintEject:
+        return "FcPrintEject";
+
+    case FcPrintPrint:
+        return "FcPrintPrint";
+
+    case FcPrintNoSpace:
+        return "FcPrintNoSpace";
+
+    case FcPrintStatusReq:
+        return "FcPrintStatusReq";
+
+    case FcPrintClearFormat:
+        return "FcPrintClearFormat";
+
+    case FcPrintFormat1:
+        return "FcPrintFormat1";
+
+    case FcPrintFormat2:
+        return "FcPrintFormat2";
+
+    case FcPrintFormat3:
+        return "FcPrintFormat3";
+
+    case FcPrintFormat4:
+        return "FcPrintFormat4";
+
+    case FcPrintFormat5:
+        return "FcPrintFormat5";
+
+    case FcPrintFormat6:
+        return "FcPrintFormat6";
         }
     sprintf(buf, "Unknown Function: %04o", funcCode);
 
     return (buf);
     }
+
 #endif
 
 /*---------------------------  End Of File  ------------------------------*/

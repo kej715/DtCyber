@@ -199,7 +199,7 @@ bool fsCreateThread(fswContext *parms)
 
     if (noLaunch)
         {
-        fprintf(stderr, "(fsmon  ) Failed to create Filesystem Watcher thread\n");
+        logDtError(LogErrorLocation, "Failed to create Filesystem Watcher thread\n");
 
         return FALSE;
         }
@@ -234,7 +234,7 @@ static void *fsWatchThread(void * parms)
     int  retval           = 0;
     char lpDir[MaxFSPath] = { "" };
     //      Just need to be large enough to hold the unit spec.
-    char crDevId[16];
+    char crDevId[16] = "";
 
     struct dirent *curDirEntry;
     DIR           *curDir;
@@ -344,5 +344,6 @@ static void *fsWatchThread(void * parms)
     printf("(fsmon  ) Terminating Monitor Thread '%s'.\n", lparms->inWatchDir);
 
     free(lparms);
+
     return fsReturn;
     }

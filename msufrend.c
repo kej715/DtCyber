@@ -116,15 +116,16 @@
 #define DEFAULT_TCP_PORT                  6500
 #define IoTurnsPerPoll                    4
 #define MIN_FREE_PORT_BUFFERS             2
+
 /*
 ** It appears that the Cyber never tries to access memory beyond this.
 */
 #define MAX_FREND_BYTES                   0xc0000
 
 /* hard-coded port numbers for initial implementation. */
-#define FPORTCONSOLE      4     /* must be greater than PTN.MAX */
-#define RESERVED_PORTS    4
-#define FIRSTUSERPORT     (RESERVED_PORTS+1)
+#define FPORTCONSOLE                      4 /* must be greater than PTN.MAX */
+#define RESERVED_PORTS                    4
+#define FIRSTUSERPORT                     (RESERVED_PORTS + 1)
 
 /*
 **  -----------------------
@@ -132,17 +133,17 @@
 **  -----------------------
 */
 /* Interdata 7/32 types */
-#define ByteAddr  u32
-#define FrendAddr u32
-#define FullWord  u32
-#define HalfWord  u16
+#define ByteAddr     u32
+#define FrendAddr    u32
+#define FullWord     u32
+#define HalfWord     u16
 
 /* Compute FWA of socket entry given port number */
-#define portNumToFwa(portNum) (activeFrend->fwaPORT + (portNum - 1) * LE_PORT)
-#define sockNumToFwa(sockNum) (activeFrend->fwaSOCK + (sockNum - 1) * LE_SOCK)
+#define portNumToFwa(portNum)    (activeFrend->fwaPORT + (portNum - 1) * LE_PORT)
+#define sockNumToFwa(sockNum)    (activeFrend->fwaSOCK + (sockNum - 1) * LE_SOCK)
 
 #if !defined(_WIN32)
-#define SOCKET int
+#define SOCKET    int
 #endif
 
 /*
@@ -166,23 +167,23 @@ typedef enum telnetState
 
 typedef struct pendingBuffer
     {
-    u8    buf[L_LINE + 16];  /* Waiting chars */
-    int   first;             /* Index of first char still pending */
-    int   charsLeft;        /* # of chars remaining in buffer */
+    u8  buf[L_LINE + 16];   /* Waiting chars */
+    int first;              /* Index of first char still pending */
+    int charsLeft;          /* # of chars remaining in buffer */
     } PendingBuffer;
 
 typedef struct portContext
     {
-    int           id;
-    struct frendContext *frend; /* pointer to supporting FREND context */
-    bool          active;       /* TRUE if port is connected and active */
-    SOCKET        fd;           /* TCP socket descriptor */
-    TelnetState   telnetState;  /* telnet state */
-    bool          EOLL;         /* TRUE if last line ended in end of line */
-    PendingBuffer pbuf;         /* chars pending output.  Normally, this is 0 */
-                                /* except when assembling bytes to be sent. */
-                                /* If non-zero, then we shouldn't send any */
-                                /* more lines until this buffer is sent. */
+    int                 id;
+    struct frendContext *frend;      /* pointer to supporting FREND context */
+    bool                active;      /* TRUE if port is connected and active */
+    SOCKET              fd;          /* TCP socket descriptor */
+    TelnetState         telnetState; /* telnet state */
+    bool                EOLL;        /* TRUE if last line ended in end of line */
+    PendingBuffer       pbuf;        /* chars pending output.  Normally, this is 0 */
+                                     /* except when assembling bytes to be sent. */
+                                     /* If non-zero, then we shouldn't send any */
+                                     /* more lines until this buffer is sent. */
     } PortContext;
 
 typedef struct frendContext
@@ -206,21 +207,21 @@ typedef struct frendContext
                                                * but which is not supposed to change the address register. */
     u8                  mem[MAX_FREND_BYTES]; /* Contents of FREND memory, in bytes.
                                                * The 7/32 stored in most-significant-byte-first format */
-    FrendAddr fwaMISC;
-    FrendAddr fwaFPCOM;
-    FrendAddr fwaBF80;
-    FrendAddr fwaBF240;
-    FrendAddr fwaBFREL;
-    FrendAddr fwaBANM;
-    FrendAddr fwaLOGM;
-    FrendAddr fwaSOCK;
-    FrendAddr fwaDVSK;
-    FrendAddr fwaPORT;
-    FrendAddr fwaPTBUF;
-    FrendAddr fwaMALC;
-    FrendAddr fwaALLOC;
-    FrendAddr fwaBuffers80;
-    FrendAddr fwaBuffers240;
+    FrendAddr           fwaMISC;
+    FrendAddr           fwaFPCOM;
+    FrendAddr           fwaBF80;
+    FrendAddr           fwaBF240;
+    FrendAddr           fwaBFREL;
+    FrendAddr           fwaBANM;
+    FrendAddr           fwaLOGM;
+    FrendAddr           fwaSOCK;
+    FrendAddr           fwaDVSK;
+    FrendAddr           fwaPORT;
+    FrendAddr           fwaPTBUF;
+    FrendAddr           fwaMALC;
+    FrendAddr           fwaALLOC;
+    FrendAddr           fwaBuffers80;
+    FrendAddr           fwaBuffers240;
     } FrendContext;
 
 /*
@@ -233,8 +234,10 @@ static FcStatus  msufrendFunc(PpWord funcCode);
 static void      msufrendIo(void);
 static void      msufrendActivate(void);
 static void      msufrendDisconnect(void);
+
 #if DEBUG
 static char      *msufrendFunc2String(PpWord funcCode);
+
 #endif
 
 static void      handleInterruptFromHost(void);
@@ -329,30 +332,30 @@ void msufrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
         }
     else if (numParam < 2)
         {
-        portCount  = DEFAULT_MAX_CONNECTIONS;
-        isTelnet   = TRUE;
+        portCount = DEFAULT_MAX_CONNECTIONS;
+        isTelnet  = TRUE;
         }
     else if (strcasecmp(connType, "telnet") == 0)
         {
-        isTelnet   = TRUE;
+        isTelnet = TRUE;
         }
     else if (strcasecmp(connType, "raw") == 0)
         {
-        isTelnet   = FALSE;
+        isTelnet = FALSE;
         }
     else
         {
-        fprintf(stderr, "(msufrend) Invalid connection type: %s, not one of 'telnet' or 'raw'.\n", connType);
+        logDtError(LogErrorLocation, "Invalid connection type: %s, not one of 'telnet' or 'raw'.\n", connType);
         exit(1);
         }
     if ((listenPort < 1) || (listenPort > 65535))
         {
-        fprintf(stderr, "(msufrend) Invalid TCP port number: %d\n", listenPort);
+        logDtError(LogErrorLocation, "Invalid TCP port number: %d\n", listenPort);
         exit(1);
         }
     if (portCount < 1)
         {
-        fprintf(stderr, "(msufrend) Invalid port count: %d\n", portCount);
+        logDtError(LogErrorLocation, "Invalid port count: %d\n", portCount);
         exit(1);
         }
     activeFrend = (FrendContext *)calloc(1, sizeof(FrendContext));
@@ -361,7 +364,7 @@ void msufrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
         fputs("(msufrend) Failed to allocate context block\n", stderr);
         exit(1);
         }
-    dp->context[0]          = activeFrend;
+    dp->context[0] = activeFrend;
     if (firstFrend == NULL)
         {
         firstFrend = activeFrend;
@@ -392,12 +395,12 @@ void msufrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     */
     for (i = 0, pp = activeFrend->ports; i < activeFrend->portCount; i++, pp++)
         {
-        pp->id        = i + 1;
-        pp->frend     = activeFrend;
-        pp->active    = FALSE;
-        pp->EOLL      = FALSE;
-        fwaThisSock   = portNumToFwa(pp->id);
-        fwaListSock   = fwaThisSock + W_SKOTCL;
+        pp->id      = i + 1;
+        pp->frend   = activeFrend;
+        pp->active  = FALSE;
+        pp->EOLL    = FALSE;
+        fwaThisSock = portNumToFwa(pp->id);
+        fwaListSock = fwaThisSock + W_SKOTCL;
         /* Initialize the circular list, which is actually part of the socket entry. */
         initCircList(fwaListSock, L_SKOCL);
         setHalfWord(fwaThisSock + H_SKNUM, pp->id);
@@ -416,7 +419,7 @@ void msufrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     if (activeFrend->listenFd == -1)
 #endif
         {
-        fprintf(stderr, "(msufrend) Can't create socket on port %d\n", activeFrend->listenPort);
+        logDtError(LogErrorLocation, "Can't create socket on port %d\n", activeFrend->listenPort);
         exit(1);
         }
 
@@ -449,15 +452,15 @@ void msufrendShowStatus()
             {
             sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "MSUFrEnd", fp->channelNo, fp->eqNo);
             opDisplay(outBuf);
-            sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(fp->listenFd), "", "frend", "listening");
+            sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(fp->listenFd), "", "frend", "listening");
             opDisplay(outBuf);
             for (i = 0, pp = fp->ports; i < fp->portCount; i++, pp++)
                 {
-                if (pp->active && pp->fd > 0)
+                if (pp->active && (pp->fd > 0))
                     {
-                    sprintf(outBuf, "(msu    )         P%02o ",  pp->id);
+                    sprintf(outBuf, "(msu    )         P%02o ", pp->id);
                     opDisplay(outBuf);
-                    sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(pp->fd), netGetPeerTcpAddress(pp->fd), "frend", "connected");
+                    sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->fd), netGetPeerTcpAddress(pp->fd), "frend", "connected");
                     opDisplay(outBuf);
                     }
                 }
@@ -484,7 +487,7 @@ static FcStatus msufrendFunc(PpWord funcCode)
      * more or less.  In some cases, the bottom 8 bits contain data related
      * to the function--typically address bits to set.
      */
-    activeDevice->fcode   = funcCode & 07400;
+    activeDevice->fcode = funcCode & 07400;
 
 #if DEBUG
     fprintf(msufrendLog, "\n%010u PP:%02o CH:%02o P:%04o f:%04o T:%s",
@@ -500,6 +503,7 @@ static FcStatus msufrendFunc(PpWord funcCode)
         if (FcFEFDES == funcCode)
             {
             activeDevice->fcode = funcCode;
+
             return FcProcessed;
             }
 
@@ -517,6 +521,7 @@ static FcStatus msufrendFunc(PpWord funcCode)
 #if DEBUG
         fprintf(msufrendLog, " data:%02x", data);
 #endif
+
         return FcProcessed;
 
     case FcFEFSAM:
@@ -525,6 +530,7 @@ static FcStatus msufrendFunc(PpWord funcCode)
 #if DEBUG
         fprintf(msufrendLog, " data:%02x", data);
 #endif
+
         return FcProcessed;
 
     case FcFEFHL:
@@ -533,12 +539,14 @@ static FcStatus msufrendFunc(PpWord funcCode)
 
     case FcFEFINT: /* Interrupt the 7/32 */
         handleInterruptFromHost();
+
         return FcProcessed;
 
     case FcFEFLP: /* LOAD INTERFACE MEMORY */
         /* Prepare to accept 8-bit bytes, to be written in "a 16-byte memory"
          * starting at location 0. */
         activeFrend->addr = 0;
+
         return FcProcessed;
 
     case FcFEFRM:
@@ -573,7 +581,7 @@ static FcStatus msufrendFunc(PpWord funcCode)
         /* by the PPU with a DCN.  Address register is not changed, says */
         /* the 6CA hardware doc. */
         /* Apparently the top bit is set. */
-        activeFrend->addr = (activeFrend->addr & 0x1fffe00) | ((u32)(data << 1));
+        activeFrend->addr         = (activeFrend->addr & 0x1fffe00) | ((u32)(data << 1));
         activeFrend->nextIsSecond = FALSE;
 #if DEBUG
         fprintf(msufrendLog, " data:%02x addr:%05x <-", data, activeFrend->addr);
@@ -652,7 +660,7 @@ static void msufrendIo(void)
             /* not change the address register. */
             if (activeFrend->nextIsSecond)
                 {
-                activeChannel->data = activeFrend->mem[activeFrend->addr + 1];
+                activeChannel->data       = activeFrend->mem[activeFrend->addr + 1];
                 activeFrend->nextIsSecond = FALSE; /* Probably unnecessary. */
                 }
             else
@@ -660,7 +668,7 @@ static void msufrendIo(void)
                 activeChannel->data = activeFrend->mem[activeFrend->addr];
                 /* Set top bit of word. */
                 activeFrend->mem[activeFrend->addr] |= 0x80;
-                activeFrend->nextIsSecond = TRUE;
+                activeFrend->nextIsSecond            = TRUE;
                 }
             activeChannel->full = TRUE;
 #if DEBUG
@@ -676,8 +684,8 @@ static void msufrendIo(void)
             /*
             **  Output data.
             */
-            activeFrend->mem[activeFrend->addr++] = (u8)activeChannel->data >> 8;
-            activeFrend->mem[activeFrend->addr++] = (u8)activeChannel->data & 0xff;
+            activeFrend->mem[activeFrend->addr++] = (u8)(activeChannel->data >> 8);
+            activeFrend->mem[activeFrend->addr++] = (u8)(activeChannel->data & 0xff);
             activeChannel->full = FALSE;
 #if DEBUG
             fprintf(msufrendLog, " %04o", activeChannel->data);
@@ -838,7 +846,6 @@ static int getLastSocketError()
 #endif
     }
 
-
 /*--- function addrFrendTo1FP ----------------------
  *  Convert an address from FREND to 1FP format.
  *  This means dividing by 2, and ORing in the magic value
@@ -876,10 +883,10 @@ static void setFullWord(FrendAddr addr, FullWord word)
 
 static FullWord getFullWord(FrendAddr addr)
     {
-    return   (activeFrend->mem[addr    ] << 24)
+    return (activeFrend->mem[addr] << 24)
            | (activeFrend->mem[1 + addr] << 16)
            | (activeFrend->mem[2 + addr] << 8)
-           |  activeFrend->mem[3 + addr];
+           | activeFrend->mem[3 + addr];
     }
 
 static void setHalfWord(FrendAddr addr, HalfWord half)
@@ -960,6 +967,7 @@ static int sendToFSock(PortContext *pp, u8 bufout[], int nOutBytes)
 #if DEBUG
             fprintf(msufrendLog, "\nsendToFSock on port %d is not active", pp->id);
 #endif
+
             return -1;
             }
         }
@@ -976,6 +984,7 @@ static int sendToFSock(PortContext *pp, u8 bufout[], int nOutBytes)
 static HalfWord initCircList(FrendAddr fwaList, HalfWord nslots)
     {
     HalfWord totbytes = H_CIRCLIST_HEADER_BYTES + (nslots * CIRCLIST_SLOT_SIZE_BYTES);
+
     memset(activeFrend->mem + fwaList, 0, totbytes);
     setHalfWord(fwaList + H_CIRCLIST_N_SLOTS_TOT, nslots);
 
@@ -1058,6 +1067,7 @@ static void addToTopOfList(FrendAddr fwaList, FullWord myword)
 #if DEBUG
         fprintf(msufrendLog, "\naddToTopOfList(%x, %x): value already in list", fwaList, myword);
 #endif
+
         return;
         }
     if (nSlotsUsed >= nSlotsTot)
@@ -1228,7 +1238,7 @@ static FrendAddr get80()
 
     if (0 == bufAddr)
         {
-        fprintf(stderr, "(msufrend) get80: no free buffers\n");
+        logDtError(LogErrorLocation, "get80: no free buffers\n");
         }
 
     return bufAddr;
@@ -1243,7 +1253,7 @@ static FrendAddr get240()
 
     if (0 == bufAddr)
         {
-        fprintf(stderr, "(msufrend) get240: no free buffers\n");
+        logDtError(LogErrorLocation, "get240: no free buffers\n");
         }
 
     return bufAddr;
@@ -1255,7 +1265,7 @@ static FrendAddr get240()
  */
 static FrendAddr getBufferForC(const char *szmsg)
     {
-    u8 len = strlen(szmsg);
+    u8 len = (u8)strlen(szmsg);
     /* Technically, I should first check len for >80 */
     FrendAddr bufaddr = get80();
 
@@ -1430,7 +1440,7 @@ static void initLmbi()
 
     /* Carve out buffers from the end here and insert them
      * into the 80-char and 240-char buffer circular lists. */
-    nSlots       = getHalfWord(activeFrend->fwaBF80 + H_CIRCLIST_N_SLOTS_TOT);
+    nSlots = getHalfWord(activeFrend->fwaBF80 + H_CIRCLIST_N_SLOTS_TOT);
     activeFrend->fwaBuffers80 = curTableFwa;
     for (islot = 0; islot < nSlots; islot++)
         {
@@ -1438,7 +1448,7 @@ static void initLmbi()
         curTableFwa += LE_BF80;
         }
 
-    nSlots        = getHalfWord(activeFrend->fwaBF240 + H_CIRCLIST_N_SLOTS_TOT);
+    nSlots = getHalfWord(activeFrend->fwaBF240 + H_CIRCLIST_N_SLOTS_TOT);
     activeFrend->fwaBuffers240 = curTableFwa;
     for (islot = 0; islot < nSlots; islot++)
         {
@@ -1523,7 +1533,7 @@ static HalfWord initPortFirstTime(FrendAddr fwaList, HalfWord portNum)
     setPortFullWord(portNum, W_PTINCL, fwaList);
 
     fwaList += nBytes;
-    nBytes += initCircList(fwaList, nOutBufs);
+    nBytes  += initCircList(fwaList, nOutBufs);
     setPortFullWord(portNum, W_PTOTCL, fwaList);
 
     return nBytes;
@@ -1823,7 +1833,7 @@ static FrendAddr GETDATA(PortContext *pp, FrendAddr fwaMySocket)
     {
     FrendAddr bufaddr;
     FrendAddr fwaList = fwaMySocket + W_SKOTCL; /* Not a pointer */
-    u8     charCode = 0xe5, ctlFlags = 0xe5 /*//! debug */;
+    u8        charCode = 0xe5, ctlFlags = 0xe5 /*//! debug */;
 
     pp->EOLL = FALSE;
 
@@ -1893,9 +1903,9 @@ static void sendOTBSIfNecessary(HalfWord portNum, FrendAddr fwaMyPort, bool bIsE
     {
     /* Don't send an OTBS unless either CHTHRSH says to,
      * or PTOTBS is set.  */
-    bool  bSendOTBS   = FALSE;
-    bool  bBelowThres = CKTHRSH(fwaMyPort);
-    u8 MsgCode     = FP_OTBS;
+    bool bSendOTBS   = FALSE;
+    bool bBelowThres = CKTHRSH(fwaMyPort);
+    u8   MsgCode     = FP_OTBS;
 
     INTRLOC(fwaMyPort + H_PTNDIK);
     if (!HFLAGISSET(fwaMyPort, PTOTBS) || bBelowThres)
@@ -1948,7 +1958,10 @@ static void taskSKOTCL(PortContext *pp, FrendAddr fwaMySocket)
     {
     FrendAddr bufaddr;
 
-    if (pp == NULL) return;
+    if (pp == NULL)
+        {
+        return;
+        }
 
     /* If there are pending output characters, don't send more lines. */
     if (CHKACT(pp, fwaMySocket) == FALSE)
@@ -1966,8 +1979,8 @@ static void taskSKOTCL(PortContext *pp, FrendAddr fwaMySocket)
             }
         if ((FP_FECNE == recType) || (FP_FEC == recType))
             {
-            char  buf[256];
-            u8 len = getByte(bufaddr + C_DHBCT) - L_DTAHDR;
+            char buf[256];
+            u8   len = getByte(bufaddr + C_DHBCT) - L_DTAHDR;
             memcpy(buf, &activeFrend->mem[bufaddr + L_DTAHDR], len);
             buf[len] = '\0';
             /* //! Should we call PUTBUF with bufaddr here? */
@@ -2105,10 +2118,10 @@ static void taskSENDCP(HalfWord portNum, u8 MsgCode)
     {
     /*//! I'm not sure I'm handling V_EXTREQ right.
      * I am basically ignoring it. */
-    u8     MsgCodeWithoutFlag = (u8)(MsgCode & (0xff ^ V_EXTREQ));
-    FrendAddr fwaMyPort = portNumToFwa(portNum);
-    HalfWord  ctlPort   = getHalfWord(fwaMyPort + H_PTCPN);
-    FrendAddr bufaddr   = get80();
+    u8        MsgCodeWithoutFlag = (u8)(MsgCode & (0xff ^ V_EXTREQ));
+    FrendAddr fwaMyPort          = portNumToFwa(portNum);
+    HalfWord  ctlPort            = getHalfWord(fwaMyPort + H_PTCPN);
+    FrendAddr bufaddr            = get80();
 
     /* Set the message code, clearing the V_EXTREQ bit. */
     setByte(bufaddr + C_DHTYPE, MsgCodeWithoutFlag);
@@ -2371,7 +2384,7 @@ static void taskCLOFSK(HalfWord socketNum, FrendAddr fwaMySocket)
  *  it ignores the second connection in the socket.
  */
 static void CLRPTS(HalfWord portNum, FrendAddr fwaMyPort,
-            HalfWord socketNum, FrendAddr fwaMySocket)
+                   HalfWord socketNum, FrendAddr fwaMySocket)
     {
     setHalfWord(fwaMySocket + H_SKCN1, 0);
     setByte(fwaMySocket + C_SKCT1, 0);
@@ -2705,7 +2718,7 @@ static void PALISR(PortContext *pp, u8 ch)
     FrendAddr bufout      = 0;
     HalfWord  count;
     /* Echo characters if "suppress echo" is not set. */
-    bool doEcho           = !HFLAGISSET(fwaMySocket, SKSUPE);
+    bool doEcho = !HFLAGISSET(fwaMySocket, SKSUPE);
 
     if (0 == bufaddr)
         {
@@ -2761,7 +2774,7 @@ static void PALISR(PortContext *pp, u8 ch)
         doEcho = FALSE;
         break;
 
-    case '\x1b': /* Escape: abort current program and discard input line */
+    case '\x1b':                         /* Escape: abort current program and discard input line */
         doEcho = FALSE;
         CLEARHFLAG(fwaMySocket, SKSUPE); /* CLEAR 'SUPPRESS ECHO' FLAG */
         if (!HFLAGISSET(fwaMySocket, SKESCP))
@@ -2883,7 +2896,7 @@ static void cmdHereIs(HalfWord portNum, int offsetForBufType)
 
     cmdPort = getHalfWord(activeFrend->fwaFPCOM + H_FCMDPT);
 #if DEBUG
-        fprintf(msufrendLog, " cmdPort:%04x", cmdPort);
+    fprintf(msufrendLog, " cmdPort:%04x", cmdPort);
 #endif
 
     if (cmdPort <= PTN_MAX)
@@ -3012,32 +3025,36 @@ static void handleInterruptFromHost()
  *  select() noticed an incoming connection on the listening port.
  *  Accept it and create a new terminal session.
  */
-static u8 telnetIntro[] = {
+static u8 telnetIntro[] =
+    {
     TELCODE_IAC, TELCODE_DONT, TELCODE_OPT_ECHO,
     TELCODE_IAC, TELCODE_WILL, TELCODE_OPT_ECHO,
     TELCODE_IAC, TELCODE_WILL, TELCODE_OPT_SUPPRESS_GO_AHEAD,
-    TELCODE_IAC, TELCODE_DO, TELCODE_OPT_SUPPRESS_GO_AHEAD
-};
+    TELCODE_IAC, TELCODE_DO,   TELCODE_OPT_SUPPRESS_GO_AHEAD
+    };
 
 static void processIncomingConnection()
     {
 #if defined(_WIN32)
     u_long blockEnable = 1;
 #endif
-    SOCKET fd;
+    SOCKET             fd;
     struct sockaddr_in from;
 #if defined(_WIN32)
     int fromLen;
 #else
     socklen_t fromLen;
 #endif
-    int            i;
-    int            optEnable = 1;
-    PortContext    *pp;
+    int         i;
+    int         optEnable = 1;
+    PortContext *pp;
 
     fromLen = sizeof(from);
-    fd = accept(activeFrend->listenFd, (struct sockaddr *)&from, &fromLen);
-    if (fd < 0) return;
+    fd      = accept(activeFrend->listenFd, (struct sockaddr *)&from, &fromLen);
+    if (fd < 0)
+        {
+        return;
+        }
 
     /*
     **  Set Keepalive option so that we can eventually discover if
@@ -3063,9 +3080,9 @@ static void processIncomingConnection()
         {
         if (pp->active == FALSE)
             {
-            pp->active = TRUE;
+            pp->active      = TRUE;
             pp->telnetState = TELST_NORMAL;
-            pp->fd = fd;
+            pp->fd          = fd;
             break;
             }
         }
@@ -3081,7 +3098,7 @@ static void processIncomingConnection()
     else
         {
         char *sorry = "\r\nSorry, all sockets are in use. Please try again later.";
-        int n = send(fd, (unsigned char *)sorry, strlen(sorry), 0);
+        int  n      = send(fd, (unsigned char *)sorry, (int)strlen(sorry), 0);
         netCloseConnection(fd);
         }
     }
@@ -3095,8 +3112,8 @@ static void processIncomingConnection()
  */
 static void processInboundTelnet(PortContext *pp, unsigned char *buf, int len)
     {
-    int     i;
-    u8      ch;
+    int i;
+    u8  ch;
 
     for (i = 0; i < len; i++)
         {
@@ -3104,7 +3121,7 @@ static void processInboundTelnet(PortContext *pp, unsigned char *buf, int len)
         switch (pp->telnetState)
             {
         case TELST_NORMAL:
-            if (activeFrend->doesTelnet && TELCODE_IAC == ch)
+            if (activeFrend->doesTelnet && (TELCODE_IAC == ch))
                 {
                 pp->telnetState = TELST_GOT_IAC;
                 }
@@ -3143,8 +3160,8 @@ static void processInboundTelnet(PortContext *pp, unsigned char *buf, int len)
  */
 static void writeNowAvailable(PortContext *pp)
     {
-    int           bytesSent;
-    int           nOutBytes = pp->pbuf.charsLeft;
+    int bytesSent;
+    int nOutBytes = pp->pbuf.charsLeft;
 
     bytesSent = sendToFSock(pp, pp->pbuf.buf + pp->pbuf.first, nOutBytes);
     if (bytesSent <= 0)
@@ -3191,7 +3208,7 @@ static void msufrendCheckIo()
     FD_ZERO(&writeFds);
 
     FD_SET(activeFrend->listenFd, &readFds);
-    maxFd = activeFrend->listenFd;
+    maxFd = (int)activeFrend->listenFd;
 
     for (i = FIRSTUSERPORT, pp = activeFrend->ports + (FIRSTUSERPORT - 1); i <= activeFrend->portCount; i++, pp++)
         {
@@ -3212,8 +3229,12 @@ static void msufrendCheckIo()
             if (getListFreeEntries(fwaList) > MIN_FREE_PORT_BUFFERS)
                 {
                 FD_SET(pp->fd, &readFds);
-                if (pp->fd > maxFd) maxFd = pp->fd;
+                if ((int)pp->fd > maxFd)
+                    {
+                    maxFd = (int)pp->fd;
+                    }
                 }
+
             /*
              * If there are characters pending output on this socket,
              * then we need to hear about write availability.
@@ -3221,7 +3242,10 @@ static void msufrendCheckIo()
             if (pp->pbuf.charsLeft > 0)
                 {
                 FD_SET(pp->fd, &writeFds);
-                if (pp->fd > maxFd) maxFd = pp->fd;
+                if ((int)pp->fd > maxFd)
+                    {
+                    maxFd = (int)pp->fd;
+                    }
                 }
             }
         }
@@ -3261,7 +3285,7 @@ static void msufrendCheckIo()
         }
     else if (n < 0)
         {
-        fprintf(stderr, "(msufrend) Error %d from select\n", getLastSocketError());
+        logDtError(LogErrorLocation, "Error %d from select\n", getLastSocketError());
         sleepMsec(500);
         }
     dropInterlock(activeFrend->fwaFPCOM + H_FEDEAD); /* Clear "front-end dead" flag */
@@ -3284,21 +3308,48 @@ static char *msufrendFunc2String(PpWord funcCode)
 
     switch (funcCode)
         {
-    case FcFEFSEL: return "SELECT      ";
-    case FcFEFDES: return "DESELECT    ";
-    case FcFEFST:  return "STATUS      ";
-    case FcFEFSAU: return "SET UPPER   ";
-    case FcFEFSAM: return "SET MIDDLE  ";
-    case FcFEFHL:  return "HALT-LOAD   ";
-    case FcFEFINT: return "INTERRUPT   ";
-    case FcFEFLP:  return "LOAD IFC MEM";
-    case FcFEFRM:  return "READ        ";
-    case FcFEFWM0: return "WRITE MODE 0";
-    case FcFEFWM:  return "WRITE MODE 1";
-    case FcFEFRSM: return "READ AND SET";
-    case FcFEFCI:  return "CLEAR INITIALIZED STATUS BIT";
+    case FcFEFSEL:
+        return "SELECT      ";
+
+    case FcFEFDES:
+        return "DESELECT    ";
+
+    case FcFEFST:
+        return "STATUS      ";
+
+    case FcFEFSAU:
+        return "SET UPPER   ";
+
+    case FcFEFSAM:
+        return "SET MIDDLE  ";
+
+    case FcFEFHL:
+        return "HALT-LOAD   ";
+
+    case FcFEFINT:
+        return "INTERRUPT   ";
+
+    case FcFEFLP:
+        return "LOAD IFC MEM";
+
+    case FcFEFRM:
+        return "READ        ";
+
+    case FcFEFWM0:
+        return "WRITE MODE 0";
+
+    case FcFEFWM:
+        return "WRITE MODE 1";
+
+    case FcFEFRSM:
+        return "READ AND SET";
+
+    case FcFEFCI:
+        return "CLEAR INITIALIZED STATUS BIT";
+
     default:
-        sprintf(buf,      "UNKNOWN %04o", funcCode);
+        sprintf(buf, "UNKNOWN %04o", funcCode);
+
         return buf;
         }
     }

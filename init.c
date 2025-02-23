@@ -61,7 +61,7 @@
 #define DefaultFontMedium      12
 #define DefaultFontSmall       8
 #else
-#define RGB(R,G,B) ((R<<16)|(G<<8)|B)
+#define RGB(R, G, B)    ((R << 16) | (G << 8) | B)
 #define FontName               "lucidatypewriter"
 #define DefaultFontLarge       24
 #define DefaultFontMedium      14
@@ -561,7 +561,7 @@ static void initCyber(char *config)
      */
     if (!initOpenSection(config))
         {
-        fprintf(stderr, "(init   ) Required section [%s] not found in %s\n", config, startupFile);
+        logDtError(LogErrorLocation, "Required section [%s] not found in %s\n", config, startupFile);
         exit(1);
         }
 
@@ -587,16 +587,16 @@ static void initCyber(char *config)
                     if (strcasecmp(curVal->valName, token) == 0)
                         {
                         goodToken = TRUE;
-                        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: %-12s %s\n",
-                                startupFile, config, lineNo, token == NULL ? "NULL" : token, curVal->valStatus);
+                        logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: %-12s %s\n",
+                                   startupFile, config, lineNo, token == NULL ? "NULL" : token, curVal->valStatus);
                         break;
                         }
                     }
                 }
             if (!goodToken)
                 {
-                fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: invalid or deprecated configuration keyword '%s'\n",
-                        startupFile, config, lineNo, token == NULL ? "NULL" : token);
+                logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: invalid or deprecated configuration keyword '%s'\n",
+                           startupFile, config, lineNo, token == NULL ? "NULL" : token);
                 numErrors++;
                 }
             }
@@ -604,8 +604,8 @@ static void initCyber(char *config)
 
     if (numErrors > 0)
         {
-        fprintf(stderr, "(init   ) Correct the %d error(s) in section '[%s]' of '%s' and restart.\n",
-                numErrors, config, startupFile);
+        logDtError(LogErrorLocation, "Correct the %d error(s) in section '[%s]' of '%s' and restart.\n",
+                   numErrors, config, startupFile);
         exit(1);
         }
 
@@ -613,7 +613,7 @@ static void initCyber(char *config)
 
     if (!initOpenSection(config))
         {
-        fprintf(stderr, "(init   ) Required section [%s] not found in '%s'\n", config, startupFile);
+        logDtError(LogErrorLocation, "Required section [%s] not found in '%s'\n", config, startupFile);
         exit(1);
         }
     lineNo = 0;
@@ -623,28 +623,28 @@ static void initCyber(char *config)
     */
     if (initGetOctal("channels", 020, &chCount))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: ***WARNING*** Entry 'channels' is obsolete\n", startupFile, config);
-        fprintf(stderr, "                        channel count is determined from PP count.\n");
+        logDtError(LogErrorLocation, "file '%s' section [%s]: ***WARNING*** Entry 'channels' is obsolete\n", startupFile, config);
+        logDtError(LogErrorLocation, "                        channel count is determined from PP count.\n");
         exit(1);
         }
 
     if (initGetString("cmFile", "", dummy, sizeof(dummy)))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: ***WARNING*** Entry 'cmFile' is obsolete\n", startupFile, config);
-        fprintf(stderr, "                        please use 'persistDir' instead.\n");
+        logDtError(LogErrorLocation, "file '%s' section [%s]: ***WARNING*** Entry 'cmFile' is obsolete\n", startupFile, config);
+        logDtError(LogErrorLocation, "                        please use 'persistDir' instead.\n");
         exit(1);
         }
 
     if (initGetString("ecsFile", "", dummy, sizeof(dummy)))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: ***WARNING*** Entry 'ecsFile' is obsolete\n", startupFile, config);
-        fprintf(stderr, "                        please use 'persistDir' instead.\n");
+        logDtError(LogErrorLocation, "file '%s' section [%s]: ***WARNING*** Entry 'ecsFile' is obsolete\n", startupFile, config);
+        logDtError(LogErrorLocation, "                        please use 'persistDir' instead.\n");
         exit(1);
         }
 
     if (initGetString("displayName", "DtCyber Console", displayName, sizeof(displayName)))
         {
-        fprintf(stderr, "(init   ) Consoles will be labeled '%s',\n", displayName);
+        logDtError(LogErrorLocation, "Consoles will be labeled '%s',\n", displayName);
         }
 
     /*
@@ -676,8 +676,8 @@ static void initCyber(char *config)
         {
         //        modelType = ModelCyber840A;
         //        features = featuresCyber840A;
-        fprintf(stderr, "(init   ) file '%s' section [%s]: model CYBER840A was experimental and is no longer supported\n",
-            startupFile, config);
+        logDtError(LogErrorLocation, "file '%s' section [%s]: model CYBER840A was experimental and is no longer supported\n",
+                   startupFile, config);
         exit(1);
         }
     else if (stricmp(model, "CYBER865") == 0)
@@ -692,8 +692,8 @@ static void initCyber(char *config)
         }
     else
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: 'model' specified unsupported mainframe type '%s'\n",
-            config, startupFile, model);
+        logDtError(LogErrorLocation, "file '%s' section [%s]: 'model' specified unsupported mainframe type '%s'\n",
+                   config, startupFile, model);
         exit(1);
         }
 
@@ -709,7 +709,7 @@ static void initCyber(char *config)
     (void)initGetOctal("memory", 01000000, &memory);
     if (memory < 040000)
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'memory' less than 40000B\n", startupFile, config);
+        logDtError(LogErrorLocation, "file '%s' section [%s]: Entry 'memory' less than 40000B\n", startupFile, config);
         exit(1);
         }
 
@@ -723,8 +723,8 @@ static void initCyber(char *config)
             && (memory != 014000000)
             && (memory != 020000000))
             {
-            fprintf(stderr, "(init   ) file '%s' section [%s]: Cyber 865 memory must be configured in 262K increments, and Cyber 875 memory must be configured in 1024K increments\n",
-                startupFile, config);
+            logDtError(LogErrorLocation, "file '%s' section [%s]: Cyber 865 memory must be configured in 262K increments, and Cyber 875 memory must be configured in 1024K increments\n",
+                       startupFile, config);
             exit(1);
             }
         if ((memory > 04000000) && ((features & IsCyber875) == 0))
@@ -753,7 +753,7 @@ static void initCyber(char *config)
         break;
 
     default:
-        fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'ecsbanks' invalid - correct values are 0, 1, 2, 4, 8 or 16\n", startupFile, config);
+        logDtError(LogErrorLocation, "file '%s' section [%s]: Entry 'ecsbanks' invalid - correct values are 0, 1, 2, 4, 8 or 16\n", startupFile, config);
         exit(1);
         }
 
@@ -773,27 +773,27 @@ static void initCyber(char *config)
     case 128:
         if (modelType != ModelCyber865)
             {
-            fprintf(stderr, "(init   ) WARNING - file '%s' section [%s]: Entry 'esmbanks' - only CPU models CYBER865 and CYBER875 can fully access more than 16 banks of ESM\n",
-                startupFile, config);
+            logDtError(LogErrorLocation, "WARNING - file '%s' section [%s]: Entry 'esmbanks' - only CPU models CYBER865 and CYBER875 can fully access more than 16 banks of ESM\n",
+                       startupFile, config);
             }
         break;
 
     default:
         if (modelType == ModelCyber865)
             {
-            fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'esmbanks' invalid - correct values are 0, 1, 2, 4, 8, 16, 32, 64 or 128\n",
-                startupFile, config);
+            logDtError(LogErrorLocation, "file '%s' section [%s]: Entry 'esmbanks' invalid - correct values are 0, 1, 2, 4, 8, 16, 32, 64 or 128\n",
+                       startupFile, config);
             }
         else
             {
-            fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'esmbanks' invalid - correct values are 0, 1, 2, 4, 8 or 16\n", startupFile, config);
+            logDtError(LogErrorLocation, "file '%s' section [%s]: Entry 'esmbanks' invalid - correct values are 0, 1, 2, 4, 8 or 16\n", startupFile, config);
             }
         exit(1);
         }
 
     if ((ecsBanks != 0) && (esmBanks != 0))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: 'ecsbanks' and 'esmbanks' are mutually exclusive\n", startupFile, config);
+        logDtError(LogErrorLocation, "file '%s' section [%s]: 'ecsbanks' and 'esmbanks' are mutually exclusive\n", startupFile, config);
         exit(1);
         }
 
@@ -803,7 +803,7 @@ static void initCyber(char *config)
     initGetInteger("cpus", 1, &cpus);
     if ((cpus < 1) || (cpus > MaxCpus))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'cpus' invalid - correct values are 1 or 2\n", startupFile, config);
+        logDtError(LogErrorLocation, "file '%s' section [%s]: Entry 'cpus' invalid - correct values are 1 or 2\n", startupFile, config);
         exit(1);
         }
     cpuCount = (int)cpus;
@@ -817,21 +817,21 @@ static void initCyber(char *config)
         struct stat s;
         if (stat(persistDir, &s) != 0)
             {
-            fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'persistDir' specifies non-existing directory '%s'\n",
-                startupFile, config, persistDir);
+            logDtError(LogErrorLocation, "file '%s' section [%s]: Entry 'persistDir' specifies non-existing directory '%s'\n",
+                       startupFile, config, persistDir);
             exit(1);
             }
 
         if ((s.st_mode & S_IFDIR) == 0)
             {
-            fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'persistDir' specifies '%s' which is not a directory\n",
-                startupFile, config, persistDir);
+            logDtError(LogErrorLocation, "file '%s' section [%s]: Entry 'persistDir' specifies '%s' which is not a directory\n",
+                       startupFile, config, persistDir);
             exit(1);
             }
         }
     else
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'persistDir' is missing\n", startupFile, config);
+        logDtError(LogErrorLocation, "file '%s' section [%s]: Entry 'persistDir' is missing\n", startupFile, config);
         exit(1);
         }
 
@@ -855,7 +855,7 @@ static void initCyber(char *config)
     (void)initGetOctal("pps", 012, &pps);
     if ((pps != 012) && (pps != 024))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: Entry 'pps' invalid - supported values are 012 or 024\n", startupFile, config);
+        logDtError(LogErrorLocation, "file '%s' section [%s]: Entry 'pps' invalid - supported values are 012 or 024\n", startupFile, config);
         exit(1);
         }
 
@@ -880,7 +880,7 @@ static void initCyber(char *config)
     */
     if (!initGetString("deadstart", "", deadstart, sizeof(deadstart)))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s] Required entry 'deadstart' is missing\n", startupFile, config);
+        logDtError(LogErrorLocation, "file '%s' section [%s] Required entry 'deadstart' is missing\n", startupFile, config);
         exit(1);
         }
 
@@ -950,7 +950,7 @@ static void initCyber(char *config)
     */
     if (!initGetString("equipment", "", equipment, sizeof(equipment)))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: Required entry 'equipment' is missing\n", startupFile, config);
+        logDtError(LogErrorLocation, "file '%s' section [%s]: Required entry 'equipment' is missing\n", startupFile, config);
         exit(1);
         }
 
@@ -970,8 +970,8 @@ static void initCyber(char *config)
     initGetString("ipaddress", "0.0.0.0", ipAddress, 16);
     if (initParseIpAddress((strcmp(ipAddress, "0.0.0.0") == 0)? "127.0.0.1" : ipAddress, &npuNetHostIP, NULL) == FALSE)
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'ipAddress' value %s - correct values are IPv4 addresses\n",
-                startupFile, config, ipAddress);
+        logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'ipAddress' value %s - correct values are IPv4 addresses\n",
+                   startupFile, config, ipAddress);
         exit(1);
         }
     fprintf(stdout, "(init   ) IP address is '%s'\n", ipAddress);
@@ -1001,8 +1001,8 @@ static void initCyber(char *config)
             }
         if (strlen(dummy) > 16)
             {
-            fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'networkInterface' value %s\n",
-                    startupFile, config, dummy);
+            logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'networkInterface' value %s\n",
+                       startupFile, config, dummy);
             exit(1);
             }
         strcpy(networkInterface, dummy);
@@ -1016,7 +1016,7 @@ static void initCyber(char *config)
             }
         else
             {
-            fprintf(stderr, "(helper ) Failed to start \"%s\", rc=%d'\n", networkInterfaceMgr, rc);
+            logDtError(LogErrorLocation, "Failed to start \"%s\", rc=%d'\n", networkInterfaceMgr, rc);
             exit(1);
             }
         }
@@ -1054,7 +1054,7 @@ static void initCyber(char *config)
              && (strcasecmp(dummy, "false") != 0)
              && (strcasecmp(dummy, "0") != 0))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid value for 'idle' - must be one of 'on' or 'off'\n", startupFile, config);
+        logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid value for 'idle' - must be one of 'on' or 'off'\n", startupFile, config);
         exit(1);
         }
 #if defined(_WIN32)
@@ -1111,8 +1111,8 @@ static void initCyber(char *config)
         }
     else
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: WARNING: Unrecognized operating system type: '%s'\n",
-            startupFile, config, osType);
+        logDtError(LogErrorLocation, "file '%s' section [%s]: WARNING: Unrecognized operating system type: '%s'\n",
+                   startupFile, config, osType);
         }
 
     fprintf(stdout, "(init   ) Operating system type is '%s'.\n", osType);
@@ -1428,7 +1428,7 @@ static void initNpuConnections(void)
      */
     if (!initOpenSection(npuConnections))
         {
-        fprintf(stderr, "(init   ) Required section [%s] not found in '%s'\n", npuConnections, startupFile);
+        logDtError(LogErrorLocation, "Required section [%s] not found in '%s'\n", npuConnections, startupFile);
         exit(1);
         }
 
@@ -1452,17 +1452,17 @@ static void initNpuConnections(void)
                     if (strcasecmp(curVal->valName, token) == 0)
                         {
                         goodToken = TRUE;
-                        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: %-12s %s\n",
-                                startupFile, npuConnections, lineNo, token == NULL ? "NULL" : token, curVal->valStatus);
+                        logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: %-12s %s\n",
+                                   startupFile, npuConnections, lineNo, token == NULL ? "NULL" : token, curVal->valStatus);
                         break;
                         }
                     }
                 }
             if (!goodToken)
                 {
-                fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: invalid or deprecated configuration keyword %-12s %s\n",
-                        startupFile, npuConnections, lineNo, token == NULL ? "NULL" : token,
-                        curVal->valStatus == NULL ? "Invalid" : curVal->valStatus);
+                logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: invalid or deprecated configuration keyword %-12s %s\n",
+                           startupFile, npuConnections, lineNo, token == NULL ? "NULL" : token,
+                           curVal->valStatus == NULL ? "Invalid" : curVal->valStatus);
                 numErrors++;
                 }
             }
@@ -1470,8 +1470,8 @@ static void initNpuConnections(void)
 
     if (numErrors > 0)
         {
-        fprintf(stderr, "(init   ) Correct the %d error(s) in section '[%s]' of '%s' and restart.\n",
-                numErrors, npuConnections, startupFile);
+        logDtError(LogErrorLocation, "Correct the %d error(s) in section '[%s]' of '%s' and restart.\n",
+                   numErrors, npuConnections, startupFile);
         exit(1);
         }
 
@@ -1480,7 +1480,7 @@ static void initNpuConnections(void)
 
     if (!initOpenSection(npuConnections))
         {
-        fprintf(stderr, "(init   ) Section [%s] not found in '%s'\n", npuConnections, startupFile);
+        logDtError(LogErrorLocation, "Section [%s] not found in '%s'\n", npuConnections, startupFile);
         exit(1);
         }
 
@@ -1489,7 +1489,7 @@ static void initNpuConnections(void)
     */
     (void)initGetString("hostID", "CYBER", npuNetHostID, HostIdSize);
     initToUpperCase(npuNetHostID);
-    fprintf(stderr, "(init   ) Network host ID is '%s'\n", npuNetHostID);
+    logDtError(LogErrorLocation, "Network host ID is '%s'\n", npuNetHostID);
 
     /*
     **  Get optional coupler node number. If not specified, use default value of 1.
@@ -1497,12 +1497,12 @@ static void initNpuConnections(void)
     initGetInteger("couplerNode", 1, &val);
     if ((val < 0) || (val > 255))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'couplerNode' value %ld - correct values are 1..255\n",
-                startupFile, npuConnections, val);
+        logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'couplerNode' value %ld - correct values are 1..255\n",
+                   startupFile, npuConnections, val);
         exit(1);
         }
     npuSvmCouplerNode = (u8)val;
-    fprintf(stderr, "(init   ) Host coupler node value is %d\n", npuSvmCouplerNode);
+    logDtError(LogErrorLocation, "Host coupler node value is %d\n", npuSvmCouplerNode);
 
     /*
     **  Get optional NPU node number. If not specified, use default value of 2.
@@ -1510,12 +1510,12 @@ static void initNpuConnections(void)
     initGetInteger("npuNode", 2, &val);
     if ((val < 1) || (val > 255))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'npuNode' value %ld - correct values are 1..255\n",
-                startupFile, npuConnections, val);
+        logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'npuNode' value %ld - correct values are 1..255\n",
+                   startupFile, npuConnections, val);
         exit(1);
         }
     npuSvmNpuNode = (u8)val;
-    fprintf(stderr, "(init   ) NPU node value is %d\n", npuSvmNpuNode);
+    logDtError(LogErrorLocation, "NPU node value is %d\n", npuSvmNpuNode);
 
     /*
     **  Get optional CDCNet node number. If not specified, use default value of 255.
@@ -1523,12 +1523,12 @@ static void initNpuConnections(void)
     initGetInteger("cdcnetNode", 255, &val);
     if ((val < 1) || (val > 255))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'cdcnetNode' value %ld - correct values are 1..255\n",
-                startupFile, npuConnections, val);
+        logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'cdcnetNode' value %ld - correct values are 1..255\n",
+                   startupFile, npuConnections, val);
         exit(1);
         }
     cdcnetNode = (u8)val;
-    fprintf(stderr, "(init   ) CDCNet node value is %d\n", cdcnetNode);
+    logDtError(LogErrorLocation, "CDCNet node value is %d\n", cdcnetNode);
 
     /*
     **  Get optional privileged TCP and UDP port offsets for CDCNet TCP/IP passive connections. If not specified,
@@ -1537,22 +1537,22 @@ static void initNpuConnections(void)
     initGetInteger("cdcnetPrivilegedTcpPortOffset", 6600, &val);
     if ((val < 0) || (val > 64000))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'cdcnetPrivilegedTcpPortOffset' value %ld - correct values are 0..64000\n",
-                startupFile, npuConnections, val);
+        logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'cdcnetPrivilegedTcpPortOffset' value %ld - correct values are 0..64000\n",
+                   startupFile, npuConnections, val);
         exit(1);
         }
     cdcnetPrivilegedTcpPortOffset = (u16)val;
-    fprintf(stderr, "(init   ) TCP privileged port offset is %d\n", cdcnetPrivilegedTcpPortOffset);
+    logDtError(LogErrorLocation, "TCP privileged port offset is %d\n", cdcnetPrivilegedTcpPortOffset);
 
     initGetInteger("cdcnetPrivilegedUdpPortOffset", 6600, &val);
     if ((val < 0) || (val > 64000))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s]: Invalid 'cdcnetPrivilegedUdpPortOffset' value %ld - correct values are 0..64000\n",
-                startupFile, npuConnections, val);
+        logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'cdcnetPrivilegedUdpPortOffset' value %ld - correct values are 0..64000\n",
+                   startupFile, npuConnections, val);
         exit(1);
         }
     cdcnetPrivilegedUdpPortOffset = (u16)val;
-    fprintf(stderr, "(init   ) UDP privileged port offset is %d\n", cdcnetPrivilegedUdpPortOffset);
+    logDtError(LogErrorLocation, "UDP privileged port offset is %d\n", cdcnetPrivilegedUdpPortOffset);
 
     /*
     **  Get optional threshold value of network buffer backlog indicating that the NPU/MDI
@@ -1560,14 +1560,14 @@ static void initNpuConnections(void)
     */
     initGetInteger("idleNetBufs", 4, &val);
     idleNetBufs = (u32)val;
-    fprintf(stderr, "(init   ) Idle network buffer threshold is %d\n", idleNetBufs);
+    logDtError(LogErrorLocation, "Idle network buffer threshold is %d\n", idleNetBufs);
 
     /*
     **  Process all equipment entries.
     */
     if (!initOpenSection(npuConnections))
         {
-        fprintf(stderr, "(init   ) Section [%s] not found in '%s'\n", npuConnections, startupFile);
+        logDtError(LogErrorLocation, "Section [%s] not found in '%s'\n", npuConnections, startupFile);
         exit(1);
         }
 
@@ -1627,8 +1627,8 @@ static void initNpuConnections(void)
             */
             connType = initParseTerminalDefn(line, startupFile, npuConnections, lineNo,
                                              &tcpPort, &claPort, &numConns, &remainder);
-            fprintf(stderr, "(init   ) [%s] line %2d: %6s TCP port %5d CLA port 0x%02x port count %3d",
-                npuConnections, lineNo, connTypeNames[connType], tcpPort, claPort, numConns);
+            logDtError(LogErrorLocation, "[%s] line %2d: %6s TCP port %5d CLA port 0x%02x port count %3d",
+                       npuConnections, lineNo, connTypeNames[connType], tcpPort, claPort, numConns);
 
             rc = npuNetRegisterConnType(tcpPort, claPort, numConns, connType, &ncbp);
             switch (rc)
@@ -1638,11 +1638,11 @@ static void initNpuConnections(void)
                 break;
 
             case NpuNetRegOvfl:
-                fprintf(stderr, "\n(init   )   Too many terminal and trunk definitions (max of %d)\n", MaxTermDefs);
+                logDtError(LogErrorLocation, "\n(init   )   Too many terminal and trunk definitions (max of %d)\n", MaxTermDefs);
                 exit(1);
 
             case NpuNetRegDupTcp:
-                fprintf(stderr, "\n(init   )   Duplicate TCP port %d\n", tcpPort);
+                logDtError(LogErrorLocation, "\n(init   )   Duplicate TCP port %d\n", tcpPort);
                 exit(1);
 
             case NpuNetRegDupCla:
@@ -1654,7 +1654,7 @@ static void initNpuConnections(void)
                 exit(1);
 
             default:
-                fprintf(stderr, "\n(init   )   Failed to register terminals, unexpected error %d\n", rc);
+                logDtError(LogErrorLocation, "\n(init   )   Failed to register terminals, unexpected error %d\n", rc);
                 exit(1);
                 }
 
@@ -1680,7 +1680,7 @@ static void initNpuConnections(void)
                         }
                     else
                         {
-                        fprintf(stderr, "\n(init   )   Unrecognized keyword '%s'\n", token);
+                        logDtError(LogErrorLocation, "\n(init   )   Unrecognized keyword '%s'\n", token);
                         exit(1);
                         }
                     while (numConns-- > 0)
@@ -1704,21 +1704,21 @@ static void initNpuConnections(void)
                         val = strtol(token + 1, NULL, 10);
                         if ((val < MinBlockSize) || (val > MaxBlockSize))
                             {
-                            fprintf(stderr, "\n(init   )   Invalid block size %ld - correct block sizes are %d .. %d\n",
-                                val, MinBlockSize, MaxBlockSize);
+                            logDtError(LogErrorLocation, "\n(init   )   Invalid block size %ld - correct block sizes are %d .. %d\n",
+                                       val, MinBlockSize, MaxBlockSize);
                             exit(1);
                             }
                         blockSize = (int)val;
                         }
                     else
                         {
-                        fprintf(stderr, "\n(init   )   Invalid block size specification '%s'\n", token);
+                        logDtError(LogErrorLocation, "\n(init   )   Invalid block size specification '%s'\n", token);
                         exit(1);
                         }
                     }
                 pcbp = npuNetFindPcb(claPort);
                 pcbp->controls.hasp.blockSize = blockSize;
-                fprintf(stderr, ", block size %4d", blockSize);
+                logDtError(LogErrorLocation, ", block size %4d", blockSize);
                 break;
 
             case ConnTypeRevHasp:
@@ -1734,12 +1734,12 @@ static void initNpuConnections(void)
                 destHostAddr = token;
                 if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
                     {
-                    fprintf(stderr, "\n(init   )   Invalid Reverse HASP address '%s'\n", destHostAddr);
+                    logDtError(LogErrorLocation, "\n(init   )   Invalid Reverse HASP address '%s'\n", destHostAddr);
                     exit(1);
                     }
                 if (destHostPort == 0)
                     {
-                    fprintf(stderr, "\n(init   )   Missing port number on Reverse HASP address '%s'\n", destHostAddr);
+                    logDtError(LogErrorLocation, "\n(init   )   Missing port number on Reverse HASP address '%s'\n", destHostAddr);
                     exit(1);
                     }
                 destHostName = destHostAddr;
@@ -1752,20 +1752,20 @@ static void initNpuConnections(void)
                         val = strtol(token + 1, NULL, 10);
                         if ((val < MinBlockSize) || (val > MaxBlockSize))
                             {
-                            fprintf(stderr, "\n(init   )   Invalid block size %ld - correct block sizes are %d .. %d\n",
-                                val, MinBlockSize, MaxBlockSize);
+                            logDtError(LogErrorLocation, "\n(init   )   Invalid block size %ld - correct block sizes are %d .. %d\n",
+                                       val, MinBlockSize, MaxBlockSize);
                             exit(1);
                             }
                         blockSize = (int)val;
                         }
                     else
                         {
-                        fprintf(stderr, "\n(init   )   Invalid Reverse HASP block size specification '%s'\n", token);
+                        logDtError(LogErrorLocation, "\n(init   )   Invalid Reverse HASP block size specification '%s'\n", token);
                         exit(1);
                         }
                     }
-                fprintf(stderr, ", block size %4d", blockSize);
-                fprintf(stderr, ", destination host %s", destHostName);
+                logDtError(LogErrorLocation, ", block size %4d", blockSize);
+                logDtError(LogErrorLocation, ", destination host %s", destHostName);
                 break;
 
             case ConnTypeNje:
@@ -1787,7 +1787,7 @@ static void initNpuConnections(void)
                 destHostAddr = token;
                 if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
                     {
-                    fprintf(stderr, "\n(init   )   Invalid remote NJE node address %s\n", destHostAddr);
+                    logDtError(LogErrorLocation, "\n(init   )   Invalid remote NJE node address %s\n", destHostAddr);
                     exit(1);
                     }
                 token = strtok(NULL, ", ");
@@ -1809,8 +1809,8 @@ static void initNpuConnections(void)
                         val = strtol(token + 1, NULL, 10);
                         if (val < MinNjeBlockSize)
                             {
-                            fprintf(stderr, "\n(init   )   Invalid block size %ld - correct block size is at least %d\n",
-                                    val, MinNjeBlockSize);
+                            logDtError(LogErrorLocation, "\n(init   )   Invalid block size %ld - correct block size is at least %d\n",
+                                       val, MinNjeBlockSize);
                             exit(1);
                             }
                         blockSize = (int)val;
@@ -1820,25 +1820,25 @@ static void initNpuConnections(void)
                         pingInterval = strtol(token + 1, NULL, 10);
                         if (pingInterval < 0)
                             {
-                            fprintf(stderr, "\n(init   )   Invalid ping interval %ld\n", pingInterval);
+                            logDtError(LogErrorLocation, "\n(init   )   Invalid ping interval %ld\n", pingInterval);
                             exit(1);
                             }
                         }
                     else if (initParseIpAddress(token, &localHostIP, NULL) == FALSE)
                         {
-                        fprintf(stderr, "\n(init   )   Invalid local NJE node address %s\n", token);
+                        logDtError(LogErrorLocation, "\n(init   )   Invalid local NJE node address %s\n", token);
                         exit(1);
                         }
                     token = strtok(NULL, ", ");
                     }
-                fprintf(stderr, ", block size %4d", blockSize);
-                fprintf(stderr, ", destination host %s/%s", destHostName, destHostAddr);
-                fprintf(stderr, ", source address %d.%d.%d.%d",
-                    (localHostIP >> 24) & 0xff,
-                    (localHostIP >> 16) & 0xff,
-                    (localHostIP >> 8) & 0xff,
-                     localHostIP & 0xff);
-                fprintf(stderr, ", ping interval %ld", pingInterval);
+                logDtError(LogErrorLocation, ", block size %4d", blockSize);
+                logDtError(LogErrorLocation, ", destination host %s/%s", destHostName, destHostAddr);
+                logDtError(LogErrorLocation, ", source address %d.%d.%d.%d",
+                           (localHostIP >> 24) & 0xff,
+                           (localHostIP >> 16) & 0xff,
+                           (localHostIP >> 8) & 0xff,
+                           localHostIP & 0xff);
+                logDtError(LogErrorLocation, ", ping interval %ld", pingInterval);
                 break;
 
             case ConnTypeTrunk:
@@ -1859,7 +1859,7 @@ static void initNpuConnections(void)
                 destHostAddr = token;
                 if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
                     {
-                    fprintf(stderr, "\n(init   )   Invalid remote host IP address %s\n", destHostAddr);
+                    logDtError(LogErrorLocation, "\n(init   )   Invalid remote host IP address %s\n", destHostAddr);
                     exit(1);
                     }
                 token = strtok(NULL, ", ");
@@ -1881,12 +1881,12 @@ static void initNpuConnections(void)
 
                 if ((val < 1) || (val > 255))
                     {
-                    fprintf(stderr, "\n(init   )   Invalid coupler node number %ld\n", val);
+                    logDtError(LogErrorLocation, "\n(init   )   Invalid coupler node number %ld\n", val);
                     exit(1);
                     }
                 destNode = (u8)val;
-                fprintf(stderr, ", coupler node %d", destNode);
-                fprintf(stderr, ", destination host %s/%s", destHostName, destHostAddr);
+                logDtError(LogErrorLocation, ", coupler node %d", destNode);
+                logDtError(LogErrorLocation, ", destination host %s/%s", destHostName, destHostAddr);
                 break;
                 }
 
@@ -1965,7 +1965,7 @@ static void initEquipment(void)
 
     if (!initOpenSection(equipment))
         {
-        fprintf(stderr, "(init   ) Required section [%s] not found in '%s'\n", equipment, startupFile);
+        logDtError(LogErrorLocation, "Required section [%s] not found in '%s'\n", equipment, startupFile);
         exit(1);
         }
 
@@ -1988,28 +1988,28 @@ static void initEquipment(void)
             {
             if (initLookupDeviceType(token) >= 0)
                 {
-                fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: %-10s Valid\n",
-                        startupFile, equipment, lineNo, token == NULL ? "NULL" : token);
+                logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: %-10s Valid\n",
+                           startupFile, equipment, lineNo, token == NULL ? "NULL" : token);
                 }
             else
                 {
-                fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: invalid device type '%s'\n",
-                        startupFile, equipment, lineNo, token == NULL ? "NULL" : token);
+                logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: invalid device type '%s'\n",
+                           startupFile, equipment, lineNo, token == NULL ? "NULL" : token);
                 numErrors++;
                 }
             }
         else
             {
-            fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: invalid device definition '%s'\n",
-                startupFile, equipment, lineNo, token == NULL ? "NULL" : line);
+            logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: invalid device definition '%s'\n",
+                       startupFile, equipment, lineNo, token == NULL ? "NULL" : line);
             numErrors++;
             }
         }
 
     if (numErrors > 0)
         {
-        fprintf(stderr, "(init   ) Correct the %d error(s) in section '[%s]' of '%s' and restart.\n",
-                numErrors, equipment, startupFile);
+        logDtError(LogErrorLocation, "Correct the %d error(s) in section '[%s]' of '%s' and restart.\n",
+                   numErrors, equipment, startupFile);
         exit(1);
         }
 
@@ -2068,15 +2068,15 @@ static int initParseEquipmentDefn(char *defn, char *file, char *section, int lin
         deviceIndex = initLookupDeviceType(token);
         if (deviceIndex < 0)
             {
-            fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: invalid device type '%s'\n",
-                    file, section, lineNo, token == NULL ? "NULL" : token);
+            logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: invalid device type '%s'\n",
+                       file, section, lineNo, token == NULL ? "NULL" : token);
             exit(1);
             }
         }
     else
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: invalid device definition '%s'\n",
-            file, section, lineNo, token == NULL ? "NULL" : defn);
+        logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: invalid device definition '%s'\n",
+                   file, section, lineNo, token == NULL ? "NULL" : defn);
         exit(1);
         }
 
@@ -2086,8 +2086,8 @@ static int initParseEquipmentDefn(char *defn, char *file, char *section, int lin
     token = strtok(NULL, ",");
     if ((token == NULL) || (strlen(token) != 1) || !isoctal(token[0]))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s] line %d: invalid equipment number %s\n",
-                file, section, lineNo, token == NULL ? "NULL" : token);
+        logDtError(LogErrorLocation, "file '%s' section [%s] line %d: invalid equipment number %s\n",
+                   file, section, lineNo, token == NULL ? "NULL" : token);
         exit(1);
         }
 
@@ -2099,8 +2099,8 @@ static int initParseEquipmentDefn(char *defn, char *file, char *section, int lin
     token = strtok(NULL, ",");
     if ((token == NULL) || !isoctal(token[0]))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s] line %d: invalid unit number %s\n",
-                file, section, lineNo, token == NULL ? "NULL" : token);
+        logDtError(LogErrorLocation, "file '%s' section [%s] line %d: invalid unit number %s\n",
+                   file, section, lineNo, token == NULL ? "NULL" : token);
         exit(1);
         }
 
@@ -2112,16 +2112,16 @@ static int initParseEquipmentDefn(char *defn, char *file, char *section, int lin
     token = strtok(NULL, ", ");
     if ((token == NULL) || (strlen(token) != 2) || !isoctal(token[0]) || !isoctal(token[1]))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s] line %d: invalid channel number %s\n",
-                file, section, lineNo, token == NULL ? "NULL" : token);
+        logDtError(LogErrorLocation, "file '%s' section [%s] line %d: invalid channel number %s\n",
+                   file, section, lineNo, token == NULL ? "NULL" : token);
         exit(1);
         }
 
     *channelNo = (u8)strtol(token, NULL, 8);
     if ((*channelNo < 0) || (*channelNo >= chCount))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s] line %d: invalid channel number %s\n",
-                file, section, lineNo, token == NULL ? "NULL" : token);
+        logDtError(LogErrorLocation, "file '%s' section [%s] line %d: invalid channel number %s\n",
+                   file, section, lineNo, token == NULL ? "NULL" : token);
         exit(1);
         }
 
@@ -2162,24 +2162,24 @@ static int initParseTerminalDefn(char *defn, char *file, char *section, int line
     token = strtok(defn, ",=");
     if ((token == NULL) || (strcasecmp(token, "terminals") != 0))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid terminal definition '%s'\n",
-            file, section, lineNo, token == NULL ? "NULL" : token);
+        logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: Invalid terminal definition '%s'\n",
+                   file, section, lineNo, token == NULL ? "NULL" : token);
         exit(1);
         }
 
     token = strtok(NULL, ",");
     if ((token == NULL) || !isdigit(token[0]))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid TCP port number %s\n",
-            file, section, lineNo, token == NULL ? "NULL" : token);
+        logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: Invalid TCP port number %s\n",
+                   file, section, lineNo, token == NULL ? "NULL" : token);
         exit(1);
         }
 
     val = strtol(token, NULL, 10);
     if (val > 65535)
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid TCP port number %ld\n",
-            file, section, lineNo, val);
+        logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: Invalid TCP port number %ld\n",
+                   file, section, lineNo, val);
         exit(1);
         }
     *tcpPort = (u16)val;
@@ -2190,17 +2190,17 @@ static int initParseTerminalDefn(char *defn, char *file, char *section, int line
     token = strtok(NULL, ",");
     if ((token == NULL) || !isxdigit(token[0]))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid CLA port number %s\n",
-            file, section, lineNo, token == NULL ? "NULL" : token);
+        logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: Invalid CLA port number %s\n",
+                   file, section, lineNo, token == NULL ? "NULL" : token);
         exit(1);
         }
 
     val = strtol(token, NULL, 16);
     if ((val < 1) || (val > 255))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid CLA port number %ld\n",
-            file, section, lineNo, val);
-        fprintf(stderr, "(init   ) CLA port numbers must be between 0x01 and 0xFF, expressed in hexadecimal\n");
+        logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: Invalid CLA port number %ld\n",
+                   file, section, lineNo, val);
+        logDtError(LogErrorLocation, "CLA port numbers must be between 0x01 and 0xFF, expressed in hexadecimal\n");
         exit(1);
         }
     *claPort = (u8)val;
@@ -2211,17 +2211,17 @@ static int initParseTerminalDefn(char *defn, char *file, char *section, int line
     token = strtok(NULL, ",");
     if ((token == NULL) || !isdigit(token[0]))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid number of connections %s\n",
-            file, section, lineNo, token == NULL ? "NULL" : token);
+        logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: Invalid number of connections %s\n",
+                   file, section, lineNo, token == NULL ? "NULL" : token);
         exit(1);
         }
 
     val = strtol(token, NULL, 10);
-    if ((val < 1) || (val > 100))
+    if ((val < 1) || (val > 255))
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid number of connections %ld\n",
-            file, section, lineNo, val);
-        fprintf(stderr, "(init   ) Connection count must be between 0 and 100\n");
+        logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: Invalid number of connections %ld\n",
+                   file, section, lineNo, val);
+        logDtError(LogErrorLocation, "Connection count must be between 1 and 255\n");
         exit(1);
         }
     *claPortCount = (u8)val;
@@ -2232,16 +2232,16 @@ static int initParseTerminalDefn(char *defn, char *file, char *section, int line
     token = strtok(NULL, ", ");
     if (token == NULL)
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid NPU connection type %s\n",
-            file, section, lineNo, token == NULL ? "NULL" : token);
+        logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: Invalid NPU connection type %s\n",
+                   file, section, lineNo, token == NULL ? "NULL" : token);
         exit(1);
         }
     connType = initLookupConnType(token);
     if (connType == -1)
         {
-        fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: Invalid NPU connection type %s\n",
-            file, section, lineNo, token);
-        fprintf(stderr, "(init   ) NPU connection types must be one of: hasp, nje, pterm, raw, rhasp, rs232, telnet\n");
+        logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: Invalid NPU connection type %s\n",
+                   file, section, lineNo, token);
+        logDtError(LogErrorLocation, "NPU connection types must be one of: hasp, nje, pterm, raw, rhasp, rs232, telnet\n");
         exit(1);
         }
 
@@ -2268,7 +2268,7 @@ static void initDeadstart(void)
 
     if (!initOpenSection(deadstart))
         {
-        fprintf(stderr, "(init   ) Required section [%s] not found in %s\n", deadstart, startupFile);
+        logDtError(LogErrorLocation, "Required section [%s] not found in %s\n", deadstart, startupFile);
         exit(1);
         }
 
@@ -2289,8 +2289,8 @@ static void initDeadstart(void)
             || !isoctal(token[0]) || !isoctal(token[1])
             || !isoctal(token[2]) || !isoctal(token[3]))
             {
-            fprintf(stderr, "(init   ) file '%s' section [%s] line %2d: invalid deadstart setting %s\n",
-                    startupFile, deadstart, lineNo, token == NULL ? "NULL" : token);
+            logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: invalid deadstart setting %s\n",
+                       startupFile, deadstart, lineNo, token == NULL ? "NULL" : token);
             exit(1);
             }
 
@@ -2341,7 +2341,7 @@ static void initHelpers(void)
 
     if (initOpenHelpersSection() == -1)
         {
-        fprintf(stderr, "(init   ) Section [%s] not found in %s\n", helpers, startupFile);
+        logDtError(LogErrorLocation, "Section [%s] not found in %s\n", helpers, startupFile);
         exit(1);
         }
     }
@@ -2363,7 +2363,7 @@ static void initOperator(void)
 
     if (initOpenOperatorSection() == -1)
         {
-        fprintf(stderr, "(init   ) Section [%s] not found in %s\n", operator, startupFile);
+        logDtError(LogErrorLocation, "Section [%s] not found in %s\n", operator, startupFile);
         exit(1);
         }
     }
@@ -2722,7 +2722,7 @@ static void initReadStartupFile(FILE *fcb, char *fileName)
                 else if ((*cp == '\0') || isspace(*cp))
                     {
                     *cp = '\0';
-                    fprintf(stderr, "(init   ) Invalid section identifier starting with [\"%s\" in %s\n", sp, fileName);
+                    logDtError(LogErrorLocation, "Invalid section identifier starting with [\"%s\" in %s\n", sp, fileName);
                     exit(1);
                     }
                 else

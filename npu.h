@@ -315,7 +315,7 @@
 #define MaxBuffer                  2048
 #define MaxHaspStreams             7
 #define MaxTcbs                    256
-#define MaxTermDefs                64
+#define MaxTermDefs                255
 #define MinNjeBlockSize            1024
 
 /*

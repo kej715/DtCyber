@@ -269,7 +269,7 @@ void dd6603Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     if (dp->context[unitNo] == NULL)
         {
-        fprintf(stderr, "(dd6603 ) Failed to allocate context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate context block\n");
         exit(1);
         }
 
@@ -280,7 +280,10 @@ void dd6603Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     else
         {
         opt = strchr(deviceName, ',');
-        if (opt != NULL) *opt++ = '\0';
+        if (opt != NULL)
+            {
+            *opt++ = '\0';
+            }
         strcpy(fname, deviceName);
         }
 
@@ -290,7 +293,7 @@ void dd6603Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         fcb = fopen(fname, "w+b");
         if (fcb == NULL)
             {
-            fprintf(stderr, "(dd6603 ) Failed to open '%s'\n", fname);
+            logDtError(LogErrorLocation, "Failed to open '%s'\n", fname);
             exit(1);
             }
         }
@@ -428,7 +431,7 @@ static void dd6603Io(void)
     switch (activeDevice->fcode & Fc6603CodeMask)
         {
     default:
-        logError(LogErrorLocation, "(dd6603 ) channel %02o - invalid function code: %4.4o", activeChannel->id, (u32)activeDevice->fcode);
+        logDtError(LogErrorLocation, "channel %02o - invalid function code: %4.4o", activeChannel->id, (u32)activeDevice->fcode);
         break;
 
     case 0:
@@ -437,7 +440,7 @@ static void dd6603Io(void)
     case Fc6603ReadSector:
         if (!activeChannel->full)
             {
-            ignore = fread(&activeChannel->data, 2, 1, fcb);
+            ignore = (int)fread(&activeChannel->data, 2, 1, fcb);
             activeChannel->full = TRUE;
 
 #if DEBUG
@@ -526,21 +529,21 @@ static i32 dd6603Seek(i32 track, i32 head, i32 sector)
 
     if (track >= MaxTracks)
         {
-        logError(LogErrorLocation, "(dd6603 ) ch %o, track %o invalid", activeChannel->id, track);
+        logDtError(LogErrorLocation, "ch %o, track %o invalid", activeChannel->id, track);
 
         return (-1);
         }
 
     if (head >= MaxHeads)
         {
-        logError(LogErrorLocation, "(dd6603 ) ch %o, head %o invalid", activeChannel->id, head);
+        logDtError(LogErrorLocation, "ch %o, head %o invalid", activeChannel->id, head);
 
         return (-1);
         }
 
     if (sector >= sectorsPerTrack)
         {
-        logError(LogErrorLocation, "(dd6603 ) ch %o, sector %o invalid", activeChannel->id, sector);
+        logDtError(LogErrorLocation, "ch %o, sector %o invalid", activeChannel->id, sector);
 
         return (-1);
         }
@@ -602,7 +605,7 @@ static char *dd6603Func2String(PpWord funcCode)
 void dd6603ShowDiskStatus()
     {
     DiskParam *dp = firstDisk;
-    char      outBuf[MaxFSPath+128];
+    char      outBuf[MaxFSPath + 128];
 
     if (dp == NULL)
         {

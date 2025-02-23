@@ -40,7 +40,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#endif 
+#endif
 #if defined(__APPLE__)
 #include <execinfo.h>
 #endif
@@ -121,6 +121,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp);
 static void npuAsyncLogBytes(u8 *bytes, int len);
 static void npuAsyncLogFlush(void);
 static void npuAsyncPrintStackTrace(FILE *fp);
+
 #endif
 
 /*
@@ -174,16 +175,16 @@ static char npuAsyncLogBuf[LogLineLength + 1];
 static int  npuAsyncLogBytesCol = 0;
 #endif
 
-/*  
+/*
 ** Function tables to interface to either CCP or CCI functions
-*/ 
-static bool (*svmConnectTerminal[])(Pcb *bp ) =
+*/
+static bool (*svmConnectTerminal[])(Pcb *bp) =
     {
     npuSvmConnectTerminal,
     cciSvmConnectTerminal
     };
 
-static void (*svmSendDiscRequest[])(Tcb *tp ) =
+static void (*svmSendDiscRequest[])(Tcb *tp) =
     {
     npuSvmSendDiscRequest,
     cciSvmSendDiscRequest
@@ -195,7 +196,7 @@ static void (*tipNotifySent[])(Tcb *tp, u8 blockSeqNo) =
     cciTipNotifySent
     };
 
-static void (*asyncProcessUplineNormal[])(Tcb *tp ) =
+static void (*asyncProcessUplineNormal[])(Tcb *tp) =
     {
     npuAsyncProcessUplineNormal,
     cciAsyncProcessUplineNormal,
@@ -230,7 +231,7 @@ void npuAsyncPresetPcb(Pcb *pcbp)
         npuAsyncLog = fopen("asynclog.txt", "wt");
         if (npuAsyncLog == NULL)
             {
-            fprintf(stderr, "asynclog.txt - aborting\n");
+            logDtError(LogErrorLocation, "asynclog.txt - aborting\n");
             exit(1);
             }
         npuAsyncLogFlush();    // initialize log buffer
@@ -289,13 +290,13 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
 #if DEBUG
     if (tp != NULL)
         {
-        fprintf(npuAsyncLog, "Port %02x: Telnet data received from %.7s, size %d\n", pcbp->claPort, 
-            tp->termName, pcbp->inputCount);
+        fprintf(npuAsyncLog, "Port %02x: Telnet data received from %.7s, size %d\n", pcbp->claPort,
+                tp->termName, pcbp->inputCount);
         }
     else
         {
-        fprintf(npuAsyncLog, "Port %02x: Telnet data received, size %d\n", pcbp->claPort, 
-            pcbp->inputCount);
+        fprintf(npuAsyncLog, "Port %02x: Telnet data received, size %d\n", pcbp->claPort,
+                pcbp->inputCount);
         }
     npuAsyncLogBytes(pcbp->inputData, pcbp->inputCount);
     npuAsyncLogFlush();
@@ -495,24 +496,24 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
 
     if (tnOutPtr > tnOutBuf)
         {
-        send(pcbp->connFd, tnOutBuf, tnOutPtr - tnOutBuf, 0);
+        send(pcbp->connFd, tnOutBuf, (int)(tnOutPtr - tnOutBuf), 0);
 #if DEBUG
         if (tp != NULL)
             {
-            fprintf(npuAsyncLog, "Port %02x: Telnet options sent to %.7s, size %ld\n", pcbp->claPort, 
-                tp->termName, tnOutPtr - tnOutBuf);
-            } 
+            fprintf(npuAsyncLog, "Port %02x: Telnet options sent to %.7s, size %ld\n", pcbp->claPort,
+                    tp->termName, tnOutPtr - tnOutBuf);
+            }
         else
             {
-            fprintf(npuAsyncLog, "Port %02x: Telnet options sent, size %ld\n", pcbp->claPort, 
-                tnOutPtr - tnOutBuf);
+            fprintf(npuAsyncLog, "Port %02x: Telnet options sent, size %ld\n", pcbp->claPort,
+                    tnOutPtr - tnOutBuf);
             }
         npuAsyncLogBytes(tnOutBuf, tnOutPtr - tnOutBuf);
         npuAsyncLogFlush();
 #endif
         }
 
-    pcbp->inputCount = dp - pcbp->inputData;
+    pcbp->inputCount = (int)(dp - pcbp->inputData);
     if ((pcbp->inputCount > 0) && (tp != NULL))
         {
         npuAsyncProcessUplineData(pcbp);
@@ -546,7 +547,7 @@ void npuAsyncPtermNetSend(Tcb *tp, u8 *data, int len)
             /*
             **  Double FF to escape the Telnet IAC code making it a real FF.
             */
-            count = p - data;
+            count = (int)(p - data);
             npuNetQueueOutput(tp, data, count);
             npuNetQueueOutput(tp, (u8 *)"\xFF", 1);
 #if DEBUG
@@ -562,7 +563,7 @@ void npuAsyncPtermNetSend(Tcb *tp, u8 *data, int len)
             /*
             **  Append zero to CR otherwise real zeroes will be stripped by Telnet.
             */
-            count = p - data;
+            count = (int)(p - data);
             npuNetQueueOutput(tp, data, count);
             npuNetQueueOutput(tp, (u8 *)"\x00", 1);
 #if DEBUG
@@ -576,7 +577,7 @@ void npuAsyncPtermNetSend(Tcb *tp, u8 *data, int len)
             }
         }
 
-    if ((count = p - data) > 0)
+    if ((count = (int)(p - data)) > 0)
         {
         npuNetQueueOutput(tp, data, count);
 #if DEBUG
@@ -643,7 +644,7 @@ void npuAsyncTelnetNetSend(Tcb *tp, u8 *data, int len)
             /*
             **  Double FF to escape the Telnet IAC code making it a real FF.
             */
-            count = p - data;
+            count = (int)(p - data);
             npuNetQueueOutput(tp, data, count);
             npuNetQueueOutput(tp, iac, 1);
 #if DEBUG
@@ -656,7 +657,7 @@ void npuAsyncTelnetNetSend(Tcb *tp, u8 *data, int len)
             }
         }
 
-    if ((count = p - data) > 0)
+    if ((count = (int)(p - data)) > 0)
         {
         npuNetQueueOutput(tp, data, count);
 #if DEBUG
@@ -873,7 +874,7 @@ void npuAsyncProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
         /*
         **  Send the line.
         */
-        textlen = ptrUS - blk;
+        textlen = (int)(ptrUS - blk);
         npuNetSend(npuTp, blk, textlen);
 
         /*
@@ -943,7 +944,7 @@ void npuAsyncProcessUplineData(Pcb *pcbp)
     */
     if (!tp->dbcNoEchoplex)
         {
-        echoLen = echoPtr - echoBuffer;
+        echoLen = (int)(echoPtr - echoBuffer);
         if (echoLen)
             {
             npuNetSend(tp, echoBuffer, echoLen);
@@ -983,7 +984,7 @@ void npuAsyncFlushUplineTransparent(Tcb *tp)
     **  Send the upline data.
     */
     tp->inBuf[BlkOffDbc] = DbcTransparent;
-    npuBipRequestUplineCanned(tp->inBuf, tp->inBufPtr - tp->inBuf);
+    npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
     fprintf(npuAsyncLog, "Port %02x: send upline transparent data for %.7s, size %ld\n",
             tp->pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
@@ -1043,6 +1044,7 @@ void npuAsyncNotifyNetDisconnect(Pcb *pcbp)
 #if DEBUG
         fprintf(npuAsyncLog, "Port %02x: terminal disconnected\n", pcbp->claPort);
 #endif
+
         /*
         **  Close socket and reset PCB.
         */
@@ -1285,7 +1287,7 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
     */
     while (len > 0)
         {
-        ch = *dp++;
+        ch   = *dp++;
         len -= 1;
 
         if (tp->params.fvEchoplex)
@@ -1307,7 +1309,7 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
             **  Send the upline data.
             */
             tp->inBuf[BlkOffDbc] = DbcTransparent;
-            npuBipRequestUplineCanned(tp->inBuf, tp->inBufPtr - tp->inBuf);
+            npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: transparent mode termination character (%02x) detected on %.7s\n", pcbp->claPort, ch, tp->termName);
             fprintf(npuAsyncLog, "Port %02x: send upline transparent data for %.7s, size %ld\n",
@@ -1323,7 +1325,7 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
             {
             *tp->inBufPtr++      = ch;
             tp->inBuf[BlkOffDbc] = DbcTransparent;
-            npuBipRequestUplineCanned(tp->inBuf, tp->inBufPtr - tp->inBuf);
+            npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: User Break2 (%02x) detected on %.7s\n", pcbp->claPort, ch, tp->termName);
             fprintf(npuAsyncLog, "Port %02x: send upline transparent data for %.7s, size %ld\n",
@@ -1336,10 +1338,10 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
         else
             {
             *tp->inBufPtr++ = ch;
-            n = tp->inBufPtr - tp->inBufStart;
+            n = (int)(tp->inBufPtr - tp->inBufStart);
             if ((n >= tp->params.fvXCnt) || (n >= MaxBuffer - BlkOffDbc - 2))
                 {
-                if (!tp->params.fvXModeMultiple && n >= tp->params.fvXCnt)
+                if (!tp->params.fvXModeMultiple && (n >= tp->params.fvXCnt))
                     {
                     /*
                     **  Terminate single message transparent mode.
@@ -1351,7 +1353,7 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
                 **  Send the upline data.
                 */
                 tp->inBuf[BlkOffDbc] = DbcTransparent;
-                npuBipRequestUplineCanned(tp->inBuf, tp->inBufPtr - tp->inBuf);
+                npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
                 if (n >= tp->params.fvXCnt)
                     {
@@ -1456,7 +1458,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
             **  EOL or Cancel entered - send the input upline.
             */
             *tp->inBufPtr++ = ch;
-            npuBipRequestUplineCanned(tp->inBuf, tp->inBufPtr - tp->inBuf);
+            npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline ASCII data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
@@ -1478,7 +1480,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
                 }
             else
                 {
-                echoLen = echoPtr - echoBuffer;
+                echoLen = (int)(echoPtr - echoBuffer);
                 if (echoLen)
                     {
                     npuNetSend(tp, echoBuffer, echoLen);
@@ -1537,7 +1539,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
             **  Send long lines.
             */
             tp->inBuf[BlkOffBTBSN] = BtHTBLK | (tp->uplineBsn << BlkShiftBSN);
-            npuBipRequestUplineCanned(tp->inBuf, tp->inBufPtr - tp->inBuf);
+            npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline long ASCII data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
@@ -1634,7 +1636,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
             **  to build and send the sequence.
             */
             echoPtr = echoBuffer;
-            cnt     = tp->inBufPtr - tp->inBufStart;
+            cnt     = (int)(tp->inBufPtr - tp->inBufStart);
             for (i = cnt; i > 0; i--)
                 {
                 *echoPtr++ = ChrBS;
@@ -1657,13 +1659,13 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
             *echoPtr++ = '*';
             *echoPtr++ = '\r';
             *echoPtr++ = '\n';
-            npuNetSend(tp, echoBuffer, echoPtr - echoBuffer);
+            npuNetSend(tp, echoBuffer, (int)(echoPtr - echoBuffer));
 
             /*
             **  Send the line, but signal the cancel character.
             */
             tp->inBuf[BlkOffDbc] = DbcCancel;
-            npuBipRequestUplineCanned(tp->inBuf, tp->inBufPtr - tp->inBuf);
+            npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline special data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
@@ -1707,7 +1709,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
             /*
             **  EOL entered - send the input upline.
             */
-            npuBipRequestUplineCanned(tp->inBuf, tp->inBufPtr - tp->inBuf);
+            npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline special data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
@@ -1729,7 +1731,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
                 }
             else
                 {
-                echoLen = echoPtr - echoBuffer;
+                echoLen = (int)(echoPtr - echoBuffer);
                 if (echoLen)
                     {
                     npuNetSend(tp, echoBuffer, echoLen);
@@ -1782,7 +1784,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
             **  Send long lines.
             */
             tp->inBuf[BlkOffBTBSN] = BtHTBLK | (tp->uplineBsn << BlkShiftBSN);
-            npuBipRequestUplineCanned(tp->inBuf, tp->inBufPtr - tp->inBuf);
+            npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
             npuTipInputReset(tp);
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline long special data for %.7s, size %ld\n",
@@ -1870,7 +1872,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
             **  to build and send the sequence.
             */
             echoPtr = echoBuffer;
-            cnt     = tp->inBufPtr - tp->inBufStart;
+            cnt     = (int)(tp->inBufPtr - tp->inBufStart);
             for (i = cnt; i > 0; i--)
                 {
                 *echoPtr++ = ChrBS;
@@ -1893,13 +1895,13 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
             *echoPtr++ = '*';
             *echoPtr++ = '\r';
             *echoPtr++ = '\n';
-            npuNetSend(tp, echoBuffer, echoPtr - echoBuffer);
+            npuNetSend(tp, echoBuffer, (int)(echoPtr - echoBuffer));
 
             /*
             **  Send the line, but signal the cancel character.
             */
             tp->inBuf[BlkOffDbc] = DbcCancel;
-            npuBipRequestUplineCanned(tp->inBuf, tp->inBufPtr - tp->inBuf);
+            npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline normal data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
@@ -1943,7 +1945,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
             /*
             **  EOL entered - send the input upline.
             */
-            npuBipRequestUplineCanned(tp->inBuf, tp->inBufPtr - tp->inBuf);
+            npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline normal data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
@@ -1966,7 +1968,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
                 }
             else
                 {
-                echoLen = echoPtr - echoBuffer;
+                echoLen = (int)(echoPtr - echoBuffer);
                 if (echoLen)
                     {
                     npuNetSend(tp, echoBuffer, echoLen);
@@ -2041,7 +2043,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
             **  Send long lines.
             */
             tp->inBuf[BlkOffBTBSN] = BtHTBLK | (tp->uplineBsn << BlkShiftBSN);
-            npuBipRequestUplineCanned(tp->inBuf, tp->inBufPtr - tp->inBuf);
+            npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline long normal data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);

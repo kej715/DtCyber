@@ -344,14 +344,14 @@ void traceInit(void)
     devF = fopen("device.trc", "wt");
     if (devF == NULL)
         {
-        fprintf(stderr, "(trace  ) can't open device.trc - aborting\n");
+        logDtError(LogErrorLocation, "Can't open device.trc - aborting\n");
         exit(1);
         }
 
     cpuF = calloc(cpuCount, sizeof(FILE *));
     if (cpuF == NULL)
         {
-        fprintf(stderr, "(trace  ) Failed to allocate CPU trace FILE pointers - aborting\n");
+        logDtError(LogErrorLocation, "Failed to allocate CPU trace FILE pointers - aborting\n");
         exit(1);
         }
     for (cp = 0; cp < cpuCount; cp++)
@@ -360,7 +360,7 @@ void traceInit(void)
         cpuF[cp] = fopen(fileName, "wt");
         if (cpuF[cp] == NULL)
             {
-            fprintf(stderr, "(trace  ) Can't open cpu[%o] trace (%s) - aborting\n", cp, fileName);
+            logDtError(LogErrorLocation, "Can't open cpu[%o] trace (%s) - aborting\n", cp, fileName);
             exit(1);
             }
         }
@@ -368,7 +368,7 @@ void traceInit(void)
     ppuF = calloc(ppuCount, sizeof(FILE *));
     if (ppuF == NULL)
         {
-        fprintf(stderr, "(trace  ) Failed to allocate PP trace FILE pointers - aborting\n");
+        logDtError(LogErrorLocation, "Failed to allocate PP trace FILE pointers - aborting\n");
         exit(1);
         }
 
@@ -378,7 +378,7 @@ void traceInit(void)
         ppuF[pp] = fopen(fileName, "wt");
         if (ppuF[pp] == NULL)
             {
-            fprintf(stderr, "(trace  ) Can't open ppu[%02o] trace (%s) - aborting\n", pp, fileName);
+            logDtError(LogErrorLocation, "Can't open ppu[%02o] trace (%s) - aborting\n", pp, fileName);
             exit(1);
             }
         }

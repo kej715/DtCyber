@@ -199,24 +199,24 @@ static void cpOp77(CpuContext *activeCpu);
 **  Public Variables
 **  ----------------
 */
-u32          cpuMaxMemory;
-CpWord       *cpMem;
-int          cpuCount = 1;
-CpuContext   *cpus;
-u32          extMaxMemory;
-CpWord       *extMem;
-ExtMemory    extMemType = ECS;
+u32        cpuMaxMemory;
+CpWord     *cpMem;
+int        cpuCount = 1;
+CpuContext *cpus;
+u32        extMaxMemory;
+CpWord     *extMem;
+ExtMemory  extMemType = ECS;
 
 /*
 **  -----------------
 **  Private Variables
 **  -----------------
 */
-static FILE   *cmHandle;
-static FILE   *ecsHandle;
+static FILE *cmHandle;
+static FILE *ecsHandle;
 
 static volatile u32 ecsFlagRegister = 0;
-static volatile u8 ecs16Kx4bitFlagRegisters[16384];
+static volatile u8  ecs16Kx4bitFlagRegisters[16384];
 
 static volatile int monitorCpu = -1;
 
@@ -233,7 +233,7 @@ static HANDLE exchangeMutex;
 static HANDLE flagRegMutex;
 #else
 static pthread_mutex_t exchangeMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t flagRegMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t flagRegMutex  = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 /*
@@ -341,7 +341,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
     cpMem = calloc(memory, sizeof(CpWord));
     if (cpMem == NULL)
         {
-        fprintf(stderr, "(cpu    ) Failed to allocate CPU memory\n");
+        logDtError(LogErrorLocation, "Failed to allocate CPU memory\n");
         exit(1);
         }
 
@@ -364,7 +364,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
     extMem = calloc(emBanks * extBanksSize, sizeof(CpWord));
     if (extMem == NULL)
         {
-        fprintf(stderr, "(cpu    ) Failed to allocate ECS memory\n");
+        logDtError(LogErrorLocation, "Failed to allocate ECS memory\n");
         exit(1);
         }
 
@@ -403,7 +403,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
             cmHandle = fopen(fileName, "w+b");
             if (cmHandle == NULL)
                 {
-                fprintf(stderr, "(cpu    ) Failed to create CM backing file\n");
+                logDtError(LogErrorLocation, "Failed to create CM backing file\n");
                 exit(1);
                 }
             }
@@ -433,7 +433,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
             ecsHandle = fopen(fileName, "w+b");
             if (ecsHandle == NULL)
                 {
-                fprintf(stderr, "(cpu    ) Failed to create ECS backing file\n");
+                logDtError(LogErrorLocation, "Failed to create ECS backing file\n");
                 exit(1);
                 }
             }
@@ -453,7 +453,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
         cpus[cpuNum].id                   = cpuNum;
         cpus[cpuNum].isStopped            = TRUE;
         cpus[cpuNum].ppRequestingExchange = -1;
-        cpus[cpuNum].idleCycles = 0;
+        cpus[cpuNum].idleCycles           = 0;
         if (cpuNum > 0)
             {
             cpuCreateThread(cpuNum);
@@ -466,7 +466,9 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
     */
 
     for (i = 0; i < sizeof(ecs16Kx4bitFlagRegisters); i++)
-         ecs16Kx4bitFlagRegisters[i] = 0;
+        {
+        ecs16Kx4bitFlagRegisters[i] = 0;
+        }
 
     /*
     **  Print a friendly message.
@@ -508,7 +510,8 @@ u32 cpuGetP(u8 cpuNum)
         {
         cpuNum = 0;
         }
-    return((cpus[cpuNum].regP) & Mask18);
+
+    return ((cpus[cpuNum].regP) & Mask18);
     }
 
 /*--------------------------------------------------------------------------
@@ -542,7 +545,7 @@ void cpuTerminate(void)
         fseek(cmHandle, 0, SEEK_SET);
         if (fwrite(cpMem, sizeof(CpWord), cpuMaxMemory, cmHandle) != cpuMaxMemory)
             {
-            fprintf(stderr, "(cpu    ) Error writing CM backing file\n");
+            logDtError(LogErrorLocation, "Error writing CM backing file\n");
             }
 
         fclose(cmHandle);
@@ -556,7 +559,7 @@ void cpuTerminate(void)
         fseek(ecsHandle, 0, SEEK_SET);
         if (fwrite(extMem, sizeof(CpWord), extMaxMemory, ecsHandle) != extMaxMemory)
             {
-            fprintf(stderr, "(cpu    ) Error writing ECS backing file\n");
+            logDtError(LogErrorLocation, "Error writing ECS backing file\n");
             }
 
         fclose(ecsHandle);
@@ -642,8 +645,8 @@ void cpuStep(CpuContext *activeCpu)
     if (activeCpu->ppRequestingExchange != -1)
         {
         cpuAcquireExchangeMutex();
-        if ((monitorCpu == -1 || activeCpu->doChangeMode == FALSE)
-            && (activeCpu->opOffset == 60 || activeCpu->isStopped))
+        if (((monitorCpu == -1) || (activeCpu->doChangeMode == FALSE))
+            && ((activeCpu->opOffset == 60) || activeCpu->isStopped))
             {
             cpuExchangeJump(activeCpu, activeCpu->ppExchangeAddress, activeCpu->doChangeMode);
             activeCpu->ppRequestingExchange = -1;
@@ -679,9 +682,9 @@ void cpuStep(CpuContext *activeCpu)
         **  Decode based on type.
         */
         activeCpu->opFm = (u8)((activeCpu->opWord >> (activeCpu->opOffset - 6)) & Mask6);
-        activeCpu->opI  = (u8)((activeCpu->opWord >> (activeCpu->opOffset -  9)) & Mask3);
+        activeCpu->opI  = (u8)((activeCpu->opWord >> (activeCpu->opOffset - 9)) & Mask3);
         activeCpu->opJ  = (u8)((activeCpu->opWord >> (activeCpu->opOffset - 12)) & Mask3);
-        length = decodeCpuOpcode[activeCpu->opFm].length;
+        length          = decodeCpuOpcode[activeCpu->opFm].length;
 
         if (length == 0)
             {
@@ -704,7 +707,7 @@ void cpuStep(CpuContext *activeCpu)
                 cpuOpIllegal(activeCpu);
                 break;
                 }
-            activeCpu->opK       = 0;
+            activeCpu->opK       = (u8)0;
             activeCpu->opAddress = (u32)((activeCpu->opWord >> (activeCpu->opOffset - 30)) & Mask18);
             activeCpu->opOffset -= 30;
             }
@@ -714,7 +717,7 @@ void cpuStep(CpuContext *activeCpu)
         /*
         **  Force B0 to 0.
         */
-        activeCpu->regB[0] = 0;
+        activeCpu->regB[0] = (u32)0;
 
         /*
         **  Execute instruction.
@@ -775,7 +778,6 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
     u32  flagFunction;
     u16  flagRegisterAddress;
     u32  flagWord;
-    bool isExtendedFlag;
     bool result;
 
 #if DEBUG_ECS
@@ -786,11 +788,11 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
 
     cpuAcquireMutex(&flagRegMutex);
 
-    if (((ecsAddress & (1 << 29)) != 0 && (ecsAddress & (1 << 20)) != 0))
+    if ((((ecsAddress & (1 << 29)) != 0) && ((ecsAddress & (1 << 20)) != 0)))
         {
         flagFunction        = (ecsAddress >> 18) & Mask5;
-        flagRegisterAddress = (ecsAddress >>  4) & Mask14;
-        flagWord            =  ecsAddress & Mask4;
+        flagRegisterAddress = (ecsAddress >> 4) & Mask14;
+        flagWord            = ecsAddress & Mask4;
         switch (flagFunction)
             {
         case 006:
@@ -799,11 +801,11 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
             */
 #if DEBUG_ECS
             fprintf(emLog, "\n    Zero/Select: addr %05o, flag register %02o, flag word %02o",
-               flagRegisterAddress, ecs16Kx4bitFlagRegisters[flagRegisterAddress], flagWord);
+                    flagRegisterAddress, ecs16Kx4bitFlagRegisters[flagRegisterAddress], flagWord);
 #endif
             if (ecs16Kx4bitFlagRegisters[flagRegisterAddress] == 0)
                 {
-                ecs16Kx4bitFlagRegisters[flagRegisterAddress] = flagWord;
+                ecs16Kx4bitFlagRegisters[flagRegisterAddress] = (volatile u8)flagWord;
                 }
             else
                 {
@@ -832,7 +834,7 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
             */
 #if DEBUG_ECS
             fprintf(emLog, "\n    Equality Status: addr %05o, flag register %02o, flag word %02o",
-               flagRegisterAddress, ecs16Kx4bitFlagRegisters[flagRegisterAddress], flagWord);
+                    flagRegisterAddress, ecs16Kx4bitFlagRegisters[flagRegisterAddress], flagWord);
 #endif
             result = ecs16Kx4bitFlagRegisters[flagRegisterAddress] == flagWord;
             break;
@@ -841,7 +843,7 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
     else
         {
         flagFunction = (ecsAddress >> 21) & Mask2;
-        flagWord     =  ecsAddress & Mask18;
+        flagWord     = ecsAddress & Mask18;
         switch (flagFunction)
             {
         case 0:
@@ -928,8 +930,9 @@ bool cpuDdpTransfer(u32 ecsAddress, CpWord *data, bool writeToEcs)
         {
 #if DEBUG_DDP
         fprintf(emLog, "\nDDP AddressOutOfRange on %s: EM addr %010o  EM size %010o",
-            writeToEcs ? "write" : "read", ecsAddress, extMaxMemory);
+                writeToEcs ? "write" : "read", ecsAddress, extMaxMemory);
 #endif
+
         /*
         **  Abort.
         */
@@ -963,7 +966,7 @@ bool cpuDdpTransfer(u32 ecsAddress, CpWord *data, bool writeToEcs)
  */
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Create operator thread.
+**  Purpose:        Create CPU thread.
 **
 **  Parameters:     Name        Description.
 **                  cpuNum      ordinal of CPU for which to create thread
@@ -982,7 +985,7 @@ static void cpuCreateThread(int cpuNum)
     */
     exchangeMutex = CreateMutex(NULL, FALSE, NULL);
     flagRegMutex  = CreateMutex(NULL, FALSE, NULL);
-    if (exchangeMutex == NULL || flagRegMutex == NULL)
+    if ((exchangeMutex == NULL) || (flagRegMutex == NULL))
         {
         fputs("(cpu     ) Failed to create mutex\n", stderr);
         exit(1);
@@ -1001,7 +1004,7 @@ static void cpuCreateThread(int cpuNum)
 
     if (hThread == NULL)
         {
-        fprintf(stderr, "(cpu     ) Failed to create thread for CPU %d\n", cpuNum);
+        logDtError(LogErrorLocation, "Failed to create thread for CPU %d\n", cpuNum);
         exit(1);
         }
 #else
@@ -1016,7 +1019,7 @@ static void cpuCreateThread(int cpuNum)
     rc = pthread_create(&thread, &attr, cpuThread, cpus + cpuNum);
     if (rc < 0)
         {
-        fprintf(stderr, "(cpu     ) Failed to create thread for CPU %d\n", cpuNum);
+        logDtError(LogErrorLocation, "Failed to create thread for CPU %d\n", cpuNum);
         exit(1);
         }
 #endif
@@ -1036,11 +1039,13 @@ static void cpuAcquireMutex(HANDLE *mutexp)
     {
     WaitForSingleObject(*mutexp, INFINITE);
     }
+
 #else
 static void cpuAcquireMutex(pthread_mutex_t *mutexp)
     {
     pthread_mutex_lock(mutexp);
     }
+
 #endif
 
 /*--------------------------------------------------------------------------
@@ -1057,11 +1062,13 @@ static void cpuReleaseMutex(HANDLE *mutexp)
     {
     ReleaseMutex(*mutexp);
     }
+
 #else
 static void cpuReleaseMutex(pthread_mutex_t *mutexp)
     {
     pthread_mutex_unlock(mutexp);
     }
+
 #endif
 
 /*--------------------------------------------------------------------------
@@ -1080,7 +1087,8 @@ static void *cpuThread(void *param)
 #endif
     {
     CpuContext *activeCpu = (CpuContext *)param;
-    printf("(cpu    ) CPU%o started\n",  activeCpu->id);
+
+    printf("(cpu    ) CPU%o started\n", activeCpu->id);
 
     while (emulationActive)
         {
@@ -1117,11 +1125,11 @@ static void cpuExchangeJump(CpuContext *activeCpu, u32 address, bool doChangeMod
     **  Only perform exchange jump on instruction boundary or when stopped.
     */
 /*
-    if ((activeCpu->opOffset != 60) && !activeCpu->isStopped)
-        {
-        return;
-        }
-*/
+ *  if ((activeCpu->opOffset != 60) && !activeCpu->isStopped)
+ *      {
+ *      return;
+ *      }
+ */
 
 #if CcDebug == 1
     traceExchange(activeCpu, address, "Old");
@@ -1157,17 +1165,17 @@ static void cpuExchangeJump(CpuContext *activeCpu, u32 address, bool doChangeMod
     activeCpu->regA[0] = (u32)((*mem >> 18) & Mask18);
     activeCpu->regB[0] = 0;
 
-    mem        += 1;
+    mem += 1;
     activeCpu->regRaCm = (u32)((*mem >> 36) & Mask24);
     activeCpu->regA[1] = (u32)((*mem >> 18) & Mask18);
     activeCpu->regB[1] = (u32)((*mem) & Mask18);
 
-    mem        += 1;
+    mem += 1;
     activeCpu->regFlCm = (u32)((*mem >> 36) & Mask24);
     activeCpu->regA[2] = (u32)((*mem >> 18) & Mask18);
     activeCpu->regB[2] = (u32)((*mem) & Mask18);
 
-    mem         += 1;
+    mem += 1;
     activeCpu->exitMode = (u32)((*mem >> 36) & Mask24);
     activeCpu->regA[3]  = (u32)((*mem >> 18) & Mask18);
     activeCpu->regB[3]  = (u32)((*mem) & Mask18);
@@ -1200,17 +1208,17 @@ static void cpuExchangeJump(CpuContext *activeCpu, u32 address, bool doChangeMod
     activeCpu->regA[5] = (u32)((*mem >> 18) & Mask18);
     activeCpu->regB[5] = (u32)((*mem) & Mask18);
 
-    mem        += 1;
+    mem += 1;
     activeCpu->regMa   = (u32)((*mem >> 36) & Mask24);
     activeCpu->regA[6] = (u32)((*mem >> 18) & Mask18);
     activeCpu->regB[6] = (u32)((*mem) & Mask18);
 
-    mem         += 1;
+    mem += 1;
     activeCpu->regSpare = (u32)((*mem >> 36) & Mask24);
     activeCpu->regA[7]  = (u32)((*mem >> 18) & Mask18);
     activeCpu->regB[7]  = (u32)((*mem) & Mask18);
 
-    mem        += 1;
+    mem += 1;
     activeCpu->regX[0] = *mem++ & Mask60;
     activeCpu->regX[1] = *mem++ & Mask60;
     activeCpu->regX[2] = *mem++ & Mask60;
@@ -1286,7 +1294,10 @@ static void cpuExchangeJump(CpuContext *activeCpu, u32 address, bool doChangeMod
         }
     if (activeCpu->isMonitorMode)
         {
-        if (monitorCpu == -1) monitorCpu = activeCpu->id;
+        if (monitorCpu == -1)
+            {
+            monitorCpu = activeCpu->id;
+            }
         }
     else if (monitorCpu == activeCpu->id)
         {
@@ -1430,7 +1441,7 @@ static bool cpuCheckOpAddress(CpuContext *activeCpu, u32 address, u32 *location)
         /*
         **  Exit mode is always selected for RNI or branch.
         */
-        activeCpu->isStopped = TRUE;
+        activeCpu->isStopped      = TRUE;
         activeCpu->exitCondition |= EcAddressOutOfRange;
         if (activeCpu->regRaCm < cpuMaxMemory)
             {
@@ -1935,8 +1946,11 @@ static void cpuUemWord(CpuContext *activeCpu, bool writeToUem)
 
 #if DEBUG_UEM
     fprintf(emLog, "\nUEM %s one  : %010o  RAE %010o, FLE %010o",
-        writeToUem ? "write" : "read ", uemAddress, raEcs, flEcs);
-    if (isExpandedAddress) fputs("  exp", emLog);
+            writeToUem ? "write" : "read ", uemAddress, raEcs, flEcs);
+    if (isExpandedAddress)
+        {
+        fputs("  exp", emLog);
+        }
 #endif
 
     /*
@@ -2035,7 +2049,7 @@ static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
 
         return;
         }
-    
+
     isExpandedAddress = (activeCpu->exitMode & EmFlagExpandedAddress) != 0;
 
     ecsAddress = (u32)(activeCpu->regX[activeCpu->opK] & Mask30);
@@ -2047,10 +2061,10 @@ static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
         absEcsAddr     = ecsAddress + raEcs;
         isFlagRegister = (ecsAddress & (1 << 29)) != 0
                          && (activeCpu->regFlEcs & (1 << 29)) != 0;
-        if (isFlagRegister == FALSE && modelType == ModelCyber865)
+        if ((isFlagRegister == FALSE) && (modelType == ModelCyber865))
             {
-            if ((absEcsAddr & (5 << 22)) == (4 << 22)
-                || (absEcsAddr & (3 << 28)) == (1 << 28))
+            if (((absEcsAddr & (5 << 22)) == (4 << 22))
+                || ((absEcsAddr & (3 << 28)) == (1 << 28)))
                 {
                 isZeroFill = TRUE;
                 }
@@ -2067,7 +2081,7 @@ static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
         absEcsAddr     = ecsAddress + raEcs;
         isFlagRegister = (ecsAddress & (1 << 23)) != 0
                          && (activeCpu->regFlEcs & (1 << 23)) != 0;
-        if (isFlagRegister == FALSE && modelType == ModelCyber865)
+        if ((isFlagRegister == FALSE) && (modelType == ModelCyber865))
             {
             if ((absEcsAddr & (7 << 21)) == (1 << 21))
                 {
@@ -2082,9 +2096,15 @@ static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
 
 #if DEBUG_ECS
     fprintf(emLog, "\nECS %s one  : %010o  RAE %010o, FLE %010o",
-        writeToEcs ? "write" : "read ", ecsAddress, raEcs, flEcs);
-    if (isExpandedAddress) fputs("  exp", emLog);
-    if (isZeroFill)        fputs("  zero fill", emLog);
+            writeToEcs ? "write" : "read ", ecsAddress, raEcs, flEcs);
+    if (isExpandedAddress)
+        {
+        fputs("  exp", emLog);
+        }
+    if (isZeroFill)
+        {
+        fputs("  zero fill", emLog);
+        }
 #endif
 
     /*
@@ -2126,11 +2146,15 @@ static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
     */
     if (writeToEcs)
         {
-        if (isZeroFill || absEcsAddr >= extMaxMemory)
+        if (isZeroFill || (absEcsAddr >= extMaxMemory))
             {
 #if DEBUG_ECS
-            if (isZeroFill == FALSE) fprintf(emLog, "  overflow (%010o >= %010o)", absEcsAddr, extMaxMemory);
+            if (isZeroFill == FALSE)
+                {
+                fprintf(emLog, "  overflow (%010o >= %010o)", absEcsAddr, extMaxMemory);
+                }
 #endif
+
             /*
             **  No transfer and full exit to next instruction word.
             */
@@ -2144,11 +2168,15 @@ static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
         }
     else
         {
-        if (isZeroFill || absEcsAddr >= extMaxMemory)
+        if (isZeroFill || (absEcsAddr >= extMaxMemory))
             {
 #if DEBUG_ECS
-            if (isZeroFill == FALSE) fprintf(emLog, "  overflow (%010o >= %010o)", absEcsAddr, extMaxMemory);
+            if (isZeroFill == FALSE)
+                {
+                fprintf(emLog, "  overflow (%010o >= %010o)", absEcsAddr, extMaxMemory);
+                }
 #endif
+
             /*
             **  Zero Xj, then full exit to next instruction word.
             */
@@ -2202,7 +2230,7 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
     /*
     **  Calculate word count, source and destination addresses.
     */
-    wordCount  = cpuAdd18(activeCpu->regB[activeCpu->opJ], activeCpu->opAddress);
+    wordCount = cpuAdd18(activeCpu->regB[activeCpu->opJ], activeCpu->opAddress);
 
     if (((features & IsSeries800) != 0) && isExpandedAddress)
         {
@@ -2243,8 +2271,14 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
     fprintf(emLog, "\nUEM block %s: %010o  RAE %010o, FLE %010o  CM %07o  RA %08o  FL %08o  Words %d",
             writeToUem ? "write" : "read ",
             uemAddress, raEcs, flEcs, cmAddress, activeCpu->regRaCm, activeCpu->regFlCm, wordCount);
-    if (isExpandedAddress) fputs("  exp", emLog);
-    if (isZeroFill)        fputs("  zero fill", emLog);
+    if (isExpandedAddress)
+        {
+        fputs("  exp", emLog);
+        }
+    if (isZeroFill)
+        {
+        fputs("  zero fill", emLog);
+        }
 #endif
 
     /*
@@ -2306,6 +2340,7 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
 #if DEBUG_UEM
                 fprintf(emLog, "  overflow (%010o >= %010o)", absUemAddr, cpuMaxMemory);
 #endif
+
                 return;
                 }
 
@@ -2333,6 +2368,7 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
                     isZeroFill = TRUE;
                     }
 #endif
+
                 /*
                 **  Zero CM, but take error exit to lower 30 bits once zeroing is finished.
                 */
@@ -2404,10 +2440,10 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
     ecsAddress = (u32)(activeCpu->regX[0] & Mask30);
 
     isExpandedAddress = ((features & IsSeries800) != 0)
-        && ((activeCpu->exitMode & EmFlagExpandedAddress) != 0);
-    isFlagRegister    = FALSE;
-    isMaintenance     = FALSE; // for Cyber 865/875
-    isZeroFill        = FALSE; // for Cyber 865/875
+                        && ((activeCpu->exitMode & EmFlagExpandedAddress) != 0);
+    isFlagRegister = FALSE;
+    isMaintenance  = FALSE;    // for Cyber 865/875
+    isZeroFill     = FALSE;    // for Cyber 865/875
 
     /*
     **  Calculate word count, source and destination addresses.
@@ -2420,10 +2456,10 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
         flEcs          = (u32)(activeCpu->regFlEcs & Mask30);
         absEcsAddr     = ecsAddress + raEcs;
         isFlagRegister = (ecsAddress & (1 << 29)) != 0 && (flEcs & (1 << 29)) != 0;
-        if (isFlagRegister == FALSE && modelType == ModelCyber865)
+        if ((isFlagRegister == FALSE) && (modelType == ModelCyber865))
             {
-            if ((absEcsAddr & (5 << 22)) == (4 << 22)
-                || (absEcsAddr & (3 << 28)) == (1 << 28))
+            if (((absEcsAddr & (5 << 22)) == (4 << 22))
+                || ((absEcsAddr & (3 << 28)) == (1 << 28)))
                 {
                 isZeroFill = TRUE;
                 }
@@ -2439,7 +2475,7 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
         flEcs          = (u32)(activeCpu->regFlEcs & Mask24);
         absEcsAddr     = ecsAddress + raEcs;
         isFlagRegister = (ecsAddress & (1 << 23)) != 0 && (flEcs & (1 << 23)) != 0;
-        if (isFlagRegister == FALSE && modelType == ModelCyber865)
+        if ((isFlagRegister == FALSE) && (modelType == ModelCyber865))
             {
             if ((absEcsAddr & (7 << 21)) == (1 << 21))
                 {
@@ -2466,10 +2502,22 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
     fprintf(emLog, "\nECS block %s: %010o  RAE %010o, FLE %010o  CM %07o  RA %08o  FL %08o  Words %d",
             writeToEcs ? "write" : "read ",
             ecsAddress, raEcs, flEcs, cmAddress, activeCpu->regRaCm, activeCpu->regFlCm, wordCount);
-    if (isExpandedAddress) fputs("  exp", emLog);
-    if (isFlagRegister)    fputs("  flag", emLog);
-    if (isZeroFill)        fputs("  zero fill", emLog);
-    if (isMaintenance)     fputs("  maint", emLog);
+    if (isExpandedAddress)
+        {
+        fputs("  exp", emLog);
+        }
+    if (isFlagRegister)
+        {
+        fputs("  flag", emLog);
+        }
+    if (isZeroFill)
+        {
+        fputs("  zero fill", emLog);
+        }
+    if (isMaintenance)
+        {
+        fputs("  maint", emLog);
+        }
 #endif
 
     /*
@@ -2580,6 +2628,7 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
                     isZeroFill = TRUE;
                     }
 #endif
+
                 /*
                 **  Error exit to lower 30 bits of instruction word.
                 */
@@ -2610,6 +2659,7 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
                     isZeroFill = TRUE;
                     }
 #endif
+
                 /*
                 **  Zero CM, but take error exit to lower 30 bits once zeroing is finished.
                 */
@@ -2809,7 +2859,7 @@ static void cpuCmuMoveIndirect(CpuContext *activeCpu)
     */
     activeCpu->opAddress = (u32)((activeCpu->opWord >> 30) & Mask18);
     activeCpu->opAddress = cpuAdd18(activeCpu->regB[activeCpu->opJ], activeCpu->opAddress);
-    failed    = cpuReadMem(activeCpu, activeCpu->opAddress, &descWord);
+    failed = cpuReadMem(activeCpu, activeCpu->opAddress, &descWord);
     if (failed)
         {
         return;
@@ -3397,7 +3447,7 @@ static void cpOp01(CpuContext *activeCpu)
             return;
             }
 
-        activeCpu->regP = activeCpu->opAddress;
+        activeCpu->regP     = activeCpu->opAddress;
         activeCpu->opOffset = 0;
 
         if ((features & HasInstructionStack) != 0)
@@ -3459,18 +3509,19 @@ static void cpOp01(CpuContext *activeCpu)
             **  if not, it is interpreted as an illegal instruction.
             */
             cpuOpIllegal(activeCpu);
+
             return;
             }
 
         cpuAcquireExchangeMutex();
-        if (activeCpu->ppRequestingExchange == -1
-            && (monitorCpu == -1 || monitorCpu == activeCpu->id))
+        if ((activeCpu->ppRequestingExchange == -1)
+            && ((monitorCpu == -1) || (monitorCpu == activeCpu->id)))
             {
             activeCpu->regP      = (activeCpu->regP + 1) & Mask18;
             activeCpu->isStopped = TRUE;
             cpuExchangeJump(activeCpu,
-                activeCpu->isMonitorMode ? activeCpu->opAddress + activeCpu->regB[activeCpu->opJ] : activeCpu->regMa,
-                TRUE);
+                            activeCpu->isMonitorMode ? activeCpu->opAddress + activeCpu->regB[activeCpu->opJ] : activeCpu->regMa,
+                            TRUE);
             }
         else
             {
@@ -3884,7 +3935,7 @@ static void cpOp22(CpuContext *activeCpu)
 
     if ((count & Sign18) == 0)
         {
-        count        &= Mask6;
+        count &= Mask6;
         activeCpu->regX[activeCpu->opI] = shiftLeftCircular(acc60, count);
         }
     else
@@ -3928,8 +3979,8 @@ static void cpOp23(CpuContext *activeCpu)
         }
     else
         {
-        count         = ~count;
-        count        &= Mask6;
+        count  = ~count;
+        count &= Mask6;
         activeCpu->regX[activeCpu->opI] = shiftLeftCircular(acc60, count);
         }
     }
@@ -4239,13 +4290,13 @@ static void cpOp47(CpuContext *activeCpu)
     /*
     **  CXi Xk
     */
-    acc60         = activeCpu->regX[activeCpu->opK] & Mask60;
-    acc60         = ((acc60 & 0xAAAAAAAAAAAAAAAA) >> 1) + (acc60 & 0x5555555555555555);
-    acc60         = ((acc60 & 0xCCCCCCCCCCCCCCCC) >> 2) + (acc60 & 0x3333333333333333);
-    acc60         = ((acc60 & 0xF0F0F0F0F0F0F0F0) >> 4) + (acc60 & 0x0F0F0F0F0F0F0F0F);
-    acc60         = ((acc60 & 0xFF00FF00FF00FF00) >> 8) + (acc60 & 0x00FF00FF00FF00FF);
-    acc60         = ((acc60 & 0xFFFF0000FFFF0000) >> 16) + (acc60 & 0x0000FFFF0000FFFF);
-    acc60         = ((acc60 & 0xFFFFFFFF00000000) >> 32) + (acc60 & 0x00000000FFFFFFFF);
+    acc60 = activeCpu->regX[activeCpu->opK] & Mask60;
+    acc60 = ((acc60 & 0xAAAAAAAAAAAAAAAA) >> 1) + (acc60 & 0x5555555555555555);
+    acc60 = ((acc60 & 0xCCCCCCCCCCCCCCCC) >> 2) + (acc60 & 0x3333333333333333);
+    acc60 = ((acc60 & 0xF0F0F0F0F0F0F0F0) >> 4) + (acc60 & 0x0F0F0F0F0F0F0F0F);
+    acc60 = ((acc60 & 0xFF00FF00FF00FF00) >> 8) + (acc60 & 0x00FF00FF00FF00FF);
+    acc60 = ((acc60 & 0xFFFF0000FFFF0000) >> 16) + (acc60 & 0x0000FFFF0000FFFF);
+    acc60 = ((acc60 & 0xFFFFFFFF00000000) >> 32) + (acc60 & 0x00000000FFFFFFFF);
     activeCpu->regX[activeCpu->opI] = acc60 & Mask60;
     }
 

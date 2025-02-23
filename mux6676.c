@@ -263,17 +263,17 @@ void mux6676ShowStatus()
             {
             if (gp->listenFd > 0)
                 {
-                sprintf(outBuf, "    >   %-8s C%02o E%02o     ",  mts, mp->channelNo, mp->eqNo);
+                sprintf(outBuf, "    >   %-8s C%02o E%02o     ", mts, mp->channelNo, mp->eqNo);
                 opDisplay(outBuf);
-                sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(gp->listenFd), "", cts, "listening");
+                sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(gp->listenFd), "", cts, "listening");
                 opDisplay(outBuf);
                 for (i = 0, pp = mp->ports + gp->portIndex; i < gp->portCount; i++, pp++)
                     {
-                    if (pp->active && pp->connFd > 0)
+                    if (pp->active && (pp->connFd > 0))
                         {
-                        sprintf(outBuf, "    >   %-8s         P%02o ",  mts, pp->id);
+                        sprintf(outBuf, "    >   %-8s         P%02o ", mts, pp->id);
                         opDisplay(outBuf);
-                        sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), cts, "connected");
+                        sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), cts, "connected");
                         opDisplay(outBuf);
                         }
                     }
@@ -346,16 +346,17 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
     */
     if (dp->context[0] != NULL)
         {
-        fprintf(stderr, "(mux6676) Only one %s unit is possible per equipment\n", mts);
+        logDtError(LogErrorLocation, "Only one %s unit is possible per equipment\n", mts);
         exit(1);
         }
+
     /*
     **  Allocate and initialise mux control block.
     */
     mp = calloc(1, sizeof(MuxParam));
     if (mp == NULL)
         {
-        fprintf(stderr, "(mux6676) Failed to allocate %s context block\n", mts);
+        logDtError(LogErrorLocation, "Failed to allocate %s context block\n", mts);
         exit(1);
         }
     if (firstMux == NULL)
@@ -366,13 +367,13 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
         {
         lastMux->next = mp;
         }
-    lastMux  = mp;
+    lastMux = mp;
 
     sprintf(mp->name, "%s_CH%02o_EQ%02o", mts, channelNo, eqNo);
-    mp->type       = muxType;
-    mp->channelNo  = channelNo;
-    mp->eqNo       = eqNo;
-    mp->ioTurns    = IoTurnsPerPoll - 1;
+    mp->type      = muxType;
+    mp->channelNo = channelNo;
+    mp->eqNo      = eqNo;
+    mp->ioTurns   = IoTurnsPerPoll - 1;
     if (params == NULL)
         {
         params = "";
@@ -396,7 +397,7 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
                 }
             else
                 {
-                fprintf(stderr, "(mux6676) TCP port missing from %s definition\n", mts);
+                logDtError(LogErrorLocation, "TCP port missing from %s definition\n", mts);
                 exit(1);
                 }
             }
@@ -404,24 +405,24 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
             {
             portCount = maxPorts - mp->portCount;
             }
-        if (listenPort < 0 || listenPort > 65535)
+        if ((listenPort < 0) || (listenPort > 65535))
             {
-            fprintf(stderr, "(mux6676) Invalid TCP port number in %s definition: %d\n", mts, listenPort);
+            logDtError(LogErrorLocation, "Invalid TCP port number in %s definition: %d\n", mts, listenPort);
             exit(1);
             }
         if (portCount < 1)
             {
-            fprintf(stderr, "(mux6676) Invalid port count %d in %s definition, valid range is 0 < count <= %d\n", portCount, mts, maxPorts);
+            logDtError(LogErrorLocation, "Invalid port count %d in %s definition, valid range is 0 < count <= %d\n", portCount, mts, maxPorts);
             exit(1);
             }
-        gp = &mp->portGroups[g++];
+        gp             = &mp->portGroups[g++];
         gp->portIndex  = mp->portCount;
         gp->portCount  = portCount;
         gp->listenPort = listenPort;
         mp->portCount += portCount;
         if (mp->portCount > maxPorts)
             {
-            fprintf(stderr, "(mux6676) Invalid total port count %d in %s definition, valid range is 0 < count <= %d\n", mp->portCount, mts, maxPorts);
+            logDtError(LogErrorLocation, "Invalid total port count %d in %s definition, valid range is 0 < count <= %d\n", mp->portCount, mts, maxPorts);
             exit(1);
             }
         if (listenPort > 0)
@@ -429,24 +430,37 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
             /*
             **  Create socket, bind to specified port, and begin listening for connections
             */
-            gp->listenFd = netCreateListener(listenPort);
+            gp->listenFd = (int)netCreateListener(listenPort);
 #if defined(_WIN32)
             if (gp->listenFd == INVALID_SOCKET)
 #else
             if (gp->listenFd == -1)
 #endif
                 {
-                fprintf(stderr, "(mux6676) Can't listen for %s on port %d\n", mts, listenPort);
+                logDtError(LogErrorLocation, "Can't listen for %s on port %d\n", mts, listenPort);
                 exit(1);
                 }
             }
+
         /*
         **  Advance to next port/count pair
         */
-        while (*cp != '\0' && *cp != ',') cp += 1;
-        if (*cp == ',') cp += 1;
-        while (*cp != '\0' && *cp != ',') cp += 1;
-        if (*cp == ',') cp += 1;
+        while (*cp != '\0' && *cp != ',')
+            {
+            cp += 1;
+            }
+        if (*cp == ',')
+            {
+            cp += 1;
+            }
+        while (*cp != '\0' && *cp != ',')
+            {
+            cp += 1;
+            }
+        if (*cp == ',')
+            {
+            cp += 1;
+            }
         }
     dp->context[0] = mp;
 
@@ -456,13 +470,16 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
     mp->ports = (PortParam *)calloc(mp->portCount, sizeof(PortParam));
     if (mp->ports == NULL)
         {
-        fprintf(stderr, "(mux6676) Failed to allocate %s context block\n", mts);
+        logDtError(LogErrorLocation, "Failed to allocate %s context block\n", mts);
         exit(1);
         }
     gp = &mp->portGroups[0];
     for (i = 0, pp = mp->ports; i < mp->portCount; i++, pp++)
         {
-        if (i >= gp->portIndex + gp->portCount) gp += 1;
+        if (i >= gp->portIndex + gp->portCount)
+            {
+            gp += 1;
+            }
         pp->mux       = mp;
         pp->group     = gp;
         pp->enabled   = mp->type == DtMux6676; // enabled by default for 6676
@@ -482,7 +499,10 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
         {
         if (gp->listenPort != 0)
             {
-            if (n++ > 0) fputs(", ", stdout);
+            if (n++ > 0)
+                {
+                fputs(", ", stdout);
+                }
             printf("%d/%d", gp->listenPort, gp->portIndex);
             if (gp->portCount > 1)
                 {
@@ -842,6 +862,7 @@ static void mux667xDisconnect(void)
 static void mux667xCheckIo(MuxParam *mp)
     {
     PortParam *availablePort;
+
 #if defined(_WIN32)
     u_long blockEnable = 1;
 #endif
@@ -897,7 +918,7 @@ static void mux667xCheckIo(MuxParam *mp)
                     }
                 }
             }
-        else if (pp->enabled && pp->group->listenFd != 0 && !FD_ISSET(pp->group->listenFd, &readFds))
+        else if (pp->enabled && (pp->group->listenFd != 0) && !FD_ISSET(pp->group->listenFd, &readFds))
             {
             FD_SET(pp->group->listenFd, &readFds);
             if (pp->group->listenFd > maxFd)
@@ -989,11 +1010,14 @@ static void mux667xCheckIo(MuxParam *mp)
         }
     for (g = 0, gp = &mp->portGroups[0]; g < MaxPortGroups && gp->portCount > 0; g++, gp++)
         {
-        if (gp->listenFd != 0 && FD_ISSET(gp->listenFd, &readFds))
+        if ((gp->listenFd != 0) && FD_ISSET(gp->listenFd, &readFds))
             {
             fromLen = sizeof(from);
-            fd = accept(gp->listenFd, (struct sockaddr *)&from, &fromLen);
-            if (fd < 0) break;
+            fd      = (int)accept(gp->listenFd, (struct sockaddr *)&from, &fromLen);
+            if (fd < 0)
+                {
+                break;
+                }
             availablePort = NULL;
             for (i = gp->portIndex; i < gp->portIndex + gp->portCount; i++)
                 {
@@ -1012,11 +1036,13 @@ static void mux667xCheckIo(MuxParam *mp)
                 availablePort->inOutIdx  = 0;
                 availablePort->outInIdx  = 0;
                 availablePort->outOutIdx = 0;
+
                 /*
                 **  Set Keepalive option so that we can eventually discover if
                 **  a client has been rebooted.
                 */
                 setsockopt(availablePort->connFd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
+
                 /*
                 **  Make socket non-blocking.
                 */
@@ -1027,7 +1053,7 @@ static void mux667xCheckIo(MuxParam *mp)
 #endif
                 if (availablePort->mux->type == DtMux6676)
                     {
-                    send(fd, connectingMsg, strlen(connectingMsg), 0);
+                    send(fd, connectingMsg, (int)strlen(connectingMsg), 0);
                     }
 #if DEBUG_NETIO
 #if DEBUG_6671
@@ -1050,7 +1076,7 @@ static void mux667xCheckIo(MuxParam *mp)
                 {
                 if (mp->type == DtMux6676)
                     {
-                    send(fd, noPortsMsg, strlen(noPortsMsg), 0);
+                    send(fd, noPortsMsg, (int)strlen(noPortsMsg), 0);
                     }
                 netCloseConnection(fd);
                 }

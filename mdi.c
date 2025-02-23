@@ -46,7 +46,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#endif 
+#endif
 
 
 #include "const.h"
@@ -353,12 +353,12 @@ void mdiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         }
 #endif
 
-    /*  
+    /*
     ** set HCP software type, exit if npuSw is not SwUndefined
     */
     if (npuSw != SwUndefined)
         {
-        fprintf(stderr, "(cci_hip) CCP and CCI devices are mutually exclusive\n");
+        logDtError(LogErrorLocation, "CCP and CCI devices are mutually exclusive\n");
         exit(1);
         }
     npuSw = SwCCP;
@@ -380,7 +380,7 @@ void mdiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     mdi = calloc(1, sizeof(MdiParam));
     if (mdi == NULL)
         {
-        fprintf(stderr, "Failed to allocate mdi context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate mdi context block\n");
         exit(1);
         }
 
@@ -430,8 +430,8 @@ bool mdiHipUplineBlockImpl(NpuBuffer *bp)
         if ((bp != mdi->uplineData)
             || (bp->data[BlkOffCN] != mdi->uplineData->data[BlkOffCN]))
             {
-            fprintf(stderr, "(mdi     ) MDI upline block rejected, CN=%02X, BT=%02X, PDU size=%d\n", bp->data[BlkOffCN],
-                    bp->data[BlkOffBTBSN] & BlkMaskBT, bp->numBytes);
+            logDtError(LogErrorLocation, "MDI upline block rejected, CN=%02X, BT=%02X, PDU size=%d\n", bp->data[BlkOffCN],
+                       bp->data[BlkOffBTBSN] & BlkMaskBT, bp->numBytes);
             mdiPrintStackTrace(stderr);
             }
 #endif

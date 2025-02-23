@@ -245,7 +245,7 @@ void cciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     */
     if (npuSw != SwUndefined)
         {
-        fprintf(stderr, "(cci_hip) CCI and CCP devices are mutually exclusive\n");
+        logDtError(LogErrorLocation, "CCI and CCP devices are mutually exclusive\n");
         exit(1);
         }
     npuSw = SwCCI;
@@ -257,13 +257,13 @@ void cciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     if (npuSvmCouplerNode != 0)
         {
         npuSvmCouplerNode = 0;
-        fprintf(stderr, "(cci_hip) set coupler node to 0\n");
+        logDtError(LogErrorLocation, "set coupler node to 0\n");
         }
 
     if (npuSvmNpuNode != 2)
         {
         npuSvmNpuNode = 2;
-        fprintf(stderr, "(cci_hip) set npu node to 2\n");
+        logDtError(LogErrorLocation, "set npu node to 2\n");
         }
 
     /*
@@ -284,7 +284,7 @@ void cciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     cci = calloc(1, sizeof(CciParam));
     if (cci == NULL)
         {
-        fprintf(stderr, "(cci_hip) Failed to allocate cci context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate cci context block\n");
         exit(1);
         }
 
@@ -481,7 +481,7 @@ static void cciReset(void)
     cciHipState = StHipIdle;
 #if (DEBUG > 0)
     fprintf(cciLog, "(cci_hip) NPU reset\n");
-    fprintf(stderr, "(cci_hip) NPU reset\n");
+    logDtError(LogErrorLocation, "NPU reset\n");
 #endif
     }
 
@@ -500,7 +500,7 @@ static FcStatus cciHipFunc(PpWord funcCode)
     CciHcpState oldHcpState;
 
     funcCode &= ~FcNpuEqMask;
-    u16         sum;
+    u16 sum;
 
 #if (DEBUG > 1)
     if (funcCode != FcNpuInCouplerStatus)
@@ -526,7 +526,7 @@ static FcStatus cciHipFunc(PpWord funcCode)
     case FcNpuInCouplerStatus:
 
         switch (cciHipState)
-            {
+        {
         case StHipIdle:
             /*
             **  Poll network status.
@@ -551,7 +551,7 @@ static FcStatus cciHipFunc(PpWord funcCode)
 
         default:
             break;
-            }
+        }
 
         break;
 
@@ -642,14 +642,14 @@ static FcStatus cciHipFunc(PpWord funcCode)
             }
 
         switch (sum)
-            {
+        {
         /*
         ** micro program started, respond with NPU idle state
         */
         case Fp0D0:      // fingerprint of the micro image
 #if (DEBUG > 0)
             fprintf(cciLog, "(cci_hip) NPU start micro program\n");
-            fprintf(stderr, "(cci_hip) NPU start micro program\n");
+            logDtError(LogErrorLocation, "NPU start micro program\n");
 #endif
             cciHipState = StHipIdle;
             oldHcpState = cciHcpState;
@@ -664,7 +664,7 @@ static FcStatus cciHipFunc(PpWord funcCode)
         case Fp0DZ:     // fingerprint of the dump program
 #if (DEBUG > 0)
             fprintf(cciLog, "(cci_hip) NPU start dump program\n");
-            fprintf(stderr, "(cci_hip) NPU start dump program\n");
+            logDtError(LogErrorLocation, "NPU start dump program\n");
 #endif
             cciHipState        = StHipIdle;
             cci->memory[0x1FF] = 1024;
@@ -678,7 +678,7 @@ static FcStatus cciHipFunc(PpWord funcCode)
         case Fp0D1:     // fingerprint of the 0D1 image
 
             switch (cciHcpState)
-                {
+            {
             case StHcpNotInitialized:
 
                 /*
@@ -686,7 +686,7 @@ static FcStatus cciHipFunc(PpWord funcCode)
                 */
 #if (DEBUG > 0)
                 fprintf(cciLog, "(cci_hip) NPU start macro program\n");
-                fprintf(stderr, "(cci_hip) NPU start macro program\n");
+                logDtError(LogErrorLocation, "NPU start macro program\n");
 #endif
                 cciHipState = StHipIdle;
                 cciHcpState = StHcpRunning;
@@ -700,7 +700,7 @@ static FcStatus cciHipFunc(PpWord funcCode)
                 */
 #if (DEBUG > 0)
                 fprintf(cciLog, "(cci_hip) NPU restart macro program\n");
-                fprintf(stderr, "(cci_hip) NPU restart macro program\n");
+                logDtError(LogErrorLocation, "NPU restart macro program\n");
 #endif
                 cciHipState = StHipIdle;
                 cciHcpState = StHcpRunning;
@@ -712,7 +712,7 @@ static FcStatus cciHipFunc(PpWord funcCode)
                 /*
                 ** Error: start NPU while macro program is running
                 */
-                fprintf(stderr, "(cci_hip) Fatal: StartNpu called while macro program is running\n");
+                logDtError(LogErrorLocation, "Fatal: StartNpu called while macro program is running\n");
                 break;
 
             default:
@@ -720,19 +720,19 @@ static FcStatus cciHipFunc(PpWord funcCode)
                 /*
                 ** Error: unknown image loaded
                 */
-                fprintf(stderr, "(cci_hip) Fatal: StartNpu called for unknown image\n");
+                logDtError(LogErrorLocation, "Fatal: StartNpu called for unknown image\n");
                 break;
-                }
-            break;
             }
+            break;
+        }
 
         return (FcProcessed);
-    }      // case funCode
+        }              // case funCode
 
     activeDevice->fcode = funcCode;
 
     return (FcAccepted);
-        }
+    }
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Perform I/O on NPU.
@@ -896,7 +896,7 @@ static void cciHipIo(void)
 #endif
 
             switch (orderCode)
-                {
+            {
             case OrdOutServiceMsg:
                 npuBipNotifyServiceMessage();
                 break;
@@ -912,7 +912,7 @@ static void cciHipIo(void)
             case OrdNotReadyForInput:
                 npuBipRetryInput();
                 break;
-                }
+            }
             }
 
         break;
@@ -937,7 +937,7 @@ static void cciHipIo(void)
     case FcNpuOutMemAddr0:
         if (activeChannel->full)
             {
-            cci->tempMemAddr0   = activeChannel->data;
+            cci->tempMemAddr0   = (u8)activeChannel->data;
             activeChannel->full = FALSE;
             }
         break;

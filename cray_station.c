@@ -288,8 +288,8 @@ void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     if (deviceName == NULL)
         {
-        fprintf(stderr, "(crayfei) Cray computer simulator connection information required for FEI on channel %o equipment %o unit %o\n",
-                channelNo, eqNo, unitNo);
+        logDtError(LogErrorLocation, "Cray computer simulator connection information required for FEI on channel %o equipment %o unit %o\n",
+                   channelNo, eqNo, unitNo);
         exit(1);
         }
 
@@ -321,10 +321,10 @@ void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     feip = calloc(1, sizeof(FeiParam));
     if (feip == NULL)
         {
-        fprintf(stderr, "(crayfei) Failed to allocate Cray Station FEI context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate Cray Station FEI context block\n");
         exit(1);
         }
-    dp->controllerContext       = feip;
+    dp->controllerContext = feip;
     if (firstFei == NULL)
         {
         firstFei = feip;
@@ -369,7 +369,7 @@ void csFeiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     hp = gethostbyname(feip->serverName);
     if (hp == NULL)
         {
-        fprintf(stderr, "(crayfei) Failed to lookup address of Cray computer simulator host %s\n", feip->serverName);
+        logDtError(LogErrorLocation, "Failed to lookup address of Cray computer simulator host %s\n", feip->serverName);
         exit(1);
         }
     feip->serverAddr.sin_family = AF_INET;
@@ -407,20 +407,22 @@ void csFeiShowStatus()
         ipAddr = ntohl(feip->serverAddr.sin_addr.s_addr);
         port   = ntohs(feip->serverAddr.sin_port);
         sprintf(peerAddress, "%d.%d.%d.%d:%d",
-          (ipAddr >> 24) & 0xff,
-          (ipAddr >> 16) & 0xff,
-          (ipAddr >>  8) & 0xff,
-          ipAddr         & 0xff,
-          port);
+                (ipAddr >> 24) & 0xff,
+                (ipAddr >> 16) & 0xff,
+                (ipAddr >> 8) & 0xff,
+                ipAddr & 0xff,
+                port);
 
         switch (feip->state)
             {
         case StCsFeiDisconnected:
-            sprintf(outBuf, FMTNETSTATUS"\n", ipAddress, peerAddress, "crs", "disconnected");
+            sprintf(outBuf, FMTNETSTATUS "\n", ipAddress, peerAddress, "crs", "disconnected");
             break;
+
         case StCsFeiConnecting:
-            sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(feip->fd), peerAddress, "crs", "connecting");
+            sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(feip->fd), peerAddress, "crs", "connecting");
             break;
+
         case StCsFeiSendLCP:
         case StCsFeiSendSubsegment:
         case StCsFeiRecvLCPLen:
@@ -429,8 +431,9 @@ void csFeiShowStatus()
         case StCsFeiRecvSubsegmentLen:
         case StCsFeiRecvSubsegment1:
         case StCsFeiRecvSubsegment2:
-            sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(feip->fd), netGetPeerTcpAddress(feip->fd), "crs", "connected");
+            sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(feip->fd), netGetPeerTcpAddress(feip->fd), "crs", "connected");
             break;
+
         default:
             strcpy(outBuf, "\n");
             break;
@@ -496,7 +499,7 @@ static void csFeiCheckStatus(FeiParam *feip)
         FD_SET(feip->fd, &writeFds);
         timeout.tv_sec  = 0;
         timeout.tv_usec = 0;
-        readySockets    = select(feip->fd + 1, NULL, &writeFds, NULL, &timeout);
+        readySockets    = select((int)(feip->fd + 1), NULL, &writeFds, NULL, &timeout);
         if ((readySockets > 0) && FD_ISSET(feip->fd, &writeFds))
             {
             csFeiReset(feip);
@@ -521,7 +524,7 @@ static void csFeiCheckStatus(FeiParam *feip)
             }
         timeout.tv_sec  = 0;
         timeout.tv_usec = 0;
-        readySockets    = select(feip->fd + 1, &readFds, &writeFds, NULL, &timeout);
+        readySockets    = select((int)(feip->fd + 1), &readFds, &writeFds, NULL, &timeout);
         if (readySockets > 0)
             {
             if (FD_ISSET(feip->fd, &readFds))
@@ -668,7 +671,6 @@ static void csFeiInitiateConnection(FeiParam *feip)
     int optVal;
 #endif
     int optEnable = 1;
-    int rc;
 
     currentTime = getSeconds();
     if (feip->nextConnectionAttempt > currentTime)
@@ -1026,14 +1028,14 @@ static void csFeiIo(void)
             break;
 
         default:
-            logError(LogErrorLocation, "channel %02o - invalid state: %d", activeChannel->id, feip->state);
+            logDtError(LogErrorLocation, "channel %02o - invalid state: %d", activeChannel->id, feip->state);
             break;
         }
         break;
 
     default:
-        logError(LogErrorLocation, "channel %02o - unsupported function code: %04o",
-                 activeChannel->id, activeDevice->fcode);
+        logDtError(LogErrorLocation, "channel %02o - unsupported function code: %04o",
+                   activeChannel->id, activeDevice->fcode);
         break;
         }
     }
