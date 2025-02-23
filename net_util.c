@@ -196,7 +196,7 @@ int netCreateListener(int port)
 #endif
         {
 #if DEBUG
-        logDtError(LogErrorLocation, "(net_util) netCreateSocket could not create socket\n");
+        logDtError(LogErrorLocation, "netCreateSocket could not create socket\n");
 #endif
 
         return sd;
@@ -223,7 +223,7 @@ int netCreateListener(int port)
         }
 
 #if DEBUG >= 2
-    logDtError(LogErrorLocation, "(net_util) netCreateSocket listen on port %d succeeded\n", port);
+    logDtError(LogErrorLocation, "netCreateSocket listen on port %d succeeded\n", port);
 #endif
 
     return sd;
@@ -507,7 +507,7 @@ int    netInitiateConnection(struct sockaddr *sap)
 #endif
 
 #if DEBUG >= 2
-    logDtError(LogErrorLocation, "(net_util) connect succeeded\n");
+    logDtError(LogErrorLocation, "Connect succeeded\n");
 #endif
 
     return sd;

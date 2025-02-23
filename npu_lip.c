@@ -318,7 +318,7 @@ void npuLipProcessUplineData(Pcb *pcbp)
                                              | pcbp->inputData[pcbp->controls.lip.inputIndex++];
             if (pcbp->controls.lip.blockLength > MaxBuffer)
                 {
-                logDtError(LogErrorLocation, "(npu_lip) Invalid block length %d received from %s\n",
+                logDtError(LogErrorLocation, "Invalid block length %d received from %s\n",
                            pcbp->controls.lip.blockLength, pcbp->ncbp->hostName);
 #if DEBUG
                 fprintf(npuLipLog, "Port %02x: invalid block length %d received from %s\n", pcbp->claPort,
@@ -472,7 +472,7 @@ void npuLipProcessDownlineData(NpuBuffer *bp)
                 return;
                 }
             }
-        logDtError(LogErrorLocation, "(npu_lip) Block received for unknown or disconnected node %02x\n", dn);
+        logDtError(LogErrorLocation, "Block received for unknown or disconnected node %02x\n", dn);
 #if DEBUG
         fprintf(npuLipLog, "Block received for unknown or disconnected node: %02x\n", dn);
 #endif
@@ -1033,7 +1033,7 @@ static void npuLipSendQueuedData(Pcb *pcbp)
             if (n < 0)
                 {
                 npuBipBufRelease(bp);
-                logDtError(LogErrorLocation, "(npu_lip) Failed to send whole block length to %s\n",
+                logDtError(LogErrorLocation, "Failed to send whole block length to %s\n",
                            pcbp->ncbp->hostName);
                 npuLipNotifyNetDisconnect(pcbp);
 

@@ -693,13 +693,20 @@ static void INThandler(int sig)
     char c;
 
     signal(sig, SIG_IGN);
+#if defined(WIN32)
     //  Use Async-safe output function.
-    //                        1 234567890....+....2....+....3..
+    //                         1 234567890....+....2....+....3..
     _write(STD_OUTPUT_HANDLE, "\n*WARNING*:=====================", 32);
     _write(STD_OUTPUT_HANDLE, "\n*WARNING*: Ctrl-C Intercepted! ", 32);
     _write(STD_OUTPUT_HANDLE, "\n*WARNING*:=====================", 32);
-    //                        1 2 34567890....+....2....+....3....+.
+    //                         1 2 34567890....+....2....+....3....+.
     _write(STD_OUTPUT_HANDLE, "\n\nDo you really want to quit? [y/n] ", 36);
+#else
+    fputs("\n*WARNING*:=====================", stderr);
+    fputs("\n*WARNING*: Ctrl-C Intercepted! ", stderr);
+    fputs("\n*WARNING*:=====================", stderr);
+    fputs("\n\nDo you really want to quit? [y/n] ", stderr);
+#endif
     c = (char)getchar();
     if ((c == 'y') || (c == 'Y'))
         {

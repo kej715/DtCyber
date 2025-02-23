@@ -983,7 +983,7 @@ static int npuNetAcceptConnections(fd_set *selectFds, int maxFd)
     rc = select(maxFd + 1, &acceptFds, NULL, NULL, &timeout);
     if (rc < 0)
         {
-        logDtError(LogErrorLocation, "(npu_net) select returned unexpected %d\n", rc);
+        logDtError(LogErrorLocation, "Select returned unexpected %d\n", rc);
         sleepMsec(1000);
         }
     else if (rc < 1)
@@ -1025,7 +1025,7 @@ static int npuNetAcceptConnections(fd_set *selectFds, int maxFd)
             break;
 
         default:
-            logDtError(LogErrorLocation, "(npu_net) Invalid connection type: %u\n", ncbp->connType);
+            logDtError(LogErrorLocation, "Invalid connection type: %u\n", ncbp->connType);
             break;
             }
         }
@@ -1174,7 +1174,7 @@ static int npuNetCreateConnections(void)
             break;
 
         default:
-            logDtError(LogErrorLocation, "(npu_net) Invalid connection type: %u\n", ncbp->connType);
+            logDtError(LogErrorLocation, "Invalid connection type: %u\n", ncbp->connType);
             break;
             }
         }
@@ -1206,14 +1206,14 @@ static bool npuNetCreateListeningSocket(Ncb *ncbp)
     if (sd == -1)
 #endif
         {
-        logDtError(LogErrorLocation, "(npu_net) Can't create listener for port %d\n", ncbp->tcpPort);
+        logDtError(LogErrorLocation, "Can't create listener for port %d\n", ncbp->tcpPort);
 
         return FALSE;
         }
     ncbp->lstnFd = sd;
 
 #if DEBUG >= 2
-    logDtError(LogErrorLocation, "(npu_net) created listener for port %d\n", ncbp->tcpPort);
+    logDtError(LogErrorLocation, "Created listener for port %d\n", ncbp->tcpPort);
 #endif
 
 

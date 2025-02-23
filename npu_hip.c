@@ -242,7 +242,7 @@ void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     */
     if (npuSw != SwUndefined)
         {
-        logDtError(LogErrorLocation, "(cci_hip) CCP and CCI devices are mutually exclusive\n");
+        logDtError(LogErrorLocation, "CCP and CCI devices are mutually exclusive\n");
         exit(1);
         }
     npuSw = SwCCP;
@@ -264,7 +264,7 @@ void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     npu = calloc(1, sizeof(NpuParam));
     if (npu == NULL)
         {
-        logDtError(LogErrorLocation, "(npu_hip) Failed to allocate npu context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate npu context block\n");
         exit(1);
         }
 

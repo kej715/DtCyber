@@ -292,14 +292,14 @@ NpuBuffer *npuBipBufGet(void)
                     {
                     for (k = 0; k < 16; k++)
                         {
-                        logDtError(LogErrorLocation, "%02X ", *data++);
+                        fprintf(stderr, "%02X ", *data++);
                         }
                     data -= 16;
                     for (k = 0; k < 16; k++)
                         {
                         if ((*data >= 0x20) && (*data < 0x7f))
                             {
-                            logDtError(LogErrorLocation, "%c", *data);
+                            fprintf(stderr, "%c", *data);
                             }
                         else
                             {

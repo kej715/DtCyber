@@ -112,6 +112,7 @@ void logInit(void)
     logF = fopen(LogFN, "wt");
     if (logF == NULL)
         {
+        perror("Error Opening logF/logInit()");
         fprintf(stderr, "(log    ) can't open log file %s", LogFN);
         }
     }
@@ -191,7 +192,7 @@ void logDtError(char *file, int line, char *fmt, ...)
     va_list param;
     char    *ixpos;
 
-#define buflen    32
+#define buflen    64
     char dtOutBuf[buflen];
     char dtFnBuf[128];
 
@@ -207,6 +208,10 @@ void logDtError(char *file, int line, char *fmt, ...)
         }
 
     fprintf(stderr, "%s ", dtOutBuf);
+    if (logF == 0)
+    {
+        fprintf(stderr,"logF is ZERO");
+    }
     fprintf(logF, "%s ", dtOutBuf);
 
     ixpos = strrchr(file, '\\');
@@ -240,8 +245,12 @@ void logDtError(char *file, int line, char *fmt, ...)
 
     va_start(param, fmt);
     vfprintf(stderr, fmt, param);
+    va_end(param);
+    //  Unix is quirky with va_* so we re-issue va_start
+    va_start(param, fmt);
     vfprintf(logF, fmt, param);
     va_end(param);
+
     ixpos = strrchr(fmt, '\n');
     if (ixpos == NULL)
         {
