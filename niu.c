@@ -134,9 +134,9 @@ u16 platoConns;
 */
 static int              currInPort;
 static u32              currOutput;
-static DevSlot          *in = NULL;
+static DevSlot          *in     = NULL;
 static int              ioTurns = IoTurnsPerPoll - 1;
-static DevSlot          *out = NULL;
+static DevSlot          *out    = NULL;
 static int              lastInPort;
 static int              listenFd = 0;
 static LocalRing        localInput[NiuLocalStations];
@@ -209,12 +209,12 @@ void niuInInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
         }
     if ((platoPort < 1) || (platoPort > 65535))
         {
-        fprintf(stderr, "(niu    ) Invalid TCP port number in NIU definition: %d\n", platoPort);
+        logDtError(LogErrorLocation, "Invalid TCP port number in NIU definition: %d\n", platoPort);
         exit(1);
         }
     if (platoConns < 1)
         {
-        fprintf(stderr, "(niu    ) Invalid connection count in NIU definition: %d\n", platoConns);
+        logDtError(LogErrorLocation, "Invalid connection count in NIU definition: %d\n", platoConns);
         exit(1);
         }
 
@@ -296,7 +296,7 @@ void niuLocalKey(u16 key, int stat)
 
     if (stat >= NiuLocalStations)
         {
-        fprintf(stderr, "Local station number out of range: %d\n", stat);
+        logDtError(LogErrorLocation, "Local station number out of range: %d\n", stat);
         exit(1);
         }
     rp = &localInput[stat];
@@ -328,7 +328,7 @@ void niuSetOutputHandler(niuProcessOutput *h, int stat)
     {
     if (stat >= NiuLocalStations)
         {
-        fprintf(stderr, "Local station number out of range: %d\n", stat);
+        logDtError(LogErrorLocation, "Local station number out of range: %d\n", stat);
         exit(1);
         }
     outputHandler[stat] = h;
@@ -344,7 +344,6 @@ void niuSetOutputHandler(niuProcessOutput *h, int stat)
 **------------------------------------------------------------------------*/
 void niuShowStatus()
     {
-    int       g;
     int       i;
     char      outBuf[200];
     PortParam *pp;
@@ -353,15 +352,15 @@ void niuShowStatus()
         {
         sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "NIU", in->channel->id, in->eqNo);
         opDisplay(outBuf);
-        sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(listenFd), "", "plato", "listening");
+        sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(listenFd), "", "plato", "listening");
         opDisplay(outBuf);
         for (i = 0, pp = portVector; i < platoConns; i++, pp++)
             {
-            if (pp->active && pp->connFd > 0)
+            if (pp->active && (pp->connFd > 0))
                 {
                 sprintf(outBuf, "    >   %-8s         P%02o ", "NIU", pp->id);
                 opDisplay(outBuf);
-                sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), "plato", "connected");
+                sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), "plato", "connected");
                 opDisplay(outBuf);
                 }
             }
@@ -387,8 +386,8 @@ void niuShowStatus()
 **------------------------------------------------------------------------*/
 static void niuInit(void)
     {
-    u8                 i;
-    PortParam          *pp;
+    u8        i;
+    PortParam *pp;
 
 #if DEBUG_PP || DEBUG_NET
     if (niuLog == NULL)
@@ -431,14 +430,14 @@ static void niuInit(void)
     /*
     **  Start listening for new connections on the configured PLATO port number
     */
-    listenFd = netCreateListener(platoPort);
+    listenFd = (int)netCreateListener(platoPort);
 #if defined(_WIN32)
     if (listenFd == INVALID_SOCKET)
 #else
     if (listenFd == -1)
 #endif
         {
-        fprintf(stderr, "(niu    ) Can't listen for NIU on port %d\n", platoPort);
+        logDtError(LogErrorLocation, "Can't listen for NIU on port %d\n", platoPort);
         exit(1);
         }
 
@@ -781,7 +780,8 @@ static void niuDisconnect(void)
 **------------------------------------------------------------------------*/
 static void niuCheckIo(void)
     {
-    PortParam      *availablePort;
+    PortParam *availablePort;
+
 #if defined(_WIN32)
     u_long         blockEnable = 1;
 #endif
@@ -900,7 +900,7 @@ static void niuCheckIo(void)
     if ((availablePort != NULL) && FD_ISSET(listenFd, &readFds))
         {
         fromLen = sizeof(from);
-        availablePort->connFd = accept(listenFd, (struct sockaddr *)&from, &fromLen);
+        availablePort->connFd = (int)accept(listenFd, (struct sockaddr *)&from, &fromLen);
         if (availablePort->connFd > 0)
             {
             availablePort->active    = TRUE;

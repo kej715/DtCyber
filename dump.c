@@ -102,7 +102,7 @@ void dumpInit(void)
         cpuF[cp] = fopen(fileName, "wt");
         if (cpuF[cp] == NULL)
             {
-            logError(LogErrorLocation, "(dump   ) can't open cpu[%o] dump", cp);
+            logDtError(LogErrorLocation, "Can't open cpu[%o] dump", cp);
             }
         }
 
@@ -112,7 +112,7 @@ void dumpInit(void)
         ppuF[pp] = fopen(fileName, "wt");
         if (ppuF[pp] == NULL)
             {
-            logError(LogErrorLocation, "(dump   ) can't open ppu[%02o] dump", pp);
+            logDtError(LogErrorLocation, "can't open ppu[%02o] dump", pp);
             }
         }
     }
@@ -160,7 +160,7 @@ void dumpAll(void)
     u8 cp;
     u8 pp;
 
-    fprintf(stderr, "(dump   ) dumping core...");
+    logDtError(LogErrorLocation, "dumping core...");
     fflush(stderr);
 
     for (cp = 0; cp < cpuCount; cp++)
@@ -369,7 +369,7 @@ void dumpDisassemblePpu(u8 pp)
     pf = fopen(ppDisName, "wt");
     if (pf == NULL)
         {
-        logError(LogErrorLocation, "can't open %s", ppDisName);
+        logDtError(LogErrorLocation, "can't open %s", ppDisName);
 
         return;
         }
@@ -426,7 +426,7 @@ void dumpRunningPpu(u8 pp)
     pf = fopen(ppDumpName, "wt");
     if (pf == NULL)
         {
-        logError(LogErrorLocation, "(dump   ) can't open %s", ppDumpName);
+        logDtError(LogErrorLocation, "can't open %s", ppDumpName);
 
         return;
         }
@@ -457,7 +457,7 @@ void dumpRunningCpu(u8 cp)
     pf = fopen(cpDumpName, "wt");
     if (pf == NULL)
         {
-        logError(LogErrorLocation, "(dump   ) can't open %s", cpDumpName);
+        logDtError(LogErrorLocation, "can't open %s", cpDumpName);
 
         return;
         }

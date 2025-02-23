@@ -86,14 +86,14 @@ typedef struct opCmd
 
 typedef struct opCmdStackEntry
     {
-    int in;
-    int out;
+    int    in;
+    int    out;
 #if defined(_WIN32)
     SOCKET netConn;
 #else
-    int netConn;
+    int    netConn;
 #endif
-    char cwd[CwdPathSize];
+    char   cwd[CwdPathSize];
     } OpCmdStackEntry;
 
 typedef struct opNetTypeEntry
@@ -328,8 +328,8 @@ static int opListenHandle = 0;
 static int opListenPort = 0;
 
 static char opInBuf[256];
-static int  opInIdx  = 0;
-static char opOutBuf[MaxFSPath*2+128];
+static int  opInIdx = 0;
+static char opOutBuf[MaxFSPath * 2 + 128];
 static int  opOutIdx = 0;
 
 /*
@@ -373,7 +373,7 @@ void opDisplay(char *msg)
     ep = &opCmdStack[opCmdStackPtr];
     if (ep->netConn == 0)
         {
-        n = write(ep->out, msg, strlen(msg));
+        n = write(ep->out, msg, (int)strlen(msg));
         }
     else
         {
@@ -384,16 +384,22 @@ void opDisplay(char *msg)
         sp = cp = msg;
         while (*sp != '\0')
             {
-            while (*cp != '\0' && *cp != '\n') cp += 1;
+            while (*cp != '\0' && *cp != '\n')
+                {
+                cp += 1;
+                }
             if (*cp == '\n')
                 {
-                if (cp > sp) send(ep->netConn, sp, cp - sp, 0);
+                if (cp > sp)
+                    {
+                    send(ep->netConn, sp, (int)(cp - sp), 0);
+                    }
                 send(ep->netConn, "\r\n", 2, 0);
                 cp += 1;
                 }
             else if (cp > sp)
                 {
-                send(ep->netConn, sp, cp - sp, 0);
+                send(ep->netConn, sp, (int)(cp - sp), 0);
                 }
             sp = cp;
             }
@@ -417,6 +423,7 @@ bool opIsConsoleInput(void)
     OpCmdStackEntry *ep;
 
     ep = &opCmdStack[opCmdStackPtr];
+
     return ep->netConn == 0 && ep->in == fileno(stdin);
     }
 
@@ -510,19 +517,19 @@ static void opThread(void *param)
 static void *opThread(void *param)
 #endif
     {
-    OpCmd *cp;
-    char  cmd[256];
+    OpCmd           *cp;
+    char            cmd[256];
     OpCmdStackEntry *ep;
-    bool  isNetConnClosed;
-    int   len;
-    char  name[80];
-    int   newIn;
-    char  *params;
-    char  path[256];
-    char  *pos;
-    char  *sp;
+    bool            isNetConnClosed;
+    int             len;
+    char            name[80];
+    int             newIn;
+    char            *params;
+    char            path[256];
+    char            *pos;
+    char            *sp;
 
-    ep = &opCmdStack[opCmdStackPtr];
+    ep          = &opCmdStack[opCmdStackPtr];
     ep->in      = fileno(stdin);
     ep->out     = fileno(stdout);
     ep->netConn = 0;
@@ -548,10 +555,10 @@ static void *opThread(void *param)
     if (initOpenOperatorSection() == 1)
         {
         opCmdStackPtr += 1;
-        ep = &opCmdStack[opCmdStackPtr];
-        ep->in      = -1;
-        ep->out     = opCmdStack[opCmdStackPtr - 1].out;
-        ep->netConn = 0;
+        ep             = &opCmdStack[opCmdStackPtr];
+        ep->in         = -1;
+        ep->out        = opCmdStack[opCmdStackPtr - 1].out;
+        ep->netConn    = 0;
         strcpy(ep->cwd, opCmdStack[opCmdStackPtr - 1].cwd);
         }
 
@@ -563,7 +570,10 @@ static void *opThread(void *param)
         **  Wait for command input.
         */
         len = opReadLine(cmd, sizeof(cmd));
-        if (!emulationActive) break;
+        if (!emulationActive)
+            {
+            break;
+            }
         if (len <= 0)
             {
             if (opCmdStackPtr == 0)
@@ -595,12 +605,15 @@ static void *opThread(void *param)
                         }
                     opCmdStackPtr -= 1;
                     }
-                if (isNetConnClosed) opStartListening(opListenPort);
+                if (isNetConnClosed)
+                    {
+                    opStartListening(opListenPort);
+                    }
                 continue;
                 }
             }
 
-        if (ep->netConn == 0 && ep->in != fileno(stdin))
+        if ((ep->netConn == 0) && (ep->in != fileno(stdin)))
             {
             opDisplay(cmd);
             opDisplay("\n");
@@ -646,12 +659,12 @@ static void *opThread(void *param)
             if (newIn >= 0)
                 {
                 opCmdStackPtr += 1;
-                ep = &opCmdStack[opCmdStackPtr];
-                ep->in      = newIn;
-                ep->out     = opCmdStack[opCmdStackPtr - 1].out;
-                ep->netConn = 0;
-                pos  = strrchr(path, '/');
-                *pos = '\0';
+                ep             = &opCmdStack[opCmdStackPtr];
+                ep->in         = newIn;
+                ep->out        = opCmdStack[opCmdStackPtr - 1].out;
+                ep->netConn    = 0;
+                pos            = strrchr(path, '/');
+                *pos           = '\0';
                 strcpy(ep->cwd, path);
                 }
             else
@@ -717,25 +730,31 @@ static void opCmdPrompt(void)
 #if defined(_WIN32)
     SYSTEMTIME dt;
 
-    if (opCmdStackPtr != 0
-        && opCmdStack[opCmdStackPtr].netConn == 0
-        && opCmdStack[opCmdStackPtr].in != -1) return;
+    if ((opCmdStackPtr != 0)
+        && (opCmdStack[opCmdStackPtr].netConn == 0)
+        && (opCmdStack[opCmdStackPtr].in != -1))
+        {
+        return;
+        }
 
     GetLocalTime(&dt);
-    sprintf(opOutBuf, "\n%02d:%02d:%02d [%s] Operator> ", dt.wHour, dt.wMinute, dt.wSecond, displayName);
+    sprintf(opOutBuf, "\n%04d-%02d-%02d %02d:%02d:%02d \n[%s] Operator> ", dt.wYear, dt.wMonth, dt.wDay, dt.wHour, dt.wMinute, dt.wSecond, displayName);
 #else
     time_t    rawtime;
     struct tm *info;
     char      buffer[80];
 
-    if (opCmdStackPtr != 0
-        && opCmdStack[opCmdStackPtr].netConn == 0
-        && opCmdStack[opCmdStackPtr].in != -1) return;
+    if ((opCmdStackPtr != 0)
+        && (opCmdStack[opCmdStackPtr].netConn == 0)
+        && (opCmdStack[opCmdStackPtr].in != -1))
+        {
+        return;
+        }
 
     time(&rawtime);
     info = localtime(&rawtime);
-    strftime(buffer, 80, "%H:%M:%S", info);
-    sprintf(opOutBuf, "\n%s [%s] Operator> ", buffer, displayName);
+    strftime(buffer, 80, "%Y-%m-%d %H:%M:%S", info);
+    sprintf(opOutBuf, "\n%s \n[%s] Operator> ", buffer, displayName);
 #endif
     opDisplay(opOutBuf);
     }
@@ -754,27 +773,33 @@ static void opCmdPrompt(void)
 **------------------------------------------------------------------------*/
 static int opReadLine(char *buf, int size)
     {
-    char *bp;
-    char c;
+    char            *bp;
+    char            c;
     OpCmdStackEntry *ep;
-    int  err;
-    char *limit;
-    char *line;
-    int  lineNo;
-    int  n;
+    int             err;
+    char            *limit;
+    char            *line;
+    int             lineNo;
+    int             n;
 
     while (opActive)
         {
         sleepMsec(10);
         }
-    if (!emulationActive) return 0;
+    if (!emulationActive)
+        {
+        return 0;
+        }
 
-    bp = buf;
+    bp    = buf;
     limit = buf + (size - 2);
     opCmdPrompt();
     while (TRUE)
         {
-        if (!emulationActive) return 0;
+        if (!emulationActive)
+            {
+            return 0;
+            }
         if (opOutIdx >= opInIdx)
             {
             if (!opHasInput())
@@ -782,7 +807,7 @@ static int opReadLine(char *buf, int size)
                 sleepMsec(10);
                 continue;
                 }
-            ep = &opCmdStack[opCmdStackPtr];
+            ep       = &opCmdStack[opCmdStackPtr];
             opOutIdx = opInIdx = 0;
             if (ep->netConn != 0)
                 {
@@ -798,8 +823,11 @@ static int opReadLine(char *buf, int size)
                 else
                     {
                     strcpy(opInBuf, line);
-                    n = strlen(line);
-                    if (n == 0) continue;
+                    n = (int)strlen(line);
+                    if (n == 0)
+                        {
+                        continue;
+                        }
                     opInBuf[n++] = '\n';
                     }
                 }
@@ -818,7 +846,7 @@ static int opReadLine(char *buf, int size)
                         sleepMsec(10);
                         continue;
                         }
-                    fprintf(stderr, "Unexpected error while reading operator input: %d\n", err);
+                    logDtError(LogErrorLocation, "Unexpected error while reading operator input: %d\n", err);
 #else
                     if (errno == EWOULDBLOCK)
                         {
@@ -830,6 +858,7 @@ static int opReadLine(char *buf, int size)
                     netCloseConnection(ep->netConn);
                     opStartListening(opListenPort);
                     }
+
                 return -1;
                 }
             else if (n == 0)
@@ -837,7 +866,8 @@ static int opReadLine(char *buf, int size)
                 if (bp > buf)
                     {
                     *bp = '\0';
-                    return bp - buf;
+
+                    return (int)(bp - buf);
                     }
                 if (ep->netConn != 0)
                     {
@@ -848,6 +878,7 @@ static int opReadLine(char *buf, int size)
                     {
                     close(ep->in);
                     }
+
                 return 0;
                 }
             opInIdx = n;
@@ -858,11 +889,14 @@ static int opReadLine(char *buf, int size)
             if (c == '\n')
                 {
                 opPaused = FALSE;
-                if (bp > buf && *(bp - 1) == '\r') bp -= 1;
+                if ((bp > buf) && (*(bp - 1) == '\r'))
+                    {
+                    bp -= 1;
+                    }
                 *bp = '\0';
                 if (bp > buf)
                     {
-                    return bp - buf;
+                    return (int)(bp - buf);
                     }
                 else
                     {
@@ -870,7 +904,10 @@ static int opReadLine(char *buf, int size)
                     break;
                     }
                 }
-            if (bp < limit) *bp++ = c;
+            if (bp < limit)
+                {
+                *bp++ = c;
+                }
             }
         }
     }
@@ -894,9 +931,12 @@ static bool opHasInput()
     ep = &opCmdStack[opCmdStackPtr];
     if (ep->netConn == 0)
         {
-        if (ep->in == -1) return TRUE;
+        if (ep->in == -1)
+            {
+            return TRUE;
+            }
 #if defined(_WIN32)
-        if (ep->in == _fileno(stdin) && _isatty(_fileno(stdin)))
+        if ((ep->in == _fileno(stdin)) && _isatty(_fileno(stdin)))
             {
             if (kbhit())
                 {
@@ -905,12 +945,14 @@ static bool opHasInput()
             else
                 {
                 opAcceptConnection();
+
                 return FALSE;
                 }
             }
         else
             {
             opAcceptConnection();
+
             return TRUE;
             }
 #else
@@ -919,7 +961,7 @@ static bool opHasInput()
         }
     else
         {
-        fd = ep->netConn;
+        fd = (int)ep->netConn;
         }
 
     timeout.tv_sec  = 0;
@@ -935,6 +977,7 @@ static bool opHasInput()
     else
         {
         opAcceptConnection();
+
         return FALSE;
         }
     }
@@ -958,15 +1001,15 @@ static void opAcceptConnection(void)
     struct timeval     timeout;
 
 #if defined(_WIN32)
-    int fromLen;
+    int    fromLen;
     u_long blockEnable = 1;
 #else
     socklen_t fromLen;
 #endif
 
-    if (opListenHandle == 0
-        || opCmdStackPtr > 0
-        || opCmdStack[opCmdStackPtr].netConn != 0)
+    if ((opListenHandle == 0)
+        || (opCmdStackPtr > 0)
+        || (opCmdStack[opCmdStackPtr].netConn != 0))
         {
         return;
         }
@@ -977,22 +1020,23 @@ static void opAcceptConnection(void)
     FD_ZERO(&acceptFds);
     FD_SET(opListenHandle, &acceptFds);
 
-    n = select(opListenHandle + 1, &acceptFds, NULL, NULL, &timeout);
-    if (n <= 0 || !FD_ISSET(opListenHandle, &acceptFds))
+    n = select((int)(opListenHandle + 1), &acceptFds, NULL, NULL, &timeout);
+    if ((n <= 0) || !FD_ISSET(opListenHandle, &acceptFds))
         {
         return;
         }
     fromLen  = sizeof(from);
-    acceptFd = accept(opListenHandle, (struct sockaddr *)&from, &fromLen);
+    acceptFd = (int)accept(opListenHandle, (struct sockaddr *)&from, &fromLen);
     if (acceptFd >= 0)
         {
         if (opCmdStackPtr + 1 >= MaxCmdStkSize)
             {
             opDisplay("    > Too many nested operator input sources\n");
             netCloseConnection(acceptFd);
+
             return;
             }
-        setsockopt(acceptFd, SOL_SOCKET, SO_KEEPALIVE, (void*)&optEnable, sizeof(optEnable));
+        setsockopt(acceptFd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
 #if defined(_WIN32)
         ioctlsocket(acceptFd, FIONBIO, &blockEnable);
 #else
@@ -1001,7 +1045,7 @@ static void opAcceptConnection(void)
         opDisplay("\nOperator connection accepted\n");
         opCmdStackPtr += 1;
         netCloseConnection(opListenHandle);
-        opListenHandle                    = 0;
+        opListenHandle = 0;
         opCmdStack[opCmdStackPtr].netConn = acceptFd;
         opCmdStack[opCmdStackPtr].in      = 0;
         opCmdStack[opCmdStackPtr].out     = 0;
@@ -1084,13 +1128,19 @@ static char *opGetString(char *inStr, char *outStr, int outSize)
 **------------------------------------------------------------------------*/
 static bool opIsAbsolutePath(char *path)
     {
-    if (*path == '/') return TRUE;
+    if (*path == '/')
+        {
+        return TRUE;
+        }
 #if defined(_WIN32)
     if ((*(path + 1) == ':')
-        && (   (*path >= 'A' && *path <= 'Z')
-            || (*path >= 'a' && *path <= 'z'))) return TRUE;
-
+        && (((*path >= 'A') && (*path <= 'Z'))
+            || ((*path >= 'a') && (*path <= 'z'))))
+        {
+        return TRUE;
+        }
 #endif
+
     return FALSE;
     }
 
@@ -1260,7 +1310,7 @@ static void opCmdDumpCM(int fwa, int count)
     int    shiftCount;
     CpWord word;
 
-    if ((fwa < 0) || (count < 0) || (fwa + count > cpuMaxMemory))
+    if ((fwa < 0) || (count < 0) || ((u32)(fwa + count) > cpuMaxMemory))
         {
         opDisplay("    > Invalid CM address or count\n");
 
@@ -1290,7 +1340,7 @@ static void opCmdDumpEM(int fwa, int count)
     int    shiftCount;
     CpWord word;
 
-    if ((fwa < 0) || (count < 0) || (fwa + count > extMaxMemory))
+    if ((fwa < 0) || (count < 0) || ((u32)(fwa + count) > extMaxMemory))
         {
         opDisplay("    > Invalid EM address or count\n");
 
@@ -1458,6 +1508,7 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
                 {
                 sprintf(opOutBuf, "Unrecognized keyword: %%%s%%\n", kp);
                 opDisplay(opOutBuf);
+
                 return;
                 }
             }
@@ -1469,6 +1520,7 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
     if (bp > limit)
         {
         opDisplay("Key sequence is too long\n");
+
         return;
         }
     *bp = '\0';
@@ -1715,7 +1767,10 @@ static void opHelpSetOperatorPort(void)
 **------------------------------------------------------------------------*/
 static int opStartListening(int port)
     {
-    if (port <= 0) return FALSE;
+    if (port <= 0)
+        {
+        return FALSE;
+        }
 
     /*
     **  Start listening for new connections
@@ -1730,6 +1785,7 @@ static int opStartListening(int port)
         sprintf(opOutBuf, "    > Failed to listen on port %d\n", port);
         opDisplay(opOutBuf);
         opListenHandle = 0;
+
         return FALSE;
         }
 
@@ -2044,6 +2100,7 @@ void opCmdLoadCards(bool help, char *cmdParams)
         {
         sprintf(opOutBuf, "    > Invalid channel no %02o. (must be 0 to %02o) \n", channelNo, MaxChannels);
         opDisplay(opOutBuf);
+
         return;
         }
 
@@ -2051,6 +2108,7 @@ void opCmdLoadCards(bool help, char *cmdParams)
         {
         sprintf(opOutBuf, "    > Invalid equipment no %02o. (must be 0 to %02o) \n", equipmentNo, MaxEquipment);
         opDisplay(opOutBuf);
+
         return;
         }
 
@@ -2100,6 +2158,7 @@ void opCmdLoadCards(bool help, char *cmdParams)
         {
         sprintf(opOutBuf, "    > Failed to create temporary card deck '%s'\n", newDeck);
         opDisplay(opOutBuf);
+
         return;
         }
 
@@ -2125,6 +2184,7 @@ void opCmdLoadCards(bool help, char *cmdParams)
         {
         sprintf(opOutBuf, "    > Error learning status of file '%s' (%s)\n", newDeck, strerror(errno));
         opDisplay(opOutBuf);
+
         return;
         }
     if (statBuf.st_size == 0)
@@ -2193,7 +2253,7 @@ static void opInterpolateParam(char **srcp, char **dstp, int argc, char *argv[])
             {
             sp += 1;
             }
-        dfltValLen = sp - dfltVal;
+        dfltValLen = (int)(sp - dfltVal);
         }
     if (*sp == '}')
         {
@@ -2240,7 +2300,6 @@ static void opInterpolateProp(char **srcp, char **dstp, char *srcPath)
     char *cp;
     char *dfltVal;
     int  dfltValLen;
-    char delim;
     char *dp;
     FILE *fp;
     char *pp;
@@ -2273,8 +2332,8 @@ static void opInterpolateProp(char **srcp, char **dstp, char *srcPath)
             *pp++ = *sp++;
             }
         }
-    *pp = '\0';
-    sectionNameLen = pp - sectionName;
+    *pp            = '\0';
+    sectionNameLen = (int)(pp - sectionName);
 
     pp = propName;
     if (*sp == ':')
@@ -2289,13 +2348,16 @@ static void opInterpolateProp(char **srcp, char **dstp, char *srcPath)
 
     if (*sp == ':')
         {
-        sp += 1;
+        sp     += 1;
         dfltVal = sp;
-        while (*sp != '}' && *sp != '\0') sp += 1;
-        dfltValLen = sp - dfltVal;
+        while (*sp != '}' && *sp != '\0')
+            {
+            sp += 1;
+            }
+        dfltValLen = (int)(sp - dfltVal);
         }
-    
-    if (*sp == '}' && propName[0] != '\0' && sectionName[0] != '\0' && propFilePath[0] != '\0')
+
+    if ((*sp == '}') && (propName[0] != '\0') && (sectionName[0] != '\0') && (propFilePath[0] != '\0'))
         {
         *srcp = sp + 1;
 #if defined(_WIN32)
@@ -2310,7 +2372,7 @@ static void opInterpolateProp(char **srcp, char **dstp, char *srcPath)
                 *cp = '\0';
                 sprintf(propFilePath2, "%s/%s", srcPath, propFilePath);
                 *cp = '/';
-                pp = propFilePath2;
+                pp  = propFilePath2;
                 }
             }
         fp = fopen(pp, "r");
@@ -2323,10 +2385,16 @@ static void opInterpolateProp(char **srcp, char **dstp, char *srcPath)
             while (TRUE)
                 {
                 sp = fgets(sbuf, sizeof(sbuf), fp);
-                if (sp == NULL) break;
-                if (*sp == '['
-                    && memcmp(sp + 1, sectionName, sectionNameLen) == 0
-                    && *(sp + sectionNameLen + 1) == ']') break;
+                if (sp == NULL)
+                    {
+                    break;
+                    }
+                if ((*sp == '[')
+                    && (memcmp(sp + 1, sectionName, sectionNameLen) == 0)
+                    && (*(sp + sectionNameLen + 1) == ']'))
+                    {
+                    break;
+                    }
                 }
             if (sp != NULL) // named section found
                 {
@@ -2336,9 +2404,15 @@ static void opInterpolateProp(char **srcp, char **dstp, char *srcPath)
                 while (TRUE)
                     {
                     sp = fgets(sbuf, sizeof(sbuf), fp);
-                    if (sp == NULL || *sp == '[') break;
+                    if ((sp == NULL) || (*sp == '['))
+                        {
+                        break;
+                        }
                     cp = strchr(sp, '=');
-                    if (cp == NULL) continue;
+                    if (cp == NULL)
+                        {
+                        continue;
+                        }
                     *cp++ = '\0';
                     if (strcmp(propName, sp) == 0)
                         {
@@ -2348,6 +2422,7 @@ static void opInterpolateProp(char **srcp, char **dstp, char *srcPath)
                             }
                         *dstp = dp;
                         fclose(fp);
+
                         return;
                         }
                     }
@@ -2363,6 +2438,7 @@ static void opInterpolateProp(char **srcp, char **dstp, char *srcPath)
             *dp++ = *dfltVal++;
             }
         *dstp = dp;
+
         return;
         }
 
@@ -2448,6 +2524,7 @@ static int opPrepCards(char *str, FILE *fcb)
         {
         sprintf(opOutBuf, "    > Failed to open %s\n", path);
         opDisplay(opOutBuf);
+
         return -1;
         }
     while (TRUE)
@@ -2763,7 +2840,7 @@ static void opCmdShowState(bool help, char *cmdParams)
         return;
         }
 
-    cpMask = (cpuCount >  1) ? 0x03 : 0x01;
+    cpMask = (cpuCount > 1) ? 0x03 : 0x01;
     ppMask = (ppuCount > 10) ? 0xfffff : 0x3ff;
     if (strlen(cmdParams) > 0)
         {
@@ -2788,11 +2865,12 @@ static void opCmdShowState(bool help, char *cmdParams)
                     {
                     if (*(param + 2) == '\0')
                         {
-                        cpMask = (cpuCount >  1) ? 0x03 : 0x01;
+                        cpMask = (cpuCount > 1) ? 0x03 : 0x01;
                         }
                     else
                         {
                         opDisplay("    > Missing or invalid CPU number\n");
+
                         return;
                         }
                     }
@@ -2850,9 +2928,9 @@ static void opCmdShowState(bool help, char *cmdParams)
 
 static void opCmdShowStateCP(u8 cpMask)
     {
-    u8 cpNum;
+    u8         cpNum;
     CpuContext *cpu;
-    int i;
+    int        i;
 
     cpMask |= (1 << 2); // stopper
     cpNum   = 0;
@@ -2877,7 +2955,7 @@ static void opCmdShowStateCP(u8 cpMask)
             opDisplay("    > ---------------- CPU ---------------\n");
             }
         cpu = cpus + cpNum;
-        i = 0;
+        i   = 0;
         sprintf(opOutBuf, "    > P       %06o  A%d %06o  B%d %06o\n", cpu->regP, i, cpu->regA[i], i, cpu->regB[i]);
         opDisplay(opOutBuf);
         i++;
@@ -2964,7 +3042,7 @@ static void opCmdShowStatePP(u32 ppMask)
             {
             pp = &ppu[i++];
             sprintf(buf, "P %04o", pp->regP);
-            len = strlen(buf);
+            len = (int)strlen(buf);
             while (len < 16)
                 {
                 buf[len++] = ' ';
@@ -2990,7 +3068,7 @@ static void opCmdShowStatePP(u32 ppMask)
             {
             pp = &ppu[i++];
             sprintf(buf, "A %06o", pp->regA);
-            len = strlen(buf);
+            len = (int)strlen(buf);
             while (len < 16)
                 {
                 buf[len++] = ' ';
@@ -3017,7 +3095,7 @@ static void opCmdShowStatePP(u32 ppMask)
             {
             pp = &ppu[i++];
             sprintf(buf, "Q %04o", pp->regQ);
-            len = strlen(buf);
+            len = (int)strlen(buf);
             while (len < 16)
                 {
                 buf[len++] = ' ';
@@ -3053,7 +3131,7 @@ static void opCmdShowStatePP(u32 ppMask)
                     {
                     sprintf(buf, "R %010o", pp->regR);
                     }
-                len = strlen(buf);
+                len = (int)strlen(buf);
                 while (len < 16)
                     {
                     buf[len++] = ' ';
@@ -3364,7 +3442,7 @@ static void opHelpShowEquipment(void)
 static void opCmdShowNetwork(bool help, char *cmdParams)
     {
     OpNetTypeEntry *entry;
-    char *token;
+    char           *token;
 
     /*
     **  Process help request.
@@ -3388,16 +3466,20 @@ static void opCmdShowNetwork(bool help, char *cmdParams)
         for (token = strtok(cmdParams, ", "); token != NULL; token = strtok(NULL, ", "))
             {
             for (entry = netTypes; entry->name != NULL && strcasecmp(token, entry->name) != 0; entry++)
-                ;
+                {
+                }
             if (entry->name != NULL)
                 {
                 if (entry->handler != NULL)
+                    {
                     (*entry->handler)();
+                    }
                 }
             else
                 {
                 sprintf(opOutBuf, "    > Unrecognized network type: %s\n", token);
                 opDisplay(opOutBuf);
+
                 return;
                 }
             }
@@ -3407,7 +3489,9 @@ static void opCmdShowNetwork(bool help, char *cmdParams)
         for (entry = netTypes; entry->name != NULL; entry++)
             {
             if (entry->handler != NULL)
+                {
                 (*entry->handler)();
+                }
             }
         }
     }
@@ -3420,7 +3504,10 @@ static void opHelpShowNetwork(void)
     opDisplay("    >    <net-type> : ");
     for (entry = netTypes; entry->name != NULL; entry++)
         {
-        if (entry != netTypes) opDisplay(" | ");
+        if (entry != netTypes)
+            {
+            opDisplay(" | ");
+            }
         opDisplay(entry->name);
         }
     opDisplay("\n");
@@ -3581,13 +3668,14 @@ static void opCmdIdle(bool help, char *cmdParams)
 
         return;
         }
-    if (*cmdParams == 'B' || *cmdParams == 'b')
+    if ((*cmdParams == 'B') || (*cmdParams == 'b'))
         {
         numParam = sscanf(cmdParams + 1, "%u", &newThreshold);
         if (numParam < 1)
             {
             sprintf(opOutBuf, "    > Buffer count missing\n");
             opDisplay(opOutBuf);
+
             return;
             }
         idleNetBufs = newThreshold;
@@ -3602,12 +3690,14 @@ static void opCmdIdle(bool help, char *cmdParams)
             {
             sprintf(opOutBuf, "    > 2 parameters expected - %u provided\n", numParam);
             opDisplay(opOutBuf);
+
             return;
             }
         if ((newTrigger < 1) || (newSleep < 1))
             {
             sprintf(opOutBuf, "    > No parameters provided (1 or 2 expected)\n");
             opDisplay(opOutBuf);
+
             return;
             }
         idleTrigger = (u32)newTrigger;
@@ -3714,17 +3804,23 @@ static void opHelpStopHelpers(void)
 static void opDisplayVersion(void)
     {
     opDisplay("\n--------------------------------------------------------------------------------");
-    sprintf(opOutBuf, "\n     %s", DtCyberVersion); opDisplay(opOutBuf);
-    sprintf(opOutBuf, "\n     %s", DtCyberCopyright); opDisplay(opOutBuf);
-    sprintf(opOutBuf, "\n     %s", DtCyberLicense); opDisplay(opOutBuf);
-    sprintf(opOutBuf, "\n     %s", DtCyberLicenseDetails); opDisplay(opOutBuf);
+    sprintf(opOutBuf, "\n     %s", DtCyberVersion);
+    opDisplay(opOutBuf);
+    sprintf(opOutBuf, "\n     %s", DtCyberCopyright);
+    opDisplay(opOutBuf);
+    sprintf(opOutBuf, "\n     %s", DtCyberLicense);
+    opDisplay(opOutBuf);
+    sprintf(opOutBuf, "\n     %s", DtCyberLicenseDetails);
+    opDisplay(opOutBuf);
     opDisplay("\n--------------------------------------------------------------------------------");
-    sprintf(opOutBuf, "\n     Build date: %s", DtCyberBuildDate); opDisplay(opOutBuf);
+    sprintf(opOutBuf, "\n     Build date: %s", DtCyberBuildDate);
+    opDisplay(opOutBuf);
     opDisplay("\n--------------------------------------------------------------------------------");
     opDisplay("\n");
     }
 
 #if defined(_WIN32)
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Translate a Windows-style pathname to a Unix-style one
 **
@@ -3740,9 +3836,13 @@ static void opToUnixPath(char *path)
 
     for (cp = path; *cp != '\0'; cp++)
         {
-        if (*cp == '\\') *cp = '/';
+        if (*cp == '\\')
+            {
+            *cp = '/';
+            }
         }
     }
+
 #endif
 
 /*---------------------------  End Of File  ------------------------------*/

@@ -221,14 +221,14 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     */
     if (up->context[0] != NULL)
         {
-        fprintf(stderr, "(cp3446 ) Only one CP3446 unit is possible per equipment\n");
+        logDtError(LogErrorLocation, "Only one CP3446 unit is possible per equipment\n");
         exit(1);
         }
 
     cc = calloc(1, sizeof(CpContext));
     if (cc == NULL)
         {
-        fprintf(stderr, "(cp3446 ) Failed to allocate CP3446 context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate CP3446 context block\n");
         exit(1);
         }
 
@@ -263,7 +263,7 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     up->fcb[0] = fopen(cc->curFileName, "w");
     if (up->fcb[0] == NULL)
         {
-        fprintf(stderr, "(cp3446 ) Failed to open %s\n", cc->curFileName);
+        logDtError(LogErrorLocation, "Failed to open %s\n", cc->curFileName);
         exit(1);
         }
 
@@ -279,7 +279,7 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         else if (strcmp(deviceType, "026") != 0)
             {
-            fprintf(stderr, "(cp3446 ) Unrecognized card code name '%s'\n", deviceType);
+            logDtError(LogErrorLocation, "Unrecognized card code name '%s'\n", deviceType);
             exit(1);
             }
         }
@@ -340,7 +340,7 @@ void cp3446RemoveCards(char *params)
     int isuffix;
 
     struct tm   t;
-    char        fnameNew[MaxFSPath+64];
+    char        fnameNew[MaxFSPath + 64];
     static char msgBuf[80] = "";
     char        outBuf[400];
 
@@ -398,8 +398,8 @@ void cp3446RemoveCards(char *params)
         {
         renameOK = TRUE;        //  Since nothing was open - we're not renaming
         sprintf(outBuf, "(cp3446 ) cp3446RemoveCards: FCB is Null on channel %o equipment %o\n",
-               dp->channel->id,
-               dp->eqNo);
+                dp->channel->id,
+                dp->eqNo);
         opDisplay(outBuf);
         //  proceed to attempt to open a new FCB
         }
@@ -466,11 +466,12 @@ void cp3446RemoveCards(char *params)
         {
         sprintf(outBuf, "(cp3446 ) Failed to open %s\n", cc->curFileName);
         opDisplay(outBuf);
+
         return;
         }
 
-        sprintf(outBuf, "(cp3446 ) Cards removed and available on '%s'\n", fnameNew);
-        opDisplay(outBuf);
+    sprintf(outBuf, "(cp3446 ) Cards removed and available on '%s'\n", fnameNew);
+    opDisplay(outBuf);
     }
 
 /*
@@ -921,7 +922,7 @@ static char *cp3446Func2String(PpWord funcCode)
 void cp3446ShowStatus()
     {
     CpContext *cp;
-    char      outBuf[MaxFSPath+128];
+    char      outBuf[MaxFSPath + 128];
 
     for (cp = firstUnit; cp != NULL; cp = cp->nextUnit)
         {
@@ -930,7 +931,10 @@ void cp3446ShowStatus()
         sprintf(outBuf, "   %-20s (", cp->curFileName);
         opDisplay(outBuf);
         opDisplay(cp->binary ? "bin" : "char");
-        if (cp->rawCard) opDisplay(", raw");
+        if (cp->rawCard)
+            {
+            opDisplay(", raw");
+            }
         opDisplay(")\n");
         }
     }

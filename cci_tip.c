@@ -279,7 +279,7 @@ void cciTipProcessBuffer(NpuBuffer *bp, int priority)
                         cn, block[BlkOffPfc], block[BlkOffSfc]);
                 for (i = 0; i < bp->numBytes; i++)
                     {
-                    fprintf(stderr, " %02x", bp->data[i]);
+                    logDtError(LogErrorLocation, " %02x", bp->data[i]);
                     }
                 fputs("\n", stderr);
                 }
@@ -306,8 +306,8 @@ void cciTipProcessBuffer(NpuBuffer *bp, int priority)
 
 
             default:
-                fprintf(stderr, "(npu_tip) Downline data for unrecognized TIP type %u on connection %u\n",
-                        tp->tipType, tp->cn);
+                logDtError(LogErrorLocation, "(npu_tip) Downline data for unrecognized TIP type %u on connection %u\n",
+                           tp->tipType, tp->cn);
                 }
             cciTipSendAck(tp);
             break;

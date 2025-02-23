@@ -271,7 +271,7 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     if (extMaxMemory == 0)
         {
-        fprintf(stderr, "(dd885-42) Cannot configure 885-42 disk, no ECS configured\n");
+        logDtError(LogErrorLocation, "Cannot configure 885-42 disk, no ECS configured\n");
         exit(1);
         }
 
@@ -281,7 +281,7 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         dd885_42Log = fopen("dd885_42log.txt", "wt");
         if (dd885_42Log == NULL)
             {
-            fprintf(stderr, "dd885_42log.txt - aborting\n");
+            logDtError(LogErrorLocation, "Cannot Open dd885_42log.txt - aborting\n");
             exit(1);
             }
         }
@@ -304,7 +304,7 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     dp = (DiskParam *)calloc(1, sizeof(DiskParam));
     if (dp == NULL)
         {
-        fprintf(stderr, "(dd885-42) Failed to allocate dd885_42 context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate dd885_42 context block\n");
         exit(1);
         }
 
@@ -324,7 +324,7 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         **  Process options.
         */
         *opt++ = '\0';
-        fprintf(stderr, "(dd885-42) Unrecognized option name %s\n", opt);
+        logDtError(LogErrorLocation, "Unrecognized option name %s\n", opt);
         exit(1);
         }
 
@@ -398,7 +398,7 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         fcb = fopen(fname, "w+b");
         if (fcb == NULL)
             {
-            fprintf(stderr, "(dd885-42) Failed to open %s\n", fname);
+            logDtError(LogErrorLocation, "Failed to open %s\n", fname);
             exit(1);
             }
 
@@ -643,7 +643,7 @@ static FcStatus dd885_42Func(PpWord funcCode)
 #if DEBUG
         fprintf(dd885_42Log, " !!!!!FUNC %s not implemented but accepted!!!!!! ", dd885_42Func2String(funcCode));
 #endif
-        logError(LogErrorLocation, "ch %o, function %s not implemented\n", activeChannel->id, dd885_42Func2String(funcCode));
+        logDtError(LogErrorLocation, "ch %o, function %s not implemented\n", activeChannel->id, dd885_42Func2String(funcCode));
         break;
 
     case Fc885_42InterlockAutoload:
@@ -654,7 +654,7 @@ static FcStatus dd885_42Func(PpWord funcCode)
     case Fc885_42ReadFactoryData:
     case Fc885_42ReadUtilityMap:
     case Fc885_42ReadProtectedSector:
-        ignore = fread(&dp->buffer, sizeof dp->buffer, 1, fcb);
+        ignore = (int)fread(&dp->buffer, sizeof dp->buffer, 1, fcb);
         activeDevice->recordLength = ShortSectorSize * 5 + 2;
         break;
         }
@@ -704,7 +704,7 @@ static void dd885_42Io(void)
         if (activeChannel->full)
             {
             switch (activeDevice->recordLength--)
-            {
+                {
             case 4:
                 unitNo = activeChannel->data & 07;
                 if (unitNo != activeDevice->selectedUnit)
@@ -717,8 +717,8 @@ static void dd885_42Io(void)
                         }
                     else
                         {
-                        logError(LogErrorLocation, "channel %02o - invalid select: %4.4o",
-                                 activeChannel->id, (u32)activeDevice->fcode);
+                        logDtError(LogErrorLocation, "channel %02o - invalid select: %4.4o",
+                                   activeChannel->id, (u32)activeDevice->fcode);
                         activeDevice->selectedUnit = -1;
                         }
                     }
@@ -761,7 +761,7 @@ static void dd885_42Io(void)
             default:
                 activeDevice->recordLength = 0;
                 break;
-            }
+                }
 
 #if DEBUG
             fprintf(dd885_42Log, " %04o[%d]", activeChannel->data, activeChannel->data);
@@ -777,7 +777,7 @@ static void dd885_42Io(void)
             if (dp != NULL)
                 {
                 switch (activeDevice->recordLength--)
-                {
+                    {
                 case 2:
                     dp->emAddress[0] = activeChannel->data;
                     break;
@@ -797,7 +797,7 @@ static void dd885_42Io(void)
                 default:
                     activeDevice->recordLength = 0;
                     break;
-                }
+                    }
                 }
 #if DEBUG
             fprintf(dd885_42Log, " %04o", activeChannel->data);
@@ -813,7 +813,7 @@ static void dd885_42Io(void)
             if (dp != NULL)
                 {
                 switch (activeDevice->recordLength--)
-                {
+                    {
                 case 6:
                     dp->emAddress[0] = activeChannel->data;
                     break;
@@ -849,7 +849,7 @@ static void dd885_42Io(void)
                 default:
                     activeDevice->recordLength = 0;
                     break;
-                }
+                    }
                 }
 
 #if DEBUG
@@ -1048,7 +1048,7 @@ static i32 dd885_42Seek(DiskParam *dp)
 #if DEBUG
         fprintf(dd885_42Log, "ch %o, cylinder %d invalid\n", activeChannel->id, dp->cylinder);
 #endif
-        logError(LogErrorLocation, "ch %o, cylinder %d invalid\n", activeChannel->id, dp->cylinder);
+        logDtError(LogErrorLocation, "ch %o, cylinder %d invalid\n", activeChannel->id, dp->cylinder);
         activeDevice->status   = St885_42Abnormal | St885_42NonrecoverableError;
         dp->detailedStatus[2] |= 0010;
 
@@ -1060,7 +1060,7 @@ static i32 dd885_42Seek(DiskParam *dp)
 #if DEBUG
         fprintf(dd885_42Log, "ch %o, track %d invalid\n", activeChannel->id, dp->track);
 #endif
-        logError(LogErrorLocation, "ch %o, track %d invalid\n", activeChannel->id, dp->track);
+        logDtError(LogErrorLocation, "ch %o, track %d invalid\n", activeChannel->id, dp->track);
         activeDevice->status   = St885_42Abnormal | St885_42NonrecoverableError;
         dp->detailedStatus[2] |= 0010;
 
@@ -1072,7 +1072,7 @@ static i32 dd885_42Seek(DiskParam *dp)
 #if DEBUG
         fprintf(dd885_42Log, "ch %o, sector %d invalid\n", activeChannel->id, dp->sector);
 #endif
-        logError(LogErrorLocation, "ch %o, sector %d invalid\n", activeChannel->id, dp->sector);
+        logDtError(LogErrorLocation, "ch %o, sector %d invalid\n", activeChannel->id, dp->sector);
         activeDevice->status   = St885_42Abnormal | St885_42NonrecoverableError;
         dp->detailedStatus[2] |= 0010;
 
@@ -1135,7 +1135,7 @@ static bool dd885_42Read(DiskParam *dp, FILE *fcb)
     activeDevice->status  = 0;
     dp->detailedStatus[2] = Fc885_42Read << 4;
 
-    ignore = fread(&dp->buffer, sizeof dp->buffer, 1, fcb);
+    ignore = (int)fread(&dp->buffer, sizeof dp->buffer, 1, fcb);
     activeDevice->status = 0;
     dp->generalStatus[3] = dp->buffer.control[0];
     dp->generalStatus[4] = dp->buffer.control[1];
@@ -1164,7 +1164,7 @@ static bool dd885_42Read(DiskParam *dp, FILE *fcb)
         }
     else
         {
-        logError(LogErrorLocation, "ch %o, ECS transfer from 885-42 rejected, address: %08o\n", activeChannel->id, emAddress);
+        logDtError(LogErrorLocation, "ch %o, ECS transfer from 885-42 rejected, address: %08o\n", activeChannel->id, emAddress);
         activeDevice->status   = St885_42Abnormal | St885_42NonrecoverableError;
         dp->detailedStatus[2] |= 0010;
 
@@ -1223,7 +1223,7 @@ static bool dd885_42Write(DiskParam *dp, FILE *fcb)
         }
     else
         {
-        logError(LogErrorLocation, "ch %o, ECS transfer from 885-42 rejected, address: %08o\n", activeChannel->id, emAddress);
+        logDtError(LogErrorLocation, "ch %o, ECS transfer from 885-42 rejected, address: %08o\n", activeChannel->id, emAddress);
         activeDevice->status   = St885_42Abnormal | St885_42NonrecoverableError;
         dp->detailedStatus[2] |= 0010;
 
@@ -1306,7 +1306,7 @@ static char *dd885_42Func2String(PpWord funcCode)
 void dd885_42ShowDiskStatus()
     {
     DiskParam *dp = firstDisk;
-    char      outBuf[MaxFSPath+128];
+    char      outBuf[MaxFSPath + 128];
 
     if (dp == NULL)
         {

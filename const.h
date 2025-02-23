@@ -42,7 +42,7 @@
     Portions Copyright:\n \
         (c) 2018-2025 Kevin Jordan\n \
         (c) 2011-2022 Paul Koning\n \
-        (c) 2017-2022 Steven Zoppi\n \
+        (c) 2017-2025 Steven Zoppi\n \
         (c) 2006-2022 Mark Rustad\n \
         (c) 2005      Mark Riordan"
 #define DtCyberLicense      "Licensed under the terms of the GNU General Public License version 3"
@@ -148,9 +148,9 @@
 #define FontDot                    0
 
 #if defined(_WIN32)
-#define MaxFontNameSize LF_FACESIZE
+#define MaxFontNameSize            LF_FACESIZE
 #else
-#define MaxFontNameSize 64
+#define MaxFontNameSize            64
 #endif
 
 
@@ -272,18 +272,18 @@
 #define stricmp                    strcasecmp
 #endif
 #if defined(_WIN32)
-#define fdopen                     _fdopen
-#define fileno                     _fileno
-#define getcwd                     _getcwd
-#define strcasecmp                 _stricmp
-#define stricmp                    _stricmp
-#define tolower                    _tolower
-#define strncasecmp                _strnicmp
-#define unlink                     _unlink
-#define realpath(N, R)             _fullpath((R), (N), sizeof(R))
-#define fprintf(S, F, ...)         fprintf_s(S, F, __VA_ARGS__)
-#define sprintf(S, F, ...)         sprintf_s(S, sizeof(S), F, __VA_ARGS__)
-#define vfprintf(S, F, ...)        vfprintf_s(S, F, __VA_ARGS__)
+#define fdopen         _fdopen
+#define fileno         _fileno
+#define getcwd         _getcwd
+#define strcasecmp     _stricmp
+#define stricmp        _stricmp
+#define tolower        _tolower
+#define strncasecmp    _strnicmp
+#define unlink         _unlink
+#define realpath(N, R)         _fullpath((R), (N), sizeof(R))
+#define fprintf(S, F, ...)     fprintf_s(S, F, __VA_ARGS__)
+#define sprintf(S, F, ...)     sprintf_s(S, sizeof(S), F, __VA_ARGS__)
+#define vfprintf(S, F, ...)    vfprintf_s(S, F, __VA_ARGS__)
 
 #if !defined(MSG_WAITALL)
 #define MSG_WAITALL    0x8

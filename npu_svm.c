@@ -40,7 +40,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#endif 
+#endif
 
 #include "const.h"
 #include "types.h"
@@ -149,14 +149,15 @@ u8 npuSvmNpuNode     = 2;
 **  Table of terminal connection state names, indexed by terminal
 **  connection state value (TermConnState).
 */
-char *npuSvmTermStates[] = {
+char *npuSvmTermStates[] =
+    {
     "Idle",
     "Request Connection",
     "Connecting",
     "Connected",
     "NPU Request Disconnect",
     "Host Request Disconnect"
-};
+    };
 
 extern void (*npuHipResetFunc)(void);
 
@@ -248,11 +249,12 @@ static enum
     }
 svmState = StIdle;
 
-static char *svmStates[] = {
+static char *svmStates[] =
+    {
     "StIdle",
     "StWaitSupervision",
     "StReady"
-};
+    };
 
 static u8 oldRegLevel = 0;
 
@@ -337,7 +339,7 @@ void npuSvmInit(void)
     npuSvmLog = fopen("svmlog.txt", "wt");
     if (npuSvmLog == NULL)
         {
-        fprintf(stderr, "svmlog.txt - aborting\n");
+        logDtError(LogErrorLocation, "svmlog.txt - aborting\n");
         exit(1);
         }
 #endif
@@ -663,10 +665,11 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
 #if DEBUG
             fprintf(npuSvmLog, "TCN/TA/R received for %.7s in state %s\n", tp->termName, npuSvmTermStates[tp->state]);
 #endif
+
             /*
             **  Host requests terminal disconnection.
             */
-            if (tp->state == StTermConnected || tp->state == StTermConnecting)
+            if ((tp->state == StTermConnected) || (tp->state == StTermConnecting))
                 {
                 /*
                 **  Send a TERM block. The host will reply with a TERM block.
@@ -687,10 +690,12 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             if (tp->state == StTermNpuRequestDisconnect)
                 {
                 npuSvmNotifyTermDisconnect(tp);
+
                 /*
                 **  Reset connection state.
                 */
                 tp->state = StTermIdle;
+
                 /*
                 **  and disconnect the network.
                 */
@@ -709,13 +714,13 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
 
     case PfcNPI:
         npuLogMessage("(npu_svm) NPU reload request, SFC %02X", block[BlkOffSfc]);
-        fprintf(stderr, "(npu_svm) NPU reload request, SFC %02X\n", block[BlkOffSfc]);
+        logDtError(LogErrorLocation, "NPU reload request, SFC %02X\n", block[BlkOffSfc]);
         (*npuHipResetFunc)();
         break;
 
     default:
         npuLogMessage("(npu_svm) Unrecognized message %02X/%02X", block[BlkOffPfc], block[BlkOffSfc]);
-        fprintf(stderr, "(npu_svm) Unrecognized message %02X/%02X\n", block[BlkOffPfc], block[BlkOffSfc]);
+        logDtError(LogErrorLocation, "Unrecognized message %02X/%02X\n", block[BlkOffPfc], block[BlkOffSfc]);
         break;
         }
 
@@ -748,6 +753,7 @@ void npuSvmProcessTermBlock(Tcb *tp)
         npuSvmSendDiscReply(tp);
         npuSvmNotifyTermDisconnect(tp);
         tp->state = StTermIdle;
+
         /*
         **  and disconnect the network.
         */
@@ -804,7 +810,6 @@ void npuSvmSendDiscRequest(Tcb *tp)
 
     switch (tp->state)
         {
-    case StTermConnecting:        // terminal is connecting
     case StTermConnected:         // terminal is connected
         /*
         **  Clean up flow control state and discard any pending output.
@@ -823,14 +828,15 @@ void npuSvmSendDiscRequest(Tcb *tp)
     case StTermIdle:                   // terminal is not yet configured or connected
     case StTermRequestConnection:      // awaiting response to terminal connection request
     case StTermHostRequestDisconnect:  // disconnection has been requested by host
-        fprintf(stderr, "Warning - disconnect request ignored for %.7s in state %s\n",
-                tp->termName, npuSvmTermStates[tp->state]);
+        logDtError(LogErrorLocation, "Warning - disconnect request ignored for %.7s in state %s\n",
+                   tp->termName, npuSvmTermStates[tp->state]);
+
     case StTermNpuRequestDisconnect:   // disconnection has been requested by NPU/MDI
         break;
 
     default:
-        fprintf(stderr, "(npu_svm) Unrecognized state %d during %.7s disconnect request\n",
-                tp->state, tp->termName);
+        logDtError(LogErrorLocation, "Unrecognized state %d during %.7s disconnect request\n",
+                   tp->state, tp->termName);
         break;
         }
     }
@@ -899,6 +905,7 @@ static bool npuSvmRequestTerminalConfig(Pcb *pcbp)
         {
         return (FALSE);
         }
+
     /*
     **  Assemble configure request.
     */
@@ -948,7 +955,7 @@ static bool npuSvmRequestTerminalConfig(Pcb *pcbp)
         break;
         }
 
-    bp->numBytes = mp - bp->data;
+    bp->numBytes = (u16)(mp - bp->data);
 
     /*
     **  Send the request.
@@ -997,6 +1004,7 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
 #if DEBUG
         fprintf(npuSvmLog, "PCB not found for port 0x%02x\n", claPort);
 #endif
+
         return NULL;
         }
 
@@ -1005,6 +1013,7 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
 #if DEBUG
         fprintf(npuSvmLog, "TCB not allocated for port 0x%02x because network connection is closed\n", claPort);
 #endif
+
         return NULL;
         }
 
@@ -1014,6 +1023,7 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
 #if DEBUG
         fprintf(npuSvmLog, "No free TCB available for port 0x%02x\n", claPort);
 #endif
+
         return NULL;
         }
 
@@ -1039,12 +1049,13 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
     /*
     **  Verify minimum length;
     */
-    len -= mp - bp->data;
+    len -= (int)(mp - bp->data);
     if (len < 0)
         {
 #if DEBUG
         fprintf(npuSvmLog, "Short Terminal Configuration response with length %d\n", bp->numBytes);
 #endif
+
         return NULL;
         }
 
@@ -1087,8 +1098,9 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
     default:
 #if DEBUG
         fprintf(npuSvmLog, "Invalid connection type for terminal configuration: %d\n",
-            tp->pcbp->ncbp->connType);
+                tp->pcbp->ncbp->connType);
 #endif
+
         return NULL;
         }
 
@@ -1112,6 +1124,7 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
 #if DEBUG
         fprintf(npuSvmLog, "Failed to find owning console for %.7s, port 0x%02x\n", tp->termName, claPort);
 #endif
+
         return NULL;
         }
     if (tp->owningConsole->state > StTermConnected) // owning console is disconnecting
@@ -1254,7 +1267,7 @@ static bool npuSvmRequestTerminalConnection(Tcb *tp)
     *mp++ = 0;                                  // calling DTE address length
     *mp++ = 0;                                  // called DTE address length
 
-    bp->numBytes = mp - bp->data;
+    bp->numBytes = (u16)(mp - bp->data);
 
     /*
     **  Send the request.

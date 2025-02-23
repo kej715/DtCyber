@@ -599,7 +599,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
         if (GetKeyState(VK_CONTROL) & 0x8000)
             {
             switch (wParam)
-            {
+                {
             case '0':
             case '1':
             case '2':
@@ -617,7 +617,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
             case 'c':
                 dumpRunningCpu();
                 break;
-            }
+                }
             }
 
         break;
@@ -631,7 +631,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
      */
     case WM_SYSCHAR:
         switch (wParam)
-        {
+            {
         case '0':
         case '1':
         case '2':
@@ -701,7 +701,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
         case 's':
         case 'S':
             shifted = !shifted;
-        }
+            }
         break;
 
     case WM_CHAR:

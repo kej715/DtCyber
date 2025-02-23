@@ -40,7 +40,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#endif 
+#endif
 
 #include "const.h"
 #include "types.h"
@@ -107,19 +107,19 @@ bipState = BipIdle;
 ** Function tables to interface to either CCP or CCI functions
 */
 
-static bool (*hipDownlineBlock[])(NpuBuffer *np  ) =
+static bool (*hipDownlineBlock[])(NpuBuffer *np) =
     {
     npuHipDownlineBlock,
     cciHipDownlineBlock
     };
 
-static bool (*hipUplineBlock[])(NpuBuffer *np  ) =
+static bool (*hipUplineBlock[])(NpuBuffer *np) =
     {
     npuHipUplineBlock,
     cciHipUplineBlock
     };
 
-static void (*svmProcessBuffer[])(NpuBuffer *np ) =
+static void (*svmProcessBuffer[])(NpuBuffer *np) =
     {
     npuSvmProcessBuffer,
     cciSvmProcessBuffer
@@ -160,7 +160,7 @@ void npuBipInit(void)
     buffers  = bufPool = calloc(NumBuffs, sizeof(NpuBuffer));
     if (bufPool == NULL)
         {
-        fprintf(stderr, "Failed to allocate NPU data buffer pool\n");
+        logDtError(LogErrorLocation, "Failed to allocate NPU data buffer pool\n");
         exit(1);
         }
 
@@ -186,7 +186,7 @@ void npuBipInit(void)
     bipUplineQueue = calloc(1, sizeof(NpuQueue));
     if (bipUplineQueue == NULL)
         {
-        fprintf(stderr, "(npu_bip) Failed to allocate NPU buffer queue\n");
+        logDtError(LogErrorLocation, "(npu_bip) Failed to allocate NPU buffer queue\n");
         exit(1);
         }
     }
@@ -285,21 +285,21 @@ NpuBuffer *npuBipBufGet(void)
 
             for (i = 1, bp = buffers; i <= NumBuffs; i++, bp++)
                 {
-                fprintf(stderr, "\nBuffer %d, offset=%u, numBytes=%u, blockSeqNo=%u\n",
-                        i, bp->offset, bp->numBytes, bp->blockSeqNo);
+                logDtError(LogErrorLocation, "\nBuffer %d, offset=%u, numBytes=%u, blockSeqNo=%u\n",
+                           i, bp->offset, bp->numBytes, bp->blockSeqNo);
                 data = bp->data;
                 for (j = 0; j < 2; j++)
                     {
                     for (k = 0; k < 16; k++)
                         {
-                        fprintf(stderr, "%02X ", *data++);
+                        logDtError(LogErrorLocation, "%02X ", *data++);
                         }
                     data -= 16;
                     for (k = 0; k < 16; k++)
                         {
                         if ((*data >= 0x20) && (*data < 0x7f))
                             {
-                            fprintf(stderr, "%c", *data);
+                            logDtError(LogErrorLocation, "%c", *data);
                             }
                         else
                             {
@@ -330,7 +330,7 @@ NpuBuffer *npuBipBufGet(void)
 **------------------------------------------------------------------------*/
 bool npuBipIsBusy(void)
     {
-    return (NumBuffs - bufCount) >= idleNetBufs;
+    return (NumBuffs - bufCount) >= (int)idleNetBufs;
     }
 
 /*--------------------------------------------------------------------------
@@ -631,6 +631,7 @@ void npuBipRequestUplineTransfer(NpuBuffer *bp)
 
         return;
         }
+
     /*
     **  Send this block now.
     */

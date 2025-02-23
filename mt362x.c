@@ -344,7 +344,7 @@ static void mt362xInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, u8 tr
     */
     if ((unitNo >= MaxUnits2) || (dp->context[unitNo] != NULL))
         {
-        fprintf(stderr, "(mt362x ) Invalid or duplicate MT372x unit number\n");
+        logDtError(LogErrorLocation, "Invalid or duplicate MT372x unit number\n");
         exit(1);
         }
 
@@ -354,7 +354,7 @@ static void mt362xInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, u8 tr
     tp = calloc(1, sizeof(TapeParam));
     if (tp == NULL)
         {
-        fprintf(stderr, "(mt362x ) Failed to allocate MT362x tape unit context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate MT362x tape unit context block\n");
         exit(1);
         }
 
@@ -384,7 +384,7 @@ static void mt362xInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, u8 tr
         fcb = fopen(deviceName, "rb");
         if (fcb == NULL)
             {
-            fprintf(stderr, "(mt362x ) Failed to open %s\n", deviceName);
+            logDtError(LogErrorLocation, "Failed to open %s\n", deviceName);
             exit(1);
             }
 
@@ -501,6 +501,7 @@ void mt362xLoadTape(char *params)
         {
         sprintf(outBuf, "(mt362x ) Unit %d not allocated\n", unitNo);
         opDisplay(outBuf);
+
         return;
         }
 
@@ -511,6 +512,7 @@ void mt362xLoadTape(char *params)
         {
         sprintf(outBuf, "(mt362x ) Unit %d not unloaded\n", unitNo);
         opDisplay(outBuf);
+
         return;
         }
 
@@ -539,6 +541,7 @@ void mt362xLoadTape(char *params)
         {
         sprintf(outBuf, "(mt362x ) Failed to open %s\n", str);
         opDisplay(outBuf);
+
         return;
         }
 
@@ -623,6 +626,7 @@ void mt362xUnloadTape(char *params)
         {
         sprintf(outBuf, "(mt362x ) Unit %d not allocated\n", unitNo);
         opDisplay(outBuf);
+
         return;
         }
 
@@ -633,6 +637,7 @@ void mt362xUnloadTape(char *params)
         {
         sprintf(outBuf, "(mt362x ) Unit %d not loaded\n", unitNo);
         opDisplay(outBuf);
+
         return;
         }
 
@@ -668,7 +673,7 @@ void mt362xUnloadTape(char *params)
 void mt362xShowTapeStatus()
     {
     TapeParam *tp = firstTape;
-    char      outBuf[MaxFSPath+128];
+    char      outBuf[MaxFSPath + 128];
     char      type[10];
 
     while (tp)
@@ -1411,7 +1416,7 @@ static void mt362xDisconnect(void)
                     ip   += 1;
                     }
 
-                recLen0 = rp - rawBuffer;
+                recLen0 = (u32)(rp - rawBuffer);
                 }
             else
                 {
@@ -1465,7 +1470,7 @@ static void mt362xDisconnect(void)
                     }
                 }
 
-            recLen0 = rp - rawBuffer;
+            recLen0 = (u32)(rp - rawBuffer);
             }
 
         /*
@@ -1545,7 +1550,7 @@ static void mt362xFuncRead(void)
     /*
     **  Read and verify TAP record length header.
     */
-    len = fread(&recLen0, sizeof(recLen0), 1, active3000Device->fcb[unitNo]);
+    len = (u32)fread(&recLen0, sizeof(recLen0), 1, active3000Device->fcb[unitNo]);
 
     if (len != 1)
         {
@@ -1577,7 +1582,7 @@ static void mt362xFuncRead(void)
     */
     if (recLen1 > MaxByteBuf)
         {
-        logError(LogErrorLocation, "(mt362x ) channel %02o - tape record too long: %d", activeChannel->id, recLen1);
+        logDtError(LogErrorLocation, "channel %02o - tape record too long: %d", activeChannel->id, recLen1);
         tp->intStatus     |= Int362xError | Int362xEndOfOp;
         tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
@@ -1605,11 +1610,11 @@ static void mt362xFuncRead(void)
     /*
     **  Read and verify the actual raw data.
     */
-    len = fread(rawBuffer, 1, recLen1, active3000Device->fcb[unitNo]);
+    len = (u32)fread(rawBuffer, 1, recLen1, active3000Device->fcb[unitNo]);
 
     if (recLen1 != (u32)len)
         {
-        logError(LogErrorLocation, "(mt362x ) channel %02o - short tape record read: %d", activeChannel->id, len);
+        logDtError(LogErrorLocation, "channel %02o - short tape record read: %d", activeChannel->id, len);
         tp->intStatus     |= Int362xError | Int362xEndOfOp;
         tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
@@ -1620,11 +1625,11 @@ static void mt362xFuncRead(void)
     /*
     **  Read and verify the TAP record length trailer.
     */
-    len = fread(&recLen2, sizeof(recLen2), 1, active3000Device->fcb[unitNo]);
+    len = (u32)fread(&recLen2, sizeof(recLen2), 1, active3000Device->fcb[unitNo]);
 
     if (len != 1)
         {
-        logError(LogErrorLocation, "(mt362x ) channel %02o - missing tape record trailer", activeChannel->id);
+        logDtError(LogErrorLocation, "channel %02o - missing tape record trailer", activeChannel->id);
         tp->intStatus     |= Int362xError | Int362xEndOfOp;
         tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
@@ -1653,7 +1658,7 @@ static void mt362xFuncRead(void)
             }
         else
             {
-            logError(LogErrorLocation, "(mt362x ) channel %02o - invalid tape record trailer: %d", activeChannel->id, recLen2);
+            logDtError(LogErrorLocation, "channel %02o - invalid tape record trailer: %d", activeChannel->id, recLen2);
             tp->intStatus     |= Int362xError | Int362xEndOfOp;
             tp->parityError    = TRUE;
             tp->endOfOperation = TRUE;
@@ -1722,12 +1727,12 @@ static void mt362xFuncReadBkw(void)
     **  record trailer).
     */
     fseek(active3000Device->fcb[unitNo], -4, SEEK_CUR);
-    len = fread(&recLen0, sizeof(recLen0), 1, active3000Device->fcb[unitNo]);
+    len = (u32)fread(&recLen0, sizeof(recLen0), 1, active3000Device->fcb[unitNo]);
     fseek(active3000Device->fcb[unitNo], -4, SEEK_CUR);
 
     if (len != 1)
         {
-        logError(LogErrorLocation, "(mt362x ) channel %02o - missing tape record trailer", activeChannel->id);
+        logDtError(LogErrorLocation, "channel %02o - missing tape record trailer", activeChannel->id);
         tp->intStatus     |= Int362xError | Int362xEndOfOp;
         tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
@@ -1752,7 +1757,7 @@ static void mt362xFuncReadBkw(void)
     */
     if (recLen1 > MaxByteBuf)
         {
-        logError(LogErrorLocation, "(mt362x ) channel %02o - tape record too long: %d", activeChannel->id, recLen1);
+        logDtError(LogErrorLocation, "channel %02o - tape record too long: %d", activeChannel->id, recLen1);
         tp->intStatus     |= Int362xError | Int362xEndOfOp;
         tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
@@ -1772,11 +1777,11 @@ static void mt362xFuncReadBkw(void)
         /*
         **  Read and verify the TAP record header.
         */
-        len = fread(&recLen2, sizeof(recLen2), 1, active3000Device->fcb[unitNo]);
+        len = (u32)fread(&recLen2, sizeof(recLen2), 1, active3000Device->fcb[unitNo]);
 
         if (len != 1)
             {
-            logError(LogErrorLocation, "(mt362x ) channel %02o - missing TAP record header", activeChannel->id);
+            logDtError(LogErrorLocation, "channel %02o - missing TAP record header", activeChannel->id);
             tp->intStatus     |= Int362xError | Int362xEndOfOp;
             tp->parityError    = TRUE;
             tp->endOfOperation = TRUE;
@@ -1791,11 +1796,11 @@ static void mt362xFuncReadBkw(void)
             */
             position -= 1;
             fseek(active3000Device->fcb[unitNo], position, SEEK_SET);
-            len = fread(&recLen2, sizeof(recLen2), 1, active3000Device->fcb[unitNo]);
+            len = (u32)fread(&recLen2, sizeof(recLen2), 1, active3000Device->fcb[unitNo]);
 
             if ((len != 1) || (recLen0 != recLen2))
                 {
-                logError(LogErrorLocation, "(mt362x ) channel %02o - invalid record length2: %d %08X != %08X", activeChannel->id, len, recLen0, recLen2);
+                logDtError(LogErrorLocation, "channel %02o - invalid record length2: %d %08X != %08X", activeChannel->id, len, recLen0, recLen2);
                 tp->intStatus     |= Int362xError | Int362xEndOfOp;
                 tp->parityError    = TRUE;
                 tp->endOfOperation = TRUE;
@@ -1807,11 +1812,11 @@ static void mt362xFuncReadBkw(void)
         /*
         **  Read and verify the actual raw data.
         */
-        len = fread(rawBuffer, 1, recLen1, active3000Device->fcb[unitNo]);
+        len = (u32)fread(rawBuffer, 1, recLen1, active3000Device->fcb[unitNo]);
 
         if (recLen1 != (u32)len)
             {
-            logError(LogErrorLocation, "(mt362x ) channel %02o - short tape record read: %d", activeChannel->id, len);
+            logDtError(LogErrorLocation, "channel %02o - short tape record read: %d", activeChannel->id, len);
             tp->intStatus     |= Int362xError | Int362xEndOfOp;
             tp->parityError    = TRUE;
             tp->endOfOperation = TRUE;
@@ -1895,7 +1900,7 @@ static void mt362xFuncForespace(void)
     /*
     **  Read and verify TAP record length header.
     */
-    len = fread(&recLen0, sizeof(recLen0), 1, active3000Device->fcb[unitNo]);
+    len = (u32)fread(&recLen0, sizeof(recLen0), 1, active3000Device->fcb[unitNo]);
 
     if (len != 1)
         {
@@ -1926,7 +1931,7 @@ static void mt362xFuncForespace(void)
     */
     if (recLen1 > MaxByteBuf)
         {
-        logError(LogErrorLocation, "(mt362x ) channel %02o - tape record too long: %d", activeChannel->id, recLen1);
+        logDtError(LogErrorLocation, "Channel %02o - tape record too long: %d", activeChannel->id, recLen1);
         tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
 
@@ -1955,7 +1960,7 @@ static void mt362xFuncForespace(void)
     */
     if (fseek(active3000Device->fcb[unitNo], recLen1, SEEK_CUR) != 0)
         {
-        logError(LogErrorLocation, "(mt362x ) channel %02o - short tape record read: %d", activeChannel->id, len);
+        logDtError(LogErrorLocation, "Channel %02o - short tape record read: %d", activeChannel->id, len);
         tp->intStatus     |= Int362xError | Int362xEndOfOp;
         tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
@@ -1966,11 +1971,11 @@ static void mt362xFuncForespace(void)
     /*
     **  Read and verify the TAP record length trailer.
     */
-    len = fread(&recLen2, sizeof(recLen2), 1, active3000Device->fcb[unitNo]);
+    len = (u32)fread(&recLen2, sizeof(recLen2), 1, active3000Device->fcb[unitNo]);
 
     if (len != 1)
         {
-        logError(LogErrorLocation, "(mt362x ) channel %02o - missing tape record trailer", activeChannel->id);
+        logDtError(LogErrorLocation, "Channel %02o - missing tape record trailer", activeChannel->id);
         tp->intStatus     |= Int362xError | Int362xEndOfOp;
         tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
@@ -1999,7 +2004,7 @@ static void mt362xFuncForespace(void)
             }
         else
             {
-            logError(LogErrorLocation, "(mt362x ) channel %02o - invalid tape record trailer: %d", activeChannel->id, recLen2);
+            logDtError(LogErrorLocation, "Channel %02o - invalid tape record trailer: %d", activeChannel->id, recLen2);
             tp->intStatus     |= Int362xError | Int362xEndOfOp;
             tp->parityError    = TRUE;
             tp->endOfOperation = TRUE;
@@ -2051,12 +2056,12 @@ static void mt362xFuncBackspace(void)
     **  record trailer).
     */
     fseek(active3000Device->fcb[unitNo], -4, SEEK_CUR);
-    len = fread(&recLen0, sizeof(recLen0), 1, active3000Device->fcb[unitNo]);
+    len = (u32)fread(&recLen0, sizeof(recLen0), 1, active3000Device->fcb[unitNo]);
     fseek(active3000Device->fcb[unitNo], -4, SEEK_CUR);
 
     if (len != 1)
         {
-        logError(LogErrorLocation, "(mt362x ) channel %02o - missing tape record trailer", activeChannel->id);
+        logDtError(LogErrorLocation, "Channel %02o - missing tape record trailer", activeChannel->id);
         tp->intStatus     |= Int362xError | Int362xEndOfOp;
         tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
@@ -2081,7 +2086,7 @@ static void mt362xFuncBackspace(void)
     */
     if (recLen1 > MaxByteBuf)
         {
-        logError(LogErrorLocation, "(mt362x ) channel %02o - tape record too long: %d", activeChannel->id, recLen1);
+        logDtError(LogErrorLocation, "Channel %02o - tape record too long: %d", activeChannel->id, recLen1);
         tp->intStatus     |= Int362xError | Int362xEndOfOp;
         tp->parityError    = TRUE;
         tp->endOfOperation = TRUE;
@@ -2101,11 +2106,11 @@ static void mt362xFuncBackspace(void)
         /*
         **  Read and verify the TAP record header.
         */
-        len = fread(&recLen2, sizeof(recLen2), 1, active3000Device->fcb[unitNo]);
+        len = (u32)fread(&recLen2, sizeof(recLen2), 1, active3000Device->fcb[unitNo]);
 
         if (len != 1)
             {
-            logError(LogErrorLocation, "(mt362x ) channel %02o - missing TAP record header", activeChannel->id);
+            logDtError(LogErrorLocation, "Channel %02o - missing TAP record header", activeChannel->id);
             tp->intStatus     |= Int362xError | Int362xEndOfOp;
             tp->parityError    = TRUE;
             tp->endOfOperation = TRUE;
@@ -2120,11 +2125,11 @@ static void mt362xFuncBackspace(void)
             */
             position -= 1;
             fseek(active3000Device->fcb[unitNo], position, SEEK_SET);
-            len = fread(&recLen2, sizeof(recLen2), 1, active3000Device->fcb[unitNo]);
+            len = (u32)fread(&recLen2, sizeof(recLen2), 1, active3000Device->fcb[unitNo]);
 
             if ((len != 1) || (recLen0 != recLen2))
                 {
-                logError(LogErrorLocation, "(mt362x ) channel %02o - invalid record length2: %d %08X != %08X", activeChannel->id, len, recLen0, recLen2);
+                logDtError(LogErrorLocation, "Channel %02o - invalid record length2: %d %08X != %08X", activeChannel->id, len, recLen0, recLen2);
                 tp->intStatus     |= Int362xError | Int362xEndOfOp;
                 tp->parityError    = TRUE;
                 tp->endOfOperation = TRUE;
@@ -2202,7 +2207,7 @@ static void mt362xPackAndConvert(u32 recLen)
             rp   += 2;
             }
 
-        active3000Device->recordLength = op - tp->ioBuffer;
+        active3000Device->recordLength = (PpWord)(op - tp->ioBuffer);
         }
     else
         {
@@ -2249,7 +2254,7 @@ static void mt362xPackAndConvert(u32 recLen)
                 rp   += 2;
                 }
 
-            active3000Device->recordLength = op - tp->ioBuffer;
+            active3000Device->recordLength = (PpWord)(op - tp->ioBuffer);
             }
         }
     }

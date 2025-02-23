@@ -287,7 +287,7 @@ void ppInit(u8 count)
     ppu      = calloc(count, sizeof(PpSlot));
     if (ppu == NULL)
         {
-        fprintf(stderr, "(pp     ) Failed to allocate ppu control blocks\n");
+        logDtError(LogErrorLocation, "Failed to allocate ppu control blocks\n");
         exit(1);
         }
 
@@ -323,7 +323,7 @@ void ppInit(u8 count)
             ppHandle = fopen(fileName, "w+b");
             if (ppHandle == NULL)
                 {
-                fprintf(stderr, "(pp     ) Failed to create PPM backing file\n");
+                logDtError(LogErrorLocation, "Failed to create PPM backing file\n");
                 exit(1);
                 }
             }
@@ -371,7 +371,7 @@ void ppTerminate(void)
         fseek(ppHandle, 0, SEEK_SET);
         if (fwrite(ppu, sizeof(PpSlot), ppuCount, ppHandle) != ppuCount)
             {
-            fprintf(stderr, "(pp     ) Error writing PPM backing file\n");
+            logDtError(LogErrorLocation, "Error writing PPM backing file\n");
             }
 
         fclose(ppHandle);
@@ -405,7 +405,7 @@ void ppStep(void)
         **  Advance to next PPU.
         */
         activePpu = ppu + i;
-        
+
         if (activePpu->exchangingCpu >= 0)
             {
             cpuAcquireExchangeMutex();
@@ -689,7 +689,7 @@ static void ppOpPSN24(void)     // 24
             /*
             **  LRD.
             */
-            activePpu->regR  = (u32)(activePpu->mem[opD    ] & Mask4 ) << 18;
+            activePpu->regR  = (u32)(activePpu->mem[opD] & Mask4) << 18;
             activePpu->regR |= (u32)(activePpu->mem[opD + 1] & Mask12) << 6;
             }
         else if ((features & HasRelocationRegLong) != 0)
@@ -697,7 +697,7 @@ static void ppOpPSN24(void)     // 24
             /*
             **  LRD.
             */
-            activePpu->regR  = (u32)(activePpu->mem[opD    ] & Mask10) << 18;
+            activePpu->regR  = (u32)(activePpu->mem[opD] & Mask10) << 18;
             activePpu->regR |= (u32)(activePpu->mem[opD + 1] & Mask12) << 6;
             }
         }
@@ -716,16 +716,16 @@ static void ppOpPSN25(void)     // 25
             /*
             **  SRD.
             */
-            activePpu->mem[opD    ] = (PpWord)(activePpu->regR >> 18) & Mask4;
-            activePpu->mem[opD + 1] = (PpWord)(activePpu->regR >>  6) & Mask12;
+            activePpu->mem[opD]     = (PpWord)(activePpu->regR >> 18) & Mask4;
+            activePpu->mem[opD + 1] = (PpWord)(activePpu->regR >> 6) & Mask12;
             }
         else if ((features & HasRelocationRegLong) != 0)
             {
             /*
             **  SRD.
             */
-            activePpu->mem[opD    ] = (PpWord)(activePpu->regR >> 18) & Mask10;
-            activePpu->mem[opD + 1] = (PpWord)(activePpu->regR >>  6) & Mask12;
+            activePpu->mem[opD]     = (PpWord)(activePpu->regR >> 18) & Mask10;
+            activePpu->mem[opD + 1] = (PpWord)(activePpu->regR >> 6) & Mask12;
             }
         }
 
@@ -737,13 +737,13 @@ static void ppOpPSN25(void)     // 25
 static void ppOpEXN(void)     // 26
     {
     CpuContext *cpu;
-    int cpuNum;
-    bool doChangeMode;
-    bool isExchangePending;
-    u32 exchangeAddress;
+    int        cpuNum;
+    bool       doChangeMode;
+    bool       isExchangePending;
+    u32        exchangeAddress;
 
     cpuNum = (cpuCount > 1) ? (opD & 001) : 0;
-    cpu = cpus + cpuNum;
+    cpu    = cpus + cpuNum;
 
     cpuAcquireExchangeMutex();
     isExchangePending = cpu->ppRequestingExchange != -1;
@@ -758,6 +758,7 @@ static void ppOpEXN(void)     // 26
             // Release mutex and arrange to retry instruction
             cpuReleaseExchangeMutex();
             PpDecrement(activePpu->regP);
+
             return;
             }
         doChangeMode = FALSE;
@@ -782,6 +783,7 @@ static void ppOpEXN(void)     // 26
             **  Pass.
             */
             cpuReleaseExchangeMutex();
+
             return;
             }
 
@@ -818,6 +820,7 @@ static void ppOpEXN(void)     // 26
             **  Pass.
             */
             cpuReleaseExchangeMutex();
+
             return;
             }
         }
@@ -826,9 +829,9 @@ static void ppOpEXN(void)     // 26
     **  Request the exchange, and wait for it to complete.
     */
     cpu->ppRequestingExchange = activePpu->id;
-    cpu->ppExchangeAddress = exchangeAddress;
-    cpu->doChangeMode = doChangeMode;
-    activePpu->exchangingCpu = cpu->id;
+    cpu->ppExchangeAddress    = exchangeAddress;
+    cpu->doChangeMode         = doChangeMode;
+    activePpu->exchangingCpu  = cpu->id;
 
     cpuReleaseExchangeMutex();
     }
@@ -842,7 +845,7 @@ static void ppOpRPN(void)     // 27
     */
     if (((features & IsSeries800) == 0) || (modelType == ModelCyber865))
         {
-        cpuNum = (cpuCount > 1) ? (opD & 001) : 0;
+        cpuNum          = (cpuCount > 1) ? (opD & 001) : 0;
         activePpu->regA = cpuGetP(cpuNum);
         }
     }

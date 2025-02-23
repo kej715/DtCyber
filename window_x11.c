@@ -507,7 +507,7 @@ void *windowThread(void *param)
                     else
                         {
                         switch (text[0])
-                        {
+                            {
                         case '0':
                         case '1':
                         case '2':
@@ -564,7 +564,7 @@ void *windowThread(void *param)
                             */
                             XConvertSelection(disp, XA_PRIMARY, XA_STRING, targetProperty, window, event.xbutton.time);
                             break;
-                        }
+                            }
                         ppKeyIn = 0;
                         }
                     }
@@ -718,14 +718,17 @@ void *windowThread(void *param)
                 case FontSmall:
                     XSetFont(disp, gc, hSmallFont);
                     break;
+
                 case FontMedium:
                     XSetFont(disp, gc, hMediumFont);
                     break;
+
                 case FontLarge:
                     XSetFont(disp, gc, hLargeFont);
                     break;
                     }
                 }
+
             /*
             **  Draw dot or character.
             */

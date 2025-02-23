@@ -485,7 +485,7 @@ static void mchIo(void)
             if (!activeChannel->full)
                 {
                 switch (connCode)
-                {
+                    {
                 default:
                 case FcConnIou:
                     dp = dataIou;
@@ -498,10 +498,10 @@ static void mchIo(void)
                 case FcConnCpu:
                     dp = dataCpu;
                     break;
-                }
+                    }
 
                 switch (mchLocation)
-                {
+                    {
                 case RegAddrElementId:
                 case RegAddrOptionsInstalled:
                     typeCode = 0;
@@ -509,7 +509,7 @@ static void mchIo(void)
 
                 default:
                     break;
-                }
+                    }
 
                 if (activeDevice->recordLength > 0)
                     {
@@ -556,7 +556,7 @@ static void mchIo(void)
             if (activeChannel->full)
                 {
                 switch (connCode)
-                {
+                    {
                 default:
                 case FcConnIou:
                     dp = dataIou;
@@ -569,10 +569,10 @@ static void mchIo(void)
                 case FcConnCpu:
                     dp = dataCpu;
                     break;
-                }
+                    }
 
                 switch (mchLocation)
-                {
+                    {
                 case RegAddrElementId:
                 case RegAddrOptionsInstalled:
                     typeCode = 0;
@@ -580,7 +580,7 @@ static void mchIo(void)
 
                 default:
                     break;
-                }
+                    }
 
                 if (activeDevice->recordLength > 0)
                     {

@@ -178,14 +178,14 @@ void pciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     pci = calloc(1, sizeof(PciParam));
     if (pci == NULL)
         {
-        fprintf(stderr, "Failed to allocate PCI channel context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate PCI channel context block\n");
         exit(1);
         }
 
     pci->fdPci = open(DEVICE_NODE, 0);
     if (pci->fdPci < 0)
         {
-        fprintf(stderr, "Can't open %s - error %s\n", DEVICE_NODE, strerror(errno));
+        logDtError(LogErrorLocation, "Can't open %s - error %s\n", DEVICE_NODE, strerror(errno));
         exit(1);
         }
 

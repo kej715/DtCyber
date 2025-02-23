@@ -43,10 +43,10 @@
 **  CCI Constants
 **  -------------
 */
-#define BlkOffP     6
-#define BlkOffSP    7
-#define BlkOffLt    8
-#define BlkOffTt    9
+#define BlkOffP                 6
+#define BlkOffSP                7
+#define BlkOffLt                8
+#define BlkOffTt                9
 
 
 #define CciWaitForTcbTimeout    5

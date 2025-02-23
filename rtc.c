@@ -291,10 +291,10 @@ void rtcReadUsCounter(void)
 
 void rtcReadUsCounter(void)
     {
-    static bool   first = TRUE;
-    static u64    old   = 0;
-    u64           new;
-    u64           difference;
+    static bool first = TRUE;
+    static u64  old   = 0;
+    u64         new;
+    u64         difference;
 
     if (rtcIncrement != 0)
         {
@@ -318,12 +318,12 @@ void rtcReadUsCounter(void)
     difference = new - old;
     if (difference > MaxMicroseconds)
         {
-        difference = MaxMicroseconds;
-        rtcClockIsCurrent   = FALSE;
+        difference        = MaxMicroseconds;
+        rtcClockIsCurrent = FALSE;
         }
     else
         {
-        rtcClockIsCurrent   = TRUE;
+        rtcClockIsCurrent = TRUE;
         }
 
     old      += difference;
