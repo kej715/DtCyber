@@ -1476,7 +1476,7 @@ static char *lp3000FeForPostPrint(LpContext *lc, u8 func)
         if (lc->flags & Lp3000Type3555)
             {
             switch (func)
-            {
+                {
             default:
                 return "";
 
@@ -1493,12 +1493,12 @@ static char *lp3000FeForPostPrint(LpContext *lc, u8 func)
             case Fc3555PostVFU11:
             case Fc3555PostVFU12:
                 return postPrintCdcEffectors[lc->postPrintFunc - Fc3555PostVFU1];
-            }
+                }
             }
         else
             {
             switch (func)
-            {
+                {
             default:
                 return "";
 
@@ -1509,7 +1509,7 @@ static char *lp3000FeForPostPrint(LpContext *lc, u8 func)
             case Fc3152PostVFU5:
             case Fc3152PostVFU6:
                 return postPrintCdcEffectors[lc->postPrintFunc - Fc3152PostVFU1];
-            }
+                }
             }
 
     case ModeANSI:
@@ -1538,7 +1538,7 @@ static char *lp3000FeForPrePrint(LpContext *lc, u8 func)
         if (lc->flags & Lp3000Type3555)
             {
             switch (func)
-            {
+                {
             default:
                 return " ";
 
@@ -1570,12 +1570,12 @@ static char *lp3000FeForPrePrint(LpContext *lc, u8 func)
             case Fc3555PreVFU11:
             case Fc3555PreVFU12:
                 return prePrintCdcEffectors[lc->prePrintFunc - Fc3555PreVFU1];
-            }
+                }
             }
         else
             {
             switch (lc->prePrintFunc)
-            {
+                {
             default:
                 return " ";
 
@@ -1601,7 +1601,7 @@ static char *lp3000FeForPrePrint(LpContext *lc, u8 func)
             case Fc3152PreVFU5:
             case Fc3152PreVFU6:
                 return prePrintCdcEffectors[lc->prePrintFunc - Fc3152PreVFU1];
-            }
+                }
             }
         break;
 
@@ -1609,7 +1609,7 @@ static char *lp3000FeForPrePrint(LpContext *lc, u8 func)
         if (lc->flags & Lp3000Type3555)
             {
             switch (func)
-            {
+                {
             default:
                 return " ";
 
@@ -1641,12 +1641,12 @@ static char *lp3000FeForPrePrint(LpContext *lc, u8 func)
             case Fc3555PreVFU11:
             case Fc3555PreVFU12:
                 return prePrintAnsiEffectors[lc->prePrintFunc - Fc3555PreVFU1];
-            }
+                }
             }
         else
             {
             switch (lc->prePrintFunc)
-            {
+                {
             default:
                 return " ";
 
@@ -1672,13 +1672,13 @@ static char *lp3000FeForPrePrint(LpContext *lc, u8 func)
             case Fc3152PreVFU5:
             case Fc3152PreVFU6:
                 return prePrintAnsiEffectors[lc->prePrintFunc - Fc3152PreVFU1];
-            }
+                }
             }
         break;
 
     case ModeASCII:
         switch (func)
-        {
+            {
         default:
             return "";
 
@@ -1690,7 +1690,7 @@ static char *lp3000FeForPrePrint(LpContext *lc, u8 func)
 
         case FcPrintEject:
             return "\f";
-        }
+            }
         }
     }
 

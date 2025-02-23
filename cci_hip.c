@@ -526,7 +526,7 @@ static FcStatus cciHipFunc(PpWord funcCode)
     case FcNpuInCouplerStatus:
 
         switch (cciHipState)
-        {
+            {
         case StHipIdle:
             /*
             **  Poll network status.
@@ -551,7 +551,7 @@ static FcStatus cciHipFunc(PpWord funcCode)
 
         default:
             break;
-        }
+            }
 
         break;
 
@@ -642,7 +642,7 @@ static FcStatus cciHipFunc(PpWord funcCode)
             }
 
         switch (sum)
-        {
+            {
         /*
         ** micro program started, respond with NPU idle state
         */
@@ -678,7 +678,7 @@ static FcStatus cciHipFunc(PpWord funcCode)
         case Fp0D1:     // fingerprint of the 0D1 image
 
             switch (cciHcpState)
-            {
+                {
             case StHcpNotInitialized:
 
                 /*
@@ -722,12 +722,12 @@ static FcStatus cciHipFunc(PpWord funcCode)
                 */
                 logDtError(LogErrorLocation, "Fatal: StartNpu called for unknown image\n");
                 break;
-            }
+                }
             break;
-        }
+            }
 
         return (FcProcessed);
-        }              // case funCode
+        }                  // case funCode
 
     activeDevice->fcode = funcCode;
 
@@ -896,7 +896,7 @@ static void cciHipIo(void)
 #endif
 
             switch (orderCode)
-            {
+                {
             case OrdOutServiceMsg:
                 npuBipNotifyServiceMessage();
                 break;
@@ -912,7 +912,7 @@ static void cciHipIo(void)
             case OrdNotReadyForInput:
                 npuBipRetryInput();
                 break;
-            }
+                }
             }
 
         break;

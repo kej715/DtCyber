@@ -704,7 +704,7 @@ static void dd885_42Io(void)
         if (activeChannel->full)
             {
             switch (activeDevice->recordLength--)
-            {
+                {
             case 4:
                 unitNo = activeChannel->data & 07;
                 if (unitNo != activeDevice->selectedUnit)
@@ -761,7 +761,7 @@ static void dd885_42Io(void)
             default:
                 activeDevice->recordLength = 0;
                 break;
-            }
+                }
 
 #if DEBUG
             fprintf(dd885_42Log, " %04o[%d]", activeChannel->data, activeChannel->data);
@@ -777,7 +777,7 @@ static void dd885_42Io(void)
             if (dp != NULL)
                 {
                 switch (activeDevice->recordLength--)
-                {
+                    {
                 case 2:
                     dp->emAddress[0] = activeChannel->data;
                     break;
@@ -797,7 +797,7 @@ static void dd885_42Io(void)
                 default:
                     activeDevice->recordLength = 0;
                     break;
-                }
+                    }
                 }
 #if DEBUG
             fprintf(dd885_42Log, " %04o", activeChannel->data);
@@ -813,7 +813,7 @@ static void dd885_42Io(void)
             if (dp != NULL)
                 {
                 switch (activeDevice->recordLength--)
-                {
+                    {
                 case 6:
                     dp->emAddress[0] = activeChannel->data;
                     break;
@@ -849,7 +849,7 @@ static void dd885_42Io(void)
                 default:
                     activeDevice->recordLength = 0;
                     break;
-                }
+                    }
                 }
 
 #if DEBUG

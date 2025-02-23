@@ -735,7 +735,7 @@ static void csFeiIo(void)
             {
             activeChannel->data = 0;
             switch (feip->state)
-            {
+                {
             case StCsFeiSendLCP:
             case StCsFeiSendSubsegment:
                 if (feip->outputBuffer.out < feip->outputBuffer.in)
@@ -758,7 +758,7 @@ static void csFeiIo(void)
 
             default:
                 break;
-            }
+                }
             activeDevice->fcode           = 0;
             activeChannel->discAfterInput = FALSE;
             activeChannel->full           = TRUE;
@@ -770,7 +770,7 @@ static void csFeiIo(void)
 
     case 0: /* I/O typically after FcCsFeiStatus function processed */
         switch (feip->state)
-        {
+            {
         case StCsFeiSendLCP:
             if (activeChannel->full == TRUE)
                 {
@@ -1030,7 +1030,7 @@ static void csFeiIo(void)
         default:
             logDtError(LogErrorLocation, "channel %02o - invalid state: %d", activeChannel->id, feip->state);
             break;
-        }
+            }
         break;
 
     default:

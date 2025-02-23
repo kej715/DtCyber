@@ -2087,7 +2087,7 @@ static void mt679PackAndConvert(u32 recLen)
         activeDevice->recordLength = (PpWord)(op - tp->ioBuffer);
 
         switch (recLen % 3)
-        {
+            {
         default:
             break;
 
@@ -2098,7 +2098,7 @@ static void mt679PackAndConvert(u32 recLen)
         case 2:
             tp->characterFill = TRUE;
             break;
-        }
+            }
         break;
 
     case 1:

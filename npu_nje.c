@@ -694,7 +694,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                     {
                     status = npuNjeUploadBlock(pcbp, pcbp->controls.nje.inputBuf, size, &rcb, &srcb);
                     switch (status)
-                    {
+                        {
                     case NjeStatusSOH_ENQ:
                         if (npuNjeSend(pcbp, DLE_ACK0, sizeof(DLE_ACK0)) == sizeof(DLE_ACK0))
                             {
@@ -755,7 +755,7 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                         npuNjeCloseConnection(pcbp);
                         dp = limit;
                         break;
-                    }
+                        }
                     }
                 else
                     {
@@ -2206,7 +2206,7 @@ static int npuNjeUploadBlock(Pcb *pcbp, u8 *blkp, int size, u8 *rcb, u8 *srcb)
             */
             case 0xf0: // general control record
                 switch (*srcb)
-                {
+                    {
                 case SRCB_Signoff:
                     recLen = 0;
                     break;
@@ -2238,7 +2238,7 @@ static int npuNjeUploadBlock(Pcb *pcbp, u8 *blkp, int size, u8 *rcb, u8 *srcb)
                     return NjeErrProtocolError;
 
                     break;
-                }
+                    }
                 *obp++ = recLen;
                 *obp++ = *rcb;
                 *obp++ = *srcb;
@@ -2339,7 +2339,7 @@ static int npuNjeUploadBlock(Pcb *pcbp, u8 *blkp, int size, u8 *rcb, u8 *srcb)
                     {
                     scb = *ibp++;
                     switch (scb & 0xc0)
-                    {
+                        {
                     case 0x40: // terminate stream transmission
                         break;
 
@@ -2363,7 +2363,7 @@ static int npuNjeUploadBlock(Pcb *pcbp, u8 *blkp, int size, u8 *rcb, u8 *srcb)
                         npuBipBufRelease(bp);
 
                         return NjeErrBadSCB;
-                    }
+                        }
                     }
                 if (ibp >= ibLimit)
                     {
@@ -2405,7 +2405,7 @@ static int npuNjeUploadBlock(Pcb *pcbp, u8 *blkp, int size, u8 *rcb, u8 *srcb)
                     {
                     scb = *ibp++;
                     switch (scb & 0xc0)
-                    {
+                        {
                     case 0x80: // compressed string
                         len = scb & 0x1f;
                         if ((scb & 0x20) == 0x20)
@@ -2438,7 +2438,7 @@ static int npuNjeUploadBlock(Pcb *pcbp, u8 *blkp, int size, u8 *rcb, u8 *srcb)
 
                     default:
                         break;
-                    }
+                        }
                     }
                 ibp += 1; // advance past end of record SCB (0x00)
 

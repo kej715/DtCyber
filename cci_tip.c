@@ -262,7 +262,7 @@ void cciTipProcessBuffer(NpuBuffer *bp, int priority)
     */
     case BtHTCMD:
         switch (block[BlkOffPfc])
-        {
+            {
         case 7:
             /*
             **  Resume output marker after user break 1 or 2.
@@ -285,7 +285,7 @@ void cciTipProcessBuffer(NpuBuffer *bp, int priority)
                 }
 #endif
             break;
-        }
+            }
 
         /*
         **  Acknowledge any command (although most are ignored).
@@ -299,7 +299,7 @@ void cciTipProcessBuffer(NpuBuffer *bp, int priority)
             {
             last = (block[BlkOffBTBSN] & BlkMaskBT) == BtHTMSG;
             switch (tp->tipType)
-            {
+                {
             case TtASYNC:
                 cciAsyncProcessDownlineData(tp, bp, last);
                 break;
@@ -308,7 +308,7 @@ void cciTipProcessBuffer(NpuBuffer *bp, int priority)
             default:
                 logDtError(LogErrorLocation, "(npu_tip) Downline data for unrecognized TIP type %u on connection %u\n",
                            tp->tipType, tp->cn);
-            }
+                }
             cciTipSendAck(tp);
             break;
             }

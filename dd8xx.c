@@ -1133,7 +1133,7 @@ static FcStatus dd8xxFunc(PpWord funcCode)
             dp->detailedStatus[2] = (funcCode << 4) & 07760;
 
             switch (dp->diskType)
-            {
+                {
             case DiskType885:
                 dp->detailedStatus[4] = (dp->cylinder >> 4) & 077;
                 dp->detailedStatus[5] = ((dp->cylinder << 8) | dp->track) & 07777;
@@ -1169,7 +1169,7 @@ static FcStatus dd8xxFunc(PpWord funcCode)
                     dp->detailedStatus[8] &= ~0300;
                     }
                 break;
-            }
+                }
             }
         else
             {
@@ -1199,7 +1199,7 @@ static FcStatus dd8xxFunc(PpWord funcCode)
 
     case Fc8xxDeadstart:
         switch (dp->diskType)
-        {
+            {
         case DiskType844:
             if (dp->size.maxCylinders == MaxCylinders844_2)
                 {
@@ -1219,7 +1219,7 @@ static FcStatus dd8xxFunc(PpWord funcCode)
             dp->track    = DsTrack885;
             dp->sector   = DsSector885;
             break;
-        }
+            }
 
         fseek(fcb, dd8xxSeek(dp), SEEK_SET);
         activeDevice->recordLength = SectorSize;
@@ -1338,7 +1338,7 @@ static void dd8xxIo(void)
         if (activeChannel->full)
             {
             switch (activeDevice->recordLength--)
-            {
+                {
             case 4:
                 unitNo = activeChannel->data & 07;
                 if (unitNo != activeDevice->selectedUnit)
@@ -1408,7 +1408,7 @@ static void dd8xxIo(void)
             default:
                 activeDevice->recordLength = 0;
                 break;
-            }
+                }
 
 #if DEBUG
             fprintf(dd8xxLog, " %04o[%d]", activeChannel->data, activeChannel->data);

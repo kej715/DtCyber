@@ -601,7 +601,7 @@ static FcStatus lp1612Func(PpWord funcCode)
         lp1612DebugData(lc);
 #endif
         switch (lc->renderingMode)
-        {
+            {
         default:
         case ModeCDC:
             lp1612PrintCDC(lc, fcb);
@@ -614,7 +614,7 @@ static FcStatus lp1612Func(PpWord funcCode)
         case ModeASCII:
             lp1612PrintASCII(lc, fcb);
             break;
-        }
+            }
         lc->linePos = 0;
         break;
 
@@ -891,7 +891,7 @@ static char *lp1612FeForPostPrint(LpContext *lc, PpWord func)
         {
     case ModeCDC:
         switch (func)
-        {
+            {
         default:
             return "";
 
@@ -902,7 +902,7 @@ static char *lp1612FeForPostPrint(LpContext *lc, PpWord func)
         case FcPrintFormat5:
         case FcPrintFormat6:
             return postPrintCdcEffectors[lc->postPrintFunc - FcPrintFormat1];
-        }
+            }
         break;
 
     case ModeANSI:
@@ -929,7 +929,7 @@ static char *lp1612FeForPrePrint(LpContext *lc, PpWord func)
     default:
     case ModeCDC:
         switch (func)
-        {
+            {
         default:
             return " ";
 
@@ -947,12 +947,12 @@ static char *lp1612FeForPrePrint(LpContext *lc, PpWord func)
 
         case FcPrintNoSpace:
             return "+";
-        }
+            }
         break;
 
     case ModeANSI:
         switch (func)
-        {
+            {
         default:
             return " ";
 
@@ -978,12 +978,12 @@ static char *lp1612FeForPrePrint(LpContext *lc, PpWord func)
         case FcPrintFormat5:
         case FcPrintFormat6:
             return prePrintAnsiEffectors[lc->postPrintFunc - FcPrintFormat1];
-        }
+            }
         break;
 
     case ModeASCII:
         switch (func)
-        {
+            {
         default:
             return "";
 
@@ -995,7 +995,7 @@ static char *lp1612FeForPrePrint(LpContext *lc, PpWord func)
 
         case FcPrintEject:
             return "\f";
-        }
+            }
         break;
         }
     }

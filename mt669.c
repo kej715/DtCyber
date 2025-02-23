@@ -1951,7 +1951,7 @@ static void mt669Disconnect(void)
         recLen0 = (recLen2 / 4) * 6;
 
         switch (recLen2 % 4)
-        {
+            {
         case 1:
             recLen0 += oddFrameCount ? 1 : 0;
             break;
@@ -1970,7 +1970,7 @@ static void mt669Disconnect(void)
                 recLen0 -= 1;
                 }
             break;
-        }
+            }
 
         break;
 

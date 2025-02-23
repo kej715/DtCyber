@@ -439,7 +439,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 
     case BtHTCMD:
         switch (block[BlkOffPfc])
-        {
+            {
         case PfcCTRL:
             if (block[BlkOffSfc] == SfcCHAR)
                 {
@@ -522,7 +522,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
             fputs("Unrecognized TIP command\n", npuTipLog);
 #endif
             break;
-        }
+            }
 
         /*
         **  Acknowledge any command (although most are ignored).
@@ -539,7 +539,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
             {
             last = (block[BlkOffBTBSN] & BlkMaskBT) == BtHTMSG;
             switch (tp->tipType)
-            {
+                {
             case TtASYNC:
                 npuAsyncProcessDownlineData(tp, bp, last);
                 break;
@@ -561,7 +561,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
                 blockAck[BlkOffBTBSN] |= block[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN);
                 npuBipRequestUplineCanned(blockAck, sizeof(blockAck));
                 break;
-            }
+                }
             }
         else
             {
@@ -675,7 +675,7 @@ void npuTipSetupTerminalClass(Tcb *tp, u8 tc)
 
     default:
         switch (tp->tipType)
-        {
+            {
         default:
         case TtASYNC:
             tp->params = defaultTc3;
@@ -692,7 +692,7 @@ void npuTipSetupTerminalClass(Tcb *tp, u8 tc)
         case TtTT13:
             tp->params = defaultTc29;
             break;
-        }
+            }
         }
     }
 

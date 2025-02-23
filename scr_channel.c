@@ -304,7 +304,7 @@ static void scrExecute(PpWord func)
             **  Select appropriate CM configuration quadrants.
             */
             switch (cpuMaxMemory)
-            {
+                {
             case 01000000:
                 scrSetBit(scrRegister, 0260);
                 scrClrBit(scrRegister, 0261);
@@ -370,7 +370,7 @@ static void scrExecute(PpWord func)
                 scrClrBit(scrRegister, 0262);
                 scrClrBit(scrRegister, 0263);
                 break;
-            }
+                }
             }
 
         break;
