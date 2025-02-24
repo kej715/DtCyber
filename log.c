@@ -196,11 +196,7 @@ void logDtError(char *file, int line, char *fmt, ...)
     char dtOutBuf[buflen];
     char dtFnBuf[128];
 
-#if defined(_WIN32)
     dtNow(dtOutBuf, sizeof(dtOutBuf));
-#else
-    dtNow(dtOutBuf, buflen);
-#endif
 
     if (logF == NULL)
         {
@@ -254,8 +250,8 @@ void logDtError(char *file, int line, char *fmt, ...)
     ixpos = strrchr(fmt, '\n');
     if (ixpos == NULL)
         {
-        fprintf(stderr, "\n");
-        fprintf(logF, "\n");
+        fputs("\n", stderr);
+        fputs("\n", logF);
         }
 
     fflush(stderr);

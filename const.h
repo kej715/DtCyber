@@ -32,9 +32,9 @@
 **  ----------------
 */
 #ifdef _DEBUG
-#define DtCyberVersion      "Desktop CYBER 5.7.56 (Debug)   "
+#define DtCyberVersion      "Desktop CYBER 5.7.57 (Debug)   "
 #else
-#define DtCyberVersion      "Desktop CYBER 5.7.56 (Release) "
+#define DtCyberVersion      "Desktop CYBER 5.7.57 (Release) "
 #endif
 
 #define DtCyberBuildDate    __DATE__ " " __TIME__

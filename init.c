@@ -1627,34 +1627,33 @@ static void initNpuConnections(void)
             */
             connType = initParseTerminalDefn(line, startupFile, npuConnections, lineNo,
                                              &tcpPort, &claPort, &numConns, &remainder);
-            logDtError(LogErrorLocation, "[%s] line %2d: %6s TCP port %5d CLA port 0x%02x port count %3d",
+            logDtError(LogErrorLocation, "[%s] line %2d: %6s TCP port %5d CLA port 0x%02x port count %3d\n",
                        npuConnections, lineNo, connTypeNames[connType], tcpPort, claPort, numConns);
-
             rc = npuNetRegisterConnType(tcpPort, claPort, numConns, connType, &ncbp);
             switch (rc)
                 {
             case NpuNetRegOk:
-                // no errors detected, do nothing
+                // success, do nothing
                 break;
 
             case NpuNetRegOvfl:
-                logDtError(LogErrorLocation, "\n(init   )   Too many terminal and trunk definitions (max of %d)\n", MaxTermDefs);
+                logDtError(LogErrorLocation, "Too many terminal and trunk definitions (max of %d)\n", MaxTermDefs);
                 exit(1);
 
             case NpuNetRegDupTcp:
-                logDtError(LogErrorLocation, "\n(init   )   Duplicate TCP port %d\n", tcpPort);
+                logDtError(LogErrorLocation, "Duplicate TCP port %d\n", tcpPort);
                 exit(1);
 
             case NpuNetRegDupCla:
-                fputs("\n(init   )   Duplicate CLA port\n", stderr);
+                logDtError(LogErrorLocation, "Duplicate CLA port %d\n", claPort);
                 exit(1);
 
             case NpuNetRegNoMem:
-                fputs("\n(init   )   Failed to register terminals, out of memory\n", stderr);
+                logDtError(LogErrorLocation, "Failed to register terminals, out of memory\n");
                 exit(1);
 
             default:
-                logDtError(LogErrorLocation, "\n(init   )   Failed to register terminals, unexpected error %d\n", rc);
+                logDtError(LogErrorLocation, "Failed to register terminals, unexpected error %d\n", rc);
                 exit(1);
                 }
 
@@ -1680,7 +1679,7 @@ static void initNpuConnections(void)
                         }
                     else
                         {
-                        logDtError(LogErrorLocation, "\n(init   )   Unrecognized keyword '%s'\n", token);
+                        logDtError(LogErrorLocation, "Unrecognized keyword '%s'\n", token);
                         exit(1);
                         }
                     while (numConns-- > 0)
@@ -1704,7 +1703,7 @@ static void initNpuConnections(void)
                         val = strtol(token + 1, NULL, 10);
                         if ((val < MinBlockSize) || (val > MaxBlockSize))
                             {
-                            logDtError(LogErrorLocation, "\n(init   )   Invalid block size %ld - correct block sizes are %d .. %d\n",
+                            logDtError(LogErrorLocation, "Invalid block size %ld - correct block sizes are %d .. %d\n",
                                        val, MinBlockSize, MaxBlockSize);
                             exit(1);
                             }
@@ -1712,13 +1711,13 @@ static void initNpuConnections(void)
                         }
                     else
                         {
-                        logDtError(LogErrorLocation, "\n(init   )   Invalid block size specification '%s'\n", token);
+                        logDtError(LogErrorLocation, "Invalid block size specification '%s'\n", token);
                         exit(1);
                         }
                     }
                 pcbp = npuNetFindPcb(claPort);
                 pcbp->controls.hasp.blockSize = blockSize;
-                logDtError(LogErrorLocation, ", block size %4d", blockSize);
+                logDtError(LogErrorLocation, "  block size %4d", blockSize);
                 break;
 
             case ConnTypeRevHasp:
@@ -1728,18 +1727,18 @@ static void initNpuConnections(void)
                 token = strtok(remainder, ", ");
                 if (token == NULL)
                     {
-                    fputs("\n(init   )   Missing remote host address\n", stderr);
+                    logDtError(LogErrorLocation, "Missing remote host address\n");
                     exit(1);
                     }
                 destHostAddr = token;
                 if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
                     {
-                    logDtError(LogErrorLocation, "\n(init   )   Invalid Reverse HASP address '%s'\n", destHostAddr);
+                    logDtError(LogErrorLocation, "Invalid Reverse HASP address '%s'\n", destHostAddr);
                     exit(1);
                     }
                 if (destHostPort == 0)
                     {
-                    logDtError(LogErrorLocation, "\n(init   )   Missing port number on Reverse HASP address '%s'\n", destHostAddr);
+                    logDtError(LogErrorLocation, "Missing port number on Reverse HASP address '%s'\n", destHostAddr);
                     exit(1);
                     }
                 destHostName = destHostAddr;
@@ -1752,7 +1751,7 @@ static void initNpuConnections(void)
                         val = strtol(token + 1, NULL, 10);
                         if ((val < MinBlockSize) || (val > MaxBlockSize))
                             {
-                            logDtError(LogErrorLocation, "\n(init   )   Invalid block size %ld - correct block sizes are %d .. %d\n",
+                            logDtError(LogErrorLocation, "Invalid block size %ld - correct block sizes are %d .. %d\n",
                                        val, MinBlockSize, MaxBlockSize);
                             exit(1);
                             }
@@ -1760,12 +1759,11 @@ static void initNpuConnections(void)
                         }
                     else
                         {
-                        logDtError(LogErrorLocation, "\n(init   )   Invalid Reverse HASP block size specification '%s'\n", token);
+                        logDtError(LogErrorLocation, "Invalid Reverse HASP block size specification '%s'\n", token);
                         exit(1);
                         }
                     }
-                logDtError(LogErrorLocation, ", block size %4d", blockSize);
-                logDtError(LogErrorLocation, ", destination host %s", destHostName);
+                logDtError(LogErrorLocation, "  block size %4d, destination host %s", blockSize, destHostName);
                 break;
 
             case ConnTypeNje:
@@ -1775,25 +1773,25 @@ static void initNpuConnections(void)
                 */
                 if (numConns != 1)
                     {
-                    fputs("\n(init   )   Invalid port count on NJE definition (must be 1)\n", stderr);
+                    logDtError(LogErrorLocation, "Invalid port count on NJE definition (must be 1)\n");
                     exit(1);
                     }
                 token = strtok(remainder, ", ");
                 if (token == NULL)
                     {
-                    fputs("\n(init   )   Missing remote NJE node address\n", stderr);
+                    logDtError(LogErrorLocation, "Missing remote NJE node address\n");
                     exit(1);
                     }
                 destHostAddr = token;
                 if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
                     {
-                    logDtError(LogErrorLocation, "\n(init   )   Invalid remote NJE node address %s\n", destHostAddr);
+                    logDtError(LogErrorLocation, "Invalid remote NJE node address %s\n", destHostAddr);
                     exit(1);
                     }
                 token = strtok(NULL, ", ");
                 if (token == NULL)
                     {
-                    fputs("\n(init   )   Missing remote NJE node name\n", stderr);
+                    logDtError(LogErrorLocation, "Missing remote NJE node name\n");
                     exit(1);
                     }
                 destHostName = token;
@@ -1809,7 +1807,7 @@ static void initNpuConnections(void)
                         val = strtol(token + 1, NULL, 10);
                         if (val < MinNjeBlockSize)
                             {
-                            logDtError(LogErrorLocation, "\n(init   )   Invalid block size %ld - correct block size is at least %d\n",
+                            logDtError(LogErrorLocation, "Invalid block size %ld - correct block size is at least %d\n",
                                        val, MinNjeBlockSize);
                             exit(1);
                             }
@@ -1820,25 +1818,21 @@ static void initNpuConnections(void)
                         pingInterval = strtol(token + 1, NULL, 10);
                         if (pingInterval < 0)
                             {
-                            logDtError(LogErrorLocation, "\n(init   )   Invalid ping interval %ld\n", pingInterval);
+                            logDtError(LogErrorLocation, "Invalid ping interval %ld\n", pingInterval);
                             exit(1);
                             }
                         }
                     else if (initParseIpAddress(token, &localHostIP, NULL) == FALSE)
                         {
-                        logDtError(LogErrorLocation, "\n(init   )   Invalid local NJE node address %s\n", token);
+                        logDtError(LogErrorLocation, "Invalid local NJE node address %s\n", token);
                         exit(1);
                         }
                     token = strtok(NULL, ", ");
                     }
-                logDtError(LogErrorLocation, ", block size %4d", blockSize);
-                logDtError(LogErrorLocation, ", destination host %s/%s", destHostName, destHostAddr);
-                logDtError(LogErrorLocation, ", source address %d.%d.%d.%d",
-                           (localHostIP >> 24) & 0xff,
-                           (localHostIP >> 16) & 0xff,
-                           (localHostIP >> 8) & 0xff,
-                           localHostIP & 0xff);
-                logDtError(LogErrorLocation, ", ping interval %ld", pingInterval);
+                logDtError(LogErrorLocation, "  block size %4d, destination host %s/%s, source address %d.%d.%d.%d, ping interval %ld",
+                           blockSize, destHostName, destHostAddr, 
+                           (localHostIP >> 24) & 0xff, (localHostIP >> 16) & 0xff, (localHostIP >> 8) & 0xff, localHostIP & 0xff,
+                           pingInterval);
                 break;
 
             case ConnTypeTrunk:
@@ -1847,25 +1841,25 @@ static void initNpuConnections(void)
                 */
                 if (numConns != 1)
                     {
-                    fputs("\n(init   )   Invalid port count - must be 1\n", stderr);
+                    logDtError(LogErrorLocation, "Invalid port count - must be 1\n");
                     exit(1);
                     }
                 token = strtok(remainder, ", ");
                 if (token == NULL)
                     {
-                    fputs("\n(init   )   Missing remote host address\n", stderr);
+                    logDtError(LogErrorLocation, "Missing remote host address\n");
                     exit(1);
                     }
                 destHostAddr = token;
                 if (initParseIpAddress(destHostAddr, &destHostIP, &destHostPort) == FALSE)
                     {
-                    logDtError(LogErrorLocation, "\n(init   )   Invalid remote host IP address %s\n", destHostAddr);
+                    logDtError(LogErrorLocation, "Invalid remote host IP address %s\n", destHostAddr);
                     exit(1);
                     }
                 token = strtok(NULL, ", ");
                 if (token == NULL)
                     {
-                    fputs("\n(init   )   Missing remote node name\n", stderr);
+                    logDtError(LogErrorLocation, "Missing remote node name\n");
                     exit(1);
                     }
                 destHostName = token;
@@ -1874,19 +1868,19 @@ static void initNpuConnections(void)
                 token = strtok(NULL, " ");
                 if (token == NULL)
                     {
-                    fputs("\n(init   )   Missing coupler node number\n", stderr);
+                    logDtError(LogErrorLocation, "Missing coupler node number\n");
                     exit(1);
                     }
                 val = strtol(token, NULL, 10);
 
                 if ((val < 1) || (val > 255))
                     {
-                    logDtError(LogErrorLocation, "\n(init   )   Invalid coupler node number %ld\n", val);
+                    logDtError(LogErrorLocation, "Invalid coupler node number %ld\n", val);
                     exit(1);
                     }
                 destNode = (u8)val;
-                logDtError(LogErrorLocation, ", coupler node %d", destNode);
-                logDtError(LogErrorLocation, ", destination host %s/%s", destHostName, destHostAddr);
+                logDtError(LogErrorLocation, "  coupler node %d, destination host %s/%s",
+                           destNode, destHostName, destHostAddr);
                 break;
                 }
 
@@ -1899,7 +1893,7 @@ static void initNpuConnections(void)
                 ncbp->hostName = (char *)malloc(len);
                 if (ncbp->hostName == NULL)
                     {
-                    fputs("\n(init   )   Out of memory\n", stderr);
+                    logDtError(LogErrorLocation, "Out of memory\n");
                     exit(1);
                     }
                 memcpy(ncbp->hostName, destHostName, len);
@@ -1918,13 +1912,13 @@ static void initNpuConnections(void)
                     pcbp->controls.nje.inputBuf     = (u8 *)malloc(pcbp->controls.nje.inputBufSize);
                     if (pcbp->controls.nje.inputBuf == NULL)
                         {
-                        fputs("\n(init   )   Out of memory\n", stderr);
+                        logDtError(LogErrorLocation, "Out of memory\n");
                         exit(1);
                         }
                     pcbp->controls.nje.outputBuf = (u8 *)malloc(pcbp->controls.nje.blockSize);
                     if (pcbp->controls.nje.outputBuf == NULL)
                         {
-                        fputs("\n(init   )   Out of memory\n", stderr);
+                        logDtError(LogErrorLocation, "Out of memory\n");
                         exit(1);
                         }
                     }
@@ -1938,8 +1932,6 @@ static void initNpuConnections(void)
             default:
                 break;
                 }
-
-            fputs("\n", stderr);
             }
         }
     }
