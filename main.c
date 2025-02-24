@@ -52,6 +52,16 @@
 #include <unistd.h>
 #endif
 
+#if defined(_WIN32)
+extern int _write(
+    int          fd,
+    const void   *buffer,
+    unsigned int count
+    );
+extern int _isatty(int fd);
+
+#endif
+
 /*
 **  -----------------
 **  Private Constants
@@ -139,6 +149,7 @@ int main(int argc, char **argv)
     */
     atexit(opExit);
     timeBeginPeriod(8);
+
     /*
     **  Select WINSOCK 1.1.
     */
@@ -151,7 +162,7 @@ int main(int argc, char **argv)
     err = WSAStartup(versionRequested, &wsaData);
     if (err != 0)
         {
-        fprintf(stderr, "\n(main) Error in WSAStartup: %d\n", err);
+        logDtError(LogErrorLocation, "\n(main) Error in WSAStartup: %d\n", err);
         exit(1);
         }
 #else
@@ -181,11 +192,6 @@ int main(int argc, char **argv)
 
     //  Don't let the user press Ctrl-C by accident.
     signal(SIGINT, INThandler);
-
-    /*
-    **  Setup error logging.
-    */
-    logInit();
 
     /*
     **  Allow optional command line parameter to specify section to run in "cyber.ini".
@@ -241,7 +247,7 @@ int main(int argc, char **argv)
     */
     deadStart();
 
-    fputs("(cpu    ) CPU0 started\n",  stdout);
+    fputs("(cpu    ) CPU0 started\n", stdout);
 
     /*
     **  Emulation loop.
@@ -341,7 +347,7 @@ void idleThrottle(CpuContext *ctx)
                 {
                 if (ctx->id == 0)
                     {
-                    if (idleCheckBusy() || npuBipIsBusy() || rtcClockIsCurrent == FALSE)
+                    if (idleCheckBusy() || npuBipIsBusy() || (rtcClockIsCurrent == FALSE))
                         {
                         return;
                         }
@@ -467,26 +473,27 @@ bool idleDetectorMACE(CpuContext *ctx)
         {
         return TRUE;
         }
+
     return FALSE;
     }
 
- /*--------------------------------------------------------------------------
- **  Purpose:        Run a helper process.
- **
- **  Parameters:     Name        Description.
- **                  command     Helper command to run
- **
- **  Returns:        0 if successful, error code otherwise.
- **
- **------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------
+**  Purpose:        Run a helper process.
+**
+**  Parameters:     Name        Description.
+**                  command     Helper command to run
+**
+**  Returns:        0 if successful, error code otherwise.
+**
+**------------------------------------------------------------------------*/
 int runHelper(char *command)
     {
 #if defined (_WIN32)
-    char *dp;
+    char                *dp;
     PROCESS_INFORMATION pi;
-    STARTUPINFO si;
-    char *sp;
-    char winCmdLine[210];
+    STARTUPINFO         si;
+    char                *sp;
+    char                winCmdLine[210];
 
     memset(&si, 0, sizeof(si));
     si.cb = sizeof(si);
@@ -497,20 +504,20 @@ int runHelper(char *command)
     while (*sp != '\0')
         {
         *dp++ = (*sp == '/') ? '\\' : *sp;
-        sp += 1;
+        sp   += 1;
         }
     *dp = '\0';
 
     if (!CreateProcessA("C:\\Windows\\System32\\cmd.exe", // Module name
-        winCmdLine,                // Command line
-        NULL,                      // Process handle not inheritable
-        NULL,                      // Thread handle not inheritable
-        FALSE,                     // Set handle inheritance to FALSE
-        CREATE_NEW_CONSOLE,        // Creation flags
-        NULL,                      // Use parent's environment block
-        NULL,                      // Use parent's starting directory 
-        &si,                       // Pointer to STARTUPINFO structure
-        &pi)                       // Pointer to PROCESS_INFORMATION structure
+                        winCmdLine,                       // Command line
+                        NULL,                             // Process handle not inheritable
+                        NULL,                             // Thread handle not inheritable
+                        FALSE,                            // Set handle inheritance to FALSE
+                        CREATE_NEW_CONSOLE,               // Creation flags
+                        NULL,                             // Use parent's environment block
+                        NULL,                             // Use parent's starting directory
+                        &si,                              // Pointer to STARTUPINFO structure
+                        &pi)                              // Pointer to PROCESS_INFORMATION structure
         )
         {
         return GetLastError();
@@ -558,11 +565,11 @@ void startHelpers(void)
         rc = runHelper(command);
         if (rc == 0)
             {
-            printf("(helper ) Started: %s\n", line);
+            printf("(main   ) Started helper: %s\n", line);
             }
         else
             {
-            printf("(helper ) Failed to start \"%s\", rc = %d\n", line, rc);
+            printf("(main   ) Failed to start helper \"%s\", rc = %d\n", line, rc);
             }
         }
     }
@@ -590,11 +597,11 @@ void stopHelpers(void)
             rc = runHelper(command);
             if (rc == 0)
                 {
-                printf("\n(helper ) Stopped: %s\n", line);
+                printf("\n(main   ) Stopped helper: %s\n", line);
                 }
             else
                 {
-                printf("\n(helper ) Failed to stop \"%s\", rc = %d\n", line, rc);
+                printf("\n(main   ) Failed to stop helper \"%s\", rc = %d\n", line, rc);
                 }
             }
         }
@@ -604,11 +611,11 @@ void stopHelpers(void)
         rc = runHelper(command);
         if (rc == 0)
             {
-            printf("\n(helper ) Stopped: %s\n", networkInterfaceMgr);
+            printf("\n(main   ) Stopped helper: %s\n", networkInterfaceMgr);
             }
         else
             {
-            printf("\n(helper ) Failed to stop \"%s\", rc = %d\n", networkInterfaceMgr, rc);
+            printf("\n(main   ) Failed to stop helper \"%s\", rc = %d\n", networkInterfaceMgr, rc);
             }
         }
     fflush(stdout);
@@ -686,10 +693,20 @@ static void INThandler(int sig)
     char c;
 
     signal(sig, SIG_IGN);
-    printf("\n*WARNING*:===================="
-           "\n*WARNING*: Ctrl-C Intercepted!"
-           "\n*WARNING*:===================="
-           "\nDo you really want to quit? [y/n] ");
+#if defined(WIN32)
+    //  Use Async-safe output function.
+    //                         1 234567890....+....2....+....3..
+    _write(STD_OUTPUT_HANDLE, "\n*WARNING*:=====================", 32);
+    _write(STD_OUTPUT_HANDLE, "\n*WARNING*: Ctrl-C Intercepted! ", 32);
+    _write(STD_OUTPUT_HANDLE, "\n*WARNING*:=====================", 32);
+    //                         1 2 34567890....+....2....+....3....+.
+    _write(STD_OUTPUT_HANDLE, "\n\nDo you really want to quit? [y/n] ", 36);
+#else
+    fputs("\n*WARNING*:=====================", stderr);
+    fputs("\n*WARNING*: Ctrl-C Intercepted! ", stderr);
+    fputs("\n*WARNING*:=====================", stderr);
+    fputs("\n\nDo you really want to quit? [y/n] ", stderr);
+#endif
     c = (char)getchar();
     if ((c == 'y') || (c == 'Y'))
         {
@@ -705,6 +722,7 @@ static void INThandler(int sig)
 static void opExit()
     {
     char check;
+
     timeEndPeriod(8);
     if (_isatty(_fileno(stdin)) && opIsConsoleInput())
         {

@@ -40,7 +40,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#endif 
+#endif
 
 
 #include "const.h"
@@ -301,7 +301,7 @@ void npuTipInit(void)
     npuTipLog = fopen("tiplog.txt", "wt");
     if (npuTipLog == NULL)
         {
-        fprintf(stderr, "tiplog.txt - aborting\n");
+        logDtError(LogErrorLocation, "tiplog.txt - aborting\n");
         exit(1);
         }
 #endif
@@ -408,16 +408,16 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
         return;
         }
 #if DEBUG
-    {
-    int i;
-    fprintf(npuTipLog, "Connection %u received block type %02x, PFC %02x, SFC %02x\n   ",
-            cn, block[BlkOffBTBSN] & BlkMaskBT, block[BlkOffPfc], block[BlkOffSfc]);
-    for (i = 0; i < bp->numBytes; i++)
         {
-        fprintf(npuTipLog, " %02x", bp->data[i]);
+        int i;
+        fprintf(npuTipLog, "Connection %u received block type %02x, PFC %02x, SFC %02x\n   ",
+                cn, block[BlkOffBTBSN] & BlkMaskBT, block[BlkOffPfc], block[BlkOffSfc]);
+        for (i = 0; i < bp->numBytes; i++)
+            {
+            fprintf(npuTipLog, " %02x", bp->data[i]);
+            }
+        fputs("\n", npuTipLog);
         }
-    fputs("\n", npuTipLog);
-    }
 #endif
 
     switch (block[BlkOffBTBSN] & BlkMaskBT)
@@ -522,7 +522,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
             fputs("Unrecognized TIP command\n", npuTipLog);
 #endif
             break;
-        }
+            }
 
         /*
         **  Acknowledge any command (although most are ignored).
@@ -539,7 +539,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
             {
             last = (block[BlkOffBTBSN] & BlkMaskBT) == BtHTMSG;
             switch (tp->tipType)
-            {
+                {
             case TtASYNC:
                 npuAsyncProcessDownlineData(tp, bp, last);
                 break;
@@ -554,14 +554,14 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
                 break;
 
             default:
-                fprintf(stderr, "(npu_tip) Downline data for unrecognized TIP type %u on connection %u\n",
-                        tp->tipType, tp->cn);
+                logDtError(LogErrorLocation, "Downline data for unrecognized TIP type %u on connection %u\n",
+                           tp->tipType, tp->cn);
                 blockAck[BlkOffCN]     = block[BlkOffCN];
                 blockAck[BlkOffBTBSN] &= BlkMaskBT;
                 blockAck[BlkOffBTBSN] |= block[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN);
                 npuBipRequestUplineCanned(blockAck, sizeof(blockAck));
                 break;
-            }
+                }
             }
         else
             {
@@ -578,7 +578,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 
     case BtHTQBLK:
     case BtHTQMSG:
-        fprintf(stderr, "(npu_tip) Qualified block/message ignored, port=%02x\n", tp->pcbp->claPort);
+        logDtError(LogErrorLocation, "Qualified block/message ignored, port=%02x\n", tp->pcbp->claPort);
         break;
 
     case BtHTBACK:
@@ -675,7 +675,7 @@ void npuTipSetupTerminalClass(Tcb *tp, u8 tc)
 
     default:
         switch (tp->tipType)
-        {
+            {
         default:
         case TtASYNC:
             tp->params = defaultTc3;
@@ -692,7 +692,7 @@ void npuTipSetupTerminalClass(Tcb *tp, u8 tc)
         case TtTT13:
             tp->params = defaultTc29;
             break;
-        }
+            }
         }
     }
 
@@ -1073,7 +1073,7 @@ void npuTipSendUserBreak(Tcb *tp, u8 bt)
     /*
     **  Send the ICMD.
     */
-    npuBipRequestUplineCanned(tp->inBuf, mp - tp->inBuf);
+    npuBipRequestUplineCanned(tp->inBuf, (int)(mp - tp->inBuf));
 
     /*
     **  Increment BSN.
@@ -1098,7 +1098,7 @@ void npuTipSendUserBreak(Tcb *tp, u8 bt)
     /*
     **  Send the BI/MARK.
     */
-    npuBipRequestUplineCanned(tp->inBuf, mp - tp->inBuf);
+    npuBipRequestUplineCanned(tp->inBuf, (int)(mp - tp->inBuf));
 
     /*
     **  Purge output and send back all acknowledgments.

@@ -54,7 +54,7 @@
 **  Private Constants
 **  -----------------
 */
-#define MaxListenBacklog 100
+#define MaxListenBacklog    100
 
 /*
 **  -----------------------
@@ -114,10 +114,12 @@ SOCKET netAcceptConnection(SOCKET sd)
     acceptFd = accept(sd, (struct sockaddr *)&from, &fromLen);
     if (acceptFd == INVALID_SOCKET)
         {
-        fprintf(stderr, "(net_util) accept failed, rc=%d\n", WSAGetLastError());
+        logDtError(LogErrorLocation, "(net_util) accept failed, rc=%d\n", WSAGetLastError());
         }
+
     return acceptFd;
     }
+
 #else
 int netAcceptConnection(int sd)
     {
@@ -131,8 +133,10 @@ int netAcceptConnection(int sd)
         {
         perror("(net_util) accept");
         }
+
     return acceptFd;
     }
+
 #endif
 
 /*--------------------------------------------------------------------------
@@ -149,11 +153,13 @@ void netCloseConnection(SOCKET sd)
     {
     closesocket(sd);
     }
+
 #else
 void netCloseConnection(int sd)
     {
     close(sd);
     }
+
 #endif
 
 /*--------------------------------------------------------------------------
@@ -168,13 +174,13 @@ void netCloseConnection(int sd)
 #if defined(_WIN32)
 SOCKET netCreateListener(int port)
 #else
-int    netCreateListener(int port)
+int netCreateListener(int port)
 #endif
     {
 #if defined(_WIN32)
     SOCKET sd;
 #else
-    int    sd;
+    int sd;
 #endif
 
 #if DEBUG
@@ -190,8 +196,9 @@ int    netCreateListener(int port)
 #endif
         {
 #if DEBUG
-        fprintf(stderr, "(net_util) netCreateSocket could not create socket\n");
+        logDtError(LogErrorLocation, "netCreateSocket could not create socket\n");
 #endif
+
         return sd;
         }
 
@@ -206,15 +213,17 @@ int    netCreateListener(int port)
 #endif
 #if defined(_WIN32)
         closesocket(sd);
+
         return INVALID_SOCKET;
 #else
         close(sd);
+
         return -1;
 #endif
         }
 
 #if DEBUG >= 2
-    fprintf(stderr, "(net_util) netCreateSocket listen on port %d succeeded\n", port);
+    logDtError(LogErrorLocation, "netCreateSocket listen on port %d succeeded\n", port);
 #endif
 
     return sd;
@@ -234,18 +243,15 @@ int    netCreateListener(int port)
 #if defined(_WIN32)
 SOCKET netCreateSocket(int port, bool isReuse)
 #else
-int    netCreateSocket(int port, bool isReuse)
+int netCreateSocket(int port, bool isReuse)
 #endif
     {
-    int                optEnable = 1;
-    int                rc;
+    int optEnable = 1;
     struct sockaddr_in srcAddr;
 
 #if defined(_WIN32)
-    u_long    blockEnable = 1;
-    int       optLen;
-    int       optVal;
-    SOCKET    sd;
+    u_long blockEnable = 1;
+    SOCKET sd;
 #else
     socklen_t optLen;
     int       optVal;
@@ -258,9 +264,15 @@ int    netCreateSocket(int port, bool isReuse)
 
     sd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 #if defined(_WIN32)
-    if (sd == INVALID_SOCKET) return sd;
+    if (sd == INVALID_SOCKET)
+        {
+        return sd;
+        }
 #else
-    if (sd == -1) return sd;
+    if (sd == -1)
+        {
+        return sd;
+        }
 #endif
 
     if (isReuse)
@@ -280,9 +292,11 @@ int    netCreateSocket(int port, bool isReuse)
 #endif
 #if defined(_WIN32)
         closesocket(sd);
+
         return INVALID_SOCKET;
 #else
         close(sd);
+
         return -1;
 #endif
         }
@@ -296,8 +310,9 @@ int    netCreateSocket(int port, bool isReuse)
 #endif
 
 #if DEBUG >= 2
-    fprintf(stderr, "(net_util) netCreateSocket to %s:%d successful\n", ipAddress, port);
+    logDtError(LogErrorLocation, "(net_util) netCreateSocket to %s:%d successful\n", ipAddress, port);
 #endif
+
     return sd;
     }
 
@@ -367,11 +382,12 @@ char *netGetLocalTcpAddress(int sd)
         ipAddr = ntohl(hostAddr.sin_addr.s_addr);
         port   = ntohs(hostAddr.sin_port);
         sprintf(outBuf, "%d.%d.%d.%d:%d",
-          (ipAddr >> 24) & 0xff,
-          (ipAddr >> 16) & 0xff,
-          (ipAddr >>  8) & 0xff,
-          ipAddr         & 0xff,
-          port);
+                (ipAddr >> 24) & 0xff,
+                (ipAddr >> 16) & 0xff,
+                (ipAddr >> 8) & 0xff,
+                ipAddr & 0xff,
+                port);
+
         return outBuf;
         }
     else
@@ -414,11 +430,12 @@ char *netGetPeerTcpAddress(int sd)
         ipAddr = ntohl(hostAddr.sin_addr.s_addr);
         port   = ntohs(hostAddr.sin_port);
         sprintf(outBuf, "%d.%d.%d.%d:%d",
-          (ipAddr >> 24) & 0xff,
-          (ipAddr >> 16) & 0xff,
-          (ipAddr >>  8) & 0xff,
-          ipAddr         & 0xff,
-          port);
+                (ipAddr >> 24) & 0xff,
+                (ipAddr >> 16) & 0xff,
+                (ipAddr >> 8) & 0xff,
+                ipAddr & 0xff,
+                port);
+
         return outBuf;
         }
     else
@@ -458,7 +475,10 @@ int    netInitiateConnection(struct sockaddr *sap)
     sd = netCreateSocket(0, FALSE);
 
 #if defined(_WIN32)
-    if (sd == INVALID_SOCKET) return sd;
+    if (sd == INVALID_SOCKET)
+        {
+        return sd;
+        }
     rc = connect(sd, sap, sizeof(*sap));
     if ((rc == SOCKET_ERROR) && (WSAGetLastError() != WSAEWOULDBLOCK))
         {
@@ -466,10 +486,14 @@ int    netInitiateConnection(struct sockaddr *sap)
         perror("(net_util) connect");
 #endif
         closesocket(sd);
+
         return INVALID_SOCKET;
         }
 #else
-    if (sd == -1) return sd;
+    if (sd == -1)
+        {
+        return sd;
+        }
     rc = connect(sd, sap, sizeof(*sap));
     if ((rc == -1) && (errno != EINPROGRESS))
         {
@@ -477,12 +501,13 @@ int    netInitiateConnection(struct sockaddr *sap)
         perror("(net_util) connect");
 #endif
         close(sd);
+
         return -1;
         }
 #endif
 
 #if DEBUG >= 2
-    fprintf(stderr, "(net_util) connect succeeded\n");
+    logDtError(LogErrorLocation, "Connect succeeded\n");
 #endif
 
     return sd;

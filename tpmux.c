@@ -276,11 +276,11 @@ static void     tpMuxDisconnect(void);
 **  Private Variables
 **  -----------------
 */
-static int        ioTurns     = IoTurnsPerPoll - 1;
-static int        listenFd    = 0;
-static DevSlot    *mux        = NULL;
-static PortParam  *portVector = NULL;
-static u16        telnetPort  = 6602;
+static int       ioTurns     = IoTurnsPerPoll - 1;
+static int       listenFd    = 0;
+static DevSlot   *mux        = NULL;
+static PortParam *portVector = NULL;
+static u16       telnetPort  = 6602;
 
 static char connectingMsg[] = "\r\nConnecting to host - please wait ...";
 static char noPortsMsg[]    = "\r\nNo free ports available - please try again later.\r\n";
@@ -318,7 +318,7 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
         exit(1);
         }
 
-    dp = mux         = channelAttach(channelNo, eqNo, DtTpm);
+    dp               = mux = channelAttach(channelNo, eqNo, DtTpm);
     dp->activate     = tpMuxActivate;
     dp->disconnect   = tpMuxDisconnect;
     dp->func         = tpMuxFunc;
@@ -329,9 +329,9 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
         {
         //  Parse the TCP Port Number
         port = strtol(params, NULL, 10);
-        if (port < 1 || port > 65535)
+        if ((port < 1) || (port > 65535))
             {
-            fprintf(stderr, "(tpmux  ) Invalid TCP port number in TPM definition: %ld\n", port);
+            logDtError(LogErrorLocation, "Invalid TCP port number in TPM definition: %ld\n", port);
             exit(1);
             }
         telnetPort = (u16)port;
@@ -340,7 +340,7 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     portVector = calloc(MaxPorts, sizeof(PortParam));
     if (portVector == NULL)
         {
-        fprintf(stderr, "(tpmux  ) Failed to allocate two port mux context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate two port mux context block\n");
         exit(1);
         }
 
@@ -360,14 +360,14 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     /*
     **  Create the listening socket
     */
-    listenFd = netCreateListener(telnetPort);
+    listenFd = (int)netCreateListener(telnetPort);
 #if defined(_WIN32)
     if (listenFd == INVALID_SOCKET)
 #else
     if (listenFd == -1)
 #endif
         {
-        fprintf(stderr, "(tpmux  ) Can't listen on port %d\n", telnetPort);
+        logDtError(LogErrorLocation, "Can't listen on port %d\n", telnetPort);
         exit(1);
         }
 
@@ -392,20 +392,23 @@ void tpMuxShowStatus()
     char      outBuf[200];
     PortParam *pp;
 
-    if (listenFd <= 0) return;
+    if (listenFd <= 0)
+        {
+        return;
+        }
 
     sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "2pMux", mux->channel->id, mux->eqNo);
     opDisplay(outBuf);
-    sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(listenFd), "", "async", "listening");
+    sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(listenFd), "", "async", "listening");
     opDisplay(outBuf);
 
     for (i = 0, pp = portVector; i < MaxPorts; i++, pp++)
         {
-        if (pp->active && pp->connFd > 0)
+        if (pp->active && (pp->connFd > 0))
             {
             sprintf(outBuf, "    >   %-8s         P%02o ", "2pMux", pp->id);
             opDisplay(outBuf);
-            sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), "async", "connected");
+            sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), "async", "connected");
             opDisplay(outBuf);
             }
         }
@@ -430,6 +433,7 @@ void tpMuxShowStatus()
 static void tpMuxCheckIo(void)
     {
     PortParam *availablePort;
+
 #if defined(_WIN32)
     u_long blockEnable = 1;
 #endif
@@ -535,11 +539,14 @@ static void tpMuxCheckIo(void)
                 }
             }
         }
-    if (listenFd >= 0 && FD_ISSET(listenFd, &readFds))
+    if ((listenFd >= 0) && FD_ISSET(listenFd, &readFds))
         {
         fromLen = sizeof(from);
-        fd = accept(listenFd, (struct sockaddr *)&from, &fromLen);
-        if (fd < 0) return;
+        fd      = (int)accept(listenFd, (struct sockaddr *)&from, &fromLen);
+        if (fd < 0)
+            {
+            return;
+            }
         availablePort = NULL;
         for (i = 0, pp = portVector; i < MaxPorts; i++, pp++)
             {
@@ -560,11 +567,13 @@ static void tpMuxCheckIo(void)
 #if DEBUG
             printf("(tpmux  ) Connection accepted on port %d\n", availablePort->id);
 #endif
+
             /*
             **  Set Keepalive option so that we can eventually discover if
             **  a client has been rebooted.
             */
             setsockopt(availablePort->connFd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
+
             /*
             **  Make socket non-blocking.
             */
@@ -573,11 +582,11 @@ static void tpMuxCheckIo(void)
 #else
             fcntl(availablePort->connFd, F_SETFL, O_NONBLOCK);
 #endif
-            send(fd, connectingMsg, strlen(connectingMsg), 0);
+            send(fd, connectingMsg, (int)strlen(connectingMsg), 0);
             }
         else
             {
-            send(fd, noPortsMsg, strlen(noPortsMsg), 0);
+            send(fd, noPortsMsg, (int)strlen(noPortsMsg), 0);
             netCloseConnection(fd);
 #if DEBUG
             puts("(tpmux  ) No free ports available");
@@ -681,7 +690,7 @@ static void tpMuxIo(void)
     case FcTpmStatusSumary:
         if (!activeChannel->full)
             {
-            if (pp->active && pp->inOutIdx < pp->inInIdx)
+            if (pp->active && (pp->inOutIdx < pp->inInIdx))
                 {
                 pp->status |= 00010;
                 }
@@ -720,7 +729,7 @@ static void tpMuxIo(void)
             */
             activeChannel->full = FALSE;
 
-            if (pp->active && pp->outInIdx < OutBufSize)
+            if (pp->active && (pp->outInIdx < OutBufSize))
                 {
                 pp->outBuffer[pp->outInIdx++] = (u8)activeChannel->data & 0177;
 #if DEBUG

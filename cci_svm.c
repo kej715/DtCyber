@@ -370,15 +370,15 @@ void cciSvmSendDiscRequest(Tcb *tp)
 
     case StTermIdle:                   // terminal is not yet configured or connected
     case StTermHostRequestDisconnect:  // disconnection has been requested by host
-        fprintf(stderr, "Warning - disconnect request ignored for %.7s in state %s\n",
-                tp->termName, npuSvmTermStates[tp->state]);
+        logDtError(LogErrorLocation, "Warning - disconnect request ignored for %.7s in state %s\n",
+                   tp->termName, npuSvmTermStates[tp->state]);
 
     case StTermNpuRequestDisconnect:   // disconnection has been requested by NPU/MDI
         break;
 
     default:
-        fprintf(stderr, "(cci_svm) Unrecognized state %d during %.7s disconnect request\n",
-                tp->state, tp->termName);
+        logDtError(LogErrorLocation, "Unrecognized state %d during %.7s disconnect request\n",
+                   tp->state, tp->termName);
         break;
         }
     }
@@ -449,12 +449,12 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
         /*
         **  Service message must be at least DN/SN/0/BSN/PFC/SFC.
         */
-        fprintf(stderr, "(cci_svm) Short message: ");
+        logDtError(LogErrorLocation, "Short message: ");
         for (int i = 0; i < bp->numBytes; i++)
             {
-            fprintf(stderr, " %x", bp->data[i]);
+            logDtError(LogErrorLocation, " %x", bp->data[i]);
             }
-        fprintf(stderr, "\n");
+        logDtError(LogErrorLocation, "\n");
 
         /*
         **  Release downline buffer and return.
@@ -473,8 +473,8 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
         /*
         **  Connection number out of range.
         */
-        fprintf(stderr, "(cci_svm) Connection number is %u but must be zero in SVM messages %02X/%02X\n",
-                cn, block[BlkOffPfc], block[BlkOffSfc]);
+        logDtError(LogErrorLocation, "Connection number is %u but must be zero in SVM messages %02X/%02X\n",
+                   cn, block[BlkOffPfc], block[BlkOffSfc]);
 
         /*
         **  Release downline buffer and return.
@@ -502,8 +502,8 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
             /*
             **  Connection number out of range.
             */
-            fprintf(stderr, "(cci_svm) Port number out of range %02X/%02X\n",
-                    block[BlkOffPfc], block[BlkOffSfc]);
+            logDtError(LogErrorLocation, "Port number out of range %02X/%02X\n",
+                       block[BlkOffPfc], block[BlkOffSfc]);
 
             /*
             **  Release downline buffer and return.
@@ -518,8 +518,8 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
             /*
             **  illegal CLA port number
             */
-            fprintf(stderr, "(cci_svm) illegal CLA port %02X number  %02X/%02X\n",
-                    port, block[BlkOffPfc], block[BlkOffSfc]);
+            logDtError(LogErrorLocation, "Illegal CLA port %02X number  %02X/%02X\n",
+                       port, block[BlkOffPfc], block[BlkOffSfc]);
 
             /*
             **  Release downline buffer and return.
@@ -534,8 +534,8 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
             /*
             **  associated CLA port configured
             */
-            fprintf(stderr, "(cci_svm) CLA port %02X not configured %02X/%02X\n",
-                    port, block[BlkOffPfc], block[BlkOffSfc]);
+            logDtError(LogErrorLocation, "CLA port %02X not configured %02X/%02X\n",
+                       port, block[BlkOffPfc], block[BlkOffSfc]);
 
             /*
             **  Release downline buffer and return.
@@ -556,8 +556,8 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
         /*
         ** No NPU buffer available for response
         */
-        fprintf(stderr, "(cci_svm) No response buffer availabel for SVM messages %02X/%02X\n",
-                block[BlkOffPfc], block[BlkOffSfc]);
+        logDtError(LogErrorLocation, "No response buffer availabel for SVM messages %02X/%02X\n",
+                   block[BlkOffPfc], block[BlkOffSfc]);
 
         /*
         **  Release downline buffer and return.
@@ -603,7 +603,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
         if (block[BlkOffLt] != 6)
             {
 #if DEBUG
-            fprintf(stderr, "(cci_svm) port: %u illegal line type %u\n", port, block[BlkOffLt]);
+            logDtError(LogErrorLocation, "Port: %u illegal line type %u\n", port, block[BlkOffLt]);
 #endif
             rc  = rcConfLineInvalidLineType;
             err = TRUE;
@@ -617,7 +617,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
  *          if (block[BlkOffTt] != 0x88)
  *              {
  #if DEBUG
- *                  fprintf(stderr,"(cci_svm) port: %u illegal terminal type %u\n",port,block[BlkOffTt]);
+ *                  logDtError(LogErrorLocation, "Port: %u illegal terminal type %u\n",port,block[BlkOffTt]);
  #endif
  *                  rc= rcConfLineInvalidTermType;
  *                  err = TRUE;
@@ -726,8 +726,8 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
             */
                 {
 #if DEBUG
-                fprintf(stderr, "unhandled host line disconnect request P: %d State %d numTerm %d\n",
-                        port, lp->lineState, lp->numTerminals);
+                logDtError(LogErrorLocation, "Unhandled host line disconnect request P: %d State %d numTerm %d\n",
+                           port, lp->lineState, lp->numTerminals);
 #endif
                 rc = cciLnStatInoperative;
                 break;
@@ -856,12 +856,12 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
             break;
             }
 
-        if (tp->state == StTermConnected || tp->state == StTermConnecting)
+        if ((tp->state == StTermConnected) || (tp->state == StTermConnecting))
             {
             /*
             ** Host requests disconnect, output message to terminal
             */
-            send(tp->pcbp->connFd, disconnectMsg, strlen(disconnectMsg), 0);
+            send(tp->pcbp->connFd, disconnectMsg, (int)strlen(disconnectMsg), 0);
             }
 
         if (tp->state == StTermNpuRequestDisconnect)
@@ -1021,7 +1021,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
     /*
     ** send response and relase buffer
     */
-    respBuf->numBytes = rp - rpHead;
+    respBuf->numBytes = (u16)(rp - rpHead);
     npuBipRequestUplineTransfer(respBuf);
 
     npuBipBufRelease(bp);
@@ -1345,7 +1345,7 @@ static Tcb *cciSvmFindOwningConsole(Tcb *tp)
             }
         }
 #if DEBUG
-    fprintf(stderr, "(cci_svm) No owning console found for connection %u (%.7s)", tp->cn, tp->termName);
+    logDtError(LogErrorLocation, "No owning console found for connection %u (%.7s)", tp->cn, tp->termName);
 #endif
 
     return NULL; // owning console not found

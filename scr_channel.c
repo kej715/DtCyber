@@ -128,7 +128,7 @@ void scrInit(u8 channelNo)
     dp->context[0] = calloc(StatusAndControlWords, sizeof(PpWord));
     if (dp->context[0] == NULL)
         {
-        fprintf(stderr, "(scr_channel) Failed to allocate Status/Control Register context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate Status/Control Register context block\n");
         exit(1);
         }
 
@@ -304,7 +304,7 @@ static void scrExecute(PpWord func)
             **  Select appropriate CM configuration quadrants.
             */
             switch (cpuMaxMemory)
-            {
+                {
             case 01000000:
                 scrSetBit(scrRegister, 0260);
                 scrClrBit(scrRegister, 0261);
@@ -370,7 +370,7 @@ static void scrExecute(PpWord func)
                 scrClrBit(scrRegister, 0262);
                 scrClrBit(scrRegister, 0263);
                 break;
-            }
+                }
             }
 
         break;

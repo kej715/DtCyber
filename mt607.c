@@ -203,7 +203,7 @@ void mt607Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     dp->context[unitNo] = calloc(1, sizeof(TapeBuf));
     if (dp->context[unitNo] == NULL)
         {
-        fprintf(stderr, "(mt607   ) Failed to allocate MT607 context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate MT607 context block\n");
         exit(1);
         }
 
@@ -222,7 +222,7 @@ void mt607Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     dp->fcb[unitNo] = fopen(fname, "rb");
     if (dp->fcb[unitNo] == NULL)
         {
-        fprintf(stderr, "(mt607   ) Failed to open %s\n", fname);
+        logDtError(LogErrorLocation, "Failed to open %s\n", fname);
         exit(1);
         }
 
@@ -279,7 +279,7 @@ static FcStatus mt607Func(PpWord funcCode)
     case Fc607RdBCD:
     case Fc607WrFileMark:
         activeDevice->fcode = 0;
-        logError(LogErrorLocation, "(mt607   ) channel %02o - unsupported function code: %04o", activeChannel->id, (u32)funcCode);
+        logDtError(LogErrorLocation, "Channel %02o - unsupported function code: %04o", activeChannel->id, (u32)funcCode);
         break;
 
     case Fc607Rewind:
@@ -296,7 +296,7 @@ static FcStatus mt607Func(PpWord funcCode)
         activeDevice->selectedUnit = funcCode & 07;
         if (activeDevice->fcb[activeDevice->selectedUnit] == NULL)
             {
-            logError(LogErrorLocation, "(mt607   ) channel %02o - invalid select: %04o", activeChannel->id, (u32)funcCode);
+            logDtError(LogErrorLocation, "Channel %02o - invalid select: %04o", activeChannel->id, (u32)funcCode);
             }
         break;
 
@@ -319,7 +319,7 @@ static FcStatus mt607Func(PpWord funcCode)
         /*
         **  Read and verify TAP record length header.
         */
-        len = fread(&recLen0, sizeof(recLen0), 1, activeDevice->fcb[activeDevice->selectedUnit]);
+        len = (u32)fread(&recLen0, sizeof(recLen0), 1, activeDevice->fcb[activeDevice->selectedUnit]);
 
         if (len != 1)
             {
@@ -351,7 +351,7 @@ static FcStatus mt607Func(PpWord funcCode)
 
         if (recLen1 > MaxByteBuf)
             {
-            logError(LogErrorLocation, "(mt607   ) channel %02o - tape record too long: %d", activeChannel->id, recLen1);
+            logDtError(LogErrorLocation, "Channel %02o - tape record too long: %d", activeChannel->id, recLen1);
             activeChannel->status      = St607NotReadyMask;
             activeDevice->recordLength = 0;
             break;
@@ -360,11 +360,11 @@ static FcStatus mt607Func(PpWord funcCode)
         /*
         **  Read and verify the actual raw data.
         */
-        len = fread(rawBuffer, 1, recLen1, activeDevice->fcb[activeDevice->selectedUnit]);
+        len = (u32)fread(rawBuffer, 1, recLen1, activeDevice->fcb[activeDevice->selectedUnit]);
 
         if (recLen1 != (u32)len)
             {
-            logError(LogErrorLocation, "(mt607   ) channel %02o - short tape record read: %d", activeChannel->id, len);
+            logDtError(LogErrorLocation, "Channel %02o - short tape record read: %d", activeChannel->id, len);
             activeChannel->status      = St607NotReadyMask;
             activeDevice->recordLength = 0;
             break;
@@ -373,11 +373,11 @@ static FcStatus mt607Func(PpWord funcCode)
         /*
         **  Read and verify the TAP record length trailer.
         */
-        len = fread(&recLen2, sizeof(recLen2), 1, activeDevice->fcb[activeDevice->selectedUnit]);
+        len = (u32)fread(&recLen2, sizeof(recLen2), 1, activeDevice->fcb[activeDevice->selectedUnit]);
 
         if ((len != 1) || (recLen0 != recLen2))
             {
-            logError(LogErrorLocation, "(mt607   ) channel %02o - invalid tape record trailer: %08x", activeChannel->id, recLen2);
+            logDtError(LogErrorLocation, "Channel %02o - invalid tape record trailer: %08x", activeChannel->id, recLen2);
             activeChannel->status      = St607NotReadyMask;
             activeDevice->recordLength = 0;
             break;
@@ -399,7 +399,7 @@ static FcStatus mt607Func(PpWord funcCode)
             *op++ = ((c2 << 8) | (c3 >> 0)) & Mask12;
             }
 
-        activeDevice->recordLength = op - tp->ioBuffer;
+        activeDevice->recordLength = (PpWord)(op - tp->ioBuffer);
         activeChannel->status      = St607Ready;
 
 #if DEBUG
@@ -434,7 +434,7 @@ static void mt607Io(void)
     case Fc607WrBCD:
     case Fc607RdBCD:
     case Fc607WrFileMark:
-        logError(LogErrorLocation, "(mt607   ) channel %02o - unsupported function code: %04o", activeChannel->id, activeDevice->fcode);
+        logDtError(LogErrorLocation, "Channel %02o - unsupported function code: %04o", activeChannel->id, activeDevice->fcode);
         break;
 
     case Fc607StatusReq:

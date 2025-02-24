@@ -305,20 +305,20 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
         }
     if (unitNo >= MaxUnits2)
         {
-        fprintf(stderr, "(dsa311 ) Unit number must be less than %o for DSA311 on channel %o equipment %o unit %o\n",
-                MaxUnits2, channelNo, eqNo, unitNo);
+        logDtError(LogErrorLocation, "Unit number must be less than %o for DSA311 on channel %o equipment %o unit %o\n",
+                   MaxUnits2, channelNo, eqNo, unitNo);
         exit(1);
         }
     if ((unitNo & 1) != 0)
         {
-        fprintf(stderr, "(dsa311 ) Unit number must be even for DSA311 on channel %o equipment %o unit %o\n",
-                channelNo, eqNo, unitNo);
+        logDtError(LogErrorLocation, "Unit number must be even for DSA311 on channel %o equipment %o unit %o\n",
+                   channelNo, eqNo, unitNo);
         exit(1);
         }
     if (params == NULL)
         {
-        fprintf(stderr, "(dsa311 ) HASP host connection information required for DSA311 on channel %o equipment %o unit %o\n",
-                channelNo, eqNo, unitNo);
+        logDtError(LogErrorLocation, "HASP host connection information required for DSA311 on channel %o equipment %o unit %o\n",
+                   channelNo, eqNo, unitNo);
         exit(1);
         }
 
@@ -326,8 +326,8 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
 
     if (dp->context[unitNo] != NULL)
         {
-        fprintf(stderr, "(dsa311 ) Duplicate DSA311 unit number %o on channel %o equipment %o\n",
-                unitNo, channelNo, eqNo);
+        logDtError(LogErrorLocation, "Duplicate DSA311 unit number %o on channel %o equipment %o\n",
+                   unitNo, channelNo, eqNo);
         exit(1);
         }
 
@@ -339,7 +339,7 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     cp = (Dsa311Context *)calloc(1, sizeof(Dsa311Context));
     if (cp == NULL)
         {
-        fprintf(stderr, "(dsa311 ) Failed to allocate DSA311 context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate DSA311 context block\n");
         exit(1);
         }
     if (firstMux == NULL)
@@ -367,7 +367,7 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     cp->sktOutBuf.data = (u8 *)calloc(1, SktOutBufSize);
     if ((cp->ppInBuf.data == NULL) || (cp->sktInBuf.data == NULL) || (cp->sktOutBuf.data == NULL))
         {
-        fprintf(stderr, "(dsa311 ) Failed to allocate DSA311 I/O buffer\n");
+        logDtError(LogErrorLocation, "Failed to allocate DSA311 I/O buffer\n");
         exit(1);
         }
     dsa311Reset(cp);
@@ -397,7 +397,7 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     hp = gethostbyname(serverName);
     if (hp == NULL)
         {
-        fprintf(stderr, "(dsa311 ) Failed to lookup address of DSA311 HASP host %s\n", serverName);
+        logDtError(LogErrorLocation, "Failed to lookup address of DSA311 HASP host %s\n", serverName);
         exit(1);
         }
     cp->serverAddr.sin_family = AF_INET;
@@ -435,23 +435,26 @@ void dsa311ShowStatus()
         ipAddr = ntohl(cp->serverAddr.sin_addr.s_addr);
         port   = ntohs(cp->serverAddr.sin_port);
         sprintf(peerAddress, "%d.%d.%d.%d:%d",
-          (ipAddr >> 24) & 0xff,
-          (ipAddr >> 16) & 0xff,
-          (ipAddr >>  8) & 0xff,
-          ipAddr         & 0xff,
-          port);
+                (ipAddr >> 24) & 0xff,
+                (ipAddr >> 16) & 0xff,
+                (ipAddr >> 8) & 0xff,
+                ipAddr & 0xff,
+                port);
 
         switch (cp->majorState)
             {
         case StDsa311MajDisconnected:
-            sprintf(outBuf, FMTNETSTATUS"\n", ipAddress, peerAddress, "rhasp", "disconnected");
+            sprintf(outBuf, FMTNETSTATUS "\n", ipAddress, peerAddress, "rhasp", "disconnected");
             break;
+
         case StDsa311MajConnecting:
-            sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(cp->fd), peerAddress, "rhasp", "connecting");
+            sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(cp->fd), peerAddress, "rhasp", "connecting");
             break;
+
         case StDsa311MajConnected:
-            sprintf(outBuf, FMTNETSTATUS"\n", netGetLocalTcpAddress(cp->fd), netGetPeerTcpAddress(cp->fd), "rhasp", "connected");
+            sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(cp->fd), netGetPeerTcpAddress(cp->fd), "rhasp", "connected");
             break;
+
         default:
             strcpy(outBuf, "\n");
             break;
@@ -678,7 +681,7 @@ static void dsa311Io(void)
             else // output data port
                 {
                 switch (cp->outputState)
-                {
+                    {
                 //
                 //  Look for beginning of a message, and discard characters
                 //  until SOH or DLE is seen.
@@ -733,7 +736,7 @@ static void dsa311Io(void)
                     if (cp->sktOutBuf.in + 1 < SktOutBufSize)
                         {
                         switch (ch)
-                        {
+                            {
                         case SYN:
                             // discard trailing SYN's
                             break;
@@ -753,7 +756,7 @@ static void dsa311Io(void)
                         default:
                             cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
                             break;
-                        }
+                            }
                         }
                     break;
 
@@ -817,7 +820,7 @@ static void dsa311Io(void)
 #endif
                     cp->outputState = StDsa311OutSOH;
                     break;
-                }
+                    }
                 }
             activeChannel->full = FALSE;
             }
@@ -904,7 +907,7 @@ static void dsa311CheckIo(Dsa311Context *cp)
         FD_SET(cp->fd, &writeFds);
         timeout.tv_sec  = 0;
         timeout.tv_usec = 0;
-        n = select(cp->fd + 1, NULL, &writeFds, NULL, &timeout);
+        n = select((int)(cp->fd + 1), NULL, &writeFds, NULL, &timeout);
         if (n <= 0)
             {
 #if DEBUG
@@ -958,12 +961,12 @@ static void dsa311CheckIo(Dsa311Context *cp)
     if (cp->sktInBuf.in < SktInBufSize)
         {
         FD_SET(cp->fd, &readFds);
-        maxFd = cp->fd;
+        maxFd = (int)cp->fd;
         }
     if (cp->sktOutBuf.out < cp->sktOutBuf.in)
         {
         FD_SET(cp->fd, &writeFds);
-        maxFd = cp->fd;
+        maxFd = (int)cp->fd;
         }
     if (maxFd == 0)
         {
@@ -1038,6 +1041,7 @@ static void dsa311InitiateConnection(Dsa311Context *cp)
 #if DEBUG
         fprintf(dsa311Log, "\n%010lu failed to initiate connection", elapsedTime);
 #endif
+
         return;
         }
     else // connection in progress

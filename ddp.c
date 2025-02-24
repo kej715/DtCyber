@@ -155,7 +155,7 @@ void ddpInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     if (extMaxMemory == 0)
         {
-        fprintf(stderr, "(ddp    ) Cannot configure DDP, no ECS configured\n");
+        logDtError(LogErrorLocation, "Cannot configure DDP, no ECS configured\n");
         exit(1);
         }
 
@@ -176,7 +176,7 @@ void ddpInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     dc = calloc(1, sizeof(DdpContext));
     if (dc == NULL)
         {
-        fprintf(stderr, "(ddp    ) Failed to allocate DDP context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate DDP context block\n");
         exit(1);
         }
 
@@ -338,7 +338,7 @@ static void ddpIo(void)
                     */
                     dc->endaddrcycle = cycles;
 
-                    if (extMemType == ECS || extMaxMemory <= 2*1024*1024)
+                    if ((extMemType == ECS) || (extMaxMemory <= 2 * 1024 * 1024))
                         {
                         isFlagReg = (dc->addr & DdpAddrFlagReg) != 0;
                         }
@@ -376,10 +376,10 @@ static void ddpIo(void)
                         {
                         dc->dbyte = -1;
 #if DEBUG
-                        if (extMemType == ECS || extMaxMemory <= 2*1024*1024)
+                        if ((extMemType == ECS) || (extMaxMemory <= 2 * 1024 * 1024))
                             {
                             isReadOne = (dc->addr & DdpAddrReadOne) != 0;
-                            isMaint   = (dc->addr & DdpAddrMaint)   != 0;
+                            isMaint   = (dc->addr & DdpAddrMaint) != 0;
                             }
                         else
                             {
@@ -406,10 +406,10 @@ static void ddpIo(void)
             {
             if (!activeChannel->full && (cycles - dc->endaddrcycle > 20))
                 {
-                if (extMemType == ECS || extMaxMemory <= 2*1024*1024)
+                if ((extMemType == ECS) || (extMaxMemory <= 2 * 1024 * 1024))
                     {
                     isReadOne = (dc->addr & DdpAddrReadOne) != 0;
-                    isMaint   = (dc->addr & DdpAddrMaint)   != 0;
+                    isMaint   = (dc->addr & DdpAddrMaint) != 0;
                     addr      = dc->addr & Mask21;
                     }
                 else
@@ -481,7 +481,7 @@ static void ddpIo(void)
                 /*
                 **  Write next 60 bit to ECS.
                 */
-                if (activeDevice->fcode != FcDdpMaintModeWrite && !cpuDdpTransfer(dc->addr, &dc->curword, TRUE))
+                if ((activeDevice->fcode != FcDdpMaintModeWrite) && !cpuDdpTransfer(dc->addr, &dc->curword, TRUE))
                     {
 #if DEBUG
                     fputs(" abort", ddpLog);

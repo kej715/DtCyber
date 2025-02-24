@@ -125,7 +125,7 @@ DevSlot *dcc6681Attach(u8 channelNo, u8 eqNo, u8 unitNo, u8 devType)
         cp = (DccControl *)calloc(1, sizeof(DccControl));
         if (cp == NULL)
             {
-            fprintf(stderr, "(dcc6681) Failed to allocate dcc6681 context block\n");
+            logDtError(LogErrorLocation, "Failed to allocate dcc6681 context block\n");
             exit(1);
             }
 
@@ -146,7 +146,7 @@ DevSlot *dcc6681Attach(u8 channelNo, u8 eqNo, u8 unitNo, u8 devType)
         device = calloc(1, sizeof(DevSlot));
         if (device == NULL)
             {
-            fprintf(stderr, "(dcc6681) Failed to allocate device control block for converter on channel %d\n", channelNo);
+            logDtError(LogErrorLocation, "Failed to allocate device control block for converter on channel %d\n", channelNo);
             exit(1);
             }
 
@@ -420,11 +420,13 @@ static FcStatus dcc6681Func(PpWord funcCode)
         if (rc == FcDeclined)
             {
             mp->status = StFc6681Reject;
+
             return FcProcessed;
             }
         else
             {
             mp->status = StFc6681Ready;
+
             return rc;
             }
         }

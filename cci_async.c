@@ -187,12 +187,12 @@ void cciAsyncProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
         len--;
         }
 #if DEBUG
-    fprintf(npuAsyncLog,"Send to terminal : ");
-    for(int i = 0; i< len ; i++)
+    fprintf(npuAsyncLog, "Send to terminal : ");
+    for (int i = 0; i < len ; i++)
         {
-        fprintf(npuAsyncLog,"%c", blk[i]);
+        fprintf(npuAsyncLog, "%c", blk[i]);
         }
-    fprintf(npuAsyncLog,"\n");
+    fprintf(npuAsyncLog, "\n");
 #endif
 
     /*
@@ -266,7 +266,7 @@ void cciAsyncProcessUplineNormal(Tcb *tp)
         **  Echo characters.
         */
         *echoPtr++ = ch;
-        echoLen    = echoPtr - echoBuffer;
+        echoLen    = (int)(echoPtr - echoBuffer);
         if (echoLen)
             {
             npuNetSend(tp, echoBuffer, echoLen);
@@ -278,7 +278,7 @@ void cciAsyncProcessUplineNormal(Tcb *tp)
             /*
             **  EOL entered - send the input upline.
             */
-            cciTipSendMsg(tp, tp->inBufPtr - tp->inBuf);
+            cciTipSendMsg(tp, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline normal data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
@@ -352,7 +352,7 @@ void cciAsyncProcessUplineNormal(Tcb *tp)
             /*
             **  Send long lines.
             */
-            cciTipSendMsg(tp, tp->inBufPtr - tp->inBuf);
+            cciTipSendMsg(tp, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline long normal data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);

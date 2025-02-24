@@ -320,7 +320,7 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             }
         else if ((strcasecmp(tokenAuto, "auto") != 0) && (strcasecmp(tokenAuto, "*") != 0))
             {
-            fprintf(stderr, "(cr3447 ) Unrecognized Automation Type '%s'\n", tokenAuto);
+            logDtError(LogErrorLocation, "Unrecognized Automation Type '%s'\n", tokenAuto);
             exit(1);
             }
         }
@@ -341,11 +341,11 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
             {
             cc->table = asciiTo029;
             }
-        else if ((strcasecmp(xlateTable, "026")  != 0)
+        else if ((strcasecmp(xlateTable, "026") != 0)
                  && (strcmp(xlateTable, "*") != 0)
-                 && (strcmp(xlateTable, "")  != 0))
+                 && (strcmp(xlateTable, "") != 0))
             {
-            fprintf(stderr, "(cr3447 ) Unrecognized card code name %s\n", xlateTable);
+            logDtError(LogErrorLocation, "Unrecognized card code name %s\n", xlateTable);
             exit(1);
             }
         }
@@ -361,23 +361,23 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     if ((crOutput != NULL)
         && (strcmp(crOutput, "*") != 0)
-        && (strcmp(crOutput, "")  != 0))
+        && (strcmp(crOutput, "") != 0))
         {
         if (stat(crOutput, &s) != 0)
             {
-            fprintf(stderr, "(cr3447 ) The output location specified '%s' does not exist.\n", crOutput);
+            logDtError(LogErrorLocation, "The output location specified '%s' does not exist.\n", crOutput);
             exit(1);
             }
 
         if ((s.st_mode & S_IFDIR) == 0)
             {
-            fprintf(stderr, "(cr3447 ) The output location specified '%s' is not a directory.\n", crOutput);
+            logDtError(LogErrorLocation, "The output location specified '%s' is not a directory.\n", crOutput);
             exit(1);
             }
-        len = strlen(crOutput);
+        len = (int)strlen(crOutput);
         threadParms->outDoneDir = (char *)calloc(len + 1, 1);
         cc->dirOutput           = (char *)calloc(len + 1, 1);
-        if (threadParms->outDoneDir == NULL || cc->dirOutput == NULL)
+        if ((threadParms->outDoneDir == NULL) || (cc->dirOutput == NULL))
             {
             fputs("(cr3447 ) Failed to allocate storage for output directory path\n", stderr);
             exit(1);
@@ -393,17 +393,17 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     if ((crInput != NULL)
         && (strcmp(crInput, "*") != 0)
-        && (strcmp(crInput, "")  != 0))
+        && (strcmp(crInput, "") != 0))
         {
         if (stat(crInput, &s) != 0)
             {
-            fprintf(stderr, "(cr3447 ) The Input location specified '%s' does not exist.\n", crInput);
+            logDtError(LogErrorLocation, "The Input location specified '%s' does not exist.\n", crInput);
             exit(1);
             }
 
         if ((s.st_mode & S_IFDIR) == 0)
             {
-            fprintf(stderr, "(cr3447 ) The Input location specified '%s' is not a directory.\n", crInput);
+            logDtError(LogErrorLocation, "The Input location specified '%s' is not a directory.\n", crInput);
             exit(1);
             }
         //  We only care about the "Auto" "NoAuto" flag if there is a good input location
@@ -414,10 +414,10 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         **  The Card Reader Context needs to remember what directory
         **  will supply the input files so more can be found at EOD.
         */
-        len = strlen(crInput);
+        len = (int)strlen(crInput);
         threadParms->inWatchDir = (char *)calloc(len + 1, 1);
         cc->dirInput            = (char *)calloc(len + 1, 1);
-        if (threadParms->inWatchDir == NULL || cc->dirInput == NULL)
+        if ((threadParms->inWatchDir == NULL) || (cc->dirInput == NULL))
             {
             fputs("(cr3447 ) Failed to allocate storage for input directory path\n", stderr);
             exit(1);
@@ -429,7 +429,7 @@ void cr3447Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         threadParms->unitNo    = unitNo;
         threadParms->channelNo = channelNo;
         // threadParms->LoadCards = cr3447LoadCards;
-        threadParms->devType   = DtCr3447;
+        threadParms->devType = DtCr3447;
 
         /*
         **  At this point, we should have a completed context
@@ -511,7 +511,7 @@ void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, char *params)
     CrContext   *cc;
     DevSlot     *dp;
     int         len;
-    char        outBuf[MaxFSPath+128];
+    char        outBuf[MaxFSPath + 128];
     struct stat s;
     char        *sp;
 
@@ -543,12 +543,13 @@ void cr3447LoadCards(char *fname, int channelNo, int equipmentNo, char *params)
         {
         sprintf(outBuf, "(cr3447 ) Requested file '%s' not found. (%s).\n", fname, strerror(errno));
         opDisplay(outBuf);
+
         return;
         }
 
     //  Enqueue the file in the chain of pending files
 
-    len = strlen(fname);
+    len = (int)strlen(fname);
     sp  = (char *)calloc(len + 1, 1);
     memcpy(sp, fname, len);
     cc->decks[cc->inDeck] = sp;
@@ -589,11 +590,11 @@ void cr3447GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params
     DIR           *curDir;
     struct dirent *curDirEntry;
     DevSlot       *dp;
-    char          fOldest[MaxFSPath*2+2] = "";
-    char          outBuf[MaxFSPath*2+64];
+    char          fOldest[MaxFSPath * 2 + 2] = "";
+    char          outBuf[MaxFSPath * 2 + 64];
     struct stat   s;
-    char          strWork[MaxFSPath*2+2] = "";
-    time_t        tOldest            = 0;
+    char          strWork[MaxFSPath * 2 + 2] = "";
+    time_t        tOldest = 0;
 
     /*
     **  Safety check, we only respond if the first
@@ -603,6 +604,7 @@ void cr3447GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params
         {
         sprintf(outBuf, "(cr3447 ) cr3447GetNextDeck called with improper parameter '%s'.\n", fname);
         opDisplay(outBuf);
+
         return;
         }
 
@@ -671,10 +673,16 @@ void cr3447GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params
     do
         {
         curDirEntry = readdir(curDir);
-        if (curDirEntry == NULL) break;
+        if (curDirEntry == NULL)
+            {
+            break;
+            }
 
         //  Pop over the dot (.) directories
-        if (*curDirEntry->d_name == '.') continue;
+        if (*curDirEntry->d_name == '.')
+            {
+            continue;
+            }
 
         sprintf(strWork, "%s/%s", cc->dirInput, curDirEntry->d_name);
         stat(strWork, &s);
@@ -738,7 +746,7 @@ void cr3447PostProcess(char *fname, int channelNo, int equipmentNo, char *params
     {
     CrContext *cc;
     DevSlot   *dp;
-    char      outBuf[MaxFSPath+64];
+    char      outBuf[MaxFSPath + 64];
 
     /*
     **  Locate the device control block.
@@ -755,13 +763,14 @@ void cr3447PostProcess(char *fname, int channelNo, int equipmentNo, char *params
         {
         sprintf(outBuf, "(cr3447 ) Submitted deck '%s' processing complete.\n", fname);
         opDisplay(outBuf);
+
         return;
         }
 
     //
     // If the file is from the configured input directory, it can be deleted.
     //
-    if (strncmp(fname, cc->dirInput, strlen(cc->dirInput)) == 0) 
+    if (strncmp(fname, cc->dirInput, strlen(cc->dirInput)) == 0)
         {
         sprintf(outBuf, "(cr3447 ) Purging submitted deck '%s'.\n", fname);
         opDisplay(outBuf);
@@ -783,12 +792,12 @@ void cr3447PostProcess(char *fname, int channelNo, int equipmentNo, char *params
 **------------------------------------------------------------------------*/
 static void cr3447SwapInOut(CrContext *cc, char *fName)
     {
-    char fnwork[MaxFSPath*2+32] = "";
-    char outBuf[MaxFSPath+2+64];
-    
+    char fnwork[MaxFSPath * 2 + 32] = "";
+    char outBuf[MaxFSPath + 2 + 64];
+
 
     //  If either directory isn't specified, just ignore the rename.
-    if (cc->dirOutput == NULL || cc->dirInput == NULL)
+    if ((cc->dirOutput == NULL) || (cc->dirInput == NULL))
         {
         return;
         }
@@ -860,7 +869,7 @@ static void cr3447SwapInOut(CrContext *cc, char *fName)
 void cr3447ShowStatus()
     {
     CrContext *cp;
-    char      outBuf[MaxFSPath*2+64];
+    char      outBuf[MaxFSPath * 2 + 64];
 
     for (cp = firstCr3447; cp != NULL; cp = cp->nextUnit)
         {
@@ -869,7 +878,10 @@ void cr3447ShowStatus()
         sprintf(outBuf, "   %-20s (", cp->curFileName != NULL ? cp->curFileName : "");
         opDisplay(outBuf);
         opDisplay(cp->binary ? "bin" : "char");
-        if (cp->rawCard) opDisplay(", raw");
+        if (cp->rawCard)
+            {
+            opDisplay(", raw");
+            }
         sprintf(outBuf, ", seq %d", cp->seqNum);
         if (cp->isWatched)
             {
@@ -1171,7 +1183,7 @@ static void cr3447Disconnect(void)
 static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc)
     {
     char *fname;
-    char outBuf[MaxFSPath+128];
+    char outBuf[MaxFSPath + 128];
 
     while (cc->outDeck != cc->inDeck)
         {
@@ -1179,14 +1191,15 @@ static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc)
         up->fcb[0] = fopen(fname, "r");
         if (up->fcb[0] != NULL)
             {
-            cc->status = StCr3447Eof;
-            cc->status = StCr3447Ready;
+            cc->status      = StCr3447Eof;
+            cc->status      = StCr3447Ready;
             cc->curFileName = fname;
             cr3447NextCard(up, cc);
             activeDevice = channelFindDevice(up->channel->id, DtDcc6681);
             dcc6681Interrupt((cc->status & cc->intMask) != 0);
             sprintf(outBuf, "\n(cr3447 ) Cards '%s' loaded on card reader C%02o,E%02o\n", cc->curFileName, cc->channelNo, cc->eqNo);
             opDisplay(outBuf);
+
             return TRUE;
             }
         sprintf(outBuf, "(cr3447 ) Failed to open card deck '%s'\n", fname);
@@ -1196,7 +1209,7 @@ static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc)
         cc->outDeck = (cc->outDeck + 1) % Cr3447MaxDecks;
         }
     cc->curFileName = NULL;
-    up->fcb[0] = NULL;
+    up->fcb[0]      = NULL;
 
     return FALSE;
     }
@@ -1217,7 +1230,7 @@ static void cr3447NextCard(DevSlot *up, CrContext *cc)
     char        *cp;
     int         i;
     int         j;
-    char        outBuf[MaxFSPath+128];
+    char        outBuf[MaxFSPath + 128];
     int         value;
 
     /*

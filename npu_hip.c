@@ -242,7 +242,7 @@ void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     */
     if (npuSw != SwUndefined)
         {
-        fprintf(stderr, "(cci_hip) CCP and CCI devices are mutually exclusive\n");
+        logDtError(LogErrorLocation, "CCP and CCI devices are mutually exclusive\n");
         exit(1);
         }
     npuSw = SwCCP;
@@ -264,7 +264,7 @@ void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     npu = calloc(1, sizeof(NpuParam));
     if (npu == NULL)
         {
-        fprintf(stderr, "(npu_hip) Failed to allocate npu context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate npu context block\n");
         exit(1);
         }
 
@@ -484,7 +484,7 @@ static FcStatus npuHipFunc(PpWord funcCode)
 
     case FcNpuInCouplerStatus:
         switch (hipState)
-        {
+            {
         case StHipInit:
             if (initCount > 0)
                 {
@@ -526,7 +526,7 @@ static FcStatus npuHipFunc(PpWord funcCode)
 
         default:
             break;
-        }
+            }
 
         break;
 
@@ -742,7 +742,7 @@ static void npuHipIo(void)
             activeChannel->full = FALSE;
 
             switch (orderType)
-            {
+                {
             case OrdOutServiceMsg:
                 npuBipNotifyServiceMessage();
                 break;
@@ -775,7 +775,7 @@ static void npuHipIo(void)
                 */
                 npuBipRetryInput();
                 break;
-            }
+                }
             }
 
         break;
