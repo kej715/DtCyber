@@ -14,6 +14,7 @@ dtc.connect()
   "[UNLOAD,51.",
   "[!"
 ]))
+.then(() => dtc.sleep(3000))
 .then(() => dtc.mount(13, 0, 0, "tapes/ds.tap"))
 .then(() => dtc.mount(13, 0, 1, "tapes/newds.tap", true))
 .then(() => dtc.sleep(5000))
