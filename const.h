@@ -32,9 +32,9 @@
 **  ----------------
 */
 #ifdef _DEBUG
-#define DtCyberVersion      "Desktop CYBER 5.7.57 (Debug)   "
+#define DtCyberVersion      "Desktop CYBER 6.0.1 (Debug)   "
 #else
-#define DtCyberVersion      "Desktop CYBER 5.7.57 (Release) "
+#define DtCyberVersion      "Desktop CYBER 6.0.1 (Release) "
 #endif
 
 #define DtCyberBuildDate    __DATE__ " " __TIME__
@@ -75,7 +75,7 @@
 /*
 **  Debug support
 */
-#define CcDebug                    0
+#define CcDebug                    1
 
 /*
 **  Measure cycle time
@@ -142,6 +142,8 @@
 
 #define MaxIwStack                 12
 
+#define OneMegabyte                (1024 * 1024)
+
 #define FontLarge                  32
 #define FontMedium                 16
 #define FontSmall                  8
@@ -197,6 +199,7 @@
 #define Mask12                     07777
 #define Mask14                     037777
 #define Mask15                     077777
+#define Mask16                     0177777
 #define Mask17                     0377777
 #define Mask18                     0777777
 #define Mask21                     07777777

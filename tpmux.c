@@ -270,6 +270,7 @@ static void     tpMuxDisconnect(void);
 **  Public Variables
 **  ----------------
 */
+bool tpMuxEnabled = FALSE;
 
 /*
 **  -----------------
@@ -315,6 +316,11 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     if (mux != NULL)
         {
         fputs("(tpmux  ) Only one TPM allowed\n", stderr);
+        exit(1);
+        }
+    if (channelNo != ChTwoPortMux)
+        {
+        logDtError(LogErrorLocation, "TPM must be defined on channel %03o\n", ChTwoPortMux);
         exit(1);
         }
 
@@ -370,6 +376,8 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
         logDtError(LogErrorLocation, "Can't listen on port %d\n", telnetPort);
         exit(1);
         }
+
+    tpMuxEnabled = TRUE;
 
     /*
     **  Print a friendly message.
