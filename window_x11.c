@@ -364,9 +364,11 @@ void *windowThread(void *param)
     **  Setup fore- and back-ground colors.
     */
     XGetWindowAttributes(disp, window, &a);
-    XAllocNamedColor(disp, a.colormap, "green", &b, &c);
+    XAllocNamedColor(disp, a.colormap, colorFG, &b, &c);
     fg = b.pixel;
-    bg = BlackPixel(disp, screen);
+    XAllocNamedColor(disp, a.colormap, colorBG, &b, &c);
+    bg = b.pixel;
+
     XSetBackground(disp, gc, bg);
     XSetForeground(disp, gc, fg);
 
