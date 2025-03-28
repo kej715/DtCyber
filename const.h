@@ -75,7 +75,7 @@
 /*
 **  Debug support
 */
-#define CcDebug                    1
+#define CcDebug                    0
 
 /*
 **  Measure cycle time
