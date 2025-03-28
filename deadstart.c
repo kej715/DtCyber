@@ -185,8 +185,6 @@ void deadStart(void)
 **------------------------------------------------------------------------*/
 static FcStatus deadFunc(PpWord funcCode)
     {
-    (void)funcCode;
-
     return (FcDeclined);
     }
 

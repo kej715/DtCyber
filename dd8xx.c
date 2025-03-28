@@ -1838,7 +1838,7 @@ static PpWord dd8xxReadClassic(DiskParam *dp, FILE *fcb)
         return (0);
         }
 
-    return (*dp->bufPtr++);
+    return (*dp->bufPtr++) & Mask12;
     }
 
 /*--------------------------------------------------------------------------
@@ -1870,7 +1870,7 @@ static void dd8xxWriteClassic(DiskParam *dp, FILE *fcb, PpWord data)
         dp->bufPtr = dp->buffer;
         }
 
-    *dp->bufPtr++ = data;
+    *dp->bufPtr++ = data & Mask12;
 
     /*
     **  Write the data if we got a full sector.
@@ -1968,7 +1968,7 @@ static void dd8xxWritePacked(DiskParam *dp, FILE *fcb, PpWord data)
         dp->bufPtr = dp->buffer;
         }
 
-    *dp->bufPtr++ = data;
+    *dp->bufPtr++ = data & Mask12;
 
     /*
     **  Write the data if we got a full sector.

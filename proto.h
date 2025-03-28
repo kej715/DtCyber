@@ -191,7 +191,7 @@ void dumpInit(void);
 void dumpTerminate(void);
 void dumpAll(void);
 void dumpCpu(u8 cp);
-void dumpPpu(u8 pp);
+void dumpPpu(u8 pp, PpWord first, PpWord limit);
 void dumpDisassemblePpu(u8 pp);
 void dumpRunningPpu(u8 pp);
 void dumpRunningCpu(u8 cp);
@@ -256,6 +256,7 @@ void stopHelpers(void);
 **  maintenance_channel.c
 */
 void mchInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void mchSetOsBoundsFault(PpSlot *pp);
 
 /*
 **  mdi.c
@@ -536,8 +537,6 @@ extern char                ppKeyIn;
 extern PpSlot              *ppu;
 extern u8                  ppuCount;
 extern u32                 ppuOsBoundary;
-extern bool                ppuOsBoundsCheckEnabled;
-extern bool                ppuStopEnabled;
 extern u32                 readerScanSecs;
 extern u32                 rtcClock;
 extern bool                rtcClockIsCurrent;

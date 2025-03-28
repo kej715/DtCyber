@@ -113,6 +113,8 @@ typedef struct decPpControl
     {
     u8   mode;
     char *mnemonic;
+    bool hasOp2;
+    char *mnemonic2;
     } DecPpControl;
 
 typedef struct decCpControl
@@ -145,79 +147,154 @@ FILE        **cpuF;
 static FILE *devF;
 static FILE **ppuF;
 
-static DecPpControl ppDecode[] =
+static DecPpControl ppDecode170[] =
     {
-    AN, "PSN",              // 00
-    Amd, "LJM",             // 01
-    Amd, "RJM",             // 02
-    Ar, "UJN",              // 03
-    Ar, "ZJN",              // 04
-    Ar, "NJN",              // 05
-    Ar, "PJN",              // 06
-    Ar, "MJN",              // 07
+    AN,  "PSN", FALSE, NULL, // 00
+    Amd, "LJM", FALSE, NULL, // 01
+    Amd, "RJM", FALSE, NULL, // 02
+    Ar,  "UJN", FALSE, NULL, // 03
+    Ar,  "ZJN", FALSE, NULL, // 04
+    Ar,  "NJN", FALSE, NULL, // 05
+    Ar,  "PJN", FALSE, NULL, // 06
+    Ar,  "MJN", FALSE, NULL, // 07
 
-    Ar, "SHN",              // 10
-    Ad, "LMN",              // 11
-    Ad, "LPN",              // 12
-    Ad, "SCN",              // 13
-    Ad, "LDN",              // 14
-    Ad, "LCN",              // 15
-    Ad, "ADN",              // 16
-    Ad, "SBN",              // 17
+    Ar,  "SHN", FALSE, NULL, // 10
+    Ad,  "LMN", FALSE, NULL, // 11
+    Ad,  "LPN", FALSE, NULL, // 12
+    Ad,  "SCN", FALSE, NULL, // 13
+    Ad,  "LDN", FALSE, NULL, // 14
+    Ad,  "LCN", FALSE, NULL, // 15
+    Ad,  "ADN", FALSE, NULL, // 16
+    Ad,  "SBN", FALSE, NULL, // 17
 
-    Adm, "LDC",             // 20
-    Adm, "ADC",             // 21
-    Adm, "LPC",             // 22
-    Adm, "LMC",             // 23
-    AN, "PSN",              // 24
-    AN, "PSN",              // 25
-    Ad, "EXN",              // 26
-    Ad, "RPN",              // 27
+    Adm, "LDC", FALSE, NULL, // 20
+    Adm, "ADC", FALSE, NULL, // 21
+    Adm, "LPC", FALSE, NULL, // 22
+    Adm, "LMC", FALSE, NULL, // 23
+    AN,  "PSN", FALSE, NULL, // 24
+    AN,  "PSN", FALSE, NULL, // 25
+    Ad,  "EXN", FALSE, NULL, // 26
+    Ad,  "RPN", FALSE, NULL, // 27
 
-    Ad, "LDD",              // 30
-    Ad, "ADD",              // 31
-    Ad, "SBD",              // 32
-    Ad, "LMD",              // 33
-    Ad, "STD",              // 34
-    Ad, "RAD",              // 35
-    Ad, "AOD",              // 36
-    Ad, "SOD",              // 37
+    Ad,  "LDD", FALSE, NULL, // 30
+    Ad,  "ADD", FALSE, NULL, // 31
+    Ad,  "SBD", FALSE, NULL, // 32
+    Ad,  "LMD", FALSE, NULL, // 33
+    Ad,  "STD", FALSE, NULL, // 34
+    Ad,  "RAD", FALSE, NULL, // 35
+    Ad,  "AOD", FALSE, NULL, // 36
+    Ad,  "SOD", FALSE, NULL, // 37
 
-    Ad, "LDI",              // 40
-    Ad, "ADI",              // 41
-    Ad, "SBI",              // 42
-    Ad, "LMI",              // 43
-    Ad, "STI",              // 44
-    Ad, "RAI",              // 45
-    Ad, "AOI",              // 46
-    Ad, "SOI",              // 47
+    Ad,  "LDI", FALSE, NULL, // 40
+    Ad,  "ADI", FALSE, NULL, // 41
+    Ad,  "SBI", FALSE, NULL, // 42
+    Ad,  "LMI", FALSE, NULL, // 43
+    Ad,  "STI", FALSE, NULL, // 44
+    Ad,  "RAI", FALSE, NULL, // 45
+    Ad,  "AOI", FALSE, NULL, // 46
+    Ad,  "SOI", FALSE, NULL, // 47
 
-    Amd, "LDM",             // 50
-    Amd, "ADM",             // 51
-    Amd, "SBM",             // 52
-    Amd, "LMM",             // 53
-    Amd, "STM",             // 54
-    Amd, "RAM",             // 55
-    Amd, "AOM",             // 56
-    Amd, "SOM",             // 57
+    Amd, "LDM", FALSE, NULL, // 50
+    Amd, "ADM", FALSE, NULL, // 51
+    Amd, "SBM", FALSE, NULL, // 52
+    Amd, "LMM", FALSE, NULL, // 53
+    Amd, "STM", FALSE, NULL, // 54
+    Amd, "RAM", FALSE, NULL, // 55
+    Amd, "AOM", FALSE, NULL, // 56
+    Amd, "SOM", FALSE, NULL, // 57
 
-    Ad, "CRD",              // 60
-    Amd, "CRM",             // 61
-    Ad, "CWD",              // 62
-    Amd, "CWM",             // 63
-    Amd, "AJM",             // 64
-    Amd, "IJM",             // 65
-    Amd, "FJM",             // 66
-    Amd, "EJM",             // 67
+    Ad,  "CRD", FALSE, NULL, // 60
+    Amd, "CRM", FALSE, NULL, // 61
+    Ad,  "CWD", FALSE, NULL, // 62
+    Amd, "CWM", FALSE, NULL, // 63
+    Amd, "AJM", TRUE, "SCF", // 64
+    Amd, "IJM", TRUE, "CCF", // 65
+    Amd, "FJM", TRUE, "SFM", // 66
+    Amd, "EJM", TRUE, "CFM", // 67
 
-    Ad, "IAN",              // 70
-    Amd, "IAM",             // 71
-    Ad, "OAN",              // 72
-    Amd, "OAM",             // 73
-    Ad, "ACN",              // 74
-    Ad, "DCN",              // 75
-    Ad, "FAN",              // 76
-    Amd, "FNC"              // 77
+    Ad,  "IAN", FALSE, NULL, // 70
+    Amd, "IAM", FALSE, NULL, // 71
+    Ad,  "OAN", FALSE, NULL, // 72
+    Amd, "OAM", FALSE, NULL, // 73
+    Ad,  "ACN", FALSE, NULL, // 74
+    Ad,  "DCN", FALSE, NULL, // 75
+    Ad,  "FAN", FALSE, NULL, // 76
+    Amd, "FNC", FALSE, NULL  // 77
+    };
+
+static DecPpControl ppDecode180[] =
+    {
+    Ad,  "RDSL", FALSE, NULL, // 1000
+    Ad,  "RDCL", FALSE, NULL, // 1001
+    AN,  "PSN",  FALSE, NULL, // 1002
+    AN,  "PSN",  FALSE, NULL, // 1003
+    AN,  "PSN",  FALSE, NULL, // 1004
+    AN,  "PSN",  FALSE, NULL, // 1005
+    AN,  "PSN",  FALSE, NULL, // 1006
+    AN,  "PSN",  FALSE, NULL, // 1007
+
+    AN,  "PSN",  FALSE, NULL, // 1010
+    AN,  "PSN",  FALSE, NULL, // 1011
+    AN,  "PSN",  FALSE, NULL, // 1012
+    AN,  "PSN",  FALSE, NULL, // 1013
+    AN,  "PSN",  FALSE, NULL, // 1014
+    AN,  "PSN",  FALSE, NULL, // 1015
+    AN,  "PSN",  FALSE, NULL, // 1016
+    AN,  "PSN",  FALSE, NULL, // 1017
+
+    AN,  "PSN",  FALSE, NULL, // 1020
+    AN,  "PSN",  FALSE, NULL, // 1021
+    Ad,  "LPDL", FALSE, NULL, // 1022
+    Ad,  "LPIL", FALSE, NULL, // 1023
+    Amd, "LPML", FALSE, NULL, // 1024
+    AN,  "PSN",  FALSE, NULL, // 1025
+    AN,  "PSN",  FALSE, NULL, // 1026
+    AN,  "PSN",  FALSE, NULL, // 1027
+
+    Ad,  "LDDL", FALSE, NULL, // 1030
+    Ad,  "ADDL", FALSE, NULL, // 1031
+    Ad,  "SBDL", FALSE, NULL, // 1032
+    Ad,  "LMDL", FALSE, NULL, // 1033
+    Ad,  "STDL", FALSE, NULL, // 1034
+    Ad,  "RADL", FALSE, NULL, // 1035
+    Ad,  "AODL", FALSE, NULL, // 1036
+    Ad,  "SODL", FALSE, NULL, // 1037
+
+    Ad,  "LDIL", FALSE, NULL, // 1040
+    Ad,  "ADIL", FALSE, NULL, // 1041
+    Ad,  "SBIL", FALSE, NULL, // 1042
+    Ad,  "LMIL", FALSE, NULL, // 1043
+    Ad,  "STIL", FALSE, NULL, // 1044
+    Ad,  "RAIL", FALSE, NULL, // 1045
+    Ad,  "AOIL", FALSE, NULL, // 1046
+    Ad,  "SOIL", FALSE, NULL, // 1047
+
+    Amd, "LDML", FALSE, NULL, // 1050
+    Amd, "ADML", FALSE, NULL, // 1051
+    Amd, "SBML", FALSE, NULL, // 1052
+    Amd, "LMML", FALSE, NULL, // 1053
+    Amd, "STML", FALSE, NULL, // 1054
+    Amd, "RAML", FALSE, NULL, // 1055
+    Amd, "AOML", FALSE, NULL, // 1056
+    Amd, "SOML", FALSE, NULL, // 1057
+
+    Ad,  "CRDL", FALSE, NULL, // 1060
+    Amd, "CRML", FALSE, NULL, // 1061
+    Ad,  "CWDL", FALSE, NULL, // 1062
+    Amd, "CWML", FALSE, NULL, // 1063
+    Amd, "FSJM", FALSE, NULL, // 1064
+    Amd, "FCJM", FALSE, NULL, // 1065
+    AN,  "PSN",  FALSE, NULL, // 1066
+    AN,  "PSN",  FALSE, NULL, // 1067
+
+    AN,  "PSN",  FALSE, NULL, // 1070
+    Amd, "IAPM", FALSE, NULL, // 1071
+    AN,  "PSN",  FALSE, NULL, // 1072
+    Amd, "OAPM", FALSE, NULL, // 1073
+    AN,  "PSN",  FALSE, NULL, // 1074
+    AN,  "PSN",  FALSE, NULL, // 1075
+    AN,  "PSN",  FALSE, NULL, // 1076
+    AN , "PSN",  FALSE, NULL  // 1077
     };
 
 static DecCpControl rjDecode[010] =
@@ -374,7 +451,7 @@ void traceInit(void)
 
     for (pp = 0; pp < ppuCount; pp++)
         {
-        sprintf(fileName, "ppu%02o.trc", pp);
+        sprintf(fileName, "ppu%02o.trc", pp < 10 ? pp : (pp - 10) + 020);
         ppuF[pp] = fopen(fileName, "wt");
         if (ppuF[pp] == NULL)
             {
@@ -903,10 +980,13 @@ void traceRegisters(void)
 **------------------------------------------------------------------------*/
 void traceOpcode(void)
     {
-    PpWord opCode;
-    u8     addrMode;
-    u8     opF;
-    u8     opD;
+    u8           addrMode;
+    DecPpControl *decodeTable;
+    char         *fmt;
+    bool         is180;
+    PpWord       opCode;
+    u8           opD;
+    u8           opF;
 
     /*
     **  Bail out if no trace of this PPU is requested.
@@ -919,12 +999,31 @@ void traceOpcode(void)
     /*
     **  Print opcode.
     */
-    opCode   = activePpu->mem[activePpu->regP];
-    opF      = opCode >> 6;
-    opD      = opCode & 077;
-    addrMode = ppDecode[opF].mode;
+    opCode = activePpu->mem[activePpu->regP];
+    opF    = opCode >> 6;
+    opD    = opCode & 077;
+    is180  = (features & IsCyber180) != 0;
+    if (is180)
+        {
+        decodeTable = (opCode & 0100000) != 0 ? ppDecode180 : ppDecode170;
+        fmt = "O:%06o   %-4.4s ";
+        }
+    else
+        {
+        decodeTable = ppDecode170;
+        fmt = "O:%04o   %3.3s ";
+        }
+    opF     &= 077;
+    addrMode = decodeTable[opF].mode;
 
-    fprintf(ppuF[activePpu->id], "O:%04o   %3.3s ", opCode, ppDecode[opF].mnemonic);
+    if (decodeTable[opF].hasOp2 && ((opD & 040) != 0) && ((features & HasChannelFlag) != 0))
+        {
+        fprintf(ppuF[activePpu->id], fmt, opCode, decodeTable[opF].mnemonic2);
+        }
+    else
+        {
+        fprintf(ppuF[activePpu->id], fmt, opCode, decodeTable[opF].mnemonic);
+        }
 
     switch (addrMode)
         {
@@ -969,21 +1068,43 @@ void traceOpcode(void)
 **------------------------------------------------------------------------*/
 u8 traceDisassembleOpcode(char *str, PpWord *pm)
     {
-    u8     result = 1;
-    PpWord opCode;
-    u8     addrMode;
-    u8     opF;
-    u8     opD;
+    u8           addrMode;
+    DecPpControl *decodeTable;
+    char         *fmt;
+    bool         is180;
+    PpWord       opCode;
+    u8           opD;
+    u8           opF;
+    u8           result = 1;
 
     /*
     **  Print opcode.
     */
-    opCode   = *pm++;
-    opF      = opCode >> 6;
-    opD      = opCode & 077;
-    addrMode = ppDecode[opF].mode;
+    opCode = *pm++;
+    opF    = opCode >> 6;
+    opD    = opCode & 077;
+    is180  = (features & IsCyber180) != 0;
+    if (is180)
+        {    
+        decodeTable = (opCode & 0100000) != 0 ? ppDecode180 : ppDecode170;
+        fmt = "%-4.4s  ";
+        }
+    else
+        {
+        decodeTable = ppDecode170;
+        fmt = "%3.3s  ";
+        }
+    opF     &= 077;
+    addrMode = decodeTable[opF].mode;
 
-    str += sprintf(str, "%3.3s  ", ppDecode[opF].mnemonic);
+    if (decodeTable[opF].hasOp2 && ((opD & 040) != 0) && ((features & HasChannelFlag) != 0))
+        {
+        str += sprintf(str, fmt, decodeTable[opF].mnemonic2);
+        }
+    else
+        {
+        str += sprintf(str, fmt, decodeTable[opF].mnemonic);
+        }
 
     switch (addrMode)
         {
@@ -1083,10 +1204,25 @@ void traceChannel(u8 ch)
         return;
         }
 
-    fprintf(ppuF[activePpu->id], "  CH:%c%c%c",
+    fprintf(ppuF[activePpu->id], "  CH%02o:%c%c%c", ch,
             channel[ch].active           ? 'A' : 'D',
             channel[ch].full             ? 'F' : 'E',
             channel[ch].ioDevice == NULL ? 'I' : 'S');
+    if (channel[ch].flag)
+        {
+        fputc('*', ppuF[activePpu->id]);
+        }
+    if (channel[ch].full)
+        {
+        if ((features & IsCyber180) != 0)
+            {
+            fprintf(ppuF[activePpu->id], "  %06o", channel[ch].data);
+            }
+        else
+            {
+            fprintf(ppuF[activePpu->id], "  %04o", channel[ch].data);
+            }
+        }
     }
 
 /*--------------------------------------------------------------------------

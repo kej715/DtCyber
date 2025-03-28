@@ -209,9 +209,11 @@ typedef struct
     /*
      *  Cyber 180 PP support
      */
+    bool   osBoundsCheckEnabled;        /* whether OS bounds checking is enabled */
     bool   isBelowOsBound;              /* whether checking is below/above OS bound register */
+    bool   isStopEnabled;               /* whether PP stop enabled on OS bounds violation */
     u8     chWordIdx;                   /* index of next channel word in IAPM/OAPM instruction */
-    u64    chWords;                     /* current bits assembled by IAPM/OAPM instruction */
+    u64    packedWord;                  /* current word assembled by IAPM/OAPM instruction */
     } PpSlot;
 
 /*

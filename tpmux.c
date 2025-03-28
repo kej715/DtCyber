@@ -320,7 +320,7 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
         }
     if (channelNo != ChTwoPortMux)
         {
-        logDtError(LogErrorLocation, "TPM must be defined on channel %03o\n", ChTwoPortMux);
+        logDtError(LogErrorLocation, "TPM must be defined on channel %02o\n", ChTwoPortMux);
         exit(1);
         }
 

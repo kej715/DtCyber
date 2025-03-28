@@ -108,7 +108,7 @@ void dumpInit(void)
 
     for (pp = 0; pp < ppuCount; pp++)
         {
-        sprintf(fileName, "ppu%02o.dmp", pp);
+        sprintf(fileName, "ppu%02o.dmp", pp < 10 ? pp : (pp - 10) + 020);
         ppuF[pp] = fopen(fileName, "wt");
         if (ppuF[pp] == NULL)
             {
@@ -170,7 +170,7 @@ void dumpAll(void)
 
     for (pp = 0; pp < ppuCount; pp++)
         {
-        dumpPpu(pp);
+        dumpPpu(pp, 0, PpMemSize);
         dumpDisassemblePpu(pp);
         }
     }
@@ -311,17 +311,19 @@ void dumpCpu(u8 cp)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void dumpPpu(u8 pp)
+void dumpPpu(u8 pp, PpWord first, PpWord limit)
     {
     u32    addr;
     char   *fmt;
     u8     i;
+    bool   is180;
     PpWord mask;
     PpWord *pm = ppu[pp].mem;
     FILE   *pf = ppuF[pp];
     PpWord pw;
 
-    if ((features & IsCyber180) != 0)
+    is180 = (features & IsCyber180) != 0;
+    if (is180)
         {
         mask = Mask16;
         fmt  = "%06o %06o %06o %06o %06o %06o %06o %06o  ";
@@ -333,12 +335,30 @@ void dumpPpu(u8 pp)
         }
     fprintf(pf, "P   %04o\n", ppu[pp].regP);
     fprintf(pf, "A %06o\n", ppu[pp].regA);
-    fprintf(pf, "R %010o\n", ppu[pp].regR);
+    if ((features & IsSeries800) != 0)
+        {
+        fprintf(pf, "R %010o\n", ppu[pp].regR);
+        }
+    if (is180 && ppu[pp].osBoundsCheckEnabled)
+        {
+        fprintf(pf, "OS bounds %s %010o\n", ppu[pp].isBelowOsBound ? "below" : "above", ppuOsBoundary);
+        }
+    if (ppu[pp].busy)
+        {
+        if (is180)
+            {
+            fprintf(pf, "PP busy: %04o%02o\n", ppu[pp].opF, ppu[pp].opD);
+            }
+        else
+            {
+            fprintf(pf, "PP busy: %02o%02o\n", ppu[pp].opF, ppu[pp].opD);
+            }
+        }
     fprintf(pf, "\n");
 
-    for (addr = 0; addr < PpMemSize; addr += 8)
+    for (addr = first; addr < limit; addr += 8)
         {
-        fprintf(pf, "%04o   ", addr & Mask12);
+        fprintf(pf, "%04o  ", addr & Mask12);
         fprintf(pf, fmt,
                 pm[addr + 0] & mask,
                 pm[addr + 1] & mask,
@@ -379,7 +399,7 @@ void dumpDisassemblePpu(u8 pp)
     PpWord pw0, pw1;
     char   str[80];
 
-    sprintf(ppDisName, "ppu%02o.dis", pp);
+    sprintf(ppDisName, "ppu%02o.dis", pp < 10 ? pp : (pp - 10) + 020);
     pf = fopen(ppDisName, "wt");
     if (pf == NULL)
         {
@@ -388,18 +408,9 @@ void dumpDisassemblePpu(u8 pp)
         return;
         }
 
+    ppuF[pp] = pf;
+    dumpPpu(pp, 0, 0100);
     is180 = (features & IsCyber180) != 0;
-    fprintf(pf, "P   %04o\n", ppu[pp].regP);
-    fprintf(pf, "A %06o\n", ppu[pp].regA);
-    if ((features & IsSeries800) != 0)
-        {
-        fprintf(pf, "R %010o\n", ppu[pp].regR);
-        }
-    if (is180 && ppuOsBoundsCheckEnabled)
-        {
-        fprintf(pf, "OS bounds %s %010o\n", ppu[pp].isBelowOsBound ? "below" : "above", ppuOsBoundary);
-        }
-    fprintf(pf, "\n");
 
     for (addr = 0100; addr < PpMemSize; addr += cnt)
         {
@@ -462,7 +473,7 @@ void dumpRunningPpu(u8 pp)
     FILE *pf;
     char ppDumpName[20];
 
-    sprintf(ppDumpName, "ppu%02o_run.dmp", pp);
+    sprintf(ppDumpName, "ppu%02o_run.dmp", pp < 10 ? pp : (pp - 10) + 020);
     pf = fopen(ppDumpName, "wt");
     if (pf == NULL)
         {
@@ -473,7 +484,7 @@ void dumpRunningPpu(u8 pp)
 
     ppuF[pp] = pf;
 
-    dumpPpu(pp);
+    dumpPpu(pp, 0, PpMemSize);
     fclose(pf);
 
     ppuF[pp] = NULL;
