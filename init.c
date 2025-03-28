@@ -60,16 +60,17 @@
 #define DefaultFontLarge       24
 #define DefaultFontMedium      12
 #define DefaultFontSmall       8
+#define DefaultBG              RGB(0, 0, 0)
+#define DefaultFG              RGB(0, 255, 0)
 #else
-#define RGB(R, G, B)    ((R << 16) | (G << 8) | B)
+#define DefaultBG              "black"
+#define DefaultFG              "green"
 #define FontName               "lucidatypewriter"
 #define DefaultFontLarge       24
 #define DefaultFontMedium      14
 #define DefaultFontSmall       10
 #endif
 
-#define DefaultBG              RGB(0, 0, 0)
-#define DefaultFG              RGB(0, 255, 0)
 
 #define DefaultHeightLarge     30
 #define DefaultHeightMedium    20
@@ -1149,8 +1150,13 @@ static void initCyber(char *config)
 static void initConsole(void)
     {
     /* Set Defaults */
+#ifdef WIN32
     colorBG = DefaultBG;
     colorFG = DefaultFG;
+#else
+    strcpy(colorBG, DefaultBG);
+    strcpy(colorFG, DefaultFG);
+#endif
     strcpy(fontName, FontName);
 
     fontHeightLarge  = DefaultHeightLarge;
@@ -1239,7 +1245,7 @@ static void initConsole(void)
         {
         logDtError(LogErrorLocation, "Font Name '%s' will be loaded\n", fontName);
         }
-
+#ifdef WIN32
     (void)initGetHex("colorBG", DefaultBG, &colorBG);
     (void)initGetHex("colorFG", DefaultFG, &colorFG);
     //  Convert to RGB
@@ -1259,6 +1265,17 @@ static void initConsole(void)
         }
     printf("(init   )         [colorBG]=%06lx\n", colorBG);
     printf("(init   )         [colorFG]=%06lx\n", colorFG);
+#else
+    (void)initGetString("colorBG", DefaultBG, colorBG, sizeof(colorBG));
+    (void)initGetString("colorFG", DefaultFG, colorFG, sizeof(colorFG));
+    if (strcasecmp(colorBG, colorFG)==0)
+    {
+        strcpy(colorBG, DefaultBG);
+        strcpy(colorFG, DefaultFG);
+    }
+    printf("(init   )         [colorBG]=%s\n", colorBG);
+    printf("(init   )         [colorFG]=%s\n", colorFG);
+#endif
 
 
     (void)initGetInteger("fontSmall", DefaultFontSmall, &fontSmall);
