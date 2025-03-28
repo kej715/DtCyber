@@ -98,9 +98,8 @@ typedef int bool;
 #include <stdbool.h>
 #endif
 
-typedef u16 PpWord;                     /* 12 bit PP word */
-typedef u8  PpByte;                     /* 6 bit PP word */
-typedef u64 CpWord;                     /* 60 bit CPU word */
+typedef u16 PpWord;                     /* 12/16-bit PP word */
+typedef u64 CpWord;                     /* 60/64-bit CPU word */
 
 /*
 **  Format used in displaying status of data communication interfaces (operator interface).
@@ -205,8 +204,14 @@ typedef struct
     bool   busy;                        /* instruction execution state */
     int    exchangingCpu;               /* CPU for which exchange initiated */
     u8     id;                          /* PP number */
-    PpByte opF;                         /* current opcode */
-    PpByte opD;                         /* current opcode */
+    PpWord opF;                         /* current opcode */
+    PpWord opD;                         /* current opcode */
+    /*
+     *  Cyber 180 PP support
+     */
+    bool   isBelowOsBound;              /* whether checking is below/above OS bound register */
+    u8     chWordIdx;                   /* index of next channel word in IAPM/OAPM instruction */
+    u64    chWords;                     /* current bits assembled by IAPM/OAPM instruction */
     } PpSlot;
 
 /*
@@ -280,6 +285,7 @@ typedef enum
     IsSeries170            = 0x04000000,
     IsSeries800            = 0x08000000,
     IsCyber875             = 0x10000000,
+    IsCyber180             = 0x20000000
     } ModelFeatures;
 
 typedef enum
@@ -288,7 +294,7 @@ typedef enum
     ModelCyber73,
     ModelCyber173,
     ModelCyber175,
-    ModelCyber840A,
+    ModelCyber860,
     ModelCyber865,
     } ModelType;
 

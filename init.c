@@ -195,9 +195,9 @@ static ModelFeatures featuresCyber173 =
     (IsSeries170 | HasStatusAndControlReg | HasCMU);
 static ModelFeatures featuresCyber175 =
     (IsSeries170 | HasStatusAndControlReg | HasInstructionStack | HasIStackPrefetch | Has175Float);
-static ModelFeatures featuresCyber840A =
-    (IsSeries800 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasMaintenanceChannel | HasCMU | HasChannelFlag
-     | HasErrorFlag | HasRelocationRegLong | HasMicrosecondClock | HasInstructionStack | HasIStackPrefetch);
+static ModelFeatures featuresCyber860 =
+    (IsSeries800 | IsCyber180 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasMaintenanceChannel | HasCMU
+     | HasChannelFlag | HasErrorFlag | HasRelocationRegLong | HasMicrosecondClock | HasInstructionStack | HasIStackPrefetch);
 static ModelFeatures featuresCyber865 =
     (IsSeries800 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasStatusAndControlReg
      | HasRelocationRegShort | HasMicrosecondClock | HasInstructionStack | HasIStackPrefetch | Has175Float);
@@ -538,6 +538,7 @@ int initOpenConsoleSection(void)
 **------------------------------------------------------------------------*/
 static void initCyber(char *config)
     {
+    int  base;
     long clockIncrement;
     long conns;
     char *cp;
@@ -547,6 +548,7 @@ static void initCyber(char *config)
     long ecsBanks;
     long enableCejMej;
     long esmBanks;
+    bool isOk;
     long mask;
     long memory;
     char model[40];
@@ -653,40 +655,37 @@ static void initCyber(char *config)
     */
     (void)initGetString("model", "6400", model, sizeof(model));
 
-    if (stricmp(model, "6400") == 0)
+    if (stricmp(model, "CDC6400") == 0 || stricmp(model, "6400") == 0)
         {
         modelType = Model6400;
         features  = features6400;
         }
-    else if (stricmp(model, "CYBER73") == 0)
+    else if (stricmp(model, "CYBER73") == 0 || stricmp(model, "73") == 0)
         {
         modelType = ModelCyber73;
         features  = featuresCyber73;
         }
-    else if (stricmp(model, "CYBER173") == 0)
+    else if (stricmp(model, "CYBER173") == 0 || stricmp(model, "173") == 0)
         {
         modelType = ModelCyber173;
         features  = featuresCyber173;
         }
-    else if (stricmp(model, "CYBER175") == 0)
+    else if (stricmp(model, "CYBER175") == 0 || stricmp(model, "175") == 0)
         {
         modelType = ModelCyber175;
         features  = featuresCyber175;
         }
-    else if (stricmp(model, "CYBER840A") == 0)
+    else if (stricmp(model, "CYBER860") == 0 || stricmp(model, "860") == 0)
         {
-        //        modelType = ModelCyber840A;
-        //        features = featuresCyber840A;
-        logDtError(LogErrorLocation, "file '%s' section [%s]: model CYBER840A was experimental and is no longer supported\n",
-                   startupFile, config);
-        exit(1);
+        modelType = ModelCyber860;
+        features  = featuresCyber860;
         }
-    else if (stricmp(model, "CYBER865") == 0)
+    else if (stricmp(model, "CYBER865") == 0 || stricmp(model, "865") == 0)
         {
         modelType = ModelCyber865;
         features  = featuresCyber865;
         }
-    else if (stricmp(model, "CYBER875") == 0)
+    else if (stricmp(model, "CYBER875") == 0 || stricmp(model, "875") == 0)
         {
         modelType = ModelCyber865;
         features  = featuresCyber875;
@@ -705,9 +704,81 @@ static void initCyber(char *config)
         }
 
     /*
-    **  Determine CM size and ECS banks.
+    **  Determine CM size.
     */
-    (void)initGetOctal("memory", 01000000, &memory);
+    if (initGetString("memory", "", dummy, sizeof(dummy)))
+        {
+        cp = dummy;
+        base = 8;
+        isOk = TRUE;
+        while (isOk && *cp != '\0')
+            {
+            if (isdigit(*cp))
+                {
+                if (!isoctal(*cp))
+                    {
+                    base = 10;
+                    }
+                cp += 1;
+                }
+            else if (*(cp + 1) == '\0')
+                {
+                switch (*cp)
+                    {
+                case 'K':
+                case 'k':
+                case 'M':
+                case 'm':
+                    base = 10;
+                    break;
+                default:
+                    isOk = FALSE;
+                    break;
+                    }
+                cp += 1;
+                }
+            else
+                {
+                isOk = FALSE;
+                }
+            }
+        if (isOk == FALSE)
+            {
+            logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'memory' value: %s\n", startupFile, config, dummy);
+            exit(1);
+            }
+        memory = 0;
+        cp = dummy;
+        while (*cp != '\0')
+            {
+            if (isdigit(*cp))
+                {
+                memory = (memory * base) + (*cp - '0');
+                }
+            else
+                {
+                switch (*cp)
+                    {
+                case 'K':
+                case 'k':
+                    memory *= 1024;
+                    break;
+                case 'M':
+                case 'm':
+                    memory *= OneMegabyte;
+                    break;
+                default:
+                    break;
+                    }
+                }
+            cp += 1;
+            }
+        }
+    else
+        {
+        memory = 01000000;
+        }
+
     if (memory < 040000)
         {
         logDtError(LogErrorLocation, "file '%s' section [%s]: Entry 'memory' less than 40000B\n", startupFile, config);
@@ -741,8 +812,68 @@ static void initCyber(char *config)
             features = featuresCyber865;
             }
         }
+    else if ((features & IsCyber180) != 0)
+        {
+        isOk = (memory % OneMegabyte) == 0;
+        switch (memory / OneMegabyte)
+            {
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+        case 10:
+        case 12:
+        case 14:
+        case 16:
+        case 32:
+        case 64:
+        case 128:
+        case 256:
+        case 512:
+        case 1024:
+        case 2048:
+            // valid memory size, do nothing
+            break;
+        default:
+            isOk = FALSE;
+            break;
+            }
+        if (isOk == FALSE)
+            {
+            logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid Cyber 180 memory size: %ld\n",
+                       startupFile, config, memory);
+            exit(1);
+            }
+        }
+    else if (memory > 256 * 1024)
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid Cyber 170 memory size: %ld\n",
+                   startupFile, config, memory);
+        exit(1);
+        }
 
+    /*
+    **  Determine ECS/ESM banks.
+    */
     (void)initGetInteger("ecsbanks", 0, &ecsBanks);
+    (void)initGetInteger("esmbanks", 0, &esmBanks);
+
+    if (((features & IsCyber180) != 0) && ((ecsBanks != 0) || (esmBanks != 0)))
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s]: 'ecsbanks' and 'esmbanks' are invalid for Cyber 180\n", startupFile, config);
+        exit(1);
+        }
+
+    if ((ecsBanks != 0) && (esmBanks != 0))
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s]: 'ecsbanks' and 'esmbanks' are mutually exclusive\n", startupFile, config);
+        exit(1);
+        }
+
     switch (ecsBanks)
         {
     case 0:
@@ -758,7 +889,6 @@ static void initCyber(char *config)
         exit(1);
         }
 
-    (void)initGetInteger("esmbanks", 0, &esmBanks);
     switch (esmBanks)
         {
     case 0:
@@ -789,12 +919,6 @@ static void initCyber(char *config)
             {
             logDtError(LogErrorLocation, "file '%s' section [%s]: Entry 'esmbanks' invalid - correct values are 0, 1, 2, 4, 8 or 16\n", startupFile, config);
             }
-        exit(1);
-        }
-
-    if ((ecsBanks != 0) && (esmBanks != 0))
-        {
-        logDtError(LogErrorLocation, "file '%s' section [%s]: 'ecsbanks' and 'esmbanks' are mutually exclusive\n", startupFile, config);
         exit(1);
         }
 
@@ -962,7 +1086,6 @@ static void initCyber(char *config)
         {
         traceMask = (u32)mask;
         }
-
     fprintf(stdout, "(init   ) 0x%08x Tracing mask set.\n", traceMask);
 
     /*
@@ -2269,11 +2392,14 @@ static int initParseTerminalDefn(char *defn, char *file, char *section, int line
 **------------------------------------------------------------------------*/
 static void initDeadstart(void)
     {
+    char *dp;
     int  dspi;
+    bool is180;
+    bool isOk;
     char *line;
     int  lineNo;
     char *token;
-
+    long word;
 
     if (!initOpenSection(deadstart))
         {
@@ -2288,42 +2414,54 @@ static void initDeadstart(void)
     */
     dspi   = 0;
     lineNo = 0;
+    is180  = (features & IsCyber180) != 0;
     while ((line = initGetNextLine(&lineNo)) != NULL && dspi < MaxDeadStart)
         {
         /*
         **  Parse switch settings.
         */
         token = strtok(line, " ;\n");
-        if ((token == NULL) || (strlen(token) != 4)
-            || !isoctal(token[0]) || !isoctal(token[1])
-            || !isoctal(token[2]) || !isoctal(token[3]))
+        isOk = token != NULL;
+        for (dp = token; isOk && *dp != '\0'; dp++)
             {
-            logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: invalid deadstart setting %s\n",
+            isOk = isoctal(*dp);
+            }
+        if (isOk)
+            {
+            word = strtol(token, NULL, 8);
+            isOk = (word < 010000) || (is180 && (word <= 0107777));
+            }
+        if (isOk)
+            {
+            deadstartPanel[dspi++] = (u16)word;
+            }
+        else
+            {
+            logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: invalid deadstart panel setting %s\n",
                        startupFile, deadstart, lineNo, token == NULL ? "NULL" : token);
             exit(1);
             }
 
-        deadstartPanel[dspi++] = (u16)strtol(token, NULL, 8);
-
         /*
          * Print the value so we know what we captured
          */
-        printf("          Row %02d (%s):[", dspi - 1, token);
-
-        for (int c = 11; c >= 0; c--)
+        printf("          Row %02d", dspi - 1);
+        if (is180)
             {
-            if ((deadstartPanel[dspi - 1] >> c) & 1)
-                {
-                fputs("1", stdout);
-                }
-            else
-                {
-                fputs("0", stdout);
-                }
+            printf(" (%06lo)", word);
+            }
+        else
+            {
+            printf(" (%04lo)", word);
+            }
+        fputs(":[", stdout);
 
+        for (int c = is180 ? 15 : 11; c >= 0; c--)
+            {
+            fputc('0' + ((deadstartPanel[dspi - 1] >> c) & 1), stdout);
             if ((c > 0) && (c % 3 == 0))
                 {
-                fputs(" ", stdout);
+                fputc(' ', stdout);
                 }
             }
 

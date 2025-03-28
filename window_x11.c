@@ -633,13 +633,17 @@ void *windowThread(void *param)
             char buf[160];
 
             /*
-            **  Display P registers of PPUs and CPU and current trace mask.
+            **  Display P registers of PPUs and CPUs and current trace mask.
             */
             sprintf(buf, "Refresh: %-10d  PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o   CPU P-reg: %06o",
                     refreshCount++,
                     ppu[0].regP, ppu[1].regP, ppu[2].regP, ppu[3].regP, ppu[4].regP,
                     ppu[5].regP, ppu[6].regP, ppu[7].regP, ppu[8].regP, ppu[9].regP,
-                    cpu.regP);
+                    cpus[0].regP);
+            if (cpuCount > 1)
+                {
+                sprintf(buf + strlen(buf), " %06o", cpus[1].regP);
+                }
 
             sprintf(buf + strlen(buf), "   Trace: %c%c%c%c%c%c%c%c%c%c%c%c",
                     (traceMask >> 0) & 1 ? '0' : '_',

@@ -97,6 +97,7 @@ void consoleShowStatus(void);
 **  cpu.c
 */
 void cpuAcquireExchangeMutex(void);
+void cpuAcquireMemoryMutex(void);
 bool cpuDdpTransfer(u32 ecsAddress, CpWord *data, bool writeToEcs);
 bool cpuEcsFlagRegister(u32 ecsAddress);
 u32  cpuGetP(u8 cpuNum);
@@ -104,6 +105,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType);
 void cpuPpReadMem(u32 address, CpWord *data);
 void cpuPpWriteMem(u32 address, CpWord data);
 void cpuReleaseExchangeMutex(void);
+void cpuReleaseMemoryMutex(void);
 void cpuStep(CpuContext *activeCpu);
 void cpuTerminate(void);
 
@@ -473,6 +475,7 @@ extern const int           asciiToPlatoString[256];
 extern const i8            asciiToPlato[128];
 extern const char          bcdToAscii[64];
 extern bool                bigEndian;
+extern bool                cc545Enabled;
 extern const char          cdcToAscii[64];
 extern ChSlot              *channel;
 extern u8                  channelCount;
@@ -532,12 +535,16 @@ extern const unsigned char platoStringToAscii[4][65];
 extern char                ppKeyIn;
 extern PpSlot              *ppu;
 extern u8                  ppuCount;
+extern u32                 ppuOsBoundary;
+extern bool                ppuOsBoundsCheckEnabled;
+extern bool                ppuStopEnabled;
 extern u32                 readerScanSecs;
 extern u32                 rtcClock;
 extern bool                rtcClockIsCurrent;
 extern long                scaleX;                          // Console
 extern long                scaleY;                          // Console
 extern long                timerRate;                       // Console
+extern bool                tpMuxEnabled;
 extern u32                 traceMask;
 extern u32                 traceSequenceNo;
 extern long                widthPX;                         // Console

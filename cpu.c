@@ -231,9 +231,11 @@ static FILE *emLog = NULL;
 #if defined(_WIN32)
 static HANDLE exchangeMutex;
 static HANDLE flagRegMutex;
+static HANDLE memoryMutex;
 #else
 static pthread_mutex_t exchangeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t flagRegMutex  = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t memoryMutex   = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 /*
@@ -338,6 +340,10 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
     /*
     **  Allocate configured central memory.
     */
+    if ((features & IsCyber180) != 0)
+        {
+        memory /= 8;
+        }
     cpMem = calloc(memory, sizeof(CpWord));
     if (cpMem == NULL)
         {
@@ -473,8 +479,16 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
     /*
     **  Print a friendly message.
     */
-    printf("(cpu    ) CPU model %s initialised (%d CPU%s, CM: %o, ECS: %o)\n",
-           model, cpuCount, cpuCount > 1 ? "'s" : "", cpuMaxMemory, extMaxMemory);
+    if ((features & IsCyber180) == 0)
+        {
+        printf("(cpu    ) CPU model %s initialised (%d CPU%s, CM: %o words, ECS: %o words)\n",
+               model, cpuCount, cpuCount > 1 ? "'s" : "", cpuMaxMemory, extMaxMemory);
+        }
+    else
+        {
+        printf("(cpu    ) CPU model %s initialised (%d CPU%s, CM: %dM bytes)\n",
+               model, cpuCount, cpuCount > 1 ? "'s" : "", (8 * cpuMaxMemory) / OneMegabyte);
+        }
 #if DEBUG_ECS || DEBUG_UEM || DEBUG_DDP
     if (emLog == NULL)
         {
@@ -494,6 +508,19 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
 void cpuAcquireExchangeMutex(void)
     {
     cpuAcquireMutex(&exchangeMutex);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Acquire lock on memory mutex
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpuAcquireMemoryMutex(void)
+    {
+    cpuAcquireMutex(&memoryMutex);
     }
 
 /*--------------------------------------------------------------------------
@@ -525,6 +552,19 @@ u32 cpuGetP(u8 cpuNum)
 void cpuReleaseExchangeMutex(void)
     {
     cpuReleaseMutex(&exchangeMutex);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Release lock on memory mutex
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpuReleaseMemoryMutex(void)
+    {
+    cpuReleaseMutex(&memoryMutex);
     }
 
 /*--------------------------------------------------------------------------
@@ -1688,7 +1728,9 @@ static bool cpuReadMem(CpuContext *activeCpu, u32 address, CpWord *data)
     /*
     **  Fetch the data.
     */
+    cpuAcquireMemoryMutex();
     *data = cpMem[location] & Mask60;
+    cpuReleaseMemoryMutex();
 
     return (FALSE);
     }
@@ -1758,7 +1800,9 @@ static bool cpuWriteMem(CpuContext *activeCpu, u32 address, CpWord *data)
     /*
     **  Store the data.
     */
+    cpuAcquireMemoryMutex();
     cpMem[location] = *data & Mask60;
+    cpuReleaseMemoryMutex();
 
     return (FALSE);
     }
@@ -1994,7 +2038,9 @@ static void cpuUemWord(CpuContext *activeCpu, bool writeToUem)
         {
         if (absUemAddr < cpuMaxMemory)
             {
+            cpuAcquireMemoryMutex();
             cpMem[absUemAddr] = activeCpu->regX[activeCpu->opJ] & Mask60;
+            cpuReleaseMemoryMutex();
             }
 #if DEBUG_UEM
         else
@@ -2007,7 +2053,9 @@ static void cpuUemWord(CpuContext *activeCpu, bool writeToUem)
         {
         if (absUemAddr < cpuMaxMemory)
             {
+            cpuAcquireMemoryMutex();
             activeCpu->regX[activeCpu->opJ] = cpMem[absUemAddr] & Mask60;
+            cpuReleaseMemoryMutex();
             }
 #if DEBUG_UEM
         else
@@ -2331,6 +2379,7 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
     /*
     **  Perform the transfer.
     */
+    cpuAcquireMemoryMutex();
     if (writeToUem)
         {
         while (wordCount--)
@@ -2341,6 +2390,7 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
                 fprintf(emLog, "  overflow (%010o >= %010o)", absUemAddr, cpuMaxMemory);
 #endif
 
+                cpuReleaseMemoryMutex();
                 return;
                 }
 
@@ -2392,9 +2442,11 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
             /*
             **  Error exit to lower 30 bits of instruction word.
             */
+            cpuReleaseMemoryMutex();
             return;
             }
         }
+    cpuReleaseMemoryMutex();
 
     /*
     **  Normal exit to next instruction word.
@@ -2615,6 +2667,7 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
     /*
     **  Perform the transfer.
     */
+    cpuAcquireMemoryMutex();
     if (writeToEcs)
         {
         while (wordCount--)
@@ -2632,6 +2685,7 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
                 /*
                 **  Error exit to lower 30 bits of instruction word.
                 */
+                cpuReleaseMemoryMutex();
                 return;
                 }
 
@@ -2683,9 +2737,11 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
             /*
             **  Error exit to lower 30 bits of instruction word.
             */
+            cpuReleaseMemoryMutex();
             return;
             }
         }
+    cpuReleaseMemoryMutex();
 
     /*
     **  Normal exit to next instruction word.
@@ -2749,7 +2805,9 @@ static bool cpuCmuGetByte(CpuContext *activeCpu, u32 address, u32 pos, u8 *byte)
     /*
     **  Fetch the word.
     */
+    cpuAcquireMemoryMutex();
     data = cpMem[location] & Mask60;
+    cpuReleaseMemoryMutex();
 
     /*
     **  Extract and return the byte.
@@ -2814,6 +2872,7 @@ static bool cpuCmuPutByte(CpuContext *activeCpu, u32 address, u32 pos, u8 byte)
     /*
     **  Fetch the word.
     */
+    cpuAcquireMemoryMutex();
     data = cpMem[location] & Mask60;
 
     /*
@@ -2830,6 +2889,7 @@ static bool cpuCmuPutByte(CpuContext *activeCpu, u32 address, u32 pos, u8 byte)
     **  Store the word.
     */
     cpMem[location] = data & Mask60;
+    cpuReleaseMemoryMutex();
 
     return (FALSE);
     }

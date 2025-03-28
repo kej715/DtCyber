@@ -298,12 +298,10 @@ int main(int argc, char **argv)
     */
     dumpInit();
     dumpAll();
-#endif
 
     /*
     **  Shut down debug support.
     */
-#if CcDebug == 1
     traceTerminate();
     dumpTerminate();
 #endif

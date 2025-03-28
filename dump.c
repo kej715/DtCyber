@@ -171,6 +171,7 @@ void dumpAll(void)
     for (pp = 0; pp < ppuCount; pp++)
         {
         dumpPpu(pp);
+        dumpDisassemblePpu(pp);
         }
     }
 
@@ -313,28 +314,40 @@ void dumpCpu(u8 cp)
 void dumpPpu(u8 pp)
     {
     u32    addr;
+    char   *fmt;
+    u8     i;
+    PpWord mask;
     PpWord *pm = ppu[pp].mem;
     FILE   *pf = ppuF[pp];
-    u8     i;
     PpWord pw;
 
+    if ((features & IsCyber180) != 0)
+        {
+        mask = Mask16;
+        fmt  = "%06o %06o %06o %06o %06o %06o %06o %06o  ";
+        }
+    else
+        {
+        mask = Mask12;
+        fmt  = "%04o %04o %04o %04o %04o %04o %04o %04o  ";
+        }
     fprintf(pf, "P   %04o\n", ppu[pp].regP);
     fprintf(pf, "A %06o\n", ppu[pp].regA);
-    fprintf(pf, "R %08o\n", ppu[pp].regR);
+    fprintf(pf, "R %010o\n", ppu[pp].regR);
     fprintf(pf, "\n");
 
     for (addr = 0; addr < PpMemSize; addr += 8)
         {
         fprintf(pf, "%04o   ", addr & Mask12);
-        fprintf(pf, "%04o %04o %04o %04o %04o %04o %04o %04o  ",
-                pm[addr + 0] & Mask12,
-                pm[addr + 1] & Mask12,
-                pm[addr + 2] & Mask12,
-                pm[addr + 3] & Mask12,
-                pm[addr + 4] & Mask12,
-                pm[addr + 5] & Mask12,
-                pm[addr + 6] & Mask12,
-                pm[addr + 7] & Mask12);
+        fprintf(pf, fmt,
+                pm[addr + 0] & mask,
+                pm[addr + 1] & mask,
+                pm[addr + 2] & mask,
+                pm[addr + 3] & mask,
+                pm[addr + 4] & mask,
+                pm[addr + 5] & mask,
+                pm[addr + 6] & mask,
+                pm[addr + 7] & mask);
 
         for (i = 0; i < 8; i++)
             {
@@ -358,12 +371,13 @@ void dumpPpu(u8 pp)
 void dumpDisassemblePpu(u8 pp)
     {
     u32    addr;
+    u8     cnt;
+    bool   is180;
+    FILE   *pf;
     PpWord *pm = ppu[pp].mem;
     char   ppDisName[20];
-    FILE   *pf;
-    char   str[80];
-    u8     cnt;
     PpWord pw0, pw1;
+    char   str[80];
 
     sprintf(ppDisName, "ppu%02o.dis", pp);
     pf = fopen(ppDisName, "wt");
@@ -374,8 +388,17 @@ void dumpDisassemblePpu(u8 pp)
         return;
         }
 
+    is180 = (features & IsCyber180) != 0;
     fprintf(pf, "P   %04o\n", ppu[pp].regP);
     fprintf(pf, "A %06o\n", ppu[pp].regA);
+    if ((features & IsSeries800) != 0)
+        {
+        fprintf(pf, "R %010o\n", ppu[pp].regR);
+        }
+    if (is180 && ppuOsBoundsCheckEnabled)
+        {
+        fprintf(pf, "OS bounds %s %010o\n", ppu[pp].isBelowOsBound ? "below" : "above", ppuOsBoundary);
+        }
     fprintf(pf, "\n");
 
     for (addr = 0100; addr < PpMemSize; addr += cnt)
@@ -385,16 +408,33 @@ void dumpDisassemblePpu(u8 pp)
         cnt = traceDisassembleOpcode(str, pm + addr);
         fputs(str, pf);
 
-        pw0 = pm[addr] & Mask12;
-        pw1 = pm[addr + 1] & Mask12;
-        fprintf(pf, "   %04o ", pw0);
-        if (cnt == 2)
+        if (is180)
             {
-            fprintf(pf, "%04o  ", pw1);
+            pw0 = pm[addr] & Mask16;
+            pw1 = pm[addr + 1] & Mask16;
+            fprintf(pf, "   %06o ", pw0);
+            if (cnt == 2)
+                {
+                fprintf(pf, "%06o  ", pw1);
+                }
+            else
+                {
+                fprintf(pf, "        ");
+                }
             }
         else
             {
-            fprintf(pf, "      ");
+            pw0 = pm[addr] & Mask12;
+            pw1 = pm[addr + 1] & Mask12;
+            fprintf(pf, "   %04o ", pw0);
+            if (cnt == 2)
+                {
+                fprintf(pf, "%04o  ", pw1);
+                }
+            else
+                {
+                fprintf(pf, "      ");
+                }
             }
 
         fprintf(pf, "  %c%c", cdcToAscii[(pw0 >> 6) & Mask6], cdcToAscii[pw0 & Mask6]);

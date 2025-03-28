@@ -210,6 +210,7 @@ static void consoleLogFlush(void);
 **  ----------------
 */
 
+bool cc545Enabled                      = FALSE;
 #ifdef WIN32
 long colorBG;                         // Console
 long colorFG;                         // Console
@@ -365,6 +366,8 @@ void consoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
         windowInit();
         isConsoleWindowOpen = TRUE;
         }
+
+    cc545Enabled = TRUE;
 
     /*
     **  Print a friendly message.
