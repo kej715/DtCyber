@@ -240,7 +240,7 @@ void lp3000ShowStatus();
 /*
 **  log.c
 */
-void logDtError(char* file, int line, char* fmt, ...);
+void logDtError(char *file, int line, char *fmt, ...);
 void logError(char *file, int line, char *fmt, ...);
 void logInit(void);
 
@@ -479,8 +479,13 @@ extern bool                cc545Enabled;
 extern const char          cdcToAscii[64];
 extern ChSlot              *channel;
 extern u8                  channelCount;
+#ifdef WIN32
 extern long                colorBG;                         // Console
 extern long                colorFG;                         // Console
+#else
+extern char                colorBG[32];                     // Console
+extern char                colorFG[32];                     // Console
+#endif
 extern const char          consoleToAscii[64];
 extern CpWord              *cpMem;
 extern CpuContext          *cpus;

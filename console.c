@@ -210,10 +210,14 @@ static void consoleLogFlush(void);
 **  ----------------
 */
 
-bool cc545Enabled = FALSE;
-
+bool cc545Enabled                      = FALSE;
+#ifdef WIN32
 long colorBG;                         // Console
 long colorFG;                         // Console
+#else
+char colorBG[32];                     // Console
+char colorFG[32];                     // Console
+#endif
 long fontHeightLarge;                 // Console
 long fontHeightMedium;                // Console
 long fontHeightSmall;                 // Console
