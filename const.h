@@ -32,9 +32,9 @@
 **  ----------------
 */
 #ifdef _DEBUG
-#define DtCyberVersion      "Desktop CYBER 6.0.1 (Debug)   "
+#define DtCyberVersion      "Desktop CYBER 5.7.59 (Debug)   "
 #else
-#define DtCyberVersion      "Desktop CYBER 6.0.1 (Release) "
+#define DtCyberVersion      "Desktop CYBER 5.7.59 (Release) "
 #endif
 
 #define DtCyberBuildDate    __DATE__ " " __TIME__
@@ -75,7 +75,7 @@
 /*
 **  Debug support
 */
-#define CcDebug                    1
+#define CcDebug                    0
 
 /*
 **  Measure cycle time
