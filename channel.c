@@ -597,11 +597,17 @@ void channelIo(void)
     /*
     **  Perform request.
     */
-    if ((activeChannel->active || (activeChannel->id == ChClock))
-        && (activeChannel->ioDevice != NULL))
+    if (activeChannel->active || (activeChannel->id == ChClock))
         {
-        activeDevice = activeChannel->ioDevice;
-        activeDevice->io();
+        if (activeChannel->ioDevice != NULL)
+            {
+            activeDevice = activeChannel->ioDevice;
+            activeDevice->io();
+            }
+        else if ((activeChannel->id == ChMaintenance) && ((features & HasMaintenanceChannel) != 0))
+            {
+            mchCheckTimeout();
+            }
         }
     }
 

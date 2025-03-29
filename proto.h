@@ -255,6 +255,7 @@ void stopHelpers(void);
 /*
 **  maintenance_channel.c
 */
+void mchCheckTimeout(void);
 void mchInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void mchSetOsBoundsFault(PpSlot *pp);
 

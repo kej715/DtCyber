@@ -314,6 +314,8 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
+static char *mchCw2String(PpWord connCode, PpWord typeCode, PpWord location);
+static char *mchFn2String(PpWord connCode, PpWord opCode, PpWord typeCode);
 static FcStatus mchFunc(PpWord funcCode);
 static u64 mchGetRegister(u8 connCode, u8 typeCode, u8 location);
 static u8 *mchGetRegisterAddress(u8 connCode, u8 typeCode, u8 location, u16 *index, u16 *mask, u16 *limit, u8 **block, int *size);
@@ -352,6 +354,7 @@ static u8   *mchRegisters[16] =
     NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
     };
 static int  mchRegisterSizes[16];
+static u64  mchTimeout = 0;
 
 //
 //  Bit masks identifying PP's in IOU OS Bounds and fault registers
@@ -392,6 +395,41 @@ static int  mchBytesIo = 0;
  **
  **--------------------------------------------------------------------------
  */
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Check whether a maintenance channel timeout has occurred.
+**
+**                  When a timeout occurs, the channel is set inactive and
+**                  empty. Normally, a timeout is established only when a
+**                  maintenance channel function has been declined, and this
+**                  occurs only when a connection code provided in a function
+**                  request is not supported by the machine.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void mchCheckTimeout()
+    {
+    if (mchTimeout != 0 && mchTimeout < getMilliseconds())
+        {
+        mchTimeout = 0;
+        if (channel[ChMaintenance].full && channel[ChMaintenance].active && channel[ChMaintenance].ioDevice == NULL)
+            {
+            channel[ChMaintenance].full   = FALSE;
+            channel[ChMaintenance].active = FALSE;
+#if DEBUG
+            fprintf(mchLog, "\n%12d PP:%02o CH:%02o Timeout",
+                    traceSequenceNo,
+                    activePpu->id,
+                    activeDevice->channel->id);
+            fflush(mchLog);
+#endif
+            }
+        }
+    }
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise maintenance channel.
 **
@@ -694,20 +732,32 @@ static FcStatus mchFunc(PpWord funcCode)
             funcCode);
 #endif
         activeDevice->fcode = funcCode;
+        mchTimeout = 0;
         return FcProcessed;
         }
 
 #if DEBUG
-    fprintf(mchLog, "\n%12d PP:%02o CH:%02o f:0x%03X C:%X O:%X (%s) T:%X",
+    fprintf(mchLog, "\n%12d PP:%02o CH:%02o f:0x%03X C:%X O:%X T:%X (%s)",
             traceSequenceNo,
             activePpu->id,
             activeDevice->channel->id,
             funcCode,
             connCode,
             opCode,
-            mchOp2String(opCode),
-            typeCode);
+            typeCode,
+            mchFn2String(connCode, opCode, typeCode));
 #endif
+
+    if (mchIsConnected(connCode) == FALSE)
+        {
+#if DEBUG
+        fputs("  Declined", mchLog);
+#endif
+        mchTimeout = getMilliseconds() + 1;
+
+        return FcDeclined;
+        }
+    mchTimeout = 0;
 
     /*
     **  Process operation codes.
@@ -718,7 +768,6 @@ static FcStatus mchFunc(PpWord funcCode)
 #if DEBUG
         fputs(" : Operation not implemented & declined", mchLog);
 #endif
-
         return FcDeclined;
 
     case FcOpHalt:
@@ -838,11 +887,11 @@ static u8 *mchGetRegisterAddress(u8 connCode, u8 typeCode, u8 location, u16 *ind
             switch (typeCode)
                 {
             case 1:           // Control Store
-            case 3:           // internal memory
-            case 4:           // internal memory
-            case 5:           // internal memory
-            case 6:           // internal memory
-            case 7:           // internal memory
+            case 3:           // ROM
+            case 4:           // Soft control memory
+            case 5:           // BDP control memory
+            case 6:           // Instruction fetch decode memory
+            case 7:           // Register file
                 *limit = 0;
                 break;
             case 0:           // CP
@@ -897,11 +946,11 @@ static u8 *mchGetUnitRegisters(u8 connCode, u8 typeCode, int *size)
                 {
             case 0: // CP
             case 1: // Control Store
-            case 3: // internal memory
-            case 4: // internal memory
-            case 5: // internal memory
-            case 6: // internal memory
-            case 7: // internal memory
+            case 3: // ROM
+            case 4: // Soft control memory
+            case 5: // BDP control memory
+            case 6: // Instruction fetch decode memory
+            case 7: // Register file
             case 0x0A: // CM
                 if (mchRegisters[typeCode] == NULL)
                     {
@@ -1003,6 +1052,7 @@ static void mchIo(void)
                 fprintf(mchLog, " %02X", activeChannel->data);
                 if (activeDevice->recordLength == 0)
                     {
+                    fprintf(mchLog, " (%s)", mchCw2String(connCode, typeCode, mchLocation));
                     mchBytesIo = 0;
                     }
                 else
@@ -1016,11 +1066,7 @@ static void mchIo(void)
             {
             if (!activeChannel->full)
                 {
-                if (mchLocation == 0 && mchRegisterAddress != NULL) // Status summary register
-                    {
-                    activeChannel->data = mchRegisterAddress[7];
-                    }
-                else if (mchIndex < mchIndexLimit || mchIndexLimit == 0)
+                if (mchIndex < mchIndexLimit || mchIndexLimit == 0)
                     {
                     activeChannel->data = mchRegisterAddress != NULL ? mchRegisterAddress[mchIndex] : 0;
                     mchIndex = (mchIndex + 1) & mchIndexMask;
@@ -1065,6 +1111,7 @@ static void mchIo(void)
                 fprintf(mchLog, " %02X", activeChannel->data);
                 if (activeDevice->recordLength == 0)
                     {
+                    fprintf(mchLog, " (%s)", mchCw2String(connCode, typeCode, mchLocation));
                     mchBytesIo = 0;
                     }
                 else
@@ -1129,7 +1176,7 @@ static void mchIo(void)
 #if DEBUG
                         fprintf(mchLog, "\n        PP%02o OS bounds check: %s", ppIdx < 10 ? ppIdx : (ppIdx - 10) + 020,
                             ppu[ppIdx].osBoundsCheckEnabled ? "enabled" : "disabled");
-                        fprintf(mchLog, "\n                stop enabled: %s", ppu[ppIdx].isStopEnabled ? "TRUE" : "FALSE");
+                        fprintf(mchLog, "\n                        stop: %s", ppu[ppIdx].isStopEnabled ? "enabled" : "disabled");
 #endif
                         if ((mchRegisterAddress[6] & 0x10) != 0) // load PP
                             {
@@ -1276,6 +1323,262 @@ static bool mchIsConnected(PpWord connCode)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Put a 64-bit word into 8 bytes of a register
+**
+**  Parameters:     Name        Description.
+**                  address     address of register location
+**                  word        the word to write
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void mchPutWord(u8 *address, u64 word)
+    {
+    int shift;
+
+    if (address != NULL)
+        {
+        for (shift = 56; shift >= 0; shift -=8)
+             {
+             *address++ = (word >> shift) & 0xff;
+             }
+         }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Set a 64-bit word into a register
+**
+**  Parameters:     Name        Description.
+**                  connCode    unit connect code
+**                  typeCode    type code
+**                  location    location ordinal (word address)
+**                  word        the word to write
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void mchSetRegister(u8 connCode, u8 typeCode, u8 location, u64 word)
+    {
+    u8  *block;
+    u16 index;
+    u16 limit;
+    u16 mask;
+    int size;
+
+    mchPutWord(mchGetRegisterAddress(connCode, typeCode, location, &index, &mask, &limit, &block, &size), word);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Convert location to string.
+**
+**  Parameters:     Name        Description.
+**                  connCode    connection code
+**                  typeCode    type code
+**                  location    location code
+**
+**  Returns:        String equivalent of location.
+**
+**------------------------------------------------------------------------*/
+static char *mchCw2String(PpWord connCode, PpWord typeCode, PpWord location)
+    {
+#if DEBUG
+    switch (modelType)
+        {
+    case ModelCyber860:
+        switch (connCode)
+            {
+        case 0:
+            switch (location)
+                {
+            case 0x00:
+                return "Status Summary";
+            case 0x10:
+                return "EID";
+            case 0x12:
+                return "OI";
+            case 0x18:
+                return "Fault Status Mask";
+            case 0x21:
+                return "OS Bounds";
+            case 0x30:
+                return "EC";
+            case 0x40:
+                return "Status";
+            case 0x80:
+                return "FS1";
+            case 0x81:
+                return "FS2";
+            case 0xa0:
+                return "TM";
+            default:
+                break;
+                }
+            break;
+        case 1: // CP or CM
+        case 2:
+            switch (typeCode)
+                {
+            case 0:
+            case 1:
+            case 3:
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+                switch (location)
+                    {
+                case 0x00:
+                    return "Status Summary";
+                case 0x10:
+                    return "EID";
+                case 0x12:
+                    return "OI";
+                case 0x30:
+                    return "DEC";
+                case 0x80:
+                    return "PFS0";
+                case 0x81:
+                    return "PFS1";
+                case 0x82:
+                    return "PFS2";
+                case 0x83:
+                    return "PFS3";
+                case 0x84:
+                    return "PFS4";
+                case 0x85:
+                    return "PFS5";
+                case 0x86:
+                    return "PFS6";
+                case 0x87:
+                    return "PFS7";
+                case 0x88:
+                    return "PFS8";
+                case 0x89:
+                    return "PFS9";
+                case 0xa0:
+                    return "PTM";
+                default:
+                    break;
+                    }
+                break;
+            case 0x0A:
+                switch (location)
+                    {
+                case 0x00:
+                    return "Status Summary";
+                case 0x10:
+                    return "EID";
+                case 0x12:
+                    return "OI";
+                case 0x20:
+                    return "EC";
+                case 0xa0:
+                case 0xa1:
+                case 0xa2:
+                case 0xa3:
+                    return "CEL";
+                case 0xa4:
+                case 0xa5:
+                case 0xa6:
+                case 0xa7:
+                    return "UEL1";
+                case 0xa8:
+                case 0xa9:
+                case 0xaa:
+                case 0xab:
+                    return "UEL2";
+                    }
+                break;
+            default:
+                break;
+                }
+            break;
+        default:
+            break;
+            }
+        break;
+    default:
+        break;
+        }
+#endif
+
+    return "Unknown";
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Convert channel function to string.
+**
+**  Parameters:     Name        Description.
+**                  connCode    connection code
+**                  opCode      operation code
+**                  typeCode    type code
+**
+**  Returns:        String equivalent of function.
+**
+**------------------------------------------------------------------------*/
+static char *mchFn2String(PpWord connCode, PpWord opCode, PpWord typeCode)
+    {
+    static char buf[64];
+    char *object;
+
+#if DEBUG
+    switch (modelType)
+        {
+    case ModelCyber860:
+        switch (connCode)
+            {
+        case 0:
+            object = "IOU";
+            break;
+        case 1: // CP or CM
+            switch (typeCode)
+                {
+            case 0:
+                object = "CP";
+                break;
+            case 1:
+                object = "Control store";
+                break;
+            case 3:
+                object = "ROM";
+                break;
+            case 4:
+                object = "Soft control memories";
+                break;
+            case 5:
+                object = "BDP control memories";
+                break;
+            case 6:
+                object = "Instruction fetch decode memories";
+                break;
+            case 7:
+                object = "Register file";
+                break;
+            case 0x0A:
+                object = "CM control";
+                break;
+            default:
+                object = "Unknown type";
+                break;
+                }
+            break;
+        default:
+            object = "Unknown unit";
+            break;
+            }
+        break;
+    default:
+        object = "Unsupported machine type";
+        break;
+        }
+
+    sprintf(buf, "%s %s", mchOp2String(opCode), object);
+#endif
+
+    return buf;
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Convert operation code to string.
 **
 **  Parameters:     Name        Description.
@@ -1321,53 +1624,7 @@ static char *mchOp2String(PpWord opCode)
 #endif
     sprintf(buf, "Unknown 0x%X", opCode >> 4);
 
-    return (buf);
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Put a 64-bit word into 8 bytes of a register
-**
-**  Parameters:     Name        Description.
-**                  address     address of register location
-**                  word        the word to write
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-static void mchPutWord(u8 *address, u64 word)
-    {
-    int shift;
-
-    if (address != NULL)
-        {
-        for (shift = 56; shift >= 0; shift -=8)
-             {
-             *address++ = (word >> shift) & 0xff;
-             }
-         }
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Set a 64-bit word into a register
-**
-**  Parameters:     Name        Description.
-**                  connCode    unit connect code
-**                  typeCode    type code
-**                  location    location ordinal (word address)
-**                  word        the word to write
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-static void mchSetRegister(u8 connCode, u8 typeCode, u8 location, u64 word)
-    {
-    u8  *block;
-    u16 index;
-    u16 limit;
-    u16 mask;
-    int size;
-
-    mchPutWord(mchGetRegisterAddress(connCode, typeCode, location, &index, &mask, &limit, &block, &size), word);
+    return buf;
     }
 
 /*---------------------------  End Of File  ------------------------------*/

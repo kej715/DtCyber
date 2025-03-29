@@ -94,7 +94,7 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
-static bool checkOsBounds(u32 address);
+static bool ppCheckOsBounds(u32 address);
 
 static void ppOpPSN(void);    // 00
 static void ppOpLJM(void);    // 01
@@ -627,20 +627,6 @@ void ppStep(void)
  **--------------------------------------------------------------------------
  */
 
-static bool checkOsBounds(u32 address)
-    {
-    if (activePpu->osBoundsCheckEnabled)
-        {
-        if ((activePpu->isBelowOsBound && (address >= ppuOsBoundary))
-            || ((activePpu->isBelowOsBound == FALSE) && (address < ppuOsBoundary)))
-            {
-            mchSetOsBoundsFault(activePpu);
-            return TRUE;
-            }
-        }
-    return FALSE;
-    }
-
 /*--------------------------------------------------------------------------
 **  Purpose:        18 bit ones-complement addition with subtractive adder
 **
@@ -660,6 +646,29 @@ static u32 ppAdd18(u32 op1, u32 op2)
         }
 
     return (acc18 & Mask18);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Check a CM reference against the Cyber 180 OS bounds register
+**
+**  Parameters:     Name        Description.
+**                  address     absolute CM address
+**
+**  Returns:        TRUE if OS bounds register violation.
+**
+**------------------------------------------------------------------------*/
+static bool ppCheckOsBounds(u32 address)
+    {
+    if (((features & IsCyber180) != 0) && activePpu->osBoundsCheckEnabled)
+        {
+        if ((activePpu->isBelowOsBound && (address >= ppuOsBoundary))
+            || ((activePpu->isBelowOsBound == FALSE) && (address < ppuOsBoundary)))
+            {
+            mchSetOsBoundsFault(activePpu);
+            return TRUE;
+            }
+        }
+    return FALSE;
     }
 
 /*--------------------------------------------------------------------------
@@ -967,7 +976,7 @@ static void ppOpEXN(void)     // 26
             return;
             }
         }
-    if (checkOsBounds(exchangeAddress))
+    if (ppCheckOsBounds(exchangeAddress))
         {
         cpuReleaseExchangeMutex();
         if (activePpu->isStopEnabled)
@@ -1245,7 +1254,7 @@ static void ppOpCWD(void)     // 62
 #if PPDEBUG
     ppValidateCmWrite("CWD", address, data);
 #endif
-    if (checkOsBounds(address))
+    if (ppCheckOsBounds(address))
         {
         if (activePpu->isStopEnabled)
             {
@@ -1319,7 +1328,7 @@ static void ppOpCWM(void)     // 63
 #if PPDEBUG
     ppValidateCmWrite("CWM", address, data);
 #endif
-    if (checkOsBounds(address))
+    if (ppCheckOsBounds(address))
         {
         if (activePpu->isStopEnabled)
             {
@@ -1932,7 +1941,7 @@ static void ppOpRDSL(void)    // 1000
         {
         address = activePpu->regA & Mask18;
         }
-    if (checkOsBounds(address))
+    if (ppCheckOsBounds(address))
         {
         if (activePpu->isStopEnabled)
             {
@@ -1970,7 +1979,7 @@ static void ppOpRDCL(void)    // 1001
         {
         address = activePpu->regA & Mask18;
         }
-    if (checkOsBounds(address))
+    if (ppCheckOsBounds(address))
         {
         if (activePpu->isStopEnabled)
             {
@@ -2247,7 +2256,7 @@ static void ppOpCWDL(void)    // 1062
         {
         address = activePpu->regA & Mask18;
         }
-    if (checkOsBounds(address))
+    if (ppCheckOsBounds(address))
         {
         if (activePpu->isStopEnabled)
             {
@@ -2311,7 +2320,7 @@ static void ppOpCWML(void)    // 1063
         {
         address = activePpu->regA & Mask18;
         }
-    if (checkOsBounds(address))
+    if (ppCheckOsBounds(address))
         {
         if (activePpu->isStopEnabled)
             {

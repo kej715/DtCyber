@@ -117,6 +117,7 @@ void deadStart(void)
         if ((ch <= 013) || ((ch >= 020) && (ch <= 033)))
             {
             channel[ch].active = TRUE;
+            channel[ch].full   = FALSE;
             }
         }
 
