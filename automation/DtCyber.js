@@ -317,13 +317,19 @@ class DtCyber {
    *
    * Create a connection to the DtCyber operator interface. The port on which to connect
    * may be specified as a parameter. If the port is not specified, the method looks for
-   * a cyber.ini in the current working directory or its parent, parses the file for a
+   * a cyber.ini file in the current working directory or its parent, parses the file for a
    * set_operator_port command, and attempts to connect to the port number defined by
-   * that command. Creates an instance of DtCyberStreamMgr to manage the connection that
+   * that command. An instance of DtCyberStreamMgr is created to manage the connection that
    * is established.
    *
    * Arguments:
-   *   port - optional port number
+   *   port - optional port number specification
+   *          If this parameter is a number, it is accepted as a port number.
+   *          If it is a string, it is parsed as "<host>:<port>".
+   *          If it is an object, it is inspected for properties named
+   *          "host", "port", and "maxWait". maxWait specifies the maximum
+   *          number of milliseconds to wait for DtCyber to accept the
+   *          connection. The default is 10000 (i.e., 10 seconds).
    *
    * Returns:
    *   A promise that is resolved when the connection has been established
@@ -333,7 +339,8 @@ class DtCyber {
     if (typeof me.isConnected !== "undefined" && me.isConnected) {
       return Promise.resolve();
     }
-    let host  = null;
+    let host    = null;
+    let maxWait = 10000;
     if (typeof port !== "undefined") {
       if (typeof port === "string") {
         const ci = port.indexOf(":");
@@ -345,6 +352,13 @@ class DtCyber {
           host = port;
           port = undefined;
         }
+      }
+      else if (typeof port === "object") {
+        const obj = port;
+        port = undefined;
+        if (typeof obj.port    !== "undefined") port    = obj.port;
+        if (typeof obj.host    !== "undefined") host    = obj.host;
+        if (typeof obj.maxWait !== "undefined") maxWait = obj.maxWait;
       }
     }
     if (host === null) {
@@ -435,7 +449,7 @@ class DtCyber {
           }
         });
       };
-      doConnect(Date.now() + 10000, err => {
+      doConnect(Date.now() + maxWait, err => {
         if (err === null) {
           resolve();
         }

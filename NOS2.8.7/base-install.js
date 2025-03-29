@@ -57,32 +57,35 @@ for (const baseTape of baseTapes) {
 
 if (isCompletedStep("init")) {
   promise = promise
+  .then(() => dtc.say("Start DtCyber using default profile ..."))
   .then(() => dtc.start({
     detached: true,
     stdio:    [0, "ignore", 2],
     unref:    false
   }))
-  .then(() => dtc.sleep(2000))
+  .then(() => dtc.say("Wait for DtCyber to accept operator connection ..."))
   .then(() => dtc.connect())
+  .then(() => dtc.say("Connected to DtCyber"))
   .then(() => dtc.expect([ {re:/Operator> $/} ]))
   .then(() => dtc.console("idle off"))
-  .then(() => dtc.say("DtCyber started using default profile"))
   .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+  .then(() => dtc.say("Wait for deadstart to complete ..."))
   .then(() => dtc.expect([ {re:/QUEUE FILE UTILITY COMPLETE/} ], "printer"))
   .then(() => dtc.say("Deadstart complete"));
 }
 else {
   promise = promise
+  .then(() => dtc.say("Start DtCyber using manual profile ..."))
   .then(() => dtc.start(["manual"], {
     detached: true,
     stdio:    [0, "ignore", 2],
     unref:    false
   }))
-  .then(() => dtc.sleep(2000))
-  .then(() => dtc.connect())
+  .then(() => dtc.say("Wait for DtCyber to accept operator connection ..."))
+  .then(() => dtc.connect({maxWait:60000})) // initial creation of disk containers can be time-consuming
+  .then(() => dtc.say("Connected to DtCyber"))
   .then(() => dtc.expect([ {re:/Operator> $/} ]))
   .then(() => dtc.console("idle off"))
-  .then(() => dtc.say("DtCyber started using manual profile"))
   .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
   .then(() => dtc.say("Begin initial deadstart ..."))
   .then(() => dtc.dsd([
