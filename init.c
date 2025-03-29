@@ -2261,6 +2261,10 @@ static int initParseEquipmentDefn(char *defn, char *file, char *section, int lin
     **  Parse optional file name.
     */
     *deviceParams = strtok(NULL, " ");
+    if ((*deviceParams != NULL) && (**deviceParams == ';'))
+        {
+        *deviceParams = NULL;
+        }
 
     return deviceIndex;
     }
