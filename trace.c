@@ -983,7 +983,6 @@ void traceOpcode(void)
     u8           addrMode;
     DecPpControl *decodeTable;
     char         *fmt;
-    bool         is180;
     PpWord       opCode;
     u8           opD;
     u8           opF;
@@ -1002,8 +1001,7 @@ void traceOpcode(void)
     opCode = activePpu->mem[activePpu->regP];
     opF    = opCode >> 6;
     opD    = opCode & 077;
-    is180  = (features & IsCyber180) != 0;
-    if (is180)
+    if (isCyber180)
         {
         decodeTable = (opCode & 0100000) != 0 ? ppDecode180 : ppDecode170;
         fmt = "O:%06o   %-4.4s ";
@@ -1071,7 +1069,6 @@ u8 traceDisassembleOpcode(char *str, PpWord *pm)
     u8           addrMode;
     DecPpControl *decodeTable;
     char         *fmt;
-    bool         is180;
     PpWord       opCode;
     u8           opD;
     u8           opF;
@@ -1083,8 +1080,7 @@ u8 traceDisassembleOpcode(char *str, PpWord *pm)
     opCode = *pm++;
     opF    = opCode >> 6;
     opD    = opCode & 077;
-    is180  = (features & IsCyber180) != 0;
-    if (is180)
+    if (isCyber180)
         {    
         decodeTable = (opCode & 0100000) != 0 ? ppDecode180 : ppDecode170;
         fmt = "%-4.4s  ";
@@ -1204,26 +1200,47 @@ void traceChannel(u8 ch)
         return;
         }
 
-    fprintf(ppuF[activePpu->id], "  CH%02o:%c%c%c", ch,
+    fprintf(ppuF[activePpu->id], "  CH%02o:%c%c%c%c", ch,
             channel[ch].active           ? 'A' : 'D',
             channel[ch].full             ? 'F' : 'E',
-            channel[ch].ioDevice == NULL ? 'I' : 'S');
-    if (channel[ch].flag)
-        {
-        fputc('*', ppuF[activePpu->id]);
-        }
+            channel[ch].ioDevice == NULL ? 'I' : 'S',
+            channel[ch].flag             ? '*' : ' ');
     if (channel[ch].full)
         {
-        if ((features & IsCyber180) != 0)
-            {
-            fprintf(ppuF[activePpu->id], "  %06o", channel[ch].data);
-            }
-        else
-            {
-            fprintf(ppuF[activePpu->id], "  %04o", channel[ch].data);
-            }
+        fputs("  ", ppuF[activePpu->id]);
+        traceChannelIo(ch);
         }
     }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Output data on channel.
+**
+**  Parameters:     Name        Description.
+**                  ch          channel number.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceChannelIo(u8 ch)
+    {
+    /*
+    **  Bail out if no trace of this PPU is requested.
+    */
+    if ((traceMask & (1 << activePpu->id)) == 0)
+        {
+        return;
+        }
+    
+    if (isCyber180)
+        {
+        fprintf(ppuF[activePpu->id], "%06o ", channel[ch].data);
+        }
+    else
+        {
+        fprintf(ppuF[activePpu->id], "%04o ", channel[ch].data);
+        }
+    }
+
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Output end-of-line.

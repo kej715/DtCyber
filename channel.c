@@ -669,10 +669,11 @@ void channelOut(void)
         if (activeDevice->devType == DtPciChannel)
             {
             activeDevice->out(activeChannel->data);
-
-            return;
             }
         }
+#if CcDebug == 1
+        traceChannelIo(activeChannel->id);
+#endif
     }
 
 /*--------------------------------------------------------------------------
@@ -691,9 +692,10 @@ void channelIn(void)
         if (activeDevice->devType == DtPciChannel)
             {
             activeChannel->data = activeDevice->in();
-
-            return;
             }
+#if CcDebug == 1
+        traceChannelIo(activeChannel->id);
+#endif
         }
     }
 

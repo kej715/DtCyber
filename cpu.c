@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------
 **
-**  Copyright (c) 2003-2011, Tom Hunter
+**  Copyright (c) 2003-2025, Tom Hunter, Kevin Jordan
 **
 **  Name: cpu.c
 **
@@ -340,7 +340,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
     /*
     **  Allocate configured central memory.
     */
-    if ((features & IsCyber180) != 0)
+    if (isCyber180)
         {
         memory /= 8;
         }
@@ -479,15 +479,15 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
     /*
     **  Print a friendly message.
     */
-    if ((features & IsCyber180) == 0)
-        {
-        printf("(cpu    ) CPU model %s initialised (%d CPU%s, CM: %o words, ECS: %o words)\n",
-               model, cpuCount, cpuCount > 1 ? "'s" : "", cpuMaxMemory, extMaxMemory);
-        }
-    else
+    if (isCyber180)
         {
         printf("(cpu    ) CPU model %s initialised (%d CPU%s, CM: %dM bytes)\n",
                model, cpuCount, cpuCount > 1 ? "'s" : "", (8 * cpuMaxMemory) / OneMegabyte);
+        }
+    else
+        {
+        printf("(cpu    ) CPU model %s initialised (%d CPU%s, CM: %o words, ECS: %o words)\n",
+               model, cpuCount, cpuCount > 1 ? "'s" : "", cpuMaxMemory, extMaxMemory);
         }
 #if DEBUG_ECS || DEBUG_UEM || DEBUG_DDP
     if (emLog == NULL)
@@ -607,12 +607,12 @@ void cpuTerminate(void)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Read CPU memory from PP and verify that address is
+**  Purpose:        Read 60-bit CPU memory from PP and verify that address is
 **                  within limits.
 **
 **  Parameters:     Name        Description.
 **                  address     Absolute CM address to read.
-**                  data        Pointer to 60 bit word which gets the data.
+**                  data        Pointer to 60-bit word which gets the data.
 **
 **  Returns:        Nothing
 **
@@ -638,12 +638,43 @@ void cpuPpReadMem(u32 address, CpWord *data)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Write CPU memory from PP and verify that address is
+**  Purpose:        Read 64-bit CPU memory from PP and verify that address is
+**                  within limits.
+**
+**  Parameters:     Name        Description.
+**                  address     Absolute CM address to read.
+**                  data        Pointer to 64-bit word which gets the data.
+**
+**  Returns:        Nothing
+**
+**------------------------------------------------------------------------*/
+void cpuPpReadMem64(u32 address, CpWord *data)
+    {
+    if ((features & HasNoCmWrap) != 0)
+        {
+        if (address < cpuMaxMemory)
+            {
+            *data = cpMem[address];
+            }
+        else
+            {
+            *data = (~((CpWord)0));
+            }
+        }
+    else
+        {
+        address %= cpuMaxMemory;
+        *data    = cpMem[address];
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Write 60-bit CPU memory from PP and verify that address is
 **                  within limits.
 **
 **  Parameters:     Name        Description.
 **                  address     Absolute CM address
-**                  data        60 bit word which holds the data to be written.
+**                  data        60-bit word which holds the data to be written.
 **
 **  Returns:        Nothing
 **
@@ -661,6 +692,33 @@ void cpuPpWriteMem(u32 address, CpWord data)
         {
         address       %= cpuMaxMemory;
         cpMem[address] = data & Mask60;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Write 64-bit CPU memory from PP and verify that address is
+**                  within limits.
+**
+**  Parameters:     Name        Description.
+**                  address     Absolute CM address
+**                  data        64-bit word which holds the data to be written.
+**
+**  Returns:        Nothing
+**
+**------------------------------------------------------------------------*/
+void cpuPpWriteMem64(u32 address, CpWord data)
+    {
+    if ((features & HasNoCmWrap) != 0)
+        {
+        if (address < cpuMaxMemory)
+            {
+            cpMem[address] = data;
+            }
+        }
+    else
+        {
+        address       %= cpuMaxMemory;
+        cpMem[address] = data;
         }
     }
 

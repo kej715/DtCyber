@@ -103,7 +103,9 @@ bool cpuEcsFlagRegister(u32 ecsAddress);
 u32  cpuGetP(u8 cpuNum);
 void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType);
 void cpuPpReadMem(u32 address, CpWord *data);
+void cpuPpReadMem64(u32 address, CpWord *data);
 void cpuPpWriteMem(u32 address, CpWord data);
+void cpuPpWriteMem64(u32 address, CpWord data);
 void cpuReleaseExchangeMutex(void);
 void cpuReleaseMemoryMutex(void);
 void cpuStep(CpuContext *activeCpu);
@@ -440,6 +442,7 @@ void traceChannelFunction(PpWord funcCode);
 void tracePrint(char *str);
 void traceCpuPrint(CpuContext *cpu, char *str);
 void traceChannel(u8 ch);
+void traceChannelIo(u8 ch);
 void traceEnd(void);
 void traceCpu(CpuContext *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress);
 void traceExchange(CpuContext *cpu, u32 addr, char *title);
@@ -513,6 +516,7 @@ extern long                fontMedium;                      // Console
 extern long                fontSmall;                       // Console
 extern char                fontName[];                      // Console
 extern long                heightPX;                        // Console
+extern bool                isCyber180;
 extern ModelType           modelType;
 extern u16                 mux6676TelnetConns;
 extern u16                 mux6676TelnetPort;

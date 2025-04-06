@@ -273,20 +273,41 @@ void dumpCpu(u8 cp)
             {
             duplicateLine = FALSE;
             lastData      = data;
-            fprintf(pf, "%07o   ", addr & Mask21);
+            if (isCyber180)
+                {
+                fprintf(pf, "%08o   ", addr & Mask24);
+                }
+            else
+                {
+                fprintf(pf, "%07o   ", addr & Mask21);
+                }
             fprintf(pf, "%04o %04o %04o %04o %04o   ",
                     (PpWord)((data >> 48) & Mask12),
                     (PpWord)((data >> 36) & Mask12),
                     (PpWord)((data >> 24) & Mask12),
                     (PpWord)((data >> 12) & Mask12),
                     (PpWord)((data) & Mask12));
-
             shiftCount = 60;
             for (i = 0; i < 10; i++)
                 {
                 shiftCount -= 6;
                 ch          = (u8)((data >> shiftCount) & Mask6);
                 fprintf(pf, "%c", cdcToAscii[ch]);
+                }
+            if (isCyber180)
+                {
+                fprintf(pf, "    %04x %04x %04x %04x   ",
+                        (PpWord)((data >> 48) & Mask16),
+                        (PpWord)((data >> 32) & Mask16),
+                        (PpWord)((data >> 16) & Mask16),
+                        (PpWord)((data) & Mask16));
+                shiftCount = 64;
+                for (i = 0; i < 8; i++)
+                    {
+                    shiftCount -= 8;
+                    ch          = (u8)((data >> shiftCount) & Mask8);
+                    fprintf(pf, "%c", (ch > 0x1f && ch < 0x7f) ? ch : '.');
+                    }
                 }
             }
 
@@ -298,7 +319,14 @@ void dumpCpu(u8 cp)
 
     if (duplicateLine)
         {
-        fprintf(pf, "LAST ADDRESS:%07o\n", addr & Mask21);
+        if (isCyber180)
+            {
+            fprintf(pf, "LAST ADDRESS:%08o\n", addr & Mask24);
+            }
+        else
+            {
+            fprintf(pf, "LAST ADDRESS:%07o\n", addr & Mask21);
+            }
         }
     }
 
@@ -316,14 +344,12 @@ void dumpPpu(u8 pp, PpWord first, PpWord limit)
     u32    addr;
     char   *fmt;
     u8     i;
-    bool   is180;
     PpWord mask;
     PpWord *pm = ppu[pp].mem;
     FILE   *pf = ppuF[pp];
     PpWord pw;
 
-    is180 = (features & IsCyber180) != 0;
-    if (is180)
+    if (isCyber180)
         {
         mask = Mask16;
         fmt  = "%06o %06o %06o %06o %06o %06o %06o %06o  ";
@@ -339,13 +365,13 @@ void dumpPpu(u8 pp, PpWord first, PpWord limit)
         {
         fprintf(pf, "R %010o\n", ppu[pp].regR);
         }
-    if (is180 && ppu[pp].osBoundsCheckEnabled)
+    if (isCyber180 && ppu[pp].osBoundsCheckEnabled)
         {
         fprintf(pf, "OS bounds %s %010o\n", ppu[pp].isBelowOsBound ? "below" : "above", ppuOsBoundary);
         }
     if (ppu[pp].busy)
         {
-        if (is180)
+        if (isCyber180)
             {
             fprintf(pf, "PP busy: %04o%02o\n", ppu[pp].opF, ppu[pp].opD);
             }
@@ -392,7 +418,6 @@ void dumpDisassemblePpu(u8 pp)
     {
     u32    addr;
     u8     cnt;
-    bool   is180;
     FILE   *pf;
     PpWord *pm = ppu[pp].mem;
     char   ppDisName[20];
@@ -410,7 +435,6 @@ void dumpDisassemblePpu(u8 pp)
 
     ppuF[pp] = pf;
     dumpPpu(pp, 0, 0100);
-    is180 = (features & IsCyber180) != 0;
 
     for (addr = 0100; addr < PpMemSize; addr += cnt)
         {
@@ -419,7 +443,7 @@ void dumpDisassemblePpu(u8 pp)
         cnt = traceDisassembleOpcode(str, pm + addr);
         fputs(str, pf);
 
-        if (is180)
+        if (isCyber180)
             {
             pw0 = pm[addr] & Mask16;
             pw1 = pm[addr + 1] & Mask16;

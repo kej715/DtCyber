@@ -538,7 +538,7 @@ void ppStep(void)
             */
             opCode = activePpu->mem[activePpu->regP];
  
-            if ((features & IsCyber180) != 0)
+            if (isCyber180)
                 {
                 opF = (opCode >> 6) & 01777;
                 }
@@ -659,7 +659,7 @@ static u32 ppAdd18(u32 op1, u32 op2)
 **------------------------------------------------------------------------*/
 static bool ppCheckOsBounds(u32 address)
     {
-    if (((features & IsCyber180) != 0) && activePpu->osBoundsCheckEnabled)
+    if (isCyber180 && activePpu->osBoundsCheckEnabled)
         {
         if ((activePpu->isBelowOsBound && (address >= ppuOsBoundary))
             || ((activePpu->isBelowOsBound == FALSE) && (address < ppuOsBoundary)))
@@ -1538,13 +1538,13 @@ static void ppOpIAN(void)     // 70
         */
         channelIn();
         channelSetEmpty();
-        if ((features & IsCyber180) == 0)
+        if (isCyber180)
             {
-            activePpu->regA = activeChannel->data & Mask12;
+            activePpu->regA = activeChannel->data & Mask16;
             }
         else
             {
-            activePpu->regA = activeChannel->data & Mask16;
+            activePpu->regA = activeChannel->data & Mask12;
             }
         activeChannel->inputPending = FALSE;
         if (activeChannel->discAfterInput)
@@ -1623,13 +1623,13 @@ static void ppOpIAM(void)     // 71
         */
         channelIn();
         channelSetEmpty();
-        if ((features & IsCyber180) == 0)
+        if (isCyber180)
             {
-            activePpu->mem[activePpu->regP] = activeChannel->data & Mask12;
+            activePpu->mem[activePpu->regP] = activeChannel->data & Mask16;
             }
         else
             {
-            activePpu->mem[activePpu->regP] = activeChannel->data & Mask16;
+            activePpu->mem[activePpu->regP] = activeChannel->data & Mask12;
             }
         activePpu->regP             = (activePpu->regP + 1) & Mask12;
         activePpu->regA             = (activePpu->regA - 1) & Mask18;
@@ -1685,13 +1685,13 @@ static void ppOpOAN(void)     // 72
     channelCheckIfFull();
     if (!activeChannel->full)
         {
-        if ((features & IsCyber180) == 0)
+        if (isCyber180)
             {
-            activeChannel->data = (PpWord)activePpu->regA & Mask12;
+            activeChannel->data = (PpWord)activePpu->regA & Mask16;
             }
         else
             {
-            activeChannel->data = (PpWord)activePpu->regA & Mask16;
+            activeChannel->data = (PpWord)activePpu->regA & Mask12;
             }
         channelOut();
         channelSetFull();
@@ -1753,16 +1753,16 @@ static void ppOpOAM(void)     // 73
     channelCheckIfFull();
     if (!activeChannel->full)
         {
-        if ((features & IsCyber180) == 0)
-            {
-            activeChannel->data = activePpu->mem[activePpu->regP] & Mask12;
-            }
-        else
+        if (isCyber180)
             {
             activeChannel->data = activePpu->mem[activePpu->regP] & Mask16;
             }
-        activePpu->regP     = (activePpu->regP + 1) & Mask12;
-        activePpu->regA     = (activePpu->regA - 1) & Mask18;
+        else
+            {
+            activeChannel->data = activePpu->mem[activePpu->regP] & Mask12;
+            }
+        activePpu->regP = (activePpu->regP + 1) & Mask12;
+        activePpu->regA = (activePpu->regA - 1) & Mask18;
         channelOut();
         channelSetFull();
 
@@ -1880,14 +1880,13 @@ static void ppOpFAN(void)     // 76
 
         return;
         }
-
-    if ((features & IsCyber180) == 0)
+    if (isCyber180)
         {
-        channelFunction((PpWord)(activePpu->regA & Mask12));
+        channelFunction((PpWord)(activePpu->regA & Mask16));
         }
     else
         {
-        channelFunction((PpWord)(activePpu->regA & Mask16));
+        channelFunction((PpWord)(activePpu->regA & Mask12));
         }
     activePpu->busy = FALSE;
     }
@@ -1955,12 +1954,12 @@ static void ppOpRDSL(void)    // 1000
                | (((CpWord)activePpu->mem[(opD + 2) & Mask12]) << 16)
                | ((CpWord)activePpu->mem[(opD + 3) & Mask12]);
         cpuAcquireMemoryMutex();
-        cpuPpReadMem(address, &cmData);
+        cpuPpReadMem64(address, &cmData);
         activePpu->mem[opD++ & Mask12] = (PpWord)((cmData >> 48) & Mask16);
         activePpu->mem[opD++ & Mask12] = (PpWord)((cmData >> 32) & Mask16);
         activePpu->mem[opD++ & Mask12] = (PpWord)((cmData >> 16) & Mask16);
         activePpu->mem[opD & Mask12]   = (PpWord)((cmData) & Mask16);
-        cpuPpWriteMem(address, cmData | ppData);
+        cpuPpWriteMem64(address, cmData | ppData);
         cpuReleaseMemoryMutex();
         }
     }
@@ -1993,12 +1992,12 @@ static void ppOpRDCL(void)    // 1001
                | (((CpWord)activePpu->mem[(opD + 2) & Mask12]) << 16)
                | ((CpWord)activePpu->mem[(opD + 3) & Mask12]);
         cpuAcquireMemoryMutex();
-        cpuPpReadMem(address, &cmData);
+        cpuPpReadMem64(address, &cmData);
         activePpu->mem[opD++ & Mask12] = (PpWord)((cmData >> 48) & Mask16);
         activePpu->mem[opD++ & Mask12] = (PpWord)((cmData >> 32) & Mask16);
         activePpu->mem[opD++ & Mask12] = (PpWord)((cmData >> 16) & Mask16);
         activePpu->mem[opD & Mask12]   = (PpWord)((cmData) & Mask16);
-        cpuPpWriteMem(address, cmData & ppData);
+        cpuPpWriteMem64(address, cmData & ppData);
         cpuReleaseMemoryMutex();
         }
     }
@@ -2185,7 +2184,7 @@ static void ppOpCRDL(void)    // 1060
         address = activePpu->regA & Mask18;
         }
     cpuAcquireMemoryMutex();
-    cpuPpReadMem(address, &data);
+    cpuPpReadMem64(address, &data);
     cpuReleaseMemoryMutex();
     activePpu->mem[opD++ & Mask12] = (PpWord)((data >> 48) & Mask16);
     activePpu->mem[opD++ & Mask12] = (PpWord)((data >> 32) & Mask16);
@@ -2218,7 +2217,7 @@ static void ppOpCRML(void)    // 1061
         address = activePpu->regA & Mask18;
         }
     cpuAcquireMemoryMutex();
-    cpuPpReadMem(address, &data);
+    cpuPpReadMem64(address, &data);
     cpuReleaseMemoryMutex();
     activePpu->mem[activePpu->regP] = (PpWord)((data >> 48) & Mask16);
     PpIncrement(activePpu->regP);
@@ -2277,7 +2276,7 @@ static void ppOpCWDL(void)    // 1062
         data |= activePpu->mem[opD & Mask12] & Mask16;
 
         cpuAcquireMemoryMutex();
-        cpuPpWriteMem(address, data);
+        cpuPpWriteMem64(address, data);
         cpuReleaseMemoryMutex();
         }
     }
@@ -2334,7 +2333,7 @@ static void ppOpCWML(void)    // 1063
     else
         {
         cpuAcquireMemoryMutex();
-        cpuPpWriteMem(address, data);
+        cpuPpWriteMem64(address, data);
         cpuReleaseMemoryMutex();
         }
     activePpu->regA = (activePpu->regA + 1) & Mask18;
