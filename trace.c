@@ -511,7 +511,7 @@ void traceTerminate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void traceCpu(CpuContext *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
+void traceCpu(Cpu170Context *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
     {
     u8           addrMode;
     bool         link    = TRUE;
@@ -840,7 +840,7 @@ void traceCpu(CpuContext *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAdd
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void traceExchange(CpuContext *cpu, u32 addr, char *title)
+void traceExchange(Cpu170Context *cpu, u32 addr, char *title)
     {
     CpWord data;
     u8     i;
@@ -1176,7 +1176,7 @@ void tracePrint(char *str)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void traceCpuPrint(CpuContext *cpu, char *str)
+void traceCpuPrint(Cpu170Context *cpu, char *str)
     {
     fputs(str, cpuF[cpu->id]);
     }

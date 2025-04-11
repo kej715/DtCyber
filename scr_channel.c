@@ -406,7 +406,7 @@ static void scrExecute(PpWord func)
         break;
 
     case 020:
-        if (cpus[0].isStopped)
+        if (cpus170[0].isStopped)
             {
             scrSetBit(scrRegister, 0300);
             }
@@ -414,7 +414,7 @@ static void scrExecute(PpWord func)
             {
             scrClrBit(scrRegister, 0300);
             }
-        if (cpus[0].isMonitorMode)
+        if (cpus170[0].isMonitorMode)
             {
             scrSetBit(scrRegister, 0303);
             }
@@ -425,7 +425,7 @@ static void scrExecute(PpWord func)
 
         if (cpuCount > 1)
             {
-            if (cpus[1].isStopped)
+            if (cpus170[1].isStopped)
                 {
                 scrSetBit(scrRegister, 0301);
                 }
@@ -433,7 +433,7 @@ static void scrExecute(PpWord func)
                 {
                 scrClrBit(scrRegister, 0301);
                 }
-            if (cpus[1].isMonitorMode)
+            if (cpus170[1].isMonitorMode)
                 {
                 scrSetBit(scrRegister, 0304);
                 }
@@ -450,7 +450,7 @@ static void scrExecute(PpWord func)
 
         if (modelType == ModelCyber865)
             {
-            if ((cpus[0].exitMode & EmFlagExpandedAddress) != 0)
+            if ((cpus170[0].exitMode & EmFlagExpandedAddress) != 0)
                 {
                 scrSetBit(scrRegister, 0312);
                 }

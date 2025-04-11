@@ -109,7 +109,7 @@ char ipAddress[16];
 char networkInterface[16];
 char networkInterfaceMgr[64];
 char osType[16];
-bool (*idleDetector)(CpuContext *) = &idleDetectorNone;
+bool (*idleDetector)(Cpu170Context *) = &idleDetectorNone;
 
 #if CcCycleTime
 double cycleTime;
@@ -278,14 +278,14 @@ int main(int argc, char **argv)
         rtcTick();
         ppStep();
 
-        cpuStep(cpus);
-        cpuStep(cpus);
-        cpuStep(cpus);
-        cpuStep(cpus);
+        cpuStep(cpus170);
+        cpuStep(cpus170);
+        cpuStep(cpus170);
+        cpuStep(cpus170);
 
         channelStep();
 
-        idleThrottle(cpus);
+        idleThrottle(cpus170);
 
 #if CcCycleTime
         cycleTime = rtcStopTimer();
@@ -334,7 +334,7 @@ int main(int argc, char **argv)
 **  Returns:        void
 **
 **------------------------------------------------------------------------*/
-void idleThrottle(CpuContext *ctx)
+void idleThrottle(Cpu170Context *ctx)
     {
     if (idle)
         {
@@ -390,7 +390,7 @@ bool idleCheckBusy()
 **  Returns:        FALSE
 **
 **------------------------------------------------------------------------*/
-bool idleDetectorNone(CpuContext *ctx)
+bool idleDetectorNone(Cpu170Context *ctx)
     {
     return FALSE;
     }
@@ -404,7 +404,7 @@ bool idleDetectorNone(CpuContext *ctx)
 **  Returns:        TRUE if in idle, FALSE if not.
 **
 **------------------------------------------------------------------------*/
-bool idleDetectorCOS(CpuContext *ctx)
+bool idleDetectorCOS(Cpu170Context *ctx)
     {
     if ((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 020))
         {
@@ -423,7 +423,7 @@ bool idleDetectorCOS(CpuContext *ctx)
 **  Returns:        TRUE if in idle, FALSE if not.
 **
 **------------------------------------------------------------------------*/
-bool idleDetectorNOS(CpuContext *ctx)
+bool idleDetectorNOS(Cpu170Context *ctx)
     {
     if ((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 05))
         {
@@ -442,7 +442,7 @@ bool idleDetectorNOS(CpuContext *ctx)
 **  Returns:        TRUE if in idle, FALSE if not.
 **
 **------------------------------------------------------------------------*/
-bool idleDetectorNOSBE(CpuContext *ctx)
+bool idleDetectorNOSBE(Cpu170Context *ctx)
     {
     /* Based on observing CPU state on the NOS/BE TUB ready to run package */
     if ((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 010))
@@ -462,7 +462,7 @@ bool idleDetectorNOSBE(CpuContext *ctx)
 **  Returns:        TRUE if in idle, FALSE if not.
 **
 **------------------------------------------------------------------------*/
-bool idleDetectorMACE(CpuContext *ctx)
+bool idleDetectorMACE(Cpu170Context *ctx)
     {
     /* This is based on the KRONOS1 source code for CPUMTR
      * I have no working system to test this on, it may also work

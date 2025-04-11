@@ -519,7 +519,7 @@ void ppStep(void)
         if (activePpu->exchangingCpu >= 0)
             {
             cpuAcquireExchangeMutex();
-            if (cpus[activePpu->exchangingCpu].ppRequestingExchange == activePpu->id)
+            if (cpus170[activePpu->exchangingCpu].ppRequestingExchange == activePpu->id)
                 {
                 cpuReleaseExchangeMutex();
                 continue;
@@ -541,6 +541,10 @@ void ppStep(void)
             if (isCyber180)
                 {
                 opF = (opCode >> 6) & 01777;
+                if ((opF & 0700) != 0)
+                    {
+                    opF = 0;
+                    }
                 }
             else
                 {
@@ -883,11 +887,11 @@ static void ppOpSRD(void)     // 25
 
 static void ppOpEXN(void)     // 26
     {
-    CpuContext *cpu;
-    int        cpuNum;
-    bool       doChangeMode;
-    bool       isExchangePending;
-    u32        exchangeAddress;
+    Cpu170Context *cpu;
+    int           cpuNum;
+    bool          doChangeMode;
+    bool          isExchangePending;
+    u32           exchangeAddress;
 
     if (activePpu->busy) // occurs on 180 when OS bounds fault
         {
@@ -895,7 +899,7 @@ static void ppOpEXN(void)     // 26
         }
 
     cpuNum = (cpuCount > 1) ? (opD & 001) : 0;
-    cpu    = cpus + cpuNum;
+    cpu    = cpus170 + cpuNum;
 
     cpuAcquireExchangeMutex();
     isExchangePending = cpu->ppRequestingExchange != -1;

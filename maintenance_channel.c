@@ -116,6 +116,7 @@
 #define RegProcCtrlStoreAddr       0x31
 #define RegProcCtrlStoreBreak      0x32
 #define RegProcMonitorProcState    0x41
+#define RegProcProcessIntTimer     0x44
 #define RegProcPageTableAddr       0x48
 #define RegProcPageTableLen        0x49
 #define RegProcPageSizeMask        0x4A
@@ -166,6 +167,7 @@
 static char *mchCw2String(u8 connCode, u8 typeCode, PpWord location);
 static char *mchFn2String(u8 connCode, u8 opCode, u8 typeCode);
 static FcStatus mchFunc(PpWord funcCode);
+static Cpu180Context *mchGetCpContext(u8 connCode);
 static u64  mchGetRegister(u8 reg);
 static void mchIo(void);
 static void mchActivate(void);
@@ -207,14 +209,14 @@ static void mch860SmWriter(u8 byte);
 **  -----------------
 */
 static u64  *mchCmRegisters;
-static u8   *mchControlStore;
-static u16  mchControlStoreIdx;
-static u64  *mchCpRegisters;
+static u8   *mchControlStores[2];
+static int  mchControlStoreIndices[2];
+static u64  *mchCpRegisterGroups[2];
 static u64  *mchIouRegisters;
-static u64  *mchRegisterFile;
-static int  mchRegisterFileIdx;
-static u8   *mchSoftMemories[7];
-static int  mchSoftMemoryIdx[7];
+static u64  *mchRegisterFiles[2];
+static int  mchRegisterFileIndices[2];
+static u8   **mchSoftMemoryGroups[2];
+static int  mchSoftMemoryIndices[2][7];
 
 static u8   mchConnCode;
 static u8   mchLocation;
@@ -222,7 +224,7 @@ static bool mchLocationReady;
 static u64  mchRegisterWord;
 static u8   mchTypeCode;
 
-static u64  mchTimeout                  = 0;
+static u64  mchTimeout = 0;
 
 //
 //  Bit masks identifying PP's in IOU OS Bounds and fault registers
@@ -482,6 +484,8 @@ static void mchActivate(void)
 **------------------------------------------------------------------------*/
 static void mchDisconnect(void)
     {
+    Cpu180Context *ctx;
+
 #if DEBUG
     fprintf(mchLog, "\n%12d PP:%02o CH:%02o Disconnect",
             traceSequenceNo,
@@ -499,35 +503,27 @@ static void mchDisconnect(void)
             mchConnCode                = (activeDevice->fcode >> FcConnShift) & Mask4;
             mchTypeCode                = (activeDevice->fcode >> FcTypeShift) & Mask4;
             activeDevice->recordLength = 8;
-            switch (modelType)
+            if (mchIsCp(mchConnCode, mchTypeCode))
                 {
-            case ModelCyber860:
-                switch (mchConnCode)
+                switch (mchTypeCode)
                     {
-                case 1: // CP or CM
-                    switch (mchTypeCode)
-                        {
-                    case 3:
-                    case 4:
-                    case 5:
-                    case 6:
-                        mchSoftMemoryIdx[mchTypeCode] = mchLocation << 2; // 4 bytes per memory address
-                        break;
-                    case 7:
-                        mchRegisterFileIdx = mchLocation << 3;            // 8 bytes per register file address
-                        break;
-                    default:
-                        break;
-                        }
+                case 3:
+                case 4:
+                case 5:
+                case 6:
+                    ctx = mchGetCpContext(mchConnCode);
+                    mchSoftMemoryIndices[ctx->id][mchTypeCode] = mchLocation << 2; // 4 bytes per memory address
+                    break;
+                case 7:
+                    ctx = mchGetCpContext(mchConnCode);
+                    mchRegisterFileIndices[ctx->id] = mchLocation << 3;            // 8 bytes per register file address
                     break;
                 default:
                     break;
                     }
-                break;
-            default:
-                break;
                 }
             }
+    default:
         break;
         }
     }
@@ -552,6 +548,7 @@ static u64 mchGetRegister(u8 reg)
         case 0:
             return mch860IouGetter(reg);
         case 1: // CP or CM
+        case 2:
             switch (mchTypeCode)
                 {
             case 0:
@@ -710,6 +707,32 @@ static FcStatus mchFunc(PpWord funcCode)
     activeDevice->fcode = funcCode;
 
     return FcAccepted;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Get the CPU context associated with a connect code.
+**
+**  Parameters:     Name        Description.
+**                  connCode    connect code
+**
+**  Returns:        Pointer to CPU context, or NULL if connect code does
+**                  not identify a configured CPU.
+**
+**------------------------------------------------------------------------*/
+static Cpu180Context *mchGetCpContext(u8 connCode)
+    {
+    if (mchConnCode == 1)
+        {
+        return &cpus180[0];
+        }
+    else if (cpuCount > 1 && mchConnCode == 2)
+        {
+        return &cpus180[1];
+        }
+    else
+        {
+        return NULL;
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -1029,8 +1052,14 @@ static bool mchIsCp(u8 connCode, u8 typeCode)
     case ModelCyber860:
         if (typeCode == 0)
             {
-            return connCode == 1
-                || (connCode == 2 && cpuCount > 1);
+            if (connCode == 1)
+                {
+                return TRUE;
+                }
+            else if (connCode == 2 && cpuCount > 1)
+                {
+                return TRUE;
+                }
             }
         break;
     default:
@@ -1184,19 +1213,45 @@ static void mch860CmWriter(u8 byte)
 **------------------------------------------------------------------------*/
 static u64 mch860CpGetter(u8 reg)
     {
-    if (reg == 0) // Status Summary
+    u64           byte;
+    Cpu180Context *ctx;
+
+    ctx = mchGetCpContext(mchConnCode);
+    if (ctx == NULL)
         {
-        u64 byte;
-        byte = mchCpRegisters[0] & 0xff;
-        return (byte << 56) | (byte << 48) | (byte << 40) | (byte << 32)
-             | (byte << 24) | (byte << 16) | (byte <<  8) | byte;
-        }
-    if (reg == RegProcCtrlStoreAddr)
-        {
-        return mchControlStoreIdx >> 4; // 16 bytes per control store address
+        return 0;
         }
 
-    return mchCpRegisters[reg];
+    switch (reg)
+        {
+    case RegProcStatusSummary:
+        byte = mchCpRegisterGroups[ctx->id][0] & 0xff;
+        return (byte << 56) | (byte << 48) | (byte << 40) | (byte << 32)
+             | (byte << 24) | (byte << 16) | (byte <<  8) | byte;
+    case RegProcCtrlStoreAddr:
+        return mchControlStoreIndices[ctx->id] >> 4; // 16 bytes per control store address
+    case RegProcJobProcessState:
+        return ctx->regJps;
+    case RegProcMonitorProcState:
+        return ctx->regMps;
+    case RegProcPageTableAddr:
+        return ctx->regPta;
+    case RegProcPageTableLen:
+        return ctx->regPtl;
+    case RegProcPageSizeMask:
+        return ctx->regPsm;
+    case RegProcProcessIntTimer:
+        return ctx->regPit;
+    case RegProcSystemIntTimer:
+        return ctx->regSit;
+    case RegProcModelDepWord:
+        return ctx->regMdw;
+    case RegProcDepEnvControl:
+    default:
+        break;
+        }
+
+    return mchCpRegisterGroups[ctx->id][reg];
     }
 
 /*--------------------------------------------------------------------------
@@ -1237,24 +1292,48 @@ static u8 mch860CpReader(void)
 **------------------------------------------------------------------------*/
 static void mch860CpSetter(u8 reg, u64 word)
     {
-    mchCpRegisters[reg] = word;
+    u64           byte;
+    Cpu180Context *ctx;
+
+    ctx = mchGetCpContext(mchConnCode);
+    if (ctx == NULL)
+        {
+        return;
+        }
+
     switch (reg)
         {
     case RegProcCtrlStoreAddr:
-        mchControlStoreIdx = word << 4; // 16 bytes per control store address
+        mchControlStoreIndices[ctx->id] = word << 4; // 16 bytes per control store address
+        break;
+    case RegProcJobProcessState:
+        ctx->regJps = word & Mask32;
         break;
     case RegProcMonitorProcState:
+        ctx->regMps = word & Mask32;
         break;
     case RegProcPageTableAddr:
+        ctx->regPta = word & Mask32;
         break;
     case RegProcPageTableLen:
+        ctx->regPtl = word & Mask8;
         break;
     case RegProcPageSizeMask:
+        ctx->regPsm = word & Mask8;
+        break;
+    case RegProcProcessIntTimer:
+        ctx->regPit = word & Mask32;
         break;
     case RegProcSystemIntTimer:
+        ctx->regSit = word & Mask32;
         break;
+    case RegProcModelDepWord:
+        ctx->regMdw = word;
+        break;
+    case RegProcStatusSummary:
     case RegProcDepEnvControl:
     default:
+        mchCpRegisterGroups[ctx->id][reg] = word;
         break;
         }
     }
@@ -1293,7 +1372,17 @@ static void mch860CpWriter(u8 byte)
 **------------------------------------------------------------------------*/
 static u8 mch860CsReader(void)
     {
-    return mchControlStore[mchControlStoreIdx++];
+    Cpu180Context *ctx;
+
+    ctx = mchGetCpContext(mchConnCode);
+    if (ctx != NULL)
+        {
+        return mchControlStores[ctx->id][mchControlStoreIndices[ctx->id]++];
+        }
+    else
+        {
+        return 0;
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -1307,7 +1396,13 @@ static u8 mch860CsReader(void)
 **------------------------------------------------------------------------*/
 static void mch860CsWriter(u8 byte)
     {
-    mchControlStore[mchControlStoreIdx++] = byte;
+    Cpu180Context *ctx;
+
+    ctx = mchGetCpContext(mchConnCode);
+    if (ctx != NULL)
+        {
+        mchControlStores[ctx->id][mchControlStoreIndices[ctx->id]++] = byte;
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -1322,31 +1417,41 @@ static void mch860CsWriter(u8 byte)
 **------------------------------------------------------------------------*/
 static void mch860Init(u64 iouOptions, u64 memSizeMask)
     {
-    mchCmRegisters     = (u64 *)calloc(256, 8);
-    mchControlStore    = (u8 *)calloc(2048, 16);
-    mchCpRegisters     = (u64 *)calloc(256, 8);
-    mchIouRegisters    = (u64 *)calloc(256, 8);
-    mchRegisterFile    = (u64 *)calloc(64, 8);
-    mchSoftMemories[3] = (u8 *)calloc(1024, 4);
-    mchSoftMemories[4] = (u8 *)calloc(1024, 4);
-    mchSoftMemories[5] = (u8 *)calloc(2048, 4);
-    mchSoftMemories[6] = (u8 *)calloc(512, 4);
+    u8 i;
+    u8 j;
+    u8 **softMemories;
 
+    mchIouRegisters = (u64 *)calloc(256, 8);
     mch860IouSetter(RegIouElementId, 0x0000000002201234); // Elem: 02 (IOU), Model: 835-990, S/N
     mch860IouSetter(RegIouOptionsInstalled, iouOptions);
 
-    mch860CpSetter(RegProcElementId, 0x0000000000321234); // Elem: 00 (CP),  Model: 860, S/N
-    mch860CpSetter(RegProcVmCapabilityList, 0xc000);      // Virtual state and CYBER 170 state
-    mch860CpSetter(RegProcStatusSummary, 0x08);           // Processor Halt
-
+    mchCmRegisters  = (u64 *)calloc(256, 8);
     mch860CmSetter(RegMemElementId, 0x0000000001311234);  // Elem: 01 (CM),  Model: 850/860, S/N
     mch860CmSetter(RegMemOptionsInstalled, memSizeMask);
 
-/* TODO
-    if (cpuCount > 1)
+    mchTypeCode = 0;
+    for (i = 0; i < cpuCount; i++)
         {
+        mchConnCode               = (i == 0) ? 1 : 2;
+        mchControlStores[i]       = (u8 *)calloc(2048, 16);
+        mchControlStoreIndices[i] = 0;
+        mchCpRegisterGroups[i]    = (u64 *)calloc(256, 8);
+        mchRegisterFiles[i]       = (u64 *)calloc(64, 8);
+        mchRegisterFileIndices[i] = 0;
+        mchSoftMemoryGroups[i]    = (u8 **)calloc(7, sizeof(u8 *));
+        softMemories              = mchSoftMemoryGroups[i];
+        softMemories[3]           = (u8 *)calloc(1024, 4);
+        softMemories[4]           = (u8 *)calloc(1024, 4);
+        softMemories[5]           = (u8 *)calloc(2048, 4);
+        softMemories[6]           = (u8 *)calloc(512, 4);
+        mch860CpSetter(RegProcElementId, 0x0000000000321234); // Elem: 00 (CP),  Model: 860, S/N
+        mch860CpSetter(RegProcVmCapabilityList, 0xc000);      // Virtual state and CYBER 170 state
+        mch860CpSetter(RegProcStatusSummary, 0x08);           // Processor Halt
+        for (j = 0; j < 7; j++)
+            {
+            mchSoftMemoryIndices[i][j] = 0;
+            }
         }
-*/
     }
 
 /*--------------------------------------------------------------------------
@@ -1526,7 +1631,17 @@ static void mch860IouWriter(u8 byte)
 **------------------------------------------------------------------------*/
 static u8 mch860RfReader(void)
     {
-    return mchRegisterFile[mchRegisterFileIdx++];
+    Cpu180Context *ctx;
+
+    ctx = mchGetCpContext(mchConnCode);
+    if (ctx != NULL)
+        {
+        return mchRegisterFiles[ctx->id][mchRegisterFileIndices[ctx->id]++];
+        }
+    else
+        {
+        return 0;
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -1540,7 +1655,13 @@ static u8 mch860RfReader(void)
 **------------------------------------------------------------------------*/
 static void mch860RfWriter(u8 byte)
     {
-    mchRegisterFile[mchRegisterFileIdx++] = byte;
+    Cpu180Context *ctx;
+
+    ctx = mchGetCpContext(mchConnCode);
+    if (ctx != NULL)
+        {
+        mchRegisterFiles[ctx->id][mchRegisterFileIndices[ctx->id]++] = byte;
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -1553,14 +1674,16 @@ static void mch860RfWriter(u8 byte)
 **------------------------------------------------------------------------*/
 static u8 mch860SmReader(void)
     {
-    u8 *mp;
+    Cpu180Context *ctx;
+    u8            *mp;
 
-    if (mchTypeCode < 7)
+    ctx = mchGetCpContext(mchConnCode);
+    if (mchTypeCode < 7 && ctx != NULL)
         {
-        mp = mchSoftMemories[mchTypeCode];
+        mp = mchSoftMemoryGroups[ctx->id][mchTypeCode];
         if (mp != NULL)
             {
-            return mp[mchSoftMemoryIdx[mchTypeCode]++];
+            return mp[mchSoftMemoryIndices[ctx->id][mchTypeCode]++];
             }
         }
 
@@ -1578,14 +1701,16 @@ static u8 mch860SmReader(void)
 **------------------------------------------------------------------------*/
 static void mch860SmWriter(u8 byte)
     {
-    u8 *mp;
+    Cpu180Context *ctx;
+    u8            *mp;
 
-    if (mchTypeCode < 7)
+    ctx = mchGetCpContext(mchConnCode);
+    if (mchTypeCode < 7 && ctx != NULL)
         {
-        mp = mchSoftMemories[mchTypeCode];
+        mp = mchSoftMemoryGroups[ctx->id][mchTypeCode];
         if (mp != NULL)
             {
-            mp[mchSoftMemoryIdx[mchTypeCode]++] = byte;
+            mp[mchSoftMemoryIndices[ctx->id][mchTypeCode]++] = byte;
             }
         }
     }

@@ -59,6 +59,7 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
+static void dumpPrintPva(FILE *pf, u64 pva);
 
 /*
 **  ----------------
@@ -71,7 +72,7 @@
 **  Private Variables
 **  -----------------
 */
-static FILE *cpuF[2];
+static FILE *cpuF;
 static FILE *ppuF[024];
 
 /*
@@ -98,11 +99,11 @@ void dumpInit(void)
 
     for (cp = 0; cp < cpuCount; cp++)
         {
-        sprintf(fileName, "cpu%o.dmp", cp);
-        cpuF[cp] = fopen(fileName, "wt");
-        if (cpuF[cp] == NULL)
+        strcpy(fileName, "cpu.dmp");
+        cpuF = fopen(fileName, "wt");
+        if (cpuF == NULL)
             {
-            logDtError(LogErrorLocation, "Can't open cpu[%o] dump", cp);
+            logDtError(LogErrorLocation, "Can't open cpu dump");
             }
         }
 
@@ -132,9 +133,9 @@ void dumpTerminate(void)
 
     for (cp = 0; cp < cpuCount; cp++)
         {
-        if (cpuF[cp] != NULL)
+        if (cpuF != NULL)
             {
-            fclose(cpuF[cp]);
+            fclose(cpuF);
             }
         }
 
@@ -157,16 +158,12 @@ void dumpTerminate(void)
 **------------------------------------------------------------------------*/
 void dumpAll(void)
     {
-    u8 cp;
     u8 pp;
 
     logDtError(LogErrorLocation, "dumping core...");
     fflush(stderr);
 
-    for (cp = 0; cp < cpuCount; cp++)
-        {
-        dumpCpu(cp);
-        }
+    dumpCpu();
 
     for (pp = 0; pp < ppuCount; pp++)
         {
@@ -184,76 +181,139 @@ void dumpAll(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void dumpCpu(u8 cp)
+void dumpCpu(void)
     {
-    u32         addr;
-    u8          ch;
-    CpuContext *cpu;
-    CpWord      data;
-    bool        duplicateLine;
-    u8          i;
-    CpWord      lastData;
-    FILE        *pf = cpuF[cp];
-    u8          shiftCount;
+    u32           addr;
+    u8            ch;
+    u8            cp;
+    Cpu170Context *cpu170;
+    Cpu180Context *cpu180;
+    CpWord        data;
+    bool          duplicateLine;
+    u8            i;
+    CpWord        lastData;
+    FILE          *pf = cpuF;
+    u8            shiftCount;
 
-    cpu = cpus + cp;
-    fprintf(pf, "P       %06o  ", cpu->regP);
-    fprintf(pf, "A%d %06o  ", 0, cpu->regA[0]);
-    fprintf(pf, "B%d %06o", 0, cpu->regB[0]);
-    fprintf(pf, "\n");
-
-    fprintf(pf, "RA      %06o  ", cpu->regRaCm);
-    fprintf(pf, "A%d %06o  ", 1, cpu->regA[1]);
-    fprintf(pf, "B%d %06o", 1, cpu->regB[1]);
-    fprintf(pf, "\n");
-
-    fprintf(pf, "FL      %06o  ", cpu->regFlCm);
-    fprintf(pf, "A%d %06o  ", 2, cpu->regA[2]);
-    fprintf(pf, "B%d %06o", 2, cpu->regB[2]);
-    fprintf(pf, "\n");
-
-    fprintf(pf, "RAE   %08o  ", cpu->regRaEcs);
-    fprintf(pf, "A%d %06o  ", 3, cpu->regA[3]);
-    fprintf(pf, "B%d %06o", 3, cpu->regB[3]);
-    fprintf(pf, "\n");
-
-    fprintf(pf, "FLE   %08o  ", cpu->regFlEcs);
-    fprintf(pf, "A%d %06o  ", 4, cpu->regA[4]);
-    fprintf(pf, "B%d %06o", 4, cpu->regB[4]);
-    fprintf(pf, "\n");
-
-    fprintf(pf, "EM/FL %08o  ", cpu->exitMode);
-    fprintf(pf, "A%d %06o  ", 5, cpu->regA[5]);
-    fprintf(pf, "B%d %06o", 5, cpu->regB[5]);
-    fprintf(pf, "\n");
-
-    fprintf(pf, "MA      %06o  ", cpu->regMa);
-    fprintf(pf, "A%d %06o  ", 6, cpu->regA[6]);
-    fprintf(pf, "B%d %06o", 6, cpu->regB[6]);
-    fprintf(pf, "\n");
-
-    fprintf(pf, "ECOND       %02o  ", cpu->exitCondition);
-    fprintf(pf, "A%d %06o  ", 7, cpu->regA[7]);
-    fprintf(pf, "B%d %06o  ", 7, cpu->regB[7]);
-    fprintf(pf, "\n");
-    fprintf(pf, "STOP         %d  ", cpu->isStopped ? 1 : 0);
-    fprintf(pf, "\n");
-    fprintf(pf, "\n");
-
-    for (i = 0; i < 8; i++)
+    for (cp = 0; cp < cpuCount; cp++)
         {
-        fprintf(pf, "X%d ", i);
-        data = cpu->regX[i];
-        fprintf(pf, "%04o %04o %04o %04o %04o   ",
-                (PpWord)((data >> 48) & Mask12),
-                (PpWord)((data >> 36) & Mask12),
-                (PpWord)((data >> 24) & Mask12),
-                (PpWord)((data >> 12) & Mask12),
-                (PpWord)((data) & Mask12));
-        fprintf(pf, "\n");
-        }
+        fprintf(pf, "[CPU%d", cp);
+        if (isCyber180)
+            {
+            fputs(" : Cyber 170 state", pf);
+            }
+        fputs("]\n", pf);
+        cpu170 = cpus170 + cp;
+        fprintf(pf, "P       %06o  ", cpu170->regP);
+        fprintf(pf, "A%d %06o  ", 0, cpu170->regA[0]);
+        fprintf(pf, "B%d %06o", 0, cpu170->regB[0]);
+        fputs("\n", pf);
 
-    fprintf(pf, "\n");
+        fprintf(pf, "RA      %06o  ", cpu170->regRaCm);
+        fprintf(pf, "A%d %06o  ", 1, cpu170->regA[1]);
+        fprintf(pf, "B%d %06o", 1, cpu170->regB[1]);
+        fputs("\n", pf);
+
+        fprintf(pf, "FL      %06o  ", cpu170->regFlCm);
+        fprintf(pf, "A%d %06o  ", 2, cpu170->regA[2]);
+        fprintf(pf, "B%d %06o", 2, cpu170->regB[2]);
+        fputs("\n", pf);
+
+        fprintf(pf, "RAE   %08o  ", cpu170->regRaEcs);
+        fprintf(pf, "A%d %06o  ", 3, cpu170->regA[3]);
+        fprintf(pf, "B%d %06o", 3, cpu170->regB[3]);
+        fputs("\n", pf);
+
+        fprintf(pf, "FLE   %08o  ", cpu170->regFlEcs);
+        fprintf(pf, "A%d %06o  ", 4, cpu170->regA[4]);
+        fprintf(pf, "B%d %06o", 4, cpu170->regB[4]);
+        fputs("\n", pf);
+
+        fprintf(pf, "EM/FL %08o  ", cpu170->exitMode);
+        fprintf(pf, "A%d %06o  ", 5, cpu170->regA[5]);
+        fprintf(pf, "B%d %06o", 5, cpu170->regB[5]);
+        fputs("\n", pf);
+
+        fprintf(pf, "MA      %06o  ", cpu170->regMa);
+        fprintf(pf, "A%d %06o  ", 6, cpu170->regA[6]);
+        fprintf(pf, "B%d %06o", 6, cpu170->regB[6]);
+        fputs("\n", pf);
+
+        fprintf(pf, "ECOND       %02o  ", cpu170->exitCondition);
+        fprintf(pf, "A%d %06o  ", 7, cpu170->regA[7]);
+        fprintf(pf, "B%d %06o  ", 7, cpu170->regB[7]);
+        fputs("\n", pf);
+        fprintf(pf, "STOP         %d  ", cpu170->isStopped ? 1 : 0);
+        fputs("\n\n", pf);
+
+        for (i = 0; i < 8; i++)
+            {
+            fprintf(pf, "X%d ", i);
+            data = cpu170->regX[i];
+            fprintf(pf, "%04o %04o %04o %04o %04o",
+                    (PpWord)((data >> 48) & Mask12),
+                    (PpWord)((data >> 36) & Mask12),
+                    (PpWord)((data >> 24) & Mask12),
+                    (PpWord)((data >> 12) & Mask12),
+                    (PpWord)((data) & Mask12));
+            fputs("\n", pf);
+            }
+        fputs("\n", pf);
+
+        if (isCyber180)
+            {
+            fprintf(pf, "[CPU%d : Cyber 180 state]\n", cp);
+            cpu180 = cpus180 + cp;
+            data = cpu180->regX[i];
+            fprintf(pf, " P %02x ", (PpWord)((data >> 48) & Mask8)); // key
+            dumpPrintPva(pf, data);
+            fputs("\n\n", pf);
+            for (i = 0; i < 16; i++)
+                {
+                data = cpu180->regX[i];
+                fprintf(pf, "A%X ", i);
+                dumpPrintPva(pf, cpu180->regA[i]);
+                fprintf(pf,"   X%X %04x %04x %04x %04x\n", i,
+                        (PpWord)((data >> 48) & Mask16),
+                        (PpWord)((data >> 32) & Mask16),
+                        (PpWord)((data >> 16) & Mask16),
+                        (PpWord)((data) & Mask16));
+                }
+            fputs("\n", pf);
+            fprintf(pf, "VMID %04x LPID %02x\n", cpu180->regVmid, cpu180->regLpid);
+            fprintf(pf, " UMR %04x  MMR %04x         Flags %02x\n", cpu180->regUmr, cpu180->regMmr, cpu180->regFlags);
+            fprintf(pf, " UCR %04x  MCR %04x  Trap Enables %02x\n", cpu180->regUcr, cpu180->regMcr, cpu180->regTe);
+            fprintf(pf, "                              MDF %04x\n", cpu180->regMdf);
+            fputs("\n", pf);
+            fprintf(pf, " MPS %08x   BC %08x\n", cpu180->regMps, cpu180->regBc);
+            fprintf(pf, " JPS %08x  PIT %08x\n", cpu180->regJps, cpu180->regPit);
+            fputs("\n", pf);
+            fprintf(pf, " PTA %08x  STA %08x\n", cpu180->regPta, cpu180->regSta);
+            fprintf(pf, " PTL %02x        STL %04x\n", cpu180->regPtl, cpu180->regStl);
+            fprintf(pf, " PSM %02x\n", cpu180->regPsm);
+            fputs("\n", pf);
+            fputs(" UTP ", pf);
+            dumpPrintPva(pf, cpu180->regUtp);
+            fputs("   TP ", pf);
+            dumpPrintPva(pf, cpu180->regTp);
+            fputs("\n", pf);
+            fputs(" DLP ", pf);
+            dumpPrintPva(pf, cpu180->regDlp);
+            fprintf(pf, "   DI %02x\n", cpu180->regDi);
+            fprintf(pf, "                      DM %02x\n", cpu180->regDm);
+            fputs("\n", pf);
+            fprintf(pf, " LRN %d\n", cpu180->regLrn);
+            for (i = 0; i < 15; i++)
+                {
+                fprintf(pf, " TOS[%02d] ", i + 1);
+                dumpPrintPva(pf, cpu180->regTos[i]);
+                fputs("\n", pf);
+                }
+            }
+            fputs("\n", pf);
+            fprintf(pf, " MDW %016lx  \n", cpu180->regMdw);
+            fputs("\n", pf);
+        }
 
     lastData      = ~cpMem[0];
     duplicateLine = FALSE;
@@ -275,7 +335,7 @@ void dumpCpu(u8 cp)
             lastData      = data;
             if (isCyber180)
                 {
-                fprintf(pf, "%08o   ", addr & Mask24);
+                fprintf(pf, "%08o  ", addr & Mask24);
                 }
             else
                 {
@@ -296,7 +356,8 @@ void dumpCpu(u8 cp)
                 }
             if (isCyber180)
                 {
-                fprintf(pf, "    %04x %04x %04x %04x   ",
+                fprintf(pf, "    %08x  %04x %04x %04x %04x   ",
+                        (addr << 3) & Mask24,
                         (PpWord)((data >> 48) & Mask16),
                         (PpWord)((data >> 32) & Mask16),
                         (PpWord)((data >> 16) & Mask16),
@@ -403,6 +464,24 @@ void dumpPpu(u8 pp, PpWord first, PpWord limit)
 
         fprintf(pf, "\n");
         }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Print a Cyber 180 Process Virtual Address.
+**
+**  Parameters:     Name        Description.
+**                  pf          pointer to file descriptor
+**                  pva         the PVA to print
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void dumpPrintPva(FILE *pf, u64 pva)
+    {
+    fprintf(pf, "%x %03x %08x",
+            (PpWord)((pva >> 44) & Mask4),   // ring
+            (PpWord)((pva >> 32) & Mask12),  // segment
+            (PpWord)(pva & Mask32));         // byte number
     }
 
 /*--------------------------------------------------------------------------
@@ -523,12 +602,11 @@ void dumpRunningPpu(u8 pp)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void dumpRunningCpu(u8 cp)
+void dumpRunningCpu(void)
     {
     FILE *pf;
-    char cpDumpName[20];
+    char *cpDumpName = "cpu_run.dmp";
 
-    sprintf(cpDumpName, "cpu%o_run.dmp", cp);
     pf = fopen(cpDumpName, "wt");
     if (pf == NULL)
         {
@@ -537,12 +615,12 @@ void dumpRunningCpu(u8 cp)
         return;
         }
 
-    cpuF[cp] = pf;
+    cpuF = pf;
 
-    dumpCpu(cp);
+    dumpCpu();
     fclose(pf);
 
-    cpuF[cp] = NULL;
+    cpuF = NULL;
     }
 
 /*---------------------------  End Of File  ------------------------------*/

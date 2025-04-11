@@ -75,7 +75,7 @@
 /*
 **  Debug support
 */
-#define CcDebug                    0
+#define CcDebug                    1
 
 /*
 **  Measure cycle time
@@ -210,6 +210,7 @@
 #define Mask29                     03777777777
 #define Mask30                     07777777777
 #define Mask30Ecs                  07777777700
+#define Mask32                     037777777777
 #define Mask48                     000007777777777777777
 #define Mask50                     000037777777777777777
 #define Mask60                     077777777777777777777

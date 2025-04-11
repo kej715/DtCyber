@@ -108,7 +108,7 @@ void cpuPpWriteMem(u32 address, CpWord data);
 void cpuPpWriteMem64(u32 address, CpWord data);
 void cpuReleaseExchangeMutex(void);
 void cpuReleaseMemoryMutex(void);
-void cpuStep(CpuContext *activeCpu);
+void cpuStep(Cpu170Context *activeCpu);
 void cpuTerminate(void);
 
 /*
@@ -192,11 +192,11 @@ void dsa311ShowStatus();
 void dumpInit(void);
 void dumpTerminate(void);
 void dumpAll(void);
-void dumpCpu(u8 cp);
+void dumpCpu(void);
 void dumpPpu(u8 pp, PpWord first, PpWord limit);
 void dumpDisassemblePpu(u8 pp);
 void dumpRunningPpu(u8 pp);
-void dumpRunningCpu(u8 cp);
+void dumpRunningCpu(void);
 
 /*
 **  float.c
@@ -440,12 +440,12 @@ void traceOpcode(void);
 u8 traceDisassembleOpcode(char *str, PpWord *pm);
 void traceChannelFunction(PpWord funcCode);
 void tracePrint(char *str);
-void traceCpuPrint(CpuContext *cpu, char *str);
+void traceCpuPrint(Cpu170Context *cpu, char *str);
 void traceChannel(u8 ch);
 void traceChannelIo(u8 ch);
 void traceEnd(void);
-void traceCpu(CpuContext *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress);
-void traceExchange(CpuContext *cpu, u32 addr, char *title);
+void traceCpu(Cpu170Context *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress);
+void traceExchange(Cpu170Context *cpu, u32 addr, char *title);
 
 /*
 **  window_{win32,x11}.c
@@ -493,7 +493,8 @@ extern char                colorFG[32];                     // Console
 #endif
 extern const char          consoleToAscii[64];
 extern CpWord              *cpMem;
-extern CpuContext          *cpus;
+extern Cpu170Context       *cpus170;
+extern Cpu180Context       *cpus180;
 extern int                 cpuCount;
 extern u32                 cpuMaxMemory;
 extern bool                cpuStopped;
@@ -556,7 +557,7 @@ extern long                widthPX;                         // Console
 
 /* Idle Loop throttle */
 extern bool idle;
-extern bool (*idleDetector)(CpuContext *ctx);
+extern bool (*idleDetector)(Cpu170Context *ctx);
 extern u32  idleNetBufs;
 extern u32  idleTime;
 extern u32  idleTrigger;
@@ -566,12 +567,12 @@ extern char networkInterfaceMgr[];
 extern char osType[];
 
 bool idleCheckBusy();
-bool idleDetectorNone(CpuContext *ctx);
-bool idleDetectorCOS(CpuContext *ctx);   /* COS */
-bool idleDetectorMACE(CpuContext *ctx);  /* KRONOS1 or MACE, possibly SCOPE too) */
-bool idleDetectorNOS(CpuContext *ctx);   /* KRONOS2.1 - NOS 2.8.7 */
-bool idleDetectorNOSBE(CpuContext *ctx); /* NOS/BE (only tested with TUB) */
-void idleThrottle(CpuContext *ctx);
+bool idleDetectorNone(Cpu170Context *ctx);
+bool idleDetectorCOS(Cpu170Context *ctx);   /* COS */
+bool idleDetectorMACE(Cpu170Context *ctx);  /* KRONOS1 or MACE, possibly SCOPE too) */
+bool idleDetectorNOS(Cpu170Context *ctx);   /* KRONOS2.1 - NOS 2.8.7 */
+bool idleDetectorNOSBE(Cpu170Context *ctx); /* NOS/BE (only tested with TUB) */
+void idleThrottle(Cpu170Context *ctx);
 
 #endif /* PROTO_H */
 /*---------------------------  End Of File  ------------------------------*/

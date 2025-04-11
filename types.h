@@ -225,7 +225,7 @@ typedef struct
     CpWord        regX[010];            /* data registers (60 bit) */
     u32           regA[010];            /* address registers (18 bit) */
     u32           regB[010];            /* index registers (18 bit) */
-    u32           regP;                 /* program counter */
+    u32           regP;                 /* program address */
     u32           regRaCm;              /* reference address CM */
     u32           regFlCm;              /* field length CM */
     u32           regRaEcs;             /* reference address ECS */
@@ -257,7 +257,104 @@ typedef struct
     bool          iwValid[MaxIwStack];
     u8            iwRank;
     volatile u32  idleCycles;           /* Counter for how many times we've seen the idle loop */
-    } CpuContext;
+    } Cpu170Context;
+
+/*
+**  CPU control block for Cyber 180 state
+*/
+typedef struct
+    {
+    u8            id;                   /* CPU identifier */
+    u64           regP;                 /* program address */
+    u64           regX[16];             /* data registers (64 bit) */
+    u64           regA[16];             /* address registers (48 bit) */
+    u8            regVmid;              /* virtual machine ID register */
+    u8            regUvmid;             /* untranslatable virtual machine ID register */
+    u8            regFlags;             /* CP flag register */
+    u8            regTe;                /* trap enables register */
+    u16           regUmr;               /* user mask register */
+    u16           regMmr;               /* monitor mask register */
+    u16           regUcr;               /* user condition register */
+    u16           regMcr;               /* monitor condition register */
+    u8            regLpid;              /* last processor ID register */
+    u32           regPit;               /* process interval timer register */
+    u32           regBc;                /* base constant register */
+    u16           regMdf;               /* model-dependent flags */
+    u16           regStl;               /* segment table length register */
+    u64           regMdw;               /* model-dependent word */
+    u32           regSta;               /* segment table address register */
+    u64           regUtp;               /* untranslatable pointer register */
+    u64           regTp;                /* trap pointer register */
+    u8            regDm;                /* debug mask register */
+    u8            regDi;                /* debug index register */
+    u64           regDlp;               /* debug list pointer register */
+    u8            regLrn;               /* largest ring number register */
+    u64           regTos[15];           /* top of stack pointer registers */
+    u32           regMps;               /* monitor process state register */
+    u32           regJps;               /* job process state register */
+    u32           regPta;               /* page table address register */
+    u8            regPtl;               /* page table length register */
+    u8            regPsm;               /* page size mask register */
+    u32           regSit;               /* system interval timer register */
+    u16           regVmcl;              /* virtual machine capability list register */
+    u32           exitMode;             /* CPU exit mode (24 bit) */
+    volatile bool isMonitorMode;        /* TRUE if CPU is in monitor mode */
+    volatile bool isStopped;            /* TRUE if CPU is stopped */
+    volatile int  ppRequestingExchange; /* PP number of PP requesting exchange, -1 if none */
+    u32           ppExchangeAddress;    /* PP-requested exchange address */
+    bool          doChangeMode;         /* TRUE if monitor mode flag should be changed by PP exchange jump */
+    volatile bool isErrorExitPending;   /* TRUE if error exit pending */
+    u8            exitCondition;        /* pending error exit conditions */
+    u64           opWord;               /* Current instruction word */
+    u8            opOffset;             /* Bit offset to current instruction */
+    u8            opFm;                 /* Opcode field (first 6 bits) */
+    u8            opI;                  /* I field of current instruction */
+    u8            opJ;                  /* J field of current instruction */
+    u8            opK;                  /* K field (first 3 bits only) */
+    u32           opAddress;            /* K field (18 bits) */
+    bool          floatException;       /* TRUE if CPU detected float exception */
+    volatile u32  idleCycles;           /* Counter for how many times we've seen the idle loop */
+    } Cpu180Context;
+
+typedef enum
+    {
+    MCR63 = 0x0001,  // Trap exception (status bit)
+    MCR62 = 0x0002,  // Soft error
+    MCR61 = 0x0004,  // Outward call / Inward return
+    MCR60 = 0x0008,  // Invalid segment / Ring number 0
+    MCR59 = 0x0010,  // System interval timer
+    MCR58 = 0x0020,  // System call (status bit)
+    MCR57 = 0x0040,  // Page table search without find
+    MCR56 = 0x0080,  // External interrupt
+    MCR55 = 0x0100,  // Environment specification error
+    MCR54 = 0x0200,  // Access violation
+    MCR53 = 0x0400,  // CYBER 170 state exchange request
+    MCR52 = 0x0800,  // Address specification error
+    MCR51 = 0x1000,  // Instruction specfication error
+    MCR50 = 0x2000,  // Short warning
+    MCR49 = 0x4000,  // Not assigned
+    MCR48 = 0x8000   // Detected uncorrectable error
+    } McrBits;
+
+typedef enum
+    {
+    UCR63 = 0x0001,  // Invalid BDP data
+    UCR62 = 0x0002,  // Arithmetic loss of significance
+    UCR61 = 0x0004,  // FP indefinite
+    UCR60 = 0x0008,  // FP loss of significance
+    UCR59 = 0x0010,  // Exponent underflow
+    UCR58 = 0x0020,  // Exponent overflow
+    UCR57 = 0x0040,  // Arithmetic overflow
+    UCR56 = 0x0080,  // Debug
+    UCR55 = 0x0100,  // Divide fault
+    UCR54 = 0x0200,  // Reserved
+    UCR53 = 0x0400,  // Critical frame flag
+    UCR52 = 0x0800,  // Inter-ring pop
+    UCR51 = 0x1000,  // Process interval timer
+    UCR50 = 0x2000,  // Free flag
+    UCR49 = 0x4000,  // Unimplemented instruction
+    UCR48 = 0x8000   // Privileged instruction fault
+    } UcrBits;
 
 /*
 **  Model specific feature set.
