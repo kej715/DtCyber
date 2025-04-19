@@ -103,13 +103,22 @@ bool cpuEcsFlagRegister(u32 ecsAddress);
 u32  cpuGetP(u8 cpuNum);
 void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType);
 void cpuPpReadMem(u32 address, CpWord *data);
-void cpuPpReadMem64(u32 address, CpWord *data);
 void cpuPpWriteMem(u32 address, CpWord data);
-void cpuPpWriteMem64(u32 address, CpWord data);
 void cpuReleaseExchangeMutex(void);
 void cpuReleaseMemoryMutex(void);
 void cpuStep(Cpu170Context *activeCpu);
 void cpuTerminate(void);
+
+/*
+**  cpu180.c
+*/
+void cpu180Init(char *model);
+void cpu180LoadMpsXp(Cpu180Context *ctx);
+void cpu180PpReadMem(u32 address, CpWord *data);
+void cpu180PpWriteMem(u32 address, CpWord data);
+bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, u32 *rma, u16 *cond);
+void cpu180Step(Cpu180Context *activeCpu);
+void cpu180UpdatePageSize(Cpu180Context *ctx);
 
 /*
 **  cr405.c
@@ -432,20 +441,29 @@ void tpMuxShowStatus();
 /*
 **  trace.c
 */
-void traceInit(void);
-void traceTerminate(void);
-void traceSequence(void);
-void traceRegisters(void);
-void traceOpcode(void);
-u8 traceDisassembleOpcode(char *str, PpWord *pm);
-void traceChannelFunction(PpWord funcCode);
-void tracePrint(char *str);
-void traceCpuPrint(Cpu170Context *cpu, char *str);
 void traceChannel(u8 ch);
+void traceChannelFunction(PpWord funcCode);
 void traceChannelIo(u8 ch);
-void traceEnd(void);
+void traceCmWord(CpWord data);
+void traceCmWord64(CpWord data);
 void traceCpu(Cpu170Context *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress);
+void traceCpuPrint(Cpu170Context *cpu, char *str);
+u8 traceDisassembleOpcode(char *str, PpWord *pm);
+void traceEnd(void);
 void traceExchange(Cpu170Context *cpu, u32 addr, char *title);
+void traceFault(Cpu180Context *cpu, char *title, u16 condition);
+void traceInit(void);
+void traceOpcode(void);
+void tracePageInfo(Cpu180Context *cpu, u32 pageNum, u32 pageOffset, u32 pageTableIdx, u64 spid);
+void tracePrint(char *str);
+void tracePte(Cpu180Context *cpu, u64 pte);
+void tracePva(Cpu180Context *cpu, u64 pva);
+void traceRegisters(bool isPost);
+void traceRma(Cpu180Context *cpu, u32 rma);
+void traceSde(Cpu180Context *cpu, u64 sde);
+void traceSequence(void);
+void traceTerminate(void);
+void traceVmRegisters(Cpu180Context *cpu);
 
 /*
 **  window_{win32,x11}.c

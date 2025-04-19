@@ -669,6 +669,19 @@ static FcStatus mchFunc(PpWord funcCode)
             else if (csAddr == 0x381)
                 {
                 // TODO: start EI
+                Cpu180Context *ctx;
+                u16 mcr;
+                u32 rma;
+                ctx = mchGetCpContext(mchConnCode);
+                cpu180LoadMpsXp(ctx);
+                if (cpu180PvaToRma(ctx, cpMem[ctx->regMps >> 3] & Mask48, &rma, &mcr))
+                    {
+                    fprintf(mchLog, "\nStart CPU at RMA %08x", rma);
+                    }
+                else
+                    {
+                    fprintf(mchLog, "\nFailed to translate PVA %012lx to RMA, MCR %04x", cpMem[ctx->regMps >> 3] & Mask48, mcr);
+                    }
                 }
             mchSetRegister(RegProcStatusSummary, word);
             }
@@ -677,7 +690,7 @@ static FcStatus mchFunc(PpWord funcCode)
     case FcOpMasterClear:
         if (mchIsCp(mchConnCode, mchTypeCode))
             {
-            mchSetRegister(RegProcStatusSummary, 0x08); // Processor Halt
+            mchSetRegister(RegProcStatusSummary, 0x28); // CYBER 180 monitor mode, Processor Halt
             mchSetRegister(RegProcDepEnvControl, 0);
 //          mchSetRegister(RegProcCtrlStoreAddr, 0);
 //          mchSetRegister(RegProcCtrlStoreBreak, 0);
@@ -1319,7 +1332,8 @@ static void mch860CpSetter(u8 reg, u64 word)
         ctx->regPtl = word & Mask8;
         break;
     case RegProcPageSizeMask:
-        ctx->regPsm = word & Mask8;
+        ctx->regPsm = word & Mask7;
+        cpu180UpdatePageSize(ctx);
         break;
     case RegProcProcessIntTimer:
         ctx->regPit = word & Mask32;

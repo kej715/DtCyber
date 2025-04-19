@@ -672,7 +672,7 @@ void channelOut(void)
             }
         }
 #if CcDebug == 1
-        traceChannelIo(activeChannel->id);
+    traceChannelIo(activeChannel->id);
 #endif
     }
 
@@ -693,10 +693,10 @@ void channelIn(void)
             {
             activeChannel->data = activeDevice->in();
             }
-#if CcDebug == 1
-        traceChannelIo(activeChannel->id);
-#endif
         }
+#if CcDebug == 1
+    traceChannelIo(activeChannel->id);
+#endif
     }
 
 /*--------------------------------------------------------------------------

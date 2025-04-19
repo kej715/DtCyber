@@ -185,6 +185,7 @@ void dumpCpu(void)
     {
     u32           addr;
     u8            ch;
+    u16           cond;
     u8            cp;
     Cpu170Context *cpu170;
     Cpu180Context *cpu180;
@@ -193,6 +194,7 @@ void dumpCpu(void)
     u8            i;
     CpWord        lastData;
     FILE          *pf = cpuF;
+    u32           rma;
     u8            shiftCount;
 
     for (cp = 0; cp < cpuCount; cp++)
@@ -264,9 +266,12 @@ void dumpCpu(void)
             {
             fprintf(pf, "[CPU%d : Cyber 180 state]\n", cp);
             cpu180 = cpus180 + cp;
-            data = cpu180->regX[i];
-            fprintf(pf, " P %02x ", (PpWord)((data >> 48) & Mask8)); // key
-            dumpPrintPva(pf, data);
+            fprintf(pf, " P %02x ", (PpWord)((cpu180->regP >> 48) & Mask8)); // key
+            dumpPrintPva(pf, cpu180->regP & Mask48);
+            if (cpu180PvaToRma(cpu180, cpu180->regP & Mask48, &rma, &cond))
+                {
+                fprintf(pf, " (RMA %08x)", rma);
+                }
             fputs("\n\n", pf);
             for (i = 0; i < 16; i++)
                 {
@@ -281,15 +286,14 @@ void dumpCpu(void)
                 }
             fputs("\n", pf);
             fprintf(pf, "VMID %04x LPID %02x\n", cpu180->regVmid, cpu180->regLpid);
-            fprintf(pf, " UMR %04x  MMR %04x         Flags %02x\n", cpu180->regUmr, cpu180->regMmr, cpu180->regFlags);
-            fprintf(pf, " UCR %04x  MCR %04x  Trap Enables %02x\n", cpu180->regUcr, cpu180->regMcr, cpu180->regTe);
-            fprintf(pf, "                              MDF %04x\n", cpu180->regMdf);
+            fprintf(pf, " UMR %04x  MMR %04x  Flags %04x\n", cpu180->regUmr, cpu180->regMmr, cpu180->regFlags);
+            fprintf(pf, " UCR %04x  MCR %04x  MDF   %04x\n", cpu180->regUcr, cpu180->regMcr, cpu180->regMdf);
             fputs("\n", pf);
             fprintf(pf, " MPS %08x   BC %08x\n", cpu180->regMps, cpu180->regBc);
             fprintf(pf, " JPS %08x  PIT %08x\n", cpu180->regJps, cpu180->regPit);
             fputs("\n", pf);
             fprintf(pf, " PTA %08x  STA %08x\n", cpu180->regPta, cpu180->regSta);
-            fprintf(pf, " PTL %02x        STL %04x\n", cpu180->regPtl, cpu180->regStl);
+            fprintf(pf, " PTL %02x        STL %03x\n", cpu180->regPtl, cpu180->regStl);
             fprintf(pf, " PSM %02x\n", cpu180->regPsm);
             fputs("\n", pf);
             fputs(" UTP ", pf);
@@ -309,10 +313,10 @@ void dumpCpu(void)
                 dumpPrintPva(pf, cpu180->regTos[i]);
                 fputs("\n", pf);
                 }
-            }
             fputs("\n", pf);
             fprintf(pf, " MDW %016lx  \n", cpu180->regMdw);
             fputs("\n", pf);
+            }
         }
 
     lastData      = ~cpMem[0];
@@ -479,9 +483,9 @@ void dumpPpu(u8 pp, PpWord first, PpWord limit)
 static void dumpPrintPva(FILE *pf, u64 pva)
     {
     fprintf(pf, "%x %03x %08x",
-            (PpWord)((pva >> 44) & Mask4),   // ring
-            (PpWord)((pva >> 32) & Mask12),  // segment
-            (PpWord)(pva & Mask32));         // byte number
+            (u8)((pva >> 44) & Mask4),   // ring
+            (u16)((pva >> 32) & Mask12), // segment
+            (u32)(pva & Mask32));        // byte number
     }
 
 /*--------------------------------------------------------------------------

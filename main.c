@@ -294,7 +294,7 @@ int main(int argc, char **argv)
 
 #if CcDebug == 1
     /*
-    **  Example post-mortem dumps.
+    **  Post-mortem dumps.
     */
     dumpInit();
     dumpAll();

@@ -212,8 +212,8 @@ typedef struct
     bool   osBoundsCheckEnabled;        /* whether OS bounds checking is enabled */
     bool   isBelowOsBound;              /* whether checking is below/above OS bound register */
     bool   isStopEnabled;               /* whether PP stop enabled on OS bounds violation */
-    u8     chWordIdx;                   /* index of next channel word in IAPM/OAPM instruction */
     u64    packedWord;                  /* current word assembled by IAPM/OAPM instruction */
+    u8     packedWordShift;             /* shift count used in packed word dis/assembly */
     } PpSlot;
 
 /*
@@ -270,8 +270,14 @@ typedef struct
     u64           regA[16];             /* address registers (48 bit) */
     u8            regVmid;              /* virtual machine ID register */
     u8            regUvmid;             /* untranslatable virtual machine ID register */
-    u8            regFlags;             /* CP flag register */
-    u8            regTe;                /* trap enables register */
+    u16           regFlags;             /* CP flag register                   */
+                                        /*   Bit         Flag                 */
+                                        /*     0  Critical Frame Flag         */
+                                        /*     1  On Condition Flag           */
+                                        /*     3  Process Not Damaged Flag    */
+                                        /*     4  EA                          */
+                                        /*    14  Trap-enable Flip-flop       */
+                                        /*    15  Trap-enable Delay Flip-flop */
     u16           regUmr;               /* user mask register */
     u16           regMmr;               /* monitor mask register */
     u16           regUcr;               /* user condition register */
@@ -297,6 +303,8 @@ typedef struct
     u8            regPsm;               /* page size mask register */
     u32           regSit;               /* system interval timer register */
     u16           regVmcl;              /* virtual machine capability list register */
+    u8            pageNumShift;         /* shift count used in calculating page numbers */
+    u16           pageOffsetMask;       /* mask used in calculating page offsets */
     u32           exitMode;             /* CPU exit mode (24 bit) */
     volatile bool isMonitorMode;        /* TRUE if CPU is in monitor mode */
     volatile bool isStopped;            /* TRUE if CPU is stopped */
@@ -315,46 +323,6 @@ typedef struct
     bool          floatException;       /* TRUE if CPU detected float exception */
     volatile u32  idleCycles;           /* Counter for how many times we've seen the idle loop */
     } Cpu180Context;
-
-typedef enum
-    {
-    MCR63 = 0x0001,  // Trap exception (status bit)
-    MCR62 = 0x0002,  // Soft error
-    MCR61 = 0x0004,  // Outward call / Inward return
-    MCR60 = 0x0008,  // Invalid segment / Ring number 0
-    MCR59 = 0x0010,  // System interval timer
-    MCR58 = 0x0020,  // System call (status bit)
-    MCR57 = 0x0040,  // Page table search without find
-    MCR56 = 0x0080,  // External interrupt
-    MCR55 = 0x0100,  // Environment specification error
-    MCR54 = 0x0200,  // Access violation
-    MCR53 = 0x0400,  // CYBER 170 state exchange request
-    MCR52 = 0x0800,  // Address specification error
-    MCR51 = 0x1000,  // Instruction specfication error
-    MCR50 = 0x2000,  // Short warning
-    MCR49 = 0x4000,  // Not assigned
-    MCR48 = 0x8000   // Detected uncorrectable error
-    } McrBits;
-
-typedef enum
-    {
-    UCR63 = 0x0001,  // Invalid BDP data
-    UCR62 = 0x0002,  // Arithmetic loss of significance
-    UCR61 = 0x0004,  // FP indefinite
-    UCR60 = 0x0008,  // FP loss of significance
-    UCR59 = 0x0010,  // Exponent underflow
-    UCR58 = 0x0020,  // Exponent overflow
-    UCR57 = 0x0040,  // Arithmetic overflow
-    UCR56 = 0x0080,  // Debug
-    UCR55 = 0x0100,  // Divide fault
-    UCR54 = 0x0200,  // Reserved
-    UCR53 = 0x0400,  // Critical frame flag
-    UCR52 = 0x0800,  // Inter-ring pop
-    UCR51 = 0x1000,  // Process interval timer
-    UCR50 = 0x2000,  // Free flag
-    UCR49 = 0x4000,  // Unimplemented instruction
-    UCR48 = 0x8000   // Privileged instruction fault
-    } UcrBits;
 
 /*
 **  Model specific feature set.

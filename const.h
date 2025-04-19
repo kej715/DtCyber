@@ -202,8 +202,10 @@
 #define Mask16                     0177777
 #define Mask17                     0377777
 #define Mask18                     0777777
+#define Mask20                     03777777
 #define Mask21                     07777777
 #define Mask21Ecs                  07777700
+#define Mask22                     017777777
 #define Mask23                     037777777
 #define Mask24                     077777777
 #define Mask24Ecs                  077777700
@@ -211,6 +213,7 @@
 #define Mask30                     07777777777
 #define Mask30Ecs                  07777777700
 #define Mask32                     037777777777
+#define Mask38                     03777777777777
 #define Mask48                     000007777777777777777
 #define Mask50                     000037777777777777777
 #define Mask60                     077777777777777777777
@@ -221,6 +224,7 @@
 /*
 **  Trace masks.
 */
+#define TracePva                   (1 << 31)
 #define TraceCpu                   (1 << 30)
 #define TraceExchange              (1 << 29)
 

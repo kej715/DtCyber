@@ -171,8 +171,8 @@ static DecPpControl ppDecode170[] =
     Adm, "ADC", FALSE, NULL, // 21
     Adm, "LPC", FALSE, NULL, // 22
     Adm, "LMC", FALSE, NULL, // 23
-    AN,  "PSN", FALSE, NULL, // 24
-    AN,  "PSN", FALSE, NULL, // 25
+    Ad,  "LRD", FALSE, NULL, // 24
+    Ad,  "SRD", FALSE, NULL, // 25
     Ad,  "EXN", FALSE, NULL, // 26
     Ad,  "RPN", FALSE, NULL, // 27
 
@@ -916,6 +916,126 @@ void traceExchange(Cpu170Context *cpu, u32 addr, char *title)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Trace a monitor or user fault.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceFault(Cpu180Context *cpu, char *title, u16 condition)
+    {
+    if ((traceMask & TracePva) != 0)
+        {
+        fprintf(cpuF[cpu->id], " %s %04x", title, condition);
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Trace info about a page.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void tracePageInfo(Cpu180Context *cpu, u32 pageNum, u32 pageOffset, u32 pageTableIdx, u64 spid)
+    {
+    if ((traceMask & TracePva) != 0)
+        {
+        fprintf(cpuF[cpu->id], "\n%06d pageNum %x pageOffset %x pageTableIdx %x SPID %lx", traceSequenceNo,
+            pageNum, pageOffset, pageTableIdx, spid);
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Trace a page table entry.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void tracePte(Cpu180Context *cpu, u64 pte)
+    {
+    if ((traceMask & TracePva) != 0)
+        {
+        fprintf(cpuF[cpu->id], "\n%06d PTE V %x C %x U %x M %x SPID %010lx PFA %05x", traceSequenceNo,
+            (u8)((pte >> 63) & 1), (u8)((pte >> 62) & 1), (u8)((pte >> 61) & 1), (u8)((pte >> 60) & 1),
+            (pte >> 22) & Mask38, (u32)((pte >> 2) & Mask20));
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Trace a process virtual address.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void tracePva(Cpu180Context *cpu, u64 pva)
+    {
+    if ((traceMask & TracePva) != 0)
+        {
+        fprintf(cpuF[cpu->id], "\n%06d PVA %x %03x %08x", traceSequenceNo,
+            (u8)((pva >> 44) & Mask4), (u16)((pva >> 32) & Mask12), (u32)(pva & Mask32));
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Trace a real memory address.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceRma(Cpu180Context *cpu, u32 rma)
+    {
+    if ((traceMask & TracePva) != 0)
+        {
+        fprintf(cpuF[cpu->id], "\n%06d RMA %08x", traceSequenceNo, rma);
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Trace a segment descriptor table entry.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceSde(Cpu180Context *cpu, u64 sde)
+    {
+    if ((traceMask & TracePva) != 0)
+        {
+        fprintf(cpuF[cpu->id], "\n%06d SDE VL %x XP %x RP %x WP %x R1 %x R2 %x ASID %04x Lock %02x", traceSequenceNo,
+            (u8)((sde >> 62) & Mask2), (u8)((sde >> 60) & Mask2), (u8)((sde >> 58) & Mask2), (u8)((sde >> 56) & Mask2),
+            (u8)((sde >> 52) & Mask4), (u8)((sde >> 48) & Mask4),
+            (u16)((sde >> 32) & Mask16), (u8)((sde >> 24) & Mask6));
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Trace virtual address translation registers.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceVmRegisters(Cpu180Context *cpu)
+    {
+    if ((traceMask & TracePva) != 0)
+        {
+        fprintf(cpuF[cpu->id], "\n%06d STA %08x STL %d PTA %08x PTL %d PSM %02x pnShift %d poMask %x",
+            traceSequenceNo, cpu->regSta, cpu->regStl, cpu->regPta, cpu->regPtl, cpu->regPsm, cpu->pageNumShift, cpu->pageOffsetMask);
+        }
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Output sequence number.
 **
 **  Parameters:     Name        Description.
@@ -952,8 +1072,10 @@ void traceSequence(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void traceRegisters(void)
+void traceRegisters(bool isPost)
     {
+    u8 op;
+
     /*
     **  Bail out if no trace of this PPU is requested.
     */
@@ -962,11 +1084,17 @@ void traceRegisters(void)
         return;
         }
 
+    op = activePpu->opF & 077;
+
     /*
     **  Print registers.
     */
     fprintf(ppuF[activePpu->id], "P:%04o  ", activePpu->regP);
     fprintf(ppuF[activePpu->id], "A:%06o", activePpu->regA);
+    if (isPost && ((features & HasRelocationReg) != 0) && ((op >= 060 && op <= 063) || activePpu->opF == 01000 || activePpu->opF == 01001))
+        {
+        fprintf(ppuF[activePpu->id], "  R:%o", activePpu->regR);
+        }
     fprintf(ppuF[activePpu->id], "    ");
     }
 
@@ -1030,7 +1158,7 @@ void traceOpcode(void)
         break;
 
     case Amd:
-        fprintf(ppuF[activePpu->id], "%04o,%02o ", activePpu->mem[activePpu->regP + 1], opD);
+        fprintf(ppuF[activePpu->id], "%04o,%02o ", activePpu->mem[activePpu->regP + 1] & Mask12, opD);
         break;
 
     case Ar:
@@ -1049,7 +1177,7 @@ void traceOpcode(void)
         break;
 
     case Adm:
-        fprintf(ppuF[activePpu->id], "%02o%04o  ", opD, activePpu->mem[activePpu->regP + 1]);
+        fprintf(ppuF[activePpu->id], "%02o%04o  ", opD, activePpu->mem[activePpu->regP + 1] & Mask12);
         break;
         }
 
@@ -1109,7 +1237,7 @@ u8 traceDisassembleOpcode(char *str, PpWord *pm)
         break;
 
     case Amd:
-        sprintf(str, "%04o,%02o ", *pm, opD);
+        sprintf(str, "%04o,%02o ", *pm & Mask12, opD);
         result = 2;
         break;
 
@@ -1129,7 +1257,7 @@ u8 traceDisassembleOpcode(char *str, PpWord *pm)
         break;
 
     case Adm:
-        sprintf(str, "%02o%04o  ", opD, *pm);
+        sprintf(str, "%02o%04o  ", opD, *pm & Mask12);
         result = 2;
         break;
         }
@@ -1205,11 +1333,6 @@ void traceChannel(u8 ch)
             channel[ch].full             ? 'F' : 'E',
             channel[ch].ioDevice == NULL ? 'I' : 'S',
             channel[ch].flag             ? '*' : ' ');
-    if (channel[ch].full)
-        {
-        fputs("  ", ppuF[activePpu->id]);
-        traceChannelIo(ch);
-        }
     }
 
 /*--------------------------------------------------------------------------
@@ -1241,6 +1364,56 @@ void traceChannelIo(u8 ch)
         }
     }
 
+/*--------------------------------------------------------------------------
+**  Purpose:        Output a 60-bit CM word read/written by a PP.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceCmWord(CpWord data)
+    {
+    /*
+    **  Bail out if no trace of this PPU is requested.
+    */
+    if ((traceMask & (1 << activePpu->id)) == 0)
+        {
+        return;
+        }
+
+    fprintf(ppuF[activePpu->id], "%04o %04o %04o %04o %04o ",
+        (PpWord)((data >> 48) & Mask12),
+        (PpWord)((data >> 36) & Mask12),
+        (PpWord)((data >> 24) & Mask12),
+        (PpWord)((data >> 12) & Mask12),
+        (PpWord)(data & Mask12));
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Output a 64-bit CM word read/written by a PP.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceCmWord64(CpWord data)
+    {
+    /*
+    **  Bail out if no trace of this PPU is requested.
+    */
+    if ((traceMask & (1 << activePpu->id)) == 0)
+        {
+        return;
+        }
+
+    fprintf(ppuF[activePpu->id], "%04x %04x %04x %04x ",
+        (PpWord)((data >> 48) & Mask16),
+        (PpWord)((data >> 32) & Mask16),
+        (PpWord)((data >> 16) & Mask16),
+        (PpWord)(data & Mask16));
+    }
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Output end-of-line.

@@ -144,8 +144,8 @@ void deadStart(void)
             }
         else
             {
-            ppu[pp].opD = pp - 012 + 020;
-            channel[pp - 012 + 020].active = TRUE;
+            ppu[pp].opD = (pp - 012) + 020;
+            channel[(pp - 012) + 020].active = TRUE;
             }
 
         /*
@@ -164,6 +164,18 @@ void deadStart(void)
         **  Set all A registers to an input word count of 10000.
         */
         ppu[pp].regA = 010000;
+
+        /*
+        **  Miscellaneous parameters that should be reset to default
+        **  values at deadstart.
+        */
+        ppu[pp].id                   = pp;
+        ppu[pp].regR                 = 0;
+        ppu[pp].regQ                 = 0;
+        ppu[pp].exchangingCpu        = -1;
+        ppu[pp].osBoundsCheckEnabled = FALSE;
+        ppu[pp].isBelowOsBound       = FALSE;
+        ppu[pp].isStopEnabled        = FALSE;
         }
 
     /*

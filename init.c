@@ -2433,7 +2433,7 @@ static void initDeadstart(void)
         if (isOk)
             {
             word = strtol(token, NULL, 8);
-            isOk = (word < 010000) || (isCyber180 && (word <= 0107777));
+            isOk = (word < 010000) || (isCyber180 && (word >= 0100000 && word <= 0107777));
             }
         if (isOk)
             {

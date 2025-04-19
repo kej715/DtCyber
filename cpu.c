@@ -447,12 +447,12 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
         }
 
     /*
-    **  Initialize 170 CPU(s)
+    **  Initialize CYBER 170 CPU(s)
     */
     cpus170 = (Cpu170Context *)calloc(cpuCount, sizeof(Cpu170Context));
     if (cpus170 == NULL)
         {
-        fputs("(cpu    ) Failed to allocate memory for CPU contexts\n", stderr);
+        fputs("(cpu    ) Failed to allocate memory for CYBER 170 CPU contexts\n", stderr);
         exit(1);
         }
     for (cpuNum = 0; cpuNum < cpuCount; cpuNum++)
@@ -468,23 +468,11 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
         }
 
     /*
-    **  Initialize 180 CPU(s)
+    **  Initialize CYBER 180 CPU(s)
     */
     if (isCyber180)
         {
-        cpus180 = (Cpu180Context *)calloc(cpuCount, sizeof(Cpu180Context));
-        if (cpus180 == NULL)
-            {
-            fputs("(cpu    ) Failed to allocate memory for CPU contexts\n", stderr);
-            exit(1);
-            }
-        for (cpuNum = 0; cpuNum < cpuCount; cpuNum++)
-            {
-            cpus180[cpuNum].id                   = cpuNum;
-            cpus180[cpuNum].isStopped            = TRUE;
-            cpus180[cpuNum].ppRequestingExchange = -1;
-            cpus180[cpuNum].idleCycles           = 0;
-            }
+        cpu180Init(model);
         }
 
     /*
@@ -502,13 +490,13 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
     */
     if (isCyber180)
         {
-        printf("(cpu    ) CPU model %s initialised (%d CPU%s, CM: %dM bytes)\n",
+        printf("(cpu    ) CPU model %s initialised (%d CPU%s, %dM bytes CM)\n",
                model, cpuCount, cpuCount > 1 ? "'s" : "", (8 * cpuMaxMemory) / OneMegabyte);
         }
     else
         {
-        printf("(cpu    ) CPU model %s initialised (%d CPU%s, CM: %o words, ECS: %o words)\n",
-               model, cpuCount, cpuCount > 1 ? "'s" : "", cpuMaxMemory, extMaxMemory);
+        printf("(cpu    ) CPU model %s initialised (%d CPU%s, %o words CM, %o words %s)\n",
+               model, cpuCount, cpuCount > 1 ? "'s" : "", cpuMaxMemory, extMaxMemory, (emType == ESM) ? "ESM" : "ECS");
         }
 #if DEBUG_ECS || DEBUG_UEM || DEBUG_DDP
     if (emLog == NULL)
@@ -659,37 +647,6 @@ void cpuPpReadMem(u32 address, CpWord *data)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Read 64-bit CPU memory from PP and verify that address is
-**                  within limits.
-**
-**  Parameters:     Name        Description.
-**                  address     Absolute CM address to read.
-**                  data        Pointer to 64-bit word which gets the data.
-**
-**  Returns:        Nothing
-**
-**------------------------------------------------------------------------*/
-void cpuPpReadMem64(u32 address, CpWord *data)
-    {
-    if ((features & HasNoCmWrap) != 0)
-        {
-        if (address < cpuMaxMemory)
-            {
-            *data = cpMem[address];
-            }
-        else
-            {
-            *data = (~((CpWord)0));
-            }
-        }
-    else
-        {
-        address %= cpuMaxMemory;
-        *data    = cpMem[address];
-        }
-    }
-
-/*--------------------------------------------------------------------------
 **  Purpose:        Write 60-bit CPU memory from PP and verify that address is
 **                  within limits.
 **
@@ -717,33 +674,6 @@ void cpuPpWriteMem(u32 address, CpWord data)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Write 64-bit CPU memory from PP and verify that address is
-**                  within limits.
-**
-**  Parameters:     Name        Description.
-**                  address     Absolute CM address
-**                  data        64-bit word which holds the data to be written.
-**
-**  Returns:        Nothing
-**
-**------------------------------------------------------------------------*/
-void cpuPpWriteMem64(u32 address, CpWord data)
-    {
-    if ((features & HasNoCmWrap) != 0)
-        {
-        if (address < cpuMaxMemory)
-            {
-            cpMem[address] = data;
-            }
-        }
-    else
-        {
-        address       %= cpuMaxMemory;
-        cpMem[address] = data;
-        }
-    }
-
-/*--------------------------------------------------------------------------
 **  Purpose:        Execute next instruction in the CPU.
 **
 **  Parameters:     Name        Description.
@@ -756,6 +686,16 @@ void cpuStep(Cpu170Context *activeCpu)
     {
     u32 length;
     u32 oldRegP;
+
+    /*
+    **  If the machine is a CYBER 180, and this CPU is currently in 180 state,
+    **  give control to the 180 state step processor.
+    */
+    if (isCyber180 && cpus180[activeCpu->id].regVmid == 0)
+        {
+        cpu180Step(&cpus180[activeCpu->id]);
+        return;
+        }
 
     /*
     **  If this CPU needs to be exchanged, do that first.
