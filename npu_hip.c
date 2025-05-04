@@ -117,7 +117,6 @@
 /*
 **  Misc constants.
 */
-#define CyclesOneSecond            100000
 #define ReportInitCount            4
 
 #if DEBUG

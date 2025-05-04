@@ -126,11 +126,6 @@
 #define Fp0D1                      0xEC98  // fingerprint of the 0D1 macro image
 
 /*
-**  Misc constants.
-*/
-#define CyclesOneSecond            100000
-
-/*
 **  -----------------------
 **  Private Macro Functions
 **  -----------------------
