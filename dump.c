@@ -183,19 +183,19 @@ void dumpAll(void)
 **------------------------------------------------------------------------*/
 void dumpCpu(void)
     {
-    u32           addr;
-    u8            ch;
-    u16           cond;
-    u8            cp;
-    Cpu170Context *cpu170;
-    Cpu180Context *cpu180;
-    CpWord        data;
-    bool          duplicateLine;
-    u8            i;
-    CpWord        lastData;
-    FILE          *pf = cpuF;
-    u32           rma;
-    u8            shiftCount;
+    u32              addr;
+    u8               ch;
+    MonitorCondition cond;
+    u8               cp;
+    Cpu170Context    *cpu170;
+    Cpu180Context    *cpu180;
+    CpWord           data;
+    bool             duplicateLine;
+    u8               i;
+    CpWord           lastData;
+    FILE             *pf = cpuF;
+    u32              rma;
+    u8               shiftCount;
 
     for (cp = 0; cp < cpuCount; cp++)
         {
@@ -266,9 +266,9 @@ void dumpCpu(void)
             {
             fprintf(pf, "[CPU%d : Cyber 180 state]\n", cp);
             cpu180 = cpus180 + cp;
-            fprintf(pf, " P %02x ", (PpWord)((cpu180->regP >> 48) & Mask8)); // key
-            dumpPrintPva(pf, cpu180->regP & Mask48);
-            if (cpu180PvaToRma(cpu180, cpu180->regP & Mask48, &rma, &cond))
+            fprintf(pf, " P %02x ", cpu180->key);
+            dumpPrintPva(pf, cpu180->regP);
+            if (cpu180PvaToRma(cpu180, cpu180->regP & Mask48, AccessModeExecute, &rma, &cond))
                 {
                 fprintf(pf, " (RMA %08x)", rma);
                 }
@@ -285,12 +285,13 @@ void dumpCpu(void)
                         (PpWord)((data) & Mask16));
                 }
             fputs("\n", pf);
-            fprintf(pf, "VMID %04x LPID %02x\n", cpu180->regVmid, cpu180->regLpid);
-            fprintf(pf, " UMR %04x  MMR %04x  Flags %04x\n", cpu180->regUmr, cpu180->regMmr, cpu180->regFlags);
-            fprintf(pf, " UCR %04x  MCR %04x  MDF   %04x\n", cpu180->regUcr, cpu180->regMcr, cpu180->regMdf);
+            fprintf(pf, "VMID %04x  VMCL %04x   LPID %02x\n", cpu180->regVmid, cpu180->regVmcl, cpu180->regLpid);
+            fprintf(pf, " UMR %04x   MMR %04x  Flags %04x\n", cpu180->regUmr, cpu180->regMmr, cpu180->regFlags);
+            fprintf(pf, " UCR %04x   MCR %04x    MDF %04x\n", cpu180->regUcr, cpu180->regMcr, cpu180->regMdf);
             fputs("\n", pf);
-            fprintf(pf, " MPS %08x   BC %08x\n", cpu180->regMps, cpu180->regBc);
+            fprintf(pf, " MPS %08x  SIT %08x\n", cpu180->regMps, cpu180->regSit);
             fprintf(pf, " JPS %08x  PIT %08x\n", cpu180->regJps, cpu180->regPit);
+            fprintf(pf, "  BC %08x\n", cpu180->regBc);
             fputs("\n", pf);
             fprintf(pf, " PTA %08x  STA %08x\n", cpu180->regPta, cpu180->regSta);
             fprintf(pf, " PTL %02x        STL %03x\n", cpu180->regPtl, cpu180->regStl);
@@ -298,13 +299,13 @@ void dumpCpu(void)
             fputs("\n", pf);
             fputs(" UTP ", pf);
             dumpPrintPva(pf, cpu180->regUtp);
-            fputs("   TP ", pf);
+            fputs("  TP ", pf);
             dumpPrintPva(pf, cpu180->regTp);
             fputs("\n", pf);
             fputs(" DLP ", pf);
             dumpPrintPva(pf, cpu180->regDlp);
-            fprintf(pf, "   DI %02x\n", cpu180->regDi);
-            fprintf(pf, "                      DM %02x\n", cpu180->regDm);
+            fprintf(pf, "  DI %02x\n", cpu180->regDi);
+            fprintf(pf, "                     DM %02x\n", cpu180->regDm);
             fputs("\n", pf);
             fprintf(pf, " LRN %d\n", cpu180->regLrn);
             for (i = 0; i < 15; i++)
