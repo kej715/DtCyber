@@ -81,6 +81,7 @@
 **  Measure cycle time
 */
 #define CcCycleTime                0
+#define CyclesOneSecond            100000
 
 /*
 **  Device types.
@@ -214,6 +215,7 @@
 #define Mask30Ecs                  07777777700
 #define Mask32                     037777777777
 #define Mask38                     03777777777777
+#define Mask44                     000000377777777777777
 #define Mask48                     000007777777777777777
 #define Mask50                     000037777777777777777
 #define Mask60                     077777777777777777777

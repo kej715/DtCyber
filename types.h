@@ -61,7 +61,7 @@ typedef unsigned __int64   u64;
 typedef signed char         i8;
 typedef signed short        i16;
 typedef signed int          i32;
-typedef unsigned long int   i64;
+typedef signed long int     i64;
 typedef unsigned char       u8;
 typedef unsigned short      u16;
 typedef unsigned int        u32;
@@ -77,7 +77,7 @@ typedef unsigned long int   u64;
 typedef signed char              i8;
 typedef signed short             i16;
 typedef signed int               i32;
-typedef unsigned long long int   i64;
+typedef signed long long int     i64;
 typedef unsigned char            u8;
 typedef unsigned short           u16;
 typedef unsigned int             u32;
@@ -217,7 +217,7 @@ typedef struct
     } PpSlot;
 
 /*
-**  CPU control block.
+**  CPU control block for CYBER 170 state.
 */
 typedef struct
     {
@@ -260,11 +260,65 @@ typedef struct
     } Cpu170Context;
 
 /*
-**  CPU control block for Cyber 180 state
+**  CPU control block for CYBER 180 state
 */
+
+//  Monitor condition register bit ordinals.
+typedef enum
+    {
+    MCR48 = 0,  /* Detected uncorrectable error     */
+    MCR49,      /* Not assigned                     */
+    MCR50,      /* Short warning                    */
+    MCR51,      /* Instruction specfication error   */
+    MCR52,      /* Address specification error      */
+    MCR53,      /* CYBER 170 state exchange request */
+    MCR54,      /* Access violation                 */
+    MCR55,      /* Environment specification error  */
+    MCR56,      /* External interrupt               */
+    MCR57,      /* Page table search without find   */
+    MCR58,      /* System call (status bit)         */
+    MCR59,      /* System interval timer            */
+    MCR60,      /* Invalid segment / Ring number 0  */
+    MCR61,      /* Outward call / Inward return     */
+    MCR62,      /* Soft error                       */
+    MCR63       /* Trap exception (status bit)      */
+    } MonitorCondition;
+
+//  User condition register bit ordinals.
+typedef enum
+    {
+    UCR48 = 0,  /* Privileged instruction fault     */
+    UCR49,      /* Unimplemented instruction        */
+    UCR50,      /* Free flag                        */
+    UCR51,      /* Process interval timer           */
+    UCR52,      /* Inter-ring pop                   */
+    UCR53,      /* Critical frame flag              */
+    UCR54,      /* Reserved                         */
+    UCR55,      /* Divide fault                     */
+    UCR56,      /* Debug                            */
+    UCR57,      /* Arithmetic overflow              */
+    UCR58,      /* Exponent overflow                */
+    UCR59,      /* Exponent underflow               */
+    UCR60,      /* FP loss of significance          */
+    UCR61,      /* FP indefinite                    */
+    UCR62,      /* Arithmetic loss of significance  */
+    UCR63       /* Invalid BDP data                 */
+    } UserCondition;
+
+//  Possible actions for monitor and user conditions
+typedef enum
+    {
+    Cont = 0,
+    Exch,
+    Trap,
+    Halt,
+    Stack
+    } ConditionAction;
+
 typedef struct
     {
     u8            id;                   /* CPU identifier */
+    u8            key;                  /* program address key */
     u64           regP;                 /* program address */
     u64           regX[16];             /* data registers (64 bit) */
     u64           regA[16];             /* address registers (48 bit) */
@@ -274,8 +328,9 @@ typedef struct
                                         /*   Bit         Flag                 */
                                         /*     0  Critical Frame Flag         */
                                         /*     1  On Condition Flag           */
+                                        /*     2  Keypoint Enable Flag        */
                                         /*     3  Process Not Damaged Flag    */
-                                        /*     4  EA                          */
+                                        /*     4  ECS Authorized Flag         */
                                         /*    14  Trap-enable Flip-flop       */
                                         /*    15  Trap-enable Delay Flip-flop */
     u16           regUmr;               /* user mask register */
@@ -303,26 +358,36 @@ typedef struct
     u8            regPsm;               /* page size mask register */
     u32           regSit;               /* system interval timer register */
     u16           regVmcl;              /* virtual machine capability list register */
+    u32           pageLengthMask;       /* mask used in calculating page table index */
     u8            pageNumShift;         /* shift count used in calculating page numbers */
     u16           pageOffsetMask;       /* mask used in calculating page offsets */
-    u32           exitMode;             /* CPU exit mode (24 bit) */
     volatile bool isMonitorMode;        /* TRUE if CPU is in monitor mode */
     volatile bool isStopped;            /* TRUE if CPU is stopped */
     volatile int  ppRequestingExchange; /* PP number of PP requesting exchange, -1 if none */
     u32           ppExchangeAddress;    /* PP-requested exchange address */
     bool          doChangeMode;         /* TRUE if monitor mode flag should be changed by PP exchange jump */
-    volatile bool isErrorExitPending;   /* TRUE if error exit pending */
-    u8            exitCondition;        /* pending error exit conditions */
-    u64           opWord;               /* Current instruction word */
-    u8            opOffset;             /* Bit offset to current instruction */
-    u8            opFm;                 /* Opcode field (first 6 bits) */
-    u8            opI;                  /* I field of current instruction */
-    u8            opJ;                  /* J field of current instruction */
-    u8            opK;                  /* K field (first 3 bits only) */
-    u32           opAddress;            /* K field (18 bits) */
-    bool          floatException;       /* TRUE if CPU detected float exception */
+    u8            opCode;               /* Opcode field (first 8 bits) */
+    u8            opI;                  /* i field of current instruction */
+    u8            opJ;                  /* j field of current instruction */
+    u8            opK;                  /* k field of current instruction, if applicable */
+    u16           opD;                  /* D field of current instruction, if applicable */
+    u16           opQ;                  /* Q field of current instruction, if applicable */
+    ConditionAction pendingAction;      /* pending monitor or user condition action */
+    u8            nextKey;              /* next P register key */
+    u64           nextP;                /* next P register value */
     volatile u32  idleCycles;           /* Counter for how many times we've seen the idle loop */
     } Cpu180Context;
+
+/*
+**  CYBER 180 memory access modes
+*/
+typedef enum
+    {
+    AccessModeExecute,
+    AccessModeRead,
+    AccessModeWrite,
+    AccessModeAny
+    } Cpu180AccessMode;
 
 /*
 **  Model specific feature set.

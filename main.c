@@ -85,11 +85,14 @@ extern int _isatty(int fd);
 **  Private Function Prototypes
 **  ---------------------------
 */
+static void emulate(void);
+static void INThandler(int);
 static void tracePpuCalls(void);
 static void waitTerminationMessage(void);
 
-static void INThandler(int);
+#if defined(_WIN32)
 static void opExit(void);
+#endif
 
 /*
 **  ----------------
@@ -252,45 +255,7 @@ int main(int argc, char **argv)
     /*
     **  Emulation loop.
     */
-
-    while (emulationActive)
-        {
-#if CcCycleTime
-        rtcStartTimer();
-#endif
-
-        /*
-        **  Count major cycles.
-        */
-        cycles++;
-
-        /*
-        **  Deal with operator interface requests.
-        */
-        if (opActive)
-            {
-            opRequest();
-            }
-
-        /*
-        **  Execute PP, CPU and RTC.
-        */
-        rtcTick();
-        ppStep();
-
-        cpuStep(cpus170);
-        cpuStep(cpus170);
-        cpuStep(cpus170);
-        cpuStep(cpus170);
-
-        channelStep();
-
-        idleThrottle(cpus170);
-
-#if CcCycleTime
-        cycleTime = rtcStopTimer();
-#endif
-        }
+    emulate();
 
 #if CcDebug == 1
     /*
@@ -529,14 +494,6 @@ int runHelper(char *command)
 #endif
     }
 
-/*
- **--------------------------------------------------------------------------
- **
- **  Private Functions
- **
- **--------------------------------------------------------------------------
- */
-
 /*--------------------------------------------------------------------------
 **  Purpose:        Start helper processes.
 **
@@ -617,6 +574,66 @@ void stopHelpers(void)
             }
         }
     fflush(stdout);
+    }
+
+/*
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Main emulation loop.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void emulate(void)
+    {
+    int i;
+
+    while (emulationActive)
+        {
+#if CcCycleTime
+        rtcStartTimer();
+#endif
+
+        /*
+        **  Count major cycles.
+        */
+        cycles++;
+
+        /*
+        **  Deal with operator interface requests.
+        */
+        if (opActive)
+            {
+            opRequest();
+            }
+
+        /*
+        **  Execute PP, CPU and RTC.
+        */
+        rtcTick();
+        ppStep();
+
+        cpuStep(cpus170);
+        cpuStep(cpus170);
+        cpuStep(cpus170);
+        cpuStep(cpus170);
+
+        channelStep();
+
+        idleThrottle(cpus170);
+
+#if CcCycleTime
+        cycleTime = rtcStopTimer();
+#endif
+        }
     }
 
 /*--------------------------------------------------------------------------

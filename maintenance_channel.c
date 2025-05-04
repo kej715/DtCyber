@@ -301,6 +301,81 @@ void mchCheckTimeout()
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Get a value from a CP maintenance register
+**
+**  Parameters:     Name        Description.
+**                  ctx         CP context
+**                  reg         the register address
+**
+**  Returns:        64-bit value.
+**
+**------------------------------------------------------------------------*/
+u64 mchGetCpRegister(Cpu180Context *ctx, u8 reg)
+    {
+    u64 byte;
+
+    switch (reg)
+        {
+    case RegProcStatusSummary:
+        byte = mchCpRegisterGroups[ctx->id][0] & 0xff;
+        if (ctx->isStopped)
+            {
+            byte |= 0x08;
+            }
+        if (ctx->isMonitorMode)
+            {
+            byte |= 0x20;
+            }
+        return (byte << 56) | (byte << 48) | (byte << 40) | (byte << 32)
+             | (byte << 24) | (byte << 16) | (byte <<  8) | byte;
+    case RegProcCtrlStoreAddr:
+        return mchControlStoreIndices[ctx->id] >> 4; // 16 bytes per control store address
+    case RegProcJobProcessState:
+        return ctx->regJps;
+    case RegProcMonitorProcState:
+        return ctx->regMps;
+    case RegProcPageTableAddr:
+        return ctx->regPta;
+    case RegProcPageTableLen:
+        return ctx->regPtl;
+    case RegProcPageSizeMask:
+        return ctx->regPsm;
+    case RegProcProcessIntTimer:
+        return ctx->regPit;
+    case RegProcSystemIntTimer:
+        return ctx->regSit;
+    case RegProcVmCapabilityList:
+        return ctx->regVmcl;
+    case RegProcModelDepWord:
+        return ctx->regMdw;
+    case RegProcDepEnvControl:
+    default:
+        break;
+    //  Trap Enables addresses
+    case 0xc0:
+    case 0xc1:
+    case 0xc2:
+    case 0xc3:
+        return ctx->regFlags & Mask2;
+    //  Keypoint Enable addresses
+    case 0xca:
+    case 0xcb:
+        return (ctx->regFlags >> 13) & 1;
+        break;
+    //  Critical Frame Flag addresses
+    case 0xe0:
+    case 0xe1:
+        return (ctx->regFlags >> 15) & 1;
+    //  On Condition Flag addresses
+    case 0xe2:
+    case 0xe3:
+        return (ctx->regFlags >> 14) & 1;
+        }
+
+    return mchCpRegisterGroups[ctx->id][reg];
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Initialise maintenance channel.
 **
 **  Parameters:     Name        Description.
@@ -433,6 +508,85 @@ void mchInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     **  Print a friendly message.
     */
     printf("(maintenance_channel) Initialised on channel %o\n", channelNo);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Set CP maintenance register to a value
+**
+**  Parameters:     Name        Description.
+**                  ctx         CP context
+**                  reg         the register address
+**                  word        the 64-bit value to set
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void mchSetCpRegister(Cpu180Context *ctx, u8 reg, u64 word)
+    {
+    switch (reg)
+        {
+    case RegProcCtrlStoreAddr:
+        mchControlStoreIndices[ctx->id] = word << 4; // 16 bytes per control store address
+        break;
+    case RegProcJobProcessState:
+        ctx->regJps = word & Mask32;
+        break;
+    case RegProcMonitorProcState:
+        ctx->regMps = word & Mask32;
+        break;
+    case RegProcPageTableAddr:
+        ctx->regPta = word & Mask32;
+        break;
+    case RegProcPageTableLen:
+        ctx->regPtl = word & Mask8;
+        cpu180UpdatePageSize(ctx);
+        break;
+    case RegProcPageSizeMask:
+        ctx->regPsm = word & Mask7;
+        cpu180UpdatePageSize(ctx);
+        break;
+    case RegProcVmCapabilityList:
+        ctx->regVmcl = word & Mask16;
+        break;
+    case RegProcProcessIntTimer:
+        ctx->regPit = word & Mask32;
+        break;
+    case RegProcSystemIntTimer:
+        ctx->regSit = word & Mask32;
+        break;
+    case RegProcModelDepWord:
+        ctx->regMdw = word;
+        break;
+    case RegProcStatusSummary:
+        ctx->isStopped     = (word & 0x08) != 0;
+        ctx->isMonitorMode = (word & 0x20) != 0;
+    case RegProcDepEnvControl:
+    default:
+        mchCpRegisterGroups[ctx->id][reg] = word;
+        break;
+    //  Trap Enables addresses
+    case 0xc0:
+    case 0xc1:
+    case 0xc2:
+    case 0xc3:
+        ctx->regFlags = (ctx->regFlags & 0xffc0) | (word & Mask2);
+        break;
+    //  Keypoint Enable addresses
+    case 0xca:
+    case 0xcb:
+        ctx->regFlags = (ctx->regFlags & 0xdfff) | ((word & 1) << 13);
+        break;
+    //  Critical Frame Flag addresses
+    case 0xe0:
+    case 0xe1:
+        ctx->regFlags = (ctx->regFlags & 0x7fff) | ((word & 1) << 15);
+        break;
+    //  On Condition Flag addresses
+    case 0xe2:
+    case 0xe3:
+        ctx->regFlags = (ctx->regFlags & 0xbfff) | ((word & 1) << 14);
+        break;
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -579,9 +733,10 @@ static u64 mchGetRegister(u8 reg)
 **------------------------------------------------------------------------*/
 static FcStatus mchFunc(PpWord funcCode)
     {
-    u64 csAddr;
-    u8  opCode;
-    u64 word;
+    u64           csAddr;
+    Cpu180Context *ctx;
+    u8            opCode;
+    u64           word;
 
     mchConnCode = (funcCode >> FcConnShift) & Mask4;
     opCode      = (funcCode >> FcOpShift) & Mask4;
@@ -669,12 +824,12 @@ static FcStatus mchFunc(PpWord funcCode)
             else if (csAddr == 0x381)
                 {
                 // TODO: start EI
-                Cpu180Context *ctx;
-                u16 mcr;
+                MonitorCondition mcr;
                 u32 rma;
                 ctx = mchGetCpContext(mchConnCode);
                 cpu180LoadMpsXp(ctx);
-                if (cpu180PvaToRma(ctx, cpMem[ctx->regMps >> 3] & Mask48, &rma, &mcr))
+                mchSetRegister(RegProcStatusSummary, word);
+                if (cpu180PvaToRma(ctx, cpMem[ctx->regMps >> 3] & Mask48, AccessModeExecute, &rma, &mcr))
                     {
                     fprintf(mchLog, "\nStart CPU at RMA %08x", rma);
                     }
@@ -682,6 +837,11 @@ static FcStatus mchFunc(PpWord funcCode)
                     {
                     fprintf(mchLog, "\nFailed to translate PVA %012lx to RMA, MCR %04x", cpMem[ctx->regMps >> 3] & Mask48, mcr);
                     }
+                mchSetRegister(RegProcStatusSummary, word);
+                }
+            else
+                {
+                word |= 0x08;  // Processor Halt
                 }
             mchSetRegister(RegProcStatusSummary, word);
             }
@@ -1226,7 +1386,6 @@ static void mch860CmWriter(u8 byte)
 **------------------------------------------------------------------------*/
 static u64 mch860CpGetter(u8 reg)
     {
-    u64           byte;
     Cpu180Context *ctx;
 
     ctx = mchGetCpContext(mchConnCode);
@@ -1235,36 +1394,7 @@ static u64 mch860CpGetter(u8 reg)
         return 0;
         }
 
-    switch (reg)
-        {
-    case RegProcStatusSummary:
-        byte = mchCpRegisterGroups[ctx->id][0] & 0xff;
-        return (byte << 56) | (byte << 48) | (byte << 40) | (byte << 32)
-             | (byte << 24) | (byte << 16) | (byte <<  8) | byte;
-    case RegProcCtrlStoreAddr:
-        return mchControlStoreIndices[ctx->id] >> 4; // 16 bytes per control store address
-    case RegProcJobProcessState:
-        return ctx->regJps;
-    case RegProcMonitorProcState:
-        return ctx->regMps;
-    case RegProcPageTableAddr:
-        return ctx->regPta;
-    case RegProcPageTableLen:
-        return ctx->regPtl;
-    case RegProcPageSizeMask:
-        return ctx->regPsm;
-    case RegProcProcessIntTimer:
-        return ctx->regPit;
-    case RegProcSystemIntTimer:
-        return ctx->regSit;
-    case RegProcModelDepWord:
-        return ctx->regMdw;
-    case RegProcDepEnvControl:
-    default:
-        break;
-        }
-
-    return mchCpRegisterGroups[ctx->id][reg];
+    return mchGetCpRegister(ctx, reg);
     }
 
 /*--------------------------------------------------------------------------
@@ -1305,7 +1435,6 @@ static u8 mch860CpReader(void)
 **------------------------------------------------------------------------*/
 static void mch860CpSetter(u8 reg, u64 word)
     {
-    u64           byte;
     Cpu180Context *ctx;
 
     ctx = mchGetCpContext(mchConnCode);
@@ -1313,43 +1442,7 @@ static void mch860CpSetter(u8 reg, u64 word)
         {
         return;
         }
-
-    switch (reg)
-        {
-    case RegProcCtrlStoreAddr:
-        mchControlStoreIndices[ctx->id] = word << 4; // 16 bytes per control store address
-        break;
-    case RegProcJobProcessState:
-        ctx->regJps = word & Mask32;
-        break;
-    case RegProcMonitorProcState:
-        ctx->regMps = word & Mask32;
-        break;
-    case RegProcPageTableAddr:
-        ctx->regPta = word & Mask32;
-        break;
-    case RegProcPageTableLen:
-        ctx->regPtl = word & Mask8;
-        break;
-    case RegProcPageSizeMask:
-        ctx->regPsm = word & Mask7;
-        cpu180UpdatePageSize(ctx);
-        break;
-    case RegProcProcessIntTimer:
-        ctx->regPit = word & Mask32;
-        break;
-    case RegProcSystemIntTimer:
-        ctx->regSit = word & Mask32;
-        break;
-    case RegProcModelDepWord:
-        ctx->regMdw = word;
-        break;
-    case RegProcStatusSummary:
-    case RegProcDepEnvControl:
-    default:
-        mchCpRegisterGroups[ctx->id][reg] = word;
-        break;
-        }
+    mchSetCpRegister(ctx, reg, word);
     }
 
 /*--------------------------------------------------------------------------
@@ -1460,7 +1553,7 @@ static void mch860Init(u64 iouOptions, u64 memSizeMask)
         softMemories[6]           = (u8 *)calloc(512, 4);
         mch860CpSetter(RegProcElementId, 0x0000000000321234); // Elem: 00 (CP),  Model: 860, S/N
         mch860CpSetter(RegProcVmCapabilityList, 0xc000);      // Virtual state and CYBER 170 state
-        mch860CpSetter(RegProcStatusSummary, 0x08);           // Processor Halt
+        mch860CpSetter(RegProcStatusSummary, 0x28);           // CYBER 180 Monitor Mode, Processor Halt
         for (j = 0; j < 7; j++)
             {
             mchSoftMemoryIndices[i][j] = 0;

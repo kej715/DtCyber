@@ -116,7 +116,7 @@ void cpu180Init(char *model);
 void cpu180LoadMpsXp(Cpu180Context *ctx);
 void cpu180PpReadMem(u32 address, CpWord *data);
 void cpu180PpWriteMem(u32 address, CpWord data);
-bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, u32 *rma, u16 *cond);
+bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *rma, MonitorCondition *cond);
 void cpu180Step(Cpu180Context *activeCpu);
 void cpu180UpdatePageSize(Cpu180Context *ctx);
 
@@ -267,7 +267,9 @@ void stopHelpers(void);
 **  maintenance_channel.c
 */
 void mchCheckTimeout(void);
+u64 mchGetCpRegister(Cpu180Context *ctx, u8 reg);
 void mchInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void mchSetCpRegister(Cpu180Context *ctx, u8 reg, u64 word);
 void mchSetOsBoundsFault(PpSlot *pp);
 
 /*
@@ -447,14 +449,15 @@ void traceChannelIo(u8 ch);
 void traceCmWord(CpWord data);
 void traceCmWord64(CpWord data);
 void traceCpu(Cpu170Context *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress);
+void traceCpu180(Cpu180Context *cpu, u64 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u16 opD, u16 opQ);
 void traceCpuPrint(Cpu170Context *cpu, char *str);
 u8 traceDisassembleOpcode(char *str, PpWord *pm);
 void traceEnd(void);
 void traceExchange(Cpu170Context *cpu, u32 addr, char *title);
-void traceFault(Cpu180Context *cpu, char *title, u16 condition);
 void traceInit(void);
+void traceMonitorCondition(Cpu180Context *cpu, MonitorCondition cond);
 void traceOpcode(void);
-void tracePageInfo(Cpu180Context *cpu, u32 pageNum, u32 pageOffset, u32 pageTableIdx, u64 spid);
+void tracePageInfo(Cpu180Context *cpu, u16 hash, u32 pageNum, u32 pageOffset, u32 pageTableIdx, u64 spid);
 void tracePrint(char *str);
 void tracePte(Cpu180Context *cpu, u64 pte);
 void tracePva(Cpu180Context *cpu, u64 pva);
