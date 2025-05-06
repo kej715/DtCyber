@@ -998,11 +998,11 @@ static FcStatus dd8xxFunc(PpWord funcCode)
     */
     if ((funcCode & 0700) == Fc8xxDeadstart)
         {
-        funcCode = Fc8xxDeadstart;
         activeDevice->selectedUnit = funcCode & 07;
-        unitNo = activeDevice->selectedUnit;
-        fcb    = activeDevice->fcb[unitNo];
-        dp     = (DiskParam *)activeDevice->context[unitNo];
+        funcCode = Fc8xxDeadstart;
+        unitNo   = activeDevice->selectedUnit;
+        fcb      = activeDevice->fcb[unitNo];
+        dp       = (DiskParam *)activeDevice->context[unitNo];
         }
 
 #if DEBUG
@@ -1421,25 +1421,19 @@ static void dd8xxIo(void)
     case Fc8xxDeadstart:
         if (!activeChannel->full)
             {
+            activeChannel->data = dp->read(dp, fcb);
+            activeChannel->full = TRUE;
             if (activeDevice->recordLength == SectorSize)
                 {
                 /*
                 **  The first word in the sector contains the data length.
                 */
-                activeDevice->recordLength = dp->read(dp, fcb);
-                if (activeDevice->recordLength > SectorSize)
+                if (activeChannel->data > SectorSize)
                     {
-                    activeDevice->recordLength = SectorSize;
+                    activeChannel->data = SectorSize;
                     }
-
-                activeChannel->data = activeDevice->recordLength;
+                activeDevice->recordLength = activeChannel->data;
                 }
-            else
-                {
-                activeChannel->data = dp->read(dp, fcb);
-                }
-
-            activeChannel->full = TRUE;
 
             if (--activeDevice->recordLength == 0)
                 {
@@ -1838,7 +1832,7 @@ static PpWord dd8xxReadClassic(DiskParam *dp, FILE *fcb)
         return (0);
         }
 
-    return (*dp->bufPtr++);
+    return (*dp->bufPtr++) & Mask12;
     }
 
 /*--------------------------------------------------------------------------
@@ -1870,7 +1864,7 @@ static void dd8xxWriteClassic(DiskParam *dp, FILE *fcb, PpWord data)
         dp->bufPtr = dp->buffer;
         }
 
-    *dp->bufPtr++ = data;
+    *dp->bufPtr++ = data & Mask12;
 
     /*
     **  Write the data if we got a full sector.
@@ -1968,7 +1962,7 @@ static void dd8xxWritePacked(DiskParam *dp, FILE *fcb, PpWord data)
         dp->bufPtr = dp->buffer;
         }
 
-    *dp->bufPtr++ = data;
+    *dp->bufPtr++ = data & Mask12;
 
     /*
     **  Write the data if we got a full sector.

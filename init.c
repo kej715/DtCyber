@@ -162,11 +162,12 @@ static void initToUpperCase(char *str);
 bool          bigEndian;
 extern u16    deadstartPanel[];
 extern u8     deadstartCount;
-ModelFeatures features;
-ModelType     modelType;
-char          persistDir[256];
 char          displayName[32];
+ModelFeatures features;
+bool          isCyber180;
+ModelType     modelType;
 NpuSoftware   npuSw = SwUndefined;
+char          persistDir[256];
 
 /*
 **  -----------------
@@ -696,6 +697,7 @@ static void initCyber(char *config)
                    config, startupFile, model);
         exit(1);
         }
+    isCyber180 = (features & IsCyber180) != 0;
 
     (void)initGetInteger("CEJ/MEJ", 1, &enableCejMej);
     if (enableCejMej == 0)
@@ -812,7 +814,7 @@ static void initCyber(char *config)
             features = featuresCyber865;
             }
         }
-    else if ((features & IsCyber180) != 0)
+    else if (isCyber180)
         {
         isOk = (memory % OneMegabyte) == 0;
         switch (memory / OneMegabyte)
@@ -862,7 +864,7 @@ static void initCyber(char *config)
     (void)initGetInteger("ecsbanks", 0, &ecsBanks);
     (void)initGetInteger("esmbanks", 0, &esmBanks);
 
-    if (((features & IsCyber180) != 0) && ((ecsBanks != 0) || (esmBanks != 0)))
+    if (isCyber180 && ((ecsBanks != 0) || (esmBanks != 0)))
         {
         logDtError(LogErrorLocation, "file '%s' section [%s]: 'ecsbanks' and 'esmbanks' are invalid for Cyber 180\n", startupFile, config);
         exit(1);
@@ -2398,7 +2400,6 @@ static void initDeadstart(void)
     {
     char *dp;
     int  dspi;
-    bool is180;
     bool isOk;
     char *line;
     int  lineNo;
@@ -2418,7 +2419,6 @@ static void initDeadstart(void)
     */
     dspi   = 0;
     lineNo = 0;
-    is180  = (features & IsCyber180) != 0;
     while ((line = initGetNextLine(&lineNo)) != NULL && dspi < MaxDeadStart)
         {
         /*
@@ -2433,7 +2433,7 @@ static void initDeadstart(void)
         if (isOk)
             {
             word = strtol(token, NULL, 8);
-            isOk = (word < 010000) || (is180 && (word <= 0107777));
+            isOk = (word < 010000) || (isCyber180 && (word >= 0100000 && word <= 0107777));
             }
         if (isOk)
             {
@@ -2450,7 +2450,7 @@ static void initDeadstart(void)
          * Print the value so we know what we captured
          */
         printf("          Row %02d", dspi - 1);
-        if (is180)
+        if (isCyber180)
             {
             printf(" (%06lo)", word);
             }
@@ -2460,7 +2460,7 @@ static void initDeadstart(void)
             }
         fputs(":[", stdout);
 
-        for (int c = is180 ? 15 : 11; c >= 0; c--)
+        for (int c = isCyber180 ? 15 : 11; c >= 0; c--)
             {
             fputc('0' + ((deadstartPanel[dspi - 1] >> c) & 1), stdout);
             if ((c > 0) && (c % 3 == 0))

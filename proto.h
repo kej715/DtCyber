@@ -106,8 +106,24 @@ void cpuPpReadMem(u32 address, CpWord *data);
 void cpuPpWriteMem(u32 address, CpWord data);
 void cpuReleaseExchangeMutex(void);
 void cpuReleaseMemoryMutex(void);
-void cpuStep(CpuContext *activeCpu);
+void cpuStep(Cpu170Context *activeCpu);
 void cpuTerminate(void);
+void cpuVoidIwStack(Cpu170Context *activeCpu, u32 branchAddr);
+
+/*
+**  cpu180.c
+*/
+void cpu180CheckConditions(Cpu180Context *ctx);
+void cpu180Init(char *model);
+void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa);
+void cpu180PpReadMem(u32 address, CpWord *data);
+void cpu180PpWriteMem(u32 address, CpWord data);
+bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *rma, MonitorCondition *cond);
+void cpu180SetMonitorCondition(Cpu180Context *ctx, MonitorCondition cond);
+void cpu180Step(Cpu180Context *activeCpu);
+void cpu180Store170Xp(Cpu180Context *ctx, u32 xpa);
+void cpu180UpdateIntervalTimers(u64 delta);
+void cpu180UpdatePageSize(Cpu180Context *ctx);
 
 /*
 **  cr405.c
@@ -190,11 +206,11 @@ void dsa311ShowStatus();
 void dumpInit(void);
 void dumpTerminate(void);
 void dumpAll(void);
-void dumpCpu(u8 cp);
-void dumpPpu(u8 pp);
+void dumpCpu(void);
+void dumpPpu(u8 pp, PpWord first, PpWord limit);
 void dumpDisassemblePpu(u8 pp);
 void dumpRunningPpu(u8 pp);
-void dumpRunningCpu(u8 cp);
+void dumpRunningCpu(void);
 
 /*
 **  float.c
@@ -255,7 +271,11 @@ void stopHelpers(void);
 /*
 **  maintenance_channel.c
 */
+void mchCheckTimeout(void);
+u64 mchGetCpRegister(Cpu180Context *ctx, u8 reg);
 void mchInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void mchSetCpRegister(Cpu180Context *ctx, u8 reg, u64 word);
+void mchSetOsBoundsFault(PpSlot *pp);
 
 /*
 **  mdi.c
@@ -428,19 +448,30 @@ void tpMuxShowStatus();
 /*
 **  trace.c
 */
-void traceInit(void);
-void traceTerminate(void);
-void traceSequence(void);
-void traceRegisters(void);
-void traceOpcode(void);
-u8 traceDisassembleOpcode(char *str, PpWord *pm);
-void traceChannelFunction(PpWord funcCode);
-void tracePrint(char *str);
-void traceCpuPrint(CpuContext *cpu, char *str);
 void traceChannel(u8 ch);
+void traceChannelFunction(PpWord funcCode);
+void traceChannelIo(u8 ch);
+void traceCmWord(CpWord data);
+void traceCmWord64(CpWord data);
+void traceCpu(Cpu170Context *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress);
+void traceCpu180(Cpu180Context *cpu, u64 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u16 opD, u16 opQ);
+void traceCpuPrint(Cpu170Context *cpu, char *str);
+u8 traceDisassembleOpcode(char *str, PpWord *pm);
 void traceEnd(void);
-void traceCpu(CpuContext *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress);
-void traceExchange(CpuContext *cpu, u32 addr, char *title);
+void traceExchange(Cpu170Context *cpu, u32 addr, char *title);
+void traceInit(void);
+void traceMonitorCondition(Cpu180Context *cpu, MonitorCondition cond);
+void traceOpcode(void);
+void tracePageInfo(Cpu180Context *cpu, u16 hash, u32 pageNum, u32 pageOffset, u32 pageTableIdx, u64 spid);
+void tracePrint(char *str);
+void tracePte(Cpu180Context *cpu, u64 pte);
+void tracePva(Cpu180Context *cpu, u64 pva);
+void traceRegisters(bool isPost);
+void traceRma(Cpu180Context *cpu, u32 rma);
+void traceSde(Cpu180Context *cpu, u64 sde);
+void traceSequence(void);
+void traceTerminate(void);
+void traceVmRegisters(Cpu180Context *cpu);
 
 /*
 **  window_{win32,x11}.c
@@ -488,7 +519,8 @@ extern char                colorFG[32];                     // Console
 #endif
 extern const char          consoleToAscii[64];
 extern CpWord              *cpMem;
-extern CpuContext          *cpus;
+extern Cpu170Context       *cpus170;
+extern Cpu180Context       *cpus180;
 extern int                 cpuCount;
 extern u32                 cpuMaxMemory;
 extern bool                cpuStopped;
@@ -511,6 +543,7 @@ extern long                fontMedium;                      // Console
 extern long                fontSmall;                       // Console
 extern char                fontName[];                      // Console
 extern long                heightPX;                        // Console
+extern bool                isCyber180;
 extern ModelType           modelType;
 extern u16                 mux6676TelnetConns;
 extern u16                 mux6676TelnetPort;
@@ -536,10 +569,9 @@ extern char                ppKeyIn;
 extern PpSlot              *ppu;
 extern u8                  ppuCount;
 extern u32                 ppuOsBoundary;
-extern bool                ppuOsBoundsCheckEnabled;
-extern bool                ppuStopEnabled;
 extern u32                 readerScanSecs;
 extern u32                 rtcClock;
+extern u64                 rtcClockDelta;
 extern bool                rtcClockIsCurrent;
 extern long                scaleX;                          // Console
 extern long                scaleY;                          // Console
@@ -552,7 +584,7 @@ extern long                widthPX;                         // Console
 
 /* Idle Loop throttle */
 extern bool idle;
-extern bool (*idleDetector)(CpuContext *ctx);
+extern bool (*idleDetector)(Cpu170Context *ctx);
 extern u32  idleNetBufs;
 extern u32  idleTime;
 extern u32  idleTrigger;
@@ -562,12 +594,12 @@ extern char networkInterfaceMgr[];
 extern char osType[];
 
 bool idleCheckBusy();
-bool idleDetectorNone(CpuContext *ctx);
-bool idleDetectorCOS(CpuContext *ctx);   /* COS */
-bool idleDetectorMACE(CpuContext *ctx);  /* KRONOS1 or MACE, possibly SCOPE too) */
-bool idleDetectorNOS(CpuContext *ctx);   /* KRONOS2.1 - NOS 2.8.7 */
-bool idleDetectorNOSBE(CpuContext *ctx); /* NOS/BE (only tested with TUB) */
-void idleThrottle(CpuContext *ctx);
+bool idleDetectorNone(Cpu170Context *ctx);
+bool idleDetectorCOS(Cpu170Context *ctx);   /* COS */
+bool idleDetectorMACE(Cpu170Context *ctx);  /* KRONOS1 or MACE, possibly SCOPE too) */
+bool idleDetectorNOS(Cpu170Context *ctx);   /* KRONOS2.1 - NOS 2.8.7 */
+bool idleDetectorNOSBE(Cpu170Context *ctx); /* NOS/BE (only tested with TUB) */
+void idleThrottle(Cpu170Context *ctx);
 
 #endif /* PROTO_H */
 /*---------------------------  End Of File  ------------------------------*/

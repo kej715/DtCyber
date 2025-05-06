@@ -29,7 +29,7 @@ INCL    = -I/opt/X11/include
 EXTRACFLAGS = -Wno-switch -Wno-format-security
 
 CFLAGS  = -O3 -std=gnu99 $(INCL) $(EXTRACFLAGS)
-#CFLAGS  = -O0 -g -std=gnu99 $(INCL) $(EXTRACFLAGS)
+CFLAGS  = -O0 -g -std=gnu99 $(INCL) $(EXTRACFLAGS)
 
 HDRS    =   const.h                 \
             cyber_channel_linux.h   \
@@ -44,6 +44,7 @@ OBJS    =   cdcnet.o                \
             console.o               \
             cp3446.o                \
             cpu.o                   \
+            cpu180.o                \
             cr3447.o                \
             cr405.o                 \
             cray_station.o          \

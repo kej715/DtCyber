@@ -41,198 +41,31 @@
 #include "proto.h"
 
 /*
- *
- **        MAINTENANCE REGISTER EQUIVALENCES.                            COMSIOU    20
- **                                                                      NS2149      1
- *         CONNECT CODES.                                                NS2149      2
- *                                                                       NS2149      3
- * IOUC     EQU    0S8         IOU CONNECT CODE                          NS2149      4
- * CMCC     EQU    1S8         MEMORY CONNECT CODE                       NS2149      5
- * CPCC     EQU    2S8         PROCESSOR CONNECT CODE                    NS2149      6
- *                                                                       COMSIOU    22
- *         FUNCTIONS.                                                    COMSIOU    23
- *                                                                       COMSIOU    24
- * MRHP     EQU    0#00        HALT PROCESSOR                            COMSIOU    25
- * MRSP     EQU    0#10        START PROCESSOR                           COMSIOU    26
- * MRRD     EQU    0#40        READ REGISTER                             COMSIOU    27
- * MRWT     EQU    0#50        WRITE REGISTER                            COMSIOU    28
- * MRMC     EQU    0#60        MASTER CLEAR                              COMSIOU    29
- * MRCE     EQU    0#70        CLEAR FAULT STATUS REGISTER               COMSIOU    30
- * MREC     EQU    0#80        ECHO DATA                                 COMSIOU    31
- * MRSS     EQU    0#C0        REQUEST SUMMARY STATUS                    COMSIOU    32
- * MRDC     EQU    0#AE0       DEACTIVATE MAINTENANCE CHANNEL CONTROL    COMSIOU    33
- *                                                                       COMSIOU    34
- *         MODEL INDEPENDENT REGISTER NUMBERS.                           COMSIOU    35
- *                                                                       COMSIOU    36
- * SSMR     EQU    0#00        STATUS SUMMARY                            COMSIOU    37
- * EIMR     EQU    0#10        ELEMENT ID                                COMSIOU    38
- * OIMR     EQU    0#12        OPTIONS INSTALLED                         COMSIOU    39
- * ECMR     EQU    0#20        ENVIRONMENT CONTROL                       COMSIOU    40
- * DEMR     EQU    0#30        DEPENDENT ENVIRONMENT CONTROL             COMSIOU    41
- *                                                                       COMSIOU    42
- *         IOU REGISTERS.                                                COMSIOU    43
- *                                                                       COMSIOU    44
- * IFSM     EQU    0#18        FAULT STATUS MASK                         COMSIOU    45
- * IOSB     EQU    0#21        OS BOUNDS                                 COMSIOU    46
- * ISTR     EQU    0#40        STATUS REGISTER                           COMSIOU    47
- * IFS1     EQU    0#80        FAULT STATUS 1                            COMSIOU    48
- * IFS2     EQU    0#81        FAULT STATUS 2                            COMSIOU    49
- * ITMR     EQU    0#A0        TEST MODE REGISTER                        COMSIOU    50
- * OICR     EQU    0#16        CIO OPTIONS INSTALLED                     242L642     1
- * ECCR     EQU    0#34        CIO ENVIRONMENT CONTROL                   242L642     2
- * SRCR     EQU    0#44        CIO STATUS REGISTER                       242L642     3
- * F1CR     EQU    0#84        CIO FAULT STATUS 1                        242L642     4
- * F2CR     EQU    0#85        CIO FAULT STATUS 2                        242L642     5
- * TMCR     EQU    0#A4        CIO TEST MODE                             242L642     6
- * FMCR     EQU    0#1C        CIO FAULT STATUS MASK                     242L642     7
- * OBCR     EQU    0#25        CIO O S BOUNDS                            242L642     8
- * C0CR     EQU    0#B0        CIO CHANNEL 0 STATUS                      242L642     9
- * C1CR     EQU    0#B1        CIO CHANNEL 1 STATUS                      242L642    10
- * C2CR     EQU    0#B2        CIO CHANNEL 2 STATUS                      242L642    11
- * C3CR     EQU    0#B3        CIO CHANNEL 3 STATUS                      242L642    12
- * C4CR     EQU    0#B4        CIO CHANNEL 4 STATUS                      242L642    13
- * C5CR     EQU    0#B5        CIO CHANNEL 5 STATUS                      242L642    14
- * C6CR     EQU    0#B6        CIO CHANNEL 6 STATUS                      242L642    15
- * C7CR     EQU    0#B7        CIO CHANNEL 7 STATUS                      242L642    16
- * C8CR     EQU    0#B8        CIO CHANNEL 10 STATUS                     242L642    17
- * C9CR     EQU    0#B9        CIO CHANNEL 11 STATUS                     242L642    18
- *                                                                       COMSIOU    51
- *         MEMORY REGISTERS.                                             COMSIOU    52
- *                                                                       COMSIOU    53
- * MBRG     EQU    0#21        BOUNDS REGISTER                           COMSIOU    54
- * MCEL     EQU    0#A0        CORRECTED ERROR LOG                       COMSIOU    55
- * MUL1     EQU    0#A4        UNCORRECTED ERROR LOG 1                   COMSIOU    56
- * MUL2     EQU    0#A8        UNCORRECTED ERROR LOG 2                   COMSIOU    57
- * MFRC     EQU    0#B0        FREE RUNNING COUNTER                      COMSIOU    58
- *                                                                       COMSIOU    59
- *         PROCESSOR REGISTERS.                                          COMSIOU    60
- *                                                                       COMSIOU    61
- * PPID     EQU    0#11        PROCESSOR ID                              COMSIOU    62
- * PVCM     EQU    0#13        VIRTUAL MACHINE CAPABILITY LIST           COMSIOU    63
- * PMF1     EQU    0#21        PROCESSOR MONITORING FACILITY 1           COMSIOU    64
- * PMF2     EQU    0#22        PROCESSOR MINITORING FACILITY 2           COMSIOU    65
- * PCSA     EQU    0#31        CONTROL STORE ADDRESS                     COMSIOU    66
- * PCSB     EQU    0#32        CONTROL STORE BREAKPOINT                  COMSIOU    67
- * PPRG     EQU    0#40        PROGRAM ADDRESS REGISTER                  COMSIOU    68
- * PMPS     EQU    0#41        MONITOR PROCESS STATE REGISTER            COMSIOU    69
- * PMCR     EQU    0#42        MONITOR STATE CONTROL REGISTER            COMSIOU    70
- * PUCR     EQU    0#43        USER STATE CONTROL REGISTER               COMSIOU    71
- * PUPR     EQU    0#44        UNTRANSLATABLE POINTER                    COMSIOU    72
- * PSTL     EQU    0#45        SEGMENT TABLE LENGTH                      COMSIOU    73
- * PSTA     EQU    0#46        SEGMENT TABLE ADDRESS                     COMSIOU    74
- * PBCR     EQU    0#47        BASE ADDRESS REGISTER                     COMSIOU    75
- * PPTA     EQU    0#48        PAGE TABLE ADDRESS                        COMSIOU    76
- * PPTL     EQU    0#49        PAGE TABLE LENGTH                         COMSIOU    77
- * PPSM     EQU    0#4A        PAGE SIZE MASK                            COMSIOU    78
- * PMDF     EQU    0#50        MODEL DEPENDENT FLAGS                     COMSIOU    79
- * PMDW     EQU    0#51        MODEL DEPENDENT WORD                      COMSIOU    80
- * PMMR     EQU    0#60        MONITOR MASK                              COMSIOU    81
- * PJPS     EQU    0#61        JOB PROCESS STATE REGISTER                COMSIOU    82
- * PSIT     EQU    0#62        SYSTEM INTERVAL TIMER                     COMSIOU    83
- * PPFS     EQU    0#80        PROCESSOR FAULT STATUS                    COMSIOU    84
- * PCSP     EQU    0#81        CONTROL MEMORY PARITY                     COMSIOU    85
- * PRCL     EQU    0#90        RETRY CORRECTED ERROR LOG                 NS2125      1
- * PUCS     EQU    0#91        CONTROL STORE ERROR LOG                   V22L602     1
- * PCCL     EQU    0#92        CACHE CORRECTED ERROR LOG                 COMSIOU    87
- * PMCL     EQU    0#93        MAP CORRECTED ERROR LOG                   COMSIOU    88
- * PPTM     EQU    0#A0        TEST MODE                                 COMSIOU    89
- * PTPE     EQU    0#C0        TRAP ENABLES                              COMSIOU    90
- * PTRP     EQU    0#C4        TRAP POINTER                              COMSIOU    91
- * PDLP     EQU    0#C5        DEBUG LIST POINTER                        COMSIOU    92
- * PKPM     EQU    0#C6        KEYPOINT HASH                             COMSIOU    93
- * PKPC     EQU    0#C7        KEYPOINT CODE                             COMSIOU    94
- * PKCN     EQU    0#C8        KEYPOINT CLASS NUMBER                     COMSIOU    95
- * PPIT     EQU    0#C9        PROCESSOR INTERVAL TIMER                  COMSIOU    96
- * PCCF     EQU    0#E0        CRITICAL FRAME FLAG                       COMSIOU    97
- * POCF     EQU    0#E2        ON CONDITION FLAG                         COMSIOU    98
- * PDBI     EQU    0#E4        DEBUG INDEX                               COMSIOU    99
- * PDBM     EQU    0#E5        DEBUG MASK                                COMSIOU   100
- * PUSM     EQU    0#E6        USER MASK                                 COMSIOU   101
- * PRDM     EQU    0#FF        REGISTER FILE DUMP ADDRESS                COMSIOU   102
- *                                                                       COMSIOU   103
- *         STATUS SUMMARY BITS.                                          COMSIOU   104
- *                                                                       COMSIOU   105
- * SSLW     EQU    0           LONG WARNING (IOU, MEM, PROC)             COMSIOU   106
- * SSCE     EQU    1           CORRECTED ERROR (MEM, PROC)               COMSIOU   107
- * SSUE     EQU    2           UNCORRECTED ERROR (IOU, MEM, PROC)        COMSIOU   108
- * SSPH     EQU    3           PROCESSOR HALT (IOU, PROC)                COMSIOU   109
- * SSSW     EQU    4           SHORT WARNING (PROCESSOR)                 COMSIOU   110
- * SSSS     EQU    4           STATUS SUMMARY (IOU)                      COMSIOU   111
- * SSMM     EQU    5           EXECUTIVE MONITOR MODE (PROCESSOR)        COMSIOU   112
- *                                                                       COMSIOU   113
- *                                                                       COMSIOU   114
- *         PMF HARDWARE BYTE DEFINITIONS.                                COMSIOU   115
- *                                                                       COMSIOU   116
- * PMSB     EQU    0           STATUS BYTE                               COMSIOU   117
- * PMCB     EQU    1           CONTROL BYTE                              COMSIOU   118
- * PMKC     EQU    2           KEYPOINT CONTROL                          COMSIOU   119
- * PMCO     EQU    3           COUNTER OVERFLOW CONTROL                  COMSIOU   120
- * PMIA     EQU    4           INSTRUCTION ARGUMENT                      COMSIOU   121
- * PMIM     EQU    5           INSTRUCTION MASK                          COMSIOU   122
- * PA0S     EQU    8D          SELECT A0 COUNTER                         COMSIOU   123
- * PB0S     EQU    9D          SELECT B0 COUNTER                         COMSIOU   124
- * PA1S     EQU    10D         SELECT A1 COUNTER                         COMSIOU   125
- * PB1S     EQU    11D         SELECT B1 COUNTER                         COMSIOU   126
- * PA2S     EQU    12D         SELECT A2 COUNTER                         COMSIOU   127
- * PB2S     EQU    13D         SELECT B2 COUNTER                         COMSIOU   128
- * PA3S     EQU    14D         SELECT A3 COUNTER                         COMSIOU   129
- * PB3S     EQU    15D         SELECT B3 COUNTER                         COMSIOU   130
- * PA0C     EQU    16D - 19D   A0 COUNTER                                COMSIOU   131
- * PB0C     EQU    20D - 23D   B0 COUNTER                                COMSIOU   132
- * PA1C     EQU    24D - 27D   A1 COUNTER                                COMSIOU   133
- * PB1C     EQU    28D - 31D   B1 COUNTER                                COMSIOU   134
- * PA2C     EQU    32D - 35D   A2 COUNTER                                COMSIOU   135
- * PB2C     EQU    36D - 39D   B2 COUNTER                                COMSIOU   136
- * PA3C     EQU    40D - 43D   A3 COUNTER                                COMSIOU   137
- * PB3C     EQU    44D - 47D   B3 COUNTER                                COMSIOU   138
- *                                                                       COMSIOU   139
- */
-
-/*
 **  -----------------
 **  Private Constants
 **  -----------------
 */
 
 /*
-**  Unit numbers in connect codes
+**  Shift counts for Conn, Op, and Type fields
+**  of function codes
 */
-#define UnitIou                    0
-#define UnitMem                    1
-#define UnitCp0                    2
-#define UnitCp1                    3
-
-/*
-**  Connect codes.
-*/
-#define FcConnIou                  0x000
-#define FcConnMemory               0x100
-#define FcConnCp0                  0x200
-#define FcConnCp1                  0x300
-#define FcConnIdleLow              0x800
-#define FcConnIdleHigh             0xF00
-
-#define FcConnMask                 0xF00
+#define FcConnShift                8
+#define FcOpShift                  4
+#define FcTypeShift                0
 
 /*
 **  Function codes.
 */
-#define FcOpHalt                   0x000
-#define FcOpStart                  0x010
-#define FcOpClearLed               0x030
-#define FcOpRead                   0x040
-#define FcOpWrite                  0x050
-#define FcOpMasterClear            0x060
-#define FcOpClearErrors            0x070
-#define FcOpEchoData               0x080
-#define FcOpStatusSummary          0x0C0
-
-#define FcOpMask                   0x0F0
-
-/*
-**  Type bits.
-*/
-#define FcTypeMask                 0x00F
+#define FcOpHalt                   0x00
+#define FcOpStart                  0x01
+#define FcOpClearLed               0x03
+#define FcOpRead                   0x04
+#define FcOpWrite                  0x05
+#define FcOpMasterClear            0x06
+#define FcOpClearErrors            0x07
+#define FcOpEchoData               0x08
+#define FcOpStatusSummary          0x0C
 
 /*
 **  IOU Register addresses.
@@ -276,8 +109,20 @@
 */
 #define RegProcStatusSummary       0x00
 #define RegProcElementId           0x10
+#define RegProcProcessorId         0x11
 #define RegProcOptionsInstalled    0x12
-#define RegProcDEC                 0x30
+#define RegProcVmCapabilityList    0x13
+#define RegProcDepEnvControl       0x30
+#define RegProcCtrlStoreAddr       0x31
+#define RegProcCtrlStoreBreak      0x32
+#define RegProcMonitorProcState    0x41
+#define RegProcProcessIntTimer     0x44
+#define RegProcPageTableAddr       0x48
+#define RegProcPageTableLen        0x49
+#define RegProcPageSizeMask        0x4A
+#define RegProcModelDepWord        0x51
+#define RegProcJobProcessState     0x61
+#define RegProcSystemIntTimer      0x62
 #define RegProcFaultStatus0        0x80
 #define RegProcFaultStatus1        0x81
 #define RegProcFaultStatus2        0x82
@@ -319,12 +164,38 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
+static char *mchCw2String(u8 connCode, u8 typeCode, PpWord location);
+static char *mchFn2String(u8 connCode, u8 opCode, u8 typeCode);
 static FcStatus mchFunc(PpWord funcCode);
+static Cpu180Context *mchGetCpContext(u8 connCode);
+static u64  mchGetRegister(u8 reg);
 static void mchIo(void);
 static void mchActivate(void);
 static void mchDisconnect(void);
-static char *mchConn2String(PpWord connCode);
-static char *mchOp2String(PpWord opCode);
+static bool mchIsConnected(u8 connCode);
+static bool mchIsCp(u8 connCode, u8 typeCode);
+static char *mchOp2String(u8 opCode);
+static void mchSetRegister(u8 reg, u64 word);
+
+static u64  mch860CmGetter(u8 reg);
+static u8   mch860CmReader(void);
+static void mch860CmSetter(u8 reg, u64 word);
+static void mch860CmWriter(u8 byte);
+static u64  mch860CpGetter(u8 reg);
+static u8   mch860CpReader(void);
+static void mch860CpSetter(u8 reg, u64 word);
+static void mch860CpWriter(u8 byte);
+static u8   mch860CsReader(void);
+static void mch860CsWriter(u8 byte);
+static void mch860Init(u64 iouOptions, u64 memSizeMask);
+static u64  mch860IouGetter(u8 reg);
+static u8   mch860IouReader(void);
+static void mch860IouSetter(u8 reg, u64 word);
+static void mch860IouWriter(u8 byte);
+static u8   mch860RfReader(void);
+static void mch860RfWriter(u8 byte);
+static u8   mch860SmReader(void);
+static void mch860SmWriter(u8 byte);
 
 /*
 **  ----------------
@@ -337,12 +208,54 @@ static char *mchOp2String(PpWord opCode);
 **  Private Variables
 **  -----------------
 */
+static u64  *mchCmRegisters;
+static u8   *mchControlStores[2];
+static int  mchControlStoreIndices[2];
+static u64  *mchCpRegisterGroups[2];
+static u64  *mchIouRegisters;
+static u64  *mchRegisterFiles[2];
+static int  mchRegisterFileIndices[2];
+static u8   **mchSoftMemoryGroups[2];
+static int  mchSoftMemoryIndices[2][7];
+
+static u8   mchConnCode;
 static u8   mchLocation;
-static bool mchAddressReady;
-static u64  *mchRegisters = NULL;
+static bool mchLocationReady;
+static u64  mchRegisterWord;
+static u8   mchTypeCode;
+
+static u64  mchTimeout = 0;
+
+//
+//  Bit masks identifying PP's in IOU OS Bounds and fault registers
+//
+static u64  mchPpMasks[20] =
+    {
+    0x01000000, // PP00
+    0x02000000, // PP01
+    0x04000000, // PP02
+    0x08000000, // PP03
+    0x10000000, // PP04
+    0x00010000, // PP05
+    0x00020000, // PP06
+    0x00040000, // PP07
+    0x00080000, // PP10
+    0x00100000, // PP11
+    0x00000100, // PP20
+    0x00000200, // PP21
+    0x00000400, // PP22
+    0x00000800, // PP23
+    0x00001000, // PP24
+    0x00000001, // PP25
+    0x00000002, // PP26
+    0x00000004, // PP27
+    0x00000008, // PP30
+    0x00000010  // PP31
+    };
 
 #if DEBUG
-static FILE *mchLog = NULL;
+static FILE *mchLog    = NULL;
+static int  mchBytesIo = 0;
 #endif
 
 /*
@@ -352,6 +265,116 @@ static FILE *mchLog = NULL;
  **
  **--------------------------------------------------------------------------
  */
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Check whether a maintenance channel timeout has occurred.
+**
+**                  When a timeout occurs, the channel is set inactive and
+**                  empty. Normally, a timeout is established only when a
+**                  maintenance channel function has been declined, and this
+**                  occurs only when a connection code provided in a function
+**                  request is not supported by the machine.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void mchCheckTimeout()
+    {
+    if (mchTimeout != 0 && mchTimeout < getMilliseconds())
+        {
+        mchTimeout = 0;
+        if (channel[ChMaintenance].full && channel[ChMaintenance].active && channel[ChMaintenance].ioDevice == NULL)
+            {
+            channel[ChMaintenance].full   = FALSE;
+            channel[ChMaintenance].active = FALSE;
+#if DEBUG
+            fprintf(mchLog, "\n%12d PP:%02o CH:%02o Timeout",
+                    traceSequenceNo,
+                    activePpu->id,
+                    activeDevice->channel->id);
+            fflush(mchLog);
+#endif
+            }
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Get a value from a CP maintenance register
+**
+**  Parameters:     Name        Description.
+**                  ctx         CP context
+**                  reg         the register address
+**
+**  Returns:        64-bit value.
+**
+**------------------------------------------------------------------------*/
+u64 mchGetCpRegister(Cpu180Context *ctx, u8 reg)
+    {
+    u64 byte;
+
+    switch (reg)
+        {
+    case RegProcStatusSummary:
+        byte = mchCpRegisterGroups[ctx->id][0] & 0xff;
+        if (ctx->isStopped)
+            {
+            byte |= 0x08;
+            }
+        if (ctx->isMonitorMode)
+            {
+            byte |= 0x20;
+            }
+        return (byte << 56) | (byte << 48) | (byte << 40) | (byte << 32)
+             | (byte << 24) | (byte << 16) | (byte <<  8) | byte;
+    case RegProcCtrlStoreAddr:
+        return mchControlStoreIndices[ctx->id] >> 4; // 16 bytes per control store address
+    case RegProcJobProcessState:
+        return ctx->regJps;
+    case RegProcMonitorProcState:
+        return ctx->regMps;
+    case RegProcPageTableAddr:
+        return ctx->regPta;
+    case RegProcPageTableLen:
+        return ctx->regPtl;
+    case RegProcPageSizeMask:
+        return ctx->regPsm;
+    case RegProcProcessIntTimer:
+        return ctx->regPit;
+    case RegProcSystemIntTimer:
+        return ctx->regSit;
+    case RegProcVmCapabilityList:
+        return ctx->regVmcl;
+    case RegProcModelDepWord:
+        return ctx->regMdw;
+    case RegProcDepEnvControl:
+    default:
+        break;
+    //  Trap Enables addresses
+    case 0xc0:
+    case 0xc1:
+    case 0xc2:
+    case 0xc3:
+        return ctx->regFlags & Mask2;
+    //  Keypoint Enable addresses
+    case 0xca:
+    case 0xcb:
+        return (ctx->regFlags >> 13) & 1;
+        break;
+    //  Critical Frame Flag addresses
+    case 0xe0:
+    case 0xe1:
+        return (ctx->regFlags >> 15) & 1;
+    //  On Condition Flag addresses
+    case 0xe2:
+    case 0xe3:
+        return (ctx->regFlags >> 14) & 1;
+        }
+
+    return mchCpRegisterGroups[ctx->id][reg];
+    }
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise maintenance channel.
 **
@@ -366,9 +389,10 @@ static FILE *mchLog = NULL;
 **------------------------------------------------------------------------*/
 void mchInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
+    u64     channelMask;
     DevSlot *dp;
+    u64     iouOptionsInstalled;
     u64     memSizeMask;
-    u64     *rp;
 
 #if DEBUG
     if (mchLog == NULL)
@@ -383,101 +407,97 @@ void mchInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     dp->func       = mchFunc;
     dp->io         = mchIo;
 
-    mchRegisters = (u64 *)calloc(8 * 256, 8);
+    channelMask = 0x000000FFAF000000; // channels 00 - 17
+    if (channelCount > 16)
+        {
+        channelMask |= 0x0000000000FF0F00;
+        }
+
+    switch ((cpuMaxMemory * 8) / OneMegabyte)
+        {
+    case 1:
+        memSizeMask = 0x8000;
+        break;
+    case 2:
+        memSizeMask = 0x4000;
+        break;
+    case 3:
+        memSizeMask = 0x2000;
+        break;
+    case 4:
+        memSizeMask = 0x1000;
+        break;
+    case 5:
+        memSizeMask = 0x0800;
+        break;
+    case 6:
+        memSizeMask = 0x0400;
+        break;
+    case 7:
+        memSizeMask = 0x0200;
+        break;
+    case 8:
+        memSizeMask = 0x0100;
+        break;
+    case 10:
+        memSizeMask = 0x0080;
+        break;
+    case 12:
+        memSizeMask = 0x0040;
+        break;
+    case 14:
+        memSizeMask = 0x0020;
+        break;
+    case 16:
+        memSizeMask = 0x0010;
+        break;
+    case 2048:
+        memSizeMask = 0x8008;
+        break;
+    case 1024:
+        memSizeMask = 0x4008;
+        break;
+    case 512:
+        memSizeMask = 0x2008;
+        break;
+    case 256:
+        memSizeMask = 0x1008;
+        break;
+    case 128:
+        memSizeMask = 0x0808;
+        break;
+    case 64:
+        memSizeMask = 0x0408;
+        break;
+    case 32:
+        memSizeMask = 0x0208;
+        break;
+    default:
+        logDtError(LogErrorLocation, "Unsupported memory size: %ld", cpuMaxMemory * 8);
+        exit(1);
+        }
+    memSizeMask <<= 48;
+
+    iouOptionsInstalled  = channelMask;
+    iouOptionsInstalled |= (u64)0x03 << 40;     // PP's 00 - 11
+    if (ppuCount > 10)
+        {
+        iouOptionsInstalled |= (u64)0x0C << 40; // PP's 20 - 31
+        }
+    if (tpMuxEnabled)
+        {
+        iouOptionsInstalled |= 2;
+        }
+    if (cc545Enabled)
+        {
+        iouOptionsInstalled |= 1;
+        }
+    iouOptionsInstalled |= 0x04; // radial interfaces 1,2
 
     switch (modelType)
         {
     case ModelCyber860:
-        rp                  = mchRegisters + (UnitIou * 256);
-        rp[RegIouElementId] = 0x0000000002201234;
-        if (ppuCount == 20)
-            {
-            rp[RegIouOptionsInstalled] = 0x00000FFFAFFF0F1C;
-            }
-        else
-            {
-            rp[RegIouOptionsInstalled] = 0x000003FFAF00001C;
-            }
-        if (tpMuxEnabled) rp[RegIouOptionsInstalled] |= 2;
-        if (cc545Enabled) rp[RegIouOptionsInstalled] |= 1;
-
-        rp                  = mchRegisters + (UnitMem * 256);
-        rp[RegMemElementId] = 0x0000000001311234;
-        switch ((cpuMaxMemory * 8) / OneMegabyte)
-            {
-        case 1:
-            memSizeMask = 0x8000;
-            break;
-        case 2:
-            memSizeMask = 0x4000;
-            break;
-        case 3:
-            memSizeMask = 0x2000;
-            break;
-        case 4:
-            memSizeMask = 0x1000;
-            break;
-        case 5:
-            memSizeMask = 0x0800;
-            break;
-        case 6:
-            memSizeMask = 0x0400;
-            break;
-        case 7:
-            memSizeMask = 0x0200;
-            break;
-        case 8:
-            memSizeMask = 0x0100;
-            break;
-        case 10:
-            memSizeMask = 0x0080;
-            break;
-        case 12:
-            memSizeMask = 0x0040;
-            break;
-        case 14:
-            memSizeMask = 0x0020;
-            break;
-        case 16:
-            memSizeMask = 0x0010;
-            break;
-        case 2048:
-            memSizeMask = 0x8008;
-            break;
-        case 1024:
-            memSizeMask = 0x4008;
-            break;
-        case 512:
-            memSizeMask = 0x2008;
-            break;
-        case 256:
-            memSizeMask = 0x1008;
-            break;
-        case 128:
-            memSizeMask = 0x0808;
-            break;
-        case 64:
-            memSizeMask = 0x0408;
-            break;
-        case 32:
-            memSizeMask = 0x0208;
-            break;
-        default:
-            logDtError(LogErrorLocation, "Unsupported memory size: %ld", cpuMaxMemory * 8);
-            exit(1);
-            }
-        rp[RegMemOptionsInstalled]  = memSizeMask << 48;
-
-        rp                          = mchRegisters + (UnitCp0 * 256);
-        rp[RegProcElementId]        = 0x0000000000321234;
-        rp[RegProcOptionsInstalled] = 0x0000000000000000;
-
-        if (cpuCount > 1)
-            {
-            rp                          = mchRegisters + (UnitCp1 * 256);
-            rp[RegProcElementId]        = 0x0000000000321234;
-            rp[RegProcOptionsInstalled] = 0x0000000000000000;
-            }
+        mch860Init(iouOptionsInstalled, memSizeMask);
         break;
     default:
         logDtError(LogErrorLocation, "Unsupported machine model: %d", modelType);
@@ -491,6 +511,218 @@ void mchInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Set CP maintenance register to a value
+**
+**  Parameters:     Name        Description.
+**                  ctx         CP context
+**                  reg         the register address
+**                  word        the 64-bit value to set
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void mchSetCpRegister(Cpu180Context *ctx, u8 reg, u64 word)
+    {
+    switch (reg)
+        {
+    case RegProcCtrlStoreAddr:
+        mchControlStoreIndices[ctx->id] = word << 4; // 16 bytes per control store address
+        break;
+    case RegProcJobProcessState:
+        ctx->regJps = word & Mask32;
+        break;
+    case RegProcMonitorProcState:
+        ctx->regMps = word & Mask32;
+        break;
+    case RegProcPageTableAddr:
+        ctx->regPta = word & Mask32;
+        break;
+    case RegProcPageTableLen:
+        ctx->regPtl = word & Mask8;
+        cpu180UpdatePageSize(ctx);
+        break;
+    case RegProcPageSizeMask:
+        ctx->regPsm = word & Mask7;
+        cpu180UpdatePageSize(ctx);
+        break;
+    case RegProcVmCapabilityList:
+        ctx->regVmcl = word & Mask16;
+        break;
+    case RegProcProcessIntTimer:
+        ctx->regPit = word & Mask32;
+        break;
+    case RegProcSystemIntTimer:
+        ctx->regSit = word & Mask32;
+        break;
+    case RegProcModelDepWord:
+        ctx->regMdw = word;
+        break;
+    case RegProcStatusSummary:
+        ctx->isStopped     = (word & 0x08) != 0;
+        ctx->isMonitorMode = (word & 0x20) != 0;
+    case RegProcDepEnvControl:
+    default:
+        mchCpRegisterGroups[ctx->id][reg] = word;
+        break;
+    //  Trap Enables addresses
+    case 0xc0:
+    case 0xc1:
+    case 0xc2:
+    case 0xc3:
+        ctx->regFlags = (ctx->regFlags & 0xffc0) | (word & Mask2);
+        break;
+    //  Keypoint Enable addresses
+    case 0xca:
+    case 0xcb:
+        ctx->regFlags = (ctx->regFlags & 0xdfff) | ((word & 1) << 13);
+        break;
+    //  Critical Frame Flag addresses
+    case 0xe0:
+    case 0xe1:
+        ctx->regFlags = (ctx->regFlags & 0x7fff) | ((word & 1) << 15);
+        break;
+    //  On Condition Flag addresses
+    case 0xe2:
+    case 0xe3:
+        ctx->regFlags = (ctx->regFlags & 0xbfff) | ((word & 1) << 14);
+        break;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Set OS bounds fault flag in IOU FS1 register.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void mchSetOsBoundsFault(PpSlot *pp)
+    {
+#if DEBUG
+    fprintf(mchLog, "\n%12d PP:%02o OS bounds fault",
+            traceSequenceNo,
+            pp->id);
+    fflush(mchLog);
+#endif
+    mchIouRegisters[RegIouFaultStatus1] |= (mchPpMasks[pp->id] << 32) | 0x040000;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Handle channel activation.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void mchActivate(void)
+    {
+#if DEBUG
+    fprintf(mchLog, "\n%12d PP:%02o CH:%02o Activate",
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id);
+    fflush(mchLog);
+    mchBytesIo = 0;
+#endif
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Handle disconnecting of channel.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void mchDisconnect(void)
+    {
+    Cpu180Context *ctx;
+
+#if DEBUG
+    fprintf(mchLog, "\n%12d PP:%02o CH:%02o Disconnect",
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id);
+    fflush(mchLog);
+#endif
+    switch ((activeDevice->fcode >> FcOpShift) & Mask4)
+        {
+    case FcOpRead:
+    case FcOpWrite:
+        if (mchLocationReady == FALSE)
+            {
+            mchLocationReady           = TRUE;
+            mchConnCode                = (activeDevice->fcode >> FcConnShift) & Mask4;
+            mchTypeCode                = (activeDevice->fcode >> FcTypeShift) & Mask4;
+            activeDevice->recordLength = 8;
+            if (mchIsCp(mchConnCode, mchTypeCode))
+                {
+                switch (mchTypeCode)
+                    {
+                case 3:
+                case 4:
+                case 5:
+                case 6:
+                    ctx = mchGetCpContext(mchConnCode);
+                    mchSoftMemoryIndices[ctx->id][mchTypeCode] = mchLocation << 2; // 4 bytes per memory address
+                    break;
+                case 7:
+                    ctx = mchGetCpContext(mchConnCode);
+                    mchRegisterFileIndices[ctx->id] = mchLocation << 3;            // 8 bytes per register file address
+                    break;
+                default:
+                    break;
+                    }
+                }
+            }
+    default:
+        break;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Get a word from a maintenance register of the currently
+**                  selected unit
+**
+**  Parameters:     Name        Description.
+**                  reg         register address
+**
+**  Returns:        64-bit register value
+**
+**------------------------------------------------------------------------*/
+static u64 mchGetRegister(u8 reg)
+    {
+    switch (modelType)
+        {
+    case ModelCyber860:
+        switch (mchConnCode)
+            {
+        case 0:
+            return mch860IouGetter(reg);
+        case 1: // CP or CM
+        case 2:
+            switch (mchTypeCode)
+                {
+            case 0:
+                return mch860CpGetter(reg);
+            case 0x0a:
+                return mch860CmGetter(reg);
+            default:
+                break;
+                }
+        default:
+            break;
+            }
+    default:
+        break;
+        }
+
+    return 0;
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Execute function code on maintenance channel.
 **
 **  Parameters:     Name        Description.
@@ -501,32 +733,54 @@ void mchInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 static FcStatus mchFunc(PpWord funcCode)
     {
-    PpWord connCode;
-    PpWord opCode;
-    PpWord typeCode;
+    u64           csAddr;
+    Cpu180Context *ctx;
+    u8            opCode;
+    u64           word;
 
-    connCode = (funcCode & FcConnMask) >> 8;
-    opCode   = funcCode & FcOpMask;
-    typeCode = funcCode & FcTypeMask;
-
-#if DEBUG
-    fprintf(mchLog, "\n(maintenance_channel) %08d PP:%02o CH:%02o f:0x%03X C:%s O:%-14s T:%X",
-            traceSequenceNo,
-            activePpu->id,
-            activeDevice->channel->id,
-            funcCode,
-            mchConn2String(connCode),
-            mchOp2String(opCode),
-            typeCode);
-#endif
+    mchConnCode = (funcCode >> FcConnShift) & Mask4;
+    opCode      = (funcCode >> FcOpShift) & Mask4;
+    mchTypeCode = (funcCode >> FcTypeShift) & Mask4;
 
     /*
     **  Connect codes 0x800 - 0xF00 causes the MCH to be deselected.
     */
-    if (connCode >= 0x800)
+    if (mchConnCode >= 8)
         {
-        return (FcProcessed);
+#if DEBUG
+    fprintf(mchLog, "\n%12d PP:%02o CH:%02o f:0x%03X MCH deselect",
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id,
+            funcCode);
+#endif
+        activeDevice->fcode = funcCode;
+        mchTimeout = 0;
+        return FcProcessed;
         }
+
+#if DEBUG
+    fprintf(mchLog, "\n%12d PP:%02o CH:%02o f:0x%03X C:%X O:%X T:%X (%s)",
+            traceSequenceNo,
+            activePpu->id,
+            activeDevice->channel->id,
+            funcCode,
+            mchConnCode,
+            opCode,
+            mchTypeCode,
+            mchFn2String(mchConnCode, opCode, mchTypeCode));
+#endif
+
+    if (mchIsConnected(mchConnCode) == FALSE)
+        {
+#if DEBUG
+        fputs("  Declined", mchLog);
+#endif
+        mchTimeout = getMilliseconds() + 1;
+
+        return FcDeclined;
+        }
+    mchTimeout = 0;
 
     /*
     **  Process operation codes.
@@ -537,50 +791,85 @@ static FcStatus mchFunc(PpWord funcCode)
 #if DEBUG
         fputs(" : Operation not implemented & declined", mchLog);
 #endif
-
-        return (FcDeclined);
+        return FcDeclined;
 
     case FcOpHalt:
-        connCode >>= 4;
-        if (connCode == UnitCp0)
+        if (mchIsCp(mchConnCode, mchTypeCode))
             {
-            // TODO: halt CPU 0
+            word = mchGetRegister(RegProcStatusSummary) | 0x08;
+            mchSetRegister(RegProcStatusSummary, word);
             }
-        else if (connCode == UnitCp1)
-            {
-            // TODO: halt CPU 1
-            }
-        return (FcProcessed);
+        return FcProcessed;
 
     case FcOpStart:
-        connCode >>= 4;
-        if (connCode == UnitCp0)
+        if (mchIsCp(mchConnCode, mchTypeCode))
             {
-            // TODO: start CPU 0
+            //
+            //  With CIP L826 for 860/870:
+            //
+            //  - When the CP is started at control store address 0x700,
+            //    CIP is verifying control store and expects the CP to
+            //    halt at address 0x705.
+            //
+            //  - When the CP is started at control store address 0x381,
+            //    CIP has established the EI and is starting it.
+            //
+            word   = mchGetRegister(RegProcStatusSummary) & ~(u64)0x08;
+            csAddr = mchGetRegister(RegProcCtrlStoreAddr);
+            if (csAddr == 0x700)
+                {
+                word |= 0x08;  // Processor Halt
+                mchSetRegister(RegProcCtrlStoreAddr, 0x705);
+                }
+            else if (csAddr == 0x381)
+                {
+                // TODO: start EI
+                MonitorCondition mcr;
+                u32 rma;
+                ctx = mchGetCpContext(mchConnCode);
+                cpu180Load180Xp(ctx, ctx->regMps >> 3);
+                mchSetRegister(RegProcStatusSummary, word);
+                if (cpu180PvaToRma(ctx, cpMem[ctx->regMps >> 3] & Mask48, AccessModeExecute, &rma, &mcr))
+                    {
+                    fprintf(mchLog, "\nStart CPU at RMA %08x", rma);
+                    }
+                else
+                    {
+                    fprintf(mchLog, "\nFailed to translate PVA %012lx to RMA, MCR %04x", cpMem[ctx->regMps >> 3] & Mask48, mcr);
+                    }
+                mchSetRegister(RegProcStatusSummary, word);
+                }
+            else
+                {
+                word |= 0x08;  // Processor Halt
+                }
+            mchSetRegister(RegProcStatusSummary, word);
             }
-        else if (connCode == UnitCp1)
+        return FcProcessed;
+
+    case FcOpMasterClear:
+        if (mchIsCp(mchConnCode, mchTypeCode))
             {
-            // TODO: start CPU 1
+            mchSetRegister(RegProcStatusSummary, 0x28); // CYBER 180 monitor mode, Processor Halt
+            mchSetRegister(RegProcDepEnvControl, 0);
+//          mchSetRegister(RegProcCtrlStoreAddr, 0);
+//          mchSetRegister(RegProcCtrlStoreBreak, 0);
             }
-        return (FcProcessed);
+        return FcProcessed;
 
     case FcOpClearLed:
-    case FcOpMasterClear:
     case FcOpClearErrors:
         /*
         **  Do nothing.
         */
-        return (FcProcessed);
+        return FcProcessed;
 
     case FcOpRead:
     case FcOpWrite:
     case FcOpEchoData:
         mchLocation                = 0;
-        mchAddressReady            = FALSE;
+        mchLocationReady           = FALSE;
         activeDevice->recordLength = 2;
-#if DEBUG
-        fputs(" >", mchLog);
-#endif
         break;
 
     case FcOpStatusSummary:
@@ -590,7 +879,33 @@ static FcStatus mchFunc(PpWord funcCode)
 
     activeDevice->fcode = funcCode;
 
-    return (FcAccepted);
+    return FcAccepted;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Get the CPU context associated with a connect code.
+**
+**  Parameters:     Name        Description.
+**                  connCode    connect code
+**
+**  Returns:        Pointer to CPU context, or NULL if connect code does
+**                  not identify a configured CPU.
+**
+**------------------------------------------------------------------------*/
+static Cpu180Context *mchGetCpContext(u8 connCode)
+    {
+    if (mchConnCode == 1)
+        {
+        return &cpus180[0];
+        }
+    else if (cpuCount > 1 && mchConnCode == 2)
+        {
+        return &cpus180[1];
+        }
+    else
+        {
+        return NULL;
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -603,25 +918,37 @@ static FcStatus mchFunc(PpWord funcCode)
 **------------------------------------------------------------------------*/
 static void mchIo(void)
     {
-    PpWord connCode;
-    PpWord opCode;
-    PpWord typeCode;
-    u64    *dp;
-    u32    osBoundary;
-    u32    ppVector;
-    int    shiftCount;
+    u8 opCode;
 
-    connCode = (activeDevice->fcode & FcConnMask) >> 8;
-    opCode   = activeDevice->fcode & FcOpMask;
-    typeCode = activeDevice->fcode & FcTypeMask;
+    mchConnCode = (activeDevice->fcode >> FcConnShift) & Mask4;
+    opCode      = (activeDevice->fcode >> FcOpShift) & Mask4;
+    mchTypeCode = (activeDevice->fcode >> FcTypeShift) & Mask4;
+
+    if (mchConnCode >= 8)
+        {
+#if DEBUG
+        fprintf(mchLog, "\n%12d PP:%02o CH:%02o I/O while deselected",
+        traceSequenceNo,
+        activePpu->id,
+        activeDevice->channel->id);
+#endif
+        return;
+        }
 
     switch (opCode)
         {
     default:
+#if DEBUG
+        fprintf(mchLog, "\n%12d PP:%02o CH:%02o unrecognized op code: %X",
+        traceSequenceNo,
+        activePpu->id,
+        activeDevice->channel->id,
+        opCode);
+#endif
         break;
 
     case FcOpRead:
-        if (!mchAddressReady)
+        if (!mchLocationReady)
             {
             if (activeChannel->full)
                 {
@@ -629,10 +956,22 @@ static void mchIo(void)
                 activeDevice->recordLength -= 1;
                 mchLocation = (mchLocation << 8) | (activeChannel->data & Mask8);
 #if DEBUG
+                if (mchBytesIo < 1)
+                    {
+                    fprintf(mchLog, "\n%12d PP:%02o CH:%02o >",
+                    traceSequenceNo,
+                    activePpu->id,
+                    activeDevice->channel->id);
+                    }
                 fprintf(mchLog, " %02X", activeChannel->data);
                 if (activeDevice->recordLength == 0)
                     {
-                    fputs("\n <", mchLog);
+                    fprintf(mchLog, " (%s)", mchCw2String(mchConnCode, mchTypeCode, mchLocation));
+                    mchBytesIo = 0;
+                    }
+                else
+                    {
+                    mchBytesIo += 1;
                     }
 #endif
                 }
@@ -641,29 +980,61 @@ static void mchIo(void)
             {
             if (!activeChannel->full)
                 {
-                dp = mchRegisters + (connCode * 256);
-
-                if (activeDevice->recordLength > 0)
+                switch (modelType)
                     {
-                    if (connCode == UnitIou)
+                case ModelCyber860:
+                    switch (mchConnCode)
                         {
-                        shiftCount = 56 - ((8 - (activeDevice->recordLength - typeCode)) * 8);
-                        if (shiftCount < 0) shiftCount += 64;
+                    case 0:
+                        activeChannel->data = mch860IouReader();
+                        break;
+                    case 1: // CP or CM
+                        switch (mchTypeCode)
+                            {
+                        case 0:
+                            activeChannel->data = mch860CpReader();
+                            break;
+                        case 1:
+                            activeChannel->data = mch860CsReader();
+                            break;
+                        case 3:
+                        case 4:
+                        case 5:
+                        case 6:
+                            activeChannel->data = mch860SmReader();
+                            break;
+                        case 7:
+                            activeChannel->data = mch860RfReader();
+                            break;
+                        case 0x0A:
+                            activeChannel->data = mch860CmReader();
+                            break;
+                        default:
+                            activeChannel->data = 0;
+                            break;
+                            }
+                        break;
+                    default:
+                        activeChannel->data = 0;
+                        break;
                         }
-                    else
-                        {
-                        shiftCount = 56 - ((8 - activeDevice->recordLength) * 8);
-                        }
-                    activeChannel->data = (PpWord)((dp[mchLocation] >> shiftCount) & Mask8);
-                    activeDevice->recordLength -= 1;
-                    }
-                else
-                    {
+                    break;
+                default:
                     activeChannel->data = 0;
+                    break;
                     }
+
                 activeChannel->full = TRUE;
 #if DEBUG
+                if ((mchBytesIo & 0x1f) == 0)
+                    {
+                    fprintf(mchLog, "\n%12d PP:%02o CH:%02o <",
+                    traceSequenceNo,
+                    activePpu->id,
+                    activeDevice->channel->id);
+                    }
                 fprintf(mchLog, " %02X", activeChannel->data);
+                mchBytesIo += 1;
 #endif
                 }
             }
@@ -671,7 +1042,7 @@ static void mchIo(void)
         break;
 
     case FcOpWrite:
-        if (!mchAddressReady)
+        if (!mchLocationReady)
             {
             if (activeChannel->full)
                 {
@@ -679,10 +1050,22 @@ static void mchIo(void)
                 activeDevice->recordLength -= 1;
                 mchLocation = (mchLocation << 8) | (activeChannel->data & Mask8);
 #if DEBUG
+                if (mchBytesIo < 1)
+                    {
+                    fprintf(mchLog, "\n%12d PP:%02o CH:%02o >",
+                    traceSequenceNo,
+                    activePpu->id,
+                    activeDevice->channel->id);
+                    }
                 fprintf(mchLog, " %02X", activeChannel->data);
                 if (activeDevice->recordLength == 0)
                     {
-                    fputs("\n >", mchLog);
+                    fprintf(mchLog, " (%s)", mchCw2String(mchConnCode, mchTypeCode, mchLocation));
+                    mchBytesIo = 0;
+                    }
+                else
+                    {
+                    mchBytesIo += 1;
                     }
 #endif
                 }
@@ -691,104 +1074,56 @@ static void mchIo(void)
             {
             if (activeChannel->full)
                 {
-                dp = mchRegisters + (connCode * 256);
-
-                if (activeDevice->recordLength > 0)
+#if DEBUG
+                if ((mchBytesIo & 0x1f) == 0)
                     {
-                    shiftCount = 56 - ((8 - activeDevice->recordLength) * 8);
-                    dp[mchLocation] &= ~((u64)Mask8 << shiftCount);
-                    dp[mchLocation] |= ((u64)activeChannel->data & Mask8) << shiftCount;
-                    activeDevice->recordLength -= 1;
+                    fprintf(mchLog, "\n%12d PP:%02o CH:%02o >",
+                    traceSequenceNo,
+                    activePpu->id,
+                    activeDevice->channel->id);
                     }
-
-#if DEBUG
                 fprintf(mchLog, " %02X", activeChannel->data);
+                mchBytesIo += 1;
 #endif
-                if ((connCode == UnitIou) && (activeDevice->recordLength == 0))
+                switch (modelType)
                     {
-                    if (mchLocation == RegIouEnvControl)
+                case ModelCyber860:
+                    switch (mchConnCode)
                         {
-#if DEBUG
-                        fputs("\nWrite IOU EC register", mchLog);
-#endif
-                        ppuOsBoundsCheckEnabled = (dp[mchLocation] & 0x08) != 0;
-                        ppuStopEnabled          = (dp[mchLocation] & 0x01) != 0;
-#if DEBUG
-                        fprintf(mchLog, "\n  OS bounds check: %s", ppuOsBoundsCheckEnabled ? "enabled" : "disabled");
-                        fprintf(mchLog, "\n          PP stop: %s", ppuStopEnabled ? "enabled" : "disabled");
-#endif
-                        if ((dp[mchLocation] & 0x1000) != 0) // load PP
+                    case 0:
+                        mch860IouWriter(activeChannel->data);
+                        break;
+                    case 1: // CP or CM
+                        switch (mchTypeCode)
                             {
-                            u8 pi = (u8)(dp[mchLocation] >> 24) & Mask5;
-                            u8 ci = (u8)(dp[mchLocation] >> 16) & Mask5;
-
-                            ppu[pi].opD        = ci;
-                            channel[ci].active = TRUE;
-
-                            /*
-                            **  Set PP to INPUT (71) instruction.
-                            */
-                            ppu[pi].opF  = 071;
-                            ppu[pi].busy = TRUE;
-
-                            /*
-                            **  Clear P register and location zero of PP.
-                            */
-                            ppu[pi].regP   = 0;
-                            ppu[pi].mem[0] = 0;
-
-                            /*
-                            **  Set A register to an input word count of 10000.
-                            */
-                            ppu[pi].regA = 010000;
-#if DEBUG
-                            fprintf(mchLog, "\n  Deadstart PP%02o using channel %02o", pi, ci);
-#endif
+                        case 0:
+                            mch860CpWriter(activeChannel->data);
+                            break;
+                        case 1:
+                            mch860CsWriter(activeChannel->data);
+                            break;
+                        case 3:
+                        case 4:
+                        case 5:
+                        case 6:
+                            mch860SmWriter(activeChannel->data);
+                            break;
+                        case 7:
+                            mch860RfWriter(activeChannel->data);
+                            break;
+                        case 0x0A:
+                            mch860CmWriter(activeChannel->data);
+                            break;
+                        default:
+                            break;
                             }
+                        break;
+                    default:
+                        break;
                         }
-                    else if (mchLocation == RegIouOsBounds)
-                        {
-                        ppuOsBoundary = (u32)(dp[mchLocation] & Mask18) << 10;
-                        ppVector      = (u32)(dp[mchLocation] >> 32);
-                        ppu[0].isBelowOsBound = (ppVector & 0x01000000) != 0;
-                        ppu[1].isBelowOsBound = (ppVector & 0x02000000) != 0;
-                        ppu[2].isBelowOsBound = (ppVector & 0x04000000) != 0;
-                        ppu[3].isBelowOsBound = (ppVector & 0x08000000) != 0;
-                        ppu[4].isBelowOsBound = (ppVector & 0x10000000) != 0;
-                        ppu[5].isBelowOsBound = (ppVector & 0x00010000) != 0;
-                        ppu[6].isBelowOsBound = (ppVector & 0x00020000) != 0;
-                        ppu[7].isBelowOsBound = (ppVector & 0x00040000) != 0;
-                        ppu[8].isBelowOsBound = (ppVector & 0x00080000) != 0;
-                        ppu[9].isBelowOsBound = (ppVector & 0x00100000) != 0;
-                        if (ppuCount > 10)
-                            {
-                            ppu[10].isBelowOsBound = (ppVector & 0x00000100) != 0;
-                            ppu[11].isBelowOsBound = (ppVector & 0x00000200) != 0;
-                            ppu[12].isBelowOsBound = (ppVector & 0x00000400) != 0;
-                            ppu[13].isBelowOsBound = (ppVector & 0x00000800) != 0;
-                            ppu[14].isBelowOsBound = (ppVector & 0x00001000) != 0;
-                            ppu[15].isBelowOsBound = (ppVector & 0x00000001) != 0;
-                            ppu[16].isBelowOsBound = (ppVector & 0x00000002) != 0;
-                            ppu[17].isBelowOsBound = (ppVector & 0x00000004) != 0;
-                            ppu[18].isBelowOsBound = (ppVector & 0x00000008) != 0;
-                            ppu[19].isBelowOsBound = (ppVector & 0x00000010) != 0;
-                            }
-#if DEBUG
-                        fputs("\nWrite IOU OS register", mchLog);
-                        fprintf(mchLog, "\n  OS boundary: %010o", ppuOsBoundary);
-                        for (int i = 0; i < 10; i++)
-                            {
-                            fprintf(mchLog, "\n  PP%02o: %s", i, ppu[i].isBelowOsBound ? "below" : "above");
-                            }
-                        if (ppuCount > 10)
-                            {
-                            for (int i = 10; i < 20; i++)
-                                {
-                                fprintf(mchLog, "\n  PP%02o: %s", i + 20, ppu[i].isBelowOsBound ? "below" : "above");
-                                }
-                            }
-#endif
-                        }
+                    break;
+                default:
+                    break;
                     }
 
                 activeChannel->full = FALSE;
@@ -798,7 +1133,7 @@ static void mchIo(void)
         break;
 
     case FcOpEchoData:
-        if (!mchAddressReady)
+        if (!mchLocationReady)
             {
             if (activeChannel->full)
                 {
@@ -840,73 +1175,897 @@ static void mchIo(void)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Handle channel activation.
+**  Purpose:        Determine whether a connect code represents a unit
+**                  supported by this machine.
 **
 **  Parameters:     Name        Description.
+**                  connCode    connect code
 **
-**  Returns:        Nothing.
+**  Returns:        TRUE if connect code supported
 **
 **------------------------------------------------------------------------*/
-static void mchActivate(void)
+static bool mchIsConnected(u8 connCode)
     {
+    switch (modelType)
+        {
+    case ModelCyber860:
+        switch (connCode)
+            {
+        case 0:      // IOU
+        case 1:      // CP or CM
+            return TRUE;
+        case 2:
+            return cpuCount > 1;
+        default:
+            break;
+            }
+        break;
+    default:
+        break;
+        }
+
+    return FALSE;
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Handle disconnecting of channel.
+**  Purpose:        Determine whether a connect code and type code
+**                  combination represents a CPU
 **
 **  Parameters:     Name        Description.
+**                  connCode    connect code
+**                  typeCode    type code
+**
+**  Returns:        TRUE if CPU
+**
+**------------------------------------------------------------------------*/
+static bool mchIsCp(u8 connCode, u8 typeCode)
+    {
+    switch (modelType)
+        {
+    case ModelCyber860:
+        if (typeCode == 0)
+            {
+            if (connCode == 1)
+                {
+                return TRUE;
+                }
+            else if (connCode == 2 && cpuCount > 1)
+                {
+                return TRUE;
+                }
+            }
+        break;
+    default:
+        break;
+        }
+
+    return FALSE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Set a word into a maintenance register of the currently
+**                  selected unit
+**
+**  Parameters:     Name        Description.
+**                  reg         register address
+**                  word        64-bit value to set
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void mchDisconnect(void)
+static void mchSetRegister(u8 reg, u64 word)
     {
-    switch (activeDevice->fcode & FcOpMask)
+    switch (modelType)
         {
-    case FcOpRead:
-    case FcOpWrite:
-        if (mchAddressReady == FALSE)
+    case ModelCyber860:
+        switch (mchConnCode)
             {
-            mchAddressReady            = TRUE;
-            activeDevice->recordLength = 8;
+        case 0:
+            mch860IouSetter(reg, word);
+            break;
+        case 1: // CP or CM
+            switch (mchTypeCode)
+                {
+            case 0:
+                mch860CpSetter(reg, word);
+                break;
+            case 0x0a:
+                mch860CmSetter(reg, word);
+                break;
+            default:
+                break;
+                }
+        default:
+            break;
             }
-
+    default:
         break;
         }
     }
 
+/*
+**  ---------------------------------
+**  Model dependent utility functions
+**  ---------------------------------
+*/
+
 /*--------------------------------------------------------------------------
-**  Purpose:        Convert connect code to string.
+**  Purpose:        Get a value from a Cyber 860 CM maintenance register
 **
 **  Parameters:     Name        Description.
-**                  connCode    operation code
+**                  reg         the register address
 **
-**  Returns:        String equivalent of connect code.
+**  Returns:        64-bit value.
 **
 **------------------------------------------------------------------------*/
-static char *mchConn2String(PpWord connCode)
+static u64 mch860CmGetter(u8 reg)
     {
-    static char buf[8];
-
-#if DEBUG
-    switch (connCode)
+    if (reg == 0) // Status Summary
         {
-    case UnitIou:
-        return "Iou";
+        u64 byte;
+        byte = mchCmRegisters[0] & 0xff;
+        return (byte << 56) | (byte << 48) | (byte << 40) | (byte << 32)
+             | (byte << 24) | (byte << 16) | (byte <<  8) | byte;
+        }
+    return mchCmRegisters[reg];
+    }
 
-    case UnitMem:
-        return "Mem";
+/*--------------------------------------------------------------------------
+**  Purpose:        Read a byte from a Cyber 860 CM maintenance register
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        next byte.
+**
+**------------------------------------------------------------------------*/
+static u8 mch860CmReader(void)
+    {
+    u8 byte;
 
-    case UnitCp0:
-        return "Cp0";
+    if (activeDevice->recordLength == 8)
+        {
+        mchRegisterWord = mch860CmGetter(mchLocation);
+        }
+    activeDevice->recordLength -= 1;
+    byte = (mchRegisterWord >> (activeDevice->recordLength * 8)) & 0xff;
+    if (activeDevice->recordLength == 0)
+        {
+        activeDevice->recordLength = 8;
+        }
+    
+    return byte;
+    }
 
-    case UnitCp1:
-        return "Cp1";
+/*--------------------------------------------------------------------------
+**  Purpose:        Set a Cyber 860 CM maintenance register
+**
+**  Parameters:     Name        Description.
+**                  reg         the register address
+**                  word        the 64-bit value to set
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void mch860CmSetter(u8 reg, u64 word)
+    {
+    mchCmRegisters[reg] = word;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Write a byte to a Cyber 860 CM maintenance register
+**
+**  Parameters:     Name        Description.
+**                  byte        the byte to write
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void mch860CmWriter(u8 byte)
+    {
+    if (activeDevice->recordLength == 8)
+        {
+        mchRegisterWord = 0;
+        }
+    mchRegisterWord = (mchRegisterWord << 8) | byte;
+    activeDevice->recordLength -= 1;
+    if (activeDevice->recordLength == 0)
+        {
+        mch860CmSetter(mchLocation, mchRegisterWord);
+        activeDevice->recordLength = 8;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Get a value from a Cyber 860 CP maintenance register
+**
+**  Parameters:     Name        Description.
+**                  reg         the register address
+**
+**  Returns:        64-bit value.
+**
+**------------------------------------------------------------------------*/
+static u64 mch860CpGetter(u8 reg)
+    {
+    Cpu180Context *ctx;
+
+    ctx = mchGetCpContext(mchConnCode);
+    if (ctx == NULL)
+        {
+        return 0;
+        }
+
+    return mchGetCpRegister(ctx, reg);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Read a byte from a Cyber 860 CP maintenance register
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        next byte.
+**
+**------------------------------------------------------------------------*/
+static u8 mch860CpReader(void)
+    {
+    u8 byte;
+
+    if (activeDevice->recordLength == 8)
+        {
+        mchRegisterWord = mch860CpGetter(mchLocation);
+        }
+    activeDevice->recordLength -= 1;
+    byte = (mchRegisterWord >> (activeDevice->recordLength * 8)) & 0xff;
+    if (activeDevice->recordLength == 0)
+        {
+        activeDevice->recordLength = 8;
+        }
+
+    return byte;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Set a Cyber 860 CP maintenance register
+**
+**  Parameters:     Name        Description.
+**                  reg         the register address
+**                  word        the 64-bit value to set
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void mch860CpSetter(u8 reg, u64 word)
+    {
+    Cpu180Context *ctx;
+
+    ctx = mchGetCpContext(mchConnCode);
+    if (ctx == NULL)
+        {
+        return;
+        }
+    mchSetCpRegister(ctx, reg, word);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Write a byte to a Cyber 860 CP maintenance register
+**
+**  Parameters:     Name        Description.
+**                  byte        the byte to write
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void mch860CpWriter(u8 byte)
+    {
+    if (activeDevice->recordLength == 8)
+        {
+        mchRegisterWord = 0;
+        }
+    mchRegisterWord = (mchRegisterWord << 8) | byte;
+    activeDevice->recordLength -= 1;
+    if (activeDevice->recordLength == 0)
+        {
+        mch860CpSetter(mchLocation, mchRegisterWord);
+        activeDevice->recordLength = 8;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Read a byte from Cyber 860 Control Store
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        next byte.
+**
+**------------------------------------------------------------------------*/
+static u8 mch860CsReader(void)
+    {
+    Cpu180Context *ctx;
+
+    ctx = mchGetCpContext(mchConnCode);
+    if (ctx != NULL)
+        {
+        return mchControlStores[ctx->id][mchControlStoreIndices[ctx->id]++];
+        }
+    else
+        {
+        return 0;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Write a byte to Cyber 860 Control Store
+**
+**  Parameters:     Name        Description.
+**                  byte        the byte to write
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void mch860CsWriter(u8 byte)
+    {
+    Cpu180Context *ctx;
+
+    ctx = mchGetCpContext(mchConnCode);
+    if (ctx != NULL)
+        {
+        mchControlStores[ctx->id][mchControlStoreIndices[ctx->id]++] = byte;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Initialize for model Cyber 860
+**
+**  Parameters:     Name        Description.
+**                  iouOptions  IOU OI maintenance register value
+**                  memSizeMask CM EC maintenance register value
+**
+**  Returns:        64-bit value.
+**
+**------------------------------------------------------------------------*/
+static void mch860Init(u64 iouOptions, u64 memSizeMask)
+    {
+    u8 i;
+    u8 j;
+    u8 **softMemories;
+
+    mchIouRegisters = (u64 *)calloc(256, 8);
+    mch860IouSetter(RegIouElementId, 0x0000000002201234); // Elem: 02 (IOU), Model: 835-990, S/N
+    mch860IouSetter(RegIouOptionsInstalled, iouOptions);
+
+    mchCmRegisters  = (u64 *)calloc(256, 8);
+    mch860CmSetter(RegMemElementId, 0x0000000001311234);  // Elem: 01 (CM),  Model: 850/860, S/N
+    mch860CmSetter(RegMemOptionsInstalled, memSizeMask);
+
+    mchTypeCode = 0;
+    for (i = 0; i < cpuCount; i++)
+        {
+        mchConnCode               = (i == 0) ? 1 : 2;
+        mchControlStores[i]       = (u8 *)calloc(2048, 16);
+        mchControlStoreIndices[i] = 0;
+        mchCpRegisterGroups[i]    = (u64 *)calloc(256, 8);
+        mchRegisterFiles[i]       = (u64 *)calloc(64, 8);
+        mchRegisterFileIndices[i] = 0;
+        mchSoftMemoryGroups[i]    = (u8 **)calloc(7, sizeof(u8 *));
+        softMemories              = mchSoftMemoryGroups[i];
+        softMemories[3]           = (u8 *)calloc(1024, 4);
+        softMemories[4]           = (u8 *)calloc(1024, 4);
+        softMemories[5]           = (u8 *)calloc(2048, 4);
+        softMemories[6]           = (u8 *)calloc(512, 4);
+        mch860CpSetter(RegProcElementId, 0x0000000000321234); // Elem: 00 (CP),  Model: 860, S/N
+        mch860CpSetter(RegProcVmCapabilityList, 0xc000);      // Virtual state and CYBER 170 state
+        mch860CpSetter(RegProcStatusSummary, 0x28);           // CYBER 180 Monitor Mode, Processor Halt
+        for (j = 0; j < 7; j++)
+            {
+            mchSoftMemoryIndices[i][j] = 0;
+            }
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Get a value from a Cyber 860 IOU maintenance register
+**
+**  Parameters:     Name        Description.
+**                  reg         the register address
+**
+**  Returns:        64-bit value.
+**
+**------------------------------------------------------------------------*/
+static u64 mch860IouGetter(u8 reg)
+    {
+    if (reg == 0) // Status Summary
+        {
+        u64 byte;
+        byte = mchIouRegisters[0] & 0xff;
+        return (byte << 56) | (byte << 48) | (byte << 40) | (byte << 32)
+             | (byte << 24) | (byte << 16) | (byte <<  8) | byte;
+        }
+    return mchIouRegisters[reg];
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Read a byte from a Cyber 860 IOU maintenance register
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        next byte.
+**
+**------------------------------------------------------------------------*/
+static u8 mch860IouReader(void)
+    {
+    u8 byte;
+
+    if (activeDevice->recordLength == 8)
+        {
+        mchRegisterWord = mch860IouGetter(mchLocation);
+        }
+    activeDevice->recordLength -= 1;
+    byte = (mchRegisterWord >> (activeDevice->recordLength * 8)) & 0xff;
+    if (activeDevice->recordLength == 0)
+        {
+        activeDevice->recordLength = 8;
+        }
+
+    return byte;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Set a Cyber 860 IOU maintenance register
+**
+**  Parameters:     Name        Description.
+**                  reg         the register address
+**                  word        the 64-bit value to set
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void mch860IouSetter(u8 reg, u64 word)
+    {
+    mchIouRegisters[reg] = word;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Write a byte to a Cyber 860 IOU maintenance register
+**
+**  Parameters:     Name        Description.
+**                  byte        the byte to write
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void mch860IouWriter(u8 byte)
+    {
+    int chIdx;
+    int i;
+    int ppIdx;
+    u32 ppVector;
+
+    if (activeDevice->recordLength == 8)
+        {
+        mchRegisterWord = 0;
+        }
+    mchRegisterWord = (mchRegisterWord << 8) | byte;
+    activeDevice->recordLength -= 1;
+    if (activeDevice->recordLength == 0)
+        {
+        mch860IouSetter(mchLocation, mchRegisterWord);
+        activeDevice->recordLength = 8;
+        if (mchLocation == RegIouEnvControl)
+            {
+#if DEBUG
+            fputs("\n      Write IOU EC register", mchLog);
+#endif
+            ppIdx = (mchRegisterWord >> 24) & Mask5;
+            if (ppIdx > 9)
+                {
+                ppIdx = (ppIdx - 0x10) + 10;
+                }
+            chIdx = (mchRegisterWord >> 16) & Mask5;
+            ppu[ppIdx].osBoundsCheckEnabled = (mchRegisterWord & 0x08) != 0;
+            ppu[ppIdx].isStopEnabled        = (mchRegisterWord & 0x01) != 0;
+#if DEBUG
+            fprintf(mchLog, "\n        PP%02o OS bounds check: %s", ppIdx < 10 ? ppIdx : (ppIdx - 10) + 020,
+                ppu[ppIdx].osBoundsCheckEnabled ? "enabled" : "disabled");
+            fprintf(mchLog, "\n                        stop: %s", ppu[ppIdx].isStopEnabled ? "enabled" : "disabled");
+#endif
+            if ((mchRegisterWord & 0x1000) != 0) // load PP
+                {
+                ppu[ppIdx].opD        = chIdx;
+                channel[chIdx].active = TRUE;
+
+                /*
+                **  Set PP to INPUT (71) instruction.
+                */
+                ppu[ppIdx].opF  = 071;
+                ppu[ppIdx].busy = TRUE;
+
+                /*
+                **  Clear P register and location zero of PP.
+                */
+                ppu[ppIdx].regP   = 0;
+                ppu[ppIdx].mem[0] = 0;
+
+                /*
+                **  Set A register to an input word count of 10000.
+                */
+                ppu[ppIdx].regA = 010000;
+#if DEBUG
+                fprintf(mchLog, "\n        Deadstart PP%02o using channel %02o",
+                    ppIdx < 10 ? ppIdx : (ppIdx - 10) + 020, chIdx);
+#endif
+                }
+            }
+        else if (mchLocation == RegIouOsBounds)
+            {
+            ppuOsBoundary = mchRegisterWord & 0x3ffff;
+            ppVector      = mchRegisterWord >> 32;
+            for (i = 0; i < 10; i++)
+                {
+                ppu[i].isBelowOsBound = (ppVector & mchPpMasks[i]) != 0;
+                }
+            if (ppuCount > 10)
+                {
+                for (i = 10; i < 20; i++)
+                    {
+                    ppu[i].isBelowOsBound = (ppVector & mchPpMasks[i]) != 0;
+                    }
+                }
+#if DEBUG
+            fputs("\n      Write IOU OS bound register", mchLog);
+            fprintf(mchLog, "\n        OS boundary: %010o", ppuOsBoundary);
+            for (int i = 0; i < 10; i++)
+                {
+                fprintf(mchLog, "\n        PP%02o: %s", i, ppu[i].isBelowOsBound ? "below" : "above");
+                }
+            if (ppuCount > 10)
+                {
+                for (int i = 10; i < 20; i++)
+                    {
+                    fprintf(mchLog, "\n        PP%02o: %s", (i - 10) + 020, ppu[i].isBelowOsBound ? "below" : "above");
+                    }
+                }
+#endif
+            }
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Read a byte from the Cyber 860 register file
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        next byte.
+**
+**------------------------------------------------------------------------*/
+static u8 mch860RfReader(void)
+    {
+    Cpu180Context *ctx;
+
+    ctx = mchGetCpContext(mchConnCode);
+    if (ctx != NULL)
+        {
+        return mchRegisterFiles[ctx->id][mchRegisterFileIndices[ctx->id]++];
+        }
+    else
+        {
+        return 0;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Write a byte to the Cyber 860 register file
+**
+**  Parameters:     Name        Description.
+**                  byte        the byte to write
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void mch860RfWriter(u8 byte)
+    {
+    Cpu180Context *ctx;
+
+    ctx = mchGetCpContext(mchConnCode);
+    if (ctx != NULL)
+        {
+        mchRegisterFiles[ctx->id][mchRegisterFileIndices[ctx->id]++] = byte;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Read a byte from a Cyber 860 soft memory
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        next byte.
+**
+**------------------------------------------------------------------------*/
+static u8 mch860SmReader(void)
+    {
+    Cpu180Context *ctx;
+    u8            *mp;
+
+    ctx = mchGetCpContext(mchConnCode);
+    if (mchTypeCode < 7 && ctx != NULL)
+        {
+        mp = mchSoftMemoryGroups[ctx->id][mchTypeCode];
+        if (mp != NULL)
+            {
+            return mp[mchSoftMemoryIndices[ctx->id][mchTypeCode]++];
+            }
+        }
+
+    return 0;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Write a byte to a Cyber 860 soft memory
+**
+**  Parameters:     Name        Description.
+**                  byte        the byte to write
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void mch860SmWriter(u8 byte)
+    {
+    Cpu180Context *ctx;
+    u8            *mp;
+
+    ctx = mchGetCpContext(mchConnCode);
+    if (mchTypeCode < 7 && ctx != NULL)
+        {
+        mp = mchSoftMemoryGroups[ctx->id][mchTypeCode];
+        if (mp != NULL)
+            {
+            mp[mchSoftMemoryIndices[ctx->id][mchTypeCode]++] = byte;
+            }
+        }
+    }
+
+/*
+**  -----------------
+**   Debugging Aids
+**  -----------------
+*/
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Convert location to string.
+**
+**  Parameters:     Name        Description.
+**                  connCode    connection code
+**                  typeCode    type code
+**                  location    location code
+**
+**  Returns:        String equivalent of location.
+**
+**------------------------------------------------------------------------*/
+static char *mchCw2String(u8 connCode, u8 typeCode, PpWord location)
+    {
+#if DEBUG
+    switch (modelType)
+        {
+    case ModelCyber860:
+        switch (connCode)
+            {
+        case 0:
+            switch (location)
+                {
+            case 0x00:
+                return "Status Summary";
+            case 0x10:
+                return "EID";
+            case 0x12:
+                return "OI";
+            case 0x18:
+                return "Fault Status Mask";
+            case 0x21:
+                return "OS Bounds";
+            case 0x30:
+                return "EC";
+            case 0x40:
+                return "Status";
+            case 0x80:
+                return "FS1";
+            case 0x81:
+                return "FS2";
+            case 0xa0:
+                return "TM";
+            default:
+                break;
+                }
+            break;
+        case 1: // CP or CM
+        case 2:
+            switch (typeCode)
+                {
+            case 0:
+                switch (location)
+                    {
+                case 0x00:
+                    return "Status Summary";
+                case 0x10:
+                    return "EID";
+                case 0x11:
+                    return "Processor ID";
+                case 0x12:
+                    return "OI";
+                case 0x13:
+                    return "VMCL";
+                case 0x30:
+                    return "DEC";
+                case 0x31:
+                    return "Control Store Address";
+                case 0x32:
+                    return "Control Store Breakpoint";
+                case 0x41:
+                    return "Monitor Process State";
+                case 0x48:
+                    return "Page Table Address";
+                case 0x49:
+                    return "Page Table Length";
+                case 0x4a:
+                    return "Page Size Mask";
+                case 0x51:
+                    return "Model Dependent Word";
+                case 0x61:
+                    return "Job Process State";
+                case 0x62:
+                    return "System Interval Timer";
+                case 0x80:
+                    return "PFS0";
+                case 0x81:
+                    return "PFS1";
+                case 0x82:
+                    return "PFS2";
+                case 0x83:
+                    return "PFS3";
+                case 0x84:
+                    return "PFS4";
+                case 0x85:
+                    return "PFS5";
+                case 0x86:
+                    return "PFS6";
+                case 0x87:
+                    return "PFS7";
+                case 0x88:
+                    return "PFS8";
+                case 0x89:
+                    return "PFS9";
+                case 0xa0:
+                    return "PTM";
+                default:
+                    break;
+                    }
+                break;
+            case 1:
+                return "ignored";
+            case 3:
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+                return "address";
+            case 0x0A:
+                switch (location)
+                    {
+                case 0x00:
+                    return "Status Summary";
+                case 0x10:
+                    return "EID";
+                case 0x12:
+                    return "OI";
+                case 0x20:
+                    return "EC";
+                case 0x21:
+                    return "Bounds Register";
+                case 0xa0:
+                case 0xa1:
+                case 0xa2:
+                case 0xa3:
+                    return "CEL";
+                case 0xa4:
+                case 0xa5:
+                case 0xa6:
+                case 0xa7:
+                    return "UEL1";
+                case 0xa8:
+                case 0xa9:
+                case 0xaa:
+                case 0xab:
+                    return "UEL2";
+                case 0xb0:
+                    return "Free Running Counter";
+                default:
+                    break;
+                    }
+                break;
+            default:
+                break;
+                }
+            break;
+        default:
+            break;
+            }
+        break;
+    default:
+        break;
         }
 #endif
-    sprintf(buf, "0x%X", connCode);
 
-    return (buf);
+    return "Unknown";
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Convert channel function to string.
+**
+**  Parameters:     Name        Description.
+**                  connCode    connection code
+**                  opCode      operation code
+**                  typeCode    type code
+**
+**  Returns:        String equivalent of function.
+**
+**------------------------------------------------------------------------*/
+static char *mchFn2String(u8 connCode, u8 opCode, u8 typeCode)
+    {
+    static char buf[64];
+    char *object;
+
+#if DEBUG
+    switch (modelType)
+        {
+    case ModelCyber860:
+        switch (connCode)
+            {
+        case 0:
+            object = "IOU";
+            break;
+        case 1: // CP or CM
+            switch (typeCode)
+                {
+            case 0:
+                object = "CP";
+                break;
+            case 1:
+                object = "Control Store";
+                break;
+            case 3:
+                object = "Reference ROM";
+                break;
+            case 4:
+                object = "Soft control memories";
+                break;
+            case 5:
+                object = "BDP control memory";
+                break;
+            case 6:
+                object = "Instruction fetch decode memory";
+                break;
+            case 7:
+                object = "Register file";
+                break;
+            case 0x0A:
+                object = "CM";
+                break;
+            default:
+                object = "Unknown type";
+                break;
+                }
+            break;
+        default:
+            object = "Unknown unit";
+            break;
+            }
+        break;
+    default:
+        object = "Unsupported machine type";
+        break;
+        }
+
+    sprintf(buf, "%s %s", mchOp2String(opCode), object);
+#endif
+
+    return buf;
     }
 
 /*--------------------------------------------------------------------------
@@ -918,7 +2077,7 @@ static char *mchConn2String(PpWord connCode)
 **  Returns:        String equivalent of operation code.
 **
 **------------------------------------------------------------------------*/
-static char *mchOp2String(PpWord opCode)
+static char *mchOp2String(u8 opCode)
     {
     static char buf[16];
 
@@ -955,7 +2114,7 @@ static char *mchOp2String(PpWord opCode)
 #endif
     sprintf(buf, "Unknown 0x%X", opCode >> 4);
 
-    return (buf);
+    return buf;
     }
 
 /*---------------------------  End Of File  ------------------------------*/

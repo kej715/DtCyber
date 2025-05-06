@@ -75,12 +75,13 @@
 /*
 **  Debug support
 */
-#define CcDebug                    0
+#define CcDebug                    1
 
 /*
 **  Measure cycle time
 */
 #define CcCycleTime                0
+#define CyclesOneSecond            100000
 
 /*
 **  Device types.
@@ -202,14 +203,19 @@
 #define Mask16                     0177777
 #define Mask17                     0377777
 #define Mask18                     0777777
+#define Mask20                     03777777
 #define Mask21                     07777777
 #define Mask21Ecs                  07777700
+#define Mask22                     017777777
 #define Mask23                     037777777
 #define Mask24                     077777777
 #define Mask24Ecs                  077777700
 #define Mask29                     03777777777
 #define Mask30                     07777777777
 #define Mask30Ecs                  07777777700
+#define Mask32                     037777777777
+#define Mask38                     03777777777777
+#define Mask44                     000000377777777777777
 #define Mask48                     000007777777777777777
 #define Mask50                     000037777777777777777
 #define Mask60                     077777777777777777777
@@ -220,6 +226,7 @@
 /*
 **  Trace masks.
 */
+#define TracePva                   (1 << 31)
 #define TraceCpu                   (1 << 30)
 #define TraceExchange              (1 << 29)
 

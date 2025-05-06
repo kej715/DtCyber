@@ -42,6 +42,7 @@ OBJS    =   cdcnet.o                \
             console.o               \
             cp3446.o                \
             cpu.o                   \
+            cpu180.o                \
             cr3447.o                \
             cr405.o                 \
             cray_station.o          \

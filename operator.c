@@ -2928,9 +2928,9 @@ static void opCmdShowState(bool help, char *cmdParams)
 
 static void opCmdShowStateCP(u8 cpMask)
     {
-    u8         cpNum;
-    CpuContext *cpu;
-    int        i;
+    u8            cpNum;
+    Cpu170Context *cpu;
+    int           i;
 
     cpMask |= (1 << 2); // stopper
     cpNum   = 0;
@@ -2954,7 +2954,7 @@ static void opCmdShowStateCP(u8 cpMask)
             {
             opDisplay("    > ---------------- CPU ---------------\n");
             }
-        cpu = cpus + cpNum;
+        cpu = cpus170 + cpNum;
         i   = 0;
         sprintf(opOutBuf, "    > P       %06o  A%d %06o  B%d %06o\n", cpu->regP, i, cpu->regA[i], i, cpu->regB[i]);
         opDisplay(opOutBuf);

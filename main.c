@@ -85,11 +85,14 @@ extern int _isatty(int fd);
 **  Private Function Prototypes
 **  ---------------------------
 */
+static void emulate(void);
+static void INThandler(int);
 static void tracePpuCalls(void);
 static void waitTerminationMessage(void);
 
-static void INThandler(int);
+#if defined(_WIN32)
 static void opExit(void);
+#endif
 
 /*
 **  ----------------
@@ -109,7 +112,7 @@ char ipAddress[16];
 char networkInterface[16];
 char networkInterfaceMgr[64];
 char osType[16];
-bool (*idleDetector)(CpuContext *) = &idleDetectorNone;
+bool (*idleDetector)(Cpu170Context *) = &idleDetectorNone;
 
 #if CcCycleTime
 double cycleTime;
@@ -252,49 +255,11 @@ int main(int argc, char **argv)
     /*
     **  Emulation loop.
     */
-
-    while (emulationActive)
-        {
-#if CcCycleTime
-        rtcStartTimer();
-#endif
-
-        /*
-        **  Count major cycles.
-        */
-        cycles++;
-
-        /*
-        **  Deal with operator interface requests.
-        */
-        if (opActive)
-            {
-            opRequest();
-            }
-
-        /*
-        **  Execute PP, CPU and RTC.
-        */
-        rtcTick();
-        ppStep();
-
-        cpuStep(cpus);
-        cpuStep(cpus);
-        cpuStep(cpus);
-        cpuStep(cpus);
-
-        channelStep();
-
-        idleThrottle(cpus);
-
-#if CcCycleTime
-        cycleTime = rtcStopTimer();
-#endif
-        }
+    emulate();
 
 #if CcDebug == 1
     /*
-    **  Example post-mortem dumps.
+    **  Post-mortem dumps.
     */
     dumpInit();
     dumpAll();
@@ -334,7 +299,7 @@ int main(int argc, char **argv)
 **  Returns:        void
 **
 **------------------------------------------------------------------------*/
-void idleThrottle(CpuContext *ctx)
+void idleThrottle(Cpu170Context *ctx)
     {
     if (idle)
         {
@@ -390,7 +355,7 @@ bool idleCheckBusy()
 **  Returns:        FALSE
 **
 **------------------------------------------------------------------------*/
-bool idleDetectorNone(CpuContext *ctx)
+bool idleDetectorNone(Cpu170Context *ctx)
     {
     return FALSE;
     }
@@ -404,7 +369,7 @@ bool idleDetectorNone(CpuContext *ctx)
 **  Returns:        TRUE if in idle, FALSE if not.
 **
 **------------------------------------------------------------------------*/
-bool idleDetectorCOS(CpuContext *ctx)
+bool idleDetectorCOS(Cpu170Context *ctx)
     {
     if ((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 020))
         {
@@ -423,7 +388,7 @@ bool idleDetectorCOS(CpuContext *ctx)
 **  Returns:        TRUE if in idle, FALSE if not.
 **
 **------------------------------------------------------------------------*/
-bool idleDetectorNOS(CpuContext *ctx)
+bool idleDetectorNOS(Cpu170Context *ctx)
     {
     if ((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 05))
         {
@@ -442,7 +407,7 @@ bool idleDetectorNOS(CpuContext *ctx)
 **  Returns:        TRUE if in idle, FALSE if not.
 **
 **------------------------------------------------------------------------*/
-bool idleDetectorNOSBE(CpuContext *ctx)
+bool idleDetectorNOSBE(Cpu170Context *ctx)
     {
     /* Based on observing CPU state on the NOS/BE TUB ready to run package */
     if ((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 010))
@@ -462,7 +427,7 @@ bool idleDetectorNOSBE(CpuContext *ctx)
 **  Returns:        TRUE if in idle, FALSE if not.
 **
 **------------------------------------------------------------------------*/
-bool idleDetectorMACE(CpuContext *ctx)
+bool idleDetectorMACE(Cpu170Context *ctx)
     {
     /* This is based on the KRONOS1 source code for CPUMTR
      * I have no working system to test this on, it may also work
@@ -528,14 +493,6 @@ int runHelper(char *command)
     return system(command);
 #endif
     }
-
-/*
- **--------------------------------------------------------------------------
- **
- **  Private Functions
- **
- **--------------------------------------------------------------------------
- */
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Start helper processes.
@@ -617,6 +574,72 @@ void stopHelpers(void)
             }
         }
     fflush(stdout);
+    }
+
+/*
+ **--------------------------------------------------------------------------
+ **
+ **  Private Functions
+ **
+ **--------------------------------------------------------------------------
+ */
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Main emulation loop.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void emulate(void)
+    {
+    while (emulationActive)
+        {
+#if CcCycleTime
+        rtcStartTimer();
+#endif
+
+        /*
+        **  Count major cycles.
+        */
+        cycles++;
+
+        /*
+        **  Deal with operator interface requests.
+        */
+        if (opActive)
+            {
+            opRequest();
+            }
+
+        /*
+        **  Update RTC and interval timers.
+        */
+        rtcTick();
+        if (isCyber180)
+            {
+            cpu180UpdateIntervalTimers(rtcClockDelta);
+            }
+
+        /*
+        **  Execute PP and CPU.
+        */
+        ppStep();
+
+        cpuStep(cpus170);
+        cpuStep(cpus170);
+        cpuStep(cpus170);
+        cpuStep(cpus170);
+
+        channelStep();
+
+        idleThrottle(cpus170);
+
+#if CcCycleTime
+        cycleTime = rtcStopTimer();
+#endif
+        }
     }
 
 /*--------------------------------------------------------------------------
