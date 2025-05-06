@@ -108,16 +108,21 @@ void cpuReleaseExchangeMutex(void);
 void cpuReleaseMemoryMutex(void);
 void cpuStep(Cpu170Context *activeCpu);
 void cpuTerminate(void);
+void cpuVoidIwStack(Cpu170Context *activeCpu, u32 branchAddr);
 
 /*
 **  cpu180.c
 */
+void cpu180CheckConditions(Cpu180Context *ctx);
 void cpu180Init(char *model);
-void cpu180LoadMpsXp(Cpu180Context *ctx);
+void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa);
 void cpu180PpReadMem(u32 address, CpWord *data);
 void cpu180PpWriteMem(u32 address, CpWord data);
 bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *rma, MonitorCondition *cond);
+void cpu180SetMonitorCondition(Cpu180Context *ctx, MonitorCondition cond);
 void cpu180Step(Cpu180Context *activeCpu);
+void cpu180Store170Xp(Cpu180Context *ctx, u32 xpa);
+void cpu180UpdateIntervalTimers(u64 delta);
 void cpu180UpdatePageSize(Cpu180Context *ctx);
 
 /*
@@ -566,6 +571,7 @@ extern u8                  ppuCount;
 extern u32                 ppuOsBoundary;
 extern u32                 readerScanSecs;
 extern u32                 rtcClock;
+extern u64                 rtcClockDelta;
 extern bool                rtcClockIsCurrent;
 extern long                scaleX;                          // Console
 extern long                scaleY;                          // Console

@@ -79,6 +79,7 @@ static u64 rtcGetTick(void);
 **  ----------------
 */
 u32  rtcClock          = 0;
+u64  rtcClockDelta     = 0;
 bool rtcClockIsCurrent = TRUE;
 
 
@@ -236,7 +237,6 @@ void rtcReadUsCounter(void)
     static double fraction            = 0.0L;
     static double delayedMicroseconds = 0.0L;
     u64           new;
-    u64           difference;
     double        microseconds;
     double        result;
 
@@ -261,10 +261,10 @@ void rtcReadUsCounter(void)
         return;
         }
 
-    difference = new - old;
-    old        = new;
+    rtcClockDelta = new - old;
+    old           = new;
 
-    microseconds        = (double)(i64)difference / MHz;
+    microseconds        = (double)(i64)rtcClockDelta / MHz;
     microseconds       += fraction + delayedMicroseconds;
     delayedMicroseconds = 0.0;
 
@@ -294,7 +294,6 @@ void rtcReadUsCounter(void)
     static bool first = TRUE;
     static u64  old   = 0;
     u64         new;
-    u64         difference;
 
     if (rtcIncrement != 0)
         {
@@ -315,10 +314,10 @@ void rtcReadUsCounter(void)
         return;
         }
 
-    difference = new - old;
-    if (difference > MaxMicroseconds)
+    rtcClockDelta = new - old;
+    if (rtcClockDelta > MaxMicroseconds)
         {
-        difference        = MaxMicroseconds;
+        rtcClockDelta     = MaxMicroseconds;
         rtcClockIsCurrent = FALSE;
         }
     else
@@ -326,8 +325,8 @@ void rtcReadUsCounter(void)
         rtcClockIsCurrent = TRUE;
         }
 
-    old      += difference;
-    rtcClock += (u32)difference;
+    old      += rtcClockDelta;
+    rtcClock += (u32)rtcClockDelta;
     }
 
 #endif
@@ -457,7 +456,7 @@ static u64 rtcGetTick(void)
 
     gettimeofday(&tv, NULL);
 
-    return ((u64)tv.tv_sec * (u64)1000000 + (u64)tv.tv_usec);
+    return ((u64)tv.tv_sec * (u64)1000000) + (u64)tv.tv_usec;
     }
 
 #else
@@ -466,7 +465,7 @@ static bool rtcInitTick(void)
     {
     printf("(rtc    ) No high resolution hardware clock, using emulation cycle counter\n");
 
-    return (FALSE);
+    return FALSE;
     }
 
 #endif

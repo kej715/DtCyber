@@ -305,14 +305,15 @@ typedef enum
     UCR63       /* Invalid BDP data                 */
     } UserCondition;
 
-//  Possible actions for monitor and user conditions
+//  Possible actions for monitor and user conditions.
+//  Priority corresponds to ordinal value.
 typedef enum
     {
-    Cont = 0,
-    Exch,
+    Rni = 0,
+    Stack,
     Trap,
-    Halt,
-    Stack
+    Exch,
+    Halt
     } ConditionAction;
 
 typedef struct
@@ -338,6 +339,7 @@ typedef struct
     u16           regUcr;               /* user condition register */
     u16           regMcr;               /* monitor condition register */
     u8            regLpid;              /* last processor ID register */
+    u16           regKmr;               /* keypoint mask register */
     u32           regPit;               /* process interval timer register */
     u32           regBc;                /* base constant register */
     u16           regMdf;               /* model-dependent flags */
@@ -358,14 +360,14 @@ typedef struct
     u8            regPsm;               /* page size mask register */
     u32           regSit;               /* system interval timer register */
     u16           regVmcl;              /* virtual machine capability list register */
+    u64           regP170;              /* CYBER 170 mode P register from last exchange */
+    u32           byteNumMask;          /* mask used in determining byte number within page */
     u32           pageLengthMask;       /* mask used in calculating page table index */
     u8            pageNumShift;         /* shift count used in calculating page numbers */
     u16           pageOffsetMask;       /* mask used in calculating page offsets */
+    u8            spidShift;            /* shift count used in calculating SPID's */
     volatile bool isMonitorMode;        /* TRUE if CPU is in monitor mode */
     volatile bool isStopped;            /* TRUE if CPU is stopped */
-    volatile int  ppRequestingExchange; /* PP number of PP requesting exchange, -1 if none */
-    u32           ppExchangeAddress;    /* PP-requested exchange address */
-    bool          doChangeMode;         /* TRUE if monitor mode flag should be changed by PP exchange jump */
     u8            opCode;               /* Opcode field (first 8 bits) */
     u8            opI;                  /* i field of current instruction */
     u8            opJ;                  /* j field of current instruction */
@@ -375,7 +377,6 @@ typedef struct
     ConditionAction pendingAction;      /* pending monitor or user condition action */
     u8            nextKey;              /* next P register key */
     u64           nextP;                /* next P register value */
-    volatile u32  idleCycles;           /* Counter for how many times we've seen the idle loop */
     } Cpu180Context;
 
 /*

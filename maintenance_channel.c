@@ -827,7 +827,7 @@ static FcStatus mchFunc(PpWord funcCode)
                 MonitorCondition mcr;
                 u32 rma;
                 ctx = mchGetCpContext(mchConnCode);
-                cpu180LoadMpsXp(ctx);
+                cpu180Load180Xp(ctx, ctx->regMps >> 3);
                 mchSetRegister(RegProcStatusSummary, word);
                 if (cpu180PvaToRma(ctx, cpMem[ctx->regMps >> 3] & Mask48, AccessModeExecute, &rma, &mcr))
                     {

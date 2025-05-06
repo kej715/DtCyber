@@ -126,7 +126,6 @@ static void cpuRegASemantics(Cpu170Context *activeCpu);
 static u32  cpuSubtract18(u32 op1, u32 op2);
 static void cpuUemTransfer(Cpu170Context *activeCpu, bool writeToUem);
 static void cpuUemWord(Cpu170Context *activeCpu, bool writeToUem);
-static void cpuVoidIwStack(Cpu170Context *activeCpu, u32 branchAddr);
 static bool cpuWriteMem(Cpu170Context *activeCpu, u32 address, CpWord *data);
 
 static void cpOp00(Cpu170Context *activeCpu);
@@ -684,8 +683,9 @@ void cpuPpWriteMem(u32 address, CpWord data)
 **------------------------------------------------------------------------*/
 void cpuStep(Cpu170Context *activeCpu)
     {
-    u32 length;
-    u32 oldRegP;
+    Cpu180Context *ctx180;
+    u32           length;
+    u32           oldRegP;
 
     /*
     **  If the machine is a CYBER 180, and this CPU is currently in 180 state,
@@ -707,6 +707,10 @@ void cpuStep(Cpu170Context *activeCpu)
         if (((monitorCpu == -1) || (activeCpu->doChangeMode == FALSE))
             && ((activeCpu->opOffset == 60) || activeCpu->isStopped))
             {
+            if (isCyber180)
+                {
+                cpus180[activeCpu->id].regMcr &= 0xfbff; // clear MCR53 CYBER 170 state exchange request
+                }
             cpuExchangeJump(activeCpu, activeCpu->ppExchangeAddress, activeCpu->doChangeMode);
             activeCpu->ppRequestingExchange = -1;
             cpuReleaseExchangeMutex();
@@ -776,7 +780,7 @@ void cpuStep(Cpu170Context *activeCpu)
         /*
         **  Force B0 to 0.
         */
-        activeCpu->regB[0] = (u32)0;
+        activeCpu->regB[0] = 0;
 
         /*
         **  Execute instruction.
@@ -820,6 +824,13 @@ void cpuStep(Cpu170Context *activeCpu)
         cpuAcquireExchangeMutex();
         cpuExchangeJump(activeCpu, activeCpu->regMa, TRUE);
         cpuReleaseExchangeMutex();
+        }
+    else if (isCyber180 && activeCpu->isStopped)
+        {
+        ctx180 = &cpus180[activeCpu->id];
+        cpu180Store170Xp(ctx180, ctx180->regJps >> 3);
+        cpu180Load180Xp(ctx180, ctx180->regMps >> 3);
+        cpu180CheckConditions(ctx180);
         }
     }
 
@@ -1635,7 +1646,7 @@ static void cpuFetchOpWord(Cpu170Context *activeCpu)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cpuVoidIwStack(Cpu170Context *activeCpu, u32 branchAddr)
+void cpuVoidIwStack(Cpu170Context *activeCpu, u32 branchAddr)
     {
     u32 location;
     int i;
@@ -1747,9 +1758,7 @@ static bool cpuReadMem(Cpu170Context *activeCpu, u32 address, CpWord *data)
     /*
     **  Fetch the data.
     */
-    cpuAcquireMemoryMutex();
     *data = cpMem[location] & Mask60;
-    cpuReleaseMemoryMutex();
 
     return (FALSE);
     }
@@ -1819,9 +1828,7 @@ static bool cpuWriteMem(Cpu170Context *activeCpu, u32 address, CpWord *data)
     /*
     **  Store the data.
     */
-    cpuAcquireMemoryMutex();
     cpMem[location] = *data & Mask60;
-    cpuReleaseMemoryMutex();
 
     return (FALSE);
     }
@@ -2057,9 +2064,7 @@ static void cpuUemWord(Cpu170Context *activeCpu, bool writeToUem)
         {
         if (absUemAddr < cpuMaxMemory)
             {
-            cpuAcquireMemoryMutex();
             cpMem[absUemAddr] = activeCpu->regX[activeCpu->opJ] & Mask60;
-            cpuReleaseMemoryMutex();
             }
 #if DEBUG_UEM
         else
@@ -2072,9 +2077,7 @@ static void cpuUemWord(Cpu170Context *activeCpu, bool writeToUem)
         {
         if (absUemAddr < cpuMaxMemory)
             {
-            cpuAcquireMemoryMutex();
             activeCpu->regX[activeCpu->opJ] = cpMem[absUemAddr] & Mask60;
-            cpuReleaseMemoryMutex();
             }
 #if DEBUG_UEM
         else
@@ -2398,7 +2401,6 @@ static void cpuUemTransfer(Cpu170Context *activeCpu, bool writeToUem)
     /*
     **  Perform the transfer.
     */
-    cpuAcquireMemoryMutex();
     if (writeToUem)
         {
         while (wordCount--)
@@ -2409,7 +2411,6 @@ static void cpuUemTransfer(Cpu170Context *activeCpu, bool writeToUem)
                 fprintf(emLog, "  overflow (%010o >= %010o)", absUemAddr, cpuMaxMemory);
 #endif
 
-                cpuReleaseMemoryMutex();
                 return;
                 }
 
@@ -2461,11 +2462,9 @@ static void cpuUemTransfer(Cpu170Context *activeCpu, bool writeToUem)
             /*
             **  Error exit to lower 30 bits of instruction word.
             */
-            cpuReleaseMemoryMutex();
             return;
             }
         }
-    cpuReleaseMemoryMutex();
 
     /*
     **  Normal exit to next instruction word.
@@ -2686,7 +2685,6 @@ static void cpuEcsTransfer(Cpu170Context *activeCpu, bool writeToEcs)
     /*
     **  Perform the transfer.
     */
-    cpuAcquireMemoryMutex();
     if (writeToEcs)
         {
         while (wordCount--)
@@ -2704,7 +2702,6 @@ static void cpuEcsTransfer(Cpu170Context *activeCpu, bool writeToEcs)
                 /*
                 **  Error exit to lower 30 bits of instruction word.
                 */
-                cpuReleaseMemoryMutex();
                 return;
                 }
 
@@ -2756,11 +2753,9 @@ static void cpuEcsTransfer(Cpu170Context *activeCpu, bool writeToEcs)
             /*
             **  Error exit to lower 30 bits of instruction word.
             */
-            cpuReleaseMemoryMutex();
             return;
             }
         }
-    cpuReleaseMemoryMutex();
 
     /*
     **  Normal exit to next instruction word.
@@ -2824,9 +2819,7 @@ static bool cpuCmuGetByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 *by
     /*
     **  Fetch the word.
     */
-    cpuAcquireMemoryMutex();
     data = cpMem[location] & Mask60;
-    cpuReleaseMemoryMutex();
 
     /*
     **  Extract and return the byte.
@@ -2891,7 +2884,6 @@ static bool cpuCmuPutByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 byt
     /*
     **  Fetch the word.
     */
-    cpuAcquireMemoryMutex();
     data = cpMem[location] & Mask60;
 
     /*
@@ -2908,7 +2900,6 @@ static bool cpuCmuPutByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 byt
     **  Store the word.
     */
     cpMem[location] = data & Mask60;
-    cpuReleaseMemoryMutex();
 
     return (FALSE);
     }

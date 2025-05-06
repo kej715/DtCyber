@@ -1000,6 +1000,10 @@ static void ppOpEXN(void)     // 26
         cpu->ppExchangeAddress    = exchangeAddress;
         cpu->doChangeMode         = doChangeMode;
         activePpu->exchangingCpu  = cpu->id;
+        if (isCyber180)
+            {
+            cpu180SetMonitorCondition(&cpus180[cpu->id], MCR53);
+            }
 
         cpuReleaseExchangeMutex();
         }
@@ -1179,9 +1183,7 @@ static void ppOpCRD(void)     // 60
         {
         address = activePpu->regA & Mask18;
         }
-    cpuAcquireMemoryMutex();
     cpuPpReadMem(address, &data);
-    cpuReleaseMemoryMutex();
     activePpu->mem[opD]     = (PpWord)((data >> 48) & Mask12);
     activePpu->mem[opD + 1] = (PpWord)((data >> 36) & Mask12);
     activePpu->mem[opD + 2] = (PpWord)((data >> 24) & Mask12);
@@ -1217,9 +1219,7 @@ static void ppOpCRM(void)     // 61
         {
         address = activePpu->regA & Mask18;
         }
-    cpuAcquireMemoryMutex();
     cpuPpReadMem(address, &data);
-    cpuReleaseMemoryMutex();
     activePpu->mem[activePpu->regP] = (PpWord)((data >> 48) & Mask12);
     PpIncrement(activePpu->regP);
 
@@ -1280,9 +1280,7 @@ static void ppOpCWD(void)     // 62
              | ((CpWord)(activePpu->mem[opD + 2] & Mask12) << 24)
              | ((CpWord)(activePpu->mem[opD + 3] & Mask12) << 12)
              | (CpWord)(activePpu->mem[opD + 4] & Mask12);
-        cpuAcquireMemoryMutex();
         cpuPpWriteMem(address, data);
-        cpuReleaseMemoryMutex();
 
 #if CcDebug == 1
         traceCmWord(data);
@@ -1345,9 +1343,7 @@ static void ppOpCWM(void)     // 63
         }
     else
         {
-        cpuAcquireMemoryMutex();
         cpuPpWriteMem(address, data);
-        cpuReleaseMemoryMutex();
 
 #if CcDebug == 1
         traceCmWord(data);
@@ -2198,9 +2194,7 @@ static void ppOpCRDL(void)    // 1060
         {
         address = activePpu->regA & Mask18;
         }
-    cpuAcquireMemoryMutex();
     cpu180PpReadMem(address, &data);
-    cpuReleaseMemoryMutex();
     activePpu->mem[opD] = (PpWord)((data >> 48) & Mask16);
     activePpu->mem[opD + 1] = (PpWord)((data >> 32) & Mask16);
     activePpu->mem[opD + 2] = (PpWord)((data >> 16) & Mask16);
@@ -2235,9 +2229,7 @@ static void ppOpCRML(void)    // 1061
         {
         address = activePpu->regA & Mask18;
         }
-    cpuAcquireMemoryMutex();
     cpu180PpReadMem(address, &data);
-    cpuReleaseMemoryMutex();
     activePpu->mem[activePpu->regP] = (PpWord)((data >> 48) & Mask16);
     PpIncrement(activePpu->regP);
 
@@ -2291,9 +2283,7 @@ static void ppOpCWDL(void)    // 1062
              | ((CpWord)(activePpu->mem[opD + 1] & Mask16) << 32)
              | ((CpWord)(activePpu->mem[opD + 2] & Mask16) << 16)
              | (CpWord)(activePpu->mem[opD + 3] & Mask16);
-        cpuAcquireMemoryMutex();
         cpu180PpWriteMem(address, data);
-        cpuReleaseMemoryMutex();
 
 #if CcDebug == 1
         traceCmWord64(data);
@@ -2349,9 +2339,7 @@ static void ppOpCWML(void)    // 1063
         }
     else
         {
-        cpuAcquireMemoryMutex();
         cpu180PpWriteMem(address, data);
-        cpuReleaseMemoryMutex();
 
 #if CcDebug == 1
         traceCmWord64(data);

@@ -594,8 +594,6 @@ void stopHelpers(void)
 **------------------------------------------------------------------------*/
 static void emulate(void)
     {
-    int i;
-
     while (emulationActive)
         {
 #if CcCycleTime
@@ -616,9 +614,17 @@ static void emulate(void)
             }
 
         /*
-        **  Execute PP, CPU and RTC.
+        **  Update RTC and interval timers.
         */
         rtcTick();
+        if (isCyber180)
+            {
+            cpu180UpdateIntervalTimers(rtcClockDelta);
+            }
+
+        /*
+        **  Execute PP and CPU.
+        */
         ppStep();
 
         cpuStep(cpus170);

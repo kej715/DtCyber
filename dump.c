@@ -245,6 +245,8 @@ void dumpCpu(void)
         fprintf(pf, "A%d %06o  ", 7, cpu170->regA[7]);
         fprintf(pf, "B%d %06o  ", 7, cpu170->regB[7]);
         fputs("\n", pf);
+        fprintf(pf, "MONITOR      %d  ", cpu170->isMonitorMode ? 1 : 0);
+        fputs("\n", pf);
         fprintf(pf, "STOP         %d  ", cpu170->isStopped ? 1 : 0);
         fputs("\n\n", pf);
 
@@ -316,6 +318,9 @@ void dumpCpu(void)
                 }
             fputs("\n", pf);
             fprintf(pf, " MDW %016lx  \n", cpu180->regMdw);
+            fputs("\n", pf);
+            fprintf(pf, "MONITOR      %d\n", cpu180->isMonitorMode ? 1 : 0);
+            fprintf(pf, "STOP         %d\n", cpu180->isStopped ? 1 : 0);
             fputs("\n", pf);
             }
         }
