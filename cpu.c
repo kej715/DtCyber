@@ -1728,9 +1728,7 @@ static bool cpuReadMem(CpuContext *activeCpu, u32 address, CpWord *data)
     /*
     **  Fetch the data.
     */
-    cpuAcquireMemoryMutex();
     *data = cpMem[location] & Mask60;
-    cpuReleaseMemoryMutex();
 
     return (FALSE);
     }
@@ -1800,9 +1798,7 @@ static bool cpuWriteMem(CpuContext *activeCpu, u32 address, CpWord *data)
     /*
     **  Store the data.
     */
-    cpuAcquireMemoryMutex();
     cpMem[location] = *data & Mask60;
-    cpuReleaseMemoryMutex();
 
     return (FALSE);
     }
@@ -2038,9 +2034,7 @@ static void cpuUemWord(CpuContext *activeCpu, bool writeToUem)
         {
         if (absUemAddr < cpuMaxMemory)
             {
-            cpuAcquireMemoryMutex();
             cpMem[absUemAddr] = activeCpu->regX[activeCpu->opJ] & Mask60;
-            cpuReleaseMemoryMutex();
             }
 #if DEBUG_UEM
         else
@@ -2053,9 +2047,7 @@ static void cpuUemWord(CpuContext *activeCpu, bool writeToUem)
         {
         if (absUemAddr < cpuMaxMemory)
             {
-            cpuAcquireMemoryMutex();
             activeCpu->regX[activeCpu->opJ] = cpMem[absUemAddr] & Mask60;
-            cpuReleaseMemoryMutex();
             }
 #if DEBUG_UEM
         else
@@ -2379,7 +2371,6 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
     /*
     **  Perform the transfer.
     */
-    cpuAcquireMemoryMutex();
     if (writeToUem)
         {
         while (wordCount--)
@@ -2390,7 +2381,6 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
                 fprintf(emLog, "  overflow (%010o >= %010o)", absUemAddr, cpuMaxMemory);
 #endif
 
-                cpuReleaseMemoryMutex();
                 return;
                 }
 
@@ -2442,11 +2432,9 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
             /*
             **  Error exit to lower 30 bits of instruction word.
             */
-            cpuReleaseMemoryMutex();
             return;
             }
         }
-    cpuReleaseMemoryMutex();
 
     /*
     **  Normal exit to next instruction word.
@@ -2667,7 +2655,6 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
     /*
     **  Perform the transfer.
     */
-    cpuAcquireMemoryMutex();
     if (writeToEcs)
         {
         while (wordCount--)
@@ -2685,7 +2672,6 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
                 /*
                 **  Error exit to lower 30 bits of instruction word.
                 */
-                cpuReleaseMemoryMutex();
                 return;
                 }
 
@@ -2737,11 +2723,9 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
             /*
             **  Error exit to lower 30 bits of instruction word.
             */
-            cpuReleaseMemoryMutex();
             return;
             }
         }
-    cpuReleaseMemoryMutex();
 
     /*
     **  Normal exit to next instruction word.
@@ -2805,9 +2789,7 @@ static bool cpuCmuGetByte(CpuContext *activeCpu, u32 address, u32 pos, u8 *byte)
     /*
     **  Fetch the word.
     */
-    cpuAcquireMemoryMutex();
     data = cpMem[location] & Mask60;
-    cpuReleaseMemoryMutex();
 
     /*
     **  Extract and return the byte.
@@ -2872,7 +2854,6 @@ static bool cpuCmuPutByte(CpuContext *activeCpu, u32 address, u32 pos, u8 byte)
     /*
     **  Fetch the word.
     */
-    cpuAcquireMemoryMutex();
     data = cpMem[location] & Mask60;
 
     /*
@@ -2889,7 +2870,6 @@ static bool cpuCmuPutByte(CpuContext *activeCpu, u32 address, u32 pos, u8 byte)
     **  Store the word.
     */
     cpMem[location] = data & Mask60;
-    cpuReleaseMemoryMutex();
 
     return (FALSE);
     }

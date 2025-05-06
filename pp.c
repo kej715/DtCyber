@@ -1143,9 +1143,7 @@ static void ppOpCRD(void)     // 60
         {
         address = activePpu->regA & Mask18;
         }
-    cpuAcquireMemoryMutex();
     cpuPpReadMem(address, &data);
-    cpuReleaseMemoryMutex();
     activePpu->mem[opD++ & Mask12] = (PpWord)((data >> 48) & Mask12);
     activePpu->mem[opD++ & Mask12] = (PpWord)((data >> 36) & Mask12);
     activePpu->mem[opD++ & Mask12] = (PpWord)((data >> 24) & Mask12);
@@ -1177,9 +1175,7 @@ static void ppOpCRM(void)     // 61
         {
         address = activePpu->regA & Mask18;
         }
-    cpuAcquireMemoryMutex();
     cpuPpReadMem(address, &data);
-    cpuReleaseMemoryMutex();
     activePpu->mem[activePpu->regP] = (PpWord)((data >> 48) & Mask12);
     PpIncrement(activePpu->regP);
 
@@ -1237,9 +1233,7 @@ static void ppOpCWD(void)     // 62
     ppValidateCmWrite("CWD", address, data);
 #endif
     // TODO: verify against OS Bounds on 180
-    cpuAcquireMemoryMutex();
     cpuPpWriteMem(address, data);
-    cpuReleaseMemoryMutex();
     }
 
 static void ppOpCWM(void)     // 63
@@ -1287,10 +1281,7 @@ static void ppOpCWM(void)     // 63
 #if PPDEBUG
     ppValidateCmWrite("CWM", address, data);
 #endif
-    // TODO: validate against OS Bounds on 180
-    cpuAcquireMemoryMutex();
     cpuPpWriteMem(address, data);
-    cpuReleaseMemoryMutex();
     activePpu->regA = (activePpu->regA + 1) & Mask18;
     PpDecrement(activePpu->regQ);
 
@@ -2093,9 +2084,7 @@ static void ppOpCRDL(void)    // 1060
         {
         address = activePpu->regA & Mask18;
         }
-    cpuAcquireMemoryMutex();
     cpuPpReadMem(address, &data);
-    cpuReleaseMemoryMutex();
     activePpu->mem[opD++ & Mask12] = (PpWord)((data >> 48) & Mask16);
     activePpu->mem[opD++ & Mask12] = (PpWord)((data >> 32) & Mask16);
     activePpu->mem[opD++ & Mask12] = (PpWord)((data >> 16) & Mask16);
@@ -2126,9 +2115,7 @@ static void ppOpCRML(void)    // 1061
         {
         address = activePpu->regA & Mask18;
         }
-    cpuAcquireMemoryMutex();
     cpuPpReadMem(address, &data);
-    cpuReleaseMemoryMutex();
     activePpu->mem[activePpu->regP] = (PpWord)((data >> 48) & Mask16);
     PpIncrement(activePpu->regP);
 
@@ -2176,10 +2163,7 @@ static void ppOpCWDL(void)    // 1062
         {
         address = activePpu->regA & Mask18;
         }
-    // TODO: verify against OS Bounds on 180
-    cpuAcquireMemoryMutex();
     cpuPpWriteMem(address, data);
-    cpuReleaseMemoryMutex();
     }
 
 static void ppOpCWML(void)    // 1063
@@ -2220,10 +2204,7 @@ static void ppOpCWML(void)    // 1063
         {
         address = activePpu->regA & Mask18;
         }
-    // TODO: validate against OS Bounds on 180
-    cpuAcquireMemoryMutex();
     cpuPpWriteMem(address, data);
-    cpuReleaseMemoryMutex();
     activePpu->regA = (activePpu->regA + 1) & Mask18;
     PpDecrement(activePpu->regQ);
 
