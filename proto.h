@@ -120,6 +120,7 @@ void cpu180PpReadMem(u32 address, CpWord *data);
 void cpu180PpWriteMem(u32 address, CpWord data);
 bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *rma, MonitorCondition *cond);
 void cpu180SetMonitorCondition(Cpu180Context *ctx, MonitorCondition cond);
+void cpu180SetUserCondition(Cpu180Context *ctx, UserCondition cond);
 void cpu180Step(Cpu180Context *activeCpu);
 void cpu180Store170Xp(Cpu180Context *ctx, u32 xpa);
 void cpu180UpdateIntervalTimers(u64 delta);
@@ -275,7 +276,7 @@ void mchCheckTimeout(void);
 u64 mchGetCpRegister(Cpu180Context *ctx, u8 reg);
 void mchInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void mchSetCpRegister(Cpu180Context *ctx, u8 reg, u64 word);
-void mchSetOsBoundsFault(PpSlot *pp);
+void mchSetOsBoundsFault(PpSlot *pp, u32 address, u32 boundary);
 
 /*
 **  mdi.c
@@ -459,6 +460,7 @@ void traceCpuPrint(Cpu170Context *cpu, char *str);
 u8 traceDisassembleOpcode(char *str, PpWord *pm);
 void traceEnd(void);
 void traceExchange(Cpu170Context *cpu, u32 addr, char *title);
+void traceExchange180(Cpu180Context *cpu, u32 addr, char *title);
 void traceInit(void);
 void traceMonitorCondition(Cpu180Context *cpu, MonitorCondition cond);
 void traceOpcode(void);
@@ -470,7 +472,13 @@ void traceRegisters(bool isPost);
 void traceRma(Cpu180Context *cpu, u32 rma);
 void traceSde(Cpu180Context *cpu, u64 sde);
 void traceSequence(void);
+void traceStack(FILE *fp);
 void traceTerminate(void);
+char *traceTranslateAction(ConditionAction action);
+void traceTrapFrame170(Cpu180Context *cpu, u32 rma);
+void traceTrapFrame180(Cpu180Context *cpu, u32 rma);
+void traceTrapPointer(Cpu180Context *cpu);
+void traceUserCondition(Cpu180Context *cpu, UserCondition cond);
 void traceVmRegisters(Cpu180Context *cpu);
 
 /*

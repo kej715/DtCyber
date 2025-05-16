@@ -35,6 +35,11 @@
 #include "types.h"
 #include "proto.h"
 
+#if defined(__APPLE__)
+#include <execinfo.h>
+#endif
+
+
 /*
 **  -----------------
 **  Private Constants
@@ -162,6 +167,11 @@
 **  Private Macro Functions
 **  -----------------------
 */
+#define tracePrintPva(f, pva) (             \
+    fprintf((f), "%x %03x %08x",           \
+            (u8)(((pva) >> 44) & Mask4),   \
+            (u16)(((pva) >> 32) & Mask12), \
+            (u32)((pva) & Mask32)))
 
 /*
 **  -----------------------------------------
@@ -196,6 +206,7 @@ typedef struct decCp180Control
 **  Private Function Prototypes
 **  ---------------------------
 */
+static char *traceMonitorConditionToStr(MonitorCondition cond);
 
 /*
 **  ----------------
@@ -373,7 +384,7 @@ static DecCpControl rjDecode[010] =
     Cjk, "RX    X%o,X%o", RNXX,                 // 4
     Cjk, "WX    X%o,X%o", RNXX,                 // 5
     Cj,  "RC    X%o", RNXN,                     // 6
-    CN,  "Illegal", R,                          // 7
+    CN,  "Trap180", R,                          // 7
     };
 
 static DecCpControl cjDecode[010] =
@@ -1195,6 +1206,7 @@ void traceCpu180(Cpu180Context *cpu, u64 p, u8 opCode, u8 opI, u8 opJ, u8 opK, u
     DecCp180Control *decode = cp180Decode;
     DecCp180Control *entry;
     static char     str[80];
+    u64             value;
 
     /*
     **  Bail out if no trace of the CPU is requested.
@@ -1279,10 +1291,15 @@ void traceCpu180(Cpu180Context *cpu, u64 p, u8 opCode, u8 opI, u8 opJ, u8 opK, u
         sprintf(str, entry->mnemonic, opI, opD, opK, opJ);
         break;
     case VFJK8:
-        sprintf(str, entry->mnemonic, opJ + opK);
+        sprintf(str, entry->mnemonic, ((u16)opJ << 4) | (u16)opK);
         break;
     case VFJKQ24:
-        sprintf(str, entry->mnemonic, opJ + opK + opQ);
+        value = ((u64)opJ << 20) | ((u64)opK << 16) | (u64)opQ;
+        if (opJ > 7)
+            {
+            value |= 0xffffffffff000000;
+            }
+        sprintf(str, entry->mnemonic, (i64)value);
         break;
     default:
         break;
@@ -1332,10 +1349,10 @@ void traceCpu180(Cpu180Context *cpu, u64 p, u8 opCode, u8 opI, u8 opJ, u8 opK, u
         fprintf(cpuF[cpu->id], "XX%X=%016lx %016lx XX%X=%016lx %016lx", opK, cpu->regX[opK], cpu->regX[opK+1], opJ, cpu->regX[opJ], cpu->regX[opJ+1]);
         break;
     case VRX0:
-        fprintf(cpuF[cpu->id], "X0:%016lx", cpu->regX[0]);
+        fprintf(cpuF[cpu->id], "X0=%016lx", cpu->regX[0]);
         break;
     case VRX1:
-        fprintf(cpuF[cpu->id], "X1:%016lx", cpu->regX[1]);
+        fprintf(cpuF[cpu->id], "X1=%016lx", cpu->regX[1]);
         break;
     case VRAJX0AKX1:
         fprintf(cpuF[cpu->id], "A%X=%012lx     X0=%016lx A%X=%012lx     X1=%016lx", opJ, cpu->regA[opJ], cpu->regX[0], opK, cpu->regA[opK], cpu->regX[1]);
@@ -1384,11 +1401,12 @@ void traceCpu180(Cpu180Context *cpu, u64 p, u8 opCode, u8 opI, u8 opJ, u8 opK, u
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Trace a exchange jump.
+**  Purpose:        Trace a CYBER 170 exchange jump.
 **
 **  Parameters:     Name        Description.
 **                  cpu         Pointer to CPU context
 **                  addr        Address of exchange package
+**                  title       Title for exchange
 **
 **  Returns:        Nothing.
 **
@@ -1405,52 +1423,54 @@ void traceExchange(Cpu170Context *cpu, u32 addr, char *title)
         {
         return;
         }
-
-    fprintf(cpuF[cpu->id], "\n%06d Exchange jump with package address %06o (%s)\n\n", traceSequenceNo, addr, title);
+    if (title != NULL)
+        {
+        fprintf(cpuF[cpu->id], "\n%06d Exchange jump with package address %06o (%s)\n", traceSequenceNo, addr, title);
+        }
+    fputs("\n", cpuF[cpu->id]);
     fprintf(cpuF[cpu->id], "P       %06o  ", cpu->regP);
     fprintf(cpuF[cpu->id], "A%d %06o  ", 0, cpu->regA[0]);
     fprintf(cpuF[cpu->id], "B%d %06o", 0, cpu->regB[0]);
-    fprintf(cpuF[cpu->id], "\n");
+    fputs("\n", cpuF[cpu->id]);
 
-    fprintf(cpuF[cpu->id], "RA      %06o  ", cpu->regRaCm);
+    fprintf(cpuF[cpu->id], "RA     %07o  ", cpu->regRaCm);
     fprintf(cpuF[cpu->id], "A%d %06o  ", 1, cpu->regA[1]);
     fprintf(cpuF[cpu->id], "B%d %06o", 1, cpu->regB[1]);
-    fprintf(cpuF[cpu->id], "\n");
+    fputs("\n", cpuF[cpu->id]);
 
-    fprintf(cpuF[cpu->id], "FL      %06o  ", cpu->regFlCm);
+    fprintf(cpuF[cpu->id], "FL     %07o  ", cpu->regFlCm);
     fprintf(cpuF[cpu->id], "A%d %06o  ", 2, cpu->regA[2]);
     fprintf(cpuF[cpu->id], "B%d %06o", 2, cpu->regB[2]);
-    fprintf(cpuF[cpu->id], "\n");
+    fputs("\n", cpuF[cpu->id]);
 
     fprintf(cpuF[cpu->id], "RAE   %08o  ", cpu->regRaEcs);
     fprintf(cpuF[cpu->id], "A%d %06o  ", 3, cpu->regA[3]);
     fprintf(cpuF[cpu->id], "B%d %06o", 3, cpu->regB[3]);
-    fprintf(cpuF[cpu->id], "\n");
+    fputs("\n", cpuF[cpu->id]);
 
     fprintf(cpuF[cpu->id], "FLE   %08o  ", cpu->regFlEcs);
     fprintf(cpuF[cpu->id], "A%d %06o  ", 4, cpu->regA[4]);
     fprintf(cpuF[cpu->id], "B%d %06o", 4, cpu->regB[4]);
-    fprintf(cpuF[cpu->id], "\n");
+    fputs("\n", cpuF[cpu->id]);
 
     fprintf(cpuF[cpu->id], "EM/FL %08o  ", cpu->exitMode);
     fprintf(cpuF[cpu->id], "A%d %06o  ", 5, cpu->regA[5]);
     fprintf(cpuF[cpu->id], "B%d %06o", 5, cpu->regB[5]);
-    fprintf(cpuF[cpu->id], "\n");
+    fputs("\n", cpuF[cpu->id]);
 
     fprintf(cpuF[cpu->id], "MA      %06o  ", cpu->regMa);
     fprintf(cpuF[cpu->id], "A%d %06o  ", 6, cpu->regA[6]);
     fprintf(cpuF[cpu->id], "B%d %06o", 6, cpu->regB[6]);
-    fprintf(cpuF[cpu->id], "\n");
+    fputs("\n", cpuF[cpu->id]);
 
     fprintf(cpuF[cpu->id], "STOP         %d  ", cpu->isStopped ? 1 : 0);
     fprintf(cpuF[cpu->id], "A%d %06o  ", 7, cpu->regA[7]);
     fprintf(cpuF[cpu->id], "B%d %06o  ", 7, cpu->regB[7]);
-    fprintf(cpuF[cpu->id], "\n");
+    fputs("\n", cpuF[cpu->id]);
     fprintf(cpuF[cpu->id], "ECOND       %02o  ", cpu->exitCondition);
-    fprintf(cpuF[cpu->id], "\n");
+    fputs("\n", cpuF[cpu->id]);
     fprintf(cpuF[cpu->id], "MonitorFlag %s", cpu->isMonitorMode ? "TRUE" : "FALSE");
-    fprintf(cpuF[cpu->id], "\n");
-    fprintf(cpuF[cpu->id], "\n");
+    fputs("\n\n", cpuF[cpu->id]);
 
     for (i = 0; i < 8; i++)
         {
@@ -1462,10 +1482,294 @@ void traceExchange(Cpu170Context *cpu, u32 addr, char *title)
                 (PpWord)((data >> 24) & Mask12),
                 (PpWord)((data >> 12) & Mask12),
                 (PpWord)((data) & Mask12));
-        fprintf(cpuF[cpu->id], "\n");
+        fputs("\n", cpuF[cpu->id]);
         }
 
-    fprintf(cpuF[cpu->id], "\n\n");
+    fprintf(cpuF[cpu->id], "\n");
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Trace a CYBER 180 exchange load or store.
+**
+**  Parameters:     Name        Description.
+**                  cpu         Pointer to CPU context
+**                  addr        Address of exchange package
+**                  title       Title for exchange
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceExchange180(Cpu180Context *cpu, u32 addr, char *title)
+    {
+    CpWord           data;
+    u8               i;
+    MonitorCondition cond;
+    u32              rma;
+
+    /*
+    **  Bail out if no trace of exchange jumps is requested.
+    */
+    if ((traceMask & TraceExchange) == 0)
+        {
+        return;
+        }
+    fprintf(cpuF[cpu->id], "\n%06d %s %08x\n\n", traceSequenceNo, title, addr);
+    fprintf(cpuF[cpu->id], " P %02x ", cpu->key);
+    tracePrintPva(cpuF[cpu->id], cpu->regP);
+    if (cpu180PvaToRma(cpu, cpu->regP & Mask48, AccessModeExecute, &rma, &cond))
+        {
+        fprintf(cpuF[cpu->id], " (RMA %08x)", rma);
+        }
+    fputs("\n\n", cpuF[cpu->id]);
+    for (i = 0; i < 16; i++)
+        {
+        data = cpu->regX[i];
+        fprintf(cpuF[cpu->id], "A%X ", i);
+        tracePrintPva(cpuF[cpu->id], cpu->regA[i]);
+        fprintf(cpuF[cpu->id],"   X%X %04x %04x %04x %04x\n", i,
+                (PpWord)((data >> 48) & Mask16),
+                (PpWord)((data >> 32) & Mask16),
+                (PpWord)((data >> 16) & Mask16),
+                (PpWord)((data) & Mask16));
+        }
+    fputs("\n", cpuF[cpu->id]);
+    fprintf(cpuF[cpu->id], "VMID %04x  VMCL %04x   LPID %02x\n", cpu->regVmid, cpu->regVmcl, cpu->regLpid);
+    fprintf(cpuF[cpu->id], " UMR %04x   MMR %04x  Flags %04x\n", cpu->regUmr, cpu->regMmr, cpu->regFlags);
+    fprintf(cpuF[cpu->id], " UCR %04x   MCR %04x    MDF %04x\n", cpu->regUcr, cpu->regMcr, cpu->regMdf);
+    fputs("\n", cpuF[cpu->id]);
+    fprintf(cpuF[cpu->id], " MPS %08x  SIT %08x\n", cpu->regMps, cpu->regSit);
+    fprintf(cpuF[cpu->id], " JPS %08x  PIT %08x\n", cpu->regJps, cpu->regPit);
+    fprintf(cpuF[cpu->id], "  BC %08x\n", cpu->regBc);
+    fputs("\n", cpuF[cpu->id]);
+    fprintf(cpuF[cpu->id], " PTA %08x  STA %08x\n", cpu->regPta, cpu->regSta);
+    fprintf(cpuF[cpu->id], " PTL %02x        STL %03x\n", cpu->regPtl, cpu->regStl);
+    fprintf(cpuF[cpu->id], " PSM %02x\n", cpu->regPsm);
+    fputs("\n", cpuF[cpu->id]);
+    fputs(" UTP ", cpuF[cpu->id]);
+    tracePrintPva(cpuF[cpu->id], cpu->regUtp);
+    fputs("  TP ", cpuF[cpu->id]);
+    tracePrintPva(cpuF[cpu->id], cpu->regTp);
+    fputs("\n", cpuF[cpu->id]);
+    fputs(" DLP ", cpuF[cpu->id]);
+    tracePrintPva(cpuF[cpu->id], cpu->regDlp);
+    fprintf(cpuF[cpu->id], "  DI %02x\n", cpu->regDi);
+    fprintf(cpuF[cpu->id], "                     DM %02x\n", cpu->regDm);
+    fputs("\n", cpuF[cpu->id]);
+    fprintf(cpuF[cpu->id], " LRN %d\n", cpu->regLrn);
+    for (i = 0; i < 15; i++)
+        {
+        fprintf(cpuF[cpu->id], " TOS[%02d] ", i + 1);
+        tracePrintPva(cpuF[cpu->id], cpu->regTos[i]);
+        fputs("\n", cpuF[cpu->id]);
+        }
+    fputs("\n", cpuF[cpu->id]);
+    fprintf(cpuF[cpu->id], " MDW %016lx  \n", cpu->regMdw);
+    fputs("\n", cpuF[cpu->id]);
+    fprintf(cpuF[cpu->id], "MonitorFlag  %s\n", cpu->isMonitorMode ? "TRUE" : "FALSE");
+    fprintf(cpuF[cpu->id], "STOP         %d\n", cpu->isStopped ? 1 : 0);
+    fputs("\n", cpuF[cpu->id]);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Trace a CYBER 170 trap frame.
+**
+**  Parameters:     Name        Description.
+**                  cpu         Pointer to CYBER 180 CPU context
+**                  rma         Stack frame address
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceTrapFrame170(Cpu180Context *cpu, u32 rma)
+    {
+    u8  i;
+    u64 word;
+    u32 wordAddr;
+
+    /*
+    **  Bail out if no trace of exchange jumps is requested.
+    */
+    if ((traceMask & TraceExchange) == 0)
+        {
+        return;
+        }
+    fprintf(cpuF[cpu->id], "\n%06d CYBER 170 trap frame pushed at %08x\n\n", traceSequenceNo, rma);
+    wordAddr = rma >> 3;
+    fprintf(cpuF[cpu->id], "P %lx\n", cpMem[wordAddr++]);
+    word = cpMem[wordAddr++];
+    fprintf(cpuF[cpu->id], "VMID %04x   A0 %012lx\n", (u16)((word >> 56) & Mask4), word & Mask48);
+    word = cpMem[wordAddr++];
+    fprintf(cpuF[cpu->id], "Desc %04x   A1 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
+    word = cpMem[wordAddr++];
+    fprintf(cpuF[cpu->id], "UMR  %04x   A2 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
+    word = cpMem[wordAddr++];
+    fprintf(cpuF[cpu->id], "EM   %04o   RA %07o\n", (u16)((word >> 32) & Mask12), (u32)(word & Mask32));
+    word = cpMem[wordAddr++];
+    fprintf(cpuF[cpu->id], "UCR  %04x%s  FL %07o\n", (u16)((word >> 48) & Mask16), (word >> 32) & 1 ? "*" : " ", (u32)(word & Mask32));
+    word = cpMem[wordAddr++];
+    fprintf(cpuF[cpu->id], "MCR  %04x   MA %07o\n", (u16)((word >> 48) & Mask16), (u32)(word & Mask32));
+    fprintf(cpuF[cpu->id], "           RAE %07o\n", (u32)(cpMem[wordAddr++] & Mask32));
+    fprintf(cpuF[cpu->id], "           FLE %07o\n\n", (u32)(cpMem[wordAddr++] & Mask32));
+    fprintf(cpuF[cpu->id], "A0 %06o  B0 000000\n", (u32)(cpMem[wordAddr] & Mask32));
+    for (i = 1; i < 8; i++)
+        {
+        fprintf(cpuF[cpu->id], "A%d %06o  B%d %06o\n", i, (u32)(cpMem[wordAddr + i] & Mask32), i, (u32)(cpMem[wordAddr + i + 8] & Mask32));
+        }
+    wordAddr += 16;
+    fputs("\n", cpuF[cpu->id]);
+    for (i = 0; i < 8; i++)
+        {
+        fprintf(cpuF[cpu->id], "X%d %020lo\n", i, cpMem[wordAddr++] & Mask60);
+        }
+    fputs("\n", cpuF[cpu->id]);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Trace a CYBER 180 trap frame.
+**
+**  Parameters:     Name        Description.
+**                  cpu         Pointer to CYBER 180 CPU context
+**                  rma         Stack frame address
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceTrapFrame180(Cpu180Context *cpu, u32 rma)
+    {
+    u8  i;
+    u64 word;
+    u32 wordAddr;
+
+    /*
+    **  Bail out if no trace of exchange jumps is requested.
+    */
+    if ((traceMask & TraceExchange) == 0)
+        {
+        return;
+        }
+    fprintf(cpuF[cpu->id], "\n%06d CYBER 180 trap frame pushed at %08x\n\n", traceSequenceNo, rma);
+    wordAddr = rma >> 3;
+    fprintf(cpuF[cpu->id], "P %lx\n", cpMem[wordAddr++]);
+    word = cpMem[wordAddr++];
+    fprintf(cpuF[cpu->id], "VMID %04x  A0 %012lx\n", (u8)((word >> 56) & Mask4), word & Mask48);
+    word = cpMem[wordAddr++];
+    fprintf(cpuF[cpu->id], "Desc %04x  A1 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
+    word = cpMem[wordAddr++];
+    fprintf(cpuF[cpu->id], "UMR  %04x  A2 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
+    fprintf(cpuF[cpu->id], "           A3 %012lx\n", cpMem[wordAddr++] & Mask48);
+    word = cpMem[wordAddr++];
+    fprintf(cpuF[cpu->id], "UCR  %04x  A4 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
+    word = cpMem[wordAddr++];
+    fprintf(cpuF[cpu->id], "MCR  %04x  A5 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
+    for (i = 6; i < 16; i++)
+        {
+        fprintf(cpuF[cpu->id], "           A%X %012lx\n", i, cpMem[wordAddr++] & Mask48);
+        }
+    fputs("\n", cpuF[cpu->id]);
+    for (i = 0; i < 16; i++)
+        {
+        fprintf(cpuF[cpu->id], "X%X %016lx\n", i, cpMem[wordAddr++]);
+        }
+    fputs("\n", cpuF[cpu->id]);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Trace a CYBER 180 trap pointer.
+**
+**  Parameters:     Name        Description.
+**                  cpu         Pointer to CYBER 180 CPU context
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceTrapPointer(Cpu180Context *cpu)
+    {
+    u64              bsp;
+    u64              cbp;
+    MonitorCondition cond;
+    bool             isExt;
+    u32              rma;
+    u8               vmid;
+
+    /*
+    **  Bail out if no trace of exchange jumps is requested.
+    */
+    if ((traceMask & TraceExchange) == 0)
+        {
+        return;
+        }
+    fprintf(cpuF[cpu->id], "%06d CYBER 180 trap pointer %012lx ", traceSequenceNo, cpu->regTp);
+    if (cpu180PvaToRma(cpu, cpu->regTp, AccessModeRead, &rma, &cond) == FALSE)
+        {
+        fprintf(cpuF[cpu->id], "%s\n", traceMonitorConditionToStr(cond));
+        return;
+        }
+    cbp   = cpMem[rma >> 3];
+    vmid  = (cbp >> 56) & Mask4;
+    fprintf(cpuF[cpu->id], "RMA %08x VMID %x CBP %lx", rma, vmid, cbp);
+    isExt = vmid == 0 && ((cbp >> 55) & 1) != 0;
+    if (isExt)
+        {
+        fprintf(cpuF[cpu->id], "\n         Binding section pointer %lx ", cpu->regTp + 8);
+        if (cpu180PvaToRma(cpu, cpu->regTp + 8, AccessModeRead, &rma, &cond) == FALSE)
+            {
+            fprintf(cpuF[cpu->id], "%s\n", traceMonitorConditionToStr(cond));
+            return;
+            }
+        bsp = cpMem[rma >> 3] & Mask48;
+        fprintf(cpuF[cpu->id], "RMA %08x Binding section %012lx", rma, bsp);
+        }
+    fputs("\n", cpuF[cpu->id]);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Trace a monitor condition.
+**
+**  Parameters:     Name        Description.
+**                  cond        monitor condition ordinal
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static char *traceMonitorConditionToStr(MonitorCondition cond)
+    {
+    switch (cond)
+        {
+    case MCR48:
+        return "Detected uncorrectable error";
+    case MCR49:
+        return "Not assigned";
+    case MCR50:
+        return "Short warning";
+    case MCR51:
+        return "Instruction specfication error";
+    case MCR52:
+        return "Address specification error";
+    case MCR53:
+        return "CYBER 170 state exchange request";
+    case MCR54:
+        return "Access violation";
+    case MCR55:
+        return "Environment specification error";
+    case MCR56:
+        return "External interrupt";
+    case MCR57:
+        return "Page table search without find";
+    case MCR58:
+        return "System call (status bit)";
+    case MCR59:
+        return "System interval timer";
+    case MCR60:
+        return "Invalid segment / Ring number 0";
+    case MCR61:
+        return "Outward call / Inward return";
+    case MCR62:
+        return "Soft error";
+    case MCR63:
+        return "Trap exception (status bit)";
+    default:
+        return "";
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -1537,7 +1841,8 @@ void traceMonitorCondition(Cpu180Context *cpu, MonitorCondition cond)
             s = "";
             break;
             }
-        fprintf(cpuF[cpu->id], "%06d MCR%d %s\n", traceSequenceNo, (cond - MCR48) + 48, s);
+        fprintf(cpuF[cpu->id], "%06d MCR%02d %s\n", traceSequenceNo, (cond - MCR48) + 48, s);
+        fprintf(cpuF[cpu->id], "%06d       Action %s, P %012lx\n", traceSequenceNo, traceTranslateAction(cpu->pendingAction), cpu->nextP);
         }
     }
 
@@ -1553,8 +1858,8 @@ void tracePageInfo(Cpu180Context *cpu, u16 hash, u32 pageNum, u32 pageOffset, u3
     {
     if ((traceMask & TracePva) != 0)
         {
-        fprintf(cpuF[cpu->id], "%06d hash %04x pageNum %x pageOffset %x pageTableIdx %x SPID %lx\n", traceSequenceNo,
-            hash, pageNum, pageOffset, pageTableIdx, spid);
+        fprintf(cpuF[cpu->id], "%06d hash %04x pageNum %x pageOffset %x pageTableAddr %08x SPID %lx\n", traceSequenceNo,
+            hash, pageNum, pageOffset, pageTableIdx << 3, spid);
         }
     }
 
@@ -1625,6 +1930,108 @@ void traceSde(Cpu180Context *cpu, u64 sde)
             (u8)((sde >> 62) & Mask2), (u8)((sde >> 60) & Mask2), (u8)((sde >> 58) & Mask2), (u8)((sde >> 56) & Mask2),
             (u8)((sde >> 52) & Mask4), (u8)((sde >> 48) & Mask4),
             (u16)((sde >> 32) & Mask16), (u8)((sde >> 24) & Mask6));
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Translate an action indication to a string.
+**
+**  Parameters:     Name        Description.
+**                  action      action ordinal
+**
+**  Returns:        String representation.
+**
+**------------------------------------------------------------------------*/
+char *traceTranslateAction(ConditionAction action)
+    {
+    switch (action)
+        {
+    case Rni:
+        return "RNI";
+    case Stack:
+        return "Stack";
+    case Trap:
+        return "Trap";
+    case Exch:
+        return "Exchange";
+    case Halt:
+        return "Halt";
+    default:
+        return "Unknown";
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Trace a user condition.
+**
+**  Parameters:     Name        Description.
+**                  cond        user condition ordinal
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceUserCondition(Cpu180Context *cpu, UserCondition cond)
+    {
+    char *s;
+
+    if ((traceMask & TracePva) != 0)
+        {
+        switch (cond)
+            {
+        case UCR48:
+            s = "Privileged instruction fault";
+            break;
+        case UCR49:
+            s = "Unimplemented instruction";
+            break;
+        case UCR50:
+            s = "Free flag";
+            break;
+        case UCR51:
+            s = "Process interval timer";
+            break;
+        case UCR52:
+            s = "Inter-ring pop";
+            break;
+        case UCR53:
+            s = "Critical frame flag";
+            break;
+        case UCR54:
+            s = "Reserved";
+            break;
+        case UCR55:
+            s = "Divide fault";
+            break;
+        case UCR56:
+            s = "Debug";
+            break;
+        case UCR57:
+            s = "Arithmetic overflow";
+            break;
+        case UCR58:
+            s = "Exponent overflow";
+            break;
+        case UCR59:
+            s = "Exponent underflow";
+            break;
+        case UCR60:
+            s = "FP loss of significance";
+            break;
+        case UCR61:
+            s = "FP indefinite";
+            break;
+        case UCR62:
+            s = "Arithmetic loss of significance";
+            break;
+        case UCR63:
+            s = "Invalid BDP data";
+            break;
+        default:
+            s = "";
+            break;
+            }
+        fprintf(cpuF[cpu->id], "%06d UCR%d %s\n", traceSequenceNo, (cond - MCR48) + 48, s);
+        fprintf(cpuF[cpu->id], "%06d       Action %s, P %012lx\n", traceSequenceNo, traceTranslateAction(cpu->pendingAction), cpu->nextP);
         }
     }
 
@@ -2049,5 +2456,32 @@ void traceEnd(void)
     */
     fprintf(ppuF[activePpu->id], "\n");
     }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Log a stack trace
+**
+**  Parameters:     none
+**
+**  Returns:        nothing
+**
+**------------------------------------------------------------------------*/
+void traceStack(FILE *fp)
+    {
+#if defined(__APPLE__)
+    void *callstack[128];
+    int  i;
+    int  frames;
+    char **strs;
+
+    frames = backtrace(callstack, 128);
+    strs   = backtrace_symbols(callstack, frames);
+    for (i = 1; i < frames; ++i)
+        {
+        fprintf(fp, "%s\n", strs[i]);
+        }
+    free(strs);
+#endif
+    }
+
 
 /*---------------------------  End Of File  ------------------------------*/

@@ -209,6 +209,7 @@ typedef struct
     /*
      *  Cyber 180 PP support
      */
+    bool   isStopped;                   /* TRUE if PP is stopped (CYBER 180 only) */
     bool   osBoundsCheckEnabled;        /* whether OS bounds checking is enabled */
     bool   isBelowOsBound;              /* whether checking is below/above OS bound register */
     bool   isStopEnabled;               /* whether PP stop enabled on OS bounds violation */

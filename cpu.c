@@ -691,10 +691,27 @@ void cpuStep(Cpu170Context *activeCpu)
     **  If the machine is a CYBER 180, and this CPU is currently in 180 state,
     **  give control to the 180 state step processor.
     */
-    if (isCyber180 && cpus180[activeCpu->id].regVmid == 0)
+    if (isCyber180)
         {
-        cpu180Step(&cpus180[activeCpu->id]);
-        return;
+        ctx180 = &cpus180[activeCpu->id];
+        if (ctx180->regVmid == 0) // CPU is in CYBER 180 state
+            {
+            cpu180Step(ctx180);
+            return;
+            }
+        else if (ctx180->isStopped)
+            {
+            return;
+            }
+        else if (ctx180->regMcr != 0 || ctx180->regUcr != 0)
+            {
+            cpu180CheckConditions(ctx180);
+            if (ctx180->pendingAction > Stack)
+                {
+                cpu180Step(ctx180);
+                return;
+                }
+            }
         }
 
     /*
@@ -817,6 +834,16 @@ void cpuStep(Cpu170Context *activeCpu)
             activeCpu->regP = (activeCpu->regP + 1) & Mask18;
             cpuFetchOpWord(activeCpu);
             }
+        /*
+        **  Check for monitor or user condition indications in dual-state environment
+        */
+        if (isCyber180 && (ctx180->regMcr != 0 || ctx180->regUcr != 0))
+            {
+            if (ctx180->pendingAction > Stack)
+                {
+                return;
+                }
+            }
         } while (activeCpu->opOffset != 60 && !activeCpu->isStopped);
 
     if (activeCpu->isErrorExitPending)
@@ -829,6 +856,7 @@ void cpuStep(Cpu170Context *activeCpu)
         {
         ctx180 = &cpus180[activeCpu->id];
         cpu180Store170Xp(ctx180, ctx180->regJps >> 3);
+        ctx180->isMonitorMode = TRUE;
         cpu180Load180Xp(ctx180, ctx180->regMps >> 3);
         cpu180CheckConditions(ctx180);
         }
@@ -1202,7 +1230,7 @@ static void cpuExchangeJump(Cpu170Context *activeCpu, u32 address, bool doChange
  */
 
 #if CcDebug == 1
-    traceExchange(activeCpu, address, "Old");
+    traceExchange(activeCpu, address, "Outgoing");
 #endif
 
     /*
@@ -1236,12 +1264,12 @@ static void cpuExchangeJump(Cpu170Context *activeCpu, u32 address, bool doChange
     activeCpu->regB[0] = 0;
 
     mem += 1;
-    activeCpu->regRaCm = (u32)((*mem >> 36) & Mask24);
+    activeCpu->regRaCm = (u32)((*mem >> 36) & Mask21);
     activeCpu->regA[1] = (u32)((*mem >> 18) & Mask18);
     activeCpu->regB[1] = (u32)((*mem) & Mask18);
 
     mem += 1;
-    activeCpu->regFlCm = (u32)((*mem >> 36) & Mask24);
+    activeCpu->regFlCm = (u32)((*mem >> 36) & Mask21);
     activeCpu->regA[2] = (u32)((*mem >> 18) & Mask18);
     activeCpu->regB[2] = (u32)((*mem) & Mask18);
 
@@ -1279,7 +1307,7 @@ static void cpuExchangeJump(Cpu170Context *activeCpu, u32 address, bool doChange
     activeCpu->regB[5] = (u32)((*mem) & Mask18);
 
     mem += 1;
-    activeCpu->regMa   = (u32)((*mem >> 36) & Mask24);
+    activeCpu->regMa   = (u32)((*mem >> 36) & Mask21);
     activeCpu->regA[6] = (u32)((*mem >> 18) & Mask18);
     activeCpu->regB[6] = (u32)((*mem) & Mask18);
 
@@ -1301,7 +1329,7 @@ static void cpuExchangeJump(Cpu170Context *activeCpu, u32 address, bool doChange
     activeCpu->exitCondition = EcNone;
 
 #if CcDebug == 1
-    traceExchange(activeCpu, address, "New");
+    traceExchange(activeCpu, address, "Incoming");
 #endif
 
     /*
@@ -1310,8 +1338,8 @@ static void cpuExchangeJump(Cpu170Context *activeCpu, u32 address, bool doChange
     mem = cpMem + address;
 
     *mem++ = ((CpWord)(tmp.regP & Mask18) << 36) | ((CpWord)(tmp.regA[0] & Mask18) << 18);
-    *mem++ = ((CpWord)(tmp.regRaCm & Mask24) << 36) | ((CpWord)(tmp.regA[1] & Mask18) << 18) | ((CpWord)(tmp.regB[1] & Mask18));
-    *mem++ = ((CpWord)(tmp.regFlCm & Mask24) << 36) | ((CpWord)(tmp.regA[2] & Mask18) << 18) | ((CpWord)(tmp.regB[2] & Mask18));
+    *mem++ = ((CpWord)(tmp.regRaCm & Mask21) << 36) | ((CpWord)(tmp.regA[1] & Mask18) << 18) | ((CpWord)(tmp.regB[1] & Mask18));
+    *mem++ = ((CpWord)(tmp.regFlCm & Mask21) << 36) | ((CpWord)(tmp.regA[2] & Mask18) << 18) | ((CpWord)(tmp.regB[2] & Mask18));
     *mem++ = ((CpWord)(tmp.exitMode & Mask24) << 36) | ((CpWord)(tmp.regA[3] & Mask18) << 18) | ((CpWord)(tmp.regB[3] & Mask18));
 
     if (((features & IsSeries800) != 0)
@@ -1334,7 +1362,7 @@ static void cpuExchangeJump(Cpu170Context *activeCpu, u32 address, bool doChange
         *mem++ = ((CpWord)(tmp.regFlEcs & Mask24Ecs) << 36) | ((CpWord)(tmp.regA[5] & Mask18) << 18) | ((CpWord)(tmp.regB[5] & Mask18));
         }
 
-    *mem++ = ((CpWord)(tmp.regMa & Mask24) << 36) | ((CpWord)(tmp.regA[6] & Mask18) << 18) | ((CpWord)(tmp.regB[6] & Mask18));
+    *mem++ = ((CpWord)(tmp.regMa & Mask21) << 36) | ((CpWord)(tmp.regA[6] & Mask18) << 18) | ((CpWord)(tmp.regB[6] & Mask18));
     *mem++ = ((CpWord)(tmp.regSpare & Mask24) << 36) | ((CpWord)(tmp.regA[7] & Mask18) << 18) | ((CpWord)(tmp.regB[7] & Mask18));
     *mem++ = tmp.regX[0] & Mask60;
     *mem++ = tmp.regX[1] & Mask60;
@@ -1474,6 +1502,7 @@ static void dumpXP(Cpu170Context *activeCpu, int before, int after)
 **------------------------------------------------------------------------*/
 static void cpuOpIllegal(Cpu170Context *activeCpu)
     {
+/*DELETE*/traceStack(stderr);
     activeCpu->isStopped = TRUE;
     if (activeCpu->regRaCm < cpuMaxMemory)
         {
@@ -1526,6 +1555,7 @@ static bool cpuCheckOpAddress(Cpu170Context *activeCpu, u32 address, u32 *locati
 
         if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
             {
+/*DELETE*/traceStack(stderr);
             activeCpu->isErrorExitPending = TRUE;
             }
 
@@ -1726,6 +1756,7 @@ static bool cpuReadMem(Cpu170Context *activeCpu, u32 address, CpWord *data)
 
             if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
                 {
+/*DELETE*/traceStack(stderr);
                 activeCpu->isErrorExitPending = TRUE;
                 }
 
@@ -1798,6 +1829,7 @@ static bool cpuWriteMem(Cpu170Context *activeCpu, u32 address, CpWord *data)
 
             if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
                 {
+/*DELETE*/traceStack(stderr);
                 activeCpu->isErrorExitPending = TRUE;
                 }
 
@@ -2050,6 +2082,7 @@ static void cpuUemWord(Cpu170Context *activeCpu, bool writeToUem)
 
             if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
                 {
+/*DELETE*/traceStack(stderr);
                 activeCpu->isErrorExitPending = TRUE;
                 }
             }
@@ -2131,7 +2164,7 @@ static void cpuEcsWord(Cpu170Context *activeCpu, bool writeToEcs)
         absEcsAddr     = ecsAddress + raEcs;
         isFlagRegister = (ecsAddress & (1 << 29)) != 0
                          && (activeCpu->regFlEcs & (1 << 29)) != 0;
-        if ((isFlagRegister == FALSE) && (modelType == ModelCyber865))
+        if ((isFlagRegister == FALSE) && ((features & IsSeries800) != 0))
             {
             if (((absEcsAddr & (5 << 22)) == (4 << 22))
                 || ((absEcsAddr & (3 << 28)) == (1 << 28)))
@@ -2151,7 +2184,7 @@ static void cpuEcsWord(Cpu170Context *activeCpu, bool writeToEcs)
         absEcsAddr     = ecsAddress + raEcs;
         isFlagRegister = (ecsAddress & (1 << 23)) != 0
                          && (activeCpu->regFlEcs & (1 << 23)) != 0;
-        if ((isFlagRegister == FALSE) && (modelType == ModelCyber865))
+        if ((isFlagRegister == FALSE) && ((features & IsSeries800) != 0))
             {
             if ((absEcsAddr & (7 << 21)) == (1 << 21))
                 {
@@ -2204,6 +2237,7 @@ static void cpuEcsWord(Cpu170Context *activeCpu, bool writeToEcs)
 
             if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
                 {
+/*DELETE*/traceStack(stderr);
                 activeCpu->isErrorExitPending = TRUE;
                 }
             }
@@ -2307,7 +2341,7 @@ static void cpuUemTransfer(Cpu170Context *activeCpu, bool writeToUem)
         raEcs      = (u32)(activeCpu->regRaEcs & Mask24);
         flEcs      = (u32)(activeCpu->regFlEcs & Mask30);
         absUemAddr = uemAddress + raEcs;
-        isZeroFill = modelType == ModelCyber865
+        isZeroFill = (features & IsSeries800) != 0
                      && ((absUemAddr & (3 << 28)) == (1 << 28));
         }
     else
@@ -2315,7 +2349,7 @@ static void cpuUemTransfer(Cpu170Context *activeCpu, bool writeToUem)
         raEcs      = (u32)(activeCpu->regRaEcs & Mask21);
         flEcs      = (u32)(activeCpu->regFlEcs & Mask24);
         absUemAddr = uemAddress + raEcs;
-        isZeroFill = modelType == ModelCyber865
+        isZeroFill = (features & IsSeries800) != 0
                      && (((absUemAddr & (5 << 21)) == (1 << 21))
                          || ((absUemAddr & (3 << 22)) == (1 << 22)));
         }
@@ -2380,6 +2414,7 @@ static void cpuUemTransfer(Cpu170Context *activeCpu, bool writeToUem)
 
             if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
                 {
+/*DELETE*/traceStack(stderr);
                 activeCpu->isErrorExitPending = TRUE;
                 }
             }
@@ -2512,8 +2547,8 @@ static void cpuEcsTransfer(Cpu170Context *activeCpu, bool writeToEcs)
     isExpandedAddress = ((features & IsSeries800) != 0)
                         && ((activeCpu->exitMode & EmFlagExpandedAddress) != 0);
     isFlagRegister = FALSE;
-    isMaintenance  = FALSE;    // for Cyber 865/875
-    isZeroFill     = FALSE;    // for Cyber 865/875
+    isMaintenance  = FALSE;    // for Series 800
+    isZeroFill     = FALSE;    // for Series 800
 
     /*
     **  Calculate word count, source and destination addresses.
@@ -2526,7 +2561,7 @@ static void cpuEcsTransfer(Cpu170Context *activeCpu, bool writeToEcs)
         flEcs          = (u32)(activeCpu->regFlEcs & Mask30);
         absEcsAddr     = ecsAddress + raEcs;
         isFlagRegister = (ecsAddress & (1 << 29)) != 0 && (flEcs & (1 << 29)) != 0;
-        if ((isFlagRegister == FALSE) && (modelType == ModelCyber865))
+        if ((isFlagRegister == FALSE) && ((features & IsSeries800) != 0))
             {
             if (((absEcsAddr & (5 << 22)) == (4 << 22))
                 || ((absEcsAddr & (3 << 28)) == (1 << 28)))
@@ -2545,7 +2580,7 @@ static void cpuEcsTransfer(Cpu170Context *activeCpu, bool writeToEcs)
         flEcs          = (u32)(activeCpu->regFlEcs & Mask24);
         absEcsAddr     = ecsAddress + raEcs;
         isFlagRegister = (ecsAddress & (1 << 23)) != 0 && (flEcs & (1 << 23)) != 0;
-        if ((isFlagRegister == FALSE) && (modelType == ModelCyber865))
+        if ((isFlagRegister == FALSE) && ((features & IsSeries800) != 0))
             {
             if ((absEcsAddr & (7 << 21)) == (1 << 21))
                 {
@@ -2664,6 +2699,7 @@ static void cpuEcsTransfer(Cpu170Context *activeCpu, bool writeToEcs)
 
             if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
                 {
+/*DELETE*/traceStack(stderr);
                 activeCpu->isErrorExitPending = TRUE;
                 }
             }
@@ -2803,6 +2839,7 @@ static bool cpuCmuGetByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 *by
 
             if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
                 {
+/*DELETE*/traceStack(stderr);
                 activeCpu->isErrorExitPending = TRUE;
                 }
             }
@@ -2868,6 +2905,7 @@ static bool cpuCmuPutByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 byt
 
             if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
                 {
+/*DELETE*/traceStack(stderr);
                 activeCpu->isErrorExitPending = TRUE;
                 }
             }
@@ -2966,6 +3004,7 @@ static void cpuCmuMoveIndirect(Cpu170Context *activeCpu)
 
             if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
                 {
+/*DELETE*/traceStack(stderr);
                 activeCpu->isErrorExitPending = TRUE;
                 }
 
@@ -3077,6 +3116,7 @@ static void cpuCmuMoveDirect(Cpu170Context *activeCpu)
 
             if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
                 {
+/*DELETE*/traceStack(stderr);
                 activeCpu->isErrorExitPending = TRUE;
                 }
 
@@ -3193,6 +3233,7 @@ static void cpuCmuCompareCollated(Cpu170Context *activeCpu)
 
             if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
                 {
+/*DELETE*/traceStack(stderr);
                 activeCpu->isErrorExitPending = TRUE;
                 }
 
@@ -3338,6 +3379,7 @@ static void cpuCmuCompareUncollated(Cpu170Context *activeCpu)
 
             if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
                 {
+/*DELETE*/traceStack(stderr);
                 activeCpu->isErrorExitPending = TRUE;
                 }
 
@@ -3472,6 +3514,7 @@ static void cpuFloatExceptionHandler(Cpu170Context *activeCpu)
 
             if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
                 {
+/*DELETE*/traceStack(stderr);
                 activeCpu->isErrorExitPending = TRUE;
                 }
             }
@@ -3601,7 +3644,7 @@ static void cpOp01(Cpu170Context *activeCpu)
         break;
 
     case 4:
-        if (modelType != ModelCyber865)
+        if ((features & IsSeries800) == 0)
             {
             cpuOpIllegal(activeCpu);
 
@@ -3623,7 +3666,7 @@ static void cpOp01(Cpu170Context *activeCpu)
         break;
 
     case 5:
-        if (modelType != ModelCyber865)
+        if ((features & IsSeries800) == 0)
             {
             cpuOpIllegal(activeCpu);
 
@@ -3661,10 +3704,23 @@ static void cpOp01(Cpu170Context *activeCpu)
         break;
 
     case 7:
-        /*
-        **  7600 instruction (invalid in our context).
-        */
-        cpuOpIllegal(activeCpu);
+        if (isCyber180 && activeCpu->opOffset == 45)
+            {
+            /*
+            **  TRAP 180 instruction.
+            */
+            activeCpu->opOffset += 15;
+            cpu180SetUserCondition(&cpus180[activeCpu->id], UCR48);
+/*DELETE*/ //traceMask |= TraceCpu|TracePva;
+/*DELETE*/ //traceMask |= TraceCpu;
+            }
+        else
+            {
+            /*
+            **  7600 instruction (invalid in our context).
+            */
+            cpuOpIllegal(activeCpu);
+            }
         break;
         }
     }

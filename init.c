@@ -198,7 +198,7 @@ static ModelFeatures featuresCyber175 =
     (IsSeries170 | HasStatusAndControlReg | HasInstructionStack | HasIStackPrefetch | Has175Float);
 static ModelFeatures featuresCyber860 =
     (IsSeries800 | IsCyber180 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasMaintenanceChannel | HasCMU
-     | HasChannelFlag | HasErrorFlag | HasRelocationRegLong | HasMicrosecondClock | HasInstructionStack | HasIStackPrefetch);
+     | HasChannelFlag | HasErrorFlag | HasRelocationRegLong | HasMicrosecondClock);
 static ModelFeatures featuresCyber865 =
     (IsSeries800 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasStatusAndControlReg
      | HasRelocationRegShort | HasMicrosecondClock | HasInstructionStack | HasIStackPrefetch | Has175Float);

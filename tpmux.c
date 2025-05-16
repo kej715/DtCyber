@@ -1,6 +1,7 @@
 /*--------------------------------------------------------------------------
 **
-**  Copyright (c) 2003-2011, Gerard J van der Grinten, Tom Hunter
+**  Copyright (c) 2003-2025, Gerard J van der Grinten, Tom Hunter,
+**                           Kevin Jordan
 **
 **  Name: tpmux.c
 **
@@ -207,6 +208,7 @@
 #define FcTpmFlipRTS          00500
 #define FcTpmNotUsed          00600
 #define FcTpmMasterClear      00700
+#define FcTpmClockDialout     01000
 #define FcTpmDeSelect         06000
 #define FcTpmConPort          07000
 
@@ -261,6 +263,7 @@ typedef struct portParam
 */
 static void     tpMuxCheckIo(void);
 static FcStatus tpMuxFunc(PpWord funcCode);
+static void     tpMuxGetTimestamp(void);
 static void     tpMuxIo(void);
 static void     tpMuxActivate(void);
 static void     tpMuxDisconnect(void);
@@ -280,11 +283,16 @@ bool tpMuxEnabled = FALSE;
 static int       ioTurns     = IoTurnsPerPoll - 1;
 static int       listenFd    = 0;
 static DevSlot   *mux        = NULL;
+static u8        outBuf[540];
 static PortParam *portVector = NULL;
 static u16       telnetPort  = 6602;
 
 static char connectingMsg[] = "\r\nConnecting to host - please wait ...";
 static char noPortsMsg[]    = "\r\nNo free ports available - please try again later.\r\n";
+
+#if DEBUG
+FILE *tpMuxLog = NULL;
+#endif
 
 /*
  **--------------------------------------------------------------------------
@@ -312,6 +320,13 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     u8        i;
     long      port;
     PortParam *pp;
+
+#if DEBUG
+    if (tpMuxLog == NULL)
+        {
+        tpMuxLog = fopen("tpmlog.txt", "wt");
+        }
+#endif
 
     if (mux != NULL)
         {
@@ -573,7 +588,7 @@ static void tpMuxCheckIo(void)
             availablePort->outInIdx  = 0;
             availablePort->outOutIdx = 0;
 #if DEBUG
-            printf("(tpmux  ) Connection accepted on port %d\n", availablePort->id);
+            fprintf(tpMuxLog, "Connection accepted on port %d\n", availablePort->id);
 #endif
 
             /*
@@ -597,7 +612,7 @@ static void tpMuxCheckIo(void)
             send(fd, noPortsMsg, (int)strlen(noPortsMsg), 0);
             netCloseConnection(fd);
 #if DEBUG
-            puts("(tpmux  ) No free ports available");
+            fputs("No free ports available\n", tpMuxLog);
 #endif
             }
         }
@@ -616,60 +631,129 @@ static FcStatus tpMuxFunc(PpWord funcCode)
     {
     int funcParam;
 
+#if DEBUG
+    fprintf(tpMuxLog, "Function %04o\n", funcCode);
+#endif
+
     funcParam = funcCode & 077;
     switch (funcCode & 07700)
         {
     default:
 #if DEBUG
-        printf("(tpmux  ) Function on tpm %04o declined\n", funcCode);
+        fputs("Unrecognized, declined\n", tpMuxLog);
 #endif
-
-        return (FcDeclined);
+        return FcDeclined;
 
     case FcTpmStatusSumary:
-        break;
-
     case FcTpmReadChar:
-        break;
-
     case FcTpmWriteChar:
-        break;
-
     case FcTpmSetTerminal:
-#if DEBUG
-        printf("(tpmux  ) Set Terminal mode %03o (unit %d)\n", funcParam, activeDevice->selectedUnit);
-#endif
-        break;
-
     case FcTpmFlipDTR:
-#if DEBUG
-        printf("(tpmux  ) %s DTR (unit %d)\n", funcParam == 0 ? "Clear" : "Set", activeDevice->selectedUnit);
-#endif
-        break;
-
     case FcTpmFlipRTS:
-#if DEBUG
-        printf("(tpmux  ) %s RTS (unit %d)\n", funcParam == 0 ? "Clear" : "Set", activeDevice->selectedUnit);
-#endif
         break;
 
     case FcTpmMasterClear:
-        return (FcProcessed);
+        return FcProcessed;
 
     case FcTpmDeSelect:
         activeDevice->selectedUnit = -1;
 
-        return (FcProcessed);
+        return FcProcessed;
 
     case FcTpmConPort:
         activeDevice->selectedUnit = 1 - (funcParam & 1);
 
-        return (FcProcessed);
+        return FcProcessed;
+
+    case FcTpmClockDialout:
+        switch (funcParam)
+            {
+        default:
+            // ignore unrecognized parameter
+            break;
+        case 002: // Read deadstart port/terminal type
+            outBuf[0] = 0;
+            activeDevice->recordLength = 1;
+            break;
+        case 003: // Set baud rate
+            activeDevice->recordLength = 1;
+            break;
+        case 004: // Read calendar clock
+            tpMuxGetTimestamp();
+            activeDevice->recordLength = 8;
+            break;
+        case 005: // Write calendar clock
+            activeDevice->recordLength = 6;
+            break;
+        case 006: // Write auto-dialout data
+            break;
+        case 007: // Read auto-dialout status
+            outBuf[0] = 0;
+            activeDevice->recordLength = 1;
+            break;
+        case 010: // Abandon call
+            return FcProcessed;
+        case 020: // Read pre-deadstart copies of P,Q,K,A registers, NIO barrel 0
+        case 021: // Read pre-deadstart copies of P,Q,K,A registers, NIO barrel 1
+        case 022: // Read pre-deadstart copies of P,Q,K,A registers, NIO barrel 2
+        case 023: // Read pre-deadstart copies of P,Q,K,A registers, NIO barrel 3
+        case 024: // Read pre-deadstart copies of P,Q,K,A registers, CIO barrel 0
+        case 025: // Read pre-deadstart copies of P,Q,K,A registers, CIO barrel 1
+        case 026: // Read pre-deadstart copies of P,Q,K,A registers, all barrels
+            memset(outBuf, 0, sizeof(outBuf));
+            activeDevice->recordLength = funcParam == 026 ? 540 : 90;
+            break;
+        case 027: // Read pre-deadstart copies of channel status
+            memset(outBuf, 0, sizeof(outBuf));
+            activeDevice->recordLength = 38;
+            break;
+            }
+        break;
         }
 
     activeDevice->fcode = funcCode;
 
-    return (FcAccepted);
+    return FcAccepted;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Get the current date and time.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void tpMuxGetTimestamp(void)
+    {
+#if defined(_WIN32)
+    SYSTEMTIME dt;
+
+    GetLocalTime(&dt);
+    outBuf[0] = 0;
+    outBuf[1] = ((((dt.wYear % 10) / 10) << 4) | (dt.wYear % 10);
+    outBuf[2] = ((dt.wMonth / 10) << 4) | (dt.wMonth % 10);
+    outBuf[3] = ((dt.wDay / 10) << 4) | (dt.wDay % 10);
+    outBuf[4] = ((dt.wHour / 10) << 4) | (dt.wHour % 10);
+    outBuf[5] = ((dt.wMinute / 10) << 4) | (dt.wMinute % 10);
+    outBuf[6] = ((dt.wSecond / 10) << 4) | (dt.wSecond % 10);
+    outBuf[7] = 0;
+#else
+    time_t    rawtime;
+    struct tm *info;
+
+    time(&rawtime);
+    info = localtime(&rawtime);
+    
+    outBuf[0] = 0;
+    outBuf[1] = (((info->tm_year - 100) / 10) << 4) | (info->tm_year % 10);
+    outBuf[2] = (((info->tm_mon + 1) / 10) << 4) | ((info->tm_mon + 1) % 10);
+    outBuf[3] = ((info->tm_mday / 10) << 4) | (info->tm_mday % 10);
+    outBuf[4] = ((info->tm_hour / 10) << 4) | (info->tm_hour % 10);
+    outBuf[5] = ((info->tm_min / 10) << 4) | (info->tm_min % 10);
+    outBuf[6] = ((info->tm_sec / 10) << 4) | (info->tm_sec % 10);
+    outBuf[7] = 0;
+#endif
     }
 
 /*--------------------------------------------------------------------------
@@ -693,8 +777,11 @@ static void tpMuxIo(void)
 
     pp = (PortParam *)activeDevice->context[0] + activeDevice->selectedUnit;
 
-    switch (activeDevice->fcode & 00700)
+    switch (activeDevice->fcode & 07700)
         {
+    default:
+        break;
+
     case FcTpmStatusSumary:
         if (!activeChannel->full)
             {
@@ -724,7 +811,7 @@ static void tpMuxIo(void)
                 pp->inInIdx  = 0;
                 }
 #if DEBUG
-            printf("(tpmux  ) read port %d -  %04o\n", pp->id, activeChannel->data);
+            fprintf(tpMuxLog, " <  port %d : %04o\n", pp->id, activeChannel->data);
 #endif
             }
         break;
@@ -741,9 +828,63 @@ static void tpMuxIo(void)
                 {
                 pp->outBuffer[pp->outInIdx++] = (u8)activeChannel->data & 0177;
 #if DEBUG
-                printf("(tpmux  ) write port %d - %04o\n", pp->id, activeChannel->data);
+                fprintf(tpMuxLog, " > port %d : %04o\n", pp->id, activeChannel->data);
 #endif
                 }
+            }
+        break;
+
+    case FcTpmClockDialout:
+        switch (activeDevice->fcode & 077)
+            {
+        default:
+            // ignore unrecognized parameter
+            break;
+        case 002: // Read deadstart port/terminal type
+        case 004: // Read calendar clock
+        case 007: // Read auto-dialout status
+        case 020: // Read pre-deadstart copies of P,Q,K,A registers, NIO barrel 0
+        case 021: // Read pre-deadstart copies of P,Q,K,A registers, NIO barrel 1
+        case 022: // Read pre-deadstart copies of P,Q,K,A registers, NIO barrel 2
+        case 023: // Read pre-deadstart copies of P,Q,K,A registers, NIO barrel 3
+        case 024: // Read pre-deadstart copies of P,Q,K,A registers, CIO barrel 0
+        case 025: // Read pre-deadstart copies of P,Q,K,A registers, CIO barrel 1
+        case 026: // Read pre-deadstart copies of P,Q,K,A registers, all barrels
+        case 027: // Read pre-deadstart copies of channel status
+            if (!activeChannel->full)
+                {
+                activeChannel->data         = outBuf[8 - activeDevice->recordLength];
+                activeChannel->full         = TRUE;
+                activeDevice->recordLength -= 1;
+                if (activeDevice->recordLength < 1)
+                    {
+                    activeChannel->discAfterInput = TRUE;
+                    }
+#if DEBUG
+                fprintf(tpMuxLog, " < %02x\n", activeChannel->data);
+#endif
+                }
+            break;
+        case 003: // Set baud rate
+        case 005: // Write calendar clock
+            if (activeChannel->full)
+                {
+                activeDevice->recordLength -= 1;
+                activeChannel->full         = FALSE;
+#if DEBUG
+                fprintf(tpMuxLog, " > %02x\n", activeChannel->data);
+#endif
+                }
+            break;
+        case 006: // Write auto-dialout data
+            if (activeChannel->full)
+                {
+                activeChannel->full = FALSE;
+#if DEBUG
+                fprintf(tpMuxLog, " > %02x\n", activeChannel->data);
+#endif
+                }
+            break;
             }
         break;
         }

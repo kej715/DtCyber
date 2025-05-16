@@ -47,6 +47,11 @@
 **  Private Macro Functions
 **  -----------------------
 */
+#define dumpPrintPva(f, pva) (             \
+    fprintf((f), "%x %03x %08x",           \
+            (u8)(((pva) >> 44) & Mask4),   \
+            (u16)(((pva) >> 32) & Mask12), \
+            (u32)((pva) & Mask32)))
 
 /*
 **  -----------------------------------------
@@ -59,7 +64,7 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
-static void dumpPrintPva(FILE *pf, u64 pva);
+
 
 /*
 **  ----------------
@@ -474,24 +479,6 @@ void dumpPpu(u8 pp, PpWord first, PpWord limit)
 
         fprintf(pf, "\n");
         }
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Print a Cyber 180 Process Virtual Address.
-**
-**  Parameters:     Name        Description.
-**                  pf          pointer to file descriptor
-**                  pva         the PVA to print
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-static void dumpPrintPva(FILE *pf, u64 pva)
-    {
-    fprintf(pf, "%x %03x %08x",
-            (u8)((pva >> 44) & Mask4),   // ring
-            (u16)((pva >> 32) & Mask12), // segment
-            (u32)(pva & Mask32));        // byte number
     }
 
 /*--------------------------------------------------------------------------

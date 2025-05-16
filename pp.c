@@ -444,8 +444,11 @@ void ppInit(u8 count)
     */
     for (pp = 0; pp < ppuCount; pp++)
         {
-        ppu[pp].id            = pp;
-        ppu[pp].exchangingCpu = -1;
+        ppu[pp].id                   = pp;
+        ppu[pp].busy                 = FALSE;
+        ppu[pp].exchangingCpu        = -1;
+        ppu[pp].isStopped            = FALSE;
+        ppu[pp].osBoundsCheckEnabled = FALSE;
         }
 
     pp = 0;
@@ -515,6 +518,11 @@ void ppStep(void)
         **  Advance to next PPU.
         */
         activePpu = ppu + i;
+
+        if (activePpu->isStopped)
+            {
+            continue;
+            }
 
         if (activePpu->exchangingCpu >= 0)
             {
@@ -668,7 +676,7 @@ static bool ppCheckOsBounds(u32 address)
         if ((activePpu->isBelowOsBound && (address >= ppuOsBoundary))
             || ((activePpu->isBelowOsBound == FALSE) && (address < ppuOsBoundary)))
             {
-            mchSetOsBoundsFault(activePpu);
+            mchSetOsBoundsFault(activePpu, address, ppuOsBoundary);
             return TRUE;
             }
         }
@@ -985,10 +993,8 @@ static void ppOpEXN(void)     // 26
         cpuReleaseExchangeMutex();
         if (activePpu->isStopEnabled)
             {
+            activePpu->isStopped = TRUE;
             PpDecrement(activePpu->regP);
-            activePpu->opF  = opF;
-            activePpu->opD  = opD;
-            activePpu->busy = TRUE;
             }
         }
     else
@@ -1270,6 +1276,7 @@ static void ppOpCWD(void)     // 62
         {
         if (activePpu->isStopEnabled)
             {
+            activePpu->isStopped = TRUE;
             PpDecrement(activePpu->regP);
             }
         }
@@ -1333,6 +1340,7 @@ static void ppOpCWM(void)     // 63
         {
         if (activePpu->isStopEnabled)
             {
+            activePpu->isStopped = TRUE;
             PpDecrement(activePpu->regP);
             PpDecrement(activePpu->regP);
             PpDecrement(activePpu->regP);
@@ -1947,6 +1955,7 @@ static void ppOpRDSL(void)    // 1000
         {
         if (activePpu->isStopEnabled)
             {
+            activePpu->isStopped = TRUE;
             PpDecrement(activePpu->regP);
             }
         }
@@ -1989,6 +1998,7 @@ static void ppOpRDCL(void)    // 1001
         {
         if (activePpu->isStopEnabled)
             {
+            activePpu->isStopped = TRUE;
             PpDecrement(activePpu->regP);
             }
         }
@@ -2032,8 +2042,11 @@ static void ppOpLPML(void)    // 1024
 
 static void ppOpINPN(void)    // 1026
     {
-    // TODO: implement this
-    fprintf(stderr, "INPN %d\n", activePpu->opD);
+    if (activePpu->opD < cpuCount)
+        {
+        // TODO: verify that memory port number corresponds to CPU number
+        cpu180SetMonitorCondition(&cpus180[activePpu->opD], MCR56);
+        }
     }
 
 static void ppOpLDDL(void)    // 1030
@@ -2274,6 +2287,7 @@ static void ppOpCWDL(void)    // 1062
         {
         if (activePpu->isStopEnabled)
             {
+            activePpu->isStopped = TRUE;
             PpDecrement(activePpu->regP);
             }
         }
@@ -2330,6 +2344,7 @@ static void ppOpCWML(void)    // 1063
         {
         if (activePpu->isStopEnabled)
             {
+            activePpu->isStopped = TRUE;
             PpDecrement(activePpu->regP);
             PpDecrement(activePpu->regP);
             PpDecrement(activePpu->regP);

@@ -24,7 +24,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG    1
+#define DEBUG    0
 
 /*
 **  -------------
@@ -597,12 +597,15 @@ void mchSetCpRegister(Cpu180Context *ctx, u8 reg, u64 word)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void mchSetOsBoundsFault(PpSlot *pp)
+void mchSetOsBoundsFault(PpSlot *pp, u32 address, u32 boundary)
     {
 #if DEBUG
-    fprintf(mchLog, "\n%12d PP:%02o OS bounds fault",
+    fprintf(mchLog, "\n%12d PP:%02o OS bounds fault, reference to %o is %s boundary %o",
             traceSequenceNo,
-            pp->id);
+            pp->id,
+            address,
+            activePpu->isBelowOsBound ? "above" : "below",
+            boundary);
     fflush(mchLog);
 #endif
     mchIouRegisters[RegIouFaultStatus1] |= (mchPpMasks[pp->id] << 32) | 0x040000;
@@ -823,20 +826,27 @@ static FcStatus mchFunc(PpWord funcCode)
                 }
             else if (csAddr == 0x381)
                 {
-                // TODO: start EI
                 MonitorCondition mcr;
                 u32 rma;
+
                 ctx = mchGetCpContext(mchConnCode);
                 cpu180Load180Xp(ctx, ctx->regMps >> 3);
                 mchSetRegister(RegProcStatusSummary, word);
-                if (cpu180PvaToRma(ctx, cpMem[ctx->regMps >> 3] & Mask48, AccessModeExecute, &rma, &mcr))
+                if (cpu180PvaToRma(ctx, cpMem[ctx->regMps >> 3] & Mask48, AccessModeExecute, &rma, &mcr) == FALSE)
                     {
-                    fprintf(mchLog, "\nStart CPU at RMA %08x", rma);
+                    logDtError(LogErrorLocation, "Failed to start CPU: failed to translate PVA %012lx to RMA, MCR %04x\n",
+                        cpMem[ctx->regMps >> 3] & Mask48, mcr);
                     }
+#if DEBUG
                 else
                     {
-                    fprintf(mchLog, "\nFailed to translate PVA %012lx to RMA, MCR %04x", cpMem[ctx->regMps >> 3] & Mask48, mcr);
+                    fprintf(mchLog, "\n%12d PP:%02o CH:%02o Start CPU at RMA %08x",
+                    traceSequenceNo,
+                    activePpu->id,
+                    activeDevice->channel->id,
+                    rma);
                     }
+#endif
                 mchSetRegister(RegProcStatusSummary, word);
                 }
             else
@@ -852,8 +862,6 @@ static FcStatus mchFunc(PpWord funcCode)
             {
             mchSetRegister(RegProcStatusSummary, 0x28); // CYBER 180 monitor mode, Processor Halt
             mchSetRegister(RegProcDepEnvControl, 0);
-//          mchSetRegister(RegProcCtrlStoreAddr, 0);
-//          mchSetRegister(RegProcCtrlStoreBreak, 0);
             }
         return FcProcessed;
 
@@ -1696,7 +1704,7 @@ static void mch860IouWriter(u8 byte)
             }
         else if (mchLocation == RegIouOsBounds)
             {
-            ppuOsBoundary = mchRegisterWord & 0x3ffff;
+            ppuOsBoundary = (mchRegisterWord & 0x3ffff) << 10;
             ppVector      = mchRegisterWord >> 32;
             for (i = 0; i < 10; i++)
                 {
