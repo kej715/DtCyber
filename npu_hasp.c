@@ -63,11 +63,6 @@
 #include "proto.h"
 #include "npu.h"
 
-#if defined(__APPLE__)
-#include <execinfo.h>
-#endif
-
-
 /*
 **  -----------------
 **  Private Constants
@@ -204,7 +199,6 @@ static void npuHaspLogBytes(u8 *bytes, int len, CharEncoding encoding);
 static void npuHaspLogDevParam(Tcb *tp, u8 fn, u8 fv);
 static void npuHaspLogFileParam(Tcb *tp, u8 fn, u8 fv);
 static void npuHaspLogFlush(void);
-static void npuHaspPrintStackTrace(FILE *fp);
 
 #endif
 
@@ -4286,32 +4280,6 @@ static void npuHaspLogFileParam(Tcb *tp, u8 fn, u8 fv)
         break;
         }
     fprintf(npuHaspLog, "Set batch file parameter, connection %u (%.7s), %s=<%02x>\n", tp->cn, tp->termName, kw, fv);
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Log a stack trace
-**
-**  Parameters:     none
-**
-**  Returns:        nothing
-**
-**------------------------------------------------------------------------*/
-static void npuHaspPrintStackTrace(FILE *fp)
-    {
-#if defined(__APPLE__)
-    void *callstack[128];
-    int  i;
-    int  frames;
-    char **strs;
-
-    frames = backtrace(callstack, 128);
-    strs   = backtrace_symbols(callstack, frames);
-    for (i = 1; i < frames; ++i)
-        {
-        fprintf(fp, "%s\n", strs[i]);
-        }
-    free(strs);
-#endif
     }
 
 #endif // DEBUG

@@ -226,9 +226,6 @@ void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
     DevSlot *dp;
 
-    (void)unitNo;
-    (void)deviceName;
-
 #if DEBUG
     if (npuLog == NULL)
         {

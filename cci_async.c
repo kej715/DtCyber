@@ -44,9 +44,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #endif
-#if defined(__APPLE__)
-#include <execinfo.h>
-#endif
 
 #include "const.h"
 #include "types.h"

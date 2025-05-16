@@ -41,9 +41,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #endif
-#if defined(__APPLE__)
-#include <execinfo.h>
-#endif
 
 #include "const.h"
 #include "types.h"
@@ -2119,32 +2116,6 @@ static void npuAsyncLogBytes(u8 *bytes, int len)
             hexCol = HexColumn(npuAsyncLogBytesCol);
             }
         }
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Log a stack trace
-**
-**  Parameters:     none
-**
-**  Returns:        nothing
-**
-**------------------------------------------------------------------------*/
-static void npuAsyncPrintStackTrace(FILE *fp)
-    {
-#if defined(__APPLE__)
-    void *callstack[128];
-    int  i;
-    int  frames;
-    char **strs;
-
-    frames = backtrace(callstack, 128);
-    strs   = backtrace_symbols(callstack, frames);
-    for (i = 1; i < frames; ++i)
-        {
-        fprintf(fp, "%s\n", strs[i]);
-        }
-    free(strs);
-#endif
     }
 
 #endif // DEBUG

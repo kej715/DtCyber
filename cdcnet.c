@@ -56,10 +56,6 @@
 #include "proto.h"
 #include "npu.h"
 
-#if defined(__APPLE__)
-#include <execinfo.h>
-#endif
-
 /*
 **  -----------------
 **  Private Constants
@@ -3207,32 +3203,6 @@ static void cdcnetLogBytes(u8 *bytes, int len)
             hexCol = HexColumn(cdcnetLogBytesCol);
             }
         }
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Log a stack trace
-**
-**  Parameters:     none
-**
-**  Returns:        nothing
-**
-**------------------------------------------------------------------------*/
-static void cdcnetPrintStackTrace(FILE *fp)
-    {
-#if defined(__APPLE__)
-    void *callstack[128];
-    int  i;
-    int  frames;
-    char **strs;
-
-    frames = backtrace(callstack, 128);
-    strs   = backtrace_symbols(callstack, frames);
-    for (i = 1; i < frames; ++i)
-        {
-        fprintf(fp, "%s\n", strs[i]);
-        }
-    free(strs);
-#endif
     }
 
 #endif // DEBUG
