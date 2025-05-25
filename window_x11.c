@@ -524,11 +524,11 @@ void *windowThread(void *param)
                             break;
 
                         case 'c':
-                            traceMask ^= (1 << 14);
+                            traceMask ^= TraceCpu;
                             break;
 
                         case 'e':
-                            traceMask ^= (1 << 15);
+                            traceMask ^= TraceExchange;
                             break;
 
                         case 'x':
@@ -656,8 +656,8 @@ void *windowThread(void *param)
                     (traceMask >> 7) & 1 ? '7' : '_',
                     (traceMask >> 8) & 1 ? '8' : '_',
                     (traceMask >> 9) & 1 ? '9' : '_',
-                    (traceMask >> 14) & 1 ? 'C' : '_',
-                    (traceMask >> 15) & 1 ? 'E' : '_');
+                    (traceMask & TraceCpu) != 0 ? 'C' : '_',
+                    (traceMask & TraceExchange) != 0 ? 'E' : '_');
 
             XDrawString(disp, pixmap, gc, 0, 10, buf, strlen(buf));
             }
