@@ -203,7 +203,6 @@ u32           cpuMaxMemory;
 CpWord        *cpMem;
 int           cpuCount = 1;
 Cpu170Context *cpus170;
-Cpu180Context *cpus180;
 u32           extMaxMemory;
 CpWord        *extMem;
 ExtMemory     extMemType = ECS;
