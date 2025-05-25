@@ -6,7 +6,7 @@
 **  Name: pp.c
 **
 **  Description:
-**      Perform emulation of CDC 6600, Cyber 170, and Cyber 180 PPs
+**      Perform emulation of CDC 6600, CYBER 170, and CYBER 180 PPs
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
@@ -24,7 +24,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define PPDEBUG    0
+#define DEBUG_CM_WRITE    0
 
 /*
 **  -------------
@@ -43,6 +43,7 @@
 **  Private Constants
 **  -----------------
 */
+#define PPC 07400
 
 /*
 **  -----------------------
@@ -204,9 +205,12 @@ static u32 ppAdd18(u32 op1, u32 op2);
 static u32 ppSubtract18(u32 op1, u32 op2);
 static void ppInterlock(PpWord func);
 
-#if PPDEBUG
+#if DEBUG_CM_WRITE
 static void ppValidateCmWrite(char *inst, u32 address, CpWord data);
+#endif
 
+#if CcDebug == 1
+static bool ppIsPpLoad(char *name, u32 address);
 #endif
 
 /*
@@ -368,7 +372,7 @@ static void (*ppOp180[])(void) =
     ppOpPSN     // 1077
     };
 
-#if PPDEBUG
+#if DEBUG_CM_WRITE
 static FILE *ppLog = NULL;
 #endif
 
@@ -448,6 +452,8 @@ void ppInit(u8 count)
         ppu[pp].busy                 = FALSE;
         ppu[pp].exchangingCpu        = -1;
         ppu[pp].isStopped            = FALSE;
+        ppu[pp].isStopEnabled        = FALSE;
+        ppu[pp].isIdle               = FALSE;
         ppu[pp].osBoundsCheckEnabled = FALSE;
         }
 
@@ -458,7 +464,7 @@ void ppInit(u8 count)
     */
     printf("(pp     ) PPs initialised (number of PPUs %o)\n", ppuCount);
 
-#if PPDEBUG
+#if DEBUG_CM_WRITE
     if (ppLog == NULL)
         {
         ppLog = fopen("pplog.txt", "wt");
@@ -519,7 +525,7 @@ void ppStep(void)
         */
         activePpu = ppu + i;
 
-        if (activePpu->isStopped)
+        if (activePpu->isIdle || activePpu->isStopped)
             {
             continue;
             }
@@ -1198,6 +1204,20 @@ static void ppOpCRD(void)     // 60
 
 #if CcDebug == 1
     traceCmWord(data);
+/*DELETE*/
+#if 0
+    if (address == (PPC + ((activePpu->id) * 8)))
+        {
+        if (ppIsPpLoad("VER", address))
+            {
+            traceMask |= 1 << activePpu->id;
+            }
+        else
+            {
+            traceMask &= ~(u64)(1 << activePpu->id);
+            }
+        }
+#endif
 #endif
     }
 
@@ -1269,7 +1289,7 @@ static void ppOpCWD(void)     // 62
         {
         address = activePpu->regA & Mask18;
         }
-#if PPDEBUG
+#if DEBUG_CM_WRITE
     ppValidateCmWrite("CWD", address, data);
 #endif
     if (ppCheckOsBounds(address))
@@ -1333,7 +1353,7 @@ static void ppOpCWM(void)     // 63
         {
         address = activePpu->regA & Mask18;
         }
-#if PPDEBUG
+#if DEBUG_CM_WRITE
     ppValidateCmWrite("CWM", address, data);
 #endif
     if (ppCheckOsBounds(address))
@@ -2596,7 +2616,7 @@ static void ppOpOAPM(void)    // 1073
     channelIo();
     }
 
-#if PPDEBUG
+#if DEBUG_CM_WRITE
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Check that a write to CM appears to be legitimate.
@@ -2609,7 +2629,6 @@ static void ppOpOAPM(void)    // 1073
 **
 **------------------------------------------------------------------------*/
 #define CPA     00200
-#define PPC     07400
 #define FLSW    023
 
 static char *ppMonitored[] =
@@ -2690,6 +2709,32 @@ static void ppValidateCmWrite(char *inst, u32 address, CpWord data)
                 ppName, activePpu->id, activePpu->regP, activePpu->regQ, activePpu->mem[0], data, address);
         }
     fprintf(ppLog, "      CP%02o RA:%o FL:%o NFL:%o\n", cpn, ra, fl, nfl);
+    }
+
+#endif
+
+#if CcDebug == 1
+
+static bool ppIsPpLoad(char *name, u32 address)
+    {
+    u32    irAddress;
+    char   *np;
+    char   ppName[4];
+    CpWord word;
+
+    irAddress = PPC + ((activePpu->id) * 8);
+    if (address != irAddress)
+        {
+        return FALSE;
+        }
+    word      = cpMem[irAddress] & Mask60;
+    ppName[0] = cdcToAscii[(word >> 54) & 077];
+    ppName[1] = cdcToAscii[(word >> 48) & 077];
+    ppName[2] = cdcToAscii[(word >> 42) & 077];
+    ppName[3] = '\0';
+    np        = NULL;
+
+    return strcmp(ppName, name) == 0;
     }
 
 #endif

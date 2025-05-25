@@ -317,7 +317,7 @@ void dumpCpu(void)
             fprintf(pf, " LRN %d\n", cpu180->regLrn);
             for (i = 0; i < 15; i++)
                 {
-                fprintf(pf, " TOS[%02d] ", i + 1);
+                fprintf(pf, " TOS[%x] ", i + 1);
                 dumpPrintPva(pf, cpu180->regTos[i]);
                 fputs("\n", pf);
                 }

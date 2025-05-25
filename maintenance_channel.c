@@ -116,7 +116,11 @@
 #define RegProcCtrlStoreAddr       0x31
 #define RegProcCtrlStoreBreak      0x32
 #define RegProcMonitorProcState    0x41
-#define RegProcProcessIntTimer     0x44
+#define RegProcMonitorCondition    0x42
+#define RegProcUserCondition       0x43
+#define RegProcUntranslatablePtr   0x44
+#define RegProcSegmentTableLen     0x45
+#define RegProcSegmentTableAddr    0x46
 #define RegProcPageTableAddr       0x48
 #define RegProcPageTableLen        0x49
 #define RegProcPageSizeMask        0x4A
@@ -146,6 +150,7 @@
 #define RegProcTestMode1           0xA1
 #define RegProcTestMode2           0xA2
 #define RegProcTestMode3           0xA3
+#define RegProcProcessIntTimer     0xC9
 
 /*
 **  -----------------------
@@ -328,12 +333,24 @@ u64 mchGetCpRegister(Cpu180Context *ctx, u8 reg)
             }
         return (byte << 56) | (byte << 48) | (byte << 40) | (byte << 32)
              | (byte << 24) | (byte << 16) | (byte <<  8) | byte;
+    case RegProcProcessorId:
+        return ctx->id;
     case RegProcCtrlStoreAddr:
         return mchControlStoreIndices[ctx->id] >> 4; // 16 bytes per control store address
     case RegProcJobProcessState:
         return ctx->regJps;
     case RegProcMonitorProcState:
         return ctx->regMps;
+    case RegProcMonitorCondition:
+        return ctx->regMcr;
+    case  RegProcUserCondition:
+        return ctx->regUcr;
+    case RegProcUntranslatablePtr:
+        return ctx->regUtp;
+    case RegProcSegmentTableLen:
+        return ctx->regStl;
+    case RegProcSegmentTableAddr:
+        return ctx->regSta;
     case RegProcPageTableAddr:
         return ctx->regPta;
     case RegProcPageTableLen:
@@ -533,6 +550,21 @@ void mchSetCpRegister(Cpu180Context *ctx, u8 reg, u64 word)
         break;
     case RegProcMonitorProcState:
         ctx->regMps = word & Mask32;
+        break;
+    case RegProcMonitorCondition:
+        ctx->regMcr = word & Mask16;
+        break;
+    case  RegProcUserCondition:
+        ctx->regUcr = word & Mask16;
+        break;
+    case RegProcUntranslatablePtr:
+        ctx->regUtp = word & Mask48;
+        break;
+    case RegProcSegmentTableLen:
+        ctx->regStl = word & Mask16;
+        break;
+    case RegProcSegmentTableAddr:
+        ctx->regSta = word & Mask32;
         break;
     case RegProcPageTableAddr:
         ctx->regPta = word & Mask32;
@@ -1600,11 +1632,42 @@ static u64 mch860IouGetter(u8 reg)
 **------------------------------------------------------------------------*/
 static u8 mch860IouReader(void)
     {
-    u8 byte;
+    u8  byte;
+    u8  ppIdx;
+    u8  regSelect;
+    u32 regVal;
+    u64 word;
 
     if (activeDevice->recordLength == 8)
         {
         mchRegisterWord = mch860IouGetter(mchLocation);
+        if (mchLocation == RegIouStatus)
+            {
+            word      = mch860IouGetter(RegIouEnvControl);
+            ppIdx     = (word >> 24) & Mask5;
+            regSelect = (word >> 8) & Mask2;
+            if (ppIdx >= 020)
+                {
+                ppIdx = (ppIdx - 020) + 10;
+                }
+            switch (regSelect)
+                {
+            default:
+            case 0: // A register
+                regVal = ppu[ppIdx].regA;
+                break;
+            case 1: // P register
+                regVal = ppu[ppIdx].regP;
+                break;
+            case 2: // K register
+                regVal = ppu[ppIdx].isIdle ? 0107700 : ppu[ppIdx].opF << 6;
+                break;
+            case 3: // Q register
+                regVal = ppu[ppIdx].regQ;
+                break;
+                }
+            mchRegisterWord = (mchRegisterWord & Mask8) | (regVal << 8);
+            }
         }
     activeDevice->recordLength -= 1;
     byte = (mchRegisterWord >> (activeDevice->recordLength * 8)) & 0xff;
@@ -1659,48 +1722,89 @@ static void mch860IouWriter(u8 byte)
         activeDevice->recordLength = 8;
         if (mchLocation == RegIouEnvControl)
             {
-#if DEBUG
-            fputs("\n      Write IOU EC register", mchLog);
-#endif
             ppIdx = (mchRegisterWord >> 24) & Mask5;
-            if (ppIdx > 9)
+            if (ppIdx >= 020)
                 {
-                ppIdx = (ppIdx - 0x10) + 10;
+                ppIdx = (ppIdx - 020) + 10;
                 }
-            chIdx = (mchRegisterWord >> 16) & Mask5;
             ppu[ppIdx].osBoundsCheckEnabled = (mchRegisterWord & 0x08) != 0;
             ppu[ppIdx].isStopEnabled        = (mchRegisterWord & 0x01) != 0;
-#if DEBUG
-            fprintf(mchLog, "\n        PP%02o OS bounds check: %s", ppIdx < 10 ? ppIdx : (ppIdx - 10) + 020,
-                ppu[ppIdx].osBoundsCheckEnabled ? "enabled" : "disabled");
-            fprintf(mchLog, "\n                        stop: %s", ppu[ppIdx].isStopEnabled ? "enabled" : "disabled");
-#endif
-            if ((mchRegisterWord & 0x1000) != 0) // load PP
+            ppu[ppIdx].isIdle               = FALSE;
+
+            if ((mchRegisterWord & 0x0020) != 0) // load/dump/idle PP
                 {
-                ppu[ppIdx].opD        = chIdx;
-                channel[chIdx].active = TRUE;
+                if ((mchRegisterWord & 0x1000) != 0) // load PP
+                    {
+                    chIdx                 = (mchRegisterWord >> 16) & Mask5;
+                    ppu[ppIdx].opD        = chIdx;
+                    channel[chIdx].active = TRUE;
 
-                /*
-                **  Set PP to INPUT (71) instruction.
-                */
-                ppu[ppIdx].opF  = 071;
-                ppu[ppIdx].busy = TRUE;
+                    /*
+                    **  Set PP to INPUT (IAM) instruction.
+                    */
+                    ppu[ppIdx].opF  = 071;
+                    ppu[ppIdx].busy = TRUE;
 
-                /*
-                **  Clear P register and location zero of PP.
-                */
-                ppu[ppIdx].regP   = 0;
-                ppu[ppIdx].mem[0] = 0;
+                    /*
+                    **  Clear P register and location zero of PP.
+                    */
+                    ppu[ppIdx].regP   = 0;
+                    ppu[ppIdx].mem[0] = 0;
 
-                /*
-                **  Set A register to an input word count of 10000.
-                */
-                ppu[ppIdx].regA = 010000;
+                    /*
+                    **  Set A register to an input word count of 10000.
+                    */
+                    ppu[ppIdx].regA      = 010000;
+                    ppu[ppIdx].isStopped = FALSE;
 #if DEBUG
-                fprintf(mchLog, "\n        Deadstart PP%02o using channel %02o",
-                    ppIdx < 10 ? ppIdx : (ppIdx - 10) + 020, chIdx);
+                    fprintf(mchLog, "\n        Deadstart PP%02o using channel %02o",
+                        ppIdx < 10 ? ppIdx : (ppIdx - 10) + 020, chIdx);
 #endif
+                    }
+#if 0
+                else if ((mchRegisterWord & 0x0800) != 0) // dump PP
+                    {
+                    chIdx                 = (mchRegisterWord >> 16) & Mask5;
+                    ppu[ppIdx].opD        = chIdx;
+                    channel[chIdx].active = TRUE;
+
+                    /*
+                    **  Set PP to OUTPUT (OAM) instruction.
+                    */
+                    ppu[ppIdx].opF  = 073;
+                    ppu[ppIdx].busy = TRUE;
+
+                    /*
+                    **  Clear P register and location zero of PP.
+                    */
+                    ppu[ppIdx].regP   = 0;
+                    ppu[ppIdx].mem[0] = 0;
+
+                    /*
+                    **  Set A register to an input word count of 10000.
+                    */
+                    ppu[ppIdx].regA      = 010000;
+                    ppu[ppIdx].isStopped = FALSE;
+#if DEBUG
+                    fprintf(mchLog, "\n        Dump PP%02o using channel %02o",
+                        ppIdx < 10 ? ppIdx : (ppIdx - 10) + 020, chIdx);
+#endif
+                    }
+#endif
+                else if ((mchRegisterWord & 0x0400) != 0) // idle PP
+                    {
+                    ppu[ppIdx].isIdle = TRUE;
+                    }
                 }
+#if DEBUG
+            fputs("\n      Write IOU EC register", mchLog);
+            fprintf(mchLog, "\n        PP%02o", ppIdx < 10 ? ppIdx : (ppIdx - 10) + 020);
+            fprintf(mchLog, "\n                Auto mode: %s", (mchRegisterWord & 0x20000000) != 0 ? "enabled" : "disabled");
+            fprintf(mchLog, "\n          Register select: %c", "APKQ"[(mchRegisterWord >> 8) & Mask2]);
+            fprintf(mchLog, "\n          OS bounds check: %s", ppu[ppIdx].osBoundsCheckEnabled ? "enabled" : "disabled");
+            fprintf(mchLog, "\n            Stop on error: %s", ppu[ppIdx].isStopEnabled ? "enabled" : "disabled");
+            fprintf(mchLog, "\n                     Idle: %s", ppu[ppIdx].isIdle ? "yes" : "no");
+#endif
             }
         else if (mchLocation == RegIouOsBounds)
             {

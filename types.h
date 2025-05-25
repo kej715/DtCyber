@@ -207,9 +207,10 @@ typedef struct
     PpWord opF;                         /* current opcode */
     PpWord opD;                         /* current opcode */
     /*
-     *  Cyber 180 PP support
+     *  CYBER 180 PP support
      */
-    bool   isStopped;                   /* TRUE if PP is stopped (CYBER 180 only) */
+    bool   isStopped;                   /* TRUE if PP is stopped on error */
+    bool   isIdle;                      /* TRUE if PP is idled */
     bool   osBoundsCheckEnabled;        /* whether OS bounds checking is enabled */
     bool   isBelowOsBound;              /* whether checking is below/above OS bound register */
     bool   isStopEnabled;               /* whether PP stop enabled on OS bounds violation */
@@ -385,10 +386,10 @@ typedef struct
 */
 typedef enum
     {
-    AccessModeExecute,
-    AccessModeRead,
-    AccessModeWrite,
-    AccessModeAny
+    AccessModeAny     = 0,
+    AccessModeExecute = 1,
+    AccessModeRead    = 2,
+    AccessModeWrite   = 4
     } Cpu180AccessMode;
 
 /*

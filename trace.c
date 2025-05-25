@@ -384,7 +384,7 @@ static DecCpControl rjDecode[010] =
     Cjk, "RX    X%o,X%o", RNXX,                 // 4
     Cjk, "WX    X%o,X%o", RNXX,                 // 5
     Cj,  "RC    X%o", RNXN,                     // 6
-    CN,  "Trap180", R,                          // 7
+    CjK, "RT    X%o,%6.6o", RZX                 // 7
     };
 
 static DecCpControl cjDecode[010] =
@@ -396,7 +396,7 @@ static DecCpControl cjDecode[010] =
     CjK, "IR    X%o,%6.6o", RZX,                // 4
     CjK, "OR    X%o,%6.6o", RZX,                // 5
     CjK, "DF    X%o,%6.6o", RZX,                // 6
-    CjK, "ID    X%o,%6.6o", RZX,                // 7
+    CjK, "ID    X%o,%6.6o", RZX                 // 7
     };
 
 static DecCpControl cpDecode[0100] =
@@ -471,7 +471,7 @@ static DecCpControl cpDecode[0100] =
     Cijk,  "SX%o   A%o+B%o", RXAB,              // 74
     Cijk,  "SX%o   A%o-B%o", RXAB,              // 75
     Cijk,  "SX%o   B%o+B%o", RXBB,              // 76
-    Cijk,  "SX%o   B%o-B%o", RXBB,              // 77
+    Cijk,  "SX%o   B%o-B%o", RXBB               // 77
     };
 
 static DecCp180Control cp180Decode[0x100] =
@@ -747,7 +747,7 @@ static DecCp180Control cp180Decode[0x100] =
     VCjkiD, "Illegal",  VF, VR,                                // FC
     VCjkiD, "Illegal",  VF, VR,                                // FD
     VCjkiD, "Illegal",  VF, VR,                                // FE
-    VCjkiD, "Illegal",  VF, VR,                                // FF
+    VCjkiD, "Illegal",  VF, VR                                 // FF
     };
 
 /*
@@ -1558,7 +1558,7 @@ void traceExchange180(Cpu180Context *cpu, u32 addr, char *title)
     fprintf(cpuF[cpu->id], " LRN %d\n", cpu->regLrn);
     for (i = 0; i < 15; i++)
         {
-        fprintf(cpuF[cpu->id], " TOS[%02d] ", i + 1);
+        fprintf(cpuF[cpu->id], " TOS[%x] ", i + 1);
         tracePrintPva(cpuF[cpu->id], cpu->regTos[i]);
         fputs("\n", cpuF[cpu->id]);
         }
@@ -1783,65 +1783,9 @@ static char *traceMonitorConditionToStr(MonitorCondition cond)
 **------------------------------------------------------------------------*/
 void traceMonitorCondition(Cpu180Context *cpu, MonitorCondition cond)
     {
-    char *s;
-
-    if ((traceMask & TracePva) != 0)
+    if ((traceMask & (TracePva | TraceCpu)) != 0)
         {
-        switch (cond)
-            {
-        case MCR48:
-            s = "Detected uncorrectable error";
-            break;
-        case MCR49:
-            s = "Not assigned";
-            break;
-        case MCR50:
-            s = "Short warning";
-            break;
-        case MCR51:
-            s = "Instruction specfication error";
-            break;
-        case MCR52:
-            s = "Address specification error";
-            break;
-        case MCR53:
-            s = "CYBER 170 state exchange request";
-            break;
-        case MCR54:
-            s = "Access violation";
-            break;
-        case MCR55:
-            s = "Environment specification error";
-            break;
-        case MCR56:
-            s = "External interrupt";
-            break;
-        case MCR57:
-            s = "Page table search without find";
-            break;
-        case MCR58:
-            s = "System call (status bit)";
-            break;
-        case MCR59:
-            s = "System interval timer";
-            break;
-        case MCR60:
-            s = "Invalid segment / Ring number 0";
-            break;
-        case MCR61:
-            s = "Outward call / Inward return";
-            break;
-        case MCR62:
-            s = "Soft error";
-            break;
-        case MCR63:
-            s = "Trap exception (status bit)";
-            break;
-        default:
-            s = "";
-            break;
-            }
-        fprintf(cpuF[cpu->id], "%06d MCR%02d %s\n", traceSequenceNo, (cond - MCR48) + 48, s);
+        fprintf(cpuF[cpu->id], "%06d MCR%02d %s\n", traceSequenceNo, (cond - MCR48) + 48, traceMonitorConditionToStr(cond));
         fprintf(cpuF[cpu->id], "%06d       Action %s, P %012lx\n", traceSequenceNo, traceTranslateAction(cpu->pendingAction), cpu->nextP);
         }
     }
@@ -1974,7 +1918,7 @@ void traceUserCondition(Cpu180Context *cpu, UserCondition cond)
     {
     char *s;
 
-    if ((traceMask & TracePva) != 0)
+    if ((traceMask & (TracePva | TraceCpu)) != 0)
         {
         switch (cond)
             {
