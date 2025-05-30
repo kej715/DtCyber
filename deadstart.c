@@ -153,6 +153,7 @@ void deadStart(void)
         */
         ppu[pp].opF  = 071;
         ppu[pp].busy = TRUE;
+        ppu[pp].regK = (ppu[pp].opF << 6) | ppu[pp].opD;
 
         /*
         **  Clear P registers and location zero of each PP.

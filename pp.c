@@ -513,7 +513,6 @@ void ppTerminate(void)
 void ppStep(void)
     {
     u8     i;
-    PpWord opCode;
 
     /*
     **  Exercise each PP in the barrel.
@@ -550,11 +549,11 @@ void ppStep(void)
             /*
             **  Extract next PPU instruction.
             */
-            opCode = activePpu->mem[activePpu->regP];
+            activePpu->regK = activePpu->mem[activePpu->regP];
  
             if (isCyber180)
                 {
-                opF = (opCode >> 6) & 01777;
+                opF = (activePpu->regK >> 6) & 01777;
                 if ((opF & 0700) != 0)
                     {
                     opF = 0;
@@ -562,9 +561,9 @@ void ppStep(void)
                 }
             else
                 {
-                opF = (opCode >> 6) & 077;
+                opF = (activePpu->regK >> 6) & 077;
                 }
-            opD = opCode & 077;
+            opD = activePpu->regK & 077;
 
 #if CcDebug == 1
             /*

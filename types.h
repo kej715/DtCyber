@@ -42,14 +42,16 @@
 /*
 **  MS Win32 systems
 */
-typedef signed char        i8;
-typedef signed short       i16;
-typedef signed long        i32;
-typedef signed __int64     i64;
-typedef unsigned char      u8;
-typedef unsigned short     u16;
-typedef unsigned long      u32;
-typedef unsigned __int64   u64;
+typedef signed char         i8;
+typedef signed short        i16;
+typedef signed long         i32;
+typedef signed __int64      i64;
+typedef signed __int128     i128;
+typedef unsigned char       u8;
+typedef unsigned short      u16;
+typedef unsigned long       u32;
+typedef unsigned __int64    u64;
+typedef unsigned __int128   u128;
 #define FMT60_020o    "%020I64o"
 #elif defined (__GNUC__) || defined(__SunOS)
 #if defined(__amd64) || defined(__amd64__) || defined(__alpha__) || defined(__powerpc64__) || defined(__ppc64__) \
@@ -62,10 +64,12 @@ typedef signed char         i8;
 typedef signed short        i16;
 typedef signed int          i32;
 typedef signed long int     i64;
+typedef signed __int128     i128;
 typedef unsigned char       u8;
 typedef unsigned short      u16;
 typedef unsigned int        u32;
 typedef unsigned long int   u64;
+typedef unsigned __int128   u128;
 #define FMT60_020o    "%020lo"
 #elif defined(__i386) || defined(__i386__) || defined(__powerpc__) || defined(__ppc__)   \
     || defined(__sparc__) || defined(__hppa__) || defined(__APPLE__) || defined(__arm__) \
@@ -78,10 +82,12 @@ typedef signed char              i8;
 typedef signed short             i16;
 typedef signed int               i32;
 typedef signed long long int     i64;
+typedef signed __int128          i128;
 typedef unsigned char            u8;
 typedef unsigned short           u16;
 typedef unsigned int             u32;
 typedef unsigned long long int   u64;
+typedef unsigned __int128        u128;
 #define FMT60_020o    "%020llo"
 #else
 #error "Unable to determine size of basic data types"
@@ -200,6 +206,7 @@ typedef struct
     u32    regR;                        /* register R (28 bit) */
     PpWord regP;                        /* program counter (12 bit) */
     PpWord regQ;                        /* register Q (12 bit) */
+    PpWord regK;                        /* register K (16 bit) */
     PpWord mem[PpMemSize];              /* PP memory */
     bool   busy;                        /* instruction execution state */
     int    exchangingCpu;               /* CPU for which exchange initiated */

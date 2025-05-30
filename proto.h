@@ -449,11 +449,14 @@ void tpMuxShowStatus();
 /*
 **  trace.c
 */
+void traceCall(Cpu180Context *cpu, u64 pva);
+void traceCallFrame180(Cpu180Context *cpu, u32 rma);
 void traceChannel(u8 ch);
 void traceChannelFunction(PpWord funcCode);
 void traceChannelIo(u8 ch);
 void traceCmWord(CpWord data);
 void traceCmWord64(CpWord data);
+void traceCodebasePointer(Cpu180Context *cpu, u64 pva, u32 rma, u64 cbp);
 void traceCpu(Cpu170Context *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress);
 void traceCpu180(Cpu180Context *cpu, u64 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u16 opD, u16 opQ);
 void traceCpuPrint(Cpu170Context *cpu, char *str);
@@ -461,7 +464,9 @@ u8 traceDisassembleOpcode(char *str, PpWord *pm);
 void traceEnd(void);
 void traceExchange(Cpu170Context *cpu, u32 addr, char *title);
 void traceExchange180(Cpu180Context *cpu, u32 addr, char *title);
+void traceHaltCpu180(Cpu180Context *cpu);
 void traceInit(void);
+void traceMasterClearCpu180(Cpu180Context *cpu);
 void traceMonitorCondition(Cpu180Context *cpu, MonitorCondition cond);
 void traceOpcode(void);
 void tracePageInfo(Cpu180Context *cpu, u16 hash, u32 pageNum, u32 pageOffset, u32 pageTableIdx, u64 spid);
@@ -470,9 +475,10 @@ void tracePte(Cpu180Context *cpu, u64 pte);
 void tracePva(Cpu180Context *cpu, u64 pva);
 void traceRegisters(bool isPost);
 void traceRma(Cpu180Context *cpu, u32 rma);
-void traceSde(Cpu180Context *cpu, u64 sde);
+void traceSde(Cpu180Context *cpu, u16 segNum, u64 sde);
 void traceSequence(void);
 void traceStack(FILE *fp);
+void traceStartCpu180(Cpu180Context *cpu, u32 rma);
 void traceTerminate(void);
 char *traceTranslateAction(ConditionAction action);
 void traceTrapFrame170(Cpu180Context *cpu, u32 rma);
@@ -527,6 +533,7 @@ extern char                colorFG[32];                     // Console
 #endif
 extern const char          consoleToAscii[64];
 extern CpWord              *cpMem;
+extern u64                 cpu180FreeRunningCounter;
 extern Cpu170Context       *cpus170;
 extern Cpu180Context       *cpus180;
 extern int                 cpuCount;

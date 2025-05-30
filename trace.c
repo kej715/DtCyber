@@ -481,7 +481,7 @@ static DecCp180Control cp180Decode[0x100] =
     VCjk,   "EXCHANGE", VF, VR,                                // 02
     VCjk,   "INTRUPT  X%X", VFK, VRXK,                         // 03
     VCjk,   "RETURN",   VF, VR,                                // 04
-    VCjk,   "PURGE    X%X,%d", VFJK, VRXJ,                       // 05
+    VCjk,   "PURGE    X%X,0x%X", VFJK, VRXJ,                   // 05
     VCjk,   "POP",      VF, VR,                                // 06
     VCjk,   "PSFSA",    VF, VR,                                // 07
     VCjk,   "CPYTX    X%X,X%X", VFKJ, VRXKXJ,                  // 08
@@ -493,8 +493,8 @@ static DecCp180Control cp180Decode[0x100] =
     VCjk,   "CPYSX    X%X,X%X", VFKJ, VRXKXJ,                  // 0E
     VCjk,   "CPYXS    X%X,X%X", VFKJ, VRXKXJ,                  // 0F
 
-    VCjk,   "INCX     X%X,%d", VFKJ, VRXK,                     // 10
-    VCjk,   "DECX     X%X,%d", VFKJ, VRXK,                     // 11
+    VCjk,   "INCX     X%X,0x%X", VFKJ, VRXK,                   // 10
+    VCjk,   "DECX     X%X,0x%X", VFKJ, VRXK,                   // 11
     VCjk,   "Illegal",  VF, VR,                                // 12
     VCjk,   "Illegal",  VF, VR,                                // 13
     VCjk,   "LBSET    X%X,A%X,X0", VFKJ, VRXKAJX0,             // 14
@@ -507,7 +507,7 @@ static DecCp180Control cp180Decode[0x100] =
     VCjk,   "NOTX     X%X,X%X", VFKJ, VRXKXJ,                  // 1B
     VCjk,   "INHX     X%X,X%X", VFKJ, VRXKXJ,                  // 1C
     VCjk,   "Illegal",  VF, VR,                                // 1D
-    VCjk,   "MARK     X%X,X1,%d", VFKJ, VRXKX1,                // 1E
+    VCjk,   "MARK     X%X,X1,0x%X", VFKJ, VRXKX1,              // 1E
     VCjk,   "ENTZ/O/S X%X", VFK, VRXK,                         // 1F
 
     VCjk,   "ADDR     X%X,X%X", VFKJ, VRXKXJ,                  // 20
@@ -518,8 +518,8 @@ static DecCp180Control cp180Decode[0x100] =
     VCjk,   "SUBX     X%X,X%X", VFKJ, VRXKXJ,                  // 25
     VCjk,   "MULX     X%X,X%X", VFKJ, VRXKXJ,                  // 26
     VCjk,   "DIVX     X%X,X%X", VFKJ, VRXKXJ,                  // 27
-    VCjk,   "INCR     X%X,%d", VFKJ, VRXK,                     // 28
-    VCjk,   "DECR     X%X,%d", VFKJ, VRXK,                     // 29
+    VCjk,   "INCR     X%X,0x%X", VFKJ, VRXK,                   // 28
+    VCjk,   "DECR     X%X,0x%X", VFKJ, VRXK,                   // 29
     VCjk,   "ADDAX    A%X,X%X", VFKJ,VRAKXJ,                   // 2A
     VCjk,   "Illegal",  VF, VR,                                // 2B
     VCjk,   "CMPR     X1,X%X,X%X", VFJK, VRX1XJXK,             // 2C
@@ -536,13 +536,13 @@ static DecCp180Control cp180Decode[0x100] =
     VCjk,   "MULD     XX%X,XX%X", VFKJ, VRXXKXXJ,              // 36
     VCjk,   "DIVD     XX%X,XX%X", VFKJ, VRXXKXXJ,              // 37
     VCjk,   "Illegal",  VF, VR,                                // 38
-    VCjk,   "ENTX     X1,%d", VFJK8, VRX1,                     // 39
+    VCjk,   "ENTX     X1,0x%02X", VFJK8, VRX1,                 // 39
     VCjk,   "CNIF     X%X,X%X", VFKJ, VRXKXJ,                  // 3A
     VCjk,   "CNFI     X%X,X%X", VFKJ, VRXKXJ,                  // 3B
     VCjk,   "CMPF     X1,X%X,X%X", VFJK, VRX1XJXK,             // 3C
-    VCjk,   "ENTP     X%X,%d", VFKJ, VRXK,                     // 3D
-    VCjk,   "ENTN     X%X,%d", VFKJ, VRXK,                     // 3E
-    VCjk,   "ENTL     X0,%d", VFJK8, VRX0,                     // 3F
+    VCjk,   "ENTP     X%X,0x%X", VFKJ, VRXK,                   // 3D
+    VCjk,   "ENTN     X%X,0x%X", VFKJ, VRXK,                   // 3E
+    VCjk,   "ENTL     X0,0x%02X", VFJK8, VRX0,                 // 3F
 
     // Vector instructions not decoded yet
     VCjkiD, "Illegal",  VF, VR,                                // 40
@@ -613,22 +613,22 @@ static DecCp180Control cp180Decode[0x100] =
     VCjk,   "Illegal",  VF, VR,                                // 7E
     VCjk,   "Illegal",  VF, VR,                                // 7F
 
-    VCjkQ,  "LMULT    X%X,A%X,%d", VFKJQ, VRXKAJ,              // 80
-    VCjkQ,  "SMULT    X%X,A%X,%d", VFKJQ, VRXKAJ,              // 81
-    VCjkQ,  "LX       X%X,A%X,%d", VFKJQ, VRXKAJ,              // 82
-    VCjkQ,  "SX       X%X,A%X,%d", VFKJQ, VRXKAJ,              // 83
-    VCjkQ,  "LA       A%X,A%X,%d", VFKJQ, VRAKAJ,              // 84
-    VCjkQ,  "SA       A%X,A%X,%d", VFKJQ, VRAKAJ,              // 85
-    VCjkQ,  "LBYTP,%d  X%X,%d", VFJKQ, VRXK,                   // 86
-    VCjkQ,  "ENTC     X1,%d", VFJKQ24, VRX1,                   // 87
-    VCjkQ,  "LBIT     X%X,A%X,%d,X0", VFKJQ, VRXKAJX0,         // 88
-    VCjkQ,  "SBIT     X%X,A%X,%d,X0", VFKJQ, VRXKAJX0,         // 89
-    VCjkQ,  "ADDRQ    X%X,X%X,%d", VFKJQ, VRXKXJ,              // 8A
-    VCjkQ,  "ADDXQ    X%X,X%X,%d", VFKJQ, VRXKXJ,              // 8B
-    VCjkQ,  "MULRQ    X%X,X%X,%d", VFKJQ, VRXKXJ,              // 8C
-    VCjkQ,  "ENTE     X%X,%d", VFKQ, VRXK,                     // 8D
-    VCjkQ,  "ADDAQ    A%X,A%X,%d", VFKJQ, VRAKAJ,              // 8E
-    VCjkQ,  "ADDPXQ   A%X,X%X,%d", VFKJQ, VRAKXJ,              // 8F
+    VCjkQ,  "LMULT    X%X,A%X,0x%X", VFKJQ, VRXKAJ,            // 80
+    VCjkQ,  "SMULT    X%X,A%X,0x%X", VFKJQ, VRXKAJ,            // 81
+    VCjkQ,  "LX       X%X,A%X,0x%X", VFKJQ, VRXKAJ,            // 82
+    VCjkQ,  "SX       X%X,A%X,0x%X", VFKJQ, VRXKAJ,            // 83
+    VCjkQ,  "LA       A%X,A%X,0x%X", VFKJQ, VRAKAJ,            // 84
+    VCjkQ,  "SA       A%X,A%X,0x%X", VFKJQ, VRAKAJ,            // 85
+    VCjkQ,  "LBYTP,%d  X%X,0x%X", VFJKQ, VRXK,                 // 86
+    VCjkQ,  "ENTC     X1,0x%X", VFJKQ24, VRX1,                 // 87
+    VCjkQ,  "LBIT     X%X,A%X,0x%X,X0", VFKJQ, VRXKAJX0,       // 88
+    VCjkQ,  "SBIT     X%X,A%X,0x%X,X0", VFKJQ, VRXKAJX0,       // 89
+    VCjkQ,  "ADDRQ    X%X,X%X,0x%X", VFKJQ, VRXKXJ,            // 8A
+    VCjkQ,  "ADDXQ    X%X,X%X,0x%X", VFKJQ, VRXKXJ,            // 8B
+    VCjkQ,  "MULRQ    X%X,X%X,0x%X", VFKJQ, VRXKXJ,            // 8C
+    VCjkQ,  "ENTE     X%X,0x%X", VFKQ, VRXK,                   // 8D
+    VCjkQ,  "ADDAQ    A%X,A%X,0x%X", VFKJQ, VRAKAJ,            // 8E
+    VCjkQ,  "ADDPXQ   A%X,X%X,0x%X", VFKJQ, VRAKXJ,            // 8F
 
     VCjkQ,  "BRREQ    X%X,X%X,0x%X", VFJKQ, VRXJXK,            // 90
     VCjkQ,  "BRRNE    X%X,X%X,0x%X", VFJKQ, VRXJXK,            // 91
@@ -645,30 +645,30 @@ static DecCp180Control cp180Decode[0x100] =
     VCjkQ,  "BRINC    X%X,X%X,0x%X", VFJKQ, VRXJXK,            // 9C
     VCjkQ,  "BRSEG    X1,A%X,A%X,0x%X", VFJKQ, VRX1AJAK,       // 9D
     VCjkQ,  "BR---    X%X,0x%X", VFKQ, VRXK,                   // 9E
-    VCjkQ,  "BRCR     %d,0x%X,0x%X", VFJKQ, VR,                // 9F
+    VCjkQ,  "BRCR     0x%X,0x%X,0x%X", VFJKQ, VR,              // 9F
 
-    VCjkiD, "LAI      A%X,A%X,X%X,%d", VFKJID, VRAKAJXI,       // A0
-    VCjkiD, "SAI      A%X,A%X,X%X,%d", VFKJID, VRAKAJXI,       // A1
-    VCjkiD, "LXI      X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // A2
-    VCjkiD, "SXI      X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // A3
-    VCjkiD, "LBYT,X0  X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // A4
-    VCjkiD, "SBYT,X0  X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // A5
+    VCjkiD, "LAI      A%X,A%X,X%X,0x%X", VFKJID, VRAKAJXI,     // A0
+    VCjkiD, "SAI      A%X,A%X,X%X,0x%X", VFKJID, VRAKAJXI,     // A1
+    VCjkiD, "LXI      X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // A2
+    VCjkiD, "SXI      X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // A3
+    VCjkiD, "LBYT,X0  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // A4
+    VCjkiD, "SBYT,X0  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // A5
     VCjkiD, "Illegal",  VF, VR,                                // A6
-    VCjkiD, "ADDAD    A%X,A%X,%d,%d", VFKJDJ, VRAKAJ,          // A7
-    VCjkiD, "SHFC     X%X,X%X,X%X,%d", VFKJID, VRXKXJXI,       // A8
-    VCjkiD, "SHFX     X%X,X%X,X%X,%d", VFKJID, VRXKXJXI,       // A9
-    VCjkiD, "SHFR     X%X,X%X,X%X,%d", VFKJID, VRXKXJXI,       // AA
+    VCjkiD, "ADDAD    A%X,A%X,0x%X,0x%X", VFKJDJ, VRAKAJ,      // A7
+    VCjkiD, "SHFC     X%X,X%X,X%X,0x%X", VFKJID, VRXKXJXI,     // A8
+    VCjkiD, "SHFX     X%X,X%X,X%X,0x%X", VFKJID, VRXKXJXI,     // A9
+    VCjkiD, "SHFR     X%X,X%X,X%X,0x%X", VFKJID, VRXKXJXI,     // AA
     VCjkiD, "Illegal",  VF, VR,                                // AB
-    VCjkiD, "ISOM     X%X,X%X,%d", VFKID, VRXKXI,              // AC
-    VCjkiD, "ISOB     X%X,X%X,X%X,%d", VFKJID, VRXKXJXI,       // AD
-    VCjkiD, "INSB     X%X,X%X,X%X,%d", VFKJID, VRXKXJXI,       // AE
+    VCjkiD, "ISOM     X%X,X%X,0x%X", VFKID, VRXKXI,            // AC
+    VCjkiD, "ISOB     X%X,X%X,X%X,0x%X", VFKJID, VRXKXJXI,     // AD
+    VCjkiD, "INSB     X%X,X%X,X%X,0x%X", VFKJID, VRXKXJXI,     // AE
     VCjkiD, "Illegal",  VF, VR,                                // AF
 
     VCjkQ,  "CALLREL  0x%X,A%X,A%X", VFQJK, VRAJAK,            // B0
-    VCjkQ,  "KEYPOINT 0x%X,X%X,%d", VFJKQ, VRXK,               // B1
-    VCjkQ,  "MULXQ    X%X,X%X,%d", VFKJQ, VRXKXJ,              // B2
-    VCjkQ,  "ENTA     X0,%d", VFJKQ24, VRX0,                   // B3
-    VCjkQ,  "CMPXA    X%X,A%X,X0,%d", VFKJQ, VRXKAJX0,         // B4
+    VCjkQ,  "KEYPOINT 0x%X,X%X,0x%X", VFJKQ, VRXK,             // B1
+    VCjkQ,  "MULXQ    X%X,X%X,0x%X", VFKJQ, VRXKXJ,            // B2
+    VCjkQ,  "ENTA     X0,0x%X", VFJKQ24, VRX0,                 // B3
+    VCjkQ,  "CMPXA    X%X,A%X,X0,0x%X", VFKJQ, VRXKAJX0,       // B4
     VCjkQ,  "CALLSEG  0x%X,A%X,A%X", VFQJK, VRAJAK,            // B5
     VCjkQ,  "Illegal",  VF, VR,                                // B6
     VCjkQ,  "Illegal",  VF, VR,                                // B7
@@ -681,14 +681,14 @@ static DecCp180Control cp180Decode[0x100] =
     VCjkQ,  "Illegal",  VF, VR,                                // BE
     VCjkQ,  "Illegal",  VF, VR,                                // BF
 
-    VCjkiD, "EXECUTE,0 %X,%X,%X,%d", VFJKID, VR,               // C0
-    VCjkiD, "EXECUTE,1 %X,%X,%X,%d", VFJKID, VR,               // C1
-    VCjkiD, "EXECUTE,2 %X,%X,%X,%d", VFJKID, VR,               // C2
-    VCjkiD, "EXECUTE,3 %X,%X,%X,%d", VFJKID, VR,               // C3
-    VCjkiD, "EXECUTE,4 %X,%X,%X,%d", VFJKID, VR,               // C4
-    VCjkiD, "EXECUTE,5 %X,%X,%X,%d", VFJKID, VR,               // C5
-    VCjkiD, "EXECUTE,6 %X,%X,%X,%d", VFJKID, VR,               // C6
-    VCjkiD, "EXECUTE,7 %X,%X,%X,%d", VFJKID, VR,               // C7
+    VCjkiD, "EXECUTE,0 %X,%X,%X,0x%X", VFJKID, VR,             // C0
+    VCjkiD, "EXECUTE,1 %X,%X,%X,0x%X", VFJKID, VR,             // C1
+    VCjkiD, "EXECUTE,2 %X,%X,%X,0x%X", VFJKID, VR,             // C2
+    VCjkiD, "EXECUTE,3 %X,%X,%X,0x%X", VFJKID, VR,             // C3
+    VCjkiD, "EXECUTE,4 %X,%X,%X,0x%X", VFJKID, VR,             // C4
+    VCjkiD, "EXECUTE,5 %X,%X,%X,0x%X", VFJKID, VR,             // C5
+    VCjkiD, "EXECUTE,6 %X,%X,%X,0x%X", VFJKID, VR,             // C6
+    VCjkiD, "EXECUTE,7 %X,%X,%X,0x%X", VFJKID, VR,             // C7
     VCjkiD, "Illegal",  VF, VR,                                // C8
     VCjkiD, "Illegal",  VF, VR,                                // C9
     VCjkiD, "Illegal",  VF, VR,                                // CA
@@ -698,52 +698,52 @@ static DecCp180Control cp180Decode[0x100] =
     VCjkiD, "Illegal",  VF, VR,                                // CE
     VCjkiD, "Illegal",  VF, VR,                                // CF
 
-    VCjkiD, "LBYTS,1  X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // D0
-    VCjkiD, "LBYTS,2  X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // D1
-    VCjkiD, "LBYTS,3  X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // D2
-    VCjkiD, "LBYTS,4  X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // D3
-    VCjkiD, "LBYTS,5  X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // D4
-    VCjkiD, "LBYTS,6  X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // D5
-    VCjkiD, "LBYTS,7  X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // D6
-    VCjkiD, "LBYTS,8  X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // D7
-    VCjkiD, "SBYTS,1  X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // D8
-    VCjkiD, "SBYTS,2  X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // D9
-    VCjkiD, "SBYTS,3  X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // DA
-    VCjkiD, "SBYTS,4  X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // DB
-    VCjkiD, "SBYTS,5  X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // DC
-    VCjkiD, "SBYTS,6  X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // DD
-    VCjkiD, "SBYTS,7  X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // DE
-    VCjkiD, "SBYTS,8  X%X,A%X,X%X,%d", VFKJID, VRXKAJXI,       // DF
+    VCjkiD, "LBYTS,1  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D0
+    VCjkiD, "LBYTS,2  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D1
+    VCjkiD, "LBYTS,3  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D2
+    VCjkiD, "LBYTS,4  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D3
+    VCjkiD, "LBYTS,5  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D4
+    VCjkiD, "LBYTS,6  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D5
+    VCjkiD, "LBYTS,7  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D6
+    VCjkiD, "LBYTS,8  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D7
+    VCjkiD, "SBYTS,1  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D8
+    VCjkiD, "SBYTS,2  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D9
+    VCjkiD, "SBYTS,3  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // DA
+    VCjkiD, "SBYTS,4  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // DB
+    VCjkiD, "SBYTS,5  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // DC
+    VCjkiD, "SBYTS,6  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // DD
+    VCjkiD, "SBYTS,7  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // DE
+    VCjkiD, "SBYTS,8  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // DF
 
     VCjkiD, "Illegal",  VF, VR,                                // E0
     VCjkiD, "Illegal",  VF, VR,                                // E1
     VCjkiD, "Illegal",  VF, VR,                                // E2
     VCjkiD, "Illegal",  VF, VR,                                // E3
-    VCjkiD, "SCLN,A%X,X0 A%X,X1,X%X,%d", VFJKID, VRAJX0AKX1XI, // E4
-    VCjkiD, "SCLR,A%X,X0 A%X,X1,X%X,%d", VFJKID, VRAJX0AKX1XI, // E5
+    VCjkiD, "SCLN,A%X,X0 A%X,X1,X%X,0x%X", VFJKID, VRAJX0AKX1XI, // E4
+    VCjkiD, "SCLR,A%X,X0 A%X,X1,X%X,0x%X", VFJKID, VRAJX0AKX1XI, // E5
     VCjkiD, "Illegal",  VF, VR,                                // E6
     VCjkiD, "Illegal",  VF, VR,                                // E7
     VCjkiD, "Illegal",  VF, VR,                                // E8
-    VCjkiD, "CMPC,A%X,X0 A%X,X1,A%X,%d", VFJKID, VRAJX0AKX1AI, // E9
+    VCjkiD, "CMPC,A%X,X0 A%X,X1,A%X,0x%X", VFJKID, VRAJX0AKX1AI, // E9
     VCjkiD, "Illegal",  VF, VR,                                // EA
-    VCjkiD, "TRANB,A%X,X0 A%X,X1,A%X,%d",VFJKID, VRAJX0AKX1AI, // EB
+    VCjkiD, "TRANB,A%X,X0 A%X,X1,A%X,0x%X",VFJKID, VRAJX0AKX1AI, // EB
     VCjkiD, "Illegal",  VF, VR,                                // EC
-    VCjkiD, "EDIT,A%X,X0 A%X,X1,A%X,%d", VFJKID, VRAJX0AKX1AI, // ED
+    VCjkiD, "EDIT,A%X,X0 A%X,X1,A%X,0x%X", VFJKID, VRAJX0AKX1AI, // ED
     VCjkiD, "Illegal",  VF, VR,                                // EE
     VCjkiD, "Illegal",  VF, VR,                                // EF
 
     VCjkiD, "Illegal",  VF, VR,                                // F0
     VCjkiD, "Illegal",  VF, VR,                                // F1
     VCjkiD, "Illegal",  VF, VR,                                // F2
-    VCjkiD, "SCANB,X0 A%X,X1,A%X,%d", VFKID, VRX0AKX1AI,       // F3
+    VCjkiD, "SCANB,X0 A%X,X1,A%X,0x%X", VFKID, VRX0AKX1AI,     // F3
     VCjkiD, "Illegal",  VF, VR,                                // F4
     VCjkiD, "Illegal",  VF, VR,                                // F5
     VCjkiD, "Illegal",  VF, VR,                                // F6
     VCjkiD, "Illegal",  VF, VR,                                // F7
     VCjkiD, "Illegal",  VF, VR,                                // F8
-    VCjkiD, "MOVI,X%X,%d A%X,X1,%d", VFIDKJ, VRXIAKX1,         // F9
-    VCjkiD, "CMPI,X%X,%d A%X,X1,%d", VFIDKJ, VRXIAKX1,         // FA
-    VCjkiD, "ADDI,X%X,%d A%X,X1,%d", VFIDKJ, VRXIAKX1,         // FB
+    VCjkiD, "MOVI,X%X,0x%X A%X,X1,0x%X", VFIDKJ, VRXIAKX1,     // F9
+    VCjkiD, "CMPI,X%X,0x%X A%X,X1,0x%X", VFIDKJ, VRXIAKX1,     // FA
+    VCjkiD, "ADDI,X%X,0x%X A%X,X1,0x%X", VFIDKJ, VRXIAKX1,     // FB
     VCjkiD, "Illegal",  VF, VR,                                // FC
     VCjkiD, "Illegal",  VF, VR,                                // FD
     VCjkiD, "Illegal",  VF, VR,                                // FE
@@ -1401,6 +1401,110 @@ void traceCpu180(Cpu180Context *cpu, u64 p, u8 opCode, u8 opI, u8 opJ, u8 opK, u
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Trace a CYBER 180 procedure call.
+**
+**  Parameters:     Name        Description.
+**                  cpu         Pointer to CYBER 180 CPU context
+**                  pva         PVA of callee
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceCall(Cpu180Context *cpu, u64 pva)
+    {
+    u8  i;
+
+    /*
+    **  Bail out if no trace of CPU is requested.
+    */
+    if ((traceMask & TraceCpu) == 0)
+        {
+        return;
+        }
+    fprintf(cpuF[cpu->id], "%06d Call procedure at PVA %012lx\n", traceSequenceNo, pva);
+    for (i = 0; i <= 4; i++)
+        {
+        fprintf(cpuF[cpu->id], "           A%X %012lx\n", i, cpu->regA[i]);
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Trace a CYBER 180 codebase pointer used in a procedure call.
+**
+**  Parameters:     Name        Description.
+**                  cpu         Pointer to CYBER 180 CPU context
+**                  pva         PVA of binding section entry
+**                  rma         RMA of binding section entry
+**                  cbp         Codebase pointer
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceCodebasePointer(Cpu180Context *cpu, u64 pva, u32 rma, u64 cbp)
+    {
+    /*
+    **  Bail out if no trace of CPU is requested.
+    */
+    if ((traceMask & TraceCpu) == 0)
+        {
+        return;
+        }
+    fprintf(cpuF[cpu->id], "%06d Call indirect PVA %012lx RMA %08x CBP %016lx\n", traceSequenceNo, pva, rma, cbp);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Trace a CYBER 180 procedure call frame.
+**
+**  Parameters:     Name        Description.
+**                  cpu         Pointer to CYBER 180 CPU context
+**                  rma         Stack frame address
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceCallFrame180(Cpu180Context *cpu, u32 rma)
+    {
+    u8  at;
+    u16 desc;
+    u8  i;
+    u64 word;
+    u32 wordAddr;
+    u8  xs;
+    u8  xt;
+
+    /*
+    **  Bail out if no trace of CPU is requested.
+    */
+    if ((traceMask & TraceCpu) == 0)
+        {
+        return;
+        }
+    fprintf(cpuF[cpu->id], "\n%06d CYBER 180 call frame pushed at %08x\n\n", traceSequenceNo, rma);
+    wordAddr = rma >> 3;
+    fprintf(cpuF[cpu->id], "P %lx\n", cpMem[wordAddr++]);
+    word = cpMem[wordAddr++];
+    fprintf(cpuF[cpu->id], "VMID %04x  A0 %012lx\n", (u8)((word >> 56) & Mask4), word & Mask48);
+    word = cpMem[wordAddr++];
+    desc = (word >> 48) & Mask16;
+    xs   = (desc >> 8) & Mask4;
+    at   = (desc >> 4) & Mask4;
+    xt   = desc & Mask4;
+    fprintf(cpuF[cpu->id], "Desc %04x  A1 %012lx\n", desc, word & Mask48);
+    word = cpMem[wordAddr++];
+    fprintf(cpuF[cpu->id], "UMR  %04x  A2 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
+    for (i = 3; i <= at; i++)
+        {
+        fprintf(cpuF[cpu->id], "           A%X %012lx\n", i, cpMem[wordAddr++] & Mask48);
+        }
+    fputs("\n", cpuF[cpu->id]);
+    for (i = xs; i <= xt; i++)
+        {
+        fprintf(cpuF[cpu->id], "X%X %016lx\n", i, cpMem[wordAddr++]);
+        }
+    fputs("\n", cpuF[cpu->id]);
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Trace a CYBER 170 exchange jump.
 **
 **  Parameters:     Name        Description.
@@ -1571,6 +1675,58 @@ void traceExchange180(Cpu180Context *cpu, u32 addr, char *title)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Trace a CYBER 180 halt request.
+**
+**  Parameters:     Name        Description.
+**                  cpu         Pointer to CYBER 180 CPU context
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceHaltCpu180(Cpu180Context *cpu)
+    {
+    if ((traceMask & TraceCpu) != 0)
+        {
+        fprintf(cpuF[cpu->id], "%06d Halt CPU%d\n", traceSequenceNo, cpu->id);
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Trace a CYBER 180 master clear request.
+**
+**  Parameters:     Name        Description.
+**                  cpu         Pointer to CYBER 180 CPU context
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceMasterClearCpu180(Cpu180Context *cpu)
+    {
+    if ((traceMask & TraceCpu) != 0)
+        {
+        fprintf(cpuF[cpu->id], "%06d Master Clear CPU%d\n", traceSequenceNo, cpu->id);
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Trace a CYBER 180 start request.
+**
+**  Parameters:     Name        Description.
+**                  cpu         Pointer to CYBER 180 CPU context
+**                  rma         start address
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceStartCpu180(Cpu180Context *cpu, u32 rma)
+    {
+    if ((traceMask & TraceCpu) != 0)
+        {
+        fprintf(cpuF[cpu->id], "%06d Start CPU%d at %08x\n", traceSequenceNo, cpu->id, rma);
+        }
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Trace a CYBER 170 trap frame.
 **
 **  Parameters:     Name        Description.
@@ -1710,7 +1866,7 @@ void traceTrapPointer(Cpu180Context *cpu)
     isExt = vmid == 0 && ((cbp >> 55) & 1) != 0;
     if (isExt)
         {
-        fprintf(cpuF[cpu->id], "\n         Binding section pointer %lx ", cpu->regTp + 8);
+        fprintf(cpuF[cpu->id], "\n          Binding section pointer %lx ", cpu->regTp + 8);
         if (cpu180PvaToRma(cpu, cpu->regTp + 8, AccessModeRead, &rma, &cond) == FALSE)
             {
             fprintf(cpuF[cpu->id], "%s\n", traceMonitorConditionToStr(cond));
@@ -1785,8 +1941,19 @@ void traceMonitorCondition(Cpu180Context *cpu, MonitorCondition cond)
     {
     if ((traceMask & (TracePva | TraceCpu)) != 0)
         {
-        fprintf(cpuF[cpu->id], "%06d MCR%02d %s\n", traceSequenceNo, (cond - MCR48) + 48, traceMonitorConditionToStr(cond));
-        fprintf(cpuF[cpu->id], "%06d       Action %s, P %012lx\n", traceSequenceNo, traceTranslateAction(cpu->pendingAction), cpu->nextP);
+        fprintf(cpuF[cpu->id], "%06d MCR%02d %s", traceSequenceNo, (cond - MCR48) + 48, traceMonitorConditionToStr(cond));
+        switch (cond)
+            {
+        case MCR52:
+        case MCR54:
+        case MCR57:
+        case MCR60:
+            fprintf(cpuF[cpu->id], ", UTP %012lx", cpu->regUtp);
+            break;
+        default:
+            break;
+            }
+        fprintf(cpuF[cpu->id], "\n%06d       Action %s, P %012lx\n", traceSequenceNo, traceTranslateAction(cpu->pendingAction), cpu->nextP);
         }
     }
 
@@ -1866,12 +2033,12 @@ void traceRma(Cpu180Context *cpu, u32 rma)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void traceSde(Cpu180Context *cpu, u64 sde)
+void traceSde(Cpu180Context *cpu, u16 segNum, u64 sde)
     {
     if ((traceMask & TracePva) != 0)
         {
-        fprintf(cpuF[cpu->id], "%06d SDE VL %x XP %x RP %x WP %x R1 %x R2 %x ASID %04x Lock %02x\n", traceSequenceNo,
-            (u8)((sde >> 62) & Mask2), (u8)((sde >> 60) & Mask2), (u8)((sde >> 58) & Mask2), (u8)((sde >> 56) & Mask2),
+        fprintf(cpuF[cpu->id], "%06d Seg %03x SDE VL %x XP %x RP %x WP %x R1 %x R2 %x ASID %04x Lock %02x\n", traceSequenceNo,
+            segNum, (u8)((sde >> 62) & Mask2), (u8)((sde >> 60) & Mask2), (u8)((sde >> 58) & Mask2), (u8)((sde >> 56) & Mask2),
             (u8)((sde >> 52) & Mask4), (u8)((sde >> 48) & Mask4),
             (u16)((sde >> 32) & Mask16), (u8)((sde >> 24) & Mask6));
         }
@@ -1989,7 +2156,7 @@ void traceUserCondition(Cpu180Context *cpu, UserCondition cond)
 **------------------------------------------------------------------------*/
 void traceVmRegisters(Cpu180Context *cpu)
     {
-    if ((traceMask & TracePva) != 0)
+    if ((traceMask & (TracePva | TraceCpu)) != 0)
         {
         fprintf(cpuF[cpu->id], "%06d STA %08x STL %d PTA %08x PTL %d PSM %02x pnShift %d poMask %x plMask %x\n",
             traceSequenceNo, cpu->regSta, cpu->regStl, cpu->regPta, cpu->regPtl, cpu->regPsm,

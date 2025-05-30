@@ -24,7 +24,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG    0
+#define DEBUG    1
 
 /*
 **  -------------
@@ -103,6 +103,7 @@
 #define RegMemUEL2d1               0xA9
 #define RegMemUEL2d2               0xAA
 #define RegMemUEL2d3               0xAB
+#define RegMemFreeRunningCounter   0xB0
 
 /*
 **  Processor Register addresses.
@@ -112,9 +113,11 @@
 #define RegProcProcessorId         0x11
 #define RegProcOptionsInstalled    0x12
 #define RegProcVmCapabilityList    0x13
+#define RegProcPerfMonFacility     0x22
 #define RegProcDepEnvControl       0x30
 #define RegProcCtrlStoreAddr       0x31
 #define RegProcCtrlStoreBreak      0x32
+#define RegProcRegisterP           0x40
 #define RegProcMonitorProcState    0x41
 #define RegProcMonitorCondition    0x42
 #define RegProcUserCondition       0x43
@@ -124,9 +127,12 @@
 #define RegProcPageTableAddr       0x48
 #define RegProcPageTableLen        0x49
 #define RegProcPageSizeMask        0x4A
+#define RegProcModelDepFlags       0x50
 #define RegProcModelDepWord        0x51
+#define RegProcMonitorMask         0x60
 #define RegProcJobProcessState     0x61
 #define RegProcSystemIntTimer      0x62
+#define RegProcKeypointBuffer      0x63
 #define RegProcFaultStatus0        0x80
 #define RegProcFaultStatus1        0x81
 #define RegProcFaultStatus2        0x82
@@ -146,11 +152,13 @@
 #define RegProcCCEL                0x92
 #define RegProcMCEL                0x93
 #define RegProcTestMode            0xA0
-#define RegProcTestMode0           0xA0
-#define RegProcTestMode1           0xA1
-#define RegProcTestMode2           0xA2
-#define RegProcTestMode3           0xA3
+#define RegProcTrapPointer         0xC4
+#define RegProcDebugList           0xC5
+#define RegProcKeypointMask        0xC6
 #define RegProcProcessIntTimer     0xC9
+#define RegProcDebugIndex          0xE4
+#define RegProcDebugMask           0xE5
+#define RegProcUserMask            0xE6
 
 /*
 **  -----------------------
@@ -218,6 +226,7 @@ static u8   *mchControlStores[2];
 static int  mchControlStoreIndices[2];
 static u64  *mchCpRegisterGroups[2];
 static u64  *mchIouRegisters;
+static u64  mchLastCsStartAddr = 0;
 static u64  *mchRegisterFiles[2];
 static int  mchRegisterFileIndices[2];
 static u8   **mchSoftMemoryGroups[2];
@@ -333,24 +342,18 @@ u64 mchGetCpRegister(Cpu180Context *ctx, u8 reg)
             }
         return (byte << 56) | (byte << 48) | (byte << 40) | (byte << 32)
              | (byte << 24) | (byte << 16) | (byte <<  8) | byte;
-    case RegProcProcessorId:
-        return ctx->id;
     case RegProcCtrlStoreAddr:
         return mchControlStoreIndices[ctx->id] >> 4; // 16 bytes per control store address
     case RegProcJobProcessState:
         return ctx->regJps;
-    case RegProcMonitorProcState:
-        return ctx->regMps;
+    case RegProcModelDepWord:
+        return ctx->regMdw;
     case RegProcMonitorCondition:
         return ctx->regMcr;
-    case  RegProcUserCondition:
-        return ctx->regUcr;
-    case RegProcUntranslatablePtr:
-        return ctx->regUtp;
-    case RegProcSegmentTableLen:
-        return ctx->regStl;
-    case RegProcSegmentTableAddr:
-        return ctx->regSta;
+    case RegProcMonitorMask:
+        return ctx->regMmr;
+    case RegProcMonitorProcState:
+        return ctx->regMps;
     case RegProcPageTableAddr:
         return ctx->regPta;
     case RegProcPageTableLen:
@@ -359,12 +362,26 @@ u64 mchGetCpRegister(Cpu180Context *ctx, u8 reg)
         return ctx->regPsm;
     case RegProcProcessIntTimer:
         return ctx->regPit;
+    case RegProcProcessorId:
+        return ctx->id;
+    case RegProcRegisterP:
+        return ((u64)ctx->key << 48) | ctx->regP;
+    case RegProcSegmentTableLen:
+        return ctx->regStl;
+    case RegProcSegmentTableAddr:
+        return ctx->regSta;
     case RegProcSystemIntTimer:
         return ctx->regSit;
+    case RegProcTrapPointer:
+        return ctx->regTp;
+    case RegProcUntranslatablePtr:
+        return ctx->regUtp;
+    case  RegProcUserCondition:
+        return ctx->regUcr;
+    case  RegProcUserMask:
+        return ctx->regUmr;
     case RegProcVmCapabilityList:
         return ctx->regVmcl;
-    case RegProcModelDepWord:
-        return ctx->regMdw;
     case RegProcDepEnvControl:
     default:
         break;
@@ -548,23 +565,21 @@ void mchSetCpRegister(Cpu180Context *ctx, u8 reg, u64 word)
     case RegProcJobProcessState:
         ctx->regJps = word & Mask32;
         break;
+    case RegProcModelDepWord:
+        ctx->regMdw = word;
+        break;
     case RegProcMonitorProcState:
         ctx->regMps = word & Mask32;
         break;
     case RegProcMonitorCondition:
         ctx->regMcr = word & Mask16;
         break;
-    case  RegProcUserCondition:
-        ctx->regUcr = word & Mask16;
+    case RegProcMonitorMask:
+        ctx->regMmr = word & Mask16;
         break;
-    case RegProcUntranslatablePtr:
-        ctx->regUtp = word & Mask48;
-        break;
-    case RegProcSegmentTableLen:
-        ctx->regStl = word & Mask16;
-        break;
-    case RegProcSegmentTableAddr:
-        ctx->regSta = word & Mask32;
+    case RegProcPageSizeMask:
+        ctx->regPsm = word & Mask7;
+        cpu180UpdatePageSize(ctx);
         break;
     case RegProcPageTableAddr:
         ctx->regPta = word & Mask32;
@@ -573,21 +588,36 @@ void mchSetCpRegister(Cpu180Context *ctx, u8 reg, u64 word)
         ctx->regPtl = word & Mask8;
         cpu180UpdatePageSize(ctx);
         break;
-    case RegProcPageSizeMask:
-        ctx->regPsm = word & Mask7;
-        cpu180UpdatePageSize(ctx);
-        break;
-    case RegProcVmCapabilityList:
-        ctx->regVmcl = word & Mask16;
-        break;
     case RegProcProcessIntTimer:
         ctx->regPit = word & Mask32;
+        break;
+    case RegProcRegisterP:
+        ctx->key  = (word >> 48) & Mask6;
+        ctx->regP = word & Mask48;
+        break;
+    case RegProcSegmentTableLen:
+        ctx->regStl = word & Mask16;
+        break;
+    case RegProcSegmentTableAddr:
+        ctx->regSta = word & Mask32;
         break;
     case RegProcSystemIntTimer:
         ctx->regSit = word & Mask32;
         break;
-    case RegProcModelDepWord:
-        ctx->regMdw = word;
+    case RegProcTrapPointer:
+        ctx->regTp = word & Mask48;
+        break;
+    case RegProcUntranslatablePtr:
+        ctx->regUtp = word & Mask48;
+        break;
+    case  RegProcUserCondition:
+        ctx->regUcr = word & Mask16;
+        break;
+    case  RegProcUserMask:
+        ctx->regUmr = word & Mask16;
+        break;
+    case RegProcVmCapabilityList:
+        ctx->regVmcl = word & Mask16;
         break;
     case RegProcStatusSummary:
         ctx->isStopped     = (word & 0x08) != 0;
@@ -768,10 +798,12 @@ static u64 mchGetRegister(u8 reg)
 **------------------------------------------------------------------------*/
 static FcStatus mchFunc(PpWord funcCode)
     {
-    u64           csAddr;
-    Cpu180Context *ctx;
-    u8            opCode;
-    u64           word;
+    u64              csAddr;
+    Cpu180Context    *ctx;
+    MonitorCondition mcr;
+    u8               opCode;
+    u32              rma;
+    u64              word;
 
     mchConnCode = (funcCode >> FcConnShift) & Mask4;
     opCode      = (funcCode >> FcOpShift) & Mask4;
@@ -833,6 +865,9 @@ static FcStatus mchFunc(PpWord funcCode)
             {
             word = mchGetRegister(RegProcStatusSummary) | 0x08;
             mchSetRegister(RegProcStatusSummary, word);
+#if CcDebug == 1
+            traceHaltCpu180(mchGetCpContext(mchConnCode));
+#endif
             }
         return FcProcessed;
 
@@ -858,28 +893,30 @@ static FcStatus mchFunc(PpWord funcCode)
                 }
             else if (csAddr == 0x381)
                 {
-                MonitorCondition mcr;
-                u32 rma;
-
-                ctx = mchGetCpContext(mchConnCode);
-                cpu180Load180Xp(ctx, ctx->regMps >> 3);
-                mchSetRegister(RegProcStatusSummary, word);
-                if (cpu180PvaToRma(ctx, cpMem[ctx->regMps >> 3] & Mask48, AccessModeExecute, &rma, &mcr) == FALSE)
+                if (mchLastCsStartAddr != csAddr)
                     {
-                    logDtError(LogErrorLocation, "Failed to start CPU: failed to translate PVA %012lx to RMA, MCR %04x\n",
-                        cpMem[ctx->regMps >> 3] & Mask48, mcr);
-                    }
-#if DEBUG
-                else
-                    {
-                    fprintf(mchLog, "\n%12d PP:%02o CH:%02o Start CPU at RMA %08x",
-                    traceSequenceNo,
-                    activePpu->id,
-                    activeDevice->channel->id,
-                    rma);
-                    }
+                    mchLastCsStartAddr = csAddr;
+                    ctx = mchGetCpContext(mchConnCode);
+                    cpu180Load180Xp(ctx, ctx->regMps >> 3);
+                    if (cpu180PvaToRma(ctx, cpMem[ctx->regMps >> 3] & Mask48, AccessModeExecute, &rma, &mcr))
+                        {
+#if CcDebug == 1
+                        traceStartCpu180(ctx, rma);
 #endif
-                mchSetRegister(RegProcStatusSummary, word);
+#if DEBUG
+                        fprintf(mchLog, "\n%12d PP:%02o CH:%02o Start CPU at RMA %08x",
+                        traceSequenceNo,
+                        activePpu->id,
+                        activeDevice->channel->id,
+                        rma);
+#endif
+                        }
+                    else
+                        {
+                        logDtError(LogErrorLocation, "Failed to start CPU: failed to translate PVA %012lx to RMA, MCR %04x\n",
+                            cpMem[ctx->regMps >> 3] & Mask48, mcr);
+                        }
+                    }
                 }
             else
                 {
@@ -894,6 +931,10 @@ static FcStatus mchFunc(PpWord funcCode)
             {
             mchSetRegister(RegProcStatusSummary, 0x28); // CYBER 180 monitor mode, Processor Halt
             mchSetRegister(RegProcDepEnvControl, 0);
+            mchLastCsStartAddr = 0;
+#if CcDebug == 1
+            traceMasterClearCpu180(mchGetCpContext(mchConnCode));
+#endif
             }
         return FcProcessed;
 
@@ -1388,7 +1429,15 @@ static u8 mch860CmReader(void)
 **------------------------------------------------------------------------*/
 static void mch860CmSetter(u8 reg, u64 word)
     {
-    mchCmRegisters[reg] = word;
+    switch (reg)
+        {
+    case RegMemFreeRunningCounter:
+        cpu180FreeRunningCounter = word;
+        break;
+    default:
+        mchCmRegisters[reg] = word;
+        break;
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -1660,7 +1709,7 @@ static u8 mch860IouReader(void)
                 regVal = ppu[ppIdx].regP;
                 break;
             case 2: // K register
-                regVal = ppu[ppIdx].isIdle ? 0107700 : ppu[ppIdx].opF << 6;
+                regVal = ppu[ppIdx].isIdle ? 0107700 : ppu[ppIdx].regK;
                 break;
             case 3: // Q register
                 regVal = ppu[ppIdx].regQ;
@@ -1744,6 +1793,7 @@ static void mch860IouWriter(u8 byte)
                     */
                     ppu[ppIdx].opF  = 071;
                     ppu[ppIdx].busy = TRUE;
+                    ppu[ppIdx].regK = (ppu[ppIdx].opF << 6) | ppu[ppIdx].opD;
 
                     /*
                     **  Clear P register and location zero of PP.
@@ -1773,6 +1823,7 @@ static void mch860IouWriter(u8 byte)
                     */
                     ppu[ppIdx].opF  = 073;
                     ppu[ppIdx].busy = TRUE;
+                    ppu[ppIdx].regK = (ppu[ppIdx].opF << 6) | ppu[ppIdx].opD;
 
                     /*
                     **  Clear P register and location zero of PP.
