@@ -273,9 +273,9 @@ void stopHelpers(void);
 **  maintenance_channel.c
 */
 void mchCheckTimeout(void);
-u64 mchGetCpRegister(Cpu180Context *ctx, u8 reg);
+u64 mchGetCpStateRegister(Cpu180Context *ctx, u8 reg);
 void mchInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-void mchSetCpRegister(Cpu180Context *ctx, u8 reg, u64 word);
+void mchSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word);
 void mchSetOsBoundsFault(PpSlot *pp, u32 address, u32 boundary);
 
 /*

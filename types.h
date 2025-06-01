@@ -369,6 +369,7 @@ typedef struct
     u8            regPsm;               /* page size mask register */
     u32           regSit;               /* system interval timer register */
     u16           regVmcl;              /* virtual machine capability list register */
+    u64           regKbp;               /* keypoint buffer pointer */
     u64           regP170;              /* CYBER 170 mode P register from last exchange */
     u32           byteNumMask;          /* mask used in determining byte number within page */
     u32           pageLengthMask;       /* mask used in calculating page table index */

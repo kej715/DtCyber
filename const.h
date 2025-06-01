@@ -210,6 +210,7 @@
 #define Mask23                     037777777
 #define Mask24                     077777777
 #define Mask24Ecs                  077777700
+#define Mask28                     01777777777
 #define Mask29                     03777777777
 #define Mask30                     07777777777
 #define Mask30Ecs                  07777777700

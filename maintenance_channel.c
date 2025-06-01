@@ -124,6 +124,7 @@
 #define RegProcUntranslatablePtr   0x44
 #define RegProcSegmentTableLen     0x45
 #define RegProcSegmentTableAddr    0x46
+#define RegProcBaseConstant        0x47
 #define RegProcPageTableAddr       0x48
 #define RegProcPageTableLen        0x49
 #define RegProcPageSizeMask        0x4A
@@ -315,7 +316,7 @@ void mchCheckTimeout()
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Get a value from a CP maintenance register
+**  Purpose:        Get a value from a CP state register
 **
 **  Parameters:     Name        Description.
 **                  ctx         CP context
@@ -324,7 +325,7 @@ void mchCheckTimeout()
 **  Returns:        64-bit value.
 **
 **------------------------------------------------------------------------*/
-u64 mchGetCpRegister(Cpu180Context *ctx, u8 reg)
+u64 mchGetCpStateRegister(Cpu180Context *ctx, u8 reg)
     {
     u64 byte;
 
@@ -342,10 +343,16 @@ u64 mchGetCpRegister(Cpu180Context *ctx, u8 reg)
             }
         return (byte << 56) | (byte << 48) | (byte << 40) | (byte << 32)
              | (byte << 24) | (byte << 16) | (byte <<  8) | byte;
+    case RegProcBaseConstant:
+        return ctx->regBc;
     case RegProcCtrlStoreAddr:
         return mchControlStoreIndices[ctx->id] >> 4; // 16 bytes per control store address
     case RegProcJobProcessState:
         return ctx->regJps;
+    case RegProcKeypointBuffer:
+        return ctx->regKbp;
+    case RegProcKeypointMask:
+        return ctx->regKmr;
     case RegProcModelDepWord:
         return ctx->regMdw;
     case RegProcMonitorCondition:
@@ -545,7 +552,7 @@ void mchInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Set CP maintenance register to a value
+**  Purpose:        Set CP state register to a value
 **
 **  Parameters:     Name        Description.
 **                  ctx         CP context
@@ -555,12 +562,18 @@ void mchInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void mchSetCpRegister(Cpu180Context *ctx, u8 reg, u64 word)
+void mchSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
     {
     switch (reg)
         {
     case RegProcCtrlStoreAddr:
         mchControlStoreIndices[ctx->id] = word << 4; // 16 bytes per control store address
+        break;
+    case RegProcKeypointBuffer:
+        ctx->regKbp = word & Mask48;
+        break;
+    case RegProcKeypointMask:
+        ctx->regKmr = word & Mask16;
         break;
     case RegProcJobProcessState:
         ctx->regJps = word & Mask32;
@@ -600,6 +613,9 @@ void mchSetCpRegister(Cpu180Context *ctx, u8 reg, u64 word)
         break;
     case RegProcSegmentTableAddr:
         ctx->regSta = word & Mask32;
+        break;
+    case RegProcBaseConstant:
+        ctx->regBc = word;
         break;
     case RegProcSystemIntTimer:
         ctx->regSit = word & Mask32;
@@ -1483,7 +1499,7 @@ static u64 mch860CpGetter(u8 reg)
         return 0;
         }
 
-    return mchGetCpRegister(ctx, reg);
+    return mchGetCpStateRegister(ctx, reg);
     }
 
 /*--------------------------------------------------------------------------
@@ -1531,7 +1547,7 @@ static void mch860CpSetter(u8 reg, u64 word)
         {
         return;
         }
-    mchSetCpRegister(ctx, reg, word);
+    mchSetCpStateRegister(ctx, reg, word);
     }
 
 /*--------------------------------------------------------------------------
