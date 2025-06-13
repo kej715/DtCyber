@@ -109,6 +109,9 @@
 #define VCjk     1
 #define VCjkiD   2
 #define VCjkQ    3
+#define VCjkB2   4
+#define VCjkiDB1 5
+#define VCjkiDB2 6
 
 /*
 **  CYBER 180 CPU instruction format markers
@@ -167,7 +170,7 @@
 **  Private Macro Functions
 **  -----------------------
 */
-#define tracePrintPva(f, pva) (             \
+#define tracePrintPva(f, pva) (            \
     fprintf((f), "%x %03x %08x",           \
             (u8)(((pva) >> 44) & Mask4),   \
             (u16)(((pva) >> 32) & Mask12), \
@@ -207,6 +210,7 @@ typedef struct decCp180Control
 **  ---------------------------
 */
 static char *traceMonitorConditionToStr(MonitorCondition cond);
+static void tracePrintRma(Cpu180Context *cpu, u64 pva, Cpu180AccessMode mode);
 
 /*
 **  ----------------
@@ -221,7 +225,7 @@ u32 traceSequenceNo;
 **  Private Variables
 **  -----------------
 */
-FILE        **cpuF;
+static FILE **cpuF;
 static FILE *devF;
 static FILE **ppuF;
 
@@ -602,8 +606,8 @@ static DecCp180Control cp180Decode[0x100] =
     VCjk,   "DIVN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 73
     VCjk,   "CMPN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 74
     VCjk,   "MOVN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 75
-    VCjk,   "MOVB,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 76
-    VCjk,   "CMPB,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 77
+    VCjkB2, "MOVB,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 76
+    VCjkB2, "CMPB,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 77
     VCjk,   "Illegal",  VF, VR,                                // 78
     VCjk,   "Illegal",  VF, VR,                                // 79
     VCjk,   "Illegal",  VF, VR,                                // 7A
@@ -1236,9 +1240,12 @@ void traceCpu180(Cpu180Context *cpu, u64 p, u8 opCode, u8 opI, u8 opJ, u8 opK, u
         {
     default:
     case VCjk:
+    case VCjkB2:
         fprintf(cpuF[cpu->id], "j:%X k:%X            ", opJ, opK);
         break;
     case VCjkiD:
+    case VCjkiDB1:
+    case VCjkiDB2:
         fprintf(cpuF[cpu->id], "j:%X k:%X i:%X D:%03x  ", opJ, opK, opI, opD);
         break;
     case VCjkQ:
@@ -1398,6 +1405,150 @@ void traceCpu180(Cpu180Context *cpu, u64 p, u8 opCode, u8 opI, u8 opJ, u8 opK, u
         break;
         }
     fputs("\n", cpuF[cpu->id]);
+
+    //
+    //  If the instruction is a BDP instruction, print its descriptor(s)
+    //
+    if (entry->mode >= VCjkB2)
+        {
+        switch (entry->mode)
+            {
+        default:
+        case VCjkB2:
+            p += 2;
+            fprintf(cpuF[cpu->id], "%06d %x %03x %08x  ", traceSequenceNo, (u8)((p >> 44) & Mask4), (u16)((p >> 32) & Mask12), (u32)(p & Mask32));
+            fprintf(cpuF[cpu->id], "  desc:%08x type:%x len:%04x pva:%012lx", cpu->srcDesc.rawDesc, cpu->srcDesc.type, cpu->srcDesc.length, cpu->srcDesc.pva);
+            tracePrintRma(cpu, cpu->srcDesc.pva, AccessModeRead);
+            fputs("\n", cpuF[cpu->id]);
+            p += 4;
+            fprintf(cpuF[cpu->id], "%06d %x %03x %08x  ", traceSequenceNo, (u8)((p >> 44) & Mask4), (u16)((p >> 32) & Mask12), (u32)(p & Mask32));
+            fprintf(cpuF[cpu->id], "  desc:%08x type:%x len:%04x pva:%012lx", cpu->dstDesc.rawDesc, cpu->dstDesc.type, cpu->dstDesc.length, cpu->dstDesc.pva);
+            tracePrintRma(cpu, cpu->dstDesc.pva, AccessModeWrite);
+            fputs("\n", cpuF[cpu->id]);
+            break;
+        case VCjkiDB1:
+            p += 4;
+            fprintf(cpuF[cpu->id], "%06d %x %03x %08x  ", traceSequenceNo, (u8)((p >> 44) & Mask4), (u16)((p >> 32) & Mask12), (u32)(p & Mask32));
+            fprintf(cpuF[cpu->id], "  desc:%08x type:%x len:%04x pva:%012lx", cpu->srcDesc.rawDesc, cpu->srcDesc.type, cpu->srcDesc.length, cpu->srcDesc.pva);
+            tracePrintRma(cpu, cpu->srcDesc.pva, AccessModeRead);
+            fputs("\n", cpuF[cpu->id]);
+            break;
+        case VCjkiDB2:
+            p += 4;
+            fprintf(cpuF[cpu->id], "%06d %x %03x %08x  ", traceSequenceNo, (u8)((p >> 44) & Mask4), (u16)((p >> 32) & Mask12), (u32)(p & Mask32));
+            fprintf(cpuF[cpu->id], "  desc:%08x type:%x len:%04x pva:%012lx", cpu->srcDesc.rawDesc, cpu->srcDesc.type, cpu->srcDesc.length, cpu->srcDesc.pva);
+            tracePrintRma(cpu, cpu->srcDesc.pva, AccessModeRead);
+            fputs("\n", cpuF[cpu->id]);
+            p += 4;
+            fprintf(cpuF[cpu->id], "%06d %x %03x %08x  ", traceSequenceNo, (u8)((p >> 44) & Mask4), (u16)((p >> 32) & Mask12), (u32)(p & Mask32));
+            fprintf(cpuF[cpu->id], "  desc:%08x type:%x len:%04x pva:%012lx", cpu->dstDesc.rawDesc, cpu->dstDesc.type, cpu->dstDesc.length, cpu->dstDesc.pva);
+            tracePrintRma(cpu, cpu->dstDesc.pva, AccessModeWrite);
+            fputs("\n", cpuF[cpu->id]);
+            break;
+            }
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Print the RMA for a PVA.
+**
+**  Parameters:     Name        Description.
+**                  cpu         Pointer to CYBER 180 CPU context
+**                  pva         PVA to translate
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void tracePrintRma(Cpu180Context *cpu, u64 pva, Cpu180AccessMode mode)
+    {
+    MonitorCondition cond;
+    u32              rma;
+    u32              savedMask;
+    u64              utp;
+
+    savedMask  = traceMask;
+    traceMask &= ~TracePva;
+    utp        = cpu->regUtp;
+    if (cpu180PvaToRma(cpu, pva, mode, &rma, &cond))
+        {
+        fprintf(cpuF[cpu->id], " (RMA %08x)", rma);
+        }
+    else
+        {
+        cpu->regUtp = utp;
+        }
+    traceMask = savedMask;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Trace the result of a block move operation.
+**
+**  Parameters:     Name        Description.
+**                  cpu         Pointer to CPU context
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceBlockMove(Cpu180Context *cpu)
+    {
+    u8               c;
+    MonitorCondition cond;
+    int              count;
+    u32              dstAddr;
+    int              i;
+    u32              rma;
+    u32              srcAddr;
+    u64              utp;
+    u64              word;
+
+    /*
+    **  Bail out if no trace of block move is requested.
+    */
+    if ((traceMask & (TraceCpu | TraceBlockMove)) != (TraceCpu | TraceBlockMove))
+        {
+        return;
+        }
+    utp = cpu->regUtp;
+    if (cpu180PvaToRma(cpu, cpu->srcDesc.pva, AccessModeRead, &rma, &cond) == FALSE)
+        {
+        cpu->regUtp = utp;
+        return;
+        }
+    srcAddr = rma >> 3;
+    if (cpu180PvaToRma(cpu, cpu->dstDesc.pva, AccessModeWrite, &rma, &cond) == FALSE)
+        {
+        cpu->regUtp = utp;
+        return;
+        }
+    dstAddr = rma >> 3;
+    count   = (cpu->srcDesc.length + 7) >> 3;
+    fputs("    source block:\n", cpuF[cpu->id]);
+    while (count-- > 0)
+        {
+        word = cpMem[srcAddr];
+        fprintf(cpuF[cpu->id], "    %08x %016lx ", srcAddr << 3, word);
+        for (i = 56; i >= 0; i -= 8)
+            {
+            c = (u8)((word >> i) & 0xff);
+            fprintf(cpuF[cpu->id], "%c", (c >= 0x20 && c < 0x7f) ? c : '.');
+            }
+        fputs("\n", cpuF[cpu->id]);
+        srcAddr += 1;
+        }
+    count = (cpu->dstDesc.length + 7) >> 3;
+    fputs("    destination block:\n", cpuF[cpu->id]);
+    while (count-- > 0)
+        {
+        word = cpMem[dstAddr];
+        fprintf(cpuF[cpu->id], "    %08x %016lx ", dstAddr << 3, word);
+        for (i = 56; i >= 0; i -= 8)
+            {
+            c = (u8)((word >> i) & 0xff);
+            fprintf(cpuF[cpu->id], "%c", (c >= 0x20 && c < 0x7f) ? c : '.');
+            }
+        fputs("\n", cpuF[cpu->id]);
+        dstAddr += 1;
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -1412,20 +1563,23 @@ void traceCpu180(Cpu180Context *cpu, u64 p, u8 opCode, u8 opI, u8 opJ, u8 opK, u
 **------------------------------------------------------------------------*/
 void traceCall(Cpu180Context *cpu, u64 pva)
     {
-    u8  i;
+    u8 i;
 
     /*
-    **  Bail out if no trace of CPU is requested.
+    **  Bail out if no trace of call frame is requested.
     */
-    if ((traceMask & TraceCpu) == 0)
+    if ((traceMask & TraceCallFrame) == 0)
         {
         return;
         }
-    fprintf(cpuF[cpu->id], "%06d Call procedure at PVA %012lx\n", traceSequenceNo, pva);
+    fprintf(cpuF[cpu->id], "%06d Call procedure at PVA %012lx", traceSequenceNo, pva);
+    tracePrintRma(cpu, pva, AccessModeExecute);
     for (i = 0; i <= 4; i++)
         {
-        fprintf(cpuF[cpu->id], "           A%X %012lx\n", i, cpu->regA[i]);
+        fprintf(cpuF[cpu->id], "\n           A%X %012lx", i, cpu->regA[i]);
+        tracePrintRma(cpu, cpu->regA[i], AccessModeRead);
         }
+    fputs("\n", cpuF[cpu->id]);
     }
 
 /*--------------------------------------------------------------------------
@@ -1433,23 +1587,19 @@ void traceCall(Cpu180Context *cpu, u64 pva)
 **
 **  Parameters:     Name        Description.
 **                  cpu         Pointer to CYBER 180 CPU context
-**                  pva         PVA of binding section entry
+**                  bsp         PVA of binding section entry
 **                  rma         RMA of binding section entry
 **                  cbp         Codebase pointer
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void traceCodebasePointer(Cpu180Context *cpu, u64 pva, u32 rma, u64 cbp)
+void traceCodebasePointer(Cpu180Context *cpu, u64 bsp, u32 rma, u64 cbp)
     {
-    /*
-    **  Bail out if no trace of CPU is requested.
-    */
-    if ((traceMask & TraceCpu) == 0)
+    if ((traceMask & TraceCallFrame) != 0)
         {
-        return;
+        fprintf(cpuF[cpu->id], "%06d Call indirect BSP %012lx RMA %08x CBP %016lx\n", traceSequenceNo, bsp, rma, cbp);
         }
-    fprintf(cpuF[cpu->id], "%06d Call indirect PVA %012lx RMA %08x CBP %016lx\n", traceSequenceNo, pva, rma, cbp);
     }
 
 /*--------------------------------------------------------------------------
@@ -1473,9 +1623,9 @@ void traceCallFrame180(Cpu180Context *cpu, u32 rma)
     u8  xt;
 
     /*
-    **  Bail out if no trace of CPU is requested.
+    **  Bail out if no trace of call frame is requested.
     */
-    if ((traceMask & TraceCpu) == 0)
+    if ((traceMask & TraceCallFrame) == 0)
         {
         return;
         }
@@ -1605,10 +1755,8 @@ void traceExchange(Cpu170Context *cpu, u32 addr, char *title)
 **------------------------------------------------------------------------*/
 void traceExchange180(Cpu180Context *cpu, u32 addr, char *title)
     {
-    CpWord           data;
-    u8               i;
-    MonitorCondition cond;
-    u32              rma;
+    CpWord data;
+    u8     i;
 
     /*
     **  Bail out if no trace of exchange jumps is requested.
@@ -1620,10 +1768,7 @@ void traceExchange180(Cpu180Context *cpu, u32 addr, char *title)
     fprintf(cpuF[cpu->id], "\n%06d %s %08x\n\n", traceSequenceNo, title, addr);
     fprintf(cpuF[cpu->id], " P %02x ", cpu->key);
     tracePrintPva(cpuF[cpu->id], cpu->regP);
-    if (cpu180PvaToRma(cpu, cpu->regP & Mask48, AccessModeExecute, &rma, &cond))
-        {
-        fprintf(cpuF[cpu->id], " (RMA %08x)", rma);
-        }
+    tracePrintRma(cpu, cpu->regP & Mask48, AccessModeExecute);
     fputs("\n\n", cpuF[cpu->id]);
     for (i = 0; i < 16; i++)
         {
@@ -1845,6 +1990,7 @@ void traceTrapPointer(Cpu180Context *cpu)
     MonitorCondition cond;
     bool             isExt;
     u32              rma;
+    u64              utp;
     u8               vmid;
 
     /*
@@ -1854,26 +2000,28 @@ void traceTrapPointer(Cpu180Context *cpu)
         {
         return;
         }
-    fprintf(cpuF[cpu->id], "%06d CYBER 180 trap pointer %012lx ", traceSequenceNo, cpu->regTp);
+    fprintf(cpuF[cpu->id], "%06d CYBER 180 TP %012lx ", traceSequenceNo, cpu->regTp);
+    utp = cpu->regUtp;
     if (cpu180PvaToRma(cpu, cpu->regTp, AccessModeRead, &rma, &cond) == FALSE)
         {
         fprintf(cpuF[cpu->id], "%s\n", traceMonitorConditionToStr(cond));
+        cpu->regUtp = utp;
         return;
         }
     cbp   = cpMem[rma >> 3];
     vmid  = (cbp >> 56) & Mask4;
-    fprintf(cpuF[cpu->id], "RMA %08x VMID %x CBP %lx", rma, vmid, cbp);
+    fprintf(cpuF[cpu->id], "RMA %08x VMID %x CBP %lx ", rma, vmid, cbp);
     isExt = vmid == 0 && ((cbp >> 55) & 1) != 0;
     if (isExt)
         {
-        fprintf(cpuF[cpu->id], "\n          Binding section pointer %lx ", cpu->regTp + 8);
         if (cpu180PvaToRma(cpu, cpu->regTp + 8, AccessModeRead, &rma, &cond) == FALSE)
             {
             fprintf(cpuF[cpu->id], "%s\n", traceMonitorConditionToStr(cond));
+            cpu->regUtp = utp;
             return;
             }
         bsp = cpMem[rma >> 3] & Mask48;
-        fprintf(cpuF[cpu->id], "RMA %08x Binding section %012lx", rma, bsp);
+        fprintf(cpuF[cpu->id], "BSP %012lx", bsp);
         }
     fputs("\n", cpuF[cpu->id]);
     }
@@ -1953,7 +2101,9 @@ void traceMonitorCondition(Cpu180Context *cpu, MonitorCondition cond)
         default:
             break;
             }
-        fprintf(cpuF[cpu->id], "\n%06d       Action %s, P %012lx\n", traceSequenceNo, traceTranslateAction(cpu->pendingAction), cpu->nextP);
+        fprintf(cpuF[cpu->id], "\n%06d       Action %s, P %012lx", traceSequenceNo, traceTranslateAction(cpu->pendingAction), cpu->nextP);
+        tracePrintRma(cpu, cpu->nextP, AccessModeExecute);
+        fputs("\n", cpuF[cpu->id]);
         }
     }
 
@@ -2142,7 +2292,9 @@ void traceUserCondition(Cpu180Context *cpu, UserCondition cond)
             break;
             }
         fprintf(cpuF[cpu->id], "%06d UCR%d %s\n", traceSequenceNo, (cond - MCR48) + 48, s);
-        fprintf(cpuF[cpu->id], "%06d       Action %s, P %012lx\n", traceSequenceNo, traceTranslateAction(cpu->pendingAction), cpu->nextP);
+        fprintf(cpuF[cpu->id], "%06d       Action %s, P %012lx", traceSequenceNo, traceTranslateAction(cpu->pendingAction), cpu->nextP);
+        tracePrintRma(cpu, cpu->nextP, AccessModeExecute);
+        fputs("\n", cpuF[cpu->id]);
         }
     }
 

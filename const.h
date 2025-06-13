@@ -230,6 +230,8 @@
 #define TracePva                   (1 << 31)
 #define TraceCpu                   (1 << 30)
 #define TraceExchange              (1 << 29)
+#define TraceBlockMove             (1 << 28)
+#define TraceCallFrame             (1 << 27)
 
 /*
 **  Sign extension and overflow.

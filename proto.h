@@ -449,6 +449,7 @@ void tpMuxShowStatus();
 /*
 **  trace.c
 */
+void traceBlockMove(Cpu180Context *cpu);
 void traceCall(Cpu180Context *cpu, u64 pva);
 void traceCallFrame180(Cpu180Context *cpu, u32 rma);
 void traceChannel(u8 ch);
@@ -456,7 +457,7 @@ void traceChannelFunction(PpWord funcCode);
 void traceChannelIo(u8 ch);
 void traceCmWord(CpWord data);
 void traceCmWord64(CpWord data);
-void traceCodebasePointer(Cpu180Context *cpu, u64 pva, u32 rma, u64 cbp);
+void traceCodebasePointer(Cpu180Context *cpu, u64 bsp, u32 rma, u64 cbp);
 void traceCpu(Cpu170Context *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress);
 void traceCpu180(Cpu180Context *cpu, u64 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u16 opD, u16 opQ);
 void traceCpuPrint(Cpu170Context *cpu, char *str);

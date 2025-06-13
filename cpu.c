@@ -689,7 +689,9 @@ void cpuStep(Cpu170Context *activeCpu)
 
     /*
     **  If the machine is a CYBER 180, and this CPU is currently in 180 state,
-    **  give control to the 180 state step processor.
+    **  give control to the 180 state step processor. Otherwise, check the
+    **  MCR and UCR for pending interrupts and pass control to the 180 state
+    **  step processor, if indicated.
     */
     if (isCyber180)
         {
@@ -708,6 +710,11 @@ void cpuStep(Cpu170Context *activeCpu)
             cpu180CheckConditions(ctx180);
             if (ctx180->pendingAction > Stack)
                 {
+                if (ctx180->pendingAction == Exch)
+                    {
+                    cpuExchangeTo180(activeCpu, FALSE);
+                    cpu180CheckConditions(ctx180);
+                    }
                 cpu180Step(ctx180);
                 return;
                 }
@@ -1521,7 +1528,6 @@ static void dumpXP(Cpu170Context *activeCpu, int before, int after)
 **------------------------------------------------------------------------*/
 static void cpuOpIllegal(Cpu170Context *activeCpu)
     {
-/*DELETE*/traceStack(stderr);
     activeCpu->isStopped = TRUE;
     if (activeCpu->regRaCm < cpuMaxMemory)
         {
@@ -3643,7 +3649,7 @@ static void cpOp01(Cpu170Context *activeCpu)
                             TRUE);
             if (is180xch)
                 {
-/*DELETE*/fputs("System call from 170 to 180\n",stderr);
+/*DELETE*/fputs("System call from 170 to 180\n",stderr);traceMask|=TraceCpu|TraceExchange;
                 cpuExchangeTo180(activeCpu, TRUE);
                 }
             }
@@ -3705,7 +3711,14 @@ static void cpOp01(Cpu170Context *activeCpu)
             **  RC  Xj
             */
             //rtcReadUsCounter();
-            activeCpu->regX[activeCpu->opJ] = rtcClock;
+            if (isCyber180)
+                {
+                activeCpu->regX[activeCpu->opJ] = cpu180FreeRunningCounter & Mask48;
+                }
+            else
+                {
+                activeCpu->regX[activeCpu->opJ] = rtcClock;
+                }
             }
         else
             {
@@ -3723,6 +3736,8 @@ static void cpOp01(Cpu170Context *activeCpu)
             activeCpu->opOffset += 30;
             cpu180SetUserCondition(&cpus180[activeCpu->id], UCR48);
 /*DELETE*/  //if (activeCpu->opJ == 1 && activeCpu->opAddress == 0201001) traceMask |= TraceCpu | TraceExchange;
+/*DELETE*/  //fprintf(stderr,"017 %o %o %o\n",activeCpu->opJ,activeCpu->opK,activeCpu->opAddress&Mask15);
+/*DELETE*/  //if (activeCpu->opJ == 0 && activeCpu->opAddress == 0000002) traceMask |= TraceCpu | TraceExchange;
             }
         else
             {

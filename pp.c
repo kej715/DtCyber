@@ -1203,20 +1203,6 @@ static void ppOpCRD(void)     // 60
 
 #if CcDebug == 1
     traceCmWord(data);
-/*DELETE*/
-#if 0
-    if (address == (PPC + ((activePpu->id) * 8)))
-        {
-        if (ppIsPpLoad("VER", address))
-            {
-            traceMask |= 1 << activePpu->id;
-            }
-        else
-            {
-            traceMask &= ~(u64)(1 << activePpu->id);
-            }
-        }
-#endif
 #endif
     }
 

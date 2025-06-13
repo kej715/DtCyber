@@ -325,6 +325,14 @@ typedef enum
     Halt
     } ConditionAction;
 
+//  Source/Destination descriptor used in BDP instructions.
+typedef struct bdpDescriptor {
+    u32 rawDesc;
+    u8  type;
+    u16 length;
+    u64 pva;
+} BdpDescriptor;
+
 typedef struct
     {
     u8            id;                   /* CPU identifier */
@@ -384,6 +392,8 @@ typedef struct
     u8            opK;                  /* k field of current instruction, if applicable */
     u16           opD;                  /* D field of current instruction, if applicable */
     u16           opQ;                  /* Q field of current instruction, if applicable */
+    BdpDescriptor srcDesc;              /* source descriptor of BDP instruction */
+    BdpDescriptor dstDesc;              /* destination descriptor of BDP instruction */
     ConditionAction pendingAction;      /* pending monitor or user condition action */
     u8            nextKey;              /* next P register key */
     u64           nextP;                /* next P register value */
