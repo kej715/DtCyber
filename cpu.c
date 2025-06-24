@@ -121,6 +121,7 @@ static void cpuExchangeTo180(Cpu170Context *activeCpu, bool setSysCall);
 static void cpuFetchOpWord(Cpu170Context *activeCpu);
 static void cpuFloatCheck(Cpu170Context *activeCpu, CpWord value);
 static void cpuFloatExceptionHandler(Cpu170Context *activeCpu);
+static void cpuInitiateExitTo180(Cpu170Context *activeCpu);
 static void cpuOpIllegal(Cpu170Context *activeCpu);
 static bool cpuReadMem(Cpu170Context *activeCpu, u32 address, CpWord *data);
 static void cpuRegASemantics(Cpu170Context *activeCpu);
@@ -685,7 +686,6 @@ void cpuStep(Cpu170Context *activeCpu)
     {
     Cpu180Context *ctx180;
     u32           length;
-    u32           oldRegP;
 
     /*
     **  If the machine is a CYBER 180, and this CPU is currently in 180 state,
@@ -701,11 +701,12 @@ void cpuStep(Cpu170Context *activeCpu)
             cpu180Step(ctx180);
             return;
             }
-        else if (ctx180->isStopped)
+        if (ctx180->isStopped)
             {
             return;
             }
-        else if (ctx180->regMcr != 0 || ctx180->regUcr != 0)
+        ctx180->pendingAction = Rni;
+        if (ctx180->regMcr != 0 || ctx180->regUcr != 0)
             {
             cpu180CheckConditions(ctx180);
             if (ctx180->pendingAction > Stack)
@@ -762,6 +763,13 @@ void cpuStep(Cpu170Context *activeCpu)
     do
         {
         /*
+        **  Save initial P register value and instruction parcel offset in case
+        **  they're needed for interrupt or exit mode processing.
+        */
+        activeCpu->oldOpOffset = activeCpu->opOffset;
+        activeCpu->oldRegP     = activeCpu->regP;
+
+        /*
         **  Decode based on type.
         */
         activeCpu->opFm = (u8)((activeCpu->opWord >> (activeCpu->opOffset - 6)) & Mask6);
@@ -795,8 +803,6 @@ void cpuStep(Cpu170Context *activeCpu)
             activeCpu->opOffset -= 30;
             }
 
-        oldRegP = activeCpu->regP;
-
         /*
         **  Force B0 to 0.
         */
@@ -813,7 +819,7 @@ void cpuStep(Cpu170Context *activeCpu)
         activeCpu->regB[0] = 0;
 
 #if CcDebug == 1
-        traceCpu(activeCpu, oldRegP, activeCpu->opFm, activeCpu->opI, activeCpu->opJ, activeCpu->opK, activeCpu->opAddress);
+        traceCpu(activeCpu, activeCpu->oldRegP, activeCpu->opFm, activeCpu->opI, activeCpu->opJ, activeCpu->opK, activeCpu->opAddress);
 #endif
 
         if (activeCpu->isStopped)
@@ -823,9 +829,12 @@ void cpuStep(Cpu170Context *activeCpu)
                 activeCpu->regP = (activeCpu->regP + 1) & Mask18;
                 }
 #if CcDebug == 1
-            traceCpuPrint(activeCpu, "Stopped\n");
+            traceCpuPrint(activeCpu, "Stopped");
 #endif
-
+            if (isCyber180 && ctx180->pendingAction == Exch) // error exit to 180 state
+                {
+                cpuExchangeTo180(activeCpu, FALSE);
+                }
             break;
             }
 
@@ -1287,7 +1296,7 @@ static void cpuExchangeJump(Cpu170Context *activeCpu, u32 address, bool doChange
         }
     else
         {
-        activeCpu->regRaEcs = (u32)((*mem >> 36) & Mask24Ecs);
+        activeCpu->regRaEcs = (u32)((*mem >> 36) & Mask21Ecs);
         }
 
     activeCpu->regA[4] = (u32)((*mem >> 18) & Mask18);
@@ -1423,7 +1432,7 @@ static void cpuExchangeTo180(Cpu170Context *activeCpu, bool setSysCall)
     ctx180 = &cpus180[activeCpu->id];
     if (setSysCall)
         {
-        cpu180SetMonitorCondition(ctx180, MCR58);
+        ctx180->regMcr |= 0x20; // set system call status bit
         }
     cpu180Store170Xp(ctx180, ctx180->regJps >> 3);
     ctx180->isMonitorMode = TRUE;
@@ -1528,6 +1537,12 @@ static void dumpXP(Cpu170Context *activeCpu, int before, int after)
 **------------------------------------------------------------------------*/
 static void cpuOpIllegal(Cpu170Context *activeCpu)
     {
+/*DELETE*/traceStack(stderr);
+    if (isCyber180 && activeCpu->isMonitorMode)
+        {
+        cpuInitiateExitTo180(activeCpu);
+        return;
+        }
     activeCpu->isStopped = TRUE;
     if (activeCpu->regRaCm < cpuMaxMemory)
         {
@@ -1540,6 +1555,26 @@ static void cpuOpIllegal(Cpu170Context *activeCpu)
         {
         activeCpu->isErrorExitPending = TRUE;
         }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Initiate error exit to CYBER 180 state
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing
+**
+**------------------------------------------------------------------------*/
+static void cpuInitiateExitTo180(Cpu170Context *activeCpu)
+    {
+    activeCpu->isStopped = TRUE;
+    activeCpu->regP      = activeCpu->oldRegP;
+    activeCpu->opOffset  = activeCpu->oldOpOffset;
+    if (activeCpu->regRaCm < cpuMaxMemory)
+        {
+        cpMem[activeCpu->regRaCm] = ((CpWord)activeCpu->exitCondition << 48) | ((CpWord)activeCpu->regP << 30);
+        }
+    cpus180[activeCpu->id].pendingAction = Exch;
     }
 
 /*--------------------------------------------------------------------------
@@ -1565,8 +1600,13 @@ static bool cpuCheckOpAddress(Cpu170Context *activeCpu, u32 address, u32 *locati
         /*
         **  Exit mode is always selected for RNI or branch.
         */
-        activeCpu->isStopped      = TRUE;
         activeCpu->exitCondition |= EcAddressOutOfRange;
+        if (isCyber180 && activeCpu->isMonitorMode)
+            {
+            cpuInitiateExitTo180(activeCpu);
+            return TRUE;
+            }
+        activeCpu->isStopped = TRUE;
         if (activeCpu->regRaCm < cpuMaxMemory)
             {
             // not need for RNI or branch - how about other uses?
@@ -1583,7 +1623,7 @@ static bool cpuCheckOpAddress(Cpu170Context *activeCpu, u32 address, u32 *locati
             activeCpu->isErrorExitPending = TRUE;
             }
 
-        return (TRUE);
+        return TRUE;
         }
 
     /*
@@ -1591,7 +1631,7 @@ static bool cpuCheckOpAddress(Cpu170Context *activeCpu, u32 address, u32 *locati
     */
     *location %= cpuMaxMemory;
 
-    return (FALSE);
+    return FALSE;
     }
 
 /*--------------------------------------------------------------------------
@@ -1761,6 +1801,12 @@ static bool cpuReadMem(Cpu170Context *activeCpu, u32 address, CpWord *data)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return TRUE;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -1770,23 +1816,15 @@ static bool cpuReadMem(Cpu170Context *activeCpu, u32 address, CpWord *data)
 
             activeCpu->regP = 0;
 
-            if ((features & IsSeries170) == 0)
-                {
-                /*
-                **  All except series 170 clear the data.
-                */
-                *data = 0;
-                }
-
             if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
                 {
                 activeCpu->isErrorExitPending = TRUE;
                 }
 
-            return (TRUE);
+            return TRUE;
             }
 
-        return (FALSE);
+        return FALSE;
         }
 
     /*
@@ -1803,7 +1841,7 @@ static bool cpuReadMem(Cpu170Context *activeCpu, u32 address, CpWord *data)
             {
             *data = (~((CpWord)0)) & Mask60;
 
-            return (FALSE);
+            return FALSE;
             }
 
         location %= cpuMaxMemory;
@@ -1814,7 +1852,7 @@ static bool cpuReadMem(Cpu170Context *activeCpu, u32 address, CpWord *data)
     */
     *data = cpMem[location] & Mask60;
 
-    return (FALSE);
+    return FALSE;
     }
 
 /*--------------------------------------------------------------------------
@@ -1841,6 +1879,12 @@ static bool cpuWriteMem(Cpu170Context *activeCpu, u32 address, CpWord *data)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return TRUE;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -1855,10 +1899,10 @@ static bool cpuWriteMem(Cpu170Context *activeCpu, u32 address, CpWord *data)
                 activeCpu->isErrorExitPending = TRUE;
                 }
 
-            return (TRUE);
+            return TRUE;
             }
 
-        return (FALSE);
+        return FALSE;
         }
 
     /*
@@ -1873,7 +1917,7 @@ static bool cpuWriteMem(Cpu170Context *activeCpu, u32 address, CpWord *data)
         {
         if ((features & HasNoCmWrap) != 0)
             {
-            return (FALSE);
+            return FALSE;
             }
 
         location %= cpuMaxMemory;
@@ -1884,7 +1928,7 @@ static bool cpuWriteMem(Cpu170Context *activeCpu, u32 address, CpWord *data)
     */
     cpMem[location] = *data & Mask60;
 
-    return (FALSE);
+    return FALSE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2093,6 +2137,12 @@ static void cpuUemWord(Cpu170Context *activeCpu, bool writeToUem)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -2248,6 +2298,11 @@ static void cpuEcsWord(Cpu170Context *activeCpu, bool writeToEcs)
             **  Exit mode selected.
             */
             activeCpu->isStopped = TRUE;
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return;
+                }
 
             if (activeCpu->regRaCm < cpuMaxMemory)
                 {
@@ -2423,6 +2478,12 @@ static void cpuUemTransfer(Cpu170Context *activeCpu, bool writeToUem)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -2707,6 +2768,12 @@ static void cpuEcsTransfer(Cpu170Context *activeCpu, bool writeToEcs)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -2846,6 +2913,12 @@ static bool cpuCmuGetByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 *by
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return TRUE;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -2861,7 +2934,7 @@ static bool cpuCmuGetByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 *by
                 }
             }
 
-        return (TRUE);
+        return TRUE;
         }
 
     /*
@@ -2880,7 +2953,7 @@ static bool cpuCmuGetByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 *by
     */
     *byte = (u8)((data >> ((9 - pos) * 6)) & Mask6);
 
-    return (FALSE);
+    return FALSE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2911,6 +2984,12 @@ static bool cpuCmuPutByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 byt
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return TRUE;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -2926,7 +3005,7 @@ static bool cpuCmuPutByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 byt
                 }
             }
 
-        return (TRUE);
+        return TRUE;
         }
 
     /*
@@ -2955,7 +3034,7 @@ static bool cpuCmuPutByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 byt
     */
     cpMem[location] = data & Mask60;
 
-    return (FALSE);
+    return FALSE;
     }
 
 /*--------------------------------------------------------------------------
@@ -3009,6 +3088,12 @@ static void cpuCmuMoveIndirect(Cpu170Context *activeCpu)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -3120,6 +3205,12 @@ static void cpuCmuMoveDirect(Cpu170Context *activeCpu)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -3236,6 +3327,12 @@ static void cpuCmuCompareCollated(Cpu170Context *activeCpu)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -3381,6 +3478,12 @@ static void cpuCmuCompareUncollated(Cpu170Context *activeCpu)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -3515,6 +3618,12 @@ static void cpuFloatExceptionHandler(Cpu170Context *activeCpu)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -3548,6 +3657,10 @@ static void cpOp00(Cpu170Context *activeCpu)
     if (((features & (HasNoCejMej | IsSeries6x00)) != 0) || activeCpu->isMonitorMode)
         {
         activeCpu->isStopped = TRUE;
+        if (isCyber180)
+            {
+            cpuOpIllegal(activeCpu);
+            }
         }
     else
         {
@@ -3649,7 +3762,6 @@ static void cpOp01(Cpu170Context *activeCpu)
                             TRUE);
             if (is180xch)
                 {
-/*DELETE*/fputs("System call from 170 to 180\n",stderr);traceMask|=TraceCpu|TraceExchange;
                 cpuExchangeTo180(activeCpu, TRUE);
                 }
             }
@@ -3734,10 +3846,7 @@ static void cpOp01(Cpu170Context *activeCpu)
             **  TRAP 180 instruction.
             */
             activeCpu->opOffset += 30;
-            cpu180SetUserCondition(&cpus180[activeCpu->id], UCR48);
-/*DELETE*/  //if (activeCpu->opJ == 1 && activeCpu->opAddress == 0201001) traceMask |= TraceCpu | TraceExchange;
-/*DELETE*/  //fprintf(stderr,"017 %o %o %o\n",activeCpu->opJ,activeCpu->opK,activeCpu->opAddress&Mask15);
-/*DELETE*/  //if (activeCpu->opJ == 0 && activeCpu->opAddress == 0000002) traceMask |= TraceCpu | TraceExchange;
+            cpus180[activeCpu->id].regUcr |= 0x8000; // set privileged instruction fault bit
             }
         else
             {

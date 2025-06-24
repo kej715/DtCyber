@@ -449,9 +449,9 @@ void tpMuxShowStatus();
 /*
 **  trace.c
 */
-void traceBlockMove(Cpu180Context *cpu);
+void traceBlockOp(Cpu180Context *cpu);
 void traceCall(Cpu180Context *cpu, u64 pva);
-void traceCallFrame180(Cpu180Context *cpu, u32 rma);
+void traceCallFrame(Cpu180Context *cpu, u64 sfsa);
 void traceChannel(u8 ch);
 void traceChannelFunction(PpWord funcCode);
 void traceChannelIo(u8 ch);
@@ -471,10 +471,11 @@ void traceMasterClearCpu180(Cpu180Context *cpu);
 void traceMonitorCondition(Cpu180Context *cpu, MonitorCondition cond);
 void traceOpcode(void);
 void tracePageInfo(Cpu180Context *cpu, u16 hash, u32 pageNum, u32 pageOffset, u32 pageTableIdx, u64 spid);
-void tracePrint(char *str);
+void tracePpuPrint(char *str);
 void tracePte(Cpu180Context *cpu, u64 pte);
 void tracePva(Cpu180Context *cpu, u64 pva);
 void traceRegisters(bool isPost);
+void traceRingZeroCondition(Cpu180Context *cpu, u64 pva);
 void traceRma(Cpu180Context *cpu, u32 rma);
 void traceSde(Cpu180Context *cpu, u16 segNum, u64 sde);
 void traceSequence(void);
@@ -482,8 +483,7 @@ void traceStack(FILE *fp);
 void traceStartCpu180(Cpu180Context *cpu, u32 rma);
 void traceTerminate(void);
 char *traceTranslateAction(ConditionAction action);
-void traceTrapFrame170(Cpu180Context *cpu, u32 rma);
-void traceTrapFrame180(Cpu180Context *cpu, u32 rma);
+void traceTrapFrame(Cpu180Context *cpu, u32 rma);
 void traceTrapPointer(Cpu180Context *cpu);
 void traceUserCondition(Cpu180Context *cpu, UserCondition cond);
 void traceVmRegisters(Cpu180Context *cpu);

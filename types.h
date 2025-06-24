@@ -256,6 +256,8 @@ typedef struct
     u8            opJ;                  /* J field of current instruction */
     u8            opK;                  /* K field (first 3 bits only) */
     u32           opAddress;            /* K field (18 bits) */
+    u32           oldRegP;              /* used in interrupt/exit mode processing */
+    u32           oldOpOffset;          /* used in interrupt/exit mode processing */
     bool          floatException;       /* TRUE if CPU detected float exception */
 
     /*
@@ -378,7 +380,6 @@ typedef struct
     u32           regSit;               /* system interval timer register */
     u16           regVmcl;              /* virtual machine capability list register */
     u64           regKbp;               /* keypoint buffer pointer */
-    u64           regP170;              /* CYBER 170 mode P register from last exchange */
     u32           byteNumMask;          /* mask used in determining byte number within page */
     u32           pageLengthMask;       /* mask used in calculating page table index */
     u8            pageNumShift;         /* shift count used in calculating page numbers */
@@ -392,6 +393,7 @@ typedef struct
     u8            opK;                  /* k field of current instruction, if applicable */
     u16           opD;                  /* D field of current instruction, if applicable */
     u16           opQ;                  /* Q field of current instruction, if applicable */
+    u64           regP170;              /* P register from most recent exchange to 170 mode */
     BdpDescriptor srcDesc;              /* source descriptor of BDP instruction */
     BdpDescriptor dstDesc;              /* destination descriptor of BDP instruction */
     ConditionAction pendingAction;      /* pending monitor or user condition action */
@@ -432,6 +434,7 @@ typedef enum
     HasNoCmWrap            = 0x00002000,
     HasNoCejMej            = 0x00004000,
     Has175Float            = 0x00008000,
+    HasRingZeroTest        = 0x00010000,
 
     IsSeries6x00           = 0x01000000,
     IsSeries70             = 0x02000000,
