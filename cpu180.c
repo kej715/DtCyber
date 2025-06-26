@@ -5242,7 +5242,45 @@ static void cp180OpED(Cpu180Context *activeCpu)  // ED  EDIT       MIGDS 2-55
 
 static void cp180OpF3(Cpu180Context *activeCpu)  // F3  SCNB       MIGDS 2-54
     {
-    cp180OpIv(activeCpu);
+    u8  bitIdx;
+    u8  bits;
+    u64 bPva;
+    u64 dPva;
+    u16 i;
+
+    static u8 masks[8] = { 0x80,0x40,0x20,0x10,0x08,0x04,0x02,0x01 };
+
+    if (cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP, activeCpu->opK, 1, &activeCpu->dstDesc))
+        {
+        if (activeCpu->dstDesc.length > 256)
+            {
+            cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+            return;
+            }
+        dPva = activeCpu->dstDesc.pva;
+        bPva = (activeCpu->regA[activeCpu->opI] & RingSegMask) | ((activeCpu->regA[activeCpu->opI] + activeCpu->opD) & Mask32);
+        i = 0;
+        while (i < activeCpu->dstDesc.length)
+            {
+            if (cpu180GetByte(activeCpu, dPva++, AccessModeRead, &bitIdx) == FALSE)
+                {
+                return;
+                }
+            if (cpu180GetByte(activeCpu, bPva + (bitIdx >> 3), AccessModeRead, &bits) == FALSE)
+                {
+                return;
+                }
+            if ((bits & masks[bitIdx & Mask3]) != 0)
+                {
+                activeCpu->regX[0] = (activeCpu->regX[0] & LeftMask) | i;
+                activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | bitIdx;
+                return;
+                }
+            i += 1;
+            }
+        activeCpu->regX[0] = (activeCpu->regX[0] & LeftMask) | activeCpu->dstDesc.length;
+        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | 0x80000000;
+        }
     }
 
 static void cp180OpF9(Cpu180Context *activeCpu)  // F9  MOVI       MIGDS 2-62
