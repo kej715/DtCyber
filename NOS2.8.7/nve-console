@@ -1,0 +1,19 @@
+#!/bin/sh
+# start and stop the NOS/VE console emulator
+cd ../webterm
+
+case "$1" in
+  start)
+        xterm -geometry 80x30 -T 'NOS/VE' -e node viking-console -i ../NOS2.8.7/vike1.pid &
+        xterm -geometry 80x30 -T 'NOS/VE' -e node viking-console -i ../NOS2.8.7/vike2.pid &
+	;;
+  stop)
+        kill `cat ../NOS2.8.7/vike1.pid`
+        kill `cat ../NOS2.8.7/vike2.pid`
+	;;
+  *)
+	echo "Usage: $0 {start|stop}"
+	exit 1
+esac
+
+exit 0
