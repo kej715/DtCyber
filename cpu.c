@@ -705,8 +705,7 @@ void cpuStep(Cpu170Context *activeCpu)
             {
             return;
             }
-        ctx180->pendingAction = Rni;
-        if (ctx180->regMcr != 0 || ctx180->regUcr != 0)
+        if ((ctx180->regMcr & 0xfbff) != 0 || ctx180->regUcr != 0)
             {
             cpu180CheckConditions(ctx180);
             if (ctx180->pendingAction > Stack)
@@ -732,12 +731,13 @@ void cpuStep(Cpu170Context *activeCpu)
         if (((monitorCpu == -1) || (activeCpu->doChangeMode == FALSE))
             && ((activeCpu->opOffset == 60) || activeCpu->isStopped))
             {
-            if (isCyber180)
-                {
-                cpus180[activeCpu->id].regMcr &= 0xfbff; // clear MCR53 CYBER 170 state exchange request
-                }
             cpuExchangeJump(activeCpu, activeCpu->ppExchangeAddress, activeCpu->doChangeMode);
             activeCpu->ppRequestingExchange = -1;
+            if (isCyber180)
+                {
+                ctx180->regMcr &= 0xfbff; // clear MCR53 CYBER 170 state exchange request
+                cpu180CheckConditions(ctx180);
+                }
             }
         cpuReleaseExchangeMutex();
         }

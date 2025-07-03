@@ -906,11 +906,6 @@ static void ppOpEXN(void)     // 26
     bool          isExchangePending;
     u32           exchangeAddress;
 
-    if (activePpu->busy) // occurs on 180 when OS bounds fault
-        {
-        return;
-        }
-
     cpuNum = (cpuCount > 1) ? (opD & 001) : 0;
     cpu    = cpus170 + cpuNum;
 
@@ -946,16 +941,6 @@ static void ppOpEXN(void)     // 26
         }
     else
         {
-        if (cpu->isMonitorMode || isExchangePending)
-            {
-            /*
-            **  Pass.
-            */
-            cpuReleaseExchangeMutex();
-
-            return;
-            }
-
         doChangeMode = TRUE;
         if ((opD & 070) == 010)
             {
@@ -992,6 +977,28 @@ static void ppOpEXN(void)     // 26
 
             return;
             }
+        if (isExchangePending)
+            {
+            /*
+            **  Pass.
+            */
+            cpuReleaseExchangeMutex();
+
+            return;
+            }
+        if (cpu->isMonitorMode)
+            {
+            /*
+            **  Pass.
+            */
+            if (isCyber180)
+                {
+                cpus180[cpu->id].regMcr |= 0x0400; // set MCR53
+                }
+            cpuReleaseExchangeMutex();
+
+            return;
+            }
         }
     if (ppCheckOsBounds(exchangeAddress))
         {
@@ -1013,9 +1020,8 @@ static void ppOpEXN(void)     // 26
         activePpu->exchangingCpu  = cpu->id;
         if (isCyber180)
             {
-            cpu180SetMonitorCondition(&cpus180[cpu->id], MCR53);
+            cpus180[cpu->id].regMcr |= 0x0400; // set MCR53
             }
-
         cpuReleaseExchangeMutex();
         }
     }
@@ -2047,10 +2053,11 @@ static void ppOpLPML(void)    // 1024
 
 static void ppOpINPN(void)    // 1026
     {
-    if (activePpu->opD < cpuCount)
+/*DELETE*/ //fprintf(stderr,"INPN %o\n",activePpu->opD);
+// TODO: 1 seems to indicate CPU0, is a different memory port value used for CPU1 ?
+    if (activePpu->opD == 1)
         {
-        // TODO: verify that memory port number corresponds to CPU number
-        cpu180SetMonitorCondition(&cpus180[activePpu->opD], MCR56);
+        cpus180[0].regMcr |= 0x0080; // set MCR56
         }
     }
 

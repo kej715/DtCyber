@@ -253,6 +253,11 @@ void dumpCpu(void)
         fprintf(pf, "MONITOR      %d  ", cpu170->isMonitorMode ? 1 : 0);
         fputs("\n", pf);
         fprintf(pf, "STOP         %d  ", cpu170->isStopped ? 1 : 0);
+        if (cpu170->ppRequestingExchange >= 0)
+            {
+            fputs("\n", pf);
+            fprintf(pf, "Exchanging   PP%02o", cpu170->ppRequestingExchange < 10 ? cpu170->ppRequestingExchange : (cpu170->ppRequestingExchange - 10) + 020);
+            }
         fputs("\n\n", pf);
 
         for (i = 0; i < 8; i++)

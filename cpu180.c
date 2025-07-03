@@ -115,10 +115,13 @@ typedef struct conditionActionDefn
 */
 static bool cpu180AddInt32(Cpu180Context *ctx, u32 augend, u32 addend, u32 *sum);
 static bool cpu180AddInt64(Cpu180Context *ctx, u64 augend, u64 addend, u64 *sum);
+static void cpu180CheckExternalInterrupts(Cpu180Context *ctx);
 static void cpu180CheckMonitorConditions(Cpu180Context *ctx);
 static void cpu180CheckUserConditions(Cpu180Context *ctx);
 static void cpu180Exchange(Cpu180Context *activeCpu);
 static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool ignoreValidity, u32 *pti, u8 *count);
+static ConditionAction cpu180GetActionForMonitorCondition(Cpu180Context *ctx, MonitorCondition cond);
+static ConditionAction cpu180GetActionForUserCondition(Cpu180Context *ctx, UserCondition cond);
 static bool cpu180GetBdpDescriptor(Cpu180Context *ctx, u64 pva, u8 aRegNum, u8 xRegNum, BdpDescriptor *descriptor);
 static bool cpu180GetByte(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u8 *byte);
 static bool cpu180GetBytes(Cpu180Context *ctx, u64 pva, int count, Cpu180AccessMode access, u64 *word);
@@ -943,9 +946,11 @@ void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa)
     word           = cpMem[xpa++];
     ctx->regA[4]   = word & Mask48;
     ctx->regUcr    = (word >> 48) & ~ctx->regUmr;
+//  ctx->regUcr    = word >> 48;
     word           = cpMem[xpa++];
     ctx->regA[5]   = word & Mask48;
     ctx->regMcr    = (word >> 48) & ~(ctx->regMmr | 0x0021); // clear masked bits and status bits
+//  ctx->regMcr    = word >> 48;
     word           = cpMem[xpa++];
     ctx->regA[6]   = word & Mask48;
     ctx->regLpid   = (word >> 48) & Mask8;
@@ -1189,21 +1194,11 @@ void cpu180SetMonitorCondition(Cpu180Context *ctx, MonitorCondition cond)
     ConditionAction     action;
     ConditionActionDefn *defn;
 
+/*DELETE*/ //if (cond != MCR59) fprintf(stderr,"Set MCR %d\n",cond);
     defn         = &mcrDefns[cond];
     ctx->regMcr |= defn->bitMask;
+    action       = cpu180GetActionForMonitorCondition(ctx, cond);
 
-    if ((ctx->regMmr & defn->bitMask) == 0)
-        {
-        action = defn->whenNoMask;
-        }
-    else if ((ctx->regFlags & 3) == 2) // trap enabled
-        {
-        action = ctx->isMonitorMode ? defn->whenMaskTrapMonitor : defn->whenMaskTrapJob;
-        }
-    else
-        {
-        action = ctx->isMonitorMode ? defn->whenMaskNoTrapMonitor : defn->whenMaskNoTrapJob;
-        }
     if (action > ctx->pendingAction)
         {
         ctx->pendingAction = action;
@@ -1234,19 +1229,8 @@ void cpu180SetUserCondition(Cpu180Context *ctx, UserCondition cond)
 
     defn         = &ucrDefns[cond];
     ctx->regUcr |= defn->bitMask;
+    action       = cpu180GetActionForUserCondition(ctx, cond);
 
-    if ((ctx->regUmr & defn->bitMask) == 0)
-        {
-        action = defn->whenNoMask;
-        }
-    else if ((ctx->regFlags & 3) == 2) // trap enabled
-        {
-        action = ctx->isMonitorMode ? defn->whenMaskTrapMonitor : defn->whenMaskTrapJob;
-        }
-    else
-        {
-        action = ctx->isMonitorMode ? defn->whenMaskNoTrapMonitor : defn->whenMaskNoTrapJob;
-        }
     if (action > ctx->pendingAction)
         {
         ctx->pendingAction = action;
@@ -1278,6 +1262,10 @@ void cpu180Step(Cpu180Context *activeCpu)
     u64        oldRegP;
 #endif
 
+    cpu180CheckExternalInterrupts(activeCpu);
+/*DELETE*/ //if ((activeCpu->regMcr & 0x400) != 0 && activeCpu->pendingAction <= Stack)
+/*DELETE*/ //  fprintf(stderr,"MCR53, MCR %04x MMR %04x action %d\n",activeCpu->regMcr,activeCpu->regMmr,activeCpu->pendingAction);
+
     if (activeCpu->pendingAction != Rni)
         {
         switch (activeCpu->pendingAction)
@@ -1285,25 +1273,20 @@ void cpu180Step(Cpu180Context *activeCpu)
         case Trap:
             activeCpu->pendingAction = Rni;
             cpu180Trap(activeCpu);
-            if (activeCpu->pendingAction > Stack)
-                {
-                return;
-                }
             break;
         case Exch:
             activeCpu->pendingAction = Rni;
             cpu180Exchange(activeCpu);
-            if (activeCpu->pendingAction > Stack)
-                {
-                return;
-                }
             break;
         case Halt:
             activeCpu->isStopped = TRUE;
             break;
-        case Stack:
         default:
             break;
+            }
+        if (activeCpu->pendingAction > Stack)
+            {
+            return;
             }
         }
 
@@ -1548,6 +1531,39 @@ static bool cpu180AddInt64(Cpu180Context *ctx, u64 augend, u64 addend, u64 *sum)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Check monitor condition register for interrupts from PP's
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CPU context
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void cpu180CheckExternalInterrupts(Cpu180Context *ctx)
+    {
+    ConditionAction     action;
+    u16                 cr;
+
+    cr = ctx->regMcr & ctx->regMmr;
+    if ((cr & 0x0400) != 0) // MCR53
+        {
+        action = cpu180GetActionForMonitorCondition(ctx, MCR53);
+        if (action > ctx->pendingAction)
+            {
+            ctx->pendingAction = action;
+            }
+        }
+    if ((cr & 0x0080) != 0) // MCR56
+        {
+        action = cpu180GetActionForMonitorCondition(ctx, MCR56);
+        if (action > ctx->pendingAction)
+            {
+            ctx->pendingAction = action;
+            }
+        }
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Check monitor condition register for indications
 **
 **                  Ordinarily, this is called after an exchange or return
@@ -1561,6 +1577,7 @@ static bool cpu180AddInt64(Cpu180Context *ctx, u64 augend, u64 addend, u64 *sum)
 **------------------------------------------------------------------------*/
 static void cpu180CheckMonitorConditions(Cpu180Context *ctx)
     {
+    ConditionAction  action;
     u16              cr;
     u16              mask;
     MonitorCondition mCond;
@@ -1571,7 +1588,11 @@ static void cpu180CheckMonitorConditions(Cpu180Context *ctx)
         mask = mcrDefns[mCond].bitMask;
         if ((cr & mask) != 0)
             {
-            cpu180SetMonitorCondition(ctx, mCond);
+            action = cpu180GetActionForMonitorCondition(ctx, mCond);
+            if (action > ctx->pendingAction)
+                {
+                ctx->pendingAction = action;
+                }
             cr &= ~mask;
             }
         }
@@ -1591,6 +1612,7 @@ static void cpu180CheckMonitorConditions(Cpu180Context *ctx)
 **------------------------------------------------------------------------*/
 static void cpu180CheckUserConditions(Cpu180Context *ctx)
     {
+    ConditionAction  action;
     u16              cr;
     u16              mask;
     UserCondition    uCond;
@@ -1601,7 +1623,11 @@ static void cpu180CheckUserConditions(Cpu180Context *ctx)
         mask = ucrDefns[uCond].bitMask;
         if ((cr & mask) != 0)
             {
-            cpu180SetUserCondition(ctx, uCond);
+            action = cpu180GetActionForUserCondition(ctx, uCond);
+            if (action > ctx->pendingAction)
+                {
+                ctx->pendingAction = action;
+                }
             cr &= ~mask;
             }
         }
@@ -1730,6 +1756,72 @@ static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool ignore
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Get the action associated with a monitor condition
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CPU context
+**                  cond        monitor condition ordinal
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static ConditionAction cpu180GetActionForMonitorCondition(Cpu180Context *ctx, MonitorCondition cond)
+    {
+    ConditionAction     action;
+    ConditionActionDefn *defn;
+
+    defn = &mcrDefns[cond];
+
+    if ((ctx->regMmr & defn->bitMask) == 0)
+        {
+        action = defn->whenNoMask;
+        }
+    else if ((ctx->regFlags & 3) == 2) // trap enabled
+        {
+        action = ctx->isMonitorMode ? defn->whenMaskTrapMonitor : defn->whenMaskTrapJob;
+        }
+    else
+        {
+        action = ctx->isMonitorMode ? defn->whenMaskNoTrapMonitor : defn->whenMaskNoTrapJob;
+        }
+
+    return action;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Get the action associated with a user condition
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CPU context
+**                  cond        user condition ordinal
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static ConditionAction cpu180GetActionForUserCondition(Cpu180Context *ctx, UserCondition cond)
+    {
+    ConditionAction     action;
+    ConditionActionDefn *defn;
+
+    defn = &ucrDefns[cond];
+
+    if ((ctx->regUmr & defn->bitMask) == 0)
+        {
+        action = defn->whenNoMask;
+        }
+    else if ((ctx->regFlags & 3) == 2) // trap enabled
+        {
+        action = ctx->isMonitorMode ? defn->whenMaskTrapMonitor : defn->whenMaskTrapJob;
+        }
+    else
+        {
+        action = ctx->isMonitorMode ? defn->whenMaskNoTrapMonitor : defn->whenMaskNoTrapJob;
+        }
+
+    return action;
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Get a BDP descriptor from a specified PVA
 **
 **  Parameters:     Name        Description.
@@ -1844,7 +1936,7 @@ static bool cpu180GetBytes(Cpu180Context *ctx, u64 pva, int count, Cpu180AccessM
         rma += 1;
         if (PageOf(pva, ctx) != pageNum)
             {
-            if (cpu180PvaToRma(ctx, pva, access, &rma, &cond))
+            if (cpu180PvaToRma(ctx, pva, access, &rma, &cond) == FALSE)
                 {
                 cpu180SetMonitorCondition(ctx, cond);
                 return FALSE;
@@ -2357,7 +2449,6 @@ static void cpu180SetRingZeroCondition(Cpu180Context *ctx, u64 pva)
 
     if ((features & HasRingZeroTest) != 0)
         {
-/*DELETE*/ traceMask |= TraceCpu|TraceExchange|TraceBlockOp;
         defn         = &mcrDefns[MCR60];
         ctx->regMcr |= defn->bitMask;
 
@@ -2709,6 +2800,7 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
     pva = activeCpu->regA[2];
     if (cpu180PvaToRma(activeCpu, pva, AccessModeRead, &rma, &cond) == FALSE)
         {
+        cpu180SetMonitorCondition(activeCpu, cond);
         return;
         }
     wordAddrs[0] = rma >> 3;
@@ -2720,6 +2812,7 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
             {
             if (cpu180PvaToRma(activeCpu, pva, AccessModeRead, &rma, &cond) == FALSE)
                 {
+                cpu180SetMonitorCondition(activeCpu, cond);
                 return;
                 }
             pageNum = PageOf(pva, activeCpu);
@@ -2768,6 +2861,7 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
             {
             if (cpu180PvaToRma(activeCpu, pva, AccessModeRead, &rma, &cond) == FALSE)
                 {
+                cpu180SetMonitorCondition(activeCpu, cond);
                 return;
                 }
             pageNum = PageOf(pva, activeCpu);
@@ -3013,7 +3107,8 @@ static void cp180Op0E(Cpu180Context *activeCpu)  // 0E  CPYSX      MIGDS 2-146
 
 static void cp180Op0F(Cpu180Context *activeCpu)  // 0F  CPYXS      MIGDS 2-146
     {
-    u8 regId;
+    u64 nextP;
+    u8  regId;
 
     regId = activeCpu->regX[activeCpu->opJ] & Mask8;
     if (regId < 0x60) // no access
@@ -3045,6 +3140,17 @@ static void cp180Op0F(Cpu180Context *activeCpu)  // 0F  CPYXS      MIGDS 2-146
             }
         }
     mchSetCpStateRegister(activeCpu, regId, activeCpu->regX[activeCpu->opK]);
+    switch (regId)
+        {
+    case 0x42: // MCR
+    case 0x43: // UCR
+    case 0x60: // MMR
+    case 0xe6: // UMR
+        cpu180CheckConditions(activeCpu);
+        break;
+    default:
+        break;
+        }
     }
 
 static void cp180Op10(Cpu180Context *activeCpu)  // 10  INCX       MIGDS 2-20
