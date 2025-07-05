@@ -315,75 +315,21 @@ static u16 detailedStatus844[] =
     0                  // last command 4
     };
 
-#if DEBUG
-static FILE *dd8xxLog = NULL;
-#endif
+static u16 driveAddress[3];
 
 #if DEBUG
-#define OctalColumn(x)    (5 * (x) + 1 + 5)
-#define AsciiColumn(x)    (OctalColumn(5) + 2 + (2 * x))
-#define LogLineLength    (AsciiColumn(5))
-#endif
 
-#if DEBUG
 static void dd8xxLogFlush(void);
 static void dd8xxLogByte(int b);
 
-#endif
+static FILE *dd8xxLog = NULL;
 
-#if DEBUG
+#define OctalColumn(x)    (5 * (x) + 1 + 5)
+#define AsciiColumn(x)    (OctalColumn(5) + 2 + (2 * x))
+#define LogLineLength    (AsciiColumn(5))
+
 static char dd8xxLogBuf[LogLineLength + 1];
 static int  dd8xxLogCol = 0;
-#endif
-
-#if DEBUG
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Flush incomplete numeric/ascii data line
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        nothing
-**
-**------------------------------------------------------------------------*/
-static void dd8xxLogFlush(void)
-    {
-    if (dd8xxLogCol != 0)
-        {
-        fputs(dd8xxLogBuf, dd8xxLog);
-        }
-
-    dd8xxLogCol = 0;
-    memset(dd8xxLogBuf, ' ', LogLineLength);
-    dd8xxLogBuf[0]             = '\n';
-    dd8xxLogBuf[LogLineLength] = '\0';
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Log a byte in octal/ascii form
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        nothing
-**
-**------------------------------------------------------------------------*/
-static void dd8xxLogByte(int b)
-    {
-    char octal[10];
-    int  col;
-
-    col = OctalColumn(dd8xxLogCol);
-    sprintf(octal, "%04o ", b);
-    memcpy(dd8xxLogBuf + col, octal, 5);
-
-    col = AsciiColumn(dd8xxLogCol);
-    dd8xxLogBuf[col + 0] = cdcToAscii[(b >> 6) & Mask6];
-    dd8xxLogBuf[col + 1] = cdcToAscii[(b >> 0) & Mask6];
-    if (++dd8xxLogCol == 5)
-        {
-        dd8xxLogFlush();
-        }
-    }
 
 #endif
 
@@ -1249,10 +1195,19 @@ static FcStatus dd8xxFunc(PpWord funcCode)
         activeDevice->recordLength = 5;
         break;
 
+    case Fc8xxOnSectorStatus:
+        activeDevice->recordLength = 3;
+        driveAddress[0] = activeDevice->status;
+        if (dp != NULL)
+            {
+            driveAddress[1] = dp->cylinder;
+            driveAddress[2] = dp->size.maxSectors >> 1;
+            }
+        break;
+
     case Fc8xxIoLength:
     case Fc8xxDisableReserve:
     case Fc8xxContinue:
-    case Fc8xxOnSectorStatus:
     case Fc8xxReturnCylAddr:
     case Fc8xxGapWrite:
     case Fc8xxGapWriteVerify:
@@ -1592,6 +1547,23 @@ static void dd8xxIo(void)
             }
         break;
 
+    case Fc8xxOnSectorStatus:
+        if (!activeChannel->full)
+            {
+            activeChannel->data = driveAddress[3 - activeDevice->recordLength];
+            activeChannel->full = TRUE;
+
+#if DEBUG
+            fprintf(dd8xxLog, " %04o[%d]", activeChannel->data, activeChannel->data);
+#endif
+
+            if (--activeDevice->recordLength == 0)
+                {
+                activeChannel->discAfterInput = TRUE;
+                }
+            }
+        break;
+
     case Fc8xxSetClearFlaw:
         if (activeChannel->full)
             {
@@ -1620,7 +1592,6 @@ static void dd8xxIo(void)
     case Fc8xxDisableReserve:
     case Fc8xxContinue:
     case Fc8xxDropSeeks:
-    case Fc8xxOnSectorStatus:
     case Fc8xxDriveRelease:
     case Fc8xxReturnCylAddr:
     case Fc8xxGapWrite:
@@ -2306,5 +2277,56 @@ void dd8xxShowDiskStatus()
         dp = dp->nextDisk;
         }
     }
+
+#if DEBUG
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Flush incomplete numeric/ascii data line
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        nothing
+**
+**------------------------------------------------------------------------*/
+static void dd8xxLogFlush(void)
+    {
+    if (dd8xxLogCol != 0)
+        {
+        fputs(dd8xxLogBuf, dd8xxLog);
+        }
+
+    dd8xxLogCol = 0;
+    memset(dd8xxLogBuf, ' ', LogLineLength);
+    dd8xxLogBuf[0]             = '\n';
+    dd8xxLogBuf[LogLineLength] = '\0';
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Log a byte in octal/ascii form
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        nothing
+**
+**------------------------------------------------------------------------*/
+static void dd8xxLogByte(int b)
+    {
+    char octal[10];
+    int  col;
+
+    col = OctalColumn(dd8xxLogCol);
+    sprintf(octal, "%04o ", b);
+    memcpy(dd8xxLogBuf + col, octal, 5);
+
+    col = AsciiColumn(dd8xxLogCol);
+    dd8xxLogBuf[col + 0] = cdcToAscii[(b >> 6) & Mask6];
+    dd8xxLogBuf[col + 1] = cdcToAscii[(b >> 0) & Mask6];
+    if (++dd8xxLogCol == 5)
+        {
+        dd8xxLogFlush();
+        }
+    }
+
+#endif
 
 /*---------------------------  End Of File  ------------------------------*/
