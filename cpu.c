@@ -713,7 +713,6 @@ void cpuStep(Cpu170Context *activeCpu)
                 if (ctx180->pendingAction == Exch)
                     {
                     cpuExchangeTo180(activeCpu, FALSE);
-                    cpu180CheckConditions(ctx180);
                     }
                 cpu180Step(ctx180);
                 return;
@@ -834,6 +833,7 @@ void cpuStep(Cpu170Context *activeCpu)
             if (isCyber180 && ctx180->pendingAction == Exch) // error exit to 180 state
                 {
                 cpuExchangeTo180(activeCpu, FALSE);
+                return;
                 }
             break;
             }
@@ -864,10 +864,6 @@ void cpuStep(Cpu170Context *activeCpu)
         cpuAcquireExchangeMutex();
         cpuExchangeJump(activeCpu, activeCpu->regMa, TRUE);
         cpuReleaseExchangeMutex();
-        }
-    else if (isCyber180 && activeCpu->isStopped)
-        {
-        cpuExchangeTo180(activeCpu, FALSE);
         }
     }
 
@@ -1437,6 +1433,8 @@ static void cpuExchangeTo180(Cpu170Context *activeCpu, bool setSysCall)
     cpu180Store170Xp(ctx180, ctx180->regJps >> 3);
     ctx180->isMonitorMode = TRUE;
     cpu180Load180Xp(ctx180, ctx180->regMps >> 3);
+    ctx180->nextKey = ctx180->key;
+    ctx180->nextP   = ctx180->regP;
     cpu180CheckConditions(ctx180);
     }
 
