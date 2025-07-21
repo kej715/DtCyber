@@ -523,12 +523,20 @@ void *windowThread(void *param)
                             traceMask ^= (1 << (text[0] - '0'));
                             break;
 
+                        case 'b':
+                            traceMask ^= TraceBlockOp;
+                            break;
+
                         case 'c':
                             traceMask ^= TraceCpu;
                             break;
 
                         case 'e':
                             traceMask ^= TraceExchange;
+                            break;
+
+                        case 'f':
+                            traceMask ^= TraceCallFrame;
                             break;
 
                         case 'x':
@@ -645,7 +653,7 @@ void *windowThread(void *param)
                 sprintf(buf + strlen(buf), " %06o", cpus170[1].regP);
                 }
 
-            sprintf(buf + strlen(buf), "   Trace: %c%c%c%c%c%c%c%c%c%c%c%c",
+            sprintf(buf + strlen(buf), "   Trace: %c%c%c%c%c%c%c%c%c%c%c%c%c%c",
                     (traceMask >> 0) & 1 ? '0' : '_',
                     (traceMask >> 1) & 1 ? '1' : '_',
                     (traceMask >> 2) & 1 ? '2' : '_',
@@ -657,7 +665,9 @@ void *windowThread(void *param)
                     (traceMask >> 8) & 1 ? '8' : '_',
                     (traceMask >> 9) & 1 ? '9' : '_',
                     (traceMask & TraceCpu) != 0 ? 'C' : '_',
-                    (traceMask & TraceExchange) != 0 ? 'E' : '_');
+                    (traceMask & TraceExchange) != 0 ? 'E' : '_',
+                    (traceMask & TraceBlockOp) != 0 ? 'B' : '_',
+                    (traceMask & TraceCallFrame) != 0 ? 'F' : '_');
 
             XDrawString(disp, pixmap, gc, 0, 10, buf, strlen(buf));
             }
