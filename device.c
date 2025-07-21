@@ -78,6 +78,7 @@ DevDesc deviceDesc[] =
     "DD844",    dd844Init_4,
     "DD885-1",  dd885Init_1,
     "DD885",    dd885Init_1,
+    "DD885-LS", dd885InitLs,
     "DD885-42", dd885_42Init,
     "CR405",    cr405Init,
     "LP1612",   lp1612Init,
