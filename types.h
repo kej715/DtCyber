@@ -46,12 +46,10 @@ typedef signed char         i8;
 typedef signed short        i16;
 typedef signed long         i32;
 typedef signed __int64      i64;
-typedef signed __int128     i128;
 typedef unsigned char       u8;
 typedef unsigned short      u16;
 typedef unsigned long       u32;
 typedef unsigned __int64    u64;
-typedef unsigned __int128   u128;
 #define FMT60_020o    "%020I64o"
 #elif defined (__GNUC__) || defined(__SunOS)
 #if defined(__amd64) || defined(__amd64__) || defined(__alpha__) || defined(__powerpc64__) || defined(__ppc64__) \

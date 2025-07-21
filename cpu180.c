@@ -2999,9 +2999,13 @@ static bool cpu180MulInt32(Cpu180Context *ctx, u32 mltand, u32 mltier, u32 *prod
 **------------------------------------------------------------------------*/
 static bool cpu180MulInt64(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *product)
     {
-    u64  lower64;
+    u64 lower64;
+    u64 upper64;
+
+#if defined(_WIN32)
+    lower64 = _umul128(mltier, mltand, &upper64);
+#else
     u128 p128;
-    u64  upper64;
 
     if ((i64)mltand < 0)
         {
@@ -3024,12 +3028,14 @@ static bool cpu180MulInt64(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *prod
         }
     lower64 = p128;
     upper64 = p128 >> 64;
+#endif
+
     if ((lower64 < 0x8000000000000000 && upper64 != 0) || (lower64 >= 0x8000000000000000 && upper64 != 0xffffffffffffffff))
         {
         cpu180SetUserCondition(ctx, UCR57);
         return FALSE;
         }
-    *product = p128;
+    *product = lower64;
 
     return TRUE;
     }
