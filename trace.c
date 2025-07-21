@@ -1915,16 +1915,19 @@ void traceStartCpu180(Cpu180Context *cpu, u32 rma)
 **
 **  Parameters:     Name        Description.
 **                  cpu         Pointer to CYBER 180 CPU context
-**                  rma         Stack frame address
+**                  sfsa        Stack frame save address
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void traceTrapFrame170(Cpu180Context *cpu, u32 rma)
+static void traceTrapFrame170(Cpu180Context *cpu, u64 sfsa)
     {
-    u8  i;
-    u64 word;
-    u32 wordAddr;
+    MonitorCondition cond;
+    u8               i;
+    u32              rma;
+    u64              utp;
+    u64              word;
+    u32              wordAddr;
 
     /*
     **  Bail out if no trace of exchange jumps is requested.
@@ -1933,7 +1936,15 @@ static void traceTrapFrame170(Cpu180Context *cpu, u32 rma)
         {
         return;
         }
-    fprintf(cpuF[cpu->id], "\n%06d CYBER 170 trap frame pushed at %08x\n\n", traceSequenceNo, rma);
+    fprintf(cpuF[cpu->id], "\n%06d CYBER 170 trap frame pushed at %012lx ", traceSequenceNo, sfsa);
+    utp = cpu->regUtp;
+    if (cpu180PvaToRma(cpu, cpu->regTp, AccessModeRead, &rma, &cond) == FALSE)
+        {
+        fprintf(cpuF[cpu->id], "%s\n", traceMonitorConditionToStr(cond));
+        cpu->regUtp = utp;
+        return;
+        }
+    fprintf(cpuF[cpu->id], "(RMA %08x)\n\n", rma);
     wordAddr = rma >> 3;
     fprintf(cpuF[cpu->id], "P %lx\n", cpMem[wordAddr++]);
     word = cpMem[wordAddr++];
@@ -1969,16 +1980,20 @@ static void traceTrapFrame170(Cpu180Context *cpu, u32 rma)
 **
 **  Parameters:     Name        Description.
 **                  cpu         Pointer to CYBER 180 CPU context
-**                  rma         Stack frame address
+**                  sfsa        Stack frame save address (PVA)
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void traceTrapFrame(Cpu180Context *cpu, u32 rma)
+void traceTrapFrame(Cpu180Context *cpu, u64 sfsa)
     {
-    u8  i;
-    u64 word;
-    u32 wordAddr;
+    MonitorCondition cond;
+    u8               i;
+    u8               r;
+    u32              rma;
+    u64              utp;
+    u64              word;
+    u32              wordAddrs[33];
 
     /*
     **  Bail out if no trace of exchange jumps is requested.
@@ -1989,31 +2004,44 @@ void traceTrapFrame(Cpu180Context *cpu, u32 rma)
         }
     if (cpu->regVmid == 1)
         {
-        traceTrapFrame170(cpu, rma);
+        traceTrapFrame170(cpu, sfsa);
         return;
         }
-    fprintf(cpuF[cpu->id], "\n%06d CYBER 180 trap frame pushed at %08x\n\n", traceSequenceNo, rma);
-    wordAddr = rma >> 3;
-    fprintf(cpuF[cpu->id], "P %lx\n", cpMem[wordAddr++]);
-    word = cpMem[wordAddr++];
-    fprintf(cpuF[cpu->id], "VMID %04x  A0 %012lx\n", (u8)((word >> 56) & Mask4), word & Mask48);
-    word = cpMem[wordAddr++];
-    fprintf(cpuF[cpu->id], "Desc %04x  A1 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
-    word = cpMem[wordAddr++];
-    fprintf(cpuF[cpu->id], "UMR  %04x  A2 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
-    fprintf(cpuF[cpu->id], "           A3 %012lx\n", cpMem[wordAddr++] & Mask48);
-    word = cpMem[wordAddr++];
-    fprintf(cpuF[cpu->id], "UCR  %04x  A4 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
-    word = cpMem[wordAddr++];
-    fprintf(cpuF[cpu->id], "MCR  %04x  A5 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
-    for (i = 6; i < 16; i++)
+    fprintf(cpuF[cpu->id], "\n%06d CYBER 180 trap frame pushed at %012lx ", traceSequenceNo, sfsa);
+    utp = cpu->regUtp;
+    for (i = 0; i < 33; i++)
         {
-        fprintf(cpuF[cpu->id], "           A%X %012lx\n", i, cpMem[wordAddr++] & Mask48);
+        if (cpu180PvaToRma(cpu, sfsa, AccessModeRead, &rma, &cond) == FALSE)
+            {
+            fprintf(cpuF[cpu->id], "%s\n", traceMonitorConditionToStr(cond));
+            cpu->regUtp = utp;
+            return;
+            }
+        wordAddrs[i] = rma >> 3;
+        sfsa += 8;
+        }
+    fprintf(cpuF[cpu->id], "(RMA %08x)\n\n", wordAddrs[0] << 3);
+    i = 0;
+    fprintf(cpuF[cpu->id], "P %lx\n", cpMem[wordAddrs[i++]]);
+    word = cpMem[wordAddrs[i++]];
+    fprintf(cpuF[cpu->id], "VMID %04x  A0 %012lx\n", (u8)((word >> 56) & Mask4), word & Mask48);
+    word = cpMem[wordAddrs[i++]];
+    fprintf(cpuF[cpu->id], "Desc %04x  A1 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
+    word = cpMem[wordAddrs[i++]];
+    fprintf(cpuF[cpu->id], "UMR  %04x  A2 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
+    fprintf(cpuF[cpu->id], "           A3 %012lx\n", cpMem[wordAddrs[i++]] & Mask48);
+    word = cpMem[wordAddrs[i++]];
+    fprintf(cpuF[cpu->id], "UCR  %04x  A4 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
+    word = cpMem[wordAddrs[i++]];
+    fprintf(cpuF[cpu->id], "MCR  %04x  A5 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
+    for (r = 6; r < 16; r++)
+        {
+        fprintf(cpuF[cpu->id], "           A%X %012lx\n", r, cpMem[wordAddrs[i++]] & Mask48);
         }
     fputs("\n", cpuF[cpu->id]);
-    for (i = 0; i < 16; i++)
+    for (r = 0; r < 16; r++)
         {
-        fprintf(cpuF[cpu->id], "X%X %016lx\n", i, cpMem[wordAddr++]);
+        fprintf(cpuF[cpu->id], "X%X %016lx\n", r, cpMem[wordAddrs[i++]]);
         }
     fputs("\n", cpuF[cpu->id]);
     }
