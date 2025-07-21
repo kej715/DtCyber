@@ -63,6 +63,87 @@
 #define RingSegMask 0xffff00000000
 
 /*
+**  Memory Register addresses.
+*/
+#define MemStatusSummary       0x00
+#define MemElementId           0x10
+#define MemOptionsInstalled    0x12
+#define MemEnvControl          0x20
+#define MemBounds              0x21
+#define MemCEL                 0xA0
+#define MemCELd0               0xA0
+#define MemCELd1               0xA1
+#define MemDELd2               0xA2
+#define MemCELd3               0xA3
+#define MemUEL1                0xA4
+#define MemUEL1d0              0xA4
+#define MemUEL1d1              0xA5
+#define MemUEL1d2              0xA6
+#define MemUEL1d3              0xA7
+#define MemUEL2                0xA8
+#define MemUEL2d0              0xA8
+#define MemUEL2d1              0xA9
+#define MemUEL2d2              0xAA
+#define MemUEL2d3              0xAB
+#define MemFreeRunningCounter  0xB0
+
+/*
+**  Processor register addresses.
+*/
+#define RegStatusSummary       0x00
+#define RegElementId           0x10
+#define RegProcessorId         0x11
+#define RegOptionsInstalled    0x12
+#define RegVmCapabilityList    0x13
+#define RegPerfMonFacility     0x22
+#define RegDepEnvControl       0x30
+#define RegCtrlStoreAddr       0x31
+#define RegCtrlStoreBreak      0x32
+#define RegRegisterP           0x40
+#define RegMonitorProcState    0x41
+#define RegMonitorCondition    0x42
+#define RegUserCondition       0x43
+#define RegUntranslatablePtr   0x44
+#define RegSegmentTableLen     0x45
+#define RegSegmentTableAddr    0x46
+#define RegBaseConstant        0x47
+#define RegPageTableAddr       0x48
+#define RegPageTableLen        0x49
+#define RegPageSizeMask        0x4A
+#define RegModelDepFlags       0x50
+#define RegModelDepWord        0x51
+#define RegMonitorMask         0x60
+#define RegJobProcessState     0x61
+#define RegSystemIntTimer      0x62
+#define RegKeypointBuffer      0x63
+#define RegFaultStatus0        0x80
+#define RegFaultStatus1        0x81
+#define RegFaultStatus2        0x82
+#define RegFaultStatus3        0x83
+#define RegFaultStatus4        0x84
+#define RegFaultStatus5        0x85
+#define RegFaultStatus6        0x86
+#define RegFaultStatus7        0x87
+#define RegFaultStatus8        0x88
+#define RegFaultStatus9        0x89
+#define RegFaultStatusA        0x8A
+#define RegFaultStatusB        0x8B
+#define RegFaultStatusC        0x8C
+#define RegFaultStatusD        0x8D
+#define RegFaultStatusE        0x8E
+#define RegFaultStatusF        0x8F
+#define RegCCEL                0x92
+#define RegMCEL                0x93
+#define RegTestMode            0xA0
+#define RegTrapPointer         0xC4
+#define RegDebugList           0xC5
+#define RegKeypointMask        0xC6
+#define RegProcessIntTimer     0xC9
+#define RegDebugIndex          0xE4
+#define RegDebugMask           0xE5
+#define RegUserMask            0xE6
+
+/*
 **  -----------------------
 **  Private Macro Functions
 **  -----------------------
@@ -366,6 +447,9 @@ Cpu180Context *cpus180;
 **  Private Variables
 **  -----------------
 */
+#if DEBUG
+static FILE cpu180Log = NULL;
+#endif
 
 /*
 **  Opcode decode and dispatch table.
@@ -786,6 +870,17 @@ static u16 bitSelectors[16] =
     };
 
 /*
+**  Maintenance access information for central memory
+*/
+static u64 memoryBounds;
+static u32 memoryEid;
+static u64 memoryEnvControl;
+static u64 memoryOptions;
+static u16 memoryRegisterAddr;
+static u8  memoryRegisterBuf[8];
+static u8  memoryRegisterBufIdx;
+
+/*
  **--------------------------------------------------------------------------
  **
  **  Public Functions
@@ -823,8 +918,80 @@ void cpu180CheckConditions(Cpu180Context *ctx)
 **------------------------------------------------------------------------*/
 void cpu180Init(char *model)
     {
-    int           cpuNum;
     Cpu180Context *activeCpu;
+    int           cpuNum;
+    u64           memSizeMask;
+
+#if DEBUG
+    if (cpu180Log == NULL)
+        {
+        cpu180Log = fopen("cpu180log.txt", "wt");
+        }
+#endif
+
+    switch ((cpuMaxMemory * 8) / OneMegabyte)
+        {
+    case 1:
+        memSizeMask = 0x8000;
+        break;
+    case 2:
+        memSizeMask = 0x4000;
+        break;
+    case 3:
+        memSizeMask = 0x2000;
+        break;
+    case 4:
+        memSizeMask = 0x1000;
+        break;
+    case 5:
+        memSizeMask = 0x0800;
+        break;
+    case 6:
+        memSizeMask = 0x0400;
+        break;
+    case 7:
+        memSizeMask = 0x0200;
+        break;
+    case 8:
+        memSizeMask = 0x0100;
+        break;
+    case 10:
+        memSizeMask = 0x0080;
+        break;
+    case 12:
+        memSizeMask = 0x0040;
+        break;
+    case 14:
+        memSizeMask = 0x0020;
+        break;
+    case 16:
+        memSizeMask = 0x0010;
+        break;
+    case 32:
+        memSizeMask = 0x0208;
+        break;
+    case 64:
+        memSizeMask = 0x0408;
+        break;
+    case 128:
+        memSizeMask = 0x0808;
+        break;
+    case 256:
+        memSizeMask = 0x1008;
+        break;
+    case 512:
+        memSizeMask = 0x2008;
+        break;
+    case 1024:
+        memSizeMask = 0x4008;
+        break;
+    case 2048:
+        memSizeMask = 0x8008;
+        break;
+    default:
+        logDtError(LogErrorLocation, "Unsupported memory size: %ld", cpuMaxMemory * 8);
+        exit(1);
+        }
 
     /*
     **  Initialize CYBER 180 CPU(s)
@@ -837,13 +1004,34 @@ void cpu180Init(char *model)
         }
     for (cpuNum = 0; cpuNum < cpuCount; cpuNum++)
         {
-        activeCpu                       = &cpus180[cpuNum];
-        activeCpu->id                   = cpuNum;
-        activeCpu->pendingAction        = Rni;
-        activeCpu->isStopped            = TRUE;
-        activeCpu->isMonitorMode        = TRUE;
+        activeCpu                  = &cpus180[cpuNum];
+        activeCpu->id              = cpuNum;
+        activeCpu->controlStore    = (u8 *)calloc(2048, 16);
+        activeCpu->softMemories[3] = (u8 *)calloc(1024, 4);
+        activeCpu->softMemories[4] = (u8 *)calloc(1024, 4);
+        activeCpu->softMemories[5] = (u8 *)calloc(2048, 4);
+        activeCpu->softMemories[6] = (u8 *)calloc(512, 4);
+        activeCpu->registerFile    = (u8 *)calloc(64, 8);
+        if (activeCpu->controlStore == NULL
+            || activeCpu->softMemories[3] == NULL
+            || activeCpu->softMemories[4] == NULL
+            || activeCpu->softMemories[5] == NULL
+            || activeCpu->softMemories[6] == NULL
+            || activeCpu->registerFile == NULL)
+            {
+            fputs("(cpu    ) Failed to allocate memory for CYBER 180 CPU memory\n", stderr);
+            exit(1);
+            }
+        activeCpu->regEid        = 0x00321234; // Elem: 00 (CP), Model: 860, S/N
+        activeCpu->regVmcl       = 0xc000;     // Virtual state and CYBER 170 state
+        activeCpu->pendingAction = Rni;
+        activeCpu->isStopped     = TRUE;
+        activeCpu->isMonitorMode = TRUE;
         cpu180UpdatePageSize(activeCpu);
         }
+
+    memoryEid     = 0x01311234; // Elem: 01 (CM),  Model: 850/860, S/N
+    memoryOptions = memSizeMask <<= 48;
 
     /*
     **  Print a friendly message.
@@ -1010,6 +1198,618 @@ void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: get a value from a CM maintenance register
+**
+**  Parameters:     Name        Description.
+**                  reg         the register address
+**
+**  Returns:        64-bit value.
+**
+**------------------------------------------------------------------------*/
+u64 cpu180MacGetCmRegister(u8 reg)
+    {
+    switch (reg)
+        {
+    case MemStatusSummary:
+    default:
+        return 0;
+    case MemBounds:
+        return memoryBounds;
+    case MemElementId:
+        return memoryEid;
+    case MemEnvControl:
+        return memoryEnvControl;
+    case MemFreeRunningCounter:
+        return cpu180FreeRunningCounter;
+    case MemOptionsInstalled:
+        return memoryOptions;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: get a value from a CP state register
+**
+**  Parameters:     Name        Description.
+**                  ctx         CPU context
+**                  reg         the register address
+**
+**  Returns:        64-bit value.
+**
+**------------------------------------------------------------------------*/
+u64 cpu180MacGetCpStateRegister(Cpu180Context *ctx, u8 reg)
+    {
+    u64 byte;
+
+    switch (reg)
+        {
+    case RegOptionsInstalled:
+    default:
+        return 0;
+    case RegStatusSummary:
+        byte = 0;
+        if (ctx->isStopped)
+            {
+            byte |= 0x08;
+            }
+        if (ctx->isMonitorMode)
+            {
+            byte |= 0x20;
+            }
+        return (byte << 56) | (byte << 48) | (byte << 40) | (byte << 32)
+             | (byte << 24) | (byte << 16) | (byte <<  8) | byte;
+    case RegBaseConstant:
+        return ctx->regBc;
+    case RegDepEnvControl:
+        return ctx->regDec;
+    case RegElementId:
+        return ctx->regEid;
+    case RegCtrlStoreAddr:
+        return ctx->controlStoreIdx >> 4; // 16 bytes per control store address
+    case RegCtrlStoreBreak:
+        return ctx->controlStoreBreak;
+    case RegJobProcessState:
+        return ctx->regJps;
+    case RegKeypointBuffer:
+        return ctx->regKbp;
+    case RegKeypointMask:
+        return ctx->regKmr;
+    case RegModelDepWord:
+        return ctx->regMdw;
+    case RegMonitorCondition:
+        return ctx->regMcr;
+    case RegMonitorMask:
+        return ctx->regMmr;
+    case RegMonitorProcState:
+        return ctx->regMps;
+    case RegPageTableAddr:
+        return ctx->regPta;
+    case RegPageTableLen:
+        return ctx->regPtl;
+    case RegPageSizeMask:
+        return ctx->regPsm;
+    case RegProcessIntTimer:
+        return ctx->regPit;
+    case RegProcessorId:
+        return ctx->id;
+    case RegRegisterP:
+        return ((u64)ctx->key << 48) | ctx->regP;
+    case RegSegmentTableLen:
+        return ctx->regStl;
+    case RegSegmentTableAddr:
+        return ctx->regSta;
+    case RegSystemIntTimer:
+        return ctx->regSit;
+    case RegTrapPointer:
+        return ctx->regTp;
+    case RegUntranslatablePtr:
+        return ctx->regUtp;
+    case  RegUserCondition:
+        return ctx->regUcr;
+    case  RegUserMask:
+        return ctx->regUmr;
+    case RegVmCapabilityList:
+        return ctx->regVmcl;
+    //  Trap Enables addresses
+    case 0xc0:
+    case 0xc1:
+    case 0xc2:
+    case 0xc3:
+        return ctx->regFlags & Mask2;
+    //  Keypoint Enable addresses
+    case 0xca:
+    case 0xcb:
+        return (ctx->regFlags >> 13) & 1;
+        break;
+    //  Critical Frame Flag addresses
+    case 0xe0:
+    case 0xe1:
+        return (ctx->regFlags >> 15) & 1;
+    //  On Condition Flag addresses
+    case 0xe2:
+    case 0xe3:
+        return (ctx->regFlags >> 14) & 1;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: halt CP
+**
+**  Parameters:     Name        Description.
+**                  ctx         CP context
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpu180MacHaltCp(Cpu180Context *ctx)
+    {
+    ctx->isStopped = TRUE;
+
+#if CcDebug == 1
+    traceHaltCpu180(ctx);
+#endif
+#if DEBUG
+    fprintf(cpu180Log, "Halt CPU%d\n", ctx->id);
+#endif
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: master clear CP
+**
+**  Parameters:     Name        Description.
+**                  ctx         CP context
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpu180MacMasterClearCp(Cpu180Context *ctx)
+    {
+    ctx->isMonitorMode   = TRUE;
+    ctx->isStopped       = TRUE;
+    ctx->lastCsStartAddr = 0;
+    cpu180MacSetCpStateRegister(ctx, RegDepEnvControl, 0);
+#if CcDebug == 1
+    traceMasterClearCpu180(ctx);
+#endif
+#if DEBUG
+    fprintf(cpu180Log, "MasterClear CPU%d\n", ctx->id);
+#endif
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: read CM data
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        next byte.
+**
+**------------------------------------------------------------------------*/
+u8 cpu180MacReadCm(void)
+    {
+    u8  i;
+    u8  shift;
+    u64 word;
+
+    if (memoryRegisterBufIdx < 8)
+        {
+        if (memoryRegisterBufIdx == 0)
+            {
+            word  = cpu180MacGetCmRegister(memoryRegisterAddr);
+            shift = 56;
+            for (i = 0; i < 8; i++)
+                {
+                memoryRegisterBuf[i] = (word >> shift) & 0xff;
+                shift -= 8;
+                }
+            }
+        return memoryRegisterBuf[memoryRegisterBufIdx++];
+        }
+    else
+        {
+        return 0;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: read CP data
+**
+**  Parameters:     Name        Description.
+**                  ctx         CP context
+**                  type        type of data to read (type code from maintenance channel function)
+**
+**  Returns:        next byte.
+**
+**------------------------------------------------------------------------*/
+u8 cpu180MacReadCp(Cpu180Context *ctx, u8 type)
+    {
+    u8  i;
+    u8  shift;
+    u64 word;
+
+    switch (type)
+        {
+    case 0:
+        if (ctx->macRegisterBufIdx < 8)
+            {
+            if (ctx->macRegisterBufIdx == 0)
+                {
+                word  = cpu180MacGetCpStateRegister(ctx, ctx->macRegisterAddr);
+                shift = 56;
+                for (i = 0; i < 8; i++)
+                    {
+                    ctx->macRegisterBuf[i] = (word >> shift) & 0xff;
+                    shift -= 8;
+                    }
+                }
+            return ctx->macRegisterBuf[ctx->macRegisterBufIdx++];
+            }
+        break;
+    case 1:
+        return ctx->controlStore[ctx->controlStoreIdx++];
+    case 3:
+    case 4:
+    case 5:
+    case 6:
+        return ctx->softMemories[type][ctx->softMemoryIndices[type]++];
+    case 7:
+        return ctx->registerFile[ctx->registerFileIdx++];
+    case 0xa:
+        return cpu180MacReadCm();
+    default:
+        break;
+        }
+
+    return 0;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: set CM register location
+**
+**  Parameters:     Name        Description.
+**                  location    the location
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpu180MacSetCmLocation(u16 location)
+    {
+    memoryRegisterAddr   = location;
+    memoryRegisterBufIdx = 0;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: set CP read/write location
+**
+**  Parameters:     Name        Description.
+**                  ctx         CP context
+**                  type        type of location (type code from maintenance channel function)
+**                  location    the location
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpu180MacSetCpLocation(Cpu180Context *ctx, u8 type, u16 location)
+    {
+    switch (type)
+        {
+    case 0:
+        ctx->macRegisterAddr   = location;
+        ctx->macRegisterBufIdx = 0;
+        break;
+    case 3:
+    case 4:
+    case 5:
+    case 6:
+        ctx->softMemoryIndices[type] = location << 2; // 4 bytes per memory address
+        break;
+    case 7:
+        ctx->registerFileIdx = location << 3;         // 8 bytes per memory address
+        break;
+    case 0xa:
+        cpu180MacSetCmLocation(location);
+        break;
+    default:
+        break;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: set a value in a CM maintenance register
+**
+**  Parameters:     Name        Description.
+**                  reg         the register address
+**                  word        the 64-bit value to set
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpu180MacSetCmRegister(u8 reg, u64 word)
+    {
+    switch (reg)
+        {
+    default:
+        break;
+    case MemBounds:
+        memoryBounds = word;
+        break;
+    case MemElementId:
+        memoryEid = word;
+        break;
+    case MemEnvControl:
+        memoryEnvControl = word;
+        break;
+    case MemFreeRunningCounter:
+        cpu180FreeRunningCounter = word;
+        break;
+    case MemOptionsInstalled:
+        memoryOptions = word;
+        break;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: set CP state register to a value
+**
+**  Parameters:     Name        Description.
+**                  ctx         CP context
+**                  reg         the register address
+**                  word        the 64-bit value to set
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
+    {
+    switch (reg)
+        {
+    case RegStatusSummary:
+    default:
+        break;
+    case RegBaseConstant:
+        ctx->regBc = word;
+        break;
+    case RegCtrlStoreAddr:
+        ctx->controlStoreIdx = word << 4; // 16 bytes per control store address
+        break;
+    case RegCtrlStoreBreak:
+        ctx->controlStoreBreak = word;
+        break;
+    case RegDepEnvControl:
+        ctx->regDec = word;
+        break;
+    case RegJobProcessState:
+        ctx->regJps = word & Mask32;
+        break;
+    case RegKeypointBuffer:
+        ctx->regKbp = word & Mask48;
+        break;
+    case RegKeypointMask:
+        ctx->regKmr = word & Mask16;
+        break;
+    case RegModelDepWord:
+        ctx->regMdw = word;
+        break;
+    case RegMonitorCondition:
+        ctx->regMcr = word & Mask16;
+        break;
+    case RegMonitorMask:
+        ctx->regMmr = word & Mask16;
+        break;
+    case RegMonitorProcState:
+        ctx->regMps = word & Mask32;
+        break;
+    case RegPageSizeMask:
+        ctx->regPsm = word & Mask7;
+        cpu180UpdatePageSize(ctx);
+        break;
+    case RegPageTableAddr:
+        ctx->regPta = word & Mask32;
+        break;
+    case RegPageTableLen:
+        ctx->regPtl = word & Mask8;
+        cpu180UpdatePageSize(ctx);
+        break;
+    case RegProcessIntTimer:
+        ctx->regPit = word & Mask32;
+        break;
+    case RegRegisterP:
+        ctx->key  = (word >> 48) & Mask6;
+        ctx->regP = word & Mask48;
+        break;
+    case RegSegmentTableLen:
+        ctx->regStl = word & Mask16;
+        break;
+    case RegSegmentTableAddr:
+        ctx->regSta = word & Mask32;
+        break;
+    case RegSystemIntTimer:
+        ctx->regSit = word & Mask32;
+        break;
+    case RegTrapPointer:
+        ctx->regTp = word & Mask48;
+        break;
+    case RegUntranslatablePtr:
+        ctx->regUtp = word & Mask48;
+        break;
+    case  RegUserCondition:
+        ctx->regUcr = word & Mask16;
+        break;
+    case  RegUserMask:
+        ctx->regUmr = word & Mask16;
+        break;
+    case RegVmCapabilityList:
+        ctx->regVmcl = word & Mask16;
+        break;
+    //  Trap Enables addresses
+    case 0xc0:
+    case 0xc1:
+    case 0xc2:
+    case 0xc3:
+        ctx->regFlags = (ctx->regFlags & 0xffc0) | (word & Mask2);
+        break;
+    //  Keypoint Enable addresses
+    case 0xca:
+    case 0xcb:
+        ctx->regFlags = (ctx->regFlags & 0xdfff) | ((word & 1) << 13);
+        break;
+    //  Critical Frame Flag addresses
+    case 0xe0:
+    case 0xe1:
+        ctx->regFlags = (ctx->regFlags & 0x7fff) | ((word & 1) << 15);
+        break;
+    //  On Condition Flag addresses
+    case 0xe2:
+    case 0xe3:
+        ctx->regFlags = (ctx->regFlags & 0xbfff) | ((word & 1) << 14);
+        break;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: start CP
+**
+**  Parameters:     Name        Description.
+**                  ctx         CP context
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpu180MacStartCp(Cpu180Context *ctx)
+    {
+    MonitorCondition cond;
+    u64              csAddr;
+    u32              rma;
+
+    //
+    //  With CIP L826 for 860/870:
+    //
+    //  - When the CP is started at control store address 0x700,
+    //    CIP is verifying control store and expects the CP to
+    //    halt at address 0x705.
+    //
+    //  - When the CP is started at control store address 0x381,
+    //    CIP has established the EI and is starting it.
+    //
+    csAddr = cpu180MacGetCpStateRegister(ctx, RegCtrlStoreAddr);
+    if (csAddr == 0x700)
+        {
+        ctx->isStopped = TRUE; // Processor Halt
+        cpu180MacSetCpStateRegister(ctx, RegCtrlStoreAddr, 0x705);
+        }
+    else if (csAddr == 0x381)
+        {
+        if (ctx->lastCsStartAddr != csAddr)
+            {
+            ctx->lastCsStartAddr = csAddr;
+            cpu180Load180Xp(ctx, ctx->regMps >> 3);
+            ctx->nextKey = ctx->key;
+            ctx->nextP   = ctx->regP;
+            cpu180CheckConditions(ctx);
+            if (cpu180PvaToRma(ctx, ctx->regP, AccessModeExecute, &rma, &cond))
+                {
+                ctx->isStopped = FALSE; // Processor started
+#if CcDebug == 1
+                traceStartCpu180(ctx, rma);
+#endif
+#if DEBUG
+                fprintf(cpu180Log, "Start CPU%d at RMA %08x\n", ctx->id, rma);
+#endif
+                }
+            else
+                {
+                logDtError(LogErrorLocation, "Failed to start CPU%d: failed to translate PVA %012lx to RMA, MCR %04x\n",
+                    ctx->id, ctx->regP, mcrDefns[cond].bitMask);
+                }
+            }
+        }
+    else
+        {
+        ctx->isStopped = TRUE; // Processor Halt
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: write CM data
+**
+**  Parameters:     Name        Description.
+**                  byte        the byte to write
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpu180MacWriteCm(u8 byte)
+    {
+    u8  i;
+    u64 word;
+
+    if (memoryRegisterBufIdx < 8)
+        {
+        memoryRegisterBuf[memoryRegisterBufIdx++] = byte;
+        if (memoryRegisterBufIdx >= 8)
+            {
+            word = 0;
+            for (i = 0; i < 8; i++)
+                {
+                word = (word << 8) | memoryRegisterBuf[i];
+                }
+            cpu180MacSetCmRegister(memoryRegisterAddr, word);
+            }
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: write CP data
+**
+**  Parameters:     Name        Description.
+**                  ctx         CP context
+**                  type        type of data to read (type code from maintenance channel function)
+**                  byte        the byte to write
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpu180MacWriteCp(Cpu180Context *ctx, u8 type, u8 byte)
+    {
+    u8  i;
+    u64 word;
+
+    switch (type)
+        {
+    case 0:
+        if (ctx->macRegisterBufIdx < 8)
+            {
+            ctx->macRegisterBuf[ctx->macRegisterBufIdx++] = byte;
+            if (ctx->macRegisterBufIdx >= 8)
+                {
+                word = 0;
+                for (i = 0; i < 8; i++)
+                    {
+                    word = (word << 8) | ctx->macRegisterBuf[i];
+                    }
+                cpu180MacSetCpStateRegister(ctx, ctx->macRegisterAddr, word);
+                }
+            }
+        break;
+    case 1:
+        ctx->controlStore[ctx->controlStoreIdx++] = byte;
+        break;
+    case 3:
+    case 4:
+    case 5:
+    case 6:
+        ctx->softMemories[type][ctx->softMemoryIndices[type]++] = byte;
+        break;
+    case 7:
+        ctx->registerFile[ctx->registerFileIdx++] = byte;
+        break;
+    case 0xa:
+        cpu180MacWriteCm(byte);
+        break;
+    default:
+        break;
+        }
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Read 64-bit CPU memory from PP and verify that address is
 **                  within limits.
 **
@@ -1053,6 +1853,8 @@ void cpu180PpReadMem(u32 address, CpWord *data)
 **------------------------------------------------------------------------*/
 void cpu180PpWriteMem(u32 address, CpWord data)
     {
+/*DELETE*/ //if (address >= (0x00fca0e0 >> 3) && address < (0x00fca0e8 >> 3)) { // traceMask |= TraceCpu|TraceExchange;
+/*DELETE*/ //fprintf(stderr, "PP%02d write %016lx at %08x\n",activePpu->id,cpMem[address],address<<3); traceStack(stderr); }
     if ((features & HasNoCmWrap) != 0)
         {
         if (address < cpuMaxMemory)
@@ -1426,15 +2228,15 @@ void cpu180UpdateIntervalTimers(u64 delta)
         ctx->regSit -= (u32)delta;
         if (ctx->regSit > oldIt || ctx->regSit == 0)
             {
-            cpu180SetMonitorCondition(ctx, MCR59);
-            ctx->regSit = 0xffffffff;
+            ctx->regMcr |= 0x0010; // MCR59
+            ctx->regSit  = 0xffffffff;
             }
         oldIt = ctx->regPit;
         ctx->regPit -= (u32)delta;
         if (ctx->regPit > oldIt || ctx->regPit == 0)
             {
-            cpu180SetUserCondition(ctx, UCR51);
-            ctx->regPit = 0xffffffff;
+            ctx->regUcr |= 0x1000; // UCR51
+            ctx->regPit  = 0xffffffff;
             }
         }
     cpu180FreeRunningCounter += delta;
@@ -1541,21 +2343,33 @@ static bool cpu180AddInt64(Cpu180Context *ctx, u64 augend, u64 addend, u64 *sum)
 **------------------------------------------------------------------------*/
 static void cpu180CheckExternalInterrupts(Cpu180Context *ctx)
     {
-    ConditionAction     action;
-    u16                 cr;
+    ConditionAction         action;
+    u16                     cr;
+    u8                      i;
+    u16                     mask;
+    static MonitorCondition mCondList[5] = {MCR53, MCR59, MCR56, MCR48, MCR50};
 
     cr = ctx->regMcr & ctx->regMmr;
-    if ((cr & 0x0400) != 0) // MCR53
+    if ((cr & 0xa490) != 0) // MCR48, MCR50, MCR53, MCR56, MCR59
         {
-        action = cpu180GetActionForMonitorCondition(ctx, MCR53);
-        if (action > ctx->pendingAction)
+        for (i = 0; cr != 0 && i < 5; i++)
             {
-            ctx->pendingAction = action;
+            mask = mcrDefns[mCondList[i]].bitMask;
+            if ((cr & mask) != 0)
+                {
+                action = cpu180GetActionForMonitorCondition(ctx, MCR53);
+                if (action > ctx->pendingAction)
+                    {
+                    ctx->pendingAction = action;
+                    }
+                cr &= ~mask;
+                }
             }
         }
-    if ((cr & 0x0080) != 0) // MCR56
+    cr = ctx->regUcr & ctx->regUmr;
+    if ((cr & 0x1000) != 0) // UCR51
         {
-        action = cpu180GetActionForMonitorCondition(ctx, MCR56);
+        action = cpu180GetActionForUserCondition(ctx, UCR51);
         if (action > ctx->pendingAction)
             {
             ctx->pendingAction = action;
@@ -2371,6 +3185,7 @@ static bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u64 word, int count)
     u32              rmas[8];
     u8               shift;
     u32              wordAddr;
+/*DELETE*/u64 opva = pva;
 
     static u64       masks[8] =
         {
@@ -2426,6 +3241,11 @@ static bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u64 word, int count)
         shift           = 56 - ((rma & 7) << 3);
         mask            = ~((u64)0xff << shift);
         cpMem[wordAddr] = (cpMem[wordAddr] & mask) | (((word >> count) & Mask8) << shift);
+/*DELETE*/ if ((rma >= 0x00fca0e0 && rma < 0x00fca0e8)
+/*DELETE*/     || (opva >= 0x100c00000b60 && opva < 0x100c00000b68)) { // traceMask |= TraceCpu|TraceExchange;
+/*DELETE*/     //if (opva >= 0x100c00000b60 && opva < 0x100c00000b68) traceMask |= TraceCpu|TraceExchange|TraceBlockOp;
+/*DELETE*/ fprintf(stderr, "Store %016lx at %08x, P %012lx\n",cpMem[wordAddr],wordAddr<<3,ctx->regP);
+/*DELETE*/ traceStack(stderr); }
         count          -= 8;
         }
 
@@ -3101,7 +3921,7 @@ static void cp180Op0E(Cpu180Context *activeCpu)  // 0E  CPYSX      MIGDS 2-146
         }
     else
         {
-        activeCpu->regX[activeCpu->opK] = mchGetCpStateRegister(activeCpu, regId);
+        activeCpu->regX[activeCpu->opK] = cpu180MacGetCpStateRegister(activeCpu, regId);
         }
     }
 
@@ -3139,7 +3959,7 @@ static void cp180Op0F(Cpu180Context *activeCpu)  // 0F  CPYXS      MIGDS 2-146
             return;
             }
         }
-    mchSetCpStateRegister(activeCpu, regId, activeCpu->regX[activeCpu->opK]);
+    cpu180MacSetCpStateRegister(activeCpu, regId, activeCpu->regX[activeCpu->opK]);
     switch (regId)
         {
     case 0x42: // MCR
@@ -4200,6 +5020,10 @@ static void cp180Op83(Cpu180Context *activeCpu)  // 83  SX         MIGDS 2-12
     if (cpu180PvaToRma(activeCpu, pva, AccessModeWrite, &rma, &cond))
         {
         cpMem[rma >> 3] = activeCpu->regX[activeCpu->opK];
+/*DELETE*/ if ((rma >= 0x00fca0e0 && rma < 0x00fca0e8)
+/*DELETE*/     || (pva >= 0x100c00000b60 && pva < 0x100c00000b68)) { // traceMask |= TraceCpu|TraceExchange;
+/*DELETE*/ fprintf(stderr, "Store %016lx at %08x, P %012lx\n",cpMem[rma>>3],rma,activeCpu->regP);
+/*DELETE*/ traceStack(stderr); }
         }
     else
         {
@@ -4751,6 +5575,10 @@ static void cp180OpA3(Cpu180Context *activeCpu)  // A3  SXI        MIGDS 2-12
     if (cpu180PvaToRma(activeCpu, pva, AccessModeWrite, &rma, &cond))
         {
         cpMem[rma >> 3] = activeCpu->regX[activeCpu->opK];
+/*DELETE*/ if ((rma >= 0x00fca0e0 && rma < 0x00fca0e8)
+/*DELETE*/     || (pva >= 0x100c00000b60 && pva < 0x100c00000b68)) { // traceMask |= TraceCpu|TraceExchange;
+/*DELETE*/ fprintf(stderr, "Store %016lx at %08x, P %012lx\n",cpMem[rma>>3],rma,activeCpu->regP);
+/*DELETE*/ traceStack(stderr); }
         }
     else
         {

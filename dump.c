@@ -448,7 +448,7 @@ void dumpPpu(u8 pp, PpWord first, PpWord limit)
         }
     if (isCyber180 && ppu[pp].osBoundsCheckEnabled)
         {
-        fprintf(pf, "OS bounds %s %010o\n", ppu[pp].isBelowOsBound ? "below" : "above", ppuOsBoundary);
+        fprintf(pf, "OS bounds %s %010o\n", ppu[pp].isBelowOsBound ? "below" : "above", iouOsBoundary);
         }
     if (ppu[pp].busy)
         {

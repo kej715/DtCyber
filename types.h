@@ -379,7 +379,9 @@ typedef struct
     u8            regPsm;               /* page size mask register */
     u32           regSit;               /* system interval timer register */
     u16           regVmcl;              /* virtual machine capability list register */
-    u64           regKbp;               /* keypoint buffer pointer */
+    u64           regKbp;               /* keypoint buffer pointer register */
+    u32           regEid;               /* CPU element identifier register */
+    u64           regDec;               /* dependent environment control register */
     u32           byteNumMask;          /* mask used in determining byte number within page */
     u32           pageLengthMask;       /* mask used in calculating page table index */
     u8            pageNumShift;         /* shift count used in calculating page numbers */
@@ -399,6 +401,17 @@ typedef struct
     ConditionAction pendingAction;      /* pending monitor or user condition action */
     u8            nextKey;              /* next P register key */
     u64           nextP;                /* next P register value */
+    u8            macRegisterAddr;      /* maintenance access register number */
+    u8            macRegisterBuf[8];    /* maintenance access register contents */
+    u8            macRegisterBufIdx;    /* maintenance access register contents index */
+    u8            *controlStore;        /* control store image */
+    u32           controlStoreIdx;      /* control store image index */
+    u32           lastCsStartAddr;      /* last control store start address */
+    u32           controlStoreBreak;    /* control store break address */
+    u8            *softMemories[7];     /* soft memory images */
+    u32           softMemoryIndices[7]; /* soft memory image indices */
+    u8            *registerFile;        /* internal register file */
+    u32           registerFileIdx;      /* internal register file index */
     } Cpu180Context;
 
 /*

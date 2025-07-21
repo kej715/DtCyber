@@ -116,6 +116,19 @@ void cpuVoidIwStack(Cpu170Context *activeCpu, u32 branchAddr);
 void cpu180CheckConditions(Cpu180Context *ctx);
 void cpu180Init(char *model);
 void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa);
+u64  cpu180MacGetCmRegister(u8 reg);
+u64  cpu180MacGetCpStateRegister(Cpu180Context *ctx, u8 reg);
+void cpu180MacHaltCp(Cpu180Context *ctx);
+void cpu180MacMasterClearCp(Cpu180Context *ctx);
+u8   cpu180MacReadCm(void);
+u8   cpu180MacReadCp(Cpu180Context *ctx, u8 type);
+void cpu180MacSetCmLocation(u16 location);
+void cpu180MacSetCmRegister(u8 reg, u64 word);
+void cpu180MacSetCpLocation(Cpu180Context *ctx, u8 type, u16 location);
+void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word);
+void cpu180MacStartCp(Cpu180Context *ctx);
+void cpu180MacWriteCm(u8 byte);
+void cpu180MacWriteCp(Cpu180Context *ctx, u8 type, u8 byte);
 void cpu180PpReadMem(u32 address, CpWord *data);
 void cpu180PpWriteMem(u32 address, CpWord data);
 bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *rma, MonitorCondition *cond);
@@ -169,6 +182,7 @@ void dd6603ShowDiskStatus();
 void dd844Init_2(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void dd844Init_4(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void dd885Init_1(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+void dd885InitLs(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void dd8xxLoadDisk(char *params);
 void dd8xxUnloadDisk(char *params);
 void dd8xxShowDiskStatus();
@@ -276,7 +290,6 @@ void mchCheckTimeout(void);
 u64 mchGetCpStateRegister(Cpu180Context *ctx, u8 reg);
 void mchInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void mchSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word);
-void mchSetOsBoundsFault(PpSlot *pp, u32 address, u32 boundary);
 
 /*
 **  mdi.c
@@ -405,6 +418,11 @@ void pciConsoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 **  pp.c
 */
 void ppInit(u8 count);
+u64  ppMacGetIouRegister(u8 reg);
+u8   ppMacReadIou(void);
+void ppMacSetIouLocation(u16 location);
+void ppMacSetIouRegister(u8 reg, u64 word);
+void ppMacWriteIou(u8 byte);
 void ppTerminate(void);
 void ppStep(void);
 
@@ -483,7 +501,7 @@ void traceStack(FILE *fp);
 void traceStartCpu180(Cpu180Context *cpu, u32 rma);
 void traceTerminate(void);
 char *traceTranslateAction(ConditionAction action);
-void traceTrapFrame(Cpu180Context *cpu, u32 rma);
+void traceTrapFrame(Cpu180Context *cpu, u64 sfsa);
 void traceTrapPointer(Cpu180Context *cpu);
 void traceUserCondition(Cpu180Context *cpu, UserCondition cond);
 void traceVmRegisters(Cpu180Context *cpu);
@@ -559,6 +577,7 @@ extern long                fontMedium;                      // Console
 extern long                fontSmall;                       // Console
 extern char                fontName[];                      // Console
 extern long                heightPX;                        // Console
+extern u32                 iouOsBoundary;
 extern bool                isCyber180;
 extern ModelType           modelType;
 extern u16                 mux6676TelnetConns;
@@ -584,7 +603,6 @@ extern const unsigned char platoStringToAscii[4][65];
 extern char                ppKeyIn;
 extern PpSlot              *ppu;
 extern u8                  ppuCount;
-extern u32                 ppuOsBoundary;
 extern u32                 readerScanSecs;
 extern u32                 rtcClock;
 extern u64                 rtcClockDelta;

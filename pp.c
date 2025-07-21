@@ -24,7 +24,8 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG_CM_WRITE    0
+#define DEBUG          1
+#define DEBUG_CM_WRITE 0
 
 /*
 **  -------------
@@ -44,6 +45,20 @@
 **  -----------------
 */
 #define PPC 07400
+
+/*
+**  IOU Register addresses.
+*/
+#define RegStatusSummary     0x00
+#define RegElementId         0x10
+#define RegOptionsInstalled  0x12
+#define RegFaultStatusMask   0x18
+#define RegOsBounds          0x21
+#define RegEnvControl        0x30
+#define RegStatus            0x40
+#define RegFaultStatus1      0x80
+#define RegFaultStatus2      0x81
+#define RegTestMode          0xA0
 
 /*
 **  -----------------------
@@ -205,7 +220,7 @@ static u32 ppAdd18(u32 op1, u32 op2);
 static u32 ppSubtract18(u32 op1, u32 op2);
 static void ppInterlock(PpWord func);
 
-#if DEBUG_CM_WRITE
+#if DEBUG || DEBUG_CM_WRITE
 static void ppValidateCmWrite(char *inst, u32 address, CpWord data);
 #endif
 
@@ -218,10 +233,10 @@ static bool ppIsPpLoad(char *name, u32 address);
 **  Public Variables
 **  ----------------
 */
+u32    iouOsBoundary;
 PpSlot *ppu;
 PpSlot *activePpu;
 u8     ppuCount;
-u32    ppuOsBoundary = 0;
 
 /*
 **  -----------------
@@ -236,6 +251,50 @@ static PpWord location;
 static u32    acc18;
 static bool   noHang;
 
+//
+//  Maintenance access information for CYBER 180 IOU
+//
+static u32 iouEid;
+static u64 iouEnvControl;
+static u64 iouFaultStatus1;
+static u64 iouFaultStatusMask;
+static u64 iouOptions;
+static u64 iouOsBoundaryReg;
+static u16 iouRegisterAddr;
+static u8  iouRegisterBuf[8];
+static u8  iouRegisterBufIdx;
+static u64 iouStatus;
+static u64 iouTestMode;
+//
+//  Bit masks identifying PP's in IOU OS Bounds and fault registers
+//
+static u64 iouPpMasks[20] =
+    {
+    0x01000000, // PP00
+    0x02000000, // PP01
+    0x04000000, // PP02
+    0x08000000, // PP03
+    0x10000000, // PP04
+    0x00010000, // PP05
+    0x00020000, // PP06
+    0x00040000, // PP07
+    0x00080000, // PP10
+    0x00100000, // PP11
+    0x00000100, // PP20
+    0x00000200, // PP21
+    0x00000400, // PP22
+    0x00000800, // PP23
+    0x00001000, // PP24
+    0x00000001, // PP25
+    0x00000002, // PP26
+    0x00000004, // PP27
+    0x00000008, // PP30
+    0x00000010  // PP31
+    };
+
+//
+//  Instruction processors
+//
 static void (*ppOp170[])(void) =
     {
     ppOpPSN,    // 00
@@ -372,7 +431,7 @@ static void (*ppOp180[])(void) =
     ppOpPSN     // 1077
     };
 
-#if DEBUG_CM_WRITE
+#if DEBUG || DEBUG_CM_WRITE
 static FILE *ppLog = NULL;
 #endif
 
@@ -444,6 +503,31 @@ void ppInit(u8 count)
         }
 
     /*
+    **  Initialize maintenance access information
+    */
+    iouEid     = 0x02201234; // Elem: 02 (IOU), Model: 835-990, S/N
+
+    iouOptions = 0x000000FFAF000000; // channels 00 - 17
+    if (channelCount > 16)
+        {
+        iouOptions |= 0x0000000000FF0F00;
+        }
+    iouOptions |= (u64)0x03 << 40;     // PP's 00 - 11
+    if (ppuCount > 10)
+        {
+        iouOptions |= (u64)0x0C << 40; // PP's 20 - 31
+        }
+    if (tpMuxEnabled)
+        {
+        iouOptions |= 2;
+        }
+    if (cc545Enabled)
+        {
+        iouOptions |= 1;
+        }
+    iouOptions |= 0x04; // radial interfaces 1,2
+
+    /*
     **  Initialise all ppus.
     */
     for (pp = 0; pp < ppuCount; pp++)
@@ -464,12 +548,309 @@ void ppInit(u8 count)
     */
     printf("(pp     ) PPs initialised (number of PPUs %o)\n", ppuCount);
 
-#if DEBUG_CM_WRITE
+#if DEBUG || DEBUG_CM_WRITE
     if (ppLog == NULL)
         {
         ppLog = fopen("pplog.txt", "wt");
         }
 #endif
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: get a value from an IOU maintenance register
+**
+**  Parameters:     Name        Description.
+**                  reg         the register address
+**
+**  Returns:        64-bit value.
+**
+**------------------------------------------------------------------------*/
+u64 ppMacGetIouRegister(u8 reg)
+    {
+    u8  ppIdx;
+    u8  regSelect;
+    u32 regVal;
+
+    switch (reg)
+        {
+    case RegStatusSummary:
+    default:
+        return 0;
+    case RegElementId:
+        return iouEid;
+    case RegEnvControl:
+        return iouEnvControl;
+    case RegFaultStatus1:
+        return iouFaultStatus1;
+    case RegFaultStatusMask:
+        return iouFaultStatusMask;
+    case RegOptionsInstalled:
+        return iouOptions;
+    case RegOsBounds:
+        return iouOsBoundaryReg;
+    case RegStatus:
+        ppIdx     = (iouEnvControl >> 24) & Mask5;
+        regSelect = (iouEnvControl >> 8) & Mask2;
+        if (ppIdx >= 020)
+            {
+            ppIdx = (ppIdx - 020) + 10;
+            }
+        switch (regSelect)
+            {
+        default:
+        case 0: // A register
+            regVal = ppu[ppIdx].regA;
+            break;
+        case 1: // P register
+            regVal = ppu[ppIdx].regP;
+            break;
+        case 2: // K register
+            regVal = ppu[ppIdx].isIdle ? 0107700 : ppu[ppIdx].regK;
+            break;
+        case 3: // Q register
+            regVal = ppu[ppIdx].regQ;
+            break;
+            }
+        return (iouStatus & Mask8) | (regVal << 8);
+    case RegTestMode:
+        return iouTestMode;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: read IOU data
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        next byte.
+**
+**------------------------------------------------------------------------*/
+u8 ppMacReadIou(void)
+    {
+    u8  i;
+    u8  shift;
+    u64 word;
+
+    if (iouRegisterBufIdx < 8)
+        {
+        if (iouRegisterBufIdx == 0)
+            {
+            word  = ppMacGetIouRegister(iouRegisterAddr);
+            shift = 56;
+            for (i = 0; i < 8; i++)
+                {
+                iouRegisterBuf[i] = (word >> shift) & 0xff;
+                shift -= 8;
+                }
+            }
+        return iouRegisterBuf[iouRegisterBufIdx++];
+        }
+    else
+        {
+        return 0;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: set IOU register location
+**
+**  Parameters:     Name        Description.
+**                  location    the location
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void ppMacSetIouLocation(u16 location)
+    {
+    iouRegisterAddr   = location;
+    iouRegisterBufIdx = 0;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: set a value in an IOU maintenance register
+**
+**  Parameters:     Name        Description.
+**                  reg         the register address
+**                  word        the 64-bit value to set
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void ppMacSetIouRegister(u8 reg, u64 word)
+    {
+    int    chIdx;
+    int    i;
+    PpSlot *pp;
+    int    ppIdx;
+    u32    ppVector;
+
+    switch (reg)
+        {
+    default:
+        break;
+
+    case RegEnvControl:
+        iouEnvControl = word;
+        ppIdx         = (word >> 24) & Mask5;
+        if (ppIdx >= 020)
+            {
+            ppIdx = (ppIdx - 020) + 10;
+            }
+        pp                       = &ppu[ppIdx];
+        pp->osBoundsCheckEnabled = (word & 0x08) != 0;
+        pp->isStopEnabled        = (word & 0x01) != 0;
+        pp->isIdle               = FALSE;
+
+        if ((word & 0x0020) != 0) // load/dump/idle PP
+            {
+            if ((word & 0x1000) != 0) // load PP
+                {
+                chIdx                 = (word >> 16) & Mask5;
+                pp->opD               = chIdx;
+                channel[chIdx].active = TRUE;
+
+                /*
+                **  Set PP to INPUT (IAM) instruction.
+                */
+                pp->opF  = 071;
+                pp->busy = TRUE;
+                pp->regK = (pp->opF << 6) | pp->opD;
+
+                /*
+                **  Clear P register and location zero of PP.
+                */
+                pp->regP   = 0;
+                pp->mem[0] = 0;
+
+                /*
+                **  Set A register to an input word count of 10000.
+                */
+                pp->regA      = 010000;
+                pp->isStopped = FALSE;
+#if DEBUG
+                fprintf(ppLog, "Deadstart PP%02o using channel %02o\n",
+                    ppIdx < 10 ? ppIdx : (ppIdx - 10) + 020, chIdx);
+#endif
+                }
+#if 0
+            else if ((word & 0x0800) != 0) // dump PP
+                {
+                chIdx                 = (word >> 16) & Mask5;
+                pp->opD               = chIdx;
+                channel[chIdx].active = TRUE;
+
+                /*
+                **  Set PP to OUTPUT (OAM) instruction.
+                */
+                pp->opF  = 073;
+                pp->busy = TRUE;
+                pp->regK = (pp->opF << 6) | pp->opD;
+
+                /*
+                **  Clear P register and location zero of PP.
+                */
+                pp->regP   = 0;
+                pp->mem[0] = 0;
+
+                /*
+                **  Set A register to an input word count of 10000.
+                */
+                pp->regA      = 010000;
+                pp->isStopped = FALSE;
+#if DEBUG
+                fprintf(ppLog, "Dump PP%02o using channel %02o\n",
+                    ppIdx < 10 ? ppIdx : (ppIdx - 10) + 020, chIdx);
+#endif
+                }
+#endif
+            else if ((word & 0x0400) != 0) // idle PP
+                {
+                pp->isIdle = TRUE;
+                }
+            }
+#if DEBUG
+        fputs("Write IOU EC register\n", ppLog);
+        fprintf(ppLog, "  PP%02o\n", ppIdx < 10 ? ppIdx : (ppIdx - 10) + 020);
+        fprintf(ppLog, "          Auto mode: %s\n", (word & 0x20000000) != 0 ? "enabled" : "disabled");
+        fprintf(ppLog, "    Register select: %c\n", "APKQ"[(word >> 8) & Mask2]);
+        fprintf(ppLog, "    OS bounds check: %s\n", pp->osBoundsCheckEnabled ? "enabled" : "disabled");
+        fprintf(ppLog, "      Stop on error: %s\n", pp->isStopEnabled ? "enabled" : "disabled");
+        fprintf(ppLog, "               Idle: %s\n", pp->isIdle ? "yes" : "no");
+#endif
+        break;
+
+    case RegFaultStatus1:
+        iouFaultStatus1 = word;
+        break;
+
+    case RegFaultStatusMask:
+        iouFaultStatusMask = word;
+        break;
+
+    case RegOsBounds:
+        iouOsBoundaryReg = word;
+        iouOsBoundary    = (word & 0x3ffff) << 10;
+        ppVector         = word >> 32;
+        for (i = 0; i < 10; i++)
+            {
+            ppu[i].isBelowOsBound = (ppVector & iouPpMasks[i]) != 0;
+            }
+        if (ppuCount > 10)
+            {
+            for (i = 10; i < 20; i++)
+                {
+                ppu[i].isBelowOsBound = (ppVector & iouPpMasks[i]) != 0;
+                }
+            }
+#if DEBUG
+        fputs("Write IOU OS bound register\n", ppLog);
+        fprintf(ppLog, "  OS boundary: %010o\n", iouOsBoundary);
+        for (int i = 0; i < 10; i++)
+            {
+            fprintf(ppLog, "  PP%02o: %s\n", i, ppu[i].isBelowOsBound ? "below" : "above");
+            }
+        if (ppuCount > 10)
+            {
+            for (int i = 10; i < 20; i++)
+                {
+                fprintf(ppLog, "  PP%02o: %s\n", (i - 10) + 020, ppu[i].isBelowOsBound ? "below" : "above");
+                }
+            }
+#endif
+        break;
+    case RegTestMode:
+        iouTestMode = word;
+        break;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: write IOU data
+**
+**  Parameters:     Name        Description.
+**                  byte        the byte to write
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void ppMacWriteIou(u8 byte)
+    {
+    u8  i;
+    u64 word;
+
+    if (iouRegisterBufIdx < 8)
+        {
+        iouRegisterBuf[iouRegisterBufIdx++] = byte;
+        if (iouRegisterBufIdx >= 8)
+            {
+            word = 0;
+            for (i = 0; i < 8; i++)
+                {
+                word = (word << 8) | iouRegisterBuf[i];
+                }
+            ppMacSetIouRegister(iouRegisterAddr, word);
+            }
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -676,12 +1057,23 @@ static u32 ppAdd18(u32 op1, u32 op2)
 **------------------------------------------------------------------------*/
 static bool ppCheckOsBounds(u32 address)
     {
+    u64 word;
+
     if (isCyber180 && activePpu->osBoundsCheckEnabled)
         {
-        if ((activePpu->isBelowOsBound && (address >= ppuOsBoundary))
-            || ((activePpu->isBelowOsBound == FALSE) && (address < ppuOsBoundary)))
+        if ((activePpu->isBelowOsBound && (address >= iouOsBoundary))
+            || ((activePpu->isBelowOsBound == FALSE) && (address < iouOsBoundary)))
             {
-            mchSetOsBoundsFault(activePpu, address, ppuOsBoundary);
+            word = ppMacGetIouRegister(RegFaultStatus1);
+            ppMacSetIouRegister(RegFaultStatus1, word | (iouPpMasks[activePpu->id] << 32) | 0x040000);
+#if DEBUG
+            fprintf(ppLog, "PP:%02o OS bounds fault, reference to %o is %s boundary %o",
+                activePpu->id,
+                address,
+                activePpu->isBelowOsBound ? "above" : "below",
+                iouOsBoundary);
+            fflush(ppLog);
+#endif
             return TRUE;
             }
         }
