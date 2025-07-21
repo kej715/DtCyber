@@ -1,11 +1,14 @@
 /*--------------------------------------------------------------------------
 **
-**  Copyright (c) 2019, Kevin Jordan, Tom Hunter,and Gerard van der Grinten
+**  Copyright (c) 2019, Kevin Jordan
 **
 **  Name: dd885_42.c
 **
 **  Description:
 **      Perform emulation of the CDC 885-42 disk drive and 7155-401 controller.
+**
+**  This module is a derivative of module dd8xx.c, implemented by Tom Hunter
+**  and Gerard van der Grinten.
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
