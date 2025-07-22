@@ -211,6 +211,9 @@
     <ClCompile Include="cci_tip.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cpu180.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="const.h">

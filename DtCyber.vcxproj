@@ -251,6 +251,7 @@
     <ClCompile Include="console.c" />
     <ClCompile Include="cp3446.c" />
     <ClCompile Include="cpu.c" />
+    <ClCompile Include="cpu180.c" />
     <ClCompile Include="cr3447.c" />
     <ClCompile Include="cr405.c" />
     <ClCompile Include="cray_station.c" />
