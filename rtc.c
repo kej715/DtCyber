@@ -265,7 +265,7 @@ void rtcReadUsCounter(void)
         }
 
     old      += rtcClockDelta;
-    rtcClock += (u32)rtcClockDelta;
+    rtcClock += rtcClockDelta;
     }
 
 /*
@@ -356,7 +356,7 @@ static bool rtcInitTick(void)
     MHz = (double)(i64)Hz / 1000000.0;
     printf("(rtc    ) Using QueryPerformanceCounter() clock at %f MHz\n", MHz);
 
-    return (TRUE);
+    return TRUE;
     }
 
 static u64 rtcGetTick(void)
@@ -384,7 +384,7 @@ static bool rtcInitTick(void)
     MHz = 1.0;
     printf("(rtc    ) Using gettimeofday() clock at %f MHz\n", MHz);
 
-    return (TRUE);
+    return TRUE;
     }
 
 static u64 rtcGetTick(void)
