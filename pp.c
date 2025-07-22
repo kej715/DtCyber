@@ -84,9 +84,9 @@
         }
 
 #define IndexLocation                                                     \
-    if (opD != 0)                                                         \
+    if (activePpu->opD != 0)                                                         \
         {                                                                 \
-        location = activePpu->mem[opD] + activePpu->mem[activePpu->regP]; \
+        location = activePpu->mem[activePpu->opD] + activePpu->mem[activePpu->regP]; \
         }                                                                 \
     else                                                                  \
         {                                                                 \
@@ -245,8 +245,6 @@ u8     ppuCount;
 */
 static FILE   *ppHandle;
 static u8     pp = 0;
-static PpWord opF;
-static PpWord opD;
 static PpWord location;
 static u32    acc18;
 static bool   noHang;
@@ -893,7 +891,7 @@ void ppTerminate(void)
 **------------------------------------------------------------------------*/
 void ppStep(void)
     {
-    u8     i;
+    u8 i;
 
     /*
     **  Exercise each PP in the barrel.
@@ -934,25 +932,19 @@ void ppStep(void)
  
             if (isCyber180)
                 {
-                opF = (activePpu->regK >> 6) & 01777;
-                if ((opF & 0700) != 0)
+                activePpu->opF = (activePpu->regK >> 6) & 01777;
+                if ((activePpu->opF & 0700) != 0)
                     {
-                    opF = 0;
+                    activePpu->opF = 0;
                     }
                 }
             else
                 {
-                opF = (activePpu->regK >> 6) & 077;
+                activePpu->opF = (activePpu->regK >> 6) & 077;
                 }
-            opD = activePpu->regK & 077;
+            activePpu->opD = activePpu->regK & 077;
 
 #if CcDebug == 1
-            /*
-            **  Save opF and opD for post-instruction trace.
-            */
-            activePpu->opF = opF;
-            activePpu->opD = opD;
-
             /*
             **  Trace instructions.
             */
@@ -971,13 +963,13 @@ void ppStep(void)
             /*
             **  Execute PPU instruction.
             */
-            if ((opF & 01000) == 0)
+            if ((activePpu->opF & 01000) == 0)
                 {
-                ppOp170[opF]();
+                ppOp170[activePpu->opF]();
                 }
             else
                 {
-                ppOp180[opF & 077]();
+                ppOp180[activePpu->opF & 077]();
                 }
             }
         else
@@ -1132,14 +1124,14 @@ static void ppOpRJM(void)     // 02
 
 static void ppOpUJN(void)     // 03
     {
-    PpAddOffset(activePpu->regP, opD);
+    PpAddOffset(activePpu->regP, activePpu->opD);
     }
 
 static void ppOpZJN(void)     // 04
     {
     if (activePpu->regA == 0)
         {
-        PpAddOffset(activePpu->regP, opD);
+        PpAddOffset(activePpu->regP, activePpu->opD);
         }
     }
 
@@ -1147,7 +1139,7 @@ static void ppOpNJN(void)     // 05
     {
     if (activePpu->regA != 0)
         {
-        PpAddOffset(activePpu->regP, opD);
+        PpAddOffset(activePpu->regP, activePpu->opD);
         }
     }
 
@@ -1155,7 +1147,7 @@ static void ppOpPJN(void)     // 06
     {
     if (activePpu->regA < 0400000)
         {
-        PpAddOffset(activePpu->regP, opD);
+        PpAddOffset(activePpu->regP, activePpu->opD);
         }
     }
 
@@ -1163,7 +1155,7 @@ static void ppOpMJN(void)     // 07
     {
     if (activePpu->regA > 0377777)
         {
-        PpAddOffset(activePpu->regP, opD);
+        PpAddOffset(activePpu->regP, activePpu->opD);
         }
     }
 
@@ -1171,121 +1163,121 @@ static void ppOpSHN(void)     // 10
     {
     u64 acc;
 
-    if (opD < 040)
+    if (activePpu->opD < 040)
         {
-        opD             = opD % 18;
+        activePpu->opD  = activePpu->opD % 18;
         acc             = activePpu->regA & Mask18;
-        acc           <<= opD;
+        acc           <<= activePpu->opD;
         activePpu->regA = (u32)((acc & Mask18) | (acc >> 18));
         }
-    else if (opD > 037)
+    else if (activePpu->opD > 037)
         {
-        opD               = 077 - opD;
-        activePpu->regA >>= opD;
+        activePpu->opD    = 077 - activePpu->opD;
+        activePpu->regA >>= activePpu->opD;
         }
     }
 
 static void ppOpLMN(void)     // 11
     {
-    activePpu->regA ^= opD;
+    activePpu->regA ^= activePpu->opD;
     }
 
 static void ppOpLPN(void)     // 12
     {
-    activePpu->regA &= opD;
+    activePpu->regA &= activePpu->opD;
     }
 
 static void ppOpSCN(void)     // 13
     {
-    activePpu->regA &= ~(opD & 077);
+    activePpu->regA &= ~(activePpu->opD & 077);
     }
 
 static void ppOpLDN(void)     // 14
     {
-    activePpu->regA = opD;
+    activePpu->regA = activePpu->opD;
     }
 
 static void ppOpLCN(void)     // 15
     {
-    activePpu->regA = ~opD & Mask18;
+    activePpu->regA = ~activePpu->opD & Mask18;
     }
 
 static void ppOpADN(void)     // 16
     {
-    activePpu->regA = ppAdd18(activePpu->regA, opD);
+    activePpu->regA = ppAdd18(activePpu->regA, activePpu->opD);
     }
 
 static void ppOpSBN(void)     // 17
     {
-    activePpu->regA = ppSubtract18(activePpu->regA, opD);
+    activePpu->regA = ppSubtract18(activePpu->regA, activePpu->opD);
     }
 
 static void ppOpLDC(void)     // 20
     {
-    activePpu->regA = (opD << 12) | (activePpu->mem[activePpu->regP] & Mask12);
+    activePpu->regA = (activePpu->opD << 12) | (activePpu->mem[activePpu->regP] & Mask12);
     PpIncrement(activePpu->regP);
     }
 
 static void ppOpADC(void)     // 21
     {
-    activePpu->regA = ppAdd18(activePpu->regA, (opD << 12) | (activePpu->mem[activePpu->regP] & Mask12));
+    activePpu->regA = ppAdd18(activePpu->regA, (activePpu->opD << 12) | (activePpu->mem[activePpu->regP] & Mask12));
     PpIncrement(activePpu->regP);
     }
 
 static void ppOpLPC(void)     // 22
     {
-    activePpu->regA &= (opD << 12) | (activePpu->mem[activePpu->regP] & Mask12);
+    activePpu->regA &= (activePpu->opD << 12) | (activePpu->mem[activePpu->regP] & Mask12);
     PpIncrement(activePpu->regP);
     }
 
 static void ppOpLMC(void)     // 23
     {
-    activePpu->regA ^= (opD << 12) | (activePpu->mem[activePpu->regP] & Mask12);
+    activePpu->regA ^= (activePpu->opD << 12) | (activePpu->mem[activePpu->regP] & Mask12);
     PpIncrement(activePpu->regP);
     }
 
 static void ppOpLRD(void)     // 24
     {
-    if (opD != 0)
+    if (activePpu->opD != 0)
         {
         if ((features & HasRelocationRegShort) != 0)
             {
             /*
             **  LRD.
             */
-            activePpu->regR = ((u32)(activePpu->mem[opD] & Mask4) << 18)
-                            | ((u32)(activePpu->mem[opD + 1] & Mask12) << 6);
+            activePpu->regR = ((u32)(activePpu->mem[activePpu->opD] & Mask4) << 18)
+                            | ((u32)(activePpu->mem[activePpu->opD + 1] & Mask12) << 6);
             }
         else if ((features & HasRelocationRegLong) != 0)
             {
             /*
             **  LRD.
             */
-            activePpu->regR = ((u32)(activePpu->mem[opD] & Mask10) << 18)
-                            | ((u32)(activePpu->mem[opD + 1] & Mask12) << 6);
+            activePpu->regR = ((u32)(activePpu->mem[activePpu->opD] & Mask10) << 18)
+                            | ((u32)(activePpu->mem[activePpu->opD + 1] & Mask12) << 6);
             }
         }
     }
 
 static void ppOpSRD(void)     // 25
     {
-    if (opD != 0)
+    if (activePpu->opD != 0)
         {
         if ((features & HasRelocationRegShort) != 0)
             {
             /*
             **  SRD.
             */
-            activePpu->mem[opD]     = (PpWord)(activePpu->regR >> 18) & Mask4;
-            activePpu->mem[opD + 1] = (PpWord)(activePpu->regR >> 6) & Mask12;
+            activePpu->mem[activePpu->opD]     = (PpWord)(activePpu->regR >> 18) & Mask4;
+            activePpu->mem[activePpu->opD + 1] = (PpWord)(activePpu->regR >> 6) & Mask12;
             }
         else if ((features & HasRelocationRegLong) != 0)
             {
             /*
             **  SRD.
             */
-            activePpu->mem[opD]     = (PpWord)(activePpu->regR >> 18) & Mask10;
-            activePpu->mem[opD + 1] = (PpWord)(activePpu->regR >> 6) & Mask12;
+            activePpu->mem[activePpu->opD]     = (PpWord)(activePpu->regR >> 18) & Mask10;
+            activePpu->mem[activePpu->opD + 1] = (PpWord)(activePpu->regR >> 6) & Mask12;
             }
         }
     }
@@ -1298,13 +1290,13 @@ static void ppOpEXN(void)     // 26
     bool          isExchangePending;
     u32           exchangeAddress;
 
-    cpuNum = (cpuCount > 1) ? (opD & 001) : 0;
+    cpuNum = (cpuCount > 1) ? (activePpu->opD & 001) : 0;
     cpu    = cpus170 + cpuNum;
 
     cpuAcquireExchangeMutex();
     isExchangePending = cpu->ppRequestingExchange != -1;
 
-    if (((opD & 070) == 0) || ((features & HasNoCejMej) != 0))
+    if (((activePpu->opD & 070) == 0) || ((features & HasNoCejMej) != 0))
         {
         /*
         **  EXN or MXN/MAN with CEJ/MEJ disabled.
@@ -1334,7 +1326,7 @@ static void ppOpEXN(void)     // 26
     else
         {
         doChangeMode = TRUE;
-        if ((opD & 070) == 010)
+        if ((activePpu->opD & 070) == 010)
             {
             /*
             **  MXN.
@@ -1353,7 +1345,7 @@ static void ppOpEXN(void)     // 26
                 exchangeAddress = activePpu->regA & Mask18;
                 }
             }
-        else if ((opD & 070) == 020)
+        else if ((activePpu->opD & 070) == 020)
             {
             /*
             **  MAN.
@@ -1429,101 +1421,101 @@ static void ppOpRPN(void)     // 27
     */
     if (((features & IsSeries800) == 0) || (modelType == ModelCyber865))
         {
-        cpuNum          = (cpuCount > 1) ? (opD & 001) : 0;
+        cpuNum          = (cpuCount > 1) ? (activePpu->opD & 001) : 0;
         activePpu->regA = cpuGetP(cpuNum);
         }
     }
 
 static void ppOpLDD(void)     // 30
     {
-    activePpu->regA  = activePpu->mem[opD] & Mask12;
+    activePpu->regA  = activePpu->mem[activePpu->opD] & Mask12;
     }
 
 static void ppOpADD(void)     // 31
     {
-    activePpu->regA = ppAdd18(activePpu->regA, activePpu->mem[opD] & Mask12);
+    activePpu->regA = ppAdd18(activePpu->regA, activePpu->mem[activePpu->opD] & Mask12);
     }
 
 static void ppOpSBD(void)     // 32
     {
-    activePpu->regA = ppSubtract18(activePpu->regA, activePpu->mem[opD] & Mask12);
+    activePpu->regA = ppSubtract18(activePpu->regA, activePpu->mem[activePpu->opD] & Mask12);
     }
 
 static void ppOpLMD(void)     // 33
     {
-    activePpu->regA ^= activePpu->mem[opD] & Mask12;
+    activePpu->regA ^= activePpu->mem[activePpu->opD] & Mask12;
     }
 
 static void ppOpSTD(void)     // 34
     {
-    activePpu->mem[opD] = (PpWord)activePpu->regA & Mask12;
+    activePpu->mem[activePpu->opD] = (PpWord)activePpu->regA & Mask12;
     }
 
 static void ppOpRAD(void)     // 35
     {
-    activePpu->regA     = ppAdd18(activePpu->regA, activePpu->mem[opD] & Mask12);
-    activePpu->mem[opD] = (PpWord)activePpu->regA & Mask12;
+    activePpu->regA                = ppAdd18(activePpu->regA, activePpu->mem[activePpu->opD] & Mask12);
+    activePpu->mem[activePpu->opD] = (PpWord)activePpu->regA & Mask12;
     }
 
 static void ppOpAOD(void)     // 36
     {
-    activePpu->regA     = ppAdd18(activePpu->mem[opD] & Mask12, 1);
-    activePpu->mem[opD] = (PpWord)activePpu->regA & Mask12;
+    activePpu->regA                = ppAdd18(activePpu->mem[activePpu->opD] & Mask12, 1);
+    activePpu->mem[activePpu->opD] = (PpWord)activePpu->regA & Mask12;
     }
 
 static void ppOpSOD(void)     // 37
     {
-    activePpu->regA     = ppSubtract18(activePpu->mem[opD] & Mask12, 1);
-    activePpu->mem[opD] = (PpWord)activePpu->regA & Mask12;
+    activePpu->regA                = ppSubtract18(activePpu->mem[activePpu->opD] & Mask12, 1);
+    activePpu->mem[activePpu->opD] = (PpWord)activePpu->regA & Mask12;
     }
 
 static void ppOpLDI(void)     // 40
     {
-    location        = activePpu->mem[opD] & Mask12;
+    location        = activePpu->mem[activePpu->opD] & Mask12;
     activePpu->regA = activePpu->mem[location] & Mask12;
     }
 
 static void ppOpADI(void)     // 41
     {
-    location        = activePpu->mem[opD] & Mask12;
+    location        = activePpu->mem[activePpu->opD] & Mask12;
     activePpu->regA = ppAdd18(activePpu->regA, activePpu->mem[location] & Mask12);
     }
 
 static void ppOpSBI(void)     // 42
     {
-    location        = activePpu->mem[opD] & Mask12;
+    location        = activePpu->mem[activePpu->opD] & Mask12;
     activePpu->regA = ppSubtract18(activePpu->regA, activePpu->mem[location] & Mask12);
     }
 
 static void ppOpLMI(void)     // 43
     {
-    location         = activePpu->mem[opD] & Mask12;
+    location         = activePpu->mem[activePpu->opD] & Mask12;
     activePpu->regA ^= activePpu->mem[location] & Mask12;
     }
 
 static void ppOpSTI(void)     // 44
     {
-    location = activePpu->mem[opD] & Mask12;
+    location = activePpu->mem[activePpu->opD] & Mask12;
     activePpu->mem[location] = (PpWord)activePpu->regA & Mask12;
     }
 
 static void ppOpRAI(void)     // 45
     {
-    location                 = activePpu->mem[opD] & Mask12;
+    location                 = activePpu->mem[activePpu->opD] & Mask12;
     activePpu->regA          = ppAdd18(activePpu->regA, activePpu->mem[location] & Mask12);
     activePpu->mem[location] = (PpWord)activePpu->regA & Mask12;
     }
 
 static void ppOpAOI(void)     // 46
     {
-    location                 = activePpu->mem[opD] & Mask12;
+    location                 = activePpu->mem[activePpu->opD] & Mask12;
     activePpu->regA          = ppAdd18(activePpu->mem[location] & Mask12, 1);
     activePpu->mem[location] = (PpWord)activePpu->regA & Mask12;
     }
 
 static void ppOpSOI(void)     // 47
     {
-    location                 = activePpu->mem[opD] & Mask12;
+    location                 = activePpu->mem[activePpu->opD] & Mask12;
     activePpu->regA          = ppSubtract18(activePpu->mem[location] & Mask12, 1);
     activePpu->mem[location] = (PpWord)activePpu->regA & Mask12;
     }
@@ -1593,11 +1585,11 @@ static void ppOpCRD(void)     // 60
         address = activePpu->regA & Mask18;
         }
     cpuPpReadMem(address, &data);
-    activePpu->mem[opD]     = (PpWord)((data >> 48) & Mask12);
-    activePpu->mem[opD + 1] = (PpWord)((data >> 36) & Mask12);
-    activePpu->mem[opD + 2] = (PpWord)((data >> 24) & Mask12);
-    activePpu->mem[opD + 3] = (PpWord)((data >> 12) & Mask12);
-    activePpu->mem[opD + 4] = (PpWord)(data & Mask12);
+    activePpu->mem[activePpu->opD]     = (PpWord)((data >> 48) & Mask12);
+    activePpu->mem[activePpu->opD + 1] = (PpWord)((data >> 36) & Mask12);
+    activePpu->mem[activePpu->opD + 2] = (PpWord)((data >> 24) & Mask12);
+    activePpu->mem[activePpu->opD + 3] = (PpWord)((data >> 12) & Mask12);
+    activePpu->mem[activePpu->opD + 4] = (PpWord)(data & Mask12);
 
 #if CcDebug == 1
     traceCmWord(data);
@@ -1611,11 +1603,8 @@ static void ppOpCRM(void)     // 61
 
     if (!activePpu->busy)
         {
-        activePpu->opF  = opF;
-        activePpu->regQ = activePpu->mem[opD] & Mask12;
-
-        activePpu->busy = TRUE;
-
+        activePpu->regQ   = activePpu->mem[activePpu->opD] & Mask12;
+        activePpu->busy   = TRUE;
         activePpu->mem[0] = activePpu->regP;
         activePpu->regP   = activePpu->mem[activePpu->regP] & Mask12;
         }
@@ -1685,11 +1674,11 @@ static void ppOpCWD(void)     // 62
         }
     else
         {
-        data = ((CpWord)(activePpu->mem[opD] & Mask12) << 48)
-             | ((CpWord)(activePpu->mem[opD + 1] & Mask12) << 36)
-             | ((CpWord)(activePpu->mem[opD + 2] & Mask12) << 24)
-             | ((CpWord)(activePpu->mem[opD + 3] & Mask12) << 12)
-             | (CpWord)(activePpu->mem[opD + 4] & Mask12);
+        data = ((CpWord)(activePpu->mem[activePpu->opD] & Mask12) << 48)
+             | ((CpWord)(activePpu->mem[activePpu->opD + 1] & Mask12) << 36)
+             | ((CpWord)(activePpu->mem[activePpu->opD + 2] & Mask12) << 24)
+             | ((CpWord)(activePpu->mem[activePpu->opD + 3] & Mask12) << 12)
+             | (CpWord)(activePpu->mem[activePpu->opD + 4] & Mask12);
         cpuPpWriteMem(address, data);
 
 #if CcDebug == 1
@@ -1705,11 +1694,8 @@ static void ppOpCWM(void)     // 63
 
     if (!activePpu->busy)
         {
-        activePpu->opF  = opF;
-        activePpu->regQ = activePpu->mem[opD] & Mask12;
-
-        activePpu->busy = TRUE;
-
+        activePpu->regQ   = activePpu->mem[activePpu->opD] & Mask12;
+        activePpu->busy   = TRUE;
         activePpu->mem[0] = activePpu->regP;
         activePpu->regP   = activePpu->mem[activePpu->regP] & Mask12;
         }
@@ -1776,32 +1762,32 @@ static void ppOpAJM(void)     // 64
     location  = activePpu->mem[activePpu->regP] & Mask12;
     PpIncrement(activePpu->regP);
 
-    if (((opD & 040) != 0)
+    if (((activePpu->opD & 040) != 0)
         && ((features & HasChannelFlag) != 0))
         {
         /*
         **  SCF.
         */
-        opD &= 037;
-        if (opD < channelCount)
+        activePpu->opD &= 037;
+        if (activePpu->opD < channelCount)
             {
-            if (channel[opD].flag)
+            if (channel[activePpu->opD].flag)
                 {
                 activePpu->regP = location;
                 }
             else
                 {
-                channel[opD].flag = TRUE;
+                channel[activePpu->opD].flag = TRUE;
                 }
             }
 
         return;
         }
 
-    opD &= 037;
-    if (opD < channelCount)
+    activePpu->opD &= 037;
+    if (activePpu->opD < channelCount)
         {
-        activeChannel = channel + opD;
+        activeChannel = channel + activePpu->opD;
         channelCheckIfActive();
         if (activeChannel->active)
             {
@@ -1815,29 +1801,29 @@ static void ppOpIJM(void)     // 65
     location  = activePpu->mem[activePpu->regP] & Mask12;
     PpIncrement(activePpu->regP);
 
-    if (((opD & 040) != 0)
+    if (((activePpu->opD & 040) != 0)
         && ((features & HasChannelFlag) != 0))
         {
         /*
         **  CCF.
         */
-        opD &= 037;
-        if (opD < channelCount)
+        activePpu->opD &= 037;
+        if (activePpu->opD < channelCount)
             {
-            channel[opD].flag = FALSE;
+            channel[activePpu->opD].flag = FALSE;
             }
 
         return;
         }
 
-    opD &= 037;
-    if (opD >= channelCount)
+    activePpu->opD &= 037;
+    if (activePpu->opD >= channelCount)
         {
         activePpu->regP = location;
         }
     else
         {
-        activeChannel = channel + opD;
+        activeChannel = channel + activePpu->opD;
         channelCheckIfActive();
         if (!activeChannel->active)
             {
@@ -1851,7 +1837,7 @@ static void ppOpFJM(void)     // 66
     location  = activePpu->mem[activePpu->regP] & Mask12;
     PpIncrement(activePpu->regP);
 
-    if (((opD & 040) != 0)
+    if (((activePpu->opD & 040) != 0)
         && ((features & HasErrorFlag) != 0))
         {
         /*
@@ -1860,10 +1846,10 @@ static void ppOpFJM(void)     // 66
         return;
         }
 
-    opD &= 037;
-    if (opD < channelCount)
+    activePpu->opD &= 037;
+    if (activePpu->opD < channelCount)
         {
-        activeChannel = channel + opD;
+        activeChannel = channel + activePpu->opD;
         channelIo();
         channelCheckIfFull();
         if (activeChannel->full)
@@ -1878,14 +1864,14 @@ static void ppOpEJM(void)     // 67
     location  = activePpu->mem[activePpu->regP] & Mask12;
     PpIncrement(activePpu->regP);
 
-    if (((opD & 040) != 0)
+    if (((activePpu->opD & 040) != 0)
         && ((features & HasErrorFlag) != 0))
         {
         /*
         **  CFM - we never have errors, so we always jump.
         */
-        opD &= 037;
-        if (opD < channelCount)
+        activePpu->opD &= 037;
+        if (activePpu->opD < channelCount)
             {
             activePpu->regP = location;
             }
@@ -1893,14 +1879,14 @@ static void ppOpEJM(void)     // 67
         return;
         }
 
-    opD &= 037;
-    if (opD >= channelCount)
+    activePpu->opD &= 037;
+    if (activePpu->opD >= channelCount)
         {
         activePpu->regP = location;
         }
     else
         {
-        activeChannel = channel + opD;
+        activeChannel = channel + activePpu->opD;
         channelIo();
         channelCheckIfFull();
         if (!activeChannel->full)
@@ -1914,8 +1900,6 @@ static void ppOpIAN(void)     // 70
     {
     if (!activePpu->busy)
         {
-        activePpu->opF             = opF;
-        activePpu->opD             = opD;
         activeChannel->delayStatus = 0;
         }
 
@@ -1977,9 +1961,6 @@ static void ppOpIAM(void)     // 71
     {
     if (!activePpu->busy)
         {
-        activePpu->opF = opF;
-        activePpu->opD = opD;
-
         activeChannel   = channel + (activePpu->opD & 037);
         activePpu->busy = TRUE;
 
@@ -2076,8 +2057,6 @@ static void ppOpOAN(void)     // 72
     {
     if (!activePpu->busy)
         {
-        activePpu->opF             = opF;
-        activePpu->opD             = opD;
         activeChannel->delayStatus = 0;
         }
 
@@ -2122,9 +2101,6 @@ static void ppOpOAM(void)     // 73
     {
     if (!activePpu->busy)
         {
-        activePpu->opF = opF;
-        activePpu->opD = opD;
-
         activeChannel   = channel + (activePpu->opD & 037);
         activePpu->busy = TRUE;
 
@@ -2197,12 +2173,6 @@ static void ppOpOAM(void)     // 73
 
 static void ppOpACN(void)     // 74
     {
-    if (!activePpu->busy)
-        {
-        activePpu->opF = opF;
-        activePpu->opD = opD;
-        }
-
     noHang        = (activePpu->opD & 040) != 0;
     activeChannel = channel + (activePpu->opD & 037);
 
@@ -2223,12 +2193,6 @@ static void ppOpACN(void)     // 74
 
 static void ppOpDCN(void)     // 75
     {
-    if (!activePpu->busy)
-        {
-        activePpu->opF = opF;
-        activePpu->opD = opD;
-        }
-
     noHang        = (activePpu->opD & 040) != 0;
     activeChannel = channel + (activePpu->opD & 037);
 
@@ -2267,12 +2231,6 @@ static void ppOpDCN(void)     // 75
 
 static void ppOpFAN(void)     // 76
     {
-    if (!activePpu->busy)
-        {
-        activePpu->opF = opF;
-        activePpu->opD = opD;
-        }
-
     noHang        = (activePpu->opD & 040) != 0;
     activeChannel = channel + (activePpu->opD & 037);
 
@@ -2307,12 +2265,6 @@ static void ppOpFAN(void)     // 76
 
 static void ppOpFNC(void)     // 77
     {
-    if (!activePpu->busy)
-        {
-        activePpu->opF = opF;
-        activePpu->opD = opD;
-        }
-
     noHang        = (activePpu->opD & 040) != 0;
     activeChannel = channel + (activePpu->opD & 037);
 
@@ -2364,16 +2316,16 @@ static void ppOpRDSL(void)    // 1000
         }
     else
         {
-        ppData = (((CpWord)activePpu->mem[opD]) << 48)
-               | (((CpWord)activePpu->mem[opD + 1]) << 32)
-               | (((CpWord)activePpu->mem[opD + 2]) << 16)
-               | ((CpWord)activePpu->mem[opD + 3]);
+        ppData = (((CpWord)activePpu->mem[activePpu->opD]) << 48)
+               | (((CpWord)activePpu->mem[activePpu->opD + 1]) << 32)
+               | (((CpWord)activePpu->mem[activePpu->opD + 2]) << 16)
+               | ((CpWord)activePpu->mem[activePpu->opD + 3]);
         cpuAcquireMemoryMutex();
         cpu180PpReadMem(address, &cmData);
-        activePpu->mem[opD] = (PpWord)((cmData >> 48) & Mask16);
-        activePpu->mem[opD + 1] = (PpWord)((cmData >> 32) & Mask16);
-        activePpu->mem[opD + 2] = (PpWord)((cmData >> 16) & Mask16);
-        activePpu->mem[opD + 3] = (PpWord)((cmData) & Mask16);
+        activePpu->mem[activePpu->opD]     = (PpWord)((cmData >> 48) & Mask16);
+        activePpu->mem[activePpu->opD + 1] = (PpWord)((cmData >> 32) & Mask16);
+        activePpu->mem[activePpu->opD + 2] = (PpWord)((cmData >> 16) & Mask16);
+        activePpu->mem[activePpu->opD + 3] = (PpWord)((cmData) & Mask16);
         cpu180PpWriteMem(address, cmData | ppData);
         cpuReleaseMemoryMutex();
 
@@ -2407,16 +2359,16 @@ static void ppOpRDCL(void)    // 1001
         }
     else
         {
-        ppData = (((CpWord)activePpu->mem[opD] & Mask12) << 48)
-               | (((CpWord)activePpu->mem[opD + 1] & Mask12) << 32)
-               | (((CpWord)activePpu->mem[opD + 2] & Mask12) << 16)
-               | ((CpWord)activePpu->mem[opD + 3] & Mask12);
+        ppData = (((CpWord)activePpu->mem[activePpu->opD] & Mask12) << 48)
+               | (((CpWord)activePpu->mem[activePpu->opD + 1] & Mask12) << 32)
+               | (((CpWord)activePpu->mem[activePpu->opD + 2] & Mask12) << 16)
+               | ((CpWord)activePpu->mem[activePpu->opD + 3] & Mask12);
         cpuAcquireMemoryMutex();
         cpu180PpReadMem(address, &cmData);
-        activePpu->mem[opD] = (PpWord)((cmData >> 48) & Mask16);
-        activePpu->mem[opD + 1] = (PpWord)((cmData >> 32) & Mask16);
-        activePpu->mem[opD + 2] = (PpWord)((cmData >> 16) & Mask16);
-        activePpu->mem[opD + 3] = (PpWord)((cmData) & Mask16);
+        activePpu->mem[activePpu->opD]     = (PpWord)((cmData >> 48) & Mask16);
+        activePpu->mem[activePpu->opD + 1] = (PpWord)((cmData >> 32) & Mask16);
+        activePpu->mem[activePpu->opD + 2] = (PpWord)((cmData >> 16) & Mask16);
+        activePpu->mem[activePpu->opD + 3] = (PpWord)((cmData) & Mask16);
         cpu180PpWriteMem(address, cmData & ppData);
         cpuReleaseMemoryMutex();
 
@@ -2428,12 +2380,12 @@ static void ppOpRDCL(void)    // 1001
 
 static void ppOpLPDL(void)    // 1022
     {
-    activePpu->regA &= activePpu->mem[opD] & Mask16;
+    activePpu->regA &= activePpu->mem[activePpu->opD] & Mask16;
     }
 
 static void ppOpLPIL(void)    // 1023
     {
-    location         = activePpu->mem[opD] & Mask12;
+    location         = activePpu->mem[activePpu->opD] & Mask12;
     activePpu->regA &= activePpu->mem[location] & Mask16;
     }
 
@@ -2455,94 +2407,94 @@ static void ppOpINPN(void)    // 1026
 
 static void ppOpLDDL(void)    // 1030
     {
-    activePpu->regA = activePpu->mem[opD] & Mask16;
+    activePpu->regA = activePpu->mem[activePpu->opD] & Mask16;
     }
 
 static void ppOpADDL(void)    // 1031
     {
-    activePpu->regA = ppAdd18(activePpu->regA, activePpu->mem[opD] & Mask16);
+    activePpu->regA = ppAdd18(activePpu->regA, activePpu->mem[activePpu->opD] & Mask16);
     }
 
 static void ppOpSBDL(void)    // 1032
     {
-    activePpu->regA = ppSubtract18(activePpu->regA, activePpu->mem[opD] & Mask16);
+    activePpu->regA = ppSubtract18(activePpu->regA, activePpu->mem[activePpu->opD] & Mask16);
     }
 
 static void ppOpLMDL(void)    // 1033
     {
-    activePpu->regA ^= activePpu->mem[opD] & Mask16;
+    activePpu->regA ^= activePpu->mem[activePpu->opD] & Mask16;
     }
 
 static void ppOpSTDL(void)    // 1034
     {
-    activePpu->mem[opD] = (PpWord)activePpu->regA & Mask16;
+    activePpu->mem[activePpu->opD] = (PpWord)activePpu->regA & Mask16;
     }
 
 static void ppOpRADL(void)    // 1035
     {
-    activePpu->regA     = ppAdd18(activePpu->regA, activePpu->mem[opD] & Mask16);
-    activePpu->mem[opD] = (PpWord)activePpu->regA & Mask16;
+    activePpu->regA                = ppAdd18(activePpu->regA, activePpu->mem[activePpu->opD] & Mask16);
+    activePpu->mem[activePpu->opD] = (PpWord)activePpu->regA & Mask16;
     }
 
 static void ppOpAODL(void)    // 1036
     {
-    activePpu->regA     = ppAdd18(activePpu->mem[opD] & Mask16, 1);
-    activePpu->mem[opD] = (PpWord)activePpu->regA & Mask16;
+    activePpu->regA                = ppAdd18(activePpu->mem[activePpu->opD] & Mask16, 1);
+    activePpu->mem[activePpu->opD] = (PpWord)activePpu->regA & Mask16;
     }
 
 static void ppOpSODL(void)    // 1037
     {
-    activePpu->regA     = ppSubtract18(activePpu->mem[opD] & Mask16, 1);
-    activePpu->mem[opD] = (PpWord)activePpu->regA & Mask16;
+    activePpu->regA                = ppSubtract18(activePpu->mem[activePpu->opD] & Mask16, 1);
+    activePpu->mem[activePpu->opD] = (PpWord)activePpu->regA & Mask16;
     }
 
 static void ppOpLDIL(void)    // 1040
     {
-    location        = activePpu->mem[opD] & Mask12;
+    location        = activePpu->mem[activePpu->opD] & Mask12;
     activePpu->regA = activePpu->mem[location] & Mask16;
     }
 
 static void ppOpADIL(void)    // 1041
     {
-    location        = activePpu->mem[opD] & Mask12;
+    location        = activePpu->mem[activePpu->opD] & Mask12;
     activePpu->regA = ppAdd18(activePpu->regA, activePpu->mem[location] & Mask16);
     }
 
 static void ppOpSBIL(void)    // 1042
     {
-    location        = activePpu->mem[opD] & Mask12;
+    location        = activePpu->mem[activePpu->opD] & Mask12;
     activePpu->regA = ppSubtract18(activePpu->regA, activePpu->mem[location] & Mask16);
     }
 
 static void ppOpLMIL(void)    // 1043
     {
-    location         = activePpu->mem[opD] & Mask12;
+    location         = activePpu->mem[activePpu->opD] & Mask12;
     activePpu->regA ^= activePpu->mem[location] & Mask16;
     }
 
 static void ppOpSTIL(void)    // 1044
     {
-    location = activePpu->mem[opD] & Mask12;
+    location = activePpu->mem[activePpu->opD] & Mask12;
     activePpu->mem[location] = (PpWord)activePpu->regA & Mask16;
     }
 
 static void ppOpRAIL(void)    // 1045
     {
-    location                 = activePpu->mem[opD] & Mask12;
+    location                 = activePpu->mem[activePpu->opD] & Mask12;
     activePpu->regA          = ppAdd18(activePpu->regA, activePpu->mem[location] & Mask16);
     activePpu->mem[location] = (PpWord)activePpu->regA & Mask16;
     }
 
 static void ppOpAOIL(void)    // 1046
     {
-    location                 = activePpu->mem[opD] & Mask12;
+    location                 = activePpu->mem[activePpu->opD] & Mask12;
     activePpu->regA          = ppAdd18(activePpu->mem[location] & Mask16, 1);
     activePpu->mem[location] = (PpWord)activePpu->regA & Mask16;
     }
 
 static void ppOpSOIL(void)    // 1047
     {
-    location                 = activePpu->mem[opD] & Mask12;
+    location                 = activePpu->mem[activePpu->opD] & Mask12;
     activePpu->regA          = ppSubtract18(activePpu->mem[location] & Mask16, 1);
     activePpu->mem[location] = (PpWord)activePpu->regA & Mask16;
     }
@@ -2612,10 +2564,10 @@ static void ppOpCRDL(void)    // 1060
         address = activePpu->regA & Mask18;
         }
     cpu180PpReadMem(address, &data);
-    activePpu->mem[opD] = (PpWord)((data >> 48) & Mask16);
-    activePpu->mem[opD + 1] = (PpWord)((data >> 32) & Mask16);
-    activePpu->mem[opD + 2] = (PpWord)((data >> 16) & Mask16);
-    activePpu->mem[opD + 3] = (PpWord)((data) & Mask16);
+    activePpu->mem[activePpu->opD]     = (PpWord)((data >> 48) & Mask16);
+    activePpu->mem[activePpu->opD + 1] = (PpWord)((data >> 32) & Mask16);
+    activePpu->mem[activePpu->opD + 2] = (PpWord)((data >> 16) & Mask16);
+    activePpu->mem[activePpu->opD + 3] = (PpWord)((data) & Mask16);
 
 #if CcDebug == 1
     traceCmWord64(data);
@@ -2629,11 +2581,8 @@ static void ppOpCRML(void)    // 1061
 
     if (!activePpu->busy)
         {
-        activePpu->opF  = opF;
-        activePpu->regQ = activePpu->mem[opD] & Mask12;
-
-        activePpu->busy = TRUE;
-
+        activePpu->regQ   = activePpu->mem[activePpu->opD] & Mask12;
+        activePpu->busy   = TRUE;
         activePpu->mem[0] = activePpu->regP;
         activePpu->regP   = activePpu->mem[activePpu->regP] & Mask12;
         }
@@ -2697,10 +2646,10 @@ static void ppOpCWDL(void)    // 1062
         }
     else
         {
-        data = ((CpWord)(activePpu->mem[opD] & Mask16) << 48)
-             | ((CpWord)(activePpu->mem[opD + 1] & Mask16) << 32)
-             | ((CpWord)(activePpu->mem[opD + 2] & Mask16) << 16)
-             | (CpWord)(activePpu->mem[opD + 3] & Mask16);
+        data = ((CpWord)(activePpu->mem[activePpu->opD] & Mask16) << 48)
+             | ((CpWord)(activePpu->mem[activePpu->opD + 1] & Mask16) << 32)
+             | ((CpWord)(activePpu->mem[activePpu->opD + 2] & Mask16) << 16)
+             | (CpWord)(activePpu->mem[activePpu->opD + 3] & Mask16);
         cpu180PpWriteMem(address, data);
 
 #if CcDebug == 1
@@ -2716,11 +2665,8 @@ static void ppOpCWML(void)    // 1063
 
     if (!activePpu->busy)
         {
-        activePpu->opF  = opF;
-        activePpu->regQ = activePpu->mem[opD] & Mask12;
-
-        activePpu->busy = TRUE;
-
+        activePpu->regQ   = activePpu->mem[activePpu->opD] & Mask12;
+        activePpu->busy   = TRUE;
         activePpu->mem[0] = activePpu->regP;
         activePpu->regP   = activePpu->mem[activePpu->regP] & Mask12;
         }
@@ -2780,10 +2726,10 @@ static void ppOpFSJM(void)    // 1064
     location  = activePpu->mem[activePpu->regP] & Mask12;
     PpIncrement(activePpu->regP);
 
-    opD &= 037;
-    if (opD < channelCount)
+    activePpu->opD &= 037;
+    if (activePpu->opD < channelCount)
         {
-        if (channel[opD].flag)
+        if (channel[activePpu->opD].flag)
             {
             activePpu->regP = location;
             }
@@ -2795,10 +2741,10 @@ static void ppOpFCJM(void)    // 1065
     location  = activePpu->mem[activePpu->regP] & Mask12;
     PpIncrement(activePpu->regP);
 
-    opD &= 037;
-    if (opD < channelCount)
+    activePpu->opD &= 037;
+    if (activePpu->opD < channelCount)
         {
-        if (channel[opD].flag == FALSE)
+        if (channel[activePpu->opD].flag == FALSE)
             {
             activePpu->regP = location;
             }
@@ -2822,8 +2768,6 @@ static void ppOpIAPM(void)    // 1071
     activeChannel = channel + (activePpu->opD & 037);
     if (!activePpu->busy)
         {
-        activePpu->opF             = opF;
-        activePpu->opD             = opD;
         activePpu->busy            = TRUE;
         activePpu->mem[0]          = activePpu->regP;
         activePpu->regP            = activePpu->mem[activePpu->regP] & Mask12;
@@ -2919,9 +2863,6 @@ static void ppOpOAPM(void)    // 1073
     {
     if (!activePpu->busy)
         {
-        activePpu->opF = opF;
-        activePpu->opD = opD;
-
         activeChannel   = channel + (activePpu->opD & 037);
         activePpu->busy = TRUE;
 
