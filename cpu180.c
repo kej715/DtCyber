@@ -2209,12 +2209,12 @@ void cpu180Store170Xp(Cpu180Context *ctx180, u32 xpa)
 **  Purpose:        Update system and process interval timers.
 **
 **  Parameters:     Name        Description.
-**                  delta       number of usecs by which decrement timers
+**                  delta       number of usecs by which to update timers
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void cpu180UpdateIntervalTimers(u64 delta)
+void cpu180UpdateIntervalTimers(u32 delta)
     {
     Cpu180Context *ctx;
     int           i;

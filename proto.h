@@ -136,7 +136,7 @@ void cpu180SetMonitorCondition(Cpu180Context *ctx, MonitorCondition cond);
 void cpu180SetUserCondition(Cpu180Context *ctx, UserCondition cond);
 void cpu180Step(Cpu180Context *activeCpu);
 void cpu180Store170Xp(Cpu180Context *ctx, u32 xpa);
-void cpu180UpdateIntervalTimers(u64 delta);
+void cpu180UpdateIntervalTimers(u32 delta);
 void cpu180UpdatePageSize(Cpu180Context *ctx);
 
 /*
@@ -605,7 +605,7 @@ extern PpSlot              *ppu;
 extern u8                  ppuCount;
 extern u32                 readerScanSecs;
 extern u32                 rtcClock;
-extern u64                 rtcClockDelta;
+extern u32                 rtcClockDelta;
 extern bool                rtcClockIsCurrent;
 extern long                scaleX;                          // Console
 extern long                scaleY;                          // Console

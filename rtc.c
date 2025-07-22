@@ -79,7 +79,7 @@ static u64 rtcGetTick(void);
 **  ----------------
 */
 u32  rtcClock          = 0;
-u64  rtcClockDelta     = 0;
+u32  rtcClockDelta     = 0;
 bool rtcClockIsCurrent = TRUE;
 
 
@@ -226,67 +226,6 @@ double rtcStopTimer(void)
 **
 **------------------------------------------------------------------------*/
 
-#if defined(_WIN32)
-
-#define MaxMicroseconds    400.0L
-
-void rtcReadUsCounter(void)
-    {
-    static bool   first               = TRUE;
-    static u64    old                 = 0;
-    static double fraction            = 0.0L;
-    static double delayedMicroseconds = 0.0L;
-    u64           new;
-    double        microseconds;
-    double        result;
-
-    if (rtcIncrement != 0)
-        {
-        return;
-        }
-
-    if (first)
-        {
-        first = FALSE;
-        old   = rtcGetTick();
-        }
-
-    new = rtcGetTick();
-
-    if ((i64)new < (i64)old)
-        {
-        /* Ignore ticks if they go backward */
-        old = new;
-
-        return;
-        }
-
-    rtcClockDelta = new - old;
-    old           = new;
-
-    microseconds        = (double)(i64)rtcClockDelta / MHz;
-    microseconds       += fraction + delayedMicroseconds;
-    delayedMicroseconds = 0.0;
-
-    if (microseconds > MaxMicroseconds)
-        {
-        delayedMicroseconds = microseconds - MaxMicroseconds;
-        microseconds        = MaxMicroseconds;
-        rtcClockIsCurrent   = FALSE;
-        }
-    else
-        {
-        rtcClockIsCurrent   = TRUE;
-        }
-
-    result   = floor(microseconds);
-    fraction = microseconds - result;
-
-    rtcClock += (u32)result;
-    }
-
-#else
-
 #define MaxMicroseconds    1000
 
 void rtcReadUsCounter(void)
@@ -328,8 +267,6 @@ void rtcReadUsCounter(void)
     old      += rtcClockDelta;
     rtcClock += (u32)rtcClockDelta;
     }
-
-#endif
 
 /*
  **--------------------------------------------------------------------------
@@ -428,7 +365,7 @@ static u64 rtcGetTick(void)
 
     QueryPerformanceCounter(&ctr);
 
-    return (ctr.QuadPart);
+    return (u64)floor((double)(i64)ctr.QuadPart / MHz);
     }
 
 #elif defined(__GNUC__) && (defined(__linux__) || defined(__SunOS) || defined (__FreeBSD__) || defined (__APPLE__))
