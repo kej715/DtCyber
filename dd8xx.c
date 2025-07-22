@@ -1128,6 +1128,7 @@ static FcStatus dd8xxFunc(PpWord funcCode)
             switch (dp->diskType)
                 {
             case DiskType885:
+            case DiskType885Ls:
                 dp->detailedStatus[4] = (dp->cylinder >> 4) & 077;
                 dp->detailedStatus[5] = ((dp->cylinder << 8) | dp->track) & 07777;
                 dp->detailedStatus[6] = ((dp->sector << 4) | 010) & 07777;
@@ -1146,6 +1147,17 @@ static FcStatus dd8xxFunc(PpWord funcCode)
                 else
                     {
                     dp->detailedStatus[6] &= ~010;
+                    }
+                if (dp->diskType == DiskType885Ls)
+                    {
+                    if (dp->isLargeSectorMode)
+                        {
+                        dp->detailedStatus[17] |= 00010;
+                        }
+                    else
+                        {
+                        dp->detailedStatus[17] &= 07767;;
+                        }
                     }
                 break;
 
