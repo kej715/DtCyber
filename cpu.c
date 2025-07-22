@@ -908,7 +908,7 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
 #endif
             if (ecs16Kx4bitFlagRegisters[flagRegisterAddress] == 0)
                 {
-                ecs16Kx4bitFlagRegisters[flagRegisterAddress] = (volatile u8)flagWord;
+                ecs16Kx4bitFlagRegisters[flagRegisterAddress] = (u8)flagWord;
                 }
             else
                 {

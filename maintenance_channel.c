@@ -90,7 +90,6 @@ typedef enum
 **  ---------------------------
 */
 static char *mchCw2String(u8 connCode, u8 typeCode, PpWord location);
-static char *mchFn2String(u8 connCode, u8 opCode, u8 typeCode);
 static FcStatus mchFunc(PpWord funcCode);
 static MacConnType mchGetConnType(u8 connCode, u8 *cpId);
 static void mchIo(void);
@@ -98,6 +97,10 @@ static void mchActivate(void);
 static void mchDisconnect(void);
 static bool mchIsConnected(u8 connCode);
 static char *mchOp2String(u8 opCode);
+
+#if DEBUG
+static char *mchFn2String(u8 connCode, u8 opCode, u8 typeCode);
+#endif
 
 /*
 **  ----------------
@@ -584,13 +587,13 @@ static void mchIo(void)
                 switch (connType)
                     {
                 case MacConnType_IOU:
-                    ppMacWriteIou(activeChannel->data);
+                    ppMacWriteIou((u8)(activeChannel->data & Mask8));
                     break;
                 case MacConnType_CP:
-                    cpu180MacWriteCp(&cpus180[cpId], mchTypeCode, activeChannel->data);
+                    cpu180MacWriteCp(&cpus180[cpId], mchTypeCode, (u8)(activeChannel->data & Mask8));
                     break;
                 case MacConnType_CM:
-                    cpu180MacWriteCm(activeChannel->data);
+                    cpu180MacWriteCm((u8)(activeChannel->data & Mask8));
                     break;
                 default:
                     break;
@@ -850,6 +853,7 @@ static char *mchCw2String(u8 connCode, u8 typeCode, PpWord location)
     return "Unknown";
     }
 
+#if DEBUG
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert channel function to string.
 **
@@ -866,7 +870,6 @@ static char *mchFn2String(u8 connCode, u8 opCode, u8 typeCode)
     static char buf[64];
     char *object;
 
-#if DEBUG
     switch (modelType)
         {
     case ModelCyber860:
@@ -918,10 +921,10 @@ static char *mchFn2String(u8 connCode, u8 opCode, u8 typeCode)
         }
 
     sprintf(buf, "%s %s", mchOp2String(opCode), object);
-#endif
 
     return buf;
     }
+#endif
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert operation code to string.

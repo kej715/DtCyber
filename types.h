@@ -255,7 +255,7 @@ typedef struct
     u8            opK;                  /* K field (first 3 bits only) */
     u32           opAddress;            /* K field (18 bits) */
     u32           oldRegP;              /* used in interrupt/exit mode processing */
-    u32           oldOpOffset;          /* used in interrupt/exit mode processing */
+    u8            oldOpOffset;          /* used in interrupt/exit mode processing */
     bool          floatException;       /* TRUE if CPU detected float exception */
 
     /*

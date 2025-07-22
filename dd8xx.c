@@ -1251,8 +1251,8 @@ static FcStatus dd8xxFunc(PpWord funcCode)
         driveAddress[0] = activeDevice->status;
         if (dp != NULL)
             {
-            driveAddress[1] = dp->cylinder;
-            driveAddress[2] = dp->size.maxSectors >> 1;
+            driveAddress[1] = (u16)dp->cylinder;
+            driveAddress[2] = (u16)(dp->size.maxSectors >> 1);
             }
         break;
 

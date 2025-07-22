@@ -731,7 +731,7 @@ static void tpMuxGetTimestamp(void)
 
     GetLocalTime(&dt);
     outBuf[0] = 0;
-    outBuf[1] = ((((dt.wYear % 10) / 10) << 4) | (dt.wYear % 10);
+    outBuf[1] = (((dt.wYear % 100) / 10) << 4) | (dt.wYear % 10);
     outBuf[2] = ((dt.wMonth / 10) << 4) | (dt.wMonth % 10);
     outBuf[3] = ((dt.wDay / 10) << 4) | (dt.wDay % 10);
     outBuf[4] = ((dt.wHour / 10) << 4) | (dt.wHour % 10);

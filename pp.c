@@ -635,7 +635,7 @@ u8 ppMacReadIou(void)
         {
         if (iouRegisterBufIdx == 0)
             {
-            word  = ppMacGetIouRegister(iouRegisterAddr);
+            word  = ppMacGetIouRegister((u8)iouRegisterAddr);
             shift = 56;
             for (i = 0; i < 8; i++)
                 {
@@ -848,7 +848,7 @@ void ppMacWriteIou(u8 byte)
                 {
                 word = (word << 8) | iouRegisterBuf[i];
                 }
-            ppMacSetIouRegister(iouRegisterAddr, word);
+            ppMacSetIouRegister((u8)iouRegisterAddr, word);
             }
         }
     }

@@ -215,7 +215,7 @@ static bool cpu180IsBindingSectionRef(Cpu180Context *ctx, u64 pva);
 static bool cpu180IsValidSegment(Cpu180Context *ctx, u64 pva);
 static bool cpu180IsValidSegment(Cpu180Context *ctx, u64 pva);
 static bool cpu180MulInt64(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *product);
-static bool cpu180PushFrame(Cpu180Context *ctx, u16 at, u16 xs, u16 xt, bool isTrap, u64 *sfsa, u32 *frameSize);
+static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool isTrap, u64 *sfsa, u32 *frameSize);
 static bool cpu180PutByte(Cpu180Context *ctx, u64 pva, u8 byte);
 static bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u64 word, int count);
 static void cpu180SetRingZeroCondition(Cpu180Context *ctx, u64 pva);
@@ -1393,7 +1393,7 @@ u8 cpu180MacReadCm(void)
         {
         if (memoryRegisterBufIdx == 0)
             {
-            word  = cpu180MacGetCmRegister(memoryRegisterAddr);
+            word  = cpu180MacGetCmRegister((u8)memoryRegisterAddr);
             shift = 56;
             for (i = 0; i < 8; i++)
                 {
@@ -1492,7 +1492,7 @@ void cpu180MacSetCpLocation(Cpu180Context *ctx, u8 type, u16 location)
     switch (type)
         {
     case 0:
-        ctx->macRegisterAddr   = location;
+        ctx->macRegisterAddr   = (u8)location;
         ctx->macRegisterBufIdx = 0;
         break;
     case 3:
@@ -1532,7 +1532,7 @@ void cpu180MacSetCmRegister(u8 reg, u64 word)
         memoryBounds = word;
         break;
     case MemElementId:
-        memoryEid = word;
+        memoryEid = (u32)word;
         break;
     case MemEnvControl:
         memoryEnvControl = word;
@@ -1565,13 +1565,13 @@ void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
     default:
         break;
     case RegBaseConstant:
-        ctx->regBc = word;
+        ctx->regBc = (u32)word;
         break;
     case RegCtrlStoreAddr:
-        ctx->controlStoreIdx = word << 4; // 16 bytes per control store address
+        ctx->controlStoreIdx = (u32)(word << 4); // 16 bytes per control store address
         break;
     case RegCtrlStoreBreak:
-        ctx->controlStoreBreak = word;
+        ctx->controlStoreBreak = (u32)word;
         break;
     case RegDepEnvControl:
         ctx->regDec = word;
@@ -1699,7 +1699,7 @@ void cpu180MacStartCp(Cpu180Context *ctx)
         {
         if (ctx->lastCsStartAddr != csAddr)
             {
-            ctx->lastCsStartAddr = csAddr;
+            ctx->lastCsStartAddr = (u32)csAddr;
             cpu180Load180Xp(ctx, ctx->regMps >> 3);
             ctx->nextKey = ctx->key;
             ctx->nextP   = ctx->regP;
@@ -1751,7 +1751,7 @@ void cpu180MacWriteCm(u8 byte)
                 {
                 word = (word << 8) | memoryRegisterBuf[i];
                 }
-            cpu180MacSetCmRegister(memoryRegisterAddr, word);
+            cpu180MacSetCmRegister((u8)memoryRegisterAddr, word);
             }
         }
     }
@@ -1889,7 +1889,6 @@ bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *r
     u16 asid;
     u8  n;
     u32 pti;
-    u8  pm;
     u64 pte;
     u8  ring;
     u64 sde;
@@ -2656,7 +2655,7 @@ static bool cpu180GetBdpDescriptor(Cpu180Context *ctx, u64 pva, u8 aRegNum, u8 x
 
     if (cpu180GetBytes(ctx, pva, 4, AccessModeExecute, &desc))
         {
-        descriptor->rawDesc = desc;
+        descriptor->rawDesc = (u32)desc;
         descriptor->type    = (desc >> 24) & Mask4;
         descriptor->length  = (desc < 0x80000000) ? (desc >> 16) & Mask8 : ctx->regX[xRegNum] & Mask9;
         operandAddress      = desc & Mask16;
@@ -2978,7 +2977,7 @@ static bool cpu180MulInt32(Cpu180Context *ctx, u32 mltand, u32 mltier, u32 *prod
         cpu180SetUserCondition(ctx, UCR57);
         return FALSE;
         }
-    *product = prod64;
+    *product = (u32)prod64;
 
     return TRUE;
     }
@@ -3057,7 +3056,7 @@ static bool cpu180MulInt64(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *prod
 **  Returns:        TRUE if successful.
 **
 **------------------------------------------------------------------------*/
-static bool cpu180PushFrame(Cpu180Context *ctx, u16 at, u16 xs, u16 xt, bool isTrap, u64 *sfsa, u32 *frameSize)
+static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool isTrap, u64 *sfsa, u32 *frameSize)
     {
     MonitorCondition cond;
     u8               i;
@@ -3384,7 +3383,6 @@ static void cpu180Trap(Cpu180Context *ctx)
     u32              rma;
     u64              sfsa;
     u8               vmid;
-    u32              wordAddr;
 
 #if CcDebug == 1
     traceTrapPointer(ctx);
@@ -3704,7 +3702,7 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
     ringA2             = (r1 > ringA2) ? r1 : ringA2;
     i                  = 0;
     word               = cpMem[wordAddrs[i++]];
-    activeCpu->nextKey = (word >> 48);
+    activeCpu->nextKey = (u8)(word >> 48);
     activeCpu->nextP   = word & Mask48;
     ringNewP           = activeCpu->nextP & RingMask;
     word               = cpMem[wordAddrs[i++]];
@@ -3799,6 +3797,7 @@ static void cp180Op06(Cpu180Context *activeCpu)  // 06  POP        MIGDS 2-129
     u64              psap;
     u32              last;
     u64              regA;
+    u8               r;
     u64              r1;
     u64              ring;
     u64              ringA2;
@@ -3855,13 +3854,13 @@ static void cp180Op06(Cpu180Context *activeCpu)  // 06  POP        MIGDS 2-129
         {
         ring = r1;
         }
-    activeCpu->regA[2]          = ring | (regA & Mask44);
-    activeCpu->regFlags         = (activeCpu->regFlags & 0x3fff) | ((cpMem[wordAddr + 2] >> 48) & 0xc000);
-    ring                        = RingOf(activeCpu->nextP);
-    activeCpu->regTos[ring - 1] = activeCpu->regA[1];
-    if (ring > activeCpu->regLrn)
+    activeCpu->regA[2]       = ring | (regA & Mask44);
+    activeCpu->regFlags      = (activeCpu->regFlags & 0x3fff) | ((cpMem[wordAddr + 2] >> 48) & 0xc000);
+    r                        = RingOf(activeCpu->nextP);
+    activeCpu->regTos[r - 1] = activeCpu->regA[1];
+    if (r > activeCpu->regLrn)
         {
-        activeCpu->regLrn = ring;
+        activeCpu->regLrn = r;
         }
     }
 
@@ -3933,8 +3932,7 @@ static void cp180Op0E(Cpu180Context *activeCpu)  // 0E  CPYSX      MIGDS 2-146
 
 static void cp180Op0F(Cpu180Context *activeCpu)  // 0F  CPYXS      MIGDS 2-146
     {
-    u64 nextP;
-    u8  regId;
+    u8 regId;
 
     regId = activeCpu->regX[activeCpu->opJ] & Mask8;
     if (regId < 0x60) // no access
@@ -3993,7 +3991,7 @@ static void cp180Op11(Cpu180Context *activeCpu)  // 11  DECX       MIGDS 2-20
     {
     u64 sum;
 
-    if (cpu180AddInt64(activeCpu, activeCpu->regX[activeCpu->opK], -((u64)activeCpu->opJ), &sum))
+    if (cpu180AddInt64(activeCpu, activeCpu->regX[activeCpu->opK], (u64)(-(i64)activeCpu->opJ), &sum))
         {
         activeCpu->regX[activeCpu->opK] = sum;
         }
@@ -4009,7 +4007,7 @@ static void cp180Op14(Cpu180Context *activeCpu)  // 14  LBSET      MIGDS 2-136
     u8               shift;
     u32              wordAddr;
 
-    offset   = activeCpu->regX[0] >> 3;
+    offset   = (u32)(activeCpu->regX[0] >> 3);
     if (offset > 0x0fffffff)
         {
         offset |= 0xf0000000;
@@ -4052,7 +4050,6 @@ static void cp180Op17(Cpu180Context *activeCpu)  // 17  LPAGE      MIGDS 2-139
     u32 byteNum;
     u8  count;
     u32 pti;
-    u8  xp;
 
     if (cpu180GetCurrentXp(activeCpu) < 2)
         {
@@ -4168,7 +4165,7 @@ static void cp180Op21(Cpu180Context *activeCpu)  // 21  SUBR       MIGDS 2-22
     {
     u32 sum;
 
-    if (cpu180AddInt32(activeCpu, activeCpu->regX[activeCpu->opK] & Mask32, (-activeCpu->regX[activeCpu->opJ]) & Mask32, &sum))
+    if (cpu180AddInt32(activeCpu, activeCpu->regX[activeCpu->opK] & Mask32, (u32)(-(i32)(activeCpu->regX[activeCpu->opJ] & Mask32)), &sum))
         {
         activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | sum;
         }
@@ -4203,7 +4200,7 @@ static void cp180Op25(Cpu180Context *activeCpu)  // 25  SUBX       MIGDS 2-20
     {
     u64 sum;
 
-    if (cpu180AddInt64(activeCpu, activeCpu->regX[activeCpu->opK], -activeCpu->regX[activeCpu->opJ], &sum))
+    if (cpu180AddInt64(activeCpu, activeCpu->regX[activeCpu->opK], (u64)(-(i64)activeCpu->regX[activeCpu->opJ]), &sum))
         {
         activeCpu->regX[activeCpu->opK] = sum;
         }
@@ -4252,7 +4249,7 @@ static void cp180Op29(Cpu180Context *activeCpu)  // 29  DECR       MIGDS 2-22
     {
     u32 sum;
 
-    if (cpu180AddInt32(activeCpu, activeCpu->regX[activeCpu->opK] & Mask32, -((u32)activeCpu->opJ), &sum))
+    if (cpu180AddInt32(activeCpu, activeCpu->regX[activeCpu->opK] & Mask32, (u32)(-(i32)activeCpu->opJ), &sum))
         {
         activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | sum;
         }
@@ -4566,7 +4563,6 @@ static void cp180Op76(Cpu180Context *activeCpu)  // 76  MOVB       MIGDS 2-55
     {
     int count;
     u64 dPva;
-    u16 i;
     u16 n;
     u64 sPva;
     u64 word;
@@ -4659,7 +4655,6 @@ static void cp180Op77(Cpu180Context *activeCpu)  // 77  CMPB       MIGDS 2-52
     u64 diff;
     u64 dPva;
     u64 dstWord;
-    u16 i;
     u64 mask;
     u16 n;
     u16 offset;
@@ -4835,7 +4830,7 @@ static void cp180Op80(Cpu180Context *activeCpu)  // 80  LMULT      MIGDS 2-16
         }
     disp       = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffff0000 | activeCpu->opQ) << 3;
     pva        = (pva & RingSegMask) | ((pva + disp) & Mask32);
-    selector   = activeCpu->regX[activeCpu->opK];
+    selector   = (u16)activeCpu->regX[activeCpu->opK];
     as         = selector >> 12;
     xs         = (selector >> 8) & Mask4;
     at         = (selector >> 4) & Mask4;
@@ -4910,7 +4905,6 @@ static void cp180Op81(Cpu180Context *activeCpu)  // 81  SMULT      MIGDS 2-16
     u64              pva;
     u32              rma;
     u16              selector;
-    u64              word;
     u32              wordAddrs[32];
     u8               wordCount;
     u8               xs;
@@ -4924,7 +4918,7 @@ static void cp180Op81(Cpu180Context *activeCpu)  // 81  SMULT      MIGDS 2-16
         }
     disp       = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffff0000 | activeCpu->opQ) << 3;
     pva        = (pva & RingSegMask) | ((pva + disp) & Mask32);
-    selector   = activeCpu->regX[activeCpu->opK];
+    selector   = (u16)activeCpu->regX[activeCpu->opK];
     as         = selector >> 12;
     xs         = (selector >> 8) & Mask4;
     at         = (selector >> 4) & Mask4;
@@ -5099,7 +5093,7 @@ static void cp180Op88(Cpu180Context *activeCpu)  // 88  LBIT       MIGDS 2-14
     u64 pva;
     u32 q;
 
-    offset   = activeCpu->regX[0];
+    offset   = (u32)activeCpu->regX[0];
     offset >>= 3;
     if (offset > 0x0fffffff)
         {
@@ -5125,7 +5119,7 @@ static void cp180Op89(Cpu180Context *activeCpu)  // 89  SBIT       MIGDS 2-14
     u8               shift;
     u32              wordAddr;
 
-    offset   = activeCpu->regX[0];
+    offset   = (u32)activeCpu->regX[0];
     offset >>= 3;
     if (offset > 0x0fffffff)
         {
@@ -5489,7 +5483,6 @@ static void cp180Op9F(Cpu180Context *activeCpu)  // 9F  BRCR       MIGDS 2-142
 static void cp180OpA0(Cpu180Context *activeCpu)  // A0  LAI        MIGDS 2-15
     {
     u64 addr;
-    u32 disp;
     u64 pva;
     u64 r1;
     u64 r2;
@@ -5614,7 +5607,6 @@ static void cp180OpA7(Cpu180Context *activeCpu)  // A7  ADDAD      MIGDS 2-30
 
 static void cp180OpA8(Cpu180Context *activeCpu)  // A8  SHFC       MIGDS 2-33
     {
-    u64 mask;
     u64 rightBits;
     i8  shift;
 
@@ -5675,7 +5667,7 @@ static void cp180OpAC(Cpu180Context *activeCpu)  // AC  ISOM       MIGDS 2-36
     u8  length;
 
     desc = (((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask32) + activeCpu->opD) & Mask12;
-    first  = desc >> 6;
+    first  = (u8)(desc >> 6);
     length = desc & Mask6;
     if (first + length < 64)
         {
@@ -5695,7 +5687,7 @@ static void cp180OpAD(Cpu180Context *activeCpu)  // AD  ISOB       MIGDS 2-36
     u8  shift;
 
     desc = (((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask32) + activeCpu->opD) & Mask12;
-    first  = desc >> 6;
+    first  = (u8)(desc >> 6);
     length = desc & Mask6;
     if (first + length < 64)
         {
@@ -5718,7 +5710,7 @@ static void cp180OpAE(Cpu180Context *activeCpu)  // AE  INSB       MIGDS 2-36
     u8  shift;
 
     desc = (((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask32) + activeCpu->opD) & Mask12;
-    first  = desc >> 6;
+    first  = (u8)(desc >> 6);
     length = desc & Mask6;
     if (first + length < 64)
         {
@@ -5740,7 +5732,6 @@ static void cp180OpB0(Cpu180Context *activeCpu)  // B0  CALLREL    MIGDS 2-125
     u32              disp;
     u32              frameSize;
     u8               ring;
-    u32              rma;
     u64              sfsa;
     u8               xs;
     u8               xt;
@@ -5786,7 +5777,7 @@ static void cp180OpB1(Cpu180Context *activeCpu)  // B1  KEYPOINT   MIGDS 2-133
     mask = bitSelectors[activeCpu->opJ];
     if ((activeCpu->regKmr & mask) != 0 && (activeCpu->regFlags & (1 << 13)) != 0)
         {
-        XkR  = (activeCpu->opK == 0) ? 0 : activeCpu->regX[activeCpu->opK];
+        XkR  = (activeCpu->opK == 0) ? 0 : (u32)activeCpu->regX[activeCpu->opK];
         disp = (activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffff0000 | activeCpu->opQ;
         kpe  = ((cpu180FreeRunningCounter & Mask28) << 36) | ((u64)activeCpu->opJ << 32) | ((XkR + disp) & Mask32);
         if (cpu180PvaToRma(activeCpu, activeCpu->regKbp, AccessModeWrite, &rma, &cond) == FALSE)

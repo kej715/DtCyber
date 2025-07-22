@@ -801,7 +801,7 @@ void windowDisplay(HWND hWnd)
                 refreshCount++,
                 ppu[0].regP, ppu[1].regP, ppu[2].regP, ppu[3].regP, ppu[4].regP,
                 ppu[5].regP, ppu[6].regP, ppu[7].regP, ppu[8].regP, ppu[9].regP,
-                cpu.regP);
+                cpus170[0].regP);
 
         sprintf(buf + strlen(buf), "   Trace0x: %c%c%c%c%c%c%c%c%c%c%c%c %c",
                 (traceMask >> 0) & 1 ? '0' : '_',
