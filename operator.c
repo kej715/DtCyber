@@ -1826,7 +1826,7 @@ static void opCmdSetMemory(bool help, char *cmdParams)
         }
     else if (strcasecmp(memType, "EM") == 0)
         {
-        if (addr < 0 || addr >= extMaxMemory)
+        if (addr < 0 || (u32)addr >= extMaxMemory)
             {
             opDisplay("    > Invalid EM address\n");
             return;
@@ -1853,7 +1853,7 @@ static void opCmdSetMemory(bool help, char *cmdParams)
                 return;
                 }
             }
-        ppu[ppNum].mem[addr] = value;;
+        ppu[ppNum].mem[addr] = (PpWord)value;
         }
     else
         {
