@@ -1804,11 +1804,11 @@ static void opCmdSetMemory(bool help, char *cmdParams)
         }
     if (*cp == '0' && *(cp + 1) == 'x')
         {
-        n = sscanf(cp + 2, "%lx", &value);
+        n = sscanf(cp + 2, FMT64_016x, &value);
         }
     else
         {
-        n = sscanf(cp, "%lo", &value);
+        n = sscanf(cp, FMT64_022o, &value);
         }
     if (n != 1)
         {
@@ -1817,7 +1817,7 @@ static void opCmdSetMemory(bool help, char *cmdParams)
         }
     if (strcasecmp(memType, "CM") == 0)
         {
-        if (addr < 0 || addr >= cpuMaxMemory)
+        if (addr < 0 || (u32)addr >= cpuMaxMemory)
             {
             opDisplay("    > Invalid CM address\n");
             return;
@@ -3227,7 +3227,7 @@ static void opCmdShowStateCp180(Cpu180Context *cpu)
         opDisplay(opOutBuf);
         }
     opDisplay("\n");
-    sprintf(opOutBuf, "    >  MDW %016lx  \n", cpu->regMdw);
+    sprintf(opOutBuf, "    >  MDW " FMT64_016x "  \n", cpu->regMdw);
     opDisplay(opOutBuf);
     opDisplay("\n");
     sprintf(opOutBuf, "    > Monitor Mode %d\n", cpu->isMonitorMode ? 1 : 0);
