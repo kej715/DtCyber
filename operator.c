@@ -178,6 +178,9 @@ static void opHelpSetKeyInterval(void);
 static void opCmdSetKeyWaitInterval(bool help, char *cmdParams);
 static void opHelpSetKeyWaitInterval(void);
 
+static void opCmdSetMemory(bool help, char *cmdParams);
+static void opHelpSetMemory(void);
+
 static void opCmdSetOperatorPort(bool help, char *cmdParams);
 static void opHelpSetOperatorPort(void);
 
@@ -195,6 +198,8 @@ static void opHelpShowNetwork(void);
 
 static void opCmdShowState(bool help, char *cmdParams);
 static void opCmdShowStateCP(u8 cpMask);
+static void opCmdShowStateCp170(Cpu170Context *cpu);
+static void opCmdShowStateCp180(Cpu180Context *cpu);
 static void opCmdShowStatePP(u32 ppMask);
 static void opHelpShowState(void);
 
@@ -257,6 +262,8 @@ static OpCmd decode[] =
     "se",                    opCmdShowEquipment,
     "ski",                   opCmdSetKeyInterval,
     "skwi",                  opCmdSetKeyWaitInterval,
+    "s",                     opCmdSetMemory,
+    "sm",                    opCmdSetMemory,
     "sn",                    opCmdShowNetwork,
     "sop",                   opCmdSetOperatorPort,
     "ss",                    opCmdShowState,
@@ -279,6 +286,7 @@ static OpCmd decode[] =
     "remove_paper",          opCmdRemovePaper,
     "set_key_interval",      opCmdSetKeyInterval,
     "set_key_wait_interval", opCmdSetKeyWaitInterval,
+    "set_memory",            opCmdSetMemory,
     "set_operator_port",     opCmdSetOperatorPort,
     "show_all",              opCmdShowAll,
     "show_disk",             opCmdShowDisk,
@@ -292,6 +300,7 @@ static OpCmd decode[] =
     "stop_helpers",          opCmdStopHelpers,
     "unload_disk",           opCmdUnloadDisk,
     "unload_tape",           opCmdUnloadTape,
+    "version",               opCmdShowVersion,
     "?",                     opCmdHelp,
     "help",                  opCmdHelp,
     "??",                    opCmdHelpAll,
@@ -1255,27 +1264,39 @@ static void opCmdDumpMemory(bool help, char *cmdParams)
         return;
         }
 
-    cp = memType = cmdParams;
-    while (*cp != '\0' && *cp != ',')
-        {
-        ++cp;
-        }
-    if (*cp != ',')
+    memType = strtok(cmdParams, ", ");
+    if (memType == NULL)
         {
         opDisplay("    > Not enough parameters\n");
-
         return;
         }
-    *cp++    = '\0';
-    numParam = sscanf(cp, "%o,%d", &fwa, &count);
-    if (numParam == 1)
+    cp = strtok(NULL, ", ");
+    if (cp == NULL)
+        {
+        opDisplay("    > Not enough parameters\n");
+        return;
+        }
+    if (*cp == '0' && *(cp + 1) == 'x')
+        {
+        numParam = sscanf(cp + 2, "%x", &fwa);
+        }
+    else
+        {
+        numParam = sscanf(cp, "%o", &fwa);
+        }
+    if (numParam != 1)
+        {
+        opDisplay("    > Invalid address\n");
+        return;
+        }
+    cp = strtok(NULL, " ");
+    if (cp == NULL)
         {
         count = 1;
         }
-    else if (numParam != 2)
+    else if (sscanf(cp, "%u", &count) != 1)
         {
-        opDisplay("    > Not enough or invalid parameters\n");
-
+        opDisplay("    > Invalid word count\n");
         return;
         }
     if (strcasecmp(memType, "CM") == 0)
@@ -1303,7 +1324,8 @@ static void opCmdDumpMemory(bool help, char *cmdParams)
 
 static void opCmdDumpCM(int fwa, int count)
     {
-    char   buf[60];
+    char   buf[120];
+    char   c;
     char   *cp;
     int    limit;
     int    n;
@@ -1319,11 +1341,22 @@ static void opCmdDumpCM(int fwa, int count)
     for (limit = fwa + count; fwa < limit; fwa++)
         {
         word = cpMem[fwa];
-        n    = sprintf(buf, "    > %08o " FMT60_020o " ", fwa, word);
+        n    = sprintf(buf, "    > %08o " FMT60_020o " ", fwa, word & Mask60);
         cp   = buf + n;
         for (shiftCount = 54; shiftCount >= 0; shiftCount -= 6)
             {
-            *cp++ = cdcToAscii[(word >> shiftCount) & 077];
+            *cp++ = cdcToAscii[(word >> shiftCount) & Mask6];
+            }
+        if (isCyber180)
+            {
+            strcpy(cp, "    ");
+            cp += 4;
+            cp += sprintf(cp, "    %08x " FMT64_016x " ", fwa, word);
+            for (shiftCount = 56; shiftCount >= 0; shiftCount -= 8)
+                {
+                c     = (word >> shiftCount) & Mask8;
+                *cp++ = (c >= ' ' && c < 0x7f) ? c : '.';
+                }
             }
         *cp++ = '\n';
         *cp   = '\0';
@@ -1363,7 +1396,8 @@ static void opCmdDumpEM(int fwa, int count)
 
 static void opCmdDumpPP(int ppNum, int fwa, int count)
     {
-    char   buf[20];
+    char   buf[40];
+    char   c;
     char   *cp;
     int    limit;
     int    n;
@@ -1396,10 +1430,25 @@ static void opCmdDumpPP(int ppNum, int fwa, int count)
     for (limit = fwa + count; fwa < limit; fwa++)
         {
         word  = pp->mem[fwa];
-        n     = sprintf(buf, "%04o %04o ", fwa, word);
-        cp    = buf + n;
-        *cp++ = cdcToAscii[(word >> 6) & 077];
-        *cp++ = cdcToAscii[word & 077];
+        if (isCyber180)
+            {
+            n     = sprintf(buf, "%04o %06o .", fwa, word);
+            cp    = buf + n;
+            *cp++ = cdcToAscii[(word >> 6) & Mask6];
+            *cp++ = cdcToAscii[word & Mask6];
+            cp   += sprintf(cp, "    %03x %04x ", fwa, word);
+            c     = (word >> 8) & Mask8;
+            *cp++ = (c >= ' ' && c < 0x7f) ? c : '.';
+            c     = word & Mask8;
+            *cp++ = (c >= ' ' && c < 0x7f) ? c : '.';
+            }
+        else
+            {
+            n     = sprintf(buf, "%04o %04o ", fwa, word);
+            cp    = buf + n;
+            *cp++ = cdcToAscii[(word >> 6) & 077];
+            *cp++ = cdcToAscii[word & 077];
+            }
         *cp++ = '\n';
         *cp   = '\0';
         opDisplay(buf);
@@ -1691,6 +1740,132 @@ static void opHelpSetKeyWaitInterval(void)
     opDisplay("    > 'set_keywait_interval <millisecs>' set the interval between keyboard scans of the emulated system console.\n");
     sprintf(opOutBuf, "    > [Current key wait interval is %ld msec.]\n", opKeyWaitInterval);
     opDisplay(opOutBuf);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Set CM, EM, or PP memory.
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdSetMemory(bool help, char *cmdParams)
+    {
+    int  addr;
+    char *cp;
+    char *memType;
+    int  n;
+    int  ppNum;
+    u64  value;
+
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpSetMemory();
+
+        return;
+        }
+
+    memType = strtok(cmdParams, ", ");
+    if (memType == NULL)
+        {
+        opDisplay("    > Not enough parameters\n");
+        return;
+        }
+    cp = strtok(NULL, ", ");
+    if (cp == NULL)
+        {
+        opDisplay("    > Not enough parameters\n");
+        return;
+        }
+    if (*cp == '0' && *(cp + 1) == 'x')
+        {
+        n = sscanf(cp + 2, "%x", &addr);
+        }
+    else
+        {
+        n = sscanf(cp, "%o", &addr);
+        }
+    if (n != 1)
+        {
+        opDisplay("    > Invalid address\n");
+        return;
+        }
+    cp = strtok(NULL, " ");
+    if (cp == NULL)
+        {
+        opDisplay("    > Not enough parameters\n");
+        return;
+        }
+    if (*cp == '0' && *(cp + 1) == 'x')
+        {
+        n = sscanf(cp + 2, "%lx", &value);
+        }
+    else
+        {
+        n = sscanf(cp, "%lo", &value);
+        }
+    if (n != 1)
+        {
+        opDisplay("    > Invalid memory value\n");
+        return;
+        }
+    if (strcasecmp(memType, "CM") == 0)
+        {
+        if (addr < 0 || addr >= cpuMaxMemory)
+            {
+            opDisplay("    > Invalid CM address\n");
+            return;
+            }
+        cpMem[addr] = value;
+        }
+    else if (strcasecmp(memType, "EM") == 0)
+        {
+        if (addr < 0 || addr >= extMaxMemory)
+            {
+            opDisplay("    > Invalid EM address\n");
+            return;
+            }
+        extMem[addr] = value;
+        }
+    else if (strncasecmp(memType, "PP", 2) == 0)
+        {
+        n = sscanf(memType + 2, "%o", &ppNum);
+        if (n != 1)
+            {
+            opDisplay("    > Missing or invalid PP number\n");
+            }
+        if (addr > 07777)
+            {
+            opDisplay("    > Invalid PP address\n");
+            return;
+            }
+        if (value > 07777)
+            {
+            if (!isCyber180 || value > 0xffff)
+                {
+                opDisplay("    > Invalid memory value\n");
+                return;
+                }
+            }
+        ppu[ppNum].mem[addr] = value;;
+        }
+    else
+        {
+        opDisplay("    > Invalid memory type\n");
+        }
+    }
+
+static void opHelpSetMemory(void)
+    {
+    opDisplay("    > 'set_memory CM,<addr>,<value>' set a word in central memory at address <addr> to value <value>.\n");
+    opDisplay("    > 'set_memory EM,<addr>,<value>' set a word in extended memory at address <addr> to value <value>.\n");
+    opDisplay("    > 'set_memory PP<nn>,<addr>,<value>' set a word in PP nn's memory at address <addr> to value <value>.\n");
     }
 
 /*--------------------------------------------------------------------------
@@ -2929,8 +3104,6 @@ static void opCmdShowState(bool help, char *cmdParams)
 static void opCmdShowStateCP(u8 cpMask)
     {
     u8            cpNum;
-    Cpu170Context *cpu;
-    int           i;
 
     cpMask |= (1 << 2); // stopper
     cpNum   = 0;
@@ -2954,41 +3127,114 @@ static void opCmdShowStateCP(u8 cpMask)
             {
             opDisplay("    > ---------------- CPU ---------------\n");
             }
-        cpu = cpus170 + cpNum;
-        i   = 0;
-        sprintf(opOutBuf, "    > P       %06o  A%d %06o  B%d %06o\n", cpu->regP, i, cpu->regA[i], i, cpu->regB[i]);
-        opDisplay(opOutBuf);
-        i++;
-        sprintf(opOutBuf, "    > RA    %08o  A%d %06o  B%d %06o\n", cpu->regRaCm, i, cpu->regA[i], i, cpu->regB[i]);
-        opDisplay(opOutBuf);
-        i++;
-        sprintf(opOutBuf, "    > FL    %08o  A%d %06o  B%d %06o\n", cpu->regFlCm, i, cpu->regA[i], i, cpu->regB[i]);
-        opDisplay(opOutBuf);
-        i++;
-        sprintf(opOutBuf, "    > EM    %08o  A%d %06o  B%d %06o\n", cpu->exitMode, i, cpu->regA[i], i, cpu->regB[i]);
-        opDisplay(opOutBuf);
-        i++;
-        sprintf(opOutBuf, "    > RAE   %08o  A%d %06o  B%d %06o\n", cpu->regRaEcs, i, cpu->regA[i], i, cpu->regB[i]);
-        opDisplay(opOutBuf);
-        i++;
-        sprintf(opOutBuf, "    > FLE %010o  A%d %06o  B%d %06o\n", cpu->regFlEcs, i, cpu->regA[i], i, cpu->regB[i]);
-        opDisplay(opOutBuf);
-        i++;
-        sprintf(opOutBuf, "    > MA    %08o  A%d %06o  B%d %06o\n", cpu->regMa, i, cpu->regA[i], i, cpu->regB[i]);
-        opDisplay(opOutBuf);
-        i++;
-        sprintf(opOutBuf, "    > MF           %d  A%d %06o  B%d %06o\n\n", cpu->isMonitorMode, i, cpu->regA[i], i, cpu->regB[i]);
-        opDisplay(opOutBuf);
-        i++;
-
-        for (i = 0; i < 8; i++)
+        if (isCyber180 && cpus180[cpNum].regVmid == 0)
             {
-            sprintf(opOutBuf, "    > X%d  " FMT60_020o "\n", i, cpu->regX[i]);
-            opDisplay(opOutBuf);
+            opCmdShowStateCp180(cpus180 + cpNum);
             }
-        opDisplay("\n");
+        else
+            {
+            opCmdShowStateCp170(cpus170 + cpNum);
+            }
         cpNum += 1;
         }
+    }
+
+static void opCmdShowStateCp170(Cpu170Context *cpu)
+    {
+    int i;
+
+    i = 0;
+    sprintf(opOutBuf, "    > P       %06o  A%d %06o  B%d %06o\n", cpu->regP, i, cpu->regA[i], i, cpu->regB[i]);
+    opDisplay(opOutBuf);
+    i++;
+    sprintf(opOutBuf, "    > RA    %08o  A%d %06o  B%d %06o\n", cpu->regRaCm, i, cpu->regA[i], i, cpu->regB[i]);
+    opDisplay(opOutBuf);
+    i++;
+    sprintf(opOutBuf, "    > FL    %08o  A%d %06o  B%d %06o\n", cpu->regFlCm, i, cpu->regA[i], i, cpu->regB[i]);
+    opDisplay(opOutBuf);
+    i++;
+    sprintf(opOutBuf, "    > EM    %08o  A%d %06o  B%d %06o\n", cpu->exitMode, i, cpu->regA[i], i, cpu->regB[i]);
+    opDisplay(opOutBuf);
+    i++;
+    sprintf(opOutBuf, "    > RAE   %08o  A%d %06o  B%d %06o\n", cpu->regRaEcs, i, cpu->regA[i], i, cpu->regB[i]);
+    opDisplay(opOutBuf);
+    i++;
+    sprintf(opOutBuf, "    > FLE %010o  A%d %06o  B%d %06o\n", cpu->regFlEcs, i, cpu->regA[i], i, cpu->regB[i]);
+    opDisplay(opOutBuf);
+    i++;
+    sprintf(opOutBuf, "    > MA    %08o  A%d %06o  B%d %06o\n", cpu->regMa, i, cpu->regA[i], i, cpu->regB[i]);
+    opDisplay(opOutBuf);
+    i++;
+    sprintf(opOutBuf, "    > Monitor Mode %d  A%d %06o  B%d %06o\n", cpu->isMonitorMode, i, cpu->regA[i], i, cpu->regB[i]);
+    opDisplay(opOutBuf);
+    sprintf(opOutBuf, "    > Stopped      %d\n\n", cpu->isStopped);
+    opDisplay(opOutBuf);
+
+    for (i = 0; i < 8; i++)
+        {
+        sprintf(opOutBuf, "    > X%d  " FMT60_020o "\n", i, cpu->regX[i]);
+        opDisplay(opOutBuf);
+        }
+    opDisplay("\n");
+    }
+
+static void opCmdShowStateCp180(Cpu180Context *cpu)
+    {
+    int i;
+
+    sprintf(opOutBuf, "    > P %02x " FMT48_012x, cpu->key, cpu->regP);
+    opDisplay(opOutBuf);
+    opDisplay("\n\n");
+    for (i = 0; i < 16; i++)
+        {
+        sprintf(opOutBuf, "    > A%X " FMT48_012x, i, cpu->regA[i]);
+        opDisplay(opOutBuf);
+        sprintf(opOutBuf,"   X%X " FMT64_016x "\n", i, cpu->regX[i]);
+        opDisplay(opOutBuf);
+        }
+    opDisplay("\n");
+    sprintf(opOutBuf, "    > VMID %04x  VMCL %04x   LPID %02x\n", cpu->regVmid, cpu->regVmcl, cpu->regLpid);
+    opDisplay(opOutBuf);
+    sprintf(opOutBuf, "    >  UMR %04x   MMR %04x  Flags %04x\n", cpu->regUmr, cpu->regMmr, cpu->regFlags);
+    opDisplay(opOutBuf);
+    sprintf(opOutBuf, "    >  UCR %04x   MCR %04x    MDF %04x\n", cpu->regUcr, cpu->regMcr, cpu->regMdf);
+    opDisplay(opOutBuf);
+    opDisplay("\n");
+    sprintf(opOutBuf, "    >  MPS %08x  SIT %08x\n", cpu->regMps, cpu->regSit);
+    opDisplay(opOutBuf);
+    sprintf(opOutBuf, "    >  JPS %08x  PIT %08x\n", cpu->regJps, cpu->regPit);
+    opDisplay(opOutBuf);
+    sprintf(opOutBuf, "    >   BC %08x\n", cpu->regBc);
+    opDisplay(opOutBuf);
+    opDisplay("\n");
+    sprintf(opOutBuf, "    >  PTA %08x  STA %08x\n", cpu->regPta, cpu->regSta);
+    opDisplay(opOutBuf);
+    sprintf(opOutBuf, "    >  PTL %02x        STL %03x\n", cpu->regPtl, cpu->regStl);
+    opDisplay(opOutBuf);
+    sprintf(opOutBuf, "    >  PSM %02x\n", cpu->regPsm);
+    opDisplay(opOutBuf);
+    opDisplay("\n");
+    sprintf(opOutBuf, "    >  UTP " FMT48_012x "  TP " FMT48_012x "\n", cpu->regUtp, cpu->regTp);
+    opDisplay(opOutBuf);
+    sprintf(opOutBuf, "    >  DLP " FMT48_012x "  DI %02x  DM %02x\n", cpu->regDlp, cpu->regDi, cpu->regDm);
+    opDisplay(opOutBuf);
+    opDisplay("\n");
+    sprintf(opOutBuf, "    >  LRN %d\n", cpu->regLrn);
+    opDisplay(opOutBuf);
+    for (i = 0; i < 15; i++)
+        {
+        sprintf(opOutBuf, "    >  TOS[%x] " FMT48_012x "\n", i + 1, cpu->regTos[i]);
+        opDisplay(opOutBuf);
+        }
+    opDisplay("\n");
+    sprintf(opOutBuf, "    >  MDW %016lx  \n", cpu->regMdw);
+    opDisplay(opOutBuf);
+    opDisplay("\n");
+    sprintf(opOutBuf, "    > Monitor Mode %d\n", cpu->isMonitorMode ? 1 : 0);
+    opDisplay(opOutBuf);
+    sprintf(opOutBuf, "    > Stopped      %d\n", cpu->isStopped ? 1 : 0);
+    opDisplay(opOutBuf);
+    opDisplay("\n");
     }
 
 static void opCmdShowStatePP(u32 ppMask)
@@ -3553,6 +3799,7 @@ static void opHelpShowVersion(void)
     {
     opDisplay("    > 'sv'           show version of dtCyber.\n");
     opDisplay("    > 'show_version'\n");
+    opDisplay("    > 'version'\n");
     }
 
 /*--------------------------------------------------------------------------
