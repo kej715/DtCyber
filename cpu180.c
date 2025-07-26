@@ -199,6 +199,8 @@ static bool cpu180AddInt64(Cpu180Context *ctx, u64 augend, u64 addend, u64 *sum)
 static void cpu180CheckExternalInterrupts(Cpu180Context *ctx);
 static void cpu180CheckMonitorConditions(Cpu180Context *ctx);
 static void cpu180CheckUserConditions(Cpu180Context *ctx);
+static bool cpu180CopyFromBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer);
+static bool cpu180CopyToBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer);
 static void cpu180Exchange(Cpu180Context *activeCpu);
 static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool ignoreValidity, u32 *pti, u8 *count);
 static ConditionAction cpu180GetActionForMonitorCondition(Cpu180Context *ctx, MonitorCondition cond);
@@ -1853,8 +1855,6 @@ void cpu180PpReadMem(u32 address, CpWord *data)
 **------------------------------------------------------------------------*/
 void cpu180PpWriteMem(u32 address, CpWord data)
     {
-/*DELETE*/ //if (address >= (0x00fca0e0 >> 3) && address < (0x00fca0e8 >> 3)) { // traceMask |= TraceCpu|TraceExchange;
-/*DELETE*/ //fprintf(stderr, "PP%02d write %016lx at %08x\n",activePpu->id,cpMem[address],address<<3); traceStack(stderr); }
     if ((features & HasNoCmWrap) != 0)
         {
         if (address < cpuMaxMemory)
@@ -1995,7 +1995,6 @@ void cpu180SetMonitorCondition(Cpu180Context *ctx, MonitorCondition cond)
     ConditionAction     action;
     ConditionActionDefn *defn;
 
-/*DELETE*/ //if (cond != MCR59) fprintf(stderr,"Set MCR %d\n",cond);
     defn         = &mcrDefns[cond];
     ctx->regMcr |= defn->bitMask;
     action       = cpu180GetActionForMonitorCondition(ctx, cond);
@@ -2064,8 +2063,6 @@ void cpu180Step(Cpu180Context *activeCpu)
 #endif
 
     cpu180CheckExternalInterrupts(activeCpu);
-/*DELETE*/ //if ((activeCpu->regMcr & 0x400) != 0 && activeCpu->pendingAction <= Stack)
-/*DELETE*/ //  fprintf(stderr,"MCR53, MCR %04x MMR %04x action %d\n",activeCpu->regMcr,activeCpu->regMmr,activeCpu->pendingAction);
 
     if (activeCpu->pendingAction != Rni)
         {
@@ -2447,6 +2444,132 @@ static void cpu180CheckUserConditions(Cpu180Context *ctx)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Copy bytes from a buffer to a specified PVA
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CPU context
+**                  pva         the PVA to which to copy bytes
+**                  count       the number of bytes to copy
+**                  buffer      pointer to the source buffer
+**
+**  Returns:        TRUE if success, FALSE if failure (e.g., page fault)
+**
+**------------------------------------------------------------------------*/
+static bool cpu180CopyFromBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
+    {
+    u8  *bp;
+    u16 i;
+    u16 n;
+    u64 word;
+
+    //
+    //  Copy bytes from to the buffer to the destination block. Optimize the copy by storing
+    //  whole words in memory.
+    //
+    bp  = buffer;
+    if ((pva & Mask3) != 0) // destination not word-aligned, so copy enough bytes to word-align it
+        {
+        n = 8 - (pva & Mask3);
+        if (n > count)
+            {
+            n = count;
+            }
+        word = 0;
+        for (i = 0; i < n; i++)
+            {
+            word = (word << 8) | *bp++;
+            }
+        if (cpu180PutBytes(ctx, pva, word, n) == FALSE)
+            {
+            return FALSE;
+            }
+        pva   += n;
+        count -= n;
+        }
+    while (count > 0) // copy a whole word at a time
+        {
+        n = (count >= 8) ? 8 : count;
+        word = 0;
+        for (i = 0; i < n; i++)
+            {
+            word = (word << 8) | *bp++;
+            }
+        if (cpu180PutBytes(ctx, pva, word, n) == FALSE)
+            {
+            return FALSE;
+            }
+        pva   += n;
+        count -= n;
+        }
+
+    return TRUE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Copy bytes from a specified PVA to a buffer
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CPU context
+**                  pva         the PVA of the first byte
+**                  count       the number of bytes to copy
+**                  buffer      pointer to the destination buffer
+**
+**  Returns:        TRUE if success, FALSE if failure (e.g., page fault)
+**
+**------------------------------------------------------------------------*/
+static bool cpu180CopyToBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
+    {
+    u8  *bp;
+    u16 n;
+    u8  shift;
+    u64 word;
+
+    //
+    //  Copy bytes of the source block to the buffer. Optimize the copy by fetching
+    //  whole words from memory.
+    //
+    bp  = buffer;
+    if ((pva & Mask3) != 0) // source not word-aligned, so copy enough bytes to word-align it
+        {
+        n = 8 - (pva & Mask3);
+        if (n > count)
+            {
+            n = count;
+            }
+        if (cpu180GetBytes(ctx, pva, n, AccessModeRead, &word) == FALSE)
+            {
+            return FALSE;
+            }
+        pva   += n;
+        count -= n;
+        shift  = (n - 1) << 3;
+        while (n-- > 0)
+            {
+            *bp++  = (u8)((word >> shift) & 0xff);
+            shift -= 8;
+            }
+        }
+    while (count > 0) // copy a whole word at a time
+        {
+        n = (count >= 8) ? 8 : count;
+        if (cpu180GetBytes(ctx, pva, n, AccessModeRead, &word) == FALSE)
+            {
+            return FALSE;
+            }
+        pva   += n;
+        count -= n;
+        shift  = (n - 1) << 3;
+        while (n-- > 0)
+            {
+            *bp++  = (u8)((word >> shift) & 0xff);
+            shift -= 8;
+            }
+        }
+
+    return TRUE;
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Perform exchange operation.
 **
 **  Parameters:     Name         Description.
@@ -2484,7 +2607,6 @@ static void cpu180Exchange(Cpu180Context *activeCpu)
         }
     else if (vmid == 1 && activeCpu->isMonitorMode) // 180 -> 170 state exchange
         {
-/*DELETE*/ //if(activeCpu->regMps == 0x00620080)traceMask|=TraceCpu|TraceExchange|TraceBlockOp|TraceCallFrame;
         activeCpu->regP = activeCpu->nextP;
         cpu180Store180Xp(activeCpu, activeCpu->regMps >> 3);
         activeCpu->isMonitorMode = FALSE;
@@ -2692,7 +2814,7 @@ static bool cpu180GetByte(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, 
     if (cpu180PvaToRma(ctx, pva, access, &rma, &cond))
         {
         word  = cpMem[rma >> 3];
-        shift = 56 - ((rma & 7) << 3);
+        shift = 56 - ((rma & Mask3) << 3);
         *byte = (word >> shift) & 0xff;
         return TRUE;
         }
@@ -2763,7 +2885,7 @@ static bool cpu180GetBytes(Cpu180Context *ctx, u64 pva, int count, Cpu180AccessM
         {
         rma      = rmas[i];
         wordAddr = rma >> 3;
-        shift    = 56 - ((rma & 7) << 3);
+        shift    = 56 - ((rma & Mask3) << 3);
         *word    = (*word << 8) | ((cpMem[wordAddr] >> shift) & Mask8);
         }
 
@@ -3156,7 +3278,7 @@ static bool cpu180PutByte(Cpu180Context *ctx, u64 pva, u8 byte)
     if (cpu180PvaToRma(ctx, pva, AccessModeWrite, &rma, &cond))
         {
         wordAddr        = rma >> 3;
-        shift           = 56 - ((rma & 7) << 3);
+        shift           = 56 - ((rma & Mask3) << 3);
         mask            = ~((u64)0xff << shift);
         cpMem[wordAddr] = (cpMem[wordAddr] & mask) | ((u64)byte << shift);
         return TRUE;
@@ -3190,7 +3312,6 @@ static bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u64 word, int count)
     u32              rmas[8];
     u8               shift;
     u32              wordAddr;
-/*DELETE*/u64 opva = pva;
 
     static u64       masks[8] =
         {
@@ -3243,14 +3364,9 @@ static bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u64 word, int count)
         {
         rma             = rmas[i++];
         wordAddr        = rma >> 3;
-        shift           = 56 - ((rma & 7) << 3);
+        shift           = 56 - ((rma & Mask3) << 3);
         mask            = ~((u64)0xff << shift);
         cpMem[wordAddr] = (cpMem[wordAddr] & mask) | (((word >> count) & Mask8) << shift);
-/*DELETE*/ if ((rma >= 0x00fca0e0 && rma < 0x00fca0e8)
-/*DELETE*/     || (opva >= 0x100c00000b60 && opva < 0x100c00000b68)) { // traceMask |= TraceCpu|TraceExchange;
-/*DELETE*/     //if (opva >= 0x100c00000b60 && opva < 0x100c00000b68) traceMask |= TraceCpu|TraceExchange|TraceBlockOp;
-/*DELETE*/ fprintf(stderr, "Store %016lx at %08x, P %012lx\n",cpMem[wordAddr],wordAddr<<3,ctx->regP);
-/*DELETE*/ traceStack(stderr); }
         count          -= 8;
         }
 
@@ -4016,7 +4132,7 @@ static void cp180Op14(Cpu180Context *activeCpu)  // 14  LBSET      MIGDS 2-136
     if (cpu180PvaToRma(activeCpu, pva, AccessModeRead | AccessModeWrite, &rma, &cond))
         {
         wordAddr         = rma >> 3;
-        shift            = (56 - ((rma & 7) << 3)) + (7 - (activeCpu->regX[0] & 7));
+        shift            = (56 - ((rma & Mask3) << 3)) + (7 - (activeCpu->regX[0] & Mask3));
         mask             = (u64)1 << shift;
         cpuAcquireMemoryMutex();
         activeCpu->regX[activeCpu->opK] = (cpMem[wordAddr] & mask) != 0 ? 1 : 0;
@@ -4125,7 +4241,7 @@ static void cp180Op1E(Cpu180Context *activeCpu)  // 1E  MARK       MIGDS 2-37
         /* F */ 1, 1, 1, 1,
         };
 
-    activeCpu->regX[activeCpu->opK] = (u64)table[activeCpu->opJ][(activeCpu->regX[1] >> 30) & Mask2] << 31;
+    activeCpu->regX[activeCpu->opK] = (u64)table[activeCpu->opJ][(activeCpu->regX[1] >> 30) & Mask2] << 63;
     }
 
 static void cp180Op1F(Cpu180Context *activeCpu)  // 1F  ENTZ/O/S   MIGDS 2-31
@@ -4650,149 +4766,62 @@ static void cp180Op76(Cpu180Context *activeCpu)  // 76  MOVB       MIGDS 2-55
 
 static void cp180Op77(Cpu180Context *activeCpu)  // 77  CMPB       MIGDS 2-52
     {
-    u8  byte;
-    int count;
-    u64 diff;
-    u64 dPva;
-    u64 dstWord;
-    u64 mask;
+    u8  *dp;
+    u16 i;
+    u8  *sp;
+    u8  dstBuf[256];
     u16 n;
     u16 offset;
     u8  result;
-    int shift;
-    u64 sPva;
-    u64 srcWord;
+    u8  srcBuf[256];
 
     if (cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP, activeCpu->opJ, 0, &activeCpu->srcDesc)
         && cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
         {
-        n = (activeCpu->dstDesc.length < activeCpu->srcDesc.length) ? activeCpu->dstDesc.length : activeCpu->srcDesc.length;
+        n = (activeCpu->dstDesc.length < activeCpu->srcDesc.length) ? activeCpu->srcDesc.length : activeCpu->dstDesc.length;
         if (n > 256)
             {
             cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
             return;
             }
-        sPva = activeCpu->srcDesc.pva;
-        dPva = activeCpu->dstDesc.pva;
-        //
-        //  Optimize the block compare by:
-        //  1. Compare enough bytes to word-align the source PVA
-        //  2. Iterate comparing 8 bytes (a whole word) per iteration
-        //
-        offset = 0;
+        if (cpu180CopyToBuf(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, srcBuf) == FALSE
+            || cpu180CopyToBuf(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, dstBuf) == FALSE)
+            {
+            return;
+            }
+        for (i = activeCpu->srcDesc.length; i < n; i++)
+            {
+            srcBuf[i] = 0x20;
+            }
+        for (i = activeCpu->dstDesc.length; i < n; i++)
+            {
+            dstBuf[i] = 0x20;
+            }
         result = 0;
-        if ((sPva & 7) != 0) // source not word-aligned, so compare enough bytes to word-align it
+        offset = 0;
+        sp     = srcBuf;
+        dp     = dstBuf;
+        for (i = 0; i < n; i++)
             {
-            count = 8 - (sPva & 7);
-            if (count > n)
+            if (*sp < *dp)
                 {
-                count = n;
+                result = 3;
+                offset = sp - srcBuf;
+                break;
                 }
-            if (cpu180GetBytes(activeCpu, sPva, count, AccessModeRead, &srcWord) == FALSE
-                || cpu180GetBytes(activeCpu, dPva, count, AccessModeRead, &dstWord) == FALSE)
+            else if (*sp > *dp)
                 {
-                return;
+                result = 1;
+                offset = sp - srcBuf;
+                break;
                 }
-            sPva += count;
-            dPva += count;
-            n    -= count;
-            if (srcWord == dstWord)
-                {
-                offset += count;
-                }
-            else
-                {
-                diff  = srcWord ^ dstWord;
-                shift = (count - 1) << 3;
-                while (shift >= 0)
-                    {
-                    mask = 0xff << shift;
-                    if ((diff & mask) != 0)
-                        {
-                        result = ((srcWord & mask) > (dstWord & mask)) ? 1 : 3;
-                        break;
-                        }
-                    shift  -= 8;
-                    offset += 1;
-                    }
-                }
+            sp += 1;
+            dp += 1;
             }
-        while (n > 0 && result == 0) // compare a word per iteration
+        if (result != 0)
             {
-            count = (n >= 8) ? 8 : n;
-            if (cpu180GetBytes(activeCpu, sPva, count, AccessModeRead, &srcWord) == FALSE
-                || cpu180GetBytes(activeCpu, dPva, count, AccessModeRead, &dstWord) == FALSE)
-                {
-                return;
-                }
-            sPva += count;
-            dPva += count;
-            n    -= count;
-            if (srcWord == dstWord)
-                {
-                offset += count;
-                }
-            else
-                {
-                diff  = srcWord ^ dstWord;
-                shift = (count - 1) << 3;
-                while (shift >= 0)
-                    {
-                    mask = 0xff << shift;
-                    if ((diff & mask) != 0)
-                        {
-                        result = ((srcWord & mask) > (dstWord & mask)) ? 1 : 3;
-                        break;
-                        }
-                    shift  -= 8;
-                    offset += 1;
-                    }
-                }
+            activeCpu->regX[0] = (activeCpu->regX[0] & LeftMask) | offset;
             }
-        if (result == 0)
-            {
-            if (activeCpu->dstDesc.length < activeCpu->srcDesc.length)
-                {
-                count = activeCpu->dstDesc.length - activeCpu->srcDesc.length;
-                while (count-- > 0)
-                    {
-                    if (cpu180GetByte(activeCpu, sPva++, AccessModeRead, &byte) == FALSE)
-                        {
-                        return;
-                        }
-                    if (byte == ' ')
-                        {
-                        offset += 1;
-                        }
-                    else
-                        {
-                        result = (byte > ' ') ? 1 : 3;
-                        break;
-                        }
-                    }
-                }
-            else if (activeCpu->dstDesc.length > activeCpu->srcDesc.length)
-                {
-                count = activeCpu->dstDesc.length - activeCpu->srcDesc.length;
-                while (count-- > 0)
-                    {
-                    if (cpu180GetByte(activeCpu, dPva++, AccessModeRead, &byte) == FALSE)
-                        {
-                        return;
-                        }
-                    if (byte == ' ')
-                        {
-                        offset += 1;
-                        }
-                    else
-                        {
-                        result = (byte < ' ') ? 1 : 3;
-                        break;
-                        }
-                    }
-                }
-            }
-        activeCpu->regX[0] = (activeCpu->regX[0] & LeftMask) | offset;
         activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | (result << 30);
         activeCpu->nextP += 8;
 
@@ -5020,10 +5049,6 @@ static void cp180Op83(Cpu180Context *activeCpu)  // 83  SX         MIGDS 2-12
     if (cpu180PvaToRma(activeCpu, pva, AccessModeWrite, &rma, &cond))
         {
         cpMem[rma >> 3] = activeCpu->regX[activeCpu->opK];
-/*DELETE*/ if ((rma >= 0x00fca0e0 && rma < 0x00fca0e8)
-/*DELETE*/     || (pva >= 0x100c00000b60 && pva < 0x100c00000b68)) { // traceMask |= TraceCpu|TraceExchange;
-/*DELETE*/ fprintf(stderr, "Store %016lx at %08x, P %012lx\n",cpMem[rma>>3],rma,activeCpu->regP);
-/*DELETE*/ traceStack(stderr); }
         }
     else
         {
@@ -5105,7 +5130,7 @@ static void cp180Op88(Cpu180Context *activeCpu)  // 88  LBIT       MIGDS 2-14
         {
         return;
         }
-    activeCpu->regX[activeCpu->opK] = (byte >> (7 - (activeCpu->regX[0] & 7))) & 1;
+    activeCpu->regX[activeCpu->opK] = (byte >> (7 - (activeCpu->regX[0] & Mask3))) & 1;
     }
 
 static void cp180Op89(Cpu180Context *activeCpu)  // 89  SBIT       MIGDS 2-14
@@ -5130,7 +5155,7 @@ static void cp180Op89(Cpu180Context *activeCpu)  // 89  SBIT       MIGDS 2-14
     if (cpu180PvaToRma(activeCpu, pva, AccessModeWrite, &rma, &cond))
         {
         wordAddr         = rma >> 3;
-        shift            = (56 - ((rma & 7) << 3)) + (7 - (activeCpu->regX[0] & 7));
+        shift            = (56 - ((rma & Mask3) << 3)) + (7 - (activeCpu->regX[0] & Mask3));
         mask             = ~((u64)1 << shift);
         cpuAcquireMemoryMutex();
         cpMem[wordAddr] = (cpMem[wordAddr] & mask) | (activeCpu->regX[activeCpu->opK] & 1) << shift;
@@ -5574,10 +5599,6 @@ static void cp180OpA3(Cpu180Context *activeCpu)  // A3  SXI        MIGDS 2-12
     if (cpu180PvaToRma(activeCpu, pva, AccessModeWrite, &rma, &cond))
         {
         cpMem[rma >> 3] = activeCpu->regX[activeCpu->opK];
-/*DELETE*/ if ((rma >= 0x00fca0e0 && rma < 0x00fca0e8)
-/*DELETE*/     || (pva >= 0x100c00000b60 && pva < 0x100c00000b68)) { // traceMask |= TraceCpu|TraceExchange;
-/*DELETE*/ fprintf(stderr, "Store %016lx at %08x, P %012lx\n",cpMem[rma>>3],rma,activeCpu->regP);
-/*DELETE*/ traceStack(stderr); }
         }
     else
         {
@@ -5888,7 +5909,7 @@ static void cp180OpB5(Cpu180Context *activeCpu)  // B5  CALLSEG    MIGDS 2-122
     u8               xt;
 
     Aj = activeCpu->regA[activeCpu->opJ];
-    if ((Aj & 7) != 0)
+    if ((Aj & Mask3) != 0)
         {
         cpu180SetMonitorCondition(activeCpu, MCR52);
         return;
@@ -5934,7 +5955,7 @@ static void cp180OpB5(Cpu180Context *activeCpu)  // B5  CALLSEG    MIGDS 2-122
         ring   = r2;
         callee = ((u64)ring << 44) | (callee & Mask44);
         }
-    if (((callee & 7) != 0) || (callee & 0x80000000) != 0)
+    if (((callee & Mask3) != 0) || (callee & 0x80000000) != 0)
         {
         activeCpu->regUtp = callee;
         cpu180SetMonitorCondition(activeCpu, MCR52);
@@ -6163,7 +6184,40 @@ static void cp180OpE9(Cpu180Context *activeCpu)  // E9  CMPC       MIGDS 2-52
 
 static void cp180OpEB(Cpu180Context *activeCpu)  // EB  TRANB      MIGDS 2-54
     {
-    cp180OpIv(activeCpu);
+    u64 Ai;
+    u8  buf[256];
+    u16 i;
+    u64 pva;
+    u8  table[256];
+
+    if (cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP, activeCpu->opJ, 0, &activeCpu->srcDesc)
+        && cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
+        {
+        if (activeCpu->srcDesc.length > 256 || activeCpu->dstDesc.length > 256)
+            {
+            cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+            return;
+            }
+        if (cpu180CopyToBuf(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, buf) == FALSE)
+            {
+            return;
+            }
+        for (i = activeCpu->srcDesc.length; i < activeCpu->dstDesc.length; i++)
+            {
+            buf[i] = 0x20;
+            }
+        Ai  = activeCpu->regA[activeCpu->opI];
+        pva = (Ai & RingSegMask) | ((Ai + activeCpu->opD) & Mask32);
+        if (cpu180CopyToBuf(activeCpu, pva, 256, table) == FALSE)
+            {
+            return;
+            }
+        for (i = 0; i < activeCpu->dstDesc.length; i++)
+            {
+            buf[i] = table[buf[i]];
+            }
+        (void)cpu180CopyFromBuf(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, buf);
+        }
     }
 
 static void cp180OpED(Cpu180Context *activeCpu)  // ED  EDIT       MIGDS 2-55
