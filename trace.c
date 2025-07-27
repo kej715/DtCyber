@@ -1323,85 +1323,85 @@ void traceCpu180(Cpu180Context *cpu, u64 p, u8 opCode, u8 opI, u8 opJ, u8 opK, u
     case VR:
         break;
     case VRXJ:
-        fprintf(cpuF[cpu->id], "X%X=%016lx", opJ, cpu->regX[opJ]);
+        fprintf(cpuF[cpu->id], "X%X=" FMT64_016x, opJ, cpu->regX[opJ]);
         break;
     case VRXK:
-        fprintf(cpuF[cpu->id], "X%X=%016lx", opK, cpu->regX[opK]);
+        fprintf(cpuF[cpu->id], "X%X=" FMT64_016x, opK, cpu->regX[opK]);
         break;
     case VRXKXJ:
-        fprintf(cpuF[cpu->id], "X%X=%016lx X%X=%016lx", opK, cpu->regX[opK], opJ, cpu->regX[opJ]);
+        fprintf(cpuF[cpu->id], "X%X=" FMT64_016x " X%X=" FMT64_016x, opK, cpu->regX[opK], opJ, cpu->regX[opJ]);
         break;
     case VRAKAJ:
-        fprintf(cpuF[cpu->id], "A%X=%012lx     A%X=%012lx", opK, cpu->regA[opK], opJ, cpu->regA[opJ]);
+        fprintf(cpuF[cpu->id], "A%X=" FMT64_012x "     A%X=" FMT64_012x, opK, cpu->regA[opK], opJ, cpu->regA[opJ]);
         break;
     case VRAKXJ:
-        fprintf(cpuF[cpu->id], "A%X=%012lx     X%X=%016lx", opK, cpu->regA[opK], opJ, cpu->regX[opJ]);
+        fprintf(cpuF[cpu->id], "A%X=" FMT64_012x "     X%X=" FMT64_016x, opK, cpu->regA[opK], opJ, cpu->regX[opJ]);
         break;
     case VRXKAJ:
-        fprintf(cpuF[cpu->id], "X%X=%016lx A%X=%012lx", opK, cpu->regX[opK], opJ, cpu->regA[opJ]);
+        fprintf(cpuF[cpu->id], "X%X=" FMT64_016x " A%X=" FMT64_012x, opK, cpu->regX[opK], opJ, cpu->regA[opJ]);
         break;
     case VRXKAJX0:
-        fprintf(cpuF[cpu->id], "X%X=%016lx A%X=%012lx     X0=%016lx", opK, cpu->regX[opK], opJ, cpu->regA[opJ], cpu->regX[0]);
+        fprintf(cpuF[cpu->id], "X%X=" FMT64_016x " A%X=" FMT64_012x "     X0=" FMT64_016x, opK, cpu->regX[opK], opJ, cpu->regA[opJ], cpu->regX[0]);
         break;
     case VRXKXJX1:
-        fprintf(cpuF[cpu->id], "X%X=%016lx X%X=%016lx X1=%016lx", opK, cpu->regX[opK], opJ, cpu->regX[opJ], cpu->regX[1]);
+        fprintf(cpuF[cpu->id], "X%X=" FMT64_016x " X%X=" FMT64_016x " X1=" FMT64_016x, opK, cpu->regX[opK], opJ, cpu->regX[opJ], cpu->regX[1]);
         break;
     case VRXKX1:
-        fprintf(cpuF[cpu->id], "X%X=%016lx X1=%016lx", opK, cpu->regX[opK], cpu->regX[1]);
+        fprintf(cpuF[cpu->id], "X%X=" FMT64_016x " X1=" FMT64_016x, opK, cpu->regX[opK], cpu->regX[1]);
         break;
     case XRX1XJXK:
-        fprintf(cpuF[cpu->id], "X1=%016lx X%X=%016lx X%X=%016lx", cpu->regX[1], opJ, cpu->regX[opJ], opK, cpu->regX[opK]);
+        fprintf(cpuF[cpu->id], "X1=" FMT64_016x " X%X=" FMT64_016x " X%X=" FMT64_016x, cpu->regX[1], opJ, cpu->regX[opJ], opK, cpu->regX[opK]);
         break;
     case VRXXKXXJ:
-        fprintf(cpuF[cpu->id], "XX%X=%016lx %016lx XX%X=%016lx %016lx", opK, cpu->regX[opK], cpu->regX[opK+1], opJ, cpu->regX[opJ], cpu->regX[opJ+1]);
+        fprintf(cpuF[cpu->id], "XX%X=" FMT64_016x " " FMT64_016x " XX%X=" FMT64_016x " " FMT64_016x, opK, cpu->regX[opK], cpu->regX[opK+1], opJ, cpu->regX[opJ], cpu->regX[opJ+1]);
         break;
     case VRX0:
-        fprintf(cpuF[cpu->id], "X0=%016lx", cpu->regX[0]);
+        fprintf(cpuF[cpu->id], "X0=" FMT64_016x, cpu->regX[0]);
         break;
     case VRX1:
-        fprintf(cpuF[cpu->id], "X1=%016lx", cpu->regX[1]);
+        fprintf(cpuF[cpu->id], "X1=" FMT64_016x, cpu->regX[1]);
         break;
     case VRAJX0AKX1:
-        fprintf(cpuF[cpu->id], "A%X=%012lx     X0=%016lx A%X=%012lx     X1=%016lx", opJ, cpu->regA[opJ], cpu->regX[0], opK, cpu->regA[opK], cpu->regX[1]);
+        fprintf(cpuF[cpu->id], "A%X=" FMT64_012x "     X0=" FMT64_016x " A%X=" FMT64_012x "     X1=" FMT64_016x, opJ, cpu->regA[opJ], cpu->regX[0], opK, cpu->regA[opK], cpu->regX[1]);
         break;
     case VRXJXK:
-        fprintf(cpuF[cpu->id], "X%X=%016lx X%X=%016lx", opJ, cpu->regX[opJ], opK, cpu->regX[opK]);
+        fprintf(cpuF[cpu->id], "X%X=" FMT64_016x " X%X=" FMT64_016x, opJ, cpu->regX[opJ], opK, cpu->regX[opK]);
         break;
     case VRX1AJAK:
-        fprintf(cpuF[cpu->id], "X1=%016lx A%X=%012lx     A%X=%012lx", cpu->regX[1], opJ, cpu->regA[opJ], opK, cpu->regA[opK]);
+        fprintf(cpuF[cpu->id], "X1=" FMT64_016x " A%X=" FMT64_012x "     A%X=" FMT64_012x, cpu->regX[1], opJ, cpu->regA[opJ], opK, cpu->regA[opK]);
         break;
     case VRAKAJXI:
-        fprintf(cpuF[cpu->id], "A%X=%012lx     A%X=%012lx     X%X=%016lx", opK, cpu->regA[opK], opJ, cpu->regA[opJ], opI, cpu->regX[opI]);
+        fprintf(cpuF[cpu->id], "A%X=" FMT64_012x "     A%X=" FMT64_012x "     X%X=" FMT64_016x, opK, cpu->regA[opK], opJ, cpu->regA[opJ], opI, cpu->regX[opI]);
         break;
     case VRXKAJXI:
-        fprintf(cpuF[cpu->id], "X%X=%016lx A%X=%012lx     X%X=%016lx", opK, cpu->regX[opK], opJ, cpu->regA[opJ], opI, cpu->regX[opI]);
+        fprintf(cpuF[cpu->id], "X%X=" FMT64_016x " A%X=" FMT64_012x "     X%X=" FMT64_016x, opK, cpu->regX[opK], opJ, cpu->regA[opJ], opI, cpu->regX[opI]);
         break;
     case VRXKXJXI:
-        fprintf(cpuF[cpu->id], "X%X=%016lx X%X=%016lx X%X=%016lx", opK, cpu->regX[opK], opJ, cpu->regX[opJ], opI, cpu->regX[opI]);
+        fprintf(cpuF[cpu->id], "X%X=" FMT64_016x " X%X=" FMT64_016x " X%X=" FMT64_016x, opK, cpu->regX[opK], opJ, cpu->regX[opJ], opI, cpu->regX[opI]);
         break;
     case VRAJAK:
-        fprintf(cpuF[cpu->id], "A%X=%012lx     A%X=%012lx", opJ, cpu->regA[opJ], opK, cpu->regA[opK]);
+        fprintf(cpuF[cpu->id], "A%X=" FMT64_012x "     A%X=" FMT64_012x, opJ, cpu->regA[opJ], opK, cpu->regA[opK]);
         break;
     case VRAJX0AKX1XI:
-        fprintf(cpuF[cpu->id], "A%X=%012lx     X0=%016lx A%X=%012lx     X1=%016lx X%X=%016lx", opJ, cpu->regA[opJ], cpu->regX[0], opK, cpu->regA[opK], cpu->regX[1], opI, cpu->regX[opI]);
+        fprintf(cpuF[cpu->id], "A%X=" FMT64_012x "     X0=" FMT64_016x " A%X=" FMT64_012x "     X1=" FMT64_016x " X%X=" FMT64_016x, opJ, cpu->regA[opJ], cpu->regX[0], opK, cpu->regA[opK], cpu->regX[1], opI, cpu->regX[opI]);
         break;
     case VRAJX0AKX1AI:
-        fprintf(cpuF[cpu->id], "A%X=%012lx     X0=%016lx A%X=%012lx     X1=%016lx A%X=%012lx", opJ, cpu->regA[opJ], cpu->regX[0], opK, cpu->regA[opK], cpu->regX[1], opI, cpu->regA[opI]);
+        fprintf(cpuF[cpu->id], "A%X=" FMT64_012x "     X0=" FMT64_016x " A%X=" FMT64_012x "     X1=" FMT64_016x " A%X=" FMT64_012x, opJ, cpu->regA[opJ], cpu->regX[0], opK, cpu->regA[opK], cpu->regX[1], opI, cpu->regA[opI]);
         break;
     case VRX0AKX1AI:
-        fprintf(cpuF[cpu->id], "X0=%016lx A%X=%012lx     X1=%016lx A%X=%012lx", cpu->regX[0], opK, cpu->regA[opK], cpu->regX[1], opI, cpu->regA[opI]);
+        fprintf(cpuF[cpu->id], "X0=" FMT64_016x " A%X=" FMT64_012x "     X1=" FMT64_016x " A%X=" FMT64_012x, cpu->regX[0], opK, cpu->regA[opK], cpu->regX[1], opI, cpu->regA[opI]);
         break;
     case VRXIAKX1:
-        fprintf(cpuF[cpu->id], "X%X=%016lx A%X=%012lx     X1=%016lx", opI, cpu->regX[opI], opK, cpu->regA[opK], cpu->regX[1]);
+        fprintf(cpuF[cpu->id], "X%X=" FMT64_016x " A%X=" FMT64_012x "     X1=" FMT64_016x, opI, cpu->regX[opI], opK, cpu->regA[opK], cpu->regX[1]);
         break;
     case VRX1XJXK:
-        fprintf(cpuF[cpu->id], "X1=%016lx X%X=%016lx X%X=%016lx", cpu->regX[1], opJ, cpu->regX[opJ], opK, cpu->regX[opK]);
+        fprintf(cpuF[cpu->id], "X1=" FMT64_016x " X%X=" FMT64_016x " X%X=" FMT64_016x, cpu->regX[1], opJ, cpu->regX[opJ], opK, cpu->regX[opK]);
         break;
     case VRAJXK:
-        fprintf(cpuF[cpu->id], "A%X=%012lx     X%X=%016lx", opJ, cpu->regA[opJ], opK, cpu->regX[opK]);
+        fprintf(cpuF[cpu->id], "A%X=" FMT64_012x "     X%X=" FMT64_016x, opJ, cpu->regA[opJ], opK, cpu->regX[opK]);
         break;
     case VRXKXI:
-        fprintf(cpuF[cpu->id], "X%X=%016lx X%X=%016lx", opK, cpu->regX[opK], opI, cpu->regX[opI]);
+        fprintf(cpuF[cpu->id], "X%X=" FMT64_016x " X%X=" FMT64_016x, opK, cpu->regX[opK], opI, cpu->regX[opI]);
         break;
         }
     fputs("\n", cpuF[cpu->id]);
@@ -1417,31 +1417,31 @@ void traceCpu180(Cpu180Context *cpu, u64 p, u8 opCode, u8 opI, u8 opJ, u8 opK, u
         case VCjkB2:
             p += 2;
             fprintf(cpuF[cpu->id], "%06d %x %03x %08x  ", traceSequenceNo, (u8)((p >> 44) & Mask4), (u16)((p >> 32) & Mask12), (u32)(p & Mask32));
-            fprintf(cpuF[cpu->id], "  desc:%08x type:%x len:%04x pva:%012lx", cpu->srcDesc.rawDesc, cpu->srcDesc.type, cpu->srcDesc.length, cpu->srcDesc.pva);
+            fprintf(cpuF[cpu->id], "  desc:%08x type:%x len:%04x pva:" FMT64_012x, cpu->srcDesc.rawDesc, cpu->srcDesc.type, cpu->srcDesc.length, cpu->srcDesc.pva);
             tracePrintRma(cpu, cpu->srcDesc.pva, AccessModeRead);
             fputs("\n", cpuF[cpu->id]);
             p += 4;
             fprintf(cpuF[cpu->id], "%06d %x %03x %08x  ", traceSequenceNo, (u8)((p >> 44) & Mask4), (u16)((p >> 32) & Mask12), (u32)(p & Mask32));
-            fprintf(cpuF[cpu->id], "  desc:%08x type:%x len:%04x pva:%012lx", cpu->dstDesc.rawDesc, cpu->dstDesc.type, cpu->dstDesc.length, cpu->dstDesc.pva);
+            fprintf(cpuF[cpu->id], "  desc:%08x type:%x len:%04x pva:" FMT64_012x, cpu->dstDesc.rawDesc, cpu->dstDesc.type, cpu->dstDesc.length, cpu->dstDesc.pva);
             tracePrintRma(cpu, cpu->dstDesc.pva, AccessModeWrite);
             fputs("\n", cpuF[cpu->id]);
             break;
         case VCjkiDB1:
             p += 4;
             fprintf(cpuF[cpu->id], "%06d %x %03x %08x  ", traceSequenceNo, (u8)((p >> 44) & Mask4), (u16)((p >> 32) & Mask12), (u32)(p & Mask32));
-            fprintf(cpuF[cpu->id], "  desc:%08x type:%x len:%04x pva:%012lx", cpu->srcDesc.rawDesc, cpu->srcDesc.type, cpu->srcDesc.length, cpu->srcDesc.pva);
+            fprintf(cpuF[cpu->id], "  desc:%08x type:%x len:%04x pva:" FMT64_012x, cpu->srcDesc.rawDesc, cpu->srcDesc.type, cpu->srcDesc.length, cpu->srcDesc.pva);
             tracePrintRma(cpu, cpu->srcDesc.pva, AccessModeRead);
             fputs("\n", cpuF[cpu->id]);
             break;
         case VCjkiDB2:
             p += 4;
             fprintf(cpuF[cpu->id], "%06d %x %03x %08x  ", traceSequenceNo, (u8)((p >> 44) & Mask4), (u16)((p >> 32) & Mask12), (u32)(p & Mask32));
-            fprintf(cpuF[cpu->id], "  desc:%08x type:%x len:%04x pva:%012lx", cpu->srcDesc.rawDesc, cpu->srcDesc.type, cpu->srcDesc.length, cpu->srcDesc.pva);
+            fprintf(cpuF[cpu->id], "  desc:%08x type:%x len:%04x pva:" FMT64_012x, cpu->srcDesc.rawDesc, cpu->srcDesc.type, cpu->srcDesc.length, cpu->srcDesc.pva);
             tracePrintRma(cpu, cpu->srcDesc.pva, AccessModeRead);
             fputs("\n", cpuF[cpu->id]);
             p += 4;
             fprintf(cpuF[cpu->id], "%06d %x %03x %08x  ", traceSequenceNo, (u8)((p >> 44) & Mask4), (u16)((p >> 32) & Mask12), (u32)(p & Mask32));
-            fprintf(cpuF[cpu->id], "  desc:%08x type:%x len:%04x pva:%012lx", cpu->dstDesc.rawDesc, cpu->dstDesc.type, cpu->dstDesc.length, cpu->dstDesc.pva);
+            fprintf(cpuF[cpu->id], "  desc:%08x type:%x len:%04x pva:" FMT64_012x, cpu->dstDesc.rawDesc, cpu->dstDesc.type, cpu->dstDesc.length, cpu->dstDesc.pva);
             tracePrintRma(cpu, cpu->dstDesc.pva, AccessModeWrite);
             fputs("\n", cpuF[cpu->id]);
             break;
@@ -1528,7 +1528,7 @@ void traceBlockOp(Cpu180Context *cpu)
     while (srcAddr < srcLimit)
         {
         word = cpMem[srcAddr];
-        fprintf(cpuF[cpu->id], "    %08x %016lx ", srcAddr << 3, word);
+        fprintf(cpuF[cpu->id], "    %08x " FMT64_016x " ", srcAddr << 3, word);
         for (i = 56; i >= 0; i -= 8)
             {
             c = (u8)((word >> i) & 0xff);
@@ -1541,7 +1541,7 @@ void traceBlockOp(Cpu180Context *cpu)
     while (dstAddr < dstLimit)
         {
         word = cpMem[dstAddr];
-        fprintf(cpuF[cpu->id], "    %08x %016lx ", dstAddr << 3, word);
+        fprintf(cpuF[cpu->id], "    %08x " FMT64_016x " ", dstAddr << 3, word);
         for (i = 56; i >= 0; i -= 8)
             {
             c = (u8)((word >> i) & 0xff);
@@ -1573,11 +1573,11 @@ void traceCall(Cpu180Context *cpu, u64 pva)
         {
         return;
         }
-    fprintf(cpuF[cpu->id], "%06d Call procedure at PVA %012lx", traceSequenceNo, pva);
+    fprintf(cpuF[cpu->id], "%06d Call procedure at PVA " FMT64_012x, traceSequenceNo, pva);
     tracePrintRma(cpu, pva, AccessModeExecute);
     for (i = 0; i <= 4; i++)
         {
-        fprintf(cpuF[cpu->id], "\n           A%X %012lx", i, cpu->regA[i]);
+        fprintf(cpuF[cpu->id], "\n           A%X " FMT64_012x, i, cpu->regA[i]);
         tracePrintRma(cpu, cpu->regA[i], AccessModeRead);
         }
     fputs("\n", cpuF[cpu->id]);
@@ -1599,7 +1599,7 @@ void traceCodebasePointer(Cpu180Context *cpu, u64 bsp, u32 rma, u64 cbp)
     {
     if ((traceMask & TraceCallFrame) != 0)
         {
-        fprintf(cpuF[cpu->id], "%06d Call indirect BSP %012lx RMA %08x CBP %016lx\n", traceSequenceNo, bsp, rma, cbp);
+        fprintf(cpuF[cpu->id], "%06d Call indirect BSP " FMT64_012x " RMA %08x CBP " FMT64_016x "\n", traceSequenceNo, bsp, rma, cbp);
         }
     }
 
@@ -1632,14 +1632,14 @@ void traceCallFrame(Cpu180Context *cpu, u64 sfsa)
         {
         return;
         }
-    fprintf(cpuF[cpu->id], "\n%06d CYBER 180 call frame pushed at %012lx\n\n", traceSequenceNo, sfsa);
+    fprintf(cpuF[cpu->id], "\n%06d CYBER 180 call frame pushed at " FMT64_012x "\n\n", traceSequenceNo, sfsa);
     utp = cpu->regUtp;
     if (cpu180PvaToRma(cpu, sfsa, AccessModeRead, &rma, &cond) == FALSE)
         {
         cpu->regUtp = utp;
         return;
         }
-    fprintf(cpuF[cpu->id], "P %lx\n", cpMem[rma >> 3]);
+    fprintf(cpuF[cpu->id], "P " FMT64_016x "\n", cpMem[rma >> 3]);
     sfsa += 8;
     if (cpu180PvaToRma(cpu, sfsa, AccessModeRead, &rma, &cond) == FALSE)
         {
@@ -1647,7 +1647,7 @@ void traceCallFrame(Cpu180Context *cpu, u64 sfsa)
         return;
         }
     word = cpMem[rma >> 3];
-    fprintf(cpuF[cpu->id], "VMID %04x  A0 %012lx\n", (u8)((word >> 56) & Mask4), word & Mask48);
+    fprintf(cpuF[cpu->id], "VMID %04x  A0 " FMT64_012x "\n", (u8)((word >> 56) & Mask4), word & Mask48);
     sfsa += 8;
     if (cpu180PvaToRma(cpu, sfsa, AccessModeRead, &rma, &cond) == FALSE)
         {
@@ -1659,7 +1659,7 @@ void traceCallFrame(Cpu180Context *cpu, u64 sfsa)
     xs   = (desc >> 8) & Mask4;
     at   = (desc >> 4) & Mask4;
     xt   = desc & Mask4;
-    fprintf(cpuF[cpu->id], "Desc %04x  A1 %012lx\n", desc, word & Mask48);
+    fprintf(cpuF[cpu->id], "Desc %04x  A1 " FMT64_012x "\n", desc, word & Mask48);
     sfsa += 8;
     if (cpu180PvaToRma(cpu, sfsa, AccessModeRead, &rma, &cond) == FALSE)
         {
@@ -1667,7 +1667,7 @@ void traceCallFrame(Cpu180Context *cpu, u64 sfsa)
         return;
         }
     word = cpMem[rma >> 3];
-    fprintf(cpuF[cpu->id], "UMR  %04x  A2 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
+    fprintf(cpuF[cpu->id], "UMR  %04x  A2 " FMT64_012x "\n", (u16)((word >> 48) & Mask16), word & Mask48);
     for (i = 3; i <= at; i++)
         {
         sfsa += 8;
@@ -1676,7 +1676,7 @@ void traceCallFrame(Cpu180Context *cpu, u64 sfsa)
             cpu->regUtp = utp;
             return;
             }
-        fprintf(cpuF[cpu->id], "           A%X %012lx\n", i, cpMem[rma >> 3] & Mask48);
+        fprintf(cpuF[cpu->id], "           A%X " FMT64_012x "\n", i, cpMem[rma >> 3] & Mask48);
         }
     fputs("\n", cpuF[cpu->id]);
     for (i = xs; i <= xt; i++)
@@ -1687,7 +1687,7 @@ void traceCallFrame(Cpu180Context *cpu, u64 sfsa)
             cpu->regUtp = utp;
             return;
             }
-        fprintf(cpuF[cpu->id], "X%X %016lx\n", i, cpMem[rma >> 3]);
+        fprintf(cpuF[cpu->id], "X%X " FMT64_016x "\n", i, cpMem[rma >> 3]);
         }
     fputs("\n", cpuF[cpu->id]);
     cpu->regUtp = utp;
@@ -1851,7 +1851,7 @@ void traceExchange180(Cpu180Context *cpu, u32 addr, char *title)
         fputs("\n", cpuF[cpu->id]);
         }
     fputs("\n", cpuF[cpu->id]);
-    fprintf(cpuF[cpu->id], " MDW %016lx  \n", cpu->regMdw);
+    fprintf(cpuF[cpu->id], " MDW " FMT64_016x "  \n", cpu->regMdw);
     fputs("\n", cpuF[cpu->id]);
     fprintf(cpuF[cpu->id], "MonitorFlag  %s\n", cpu->isMonitorMode ? "TRUE" : "FALSE");
     fprintf(cpuF[cpu->id], "STOP         %d\n", cpu->isStopped ? 1 : 0);
@@ -1924,10 +1924,11 @@ static void traceTrapFrame170(Cpu180Context *cpu, u64 sfsa)
     {
     MonitorCondition cond;
     u8               i;
+    u8               r;
     u32              rma;
     u64              utp;
     u64              word;
-    u32              wordAddr;
+    u32              wordAddrs[33];
 
     /*
     **  Bail out if no trace of exchange jumps is requested.
@@ -1936,41 +1937,46 @@ static void traceTrapFrame170(Cpu180Context *cpu, u64 sfsa)
         {
         return;
         }
-    fprintf(cpuF[cpu->id], "\n%06d CYBER 170 trap frame pushed at %012lx ", traceSequenceNo, sfsa);
+    fprintf(cpuF[cpu->id], "\n%06d CYBER 170 trap frame pushed at " FMT64_012x " ", traceSequenceNo, sfsa);
     utp = cpu->regUtp;
-    if (cpu180PvaToRma(cpu, cpu->regTp, AccessModeRead, &rma, &cond) == FALSE)
+    for (i = 0; i < 33; i++)
         {
-        fprintf(cpuF[cpu->id], "%s\n", traceMonitorConditionToStr(cond));
-        cpu->regUtp = utp;
-        return;
+        if (cpu180PvaToRma(cpu, sfsa, AccessModeRead, &rma, &cond) == FALSE)
+            {
+            fprintf(cpuF[cpu->id], "%s\n", traceMonitorConditionToStr(cond));
+            cpu->regUtp = utp;
+            return;
+            }
+        wordAddrs[i] = rma >> 3;
+        sfsa += 8;
         }
-    fprintf(cpuF[cpu->id], "(RMA %08x)\n\n", rma);
-    wordAddr = rma >> 3;
-    fprintf(cpuF[cpu->id], "P %lx\n", cpMem[wordAddr++]);
-    word = cpMem[wordAddr++];
-    fprintf(cpuF[cpu->id], "VMID %04x   A0 %012lx\n", (u16)((word >> 56) & Mask4), word & Mask48);
-    word = cpMem[wordAddr++];
-    fprintf(cpuF[cpu->id], "Desc %04x   A1 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
-    word = cpMem[wordAddr++];
-    fprintf(cpuF[cpu->id], "UMR  %04x   A2 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
-    word = cpMem[wordAddr++];
+    fprintf(cpuF[cpu->id], "(RMA %08x)\n\n", wordAddrs[0] << 3);
+    i = 0;
+    fprintf(cpuF[cpu->id], "P " FMT64_016x "\n", cpMem[wordAddrs[i++]]);
+    word = cpMem[wordAddrs[i++]];
+    fprintf(cpuF[cpu->id], "VMID %04x   A0 " FMT64_012x "\n", (u16)((word >> 56) & Mask4), word & Mask48);
+    word = cpMem[wordAddrs[i++]];
+    fprintf(cpuF[cpu->id], "Desc %04x   A1 " FMT64_012x "\n", (u16)((word >> 48) & Mask16), word & Mask48);
+    word = cpMem[wordAddrs[i++]];
+    fprintf(cpuF[cpu->id], "UMR  %04x   A2 " FMT64_012x "\n", (u16)((word >> 48) & Mask16), word & Mask48);
+    word = cpMem[wordAddrs[i++]];
     fprintf(cpuF[cpu->id], "EM   %04o   RA %07o\n", (u16)((word >> 32) & Mask12), (u32)(word & Mask32));
-    word = cpMem[wordAddr++];
+    word = cpMem[wordAddrs[i++]];
     fprintf(cpuF[cpu->id], "UCR  %04x%s  FL %07o\n", (u16)((word >> 48) & Mask16), (word >> 32) & 1 ? "*" : " ", (u32)(word & Mask32));
-    word = cpMem[wordAddr++];
+    word = cpMem[wordAddrs[i++]];
     fprintf(cpuF[cpu->id], "MCR  %04x   MA %07o\n", (u16)((word >> 48) & Mask16), (u32)(word & Mask32));
-    fprintf(cpuF[cpu->id], "           RAE %07o\n", (u32)(cpMem[wordAddr++] & Mask32));
-    fprintf(cpuF[cpu->id], "           FLE %07o\n\n", (u32)(cpMem[wordAddr++] & Mask32));
-    fprintf(cpuF[cpu->id], "A0 %06o  B0 000000\n", (u32)(cpMem[wordAddr] & Mask32));
-    for (i = 1; i < 8; i++)
+    fprintf(cpuF[cpu->id], "           RAE %07o\n", (u32)(cpMem[wordAddrs[i++]] & Mask32));
+    fprintf(cpuF[cpu->id], "           FLE %07o\n\n", (u32)(cpMem[wordAddrs[i++]] & Mask32));
+    fprintf(cpuF[cpu->id], "A0 %06o  B0 000000\n", (u32)(cpMem[wordAddrs[i]] & Mask32));
+    for (r = 1; r < 8; r++)
         {
-        fprintf(cpuF[cpu->id], "A%d %06o  B%d %06o\n", i, (u32)(cpMem[wordAddr + i] & Mask32), i, (u32)(cpMem[wordAddr + i + 8] & Mask32));
+        fprintf(cpuF[cpu->id], "A%d %06o  B%d %06o\n", r, (u32)(cpMem[wordAddrs[i + r]] & Mask32), r, (u32)(cpMem[wordAddrs[i + r + 8]] & Mask32));
         }
-    wordAddr += 16;
+    i += 16;
     fputs("\n", cpuF[cpu->id]);
-    for (i = 0; i < 8; i++)
+    for (r = 0; r < 8; r++)
         {
-        fprintf(cpuF[cpu->id], "X%d %020lo\n", i, cpMem[wordAddr++] & Mask60);
+        fprintf(cpuF[cpu->id], "X%d " FMT60_020o "\n", r, cpMem[wordAddrs[i++]] & Mask60);
         }
     fputs("\n", cpuF[cpu->id]);
     }
@@ -2007,7 +2013,7 @@ void traceTrapFrame(Cpu180Context *cpu, u64 sfsa)
         traceTrapFrame170(cpu, sfsa);
         return;
         }
-    fprintf(cpuF[cpu->id], "\n%06d CYBER 180 trap frame pushed at %012lx ", traceSequenceNo, sfsa);
+    fprintf(cpuF[cpu->id], "\n%06d CYBER 180 trap frame pushed at " FMT64_012x " ", traceSequenceNo, sfsa);
     utp = cpu->regUtp;
     for (i = 0; i < 33; i++)
         {
@@ -2022,26 +2028,26 @@ void traceTrapFrame(Cpu180Context *cpu, u64 sfsa)
         }
     fprintf(cpuF[cpu->id], "(RMA %08x)\n\n", wordAddrs[0] << 3);
     i = 0;
-    fprintf(cpuF[cpu->id], "P %lx\n", cpMem[wordAddrs[i++]]);
+    fprintf(cpuF[cpu->id], "P " FMT64_016x "\n", cpMem[wordAddrs[i++]]);
     word = cpMem[wordAddrs[i++]];
-    fprintf(cpuF[cpu->id], "VMID %04x  A0 %012lx\n", (u8)((word >> 56) & Mask4), word & Mask48);
+    fprintf(cpuF[cpu->id], "VMID %04x  A0 " FMT64_012x "\n", (u8)((word >> 56) & Mask4), word & Mask48);
     word = cpMem[wordAddrs[i++]];
-    fprintf(cpuF[cpu->id], "Desc %04x  A1 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
+    fprintf(cpuF[cpu->id], "Desc %04x  A1 " FMT64_012x "\n", (u16)((word >> 48) & Mask16), word & Mask48);
     word = cpMem[wordAddrs[i++]];
-    fprintf(cpuF[cpu->id], "UMR  %04x  A2 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
-    fprintf(cpuF[cpu->id], "           A3 %012lx\n", cpMem[wordAddrs[i++]] & Mask48);
+    fprintf(cpuF[cpu->id], "UMR  %04x  A2 " FMT64_012x "\n", (u16)((word >> 48) & Mask16), word & Mask48);
+    fprintf(cpuF[cpu->id], "           A3 " FMT64_012x "\n", cpMem[wordAddrs[i++]] & Mask48);
     word = cpMem[wordAddrs[i++]];
-    fprintf(cpuF[cpu->id], "UCR  %04x  A4 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
+    fprintf(cpuF[cpu->id], "UCR  %04x  A4 " FMT64_012x "\n", (u16)((word >> 48) & Mask16), word & Mask48);
     word = cpMem[wordAddrs[i++]];
-    fprintf(cpuF[cpu->id], "MCR  %04x  A5 %012lx\n", (u16)((word >> 48) & Mask16), word & Mask48);
+    fprintf(cpuF[cpu->id], "MCR  %04x  A5 " FMT64_012x "\n", (u16)((word >> 48) & Mask16), word & Mask48);
     for (r = 6; r < 16; r++)
         {
-        fprintf(cpuF[cpu->id], "           A%X %012lx\n", r, cpMem[wordAddrs[i++]] & Mask48);
+        fprintf(cpuF[cpu->id], "           A%X " FMT64_012x "\n", r, cpMem[wordAddrs[i++]] & Mask48);
         }
     fputs("\n", cpuF[cpu->id]);
     for (r = 0; r < 16; r++)
         {
-        fprintf(cpuF[cpu->id], "X%X %016lx\n", r, cpMem[wordAddrs[i++]]);
+        fprintf(cpuF[cpu->id], "X%X " FMT64_016x "\n", r, cpMem[wordAddrs[i++]]);
         }
     fputs("\n", cpuF[cpu->id]);
     }
@@ -2072,7 +2078,7 @@ void traceTrapPointer(Cpu180Context *cpu)
         {
         return;
         }
-    fprintf(cpuF[cpu->id], "%06d CYBER 180 TP %012lx ", traceSequenceNo, cpu->regTp);
+    fprintf(cpuF[cpu->id], "%06d CYBER 180 TP " FMT64_012x " ", traceSequenceNo, cpu->regTp);
     utp = cpu->regUtp;
     if (cpu180PvaToRma(cpu, cpu->regTp, AccessModeRead, &rma, &cond) == FALSE)
         {
@@ -2082,7 +2088,7 @@ void traceTrapPointer(Cpu180Context *cpu)
         }
     cbp   = cpMem[rma >> 3];
     vmid  = (cbp >> 56) & Mask4;
-    fprintf(cpuF[cpu->id], "RMA %08x VMID %x CBP %lx ", rma, vmid, cbp);
+    fprintf(cpuF[cpu->id], "RMA %08x VMID %x CBP " FMT64_016x " ", rma, vmid, cbp);
     isExt = vmid == 0 && ((cbp >> 55) & 1) != 0;
     if (isExt)
         {
@@ -2093,7 +2099,7 @@ void traceTrapPointer(Cpu180Context *cpu)
             return;
             }
         bsp = cpMem[rma >> 3] & Mask48;
-        fprintf(cpuF[cpu->id], "BSP %012lx", bsp);
+        fprintf(cpuF[cpu->id], "BSP " FMT64_012x, bsp);
         }
     fputs("\n", cpuF[cpu->id]);
     }
@@ -2168,12 +2174,12 @@ void traceMonitorCondition(Cpu180Context *cpu, MonitorCondition cond)
         case MCR54:
         case MCR57:
         case MCR60:
-            fprintf(cpuF[cpu->id], ", UTP %012lx", cpu->regUtp);
+            fprintf(cpuF[cpu->id], ", UTP " FMT64_012x, cpu->regUtp);
             break;
         default:
             break;
             }
-        fprintf(cpuF[cpu->id], "\n%06d       Action %s, P %012lx", traceSequenceNo, traceTranslateAction(cpu->pendingAction), cpu->nextP);
+        fprintf(cpuF[cpu->id], "\n%06d       Action %s, P " FMT64_012x, traceSequenceNo, traceTranslateAction(cpu->pendingAction), cpu->nextP);
         tracePrintRma(cpu, cpu->nextP, AccessModeExecute);
         fputs("\n", cpuF[cpu->id]);
         }
@@ -2245,9 +2251,9 @@ void traceRingZeroCondition(Cpu180Context *cpu, u64 pva)
     {
     if ((traceMask & (TracePva | TraceCpu)) != 0)
         {
-        fprintf(cpuF[cpu->id], "%06d MCR60 Ring 0 violation, PVA %012lx %s mode trapEnables %d\n", traceSequenceNo,
+        fprintf(cpuF[cpu->id], "%06d MCR60 Ring 0 violation, PVA " FMT64_012x " %s mode trapEnables %d\n", traceSequenceNo,
             pva, cpu->isMonitorMode ? "monitor" : "job", cpu->regFlags & 3);
-        fprintf(cpuF[cpu->id], "%06d       Action %s, P %012lx", traceSequenceNo, traceTranslateAction(cpu->pendingAction), cpu->nextP);
+        fprintf(cpuF[cpu->id], "%06d       Action %s, P " FMT64_012x, traceSequenceNo, traceTranslateAction(cpu->pendingAction), cpu->nextP);
         tracePrintRma(cpu, cpu->nextP, AccessModeExecute);
         fputs("\n", cpuF[cpu->id]);
         }
@@ -2386,7 +2392,7 @@ void traceUserCondition(Cpu180Context *cpu, UserCondition cond)
             break;
             }
         fprintf(cpuF[cpu->id], "%06d UCR%d %s\n", traceSequenceNo, (cond - MCR48) + 48, s);
-        fprintf(cpuF[cpu->id], "%06d       Action %s, P %012lx", traceSequenceNo, traceTranslateAction(cpu->pendingAction), cpu->nextP);
+        fprintf(cpuF[cpu->id], "%06d       Action %s, P " FMT64_012x, traceSequenceNo, traceTranslateAction(cpu->pendingAction), cpu->nextP);
         tracePrintRma(cpu, cpu->nextP, AccessModeExecute);
         fputs("\n", cpuF[cpu->id]);
         }

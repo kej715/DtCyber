@@ -3182,12 +3182,12 @@ static void opCmdShowStateCp180(Cpu180Context *cpu)
     {
     int i;
 
-    sprintf(opOutBuf, "    > P %02x " FMT48_012x, cpu->key, cpu->regP);
+    sprintf(opOutBuf, "    > P %02x " FMT64_012x, cpu->key, cpu->regP);
     opDisplay(opOutBuf);
     opDisplay("\n\n");
     for (i = 0; i < 16; i++)
         {
-        sprintf(opOutBuf, "    > A%X " FMT48_012x, i, cpu->regA[i]);
+        sprintf(opOutBuf, "    > A%X " FMT64_012x, i, cpu->regA[i]);
         opDisplay(opOutBuf);
         sprintf(opOutBuf,"   X%X " FMT64_016x "\n", i, cpu->regX[i]);
         opDisplay(opOutBuf);
@@ -3214,16 +3214,16 @@ static void opCmdShowStateCp180(Cpu180Context *cpu)
     sprintf(opOutBuf, "    >  PSM %02x\n", cpu->regPsm);
     opDisplay(opOutBuf);
     opDisplay("\n");
-    sprintf(opOutBuf, "    >  UTP " FMT48_012x "  TP " FMT48_012x "\n", cpu->regUtp, cpu->regTp);
+    sprintf(opOutBuf, "    >  UTP " FMT64_012x "  TP " FMT64_012x "\n", cpu->regUtp, cpu->regTp);
     opDisplay(opOutBuf);
-    sprintf(opOutBuf, "    >  DLP " FMT48_012x "  DI %02x  DM %02x\n", cpu->regDlp, cpu->regDi, cpu->regDm);
+    sprintf(opOutBuf, "    >  DLP " FMT64_012x "  DI %02x  DM %02x\n", cpu->regDlp, cpu->regDi, cpu->regDm);
     opDisplay(opOutBuf);
     opDisplay("\n");
     sprintf(opOutBuf, "    >  LRN %d\n", cpu->regLrn);
     opDisplay(opOutBuf);
     for (i = 0; i < 15; i++)
         {
-        sprintf(opOutBuf, "    >  TOS[%x] " FMT48_012x "\n", i + 1, cpu->regTos[i]);
+        sprintf(opOutBuf, "    >  TOS[%x] " FMT64_012x "\n", i + 1, cpu->regTos[i]);
         opDisplay(opOutBuf);
         }
     opDisplay("\n");
