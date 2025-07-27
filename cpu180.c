@@ -1135,12 +1135,10 @@ void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa)
     ctx->regMmr    = word >> 48;
     word           = cpMem[xpa++];
     ctx->regA[4]   = word & Mask48;
-    ctx->regUcr    = (word >> 48) & ~ctx->regUmr;
-//  ctx->regUcr    = word >> 48;
+    ctx->regUcr    = word >> 48;
     word           = cpMem[xpa++];
     ctx->regA[5]   = word & Mask48;
-    ctx->regMcr    = (word >> 48) & ~(ctx->regMmr | 0x0021); // clear masked bits and status bits
-//  ctx->regMcr    = word >> 48;
+    ctx->regMcr    = word >> 48;
     word           = cpMem[xpa++];
     ctx->regA[6]   = word & Mask48;
     ctx->regLpid   = (word >> 48) & Mask8;
@@ -3595,7 +3593,7 @@ static void cpu180Trap(Cpu180Context *ctx)
     ctx->regA[1]   = ctx->regTos[ring - 1];
     ctx->regA[0]   = ctx->regA[1];
     ctx->regVmid   = vmid;
-    ctx->regFlags &= 0x3fff; // clear CCF and OCF
+    ctx->regFlags &= 0x3ffc; // clear CCF, OCF, and trap enable flags
     ctx->regMcr   &= ~(ctx->regMmr | 0x0021); // clear masked bits and status bits
     ctx->regUcr   &= ~ctx->regUmr;
     }
@@ -6295,7 +6293,7 @@ static void cp180OpFB(Cpu180Context *activeCpu)  // FB  ADDI       MIGDS 2-64
 static void cp180OpIv(Cpu180Context *activeCpu) 
     {
     cpu180SetUserCondition(activeCpu, UCR49);
-/*DELETE*/fprintf(stderr,"Invalid instruction %02x (P %016lx)\n", activeCpu->opCode, activeCpu->regP);
+/*DELETE*/fprintf(stderr,"Invalid instruction %02x (P %012lx)\n", activeCpu->opCode, activeCpu->regP);
     }
 
 /*--------------------------------------------------------------------------
