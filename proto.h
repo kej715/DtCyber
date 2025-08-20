@@ -235,6 +235,20 @@ CpWord floatMultiply(CpWord v1, CpWord v2, bool doRound, bool doDouble);
 CpWord floatDivide(CpWord v1, CpWord v2, bool doRound);
 
 /*
+**  float180.c
+*/
+bool float180AddDouble(Cpu180Context *ctx, Cpu180Double *augend, Cpu180Double *addend, Cpu180Double *sum);
+bool float180AddFloat(Cpu180Context *ctx, u64 augend, u64 addend, u64 *sum);
+bool float180ConvertFloatToInt(Cpu180Context *ctx, u64 floatValue, u64 *intResult);
+u64  float180ConvertIntToFloat(u64 intValue);
+bool float180DivDouble(Cpu180Context *ctx, Cpu180Double *dvdend, Cpu180Double *dvisor, Cpu180Double *quotient);
+bool float180DivFloat(Cpu180Context *ctx, u64 dvdend, u64 dvisor, u64 *quotient);
+bool float180MulDouble(Cpu180Context *ctx, Cpu180Double *mltand, Cpu180Double *mltier, Cpu180Double *product);
+bool float180MulFloat(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *product);
+bool float180SubDouble(Cpu180Context *ctx, Cpu180Double *minend, Cpu180Double *subend, Cpu180Double *diff);
+bool float180SubFloat(Cpu180Context *ctx, u64 minend, u64 subend, u64 *diff);
+
+/*
 **  fsmon.c
 */
 bool fsCreateThread(fswContext *parms);
@@ -467,7 +481,6 @@ void tpMuxShowStatus();
 /*
 **  trace.c
 */
-void traceBlockOp(Cpu180Context *cpu);
 void traceCall(Cpu180Context *cpu, u64 pva);
 void traceCallFrame(Cpu180Context *cpu, u64 sfsa);
 void traceChannel(u8 ch);
@@ -486,6 +499,7 @@ void traceExchange180(Cpu180Context *cpu, u32 addr, char *title);
 void traceHaltCpu180(Cpu180Context *cpu);
 void traceInit(void);
 void traceMasterClearCpu180(Cpu180Context *cpu);
+void traceMemoryBlock(Cpu180Context *cpu, u64 pva, u16 length, char *title);
 void traceMonitorCondition(Cpu180Context *cpu, MonitorCondition cond);
 void traceOpcode(void);
 void tracePageInfo(Cpu180Context *cpu, u16 hash, u32 pageNum, u32 pageOffset, u32 pageTableIdx, u64 spid);

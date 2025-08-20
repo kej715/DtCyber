@@ -2055,6 +2055,7 @@ void cpu180Step(Cpu180Context *activeCpu)
     u64        oldRegP;
 #endif
 
+/*DELETE*/ //traceMask = 0;
     cpu180CheckExternalInterrupts(activeCpu);
 
     if (activeCpu->pendingAction != Rni)
@@ -4439,42 +4440,150 @@ static void cp180Op2F(Cpu180Context *activeCpu)  // 2F  BRDIR      MIGDS 2-27
 
 static void cp180Op30(Cpu180Context *activeCpu)  // 30  ADDF       MIGDS 2-73
     {
-    cp180OpIv(activeCpu);
+    u64 result;
+
+    if (float180AddFloat(activeCpu, activeCpu->regX[activeCpu->opK], activeCpu->regX[activeCpu->opJ], &result))
+        {
+        activeCpu->regX[activeCpu->opK] = result;
+        activeCpu->nextP                = activeCpu->regP + 2;
+        }
+    else
+        {
+        activeCpu->nextP = activeCpu->regP;
+        }
     }
 
 static void cp180Op31(Cpu180Context *activeCpu)  // 31  SUBF       MIGDS 2-73
     {
-    cp180OpIv(activeCpu);
+    u64 result;
+
+    if (float180SubFloat(activeCpu, activeCpu->regX[activeCpu->opK], activeCpu->regX[activeCpu->opJ], &result))
+        {
+        activeCpu->regX[activeCpu->opK] = result;
+        activeCpu->nextP                = activeCpu->regP + 2;
+        }
+    else
+        {
+        activeCpu->nextP = activeCpu->regP;
+        }
     }
 
 static void cp180Op32(Cpu180Context *activeCpu)  // 32  MULF       MIGDS 2-76
     {
-    cp180OpIv(activeCpu);
+    u64 result;
+
+    if (float180MulFloat(activeCpu, activeCpu->regX[activeCpu->opK], activeCpu->regX[activeCpu->opJ], &result))
+        {
+        activeCpu->regX[activeCpu->opK] = result;
+        activeCpu->nextP                = activeCpu->regP + 2;
+        }
+    else
+        {
+        activeCpu->nextP = activeCpu->regP;
+        }
     }
 
 static void cp180Op33(Cpu180Context *activeCpu)  // 33  DIVF       MIGDS 2-77
     {
-    cp180OpIv(activeCpu);
+    u64 result;
+
+    if (float180DivFloat(activeCpu, activeCpu->regX[activeCpu->opK], activeCpu->regX[activeCpu->opJ], &result))
+        {
+        activeCpu->regX[activeCpu->opK] = result;
+        activeCpu->nextP                = activeCpu->regP + 2;
+        }
+    else
+        {
+        activeCpu->nextP = activeCpu->regP;
+        }
     }
 
 static void cp180Op34(Cpu180Context *activeCpu)  // 34  ADDD       MIGDS 2-79
     {
-    cp180OpIv(activeCpu);
+    Cpu180Double addend;
+    Cpu180Double augend;
+    Cpu180Double result;
+
+    augend.leftPart  = activeCpu->regX[activeCpu->opK];
+    augend.rightPart = activeCpu->regX[(activeCpu->opK + 1) & Mask4];
+    addend.leftPart  = activeCpu->regX[activeCpu->opJ];
+    addend.rightPart = activeCpu->regX[(activeCpu->opJ + 1) & Mask4];
+    if (float180AddDouble(activeCpu, &augend, &addend, &result))
+        {
+        activeCpu->regX[activeCpu->opK]               = result.leftPart;
+        activeCpu->regX[(activeCpu->opK + 1) & Mask4] = result.rightPart;
+        activeCpu->nextP                              = activeCpu->regP + 2;
+        }
+    else
+        {
+        activeCpu->nextP = activeCpu->regP;
+        }
     }
 
 static void cp180Op35(Cpu180Context *activeCpu)  // 35  SUBD       MIGDS 2-79
     {
-    cp180OpIv(activeCpu);
+    Cpu180Double minend;
+    Cpu180Double result;
+    Cpu180Double subend;
+
+    minend.leftPart  = activeCpu->regX[activeCpu->opK];
+    minend.rightPart = activeCpu->regX[(activeCpu->opK + 1) & Mask4];
+    subend.leftPart  = activeCpu->regX[activeCpu->opJ];
+    subend.rightPart = activeCpu->regX[(activeCpu->opJ + 1) & Mask4];
+    if (float180SubDouble(activeCpu, &minend, &subend, &result))
+        {
+        activeCpu->regX[activeCpu->opK]               = result.leftPart;
+        activeCpu->regX[(activeCpu->opK + 1) & Mask4] = result.rightPart;
+        activeCpu->nextP                              = activeCpu->regP + 2;
+        }
+    else
+        {
+        activeCpu->nextP = activeCpu->regP;
+        }
     }
 
 static void cp180Op36(Cpu180Context *activeCpu)  // 36  MULD       MIGDS 2-82
     {
-    cp180OpIv(activeCpu);
+    Cpu180Double mltand;
+    Cpu180Double mltier;
+    Cpu180Double result;
+
+    mltand.leftPart  = activeCpu->regX[activeCpu->opK];
+    mltand.rightPart = activeCpu->regX[(activeCpu->opK + 1) & Mask4];
+    mltier.leftPart  = activeCpu->regX[activeCpu->opJ];
+    mltier.rightPart = activeCpu->regX[(activeCpu->opJ + 1) & Mask4];
+    if (float180MulDouble(activeCpu, &mltand, &mltier, &result))
+        {
+        activeCpu->regX[activeCpu->opK]     = result.leftPart;
+        activeCpu->regX[activeCpu->opK + 1] = result.rightPart;
+        activeCpu->nextP                    = activeCpu->regP + 2;
+        }
+    else
+        {
+        activeCpu->nextP = activeCpu->regP;
+        }
     }
 
 static void cp180Op37(Cpu180Context *activeCpu)  // 37  DIVD       MIGDS 2-84
     {
-    cp180OpIv(activeCpu);
+    Cpu180Double dvdend;
+    Cpu180Double dvisor;
+    Cpu180Double result;
+
+    dvdend.leftPart  = activeCpu->regX[activeCpu->opK];
+    dvdend.rightPart = activeCpu->regX[(activeCpu->opK + 1) & Mask4];
+    dvisor.leftPart  = activeCpu->regX[activeCpu->opJ];
+    dvisor.rightPart = activeCpu->regX[(activeCpu->opJ + 1) & Mask4];
+    if (float180DivDouble(activeCpu, &dvdend, &dvisor, &result))
+        {
+        activeCpu->regX[activeCpu->opK]     = result.leftPart;
+        activeCpu->regX[activeCpu->opK + 1] = result.rightPart;
+        activeCpu->nextP                    = activeCpu->regP + 2;
+        }
+    else
+        {
+        activeCpu->nextP = activeCpu->regP;
+        }
     }
 
 static void cp180Op39(Cpu180Context *activeCpu)  // 39  ENTX       MIGDS 2-31
@@ -4484,48 +4593,16 @@ static void cp180Op39(Cpu180Context *activeCpu)  // 39  ENTX       MIGDS 2-31
 
 static void cp180Op3A(Cpu180Context *activeCpu)  // 3A  CNIF       MIGDS 2-71
     {
-    u16 exponent;
-    u64 floatResult;
-    u64 intValue;
-    u8  sign;
-
-    intValue = activeCpu->regX[activeCpu->opJ];
-    if (intValue == 0)
-        {
-        floatResult = 0;
-        }
-    else
-        {
-        sign = intValue >> 63;
-        if (sign == 1)
-            {
-            intValue = ~intValue + 1;
-            } 
-        exponent = 0x4030;
-        if ((intValue & 0xffff000000000000) != 0)
-            {
-            while ((intValue & 0xffff000000000000) != 0)
-                {
-                intValue >>= 1;
-                exponent  += 1;
-                }
-            }
-        else
-            {
-            while ((intValue & 0x800000000000) == 0)
-                {
-                intValue <<= 1;
-                exponent  -= 1;
-                }
-            }
-        floatResult = ((u64)sign << 63) | ((u64)exponent << 48) | intValue;
-        }
-    activeCpu->regX[activeCpu->opK] = floatResult;
+    activeCpu->regX[activeCpu->opK] = float180ConvertIntToFloat(activeCpu->regX[activeCpu->opJ]);
     }
 
 static void cp180Op3B(Cpu180Context *activeCpu)  // 3B  CNFI       MIGDS 2-72
     {
-    cp180OpIv(activeCpu);
+    u64 intResult;
+
+    intResult = activeCpu->regX[activeCpu->opK];
+    (void)float180ConvertFloatToInt(activeCpu, activeCpu->regX[activeCpu->opJ], &intResult);
+    activeCpu->regX[activeCpu->opK] = intResult;
     }
 
 static void cp180Op3C(Cpu180Context *activeCpu)  // 3C  CMPF       MIGDS 2-89
@@ -4797,7 +4874,8 @@ static void cp180Op76(Cpu180Context *activeCpu)  // 76  MOVB       MIGDS 2-55
                     }
                 }
             }
-        traceBlockOp(activeCpu);
+        traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
+        traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
 #endif
         }
     }
@@ -4844,13 +4922,11 @@ static void cp180Op77(Cpu180Context *activeCpu)  // 77  CMPB       MIGDS 2-52
             if (*sp < *dp)
                 {
                 result = 3;
-                offset = sp - srcBuf;
                 break;
                 }
             else if (*sp > *dp)
                 {
                 result = 1;
-                offset = sp - srcBuf;
                 break;
                 }
             sp += 1;
@@ -4858,13 +4934,15 @@ static void cp180Op77(Cpu180Context *activeCpu)  // 77  CMPB       MIGDS 2-52
             }
         if (result != 0)
             {
+            offset             = sp - srcBuf;
             activeCpu->regX[0] = (activeCpu->regX[0] & LeftMask) | offset;
             }
         activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | (result << 30);
         activeCpu->nextP += 8;
 
 #if CcDebug == 1
-        traceBlockOp(activeCpu);
+        traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
+        traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
 #endif
         }
     }
@@ -5141,7 +5219,16 @@ static void cp180Op85(Cpu180Context *activeCpu)  // 85  SA         MIGDS 2-15
 
 static void cp180Op86(Cpu180Context *activeCpu)  // 86  LBYTP,j    MIGDS 2-13
     {
-    cp180OpIv(activeCpu);
+    u32 disp;
+    u64 pva;
+    u64 word;
+
+    disp = (activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffff0000 | activeCpu->opQ;
+    pva  = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+    if (cpu180GetBytes(activeCpu, pva, (activeCpu->opJ & Mask3) + 1, AccessModeExecute, &word))
+        {
+        activeCpu->regX[activeCpu->opK] = word;
+        }
     }
 
 static void cp180Op87(Cpu180Context *activeCpu)  // 87  ENTC       MIGDS 2-31
@@ -5946,7 +6033,6 @@ static void cp180OpB5(Cpu180Context *activeCpu)  // B5  CALLSEG    MIGDS 2-122
     u32              frameSize;
     u8               r1;
     u8               r2;
-    u8               ring;
     u8               ringBsp;
     u8               ringP;
     u32              rma;
@@ -5976,13 +6062,20 @@ static void cp180OpB5(Cpu180Context *activeCpu)  // B5  CALLSEG    MIGDS 2-122
         cpu180SetMonitorCondition(activeCpu, MCR54); // access violation
         return;
         }
-    if (cpu180ValidateAccess(activeCpu, bsp, RingOf(activeCpu->regP), AccessModeRead, &cond) == FALSE
+    ringP = RingOf(activeCpu->regP);
+    if (cpu180ValidateAccess(activeCpu, bsp, ringP, AccessModeRead, &cond) == FALSE
         || cpu180PvaToRma(activeCpu, bsp, AccessModeRead, &rma, &cond) == FALSE)
         {
         cpu180SetMonitorCondition(activeCpu, cond);
         return;
         }
     cbp = cpMem[rma >> 3];
+    if (ringBsp > ((cbp >> 48) & Mask4))
+        {
+        activeCpu->regUtp = callee;
+        cpu180SetMonitorCondition(activeCpu, MCR54); // Access violation
+        return;
+        }
 
 #if CcDebug == 1
     traceCodebasePointer(activeCpu, bsp, rma, cbp);
@@ -5995,28 +6088,23 @@ static void cp180OpB5(Cpu180Context *activeCpu)  // B5  CALLSEG    MIGDS 2-122
         cpu180SetMonitorCondition(activeCpu, MCR52); // Address specification error
         return;
         }
-    r1    = cpu180GetR1(activeCpu, callee);
-    ringP = RingOf(activeCpu->regP);
+    r1 = cpu180GetR1(activeCpu, callee);
     if (r1 > ringP)
         {
         activeCpu->regUtp = callee;
         cpu180SetMonitorCondition(activeCpu, MCR61); // Outward call
         return;
         }
-    ring = ringP;
-    r2   = cpu180GetR2(activeCpu, callee);
-    if (ring > r2)
+    r2 = cpu180GetR2(activeCpu, callee);
+    if (ringP <= r2)
         {
-        ring   = r2;
-        callee = ((u64)ring << 44) | (callee & Mask44);
+        callee = ((u64)ringP << 44) | (callee & Mask44);
         }
-    if (ringBsp > ((cbp >> 48) & Mask4))
+    else
         {
-        activeCpu->regUtp = callee;
-        cpu180SetMonitorCondition(activeCpu, MCR54); // Access violation
-        return;
+        callee = ((u64)r2 << 44) | (callee & Mask44);
         }
-    if (cpu180ValidateAccess(activeCpu, activeCpu->regA[0], RingOf(activeCpu->regP), AccessModeWrite, &cond) == FALSE)
+    if (cpu180ValidateAccess(activeCpu, activeCpu->regA[0], ringP, AccessModeWrite, &cond) == FALSE)
         {
         cpu180SetMonitorCondition(activeCpu, cond);
         return;
@@ -6206,7 +6294,78 @@ static void cp180OpE5(Cpu180Context *activeCpu)  // E5  SCLR       MIGDS 2-49
 
 static void cp180OpE9(Cpu180Context *activeCpu)  // E9  CMPC       MIGDS 2-52
     {
-    cp180OpIv(activeCpu);
+    u8  *dp;
+    u16 i;
+    u8  *sp;
+    u8  dstBuf[256];
+    u16 n;
+    u16 offset;
+    u8  result;
+    u8  srcBuf[256];
+    u8  trnBuf[256];
+    u64 trnPva;
+
+    if (cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP, activeCpu->opJ, 0, &activeCpu->srcDesc)
+        && cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
+        {
+        n = (activeCpu->dstDesc.length < activeCpu->srcDesc.length) ? activeCpu->srcDesc.length : activeCpu->dstDesc.length;
+        if (n > 256)
+            {
+            cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+            return;
+            }
+        trnPva = (RingSegMask & activeCpu->regA[activeCpu->opI]) | ((activeCpu->regA[activeCpu->opI] + activeCpu->opD) & Mask32);
+        if (cpu180CopyToBuf(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, srcBuf) == FALSE
+            || cpu180CopyToBuf(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, dstBuf) == FALSE
+            || cpu180CopyToBuf(activeCpu, trnPva, 256, trnBuf) == FALSE)
+            {
+            return;
+            }
+        for (i = activeCpu->srcDesc.length; i < n; i++)
+            {
+            srcBuf[i] = 0x20;
+            }
+        for (i = activeCpu->dstDesc.length; i < n; i++)
+            {
+            dstBuf[i] = 0x20;
+            }
+        result = 0;
+        offset = 0;
+        sp     = srcBuf;
+        dp     = dstBuf;
+        for (i = 0; i < n; i++)
+            {
+            if (*sp == *dp || trnBuf[*sp] == trnBuf[*dp])
+                {
+                sp += 1;
+                dp += 1;
+                }
+            else if (*sp < *dp)
+                {
+                result = 3;
+                break;
+                }
+            else
+                {
+                result = 1;
+                break;
+                }
+            }
+        if (result != 0)
+            {
+            offset             = sp - srcBuf;
+            activeCpu->regX[0] = (activeCpu->regX[0] & LeftMask) | offset;
+            }
+        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | (result << 30);
+        activeCpu->nextP += 8;
+/*DELETE*/traceMask |= TraceCpu|TraceBlockOp|TraceExchange;
+
+#if CcDebug == 1
+        traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
+        traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
+        traceMemoryBlock(activeCpu, trnPva, 256, "    translation table:");
+#endif
+        }
     }
 
 static void cp180OpEB(Cpu180Context *activeCpu)  // EB  TRANB      MIGDS 2-54
@@ -6245,6 +6404,12 @@ static void cp180OpEB(Cpu180Context *activeCpu)  // EB  TRANB      MIGDS 2-54
             }
         (void)cpu180CopyFromBuf(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, buf);
         activeCpu->nextP += 8;
+
+#if CcDebug == 1
+        traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
+        traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
+        traceMemoryBlock(activeCpu, pva, 256, "    translation table:");
+#endif
         }
     }
 
@@ -6257,10 +6422,12 @@ static void cp180OpF3(Cpu180Context *activeCpu)  // F3  SCNB       MIGDS 2-54
     {
     u8  bitIdx;
     u8  bits;
-    u64 bPva;
-    u64 dPva;
+    u8  dstBuf[256];
     u16 i;
+    u8  table[32];
+    u64 tPva;
 
+/*DELETE*/ //traceMask |= TraceCpu|TraceBlockOp|TraceExchange;
     static u8 masks[8] = { 0x80,0x40,0x20,0x10,0x08,0x04,0x02,0x01 };
 
     if (cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP, activeCpu->opK, 1, &activeCpu->dstDesc))
@@ -6270,19 +6437,23 @@ static void cp180OpF3(Cpu180Context *activeCpu)  // F3  SCNB       MIGDS 2-54
             cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
             return;
             }
-        dPva = activeCpu->dstDesc.pva;
-        bPva = (activeCpu->regA[activeCpu->opI] & RingSegMask) | ((activeCpu->regA[activeCpu->opI] + activeCpu->opD) & Mask32);
+        tPva = (activeCpu->regA[activeCpu->opI] & RingSegMask) | ((activeCpu->regA[activeCpu->opI] + activeCpu->opD) & Mask32);
+        if (cpu180CopyToBuf(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, dstBuf) == FALSE
+            || cpu180CopyToBuf(activeCpu, tPva, 32, table) == FALSE)
+            {
+            return;
+            }
+
+#if CcDebug == 1
+        traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    byte string:");
+        traceMemoryBlock(activeCpu, tPva, 32, "    bit table:");
+#endif
+
         i = 0;
         while (i < activeCpu->dstDesc.length)
             {
-            if (cpu180GetByte(activeCpu, dPva++, AccessModeRead, &bitIdx) == FALSE)
-                {
-                return;
-                }
-            if (cpu180GetByte(activeCpu, bPva + (bitIdx >> 3), AccessModeRead, &bits) == FALSE)
-                {
-                return;
-                }
+            bitIdx = dstBuf[i];
+            bits   = table[bitIdx >> 3];
             if ((bits & masks[bitIdx & Mask3]) != 0)
                 {
                 activeCpu->regX[0] = (activeCpu->regX[0] & LeftMask) | i;

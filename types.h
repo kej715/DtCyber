@@ -433,6 +433,15 @@ typedef enum
     } Cpu180AccessMode;
 
 /*
+**  CYBER 180 double precision floating point value
+*/
+typedef struct
+    {
+    u64 leftPart;
+    u64 rightPart;
+    } Cpu180Double;
+
+/*
 **  Model specific feature set.
 */
 typedef enum

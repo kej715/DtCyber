@@ -58,6 +58,7 @@ OBJS    =   cdcnet.o                \
             dsa311.o                \
             dump.o                  \
             float.o                 \
+            float180.o              \
             fsmon.o                 \
             init.o                  \
             interlock_channel.o     \
@@ -103,6 +104,9 @@ dtcyber: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $+ $(LIBS)
 
 all: dtcyber stk/node_modules automation/node_modules webterm/node_modules webterm/www/js/node_modules rje-station/node_modules
+
+test_float180: float180.o test_float180.o
+	$(CC) $(LDFLAGS) -o $@ $+ $(LIBS)
 
 automation/node_modules:
 	$(MAKE) -C automation
