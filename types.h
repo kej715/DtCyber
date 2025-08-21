@@ -51,6 +51,7 @@ typedef unsigned short      u16;
 typedef unsigned long       u32;
 typedef unsigned __int64    u64;
 #define FMT60_020o    "%020I64o"
+#define FMT64_010x    "%010I64x"
 #define FMT64_016x    "%016I64x"
 #define FMT64_022o    "%022I64o"
 #define FMT64_012x    "%012I64x"
@@ -72,6 +73,7 @@ typedef unsigned int        u32;
 typedef unsigned long int   u64;
 typedef unsigned __int128   u128;
 #define FMT60_020o    "%020lo"
+#define FMT64_010x    "%010lx"
 #define FMT64_016x    "%016lx"
 #define FMT64_022o    "%022lo"
 #define FMT64_012x    "%012lx"
@@ -93,6 +95,7 @@ typedef unsigned int             u32;
 typedef unsigned long long int   u64;
 typedef unsigned __int128        u128;
 #define FMT60_020o    "%020llo"
+#define FMT64_010x    "%010llx"
 #define FMT64_016x    "%016llx"
 #define FMT64_022o    "%022llo"
 #define FMT64_012x    "%012;lx"

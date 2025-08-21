@@ -2201,7 +2201,7 @@ void tracePageInfo(Cpu180Context *cpu, u16 hash, u32 pageNum, u32 pageOffset, u3
     {
     if ((traceMask & TracePva) != 0)
         {
-        fprintf(cpuF[cpu->id], "%06d hash %04x pageNum %x pageOffset %x pageTableAddr %08x SPID %lx\n", traceSequenceNo,
+        fprintf(cpuF[cpu->id], "%06d hash %04x pageNum %x pageOffset %x pageTableAddr %08x SPID " FMT64_010x "\n", traceSequenceNo,
             hash, pageNum, pageOffset, pageTableIdx << 3, spid);
         }
     }
@@ -2218,7 +2218,7 @@ void tracePte(Cpu180Context *cpu, u64 pte)
     {
     if ((traceMask & TracePva) != 0)
         {
-        fprintf(cpuF[cpu->id], "%06d PTE V %x C %x U %x M %x SPID %010lx PFA %05x\n", traceSequenceNo,
+        fprintf(cpuF[cpu->id], "%06d PTE V %x C %x U %x M %x SPID " FMT64_010x " PFA %05x\n", traceSequenceNo,
             (u8)((pte >> 63) & 1), (u8)((pte >> 62) & 1), (u8)((pte >> 61) & 1), (u8)((pte >> 60) & 1),
             (pte >> 22) & Mask38, (u32)((pte >> 2) & Mask20));
         }

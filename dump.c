@@ -327,7 +327,7 @@ void dumpCpu(void)
                 fputs("\n", pf);
                 }
             fputs("\n", pf);
-            fprintf(pf, " MDW %016lx  \n", cpu180->regMdw);
+            fprintf(pf, " MDW " FMT64_016x "\n", cpu180->regMdw);
             fputs("\n", pf);
             fprintf(pf, "MONITOR      %d\n", cpu180->isMonitorMode ? 1 : 0);
             fprintf(pf, "STOP         %d\n", cpu180->isStopped ? 1 : 0);

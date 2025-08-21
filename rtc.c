@@ -253,7 +253,7 @@ void rtcReadUsCounter(void)
         return;
         }
 
-    rtcClockDelta = new - old;
+    rtcClockDelta = (u32)(new - old);
     if (rtcClockDelta > MaxMicroseconds)
         {
         rtcClockDelta     = MaxMicroseconds;

@@ -4934,7 +4934,7 @@ static void cp180Op77(Cpu180Context *activeCpu)  // 77  CMPB       MIGDS 2-52
             }
         if (result != 0)
             {
-            offset             = sp - srcBuf;
+            offset             = (u16)(sp - srcBuf);
             activeCpu->regX[0] = (activeCpu->regX[0] & LeftMask) | offset;
             }
         activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | (result << 30);
@@ -5845,7 +5845,7 @@ static void cp180OpAD(Cpu180Context *activeCpu)  // AD  ISOB       MIGDS 2-36
     if (first + length < 64)
         {
         shift = (63 - first) - length;
-        activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opJ] & (bitMasks[length] << shift)) >> shift;
+        activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opJ] >> shift) & bitMasks[length];
         }
     else
         {
@@ -6069,7 +6069,8 @@ static void cp180OpB5(Cpu180Context *activeCpu)  // B5  CALLSEG    MIGDS 2-122
         cpu180SetMonitorCondition(activeCpu, cond);
         return;
         }
-    cbp = cpMem[rma >> 3];
+    cbp    = cpMem[rma >> 3];
+    callee = cbp & Mask48;
     if (ringBsp > ((cbp >> 48) & Mask4))
         {
         activeCpu->regUtp = callee;
@@ -6081,7 +6082,6 @@ static void cp180OpB5(Cpu180Context *activeCpu)  // B5  CALLSEG    MIGDS 2-122
     traceCodebasePointer(activeCpu, bsp, rma, cbp);
 #endif
 
-    callee = cbp & Mask48;
     if (((callee & Mask3) != 0) || (callee & 0x80000000) != 0)
         {
         activeCpu->regUtp = callee;
@@ -6353,7 +6353,7 @@ static void cp180OpE9(Cpu180Context *activeCpu)  // E9  CMPC       MIGDS 2-52
             }
         if (result != 0)
             {
-            offset             = sp - srcBuf;
+            offset             = (u16)(sp - srcBuf);
             activeCpu->regX[0] = (activeCpu->regX[0] & LeftMask) | offset;
             }
         activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | (result << 30);

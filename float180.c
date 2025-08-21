@@ -54,6 +54,10 @@
 **  Private Macro Functions
 **  -----------------------
 */
+#if defined(_WIN32)
+#undef INFINITE
+#endif
+
 #define CoefficientOf(fval) ((fval) & Mask48)
 #define ExponentOf(fval) (((fval) >> 48) & 0x7fff)
 #define SignOf(fval) (((fval) >> 63) & 1)
@@ -951,7 +955,6 @@ bool float180ConvertFloatToInt(Cpu180Context *ctx, u64 floatValue, u64 *intResul
     {
     u16 exponent;
     u16 shift;
-    u8  sign;
 
     exponent = ExponentOf(floatValue);
 
