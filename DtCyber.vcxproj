@@ -266,6 +266,7 @@
     <ClCompile Include="dsa311.c" />
     <ClCompile Include="dump.c" />
     <ClCompile Include="float.c" />
+    <ClCompile Include="float180.c" />
     <ClCompile Include="fsmon.c" />
     <ClCompile Include="init.c" />
     <ClCompile Include="interlock_channel.c" />
