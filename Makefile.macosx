@@ -38,7 +38,8 @@ HDRS    =   const.h                 \
             proto.h                 \
             types.h
 
-OBJS    =   cdcnet.o                \
+OBJS    =   bdp180.o                \
+            cdcnet.o                \
             channel.o               \
             charset.o               \
             console.o               \

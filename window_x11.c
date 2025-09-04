@@ -528,7 +528,11 @@ void *windowThread(void *param)
                             break;
 
                         case 'c':
-                            traceMask ^= TraceCpu;
+                            traceMask ^= TraceCpu170;
+                            break;
+
+                        case 'v':
+                            traceMask ^= TraceCpu180;
                             break;
 
                         case 'e':
@@ -653,7 +657,7 @@ void *windowThread(void *param)
                 sprintf(buf + strlen(buf), " %06o", cpus170[1].regP);
                 }
 
-            sprintf(buf + strlen(buf), "   Trace: %c%c%c%c%c%c%c%c%c%c%c%c%c%c",
+            sprintf(buf + strlen(buf), "   Trace: %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
                     (traceMask >> 0) & 1 ? '0' : '_',
                     (traceMask >> 1) & 1 ? '1' : '_',
                     (traceMask >> 2) & 1 ? '2' : '_',
@@ -664,7 +668,8 @@ void *windowThread(void *param)
                     (traceMask >> 7) & 1 ? '7' : '_',
                     (traceMask >> 8) & 1 ? '8' : '_',
                     (traceMask >> 9) & 1 ? '9' : '_',
-                    (traceMask & TraceCpu) != 0 ? 'C' : '_',
+                    (traceMask & TraceCpu170) != 0 ? 'C' : '_',
+                    (traceMask & TraceCpu180) != 0 ? 'V' : '_',
                     (traceMask & TraceExchange) != 0 ? 'E' : '_',
                     (traceMask & TraceBlockOp) != 0 ? 'B' : '_',
                     (traceMask & TraceCallFrame) != 0 ? 'F' : '_');

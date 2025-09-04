@@ -59,6 +59,14 @@
 */
 
 /*
+**  bdp180.c
+*/
+bool bdp180CopyFromBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer);
+bool bdp180CopyToBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer);
+bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *operand);
+bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *operand);
+
+/*
 **  channel.c
 */
 void channelInit(u8 count);
@@ -114,6 +122,7 @@ void cpuVoidIwStack(Cpu170Context *activeCpu, u32 branchAddr);
 **  cpu180.c
 */
 void cpu180CheckConditions(Cpu180Context *ctx);
+bool cpu180GetBytes(Cpu180Context *ctx, u64 pva, int count, u8 ring, Cpu180AccessMode access, u64 *word);
 void cpu180Init(char *model);
 void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa);
 u64  cpu180MacGetCmRegister(u8 reg);
@@ -131,6 +140,7 @@ void cpu180MacWriteCm(u8 byte);
 void cpu180MacWriteCp(Cpu180Context *ctx, u8 type, u8 byte);
 void cpu180PpReadMem(u32 address, CpWord *data);
 void cpu180PpWriteMem(u32 address, CpWord data);
+bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u8 ring, u64 word, int count);
 bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *rma, MonitorCondition *cond);
 void cpu180SetMonitorCondition(Cpu180Context *ctx, MonitorCondition cond);
 void cpu180SetUserCondition(Cpu180Context *ctx, UserCondition cond);
@@ -239,6 +249,7 @@ CpWord floatDivide(CpWord v1, CpWord v2, bool doRound);
 */
 bool float180AddDouble(Cpu180Context *ctx, Cpu180Double *augend, Cpu180Double *addend, Cpu180Double *sum);
 bool float180AddFloat(Cpu180Context *ctx, u64 augend, u64 addend, u64 *sum);
+bool float180CompareFloat(Cpu180Context *ctx, u64 minend, u64 subend, int *valence);
 bool float180ConvertFloatToInt(Cpu180Context *ctx, u64 floatValue, u64 *intResult);
 u64  float180ConvertIntToFloat(u64 intValue);
 bool float180DivDouble(Cpu180Context *ctx, Cpu180Double *dvdend, Cpu180Double *dvisor, Cpu180Double *quotient);
@@ -494,7 +505,7 @@ void traceCpu180(Cpu180Context *cpu, u64 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u16
 void traceCpuPrint(Cpu170Context *cpu, char *str);
 u8 traceDisassembleOpcode(char *str, PpWord *pm);
 void traceEnd(void);
-void traceExchange(Cpu170Context *cpu, u32 addr, char *title);
+void traceExchange170(Cpu170Context *cpu, u32 addr, char *title, bool force);
 void traceExchange180(Cpu180Context *cpu, u32 addr, char *title);
 void traceHaltCpu180(Cpu180Context *cpu);
 void traceInit(void);

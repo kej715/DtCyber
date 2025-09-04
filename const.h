@@ -227,11 +227,13 @@
 /*
 **  Trace masks.
 */
-#define TracePva                   (1 << 31)
-#define TraceCpu                   (1 << 30)
+#define TraceCpu180                (1 << 31)
+#define TraceCpu170                (1 << 30)
+#define TraceCpu                   (TraceCpu180 | TraceCpu170)
 #define TraceExchange              (1 << 29)
 #define TraceBlockOp               (1 << 28)
 #define TraceCallFrame             (1 << 27)
+#define TracePva                   (1 << 26)
 
 /*
 **  Sign extension and overflow.

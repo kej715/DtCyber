@@ -1236,7 +1236,7 @@ static void cpuExchangeJump(Cpu170Context *activeCpu, u32 address, bool doChange
  */
 
 #if CcDebug == 1
-    traceExchange(activeCpu, address, "Outgoing");
+    traceExchange170(activeCpu, address, "Outgoing", FALSE);
 #endif
 
     /*
@@ -1335,7 +1335,7 @@ static void cpuExchangeJump(Cpu170Context *activeCpu, u32 address, bool doChange
     activeCpu->exitCondition = EcNone;
 
 #if CcDebug == 1
-    traceExchange(activeCpu, address, "Incoming");
+    traceExchange170(activeCpu, address, "Incoming", FALSE);
 #endif
 
     /*

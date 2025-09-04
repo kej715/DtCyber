@@ -604,8 +604,8 @@ static DecCp180Control cp180Decode[0x100] =
     VCjk,   "SUBN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 71
     VCjk,   "MULN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 72
     VCjk,   "DIVN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 73
-    VCjk,   "CMPN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 74
-    VCjk,   "MOVN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 75
+    VCjkB2, "CMPN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 74
+    VCjkB2, "MOVN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 75
     VCjkB2, "MOVB,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 76
     VCjkB2, "CMPB,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 77
     VCjk,   "Illegal",  VF, VR,                                // 78
@@ -881,7 +881,7 @@ void traceCpu(Cpu170Context *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 op
     /*
     **  Bail out if no trace of the CPU is requested.
     */
-    if ((traceMask & TraceCpu) == 0)
+    if ((traceMask & TraceCpu170) == 0)
         {
         return;
         }
@@ -1215,7 +1215,7 @@ void traceCpu180(Cpu180Context *cpu, u64 p, u8 opCode, u8 opI, u8 opJ, u8 opK, u
     /*
     **  Bail out if no trace of the CPU is requested.
     */
-    if ((traceMask & TraceCpu) == 0)
+    if ((traceMask & TraceCpu180) == 0)
         {
         return;
         }
@@ -1628,11 +1628,12 @@ void traceCodebasePointer(Cpu180Context *cpu, u64 bsp, u32 rma, u64 cbp)
 **                  cpu         Pointer to CPU context
 **                  addr        Address of exchange package
 **                  title       Title for exchange
+**                  force       force trace regardless of TraceCpu170 state
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void traceExchange(Cpu170Context *cpu, u32 addr, char *title)
+void traceExchange170(Cpu170Context *cpu, u32 addr, char *title, bool force)
     {
     CpWord data;
     u8     i;
@@ -1640,7 +1641,8 @@ void traceExchange(Cpu170Context *cpu, u32 addr, char *title)
     /*
     **  Bail out if no trace of exchange jumps is requested.
     */
-    if ((traceMask & TraceExchange) == 0)
+    if ((traceMask & TraceExchange) == 0
+        || ((traceMask & TraceCpu170) == 0 && force == FALSE))
         {
         return;
         }
@@ -1728,7 +1730,7 @@ void traceExchange180(Cpu180Context *cpu, u32 addr, char *title)
     /*
     **  Bail out if no trace of exchange jumps is requested.
     */
-    if ((traceMask & TraceExchange) == 0)
+    if ((traceMask & (TraceCpu180 | TraceExchange)) != (TraceCpu180 | TraceExchange))
         {
         return;
         }
@@ -1797,7 +1799,7 @@ void traceExchange180(Cpu180Context *cpu, u32 addr, char *title)
 **------------------------------------------------------------------------*/
 void traceHaltCpu180(Cpu180Context *cpu)
     {
-    if ((traceMask & TraceCpu) != 0)
+    if ((traceMask & TraceCpu180) != 0)
         {
         fprintf(cpuF[cpu->id], "%06d Halt CPU%d\n", traceSequenceNo, cpu->id);
         }
@@ -1814,7 +1816,7 @@ void traceHaltCpu180(Cpu180Context *cpu)
 **------------------------------------------------------------------------*/
 void traceMasterClearCpu180(Cpu180Context *cpu)
     {
-    if ((traceMask & TraceCpu) != 0)
+    if ((traceMask & TraceCpu180) != 0)
         {
         fprintf(cpuF[cpu->id], "%06d Master Clear CPU%d\n", traceSequenceNo, cpu->id);
         }
@@ -1845,7 +1847,7 @@ void traceMemoryBlock(Cpu180Context *cpu, u64 pva, u16 length, char *title)
     u64              word;
     u32              wordAddr;
 
-    if ((traceMask & (TraceCpu | TraceBlockOp)) != (TraceCpu | TraceBlockOp))
+    if ((traceMask & (TraceCpu180 | TraceBlockOp)) != (TraceCpu180 | TraceBlockOp))
         {
         return;
         }
@@ -1908,7 +1910,7 @@ void traceMemoryBlock(Cpu180Context *cpu, u64 pva, u16 length, char *title)
 **------------------------------------------------------------------------*/
 void traceStartCpu180(Cpu180Context *cpu, u32 rma)
     {
-    if ((traceMask & TraceCpu) != 0)
+    if ((traceMask & TraceCpu180) != 0)
         {
         fprintf(cpuF[cpu->id], "%06d Start CPU%d at %08x\n", traceSequenceNo, cpu->id, rma);
         }
@@ -2169,7 +2171,7 @@ static char *traceMonitorConditionToStr(MonitorCondition cond)
 **------------------------------------------------------------------------*/
 void traceMonitorCondition(Cpu180Context *cpu, MonitorCondition cond)
     {
-    if ((traceMask & (TracePva | TraceCpu)) != 0)
+    if ((traceMask & (TracePva | TraceCpu180)) != 0)
         {
         fprintf(cpuF[cpu->id], "%06d MCR%02d %s", traceSequenceNo, (cond - MCR48) + 48, traceMonitorConditionToStr(cond));
         switch (cond)
@@ -2253,7 +2255,7 @@ void tracePva(Cpu180Context *cpu, u64 pva)
 **------------------------------------------------------------------------*/
 void traceRingZeroCondition(Cpu180Context *cpu, u64 pva)
     {
-    if ((traceMask & (TracePva | TraceCpu)) != 0)
+    if ((traceMask & (TracePva | TraceCpu180)) != 0)
         {
         fprintf(cpuF[cpu->id], "%06d MCR60 Ring 0 violation, PVA " FMT64_012x " %s mode trapEnables %d\n", traceSequenceNo,
             pva, cpu->isMonitorMode ? "monitor" : "job", cpu->regFlags & 3);
@@ -2339,7 +2341,7 @@ void traceUserCondition(Cpu180Context *cpu, UserCondition cond)
     {
     char *s;
 
-    if ((traceMask & (TracePva | TraceCpu)) != 0)
+    if ((traceMask & (TracePva | TraceCpu180)) != 0)
         {
         switch (cond)
             {
@@ -2412,7 +2414,7 @@ void traceUserCondition(Cpu180Context *cpu, UserCondition cond)
 **------------------------------------------------------------------------*/
 void traceVmRegisters(Cpu180Context *cpu)
     {
-    if ((traceMask & (TracePva | TraceCpu)) != 0)
+    if ((traceMask & (TracePva | TraceCpu180)) != 0)
         {
         fprintf(cpuF[cpu->id], "%06d STA %08x STL %d PTA %08x PTL %d PSM %02x pnShift %d poMask %x plMask %x\n",
             traceSequenceNo, cpu->regSta, cpu->regStl, cpu->regPta, cpu->regPtl, cpu->regPsm,

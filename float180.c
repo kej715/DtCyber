@@ -68,6 +68,9 @@
 #define NEG_INDEFINITE 0xF000000000000000
 #define NEG_INFINITE   0xD000000000000000
 
+#define FP_ONE         0x4001800000000000
+#define FP__NEG_ONE    0xc001800000000000
+
 #define IsIndefinite(exponent) ((exponent) >= 0x7000)
 #define IsInfinite(exponent) ((exponent) >= 0x5000 && (exponent) < 0x7000)
 #define IsStandard(exponent) ((exponent) >= 0x3000 && (exponent) < 0x5000)
@@ -936,6 +939,125 @@ bool float180AddFloat(Cpu180Context *ctx, u64 augend, u64 addend, u64 *sum)
     case INFxN:
         cpu180SetUserCondition(ctx, UCR58);
         *sum = (SignOf(augend) << 63) | INFINITE;
+        return TRUE;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Compare two single precision floating point quantities
+**                  and detect exceptions
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CPU context
+**                  minend      the minuend
+**                  subend      the subtrahend
+**                  valence     (out) -1 if minuend <  subend
+**                                     0 if minuend == subend
+**                                     1 if minuend >  subend
+**
+**  Returns:        TRUE if no exceptions detected or instruction should
+**                  complete. FALSE if exception detected and instruction
+**                  should be inhibited.
+**
+**                  UCR set if exception detected.
+**
+**------------------------------------------------------------------------*/
+bool float180CompareFloat(Cpu180Context *ctx, u64 minend, u64 subend, int *valence)
+    {
+    FloatClass classSubend;
+    FloatClass classMinend;
+    u64        diff;
+    u8         signSubend;
+    u8         signMinend;
+
+    classSubend = float180FloatClassOf(minend);
+    classMinend = float180FloatClassOf(minend);
+    switch ((classMinend * 5) + classSubend)
+        {
+    default:
+    case NxN:
+    case Z3xN:
+    case NxZ3:
+    case Z3xZ3:
+        signMinend = SignOf(minend);
+        signSubend = SignOf(minend);
+        if (signMinend < signSubend)
+            {
+            *valence = 1;
+            return TRUE;
+            }
+        else if (signMinend > signSubend)
+            {
+            *valence = -1;
+            return TRUE;
+            }
+        if (float180SubFloat(ctx, minend, subend, &diff))
+            {
+            if (diff == 0)
+                {
+                *valence = 0;
+                }
+            else if ((diff & 0x8000000000000000) == 0)
+                {
+                *valence = 1;
+                }
+            else
+                {
+                *valence = -1;
+                }
+            return TRUE;
+            }
+        return FALSE;
+    case NxZ1Z2:
+    case Z3xZ1Z2:
+        *valence = (SignOf(minend) == 0) ? 1 : -1;
+        return TRUE;
+    case Z1Z2xN:
+    case Z1Z2xZ3:
+    case Z1Z2xINF:
+        *valence = (SignOf(minend) == 0) ? -1 : 1;
+        return TRUE;
+    case Z1Z2xZ1Z2:
+        *valence = 0;
+        return TRUE;
+    case NxINF:
+    case Z3xINF:
+        *valence = (SignOf(subend) == 0) ? -1 : 1;
+        return TRUE;
+    case Z1Z2xINDEF:
+    case Z3xINDEF:
+    case NxINDEF:
+    case INFxINDEF:
+    case INDEFxZ1Z2:
+    case INDEFxZ3:
+    case INDEFxN:
+    case INDEFxINDEF:
+    case INDEFxINF:
+        cpu180SetUserCondition(ctx, UCR61);
+        *valence = 0;
+        return FALSE;
+    case INFxZ3:
+    case INFxN:
+    case INFxZ1Z2:
+        *valence = (SignOf(minend) == 0) ? 1 : -1;
+        return TRUE;
+    case INFxINF:
+        signMinend = SignOf(minend);
+        signSubend = SignOf(minend);
+        if (signMinend < signSubend)
+            {
+            *valence = 1;
+            }
+        else if (signMinend > signSubend)
+            {
+            *valence = -1;
+            }
+        else
+            {
+            cpu180SetUserCondition(ctx, UCR61);
+            *valence = 0;
+            return FALSE;
+            }
         return TRUE;
         }
     }

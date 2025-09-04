@@ -647,13 +647,17 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 
         case 'C':
         case 'c':
-            traceMask ^= TraceCpu;
-            traceMask ^= TraceExchange;
+            traceMask ^= TraceCpu170;
             break;
 
         case 'E':
         case 'e':
             traceMask ^= TraceExchange;
+            break;
+
+        case 'V':
+        case 'v':
+            traceMask ^= TraceCpu180;
             break;
 
         case 'X':
@@ -803,7 +807,7 @@ void windowDisplay(HWND hWnd)
                 ppu[5].regP, ppu[6].regP, ppu[7].regP, ppu[8].regP, ppu[9].regP,
                 cpus170[0].regP);
 
-        sprintf(buf + strlen(buf), "   Trace0x: %c%c%c%c%c%c%c%c%c%c%c%c %c",
+        sprintf(buf + strlen(buf), "   Trace0x: %c%c%c%c%c%c%c%c%c%c%c%c%c %c",
                 (traceMask >> 0) & 1 ? '0' : '_',
                 (traceMask >> 1) & 1 ? '1' : '_',
                 (traceMask >> 2) & 1 ? '2' : '_',
@@ -814,7 +818,8 @@ void windowDisplay(HWND hWnd)
                 (traceMask >> 7) & 1 ? '7' : '_',
                 (traceMask >> 8) & 1 ? '8' : '_',
                 (traceMask >> 9) & 1 ? '9' : '_',
-                traceMask & TraceCpu ? 'C' : '_',
+                traceMask & TraceCpu170 ? 'C' : '_',
+                traceMask & TraceCpu180 ? 'V' : '_',
                 traceMask & TraceExchange ? 'E' : '_',
                 shifted ? ' ' : '<');
 

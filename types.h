@@ -281,8 +281,11 @@ typedef struct
     } Cpu170Context;
 
 /*
-**  CPU control block for CYBER 180 state
+**  Data types and macros supporting CYBER 180 state
 */
+#define PageOf(pva, ctx) (((pva) & Mask32) >> (ctx)->pageNumShift)
+#define RingOf(pva) (((pva) >> 44) & 0xf)
+#define SegmentOf(pva) (((pva) >> 32) & 0xfff)
 
 //  Monitor condition register bit ordinals.
 typedef enum
@@ -345,6 +348,14 @@ typedef struct bdpDescriptor {
     u64 pva;
 } BdpDescriptor;
 
+// BDP numeric operand
+typedef struct bdpOperand
+    {
+    bool sign;
+    u64  value[2];
+    } BdpOperand;
+
+// CYBER 180 CPU control block
 typedef struct
     {
     u8            id;                   /* CPU identifier */
