@@ -241,6 +241,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="bdp180.c" />
     <ClCompile Include="cci_async.c" />
     <ClCompile Include="cci_hip.c" />
     <ClCompile Include="cci_svm.c" />
