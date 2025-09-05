@@ -700,6 +700,7 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                 }
             if (operand->value[1] == 0 && operand->value[0] == 0)
                 {
+                d1 = buffer[0] - 0x30;
                 if (d1 == 0)
                     {
                     d1 = operand->sign ? 0x7d : 0x7b;
@@ -712,7 +713,7 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                     {
                     d1 += 0x40;
                     }
-                buffer[i] = d1;
+                buffer[0] = d1;
                 }
             }
         break;
@@ -722,13 +723,16 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
             i = desc->length;
             while (i > 0)
                 {
-                bdp180Div10(operand, &d1);
                 i -= 1;
-                buffer[i] = d1 + 0x30;
-                }
-            if (buffer[i] == 0 && operand->value[1] == 0 && operand->value[0] == 0)
-                {
-                buffer[i] = operand->sign ? 0x2d : 0x2b;
+                if (i == 0 && operand->value[1] == 0 && operand->value[0] == 0)
+                    {
+                    buffer[i] = operand->sign ? 0x2d : 0x2b;
+                    }
+                else
+                    {
+                    bdp180Div10(operand, &d1);
+                    buffer[i] = d1 + 0x30;
+                    }
                 }
             }
         break;
