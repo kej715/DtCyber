@@ -531,10 +531,6 @@ void *windowThread(void *param)
                             traceMask ^= TraceCpu170;
                             break;
 
-                        case 'v':
-                            traceMask ^= TraceCpu180;
-                            break;
-
                         case 'e':
                             traceMask ^= TraceExchange;
                             break;
@@ -543,15 +539,16 @@ void *windowThread(void *param)
                             traceMask ^= TraceCallFrame;
                             break;
 
+                        case 'v':
+                            traceMask ^= TraceCpu180;
+                            break;
+
+                        case 'w':
+                            traceMask ^= TraceCpu180|TraceExchange|TraceBlockOp|TraceCallFrame;
+                            break;
+
                         case 'x':
-                            if (traceMask == 0)
-                                {
-                                traceMask = ~0;
-                                }
-                            else
-                                {
-                                traceMask = 0;
-                                }
+                            traceMask = 0;
                             break;
 
                         case 'p':
