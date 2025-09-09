@@ -23,8 +23,6 @@
 **--------------------------------------------------------------------------
 */
 
-//TODO: See MIGDS 7-27 mapping of RAE and FLE
-
 #define DEBUG 0
 
 /*
@@ -42,6 +40,27 @@
 #include <windows.h>
 #else
 #include <unistd.h>
+#endif
+
+#if CcDebug == 1
+
+//
+//  These macros facilitate tracing specific instructions and/or instructions
+//  occurring within a specified range of addresses.
+//
+//  Define macro TRACE_INST_LIST as an array initializer specifying o list of
+//  pcodes. This enables tracing of specific instructions. Macro TRACE_INST_COUNT
+//  specifies the number of instructions to trace after TRACE_INST_LIST has
+//  triggered tracing.
+
+//  TRACE_RANGE_START and TRACE_RANGE_END to enable tracing instructions within the
+//  range of addresses they specify.
+//
+//#define TRACE_INST_LIST   { 0x17 }
+#define TRACE_INST_COUNT  10
+//#define TRACE_RANGE_START 0xb027000cad00
+#define TRACE_RANGE_END   0xb027000cadff
+
 #endif
 
 /*
@@ -440,9 +459,6 @@ Cpu180Context *cpus180;
 **  Private Variables
 **  -----------------
 */
-#if DEBUG
-static FILE cpu180Log = NULL;
-#endif
 
 /*
 **  Opcode decode and dispatch table.
@@ -981,6 +997,17 @@ static u64 memoryOptions;
 static u16 memoryRegisterAddr;
 static u8  memoryRegisterBuf[8];
 static u8  memoryRegisterBufIdx;
+
+#if DEBUG
+static FILE cpu180Log = NULL;
+#endif
+
+#if CcDebug == 1
+static int traceInstCount  = 0;
+#if defined(TRACE_INST_LIST)
+static u8  traceInstList[] = TRACE_INST_LIST;
+#endif
+#endif
 
 /*
  **--------------------------------------------------------------------------
@@ -2247,7 +2274,6 @@ void cpu180SetMonitorCondition(Cpu180Context *ctx, MonitorCondition cond)
     defn         = &mcrDefns[cond];
     ctx->regMcr |= defn->bitMask;
     action       = cpu180GetActionForMonitorCondition(ctx, cond);
-/*DELETE*/ //if((ctx->regMcr & 0xfb0f) != 0) fprintf(stderr,"P %012lx MCR %04x MMR %04x action %d\n",ctx->regP,ctx->regMcr,ctx->regMmr,action);
 /*DELETE*/ if((ctx->regMcr & 0x1200) != 0) {fprintf(stderr,"P %012lx MCR %04x MMR %04x action %d\n",ctx->regP,ctx->regMcr,ctx->regMmr,action);traceStack(stderr);}
 
     if (action > ctx->pendingAction)
@@ -2281,9 +2307,6 @@ void cpu180SetUserCondition(Cpu180Context *ctx, UserCondition cond)
     defn         = &ucrDefns[cond];
     ctx->regUcr |= defn->bitMask;
     action       = cpu180GetActionForUserCondition(ctx, cond);
-/*DELETE*/ //if((ctx->regUcr & 0xefff) != 0) fprintf(stderr,"P %012lx UCR %04x UMR %04x action %d\n",ctx->regP,ctx->regUcr,ctx->regUmr,action);
-/*DELETE*/ //if((ctx->regUcr & 0x0400) != 0) traceMask |= TraceCpu180|TraceExchange|TraceBlockOp;
-/*DELETE*/ //else traceMask = 0;
 
     if (action > ctx->pendingAction)
         {
@@ -2298,7 +2321,6 @@ void cpu180SetUserCondition(Cpu180Context *ctx, UserCondition cond)
 #endif
     }
 
-/*DELETE*/ static u8 instCount = 0;
 /*--------------------------------------------------------------------------
 **  Purpose:        Execute next instruction in the CPU.
 **
@@ -2316,7 +2338,6 @@ void cpu180Step(Cpu180Context *activeCpu)
 #if CcDebug == 1
     u64        oldRegP;
 #endif
-/*DELETE*/ if (instCount > 0) {instCount-=1;if (instCount == 0) traceMask = 0;}
 
     cpu180CheckExternalInterrupts(activeCpu);
 
@@ -2391,16 +2412,42 @@ void cpu180Step(Cpu180Context *activeCpu)
             logDtError(LogErrorLocation, "Unrecognized CYBER 180 instruction format: %d", odp->format);
             exit(1);
             }
+
 #if CcDebug == 1
         oldRegP = activeCpu->regP;
+#if defined(TRACE_INST_LIST)
+        if (traceInstCount > 0)
+            {
+            traceInstCount -= 1;
+            if (traceInstCount < 1)
+                {
+                traceMask &= ~(TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
+                }
+            }
+        if (memchr(traceInstList, activeCpu->opCode, sizeof(traceInstList)) != NULL)
+            {
+            traceMask     |= TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp;
+            traceInstCount = TRACE_INST_COUNT;
+            }
 #endif
+#if defined(TRACE_RANGE_START)
+        if (activeCpu->regP >= (TRACE_RANGE_START) && activeCpu->regP <= (TRACE_RANGE_END))
+            {
+            traceMask |= TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp;
+            }
+        else if (traceInstCount < 1)
+            {
+            traceMask &= ~(TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
+            }
+#endif
+#endif
+
         activeCpu->nextKey = activeCpu->key;
         activeCpu->nextP   = activeCpu->regP + length;
         odp->execute(activeCpu);
         activeCpu->key     = activeCpu->nextKey;
         activeCpu->regP    = activeCpu->nextP;
 
-/*DELETE*/ //if(activeCpu->nextP >= 0xb0440005f000 && activeCpu->nextP <= 0xb0440005f11f) traceMask|=TraceCpu180|TraceExchange|TraceCallFrame|TraceBlockOp;
 #if CcDebug == 1
         traceCpu180(activeCpu, oldRegP, activeCpu->opCode, activeCpu->opI, activeCpu->opJ, activeCpu->opK, activeCpu->opD, activeCpu->opQ);
 #endif
@@ -4208,7 +4255,6 @@ static void cp180Op17(Cpu180Context *activeCpu)  // 17  LPAGE      MIGDS 2-139
         return;
         }
 
-/*DELETE*/ //traceMask|=TraceCpu180|TraceExchange|TraceBlockOp;instCount=10;
     asid    = (activeCpu->regX[activeCpu->opJ] >> 32) & Mask16;
     byteNum = activeCpu->regX[activeCpu->opJ] & Mask32;
     if ((byteNum & 0x80000000) != 0)
@@ -4822,7 +4868,6 @@ static void cp180Op75(Cpu180Context *activeCpu)  // 75  MOVN       MIGDS 2-51
     {
     BdpOperand operand;
 
-/*DELETE*/ traceMask|=TraceCpu180|TraceExchange|TraceBlockOp;instCount=10;
     if (cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP, activeCpu->opJ, 0, &activeCpu->srcDesc)
         && cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
         {
@@ -4974,7 +5019,6 @@ static void cp180Op77(Cpu180Context *activeCpu)  // 77  CMPB       MIGDS 2-52
             }
         activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | (result << 30);
         activeCpu->nextP += 8;
-/*DELETE*/ //traceMask|=TraceCpu180|TraceExchange|TraceBlockOp;instCount=10;
 
 #if CcDebug == 1
         traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
@@ -6490,7 +6534,6 @@ static void cp180OpE9(Cpu180Context *activeCpu)  // E9  CMPC       MIGDS 2-52
         activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | (result << 30);
         activeCpu->nextP += 8;
 
-/*DELETE*/ //traceMask|=TraceCpu180|TraceExchange|TraceBlockOp;instCount=10;
 #if CcDebug == 1
         traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
         traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
@@ -6538,7 +6581,6 @@ static void cp180OpEB(Cpu180Context *activeCpu)  // EB  TRANB      MIGDS 2-54
             return;
             }
         activeCpu->nextP += 8;
-/*DELETE*/ //traceMask|=TraceCpu180|TraceExchange|TraceBlockOp;instCount=10;
 
 #if CcDebug == 1
         traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
@@ -6577,13 +6619,13 @@ static void cp180OpF3(Cpu180Context *activeCpu)  // F3  SCNB       MIGDS 2-54
             {
             return;
             }
+        activeCpu->nextP += 4;
 
 #if CcDebug == 1
         traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    byte string:");
         traceMemoryBlock(activeCpu, tPva, 32, "    bit table:");
 #endif
 
-/*DELETE*/ //traceMask|=TraceCpu180|TraceExchange|TraceBlockOp;instCount=10;
         i = 0;
         while (i < activeCpu->dstDesc.length)
             {
