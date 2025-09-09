@@ -562,8 +562,11 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
             {
             operand->value[1] = (operand->value[1] << 8) | buffer[i];
             }
-        operand->value[1] = ~operand->value[1] + 1;
-        operand->sign     = TRUE;
+        if (buffer[0] >= 0x80)
+            {
+            operand->value[1] = ~operand->value[1] + 1;
+            operand->sign     = TRUE;
+            }
         break;
 
     default:
