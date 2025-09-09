@@ -29,7 +29,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG      1
+#define DEBUG      0
 #define DEBUG_CH 020
 #define DEBUG_EQ   0
 #define DEBUG_UN   1
