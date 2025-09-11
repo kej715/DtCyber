@@ -144,7 +144,7 @@ bool bdp180CopyFromBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
     //  Copy bytes from the buffer to the destination block. Optimize the copy by storing
     //  whole words in memory.
     //
-    bp  = buffer;
+    bp = buffer;
     if ((pva & Mask3) != 0) // destination not word-aligned, so copy enough bytes to word-align it
         {
         n = 8 - (pva & Mask3);
@@ -268,6 +268,19 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
     u8  i;
     u16 limit;
     u16 maxLength;
+
+    static u64 signExt[9] =
+        {
+        0xffffffffffffffff,
+        0xffffffffffffff00,
+        0xffffffffffff0000,
+        0xffffffffff000000,
+        0xffffffff00000000,
+        0xffffff0000000000,
+        0xffff000000000000,
+        0xff00000000000000,
+        0x0000000000000000
+        };
 
     maxLength = maxBdpOpLengths[desc->type];
     if (desc->length > maxLength || maxLength == 0)
@@ -564,8 +577,9 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
             }
         if (buffer[0] >= 0x80)
             {
-            operand->value[1] = ~operand->value[1] + 1;
-            operand->sign     = TRUE;
+            operand->value[1] |= signExt[desc->length];
+            operand->value[1]  = ~operand->value[1] + 1;
+            operand->sign      = TRUE;
             }
         break;
 
