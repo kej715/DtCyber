@@ -2381,6 +2381,7 @@ static char *dd8xxFunc2String(PpWord funcCode)
 void dd8xxShowDiskStatus()
     {
     DiskParam *dp = firstDisk;
+    char      dt[16];
     char      outBuf[MaxFSPath + 128];
 
     if (dp == NULL)
@@ -2390,11 +2391,20 @@ void dd8xxShowDiskStatus()
 
     while (dp)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o",
-                dp->diskType == DiskType844 ? "844" : "885",
-                dp->channelNo,
-                dp->eqNo,
-                dp->unitNo);
+        switch (dp->diskType)
+            {
+        default:
+        case DiskType885:
+            strcpy(dt, "885");
+            break;
+        case DiskType885Ls:
+            strcpy(dt, "885-LS");
+            break;
+        case DiskType844:
+            strcpy(dt, "844");
+            break;
+            }
+        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", dt, dp->channelNo, dp->eqNo, dp->unitNo);
         opDisplay(outBuf);
         if (*dp->fileName != '\0')
             {
