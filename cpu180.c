@@ -60,7 +60,7 @@
 //  instruction stores data within the specified range of addresses. TRACE_INST_COUNT
 //  defines how many instructions to trace thereafter.
 //
-//#define TRACE_INST_LIST   { 0x17 }
+//#define TRACE_INST_LIST   { 0x75,0x3c,0x98,0x99,0x9a,0x9b }
 #define TRACE_INST_COUNT  10
 
 //#define TRACE_RANGE_START 0xb027000cad00

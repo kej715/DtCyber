@@ -453,7 +453,7 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                 bdp180AddDigit(operand, d1 - 0x30);
                 }
             d1 = buffer[limit];
-            if (d1 != 0x2d) // '-'
+            if (d1 == 0x2d) // '-'
                 {
                 operand->sign = TRUE;
                 }
@@ -540,7 +540,7 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
         if (desc->length > 0)
             {
             d1 = buffer[0];
-            if (d1 != 0x2d) // '-'
+            if (d1 == 0x2d) // '-'
                 {
                 operand->sign = TRUE;
                 }
