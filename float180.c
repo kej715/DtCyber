@@ -951,9 +951,9 @@ bool float180AddFloat(Cpu180Context *ctx, u64 augend, u64 addend, u64 *sum)
 **                  ctx         pointer to CPU context
 **                  minend      the minuend
 **                  subend      the subtrahend
-**                  valence     (out) -1 if minuend <  subend
-**                                     0 if minuend == subend
-**                                     1 if minuend >  subend
+**                  valence     (out) -1 if minend <  subend
+**                                     0 if minend == subend
+**                                     1 if minend >  subend
 **
 **  Returns:        TRUE if no exceptions detected or instruction should
 **                  complete. FALSE if exception detected and instruction
