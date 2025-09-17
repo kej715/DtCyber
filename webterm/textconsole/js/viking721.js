@@ -52,6 +52,35 @@ class VikingConsole {
     this.x                = 0;
     this.y                = 0;
     //
+    // Function key input character sequences
+    //
+    this.fnKeySequences = {
+            'F1' : '\x1e\x71',
+            'F2' : '\x1e\x72',
+            'F3' : '\x1e\x73',
+            'F4' : '\x1e\x74',
+            'F5' : '\x1e\x75',
+            'F6' : '\x1e\x76',
+            'F7' : '\x1e\x77',
+            'F8' : '\x1e\x78',
+            'F9' : '\x1e\x79',
+            'F10': '\x1e\x7a',
+            'F11': '\x1e\x7b',
+            'F12': '\x1e\x7c',
+      'SHIFT_F1' : '\x1e\x61',
+      'SHIFT_F2' : '\x1e\x62',
+      'SHIFT_F3' : '\x1e\x63',
+      'SHIFT_F4' : '\x1e\x64',
+      'SHIFT_F5' : '\x1e\x65',
+      'SHIFT_F6' : '\x1e\x66',
+      'SHIFT_F7' : '\x1e\x67',
+      'SHIFT_F8' : '\x1e\x68',
+      'SHIFT_F9' : '\x1e\x69',
+      'SHIFT_F10': '\x1e\x6a',
+      'SHIFT_F11': '\x1e\x6b',
+      'SHIFT_F12': '\x1e\x6c'
+    };
+    //
     // Shutdown
     //
     this.shutdownListener = null;
@@ -98,8 +127,10 @@ class VikingConsole {
       }
       else {
         switch (name) {
-        case 'CTRL_M':
         case 'CTRL_J':
+          this.uplineDataSender('\n');
+          break;
+        case 'CTRL_M':
         case 'ENTER':
           this.uplineDataSender('\r');
           break;
@@ -111,6 +142,62 @@ class VikingConsole {
           break;
         case 'DELETE':
           this.uplineDataSender(String.fromCharCode(0x7f));
+          break;
+        case 'F1':
+        case 'F2':
+        case 'F3':
+        case 'F4':
+        case 'F5':
+        case 'F6':
+        case 'F7':
+        case 'F8':
+        case 'F9':
+        case 'F10':
+        case 'F11':
+        case 'F12':
+        case 'SHIFT_F1':
+        case 'SHIFT_F2':
+        case 'SHIFT_F3':
+        case 'SHIFT_F4':
+        case 'SHIFT_F5':
+        case 'SHIFT_F6':
+        case 'SHIFT_F7':
+        case 'SHIFT_F8':
+        case 'SHIFT_F9':
+        case 'SHIFT_F10':
+        case 'SHIFT_F11':
+        case 'SHIFT_F12':
+          this.uplineDataSender(this.fnKeySequences[name]);
+          break;
+        case 'UP':
+          this.uplineDataSender('\x1e\x12\x24');
+          break;
+        case 'SHIFT_UP':
+          this.uplineDataSender('\x1e\x12\x25');
+          break;
+        case 'DOWN':
+          this.uplineDataSender('\x1e\x12\x20');
+          break;
+        case 'SHIFT_DOWN':
+          this.uplineDataSender('\x1e\x12\x21');
+          break;
+        case 'RIGHT':
+          this.uplineDataSender('\x1e\x12\x28');
+          break;
+        case 'SHIFT_RIGHT':
+          this.uplineDataSender('\x1e\x12\x29');
+          break;
+        case 'LEFT':
+          this.uplineDataSender('\x1e\x12\x2c');
+          break;
+        case 'SHIFT_LEFT':
+          this.uplineDataSender('\x1e\x12\x2d');
+          break;
+        case 'CTRL_LEFT':
+          this.uplineDataSender('\x1e\x5f');
+          break;
+        case 'CTRL_L':
+          this.uplineDataSender('\x0c');
           break;
         case 'CTRL_C':
           this.processExit();
