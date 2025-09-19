@@ -69,8 +69,9 @@
 #define DefaultFontLarge       24
 #define DefaultFontMedium      14
 #define DefaultFontSmall       10
+#define DefaultFontTtfMedium   12
+#define DefaultFontTtfSmall    8
 #endif
-
 
 #define DefaultHeightLarge     30
 #define DefaultHeightMedium    20
@@ -285,6 +286,7 @@ static InitVal sectVals[] =
     "fontName",                      "console", "Valid",
     "fontSmall",                     "console", "Valid",
     "fontSmallHeight",               "console", "Valid",
+    "fontType",                      "console", "Valid",
     "heightPX",                      "console", "Valid",
     "scaleX",                        "console", "Valid",
     "scaleY",                        "console", "Valid",
@@ -1274,6 +1276,15 @@ static void initCyber(char *config)
 **------------------------------------------------------------------------*/
 static void initConsole(void)
     {
+    InitVal *curVal;
+    char    fontType[16];
+    bool    goodToken = TRUE;
+    int     lineNo    = 0;
+    char    *line;
+    int     numErrors = 0;
+    int     ratio     = 0;
+    char    *token;
+
     /* Set Defaults */
 #ifdef WIN32
     colorBG = DefaultBG;
@@ -1283,14 +1294,11 @@ static void initConsole(void)
     strcpy(colorFG, DefaultFG);
 #endif
     strcpy(fontName, FontName);
+    fontIsTrueType   = FALSE;
 
     fontHeightLarge  = DefaultHeightLarge;
     fontHeightMedium = DefaultHeightMedium;
     fontHeightSmall  = DefaultHeightSmall;
-
-    fontLarge  = DefaultFontLarge;
-    fontMedium = DefaultFontMedium;
-    fontSmall  = DefaultFontSmall;
 
     heightPX = DefaultHeightPX;
     widthPX  = DefaultWidthPX;
@@ -1315,14 +1323,6 @@ static void initConsole(void)
         }
 
     printf("(init   ) Loading console section [%s] from %s\n", console, startupFile);
-
-    int     lineNo = 0;
-    char    *line;
-    char    *token;
-    InitVal *curVal;
-    bool    goodToken = TRUE;
-    int     numErrors = 0;
-    int     ratio     = 0;
 
     while ((line = initGetNextLine(&lineNo)) != NULL)
         {
@@ -1368,7 +1368,20 @@ static void initConsole(void)
 
     if (initGetString("fontName", FontName, fontName, MaxFontNameSize))
         {
-        logDtError(LogErrorLocation, "Font Name '%s' will be loaded\n", fontName);
+        logDtError(LogErrorLocation, "Font name '%s' will be loaded\n", fontName);
+        }
+    if (initGetString("fontType", "standard", fontType, sizeof(fontType) - 1))
+        {
+        if (strcasecmp(fontType, "TrueType") == 0 || strcasecmp(fontType, "TTF") == 0)
+            {
+            logDtError(LogErrorLocation, "Font '%s' is TrueType\n", fontName);
+            fontIsTrueType = TRUE;
+            }
+        else if (strcasecmp(fontType, "standard") != 0)
+            {
+            logDtError(LogErrorLocation, "Unknown font type: '%s'\n", fontType);
+            exit(1);
+            }
         }
 #ifdef WIN32
     (void)initGetHex("colorBG", DefaultBG, &colorBG);
@@ -1393,18 +1406,17 @@ static void initConsole(void)
 #else
     (void)initGetString("colorBG", DefaultBG, colorBG, sizeof(colorBG));
     (void)initGetString("colorFG", DefaultFG, colorFG, sizeof(colorFG));
-    if (strcasecmp(colorBG, colorFG)==0)
-    {
+    if (strcasecmp(colorBG, colorFG) == 0)
+        {
         strcpy(colorBG, DefaultBG);
         strcpy(colorFG, DefaultFG);
-    }
+        }
     printf("(init   )         [colorBG]=%s\n", colorBG);
     printf("(init   )         [colorFG]=%s\n", colorFG);
 #endif
 
-
-    (void)initGetInteger("fontSmall", DefaultFontSmall, &fontSmall);
-    (void)initGetInteger("fontMedium", DefaultFontMedium, &fontMedium);
+    (void)initGetInteger("fontSmall", fontIsTrueType ? DefaultFontTtfSmall : DefaultFontSmall, &fontSmall);
+    (void)initGetInteger("fontMedium", fontIsTrueType ? DefaultFontTtfMedium : DefaultFontMedium, &fontMedium);
     (void)initGetInteger("fontLarge", DefaultFontLarge, &fontLarge);
     if (fontSmall < 8)
         {

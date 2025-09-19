@@ -37,6 +37,7 @@
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
 #include <X11/Xatom.h>
+#include <X11/Xft/Xft.h>
 #include "const.h"
 #include "types.h"
 #include "proto.h"
@@ -74,7 +75,9 @@ typedef struct dispList
 **  Private Function Prototypes
 **  ---------------------------
 */
-void *windowThread(void *param);
+static void windowActivateFont(u8 fontSize);
+static void windowDrawString(int x, int y, char *s, int len);
+static void *windowThread(void *param);
 
 /*
 **  ----------------
@@ -87,24 +90,47 @@ void *windowThread(void *param);
 **  Private Variables
 **  -----------------
 */
-static volatile bool   displayActive = FALSE;
+static unsigned long   bg;
+static u8              *clipToKeyboard     = NULL;
+static u8              *clipToKeyboardPtr  = NULL;
+static u8              clipToKeyboardDelay = 0;
 static u8              currentFont;
 static i16             currentX;
 static i16             currentY;
-static DispList        display[ListSize];
-static pthread_t       displayThread;
-static u32             listEnd;
-static Font            hSmallFont;
-static Font            hMediumFont;
-static Font            hLargeFont;
-static int             width;
-static int             height;
-static pthread_mutex_t mutexDisplay;
+static int             depth;
 static Display         *disp;
+static DispList        display[ListSize];
+static volatile bool   displayActive = FALSE;
+static pthread_t       displayThread;
+static unsigned long   fg;
+static GC              gc;
+static int             height;
+static u32             listEnd;
+static pthread_mutex_t mutexDisplay;
+static Pixmap          pixmap;
+static int             screen;
+static Atom            targetProperty;
+static int             width;
 static Window          window;
-static u8              *lpClipToKeyboard    = NULL;
-static u8              *lpClipToKeyboardPtr = NULL;
-static u8              clipToKeyboardDelay  = 0;
+static Atom            wmDeleteWindow;
+static XftFont         *xftFont;
+
+//
+//  Variables related to rendering standard fonts
+//
+static Font            stdSmallFont;
+static Font            stdMediumFont;
+static Font            stdLargeFont;
+
+//
+//  Variables related to rendering XFT (TrueType) fonts
+//
+static XftDraw         *xftDraw;
+static XftFont         *xftSmallFont;
+static XftFont         *xftMediumFont;
+static XftFont         *xftLargeFont;
+static XftColor        xftColor;
+
 
 /*
  **--------------------------------------------------------------------------
@@ -125,8 +151,146 @@ static u8              clipToKeyboardDelay  = 0;
 **------------------------------------------------------------------------*/
 void windowInit(void)
     {
-    int            rc;
-    pthread_attr_t attr;
+    XWindowAttributes a;
+    pthread_attr_t    attr;
+    XColor            b;
+    XColor            c;
+    int               rc;
+    char              windowTitle[132];
+    XWMHints          wmHints;
+    char              xFontName[132];
+
+    /*
+    **  Open the X11 display.
+    */
+    disp = XOpenDisplay(0);
+    if (disp == (Display *)NULL)
+        {
+        logDtError(LogErrorLocation, "Could not open display\n");
+        exit(1);
+        }
+
+    screen = DefaultScreen(disp);
+
+    /*
+    **  Create a window using the following hints.
+    */
+    width  = 1100;
+    height = 750;
+
+    bg = BlackPixel(disp, screen);
+    fg = WhitePixel(disp, screen);
+
+    window = XCreateSimpleWindow(disp, DefaultRootWindow(disp),
+                                 10, 10, width, height, 5, fg, bg);
+
+    /*
+    **  Create a pixmap for background image generation.
+    */
+    depth  = DefaultDepth(disp, screen);
+    pixmap = XCreatePixmap(disp, window, width, height, depth);
+
+    /*
+    **  Set window and icon titles.
+    */
+    windowTitle[0] = '\0';
+    strcat(windowTitle, displayName);
+    strcat(windowTitle, " - " DtCyberVersion);
+    strcat(windowTitle, " - " DtCyberBuildDate);
+
+    XSetStandardProperties(disp, window, windowTitle,
+                           DtCyberVersion, None, NULL, 0, NULL);
+
+    /*
+    **  Create the graphics contexts for window and pixmap.
+    */
+    gc = XCreateGC(disp, window, 0, 0);
+
+    /*
+    **  We don't want to get Expose events, otherwise every XCopyArea will generate one,
+    **  and the event queue will fill up. This application will discard them anyway, but
+    **  it is better not to generate them in the first place.
+    */
+    XSetGraphicsExposures(disp, gc, FALSE);
+
+    /*
+    **  Setup foreground and background colors.
+    */
+    XGetWindowAttributes(disp, window, &a);
+    XAllocNamedColor(disp, a.colormap, colorFG, &b, &c);
+    fg = b.pixel;
+    XAllocNamedColor(disp, a.colormap, colorBG, &b, &c);
+    bg = b.pixel;
+
+    XSetBackground(disp, gc, bg);
+    XSetForeground(disp, gc, fg);
+
+    /*
+    **  Load three Cyber fonts.
+    */
+    if (fontIsTrueType)
+        {
+        xftDraw = XftDrawCreate(disp, pixmap, DefaultVisual(disp, screen), a.colormap);
+        sprintf(xFontName, "%s-%ld", fontName, fontSmall);
+        xftSmallFont = XftFontOpenName(disp, screen, xFontName);
+        if (xftSmallFont == 0)
+            {
+            logDtError(LogErrorLocation, "Could not open font %s\n", fontName);
+            exit(1);
+            }
+        sprintf(xFontName, "%s-%ld", fontName, fontMedium);
+        xftMediumFont = XftFontOpenName(disp, screen, xFontName);
+        if (xftMediumFont == 0)
+            {
+            logDtError(LogErrorLocation, "Could not open font %s\n", fontName);
+            exit(1);
+            }
+        sprintf(xFontName, "%s-%ld", fontName, fontLarge);
+        xftLargeFont = XftFontOpenName(disp, screen, xFontName);
+        if (xftLargeFont == 0)
+            {
+            logDtError(LogErrorLocation, "Could not open font %s\n", fontName);
+            exit(1);
+            }
+        if (XftColorAllocName(disp, DefaultVisual(disp, screen), a.colormap, colorFG, &xftColor) == FALSE)
+            {
+            logDtError(LogErrorLocation, "Could not allocate color '%s'\n", colorFG);
+            exit(1);
+            }
+        }
+    else
+        {
+        sprintf(xFontName, "-*-%s-medium-*-*-*-%ld-*-*-*-*-*-*-*", fontName, fontSmall);
+        stdSmallFont = XLoadFont(disp, xFontName);
+        sprintf(xFontName, "-*-%s-medium-*-*-*-%ld-*-*-*-*-*-*-*", fontName, fontMedium);
+        stdMediumFont = XLoadFont(disp, xFontName);
+        sprintf(xFontName, "-*-%s-medium-*-*-*-%ld-*-*-*-*-*-*-*", fontName, fontLarge);
+        stdLargeFont = XLoadFont(disp, xFontName);
+        }
+
+    /*
+    **  Initialise input.
+    */
+    wmHints.flags = InputHint;
+    wmHints.input = True;
+    XSetWMHints(disp, window, &wmHints);
+    XSelectInput(disp, window, KeyPressMask | KeyReleaseMask | StructureNotifyMask);
+
+    /*
+    **  We like to be on top.
+    */
+    XMapRaised(disp, window);
+
+    /*
+    **  Create atom for paste operations,
+    */
+    targetProperty = XInternAtom(disp, "DtCYBER", False);
+
+    /*
+    **  Create atom for delete message and set window manager.
+    */
+    wmDeleteWindow = XInternAtom(disp, "WM_DELETE_WINDOW", False);
+    XSetWMProtocols(disp, window, &wmDeleteWindow, 1);
 
     /*
     **  Create display list pool.
@@ -257,144 +421,105 @@ void windowTerminate(void)
  */
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Windows thread.
+**  Purpose:        Activate a specified size of the configured font.
+**
+**  Parameters:     Name        Description.
+**                  fontSize    the size (one of FontSmall, FontMedium, FontLarge)
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void windowActivateFont(u8 fontSize)
+    {
+    Font stdFont;
+
+    if (fontIsTrueType)
+        {
+        switch (fontSize)
+            {
+        default:
+        case FontSmall:
+            xftFont = xftSmallFont;
+            break;
+        case FontMedium:
+            xftFont = xftMediumFont;
+            break;
+        case FontLarge:
+            xftFont = xftLargeFont;
+            break;
+            }
+        }
+    else
+        {
+        switch (fontSize)
+            {
+        default:
+        case FontSmall:
+            stdFont = stdSmallFont;
+            break;
+
+        case FontMedium:
+            stdFont = stdMediumFont;
+            break;
+
+        case FontLarge:
+            stdFont = stdLargeFont;
+            break;
+            }
+        XSetFont(disp, gc, stdFont);
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Draw a string at a specified screen coordinate.
+**
+**  Parameters:     Name        Description.
+**                  x           the X coordinate
+**                  y           the Y coordinate
+**                  s           the string to draw
+**                  len         the length of the string
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void windowDrawString(int x, int y, char *s, int len)
+    {
+    if (fontIsTrueType)
+        {
+        XftDrawStringUtf8(xftDraw, &xftColor, xftFont, x, y, (FcChar8 *)s, len);
+        }
+    else
+        {
+        XDrawString(disp, pixmap, gc, x, y, s, len);
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Window thread.
 **
 **  Parameters:     Name        Description.
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void *windowThread(void *param)
+static void *windowThread(void *param)
     {
-    XWindowAttributes a;
-    XColor            b;
-    unsigned long     bg;
-    XColor            c;
     DispList          *curr;
-    int               depth;
     DispList          *end;
     XEvent            event;
-    unsigned long     fg;
-    GC                gc;
     bool              isMeta;
     KeySym            key;
     int               len;
     u8                oldFont = 0;
-    Pixmap            pixmap;
     static int        refreshCount = 0;
     Atom              retAtom;
     int               retFormat;
     unsigned long     retLength;
     unsigned long     retRemaining;
     int               retStatus;
-    int               screen;
     char              str[2] = " ";
-    Atom              targetProperty;
     char              text[30];
     int               usageDisplayCount = 0;
-    char              windowTitle[132];
-    Atom              wmDeleteWindow;
-    XWMHints          wmhints;
-    char              xFontName[132];
-
-    /*
-    **  Open the X11 display.
-    */
-    disp = XOpenDisplay(0);
-    if (disp == (Display *)NULL)
-        {
-        logDtError(LogErrorLocation, "Could not open display\n");
-        exit(1);
-        }
-
-    screen = DefaultScreen(disp);
-
-    /*
-    **  Create a window using the following hints.
-    */
-    width  = 1100;
-    height = 750;
-
-    bg = BlackPixel(disp, screen);
-    fg = WhitePixel(disp, screen);
-
-    window = XCreateSimpleWindow(disp, DefaultRootWindow(disp),
-                                 10, 10, width, height, 5, fg, bg);
-
-    /*
-    **  Create a pixmap for background image generation.
-    */
-    depth  = DefaultDepth(disp, screen);
-    pixmap = XCreatePixmap(disp, window, width, height, depth);
-
-    /*
-    **  Set window and icon titles.
-    */
-    windowTitle[0] = '\0';
-    strcat(windowTitle, displayName);
-    strcat(windowTitle, " - " DtCyberVersion);
-    strcat(windowTitle, " - " DtCyberBuildDate);
-
-    XSetStandardProperties(disp, window, windowTitle,
-                           DtCyberVersion, None, NULL, 0, NULL);
-
-    /*
-    **  Create the graphics contexts for window and pixmap.
-    */
-    gc = XCreateGC(disp, window, 0, 0);
-
-    /*
-    **  We don't want to get Expose events, otherwise every XCopyArea will generate one,
-    **  and the event queue will fill up. This application will discard them anyway, but
-    **  it is better not to generate them in the first place.
-    */
-    XSetGraphicsExposures(disp, gc, FALSE);
-
-    /*
-    **  Load three Cyber fonts.
-    */
-    sprintf(xFontName, "-*-%s-medium-*-*-*-%ld-*-*-*-*-*-*-*", fontName, fontSmall);
-    hSmallFont = XLoadFont(disp, xFontName);
-    sprintf(xFontName, "-*-%s-medium-*-*-*-%ld-*-*-*-*-*-*-*", fontName, fontMedium);
-    hMediumFont = XLoadFont(disp, xFontName);
-    sprintf(xFontName, "-*-%s-medium-*-*-*-%ld-*-*-*-*-*-*-*", fontName, fontLarge);
-    hLargeFont = XLoadFont(disp, xFontName);
-
-    /*
-    **  Setup fore- and back-ground colors.
-    */
-    XGetWindowAttributes(disp, window, &a);
-    XAllocNamedColor(disp, a.colormap, colorFG, &b, &c);
-    fg = b.pixel;
-    XAllocNamedColor(disp, a.colormap, colorBG, &b, &c);
-    bg = b.pixel;
-
-    XSetBackground(disp, gc, bg);
-    XSetForeground(disp, gc, fg);
-
-    /*
-    **  Initialise input.
-    */
-    wmhints.flags = InputHint;
-    wmhints.input = True;
-    XSetWMHints(disp, window, &wmhints);
-    XSelectInput(disp, window, KeyPressMask | KeyReleaseMask | StructureNotifyMask);
-
-    /*
-    **  We like to be on top.
-    */
-    XMapRaised(disp, window);
-
-    /*
-    **  Create atom for paste operations,
-    */
-    targetProperty = XInternAtom(disp, "DtCYBER", False);
-
-    /*
-    **  Create atom for delete message and set window manager.
-    */
-    wmDeleteWindow = XInternAtom(disp, "WM_DELETE_WINDOW", False);
-    XSetWMProtocols(disp, window, &wmDeleteWindow, 1);
 
     /*
     **  Window thread loop.
@@ -406,7 +531,7 @@ void *windowThread(void *param)
         /*
         **  Process paste buffer one character a time.
         */
-        if (lpClipToKeyboardPtr != NULL)
+        if (clipToKeyboardPtr != NULL)
             {
             if (clipToKeyboardDelay != 0)
                 {
@@ -417,15 +542,15 @@ void *windowThread(void *param)
                 }
             else
                 {
-                ppKeyIn = *lpClipToKeyboardPtr++;
+                ppKeyIn = *clipToKeyboardPtr++;
                 if (ppKeyIn == 0)
                     {
                     /*
                     **  All paste data has been processed - clean up.
                     */
-                    XFree(lpClipToKeyboard);
-                    lpClipToKeyboard    = NULL;
-                    lpClipToKeyboardPtr = NULL;
+                    XFree(clipToKeyboard);
+                    clipToKeyboard    = NULL;
+                    clipToKeyboardPtr = NULL;
                     }
                 else if (ppKeyIn == '\n')
                     {
@@ -552,7 +677,7 @@ void *windowThread(void *param)
                             break;
 
                         case 'p':
-                            if (lpClipToKeyboardPtr != NULL)
+                            if (clipToKeyboardPtr != NULL)
                                 {
                                 /*
                                 **  Ignore paste request when a previous one is still executing.
@@ -606,16 +731,16 @@ void *windowThread(void *param)
                 */
                 retStatus = XGetWindowProperty(disp, window, event.xselection.property,
                                                0L, 1024, False, AnyPropertyType, &retAtom, &retFormat,
-                                               &retLength, &retRemaining, &lpClipToKeyboard);
+                                               &retLength, &retRemaining, &clipToKeyboard);
 
                 if (retStatus == Success)
                     {
-                    lpClipToKeyboardPtr = lpClipToKeyboard;
+                    clipToKeyboardPtr = clipToKeyboard;
                     }
                 else
                     {
-                    lpClipToKeyboard    = NULL;
-                    lpClipToKeyboardPtr = NULL;
+                    clipToKeyboard    = NULL;
+                    clipToKeyboardPtr = NULL;
                     }
 
                 break;
@@ -624,7 +749,7 @@ void *windowThread(void *param)
 
         XSetForeground(disp, gc, fg);
 
-        XSetFont(disp, gc, hSmallFont);
+        windowActivateFont(FontSmall);
         oldFont = FontSmall;
 
 #if CcCycleTime
@@ -633,7 +758,7 @@ void *windowThread(void *param)
             char          buf[80];
 
             sprintf(buf, "Cycle time: %.3f", cycleTime);
-            XDrawString(disp, pixmap, gc, 0, 10, buf, strlen(buf));
+            windowDrawString(0, 10, buf, strlen(buf));
             }
 #endif
 
@@ -671,7 +796,7 @@ void *windowThread(void *param)
                     (traceMask & TraceBlockOp) != 0 ? 'B' : '_',
                     (traceMask & TraceCallFrame) != 0 ? 'F' : '_');
 
-            XDrawString(disp, pixmap, gc, 0, 10, buf, strlen(buf));
+            windowDrawString(0, 10, buf, strlen(buf));
             }
 #endif
 
@@ -681,9 +806,9 @@ void *windowThread(void *param)
             **  Display pause message.
             */
             static char opMessage[] = "Emulation paused";
-            XSetFont(disp, gc, hLargeFont);
+            windowActivateFont(FontLarge);
             oldFont = FontLarge;
-            XDrawString(disp, pixmap, gc, 20, 256, opMessage, strlen(opMessage));
+            windowDrawString(20, 256, opMessage, strlen(opMessage));
             }
         else if (consoleIsRemoteActive())
             {
@@ -691,9 +816,9 @@ void *windowThread(void *param)
             **  Display indication that rmeote console is active.
             */
             static char opMessage[] = "Remote console active";
-            XSetFont(disp, gc, hLargeFont);
+            windowActivateFont(FontLarge);
             oldFont = FontLarge;
-            XDrawString(disp, pixmap, gc, 20, 256, opMessage, strlen(opMessage));
+            windowDrawString(20, 256, opMessage, strlen(opMessage));
             }
 
         /*
@@ -708,10 +833,10 @@ void *windowThread(void *param)
             */
             static char usageMessage1[] = "Please don't just close the window, but instead first cleanly halt the operating system and";
             static char usageMessage2[] = "then use the 'shutdown' command in the operator interface to terminate the emulation.";
-            XSetFont(disp, gc, hMediumFont);
+            windowActivateFont(FontMedium);
             oldFont = FontMedium;
-            XDrawString(disp, pixmap, gc, 20, 256, usageMessage1, strlen(usageMessage1));
-            XDrawString(disp, pixmap, gc, 20, 275, usageMessage2, strlen(usageMessage2));
+            windowDrawString(20, 256, usageMessage1, strlen(usageMessage1));
+            windowDrawString(20, 275, usageMessage2, strlen(usageMessage2));
             listEnd            = 0;
             usageDisplayCount -= 1;
             }
@@ -730,21 +855,7 @@ void *windowThread(void *param)
             if (oldFont != curr->fontSize)
                 {
                 oldFont = curr->fontSize;
-
-                switch (oldFont)
-                    {
-                case FontSmall:
-                    XSetFont(disp, gc, hSmallFont);
-                    break;
-
-                case FontMedium:
-                    XSetFont(disp, gc, hMediumFont);
-                    break;
-
-                case FontLarge:
-                    XSetFont(disp, gc, hLargeFont);
-                    break;
-                    }
+                windowActivateFont(oldFont);
                 }
 
             /*
@@ -757,7 +868,7 @@ void *windowThread(void *param)
             else
                 {
                 str[0] = curr->ch;
-                XDrawString(disp, pixmap, gc, curr->xPos, (curr->yPos * 14) / 10 + 20, str, 1);
+                windowDrawString(curr->xPos, (curr->yPos * 14) / 10 + 20, str, 1);
                 }
             }
 
@@ -792,6 +903,14 @@ void *windowThread(void *param)
         sleepUsec(FrameTime);
         }
 
+    if (fontIsTrueType)
+        {
+        XftFontClose(disp, xftSmallFont);
+        XftFontClose(disp, xftMediumFont);
+        XftFontClose(disp, xftLargeFont);
+        XftColorFree(disp, DefaultVisual(disp, screen), DefaultColormap(disp, screen), &xftColor);
+        XftDrawDestroy(xftDraw);
+        }
     XSync(disp, 0);
     XFreeGC(disp, gc);
     XFreePixmap(disp, pixmap);

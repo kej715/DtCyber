@@ -43,6 +43,7 @@
         (c) 2018-2025 Kevin Jordan\n \
         (c) 2011-2022 Paul Koning\n \
         (c) 2017-2025 Steven Zoppi\n \
+        (c) 2025      Daiyu Hurst\n \
         (c) 2006-2022 Mark Rustad\n \
         (c) 2005      Mark Riordan"
 #define DtCyberLicense      "Licensed under the terms of the GNU General Public License version 3"

@@ -210,26 +210,27 @@ static void consoleLogFlush(void);
 **  ----------------
 */
 
-bool cc545Enabled                      = FALSE;
+bool cc545Enabled     = FALSE;
 #ifdef WIN32
-long colorBG;                         // Console
-long colorFG;                         // Console
+long colorBG;
+long colorFG;
 #else
-char colorBG[32];                     // Console
-char colorFG[32];                     // Console
+char colorBG[32];
+char colorFG[32];
 #endif
-long fontHeightLarge;                 // Console
-long fontHeightMedium;                // Console
-long fontHeightSmall;                 // Console
-long fontLarge;                       // Console
-long fontMedium;                      // Console
-long fontSmall;                       // Console
-char fontName[MaxFontNameSize + 1];   // Console
-long heightPX;                        // Console
-long scaleX;                          // Console
-long scaleY;                          // Console
-long timerRate;                       // Console
-long widthPX;                         // Console
+long fontHeightLarge;
+long fontHeightMedium;
+long fontHeightSmall;
+bool fontIsTrueType;
+long fontLarge;
+long fontMedium;
+long fontSmall;
+char fontName[MaxFontNameSize + 1];
+long heightPX;
+long scaleX;
+long scaleY;
+long timerRate;
+long widthPX;
 
 /*
 **  -----------------

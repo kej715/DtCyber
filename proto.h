@@ -598,6 +598,7 @@ extern ModelFeatures       features;
 extern long                fontHeightLarge;                 // Console
 extern long                fontHeightMedium;                // Console
 extern long                fontHeightSmall;                 // Console
+extern bool                fontIsTrueType;                  // Console
 extern long                fontLarge;                       // Console
 extern long                fontMedium;                      // Console
 extern long                fontSmall;                       // Console
