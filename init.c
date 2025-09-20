@@ -1296,8 +1296,11 @@ static void initConsole(void)
     strcpy(fontName, FontName);
     fontIsTrueType   = FALSE;
 
+    fontLarge        = DefaultFontLarge;
     fontHeightLarge  = DefaultHeightLarge;
+    fontMedium       = DefaultFontMedium;
     fontHeightMedium = DefaultHeightMedium;
+    fontSmall        = DefaultFontSmall;
     fontHeightSmall  = DefaultHeightSmall;
 
     heightPX = DefaultHeightPX;
