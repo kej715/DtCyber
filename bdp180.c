@@ -609,10 +609,8 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
     u8  buffer[38];
     u8  d1;
     u8  d2;
-    u8  i;
-    u16 limit;
+    u16 i;
     u16 maxLength;
-    u64 v;
 
     maxLength = maxBdpOpLengths[desc->type];
     if (desc->length > maxLength || maxLength == 0)
@@ -851,7 +849,7 @@ static void bdp180Div10(BdpOperand *operand, u8 *remainder)
             q128[1] |= 1;
             }
         }
-    *remainder        = operand->value[1];
+    *remainder        = (u8)operand->value[1];
     operand->value[0] = q128[0];
     operand->value[1] = q128[1];
 #else

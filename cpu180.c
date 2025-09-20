@@ -3793,7 +3793,7 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
     u32              pageNum;
     u64              psap;
     u64              pva;
-    u64              r1;
+    u8               r1;
     u8               ring;
     u8               ringA2;
     u8               ringNewP;
@@ -3991,7 +3991,6 @@ static void cp180Op06(Cpu180Context *activeCpu)  // 06  POP        MIGDS 2-129
     {
     MonitorCondition cond;
     u8               i;
-    u32              last;
     u32              pageNum;
     u64              psap;
     u64              regA;

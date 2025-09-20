@@ -1403,6 +1403,10 @@ static void initConsole(void)
         }
     printf("(init   )         [colorBG]=%06lx\n", colorBG);
     printf("(init   )         [colorFG]=%06lx\n", colorFG);
+
+    (void)initGetInteger("fontSmall", DefaultFontSmall, &fontSmall);
+    (void)initGetInteger("fontMedium", DefaultFontMedium, &fontMedium);
+    (void)initGetInteger("fontLarge", DefaultFontLarge, &fontLarge);
 #else
     (void)initGetString("colorBG", DefaultBG, colorBG, sizeof(colorBG));
     (void)initGetString("colorFG", DefaultFG, colorFG, sizeof(colorFG));
@@ -1413,11 +1417,12 @@ static void initConsole(void)
         }
     printf("(init   )         [colorBG]=%s\n", colorBG);
     printf("(init   )         [colorFG]=%s\n", colorFG);
-#endif
 
     (void)initGetInteger("fontSmall", fontIsTrueType ? DefaultFontTtfSmall : DefaultFontSmall, &fontSmall);
     (void)initGetInteger("fontMedium", fontIsTrueType ? DefaultFontTtfMedium : DefaultFontMedium, &fontMedium);
     (void)initGetInteger("fontLarge", DefaultFontLarge, &fontLarge);
+#endif
+
     if (fontSmall < 8)
         {
         logDtError(LogErrorLocation, "file '%s' section [%s]: 'fontSmall' must be greater than or equal to 8.\n", startupFile, console);
