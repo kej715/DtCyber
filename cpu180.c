@@ -235,6 +235,7 @@ static bool cpu180GetParcel(Cpu180Context *ctx, u64 pva, u16 *parcel);
 static u8 cpu180GetR1(Cpu180Context *ctx, u64 pva);
 static u8 cpu180GetR2(Cpu180Context *ctx, u64 pva);
 static bool cpu180IsBindingSectionRef(Cpu180Context *ctx, u64 pva);
+static bool cpu180MulInt32(Cpu180Context *ctx, u32 mltand, u32 mltier, u32 *product);
 static bool cpu180MulInt64(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *product);
 static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool isTrap, u64 *sfsa, u32 *frameSize);
 static bool cpu180PutByte(Cpu180Context *ctx, u64 pva, u8 ring, u8 byte);
@@ -4412,7 +4413,23 @@ static void cp180Op22(Cpu180Context *activeCpu)  // 22  MULR       MIGDS 2-23
 
 static void cp180Op23(Cpu180Context *activeCpu)  // 23  DIVR       MIGDS 2-23
     {
-    cp180OpIv(activeCpu);
+    i32 XjR;
+    i32 XkR;
+
+    XjR = (i32)(activeCpu->regX[activeCpu->opJ] & Mask32);
+    XkR = (i32)(activeCpu->regX[activeCpu->opK] & Mask32);
+    if (XjR == 0)
+        {
+        cpu180SetUserCondition(activeCpu, UCR55);
+        }
+    else if (XjR == -1 && (u32)XkR == 0x80000000)
+        {
+        cpu180SetUserCondition(activeCpu, UCR57);
+        }
+    else
+        {
+        activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | ((u64)(XkR / XjR) & Mask32);
+        }
     }
 
 static void cp180Op24(Cpu180Context *activeCpu)  // 24  ADDX       MIGDS 2-20
@@ -4454,7 +4471,7 @@ static void cp180Op27(Cpu180Context *activeCpu)  // 27  DIVX       MIGDS 2-21
         {
         cpu180SetUserCondition(activeCpu, UCR55);
         }
-    else if (Xj == -1)
+    else if (Xj == -1 && activeCpu->regX[activeCpu->opK] == 0x8000000000000000)
         {
         cpu180SetUserCondition(activeCpu, UCR57);
         }
@@ -6702,7 +6719,84 @@ static void cp180OpF3(Cpu180Context *activeCpu)  // F3  SCNB       MIGDS 2-54
 
 static void cp180OpF9(Cpu180Context *activeCpu)  // F9  MOVI       MIGDS 2-62
     {
-    cp180OpIv(activeCpu);
+    u8         buf[256];
+    u8         byte;
+    u8         d1;
+    u8         d2;
+    BdpOperand operand;
+
+    if (cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP, activeCpu->opK, 1, &activeCpu->dstDesc) == FALSE)
+        {
+        return;
+        }
+    byte = (((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI]) + activeCpu->opD) & Mask8;
+    memset(&operand, 0, sizeof(operand));
+    operand.value[1] = byte;
+    switch (activeCpu->opJ & Mask2)
+        {
+    default:
+    case 0:
+        if (activeCpu->dstDesc.type != 10 && activeCpu->dstDesc.type != 11)
+            {
+            cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+            return;
+            }
+        if (bdp180EncodeOperand(activeCpu, &activeCpu->dstDesc, &operand) == FALSE)
+            {
+            return;
+            }
+        d1 = byte >> 4;
+        d2 = byte & Mask4;
+        if (d1 > 9 || d2 > 9)
+            {
+            cpu180SetUserCondition(activeCpu, UCR63); // invalid BDP data
+            return;
+            }
+        operand.value[1] = (d1 * 10) + d2;
+        if (bdp180EncodeOperand(activeCpu, &activeCpu->dstDesc, &operand) == FALSE)
+            {
+            return;
+            }
+        break;
+    case 1:
+        if (activeCpu->dstDesc.type > 6)
+            {
+            cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+            return;
+            }
+        break;
+    case 2:
+        if (activeCpu->dstDesc.length > 256)
+            {
+            cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+            return;
+            }
+        memset(buf, byte, activeCpu->dstDesc.length);
+        if (bdp180CopyFromBuf(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, buf) == FALSE)
+            {
+            return;
+            }
+        break;
+    case 3:
+        if (activeCpu->dstDesc.length > 256)
+            {
+            cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+            return;
+            }
+        memset(buf, ' ', activeCpu->dstDesc.length);
+        buf[0] = byte;
+        if (bdp180CopyFromBuf(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, buf) == FALSE)
+            {
+            return;
+            }
+        break;
+        }
+
+    activeCpu->nextP += 4;
+
+#if CcDebug == 1
+    traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
+#endif
     }
 
 static void cp180OpFA(Cpu180Context *activeCpu)  // FA  CMPI       MIGDS 2-63
