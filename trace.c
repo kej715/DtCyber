@@ -517,7 +517,7 @@ static DecCp180Control cp180Decode[0x100] =
     VCjk,   "ADDR     X%X,X%X", VFKJ, VRXKXJ,                  // 20
     VCjk,   "SUBR     X%X,X%X", VFKJ, VRXKXJ,                  // 21
     VCjk,   "MULR     X%X,X%X", VFKJ, VRXKXJ,                  // 22
-    VCjk,   "DIVF     X%X,X%X", VFKJ, VRXKXJ,                  // 23
+    VCjk,   "DIVR     X%X,X%X", VFKJ, VRXKXJ,                  // 23
     VCjk,   "ADDX     X%X,X%X", VFKJ, VRXKXJ,                  // 24
     VCjk,   "SUBX     X%X,X%X", VFKJ, VRXKXJ,                  // 25
     VCjk,   "MULX     X%X,X%X", VFKJ, VRXKXJ,                  // 26
