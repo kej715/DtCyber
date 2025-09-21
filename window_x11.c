@@ -113,7 +113,8 @@ static Atom            targetProperty;
 static int             width;
 static Window          window;
 static Atom            wmDeleteWindow;
-static XftFont         *xftFont;
+static int             yFactor;
+static int             yIncrement;
 
 //
 //  Variables related to rendering standard fonts
@@ -126,6 +127,7 @@ static Font            stdLargeFont;
 //  Variables related to rendering XFT (TrueType) fonts
 //
 static XftDraw         *xftDraw;
+static XftFont         *xftFont;
 static XftFont         *xftSmallFont;
 static XftFont         *xftMediumFont;
 static XftFont         *xftLargeFont;
@@ -230,6 +232,8 @@ void windowInit(void)
     */
     if (fontIsTrueType)
         {
+        yFactor    = 12;
+        yIncrement = 16;
         xftDraw = XftDrawCreate(disp, pixmap, DefaultVisual(disp, screen), a.colormap);
         sprintf(xFontName, "%s-%ld", fontName, fontSmall);
         xftSmallFont = XftFontOpenName(disp, screen, xFontName);
@@ -260,6 +264,8 @@ void windowInit(void)
         }
     else
         {
+        yFactor    = 14;
+        yIncrement = 20;
         sprintf(xFontName, "-*-%s-medium-*-*-*-%ld-*-*-*-*-*-*-*", fontName, fontSmall);
         stdSmallFont = XLoadFont(disp, xFontName);
         sprintf(xFontName, "-*-%s-medium-*-*-*-%ld-*-*-*-*-*-*-*", fontName, fontMedium);
@@ -863,12 +869,12 @@ static void *windowThread(void *param)
             */
             if (curr->fontSize == FontDot)
                 {
-                XDrawPoint(disp, pixmap, gc, curr->xPos, (curr->yPos * 14) / 10 + 20);
+                XDrawPoint(disp, pixmap, gc, curr->xPos, (curr->yPos * yFactor) / 10 + yIncrement);
                 }
             else
                 {
                 str[0] = curr->ch;
-                windowDrawString(curr->xPos, (curr->yPos * 14) / 10 + 20, str, 1);
+                windowDrawString(curr->xPos, (curr->yPos * yFactor) / 10 + yIncrement, str, 1);
                 }
             }
 
