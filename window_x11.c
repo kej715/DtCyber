@@ -78,6 +78,7 @@ typedef struct dispList
 static void windowActivateFont(u8 fontSize);
 static void windowDrawString(int x, int y, char *s, int len);
 static void *windowThread(void *param);
+static Bool windowWaitForMap(Display *disp, XEvent *evt, XPointer arg);
 
 /*
 **  ----------------
@@ -90,31 +91,32 @@ static void *windowThread(void *param);
 **  Private Variables
 **  -----------------
 */
-static unsigned long   bg;
-static u8              *clipToKeyboard     = NULL;
-static u8              *clipToKeyboardPtr  = NULL;
-static u8              clipToKeyboardDelay = 0;
-static u8              currentFont;
-static i16             currentX;
-static i16             currentY;
-static int             depth;
-static Display         *disp;
-static DispList        display[ListSize];
-static volatile bool   displayActive = FALSE;
-static pthread_t       displayThread;
-static unsigned long   fg;
-static GC              gc;
-static int             height;
-static u32             listEnd;
-static pthread_mutex_t mutexDisplay;
-static Pixmap          pixmap;
-static int             screen;
-static Atom            targetProperty;
-static int             width;
-static Window          window;
-static Atom            wmDeleteWindow;
-static int             yFactor;
-static int             yIncrement;
+static unsigned long     bg;
+static u8                *clipToKeyboard     = NULL;
+static u8                *clipToKeyboardPtr  = NULL;
+static u8                clipToKeyboardDelay = 0;
+static Colormap          colorMap;
+static u8                currentFont;
+static i16               currentX;
+static i16               currentY;
+static int               depth;
+static Display           *disp;
+static DispList          display[ListSize];
+static volatile bool     displayActive = FALSE;
+static pthread_t         displayThread;
+static unsigned long     fg;
+static GC                gc;
+static int               height;
+static u32               listEnd;
+static pthread_mutex_t   mutexDisplay;
+static Pixmap            pixmap;
+static int               screen;
+static Atom              targetProperty;
+static int               width;
+static Window            window;
+static Atom              wmDeleteWindow;
+static int               yFactor;
+static int               yIncrement;
 
 //
 //  Variables related to rendering standard fonts
@@ -157,6 +159,7 @@ void windowInit(void)
     pthread_attr_t    attr;
     XColor            b;
     XColor            c;
+    XEvent            evt;
     int               rc;
     char              windowTitle[132];
     XWMHints          wmHints;
@@ -219,9 +222,10 @@ void windowInit(void)
     **  Setup foreground and background colors.
     */
     XGetWindowAttributes(disp, window, &a);
-    XAllocNamedColor(disp, a.colormap, colorFG, &b, &c);
+    colorMap = a.colormap;
+    XAllocNamedColor(disp, colorMap, colorFG, &b, &c);
     fg = b.pixel;
-    XAllocNamedColor(disp, a.colormap, colorBG, &b, &c);
+    XAllocNamedColor(disp, colorMap, colorBG, &b, &c);
     bg = b.pixel;
 
     XSetBackground(disp, gc, bg);
@@ -234,7 +238,7 @@ void windowInit(void)
         {
         yFactor    = 12;
         yIncrement = 16;
-        xftDraw = XftDrawCreate(disp, pixmap, DefaultVisual(disp, screen), a.colormap);
+        xftDraw = XftDrawCreate(disp, pixmap, DefaultVisual(disp, screen), colorMap);
         sprintf(xFontName, "%s-%ld", fontName, fontSmall);
         xftSmallFont = XftFontOpenName(disp, screen, xFontName);
         if (xftSmallFont == 0)
@@ -256,7 +260,7 @@ void windowInit(void)
             logDtError(LogErrorLocation, "Could not open font %s\n", fontName);
             exit(1);
             }
-        if (XftColorAllocName(disp, DefaultVisual(disp, screen), a.colormap, colorFG, &xftColor) == FALSE)
+        if (XftColorAllocName(disp, DefaultVisual(disp, screen), colorMap, colorFG, &xftColor) == FALSE)
             {
             logDtError(LogErrorLocation, "Could not allocate color '%s'\n", colorFG);
             exit(1);
@@ -280,12 +284,22 @@ void windowInit(void)
     wmHints.flags = InputHint;
     wmHints.input = True;
     XSetWMHints(disp, window, &wmHints);
-    XSelectInput(disp, window, KeyPressMask | KeyReleaseMask | StructureNotifyMask);
+    XSelectInput(disp, window, KeyPressMask | KeyReleaseMask | StructureNotifyMask | FocusChangeMask | ExposureMask);
 
     /*
     **  We like to be on top.
     */
     XMapRaised(disp, window);
+
+    /*
+    **  Wait until window is mapped
+    */
+    XIfEvent(disp, &evt, windowWaitForMap, (XPointer)window);
+
+    /*
+    **  Try to get focus so keys go directly to this window
+    */
+    XSetInputFocus(disp, window, RevertToParent, CurrentTime);
 
     /*
     **  Create atom for paste operations,
@@ -591,6 +605,12 @@ static void *windowThread(void *param)
 
             switch (event.type)
                 {
+            default:
+                 /*
+                 **  Ignore
+                 */
+                break;
+
             case ClientMessage:
                 if (event.xclient.data.l[0] == wmDeleteWindow)
                     {
@@ -599,7 +619,6 @@ static void *windowThread(void *param)
                     */
                     usageDisplayCount = 5 * FramesPerSecond;
                     }
-
                 break;
 
             case MappingNotify:
@@ -616,8 +635,12 @@ static void *windowThread(void *param)
                     height = event.xconfigure.height;
                     XFreePixmap(disp, pixmap);
                     pixmap = XCreatePixmap(disp, window, width, height, depth);
+                    if (fontIsTrueType)
+                        {
+                        XftDrawDestroy(xftDraw);
+                        xftDraw = XftDrawCreate(disp, pixmap, DefaultVisual(disp, screen), colorMap);
+                        }
                     }
-
                 XFillRectangle(disp, pixmap, gc, 0, 0, width, height);
                 break;
 
@@ -924,6 +947,19 @@ static void *windowThread(void *param)
     XCloseDisplay(disp);
     pthread_mutex_destroy(&mutexDisplay);
     pthread_exit(NULL);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Predicate for XIfEvent.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        TRUE if the event is MapNotify for our window.
+**
+**------------------------------------------------------------------------*/
+static Bool windowWaitForMap(Display *disp, XEvent *evt, XPointer arg)
+    {
+    return evt->type == MapNotify && evt->xmap.window == (Window)arg;
     }
 
 /*---------------------------  End Of File  ------------------------------*/
