@@ -122,6 +122,59 @@ static FILE bdp180Log = NULL;
  */
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Add two BDP operands
+**
+**  Parameters:     Name        Description.
+**                  augend      pointer to augend
+**                  addend      pointer to addend
+**                  result      (out) pointer to result
+**
+**  Returns:        TRUE if success, FALSE if failure (e.g., arithmetic overflow)
+**
+**------------------------------------------------------------------------*/
+bool bdp180Add(BdpOperand *augend, BdpOperand *addend, BdpOperand *result)
+    {
+#if defined(_WIN32)
+#else
+    u128 a1;
+    u128 a2;
+    u128 sum;
+
+    a1 = ((u128)augend->value[0] << 64) | (u128)augend->value[1];
+    a2 = ((u128)addend->value[0] << 64) | (u128)addend->value[1];
+    if (augend->sign == addend->sign)
+        {
+        sum = a1 + a2;
+        if (sum < a1 || sum < a2)
+            {
+            return FALSE;
+            }
+        result->sign = augend->sign;
+        }
+    else
+        {
+        if (addend->sign)
+            {
+            sum = a1 - a2;
+            }
+        else
+            {
+            sum = a2 - a1;
+            }
+        result->sign = (sum >> 127) != 0;
+        if (result->sign)
+            {
+            sum = ~sum + 1;
+            }
+        }
+    result->value[0] = (u64)(sum >> 64);
+    result->value[1] = (u64)sum;
+
+    return TRUE;
+#endif
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Copy bytes from a buffer to a specified PVA
 **
 **  Parameters:     Name        Description.
@@ -598,13 +651,14 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
 **                  ctx         pointer to CPU context
 **                  desc        pointer to BDP destination descriptor
 **                  operand     pointer to operand to encode
+**                  isTruncated (out) TRUE if result is truncated
 **
-**  Returns:        TRUE if successful
+**  Returns:        TRUE if successful (i.e., no MCR/UCR condition set)
 **
 **                  MCR/UCR set if exception detected.
 **
 **------------------------------------------------------------------------*/
-bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *operand)
+bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *operand, bool *isTruncated)
     {
     u8  buffer[38];
     u8  d1;
@@ -612,7 +666,8 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
     u16 i;
     u16 maxLength;
 
-    maxLength = maxBdpOpLengths[desc->type];
+    *isTruncated = FALSE;
+    maxLength    = maxBdpOpLengths[desc->type];
     if (desc->length > maxLength || maxLength == 0)
         {
         cpu180SetMonitorCondition(ctx, MCR51); // Instruction specification error
@@ -634,6 +689,8 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
             i -= 1;
             buffer[i] = (d2 << 4) | d1;
             }
+        *isTruncated = operand->value[1] != 0 || operand->value[0] != 0
+                       || (desc->type == 1 && (desc->length < 1 || (buffer[0] & 0xf0) != 0));
         break;
     case 2:  // Packed Decimal Signed
     case 3:  // Packed Decimal Signed Leading Slack Digit
@@ -650,6 +707,8 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                 buffer[i] = (d2 << 4) | d1;
                 }
             }
+        *isTruncated = operand->value[1] != 0 || operand->value[0] != 0
+                       || (desc->type == 1 && (desc->length < 1 || (buffer[0] & 0xf0) != 0));
         break;
     case 4:  // Unpacked Decimal Unsigned
         if (operand->sign)
@@ -663,6 +722,7 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
             i -= 1;
             buffer[i] = d1 + 0x30;
             }
+        *isTruncated = operand->value[1] != 0 || operand->value[0] != 0;
         break;
     case 5:  // Unpacked Decimal Trailing Sign Combined Hollerith
         if (desc->length > 0)
@@ -688,6 +748,11 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                 i -= 1;
                 buffer[i] = d1 + 0x30;
                 }
+            *isTruncated = operand->value[1] != 0 || operand->value[0] != 0;
+            }
+        else
+            {
+            *isTruncated = TRUE;
             }
         break;
     case 6:  // Unpacked Decimal Trailing Sign Separate
@@ -701,6 +766,11 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                 i -= 1;
                 buffer[i] = d1 + 0x30;
                 }
+            *isTruncated = operand->value[1] != 0 || operand->value[0] != 0;
+            }
+        else
+            {
+            *isTruncated = TRUE;
             }
         break;
     case 7:  // Unpacked Decimal Leading Sign Combined Hollerith
@@ -730,6 +800,14 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                     }
                 buffer[0] = d1;
                 }
+            else
+                {
+                *isTruncated = TRUE;
+                }
+            }
+        else
+            {
+            *isTruncated = TRUE;
             }
         break;
     case 8:  // Unpacked Decimal Leading Sign Separate
@@ -739,9 +817,18 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
             while (i > 0)
                 {
                 i -= 1;
-                if (i == 0 && operand->value[1] == 0 && operand->value[0] == 0)
+                if (i == 0)
                     {
-                    buffer[i] = operand->sign ? 0x2d : 0x2b;
+                    if (operand->value[1] == 0 && operand->value[0] == 0)
+                        {
+                        buffer[i] = operand->sign ? 0x2d : 0x2b;
+                        }
+                    else
+                        {
+                        bdp180Div10(operand, &d1);
+                        buffer[i] = d1 + 0x30;
+                        *isTruncated = TRUE;
+                        }
                     }
                 else
                     {
@@ -749,6 +836,10 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                     buffer[i] = d1 + 0x30;
                     }
                 }
+            }
+        else
+            {
+            *isTruncated = TRUE;
             }
         break;
     case 10: // Binary Unsigned
@@ -764,6 +855,7 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
             buffer[i]           = (u8)operand->value[1];
             operand->value[1] >>= 8;
             }
+        *isTruncated = operand->value[1] != 0;
         break;
     default:
         cpu180SetMonitorCondition(ctx, MCR51); // Instruction specification error

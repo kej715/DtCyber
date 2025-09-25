@@ -60,11 +60,11 @@
 //  instruction stores data within the specified range of addresses. TRACE_INST_COUNT
 //  defines how many instructions to trace thereafter.
 //
-//#define TRACE_INST_LIST   { 0x75,0x3c,0x98,0x99,0x9a,0x9b }
+//#define TRACE_INST_LIST   { 0x75,0x3c,0x98,0x99,0x9a,0x9b,0xf9,0x23 }
 #define TRACE_INST_COUNT  10
 
-//#define TRACE_RANGE_START 0xb027000cad00
-//#define TRACE_RANGE_END   0xb027000cadff
+//#define TRACE_RANGE_START 0xb025000b2000
+//#define TRACE_RANGE_END   0xb025000b2fff
 
 //#define TRACE_STORE_START 0xb04f00000220
 //#define TRACE_STORE_END   0xb04f0000024f
@@ -3299,7 +3299,7 @@ static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool isTrap
 
     if (at < 2)
         {
-        cpu180SetMonitorCondition(ctx, MCR51); // instruction specification error
+        cpu180SetMonitorCondition(ctx, MCR51); // Instruction specification error
         return FALSE;
         }
     pva   = (ctx->regA[0] + 7) & 0xfffffffffff8;
@@ -3762,12 +3762,12 @@ static bool cpu180ValidateAccess(Cpu180Context *ctx, u64 pva, u8 ring, Cpu180Acc
 
 static void cp180Op00(Cpu180Context *activeCpu)  // 00  HALT       MIGDS 2-122
     {
-    cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+    cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
     }
 
 static void cp180Op01(Cpu180Context *activeCpu)  // 01  SYNC       MIGDS 2-138
     {
-    cp180OpIv(activeCpu);
+    // do nothing
     }
 
 static void cp180Op02(Cpu180Context *activeCpu)  // 02  EXCHANGE   MIGDS 2-132
@@ -4161,7 +4161,7 @@ static void cp180Op0F(Cpu180Context *activeCpu)  // 0F  CPYXS      MIGDS 2-146
         {
         if (activeCpu->isMonitorMode == FALSE)
             {
-            cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
             }
         }
@@ -4923,7 +4923,45 @@ static void cp180Op5E(Cpu180Context *activeCpu)  // 5E  SCTIV      MIGDS 2-217
 
 static void cp180Op70(Cpu180Context *activeCpu)  // 70  ADDN       MIGDS 2-47
     {
-    cp180OpIv(activeCpu);
+    BdpOperand addend;
+    BdpOperand augend;
+    u64        descPva;
+    bool       isTruncated;
+    BdpOperand result;
+
+    descPva           = activeCpu->nextP;
+    activeCpu->nextP += 8;
+    if (cpu180GetBdpDescriptor(activeCpu, descPva, activeCpu->opJ, 0, &activeCpu->srcDesc)
+        && cpu180GetBdpDescriptor(activeCpu, descPva + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
+        {
+        if (activeCpu->srcDesc.type == 7 || activeCpu->srcDesc.type == 8
+            || activeCpu->dstDesc.type == 7 || activeCpu->dstDesc.type == 8)
+            {
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
+            return;
+            }
+        if (bdp180DecodeOperand(activeCpu, &activeCpu->srcDesc, &augend)
+            && bdp180DecodeOperand(activeCpu, &activeCpu->dstDesc, &addend))
+            {
+            if (bdp180Add(&augend, &addend, &result) == FALSE)
+                {
+                cpu180SetUserCondition(activeCpu, UCR57); // Arithmetic overflow
+                return;
+                }
+            else if (bdp180EncodeOperand(activeCpu, &activeCpu->dstDesc, &result, &isTruncated))
+                {
+#if CcDebug == 1
+                traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
+                traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
+#endif
+                if (isTruncated)
+                    {
+                    cpu180SetUserCondition(activeCpu, UCR57); // Arithmetic overflow
+                    return;
+                    }
+                }
+            }
+        }
     }
 
 static void cp180Op71(Cpu180Context *activeCpu)  // 71  SUBN       MIGDS 2-47
@@ -4948,20 +4986,27 @@ static void cp180Op74(Cpu180Context *activeCpu)  // 74  CMPN       MIGDS 2-52
 
 static void cp180Op75(Cpu180Context *activeCpu)  // 75  MOVN       MIGDS 2-51
     {
+    u64        descPva;
+    bool       isTruncated;
     BdpOperand operand;
 
-    if (cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP, activeCpu->opJ, 0, &activeCpu->srcDesc)
-        && cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
+    descPva           = activeCpu->nextP;
+    activeCpu->nextP += 8;
+    if (cpu180GetBdpDescriptor(activeCpu, descPva, activeCpu->opJ, 0, &activeCpu->srcDesc)
+        && cpu180GetBdpDescriptor(activeCpu, descPva + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
         {
         if (bdp180DecodeOperand(activeCpu, &activeCpu->srcDesc, &operand)
-            && bdp180EncodeOperand(activeCpu, &activeCpu->dstDesc, &operand))
+            && bdp180EncodeOperand(activeCpu, &activeCpu->dstDesc, &operand, &isTruncated))
             {
-            activeCpu->nextP += 8;
-
 #if CcDebug == 1
             traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
             traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
 #endif
+            if (isTruncated)
+                {
+                cpu180SetUserCondition(activeCpu, UCR62); // Arithmetic loss of significance
+                return;
+                }
             }
         }
     }
@@ -4969,16 +5014,17 @@ static void cp180Op75(Cpu180Context *activeCpu)  // 75  MOVN       MIGDS 2-51
 static void cp180Op76(Cpu180Context *activeCpu)  // 76  MOVB       MIGDS 2-55
     {
     u8  buf[256];
+    u64 descPva;
     u16 i;
-    u16 n;
 
-    if (cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP, activeCpu->opJ, 0, &activeCpu->srcDesc)
-        && cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
+    descPva           = activeCpu->nextP;
+    activeCpu->nextP += 8;
+    if (cpu180GetBdpDescriptor(activeCpu, descPva, activeCpu->opJ, 0, &activeCpu->srcDesc)
+        && cpu180GetBdpDescriptor(activeCpu, descPva + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
         {
-        n = (activeCpu->dstDesc.length < activeCpu->srcDesc.length) ? activeCpu->dstDesc.length : activeCpu->srcDesc.length;
-        if (n > 256)
+        if (activeCpu->srcDesc.length > 256 || activeCpu->dstDesc.length > 256)
             {
-            cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
             }
         if (bdp180CopyToBuf(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, buf) == FALSE)
@@ -4993,7 +5039,6 @@ static void cp180Op76(Cpu180Context *activeCpu)  // 76  MOVB       MIGDS 2-55
             {
             return;
             }
-        activeCpu->nextP += 8;
 
 #if CcDebug == 1
         traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
@@ -5007,19 +5052,22 @@ static void cp180Op77(Cpu180Context *activeCpu)  // 77  CMPB       MIGDS 2-52
     u8  *dp;
     u16 i;
     u8  *sp;
+    u64 descPva;
     u8  dstBuf[256];
     u16 n;
     u16 offset;
     u8  result;
     u8  srcBuf[256];
 
-    if (cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP, activeCpu->opJ, 0, &activeCpu->srcDesc)
-        && cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
+    descPva           = activeCpu->nextP;
+    activeCpu->nextP += 8;
+    if (cpu180GetBdpDescriptor(activeCpu, descPva, activeCpu->opJ, 0, &activeCpu->srcDesc)
+        && cpu180GetBdpDescriptor(activeCpu, descPva + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
         {
         n = (activeCpu->dstDesc.length < activeCpu->srcDesc.length) ? activeCpu->srcDesc.length : activeCpu->dstDesc.length;
         if (n > 256)
             {
-            cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
             }
         if (bdp180CopyToBuf(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, srcBuf) == FALSE
@@ -5060,7 +5108,6 @@ static void cp180Op77(Cpu180Context *activeCpu)  // 77  CMPB       MIGDS 2-52
             activeCpu->regX[0] = (activeCpu->regX[0] & LeftMask) | offset;
             }
         activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | (result << 30);
-        activeCpu->nextP += 8;
 
 #if CcDebug == 1
         traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
@@ -5488,7 +5535,7 @@ static void cp180Op8E(Cpu180Context *activeCpu)  // 8E  ADDAQ      MIGDS 2-29
 static void cp180Op8F(Cpu180Context *activeCpu)  // 8F  ADDPXQ     MIGDS 2-29
     {
     u32 disp;
-    i32 XjR;
+    u32 XjR;
 
     XjR  = (((activeCpu->opJ == 0) ? 0 : activeCpu->regX[activeCpu->opJ]) << 1) & Mask32;
     disp = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0x7fff0000 | activeCpu->opQ) << 1;
@@ -6220,7 +6267,7 @@ static void cp180OpB4(Cpu180Context *activeCpu)  // B4  CMPXA      MIGDS 2-134
         }
     if (activeCpu->regX[0] == LeftMask)
         {
-        cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+        cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
         return;
         }
     if (cpu180ValidateAccess(activeCpu, pva, RingOf(pva), AccessModeRead | AccessModeWrite, &cond) == FALSE
@@ -6545,6 +6592,7 @@ static void cp180OpE9(Cpu180Context *activeCpu)  // E9  CMPC       MIGDS 2-52
     u8  *dp;
     u16 i;
     u8  *sp;
+    u64 descPva;
     u8  dstBuf[256];
     u16 n;
     u16 offset;
@@ -6553,13 +6601,15 @@ static void cp180OpE9(Cpu180Context *activeCpu)  // E9  CMPC       MIGDS 2-52
     u8  trnBuf[256];
     u64 trnPva;
 
-    if (cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP, activeCpu->opJ, 0, &activeCpu->srcDesc)
-        && cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
+    descPva           = activeCpu->nextP;
+    activeCpu->nextP += 8;
+    if (cpu180GetBdpDescriptor(activeCpu, descPva, activeCpu->opJ, 0, &activeCpu->srcDesc)
+        && cpu180GetBdpDescriptor(activeCpu, descPva + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
         {
         n = (activeCpu->dstDesc.length < activeCpu->srcDesc.length) ? activeCpu->srcDesc.length : activeCpu->dstDesc.length;
         if (n > 256)
             {
-            cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
             }
         trnPva = (RingSegMask & activeCpu->regA[activeCpu->opI]) | ((activeCpu->regA[activeCpu->opI] + activeCpu->opD) & Mask32);
@@ -6605,7 +6655,6 @@ static void cp180OpE9(Cpu180Context *activeCpu)  // E9  CMPC       MIGDS 2-52
             activeCpu->regX[0] = (activeCpu->regX[0] & LeftMask) | offset;
             }
         activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | (result << 30);
-        activeCpu->nextP += 8;
 
 #if CcDebug == 1
         traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
@@ -6619,16 +6668,19 @@ static void cp180OpEB(Cpu180Context *activeCpu)  // EB  TRANB      MIGDS 2-54
     {
     u64 Ai;
     u8  buf[256];
+    u64 descPva;
     u16 i;
     u64 pva;
     u8  table[256];
 
-    if (cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP, activeCpu->opJ, 0, &activeCpu->srcDesc)
-        && cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
+    descPva           = activeCpu->nextP;
+    activeCpu->nextP += 8;
+    if (cpu180GetBdpDescriptor(activeCpu, descPva, activeCpu->opJ, 0, &activeCpu->srcDesc)
+        && cpu180GetBdpDescriptor(activeCpu, descPva + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
         {
         if (activeCpu->srcDesc.length > 256 || activeCpu->dstDesc.length > 256)
             {
-            cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
             }
         if (bdp180CopyToBuf(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, buf) == FALSE)
@@ -6653,7 +6705,6 @@ static void cp180OpEB(Cpu180Context *activeCpu)  // EB  TRANB      MIGDS 2-54
             {
             return;
             }
-        activeCpu->nextP += 8;
 
 #if CcDebug == 1
         traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
@@ -6672,6 +6723,7 @@ static void cp180OpF3(Cpu180Context *activeCpu)  // F3  SCNB       MIGDS 2-54
     {
     u8  bitIdx;
     u8  bits;
+    u64 descPva;
     u8  dstBuf[256];
     u16 i;
     u8  table[32];
@@ -6679,11 +6731,13 @@ static void cp180OpF3(Cpu180Context *activeCpu)  // F3  SCNB       MIGDS 2-54
 
     static u8 masks[8] = { 0x80,0x40,0x20,0x10,0x08,0x04,0x02,0x01 };
 
-    if (cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP, activeCpu->opK, 1, &activeCpu->dstDesc))
+    descPva           = activeCpu->nextP;
+    activeCpu->nextP += 4;
+    if (cpu180GetBdpDescriptor(activeCpu, descPva, activeCpu->opK, 1, &activeCpu->dstDesc))
         {
         if (activeCpu->dstDesc.length > 256)
             {
-            cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
             }
         tPva = (activeCpu->regA[activeCpu->opI] & RingSegMask) | ((activeCpu->regA[activeCpu->opI] + activeCpu->opD) & Mask32);
@@ -6692,7 +6746,6 @@ static void cp180OpF3(Cpu180Context *activeCpu)  // F3  SCNB       MIGDS 2-54
             {
             return;
             }
-        activeCpu->nextP += 4;
 
 #if CcDebug == 1
         traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    byte string:");
@@ -6723,9 +6776,13 @@ static void cp180OpF9(Cpu180Context *activeCpu)  // F9  MOVI       MIGDS 2-62
     u8         byte;
     u8         d1;
     u8         d2;
+    u64        descPva;
+    bool       isTruncated;
     BdpOperand operand;
 
-    if (cpu180GetBdpDescriptor(activeCpu, activeCpu->nextP, activeCpu->opK, 1, &activeCpu->dstDesc) == FALSE)
+    descPva           = activeCpu->nextP;
+    activeCpu->nextP += 4;
+    if (cpu180GetBdpDescriptor(activeCpu, descPva, activeCpu->opK, 1, &activeCpu->dstDesc) == FALSE)
         {
         return;
         }
@@ -6738,37 +6795,43 @@ static void cp180OpF9(Cpu180Context *activeCpu)  // F9  MOVI       MIGDS 2-62
     case 0:
         if (activeCpu->dstDesc.type != 10 && activeCpu->dstDesc.type != 11)
             {
-            cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
             }
-        if (bdp180EncodeOperand(activeCpu, &activeCpu->dstDesc, &operand) == FALSE)
+        if (bdp180EncodeOperand(activeCpu, &activeCpu->dstDesc, &operand, &isTruncated) == FALSE)
             {
             return;
             }
-        d1 = byte >> 4;
-        d2 = byte & Mask4;
-        if (d1 > 9 || d2 > 9)
+        if (isTruncated)
             {
-            cpu180SetUserCondition(activeCpu, UCR63); // invalid BDP data
-            return;
-            }
-        operand.value[1] = (d1 * 10) + d2;
-        if (bdp180EncodeOperand(activeCpu, &activeCpu->dstDesc, &operand) == FALSE)
-            {
-            return;
+            cpu180SetUserCondition(activeCpu, UCR62); // Arithmetic loss of significance
             }
         break;
     case 1:
         if (activeCpu->dstDesc.type > 6)
             {
-            cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
+            }
+        if (byte < 0x30 || byte > 0x39)
+            {
+            cpu180SetUserCondition(activeCpu, UCR63); // Invalid BDP data
+            return;
+            }
+        operand.value[1] = byte - 0x30;
+        if (bdp180EncodeOperand(activeCpu, &activeCpu->dstDesc, &operand, &isTruncated) == FALSE)
+            {
+            return;
+            }
+        if (isTruncated)
+            {
+            cpu180SetUserCondition(activeCpu, UCR62); // Arithmetic loss of significance
             }
         break;
     case 2:
         if (activeCpu->dstDesc.length > 256)
             {
-            cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
             }
         memset(buf, byte, activeCpu->dstDesc.length);
@@ -6780,7 +6843,7 @@ static void cp180OpF9(Cpu180Context *activeCpu)  // F9  MOVI       MIGDS 2-62
     case 3:
         if (activeCpu->dstDesc.length > 256)
             {
-            cpu180SetMonitorCondition(activeCpu, MCR51); // instruction specification error
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
             }
         memset(buf, ' ', activeCpu->dstDesc.length);
@@ -6791,8 +6854,6 @@ static void cp180OpF9(Cpu180Context *activeCpu)  // F9  MOVI       MIGDS 2-62
             }
         break;
         }
-
-    activeCpu->nextP += 4;
 
 #if CcDebug == 1
     traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");

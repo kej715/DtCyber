@@ -600,10 +600,10 @@ static DecCp180Control cp180Decode[0x100] =
     VCjkiD, "Illegal",  VF, VR,                                // 6E
     VCjkiD, "Illegal",  VF, VR,                                // 6F
 
-    VCjk,   "ADDN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 70
-    VCjk,   "SUBN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 71
-    VCjk,   "MULN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 72
-    VCjk,   "DIVN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 73
+    VCjkB2, "ADDN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 70
+    VCjkB2, "SUBN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 71
+    VCjkB2, "MULN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 72
+    VCjkB2, "DIVN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 73
     VCjkB2, "CMPN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 74
     VCjkB2, "MOVN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 75
     VCjkB2, "MOVB,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 76

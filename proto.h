@@ -61,10 +61,11 @@
 /*
 **  bdp180.c
 */
+bool bdp180Add(BdpOperand *augend, BdpOperand *addend, BdpOperand *result);
 bool bdp180CopyFromBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer);
 bool bdp180CopyToBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer);
 bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *operand);
-bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *operand);
+bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *operand, bool *isTruncated);
 
 /*
 **  channel.c
