@@ -135,6 +135,7 @@ static FILE bdp180Log = NULL;
 bool bdp180Add(BdpOperand *augend, BdpOperand *addend, BdpOperand *result)
     {
 #if defined(_WIN32)
+    return TRUE;
 #else
     u128 a1;
     u128 a2;

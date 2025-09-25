@@ -6774,8 +6774,6 @@ static void cp180OpF9(Cpu180Context *activeCpu)  // F9  MOVI       MIGDS 2-62
     {
     u8         buf[256];
     u8         byte;
-    u8         d1;
-    u8         d2;
     u64        descPva;
     bool       isTruncated;
     BdpOperand operand;
