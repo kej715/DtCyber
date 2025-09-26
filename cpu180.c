@@ -1121,13 +1121,14 @@ bool cpu180GetBytes(Cpu180Context *ctx, u64 pva, int count, u8 ring, Cpu180Acces
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise CYBER 180 CPU.
 **
-**  Parameters:     Name        Description.
-**                  model       CPU model string
+**  Parameters:     Name          Description.
+**                  model         CPU model string
+**                  serialNumbers CPU serial numbers
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void cpu180Init(char *model)
+void cpu180Init(char *model, u16 *serialNumbers)
     {
     Cpu180Context *activeCpu;
     int           cpuNum;
@@ -1233,7 +1234,11 @@ void cpu180Init(char *model)
             fputs("(cpu    ) Failed to allocate memory for CYBER 180 CPU memory\n", stderr);
             exit(1);
             }
-        activeCpu->regEid        = 0x00321234; // Elem: 00 (CP), Model: 860, S/N
+        activeCpu->regEid        = 0x00320000  // Elem: 00 (CP), Model: 860, S/N
+                                   | ((serialNumbers[cpuNum] / 1000) << 12)
+                                   | (((serialNumbers[cpuNum] % 1000) / 100) << 8)
+                                   | (((serialNumbers[cpuNum] % 100) / 10) << 4)
+                                   | (serialNumbers[cpuNum] % 10);
         activeCpu->regVmcl       = 0xc000;     // Virtual state and CYBER 170 state
         activeCpu->pendingAction = Rni;
         activeCpu->isStopped     = TRUE;

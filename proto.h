@@ -110,7 +110,7 @@ void cpuAcquireMemoryMutex(void);
 bool cpuDdpTransfer(u32 ecsAddress, CpWord *data, bool writeToEcs);
 bool cpuEcsFlagRegister(u32 ecsAddress);
 u32  cpuGetP(u8 cpuNum);
-void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType);
+void cpuInit(char *model, u16 *serialNumbers, u32 memory, u32 emBanks, ExtMemory emType);
 void cpuPpReadMem(u32 address, CpWord *data);
 void cpuPpWriteMem(u32 address, CpWord data);
 void cpuReleaseExchangeMutex(void);
@@ -124,7 +124,7 @@ void cpuVoidIwStack(Cpu170Context *activeCpu, u32 branchAddr);
 */
 void cpu180CheckConditions(Cpu180Context *ctx);
 bool cpu180GetBytes(Cpu180Context *ctx, u64 pva, int count, u8 ring, Cpu180AccessMode access, u64 *word);
-void cpu180Init(char *model);
+void cpu180Init(char *model, u16 *serialNumbers);
 void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa);
 u64  cpu180MacGetCmRegister(u8 reg);
 u64  cpu180MacGetCpStateRegister(Cpu180Context *ctx, u8 reg);

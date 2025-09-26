@@ -241,6 +241,8 @@ static InitVal sectVals[] =
     "cmFile",                        "cyber",   "Deprecated",
     "console",                       "cyber",   "Valid",
     "cpus",                          "cyber",   "Valid",
+    "cpu0sn",                        "cyber",   "Valid",
+    "cpu1sn",                        "cyber",   "Valid",
     "deadstart",                     "cyber",   "Valid",
     "displayName",                   "cyber",   "Valid",
     "ecsBanks",                      "cyber",   "Valid",
@@ -546,11 +548,14 @@ static void initCyber(char *config)
     long conns;
     char *cp;
     long cpus;
+    long cpuSN;
+    long defaultSN;
     char dummy[256];
     long dummyInt;
     long ecsBanks;
     long enableCejMej;
     long esmBanks;
+    int  i;
     bool isOk;
     long mask;
     long memory;
@@ -558,6 +563,7 @@ static void initCyber(char *config)
     long port;
     long pps;
     int  rc;
+    u16  serialNumbers[MaxCpus];
     long setMHz;
 
     /*-------------------START OF PRECHECK-------------------*/
@@ -938,6 +944,22 @@ static void initCyber(char *config)
     cpuCount = (int)cpus;
 
     /*
+    **  Obtain CPU serial numbers, if specified
+    */
+    defaultSN = 1234;
+    for (i = 0; i < cpuCount; i++)
+        {
+        sprintf(dummy, "cpu%dsn", i);
+        initGetInteger(dummy, defaultSN++, &cpuSN);
+        if (cpuSN < 1 || cpuSN > 9999)
+            {
+            logDtError(LogErrorLocation, "file '%s' section [%s]: Entry '%s' invalid - correct values are 1 .. 9999\n", startupFile, config, dummy);
+            exit(1);
+            }
+        serialNumbers[i] = (u16)cpuSN;
+        }
+
+    /*
     **  Determine where to persist data between emulator invocations
     **  and check if directory exists.
     */
@@ -967,14 +989,15 @@ static void initCyber(char *config)
     /*
     **  Initialise CPU.
     */
-    cpuInit(model, memory, ecsBanks + esmBanks, ecsBanks != 0 ? ECS : ESM);
+    cpuInit(model, serialNumbers, memory, ecsBanks + esmBanks, ecsBanks != 0 ? ECS : ESM);
     if (ecsBanks + esmBanks == 0)
         {
-        fprintf(stdout, "(init   ) Successfully configured model %s with %d CPUs.\n", model, cpuCount);
+        fprintf(stdout, "(init   ) Successfully configured model %s with %d CPU%s.\n", model, cpuCount, cpuCount > 1 ? "'s" : "");
         }
     else
         {
-        fprintf(stdout, "(init   ) Successfully configured model %s with %d CPUs and %ld banks of %s.\n", model, cpuCount, ecsBanks + esmBanks, ecsBanks != 0 ? "ESM" : "ECS");
+        fprintf(stdout, "(init   ) Successfully configured model %s with %d CPU%s and %ld banks of %s.\n", model, cpuCount, cpuCount > 1 ? "'s" : "",
+            ecsBanks + esmBanks, ecsBanks != 0 ? "ESM" : "ECS");
         }
 
 

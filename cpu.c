@@ -326,13 +326,15 @@ static u8 cpOp01Length[8] = { 30, 30, 30, 30, 15, 15, 15, 30 };
 **
 **  Parameters:     Name        Description.
 **                  model       CPU model string
+**                  serialNumbers CPU serial number(s)
 **                  memory      configured central memory
 **                  emBanks     configured number of extended memory banks
+**                  emType      type of extended memory (ECS or ESM)
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
+void cpuInit(char *model, u16 *serialNumbers, u32 memory, u32 emBanks, ExtMemory emType)
     {
     int cpuNum;
     u32 extBanksSize = 0;
@@ -472,7 +474,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
     */
     if (isCyber180)
         {
-        cpu180Init(model);
+        cpu180Init(model, serialNumbers);
         }
 
     /*
@@ -490,8 +492,13 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
     */
     if (isCyber180)
         {
-        printf("(cpu    ) CPU model %s initialised (%d CPU%s, %dM bytes CM)\n",
-               model, cpuCount, cpuCount > 1 ? "'s" : "", (8 * cpuMaxMemory) / OneMegabyte);
+        printf("(cpu    ) CPU model %s initialised (%d CPU%s, ", model, cpuCount, cpuCount > 1 ? "'s" : "");
+        printf("S/N %04x, ", cpus180[0].regEid & Mask16);
+        if (cpuCount > 1)
+            {
+            printf("S/N %04x, ", cpus180[1].regEid & Mask16);
+            }
+        printf("%dM bytes CM)\n", (8 * cpuMaxMemory) / OneMegabyte);
         }
     else
         {
