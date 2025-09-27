@@ -6067,10 +6067,13 @@ static void cp180OpA9(Cpu180Context *activeCpu)  // A9  SHFX       MIGDS 2-33
     else
         {
         shift = (~(shift | 0x40) + 1) & Mask7;
-        activeCpu->regX[activeCpu->opK] = activeCpu->regX[activeCpu->opJ] >> shift;
         if ((activeCpu->regX[activeCpu->opJ] & 0x8000000000000000) != 0)
             {
-            activeCpu->regX[activeCpu->opK] |= (u64)signExt64[shift];
+            activeCpu->regX[activeCpu->opK] = signExt64[shift] | (activeCpu->regX[activeCpu->opJ] >> shift);
+            }
+        else
+            {
+            activeCpu->regX[activeCpu->opK] = activeCpu->regX[activeCpu->opJ] >> shift;
             }
         }
     }
