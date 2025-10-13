@@ -2397,8 +2397,7 @@ static void ppOpLPML(void)    // 1024
 
 static void ppOpINPN(void)    // 1026
     {
-/*DELETE*/ //fprintf(stderr,"INPN %o\n",activePpu->opD);
-// TODO: 1 seems to indicate CPU0, is a different memory port value used for CPU1 ?
+// TODO: 1 seems to indicate CPU0. Is a different memory port value used for CPU1 ?
     if (activePpu->opD == 1)
         {
         cpus180[0].regMcr |= 0x0080; // set MCR56

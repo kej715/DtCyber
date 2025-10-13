@@ -1542,7 +1542,6 @@ static void dumpXP(Cpu170Context *activeCpu, int before, int after)
 **------------------------------------------------------------------------*/
 static void cpuOpIllegal(Cpu170Context *activeCpu)
     {
-/*DELETE*/traceStack(stderr);
     if (isCyber180 && activeCpu->isMonitorMode)
         {
         cpuInitiateExitTo180(activeCpu);
