@@ -2059,7 +2059,7 @@ void traceTrapFrame(Cpu180Context *cpu, u64 sfsa)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Trace a CYBER 180 trap pointer.
+**  Purpose:        Trace a CYBER 180 trap indication.
 **
 **  Parameters:     Name        Description.
 **                  cpu         Pointer to CYBER 180 CPU context
@@ -2067,7 +2067,7 @@ void traceTrapFrame(Cpu180Context *cpu, u64 sfsa)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void traceTrapPointer(Cpu180Context *cpu)
+void traceTrap(Cpu180Context *cpu)
     {
     u64              bsp;
     u64              cbp;
@@ -2084,7 +2084,8 @@ void traceTrapPointer(Cpu180Context *cpu)
         {
         return;
         }
-    fprintf(cpuF[cpu->id], "%06d CYBER 180 TP " FMT64_012x " ", traceSequenceNo, cpu->regTp);
+    fprintf(cpuF[cpu->id], "%06d CYBER 180 Trap MCR %04x MMR %04x UCR %04x UMR %04x\n", traceSequenceNo, cpu->regMcr, cpu->regMmr, cpu->regUcr, cpu->regUmr);
+    fprintf(cpuF[cpu->id], "%06d                TP " FMT64_012x " ", traceSequenceNo, cpu->regTp);
     utp = cpu->regUtp;
     if (cpu180PvaToRma(cpu, cpu->regTp, AccessModeRead, &rma, &cond) == FALSE)
         {
@@ -2185,6 +2186,7 @@ void traceMonitorCondition(Cpu180Context *cpu, MonitorCondition cond)
         default:
             break;
             }
+        fprintf(cpuF[cpu->id], "\n%06d       MCR %04x, MMR %04x", traceSequenceNo, cpu->regMcr, cpu->regMmr);
         fprintf(cpuF[cpu->id], "\n%06d       Action %s, P " FMT64_012x, traceSequenceNo, traceTranslateAction(cpu->pendingAction), cpu->nextP);
         tracePrintRma(cpu, cpu->nextP);
         fputs("\n", cpuF[cpu->id]);
@@ -2398,6 +2400,7 @@ void traceUserCondition(Cpu180Context *cpu, UserCondition cond)
             break;
             }
         fprintf(cpuF[cpu->id], "%06d UCR%d %s\n", traceSequenceNo, (cond - MCR48) + 48, s);
+        fprintf(cpuF[cpu->id], "%06d       UCR %04x, UMR %04x\n", traceSequenceNo, cpu->regUcr, cpu->regUmr);
         fprintf(cpuF[cpu->id], "%06d       Action %s, P " FMT64_012x, traceSequenceNo, traceTranslateAction(cpu->pendingAction), cpu->nextP);
         tracePrintRma(cpu, cpu->nextP);
         fputs("\n", cpuF[cpu->id]);

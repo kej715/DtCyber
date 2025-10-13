@@ -139,9 +139,10 @@ typedef enum
 **  Private Function Prototypes
 **  ---------------------------
 */
-static FloatClass float180FloatClassOf(u64 floatValue);
+static FloatClass float180DoubleClassOf(Cpu180Double *value);
+static FloatClass float180FloatClassOf(u64 value);
 static void float180LongDiv(Cpu180Double *dvdend, Cpu180Double *dvisor, Cpu180Double *quotient);
-static void float180LongMul(Cpu180Double *mltand, Cpu180Double *mltier, Cpu180Double *product);
+static void float180LongMul(Cpu180Double *mltand, Cpu180Double *mltier, Cpu180Double *hiProd, Cpu180Double *loProd);
 static void float180NormalizeDouble(u16 *exponent, Cpu180Double *coefficient);
 static void float180NormalizeFloat(u16 *exponent, u64 *coefficient);
 
@@ -275,23 +276,20 @@ bool float180AddDouble(Cpu180Context *ctx, Cpu180Double *augend, Cpu180Double *a
     u16          expAddend;
     u16          expAugend;
     u16          expResult;
+    u64          nextP;
     u16          shift;
     u8           signAddend;
     u8           signAugend;
     u8           signResult;
 
-    classAddend = float180FloatClassOf(addend->leftPart);
-    classAugend = float180FloatClassOf(augend->leftPart);
+    classAddend = float180DoubleClassOf(addend);
+    classAugend = float180DoubleClassOf(augend);
     switch ((classAugend * 5) + classAddend)
         {
-    case Z1Z2xZ1Z2:
-        sum->leftPart  = 0;
-        sum->rightPart = 0;
-        return TRUE;
     default:
-    case Z1Z2xN:
     case NxN:
-    case NxZ1Z2:
+    case NxZ3:
+    case Z3xN:
         expAddend             = ExponentOf(addend->leftPart);
         coeffAddend.leftPart  = CoefficientOf(addend->leftPart);
         coeffAddend.rightPart = CoefficientOf(addend->rightPart);
@@ -304,46 +302,38 @@ bool float180AddDouble(Cpu180Context *ctx, Cpu180Double *augend, Cpu180Double *a
             {
             expResult = expAddend;
             shift     = expAddend - expAugend;
-            if (shift < 96)
+            if (shift > 96)
                 {
-                if (shift < 48)
-                    {
-                    coeffAugend.rightPart  = (coeffAugend.rightPart >> shift) | ((coeffAugend.leftPart & coeffMasks[shift]) << (48 - shift));
-                    coeffAugend.leftPart >>= shift;
-                    }
-                else
-                    {
-                    coeffAugend.rightPart = coeffAugend.leftPart >> (shift - 48);
-                    coeffAugend.leftPart  = 0;
-                    }
+                shift = 96;
+                }
+            if (shift < 48)
+                {
+                coeffAugend.rightPart  = (coeffAugend.rightPart >> shift) | ((coeffAugend.leftPart & coeffMasks[shift]) << (48 - shift));
+                coeffAugend.leftPart >>= shift;
                 }
             else
                 {
+                coeffAugend.rightPart = coeffAugend.leftPart >> (shift - 48);
                 coeffAugend.leftPart  = 0;
-                coeffAugend.rightPart = 0;
                 }
             }
         else if (expAugend > expAddend)
             {
             expResult = expAugend;
             shift     = expAugend - expAddend;
-            if (shift < 96)
+            if (shift > 96)
                 {
-                if (shift < 48)
-                    {
-                    coeffAddend.rightPart  = (coeffAddend.rightPart >> shift) | ((coeffAddend.leftPart & coeffMasks[shift]) << (48 - shift));
-                    coeffAddend.leftPart >>= shift;
-                    }
-                else
-                    {
-                    coeffAddend.rightPart = coeffAddend.leftPart >> (shift - 48);
-                    coeffAddend.leftPart  = 0;
-                    }
+                shift = 96;
+                }
+            if (shift < 48)
+                {
+                coeffAddend.rightPart  = (coeffAddend.rightPart >> shift) | ((coeffAddend.leftPart & coeffMasks[shift]) << (48 - shift));
+                coeffAddend.leftPart >>= shift;
                 }
             else
                 {
+                coeffAddend.rightPart = coeffAddend.leftPart >> (shift - 48);
                 coeffAddend.leftPart  = 0;
-                coeffAddend.rightPart = 0;
                 }
             }
         else
@@ -419,71 +409,36 @@ bool float180AddDouble(Cpu180Context *ctx, Cpu180Double *augend, Cpu180Double *a
                     }
                 }
             }
-        if (coeffResult.leftPart != 0 || coeffResult.rightPart != 0)
-            {
-            float180NormalizeDouble(&expResult, &coeffResult);
-            sum->leftPart  = ((u64)signResult << 63) | ((u64)expResult << 48) | coeffResult.leftPart;
-            sum->rightPart = ((u64)signResult << 63) | ((u64)expResult << 48) | coeffResult.rightPart;
-            if (IsInfinite(expResult)) // exponent overflow
-                {
-                cpu180SetUserCondition(ctx, UCR58);
-                if (IsUmrBitSet(ctx, UCR58) == FALSE)
-                    {
-                    sum->leftPart  = ((u64)signResult << 63) | INFINITE;
-                    sum->rightPart = ((u64)signResult << 63) | INFINITE;
-                    }
-                }
-            else if (IsZ2(expResult))  // exponent underflow
-                {
-                cpu180SetUserCondition(ctx, UCR59);
-                if (IsUmrBitSet(ctx, UCR59) == FALSE)
-                    {
-                    sum->leftPart  = 0;
-                    sum->rightPart = 0;
-                    }
-                }
-            }
-        else if (((augend->leftPart ^ addend->leftPart) == 0x8000000000000000) // N + -N
-                 && (((augend->rightPart ^ addend->rightPart) & 0xffffffffffff) == 0))
-            {
-            sum->leftPart  = 0;
-            sum->rightPart = 0;
-            }
-        else
-            {
-            cpu180SetUserCondition(ctx, UCR60); // FP loss of significance
-            if (IsUmrBitSet(ctx, UCR60))
-                {
-                sum->leftPart  = (u64)expResult << 48; // Z3
-                sum->rightPart = sum->leftPart;
-                }
-            else
-                {
-                sum->leftPart  = 0;
-                sum->rightPart = 0;
-                }
-            }
-        return TRUE;
+        break;
     //
     //  See MIGDS 2-92 and 2-93
     //
-    case Z1Z2xZ3:
-    case Z3xZ1Z2:
+    case Z1Z2xN:
+        expResult             = ExponentOf(addend->leftPart);
+        coeffResult.leftPart  = CoefficientOf(addend->leftPart);
+        coeffResult.rightPart = CoefficientOf(addend->rightPart);
+        signResult            = SignOf(addend->leftPart);
+        break;
+    case NxZ1Z2:
+        expResult             = ExponentOf(augend->leftPart);
+        coeffResult.leftPart  = CoefficientOf(augend->leftPart);
+        coeffResult.rightPart = CoefficientOf(augend->rightPart);
+        signResult            = SignOf(augend->leftPart);
+        break;
+    case Z1Z2xZ1Z2:
+        sum->leftPart  = 0;
+        sum->rightPart = 0;
+        return TRUE;
     case Z3xZ3:
+        nextP = ctx->nextP;
         cpu180SetUserCondition(ctx, UCR60); // FP loss of significance
         if (IsUmrBitSet(ctx, UCR59))
             {
-            expAugend = ExponentOf(augend->leftPart);
-            if (IsStandard(expAugend)) // if Z3
-                {
-                sum->leftPart  = (u64)expAugend << 48;
-                sum->rightPart = sum->leftPart;
-                }
-            else
-                {
-                sum->leftPart  = ExponentOf(addend->leftPart) << 48;
-                sum->rightPart = sum->leftPart;
-                }
+            expAugend      = ExponentOf(augend->leftPart);
+            expAddend      = ExponentOf(addend->leftPart);
+            sum->leftPart  = expAugend > expAddend ? (u64)expAugend << 48 : (u64)expAddend << 48;
+            sum->rightPart = sum->leftPart;
+            ctx->nextP = nextP;
             }
         else
             {
@@ -491,114 +446,22 @@ bool float180AddDouble(Cpu180Context *ctx, Cpu180Double *augend, Cpu180Double *a
             sum->rightPart = 0;
             }
         return TRUE;
-    case Z3xN:
-        expAddend             = ExponentOf(addend->leftPart);
-        expAugend             = ExponentOf(augend->leftPart);
-        coeffAddend.leftPart  = CoefficientOf(addend->leftPart);
-        coeffAddend.rightPart = CoefficientOf(addend->rightPart);
-        signAddend            = SignOf(addend->leftPart);
-        if (expAddend >= expAugend)
+    case Z1Z2xZ3:
+    case Z3xZ1Z2:
+        nextP = ctx->nextP;
+        cpu180SetUserCondition(ctx, UCR60); // FP loss of significance
+        if (IsUmrBitSet(ctx, UCR59))
             {
-            *sum = *addend;
+            expAugend      = ExponentOf(augend->leftPart);
+            expAddend      = ExponentOf(addend->leftPart);
+            sum->leftPart  = IsStandard(expAugend) ? (u64)expAugend << 48 : (u64)expAddend << 48;
+            sum->rightPart = sum->leftPart;
+            ctx->nextP = nextP;
             }
         else
             {
-            expResult = expAugend;
-            shift     = expAugend - expAddend;
-            if (shift < 96)
-                {
-                if (shift < 48)
-                    {
-                    coeffResult.rightPart  = (coeffAddend.rightPart >> shift) | ((coeffAddend.leftPart & coeffMasks[shift]) << (48 - shift));
-                    coeffResult.leftPart   = coeffAddend.leftPart >> shift;
-                    }
-                else
-                    {
-                    coeffResult.rightPart = coeffAddend.leftPart >> (shift - 48);
-                    coeffResult.leftPart  = 0;
-                    }
-                float180NormalizeDouble(&expResult, &coeffResult);
-                sum->leftPart  = ((u64)signAddend << 63) | ((u64)expResult << 48) | coeffResult.leftPart;
-                sum->rightPart = ((u64)signAddend << 63) | ((u64)expResult << 48) | coeffResult.rightPart;
-                if (IsZ2(expResult))  // exponent underflow
-                    {
-                    cpu180SetUserCondition(ctx, UCR59);
-                    if (IsUmrBitSet(ctx, UCR59) == FALSE)
-                        {
-                        sum->leftPart  = 0;
-                        sum->rightPart = 0;
-                        }
-                    }
-                }
-            else
-                {
-                cpu180SetUserCondition(ctx, UCR60); // FP loss of significance
-                if (IsUmrBitSet(ctx, UCR59))
-                    {
-                    sum->leftPart  = (u64)expResult << 48;
-                    sum->rightPart = sum->leftPart;
-                    }
-                else
-                    {
-                    sum->leftPart  = 0;
-                    sum->rightPart = 0;
-                    }
-                }
-            }
-        return TRUE;
-    case NxZ3:
-        expAddend             = ExponentOf(addend->leftPart);
-        expAugend             = ExponentOf(augend->leftPart);
-        coeffAugend.leftPart  = CoefficientOf(augend->leftPart);
-        coeffAugend.rightPart = CoefficientOf(augend->rightPart);
-        signAugend            = SignOf(augend->leftPart);
-        if (expAugend >= expAddend)
-            {
-            *sum = *augend;
-            }
-        else
-            {
-            expResult = expAddend;
-            shift     = expAddend - expAugend;
-            if (shift < 96)
-                {
-                if (shift < 48)
-                    {
-                    coeffResult.rightPart  = (coeffAugend.rightPart >> shift) | ((coeffAugend.leftPart & coeffMasks[shift]) << (48 - shift));
-                    coeffResult.leftPart   = coeffAugend.leftPart >> shift;
-                    }
-                else
-                    {
-                    coeffResult.rightPart = coeffAugend.leftPart >> (shift - 48);
-                    coeffResult.leftPart  = 0;
-                    }
-                float180NormalizeDouble(&expResult, &coeffResult);
-                sum->leftPart  = ((u64)signAugend << 63) | ((u64)expResult << 48) | coeffResult.leftPart;
-                sum->rightPart = ((u64)signAugend << 63) | ((u64)expResult << 48) | coeffResult.rightPart;
-                if (IsZ2(expResult))  // exponent underflow
-                    {
-                    cpu180SetUserCondition(ctx, UCR59);
-                    if (IsUmrBitSet(ctx, UCR59) == FALSE)
-                        {
-                        sum->leftPart  = 0;
-                        sum->rightPart = 0;
-                        }
-                    }
-                }
-            else
-                {
-                cpu180SetUserCondition(ctx, UCR60); // FP loss of significance
-                if (IsUmrBitSet(ctx, UCR59))
-                    {
-                    sum->leftPart  = (u64)expResult << 48;
-                    sum->rightPart = sum->leftPart;
-                    }
-                else
-                    {
-                    sum->leftPart  = 0;
-                    sum->rightPart = 0;
-                    }
-                }
+            sum->leftPart  = 0;
+            sum->rightPart = 0;
             }
         return TRUE;
     case Z1Z2xINDEF:
@@ -612,7 +475,7 @@ bool float180AddDouble(Cpu180Context *ctx, Cpu180Double *augend, Cpu180Double *a
     case INDEFxINF:
         cpu180SetUserCondition(ctx, UCR61);
         sum->leftPart  = INDEFINITE;
-        sum->rightPart = sum->leftPart;
+        sum->rightPart = INDEFINITE;
         if (IsUcTrapEnabled(ctx, UCR61)) // inhibit instruction execution
             {
             return FALSE;
@@ -625,7 +488,7 @@ bool float180AddDouble(Cpu180Context *ctx, Cpu180Double *augend, Cpu180Double *a
             {
             cpu180SetUserCondition(ctx, UCR61);
             sum->leftPart  = INDEFINITE;
-            sum->rightPart = sum->leftPart;
+            sum->rightPart = INDEFINITE;
             if (IsUcTrapEnabled(ctx, UCR61)) // inhibit instruction execution
                 {
                 return FALSE;
@@ -653,6 +516,58 @@ bool float180AddDouble(Cpu180Context *ctx, Cpu180Double *augend, Cpu180Double *a
         sum->rightPart = sum->leftPart;
         return TRUE;
         }
+
+    if (coeffResult.leftPart != 0 || coeffResult.rightPart != 0)
+        {
+        float180NormalizeDouble(&expResult, &coeffResult);
+        sum->leftPart  = ((u64)signResult << 63) | ((u64)expResult << 48) | coeffResult.leftPart;
+        sum->rightPart = ((u64)signResult << 63) | ((u64)expResult << 48) | coeffResult.rightPart;
+        if (IsInfinite(expResult)) // exponent overflow
+            {
+            nextP = ctx->nextP;
+            cpu180SetUserCondition(ctx, UCR58);
+            if (IsUmrBitSet(ctx, UCR58))
+                {
+                ctx->nextP = nextP;
+                }
+            else
+                {
+                sum->leftPart  = ((u64)signResult << 63) | INFINITE;
+                sum->rightPart = ((u64)signResult << 63) | INFINITE;
+                }
+            }
+        else if (IsZ2(expResult))  // exponent underflow
+            {
+            nextP = ctx->nextP;
+            cpu180SetUserCondition(ctx, UCR59);
+            if (IsUmrBitSet(ctx, UCR59))
+                {
+                ctx->nextP = nextP;
+                }
+            else
+                {
+                sum->leftPart  = 0;
+                sum->rightPart = 0;
+                }
+            }
+        }
+    else
+        {
+        nextP = ctx->nextP;
+        cpu180SetUserCondition(ctx, UCR60); // FP loss of significance
+        if (IsUmrBitSet(ctx, UCR60))
+            {
+            sum->leftPart  = (u64)expResult << 48; // Z3
+            sum->rightPart = sum->leftPart;
+            ctx->nextP = nextP;
+            }
+        else
+            {
+            sum->leftPart  = 0;
+            sum->rightPart = 0;
+            }
+        }
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -682,6 +597,7 @@ bool float180AddFloat(Cpu180Context *ctx, u64 augend, u64 addend, u64 *sum)
     u16        expAddend;
     u16        expAugend;
     u16        expResult;
+    u64        nextP;
     u16        shift;
     u8         signAddend;
     u8         signAugend;
@@ -691,13 +607,10 @@ bool float180AddFloat(Cpu180Context *ctx, u64 augend, u64 addend, u64 *sum)
     classAugend = float180FloatClassOf(augend);
     switch ((classAugend * 5) + classAddend)
         {
-    case Z1Z2xZ1Z2:
-        *sum = 0;
-        return TRUE;
     default:
-    case Z1Z2xN:
     case NxN:
-    case NxZ1Z2:
+    case NxZ3:
+    case Z3xN:
         expAddend   = ExponentOf(addend);
         coeffAddend = CoefficientOf(addend);
         signAddend  = SignOf(addend);
@@ -708,27 +621,21 @@ bool float180AddFloat(Cpu180Context *ctx, u64 augend, u64 addend, u64 *sum)
             {
             expResult = expAddend;
             shift     = expAddend - expAugend;
-            if (shift < 48)
+            if (shift > 48)
                 {
-                coeffAugend >>= shift;
+                shift = 48;
                 }
-            else
-                {
-                coeffAugend = 0;
-                }
+            coeffAugend >>= shift;
             }
         else if (expAugend > expAddend)
             {
             expResult = expAugend;
             shift     = expAugend - expAddend;
-            if (shift < 48)
+            if (shift > 48)
                 {
-                coeffAddend >>= shift;
+                shift = 48;
                 }
-            else
-                {
-                coeffAddend = 0;
-                }
+            coeffAddend >>= shift;
             }
         else
             {
@@ -757,141 +664,52 @@ bool float180AddFloat(Cpu180Context *ctx, u64 augend, u64 addend, u64 *sum)
                 coeffResult = ~coeffResult + 1;
                 }
             }
-        if (coeffResult != 0)
-            {
-            float180NormalizeFloat(&expResult, &coeffResult);
-            *sum = ((u64)signResult << 63) | ((u64)expResult << 48) | coeffResult;
-            if (IsInfinite(expResult)) // exponent overflow
-                {
-                cpu180SetUserCondition(ctx, UCR58);
-                if (IsUmrBitSet(ctx, UCR58) == FALSE)
-                    {
-                    *sum = ((u64)signResult << 63) | INFINITE;
-                    }
-                }
-            else if (IsZ2(expResult))  // exponent underflow
-                {
-                cpu180SetUserCondition(ctx, UCR59);
-                if (IsUmrBitSet(ctx, UCR59) == FALSE)
-                    {
-                    *sum = 0;
-                    }
-                }
-            }
-        else if ((augend ^ addend) == 0x8000000000000000) // N + -N
-            {
-            *sum = 0;
-            }
-        else
-            {
-            cpu180SetUserCondition(ctx, UCR60); // FP loss of significance
-            if (IsUmrBitSet(ctx, UCR60))
-                {
-                *sum = (u64)expResult << 48; // Z3
-                }
-            else
-                {
-                *sum = 0;
-                }
-            }
-        return TRUE;
+        break;
     //
     //  See MIGDS 2-92 and 2-93
     //
-    case Z1Z2xZ3:
-    case Z3xZ1Z2:
+    case Z1Z2xN:
+        expResult   = ExponentOf(addend);
+        coeffResult = CoefficientOf(addend);
+        signResult  = SignOf(addend);
+        break;
+    case NxZ1Z2:
+        expResult   = ExponentOf(augend);
+        coeffResult = CoefficientOf(augend);
+        signResult  = SignOf(augend);
+        break;
+    case Z1Z2xZ1Z2:
+        *sum = 0;
+        return TRUE;
     case Z3xZ3:
+        nextP = ctx->nextP;
         cpu180SetUserCondition(ctx, UCR60); // FP loss of significance
         if (IsUmrBitSet(ctx, UCR59))
             {
             expAugend = ExponentOf(augend);
-            *sum = IsStandard(expAugend) ? (u64)expAugend << 48 : ExponentOf(addend) << 48;
+            expAddend = ExponentOf(addend);
+            *sum = expAugend > expAddend ? (u64)expAugend << 48 : (u64)expAddend << 48;
+            ctx->nextP = nextP;
             }
         else
             {
             *sum = 0;
             }
         return TRUE;
-    case Z3xN:
-        expAddend   = ExponentOf(addend);
-        expAugend   = ExponentOf(augend);
-        coeffAddend = CoefficientOf(addend);
-        signAddend  = SignOf(addend);
-        if (expAddend >= expAugend)
+    case Z1Z2xZ3:
+    case Z3xZ1Z2:
+        nextP = ctx->nextP;
+        cpu180SetUserCondition(ctx, UCR60); // FP loss of significance
+        if (IsUmrBitSet(ctx, UCR59))
             {
-            *sum = addend;
+            expAugend = ExponentOf(augend);
+            expAddend = ExponentOf(addend);
+            *sum = IsStandard(expAugend) ? (u64)expAugend << 48 : (u64)expAddend << 48;
+            ctx->nextP = nextP;
             }
         else
             {
-            expResult = expAugend;
-            shift     = expAugend - expAddend;
-            if (shift < 48)
-                {
-                coeffResult = coeffAddend >> shift;
-                float180NormalizeFloat(&expResult, &coeffResult);
-                *sum = ((u64)signAddend << 63) | ((u64)expResult << 48) | coeffResult;
-                if (IsZ2(expResult))  // exponent underflow
-                    {
-                    cpu180SetUserCondition(ctx, UCR59);
-                    if (IsUmrBitSet(ctx, UCR59) == FALSE)
-                        {
-                        *sum = 0;
-                        }
-                    }
-                }
-            else
-                {
-                cpu180SetUserCondition(ctx, UCR60); // FP loss of significance
-                if (IsUmrBitSet(ctx, UCR59))
-                    {
-                    *sum = (u64)expResult << 48;
-                    }
-                else
-                    {
-                    *sum = 0;
-                    }
-                }
-            }
-        return TRUE;
-    case NxZ3:
-        expAddend   = ExponentOf(addend);
-        expAugend   = ExponentOf(augend);
-        coeffAugend = CoefficientOf(addend);
-        signAugend  = SignOf(augend);
-        if (expAugend >= expAddend)
-            {
-            *sum = augend;
-            }
-        else
-            {
-            expResult = expAddend;
-            shift     = expAddend - expAugend;
-            if (shift < 48)
-                {
-                coeffResult = coeffAugend >> shift;
-                float180NormalizeFloat(&expResult, &coeffResult);
-                *sum = ((u64)signAugend << 63) | ((u64)expResult << 48) | coeffResult;
-                if (IsZ2(expResult))  // exponent underflow
-                    {
-                    cpu180SetUserCondition(ctx, UCR59);
-                    if (IsUmrBitSet(ctx, UCR59) == FALSE)
-                        {
-                        *sum = 0;
-                        }
-                    }
-                }
-            else
-                {
-                cpu180SetUserCondition(ctx, UCR60); // FP loss of significance
-                if (IsUmrBitSet(ctx, UCR59))
-                    {
-                    *sum = (u64)expResult << 48;
-                    }
-                else
-                    {
-                    *sum = 0;
-                    }
-                }
+            *sum = 0;
             }
         return TRUE;
     case Z1Z2xINDEF:
@@ -941,6 +759,53 @@ bool float180AddFloat(Cpu180Context *ctx, u64 augend, u64 addend, u64 *sum)
         *sum = (SignOf(augend) << 63) | INFINITE;
         return TRUE;
         }
+
+    if (coeffResult != 0)
+        {
+        float180NormalizeFloat(&expResult, &coeffResult);
+        *sum = ((u64)signResult << 63) | ((u64)expResult << 48) | coeffResult;
+        if (IsInfinite(expResult)) // exponent overflow
+            {
+            nextP = ctx->nextP;
+            cpu180SetUserCondition(ctx, UCR58);
+            if (IsUmrBitSet(ctx, UCR58))
+                {
+                ctx->nextP = nextP;
+                }
+            else
+                {
+                *sum = ((u64)signResult << 63) | INFINITE;
+                }
+            }
+        else if (IsZ2(expResult))  // exponent underflow
+            {
+            nextP = ctx->nextP;
+            cpu180SetUserCondition(ctx, UCR59);
+            if (IsUmrBitSet(ctx, UCR59))
+                {
+                ctx->nextP = nextP;
+                }
+            else
+                {
+                *sum = 0;
+                }
+            }
+        }
+    else
+        {
+        nextP = ctx->nextP;
+        cpu180SetUserCondition(ctx, UCR60); // FP loss of significance
+        if (IsUmrBitSet(ctx, UCR60))
+            {
+            *sum = (u64)expResult << 48; // Z3
+            ctx->nextP = nextP;
+            }
+        else
+            {
+            *sum = 0;
+            }
+        }
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -964,13 +829,19 @@ bool float180AddFloat(Cpu180Context *ctx, u64 augend, u64 addend, u64 *sum)
 **------------------------------------------------------------------------*/
 bool float180CompareFloat(Cpu180Context *ctx, u64 minend, u64 subend, int *valence)
     {
-    FloatClass classSubend;
-    FloatClass classMinend;
-    u64        diff;
-    u8         signSubend;
-    u8         signMinend;
+    ConditionAction action;
+    FloatClass      classSubend;
+    FloatClass      classMinend;
+    u64             diff;
+    bool            isOk;
+    u64             nextP;
+    u8              signSubend;
+    u8              signMinend;
+    u16             ucr;
+    u16             ucrDelta;
+    u16             umr;
 
-    classSubend = float180FloatClassOf(minend);
+    classSubend = float180FloatClassOf(subend);
     classMinend = float180FloatClassOf(minend);
     switch ((classMinend * 5) + classSubend)
         {
@@ -980,7 +851,7 @@ bool float180CompareFloat(Cpu180Context *ctx, u64 minend, u64 subend, int *valen
     case NxZ3:
     case Z3xZ3:
         signMinend = SignOf(minend);
-        signSubend = SignOf(minend);
+        signSubend = SignOf(subend);
         if (signMinend < signSubend)
             {
             *valence = 1;
@@ -991,9 +862,37 @@ bool float180CompareFloat(Cpu180Context *ctx, u64 minend, u64 subend, int *valen
             *valence = -1;
             return TRUE;
             }
-        if (float180SubFloat(ctx, minend, subend, &diff))
+        /*
+        **  MIGDS 2-89 says "For standard numbers having like signs
+        **  a floating point subtract shall be performed in the manner
+        **  described in subparagraph 2.4.3.1 of this specification,
+        **  with the exception that the operation is performed as if
+        **  the (FP Overflow, Underflow and Loss of Significance)
+        **  User Mask bits were set (Z2 not forced to zero, etc.) and
+        **  that the result shall not be transferred to Register Xk
+        **  but shall be interpreted in its post-normalized form to
+        **  determine the result of the comparison."
+        **
+        **  The UMR/UCR mask for FP Overflow, Underflow, and Loss of
+        **  significance is 0x0038.
+        */
+        ucr          = ctx->regUcr;
+        umr          = ctx->regUmr;
+        action       = ctx->pendingAction;
+        nextP        = ctx->nextP;
+        ctx->regUmr |= 0x0038;  // set all of the bits temporarily
+        isOk         = float180SubFloat(ctx, minend, subend, &diff);
+        ctx->regUmr  = umr;  // restore original mask
+        ucrDelta     = (ctx->regUcr ^ ucr) & 0x0038;
+        if (ucrDelta != 0)
             {
-            if (diff == 0)
+            ctx->regUcr       &= ~ucrDelta;
+            ctx->pendingAction = action;
+            ctx->nextP         = nextP;
+            }
+        if (isOk)
+            {
+            if (diff == 0 || IsZ3(ExponentOf(diff), CoefficientOf(diff)))
                 {
                 *valence = 0;
                 }
@@ -1015,7 +914,7 @@ bool float180CompareFloat(Cpu180Context *ctx, u64 minend, u64 subend, int *valen
     case Z1Z2xN:
     case Z1Z2xZ3:
     case Z1Z2xINF:
-        *valence = (SignOf(minend) == 0) ? -1 : 1;
+        *valence = (SignOf(subend) == 0) ? -1 : 1;
         return TRUE;
     case Z1Z2xZ1Z2:
         *valence = 0;
@@ -1043,7 +942,7 @@ bool float180CompareFloat(Cpu180Context *ctx, u64 minend, u64 subend, int *valen
         return TRUE;
     case INFxINF:
         signMinend = SignOf(minend);
-        signSubend = SignOf(minend);
+        signSubend = SignOf(subend);
         if (signMinend < signSubend)
             {
             *valence = 1;
@@ -1075,10 +974,12 @@ bool float180CompareFloat(Cpu180Context *ctx, u64 minend, u64 subend, int *valen
 **------------------------------------------------------------------------*/
 bool float180ConvertFloatToInt(Cpu180Context *ctx, u64 floatValue, u64 *intResult)
     {
+    u64 coefficient;
     u16 exponent;
     u16 shift;
 
-    exponent = ExponentOf(floatValue);
+    exponent    = ExponentOf(floatValue);
+    coefficient = CoefficientOf(floatValue);
 
     if (IsIndefinite(exponent))
         {
@@ -1100,38 +1001,53 @@ bool float180ConvertFloatToInt(Cpu180Context *ctx, u64 floatValue, u64 *intResul
         ctx->regUcr |= UcrBitMask(UCR62);
         *intResult   = 0;
         }
-    else if (IsZero(floatValue) || exponent <= BIAS)
+    else if (coefficient == 0)
         {
         *intResult = 0;
         }
     else
         {
-        *intResult = CoefficientOf(floatValue);
-        shift      = exponent - BIAS;
-        if (shift < 48)
+        float180NormalizeFloat(&exponent, &coefficient);
+        shift = exponent - BIAS;
+        if (shift > 0 && shift < 0x8000)
             {
-            *intResult >>= (48 - shift);
-            }
-        else if (shift > 48)
-            {
-            shift -= 48;
-            if (shift < 15)
+            if (shift < 48)
                 {
-                *intResult <<= shift;
+                *intResult = coefficient >> (48 - shift);
                 }
-            else
+            else if (shift > 48)
                 {
-                if (IsUcTrapEnabled(ctx, UCR62))
+                shift -= 48;
+                if (shift < 16)
                     {
-                    cpu180SetUserCondition(ctx, UCR62);
-                    return FALSE;
+                    *intResult = coefficient << shift;
                     }
-                ctx->regUcr |= UcrBitMask(UCR62);
+                else
+                    {
+                    if (IsUcTrapEnabled(ctx, UCR62))
+                        {
+                        cpu180SetUserCondition(ctx, UCR62);
+                        return FALSE;
+                        }
+                    ctx->regUcr |= UcrBitMask(UCR62);
+                    if (shift < 64)
+                        {
+                        *intResult = coefficient << shift;
+                        }
+                    else
+                        {
+                        *intResult = 0;
+                        }
+                    }
+                }
+            if (SignOf(floatValue) != 0)
+                {
+                *intResult = ~*intResult + 1;
                 }
             }
-        if (SignOf(floatValue) != 0)
+        else
             {
-            *intResult = ~*intResult + 1;
+            *intResult = 0;
             }
         }
 
@@ -1196,6 +1112,7 @@ bool float180DivDouble(Cpu180Context *ctx, Cpu180Double *dvdend, Cpu180Double *d
     Cpu180Double coeffDvisor;
     Cpu180Double coeffDvdend;
     Cpu180Double coeffResult;
+    Cpu180Double coeffTmp;
     u16          expDvisor;
     u16          expDvdend;
     u16          expResult;
@@ -1203,12 +1120,11 @@ bool float180DivDouble(Cpu180Context *ctx, Cpu180Double *dvdend, Cpu180Double *d
     u8           signDvdend;
     u8           signResult;
 
-    classDvisor = float180FloatClassOf(dvisor->leftPart);
-    classDvdend = float180FloatClassOf(dvdend->leftPart);
+    classDvisor = float180DoubleClassOf(dvisor);
+    classDvdend = float180DoubleClassOf(dvdend);
     switch ((classDvdend * 5) + classDvisor)
         {
     default:
-    case Z3xN:
     case NxN:
         expDvisor             = ExponentOf(dvisor->leftPart) - BIAS;
         coeffDvisor.leftPart  = CoefficientOf(dvisor->leftPart);
@@ -1222,7 +1138,10 @@ bool float180DivDouble(Cpu180Context *ctx, Cpu180Double *dvdend, Cpu180Double *d
         signResult            = signDvisor ^ signDvdend;
         if ((coeffDvisor.leftPart & 0x800000000000) == 0) // unnormalized divisor
             {
-            if ((coeffDvisor.leftPart << 1) <= coeffDvdend.leftPart) // divisor <= half of dividend
+            coeffTmp.leftPart  = (coeffDvisor.leftPart << 1) | ((coeffDvisor.rightPart >> 47) & 1);
+            coeffTmp.rightPart = (coeffDvisor.rightPart << 1) & Mask48;
+            if (coeffTmp.leftPart < coeffDvdend.leftPart
+                || (coeffTmp.leftPart == coeffDvdend.leftPart && coeffTmp.rightPart <= coeffDvdend.rightPart))
                 {
                 *quotient = *dvdend;
                 cpu180SetUserCondition(ctx, UCR55); // divide fault
@@ -1237,12 +1156,39 @@ bool float180DivDouble(Cpu180Context *ctx, Cpu180Double *dvdend, Cpu180Double *d
         if (coeffResult.leftPart > 0xffffffffffff)
             {
             coeffResult.rightPart = (coeffResult.rightPart >> 1) | ((coeffResult.leftPart & 1) << 47);
-            coeffResult.leftPart  = (coeffResult.leftPart >> 1) | 0x800000000000;
+            coeffResult.leftPart  = ((coeffResult.leftPart >> 1) | 0x800000000000) & Mask48;
             expResult            += 1;
             }
-        float180NormalizeDouble(&expResult, &coeffResult);
         quotient->leftPart  = ((u64)signResult << 63) | ((u64)expResult << 48) | coeffResult.leftPart;
         quotient->rightPart = ((u64)signResult << 63) | ((u64)expResult << 48) | coeffResult.rightPart;
+        if (IsInfinite(expResult)) // exponent overflow
+            {
+            cpu180SetUserCondition(ctx, UCR58);
+            if (IsUmrBitSet(ctx, UCR58) == FALSE)
+                {
+                quotient->leftPart  = ((u64)signResult << 63) | INFINITE;
+                quotient->rightPart = ((u64)signResult << 63) | INFINITE;
+                }
+            }
+        else if (IsZ2(expResult))  // exponent underflow
+            {
+            cpu180SetUserCondition(ctx, UCR59);
+            if (IsUmrBitSet(ctx, UCR59) == FALSE)
+                {
+                quotient->leftPart  = 0;
+                quotient->rightPart = 0;
+                }
+            }
+        return TRUE;
+    case Z3xN:
+        expDvisor             = ExponentOf(dvisor->leftPart) - BIAS;
+        signDvisor            = SignOf(dvisor->leftPart);
+        expDvdend             = ExponentOf(dvdend->leftPart) - BIAS;
+        signDvdend            = SignOf(dvdend->leftPart);
+        expResult             = (expDvdend - expDvisor) + BIAS;
+        signResult            = signDvisor ^ signDvdend;
+        quotient->leftPart  = ((u64)signResult << 63) | ((u64)expResult << 48);
+        quotient->rightPart = quotient->leftPart;
         if (IsInfinite(expResult)) // exponent overflow
             {
             cpu180SetUserCondition(ctx, UCR58);
@@ -1385,7 +1331,6 @@ bool float180DivFloat(Cpu180Context *ctx, u64 dvdend, u64 dvisor, u64 *quotient)
             coeffResult = (coeffResult >> 1) | 0x800000000000;
             expResult  += 1;
             }
-        float180NormalizeFloat(&expResult, &coeffResult);
         *quotient = ((u64)signResult << 63) | ((u64)expResult << 48) | coeffResult;
         if (IsInfinite(expResult)) // exponent overflow
             {
@@ -1475,16 +1420,17 @@ bool float180MulDouble(Cpu180Context *ctx, Cpu180Double *mltand, Cpu180Double *m
     FloatClass   classMltand;
     Cpu180Double coeffMltier;
     Cpu180Double coeffMltand;
-    Cpu180Double coeffResult;
     u16          expMltier;
     u16          expMltand;
     u16          expResult;
+    Cpu180Double hiCoeffResult;
+    Cpu180Double loCoeffResult;
     u8           signMltier;
     u8           signMltand;
     u8           signResult;
 
-    classMltier = float180FloatClassOf(mltier->leftPart);
-    classMltand = float180FloatClassOf(mltand->leftPart);
+    classMltier = float180DoubleClassOf(mltier);
+    classMltand = float180DoubleClassOf(mltand);
     switch ((classMltand * 5) + classMltier)
         {
     default:
@@ -1502,10 +1448,15 @@ bool float180MulDouble(Cpu180Context *ctx, Cpu180Double *mltand, Cpu180Double *m
         signMltand            = SignOf(mltand->leftPart);
         expResult             = (expMltier + expMltand) + BIAS;
         signResult            = signMltier ^ signMltand;
-        float180LongMul(&coeffMltand, &coeffMltier, &coeffResult);
-        float180NormalizeDouble(&expResult, &coeffResult);
-        product->leftPart  = ((u64)signResult << 63) | ((u64)expResult << 48) | coeffResult.leftPart;
-        product->rightPart = ((u64)signResult << 63) | ((u64)expResult << 48) | coeffResult.rightPart;
+        float180LongMul(&coeffMltand, &coeffMltier, &hiCoeffResult, &loCoeffResult);
+        if (hiCoeffResult.leftPart < 0x800000000000)
+            {
+            hiCoeffResult.leftPart  = (hiCoeffResult.leftPart << 1) | (hiCoeffResult.rightPart >> 47);
+            hiCoeffResult.rightPart = ((hiCoeffResult.rightPart << 1) | (loCoeffResult.leftPart >> 47)) & Mask48;
+            expResult              -= 1;
+            }
+        product->leftPart  = ((u64)signResult << 63) | ((u64)expResult << 48) | hiCoeffResult.leftPart;
+        product->rightPart = ((u64)signResult << 63) | ((u64)expResult << 48) | hiCoeffResult.rightPart;
         if (IsInfinite(expResult)) // exponent overflow
             {
             cpu180SetUserCondition(ctx, UCR58);
@@ -1594,12 +1545,13 @@ bool float180MulFloat(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *product)
     u16        expMltier;
     u16        expMltand;
     u16        expResult;
+    u64        hiCoeff128;
+    u64        loCoeff128;
     u8         signMltier;
     u8         signMltand;
     u8         signResult;
-#if defined(_WIN32)
-    u64        hiCoeff128;
-    u64        loCoeff128;
+#if !defined(_WIN32)
+    u128       p128;
 #endif
 
     classMltier = float180FloatClassOf(mltier);
@@ -1621,11 +1573,20 @@ bool float180MulFloat(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *product)
         signResult  = signMltier ^ signMltand;
 #if defined(_WIN32)
         loCoeff128  = _umul128(coeffMltand, coeffMltier, &hiCoeff128);
-        coeffResult = (hiCoeff128 << 16) | (loCoeff128 >> 48);
 #else
-        coeffResult = (u64)(((u128)coeffMltand * (u128)coeffMltier) >> 48);
+        p128        = (u128)coeffMltand * (u128)coeffMltier;
+        loCoeff128  = (u64)p128;
+        hiCoeff128  = (u64)(p128 >> 64);
 #endif
-        float180NormalizeFloat(&expResult, &coeffResult);
+        if (hiCoeff128 >= 0x80000000)
+            {
+            coeffResult = (hiCoeff128 << 16) | (loCoeff128 >> 48);
+            }
+        else
+            {
+            coeffResult = (hiCoeff128 << 17) | (loCoeff128 >> 47);
+            expResult  -= 1;
+            }
         *product = ((u64)signResult << 63) | ((u64)expResult << 48) | coeffResult;
         if (IsInfinite(expResult)) // exponent overflow
             {
@@ -1740,17 +1701,17 @@ bool float180SubFloat(Cpu180Context *ctx, u64 minend, u64 subend, u64 *diff)
  */
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Determine the class of a floating point value
+**  Purpose:        Determine the class of a double precision value
 **
 **  Parameters:     Name        Description.
-**                  floatValue  the value for which to determine the class
+**                  doubleValue the value for which to determine the class
 **
 **  Returns:        Floating point class.
 **
 **------------------------------------------------------------------------*/
-static FloatClass float180FloatClassOf(u64 floatValue)
+static FloatClass float180DoubleClassOf(Cpu180Double *value)
     {
-    switch (floatValue >> 60)
+    switch (value->leftPart >> 60)
         {
     case 0x7:
     case 0xf:
@@ -1768,7 +1729,40 @@ static FloatClass float180FloatClassOf(u64 floatValue)
     case 0xa:
         return FloatClass_Z1Z2;
     default:
-        return (floatValue & Mask48) != 0 ? FloatClass_N : FloatClass_Z3;
+        return ((value->leftPart | value->rightPart) & Mask48) != 0 ? FloatClass_N : FloatClass_Z3;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Determine the class of a single precision value
+**
+**  Parameters:     Name        Description.
+**                  floatValue  the value for which to determine the class
+**
+**  Returns:        Floating point class.
+**
+**------------------------------------------------------------------------*/
+static FloatClass float180FloatClassOf(u64 value)
+    {
+    switch (value >> 60)
+        {
+    case 0x7:
+    case 0xf:
+        return FloatClass_Indefinite;
+    case 0x6:
+    case 0x5:
+    case 0xd:
+    case 0xe:
+        return FloatClass_Infinite;
+    case 0x2:
+    case 0x1:
+    case 0x0:
+    case 0x8:
+    case 0x9:
+    case 0xa:
+        return FloatClass_Z1Z2;
+    default:
+        return (value & Mask48) != 0 ? FloatClass_N : FloatClass_Z3;
         }
     }
 
@@ -1776,61 +1770,74 @@ static FloatClass float180FloatClassOf(u64 floatValue)
 **  Purpose:        Perform long division of double precision coefficients
 **
 **  Parameters:     Name         Description.
-**                  dvdend       pointer to 192-bit normalized dividend
-**                  dvisor       pointer to 96-bit normalized divisor
+**                  dvdend       pointer to 96-bit dividend
+**                  dvisor       pointer to 96-bit divisor
 **                  quotient     pointer to quotient
 **
 **------------------------------------------------------------------------*/
 static void float180LongDiv(Cpu180Double *dvdend, Cpu180Double *dvisor, Cpu180Double *quotient)
     {
-    u8           i;
-    u8           numBits;
-    Cpu180Double remainder;
-    Cpu180Double tmpDvisor;
-    u64          packedQuotient[2];
+    u64          borrow;
+    u64          diff;
+    u64          dvdend192[4];
+    u64          dvisor192[4];
+    int          i;
+    u64          t[4];
 
-    remainder         = *dvdend;
-    tmpDvisor         = *dvisor;
-    packedQuotient[0] = 0;
-    packedQuotient[1] = 0;
-    numBits           = 96;
-
-    for (i = 0; i < numBits; i++)
+    dvdend192[0]        = dvdend->leftPart & Mask48;
+    dvdend192[1]        = dvdend->rightPart & Mask48;
+    dvdend192[2]        = 0;
+    dvdend192[3]        = 0;
+    dvisor192[0]        = dvisor->leftPart & Mask48;
+    dvisor192[1]        = dvisor->rightPart & Mask48;
+    dvisor192[2]        = 0;
+    dvisor192[3]        = 0;
+    quotient->leftPart  = 0;
+    quotient->rightPart = 0;
+    i                   = 96;
+    do
         {
-        //
-        //  Shift divisor right
-        //
-        tmpDvisor.rightPart  = (tmpDvisor.rightPart >> 1) | ((tmpDvisor.leftPart & 1) << 47);
-        tmpDvisor.leftPart >>= 1;
-        //
-        //  Shift quotient left to make space for new bit
-        //
-        packedQuotient[0]   = (packedQuotient[0] << 1) | (packedQuotient[1] >> 63);
-        packedQuotient[1] <<= 1;
-        //
-        //  Subtract divisor from remainder, if possible
-        //
-        if (remainder.leftPart > tmpDvisor.leftPart
-            || (remainder.leftPart == tmpDvisor.leftPart && remainder.rightPart >= tmpDvisor.rightPart))
+        quotient->leftPart  = (quotient->leftPart << 1) | (quotient->rightPart >> 47);
+        quotient->rightPart = (quotient->rightPart << 1) & Mask48;
+        t[0]                = dvdend192[0];
+        t[1]                = dvdend192[1];
+        t[2]                = dvdend192[2];
+        t[3]                = dvdend192[3];
+
+        diff                = dvdend192[3] - dvisor192[3];
+        borrow              = (diff >> 48) & 1;
+        dvdend192[3]        = diff & Mask48;
+
+        diff                = (dvdend192[2] - dvisor192[2]) - borrow;
+        borrow              = (diff >> 48) & 1;
+        dvdend192[2]        = diff & Mask48;
+
+        diff                = (dvdend192[1] - dvisor192[1]) - borrow;
+        borrow              = (diff >> 48) & 1;
+        dvdend192[1]        = diff & Mask48;
+
+        diff                = (dvdend192[0] - dvisor192[0]) - borrow;
+        borrow              = (diff >> 48) & 1;
+        dvdend192[0]        = diff & Mask48;
+
+        if (borrow)
             {
-            remainder.rightPart -= tmpDvisor.rightPart;
-            if (remainder.rightPart > 0x800000000000)
-                {
-                remainder.rightPart &= Mask48;
-                remainder.leftPart  -= 1;
-                }
-            remainder.leftPart -= tmpDvisor.leftPart;
-            packedQuotient[1] |= 1;
+            dvdend192[0] = t[0];
+            dvdend192[1] = t[1];
+            dvdend192[2] = t[2];
+            dvdend192[3] = t[3];
             }
+        else
+            {
+            quotient->rightPart |= 1;
+            }
+
+        dvisor192[3]   = (dvisor192[3] >> 1) | ((dvisor192[2] & 1) << 47);
+        dvisor192[2]   = (dvisor192[2] >> 1) | ((dvisor192[1] & 1) << 47);
+        dvisor192[1]   = (dvisor192[1] >> 1) | ((dvisor192[0] & 1) << 47);
+        dvisor192[0] >>= 1;
         }
-    quotient->rightPart = packedQuotient[1] & Mask48;
-    quotient->leftPart  = (packedQuotient[0] << 16) | (packedQuotient[1] >> 48);
-    if ((quotient->rightPart & 0xffffffff) == 0xffffffff) // round up if "noise" in least significant bits
-        {
-        quotient->rightPart += 1;
-        quotient->leftPart  += quotient->rightPart >> 48;
-        quotient->rightPart &= 0xffffffffffff;
-        }
+    while (--i >= 0);
     }
 
 /*--------------------------------------------------------------------------
@@ -1839,10 +1846,11 @@ static void float180LongDiv(Cpu180Double *dvdend, Cpu180Double *dvisor, Cpu180Do
 **  Parameters:     Name         Description.
 **                  mltand       pointer to 96-bit normalized multiplicand
 **                  mltier       pointer to 96-bit normalized multiplier
-**                  product      pointer to product
+**                  hiProd       pointer to high 96 bits of product
+**                  loProd       pointer to low  96 bits of product
 **
 **------------------------------------------------------------------------*/
-static void float180LongMul(Cpu180Double *mltand, Cpu180Double *mltier, Cpu180Double *product)
+static void float180LongMul(Cpu180Double *mltand, Cpu180Double *mltier, Cpu180Double *hiProd, Cpu180Double *loProd)
     {
     u64 m192[4];
     u64 p192[4];
@@ -1880,8 +1888,10 @@ static void float180LongMul(Cpu180Double *mltand, Cpu180Double *mltier, Cpu180Do
         mltier->rightPart  = (mltier->rightPart >> 1) | ((mltier->leftPart & 1) << 47);
         mltier->leftPart >>= 1;
         }
-    product->leftPart  = p192[0];
-    product->rightPart = p192[1];
+    hiProd->leftPart  = p192[0];
+    hiProd->rightPart = p192[1];
+    loProd->leftPart  = p192[2];
+    loProd->rightPart = p192[3];
     }
 
 /*--------------------------------------------------------------------------
@@ -1895,55 +1905,22 @@ static void float180LongMul(Cpu180Double *mltand, Cpu180Double *mltier, Cpu180Do
 **------------------------------------------------------------------------*/
 static void float180NormalizeDouble(u16 *exponent, Cpu180Double *coefficient)
     {
-#if defined(_WIN32)
-    u64 bit;
-
-    if ((coefficient->leftPart & 0xffff000000000000) != 0)
+    coefficient->rightPart &= Mask48;
+    while ((coefficient->leftPart & 0xffff000000000000) != 0)
         {
-        while ((coefficient->leftPart & 0xffff000000000000) != 0)
-            {
-            bit                     = coefficient->leftPart & 1;
-            coefficient->leftPart >>= 1;
-            coefficient->rightPart  = (coefficient->rightPart >> 1) | (bit << 47);
-            *exponent              += 1;
-            }
+        coefficient->rightPart  = (coefficient->rightPart >> 1) | ((coefficient->leftPart & 1) << 47);
+        coefficient->leftPart >>= 1;
+        *exponent              += 1;
         }
-    else if (coefficient->leftPart != 0 || coefficient->rightPart != 0)
+    if (coefficient->leftPart != 0 || coefficient->rightPart != 0)
         {
-        coefficient->rightPart &= 0xffffffffffff;
         while ((coefficient->leftPart & 0x800000000000) == 0)
             {
             coefficient->leftPart  = (coefficient->leftPart << 1) | (coefficient->rightPart >> 47);
-            coefficient->rightPart = (coefficient->rightPart << 1) & 0xffffffffffff;
-            *exponent     -= 1;
+            coefficient->rightPart = (coefficient->rightPart << 1) & Mask48;
+            *exponent             -= 1;
             }
         }
-#else
-    u128 coeff128;
-    u128 mask;
-
-    coeff128 = ((u128)coefficient->leftPart << 48) | (u128)coefficient->rightPart;
-    mask     = (u128)0xffff << 96;
-    if ((coeff128 & mask) != 0)
-        {
-        while ((coeff128 & mask) != 0)
-            {
-            coeff128 >>= 1;
-            *exponent += 1;
-            }
-        }
-    else if (coeff128 != 0)
-        {
-        mask = (u128)1 << 95;
-        while ((coeff128 & mask) == 0)
-            {
-            coeff128 <<= 1;
-            *exponent -= 1;
-            }
-        }
-    coefficient->leftPart  = coeff128 >> 48;
-    coefficient->rightPart = coeff128 & 0xffffffffffff;
-#endif
     }
 
 /*--------------------------------------------------------------------------
@@ -1957,15 +1934,12 @@ static void float180NormalizeDouble(u16 *exponent, Cpu180Double *coefficient)
 **------------------------------------------------------------------------*/
 static void float180NormalizeFloat(u16 *exponent, u64 *coefficient)
     {
-    if ((*coefficient & 0xffff000000000000) != 0)
+    while ((*coefficient & 0xffff000000000000) != 0)
         {
-        while ((*coefficient & 0xffff000000000000) != 0)
-            {
-            *coefficient >>= 1;
-            *exponent     += 1;
-            }
+        *coefficient >>= 1;
+        *exponent     += 1;
         }
-    else if (*coefficient != 0)
+    if ((*coefficient & 0x800000000000) == 0 && *coefficient != 0)
         {
         while ((*coefficient & 0x800000000000) == 0)
             {

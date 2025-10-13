@@ -61,13 +61,13 @@
 //  defines how many instructions to trace thereafter.
 //
 //#define TRACE_INST_LIST   { 0x75,0x3c,0x98,0x99,0x9a,0x9b,0xf9,0x23 }
-#define TRACE_INST_COUNT  10
+#define TRACE_INST_COUNT  100
 
-//#define TRACE_RANGE_START 0xb025000b2000
-//#define TRACE_RANGE_END   0xb025000b2fff
+//#define TRACE_RANGE_START 0xb04600000000
+//#define TRACE_RANGE_END   0xb04600000fff
 
-//#define TRACE_STORE_START 0xb04f00000220
-//#define TRACE_STORE_END   0xb04f0000024f
+//#define TRACE_STORE_START 0xb04600000000
+//#define TRACE_STORE_END   0xb0460000000f
 
 #endif
 
@@ -241,6 +241,9 @@ static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool isTrap
 static bool cpu180PutByte(Cpu180Context *ctx, u64 pva, u8 ring, u8 byte);
 static void cpu180SetRingZeroCondition(Cpu180Context *ctx, u64 pva);
 static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa);
+static bool cpu180SubInt32(Cpu180Context *ctx, u32 minend, u32 subend, u32 *diff);
+static bool cpu180SubInt64(Cpu180Context *ctx, u64 minend, u64 subend, u64 *diff);
+static bool cpu180TranslatePvaSequence(Cpu180Context *ctx, u64 pva, u16 count, u8 incr, u8 ring, Cpu180AccessMode access, u32 *rmas);
 static void cpu180Trap(Cpu180Context *ctx);
 static bool cpu180ValidateAccess(Cpu180Context *ctx, u64 sde, u8 ring, Cpu180AccessMode access, MonitorCondition *cond);
 
@@ -756,22 +759,26 @@ static OpDispatch decodeCpu180Opcode[] =
 */
 static ConditionActionDefn mcrDefns [] =
     {
-    0x8000, FALSE, TRUE,  Exch, Trap, Exch, Halt,  Halt,  /* MCR48 Detected uncorrectable error     */
-    0x4000, FALSE, TRUE,  Exch, Trap, Exch, Halt,  Halt,  /* MCR49 Not assigned                     */
-    0x2000, TRUE,  FALSE, Exch, Trap, Exch, Stack, Stack, /* MCR50 Short warning                    */
-    0x1000, FALSE, TRUE,  Exch, Trap, Exch, Halt,  Halt,  /* MCR51 Instruction specfication error   */
-    0x0800, FALSE, TRUE,  Exch, Trap, Exch, Halt,  Halt,  /* MCR52 Address specification error      */
-    0x0400, TRUE,  FALSE, Exch, Trap, Exch, Stack, Stack, /* MCR53 CYBER 170 state exchange request */
-    0x0200, FALSE, TRUE,  Exch, Trap, Exch, Halt,  Halt,  /* MCR54 Access violation                 */
-    0x0100, FALSE, TRUE,  Exch, Trap, Exch, Halt,  Halt,  /* MCR55 Environment specification error  */
-    0x0080, TRUE,  FALSE, Exch, Trap, Exch, Stack, Stack, /* MCR56 External interrupt               */
-    0x0040, FALSE, TRUE,  Exch, Trap, Exch, Halt,  Halt,  /* MCR57 Page table search without find   */
-    0x0020, TRUE,  FALSE, Rni,  Rni,  Rni,  Rni,   Rni,   /* MCR58 System call (status bit)         */
-    0x0010, TRUE,  FALSE, Exch, Trap, Exch, Stack, Stack, /* MCR59 System interval timer            */
-    0x0008, FALSE, TRUE,  Exch, Trap, Exch, Halt,  Halt,  /* MCR60 Invalid segment / Ring number 0  */
-    0x0004, FALSE, TRUE,  Exch, Trap, Exch, Halt,  Halt,  /* MCR61 Outward call / Inward return     */
-    0x0002, TRUE,  FALSE, Exch, Trap, Exch, Stack, Stack, /* MCR62 Soft error                       */
-    0x0001, FALSE, TRUE,  Rni,  Rni,  Rni,  Rni,   Rni    /* MCR63 Trap exception (status bit)      */
+//                        Job   Mtr   Job    Mtr
+//                  P     Mask  Mask  Mask   Mask   NoMask
+//    Bit   Cmplt  Stay    TE    TE    TD     TD
+//  ------  -----  ----   ----  ----  ----   ----   ------
+    0x8000, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt,  /* MCR48 Detected uncorrectable error     */
+    0x4000, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt,  /* MCR49 Not assigned                     */
+    0x2000, TRUE,  FALSE, Exch, Trap, Exch,  Stack, Stack, /* MCR50 Short warning                    */
+    0x1000, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt,  /* MCR51 Instruction specfication error   */
+    0x0800, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt,  /* MCR52 Address specification error      */
+    0x0400, TRUE,  FALSE, Exch, Trap, Exch,  Stack, Stack, /* MCR53 CYBER 170 state exchange request */
+    0x0200, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt,  /* MCR54 Access violation                 */
+    0x0100, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt,  /* MCR55 Environment specification error  */
+    0x0080, TRUE,  FALSE, Exch, Trap, Exch,  Stack, Stack, /* MCR56 External interrupt               */
+    0x0040, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt,  /* MCR57 Page table search without find   */
+    0x0020, TRUE,  FALSE, Rni,  Rni,  Rni,   Rni,   Rni,   /* MCR58 System call (status bit)         */
+    0x0010, TRUE,  FALSE, Exch, Trap, Exch,  Stack, Stack, /* MCR59 System interval timer            */
+    0x0008, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt,  /* MCR60 Invalid segment / Ring number 0  */
+    0x0004, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt,  /* MCR61 Outward call / Inward return     */
+    0x0002, TRUE,  FALSE, Exch, Trap, Exch,  Stack, Stack, /* MCR62 Soft error                       */
+    0x0001, FALSE, TRUE,  Rni,  Rni,  Rni,   Rni,   Rni    /* MCR63 Trap exception (status bit)      */
     };
 
 /*
@@ -779,6 +786,10 @@ static ConditionActionDefn mcrDefns [] =
 */
 static ConditionActionDefn ucrDefns [] =
     {
+//                        Job   Mtr   Job    Mtr
+//                  P     Mask  Mask  Mask   Mask   NoMask
+//    Bit   Cmplt  Stay    TE    TE    TD     TD
+//  ------  -----  ----   ----  ----  ----   ----   ------
     0x8000, FALSE, TRUE,  Trap, Trap, Exch,  Halt,  Rni,   /* UCR48 Privileged instruction fault     */
     0x4000, FALSE, TRUE,  Trap, Trap, Exch,  Halt,  Rni,   /* UCR49 Unimplemented instruction        */
     0x2000, TRUE,  FALSE, Trap, Trap, Stack, Stack, Rni,   /* UCR50 Free flag                        */
@@ -1068,20 +1079,19 @@ bool cpu180GetBytes(Cpu180Context *ctx, u64 pva, int count, u8 ring, Cpu180Acces
     {
     MonitorCondition cond;
     u8               i;
-    u32              pageNum;
     u32              rma;
     u32              rmas[8];
     u8               shift;
     u32              wordAddr;
 
-    if (cpu180ValidateAccess(ctx, pva, ring, access, &cond) == FALSE
-        || cpu180PvaToRma(ctx, pva, access, &rma, &cond) == FALSE)
+    if ((pva & Mask3) == 0) // optimization: word-aligned load
         {
-        cpu180SetMonitorCondition(ctx, cond);
-        return FALSE;
-        }
-    if ((rma & Mask3) == 0) // optimization: word-aligned load
-        {
+        if (cpu180ValidateAccess(ctx, pva, ring, access, &cond) == FALSE
+            || cpu180PvaToRma(ctx, pva, access, &rma, &cond) == FALSE)
+            {
+            cpu180SetMonitorCondition(ctx, cond);
+            return FALSE;
+            }
         *word = cpMem[rma >> 3];
         if (count < 8)
             {
@@ -1089,22 +1099,9 @@ bool cpu180GetBytes(Cpu180Context *ctx, u64 pva, int count, u8 ring, Cpu180Acces
             }
         return TRUE;
         }
-    rmas[0] = rma;
-    pageNum = PageOf(pva, ctx);
-    for (i = 1; i < count; i++)
+    if (cpu180TranslatePvaSequence(ctx, pva, count, 1, ring, access, rmas) == FALSE)
         {
-        pva += 1;
-        rma += 1;
-        if (PageOf(pva, ctx) != pageNum)
-            {
-            if (cpu180PvaToRma(ctx, pva, access, &rma, &cond) == FALSE)
-                {
-                cpu180SetMonitorCondition(ctx, cond);
-                return FALSE;
-                }
-            pageNum = PageOf(pva, ctx);
-            }
-        rmas[i] = rma;
+        return FALSE;
         }
     *word = 0;
     for (i = 0; i < count; i++)
@@ -1343,7 +1340,7 @@ void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa)
     ctx->regFlags  = word >> 48;
     word           = cpMem[xpa++];
     ctx->regA[2]   = word & Mask48;
-    ctx->regUmr    = (word >> 48) | 0xfc00;
+    ctx->regUmr    = (word >> 48) | 0xfe00;
     word           = cpMem[xpa++];
     ctx->regA[3]   = word & Mask48;
     ctx->regMmr    = word >> 48;
@@ -1522,7 +1519,7 @@ u64 cpu180MacGetCpStateRegister(Cpu180Context *ctx, u8 reg)
     case  RegUserCondition:
         return ctx->regUcr;
     case  RegUserMask:
-        return ctx->regUmr;
+        return ctx->regUmr | 0xfe00;
     case RegVmCapabilityList:
         return ctx->regVmcl;
     //  Trap Enables addresses
@@ -1850,7 +1847,7 @@ void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
         ctx->regUcr = word & Mask16;
         break;
     case  RegUserMask:
-        ctx->regUmr = word & Mask16;
+        ctx->regUmr = (word & Mask16) | 0xfe00;
         break;
     case RegVmCapabilityList:
         ctx->regVmcl = word & Mask16;
@@ -2101,7 +2098,6 @@ bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u8 ring, u64 word, int count)
     MonitorCondition cond;
     u8               i;
     u64              mask;
-    u32              pageNum;
     u32              rma;
     u32              rmas[8];
     u8               shift;
@@ -2119,19 +2115,18 @@ bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u8 ring, u64 word, int count)
         0x0000000000000000,
         };
 
-    if (cpu180ValidateAccess(ctx, pva, ring, AccessModeWrite, &cond) == FALSE
-        || cpu180PvaToRma(ctx, pva, AccessModeWrite, &rma, &cond) == FALSE)
-        {
-        cpu180SetMonitorCondition(ctx, cond);
-        return FALSE;
-        }
-
 #if CcDebug == 1 && defined(TRACE_STORE_START)
     cpu180CheckTraceStore(ctx, pva, pva + 7);
 #endif
 
-    if ((rma & Mask3) == 0) // optimization: word-aligned store
+    if ((pva & Mask3) == 0) // optimization: word-aligned store
         {
+        if (cpu180ValidateAccess(ctx, pva, ring, AccessModeWrite, &cond) == FALSE
+            || cpu180PvaToRma(ctx, pva, AccessModeWrite, &rma, &cond) == FALSE)
+            {
+            cpu180SetMonitorCondition(ctx, cond);
+            return FALSE;
+            }
         wordAddr = rma >> 3;
         if (count < 8)
             {
@@ -2141,22 +2136,9 @@ bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u8 ring, u64 word, int count)
         cpMem[wordAddr] = word;
         return TRUE;
         }
-    rmas[0] = rma;
-    pageNum = PageOf(pva, ctx);
-    for (i = 1; i < count; i++)
+    if (cpu180TranslatePvaSequence(ctx, pva, count, 1, ring, AccessModeWrite, rmas) == FALSE)
         {
-        pva += 1;
-        rma += 1;
-        if (PageOf(pva, ctx) != pageNum)
-            {
-            if (cpu180PvaToRma(ctx, pva, AccessModeWrite, &rma, &cond) == FALSE)
-                {
-                cpu180SetMonitorCondition(ctx, cond);
-                return FALSE;
-                }
-            pageNum = PageOf(pva, ctx);
-            }
-        rmas[i] = rma;
+        return FALSE;
         }
     i     = 0;
     count = (count - 1) << 3;
@@ -2617,18 +2599,25 @@ void cpu180UpdatePageSize(Cpu180Context *ctx)
 **                  addend      the addend
 **                  sum         (out) pointer to sum
 **
-**  Returns:        TRUE if arithmetic overflow not detected.
+**  Returns:        TRUE if arithmetic overflow exception not indicated.
 **                  FALSE if overflow detected and user condition register
 **                  bit is set.
 **
 **------------------------------------------------------------------------*/
 static bool cpu180AddInt32(Cpu180Context *ctx, u32 augend, u32 addend, u32 *sum)
     {
+    u16 mask;
+
     *sum = augend + addend;
     if ((i32)(augend ^ addend) >= 0 && (i32)(*sum ^ augend) < 0)
         {
-        cpu180SetUserCondition(ctx, UCR57);
-        return FALSE;
+        mask = ucrDefns[UCR57].bitMask;
+        if ((ctx->regUmr & mask) != 0 && (ctx->regFlags & 3) == 2) // mask set and trap enabled
+            {
+            cpu180SetUserCondition(ctx, UCR57);
+            return FALSE;
+            }
+        ctx->regUcr |= mask;
         }
 
     return TRUE;
@@ -2643,18 +2632,25 @@ static bool cpu180AddInt32(Cpu180Context *ctx, u32 augend, u32 addend, u32 *sum)
 **                  addend      the addend
 **                  sum         (out) pointer to sum
 **
-**  Returns:        TRUE if arithmetic overflow not detected.
+**  Returns:        TRUE if arithmetic overflow exception not indicated.
 **                  FALSE if overflow detected and user condition register
 **                  bit is set.
 **
 **------------------------------------------------------------------------*/
 static bool cpu180AddInt64(Cpu180Context *ctx, u64 augend, u64 addend, u64 *sum)
     {
+    u16 mask;
+
     *sum = augend + addend;
     if ((i64)(augend ^ addend) >= 0 && (i64)(*sum ^ augend) < 0)
         {
-        cpu180SetUserCondition(ctx, UCR57);
-        return FALSE;
+        mask = ucrDefns[UCR57].bitMask;
+        if ((ctx->regUmr & mask) != 0 && (ctx->regFlags & 3) == 2) // mask set and trap enabled
+            {
+            cpu180SetUserCondition(ctx, UCR57);
+            return FALSE;
+            }
+        ctx->regUcr |= mask;
         }
 
     return TRUE;
@@ -2685,7 +2681,7 @@ static void cpu180CheckExternalInterrupts(Cpu180Context *ctx)
             mask = mcrDefns[mCondList[i]].bitMask;
             if ((cr & mask) != 0)
                 {
-                action = cpu180GetActionForMonitorCondition(ctx, MCR53);
+                action = cpu180GetActionForMonitorCondition(ctx, mCondList[i]);
                 if (action > ctx->pendingAction)
                     {
                     ctx->pendingAction = action;
@@ -3204,15 +3200,44 @@ static bool cpu180IsBindingSectionRef(Cpu180Context *ctx, u64 pva)
 **------------------------------------------------------------------------*/
 static bool cpu180MulInt32(Cpu180Context *ctx, u32 mltand, u32 mltier, u32 *product)
     {
-    u64 prod64;
+    u32 lower32;
+    u16 mask;
+    u64 p64;
+    u32 upper32;
 
-    prod64 = (u64)mltand * (u64)mltier;
-    if (mltand != 0 && (prod64 / (u64)mltand) != mltier)
+    if ((i32)mltand < 0)
         {
-        cpu180SetUserCondition(ctx, UCR57);
-        return FALSE;
+        if ((i32)mltier < 0)
+            {
+            p64 = ((u64)mltand | (u64)0xffffffff00000000) * ((u64)mltier | (u64)0xffffffff00000000);
+            }
+        else
+            {
+            p64 = (u64)mltier * ((u64)mltand | (u64)0xffffffff00000000);
+            }
         }
-    *product = (u32)prod64;
+    else if ((i32)mltier < 0)
+        {
+        p64 = (u64)mltand * ((u64)mltier | (u64)0xffffffff00000000);
+        }
+    else
+        {
+        p64 = (u64)mltand * (u64)mltier;
+        }
+    upper32 = (u32)(p64 >> 32);
+    lower32 = (u32)(p64 & Mask32);
+    if ((lower32 < 0x80000000 && upper32 != 0)
+        || (lower32 >= 0x80000000 && upper32 != 0xffffffff))
+        {
+        mask = ucrDefns[UCR57].bitMask;
+        if ((ctx->regUmr & mask) != 0 && (ctx->regFlags & 3) == 2) // mask set and trap enabled
+            {
+            cpu180SetUserCondition(ctx, UCR57);
+            return FALSE;
+            }
+        ctx->regUcr |= mask;
+        }
+    *product = (u32)p64;
 
     return TRUE;
     }
@@ -3234,6 +3259,7 @@ static bool cpu180MulInt32(Cpu180Context *ctx, u32 mltand, u32 mltier, u32 *prod
 static bool cpu180MulInt64(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *product)
     {
     u64 lower64;
+    u16 mask;
     u64 upper64;
 
 #if defined(_WIN32)
@@ -3266,8 +3292,13 @@ static bool cpu180MulInt64(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *prod
 
     if ((lower64 < 0x8000000000000000 && upper64 != 0) || (lower64 >= 0x8000000000000000 && upper64 != 0xffffffffffffffff))
         {
-        cpu180SetUserCondition(ctx, UCR57);
-        return FALSE;
+        mask = ucrDefns[UCR57].bitMask;
+        if ((ctx->regUmr & mask) != 0 && (ctx->regFlags & 3) == 2) // mask set and trap enabled
+            {
+            cpu180SetUserCondition(ctx, UCR57);
+            return FALSE;
+            }
+        ctx->regUcr |= mask;
         }
     *product = lower64;
 
@@ -3295,10 +3326,9 @@ static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool isTrap
     {
     MonitorCondition cond;
     u8               i;
-    u32              pageNum;
     u64              pva;
     u8               r;
-    u32              rma;
+    u32              rmas[33];
     u32              wordAddrs[33];
     int              words;
 
@@ -3318,33 +3348,15 @@ static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool isTrap
         {
         words += (xt - xs) + 1;
         }
-    if (cpu180ValidateAccess(ctx, pva, RingOf(pva), AccessModeWrite, &cond) == FALSE
-        || cpu180PvaToRma(ctx, pva, AccessModeWrite, &rma, &cond) == FALSE)
+    if (cpu180TranslatePvaSequence(ctx, pva, words, 8, RingOf(pva), AccessModeWrite, rmas) == FALSE)
         {
-        cpu180SetMonitorCondition(ctx, cond);
         return FALSE;
         }
-    wordAddrs[0] = rma >> 3;
-    pageNum      = PageOf(pva, ctx);
-    for (i = 1; i < words; i++)
+    for (i = 0; i < words; i++)
         {
-        pva += 8;
-        if (PageOf(pva, ctx) != pageNum)
-            {
-            if (cpu180PvaToRma(ctx, pva, AccessModeWrite, &rma, &cond) == FALSE)
-                {
-                cpu180SetMonitorCondition(ctx, cond);
-                return FALSE;
-                }
-            pageNum = PageOf(pva, ctx);
-            }
-        else
-            {
-            rma += 8;
-            }
-        wordAddrs[i] = rma >> 3;
+        wordAddrs[i] = rmas[i] >> 3;
         }
-    ctx->regA[0]          = *sfsa;
+    ctx->regA[0]          = pva;
     i                     = 0;
     cpMem[wordAddrs[i++]] = ((u64)ctx->nextKey << 48) | ctx->nextP;
     cpMem[wordAddrs[i++]] = ((u64)ctx->regVmid << 56) | ctx->regA[0];
@@ -3478,7 +3490,7 @@ static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa)
     cpMem[xpa++] = ((u64)ctx->key << 48) | ctx->regP;
     cpMem[xpa++] = ((u64)ctx->regVmid << 56) | ((u64)ctx->regUvmid << 48) | ctx->regA[0];
     cpMem[xpa++] = ((u64)ctx->regFlags << 48) | ctx->regA[1];
-    cpMem[xpa++] = ((u64)ctx->regUmr << 48) | ctx->regA[2];
+    cpMem[xpa++] = ((u64)(ctx->regUmr | 0xfe00) << 48) | ctx->regA[2];
     cpMem[xpa++] = ((u64)ctx->regMmr << 48) | ctx->regA[3];
     cpMem[xpa++] = ((u64)ctx->regUcr << 48) | ctx->regA[4];
     cpMem[xpa++] = ((u64)ctx->regMcr << 48) | ctx->regA[5];
@@ -3514,6 +3526,125 @@ static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Subtrace two 32-bit integer quantities and detect overflow
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CPU context
+**                  minend      the minuend
+**                  subend      the subtrahend
+**                  diff        (out) pointer to difference
+**
+**  Returns:        TRUE if arithmetic overflow exception not indicated.
+**                  FALSE if overflow detected and user condition register
+**                  bit is set.
+**
+**------------------------------------------------------------------------*/
+static bool cpu180SubInt32(Cpu180Context *ctx, u32 minend, u32 subend, u32 *diff)
+    {
+    u16 mask;
+
+    *diff = minend - subend;
+    if ((i32)(minend ^ subend) < 0 && (i32)(*diff ^ minend) < 0)
+        {
+        mask = ucrDefns[UCR57].bitMask;
+        if ((ctx->regUmr & mask) != 0 && (ctx->regFlags & 3) == 2) // mask set and trap enabled
+            {
+            cpu180SetUserCondition(ctx, UCR57);
+            return FALSE;
+            }
+        ctx->regUcr |= mask;
+        }
+
+    return TRUE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Subtract two 64-bit integer quantities and detect overflow
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CPU context
+**                  minend      the minuend
+**                  subend      the subtrahend
+**                  diff        (out) pointer to difference
+**
+**  Returns:        TRUE if arithmetic overflow exception not indicated.
+**                  FALSE if overflow detected and user condition register
+**                  bit is set.
+**
+**------------------------------------------------------------------------*/
+static bool cpu180SubInt64(Cpu180Context *ctx, u64 minend, u64 subend, u64 *diff)
+    {
+    u16 mask;
+
+    *diff = minend - subend;
+    if ((i64)(minend ^ subend) < 0 && (i64)(*diff ^ minend) < 0)
+        {
+        mask = ucrDefns[UCR57].bitMask;
+        if ((ctx->regUmr & mask) != 0 && (ctx->regFlags & 3) == 2) // mask set and trap enabled
+            {
+            cpu180SetUserCondition(ctx, UCR57);
+            return FALSE;
+            }
+        ctx->regUcr |= mask;
+        }
+
+    return TRUE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Translate a sequence of PVA's to RMA's.
+**
+**  Parameters:     Name        Description.
+**                  ctx         Pointer to CPU context
+**                  pva         first PVA in sequence
+**                  count       number of PVA's in sequence
+**                  incr        increment between addresses
+**                  ring        ring number for which to validate access
+**                              (e.g., caller's ring number)
+**                  access      mode of access (execute, read, write)
+**                  rmas        (out) sequence of translated RMA's
+**
+**  Returns:        TRUE if sequence translated successfully. FALSE otherwise,
+**                  and MCR set accordingly.
+**
+**------------------------------------------------------------------------*/
+static bool cpu180TranslatePvaSequence(Cpu180Context *ctx, u64 pva, u16 count, u8 incr, u8 ring, Cpu180AccessMode access, u32 *rmas)
+    {
+    MonitorCondition cond;
+    u16              i;
+    u32              pageNum;
+    u32              rma;
+
+    if (count > 0)
+        {
+        if (cpu180ValidateAccess(ctx, pva, ring, access, &cond) == FALSE
+            || cpu180PvaToRma(ctx, pva, access, &rma, &cond) == FALSE)
+            {
+            cpu180SetMonitorCondition(ctx, cond);
+            return FALSE;
+            }
+        *rmas++ = rma;
+        pageNum = PageOf(pva, ctx);
+        for (i = 1; i < count; i++)
+            {
+            pva += incr;
+            rma += incr;
+            if (PageOf(pva, ctx) != pageNum)
+                {
+                if (cpu180PvaToRma(ctx, pva, access, &rma, &cond) == FALSE)
+                    {
+                    cpu180SetMonitorCondition(ctx, cond);
+                    return FALSE;
+                    }
+                pageNum = PageOf(pva, ctx);
+                }
+            *rmas++ = rma;
+            }
+        }
+    return TRUE;
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Perform trap operation.
 **
 **                  See MIGDS 2-180
@@ -3543,7 +3674,7 @@ static void cpu180Trap(Cpu180Context *ctx)
     u8               vmid;
 
 #if CcDebug == 1
-    traceTrapPointer(ctx);
+    traceTrap(ctx);
 #endif
     if (cpu180ValidateAccess(ctx, ctx->regTp, RingOf(ctx->regP), AccessModeRead, &cond) == FALSE
         || cpu180PvaToRma(ctx, ctx->regTp, AccessModeRead, &rma, &cond) == FALSE)
@@ -3796,9 +3927,7 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
     Cpu170Context    *ctx170;
     u16              desc;
     u8               i;
-    u32              pageNum;
     u64              psap;
-    u64              pva;
     u8               r1;
     u8               ring;
     u8               ringA2;
@@ -3806,6 +3935,7 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
     u8               ringP;
     u8               r;
     u32              rma;
+    u32              rmas[33];
     u8               vmid;
     u64              word;
     u32              wordAddr;
@@ -3820,32 +3950,18 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
         return;
         }
     psap = activeCpu->regA[2];
-    pva  = psap;
-    if (cpu180ValidateAccess(activeCpu, pva, RingOf(pva), AccessModeRead, &cond) == FALSE
-        || cpu180PvaToRma(activeCpu, pva, AccessModeRead, &rma, &cond) == FALSE)
+    if ((psap & Mask3) != 0)
         {
-        cpu180SetMonitorCondition(activeCpu, cond);
+        cpu180SetMonitorCondition(activeCpu, MCR52); // address specification error
         return;
         }
-    wordAddrs[0] = rma >> 3;
-    pageNum      = PageOf(pva, activeCpu);
-    for (i = 1; i < 4; i++)
+    if (cpu180TranslatePvaSequence(activeCpu, psap, 4, 8, RingOf(psap), AccessModeRead, rmas) == FALSE)
         {
-        pva += 8;
-        if (PageOf(pva, activeCpu) != pageNum)
-            {
-            if (cpu180PvaToRma(activeCpu, pva, AccessModeRead, &rma, &cond) == FALSE)
-                {
-                cpu180SetMonitorCondition(activeCpu, cond);
-                return;
-                }
-            pageNum = PageOf(pva, activeCpu);
-            }
-        else
-            {
-            rma += 8;
-            }
-        wordAddrs[i] = rma >> 3;
+        return;
+        }
+    for (i = 0; i < 4; i++)
+        {
+        wordAddrs[i] = rmas[i] >> 3;
         }
     if ((cpMem[wordAddrs[0]] & RingMask) < (activeCpu->regA[2] & RingMask))
         {
@@ -3872,24 +3988,13 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
         {
         words += (xt - xs) + 1;
         }
-    i = 4;
-    while (i < words)
+    if (cpu180TranslatePvaSequence(activeCpu, psap + 32, words - 4, 8, RingOf(psap), AccessModeRead, &rmas[4]) == FALSE)
         {
-        pva += 8;
-        if (PageOf(pva, activeCpu) != pageNum)
-            {
-            if (cpu180PvaToRma(activeCpu, pva, AccessModeRead, &rma, &cond) == FALSE)
-                {
-                cpu180SetMonitorCondition(activeCpu, cond);
-                return;
-                }
-            pageNum = PageOf(pva, activeCpu);
-            }
-        else
-            {
-            rma += 8;
-            }
-        wordAddrs[i++] = rma >> 3;
+        return;
+        }
+    for (i = 4; i < words; i++)
+        {
+        wordAddrs[i] = rmas[i] >> 3;
         }
     ringP  = RingOf(activeCpu->regP);
     ringA2 = RingOf(activeCpu->regA[2]);
@@ -3997,13 +4102,13 @@ static void cp180Op06(Cpu180Context *activeCpu)  // 06  POP        MIGDS 2-129
     {
     MonitorCondition cond;
     u8               i;
-    u32              pageNum;
     u64              psap;
     u64              regA;
     u8               r1;
     u8               ring;
     u8               ringA2;
     u32              rma;
+    u32              rmas[4];
     u32              wordAddrs[4];
 
     if ((activeCpu->regFlags & 0x8000) != 0)
@@ -4011,40 +4116,26 @@ static void cp180Op06(Cpu180Context *activeCpu)  // 06  POP        MIGDS 2-129
         cpu180SetUserCondition(activeCpu, UCR53); // critical frame flag
         return;
         }
-    psap   = activeCpu->regA[2];
+    psap = activeCpu->regA[2];
+    if ((psap & Mask3) != 0)
+        {
+        cpu180SetMonitorCondition(activeCpu, MCR52); // address specification error
+        return;
+        }
     ringA2 = RingOf(psap);
     if (ringA2 != RingOf(activeCpu->regP))
         {
         cpu180SetUserCondition(activeCpu, UCR52); // inter-ring pop
         return;
         }
-    if (cpu180ValidateAccess(activeCpu, psap, RingOf(psap), AccessModeRead, &cond) == FALSE
-        || cpu180PvaToRma(activeCpu, psap, AccessModeRead, &rma, &cond) == FALSE)
+    if (cpu180TranslatePvaSequence(activeCpu, psap, 4, 8, RingOf(psap), AccessModeRead, rmas) == FALSE)
         {
-        cpu180SetMonitorCondition(activeCpu, cond);
         return;
         }
-    wordAddrs[0] = rma >> 3;
-    pageNum      = PageOf(psap, activeCpu);
-    for (i = 1; i < 4; i++)
+    for (i = 0; i < 4; i++)
         {
-        psap += 8;
-        if (PageOf(psap, activeCpu) != pageNum)
-            {
-            if (cpu180PvaToRma(activeCpu, psap, AccessModeRead, &rma, &cond) == FALSE)
-                {
-                cpu180SetMonitorCondition(activeCpu, cond);
-                return;
-                }
-            pageNum = PageOf(psap, activeCpu);
-            }
-        else
-            {
-            rma += 8;
-            }
-        wordAddrs[i] = rma >> 3;
+        wordAddrs[i] = rmas[i] >> 3;
         }
-    psap = activeCpu->regA[2];
 
 /*  MIGDS says this test is optional
     if (psap != (cpMem[wordAddrs[1]] & Mask48))
@@ -4212,11 +4303,11 @@ static void cp180Op10(Cpu180Context *activeCpu)  // 10  INCX       MIGDS 2-20
 
 static void cp180Op11(Cpu180Context *activeCpu)  // 11  DECX       MIGDS 2-20
     {
-    u64 sum;
+    u64 diff;
 
-    if (cpu180AddInt64(activeCpu, activeCpu->regX[activeCpu->opK], (u64)(-(i64)activeCpu->opJ), &sum))
+    if (cpu180SubInt64(activeCpu, activeCpu->regX[activeCpu->opK], activeCpu->opJ, &diff))
         {
-        activeCpu->regX[activeCpu->opK] = sum;
+        activeCpu->regX[activeCpu->opK] = diff;
         }
     }
 
@@ -4398,11 +4489,11 @@ static void cp180Op20(Cpu180Context *activeCpu)  // 20  ADDR       MIGDS 2-22
 
 static void cp180Op21(Cpu180Context *activeCpu)  // 21  SUBR       MIGDS 2-22
     {
-    u32 sum;
+    u32 diff;
 
-    if (cpu180AddInt32(activeCpu, activeCpu->regX[activeCpu->opK] & Mask32, (u32)(-(i32)(activeCpu->regX[activeCpu->opJ] & Mask32)), &sum))
+    if (cpu180SubInt32(activeCpu, activeCpu->regX[activeCpu->opK] & Mask32, activeCpu->regX[activeCpu->opJ] & Mask32, &diff))
         {
-        activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | sum;
+        activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | diff;
         }
     }
 
@@ -4426,10 +4517,18 @@ static void cp180Op23(Cpu180Context *activeCpu)  // 23  DIVR       MIGDS 2-23
     if (XjR == 0)
         {
         cpu180SetUserCondition(activeCpu, UCR55);
+        if ((activeCpu->regUmr & ucrDefns[UCR55].bitMask) != 0 && (activeCpu->regFlags & 3) == 2) // mask set and trap enabled
+            {
+            activeCpu->nextP = activeCpu->regP; // inhibit execution
+            }
         }
     else if (XjR == -1 && (u32)XkR == 0x80000000)
         {
         cpu180SetUserCondition(activeCpu, UCR57);
+        if ((activeCpu->regUmr & ucrDefns[UCR57].bitMask) != 0 && (activeCpu->regFlags & 3) == 2) // mask set and trap enabled
+            {
+            activeCpu->nextP = activeCpu->regP; // inhibit execution
+            }
         }
     else
         {
@@ -4449,11 +4548,11 @@ static void cp180Op24(Cpu180Context *activeCpu)  // 24  ADDX       MIGDS 2-20
 
 static void cp180Op25(Cpu180Context *activeCpu)  // 25  SUBX       MIGDS 2-20
     {
-    u64 sum;
+    u64 diff;
 
-    if (cpu180AddInt64(activeCpu, activeCpu->regX[activeCpu->opK], (u64)(-(i64)activeCpu->regX[activeCpu->opJ]), &sum))
+    if (cpu180SubInt64(activeCpu, activeCpu->regX[activeCpu->opK], activeCpu->regX[activeCpu->opJ], &diff))
         {
-        activeCpu->regX[activeCpu->opK] = sum;
+        activeCpu->regX[activeCpu->opK] = diff;
         }
     }
 
@@ -4475,10 +4574,18 @@ static void cp180Op27(Cpu180Context *activeCpu)  // 27  DIVX       MIGDS 2-21
     if (Xj == 0)
         {
         cpu180SetUserCondition(activeCpu, UCR55);
+        if ((activeCpu->regUmr & ucrDefns[UCR55].bitMask) != 0 && (activeCpu->regFlags & 3) == 2) // mask set and trap enabled
+            {
+            activeCpu->nextP = activeCpu->regP; // inhibit execution
+            }
         }
     else if (Xj == -1 && activeCpu->regX[activeCpu->opK] == 0x8000000000000000)
         {
         cpu180SetUserCondition(activeCpu, UCR57);
+        if ((activeCpu->regUmr & ucrDefns[UCR57].bitMask) != 0 && (activeCpu->regFlags & 3) == 2) // mask set and trap enabled
+            {
+            activeCpu->nextP = activeCpu->regP; // inhibit execution
+            }
         }
     else
         {
@@ -4498,11 +4605,11 @@ static void cp180Op28(Cpu180Context *activeCpu)  // 28  INCR       MIGDS 2-22
 
 static void cp180Op29(Cpu180Context *activeCpu)  // 29  DECR       MIGDS 2-22
     {
-    u32 sum;
+    u32 diff;
 
-    if (cpu180AddInt32(activeCpu, activeCpu->regX[activeCpu->opK] & Mask32, (u32)(-(i32)activeCpu->opJ), &sum))
+    if (cpu180SubInt32(activeCpu, activeCpu->regX[activeCpu->opK] & Mask32, activeCpu->opJ, &diff))
         {
-        activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | sum;
+        activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | diff;
         }
     }
 
@@ -4732,9 +4839,10 @@ static void cp180Op3B(Cpu180Context *activeCpu)  // 3B  CNFI       MIGDS 2-72
     {
     u64 intResult;
 
-    intResult = activeCpu->regX[activeCpu->opK];
-    (void)float180ConvertFloatToInt(activeCpu, activeCpu->regX[activeCpu->opJ], &intResult);
-    activeCpu->regX[activeCpu->opK] = intResult;
+    if (float180ConvertFloatToInt(activeCpu, activeCpu->regX[activeCpu->opJ], &intResult))
+        {
+        activeCpu->regX[activeCpu->opK] = intResult;
+        }
     }
 
 static void cp180Op3C(Cpu180Context *activeCpu)  // 3C  CMPF       MIGDS 2-89
@@ -5128,15 +5236,13 @@ static void cp180Op80(Cpu180Context *activeCpu)  // 80  LMULT      MIGDS 2-16
     MonitorCondition cond;
     u32              disp;
     u8               i;
-    u64              p;
-    u32              pageNum;
     u64              pva;
     u8               r1;
     u8               ring;
     u32              rma;
+    u32              rmas[32];
     u16              selector;
     u64              word;
-    u32              wordAddrs[32];
     u8               wordCount;
     u8               xs;
     u8               xt;
@@ -5160,32 +5266,9 @@ static void cp180Op80(Cpu180Context *activeCpu)  // 80  LMULT      MIGDS 2-16
         {
         return;
         }
-    if (cpu180ValidateAccess(activeCpu, pva, RingOf(pva), AccessModeRead, &cond) == FALSE
-        || cpu180PvaToRma(activeCpu, pva, AccessModeRead, &rma, &cond) == FALSE)
+    if (cpu180TranslatePvaSequence(activeCpu, pva, wordCount, 8, RingOf(pva), AccessModeRead, rmas) == FALSE)
         {
-        cpu180SetMonitorCondition(activeCpu, cond);
         return;
-        }
-    pageNum      = PageOf(pva, activeCpu);
-    wordAddrs[0] = rma >> 3;
-    p            = pva;
-    for (i = 1; i < wordCount; i++)
-        {
-        p += 8;
-        if (PageOf(p, activeCpu) != pageNum)
-            {
-            if (cpu180PvaToRma(activeCpu, p, AccessModeRead, &rma, &cond) == FALSE)
-                {
-                cpu180SetMonitorCondition(activeCpu, cond);
-                return;
-                }
-            pageNum = PageOf(p, activeCpu);
-            }
-        else
-            {
-            rma += 8;
-            }
-        wordAddrs[i] = rma >> 3;
         }
     ring = RingOf(activeCpu->regA[activeCpu->opJ]);
     r1   = cpu180GetR1(activeCpu, pva);
@@ -5196,7 +5279,7 @@ static void cp180Op80(Cpu180Context *activeCpu)  // 80  LMULT      MIGDS 2-16
     i = 0;
     while (as <= at)
         {
-        word = cpMem[wordAddrs[i++]] & Mask48;
+        word = cpMem[rmas[i++] >> 3] & Mask48;
         r1   = RingOf(word);
         if (r1 == 0)
             {
@@ -5210,8 +5293,16 @@ static void cp180Op80(Cpu180Context *activeCpu)  // 80  LMULT      MIGDS 2-16
         }
     while (xs <= xt)
         {
-        activeCpu->regX[xs++] = cpMem[wordAddrs[i++]];
+        activeCpu->regX[xs++] = cpMem[rmas[i++] >> 3];
         }
+
+#if CcDebug == 1
+        {
+        char buf[40];
+        sprintf(buf, "   A%X..A%X  X%X..X%X", selector >> 12, at, (selector >> 8) & Mask4, xt);
+        traceMemoryBlock(activeCpu, pva, wordCount * 8, buf);
+        }
+#endif
     }
 
 static void cp180Op81(Cpu180Context *activeCpu)  // 81  SMULT      MIGDS 2-16
@@ -5221,11 +5312,10 @@ static void cp180Op81(Cpu180Context *activeCpu)  // 81  SMULT      MIGDS 2-16
     MonitorCondition cond;
     u32              disp;
     u8               i;
-    u32              pageNum;
     u64              pva;
     u32              rma;
+    u32              rmas[32];
     u16              selector;
-    u32              wordAddrs[32];
     u8               wordCount;
     u8               xs;
     u8               xt;
@@ -5249,45 +5339,29 @@ static void cp180Op81(Cpu180Context *activeCpu)  // 81  SMULT      MIGDS 2-16
         {
         return;
         }
-    if (cpu180ValidateAccess(activeCpu, pva, RingOf(pva), AccessModeWrite, &cond) == FALSE
-        || cpu180PvaToRma(activeCpu, pva, AccessModeWrite, &rma, &cond) == FALSE)
+    if (cpu180TranslatePvaSequence(activeCpu, pva, wordCount, 8, RingOf(pva), AccessModeWrite, rmas) == FALSE)
         {
-        cpu180SetMonitorCondition(activeCpu, cond);
         return;
-        }
-    pageNum      = PageOf(pva, activeCpu);
-    wordAddrs[0] = rma >> 3;
-    for (i = 1; i < wordCount; i++)
-        {
-        pva += 8;
-        if (PageOf(pva, activeCpu) != pageNum)
-            {
-            if (cpu180PvaToRma(activeCpu, pva, AccessModeWrite, &rma, &cond) == FALSE)
-                {
-                cpu180SetMonitorCondition(activeCpu, cond);
-                return;
-                }
-            pageNum = PageOf(pva, activeCpu);
-            }
-        else
-            {
-            rma += 8;
-            }
-        wordAddrs[i] = rma >> 3;
         }
     i = 0;
     while (as <= at)
         {
-        cpMem[wordAddrs[i++]] = activeCpu->regA[as++];
+        cpMem[rmas[i++] >> 3] = activeCpu->regA[as++];
         }
     while (xs <= xt)
         {
-        cpMem[wordAddrs[i++]] = activeCpu->regX[xs++];
+        cpMem[rmas[i++] >> 3] = activeCpu->regX[xs++];
         }
 
-#if CcDebug == 1 && defined(TRACE_STORE_START)
-    pva -= wordCount << 3;
+#if CcDebug == 1
+#if defined(TRACE_STORE_START)
     cpu180CheckTraceStore(activeCpu, pva, pva + (wordCount << 3) - 1);
+#endif
+        {
+        char buf[40];
+        sprintf(buf, "   A%X..A%X  X%X..X%X", selector >> 12, at, (selector >> 8) & Mask4, xt);
+        traceMemoryBlock(activeCpu, pva, wordCount * 8, buf);
+        }
 #endif
     }
 
@@ -5488,8 +5562,7 @@ static void cp180Op8A(Cpu180Context *activeCpu)  // 8A  ADDRQ      MIGDS 2-22
     {
     u32 sum;
 
-    if (cpu180AddInt32(activeCpu, activeCpu->regX[activeCpu->opJ] & Mask32,
-        (activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffff0000 | activeCpu->opQ, &sum))
+    if (cpu180AddInt32(activeCpu, activeCpu->regX[activeCpu->opJ] & Mask32, (activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffff0000 | activeCpu->opQ, &sum))
         {
         activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | sum;
         }
@@ -5499,8 +5572,7 @@ static void cp180Op8B(Cpu180Context *activeCpu)  // 8B  ADDXQ      MIGDS 2-20
     {
     u64 sum;
 
-    if (cpu180AddInt64(activeCpu, activeCpu->regX[activeCpu->opJ],
-        (activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffffffffffff0000 | activeCpu->opQ, &sum))
+    if (cpu180AddInt64(activeCpu, activeCpu->regX[activeCpu->opJ], (activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffffffffffff0000 | activeCpu->opQ, &sum))
         {
         activeCpu->regX[activeCpu->opK] = sum;
         }

@@ -661,7 +661,7 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
 **------------------------------------------------------------------------*/
 bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *operand, bool *isTruncated)
     {
-    u8  buffer[38];
+    u8  buffer[512];
     u8  d1;
     u8  d2;
     u16 i;
@@ -669,7 +669,7 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
 
     *isTruncated = FALSE;
     maxLength    = maxBdpOpLengths[desc->type];
-    if (desc->length > maxLength || maxLength == 0)
+    if (desc->length > maxLength)
         {
         cpu180SetMonitorCondition(ctx, MCR51); // Instruction specification error
         return FALSE;

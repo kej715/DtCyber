@@ -528,8 +528,8 @@ void traceStack(FILE *fp);
 void traceStartCpu180(Cpu180Context *cpu, u32 rma);
 void traceTerminate(void);
 char *traceTranslateAction(ConditionAction action);
+void traceTrap(Cpu180Context *cpu);
 void traceTrapFrame(Cpu180Context *cpu, u64 sfsa);
-void traceTrapPointer(Cpu180Context *cpu);
 void traceUserCondition(Cpu180Context *cpu, UserCondition cond);
 void traceVmRegisters(Cpu180Context *cpu);
 
