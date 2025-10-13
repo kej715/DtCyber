@@ -41,7 +41,7 @@
 #define DtCyberCopyright    "Copyright (c) 2011-2017 Tom Hunter \n \
     Portions Copyright:\n \
         (c) 2018-2025 Kevin Jordan\n \
-        (c) 2003-2025 Gerard J van der Grinten \
+        (c) 2003-2025 Gerard J van der Grinten\n \
         (c) 2011-2022 Paul Koning\n \
         (c) 2017-2025 Steven Zoppi\n \
         (c) 2025      Daiyu Hurst\n \
