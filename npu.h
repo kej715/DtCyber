@@ -102,8 +102,8 @@
 #define PfcCTRL                    0xC1 // terminal characteristics
 #define   SfcDEF                   0x04 // define characteristics
 #define   SfcCHAR                  0x08 // define multiple char.
-#define   SfcRTC                   0x09 // request terminal istics
-#define   SfcTCD                   0x0A // term istics definition
+#define   SfcRTC                   0x09 // request terminal characteristics
+#define   SfcTCD                   0x0A // term characteristics definition
 
 #define PfcBD                      0xC2 // batch device characteristics
 #define   SfcCHG                   0x00 // change
