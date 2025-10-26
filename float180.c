@@ -1844,10 +1844,10 @@ static void float180LongDiv(Cpu180Double *dvdend, Cpu180Double *dvisor, Cpu180Do
 **  Purpose:        Perform long multiplication of double precision coefficients
 **
 **  Parameters:     Name         Description.
-**                  mltand       pointer to 96-bit normalized multiplicand
-**                  mltier       pointer to 96-bit normalized multiplier
-**                  hiProd       pointer to high 96 bits of product
-**                  loProd       pointer to low  96 bits of product
+**                  mltand       pointer to 96-bit multiplicand
+**                  mltier       pointer to 96-bit multiplier
+**                  hiProd       (out) pointer to high 96 bits of product
+**                  loProd       (out) pointer to low  96 bits of product
 **
 **------------------------------------------------------------------------*/
 static void float180LongMul(Cpu180Double *mltand, Cpu180Double *mltier, Cpu180Double *hiProd, Cpu180Double *loProd)

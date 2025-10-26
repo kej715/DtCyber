@@ -1517,11 +1517,12 @@ void traceCall(Cpu180Context *cpu, u64 pva)
 **  Parameters:     Name        Description.
 **                  cpu         Pointer to CYBER 180 CPU context
 **                  sfsa        PVA of stack frame area
+**                  label       Label for header
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void traceCallFrame(Cpu180Context *cpu, u64 sfsa)
+void traceCallFrame(Cpu180Context *cpu, u64 sfsa, char *label)
     {
     u8               at;
     MonitorCondition cond;
@@ -1540,7 +1541,7 @@ void traceCallFrame(Cpu180Context *cpu, u64 sfsa)
         {
         return;
         }
-    fprintf(cpuF[cpu->id], "\n%06d CYBER 180 call frame pushed at " FMT64_012x "\n\n", traceSequenceNo, sfsa);
+    fprintf(cpuF[cpu->id], "\n%06d CYBER 180 call frame %s at " FMT64_012x "\n\n", traceSequenceNo, label, sfsa);
     utp = cpu->regUtp;
     if (cpu180PvaToRma(cpu, sfsa, AccessModeRead, &rma, &cond) == FALSE)
         {
@@ -2109,6 +2110,110 @@ void traceTrap(Cpu180Context *cpu)
         fprintf(cpuF[cpu->id], "BSP " FMT64_012x, bsp);
         }
     fputs("\n", cpuF[cpu->id]);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Validate a CYBER 180 stack.
+**
+**  Parameters:     Name        Description.
+**                  cpu         Pointer to CYBER 180 CPU context
+**                  sfsa        Stack frame save address (PVA)
+**                  maxDepth    Maximum number of stack frames to validate
+**                  label       Label to associate with error indications
+**
+**  Returns:        TRUE if stack validated successfully.
+**
+**------------------------------------------------------------------------*/
+bool traceValidateStack(Cpu180Context *cpu, u64 sfsa, u16 maxDepth, char *label)
+    {
+    MonitorCondition cond;
+    u16              depth;
+    u8               i;
+    u32              pageNum;
+    u64              pva;
+    u64              regA;
+    u8               r1;
+    u8               ring;
+    u8               ringA2;
+    u32              rma;
+    u64              utp;
+    u32              wordAddrs[4];
+
+    /*
+    **  Bail out if stack validation is not requested.
+    */
+    if ((traceMask & TraceValidateStack) == 0)
+        {
+        return TRUE;
+        }
+
+    utp = cpu->regUtp;
+    for (depth = 0; depth < maxDepth; depth++)
+        {
+        if (sfsa == 0xffff80000000 || (sfsa & Mask32) == 0)
+            {
+            break;
+            }
+        if ((sfsa & Mask3) != 0)
+            {
+            if ((sfsa >> 32) != 0xffff)
+                {
+                fprintf(cpuF[cpu->id], "\n%06d CYBER 180 %s invalid SFSA ptr " FMT64_012x " of frame %d P " FMT64_012x "\n",
+                    traceSequenceNo, label, sfsa, depth, cpu->regP);
+                return FALSE;
+                }
+            break;
+            }
+        if (cpu180PvaToRma(cpu, sfsa, AccessModeRead, &rma, &cond) == FALSE)
+            {
+            cpu->regUtp = utp;
+            break;
+            }
+        wordAddrs[0] = rma >> 3;
+        pageNum      = PageOf(sfsa, cpu);
+        pva          = sfsa;
+        for (i = 1; i < 4; i++)
+            {
+            pva += 8;
+            rma += 8;
+            if (PageOf(pva, cpu) != pageNum)
+                {
+                if (cpu180PvaToRma(cpu, pva, AccessModeRead, &rma, &cond) == FALSE)
+                    {
+                    cpu->regUtp = utp;
+                    return TRUE;
+                    }
+                pageNum = PageOf(pva, cpu);
+                }
+            wordAddrs[i] = rma >> 3;
+            }
+        regA = cpMem[wordAddrs[1]] & Mask48; // A0
+        if ((sfsa & Mask44) != (regA & Mask44))
+            {
+            if (regA != 0xffff80000000 && (regA & Mask32) != 0 && (regA >> 44) != 0)
+                {
+                fprintf(cpuF[cpu->id], "\n%06d CYBER 180 %s SFSA ptr " FMT64_012x " of frame %d != A0 " FMT64_012x " of frame %d P " FMT64_012x "\n",
+                    traceSequenceNo, label, sfsa, depth, regA, depth + 1, cpu->regP);
+                return FALSE;
+                }
+            break;
+            }
+        // Load A2
+        ringA2 = RingOf(sfsa);
+        regA   = cpMem[wordAddrs[3]] & Mask48; // A2
+        ring   = RingOf(regA);
+        if (ring < ringA2)
+            {
+            ring = ringA2;
+            }
+        if (ring < r1)
+            {
+            ring = r1;
+            }
+        sfsa = ((u64)ring << 44) | (regA & Mask44);
+        }
+
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------

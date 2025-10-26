@@ -236,6 +236,7 @@
 #define TraceBlockOp               (1 << 28)
 #define TraceCallFrame             (1 << 27)
 #define TracePva                   (1 << 26)
+#define TraceValidateStack         (1 << 25)
 
 /*
 **  Sign extension and overflow.

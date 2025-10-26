@@ -128,29 +128,34 @@ static FILE bdp180Log = NULL;
 **                  augend      pointer to augend
 **                  addend      pointer to addend
 **                  result      (out) pointer to result
+**                  cond        (out) pointer to user condition on failure
 **
 **  Returns:        TRUE if success, FALSE if failure (e.g., arithmetic overflow)
 **
 **------------------------------------------------------------------------*/
-bool bdp180Add(BdpOperand *augend, BdpOperand *addend, BdpOperand *result)
+bool bdp180Add(BdpOperand *augend, BdpOperand *addend, BdpOperand *result, UserCondition *cond)
     {
 #if defined(_WIN32)
+    // TODO: implement this for Windows
     return TRUE;
 #else
     u128 a1;
     u128 a2;
+    bool isOk;
     u128 sum;
 
-    a1 = ((u128)augend->value[0] << 64) | (u128)augend->value[1];
-    a2 = ((u128)addend->value[0] << 64) | (u128)addend->value[1];
+    a1   = ((u128)augend->value[0] << 64) | (u128)augend->value[1];
+    a2   = ((u128)addend->value[0] << 64) | (u128)addend->value[1];
+    isOk = TRUE;
     if (augend->sign == addend->sign)
         {
-        sum = a1 + a2;
+        result->sign = augend->sign;
+        sum          = a1 + a2;
         if (sum < a1 || sum < a2)
             {
-            return FALSE;
+            *cond = UCR57; // Arithmetic overflow
+            isOk  = FALSE;
             }
-        result->sign = augend->sign;
         }
     else
         {
@@ -170,8 +175,7 @@ bool bdp180Add(BdpOperand *augend, BdpOperand *addend, BdpOperand *result)
         }
     result->value[0] = (u64)(sum >> 64);
     result->value[1] = (u64)sum;
-
-    return TRUE;
+    return isOk;
 #endif
     }
 
@@ -349,8 +353,9 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
     memset(operand, 0, sizeof(BdpOperand));
     switch (desc->type)
         {
-    case 0:  // Packed Decimal No Sign
     case 1:  // Packed Decimal No Sign Leading Slack Digit
+        buffer[0] &= 0x0f;
+    case 0:  // Packed Decimal No Sign
         for (i = 0; i < desc->length; i++)
             {
             d1 = buffer[i] >> 4;
@@ -367,8 +372,9 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
             }
         break;
 
-    case 2:  // Packed Decimal Signed
     case 3:  // Packed Decimal Signed Leading Slack Digit
+        buffer[0] &= 0x0f;
+    case 2:  // Packed Decimal Signed
         if (desc->length > 0)
             {
             limit = desc->length - 1;
@@ -397,10 +403,13 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                 bdp180AddDigit(operand, d2);
                 }
             d1 = buffer[limit] >> 4;
+            if (d1 > 9)
+                {
+                cpu180SetUserCondition(ctx, UCR63); // Invalid BDP data
+                return FALSE;
+                }
             bdp180Mul10(operand);
             bdp180AddDigit(operand, d1);
-            bdp180Mul10(operand);
-            bdp180AddDigit(operand, d2);
             }
         break;
 
@@ -642,6 +651,11 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
         return FALSE;
         }
 
+    if (operand->sign && operand->value[1] == 0 && operand->value[0] == 0)
+        {
+        operand->sign = 0;
+        }
+
     return TRUE;
     }
 
@@ -652,6 +666,7 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
 **                  ctx         pointer to CPU context
 **                  desc        pointer to BDP destination descriptor
 **                  operand     pointer to operand to encode
+**                  inhOnTrunc  TRUE to inhibit copying result to descriptor on truncation
 **                  isTruncated (out) TRUE if result is truncated
 **
 **  Returns:        TRUE if successful (i.e., no MCR/UCR condition set)
@@ -659,7 +674,7 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
 **                  MCR/UCR set if exception detected.
 **
 **------------------------------------------------------------------------*/
-bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *operand, bool *isTruncated)
+bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *operand, bool inhOnTrunc, bool *isTruncated)
     {
     u8  buffer[512];
     u8  d1;
@@ -678,10 +693,6 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
         {
     case 0:  // Packed Decimal No Sign
     case 1:  // Packed Decimal No Sign Leading Slack Digit
-        if (operand->sign)
-            {
-            bdp180Negate(operand);
-            }
         i = desc->length;
         while (i > 0)
             {
@@ -690,8 +701,12 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
             i -= 1;
             buffer[i] = (d2 << 4) | d1;
             }
-        *isTruncated = operand->value[1] != 0 || operand->value[0] != 0
-                       || (desc->type == 1 && (desc->length < 1 || (buffer[0] & 0xf0) != 0));
+        *isTruncated = operand->value[1] != 0 || operand->value[0] != 0;
+        if (desc->type == 1 && (desc->length < 1 || (buffer[0] & 0xf0) != 0))
+            {
+            *isTruncated = TRUE;
+            buffer[0]   &= 0x0f;
+            }
         break;
     case 2:  // Packed Decimal Signed
     case 3:  // Packed Decimal Signed Leading Slack Digit
@@ -708,14 +723,14 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                 buffer[i] = (d2 << 4) | d1;
                 }
             }
-        *isTruncated = operand->value[1] != 0 || operand->value[0] != 0
-                       || (desc->type == 1 && (desc->length < 1 || (buffer[0] & 0xf0) != 0));
+        *isTruncated = operand->value[1] != 0 || operand->value[0] != 0;
+        if (desc->type == 3 && (desc->length < 1 || (buffer[0] & 0xf0) != 0))
+            {
+            *isTruncated = TRUE;
+            buffer[0]   &= 0x0f;
+            }
         break;
     case 4:  // Unpacked Decimal Unsigned
-        if (operand->sign)
-            {
-            bdp180Negate(operand);
-            }
         i = desc->length;
         while (i > 0)
             {
@@ -863,12 +878,102 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
         return FALSE;
         }
 
-    if (bdp180CopyFromBuf(ctx, desc->pva, desc->length, buffer) == FALSE)
+    if (*isTruncated == FALSE || inhOnTrunc == FALSE)
         {
-        return FALSE;
+        return bdp180CopyFromBuf(ctx, desc->pva, desc->length, buffer);
         }
 
     return TRUE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Multiply two BDP operands
+**
+**  Parameters:     Name        Description.
+**                  mltand      pointer to multiplicand
+**                  mltier      pointer to multiplier
+**                  result      (out) pointer to result
+**                  cond        (out) pointer to user condition on failure
+**
+**  Returns:        TRUE if success, FALSE if failure (e.g., arithmetic overflow)
+**
+**------------------------------------------------------------------------*/
+bool bdp180Mul(BdpOperand *mltand, BdpOperand *mltier, BdpOperand *result, UserCondition *cond)
+    {
+    u64  carry;
+    u64  m256[4];
+    u64  p256[4];
+    u64  t;
+
+    m256[0]          = 0;
+    m256[1]          = 0;
+    m256[2]          = mltand->value[0];
+    m256[3]          = mltand->value[1];
+    result->sign     = ((mltier->value[0] | mltier->value[1]) == 0 || (mltand->value[0] | mltand->value[1]) == 0) ? 0 : mltand->sign ^ mltier->sign;
+    memset(p256, 0, sizeof(p256));
+    while (mltier->value[0] != 0 || mltier->value[1] != 0)
+        {
+        //
+        //  If the LSB of multiplier is 1, add multiplicand to product
+        //
+        if ((mltier->value[1] & 1) != 0)
+            {
+            t        = p256[3];
+            p256[3] += m256[3];
+            carry    = p256[3] < t;
+            t        = p256[2];
+            p256[2] += m256[2] + carry;
+            carry    = p256[2] < t;
+            t        = p256[1];
+            p256[1] += m256[1] + carry;
+            carry    = p256[1] < t;
+            p256[0] += m256[0] + carry;
+            }
+        //
+        //  Left shift multiplicand (multiply by 2)
+        //
+        m256[0]   = (m256[0] << 1) | (m256[1] >> 63);
+        m256[1]   = (m256[1] << 1) | (m256[2] >> 63);
+        m256[2]   = (m256[2] << 1) | (m256[3] >> 63);
+        m256[3] <<= 1;
+        //
+        //  Right shift multiplier (divide by 2)
+        //
+        mltier->value[1]  = (mltier->value[1] >> 1) | ((mltier->value[0] & 1) << 63);
+        mltier->value[0] >>= 1;
+        }
+    result->value[0] = p256[2];
+    result->value[1] = p256[3];
+    if (p256[1] != 0 || p256[0] != 0)
+        {
+        *cond = UCR57; // Arithmetic overflow
+        return FALSE;
+        }
+    else
+        {
+        return TRUE;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Subtract two BDP operands
+**
+**  Parameters:     Name        Description.
+**                  minend      pointer to minuend
+**                  subend      pointer to subtrahend
+**                  result      (out) pointer to result
+**                  cond        (out) pointer to user condition on failure
+**
+**  Returns:        TRUE if success, FALSE if failure (e.g., arithmetic overflow)
+**
+**------------------------------------------------------------------------*/
+bool bdp180Sub(BdpOperand *minend, BdpOperand *subend, BdpOperand *result, UserCondition *cond)
+    {
+    BdpOperand t;
+
+    t      = *subend;
+    t.sign = !t.sign;
+    return bdp180Add(minend, &t, result, cond);
     }
 
 /*
@@ -901,7 +1006,7 @@ static void bdp180AddDigit(BdpOperand *operand, u8 digit)
 **
 **  Parameters:     Name         Description.
 **                  operand      pointer to the BDP operand
-**                  remainder    pointer to remainder
+**                  remainder    (out) pointer to remainder
 **
 **------------------------------------------------------------------------*/
 static void bdp180Div10(BdpOperand *operand, u8 *remainder)
@@ -1008,17 +1113,13 @@ static void bdp180Negate(BdpOperand *operand)
     {
     u64 v;
 
+    operand->value[0] = ~operand->value[0];
     v = ~operand->value[1] + 1;
     if (v < operand->value[1])
         {
-        operand->value[1] = v;
-        operand->value[0] = ~operand->value[0] + 1;
+        operand->value[0] += 1;
         }
-    else
-        {
-        operand->value[1] = v;
-        operand->value[0] = ~operand->value[0];
-        }
+    operand->value[1] = v;
     operand->sign = !operand->sign;
     }
 

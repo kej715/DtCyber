@@ -61,11 +61,13 @@
 /*
 **  bdp180.c
 */
-bool bdp180Add(BdpOperand *augend, BdpOperand *addend, BdpOperand *result);
+bool bdp180Add(BdpOperand *augend, BdpOperand *addend, BdpOperand *result, UserCondition *cond);
 bool bdp180CopyFromBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer);
 bool bdp180CopyToBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer);
 bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *operand);
-bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *operand, bool *isTruncated);
+bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *operand, bool inhOnTrunc, bool *isTruncated);
+bool bdp180Mul(BdpOperand *mltand, BdpOperand *mltier, BdpOperand *result, UserCondition *cond);
+bool bdp180Sub(BdpOperand *minend, BdpOperand *subend, BdpOperand *result, UserCondition *cond);
 
 /*
 **  channel.c
@@ -494,7 +496,7 @@ void tpMuxShowStatus();
 **  trace.c
 */
 void traceCall(Cpu180Context *cpu, u64 pva);
-void traceCallFrame(Cpu180Context *cpu, u64 sfsa);
+void traceCallFrame(Cpu180Context *cpu, u64 sfsa, char *label);
 void traceChannel(u8 ch);
 void traceChannelFunction(PpWord funcCode);
 void traceChannelIo(u8 ch);
@@ -531,6 +533,7 @@ char *traceTranslateAction(ConditionAction action);
 void traceTrap(Cpu180Context *cpu);
 void traceTrapFrame(Cpu180Context *cpu, u64 sfsa);
 void traceUserCondition(Cpu180Context *cpu, UserCondition cond);
+bool traceValidateStack(Cpu180Context *cpu, u64 sfsa, u16 maxDepth, char *label);
 void traceVmRegisters(Cpu180Context *cpu);
 
 /*

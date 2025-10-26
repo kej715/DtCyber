@@ -403,6 +403,7 @@ typedef struct
     u64           regKbp;               /* keypoint buffer pointer register */
     u32           regEid;               /* CPU element identifier register */
     u64           regDec;               /* dependent environment control register */
+    u64           regTm;                /* test mode register */
     u32           byteNumMask;          /* mask used in determining byte number within page */
     u32           pageLengthMask;       /* mask used in calculating page table index */
     u8            pageNumShift;         /* shift count used in calculating page numbers */
