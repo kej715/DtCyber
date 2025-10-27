@@ -1777,12 +1777,12 @@ static FloatClass float180FloatClassOf(u64 value)
 **------------------------------------------------------------------------*/
 static void float180LongDiv(Cpu180Double *dvdend, Cpu180Double *dvisor, Cpu180Double *quotient)
     {
-    u64          borrow;
-    u64          diff;
-    u64          dvdend192[4];
-    u64          dvisor192[4];
-    int          i;
-    u64          t[4];
+    u64 borrow;
+    u64 diff;
+    u64 dvdend192[4];
+    u64 dvisor192[4];
+    int i;
+    u64 t[4];
 
     dvdend192[0]        = dvdend->leftPart & Mask48;
     dvdend192[1]        = dvdend->rightPart & Mask48;
