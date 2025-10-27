@@ -61,7 +61,7 @@
 //  defines how many instructions to trace thereafter.
 //
 //#define TRACE_INST_LIST   { 0x75,0x3c,0x98,0x99,0x9a,0x9b,0xf9,0x23 }
-#define TRACE_INST_LIST   { 0x72 }
+#define TRACE_INST_LIST   { 0x73, 0x75 }
 #define TRACE_INST_COUNT  10
 
 //#define TRACE_RANGE_START 0xb04600000000
@@ -1243,6 +1243,8 @@ void cpu180Init(char *model, u16 *serialNumbers)
         activeCpu->pendingAction = Rni;
         activeCpu->isStopped     = TRUE;
         activeCpu->isMonitorMode = TRUE;
+        activeCpu->regSit        = 0xffffffff; // System Interval Timer
+        activeCpu->regPit        = 0xffffffff; // Process Interval Timer
         cpu180UpdatePageSize(activeCpu);
         }
 
@@ -7000,7 +7002,7 @@ static void cp180OpF9(Cpu180Context *activeCpu)  // F9  MOVI       MIGDS 2-62
         }
     byte = (((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI]) + activeCpu->opD) & Mask8;
     memset(&operand, 0, sizeof(operand));
-    operand.value[1] = byte;
+    operand.value[3] = byte;
     switch (activeCpu->opJ & Mask2)
         {
     default:
@@ -7030,7 +7032,7 @@ static void cp180OpF9(Cpu180Context *activeCpu)  // F9  MOVI       MIGDS 2-62
             cpu180SetUserCondition(activeCpu, UCR63); // Invalid BDP data
             return;
             }
-        operand.value[1] = byte - 0x30;
+        operand.value[3] = byte - 0x30;
         if (bdp180EncodeOperand(activeCpu, &activeCpu->dstDesc, &operand,
             (activeCpu->regUmr & ucrDefns[UCR62].bitMask) != 0 && IsTrapEnabled(activeCpu), &isTruncated) == FALSE)
             {

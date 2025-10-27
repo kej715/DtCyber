@@ -352,7 +352,7 @@ typedef struct bdpDescriptor {
 typedef struct bdpOperand
     {
     bool sign;
-    u64  value[2];
+    u64  value[4];
     } BdpOperand;
 
 // CYBER 180 CPU control block

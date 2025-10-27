@@ -55,6 +55,7 @@
 **  Private Macro Functions
 **  -----------------------
 */
+#define IsLongZero(val) (((val)[0] | (val)[1] | (val)[2] | (val)[3]) == 0)
 
 /*
 **  -----------------------------------------
@@ -69,8 +70,11 @@
 */
 static void bdp180AddDigit(BdpOperand *operand, u8 digit);
 static void bdp180Div10(BdpOperand *operand, u8 *remainder);
+static void bdp180LongDiff(u64 *minend, u64 *subend, u64 *result, u64 *borrow);
+static void bdp180LongDiv(u64 *dvdend, u64 *dvisor, u64 *quotient, u64 *remainder);
+static void bdp180LongNegate(u64 *value);
+static void bdp180LongSum(u64 *augend, u64 *addend, u64 *result, u64 *carry);
 static void bdp180Mul10(BdpOperand *operand);
-static void bdp180Negate(BdpOperand *operand);
 
 /*
 **  ----------------
@@ -135,23 +139,16 @@ static FILE bdp180Log = NULL;
 **------------------------------------------------------------------------*/
 bool bdp180Add(BdpOperand *augend, BdpOperand *addend, BdpOperand *result, UserCondition *cond)
     {
-#if defined(_WIN32)
-    // TODO: implement this for Windows
-    return TRUE;
-#else
-    u128 a1;
-    u128 a2;
+    u64 carry;
     bool isOk;
-    u128 sum;
+    u64 sum[4];
 
-    a1   = ((u128)augend->value[0] << 64) | (u128)augend->value[1];
-    a2   = ((u128)addend->value[0] << 64) | (u128)addend->value[1];
     isOk = TRUE;
     if (augend->sign == addend->sign)
         {
         result->sign = augend->sign;
-        sum          = a1 + a2;
-        if (sum < a1 || sum < a2)
+        bdp180LongSum(augend->value, addend->value, sum, &carry);
+        if (carry != 0 || sum[1] != 0 || sum[0] != 0)
             {
             *cond = UCR57; // Arithmetic overflow
             isOk  = FALSE;
@@ -161,22 +158,21 @@ bool bdp180Add(BdpOperand *augend, BdpOperand *addend, BdpOperand *result, UserC
         {
         if (addend->sign)
             {
-            sum = a1 - a2;
+            bdp180LongDiff(augend->value, addend->value, sum, &carry);
             }
         else
             {
-            sum = a2 - a1;
+            bdp180LongDiff(addend->value, augend->value, sum, &carry);
             }
-        result->sign = (sum >> 127) != 0;
+        result->sign = (sum[0] >> 63) != 0;
         if (result->sign)
             {
-            sum = ~sum + 1;
+            bdp180LongNegate(sum);
             }
         }
-    result->value[0] = (u64)(sum >> 64);
-    result->value[1] = (u64)sum;
+    memcpy(result->value, sum, sizeof(sum));
+
     return isOk;
-#endif
     }
 
 /*--------------------------------------------------------------------------
@@ -629,19 +625,19 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
     case 10: // Binary Unsigned
         for (i = 0; i < desc->length; i++)
             {
-            operand->value[1] = (operand->value[1] << 8) | buffer[i];
+            operand->value[3] = (operand->value[3] << 8) | buffer[i];
             }
         break;
 
     case 11: // Binary Signed
         for (i = 0; i < desc->length; i++)
             {
-            operand->value[1] = (operand->value[1] << 8) | buffer[i];
+            operand->value[3] = (operand->value[3] << 8) | buffer[i];
             }
         if (buffer[0] >= 0x80)
             {
-            operand->value[1] |= signExt[desc->length];
-            operand->value[1]  = ~operand->value[1] + 1;
+            operand->value[3] |= signExt[desc->length];
+            operand->value[3]  = ~operand->value[3] + 1;
             operand->sign      = TRUE;
             }
         break;
@@ -651,7 +647,7 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
         return FALSE;
         }
 
-    if (operand->sign && operand->value[1] == 0 && operand->value[0] == 0)
+    if (operand->sign && IsLongZero(operand->value))
         {
         operand->sign = 0;
         }
@@ -701,7 +697,7 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
             i -= 1;
             buffer[i] = (d2 << 4) | d1;
             }
-        *isTruncated = operand->value[1] != 0 || operand->value[0] != 0;
+        *isTruncated = IsLongZero(operand->value) == FALSE;
         if (desc->type == 1 && (desc->length < 1 || (buffer[0] & 0xf0) != 0))
             {
             *isTruncated = TRUE;
@@ -723,7 +719,7 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                 buffer[i] = (d2 << 4) | d1;
                 }
             }
-        *isTruncated = operand->value[1] != 0 || operand->value[0] != 0;
+        *isTruncated = IsLongZero(operand->value) == FALSE;
         if (desc->type == 3 && (desc->length < 1 || (buffer[0] & 0xf0) != 0))
             {
             *isTruncated = TRUE;
@@ -738,7 +734,7 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
             i -= 1;
             buffer[i] = d1 + 0x30;
             }
-        *isTruncated = operand->value[1] != 0 || operand->value[0] != 0;
+        *isTruncated = IsLongZero(operand->value) == FALSE;
         break;
     case 5:  // Unpacked Decimal Trailing Sign Combined Hollerith
         if (desc->length > 0)
@@ -764,7 +760,7 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                 i -= 1;
                 buffer[i] = d1 + 0x30;
                 }
-            *isTruncated = operand->value[1] != 0 || operand->value[0] != 0;
+            *isTruncated = IsLongZero(operand->value) == FALSE;
             }
         else
             {
@@ -782,7 +778,7 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                 i -= 1;
                 buffer[i] = d1 + 0x30;
                 }
-            *isTruncated = operand->value[1] != 0 || operand->value[0] != 0;
+            *isTruncated = IsLongZero(operand->value) == FALSE;
             }
         else
             {
@@ -799,7 +795,7 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                 i -= 1;
                 buffer[i] = d1 + 0x30;
                 }
-            if (operand->value[1] == 0 && operand->value[0] == 0)
+            if (IsLongZero(operand->value))
                 {
                 d1 = buffer[0] - 0x30;
                 if (d1 == 0)
@@ -835,7 +831,7 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                 i -= 1;
                 if (i == 0)
                     {
-                    if (operand->value[1] == 0 && operand->value[0] == 0)
+                    if (IsLongZero(operand->value))
                         {
                         buffer[i] = operand->sign ? 0x2d : 0x2b;
                         }
@@ -862,16 +858,20 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
     case 11: // Binary Signed
         if (operand->sign)
             {
-            bdp180Negate(operand);
+            bdp180LongNegate(operand->value);
+            if (IsLongZero(operand->value) == FALSE)
+                {
+                operand->sign = !operand->sign;
+                }
             }
         i = desc->length;
         while (i > 0)
             {
             i                  -= 1;
-            buffer[i]           = (u8)operand->value[1];
-            operand->value[1] >>= 8;
+            buffer[i]           = (u8)operand->value[3];
+            operand->value[3] >>= 8;
             }
-        *isTruncated = operand->value[1] != 0;
+        *isTruncated = operand->value[3] != 0;
         break;
     default:
         cpu180SetMonitorCondition(ctx, MCR51); // Instruction specification error
@@ -901,50 +901,46 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
 bool bdp180Mul(BdpOperand *mltand, BdpOperand *mltier, BdpOperand *result, UserCondition *cond)
     {
     u64  carry;
-    u64  m256[4];
-    u64  p256[4];
+    u64  product[4];
     u64  t;
 
-    m256[0]          = 0;
-    m256[1]          = 0;
-    m256[2]          = mltand->value[0];
-    m256[3]          = mltand->value[1];
-    result->sign     = ((mltier->value[0] | mltier->value[1]) == 0 || (mltand->value[0] | mltand->value[1]) == 0) ? 0 : mltand->sign ^ mltier->sign;
-    memset(p256, 0, sizeof(p256));
-    while (mltier->value[0] != 0 || mltier->value[1] != 0)
+    result->sign = (IsLongZero(mltier->value) || IsLongZero(mltand->value)) ? 0 : mltand->sign ^ mltier->sign;
+    memset(product, 0, sizeof(product));
+    while (IsLongZero(mltier->value) == FALSE)
         {
         //
         //  If the LSB of multiplier is 1, add multiplicand to product
         //
-        if ((mltier->value[1] & 1) != 0)
+        if ((mltier->value[3] & 1) != 0)
             {
-            t        = p256[3];
-            p256[3] += m256[3];
-            carry    = p256[3] < t;
-            t        = p256[2];
-            p256[2] += m256[2] + carry;
-            carry    = p256[2] < t;
-            t        = p256[1];
-            p256[1] += m256[1] + carry;
-            carry    = p256[1] < t;
-            p256[0] += m256[0] + carry;
+            t           = product[3];
+            product[3] += mltand->value[3];
+            carry       = product[3] < t;
+            t           = product[2];
+            product[2] += mltand->value[2] + carry;
+            carry       = product[2] < t;
+            t           = product[1];
+            product[1] += mltand->value[1] + carry;
+            carry       = product[1] < t;
+            product[0] += mltand->value[0] + carry;
             }
         //
         //  Left shift multiplicand (multiply by 2)
         //
-        m256[0]   = (m256[0] << 1) | (m256[1] >> 63);
-        m256[1]   = (m256[1] << 1) | (m256[2] >> 63);
-        m256[2]   = (m256[2] << 1) | (m256[3] >> 63);
-        m256[3] <<= 1;
+        mltand->value[0]   = (mltand->value[0] << 1) | (mltand->value[1] >> 63);
+        mltand->value[1]   = (mltand->value[1] << 1) | (mltand->value[2] >> 63);
+        mltand->value[2]   = (mltand->value[2] << 1) | (mltand->value[3] >> 63);
+        mltand->value[3] <<= 1;
         //
         //  Right shift multiplier (divide by 2)
         //
-        mltier->value[1]  = (mltier->value[1] >> 1) | ((mltier->value[0] & 1) << 63);
+        mltier->value[3]   = (mltier->value[3] >> 1) | ((mltier->value[2] & 1) << 63);
+        mltier->value[2]   = (mltier->value[2] >> 1) | ((mltier->value[1] & 1) << 63);
+        mltier->value[1]   = (mltier->value[1] >> 1) | ((mltier->value[0] & 1) << 63);
         mltier->value[0] >>= 1;
         }
-    result->value[0] = p256[2];
-    result->value[1] = p256[3];
-    if (p256[1] != 0 || p256[0] != 0)
+    memcpy(result->value, product, sizeof(product));
+    if (product[1] != 0 || product[0] != 0)
         {
         *cond = UCR57; // Arithmetic overflow
         return FALSE;
@@ -994,11 +990,22 @@ bool bdp180Sub(BdpOperand *minend, BdpOperand *subend, BdpOperand *result, UserC
 **------------------------------------------------------------------------*/
 static void bdp180AddDigit(BdpOperand *operand, u8 digit)
     {
-    operand->value[1] += digit;
-    if (operand->value[1] < digit)
-        {
-        operand->value[0] += 1;
-        }
+    u64 carry;
+    u64 t;
+
+    t                  = operand->value[3];
+    operand->value[3] += digit;
+    carry              = operand->value[3] < t;
+
+    t                  = operand->value[2];
+    operand->value[2] += carry;
+    carry              = operand->value[2] < t;
+
+    t                  = operand->value[1];
+    operand->value[1] += carry;
+    carry              = operand->value[1] < t;
+
+    operand->value[0] += carry;
     }
 
 /*--------------------------------------------------------------------------
@@ -1011,55 +1018,165 @@ static void bdp180AddDigit(BdpOperand *operand, u8 digit)
 **------------------------------------------------------------------------*/
 static void bdp180Div10(BdpOperand *operand, u8 *remainder)
     {
-#if defined(_WIN32)
-    u8  divisor;
-    u8  i;
-    u64 q128[2];
+    u64 dvisor[4];
+    u64 quotient[4];
+    u64 r[4];
 
-    divisor      = 10;
-    memset(q128, 0, sizeof(q128));
+    dvisor[0] = 0;
+    dvisor[1] = 0;
+    dvisor[2] = 0;
+    dvisor[3] = 10;
 
-    for (i = 0; i < 4; i++)
+    bdp180LongDiv(operand->value, dvisor, quotient, r);
+    memcpy(operand->value, quotient, sizeof(quotient));
+    *remainder = r[3];
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Calculate the difference between two 256-bit, unsigned integers
+**
+**  Parameters:     Name         Description.
+**                  minend       pointer to 256-bit minuend
+**                  subend       pointer to 256-bit subtrahend
+**                  result       (out) 256-bit difference
+**                  borrow       (out) 1 if minuend < subtrahend, 0 otherwise
+**
+**------------------------------------------------------------------------*/
+static void bdp180LongDiff(u64 *minend, u64 *subend, u64 *result, u64 *borrow)
+    {
+    u64 diff;
+
+    diff      = minend[3] - subend[3];
+    *borrow   = diff > minend[3];
+    result[3] = diff;
+
+    diff      = (minend[2] - subend[2]) - *borrow;
+    *borrow   = diff > minend[2];
+    result[2] = diff;
+
+    diff      = (minend[1] - subend[1]) - *borrow;
+    *borrow   = diff > minend[1];
+    result[1] = diff;
+
+    diff      = (minend[0] - subend[0]) - *borrow;
+    *borrow   = diff > minend[0];
+    result[0] = diff;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Calculate the quotient and remainder of a 256-bit, unsigned
+**                  dividend and divisor
+**
+**  Parameters:     Name         Description.
+**                  dvdend       pointer to 256-bit dividend
+**                  dvisor       pointer to 256-bit divisor
+**                  quotient     (out) 256-bit quotient
+**                  remainder    (out) 256-bit remainder
+**
+**------------------------------------------------------------------------*/
+static void bdp180LongDiv(u64 *dvdend, u64 *dvisor, u64 *quotient, u64 *remainder)
+    {
+    u64 borrow;
+    int i;
+    u64 t[4];
+
+    memset(quotient, 0, sizeof(u64) * 4);
+
+    if (IsLongZero(dvdend))
         {
-        //
-        //  Shift divisor right
-        //
-        divisor >>= 1;
-        //
-        //  Shift quotient left to make space for new bit
-        //
-        q128[0]   = (q128[0] << 1) | (q128[1] >> 63);
-        q128[1] <<= 1;
-        //
-        //  Subtract divisor from remainder, if possible
-        //
-        if (operand->value[0] > 0 || operand->value[1] >= divisor)
-            {
-            if (operand->value[1] < divisor)
-                {
-                operand->value[1] -= divisor;
-                operand->value[0] -= 1;
-                }
-            else
-                {
-                operand->value[1] -= divisor;
-                }
-            q128[1] |= 1;
-            }
+        memset(remainder, 0, sizeof(u64) * 4);
+        return;
         }
-    *remainder        = (u8)operand->value[1];
-    operand->value[0] = q128[0];
-    operand->value[1] = q128[1];
-#else
-    u128 d128;
-    u128 q128;
 
-    d128              = ((u128)operand->value[0] << 64) | (u128)operand->value[1];
-    q128              = d128 / (u128)10;
-    operand->value[0] = (u64)(q128 >> 64);
-    operand->value[1] = (u64)q128;
-    *remainder        = (u8)(d128 % 10);
-#endif
+    bdp180LongDiff(dvdend, dvisor, t, &borrow);
+    if (borrow != 0)
+        {
+        memcpy(remainder, dvdend, sizeof(u64) * 4);
+        return;
+        }
+
+    // Align the divisor to the most significant bit of the dividend
+    i = 1;
+    for (;;)
+        {
+        bdp180LongDiff(dvdend, dvisor, t, &borrow);
+        if (borrow || (dvisor[0] & 0x8000000000000000) != 0) break;
+        dvisor[0]   = (dvisor[0] << 1) | (dvisor[1] >> 63);
+        dvisor[1]   = (dvisor[1] << 1) | (dvisor[2] >> 63);
+        dvisor[2]   = (dvisor[2] << 1) | (dvisor[3] >> 63);
+        dvisor[3] <<= 1;
+        i          += 1;
+        }
+
+    // Perform the repeated shift and subtract
+    while (i-- > 0)
+        {
+        quotient[0]   = (quotient[0] << 1) | (quotient[1] >> 63);
+        quotient[1]   = (quotient[1] << 1) | (quotient[2] >> 63);
+        quotient[2]   = (quotient[2] << 1) | (quotient[3] >> 63);
+        quotient[3] <<= 1;
+        bdp180LongDiff(dvdend, dvisor, t, &borrow);
+        if (borrow == 0)
+            {
+            memcpy(dvdend, t, sizeof(t));
+            quotient[3] |= 1;
+            }
+        dvisor[3]   = (dvisor[3] >> 1) | ((dvisor[2] & 1) << 63);
+        dvisor[2]   = (dvisor[2] >> 1) | ((dvisor[1] & 1) << 63);
+        dvisor[1]   = (dvisor[1] >> 1) | ((dvisor[0] & 1) << 63);
+        dvisor[0] >>= 1;
+        }
+
+    memcpy(remainder, dvdend, sizeof(u64) * 4);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Negate a 256-bit integer value
+**
+**  Parameters:     Name         Description.
+**                  value        pointer to the value
+**
+**------------------------------------------------------------------------*/
+static void bdp180LongNegate(u64 *value)
+    {
+    u64 carry;
+    u64 t;
+
+    t        = ~value[3];
+    value[3] = t + 1;
+    carry    = value[3] < t;
+    t        = ~value[2];
+    value[2] = t + carry;
+    carry    = value[2] < t;
+    t        = ~value[1];
+    value[1] = t + carry;
+    carry    = value[1] < t;
+    value[0] = ~value[0] + carry;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Calculate the sum of two 256-bit, unsigned integers
+**
+**  Parameters:     Name         Description.
+**                  augend       pointer to 256-bit augend
+**                  addend       pointer to 256-bit addend
+**                  result       (out) 256-bit sum
+**                  carry        (out) 1 if carry (i.e., arithmetic overflow)
+**
+**------------------------------------------------------------------------*/
+static void bdp180LongSum(u64 *augend, u64 *addend, u64 *result, u64 *carry)
+    {
+    result[3] = augend[3] + addend[3];
+    *carry    = result[3] < augend[3];
+
+    result[2] = augend[2] + addend[2] + *carry;
+    *carry    = result[2] < augend[2];
+
+    result[1] = augend[1] + addend[1] + *carry;
+    *carry    = result[1] < augend[1];
+
+    result[0] = augend[0] + addend[0] + *carry;
+    *carry    = result[0] < augend[0];
     }
 
 /*--------------------------------------------------------------------------
@@ -1071,56 +1188,35 @@ static void bdp180Div10(BdpOperand *operand, u8 *remainder)
 **------------------------------------------------------------------------*/
 static void bdp180Mul10(BdpOperand *operand)
     {
-#if defined(_WIN32)
-    u64 f2[2];
-    u64 f8[2];
+    u64 carry;
+    u64 f2[4];
+    u64 f8[4];
 
     //
     // x * 10 = (x << 1) + (x << 3)
     //
     f2[0] = (operand->value[0] << 1) | (operand->value[1] >> 63);
-    f2[1] = operand->value[1] << 1;
+    f2[1] = (operand->value[1] << 1) | (operand->value[2] >> 63);
+    f2[2] = (operand->value[2] << 1) | (operand->value[3] >> 63);
+    f2[3] = operand->value[3] << 1;
 
     f8[0] = (f2[0] << 1) | (f2[1] >> 63);
-    f8[1] = f2[1] << 1;
+    f8[1] = (f2[1] << 1) | (f2[2] >> 63);
+    f8[2] = (f2[2] << 1) | (f2[3] >> 63);
+    f8[3] = f2[3] << 1;
 
     f8[0] = (f8[0] << 1) | (f8[1] >> 63);
-    f8[1] = f8[1] << 1;
+    f8[1] = (f8[1] << 1) | (f8[2] >> 63);
+    f8[2] = (f8[2] << 1) | (f8[3] >> 63);
+    f8[3] = f8[3] << 1;
 
-    operand->value[1] = f8[1] + f2[1];
-    operand->value[0] = f8[0] + f2[0];
-    if (operand->value[1] < f8[1] || operand->value[1] < f2[1])
-        {
-        operand->value[0] += 1;
-        }
-#else
-    u128 p128;
-
-    p128 = (((u128)operand->value[0] << 64) | (u64)operand->value[1]) * (u128)10;
-    operand->value[0] = (u64)(p128 >> 64);
-    operand->value[1] = (u64)p128;
-#endif
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Negate a BDP operand
-**
-**  Parameters:     Name         Description.
-**                  operand      pointer to BDP operand
-**
-**------------------------------------------------------------------------*/
-static void bdp180Negate(BdpOperand *operand)
-    {
-    u64 v;
-
-    operand->value[0] = ~operand->value[0];
-    v = ~operand->value[1] + 1;
-    if (v < operand->value[1])
-        {
-        operand->value[0] += 1;
-        }
-    operand->value[1] = v;
-    operand->sign = !operand->sign;
+    operand->value[3] = f8[3] + f2[3];
+    carry             = operand->value[3] < f8[3] || operand->value[3] < f2[3];
+    operand->value[2] = f8[2] + f2[2] + carry;
+    carry             = operand->value[2] < f8[2] || operand->value[2] < f2[2];
+    operand->value[1] = f8[1] + f2[1] + carry;
+    carry             = operand->value[1] < f8[1] || operand->value[1] < f2[1];
+    operand->value[0] = f8[0] + f2[0] + carry;
     }
 
 /*---------------------------  End Of File  ------------------------------*/
