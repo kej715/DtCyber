@@ -2761,11 +2761,19 @@ static void cpu180ApplyBdpOperator(Cpu180Context *ctx, bool (*operator)(BdpOpera
 #endif
             if (ctx->dstDesc.length > 0)
                 {
-                inhOnCond = (ctx->regUmr & ucrDefns[UCR57].bitMask) != 0 && IsTrapEnabled(ctx);
-                isOk      = (*operator)(&dstOperand, &srcOperand, &result, &cond);
+                isOk = (*operator)(&dstOperand, &srcOperand, &result, &cond);
                 if (isOk == FALSE)
                     {
                     cpu180SetUserCondition(ctx, cond);
+                    inhOnCond = (ctx->regUmr & ucrDefns[cond].bitMask) != 0 && IsTrapEnabled(ctx);
+                    if (inhOnCond && cond == UCR55) // Divide fault and execution inhibited
+                        {
+                        ctx->nextP = ctx->regP;
+                        }
+                    }
+                else
+                    {
+                    inhOnCond = FALSE;
                     }
                 if ((isOk || inhOnCond == FALSE) && bdp180EncodeOperand(ctx, &ctx->dstDesc, &result, inhOnCond, &isTruncated))
                     {
@@ -5196,12 +5204,90 @@ static void cp180Op72(Cpu180Context *activeCpu)  // 72  MULN       MIGDS 2-47
 
 static void cp180Op73(Cpu180Context *activeCpu)  // 73  DIVN       MIGDS 2-47
     {
-    cp180OpIv(activeCpu);
+    activeCpu->nextP += 8;
+    cpu180ApplyBdpOperator(activeCpu, bdp180Div);
     }
 
 static void cp180Op74(Cpu180Context *activeCpu)  // 74  CMPN       MIGDS 2-52
     {
-    cp180OpIv(activeCpu);
+    u64        descPva;
+    BdpOperand dstOperand;
+    u8         result;
+    BdpOperand srcOperand;
+
+    descPva           = activeCpu->nextP;
+    activeCpu->nextP += 8;
+    if (cpu180GetBdpDescriptor(activeCpu, descPva, activeCpu->opJ, 0, &activeCpu->srcDesc)
+        && cpu180GetBdpDescriptor(activeCpu, descPva + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
+        {
+        if (activeCpu->srcDesc.type > 6 || activeCpu->dstDesc.type > 6)
+            {
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
+            return;
+            }
+        if (bdp180DecodeOperand(activeCpu, &activeCpu->dstDesc, &dstOperand)
+            && bdp180DecodeOperand(activeCpu, &activeCpu->srcDesc, &srcOperand))
+            {
+            if (srcOperand.sign == dstOperand.sign)
+                {
+                result = 0;
+                if (srcOperand.value[3] != dstOperand.value[3] || srcOperand.value[2] != dstOperand.value[2])
+                    {
+                    if (srcOperand.sign) // both operands are negative
+                        {
+                        if (srcOperand.value[2] > dstOperand.value[2])
+                            {
+                            result = 3;
+                            }
+                        else if (srcOperand.value[2] == dstOperand.value[2])
+                            {
+                            if (srcOperand.value[3] > dstOperand.value[3])
+                                {
+                                result = 3;
+                                }
+                            else
+                                {
+                                result = 2;
+                                }
+                            }
+                        }
+                    else if (srcOperand.value[2] > dstOperand.value[2])
+                        {
+                        result = 2;
+                        }
+                    else if (srcOperand.value[2] == dstOperand.value[2])
+                        {
+                        if (srcOperand.value[3] > dstOperand.value[3])
+                            {
+                            result = 2;
+                            }
+                        else
+                            {
+                            result = 3;
+                            }
+                        }
+                    else // source < destination
+                        {
+                        result = 3;
+                        }
+                    }
+                }
+            else if (srcOperand.sign) // source is negative, destination is positive
+                {
+                result = 3;
+                }
+            else // source is positive, destination is negative
+                {
+                result = 2;
+                }
+            activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | (result << 30);
+
+#if CcDebug == 1
+            traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
+            traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
+#endif
+            }
+        }
     }
 
 static void cp180Op75(Cpu180Context *activeCpu)  // 75  MOVN       MIGDS 2-51
@@ -5327,7 +5413,7 @@ static void cp180Op77(Cpu180Context *activeCpu)  // 77  CMPB       MIGDS 2-52
             offset             = (u16)(sp - srcBuf);
             activeCpu->regX[0] = (activeCpu->regX[0] & LeftMask) | offset;
             }
-        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | (result << 30);
+        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | ((u64)result << 30);
 
 #if CcDebug == 1
         traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
@@ -6870,7 +6956,7 @@ static void cp180OpE9(Cpu180Context *activeCpu)  // E9  CMPC       MIGDS 2-52
             offset             = (u16)(sp - srcBuf);
             activeCpu->regX[0] = (activeCpu->regX[0] & LeftMask) | offset;
             }
-        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | (result << 30);
+        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | ((u64)result << 30);
 
 #if CcDebug == 1
         traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");

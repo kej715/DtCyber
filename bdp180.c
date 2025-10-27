@@ -656,6 +656,43 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Divide one BDP operand by another
+**
+**  Parameters:     Name        Description.
+**                  dvdend      pointer to dividend
+**                  dvisor      pointer to divisor
+**                  result      (out) pointer to result
+**                  cond        (out) pointer to user condition on failure
+**
+**  Returns:        TRUE if success, FALSE if failure (e.g., divide by zero)
+**
+**------------------------------------------------------------------------*/
+bool bdp180Div(BdpOperand *dvdend, BdpOperand *dvisor, BdpOperand *result, UserCondition *cond)
+    {
+    u64  quotient[4];
+    u64  remainder[4];
+
+    if (IsLongZero(dvisor->value))
+        {
+        memset(result, 0, sizeof(BdpOperand));
+        *cond = UCR55; // Divide fault
+        return FALSE;
+        }
+    result->sign = IsLongZero(dvdend->value) ? 0 : dvdend->sign ^ dvisor->sign;
+    bdp180LongDiv(dvdend->value, dvisor->value, quotient, remainder);
+    memcpy(result->value, quotient, sizeof(quotient));
+    if (quotient[1] != 0 || quotient[0] != 0)
+        {
+        *cond = UCR57; // Arithmetic overflow
+        return FALSE;
+        }
+    else
+        {
+        return TRUE;
+        }
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Encode a BDP operand
 **
 **  Parameters:     Name        Description.

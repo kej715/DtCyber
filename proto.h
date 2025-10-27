@@ -65,6 +65,7 @@ bool bdp180Add(BdpOperand *augend, BdpOperand *addend, BdpOperand *result, UserC
 bool bdp180CopyFromBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer);
 bool bdp180CopyToBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer);
 bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *operand);
+bool bdp180Div(BdpOperand *mltand, BdpOperand *mltier, BdpOperand *result, UserCondition *cond);
 bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *operand, bool inhOnTrunc, bool *isTruncated);
 bool bdp180Mul(BdpOperand *mltand, BdpOperand *mltier, BdpOperand *result, UserCondition *cond);
 bool bdp180Sub(BdpOperand *minend, BdpOperand *subend, BdpOperand *result, UserCondition *cond);
