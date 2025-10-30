@@ -68,13 +68,10 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
-static void bdp180AddDigit(BdpOperand *operand, u8 digit);
-static void bdp180Div10(BdpOperand *operand, u8 *remainder);
 static void bdp180LongDiff(u64 *minend, u64 *subend, u64 *result, u64 *borrow);
 static void bdp180LongDiv(u64 *dvdend, u64 *dvisor, u64 *quotient, u64 *remainder);
 static void bdp180LongNegate(u64 *value);
 static void bdp180LongSum(u64 *augend, u64 *addend, u64 *result, u64 *carry);
-static void bdp180Mul10(BdpOperand *operand);
 
 /*
 **  ----------------
@@ -173,6 +170,34 @@ bool bdp180Add(BdpOperand *augend, BdpOperand *addend, BdpOperand *result, UserC
     memcpy(result->value, sum, sizeof(sum));
 
     return isOk;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Add a digit to a BDP operand
+**
+**  Parameters:     Name         Description.
+**                  operand      pointer to BDP operand
+**                  digit        the digit to add
+**
+**------------------------------------------------------------------------*/
+void bdp180AddDigit(BdpOperand *operand, u8 digit)
+    {
+    u64 carry;
+    u64 t;
+
+    t                  = operand->value[3];
+    operand->value[3] += digit;
+    carry              = operand->value[3] < t;
+
+    t                  = operand->value[2];
+    operand->value[2] += carry;
+    carry              = operand->value[2] < t;
+
+    t                  = operand->value[1];
+    operand->value[1] += carry;
+    carry              = operand->value[1] < t;
+
+    operand->value[0] += carry;
     }
 
 /*--------------------------------------------------------------------------
@@ -693,6 +718,30 @@ bool bdp180Div(BdpOperand *dvdend, BdpOperand *dvisor, BdpOperand *result, UserC
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Divide a BDP operand by 10
+**
+**  Parameters:     Name         Description.
+**                  operand      pointer to the BDP operand
+**                  remainder    (out) pointer to remainder
+**
+**------------------------------------------------------------------------*/
+void bdp180Div10(BdpOperand *operand, u8 *remainder)
+    {
+    u64 dvisor[4];
+    u64 quotient[4];
+    u64 r[4];
+
+    dvisor[0] = 0;
+    dvisor[1] = 0;
+    dvisor[2] = 0;
+    dvisor[3] = 10;
+
+    bdp180LongDiv(operand->value, dvisor, quotient, r);
+    memcpy(operand->value, quotient, sizeof(quotient));
+    *remainder = r[3];
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Encode a BDP operand
 **
 **  Parameters:     Name        Description.
@@ -989,6 +1038,46 @@ bool bdp180Mul(BdpOperand *mltand, BdpOperand *mltier, BdpOperand *result, UserC
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Multiply a BDP operand by 10
+**
+**  Parameters:     Name         Description.
+**                  operand      pointer to BDP operand
+**
+**------------------------------------------------------------------------*/
+void bdp180Mul10(BdpOperand *operand)
+    {
+    u64 carry;
+    u64 f2[4];
+    u64 f8[4];
+
+    //
+    // x * 10 = (x << 1) + (x << 3)
+    //
+    f2[0] = (operand->value[0] << 1) | (operand->value[1] >> 63);
+    f2[1] = (operand->value[1] << 1) | (operand->value[2] >> 63);
+    f2[2] = (operand->value[2] << 1) | (operand->value[3] >> 63);
+    f2[3] = operand->value[3] << 1;
+
+    f8[0] = (f2[0] << 1) | (f2[1] >> 63);
+    f8[1] = (f2[1] << 1) | (f2[2] >> 63);
+    f8[2] = (f2[2] << 1) | (f2[3] >> 63);
+    f8[3] = f2[3] << 1;
+
+    f8[0] = (f8[0] << 1) | (f8[1] >> 63);
+    f8[1] = (f8[1] << 1) | (f8[2] >> 63);
+    f8[2] = (f8[2] << 1) | (f8[3] >> 63);
+    f8[3] = f8[3] << 1;
+
+    operand->value[3] = f8[3] + f2[3];
+    carry             = operand->value[3] < f8[3];
+    operand->value[2] = f8[2] + f2[2] + carry;
+    carry             = operand->value[2] < f8[2];
+    operand->value[1] = f8[1] + f2[1] + carry;
+    carry             = operand->value[1] < f8[1];
+    operand->value[0] = f8[0] + f2[0] + carry;
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Subtract two BDP operands
 **
 **  Parameters:     Name        Description.
@@ -1016,58 +1105,6 @@ bool bdp180Sub(BdpOperand *minend, BdpOperand *subend, BdpOperand *result, UserC
  **
  **--------------------------------------------------------------------------
  */
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Add a digit to a BDP operand
-**
-**  Parameters:     Name         Description.
-**                  operand      pointer to BDP operand
-**                  digit        the digit to add
-**
-**------------------------------------------------------------------------*/
-static void bdp180AddDigit(BdpOperand *operand, u8 digit)
-    {
-    u64 carry;
-    u64 t;
-
-    t                  = operand->value[3];
-    operand->value[3] += digit;
-    carry              = operand->value[3] < t;
-
-    t                  = operand->value[2];
-    operand->value[2] += carry;
-    carry              = operand->value[2] < t;
-
-    t                  = operand->value[1];
-    operand->value[1] += carry;
-    carry              = operand->value[1] < t;
-
-    operand->value[0] += carry;
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Divide a BDP operand by 10
-**
-**  Parameters:     Name         Description.
-**                  operand      pointer to the BDP operand
-**                  remainder    (out) pointer to remainder
-**
-**------------------------------------------------------------------------*/
-static void bdp180Div10(BdpOperand *operand, u8 *remainder)
-    {
-    u64 dvisor[4];
-    u64 quotient[4];
-    u64 r[4];
-
-    dvisor[0] = 0;
-    dvisor[1] = 0;
-    dvisor[2] = 0;
-    dvisor[3] = 10;
-
-    bdp180LongDiv(operand->value, dvisor, quotient, r);
-    memcpy(operand->value, quotient, sizeof(quotient));
-    *remainder = r[3];
-    }
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Calculate the difference between two 256-bit, unsigned integers
@@ -1214,46 +1251,6 @@ static void bdp180LongSum(u64 *augend, u64 *addend, u64 *result, u64 *carry)
 
     result[0] = augend[0] + addend[0] + *carry;
     *carry    = result[0] < augend[0];
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Multiply a BDP operand by 10
-**
-**  Parameters:     Name         Description.
-**                  operand      pointer to BDP operand
-**
-**------------------------------------------------------------------------*/
-static void bdp180Mul10(BdpOperand *operand)
-    {
-    u64 carry;
-    u64 f2[4];
-    u64 f8[4];
-
-    //
-    // x * 10 = (x << 1) + (x << 3)
-    //
-    f2[0] = (operand->value[0] << 1) | (operand->value[1] >> 63);
-    f2[1] = (operand->value[1] << 1) | (operand->value[2] >> 63);
-    f2[2] = (operand->value[2] << 1) | (operand->value[3] >> 63);
-    f2[3] = operand->value[3] << 1;
-
-    f8[0] = (f2[0] << 1) | (f2[1] >> 63);
-    f8[1] = (f2[1] << 1) | (f2[2] >> 63);
-    f8[2] = (f2[2] << 1) | (f2[3] >> 63);
-    f8[3] = f2[3] << 1;
-
-    f8[0] = (f8[0] << 1) | (f8[1] >> 63);
-    f8[1] = (f8[1] << 1) | (f8[2] >> 63);
-    f8[2] = (f8[2] << 1) | (f8[3] >> 63);
-    f8[3] = f8[3] << 1;
-
-    operand->value[3] = f8[3] + f2[3];
-    carry             = operand->value[3] < f8[3] || operand->value[3] < f2[3];
-    operand->value[2] = f8[2] + f2[2] + carry;
-    carry             = operand->value[2] < f8[2] || operand->value[2] < f2[2];
-    operand->value[1] = f8[1] + f2[1] + carry;
-    carry             = operand->value[1] < f8[1] || operand->value[1] < f2[1];
-    operand->value[0] = f8[0] + f2[0] + carry;
     }
 
 /*---------------------------  End Of File  ------------------------------*/

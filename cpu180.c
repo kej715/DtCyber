@@ -60,8 +60,7 @@
 //  instruction stores data within the specified range of addresses. TRACE_INST_COUNT
 //  defines how many instructions to trace thereafter.
 //
-//#define TRACE_INST_LIST   { 0x75,0x3c,0x98,0x99,0x9a,0x9b,0xf9,0x23 }
-#define TRACE_INST_LIST   { 0x73, 0x75 }
+#define TRACE_INST_LIST   { 0x74 }
 #define TRACE_INST_COUNT  10
 
 //#define TRACE_RANGE_START 0xb04600000000
@@ -5247,19 +5246,19 @@ static void cp180Op74(Cpu180Context *activeCpu)  // 74  CMPN       MIGDS 2-52
                                 }
                             else
                                 {
-                                result = 2;
+                                result = 1;
                                 }
                             }
                         }
                     else if (srcOperand.value[2] > dstOperand.value[2])
                         {
-                        result = 2;
+                        result = 1;
                         }
                     else if (srcOperand.value[2] == dstOperand.value[2])
                         {
                         if (srcOperand.value[3] > dstOperand.value[3])
                             {
-                            result = 2;
+                            result = 1;
                             }
                         else
                             {
@@ -5278,7 +5277,7 @@ static void cp180Op74(Cpu180Context *activeCpu)  // 74  CMPN       MIGDS 2-52
                 }
             else // source is positive, destination is negative
                 {
-                result = 2;
+                result = 1;
                 }
             activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | (result << 30);
 
@@ -6881,12 +6880,157 @@ static void cp180OpDF(Cpu180Context *activeCpu)  // DF  SBYTS,8    MIGDS 2-11
 
 static void cp180OpE4(Cpu180Context *activeCpu)  // E4  SCLN       MIGDS 2-49
     {
-    cp180OpIv(activeCpu);
+    u64        descPva;
+    bool       inhOnCond;
+    bool       isOk;
+    bool       isTruncated;
+    BdpOperand operand;
+    u8         power;
+    u8         remainder;
+
+    descPva           = activeCpu->nextP;
+    activeCpu->nextP += 8;
+    if (cpu180GetBdpDescriptor(activeCpu, descPva, activeCpu->opJ, 0, &activeCpu->srcDesc)
+        && cpu180GetBdpDescriptor(activeCpu, descPva + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
+        {
+        if (activeCpu->srcDesc.type > 6 || activeCpu->dstDesc.type > 6)
+            {
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
+            return;
+            }
+        if (bdp180DecodeOperand(activeCpu, &activeCpu->srcDesc, &operand))
+            {
+            isOk  = TRUE;
+            power = activeCpu->opD + (activeCpu->opI == 0 ? 0 : activeCpu->regX[activeCpu->opI]);
+            if (power < 38)
+                {
+                while (power-- > 0)
+                    {
+                    bdp180Mul10(&operand);
+                    if (operand.value[1] != 0)
+                        {
+                        isOk = FALSE;
+                        }
+                    }
+                }
+            else if (power < 0x80)
+                {
+                isOk = FALSE;
+                memset(operand.value, 0, sizeof(operand.value));
+                }
+            else
+                {
+                power = ~power + 1;
+                while (power-- > 0)
+                    {
+                    bdp180Div10(&operand, &remainder);
+                    }
+                if (operand.value[2] == 0 && operand.value[3] == 0)
+                    {
+                    operand.sign = 0;
+                    }
+                }
+            if (isOk == FALSE)
+                {
+                cpu180SetUserCondition(activeCpu, UCR62); // Arithmetic loss of significance
+                inhOnCond = (activeCpu->regUmr & ucrDefns[UCR62].bitMask) != 0 && IsTrapEnabled(activeCpu);
+                }
+            else
+                {
+                inhOnCond = FALSE;
+                }
+            if ((isOk || inhOnCond == FALSE) && bdp180EncodeOperand(activeCpu, &activeCpu->dstDesc, &operand, inhOnCond, &isTruncated))
+                {
+                if (isTruncated)
+                    {
+                    cpu180SetUserCondition(activeCpu, UCR57); // Arithmetic overflow
+                    }
+                }
+            }
+#if CcDebug == 1
+        traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
+        traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
+#endif
+        }
     }
 
 static void cp180OpE5(Cpu180Context *activeCpu)  // E5  SCLR       MIGDS 2-49
     {
-    cp180OpIv(activeCpu);
+    u64        descPva;
+    bool       inhOnCond;
+    bool       isOk;
+    bool       isTruncated;
+    BdpOperand operand;
+    u8         power;
+    u8         remainder;
+
+    descPva           = activeCpu->nextP;
+    activeCpu->nextP += 8;
+    if (cpu180GetBdpDescriptor(activeCpu, descPva, activeCpu->opJ, 0, &activeCpu->srcDesc)
+        && cpu180GetBdpDescriptor(activeCpu, descPva + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
+        {
+        if (activeCpu->srcDesc.type > 6 || activeCpu->dstDesc.type > 6)
+            {
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
+            return;
+            }
+        if (bdp180DecodeOperand(activeCpu, &activeCpu->srcDesc, &operand))
+            {
+            isOk  = TRUE;
+            power = activeCpu->opD + (activeCpu->opI == 0 ? 0 : activeCpu->regX[activeCpu->opI]);
+            if (power < 38)
+                {
+                while (power-- > 0)
+                    {
+                    bdp180Mul10(&operand);
+                    if (operand.value[1] != 0)
+                        {
+                        isOk = FALSE;
+                        }
+                    }
+                }
+            else if (power < 0x80)
+                {
+                isOk = FALSE;
+                memset(operand.value, 0, sizeof(operand.value));
+                }
+            else
+                {
+                power = ~power + 1;
+                while (power > 1)
+                    {
+                    bdp180Div10(&operand, &remainder);
+                    power -= 1;
+                    }
+                bdp180AddDigit(&operand, 5);
+                bdp180Div10(&operand, &remainder);
+                if (operand.value[2] == 0 && operand.value[3] == 0)
+                    {
+                    operand.sign = 0;
+                    }
+                }
+            if (isOk == FALSE)
+                {
+                cpu180SetUserCondition(activeCpu, UCR62); // Arithmetic loss of significance
+                inhOnCond = (activeCpu->regUmr & ucrDefns[UCR62].bitMask) != 0 && IsTrapEnabled(activeCpu);
+                }
+            else
+                {
+                inhOnCond = FALSE;
+                }
+            if ((isOk || inhOnCond == FALSE) && bdp180EncodeOperand(activeCpu, &activeCpu->dstDesc, &operand, inhOnCond, &isTruncated))
+                {
+                if (isTruncated)
+                    {
+                    cpu180SetUserCondition(activeCpu, UCR57); // Arithmetic overflow
+                    }
+                }
+            }
+#if CcDebug == 1
+        traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
+        traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
+#endif
+        }
     }
 
 static void cp180OpE9(Cpu180Context *activeCpu)  // E9  CMPC       MIGDS 2-52

@@ -62,12 +62,15 @@
 **  bdp180.c
 */
 bool bdp180Add(BdpOperand *augend, BdpOperand *addend, BdpOperand *result, UserCondition *cond);
+void bdp180AddDigit(BdpOperand *operand, u8 digit);
 bool bdp180CopyFromBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer);
 bool bdp180CopyToBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer);
 bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *operand);
 bool bdp180Div(BdpOperand *mltand, BdpOperand *mltier, BdpOperand *result, UserCondition *cond);
+void bdp180Div10(BdpOperand *operand, u8 *remainder);
 bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *operand, bool inhOnTrunc, bool *isTruncated);
 bool bdp180Mul(BdpOperand *mltand, BdpOperand *mltier, BdpOperand *result, UserCondition *cond);
+void bdp180Mul10(BdpOperand *operand);
 bool bdp180Sub(BdpOperand *minend, BdpOperand *subend, BdpOperand *result, UserCondition *cond);
 
 /*
