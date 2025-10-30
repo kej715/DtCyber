@@ -758,7 +758,7 @@ void bdp180Div10(BdpOperand *operand, u8 *remainder)
 **------------------------------------------------------------------------*/
 bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *operand, bool inhOnTrunc, bool *isTruncated)
     {
-    u8  buffer[512];
+    u8  buffer[256];
     u8  d1;
     u8  d2;
     u16 i;
