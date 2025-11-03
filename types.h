@@ -351,7 +351,8 @@ typedef struct bdpDescriptor {
 // BDP numeric operand
 typedef struct bdpOperand
     {
-    bool sign;
+    bool rawSign;  // sign of raw operand
+    bool sign;     // operating sign (e.g., + for 0)
     u64  value[4];
     } BdpOperand;
 

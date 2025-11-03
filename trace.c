@@ -732,7 +732,7 @@ static DecCp180Control cp180Decode[0x100] =
     VCjkiD, "Illegal",  VF, VR,                                // EA
     VCjkiDB2, "TRANB,A%X,X0 A%X,X1,A%X,0x%X",VFJKID, VRAJX0AKX1AI, // EB
     VCjkiD, "Illegal",  VF, VR,                                // EC
-    VCjkiD, "EDIT,A%X,X0 A%X,X1,A%X,0x%X", VFJKID, VRAJX0AKX1AI, // ED
+    VCjkiDB2, "EDIT,A%X,X0 A%X,X1,A%X,0x%X", VFJKID, VRAJX0AKX1AI, // ED
     VCjkiD, "Illegal",  VF, VR,                                // EE
     VCjkiD, "Illegal",  VF, VR,                                // EF
 

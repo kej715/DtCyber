@@ -672,6 +672,7 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
         return FALSE;
         }
 
+    operand->rawSign = operand->sign;
     if (operand->sign && IsLongZero(operand->value))
         {
         operand->sign = 0;
@@ -881,27 +882,21 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                 i -= 1;
                 buffer[i] = d1 + 0x30;
                 }
-            if (IsLongZero(operand->value))
+            d1 = buffer[0] - 0x30;
+            if (d1 == 0)
                 {
-                d1 = buffer[0] - 0x30;
-                if (d1 == 0)
-                    {
-                    d1 = operand->sign ? 0x7d : 0x7b;
-                    }
-                else if (operand->sign)
-                    {
-                    d1 += 0x49;
-                    }
-                else
-                    {
-                    d1 += 0x40;
-                    }
-                buffer[0] = d1;
+                d1 = operand->sign ? 0x7d : 0x7b;
+                }
+            else if (operand->sign)
+                {
+                d1 += 0x49;
                 }
             else
                 {
-                *isTruncated = TRUE;
+                d1 += 0x40;
                 }
+            buffer[0] = d1;
+            *isTruncated = IsLongZero(operand->value) == FALSE;
             }
         else
             {
@@ -917,16 +912,8 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                 i -= 1;
                 if (i == 0)
                     {
-                    if (IsLongZero(operand->value))
-                        {
-                        buffer[i] = operand->sign ? 0x2d : 0x2b;
-                        }
-                    else
-                        {
-                        bdp180Div10(operand, &d1);
-                        buffer[i] = d1 + 0x30;
-                        *isTruncated = TRUE;
-                        }
+                    buffer[i] = operand->sign ? 0x2d : 0x2b;
+                    *isTruncated = IsLongZero(operand->value) == FALSE;
                     }
                 else
                     {
@@ -940,7 +927,6 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
             *isTruncated = TRUE;
             }
         break;
-    case 10: // Binary Unsigned
     case 11: // Binary Signed
         if (operand->sign)
             {
@@ -950,6 +936,7 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                 operand->sign = !operand->sign;
                 }
             }
+    case 10: // Binary Unsigned
         i = desc->length;
         while (i > 0)
             {

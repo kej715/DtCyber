@@ -60,14 +60,14 @@
 //  instruction stores data within the specified range of addresses. TRACE_INST_COUNT
 //  defines how many instructions to trace thereafter.
 //
-#define TRACE_INST_LIST   { 0x74 }
+//#define TRACE_INST_LIST   { 0xfa, 0xfb }
 #define TRACE_INST_COUNT  10
 
-//#define TRACE_RANGE_START 0xb04600000000
-//#define TRACE_RANGE_END   0xb04600000fff
+//#define TRACE_RANGE_START 0xb04d00018600
+//#define TRACE_RANGE_END   0xb04d00018687
 
-//#define TRACE_STORE_START 0xb04600000000
-//#define TRACE_STORE_END   0xb0460000000f
+//#define TRACE_STORE_START 0xb04d00018680
+//#define TRACE_STORE_END   0xb04d0001868f
 
 #endif
 
@@ -5279,7 +5279,7 @@ static void cp180Op74(Cpu180Context *activeCpu)  // 74  CMPN       MIGDS 2-52
                 {
                 result = 1;
                 }
-            activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | (result << 30);
+            activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | ((u64)result << 30);
 
 #if CcDebug == 1
             traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
@@ -7035,6 +7035,7 @@ static void cp180OpE5(Cpu180Context *activeCpu)  // E5  SCLR       MIGDS 2-49
 
 static void cp180OpE9(Cpu180Context *activeCpu)  // E9  CMPC       MIGDS 2-52
     {
+    u8  db;
     u8  *dp;
     u16 i;
     u8  *sp;
@@ -7043,6 +7044,7 @@ static void cp180OpE9(Cpu180Context *activeCpu)  // E9  CMPC       MIGDS 2-52
     u16 n;
     u16 offset;
     u8  result;
+    u8  sb;
     u8  srcBuf[256];
     u8  trnBuf[256];
     u64 trnPva;
@@ -7079,12 +7081,14 @@ static void cp180OpE9(Cpu180Context *activeCpu)  // E9  CMPC       MIGDS 2-52
         dp     = dstBuf;
         for (i = 0; i < n; i++)
             {
-            if (*sp == *dp || trnBuf[*sp] == trnBuf[*dp])
+            sb = trnBuf[*sp];
+            db = trnBuf[*dp];
+            if (sb == db)
                 {
                 sp += 1;
                 dp += 1;
                 }
-            else if (*sp < *dp)
+            else if (sb < db)
                 {
                 result = 3;
                 break;
@@ -7162,7 +7166,505 @@ static void cp180OpEB(Cpu180Context *activeCpu)  // EB  TRANB      MIGDS 2-54
 
 static void cp180OpED(Cpu180Context *activeCpu)  // ED  EDIT       MIGDS 2-55
     {
-    cp180OpIv(activeCpu);
+    u16        i;
+    u64        descPva;
+    u8         digit;
+    u8         *dLim;
+    u8         *dp;
+    u8         dstBuf[256];
+    bool       es;
+    bool       isInvalidData;
+    u16        len;
+    u8         maskBuf[256];
+    u64        maskPva;
+    u8         mop;
+    u8         *mLim;
+    u8         *mp;
+    u8         sct[8];
+    static u8  sctPreset[8] = { 0x20, 0x20, 0x2b, 0x2d, 0x2c, 0x2e, 0x24, 0x2f };
+    u8         *sLim;
+    u8         sm[15];
+    u8         smLen;
+    bool       sn;
+    u8         *sp;
+    u8         srcBuf[256];
+    BdpOperand srcOperand;
+    u8         sv;
+    bool       zf;
+
+    descPva           = activeCpu->nextP;
+    activeCpu->nextP += 8;
+    if (cpu180GetBdpDescriptor(activeCpu, descPva, activeCpu->opJ, 0, &activeCpu->srcDesc) == FALSE
+        || cpu180GetBdpDescriptor(activeCpu, descPva + 4, activeCpu->opK, 1, &activeCpu->dstDesc) == FALSE)
+        {
+        return;
+        }
+    if (activeCpu->srcDesc.type > 9 || activeCpu->dstDesc.length > 256 || activeCpu->srcDesc.length > 256)
+        {
+        cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
+        return;
+        }
+    if (activeCpu->srcDesc.type < 9)
+        {
+        if (bdp180DecodeOperand(activeCpu, &activeCpu->srcDesc, &srcOperand) == FALSE)
+            {
+            return;
+            }
+        if (activeCpu->srcDesc.length > 0)
+            {
+            switch (activeCpu->srcDesc.type)
+                {
+            default:
+            case 0: // Packed Decimal No Sign
+                len = activeCpu->srcDesc.length * 2;
+                break;
+            case 1: // Packed Decimal No Sign Leading Slack Digit
+            case 2: // Packed Decimal Signed
+                len = (activeCpu->srcDesc.length * 2) - 1;
+                break;
+            case 3: // Packed Decimal Signed Leading Slack Digit
+                len = (activeCpu->srcDesc.length * 2) - 2;
+                break;
+            case 4: // Unpacked Decimal Unsigned
+            case 5: // Unpacked Decimal Trailing Sign Combined Hollerith
+            case 7: // Unpacked Decimal Leading Sign Combined Hollerith
+                len = activeCpu->srcDesc.length;
+                break;
+            case 6: // Unpacked Decimal Trailing Sign Separate
+            case 8: // Unpacked Decimal Leading Sign Separate
+                len = activeCpu->srcDesc.length - 1;
+                break;
+                }
+            sLim = &srcBuf[len];
+            sp   = sLim;
+            while (len-- > 0)
+                {
+                bdp180Div10(&srcOperand, &digit);
+                sp -= 1;
+                *sp = 0x30 + digit;
+                }
+            }
+        else
+            {
+            sLim = srcBuf;
+            }
+        sp = srcBuf;
+        sn = srcOperand.rawSign;
+        }
+    else // type == 9
+        {
+        if (bdp180CopyToBuf(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, srcBuf) == FALSE)
+            {
+            return;
+            }
+        sp   = srcBuf;
+        sLim = sp + activeCpu->srcDesc.length;
+        sn   = FALSE;
+        }
+    maskPva = (RingSegMask & activeCpu->regA[activeCpu->opI]) | ((activeCpu->regA[activeCpu->opI] + activeCpu->opD) & Mask32);
+    if (bdp180CopyToBuf(activeCpu, maskPva, 1, maskBuf) == FALSE) // fetch the length byte
+        {
+        return;
+        }
+    len = maskBuf[0];
+    if (bdp180CopyToBuf(activeCpu, maskPva, len, maskBuf) == FALSE) // fetch the whole edit mask
+        {
+        return;
+        }
+    dp    = dstBuf;
+    dLim  = dstBuf + activeCpu->dstDesc.length;
+    mp    = &maskBuf[1];
+    mLim  = maskBuf + maskBuf[0];
+    smLen = 0;
+    es    = FALSE;
+    zf    = TRUE;
+    memcpy(sct, sctPreset, sizeof(sct));
+
+    //
+    //  Traverse the edit mask and execute the MOP's in it one by one
+    //
+    isInvalidData = FALSE;
+    while (mp < mLim && isInvalidData == FALSE)
+        {
+        mop = *mp >> 4;
+        sv  = *mp & Mask4;
+        mp += 1;
+        switch (mop)
+            {
+        //
+        //  MOP 0
+        //
+        case 0x0:
+            if ((activeCpu->srcDesc.type == 9 && sv > 0) || dp + sv > dLim || sp + sv > sLim)
+                {
+                isInvalidData = TRUE;
+                }
+            else if (sv > 0)
+                {
+                es = TRUE;
+                while (sv-- > 0)
+                    {
+                    if (*sp != '0')
+                        {
+                        zf = FALSE;
+                        }
+                    *dp++ = *sp++;
+                    }
+                }
+            break;
+        //
+        //  MOP 1
+        //
+        case 0x1:
+            if ((activeCpu->srcDesc.type != 9 && sv > 0) || dp + sv > dLim || sp + sv > sLim)
+                {
+                isInvalidData = TRUE;
+                }
+            else if (sv > 0)
+                {
+                es = TRUE;
+                while (sv-- > 0)
+                    {
+                    *dp++ = *sp++;
+                    }
+                }
+            break;
+        //
+        //  MOP 2 and 3
+        //
+        default:
+        case 0x2: // no operation
+        case 0x3:
+            break;
+        //
+        //  MOP 4
+        //
+        case 0x4:
+            if (dp + sv > dLim || mp + sv > mLim)
+                {
+                isInvalidData = TRUE;
+                }
+            else if (sv > 0)
+                {
+                while (sv-- > 0)
+                    {
+                    *dp++ = *mp++;
+                    }
+                }
+            break;
+        //
+        //  MOP 5
+        //
+        case 0x5:
+            sm[0] = sn ? sct[3] : sct[sv & Mask3];
+            smLen = 1;
+            break;
+        //
+        //  MOP 6
+        //
+        case 0x6:
+            if (mp + sv > mLim)
+                {
+                isInvalidData = TRUE;
+                }
+            else
+                {
+                for (i = 0; i < sv; i++)
+                    {
+                    sm[i] = *mp++;
+                    }
+                smLen = sv;
+                }
+            break;
+        //
+        //  MOP 7
+        //
+        case 0x7:
+            if ((activeCpu->srcDesc.type == 9 && sv > 0) || sp + sv > sLim)
+                {
+                isInvalidData = TRUE;
+                }
+            else if (sv > 0)
+                {
+                while (sv-- > 0)
+                    {
+                    if (es == FALSE)
+                        {
+                        if (*sp == '0')
+                            {
+                            if (dp + 1 > dLim)
+                                {
+                                isInvalidData = TRUE;
+                                }
+                            else
+                                {
+                                *dp++ = sct[1];
+                                }
+                            }
+                        else
+                            {
+                            es = TRUE;
+                            if (dp + smLen + 1 > dLim)
+                                {
+                                isInvalidData = TRUE;
+                                }
+                            else
+                                {
+                                memcpy(dp, sm, smLen);
+                                dp   += smLen;
+                                *dp++ = *sp;
+                                zf    = FALSE;
+                                }
+                            }
+                        }
+                    else if (dp + 1 > dLim)
+                        {
+                        isInvalidData = TRUE;
+                        }
+                    else
+                        {
+                        if (*sp != '0')
+                            {
+                            zf = FALSE;
+                            }
+                        *dp++ = *sp;
+                        }
+                    sp += 1;
+                    }
+                }
+            break;
+        //
+        //  MOP 8
+        //
+        case 0x8:
+            if (es == FALSE)
+                {
+                es = TRUE;
+                if (dp + smLen > dLim)
+                    {
+                    isInvalidData = TRUE;
+                    }
+                else
+                    {
+                    memcpy(dp, sm, smLen);
+                    dp   += smLen;
+                    smLen = 0;
+                    }
+                }
+            break;
+        //
+        //  MOP 9
+        //
+        case 0x9:
+            if (sv > 7)
+                {
+                if (dp + smLen > dLim)
+                    {
+                    isInvalidData = TRUE;
+                    }
+                else
+                    {
+                    memcpy(dp, sm, smLen);
+                    dp   += smLen;
+                    smLen = 0;
+                    }
+                }
+            else if (dp + 1 > dLim)
+                {
+                isInvalidData = TRUE;
+                }
+            else
+                {
+                *dp++ = sct[sv];
+                }
+            break;
+        //
+        //  MOP A
+        //
+        case 0xa:
+            if (sv > 7)
+                {
+                if (dp + smLen > dLim)
+                    {
+                    isInvalidData = TRUE;
+                    }
+                if (sn == FALSE)
+                    {
+                    memcpy(dp, sm, smLen);
+                    dp   += smLen;
+                    smLen = 0;
+                    }
+                else
+                    {
+                    for (i = 0; i < smLen; i++)
+                        {
+                        *dp++ = sct[0];
+                        }
+                    }
+                }
+            else if (dp + 1 > dLim)
+                {
+                isInvalidData = TRUE;
+                }
+            else if (sn == FALSE)
+                {
+                *dp++ = sct[sv];
+                }
+            else
+                {
+                *dp++ = sct[0];
+                }
+            break;
+        //
+        //  MOP B
+        //
+        case 0xb:
+            if (sv > 7)
+                {
+                if (dp + smLen > dLim)
+                    {
+                    isInvalidData = TRUE;
+                    }
+                if (sn == TRUE)
+                    {
+                    memcpy(dp, sm, smLen);
+                    dp   += smLen;
+                    smLen = 0;
+                    }
+                else
+                    {
+                    for (i = 0; i < smLen; i++)
+                        {
+                        *dp++ = sct[0];
+                        }
+                    }
+                }
+            else if (dp + 1 > dLim)
+                {
+                isInvalidData = TRUE;
+                }
+            else if (sn == TRUE)
+                {
+                *dp++ = sct[sv];
+                }
+            else
+                {
+                *dp++ = sct[0];
+                }
+            break;
+        //
+        //  MOP C
+        //
+        case 0xc:
+            if (sv > 7)
+                {
+                if (dp + smLen > dLim)
+                    {
+                    isInvalidData = TRUE;
+                    }
+                else if (es)
+                    {
+                    memcpy(dp, sm, smLen);
+                    dp   += smLen;
+                    smLen = 0;
+                    }
+                else
+                    {
+                    for (i = 0; i < smLen; i++)
+                        {
+                        *dp++ = sct[1];
+                        }
+                    }
+                }
+            else if (dp + 1 > dLim)
+                {
+                isInvalidData = TRUE;
+                }
+            else if (es)
+                {
+                *dp++ = sct[sv];
+                }
+            else
+                {
+                *dp++ = sct[1];
+                }
+            break;
+        //
+        //  MOP D
+        //
+        case 0xd:
+            if (mp + 1 > mLim)
+                {
+                isInvalidData = TRUE;
+                }
+            else
+                {
+                sct[sv & Mask3] = *mp++;
+                }
+            break;
+        //
+        //  MOP E
+        //
+        case 0xe:
+            if (dp + sv > dLim)
+                {
+                isInvalidData = TRUE;
+                }
+            else
+                {
+                for (i = 0; i < sv; i++)
+                    {
+                    *dp++ = sct[1];
+                    }
+                }
+            break;
+        //
+        //  MOP F
+        //
+        case 0xf:
+            if (sv > 0)
+                {
+                if (zf == FALSE)
+                    {
+                    mp = mLim;
+                    }
+                else
+                    {
+                    dp = dstBuf;
+                    if (dp + sv > dLim)
+                        {
+                        isInvalidData = TRUE;
+                        }
+                    else
+                        {
+                        for (i = 0; i < sv; i++)
+                            {
+                            *dp++ = sct[1];
+                            }
+                        }
+                    }
+                }
+            break;
+            }
+        }
+
+    if (isInvalidData)
+        {
+        cpu180SetUserCondition(activeCpu, UCR63); // Invalid BDP data
+        }
+    if (isInvalidData == FALSE || IsTrapEnabled(activeCpu) == FALSE)
+        {
+        if (bdp180CopyFromBuf(activeCpu, activeCpu->dstDesc.pva, dp - dstBuf, dstBuf) == FALSE)
+            {
+            return;
+            }
+        }
+
+#if CcDebug == 1
+    traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
+    traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
+    traceMemoryBlock(activeCpu, maskPva, maskBuf[0], "    edit mask:");
+#endif
     }
 
 static void cp180OpF3(Cpu180Context *activeCpu)  // F3  SCNB       MIGDS 2-54
@@ -7307,12 +7809,226 @@ static void cp180OpF9(Cpu180Context *activeCpu)  // F9  MOVI       MIGDS 2-62
 
 static void cp180OpFA(Cpu180Context *activeCpu)  // FA  CMPI       MIGDS 2-63
     {
-    cp180OpIv(activeCpu);
+    u8         buf[256];
+    u8         byte;
+    u64        descPva;
+    u16        i;
+    u16        len;
+    BdpOperand operand;
+    u8         result;
+
+    descPva           = activeCpu->nextP;
+    activeCpu->nextP += 4;
+    if (cpu180GetBdpDescriptor(activeCpu, descPva, activeCpu->opK, 1, &activeCpu->dstDesc) == FALSE)
+        {
+        return;
+        }
+    byte   = (((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI]) + activeCpu->opD) & Mask8;
+    result = 0;
+    switch (activeCpu->opJ & Mask2)
+        {
+    default:
+    case 0:
+        if (activeCpu->dstDesc.type != 10 && activeCpu->dstDesc.type != 11)
+            {
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
+            return;
+            }
+        if (bdp180DecodeOperand(activeCpu, &activeCpu->dstDesc, &operand) == FALSE)
+            {
+            return;
+            }
+        break;
+
+    case 1:
+        if (activeCpu->dstDesc.type > 6)
+            {
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
+            return;
+            }
+        if (byte < 0x30 || byte > 0x39)
+            {
+            cpu180SetUserCondition(activeCpu, UCR63); // Invalid BDP data
+            return;
+            }
+        if (bdp180DecodeOperand(activeCpu, &activeCpu->dstDesc, &operand) == FALSE)
+            {
+            return;
+            }
+        byte -= 0x30;
+        break;
+
+    case 2:
+        if (activeCpu->dstDesc.length > 256)
+            {
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
+            return;
+            }
+        if (bdp180CopyToBuf(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, buf) == FALSE)
+            {
+            return;
+            }
+        len = activeCpu->dstDesc.length;
+        if (len < 1)
+            {
+            len    = 1;
+            buf[0] = 0x20;
+            }
+        for (i = 0; i < len; i++)
+            {
+            if (byte < buf[i])
+                {
+                result = 3;
+                break;
+                }
+            else if (byte > buf[i])
+                {
+                result = 1;
+                break;
+                }
+            }
+        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | ((u64)result << 30);
+
+#if CcDebug == 1
+        traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
+#endif
+        return;
+
+    case 3:
+        if (activeCpu->dstDesc.length > 256)
+            {
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
+            return;
+            }
+        if (bdp180CopyToBuf(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, buf) == FALSE)
+            {
+            return;
+            }
+        len = activeCpu->dstDesc.length;
+        if (len < 1)
+            {
+            len    = 1;
+            buf[0] = 0x20;
+            }
+        if (byte == buf[0])
+            {
+            for (i = 1; i < len; i++)
+                {
+                if (0x20 < buf[i])
+                    {
+                    result = 3;
+                    break;
+                    }
+                else if (0x20 > buf[i])
+                    {
+                    result = 1;
+                    break;
+                    }
+                }
+            }
+        else if (byte < buf[0])
+            {
+            result = 3;
+            }
+        else if (byte > buf[0])
+            {
+            result = 1;
+            }
+        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | ((u64)result << 30);
+
+#if CcDebug == 1
+        traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
+#endif
+        return;
+        }
+    if (operand.sign) // operand is negative
+        {
+        result = 1;
+        }
+    else if (operand.value[2] != 0 || byte < operand.value[3])
+        {
+        result = 3;
+        }
+    else if (byte > operand.value[3])
+        {
+        result = 1;
+        }
+    activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | ((u64)result << 30);
+
+#if CcDebug == 1
+    traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
+#endif
     }
 
 static void cp180OpFB(Cpu180Context *activeCpu)  // FB  ADDI       MIGDS 2-64
     {
-    cp180OpIv(activeCpu);
+    u8             byte;
+    UserCondition cond;
+    u64            descPva;
+    BdpOperand     dstOperand;
+    bool           isTruncated;
+    BdpOperand     result;
+    BdpOperand     srcOperand;
+
+    descPva           = activeCpu->nextP;
+    activeCpu->nextP += 4;
+    if (cpu180GetBdpDescriptor(activeCpu, descPva, activeCpu->opK, 1, &activeCpu->dstDesc) == FALSE)
+        {
+        return;
+        }
+    byte = (((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI]) + activeCpu->opD) & Mask8;
+    if ((activeCpu->opJ & 1) == 0) // j == 0
+        {
+        if (activeCpu->dstDesc.type != 10 && activeCpu->dstDesc.type != 11)
+            {
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
+            return;
+            }
+        if (bdp180DecodeOperand(activeCpu, &activeCpu->dstDesc, &dstOperand) == FALSE)
+            {
+            return;
+            }
+        }
+    else // j == 1
+        {
+        if (activeCpu->dstDesc.type > 6)
+            {
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
+            return;
+            }
+        if (byte < 0x30 || byte > 0x39)
+            {
+            cpu180SetUserCondition(activeCpu, UCR63); // Invalid BDP data
+            return;
+            }
+        if (bdp180DecodeOperand(activeCpu, &activeCpu->dstDesc, &dstOperand) == FALSE)
+            {
+            return;
+            }
+        byte -= 0x30;
+        }
+
+#if CcDebug == 1
+    traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
+#endif
+
+    memset(&srcOperand, 0, sizeof(BdpOperand));
+    srcOperand.value[3] = byte;
+    if (bdp180Add(&dstOperand, &srcOperand, &result, &cond) == FALSE)
+        {
+        cpu180SetUserCondition(activeCpu, cond);
+        }
+    else if (bdp180EncodeOperand(activeCpu, &activeCpu->dstDesc, &result, TRUE, &isTruncated))
+        {
+        if (isTruncated)
+            {
+            cpu180SetUserCondition(activeCpu, UCR57); // Arithmetic overflow
+            }
+        }
+
+#if CcDebug == 1
+    traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination result block:");
+#endif
     }
 
 /*--------------------------------------------------------------------------
