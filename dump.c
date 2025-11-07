@@ -199,6 +199,7 @@ void dumpCpu(void)
     u8               i;
     CpWord           lastData;
     FILE             *pf = cpuF;
+    u32              pti;
     u32              rma;
     u8               shiftCount;
 
@@ -280,7 +281,7 @@ void dumpCpu(void)
             cpu180 = cpus180 + cp;
             fprintf(pf, " P %02x ", cpu180->key);
             dumpPrintPva(pf, cpu180->regP);
-            if (cpu180PvaToRma(cpu180, cpu180->regP & Mask48, AccessModeExecute, &rma, &cond))
+            if (cpu180PvaToRma(cpu180, cpu180->regP & Mask48, AccessModeNone, &rma, &pti, &cond))
                 {
                 fprintf(pf, " (RMA %08x)", rma);
                 }

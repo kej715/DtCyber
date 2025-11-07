@@ -148,7 +148,7 @@ void cpu180MacWriteCp(Cpu180Context *ctx, u8 type, u8 byte);
 void cpu180PpReadMem(u32 address, CpWord *data);
 void cpu180PpWriteMem(u32 address, CpWord data);
 bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u8 ring, u64 word, int count);
-bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *rma, MonitorCondition *cond);
+bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *rma, u32 *pti, MonitorCondition *cond);
 void cpu180SetMonitorCondition(Cpu180Context *ctx, MonitorCondition cond);
 void cpu180SetUserCondition(Cpu180Context *ctx, UserCondition cond);
 void cpu180Step(Cpu180Context *activeCpu);

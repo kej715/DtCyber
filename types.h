@@ -442,7 +442,7 @@ typedef struct
 */
 typedef enum
     {
-    AccessModeAny     = 0,
+    AccessModeNone    = 0,
     AccessModeExecute = 1,
     AccessModeRead    = 2,
     AccessModeWrite   = 4
