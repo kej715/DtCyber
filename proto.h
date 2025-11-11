@@ -153,6 +153,8 @@ void cpu180SetMonitorCondition(Cpu180Context *ctx, MonitorCondition cond);
 void cpu180SetUserCondition(Cpu180Context *ctx, UserCondition cond);
 void cpu180Step(Cpu180Context *activeCpu);
 void cpu180Store170Xp(Cpu180Context *ctx, u32 xpa);
+bool cpu180TranslatePvaSequence(Cpu180Context *ctx, u64 pva, u16 count, u8 incr, u8 ring, Cpu180AccessMode access, u32 *rmas);
+void cpu180Trap(Cpu180Context *ctx);
 void cpu180UpdateIntervalTimers(u32 delta);
 void cpu180UpdatePageSize(Cpu180Context *ctx);
 

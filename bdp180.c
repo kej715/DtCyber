@@ -216,47 +216,70 @@ bool bdp180CopyFromBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
     {
     u8  *bp;
     u16 i;
+    u64 mask;
     u16 n;
+    u32 rmas[32];
+    u8  shift;
     u64 word;
+    u32 wordAddr;
 
     //
     //  Copy bytes from the buffer to the destination block. Optimize the copy by storing
     //  whole words in memory.
     //
     bp = buffer;
-    if ((pva & Mask3) != 0) // destination not word-aligned, so copy enough bytes to word-align it
+    if ((pva & Mask3) != 0 && count > 0)
         {
-        n = 8 - (pva & Mask3);
+        //
+        // Destination not word-aligned, so copy enough bytes to reach next word boundary
+        //
+        n     = 8 - (pva & Mask3);
+        shift = (n - 1) << 3;
         if (n > count)
             {
             n = count;
             }
-        word = 0;
-        for (i = 0; i < n; i++)
-            {
-            word = (word << 8) | *bp++;
-            }
-        if (cpu180PutBytes(ctx, pva, RingOf(pva), word, n) == FALSE)
+        if (cpu180TranslatePvaSequence(ctx, pva, 1, n, RingOf(pva), AccessModeWrite, rmas) == FALSE)
             {
             return FALSE;
             }
-        pva   += n;
-        count -= n;
+        pva     += n;
+        count   -= n;
+        wordAddr = rmas[0] >> 3;
+        word     = cpMem[wordAddr];
+        while (n-- > 0)
+            {
+            mask   = ~((u64)0xff << shift);
+            word   = (word & mask) | ((u64)*bp++ << shift);
+            shift -= 8;
+            }
+        cpMem[wordAddr] = word;
         }
-    while (count > 0) // copy a whole word at a time
+    if (count > 0)
         {
-        n = (count >= 8) ? 8 : count;
-        word = 0;
-        for (i = 0; i < n; i++)
-            {
-            word = (word << 8) | *bp++;
-            }
-        if (cpu180PutBytes(ctx, pva, RingOf(pva), word, n) == FALSE)
+        //
+        // Copy up to eight bytes at a time, word-aligned
+        //
+        if (cpu180TranslatePvaSequence(ctx, pva, (count + 7) >> 3, 8, RingOf(pva), AccessModeWrite, rmas) == FALSE)
             {
             return FALSE;
             }
-        pva   += n;
-        count -= n;
+        i = 0;
+        while (count > 0) // copy a whole word at a time
+            {
+            n        = (count >= 8) ? 8 : count;
+            count   -= n;
+            wordAddr = rmas[i++] >> 3;
+            word     = cpMem[wordAddr];
+            shift    = 56;
+            while (n-- > 0)
+                {
+                mask   = ~((u64)0xff << shift);
+                word   = (word & mask) | ((u64)*bp++ << shift);
+                shift -= 8;
+                }
+            cpMem[wordAddr] = word;
+            }
         }
 
     return TRUE;
@@ -277,7 +300,9 @@ bool bdp180CopyFromBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
 bool bdp180CopyToBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
     {
     u8  *bp;
+    u8  i;
     u16 n;
+    u32 rmas[32];
     u8  shift;
     u64 word;
 
@@ -285,41 +310,53 @@ bool bdp180CopyToBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
     //  Copy bytes of the source block to the buffer. Optimize the copy by fetching
     //  whole words from memory.
     //
-    bp  = buffer;
-    if ((pva & Mask3) != 0) // source not word-aligned, so copy enough bytes to word-align it
+    bp = buffer;
+    if ((pva & Mask3) != 0 && count > 0)
         {
-        n = 8 - (pva & Mask3);
+        //
+        // Source not word-aligned, so copy enough bytes to reach next word boundary
+        //
+        n     = 8 - (pva & Mask3);
+        shift = (n - 1) << 3;
         if (n > count)
             {
             n = count;
             }
-        if (cpu180GetBytes(ctx, pva, n, RingOf(pva), AccessModeRead, &word) == FALSE)
+        if (cpu180TranslatePvaSequence(ctx, pva, 1, n, RingOf(pva), AccessModeRead, rmas) == FALSE)
             {
             return FALSE;
             }
         pva   += n;
         count -= n;
-        shift  = (n - 1) << 3;
+        word   = cpMem[rmas[0] >> 3];
         while (n-- > 0)
             {
-            *bp++  = (u8)((word >> shift) & 0xff);
+            *bp++  = (u8)((word >> shift) & Mask8);
             shift -= 8;
             }
         }
-    while (count > 0) // copy a whole word at a time
+    //
+    // Copy a whole word at a time
+    //
+    if (count > 0)
         {
-        n = (count >= 8) ? 8 : count;
-        if (cpu180GetBytes(ctx, pva, n, RingOf(pva), AccessModeRead, &word) == FALSE)
+        n = (count + 7) >> 3;
+        if (cpu180TranslatePvaSequence(ctx, pva, n, 8, RingOf(pva), AccessModeRead, rmas) == FALSE)
             {
             return FALSE;
             }
-        pva   += n;
-        count -= n;
-        shift  = (n - 1) << 3;
-        while (n-- > 0)
+        i = 0;
+        while (count > 0)
             {
-            *bp++  = (u8)((word >> shift) & 0xff);
-            shift -= 8;
+            n      = (count >= 8) ? 8 : count;
+            word   = cpMem[rmas[i++] >> 3];
+            count -= n;
+            shift  = 56;
+            while (n-- > 0)
+                {
+                *bp++  = (u8)((word >> shift) & Mask8);
+                shift -= 8;
+                }
             }
         }
 

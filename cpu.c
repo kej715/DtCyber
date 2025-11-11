@@ -712,7 +712,8 @@ void cpuStep(Cpu170Context *activeCpu)
             {
             return;
             }
-        if ((ctx180->regMcr & 0xfbff) != 0 || ctx180->regUcr != 0)
+        ctx180->pendingAction = Rni;
+        if ((ctx180->regMcr & 0xbbde) != 0 || ctx180->regUcr != 0)
             {
             cpu180CheckConditions(ctx180);
             if (ctx180->pendingAction > Stack)
@@ -720,8 +721,13 @@ void cpuStep(Cpu170Context *activeCpu)
                 if (ctx180->pendingAction == Exch)
                     {
                     cpuExchangeTo180(activeCpu, FALSE);
+                    cpu180Step(ctx180);
                     }
-                cpu180Step(ctx180);
+                else if (ctx180->pendingAction == Trap)
+                    {
+                    cpu180Trap(ctx180);
+                    cpu180Step(ctx180);
+                    }
                 return;
                 }
             }
@@ -742,7 +748,6 @@ void cpuStep(Cpu170Context *activeCpu)
             if (isCyber180)
                 {
                 ctx180->regMcr &= 0xfbff; // clear MCR53 CYBER 170 state exchange request
-                cpu180CheckConditions(ctx180);
                 }
             }
         cpuReleaseExchangeMutex();
@@ -854,12 +859,11 @@ void cpuStep(Cpu170Context *activeCpu)
             cpuFetchOpWord(activeCpu);
             }
         /*
-        **  Check for monitor or user condition indications in dual-state environment
+        **  Exit if CPU has switched to CYBER 180 state
         */
         if (isCyber180)
             {
-            if (ctx180->regVmid == 0
-                || (ctx180->pendingAction > Stack && (ctx180->regMcr != 0 || ctx180->regUcr != 0)))
+            if (ctx180->regVmid == 0)
                 {
                 return;
                 }
@@ -1442,7 +1446,6 @@ static void cpuExchangeTo180(Cpu170Context *activeCpu, bool setSysCall)
     cpu180Load180Xp(ctx180, ctx180->regMps >> 3);
     ctx180->nextKey = ctx180->key;
     ctx180->nextP   = ctx180->regP;
-    cpu180CheckConditions(ctx180);
     }
 
 /*--------------------------------------------------------------------------

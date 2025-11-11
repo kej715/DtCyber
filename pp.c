@@ -1375,10 +1375,6 @@ static void ppOpEXN(void)     // 26
             /*
             **  Pass.
             */
-            if (isCyber180)
-                {
-                cpus180[cpu->id].regMcr |= 0x0400; // set MCR53
-                }
             cpuReleaseExchangeMutex();
 
             return;
