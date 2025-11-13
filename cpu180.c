@@ -4011,7 +4011,32 @@ static void cp180Op02(Cpu180Context *activeCpu)  // 02  EXCHANGE   MIGDS 2-132
 
 static void cp180Op03(Cpu180Context *activeCpu)  // 03  INTRUPT    MIGDS 2-141
     {
-    cp180OpIv(activeCpu);
+    u64 Xk;
+
+    if (cpu180GetCurrentXp(activeCpu) < 3) // Global privileged mode required
+        {
+        cpu180SetUserCondition(activeCpu, UCR48); // privileged instruction fault
+        return;
+        }
+    //
+    // This instruction is capable of sending interrupts to external memories, depending
+    // upon the processor class. For example, P3 (e.g., Cyber 860) can send interrupts
+    // to external memories when bit 33 of Xk is set. This is not currently supported.
+    //
+    // Ordinarily, on processors capable of being connected to more than one memory (e.g., P3),
+    // bit 63 of Xk is associated with local memory port 0, and bit 61 is associated with
+    // local memory port 2. Local memory port 0 is associated with CPU0, and local memory port 2
+    // is associated with CPU 1.
+    //
+    Xk = activeCpu->regX[activeCpu->opK];
+    if ((Xk & 1) != 0)
+        {
+        cpus180[0].regMcr |= mcrDefns[MCR56].bitMask; // External interrupt
+        }
+    else if ((Xk & 4) != 0 && cpuCount > 1)
+        {
+        cpus180[1].regMcr |= mcrDefns[MCR56].bitMask; // External interrupt
+        }
     }
 
 static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
