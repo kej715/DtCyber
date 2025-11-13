@@ -55,7 +55,54 @@
 */
 
 /*
-**  Field name codes, used in various packets such as CNF/TE. These are
+**  CDCNet attribute number codes, used in defining terminal characteristics
+**  and responding to requests for terminal characteristics.
+*/
+#define AnTdAC                0x46  // Attention character
+#define AnTdACA               0x0A  // Attention character action (0 - 9)
+#define AnTdBC                0x44  // Backspace character
+#define AnTdBKA               0x0B  // Break key action
+#define AnTdBLC               0x43  // Begin line character
+#define AnTdCFC               0x56  // Character flow control
+#define AnTdCLC               0x41  // Cancel line character
+#define AnTdCRD               0x51  // Carriage return delay
+#define AnTdCRS               0x4D  // Carriage return sequence
+#define AnTdCS                0x58  // Code set
+#define AnTdE                 0x5A  // Echoplex
+#define AnTdELC               0x42  // End line character
+#define AnTdELP               0x54  // End line positioning
+#define AnTdEOS               0x4C  // End output sequence
+#define AnTdEPA               0x50  // End page action
+#define AnTdEPC               0x45  // End partial character
+#define AnTdEPP               0x55  // End partial position
+#define AnTdFFD               0x53  // Form feed delay
+#define AnTdFFS               0x4F  // Form feed sequence
+#define AnTdFL                0x4B  // Fold line
+#define AnTdHP                0x49  // Hold page
+#define AnTdHPO               0x4A  // Hold page over
+#define AnTdIBS               0x0C  // Input block size
+#define AnTdIEM               0x02  // Input editing mode
+#define AnTdIOM               0x01  // Input output mode
+#define AnTdLFD               0x52  // Line feed delay
+#define AnTdLFS               0x4E  // Line feed sequence
+#define AnTdNCC               0x40  // Netword command character
+#define AnTdP                 0x59  // Parity
+#define AnTdPCF               0x09  // Partial character forwarding
+#define AnTdPL                0x47  // Page length
+#define AnTdPW                0x48  // Page width
+#define AnTdSA                0x5B  // Status action
+#define AnTdSBC               0x0E  // Store backspace character
+#define AnTdSND               0x0D  // Store NULs DELs
+#define AnTdTCM               0x03  // Transparent character mode
+#define AnTdTFC               0x04  // Transparent forward character
+#define AnTdTLM               0x07  // Transparent length mode
+#define AnTdTM                0x57  // Terminal model
+#define AnTdTML               0x08  // Transparent message length
+#define AnTdTTC               0x05  // Transparent terminate character
+#define AnTdTTM               0x06  // Transparent timeout mode
+
+/*
+**  CCP field name codes, used in various packets such as CNF/TE. These are
 **  defined in "NAM 1 Host Application Progr. RM (60499500W 1987)" on
 **  pages 3-59 to 3-62.
 */
@@ -141,6 +188,7 @@
 **  ---------------------------
 */
 static void npuTipNotifyAck(Tcb *tp, u8 bsn);
+static void npuTipSendAnAvList(u8 *mp, int len, Tcb *tp);
 static void npuTipSetupDefaultTc2(void);
 static void npuTipSetupDefaultTc3(void);
 static void npuTipSetupDefaultTc7(void);
@@ -198,12 +246,33 @@ static u8 blockAck[] =
     BtHTBACK,           // BT/BSN/PRIO
     };
 
-static u8 intrRsp[4] =
+static u8 intrRsp[] =
     {
     0,                  // DN
     0,                  // SN
     0,                  // CN
-    BtHTICMR,           // BT/BSN/PRIO
+    BtHTICMR            // BT/BSN/PRIO
+    };
+
+static u8 rccRsp[1024] =
+    {
+    0,                  // DN
+    0,                  // SN
+    0,                  // CN
+    BtHTCMD,            // BT/BSN/PRIO
+    PfcCTRL,
+    SfcCCD
+    };
+
+static u8 rccRspA[] =
+    {
+    0,                  // DN
+    0,                  // SN
+    0,                  // CN
+    BtHTCMD,            // BT/BSN/PRIO
+    PfcCTRL,
+    SfcRCC | SfcErr,
+    0
     };
 
 static TipParams defaultTc2;
@@ -213,6 +282,18 @@ static TipParams defaultTc9;
 static TipParams defaultTc14;
 static TipParams defaultTc28;
 static TipParams defaultTc29;
+
+/*
+**  Default list of CDCNet terminal attributes to send when none are explicitly requested
+*/
+static u8 defaultANList[] =
+    {
+    AnTdAC, AnTdACA, AnTdBC, AnTdBKA, AnTdBLC, AnTdCFC, AnTdCLC, AnTdCRD, AnTdCRS, AnTdCS,
+    AnTdE, AnTdELC, AnTdELP, AnTdEOS, AnTdEPA, AnTdEPC, AnTdEPP, AnTdFFD, AnTdFFS, AnTdFL,
+    AnTdHP, AnTdHPO, AnTdIBS, AnTdIEM, AnTdIOM, AnTdLFD, AnTdLFS, AnTdNCC, AnTdP, AnTdPCF,
+    AnTdPL, AnTdPW, AnTdSA, AnTdSBC, AnTdSND, AnTdTCM, AnTdTFC, AnTdTLM, AnTdTM, AnTdTML,
+    AnTdTTC, AnTdTTM
+    };
 
 /*
 **  Table of functions that notify of upline block acknowledgement, indexed by connection type
@@ -268,6 +349,12 @@ void npuTipInit(void)
 
     intrRsp[BlkOffDN] = npuSvmCouplerNode;
     intrRsp[BlkOffSN] = npuSvmNpuNode;
+
+    rccRsp[BlkOffDN] = npuSvmCouplerNode;
+    rccRsp[BlkOffSN] = npuSvmNpuNode;
+
+    rccRspA[BlkOffDN] = npuSvmCouplerNode;
+    rccRspA[BlkOffSN] = npuSvmNpuNode;
 
     /*
     **  Initialize default terminal class parameters.
@@ -441,13 +528,21 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
         switch (block[BlkOffPfc])
             {
         case PfcCTRL:
-            if (block[BlkOffSfc] == SfcCHAR)
+            switch (block[BlkOffSfc])
                 {
-                /*
-                **  Terminal characteristics define multiple characteristics -
-                **  setup TCB with supported FN/FV values.
-                */
+            case SfcCHAR:  // Define CCP terminal characteristics
                 npuTipParseFnFv(block + BlkOffP3, bp->numBytes - BlkOffP3, tp);
+                break;
+
+            case SfcRCC:   // Request CDCNet terminal characteristics
+                npuTipSendAnAvList(block + BlkOffP3, bp->numBytes - BlkOffP3, tp);
+                break;
+
+            default:
+#if DEBUG
+                fprintf(npuTipLog, "Unrecognized SFC for PfcCTRL: %02x\n", block[BlkOffSfc]);
+#endif
+                break;
                 }
             break;
 
@@ -874,7 +969,6 @@ bool npuTipParseFnFv(u8 *mp, int len, Tcb *tp)
 
         case FnTdParity:         // Zero (0), odd (1), even (2), none (3), ignore (4)
             pp->fvParity = mp[1];
-            // printf("Term = %u, Parity = %u\n", tp->pcbp->claPort, mp[1]); fflush(stdout);
             break;
 
         case FnTdPG:             // Page waiting; yes (1), no (0)
@@ -1181,7 +1275,240 @@ static void npuTipNotifyAck(Tcb *tp, u8 bsn)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Setup CDC 713 defaults (terminal class 2)
+**  Purpose:        Respond to a request for CDCNet terminal characteristics
+**
+**  Parameters:     Name        Description.
+**                  mp          Pointer to attribute number sequence
+**                  len         Length of the AN sequence
+**                  tp          Pointer to TCB
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void npuTipSendAnAvList(u8 *mp, int len, Tcb *tp)
+    {
+    u8 an;
+    u8 ch;
+    u8 *dp;
+    u8 sz;
+
+    if (len < 1)
+        {
+        mp  = defaultANList;
+        len = sizeof(defaultANList);
+        }
+    rccRsp[BlkOffCN] = tp->cn;
+    dp                 = rccRsp + BlkOffP3;
+    while (len-- > 0)
+        {
+        an    = *mp++;
+        *dp++ = an;
+        switch (an)
+            {
+        case AnTdAC:                // Attention character
+            *dp++ = tp->params.avAC;
+            break;
+        case AnTdACA:               // Attention character action (0 - 9)
+            *dp++ = tp->params.avACA;
+            break;
+        case AnTdBC:                // Backspace character
+            *dp++ = tp->params.fvBS;
+            break;
+        case AnTdBKA:               // Break key action
+            *dp++ = tp->params.fvBreakAsUser;
+            break;
+        case AnTdBLC:               // Begin line character
+            *dp++ = tp->params.avBLC;
+            break;
+        case AnTdCFC:               // Character flow control
+            *dp++ = tp->params.fvInFlowControl;
+            break;
+        case AnTdCLC:               // Cancel line character
+            *dp++ = tp->params.fvCN;
+            break;
+        case AnTdCRD:               // Carriage return delay
+            *dp++ = tp->params.fvCI;
+            break;
+        case AnTdCRS:               // Carriage return sequence
+            *(dp - 1) |= 0x80;
+            sz         = tp->params.avCRS[0] + 1;
+            memcpy(dp, tp->params.avCRS, sz);
+            dp += sz;
+            break;
+        case AnTdCS:                // Code set
+            *dp++ = tp->params.avCS;
+            break;
+        case AnTdE:                 // Echoplex
+            *dp++ = tp->params.fvEchoplex;
+            break;
+        case AnTdELC:               // End line character
+            *dp++ = tp->params.fvEOL;
+            break;
+        case AnTdELP:               // End line positioning
+            *dp++ = tp->params.fvEOLCursorPos;
+            break;
+        case AnTdEOS:               // End output sequence
+            *(dp - 1) |= 0x80;
+            sz         = tp->params.avEOS[0] + 1;
+            memcpy(dp, tp->params.avEOS, sz);
+            dp += sz;
+            break;
+        case AnTdEPA:               // End page action
+            *dp++ = tp->params.avEPA;
+            break;
+        case AnTdEPC:               // End partial character
+            *dp++ = (tp->params.fvFullASCII == FALSE || tp->params.fvSpecialEdit == FALSE) ? 0x0a : 0;
+            break;
+        case AnTdEPP:               // End partial position
+            *dp++ = tp->params.fvCursorPos;
+            break;
+        case AnTdFFD:               // Form feed delay
+            if (tp->params.avFFD < 256)
+                {
+                *dp++ = tp->params.avFFD;
+                }
+            else
+                {
+                *(dp - 1) |= 0x80;
+                *dp++      = 2;
+                *dp++      = tp->params.avFFD >> 8;
+                *dp++      = tp->params.avFFD & Mask8;
+                }
+            break;
+        case AnTdFFS:               // Form feed sequence
+            *(dp - 1) |= 0x80;
+            sz         = tp->params.avFFS[0] + 1;
+            memcpy(dp, tp->params.avFFS, sz);
+            dp += sz;
+            break;
+        case AnTdFL:                // Fold line
+            *dp++ = tp->params.avFL;
+            break;
+        case AnTdHP:                // Hold page
+            *dp++ = tp->params.fvPG;
+            break;
+        case AnTdHPO:               // Hold page over
+            *dp++ = tp->params.avHPO;
+            break;
+        case AnTdIBS:               // Input block size
+            if (tp->params.fvUBZ < 256)
+                {
+                *dp++ = tp->params.fvUBZ;
+                }
+            else
+                {
+                *(dp - 1) |= 0x80;
+                *dp++      = 2;
+                *dp++      = tp->params.fvUBZ >> 8;
+                *dp++      = tp->params.fvUBZ & Mask8;
+                }
+            break;
+        case AnTdIEM:               // Input editing mode
+            *dp++ = tp->params.fvXInput;
+            break;
+        case AnTdIOM:               // Input output mode
+            *dp++ = (tp->params.fvDuplex == TRUE || tp->params.fvSolicitInput == FALSE) ? 1 : 0;
+            break;
+        case AnTdLFD:               // Line feed delay
+            *dp++ = tp->params.fvLI;
+            break;
+        case AnTdLFS:               // Line feed sequence
+            *(dp - 1) |= 0x80;
+            sz         = tp->params.avLFS[0] + 1;
+            memcpy(dp, tp->params.avLFS, sz);
+            dp += sz;
+            break;
+        case AnTdNCC:               // Netword command character
+            *dp++ = tp->params.fvCT;
+            break;
+        case AnTdP:                 // Parity
+            *dp++ = tp->params.fvParity;
+            break;
+        case AnTdPCF:               // Partial character forwarding
+            *dp++ = tp->params.fvBlockFactor < 1;
+            break;
+        case AnTdPL:                // Page length
+            *dp++ = tp->params.fvPL;
+            break;
+        case AnTdPW:                // Page width
+            *dp++ = tp->params.fvPW;
+            break;
+        case AnTdSA:                // Status action
+            *dp++ = tp->params.avSA;
+            break;
+        case AnTdSBC:               // Store backspace character
+            *dp++ = (tp->params.fvFullASCII == FALSE || tp->params.fvSpecialEdit == FALSE) ? 0 : 1;
+            break;
+        case AnTdSND:               // Store NULs DELs
+            *dp++ = (tp->params.fvFullASCII == FALSE) ? 0 : 1;
+            break;
+        case AnTdTCM:               // Transparent character mode
+            *dp++ = tp->params.fvXCharFlag;
+            break;
+        case AnTdTFC:               // Transparent forward character
+            if (tp->params.fvXChar == ChrCR && tp->params.fvParity > 2)
+                {
+                *(dp - 1) |= 0x80;
+                *dp++      = 2;
+                *dp++      = 0x04;
+                *dp++      = 0x84;
+                }
+            else
+                {
+                *dp++ = tp->params.fvXChar;
+                }
+            break;
+        case AnTdTLM:               // Transparent length mode
+            *dp++ = tp->params.fvXCnt > 0;
+            break;
+        case AnTdTM:                // Terminal model
+            *(dp - 1) |= 0x80;
+            sz         = tp->params.avTM[0] + 1;
+            memcpy(dp, tp->params.avTM, sz);
+            dp += sz;
+            break;
+        case AnTdTML:               // Transparent message length
+            if (tp->params.fvXCnt < 256)
+                {
+                *dp++ = tp->params.fvXCnt;
+                }
+            else
+                {
+                *(dp - 1) |= 0x80;
+                *dp++      = 2;
+                *dp++      = tp->params.fvXCnt >> 8;
+                *dp++      = tp->params.fvXCnt & Mask8;
+                }
+            break;
+        case AnTdTTC:               // Transparent terminate character
+            ch = tp->params.fvXModeMultiple ? tp->params.fvXModeDelimiter : tp->params.fvXChar;
+            if (ch == ChrCR && tp->params.fvParity > 2)
+                {
+                *(dp - 1) |= 0x80;
+                *dp++      = 2;
+                *dp++      = 0x04;
+                *dp++      = 0x84;
+                }
+            else
+                {
+                *dp++ = ch;
+                }
+            break;
+        case AnTdTTM:               // Transparent timeout mode
+            *dp++ = tp->params.fvXTimeout;
+            break;
+        default:
+            rccRspA[BlkOffCN] = tp->cn;
+            rccRspA[BlkOffP3] = an;
+            npuBipRequestUplineCanned(rccRspA, sizeof(rccRspA));
+            return;
+            }
+        }
+    npuBipRequestUplineCanned(rccRsp, dp - rccRsp);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Setup CDC 722 defaults (terminal class 2)
 **
 **  Parameters:     Name        Description.
 **
@@ -1228,7 +1555,7 @@ static void npuTipSetupDefaultTc2(void)
     defaultTc2.fvPL             = 24;
     defaultTc2.fvPW             = 80;
     defaultTc2.fvSpecialEdit    = FALSE;
-    defaultTc2.fvTC             = Tc721;
+    defaultTc2.fvTC             = Tc722;
     defaultTc2.fvXStickyTimeout = FALSE;
     defaultTc2.fvXModeDelimiter = 0;
     defaultTc2.fvDuplex         = FALSE;
@@ -1246,6 +1573,20 @@ static void npuTipSetupDefaultTc2(void)
     defaultTc2.fvRIC            = 0;
     defaultTc2.fvSDT            = 0;
     defaultTc2.fvDO             = 1;
+    defaultTc2.avAC             = 0;
+    defaultTc2.avACA            = 0;
+    defaultTc2.avBLC            = 0;
+    defaultTc2.avCS             = 0;
+    defaultTc2.avEPA            = 0;
+    defaultTc2.avFFD            = 0;
+    defaultTc2.avFL             = 0;
+    defaultTc2.avHPO            = 0;
+    defaultTc2.avSA             = 0;
+    memcpy(defaultTc2.avCRS, "\x01\x0d", 2);
+    memcpy(defaultTc2.avEOS, "\x00", 1);
+    memcpy(defaultTc2.avFFS, "\x02\x19\18", 3);
+    memcpy(defaultTc2.avCRS, "\x01\x0a", 2);
+    memcpy(defaultTc2.avTM, "\x07" "CDC_722", 8);
     }
 
 /*--------------------------------------------------------------------------
@@ -1293,7 +1634,7 @@ static void npuTipSetupDefaultTc3(void)
     defaultTc3.fvOutputDevice   = 1;
     defaultTc3.fvParity         = 2;
     defaultTc3.fvPG             = FALSE;
-    defaultTc3.fvPL             = 24;
+    defaultTc3.fvPL             = 30;
     defaultTc3.fvPW             = 80;
     defaultTc3.fvSpecialEdit    = FALSE;
     defaultTc3.fvTC             = Tc721;
@@ -1314,6 +1655,20 @@ static void npuTipSetupDefaultTc3(void)
     defaultTc3.fvRIC            = 0;
     defaultTc3.fvSDT            = 0;
     defaultTc3.fvDO             = 1;
+    defaultTc3.avAC             = 0;
+    defaultTc3.avACA            = 0;
+    defaultTc3.avBLC            = 0;
+    defaultTc3.avCS             = 0;
+    defaultTc3.avEPA            = 0;
+    defaultTc3.avFFD            = 0;
+    defaultTc3.avFL             = 0;
+    defaultTc3.avHPO            = 1;
+    defaultTc3.avSA             = 0;
+    memcpy(defaultTc3.avCRS, "\x01\x0d", 2);
+    memcpy(defaultTc3.avEOS, "\x00", 1);
+    memcpy(defaultTc3.avFFS, "\x01\x0c", 2);
+    memcpy(defaultTc3.avCRS, "\x01\x0a", 2);
+    memcpy(defaultTc3.avTM, "\x07" "CDC_721", 8);
     }
 
 /*--------------------------------------------------------------------------
@@ -1382,6 +1737,20 @@ static void npuTipSetupDefaultTc7(void)
     defaultTc7.fvRIC            = 0;
     defaultTc7.fvSDT            = 0;
     defaultTc7.fvDO             = 1;
+    defaultTc7.avAC             = 0;
+    defaultTc7.avACA            = 0;
+    defaultTc7.avBLC            = 0;
+    defaultTc7.avCS             = 0;
+    defaultTc7.avEPA            = 0;
+    defaultTc7.avFFD            = 0;
+    defaultTc7.avFL             = 0;
+    defaultTc7.avHPO            = 0;
+    defaultTc7.avSA             = 0;
+    memcpy(defaultTc7.avCRS, "\x01\x0d", 2);
+    memcpy(defaultTc7.avEOS, "\x00", 1);
+    memcpy(defaultTc7.avFFS, "\x06\x1b[H\x1b[J", 7);
+    memcpy(defaultTc7.avCRS, "\x01\x0a", 2);
+    memcpy(defaultTc7.avTM, "\x09" "DEC_VT100", 10);
     }
 
 /*--------------------------------------------------------------------------

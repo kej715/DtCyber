@@ -100,10 +100,13 @@
 **  Primary/secondary function codes for terminal commands.
 */
 #define PfcCTRL                    0xC1 // terminal characteristics
-#define   SfcDEF                   0x04 // define characteristics
-#define   SfcCHAR                  0x08 // define multiple char.
-#define   SfcRTC                   0x09 // request terminal characteristics
+#define   SfcCTD                   0x02 // define CDCNet terminal characteristics
+#define   SfcDEF                   0x04 // define CCP terminal characteristic
+#define   SfcCHAR                  0x08 // define multiple CCP terminal characteristics
+#define   SfcRTC                   0x09 // request CCP terminal characteristics
 #define   SfcTCD                   0x0A // term characteristics definition
+#define   SfcRCC                   0x0B // request CDCNet terminal characteristics
+#define   SfcCCD                   0x0C // CDCNet terminal characteristics definitions
 
 #define PfcBD                      0xC2 // batch device characteristics
 #define   SfcCHG                   0x00 // change
@@ -236,6 +239,7 @@
 #define TcNA                       0  //  N/A
 #define TcM33                      1  //  ASYNC  - M33,M35,M37,M38
 #define Tc713                      2  //         - CDC 713, 751-1, 752, 756
+#define Tc722                      2  //         - CDC 722
 #define Tc721                      3  //         - CDC 721
 #define Tc2741                     4  //         - IBM 2741
 #define TcM40                      5  //         - M40
@@ -659,6 +663,9 @@ typedef struct pcb
 */
 typedef struct tipParams
     {
+    //
+    //  CCP parameters
+    //
     u8   fvAbortBlock;                    // Abort block character
     u8   fvBlockFactor;                   // Blocking factor; multiple of 100 chars (upline block)
     bool fvBreakAsUser;                   // Break as user break 1; yes (1), no (0)
@@ -675,7 +682,7 @@ typedef struct tipParams
     u16  fvXCnt;                          // Transparent input delimiter count
     u8   fvXChar;                         // Transparent input delimiter character
     bool fvXTimeout;                      // Transparent input delimiter timeout; yes (1), no (0)
-    bool fvXModeMultiple;                 // Transparent input mode; multiple (1), singe (0)
+    bool fvXModeMultiple;                 // Transparent input mode; multiple (1), single (0)
     u8   fvEOB;                           // End of block character
     u8   fvEOBterm;                       // End of block terminator; EOL (1), EOB (2)
     u8   fvEOBCursorPos;                  // EOB cursor pos; no (0), CR (1), LF (2), CR & LF (3)
@@ -708,13 +715,30 @@ typedef struct tipParams
     bool fvAutoConnect;                   // yes (1), no (0)
     u8   fvPriority;                      // Terminal priority
     u8   fvUBL;                           // Upline block count limit
-    u16  fvUBZ;                           // Uplineblock size
+    u16  fvUBZ;                           // Upline block size
     u8   fvABL;                           // Application block count limit
     u8   fvDBL;                           // Downline block count limit
     u16  fvDBZ;                           // Downline block size
     u8   fvRIC;                           // Restriced interactive console (RBF)
     u8   fvSDT;                           // Subdevice type
     u8   fvDO;                            // Device ordinal
+    //
+    //  CDCNet attributes
+    //
+    u8   avAC;                            // Attention character
+    u8   avACA;                           // Attention character action
+    u8   avBLC;                           // Begin line character
+    u8   avCRS[3];                        // Carriage return sequence
+    u8   avCS;                            // Code set (ASCII / APL)
+    u8   avEOS[5];                        // End output sequence
+    u8   avEPA;                           // End page action
+    u16  avFFD;                           // Form feed delay
+    u8   avFFS[8];                        // Form feed sequence
+    u8   avFL;                            // Fold line
+    u8   avHPO;                           // Hold page over
+    u8   avLFS[3];                        // Line feed sequence
+    u8   avSA;                            // Status action
+    u8   avTM[26];                        // Terminal model name (CDCNet attribute)
     } TipParams;
 
 /*
