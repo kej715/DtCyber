@@ -239,7 +239,7 @@ bool bdp180CopyFromBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
             {
             n = count;
             }
-        if (cpu180TranslatePvaSequence(ctx, pva, 1, n, RingOf(pva), AccessModeWrite, rmas) == FALSE)
+        if (cpu180TranslatePvaSequence(ctx, pva, 1, (u8)n, RingOf(pva), AccessModeWrite, rmas) == FALSE)
             {
             return FALSE;
             }
@@ -322,7 +322,7 @@ bool bdp180CopyToBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
             {
             n = count;
             }
-        if (cpu180TranslatePvaSequence(ctx, pva, 1, n, RingOf(pva), AccessModeRead, rmas) == FALSE)
+        if (cpu180TranslatePvaSequence(ctx, pva, 1, (u8)n, RingOf(pva), AccessModeRead, rmas) == FALSE)
             {
             return FALSE;
             }
@@ -776,7 +776,7 @@ void bdp180Div10(BdpOperand *operand, u8 *remainder)
 
     bdp180LongDiv(operand->value, dvisor, quotient, r);
     memcpy(operand->value, quotient, sizeof(quotient));
-    *remainder = r[3];
+    *remainder = (u8)r[3];
     }
 
 /*--------------------------------------------------------------------------

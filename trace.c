@@ -2139,7 +2139,6 @@ bool traceValidateStack(Cpu180Context *cpu, u64 sfsa, u16 maxDepth, char *label)
     u32              pti;
     u64              pva;
     u64              regA;
-    u8               r1;
     u8               ring;
     u8               ringA2;
     u32              rma;
@@ -2212,10 +2211,6 @@ bool traceValidateStack(Cpu180Context *cpu, u64 sfsa, u16 maxDepth, char *label)
         if (ring < ringA2)
             {
             ring = ringA2;
-            }
-        if (ring < r1)
-            {
-            ring = r1;
             }
         sfsa = ((u64)ring << 44) | (regA & Mask44);
         }

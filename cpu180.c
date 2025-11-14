@@ -3600,13 +3600,12 @@ static bool cpu180MulInt64(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *prod
 **------------------------------------------------------------------------*/
 static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool isTrap, u64 *sfsa, u32 *frameSize)
     {
-    MonitorCondition cond;
-    u8               i;
-    u64              pva;
-    u8               r;
-    u32              rmas[33];
-    u32              wordAddrs[33];
-    int              words;
+    u8  i;
+    u64 pva;
+    u8  r;
+    u32 rmas[33];
+    u32 wordAddrs[33];
+    int words;
 
     if (at < 2)
         {
@@ -5413,21 +5412,19 @@ static void cp180Op77(Cpu180Context *activeCpu)  // 77  CMPB       MIGDS 2-52
 
 static void cp180Op80(Cpu180Context *activeCpu)  // 80  LMULT      MIGDS 2-16
     {
-    u8               as;
-    u8               at;
-    MonitorCondition cond;
-    u32              disp;
-    u8               i;
-    u64              pva;
-    u8               r1;
-    u8               ring;
-    u32              rma;
-    u32              rmas[32];
-    u16              selector;
-    u64              word;
-    u8               wordCount;
-    u8               xs;
-    u8               xt;
+    u8  as;
+    u8  at;
+    u32 disp;
+    u8  i;
+    u64 pva;
+    u8  r1;
+    u8  ring;
+    u32 rmas[32];
+    u16 selector;
+    u64 word;
+    u8  wordCount;
+    u8  xs;
+    u8  xt;
 
     pva = activeCpu->regA[activeCpu->opJ];
     if ((pva & Mask3) != 0)
@@ -5489,18 +5486,16 @@ static void cp180Op80(Cpu180Context *activeCpu)  // 80  LMULT      MIGDS 2-16
 
 static void cp180Op81(Cpu180Context *activeCpu)  // 81  SMULT      MIGDS 2-16
     {
-    u8               as;
-    u8               at;
-    MonitorCondition cond;
-    u32              disp;
-    u8               i;
-    u64              pva;
-    u32              rma;
-    u32              rmas[32];
-    u16              selector;
-    u8               wordCount;
-    u8               xs;
-    u8               xt;
+    u8  as;
+    u8  at;
+    u32 disp;
+    u8  i;
+    u64 pva;
+    u32 rmas[32];
+    u16 selector;
+    u8  wordCount;
+    u8  xs;
+    u8  xt;
 
     pva = activeCpu->regA[activeCpu->opJ];
     if ((pva & Mask3) != 0)
@@ -6896,7 +6891,7 @@ static void cp180OpE4(Cpu180Context *activeCpu)  // E4  SCLN       MIGDS 2-49
         if (bdp180DecodeOperand(activeCpu, &activeCpu->srcDesc, &operand))
             {
             isOk  = TRUE;
-            power = activeCpu->opD + (activeCpu->opI == 0 ? 0 : activeCpu->regX[activeCpu->opI]);
+            power = (u8)(activeCpu->opD + (activeCpu->opI == 0 ? 0 : activeCpu->regX[activeCpu->opI]));
             if (power < 38)
                 {
                 while (power-- > 0)
@@ -6972,7 +6967,7 @@ static void cp180OpE5(Cpu180Context *activeCpu)  // E5  SCLR       MIGDS 2-49
         if (bdp180DecodeOperand(activeCpu, &activeCpu->srcDesc, &operand))
             {
             isOk  = TRUE;
-            power = activeCpu->opD + (activeCpu->opI == 0 ? 0 : activeCpu->regX[activeCpu->opI]);
+            power = (u8)(activeCpu->opD + (activeCpu->opI == 0 ? 0 : activeCpu->regX[activeCpu->opI]));
             if (power < 38)
                 {
                 while (power-- > 0)
@@ -7649,7 +7644,7 @@ static void cp180OpED(Cpu180Context *activeCpu)  // ED  EDIT       MIGDS 2-55
         }
     if (isInvalidData == FALSE || IsTrapEnabled(activeCpu) == FALSE)
         {
-        if (bdp180CopyFromBuf(activeCpu, activeCpu->dstDesc.pva, dp - dstBuf, dstBuf) == FALSE)
+        if (bdp180CopyFromBuf(activeCpu, activeCpu->dstDesc.pva, (u16)(dp - dstBuf), dstBuf) == FALSE)
             {
             return;
             }

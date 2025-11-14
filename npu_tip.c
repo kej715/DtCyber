@@ -533,7 +533,11 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
             case SfcCHAR:  // Define CCP terminal characteristics
                 npuTipParseFnFv(block + BlkOffP3, bp->numBytes - BlkOffP3, tp);
                 break;
-
+/*
+            case SfcCTD:   // Define CDCNet terminal characteristics
+                npuTipParseAnAvList(block + BlkOffP3, bp->numBytes - BlkOffP3, tp);
+                break;
+*/
             case SfcRCC:   // Request CDCNet terminal characteristics
                 npuTipSendAnAvList(block + BlkOffP3, bp->numBytes - BlkOffP3, tp);
                 break;
@@ -1365,7 +1369,7 @@ static void npuTipSendAnAvList(u8 *mp, int len, Tcb *tp)
         case AnTdFFD:               // Form feed delay
             if (tp->params.avFFD < 256)
                 {
-                *dp++ = tp->params.avFFD;
+                *dp++ = (u8)tp->params.avFFD;
                 }
             else
                 {
@@ -1393,7 +1397,7 @@ static void npuTipSendAnAvList(u8 *mp, int len, Tcb *tp)
         case AnTdIBS:               // Input block size
             if (tp->params.fvUBZ < 256)
                 {
-                *dp++ = tp->params.fvUBZ;
+                *dp++ = (u8)tp->params.fvUBZ;
                 }
             else
                 {
@@ -1470,7 +1474,7 @@ static void npuTipSendAnAvList(u8 *mp, int len, Tcb *tp)
         case AnTdTML:               // Transparent message length
             if (tp->params.fvXCnt < 256)
                 {
-                *dp++ = tp->params.fvXCnt;
+                *dp++ = (u8)tp->params.fvXCnt;
                 }
             else
                 {
@@ -1504,7 +1508,7 @@ static void npuTipSendAnAvList(u8 *mp, int len, Tcb *tp)
             return;
             }
         }
-    npuBipRequestUplineCanned(rccRsp, dp - rccRsp);
+    npuBipRequestUplineCanned(rccRsp, (int)(dp - rccRsp));
     }
 
 /*--------------------------------------------------------------------------
