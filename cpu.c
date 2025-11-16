@@ -3829,7 +3829,6 @@ static void cpOp01(Cpu170Context *activeCpu)
             /*
             **  RC  Xj
             */
-            //rtcReadUsCounter();
             if (isCyber180)
                 {
                 activeCpu->regX[activeCpu->opJ] = cpu180FreeRunningCounter & Mask48;
