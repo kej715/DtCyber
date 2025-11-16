@@ -198,7 +198,8 @@ void rtcTick(void)
         }
     else
         {
-        rtcClockDelta = 0;
+        rtcClockDelta     = 0;
+        rtcClockIsCurrent = TRUE;
         }
     }
 
@@ -359,7 +360,7 @@ static u64 rtcGetTick(void)
     if (rtcDoVirtual)
         {
         QueryPerformanceCounter(&ctr);
-        rtcMicroseconds += (u64)((double)((u64)ctr.QuadPart - rtcTickReference) / rtcTicksPerUs);
+        rtcMicroseconds += (u64)round((double)((u64)ctr.QuadPart - rtcTickReference) / rtcTicksPerUs);
         rtcTickReference = (u64)ctr.QuadPart;
         }
     else
