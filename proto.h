@@ -463,11 +463,10 @@ void ppStep(void);
 /*
 **  rtc.c
 */
-void rtcInit(u8 increment, u32 setMHz);
+void rtcInit(u8 increment, bool doVirtual);
 void rtcTick(void);
 void rtcStartTimer(void);
 double rtcStopTimer(void);
-void rtcReadUsCounter(void);
 
 /*
 **  scr_channel.c

@@ -551,6 +551,7 @@ static void initCyber(char *config)
     long cpuSN;
     long defaultSN;
     char dummy[256];
+    bool dummyBool;
     long dummyInt;
     long ecsBanks;
     long enableCejMej;
@@ -1045,10 +1046,33 @@ static void initCyber(char *config)
     /*
     **  Get clock increment value and initialise clock.
     */
-    (void)initGetInteger("clock", 0, &clockIncrement);
-
-    rtcInit((u8)clockIncrement, setMHz);
-    fprintf(stdout, "(init   ) %ld Clock increment set.\n", clockIncrement);
+    initGetString("clock", "0", dummy, sizeof(dummy));
+    if (strcasecmp(dummy, "virtual") == 0)
+        {
+        clockIncrement = 0;
+        dummyBool = TRUE;
+        }
+    else if (strcasecmp(dummy, "real") == 0)
+        {
+        clockIncrement = 0;
+        dummyBool = FALSE;
+        }
+    else if (sscanf(dummy, "%ld", &clockIncrement) == 1)
+        {
+        dummyBool = TRUE;
+        }
+    else
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s] Invalid 'clock' value %s\n", startupFile, config, dummy);
+        exit(1);
+        }
+    rtcInit((u8)clockIncrement, dummyBool);
+    fprintf(stdout, "(init   ) Clock initialized, mode %s", dummyBool ? "virtual" : "real");
+    if (clockIncrement != 0)
+        {
+        fprintf(stdout, ", increment %ld", clockIncrement);
+        }
+    fputs("\n", stdout);
 
     /*
     **  Initialise optional Interlock Register on channel 15.
