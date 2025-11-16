@@ -93,9 +93,9 @@ static u8     rtcIncrement;
 
 #if defined(_WIN32)
 static bool          rtcDoVirtual;
-static LARGE_INTEGER rtcFrequency;
+static double        rtcTicksPerUs;
 static u64           rtcMicroseconds = 0;
-static LARGE_INTEGER rtcTimeReference;
+static u64           rtcTickReference;
 #else
 static clockid_t     rtcClockId;
 static u64           rtcUsCounter = 0;
@@ -238,7 +238,7 @@ double rtcStopTimer(void)
         {
         endTime = rtcGetTick();
 
-        return ((double)(endTime - startTime) / (Hz / 1000000.0L));
+        return ((double)(endTime - startTime) / (Hz / 1000000.0));
         }
     else
         {
@@ -323,22 +323,28 @@ static void rtcDisconnect(void)
 **------------------------------------------------------------------------*/
 static bool rtcInitTick(bool doVirtual)
     {
+    LARGE_INTEGER ctr;
+    LARGE_INTEGER freq;
+
     rtcDoVirtual = doVirtual;
     if (doVirtual)
         {
-        if (!QueryPerformanceFrequency(&rtcFrequency))
+        if (!QueryPerformanceFrequency(&freq))
             {
-            printf("(rtc    ) No high resolution hardware clock, using emulation cycle counter\n");
+            printf("(rtc    ) Failed to query performance frequency, using emulation cycle counter\n");
 
             return FALSE;
             }
-        Hz = (double)rtcFrequency.QuadPart;
-        QueryPerformanceCounter(&rtcTimeReference);
+        QueryPerformanceCounter(&ctr);
+        rtcTicksPerUs    = (double)freq.QuadPart / 1000000.0;
+        Hz               = (double)freq.QuadPart;
+        rtcTickReference = (u64)ctr.QuadPart;
 
-        printf("(rtc    ) Using QueryPerformanceCounter() clock at %f MHz\n", Hz / 1000000.0L);
+        printf("(rtc    ) Using QueryPerformanceCounter() clock at %f MHz\n", Hz / 1000000.0);
         }
     else
         {
+        Hz = 1000000.0;
         fputs("(rtc    ) Using GetSystemTimePreciseAsFileTime() clock\n", stdout);
         }
 
@@ -353,8 +359,8 @@ static u64 rtcGetTick(void)
     if (rtcDoVirtual)
         {
         QueryPerformanceCounter(&ctr);
-        rtcMicroseconds += ((ctr.QuadPart - rtcTimeReference.QuadPart) * 1000000) / rtcFrequency.QuadPart;
-        rtcTimeReference = ctr;
+        rtcMicroseconds += (u64)((double)((u64)ctr.QuadPart - rtcTickReference) / rtcTicksPerUs);
+        rtcTickReference = (u64)ctr.QuadPart;
         }
     else
         {
@@ -380,7 +386,7 @@ static bool rtcInitTick(bool doVirtual)
     {
     struct timespec ts;
 
-    Hz         = 1000000.0L;
+    Hz         = 1000000.0;
     rtcClockId = doVirtual ? CLOCK_PROCESS_CPUTIME_ID : CLOCK_MONOTONIC_RAW;
     if (clock_gettime(rtcClockId, &ts) != -1)
         {
@@ -400,6 +406,7 @@ static bool rtcInitTick(bool doVirtual)
 
 static bool rtcInitTick(bool doVirtual)
     {
+    Hz = 1000000.0;
     fputs("(rtc    ) No high resolution hardware clock, using emulation cycle counter\n", stdout);
 
     return FALSE;
