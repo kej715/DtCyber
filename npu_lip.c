@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------
 **
-**  Copyright (c) 2003-2019, Kevin Jordan, Tom Hunter
+**  Copyright (c) 2019-2025, Kevin Jordan
 **
 **  Name: npu_lip.c
 **
