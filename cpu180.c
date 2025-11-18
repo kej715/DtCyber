@@ -4412,16 +4412,6 @@ static void cp180Op0F(Cpu180Context *activeCpu)  // 0F  CPYXS      MIGDS 2-146
             }
         }
     cpu180MacSetCpStateRegister(activeCpu, regId, activeCpu->regX[activeCpu->opK]);
-    switch (regId)
-        {
-    case 0x42: // MCR
-    case 0x43: // UCR
-    case 0x60: // MMR
-    case 0xe6: // UMR
-        break;
-    default:
-        break;
-        }
     }
 
 static void cp180Op10(Cpu180Context *activeCpu)  // 10  INCX       MIGDS 2-20
