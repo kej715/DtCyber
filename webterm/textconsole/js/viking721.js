@@ -199,6 +199,12 @@ class VikingConsole {
         case 'CTRL_L':
           this.uplineDataSender('\x0c');
           break;
+        case 'END':
+          this.uplineDataSender('\x1e\x49');
+          break;
+        case 'SHIFT_END':
+          this.uplineDataSender('\x1e\x4a');
+          break;
         case 'CTRL_C':
           this.processExit();
           process.exit(0);
