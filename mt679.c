@@ -991,7 +991,7 @@ static void mt679UnpackConversionTable(u8 *convTable)
 #if DEBUG
         {
         int i;
-        fprintf(mt679Log, "\n(mt679  ) Conversion Table %d", cp->selectedConversion);
+        fprintf(mt679Log, "\nConversion Table %d", cp->selectedConversion);
 
         for (i = 0; i < 256; i++)
             {
@@ -1033,7 +1033,7 @@ static void mt679Unpack6BitTable(u8 *convTable)
 #if DEBUG
         {
         int i;
-        fprintf(mt679Log, "\n(mt679  ) Conversion Table %d", cp->selectedConversion);
+        fprintf(mt679Log, "\nConversion Table %d", cp->selectedConversion);
 
         for (i = 0; i < 256; i++)
             {
@@ -1077,7 +1077,7 @@ static FcStatus mt679Func(PpWord funcCode)
         }
 
 #if DEBUG
-    fprintf(mt679Log, "\n(mt679  ) %06d PP:%02o CH:%02o u:%d f:%04o T:%-25s  >   ",
+    fprintf(mt679Log, "\n%06d PP:%02o CH:%02o u:%d f:%04o T:%-25s  >   ",
             traceSequenceNo,
             activePpu->id,
             activeDevice->channel->id,
@@ -1105,7 +1105,7 @@ static FcStatus mt679Func(PpWord funcCode)
         }
 
     /*
-    **  Strip of the equipment number.
+    **  Strip off the equipment number.
     */
     funcCode &= Mask9;
 
@@ -1139,13 +1139,16 @@ static FcStatus mt679Func(PpWord funcCode)
             {
             activeDevice->recordLength = 0;
             tp->recordLength           = 0;
-            tp->errorCode = 0;
             mt679ResetStatus(tp);
             }
 
         return (FcProcessed);
 
     case Fc679Release:
+        if (unitNo != -1)
+            {
+            mt679ResetStatus(tp);
+            }
         activeDevice->selectedUnit = -1;
 
         return (FcProcessed);
@@ -1505,7 +1508,7 @@ static FcStatus mt679Func(PpWord funcCode)
     case Fc679SetTransferCheckCh:
     case Fc679SetLoopWTRTcu:
 #if DEBUG
-        fprintf(mt679Log, "(mt679  ) maintenance functions not implemented %o\n", funcCode);
+        fprintf(mt679Log, "maintenance functions not implemented %o\n", funcCode);
 #endif
 
         return (FcProcessed);
@@ -1523,7 +1526,7 @@ static FcStatus mt679Func(PpWord funcCode)
     case Fc679SetEvenChParity:
     case Fc679ForceDataErrors:
 #if DEBUG
-        fprintf(mt679Log, "(mt679  ) maintenance functions not implemented %o\n", funcCode);
+        fprintf(mt679Log, "maintenance functions not implemented %o\n", funcCode);
 #endif
 
         return (FcProcessed);
@@ -1826,7 +1829,7 @@ static void mt679Activate(void)
     {
 #if DEBUG
     CtrlParam *cp = activeDevice->controllerContext;
-    fprintf(mt679Log, "\n(mt679  ) %06d PP:%02o CH:%02o Activate",
+    fprintf(mt679Log, "\n%06d PP:%02o CH:%02o Activate",
             traceSequenceNo,
             activePpu->id,
             activeDevice->channel->id);
@@ -1847,7 +1850,7 @@ static void mt679Disconnect(void)
     CtrlParam *cp = activeDevice->controllerContext;
 
 #if DEBUG
-    fprintf(mt679Log, "\n(mt679  ) %06d PP:%02o CH:%02o Disconnect",
+    fprintf(mt679Log, "\n%06d PP:%02o CH:%02o Disconnect",
             traceSequenceNo,
             activePpu->id,
             activeDevice->channel->id);
@@ -2299,7 +2302,7 @@ static void mt679FuncRead(void)
     **  Setup length, buffer pointer and block number.
     */
 #if DEBUG
-    fprintf(mt679Log, "(mt679  ) Read fwd %d PP words (%d 8-bit bytes)\n", activeDevice->recordLength, recLen1);
+    fprintf(mt679Log, "Read fwd %d PP words (%d 8-bit bytes)\n", activeDevice->recordLength, recLen1);
 #endif
 
     tp->recordLength = activeDevice->recordLength;
@@ -2455,7 +2458,7 @@ static void mt679FuncReadBkw(void)
         **  Setup length and buffer pointer.
         */
 #if DEBUG
-        fprintf(mt679Log, "(mt679  ) Read bkwd %d bytes\n", activeDevice->recordLength);
+        fprintf(mt679Log, "Read bkwd %d bytes\n", activeDevice->recordLength);
 #endif
 
         tp->recordLength = activeDevice->recordLength;
@@ -2469,7 +2472,7 @@ static void mt679FuncReadBkw(void)
         tp->fileMark = TRUE;
 
 #if DEBUG
-        fprintf(mt679Log, "(mt679  ) Tape mark\n");
+        fprintf(mt679Log, "Tape mark\n");
 #endif
         }
 
@@ -2529,7 +2532,7 @@ static void mt679FuncForespace(void)
 //            tp->endOfTape = TRUE;
             tp->fileMark = TRUE;
 #if DEBUG
-            fprintf(mt679Log, "(mt679  ) TAP is at EOF (simulate tape mark)\n");
+            fputs("TAP is at EOF (simulate tape mark)\n", mt679Log);
 #endif
             }
 
@@ -2569,7 +2572,7 @@ static void mt679FuncForespace(void)
         tp->blockNo += 1;
 
 #if DEBUG
-        fprintf(mt679Log, "(mt679  ) Tape mark\n");
+        fputs("Tape mark\n", mt679Log);
 #endif
 
         return;
@@ -2660,7 +2663,12 @@ static void mt679FuncBackspace(void)
     position = ftell(activeDevice->fcb[unitNo]);
     if (position == 0)
         {
-        tp->blockNo = 0;
+        tp->blockNo   = 0;
+        tp->alert     = TRUE;
+        tp->errorCode = EcBackPastLoadpoint;
+#if DEBUG
+        logDtError(LogErrorLocation, "channel %02o - attempt to backspace at loadpoint on unit %02o", activeChannel->id, unitNo);
+#endif
 
         return;
         }
@@ -2762,7 +2770,7 @@ static void mt679FuncBackspace(void)
         tp->fileMark = TRUE;
 
 #if DEBUG
-        fprintf(mt679Log, "(mt679  ) Tape mark\n");
+        fputs("Tape mark\n", mt679Log);
 #endif
         }
 
