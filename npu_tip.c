@@ -189,6 +189,7 @@
 **  ---------------------------
 */
 static void npuTipNotifyAck(Tcb *tp, u8 bsn);
+static void npuTipParseAnAvList(u8 *mp, int len, Tcb *tp);
 static void npuTipSendAnAvList(u8 *mp, int len, Tcb *tp);
 static void npuTipSetupDefaultTc2(void);
 static void npuTipSetupDefaultTc3(void);
@@ -534,11 +535,11 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
             case SfcCHAR:  // Define CCP terminal characteristics
                 npuTipParseFnFv(block + BlkOffP3, bp->numBytes - BlkOffP3, tp);
                 break;
-/*
+
             case SfcCTD:   // Define CDCNet terminal characteristics
                 npuTipParseAnAvList(block + BlkOffP3, bp->numBytes - BlkOffP3, tp);
                 break;
-*/
+
             case SfcRCC:   // Request CDCNet terminal characteristics
                 npuTipSendAnAvList(block + BlkOffP3, bp->numBytes - BlkOffP3, tp);
                 break;
@@ -1000,7 +1001,7 @@ bool npuTipParseFnFv(u8 *mp, int len, Tcb *tp)
                 }
             break;
 
-        case FnTdXStickyTimeout:// Sticky transparent input forward on timeout; yes (1), no (0)
+        case FnTdXStickyTimeout: // Sticky transparent input forward on timeout; yes (1), no (0)
             pp->fvXStickyTimeout = mp[1] != 0;
             break;
 
@@ -1058,25 +1059,25 @@ bool npuTipParseFnFv(u8 *mp, int len, Tcb *tp)
             pp->fvDBL = mp[1];
             break;
 
-        case FnTdDBZMSB:      // Downline block size MSB
+        case FnTdDBZMSB:         // Downline block size MSB
             pp->fvDBZ &= 0x00FF;
             pp->fvDBZ |= mp[1] << 8;
             break;
 
-        case FnTdDBZLSB:      // Downline block size LSB
+        case FnTdDBZLSB:         // Downline block size LSB
             pp->fvDBZ &= 0xFF00;
             pp->fvDBZ |= mp[1];
             break;
 
-        case FnTdRIC:           // Restricted interactive console (RBF)
+        case FnTdRIC:            // Restricted interactive console (RBF)
             pp->fvRIC = mp[1];
             break;
 
-        case FnSDT:             // Subdevice type
+        case FnSDT:              // Subdevice type
             pp->fvSDT = mp[1];
             break;
 
-        case FnDO1:            // Device ordinal
+        case FnDO1:              // Device ordinal
             pp->fvDO = mp[1];
             break;
 
@@ -1277,6 +1278,246 @@ void npuTipNotifySent(Tcb *tp, u8 blockSeqNo)
 static void npuTipNotifyAck(Tcb *tp, u8 bsn)
     {
     // Do nothing for now
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Parse a list of CDCNet terminal characteristics
+**
+**  Parameters:     Name        Description.
+**                  mp          Pointer to attribute number/value sequence
+**                  len         Length of the AN/AV sequence
+**                  tp          Pointer to TCB
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void npuTipParseAnAvList(u8 *mp, int len, Tcb *tp)
+    {
+    u8 an;
+    u8 av[32];
+    u8 ch;
+    u8 i;
+    u8 *limit;
+    u8 sz;
+
+    limit = mp + len;
+
+    while (mp < limit)
+        {
+        an = *mp++;
+        if (an >= 0x80)
+            {
+            an &= 0x7f;
+            sz  = *mp++;
+            for (i = 0; i < sz; i++)
+                {
+                av[i] = *mp++;
+                }
+            }
+        else
+            {
+            sz    = 1;
+            av[0] = *mp++;
+            }
+        switch (an)
+            {
+        case AnTdAC:                // Attention character
+            tp->params.avAC = av[0];
+            break;
+        case AnTdACA:               // Attention character action (0 - 9)
+            tp->params.avACA = av[0];
+            break;
+        case AnTdBC:                // Backspace character
+            tp->params.fvBS = av[0];
+            break;
+        case AnTdBKA:               // Break key action
+            tp->params.fvBreakAsUser = av[0];
+            break;
+        case AnTdBLC:               // Begin line character
+            tp->params.avBLC = av[0];
+            break;
+        case AnTdCFC:               // Character flow control
+	    tp->params.fvInFlowControl = av[0];
+	    break;
+        case AnTdCLC:               // Cancel line character
+            tp->params.fvCN = av[0];
+            break;
+        case AnTdCRD:               // Carriage return delay
+            tp->params.fvCI = av[0];
+            break;
+        case AnTdCRS:               // Carriage return sequence
+            tp->params.avCRS[0] = sz;
+            memcpy(&tp->params.avCRS[1], av, sz);
+            break;
+        case AnTdCS:                // Code set
+            tp->params.avCS = av[0];
+            break;
+        case AnTdE:                 // Echoplex
+            tp->params.fvEchoplex = av[0];
+            break;
+        case AnTdELC:               // End line character
+            tp->params.fvEOL = av[0];
+            break;
+        case AnTdELP:               // End line positioning
+            tp->params.fvEOLCursorPos = av[0];
+            break;
+        case AnTdEOS:               // End output sequence
+            tp->params.avEOS[0] = sz;
+            memcpy(&tp->params.avEOS[1], av, sz);
+            break;
+        case AnTdEPA:               // End page action
+            tp->params.avEPA = av[0];
+            break;
+        case AnTdEPC:               // End partial character
+            if (av[0] == 0x0a)
+                {
+                tp->params.fvFullASCII   = FALSE;
+                tp->params.fvSpecialEdit = FALSE;
+                }
+            else
+                {
+                tp->params.fvFullASCII   = TRUE;
+                tp->params.fvSpecialEdit = TRUE;
+                }
+            break;
+        case AnTdEPP:               // End partial position
+            tp->params.fvCursorPos = av[0];
+            break;
+        case AnTdFFD:               // Form feed delay
+            if (sz < 2)
+                {
+                tp->params.avFFD = av[0];
+                }
+            else
+                {
+                tp->params.avFFD = ((u16)av[0] << 8) | (u16)av[1];;
+                }
+            break;
+        case AnTdFFS:               // Form feed sequence
+            tp->params.avFFS[0] = sz;
+            memcpy(&tp->params.avFFS[1], av, sz);
+            break;
+        case AnTdFL:                // Fold line
+            tp->params.avFL = av[0];
+            break;
+        case AnTdHP:                // Hold page
+            tp->params.fvPG = av[0];
+            break;
+        case AnTdHPO:               // Hold page over
+            tp->params.avHPO = av[0];
+            break;
+        case AnTdIBS:               // Input block size
+            if (sz < 2)
+                {
+                tp->params.fvUBZ = av[0];
+                }
+            else
+                {
+                tp->params.fvUBZ = ((u16)av[0] << 8) | (u16)av[1];;
+                }
+            break;
+        case AnTdIEM:               // Input editing mode
+            tp->params.fvXInput = av[0];
+            break;
+        case AnTdIOM:               // Input output mode
+            if (av[0] == 0)
+                {
+                tp->params.fvDuplex       = FALSE;
+                tp->params.fvSolicitInput = TRUE;
+                }
+            else
+                {
+                tp->params.fvDuplex       = TRUE;
+                tp->params.fvSolicitInput = FALSE;
+                }
+            break;
+        case AnTdLFD:               // Line feed delay
+            tp->params.fvLI = av[0];
+            break;
+        case AnTdLFS:               // Line feed sequence
+            tp->params.avLFS[0] = sz;
+            memcpy(&tp->params.avLFS[1], av, sz);
+            break;
+        case AnTdNCC:               // Netword command character
+            tp->params.fvCT = av[0];
+            break;
+        case AnTdP:                 // Parity
+            tp->params.fvParity = av[0];
+            break;
+        case AnTdPCF:               // Partial character forwarding
+            tp->params.fvBlockFactor = av[0] == FALSE;
+            break;
+        case AnTdPL:                // Page length
+	    tp->params.fvPL = av[0];
+	    break;
+        case AnTdPW:                // Page width
+            tp->params.fvPW = av[0];
+            break;
+        case AnTdSA:                // Status action
+            tp->params.avSA = av[0];
+            break;
+        case AnTdSBC:               // Store backspace character
+            if (av[0] == 0)
+                {
+                tp->params.fvFullASCII   = FALSE;
+                tp->params.fvSpecialEdit = FALSE;
+                }
+            else
+                {
+                tp->params.fvFullASCII   = TRUE;
+                tp->params.fvSpecialEdit = TRUE;
+                }
+            break;
+        case AnTdSND:               // Store NULs DELs
+            tp->params.fvFullASCII = av[0] != 0;
+            break;
+        case AnTdTCM:               // Transparent character mode
+            tp->params.fvXCharFlag = av[0];
+            break;
+        case AnTdTFC:               // Transparent forward character
+            if (sz > 1 && av[0] == 0x04 && av[1] == 0x84)
+                {
+                tp->params.fvXChar  = ChrCR;
+                tp->params.fvParity = 3;
+                }
+            else
+                {
+                tp->params.fvXChar = av[0];
+                }
+            break;
+        case AnTdTLM:               // Transparent length mode
+            break;
+        case AnTdTM:                // Terminal model
+            tp->params.avTM[0] = sz;
+            memcpy(&tp->params.avTM[1], av, sz);
+            break;
+        case AnTdTML:               // Transparent message length
+            if (sz < 2)
+                {
+                tp->params.fvXCnt = av[0];
+                }
+             else
+                {
+                tp->params.fvXCnt = ((u16)av[0] << 8) | (u16)av[1];
+                }
+            break;
+        case AnTdTTC:               // Transparent terminate character
+            if (sz > 1 && av[0] == 0x04 && av[1] == 0x84)
+                {
+                tp->params.fvXChar = ChrCR;
+                }
+            else
+                {
+                tp->params.fvXChar = av[0];
+                }
+            break;
+        case AnTdTTM:               // Transparent timeout mode
+            tp->params.fvXTimeout = av[0];
+            break;
+        default:
+            break;
+            }
+        }
     }
 
 /*--------------------------------------------------------------------------
