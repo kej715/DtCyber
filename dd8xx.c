@@ -1134,29 +1134,29 @@ static FcStatus dd8xxFunc(PpWord funcCode)
                 dp->detailedStatus[6] = ((dp->sector << 4) | 010) & 07777;
                 if ((dp->track & 1) != 0)
                     {
-                    dp->detailedStatus[9] |= 2;  /* odd track */
+                    dp->detailedStatus[9] |= 0002;  /* odd track */
                     }
                 else
                     {
-                    dp->detailedStatus[9] &= ~2;
+                    dp->detailedStatus[9] &= ~0002;
                     }
                 if (fcb != NULL)
                     {
-                    dp->detailedStatus[6] |= 010;
+                    dp->detailedStatus[6] |= 0010;
                     }
                 else
                     {
-                    dp->detailedStatus[6] &= ~010;
+                    dp->detailedStatus[6] &= ~0010;
                     }
                 if (dp->diskType == DiskType885Ls)
                     {
                     if (dp->isLargeSectorMode)
                         {
-                        dp->detailedStatus[17] |= 00010;
+                        dp->detailedStatus[17] |= 0010;
                         }
                     else
                         {
-                        dp->detailedStatus[17] &= 07767;;
+                        dp->detailedStatus[17] &= ~0010;;
                         }
                     }
                 break;
@@ -1185,7 +1185,7 @@ static FcStatus dd8xxFunc(PpWord funcCode)
             {
             activeDevice->recordLength = 12;
             }
-        else
+        else // Fc8xxDetailedStatus2
             {
             activeDevice->recordLength = 20;
             }
@@ -1340,7 +1340,7 @@ static void dd8xxIo(void)
                 else
                     {
                     activeDevice->selectedUnit = -1;
-                    activeDevice->status       = 05020;
+                    activeDevice->status       = St8xxAbnormal | St8xxNonRecoverable | St8xxDSUmalfunction;
                     }
                 }
             else if (fcb != NULL)
@@ -1350,7 +1350,7 @@ static void dd8xxIo(void)
             else
                 {
                 activeDevice->selectedUnit = -1;
-                activeDevice->status       = 05020;
+                activeDevice->status       = St8xxAbnormal | St8xxNonRecoverable | St8xxDSUmalfunction;
                 }
             activeChannel->full = FALSE;
 #if DEBUG
@@ -1391,7 +1391,7 @@ static void dd8xxIo(void)
                     else
                         {
                         activeDevice->selectedUnit = -1;
-                        activeDevice->status       = 05020;
+                        activeDevice->status       = St8xxAbnormal | St8xxNonRecoverable | St8xxDSUmalfunction;
                         }
                     }
                 else if (fcb != NULL)
@@ -1401,7 +1401,7 @@ static void dd8xxIo(void)
                 else
                     {
                     activeDevice->selectedUnit = -1;
-                    activeDevice->status       = 05020;
+                    activeDevice->status       = St8xxAbnormal | St8xxNonRecoverable | St8xxDSUmalfunction;
                     }
                 if (dp != NULL)
                     {
@@ -1464,7 +1464,7 @@ static void dd8xxIo(void)
                     }
                 else
                     {
-                    activeDevice->status = 05020;
+                    activeDevice->status = St8xxAbnormal | St8xxNonRecoverable | St8xxDSUmalfunction;
                     }
                 break;
 
@@ -1815,7 +1815,7 @@ static i32 dd8xxSeek(DiskParam *dp)
             }
 #endif
         logDtError(LogErrorLocation, "ch %o, cylinder %d invalid\n", activeChannel->id, dp->cylinder);
-        dp->device->status = 01000;
+        dp->device->status = St8xxNonRecoverable;
 
         return -1;
         }
@@ -1829,7 +1829,7 @@ static i32 dd8xxSeek(DiskParam *dp)
             }
 #endif
         logDtError(LogErrorLocation, "ch %o, track %d invalid\n", activeChannel->id, dp->track);
-        dp->device->status = 01000;
+        dp->device->status = St8xxNonRecoverable;
 
         return -1;
         }
@@ -1843,7 +1843,7 @@ static i32 dd8xxSeek(DiskParam *dp)
             }
 #endif
         logDtError(LogErrorLocation, "ch %o, sector %d invalid\n", activeChannel->id, dp->sector);
-        dp->device->status = 01000;
+        dp->device->status = St8xxNonRecoverable;
 
         return -1;
         }
