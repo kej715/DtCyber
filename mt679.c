@@ -1128,8 +1128,8 @@ static FcStatus mt679Func(PpWord funcCode)
 #endif
         if (unitNo != -1)
             {
-            tp->errorCode = EcIllegalFunction;
             tp->alert     = TRUE;
+            tp->errorCode = EcIllegalFunction;
             }
 
         return (FcDeclined);
@@ -2115,7 +2115,7 @@ static void mt679PackAndConvert(u32 recLen)
         for (i = 0; i < recLen; i++)
             {
             c1 = readConv[*rp++];
-            if ((c1 & (1 << 6)) != 0)
+            if ((c1 & (1 << 6)) != 0 && !cp->packedMode)
                 {
                 /*
                 **  Indicate illegal character.
