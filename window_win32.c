@@ -655,21 +655,24 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
             traceMask ^= TraceExchange;
             break;
 
+        case 'F':
+        case 'f':
+            traceMask ^= TraceCallFrame;
+            break;
+
         case 'V':
         case 'v':
             traceMask ^= TraceCpu180;
             break;
 
+        case 'W':
+        case 'w':
+            traceMask ^= TraceCpu180|TraceExchange|TraceBlockOp|TraceCallFrame;
+            break;
+
         case 'X':
         case 'x':
-            if (traceMask == 0)
-                {
-                traceMask = ~0;
-                }
-            else
-                {
-                traceMask = 0;
-                }
+            traceMask = 0;
             break;
 
         case 'D':
