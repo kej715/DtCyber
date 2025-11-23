@@ -804,13 +804,12 @@ void windowDisplay(HWND hWnd)
         /*
         **  Display P registers of PPUs and CPU and current trace mask.
         */
-        sprintf(buf, "Refresh: %-10d  PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o   CPU P-reg: %06o",
+        sprintf(buf, "Refresh: %-10d  PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o   CPU P-reg: %06o"
+                     "   Trace0x: %c%c%c%c%c%c%c%c%c%c%c%c%c %c",
                 refreshCount++,
                 ppu[0].regP, ppu[1].regP, ppu[2].regP, ppu[3].regP, ppu[4].regP,
                 ppu[5].regP, ppu[6].regP, ppu[7].regP, ppu[8].regP, ppu[9].regP,
-                cpus170[0].regP);
-
-        sprintf(buf + strlen(buf), "   Trace0x: %c%c%c%c%c%c%c%c%c%c%c%c%c %c",
+                cpus170[0].regP,
                 (traceMask >> 0) & 1 ? '0' : '_',
                 (traceMask >> 1) & 1 ? '1' : '_',
                 (traceMask >> 2) & 1 ? '2' : '_',
@@ -833,11 +832,10 @@ void windowDisplay(HWND hWnd)
             /*
             **  Display P registers of second barrel of PPUs.
             */
-            sprintf(buf, "                     PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o                    ",
+            sprintf(buf, "                     PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o                    "
+                         "   Trace1x: %c%c%c%c%c%c%c%c%c%c%c%c %c",
                     ppu[10].regP, ppu[11].regP, ppu[12].regP, ppu[13].regP, ppu[14].regP,
-                    ppu[15].regP, ppu[16].regP, ppu[17].regP, ppu[18].regP, ppu[19].regP);
-
-            sprintf(buf + strlen(buf), "   Trace1x: %c%c%c%c%c%c%c%c%c%c%c%c %c",
+                    ppu[15].regP, ppu[16].regP, ppu[17].regP, ppu[18].regP, ppu[19].regP,
                     (traceMask >> 10) & 1 ? '0' : '_',
                     (traceMask >> 11) & 1 ? '1' : '_',
                     (traceMask >> 12) & 1 ? '2' : '_',

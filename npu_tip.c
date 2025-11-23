@@ -1295,7 +1295,6 @@ static void npuTipParseAnAvList(u8 *mp, int len, Tcb *tp)
     {
     u8 an;
     u8 av[32];
-    u8 ch;
     u8 i;
     u8 *limit;
     u8 sz;
