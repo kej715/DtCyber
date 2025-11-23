@@ -293,7 +293,7 @@ typedef enum
     MCR48 = 0,  /* Detected uncorrectable error     */
     MCR49,      /* Not assigned                     */
     MCR50,      /* Short warning                    */
-    MCR51,      /* Instruction specfication error   */
+    MCR51,      /* Instruction specification error  */
     MCR52,      /* Address specification error      */
     MCR53,      /* CYBER 170 state exchange request */
     MCR54,      /* Access violation                 */
