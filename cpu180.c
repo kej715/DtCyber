@@ -3534,49 +3534,76 @@ static bool cpu180MulInt32(Cpu180Context *ctx, u32 mltand, u32 mltier, u32 *prod
 **------------------------------------------------------------------------*/
 static bool cpu180MulInt64(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *product)
     {
-    u64 lower64;
-    u16 mask;
-    u64 upper64;
-
+    bool isResultNeg;
+    u64  lower64;
+    u16  mask;
+    u64  upper64;
 #if defined(_WIN32)
-    lower64 = _umul128(mltier, mltand, &upper64);
+    u64 carry;
+    u64 m128[2];
+    u64 t;
 #else
     u128 p128;
+#endif
 
+    isResultNeg = (i64)(mltand ^ mltier) < 0;
     if ((i64)mltand < 0)
         {
-        if ((i64)mltier < 0)
-            {
-            p128 = ((u128)mltand | ((u128)0xffffffffffffffff << 64)) * ((u128)mltier | ((u128)0xffffffffffffffff << 64));
-            }
-        else
-            {
-            p128 = (u128)mltier * ((u128)mltand | ((u128)0xffffffffffffffff << 64));
-            }
+        mltand = ~mltand + 1;
         }
-    else if ((i64)mltier < 0)
+    if ((i64)mltier < 0)
         {
-        p128 = (u128)mltand * ((u128)mltier | ((u128)0xffffffffffffffff << 64));
+        mltier = ~mltier + 1;
         }
-    else
+
+#if defined(_WIN32)
+    m128[0] = 0;
+    m128[1] = mltand;
+    lower64 = 0;
+    upper64 = 0;
+    while (mltier != 0)
         {
-        p128 = (u128)mltand * (u128)mltier;
+        //
+        //  If the LSB of multiplier is 1, add multiplicand to product
+        //
+        if ((mltier & 1) != 0)
+            {
+            t        = lower64;
+            lower64 += m128[1];
+            carry    = lower64 < t;
+            upper64 += m128[0] + carry;
+            }
+        //
+        //  Left shift multiplicand (multiply by 2)
+        //
+        m128[0]   = (m128[0] << 1) | (m128[1] >> 63);
+        m128[1] <<= 1;
+        //
+        //  Right shift multiplier (divide by 2)
+        //
+        mltier >>= 1;
         }
+#else
+    p128    = (u128)mltand * (u128)mltier;
     lower64 = p128;
     upper64 = p128 >> 64;
 #endif
 
-    if ((lower64 < 0x8000000000000000 && upper64 != 0) || (lower64 >= 0x8000000000000000 && upper64 != 0xffffffffffffffff))
+    if (lower64 > 0x7fffffffffffffff || upper64 != 0)
         {
-        mask = ucrDefns[UCR57].bitMask;
-        if ((ctx->regUmr & mask) != 0 && IsTrapEnabled(ctx)) // mask set and trap enabled
+        if (isResultNeg == FALSE || lower64 != 0x8000000000000000 || upper64 != 0)
             {
-            cpu180SetUserCondition(ctx, UCR57);
-            return FALSE;
+            mask = ucrDefns[UCR57].bitMask;
+            if ((ctx->regUmr & mask) != 0 && IsTrapEnabled(ctx)) // mask set and trap enabled
+                {
+                cpu180SetUserCondition(ctx, UCR57);
+                return FALSE;
+                }
+            ctx->regUcr |= mask;
             }
-        ctx->regUcr |= mask;
         }
-    *product = lower64;
+
+    *product = isResultNeg ? ~lower64 + 1 : lower64;
 
     return TRUE;
     }
