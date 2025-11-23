@@ -687,15 +687,18 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
         break;
 
     case 11: // Binary Signed
-        for (i = 0; i < desc->length; i++)
+        if (desc->length > 0)
             {
-            operand->value[3] = (operand->value[3] << 8) | buffer[i];
-            }
-        if (buffer[0] >= 0x80)
-            {
-            operand->value[3] |= signExt[desc->length];
-            operand->value[3]  = ~operand->value[3] + 1;
-            operand->sign      = TRUE;
+            for (i = 0; i < desc->length; i++)
+                {
+                operand->value[3] = (operand->value[3] << 8) | buffer[i];
+                }
+            if (buffer[0] >= 0x80)
+                {
+                operand->value[3] |= signExt[desc->length];
+                operand->value[3]  = ~operand->value[3] + 1;
+                operand->sign      = TRUE;
+                }
             }
         break;
 
