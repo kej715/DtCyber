@@ -29,7 +29,7 @@ INCL    = -I/opt/X11/include
 EXTRACFLAGS = -Wno-switch -Wno-format-security
 
 CFLAGS  = -O3 -std=gnu99 $(INCL) $(shell pkg-config --cflags freetype2) $(EXTRACFLAGS)
-CFLAGS  = -O0 -g -std=gnu99 $(INCL) $(shell pkg-config --cflags freetype2) $(EXTRACFLAGS)
+#CFLAGS  = -O0 -g -std=gnu99 $(INCL) $(shell pkg-config --cflags freetype2) $(EXTRACFLAGS)
 
 HDRS    =   const.h                 \
             cyber_channel_linux.h   \
