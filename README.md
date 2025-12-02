@@ -2,11 +2,12 @@
 *DtCyber* is a high fidelity simulator of
 [Control Data](https://en.wikipedia.org/wiki/Control_Data_Corporation)
 [6000](https://en.wikipedia.org/wiki/CDC_6000_series),
-[70, 170, and 700](https://en.wikipedia.org/wiki/CDC_Cyber#Cyber_70_and_170_series),
+[70, 170](https://en.wikipedia.org/wiki/CDC_Cyber#Cyber_70_and_170_series), and
+[180](https://en.wikipedia.org/wiki/CDC_Cyber#Cyber_180_series)
 series supercomputers. This version of *DtCyber* is a direct derivative of
 *Desktop CYBER 5.5.1* created by Tom Hunter. This version simulates additional
-types of peripheral I/O devices, includes additional networking features, and
-supports the [Nostalgic Computing Center](http://www.nostalgiccomputing.org).
+types of peripheral I/O devices, includes additional networking features, and adds
+support for dual-state operation (concurrent Cyber 170 and Cyber 180 modes).
 This repository also provides automation and artifacts intended to make it easy for
 anyone to build the simulator and run historic software on it.
 
@@ -26,7 +27,9 @@ operation, and a version of
 - [NOS2.8.7](NOS2.8.7) : NOS 2.8.7 was the last operating system formally released
 by CDC for its Cyber 170 series supercomputers. In addition to supporting interactive
 access and local and remote batch operation, the instance provided here supports a
-very rich collection of programming languages and data communication features.
+very rich collection of programming languages and data communication features. NOS 2.8.7
+also supports dual-state operation with [NOS/VE 1.8.3](https://en.wikipedia.org/wiki/NOS/VE)
+when DtCyber is configured to emulate a CYBER 180 model such as a Cyber 860.
 - [NOS/BE](https://github.com/bug400/NOSBE712) : the NOS/BE operation system was a
 descendent of COS and SCOPE. It was designed primarily for batch operation but also
 supported interactive access. Additional documentation about building a NOS/BE system
@@ -82,7 +85,7 @@ following commands:
 To build *dtcyber* on Windows, open the solution file (*DtCyber.sln*) in Visual
 Studio and build the project defined by it.
 
-Additional per platform build information (Linux, OSX, Raspberry Pi) is 
+Additional per platform build information (Linux, MacOS, Raspberry Pi) is found 
 in [BUILDING.README.txt](BUILDING.README.txt).
 
 ## Contributing
