@@ -23,7 +23,10 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG                0
+#define DEBUG_INTERRUPT      0
+#define DEBUG_SET_PAGE_FLAGS 0
+#define DEBUG_SET_STATE_REG  0
 
 /*
 **  -------------
@@ -60,7 +63,6 @@
 //  instruction stores data within the specified range of addresses. TRACE_INST_COUNT
 //  defines how many instructions to trace thereafter.
 //
-//#define TRACE_INST_LIST   { 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37 }
 //#define TRACE_INST_LIST   { 0x77, 0xe9 }
 #define TRACE_INST_COUNT  10
 
@@ -245,6 +247,7 @@ static void cpu180SetRingZeroCondition(Cpu180Context *ctx, u64 pva);
 static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa);
 static bool cpu180SubInt32(Cpu180Context *ctx, u32 minend, u32 subend, u32 *diff);
 static bool cpu180SubInt64(Cpu180Context *ctx, u64 minend, u64 subend, u64 *diff);
+static void cpu180UpdatePageSize(Cpu180Context *ctx);
 static bool cpu180ValidateAccess(Cpu180Context *ctx, u64 sde, u8 ring, Cpu180AccessMode access, MonitorCondition *cond);
 
 #if CcDebug == 1
@@ -1023,7 +1026,7 @@ static u8  memoryRegisterBuf[8];
 static u8  memoryRegisterBufIdx;
 
 #if DEBUG
-static FILE cpu180Log = NULL;
+static FILE *cpu180Log = NULL;
 #endif
 
 #if CcDebug == 1
@@ -1243,10 +1246,13 @@ void cpu180Init(char *model, u16 *serialNumbers)
         activeCpu->regSit        = 0xffffffff; // System Interval Timer
         activeCpu->regPit        = 0xffffffff; // Process Interval Timer
         cpu180UpdatePageSize(activeCpu);
+        printf("(cpu    ) CP%d EID " FMT32_08x "\n", activeCpu->id, activeCpu->regEid);
         }
 
     memoryEid     = 0x01311234; // Elem: 01 (CM),  Model: 850/860, S/N
     memoryOptions = memSizeMask <<= 48;
+    printf("(cpu    ) MEM EID " FMT32_08x "\n", memoryEid);
+    printf("(cpu    ) MEM OI  " FMT64_016x "\n", memoryOptions);
 
     /*
     **  Print a friendly message.
@@ -1800,6 +1806,9 @@ void cpu180MacSetCmRegister(u8 reg, u64 word)
 **------------------------------------------------------------------------*/
 void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
     {
+#if DEBUG && DEBUG_SET_STATE_REG
+    fprintf(cpu180Log, "Set CP%d state register %02x " FMT64_016x "\n", ctx->id, reg, word);
+#endif
     switch (reg)
         {
     default:
@@ -1856,9 +1865,15 @@ void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
         break;
     case RegMonitorCondition:
         ctx->regMcr = word & Mask16;
+#if DEBUG && DEBUG_SET_STATE_REG
+        fprintf(cpu180Log, "        MMR %04x MCR %04x\n", ctx->regMmr, ctx->regMcr);
+#endif
         break;
     case RegMonitorMask:
         ctx->regMmr = word & Mask16;
+#if DEBUG && DEBUG_SET_STATE_REG
+        fprintf(cpu180Log, "        MMR %04x MCR %04x\n", ctx->regMmr, ctx->regMcr);
+#endif
         break;
     case RegMonitorProcState:
         ctx->regMps = word & Mask32;
@@ -1876,6 +1891,14 @@ void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
         break;
     case RegProcessIntTimer:
         ctx->regPit = word & Mask32;
+#if DEBUG && DEBUG_SET_STATE_REG
+        fprintf(cpu180Log, "        PIT " FMT32_08x " (%u)\n", ctx->regPit, ctx->regPit);
+#endif
+        if (ctx->regPit == 0)
+            {
+            ctx->regUcr |= ucrDefns[UCR51].bitMask;
+            ctx->regPit  = 0xffffffff;
+            }
         break;
     case RegRegisterP:
         ctx->key  = (word >> 48) & Mask6;
@@ -1889,6 +1912,14 @@ void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
         break;
     case RegSystemIntTimer:
         ctx->regSit = word & Mask32;
+#if DEBUG && DEBUG_SET_STATE_REG
+        fprintf(cpu180Log, "        SIT " FMT32_08x " (%u)\n", ctx->regSit, ctx->regSit);
+#endif
+        if (ctx->regSit == 0)
+            {
+            ctx->regMcr |= mcrDefns[MCR59].bitMask;
+            ctx->regSit  = 0xffffffff;
+            }
         break;
     case RegTestMode:
         ctx->regTm = word;
@@ -1901,9 +1932,15 @@ void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
         break;
     case  RegUserCondition:
         ctx->regUcr = word & Mask16;
+#if DEBUG && DEBUG_SET_STATE_REG
+        fprintf(cpu180Log, "        UMR %04x UCR %04x\n", ctx->regUmr, ctx->regUcr);
+#endif
         break;
     case  RegUserMask:
         ctx->regUmr = (word & Mask16) | 0xfe00;
+#if DEBUG && DEBUG_SET_STATE_REG
+        fprintf(cpu180Log, "        UMR %04x UCR %04x\n", ctx->regUmr, ctx->regUcr);
+#endif
         break;
     case RegVmCapabilityList:
         ctx->regVmcl = word & Mask16;
@@ -1948,6 +1985,7 @@ void cpu180MacStartCp(Cpu180Context *ctx)
     u64              csAddr;
     u32              pti;
     u32              rma;
+    u32              xpa;
 
     //
     //  With CIP L826 for 860/870:
@@ -1970,17 +2008,25 @@ void cpu180MacStartCp(Cpu180Context *ctx)
         if (ctx->lastCsStartAddr != csAddr)
             {
             ctx->lastCsStartAddr = (u32)csAddr;
+            xpa                  = ctx->regMps >> 3;
+            if (xpa >= cpuMaxMemory)
+                {
+                logDtError(LogErrorLocation, "Failed to start CPU%d: MPS beyond end of memory, MPS " FMT32_08x " mem size %d Mbytes\n",
+                    ctx->id, ctx->regMps, (cpuMaxMemory * 8) / OneMegabyte);
+                ctx->isStopped = TRUE;
+                return;
+                }
             cpu180Load180Xp(ctx, ctx->regMps >> 3);
             ctx->nextKey = ctx->key;
             ctx->nextP   = ctx->regP;
-            if (cpu180PvaToRma(ctx, ctx->regP, AccessModeExecute, &rma, &pti, &cond))
+            if (cpu180PvaToRma(ctx, ctx->regP, AccessModeNone, &rma, &pti, &cond))
                 {
                 ctx->isStopped = FALSE; // Processor started
 #if CcDebug == 1
                 traceStartCpu180(ctx, rma);
 #endif
 #if DEBUG
-                fprintf(cpu180Log, "Start CPU%d at RMA %08x\n", ctx->id, rma);
+                fprintf(cpu180Log, "Start CPU%d at PVA " FMT64_012x " (RMA " FMT32_08x ")\n", ctx->id, ctx->regP, rma);
 #endif
                 }
             else
@@ -2294,10 +2340,24 @@ bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *r
         pte = cpMem[*pti];
         if ((access & AccessModeWrite) != 0)
             {
+#if DEBUG && DEBUG_SET_PAGE_FLAGS
+            if ((pte & ((u64)3 << 60)) == 0)
+                {
+                fprintf(cpu180Log, "PVA " FMT64_012x " PTI %08x PTE " FMT64_016x " set used and modified\n", pva, *pti, pte);
+                traceStack(cpu180Log);
+                }
+#endif
             cpMem[*pti] |= (u64)3 << 60; // set page used and modified bits
             }
         else if ((access & (AccessModeRead | AccessModeExecute)) != 0)
             {
+#if DEBUG && DEBUG_SET_PAGE_FLAGS
+            if ((pte & ((u64)3 << 60)) == 0)
+                {
+                fprintf(cpu180Log, "PVA " FMT64_012x " PTI %08x PTE " FMT64_016x " set used\n", pva, *pti, pte);
+                traceStack(cpu180Log);
+                }
+#endif
             cpMem[*pti] |= (u64)2 << 60; // set page used bit only
             }
         //
@@ -2350,14 +2410,9 @@ void cpu180SetMonitorCondition(Cpu180Context *ctx, MonitorCondition cond)
         }
 #if CcDebug == 1
     traceMonitorCondition(ctx, cond);
-/*DELETE*/ if((ctx->regMcr & 0x1208) != 0)
-/*DELETE*/   {
-/*DELETE*/   fprintf(stderr,"P %012lx MCR %04x MMR %04x action %d isThis %d nextP %012lx\n",ctx->regP,ctx->regMcr,ctx->regMmr,action,defn->isThis,ctx->nextP);
-/*DELETE*/   traceStack(stderr);
-/*DELETE*/   traceMask     |= TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp;
-/*DELETE*/   traceInstCount = 25000;
-/*DELETE*/   traceCpuBreak(ctx);
-/*DELETE*/   }
+#endif
+#if DEBUG && DEBUG_INTERRUPT
+    fprintf(cpu180Log, "Set monitor condition MCR%d, MCR %04x MMR %04x PVA " FMT64_012x "\n", 48 + cond, ctx->regMcr, ctx->regMmr, ctx->regP);
 #endif
     }
 
@@ -2391,6 +2446,9 @@ void cpu180SetUserCondition(Cpu180Context *ctx, UserCondition cond)
 #if CcDebug == 1
     traceUserCondition(ctx, cond);
 #endif
+#if DEBUG && DEBUG_INTERRUPT
+    fprintf(cpu180Log, "Set user condition UCR%d, UCR %04x UMR %04x PVA " FMT64_012x "\n", 48 + cond, ctx->regUcr, ctx->regUmr, ctx->regP);
+#endif
     }
 
 /*--------------------------------------------------------------------------
@@ -2411,29 +2469,47 @@ void cpu180Step(Cpu180Context *activeCpu)
     u64        oldRegP;
 #endif
 
+    /*
+    **  First, check for interrupt conditions and initiate trap or
+    **  exchange operations, or halt the CPU as required.
+    */
     cpu180CheckConditions(activeCpu);
 
-    if (activeCpu->pendingAction != Rni)
+    if (activeCpu->pendingAction > Stack)
         {
         switch (activeCpu->pendingAction)
             {
         case Trap:
+#if DEBUG && DEBUG_INTERRUPT
+            fprintf(cpu180Log, "Trap interrupt: P " FMT64_012x " MCR %04x MMR %04x UCR %04x UMR %04x\n",
+                activeCpu->regP, activeCpu->regMcr, activeCpu->regMmr, activeCpu->regUcr, activeCpu->regUmr);
+#endif
             activeCpu->pendingAction = Rni;
             cpu180Trap(activeCpu);
+            if (activeCpu->pendingAction > Stack)
+                {
+                return;
+                }
             break;
+
         case Exch:
+#if DEBUG && DEBUG_INTERRUPT
+            fprintf(cpu180Log, "Exchange interrupt: P " FMT64_012x " MCR %04x MMR %04x UCR %04x UMR %04x\n",
+                activeCpu->regP, activeCpu->regMcr, activeCpu->regMmr, activeCpu->regUcr, activeCpu->regUmr);
+#endif
             activeCpu->pendingAction = Rni;
             cpu180Exchange(activeCpu);
-            break;
+            return;
+
         case Halt:
+#if DEBUG && DEBUG_INTERRUPT
+            fprintf(cpu180Log, "Halt: P " FMT64_012x " MCR %04x MMR %04x UCR %04x UMR %04x\n",
+                activeCpu->regP, activeCpu->regMcr, activeCpu->regMmr, activeCpu->regUcr, activeCpu->regUmr);
+#endif
             activeCpu->isStopped = TRUE;
-            break;
+            return;
         default:
             break;
-            }
-        if (activeCpu->pendingAction > Stack)
-            {
-            return;
             }
         }
 
@@ -2794,36 +2870,6 @@ void cpu180UpdateIntervalTimers(u32 delta)
     cpu180FreeRunningCounter += delta;
     }
 
-/*--------------------------------------------------------------------------
-**  Purpose:        Update elements related to page size.
-**
-**  Parameters:     Name        Description.
-**                  ctx         pointer to CPU context to be updated
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-void cpu180UpdatePageSize(Cpu180Context *ctx)
-    {
-    u8 mask;
-
-    mask              = ctx->regPsm;
-    ctx->pageNumShift = 9;
-    while ((mask & 1) == 0 && ctx->pageNumShift < 16)
-        {
-        ctx->pageNumShift += 1;
-        mask             >>= 1;
-        }
-    ctx->byteNumMask    = ((~(u32)ctx->regPsm) << 9) | (u32)0x1ff;
-    ctx->pageLengthMask = ((u32)ctx->regPtl << 12) | (u32)0xfff;
-    ctx->pageOffsetMask = (((u16)~ctx->regPsm) << 9) | (u16)0x1ff;
-    ctx->spidShift      = ctx->pageNumShift - 9;
-
-#if CcDebug == 1
-    traceVmRegisters(ctx);
-#endif
-    }
-
 /*
  **--------------------------------------------------------------------------
  **
@@ -3163,7 +3209,7 @@ static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool ignore
     spid    = ((u64)asid << 22) | ((u64)pageNum << ctx->spidShift);
 
 #if CcDebug == 1
-    tracePageInfo(ctx, hash, pageNum, byteNum & ctx->pageOffsetMask, idx, spid);
+    tracePageInfo(ctx, hash, pageNum, idx, spid);
 #endif
 
     /*
@@ -3892,6 +3938,38 @@ static bool cpu180SubInt64(Cpu180Context *ctx, u64 minend, u64 subend, u64 *diff
         }
 
     return TRUE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Update elements related to page size.
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CPU context to be updated
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void cpu180UpdatePageSize(Cpu180Context *ctx)
+    {
+    u8 mask;
+
+    mask              = ctx->regPsm;
+    ctx->pageNumShift = 9;
+    while ((mask & 1) == 0 && ctx->pageNumShift < 16)
+        {
+        ctx->pageNumShift += 1;
+        mask             >>= 1;
+        }
+    ctx->pageLengthMask = ((u32)ctx->regPtl << 12) | (u32)0xfff;
+    ctx->spidShift      = ctx->pageNumShift - 9;
+
+#if CcDebug == 1
+    traceVmRegisters(ctx);
+#endif
+#if DEBUG
+    fprintf(cpu180Log, "Update page size: PSM %02x PTL %02x pageLengthMask " FMT32_08x " pageNumShift %d spidShift %d\n",
+        ctx->regPsm, ctx->regPtl, ctx->pageLengthMask, ctx->pageNumShift, ctx->spidShift);
+#endif
     }
 
 /*--------------------------------------------------------------------------
@@ -8050,7 +8128,10 @@ static void cp180OpFB(Cpu180Context *activeCpu)  // FB  ADDI       MIGDS 2-64
 static void cp180OpIv(Cpu180Context *activeCpu) 
     {
     cpu180SetUserCondition(activeCpu, UCR49);
-/*DELETE*/fprintf(stderr,"Invalid instruction %02x (P %012lx)\n", activeCpu->opCode, activeCpu->regP);
+
+#if DEBUG
+    fprintf(stderr,"Invalid instruction %02x (P " FMT64_012x ")\n", activeCpu->opCode, activeCpu->regP);
+#endif
     }
 
 /*--------------------------------------------------------------------------

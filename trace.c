@@ -1787,7 +1787,7 @@ void traceExchange180(Cpu180Context *cpu, u32 addr, char *title)
     fprintf(cpuF[cpu->id], " MDW " FMT64_016x "  \n", cpu->regMdw);
     fputs("\n", cpuF[cpu->id]);
     fprintf(cpuF[cpu->id], "MonitorFlag  %s\n", cpu->isMonitorMode ? "TRUE" : "FALSE");
-    fprintf(cpuF[cpu->id], "STOP         %d\n", cpu->isStopped ? 1 : 0);
+    fprintf(cpuF[cpu->id], "Halt         %s\n", cpu->isStopped ? "TRUE" : "FALSE");
     fputs("\n", cpuF[cpu->id]);
     }
 
@@ -2308,12 +2308,12 @@ void traceMonitorCondition(Cpu180Context *cpu, MonitorCondition cond)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void tracePageInfo(Cpu180Context *cpu, u16 hash, u32 pageNum, u32 pageOffset, u32 pageTableIdx, u64 spid)
+void tracePageInfo(Cpu180Context *cpu, u16 hash, u32 pageNum, u32 pageTableIdx, u64 spid)
     {
     if ((traceMask & TracePva) != 0)
         {
-        fprintf(cpuF[cpu->id], "%06d hash %04x pageNum %x pageOffset %x pageTableAddr %08x SPID " FMT64_010x "\n", traceSequenceNo,
-            hash, pageNum, pageOffset, pageTableIdx << 3, spid);
+        fprintf(cpuF[cpu->id], "%06d Hash %04x pageNum %x startingPageTableAddr %08x SPID " FMT64_010x "\n", traceSequenceNo,
+            hash, pageNum, pageTableIdx << 3, spid);
         }
     }
 
@@ -2347,7 +2347,7 @@ void tracePva(Cpu180Context *cpu, u64 pva)
     {
     if ((traceMask & TracePva) != 0)
         {
-        fprintf(cpuF[cpu->id], "%06d PVA %x %03x %08x\n", traceSequenceNo,
+        fprintf(cpuF[cpu->id], "\n%06d PVA %x %03x %08x\n", traceSequenceNo,
             (u8)((pva >> 44) & Mask4), (u16)((pva >> 32) & Mask12), (u32)(pva & Mask32));
         }
     }
@@ -2526,9 +2526,9 @@ void traceVmRegisters(Cpu180Context *cpu)
     {
     if ((traceMask & (TracePva | TraceCpu180)) != 0)
         {
-        fprintf(cpuF[cpu->id], "%06d STA %08x STL %d PTA %08x PTL %d PSM %02x pnShift %d poMask %x plMask %x\n",
+        fprintf(cpuF[cpu->id], "%06d VM registers: STA %08x STL %d PTA %08x PTL %d PSM %02x pnShift %d plMask %x\n",
             traceSequenceNo, cpu->regSta, cpu->regStl, cpu->regPta, cpu->regPtl, cpu->regPsm,
-            cpu->pageNumShift, cpu->pageOffsetMask, cpu->pageLengthMask);
+            cpu->pageNumShift, cpu->pageLengthMask);
         }
     }
 

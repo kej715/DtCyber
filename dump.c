@@ -378,7 +378,7 @@ void dumpCpu(void)
             if (isCyber180)
                 {
                 fprintf(pf, "    %08x  %04x %04x %04x %04x   ",
-                        (addr << 3) & Mask24,
+                        addr << 3,
                         (PpWord)((data >> 48) & Mask16),
                         (PpWord)((data >> 32) & Mask16),
                         (PpWord)((data >> 16) & Mask16),

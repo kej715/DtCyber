@@ -156,7 +156,6 @@ void cpu180Store170Xp(Cpu180Context *ctx, u32 xpa);
 bool cpu180TranslatePvaSequence(Cpu180Context *ctx, u64 pva, u16 count, u8 incr, u8 ring, Cpu180AccessMode access, u32 *rmas);
 void cpu180Trap(Cpu180Context *ctx);
 void cpu180UpdateIntervalTimers(u32 delta);
-void cpu180UpdatePageSize(Cpu180Context *ctx);
 
 /*
 **  cr405.c
@@ -522,7 +521,7 @@ void traceMasterClearCpu180(Cpu180Context *cpu);
 void traceMemoryBlock(Cpu180Context *cpu, u64 pva, u16 length, char *title);
 void traceMonitorCondition(Cpu180Context *cpu, MonitorCondition cond);
 void traceOpcode(void);
-void tracePageInfo(Cpu180Context *cpu, u16 hash, u32 pageNum, u32 pageOffset, u32 pageTableIdx, u64 spid);
+void tracePageInfo(Cpu180Context *cpu, u16 hash, u32 pageNum, u32 pageTableIdx, u64 spid);
 void tracePpuPrint(char *str);
 void tracePte(Cpu180Context *cpu, u64 pte);
 void tracePva(Cpu180Context *cpu, u64 pva);

@@ -84,7 +84,7 @@
         }
 
 #define IndexLocation                                                     \
-    if (activePpu->opD != 0)                                                         \
+    if (activePpu->opD != 0)                                              \
         {                                                                 \
         location = activePpu->mem[activePpu->opD] + activePpu->mem[activePpu->regP]; \
         }                                                                 \
@@ -217,6 +217,8 @@ static void ppOpIAPM(void);   // 1071
 static void ppOpOAPM(void);   // 1073
 
 static u32 ppAdd18(u32 op1, u32 op2);
+static void ppFlushIoBuf(void);
+static void ppResetIoBuf(void);
 static u32 ppSubtract18(u32 op1, u32 op2);
 static void ppInterlock(PpWord func);
 
@@ -2746,16 +2748,31 @@ static void ppOpFCJM(void)    // 1065
         }
     }
 
-static void ppStorePackedWord(void)
+static void ppFlushIoBuf(void)
     {
-    activePpu->mem[activePpu->regP] = (activePpu->packedWord >> 32) & Mask16;
-    PpIncrement(activePpu->regP);
+    if (activePpu->ioBufIdx > 1)
+        {
+        activePpu->mem[activePpu->regP] = (activePpu->ioBuf[0] << 4) | (activePpu->ioBuf[1] >> 8);
+        PpIncrement(activePpu->regP);
 
-    activePpu->mem[activePpu->regP] = (activePpu->packedWord >> 16) & Mask16;
-    PpIncrement(activePpu->regP);
+        if (activePpu->ioBufIdx > 2)
+            {
+            activePpu->mem[activePpu->regP] = ((activePpu->ioBuf[1] & Mask8) << 8) | (activePpu->ioBuf[2] >> 4);
+            PpIncrement(activePpu->regP);
 
-    activePpu->mem[activePpu->regP] = activePpu->packedWord & Mask16;
-    PpIncrement(activePpu->regP);
+            if (activePpu->ioBufIdx > 3)
+                {
+                activePpu->mem[activePpu->regP] = ((activePpu->ioBuf[2] & Mask4) << 12) | activePpu->ioBuf[3];
+                PpIncrement(activePpu->regP);
+                }
+            }
+        }
+    }
+
+static void ppResetIoBuf(void)
+    {
+    activePpu->ioBufIdx = 0;
+    memset(activePpu->ioBuf, 0, sizeof(activePpu->ioBuf));
     }
 
 static void ppOpIAPM(void)    // 1071
@@ -2766,9 +2783,8 @@ static void ppOpIAPM(void)    // 1071
         activePpu->busy            = TRUE;
         activePpu->mem[0]          = activePpu->regP;
         activePpu->regP            = activePpu->mem[activePpu->regP] & Mask12;
-        activePpu->packedWord      = 0;
-        activePpu->packedWordShift = 36;
         activeChannel->delayStatus = 0;
+        ppResetIoBuf();
         }
 
     channelCheckIfActive();
@@ -2789,9 +2805,10 @@ static void ppOpIAPM(void)    // 1071
         activeChannel->full = FALSE;
 
         /*
-        **  Terminate transfer and set next three locations to zero.
+        **  Terminate transfer and zero-fill 3-word block
         */
-        ppStorePackedWord();
+        activePpu->ioBufIdx = 4;
+        ppFlushIoBuf();
         activePpu->regP = activePpu->mem[0];
         PpIncrement(activePpu->regP);
         activePpu->busy = FALSE;
@@ -2812,26 +2829,21 @@ static void ppOpIAPM(void)    // 1071
         {
         channelIn();
         channelSetEmpty();
-        if (activePpu->packedWordShift == 0)
+        activePpu->ioBuf[activePpu->ioBufIdx++] = activeChannel->data & Mask12;
+        if (activePpu->ioBufIdx > 3)
             {
-            activePpu->packedWord |= (u64)(activeChannel->data & Mask12);
-            ppStorePackedWord();
-            activePpu->packedWord      = 0;
-            activePpu->packedWordShift = 36;
-            }
-        else
-            {
-            activePpu->packedWord |= (u64)(activeChannel->data & Mask12) << activePpu->packedWordShift;
-            activePpu->packedWordShift -= 12;
+            ppFlushIoBuf();
+            ppResetIoBuf();
             }
         activePpu->regA             = (activePpu->regA - 1) & Mask18;
         activeChannel->inputPending = FALSE;
 
         if (activeChannel->discAfterInput)
             {
-            if (activePpu->packedWordShift != 36)
+            if (activePpu->ioBufIdx > 0)
                 {
-                ppStorePackedWord();
+                activePpu->ioBufIdx = 4; // zero-fill to next 3-word boundary
+                ppFlushIoBuf();
                 }
             activeChannel->discAfterInput  = FALSE;
             activeChannel->delayDisconnect = 0;
@@ -2843,9 +2855,9 @@ static void ppOpIAPM(void)    // 1071
             }
         else if (activePpu->regA == 0)
             {
-            if (activePpu->packedWordShift != 36)
+            if (activePpu->ioBufIdx > 0)
                 {
-                ppStorePackedWord();
+                ppFlushIoBuf();
                 }
             activePpu->regP = activePpu->mem[0];
             PpIncrement(activePpu->regP);
@@ -2864,8 +2876,7 @@ static void ppOpOAPM(void)    // 1073
         activePpu->mem[0]          = activePpu->regP;
         activePpu->regP            = activePpu->mem[activePpu->regP] & Mask12;
         activeChannel->delayStatus = 0;
-        activePpu->packedWordShift = 0;
-        activePpu->packedWord      = 0;
+        activePpu->ioBufIdx        = 4;
         }
     else
         {
@@ -2902,22 +2913,21 @@ static void ppOpOAPM(void)    // 1073
     channelCheckIfFull();
     if (!activeChannel->full)
         {
-        if (activePpu->packedWordShift == 0)
+        if (activePpu->ioBufIdx > 3)
             {
-            activePpu->packedWord = (u64)(activePpu->mem[activePpu->regP] & Mask16) << 32;
+            activePpu->ioBuf[0]  = activePpu->mem[activePpu->regP] >> 4;
+            activePpu->ioBuf[1]  = (activePpu->mem[activePpu->regP] & Mask4) << 8;
             PpIncrement(activePpu->regP);
-
-            activePpu->packedWord |= (u64)(activePpu->mem[activePpu->regP] & Mask16) << 16;
+            activePpu->ioBuf[1] |= activePpu->mem[activePpu->regP] >> 8;
+            activePpu->ioBuf[2]  = (activePpu->mem[activePpu->regP] & Mask8) << 4;
             PpIncrement(activePpu->regP);
-
-            activePpu->packedWord |= (u64)(activePpu->mem[activePpu->regP] & Mask16);
+            activePpu->ioBuf[2] |= activePpu->mem[activePpu->regP] >> 12;
+            activePpu->ioBuf[3]  = activePpu->mem[activePpu->regP] & Mask12;
             PpIncrement(activePpu->regP);
-
-            activePpu->packedWordShift = 48;
+            activePpu->ioBufIdx = 0;
             }
-        activePpu->packedWordShift -= 12;
-        activeChannel->data         = (activePpu->packedWord >> activePpu->packedWordShift) & Mask12;
-        activePpu->regA             = (activePpu->regA - 1) & Mask18;
+        activeChannel->data = activePpu->ioBuf[activePpu->ioBufIdx++];
+        activePpu->regA     = (activePpu->regA - 1) & Mask18;
         channelOut();
         channelSetFull();
 

@@ -50,6 +50,7 @@ typedef unsigned char       u8;
 typedef unsigned short      u16;
 typedef unsigned long       u32;
 typedef unsigned __int64    u64;
+#define FMT32_08x     "%08I32x"
 #define FMT60_020o    "%020I64o"
 #define FMT64_010x    "%010I64x"
 #define FMT64_016x    "%016I64x"
@@ -72,6 +73,7 @@ typedef unsigned short      u16;
 typedef unsigned int        u32;
 typedef unsigned long int   u64;
 typedef unsigned __int128   u128;
+#define FMT32_08x     "%08x"
 #define FMT60_020o    "%020lo"
 #define FMT64_010x    "%010lx"
 #define FMT64_016x    "%016lx"
@@ -94,11 +96,12 @@ typedef unsigned short           u16;
 typedef unsigned int             u32;
 typedef unsigned long long int   u64;
 typedef unsigned __int128        u128;
+#define FMT32_08x     "%08lx"
 #define FMT60_020o    "%020llo"
 #define FMT64_010x    "%010llx"
 #define FMT64_016x    "%016llx"
 #define FMT64_022o    "%022llo"
-#define FMT64_012x    "%012;lx"
+#define FMT64_012x    "%012llx"
 #else
 #error "Unable to determine size of basic data types"
 #endif
@@ -231,8 +234,8 @@ typedef struct
     bool   osBoundsCheckEnabled;        /* whether OS bounds checking is enabled */
     bool   isBelowOsBound;              /* whether checking is below/above OS bound register */
     bool   isStopEnabled;               /* whether PP stop enabled on OS bounds violation */
-    u64    packedWord;                  /* current word assembled by IAPM/OAPM instruction */
-    u8     packedWordShift;             /* shift count used in packed word dis/assembly */
+    PpWord ioBuf[4];                    /* used by IAPM/OAPM instructions */
+    u8     ioBufIdx;
     } PpSlot;
 
 /*
@@ -405,10 +408,8 @@ typedef struct
     u32           regEid;               /* CPU element identifier register */
     u64           regDec;               /* dependent environment control register */
     u64           regTm;                /* test mode register */
-    u32           byteNumMask;          /* mask used in determining byte number within page */
     u32           pageLengthMask;       /* mask used in calculating page table index */
     u8            pageNumShift;         /* shift count used in calculating page numbers */
-    u16           pageOffsetMask;       /* mask used in calculating page offsets */
     u8            spidShift;            /* shift count used in calculating SPID's */
     volatile bool isMonitorMode;        /* TRUE if CPU is in monitor mode */
     volatile bool isStopped;            /* TRUE if CPU is stopped */
