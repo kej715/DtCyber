@@ -58,7 +58,7 @@ typedef unsigned __int64    u64;
 #define FMT64_012x    "%012I64x"
 #elif defined (__GNUC__) || defined(__SunOS)
 #if defined(__amd64) || defined(__amd64__) || defined(__alpha__) || defined(__powerpc64__) || defined(__ppc64__) \
-    || (defined(__sparc64__) && defined(__arch64__)) || defined(__aarch64__)
+    || (defined(__sparc64__) && defined(__arch64__)) || defined(__aarch64__) || defined(__x86_64__)
 
 /*
 **  64 bit systems
