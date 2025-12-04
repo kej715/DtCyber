@@ -69,8 +69,8 @@
 //#define TRACE_RANGE_START 0xb04d00018600
 //#define TRACE_RANGE_END   0xb04d00018687
 
-//#define TRACE_STORE_START 0xb04d00018680
-//#define TRACE_STORE_END   0xb04d0001868f
+#define TRACE_STORE_START 0x100a0000b700
+#define TRACE_STORE_END   0x100a0000b7ff
 
 #endif
 
@@ -1031,6 +1031,8 @@ static FILE *cpu180Log = NULL;
 
 #if CcDebug == 1
 static int traceInstCount  = 0;
+static u32 traceRmaEnd     = 0x0062bfff;
+static u32 traceRmaStart   = 0x0062b000;
 #if defined(TRACE_INST_LIST)
 static u8  traceInstList[] = TRACE_INST_LIST;
 #endif
@@ -2180,6 +2182,28 @@ void cpu180PpWriteMem(u32 address, CpWord data)
         address       %= cpuMaxMemory;
         cpMem[address] = data;
         }
+
+#if CcDebug == 1 && defined(TRACE_STORE_START)
+    address <<= 3;
+    if (address >= traceRmaStart && address <= traceRmaEnd)
+        {
+        u8   b;
+        char buf[128];
+        char *cp;
+        int  shift;
+
+        sprintf(buf, "PP%02o write " FMT32_08x " " FMT64_016x, activePpu->id, address, data);
+        cp = buf + strlen(buf);
+        *cp++ = ' ';
+        for (shift = 56; shift >= 0; shift -= 8)
+            {
+            b = (u8)((data >> shift) & Mask8);
+            *cp++ = (b >= 0x20 && b < 0x7f) ? b : '.';
+            }
+        *cp = '\0';
+        traceCpuPrint(&cpus170[0], buf);
+        }
+#endif
     }
 
 /*--------------------------------------------------------------------------
@@ -2369,6 +2393,16 @@ bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *r
 
 #if CcDebug == 1
         traceRma(ctx, *rma);
+#if defined(TRACE_STORE_START)
+        if (pva >= (TRACE_STORE_START) && pva <= (TRACE_STORE_END))
+            {
+            u32 delta;
+            delta = (TRACE_STORE_END) - (TRACE_STORE_START);
+            if (delta > 4095) delta = 4095;
+            traceRmaStart = (*rma >> ctx->pageNumShift) << ctx->pageNumShift;
+            traceRmaEnd   = traceRmaStart + delta;
+            }
+#endif
 #endif
 
         return TRUE;
@@ -5388,6 +5422,9 @@ static void cp180Op75(Cpu180Context *activeCpu)  // 75  MOVN       MIGDS 2-51
             && bdp180EncodeOperand(activeCpu, &activeCpu->dstDesc, &operand, FALSE, &isTruncated))
             {
 #if CcDebug == 1
+#if defined(TRACE_STORE_START)
+            cpu180CheckTraceStore(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.pva + activeCpu->dstDesc.length - 1);
+#endif
             traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
             traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
 #endif
@@ -5430,6 +5467,9 @@ static void cp180Op76(Cpu180Context *activeCpu)  // 76  MOVB       MIGDS 2-55
             }
 
 #if CcDebug == 1
+#if defined(TRACE_STORE_START)
+        cpu180CheckTraceStore(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.pva + activeCpu->dstDesc.length - 1);
+#endif
         traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
         traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
 #endif
@@ -6219,7 +6259,6 @@ static void cp180Op9F(Cpu180Context *activeCpu)  // 9F  BRCR       MIGDS 2-142
         if ((activeCpu->regMcr & mask) == 0)
             {
             activeCpu->regMcr |= mask;
-//            cpu180CheckMonitorConditions(activeCpu);
             activeCpu->regP  = brExit;
             activeCpu->nextP = activeCpu->regP;
             }
@@ -6247,7 +6286,6 @@ static void cp180Op9F(Cpu180Context *activeCpu)  // 9F  BRCR       MIGDS 2-142
         if ((activeCpu->regUcr & mask) == 0)
             {
             activeCpu->regUcr |= mask;
-//            cpu180CheckUserConditions(activeCpu);
             activeCpu->regP  = brExit;
             activeCpu->nextP = activeCpu->regP;
             }
@@ -7888,6 +7926,9 @@ static void cp180OpF9(Cpu180Context *activeCpu)  // F9  MOVI       MIGDS 2-62
         }
 
 #if CcDebug == 1
+#if defined(TRACE_STORE_START)
+    cpu180CheckTraceStore(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.pva + activeCpu->dstDesc.length - 1);
+#endif
     traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
 #endif
     }
