@@ -1156,7 +1156,7 @@ static FcStatus dd8xxFunc(PpWord funcCode)
                         }
                     else
                         {
-                        dp->detailedStatus[17] &= ~0010;;
+                        dp->detailedStatus[17] &= ~0010;
                         }
                     }
                 break;
@@ -2128,7 +2128,7 @@ static void dd8xxSectorWrite(DiskParam *dp, FILE *fcb, PpWord *sector)
     dp->bufPtr            = dp->buffer;
     sectorSize            = (dp->diskType == DiskType885Ls) ? LargeSectorSize : SectorSize;
     dp->bufLimit          = dp->buffer + sectorSize;
-    for (wordCount = sectorSize; wordCount > 0; wordCount--)
+    for (wordCount = 0; wordCount < sectorSize; wordCount++)
         {
         dp->write(dp, fcb, *sector++);
         }
