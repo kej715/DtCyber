@@ -2715,6 +2715,7 @@ bool cpu180TranslatePvaSequence(Cpu180Context *ctx, u64 pva, u16 count, u8 incr,
     MonitorCondition cond;
     u16              i;
     u32              pageNum;
+    u32              pn;
     u32              pti;
     u32              rma;
 
@@ -2732,14 +2733,15 @@ bool cpu180TranslatePvaSequence(Cpu180Context *ctx, u64 pva, u16 count, u8 incr,
             {
             pva += incr;
             rma += incr;
-            if (PageOf(pva, ctx) != pageNum)
+            pn   = PageOf(pva, ctx);
+            if (pn != pageNum)
                 {
                 if (cpu180PvaToRma(ctx, pva, access, &rma, &pti, &cond) == FALSE)
                     {
                     cpu180SetMonitorCondition(ctx, cond);
                     return FALSE;
                     }
-                pageNum = PageOf(pva, ctx);
+                pageNum = pn;
                 }
             *rmas++ = rma;
             }
@@ -5567,7 +5569,7 @@ static void cp180Op80(Cpu180Context *activeCpu)  // 80  LMULT      MIGDS 2-16
         cpu180SetMonitorCondition(activeCpu, MCR52); // address specification error
         return;
         }
-    disp       = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffff0000 | activeCpu->opQ) << 3;
+    disp       = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ) << 3;
     pva        = (pva & RingSegMask) | ((pva + disp) & Mask32);
     selector   = (u16)activeCpu->regX[activeCpu->opK];
     as         = selector >> 12;
@@ -5763,7 +5765,7 @@ static void cp180Op84(Cpu180Context *activeCpu)  // 84  LA         MIGDS 2-15
     u64 r2;
 
     Aj   = activeCpu->regA[activeCpu->opJ];
-    disp = (activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffff0000 | activeCpu->opQ;
+    disp = (activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
     pva  = (Aj & RingSegMask) | ((Aj + disp) & Mask32);
     if (cpu180GetBytes(activeCpu, pva, 6, RingOf(pva), AccessModeRead, &addr))
         {
@@ -5793,7 +5795,7 @@ static void cp180Op85(Cpu180Context *activeCpu)  // 85  SA         MIGDS 2-15
     u64 pva;
 
     Aj   = activeCpu->regA[activeCpu->opJ];
-    disp = (activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffff0000 | activeCpu->opQ;
+    disp = (activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
     pva  = (Aj & RingSegMask) | ((Aj + disp) & Mask32);
     (void)cpu180PutBytes(activeCpu, pva, RingOf(pva), activeCpu->regA[activeCpu->opK], 6);
     }
@@ -5804,7 +5806,7 @@ static void cp180Op86(Cpu180Context *activeCpu)  // 86  LBYTP,j    MIGDS 2-13
     u64 pva;
     u64 word;
 
-    disp = (activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffff0000 | activeCpu->opQ;
+    disp = (activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
     pva  = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
     if (cpu180GetBytes(activeCpu, pva, (activeCpu->opJ & Mask3) + 1, RingOf(pva), AccessModeExecute, &word))
         {
@@ -5829,20 +5831,18 @@ static void cp180Op88(Cpu180Context *activeCpu)  // 88  LBIT       MIGDS 2-14
     u32 q;
     u64 word;
 
-    offset   = (u32)activeCpu->regX[0];
-    offset >>= 3;
+    offset = (u32)activeCpu->regX[0] >> 3;
     if (offset > 0x0fffffff)
         {
         offset |= 0xf0000000;
         }
     Aj  = activeCpu->regA[activeCpu->opJ];
-    q   = (activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffff0000 | activeCpu->opQ;
+    q   = (activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
     pva = (Aj & RingSegMask) | ((Aj + offset + q) & Mask32);
-    if (cpu180GetBytes(activeCpu, pva, 1, RingOf(pva), AccessModeRead, &word) == FALSE)
+    if (cpu180GetBytes(activeCpu, pva, 1, RingOf(pva), AccessModeRead, &word))
         {
-        return;
+        activeCpu->regX[activeCpu->opK] = (word >> (7 - (activeCpu->regX[0] & Mask3))) & 1;
         }
-    activeCpu->regX[activeCpu->opK] = (word >> (7 - (activeCpu->regX[0] & Mask3))) & 1;
     }
 
 static void cp180Op89(Cpu180Context *activeCpu)  // 89  SBIT       MIGDS 2-14
@@ -5858,14 +5858,13 @@ static void cp180Op89(Cpu180Context *activeCpu)  // 89  SBIT       MIGDS 2-14
     u8               shift;
     u32              wordAddr;
 
-    offset   = (u32)activeCpu->regX[0];
-    offset >>= 3;
+    offset = (u32)activeCpu->regX[0] >> 3;
     if (offset > 0x0fffffff)
         {
         offset |= 0xf0000000;
         }
     Aj  = activeCpu->regA[activeCpu->opJ];
-    q   = (activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffff0000 | activeCpu->opQ;
+    q   = (activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
     pva = (Aj & RingSegMask) | ((Aj + offset + q) & Mask32);
     if (cpu180ValidateAccess(activeCpu, pva, RingOf(pva), AccessModeWrite, &cond) == FALSE
         || cpu180PvaToRma(activeCpu, pva, AccessModeNone, &rma, &pti, &cond) == FALSE) // cause page fault if page not in memory
@@ -5878,7 +5877,7 @@ static void cp180Op89(Cpu180Context *activeCpu)  // 89  SBIT       MIGDS 2-14
         shift           = (56 - ((rma & Mask3) << 3)) + (7 - (activeCpu->regX[0] & Mask3));
         mask            = ~((u64)1 << shift);
         cpuAcquireMemoryMutex();
-        cpMem[wordAddr] = (cpMem[wordAddr] & mask) | (activeCpu->regX[activeCpu->opK] & 1) << shift;
+        cpMem[wordAddr] = (cpMem[wordAddr] & mask) | ((activeCpu->regX[activeCpu->opK] & 1) << shift);
         cpMem[pti]     |= (u64)3 << 60; // set page used and modified bits
         cpuReleaseMemoryMutex();
 
@@ -5892,7 +5891,8 @@ static void cp180Op8A(Cpu180Context *activeCpu)  // 8A  ADDRQ      MIGDS 2-22
     {
     u32 sum;
 
-    if (cpu180AddInt32(activeCpu, activeCpu->regX[activeCpu->opJ] & Mask32, (activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffff0000 | activeCpu->opQ, &sum))
+    if (cpu180AddInt32(activeCpu, activeCpu->regX[activeCpu->opJ] & Mask32,
+                       (activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ, &sum))
         {
         activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | sum;
         }
@@ -5902,7 +5902,8 @@ static void cp180Op8B(Cpu180Context *activeCpu)  // 8B  ADDXQ      MIGDS 2-20
     {
     u64 sum;
 
-    if (cpu180AddInt64(activeCpu, activeCpu->regX[activeCpu->opJ], (activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffffffffffff0000 | activeCpu->opQ, &sum))
+    if (cpu180AddInt64(activeCpu, activeCpu->regX[activeCpu->opJ],
+                       (activeCpu->opQ < 0x8000) ? (u64)activeCpu->opQ : 0xffffffffffff0000 | (u64)activeCpu->opQ, &sum))
         {
         activeCpu->regX[activeCpu->opK] = sum;
         }
@@ -5913,7 +5914,7 @@ static void cp180Op8C(Cpu180Context *activeCpu)  // 8C  MULRQ      MIGDS 2-23
     u32 product;
 
     if (cpu180MulInt32(activeCpu, activeCpu->regX[activeCpu->opJ] & Mask32,
-        (activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffff0000 | activeCpu->opQ, &product))
+                       (activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ, &product))
         {
         activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | product;
         }
@@ -5923,7 +5924,7 @@ static void cp180Op8D(Cpu180Context *activeCpu)  // 8D  ENTE       MIGDS 2-30
     {
     if (activeCpu->opQ < 0x8000)
         {
-        activeCpu->regX[activeCpu->opK] = activeCpu->opQ;
+        activeCpu->regX[activeCpu->opK] = (u64)activeCpu->opQ;
         }
     else
         {
@@ -5935,7 +5936,7 @@ static void cp180Op8E(Cpu180Context *activeCpu)  // 8E  ADDAQ      MIGDS 2-29
     {
     u32 disp;
 
-    disp = (activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffff0000 | activeCpu->opQ;
+    disp = (activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
     activeCpu->regA[activeCpu->opK] = (activeCpu->regA[activeCpu->opJ] & RingSegMask) | ((activeCpu->regA[activeCpu->opJ] + disp) & Mask32);
     }
 
@@ -5945,7 +5946,7 @@ static void cp180Op8F(Cpu180Context *activeCpu)  // 8F  ADDPXQ     MIGDS 2-29
     u64 XjR;
 
     XjR  = (((activeCpu->opJ == 0) ? 0 : activeCpu->regX[activeCpu->opJ]) << 1) & Mask32;
-    disp = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0x7fff0000 | activeCpu->opQ) << 1;
+    disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
     activeCpu->regA[activeCpu->opK] = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + XjR + (u64)disp) & Mask32);
     }
 
@@ -5959,7 +5960,7 @@ static void cp180Op90(Cpu180Context *activeCpu)  // 90  BRREQ      MIGDS 2-25
     XkR = (activeCpu->opK == 0) ? 0 : (activeCpu->regX[activeCpu->opK] & Mask32);
     if (XjR == XkR)
         {
-        disp = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0x7fff0000 | activeCpu->opQ) << 1;
+        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
         activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     }
@@ -5974,7 +5975,7 @@ static void cp180Op91(Cpu180Context *activeCpu)  // 91  BRRNE      MIGDS 2-25
     XkR = (activeCpu->opK == 0) ? 0 : (activeCpu->regX[activeCpu->opK] & Mask32);
     if (XjR != XkR)
         {
-        disp = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0x7fff0000 | activeCpu->opQ) << 1;
+        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
         activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     }
@@ -5989,7 +5990,7 @@ static void cp180Op92(Cpu180Context *activeCpu)  // 92  BRRGT      MIGDS 2-25
     XkR = (activeCpu->opK == 0) ? 0 : (activeCpu->regX[activeCpu->opK] & Mask32);
     if (XjR > XkR)
         {
-        disp = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0x7fff0000 | activeCpu->opQ) << 1;
+        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
         activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     }
@@ -6004,7 +6005,7 @@ static void cp180Op93(Cpu180Context *activeCpu)  // 93  BRRGE      MIGDS 2-25
     XkR = (activeCpu->opK == 0) ? 0 : (activeCpu->regX[activeCpu->opK] & Mask32);
     if (XjR >= XkR)
         {
-        disp = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0x7fff0000 | activeCpu->opQ) << 1;
+        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
         activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     }
@@ -6019,7 +6020,7 @@ static void cp180Op94(Cpu180Context *activeCpu)  // 94  BRXEQ      MIGDS 2-25
     Xk = (activeCpu->opK == 0) ? 0 : activeCpu->regX[activeCpu->opK];
     if (Xj == Xk)
         {
-        disp = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0x7fff0000 | activeCpu->opQ) << 1;
+        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
         activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     }
@@ -6034,7 +6035,7 @@ static void cp180Op95(Cpu180Context *activeCpu)  // 95  BRXNE      MIGDS 2-25
     Xk = (activeCpu->opK == 0) ? 0 : activeCpu->regX[activeCpu->opK];
     if (Xj != Xk)
         {
-        disp = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0x7fff0000 | activeCpu->opQ) << 1;
+        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
         activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     }
@@ -6049,7 +6050,7 @@ static void cp180Op96(Cpu180Context *activeCpu)  // 96  BRXGT      MIGDS 2-25
     Xk = (activeCpu->opK == 0) ? 0 : activeCpu->regX[activeCpu->opK];
     if (Xj > Xk)
         {
-        disp = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0x7fff0000 | activeCpu->opQ) << 1;
+        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
         activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     }
@@ -6064,7 +6065,7 @@ static void cp180Op97(Cpu180Context *activeCpu)  // 97  BRXGE      MIGDS 2-25
     Xk = (activeCpu->opK == 0) ? 0 : activeCpu->regX[activeCpu->opK];
     if (Xj >= Xk)
         {
-        disp = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0x7fff0000 | activeCpu->opQ) << 1;
+        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
         activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     }
@@ -6082,7 +6083,7 @@ static void cp180Op98(Cpu180Context *activeCpu)  // 98  BRFEQ      MIGDS 2-87
         {
         if (valence == 0)
             {
-            disp             = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0x7fff0000 | activeCpu->opQ) << 1;
+            disp             = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
             activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
             }
         }
@@ -6101,7 +6102,7 @@ static void cp180Op99(Cpu180Context *activeCpu)  // 99  BRFNE      MIGDS 2-87
         {
         if (valence != 0)
             {
-            disp             = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0x7fff0000 | activeCpu->opQ) << 1;
+            disp             = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
             activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
             }
         }
@@ -6120,7 +6121,7 @@ static void cp180Op9A(Cpu180Context *activeCpu)  // 9A  BRFGT      MIGDS 2-87
         {
         if (valence > 0)
             {
-            disp             = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0x7fff0000 | activeCpu->opQ) << 1;
+            disp             = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
             activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
             }
         }
@@ -6139,7 +6140,7 @@ static void cp180Op9B(Cpu180Context *activeCpu)  // 9B  BRFGE      MIGDS 2-87
         {
         if (valence >= 0)
             {
-            disp             = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0x7fff0000 | activeCpu->opQ) << 1;
+            disp             = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
             activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
             }
         }
@@ -6153,7 +6154,7 @@ static void cp180Op9C(Cpu180Context *activeCpu)  // 9C  BRINC      MIGDS 2-26
     Xj = (activeCpu->opJ == 0) ? 0 : (i64)activeCpu->regX[activeCpu->opJ];
     if (Xj > (i64)activeCpu->regX[activeCpu->opK])
         {
-        disp = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0x7fff0000 | activeCpu->opQ) << 1;
+        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
         activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         activeCpu->regX[activeCpu->opK] += 1;
         }
@@ -6171,7 +6172,7 @@ static void cp180Op9D(Cpu180Context *activeCpu)  // 9D  BRSEG      MIGDS 2-26
     Ak = activeCpu->regA[activeCpu->opK];
     if ((Aj & SegMask) != (Ak & SegMask))
         {
-        disp = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0x7fff0000 | activeCpu->opQ) << 1;
+        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
         activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     else
@@ -6199,7 +6200,7 @@ static void cp180Op9E(Cpu180Context *activeCpu)  // 9E  BR---      MIGDS 2-88
     u64 brExit;
     u32 disp;
 
-    disp     = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0x7fff0000 | activeCpu->opQ) << 1;
+    disp     = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
     brExit   = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
     exponent = (u16)((activeCpu->regX[activeCpu->opK] >> 48) & 0x7fff);
     switch (activeCpu->opJ & Mask2)
@@ -6232,7 +6233,7 @@ static void cp180Op9F(Cpu180Context *activeCpu)  // 9F  BRCR       MIGDS 2-142
     u16 mask;
 
     mask   = bitSelectors[activeCpu->opJ];
-    disp   = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0x7fff0000 | activeCpu->opQ) << 1;
+    disp   = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
     brExit = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
 
     switch (activeCpu->opK & Mask3)
@@ -6594,7 +6595,7 @@ static void cp180OpB0(Cpu180Context *activeCpu)  // B0  CALLREL    MIGDS 2-125
     u8               xs;
     u8               xt;
 
-    disp   = ((activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffff0000 | activeCpu->opQ) << 3;
+    disp   = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ) << 3;
     callee = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & 0xfffffff8);
     xs     = (activeCpu->regX[0] >> 8) & Mask4;
     at     = (activeCpu->regX[0] >> 4) & Mask4;
@@ -6636,7 +6637,7 @@ static void cp180OpB1(Cpu180Context *activeCpu)  // B1  KEYPOINT   MIGDS 2-133
     if ((activeCpu->regKmr & mask) != 0 && (activeCpu->regFlags & 0x2000) != 0)
         {
         XkR  = (activeCpu->opK == 0) ? 0 : (u32)activeCpu->regX[activeCpu->opK];
-        disp = (activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffff0000 | activeCpu->opQ;
+        disp = (activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
         kpe  = ((cpu180FreeRunningCounter & Mask28) << 36) | ((u64)activeCpu->opJ << 32) | ((XkR + disp) & Mask32);
         if (cpu180ValidateAccess(activeCpu, activeCpu->regKbp, RingOf(activeCpu->regKbp), AccessModeWrite, &cond) == FALSE
             || cpu180PvaToRma(activeCpu, activeCpu->regKbp, AccessModeWrite, &rma, &pti, &cond) == FALSE)
@@ -6660,7 +6661,7 @@ static void cp180OpB2(Cpu180Context *activeCpu)  // B2  MULXQ      MIGDS 2-21
     u64 product;
 
     if (cpu180MulInt64(activeCpu, activeCpu->regX[activeCpu->opJ],
-        (activeCpu->opQ < 0x8000) ? activeCpu->opQ : 0xffffffffffff0000 | activeCpu->opQ, &product))
+        (activeCpu->opQ < 0x8000) ? (u64)activeCpu->opQ : 0xffffffffffff0000 | (u64)activeCpu->opQ, &product))
         {
         activeCpu->regX[activeCpu->opK] = product;
         }
