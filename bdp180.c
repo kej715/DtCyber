@@ -81,6 +81,22 @@ static void bdp180LongSum(u64 *augend, u64 *addend, u64 *result, u64 *carry);
 */
 
 //
+// Masks used in merging bytes into words
+//
+static u64 mergeMasks[9] =
+    {
+    0xffffffffffffffff,
+    0x00ffffffffffffff,
+    0x0000ffffffffffff,
+    0x000000ffffffffff,
+    0x00000000ffffffff,
+    0x0000000000ffffff,
+    0x000000000000ffff,
+    0x00000000000000ff,
+    0x0000000000000000
+    };
+
+//
 // Maximum allowed length of each BDP operand type
 //
 static u16 maxBdpOpLengths[16] =
@@ -265,12 +281,11 @@ bool bdp180CopyFromBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
             n        = (count >= 8) ? 8 : count;
             count   -= n;
             wordAddr = rmas[i++] >> 3;
-            word     = cpMem[wordAddr];
+            word     = cpMem[wordAddr] & mergeMasks[n];
             shift    = 56;
             while (n-- > 0)
                 {
-                mask   = ~((u64)0xff << shift);
-                word   = (word & mask) | ((u64)*bp++ << shift);
+                word  |= (u64)*bp++ << shift;
                 shift -= 8;
                 }
             cpMem[wordAddr] = word;
@@ -326,7 +341,7 @@ bool bdp180CopyToBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
         word   = cpMem[rmas[0] >> 3];
         while (n-- > 0)
             {
-            *bp++  = (u8)((word >> shift) & Mask8);
+            *bp++  = (u8)(word >> shift);
             shift -= 8;
             }
         }
@@ -349,7 +364,7 @@ bool bdp180CopyToBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
             shift  = 56;
             while (n-- > 0)
                 {
-                *bp++  = (u8)((word >> shift) & Mask8);
+                *bp++  = (u8)(word >> shift);
                 shift -= 8;
                 }
             }
