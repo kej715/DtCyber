@@ -406,6 +406,7 @@ typedef struct
     u16           regVmcl;              /* virtual machine capability list register */
     u64           regKbp;               /* keypoint buffer pointer register */
     u32           regEid;               /* CPU element identifier register */
+    u8            regOi;                /* CPU options installed register */
     u64           regDec;               /* dependent environment control register */
     u64           regTm;                /* test mode register */
     u32           pageLengthMask;       /* mask used in calculating page table index */

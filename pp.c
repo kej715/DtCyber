@@ -2320,12 +2320,12 @@ static void ppOpRDSL(void)    // 1000
                | ((CpWord)activePpu->mem[activePpu->opD + 3]);
         cpuAcquireMemoryMutex();
         cpu180PpReadMem(address, &cmData);
+        cpu180PpWriteMem(address, cmData | ppData);
+        cpuReleaseMemoryMutex();
         activePpu->mem[activePpu->opD]     = (PpWord)((cmData >> 48) & Mask16);
         activePpu->mem[activePpu->opD + 1] = (PpWord)((cmData >> 32) & Mask16);
         activePpu->mem[activePpu->opD + 2] = (PpWord)((cmData >> 16) & Mask16);
         activePpu->mem[activePpu->opD + 3] = (PpWord)((cmData) & Mask16);
-        cpu180PpWriteMem(address, cmData | ppData);
-        cpuReleaseMemoryMutex();
 
 #if CcDebug == 1
         traceCmWord64(cmData | ppData);
@@ -2363,12 +2363,12 @@ static void ppOpRDCL(void)    // 1001
                | ((CpWord)activePpu->mem[activePpu->opD + 3] & Mask12);
         cpuAcquireMemoryMutex();
         cpu180PpReadMem(address, &cmData);
+        cpu180PpWriteMem(address, cmData & ppData);
+        cpuReleaseMemoryMutex();
         activePpu->mem[activePpu->opD]     = (PpWord)((cmData >> 48) & Mask16);
         activePpu->mem[activePpu->opD + 1] = (PpWord)((cmData >> 32) & Mask16);
         activePpu->mem[activePpu->opD + 2] = (PpWord)((cmData >> 16) & Mask16);
         activePpu->mem[activePpu->opD + 3] = (PpWord)((cmData) & Mask16);
-        cpu180PpWriteMem(address, cmData & ppData);
-        cpuReleaseMemoryMutex();
 
 #if CcDebug == 1
         traceCmWord64(cmData & ppData);

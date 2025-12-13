@@ -806,14 +806,39 @@ static void *windowThread(void *param)
             /*
             **  Display P registers of PPUs and CPUs and current trace mask.
             */
-            sprintf(buf, "Refresh: %-10d  PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o   CPU P-reg: %06o",
+            sprintf(buf, "Refresh: %-10d  PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o  CPU P-reg: ",
                     refreshCount++,
                     ppu[0].regP, ppu[1].regP, ppu[2].regP, ppu[3].regP, ppu[4].regP,
-                    ppu[5].regP, ppu[6].regP, ppu[7].regP, ppu[8].regP, ppu[9].regP,
-                    cpus170[0].regP);
-            if (cpuCount > 1)
+                    ppu[5].regP, ppu[6].regP, ppu[7].regP, ppu[8].regP, ppu[9].regP);
+            if (isCyber180)
                 {
-                sprintf(buf + strlen(buf), " %06o", cpus170[1].regP);
+                if (cpus180[0].regVmid == 0)
+                    {
+                    sprintf(buf + strlen(buf), FMT64_012x, cpus180[0].regP);
+                    }
+                else
+                    {
+                    sprintf(buf + strlen(buf), "%06o      ", cpus170[0].regP);
+                    }
+                if (cpuCount > 1)
+                    {
+                    if (cpus180[1].regVmid == 0)
+                        {
+                        sprintf(buf + strlen(buf), " " FMT64_012x, cpus180[1].regP);
+                        }
+                    else
+                        {
+                        sprintf(buf + strlen(buf), " %06o", cpus170[1].regP);
+                        }
+                    }
+                }
+            else
+                {
+                sprintf(buf + strlen(buf), "%06o", cpus170[0].regP);
+                if (cpuCount > 1)
+                    {
+                    sprintf(buf + strlen(buf), " %06o", cpus170[1].regP);
+                    }
                 }
 
             sprintf(buf + strlen(buf), "   Trace: %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",

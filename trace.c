@@ -874,9 +874,8 @@ void traceCpu(Cpu170Context *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 op
     {
     u8           addrMode;
     bool         link    = TRUE;
-    static bool  oneIdle = TRUE;
     DecCpControl *decode = cpDecode;
-    static char  str[80];
+    char         str[80];
 
     /*
     **  Bail out if no trace of the CPU is requested.
@@ -885,42 +884,6 @@ void traceCpu(Cpu170Context *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 op
         {
         return;
         }
-
-#if 0
-    /*
-    **  Don't trace Scope 3.1 idle loop.
-    */
-    if ((cpu->regRaCm == 02020) && (cpu->regP == 2))
-        {
-        if (!oneIdle)
-            {
-            return;
-            }
-        else
-            {
-            oneIdle = FALSE;
-            }
-        }
-    else
-        {
-        oneIdle = TRUE;
-        }
-#endif
-
-#if 0
-    for (i = 0; i < 8; i++)
-        {
-        data = cpu->regX[i];
-        fprintf(cpuF[cpu->id], "        A%d %06.6o  X%d %04.4o %04.4o %04.4o %04.4o %04.4o   B%d %06.6o\n",
-                i, cpu->regA[i], i,
-                (PpWord)((data >> 48) & Mask12),
-                (PpWord)((data >> 36) & Mask12),
-                (PpWord)((data >> 24) & Mask12),
-                (PpWord)((data >> 12) & Mask12),
-                (PpWord)((data) & Mask12),
-                i, cpu->regB[i]);
-        }
-#endif
 
     /*
     **  Print sequence no.
@@ -1209,7 +1172,7 @@ void traceCpu180(Cpu180Context *cpu, u64 p, u8 opCode, u8 opI, u8 opJ, u8 opK, u
     {
     DecCp180Control *decode = cp180Decode;
     DecCp180Control *entry;
-    static char     str[80];
+    char            str[80];
     u64             value;
 
     /*

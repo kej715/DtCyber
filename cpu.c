@@ -200,13 +200,13 @@ static void cpOp77(Cpu170Context *activeCpu);
 **  Public Variables
 **  ----------------
 */
-u32           cpuMaxMemory;
-CpWord        *cpMem;
-int           cpuCount = 1;
-Cpu170Context *cpus170;
-u32           extMaxMemory;
-CpWord        *extMem;
-ExtMemory     extMemType = ECS;
+u32             cpuMaxMemory;
+volatile CpWord *cpMem;
+int             cpuCount = 1;
+Cpu170Context   *cpus170;
+u32             extMaxMemory;
+volatile CpWord *extMem;
+ExtMemory       extMemType = ECS;
 
 /*
 **  -----------------
@@ -398,10 +398,10 @@ void cpuInit(char *model, u16 *serialNumbers, u32 memory, u32 emBanks, ExtMemory
             /*
             **  Read CM contents.
             */
-            if (fread(cpMem, sizeof(CpWord), cpuMaxMemory, cmHandle) != cpuMaxMemory)
+            if (fread((void *)cpMem, sizeof(CpWord), cpuMaxMemory, cmHandle) != cpuMaxMemory)
                 {
                 printf("(cpu    ) Unexpected length of CM backing file, clearing CM\n");
-                memset(cpMem, 0, cpuMaxMemory);
+                memset((void *)cpMem, 0, cpuMaxMemory);
                 }
             }
         else
@@ -428,10 +428,10 @@ void cpuInit(char *model, u16 *serialNumbers, u32 memory, u32 emBanks, ExtMemory
             /*
             **  Read ECS contents.
             */
-            if (fread(extMem, sizeof(CpWord), extMaxMemory, ecsHandle) != extMaxMemory)
+            if (fread((void *)extMem, sizeof(CpWord), extMaxMemory, ecsHandle) != extMaxMemory)
                 {
                 printf("(cpu    ) Unexpected length of ECS backing file, clearing ECS\n");
-                memset(extMem, 0, extMaxMemory);
+                memset((void *)extMem, 0, extMaxMemory);
                 }
             }
         else
@@ -463,10 +463,6 @@ void cpuInit(char *model, u16 *serialNumbers, u32 memory, u32 emBanks, ExtMemory
         cpus170[cpuNum].isStopped            = TRUE;
         cpus170[cpuNum].ppRequestingExchange = -1;
         cpus170[cpuNum].idleCycles           = 0;
-        if (cpuNum > 0)
-            {
-            cpuCreateThread(cpuNum);
-            }
         }
 
     /*
@@ -485,6 +481,14 @@ void cpuInit(char *model, u16 *serialNumbers, u32 memory, u32 emBanks, ExtMemory
     for (i = 0; i < sizeof(ecs16Kx4bitFlagRegisters); i++)
         {
         ecs16Kx4bitFlagRegisters[i] = 0;
+        }
+
+    /*
+    **  Start CPU1, if more than one CPU are configured.
+    */
+    if (cpuCount > 1)
+        {
+        cpuCreateThread(1);
         }
 
     /*
@@ -523,7 +527,10 @@ void cpuInit(char *model, u16 *serialNumbers, u32 memory, u32 emBanks, ExtMemory
 **------------------------------------------------------------------------*/
 void cpuAcquireExchangeMutex(void)
     {
-    cpuAcquireMutex(&exchangeMutex);
+    if (cpuCount > 1)
+        {
+        cpuAcquireMutex(&exchangeMutex);
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -536,7 +543,10 @@ void cpuAcquireExchangeMutex(void)
 **------------------------------------------------------------------------*/
 void cpuAcquireMemoryMutex(void)
     {
-    cpuAcquireMutex(&memoryMutex);
+    if (cpuCount > 1)
+        {
+        cpuAcquireMutex(&memoryMutex);
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -567,7 +577,10 @@ u32 cpuGetP(u8 cpuNum)
 **------------------------------------------------------------------------*/
 void cpuReleaseExchangeMutex(void)
     {
-    cpuReleaseMutex(&exchangeMutex);
+    if (cpuCount > 1)
+        {
+        cpuReleaseMutex(&exchangeMutex);
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -580,7 +593,10 @@ void cpuReleaseExchangeMutex(void)
 **------------------------------------------------------------------------*/
 void cpuReleaseMemoryMutex(void)
     {
-    cpuReleaseMutex(&memoryMutex);
+    if (cpuCount > 1)
+        {
+        cpuReleaseMutex(&memoryMutex);
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -599,7 +615,7 @@ void cpuTerminate(void)
     if (cmHandle != NULL)
         {
         fseek(cmHandle, 0, SEEK_SET);
-        if (fwrite(cpMem, sizeof(CpWord), cpuMaxMemory, cmHandle) != cpuMaxMemory)
+        if (fwrite((void *)cpMem, sizeof(CpWord), cpuMaxMemory, cmHandle) != cpuMaxMemory)
             {
             logDtError(LogErrorLocation, "Error writing CM backing file\n");
             }
@@ -613,7 +629,7 @@ void cpuTerminate(void)
     if (ecsHandle != NULL)
         {
         fseek(ecsHandle, 0, SEEK_SET);
-        if (fwrite(extMem, sizeof(CpWord), extMaxMemory, ecsHandle) != extMaxMemory)
+        if (fwrite((void *)extMem, sizeof(CpWord), extMaxMemory, ecsHandle) != extMaxMemory)
             {
             logDtError(LogErrorLocation, "Error writing ECS backing file\n");
             }
@@ -1233,8 +1249,8 @@ static void *cpuThread(void *param)
 **------------------------------------------------------------------------*/
 static void cpuExchangeJump(Cpu170Context *activeCpu, u32 address, bool doChangeMode)
     {
-    CpWord     *mem;
-    Cpu170Context tmp;
+    volatile CpWord *mem;
+    Cpu170Context   tmp;
 
     /*
     **  Only perform exchange jump on instruction boundary or when stopped.

@@ -296,27 +296,27 @@ static FcStatus mchFunc(PpWord funcCode)
     if (mchConnCode >= 8)
         {
 #if DEBUG
-    fprintf(mchLog, "\n%12d PP:%02o CH:%02o f:0x%03X MCH deselect",
+        fprintf(mchLog, "\n%12d PP:%02o CH:%02o f:0x%03X MCH deselect",
             traceSequenceNo,
             activePpu->id,
             activeDevice->channel->id,
             funcCode);
 #endif
         activeDevice->fcode = funcCode;
-        mchTimeout = 0;
+        mchTimeout          = 0;
         return FcProcessed;
         }
 
 #if DEBUG
     fprintf(mchLog, "\n%12d PP:%02o CH:%02o f:0x%03X C:%X O:%X T:%X (%s)",
-            traceSequenceNo,
-            activePpu->id,
-            activeDevice->channel->id,
-            funcCode,
-            mchConnCode,
-            opCode,
-            mchTypeCode,
-            mchFn2String(mchConnCode, opCode, mchTypeCode));
+        traceSequenceNo,
+        activePpu->id,
+        activeDevice->channel->id,
+        funcCode,
+        mchConnCode,
+        opCode,
+        mchTypeCode,
+        mchFn2String(mchConnCode, opCode, mchTypeCode));
 #endif
 
     if (mchIsConnected(mchConnCode) == FALSE)
@@ -879,6 +879,7 @@ static char *mchFn2String(u8 connCode, u8 opCode, u8 typeCode)
             object = "IOU";
             break;
         case 1: // CP or CM
+        case 3: // CP or CM
             switch (typeCode)
                 {
             case 0:

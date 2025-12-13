@@ -585,7 +585,7 @@ extern char                colorBG[32];                     // Console
 extern char                colorFG[32];                     // Console
 #endif
 extern const char          consoleToAscii[64];
-extern CpWord              *cpMem;
+extern volatile CpWord     *cpMem;
 extern u64                 cpu180FreeRunningCounter;
 extern Cpu170Context       *cpus170;
 extern Cpu180Context       *cpus180;
@@ -600,7 +600,7 @@ extern const u8            ebcdicToAscii[256];
 extern bool                emulationActive;
 extern const char          extBcdToAscii[64];
 extern u32                 extMaxMemory;
-extern CpWord              *extMem;
+extern volatile CpWord     *extMem;
 extern ExtMemory           extMemType;
 extern ModelFeatures       features;
 extern long                fontHeightLarge;                 // Console

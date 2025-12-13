@@ -69,8 +69,8 @@
 //#define TRACE_RANGE_START 0xb04d00018600
 //#define TRACE_RANGE_END   0xb04d00018687
 
-#define TRACE_STORE_START 0x100a0000b700
-#define TRACE_STORE_END   0x100a0000b7ff
+//#define TRACE_STORE_START 0x100100002b70
+//#define TRACE_STORE_END   0x100100002b7f
 
 #endif
 
@@ -1030,11 +1030,11 @@ static FILE *cpu180Log = NULL;
 #endif
 
 #if CcDebug == 1
-static int traceInstCount  = 0;
-static u32 traceRmaEnd     = 0x0062bfff;
-static u32 traceRmaStart   = 0x0062b000;
+static int traceInstCount[2] = { 0, 0 };
+static u32 traceRmaEnd       = 0;
+static u32 traceRmaStart     = 0;
 #if defined(TRACE_INST_LIST)
-static u8  traceInstList[] = TRACE_INST_LIST;
+static u8  traceInstList[]   = TRACE_INST_LIST;
 #endif
 #endif
 
@@ -1241,6 +1241,7 @@ void cpu180Init(char *model, u16 *serialNumbers)
                                    | (((serialNumbers[cpuNum] % 1000) / 100) << 8)
                                    | (((serialNumbers[cpuNum] % 100) / 10) << 4)
                                    | (serialNumbers[cpuNum] % 10);
+        activeCpu->regOi         = (cpuCount > 1) ? 0x10 : 0; // Model 860 has optional second processor
         activeCpu->regVmcl       = 0xc000;     // Virtual state and CYBER 170 state
         activeCpu->pendingAction = Rni;
         activeCpu->isStopped     = TRUE;
@@ -1468,7 +1469,7 @@ u64 cpu180MacGetCpStateRegister(Cpu180Context *ctx, u8 reg)
     default:
         fprintf(stderr, "cpu180MacGetCpStateRegister: unknown reg %02x\n", reg);
     case RegOptionsInstalled:
-        return 0;
+        return ctx->regOi;
     case RegStatusSummary:
         byte = 0;
         if (ctx->isStopped)
@@ -2139,22 +2140,16 @@ void cpu180MacWriteCp(Cpu180Context *ctx, u8 type, u8 byte)
 **------------------------------------------------------------------------*/
 void cpu180PpReadMem(u32 address, CpWord *data)
     {
-    if ((features & HasNoCmWrap) != 0)
+    if (address >= cpuMaxMemory)
         {
-        if (address < cpuMaxMemory)
+        if ((features & HasNoCmWrap) != 0)
             {
-            *data = cpMem[address];
+            *data = ~(CpWord)0;
+            return;
             }
-        else
-            {
-            *data = (~((CpWord)0));
-            }
-        }
-    else
-        {
         address %= cpuMaxMemory;
-        *data    = cpMem[address];
         }
+    *data = cpMem[address];
     }
 
 /*--------------------------------------------------------------------------
@@ -2170,18 +2165,15 @@ void cpu180PpReadMem(u32 address, CpWord *data)
 **------------------------------------------------------------------------*/
 void cpu180PpWriteMem(u32 address, CpWord data)
     {
-    if ((features & HasNoCmWrap) != 0)
+    if (address >= cpuMaxMemory)
         {
-        if (address < cpuMaxMemory)
+        if ((features & HasNoCmWrap) != 0)
             {
-            cpMem[address] = data;
+            return;
             }
+        address %= cpuMaxMemory;
         }
-    else
-        {
-        address       %= cpuMaxMemory;
-        cpMem[address] = data;
-        }
+    cpMem[address] = data;
 
 #if CcDebug == 1 && defined(TRACE_STORE_START)
     address <<= 3;
@@ -2396,11 +2388,14 @@ bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *r
 #if defined(TRACE_STORE_START)
         if (pva >= (TRACE_STORE_START) && pva <= (TRACE_STORE_END))
             {
-            u32 delta;
-            delta = (TRACE_STORE_END) - (TRACE_STORE_START);
-            if (delta > 4095) delta = 4095;
-            traceRmaStart = (*rma >> ctx->pageNumShift) << ctx->pageNumShift;
-            traceRmaEnd   = traceRmaStart + delta;
+            if (*rma < traceRmaStart || traceRmaStart == 0)
+                {
+                traceRmaStart = *rma;
+                }
+            if (*rma > traceRmaEnd)
+                {
+                traceRmaEnd = *rma;
+                }
             }
 #endif
 #endif
@@ -2446,7 +2441,8 @@ void cpu180SetMonitorCondition(Cpu180Context *ctx, MonitorCondition cond)
     traceMonitorCondition(ctx, cond);
 #endif
 #if DEBUG && DEBUG_INTERRUPT
-    fprintf(cpu180Log, "Set monitor condition MCR%d, MCR %04x MMR %04x PVA " FMT64_012x "\n", 48 + cond, ctx->regMcr, ctx->regMmr, ctx->regP);
+    fprintf(cpu180Log, "Set monitor condition MCR%d, MCR %04x MMR %04x Op %02x PVA " FMT64_012x "\n",
+        cond + 48, ctx->regMcr, ctx->regMmr, ctx->opCode, ctx->regP);
 #endif
     }
 
@@ -2481,7 +2477,8 @@ void cpu180SetUserCondition(Cpu180Context *ctx, UserCondition cond)
     traceUserCondition(ctx, cond);
 #endif
 #if DEBUG && DEBUG_INTERRUPT
-    fprintf(cpu180Log, "Set user condition UCR%d, UCR %04x UMR %04x PVA " FMT64_012x "\n", 48 + cond, ctx->regUcr, ctx->regUmr, ctx->regP);
+    fprintf(cpu180Log, "Set user condition UCR%d, UCR %04x UMR %04x Op %02x PVA " FMT64_012x "\n",
+        cond + 48, ctx->regUcr, ctx->regUmr, ctx->opCode, ctx->regP);
 #endif
     }
 
@@ -2597,10 +2594,10 @@ void cpu180Step(Cpu180Context *activeCpu)
 
 #if CcDebug == 1
         oldRegP = activeCpu->regP;
-        if (traceInstCount > 0)
+        if (traceInstCount[activeCpu->id] > 0)
             {
-            traceInstCount -= 1;
-            if (traceInstCount < 1)
+            traceInstCount[activeCpu->id] -= 1;
+            if (traceInstCount[activeCpu->id] < 1)
                 {
                 traceMask &= ~(TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
                 }
@@ -2608,8 +2605,8 @@ void cpu180Step(Cpu180Context *activeCpu)
 #if defined(TRACE_INST_LIST)
         if (memchr(traceInstList, activeCpu->opCode, sizeof(traceInstList)) != NULL)
             {
-            traceMask     |= TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp;
-            traceInstCount = TRACE_INST_COUNT;
+            traceMask                    |= TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp;
+            traceInstCount[activeCpu->id] = TRACE_INST_COUNT;
             traceCpuBreak(activeCpu);
             }
 #endif
@@ -2622,7 +2619,7 @@ void cpu180Step(Cpu180Context *activeCpu)
                 }
             traceMask |= TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp;
             }
-        else if (traceInstCount < 1)
+        else if (traceInstCount[activeCpu->id] < 1)
             {
             traceMask &= ~(TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
             }
@@ -4204,8 +4201,8 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
 #if CcDebug == 1
     if (traceValidateStack(activeCpu, activeCpu->regA[2], 2, "RETURN") == FALSE)
         {
-        traceMask     |= TraceCpu180 | TraceCallFrame;
-        traceInstCount = TRACE_INST_COUNT;
+        traceMask                    |= TraceCpu180 | TraceCallFrame;
+        traceInstCount[activeCpu->id] = TRACE_INST_COUNT;
         }
 #endif
 
@@ -4377,8 +4374,8 @@ static void cp180Op06(Cpu180Context *activeCpu)  // 06  POP        MIGDS 2-129
 #if CcDebug == 1
     if (traceValidateStack(activeCpu, activeCpu->regA[2], 2, "POP") == FALSE)
         {
-        traceMask     |= TraceCpu180 | TraceCallFrame;
-        traceInstCount = TRACE_INST_COUNT;
+        traceMask                    |= TraceCpu180 | TraceCallFrame;
+        traceInstCount[activeCpu->id] = TRACE_INST_COUNT;
         }
 #endif
 
@@ -4584,6 +4581,7 @@ static void cp180Op14(Cpu180Context *activeCpu)  // 14  LBSET      MIGDS 2-136
     u64              pva;
     u32              rma;
     u8               shift;
+    u64              word;
     u32              wordAddr;
 
     offset   = (u32)(activeCpu->regX[0] >> 3);
@@ -4603,8 +4601,9 @@ static void cp180Op14(Cpu180Context *activeCpu)  // 14  LBSET      MIGDS 2-136
         shift                           = (56 - ((rma & Mask3) << 3)) + (7 - (activeCpu->regX[0] & Mask3));
         mask                            = (u64)1 << shift;
         cpuAcquireMemoryMutex();
-        activeCpu->regX[activeCpu->opK] = (cpMem[wordAddr] & mask) != 0 ? 1 : 0;
-        cpMem[wordAddr]                |= mask;
+        word                            = cpMem[wordAddr];
+        activeCpu->regX[activeCpu->opK] = (word >> shift) & 1;
+        cpMem[wordAddr]                 = word | mask;
         cpMem[pti]                     |= (u64)3 << 60; // set page used and modified bits
         cpuReleaseMemoryMutex();
 
@@ -5747,7 +5746,9 @@ static void cp180Op83(Cpu180Context *activeCpu)  // 83  SX         MIGDS 2-12
         }
     else
         {
+        cpuAcquireMemoryMutex();
         cpMem[rma >> 3] = activeCpu->regX[activeCpu->opK];
+        cpuReleaseMemoryMutex();
 
 #if CcDebug == 1 && defined(TRACE_STORE_START)
         cpu180CheckTraceStore(activeCpu, pva, pva + 7);
@@ -5847,7 +5848,7 @@ static void cp180Op88(Cpu180Context *activeCpu)  // 88  LBIT       MIGDS 2-14
 
 static void cp180Op89(Cpu180Context *activeCpu)  // 89  SBIT       MIGDS 2-14
     {
-    u64 Aj;
+    u64              Aj;
     MonitorCondition cond;
     u64              mask;
     u32              offset;
@@ -6421,7 +6422,9 @@ static void cp180OpA3(Cpu180Context *activeCpu)  // A3  SXI        MIGDS 2-12
         }
     else
         {
+        cpuAcquireMemoryMutex();
         cpMem[rma >> 3] = activeCpu->regX[activeCpu->opK];
+        cpuReleaseMemoryMutex();
 
 #if CcDebug == 1 && defined(TRACE_STORE_START)
         cpu180CheckTraceStore(activeCpu, pva, pva + 7);
@@ -8229,7 +8232,9 @@ static void cp180OpSBYTS(Cpu180Context *activeCpu, int count)
         byteNum += (u32)activeCpu->regX[activeCpu->opI];
         }
     pva = (Aj & RingSegMask) | byteNum;
+    cpuAcquireMemoryMutex();
     (void)cpu180PutBytes(activeCpu, pva, RingOf(pva), activeCpu->regX[activeCpu->opK], count);
+    cpuReleaseMemoryMutex();
     }
 
 #if CcDebug == 1 && defined(TRACE_STORE_START)
@@ -8252,8 +8257,8 @@ static void cpu180CheckTraceStore(Cpu180Context *ctx, u64 pvaStart, u64 pvaEnd)
             {
             traceCpuBreak(ctx);
             }
-        traceMask     |= TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp;
-        traceInstCount = TRACE_INST_COUNT;
+        traceMask              |= TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp;
+        traceInstCount[ctx->id] = TRACE_INST_COUNT;
         }
     }
 #endif
