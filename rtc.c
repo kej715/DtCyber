@@ -389,7 +389,7 @@ static bool rtcInitTick(bool doVirtual)
     struct timespec ts;
 
     Hz         = 1000000.0;
-    rtcClockId = doVirtual ? CLOCK_PROCESS_CPUTIME_ID : CLOCK_MONOTONIC_RAW;
+    rtcClockId = doVirtual ? CLOCK_THREAD_CPUTIME_ID : CLOCK_MONOTONIC_RAW;
     if (clock_gettime(rtcClockId, &ts) != -1)
         {
         fprintf(stdout, "(rtc    ) Using %s time with clock_gettime()\n", doVirtual ? "process CPU" : "monotonic raw");
