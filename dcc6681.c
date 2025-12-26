@@ -70,7 +70,6 @@ typedef struct dccControl
 */
 static FcStatus dcc6681Func(PpWord funcCode);
 static void dcc6681Io(void);
-static void dcc6681Load(DevSlot *, int, char *);
 static void dcc6681Activate(void);
 static void dcc6681Disconnect(void);
 

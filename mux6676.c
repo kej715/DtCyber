@@ -142,7 +142,6 @@ typedef struct muxParam
 static FcStatus mux667xFunc(PpWord funcCode);
 static void mux667xActivate(void);
 static void mux667xCheckIo(MuxParam *mp);
-static void mux667xCreateThread(DevSlot *dp);
 static void mux667xClose(PortParam *pp);
 static void mux667xDisconnect(void);
 static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params);
@@ -538,9 +537,9 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
 static FcStatus mux667xFunc(PpWord funcCode)
     {
     u8       eqNo;
-    MuxParam *mp = (MuxParam *)activeDevice->context[0];
 
 #if DEBUG_PPIO
+    MuxParam *mp = (MuxParam *)activeDevice->context[0];
 #if DEBUG_6671
     if ((mp->type == DtMux6671) && (DEBUG_PPIO_VERBOSE != 0))
         {
@@ -678,8 +677,7 @@ static void mux667xIo(void)
                             {
                             break;
                             }
-
-                    // fall through if 6671
+                        // fall through if 6671
                     case 4:
                         if (mp->type == DtMux6676)
                             {

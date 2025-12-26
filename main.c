@@ -87,7 +87,6 @@ extern int _isatty(int fd);
 */
 static void emulate(void);
 static void INThandler(int);
-static void tracePpuCalls(void);
 static void waitTerminationMessage(void);
 
 #if defined(_WIN32)
@@ -205,7 +204,7 @@ int main(int argc, char **argv)
         }
     else if (argc > 1)
         {
-        if ((stricmp(argv[1], "-?") == 0) | (stricmp(argv[1], "/?") == 0))
+        if ((stricmp(argv[1], "-?") == 0) || (stricmp(argv[1], "/?") == 0))
             {
             printf("Command Format:\n\n");
             printf("    %s <parameters>\n\n", argv[0]);
@@ -216,8 +215,7 @@ int main(int argc, char **argv)
             printf("    where:\n");
             printf("      <section>  identifier of section within configuration file [default 'cyber']\n");
             printf("      <filename> file name of configuration file                 [default 'cyber.ini']\n");
-            printf("\n      > It is recommended that 'legal' parameters for");
-            printf("\n      > <section> or <filename> contain no spaces.");
+            printf("\n      > Values for <section> and <filename> must not contain spaces.");
             printf("\n    ---------------------------------------------------------------------------------\n");
             exit(-1);
             }
@@ -639,50 +637,6 @@ static void emulate(void)
 #if CcCycleTime
         cycleTime = rtcStopTimer();
 #endif
-        }
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Trace SCOPE 3.1 PPU calls (debug only).
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-static void tracePpuCalls(void)
-    {
-    static u64  ppIrStatus[10] = { 0 };
-    static u64  l;
-    static u64  r;
-    static FILE *f = NULL;
-
-    int pp;
-
-    if (f == NULL)
-        {
-        f = fopen("ppcalls.txt", "w");
-        if (f == NULL)
-            {
-            return;
-            }
-        }
-    for (pp = 1; pp < 10; pp++)
-        {
-        l = cpMem[050 + (pp * 010)] & ((CpWord)Mask18 << (59 - 18));
-        r = ppIrStatus[pp] & ((CpWord)Mask18 << (59 - 18));
-        if (l != r)
-            {
-            ppIrStatus[pp] = l;
-            if (l != 0)
-                {
-                l >>= (59 - 17);
-                fprintf(f, "%c", cdcToAscii[(l >> 12) & Mask6]);
-                fprintf(f, "%c", cdcToAscii[(l >> 6) & Mask6]);
-                fprintf(f, "%c", cdcToAscii[(l >> 0) & Mask6]);
-                fprintf(f, "\n");
-                }
-            }
         }
     }
 

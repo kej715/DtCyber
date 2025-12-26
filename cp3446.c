@@ -135,7 +135,9 @@ static void cp3446Io(void);
 static void cp3446Activate(void);
 static void cp3446Disconnect(void);
 static void cp3446FlushCard(DevSlot *up, CpContext *cc);
+#if DEBUG
 static char *cp3446Func2String(PpWord funcCode);
+#endif
 
 /*
 **  ----------------
@@ -332,19 +334,15 @@ void cp3446RemoveCards(char *params)
     {
     CpContext *cc;
     DevSlot   *dp;
+    int       channelNo;
     time_t    currentTime;
-
-    int numParam;
-    int channelNo;
-    int equipmentNo;
-    int isuffix;
-
-    struct tm   t;
-    char        fnameNew[MaxFSPath + 64];
-    static char msgBuf[80] = "";
-    char        outBuf[400];
-
-    bool renameOK;
+    int       equipmentNo;
+    char      fnameNew[MaxFSPath + 64];
+    int       numParam;
+    char      outBuf[400];
+    int       isuffix;
+    bool      renameOK;
+    struct tm t;
 
     /*
     **  Operator wants to remove cards.
@@ -525,8 +523,7 @@ static FcStatus cp3446Func(PpWord funcCode)
         deviceid  = (int)active3000Device->eqNo;
         sprintf(cpdevid, "%o,%o", channelid, deviceid);
         cp3446RemoveCards(cpdevid);
-    //  fall through to "FcProcessed" response
-
+        //  fall through to "FcProcessed" response
     case FcCp3446SelectOffset:
     case Fc6681MasterClear:
         st = FcProcessed;
@@ -829,6 +826,7 @@ static void cp3446FlushCard(DevSlot *up, CpContext *cc)
     cc->lastNonBlankCol = -1;
     }
 
+#if DEBUG
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert function code to string.
 **
@@ -842,7 +840,6 @@ static char *cp3446Func2String(PpWord funcCode)
     {
     static char buf[40];
 
-#if DEBUG
     switch (funcCode)
         {
     case FcCp3446Deselect:
@@ -905,11 +902,13 @@ static char *cp3446Func2String(PpWord funcCode)
 
         return "6681MasterClear";
         }
-#endif
+
     sprintf(buf, "(cp3446 ) Unknown Function: %04o", funcCode);
 
     return (buf);
     }
+
+#endif
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Show card reader status (operator interface).

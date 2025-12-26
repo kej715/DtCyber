@@ -797,7 +797,6 @@ static void msufrendDisconnect(void)
  */
 
 static char *frendVersion = "63.01";
-static char *author       = "Mark Riordan  4513 Gregg Rd  Madison, WI  53705";
 
 /*=====  Function prototypes  =============================== */
 static void taskSENDCP(HalfWord portNum, u8 MsgCode);
@@ -1030,7 +1029,6 @@ static HalfWord findEntryInList(FrendAddr fwaList, FullWord myword)
     FullWord thisWord;
     HalfWord nSlotsTot = getHalfWord(fwaList + H_CIRCLIST_N_SLOTS_TOT);
     HalfWord curTop    = getHalfWord(fwaList + H_CIRCLIST_CUR_TOP);
-    HalfWord nextBot   = getHalfWord(fwaList + H_CIRCLIST_NEXT_BOT);
     HalfWord nUsed     = getHalfWord(fwaList + H_CIRCLIST_N_USED);
 
     for (islot = curTop, slots_so_far = 0; slots_so_far < nUsed; slots_so_far++)
@@ -1488,7 +1486,6 @@ static void initLmbi()
 static void returnBuffersInReleaseList()
     {
     FrendAddr bufaddr;
-    int       nFreed = 0;
 
     while (0 != (bufaddr = removeFromBottomOfList(activeFrend->fwaBFREL)))
         {
@@ -1500,7 +1497,6 @@ static void returnBuffersInReleaseList()
             {
             addToTopOfList(activeFrend->fwaBF240, bufaddr);
             }
-        nFreed++;
         }
     }
 
@@ -1637,8 +1633,6 @@ static void ADDPORT(PortContext *pp, FrendAddr fwaMsg)
  */
 static void SENDPT(PortContext *pp, FrendAddr fwaMySocket, FrendAddr fwaMsg)
     {
-    FrendAddr fwaMyPort = portNumToFwa(pp->id);
-
     ADDPORT(pp, fwaMsg);
     taskSENDCP(pp->id, FP_INBS);
     }
@@ -1671,7 +1665,6 @@ static FrendAddr GETINBF(FrendAddr fwaMySock)
  */
 static FrendAddr getFrendVersionMsg(PortContext *pp)
     {
-    FullWord  len;
     char      dateTime[24], versionMsg[80];
     time_t    mytime = time(NULL);
     struct tm *ptm   = localtime(&mytime);
@@ -1683,7 +1676,7 @@ static FrendAddr getFrendVersionMsg(PortContext *pp)
      * This apparently does not match 100% with the text in ISUG p 1.3.
      */
     strftime(dateTime, sizeof(dateTime), "%m/%d/%y %H:%M:%S", ptm);
-    len = sprintf(versionMsg, "  %s  MSU-Frend3  %s   Socket=%3d", dateTime, frendVersion, pp->id);
+    sprintf(versionMsg, "  %s  MSU-Frend3  %s   Socket=%3d", dateTime, frendVersion, pp->id);
 
     return getBufferForC(versionMsg);
     }
@@ -2489,9 +2482,10 @@ static void taskCLOFPT(HalfWord portNum, u8 CloseType)
 static void PTMSG(PortContext *pp)
     {
     char      msg[64];
-    int       len     = sprintf(msg, "[Port%4d]", pp->id);
-    FrendAddr bufaddr = getBufferForC(msg);
+    FrendAddr bufaddr;
 
+    sprintf(msg, "[Port%4d]", pp->id);
+    bufaddr = getBufferForC(msg);
     taskSOCMSG(pp, bufaddr);
     }
 
@@ -2855,7 +2849,6 @@ static void cmdHereIs(HalfWord portNum, int offsetForBufType)
     FrendAddr fwaMyPort = portNumToFwa(portNum);
     FrendAddr fwaList   = getFullWord(fwaMyPort + W_PTOTCL);
     FrendAddr bufaddr   = addr1FPToFrend(getFullWord(activeFrend->fwaFPCOM + offsetForBufType));
-    HalfWord  portRec   = getByte(bufaddr + C_FPPT);
     u8        recType   = getByte(bufaddr + C_DHTYPE);
 
 #if DEBUG
@@ -3091,14 +3084,14 @@ static void processIncomingConnection()
         if (activeFrend->doesTelnet)
             {
             /* Issue initial Telnet negotiations */
-            int n = send(fd, telnetIntro, sizeof(telnetIntro), 0);
+            send(fd, telnetIntro, sizeof(telnetIntro), 0);
             }
         taskSKCARR(pp);
         }
     else
         {
         char *sorry = "\r\nSorry, all sockets are in use. Please try again later.";
-        int  n      = send(fd, (unsigned char *)sorry, (int)strlen(sorry), 0);
+        send(fd, (unsigned char *)sorry, (int)strlen(sorry), 0);
         netCloseConnection(fd);
         }
     }
@@ -3225,7 +3218,6 @@ static void msufrendCheckIo()
             HalfWord  portNum     = getHalfWord(fwaMySocket + H_SKCN1);
             FrendAddr fwaMyPort   = portNumToFwa(portNum);
             FrendAddr fwaList     = getFullWord(fwaMyPort + W_PTINCL);
-            HalfWord  nFree       = getListFreeEntries(fwaList);
             if (getListFreeEntries(fwaList) > MIN_FREE_PORT_BUFFERS)
                 {
                 FD_SET(pp->fd, &readFds);

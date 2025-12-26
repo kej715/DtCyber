@@ -103,8 +103,6 @@ static void niuClose(PortParam *pp);
 static FcStatus niuInFunc(PpWord funcCode);
 static void niuInIo(void);
 static void niuInit(void);
-static void niuLogBytes(u8 *bytes, int len);
-static void niuLogFlush(void);
 static FcStatus niuOutFunc(PpWord funcCode);
 static void niuOutIo(void);
 static void niuActivate(void);
@@ -116,7 +114,8 @@ static void niuSendstr(int stat, const char *p);
 
 #if DEBUG_PP || DEBUG_NET
 static char *niuFunc2String(PpWord funcCode);
-
+static void niuLogBytes(u8 *bytes, int len);
+static void niuLogFlush(void);
 #endif
 
 /*
@@ -1032,7 +1031,7 @@ static void niuSendstr(int stat, const char *p)
                 }
             shift = FALSE;
             }
-        w = (w << 6 | asciiToCdc[c]);
+        w = (w << 6 | asciiToCdc[(u8)c]);
         if (++cc == 3)
             {
             cc = 0;

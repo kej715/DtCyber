@@ -948,7 +948,7 @@ static FcStatus lp3000Func(PpWord funcCode)
                 {
                 fputs("Q\n", fcb);
                 }
-
+            // fall through
         case Fc3555CondClearFormat:
             lc->postPrintFunc = 0;
             lc->lpi           = 6;

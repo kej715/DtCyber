@@ -1218,7 +1218,7 @@ static void cr405NextCard(DevSlot *dp)
         */
         for (i = 0; i < 80; i++)
             {
-            cc->card[i] = cc->table[buffer[i]];
+            cc->card[i] = cc->table[(u8)buffer[i]];
             }
         }
     else

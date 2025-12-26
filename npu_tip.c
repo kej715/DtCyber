@@ -476,7 +476,6 @@ Tcb *npuTipFindTcbForCN(u8 cn)
 **------------------------------------------------------------------------*/
 void npuTipProcessBuffer(NpuBuffer *bp, int priority)
     {
-    static int count  = 0;
     u8         *block = bp->data;
     Tcb        *tp;
     u8         cn;

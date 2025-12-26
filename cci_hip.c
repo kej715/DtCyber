@@ -739,8 +739,10 @@ static FcStatus cciHipFunc(PpWord funcCode)
 **------------------------------------------------------------------------*/
 static void cciHipIo(void)
     {
-    PpWord orderLength;
     u8     orderCode;
+#if DEBUG > 0
+    PpWord orderLength;
+#endif
 
     switch (activeDevice->fcode)
         {
@@ -885,8 +887,8 @@ static void cciHipIo(void)
             cci->regOrder       = activeChannel->data;
             activeChannel->full = FALSE;
             orderCode           = cci->regOrder >> 9;
-            orderLength         = cci->regOrder & 0x1FF;
 #if (DEBUG > 0)
+            orderLength         = cci->regOrder & 0x1FF;
             fprintf(cciLog, "(cci-hip) Order Word Code %x Length %x\n", orderCode, orderLength);
 #endif
 

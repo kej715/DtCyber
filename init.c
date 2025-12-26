@@ -147,13 +147,15 @@ static int initParseEquipmentDefn(char *defn, char *file, char *section, int lin
                                   u8 *eqNo, u8 *unitNo, u8 *channelNo, char **deviceParams);
 static int initParseTerminalDefn(char *defn, char *file, char *section, int lineNo,
                                  u16 *tcpPort, u8 *claPort, u8 *claPortCount, char **remainder);
-static bool initGetHex(char *entry, int defValue, long *value);
 static bool initGetInteger(char *entry, int defValue, long *value);
 static bool initGetOctal(char *entry, int defValue, long *value);
 static bool initGetString(char *entry, char *defString, char *str, int strLen);
 static bool initParseIpAddress(char *ipStr, u32 *ip, u16 *port);
 static void initReadStartupFile(FILE *fcb, char *fileName);
 static void initToUpperCase(char *str);
+#ifdef WIN32
+static bool initGetHex(char *entry, int defValue, long *value);
+#endif
 
 /*
 **  ----------------
@@ -210,15 +212,15 @@ static ModelFeatures featuresCyber875 =
 
 static InitConnType connTypes[] =
     {
-    "telnet", ConnTypeTelnet,
-    "raw",    ConnTypeRaw,
-    "pterm",  ConnTypePterm,
-    "hasp",   ConnTypeHasp,
-    "rhasp",  ConnTypeRevHasp,
-    "nje",    ConnTypeNje,
-    "trunk",  ConnTypeTrunk,
-    "rs232",  ConnTypeRs232,
-    NULL, -1
+    { "telnet", ConnTypeTelnet  },
+    { "raw",    ConnTypeRaw     },
+    { "pterm",  ConnTypePterm   },
+    { "hasp",   ConnTypeHasp    },
+    { "rhasp",  ConnTypeRevHasp },
+    { "nje",    ConnTypeNje     },
+    { "trunk",  ConnTypeTrunk   },
+    { "rs232",  ConnTypeRs232   },
+    { NULL, -1                  }
     };
 
 static char *connTypeNames[] = // indexed by ordinal
@@ -235,68 +237,68 @@ static char *connTypeNames[] = // indexed by ordinal
 
 static InitVal sectVals[] =
     {
-    "CEJ/MEJ",                       "cyber",   "Valid",
-    "channels",                      "cyber",   "Deprecated",
-    "clock",                         "cyber",   "Valid",
-    "cmFile",                        "cyber",   "Deprecated",
-    "console",                       "cyber",   "Valid",
-    "cpus",                          "cyber",   "Valid",
-    "cpu0sn",                        "cyber",   "Valid",
-    "cpu1sn",                        "cyber",   "Valid",
-    "deadstart",                     "cyber",   "Valid",
-    "displayName",                   "cyber",   "Valid",
-    "ecsBanks",                      "cyber",   "Valid",
-    "ecsFile",                       "cyber",   "Deprecated",
-    "equipment",                     "cyber",   "Valid",
-    "esmBanks",                      "cyber",   "Valid",
-    "helpers",                       "cyber",   "Valid",
-    "idle",                          "cyber",   "Valid",
-    "idleCycles",                    "cyber",   "Valid",
-    "idleTime",                      "cyber",   "Valid",
-    "ipAddress",                     "cyber",   "Valid",
-    "memory",                        "cyber",   "Valid",
-    "model",                         "cyber",   "Valid",
-    "networkInterface",              "cyber",   "Valid",
-    "npuConnections",                "cyber",   "Valid",
-    "operator",                      "cyber",   "Valid",
-    "osType",                        "cyber",   "Valid",
-    "persistDir",                    "cyber",   "Valid",
-    "platoConns",                    "cyber",   "Deprecated",
-    "platoPort",                     "cyber",   "Deprecated",
-    "pps",                           "cyber",   "Valid",
-    "setMhz",                        "cyber",   "Valid",
-    "telnetConns",                   "cyber",   "Deprecated",
-    "telnetPort",                    "cyber",   "Deprecated",
-    "trace",                         "cyber",   "Valid",
+    { "CEJ/MEJ",                       "cyber",   "Valid"      },
+    { "channels",                      "cyber",   "Deprecated" },
+    { "clock",                         "cyber",   "Valid"      },
+    { "cmFile",                        "cyber",   "Deprecated" },
+    { "console",                       "cyber",   "Valid"      },
+    { "cpus",                          "cyber",   "Valid"      },
+    { "cpu0sn",                        "cyber",   "Valid"      },
+    { "cpu1sn",                        "cyber",   "Valid"      },
+    { "deadstart",                     "cyber",   "Valid"      },
+    { "displayName",                   "cyber",   "Valid"      },
+    { "ecsBanks",                      "cyber",   "Valid"      },
+    { "ecsFile",                       "cyber",   "Deprecated" },
+    { "equipment",                     "cyber",   "Valid"      },
+    { "esmBanks",                      "cyber",   "Valid"      },
+    { "helpers",                       "cyber",   "Valid"      },
+    { "idle",                          "cyber",   "Valid"      },
+    { "idleCycles",                    "cyber",   "Valid"      },
+    { "idleTime",                      "cyber",   "Valid"      },
+    { "ipAddress",                     "cyber",   "Valid"      },
+    { "memory",                        "cyber",   "Valid"      },
+    { "model",                         "cyber",   "Valid"      },
+    { "networkInterface",              "cyber",   "Valid"      },
+    { "npuConnections",                "cyber",   "Valid"      },
+    { "operator",                      "cyber",   "Valid"      },
+    { "osType",                        "cyber",   "Valid"      },
+    { "persistDir",                    "cyber",   "Valid"      },
+    { "platoConns",                    "cyber",   "Deprecated" },
+    { "platoPort",                     "cyber",   "Deprecated" },
+    { "pps",                           "cyber",   "Valid"      },
+    { "setMhz",                        "cyber",   "Valid"      },
+    { "telnetConns",                   "cyber",   "Deprecated" },
+    { "telnetPort",                    "cyber",   "Deprecated" },
+    { "trace",                         "cyber",   "Valid"      },
 
-    "cdcnetNode",                    "npu",     "Valid",
-    "cdcnetPrivilegedTcpPortOffset", "npu",     "Valid",
-    "cdcnetPrivilegedUdpPortOffset", "npu",     "Valid",
-    "couplerNode",                   "npu",     "Valid",
-    "hostID",                        "npu",     "Valid",
-    "hostIP",                        "npu",     "Deprecated",
-    "idleNetBufs",                   "npu",     "Valid",
-    "npuNode",                       "npu",     "Valid",
-    "terminals",                     "npu",     "Valid",
+    { "cdcnetNode",                    "npu",     "Valid"      },
+    { "cdcnetPrivilegedTcpPortOffset", "npu",     "Valid"      },
+    { "cdcnetPrivilegedUdpPortOffset", "npu",     "Valid"      },
+    { "couplerNode",                   "npu",     "Valid"      },
+    { "hostID",                        "npu",     "Valid"      },
+    { "hostIP",                        "npu",     "Deprecated" },
+    { "idleNetBufs",                   "npu",     "Valid"      },
+    { "npuNode",                       "npu",     "Valid"      },
+    { "terminals",                     "npu",     "Valid"      },
 
-    "colorBG",                       "console", "Valid",
-    "colorFG",                       "console", "Valid",
-    "fontLarge",                     "console", "Valid",
-    "fontLargeHeight",               "console", "Valid",
-    "fontMedium",                    "console", "Valid",
-    "fontMediumHeight",              "console", "Valid",
-    "fontName",                      "console", "Valid",
-    "fontSmall",                     "console", "Valid",
-    "fontSmallHeight",               "console", "Valid",
-    "fontType",                      "console", "Valid",
-    "heightPX",                      "console", "Valid",
-    "scaleX",                        "console", "Valid",
-    "scaleY",                        "console", "Valid",
-    "timerRate",                     "console", "Valid",
-    "widthPX",                       "console", "Valid",
+    { "colorBG",                       "console", "Valid"      },
+    { "colorFG",                       "console", "Valid"      },
+    { "fontLarge",                     "console", "Valid"      },
+    { "fontLargeHeight",               "console", "Valid"      },
+    { "fontMedium",                    "console", "Valid"      },
+    { "fontMediumHeight",              "console", "Valid"      },
+    { "fontName",                      "console", "Valid"      },
+    { "fontSmall",                     "console", "Valid"      },
+    { "fontSmallHeight",               "console", "Valid"      },
+    { "fontType",                      "console", "Valid"      },
+    { "heightPX",                      "console", "Valid"      },
+    { "scaleX",                        "console", "Valid"      },
+    { "scaleY",                        "console", "Valid"      },
+    { "timerRate",                     "console", "Valid"      },
+    { "widthPX",                       "console", "Valid"      },
 
 
-    NULL,                            NULL,      NULL
+    { NULL,                            NULL,      NULL         }
     };
 
 /*
@@ -1001,9 +1003,8 @@ static void initCyber(char *config)
             ecsBanks + esmBanks, ecsBanks != 0 ? "ESM" : "ECS");
         }
 
-
     /*
-    **  Determine number of PPs and initialise PP subsystem.
+    **  Determine number of PP's and initialize the IOU
     */
     (void)initGetOctal("pps", 012, &pps);
     if ((pps != 012) && (pps != 024))
@@ -1011,11 +1012,10 @@ static void initCyber(char *config)
         logDtError(LogErrorLocation, "file '%s' section [%s]: Entry 'pps' invalid - supported values are 012 or 024\n", startupFile, config);
         exit(1);
         }
-
     ppInit((u8)pps);
 
     /*
-    **  Calculate number of channels and initialise channel subsystem.
+    **  Calculate number of channels and initialize them
     */
     if (pps == 012)
         {
@@ -1026,6 +1026,9 @@ static void initCyber(char *config)
         chCount = 040;
         }
 
+    /*
+    **  Initialize PP's and channels
+    */
     channelInit((u8)chCount);
 
     /*
@@ -1059,7 +1062,7 @@ static void initCyber(char *config)
         }
     else if (sscanf(dummy, "%ld", &clockIncrement) == 1)
         {
-        dummyBool = TRUE;
+        dummyBool = isCyber180;
         }
     else
         {
@@ -2645,6 +2648,7 @@ static bool initGetOctal(char *entry, int defValue, long *value)
     return (TRUE);
     }
 
+#ifdef WIN32
 /*--------------------------------------------------------------------------
 **  Purpose:        Locate hexadecimal entry within section and return value.
 **
@@ -2688,6 +2692,7 @@ static bool initGetHex(char *entry, int defValue, long *value)
 
     return (FALSE);
     }
+#endif
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Locate integer entry within section and return value.
@@ -3022,10 +3027,8 @@ static void initAddLine(InitSection *section, char *fileName, int lineNo, char *
     char     c;
     u8       claPort1, claPort2;
     u8       claPortCount;
-    int      connType;
     char     *cp;
     InitLine *cursor;
-    int      deviceIndex;
     char     *params1, *params2;
     u8       eqNo1, eqNo2;
     InitLine *line;
@@ -3042,8 +3045,8 @@ static void initAddLine(InitSection *section, char *fileName, int lineNo, char *
         {
         *cp = c;
         strcpy(lineBuffer, text);
-        connType = initParseTerminalDefn(lineBuffer, fileName, section->name, lineNo,
-                                         &tcpPort, &claPort1, &claPortCount, &params1);
+        initParseTerminalDefn(lineBuffer, fileName, section->name, lineNo,
+            &tcpPort, &claPort1, &claPortCount, &params1);
         //
         //  If a terminal definition specifying the same CLA port already exists,
         //  ignore this definition and allow the previous one to prevail.
@@ -3056,8 +3059,8 @@ static void initAddLine(InitSection *section, char *fileName, int lineNo, char *
                 continue;
                 }
             strcpy(lineBuffer, line->text);
-            connType = initParseTerminalDefn(lineBuffer, line->sourceFile, section->name, line->lineNo,
-                                             &tcpPort, &claPort2, &claPortCount, &params2);
+            initParseTerminalDefn(lineBuffer, line->sourceFile, section->name, line->lineNo,
+                &tcpPort, &claPort2, &claPortCount, &params2);
             if (claPort1 == claPort2)
                 {
                 return;
@@ -3068,8 +3071,7 @@ static void initAddLine(InitSection *section, char *fileName, int lineNo, char *
         {
         *cp = c;
         strcpy(lineBuffer, text);
-        deviceIndex = initParseEquipmentDefn(lineBuffer, fileName, section->name, lineNo,
-                                             &eqNo1, &unitNo1, &chNo1, &params1);
+        initParseEquipmentDefn(lineBuffer, fileName, section->name, lineNo, &eqNo1, &unitNo1, &chNo1, &params1);
         //
         //  If an equipment definition specifying the same equipment, unit, and channel
         //  number already exists, ignore this definition and allow the previous one to prevail.
@@ -3081,8 +3083,7 @@ static void initAddLine(InitSection *section, char *fileName, int lineNo, char *
                 continue;
                 }
             strcpy(lineBuffer, line->text);
-            deviceIndex = initParseEquipmentDefn(lineBuffer, line->sourceFile, section->name, line->lineNo,
-                                                 &eqNo2, &unitNo2, &chNo2, &params2);
+            initParseEquipmentDefn(lineBuffer, line->sourceFile, section->name, line->lineNo, &eqNo2, &unitNo2, &chNo2, &params2);
             if ((chNo1 == chNo2) && (eqNo1 == eqNo2) && (unitNo1 == unitNo2))
                 {
                 return;

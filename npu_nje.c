@@ -324,13 +324,6 @@ static u8 SOH_ENQ[] =
     SOH,  ENQ,                                      // data
     0x00, 0x00, 0x00, 0x00                          // TTREOB
     };
-static u8 SYN_NAK[] =
-    {
-    0x00, 0x00, 0x00, 0x12, 0x00, 0x00, 0x00, 0x00, // TTB
-    0x00, 0x00, 0x00, 0x02,                         // TTR
-    SYN,  NAK,                                      // data
-    0x00, 0x00, 0x00, 0x00                          // TTREOB
-    };
 
 /*
 **  Special non-transparent NAM messages
@@ -373,6 +366,9 @@ void npuNjeTryOutput(Pcb *pcbp)
 
     switch (pcbp->controls.nje.state)
         {
+    default:
+        break;
+
     case StNjeRcvOpen:
     case StNjeRcvSOH_ENQ:
     case StNjeRcvAck:
@@ -2282,8 +2278,7 @@ static int npuNjeUploadBlock(Pcb *pcbp, u8 *blkp, int size, u8 *rcb, u8 *srcb)
                     {
                     blockType = BtHTBLK;
                     }
-
-            // fall through
+                // fall through
             case 0x90:                  // request to initiate stream
             case 0xa0:                  // permission to initiate stream
             case 0xc0:                  // acknowledge transmission complete

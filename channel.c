@@ -338,11 +338,8 @@ void channelDisplayContext()
 **------------------------------------------------------------------------*/
 void channelTerminate(void)
     {
-#pragma warning(push)
-#pragma warning(disable: 6001)
     DevSlot *dp;
     DevSlot *fp;
-#pragma warning(pop)
     u8 i;
 
     /*

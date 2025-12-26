@@ -577,7 +577,7 @@ static bool npuLipProcessConnectRequest(Pcb *pcbp)
     */
     token = strtok(NULL, " \r\n");
     len   = (int)strlen(token);
-    if ((token == NULL) || (len >= sizeof(hostID)))
+    if ((token == NULL) || (len >= (int)sizeof(hostID)))
         {
         return FALSE;
         }

@@ -246,10 +246,7 @@ typedef struct diskParam
 */
 static void     dd8xxActivate(void);
 static void     dd8xxDisconnect(void);
-static void     dd8xxDump(PpWord data);
-static void     dd8xxFlush(void);
 static FcStatus dd8xxFunc(PpWord funcCode);
-static char    *dd8xxFunc2String(PpWord funcCode);
 static void     dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSize *size, u8 diskType);
 static void     dd8xxIo(void);
 static FILE    *dd8xxMount(char *deviceName, DiskParam *dp);
@@ -261,6 +258,12 @@ static i32      dd8xxSeekNextSector(DiskParam *dp);
 static void     dd844SetClearFlaw(DiskParam *dp, PpWord flawState);
 static void     dd8xxWriteClassic(DiskParam *dp, FILE *fcb, PpWord data);
 static void     dd8xxWritePacked(DiskParam *dp, FILE *fcb, PpWord data);
+
+#if DEBUG
+static char    *dd8xxFunc2String(PpWord funcCode);
+static void    dd8xxLogFlush(void);
+static void    dd8xxLogByte(int b);
+#endif
 
 /*
 **  ----------------
@@ -333,9 +336,6 @@ static u16 detailedStatus844[] =
 static u16 driveAddress[3];
 
 #if DEBUG
-
-static void dd8xxLogFlush(void);
-static void dd8xxLogByte(int b);
 
 static FILE *dd8xxLog = NULL;
 
@@ -595,6 +595,56 @@ void dd8xxUnloadDisk(char *params)
 
     sprintf(outBuf, "(dd8xx  ) Successfully unloaded DD8xx disk on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
     opDisplay(outBuf);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Show disk status (operator interface).
+**
+**  Parameters:     Name        Description.
+**
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void dd8xxShowDiskStatus()
+    {
+    DiskParam *dp = firstDisk;
+    char      dt[16];
+    char      outBuf[MaxFSPath + 128];
+
+    if (dp == NULL)
+        {
+        return;
+        }
+
+    while (dp)
+        {
+        switch (dp->diskType)
+            {
+        default:
+        case DiskType885:
+            strcpy(dt, "885");
+            break;
+        case DiskType885Ls:
+            strcpy(dt, "885-LS");
+            break;
+        case DiskType844:
+            strcpy(dt, "844");
+            break;
+            }
+        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", dt, dp->channelNo, dp->eqNo, dp->unitNo);
+        opDisplay(outBuf);
+        if (*dp->fileName != '\0')
+            {
+            sprintf(outBuf, "   %-20s (cyl 0x%06x trk 0x%06o)\n", dp->fileName, dp->cylinder, dp->track);
+            opDisplay(outBuf);
+            }
+        else
+            {
+            opDisplay("   (unmounted)\n");
+            }
+        dp = dp->nextDisk;
+        }
     }
 
 /*
@@ -1933,15 +1983,13 @@ static i32 dd8xxSeekNextSector(DiskParam *dp)
 **------------------------------------------------------------------------*/
 static PpWord dd8xxReadClassic(DiskParam *dp, FILE *fcb)
     {
-    int ignore;
-
     /*
     **  Read an entire sector if the current buffer is empty.
     */
     if (dp->bufPtr == NULL)
         {
         dp->bufPtr = dp->buffer;
-        ignore     = (int)fread(dp->buffer, 1, dp->isLargeSectorMode ? dp->sectorSize * 4 : dp->sectorSize, fcb);
+        fread(dp->buffer, 1, dp->isLargeSectorMode ? dp->sectorSize * 4 : dp->sectorSize, fcb);
         }
 
     /*
@@ -2007,7 +2055,6 @@ static void dd8xxWriteClassic(DiskParam *dp, FILE *fcb, PpWord data)
 **------------------------------------------------------------------------*/
 static PpWord dd8xxReadPacked(DiskParam *dp, FILE *fcb)
     {
-    int       ignore;
     static u8 sector[516*4];
     u8        *sp;
     PpWord    *pp;
@@ -2018,7 +2065,7 @@ static PpWord dd8xxReadPacked(DiskParam *dp, FILE *fcb)
     if (dp->bufPtr == NULL)
         {
         dp->bufPtr = dp->buffer;
-        ignore     = (int)fread(sector, 1, dp->isLargeSectorMode ? dp->sectorSize * 4 : dp->sectorSize, fcb);
+        fread(sector, 1, dp->isLargeSectorMode ? dp->sectorSize * 4 : dp->sectorSize, fcb);
 
         /*
         **  Unpack the sector into the buffer.
@@ -2148,7 +2195,6 @@ static void dd844SetClearFlaw(DiskParam *dp, PpWord flawState)
     {
     u8     unitNo;
     FILE   *fcb;
-    int    ignore;
     int    index;
     PpWord flawWord0;
     PpWord flawWord1;
@@ -2185,7 +2231,7 @@ static void dd844SetClearFlaw(DiskParam *dp, PpWord flawState)
     dp->track    = 0;
     dp->sector   = 2;
     fseek(fcb, dd8xxSeek(dp), SEEK_SET);
-    ignore = (int)fread(mySector, 2, SectorSize, fcb);
+    fread(mySector, 2, SectorSize, fcb);
 
     /*
     **  Process request.
@@ -2248,6 +2294,7 @@ static void dd844SetClearFlaw(DiskParam *dp, PpWord flawState)
     dd8xxSectorWrite(dp, fcb, mySector);
     }
 
+#if DEBUG
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert function code to string.
 **
@@ -2259,7 +2306,6 @@ static void dd844SetClearFlaw(DiskParam *dp, PpWord flawState)
 **------------------------------------------------------------------------*/
 static char *dd8xxFunc2String(PpWord funcCode)
     {
-#if DEBUG
     switch (funcCode)
         {
     case Fc8xxConnect:
@@ -2364,62 +2410,9 @@ static char *dd8xxFunc2String(PpWord funcCode)
     case Fc8xxStartMemLoad:
         return "StartMemLoad";
         }
-#endif
 
     return "UNKNOWN";
     }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Show disk status (operator interface).
-**
-**  Parameters:     Name        Description.
-**
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-void dd8xxShowDiskStatus()
-    {
-    DiskParam *dp = firstDisk;
-    char      dt[16];
-    char      outBuf[MaxFSPath + 128];
-
-    if (dp == NULL)
-        {
-        return;
-        }
-
-    while (dp)
-        {
-        switch (dp->diskType)
-            {
-        default:
-        case DiskType885:
-            strcpy(dt, "885");
-            break;
-        case DiskType885Ls:
-            strcpy(dt, "885-LS");
-            break;
-        case DiskType844:
-            strcpy(dt, "844");
-            break;
-            }
-        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", dt, dp->channelNo, dp->eqNo, dp->unitNo);
-        opDisplay(outBuf);
-        if (*dp->fileName != '\0')
-            {
-            sprintf(outBuf, "   %-20s (cyl 0x%06x trk 0x%06o)\n", dp->fileName, dp->cylinder, dp->track);
-            opDisplay(outBuf);
-            }
-        else
-            {
-            opDisplay("   (unmounted)\n");
-            }
-        dp = dp->nextDisk;
-        }
-    }
-
-#if DEBUG
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Flush incomplete numeric/ascii data line

@@ -27,6 +27,7 @@ LIBS    = -lX11 -lXft
 LDFLAGS = -L/opt/X11/lib
 INCL    = -I/opt/X11/include
 EXTRACFLAGS = -Wno-switch -Wno-format-security
+EXTRACFLAGS = -Wall -Wextra -Wno-implicit-fallthrough -Wno-format-security -Wno-unused-parameter
 
 CFLAGS  = -O3 -std=gnu99 $(INCL) $(shell pkg-config --cflags freetype2) $(EXTRACFLAGS)
 #CFLAGS  = -O0 -g -std=gnu99 $(INCL) $(shell pkg-config --cflags freetype2) $(EXTRACFLAGS)

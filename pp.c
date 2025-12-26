@@ -220,14 +220,9 @@ static u32 ppAdd18(u32 op1, u32 op2);
 static void ppFlushIoBuf(void);
 static void ppResetIoBuf(void);
 static u32 ppSubtract18(u32 op1, u32 op2);
-static void ppInterlock(PpWord func);
 
-#if DEBUG || DEBUG_CM_WRITE
+#if DEBUG_CM_WRITE
 static void ppValidateCmWrite(char *inst, u32 address, CpWord data);
-#endif
-
-#if CcDebug == 1
-static bool ppIsPpLoad(char *name, u32 address);
 #endif
 
 /*
@@ -503,31 +498,6 @@ void ppInit(u8 count)
         }
 
     /*
-    **  Initialize maintenance access information
-    */
-    iouEid     = 0x02201234; // Elem: 02 (IOU), Model: 835-990, S/N
-
-    iouOptions = 0x000000FFAF000000; // channels 00 - 17
-    if (channelCount > 16)
-        {
-        iouOptions |= 0x0000000000FF0F00;
-        }
-    iouOptions |= (u64)0x03 << 40;     // PP's 00 - 11
-    if (ppuCount > 10)
-        {
-        iouOptions |= (u64)0x0C << 40; // PP's 20 - 31
-        }
-    if (tpMuxEnabled)
-        {
-        iouOptions |= 2;
-        }
-    if (cc545Enabled)
-        {
-        iouOptions |= 1;
-        }
-    iouOptions |= 0x04; // radial interfaces 1,2
-
-    /*
     **  Initialise all ppus.
     */
     for (pp = 0; pp < ppuCount; pp++)
@@ -538,6 +508,8 @@ void ppInit(u8 count)
         ppu[pp].isStopped            = FALSE;
         ppu[pp].isStopEnabled        = FALSE;
         ppu[pp].isIdle               = FALSE;
+        ppu[pp].isDump               = FALSE;
+        ppu[pp].isLoad               = FALSE;
         ppu[pp].osBoundsCheckEnabled = FALSE;
         }
 
@@ -618,6 +590,47 @@ u64 ppMacGetIouRegister(u8 reg)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Maintenance access: initialize IOU maintenance registers
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void ppMacInit(void)
+    {
+    /*
+    **  Initialize maintenance access information
+    */
+    iouEid     = 0x02201234; // Elem: 02 (IOU), Model: 835-990, S/N
+
+    iouOptions = 0x000000FFAF000000; // channels 00 - 17
+    if (channelCount > 16)
+        {
+        iouOptions |= 0x0000000000FF0F00;
+        }
+    iouOptions |= (u64)0x03 << 40;     // PP's 00 - 11
+    if (ppuCount > 10)
+        {
+        iouOptions |= (u64)0x0C << 40; // PP's 20 - 31
+        }
+    if (tpMuxEnabled)
+        {
+        iouOptions |= 2;
+        }
+    if (cc545Enabled)
+        {
+        iouOptions |= 1;
+        }
+    iouOptions |= 0x04; // radial interfaces 1,2
+
+    /*
+    **  Print a friendly message.
+    */
+    fputs("(pp     ) IOU maintenance registers initialised\n", stdout);
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Maintenance access: read IOU data
 **
 **  Parameters:     Name        Description.
@@ -639,7 +652,7 @@ u8 ppMacReadIou(void)
             shift = 56;
             for (i = 0; i < 8; i++)
                 {
-                iouRegisterBuf[i] = (word >> shift) & 0xff;
+                iouRegisterBuf[i] = (word >> shift) & Mask8;
                 shift -= 8;
                 }
             }
@@ -691,6 +704,7 @@ void ppMacSetIouRegister(u8 reg, u64 word)
 
     case RegEnvControl:
         iouEnvControl = word;
+        chIdx         = (word >> 16) & Mask5;
         ppIdx         = (word >> 24) & Mask5;
         if (ppIdx >= 020)
             {
@@ -699,13 +713,17 @@ void ppMacSetIouRegister(u8 reg, u64 word)
         pp                       = &ppu[ppIdx];
         pp->osBoundsCheckEnabled = (word & 0x08) != 0;
         pp->isStopEnabled        = (word & 0x01) != 0;
-        pp->isIdle               = FALSE;
+        pp->isStopped            = FALSE;
 
         if ((word & 0x0020) != 0) // load/dump/idle PP
             {
+            pp->isIdle = FALSE;
+            pp->isDump = FALSE;
+            pp->isLoad = FALSE;
+
             if ((word & 0x1000) != 0) // load PP
                 {
-                chIdx                 = (word >> 16) & Mask5;
+                pp->isLoad            = TRUE;
                 pp->opD               = chIdx;
                 channel[chIdx].active = TRUE;
 
@@ -725,25 +743,18 @@ void ppMacSetIouRegister(u8 reg, u64 word)
                 /*
                 **  Set A register to an input word count of 10000.
                 */
-                pp->regA      = 010000;
-                pp->isStopped = FALSE;
-#if DEBUG
-                fprintf(ppLog, "Deadstart PP%02o using channel %02o\n",
-                    ppIdx < 10 ? ppIdx : (ppIdx - 10) + 020, chIdx);
-#endif
+                pp->regA = 010000;
                 }
-#if 0
-            else if ((word & 0x0800) != 0) // dump PP
+            if ((word & 0x0800) != 0) // dump PP
                 {
-                chIdx                 = (word >> 16) & Mask5;
-                pp->opD               = chIdx;
-                channel[chIdx].active = TRUE;
+                pp->isDump = TRUE;
+                pp->opD    = chIdx;
 
                 /*
                 **  Set PP to OUTPUT (OAM) instruction.
                 */
                 pp->opF  = 073;
-                pp->busy = TRUE;
+                pp->busy = channel[chIdx].active;
                 pp->regK = (pp->opF << 6) | pp->opD;
 
                 /*
@@ -753,20 +764,26 @@ void ppMacSetIouRegister(u8 reg, u64 word)
                 pp->mem[0] = 0;
 
                 /*
-                **  Set A register to an input word count of 10000.
+                **  Set A register to an output word count of 10000.
                 */
-                pp->regA      = 010000;
-                pp->isStopped = FALSE;
-#if DEBUG
-                fprintf(ppLog, "Dump PP%02o using channel %02o\n",
-                    ppIdx < 10 ? ppIdx : (ppIdx - 10) + 020, chIdx);
-#endif
+                pp->regA = 010000;
                 }
-#endif
-            else if ((word & 0x0400) != 0) // idle PP
+            if ((word & 0x0400) != 0) // idle PP
                 {
                 pp->isIdle = TRUE;
                 }
+            }
+        else
+            {
+            if ((pp->isLoad || pp->isDump) && pp->busy)
+                {
+                pp->busy = FALSE;
+                pp->regP = pp->mem[0];
+                PpIncrement(pp->regP);
+                }
+            pp->isIdle = FALSE;
+            pp->isLoad = FALSE;
+            pp->isDump = FALSE;
             }
 #if DEBUG
         fputs("Write IOU EC register\n", ppLog);
@@ -775,7 +792,19 @@ void ppMacSetIouRegister(u8 reg, u64 word)
         fprintf(ppLog, "    Register select: %c\n", "APKQ"[(word >> 8) & Mask2]);
         fprintf(ppLog, "    OS bounds check: %s\n", pp->osBoundsCheckEnabled ? "enabled" : "disabled");
         fprintf(ppLog, "      Stop on error: %s\n", pp->isStopEnabled ? "enabled" : "disabled");
-        fprintf(ppLog, "               Idle: %s\n", pp->isIdle ? "yes" : "no");
+        fputs(         "     Load/Dump/Idle: ", ppLog);
+        if ((word & 0x0020) != 0)
+            {
+            fputs("enabled\n", ppLog);
+            fprintf(ppLog, "            Channel: %02o\n", chIdx);
+            fprintf(ppLog, "               Load: %s\n", pp->isLoad ? "yes" : "no");
+            fprintf(ppLog, "               Dump: %s\n", pp->isDump ? "yes" : "no");
+            fprintf(ppLog, "               Idle: %s\n", pp->isIdle ? "yes" : "no");
+            }
+        else
+            {
+            fputs("disabled\n", ppLog);
+            }
 #endif
         break;
 
@@ -905,7 +934,7 @@ void ppStep(void)
         */
         activePpu = ppu + i;
 
-        if (activePpu->isIdle || activePpu->isStopped)
+        if (activePpu->isStopped || (activePpu->isIdle && !activePpu->busy))
             {
             continue;
             }
@@ -953,8 +982,6 @@ void ppStep(void)
             traceSequence();
             traceRegisters(FALSE);
             traceOpcode();
-#else
-            traceSequenceNo += 1;
 #endif
 
             /*
@@ -1957,18 +1984,13 @@ static void ppOpIAN(void)     // 70
 
 static void ppOpIAM(void)     // 71
     {
+    activeChannel = channel + (activePpu->opD & 037);
     if (!activePpu->busy)
         {
-        activeChannel   = channel + (activePpu->opD & 037);
-        activePpu->busy = TRUE;
-
+        activePpu->busy            = TRUE;
         activePpu->mem[0]          = activePpu->regP;
         activePpu->regP            = activePpu->mem[activePpu->regP] & Mask12;
         activeChannel->delayStatus = 0;
-        }
-    else
-        {
-        activeChannel = channel + (activePpu->opD & 037);
         }
 
     channelCheckIfActive();
@@ -1994,7 +2016,8 @@ static void ppOpIAM(void)     // 71
         activePpu->mem[activePpu->regP] = 0;
         activePpu->regP = activePpu->mem[0];
         PpIncrement(activePpu->regP);
-        activePpu->busy = FALSE;
+        activePpu->busy   = FALSE;
+        activePpu->isLoad = FALSE;
 
         return;
         }
@@ -2046,7 +2069,8 @@ static void ppOpIAM(void)     // 71
             {
             activePpu->regP = activePpu->mem[0];
             PpIncrement(activePpu->regP);
-            activePpu->busy = FALSE;
+            activePpu->busy   = FALSE;
+            activePpu->isLoad = FALSE;
             }
         }
     }
@@ -2097,18 +2121,13 @@ static void ppOpOAN(void)     // 72
 
 static void ppOpOAM(void)     // 73
     {
+    activeChannel = channel + (activePpu->opD & 037);
     if (!activePpu->busy)
         {
-        activeChannel   = channel + (activePpu->opD & 037);
-        activePpu->busy = TRUE;
-
+        activePpu->busy            = TRUE;
         activePpu->mem[0]          = activePpu->regP;
         activePpu->regP            = activePpu->mem[activePpu->regP] & Mask12;
         activeChannel->delayStatus = 0;
-        }
-    else
-        {
-        activeChannel = channel + (activePpu->opD & 037);
         }
 
     channelCheckIfActive();
@@ -2159,6 +2178,7 @@ static void ppOpOAM(void)     // 73
             activePpu->regP = activePpu->mem[0];
             PpIncrement(activePpu->regP);
             activePpu->busy            = FALSE;
+            activePpu->isDump          = FALSE;
             activeChannel->delayStatus = 0; // ensure last byte is written
             }
         }
@@ -2395,11 +2415,24 @@ static void ppOpLPML(void)    // 1024
 
 static void ppOpINPN(void)    // 1026
     {
-// TODO: 1 seems to indicate CPU0. Is a different memory port value used for CPU1 ?
-    if (activePpu->opD == 1)
+    u8 port;
+
+    port = activePpu->opD & Mask2;
+    if (port <= 1)
         {
         cpus180[0].regMcr |= 0x0080; // set MCR56
         }
+    else if (port == 2 && cpuCount > 1)
+        {
+        cpus180[1].regMcr |= 0x0080;
+        }
+#if DEBUG
+    else
+        {
+        fprintf(ppLog, "  PP%02o Unexpected memory port specified: INPN %o\n",
+            activePpu->id < 10 ? activePpu->id : (activePpu->id - 10) + 020, activePpu->opD);
+        }
+#endif
     }
 
 static void ppOpLDDL(void)    // 1030
@@ -2868,19 +2901,14 @@ static void ppOpIAPM(void)    // 1071
 
 static void ppOpOAPM(void)    // 1073
     {
+    activeChannel = channel + (activePpu->opD & 037);
     if (!activePpu->busy)
         {
-        activeChannel   = channel + (activePpu->opD & 037);
-        activePpu->busy = TRUE;
-
+        activePpu->busy            = TRUE;
         activePpu->mem[0]          = activePpu->regP;
         activePpu->regP            = activePpu->mem[activePpu->regP] & Mask12;
         activeChannel->delayStatus = 0;
         activePpu->ioBufIdx        = 4;
-        }
-    else
-        {
-        activeChannel = channel + (activePpu->opD & 037);
         }
 
     channelCheckIfActive();
@@ -3039,32 +3067,6 @@ static void ppValidateCmWrite(char *inst, u32 address, CpWord data)
                 ppName, activePpu->id, activePpu->regP, activePpu->regQ, activePpu->mem[0], data, address);
         }
     fprintf(ppLog, "      CP%02o RA:%o FL:%o NFL:%o\n", cpn, ra, fl, nfl);
-    }
-
-#endif
-
-#if CcDebug == 1
-
-static bool ppIsPpLoad(char *name, u32 address)
-    {
-    u32    irAddress;
-    char   *np;
-    char   ppName[4];
-    CpWord word;
-
-    irAddress = PPC + ((activePpu->id) * 8);
-    if (address != irAddress)
-        {
-        return FALSE;
-        }
-    word      = cpMem[irAddress] & Mask60;
-    ppName[0] = cdcToAscii[(word >> 54) & 077];
-    ppName[1] = cdcToAscii[(word >> 48) & 077];
-    ppName[2] = cdcToAscii[(word >> 42) & 077];
-    ppName[3] = '\0';
-    np        = NULL;
-
-    return strcmp(ppName, name) == 0;
     }
 
 #endif

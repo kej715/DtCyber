@@ -196,7 +196,9 @@ static void mt362xFuncForespace(void);
 static void mt362xFuncBackspace(void);
 static void mt362xPackAndConvert(u32 recLen);
 static void mt362xUnload(TapeParam *tp);
+#if DEBUG
 static char *mt362xFunc2String(PpWord funcCode);
+#endif
 
 /*
 **  ----------------
@@ -1534,18 +1536,12 @@ static void mt362xFuncRead(void)
     u32       recLen2;
     i8        unitNo;
     TapeParam *tp;
-    i32       position;
 
     unitNo = active3000Device->selectedUnit;
     tp     = (TapeParam *)active3000Device->context[unitNo];
 
     active3000Device->recordLength = 0;
     tp->recordLength = 0;
-
-    /*
-    **  Determine if the tape is at the load point.
-    */
-    position = ftell(active3000Device->fcb[unitNo]);
 
     /*
     **  Read and verify TAP record length header.
@@ -1887,15 +1883,9 @@ static void mt362xFuncForespace(void)
     u32       recLen2;
     i8        unitNo;
     TapeParam *tp;
-    i32       position;
 
     unitNo = active3000Device->selectedUnit;
     tp     = (TapeParam *)active3000Device->context[unitNo];
-
-    /*
-    **  Determine if the tape is at the load point.
-    */
-    position = ftell(active3000Device->fcb[unitNo]);
 
     /*
     **  Read and verify TAP record length header.
@@ -2282,6 +2272,7 @@ static void mt362xUnload(TapeParam *tp)
     active3000Device->fcb[unitNo] = NULL;
     }
 
+#if DEBUG
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert function code to string.
 **
@@ -2295,7 +2286,6 @@ static char *mt362xFunc2String(PpWord funcCode)
     {
     static char buf[40];
 
-#if DEBUG
     switch (funcCode)
         {
     case Fc362xRelease:
@@ -2379,10 +2369,12 @@ static char *mt362xFunc2String(PpWord funcCode)
     case Fc6681Output:
         return "Fc6681Output";
         }
-#endif
+
     sprintf(buf, "(mt362x ) Unknown Function: %04o", funcCode);
 
     return (buf);
     }
+
+#endif
 
 /*---------------------------  End Of File  ------------------------------*/

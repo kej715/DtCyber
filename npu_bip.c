@@ -553,6 +553,9 @@ void npuBipNotifyDownlineReceived(void)
         */
         switch (bipState)
             {
+        default:
+            break;
+
         case BipDownSvm:
             svmProcessBuffer[npuSw](bp);
             break;

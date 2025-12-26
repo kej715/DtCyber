@@ -202,7 +202,7 @@
 #define Mask12                     07777
 #define Mask14                     037777
 #define Mask15                     077777
-#define Mask16                     0177777
+#define Mask16                     0177777U
 #define Mask17                     0377777
 #define Mask18                     0777777
 #define Mask20                     03777777
@@ -216,7 +216,7 @@
 #define Mask29                     03777777777
 #define Mask30                     07777777777
 #define Mask30Ecs                  07777777700
-#define Mask32                     037777777777
+#define Mask32                     037777777777U
 #define Mask38                     03777777777777
 #define Mask44                     000000377777777777777
 #define Mask48                     000007777777777777777
@@ -229,14 +229,14 @@
 /*
 **  Trace masks.
 */
-#define TraceCpu180                (1 << 31)
-#define TraceCpu170                (1 << 30)
+#define TraceCpu180                0x80000000U
+#define TraceCpu170                0x40000000U
 #define TraceCpu                   (TraceCpu180 | TraceCpu170)
-#define TraceExchange              (1 << 29)
-#define TraceBlockOp               (1 << 28)
-#define TraceCallFrame             (1 << 27)
-#define TracePva                   (1 << 26)
-#define TraceValidateStack         (1 << 25)
+#define TraceExchange              0x20000000U
+#define TraceBlockOp               0x10000000U
+#define TraceCallFrame             0x08000000U
+#define TracePva                   0x04000000U
+#define TraceValidateStack         0x02000000U
 
 /*
 **  Sign extension and overflow.

@@ -197,6 +197,7 @@ static void opCmdShowNetwork(bool help, char *cmdParams);
 static void opHelpShowNetwork(void);
 
 static void opCmdShowState(bool help, char *cmdParams);
+static void opCmdShowStateCH(u32 ppMask);
 static void opCmdShowStateCP(u8 cpMask);
 static void opCmdShowStateCp170(Cpu170Context *cpu);
 static void opCmdShowStateCp180(Cpu180Context *cpu);
@@ -244,85 +245,85 @@ volatile bool opPaused = FALSE;
 */
 static OpCmd decode[] =
     {
-    "ccw",                   opCmdCloseConsoleWindow,
-    "d",                     opCmdDumpMemory,
-    "drc",                   opCmdDiscRemoteConsole,
-    "dm",                    opCmdDumpMemory,
-    "e",                     opCmdEnterKeys,
-    "ek",                    opCmdEnterKeys,
-    "lc",                    opCmdLoadCards,
-    "ld",                    opCmdLoadDisk,
-    "lt",                    opCmdLoadTape,
-    "ocw",                   opCmdOpenConsoleWindow,
-    "p",                     opCmdPause,
-    "rc",                    opCmdRemoveCards,
-    "rp",                    opCmdRemovePaper,
-    "sa",                    opCmdShowAll,
-    "sd",                    opCmdShowDisk,
-    "se",                    opCmdShowEquipment,
-    "ski",                   opCmdSetKeyInterval,
-    "skwi",                  opCmdSetKeyWaitInterval,
-    "s",                     opCmdSetMemory,
-    "sm",                    opCmdSetMemory,
-    "sn",                    opCmdShowNetwork,
-    "sop",                   opCmdSetOperatorPort,
-    "ss",                    opCmdShowState,
-    "st",                    opCmdShowTape,
-    "starth",                opCmdStartHelpers,
-    "stoph",                 opCmdStopHelpers,
-    "sur",                   opCmdShowUnitRecord,
-    "sv",                    opCmdShowVersion,
-    "ud",                    opCmdUnloadDisk,
-    "ut",                    opCmdUnloadTape,
-    "close_console_window",  opCmdCloseConsoleWindow,
-    "disconnect_remote_console", opCmdDiscRemoteConsole,
-    "dump_memory",           opCmdDumpMemory,
-    "enter_keys",            opCmdEnterKeys,
-    "load_cards",            opCmdLoadCards,
-    "load_disk",             opCmdLoadDisk,
-    "load_tape",             opCmdLoadTape,
-    "open_console_window",   opCmdOpenConsoleWindow,
-    "remove_cards",          opCmdRemoveCards,
-    "remove_paper",          opCmdRemovePaper,
-    "set_key_interval",      opCmdSetKeyInterval,
-    "set_key_wait_interval", opCmdSetKeyWaitInterval,
-    "set_memory",            opCmdSetMemory,
-    "set_operator_port",     opCmdSetOperatorPort,
-    "show_all",              opCmdShowAll,
-    "show_disk",             opCmdShowDisk,
-    "show_equipment",        opCmdShowEquipment,
-    "show_network",          opCmdShowNetwork,
-    "show_state",            opCmdShowState,
-    "show_tape",             opCmdShowTape,
-    "show_unitrecord",       opCmdShowUnitRecord,
-    "show_version",          opCmdShowVersion,
-    "start_helpers",         opCmdStartHelpers,
-    "stop_helpers",          opCmdStopHelpers,
-    "unload_disk",           opCmdUnloadDisk,
-    "unload_tape",           opCmdUnloadTape,
-    "version",               opCmdShowVersion,
-    "?",                     opCmdHelp,
-    "help",                  opCmdHelp,
-    "??",                    opCmdHelpAll,
-    "help_all",              opCmdHelpAll,
-    "shutdown",              opCmdShutdown,
-    "pause",                 opCmdPause,
-    "idle",                  opCmdIdle,
-    NULL,                    NULL
+    { "ccw",                   opCmdCloseConsoleWindow    },
+    { "d",                     opCmdDumpMemory            },
+    { "drc",                   opCmdDiscRemoteConsole     },
+    { "dm",                    opCmdDumpMemory            },
+    { "e",                     opCmdEnterKeys             },
+    { "ek",                    opCmdEnterKeys             },
+    { "lc",                    opCmdLoadCards             },
+    { "ld",                    opCmdLoadDisk              },
+    { "lt",                    opCmdLoadTape              },
+    { "ocw",                   opCmdOpenConsoleWindow     },
+    { "p",                     opCmdPause                 },
+    { "rc",                    opCmdRemoveCards           },
+    { "rp",                    opCmdRemovePaper           },
+    { "sa",                    opCmdShowAll               },
+    { "sd",                    opCmdShowDisk              },
+    { "se",                    opCmdShowEquipment         },
+    { "ski",                   opCmdSetKeyInterval        },
+    { "skwi",                  opCmdSetKeyWaitInterval    },
+    { "s",                     opCmdSetMemory             },
+    { "sm",                    opCmdSetMemory             },
+    { "sn",                    opCmdShowNetwork           },
+    { "sop",                   opCmdSetOperatorPort       },
+    { "ss",                    opCmdShowState             },
+    { "st",                    opCmdShowTape              },
+    { "starth",                opCmdStartHelpers          },
+    { "stoph",                 opCmdStopHelpers           },
+    { "sur",                   opCmdShowUnitRecord        },
+    { "sv",                    opCmdShowVersion           },
+    { "ud",                    opCmdUnloadDisk            },
+    { "ut",                    opCmdUnloadTape            },
+    { "close_console_window",  opCmdCloseConsoleWindow    },
+    { "disconnect_remote_console", opCmdDiscRemoteConsole },
+    { "dump_memory",           opCmdDumpMemory            },
+    { "enter_keys",            opCmdEnterKeys             },
+    { "load_cards",            opCmdLoadCards             },
+    { "load_disk",             opCmdLoadDisk              },
+    { "load_tape",             opCmdLoadTape              },
+    { "open_console_window",   opCmdOpenConsoleWindow     },
+    { "remove_cards",          opCmdRemoveCards           },
+    { "remove_paper",          opCmdRemovePaper           },
+    { "set_key_interval",      opCmdSetKeyInterval        },
+    { "set_key_wait_interval", opCmdSetKeyWaitInterval    },
+    { "set_memory",            opCmdSetMemory             },
+    { "set_operator_port",     opCmdSetOperatorPort       },
+    { "show_all",              opCmdShowAll               },
+    { "show_disk",             opCmdShowDisk              },
+    { "show_equipment",        opCmdShowEquipment         },
+    { "show_network",          opCmdShowNetwork           },
+    { "show_state",            opCmdShowState             },
+    { "show_tape",             opCmdShowTape              },
+    { "show_unitrecord",       opCmdShowUnitRecord        },
+    { "show_version",          opCmdShowVersion           },
+    { "start_helpers",         opCmdStartHelpers          },
+    { "stop_helpers",          opCmdStopHelpers           },
+    { "unload_disk",           opCmdUnloadDisk            },
+    { "unload_tape",           opCmdUnloadTape            },
+    { "version",               opCmdShowVersion           },
+    { "?",                     opCmdHelp                  },
+    { "help",                  opCmdHelp                  },
+    { "??",                    opCmdHelpAll               },
+    { "help_all",              opCmdHelpAll               },
+    { "shutdown",              opCmdShutdown              },
+    { "pause",                 opCmdPause                 },
+    { "idle",                  opCmdIdle                  },
+    { NULL,                    NULL                       }
     };
 
 static OpNetTypeEntry netTypes[] =
     {
-    "cdcnet",  cdcnetShowStatus,
-    "console", consoleShowStatus,
-    "crs",     csFeiShowStatus,
-    "dsa311",  dsa311ShowStatus,
-    "msu",     msufrendShowStatus,
-    "mux",     mux6676ShowStatus,
-    "niu",     niuShowStatus,
-    "npu",     npuNetShowStatus,
-    "tpm",     tpMuxShowStatus,
-    NULL,      NULL
+    { "cdcnet",  cdcnetShowStatus   },
+    { "console", consoleShowStatus  },
+    { "crs",     csFeiShowStatus    },
+    { "dsa311",  dsa311ShowStatus   },
+    { "msu",     msufrendShowStatus },
+    { "mux",     mux6676ShowStatus  },
+    { "niu",     niuShowStatus      },
+    { "npu",     npuNetShowStatus   },
+    { "tpm",     tpMuxShowStatus    },
+    { NULL,      NULL               }
     };
 
 static void            (*opCmdFunction)(bool help, char *cmdParams);
@@ -377,12 +378,11 @@ void opInit(void)
 void opDisplay(char *msg)
     {
     OpCmdStackEntry *ep;
-    int             n;
 
     ep = &opCmdStack[opCmdStackPtr];
     if (ep->netConn == 0)
         {
-        n = write(ep->out, msg, (int)strlen(msg));
+        write(ep->out, msg, (int)strlen(msg));
         }
     else
         {
@@ -785,7 +785,6 @@ static int opReadLine(char *buf, int size)
     char            *bp;
     char            c;
     OpCmdStackEntry *ep;
-    int             err;
     char            *limit;
     char            *line;
     int             lineNo;
@@ -849,6 +848,7 @@ static int opReadLine(char *buf, int size)
                 if (ep->netConn != 0)
                     {
 #if defined(_WIN32)
+                    int err;
                     err = WSAGetLastError();
                     if (err == WSAEWOULDBLOCK)
                         {
@@ -2997,6 +2997,8 @@ static void opHelpUnloadTape(void)
 **------------------------------------------------------------------------*/
 static void opCmdShowState(bool help, char *cmdParams)
     {
+    u32  chMask;
+    int  chNum;
     char *cp;
     u8   cpMask;
     int  cpNum;
@@ -3015,21 +3017,23 @@ static void opCmdShowState(bool help, char *cmdParams)
         return;
         }
 
+    chMask = (channelCount > 16) ? 0xffffffff : 0xffff;
     cpMask = (cpuCount > 1) ? 0x03 : 0x01;
     ppMask = (ppuCount > 10) ? 0xfffff : 0x3ff;
     if (strlen(cmdParams) > 0)
         {
+        chMask = 0;
         cpMask = 0;
         ppMask = 0;
         cp     = cmdParams;
         while (*cp != '\0')
             {
             param = cp;
-            while (*cp != '\0' && *cp != ',')
+            while (*cp != '\0' && *cp != ',' && *cp != ' ')
                 {
                 ++cp;
                 }
-            if (*cp == ',')
+            if (*cp != '\0')
                 {
                 *cp++ = '\0';
                 }
@@ -3065,11 +3069,18 @@ static void opCmdShowState(bool help, char *cmdParams)
                 numParam = sscanf(param + 2, "%o", &ppNum);
                 if (numParam != 1)
                     {
-                    opDisplay("    > Missing or invalid PP number\n");
+                    if (*(param + 2) == '\0')
+                        {
+                        ppMask = (ppuCount > 10) ? 0xfffff : 0x3ff;
+                        }
+                    else
+                        {
+                        opDisplay("    > Missing or invalid PP number\n");
 
-                    return;
+                        return;
+                        }
                     }
-                if ((ppNum >= 0) && (ppNum < 012))
+                else if ((ppNum >= 0) && (ppNum < 012))
                     {
                     ppMask |= 1 << ppNum;
                     }
@@ -3084,6 +3095,33 @@ static void opCmdShowState(bool help, char *cmdParams)
                     return;
                     }
                 }
+            else if (strncasecmp(param, "CH", 2) == 0)
+                {
+                numParam = sscanf(param + 2, "%o", &chNum);
+                if (numParam != 1)
+                    {
+                    if (*(param + 2) == '\0')
+                        {
+                        chMask = (channelCount > 16) ? 0xffffffff : 0xffff;
+                        }
+                    else
+                        {
+                        opDisplay("    > Missing or invalid channel number\n");
+
+                        return;
+                        }
+                    }
+                else if ((chNum >= 0) && (chNum < channelCount))
+                    {
+                    chMask |= 1 << chNum;
+                    }
+                else
+                    {
+                    opDisplay("    > Invalid channel number\n");
+
+                    return;
+                    }
+                }
             else
                 {
                 opDisplay("    > Invalid element type\n");
@@ -3091,6 +3129,10 @@ static void opCmdShowState(bool help, char *cmdParams)
             }
         }
 
+    if (chMask != 0)
+        {
+        opCmdShowStateCH(chMask);
+        }
     if (ppMask != 0)
         {
         opCmdShowStatePP(ppMask);
@@ -3098,6 +3140,98 @@ static void opCmdShowState(bool help, char *cmdParams)
     if (cpMask != 0)
         {
         opCmdShowStateCP(cpMask);
+        }
+    }
+
+static void opCmdShowStateCH(u32 mask)
+    {
+    char   buf[20];
+    u64    chMask;
+    int    chNum;
+    ChSlot *ch;
+    int    col;
+    int    i;
+
+    chMask = ((u64)1 << 32) | (u64)mask; // add stopper
+    chNum  = 0;
+    while (chNum < 32)
+        {
+        //
+        // Find next requested channel number
+        //
+        if ((((u64)1 << chNum) & chMask) == 0)
+            {
+            chNum += 1;
+            continue;
+            }
+        //
+        // Display next eight requested channels
+        //
+        i   = chNum;
+        col = 0;
+        opDisplay("    > ");
+        while (col < 8)
+            {
+            sprintf(opOutBuf, "CH%02o    ", i);
+            opDisplay(opOutBuf);
+            i += 1;
+            while ((((u64)1 << i) & chMask) == 0) i += 1;
+            if (i >= 32) break;
+            col += 1;
+            }
+        opDisplay("\n");
+
+        i   = chNum;
+        col = 0;
+        opDisplay("    > ");
+        while (col < 8)
+            {
+            ch = &channel[i++];
+            sprintf(buf, "%c%c%c%c    ", ch->active ? 'A' : 'D', ch->full ? 'F' : 'E', ch->ioDevice == NULL ? 'I' : 'S', ch->flag ? '*' : ' ');
+            opDisplay(buf);
+            while ((((u64)1 << i) & chMask) == 0) i += 1;
+            if (i >= 32) break;
+            col += 1;
+            }
+        opDisplay("\n");
+
+        i   = chNum;
+        col = 0;
+        opDisplay("    > ");
+        while (col < 8)
+            {
+            ch = &channel[i++];
+            if (isCyber180)
+                {
+                if (ch->full)
+                    {
+                    sprintf(buf, "%06o  ", ch->data);
+                    }
+                else
+                    {
+                    strcpy(buf, "------  ");
+                    }
+                }
+            else
+                {
+                if (ch->full)
+                    {
+                    sprintf(buf, "%04o    ", ch->data);
+                    }
+                else
+                    {
+                    strcpy(buf, "----    ");
+                    }
+                }
+            opDisplay(buf);
+            while ((((u64)1 << i) & chMask) == 0) i += 1;
+            if (i >= 32) break;
+            col += 1;
+            }
+        opDisplay("\n");
+
+        opDisplay("\n");
+        chNum = i;
         }
     }
 
@@ -3259,7 +3393,7 @@ static void opCmdShowStatePP(u32 ppMask)
             continue;
             }
         //
-        // Display next four requested PP's
+        // Display next five requested PP's
         //
         i   = ppNum;
         col = 0;
@@ -3269,14 +3403,8 @@ static void opCmdShowStatePP(u32 ppMask)
             sprintf(opOutBuf, "  PP%02o          ", (i < 10) ? i : i + 6);
             opDisplay(opOutBuf);
             i += 1;
-            while (((1 << i) & ppMask) == 0)
-                {
-                i += 1;
-                }
-            if (i >= 20)
-                {
-                break;
-                }
+            while (((1 << i) & ppMask) == 0) i += 1;
+            if (i >= 20) break;
             col += 1;
             }
         opDisplay("\n");
@@ -3289,20 +3417,11 @@ static void opCmdShowStatePP(u32 ppMask)
             pp = &ppu[i++];
             sprintf(buf, "P %04o", pp->regP);
             len = (int)strlen(buf);
-            while (len < 16)
-                {
-                buf[len++] = ' ';
-                }
+            while (len < 16) buf[len++] = ' ';
             buf[len] = '\0';
             opDisplay(buf);
-            while (((1 << i) & ppMask) == 0)
-                {
-                i += 1;
-                }
-            if (i >= 20)
-                {
-                break;
-                }
+            while (((1 << i) & ppMask) == 0) i += 1;
+            if (i >= 20) break;
             col += 1;
             }
         opDisplay("\n");
@@ -3315,20 +3434,11 @@ static void opCmdShowStatePP(u32 ppMask)
             pp = &ppu[i++];
             sprintf(buf, "A %06o", pp->regA);
             len = (int)strlen(buf);
-            while (len < 16)
-                {
-                buf[len++] = ' ';
-                }
+            while (len < 16) buf[len++] = ' ';
             buf[len] = '\0';
             opDisplay(buf);
-            while (((1 << i) & ppMask) == 0)
-                {
-                i += 1;
-                }
-            if (i >= 20)
-                {
-                break;
-                }
+            while (((1 << i) & ppMask) == 0) i += 1;
+            if (i >= 20) break;
             col += 1;
             }
         opDisplay("\n");
@@ -3336,26 +3446,16 @@ static void opCmdShowStatePP(u32 ppMask)
         i   = ppNum;
         col = 0;
         opDisplay("    > ");
-
         while (col < 5)
             {
             pp = &ppu[i++];
             sprintf(buf, "Q %04o", pp->regQ);
             len = (int)strlen(buf);
-            while (len < 16)
-                {
-                buf[len++] = ' ';
-                }
+            while (len < 16) buf[len++] = ' ';
             buf[len] = '\0';
             opDisplay(buf);
-            while (((1 << i) & ppMask) == 0)
-                {
-                i += 1;
-                }
-            if (i >= 20)
-                {
-                break;
-                }
+            while (((1 << i) & ppMask) == 0) i += 1;
+            if (i >= 20) break;
             col += 1;
             }
         opDisplay("\n");
@@ -3365,7 +3465,6 @@ static void opCmdShowStatePP(u32 ppMask)
             i   = ppNum;
             col = 0;
             opDisplay("    > ");
-
             while (col < 5)
                 {
                 pp = &ppu[i++];
@@ -3378,24 +3477,55 @@ static void opCmdShowStatePP(u32 ppMask)
                     sprintf(buf, "R %010o", pp->regR);
                     }
                 len = (int)strlen(buf);
-                while (len < 16)
-                    {
-                    buf[len++] = ' ';
-                    }
+                while (len < 16) buf[len++] = ' ';
                 buf[len] = '\0';
                 opDisplay(buf);
-                while (((1 << i) & ppMask) == 0)
-                    {
-                    i += 1;
-                    }
-                if (i >= 20)
-                    {
-                    break;
-                    }
+                while (((1 << i) & ppMask) == 0) i += 1;
+                if (i >= 20) break;
                 col += 1;
                 }
             opDisplay("\n");
             }
+
+        i   = ppNum;
+        col = 0;
+        opDisplay("    > ");
+        while (col < 5)
+            {
+            pp = &ppu[i++];
+            sprintf(buf, isCyber180 ? "K %06o" : "K %04o", pp->regK);
+            len = (int)strlen(buf);
+            while (len < 16) buf[len++] = ' ';
+            buf[len] = '\0';
+            opDisplay(buf);
+            while (((1 << i) & ppMask) == 0) i += 1;
+            if (i >= 20) break;
+            col += 1;
+            }
+        opDisplay("\n");
+
+        i   = ppNum;
+        col = 0;
+        opDisplay("    > ");
+        while (col < 5)
+            {
+            pp = &ppu[i++];
+            sprintf(buf, "Mode %c%c%c%c%c",
+                pp->busy ? 'B' : '-',
+                pp->isIdle ? 'I' : '-',
+                pp->isDump ? 'D' : '-',
+                pp->isLoad ? 'L' : '-',
+                pp->isStopped ? 'S' : '-');
+            len = (int)strlen(buf);
+            while (len < 16) buf[len++] = ' ';
+            buf[len] = '\0';
+            opDisplay(buf);
+            while (((1 << i) & ppMask) == 0) i += 1;
+            if (i >= 20) break;
+            col += 1;
+            }
+        opDisplay("\n");
+
         opDisplay("\n");
         ppNum = i;
         }
@@ -3403,7 +3533,7 @@ static void opCmdShowStatePP(u32 ppMask)
 
 static void opHelpShowState(void)
     {
-    opDisplay("    > 'show_state [pp<n>,...][,cp]' show state of PP's and/or CPU.\n");
+    opDisplay("    > 'show_state [cp<n>] [pp<n>,...] [ch<n>,...]' show state of CPU's, PP's, and/or channels.\n");
     }
 
 /*--------------------------------------------------------------------------

@@ -130,7 +130,9 @@ static void dd6603Io(void);
 static void dd6603Activate(void);
 static void dd6603Disconnect(void);
 static i32 dd6603Seek(i32 track, i32 head, i32 sector);
+#if DEBUG
 static char *dd6603Func2String(PpWord funcCode);
+#endif
 
 /*
 **  ----------------
@@ -423,10 +425,7 @@ static FcStatus dd6603Func(PpWord funcCode)
 **------------------------------------------------------------------------*/
 static void dd6603Io(void)
     {
-    int ignore;
-
     FILE      *fcb = activeDevice->fcb[activeDevice->selectedUnit];
-    DiskParam *dp  = (DiskParam *)activeDevice->context[activeDevice->selectedUnit];
 
     switch (activeDevice->fcode & Fc6603CodeMask)
         {
@@ -440,7 +439,7 @@ static void dd6603Io(void)
     case Fc6603ReadSector:
         if (!activeChannel->full)
             {
-            ignore = (int)fread(&activeChannel->data, 2, 1, fcb);
+            fread(&activeChannel->data, 2, 1, fcb);
             activeChannel->full = TRUE;
 
 #if DEBUG
@@ -467,20 +466,10 @@ static void dd6603Io(void)
     case Fc6603SelectHead:
         if (activeDevice->fcode == Fc6603StatusReq)
             {
-            activeChannel->data = activeChannel->status;
-            activeChannel->full = TRUE;
-
-#if 0
-            activeChannel->status = (u16)dp->sector;
-
-            /*
-            **  Simulate the moving disk - seems strange but is required.
-            */
-            dp->sector = (dp->sector + 1) & 0177;
-#else
+            activeChannel->data   = activeChannel->status;
+            activeChannel->full   = TRUE;
             activeChannel->status = 0;
             activeDevice->fcode   = 0;
-#endif
             }
         break;
         }
@@ -556,6 +545,7 @@ static i32 dd6603Seek(i32 track, i32 head, i32 sector)
     return (result);
     }
 
+#if DEBUG
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert function code to string.
 **
@@ -569,7 +559,6 @@ static char *dd6603Func2String(PpWord funcCode)
     {
     static char buf[40];
 
-#if DEBUG
     switch (funcCode & Fc6603CodeMask)
         {
     case Fc6603ReadSector:
@@ -587,11 +576,13 @@ static char *dd6603Func2String(PpWord funcCode)
     case Fc6603StatusReq:
         return "Fc6603StatusReq";
         }
-#endif
+
     sprintf(buf, "(dd6603 ) Unknown Fundtion: %04o", funcCode);
 
     return (buf);
     }
+
+#endif
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Show disk status (operator interface).

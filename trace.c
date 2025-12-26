@@ -231,527 +231,527 @@ static FILE **ppuF;
 
 static DecPpControl ppDecode170[] =
     {
-    AN,  "PSN", FALSE, NULL, // 00
-    Amd, "LJM", FALSE, NULL, // 01
-    Amd, "RJM", FALSE, NULL, // 02
-    Ar,  "UJN", FALSE, NULL, // 03
-    Ar,  "ZJN", FALSE, NULL, // 04
-    Ar,  "NJN", FALSE, NULL, // 05
-    Ar,  "PJN", FALSE, NULL, // 06
-    Ar,  "MJN", FALSE, NULL, // 07
+    { AN,  "PSN", FALSE, NULL }, // 00
+    { Amd, "LJM", FALSE, NULL }, // 01
+    { Amd, "RJM", FALSE, NULL }, // 02
+    { Ar,  "UJN", FALSE, NULL }, // 03
+    { Ar,  "ZJN", FALSE, NULL }, // 04
+    { Ar,  "NJN", FALSE, NULL }, // 05
+    { Ar,  "PJN", FALSE, NULL }, // 06
+    { Ar,  "MJN", FALSE, NULL }, // 07
 
-    Ar,  "SHN", FALSE, NULL, // 10
-    Ad,  "LMN", FALSE, NULL, // 11
-    Ad,  "LPN", FALSE, NULL, // 12
-    Ad,  "SCN", FALSE, NULL, // 13
-    Ad,  "LDN", FALSE, NULL, // 14
-    Ad,  "LCN", FALSE, NULL, // 15
-    Ad,  "ADN", FALSE, NULL, // 16
-    Ad,  "SBN", FALSE, NULL, // 17
+    { Ar,  "SHN", FALSE, NULL }, // 10
+    { Ad,  "LMN", FALSE, NULL }, // 11
+    { Ad,  "LPN", FALSE, NULL }, // 12
+    { Ad,  "SCN", FALSE, NULL }, // 13
+    { Ad,  "LDN", FALSE, NULL }, // 14
+    { Ad,  "LCN", FALSE, NULL }, // 15
+    { Ad,  "ADN", FALSE, NULL }, // 16
+    { Ad,  "SBN", FALSE, NULL }, // 17
 
-    Adm, "LDC", FALSE, NULL, // 20
-    Adm, "ADC", FALSE, NULL, // 21
-    Adm, "LPC", FALSE, NULL, // 22
-    Adm, "LMC", FALSE, NULL, // 23
-    Ad,  "LRD", FALSE, NULL, // 24
-    Ad,  "SRD", FALSE, NULL, // 25
-    Ad,  "EXN", FALSE, NULL, // 26
-    Ad,  "RPN", FALSE, NULL, // 27
+    { Adm, "LDC", FALSE, NULL }, // 20
+    { Adm, "ADC", FALSE, NULL }, // 21
+    { Adm, "LPC", FALSE, NULL }, // 22
+    { Adm, "LMC", FALSE, NULL }, // 23
+    { Ad,  "LRD", FALSE, NULL }, // 24
+    { Ad,  "SRD", FALSE, NULL }, // 25
+    { Ad,  "EXN", FALSE, NULL }, // 26
+    { Ad,  "RPN", FALSE, NULL }, // 27
 
-    Ad,  "LDD", FALSE, NULL, // 30
-    Ad,  "ADD", FALSE, NULL, // 31
-    Ad,  "SBD", FALSE, NULL, // 32
-    Ad,  "LMD", FALSE, NULL, // 33
-    Ad,  "STD", FALSE, NULL, // 34
-    Ad,  "RAD", FALSE, NULL, // 35
-    Ad,  "AOD", FALSE, NULL, // 36
-    Ad,  "SOD", FALSE, NULL, // 37
+    { Ad,  "LDD", FALSE, NULL }, // 30
+    { Ad,  "ADD", FALSE, NULL }, // 31
+    { Ad,  "SBD", FALSE, NULL }, // 32
+    { Ad,  "LMD", FALSE, NULL }, // 33
+    { Ad,  "STD", FALSE, NULL }, // 34
+    { Ad,  "RAD", FALSE, NULL }, // 35
+    { Ad,  "AOD", FALSE, NULL }, // 36
+    { Ad,  "SOD", FALSE, NULL }, // 37
 
-    Ad,  "LDI", FALSE, NULL, // 40
-    Ad,  "ADI", FALSE, NULL, // 41
-    Ad,  "SBI", FALSE, NULL, // 42
-    Ad,  "LMI", FALSE, NULL, // 43
-    Ad,  "STI", FALSE, NULL, // 44
-    Ad,  "RAI", FALSE, NULL, // 45
-    Ad,  "AOI", FALSE, NULL, // 46
-    Ad,  "SOI", FALSE, NULL, // 47
+    { Ad,  "LDI", FALSE, NULL }, // 40
+    { Ad,  "ADI", FALSE, NULL }, // 41
+    { Ad,  "SBI", FALSE, NULL }, // 42
+    { Ad,  "LMI", FALSE, NULL }, // 43
+    { Ad,  "STI", FALSE, NULL }, // 44
+    { Ad,  "RAI", FALSE, NULL }, // 45
+    { Ad,  "AOI", FALSE, NULL }, // 46
+    { Ad,  "SOI", FALSE, NULL }, // 47
 
-    Amd, "LDM", FALSE, NULL, // 50
-    Amd, "ADM", FALSE, NULL, // 51
-    Amd, "SBM", FALSE, NULL, // 52
-    Amd, "LMM", FALSE, NULL, // 53
-    Amd, "STM", FALSE, NULL, // 54
-    Amd, "RAM", FALSE, NULL, // 55
-    Amd, "AOM", FALSE, NULL, // 56
-    Amd, "SOM", FALSE, NULL, // 57
+    { Amd, "LDM", FALSE, NULL }, // 50
+    { Amd, "ADM", FALSE, NULL }, // 51
+    { Amd, "SBM", FALSE, NULL }, // 52
+    { Amd, "LMM", FALSE, NULL }, // 53
+    { Amd, "STM", FALSE, NULL }, // 54
+    { Amd, "RAM", FALSE, NULL }, // 55
+    { Amd, "AOM", FALSE, NULL }, // 56
+    { Amd, "SOM", FALSE, NULL }, // 57
 
-    Ad,  "CRD", FALSE, NULL, // 60
-    Amd, "CRM", FALSE, NULL, // 61
-    Ad,  "CWD", FALSE, NULL, // 62
-    Amd, "CWM", FALSE, NULL, // 63
-    Amd, "AJM", TRUE, "SCF", // 64
-    Amd, "IJM", TRUE, "CCF", // 65
-    Amd, "FJM", TRUE, "SFM", // 66
-    Amd, "EJM", TRUE, "CFM", // 67
+    { Ad,  "CRD", FALSE, NULL }, // 60
+    { Amd, "CRM", FALSE, NULL }, // 61
+    { Ad,  "CWD", FALSE, NULL }, // 62
+    { Amd, "CWM", FALSE, NULL }, // 63
+    { Amd, "AJM", TRUE, "SCF" }, // 64
+    { Amd, "IJM", TRUE, "CCF" }, // 65
+    { Amd, "FJM", TRUE, "SFM" }, // 66
+    { Amd, "EJM", TRUE, "CFM" }, // 67
 
-    Ad,  "IAN", FALSE, NULL, // 70
-    Amd, "IAM", FALSE, NULL, // 71
-    Ad,  "OAN", FALSE, NULL, // 72
-    Amd, "OAM", FALSE, NULL, // 73
-    Ad,  "ACN", FALSE, NULL, // 74
-    Ad,  "DCN", FALSE, NULL, // 75
-    Ad,  "FAN", FALSE, NULL, // 76
-    Amd, "FNC", FALSE, NULL  // 77
+    { Ad,  "IAN", FALSE, NULL }, // 70
+    { Amd, "IAM", FALSE, NULL }, // 71
+    { Ad,  "OAN", FALSE, NULL }, // 72
+    { Amd, "OAM", FALSE, NULL }, // 73
+    { Ad,  "ACN", FALSE, NULL }, // 74
+    { Ad,  "DCN", FALSE, NULL }, // 75
+    { Ad,  "FAN", FALSE, NULL }, // 76
+    { Amd, "FNC", FALSE, NULL }  // 77
     };
 
 static DecPpControl ppDecode180[] =
     {
-    Ad,  "RDSL", FALSE, NULL, // 1000
-    Ad,  "RDCL", FALSE, NULL, // 1001
-    AN,  "PSN",  FALSE, NULL, // 1002
-    AN,  "PSN",  FALSE, NULL, // 1003
-    AN,  "PSN",  FALSE, NULL, // 1004
-    AN,  "PSN",  FALSE, NULL, // 1005
-    AN,  "PSN",  FALSE, NULL, // 1006
-    AN,  "PSN",  FALSE, NULL, // 1007
+    { Ad,  "RDSL", FALSE, NULL }, // 1000
+    { Ad,  "RDCL", FALSE, NULL }, // 1001
+    { AN,  "PSN",  FALSE, NULL }, // 1002
+    { AN,  "PSN",  FALSE, NULL }, // 1003
+    { AN,  "PSN",  FALSE, NULL }, // 1004
+    { AN,  "PSN",  FALSE, NULL }, // 1005
+    { AN,  "PSN",  FALSE, NULL }, // 1006
+    { AN,  "PSN",  FALSE, NULL }, // 1007
 
-    AN,  "PSN",  FALSE, NULL, // 1010
-    AN,  "PSN",  FALSE, NULL, // 1011
-    AN,  "PSN",  FALSE, NULL, // 1012
-    AN,  "PSN",  FALSE, NULL, // 1013
-    AN,  "PSN",  FALSE, NULL, // 1014
-    AN,  "PSN",  FALSE, NULL, // 1015
-    AN,  "PSN",  FALSE, NULL, // 1016
-    AN,  "PSN",  FALSE, NULL, // 1017
+    { AN,  "PSN",  FALSE, NULL }, // 1010
+    { AN,  "PSN",  FALSE, NULL }, // 1011
+    { AN,  "PSN",  FALSE, NULL }, // 1012
+    { AN,  "PSN",  FALSE, NULL }, // 1013
+    { AN,  "PSN",  FALSE, NULL }, // 1014
+    { AN,  "PSN",  FALSE, NULL }, // 1015
+    { AN,  "PSN",  FALSE, NULL }, // 1016
+    { AN,  "PSN",  FALSE, NULL }, // 1017
 
-    AN,  "PSN",  FALSE, NULL, // 1020
-    AN,  "PSN",  FALSE, NULL, // 1021
-    Ad,  "LPDL", FALSE, NULL, // 1022
-    Ad,  "LPIL", FALSE, NULL, // 1023
-    Amd, "LPML", FALSE, NULL, // 1024
-    AN,  "PSN",  FALSE, NULL, // 1025
-    AN,  "PSN",  FALSE, NULL, // 1026
-    AN,  "PSN",  FALSE, NULL, // 1027
+    { AN,  "PSN",  FALSE, NULL }, // 1020
+    { AN,  "PSN",  FALSE, NULL }, // 1021
+    { Ad,  "LPDL", FALSE, NULL }, // 1022
+    { Ad,  "LPIL", FALSE, NULL }, // 1023
+    { Amd, "LPML", FALSE, NULL }, // 1024
+    { AN,  "PSN",  FALSE, NULL }, // 1025
+    { AN,  "PSN",  FALSE, NULL }, // 1026
+    { AN,  "PSN",  FALSE, NULL }, // 1027
 
-    Ad,  "LDDL", FALSE, NULL, // 1030
-    Ad,  "ADDL", FALSE, NULL, // 1031
-    Ad,  "SBDL", FALSE, NULL, // 1032
-    Ad,  "LMDL", FALSE, NULL, // 1033
-    Ad,  "STDL", FALSE, NULL, // 1034
-    Ad,  "RADL", FALSE, NULL, // 1035
-    Ad,  "AODL", FALSE, NULL, // 1036
-    Ad,  "SODL", FALSE, NULL, // 1037
+    { Ad,  "LDDL", FALSE, NULL }, // 1030
+    { Ad,  "ADDL", FALSE, NULL }, // 1031
+    { Ad,  "SBDL", FALSE, NULL }, // 1032
+    { Ad,  "LMDL", FALSE, NULL }, // 1033
+    { Ad,  "STDL", FALSE, NULL }, // 1034
+    { Ad,  "RADL", FALSE, NULL }, // 1035
+    { Ad,  "AODL", FALSE, NULL }, // 1036
+    { Ad,  "SODL", FALSE, NULL }, // 1037
 
-    Ad,  "LDIL", FALSE, NULL, // 1040
-    Ad,  "ADIL", FALSE, NULL, // 1041
-    Ad,  "SBIL", FALSE, NULL, // 1042
-    Ad,  "LMIL", FALSE, NULL, // 1043
-    Ad,  "STIL", FALSE, NULL, // 1044
-    Ad,  "RAIL", FALSE, NULL, // 1045
-    Ad,  "AOIL", FALSE, NULL, // 1046
-    Ad,  "SOIL", FALSE, NULL, // 1047
+    { Ad,  "LDIL", FALSE, NULL }, // 1040
+    { Ad,  "ADIL", FALSE, NULL }, // 1041
+    { Ad,  "SBIL", FALSE, NULL }, // 1042
+    { Ad,  "LMIL", FALSE, NULL }, // 1043
+    { Ad,  "STIL", FALSE, NULL }, // 1044
+    { Ad,  "RAIL", FALSE, NULL }, // 1045
+    { Ad,  "AOIL", FALSE, NULL }, // 1046
+    { Ad,  "SOIL", FALSE, NULL }, // 1047
 
-    Amd, "LDML", FALSE, NULL, // 1050
-    Amd, "ADML", FALSE, NULL, // 1051
-    Amd, "SBML", FALSE, NULL, // 1052
-    Amd, "LMML", FALSE, NULL, // 1053
-    Amd, "STML", FALSE, NULL, // 1054
-    Amd, "RAML", FALSE, NULL, // 1055
-    Amd, "AOML", FALSE, NULL, // 1056
-    Amd, "SOML", FALSE, NULL, // 1057
+    { Amd, "LDML", FALSE, NULL }, // 1050
+    { Amd, "ADML", FALSE, NULL }, // 1051
+    { Amd, "SBML", FALSE, NULL }, // 1052
+    { Amd, "LMML", FALSE, NULL }, // 1053
+    { Amd, "STML", FALSE, NULL }, // 1054
+    { Amd, "RAML", FALSE, NULL }, // 1055
+    { Amd, "AOML", FALSE, NULL }, // 1056
+    { Amd, "SOML", FALSE, NULL }, // 1057
 
-    Ad,  "CRDL", FALSE, NULL, // 1060
-    Amd, "CRML", FALSE, NULL, // 1061
-    Ad,  "CWDL", FALSE, NULL, // 1062
-    Amd, "CWML", FALSE, NULL, // 1063
-    Amd, "FSJM", FALSE, NULL, // 1064
-    Amd, "FCJM", FALSE, NULL, // 1065
-    AN,  "PSN",  FALSE, NULL, // 1066
-    AN,  "PSN",  FALSE, NULL, // 1067
+    { Ad,  "CRDL", FALSE, NULL }, // 1060
+    { Amd, "CRML", FALSE, NULL }, // 1061
+    { Ad,  "CWDL", FALSE, NULL }, // 1062
+    { Amd, "CWML", FALSE, NULL }, // 1063
+    { Amd, "FSJM", FALSE, NULL }, // 1064
+    { Amd, "FCJM", FALSE, NULL }, // 1065
+    { AN,  "PSN",  FALSE, NULL }, // 1066
+    { AN,  "PSN",  FALSE, NULL }, // 1067
 
-    AN,  "PSN",  FALSE, NULL, // 1070
-    Amd, "IAPM", FALSE, NULL, // 1071
-    AN,  "PSN",  FALSE, NULL, // 1072
-    Amd, "OAPM", FALSE, NULL, // 1073
-    AN,  "PSN",  FALSE, NULL, // 1074
-    AN,  "PSN",  FALSE, NULL, // 1075
-    AN,  "PSN",  FALSE, NULL, // 1076
-    AN , "PSN",  FALSE, NULL  // 1077
+    { AN,  "PSN",  FALSE, NULL }, // 1070
+    { Amd, "IAPM", FALSE, NULL }, // 1071
+    { AN,  "PSN",  FALSE, NULL }, // 1072
+    { Amd, "OAPM", FALSE, NULL }, // 1073
+    { AN,  "PSN",  FALSE, NULL }, // 1074
+    { AN,  "PSN",  FALSE, NULL }, // 1075
+    { AN,  "PSN",  FALSE, NULL }, // 1076
+    { AN , "PSN",  FALSE, NULL }  // 1077
     };
 
 static DecCpControl rjDecode[010] =
     {
-    CK,  "RJ    %6.6o", R,                      // 0
-    CjK, "REC   B%o+%6.6o", RZB,                // 1
-    CjK, "WEC   B%o+%6.6o", RZB,                // 2
-    CK,  "XJ    %6.6o", R,                      // 3
-    Cjk, "RX    X%o,X%o", RNXX,                 // 4
-    Cjk, "WX    X%o,X%o", RNXX,                 // 5
-    Cj,  "RC    X%o", RNXN,                     // 6
-    CjK, "RT    X%o,%6.6o", RZX                 // 7
+    { CK,  "RJ    %6.6o", R       },              // 0
+    { CjK, "REC   B%o+%6.6o", RZB },              // 1
+    { CjK, "WEC   B%o+%6.6o", RZB },              // 2
+    { CK,  "XJ    %6.6o", R       },              // 3
+    { Cjk, "RX    X%o,X%o", RNXX  },              // 4
+    { Cjk, "WX    X%o,X%o", RNXX  },              // 5
+    { Cj,  "RC    X%o", RNXN      },              // 6
+    { CjK, "RT    X%o,%6.6o", RZX }               // 7
     };
 
 static DecCpControl cjDecode[010] =
     {
-    CjK, "ZR    X%o,%6.6o", RZX,                // 0
-    CjK, "NZ    X%o,%6.6o", RZX,                // 1
-    CjK, "PL    X%o,%6.6o", RZX,                // 2
-    CjK, "NG    X%o,%6.6o", RZX,                // 3
-    CjK, "IR    X%o,%6.6o", RZX,                // 4
-    CjK, "OR    X%o,%6.6o", RZX,                // 5
-    CjK, "DF    X%o,%6.6o", RZX,                // 6
-    CjK, "ID    X%o,%6.6o", RZX                 // 7
+    { CjK, "ZR    X%o,%6.6o", RZX },              // 0
+    { CjK, "NZ    X%o,%6.6o", RZX },              // 1
+    { CjK, "PL    X%o,%6.6o", RZX },              // 2
+    { CjK, "NG    X%o,%6.6o", RZX },              // 3
+    { CjK, "IR    X%o,%6.6o", RZX },              // 4
+    { CjK, "OR    X%o,%6.6o", RZX },              // 5
+    { CjK, "DF    X%o,%6.6o", RZX },              // 6
+    { CjK, "ID    X%o,%6.6o", RZX }               // 7
     };
 
 static DecCpControl cpDecode[0100] =
     {
-    CN,    "PS", R,                             // 00
-    CLINK, (char *)rjDecode, R,                 // 01
-    CiK,   "JP    %6.6o", R,                    // 02
-    CLINK, (char *)cjDecode, R,                 // 03
-    CijK,  "EQ    B%o,B%o,%6.6o", RBB,          // 04
-    CijK,  "NE    B%o,B%o,%6.6o", RBB,          // 05
-    CijK,  "GE    B%o,B%o,%6.6o", RBB,          // 06
-    CijK,  "LT    B%o,B%o,%6.6o", RBB,          // 07
+    { CN,    "PS", R                    },        // 00
+    { CLINK, (char *)rjDecode, R        },        // 01
+    { CiK,   "JP    %6.6o", R           },        // 02
+    { CLINK, (char *)cjDecode, R        },        // 03
+    { CijK,  "EQ    B%o,B%o,%6.6o", RBB },        // 04
+    { CijK,  "NE    B%o,B%o,%6.6o", RBB },        // 05
+    { CijK,  "GE    B%o,B%o,%6.6o", RBB },        // 06
+    { CijK,  "LT    B%o,B%o,%6.6o", RBB },        // 07
 
-    Cij,   "BX%o   X%o", RXX,                   // 10
-    Cijk,  "BX%o   X%o*X%o", RXXX,              // 11
-    Cijk,  "BX%o   X%o+X%o", RXXX,              // 12
-    Cijk,  "BX%o   X%o-X%o", RXXX,              // 13
-    Cik,   "BX%o   -X%o", RXXX,                 // 14
-    Cikj,  "BX%o   -X%o*X%o", RXXX,             // 15
-    Cikj,  "BX%o   -X%o+X%o", RXXX,             // 16
-    Cikj,  "BX%o   -X%o-X%o", RXXX,             // 17
+    { Cij,   "BX%o   X%o", RXX          },        // 10
+    { Cijk,  "BX%o   X%o*X%o", RXXX     },        // 11
+    { Cijk,  "BX%o   X%o+X%o", RXXX     },        // 12
+    { Cijk,  "BX%o   X%o-X%o", RXXX     },        // 13
+    { Cik,   "BX%o   -X%o", RXXX        },        // 14
+    { Cikj,  "BX%o   -X%o*X%o", RXXX    },        // 15
+    { Cikj,  "BX%o   -X%o+X%o", RXXX    },        // 16
+    { Cikj,  "BX%o   -X%o-X%o", RXXX    },        // 17
 
-    Cijk,  "LX%o   %o%o", RX,                   // 20
-    Cijk,  "AX%o   %o%o", RX,                   // 21
-    Cijk,  "LX%o   B%o,X%o", RXBX,              // 22
-    Cijk,  "AX%o   B%o,X%o", RXBX,              // 23
-    Cijk,  "NX%o   B%o,X%o", RXBX,              // 24
-    Cijk,  "ZX%o   B%o,X%o", RXBX,              // 25
-    Cijk,  "UX%o   B%o,X%o", RXBX,              // 26
-    Cijk,  "PX%o   B%o,X%o", RXBX,              // 27
+    { Cijk,  "LX%o   %o%o", RX          },        // 20
+    { Cijk,  "AX%o   %o%o", RX          },        // 21
+    { Cijk,  "LX%o   B%o,X%o", RXBX     },        // 22
+    { Cijk,  "AX%o   B%o,X%o", RXBX     },        // 23
+    { Cijk,  "NX%o   B%o,X%o", RXBX     },        // 24
+    { Cijk,  "ZX%o   B%o,X%o", RXBX     },        // 25
+    { Cijk,  "UX%o   B%o,X%o", RXBX     },        // 26
+    { Cijk,  "PX%o   B%o,X%o", RXBX     },        // 27
 
-    Cijk,  "FX%o   X%o+X%o", RXXX,              // 30
-    Cijk,  "FX%o   X%o-X%o", RXXX,              // 31
-    Cijk,  "DX%o   X%o+X%o", RXXX,              // 32
-    Cijk,  "DX%o   X%o-X%o", RXXX,              // 33
-    Cijk,  "RX%o   X%o+X%o", RXXX,              // 34
-    Cijk,  "RX%o   X%o-X%o", RXXX,              // 35
-    Cijk,  "IX%o   X%o+X%o", RXXX,              // 36
-    Cijk,  "IX%o   X%o-X%o", RXXX,              // 37
+    { Cijk,  "FX%o   X%o+X%o", RXXX     },        // 30
+    { Cijk,  "FX%o   X%o-X%o", RXXX     },        // 31
+    { Cijk,  "DX%o   X%o+X%o", RXXX     },        // 32
+    { Cijk,  "DX%o   X%o-X%o", RXXX     },        // 33
+    { Cijk,  "RX%o   X%o+X%o", RXXX     },        // 34
+    { Cijk,  "RX%o   X%o-X%o", RXXX     },        // 35
+    { Cijk,  "IX%o   X%o+X%o", RXXX     },        // 36
+    { Cijk,  "IX%o   X%o-X%o", RXXX     },        // 37
 
-    Cijk,  "FX%o   X%o*X%o", RXXX,              // 40
-    Cijk,  "RX%o   X%o*X%o", RXXX,              // 41
-    Cijk,  "DX%o   X%o*X%o", RXXX,              // 42
-    Cijk,  "MX%o   %o%o", RX,                   // 43
-    Cijk,  "FX%o   X%o/X%o", RXXX,              // 44
-    Cijk,  "RX%o   X%o/X%o", RXXX,              // 45
-    CN,    "NO", R,                             // 46
-    Cik,   "CX%o   X%o", RXNX,                  // 47
+    { Cijk,  "FX%o   X%o*X%o", RXXX     },        // 40
+    { Cijk,  "RX%o   X%o*X%o", RXXX     },        // 41
+    { Cijk,  "DX%o   X%o*X%o", RXXX     },        // 42
+    { Cijk,  "MX%o   %o%o", RX          },        // 43
+    { Cijk,  "FX%o   X%o/X%o", RXXX     },        // 44
+    { Cijk,  "RX%o   X%o/X%o", RXXX     },        // 45
+    { CN,    "NO", R                    },        // 46
+    { Cik,   "CX%o   X%o", RXNX         },        // 47
 
-    CijK,  "SA%o   A%o+%6.6o", RAA,             // 50
-    CijK,  "SA%o   B%o+%6.6o", RAB,             // 51
-    CijK,  "SA%o   X%o+%6.6o", RAX,             // 52
-    Cijk,  "SA%o   X%o+B%o", RAXB,              // 53
-    Cijk,  "SA%o   A%o+B%o", RAAB,              // 54
-    Cijk,  "SA%o   A%o-B%o", RAAB,              // 55
-    Cijk,  "SA%o   B%o+B%o", RABB,              // 56
-    Cijk,  "SA%o   B%o-B%o", RABB,              // 57
+    { CijK,  "SA%o   A%o+%6.6o", RAA    },        // 50
+    { CijK,  "SA%o   B%o+%6.6o", RAB    },        // 51
+    { CijK,  "SA%o   X%o+%6.6o", RAX    },        // 52
+    { Cijk,  "SA%o   X%o+B%o", RAXB     },        // 53
+    { Cijk,  "SA%o   A%o+B%o", RAAB     },        // 54
+    { Cijk,  "SA%o   A%o-B%o", RAAB     },        // 55
+    { Cijk,  "SA%o   B%o+B%o", RABB     },        // 56
+    { Cijk,  "SA%o   B%o-B%o", RABB     },        // 57
 
-    CijK,  "SB%o   A%o+%6.6o", RBA,             // 60
-    CijK,  "SB%o   B%o+%6.6o", RBB,             // 61
-    CijK,  "SB%o   X%o+%6.6o", RBX,             // 62
-    Cijk,  "SB%o   X%o+B%o", RBXB,              // 63
-    Cijk,  "SB%o   A%o+B%o", RBAB,              // 64
-    Cijk,  "SB%o   A%o-B%o", RBAB,              // 65
-    Cijk,  "SB%o   B%o+B%o", RBBB,              // 66
-    Cijk,  "SB%o   B%o-B%o", RBBB,              // 67
+    { CijK,  "SB%o   A%o+%6.6o", RBA    },        // 60
+    { CijK,  "SB%o   B%o+%6.6o", RBB    },        // 61
+    { CijK,  "SB%o   X%o+%6.6o", RBX    },        // 62
+    { Cijk,  "SB%o   X%o+B%o", RBXB     },        // 63
+    { Cijk,  "SB%o   A%o+B%o", RBAB     },        // 64
+    { Cijk,  "SB%o   A%o-B%o", RBAB     },        // 65
+    { Cijk,  "SB%o   B%o+B%o", RBBB     },        // 66
+    { Cijk,  "SB%o   B%o-B%o", RBBB     },        // 67
 
-    CijK,  "SX%o   A%o+%6.6o", RXA,             // 70
-    CijK,  "SX%o   B%o+%6.6o", RXB,             // 71
-    CijK,  "SX%o   X%o+%6.6o", RXX,             // 72
-    Cijk,  "SX%o   X%o+B%o", RXXB,              // 73
-    Cijk,  "SX%o   A%o+B%o", RXAB,              // 74
-    Cijk,  "SX%o   A%o-B%o", RXAB,              // 75
-    Cijk,  "SX%o   B%o+B%o", RXBB,              // 76
-    Cijk,  "SX%o   B%o-B%o", RXBB               // 77
+    { CijK,  "SX%o   A%o+%6.6o", RXA    },        // 70
+    { CijK,  "SX%o   B%o+%6.6o", RXB    },        // 71
+    { CijK,  "SX%o   X%o+%6.6o", RXX    },        // 72
+    { Cijk,  "SX%o   X%o+B%o", RXXB     },        // 73
+    { Cijk,  "SX%o   A%o+B%o", RXAB     },        // 74
+    { Cijk,  "SX%o   A%o-B%o", RXAB     },        // 75
+    { Cijk,  "SX%o   B%o+B%o", RXBB     },        // 76
+    { Cijk,  "SX%o   B%o-B%o", RXBB     }         // 77
     };
 
 static DecCp180Control cp180Decode[0x100] =
     {
-    VCjk,   "HALT",     VF, VR,                                // 00
-    VCjk,   "SYNC",     VF, VR,                                // 01
-    VCjk,   "EXCHANGE", VF, VR,                                // 02
-    VCjk,   "INTRUPT  X%X", VFK, VRXK,                         // 03
-    VCjk,   "RETURN",   VF, VR,                                // 04
-    VCjk,   "PURGE    X%X,0x%X", VFJK, VRXJ,                   // 05
-    VCjk,   "POP",      VF, VR,                                // 06
-    VCjk,   "PSFSA",    VF, VR,                                // 07
-    VCjk,   "CPYTX    X%X,X%X", VFKJ, VRXKXJ,                  // 08
-    VCjk,   "CPYAA    A%X,A%X", VFKJ, VRAKAJ,                  // 09
-    VCjk,   "CPYXA    A%X,X%X", VFKJ, VRAKXJ,                  // 0A
-    VCjk,   "CPYAX    X%X,A%X", VFKJ, VRXKAJ,                  // 0B
-    VCjk,   "CPYRR    X%X,X%X", VFKJ, VRXKXJ,                  // 0C
-    VCjk,   "CPYXX    X%X,X%X", VFKJ, VRXKXJ,                  // 0D
-    VCjk,   "CPYSX    X%X,X%X", VFKJ, VRXKXJ,                  // 0E
-    VCjk,   "CPYXS    X%X,X%X", VFKJ, VRXKXJ,                  // 0F
+    { VCjk,   "HALT",     VF, VR                                    }, // 00
+    { VCjk,   "SYNC",     VF, VR                                    }, // 01
+    { VCjk,   "EXCHANGE", VF, VR                                    }, // 02
+    { VCjk,   "INTRUPT  X%X", VFK, VRXK                             }, // 03
+    { VCjk,   "RETURN",   VF, VR                                    }, // 04
+    { VCjk,   "PURGE    X%X,0x%X", VFJK, VRXJ                       }, // 05
+    { VCjk,   "POP",      VF, VR                                    }, // 06
+    { VCjk,   "PSFSA",    VF, VR                                    }, // 07
+    { VCjk,   "CPYTX    X%X,X%X", VFKJ, VRXKXJ                      }, // 08
+    { VCjk,   "CPYAA    A%X,A%X", VFKJ, VRAKAJ                      }, // 09
+    { VCjk,   "CPYXA    A%X,X%X", VFKJ, VRAKXJ                      }, // 0A
+    { VCjk,   "CPYAX    X%X,A%X", VFKJ, VRXKAJ                      }, // 0B
+    { VCjk,   "CPYRR    X%X,X%X", VFKJ, VRXKXJ                      }, // 0C
+    { VCjk,   "CPYXX    X%X,X%X", VFKJ, VRXKXJ                      }, // 0D
+    { VCjk,   "CPYSX    X%X,X%X", VFKJ, VRXKXJ                      }, // 0E
+    { VCjk,   "CPYXS    X%X,X%X", VFKJ, VRXKXJ                      }, // 0F
 
-    VCjk,   "INCX     X%X,0x%X", VFKJ, VRXK,                   // 10
-    VCjk,   "DECX     X%X,0x%X", VFKJ, VRXK,                   // 11
-    VCjk,   "Illegal",  VF, VR,                                // 12
-    VCjk,   "Illegal",  VF, VR,                                // 13
-    VCjk,   "LBSET    X%X,A%X,X0", VFKJ, VRXKAJX0,             // 14
-    VCjk,   "Illegal",  VF, VR,                                // 15
-    VCjk,   "TPAGE    X%X,A%X", VFKJ, VRXKAJ,                  // 16
-    VCjk,   "LPAGE    X%X,X%X,X1", VFKJ, VRXKXJX1,             // 17
-    VCjk,   "IORX     X%X,X%X", VFKJ, VRXKXJ,                  // 18
-    VCjk,   "XORX     X%X,X%X", VFKJ, VRXKXJ,                  // 19
-    VCjk,   "ANDX     X%X,X%X", VFKJ, VRXKXJ,                  // 1A
-    VCjk,   "NOTX     X%X,X%X", VFKJ, VRXKXJ,                  // 1B
-    VCjk,   "INHX     X%X,X%X", VFKJ, VRXKXJ,                  // 1C
-    VCjk,   "Illegal",  VF, VR,                                // 1D
-    VCjk,   "MARK     X%X,X1,0x%X", VFKJ, VRXKX1,              // 1E
-    VCjk,   "ENTZ/O/S X%X", VFK, VRXK,                         // 1F
+    { VCjk,   "INCX     X%X,0x%X", VFKJ, VRXK                       }, // 10
+    { VCjk,   "DECX     X%X,0x%X", VFKJ, VRXK                       }, // 11
+    { VCjk,   "Illegal",  VF, VR                                    }, // 12
+    { VCjk,   "Illegal",  VF, VR                                    }, // 13
+    { VCjk,   "LBSET    X%X,A%X,X0", VFKJ, VRXKAJX0                 }, // 14
+    { VCjk,   "Illegal",  VF, VR                                    }, // 15
+    { VCjk,   "TPAGE    X%X,A%X", VFKJ, VRXKAJ                      }, // 16
+    { VCjk,   "LPAGE    X%X,X%X,X1", VFKJ, VRXKXJX1                 }, // 17
+    { VCjk,   "IORX     X%X,X%X", VFKJ, VRXKXJ                      }, // 18
+    { VCjk,   "XORX     X%X,X%X", VFKJ, VRXKXJ                      }, // 19
+    { VCjk,   "ANDX     X%X,X%X", VFKJ, VRXKXJ                      }, // 1A
+    { VCjk,   "NOTX     X%X,X%X", VFKJ, VRXKXJ                      }, // 1B
+    { VCjk,   "INHX     X%X,X%X", VFKJ, VRXKXJ                      }, // 1C
+    { VCjk,   "Illegal",  VF, VR                                    }, // 1D
+    { VCjk,   "MARK     X%X,X1,0x%X", VFKJ, VRXKX1                  }, // 1E
+    { VCjk,   "ENTZ/O/S X%X", VFK, VRXK                             }, // 1F
 
-    VCjk,   "ADDR     X%X,X%X", VFKJ, VRXKXJ,                  // 20
-    VCjk,   "SUBR     X%X,X%X", VFKJ, VRXKXJ,                  // 21
-    VCjk,   "MULR     X%X,X%X", VFKJ, VRXKXJ,                  // 22
-    VCjk,   "DIVR     X%X,X%X", VFKJ, VRXKXJ,                  // 23
-    VCjk,   "ADDX     X%X,X%X", VFKJ, VRXKXJ,                  // 24
-    VCjk,   "SUBX     X%X,X%X", VFKJ, VRXKXJ,                  // 25
-    VCjk,   "MULX     X%X,X%X", VFKJ, VRXKXJ,                  // 26
-    VCjk,   "DIVX     X%X,X%X", VFKJ, VRXKXJ,                  // 27
-    VCjk,   "INCR     X%X,0x%X", VFKJ, VRXK,                   // 28
-    VCjk,   "DECR     X%X,0x%X", VFKJ, VRXK,                   // 29
-    VCjk,   "ADDAX    A%X,X%X", VFKJ,VRAKXJ,                   // 2A
-    VCjk,   "Illegal",  VF, VR,                                // 2B
-    VCjk,   "CMPR     X1,X%X,X%X", VFJK, VRX1XJXK,             // 2C
-    VCjk,   "CMPX     X1,X%X,X%X", VFJK, VRX1XJXK,             // 2D
-    VCjk,   "BRREL    X%X", VFK, VRXK,                         // 2E
-    VCjk,   "BRDIR    A%X,X%X", VFJK, VRAJXK,                  // 2F
+    { VCjk,   "ADDR     X%X,X%X", VFKJ, VRXKXJ                      }, // 20
+    { VCjk,   "SUBR     X%X,X%X", VFKJ, VRXKXJ                      }, // 21
+    { VCjk,   "MULR     X%X,X%X", VFKJ, VRXKXJ                      }, // 22
+    { VCjk,   "DIVR     X%X,X%X", VFKJ, VRXKXJ                      }, // 23
+    { VCjk,   "ADDX     X%X,X%X", VFKJ, VRXKXJ                      }, // 24
+    { VCjk,   "SUBX     X%X,X%X", VFKJ, VRXKXJ                      }, // 25
+    { VCjk,   "MULX     X%X,X%X", VFKJ, VRXKXJ                      }, // 26
+    { VCjk,   "DIVX     X%X,X%X", VFKJ, VRXKXJ                      }, // 27
+    { VCjk,   "INCR     X%X,0x%X", VFKJ, VRXK                       }, // 28
+    { VCjk,   "DECR     X%X,0x%X", VFKJ, VRXK                       }, // 29
+    { VCjk,   "ADDAX    A%X,X%X", VFKJ,VRAKXJ                       }, // 2A
+    { VCjk,   "Illegal",  VF, VR                                    }, // 2B
+    { VCjk,   "CMPR     X1,X%X,X%X", VFJK, VRX1XJXK                 }, // 2C
+    { VCjk,   "CMPX     X1,X%X,X%X", VFJK, VRX1XJXK                 }, // 2D
+    { VCjk,   "BRREL    X%X", VFK, VRXK                             }, // 2E
+    { VCjk,   "BRDIR    A%X,X%X", VFJK, VRAJXK                      }, // 2F
 
-    VCjk,   "ADDF     X%X,X%X", VFKJ, VRXKXJ,                  // 30
-    VCjk,   "SUBF     X%X,X%X", VFKJ, VRXKXJ,                  // 31
-    VCjk,   "MULF     X%X,X%X", VFKJ, VRXKXJ,                  // 32
-    VCjk,   "DIVF     X%X,X%X", VFKJ, VRXKXJ,                  // 33
-    VCjk,   "ADDD     XX%X,XX%X", VFKJ, VRXXKXXJ,              // 34
-    VCjk,   "SUBD     XX%X,XX%X", VFKJ, VRXXKXXJ,              // 35
-    VCjk,   "MULD     XX%X,XX%X", VFKJ, VRXXKXXJ,              // 36
-    VCjk,   "DIVD     XX%X,XX%X", VFKJ, VRXXKXXJ,              // 37
-    VCjk,   "Illegal",  VF, VR,                                // 38
-    VCjk,   "ENTX     X1,0x%02X", VFJK8, VRX1,                 // 39
-    VCjk,   "CNIF     X%X,X%X", VFKJ, VRXKXJ,                  // 3A
-    VCjk,   "CNFI     X%X,X%X", VFKJ, VRXKXJ,                  // 3B
-    VCjk,   "CMPF     X1,X%X,X%X", VFJK, VRX1XJXK,             // 3C
-    VCjk,   "ENTP     X%X,0x%X", VFKJ, VRXK,                   // 3D
-    VCjk,   "ENTN     X%X,0x%X", VFKJ, VRXK,                   // 3E
-    VCjk,   "ENTL     X0,0x%02X", VFJK8, VRX0,                 // 3F
+    { VCjk,   "ADDF     X%X,X%X", VFKJ, VRXKXJ                      }, // 30
+    { VCjk,   "SUBF     X%X,X%X", VFKJ, VRXKXJ                      }, // 31
+    { VCjk,   "MULF     X%X,X%X", VFKJ, VRXKXJ                      }, // 32
+    { VCjk,   "DIVF     X%X,X%X", VFKJ, VRXKXJ                      }, // 33
+    { VCjk,   "ADDD     XX%X,XX%X", VFKJ, VRXXKXXJ                  }, // 34
+    { VCjk,   "SUBD     XX%X,XX%X", VFKJ, VRXXKXXJ                  }, // 35
+    { VCjk,   "MULD     XX%X,XX%X", VFKJ, VRXXKXXJ                  }, // 36
+    { VCjk,   "DIVD     XX%X,XX%X", VFKJ, VRXXKXXJ                  }, // 37
+    { VCjk,   "Illegal",  VF, VR                                    }, // 38
+    { VCjk,   "ENTX     X1,0x%02X", VFJK8, VRX1                     }, // 39
+    { VCjk,   "CNIF     X%X,X%X", VFKJ, VRXKXJ                      }, // 3A
+    { VCjk,   "CNFI     X%X,X%X", VFKJ, VRXKXJ                      }, // 3B
+    { VCjk,   "CMPF     X1,X%X,X%X", VFJK, VRX1XJXK                 }, // 3C
+    { VCjk,   "ENTP     X%X,0x%X", VFKJ, VRXK                       }, // 3D
+    { VCjk,   "ENTN     X%X,0x%X", VFKJ, VRXK                       }, // 3E
+    { VCjk,   "ENTL     X0,0x%02X", VFJK8, VRX0                     }, // 3F
 
     // Vector instructions not decoded yet
-    VCjkiD, "Illegal",  VF, VR,                                // 40
-    VCjkiD, "Illegal",  VF, VR,                                // 41
-    VCjkiD, "Illegal",  VF, VR,                                // 42
-    VCjkiD, "Illegal",  VF, VR,                                // 43
-    VCjkiD, "Illegal",  VF, VR,                                // 44
-    VCjkiD, "Illegal",  VF, VR,                                // 45
-    VCjkiD, "Illegal",  VF, VR,                                // 46
-    VCjkiD, "Illegal",  VF, VR,                                // 47
-    VCjkiD, "Illegal",  VF, VR,                                // 48
-    VCjkiD, "Illegal",  VF, VR,                                // 49
-    VCjkiD, "Illegal",  VF, VR,                                // 4A
-    VCjkiD, "Illegal",  VF, VR,                                // 4B
-    VCjkiD, "Illegal",  VF, VR,                                // 4C
-    VCjkiD, "Illegal",  VF, VR,                                // 4D
-    VCjkiD, "Illegal",  VF, VR,                                // 4E
-    VCjkiD, "Illegal",  VF, VR,                                // 4F
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 40
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 41
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 42
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 43
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 44
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 45
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 46
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 47
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 48
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 49
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 4A
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 4B
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 4C
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 4D
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 4E
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 4F
 
-    VCjkiD, "Illegal",  VF, VR,                                // 50
-    VCjkiD, "Illegal",  VF, VR,                                // 51
-    VCjkiD, "Illegal",  VF, VR,                                // 52
-    VCjkiD, "Illegal",  VF, VR,                                // 53
-    VCjkiD, "Illegal",  VF, VR,                                // 54
-    VCjkiD, "Illegal",  VF, VR,                                // 55
-    VCjkiD, "Illegal",  VF, VR,                                // 56
-    VCjkiD, "Illegal",  VF, VR,                                // 57
-    VCjkiD, "Illegal",  VF, VR,                                // 58
-    VCjkiD, "Illegal",  VF, VR,                                // 59
-    VCjkiD, "Illegal",  VF, VR,                                // 5A
-    VCjkiD, "Illegal",  VF, VR,                                // 5B
-    VCjkiD, "Illegal",  VF, VR,                                // 5C
-    VCjkiD, "Illegal",  VF, VR,                                // 5D
-    VCjkiD, "Illegal",  VF, VR,                                // 5E
-    VCjkiD, "Illegal",  VF, VR,                                // 5F
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 50
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 51
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 52
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 53
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 54
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 55
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 56
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 57
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 58
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 59
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 5A
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 5B
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 5C
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 5D
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 5E
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 5F
 
-    VCjkiD, "Illegal",  VF, VR,                                // 60
-    VCjkiD, "Illegal",  VF, VR,                                // 61
-    VCjkiD, "Illegal",  VF, VR,                                // 62
-    VCjkiD, "Illegal",  VF, VR,                                // 63
-    VCjkiD, "Illegal",  VF, VR,                                // 64
-    VCjkiD, "Illegal",  VF, VR,                                // 65
-    VCjkiD, "Illegal",  VF, VR,                                // 66
-    VCjkiD, "Illegal",  VF, VR,                                // 67
-    VCjkiD, "Illegal",  VF, VR,                                // 68
-    VCjkiD, "Illegal",  VF, VR,                                // 69
-    VCjkiD, "Illegal",  VF, VR,                                // 6A
-    VCjkiD, "Illegal",  VF, VR,                                // 6B
-    VCjkiD, "Illegal",  VF, VR,                                // 6C
-    VCjkiD, "Illegal",  VF, VR,                                // 6D
-    VCjkiD, "Illegal",  VF, VR,                                // 6E
-    VCjkiD, "Illegal",  VF, VR,                                // 6F
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 60
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 61
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 62
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 63
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 64
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 65
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 66
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 67
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 68
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 69
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 6A
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 6B
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 6C
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 6D
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 6E
+    { VCjkiD, "Illegal",  VF, VR                                    }, // 6F
 
-    VCjkB2, "ADDN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 70
-    VCjkB2, "SUBN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 71
-    VCjkB2, "MULN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 72
-    VCjkB2, "DIVN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 73
-    VCjkB2, "CMPN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 74
-    VCjkB2, "MOVN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 75
-    VCjkB2, "MOVB,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 76
-    VCjkB2, "CMPB,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1,           // 77
-    VCjk,   "Illegal",  VF, VR,                                // 78
-    VCjk,   "Illegal",  VF, VR,                                // 79
-    VCjk,   "Illegal",  VF, VR,                                // 7A
-    VCjk,   "Illegal",  VF, VR,                                // 7B
-    VCjk,   "Illegal",  VF, VR,                                // 7C
-    VCjk,   "Illegal",  VF, VR,                                // 7D
-    VCjk,   "Illegal",  VF, VR,                                // 7E
-    VCjk,   "Illegal",  VF, VR,                                // 7F
+    { VCjkB2, "ADDN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1               }, // 70
+    { VCjkB2, "SUBN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1               }, // 71
+    { VCjkB2, "MULN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1               }, // 72
+    { VCjkB2, "DIVN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1               }, // 73
+    { VCjkB2, "CMPN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1               }, // 74
+    { VCjkB2, "MOVN,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1               }, // 75
+    { VCjkB2, "MOVB,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1               }, // 76
+    { VCjkB2, "CMPB,A%X,X0  A%X,X1", VFJK, VRAJX0AKX1               }, // 77
+    { VCjk,   "Illegal",  VF, VR                                    }, // 78
+    { VCjk,   "Illegal",  VF, VR                                    }, // 79
+    { VCjk,   "Illegal",  VF, VR                                    }, // 7A
+    { VCjk,   "Illegal",  VF, VR                                    }, // 7B
+    { VCjk,   "Illegal",  VF, VR                                    }, // 7C
+    { VCjk,   "Illegal",  VF, VR                                    }, // 7D
+    { VCjk,   "Illegal",  VF, VR                                    }, // 7E
+    { VCjk,   "Illegal",  VF, VR                                    }, // 7F
 
-    VCjkQ,  "LMULT    X%X,A%X,0x%X", VFKJQ, VRXKAJ,            // 80
-    VCjkQ,  "SMULT    X%X,A%X,0x%X", VFKJQ, VRXKAJ,            // 81
-    VCjkQ,  "LX       X%X,A%X,0x%X", VFKJQ, VRXKAJ,            // 82
-    VCjkQ,  "SX       X%X,A%X,0x%X", VFKJQ, VRXKAJ,            // 83
-    VCjkQ,  "LA       A%X,A%X,0x%X", VFKJQ, VRAKAJ,            // 84
-    VCjkQ,  "SA       A%X,A%X,0x%X", VFKJQ, VRAKAJ,            // 85
-    VCjkQ,  "LBYTP,%d  X%X,0x%X", VFJKQ, VRXK,                 // 86
-    VCjkQ,  "ENTC     X1,0x%X", VFJKQ24, VRX1,                 // 87
-    VCjkQ,  "LBIT     X%X,A%X,0x%X,X0", VFKJQ, VRXKAJX0,       // 88
-    VCjkQ,  "SBIT     X%X,A%X,0x%X,X0", VFKJQ, VRXKAJX0,       // 89
-    VCjkQ,  "ADDRQ    X%X,X%X,0x%X", VFKJQ, VRXKXJ,            // 8A
-    VCjkQ,  "ADDXQ    X%X,X%X,0x%X", VFKJQ, VRXKXJ,            // 8B
-    VCjkQ,  "MULRQ    X%X,X%X,0x%X", VFKJQ, VRXKXJ,            // 8C
-    VCjkQ,  "ENTE     X%X,0x%X", VFKQ, VRXK,                   // 8D
-    VCjkQ,  "ADDAQ    A%X,A%X,0x%X", VFKJQ, VRAKAJ,            // 8E
-    VCjkQ,  "ADDPXQ   A%X,X%X,0x%X", VFKJQ, VRAKXJ,            // 8F
+    { VCjkQ,  "LMULT    X%X,A%X,0x%X", VFKJQ, VRXKAJ                }, // 80
+    { VCjkQ,  "SMULT    X%X,A%X,0x%X", VFKJQ, VRXKAJ                }, // 81
+    { VCjkQ,  "LX       X%X,A%X,0x%X", VFKJQ, VRXKAJ                }, // 82
+    { VCjkQ,  "SX       X%X,A%X,0x%X", VFKJQ, VRXKAJ                }, // 83
+    { VCjkQ,  "LA       A%X,A%X,0x%X", VFKJQ, VRAKAJ                }, // 84
+    { VCjkQ,  "SA       A%X,A%X,0x%X", VFKJQ, VRAKAJ                }, // 85
+    { VCjkQ,  "LBYTP,%d  X%X,0x%X", VFJKQ, VRXK                     }, // 86
+    { VCjkQ,  "ENTC     X1,0x%X", VFJKQ24, VRX1                     }, // 87
+    { VCjkQ,  "LBIT     X%X,A%X,0x%X,X0", VFKJQ, VRXKAJX0           }, // 88
+    { VCjkQ,  "SBIT     X%X,A%X,0x%X,X0", VFKJQ, VRXKAJX0           }, // 89
+    { VCjkQ,  "ADDRQ    X%X,X%X,0x%X", VFKJQ, VRXKXJ                }, // 8A
+    { VCjkQ,  "ADDXQ    X%X,X%X,0x%X", VFKJQ, VRXKXJ                }, // 8B
+    { VCjkQ,  "MULRQ    X%X,X%X,0x%X", VFKJQ, VRXKXJ                }, // 8C
+    { VCjkQ,  "ENTE     X%X,0x%X", VFKQ, VRXK                       }, // 8D
+    { VCjkQ,  "ADDAQ    A%X,A%X,0x%X", VFKJQ, VRAKAJ                }, // 8E
+    { VCjkQ,  "ADDPXQ   A%X,X%X,0x%X", VFKJQ, VRAKXJ                }, // 8F
 
-    VCjkQ,  "BRREQ    X%X,X%X,0x%X", VFJKQ, VRXJXK,            // 90
-    VCjkQ,  "BRRNE    X%X,X%X,0x%X", VFJKQ, VRXJXK,            // 91
-    VCjkQ,  "BRRGT    X%X,X%X,0x%X", VFJKQ, VRXJXK,            // 92
-    VCjkQ,  "BRRGE    X%X,X%X,0x%X", VFJKQ, VRXJXK,            // 93
-    VCjkQ,  "BRXEQ    X%X,X%X,0x%X", VFJKQ, VRXJXK,            // 94
-    VCjkQ,  "BRXNE    X%X,X%X,0x%X", VFJKQ, VRXJXK,            // 95
-    VCjkQ,  "BRXGT    X%X,X%X,0x%X", VFJKQ, VRXJXK,            // 96
-    VCjkQ,  "BRXGE    X%X,X%X,0x%X", VFJKQ, VRXJXK,            // 97
-    VCjkQ,  "BRFEQ    X%X,X%X,0x%X", VFJKQ, VRXJXK,            // 98
-    VCjkQ,  "BRFNE    X%X,X%X,0x%X", VFJKQ, VRXJXK,            // 99
-    VCjkQ,  "BRFGT    X%X,X%X,0x%X", VFJKQ, VRXJXK,            // 9A
-    VCjkQ,  "BRFGE    X%X,X%X,0x%X", VFJKQ, VRXJXK,            // 9B
-    VCjkQ,  "BRINC    X%X,X%X,0x%X", VFJKQ, VRXJXK,            // 9C
-    VCjkQ,  "BRSEG    X1,A%X,A%X,0x%X", VFJKQ, VRX1AJAK,       // 9D
-    VCjkQ,  "BR---    X%X,0x%X", VFKQ, VRXK,                   // 9E
-    VCjkQ,  "BRCR     0x%X,0x%X,0x%X", VFJKQ, VR,              // 9F
+    { VCjkQ,  "BRREQ    X%X,X%X,0x%X", VFJKQ, VRXJXK                }, // 90
+    { VCjkQ,  "BRRNE    X%X,X%X,0x%X", VFJKQ, VRXJXK                }, // 91
+    { VCjkQ,  "BRRGT    X%X,X%X,0x%X", VFJKQ, VRXJXK                }, // 92
+    { VCjkQ,  "BRRGE    X%X,X%X,0x%X", VFJKQ, VRXJXK                }, // 93
+    { VCjkQ,  "BRXEQ    X%X,X%X,0x%X", VFJKQ, VRXJXK                }, // 94
+    { VCjkQ,  "BRXNE    X%X,X%X,0x%X", VFJKQ, VRXJXK                }, // 95
+    { VCjkQ,  "BRXGT    X%X,X%X,0x%X", VFJKQ, VRXJXK                }, // 96
+    { VCjkQ,  "BRXGE    X%X,X%X,0x%X", VFJKQ, VRXJXK                }, // 97
+    { VCjkQ,  "BRFEQ    X%X,X%X,0x%X", VFJKQ, VRXJXK                }, // 98
+    { VCjkQ,  "BRFNE    X%X,X%X,0x%X", VFJKQ, VRXJXK                }, // 99
+    { VCjkQ,  "BRFGT    X%X,X%X,0x%X", VFJKQ, VRXJXK                }, // 9A
+    { VCjkQ,  "BRFGE    X%X,X%X,0x%X", VFJKQ, VRXJXK                }, // 9B
+    { VCjkQ,  "BRINC    X%X,X%X,0x%X", VFJKQ, VRXJXK                }, // 9C
+    { VCjkQ,  "BRSEG    X1,A%X,A%X,0x%X", VFJKQ, VRX1AJAK           }, // 9D
+    { VCjkQ,  "BR---    X%X,0x%X", VFKQ, VRXK                       }, // 9E
+    { VCjkQ,  "BRCR     0x%X,0x%X,0x%X", VFJKQ, VR                  }, // 9F
 
-    VCjkiD, "LAI      A%X,A%X,X%X,0x%X", VFKJID, VRAKAJXI,     // A0
-    VCjkiD, "SAI      A%X,A%X,X%X,0x%X", VFKJID, VRAKAJXI,     // A1
-    VCjkiD, "LXI      X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // A2
-    VCjkiD, "SXI      X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // A3
-    VCjkiD, "LBYT,X0  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // A4
-    VCjkiD, "SBYT,X0  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // A5
-    VCjkiD, "Illegal",  VF, VR,                                // A6
-    VCjkiD, "ADDAD    A%X,A%X,0x%X,0x%X", VFKJDJ, VRAKAJ,      // A7
-    VCjkiD, "SHFC     X%X,X%X,X%X,0x%X", VFKJID, VRXKXJXI,     // A8
-    VCjkiD, "SHFX     X%X,X%X,X%X,0x%X", VFKJID, VRXKXJXI,     // A9
-    VCjkiD, "SHFR     X%X,X%X,X%X,0x%X", VFKJID, VRXKXJXI,     // AA
-    VCjkiD, "Illegal",  VF, VR,                                // AB
-    VCjkiD, "ISOM     X%X,X%X,0x%X", VFKID, VRXKXI,            // AC
-    VCjkiD, "ISOB     X%X,X%X,X%X,0x%X", VFKJID, VRXKXJXI,     // AD
-    VCjkiD, "INSB     X%X,X%X,X%X,0x%X", VFKJID, VRXKXJXI,     // AE
-    VCjkiD, "Illegal",  VF, VR,                                // AF
+    { VCjkiD, "LAI      A%X,A%X,X%X,0x%X", VFKJID, VRAKAJXI         }, // A0
+    { VCjkiD, "SAI      A%X,A%X,X%X,0x%X", VFKJID, VRAKAJXI         }, // A1
+    { VCjkiD, "LXI      X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // A2
+    { VCjkiD, "SXI      X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // A3
+    { VCjkiD, "LBYT,X0  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // A4
+    { VCjkiD, "SBYT,X0  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // A5
+    { VCjkiD, "Illegal",  VF, VR                                    }, // A6
+    { VCjkiD, "ADDAD    A%X,A%X,0x%X,0x%X", VFKJDJ, VRAKAJ          }, // A7
+    { VCjkiD, "SHFC     X%X,X%X,X%X,0x%X", VFKJID, VRXKXJXI         }, // A8
+    { VCjkiD, "SHFX     X%X,X%X,X%X,0x%X", VFKJID, VRXKXJXI         }, // A9
+    { VCjkiD, "SHFR     X%X,X%X,X%X,0x%X", VFKJID, VRXKXJXI         }, // AA
+    { VCjkiD, "Illegal",  VF, VR                                    }, // AB
+    { VCjkiD, "ISOM     X%X,X%X,0x%X", VFKID, VRXKXI                }, // AC
+    { VCjkiD, "ISOB     X%X,X%X,X%X,0x%X", VFKJID, VRXKXJXI         }, // AD
+    { VCjkiD, "INSB     X%X,X%X,X%X,0x%X", VFKJID, VRXKXJXI         }, // AE
+    { VCjkiD, "Illegal",  VF, VR                                    }, // AF
 
-    VCjkQ,  "CALLREL  0x%X,A%X,A%X", VFQJK, VRAJAK,            // B0
-    VCjkQ,  "KEYPOINT 0x%X,X%X,0x%X", VFJKQ, VRXK,             // B1
-    VCjkQ,  "MULXQ    X%X,X%X,0x%X", VFKJQ, VRXKXJ,            // B2
-    VCjkQ,  "ENTA     X0,0x%X", VFJKQ24, VRX0,                 // B3
-    VCjkQ,  "CMPXA    X%X,A%X,X0,0x%X", VFKJQ, VRXKAJX0,       // B4
-    VCjkQ,  "CALLSEG  0x%X,A%X,A%X", VFQJK, VRAJAK,            // B5
-    VCjkQ,  "Illegal",  VF, VR,                                // B6
-    VCjkQ,  "Illegal",  VF, VR,                                // B7
-    VCjkQ,  "Illegal",  VF, VR,                                // B8
-    VCjkQ,  "Illegal",  VF, VR,                                // B9
-    VCjkQ,  "Illegal",  VF, VR,                                // BA
-    VCjkQ,  "Illegal",  VF, VR,                                // BB
-    VCjkQ,  "Illegal",  VF, VR,                                // BC
-    VCjkQ,  "Illegal",  VF, VR,                                // BD
-    VCjkQ,  "Illegal",  VF, VR,                                // BE
-    VCjkQ,  "Illegal",  VF, VR,                                // BF
+    { VCjkQ,  "CALLREL  0x%X,A%X,A%X", VFQJK, VRAJAK                }, // B0
+    { VCjkQ,  "KEYPOINT 0x%X,X%X,0x%X", VFJKQ, VRXK                 }, // B1
+    { VCjkQ,  "MULXQ    X%X,X%X,0x%X", VFKJQ, VRXKXJ                }, // B2
+    { VCjkQ,  "ENTA     X0,0x%X", VFJKQ24, VRX0                     }, // B3
+    { VCjkQ,  "CMPXA    X%X,A%X,X0,0x%X", VFKJQ, VRXKAJX0           }, // B4
+    { VCjkQ,  "CALLSEG  0x%X,A%X,A%X", VFQJK, VRAJAK                }, // B5
+    { VCjkQ,  "Illegal",  VF, VR                                    }, // B6
+    { VCjkQ,  "Illegal",  VF, VR                                    }, // B7
+    { VCjkQ,  "Illegal",  VF, VR                                    }, // B8
+    { VCjkQ,  "Illegal",  VF, VR                                    }, // B9
+    { VCjkQ,  "Illegal",  VF, VR                                    }, // BA
+    { VCjkQ,  "Illegal",  VF, VR                                    }, // BB
+    { VCjkQ,  "Illegal",  VF, VR                                    }, // BC
+    { VCjkQ,  "Illegal",  VF, VR                                    }, // BD
+    { VCjkQ,  "Illegal",  VF, VR                                    }, // BE
+    { VCjkQ,  "Illegal",  VF, VR                                    }, // BF
 
-    VCjkiD, "EXECUTE,0 %X,%X,%X,0x%X", VFJKID, VR,             // C0
-    VCjkiD, "EXECUTE,1 %X,%X,%X,0x%X", VFJKID, VR,             // C1
-    VCjkiD, "EXECUTE,2 %X,%X,%X,0x%X", VFJKID, VR,             // C2
-    VCjkiD, "EXECUTE,3 %X,%X,%X,0x%X", VFJKID, VR,             // C3
-    VCjkiD, "EXECUTE,4 %X,%X,%X,0x%X", VFJKID, VR,             // C4
-    VCjkiD, "EXECUTE,5 %X,%X,%X,0x%X", VFJKID, VR,             // C5
-    VCjkiD, "EXECUTE,6 %X,%X,%X,0x%X", VFJKID, VR,             // C6
-    VCjkiD, "EXECUTE,7 %X,%X,%X,0x%X", VFJKID, VR,             // C7
-    VCjkiD, "Illegal",  VF, VR,                                // C8
-    VCjkiD, "Illegal",  VF, VR,                                // C9
-    VCjkiD, "Illegal",  VF, VR,                                // CA
-    VCjkiD, "Illegal",  VF, VR,                                // CB
-    VCjkiD, "Illegal",  VF, VR,                                // CC
-    VCjkiD, "Illegal",  VF, VR,                                // CD
-    VCjkiD, "Illegal",  VF, VR,                                // CE
-    VCjkiD, "Illegal",  VF, VR,                                // CF
+    { VCjkiD, "EXECUTE,0 %X,%X,%X,0x%X", VFJKID, VR                 }, // C0
+    { VCjkiD, "EXECUTE,1 %X,%X,%X,0x%X", VFJKID, VR                 }, // C1
+    { VCjkiD, "EXECUTE,2 %X,%X,%X,0x%X", VFJKID, VR                 }, // C2
+    { VCjkiD, "EXECUTE,3 %X,%X,%X,0x%X", VFJKID, VR                 }, // C3
+    { VCjkiD, "EXECUTE,4 %X,%X,%X,0x%X", VFJKID, VR                 }, // C4
+    { VCjkiD, "EXECUTE,5 %X,%X,%X,0x%X", VFJKID, VR                 }, // C5
+    { VCjkiD, "EXECUTE,6 %X,%X,%X,0x%X", VFJKID, VR                 }, // C6
+    { VCjkiD, "EXECUTE,7 %X,%X,%X,0x%X", VFJKID, VR                 }, // C7
+    { VCjkiD, "Illegal",  VF, VR                                    }, // C8
+    { VCjkiD, "Illegal",  VF, VR                                    }, // C9
+    { VCjkiD, "Illegal",  VF, VR                                    }, // CA
+    { VCjkiD, "Illegal",  VF, VR                                    }, // CB
+    { VCjkiD, "Illegal",  VF, VR                                    }, // CC
+    { VCjkiD, "Illegal",  VF, VR                                    }, // CD
+    { VCjkiD, "Illegal",  VF, VR                                    }, // CE
+    { VCjkiD, "Illegal",  VF, VR                                    }, // CF
 
-    VCjkiD, "LBYTS,1  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D0
-    VCjkiD, "LBYTS,2  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D1
-    VCjkiD, "LBYTS,3  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D2
-    VCjkiD, "LBYTS,4  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D3
-    VCjkiD, "LBYTS,5  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D4
-    VCjkiD, "LBYTS,6  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D5
-    VCjkiD, "LBYTS,7  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D6
-    VCjkiD, "LBYTS,8  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D7
-    VCjkiD, "SBYTS,1  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D8
-    VCjkiD, "SBYTS,2  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // D9
-    VCjkiD, "SBYTS,3  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // DA
-    VCjkiD, "SBYTS,4  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // DB
-    VCjkiD, "SBYTS,5  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // DC
-    VCjkiD, "SBYTS,6  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // DD
-    VCjkiD, "SBYTS,7  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // DE
-    VCjkiD, "SBYTS,8  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI,     // DF
+    { VCjkiD, "LBYTS,1  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // D0
+    { VCjkiD, "LBYTS,2  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // D1
+    { VCjkiD, "LBYTS,3  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // D2
+    { VCjkiD, "LBYTS,4  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // D3
+    { VCjkiD, "LBYTS,5  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // D4
+    { VCjkiD, "LBYTS,6  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // D5
+    { VCjkiD, "LBYTS,7  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // D6
+    { VCjkiD, "LBYTS,8  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // D7
+    { VCjkiD, "SBYTS,1  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // D8
+    { VCjkiD, "SBYTS,2  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // D9
+    { VCjkiD, "SBYTS,3  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // DA
+    { VCjkiD, "SBYTS,4  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // DB
+    { VCjkiD, "SBYTS,5  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // DC
+    { VCjkiD, "SBYTS,6  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // DD
+    { VCjkiD, "SBYTS,7  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // DE
+    { VCjkiD, "SBYTS,8  X%X,A%X,X%X,0x%X", VFKJID, VRXKAJXI         }, // DF
 
-    VCjkiD, "Illegal",  VF, VR,                                // E0
-    VCjkiD, "Illegal",  VF, VR,                                // E1
-    VCjkiD, "Illegal",  VF, VR,                                // E2
-    VCjkiD, "Illegal",  VF, VR,                                // E3
-    VCjkiDB2, "SCLN,A%X,X0 A%X,X1,X%X,0x%X", VFJKID, VRAJX0AKX1XI, // E4
-    VCjkiDB2, "SCLR,A%X,X0 A%X,X1,X%X,0x%X", VFJKID, VRAJX0AKX1XI, // E5
-    VCjkiD, "Illegal",  VF, VR,                                // E6
-    VCjkiD, "Illegal",  VF, VR,                                // E7
-    VCjkiD, "Illegal",  VF, VR,                                // E8
-    VCjkiDB2, "CMPC,A%X,X0 A%X,X1,A%X,0x%X", VFJKID, VRAJX0AKX1AI, // E9
-    VCjkiD, "Illegal",  VF, VR,                                // EA
-    VCjkiDB2, "TRANB,A%X,X0 A%X,X1,A%X,0x%X",VFJKID, VRAJX0AKX1AI, // EB
-    VCjkiD, "Illegal",  VF, VR,                                // EC
-    VCjkiDB2, "EDIT,A%X,X0 A%X,X1,A%X,0x%X", VFJKID, VRAJX0AKX1AI, // ED
-    VCjkiD, "Illegal",  VF, VR,                                // EE
-    VCjkiD, "Illegal",  VF, VR,                                // EF
+    { VCjkiD, "Illegal",  VF, VR                                    }, // E0
+    { VCjkiD, "Illegal",  VF, VR                                    }, // E1
+    { VCjkiD, "Illegal",  VF, VR                                    }, // E2
+    { VCjkiD, "Illegal",  VF, VR                                    }, // E3
+    { VCjkiDB2, "SCLN,A%X,X0 A%X,X1,X%X,0x%X", VFJKID, VRAJX0AKX1XI }, // E4
+    { VCjkiDB2, "SCLR,A%X,X0 A%X,X1,X%X,0x%X", VFJKID, VRAJX0AKX1XI }, // E5
+    { VCjkiD, "Illegal",  VF, VR                                    }, // E6
+    { VCjkiD, "Illegal",  VF, VR                                    }, // E7
+    { VCjkiD, "Illegal",  VF, VR                                    }, // E8
+    { VCjkiDB2, "CMPC,A%X,X0 A%X,X1,A%X,0x%X", VFJKID, VRAJX0AKX1AI }, // E9
+    { VCjkiD, "Illegal",  VF, VR                                    }, // EA
+    { VCjkiDB2, "TRANB,A%X,X0 A%X,X1,A%X,0x%X",VFJKID, VRAJX0AKX1AI }, // EB
+    { VCjkiD, "Illegal",  VF, VR                                    }, // EC
+    { VCjkiDB2, "EDIT,A%X,X0 A%X,X1,A%X,0x%X", VFJKID, VRAJX0AKX1AI }, // ED
+    { VCjkiD, "Illegal",  VF, VR                                    }, // EE
+    { VCjkiD, "Illegal",  VF, VR                                    }, // EF
 
-    VCjkiD, "Illegal",  VF, VR,                                // F0
-    VCjkiD, "Illegal",  VF, VR,                                // F1
-    VCjkiD, "Illegal",  VF, VR,                                // F2
-    VCjkiDB1, "SCNB,X0 A%X,X1,A%X,0x%X", VFKID, VRX0AKX1AI,    // F3
-    VCjkiD, "Illegal",  VF, VR,                                // F4
-    VCjkiD, "Illegal",  VF, VR,                                // F5
-    VCjkiD, "Illegal",  VF, VR,                                // F6
-    VCjkiD, "Illegal",  VF, VR,                                // F7
-    VCjkiD, "Illegal",  VF, VR,                                // F8
-    VCjkiDB1, "MOVI,X%X,0x%X A%X,X1,0x%X", VFIDKJ, VRXIAKX1,   // F9
-    VCjkiDB1, "CMPI,X%X,0x%X A%X,X1,0x%X", VFIDKJ, VRXIAKX1,   // FA
-    VCjkiDB1, "ADDI,X%X,0x%X A%X,X1,0x%X", VFIDKJ, VRXIAKX1,   // FB
-    VCjkiD, "Illegal",  VF, VR,                                // FC
-    VCjkiD, "Illegal",  VF, VR,                                // FD
-    VCjkiD, "Illegal",  VF, VR,                                // FE
-    VCjkiD, "Illegal",  VF, VR                                 // FF
+    { VCjkiD, "Illegal",  VF, VR                                    }, // F0
+    { VCjkiD, "Illegal",  VF, VR                                    }, // F1
+    { VCjkiD, "Illegal",  VF, VR                                    }, // F2
+    { VCjkiDB1, "SCNB,X0 A%X,X1,A%X,0x%X", VFKID, VRX0AKX1AI        }, // F3
+    { VCjkiD, "Illegal",  VF, VR                                    }, // F4
+    { VCjkiD, "Illegal",  VF, VR                                    }, // F5
+    { VCjkiD, "Illegal",  VF, VR                                    }, // F6
+    { VCjkiD, "Illegal",  VF, VR                                    }, // F7
+    { VCjkiD, "Illegal",  VF, VR                                    }, // F8
+    { VCjkiDB1, "MOVI,X%X,0x%X A%X,X1,0x%X", VFIDKJ, VRXIAKX1       }, // F9
+    { VCjkiDB1, "CMPI,X%X,0x%X A%X,X1,0x%X", VFIDKJ, VRXIAKX1       }, // FA
+    { VCjkiDB1, "ADDI,X%X,0x%X A%X,X1,0x%X", VFIDKJ, VRXIAKX1       }, // FB
+    { VCjkiD, "Illegal",  VF, VR                                    }, // FC
+    { VCjkiD, "Illegal",  VF, VR                                    }, // FD
+    { VCjkiD, "Illegal",  VF, VR                                    }, // FE
+    { VCjkiD, "Illegal",  VF, VR                                    }  // FF
     };
 
 /*

@@ -89,17 +89,17 @@ typedef enum
 **  Private Function Prototypes
 **  ---------------------------
 */
-static char *mchCw2String(u8 connCode, u8 typeCode, PpWord location);
 static FcStatus mchFunc(PpWord funcCode);
 static MacConnType mchGetConnType(u8 connCode, u8 *cpId);
 static void mchIo(void);
 static void mchActivate(void);
 static void mchDisconnect(void);
 static bool mchIsConnected(u8 connCode);
-static char *mchOp2String(u8 opCode);
 
 #if DEBUG
+static char *mchCw2String(u8 connCode, u8 typeCode, PpWord location);
 static char *mchFn2String(u8 connCode, u8 opCode, u8 typeCode);
+static char *mchOp2String(u8 opCode);
 #endif
 
 /*
@@ -196,6 +196,8 @@ void mchInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     dp->func       = mchFunc;
     dp->io         = mchIo;
 
+    ppMacInit(); // initialize IOU maintenance registers
+
     /*
     **  Print a friendly message.
     */
@@ -266,6 +268,7 @@ static void mchDisconnect(void)
                 break;
                 }
             }
+        break;
     default:
         break;
         }
@@ -686,6 +689,7 @@ static bool mchIsConnected(u8 connCode)
 **  -----------------
 */
 
+#if DEBUG
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert location to string.
 **
@@ -699,7 +703,6 @@ static bool mchIsConnected(u8 connCode)
 **------------------------------------------------------------------------*/
 static char *mchCw2String(u8 connCode, u8 typeCode, PpWord location)
     {
-#if DEBUG
     switch (modelType)
         {
     case ModelCyber860:
@@ -848,12 +851,10 @@ static char *mchCw2String(u8 connCode, u8 typeCode, PpWord location)
     default:
         break;
         }
-#endif
 
     return "Unknown";
     }
 
-#if DEBUG
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert channel function to string.
 **
@@ -925,7 +926,6 @@ static char *mchFn2String(u8 connCode, u8 opCode, u8 typeCode)
 
     return buf;
     }
-#endif
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert operation code to string.
@@ -940,7 +940,6 @@ static char *mchOp2String(u8 opCode)
     {
     static char buf[16];
 
-#if DEBUG
     switch (opCode)
         {
     case FcOpHalt:
@@ -970,10 +969,11 @@ static char *mchOp2String(u8 opCode)
     case FcOpStatusSummary:
         return "StatusSummary";
         }
-#endif
     sprintf(buf, "Unknown 0x%X", opCode >> 4);
 
     return buf;
     }
+
+#endif
 
 /*---------------------------  End Of File  ------------------------------*/

@@ -294,7 +294,9 @@ static void mt669FuncRead(void);
 static void mt669FuncForespace(void);
 static void mt669FuncBackspace(void);
 static void mt669FuncReadBkw(void);
+#if DEBUG
 static char *mt669Func2String(PpWord funcCode);
+#endif
 
 /*
 **  ----------------
@@ -1055,7 +1057,6 @@ static FcStatus mt669Func(PpWord funcCode)
     i8        unitNo;
     TapeParam *tp;
     CtrlParam *cp = activeDevice->controllerContext;
-    i32       position;
 
     unitNo = activeDevice->selectedUnit;
     if (unitNo != -1)
@@ -1261,7 +1262,6 @@ static FcStatus mt669Func(PpWord funcCode)
             {
             mt669ResetStatus(tp);
             tp->bp       = tp->ioBuffer;
-            position     = ftell(activeDevice->fcb[unitNo]);
             tp->blockNo += 1;
 
             /*
@@ -1334,8 +1334,7 @@ static FcStatus mt669Func(PpWord funcCode)
     */
     case Fc669WriteOdd12:
         funcCode = Fc669WriteOdd;
-
-    /* fall through */
+        // fall through
     case Fc669Write:
     case Fc669WriteOdd:
         if ((unitNo != -1) && tp->unitReady && tp->ringIn)
@@ -2792,6 +2791,7 @@ static void mt669FuncBackspace(void)
         }
     }
 
+#if DEBUG
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert function code to string.
 **
@@ -2805,7 +2805,6 @@ static char *mt669Func2String(PpWord funcCode)
     {
     static char buf[40];
 
-#if DEBUG
     switch (funcCode)
         {
     case Fc669FormatUnit:
@@ -3045,10 +3044,12 @@ static char *mt669Func2String(PpWord funcCode)
     case Fc669ClearUnit:
         return "Fc669ClearUnit";
         }
-#endif
+
     sprintf(buf, "(mt669  ) Unknown Function: %04o", funcCode);
 
     return (buf);
     }
+
+#endif
 
 /*---------------------------  End Of File  ------------------------------*/

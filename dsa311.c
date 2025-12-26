@@ -747,12 +747,11 @@ static void dsa311Io(void)
 
                         case ETB:
                             cp->outputState = StDsa311OutCRC1;
-
+                            // fall through
                         case STX:
                         case DLE:
                             cp->sktOutBuf.data[cp->sktOutBuf.in++] = DLE;
-
-                        // fall through
+                            // fall through
                         default:
                             cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
                             break;

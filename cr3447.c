@@ -158,9 +158,11 @@ static void cr3447Io(void);
 static void cr3447Activate(void);
 static void cr3447Disconnect(void);
 static void cr3447NextCard(DevSlot *up, CrContext *cc);
-static char *cr3447Func2String(PpWord funcCode);
 static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc);
 static void cr3447SwapInOut(CrContext *cc, char *fname);
+#if DEBUG
+static char *cr3447Func2String(PpWord funcCode);
+#endif
 
 /*
 **  ----------------
@@ -1449,6 +1451,7 @@ static void cr3447NextCard(DevSlot *up, CrContext *cc)
         }
     }
 
+#if DEBUG
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert function code to string.
 **
@@ -1462,7 +1465,6 @@ static char *cr3447Func2String(PpWord funcCode)
     {
     static char buf[40];
 
-#if DEBUG
     switch (funcCode)
         {
     case FcCr3447Deselect:
@@ -1521,10 +1523,12 @@ static char *cr3447Func2String(PpWord funcCode)
 
         return "6681Input";
         }
-#endif
+
     sprintf(buf, "(cr3447 ) Unknown Function: %04o", funcCode);
 
     return (buf);
     }
+
+#endif
 
 /*---------------------------  End Of File  ------------------------------*/

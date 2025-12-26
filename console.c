@@ -643,12 +643,12 @@ static void consoleIo(void)
         activeDevice->fcode   = 0;
         if (ppKeyIn != 0)
             {
-            activeChannel->data = asciiToConsole[ppKeyIn];
+            activeChannel->data = asciiToConsole[(u8)ppKeyIn];
             ppKeyIn             = 0;
             }
         else if (opKeyIn != 0)
             {
-            activeChannel->data = asciiToConsole[opKeyIn];
+            activeChannel->data = asciiToConsole[(u8)opKeyIn];
             opKeyIn             = 0;
             }
         break;

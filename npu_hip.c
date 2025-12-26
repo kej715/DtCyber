@@ -161,12 +161,11 @@ static void npuHipWriteNpuStatus(PpWord status);
 static PpWord npuHipReadNpuStatus(void);
 static bool npuHipDownlineBlockImpl(NpuBuffer *bp);
 static bool npuHipUplineBlockImpl(NpuBuffer *bp);
-static char *npuHipFunc2String(PpWord funcCode);
 
 #if DEBUG
+static char *npuHipFunc2String(PpWord funcCode);
 static void npuLogFlush(void);
 static void npuLogByte(int b);
-
 #endif
 
 /*
@@ -863,6 +862,7 @@ static PpWord npuHipReadNpuStatus(void)
     return (value);
     }
 
+#if DEBUG
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert function code to string.
 **
@@ -876,7 +876,6 @@ static char *npuHipFunc2String(PpWord funcCode)
     {
     static char buf[40];
 
-#if DEBUG
     switch (funcCode)
         {
     case FcNpuInData:
@@ -921,13 +920,10 @@ static char *npuHipFunc2String(PpWord funcCode)
     case FcNpuClearCoupler:
         return "FcNpuClearCoupler";
         }
-#endif
     sprintf(buf, "(npu_hip) Unknown Function: %04o", funcCode);
 
     return (buf);
     }
-
-#if DEBUG
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Flush incomplete numeric/ascii data line

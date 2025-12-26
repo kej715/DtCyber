@@ -253,8 +253,6 @@ int netCreateSocket(int port, bool isReuse)
     u_long blockEnable = 1;
     SOCKET sd;
 #else
-    socklen_t optLen;
-    int       optVal;
     int       sd;
 #endif
 

@@ -391,14 +391,6 @@ typedef struct tcpGwCommand
 static Pccb *cdcnetAddPccb();
 static Gcb *cdcnetAddGcb();
 static void cdcnetCloseConnection(Gcb *gp);
-
-#if defined(_WIN32)
-static SOCKET cdcnetCreateTcpSocket();
-
-#else
-static int cdcnetCreateTcpSocket();
-
-#endif
 static Pccb *cdcnetFindPccb(u16 port);
 static Gcb *cdcnetFindGcb(u8 cn);
 static u32 cdcnetGetIdFromMessage(u8 *ip);
@@ -900,6 +892,9 @@ void cdcnetCheckStatus(void)
         {
         switch (gp->gwState)
             {
+        default:
+            break;
+
         case StGwStartingInit:
             if (cdcnetSendInitializeConnectionRequest(gp))
                 {
@@ -1419,7 +1414,7 @@ static Gcb *cdcnetAddGcb()
     gp = (Gcb *)realloc(cdcnetGcbs, (cdcnetGcbCount + 1) * sizeof(Gcb));
     if (gp == (Gcb *)NULL)
         {
-        return ((Gcb *)NULL);
+        return (Gcb *)NULL;
         }
 
     cdcnetGcbs              = gp;
@@ -1439,7 +1434,7 @@ static Gcb *cdcnetAddGcb()
     gp->outputQueue.first   = NULL;
     gp->outputQueue.last    = NULL;
 
-    return (gp);
+    return gp;
     }
 
 /*--------------------------------------------------------------------------
@@ -1460,7 +1455,7 @@ static Gcb *cdcnetGetGcb()
         {
         if (gp->gwState == StGwIdle)
             {
-            return (gp);
+            return gp;
             }
         }
 
@@ -1486,7 +1481,7 @@ static Gcb *cdcnetFindGcb(u8 cn)
         {
         if ((gp->gwState != StGwIdle) && (cn == gp->cn))
             {
-            return (gp);
+            return gp;
             }
         }
 
@@ -1509,7 +1504,7 @@ static Pccb *cdcnetAddPccb()
     pp = (Pccb *)realloc(cdcnetPccbs, (cdcnetPccbCount + 1) * sizeof(Pccb));
     if (pp == (Pccb *)NULL)
         {
-        return ((Pccb *)NULL);
+        return (Pccb *)NULL;
         }
 
     cdcnetPccbs       = pp;
@@ -1521,7 +1516,7 @@ static Pccb *cdcnetAddPccb()
     pp->tcpGcbOrdinal = 0;
     pp->deadline      = (time_t)0;
 
-    return (pp);
+    return pp;
     }
 
 /*--------------------------------------------------------------------------
@@ -1542,7 +1537,7 @@ static Pccb *cdcnetGetPccb()
         {
         if (pp->dstPort == 0)
             {
-            return (pp);
+            return pp;
             }
         }
 
@@ -1568,7 +1563,7 @@ static Pccb *cdcnetFindPccb(u16 port)
         {
         if (port == pp->dstPort)
             {
-            return (pp);
+            return pp;
             }
         }
 
@@ -1614,7 +1609,7 @@ static bool cdcnetGetEndpoints(int sd, u32 *localAddr, u16 *localPort,
         {
         logDtError(LogErrorLocation, "CDCNet: Failed to get local socket name: %s\n", strerror(errno));
 
-        return (FALSE);
+        return FALSE;
         }
 
     addrLen = sizeof(hostAddr);
@@ -1628,10 +1623,10 @@ static bool cdcnetGetEndpoints(int sd, u32 *localAddr, u16 *localPort,
         {
         logDtError(LogErrorLocation, "CDCNet: Failed to get peer socket name: %s\n", strerror(errno));
 
-        return (FALSE);
+        return FALSE;
         }
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -1767,7 +1762,7 @@ static bool cdcnetSendInitializeConnectionRequest(Gcb *gp)
     bp = npuBipBufGet();
     if (bp == NULL)
         {
-        return (FALSE);
+        return FALSE;
         }
 
     mp = bp->data;
@@ -1781,7 +1776,7 @@ static bool cdcnetSendInitializeConnectionRequest(Gcb *gp)
 
     npuBipRequestUplineTransfer(bp);
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -1944,7 +1939,7 @@ static u32 cdcnetTcpGetIpAddress(u8 *ap)
                   | ap[RelOffTcpIpAddressHost + 2];
         }
 
-    return (ipAddr);
+    return ipAddr;
     }
 
 /*--------------------------------------------------------------------------
@@ -2015,7 +2010,7 @@ static u16 cdcnetTcpGetPort(u8 *ap)
         port = (ap[RelOffTcpPort] << 8) | ap[RelOffTcpPort + 1];
         }
 
-    return (port);
+    return port;
     }
 
 /*--------------------------------------------------------------------------
@@ -2046,7 +2041,7 @@ static void cdcnetTcpSetPort(u8 *ap, u16 port)
 **------------------------------------------------------------------------*/
 static u32 cdcnetGetIdFromMessage(u8 *ip)
     {
-    return ((*ip << 24) | (*(ip + 1) << 16) | (*(ip + 2) << 8) | *(ip + 3));
+    return (*ip << 24) | (*(ip + 1) << 16) | (*(ip + 2) << 8) | *(ip + 3);
     }
 
 /*--------------------------------------------------------------------------
@@ -2159,7 +2154,7 @@ static bool cdcnetTcpOpenSAPHandler(Gcb *gp, NpuBuffer *bp)
     cdcnetPutIdToMessage(gp->tcpSapId, bp->data + BlkOffTcpOSTcpSapId);
     cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_successful);
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2195,7 +2190,7 @@ static bool cdcnetTcpCloseSAPHandler(Gcb *gp, NpuBuffer *bp)
 
     cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_successful);
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2223,7 +2218,7 @@ static bool cdcnetTcpAbortCurrentConnectionHandler(Gcb *gp, NpuBuffer *bp)
     gp->tcpUdpState = StTcpUdpIdle;
     cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_successful);
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2297,7 +2292,7 @@ static bool cdcnetTcpActiveConnectHandler(Gcb *gp, NpuBuffer *bp)
 
     cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, status);
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2316,7 +2311,6 @@ static bool cdcnetTcpPassiveConnectHandler(Gcb *gp, NpuBuffer *bp)
     u8          *dp;
     u32         dstAddr;
     u16         dstPort;
-    int         optEnable = 1;
     Pccb        *pp;
     u32         srcAddr;
     TcpGwStatus status;
@@ -2387,7 +2381,7 @@ static bool cdcnetTcpPassiveConnectHandler(Gcb *gp, NpuBuffer *bp)
                 }
             cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, status);
 
-            return (TRUE);
+            return TRUE;
             }
 
         pp = cdcnetGetPccb();
@@ -2399,7 +2393,7 @@ static bool cdcnetTcpPassiveConnectHandler(Gcb *gp, NpuBuffer *bp)
 #endif
             cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_no_resources);
 
-            return (TRUE);
+            return TRUE;
             }
 
         pp->srcPort       = gp->srcPort;
@@ -2440,7 +2434,7 @@ static bool cdcnetTcpPassiveConnectHandler(Gcb *gp, NpuBuffer *bp)
                 pp->connFd = 0;
                 cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_internal_error);
 
-                return (TRUE);
+                return TRUE;
                 }
             }
         gp->dstPort = pp->dstPort;
@@ -2461,7 +2455,7 @@ static bool cdcnetTcpPassiveConnectHandler(Gcb *gp, NpuBuffer *bp)
 
     cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, status);
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2484,7 +2478,7 @@ static bool cdcnetTcpAllocateHandler(Gcb *gp, NpuBuffer *bp)
 #endif
     cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_successful);
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2548,7 +2542,7 @@ static bool cdcnetTcpDisconnectHandler(Gcb *gp, NpuBuffer *bp)
 
     gp->tcpUdpState = StTcpUdpIdle;
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2568,7 +2562,7 @@ static bool cdcnetTcpSendConnectionIndication(Gcb *gp)
     bp = npuBipBufGet();
     if (bp == NULL)
         {
-        return (FALSE);
+        return FALSE;
         }
     memset(bp->data, 0, cdcnetTcpCILength + BlkOffTcpCmdName);
 
@@ -2613,7 +2607,7 @@ static bool cdcnetTcpSendConnectionIndication(Gcb *gp)
     bp->numBytes = cdcnetTcpCILength + BlkOffTcpCmdName;
     cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTIndication, tcp_successful);
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2634,7 +2628,7 @@ static bool cdcnetTcpSendErrorIndication(Gcb *gp)
     bp = npuBipBufGet();
     if (bp == NULL)
         {
-        return (FALSE);
+        return FALSE;
         }
     memset(bp->data, 0, cdcnetTcpEILength + BlkOffTcpCmdName);
 
@@ -2649,7 +2643,7 @@ static bool cdcnetTcpSendErrorIndication(Gcb *gp)
     cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTIndication, gp->reasonCode);
     gp->reasonCode = 0;
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2762,7 +2756,7 @@ static int cdcnetCreateUdpSocket()
     fcntl(fd, F_SETFL, O_NONBLOCK);
 #endif
 
-    return (fd);
+    return fd;
     }
 
 /*--------------------------------------------------------------------------
@@ -2811,7 +2805,7 @@ static u32 cdcnetUdpGetIpAddress(u8 *ap)
                   | ap[RelOffUdpIpAddressHost + 3];
         }
 
-    return (ipAddr);
+    return ipAddr;
     }
 
 /*--------------------------------------------------------------------------
@@ -2834,7 +2828,7 @@ static u16 cdcnetUdpGetPort(u8 *ap)
         port = (ap[RelOffUdpPort + 1] << 8) | ap[RelOffUdpPort + 2];
         }
 
-    return (port);
+    return port;
     }
 
 /*--------------------------------------------------------------------------

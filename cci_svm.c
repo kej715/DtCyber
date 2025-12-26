@@ -372,7 +372,7 @@ void cciSvmSendDiscRequest(Tcb *tp)
     case StTermHostRequestDisconnect:  // disconnection has been requested by host
         logDtError(LogErrorLocation, "Warning - disconnect request ignored for %.7s in state %s\n",
                    tp->termName, npuSvmTermStates[tp->state]);
-
+        // fall through
     case StTermNpuRequestDisconnect:   // disconnection has been requested by NPU/MDI
         break;
 

@@ -451,7 +451,7 @@ void npuHaspTryOutput(Pcb *pcbp)
         break;
 
     case StHaspMajorSendENQ:
-        if (npuHaspSend(pcbp, enqIndication, sizeof(enqIndication)) >= sizeof(enqIndication))
+        if (npuHaspSend(pcbp, enqIndication, sizeof(enqIndication)) >= (int)sizeof(enqIndication))
             {
             pcbp->controls.hasp.majorState = StHaspMajorRecvData;
             pcbp->controls.hasp.minorState = StHaspMinorRecvENQ_Resp;
@@ -702,7 +702,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
                         }
                     else if (scbp->pruFragmentSize < MaxBuffer)
                         {
-                        *fp++ = asciiToEbcdic[cdcToAscii[c]];
+                        *fp++ = asciiToEbcdic[(u8)cdcToAscii[c]];
                         scbp->pruFragmentSize += 1;
                         }
                     }
@@ -1512,9 +1512,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                     npuHaspProcessFormatControl(pcbp);
                     }
                 }
-
-        // fall through
-
+            // fall through
         /*
         **  Read and process String Control Byte other than the first of a record.
         */
@@ -1858,8 +1856,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
 
                 return;
                 }
-
-        // else fall through
+            // else fall through
         default:
             logDtError(LogErrorLocation, "Port %02x: invalid minor state: %02x\n",
                        pcbp->claPort, pcbp->controls.hasp.minorState);
@@ -3374,9 +3371,6 @@ static int npuHaspSendBlockHeader(Tcb *tp)
     {
     u8  header[16];
     int i;
-    Pcb *pcbp;
-
-    pcbp = tp->pcbp;
 
     /*
     **  Send SYN bytes and Bisync start-of-text

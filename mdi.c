@@ -198,9 +198,9 @@ static void mdiHipDisconnect(void);
 static PpWord mdiHipReadMdiStatus(void);
 static bool mdiHipDownlineBlockImpl(NpuBuffer *bp);
 static bool mdiHipUplineBlockImpl(NpuBuffer *bp);
-static char *mdiHipFunc2String(PpWord funcCode);
 
 #if DEBUG
+static char *mdiHipFunc2String(PpWord funcCode);
 static void mdiLogBuffer(u8 *dp);
 static void mdiLogBytes(int b);
 static void mdiLogFlush(void);
@@ -423,7 +423,7 @@ bool mdiHipUplineBlockImpl(NpuBuffer *bp)
             {
             logDtError(LogErrorLocation, "MDI upline block rejected, CN=%02X, BT=%02X, PDU size=%d\n", bp->data[BlkOffCN],
                        bp->data[BlkOffBTBSN] & BlkMaskBT, bp->numBytes);
-            mdiPrintStackTrace(stderr);
+            traceStack(stderr);
             }
 #endif
 
@@ -1001,6 +1001,7 @@ static PpWord mdiHipReadMdiStatus(void)
     return (mdiStatus);
     }
 
+#if DEBUG
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert function code to string.
 **
@@ -1014,7 +1015,6 @@ static char *mdiHipFunc2String(PpWord funcCode)
     {
     static char buf[30];
 
-#if DEBUG
     switch (funcCode)
         {
     case FcMdiMasterClear:
@@ -1065,7 +1065,6 @@ static char *mdiHipFunc2String(PpWord funcCode)
     case FcMdiReqProtoVersion:
         return "FcMdiReqProtoVersion";
         }
-#endif
     if ((funcCode >= FcMdiReqProtoVersion) && (funcCode <= FcMdiReqProtoVersion + 0177))
         {
         return "FcMdiReqProtoVersion";
@@ -1077,8 +1076,6 @@ static char *mdiHipFunc2String(PpWord funcCode)
         return (buf);
         }
     }
-
-#if DEBUG
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert primary function code to string.

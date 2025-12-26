@@ -244,70 +244,70 @@ static pthread_mutex_t memoryMutex   = PTHREAD_MUTEX_INITIALIZER;
 */
 static OpDispatch decodeCpuOpcode[] =
     {
-    cpOp00, 15,
-    cpOp01,  0,
-    cpOp02, 30,
-    cpOp03, 30,
-    cpOp04, 30,
-    cpOp05, 30,
-    cpOp06, 30,
-    cpOp07, 30,
-    cpOp10, 15,
-    cpOp11, 15,
-    cpOp12, 15,
-    cpOp13, 15,
-    cpOp14, 15,
-    cpOp15, 15,
-    cpOp16, 15,
-    cpOp17, 15,
-    cpOp20, 15,
-    cpOp21, 15,
-    cpOp22, 15,
-    cpOp23, 15,
-    cpOp24, 15,
-    cpOp25, 15,
-    cpOp26, 15,
-    cpOp27, 15,
-    cpOp30, 15,
-    cpOp31, 15,
-    cpOp32, 15,
-    cpOp33, 15,
-    cpOp34, 15,
-    cpOp35, 15,
-    cpOp36, 15,
-    cpOp37, 15,
-    cpOp40, 15,
-    cpOp41, 15,
-    cpOp42, 15,
-    cpOp43, 15,
-    cpOp44, 15,
-    cpOp45, 15,
-    cpOp46, 15,
-    cpOp47, 15,
-    cpOp50, 30,
-    cpOp51, 30,
-    cpOp52, 30,
-    cpOp53, 15,
-    cpOp54, 15,
-    cpOp55, 15,
-    cpOp56, 15,
-    cpOp57, 15,
-    cpOp60, 30,
-    cpOp61, 30,
-    cpOp62, 30,
-    cpOp63, 15,
-    cpOp64, 15,
-    cpOp65, 15,
-    cpOp66, 15,
-    cpOp67, 15,
-    cpOp70, 30,
-    cpOp71, 30,
-    cpOp72, 30,
-    cpOp73, 15,
-    cpOp74, 15,
-    cpOp75, 15,
-    cpOp76, 15,
-    cpOp77, 15
+    { cpOp00, 15 },
+    { cpOp01,  0 },
+    { cpOp02, 30 },
+    { cpOp03, 30 },
+    { cpOp04, 30 },
+    { cpOp05, 30 },
+    { cpOp06, 30 },
+    { cpOp07, 30 },
+    { cpOp10, 15 },
+    { cpOp11, 15 },
+    { cpOp12, 15 },
+    { cpOp13, 15 },
+    { cpOp14, 15 },
+    { cpOp15, 15 },
+    { cpOp16, 15 },
+    { cpOp17, 15 },
+    { cpOp20, 15 },
+    { cpOp21, 15 },
+    { cpOp22, 15 },
+    { cpOp23, 15 },
+    { cpOp24, 15 },
+    { cpOp25, 15 },
+    { cpOp26, 15 },
+    { cpOp27, 15 },
+    { cpOp30, 15 },
+    { cpOp31, 15 },
+    { cpOp32, 15 },
+    { cpOp33, 15 },
+    { cpOp34, 15 },
+    { cpOp35, 15 },
+    { cpOp36, 15 },
+    { cpOp37, 15 },
+    { cpOp40, 15 },
+    { cpOp41, 15 },
+    { cpOp42, 15 },
+    { cpOp43, 15 },
+    { cpOp44, 15 },
+    { cpOp45, 15 },
+    { cpOp46, 15 },
+    { cpOp47, 15 },
+    { cpOp50, 30 },
+    { cpOp51, 30 },
+    { cpOp52, 30 },
+    { cpOp53, 15 },
+    { cpOp54, 15 },
+    { cpOp55, 15 },
+    { cpOp56, 15 },
+    { cpOp57, 15 },
+    { cpOp60, 30 },
+    { cpOp61, 30 },
+    { cpOp62, 30 },
+    { cpOp63, 15 },
+    { cpOp64, 15 },
+    { cpOp65, 15 },
+    { cpOp66, 15 },
+    { cpOp67, 15 },
+    { cpOp70, 30 },
+    { cpOp71, 30 },
+    { cpOp72, 30 },
+    { cpOp73, 15 },
+    { cpOp74, 15 },
+    { cpOp75, 15 },
+    { cpOp76, 15 },
+    { cpOp77, 15 }
     };
 
 static u8 cpOp01Length[8] = { 30, 30, 30, 30, 15, 15, 15, 30 };
@@ -478,7 +478,7 @@ void cpuInit(char *model, u16 *serialNumbers, u32 memory, u32 emBanks, ExtMemory
     **  have this feature.
     */
 
-    for (i = 0; i < sizeof(ecs16Kx4bitFlagRegisters); i++)
+    for (i = 0; i < (int)sizeof(ecs16Kx4bitFlagRegisters); i++)
         {
         ecs16Kx4bitFlagRegisters[i] = 0;
         }
@@ -1411,7 +1411,7 @@ static void cpuExchangeJump(Cpu170Context *activeCpu, u32 address, bool doChange
         /*
         **  Void the instruction stack.
         */
-        cpuVoidIwStack(activeCpu, ~0);
+        cpuVoidIwStack(activeCpu, (u32)~0);
         }
 
     /*
@@ -1768,7 +1768,7 @@ void cpuVoidIwStack(Cpu170Context *activeCpu, u32 branchAddr)
     u32 location;
     int i;
 
-    if (branchAddr != ~0)
+    if (branchAddr != (u32)~0)
         {
         location = cpuAddRa(activeCpu, branchAddr);
 
@@ -1987,7 +1987,7 @@ static void cpuRegASemantics(Cpu170Context *activeCpu)
             **  Instruction stack purge flag is set - do an
             **  unconditional void.
             */
-            cpuVoidIwStack(activeCpu, ~0);
+            cpuVoidIwStack(activeCpu, (u32)~0);
             }
 
         cpuWriteMem(activeCpu, activeCpu->regA[activeCpu->opI], activeCpu->regX + activeCpu->opI);
@@ -2233,7 +2233,6 @@ static void cpuEcsWord(Cpu170Context *activeCpu, bool writeToEcs)
     u32  flEcs;
     bool isExpandedAddress;
     bool isFlagRegister = FALSE;
-    bool isMaintenance  = FALSE;
     bool isZeroFill     = FALSE;
     u32  raEcs;
 
@@ -2265,10 +2264,6 @@ static void cpuEcsWord(Cpu170Context *activeCpu, bool writeToEcs)
                 {
                 isZeroFill = TRUE;
                 }
-            else if ((absEcsAddr & (5 << 22)) == (5 << 22))
-                {
-                isMaintenance = TRUE;
-                }
             }
         }
     else
@@ -2283,10 +2278,6 @@ static void cpuEcsWord(Cpu170Context *activeCpu, bool writeToEcs)
             if ((absEcsAddr & (7 << 21)) == (1 << 21))
                 {
                 isZeroFill = TRUE;
-                }
-            else if ((absEcsAddr & (3 << 22)) == (1 << 22))
-                {
-                isMaintenance = TRUE;
                 }
             }
         }
@@ -3715,7 +3706,7 @@ static void cpOp01(Cpu170Context *activeCpu)
             /*
             **  Void the instruction stack.
             */
-            cpuVoidIwStack(activeCpu, ~0);
+            cpuVoidIwStack(activeCpu, (u32)~0);
             }
 
         break;
@@ -3738,7 +3729,7 @@ static void cpOp01(Cpu170Context *activeCpu)
             /*
             **  Void the instruction stack.
             */
-            cpuVoidIwStack(activeCpu, ~0);
+            cpuVoidIwStack(activeCpu, (u32)~0);
             }
 
         break;
@@ -3893,7 +3884,7 @@ static void cpOp02(Cpu170Context *activeCpu)
         /*
         **  Void the instruction stack.
         */
-        cpuVoidIwStack(activeCpu, ~0);
+        cpuVoidIwStack(activeCpu, (u32)~0);
         }
 
     cpuFetchOpWord(activeCpu);
@@ -3981,7 +3972,7 @@ static void cpOp03(Cpu170Context *activeCpu)
                 **  Instruction stack purge flag is set - do an
                 **  unconditional void.
                 */
-                cpuVoidIwStack(activeCpu, ~0);
+                cpuVoidIwStack(activeCpu, (u32)~0);
                 }
             else
                 {

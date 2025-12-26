@@ -260,7 +260,7 @@ bool bdp180CopyFromBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
         word     = cpMem[wordAddr];
         while (n-- > 0)
             {
-            mask   = ~((u64)0xff << shift);
+            mask   = ~((u64)0xffU << shift);
             word   = (word & mask) | ((u64)*bp++ << shift);
             shift -= 8;
             }
@@ -423,6 +423,7 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
         {
     case 1:  // Packed Decimal No Sign Leading Slack Digit
         buffer[0] &= 0x0f;
+        // fall through
     case 0:  // Packed Decimal No Sign
         for (i = 0; i < desc->length; i++)
             {
@@ -442,6 +443,7 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
 
     case 3:  // Packed Decimal Signed Leading Slack Digit
         buffer[0] &= 0x0f;
+        // fall through
     case 2:  // Packed Decimal Signed
         if (desc->length > 0)
             {
@@ -708,7 +710,7 @@ bool bdp180DecodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                 {
                 operand->value[3] = (operand->value[3] << 8) | buffer[i];
                 }
-            if (buffer[0] >= 0x80)
+            if (buffer[0] >= 0x80U)
                 {
                 operand->value[3] |= signExt[desc->length];
                 operand->value[3]  = ~operand->value[3] + 1;
@@ -986,6 +988,7 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
                 operand->sign = !operand->sign;
                 }
             }
+        // fall through
     case 10: // Binary Unsigned
         i = desc->length;
         while (i > 0)

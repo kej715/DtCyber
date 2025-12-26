@@ -1092,8 +1092,7 @@ static int npuNetCreateConnections(void)
                 {
                 continue;                               // listen-only
                 }
-
-        // fall through
+            // else fall through
         case ConnTypeRevHasp:
             switch (ncbp->state)
                 {
@@ -1338,8 +1337,7 @@ static void *npuNetThread(void *param)
                 {
                 continue;        // already listening on this port
                 }
-
-        // else fall through
+            // else fall through
         case ConnTypeRaw:
         case ConnTypePterm:
         case ConnTypeRs232:

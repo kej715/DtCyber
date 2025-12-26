@@ -452,6 +452,7 @@ void pciConsoleInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 */
 void ppInit(u8 count);
 u64  ppMacGetIouRegister(u8 reg);
+void ppMacInit(void);
 u8   ppMacReadIou(void);
 void ppMacSetIouLocation(u16 location);
 void ppMacSetIouRegister(u8 reg, u64 word);

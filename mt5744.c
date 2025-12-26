@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------
 **
-**  Copyright (c) 2003-2021, Kevin Jordan, Tom Hunter
+**  Copyright (c) 2003-2021, Kevin Jordan
 **
 **  Name: mt5744.c
 **
@@ -265,12 +265,7 @@ static void mt5744CalculateGeneralStatus(TapeParam *tp);
 static void mt5744CheckTapeServer(void);
 static void mt5744CloseTapeServerConnection(TapeParam *tp);
 static void mt5744ConnectCallback(TapeParam *tp);
-static void mt5744DismountRequestCallback(TapeParam *tp);
 static FcStatus mt5744Func(PpWord funcCode);
-static void mt5744FuncBackspace(void);
-static void mt5744FuncForespace(void);
-static void mt5744FuncReadBkw(void);
-static void mt5744FuncReadFwd(void);
 static void mt5744Disconnect(void);
 static void mt5744FlushWrite(void);
 static void mt5744Io(void);
@@ -875,39 +870,6 @@ static void mt5744Disconnect(void)
     */
     activeChannel->delayDisconnect = 0;
     activeChannel->discAfterInput  = FALSE;
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Process a response from the StorageTek simulator to a
-**                  DISMOUNT request.
-**
-**  Parameters:     Name        Description.
-**                  tp          pointer to tape unit parameters
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-static void mt5744DismountRequestCallback(TapeParam *tp)
-    {
-    char *eor;
-    int  status;
-
-    eor = mt5744ParseTapeServerResponse(tp, &status);
-    if (eor == NULL)
-        {
-        return;
-        }
-    tp->isBusy = FALSE;
-    if (status == 200)
-        {
-        tp->isReady = FALSE;
-        }
-    else
-        {
-        logDtError(LogErrorLocation, "Unexpected status %d received from StorageTek simulator for DISMOUNT request\n", status);
-        mt5744CloseTapeServerConnection(tp);
-        }
-    mt5744ResetInputBuffer(tp, (u8 *)eor);
     }
 
 /*--------------------------------------------------------------------------
@@ -1886,7 +1848,6 @@ static void mt5744ReadBlockIdRequestCallback(TapeParam *tp)
     char *ep;
     int  i;
     long id1;
-    long id2;
     char *sp;
     int  status;
 
@@ -1900,9 +1861,7 @@ static void mt5744ReadBlockIdRequestCallback(TapeParam *tp)
         {
         sp  = (char *)&tp->inputBuffer.data[4];
         id1 = strtol(sp, &ep, 10);
-        id2 = strtol(ep, NULL, 10);
         i   = 0;
-        //tp->ioBuffer[i++] = (id1 >> 20) & 0xf0;
         tp->ioBuffer[i++] = 0020;
         tp->ioBuffer[i++] = (id1 >> 12) & 0xff;
         tp->ioBuffer[i++] = id1 & 0xfff;

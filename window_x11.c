@@ -160,7 +160,6 @@ void windowInit(void)
     XColor            b;
     XColor            c;
     XEvent            evt;
-    int               rc;
     char              windowTitle[132];
     XWMHints          wmHints;
     char              xFontName[132];
@@ -326,7 +325,7 @@ void windowInit(void)
     **  Create POSIX thread with default attributes.
     */
     pthread_attr_init(&attr);
-    rc            = pthread_create(&displayThread, &attr, windowThread, NULL);
+    pthread_create(&displayThread, &attr, windowThread, NULL);
     displayActive = TRUE;
     }
 
@@ -531,7 +530,6 @@ static void *windowThread(void *param)
     KeySym            key;
     int               len;
     u8                oldFont = 0;
-    static int        refreshCount = 0;
     Atom              retAtom;
     int               retFormat;
     unsigned long     retLength;
@@ -540,6 +538,9 @@ static void *windowThread(void *param)
     char              str[2] = " ";
     char              text[30];
     int               usageDisplayCount = 0;
+#if CcDebug == 1
+    static int        refreshCount = 0;
+#endif
 
     /*
     **  Window thread loop.
@@ -612,7 +613,7 @@ static void *windowThread(void *param)
                 break;
 
             case ClientMessage:
-                if (event.xclient.data.l[0] == wmDeleteWindow)
+                if ((Atom)event.xclient.data.l[0] == wmDeleteWindow)
                     {
                     /*
                     **  Initiate display of usage note because user attempts to close the window.

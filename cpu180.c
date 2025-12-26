@@ -66,11 +66,11 @@
 //#define TRACE_INST_LIST   { 0x77, 0xe9 }
 #define TRACE_INST_COUNT  10
 
-//#define TRACE_RANGE_START 0xb04d00018600
-//#define TRACE_RANGE_END   0xb04d00018687
+//#define TRACE_RANGE_START 0x100a00068e00
+//#define TRACE_RANGE_END   0x100a00068eff
 
-//#define TRACE_STORE_START 0x100100002b70
-//#define TRACE_STORE_END   0x100100002b7f
+//#define TRACE_STORE_START 0x100a0000b758
+//#define TRACE_STORE_END   0x100a0000b758
 
 #endif
 
@@ -225,7 +225,6 @@ typedef struct conditionActionDefn
 static bool cpu180AddInt32(Cpu180Context *ctx, u32 augend, u32 addend, u32 *sum);
 static bool cpu180AddInt64(Cpu180Context *ctx, u64 augend, u64 addend, u64 *sum);
 static void cpu180ApplyBdpOperator(Cpu180Context *ctx, bool (*operator)(BdpOperand *src, BdpOperand *dst, BdpOperand *result, UserCondition *cond));
-static void cpu180CheckExternalInterrupts(Cpu180Context *ctx);
 static void cpu180CheckMonitorConditions(Cpu180Context *ctx);
 static void cpu180CheckUserConditions(Cpu180Context *ctx);
 static void cpu180Exchange(Cpu180Context *activeCpu);
@@ -239,10 +238,11 @@ static bool cpu180GetParcel(Cpu180Context *ctx, u64 pva, u16 *parcel);
 static u8 cpu180GetR1(Cpu180Context *ctx, u64 pva);
 static u8 cpu180GetR2(Cpu180Context *ctx, u64 pva);
 static bool cpu180IsBindingSectionRef(Cpu180Context *ctx, u64 pva);
+static void cpu180Load170Xp(Cpu180Context *ctx, u32 xpa);
 static bool cpu180MulInt32(Cpu180Context *ctx, u32 mltand, u32 mltier, u32 *product);
 static bool cpu180MulInt64(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *product);
 static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool isTrap, u64 *sfsa, u32 *frameSize);
-static bool cpu180PutByte(Cpu180Context *ctx, u64 pva, u8 ring, u8 byte);
+static void cpu180Set170State(Cpu180Context *ctx, u64 regP);
 static void cpu180SetRingZeroCondition(Cpu180Context *ctx, u64 pva);
 static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa);
 static bool cpu180SubInt32(Cpu180Context *ctx, u32 minend, u32 subend, u32 *diff);
@@ -250,7 +250,7 @@ static bool cpu180SubInt64(Cpu180Context *ctx, u64 minend, u64 subend, u64 *diff
 static void cpu180UpdatePageSize(Cpu180Context *ctx);
 static bool cpu180ValidateAccess(Cpu180Context *ctx, u64 sde, u8 ring, Cpu180AccessMode access, MonitorCondition *cond);
 
-#if CcDebug == 1
+#if CcDebug == 1 && defined(TRACE_STORE_START)
 static void cpu180CheckTraceStore(Cpu180Context *ctx, u64 pvaStart, u64 pvaEnd);
 #endif
 
@@ -484,277 +484,277 @@ Cpu180Context *cpus180;
 */
 static OpDispatch decodeCpu180Opcode[] =
     {
-    cp180Op00, jk,   // 00
-    cp180Op01, jk,   // 01
-    cp180Op02, jk,   // 02
-    cp180Op03, jk,   // 03
-    cp180Op04, jk,   // 04
-    cp180Op05, jk,   // 05
-    cp180Op06, jk,   // 06
-    cp180Op07, jk,   // 07
-    cp180Op08, jk,   // 08
-    cp180Op09, jk,   // 09
-    cp180Op0A, jk,   // 0A
-    cp180Op0B, jk,   // 0B
-    cp180Op0C, jk,   // 0C
-    cp180Op0D, jk,   // 0D
-    cp180Op0E, jk,   // 0E
-    cp180Op0F, jk,   // 0F
+    { cp180Op00, jk   }, // 00
+    { cp180Op01, jk   }, // 01
+    { cp180Op02, jk   }, // 02
+    { cp180Op03, jk   }, // 03
+    { cp180Op04, jk   }, // 04
+    { cp180Op05, jk   }, // 05
+    { cp180Op06, jk   }, // 06
+    { cp180Op07, jk   }, // 07
+    { cp180Op08, jk   }, // 08
+    { cp180Op09, jk   }, // 09
+    { cp180Op0A, jk   }, // 0A
+    { cp180Op0B, jk   }, // 0B
+    { cp180Op0C, jk   }, // 0C
+    { cp180Op0D, jk   }, // 0D
+    { cp180Op0E, jk   }, // 0E
+    { cp180Op0F, jk   }, // 0F
 
-    cp180Op10, jk,   // 10
-    cp180Op11, jk,   // 11
-    cp180OpIv, jk,   // 12
-    cp180OpIv, jk,   // 13
-    cp180Op14, jk,   // 14
-    cp180OpIv, jk,   // 15
-    cp180Op16, jk,   // 16
-    cp180Op17, jk,   // 17
-    cp180Op18, jk,   // 18
-    cp180Op19, jk,   // 19
-    cp180Op1A, jk,   // 1A
-    cp180Op1B, jk,   // 1B
-    cp180Op1C, jk,   // 1C
-    cp180OpIv, jk,   // 1D
-    cp180Op1E, jk,   // 1E
-    cp180Op1F, jk,   // 1F
+    { cp180Op10, jk   }, // 10
+    { cp180Op11, jk   }, // 11
+    { cp180OpIv, jk   }, // 12
+    { cp180OpIv, jk   }, // 13
+    { cp180Op14, jk   }, // 14
+    { cp180OpIv, jk   }, // 15
+    { cp180Op16, jk   }, // 16
+    { cp180Op17, jk   }, // 17
+    { cp180Op18, jk   }, // 18
+    { cp180Op19, jk   }, // 19
+    { cp180Op1A, jk   }, // 1A
+    { cp180Op1B, jk   }, // 1B
+    { cp180Op1C, jk   }, // 1C
+    { cp180OpIv, jk   }, // 1D
+    { cp180Op1E, jk   }, // 1E
+    { cp180Op1F, jk   }, // 1F
 
-    cp180Op20, jk,   // 20
-    cp180Op21, jk,   // 21
-    cp180Op22, jk,   // 22
-    cp180Op23, jk,   // 23
-    cp180Op24, jk,   // 24
-    cp180Op25, jk,   // 25
-    cp180Op26, jk,   // 26
-    cp180Op27, jk,   // 27
-    cp180Op28, jk,   // 28
-    cp180Op29, jk,   // 29
-    cp180Op2A, jk,   // 2A
-    cp180OpIv, jk,   // 2B
-    cp180Op2C, jk,   // 2C
-    cp180Op2D, jk,   // 2D
-    cp180Op2E, jk,   // 2E
-    cp180Op2F, jk,   // 2F
+    { cp180Op20, jk   }, // 20
+    { cp180Op21, jk   }, // 21
+    { cp180Op22, jk   }, // 22
+    { cp180Op23, jk   }, // 23
+    { cp180Op24, jk   }, // 24
+    { cp180Op25, jk   }, // 25
+    { cp180Op26, jk   }, // 26
+    { cp180Op27, jk   }, // 27
+    { cp180Op28, jk   }, // 28
+    { cp180Op29, jk   }, // 29
+    { cp180Op2A, jk   }, // 2A
+    { cp180OpIv, jk   }, // 2B
+    { cp180Op2C, jk   }, // 2C
+    { cp180Op2D, jk   }, // 2D
+    { cp180Op2E, jk   }, // 2E
+    { cp180Op2F, jk   }, // 2F
 
-    cp180Op30, jk,   // 30
-    cp180Op31, jk,   // 31
-    cp180Op32, jk,   // 32
-    cp180Op33, jk,   // 33
-    cp180Op34, jk,   // 34
-    cp180Op35, jk,   // 35
-    cp180Op36, jk,   // 36
-    cp180Op37, jk,   // 37
-    cp180OpIv, jk,   // 38
-    cp180Op39, jk,   // 39
-    cp180Op3A, jk,   // 3A
-    cp180Op3B, jk,   // 3B
-    cp180Op3C, jk,   // 3C
-    cp180Op3D, jk,   // 3D
-    cp180Op3E, jk,   // 3E
-    cp180Op3F, jk,   // 3F
+    { cp180Op30, jk   }, // 30
+    { cp180Op31, jk   }, // 31
+    { cp180Op32, jk   }, // 32
+    { cp180Op33, jk   }, // 33
+    { cp180Op34, jk   }, // 34
+    { cp180Op35, jk   }, // 35
+    { cp180Op36, jk   }, // 36
+    { cp180Op37, jk   }, // 37
+    { cp180OpIv, jk   }, // 38
+    { cp180Op39, jk   }, // 39
+    { cp180Op3A, jk   }, // 3A
+    { cp180Op3B, jk   }, // 3B
+    { cp180Op3C, jk   }, // 3C
+    { cp180Op3D, jk   }, // 3D
+    { cp180Op3E, jk   }, // 3E
+    { cp180Op3F, jk   }, // 3F
 
-    cp180Op40, jkiD, // 40
-    cp180Op41, jkiD, // 41
-    cp180Op42, jkiD, // 42
-    cp180Op43, jkiD, // 43
-    cp180Op44, jkiD, // 44
-    cp180Op45, jkiD, // 45
-    cp180OpIv, jkiD, // 46
-    cp180OpIv, jkiD, // 47
-    cp180Op48, jkiD, // 48
-    cp180Op49, jkiD, // 49
-    cp180Op4A, jkiD, // 4A
-    cp180Op4B, jkiD, // 4B
-    cp180Op4C, jkiD, // 4C
-    cp180Op4D, jkiD, // 4D
-    cp180OpIv, jkiD, // 4E
-    cp180OpIv, jkiD, // 4F
+    { cp180Op40, jkiD }, // 40
+    { cp180Op41, jkiD }, // 41
+    { cp180Op42, jkiD }, // 42
+    { cp180Op43, jkiD }, // 43
+    { cp180Op44, jkiD }, // 44
+    { cp180Op45, jkiD }, // 45
+    { cp180OpIv, jkiD }, // 46
+    { cp180OpIv, jkiD }, // 47
+    { cp180Op48, jkiD }, // 48
+    { cp180Op49, jkiD }, // 49
+    { cp180Op4A, jkiD }, // 4A
+    { cp180Op4B, jkiD }, // 4B
+    { cp180Op4C, jkiD }, // 4C
+    { cp180Op4D, jkiD }, // 4D
+    { cp180OpIv, jkiD }, // 4E
+    { cp180OpIv, jkiD }, // 4F
 
-    cp180Op50, jkiD, // 50
-    cp180Op51, jkiD, // 51
-    cp180Op52, jkiD, // 52
-    cp180Op53, jkiD, // 53
-    cp180Op54, jkiD, // 54
-    cp180Op55, jkiD, // 55
-    cp180Op56, jkiD, // 56
-    cp180Op57, jkiD, // 57
-    cp180Op58, jkiD, // 58
-    cp180Op59, jkiD, // 59
-    cp180Op5A, jkiD, // 5A
-    cp180Op5B, jkiD, // 5B
-    cp180Op5C, jkiD, // 5C
-    cp180Op5D, jkiD, // 5D
-    cp180Op5E, jkiD, // 5E
-    cp180OpIv, jkiD, // 5F
+    { cp180Op50, jkiD }, // 50
+    { cp180Op51, jkiD }, // 51
+    { cp180Op52, jkiD }, // 52
+    { cp180Op53, jkiD }, // 53
+    { cp180Op54, jkiD }, // 54
+    { cp180Op55, jkiD }, // 55
+    { cp180Op56, jkiD }, // 56
+    { cp180Op57, jkiD }, // 57
+    { cp180Op58, jkiD }, // 58
+    { cp180Op59, jkiD }, // 59
+    { cp180Op5A, jkiD }, // 5A
+    { cp180Op5B, jkiD }, // 5B
+    { cp180Op5C, jkiD }, // 5C
+    { cp180Op5D, jkiD }, // 5D
+    { cp180Op5E, jkiD }, // 5E
+    { cp180OpIv, jkiD }, // 5F
 
-    cp180OpIv, jkiD, // 60
-    cp180OpIv, jkiD, // 61
-    cp180OpIv, jkiD, // 62
-    cp180OpIv, jkiD, // 63
-    cp180OpIv, jkiD, // 64
-    cp180OpIv, jkiD, // 65
-    cp180OpIv, jkiD, // 66
-    cp180OpIv, jkiD, // 67
-    cp180OpIv, jkiD, // 68
-    cp180OpIv, jkiD, // 69
-    cp180OpIv, jkiD, // 6A
-    cp180OpIv, jkiD, // 6B
-    cp180OpIv, jkiD, // 6C
-    cp180OpIv, jkiD, // 6D
-    cp180OpIv, jkiD, // 6E
-    cp180OpIv, jkiD, // 6F
+    { cp180OpIv, jkiD }, // 60
+    { cp180OpIv, jkiD }, // 61
+    { cp180OpIv, jkiD }, // 62
+    { cp180OpIv, jkiD }, // 63
+    { cp180OpIv, jkiD }, // 64
+    { cp180OpIv, jkiD }, // 65
+    { cp180OpIv, jkiD }, // 66
+    { cp180OpIv, jkiD }, // 67
+    { cp180OpIv, jkiD }, // 68
+    { cp180OpIv, jkiD }, // 69
+    { cp180OpIv, jkiD }, // 6A
+    { cp180OpIv, jkiD }, // 6B
+    { cp180OpIv, jkiD }, // 6C
+    { cp180OpIv, jkiD }, // 6D
+    { cp180OpIv, jkiD }, // 6E
+    { cp180OpIv, jkiD }, // 6F
 
-    cp180Op70, jk,   // 70
-    cp180Op71, jk,   // 71
-    cp180Op72, jk,   // 72
-    cp180Op73, jk,   // 73
-    cp180Op74, jk,   // 74
-    cp180Op75, jk,   // 75
-    cp180Op76, jk,   // 76
-    cp180Op77, jk,   // 77
-    cp180OpIv, jk,   // 78
-    cp180OpIv, jk,   // 79
-    cp180OpIv, jk,   // 7A
-    cp180OpIv, jk,   // 7B
-    cp180OpIv, jk,   // 7C
-    cp180OpIv, jk,   // 7D
-    cp180OpIv, jk,   // 7E
-    cp180OpIv, jk,   // 7F
+    { cp180Op70, jk   }, // 70
+    { cp180Op71, jk   }, // 71
+    { cp180Op72, jk   }, // 72
+    { cp180Op73, jk   }, // 73
+    { cp180Op74, jk   }, // 74
+    { cp180Op75, jk   }, // 75
+    { cp180Op76, jk   }, // 76
+    { cp180Op77, jk   }, // 77
+    { cp180OpIv, jk   }, // 78
+    { cp180OpIv, jk   }, // 79
+    { cp180OpIv, jk   }, // 7A
+    { cp180OpIv, jk   }, // 7B
+    { cp180OpIv, jk   }, // 7C
+    { cp180OpIv, jk   }, // 7D
+    { cp180OpIv, jk   }, // 7E
+    { cp180OpIv, jk   }, // 7F
 
-    cp180Op80, jkQ,  // 80
-    cp180Op81, jkQ,  // 81
-    cp180Op82, jkQ,  // 82
-    cp180Op83, jkQ,  // 83
-    cp180Op84, jkQ,  // 84
-    cp180Op85, jkQ,  // 85
-    cp180Op86, jkQ,  // 86
-    cp180Op87, jkQ,  // 87
-    cp180Op88, jkQ,  // 88
-    cp180Op89, jkQ,  // 89
-    cp180Op8A, jkQ,  // 8A
-    cp180Op8B, jkQ,  // 8B
-    cp180Op8C, jkQ,  // 8C
-    cp180Op8D, jkQ,  // 8D
-    cp180Op8E, jkQ,  // 8E
-    cp180Op8F, jkQ,  // 8F
+    { cp180Op80, jkQ  }, // 80
+    { cp180Op81, jkQ  }, // 81
+    { cp180Op82, jkQ  }, // 82
+    { cp180Op83, jkQ  }, // 83
+    { cp180Op84, jkQ  }, // 84
+    { cp180Op85, jkQ  }, // 85
+    { cp180Op86, jkQ  }, // 86
+    { cp180Op87, jkQ  }, // 87
+    { cp180Op88, jkQ  }, // 88
+    { cp180Op89, jkQ  }, // 89
+    { cp180Op8A, jkQ  }, // 8A
+    { cp180Op8B, jkQ  }, // 8B
+    { cp180Op8C, jkQ  }, // 8C
+    { cp180Op8D, jkQ  }, // 8D
+    { cp180Op8E, jkQ  }, // 8E
+    { cp180Op8F, jkQ  }, // 8F
 
-    cp180Op90, jkQ,  // 90
-    cp180Op91, jkQ,  // 91
-    cp180Op92, jkQ,  // 92
-    cp180Op93, jkQ,  // 93
-    cp180Op94, jkQ,  // 94
-    cp180Op95, jkQ,  // 95
-    cp180Op96, jkQ,  // 96
-    cp180Op97, jkQ,  // 97
-    cp180Op98, jkQ,  // 98
-    cp180Op99, jkQ,  // 99
-    cp180Op9A, jkQ,  // 9A
-    cp180Op9B, jkQ,  // 9B
-    cp180Op9C, jkQ,  // 9C
-    cp180Op9D, jkQ,  // 9D
-    cp180Op9E, jkQ,  // 9E
-    cp180Op9F, jkQ,  // 9F
+    { cp180Op90, jkQ  }, // 90
+    { cp180Op91, jkQ  }, // 91
+    { cp180Op92, jkQ  }, // 92
+    { cp180Op93, jkQ  }, // 93
+    { cp180Op94, jkQ  }, // 94
+    { cp180Op95, jkQ  }, // 95
+    { cp180Op96, jkQ  }, // 96
+    { cp180Op97, jkQ  }, // 97
+    { cp180Op98, jkQ  }, // 98
+    { cp180Op99, jkQ  }, // 99
+    { cp180Op9A, jkQ  }, // 9A
+    { cp180Op9B, jkQ  }, // 9B
+    { cp180Op9C, jkQ  }, // 9C
+    { cp180Op9D, jkQ  }, // 9D
+    { cp180Op9E, jkQ  }, // 9E
+    { cp180Op9F, jkQ  }, // 9F
 
-    cp180OpA0, jkiD, // A0
-    cp180OpA1, jkiD, // A1
-    cp180OpA2, jkiD, // A2
-    cp180OpA3, jkiD, // A3
-    cp180OpA4, jkiD, // A4
-    cp180OpA5, jkiD, // A5
-    cp180OpIv, jkiD, // A6
-    cp180OpA7, jkiD, // A7
-    cp180OpA8, jkiD, // A8
-    cp180OpA9, jkiD, // A9
-    cp180OpAA, jkiD, // AA
-    cp180OpIv, jkiD, // AB
-    cp180OpAC, jkiD, // AC
-    cp180OpAD, jkiD, // AD
-    cp180OpAE, jkiD, // AE
-    cp180OpIv, jkiD, // AF
+    { cp180OpA0, jkiD }, // A0
+    { cp180OpA1, jkiD }, // A1
+    { cp180OpA2, jkiD }, // A2
+    { cp180OpA3, jkiD }, // A3
+    { cp180OpA4, jkiD }, // A4
+    { cp180OpA5, jkiD }, // A5
+    { cp180OpIv, jkiD }, // A6
+    { cp180OpA7, jkiD }, // A7
+    { cp180OpA8, jkiD }, // A8
+    { cp180OpA9, jkiD }, // A9
+    { cp180OpAA, jkiD }, // AA
+    { cp180OpIv, jkiD }, // AB
+    { cp180OpAC, jkiD }, // AC
+    { cp180OpAD, jkiD }, // AD
+    { cp180OpAE, jkiD }, // AE
+    { cp180OpIv, jkiD }, // AF
 
-    cp180OpB0, jkQ,  // B0
-    cp180OpB1, jkQ,  // B1
-    cp180OpB2, jkQ,  // B2
-    cp180OpB3, jkQ,  // B3
-    cp180OpB4, jkQ,  // B4
-    cp180OpB5, jkQ,  // B5
-    cp180OpIv, jkQ,  // B6
-    cp180OpIv, jkQ,  // B7
-    cp180OpIv, jkQ,  // B8
-    cp180OpIv, jkQ,  // B9
-    cp180OpIv, jkQ,  // BA
-    cp180OpIv, jkQ,  // BB
-    cp180OpIv, jkQ,  // BC
-    cp180OpIv, jkQ,  // BD
-    cp180OpIv, jkQ,  // BE
-    cp180OpIv, jkQ,  // BF
+    { cp180OpB0, jkQ  }, // B0
+    { cp180OpB1, jkQ  }, // B1
+    { cp180OpB2, jkQ  }, // B2
+    { cp180OpB3, jkQ  }, // B3
+    { cp180OpB4, jkQ  }, // B4
+    { cp180OpB5, jkQ  }, // B5
+    { cp180OpIv, jkQ  }, // B6
+    { cp180OpIv, jkQ  }, // B7
+    { cp180OpIv, jkQ  }, // B8
+    { cp180OpIv, jkQ  }, // B9
+    { cp180OpIv, jkQ  }, // BA
+    { cp180OpIv, jkQ  }, // BB
+    { cp180OpIv, jkQ  }, // BC
+    { cp180OpIv, jkQ  }, // BD
+    { cp180OpIv, jkQ  }, // BE
+    { cp180OpIv, jkQ  }, // BF
 
-    cp180OpC0, jkiD, // C0
-    cp180OpC1, jkiD, // C1
-    cp180OpC2, jkiD, // C2
-    cp180OpC3, jkiD, // C3
-    cp180OpC4, jkiD, // C4
-    cp180OpC5, jkiD, // C5
-    cp180OpC6, jkiD, // C6
-    cp180OpC7, jkiD, // C7
-    cp180OpIv, jkiD, // C8
-    cp180OpIv, jkiD, // C9
-    cp180OpIv, jkiD, // CA
-    cp180OpIv, jkiD, // CB
-    cp180OpIv, jkiD, // CC
-    cp180OpIv, jkiD, // CD
-    cp180OpIv, jkiD, // CE
-    cp180OpIv, jkiD, // CF
+    { cp180OpC0, jkiD }, // C0
+    { cp180OpC1, jkiD }, // C1
+    { cp180OpC2, jkiD }, // C2
+    { cp180OpC3, jkiD }, // C3
+    { cp180OpC4, jkiD }, // C4
+    { cp180OpC5, jkiD }, // C5
+    { cp180OpC6, jkiD }, // C6
+    { cp180OpC7, jkiD }, // C7
+    { cp180OpIv, jkiD }, // C8
+    { cp180OpIv, jkiD }, // C9
+    { cp180OpIv, jkiD }, // CA
+    { cp180OpIv, jkiD }, // CB
+    { cp180OpIv, jkiD }, // CC
+    { cp180OpIv, jkiD }, // CD
+    { cp180OpIv, jkiD }, // CE
+    { cp180OpIv, jkiD }, // CF
 
-    cp180OpD0, jkiD, // D0
-    cp180OpD1, jkiD, // D1
-    cp180OpD2, jkiD, // D2
-    cp180OpD3, jkiD, // D3
-    cp180OpD4, jkiD, // D4
-    cp180OpD5, jkiD, // D5
-    cp180OpD6, jkiD, // D6
-    cp180OpD7, jkiD, // D7
-    cp180OpD8, jkiD, // D8
-    cp180OpD9, jkiD, // D9
-    cp180OpDA, jkiD, // DA
-    cp180OpDB, jkiD, // DB
-    cp180OpDC, jkiD, // DC
-    cp180OpDD, jkiD, // DD
-    cp180OpDE, jkiD, // DE
-    cp180OpDF, jkiD, // DF
+    { cp180OpD0, jkiD }, // D0
+    { cp180OpD1, jkiD }, // D1
+    { cp180OpD2, jkiD }, // D2
+    { cp180OpD3, jkiD }, // D3
+    { cp180OpD4, jkiD }, // D4
+    { cp180OpD5, jkiD }, // D5
+    { cp180OpD6, jkiD }, // D6
+    { cp180OpD7, jkiD }, // D7
+    { cp180OpD8, jkiD }, // D8
+    { cp180OpD9, jkiD }, // D9
+    { cp180OpDA, jkiD }, // DA
+    { cp180OpDB, jkiD }, // DB
+    { cp180OpDC, jkiD }, // DC
+    { cp180OpDD, jkiD }, // DD
+    { cp180OpDE, jkiD }, // DE
+    { cp180OpDF, jkiD }, // DF
 
-    cp180OpIv, jkiD, // E0
-    cp180OpIv, jkiD, // E1
-    cp180OpIv, jkiD, // E2
-    cp180OpIv, jkiD, // E3
-    cp180OpE4, jkiD, // E4
-    cp180OpE5, jkiD, // E5
-    cp180OpIv, jkiD, // E6
-    cp180OpIv, jkiD, // E7
-    cp180OpIv, jkiD, // E8
-    cp180OpE9, jkiD, // E9
-    cp180OpIv, jkiD, // EA
-    cp180OpEB, jkiD, // EB
-    cp180OpIv, jkiD, // EC
-    cp180OpED, jkiD, // ED
-    cp180OpIv, jkiD, // EE
-    cp180OpIv, jkiD, // EF
+    { cp180OpIv, jkiD }, // E0
+    { cp180OpIv, jkiD }, // E1
+    { cp180OpIv, jkiD }, // E2
+    { cp180OpIv, jkiD }, // E3
+    { cp180OpE4, jkiD }, // E4
+    { cp180OpE5, jkiD }, // E5
+    { cp180OpIv, jkiD }, // E6
+    { cp180OpIv, jkiD }, // E7
+    { cp180OpIv, jkiD }, // E8
+    { cp180OpE9, jkiD }, // E9
+    { cp180OpIv, jkiD }, // EA
+    { cp180OpEB, jkiD }, // EB
+    { cp180OpIv, jkiD }, // EC
+    { cp180OpED, jkiD }, // ED
+    { cp180OpIv, jkiD }, // EE
+    { cp180OpIv, jkiD }, // EF
 
-    cp180OpIv, jkiD, // F0
-    cp180OpIv, jkiD, // F1
-    cp180OpIv, jkiD, // F2
-    cp180OpF3, jkiD, // F3
-    cp180OpIv, jkiD, // F4
-    cp180OpIv, jkiD, // F5
-    cp180OpIv, jkiD, // F6
-    cp180OpIv, jkiD, // F7
-    cp180OpIv, jkiD, // F8
-    cp180OpF9, jkiD, // F9
-    cp180OpFA, jkiD, // FA
-    cp180OpFB, jkiD, // FB
-    cp180OpIv, jkiD, // FC
-    cp180OpIv, jkiD, // FD
-    cp180OpIv, jkiD, // FE
-    cp180OpIv, jkiD  // FF
+    { cp180OpIv, jkiD }, // F0
+    { cp180OpIv, jkiD }, // F1
+    { cp180OpIv, jkiD }, // F2
+    { cp180OpF3, jkiD }, // F3
+    { cp180OpIv, jkiD }, // F4
+    { cp180OpIv, jkiD }, // F5
+    { cp180OpIv, jkiD }, // F6
+    { cp180OpIv, jkiD }, // F7
+    { cp180OpIv, jkiD }, // F8
+    { cp180OpF9, jkiD }, // F9
+    { cp180OpFA, jkiD }, // FA
+    { cp180OpFB, jkiD }, // FB
+    { cp180OpIv, jkiD }, // FC
+    { cp180OpIv, jkiD }, // FD
+    { cp180OpIv, jkiD }, // FE
+    { cp180OpIv, jkiD }  // FF
     };
 
 /*
@@ -762,26 +762,26 @@ static OpDispatch decodeCpu180Opcode[] =
 */
 static ConditionActionDefn mcrDefns [] =
     {
-//                        Job   Mtr   Job    Mtr
-//                  P     Mask  Mask  Mask   Mask   NoMask
-//    Bit   Cmplt  Stay    TE    TE    TD     TD
-//  ------  -----  ----   ----  ----  ----   ----   ------
-    0x8000, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt,  /* MCR48 Detected uncorrectable error     */
-    0x4000, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt,  /* MCR49 Not assigned                     */
-    0x2000, TRUE,  FALSE, Exch, Trap, Exch,  Stack, Stack, /* MCR50 Short warning                    */
-    0x1000, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt,  /* MCR51 Instruction specfication error   */
-    0x0800, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt,  /* MCR52 Address specification error      */
-    0x0400, TRUE,  FALSE, Exch, Trap, Exch,  Stack, Stack, /* MCR53 CYBER 170 state exchange request */
-    0x0200, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt,  /* MCR54 Access violation                 */
-    0x0100, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt,  /* MCR55 Environment specification error  */
-    0x0080, TRUE,  FALSE, Exch, Trap, Exch,  Stack, Stack, /* MCR56 External interrupt               */
-    0x0040, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt,  /* MCR57 Page table search without find   */
-    0x0020, TRUE,  FALSE, Rni,  Rni,  Rni,   Rni,   Rni,   /* MCR58 System call (status bit)         */
-    0x0010, TRUE,  FALSE, Exch, Trap, Exch,  Stack, Stack, /* MCR59 System interval timer            */
-    0x0008, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt,  /* MCR60 Invalid segment / Ring number 0  */
-    0x0004, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt,  /* MCR61 Outward call / Inward return     */
-    0x0002, TRUE,  FALSE, Exch, Trap, Exch,  Stack, Stack, /* MCR62 Soft error                       */
-    0x0001, FALSE, TRUE,  Rni,  Rni,  Rni,   Rni,   Rni    /* MCR63 Trap exception (status bit)      */
+//                          Job   Mtr   Job    Mtr
+//                    P     Mask  Mask  Mask   Mask   NoMask
+//      Bit   Cmplt  Stay    TE    TE    TD     TD
+//    ------  -----  ----   ----  ----  ----   ----   ------
+    { 0x8000, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt  }, /* MCR48 Detected uncorrectable error     */
+    { 0x4000, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt  }, /* MCR49 Not assigned                     */
+    { 0x2000, TRUE,  FALSE, Exch, Trap, Exch,  Stack, Stack }, /* MCR50 Short warning                    */
+    { 0x1000, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt  }, /* MCR51 Instruction specfication error   */
+    { 0x0800, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt  }, /* MCR52 Address specification error      */
+    { 0x0400, TRUE,  FALSE, Exch, Trap, Exch,  Stack, Stack }, /* MCR53 CYBER 170 state exchange request */
+    { 0x0200, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt  }, /* MCR54 Access violation                 */
+    { 0x0100, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt  }, /* MCR55 Environment specification error  */
+    { 0x0080, TRUE,  FALSE, Exch, Trap, Exch,  Stack, Stack }, /* MCR56 External interrupt               */
+    { 0x0040, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt  }, /* MCR57 Page table search without find   */
+    { 0x0020, TRUE,  FALSE, Rni,  Rni,  Rni,   Rni,   Rni   }, /* MCR58 System call (status bit)         */
+    { 0x0010, TRUE,  FALSE, Exch, Trap, Exch,  Stack, Stack }, /* MCR59 System interval timer            */
+    { 0x0008, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt  }, /* MCR60 Invalid segment / Ring number 0  */
+    { 0x0004, FALSE, TRUE,  Exch, Trap, Exch,  Halt,  Halt  }, /* MCR61 Outward call / Inward return     */
+    { 0x0002, TRUE,  FALSE, Exch, Trap, Exch,  Stack, Stack }, /* MCR62 Soft error                       */
+    { 0x0001, FALSE, TRUE,  Rni,  Rni,  Rni,   Rni,   Rni   }  /* MCR63 Trap exception (status bit)      */
     };
 
 /*
@@ -789,26 +789,26 @@ static ConditionActionDefn mcrDefns [] =
 */
 static ConditionActionDefn ucrDefns [] =
     {
-//                        Job   Mtr   Job    Mtr
-//                  P     Mask  Mask  Mask   Mask   NoMask
-//    Bit   Cmplt  Stay    TE    TE    TD     TD
-//  ------  -----  ----   ----  ----  ----   ----   ------
-    0x8000, FALSE, TRUE,  Trap, Trap, Exch,  Halt,  Rni,   /* UCR48 Privileged instruction fault     */
-    0x4000, FALSE, TRUE,  Trap, Trap, Exch,  Halt,  Rni,   /* UCR49 Unimplemented instruction        */
-    0x2000, TRUE,  FALSE, Trap, Trap, Stack, Stack, Rni,   /* UCR50 Free flag                        */
-    0x1000, FALSE, TRUE,  Trap, Trap, Stack, Stack, Rni,   /* UCR51 Process interval timer           */
-    0x0800, FALSE, TRUE,  Trap, Trap, Exch,  Halt,  Rni,   /* UCR52 Inter-ring pop                   */
-    0x0400, FALSE, TRUE,  Trap, Trap, Exch,  Halt,  Rni,   /* UCR53 Critical frame flag              */
-    0x0200, TRUE,  FALSE, Trap, Trap, Stack, Stack, Rni,   /* UCR54 Reserved                         */
-    0x0100, FALSE, FALSE, Trap, Trap, Stack, Stack, Stack, /* UCR55 Divide fault                     */
-    0x0080, FALSE, TRUE,  Trap, Trap, Stack, Stack, Stack, /* UCR56 Debug                            */
-    0x0040, FALSE, TRUE,  Trap, Trap, Stack, Stack, Stack, /* UCR57 Arithmetic overflow              */
-    0x0020, TRUE,  TRUE,  Trap, Trap, Stack, Stack, Stack, /* UCR58 Exponent overflow                */
-    0x0010, TRUE,  TRUE,  Trap, Trap, Stack, Stack, Stack, /* UCR59 Exponent underflow               */
-    0x0008, TRUE,  TRUE,  Trap, Trap, Stack, Stack, Stack, /* UCR60 FP loss of significance          */
-    0x0004, FALSE, TRUE,  Trap, Trap, Stack, Stack, Stack, /* UCR61 FP indefinite                    */
-    0x0002, FALSE, TRUE,  Trap, Trap, Stack, Stack, Stack, /* UCR62 Arithmetic loss of significance  */
-    0x0001, TRUE,  TRUE,  Trap, Trap, Stack, Stack, Stack  /* UCR63 Invalid BDP data                 */
+//                          Job   Mtr   Job    Mtr
+//                    P     Mask  Mask  Mask   Mask   NoMask
+//      Bit   Cmplt  Stay    TE    TE    TD     TD
+//    ------  -----  ----   ----  ----  ----   ----   ------
+    { 0x8000, FALSE, TRUE,  Trap, Trap, Exch,  Halt,  Rni   }, /* UCR48 Privileged instruction fault     */
+    { 0x4000, FALSE, TRUE,  Trap, Trap, Exch,  Halt,  Rni   }, /* UCR49 Unimplemented instruction        */
+    { 0x2000, TRUE,  FALSE, Trap, Trap, Stack, Stack, Rni   }, /* UCR50 Free flag                        */
+    { 0x1000, FALSE, TRUE,  Trap, Trap, Stack, Stack, Rni   }, /* UCR51 Process interval timer           */
+    { 0x0800, FALSE, TRUE,  Trap, Trap, Exch,  Halt,  Rni   }, /* UCR52 Inter-ring pop                   */
+    { 0x0400, FALSE, TRUE,  Trap, Trap, Exch,  Halt,  Rni   }, /* UCR53 Critical frame flag              */
+    { 0x0200, TRUE,  FALSE, Trap, Trap, Stack, Stack, Rni   }, /* UCR54 Reserved                         */
+    { 0x0100, FALSE, FALSE, Trap, Trap, Stack, Stack, Stack }, /* UCR55 Divide fault                     */
+    { 0x0080, FALSE, TRUE,  Trap, Trap, Stack, Stack, Stack }, /* UCR56 Debug                            */
+    { 0x0040, FALSE, TRUE,  Trap, Trap, Stack, Stack, Stack }, /* UCR57 Arithmetic overflow              */
+    { 0x0020, TRUE,  TRUE,  Trap, Trap, Stack, Stack, Stack }, /* UCR58 Exponent overflow                */
+    { 0x0010, TRUE,  TRUE,  Trap, Trap, Stack, Stack, Stack }, /* UCR59 Exponent underflow               */
+    { 0x0008, TRUE,  TRUE,  Trap, Trap, Stack, Stack, Stack }, /* UCR60 FP loss of significance          */
+    { 0x0004, FALSE, TRUE,  Trap, Trap, Stack, Stack, Stack }, /* UCR61 FP indefinite                    */
+    { 0x0002, FALSE, TRUE,  Trap, Trap, Stack, Stack, Stack }, /* UCR62 Arithmetic loss of significance  */
+    { 0x0001, TRUE,  TRUE,  Trap, Trap, Stack, Stack, Stack }  /* UCR63 Invalid BDP data                 */
     };
 
 /*
@@ -1264,63 +1264,6 @@ void cpu180Init(char *model, u16 *serialNumbers)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Load the 170 state exchange package referenced by a
-**                  specified real memory word address.
-**
-**  Parameters:     Name        Description.
-**                  ctx180      pointer to CYBER 180 CPU context
-**                  xpa         word address of exchange package
-**
-**  Returns:        Nothing
-**
-**------------------------------------------------------------------------*/
-void cpu180Load170Xp(Cpu180Context *ctx180, u32 xpa)
-    {
-    Cpu170Context *ctx170;
-    int           i;
-    u32           wordAddr;
-
-    cpu180Load180Xp(ctx180, xpa);
-    ctx180->regP170       = cpMem[xpa];
-    ctx170                = &cpus170[ctx180->id];
-    ctx170->regRaCm       = ctx180->regA[3] & Mask32;
-    ctx170->exitMode      = (ctx180->regA[3] >> 20) & 0xfff000;
-    ctx170->regFlCm       = ctx180->regA[4] & Mask32;
-    ctx170->isMonitorMode = (ctx180->regA[4] >> 32) & 1;
-    ctx170->regMa         = ctx180->regA[5] & Mask32;
-    ctx170->regRaEcs      = (ctx180->regA[6] & 0xffffffc0) >> 2;
-    ctx170->regFlEcs      = (ctx180->regA[7] & 0xffffffc0) >> 2;
-    for (i = 0; i < 8; i++)
-        {
-        ctx170->regA[i] = ctx180->regA[i + 8] & Mask18;
-        }
-    ctx170->regB[0] = 0;
-    for (i = 1; i < 8; i++)
-        {
-        ctx170->regB[i] = ctx180->regX[i] & Mask18;
-        }
-    for (i = 0; i < 8; i++)
-        {
-        ctx170->regX[i] = ctx180->regX[i + 8] & Mask60;
-        }
-    wordAddr          = (ctx180->regP & Mask32) >> 3;
-    ctx170->regP      = wordAddr - ctx170->regRaCm;
-    ctx170->opOffset  = 60 - (((ctx180->regP & Mask3) >> 1) * 15);
-    ctx170->opWord    = cpMem[wordAddr];
-    ctx170->isStopped = FALSE;
-    if ((features & HasInstructionStack) != 0)
-        {
-        /*
-        **  Void the instruction stack.
-        */
-        cpuVoidIwStack(ctx170, ~0);
-        }
-#if CcDebug == 1
-    traceExchange170(ctx170, xpa << 3, NULL, (traceMask & TraceCpu180) != 0);
-#endif
-    }
-
-/*--------------------------------------------------------------------------
 **  Purpose:        Load the 180 state exchange package referenced by a
 **                  specified real memory word address.
 **
@@ -1468,6 +1411,7 @@ u64 cpu180MacGetCpStateRegister(Cpu180Context *ctx, u8 reg)
         {
     default:
         fprintf(stderr, "cpu180MacGetCpStateRegister: unknown reg %02x\n", reg);
+        // fall through
     case RegOptionsInstalled:
         return ctx->regOi;
     case RegStatusSummary:
@@ -1521,6 +1465,8 @@ u64 cpu180MacGetCpStateRegister(Cpu180Context *ctx, u8 reg)
         return ctx->regKbp;
     case RegKeypointMask:
         return ctx->regKmr;
+    case RegModelDepFlags:
+        return ctx->regMdf;
     case RegModelDepWord:
         return ctx->regMdw;
     case RegMonitorCondition:
@@ -1647,7 +1593,7 @@ u8 cpu180MacReadCm(void)
             shift = 56;
             for (i = 0; i < 8; i++)
                 {
-                memoryRegisterBuf[i] = (word >> shift) & 0xff;
+                memoryRegisterBuf[i] = (word >> shift) & Mask8;
                 shift -= 8;
                 }
             }
@@ -1686,7 +1632,7 @@ u8 cpu180MacReadCp(Cpu180Context *ctx, u8 type)
                 shift = 56;
                 for (i = 0; i < 8; i++)
                     {
-                    ctx->macRegisterBuf[i] = (word >> shift) & 0xff;
+                    ctx->macRegisterBuf[i] = (word >> shift) & Mask8;
                     shift -= 8;
                     }
                 }
@@ -1816,6 +1762,7 @@ void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
         {
     default:
         fprintf(stderr, "cpu180MacSetCpStateRegister: unknown reg %02x : " FMT64_016x "\n", reg, word);
+        // fall through
     case RegFaultStatus0:
     case RegFaultStatus1:
     case RegFaultStatus2:
@@ -1862,6 +1809,9 @@ void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
         break;
     case RegKeypointMask:
         ctx->regKmr = word & Mask16;
+        break;
+    case RegModelDepFlags:
+        ctx->regMdf = word & Mask16;
         break;
     case RegModelDepWord:
         ctx->regMdw = word;
@@ -2301,7 +2251,6 @@ bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *r
     u16 asid;
     u8  n;
     u64 pte;
-    u8  ring;
     u64 sde;
     u16 segNum;
 
@@ -2309,11 +2258,10 @@ bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *r
     tracePva(ctx, pva);
 #endif
 
-    ring    = RingOf(pva);
     segNum  = SegmentOf(pva);
     byteNum = pva & Mask32;
 
-    if ((byteNum & 0x80000000) != 0)
+    if (Is32BitNeg(byteNum))
         {
         *cond = MCR52; // Address specification error
         ctx->regUtp = pva;
@@ -2380,7 +2328,7 @@ bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *r
         //  See MIGDS 3-15 for diagram of RMA calculation
         //
         *rma = ((pte & Mask22) << 9)
-            | ((byteNum & 0xfe00) & ((u16)(~ctx->regPsm & Mask7) << 9))
+            | ((byteNum & 0xfe00U) & ((u16)(~ctx->regPsm & Mask7) << 9))
             | (byteNum & Mask9);
 
 #if CcDebug == 1
@@ -2657,15 +2605,15 @@ void cpu180Store170Xp(Cpu180Context *ctx180, u32 xpa)
     u64           word;
 
     ctx170          = &cpus170[ctx180->id];
-    ctx180->regP    = (ctx180->regP170 & ~(u64)Mask32)
+    ctx180->regP    = (ctx180->regP170 & LeftMask)
                       | ((ctx170->regRaCm + ctx170->regP) << 3)
                       | (((4 - (ctx170->opOffset / 15)) & 3) << 1);
     ring            = ctx180->regP & RingMask;
     ctx180->regA[3] = ring | ((u64)ctx170->exitMode << 20) | ctx170->regRaCm;
     ctx180->regA[4] = ring | (ctx170->isMonitorMode ? (u64)1 << 32 : 0) | ctx170->regFlCm;
     ctx180->regA[5] = ring | (ctx170->isStopped ? (u64)1 << 32 : 0) | ctx170->regMa;
-    ctx180->regA[6] = ring | (ctx170->regRaEcs << 2);
-    ctx180->regA[7] = ring | (ctx170->regFlEcs << 2);
+    ctx180->regA[6] = ring | ctx170->regRaEcs;
+    ctx180->regA[7] = ring | ctx170->regFlEcs;
     for (i = 0; i < 8; i++)
         {
         ctx180->regA[i + 8] = ring | ctx170->regA[i];
@@ -2774,6 +2722,7 @@ void cpu180Trap(Cpu180Context *ctx)
     u32              rma;
     u64              sfsa;
     u8               vmid;
+    u64              word;
 
 #if CcDebug == 1
     traceTrap(ctx);
@@ -2801,7 +2750,7 @@ void cpu180Trap(Cpu180Context *ctx)
     if (ctx->regVmid == 1) // map 170 to 180 exchange package
         {
         ctx170       = &cpus170[ctx->id];
-        ctx->regP    = (ctx->regP170 & ~(u64)Mask32)
+        ctx->regP    = (ctx->regP170 & LeftMask)
                        | ((ctx170->regRaCm + ctx170->regP) << 3)
                        | (((4 - (ctx170->opOffset / 15)) & 3) << 1);
         ctx->nextP   = ctx->regP;
@@ -2821,7 +2770,12 @@ void cpu180Trap(Cpu180Context *ctx)
             }
         for (i = 0; i < 8; i++)
             {
-            ctx->regX[i + 8] = ctx170->regX[i];
+            word = ctx170->regX[i];
+            if ((word & 0x0800000000000000) != 0)
+                {
+                word |= 0xf000000000000000;
+                }
+            ctx->regX[i + 8] = word;
             }
         }
     if (cpu180PushFrame(ctx, 0xf, 0x0, 0xf, TRUE, &sfsa, &frameSize) == FALSE)
@@ -3040,51 +2994,6 @@ static void cpu180ApplyBdpOperator(Cpu180Context *ctx, bool (*operator)(BdpOpera
 #if CcDebug == 1
             traceMemoryBlock(ctx, ctx->dstDesc.pva, ctx->dstDesc.length, "    result destination block:");
 #endif
-            }
-        }
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Check monitor condition register for interrupts from PP's
-**
-**  Parameters:     Name        Description.
-**                  ctx         pointer to CPU context
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-static void cpu180CheckExternalInterrupts(Cpu180Context *ctx)
-    {
-    ConditionAction         action;
-    u16                     cr;
-    u8                      i;
-    u16                     mask;
-    static MonitorCondition mCondList[5] = {MCR53, MCR59, MCR56, MCR48, MCR50};
-
-    cr = ctx->regMcr & ctx->regMmr;
-    if ((cr & 0xa490) != 0) // MCR48, MCR50, MCR53, MCR56, MCR59
-        {
-        for (i = 0; cr != 0 && i < 5; i++)
-            {
-            mask = mcrDefns[mCondList[i]].bitMask;
-            if ((cr & mask) != 0)
-                {
-                action = cpu180GetActionForMonitorCondition(ctx, mCondList[i]);
-                if (action > ctx->pendingAction)
-                    {
-                    ctx->pendingAction = action;
-                    }
-                cr &= ~mask;
-                }
-            }
-        }
-    cr = ctx->regUcr & ctx->regUmr;
-    if ((cr & 0x1000) != 0) // UCR51
-        {
-        action = cpu180GetActionForUserCondition(ctx, UCR51);
-        if (action > ctx->pendingAction)
-            {
-            ctx->pendingAction = action;
             }
         }
     }
@@ -3362,16 +3271,17 @@ static ConditionAction cpu180GetActionForUserCondition(Cpu180Context *ctx, UserC
 static bool cpu180GetBdpDescriptor(Cpu180Context *ctx, u64 pva, u8 aRegNum, u8 xRegNum, BdpDescriptor *descriptor)
     {
     u64 desc;
+    u32 disp;
     u32 operandAddress;
 
     if (cpu180GetBytes(ctx, pva, 4, RingOf(ctx->regP), AccessModeExecute, &desc))
         {
         descriptor->rawDesc = (u32)desc;
         descriptor->type    = (desc >> 24) & Mask4;
-        descriptor->length  = (desc < 0x80000000) ? (desc >> 16) & Mask8 : ctx->regX[xRegNum] & Mask9;
+        descriptor->length  = Is32BitNeg(desc) ? ctx->regX[xRegNum] & Mask9 : (desc >> 16) & Mask8;
         operandAddress      = desc & Mask16;
-        descriptor->pva     = (ctx->regA[aRegNum] & RingSegMask)
-            | ((ctx->regA[aRegNum] + ((operandAddress < 0x8000) ? operandAddress : 0xffff0000 | operandAddress)) & Mask32);
+        disp                = (operandAddress <= 0x7fff) ? operandAddress : 0xffff0000 | operandAddress;
+        descriptor->pva     = (ctx->regA[aRegNum] & RingSegMask) | ((ctx->regA[aRegNum] + disp) & Mask32);
         return TRUE;
         }
     else
@@ -3528,7 +3438,7 @@ static bool cpu180IsBindingSectionRef(Cpu180Context *ctx, u64 pva)
     {
     u16 segNum;
 
-    segNum  = SegmentOf(pva);
+    segNum = SegmentOf(pva);
     if (segNum <= ctx->regStl)
         {
         return ((cpMem[(ctx->regSta >> 3) + segNum] >> 58) & Mask2) == 3;
@@ -3537,6 +3447,28 @@ static bool cpu180IsBindingSectionRef(Cpu180Context *ctx, u64 pva)
         {
         return FALSE;
         }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Load the 170 state exchange package referenced by a
+**                  specified real memory word address.
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CYBER 180 CPU context
+**                  xpa         word address of exchange package
+**
+**  Returns:        Nothing
+**
+**------------------------------------------------------------------------*/
+static void cpu180Load170Xp(Cpu180Context *ctx, u32 xpa)
+    {
+    cpu180Load180Xp(ctx, xpa);
+    ctx->regP170 = cpMem[xpa];
+    cpu180Set170State(ctx, ctx->regP);
+
+#if CcDebug == 1
+    traceExchange170(&cpus170[ctx->id], xpa << 3, NULL, (traceMask & TraceCpu180) != 0);
+#endif
     }
 
 /*--------------------------------------------------------------------------
@@ -3581,8 +3513,8 @@ static bool cpu180MulInt32(Cpu180Context *ctx, u32 mltand, u32 mltier, u32 *prod
         }
     upper32 = (u32)(p64 >> 32);
     lower32 = (u32)(p64 & Mask32);
-    if ((lower32 < 0x80000000 && upper32 != 0)
-        || (lower32 >= 0x80000000 && upper32 != 0xffffffff))
+    if ((lower32 <= 0x7fffffffU && upper32 != 0)
+        || (lower32 > 0x7fffffffU && upper32 != 0xffffffffU))
         {
         mask = ucrDefns[UCR57].bitMask;
         if ((ctx->regUmr & mask) != 0 && IsTrapEnabled(ctx)) // mask set and trap enabled
@@ -3767,45 +3699,61 @@ static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool isTrap
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Put a byte in memory at a specified PVA
+**  Purpose:        Set 170 state from current 180 state
 **
 **  Parameters:     Name        Description.
-**                  ctx         pointer to CPU context
-**                  pva         process virtual address at which to put byte
-**                  ring        ring for which to validate access
-**                  byte        the byte
+**                  ctx         pointer to 180 CPU context
+**                  regP        P register value
 **
-**  Returns:        TRUE if successful, FALSE if address specification error
-**                  or page fault
+**  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static bool cpu180PutByte(Cpu180Context *ctx, u64 pva, u8 ring, u8 byte)
+static void cpu180Set170State(Cpu180Context *ctx, u64 regP)
     {
-    MonitorCondition cond;
-    u64              mask;
-    u32              pti;
-    u32              rma;
-    u8               shift;
-    u32              wordAddr;
+    Cpu170Context *ctx170;
+    u8            i;
+    u32           wordAddr;
 
-    if (cpu180ValidateAccess(ctx, pva, ring, AccessModeWrite, &cond) == FALSE
-        || cpu180PvaToRma(ctx, pva, AccessModeWrite, &rma, &pti, &cond) == FALSE)
+    ctx170                = &cpus170[ctx->id];
+    ctx170->regRaCm       = ctx->regA[3] & Mask21;
+    ctx170->exitMode      = (ctx->regA[3] >> 20) & 0xfff000;
+    ctx170->regFlCm       = ctx->regA[4] & Mask21;
+    ctx170->isMonitorMode = (ctx->regA[4] >> 32) & 1;
+    ctx170->regMa         = ctx->regA[5] & Mask21;
+    if ((ctx170->exitMode & EmFlagExpandedAddress) != 0)
         {
-        cpu180SetMonitorCondition(ctx, cond);
-        return FALSE;
+        ctx170->regRaEcs = ctx->regA[6] & Mask30Ecs;
+        ctx170->regFlEcs = ctx->regA[7] & Mask30Ecs;
         }
     else
         {
-        wordAddr        = rma >> 3;
-        shift           = 56 - ((rma & Mask3) << 3);
-        mask            = ~((u64)0xff << shift);
-        cpMem[wordAddr] = (cpMem[wordAddr] & mask) | ((u64)byte << shift);
-
-#if CcDebug == 1 && defined(TRACE_STORE_START)
-        cpu180CheckTraceStore(ctx, pva, pva);
-#endif
-
-        return TRUE;
+        ctx170->regRaEcs = ctx->regA[6] & Mask21Ecs;
+        ctx170->regFlEcs = ctx->regA[7] & Mask24Ecs;
+        }
+    for (i = 0; i < 8; i++)
+        {
+        ctx170->regA[i] = ctx->regA[i + 8] & Mask18;
+        }
+    ctx170->regB[0] = 0;
+    for (i = 1; i < 8; i++)
+        {
+        ctx170->regB[i] = ctx->regX[i] & Mask18;
+        }
+    for (i = 0; i < 8; i++)
+        {
+        ctx170->regX[i] = ctx->regX[i + 8] & Mask60;
+        }
+    wordAddr          = (regP & Mask32) >> 3;
+    ctx170->regP      = wordAddr - ctx170->regRaCm;
+    ctx170->opOffset  = 60 - (((regP & Mask3) >> 1) * 15);
+    ctx170->opWord    = cpMem[wordAddr];
+    ctx170->isStopped = FALSE;
+    if ((features & HasInstructionStack) != 0)
+        {
+        //
+        //  Void the instruction stack.
+        //
+        cpuVoidIwStack(ctx170, (u32)~0);
         }
     }
 
@@ -3828,6 +3776,7 @@ static void cpu180SetRingZeroCondition(Cpu180Context *ctx, u64 pva)
         {
         defn         = &mcrDefns[MCR60];
         ctx->regMcr |= defn->bitMask;
+        ctx->regUtp  = pva;
 
         if ((ctx->regMmr & defn->bitMask) == 0)
             {
@@ -3880,10 +3829,10 @@ static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa)
     cpMem[xpa++] = ((u64)ctx->regKmr << 48) | ctx->regA[7];
     cpMem[xpa++] = ctx->regA[8];
     cpMem[xpa++] = ctx->regA[9];
-    cpMem[xpa++] = ((u64)(ctx->regPit & 0xffff0000) << 32) | ctx->regA[10];
-    cpMem[xpa++] = ((u64)(ctx->regPit & 0x0000ffff) << 48) | ctx->regA[11];
-    cpMem[xpa++] = ((u64)(ctx->regBc & 0xffff0000) << 32) | ctx->regA[12];
-    cpMem[xpa++] = ((u64)(ctx->regBc & 0x0000ffff) << 48) | ctx->regA[13];
+    cpMem[xpa++] = ((u64)(ctx->regPit & 0xffff0000U) << 32) | ctx->regA[10];
+    cpMem[xpa++] = ((u64)(ctx->regPit & 0x0000ffffU) << 48) | ctx->regA[11];
+    cpMem[xpa++] = ((u64)(ctx->regBc & 0xffff0000U) << 32) | ctx->regA[12];
+    cpMem[xpa++] = ((u64)(ctx->regBc & 0x0000ffffU) << 48) | ctx->regA[13];
     cpMem[xpa++] = ((u64)ctx->regMdf << 48) | ctx->regA[14];
     cpMem[xpa++] = ((u64)ctx->regStl << 48) | ctx->regA[15];
  
@@ -3893,8 +3842,8 @@ static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa)
         }
 
     cpMem[xpa++] = ctx->regMdw;
-    cpMem[xpa++] = ((u64)(ctx->regSta & 0xffff0000) << 32) | ctx->regUtp;
-    cpMem[xpa++] = ((u64)(ctx->regSta & 0x0000ffff) << 48) | ctx->regTp;
+    cpMem[xpa++] = ((u64)(ctx->regSta & 0xffff0000U) << 32) | ctx->regUtp;
+    cpMem[xpa++] = ((u64)(ctx->regSta & 0x0000ffffU) << 48) | ctx->regTp;
     cpMem[xpa++] = ((u64)ctx->regDi << 58) | ((u64)ctx->regDm << 48) | ctx->regDlp;
     cpMem[xpa++] = ((u64)ctx->regLrn << 48) | ctx->regTos[0];
 
@@ -3993,7 +3942,7 @@ static void cpu180UpdatePageSize(Cpu180Context *ctx)
         ctx->pageNumShift += 1;
         mask             >>= 1;
         }
-    ctx->pageLengthMask = ((u32)ctx->regPtl << 12) | (u32)0xfff;
+    ctx->pageLengthMask = ((u32)ctx->regPtl << 12) | 0xfffU;
     ctx->spidShift      = ctx->pageNumShift - 9;
 
 #if CcDebug == 1
@@ -4179,7 +4128,6 @@ static void cp180Op03(Cpu180Context *activeCpu)  // 03  INTRUPT    MIGDS 2-141
 static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
     {
     u8               at;
-    Cpu170Context    *ctx170;
     u16              desc;
     u8               i;
     u64              psap;
@@ -4192,7 +4140,6 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
     u32              rmas[33];
     u8               vmid;
     u64              word;
-    u32              wordAddr;
     u32              wordAddrs[33];
     int              words;
     u8               xs;
@@ -4302,41 +4249,6 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
         {
         activeCpu->regX[r] = cpMem[wordAddrs[i++]];
         }
-    if (vmid == 1)
-        {
-        ctx170                = &cpus170[activeCpu->id];
-        ctx170->exitMode      = (activeCpu->regA[3] >> 20) & 077770000;
-        ctx170->regRaCm       = activeCpu->regA[3] & Mask21;
-        ctx170->isMonitorMode = (activeCpu->regA[4] >> 32) & 1;
-        ctx170->regFlCm       = activeCpu->regA[4] & Mask21;
-        ctx170->regMa         = activeCpu->regA[5] & Mask21;
-        ctx170->regRaEcs      = activeCpu->regA[6] & Mask24;
-        ctx170->regFlEcs      = activeCpu->regA[7] & Mask24;
-        for (i = 0; i < 8; i++)
-            {
-            ctx170->regA[i] = activeCpu->regA[i + 8] & Mask18;
-            }
-        for (i = 1; i < 8; i++)
-            {
-            ctx170->regB[i] = activeCpu->regX[i] & Mask18;
-            }
-        for (i = 0; i < 8; i++)
-            {
-            ctx170->regX[i] = activeCpu->regX[i + 8] & Mask60;
-            }
-        wordAddr          = (activeCpu->nextP & Mask32) >> 3;
-        ctx170->regP      = wordAddr - ctx170->regRaCm;
-        ctx170->opOffset  = 60 - (((activeCpu->nextP & Mask3) >> 1) * 15);
-        ctx170->opWord    = cpMem[wordAddr];
-        ctx170->isStopped = FALSE;
-        if ((features & HasInstructionStack) != 0)
-            {
-            /*
-            **  Void the instruction stack.
-            */
-            cpuVoidIwStack(ctx170, ~0);
-            }
-        }
     activeCpu->regFlags        &= 0x3ffe;        // clear CFF, OCF, trap enable, and delay flip-flop
     activeCpu->regFlags        |= desc & 0xc000; // set CFF and OCF per descriptor
     ring                        = RingOf(activeCpu->nextP);
@@ -4349,6 +4261,11 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
 #if CcDebug == 1
     traceCallFrame(activeCpu, psap, "popped");
 #endif
+
+    if (vmid == 1)
+        {
+        cpu180Set170State(activeCpu, activeCpu->nextP);
+        }
     }
 
 static void cp180Op05(Cpu180Context *activeCpu)  // 05  PURGE      MIGDS 2-147
@@ -4525,7 +4442,7 @@ static void cp180Op0F(Cpu180Context *activeCpu)  // 0F  CPYXS      MIGDS 2-146
         {
         return;
         }
-    else if (regId < 0x80) // monitor mode required
+    else if (regId < 0x80U) // monitor mode required
         {
         if (activeCpu->isMonitorMode == FALSE)
             {
@@ -4584,12 +4501,12 @@ static void cp180Op14(Cpu180Context *activeCpu)  // 14  LBSET      MIGDS 2-136
     u64              word;
     u32              wordAddr;
 
-    offset   = (u32)(activeCpu->regX[0] >> 3);
-    if (offset > 0x0fffffff)
+    offset = (u32)activeCpu->regX[0] >> 3;
+    if (offset >= 0x1fffffff)
         {
         offset |= 0xf0000000;
         }
-    pva = (activeCpu->regA[activeCpu->opJ] & RingSegMask) | ((activeCpu->regA[activeCpu->opJ] + offset) & Mask32);
+    pva = (activeCpu->regA[activeCpu->opJ] & RingSegMask) | (u32)(activeCpu->regA[activeCpu->opJ] + offset);
     if (cpu180ValidateAccess(activeCpu, pva, RingOf(pva), AccessModeRead | AccessModeWrite, &cond) == FALSE
         || cpu180PvaToRma(activeCpu, pva, AccessModeNone, &rma, &pti, &cond) == FALSE) // cause page fault if page not in memory
         {
@@ -4651,7 +4568,7 @@ static void cp180Op17(Cpu180Context *activeCpu)  // 17  LPAGE      MIGDS 2-139
 
     asid    = (activeCpu->regX[activeCpu->opJ] >> 32) & Mask16;
     byteNum = (u32)activeCpu->regX[activeCpu->opJ];
-    if ((byteNum & 0x80000000) != 0)
+    if (Is32BitNeg(byteNum))
         {
         activeCpu->regUtp = ((u64)asid << 32) | byteNum;
         cpu180SetMonitorCondition(activeCpu, MCR52);
@@ -4699,22 +4616,22 @@ static void cp180Op1E(Cpu180Context *activeCpu)  // 1E  MARK       MIGDS 2-37
     static u8 table[16][4] =
         {
         /* j */
-        /* 0 */ 0, 0, 0, 0,
-        /* 1 */ 0, 0, 0, 1,
-        /* 2 */ 0, 0, 1, 0,
-        /* 3 */ 0, 0, 1, 1,
-        /* 4 */ 0, 1, 0, 0,
-        /* 5 */ 0, 1, 0, 1,
-        /* 6 */ 0, 1, 1, 0,
-        /* 7 */ 0, 1, 1, 1,
-        /* 8 */ 1, 0, 0, 0,
-        /* 9 */ 1, 0, 0, 1,
-        /* A */ 1, 0, 1, 0,
-        /* B */ 1, 0, 1, 1,
-        /* C */ 1, 1, 0, 0,
-        /* D */ 1, 1, 0, 1,
-        /* E */ 1, 1, 1, 0,
-        /* F */ 1, 1, 1, 1,
+        /* 0 */ { 0, 0, 0, 0 },
+        /* 1 */ { 0, 0, 0, 1 },
+        /* 2 */ { 0, 0, 1, 0 },
+        /* 3 */ { 0, 0, 1, 1 },
+        /* 4 */ { 0, 1, 0, 0 },
+        /* 5 */ { 0, 1, 0, 1 },
+        /* 6 */ { 0, 1, 1, 0 },
+        /* 7 */ { 0, 1, 1, 1 },
+        /* 8 */ { 1, 0, 0, 0 },
+        /* 9 */ { 1, 0, 0, 1 },
+        /* A */ { 1, 0, 1, 0 },
+        /* B */ { 1, 0, 1, 1 },
+        /* C */ { 1, 1, 0, 0 },
+        /* D */ { 1, 1, 0, 1 },
+        /* E */ { 1, 1, 1, 0 },
+        /* F */ { 1, 1, 1, 1 }
         };
 
     activeCpu->regX[activeCpu->opK] = (u64)table[activeCpu->opJ][(activeCpu->regX[1] >> 30) & Mask2] << 63;
@@ -4731,13 +4648,13 @@ static void cp180Op1F(Cpu180Context *activeCpu)  // 1F  ENTZ/O/S   MIGDS 2-31
         activeCpu->regX[activeCpu->opK] |= 0xffffffff00000000;
         break;
     default:
-        if ((activeCpu->regX[activeCpu->opK] & 0x80000000) == 0)
+        if (Is32BitNeg(activeCpu->regX[activeCpu->opK]))
             {
-            activeCpu->regX[activeCpu->opK] &= Mask32;
+            activeCpu->regX[activeCpu->opK] |= 0xffffffff00000000;
             }
         else
             {
-            activeCpu->regX[activeCpu->opK] |= 0xffffffff00000000;
+            activeCpu->regX[activeCpu->opK] &= Mask32;
             }
         break;
         }
@@ -4788,7 +4705,7 @@ static void cp180Op23(Cpu180Context *activeCpu)  // 23  DIVR       MIGDS 2-23
             activeCpu->nextP = activeCpu->regP; // inhibit execution
             }
         }
-    else if (XjR == -1 && (u32)XkR == 0x80000000)
+    else if (XjR == -1 && (u32)XkR == 0x80000000U)
         {
         cpu180SetUserCondition(activeCpu, UCR57);
         if ((activeCpu->regUmr & ucrDefns[UCR57].bitMask) != 0 && IsTrapEnabled(activeCpu)) // mask set and trap enabled
@@ -4798,7 +4715,7 @@ static void cp180Op23(Cpu180Context *activeCpu)  // 23  DIVR       MIGDS 2-23
         }
     else
         {
-        activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | ((u64)(XkR / XjR) & Mask32);
+        activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | (u32)(XkR / XjR);
         }
     }
 
@@ -4882,7 +4799,7 @@ static void cp180Op29(Cpu180Context *activeCpu)  // 29  DECR       MIGDS 2-22
 static void cp180Op2A(Cpu180Context *activeCpu)  // 2A  ADDAX      MIGDS 2-29
     {
     activeCpu->regA[activeCpu->opK] = (activeCpu->regA[activeCpu->opK] & RingSegMask)
-        | ((activeCpu->regA[activeCpu->opK] + activeCpu->regX[activeCpu->opJ]) & Mask32);
+        | (u32)(activeCpu->regA[activeCpu->opK] + activeCpu->regX[activeCpu->opJ]);
     }
 
 static void cp180Op2C(Cpu180Context *activeCpu)  // 2C  CMPR       MIGDS 2-24
@@ -4898,11 +4815,11 @@ static void cp180Op2C(Cpu180Context *activeCpu)  // 2C  CMPR       MIGDS 2-24
         }
     else if (XjR > XkR)
         {
-        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | 0x40000000;
+        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | 0x40000000U;
         }
     else
         {
-        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | 0xc0000000;
+        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | 0xc0000000U;
         }
     }
 
@@ -4919,17 +4836,17 @@ static void cp180Op2D(Cpu180Context *activeCpu)  // 2D  CMPX       MIGDS 2-24
         }
     else if (Xj > Xk)
         {
-        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | 0x40000000;
+        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | 0x40000000U;
         }
     else
         {
-        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | 0xc0000000;
+        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | 0xc0000000U;
         }
     }
 
 static void cp180Op2E(Cpu180Context *activeCpu)  // 2E  BRREL      MIGDS 2-27
     {
-    activeCpu->nextP = (activeCpu->regP & RingSegMask) | (((activeCpu->regX[activeCpu->opK] << 1) + activeCpu->regP) & Mask32);
+    activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)((activeCpu->regX[activeCpu->opK] << 1) + activeCpu->regP);
     }
 
 static void cp180Op2F(Cpu180Context *activeCpu)  // 2F  BRDIR      MIGDS 2-27
@@ -4939,7 +4856,7 @@ static void cp180Op2F(Cpu180Context *activeCpu)  // 2F  BRDIR      MIGDS 2-27
 
     regA = activeCpu->regA[activeCpu->opJ];
     XkR  = (activeCpu->opK == 0) ? 0 : activeCpu->regX[activeCpu->opK] & Mask32;
-    activeCpu->nextP   = (activeCpu->regP & RingMask) | (regA & SegMask) | ((regA + (XkR << 1)) & Mask32);
+    activeCpu->nextP   = (activeCpu->regP & RingMask) | (regA & SegMask) | (u32)(regA + (XkR << 1));
     activeCpu->nextKey = cpu180GetLock(activeCpu, activeCpu->nextP);
     }
 
@@ -5129,7 +5046,7 @@ static void cp180Op3C(Cpu180Context *activeCpu)  // 3C  CMPF       MIGDS 2-89
             {
             if ((activeCpu->regUmr & mask) == 0 || !IsTrapEnabled(activeCpu))
                 {
-                activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | 0x80000000;
+                activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | 0x80000000U;
                 return;
                 }
             activeCpu->nextP = activeCpu->regP;
@@ -5143,11 +5060,11 @@ static void cp180Op3C(Cpu180Context *activeCpu)  // 3C  CMPF       MIGDS 2-89
             }
         else if (valence > 0)
             {
-            activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | 0x40000000;
+            activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | 0x40000000U;
             }
         else
             {
-            activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | 0xc0000000;
+            activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | 0xc0000000U;
             }
         }
     }
@@ -5568,8 +5485,8 @@ static void cp180Op80(Cpu180Context *activeCpu)  // 80  LMULT      MIGDS 2-16
         cpu180SetMonitorCondition(activeCpu, MCR52); // address specification error
         return;
         }
-    disp       = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ) << 3;
-    pva        = (pva & RingSegMask) | ((pva + disp) & Mask32);
+    disp       = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ) << 3;
+    pva        = (pva & RingSegMask) | (u32)(pva + disp);
     selector   = (u16)activeCpu->regX[activeCpu->opK];
     as         = selector >> 12;
     xs         = (selector >> 8) & Mask4;
@@ -5639,8 +5556,8 @@ static void cp180Op81(Cpu180Context *activeCpu)  // 81  SMULT      MIGDS 2-16
         cpu180SetMonitorCondition(activeCpu, MCR52); // address specification error
         return;
         }
-    disp       = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ) << 3;
-    pva        = (pva & RingSegMask) | ((pva + disp) & Mask32);
+    disp       = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ) << 3;
+    pva        = (pva & RingSegMask) | (u32)(pva + disp);
     selector   = (u16)activeCpu->regX[activeCpu->opK];
     as         = selector >> 12;
     xs         = (selector >> 8) & Mask4;
@@ -5694,7 +5611,7 @@ static void cp180Op82(Cpu180Context *activeCpu)  // 82  LX         MIGDS 2-12
         cpu180SetMonitorCondition(activeCpu, MCR52);
         return;
         }
-    if (activeCpu->opQ < 0x8000)
+    if (activeCpu->opQ <= 0x7fff)
         {
         byteNum = (u32)Aj + ((u32)activeCpu->opQ << 3);
         }
@@ -5730,7 +5647,7 @@ static void cp180Op83(Cpu180Context *activeCpu)  // 83  SX         MIGDS 2-12
         cpu180SetMonitorCondition(activeCpu, MCR52);
         return;
         }
-    if (activeCpu->opQ < 0x8000)
+    if (activeCpu->opQ <= 0x7fff)
         {
         byteNum = (u32)Aj + ((u32)activeCpu->opQ << 3);
         }
@@ -5766,8 +5683,8 @@ static void cp180Op84(Cpu180Context *activeCpu)  // 84  LA         MIGDS 2-15
     u64 r2;
 
     Aj   = activeCpu->regA[activeCpu->opJ];
-    disp = (activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
-    pva  = (Aj & RingSegMask) | ((Aj + disp) & Mask32);
+    disp = (activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
+    pva  = (Aj & RingSegMask) | (u32)(Aj + disp);
     if (cpu180GetBytes(activeCpu, pva, 6, RingOf(pva), AccessModeRead, &addr))
         {
         r1 = addr & RingMask;
@@ -5796,8 +5713,8 @@ static void cp180Op85(Cpu180Context *activeCpu)  // 85  SA         MIGDS 2-15
     u64 pva;
 
     Aj   = activeCpu->regA[activeCpu->opJ];
-    disp = (activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
-    pva  = (Aj & RingSegMask) | ((Aj + disp) & Mask32);
+    disp = (activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
+    pva  = (Aj & RingSegMask) | (u32)(Aj + disp);
     (void)cpu180PutBytes(activeCpu, pva, RingOf(pva), activeCpu->regA[activeCpu->opK], 6);
     }
 
@@ -5807,8 +5724,8 @@ static void cp180Op86(Cpu180Context *activeCpu)  // 86  LBYTP,j    MIGDS 2-13
     u64 pva;
     u64 word;
 
-    disp = (activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
-    pva  = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+    disp = (activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
+    pva  = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
     if (cpu180GetBytes(activeCpu, pva, (activeCpu->opJ & Mask3) + 1, RingOf(pva), AccessModeExecute, &word))
         {
         activeCpu->regX[activeCpu->opK] = word;
@@ -5838,8 +5755,8 @@ static void cp180Op88(Cpu180Context *activeCpu)  // 88  LBIT       MIGDS 2-14
         offset |= 0xf0000000;
         }
     Aj  = activeCpu->regA[activeCpu->opJ];
-    q   = (activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
-    pva = (Aj & RingSegMask) | ((Aj + offset + q) & Mask32);
+    q   = (activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
+    pva = (Aj & RingSegMask) | (u32)(Aj + offset + q);
     if (cpu180GetBytes(activeCpu, pva, 1, RingOf(pva), AccessModeRead, &word))
         {
         activeCpu->regX[activeCpu->opK] = (word >> (7 - (activeCpu->regX[0] & Mask3))) & 1;
@@ -5865,8 +5782,8 @@ static void cp180Op89(Cpu180Context *activeCpu)  // 89  SBIT       MIGDS 2-14
         offset |= 0xf0000000;
         }
     Aj  = activeCpu->regA[activeCpu->opJ];
-    q   = (activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
-    pva = (Aj & RingSegMask) | ((Aj + offset + q) & Mask32);
+    q   = (activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
+    pva = (Aj & RingSegMask) | (u32)(Aj + offset + q);
     if (cpu180ValidateAccess(activeCpu, pva, RingOf(pva), AccessModeWrite, &cond) == FALSE
         || cpu180PvaToRma(activeCpu, pva, AccessModeNone, &rma, &pti, &cond) == FALSE) // cause page fault if page not in memory
         {
@@ -5893,7 +5810,7 @@ static void cp180Op8A(Cpu180Context *activeCpu)  // 8A  ADDRQ      MIGDS 2-22
     u32 sum;
 
     if (cpu180AddInt32(activeCpu, activeCpu->regX[activeCpu->opJ] & Mask32,
-                       (activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ, &sum))
+                       (activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ, &sum))
         {
         activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | sum;
         }
@@ -5904,7 +5821,7 @@ static void cp180Op8B(Cpu180Context *activeCpu)  // 8B  ADDXQ      MIGDS 2-20
     u64 sum;
 
     if (cpu180AddInt64(activeCpu, activeCpu->regX[activeCpu->opJ],
-                       (activeCpu->opQ < 0x8000) ? (u64)activeCpu->opQ : 0xffffffffffff0000 | (u64)activeCpu->opQ, &sum))
+                       (activeCpu->opQ <= 0x7fff) ? (u64)activeCpu->opQ : 0xffffffffffff0000 | (u64)activeCpu->opQ, &sum))
         {
         activeCpu->regX[activeCpu->opK] = sum;
         }
@@ -5915,7 +5832,7 @@ static void cp180Op8C(Cpu180Context *activeCpu)  // 8C  MULRQ      MIGDS 2-23
     u32 product;
 
     if (cpu180MulInt32(activeCpu, activeCpu->regX[activeCpu->opJ] & Mask32,
-                       (activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ, &product))
+                       (activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ, &product))
         {
         activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | product;
         }
@@ -5923,7 +5840,7 @@ static void cp180Op8C(Cpu180Context *activeCpu)  // 8C  MULRQ      MIGDS 2-23
 
 static void cp180Op8D(Cpu180Context *activeCpu)  // 8D  ENTE       MIGDS 2-30
     {
-    if (activeCpu->opQ < 0x8000)
+    if (activeCpu->opQ <= 0x7fff)
         {
         activeCpu->regX[activeCpu->opK] = (u64)activeCpu->opQ;
         }
@@ -5937,8 +5854,8 @@ static void cp180Op8E(Cpu180Context *activeCpu)  // 8E  ADDAQ      MIGDS 2-29
     {
     u32 disp;
 
-    disp = (activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
-    activeCpu->regA[activeCpu->opK] = (activeCpu->regA[activeCpu->opJ] & RingSegMask) | ((activeCpu->regA[activeCpu->opJ] + disp) & Mask32);
+    disp = (activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
+    activeCpu->regA[activeCpu->opK] = (activeCpu->regA[activeCpu->opJ] & RingSegMask) | (u32)(activeCpu->regA[activeCpu->opJ] + disp);
     }
 
 static void cp180Op8F(Cpu180Context *activeCpu)  // 8F  ADDPXQ     MIGDS 2-29
@@ -5947,8 +5864,8 @@ static void cp180Op8F(Cpu180Context *activeCpu)  // 8F  ADDPXQ     MIGDS 2-29
     u64 XjR;
 
     XjR  = (((activeCpu->opJ == 0) ? 0 : activeCpu->regX[activeCpu->opJ]) << 1) & Mask32;
-    disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-    activeCpu->regA[activeCpu->opK] = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + XjR + (u64)disp) & Mask32);
+    disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
+    activeCpu->regA[activeCpu->opK] = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + XjR + disp);
     }
 
 static void cp180Op90(Cpu180Context *activeCpu)  // 90  BRREQ      MIGDS 2-25
@@ -5961,8 +5878,8 @@ static void cp180Op90(Cpu180Context *activeCpu)  // 90  BRREQ      MIGDS 2-25
     XkR = (activeCpu->opK == 0) ? 0 : (activeCpu->regX[activeCpu->opK] & Mask32);
     if (XjR == XkR)
         {
-        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+        disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
         }
     }
 
@@ -5976,8 +5893,8 @@ static void cp180Op91(Cpu180Context *activeCpu)  // 91  BRRNE      MIGDS 2-25
     XkR = (activeCpu->opK == 0) ? 0 : (activeCpu->regX[activeCpu->opK] & Mask32);
     if (XjR != XkR)
         {
-        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+        disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
         }
     }
 
@@ -5991,8 +5908,8 @@ static void cp180Op92(Cpu180Context *activeCpu)  // 92  BRRGT      MIGDS 2-25
     XkR = (activeCpu->opK == 0) ? 0 : (activeCpu->regX[activeCpu->opK] & Mask32);
     if (XjR > XkR)
         {
-        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+        disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
         }
     }
 
@@ -6006,8 +5923,8 @@ static void cp180Op93(Cpu180Context *activeCpu)  // 93  BRRGE      MIGDS 2-25
     XkR = (activeCpu->opK == 0) ? 0 : (activeCpu->regX[activeCpu->opK] & Mask32);
     if (XjR >= XkR)
         {
-        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+        disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
         }
     }
 
@@ -6021,8 +5938,8 @@ static void cp180Op94(Cpu180Context *activeCpu)  // 94  BRXEQ      MIGDS 2-25
     Xk = (activeCpu->opK == 0) ? 0 : activeCpu->regX[activeCpu->opK];
     if (Xj == Xk)
         {
-        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+        disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
         }
     }
 
@@ -6036,8 +5953,8 @@ static void cp180Op95(Cpu180Context *activeCpu)  // 95  BRXNE      MIGDS 2-25
     Xk = (activeCpu->opK == 0) ? 0 : activeCpu->regX[activeCpu->opK];
     if (Xj != Xk)
         {
-        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+        disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
         }
     }
 
@@ -6051,8 +5968,8 @@ static void cp180Op96(Cpu180Context *activeCpu)  // 96  BRXGT      MIGDS 2-25
     Xk = (activeCpu->opK == 0) ? 0 : activeCpu->regX[activeCpu->opK];
     if (Xj > Xk)
         {
-        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+        disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
         }
     }
 
@@ -6066,8 +5983,8 @@ static void cp180Op97(Cpu180Context *activeCpu)  // 97  BRXGE      MIGDS 2-25
     Xk = (activeCpu->opK == 0) ? 0 : activeCpu->regX[activeCpu->opK];
     if (Xj >= Xk)
         {
-        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+        disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
         }
     }
 
@@ -6084,8 +6001,8 @@ static void cp180Op98(Cpu180Context *activeCpu)  // 98  BRFEQ      MIGDS 2-87
         {
         if (valence == 0)
             {
-            disp             = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-            activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+            disp             = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
+            activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
             }
         }
     }
@@ -6103,8 +6020,8 @@ static void cp180Op99(Cpu180Context *activeCpu)  // 99  BRFNE      MIGDS 2-87
         {
         if (valence != 0)
             {
-            disp             = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-            activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+            disp             = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
+            activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
             }
         }
     }
@@ -6122,8 +6039,8 @@ static void cp180Op9A(Cpu180Context *activeCpu)  // 9A  BRFGT      MIGDS 2-87
         {
         if (valence > 0)
             {
-            disp             = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-            activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+            disp             = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
+            activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
             }
         }
     }
@@ -6141,8 +6058,8 @@ static void cp180Op9B(Cpu180Context *activeCpu)  // 9B  BRFGE      MIGDS 2-87
         {
         if (valence >= 0)
             {
-            disp             = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-            activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+            disp             = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
+            activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
             }
         }
     }
@@ -6155,8 +6072,8 @@ static void cp180Op9C(Cpu180Context *activeCpu)  // 9C  BRINC      MIGDS 2-26
     Xj = (activeCpu->opJ == 0) ? 0 : (i64)activeCpu->regX[activeCpu->opJ];
     if (Xj > (i64)activeCpu->regX[activeCpu->opK])
         {
-        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+        disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
         activeCpu->regX[activeCpu->opK] += 1;
         }
     }
@@ -6173,8 +6090,8 @@ static void cp180Op9D(Cpu180Context *activeCpu)  // 9D  BRSEG      MIGDS 2-26
     Ak = activeCpu->regA[activeCpu->opK];
     if ((Aj & SegMask) != (Ak & SegMask))
         {
-        disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+        disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
         }
     else
         {
@@ -6201,8 +6118,8 @@ static void cp180Op9E(Cpu180Context *activeCpu)  // 9E  BR---      MIGDS 2-88
     u64 brExit;
     u32 disp;
 
-    disp     = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-    brExit   = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+    disp     = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
+    brExit   = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
     exponent = (u16)((activeCpu->regX[activeCpu->opK] >> 48) & 0x7fff);
     switch (activeCpu->opJ & Mask2)
         {
@@ -6234,8 +6151,8 @@ static void cp180Op9F(Cpu180Context *activeCpu)  // 9F  BRCR       MIGDS 2-142
     u16 mask;
 
     mask   = bitSelectors[activeCpu->opJ];
-    disp   = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-    brExit = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+    disp   = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
+    brExit = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
 
     switch (activeCpu->opK & Mask3)
         {
@@ -6460,7 +6377,7 @@ static void cp180OpA8(Cpu180Context *activeCpu)  // A8  SHFC       MIGDS 2-33
     u8  shift;
 
     shift = (((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask8) + activeCpu->opD) & Mask8;
-    if (shift < 0x80)
+    if (shift < 0x80U)
         {
         shift = 64 - (shift & Mask6);
         }
@@ -6482,7 +6399,7 @@ static void cp180OpA9(Cpu180Context *activeCpu)  // A9  SHFX       MIGDS 2-33
     u8 shift;
 
     shift = (((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask8) + activeCpu->opD) & Mask8;
-    if (shift < 0x80)
+    if (shift < 0x80U)
         {
         activeCpu->regX[activeCpu->opK] = activeCpu->regX[activeCpu->opJ] << (shift & Mask6);
         }
@@ -6507,7 +6424,7 @@ static void cp180OpAA(Cpu180Context *activeCpu)  // AA  SHFR       MIGDS 2-33
 
     XjR   = activeCpu->regX[activeCpu->opJ] & Mask32;
     shift = (u8)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask8) + activeCpu->opD) & Mask8);
-    if (shift < 0x80)
+    if (shift < 0x80U)
         {
         activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | (u64)(XjR << (shift & Mask5));
         }
@@ -6589,6 +6506,8 @@ static void cp180OpAE(Cpu180Context *activeCpu)  // AE  INSB       MIGDS 2-36
 
 static void cp180OpB0(Cpu180Context *activeCpu)  // B0  CALLREL    MIGDS 2-125
     {
+    u64              Aj;
+    u64              Ak;
     u8               at;
     u64              callee;
     u32              disp;
@@ -6598,8 +6517,10 @@ static void cp180OpB0(Cpu180Context *activeCpu)  // B0  CALLREL    MIGDS 2-125
     u8               xs;
     u8               xt;
 
-    disp   = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ) << 3;
-    callee = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & 0xfffffff8);
+    Aj     = activeCpu->regA[activeCpu->opJ];
+    Ak     = activeCpu->regA[activeCpu->opK];
+    disp   = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ) << 3;
+    callee = (activeCpu->regP & RingSegMask) | (u32)((activeCpu->regP + disp) & 0xfffffff8);
     xs     = (activeCpu->regX[0] >> 8) & Mask4;
     at     = (activeCpu->regX[0] >> 4) & Mask4;
     xt     = activeCpu->regX[0] & Mask4;
@@ -6616,8 +6537,8 @@ static void cp180OpB0(Cpu180Context *activeCpu)  // B0  CALLREL    MIGDS 2-125
     activeCpu->regA[0]   = activeCpu->regTos[ring - 1] = sfsa + frameSize;
     activeCpu->regA[1]   = activeCpu->regA[0];
     activeCpu->regA[2]   = sfsa;
-    activeCpu->regA[3]   = activeCpu->regA[activeCpu->opJ];
-    activeCpu->regA[4]   = activeCpu->regA[activeCpu->opK];
+    activeCpu->regA[3]   = Aj;
+    activeCpu->regA[4]   = Ak;
     activeCpu->regFlags &= 0x3fff; // clear CFF and OCF
     activeCpu->nextP     = callee;
 
@@ -6640,8 +6561,8 @@ static void cp180OpB1(Cpu180Context *activeCpu)  // B1  KEYPOINT   MIGDS 2-133
     if ((activeCpu->regKmr & mask) != 0 && (activeCpu->regFlags & 0x2000) != 0)
         {
         XkR  = (activeCpu->opK == 0) ? 0 : (u32)activeCpu->regX[activeCpu->opK];
-        disp = (activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
-        kpe  = ((cpu180FreeRunningCounter & Mask28) << 36) | ((u64)activeCpu->opJ << 32) | ((XkR + disp) & Mask32);
+        disp = (activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
+        kpe  = ((cpu180FreeRunningCounter & Mask28) << 36) | ((u64)activeCpu->opJ << 32) | (u32)(XkR + disp);
         if (cpu180ValidateAccess(activeCpu, activeCpu->regKbp, RingOf(activeCpu->regKbp), AccessModeWrite, &cond) == FALSE
             || cpu180PvaToRma(activeCpu, activeCpu->regKbp, AccessModeWrite, &rma, &pti, &cond) == FALSE)
             {
@@ -6664,7 +6585,7 @@ static void cp180OpB2(Cpu180Context *activeCpu)  // B2  MULXQ      MIGDS 2-21
     u64 product;
 
     if (cpu180MulInt64(activeCpu, activeCpu->regX[activeCpu->opJ],
-        (activeCpu->opQ < 0x8000) ? (u64)activeCpu->opQ : 0xffffffffffff0000 | (u64)activeCpu->opQ, &product))
+        (activeCpu->opQ <= 0x7fff) ? (u64)activeCpu->opQ : 0xffffffffffff0000 | (u64)activeCpu->opQ, &product))
         {
         activeCpu->regX[activeCpu->opK] = product;
         }
@@ -6707,7 +6628,7 @@ static void cp180OpB4(Cpu180Context *activeCpu)  // B4  CMPXA      MIGDS 2-134
         cpu180SetMonitorCondition(activeCpu, cond);
         return;
         }
-    disp     = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
+    disp     = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
     Xk       = activeCpu->regX[activeCpu->opK];
     wordAddr = rma >> 3;
     cpuAcquireMemoryMutex();
@@ -6715,7 +6636,7 @@ static void cp180OpB4(Cpu180Context *activeCpu)  // B4  CMPXA      MIGDS 2-134
     cpMem[pti] |= (u64)2 << 60; // set page used bit
     if ((word & LeftMask) == LeftMask)
         {
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
         }
     else if (Xk == word)
         {
@@ -6745,6 +6666,7 @@ static void cp180OpB4(Cpu180Context *activeCpu)  // B4  CMPXA      MIGDS 2-134
 static void cp180OpB5(Cpu180Context *activeCpu)  // B5  CALLSEG    MIGDS 2-122
     {
     u64              Aj;
+    u64              Ak;
     u8               at;
     u64              bsp;
     u64              callee;
@@ -6764,14 +6686,15 @@ static void cp180OpB5(Cpu180Context *activeCpu)  // B5  CALLSEG    MIGDS 2-122
     u8               xs;
     u8               xt;
 
+    Ak = activeCpu->regA[activeCpu->opK];
     Aj = activeCpu->regA[activeCpu->opJ];
     if ((Aj & Mask3) != 0)
         {
         cpu180SetMonitorCondition(activeCpu, MCR52); // Address specification error
         return;
         }
-    disp = ((activeCpu->opQ < 0x8000) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ) << 3;
-    bsp  = (Aj & RingSegMask) | (((Aj & Mask32) + disp) & Mask32);
+    disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ) << 3;
+    bsp  = (Aj & RingSegMask) | (u32)(Aj + disp);
     if (cpu180IsBindingSectionRef(activeCpu, bsp) == FALSE)
         {
         activeCpu->regUtp = bsp;
@@ -6804,7 +6727,7 @@ static void cp180OpB5(Cpu180Context *activeCpu)  // B5  CALLSEG    MIGDS 2-122
     traceCodebasePointer(activeCpu, bsp, rma, cbp);
 #endif
 
-    if (((callee & Mask3) != 0) || (callee & 0x80000000) != 0)
+    if (((callee & Mask3) != 0) || Is32BitNeg(callee))
         {
         activeCpu->regUtp = callee;
         cpu180SetMonitorCondition(activeCpu, MCR52); // Address specification error
@@ -6875,7 +6798,7 @@ static void cp180OpB5(Cpu180Context *activeCpu)  // B5  CALLSEG    MIGDS 2-122
     activeCpu->regA[2] = sfsa;
     if (vmid == 0)
         {
-        activeCpu->regA[4] = activeCpu->regA[activeCpu->opK];
+        activeCpu->regA[4] = Ak;
         }
     activeCpu->regVmid   = vmid;
     activeCpu->regFlags &= 0x3fff; // clear CFF and OCF
@@ -6883,6 +6806,11 @@ static void cp180OpB5(Cpu180Context *activeCpu)  // B5  CALLSEG    MIGDS 2-122
 #if CcDebug == 1
     traceCall(activeCpu, activeCpu->nextP);
 #endif
+
+    if (vmid == 1) // call 170 procedure
+        {
+        cpu180Set170State(activeCpu, activeCpu->nextP);
+        }
     }
 
 static void cp180OpC0(Cpu180Context *activeCpu)  // C0  EXECUTE,0  MIGDS 2-137
@@ -7040,7 +6968,7 @@ static void cp180OpE4(Cpu180Context *activeCpu)  // E4  SCLN       MIGDS 2-49
                         }
                     }
                 }
-            else if (power < 0x80)
+            else if (power < 0x80U)
                 {
                 isOk = FALSE;
                 memset(operand.value, 0, sizeof(operand.value));
@@ -7116,7 +7044,7 @@ static void cp180OpE5(Cpu180Context *activeCpu)  // E5  SCLR       MIGDS 2-49
                         }
                     }
                 }
-            else if (power < 0x80)
+            else if (power < 0x80U)
                 {
                 isOk = FALSE;
                 memset(operand.value, 0, sizeof(operand.value));
@@ -7187,7 +7115,7 @@ static void cp180OpE9(Cpu180Context *activeCpu)  // E9  CMPC       MIGDS 2-52
             cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
             }
-        trnPva = (RingSegMask & activeCpu->regA[activeCpu->opI]) | ((activeCpu->regA[activeCpu->opI] + activeCpu->opD) & Mask32);
+        trnPva = (RingSegMask & activeCpu->regA[activeCpu->opI]) | (u32)(activeCpu->regA[activeCpu->opI] + activeCpu->opD);
         if (bdp180CopyToBuf(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, srcBuf) == FALSE
             || bdp180CopyToBuf(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, dstBuf) == FALSE
             || bdp180CopyToBuf(activeCpu, trnPva, 256, trnBuf) == FALSE)
@@ -7269,7 +7197,7 @@ static void cp180OpEB(Cpu180Context *activeCpu)  // EB  TRANB      MIGDS 2-54
             buf[i] = 0x20;
             }
         Ai  = activeCpu->regA[activeCpu->opI];
-        pva = (Ai & RingSegMask) | ((Ai + activeCpu->opD) & Mask32);
+        pva = (Ai & RingSegMask) | (u32)(Ai + activeCpu->opD);
         if (bdp180CopyToBuf(activeCpu, pva, 256, table) == FALSE)
             {
             return;
@@ -7388,7 +7316,7 @@ static void cp180OpED(Cpu180Context *activeCpu)  // ED  EDIT       MIGDS 2-55
         sLim = sp + activeCpu->srcDesc.length;
         sn   = FALSE;
         }
-    maskPva = (RingSegMask & activeCpu->regA[activeCpu->opI]) | ((activeCpu->regA[activeCpu->opI] + activeCpu->opD) & Mask32);
+    maskPva = (RingSegMask & activeCpu->regA[activeCpu->opI]) | (u32)(activeCpu->regA[activeCpu->opI] + activeCpu->opD);
     if (bdp180CopyToBuf(activeCpu, maskPva, 1, maskBuf) == FALSE) // fetch the length byte
         {
         return;
@@ -7815,7 +7743,7 @@ static void cp180OpF3(Cpu180Context *activeCpu)  // F3  SCNB       MIGDS 2-54
             cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
             }
-        tPva = (activeCpu->regA[activeCpu->opI] & RingSegMask) | ((activeCpu->regA[activeCpu->opI] + activeCpu->opD) & Mask32);
+        tPva = (activeCpu->regA[activeCpu->opI] & RingSegMask) | (u32)(activeCpu->regA[activeCpu->opI] + activeCpu->opD);
         if (bdp180CopyToBuf(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, dstBuf) == FALSE
             || bdp180CopyToBuf(activeCpu, tPva, 32, table) == FALSE)
             {
@@ -7841,7 +7769,7 @@ static void cp180OpF3(Cpu180Context *activeCpu)  // F3  SCNB       MIGDS 2-54
             i += 1;
             }
         activeCpu->regX[0] = (activeCpu->regX[0] & LeftMask) | activeCpu->dstDesc.length;
-        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | 0x80000000;
+        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | 0x80000000U;
         }
     }
 

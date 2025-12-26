@@ -112,7 +112,9 @@ static FcStatus ddpFunc(PpWord funcCode);
 static void ddpIo(void);
 static void ddpActivate(void);
 static void ddpDisconnect(void);
+#if DEBUG
 static char *ddpFunc2String(PpWord funcCode);
+#endif
 
 /*
 **  ----------------
@@ -226,7 +228,7 @@ static FcStatus ddpFunc(PpWord funcCode)
     case FcDdpWriteECS:
     case FcDdpMaintModeWrite:
         dc->curword = 0;
-
+        // fall through
     case FcDdpReadECS:
     case FcDdpReadOne:
     case FcDdpStatus:
@@ -280,9 +282,11 @@ static void ddpIo(void)
     u32        addr;
     DdpContext *dc;
     bool       isFlagReg = FALSE;
-    bool       isMaint   = FALSE;
     bool       isRead    = FALSE;
     bool       isReadOne = FALSE;
+#if DEBUG
+    bool       isMaint   = FALSE;
+#endif
 
     dc = (DdpContext *)(activeDevice->context[0]);
 
@@ -309,7 +313,7 @@ static void ddpIo(void)
     case FcDdpFlagRegister:
     case FcDdpMaintModeRead:
         isRead = TRUE;
-
+        // fall through
     case FcDdpWriteECS:
     case FcDdpMaintModeWrite:
         if (dc->abyte < 2)
@@ -409,13 +413,11 @@ static void ddpIo(void)
                 if ((extMemType == ECS) || (extMaxMemory <= 2 * 1024 * 1024))
                     {
                     isReadOne = (dc->addr & DdpAddrReadOne) != 0;
-                    isMaint   = (dc->addr & DdpAddrMaint) != 0;
                     addr      = dc->addr & Mask21;
                     }
                 else
                     {
                     isReadOne = activeDevice->fcode == FcDdpReadOne;
-                    isMaint   = activeDevice->fcode == FcDdpMaintModeRead;
                     addr      = dc->addr & Mask24;
                     }
                 if (dc->dbyte == -1)
@@ -567,6 +569,7 @@ static void ddpDisconnect(void)
     activeChannel->discAfterInput = FALSE;
     }
 
+#if DEBUG
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert function code to string.
 **
@@ -580,7 +583,6 @@ static char *ddpFunc2String(PpWord funcCode)
     {
     static char buf[40];
 
-#if DEBUG
     switch (funcCode)
         {
     case FcDdpReadECS:
@@ -607,10 +609,12 @@ static char *ddpFunc2String(PpWord funcCode)
     case FcDdpSelectEsmMode:
         return "FcDdpSelectEsmMode";
         }
-#endif
+
     sprintf(buf, "(ddp    ) Unknown Function: %04o", funcCode);
 
     return (buf);
     }
+
+#endif
 
 /*---------------------------  End Of File  ------------------------------*/

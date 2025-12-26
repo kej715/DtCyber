@@ -668,9 +668,7 @@ static void csFeiInitiateConnection(FeiParam *feip)
     u_long blockEnable = 1;
 #else
     int fd;
-    int optVal;
 #endif
-    int optEnable = 1;
 
     currentTime = getSeconds();
     if (feip->nextConnectionAttempt > currentTime)
@@ -864,8 +862,7 @@ static void csFeiIo(void)
                                          | feip->inputBuffer.data[di + 3];
             feip->state            = StCsFeiRecvLCP1;
             feip->inputBuffer.out += 4;
-
-        // fall through
+            // fall through
         case StCsFeiRecvLCP1:
             if (feip->inputBuffer.in - feip->inputBuffer.out < activeDevice->recordLength)
                 {
@@ -917,8 +914,7 @@ static void csFeiIo(void)
             feip->inputBuffer.in       = i;
             feip->state                = StCsFeiRecvLCP2;
             activeDevice->recordLength = PpWordsPerLCP;
-
-        // fall through
+            // fall through
         case StCsFeiRecvLCP2:
             if (activeChannel->full == FALSE)
                 {
@@ -956,8 +952,7 @@ static void csFeiIo(void)
                                          | feip->inputBuffer.data[di + 3];
             feip->state            = StCsFeiRecvSubsegment1;
             feip->inputBuffer.out += 4;
-
-        // fall through
+            // fall through
         case StCsFeiRecvSubsegment1:
             if (feip->inputBuffer.in - feip->inputBuffer.out < activeDevice->recordLength)
                 {
@@ -985,8 +980,7 @@ static void csFeiIo(void)
             feip->inputBuffer.in       = i;
             feip->state                = StCsFeiRecvSubsegment2;
             activeDevice->recordLength = recordLength;
-
-        // fall through
+            // fall through
         case StCsFeiRecvSubsegment2:
             if (activeChannel->full == FALSE)
                 {

@@ -1009,7 +1009,7 @@ bool float180ConvertFloatToInt(Cpu180Context *ctx, u64 floatValue, u64 *intResul
         {
         float180NormalizeFloat(&exponent, &coefficient);
         shift = exponent - BIAS;
-        if (shift > 0 && shift < 0x8000)
+        if (shift > 0 && shift < 0x8000U)
             {
             if (shift < 48)
                 {
@@ -1578,7 +1578,7 @@ bool float180MulFloat(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *product)
         loCoeff128  = (u64)p128;
         hiCoeff128  = (u64)(p128 >> 64);
 #endif
-        if (hiCoeff128 >= 0x80000000)
+        if (hiCoeff128 >= 0x80000000U)
             {
             coeffResult = (hiCoeff128 << 16) | (loCoeff128 >> 48);
             }
