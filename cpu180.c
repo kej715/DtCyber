@@ -229,6 +229,7 @@ static void cpu180CheckMonitorConditions(Cpu180Context *ctx);
 static void cpu180CheckUserConditions(Cpu180Context *ctx);
 static void cpu180Exchange(Cpu180Context *activeCpu);
 static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool ignoreValidity, u32 *pti, u8 *count);
+static void cpu180Get170State(Cpu180Context *ctx);
 static ConditionAction cpu180GetActionForMonitorCondition(Cpu180Context *ctx, MonitorCondition cond);
 static ConditionAction cpu180GetActionForUserCondition(Cpu180Context *ctx, UserCondition cond);
 static bool cpu180GetBdpDescriptor(Cpu180Context *ctx, u64 pva, u8 aRegNum, u8 xRegNum, BdpDescriptor *descriptor);
@@ -1013,6 +1014,11 @@ static u16 bitSelectors[16] =
     0x0002,
     0x0001
     };
+
+/*
+**  The ring and segment assigned to CYBER 170 state
+*/
+static u64 ringSeg170 = 0;
 
 /*
 **  Maintenance access information for central memory
@@ -2591,47 +2597,16 @@ void cpu180Step(Cpu180Context *activeCpu)
 **                  referenced by a specified real memory word address.
 **
 **  Parameters:     Name        Description.
-**                  ctx180      pointer to CYBER 180 CPU context
+**                  ctx         pointer to CYBER 180 CPU context
 **                  xpa         word address of exchange package
 **
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-void cpu180Store170Xp(Cpu180Context *ctx180, u32 xpa)
+void cpu180Store170Xp(Cpu180Context *ctx, u32 xpa)
     {
-    Cpu170Context *ctx170;
-    int           i;
-    u64           ring;
-    u64           word;
-
-    ctx170          = &cpus170[ctx180->id];
-    ctx180->regP    = (ctx180->regP170 & LeftMask)
-                      | ((ctx170->regRaCm + ctx170->regP) << 3)
-                      | (((4 - (ctx170->opOffset / 15)) & 3) << 1);
-    ring            = ctx180->regP & RingMask;
-    ctx180->regA[3] = ring | ((u64)ctx170->exitMode << 20) | ctx170->regRaCm;
-    ctx180->regA[4] = ring | (ctx170->isMonitorMode ? (u64)1 << 32 : 0) | ctx170->regFlCm;
-    ctx180->regA[5] = ring | (ctx170->isStopped ? (u64)1 << 32 : 0) | ctx170->regMa;
-    ctx180->regA[6] = ring | ctx170->regRaEcs;
-    ctx180->regA[7] = ring | ctx170->regFlEcs;
-    for (i = 0; i < 8; i++)
-        {
-        ctx180->regA[i + 8] = ring | ctx170->regA[i];
-        }
-    for (i = 1; i < 8; i++)
-        {
-        ctx180->regX[i] = ctx170->regB[i];
-        }
-    for (i = 0; i < 8; i++)
-        {
-        word = ctx170->regX[i];
-        if ((word & 0x0800000000000000) != 0)
-            {
-            word |= 0xf000000000000000;
-            }
-        ctx180->regX[i + 8] = word;
-        }
-    cpu180Store180Xp(ctx180, xpa);
+    cpu180Get170State(ctx);
+    cpu180Store180Xp(ctx, xpa);
 
 #if CcDebug == 1
     traceExchange170(ctx170, xpa << 3, NULL, (traceMask & TraceCpu180) != 0);
@@ -2709,20 +2684,16 @@ void cpu180Trap(Cpu180Context *ctx)
     {
     u64              bsp;
     u64              cbp;
-    Cpu170Context    *ctx170;
     MonitorCondition cond;
-    int              i;
     bool             isExt;
     u32              frameSize;
     u32              pti;
     u64              pva;
     u8               r2;
     u8               ring;
-    u64              ring64;
     u32              rma;
     u64              sfsa;
     u8               vmid;
-    u64              word;
 
 #if CcDebug == 1
     traceTrap(ctx);
@@ -2749,34 +2720,7 @@ void cpu180Trap(Cpu180Context *ctx)
         }
     if (ctx->regVmid == 1) // map 170 to 180 exchange package
         {
-        ctx170       = &cpus170[ctx->id];
-        ctx->regP    = (ctx->regP170 & LeftMask)
-                       | ((ctx170->regRaCm + ctx170->regP) << 3)
-                       | (((4 - (ctx170->opOffset / 15)) & 3) << 1);
-        ctx->nextP   = ctx->regP;
-        ring64       = ctx->regP & RingMask;
-        ctx->regA[3] = ring64 | ((u64)ctx170->exitMode << 20) | ctx170->regRaCm;
-        ctx->regA[4] = ring64 | (ctx170->isMonitorMode ? (u64)1 << 32 : 0) | ctx170->regFlCm;
-        ctx->regA[5] = ring64 | ctx170->regMa;
-        ctx->regA[6] = ring64 | ctx170->regRaEcs;
-        ctx->regA[7] = ring64 | ctx170->regFlEcs;
-        for (i = 0; i < 8; i++)
-            {
-            ctx->regA[i + 8] = ring64 | ctx170->regA[i];
-            }
-        for (i = 1; i < 8; i++)
-            {
-            ctx->regX[i] = ctx170->regB[i];
-            }
-        for (i = 0; i < 8; i++)
-            {
-            word = ctx170->regX[i];
-            if ((word & 0x0800000000000000) != 0)
-                {
-                word |= 0xf000000000000000;
-                }
-            ctx->regX[i + 8] = word;
-            }
+        cpu180Get170State(ctx);
         }
     if (cpu180PushFrame(ctx, 0xf, 0x0, 0xf, TRUE, &sfsa, &frameSize) == FALSE)
         {
@@ -3189,6 +3133,52 @@ static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool ignore
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Copy the CYBER 170 state registers to the CYBER 180 state
+**                  registers.
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CYBER 180 CPU context
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void cpu180Get170State(Cpu180Context *ctx)
+    {
+    Cpu170Context *ctx170;
+    u8            i;
+    u64           ring;
+    u64           word;
+
+    ctx170       = &cpus170[ctx->id];
+    ctx->regP    = ringSeg170
+                   | ((ctx170->regRaCm + ctx170->regP) << 3)
+                   | (((4 - (ctx170->opOffset / 15)) & 3) << 1);
+    ring         = ctx->regP & RingMask;
+    ctx->regA[3] = ring | ((u64)ctx170->exitMode << 20) | ctx170->regRaCm;
+    ctx->regA[4] = ring | (ctx170->isMonitorMode ? (u64)1 << 32 : 0) | ctx170->regFlCm;
+    ctx->regA[5] = ring | ctx170->regMa;
+    ctx->regA[6] = ring | ctx170->regRaEcs;
+    ctx->regA[7] = ring | ctx170->regFlEcs;
+    for (i = 0; i < 8; i++)
+        {
+        ctx->regA[i + 8] = ring | ctx170->regA[i];
+        }
+    for (i = 1; i < 8; i++)
+        {
+        ctx->regX[i] = ctx170->regB[i];
+        }
+    for (i = 0; i < 8; i++)
+        {
+        word = ctx170->regX[i];
+        if ((word & 0x0800000000000000) != 0)
+            {
+            word |= 0xf000000000000000;
+            }
+        ctx->regX[i + 8] = word;
+        }
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Get the action associated with a monitor condition
 **
 **  Parameters:     Name        Description.
@@ -3463,7 +3453,7 @@ static bool cpu180IsBindingSectionRef(Cpu180Context *ctx, u64 pva)
 static void cpu180Load170Xp(Cpu180Context *ctx, u32 xpa)
     {
     cpu180Load180Xp(ctx, xpa);
-    ctx->regP170 = cpMem[xpa];
+    ringSeg170 = cpMem[xpa] & LeftMask;
     cpu180Set170State(ctx, ctx->regP);
 
 #if CcDebug == 1
@@ -4132,7 +4122,6 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
     u8               i;
     u64              psap;
     u8               r1;
-    u8               ring;
     u8               ringA2;
     u8               ringNewP;
     u8               ringP;
@@ -4251,11 +4240,10 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
         }
     activeCpu->regFlags        &= 0x3ffe;        // clear CFF, OCF, trap enable, and delay flip-flop
     activeCpu->regFlags        |= desc & 0xc000; // set CFF and OCF per descriptor
-    ring                        = RingOf(activeCpu->nextP);
-    activeCpu->regTos[ring - 1] = activeCpu->regA[1];
-    if (ring > activeCpu->regLrn)
+    activeCpu->regTos[ringNewP - 1] = activeCpu->regA[1];
+    if (ringNewP > activeCpu->regLrn)
         {
-        activeCpu->regLrn = ring;
+        activeCpu->regLrn = ringNewP;
         }
 
 #if CcDebug == 1
@@ -5861,9 +5849,9 @@ static void cp180Op8E(Cpu180Context *activeCpu)  // 8E  ADDAQ      MIGDS 2-29
 static void cp180Op8F(Cpu180Context *activeCpu)  // 8F  ADDPXQ     MIGDS 2-29
     {
     u32 disp;
-    u64 XjR;
+    u32 XjR;
 
-    XjR  = (((activeCpu->opJ == 0) ? 0 : activeCpu->regX[activeCpu->opJ]) << 1) & Mask32;
+    XjR  = ((activeCpu->opJ == 0) ? 0 : activeCpu->regX[activeCpu->opJ]) << 1;
     disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
     activeCpu->regA[activeCpu->opK] = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + XjR + disp);
     }

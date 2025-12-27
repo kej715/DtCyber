@@ -425,7 +425,6 @@ typedef struct
     u8            opK;                  /* k field of current instruction, if applicable */
     u16           opD;                  /* D field of current instruction, if applicable */
     u16           opQ;                  /* Q field of current instruction, if applicable */
-    u64           regP170;              /* P register from most recent exchange to 170 mode */
     BdpDescriptor srcDesc;              /* source descriptor of BDP instruction */
     BdpDescriptor dstDesc;              /* destination descriptor of BDP instruction */
     ConditionAction pendingAction;      /* pending monitor or user condition action */
