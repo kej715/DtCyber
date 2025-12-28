@@ -1,8 +1,10 @@
 /*--------------------------------------------------------------------------
 **
-**  Copyright (c) 2022, Tom Hunter, Kevin Jordan
+**  Copyright (c) 2022, Kevin Jordan
 **
 **  Name: dsa311.c
+**
+**  Author: Kevin Jordan
 **
 **  Description:
 **      Perform emulation of CDC 3000 series 3266 mux with 311 digital

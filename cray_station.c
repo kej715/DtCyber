@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------
 **
-**  Copyright (c) 2003-2021, Kevin Jordan, Tom Hunter
+**  Copyright (c) 2021, Kevin Jordan
 **
 **  Name: cray_station.c
 **
