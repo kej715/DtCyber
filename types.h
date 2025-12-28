@@ -277,6 +277,7 @@ typedef struct
     u32           oldRegP;              /* used in interrupt/exit mode processing */
     u8            oldOpOffset;          /* used in interrupt/exit mode processing */
     bool          floatException;       /* TRUE if CPU detected float exception */
+    bool          doDeadstart;          /* TRUE if deadstart requested */
 
     /*
     **  Instruction word stack.
@@ -401,7 +402,7 @@ typedef struct
     u8            regDi;                /* debug index register */
     u64           regDlp;               /* debug list pointer register */
     u8            regLrn;               /* largest ring number register */
-    u64           regTos[15];           /* top of stack pointer registers */
+    u64           regTos[16];           /* top of stack pointer registers */
     u32           regMps;               /* monitor process state register */
     u32           regJps;               /* job process state register */
     u32           regPta;               /* page table address register */

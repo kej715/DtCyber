@@ -2054,29 +2054,37 @@ void traceTrap(Cpu180Context *cpu)
         {
         return;
         }
-    fprintf(cpuF[cpu->id], "%06d CYBER 180 Trap MCR %04x MMR %04x UCR %04x UMR %04x\n", traceSequenceNo, cpu->regMcr, cpu->regMmr, cpu->regUcr, cpu->regUmr);
-    fprintf(cpuF[cpu->id], "%06d                TP " FMT64_012x " ", traceSequenceNo, cpu->regTp);
+    fprintf(cpuF[cpu->id], "%06d CYBER 180 Trap MCR %04x MMR %04x UCR %04x UMR %04x P " FMT64_012x,
+        traceSequenceNo, cpu->regMcr, cpu->regMmr, cpu->regUcr, cpu->regUmr, cpu->regP);
     utp = cpu->regUtp;
+    if (cpu180PvaToRma(cpu, cpu->regP, AccessModeNone, &rma, &pti, &cond) == FALSE)
+        {
+        fprintf(cpuF[cpu->id], " %s\n", traceMonitorConditionToStr(cond));
+        cpu->regUtp = utp;
+        return;
+        }
+    fprintf(cpuF[cpu->id], " (RMA %08x)\n", rma);
+    fprintf(cpuF[cpu->id], "%06d                TP " FMT64_012x, traceSequenceNo, cpu->regTp);
     if (cpu180PvaToRma(cpu, cpu->regTp, AccessModeNone, &rma, &pti, &cond) == FALSE)
         {
-        fprintf(cpuF[cpu->id], "%s\n", traceMonitorConditionToStr(cond));
+        fprintf(cpuF[cpu->id], " %s\n", traceMonitorConditionToStr(cond));
         cpu->regUtp = utp;
         return;
         }
     cbp   = cpMem[rma >> 3];
     vmid  = (cbp >> 56) & Mask4;
-    fprintf(cpuF[cpu->id], "RMA %08x VMID %x CBP " FMT64_016x " ", rma, vmid, cbp);
+    fprintf(cpuF[cpu->id], " (RMA %08x) VMID %x CBP " FMT64_016x, rma, vmid, cbp);
     isExt = vmid == 0 && ((cbp >> 55) & 1) != 0;
     if (isExt)
         {
         if (cpu180PvaToRma(cpu, cpu->regTp + 8, AccessModeNone, &rma, &pti, &cond) == FALSE)
             {
-            fprintf(cpuF[cpu->id], "%s\n", traceMonitorConditionToStr(cond));
+            fprintf(cpuF[cpu->id], " %s\n", traceMonitorConditionToStr(cond));
             cpu->regUtp = utp;
             return;
             }
         bsp = cpMem[rma >> 3] & Mask48;
-        fprintf(cpuF[cpu->id], "BSP " FMT64_012x, bsp);
+        fprintf(cpuF[cpu->id], " BSP " FMT64_012x, bsp);
         }
     fputs("\n", cpuF[cpu->id]);
     }
