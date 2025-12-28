@@ -511,6 +511,7 @@ void ppInit(u8 count)
         ppu[pp].isDump               = FALSE;
         ppu[pp].isLoad               = FALSE;
         ppu[pp].osBoundsCheckEnabled = FALSE;
+        ppu[pp].isBelowOsBound       = FALSE;
         }
 
     pp = 0;
