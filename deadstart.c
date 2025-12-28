@@ -177,6 +177,9 @@ void deadStart(void)
         ppu[pp].osBoundsCheckEnabled = FALSE;
         ppu[pp].isBelowOsBound       = FALSE;
         ppu[pp].isStopEnabled        = FALSE;
+        ppu[pp].isIdle               = FALSE;
+        ppu[pp].isDump               = FALSE;
+        ppu[pp].isLoad               = FALSE;
         }
 
     /*

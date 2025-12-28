@@ -114,6 +114,7 @@ static bool cpuCmuGetByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 *by
 static void cpuCmuMoveDirect(Cpu170Context *activeCpu);
 static void cpuCmuMoveIndirect(Cpu170Context *activeCpu);
 static bool cpuCmuPutByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 byte);
+static void cpuDeadstart(Cpu170Context *activeCpu);
 static void cpuEcsTransfer(Cpu170Context *activeCpu, bool writeToEcs);
 static void cpuEcsWord(Cpu170Context *activeCpu, bool writeToEcs);
 static void cpuExchangeJump(Cpu170Context *activeCpu, u32 address, bool doChangeMode);
@@ -710,6 +711,21 @@ void cpuStep(Cpu170Context *activeCpu)
     Cpu180Context *ctx180;
     u32           length;
 
+    if (activeCpu->doDeadstart)
+        {
+        if (activeCpu->id < 1)
+            {
+            deadStart();
+            }
+        cpuDeadstart(activeCpu);
+        if (isCyber180)
+            {
+            cpu180MacMasterClearCp(&cpus180[activeCpu->id]);
+            }
+        activeCpu->doDeadstart = FALSE;
+        return;
+        }
+
     /*
     **  If the machine is a CYBER 180, and this CPU is currently in 180 state,
     **  give control to the 180 state step processor. Otherwise, check the
@@ -1233,6 +1249,23 @@ static void *cpuThread(void *param)
 #if !defined(_WIN32)
     return (NULL);
 #endif
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Initiate CPU deadstart.
+**
+**  Parameters:     Name         Description.
+**                  activeCpu    Pointer to CPU context
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void cpuDeadstart(Cpu170Context *activeCpu)
+    {
+    activeCpu->isStopped            = TRUE;
+    activeCpu->isMonitorMode        = FALSE;
+    activeCpu->isErrorExitPending   = FALSE;
+    activeCpu->ppRequestingExchange = -1;
     }
 
 /*--------------------------------------------------------------------------

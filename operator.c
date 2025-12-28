@@ -128,6 +128,9 @@ static int  opStartListening(int port);
 static void opCmdCloseConsoleWindow(bool help, char *cmdParams);
 static void opHelpCloseConsoleWindow(void);
 
+static void opCmdDeadstart(bool help, char *cmdParams);
+static void opHelpDeadstart(void);
+
 static void opCmdDiscRemoteConsole(bool help, char *cmdParams);
 static void opHelpDiscRemoteConsole(void);
 
@@ -247,6 +250,7 @@ static OpCmd decode[] =
     {
     { "ccw",                   opCmdCloseConsoleWindow    },
     { "d",                     opCmdDumpMemory            },
+    { "deadstart",             opCmdDeadstart             },
     { "drc",                   opCmdDiscRemoteConsole     },
     { "dm",                    opCmdDumpMemory            },
     { "e",                     opCmdEnterKeys             },
@@ -1192,6 +1196,52 @@ static void opCmdCloseConsoleWindow(bool help, char *cmdParams)
 static void opHelpCloseConsoleWindow(void)
     {
     opDisplay("    > 'close_console_window' close the local console window.\n");
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Initiate a system deadstart
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdDeadstart(bool help, char *cmdParams)
+    {
+    u8 i;
+
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpDeadstart();
+
+        return;
+        }
+
+    /*
+    **  Check parameters and process command.
+    */
+    if (strlen(cmdParams) != 0)
+        {
+        opDisplay("    > No parameters expected\n");
+        opHelpDeadstart();
+
+        return;
+        }
+
+    for (i = 0; i < cpuCount; i++)
+        {
+        cpus170[i].doDeadstart = TRUE;
+        }
+    }
+
+static void opHelpDeadstart(void)
+    {
+    opDisplay("    > 'deadstart' initiate a system deadstart.\n");
     }
 
 /*--------------------------------------------------------------------------
