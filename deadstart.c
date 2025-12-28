@@ -101,23 +101,18 @@ void deadStart(void)
     u8      pp;
     u8      ch;
 
-    dp = channelAttach(0, 0, DtDeadStartPanel);
-
-    dp->activate     = deadActivate;
-    dp->disconnect   = deadDisconnect;
-    dp->func         = deadFunc;
-    dp->io           = deadIo;
-    dp->selectedUnit = 0;
-
     /*
     **  Set all normal channels to active and empty.
     */
     for (ch = 0; ch < channelCount; ch++)
         {
-        if ((ch <= 013) || ((ch >= 020) && (ch <= 033)))
+        channel[ch].active       = FALSE;
+        channel[ch].full         = FALSE;
+        channel[ch].flag         = FALSE;
+        channel[ch].inputPending = FALSE;
+        if (!channel[ch].hardwired)
             {
-            channel[ch].active = TRUE;
-            channel[ch].full   = FALSE;
+            channel[ch].ioDevice = NULL;
             }
         }
 
@@ -126,6 +121,14 @@ void deadStart(void)
     */
     channel[ChInterlock].active   = (features & HasInterlockReg) != 0;
     channel[ChMaintenance].active = FALSE;
+
+    dp = channelAttach(0, 0, DtDeadStartPanel);
+
+    dp->activate     = deadActivate;
+    dp->disconnect   = deadDisconnect;
+    dp->func         = deadFunc;
+    dp->io           = deadIo;
+    dp->selectedUnit = 0;
 
     /*
     **  Reset deadstart sequencer.
