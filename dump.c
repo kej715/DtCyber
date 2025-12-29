@@ -321,9 +321,9 @@ void dumpCpu(void)
             fprintf(pf, "                     DM %02x\n", cpu180->regDm);
             fputs("\n", pf);
             fprintf(pf, " LRN %d\n", cpu180->regLrn);
-            for (i = 0; i < 15; i++)
+            for (i = 1; i < 16; i++)
                 {
-                fprintf(pf, " TOS[%x] ", i + 1);
+                fprintf(pf, " TOS[%x] ", i);
                 dumpPrintPva(pf, cpu180->regTos[i]);
                 fputs("\n", pf);
                 }

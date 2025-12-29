@@ -3405,9 +3405,9 @@ static void opCmdShowStateCp180(Cpu180Context *cpu)
     opDisplay("\n");
     sprintf(opOutBuf, "    >  LRN %d\n", cpu->regLrn);
     opDisplay(opOutBuf);
-    for (i = 0; i < 15; i++)
+    for (i = 1; i < 16; i++)
         {
-        sprintf(opOutBuf, "    >  TOS[%x] " FMT64_012x "\n", i + 1, cpu->regTos[i]);
+        sprintf(opOutBuf, "    >  TOS[%x] " FMT64_012x "\n", i, cpu->regTos[i]);
         opDisplay(opOutBuf);
         }
     opDisplay("\n");

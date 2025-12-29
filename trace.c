@@ -1740,9 +1740,9 @@ void traceExchange180(Cpu180Context *cpu, u32 addr, char *title)
     fprintf(cpuF[cpu->id], "                     DM %02x\n", cpu->regDm);
     fputs("\n", cpuF[cpu->id]);
     fprintf(cpuF[cpu->id], " LRN %d\n", cpu->regLrn);
-    for (i = 0; i < 15; i++)
+    for (i = 1; i < 16; i++)
         {
-        fprintf(cpuF[cpu->id], " TOS[%x] ", i + 1);
+        fprintf(cpuF[cpu->id], " TOS[%x] ", i);
         tracePrintPva(cpuF[cpu->id], cpu->regTos[i]);
         fputs("\n", cpuF[cpu->id]);
         }
