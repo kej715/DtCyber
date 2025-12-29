@@ -106,7 +106,7 @@ void deadStart(void)
     */
     for (ch = 0; ch < channelCount; ch++)
         {
-        channel[ch].active       = FALSE;
+        channel[ch].active       = (ch <= 013) || ((ch >= 020) && (ch <= 033));
         channel[ch].full         = FALSE;
         channel[ch].flag         = FALSE;
         channel[ch].inputPending = FALSE;
@@ -121,6 +121,14 @@ void deadStart(void)
     */
     channel[ChInterlock].active   = (features & HasInterlockReg) != 0;
     channel[ChMaintenance].active = FALSE;
+    if ((features & HasStatusAndControlReg) != 0)
+        {
+        channel[ChStatusAndControl].active = TRUE;
+        if (ppuCount > 10)
+            {
+            channel[ChStatusAndControl + 020].active = TRUE;
+            }
+        }
 
     dp = channelAttach(0, 0, DtDeadStartPanel);
 
