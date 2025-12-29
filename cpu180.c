@@ -5946,7 +5946,7 @@ static void cp180Op8F(Cpu180Context *activeCpu)  // 8F  ADDPXQ     MIGDS 2-29
     u32 disp;
     u32 XjR;
 
-    XjR  = ((activeCpu->opJ == 0) ? 0 : activeCpu->regX[activeCpu->opJ]) << 1;
+    XjR  = (u32)((activeCpu->opJ == 0) ? 0 : activeCpu->regX[activeCpu->opJ]) << 1;
     disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
     activeCpu->regA[activeCpu->opK] = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + XjR + disp);
     }
