@@ -26,6 +26,8 @@
 **--------------------------------------------------------------------------
 */
 
+#include <stdint.h>
+
 /*
 **  -----------------------
 **  Public Type Definitions
@@ -35,28 +37,29 @@
 /*
 **  Basic types used in emulation.
 */
+#define i8  int8_t
+#define i16 int16_t
+#define i32 int32_t
+#define i64 int64_t
+#define u8  uint8_t
+#define u16 uint16_t
+#define u32 uint32_t
+#define u64 uint64_t
+
 #if defined(_WIN32)
 
-#define HOST_OS_TYPE       "windows"
+#define HOST_OS_TYPE  "windows"
 
 /*
 **  MS Win32 systems
 */
-typedef signed char         i8;
-typedef signed short        i16;
-typedef signed long         i32;
-typedef signed __int64      i64;
-typedef unsigned char       u8;
-typedef unsigned short      u16;
-typedef unsigned long       u32;
-typedef unsigned __int64    u64;
 #define FMT32_08x     "%08I32x"
 #define FMT60_020o    "%020I64o"
 #define FMT64_010x    "%010I64x"
 #define FMT64_016x    "%016I64x"
 #define FMT64_022o    "%022I64o"
 #define FMT64_012x    "%012I64x"
-#define Is32BitNeg(x) (((x) & 0x80000000ULL) != 0)
+#define Is32BitNeg(x) (((x) & 0x80000000UL) != 0)
 #elif defined (__GNUC__) || defined(__SunOS)
 #if defined(__amd64) || defined(__amd64__) || defined(__alpha__) || defined(__powerpc64__) || defined(__ppc64__) \
     || (defined(__sparc64__) && defined(__arch64__)) || defined(__aarch64__) || defined(__x86_64__)
@@ -64,22 +67,14 @@ typedef unsigned __int64    u64;
 /*
 **  64 bit systems
 */
-typedef signed char         i8;
-typedef signed short        i16;
-typedef signed int          i32;
-typedef signed long int     i64;
-typedef signed __int128     i128;
-typedef unsigned char       u8;
-typedef unsigned short      u16;
-typedef unsigned int        u32;
-typedef unsigned long int   u64;
-typedef unsigned __int128   u128;
-#define FMT32_08x     "%08x"
-#define FMT60_020o    "%020lo"
-#define FMT64_010x    "%010lx"
-#define FMT64_016x    "%016lx"
-#define FMT64_022o    "%022lo"
-#define FMT64_012x    "%012lx"
+typedef signed __int128   i128;
+typedef unsigned __int128 u128;
+#define FMT32_08x         "%08x"
+#define FMT60_020o        "%020llo"
+#define FMT64_010x        "%010llx"
+#define FMT64_016x        "%016llx"
+#define FMT64_022o        "%022llo"
+#define FMT64_012x        "%012llx"
 #define Is32BitNeg(x) (((x) & 0x80000000UL) != 0)
 #elif defined(__i386) || defined(__i386__) || defined(__powerpc__) || defined(__ppc__)   \
     || defined(__sparc__) || defined(__hppa__) || defined(__APPLE__) || defined(__arm__) \
@@ -88,23 +83,15 @@ typedef unsigned __int128   u128;
 /*
 **  32 bit systems
 */
-typedef signed char              i8;
-typedef signed short             i16;
-typedef signed int               i32;
-typedef signed long long int     i64;
-typedef signed __int128          i128;
-typedef unsigned char            u8;
-typedef unsigned short           u16;
-typedef unsigned int             u32;
-typedef unsigned long long int   u64;
-typedef unsigned __int128        u128;
-#define FMT32_08x     "%08lx"
-#define FMT60_020o    "%020llo"
-#define FMT64_010x    "%010llx"
-#define FMT64_016x    "%016llx"
-#define FMT64_022o    "%022llo"
-#define FMT64_012x    "%012llx"
-#define Is32BitNeg(x) (((x) & 0x80000000ULL) != 0)
+typedef signed __int128   i128;
+typedef unsigned __int128 u128;
+#define FMT32_08x         "%08lx"
+#define FMT60_020o        "%020llo"
+#define FMT64_010x        "%010llx"
+#define FMT64_016x        "%016llx"
+#define FMT64_022o        "%022llo"
+#define FMT64_012x        "%012llx"
+#define Is32BitNeg(x) (((x) & 0x80000000UL) != 0)
 #else
 #error "Unable to determine size of basic data types"
 #endif
