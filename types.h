@@ -59,7 +59,6 @@
 #define FMT64_016x    "%016I64x"
 #define FMT64_022o    "%022I64o"
 #define FMT64_012x    "%012I64x"
-#define Is32BitNeg(x) (((x) & 0x80000000UL) != 0)
 #elif defined (__GNUC__) || defined(__SunOS)
 #if defined(__amd64) || defined(__amd64__) || defined(__alpha__) || defined(__powerpc64__) || defined(__ppc64__) \
     || (defined(__sparc64__) && defined(__arch64__)) || defined(__aarch64__) || defined(__x86_64__)
@@ -75,7 +74,6 @@ typedef unsigned __int128 u128;
 #define FMT64_016x        "%016llx"
 #define FMT64_022o        "%022llo"
 #define FMT64_012x        "%012llx"
-#define Is32BitNeg(x) (((x) & 0x80000000UL) != 0)
 #elif defined(__i386) || defined(__i386__) || defined(__powerpc__) || defined(__ppc__)   \
     || defined(__sparc__) || defined(__hppa__) || defined(__APPLE__) || defined(__arm__) \
     || defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_8__)
@@ -91,13 +89,14 @@ typedef unsigned __int128 u128;
 #define FMT64_016x        "%016llx"
 #define FMT64_022o        "%022llo"
 #define FMT64_012x        "%012llx"
+#else
+#error "Unable to determine size of basic data types"
+#endif
+#else
+#error "Unable to determine size of basic data types"
+#endif
+
 #define Is32BitNeg(x) (((x) & 0x80000000UL) != 0)
-#else
-#error "Unable to determine size of basic data types"
-#endif
-#else
-#error "Unable to determine size of basic data types"
-#endif
 
 #if (!defined(__cplusplus) && !defined(bool) && !defined(CURSES) && !defined(CURSES_H) && !defined(_CURSES_H))
 typedef int bool;
