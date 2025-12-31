@@ -1904,13 +1904,6 @@ static void traceTrapFrame170(Cpu180Context *cpu, u64 sfsa)
     u64              word;
     u32              wordAddrs[33];
 
-    /*
-    **  Bail out if no trace of exchange jumps is requested.
-    */
-    if ((traceMask & TraceExchange) == 0)
-        {
-        return;
-        }
     fprintf(cpuF[cpu->id], "\n%06d CYBER 170 trap frame pushed at " FMT64_012x " ", traceSequenceNo, sfsa);
     utp = cpu->regUtp;
     for (i = 0; i < 33; i++)

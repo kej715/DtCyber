@@ -388,6 +388,20 @@ bool idleDetectorCOS(Cpu170Context *ctx)
 **------------------------------------------------------------------------*/
 bool idleDetectorNOS(Cpu170Context *ctx)
     {
+    if (isCyber180)
+        {
+        Cpu180Context *ctx180;
+
+        ctx180 = &cpus180[ctx->id];
+        if (ctx180->regVmid == 0) // dual-state CPU in 180 state
+            {
+            return ctx180->isMonitorMode
+                && ctx180->regP >= 0x100600000580
+                && ctx180->regP <= 0x1006000005ff
+                && ctx180->regMcr == 0
+                && ctx180->regUcr == 0;
+            }
+        }
     if ((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 05))
         {
         return TRUE;
@@ -407,6 +421,20 @@ bool idleDetectorNOS(Cpu170Context *ctx)
 **------------------------------------------------------------------------*/
 bool idleDetectorNOSBE(Cpu170Context *ctx)
     {
+    if (isCyber180)
+        {
+        Cpu180Context *ctx180;
+
+        ctx180 = &cpus180[ctx->id];
+        if (ctx180->regVmid == 0) // dual-state CPU in 180 state
+            {
+            return ctx180->isMonitorMode
+                && ctx180->regP >= 0x100600000580
+                && ctx180->regP <= 0x1006000005ff
+                && ctx180->regMcr == 0
+                && ctx180->regUcr == 0;
+            }
+        }
     /* Based on observing CPU state on the NOS/BE TUB ready to run package */
     if ((!ctx->isMonitorMode) && (ctx->regP == 02) && (ctx->regFlCm == 010))
         {
