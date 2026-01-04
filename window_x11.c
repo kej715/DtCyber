@@ -679,35 +679,36 @@ static void *windowThread(void *param)
                             break;
 
                         case 'b':
-                            traceMask ^= TraceBlockOp;
+                            traceMask ^= ((u64)TraceBlockOp << 32) | ((u64)TraceBlockOp << 48);
                             break;
 
                         case 'c':
-                            traceMask ^= TraceCpu170;
+                            traceMask ^= ((u64)TraceCpu170 << 32) | ((u64)TraceCpu170 << 48);
                             break;
 
                         case 'e':
-                            traceMask ^= TraceExchange;
+                            traceMask ^= ((u64)TraceExchange << 32) | ((u64)TraceExchange << 48);
                             break;
 
                         case 'f':
-                            traceMask ^= TraceCallFrame;
+                            traceMask ^= ((u64)TraceCallFrame << 32) | ((u64)TraceCallFrame << 48);
                             break;
 
                         case 's':
-                            traceMask ^= TraceValidateStack;
+                            traceMask ^= ((u64)TraceValidateStack << 32) | ((u64)TraceValidateStack << 48);
                             break;
 
                         case 't':
-                            traceMask ^= TracePva;
+                            traceMask ^= ((u64)TracePva << 32) | ((u64)TracePva << 48);
                             break;
 
                         case 'v':
-                            traceMask ^= TraceCpu180;
+                            traceMask ^= ((u64)TraceCpu180 << 32) | ((u64)TraceCpu180 << 48);
                             break;
 
                         case 'w':
-                            traceMask ^= TraceCpu180|TraceExchange|TraceBlockOp|TraceCallFrame;
+                            traceMask ^= ((u64)(TraceCpu180|TraceExchange|TraceBlockOp|TraceCallFrame) << 32)
+                                       | ((u64)(TraceCpu180|TraceExchange|TraceBlockOp|TraceCallFrame) << 48);
                             break;
 
                         case 'x':
@@ -843,23 +844,34 @@ static void *windowThread(void *param)
                 }
 
             sprintf(buf + strlen(buf), "   Trace: %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
-                    (traceMask >> 0) & 1 ? '0' : '_',
-                    (traceMask >> 1) & 1 ? '1' : '_',
-                    (traceMask >> 2) & 1 ? '2' : '_',
-                    (traceMask >> 3) & 1 ? '3' : '_',
-                    (traceMask >> 4) & 1 ? '4' : '_',
-                    (traceMask >> 5) & 1 ? '5' : '_',
-                    (traceMask >> 6) & 1 ? '6' : '_',
-                    (traceMask >> 7) & 1 ? '7' : '_',
-                    (traceMask >> 8) & 1 ? '8' : '_',
-                    (traceMask >> 9) & 1 ? '9' : '_',
-                    (traceMask & TraceCpu170) != 0 ? 'C' : '_',
-                    (traceMask & TraceCpu180) != 0 ? 'V' : '_',
-                    (traceMask & TraceExchange) != 0 ? 'E' : '_',
-                    (traceMask & TraceBlockOp) != 0 ? 'B' : '_',
-                    (traceMask & TraceCallFrame) != 0 ? 'F' : '_',
-                    (traceMask & TraceValidateStack) != 0 ? 'S' : '_',
-                    (traceMask & TracePva) != 0 ? 'T' : '_');
+                (traceMask >> 0) & 1 ? '0' : '_',
+                (traceMask >> 1) & 1 ? '1' : '_',
+                (traceMask >> 2) & 1 ? '2' : '_',
+                (traceMask >> 3) & 1 ? '3' : '_',
+                (traceMask >> 4) & 1 ? '4' : '_',
+                (traceMask >> 5) & 1 ? '5' : '_',
+                (traceMask >> 6) & 1 ? '6' : '_',
+                (traceMask >> 7) & 1 ? '7' : '_',
+                (traceMask >> 8) & 1 ? '8' : '_',
+                (traceMask >> 9) & 1 ? '9' : '_',
+                (traceMask & ((u64)TraceCpu170 << 32)) != 0 ? 'C' : '_',
+                (traceMask & ((u64)TraceCpu180 << 32)) != 0 ? 'V' : '_',
+                (traceMask & ((u64)TraceExchange << 32)) != 0 ? 'E' : '_',
+                (traceMask & ((u64)TraceBlockOp << 32)) != 0 ? 'B' : '_',
+                (traceMask & ((u64)TraceCallFrame << 32)) != 0 ? 'F' : '_',
+                (traceMask & ((u64)TraceValidateStack << 32)) != 0 ? 'S' : '_',
+                (traceMask & ((u64)TracePva << 32)) != 0 ? 'P' : '_');
+            if (cpuCount > 1)
+                {
+                sprintf(buf + strlen(buf), "%c%c%c%c%c%c%c",
+                    (traceMask & ((u64)TraceCpu170 << 48)) != 0 ? 'C' : '_',
+                    (traceMask & ((u64)TraceCpu180 << 48)) != 0 ? 'V' : '_',
+                    (traceMask & ((u64)TraceExchange << 48)) != 0 ? 'E' : '_',
+                    (traceMask & ((u64)TraceBlockOp << 48)) != 0 ? 'B' : '_',
+                    (traceMask & ((u64)TraceCallFrame << 48)) != 0 ? 'F' : '_',
+                    (traceMask & ((u64)TraceValidateStack << 48)) != 0 ? 'S' : '_',
+                    (traceMask & ((u64)TracePva << 48)) != 0 ? 'P' : '_');
+                }
 
             windowDrawString(0, 10, buf, strlen(buf));
             }

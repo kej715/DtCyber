@@ -513,6 +513,7 @@ void traceCpu180(Cpu180Context *cpu, u64 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u16
 void traceCpuBreak(Cpu180Context *cpu);
 void traceCpuPrint(Cpu170Context *cpu, char *str);
 u8 traceDisassembleOpcode(char *str, PpWord *pm);
+void traceDumpStackFrames(Cpu180Context *cpu, u16 maxDepth);
 void traceEnd(void);
 void traceExchange170(Cpu170Context *cpu, u32 addr, char *title, bool force);
 void traceExchange180(Cpu180Context *cpu, u32 addr, char *title);
@@ -647,7 +648,7 @@ extern long                scaleX;                          // Console
 extern long                scaleY;                          // Console
 extern long                timerRate;                       // Console
 extern bool                tpMuxEnabled;
-extern u32                 traceMask;
+extern u64                 traceMask;
 extern u32                 traceSequenceNo;
 extern long                widthPX;                         // Console
 

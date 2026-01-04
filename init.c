@@ -150,6 +150,7 @@ static int initParseTerminalDefn(char *defn, char *file, char *section, int line
 static bool initGetInteger(char *entry, int defValue, long *value);
 static bool initGetOctal(char *entry, int defValue, long *value);
 static bool initGetString(char *entry, char *defString, char *str, int strLen);
+static bool initGetU64(char *entry, u64 defValue, u64 *value);
 static bool initParseIpAddress(char *ipStr, u32 *ip, u16 *port);
 static void initReadStartupFile(FILE *fcb, char *fileName);
 static void initToUpperCase(char *str);
@@ -560,7 +561,6 @@ static void initCyber(char *config)
     long esmBanks;
     int  i;
     bool isOk;
-    long mask;
     long memory;
     char model[40];
     long port;
@@ -1136,11 +1136,8 @@ static void initCyber(char *config)
     /*
     **  Get optional trace mask. If not specified, use compile time value.
     */
-    if (initGetOctal("trace", 0, &mask))
-        {
-        traceMask = (u32)mask;
-        }
-    fprintf(stdout, "(init   ) 0x%08x Tracing mask set.\n", traceMask);
+    initGetU64("trace", 0, &traceMask);
+    fprintf(stdout, "(init   ) " FMT64_016x " Tracing mask set.\n", traceMask);
 
     /*
     **  Get optional IP address of DtCyber. If not specified, use "0.0.0.0".
@@ -2627,10 +2624,51 @@ static bool initOpenSection(char *name)
 static bool initGetOctal(char *entry, int defValue, long *value)
     {
     char buffer[40];
+    char *end;
 
-    if (!initGetString(entry, "", buffer, sizeof(buffer))
-        || (buffer[0] < '0')
-        || (buffer[0] > '7'))
+    if (!initGetString(entry, "", buffer, sizeof(buffer)))
+        {
+        /*
+        **  Return default value.
+        */
+        *value = defValue;
+
+        return FALSE;
+        }
+
+    /*
+    **  Convert octal string to value.
+    */
+    *value = strtol(buffer, &end, 8);
+
+    if (*end == '\0')
+        {
+        return TRUE;
+        }
+    
+    *value = defValue;
+
+    return FALSE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Locate unsigned 64-bit entry within section and return value.
+**
+**  Parameters:     Name        Description.
+**                  entry       entry name
+**                  defValue    default value
+**                  value       pointer to return value
+**
+**  Returns:        TRUE if entry was found, FALSE otherwise.
+**
+**------------------------------------------------------------------------*/
+static bool initGetU64(char *entry, u64 defValue, u64 *value)
+    {
+    char buffer[40];
+    char *end;
+
+    //  Get the next entry
+    if (!initGetString(entry, "", buffer, sizeof(buffer)))
         {
         /*
         **  Return default value.
@@ -2640,12 +2678,19 @@ static bool initGetOctal(char *entry, int defValue, long *value)
         return (FALSE);
         }
 
-    /*
-    **  Convert octal string to value.
-    */
-    *value = strtol(buffer, NULL, 8);
+    *value = strtoll(buffer, &end, 0);
 
-    return (TRUE);
+    if (*end == '\0')
+        {
+        return TRUE;
+        }
+
+    /*
+    **  Return default value.
+    */
+    *value = defValue;
+
+    return FALSE;
     }
 
 #ifdef WIN32
@@ -2663,6 +2708,7 @@ static bool initGetOctal(char *entry, int defValue, long *value)
 static bool initGetHex(char *entry, int defValue, long *value)
     {
     char buffer[40];
+    char *end;
 
     //  Get the next entry
     if (!initGetString(entry, "", buffer, sizeof(buffer)))
@@ -2672,17 +2718,16 @@ static bool initGetHex(char *entry, int defValue, long *value)
         */
         *value = defValue;
 
-        return (FALSE);
+        return FALSE;
         }
-    //  It must be valid Hexadecimal
-    if (buffer[strspn(buffer, "0123456789abcdefABCDEF")] == 0)
-        {
-        /*
-        **  Convert octal string to value.
-        */
-        *value = strtol(buffer, NULL, 16);
+    /*
+    **  Convert hexadecial string to value.
+    */
+    *value = strtol(buffer, &end, 16);
 
-        return (TRUE);
+    if (*end == '\0')
+        {
+        return TRUE;
         }
 
     /*
@@ -2690,7 +2735,7 @@ static bool initGetHex(char *entry, int defValue, long *value)
     */
     *value = defValue;
 
-    return (FALSE);
+    return FALSE;
     }
 #endif
 

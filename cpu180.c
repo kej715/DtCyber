@@ -45,14 +45,14 @@
 #include <unistd.h>
 #endif
 
-#if CcDebug == 1
+#if CcDebug > 0
 
 //
 //  These macros facilitate tracing specific instructions and/or instructions
 //  occurring within a specified range of addresses.
 //
 //  Define macro TRACE_INST_LIST as an array initializer specifying o list of
-//  pcodes. This enables tracing of specific instructions. Macro TRACE_INST_COUNT
+//  opcodes. This enables tracing of specific instructions. Macro TRACE_INST_COUNT
 //  specifies the number of instructions to trace after TRACE_INST_LIST has
 //  triggered tracing.
 
@@ -63,6 +63,95 @@
 //  instruction stores data within the specified range of addresses. TRACE_INST_COUNT
 //  defines how many instructions to trace thereafter.
 //
+//  Define TRACE_KEYPOINT_LIST as an array initializer specifying a list of system
+//  keypoints. When the KEYPOINT instruction detects entry into an element in the list,
+//  it enables instruction tracing, and when it detects exit, it disables instruction
+//  tracing. This allows for tracing the execution of specific procedures within the
+//  NOS/VE operating system. See the NOS/VE operating system source to discover the
+//  keypoint constant definitions associated with specific procedures.
+//
+//  The following keypoint identifiers correspond to definitions in the NOS/VE source
+//  except that the first "_" in each name is "$" in the NOS/VE source.
+//
+#define amk_close                          55
+#define amk_copy_file                      58
+#define amk_get_file_attributes            67
+#define amk_get_next                       69
+#define amk_open                           75
+#define amk_return                         83
+#define bak_connected_file_device         152
+#define bak_open_file                     154
+#define clk_create_file_connection        259
+#define clk_declare_variable              260
+#define clk_get_line_from_command_file    266
+#define clk_open_command_file             274
+#define clk_process_command               279
+#define clk_read_variable                 284
+#define clk_scan_command_file             288
+#define clk_scan_command_line             289
+#define clk_scan_parameter_list           291
+#define clk_include_file                  299
+#define cmk_build_interface_tables        301
+#define cmk_build_pp_interface_table      303
+#define cmk_pc_get_logical_unit           309
+#define cmk_pc_get_next_channel           310
+#define cmk_get_conf_file                 321
+#define cmk_install_conf_file             322
+#define clk_include_line                  351
+#define ifk_get_terminal_attributes       661
+#define lok_load_program                  950
+#define lok_load_module_from_library      951
+#define lok_satisfy_externals             955
+#define lok_load_module                   956
+#define mmk_advise_out                   1152
+#define mmk_write_modified_pages         1157
+#define ofk_screen_input_fap             1351
+#define osk_generate_message             1400
+#define osk_format_message               1401
+#define osk_set_status_abnormal          1403
+#define osk_await_activity_completion    1407
+#define pfk_attach                       1500
+#define pfk_get_object_information       1539
+#define pfk_restricted_attach            1565
+#define pfk_return_permanent_file        1567
+#define pmk_task_begin_end               1600
+#define pmk_task_begin                   1601
+#define pmk_pop_all_stack_frames         1602
+#define pmk_execute                      1604
+#define pmk_exit                         1606
+#define pmk_abort                        1607
+#define pmk_await_task_termination       1609
+#define pmk_establish_condition_handler  1622
+#define pmk_disestablish_cond_handler    1623
+#define pmk_get_time                     1627
+#define pmk_log_message                  1641
+#define pmk_log_ascii                    1642
+#define pmk_log                          1651
+#define pmk_wait                         1655
+#define pmk_long_term_wait               1656
+#define pmk_enable_system_conditions     1676
+#define pmk_establish_ch_in_block        1677
+#define pmk_get_binary_processor_id      1683
+#define pmk_load_from_library            1689
+#define pmk_validate_previous_save_area  1703
+#define pmk_push_task_debug_mode         1708
+#define pmk_set_task_debug_mode          1710
+#define pmk_establish_debug_cff          1712
+#define pmk_change_job_library_list      1720
+#define pmk_pop_inhibit_termination      1721
+#define pmk_push_inhibit_termination     1722
+#define pmk_establish_ch_outside_block   1746
+#define jmk_get_job_status               2602
+#define jmk_idle_system                  2615
+#define jmk_job_exists                   2627
+#define fmk_return_file                  2702
+#define fsk_open_file                    2802
+#define mtk_job_entry_exit               4001
+#define mtk_170_entry_exit               4002
+#define mtk_monitor_mode_trap            4003
+#define mtk_job_mode_trap                4004
+//
+
 //#define TRACE_INST_LIST   { 0x77, 0xe9 }
 #define TRACE_INST_COUNT  10
 
@@ -71,7 +160,16 @@
 
 //#define TRACE_STORE_START 0x100a0000b758
 //#define TRACE_STORE_END   0x100a0000b758
-
+/*
+#define TRACE_KEYPOINT_LIST     \
+    {                           \
+    osk_format_message,         \
+    osk_set_status_abnormal,    \
+    pmk_push_task_debug_mode,   \
+    pmk_establish_debug_cff,    \
+    pmk_pop_inhibit_termination \
+    }
+*/
 #endif
 
 /*
@@ -174,6 +272,12 @@
 #define RegUserMask            0xE6
 
 /*
+**  Definitions used in tracing KEYPOINT instructions
+*/
+#define KeypointEntry          2
+#define KeypointExit           3
+
+/*
 **  -----------------------
 **  Private Macro Functions
 **  -----------------------
@@ -253,8 +357,21 @@ static bool cpu180SubInt64(Cpu180Context *ctx, u64 minend, u64 subend, u64 *diff
 static void cpu180UpdatePageSize(Cpu180Context *ctx);
 static bool cpu180ValidateAccess(Cpu180Context *ctx, u64 sde, u8 ring, Cpu180AccessMode access, MonitorCondition *cond);
 
-#if CcDebug == 1 && defined(TRACE_STORE_START)
+#if CcDebug > 0
+
+#if defined(TRACE_STORE_START)
 static void cpu180CheckTraceStore(Cpu180Context *ctx, u64 pvaStart, u64 pvaEnd);
+#endif
+
+#if defined(TRACE_KEYPOINT_LIST)
+static char *cpu180KeypointToStr(u16 kpt);
+static void cpu180PopKeypoint(Cpu180Context *ctx, u16 kpt);
+static void cpu180PushKeypoint(Cpu180Context *ctx, u16 kpt);
+static void cpu180ProcessKeypointEntry(Cpu180Context *ctx, u16 kpt);
+static void cpu180ProcessKeypointExit(Cpu180Context *ctx, u16 kpt);
+static bool cpu180SearchKeypointList(u16 kpt);
+#endif
+
 #endif
 
 /*
@@ -1037,15 +1154,23 @@ static u8  memoryRegisterBufIdx;
 static FILE *cpu180Log = NULL;
 #endif
 
-#if CcDebug == 1
+#if CcDebug > 0
+
 static int traceInstCount[2] = { 0, 0 };
+
 #if defined(TRACE_STORE_START)
 static u32 traceRmaEnd       = 0;
 static u32 traceRmaStart     = 0;
 #endif
+
 #if defined(TRACE_INST_LIST)
 static u8  traceInstList[]   = TRACE_INST_LIST;
 #endif
+
+#if defined(TRACE_KEYPOINT_LIST)
+static u16 traceKeypointList[] = TRACE_KEYPOINT_LIST;
+#endif
+
 #endif
 
 /*
@@ -1288,7 +1413,7 @@ void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa)
     {
     int i;
     u64 word;
-#if CcDebug == 1
+#if CcDebug > 0
     u32 xpab = xpa << 3;
 #endif
 
@@ -1369,7 +1494,7 @@ void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa)
         {
         ctx->regTos[i] = cpMem[xpa++] & Mask48;
         }
-#if CcDebug == 1
+#if CcDebug > 0
     traceExchange180(ctx, xpab, "Load");
 #endif
     }
@@ -1550,7 +1675,7 @@ void cpu180MacHaltCp(Cpu180Context *ctx)
     {
     ctx->isStopped = TRUE;
 
-#if CcDebug == 1
+#if CcDebug > 0
     traceHaltCpu180(ctx);
 #endif
 #if DEBUG
@@ -1573,7 +1698,7 @@ void cpu180MacMasterClearCp(Cpu180Context *ctx)
     ctx->isStopped       = TRUE;
     ctx->lastCsStartAddr = 0;
     cpu180MacSetCpStateRegister(ctx, RegDepEnvControl, 0);
-#if CcDebug == 1
+#if CcDebug > 0
     traceMasterClearCpu180(ctx);
 #endif
 #if DEBUG
@@ -1985,7 +2110,7 @@ void cpu180MacStartCp(Cpu180Context *ctx)
             if (cpu180PvaToRma(ctx, ctx->regP, AccessModeNone, &rma, &pti, &cond))
                 {
                 ctx->isStopped = FALSE; // Processor started
-#if CcDebug == 1
+#if CcDebug > 0
                 traceStartCpu180(ctx, rma);
 #endif
 #if DEBUG
@@ -2135,7 +2260,7 @@ void cpu180PpWriteMem(u32 address, CpWord data)
         }
     cpMem[address] = data;
 
-#if CcDebug == 1 && defined(TRACE_STORE_START)
+#if CcDebug > 0 && defined(TRACE_STORE_START)
     address <<= 3;
     if (address >= traceRmaStart && address <= traceRmaEnd)
         {
@@ -2194,7 +2319,7 @@ bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u8 ring, u64 word, int count)
         0x0000000000000000,
         };
 
-#if CcDebug == 1 && defined(TRACE_STORE_START)
+#if CcDebug > 0 && defined(TRACE_STORE_START)
     cpu180CheckTraceStore(ctx, pva, pva + 7);
 #endif
 
@@ -2264,7 +2389,7 @@ bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *r
     u64 sde;
     u16 segNum;
 
-#if CcDebug == 1
+#if CcDebug > 0
     tracePva(ctx, pva);
 #endif
 
@@ -2294,7 +2419,7 @@ bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *r
 
     sde = cpMem[(ctx->regSta >> 3) + segNum];
 
-#if CcDebug == 1
+#if CcDebug > 0
     traceSde(ctx, segNum, sde);
 #endif
 
@@ -2340,7 +2465,7 @@ bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *r
             | ((byteNum & 0xfe00U) & ((u16)(~ctx->regPsm & Mask7) << 9))
             | (byteNum & Mask9);
 
-#if CcDebug == 1
+#if CcDebug > 0
         traceRma(ctx, *rma);
 #if defined(TRACE_STORE_START)
         if (pva >= (TRACE_STORE_START) && pva <= (TRACE_STORE_END))
@@ -2394,7 +2519,7 @@ void cpu180SetMonitorCondition(Cpu180Context *ctx, MonitorCondition cond)
             ctx->nextP = ctx->regP;
             }
         }
-#if CcDebug == 1
+#if CcDebug > 0
     traceMonitorCondition(ctx, cond);
 #endif
 #if DEBUG && DEBUG_INTERRUPT
@@ -2430,7 +2555,7 @@ void cpu180SetUserCondition(Cpu180Context *ctx, UserCondition cond)
             ctx->nextP = ctx->regP;
             }
         }
-#if CcDebug == 1
+#if CcDebug > 0
     traceUserCondition(ctx, cond);
 #endif
 #if DEBUG && DEBUG_INTERRUPT
@@ -2453,7 +2578,7 @@ void cpu180Step(Cpu180Context *activeCpu)
     OpDispatch *odp;
     u8         length;
     u16        parcel;
-#if CcDebug == 1
+#if CcDebug > 0
     u64        oldRegP;
 #endif
 
@@ -2549,20 +2674,20 @@ void cpu180Step(Cpu180Context *activeCpu)
             exit(1);
             }
 
-#if CcDebug == 1
+#if CcDebug > 0
         oldRegP = activeCpu->regP;
         if (traceInstCount[activeCpu->id] > 0)
             {
             traceInstCount[activeCpu->id] -= 1;
             if (traceInstCount[activeCpu->id] < 1)
                 {
-                traceMask &= ~(TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
+                traceMask &= ~TRACECPU(activeCpu, TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
                 }
             }
 #if defined(TRACE_INST_LIST)
         if (memchr(traceInstList, activeCpu->opCode, sizeof(traceInstList)) != NULL)
             {
-            traceMask                    |= TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp;
+            traceMask                    |= TRACECPU(activeCpu, TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
             traceInstCount[activeCpu->id] = TRACE_INST_COUNT;
             traceCpuBreak(activeCpu);
             }
@@ -2570,15 +2695,15 @@ void cpu180Step(Cpu180Context *activeCpu)
 #if defined(TRACE_RANGE_START)
         if (activeCpu->regP >= (TRACE_RANGE_START) && activeCpu->regP <= (TRACE_RANGE_END))
             {
-            if ((traceMask & TraceCpu180) == 0)
+            if ((traceMask & TRACECPU(activeCpu, TraceCpu180)) == 0)
                 {
                 traceCpuBreak(activeCpu);
                 }
-            traceMask |= TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp;
+            traceMask |= TRACECPU(activeCpu, TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
             }
         else if (traceInstCount[activeCpu->id] < 1)
             {
-            traceMask &= ~(TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
+            traceMask &= ~TRACECPU(activeCpu, TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
             }
 #endif
 #endif
@@ -2589,7 +2714,7 @@ void cpu180Step(Cpu180Context *activeCpu)
         activeCpu->key     = activeCpu->nextKey;
         activeCpu->regP    = activeCpu->nextP;
 
-#if CcDebug == 1
+#if CcDebug > 0
         traceCpu180(activeCpu, oldRegP, activeCpu->opCode, activeCpu->opI, activeCpu->opJ, activeCpu->opK, activeCpu->opD, activeCpu->opQ);
 #endif
         }
@@ -2611,8 +2736,8 @@ void cpu180Store170Xp(Cpu180Context *ctx, u32 xpa)
     cpu180Get170State(ctx);
     cpu180Store180Xp(ctx, xpa);
 
-#if CcDebug == 1
-    traceExchange170(&cpus170[ctx->id], xpa << 3, NULL, (traceMask & TraceCpu180) != 0);
+#if CcDebug > 0
+    traceExchange170(&cpus170[ctx->id], xpa << 3, NULL, (traceMask & TRACECPU(ctx, TraceCpu180)) != 0);
 #endif
     }
 
@@ -2696,7 +2821,7 @@ void cpu180Trap(Cpu180Context *ctx)
         ctx->nextP = ctx->regP;
         }
 
-#if CcDebug == 1
+#if CcDebug > 0
     traceTrap(ctx);
 #endif
 
@@ -2869,7 +2994,7 @@ static void cpu180ApplyBdpOperator(Cpu180Context *ctx, bool (*operator)(BdpOpera
         if (bdp180DecodeOperand(ctx, &ctx->dstDesc, &dstOperand)
             && bdp180DecodeOperand(ctx, &ctx->srcDesc, &srcOperand))
             {
-#if CcDebug == 1
+#if CcDebug > 0
             traceMemoryBlock(ctx, ctx->srcDesc.pva, ctx->srcDesc.length, "    source block:");
             traceMemoryBlock(ctx, ctx->dstDesc.pva, ctx->dstDesc.length, "    destination block:");
 #endif
@@ -2897,7 +3022,7 @@ static void cpu180ApplyBdpOperator(Cpu180Context *ctx, bool (*operator)(BdpOpera
                         }
                     }
                 }
-#if CcDebug == 1
+#if CcDebug > 0
             traceMemoryBlock(ctx, ctx->dstDesc.pva, ctx->dstDesc.length, "    result destination block:");
 #endif
             }
@@ -3025,25 +3150,7 @@ static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 
         cpu180Set170State(ctx, ctx->nextP);
         }
 
-#if CcDebug == 1
-    if (IsInvalidPva(ctx->regA[0]))
-        {
-        Cpu170Context *ctx170;
-        char          buf[128];
-        ctx170                  = &cpus170[ctx->id];
-        traceMask              |= TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp;
-        traceInstCount[ctx->id] = TRACE_INST_COUNT;
-        traceCpuBreak(ctx);
-        sprintf(buf, "Call Indirect : P " FMT64_012x " CBP " FMT64_012x " ringP %x R1 %x R2 %x R3 %x",
-            callee, cbp & Mask48, ringP, r1, r2, (u8)(cbp >> 48) & Mask4);
-        traceCpuPrint(ctx170, buf);
-        sprintf(buf, "TOS[%x] " FMT64_012x, (u8)RingOf(callee), ctx->regTos[RingOf(callee)]);
-        traceCpuPrint(ctx170, buf);
-        sprintf(buf, "TOS[%x] " FMT64_012x, (u8)RingOf(cbp), ctx->regTos[RingOf(cbp)]);
-        traceCpuPrint(ctx170, buf);
-        sprintf(buf, "TOS[%x] " FMT64_012x, r1, ctx->regTos[r1]);
-        traceCpuPrint(ctx170, buf);
-        }
+#if CcDebug > 0
     if (doSaveCrs)
         {
         traceTrapFrame(ctx, sfsa);
@@ -3210,7 +3317,7 @@ static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool ignore
     idx     = ((ctx->regPta & 0xfffff000) | ((hash << 4) & ctx->pageLengthMask)) >> 3;
     spid    = ((u64)asid << 22) | ((u64)pageNum << ctx->spidShift);
 
-#if CcDebug == 1
+#if CcDebug > 0
     tracePageInfo(ctx, hash, pageNum, idx, spid);
 #endif
 
@@ -3224,7 +3331,7 @@ static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool ignore
         pte   = cpMem[idx]; // next page table entry
         flags = pte >> 60;
 
-#if CcDebug == 1
+#if CcDebug > 0
         tracePte(ctx, pte);
 #endif
 
@@ -3590,8 +3697,8 @@ static void cpu180Load170Xp(Cpu180Context *ctx, u32 xpa)
     ringSeg170 = cpMem[xpa] & LeftMask;
     cpu180Set170State(ctx, ctx->regP);
 
-#if CcDebug == 1
-    traceExchange170(&cpus170[ctx->id], xpa << 3, NULL, (traceMask & TraceCpu180) != 0);
+#if CcDebug > 0
+    traceExchange170(&cpus170[ctx->id], xpa << 3, NULL, (traceMask & TRACECPU(ctx, TraceCpu180)) != 0);
 #endif
     }
 
@@ -3815,7 +3922,7 @@ static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool doSave
     ctx->regX[0] = (ctx->regX[0] & Mask32) | (cpMem[wordAddrs[0]] & LeftMask);
     *frameSize   = words << 3;
 
-#if CcDebug == 1 && defined(TRACE_STORE_START)
+#if CcDebug > 0 && defined(TRACE_STORE_START)
     cpu180CheckTraceStore(ctx, *sfsa, *sfsa + (words >> 3) - 1);
 #endif
 
@@ -3918,7 +4025,7 @@ static void cpu180SetRingZeroCondition(Cpu180Context *ctx, u64 pva)
             {
             ctx->pendingAction = action;
             }
-#if CcDebug == 1
+#if CcDebug > 0
         traceRingZeroCondition(ctx, pva);
 #endif
         }
@@ -3938,7 +4045,7 @@ static void cpu180SetRingZeroCondition(Cpu180Context *ctx, u64 pva)
 static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa)
     {
     int i;
-#if CcDebug == 1
+#if CcDebug > 0
     u32 xpab = xpa << 3;
 #endif
 
@@ -3975,7 +4082,7 @@ static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa)
         {
         cpMem[xpa++] = ctx->regTos[i];
         }
-#if CcDebug == 1
+#if CcDebug > 0
     traceExchange180(ctx, xpab, "Store");
 #endif
     }
@@ -4069,7 +4176,7 @@ static void cpu180UpdatePageSize(Cpu180Context *ctx)
     ctx->pageLengthMask = ((u32)ctx->regPtl << 12) | 0xfffU;
     ctx->spidShift      = ctx->pageNumShift - 9;
 
-#if CcDebug == 1
+#if CcDebug > 0
     traceVmRegisters(ctx);
 #endif
 #if DEBUG
@@ -4268,10 +4375,10 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
     u8               xs;
     u8               xt;
 
-#if CcDebug == 1
+#if CcDebug > 0
     if (traceValidateStack(activeCpu, activeCpu->regA[2], 2, "RETURN") == FALSE)
         {
-        traceMask                    |= TraceCpu180 | TraceCallFrame;
+        traceMask                    |= TRACECPU(activeCpu, TraceCpu180 | TraceCallFrame);
         traceInstCount[activeCpu->id] = TRACE_INST_COUNT;
         }
 #endif
@@ -4384,7 +4491,7 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
         activeCpu->regLrn = ringNewP;
         }
 
-#if CcDebug == 1
+#if CcDebug > 0
     traceCallFrame(activeCpu, psap, "popped");
 #endif
 
@@ -4414,10 +4521,10 @@ static void cp180Op06(Cpu180Context *activeCpu)  // 06  POP        MIGDS 2-129
     u32              rmas[4];
     u32              wordAddrs[4];
 
-#if CcDebug == 1
+#if CcDebug > 0
     if (traceValidateStack(activeCpu, activeCpu->regA[2], 2, "POP") == FALSE)
         {
-        traceMask                    |= TraceCpu180 | TraceCallFrame;
+        traceMask                    |= TRACECPU(activeCpu, TraceCpu180 | TraceCallFrame);
         traceInstCount[activeCpu->id] = TRACE_INST_COUNT;
         }
 #endif
@@ -4492,7 +4599,7 @@ static void cp180Op06(Cpu180Context *activeCpu)  // 06  POP        MIGDS 2-129
         activeCpu->regLrn = ring;
         }
 
-#if CcDebug == 1
+#if CcDebug > 0
     traceCallFrame(activeCpu, psap, "popped");
 #endif
     }
@@ -4654,7 +4761,7 @@ static void cp180Op14(Cpu180Context *activeCpu)  // 14  LBSET      MIGDS 2-136
         cpMem[pti]                     |= (u64)3 << 60; // set page used and modified bits
         cpuReleaseMemoryMutex();
 
-#if CcDebug == 1 && defined(TRACE_STORE_START)
+#if CcDebug > 0 && defined(TRACE_STORE_START)
         cpu180CheckTraceStore(activeCpu, pva, pva + 7);
 #endif
         }
@@ -5459,7 +5566,7 @@ static void cp180Op74(Cpu180Context *activeCpu)  // 74  CMPN       MIGDS 2-52
                 }
             activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | ((u64)result << 30);
 
-#if CcDebug == 1
+#if CcDebug > 0
             traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
             traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
 #endif
@@ -5481,7 +5588,7 @@ static void cp180Op75(Cpu180Context *activeCpu)  // 75  MOVN       MIGDS 2-51
         if (bdp180DecodeOperand(activeCpu, &activeCpu->srcDesc, &operand)
             && bdp180EncodeOperand(activeCpu, &activeCpu->dstDesc, &operand, FALSE, &isTruncated))
             {
-#if CcDebug == 1
+#if CcDebug > 0
 #if defined(TRACE_STORE_START)
             cpu180CheckTraceStore(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.pva + activeCpu->dstDesc.length - 1);
 #endif
@@ -5526,7 +5633,7 @@ static void cp180Op76(Cpu180Context *activeCpu)  // 76  MOVB       MIGDS 2-55
             return;
             }
 
-#if CcDebug == 1
+#if CcDebug > 0
 #if defined(TRACE_STORE_START)
         cpu180CheckTraceStore(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.pva + activeCpu->dstDesc.length - 1);
 #endif
@@ -5598,7 +5705,7 @@ static void cp180Op77(Cpu180Context *activeCpu)  // 77  CMPB       MIGDS 2-52
             }
         activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | ((u64)result << 30);
 
-#if CcDebug == 1
+#if CcDebug > 0
         traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
         traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
 #endif
@@ -5674,7 +5781,7 @@ static void cp180Op80(Cpu180Context *activeCpu)  // 80  LMULT      MIGDS 2-16
         activeCpu->regX[xs++] = cpMem[rmas[i++] >> 3];
         }
 
-#if CcDebug == 1
+#if CcDebug > 0
         {
         char buf[40];
         sprintf(buf, "   A%X..A%X  X%X..X%X", selector >> 12, at, (selector >> 8) & Mask4, xt);
@@ -5730,7 +5837,7 @@ static void cp180Op81(Cpu180Context *activeCpu)  // 81  SMULT      MIGDS 2-16
         cpMem[rmas[i++] >> 3] = activeCpu->regX[xs++];
         }
 
-#if CcDebug == 1
+#if CcDebug > 0
 #if defined(TRACE_STORE_START)
     cpu180CheckTraceStore(activeCpu, pva, pva + (wordCount << 3) - 1);
 #endif
@@ -5814,7 +5921,7 @@ static void cp180Op83(Cpu180Context *activeCpu)  // 83  SX         MIGDS 2-12
         cpMem[rma >> 3] = activeCpu->regX[activeCpu->opK];
         cpuReleaseMemoryMutex();
 
-#if CcDebug == 1 && defined(TRACE_STORE_START)
+#if CcDebug > 0 && defined(TRACE_STORE_START)
         cpu180CheckTraceStore(activeCpu, pva, pva + 7);
 #endif
         }
@@ -5951,7 +6058,7 @@ static void cp180Op89(Cpu180Context *activeCpu)  // 89  SBIT       MIGDS 2-14
         cpMem[pti]     |= (u64)3 << 60; // set page used and modified bits
         cpuReleaseMemoryMutex();
 
-#if CcDebug == 1 && defined(TRACE_STORE_START)
+#if CcDebug > 0 && defined(TRACE_STORE_START)
         cpu180CheckTraceStore(activeCpu, pva, pva + 7);
 #endif
         }
@@ -6500,7 +6607,7 @@ static void cp180OpA3(Cpu180Context *activeCpu)  // A3  SXI        MIGDS 2-12
         cpMem[rma >> 3] = activeCpu->regX[activeCpu->opK];
         cpuReleaseMemoryMutex();
 
-#if CcDebug == 1 && defined(TRACE_STORE_START)
+#if CcDebug > 0 && defined(TRACE_STORE_START)
         cpu180CheckTraceStore(activeCpu, pva, pva + 7);
 #endif
         }
@@ -6685,7 +6792,7 @@ static void cp180OpB0(Cpu180Context *activeCpu)  // B0  CALLREL    MIGDS 2-125
         return;
         }
 
-#if CcDebug == 1
+#if CcDebug > 0
     traceCallFrame(activeCpu, sfsa, "pushed");
 #endif
 
@@ -6697,7 +6804,7 @@ static void cp180OpB0(Cpu180Context *activeCpu)  // B0  CALLREL    MIGDS 2-125
     activeCpu->regFlags &= 0x3fff; // clear CFF and OCF
     activeCpu->nextP     = callee;
 
-#if CcDebug == 1
+#if CcDebug > 0
     traceCall(activeCpu, activeCpu->nextP);
 #endif
     }
@@ -6728,11 +6835,21 @@ static void cp180OpB1(Cpu180Context *activeCpu)  // B1  KEYPOINT   MIGDS 2-133
             cpMem[rma >> 3]    = kpe;
             activeCpu->regKbp += 8;
 
-#if CcDebug == 1 && defined(TRACE_STORE_START)
+#if CcDebug > 0 && defined(TRACE_STORE_START)
             cpu180CheckTraceStore(activeCpu, activeCpu->regKbp, activeCpu->regKbp + 7);
 #endif
             }
         }
+#if CcDebug > 0 && defined(TRACE_KEYPOINT_LIST)
+    if (activeCpu->opJ == KeypointEntry)
+        {
+        cpu180ProcessKeypointEntry(activeCpu, activeCpu->opQ);
+        }
+    else if (activeCpu->opJ == KeypointExit)
+        {
+        cpu180ProcessKeypointExit(activeCpu, activeCpu->opQ);
+        }
+#endif
     }
 
 static void cp180OpB2(Cpu180Context *activeCpu)  // B2  MULXQ      MIGDS 2-21
@@ -6800,7 +6917,7 @@ static void cp180OpB4(Cpu180Context *activeCpu)  // B4  CMPXA      MIGDS 2-134
         activeCpu->regX[1] &= LeftMask;
         cpMem[pti]         |= (u64)3 << 60; // set page used and modified bits
 
-#if CcDebug == 1 && defined(TRACE_STORE_START)
+#if CcDebug > 0 && defined(TRACE_STORE_START)
         cpu180CheckTraceStore(activeCpu, pva, pva + 7);
 #endif
         }
@@ -6870,7 +6987,7 @@ static void cp180OpB5(Cpu180Context *activeCpu)  // B5  CALLSEG    MIGDS 2-122
         }
     cbp = cpMem[rma >> 3];
 
-#if CcDebug == 1
+#if CcDebug > 0
     traceCodebasePointer(activeCpu, bsp, rma, cbp);
 #endif
 
@@ -7069,7 +7186,7 @@ static void cp180OpE4(Cpu180Context *activeCpu)  // E4  SCLN       MIGDS 2-49
                     }
                 }
             }
-#if CcDebug == 1
+#if CcDebug > 0
         traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
         traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
 #endif
@@ -7148,7 +7265,7 @@ static void cp180OpE5(Cpu180Context *activeCpu)  // E5  SCLR       MIGDS 2-49
                     }
                 }
             }
-#if CcDebug == 1
+#if CcDebug > 0
         traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
         traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
 #endif
@@ -7228,7 +7345,7 @@ static void cp180OpE9(Cpu180Context *activeCpu)  // E9  CMPC       MIGDS 2-52
             }
         activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | ((u64)result << 30);
 
-#if CcDebug == 1
+#if CcDebug > 0
         traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
         traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
         traceMemoryBlock(activeCpu, trnPva, 256, "    translation table:");
@@ -7278,7 +7395,7 @@ static void cp180OpEB(Cpu180Context *activeCpu)  // EB  TRANB      MIGDS 2-54
             return;
             }
 
-#if CcDebug == 1
+#if CcDebug > 0
         traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
         traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
         traceMemoryBlock(activeCpu, pva, 256, "    translation table:");
@@ -7782,7 +7899,7 @@ static void cp180OpED(Cpu180Context *activeCpu)  // ED  EDIT       MIGDS 2-55
             }
         }
 
-#if CcDebug == 1
+#if CcDebug > 0
     traceMemoryBlock(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, "    source block:");
     traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
     traceMemoryBlock(activeCpu, maskPva, maskBuf[0], "    edit mask:");
@@ -7817,7 +7934,7 @@ static void cp180OpF3(Cpu180Context *activeCpu)  // F3  SCNB       MIGDS 2-54
             return;
             }
 
-#if CcDebug == 1
+#if CcDebug > 0
         traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    byte string:");
         traceMemoryBlock(activeCpu, tPva, 32, "    bit table:");
 #endif
@@ -7924,7 +8041,7 @@ static void cp180OpF9(Cpu180Context *activeCpu)  // F9  MOVI       MIGDS 2-62
         break;
         }
 
-#if CcDebug == 1
+#if CcDebug > 0
 #if defined(TRACE_STORE_START)
     cpu180CheckTraceStore(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.pva + activeCpu->dstDesc.length - 1);
 #endif
@@ -8014,7 +8131,7 @@ static void cp180OpFA(Cpu180Context *activeCpu)  // FA  CMPI       MIGDS 2-63
             }
         activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | ((u64)result << 30);
 
-#if CcDebug == 1
+#if CcDebug > 0
         traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
 #endif
         return;
@@ -8061,7 +8178,7 @@ static void cp180OpFA(Cpu180Context *activeCpu)  // FA  CMPI       MIGDS 2-63
             }
         activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | ((u64)result << 30);
 
-#if CcDebug == 1
+#if CcDebug > 0
         traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
 #endif
         return;
@@ -8080,7 +8197,7 @@ static void cp180OpFA(Cpu180Context *activeCpu)  // FA  CMPI       MIGDS 2-63
         }
     activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | ((u64)result << 30);
 
-#if CcDebug == 1
+#if CcDebug > 0
     traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
 #endif
     }
@@ -8133,7 +8250,7 @@ static void cp180OpFB(Cpu180Context *activeCpu)  // FB  ADDI       MIGDS 2-64
         byte -= 0x30;
         }
 
-#if CcDebug == 1
+#if CcDebug > 0
     traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination block:");
 #endif
 
@@ -8151,7 +8268,7 @@ static void cp180OpFB(Cpu180Context *activeCpu)  // FB  ADDI       MIGDS 2-64
             }
         }
 
-#if CcDebug == 1
+#if CcDebug > 0
     traceMemoryBlock(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, "    destination result block:");
 #endif
     }
@@ -8232,7 +8349,9 @@ static void cp180OpSBYTS(Cpu180Context *activeCpu, int count)
     cpuReleaseMemoryMutex();
     }
 
-#if CcDebug == 1 && defined(TRACE_STORE_START)
+#if CcDebug > 0
+
+#if defined(TRACE_STORE_START)
 /*--------------------------------------------------------------------------
 **  Purpose:        Check whether store operation should be traced
 **
@@ -8248,14 +8367,271 @@ static void cpu180CheckTraceStore(Cpu180Context *ctx, u64 pvaStart, u64 pvaEnd)
     {
     if (pvaStart >= (TRACE_STORE_START) && pvaEnd <= (TRACE_STORE_END))
         {
-        if ((traceMask & TraceCpu180) == 0)
+        if ((traceMask & TRACECPU(ctx, TraceCpu180)) == 0)
             {
             traceCpuBreak(ctx);
             }
-        traceMask              |= TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp;
+        traceMask              |= TRACECPU(ctx, TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
         traceInstCount[ctx->id] = TRACE_INST_COUNT;
         }
     }
+
+#endif
+
+#if defined(TRACE_KEYPOINT_LIST)
+
+static u16 keypointStack[2][2000];
+static u16 keypointStackPtr[2] = { 0, 0 };
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Pop a keypoint identifier from the keypoint stack
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CYBER 180 CPU context
+**                  kpt         the keypoint identifier
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void cpu180PopKeypoint(Cpu180Context *ctx, u16 kpt)
+    {
+    u16 stkPtr;
+
+    stkPtr = keypointStackPtr[ctx->id];
+    while (stkPtr > 0)
+        {
+        stkPtr -= 1;
+        if (keypointStack[ctx->id][stkPtr] == kpt)
+            {
+            keypointStackPtr[ctx->id] = stkPtr;
+            return;
+            }
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Push a keypoint identifier onto the keypoint stack
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CYBER 180 CPU context
+**                  kpt         the keypoint identifier
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void cpu180PushKeypoint(Cpu180Context *ctx, u16 kpt)
+    {
+    keypointStack[ctx->id][keypointStackPtr[ctx->id]++] = kpt;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Process entry into a system keypoint
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CYBER 180 CPU context
+**                  kpt         the keypoint identifier
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void cpu180ProcessKeypointEntry(Cpu180Context *ctx, u16 kpt)
+    {
+    char buf[64];
+    u16  stkPtr;
+
+    stkPtr = keypointStackPtr[ctx->id];
+    if (stkPtr > 0 && keypointStack[ctx->id][stkPtr - 1] == kpt)
+        {
+        //
+        //  A number of NOS/VE procedures have a bug where they re-issue
+        //  keypoint entry when exiting a procedure instead of properly
+        //  issuing keypoint exit. Thus, if we detect that the entry on
+        //  on the top of the stack matches the keypoint identifier
+        //  specified as a parameter, this indicates that the procedure
+        //  is actually exiting instead of entering. Note that this assumes
+        //  that no NOS/VE procedures issuing keypoint entry are recursive.
+        //
+        cpu180ProcessKeypointExit(ctx, kpt);
+        return;
+        }
+    cpu180PushKeypoint(ctx, kpt);
+    if (cpu180SearchKeypointList(kpt))
+        {
+        sprintf(buf, "Keypoint entry 0x%04x (%s)", kpt, cpu180KeypointToStr(kpt));
+        traceMask                     |= TRACECPU(ctx, TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
+        traceInstCount[ctx->id]  = 0;
+        traceCpuBreak(ctx);
+        traceCpuPrint(&cpus170[ctx->id], buf);
+        traceDumpStackFrames(ctx, 8);
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Process exit from a system keypoint
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CYBER 180 CPU context
+**                  kpt         the keypoint identifier
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void cpu180ProcessKeypointExit(Cpu180Context *ctx, u16 kpt)
+    {
+    char buf[64];
+    u16  stkPtr;
+    
+    stkPtr = keypointStackPtr[ctx->id];
+    if (stkPtr > 0)
+        {
+        cpu180PopKeypoint(ctx, kpt);
+        if (cpu180SearchKeypointList(kpt))
+            {
+            sprintf(buf, "Keypoint exit 0x%04x (%s)", kpt, cpu180KeypointToStr(kpt));
+            traceCpuPrint(&cpus170[ctx->id], buf);
+            stkPtr = keypointStackPtr[ctx->id];
+            while (stkPtr > 0)
+                {
+                stkPtr -= 1;
+                kpt     = keypointStack[ctx->id][stkPtr];
+                sprintf(buf, "  Called from 0x%04x (%s)", kpt, cpu180KeypointToStr(kpt));
+                traceCpuPrint(&cpus170[ctx->id], buf);
+                if (cpu180SearchKeypointList(kpt)) break;
+                }
+            if (stkPtr < 1)
+                {
+                traceInstCount[ctx->id] = TRACE_INST_COUNT;
+                }
+            keypointStackPtr[ctx->id] = stkPtr;
+            }
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Search the keypoint list for a specified keypoint identifier
+**
+**  Parameters:     Name        Description.
+**                  kpt         the keypoint identifier
+**
+**  Returns:        TRUE if the identifier is in the list.
+**
+**------------------------------------------------------------------------*/
+static bool cpu180SearchKeypointList(u16 kpt)
+    {
+    u8 i;
+    u8 limit;
+    limit = sizeof(traceKeypointList) / sizeof(u16);
+
+    for (i = 0; i < limit; i++)
+        {
+        if (traceKeypointList[i] == kpt)
+            {
+            return TRUE;
+            }
+        }
+    return FALSE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Map a keypoint identifier to a NOS/VE procedure name
+**
+**  Parameters:     Name        Description.
+**                  kpt         the keypoint identifier
+**
+**  Returns:        Procedure name.
+**
+**------------------------------------------------------------------------*/
+static char *cpu180KeypointToStr(u16 kpt)
+    {
+    static char buf[8];
+
+    switch (kpt)
+        {
+    case amk_close:                       return "amp$close";
+    case amk_copy_file:                   return "amp$copy_file";
+    case amk_get_file_attributes:         return "amp$get_file_attributes";
+    case amk_get_next:                    return "amp$get_next";
+    case amk_open:                        return "amp$open";
+    case amk_return:                      return "amp$return";
+    case bak_connected_file_device:       return "bap$connected_file_device";
+    case bak_open_file:                   return "bap$open_file";
+    case cmk_build_interface_tables:      return "cmp$build_interface_tables";
+    case cmk_build_pp_interface_table:    return "cmp$build_pp_interface_table";
+    case cmk_pc_get_logical_unit:         return "cmp$pc_get_logical_unit";
+    case cmk_pc_get_next_channel:         return "cmp$pc_get_next_channel";
+    case cmk_get_conf_file:               return "cmp$get_conf_file";
+    case cmk_install_conf_file:           return "cmp$install_conf_file";
+    case clk_create_file_connection:      return "clp$create_file_connection";
+    case clk_declare_variable:            return "clp$declare_variable";
+    case clk_get_line_from_command_file:  return "clp$get_line_from_command_file";
+    case clk_open_command_file:           return "clp$open_command_file";
+    case clk_process_command:             return "clp$process_command";
+    case clk_read_variable:               return "clp$read_variable";
+    case clk_scan_command_file:           return "clp$scan_command_file";
+    case clk_scan_command_line:           return "clp$scan_command_line";
+    case clk_scan_parameter_list:         return "clp$scan_parameter_list";
+    case clk_include_file:                return "clp$include_file";
+    case clk_include_line:                return "clp$include_line";
+    case ifk_get_terminal_attributes:     return "ifp$get_terminal_attributes";
+    case lok_load_program:                return "lop$load_program";
+    case lok_load_module_from_library:    return "lop$load_module_from_library";
+    case lok_satisfy_externals:           return "lop$satisfy_externals";
+    case lok_load_module:                 return "lop$load_module";
+    case mmk_advise_out:                  return "mmp$advise_out";
+    case mmk_write_modified_pages:        return "mmp$write_modified_pages";
+    case ofk_screen_input_fap:            return "ofp$screen_input_fap";
+    case osk_generate_message:            return "osp$generate_message";
+    case osk_format_message:              return "osp$format_message";
+    case osk_set_status_abnormal:         return "osp$set_status_abnormal";
+    case osk_await_activity_completion:   return "osp$await_activity_completion";
+    case pfk_attach:                      return "pfp$attach";
+    case pfk_get_object_information:      return "pfp$get_object_information";
+    case pfk_restricted_attach:           return "pfp$restricted_attach";
+    case pfk_return_permanent_file:       return "pfp$return_permanent_file";
+    case pmk_task_begin_end:              return "pmp$task_begin_end";
+    case pmk_task_begin:                  return "pmp$task_begin";
+    case pmk_pop_all_stack_frames:        return "pmp$pop_all_stack_frames";
+    case pmk_execute:                     return "pmk$execute";
+    case pmk_exit:                        return "pmp$exit";
+    case pmk_abort:                       return "pmp$abort";
+    case pmk_await_task_termination:      return "pmp$await_task_termination";
+    case pmk_establish_condition_handler: return "pmp$establish_condition_handler";
+    case pmk_disestablish_cond_handler:   return "pmp$disestablish_cond_handler";
+    case pmk_get_time:                    return "pmp$get_time";
+    case pmk_log_message:                 return "pmp$log_message";
+    case pmk_log_ascii:                   return "pmp$log_ascii";
+    case pmk_log:                         return "pmp$log";
+    case pmk_wait:                        return "pmp$wait";
+    case pmk_long_term_wait:              return "pmp$long_term_wait";
+    case pmk_enable_system_conditions:    return "pmp$enable_system_conditions";
+    case pmk_establish_ch_in_block:       return "pmp$establish_ch_in_block";
+    case pmk_get_binary_processor_id:     return "pmp$get_binary_processor_id";
+    case pmk_load_from_library:           return "pmp$load_from_library";
+    case pmk_validate_previous_save_area: return "pmp$validate_previous_save_area";
+    case pmk_push_task_debug_mode:        return "pmp$push_task_debug_mode";
+    case pmk_set_task_debug_mode:         return "pmp$set_task_debug_mode";
+    case pmk_establish_debug_cff:         return "pmp$establish_debug_cff";
+    case pmk_change_job_library_list:     return "pmp$change_job_library_list";
+    case pmk_pop_inhibit_termination:     return "pmp$pop_inhibit_termination";
+    case pmk_push_inhibit_termination:    return "pmp$push_inhibit_termination";
+    case pmk_establish_ch_outside_block:  return "pmp$establish_ch_outside_block";
+    case jmk_get_job_status:              return "jmp$get_job_status";
+    case jmk_idle_system:                 return "jmp$idle_system";
+    case jmk_job_exists:                  return "jmp$job_exists";
+    case fmk_return_file:                 return "fmp$return_file";
+    case fsk_open_file:                   return "fsp$open_file";
+    case mtk_job_entry_exit:              return "mtp$job_entry_exit";
+    case mtk_170_entry_exit:              return "mtp$170_entry_exit";
+    case mtk_monitor_mode_trap:           return "mtp$monitor_mode_trap";
+    case mtk_job_mode_trap:               return "mtp$job_mode_trap";
+    default:
+        sprintf(buf, "%u", kpt);
+        return buf;
+        }
+    }
+
+#endif
+
 #endif
 
 /*---------------------------  End Of File  ------------------------------*/

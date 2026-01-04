@@ -647,37 +647,33 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 
         case 'C':
         case 'c':
-            traceMask ^= TraceCpu170;
+            traceMask ^= ((u64)TraceCpu170 << 32) | ((u64)TraceCpu170 << 48);
             break;
 
         case 'E':
         case 'e':
-            traceMask ^= TraceExchange;
+            traceMask ^= ((u64)TraceExchange << 32) | ((u64)TraceExchange << 48);
             break;
 
         case 'F':
         case 'f':
-            traceMask ^= TraceCallFrame;
+            traceMask ^= ((u64)TraceCallFrame << 32) | ((u64)TraceCallFrame << 48);
             break;
 
         case 'V':
         case 'v':
-            traceMask ^= TraceCpu180;
+            traceMask ^= ((u64)TraceCpu180 << 32) | ((u64)TraceCpu180 << 48);
             break;
 
         case 'W':
         case 'w':
-            traceMask ^= TraceCpu180|TraceExchange|TraceBlockOp|TraceCallFrame;
+            traceMask ^= ((u64)(TraceCpu180|TraceExchange|TraceBlockOp|TraceCallFrame) << 32)
+                       | ((u64)(TraceCpu180|TraceExchange|TraceBlockOp|TraceCallFrame) << 48);
             break;
 
         case 'X':
         case 'x':
             traceMask = 0;
-            break;
-
-        case 'D':
-        case 'd':
-            traceMask ^= TraceCpu | TraceExchange | 2;
             break;
 
         case 'L':
@@ -805,7 +801,7 @@ void windowDisplay(HWND hWnd)
         **  Display P registers of PPUs and CPU and current trace mask.
         */
         sprintf(buf, "Refresh: %-10d  PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o   CPU P-reg: %06o"
-                     "   Trace0x: %c%c%c%c%c%c%c%c%c%c%c%c%c %c",
+                     "   Trace0x: %c%c%c%c%c%c%c%c%c%c%c%c%c%c %c",
                 refreshCount++,
                 ppu[0].regP, ppu[1].regP, ppu[2].regP, ppu[3].regP, ppu[4].regP,
                 ppu[5].regP, ppu[6].regP, ppu[7].regP, ppu[8].regP, ppu[9].regP,
@@ -820,9 +816,10 @@ void windowDisplay(HWND hWnd)
                 (traceMask >> 7) & 1 ? '7' : '_',
                 (traceMask >> 8) & 1 ? '8' : '_',
                 (traceMask >> 9) & 1 ? '9' : '_',
-                traceMask & TraceCpu170 ? 'C' : '_',
-                traceMask & TraceCpu180 ? 'V' : '_',
-                traceMask & TraceExchange ? 'E' : '_',
+                traceMask & ((u64)TraceCpu170 << 32) ? 'C' : '_',
+                traceMask & ((u64)TraceCpu180 << 32) ? 'V' : '_',
+                traceMask & ((u64)TraceExchange << 32) ? 'E' : '_',
+                traceMask & ((u64)TraceCallFrame << 32) ? 'F' : '_',
                 shifted ? ' ' : '<');
 
         TextOut(hdcMem, 0, 0, buf, strlen(buf));
@@ -833,7 +830,7 @@ void windowDisplay(HWND hWnd)
             **  Display P registers of second barrel of PPUs.
             */
             sprintf(buf, "                     PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o                    "
-                         "   Trace1x: %c%c%c%c%c%c%c%c%c%c%c%c %c",
+                         "   Trace1x: %c%c%c%c%c%c%c%c%c%c%c%c%c%c %c",
                     ppu[10].regP, ppu[11].regP, ppu[12].regP, ppu[13].regP, ppu[14].regP,
                     ppu[15].regP, ppu[16].regP, ppu[17].regP, ppu[18].regP, ppu[19].regP,
                     (traceMask >> 10) & 1 ? '0' : '_',
@@ -846,8 +843,10 @@ void windowDisplay(HWND hWnd)
                     (traceMask >> 17) & 1 ? '7' : '_',
                     (traceMask >> 18) & 1 ? '8' : '_',
                     (traceMask >> 19) & 1 ? '9' : '_',
-                    ' ',
-                    ' ',
+                    (cpuCount > 1) && (traceMask & ((u64)TraceCpu170 << 48)) ? 'C' : '_',
+                    (cpuCount > 1) && (traceMask & ((u64)TraceCpu180 << 48)) ? 'V' : '_',
+                    (cpuCount > 1) && (traceMask & ((u64)TraceExchange << 48)) ? 'E' : '_',
+                    (cpuCount > 1) && (traceMask & ((u64)TraceCallFrame << 48)) ? 'F' : '_',
                     shifted ? '<' : ' ');
 
             TextOut(hdcMem, 0, 12, buf, strlen(buf));

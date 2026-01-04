@@ -32,9 +32,9 @@
 **  ----------------
 */
 #ifdef _DEBUG
-#define DtCyberVersion      "Desktop CYBER 6.0.3 (Debug)   "
+#define DtCyberVersion      "Desktop CYBER 6.0.4 (Debug)   "
 #else
-#define DtCyberVersion      "Desktop CYBER 6.0.3 (Release) "
+#define DtCyberVersion      "Desktop CYBER 6.0.4 (Release) "
 #endif
 
 #define DtCyberBuildDate    __DATE__ " " __TIME__
@@ -75,7 +75,7 @@
 #define CcLargeWin32Screen         1
 
 /*
-**  Debug support
+**  Debug and tracing support
 */
 #define CcDebug                    0
 
@@ -227,16 +227,17 @@
 #define MaskNormalize              000004000000000000000
 
 /*
-**  Trace masks.
+**  Trace masks and macros
 */
-#define TraceCpu180                0x80000000U
-#define TraceCpu170                0x40000000U
+#define TRACECPU(ctx, mask)        ((u64)(mask) << (((ctx)->id << 4) + 32))
+#define TraceCpu180                0x8000U
+#define TraceCpu170                0x4000U
+#define TraceExchange              0x2000U
+#define TraceBlockOp               0x1000U
+#define TraceCallFrame             0x0800U
+#define TracePva                   0x0400U
+#define TraceValidateStack         0x0200U
 #define TraceCpu                   (TraceCpu180 | TraceCpu170)
-#define TraceExchange              0x20000000U
-#define TraceBlockOp               0x10000000U
-#define TraceCallFrame             0x08000000U
-#define TracePva                   0x04000000U
-#define TraceValidateStack         0x02000000U
 
 /*
 **  Sign extension and overflow.
