@@ -1318,10 +1318,13 @@ static FcStatus dd8xxFunc(PpWord funcCode)
             }
         break;
 
+    case Fc8xxReturnCylAddr:
+        activeDevice->recordLength = 1;
+        break;
+
     case Fc8xxIoLength:
     case Fc8xxDisableReserve:
     case Fc8xxContinue:
-    case Fc8xxReturnCylAddr:
     case Fc8xxGapWrite:
     case Fc8xxGapWriteVerify:
     case Fc8xxGapReadCheckword:
@@ -1754,6 +1757,18 @@ static void dd8xxIo(void)
             }
         break;
 
+    case Fc8xxReturnCylAddr:
+        if (!activeChannel->full)
+            {
+            activeChannel->full = TRUE;
+            activeChannel->data = (PpWord)dp->cylinder;
+            if (--activeDevice->recordLength == 0)
+                {
+                activeChannel->discAfterInput = TRUE;
+                }
+            }
+        break;
+
     case Fc8xxFormatPack:
     case Fc8xxManipulateProcessor:
     case Fc8xxIoLength:
@@ -1762,7 +1777,6 @@ static void dd8xxIo(void)
     case Fc8xxContinue:
     case Fc8xxDropSeeks:
     case Fc8xxDriveRelease:
-    case Fc8xxReturnCylAddr:
     case Fc8xxGapWrite:
     case Fc8xxGapWriteVerify:
     case Fc8xxGapReadCheckword:
