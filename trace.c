@@ -1,6 +1,7 @@
 /*--------------------------------------------------------------------------
 **
 **  Copyright (c) 2003-2011, Tom Hunter
+**                2025,2026, Kevin Jordan
 **
 **  Name: trace.c
 **
@@ -217,7 +218,9 @@ static void tracePrintRma(Cpu180Context *cpu, u64 pva);
 **  Public Variables
 **  ----------------
 */
-u64 traceMask = 0;
+u64 traceMask    = 0;
+u16 traceMcrMask = 0xbb0c;
+u16 traceUcrMask = 0x6c01;
 u32 traceSequenceNo;
 
 /*
@@ -2274,7 +2277,7 @@ static char *traceMonitorConditionToStr(MonitorCondition cond)
     case MCR50:
         return "Short warning";
     case MCR51:
-        return "Instruction specfication error";
+        return "Instruction specification error";
     case MCR52:
         return "Address specification error";
     case MCR53:
@@ -2315,7 +2318,7 @@ static char *traceMonitorConditionToStr(MonitorCondition cond)
 **------------------------------------------------------------------------*/
 void traceMonitorCondition(Cpu180Context *cpu, MonitorCondition cond)
     {
-    if ((traceMask & TRACECPU(cpu, TracePva | TraceCpu180)) != 0)
+    if ((traceMask & TRACECPU(cpu, TraceConditions)) != 0 && ((1 << (15 - cond)) & traceMcrMask) != 0)
         {
         fprintf(cpuF[cpu->id], "%06d MCR%02d %s", traceSequenceNo, (cond - MCR48) + 48, traceMonitorConditionToStr(cond));
         switch (cond)
@@ -2486,7 +2489,7 @@ void traceUserCondition(Cpu180Context *cpu, UserCondition cond)
     {
     char *s;
 
-    if ((traceMask & TRACECPU(cpu, TracePva | TraceCpu180)) != 0)
+    if ((traceMask & TRACECPU(cpu, TraceConditions)) != 0 && ((1 << (15 - cond)) & traceUcrMask) != 0)
         {
         switch (cond)
             {

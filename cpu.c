@@ -750,15 +750,17 @@ void cpuStep(Cpu170Context *activeCpu)
             cpu180CheckConditions(ctx180);
             if (ctx180->pendingAction > Stack)
                 {
+                if (ctx180->pendingAction == Trap)
+                    {
+                    cpu180Trap(ctx180);
+                    }
                 if (ctx180->pendingAction == Exch)
                     {
                     cpuExchangeTo180(activeCpu, FALSE);
-                    cpu180Step(ctx180);
                     }
-                else if (ctx180->pendingAction == Trap)
+                else if (ctx180->pendingAction == Halt)
                     {
-                    cpu180Trap(ctx180);
-                    cpu180Step(ctx180);
+                    ctx180->isStopped = TRUE;
                     }
                 return;
                 }

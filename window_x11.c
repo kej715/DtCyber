@@ -707,12 +707,16 @@ static void *windowThread(void *param)
                             break;
 
                         case 'w':
-                            traceMask ^= ((u64)(TraceCpu180|TraceExchange|TraceBlockOp|TraceCallFrame) << 32)
-                                       | ((u64)(TraceCpu180|TraceExchange|TraceBlockOp|TraceCallFrame) << 48);
+                            traceMask ^= ((u64)(TraceCpu180|TraceExchange|TraceBlockOp|TraceCallFrame|TraceConditions) << 32)
+                                       | ((u64)(TraceCpu180|TraceExchange|TraceBlockOp|TraceCallFrame|TraceConditions) << 48);
                             break;
 
                         case 'x':
                             traceMask = 0;
+                            break;
+
+                        case 'y':
+                            traceMask ^= ((u64)TraceConditions << 32) | ((u64)TraceConditions << 48);
                             break;
 
                         case 'p':
@@ -843,7 +847,7 @@ static void *windowThread(void *param)
                     }
                 }
 
-            sprintf(buf + strlen(buf), "   Trace: %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
+            sprintf(buf + strlen(buf), "   Trace: %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
                 (traceMask >> 0) & 1 ? '0' : '_',
                 (traceMask >> 1) & 1 ? '1' : '_',
                 (traceMask >> 2) & 1 ? '2' : '_',
@@ -860,16 +864,18 @@ static void *windowThread(void *param)
                 (traceMask & ((u64)TraceBlockOp << 32)) != 0 ? 'B' : '_',
                 (traceMask & ((u64)TraceCallFrame << 32)) != 0 ? 'F' : '_',
                 (traceMask & ((u64)TraceValidateStack << 32)) != 0 ? 'S' : '_',
+                (traceMask & ((u64)TraceConditions << 32)) != 0 ? 'Y' : '_',
                 (traceMask & ((u64)TracePva << 32)) != 0 ? 'P' : '_');
             if (cpuCount > 1)
                 {
-                sprintf(buf + strlen(buf), "%c%c%c%c%c%c%c",
+                sprintf(buf + strlen(buf), "%c%c%c%c%c%c%c%c",
                     (traceMask & ((u64)TraceCpu170 << 48)) != 0 ? 'C' : '_',
                     (traceMask & ((u64)TraceCpu180 << 48)) != 0 ? 'V' : '_',
                     (traceMask & ((u64)TraceExchange << 48)) != 0 ? 'E' : '_',
                     (traceMask & ((u64)TraceBlockOp << 48)) != 0 ? 'B' : '_',
                     (traceMask & ((u64)TraceCallFrame << 48)) != 0 ? 'F' : '_',
                     (traceMask & ((u64)TraceValidateStack << 48)) != 0 ? 'S' : '_',
+                    (traceMask & ((u64)TraceConditions << 48)) != 0 ? 'Y' : '_',
                     (traceMask & ((u64)TracePva << 48)) != 0 ? 'P' : '_');
                 }
 

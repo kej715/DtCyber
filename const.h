@@ -32,9 +32,9 @@
 **  ----------------
 */
 #ifdef _DEBUG
-#define DtCyberVersion      "Desktop CYBER 6.0.4 (Debug)   "
+#define DtCyberVersion      "Desktop CYBER 6.0.5 (Debug)   "
 #else
-#define DtCyberVersion      "Desktop CYBER 6.0.4 (Release) "
+#define DtCyberVersion      "Desktop CYBER 6.0.5 (Release) "
 #endif
 
 #define DtCyberBuildDate    __DATE__ " " __TIME__
@@ -237,6 +237,7 @@
 #define TraceCallFrame             0x0800U
 #define TracePva                   0x0400U
 #define TraceValidateStack         0x0200U
+#define TraceConditions            0x0100U
 #define TraceCpu                   (TraceCpu180 | TraceCpu170)
 
 /*

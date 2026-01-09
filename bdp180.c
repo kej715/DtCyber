@@ -225,14 +225,15 @@ void bdp180AddDigit(BdpOperand *operand, u8 digit)
 **------------------------------------------------------------------------*/
 bool bdp180CopyFromBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
     {
-    u8  *bp;
-    u16 i;
-    u64 mask;
-    u16 n;
-    u32 rmas[32];
-    u8  shift;
-    u64 word;
-    u32 wordAddr;
+    u8               *bp;
+    MonitorCondition cond;
+    u16              i;
+    u64              mask;
+    u16              n;
+    u32              rmas[32];
+    u8               shift;
+    u64              word;
+    u32              wordAddr;
 
     //
     //  Copy bytes from the buffer to the destination block. Optimize the copy by storing
@@ -250,8 +251,9 @@ bool bdp180CopyFromBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
             {
             n = count;
             }
-        if (cpu180TranslatePvaSequence(ctx, pva, 1, (u8)n, RingOf(pva), AccessModeWrite, rmas) == FALSE)
+        if (cpu180TranslatePvaSequence(ctx, pva, 1, (u8)n, RingOf(pva), AccessModeWrite, rmas, &cond) == FALSE)
             {
+            cpu180SetMonitorCondition(ctx, cond);
             return FALSE;
             }
         pva     += n;
@@ -271,8 +273,9 @@ bool bdp180CopyFromBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
         //
         // Copy up to eight bytes at a time, word-aligned
         //
-        if (cpu180TranslatePvaSequence(ctx, pva, (count + 7) >> 3, 8, RingOf(pva), AccessModeWrite, rmas) == FALSE)
+        if (cpu180TranslatePvaSequence(ctx, pva, (count + 7) >> 3, 8, RingOf(pva), AccessModeWrite, rmas, &cond) == FALSE)
             {
+            cpu180SetMonitorCondition(ctx, cond);
             return FALSE;
             }
         i = 0;
@@ -309,12 +312,13 @@ bool bdp180CopyFromBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
 **------------------------------------------------------------------------*/
 bool bdp180CopyToBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
     {
-    u8  *bp;
-    u8  i;
-    u16 n;
-    u32 rmas[32];
-    u8  shift;
-    u64 word;
+    u8               *bp;
+    MonitorCondition cond;
+    u8               i;
+    u16              n;
+    u32              rmas[32];
+    u8               shift;
+    u64              word;
 
     //
     //  Copy bytes of the source block to the buffer. Optimize the copy by fetching
@@ -332,8 +336,9 @@ bool bdp180CopyToBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
             {
             n = count;
             }
-        if (cpu180TranslatePvaSequence(ctx, pva, 1, (u8)n, RingOf(pva), AccessModeRead, rmas) == FALSE)
+        if (cpu180TranslatePvaSequence(ctx, pva, 1, (u8)n, RingOf(pva), AccessModeRead, rmas, &cond) == FALSE)
             {
+            cpu180SetMonitorCondition(ctx, cond);
             return FALSE;
             }
         pva   += n;
@@ -351,8 +356,9 @@ bool bdp180CopyToBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
     if (count > 0)
         {
         n = (count + 7) >> 3;
-        if (cpu180TranslatePvaSequence(ctx, pva, n, 8, RingOf(pva), AccessModeRead, rmas) == FALSE)
+        if (cpu180TranslatePvaSequence(ctx, pva, n, 8, RingOf(pva), AccessModeRead, rmas, &cond) == FALSE)
             {
+            cpu180SetMonitorCondition(ctx, cond);
             return FALSE;
             }
         i = 0;

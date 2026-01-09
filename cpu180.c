@@ -103,6 +103,8 @@
 #define lok_load_module_from_library      951
 #define lok_satisfy_externals             955
 #define lok_load_module                   956
+#define mmk_page_fault                   1106
+#define mmk_build_lock_rmal              1138
 #define mmk_advise_out                   1152
 #define mmk_write_modified_pages         1157
 #define ofk_screen_input_fap             1351
@@ -110,6 +112,7 @@
 #define osk_format_message               1401
 #define osk_set_status_abnormal          1403
 #define osk_await_activity_completion    1407
+#define osk_allocate                     1447
 #define pfk_attach                       1500
 #define pfk_get_object_information       1539
 #define pfk_restricted_attach            1565
@@ -123,6 +126,7 @@
 #define pmk_await_task_termination       1609
 #define pmk_establish_condition_handler  1622
 #define pmk_disestablish_cond_handler    1623
+#define pmk_cause_condition              1624
 #define pmk_get_time                     1627
 #define pmk_log_message                  1641
 #define pmk_log_ascii                    1642
@@ -141,6 +145,12 @@
 #define pmk_pop_inhibit_termination      1721
 #define pmk_push_inhibit_termination     1722
 #define pmk_establish_ch_outside_block   1746
+#define tmk_switch_task                  1918
+#define tmk_send_monitor_fault           1930
+#define tmk_process_task_mcr_fault       1934
+#define tmk_set_monitor_flag             1936
+#define iok_queue_request                2200
+#define iok_io_completions               2201
 #define jmk_get_job_status               2602
 #define jmk_idle_system                  2615
 #define jmk_job_exists                   2627
@@ -160,16 +170,17 @@
 
 //#define TRACE_STORE_START 0x100a0000b758
 //#define TRACE_STORE_END   0x100a0000b758
-/*
-#define TRACE_KEYPOINT_LIST     \
-    {                           \
-    osk_format_message,         \
-    osk_set_status_abnormal,    \
-    pmk_push_task_debug_mode,   \
-    pmk_establish_debug_cff,    \
-    pmk_pop_inhibit_termination \
+
+#define TRACE_KEYPOINT_LIST         \
+    {                               \
+    osk_format_message,             \
+    osk_set_status_abnormal,        \
+    pmk_push_task_debug_mode,       \
+    pmk_establish_debug_cff,        \
+    pmk_pop_inhibit_termination,    \
+    pmk_validate_previous_save_area \
     }
-*/
+
 #endif
 
 /*
@@ -276,6 +287,8 @@
 */
 #define KeypointEntry          2
 #define KeypointExit           3
+#define KeypointDebug          4
+#define KeypointMtr            5
 
 /*
 **  -----------------------
@@ -330,25 +343,26 @@ typedef struct conditionActionDefn
 static bool cpu180AddInt32(Cpu180Context *ctx, u32 augend, u32 addend, u32 *sum);
 static bool cpu180AddInt64(Cpu180Context *ctx, u64 augend, u64 addend, u64 *sum);
 static void cpu180ApplyBdpOperator(Cpu180Context *ctx, bool (*operator)(BdpOperand *src, BdpOperand *dst, BdpOperand *result, UserCondition *cond));
-static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 at, u8 xs, u8 xt, bool doSaveCrs);
+static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 at, u8 xs, u8 xt, bool doSaveCrs, MonitorCondition *cond);
 static void cpu180CheckMonitorConditions(Cpu180Context *ctx);
 static void cpu180CheckUserConditions(Cpu180Context *ctx);
 static void cpu180Exchange(Cpu180Context *activeCpu);
 static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool ignoreValidity, u32 *pti, u8 *count);
 static void cpu180Get170State(Cpu180Context *ctx);
 static ConditionAction cpu180GetActionForMonitorCondition(Cpu180Context *ctx, MonitorCondition cond);
+static ConditionAction cpu180GetActionForTrapCondition(Cpu180Context *ctx, MonitorCondition cond);
 static ConditionAction cpu180GetActionForUserCondition(Cpu180Context *ctx, UserCondition cond);
 static bool cpu180GetBdpDescriptor(Cpu180Context *ctx, u64 pva, u8 aRegNum, u8 xRegNum, BdpDescriptor *descriptor);
 static u8 cpu180GetCurrentXp(Cpu180Context *ctx);
-static bool cpu180GetLock(Cpu180Context *ctx, u64 pva, u8 *lock);
+static bool cpu180GetLock(Cpu180Context *ctx, u64 pva, u8 *lock, MonitorCondition *cond);
 static bool cpu180GetParcel(Cpu180Context *ctx, u64 pva, u16 *parcel);
-static bool cpu180GetR1(Cpu180Context *ctx, u64 pva, u8 *r1);
-static bool cpu180GetR2(Cpu180Context *ctx, u64 pva, u8 *r2);
+static bool cpu180GetR1(Cpu180Context *ctx, u64 pva, u8 *r1, MonitorCondition *cond);
+static bool cpu180GetR2(Cpu180Context *ctx, u64 pva, u8 *r2, MonitorCondition *cond);
 static bool cpu180IsBindingSectionRef(Cpu180Context *ctx, u64 pva);
 static void cpu180Load170Xp(Cpu180Context *ctx, u32 xpa);
 static bool cpu180MulInt32(Cpu180Context *ctx, u32 mltand, u32 mltier, u32 *product);
 static bool cpu180MulInt64(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *product);
-static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool doSaveCrs, u64 *sfsa, u32 *frameSize);
+static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool doSaveCrs, u64 *sfsa, u32 *frameSize, MonitorCondition *cond);
 static void cpu180Set170State(Cpu180Context *ctx, u64 regP);
 static void cpu180SetRingZeroCondition(Cpu180Context *ctx, u64 pva);
 static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa);
@@ -1217,15 +1231,17 @@ void cpu180CheckConditions(Cpu180Context *ctx)
 **------------------------------------------------------------------------*/
 bool cpu180GetBytes(Cpu180Context *ctx, u64 pva, int count, u8 ring, Cpu180AccessMode access, u64 *word)
     {
-    u8  i;
-    u32 rma;
-    u32 rmas[8];
-    u8  shift;
+    MonitorCondition cond;
+    u8               i;
+    u32              rma;
+    u32              rmas[8];
+    u8               shift;
 
     if ((pva & Mask3) == 0) // optimization: word-aligned load
         {
-        if (cpu180TranslatePvaSequence(ctx, pva, 1, count, ring, access, rmas) == FALSE)
+        if (cpu180TranslatePvaSequence(ctx, pva, 1, count, ring, access, rmas, &cond) == FALSE)
             {
+            cpu180SetMonitorCondition(ctx, cond);
             return FALSE;
             }
         if (count < 8)
@@ -1237,18 +1253,19 @@ bool cpu180GetBytes(Cpu180Context *ctx, u64 pva, int count, u8 ring, Cpu180Acces
             *word = cpMem[rmas[0] >> 3];
             }
         }
-    else if (cpu180TranslatePvaSequence(ctx, pva, count, 1, ring, access, rmas))
+    else if (cpu180TranslatePvaSequence(ctx, pva, count, 1, ring, access, rmas, &cond))
         {
         *word = 0;
         for (i = 0; i < count; i++)
             {
             rma   = rmas[i];
-            shift = 56 - ((rma & Mask3) << 3);
+            shift = (u8)(56 - ((rma & Mask3) << 3));
             *word = (*word << 8) | ((cpMem[rma >> 3] >> shift) & Mask8);
             }
         }
     else
         {
+        cpu180SetMonitorCondition(ctx, cond);
         return FALSE;
         }
 
@@ -1925,60 +1942,60 @@ void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
         ctx->controlStoreBreak = (u32)word;
         break;
     case RegDebugIndex:
-        ctx->regDi = word & Mask8;
+        ctx->regDi = (u8)(word & Mask8);
         break;
     case RegDebugList:
         ctx->regDlp = word;
         break;
     case RegDebugMask:
-        ctx->regDm = word & Mask8;
+        ctx->regDm = (u8)(word & Mask8);
         break;
     case RegDepEnvControl:
         ctx->regDec = word;
         break;
     case RegJobProcessState:
-        ctx->regJps = word & Mask32;
+        ctx->regJps = (u32)(word & Mask32);
         break;
     case RegKeypointBuffer:
         ctx->regKbp = word & Mask48;
         break;
     case RegKeypointMask:
-        ctx->regKmr = word & Mask16;
+        ctx->regKmr = (u16)(word & Mask16);
         break;
     case RegModelDepFlags:
-        ctx->regMdf = word & Mask16;
+        ctx->regMdf = (u16)(word & Mask16);
         break;
     case RegModelDepWord:
         ctx->regMdw = word;
         break;
     case RegMonitorCondition:
-        ctx->regMcr = word & Mask16;
+        ctx->regMcr = (u16)(word & Mask16);
 #if DEBUG && DEBUG_SET_STATE_REG
         fprintf(cpu180Log, "        MMR %04x MCR %04x\n", ctx->regMmr, ctx->regMcr);
 #endif
         break;
     case RegMonitorMask:
-        ctx->regMmr = word & Mask16;
+        ctx->regMmr = (u16)(word & Mask16);
 #if DEBUG && DEBUG_SET_STATE_REG
         fprintf(cpu180Log, "        MMR %04x MCR %04x\n", ctx->regMmr, ctx->regMcr);
 #endif
         break;
     case RegMonitorProcState:
-        ctx->regMps = word & Mask32;
+        ctx->regMps = (u32)(word & Mask32);
         break;
     case RegPageSizeMask:
         ctx->regPsm = word & Mask7;
         cpu180UpdatePageSize(ctx);
         break;
     case RegPageTableAddr:
-        ctx->regPta = word & Mask32;
+        ctx->regPta = (u32)(word & Mask32);
         break;
     case RegPageTableLen:
-        ctx->regPtl = word & Mask8;
+        ctx->regPtl = (u8)(word & Mask8);
         cpu180UpdatePageSize(ctx);
         break;
     case RegProcessIntTimer:
-        ctx->regPit = word & Mask32;
+        ctx->regPit = (u32)(word & Mask32);
 #if DEBUG && DEBUG_SET_STATE_REG
         fprintf(cpu180Log, "        PIT " FMT32_08x " (%u)\n", ctx->regPit, ctx->regPit);
 #endif
@@ -1993,13 +2010,13 @@ void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
         ctx->regP = word & Mask48;
         break;
     case RegSegmentTableLen:
-        ctx->regStl = word & Mask16;
+        ctx->regStl = (u16)(word & Mask16);
         break;
     case RegSegmentTableAddr:
-        ctx->regSta = word & Mask32;
+        ctx->regSta = (u32)(word & Mask32);
         break;
     case RegSystemIntTimer:
-        ctx->regSit = word & Mask32;
+        ctx->regSit = (u32)(word & Mask32);
 #if DEBUG && DEBUG_SET_STATE_REG
         fprintf(cpu180Log, "        SIT " FMT32_08x " (%u)\n", ctx->regSit, ctx->regSit);
 #endif
@@ -2019,19 +2036,19 @@ void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
         ctx->regUtp = word & Mask48;
         break;
     case  RegUserCondition:
-        ctx->regUcr = word & Mask16;
+        ctx->regUcr = (u16)(word & Mask16);
 #if DEBUG && DEBUG_SET_STATE_REG
         fprintf(cpu180Log, "        UMR %04x UCR %04x\n", ctx->regUmr, ctx->regUcr);
 #endif
         break;
     case  RegUserMask:
-        ctx->regUmr = (word & Mask16) | 0xfe00;
+        ctx->regUmr = (u16)((word & Mask16) | 0xfe00);
 #if DEBUG && DEBUG_SET_STATE_REG
         fprintf(cpu180Log, "        UMR %04x UCR %04x\n", ctx->regUmr, ctx->regUcr);
 #endif
         break;
     case RegVmCapabilityList:
-        ctx->regVmcl = word & Mask16;
+        ctx->regVmcl = (u16)(word & Mask16);
         break;
     //  Trap Enables addresses
     case 0xc0:
@@ -2298,14 +2315,15 @@ void cpu180PpWriteMem(u32 address, CpWord data)
 **------------------------------------------------------------------------*/
 bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u8 ring, u64 word, int count)
     {
-    u64 byte;
-    u8  byteShift;
-    u8  i;
-    u64 mask;
-    u32 rma;
-    u32 rmas[8];
-    u32 wordAddr;
-    u8  wordShift;
+    u64              byte;
+    u8               byteShift;
+    MonitorCondition cond;
+    u8               i;
+    u64              mask;
+    u32              rma;
+    u32              rmas[8];
+    u32              wordAddr;
+    u8               wordShift;
 
     static u64 masks[8] =
         {
@@ -2325,7 +2343,7 @@ bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u8 ring, u64 word, int count)
 
     if ((pva & Mask3) == 0) // optimization: word-aligned store
         {
-        if (cpu180TranslatePvaSequence(ctx, pva, 1, count, ring, AccessModeWrite, rmas))
+        if (cpu180TranslatePvaSequence(ctx, pva, 1, count, ring, AccessModeWrite, rmas, &cond))
             {
             wordAddr = rmas[0] >> 3;
             if (count < 8)
@@ -2337,10 +2355,11 @@ bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u8 ring, u64 word, int count)
             }
         else
             {
+            cpu180SetMonitorCondition(ctx, cond);
             return FALSE;
             }
         }
-    else if (cpu180TranslatePvaSequence(ctx, pva, count, 1, ring, AccessModeWrite, rmas))
+    else if (cpu180TranslatePvaSequence(ctx, pva, count, 1, ring, AccessModeWrite, rmas, &cond))
         {
         i         = 0;
         wordShift = (count - 1) << 3;
@@ -2357,6 +2376,7 @@ bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u8 ring, u64 word, int count)
         }
     else
         {
+        cpu180SetMonitorCondition(ctx, cond);
         return FALSE;
         }
 
@@ -2430,8 +2450,8 @@ bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *r
         return FALSE;
         }
 
-    asid    = (sde >> 32) & Mask16;
-    byteNum = pva & Mask32;
+    asid    = (u16)((sde >> 32) & Mask16);
+    byteNum = (u32)(pva & Mask32);
 
     if (cpu180FindPte(ctx, asid, byteNum, FALSE, pti, &n))
         {
@@ -2590,21 +2610,16 @@ void cpu180Step(Cpu180Context *activeCpu)
 
     if (activeCpu->pendingAction > Stack)
         {
-        switch (activeCpu->pendingAction)
+        if (activeCpu->pendingAction == Trap)
             {
-        case Trap:
 #if DEBUG && DEBUG_INTERRUPT
             fprintf(cpu180Log, "Trap interrupt: P " FMT64_012x " MCR %04x MMR %04x UCR %04x UMR %04x\n",
                 activeCpu->regP, activeCpu->regMcr, activeCpu->regMmr, activeCpu->regUcr, activeCpu->regUmr);
 #endif
-            activeCpu->pendingAction = Rni;
             cpu180Trap(activeCpu);
-            if (activeCpu->pendingAction > Stack)
-                {
-                return;
-                }
-            break;
-
+            }
+        switch (activeCpu->pendingAction)
+            {
         case Exch:
 #if DEBUG && DEBUG_INTERRUPT
             fprintf(cpu180Log, "Exchange interrupt: P " FMT64_012x " MCR %04x MMR %04x UCR %04x UMR %04x\n",
@@ -2621,6 +2636,7 @@ void cpu180Step(Cpu180Context *activeCpu)
 #endif
             activeCpu->isStopped = TRUE;
             return;
+
         default:
             break;
             }
@@ -2685,7 +2701,7 @@ void cpu180Step(Cpu180Context *activeCpu)
                 }
             }
 #if defined(TRACE_INST_LIST)
-        if (memchr(traceInstList, activeCpu->opCode, sizeof(traceInstList)) != NULL)
+        if ((traceMask & TRACECPU(activeCpu, TraceCpu180)) == 0 && memchr(traceInstList, activeCpu->opCode, sizeof(traceInstList)) != NULL)
             {
             traceMask                    |= TRACECPU(activeCpu, TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
             traceInstCount[activeCpu->id] = TRACE_INST_COUNT;
@@ -2753,14 +2769,14 @@ void cpu180Store170Xp(Cpu180Context *ctx, u32 xpa)
 **                              (e.g., caller's ring number)
 **                  access      mode of access (execute, read, write)
 **                  rmas        (out) sequence of translated RMA's
+**                  cond        (out) monitor condition if error condition detected
 **
 **  Returns:        TRUE if sequence translated successfully. FALSE otherwise,
 **                  and MCR set accordingly.
 **
 **------------------------------------------------------------------------*/
-bool cpu180TranslatePvaSequence(Cpu180Context *ctx, u64 pva, u16 count, u8 incr, u8 ring, Cpu180AccessMode access, u32 *rmas)
+bool cpu180TranslatePvaSequence(Cpu180Context *ctx, u64 pva, u16 count, u8 incr, u8 ring, Cpu180AccessMode access, u32 *rmas, MonitorCondition *cond)
     {
-    MonitorCondition cond;
     u16              i;
     u32              pageNum;
     u32              pn;
@@ -2769,10 +2785,9 @@ bool cpu180TranslatePvaSequence(Cpu180Context *ctx, u64 pva, u16 count, u8 incr,
 
     if (count > 0)
         {
-        if (cpu180ValidateAccess(ctx, pva, ring, access, &cond) == FALSE
-            || cpu180PvaToRma(ctx, pva, access, &rma, &pti, &cond) == FALSE)
+        if (cpu180ValidateAccess(ctx, pva, ring, access, cond) == FALSE
+            || cpu180PvaToRma(ctx, pva, access, &rma, &pti, cond) == FALSE)
             {
-            cpu180SetMonitorCondition(ctx, cond);
             return FALSE;
             }
         *rmas++ = rma;
@@ -2784,9 +2799,8 @@ bool cpu180TranslatePvaSequence(Cpu180Context *ctx, u64 pva, u16 count, u8 incr,
             pn   = PageOf(pva, ctx);
             if (pn != pageNum)
                 {
-                if (cpu180PvaToRma(ctx, pva, access, &rma, &pti, &cond) == FALSE)
+                if (cpu180PvaToRma(ctx, pva, access, &rma, &pti, cond) == FALSE)
                     {
-                    cpu180SetMonitorCondition(ctx, cond);
                     return FALSE;
                     }
                 pageNum = pn;
@@ -2825,29 +2839,35 @@ void cpu180Trap(Cpu180Context *ctx)
     traceTrap(ctx);
 #endif
 
+    ctx->pendingAction = Rni;
+
     if (cpu180ValidateAccess(ctx, ctx->regTp, RingOf(ctx->regP), AccessModeRead, &cond) == FALSE
         || cpu180PvaToRma(ctx, ctx->regTp, AccessModeRead, &rma, &pti, &cond) == FALSE)
         {
         cpu180SetMonitorCondition(ctx, cond);
-        ctx->regMcr |= mcrDefns[MCR63].bitMask;
+        ctx->regMcr       |= mcrDefns[MCR63].bitMask;
+        ctx->pendingAction = cpu180GetActionForTrapCondition(ctx, cond);
         return;
         }
     cbp = cpMem[rma >> 3];
     if (((cbp >> 56) & Mask4) != 0 || ((cbp >> 55) & 1) == 0) // not VMID 0 or not external flag
         {
         cpu180SetMonitorCondition(ctx, MCR55); // Environment specification error
-        ctx->regMcr |= mcrDefns[MCR63].bitMask;
+        ctx->regMcr       |= mcrDefns[MCR63].bitMask;
+        ctx->pendingAction = cpu180GetActionForTrapCondition(ctx, MCR55);
         return;
         }
-    if (cpu180CallIndirect(ctx, ctx->regTp, cbp, ctx->regA[4], 0xf, 0x0, 0xf, TRUE) == FALSE)
+    if (cpu180CallIndirect(ctx, ctx->regTp, cbp, ctx->regA[4], 0xf, 0x0, 0xf, TRUE, &cond) == FALSE)
         {
-        ctx->regMcr |= mcrDefns[MCR63].bitMask;
+        cpu180SetMonitorCondition(ctx, cond);
+        ctx->regMcr       |= mcrDefns[MCR63].bitMask;
+        ctx->pendingAction = cpu180GetActionForTrapCondition(ctx, cond);
         return;
         }
 
     ctx->regP      = ctx->nextP;
     ctx->key       = ctx->nextKey;
-    ctx->regFlags &= 0x3ffc; // clear CFF, OCF, and trap enable flags
+    ctx->regFlags &= 0xfffd; // clear trap enable flag
     ctx->regMcr   &= ~(ctx->regMmr | 0x0021); // clear masked bits and status bits
     ctx->regUcr   &= ~ctx->regUmr;
     }
@@ -3041,41 +3061,41 @@ static void cpu180ApplyBdpOperator(Cpu180Context *ctx, bool (*operator)(BdpOpera
 **                  xs          starting X register
 **                  xt          terminating X register
 **                  doSaveCrs   TRUE if MCR/UCR to be saved in stack frame
+**                  cond        (out) monitor condition if error condition detected
 **
 **  Returns:        TRUE if successful. FALSE if error condition detected.
 **
 **------------------------------------------------------------------------*/
-static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 at, u8 xs, u8 xt, bool doSaveCrs)
+static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 at, u8 xs, u8 xt, bool doSaveCrs, MonitorCondition *cond)
     {
-    u64              callee;
-    MonitorCondition cond;
-    bool             isExt;
-    u32              frameSize;
-    u8               lock;
-    u32              pti;
-    u8               r1;
-    u8               r2;
-    u8               ringP;
-    u32              rma;
-    u64              sfsa;
-    u8               vmid;
+    u64  callee;
+    bool isExt;
+    u32  frameSize;
+    u8   lock;
+    u32  pti;
+    u8   r1;
+    u8   r2;
+    u8   ringP;
+    u32  rma;
+    u64  sfsa;
+    u8   vmid;
 
     callee = cbp & Mask48;
     if (RingOf(bsp) > ((cbp >> 48) & Mask4))
         {
         ctx->regUtp = callee;
-        cpu180SetMonitorCondition(ctx, MCR54); // Access violation
+        *cond       = MCR54; // Access violation
         return FALSE;
         }
     ringP = RingOf(ctx->regP);
-    if (cpu180GetR1(ctx, callee, &r1) == FALSE || cpu180GetR2(ctx, callee, &r2) == FALSE)
+    if (cpu180GetR1(ctx, callee, &r1, cond) == FALSE || cpu180GetR2(ctx, callee, &r2, cond) == FALSE)
         {
         return FALSE;
         }
     if (r1 > ringP)
         {
         ctx->regUtp = callee;
-        cpu180SetMonitorCondition(ctx, MCR61); // Outward call
+        *cond       = MCR61; // Outward call
         return FALSE;
         }
     if (ringP <= r2)
@@ -3088,27 +3108,25 @@ static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 
         }
     if (((callee & Mask3) != 0) || Is32BitNeg(callee))
         {
-        cpu180SetMonitorCondition(ctx, MCR52); // Address specification error
         ctx->regUtp = callee;
+        *cond       = MCR51; // Address specification error
         return FALSE;
         }
-    if (cpu180ValidateAccess(ctx, ctx->regA[0], RingOf(ctx->regA[0]), AccessModeWrite, &cond) == FALSE)
+    if (cpu180ValidateAccess(ctx, ctx->regA[0], RingOf(ctx->regA[0]), AccessModeWrite, cond) == FALSE)
         {
-        cpu180SetMonitorCondition(ctx, cond);
         return FALSE;
         }
     vmid  = (cbp >> 56) & Mask4;
     isExt = vmid == 0 && ((cbp >> 55) & 1) != 0;
     if (isExt)
         {
-        if (cpu180PvaToRma(ctx, bsp + 8, AccessModeRead, &rma, &pti, &cond) == FALSE)
+        if (cpu180PvaToRma(ctx, bsp + 8, AccessModeRead, &rma, &pti, cond) == FALSE)
             {
-            cpu180SetMonitorCondition(ctx, cond);
             return FALSE;
             }
         bsp = cpMem[rma >> 3] & Mask48;
         }
-    if (cpu180PushFrame(ctx, at, xs, xt, doSaveCrs, &sfsa, &frameSize) == FALSE)
+    if (cpu180PushFrame(ctx, at, xs, xt, doSaveCrs, &sfsa, &frameSize, cond) == FALSE)
         {
         return FALSE;
         }
@@ -3117,7 +3135,7 @@ static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 
         {
         ctx->regLrn = ringP;
         }
-    if (cpu180GetLock(ctx, callee, &lock) == FALSE)
+    if (cpu180GetLock(ctx, callee, &lock, cond) == FALSE)
         {
         return FALSE;
         }
@@ -3313,7 +3331,7 @@ static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool ignore
     **  Calculate the starting page table index, per section 3.5.2 of MIGDS.
     */
     pageNum = byteNum >> ctx->pageNumShift;
-    hash    = asid ^ (pageNum & Mask16);
+    hash    = (u32)asid ^ (pageNum & Mask16);
     idx     = ((ctx->regPta & 0xfffff000) | ((hash << 4) & ctx->pageLengthMask)) >> 3;
     spid    = ((u64)asid << 22) | ((u64)pageNum << ctx->spidShift);
 
@@ -3435,6 +3453,36 @@ static ConditionAction cpu180GetActionForMonitorCondition(Cpu180Context *ctx, Mo
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Get the action associated with a monitor condition that
+**                  occurs while handling a trap
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CPU context
+**                  cond        monitor condition ordinal
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static ConditionAction cpu180GetActionForTrapCondition(Cpu180Context *ctx, MonitorCondition cond)
+    {
+    ConditionAction     action;
+    ConditionActionDefn *defn;
+
+    defn = &mcrDefns[cond];
+
+    if ((ctx->regMmr & defn->bitMask) == 0)
+        {
+        action = defn->whenNoMask;
+        }
+    else
+        {
+        action = ctx->isMonitorMode ? defn->whenMaskNoTrapMonitor : defn->whenMaskNoTrapJob;
+        }
+
+    return action;
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Get the action associated with a user condition
 **
 **  Parameters:     Name        Description.
@@ -3492,7 +3540,7 @@ static bool cpu180GetBdpDescriptor(Cpu180Context *ctx, u64 pva, u8 aRegNum, u8 x
         descriptor->rawDesc = (u32)desc;
         descriptor->type    = (desc >> 24) & Mask4;
         descriptor->length  = Is32BitNeg(desc) ? ctx->regX[xRegNum] & Mask9 : (desc >> 16) & Mask8;
-        operandAddress      = desc & Mask16;
+        operandAddress      = (u32)(desc & Mask16);
         disp                = (operandAddress <= 0x7fff) ? operandAddress : 0xffff0000 | operandAddress;
         descriptor->pva     = (ctx->regA[aRegNum] & RingSegMask) | ((ctx->regA[aRegNum] + disp) & Mask32);
         return TRUE;
@@ -3535,11 +3583,12 @@ static u8 cpu180GetCurrentXp(Cpu180Context *ctx)
 **                  ctx         pointer to C180 CPU context
 **                  pva         the PVA for which to obtain associated lock
 **                  lock        (out) the lock field
+**                  cond        (out) monitor condition if error condition detected
 **
 **  Returns:        TRUE if success. FALSE if error condition detected.
 **
 **------------------------------------------------------------------------*/
-static bool cpu180GetLock(Cpu180Context *ctx, u64 pva, u8 *lock)
+static bool cpu180GetLock(Cpu180Context *ctx, u64 pva, u8 *lock, MonitorCondition *cond)
     {
     u64 sd;
     u16 segNum;
@@ -3554,8 +3603,8 @@ static bool cpu180GetLock(Cpu180Context *ctx, u64 pva, u8 *lock)
             return TRUE;
             }
         }
-    cpu180SetMonitorCondition(ctx, MCR60); // Invalid segment
     ctx->regUtp = pva;
+    *cond       = MCR60; // Invalid segment
     return FALSE;
     }
 
@@ -3600,11 +3649,12 @@ static bool cpu180GetParcel(Cpu180Context *ctx, u64 pva, u16 *parcel)
 **                  ctx         pointer to C180 CPU context
 **                  pva         the PVA for which to obtain associated R1 field
 **                  r1          (out) the R1 field
+**                  cond        (out) monitor condition if error condition detected
 **
 **  Returns:        TRUE if success. FALSE if error condition detected.
 **
 **------------------------------------------------------------------------*/
-static bool cpu180GetR1(Cpu180Context *ctx, u64 pva, u8 *r1)
+static bool cpu180GetR1(Cpu180Context *ctx, u64 pva, u8 *r1, MonitorCondition *cond)
     {
     u64 sd;
     u16 segNum;
@@ -3619,7 +3669,7 @@ static bool cpu180GetR1(Cpu180Context *ctx, u64 pva, u8 *r1)
             return TRUE;
             }
         }
-    cpu180SetMonitorCondition(ctx, MCR60); // Invalid segment
+    *cond       = MCR60; // Invalid segment
     ctx->regUtp = pva;
     return FALSE;
     }
@@ -3631,11 +3681,12 @@ static bool cpu180GetR1(Cpu180Context *ctx, u64 pva, u8 *r1)
 **                  ctx         pointer to C180 CPU context
 **                  pva         the PVA for which to obtain associated R2 field
 **                  r2          (out) the R2 field
+**                  cond        (out) monitor condition if error condition detected
 **
 **  Returns:        TRUE if success. FALSE if error condition detected.
 **
 **------------------------------------------------------------------------*/
-static bool cpu180GetR2(Cpu180Context *ctx, u64 pva, u8 *r2)
+static bool cpu180GetR2(Cpu180Context *ctx, u64 pva, u8 *r2, MonitorCondition *cond)
     {
     u64 sd;
     u16 segNum;
@@ -3650,7 +3701,7 @@ static bool cpu180GetR2(Cpu180Context *ctx, u64 pva, u8 *r2)
             return TRUE;
             }
         }
-    cpu180SetMonitorCondition(ctx, MCR60); // Invalid segment
+    *cond       = MCR60; // Invalid segment
     ctx->regUtp = pva;
     return FALSE;
     }
@@ -3755,7 +3806,7 @@ static bool cpu180MulInt32(Cpu180Context *ctx, u32 mltand, u32 mltier, u32 *prod
             }
         ctx->regUcr |= mask;
         }
-    *product = (u32)p64;
+    *product = (u32)(p64 & Mask32);
 
     return TRUE;
     }
@@ -3863,11 +3914,12 @@ static bool cpu180MulInt64(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *prod
 **                  doSaveCrs    TRUE if MCR and UCR to be saved in stack frame
 **                  sfsa         (out) PVA of stack frame save area
 **                  frameSize    (out) number of bytes stored
+**                  cond         (out) monitor condition if error condition detected
 **
 **  Returns:        TRUE if successful.
 **
 **------------------------------------------------------------------------*/
-static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool doSaveCrs, u64 *sfsa, u32 *frameSize)
+static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool doSaveCrs, u64 *sfsa, u32 *frameSize, MonitorCondition *cond)
     {
     u8  i;
     u64 pva;
@@ -3878,7 +3930,7 @@ static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool doSave
 
     if (at < 2)
         {
-        cpu180SetMonitorCondition(ctx, MCR51); // Instruction specification error
+        *cond = MCR51; // Instruction specification error
         return FALSE;
         }
     pva   = (ctx->regA[0] + 7) & 0xfffffffffff8;
@@ -3892,7 +3944,7 @@ static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool doSave
         {
         words += (xt - xs) + 1;
         }
-    if (cpu180TranslatePvaSequence(ctx, pva, words, 8, RingOf(pva), AccessModeWrite, rmas) == FALSE)
+    if (cpu180TranslatePvaSequence(ctx, pva, words, 8, RingOf(pva), AccessModeWrite, rmas, cond) == FALSE)
         {
         return FALSE;
         }
@@ -4359,6 +4411,7 @@ static void cp180Op03(Cpu180Context *activeCpu)  // 03  INTRUPT    MIGDS 2-141
 static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
     {
     u8               at;
+    MonitorCondition cond;
     u16              desc;
     u8               i;
     u64              psap;
@@ -4395,8 +4448,9 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
         activeCpu->regUtp = psap;
         return;
         }
-    if (cpu180TranslatePvaSequence(activeCpu, psap, 4, 8, RingOf(psap), AccessModeRead, rmas) == FALSE)
+    if (cpu180TranslatePvaSequence(activeCpu, psap, 4, 8, RingOf(psap), AccessModeRead, rmas, &cond) == FALSE)
         {
+        cpu180SetMonitorCondition(activeCpu, cond);
         return;
         }
     for (i = 0; i < 4; i++)
@@ -4428,8 +4482,9 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
         {
         words += (xt - xs) + 1;
         }
-    if (cpu180TranslatePvaSequence(activeCpu, psap + 32, words - 4, 8, RingOf(psap), AccessModeRead, &rmas[4]) == FALSE)
+    if (cpu180TranslatePvaSequence(activeCpu, psap + 32, words - 4, 8, RingOf(psap), AccessModeRead, &rmas[4], &cond) == FALSE)
         {
+        cpu180SetMonitorCondition(activeCpu, cond);
         return;
         }
     for (i = 4; i < words; i++)
@@ -4438,8 +4493,9 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
         }
     ringP  = RingOf(activeCpu->regP);
     ringA2 = RingOf(activeCpu->regA[2]);
-    if (cpu180GetR1(activeCpu, activeCpu->regA[2], &r1) == FALSE)
+    if (cpu180GetR1(activeCpu, activeCpu->regA[2], &r1, &cond) == FALSE)
         {
+        cpu180SetMonitorCondition(activeCpu, cond);
         return;
         }
     if (r1 > ringA2)
@@ -4512,6 +4568,7 @@ static void cp180Op05(Cpu180Context *activeCpu)  // 05  PURGE      MIGDS 2-147
 
 static void cp180Op06(Cpu180Context *activeCpu)  // 06  POP        MIGDS 2-129
     {
+    MonitorCondition cond;
     u8               i;
     u64              psap;
     u64              regA;
@@ -4547,8 +4604,9 @@ static void cp180Op06(Cpu180Context *activeCpu)  // 06  POP        MIGDS 2-129
         cpu180SetUserCondition(activeCpu, UCR52); // inter-ring pop
         return;
         }
-    if (cpu180TranslatePvaSequence(activeCpu, psap, 4, 8, RingOf(psap), AccessModeRead, rmas) == FALSE)
+    if (cpu180TranslatePvaSequence(activeCpu, psap, 4, 8, RingOf(psap), AccessModeRead, rmas, &cond) == FALSE)
         {
+        cpu180SetMonitorCondition(activeCpu, cond);
         return;
         }
     for (i = 0; i < 4; i++)
@@ -4566,8 +4624,9 @@ static void cp180Op06(Cpu180Context *activeCpu)  // 06  POP        MIGDS 2-129
     // Load A1
     regA = cpMem[wordAddrs[2]] & Mask48; // A1
     ring = RingOf(regA);
-    if (cpu180GetR1(activeCpu, psap, &r1) == FALSE)
+    if (cpu180GetR1(activeCpu, psap, &r1, &cond) == FALSE)
         {
+        cpu180SetMonitorCondition(activeCpu, cond);
         return;
         }
     if (ring < ringA2)
@@ -4659,7 +4718,7 @@ static void cp180Op0E(Cpu180Context *activeCpu)  // 0E  CPYSX      MIGDS 2-146
     {
     u8 regId;
 
-    regId = activeCpu->regX[activeCpu->opJ] & Mask8;
+    regId = (u8)(activeCpu->regX[activeCpu->opJ] & Mask8);
     if (regId < 0x10 || (regId >= 0x20 && regId <= 0x3f))
         {
         activeCpu->regX[activeCpu->opK] = 0;
@@ -4674,7 +4733,7 @@ static void cp180Op0F(Cpu180Context *activeCpu)  // 0F  CPYXS      MIGDS 2-146
     {
     u8 regId;
 
-    regId = activeCpu->regX[activeCpu->opJ] & Mask8;
+    regId = (u8)(activeCpu->regX[activeCpu->opJ] & Mask8);
     if (regId < 0x60) // no access
         {
         return;
@@ -4738,12 +4797,12 @@ static void cp180Op14(Cpu180Context *activeCpu)  // 14  LBSET      MIGDS 2-136
     u64              word;
     u32              wordAddr;
 
-    offset = (u32)activeCpu->regX[0] >> 3;
+    offset = (u32)(activeCpu->regX[0] & Mask32) >> 3;
     if (offset >= 0x10000000)
         {
         offset |= 0xf0000000;
         }
-    pva = (activeCpu->regA[activeCpu->opJ] & RingSegMask) | (u32)(activeCpu->regA[activeCpu->opJ] + offset);
+    pva = (activeCpu->regA[activeCpu->opJ] & RingSegMask) | ((activeCpu->regA[activeCpu->opJ] + offset) & Mask32);
     if (cpu180ValidateAccess(activeCpu, pva, RingOf(pva), AccessModeRead | AccessModeWrite, &cond) == FALSE
         || cpu180PvaToRma(activeCpu, pva, AccessModeNone, &rma, &pti, &cond) == FALSE) // cause page fault if page not in memory
         {
@@ -4752,7 +4811,7 @@ static void cp180Op14(Cpu180Context *activeCpu)  // 14  LBSET      MIGDS 2-136
     else
         {
         wordAddr                        = rma >> 3;
-        shift                           = (56 - ((rma & Mask3) << 3)) + (7 - (activeCpu->regX[0] & Mask3));
+        shift                           = (u8)((56 - ((rma & Mask3) << 3)) + (7 - (activeCpu->regX[0] & Mask3)));
         mask                            = (u64)1 << shift;
         cpuAcquireMemoryMutex();
         word                            = cpMem[wordAddr];
@@ -4803,8 +4862,8 @@ static void cp180Op17(Cpu180Context *activeCpu)  // 17  LPAGE      MIGDS 2-139
         return;
         }
 
-    asid    = (activeCpu->regX[activeCpu->opJ] >> 32) & Mask16;
-    byteNum = (u32)activeCpu->regX[activeCpu->opJ];
+    asid    = (u16)((activeCpu->regX[activeCpu->opJ] >> 32) & Mask16);
+    byteNum = (u32)(activeCpu->regX[activeCpu->opJ] & Mask32);
     if (Is32BitNeg(byteNum))
         {
         cpu180SetMonitorCondition(activeCpu, MCR52);
@@ -4952,7 +5011,7 @@ static void cp180Op23(Cpu180Context *activeCpu)  // 23  DIVR       MIGDS 2-23
         }
     else
         {
-        activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | (u32)(XkR / XjR);
+        activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | ((u64)(XkR / XjR) & Mask32);
         }
     }
 
@@ -5036,7 +5095,7 @@ static void cp180Op29(Cpu180Context *activeCpu)  // 29  DECR       MIGDS 2-22
 static void cp180Op2A(Cpu180Context *activeCpu)  // 2A  ADDAX      MIGDS 2-29
     {
     activeCpu->regA[activeCpu->opK] = (activeCpu->regA[activeCpu->opK] & RingSegMask)
-        | (u32)(activeCpu->regA[activeCpu->opK] + activeCpu->regX[activeCpu->opJ]);
+        | ((activeCpu->regA[activeCpu->opK] + activeCpu->regX[activeCpu->opJ]) & Mask32);
     }
 
 static void cp180Op2C(Cpu180Context *activeCpu)  // 2C  CMPR       MIGDS 2-24
@@ -5044,8 +5103,8 @@ static void cp180Op2C(Cpu180Context *activeCpu)  // 2C  CMPR       MIGDS 2-24
     i32 XjR;
     i32 XkR;
 
-    XjR = (activeCpu->opJ == 0) ? 0 : (activeCpu->regX[activeCpu->opJ] & Mask32);
-    XkR = (activeCpu->opK == 0) ? 0 : (activeCpu->regX[activeCpu->opK] & Mask32);
+    XjR = (i32)((activeCpu->opJ == 0) ? 0 : (activeCpu->regX[activeCpu->opJ] & Mask32));
+    XkR = (i32)((activeCpu->opK == 0) ? 0 : (activeCpu->regX[activeCpu->opK] & Mask32));
     if (XjR == XkR)
         {
         activeCpu->regX[1] &= LeftMask;
@@ -5083,15 +5142,16 @@ static void cp180Op2D(Cpu180Context *activeCpu)  // 2D  CMPX       MIGDS 2-24
 
 static void cp180Op2E(Cpu180Context *activeCpu)  // 2E  BRREL      MIGDS 2-27
     {
-    activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)((activeCpu->regX[activeCpu->opK] << 1) + activeCpu->regP);
+    activeCpu->nextP = (activeCpu->regP & RingSegMask) | (((activeCpu->regX[activeCpu->opK] << 1) + activeCpu->regP) & Mask32);
     }
 
 static void cp180Op2F(Cpu180Context *activeCpu)  // 2F  BRDIR      MIGDS 2-27
     {
-    u64 Aj;
-    u8  lock;
-    u64 nextP;
-    u64 XkR;
+    u64              Aj;
+    MonitorCondition cond;
+    u8               lock;
+    u64              nextP;
+    u64              XkR;
 
     Aj = activeCpu->regA[activeCpu->opJ];
     if ((Aj & 1) != 0)
@@ -5101,11 +5161,15 @@ static void cp180Op2F(Cpu180Context *activeCpu)  // 2F  BRDIR      MIGDS 2-27
         return;
         }
     XkR   = (activeCpu->opK == 0) ? 0 : activeCpu->regX[activeCpu->opK] & Mask32;
-    nextP = (activeCpu->regP & RingMask) | (Aj & SegMask) | (u32)(Aj + (XkR << 1));
-    if (cpu180GetLock(activeCpu, nextP, &lock))
+    nextP = (activeCpu->regP & RingMask) | (Aj & SegMask) | ((Aj + (XkR << 1)) & Mask32);
+    if (cpu180GetLock(activeCpu, nextP, &lock, &cond))
         {
         activeCpu->nextP   = nextP;
         activeCpu->nextKey = lock;
+        }
+    else
+        {
+        cpu180SetMonitorCondition(activeCpu, cond);
         }
     }
 
@@ -5714,19 +5778,20 @@ static void cp180Op77(Cpu180Context *activeCpu)  // 77  CMPB       MIGDS 2-52
 
 static void cp180Op80(Cpu180Context *activeCpu)  // 80  LMULT      MIGDS 2-16
     {
-    u8  as;
-    u8  at;
-    u32 disp;
-    u8  i;
-    u64 pva;
-    u8  r1;
-    u8  ring;
-    u32 rmas[32];
-    u16 selector;
-    u64 word;
-    u8  wordCount;
-    u8  xs;
-    u8  xt;
+    u8               as;
+    u8               at;
+    MonitorCondition cond;
+    u32              disp;
+    u8               i;
+    u64              pva;
+    u8               r1;
+    u8               ring;
+    u32              rmas[32];
+    u16              selector;
+    u64              word;
+    u8               wordCount;
+    u8               xs;
+    u8               xt;
 
     pva = activeCpu->regA[activeCpu->opJ];
     if ((pva & Mask3) != 0)
@@ -5736,7 +5801,7 @@ static void cp180Op80(Cpu180Context *activeCpu)  // 80  LMULT      MIGDS 2-16
         return;
         }
     disp       = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ) << 3;
-    pva        = (pva & RingSegMask) | (u32)(pva + disp);
+    pva        = (pva & RingSegMask) | ((pva + disp) & Mask32);
     selector   = (u16)activeCpu->regX[activeCpu->opK];
     as         = selector >> 12;
     xs         = (selector >> 8) & Mask4;
@@ -5748,12 +5813,14 @@ static void cp180Op80(Cpu180Context *activeCpu)  // 80  LMULT      MIGDS 2-16
         {
         return;
         }
-    if (cpu180TranslatePvaSequence(activeCpu, pva, wordCount, 8, RingOf(pva), AccessModeRead, rmas) == FALSE)
+    if (cpu180TranslatePvaSequence(activeCpu, pva, wordCount, 8, RingOf(pva), AccessModeRead, rmas, &cond) == FALSE)
         {
+        cpu180SetMonitorCondition(activeCpu, cond);
         return;
         }
-    if (cpu180GetR1(activeCpu, pva, &r1) == FALSE)
+    if (cpu180GetR1(activeCpu, pva, &r1, &cond) == FALSE)
         {
+        cpu180SetMonitorCondition(activeCpu, cond);
         return;
         }
     ring = RingOf(pva);
@@ -5792,16 +5859,17 @@ static void cp180Op80(Cpu180Context *activeCpu)  // 80  LMULT      MIGDS 2-16
 
 static void cp180Op81(Cpu180Context *activeCpu)  // 81  SMULT      MIGDS 2-16
     {
-    u8  as;
-    u8  at;
-    u32 disp;
-    u8  i;
-    u64 pva;
-    u32 rmas[32];
-    u16 selector;
-    u8  wordCount;
-    u8  xs;
-    u8  xt;
+    u8               as;
+    u8               at;
+    MonitorCondition cond;
+    u32              disp;
+    u8               i;
+    u64              pva;
+    u32              rmas[32];
+    u16              selector;
+    u8               wordCount;
+    u8               xs;
+    u8               xt;
 
     pva = activeCpu->regA[activeCpu->opJ];
     if ((pva & Mask3) != 0)
@@ -5811,7 +5879,7 @@ static void cp180Op81(Cpu180Context *activeCpu)  // 81  SMULT      MIGDS 2-16
         return;
         }
     disp       = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ) << 3;
-    pva        = (pva & RingSegMask) | (u32)(pva + disp);
+    pva        = (pva & RingSegMask) | ((pva + disp) & Mask32);
     selector   = (u16)activeCpu->regX[activeCpu->opK];
     as         = selector >> 12;
     xs         = (selector >> 8) & Mask4;
@@ -5823,8 +5891,9 @@ static void cp180Op81(Cpu180Context *activeCpu)  // 81  SMULT      MIGDS 2-16
         {
         return;
         }
-    if (cpu180TranslatePvaSequence(activeCpu, pva, wordCount, 8, RingOf(pva), AccessModeWrite, rmas) == FALSE)
+    if (cpu180TranslatePvaSequence(activeCpu, pva, wordCount, 8, RingOf(pva), AccessModeWrite, rmas, &cond) == FALSE)
         {
+        cpu180SetMonitorCondition(activeCpu, cond);
         return;
         }
     i = 0;
@@ -5867,11 +5936,11 @@ static void cp180Op82(Cpu180Context *activeCpu)  // 82  LX         MIGDS 2-12
         }
     if (activeCpu->opQ <= 0x7fff)
         {
-        byteNum = (u32)Aj + ((u32)activeCpu->opQ << 3);
+        byteNum = (u32)((Aj + ((u32)activeCpu->opQ << 3)) & Mask32);
         }
     else
         {
-        byteNum = (u32)Aj + ((0x1fff0000 | (u32)activeCpu->opQ) << 3);
+        byteNum = (u32)((Aj + ((0x1fff0000 | (u32)activeCpu->opQ) << 3)) & Mask32);
         }
     pva = (Aj & RingSegMask) | byteNum;
     if (cpu180ValidateAccess(activeCpu, pva, RingOf(pva), AccessModeRead, &cond) == FALSE
@@ -5903,11 +5972,11 @@ static void cp180Op83(Cpu180Context *activeCpu)  // 83  SX         MIGDS 2-12
         }
     if (activeCpu->opQ <= 0x7fff)
         {
-        byteNum = (u32)Aj + ((u32)activeCpu->opQ << 3);
+        byteNum = (u32)((Aj + ((u32)activeCpu->opQ << 3)) & Mask32);
         }
     else
         {
-        byteNum = (u32)Aj + ((0x1fff0000 | (u32)activeCpu->opQ) << 3);
+        byteNum = (u32)((Aj + ((0x1fff0000 | (u32)activeCpu->opQ) << 3)) & Mask32);
         }
     pva = (Aj & RingSegMask) | byteNum;
     if (cpu180ValidateAccess(activeCpu, pva, RingOf(pva), AccessModeWrite, &cond) == FALSE
@@ -5929,17 +5998,18 @@ static void cp180Op83(Cpu180Context *activeCpu)  // 83  SX         MIGDS 2-12
 
 static void cp180Op84(Cpu180Context *activeCpu)  // 84  LA         MIGDS 2-15
     {
-    u64 addr;
-    u64 Aj;
-    u32 disp;
-    u64 pva;
-    u64 r1;
-    u64 r2;
-    u8  ring;
+    u64              addr;
+    u64              Aj;
+    MonitorCondition cond;
+    u32              disp;
+    u64              pva;
+    u64              r1;
+    u64              r2;
+    u8               ring;
 
     Aj   = activeCpu->regA[activeCpu->opJ];
     disp = (activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
-    pva  = (Aj & RingSegMask) | (u32)(Aj + disp);
+    pva  = (Aj & RingSegMask) | ((Aj + disp) & Mask32);
     if (cpu180GetBytes(activeCpu, pva, 6, RingOf(pva), AccessModeRead, &addr))
         {
         r1 = addr & RingMask;
@@ -5952,8 +6022,9 @@ static void cp180Op84(Cpu180Context *activeCpu)  // 84  LA         MIGDS 2-15
             {
             r1 = r2;
             }
-        if (cpu180GetR1(activeCpu, pva, &ring) == FALSE)
+        if (cpu180GetR1(activeCpu, pva, &ring, &cond) == FALSE)
             {
+            cpu180SetMonitorCondition(activeCpu, cond);
             return;
             }
         r2 = (u64)ring << 44;
@@ -5973,7 +6044,7 @@ static void cp180Op85(Cpu180Context *activeCpu)  // 85  SA         MIGDS 2-15
 
     Aj   = activeCpu->regA[activeCpu->opJ];
     disp = (activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
-    pva  = (Aj & RingSegMask) | (u32)(Aj + disp);
+    pva  = (Aj & RingSegMask) | ((Aj + disp) & Mask32);
     (void)cpu180PutBytes(activeCpu, pva, RingOf(pva), activeCpu->regA[activeCpu->opK], 6);
     }
 
@@ -5984,7 +6055,7 @@ static void cp180Op86(Cpu180Context *activeCpu)  // 86  LBYTP,j    MIGDS 2-13
     u64 word;
 
     disp = (activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
-    pva  = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
+    pva  = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
     if (cpu180GetBytes(activeCpu, pva, (activeCpu->opJ & Mask3) + 1, RingOf(pva), AccessModeExecute, &word))
         {
         activeCpu->regX[activeCpu->opK] = word;
@@ -6008,14 +6079,14 @@ static void cp180Op88(Cpu180Context *activeCpu)  // 88  LBIT       MIGDS 2-14
     u32 q;
     u64 word;
 
-    offset = (u32)activeCpu->regX[0] >> 3;
+    offset = (activeCpu->regX[0] & Mask32) >> 3;
     if (offset > 0x0fffffff)
         {
         offset |= 0xf0000000;
         }
     Aj  = activeCpu->regA[activeCpu->opJ];
     q   = (activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
-    pva = (Aj & RingSegMask) | (u32)(Aj + offset + q);
+    pva = (Aj & RingSegMask) | ((Aj + offset + q) & Mask32);
     if (cpu180GetBytes(activeCpu, pva, 1, RingOf(pva), AccessModeRead, &word))
         {
         activeCpu->regX[activeCpu->opK] = (word >> (7 - (activeCpu->regX[0] & Mask3))) & 1;
@@ -6035,14 +6106,14 @@ static void cp180Op89(Cpu180Context *activeCpu)  // 89  SBIT       MIGDS 2-14
     u8               shift;
     u32              wordAddr;
 
-    offset = (u32)activeCpu->regX[0] >> 3;
+    offset = (u32)((activeCpu->regX[0] & Mask32) >> 3);
     if (offset > 0x0fffffff)
         {
         offset |= 0xf0000000;
         }
     Aj  = activeCpu->regA[activeCpu->opJ];
     q   = (activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
-    pva = (Aj & RingSegMask) | (u32)(Aj + offset + q);
+    pva = (Aj & RingSegMask) | ((Aj + offset + q) & Mask32);
     if (cpu180ValidateAccess(activeCpu, pva, RingOf(pva), AccessModeWrite, &cond) == FALSE
         || cpu180PvaToRma(activeCpu, pva, AccessModeNone, &rma, &pti, &cond) == FALSE) // cause page fault if page not in memory
         {
@@ -6051,7 +6122,7 @@ static void cp180Op89(Cpu180Context *activeCpu)  // 89  SBIT       MIGDS 2-14
     else
         {
         wordAddr        = rma >> 3;
-        shift           = (56 - ((rma & Mask3) << 3)) + (7 - (activeCpu->regX[0] & Mask3));
+        shift           = (u8)((56 - ((rma & Mask3) << 3)) + (7 - (activeCpu->regX[0] & Mask3)));
         mask            = ~((u64)1 << shift);
         cpuAcquireMemoryMutex();
         cpMem[wordAddr] = (cpMem[wordAddr] & mask) | ((activeCpu->regX[activeCpu->opK] & 1) << shift);
@@ -6114,7 +6185,7 @@ static void cp180Op8E(Cpu180Context *activeCpu)  // 8E  ADDAQ      MIGDS 2-29
     u32 disp;
 
     disp = (activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
-    activeCpu->regA[activeCpu->opK] = (activeCpu->regA[activeCpu->opJ] & RingSegMask) | (u32)(activeCpu->regA[activeCpu->opJ] + disp);
+    activeCpu->regA[activeCpu->opK] = (activeCpu->regA[activeCpu->opJ] & RingSegMask) | ((activeCpu->regA[activeCpu->opJ] + disp) & Mask32);
     }
 
 static void cp180Op8F(Cpu180Context *activeCpu)  // 8F  ADDPXQ     MIGDS 2-29
@@ -6122,9 +6193,9 @@ static void cp180Op8F(Cpu180Context *activeCpu)  // 8F  ADDPXQ     MIGDS 2-29
     u32 disp;
     u32 XjR;
 
-    XjR  = (u32)((activeCpu->opJ == 0) ? 0 : activeCpu->regX[activeCpu->opJ]) << 1;
+    XjR  = (u32)((((activeCpu->opJ == 0) ? 0 : activeCpu->regX[activeCpu->opJ]) << 1) & Mask32);
     disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-    activeCpu->regA[activeCpu->opK] = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + XjR + disp);
+    activeCpu->regA[activeCpu->opK] = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + XjR + disp) & Mask32);
     }
 
 static void cp180Op90(Cpu180Context *activeCpu)  // 90  BRREQ      MIGDS 2-25
@@ -6133,12 +6204,12 @@ static void cp180Op90(Cpu180Context *activeCpu)  // 90  BRREQ      MIGDS 2-25
     i32 XjR;
     i32 XkR;
 
-    XjR = (activeCpu->opJ == 0) ? 0 : (activeCpu->regX[activeCpu->opJ] & Mask32);
-    XkR = (activeCpu->opK == 0) ? 0 : (activeCpu->regX[activeCpu->opK] & Mask32);
+    XjR = (i32)((activeCpu->opJ == 0) ? 0 : (activeCpu->regX[activeCpu->opJ] & Mask32));
+    XkR = (i32)((activeCpu->opK == 0) ? 0 : (activeCpu->regX[activeCpu->opK] & Mask32));
     if (XjR == XkR)
         {
         disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     }
 
@@ -6148,12 +6219,12 @@ static void cp180Op91(Cpu180Context *activeCpu)  // 91  BRRNE      MIGDS 2-25
     i32 XjR;
     i32 XkR;
 
-    XjR = (activeCpu->opJ == 0) ? 0 : (activeCpu->regX[activeCpu->opJ] & Mask32);
-    XkR = (activeCpu->opK == 0) ? 0 : (activeCpu->regX[activeCpu->opK] & Mask32);
+    XjR = (i32)((activeCpu->opJ == 0) ? 0 : (activeCpu->regX[activeCpu->opJ] & Mask32));
+    XkR = (i32)((activeCpu->opK == 0) ? 0 : (activeCpu->regX[activeCpu->opK] & Mask32));
     if (XjR != XkR)
         {
         disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     }
 
@@ -6163,12 +6234,12 @@ static void cp180Op92(Cpu180Context *activeCpu)  // 92  BRRGT      MIGDS 2-25
     i32 XjR;
     i32 XkR;
 
-    XjR = (activeCpu->opJ == 0) ? 0 : (activeCpu->regX[activeCpu->opJ] & Mask32);
-    XkR = (activeCpu->opK == 0) ? 0 : (activeCpu->regX[activeCpu->opK] & Mask32);
+    XjR = (i32)((activeCpu->opJ == 0) ? 0 : (activeCpu->regX[activeCpu->opJ] & Mask32));
+    XkR = (i32)((activeCpu->opK == 0) ? 0 : (activeCpu->regX[activeCpu->opK] & Mask32));
     if (XjR > XkR)
         {
         disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     }
 
@@ -6178,12 +6249,12 @@ static void cp180Op93(Cpu180Context *activeCpu)  // 93  BRRGE      MIGDS 2-25
     i32 XjR;
     i32 XkR;
 
-    XjR = (activeCpu->opJ == 0) ? 0 : (activeCpu->regX[activeCpu->opJ] & Mask32);
-    XkR = (activeCpu->opK == 0) ? 0 : (activeCpu->regX[activeCpu->opK] & Mask32);
+    XjR = (i32)((activeCpu->opJ == 0) ? 0 : (activeCpu->regX[activeCpu->opJ] & Mask32));
+    XkR = (i32)((activeCpu->opK == 0) ? 0 : (activeCpu->regX[activeCpu->opK] & Mask32));
     if (XjR >= XkR)
         {
         disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     }
 
@@ -6198,7 +6269,7 @@ static void cp180Op94(Cpu180Context *activeCpu)  // 94  BRXEQ      MIGDS 2-25
     if (Xj == Xk)
         {
         disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     }
 
@@ -6213,7 +6284,7 @@ static void cp180Op95(Cpu180Context *activeCpu)  // 95  BRXNE      MIGDS 2-25
     if (Xj != Xk)
         {
         disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     }
 
@@ -6228,7 +6299,7 @@ static void cp180Op96(Cpu180Context *activeCpu)  // 96  BRXGT      MIGDS 2-25
     if (Xj > Xk)
         {
         disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     }
 
@@ -6243,7 +6314,7 @@ static void cp180Op97(Cpu180Context *activeCpu)  // 97  BRXGE      MIGDS 2-25
     if (Xj >= Xk)
         {
         disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     }
 
@@ -6261,7 +6332,7 @@ static void cp180Op98(Cpu180Context *activeCpu)  // 98  BRFEQ      MIGDS 2-87
         if (valence == 0)
             {
             disp             = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-            activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
+            activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
             }
         }
     }
@@ -6280,7 +6351,7 @@ static void cp180Op99(Cpu180Context *activeCpu)  // 99  BRFNE      MIGDS 2-87
         if (valence != 0)
             {
             disp             = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-            activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
+            activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
             }
         }
     }
@@ -6299,7 +6370,7 @@ static void cp180Op9A(Cpu180Context *activeCpu)  // 9A  BRFGT      MIGDS 2-87
         if (valence > 0)
             {
             disp             = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-            activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
+            activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
             }
         }
     }
@@ -6318,7 +6389,7 @@ static void cp180Op9B(Cpu180Context *activeCpu)  // 9B  BRFGE      MIGDS 2-87
         if (valence >= 0)
             {
             disp             = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-            activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
+            activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
             }
         }
     }
@@ -6332,7 +6403,7 @@ static void cp180Op9C(Cpu180Context *activeCpu)  // 9C  BRINC      MIGDS 2-26
     if (Xj > (i64)activeCpu->regX[activeCpu->opK])
         {
         disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         activeCpu->regX[activeCpu->opK] += 1;
         }
     }
@@ -6350,12 +6421,12 @@ static void cp180Op9D(Cpu180Context *activeCpu)  // 9D  BRSEG      MIGDS 2-26
     if ((Aj & SegMask) != (Ak & SegMask))
         {
         disp = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     else
         {
-        bnj = Aj & Mask32;
-        bnk = Ak & Mask32;
+        bnj = (i32)(Aj & Mask32);
+        bnk = (i32)(Ak & Mask32);
         if (bnj == bnk)
             {
             activeCpu->regX[1] &= LeftMask;
@@ -6378,7 +6449,7 @@ static void cp180Op9E(Cpu180Context *activeCpu)  // 9E  BR---      MIGDS 2-88
     u32 disp;
 
     disp     = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-    brExit   = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
+    brExit   = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
     exponent = (u16)((activeCpu->regX[activeCpu->opK] >> 48) & 0x7fff);
     switch (activeCpu->opJ & Mask2)
         {
@@ -6411,7 +6482,7 @@ static void cp180Op9F(Cpu180Context *activeCpu)  // 9F  BRCR       MIGDS 2-142
 
     mask   = bitSelectors[activeCpu->opJ];
     disp   = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0x7fff0000 | (u32)activeCpu->opQ) << 1;
-    brExit = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
+    brExit = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
 
     switch (activeCpu->opK & Mask3)
         {
@@ -6485,19 +6556,20 @@ static void cp180Op9F(Cpu180Context *activeCpu)  // 9F  BRCR       MIGDS 2-142
 
 static void cp180OpA0(Cpu180Context *activeCpu)  // A0  LAI        MIGDS 2-15
     {
-    u64 addr;
-    u64 Aj;
-    u32 byteNum;
-    u64 pva;
-    u64 r1;
-    u64 r2;
-    u8  ring;
+    u64              addr;
+    u64              Aj;
+    MonitorCondition cond;
+    u32              byteNum;
+    u64              pva;
+    u64              r1;
+    u64              r2;
+    u8               ring;
 
     Aj      = activeCpu->regA[activeCpu->opJ];
-    byteNum = (u32)Aj + activeCpu->opD;
+    byteNum = (u32)((Aj + activeCpu->opD) & Mask32);
     if (activeCpu->opI != 0)
         {
-        byteNum += (u32)activeCpu->regX[activeCpu->opI];
+        byteNum += (u32)(activeCpu->regX[activeCpu->opI] & Mask32);
         }
     pva = (Aj & RingSegMask) | byteNum;
     if (cpu180GetBytes(activeCpu, pva, 6, RingOf(pva), AccessModeRead, &addr))
@@ -6512,8 +6584,9 @@ static void cp180OpA0(Cpu180Context *activeCpu)  // A0  LAI        MIGDS 2-15
             {
             r1 = r2;
             }
-        if (cpu180GetR1(activeCpu, pva, &ring) == FALSE)
+        if (cpu180GetR1(activeCpu, pva, &ring, &cond) == FALSE)
             {
+            cpu180SetMonitorCondition(activeCpu, cond);
             return;
             }
         r2 = (u64)ring << 44;
@@ -6532,10 +6605,10 @@ static void cp180OpA1(Cpu180Context *activeCpu)  // A1  SAI        MIGDS 2-15
     u64 pva;
 
     Aj      = activeCpu->regA[activeCpu->opJ];
-    byteNum = (u32)Aj + activeCpu->opD;
+    byteNum = (u32)((Aj + activeCpu->opD) & Mask32);
     if (activeCpu->opI != 0)
         {
-        byteNum += (u32)activeCpu->regX[activeCpu->opI];
+        byteNum += (u32)(activeCpu->regX[activeCpu->opI] & Mask32);
         }
     pva = (Aj & RingSegMask) | byteNum;
     (void)cpu180PutBytes(activeCpu, pva, RingOf(pva), activeCpu->regA[activeCpu->opK], 6);
@@ -6557,10 +6630,10 @@ static void cp180OpA2(Cpu180Context *activeCpu)  // A2  LXI        MIGDS 2-12
         activeCpu->regUtp = Aj;
         return;
         }
-    byteNum = (u32)Aj + ((u32)activeCpu->opD << 3);
+    byteNum = (u32)((Aj + ((u64)activeCpu->opD << 3)) & Mask32);
     if (activeCpu->opI != 0)
         {
-        byteNum += (u32)activeCpu->regX[activeCpu->opI] << 3;
+        byteNum += (u32)((activeCpu->regX[activeCpu->opI] << 3) & Mask32);
         }
     pva = (Aj & RingSegMask) | byteNum;
     if (cpu180ValidateAccess(activeCpu, pva, RingOf(pva), AccessModeRead, &cond) == FALSE
@@ -6590,10 +6663,10 @@ static void cp180OpA3(Cpu180Context *activeCpu)  // A3  SXI        MIGDS 2-12
         activeCpu->regUtp = Aj;
         return;
         }
-    byteNum = (u32)Aj + ((u32)activeCpu->opD << 3);
+    byteNum = (u32)((Aj + ((u64)activeCpu->opD << 3)) & Mask32);
     if (activeCpu->opI != 0)
         {
-        byteNum += (u32)activeCpu->regX[activeCpu->opI] << 3;
+        byteNum += (u32)((activeCpu->regX[activeCpu->opI] << 3) & Mask32);
         }
     pva = (Aj & RingSegMask) | byteNum;
     if (cpu180ValidateAccess(activeCpu, pva, RingOf(pva), AccessModeWrite, &cond) == FALSE
@@ -6630,7 +6703,7 @@ static void cp180OpA7(Cpu180Context *activeCpu)  // A7  ADDAD      MIGDS 2-30
     u32 mask;
 
     Ai                              = activeCpu->regA[activeCpu->opI];
-    byteNum                         = (u32)Ai + activeCpu->opD;
+    byteNum                         = (u32)((Ai + activeCpu->opD) & Mask32);
     mask                            = 0xfffffff8 | (activeCpu->opJ & Mask3);
     activeCpu->regA[activeCpu->opK] = (Ai & RingSegMask) | (byteNum & mask);
     }
@@ -6640,7 +6713,7 @@ static void cp180OpA8(Cpu180Context *activeCpu)  // A8  SHFC       MIGDS 2-33
     u64 rightBits;
     u8  shift;
 
-    shift = (((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask8) + activeCpu->opD) & Mask8;
+    shift = (u8)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask8) + activeCpu->opD) & Mask8);
     if (shift < 0x80U)
         {
         shift = 64 - (shift & Mask6);
@@ -6662,7 +6735,7 @@ static void cp180OpA9(Cpu180Context *activeCpu)  // A9  SHFX       MIGDS 2-33
     {
     u8 shift;
 
-    shift = (((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask8) + activeCpu->opD) & Mask8;
+    shift = (u8)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask8) + activeCpu->opD) & Mask8);
     if (shift < 0x80U)
         {
         activeCpu->regX[activeCpu->opK] = activeCpu->regX[activeCpu->opJ] << (shift & Mask6);
@@ -6686,7 +6759,7 @@ static void cp180OpAA(Cpu180Context *activeCpu)  // AA  SHFR       MIGDS 2-33
     u8  shift;
     u32 XjR;
 
-    XjR   = activeCpu->regX[activeCpu->opJ] & Mask32;
+    XjR   = (u32)(activeCpu->regX[activeCpu->opJ] & Mask32);
     shift = (u8)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask8) + activeCpu->opD) & Mask8);
     if (shift < 0x80U)
         {
@@ -6709,7 +6782,7 @@ static void cp180OpAC(Cpu180Context *activeCpu)  // AC  ISOM       MIGDS 2-36
     u8  first;
     u8  length;
 
-    desc = (((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask32) + activeCpu->opD) & Mask12;
+    desc = (u32)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask32) + activeCpu->opD) & Mask12);
     first  = (u8)(desc >> 6);
     length = desc & Mask6;
     if (first + length < 64)
@@ -6729,7 +6802,7 @@ static void cp180OpAD(Cpu180Context *activeCpu)  // AD  ISOB       MIGDS 2-36
     u8  length;
     u8  shift;
 
-    desc = (((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask32) + activeCpu->opD) & Mask12;
+    desc = (u32)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask32) + activeCpu->opD) & Mask12);
     first  = (u8)(desc >> 6);
     length = desc & Mask6;
     if (first + length < 64)
@@ -6752,7 +6825,7 @@ static void cp180OpAE(Cpu180Context *activeCpu)  // AE  INSB       MIGDS 2-36
     u64 mask;
     u8  shift;
 
-    desc = (((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask32) + activeCpu->opD) & Mask12;
+    desc = (u32)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask32) + activeCpu->opD) & Mask12);
     first  = (u8)(desc >> 6);
     length = desc & Mask6;
     if (first + length < 64)
@@ -6774,6 +6847,7 @@ static void cp180OpB0(Cpu180Context *activeCpu)  // B0  CALLREL    MIGDS 2-125
     u64              Ak;
     u8               at;
     u64              callee;
+    MonitorCondition cond;
     u32              disp;
     u32              frameSize;
     u64              sfsa;
@@ -6783,12 +6857,13 @@ static void cp180OpB0(Cpu180Context *activeCpu)  // B0  CALLREL    MIGDS 2-125
     Aj     = activeCpu->regA[activeCpu->opJ];
     Ak     = activeCpu->regA[activeCpu->opK];
     disp   = ((activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ) << 3;
-    callee = (activeCpu->regP & RingSegMask) | (u32)((activeCpu->regP + disp) & 0xfffffff8);
+    callee = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & 0xfffffff8);
     xs     = (activeCpu->regX[0] >> 8) & Mask4;
     at     = (activeCpu->regX[0] >> 4) & Mask4;
     xt     = activeCpu->regX[0] & Mask4;
-    if (cpu180PushFrame(activeCpu, at, xs, xt, FALSE, &sfsa, &frameSize) == FALSE)
+    if (cpu180PushFrame(activeCpu, at, xs, xt, FALSE, &sfsa, &frameSize, &cond) == FALSE)
         {
+        cpu180SetMonitorCondition(activeCpu, cond);
         return;
         }
 
@@ -6818,13 +6893,17 @@ static void cp180OpB1(Cpu180Context *activeCpu)  // B1  KEYPOINT   MIGDS 2-133
     u32              pti;
     u32              rma;
     u32              XkR;
+#if CcDebug > 0 && defined(TRACE_KEYPOINT_LIST)
+    char             buf[64];
+    u16              kpt;
+#endif
 
     mask = bitSelectors[activeCpu->opJ];
     if ((activeCpu->regKmr & mask) != 0 && (activeCpu->regFlags & 0x2000) != 0)
         {
-        XkR  = (activeCpu->opK == 0) ? 0 : (u32)activeCpu->regX[activeCpu->opK];
+        XkR  = (u32)((activeCpu->opK == 0) ? 0 : activeCpu->regX[activeCpu->opK] & Mask32);
         disp = (activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
-        kpe  = ((cpu180FreeRunningCounter & Mask28) << 36) | ((u64)activeCpu->opJ << 32) | (u32)(XkR + disp);
+        kpe  = ((cpu180FreeRunningCounter & Mask28) << 36) | ((u64)activeCpu->opJ << 32) | ((XkR + disp) & Mask32);
         if (cpu180ValidateAccess(activeCpu, activeCpu->regKbp, RingOf(activeCpu->regKbp), AccessModeWrite, &cond) == FALSE
             || cpu180PvaToRma(activeCpu, activeCpu->regKbp, AccessModeWrite, &rma, &pti, &cond) == FALSE)
             {
@@ -6841,14 +6920,30 @@ static void cp180OpB1(Cpu180Context *activeCpu)  // B1  KEYPOINT   MIGDS 2-133
             }
         }
 #if CcDebug > 0 && defined(TRACE_KEYPOINT_LIST)
-    if (activeCpu->opJ == KeypointEntry)
+    switch (activeCpu->opJ)
         {
+    case KeypointEntry:
         cpu180ProcessKeypointEntry(activeCpu, activeCpu->opQ);
-        }
-    else if (activeCpu->opJ == KeypointExit)
-        {
+        return;
+    case KeypointExit:
         cpu180ProcessKeypointExit(activeCpu, activeCpu->opQ);
+        return;
+    case KeypointDebug:
+        sprintf(buf, "Keypoint debug 0x%04x (%s)", activeCpu->opQ, cpu180KeypointToStr(activeCpu->opQ));
+        break;
+    case KeypointMtr:
+        kpt = activeCpu->opQ;
+        if (kpt > 4095)
+            {
+            kpt -= 4096;
+            }
+        sprintf(buf, "Keypoint mtr 0x%04x ( %0x04x %s)", activeCpu->opQ, kpt, cpu180KeypointToStr(kpt));
+        break;
+    default:
+        sprintf(buf, "Keypoint 0x%x 0x%04x (%s)", activeCpu->opJ, activeCpu->opQ, cpu180KeypointToStr(activeCpu->opQ));
+        break;
         }
+    traceCpuPrint(&cpus170[activeCpu->id], buf);
 #endif
     }
 
@@ -6909,7 +7004,7 @@ static void cp180OpB4(Cpu180Context *activeCpu)  // B4  CMPXA      MIGDS 2-134
     cpMem[pti] |= (u64)2 << 60; // set page used bit
     if ((word & LeftMask) == LeftMask)
         {
-        activeCpu->nextP = (activeCpu->regP & RingSegMask) | (u32)(activeCpu->regP + disp);
+        activeCpu->nextP = (activeCpu->regP & RingSegMask) | ((activeCpu->regP + disp) & Mask32);
         }
     else if (Xk == word)
         {
@@ -6961,7 +7056,7 @@ static void cp180OpB5(Cpu180Context *activeCpu)  // B5  CALLSEG    MIGDS 2-122
         activeCpu->regUtp = Aj + disp;
         return;
         }
-    bsp = (Aj & RingSegMask) | (u32)(Aj + disp);
+    bsp = (Aj & RingSegMask) | ((Aj + disp) & Mask32);
     if (cpu180IsBindingSectionRef(activeCpu, bsp) == FALSE)
         {
         activeCpu->regUtp = bsp;
@@ -6969,8 +7064,9 @@ static void cp180OpB5(Cpu180Context *activeCpu)  // B5  CALLSEG    MIGDS 2-122
         return;
         }
     ringBsp = RingOf(bsp);
-    if (cpu180GetR2(activeCpu, Aj, &r2) == FALSE)
+    if (cpu180GetR2(activeCpu, Aj, &r2, &cond) == FALSE)
         {
+        cpu180SetMonitorCondition(activeCpu, cond);
         return;
         }
     if (ringBsp > r2)
@@ -6994,7 +7090,10 @@ static void cp180OpB5(Cpu180Context *activeCpu)  // B5  CALLSEG    MIGDS 2-122
     xs = (activeCpu->regX[0] >> 8) & Mask4;
     at = (activeCpu->regX[0] >> 4) & Mask4;
     xt = activeCpu->regX[0] & Mask4;
-    cpu180CallIndirect(activeCpu, bsp, cbp, Ak, at, xs, xt, FALSE);
+    if (cpu180CallIndirect(activeCpu, bsp, cbp, Ak, at, xs, xt, FALSE, &cond) == FALSE)
+        {
+        cpu180SetMonitorCondition(activeCpu, cond);
+        }
     }
 
 static void cp180OpC0(Cpu180Context *activeCpu)  // C0  EXECUTE,0  MIGDS 2-137
@@ -7299,7 +7398,7 @@ static void cp180OpE9(Cpu180Context *activeCpu)  // E9  CMPC       MIGDS 2-52
             cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
             }
-        trnPva = (RingSegMask & activeCpu->regA[activeCpu->opI]) | (u32)(activeCpu->regA[activeCpu->opI] + activeCpu->opD);
+        trnPva = (RingSegMask & activeCpu->regA[activeCpu->opI]) | ((activeCpu->regA[activeCpu->opI] + activeCpu->opD) & Mask32);
         if (bdp180CopyToBuf(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, srcBuf) == FALSE
             || bdp180CopyToBuf(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, dstBuf) == FALSE
             || bdp180CopyToBuf(activeCpu, trnPva, 256, trnBuf) == FALSE)
@@ -7381,7 +7480,7 @@ static void cp180OpEB(Cpu180Context *activeCpu)  // EB  TRANB      MIGDS 2-54
             buf[i] = 0x20;
             }
         Ai  = activeCpu->regA[activeCpu->opI];
-        pva = (Ai & RingSegMask) | (u32)(Ai + activeCpu->opD);
+        pva = (Ai & RingSegMask) | ((Ai + activeCpu->opD) & Mask32);
         if (bdp180CopyToBuf(activeCpu, pva, 256, table) == FALSE)
             {
             return;
@@ -7500,7 +7599,7 @@ static void cp180OpED(Cpu180Context *activeCpu)  // ED  EDIT       MIGDS 2-55
         sLim = sp + activeCpu->srcDesc.length;
         sn   = FALSE;
         }
-    maskPva = (RingSegMask & activeCpu->regA[activeCpu->opI]) | (u32)(activeCpu->regA[activeCpu->opI] + activeCpu->opD);
+    maskPva = (RingSegMask & activeCpu->regA[activeCpu->opI]) | ((activeCpu->regA[activeCpu->opI] + activeCpu->opD) & Mask32);
     if (bdp180CopyToBuf(activeCpu, maskPva, 1, maskBuf) == FALSE) // fetch the length byte
         {
         return;
@@ -7927,7 +8026,7 @@ static void cp180OpF3(Cpu180Context *activeCpu)  // F3  SCNB       MIGDS 2-54
             cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
             }
-        tPva = (activeCpu->regA[activeCpu->opI] & RingSegMask) | (u32)(activeCpu->regA[activeCpu->opI] + activeCpu->opD);
+        tPva = (activeCpu->regA[activeCpu->opI] & RingSegMask) | ((activeCpu->regA[activeCpu->opI] + activeCpu->opD) & Mask32);
         if (bdp180CopyToBuf(activeCpu, activeCpu->dstDesc.pva, activeCpu->dstDesc.length, dstBuf) == FALSE
             || bdp180CopyToBuf(activeCpu, tPva, 32, table) == FALSE)
             {
@@ -7971,7 +8070,7 @@ static void cp180OpF9(Cpu180Context *activeCpu)  // F9  MOVI       MIGDS 2-62
         {
         return;
         }
-    byte = (((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI]) + activeCpu->opD) & Mask8;
+    byte = (u8)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI]) + activeCpu->opD) & Mask8);
     memset(&operand, 0, sizeof(operand));
     operand.value[3] = byte;
     switch (activeCpu->opJ & Mask2)
@@ -8065,7 +8164,7 @@ static void cp180OpFA(Cpu180Context *activeCpu)  // FA  CMPI       MIGDS 2-63
         {
         return;
         }
-    byte   = (((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI]) + activeCpu->opD) & Mask8;
+    byte   = (u8)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI]) + activeCpu->opD) & Mask8);
     result = 0;
     switch (activeCpu->opJ & Mask2)
         {
@@ -8218,7 +8317,7 @@ static void cp180OpFB(Cpu180Context *activeCpu)  // FB  ADDI       MIGDS 2-64
         {
         return;
         }
-    byte = (((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI]) + activeCpu->opD) & Mask8;
+    byte = (u8)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI]) + activeCpu->opD) & Mask8);
     if ((activeCpu->opJ & 1) == 0) // j == 0
         {
         if (activeCpu->dstDesc.type != 10 && activeCpu->dstDesc.type != 11)
@@ -8309,10 +8408,10 @@ static void cp180OpLBYTS(Cpu180Context *activeCpu, u8 count)
     u64 word;
 
     Aj      = activeCpu->regA[activeCpu->opJ];
-    byteNum = (u32)Aj + activeCpu->opD;
+    byteNum = (u32)((Aj + activeCpu->opD) & Mask32);
     if (activeCpu->opI != 0)
         {
-        byteNum += (u32)activeCpu->regX[activeCpu->opI];
+        byteNum += (u32)(activeCpu->regX[activeCpu->opI] & Mask32);
         }
     pva = (Aj & RingSegMask) | byteNum;
     if (cpu180GetBytes(activeCpu, pva, count, RingOf(pva), AccessModeRead, &word))
@@ -8338,10 +8437,10 @@ static void cp180OpSBYTS(Cpu180Context *activeCpu, int count)
     u64 pva;
 
     Aj      = activeCpu->regA[activeCpu->opJ];
-    byteNum = (u32)Aj + activeCpu->opD;
+    byteNum = (u32)((Aj + activeCpu->opD) & Mask32);
     if (activeCpu->opI != 0)
         {
-        byteNum += (u32)activeCpu->regX[activeCpu->opI];
+        byteNum += (u32)(activeCpu->regX[activeCpu->opI] & Mask32);
         }
     pva = (Aj & RingSegMask) | byteNum;
     cpuAcquireMemoryMutex();
@@ -8365,7 +8464,7 @@ static void cp180OpSBYTS(Cpu180Context *activeCpu, int count)
 **------------------------------------------------------------------------*/
 static void cpu180CheckTraceStore(Cpu180Context *ctx, u64 pvaStart, u64 pvaEnd)
     {
-    if (pvaStart >= (TRACE_STORE_START) && pvaEnd <= (TRACE_STORE_END))
+    if ((traceMask & TRACECPU(ctx, TraceCpu180)) == 0 && pvaStart >= (TRACE_STORE_START) && pvaEnd <= (TRACE_STORE_END))
         {
         if ((traceMask & TRACECPU(ctx, TraceCpu180)) == 0)
             {
@@ -8380,7 +8479,8 @@ static void cpu180CheckTraceStore(Cpu180Context *ctx, u64 pvaStart, u64 pvaEnd)
 
 #if defined(TRACE_KEYPOINT_LIST)
 
-static u16 keypointStack[2][2000];
+#define KEYPOINT_STACK_SIZE 2000
+static u16 keypointStack[2][KEYPOINT_STACK_SIZE];
 static u16 keypointStackPtr[2] = { 0, 0 };
 
 /*--------------------------------------------------------------------------
@@ -8421,7 +8521,10 @@ static void cpu180PopKeypoint(Cpu180Context *ctx, u16 kpt)
 **------------------------------------------------------------------------*/
 static void cpu180PushKeypoint(Cpu180Context *ctx, u16 kpt)
     {
-    keypointStack[ctx->id][keypointStackPtr[ctx->id]++] = kpt;
+    if (keypointStackPtr[ctx->id] < (KEYPOINT_STACK_SIZE - 1))
+        {
+        keypointStack[ctx->id][keypointStackPtr[ctx->id]++] = kpt;
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -8452,17 +8555,22 @@ static void cpu180ProcessKeypointEntry(Cpu180Context *ctx, u16 kpt)
         //  that no NOS/VE procedures issuing keypoint entry are recursive.
         //
         cpu180ProcessKeypointExit(ctx, kpt);
-        return;
         }
-    cpu180PushKeypoint(ctx, kpt);
-    if (cpu180SearchKeypointList(kpt))
+    else
         {
-        sprintf(buf, "Keypoint entry 0x%04x (%s)", kpt, cpu180KeypointToStr(kpt));
-        traceMask                     |= TRACECPU(ctx, TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
-        traceInstCount[ctx->id]  = 0;
-        traceCpuBreak(ctx);
-        traceCpuPrint(&cpus170[ctx->id], buf);
-        traceDumpStackFrames(ctx, 8);
+        cpu180PushKeypoint(ctx, kpt);
+        if (cpu180SearchKeypointList(kpt))
+            {
+            sprintf(buf, "Keypoint entry 0x%04x (%s)", kpt, cpu180KeypointToStr(kpt));
+            if ((traceMask & TRACECPU(ctx, TraceCpu180)) == 0)
+                {
+                traceMask              |= TRACECPU(ctx, TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
+                traceInstCount[ctx->id] = 0;
+                }
+            traceCpuBreak(ctx);
+            traceCpuPrint(&cpus170[ctx->id], buf);
+            traceDumpStackFrames(ctx, 8);
+            }
         }
     }
 
@@ -8577,6 +8685,8 @@ static char *cpu180KeypointToStr(u16 kpt)
     case lok_load_module_from_library:    return "lop$load_module_from_library";
     case lok_satisfy_externals:           return "lop$satisfy_externals";
     case lok_load_module:                 return "lop$load_module";
+    case mmk_page_fault:                  return "mmp$page_fault";
+    case mmk_build_lock_rmal:             return "mmp$build_lock_rmal";
     case mmk_advise_out:                  return "mmp$advise_out";
     case mmk_write_modified_pages:        return "mmp$write_modified_pages";
     case ofk_screen_input_fap:            return "ofp$screen_input_fap";
@@ -8584,6 +8694,7 @@ static char *cpu180KeypointToStr(u16 kpt)
     case osk_format_message:              return "osp$format_message";
     case osk_set_status_abnormal:         return "osp$set_status_abnormal";
     case osk_await_activity_completion:   return "osp$await_activity_completion";
+    case osk_allocate:                    return "osp$allocate";
     case pfk_attach:                      return "pfp$attach";
     case pfk_get_object_information:      return "pfp$get_object_information";
     case pfk_restricted_attach:           return "pfp$restricted_attach";
@@ -8597,6 +8708,7 @@ static char *cpu180KeypointToStr(u16 kpt)
     case pmk_await_task_termination:      return "pmp$await_task_termination";
     case pmk_establish_condition_handler: return "pmp$establish_condition_handler";
     case pmk_disestablish_cond_handler:   return "pmp$disestablish_cond_handler";
+    case pmk_cause_condition:             return "pmp$cause_condition";
     case pmk_get_time:                    return "pmp$get_time";
     case pmk_log_message:                 return "pmp$log_message";
     case pmk_log_ascii:                   return "pmp$log_ascii";
@@ -8615,6 +8727,12 @@ static char *cpu180KeypointToStr(u16 kpt)
     case pmk_pop_inhibit_termination:     return "pmp$pop_inhibit_termination";
     case pmk_push_inhibit_termination:    return "pmp$push_inhibit_termination";
     case pmk_establish_ch_outside_block:  return "pmp$establish_ch_outside_block";
+    case tmk_switch_task:                 return "tmp$switch_task";
+    case tmk_send_monitor_fault:          return "tmp$send_monitor_fault";
+    case tmk_process_task_mcr_fault:      return "tmp$process_task_mcr_fault";
+    case tmk_set_monitor_flag:            return "tmp$set_monitor_flag";
+    case iok_queue_request:               return "iop$queue_request";
+    case iok_io_completions:              return "iop$process_io_completions";
     case jmk_get_job_status:              return "jmp$get_job_status";
     case jmk_idle_system:                 return "jmp$idle_system";
     case jmk_job_exists:                  return "jmp$job_exists";
