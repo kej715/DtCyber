@@ -1814,7 +1814,7 @@ void traceExchange180(Cpu180Context *cpu, u32 addr, char *title)
     fprintf(cpuF[cpu->id], "  DI %02x\n", cpu->regDi);
     fprintf(cpuF[cpu->id], "                     DM %02x\n", cpu->regDm);
     fputs("\n", cpuF[cpu->id]);
-    fprintf(cpuF[cpu->id], " LRN %d\n", cpu->regLrn);
+    fprintf(cpuF[cpu->id], " LRN %x\n", cpu->regLrn);
     for (i = 1; i < 16; i++)
         {
         fprintf(cpuF[cpu->id], " TOS[%x] ", i);

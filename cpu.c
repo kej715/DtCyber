@@ -1248,8 +1248,9 @@ static void *cpuThread(void *param)
         cpuStep(activeCpu);
         idleThrottle(activeCpu);
         }
+
 #if !defined(_WIN32)
-    return (NULL);
+    return NULL;
 #endif
     }
 

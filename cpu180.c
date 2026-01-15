@@ -151,6 +151,8 @@
 #define tmk_set_monitor_flag             1936
 #define iok_queue_request                2200
 #define iok_io_completions               2201
+#define iok_allocate_image_request       2203
+#define iok_queue_image_request          2204
 #define jmk_get_job_status               2602
 #define jmk_idle_system                  2615
 #define jmk_job_exists                   2627
@@ -167,20 +169,22 @@
 
 //#define TRACE_RANGE_START 0x405200126c00
 //#define TRACE_RANGE_END   0x405200126cff
+//#define TRACE_RANGE_START 0xb0440002f800
+//#define TRACE_RANGE_END   0xb0440002f8ff
 
 //#define TRACE_STORE_START 0x100a0000b758
 //#define TRACE_STORE_END   0x100a0000b758
-
+/*
 #define TRACE_KEYPOINT_LIST         \
     {                               \
-    osk_format_message,             \
     osk_set_status_abnormal,        \
     pmk_push_task_debug_mode,       \
     pmk_establish_debug_cff,        \
+    pmk_push_inhibit_termination,   \
     pmk_pop_inhibit_termination,    \
     pmk_validate_previous_save_area \
     }
-
+*/
 #endif
 
 /*
@@ -2541,6 +2545,12 @@ void cpu180SetMonitorCondition(Cpu180Context *ctx, MonitorCondition cond)
         }
 #if CcDebug > 0
     traceMonitorCondition(ctx, cond);
+    if ((traceMask & TRACECPU(ctx, TraceCpu180 | TraceConditions)) == TRACECPU(ctx, TraceConditions))
+        {
+        traceMask              |= TRACECPU(ctx, TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
+        traceInstCount[ctx->id] = 100;
+        }
+
 #endif
 #if DEBUG && DEBUG_INTERRUPT
     fprintf(cpu180Log, "Set monitor condition MCR%d, MCR %04x MMR %04x Op %02x PVA " FMT64_012x "\n",
@@ -2577,6 +2587,11 @@ void cpu180SetUserCondition(Cpu180Context *ctx, UserCondition cond)
         }
 #if CcDebug > 0
     traceUserCondition(ctx, cond);
+    if ((traceMask & TRACECPU(ctx, TraceCpu180 | TraceConditions)) == TRACECPU(ctx, TraceConditions))
+        {
+        traceMask              |= TRACECPU(ctx, TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
+        traceInstCount[ctx->id] = 100;
+        }
 #endif
 #if DEBUG && DEBUG_INTERRUPT
     fprintf(cpu180Log, "Set user condition UCR%d, UCR %04x UMR %04x Op %02x PVA " FMT64_012x "\n",
@@ -2867,9 +2882,10 @@ void cpu180Trap(Cpu180Context *ctx)
 
     ctx->regP      = ctx->nextP;
     ctx->key       = ctx->nextKey;
-    ctx->regFlags &= 0xfffd; // clear trap enable flag
-    ctx->regMcr   &= ~(ctx->regMmr | 0x0021); // clear masked bits and status bits
-    ctx->regUcr   &= ~ctx->regUmr;
+    ctx->regFlags &= 0xfffd;       // clear trap enable flag
+    ctx->regMcr   &= ~ctx->regMmr; // clear masked bits in MCR
+//  ctx->regMcr   &= ~(ctx->regMmr | 0x0021); // clear masked bits and status bits in MCR
+    ctx->regUcr   &= ~ctx->regUmr; // clear masked bits in UCR
     }
 
 /*--------------------------------------------------------------------------
@@ -2889,15 +2905,15 @@ void cpu180UpdateIntervalTimers(u32 delta)
 
     for (i = 0; i < cpuCount; i++)
         {
-        ctx = &cpus180[i];
-        oldIt = ctx->regSit;
+        ctx          = &cpus180[i];
+        oldIt        = ctx->regSit;
         ctx->regSit -= (u32)delta;
         if (ctx->regSit > oldIt || ctx->regSit == 0)
             {
             ctx->regMcr |= mcrDefns[MCR59].bitMask;
             ctx->regSit  = 0xffffffff;
             }
-        oldIt = ctx->regPit;
+        oldIt        = ctx->regPit;
         ctx->regPit -= (u32)delta;
         if (ctx->regPit > oldIt || ctx->regPit == 0)
             {
@@ -3092,20 +3108,31 @@ static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 
         {
         return FALSE;
         }
-    if (r1 > ringP)
+    if (ringP < r1)
         {
         ctx->regUtp = callee;
         *cond       = MCR61; // Outward call
         return FALSE;
         }
-    if (ringP <= r2)
-        {
-        callee = ((u64)ringP << 44) | (callee & Mask44);
-        }
-    else
+    if (ringP >= r2) // call to inner ring
         {
         callee = ((u64)r2 << 44) | (callee & Mask44);
         }
+    else // intraring call
+        {
+        callee = ((u64)ringP << 44) | (callee & Mask44);
+        }
+
+#if CcDebug > 0
+    if ((traceMask & TRACECPU(ctx, TraceCallFrame)) != 0)
+        {
+        char buf[128];
+        sprintf(buf, "  Callee " FMT64_012x " R1 %x R2 %x Ring P %x TOS[%x] " FMT64_012x, callee, r1, r2, ringP,
+            (u8)RingOf(callee), ctx->regTos[RingOf(callee)]);
+        traceCpuPrint(&cpus170[ctx->id], buf);
+        }
+#endif
+
     if (((callee & Mask3) != 0) || Is32BitNeg(callee))
         {
         ctx->regUtp = callee;
@@ -3177,7 +3204,7 @@ static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 
         {
         traceCallFrame(ctx, sfsa, "pushed");
         }
-    traceCall(ctx, ctx->nextP);
+    traceCall(ctx, callee);
 #endif
 
     return TRUE;
@@ -3839,12 +3866,12 @@ static bool cpu180MulInt64(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *prod
     u128 p128;
 #endif
 
-    isResultNeg = (i64)(mltand ^ mltier) < 0;
-    if ((i64)mltand < 0)
+    isResultNeg = ((mltand ^ mltier) >> 63) != 0;
+    if ((mltand >> 63) != 0)
         {
         mltand = ~mltand + 1;
         }
-    if ((i64)mltier < 0)
+    if ((mltier >> 63) != 0)
         {
         mltier = ~mltier + 1;
         }
@@ -6937,7 +6964,7 @@ static void cp180OpB1(Cpu180Context *activeCpu)  // B1  KEYPOINT   MIGDS 2-133
             {
             kpt -= 4096;
             }
-        sprintf(buf, "Keypoint mtr 0x%04x ( %0x04x %s)", activeCpu->opQ, kpt, cpu180KeypointToStr(kpt));
+        sprintf(buf, "Keypoint mtr 0x%04x (0x%04x %s)", activeCpu->opQ, kpt, cpu180KeypointToStr(kpt));
         break;
     default:
         sprintf(buf, "Keypoint 0x%x 0x%04x (%s)", activeCpu->opJ, activeCpu->opQ, cpu180KeypointToStr(activeCpu->opQ));
@@ -8733,6 +8760,8 @@ static char *cpu180KeypointToStr(u16 kpt)
     case tmk_set_monitor_flag:            return "tmp$set_monitor_flag";
     case iok_queue_request:               return "iop$queue_request";
     case iok_io_completions:              return "iop$process_io_completions";
+    case iok_allocate_image_request:      return "iop$allocate_image_request";
+    case iok_queue_image_request:         return "iop$queue_image_request";
     case jmk_get_job_status:              return "jmp$get_job_status";
     case jmk_idle_system:                 return "jmp$idle_system";
     case jmk_job_exists:                  return "jmp$job_exists";
