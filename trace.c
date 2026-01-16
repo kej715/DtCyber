@@ -2589,7 +2589,7 @@ void traceSequence(void)
     /*
     **  Bail out if no trace of this PPU is requested.
     */
-    if ((traceMask & (1 << activePpu->id)) == 0)
+    if ((traceMask & ((u64)1 << activePpu->id)) == 0)
         {
         return;
         }
@@ -2615,7 +2615,7 @@ void traceRegisters(bool isPost)
     /*
     **  Bail out if no trace of this PPU is requested.
     */
-    if ((traceMask & (1 << activePpu->id)) == 0)
+    if ((traceMask & ((u64)1 << activePpu->id)) == 0)
         {
         return;
         }
@@ -2654,7 +2654,7 @@ void traceOpcode(void)
     /*
     **  Bail out if no trace of this PPU is requested.
     */
-    if ((traceMask & (1 << activePpu->id)) == 0)
+    if ((traceMask & ((u64)1 << activePpu->id)) == 0)
         {
         return;
         }
@@ -2873,7 +2873,7 @@ void traceChannel(u8 ch)
     /*
     **  Bail out if no trace of this PPU is requested.
     */
-    if ((traceMask & (1 << activePpu->id)) == 0)
+    if ((traceMask & ((u64)1 << activePpu->id)) == 0)
         {
         return;
         }
@@ -2899,7 +2899,7 @@ void traceChannelIo(u8 ch)
     /*
     **  Bail out if no trace of this PPU is requested.
     */
-    if ((traceMask & (1 << activePpu->id)) == 0)
+    if ((traceMask & ((u64)1 << activePpu->id)) == 0)
         {
         return;
         }
@@ -2927,7 +2927,7 @@ void traceCmWord(CpWord data)
     /*
     **  Bail out if no trace of this PPU is requested.
     */
-    if ((traceMask & (1 << activePpu->id)) == 0)
+    if ((traceMask & ((u64)1 << activePpu->id)) == 0)
         {
         return;
         }
@@ -2953,7 +2953,7 @@ void traceCmWord64(CpWord data)
     /*
     **  Bail out if no trace of this PPU is requested.
     */
-    if ((traceMask & (1 << activePpu->id)) == 0)
+    if ((traceMask & ((u64)1 << activePpu->id)) == 0)
         {
         return;
         }
@@ -2978,7 +2978,7 @@ void traceEnd(void)
     /*
     **  Bail out if no trace of this PPU is requested.
     */
-    if ((traceMask & (1 << activePpu->id)) == 0)
+    if ((traceMask & ((u64)1 << activePpu->id)) == 0)
         {
         return;
         }

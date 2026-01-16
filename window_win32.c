@@ -642,7 +642,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
         case '7':
         case '8':
         case '9':
-            traceMask ^= (1 << (wParam - '0' + (shifted ? 10 : 0)));
+            traceMask ^= ((u64)1 << (wParam - '0' + (shifted ? 10 : 0)));
             break;
 
         case 'C':
@@ -678,7 +678,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 
         case 'Y':
         case 'y':
-            traceMask ^= ((u64)TraceCondtions << 32) | ((u64)TraceCondtions << 48);
+            traceMask ^= ((u64)TraceConditions << 32) | ((u64)TraceConditions << 48);
             break;
 
         case 'L':
