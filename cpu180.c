@@ -3420,7 +3420,7 @@ static void cpu180Get170State(Cpu180Context *ctx)
     ctx170       = &cpus170[ctx->id];
     ctx->regP    = ringSeg170
                    | (((u64)ctx170->regRaCm + (u64)ctx170->regP) << 3)
-                   | (u64)(((4 - (ctx170->opOffset / 15)) & 3) << 1);
+                   | (u64)(((4 - (ctx170->opOffset / 15)) & Mask2) << 1);
     ring         = ctx->regP & RingMask;
     ctx->regA[3] = ring | ((u64)ctx170->exitMode << 20) | ctx170->regRaCm;
     ctx->regA[4] = ring | (ctx170->isMonitorMode ? (u64)1 << 32 : 0) | ctx170->regFlCm;
@@ -6149,7 +6149,7 @@ static void cp180Op89(Cpu180Context *activeCpu)  // 89  SBIT       MIGDS 2-14
     else
         {
         wordAddr        = rma >> 3;
-        shift           = (u8)((56 - ((rma & Mask3) << 3)) + (7 - (activeCpu->regX[0] & Mask3)));
+        shift           = (u8)(56 - ((rma & Mask3) << 3)) + (u8)(7 - (activeCpu->regX[0] & Mask3));
         mask            = ~((u64)1 << shift);
         cpuAcquireMemoryMutex();
         cpMem[wordAddr] = (cpMem[wordAddr] & mask) | ((activeCpu->regX[activeCpu->opK] & 1) << shift);
@@ -6769,7 +6769,7 @@ static void cp180OpA9(Cpu180Context *activeCpu)  // A9  SHFX       MIGDS 2-33
         }
     else
         {
-        shift = (~(shift | 0x40) + 1) & Mask7;
+        shift = (~(shift | 0x40) + 1) & Mask6;
         if ((activeCpu->regX[activeCpu->opJ] & 0x8000000000000000) != 0)
             {
             activeCpu->regX[activeCpu->opK] = signExt64[shift] | (activeCpu->regX[activeCpu->opJ] >> shift);
@@ -6784,18 +6784,18 @@ static void cp180OpA9(Cpu180Context *activeCpu)  // A9  SHFX       MIGDS 2-33
 static void cp180OpAA(Cpu180Context *activeCpu)  // AA  SHFR       MIGDS 2-33
     {
     u8  shift;
-    u32 XjR;
+    u64 XjR;
 
-    XjR   = (u32)(activeCpu->regX[activeCpu->opJ] & Mask32);
+    XjR   = activeCpu->regX[activeCpu->opJ] & Mask32;
     shift = (u8)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask8) + activeCpu->opD) & Mask8);
     if (shift < 0x80U)
         {
-        activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | (u64)(XjR << (shift & Mask5));
+        activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | ((XjR << (shift & Mask5)) & Mask32);
         }
     else
         {
         shift = (~(shift | 0x60) + 1) & Mask6;
-        activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | (u64)(XjR >> shift);
+        activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | (XjR >> shift);
         if ((XjR & 0x80000000) != 0)
             {
             activeCpu->regX[activeCpu->opK] |= (u64)signExt32[shift];
