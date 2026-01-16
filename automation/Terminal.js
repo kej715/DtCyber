@@ -1034,6 +1034,26 @@ class AnsiTerminal extends BaseTerminal {
     .then(() => this.send(`${family},${username},${password}\r`))
     .then(() => this.expect([{ re: /\// }]));
   }
+
+  /*
+   * loginNVE
+   *
+   * Log into NOS/VE via a CDC NOS 2 system with VEIAF
+   *
+   * Arguments:
+   *   family   - the family with which to login
+   *   username - the username with which to login
+   *   password - the password with which to login
+   *
+   * Returns:
+   *   A promise that is reolved when the login is complete.
+   */
+  loginNVE(family, username, password) {
+    return this.expect([{ re: /FAMILY:/ }])
+    .then(() => this.sleep(1000))
+    .then(() => this.send(`${family},${username},${password},veiaf\r`))
+    .then(() => this.expect([{ re: /\// }]));
+  }
 }
 
 /*

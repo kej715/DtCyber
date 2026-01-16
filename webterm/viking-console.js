@@ -13,14 +13,17 @@
 const fs            = require('fs');
 const {program}     = require('commander');
 const Machine       = require('./textconsole/js/machine-tcp');
+const net           = require("net");
 const VikingConsole = require('./textconsole/js/viking721');
 
-function runVikingConsole(machineId, url, port, pidFile) {
+function runVikingConsole(machineId, url, port, remote, pidFile) {
   let isRunning = true;
 
   fs.writeFileSync(pidFile, `${process.pid}\n`);
 
   let title = `${machineId} (${url}:${port})`;
+
+  let client = null;
 
   const vikingConsole = new VikingConsole();
   vikingConsole.createScreen();
@@ -30,6 +33,14 @@ function runVikingConsole(machineId, url, port, pidFile) {
   machine.setReceivedDataHandler(data => {
     if (isRunning) {
       vikingConsole.renderText(data);
+      if (client !== null) {
+        try {
+          client.write(data);
+        }
+        catch (err) {
+          // ignore
+        }
+      }
     }
   });
 
@@ -62,12 +73,33 @@ function runVikingConsole(machineId, url, port, pidFile) {
   });
 
   vikingConsole.displayNotification(0, 0, `Connecting to ${title}.\n\n   Please wait ...`);
+
+  if (remote !== 0) {
+    const server = net.createServer(c => {
+      client = c;
+      c.on('data', data => {
+        machine.send(data.toString('utf8'));
+      });
+      c.on('end', () => {
+        client = null;
+      });
+      c.on('error', err => {
+        // ignore
+      });
+    });
+    server.on('error', (err) => {
+      throw err;
+    });
+    server.listen(remote);
+  }
+
   machine.createConnection();
 }
 
 program
   .description('Text mode version of CDC Viking 721 terminal emulator for use as NOS/VE console.')
   .option('-i, --pid <pid>', 'Process ID file', 'viking-console.pid')
+  .option('-m, --machine-id <id>', 'Machine ID', 'NOS/VE')
   .option('-p, --port <port>', 'The port number', (value) => {
     const parsedPort = parseInt(value, 10);
     if (isNaN(parsedPort) || parsedPort <= 0 || parsedPort > 65535) {
@@ -75,10 +107,16 @@ program
     }
     return parsedPort;
   }, 6602)
-  .option('-m, --machine-id <id>', 'Machine ID', 'NOS/VE')
+  .option('-r, --remote <port>', 'The remote listening port number', (value) => {
+    const parsedPort = parseInt(value, 10);
+    if (isNaN(parsedPort) || parsedPort <= 0 || parsedPort > 65535) {
+      throw new Error('Port must be an integer between 1 and 65535.');
+    }
+    return parsedPort;
+  }, 0)
   .option('-u, --url <url>', 'The URL to connect to', '127.0.0.1')
   .parse(process.argv);
 
 const options = program.opts();
 
-runVikingConsole(options.machineId, options.url, options.port, options.pid);
+runVikingConsole(options.machineId, options.url, options.port, options.remote, options.pid);
