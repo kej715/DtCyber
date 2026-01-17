@@ -2416,14 +2416,12 @@ static void ppOpLPML(void)    // 1024
 
 static void ppOpINPN(void)    // 1026
     {
-    u8 port;
-
-    port = activePpu->opD & Mask2;
-    if (port <= 1)
+/*DELETE*/if ((activePpu->opD & (1|4)) == 0) {fprintf(stderr,"PP%02o INPN %o\n",activePpu->id < 10 ? activePpu->id : (activePpu->id - 10) + 020,activePpu->opD);fflush(stderr);}
+    if ((activePpu->opD & 1) != 0) // memory port 0 selected
         {
         cpus180[0].regMcr |= 0x0080; // set MCR56
         }
-    else if (port == 2 && cpuCount > 1)
+    if ((activePpu->opD & 4) != 0 && cpuCount > 1) // memory port 2 selected
         {
         cpus180[1].regMcr |= 0x0080;
         }

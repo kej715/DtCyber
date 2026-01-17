@@ -4425,11 +4425,12 @@ static void cp180Op03(Cpu180Context *activeCpu)  // 03  INTRUPT    MIGDS 2-141
     // is associated with CPU 1.
     //
     Xk = activeCpu->regX[activeCpu->opK];
+/*DELETE*/if ((Xk & (1|4)) == 0) {fprintf(stderr, "CPU%d INTRUPT %02x\n",activeCpu->id,(u8)(Xk & Mask8));fflush(stderr);}
     if ((Xk & 1) != 0)
         {
         cpus180[0].regMcr |= mcrDefns[MCR56].bitMask; // External interrupt
         }
-    else if ((Xk & 4) != 0 && cpuCount > 1)
+    if ((Xk & 4) != 0 && cpuCount > 1)
         {
         cpus180[1].regMcr |= mcrDefns[MCR56].bitMask; // External interrupt
         }
