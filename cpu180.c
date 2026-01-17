@@ -357,6 +357,7 @@ static ConditionAction cpu180GetActionForMonitorCondition(Cpu180Context *ctx, Mo
 static ConditionAction cpu180GetActionForTrapCondition(Cpu180Context *ctx, MonitorCondition cond);
 static ConditionAction cpu180GetActionForUserCondition(Cpu180Context *ctx, UserCondition cond);
 static bool cpu180GetBdpDescriptor(Cpu180Context *ctx, u64 pva, u8 aRegNum, u8 xRegNum, BdpDescriptor *descriptor);
+static bool cpu180GetBytes(Cpu180Context *ctx, u64 pva, u8 count, u8 ring, Cpu180AccessMode access, u64 *word);
 static u8 cpu180GetCurrentXp(Cpu180Context *ctx);
 static bool cpu180GetLock(Cpu180Context *ctx, u64 pva, u8 *lock, MonitorCondition *cond);
 static bool cpu180GetParcel(Cpu180Context *ctx, u64 pva, u16 *parcel);
@@ -367,6 +368,7 @@ static void cpu180Load170Xp(Cpu180Context *ctx, u32 xpa);
 static bool cpu180MulInt32(Cpu180Context *ctx, u32 mltand, u32 mltier, u32 *product);
 static bool cpu180MulInt64(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *product);
 static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool doSaveCrs, u64 *sfsa, u32 *frameSize, MonitorCondition *cond);
+static bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u8 ring, u64 word, u8 count);
 static void cpu180Set170State(Cpu180Context *ctx, u64 regP);
 static void cpu180SetRingZeroCondition(Cpu180Context *ctx, u64 pva);
 static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa);
@@ -601,7 +603,7 @@ static void cp180OpFB(Cpu180Context *activeCpu); // FB  ADDI       2-64
 
 static void cp180OpIv(Cpu180Context *activeCpu);
 static void cp180OpLBYTS(Cpu180Context *activeCpu, u8 count);
-static void cp180OpSBYTS(Cpu180Context *activeCpu, int count);
+static void cp180OpSBYTS(Cpu180Context *activeCpu, u8 count);
 
 /*
 **  ----------------
@@ -1219,64 +1221,6 @@ void cpu180CheckConditions(Cpu180Context *ctx)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Get one to eight bytes from a specified PVA
-**
-**  Parameters:     Name        Description.
-**                  ctx         pointer to CPU context
-**                  pva         process virtual address of first byte
-**                  count       number of bytes to get
-**                  ring        ring from which access is being made
-**                  access      access mode (read or execute)
-**                  word        (out) pointer to assembled bytes, right justified
-**
-**  Returns:        TRUE if successful, FALSE if address specification error,
-**                  access violation, or page fault
-**
-**------------------------------------------------------------------------*/
-bool cpu180GetBytes(Cpu180Context *ctx, u64 pva, int count, u8 ring, Cpu180AccessMode access, u64 *word)
-    {
-    MonitorCondition cond;
-    u8               i;
-    u32              rma;
-    u32              rmas[8];
-    u8               shift;
-
-    if ((pva & Mask3) == 0) // optimization: word-aligned load
-        {
-        if (cpu180TranslatePvaSequence(ctx, pva, 1, count, ring, access, rmas, &cond) == FALSE)
-            {
-            cpu180SetMonitorCondition(ctx, cond);
-            return FALSE;
-            }
-        if (count < 8)
-            {
-            *word = cpMem[rmas[0] >> 3] >> ((8 - count) << 3);
-            }
-        else
-            {
-            *word = cpMem[rmas[0] >> 3];
-            }
-        }
-    else if (cpu180TranslatePvaSequence(ctx, pva, count, 1, ring, access, rmas, &cond))
-        {
-        *word = 0;
-        for (i = 0; i < count; i++)
-            {
-            rma   = rmas[i];
-            shift = (u8)(56 - ((rma & Mask3) << 3));
-            *word = (*word << 8) | ((cpMem[rma >> 3] >> shift) & Mask8);
-            }
-        }
-    else
-        {
-        cpu180SetMonitorCondition(ctx, cond);
-        return FALSE;
-        }
-
-    return TRUE;
-    }
-
-/*--------------------------------------------------------------------------
 **  Purpose:        Initialise CYBER 180 CPU.
 **
 **  Parameters:     Name          Description.
@@ -1289,7 +1233,7 @@ bool cpu180GetBytes(Cpu180Context *ctx, u64 pva, int count, u8 ring, Cpu180Acces
 void cpu180Init(char *model, u16 *serialNumbers)
     {
     Cpu180Context *activeCpu;
-    int           cpuNum;
+    u8            cpuNum;
     u64           memSizeMask;
 
 #if DEBUG
@@ -2064,17 +2008,17 @@ void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
     //  Keypoint Enable addresses
     case 0xca:
     case 0xcb:
-        ctx->regFlags = (ctx->regFlags & 0xdfff) | ((word & 1) << 13);
+        ctx->regFlags = (u16)((ctx->regFlags & 0xdfff) | ((word & 1) << 13));
         break;
     //  Critical Frame Flag addresses
     case 0xe0:
     case 0xe1:
-        ctx->regFlags = (ctx->regFlags & 0x7fff) | ((word & 1) << 15);
+        ctx->regFlags = (u16)((ctx->regFlags & 0x7fff) | ((word & 1) << 15));
         break;
     //  On Condition Flag addresses
     case 0xe2:
     case 0xe3:
-        ctx->regFlags = (ctx->regFlags & 0xbfff) | ((word & 1) << 14);
+        ctx->regFlags = (u16)((ctx->regFlags & 0xbfff) | ((word & 1) << 14));
         break;
         }
     }
@@ -2302,89 +2246,6 @@ void cpu180PpWriteMem(u32 address, CpWord data)
         traceCpuPrint(&cpus170[0], buf);
         }
 #endif
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Put 1 to 8 bytes in memory at a specified PVA
-**
-**  Parameters:     Name        Description.
-**                  ctx         pointer to CPU context
-**                  pva         process virtual address at which to put byte
-**                  ring        ring for which to validate access
-**                  word        the right-justified bytes
-**                  count       the number of bytes
-**
-**  Returns:        TRUE if successful.
-**
-**------------------------------------------------------------------------*/
-bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u8 ring, u64 word, int count)
-    {
-    u64              byte;
-    u8               byteShift;
-    MonitorCondition cond;
-    u8               i;
-    u64              mask;
-    u32              rma;
-    u32              rmas[8];
-    u32              wordAddr;
-    u8               wordShift;
-
-    static u64 masks[8] =
-        {
-        0x00ffffffffffffff,
-        0x0000ffffffffffff,
-        0x000000ffffffffff,
-        0x00000000ffffffff,
-        0x0000000000ffffff,
-        0x000000000000ffff,
-        0x00000000000000ff,
-        0x0000000000000000,
-        };
-
-#if CcDebug > 0 && defined(TRACE_STORE_START)
-    cpu180CheckTraceStore(ctx, pva, pva + 7);
-#endif
-
-    if ((pva & Mask3) == 0) // optimization: word-aligned store
-        {
-        if (cpu180TranslatePvaSequence(ctx, pva, 1, count, ring, AccessModeWrite, rmas, &cond))
-            {
-            wordAddr = rmas[0] >> 3;
-            if (count < 8)
-                {
-                wordShift = (8 - count) << 3;
-                word      = (word << wordShift) | (cpMem[wordAddr] & masks[count - 1]);
-                }
-            cpMem[wordAddr] = word;
-            }
-        else
-            {
-            cpu180SetMonitorCondition(ctx, cond);
-            return FALSE;
-            }
-        }
-    else if (cpu180TranslatePvaSequence(ctx, pva, count, 1, ring, AccessModeWrite, rmas, &cond))
-        {
-        i         = 0;
-        wordShift = (count - 1) << 3;
-        while (count-- > 0)
-            {
-            rma             = rmas[i++];
-            wordAddr        = rma >> 3;
-            byte            = (word >> wordShift) & Mask8;
-            byteShift       = 56 - ((rma & Mask3) << 3);
-            mask            = ~((u64)0xff << byteShift);
-            cpMem[wordAddr] = (cpMem[wordAddr] & mask) | (byte << byteShift);
-            wordShift      -= 8;
-            }
-        }
-    else
-        {
-        cpu180SetMonitorCondition(ctx, cond);
-        return FALSE;
-        }
-
-    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -3579,6 +3440,64 @@ static bool cpu180GetBdpDescriptor(Cpu180Context *ctx, u64 pva, u8 aRegNum, u8 x
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Get one to eight bytes from a specified PVA
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CPU context
+**                  pva         process virtual address of first byte
+**                  count       number of bytes to get
+**                  ring        ring from which access is being made
+**                  access      access mode (read or execute)
+**                  word        (out) pointer to assembled bytes, right justified
+**
+**  Returns:        TRUE if successful, FALSE if address specification error,
+**                  access violation, or page fault
+**
+**------------------------------------------------------------------------*/
+static bool cpu180GetBytes(Cpu180Context *ctx, u64 pva, u8 count, u8 ring, Cpu180AccessMode access, u64 *word)
+    {
+    MonitorCondition cond;
+    u8               i;
+    u32              rma;
+    u32              rmas[8];
+    u8               shift;
+
+    if ((pva & Mask3) == 0) // optimization: word-aligned load
+        {
+        if (cpu180TranslatePvaSequence(ctx, pva, 1, count, ring, access, rmas, &cond) == FALSE)
+            {
+            cpu180SetMonitorCondition(ctx, cond);
+            return FALSE;
+            }
+        if (count < 8)
+            {
+            *word = cpMem[rmas[0] >> 3] >> ((8 - count) << 3);
+            }
+        else
+            {
+            *word = cpMem[rmas[0] >> 3];
+            }
+        }
+    else if (cpu180TranslatePvaSequence(ctx, pva, count, 1, ring, access, rmas, &cond))
+        {
+        *word = 0;
+        for (i = 0; i < count; i++)
+            {
+            rma   = rmas[i];
+            shift = (u8)(56 - ((rma & Mask3) << 3));
+            *word = (*word << 8) | ((cpMem[rma >> 3] >> shift) & Mask8);
+            }
+        }
+    else
+        {
+        cpu180SetMonitorCondition(ctx, cond);
+        return FALSE;
+        }
+
+    return TRUE;
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Get execute permission for the segment referenced by
 **                  the current P register value.
 **
@@ -3658,7 +3577,7 @@ static bool cpu180GetParcel(Cpu180Context *ctx, u64 pva, u16 *parcel)
     if (cpu180PvaToRma(ctx, pva, AccessModeExecute, &rma, &pti, &cond))
         {
         word    = cpMem[rma >> 3];
-        shift   = 48 - ((rma & 6) << 3);
+        shift   = (u8)(48 - ((rma & 6) << 3));
         *parcel = (word >> shift) & 0xffff;
         return TRUE;
         }
@@ -3905,8 +3824,8 @@ static bool cpu180MulInt64(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *prod
         }
 #else
     p128    = (u128)mltand * (u128)mltier;
-    lower64 = p128;
-    upper64 = p128 >> 64;
+    lower64 = (u64)p128;
+    upper64 = (u64)(p128 >> 64);
 #endif
 
     if (lower64 > 0x7fffffffffffffff || upper64 != 0)
@@ -3953,7 +3872,7 @@ static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool doSave
     u8  r;
     u32 rmas[33];
     u32 wordAddrs[33];
-    int words;
+    u8  words;
 
     if (at < 2)
         {
@@ -4004,6 +3923,89 @@ static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool doSave
 #if CcDebug > 0 && defined(TRACE_STORE_START)
     cpu180CheckTraceStore(ctx, *sfsa, *sfsa + (words >> 3) - 1);
 #endif
+
+    return TRUE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Put 1 to 8 bytes in memory at a specified PVA
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CPU context
+**                  pva         process virtual address at which to put byte
+**                  ring        ring for which to validate access
+**                  word        the right-justified bytes
+**                  count       the number of bytes
+**
+**  Returns:        TRUE if successful.
+**
+**------------------------------------------------------------------------*/
+static bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u8 ring, u64 word, u8 count)
+    {
+    u64              byte;
+    u8               byteShift;
+    MonitorCondition cond;
+    u8               i;
+    u64              mask;
+    u32              rma;
+    u32              rmas[8];
+    u32              wordAddr;
+    u8               wordShift;
+
+    static u64 masks[8] =
+        {
+        0x00ffffffffffffff,
+        0x0000ffffffffffff,
+        0x000000ffffffffff,
+        0x00000000ffffffff,
+        0x0000000000ffffff,
+        0x000000000000ffff,
+        0x00000000000000ff,
+        0x0000000000000000,
+        };
+
+#if CcDebug > 0 && defined(TRACE_STORE_START)
+    cpu180CheckTraceStore(ctx, pva, pva + 7);
+#endif
+
+    if ((pva & Mask3) == 0) // optimization: word-aligned store
+        {
+        if (cpu180TranslatePvaSequence(ctx, pva, 1, count, ring, AccessModeWrite, rmas, &cond))
+            {
+            wordAddr = rmas[0] >> 3;
+            if (count < 8)
+                {
+                wordShift = (u8)((8 - count) << 3);
+                word      = (word << wordShift) | (cpMem[wordAddr] & masks[count - 1]);
+                }
+            cpMem[wordAddr] = word;
+            }
+        else
+            {
+            cpu180SetMonitorCondition(ctx, cond);
+            return FALSE;
+            }
+        }
+    else if (cpu180TranslatePvaSequence(ctx, pva, count, 1, ring, AccessModeWrite, rmas, &cond))
+        {
+        i         = 0;
+        wordShift = (u8)((count - 1) << 3);
+        while (count-- > 0)
+            {
+            rma             = rmas[i++];
+            wordAddr        = rma >> 3;
+            byte            = (word >> wordShift) & Mask8;
+            byteShift       = (u8)(56 - ((rma & Mask3) << 3));
+            mask            = ~((u64)0xff << byteShift);
+            cpMem[wordAddr] = (cpMem[wordAddr] & mask) | (byte << byteShift);
+            wordShift      -= 8;
+            }
+        }
+    else
+        {
+        cpu180SetMonitorCondition(ctx, cond);
+        return FALSE;
+        }
 
     return TRUE;
     }
@@ -4452,7 +4454,7 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
     u8               vmid;
     u64              word;
     u32              wordAddrs[33];
-    int              words;
+    u8               words;
     u8               xs;
     u8               xt;
 
@@ -8458,7 +8460,7 @@ static void cp180OpLBYTS(Cpu180Context *activeCpu, u8 count)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cp180OpSBYTS(Cpu180Context *activeCpu, int count)
+static void cp180OpSBYTS(Cpu180Context *activeCpu, u8 count)
     {
     u64 Aj;
     u32 byteNum;

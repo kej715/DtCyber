@@ -2663,7 +2663,7 @@ void traceOpcode(void)
     **  Print opcode.
     */
     opCode = activePpu->mem[activePpu->regP];
-    opF    = opCode >> 6;
+    opF    = (u8)(opCode >> 6);
     opD    = opCode & 077;
     if (isCyber180)
         {
@@ -2742,7 +2742,7 @@ u8 traceDisassembleOpcode(char *str, PpWord *pm)
     **  Print opcode.
     */
     opCode = *pm++;
-    opF    = opCode >> 6;
+    opF    = (u8)(opCode >> 6);
     opD    = opCode & 077;
     if (isCyber180)
         {    

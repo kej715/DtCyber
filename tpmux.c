@@ -786,12 +786,12 @@ static void tpMuxGetTimestamp(void)
     info = localtime(&rawtime);
     
     outBuf[0] = 0;
-    outBuf[1] = (((info->tm_year - 100) / 10) << 4) | (info->tm_year % 10);
-    outBuf[2] = (((info->tm_mon + 1) / 10) << 4) | ((info->tm_mon + 1) % 10);
-    outBuf[3] = ((info->tm_mday / 10) << 4) | (info->tm_mday % 10);
-    outBuf[4] = ((info->tm_hour / 10) << 4) | (info->tm_hour % 10);
-    outBuf[5] = ((info->tm_min / 10) << 4) | (info->tm_min % 10);
-    outBuf[6] = ((info->tm_sec / 10) << 4) | (info->tm_sec % 10);
+    outBuf[1] = (u8)((((info->tm_year - 100) / 10) << 4) | (info->tm_year % 10));
+    outBuf[2] = (u8)((((info->tm_mon + 1) / 10) << 4) | ((info->tm_mon + 1) % 10));
+    outBuf[3] = (u8)(((info->tm_mday / 10) << 4) | (info->tm_mday % 10));
+    outBuf[4] = (u8)(((info->tm_hour / 10) << 4) | (info->tm_hour % 10));
+    outBuf[5] = (u8)(((info->tm_min / 10) << 4) | (info->tm_min % 10));
+    outBuf[6] = (u8)(((info->tm_sec / 10) << 4) | (info->tm_sec % 10));
     outBuf[7] = 0;
 #endif
     }

@@ -826,7 +826,7 @@ static void mt679SetupStatus(TapeParam *tp)
                 }
             }
 
-        tp->deviceStatus[2] = (tp->blockCrc & Mask9) << 3;
+        tp->deviceStatus[2] = (PpWord)((tp->blockCrc & Mask9) << 3);
 
         /*
         **  Detailed status.
@@ -2125,7 +2125,7 @@ static void mt679PackAndConvert(u32 recLen)
 
             if ((i & 1) == 0)
                 {
-                *op = (c1 & Mask6) << 6;
+                *op = (u16)((c1 & Mask6) << 6);
                 }
             else
                 {

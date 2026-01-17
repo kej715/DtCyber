@@ -692,10 +692,10 @@ void ppMacSetIouLocation(u16 location)
 **------------------------------------------------------------------------*/
 void ppMacSetIouRegister(u8 reg, u64 word)
     {
-    int    chIdx;
+    u8     chIdx;
     int    i;
     PpSlot *pp;
-    int    ppIdx;
+    u8     ppIdx;
     u32    ppVector;
 
     switch (reg)
@@ -733,7 +733,7 @@ void ppMacSetIouRegister(u8 reg, u64 word)
                 */
                 pp->opF  = 071;
                 pp->busy = TRUE;
-                pp->regK = (pp->opF << 6) | pp->opD;
+                pp->regK = (PpWord)((pp->opF << 6) | pp->opD);
 
                 /*
                 **  Clear P register and location zero of PP.
@@ -756,7 +756,7 @@ void ppMacSetIouRegister(u8 reg, u64 word)
                 */
                 pp->opF  = 073;
                 pp->busy = channel[chIdx].active;
-                pp->regK = (pp->opF << 6) | pp->opD;
+                pp->regK = (PpWord)((pp->opF << 6) | pp->opD);
 
                 /*
                 **  Clear P register and location zero of PP.
@@ -2784,17 +2784,17 @@ static void ppFlushIoBuf(void)
     {
     if (activePpu->ioBufIdx > 1)
         {
-        activePpu->mem[activePpu->regP] = (activePpu->ioBuf[0] << 4) | (activePpu->ioBuf[1] >> 8);
+        activePpu->mem[activePpu->regP] = (PpWord)((activePpu->ioBuf[0] << 4) | (activePpu->ioBuf[1] >> 8));
         PpIncrement(activePpu->regP);
 
         if (activePpu->ioBufIdx > 2)
             {
-            activePpu->mem[activePpu->regP] = ((activePpu->ioBuf[1] & Mask8) << 8) | (activePpu->ioBuf[2] >> 4);
+            activePpu->mem[activePpu->regP] = (PpWord)(((activePpu->ioBuf[1] & Mask8) << 8) | (activePpu->ioBuf[2] >> 4));
             PpIncrement(activePpu->regP);
 
             if (activePpu->ioBufIdx > 3)
                 {
-                activePpu->mem[activePpu->regP] = ((activePpu->ioBuf[2] & Mask4) << 12) | activePpu->ioBuf[3];
+                activePpu->mem[activePpu->regP] = (PpWord)(((activePpu->ioBuf[2] & Mask4) << 12) | activePpu->ioBuf[3]);
                 PpIncrement(activePpu->regP);
                 }
             }
@@ -2943,10 +2943,10 @@ static void ppOpOAPM(void)    // 1073
         if (activePpu->ioBufIdx > 3)
             {
             activePpu->ioBuf[0]  = activePpu->mem[activePpu->regP] >> 4;
-            activePpu->ioBuf[1]  = (activePpu->mem[activePpu->regP] & Mask4) << 8;
+            activePpu->ioBuf[1]  = (PpWord)((activePpu->mem[activePpu->regP] & Mask4) << 8);
             PpIncrement(activePpu->regP);
             activePpu->ioBuf[1] |= activePpu->mem[activePpu->regP] >> 8;
-            activePpu->ioBuf[2]  = (activePpu->mem[activePpu->regP] & Mask8) << 4;
+            activePpu->ioBuf[2]  = (PpWord)((activePpu->mem[activePpu->regP] & Mask8) << 4);
             PpIncrement(activePpu->regP);
             activePpu->ioBuf[2] |= activePpu->mem[activePpu->regP] >> 12;
             activePpu->ioBuf[3]  = activePpu->mem[activePpu->regP] & Mask12;

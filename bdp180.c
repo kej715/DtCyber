@@ -246,7 +246,7 @@ bool bdp180CopyFromBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
         // Destination not word-aligned, so copy enough bytes to reach next word boundary
         //
         n     = 8 - (pva & Mask3);
-        shift = (n - 1) << 3;
+        shift = (u8)((n - 1) << 3);
         if (n > count)
             {
             n = count;
@@ -331,7 +331,7 @@ bool bdp180CopyToBuf(Cpu180Context *ctx, u64 pva, u16 count, u8 *buffer)
         // Source not word-aligned, so copy enough bytes to reach next word boundary
         //
         n     = 8 - (pva & Mask3);
-        shift = (n - 1) << 3;
+        shift = (u8)((n - 1) << 3);
         if (n > count)
             {
             n = count;
@@ -840,7 +840,7 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
             bdp180Div10(operand, &d1);
             bdp180Div10(operand, &d2);
             i -= 1;
-            buffer[i] = (d2 << 4) | d1;
+            buffer[i] = (u8)((d2 << 4) | d1);
             }
         *isTruncated = IsLongZero(operand->value) == FALSE;
         if (desc->type == 1 && (desc->length < 1 || (buffer[0] & 0xf0) != 0))
@@ -855,13 +855,13 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
             {
             i = desc->length - 1;
             bdp180Div10(operand, &d2);
-            buffer[i] = (d2 << 4) | (operand->sign ? 0xd : 0xc);
+            buffer[i] = (u8)((d2 << 4) | (operand->sign ? 0xd : 0xc));
             while (i > 0)
                 {
                 bdp180Div10(operand, &d1);
                 bdp180Div10(operand, &d2);
                 i -= 1;
-                buffer[i] = (d2 << 4) | d1;
+                buffer[i] = (u8)((d2 << 4) | d1);
                 }
             }
         *isTruncated = IsLongZero(operand->value) == FALSE;

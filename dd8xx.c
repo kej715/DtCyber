@@ -968,21 +968,21 @@ static FILE *dd8xxMount(char *deviceName, DiskParam *dp)
         /*
         **  Write serial number and date of manufacture.
         */
-        mySector[0]  = (dp->channelNo & 070) << (8 - 3);
+        mySector[0]  = (PpWord)((dp->channelNo & 070) << (8 - 3));
         mySector[0] |= (dp->channelNo & 007) << (4 - 0);
         mySector[0] |= (dp->unitNo & 070) >> (3 - 0);
-        mySector[1]  = (dp->unitNo & 007) << (8 - 0);
+        mySector[1]  = (PpWord)((dp->unitNo & 007) << (8 - 0));
         mySector[1] |= (dp->diskType & 070) << (4 - 3);
         mySector[1] |= (dp->diskType & 007) << (0 - 0);
 
         time(&mTime);
         lTime = localtime(&mTime);
-        yy    = lTime->tm_year % 100;
-        mm    = lTime->tm_mon + 1;
-        dd    = lTime->tm_mday;
+        yy    = (u8)(lTime->tm_year % 100);
+        mm    = (u8)(lTime->tm_mon + 1);
+        dd    = (u8)(lTime->tm_mday);
 
-        mySector[2] = (dd / 10) << 8 | (dd % 10) << 4 | mm / 10;
-        mySector[3] = (mm % 10) << 8 | (yy / 10) << 4 | yy % 10;
+        mySector[2] = (PpWord)((dd / 10) << 8 | (dd % 10) << 4 | mm / 10);
+        mySector[3] = (PpWord)((mm % 10) << 8 | (yy / 10) << 4 | yy % 10);
 
         dp->track  = 0;
         dp->sector = 0;
@@ -1212,9 +1212,9 @@ static FcStatus dd8xxFunc(PpWord funcCode)
                 break;
 
             case DiskType844:
-                dp->detailedStatus[4] = ((dp->cylinder & 0777) << 3) | ((dp->track >> 2) & 07);
-                dp->detailedStatus[5] = ((dp->track & 03) << 10) | ((dp->sector & 017) << 5) | ((dp->cylinder >> 9) & 01);
-                dp->detailedStatus[6] = ((dp->sector << 4) | 010) & 07777;
+                dp->detailedStatus[4] = (PpWord)(((dp->cylinder & 0777) << 3) | ((dp->track >> 2) & 07));
+                dp->detailedStatus[5] = (PpWord)(((dp->track & 03) << 10) | ((dp->sector & 017) << 5) | ((dp->cylinder >> 9) & 01));
+                dp->detailedStatus[6] = (PpWord)(((dp->sector << 4) | 010) & 07777);
                 if (fcb != NULL)
                     {
                     dp->detailedStatus[8] |= 0300;
@@ -2088,8 +2088,8 @@ static PpWord dd8xxReadPacked(DiskParam *dp, FILE *fcb)
         pp = dp->buffer;
         while (pp < dp->bufLimit)
             {
-            *pp++ = (sp[0] << 4) | (sp[1] >> 4);
-            *pp++ = (sp[1] << 8) | sp[2];
+            *pp++ = (PpWord)((sp[0] << 4) | (sp[1] >> 4));
+            *pp++ = (PpWord)((sp[1] << 8) | sp[2]);
             sp   += 3;
             }
         }
