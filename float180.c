@@ -77,7 +77,6 @@
 #define IsZ1(exponent) ((exponent) < 0x1000)
 #define IsZ2(exponent) ((exponent) < 0x3000 && (exponent) >= 0x1000)
 #define IsZ3(exponent, coefficient) ((coefficient) == 0 && IsStandard(exponent))
-#define IsZero(exponent) (exponent < 0x3000)
 
 #define IsUcTrapEnabled(ctx, cond) ((ctx->regUmr & ucrMasks[cond]) != 0 && (ctx->regFlags & 0x3) == 2)
 #define IsUmrBitSet(ctx, cond) ((ctx->regUmr & ucrMasks[cond]) != 0)
@@ -978,6 +977,7 @@ bool float180ConvertFloatToInt(Cpu180Context *ctx, u64 floatValue, u64 *intResul
     u16 exponent;
     u16 shift;
 
+    *intResult  = 0;
     exponent    = ExponentOf(floatValue);
     coefficient = CoefficientOf(floatValue);
 
@@ -985,27 +985,21 @@ bool float180ConvertFloatToInt(Cpu180Context *ctx, u64 floatValue, u64 *intResul
         {
         if (IsUcTrapEnabled(ctx, UCR61))
             {
-            cpu180SetUserCondition(ctx, UCR61);
+            cpu180SetUserCondition(ctx, UCR61); // FP indefinite
             return FALSE;
             }
         ctx->regUcr |= UcrBitMask(UCR61);
-        *intResult   = 0;
         }
     else if (IsInfinite(exponent))
         {
         if (IsUcTrapEnabled(ctx, UCR62))
             {
-            cpu180SetUserCondition(ctx, UCR62);
+            cpu180SetUserCondition(ctx, UCR62); // Arithmetic loss of significance
             return FALSE;
             }
         ctx->regUcr |= UcrBitMask(UCR62);
-        *intResult   = 0;
         }
-    else if (coefficient == 0)
-        {
-        *intResult = 0;
-        }
-    else
+    else if (coefficient != 0)
         {
         float180NormalizeFloat(&exponent, &coefficient);
         shift = exponent - BIAS;
@@ -1026,7 +1020,7 @@ bool float180ConvertFloatToInt(Cpu180Context *ctx, u64 floatValue, u64 *intResul
                     {
                     if (IsUcTrapEnabled(ctx, UCR62))
                         {
-                        cpu180SetUserCondition(ctx, UCR62);
+                        cpu180SetUserCondition(ctx, UCR62); // Arithmetic loss of significance
                         return FALSE;
                         }
                     ctx->regUcr |= UcrBitMask(UCR62);
@@ -1034,20 +1028,12 @@ bool float180ConvertFloatToInt(Cpu180Context *ctx, u64 floatValue, u64 *intResul
                         {
                         *intResult = coefficient << shift;
                         }
-                    else
-                        {
-                        *intResult = 0;
-                        }
                     }
                 }
             if (SignOf(floatValue) != 0)
                 {
                 *intResult = ~*intResult + 1;
                 }
-            }
-        else
-            {
-            *intResult = 0;
             }
         }
 
