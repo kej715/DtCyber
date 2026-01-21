@@ -2160,7 +2160,7 @@ static void mt679FuncRead(void)
     u32       recLen2;
     i8        unitNo;
     TapeParam *tp;
-    i32       position;
+    long      position;
 
     unitNo = activeDevice->selectedUnit;
     tp     = (TapeParam *)activeDevice->context[unitNo];
@@ -2325,7 +2325,7 @@ static void mt679FuncReadBkw(void)
     u32       recLen2;
     i8        unitNo;
     TapeParam *tp;
-    i32       position;
+    long      position;
 
     unitNo = activeDevice->selectedUnit;
     tp     = (TapeParam *)activeDevice->context[unitNo];
@@ -2505,7 +2505,7 @@ static void mt679FuncForespace(void)
     u32       recLen2;
     i8        unitNo;
     TapeParam *tp;
-    i32       position;
+    long      position;
 
     unitNo = activeDevice->selectedUnit;
     tp     = (TapeParam *)activeDevice->context[unitNo];
@@ -2651,7 +2651,7 @@ static void mt679FuncBackspace(void)
     u32       recLen2;
     i8        unitNo;
     TapeParam *tp;
-    i32       position;
+    long      position;
 
     unitNo = activeDevice->selectedUnit;
     tp     = (TapeParam *)activeDevice->context[unitNo];

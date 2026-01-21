@@ -499,7 +499,7 @@ static void tpMuxCheckIo(void)
     int            fd;
     int            i;
     int            maxFd;
-    int            n;
+    ssize_t        n;
     int            optEnable = 1;
     PortParam      *pp;
     fd_set         readFds;

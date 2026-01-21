@@ -4,6 +4,7 @@
 /*--------------------------------------------------------------------------
 **
 **  Copyright (c) 2003-2011, Tom Hunter
+**                2021-2026, Kevin Jordan
 **
 **  Name: const.h
 **
@@ -32,9 +33,9 @@
 **  ----------------
 */
 #ifdef _DEBUG
-#define DtCyberVersion      "Desktop CYBER 6.0.11 (Debug)   "
+#define DtCyberVersion      "Desktop CYBER 6.0.12 (Debug)   "
 #else
-#define DtCyberVersion      "Desktop CYBER 6.0.11 (Release) "
+#define DtCyberVersion      "Desktop CYBER 6.0.12 (Release) "
 #endif
 
 #define DtCyberBuildDate    __DATE__ " " __TIME__

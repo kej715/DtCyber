@@ -792,7 +792,7 @@ static int opReadLine(char *buf, int size)
     char            *limit;
     char            *line;
     int             lineNo;
-    int             n;
+    ssize_t         n;
 
     while (opActive)
         {
@@ -894,7 +894,7 @@ static int opReadLine(char *buf, int size)
 
                 return 0;
                 }
-            opInIdx = n;
+            opInIdx = (int)n;
             }
         while (opOutIdx < opInIdx)
             {
@@ -1523,8 +1523,8 @@ static void opHelpDumpMemory(void)
 **
 **------------------------------------------------------------------------*/
 char opKeyIn           = 0;
-long opKeyInterval     = 250;
-long opKeyWaitInterval = 100;
+u32  opKeyInterval     = 250;
+u32  opKeyWaitInterval = 100;
 
 static void opCmdEnterKeys(bool help, char *cmdParams)
     {
@@ -1534,7 +1534,7 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
     char      keybuf[256];
     char      *kp;
     char      *limit;
-    long      msec;
+    u32       msec;
     char      timestamp[20];
     struct tm *tmp;
 
@@ -1746,7 +1746,7 @@ static void opCmdSetKeyInterval(bool help, char *cmdParams)
 static void opHelpSetKeyInterval(void)
     {
     opDisplay("    > 'set_key_interval <millisecs>' set the interval between key entries to the system console.\n");
-    sprintf(opOutBuf, "    > [Current key interval is %ld msec.]\n", opKeyInterval);
+    sprintf(opOutBuf, "    > [Current key interval is %u msec.]\n", opKeyInterval);
     opDisplay(opOutBuf);
     }
 
@@ -1788,7 +1788,7 @@ static void opCmdSetKeyWaitInterval(bool help, char *cmdParams)
 static void opHelpSetKeyWaitInterval(void)
     {
     opDisplay("    > 'set_keywait_interval <millisecs>' set the interval between keyboard scans of the emulated system console.\n");
-    sprintf(opOutBuf, "    > [Current key wait interval is %ld msec.]\n", opKeyWaitInterval);
+    sprintf(opOutBuf, "    > [Current key wait interval is %u msec.]\n", opKeyWaitInterval);
     opDisplay(opOutBuf);
     }
 

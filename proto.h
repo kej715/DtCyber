@@ -629,7 +629,7 @@ extern u8                  npuSvmNpuNode;
 extern char                *npuSvmTermStates[];
 extern volatile bool       opActive;
 extern char                opKeyIn;
-extern long                opKeyInterval;
+extern u32                 opKeyInterval;
 extern volatile bool       opPaused;
 extern char                persistDir[];
 extern u16                 platoConns;

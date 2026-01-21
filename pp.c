@@ -819,7 +819,7 @@ void ppMacSetIouRegister(u8 reg, u64 word)
 
     case RegOsBounds:
         iouOsBoundaryReg = word;
-        iouOsBoundary    = (word & 0x3ffff) << 10;
+        iouOsBoundary    = (u32)(((word & 0x3ffff) << 10) & Mask32);
         ppVector         = word >> 32;
         for (i = 0; i < 10; i++)
             {
@@ -2416,7 +2416,7 @@ static void ppOpLPML(void)    // 1024
 
 static void ppOpINPN(void)    // 1026
     {
-/*DELETE*/if ((activePpu->opD & (1|4)) == 0) {fprintf(stderr,"PP%02o INPN %o\n",activePpu->id < 10 ? activePpu->id : (activePpu->id - 10) + 020,activePpu->opD);fflush(stderr);}
+/*DELETE*/if ((activePpu->opD & 1) == 0) {fprintf(stderr,"PP%02o INPN %o\n",activePpu->id < 10 ? activePpu->id : (activePpu->id - 10) + 020,activePpu->opD);fflush(stderr);}
     if ((activePpu->opD & 1) != 0) // memory port 0 selected
         {
         cpus180[0].regMcr |= 0x0080; // set MCR56

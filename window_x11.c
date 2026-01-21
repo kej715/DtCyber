@@ -801,7 +801,7 @@ static void *windowThread(void *param)
             char          buf[80];
 
             sprintf(buf, "Cycle time: %.3f", cycleTime);
-            windowDrawString(0, 10, buf, strlen(buf));
+            windowDrawString(0, 10, buf, (int)strlen(buf));
             }
 #endif
 
@@ -879,7 +879,7 @@ static void *windowThread(void *param)
                     (traceMask & ((u64)TracePva << 48)) != 0 ? 'P' : '_');
                 }
 
-            windowDrawString(0, 10, buf, strlen(buf));
+            windowDrawString(0, 10, buf, (int)strlen(buf));
             }
 #endif
 
@@ -891,7 +891,7 @@ static void *windowThread(void *param)
             static char opMessage[] = "Emulation paused";
             windowActivateFont(FontLarge);
             oldFont = FontLarge;
-            windowDrawString(20, 256, opMessage, strlen(opMessage));
+            windowDrawString(20, 256, opMessage, (int)strlen(opMessage));
             }
         else if (consoleIsRemoteActive())
             {
@@ -901,7 +901,7 @@ static void *windowThread(void *param)
             static char opMessage[] = "Remote console active";
             windowActivateFont(FontLarge);
             oldFont = FontLarge;
-            windowDrawString(20, 256, opMessage, strlen(opMessage));
+            windowDrawString(20, 256, opMessage, (int)strlen(opMessage));
             }
 
         /*
@@ -918,8 +918,8 @@ static void *windowThread(void *param)
             static char usageMessage2[] = "then use the 'shutdown' command in the operator interface to terminate the emulation.";
             windowActivateFont(FontMedium);
             oldFont = FontMedium;
-            windowDrawString(20, 256, usageMessage1, strlen(usageMessage1));
-            windowDrawString(20, 275, usageMessage2, strlen(usageMessage2));
+            windowDrawString(20, 256, usageMessage1, (int)strlen(usageMessage1));
+            windowDrawString(20, 275, usageMessage2, (int)strlen(usageMessage2));
             listEnd            = 0;
             usageDisplayCount -= 1;
             }

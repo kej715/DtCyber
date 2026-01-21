@@ -2482,6 +2482,10 @@ void cpu180Step(Cpu180Context *activeCpu)
     **  First, check for interrupt conditions and initiate trap or
     **  exchange operations, or halt the CPU as required.
     */
+/*DELETE*/ if ((activeCpu->regMcr & 0x00a0) == 0x00a0)
+/*DELETE*/     {
+/*DELETE*/     fprintf(stderr, "CPU%d MCR %04x MMR %04x P " FMT64_012x " mtr %d\n", activeCpu->id, activeCpu->regMcr, activeCpu->regMmr, activeCpu->regP, activeCpu->isMonitorMode);
+/*DELETE*/     }
     cpu180CheckConditions(activeCpu);
 
     if (activeCpu->pendingAction > Stack)
@@ -4427,7 +4431,6 @@ static void cp180Op03(Cpu180Context *activeCpu)  // 03  INTRUPT    MIGDS 2-141
     // is associated with CPU 1.
     //
     Xk = activeCpu->regX[activeCpu->opK];
-/*DELETE*/if ((Xk & (1|4)) == 0) {fprintf(stderr, "CPU%d INTRUPT %02x\n",activeCpu->id,(u8)(Xk & Mask8));fflush(stderr);}
     if ((Xk & 1) != 0)
         {
         cpus180[0].regMcr |= mcrDefns[MCR56].bitMask; // External interrupt
@@ -7288,7 +7291,7 @@ static void cp180OpE4(Cpu180Context *activeCpu)  // E4  SCLN       MIGDS 2-49
                 }
             else
                 {
-                power = ~power + 1;
+                power = (u8)(~power + 1);
                 while (power-- > 0)
                     {
                     bdp180Div10(&operand, &remainder);
@@ -7364,7 +7367,7 @@ static void cp180OpE5(Cpu180Context *activeCpu)  // E5  SCLR       MIGDS 2-49
                 }
             else
                 {
-                power = ~power + 1;
+                power = (u8)(~power + 1);
                 while (power > 1)
                     {
                     bdp180Div10(&operand, &remainder);

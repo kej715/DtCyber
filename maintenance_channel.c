@@ -482,7 +482,7 @@ static void mchIo(void)
                 {
                 activeChannel->full         = FALSE;
                 activeDevice->recordLength -= 1;
-                mchLocation = (mchLocation << 8) | (activeChannel->data & Mask8);
+                mchLocation = (u8)(activeChannel->data & Mask8);
 #if DEBUG
                 if (mchBytesIo < 1)
                     {
@@ -549,7 +549,7 @@ static void mchIo(void)
                 {
                 activeChannel->full         = FALSE;
                 activeDevice->recordLength -= 1;
-                mchLocation = (mchLocation << 8) | (activeChannel->data & Mask8);
+                mchLocation = (u8)(activeChannel->data & Mask8);
 #if DEBUG
                 if (mchBytesIo < 1)
                     {
@@ -615,7 +615,7 @@ static void mchIo(void)
                 {
                 activeChannel->full         = FALSE;
                 activeDevice->recordLength -= 1;
-                mchLocation = (mchLocation << 8) | (activeChannel->data & Mask8);
+                mchLocation = (u8)(activeChannel->data & Mask8);
 #if DEBUG
                 fprintf(mchLog, " %02X", activeChannel->data);
                 if (activeDevice->recordLength == 0)
