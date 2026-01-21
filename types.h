@@ -47,6 +47,8 @@
 #define u64 uint64_t
 
 #if defined(_WIN32)
+#include <basetsd.h>
+typedef SSIZE_T ssize_t;
 
 #define HOST_OS_TYPE  "windows"
 
