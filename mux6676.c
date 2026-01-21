@@ -145,7 +145,7 @@ static void mux667xActivate(void);
 static void mux667xCheckIo(MuxParam *mp);
 static void mux667xClose(PortParam *pp);
 static void mux667xDisconnect(void);
-static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params);
+static void mux667xInit(u8 eqNo, u8 channelNo, u8 muxType, char *params);
 static void mux667xIo(void);
 static bool mux667xInputRequired(MuxParam *mp);
 
@@ -307,7 +307,7 @@ void mux6676ShowStatus()
 **  consecutive multiplexor ports associated with the TCP port.
 **
 **------------------------------------------------------------------------*/
-static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
+static void mux667xInit(u8 eqNo, u8 channelNo, u8 muxType, char *params)
     {
     char               *cp;
     DevSlot            *dp;

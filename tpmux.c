@@ -569,7 +569,7 @@ static void tpMuxCheckIo(void)
                 n = recv(pp->connFd, &pp->inBuffer[pp->inInIdx], InBufSize - pp->inInIdx, 0);
                 if (n > 0)
                     {
-                    pp->inInIdx += n;
+                    pp->inInIdx += (int)n;
                     }
                 else
                     {
@@ -582,7 +582,7 @@ static void tpMuxCheckIo(void)
                 n = send(pp->connFd, &pp->outBuffer[pp->outOutIdx], pp->outInIdx - pp->outOutIdx, 0);
                 if (n >= 0)
                     {
-                    pp->outOutIdx += n;
+                    pp->outOutIdx += (int)n;
                     if (pp->outOutIdx >= pp->outInIdx)
                         {
                         pp->outInIdx  = 0;
