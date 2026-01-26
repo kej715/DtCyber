@@ -19,7 +19,8 @@ const imageMap = {
   "nos287-full-865":       "https://www.dropbox.com/s/4tey61kc0sa7swu/nos287rtr-full-865.zip?dl=1",
   "nos287-full-875":       "https://www.dropbox.com/scl/fi/0z0wxoxd2j30ko4evlvii/nos287rtr-full-875.zip?rlkey=bgxojr3ulhkj47ctrs2lp1rrk&dl=1",
   "nos287-full-875-beast": "https://www.dropbox.com/scl/fi/15wl0zf55y2azt6tpbtkv/nos287rtr-full-875-beast.zip?rlkey=jmfckxm8mt8jxpxsn0vocwr9x&dl=1",
-  "nos287-most-175":       "https://www.dropbox.com/scl/fi/0y0yycmilzytrjp0febyy/nos287rtr-most-175.zip?rlkey=zbagqkdzvst9p7t1m94oa5pp8&dl=1"
+  "nos287-most-175":       "https://www.dropbox.com/scl/fi/0y0yycmilzytrjp0febyy/nos287rtr-most-175.zip?rlkey=zbagqkdzvst9p7t1m94oa5pp8&dl=1",
+  "dual-state-860":        "https://www.dropbox.com/scl/fi/2kdymipewhp74lciqlpog/dual-state-860.zip?rlkey=nmct84xuji0sk7l43clhnj7jf&st=sxdm9euq&dl=1"
 };
 
 //
@@ -60,12 +61,14 @@ const usage = () => {
   process.stderr.write("  full       : install a full system with all optional products\n");
   process.stderr.write("  readytorun : (alias rtr) install a ready-to-run system image\n");
   process.stderr.write("               <image name> is one of:\n");
-  process.stderr.write("                 nos287-full-865       : full NOS 2.8.7 system running on a Cyber 865 (default)\n");
-  process.stderr.write("                 nos287-full-875       : full NOS 2.8.7 system running on a Cyber 875\n");
-  process.stderr.write("                 nos287-full-875-beast : full NOS 2.8.7 system running on a Cyber 875\n");
+  process.stderr.write("                 nos287-full-865       : full NOS 2.8.7 system running on a Cyber 170/865 (default)\n");
+  process.stderr.write("                 nos287-full-875       : full NOS 2.8.7 system running on a Cyber 170/875\n");
+  process.stderr.write("                 nos287-full-875-beast : full NOS 2.8.7 system running on a Cyber 170/875\n");
   process.stderr.write("                                         with 16M ESM and 885-42 disks\n");
   process.stderr.write("                 nos287-most-175       : full NOS 2.8.7 system (except CYBIS) running\n");
   process.stderr.write("                                         on a Cyber 175 with 885-42 disks\n");
+  process.stderr.write("                 dual-state-860        : dual-state NOS 2.8.7 and NOS/VE 1.8.3 system running on\n");
+  process.stderr.write("                                         a CYBER 180/860\n");
   process.stderr.write("  continue   : (alias cont) continue basic or full installation from last point of interruption\n");
   process.exit(1);
 };
@@ -124,22 +127,23 @@ const startSystem = () => {
 if (isReadyToRunInstall) {
   const imageFile = `${imageName}.zip`;
   const imagePath = `./${imageFile}`;
+  const imageType = imageName.startsWith("dual-state") ? "dual-state NOS 2.8.7 and NOS/VE 1.8.3" : "NOS 2.8.7";
   let maxProgressLen = 0;
   if (fs.existsSync(imagePath)) {
     fs.unlinkSync(imagePath);
   }
-  dtc.say(`Download NOS 2.8.7 ready-to-run package (${imageName}) ...`)
+  dtc.say(`Download ${imageType} ready-to-run package (${imageName}) ...`)
   .then(() => dtc.wget(imageMap[imageName], ".", imageFile, (byteCount, contentLength) => {
     maxProgressLen = utilities.reportProgress(byteCount, contentLength, maxProgressLen);
   }))
   .then(() => utilities.clearProgress(maxProgressLen))
-  .then(() => dtc.say("Expand NOS 2.8.7 ready-to-run package ..."))
+  .then(() => dtc.say(`Expand ${imageType} ready-to-run package ...`))
   .then(() => dtc.unzip(imagePath, "."))
   .then(() => {
     fs.unlinkSync(imagePath);
     return Promise.resolve();
   })
-  .then(() => dtc.say("Installation of ready-to-run NOS 2.8.7 system complete"))
+  .then(() => dtc.say(`Installation of ${imageType} ready-to-run system complete`))
   .then(() => dtc.say("Deadstart ready-to-run system"))
   .then(() => startSystem())
   .then(() => {
