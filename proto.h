@@ -262,6 +262,7 @@ bool float180DivDouble(Cpu180Context *ctx, Cpu180Double *dvdend, Cpu180Double *d
 bool float180DivFloat(Cpu180Context *ctx, u64 dvdend, u64 dvisor, u64 *quotient);
 bool float180MulDouble(Cpu180Context *ctx, Cpu180Double *mltand, Cpu180Double *mltier, Cpu180Double *product);
 bool float180MulFloat(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *product);
+u64  float180MulLong128(u64 mltand, u64 mltier, u64 *upper64);
 bool float180SubDouble(Cpu180Context *ctx, Cpu180Double *minend, Cpu180Double *subend, Cpu180Double *diff);
 bool float180SubFloat(Cpu180Context *ctx, u64 minend, u64 subend, u64 *diff);
 

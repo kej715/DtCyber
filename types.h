@@ -50,6 +50,7 @@
 #include <basetsd.h>
 typedef SSIZE_T ssize_t;
 
+#define HAS_INT128    0
 #define HOST_OS_TYPE  "windows"
 
 /*
@@ -66,8 +67,9 @@ typedef SSIZE_T ssize_t;
     || (defined(__sparc64__) && defined(__arch64__)) || defined(__aarch64__) || defined(__x86_64__)
 
 /*
-**  64 bit systems
+**  64-bit systems
 */
+#define HAS_INT128        1
 typedef signed __int128   i128;
 typedef unsigned __int128 u128;
 #define FMT32_08x         "%08x"
@@ -81,10 +83,9 @@ typedef unsigned __int128 u128;
     || defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_8__)
 
 /*
-**  32 bit systems
+**  32-bit systems
 */
-typedef signed __int128   i128;
-typedef unsigned __int128 u128;
+#define HAS_INT128        0
 #define FMT32_08x         "%08lx"
 #define FMT60_020o        "%020llo"
 #define FMT64_010x        "%010llx"

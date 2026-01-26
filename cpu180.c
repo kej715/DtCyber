@@ -351,7 +351,7 @@ static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 
 static void cpu180CheckMonitorConditions(Cpu180Context *ctx);
 static void cpu180CheckUserConditions(Cpu180Context *ctx);
 static void cpu180Exchange(Cpu180Context *activeCpu);
-static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool ignoreValidity, u32 *pti, u8 *count);
+static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool doIgnValidity, u32 *pti, u8 *count);
 static void cpu180Get170State(Cpu180Context *ctx);
 static ConditionAction cpu180GetActionForMonitorCondition(Cpu180Context *ctx, MonitorCondition cond);
 static ConditionAction cpu180GetActionForTrapCondition(Cpu180Context *ctx, MonitorCondition cond);
@@ -3198,17 +3198,18 @@ static void cpu180Exchange(Cpu180Context *activeCpu)
 **  Purpose:        Search the system page table for the entry associated
 **                  with an ASID and byte number.
 **
-**  Parameters:     Name        Description.
-**                  ctx         pointer to CPU context
-**                  asid        the ASID
-**                  byteNum     the byte number
-**                  pti         (out) page table index of entry, if found
-**                  count       (out) number of entries searched, if found
+**  Parameters:     Name          Description.
+**                  ctx           pointer to CPU context
+**                  asid          the ASID
+**                  byteNum       the byte number
+**                  doIgnValidity TRUE if validity bit of page table entries should be ignored
+**                  pti           (out) page table index of entry, if found
+**                  count         (out) number of entries searched, if found
 **
 **  Returns:        TRUE if page table entry found
 **
 **------------------------------------------------------------------------*/
-static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool ignoreValidity, u32 *pti, u8 *count)
+static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool doIgnValidity, u32 *pti, u8 *count)
     {
     u8   flags;
     bool found;
@@ -3239,13 +3240,13 @@ static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool ignore
     for (;;)
         {
         pte   = cpMem[idx]; // next page table entry
-        flags = pte >> 60;
+        flags = (u8)(pte >> 60);
 
 #if CcDebug > 0
         tracePte(ctx, pte);
 #endif
 
-        if (((flags & 0x8) != 0 || ignoreValidity) && spid == ((pte >> 22) & Mask38))
+        if (((flags & 0x8) != 0 || doIgnValidity) && spid == ((pte >> 22) & Mask38))
             {
             found = TRUE;
             break;
@@ -3781,11 +3782,7 @@ static bool cpu180MulInt64(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *prod
     u64  lower64;
     u16  mask;
     u64  upper64;
-#if defined(_WIN32)
-    u64 carry;
-    u64 m128[2];
-    u64 t;
-#else
+#if HAS_INT128
     u128 p128;
 #endif
 
@@ -3799,37 +3796,12 @@ static bool cpu180MulInt64(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *prod
         mltier = ~mltier + 1;
         }
 
-#if defined(_WIN32)
-    m128[0] = 0;
-    m128[1] = mltand;
-    lower64 = 0;
-    upper64 = 0;
-    while (mltier != 0)
-        {
-        //
-        //  If the LSB of multiplier is 1, add multiplicand to product
-        //
-        if ((mltier & 1) != 0)
-            {
-            t        = lower64;
-            lower64 += m128[1];
-            carry    = lower64 < t;
-            upper64 += m128[0] + carry;
-            }
-        //
-        //  Left shift multiplicand (multiply by 2)
-        //
-        m128[0]   = (m128[0] << 1) | (m128[1] >> 63);
-        m128[1] <<= 1;
-        //
-        //  Right shift multiplier (divide by 2)
-        //
-        mltier >>= 1;
-        }
-#else
+#if HAS_INT128
     p128    = (u128)mltand * (u128)mltier;
     lower64 = (u64)p128;
     upper64 = (u64)(p128 >> 64);
+#else
+    lower64 = float180MulLong128(mltand, mltier, &upper64);
 #endif
 
     if (lower64 > 0x7fffffffffffffff || upper64 != 0)
@@ -4884,10 +4856,11 @@ static void cp180Op16(Cpu180Context *activeCpu)  // 16  TPAGE      MIGDS 2-137
 
 static void cp180Op17(Cpu180Context *activeCpu)  // 17  LPAGE      MIGDS 2-139
     {
-    u16 asid;
-    u32 byteNum;
-    u8  count;
-    u32 pti;
+    u16  asid;
+    u32  byteNum;
+    u8   count;
+    bool isFound;
+    u32  pti;
 
     if (cpu180GetCurrentXp(activeCpu) < 2)
         {
@@ -4899,19 +4872,16 @@ static void cp180Op17(Cpu180Context *activeCpu)  // 17  LPAGE      MIGDS 2-139
     byteNum = (u32)(activeCpu->regX[activeCpu->opJ] & Mask32);
     if (Is32BitNeg(byteNum))
         {
-        cpu180SetMonitorCondition(activeCpu, MCR52);
+        cpu180SetMonitorCondition(activeCpu, MCR52); // Address specification error
         activeCpu->regUtp = ((u64)asid << 32) | byteNum;
         return;
         }
-    if (cpu180FindPte(activeCpu, asid, byteNum, TRUE, &pti, &count))
+    isFound                         = cpu180FindPte(activeCpu, asid, byteNum, TRUE, &pti, &count);
+    activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | ((((u64)pti << 3) - activeCpu->regPta) & Mask32);
+    activeCpu->regX[1]              = (activeCpu->regX[1] & LeftMask) | (u64)count;
+    if (isFound)
         {
-        activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | ((((u64)pti << 3) - activeCpu->regPta) & Mask32);
-        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | ((u64)1 << 31) | (u64)count;
-        }
-    else
-        {
-        activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | ((((u64)pti << 3) - activeCpu->regPta) & Mask32);
-        activeCpu->regX[1] = (activeCpu->regX[1] & LeftMask) | (u64)count;
+        activeCpu->regX[1] |= (u64)1 << 31;
         }
     }
 

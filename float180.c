@@ -140,10 +140,14 @@ typedef enum
 */
 static FloatClass float180DoubleClassOf(Cpu180Double *value);
 static FloatClass float180FloatClassOf(u64 value);
-static void float180LongDiv(Cpu180Double *dvdend, Cpu180Double *dvisor, Cpu180Double *quotient);
-static void float180LongMul(Cpu180Double *mltand, Cpu180Double *mltier, Cpu180Double *hiProd, Cpu180Double *loProd);
+static void float180DivLong96(Cpu180Double *dvdend, Cpu180Double *dvisor, Cpu180Double *quotient);
+static void float180MulLong192(Cpu180Double *mltand, Cpu180Double *mltier, Cpu180Double *hiProd, Cpu180Double *loProd);
 static void float180NormalizeDouble(u16 *exponent, Cpu180Double *coefficient);
 static void float180NormalizeFloat(u16 *exponent, u64 *coefficient);
+
+#if !defined(_WIN32) && HAS_INT128 == 0
+static u64 float180DivLong128(u64 highDvdend, u64 lowDvdend, u64 dvisor, u64 *remainder);
+#endif
 
 /*
 **  ----------------
@@ -1138,7 +1142,7 @@ bool float180DivDouble(Cpu180Context *ctx, Cpu180Double *dvdend, Cpu180Double *d
                 return TRUE;
                 }
             }
-        float180LongDiv(&coeffDvdend, &coeffDvisor, &coeffResult);
+        float180DivLong96(&coeffDvdend, &coeffDvisor, &coeffResult);
         if (coeffResult.leftPart > 0xffffffffffff)
             {
             coeffResult.rightPart = (coeffResult.rightPart >> 1) | ((coeffResult.leftPart & 1) << 47);
@@ -1309,8 +1313,10 @@ bool float180DivFloat(Cpu180Context *ctx, u64 dvdend, u64 dvisor, u64 *quotient)
             }
 #if defined(_WIN32)
         coeffResult = _udiv128(coeffDvdend >> 16, (coeffDvdend & Mask16) << 48, coeffDvisor, &remainder);
-#else
+#elif HAS_INT128
         coeffResult = (u64)(((u128)coeffDvdend << 48) / (u128)coeffDvisor);
+#else
+        coeffResult = float180DivLong128(coeffDvdend >> 16, (coeffDvdend & Mask16) << 48, coeffDvisor, &remainder);
 #endif
         if (coeffResult > 0xffffffffffff)
             {
@@ -1434,7 +1440,7 @@ bool float180MulDouble(Cpu180Context *ctx, Cpu180Double *mltand, Cpu180Double *m
         signMltand            = SignOf(mltand->leftPart);
         expResult             = (expMltier + expMltand) + BIAS;
         signResult            = signMltier ^ signMltand;
-        float180LongMul(&coeffMltand, &coeffMltier, &hiCoeffResult, &loCoeffResult);
+        float180MulLong192(&coeffMltand, &coeffMltier, &hiCoeffResult, &loCoeffResult);
         if (hiCoeffResult.leftPart < 0x800000000000)
             {
             hiCoeffResult.leftPart  = (hiCoeffResult.leftPart << 1) | (hiCoeffResult.rightPart >> 47);
@@ -1559,10 +1565,12 @@ bool float180MulFloat(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *product)
         signResult  = signMltier ^ signMltand;
 #if defined(_WIN32)
         loCoeff128  = _umul128(coeffMltand, coeffMltier, &hiCoeff128);
-#else
+#elif HAS_INT128
         p128        = (u128)coeffMltand * (u128)coeffMltier;
         loCoeff128  = (u64)p128;
         hiCoeff128  = (u64)(p128 >> 64);
+#else
+        loCoeff128  = float180MulLong128(coeffMltand, coeffMltier, &hiCoeff128);
 #endif
         if (hiCoeff128 >= 0x80000000U)
             {
@@ -1628,6 +1636,55 @@ bool float180MulFloat(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *product)
             }
         return TRUE;
         }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Multiply two 64-bit unsigned integers to produce a
+**                  128-bit product
+**
+**  Parameters:     Name        Description.
+**                  mltand      the 64-bit multiplicand
+**                  mltier      the 64-bit multiplier
+**                  upper64     (out) the upper 64 bits of the product
+**
+**  Returns:        Lower 64 bits of product
+**
+**------------------------------------------------------------------------*/
+u64 float180MulLong128(u64 mltand, u64 mltier, u64 *upper64)
+    {
+    u64 carry;
+    u64 lower64;
+    u64 m128[2];
+    u64 t;
+
+    m128[0]  = 0;
+    m128[1]  = mltand;
+    lower64  = 0;
+    *upper64 = 0;
+    while (mltier != 0)
+        {
+        //
+        //  If the LSB of multiplier is 1, add multiplicand to product
+        //
+        if ((mltier & 1) != 0)
+            {
+            t         = lower64;
+            lower64  += m128[1];
+            carry     = lower64 < t;
+            *upper64 += m128[0] + carry;
+            }
+        //
+        //  Left shift multiplicand (multiply by 2)
+        //
+        m128[0]   = (m128[0] << 1) | (m128[1] >> 63);
+        m128[1] <<= 1;
+        //
+        //  Right shift multiplier (divide by 2)
+        //
+        mltier >>= 1;
+        }
+
+    return lower64;
     }
 
 /*--------------------------------------------------------------------------
@@ -1752,6 +1809,60 @@ static FloatClass float180FloatClassOf(u64 value)
         }
     }
 
+#if !defined(_WIN32) && HAS_INT128 == 0
+/*--------------------------------------------------------------------------
+**  Purpose:        Perform long division of a 128-bit unsigned value by
+**                  a 64-bit unsigned value
+**
+**  Parameters:     Name         Description.
+**                  highDvdend   high 64 bits of dividend
+**                  lowDvdend    low 64 bits of dividend
+**                  dvisor       64-bit divisor
+**                  remainder    (out) 64-bit remainder
+**
+**  Returns:        64-bit quotient
+**
+**------------------------------------------------------------------------*/
+static u64 float180DivLong128(u64 highDvdend, u64 lowDvdend, u64 dvisor, u64 *remainder)
+    {
+    u64 borrow;
+    u8  i;
+    u64 quotient;
+    u64 t;
+
+    quotient   = lowDvdend << 1;
+    *remainder = highDvdend;
+    borrow     = lowDvdend >> 63;
+
+    for (i = 0; i < 64; i++)
+        {
+        t          = *remainder >> 63;
+        *remainder = (*remainder << 1) | borrow;;
+        borrow     = t;
+        if (borrow == 0)
+            {
+            if (*remainder >= dvisor)
+                {
+                borrow = 1;
+                }
+            else
+                {
+                t        = quotient >> 63;
+                quotient = (quotient << 1) | borrow;
+                borrow   = t;
+                continue;
+                }
+            }
+        *remainder -= dvisor + (1 - borrow);
+        t           = quotient >> 63;
+        quotient    = (quotient << 1) | (u64)1;
+        borrow      = t;
+        }
+
+    return quotient;
+    }
+#endif
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Perform long division of double precision coefficients
 **
@@ -1761,7 +1872,7 @@ static FloatClass float180FloatClassOf(u64 value)
 **                  quotient     pointer to quotient
 **
 **------------------------------------------------------------------------*/
-static void float180LongDiv(Cpu180Double *dvdend, Cpu180Double *dvisor, Cpu180Double *quotient)
+static void float180DivLong96(Cpu180Double *dvdend, Cpu180Double *dvisor, Cpu180Double *quotient)
     {
     u64 borrow;
     u64 diff;
@@ -1836,7 +1947,7 @@ static void float180LongDiv(Cpu180Double *dvdend, Cpu180Double *dvisor, Cpu180Do
 **                  loProd       (out) pointer to low  96 bits of product
 **
 **------------------------------------------------------------------------*/
-static void float180LongMul(Cpu180Double *mltand, Cpu180Double *mltier, Cpu180Double *hiProd, Cpu180Double *loProd)
+static void float180MulLong192(Cpu180Double *mltand, Cpu180Double *mltier, Cpu180Double *hiProd, Cpu180Double *loProd)
     {
     u64 m192[4];
     u64 p192[4];
