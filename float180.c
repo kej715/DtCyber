@@ -1279,7 +1279,7 @@ bool float180DivFloat(Cpu180Context *ctx, u64 dvdend, u64 dvisor, u64 *quotient)
     u8         signDvisor;
     u8         signDvdend;
     u8         signResult;
-#if defined(_WIN32)
+#if HAS_INT128 == 0
     u64        remainder;
 #endif
 
@@ -1542,7 +1542,7 @@ bool float180MulFloat(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *product)
     u8         signMltier;
     u8         signMltand;
     u8         signResult;
-#if !defined(_WIN32)
+#if HAS_INT128
     u128       p128;
 #endif
 
