@@ -1027,6 +1027,7 @@ static u64 bitMasks[] =
 */
 static u32 signExt32[33] =
     {
+    0x00000000,
     0x80000000,
     0xc0000000,
     0xe0000000,
@@ -1058,12 +1059,12 @@ static u32 signExt32[33] =
     0xfffffff8,
     0xfffffffc,
     0xfffffffe,
-    0xffffffff,
     0xffffffff
     };
 
 static u64 signExt64[65] =
     {
+    0x0000000000000000,
     0x8000000000000000,
     0xc000000000000000,
     0xe000000000000000,
@@ -1127,7 +1128,6 @@ static u64 signExt64[65] =
     0xfffffffffffffff8,
     0xfffffffffffffffc,
     0xfffffffffffffffe,
-    0xffffffffffffffff,
     0xffffffffffffffff
     };
 
@@ -1950,7 +1950,6 @@ void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
         if (ctx->regPit == 0)
             {
             ctx->regUcr |= ucrDefns[UCR51].bitMask;
-            ctx->regPit  = 0xffffffff;
             }
         break;
     case RegRegisterP:
@@ -2768,25 +2767,26 @@ void cpu180UpdateIntervalTimers(u32 delta)
     int           i;
     u32           oldIt;
 
-    for (i = 0; i < cpuCount; i++)
+    if (delta > 0)
         {
-        ctx          = &cpus180[i];
-        oldIt        = ctx->regSit;
-        ctx->regSit -= (u32)delta;
-        if (ctx->regSit > oldIt || ctx->regSit == 0)
+        for (i = 0; i < cpuCount; i++)
             {
-            ctx->regMcr |= mcrDefns[MCR59].bitMask;
-            ctx->regSit  = 0xffffffff;
+            ctx          = &cpus180[i];
+            oldIt        = ctx->regSit;
+            ctx->regSit -= (u32)delta;
+            if (ctx->regSit == 0 || (ctx->regSit > oldIt && oldIt > 0))
+                {
+                ctx->regMcr |= mcrDefns[MCR59].bitMask;
+                }
+            oldIt        = ctx->regPit;
+            ctx->regPit -= (u32)delta;
+            if (ctx->regPit == 0 || (ctx->regPit > oldIt && oldIt > 0))
+                {
+                ctx->regUcr |= ucrDefns[UCR51].bitMask;
+                }
             }
-        oldIt        = ctx->regPit;
-        ctx->regPit -= (u32)delta;
-        if (ctx->regPit > oldIt || ctx->regPit == 0)
-            {
-            ctx->regUcr |= ucrDefns[UCR51].bitMask;
-            ctx->regPit  = 0xffffffff;
-            }
+        cpu180FreeRunningCounter += delta;
         }
-    cpu180FreeRunningCounter += delta;
     }
 
 /*
@@ -3215,6 +3215,7 @@ static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool doIgnV
     bool found;
     u32  hash;
     u32  idx;
+    u32  limit;
     u8   n;
     u32  pageNum;
     u64  pte;
@@ -3226,6 +3227,7 @@ static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool doIgnV
     pageNum = byteNum >> ctx->pageNumShift;
     hash    = (u32)asid ^ (pageNum & Mask16);
     idx     = ((ctx->regPta & 0xfffff000) | ((hash << 4) & ctx->pageLengthMask)) >> 3;
+    limit   = idx + ctx->pageTableEntries;
     spid    = ((u64)asid << 22) | ((u64)pageNum << ctx->spidShift);
 
 #if CcDebug > 0
@@ -3256,8 +3258,14 @@ static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool doIgnV
             break;
             }
 
-        idx += 1;
         n   += 1;
+        idx += 1;
+        if (idx >= limit)
+            {
+/*DELETE*/if (doIgnValidity)
+/*DELETE*/  fprintf(stderr, "LPAGE SVA %04x%08x page table wrap PTA %08x PTI %08x count %d\n", asid, byteNum, ctx->regPta, idx<<3, n);
+            idx = ctx->regPta >> 3;
+            }
         }
 
     *pti   = idx;
@@ -4221,6 +4229,7 @@ static bool cpu180SubInt64(Cpu180Context *ctx, u64 minend, u64 subend, u64 *diff
 **------------------------------------------------------------------------*/
 static void cpu180UpdatePageSize(Cpu180Context *ctx)
     {
+    u8 i;
     u8 mask;
 
     mask              = ctx->regPsm;
@@ -4230,15 +4239,23 @@ static void cpu180UpdatePageSize(Cpu180Context *ctx)
         ctx->pageNumShift += 1;
         mask             >>= 1;
         }
-    ctx->pageLengthMask = ((u32)ctx->regPtl << 12) | 0xfffU;
-    ctx->spidShift      = ctx->pageNumShift - 9;
+    ctx->pageLengthMask   = ((u32)ctx->regPtl << 12) | 0xfffU;
+    ctx->spidShift        = ctx->pageNumShift - 9;
+    ctx->pageTableEntries = 512;
+    for (i = 0; i < 8; i++)
+        {
+        if (((ctx->regPtl >> i) & 1) != 0)
+            {
+            ctx->pageTableEntries <<= 1;
+            }
+        }
 
 #if CcDebug > 0
     traceVmRegisters(ctx);
 #endif
 #if DEBUG
-    fprintf(cpu180Log, "Update page size: PSM %02x PTL %02x pageLengthMask " FMT32_08x " pageNumShift %d spidShift %d\n",
-        ctx->regPsm, ctx->regPtl, ctx->pageLengthMask, ctx->pageNumShift, ctx->spidShift);
+    fprintf(cpu180Log, "Update page size: PSM %02x PTL %02x pageTableEntries %u pageLengthMask " FMT32_08x " pageNumShift %d spidShift %d\n",
+        ctx->regPsm, ctx->regPtl, ctx->pageTableEntries, ctx->pageLengthMask, ctx->pageNumShift, ctx->spidShift);
 #endif
     }
 
@@ -6716,16 +6733,16 @@ static void cp180OpA8(Cpu180Context *activeCpu)  // A8  SHFC       MIGDS 2-33
     u64 rightBits;
     u8  shift;
 
-    shift = (u8)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask8) + activeCpu->opD) & Mask8);
+    shift = (u8)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI]) + activeCpu->opD) & Mask8);
     if (shift < 0x80U)
         {
-        shift = 64 - (shift & Mask6);
+        shift = (64 - (shift & Mask6)) & Mask6;
         }
     else
         {
-        shift = (~(shift | 0x40) + 1) & Mask7;
+        shift = (~shift + 1) & Mask6;
         }
-    if ((shift & Mask6) == 0)
+    if (shift == 0)
         {
         activeCpu->regX[activeCpu->opK] = activeCpu->regX[activeCpu->opJ];
         return;
@@ -6738,14 +6755,18 @@ static void cp180OpA9(Cpu180Context *activeCpu)  // A9  SHFX       MIGDS 2-33
     {
     u8 shift;
 
-    shift = (u8)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask8) + activeCpu->opD) & Mask8);
+    shift = (u8)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI]) + activeCpu->opD) & Mask8);
     if (shift < 0x80U)
         {
         activeCpu->regX[activeCpu->opK] = activeCpu->regX[activeCpu->opJ] << (shift & Mask6);
         }
     else
         {
-        shift = (~(shift | 0x40) + 1) & Mask6;
+        shift = (~shift + 1) & Mask6;
+        if (shift == 0)
+            {
+            shift = 64;
+            }
         if ((activeCpu->regX[activeCpu->opJ] & 0x8000000000000000) != 0)
             {
             activeCpu->regX[activeCpu->opK] = signExt64[shift] | (activeCpu->regX[activeCpu->opJ] >> shift);
@@ -6763,14 +6784,18 @@ static void cp180OpAA(Cpu180Context *activeCpu)  // AA  SHFR       MIGDS 2-33
     u64 XjR;
 
     XjR   = activeCpu->regX[activeCpu->opJ] & Mask32;
-    shift = (u8)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI] & Mask8) + activeCpu->opD) & Mask8);
+    shift = (u8)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI]) + activeCpu->opD) & Mask8);
     if (shift < 0x80U)
         {
         activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | ((XjR << (shift & Mask5)) & Mask32);
         }
     else
         {
-        shift = (~(shift | 0x60) + 1) & Mask6;
+        shift = (~shift + 1) & Mask5;
+        if (shift == 0)
+            {
+            shift = 32;
+            }
         activeCpu->regX[activeCpu->opK] = (activeCpu->regX[activeCpu->opK] & LeftMask) | (XjR >> shift);
         if ((XjR & 0x80000000) != 0)
             {
