@@ -2258,7 +2258,7 @@ static int initParseEquipmentDefn(char *defn, char *file, char *section, int lin
                                   u8 *eqNo, u8 *unitNo, u8 *channelNo, char **deviceParams)
     {
     char *token;
-    u8   deviceIndex;
+    int  deviceIndex;
 
     /*
     **  Parse device type and lookup device index.
@@ -2466,7 +2466,7 @@ static int initParseTerminalDefn(char *defn, char *file, char *section, int line
 static void initDeadstart(void)
     {
     char *dp;
-    int  dspi;
+    u8   dspi;
     bool isOk;
     char *line;
     int  lineNo;
