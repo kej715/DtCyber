@@ -927,7 +927,6 @@ static void *windowThread(void *param)
         /*
         **  Draw display list in pixmap.
         */
-        curr = display;
         end  = display + listEnd;
 
         for (curr = display; curr < end; curr++)
