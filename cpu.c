@@ -231,10 +231,12 @@ static FILE *emLog = NULL;
 #endif
 
 #if defined(_WIN32)
+static HANDLE clockMutex;
 static HANDLE exchangeMutex;
 static HANDLE flagRegMutex;
 static HANDLE memoryMutex;
 #else
+static pthread_mutex_t clockMutex    = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t exchangeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t flagRegMutex  = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t memoryMutex   = PTHREAD_MUTEX_INITIALIZER;
@@ -519,6 +521,22 @@ void cpuInit(char *model, u16 *serialNumbers, u32 memory, u32 emBanks, ExtMemory
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Acquire lock on clock mutex
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpuAcquireClockMutex(void)
+    {
+    if (cpuCount > 1)
+        {
+        cpuAcquireMutex(&clockMutex);
+        }
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Acquire lock on exchange mutex
 **
 **  Parameters:     Name        Description.
@@ -566,6 +584,22 @@ u32 cpuGetP(u8 cpuNum)
         }
 
     return ((cpus170[cpuNum].regP) & Mask18);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Release lock on clock mutex
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpuReleaseClockMutex(void)
+    {
+    if (cpuCount > 1)
+        {
+        cpuReleaseMutex(&clockMutex);
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -1131,9 +1165,10 @@ static void cpuCreateThread(int cpuNum)
     /*
     **  Create mutexes
     */
+    clockMutex    = CreateMutex(NULL, FALSE, NULL);
     exchangeMutex = CreateMutex(NULL, FALSE, NULL);
     flagRegMutex  = CreateMutex(NULL, FALSE, NULL);
-    if ((exchangeMutex == NULL) || (flagRegMutex == NULL))
+    if ((exchangeMutex == NULL) || (flagRegMutex == NULL) || (clockMutex == NULL))
         {
         fputs("(cpu     ) Failed to create mutex\n", stderr);
         exit(1);
@@ -1245,7 +1280,17 @@ static void *cpuThread(void *param)
             /* wait for operator thread to clear the flag */
             sleepMsec(500);
             }
+        if (isCyber180)
+            {
+            cpuAcquireClockMutex();
+            cpu180UpdateIntervalTimers(&cpus180[activeCpu->id]);
+            cpuReleaseClockMutex();
+            }
         cpuStep(activeCpu);
+        cpuStep(activeCpu);
+        cpuStep(activeCpu);
+        cpuStep(activeCpu);
+
         idleThrottle(activeCpu);
         }
 
@@ -2676,7 +2721,6 @@ static void cpuEcsTransfer(Cpu170Context *activeCpu, bool writeToEcs)
 
     isExpandedAddress = ((features & IsSeries800) != 0)
                         && ((activeCpu->exitMode & EmFlagExpandedAddress) != 0);
-    isFlagRegister = FALSE;
     isMaintenance  = FALSE;    // for Series 800
     isZeroFill     = FALSE;    // for Series 800
 
@@ -3872,6 +3916,7 @@ static void cpOp01(Cpu170Context *activeCpu)
             /*
             **  RC  Xj
             */
+            cpuAcquireClockMutex();
             if (isCyber180)
                 {
                 activeCpu->regX[activeCpu->opJ] = cpu180FreeRunningCounter & Mask48;
@@ -3880,6 +3925,7 @@ static void cpOp01(Cpu170Context *activeCpu)
                 {
                 activeCpu->regX[activeCpu->opJ] = rtcClock;
                 }
+            cpuReleaseClockMutex();
             }
         else
             {

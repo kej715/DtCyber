@@ -301,7 +301,7 @@ void idleThrottle(Cpu170Context *ctx)
     {
     if (idle)
         {
-        if ((*idleDetector)(ctx))
+        if ((ctx->isStopped && (!isCyber180 || cpus180[ctx->id].isStopped)) || (*idleDetector)(ctx))
             {
             ctx->idleCycles++;
             if ((ctx->idleCycles % idleTrigger) == 0)
@@ -642,11 +642,13 @@ static void emulate(void)
         /*
         **  Update RTC and interval timers.
         */
+        cpuAcquireClockMutex();
         rtcTick();
         if (isCyber180)
             {
-            cpu180UpdateIntervalTimers(rtcClockDelta);
+            cpu180UpdateIntervalTimers(&cpus180[cpus170->id]);
             }
+        cpuReleaseClockMutex();
 
         /*
         **  Execute PP and CPU.

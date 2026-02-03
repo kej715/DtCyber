@@ -79,8 +79,7 @@ static u64 rtcGetTick(void);
 **  Public Variables
 **  ----------------
 */
-u32  rtcClock          = 0;
-u32  rtcClockDelta     = 0;
+volatile u64 rtcClock  = 0;
 bool rtcClockIsCurrent = TRUE;
 
 /*
@@ -170,6 +169,7 @@ void rtcInit(u8 increment, bool doVirtual)
 
 void rtcTick(void)
     {
+    u32         delta;
     static bool first = TRUE;
     static u64  old   = 0;
     u64         new;
@@ -184,22 +184,26 @@ void rtcTick(void)
 
     if (new > old)
         {
-        rtcClockDelta = (u32)(new - old);
-        if (rtcClockDelta > MaxMicroseconds)
+        delta = (u32)(new - old);
+        if (delta > MaxMicroseconds)
             {
-            rtcClockDelta     = MaxMicroseconds;
+            delta             = MaxMicroseconds;
             rtcClockIsCurrent = FALSE;
             }
         else
             {
             rtcClockIsCurrent = TRUE;
             }
-        old      += rtcClockDelta;
-        rtcClock += rtcClockDelta;
+        old += delta;
+
+        rtcClock += delta;
+        if (isCyber180)
+            {
+            cpu180FreeRunningCounter += delta;
+            }
         }
     else
         {
-        rtcClockDelta     = 0;
         rtcClockIsCurrent = TRUE;
         }
     }
@@ -284,7 +288,6 @@ static FcStatus rtcFunc(PpWord funcCode)
 **------------------------------------------------------------------------*/
 static void rtcIo(void)
     {
-    rtcTick();
     activeChannel->full = rtcFull;
     activeChannel->data = (PpWord)rtcClock & Mask12;
     }

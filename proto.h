@@ -111,6 +111,7 @@ void consoleShowStatus(void);
 /*
 **  cpu.c
 */
+void cpuAcquireClockMutex(void);
 void cpuAcquireExchangeMutex(void);
 void cpuAcquireMemoryMutex(void);
 bool cpuDdpTransfer(u32 ecsAddress, CpWord *data, bool writeToEcs);
@@ -119,6 +120,7 @@ u32  cpuGetP(u8 cpuNum);
 void cpuInit(char *model, u16 *serialNumbers, u32 memory, u32 emBanks, ExtMemory emType);
 void cpuPpReadMem(u32 address, CpWord *data);
 void cpuPpWriteMem(u32 address, CpWord data);
+void cpuReleaseClockMutex(void);
 void cpuReleaseExchangeMutex(void);
 void cpuReleaseMemoryMutex(void);
 void cpuStep(Cpu170Context *activeCpu);
@@ -153,7 +155,7 @@ void cpu180Step(Cpu180Context *activeCpu);
 void cpu180Store170Xp(Cpu180Context *ctx, u32 xpa);
 bool cpu180TranslatePvaSequence(Cpu180Context *ctx, u64 pva, u16 count, u8 incr, u8 ring, Cpu180AccessMode access, u32 *rmas, MonitorCondition *cond);
 void cpu180Trap(Cpu180Context *ctx);
-void cpu180UpdateIntervalTimers(u32 delta);
+void cpu180UpdateIntervalTimers(Cpu180Context *ctx);
 
 /*
 **  cr405.c
@@ -587,7 +589,7 @@ extern char                colorFG[32];                     // Console
 #endif
 extern const char          consoleToAscii[64];
 extern volatile CpWord     *cpMem;
-extern u64                 cpu180FreeRunningCounter;
+extern volatile u64        cpu180FreeRunningCounter;
 extern Cpu170Context       *cpus170;
 extern Cpu180Context       *cpus180;
 extern int                 cpuCount;
@@ -640,8 +642,7 @@ extern char                ppKeyIn;
 extern PpSlot              *ppu;
 extern u8                  ppuCount;
 extern u32                 readerScanSecs;
-extern u32                 rtcClock;
-extern u32                 rtcClockDelta;
+extern volatile u64        rtcClock;
 extern bool                rtcClockIsCurrent;
 extern long                scaleX;                          // Console
 extern long                scaleY;                          // Console
