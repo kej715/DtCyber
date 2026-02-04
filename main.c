@@ -303,9 +303,10 @@ void idleThrottle(Cpu170Context *ctx)
         {
         if ((ctx->isStopped && (!isCyber180 || cpus180[ctx->id].isStopped)) || (*idleDetector)(ctx))
             {
-            ctx->idleCycles++;
-            if ((ctx->idleCycles % idleTrigger) == 0)
+            ctx->idleCycles += 1;
+            if (ctx->idleCycles >= idleTrigger)
                 {
+                ctx->idleCycles = 0;
                 if (ctx->id == 0)
                     {
                     if (idleCheckBusy() || npuBipIsBusy() || (rtcClockIsCurrent == FALSE))
