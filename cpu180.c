@@ -1671,13 +1671,7 @@ void cpu180MacMasterClearCp(Cpu180Context *ctx)
     ctx->isMonitorMode   = TRUE;
     ctx->isStopped       = TRUE;
     ctx->lastCsStartAddr = 0;
-    ctx->regMcr          = 0;
-    ctx->regMmr          = 0;
-    ctx->regUcr          = 0;
-    ctx->regUmr          = 0xfe00;
-    ctx->regSit          = 0;
-    ctx->regPit          = 0;
-    cpu180MacSetCpStateRegister(ctx, RegDepEnvControl, 0);
+//  cpu180MacSetCpStateRegister(ctx, RegDepEnvControl, 0);
 #if CcDebug > 0
     traceMasterClearCpu180(ctx);
 #endif
