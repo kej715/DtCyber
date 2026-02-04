@@ -149,6 +149,11 @@ static int  mchBytesIo = 0;
 **------------------------------------------------------------------------*/
 void mchCheckTimeout()
     {
+//
+// Note: This code is currently disabled because it tends to cause
+//       deadstart to hang when DtCyber is running on a slow host.
+//
+#if 0
     if (mchTimeout != 0 && mchTimeout < getMilliseconds())
         {
         mchTimeout = 0;
@@ -160,11 +165,12 @@ void mchCheckTimeout()
             fprintf(mchLog, "\n%12d PP:%02o CH:%02o Timeout",
                     traceSequenceNo,
                     activePpu->id,
-                    activeDevice->channel->id);
+                    ChMaintenance);
             fflush(mchLog);
 #endif
             }
         }
+#endif
     }
 
 /*--------------------------------------------------------------------------
