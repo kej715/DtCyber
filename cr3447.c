@@ -1044,7 +1044,7 @@ static void cr3447Io(void)
     case Fc6681DevStatusReq:
         if (!activeChannel->full)
             {
-            activeChannel->data = (cc->status & (cc->intMask | StCr3447NonIntStatus));
+            activeChannel->data = (PpWord)((cc->status & (cc->intMask | StCr3447NonIntStatus)));
             activeChannel->full = TRUE;
 #if DEBUG
             fprintf(cr3447Log, " %04o", activeChannel->data);
@@ -1100,7 +1100,7 @@ static void cr3447Io(void)
                 }
             else
                 {
-                activeChannel->data = asciiToBcd[c] << 6;
+                activeChannel->data = (PpWord)(asciiToBcd[c] << 6);
                 c = cc->card[cc->col++];
                 activeChannel->data += asciiToBcd[c];
                 }
@@ -1227,7 +1227,7 @@ static bool cr3447StartNextDeck(DevSlot *up, CrContext *cc)
 static void cr3447NextCard(DevSlot *up, CrContext *cc)
     {
     static char buffer[326];
-    char        c;
+    int         c;
     PpWord      col1;
     char        *cp;
     int         i;
@@ -1399,7 +1399,7 @@ static void cr3447NextCard(DevSlot *up, CrContext *cc)
             /*
             **  Convert any non-ASCII characters to blank.
             */
-            cc->card[i] = (c & 0x80) ? ' ' : c;
+            cc->card[i] = (PpWord)((c & 0x80) ? ' ' : c);
             }
         }
     else
@@ -1444,7 +1444,7 @@ static void cr3447NextCard(DevSlot *up, CrContext *cc)
                     }
                 }
 
-            cc->card[i] = value;
+            cc->card[i] = (PpWord)value;
 
             cp += 4;
             }

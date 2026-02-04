@@ -1536,7 +1536,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
             /*
             **  Send long lines.
             */
-            tp->inBuf[BlkOffBTBSN] = BtHTBLK | (tp->uplineBsn << BlkShiftBSN);
+            tp->inBuf[BlkOffBTBSN] = (u8)(BtHTBLK | (tp->uplineBsn << BlkShiftBSN));
             npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline long ASCII data for %.7s, size %ld\n",
@@ -1781,7 +1781,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
             /*
             **  Send long lines.
             */
-            tp->inBuf[BlkOffBTBSN] = BtHTBLK | (tp->uplineBsn << BlkShiftBSN);
+            tp->inBuf[BlkOffBTBSN] = (u8)(BtHTBLK | (tp->uplineBsn << BlkShiftBSN));
             npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
             npuTipInputReset(tp);
 #if DEBUG
@@ -2040,7 +2040,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
             /*
             **  Send long lines.
             */
-            tp->inBuf[BlkOffBTBSN] = BtHTBLK | (tp->uplineBsn << BlkShiftBSN);
+            tp->inBuf[BlkOffBTBSN] = (u8)(BtHTBLK | (tp->uplineBsn << BlkShiftBSN));
             npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline long normal data for %.7s, size %ld\n",

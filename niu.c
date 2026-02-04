@@ -199,12 +199,12 @@ void niuInInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     numParam = sscanf(params, "%d,%d", &listenPort, &portCount);
     if (numParam > 1)
         {
-        platoPort  = listenPort;
-        platoConns = portCount;
+        platoPort  = (u16)listenPort;
+        platoConns = (u16)portCount;
         }
     else if (numParam > 0)
         {
-        platoPort = listenPort;
+        platoPort = (u16)listenPort;
         }
     if ((platoPort < 1) || (platoPort > 65535))
         {
@@ -552,7 +552,7 @@ static void niuInIo(void)
                 if (rp->get != rp->put)
                     {
                     currInPort          = lastInPort = port;
-                    activeChannel->data = 04000 + currInPort;
+                    activeChannel->data = (PpWord)(04000 + currInPort);
                     activeChannel->full = TRUE;
 
                     return;
@@ -593,7 +593,7 @@ static void niuInIo(void)
                         }
                     pp->currInput      |= (in & 0177);
                     currInPort          = lastInPort = port;
-                    activeChannel->data = 04000 + currInPort;
+                    activeChannel->data = (PpWord)(04000 + currInPort);
                     activeChannel->full = TRUE;
 
                     return;
@@ -610,7 +610,7 @@ static void niuInIo(void)
 #endif
                         continue;
                         }
-                    pp->currInput = in << 7;
+                    pp->currInput = (u16)(in << 7);
                     pp->ibytes    = 1;
                     }
                 }
@@ -633,12 +633,12 @@ static void niuInIo(void)
             }
         in                  = rp->buf[rp->get];
         rp->get             = nextget;
-        activeChannel->data = in << 1;
+        activeChannel->data = (PpWord)(in << 1);
         }
     else
         {
         pp = portVector + (currInPort - NiuLocalStations);
-        activeChannel->data = pp->currInput << 1;
+        activeChannel->data = (PpWord)(pp->currInput << 1);
         pp->ibytes          = 0;
         }
     activeChannel->full = TRUE;
@@ -993,7 +993,7 @@ static void niuSendstr(int stat, const char *p)
         {
         if (isupper(c))
             {
-            c = tolower(c);
+            c = (char)tolower(c);
             if (!shift)
                 {
                 w = (w << 6 | 077);
@@ -1081,9 +1081,9 @@ static void niuSend(int stat, int word)
                 {
                 if (pp->outInIdx + 2 < OutBufSize)
                     {
-                    pp->outBuffer[pp->outInIdx++] = word >> 12;
-                    pp->outBuffer[pp->outInIdx++] = ((word >> 6) & 077) | 0200;
-                    pp->outBuffer[pp->outInIdx++] = (word & 077) | 0300;
+                    pp->outBuffer[pp->outInIdx++] = (u8)(word >> 12);
+                    pp->outBuffer[pp->outInIdx++] = (u8)(((word >> 6) & 077) | 0200);
+                    pp->outBuffer[pp->outInIdx++] = (u8)((word & 077) | 0300);
                     }
 #if DEBUG_PP || DEBUG_NET
                 else

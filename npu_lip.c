@@ -310,8 +310,7 @@ void npuLipProcessUplineData(Pcb *pcbp)
 
         case StTrunkRcvBlockLengthLo:
             pcbp->controls.lip.state       = StTrunkRcvBlockContent;
-            pcbp->controls.lip.blockLength = (*pcbp->controls.lip.stagingBuf << 8)
-                                             | pcbp->inputData[pcbp->controls.lip.inputIndex++];
+            pcbp->controls.lip.blockLength = (u16)((*pcbp->controls.lip.stagingBuf << 8) | pcbp->inputData[pcbp->controls.lip.inputIndex++]);
             if (pcbp->controls.lip.blockLength > MaxBuffer)
                 {
                 logDtError(LogErrorLocation, "Invalid block length %d received from %s\n",
@@ -841,7 +840,7 @@ static bool npuLipActivateTrunk(Pcb *pcbp)
     *mp++ = 0x01;                           // SFC: Logical link
     *mp++ = 0x0f;                           // NS=1, CS=1, Regulation level=3
 
-    bp->numBytes = (int)(mp - bp->data);
+    bp->numBytes = (u16)(mp - bp->data);
 
     npuBipRequestUplineTransfer(bp);
 
@@ -883,7 +882,7 @@ static bool npuLipDeactivateTrunk(Pcb *pcbp)
     *mp++ = 0x01;                           // SFC: Logical link
     *mp++ = 0x0c;                           // NS=1, CS=1, Regulation level=0
 
-    bp->numBytes = (int)(mp - bp->data);
+    bp->numBytes = (u16)(mp - bp->data);
 
     npuBipRequestUplineTransfer(bp);
 

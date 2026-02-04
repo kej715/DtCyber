@@ -376,7 +376,7 @@ void npuTipInit(void)
         {
         tp = &npuTcbs[i];
         memset(tp, 0, sizeof(Tcb));
-        tp->cn    = i;
+        tp->cn    = (u8)i;
         tp->state = StTermIdle;
         npuTipInputReset(tp);
         }
@@ -416,7 +416,7 @@ void npuTipReset(void)
         {
         tp = &npuTcbs[i];
         memset(tp, 0, sizeof(Tcb));
-        tp->cn    = i;
+        tp->cn    = (u8)i;
         tp->state = StTermIdle;
         npuTipInputReset(tp);
         }
@@ -1122,11 +1122,11 @@ void npuTipInputReset(Tcb *tp)
     /*
     **  Build upline data header.
     */
-    *mp++ = npuSvmCouplerNode;                        // DN
-    *mp++ = npuSvmNpuNode;                            // SN
-    *mp++ = tp->cn;                                   // CN
-    *mp++ = BtHTMSG | (tp->uplineBsn << BlkShiftBSN); // BT=MSG
-    *mp++ = 0;                                        // DBC
+    *mp++ = npuSvmCouplerNode;                              // DN
+    *mp++ = npuSvmNpuNode;                                  // SN
+    *mp++ = tp->cn;                                         // CN
+    *mp++ = (u8)(BtHTMSG | (tp->uplineBsn << BlkShiftBSN)); // BT=MSG
+    *mp++ = 0;                                              // DBC
 
     /*
     **  Initialise buffer pointers.
@@ -1163,11 +1163,11 @@ void npuTipSendUserBreak(Tcb *tp, u8 bt)
     **  Build upline ICMD.
     */
     mp    = tp->inBuf;
-    *mp++ = npuSvmCouplerNode;                         // DN
-    *mp++ = npuSvmNpuNode;                             // SN
-    *mp++ = tp->cn;                                    // CN
-    *mp++ = BtHTICMD | (tp->uplineBsn << BlkShiftBSN); // BT=BRK
-    *mp++ = (1 << (bt - 1)) + 2;
+    *mp++ = npuSvmCouplerNode;                               // DN
+    *mp++ = npuSvmNpuNode;                                   // SN
+    *mp++ = tp->cn;                                          // CN
+    *mp++ = (u8)(BtHTICMD | (tp->uplineBsn << BlkShiftBSN)); // BT=BRK
+    *mp++ = (u8)((1 << (bt - 1)) + 2);
 
     /*
     **  Send the ICMD.
@@ -1187,10 +1187,10 @@ void npuTipSendUserBreak(Tcb *tp, u8 bt)
     **  Build upline BI/MARK.
     */
     mp    = tp->inBuf;
-    *mp++ = npuSvmCouplerNode;                        // DN
-    *mp++ = npuSvmNpuNode;                            // SN
-    *mp++ = tp->cn;                                   // CN
-    *mp++ = BtHTCMD | (tp->uplineBsn << BlkShiftBSN); // BT=BRK
+    *mp++ = npuSvmCouplerNode;                              // DN
+    *mp++ = npuSvmNpuNode;                                  // SN
+    *mp++ = tp->cn;                                         // CN
+    *mp++ = (u8)(BtHTCMD | (tp->uplineBsn << BlkShiftBSN)); // BT=BRK
     *mp++ = PfcBI;
     *mp++ = SfcMARK;
 
@@ -1388,7 +1388,7 @@ static void npuTipParseAnAvList(u8 *mp, int len, Tcb *tp)
                 }
             else
                 {
-                tp->params.avFFD = ((u16)av[0] << 8) | (u16)av[1];;
+                tp->params.avFFD = (u16)(((u16)av[0] << 8) | (u16)av[1]);
                 }
             break;
         case AnTdFFS:               // Form feed sequence
@@ -1411,7 +1411,7 @@ static void npuTipParseAnAvList(u8 *mp, int len, Tcb *tp)
                 }
             else
                 {
-                tp->params.fvUBZ = ((u16)av[0] << 8) | (u16)av[1];;
+                tp->params.fvUBZ = (u16)(((u16)av[0] << 8) | (u16)av[1]);
                 }
             break;
         case AnTdIEM:               // Input editing mode
@@ -1496,7 +1496,7 @@ static void npuTipParseAnAvList(u8 *mp, int len, Tcb *tp)
                 }
              else
                 {
-                tp->params.fvXCnt = ((u16)av[0] << 8) | (u16)av[1];
+                tp->params.fvXCnt = (u16)(((u16)av[0] << 8) | (u16)av[1]);
                 }
             break;
         case AnTdTTC:               // Transparent terminate character

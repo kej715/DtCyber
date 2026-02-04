@@ -661,7 +661,7 @@ void npuBipRequestUplineCanned(u8 *msg, int msgSize)
     {
     NpuBuffer *bp = npuBipBufGet();
 
-    bp->numBytes = msgSize;
+    bp->numBytes = (u16)msgSize;
     memcpy(bp->data, msg, bp->numBytes);
     npuBipRequestUplineTransfer(bp);
     }

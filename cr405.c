@@ -1071,7 +1071,7 @@ static void cr405NextCard(DevSlot *dp)
     {
     static char  buffer[322];
     bool         binaryCard;
-    char         c;
+    int          c;
     Cr405Context *cc = dp->context[0];
     char         *cp;
     int          i;
@@ -1263,7 +1263,7 @@ static void cr405NextCard(DevSlot *dp)
                     }
                 }
 
-            cc->card[i] = value;
+            cc->card[i] = (PpWord)value;
 
             cp += 4;
             }

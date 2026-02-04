@@ -373,7 +373,7 @@ bool cciHipUplineBlockImpl(NpuBuffer *bp)
             {
             prus = 1;
             }
-        cciHipWriteNpuStatus(StNpuInputAvailPru | (prus << 10));
+        cciHipWriteNpuStatus((PpWord)(StNpuInputAvailPru | (prus << 10)));
         }
     else if (bp->numBytes <= 256)
         {
@@ -942,7 +942,7 @@ static void cciHipIo(void)
     case FcNpuOutMemAddr1:
         if (activeChannel->full)
             {
-            cci->memoryAddress  = (cci->tempMemAddr0 << 8) | activeChannel->data;
+            cci->memoryAddress  = (u16)((cci->tempMemAddr0 << 8) | activeChannel->data);
             activeChannel->full = FALSE;
 #if (DEBUG > 1)
             fprintf(cciLog, "  %05X", cci->memoryAddress);
@@ -959,8 +959,7 @@ static void cciHipIo(void)
 #if (DEBUG > 1)
                 fprintf(cciLog, "writing mem address %x\n", cci->memoryAddress);
 #endif
-                cci->memory[cci->memoryAddress] = (cci->tempWord << 8) |
-                                                  activeChannel->data;
+                cci->memory[cci->memoryAddress] = (u16)((cci->tempWord << 8) | activeChannel->data);
 
                 cci->halfWordTransferred = FALSE;
                 cci->memoryAddress++;

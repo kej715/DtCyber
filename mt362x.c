@@ -2193,7 +2193,7 @@ static void mt362xPackAndConvert(u32 recLen)
 
         for (i = 0; i < recLen; i += 2)
             {
-            *op++ = ((PpWord)asciiToBcd[rp[0]] << 6) | ((PpWord)asciiToBcd[rp[1]] << 0);
+            *op++ = (PpWord)(((PpWord)asciiToBcd[rp[0]] << 6) | ((PpWord)asciiToBcd[rp[1]] << 0));
             rp   += 2;
             }
 
@@ -2240,7 +2240,7 @@ static void mt362xPackAndConvert(u32 recLen)
 
             for (i = 0; i < recLen; i += 2)
                 {
-                *op++ = ((PpWord)(rp[0] & Mask6) << 6) | ((PpWord)(rp[1] & Mask6) << 0);
+                *op++ = (PpWord)(((PpWord)(rp[0] & Mask6) << 6) | ((PpWord)(rp[1] & Mask6) << 0));
                 rp   += 2;
                 }
 

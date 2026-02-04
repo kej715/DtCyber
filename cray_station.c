@@ -856,10 +856,10 @@ static void csFeiIo(void)
                 break; // continue waiting for receipt of full PDU length value
                 }
             di = feip->inputBuffer.out;
-            activeDevice->recordLength = (feip->inputBuffer.data[di] << 24)
-                                         | (feip->inputBuffer.data[di + 1] << 16)
-                                         | (feip->inputBuffer.data[di + 2] << 8)
-                                         | feip->inputBuffer.data[di + 3];
+            activeDevice->recordLength = (PpWord)((feip->inputBuffer.data[di] << 24)
+                                                | (feip->inputBuffer.data[di + 1] << 16)
+                                                | (feip->inputBuffer.data[di + 2] << 8)
+                                                | feip->inputBuffer.data[di + 3]);
             feip->state            = StCsFeiRecvLCP1;
             feip->inputBuffer.out += 4;
             // fall through
@@ -946,10 +946,10 @@ static void csFeiIo(void)
                 break; // continue waiting for receipt of full PDU length value
                 }
             di = feip->inputBuffer.out;
-            activeDevice->recordLength = (feip->inputBuffer.data[di] << 24)
-                                         | (feip->inputBuffer.data[di + 1] << 16)
-                                         | (feip->inputBuffer.data[di + 2] << 8)
-                                         | feip->inputBuffer.data[di + 3];
+            activeDevice->recordLength = (PpWord)((feip->inputBuffer.data[di] << 24)
+                                                | (feip->inputBuffer.data[di + 1] << 16)
+                                                | (feip->inputBuffer.data[di + 2] << 8)
+                                                | feip->inputBuffer.data[di + 3]);
             feip->state            = StCsFeiRecvSubsegment1;
             feip->inputBuffer.out += 4;
             // fall through
@@ -979,7 +979,7 @@ static void csFeiIo(void)
             feip->inputBuffer.out      = 0;
             feip->inputBuffer.in       = i;
             feip->state                = StCsFeiRecvSubsegment2;
-            activeDevice->recordLength = recordLength;
+            activeDevice->recordLength = (PpWord)recordLength;
             // fall through
         case StCsFeiRecvSubsegment2:
             if (activeChannel->full == FALSE)
@@ -1055,8 +1055,8 @@ static void csFeiPackPpBuffer(FeiParam *feip, u32 maxWords)
         b1 = feip->inputBuffer.data[feip->inputBuffer.out++];
         b2 = feip->inputBuffer.data[feip->inputBuffer.out++];
         b3 = feip->inputBuffer.data[feip->inputBuffer.out++];
-        feip->ppIoBuffer.data[feip->ppIoBuffer.in++] = (b1 << 4) | (b2 >> 4);
-        feip->ppIoBuffer.data[feip->ppIoBuffer.in++] = ((b2 & 0x0f) << 8) | b3;
+        feip->ppIoBuffer.data[feip->ppIoBuffer.in++] = (PpWord)((b1 << 4) | (b2 >> 4));
+        feip->ppIoBuffer.data[feip->ppIoBuffer.in++] = (PpWord)(((b2 & 0x0f) << 8) | b3);
         }
     }
 
@@ -1209,14 +1209,14 @@ static void csFeiUnpackPpBuffer(FeiParam *feip)
     while (feip->ppIoBuffer.out < feip->ppIoBuffer.in)
         {
         word1 = feip->ppIoBuffer.data[feip->ppIoBuffer.out++];
-        feip->outputBuffer.data[feip->outputBuffer.in++] = word1 >> 4;
+        feip->outputBuffer.data[feip->outputBuffer.in++] = (u8)(word1 >> 4);
         if (feip->ppIoBuffer.out >= feip->ppIoBuffer.in)
             {
             break;
             }
         word2 = feip->ppIoBuffer.data[feip->ppIoBuffer.out++];
-        feip->outputBuffer.data[feip->outputBuffer.in++] = ((word1 & 0x0f) << 4) | (word2 >> 8);
-        feip->outputBuffer.data[feip->outputBuffer.in++] = word2 & 0xff;
+        feip->outputBuffer.data[feip->outputBuffer.in++] = (u8)(((word1 & 0x0f) << 4) | (word2 >> 8));
+        feip->outputBuffer.data[feip->outputBuffer.in++] = (u8)(word2 & 0xff);
         }
 
     pduLen = feip->outputBuffer.in - (in + 4);

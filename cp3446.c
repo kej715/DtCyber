@@ -294,7 +294,7 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         hol = charset[i] & Mask12;
         if (hol != 0)
             {
-            cc->convTable[hol] = i;
+            cc->convTable[hol] = (char)i;
             }
         }
 
@@ -629,7 +629,7 @@ static void cp3446Io(void)
     case Fc6681DevStatusReq:
         if (!activeChannel->full)
             {
-            activeChannel->data = (cc->status & (cc->intMask | StCp3446NonIntStatus));
+            activeChannel->data = (PpWord)((cc->status & (cc->intMask | StCp3446NonIntStatus)));
             activeChannel->full = TRUE;
 #if DEBUG
             fprintf(cp3446Log, " %04o", activeChannel->data);

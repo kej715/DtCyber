@@ -365,15 +365,15 @@ void npuHaspTryOutput(Pcb *pcbp)
             switch (scbp->tp->deviceType)
                 {
             case DtCR:
-                ptiRecord[1] = 0x80 | (scbp->tp->streamId << 4) | 3;
+                ptiRecord[1] = (u8)(0x80 | (scbp->tp->streamId << 4) | 3);
                 break;
 
             case DtLP:
-                ptiRecord[1] = 0x80 | (scbp->tp->streamId << 4) | 4;
+                ptiRecord[1] = (u8)(0x80 | (scbp->tp->streamId << 4) | 4);
                 break;
 
             case DtCP:
-                ptiRecord[1] = 0x80 | (scbp->tp->streamId << 4) | 5;
+                ptiRecord[1] = (u8)(0x80 | (scbp->tp->streamId << 4) | 5);
                 break;
                 }
             npuHaspAppendRecord(pcbp, ptiRecord, sizeof(ptiRecord));
@@ -573,11 +573,11 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
         switch (tp->deviceType)
             {
         case DtCR:
-            rtiRecord[1] = 0x80 | (tp->streamId << 4) | 3;
+            rtiRecord[1] = (u8)(0x80 | (tp->streamId << 4) | 3);
             break;
 
         case DtLP:
-            rtiRecord[1]                = 0x80 | (tp->streamId << 4) | 4;
+            rtiRecord[1]                = (u8)(0x80 | (tp->streamId << 4) | 4);
             scbp->pruFragmentSize       = 0;
             scbp->isPruFragmentComplete = TRUE;
             scbp->pruFragment2          = NULL;
@@ -585,7 +585,7 @@ void npuHaspProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
 
         case DtCP:
         case DtPLOTTER:
-            rtiRecord[1]                = 0x80 | (tp->streamId << 4) | 5;
+            rtiRecord[1]                = (u8)(0x80 | (tp->streamId << 4) | 5);
             scbp->pruFragmentSize       = 0;
             scbp->isPruFragmentComplete = FALSE;
             break;
@@ -1197,7 +1197,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
             if ((ch & 0x80) != 0)
                 {
                 pcbp->controls.hasp.pauseAllOutput = (ch & 0x40) != 0;
-                pcbp->controls.hasp.fcsMask        = (ch & 0x0f) << 4;
+                pcbp->controls.hasp.fcsMask        = (u8)((ch & 0x0f) << 4);
                 pcbp->controls.hasp.minorState     = StHaspMinorRecvFCS2;
                 if (pcbp->controls.hasp.pauseAllOutput)
                     {
@@ -1558,7 +1558,7 @@ void npuHaspProcessUplineData(Pcb *pcbp)
                         }
                     else
                         {
-                        pcbp->controls.hasp.strLength  = numBytes;
+                        pcbp->controls.hasp.strLength  = (u8)numBytes;
                         pcbp->controls.hasp.minorState = StHaspMinorRecvRC;
                         }
                     }
@@ -2230,7 +2230,7 @@ bool npuHaspParseDevParams(u8 *mp, int len, Tcb *tp)
         switch (mp[0])
             {
         case FnDevTbsUpper:
-            pp->fvDevTBS = (pp->fvDevTBS & 0x00ff) | (mp[1] << 8);
+            pp->fvDevTBS = (u16)((pp->fvDevTBS & 0x00ff) | (mp[1] << 8));
             break;
 
         case FnDevTbsLower:
@@ -2301,7 +2301,7 @@ bool npuHaspParseFileParams(u8 *mp, int len, Tcb *tp)
             break;
 
         case FnFileLimUpper:
-            pp->fvFileLimit = (pp->fvFileLimit & 0x00ff) | (mp[1] << 8);
+            pp->fvFileLimit = (u8)((pp->fvFileLimit & 0x00ff) | (mp[1] << 8));
             break;
 
         case FnFileLimLower:
@@ -3116,7 +3116,7 @@ static void npuHaspFlushUplineData(Scb *scbp, bool isEof)
                 *tp->inBufPtr++ = EbcdicBlank;
                 recordLength   += 1;
                 }
-            *tp->inBufStart = recordLength;
+            *tp->inBufStart = (u8)recordLength;
             numBytes        = (int)(tp->inBufPtr - tp->inBuf);
             tp->inBufStart  = tp->inBufPtr++;
             }
@@ -3144,7 +3144,7 @@ static void npuHaspFlushUplineData(Scb *scbp, bool isEof)
                 if (numBytes > InBufThreshold)
                     {
                     tp->inBuf[BlkOffDbc]   = DbcPRU;
-                    tp->inBuf[BlkOffBTBSN] = (tp->uplineBsn << BlkShiftBSN) | BtHTMSG;
+                    tp->inBuf[BlkOffBTBSN] = (u8)((tp->uplineBsn << BlkShiftBSN) | BtHTMSG);
                     npuHaspSendUplineData(tp, tp->inBuf, InBufThreshold);
                     npuTipInputReset(tp);
                     numBytes -= InBufThreshold;
@@ -3171,11 +3171,11 @@ static void npuHaspFlushUplineData(Scb *scbp, bool isEof)
                     tp->inBuf[BlkOffDbc] = DbcPRU;
                     }
                 }
-            tp->inBuf[BlkOffBTBSN] = (tp->uplineBsn << BlkShiftBSN) | BtHTMSG;
+            tp->inBuf[BlkOffBTBSN] = (u8)((tp->uplineBsn << BlkShiftBSN) | BtHTMSG);
             }
         else // ConnTypeRevHasp
             {
-            tp->inBuf[BlkOffBTBSN] = (tp->uplineBsn << BlkShiftBSN) | (isEof ? BtHTMSG : BtHTBLK);
+            tp->inBuf[BlkOffBTBSN] = (u8)((tp->uplineBsn << BlkShiftBSN) | (isEof ? BtHTMSG : BtHTBLK));
             tp->inBuf[BlkOffDbc]   = DbcTransparent;
             }
         npuHaspSendUplineData(tp, tp->inBuf, numBytes);
@@ -3583,30 +3583,30 @@ static int npuHaspSendRecordHeader(Tcb *tp, u8 srcb)
     case DtCONSOLE:
         if (tp->pcbp->ncbp->connType == ConnTypeHasp)
             {
-            header[i++] = 0x80 | (tp->streamId << 4) | 0x01; // Operator message
-            header[i++] = 0x80 | (0 << 5) | (0 << 4);        // count units = 1, EBCDIC
+            header[i++] = (u8)(0x80 | (tp->streamId << 4) | 0x01); // Operator message
+            header[i++] = (u8)(0x80 | (0 << 5) | (0 << 4));        // count units = 1, EBCDIC
             }
         else
             {
-            header[i++] = 0x80 | (tp->streamId << 4) | 0x02; // Operator command
-            header[i++] = 0x80 | (0 << 5) | (0 << 4);        // count units = 1, EBCDIC
+            header[i++] = (u8)(0x80 | (tp->streamId << 4) | 0x02); // Operator command
+            header[i++] = (u8)(0x80 | (0 << 5) | (0 << 4));        // count units = 1, EBCDIC
             }
         break;
 
     case DtCR:
-        header[i++] = 0x80 | (tp->streamId << 4) | 0x03; // Normal input record
-        header[i++] = 0x80 | (0 << 5) | (0 << 4);        // count units = 1, EBCDIC
+        header[i++] = (u8)(0x80 | (tp->streamId << 4) | 0x03); // Normal input record
+        header[i++] = (u8)(0x80 | (0 << 5) | (0 << 4));        // count units = 1, EBCDIC
         break;
 
     case DtLP:
-        header[i++] = 0x80 | (tp->streamId << 4) | 0x04; // Print record
-        header[i++] = 0x80 | (0 << 6) | srcb;            // normal carriage control plus format effector
+        header[i++] = (u8)(0x80 | (tp->streamId << 4) | 0x04); // Print record
+        header[i++] = (u8)(0x80 | (0 << 6) | srcb);            // normal carriage control plus format effector
         break;
 
     case DtCP:
     case DtPLOTTER:
-        header[i++] = 0x80 | (tp->streamId << 4) | 0x05; // Punch record
-        header[i++] = 0x80 | (0 << 5) | (0 << 4) | 0;    // count units = 1, EBCDIC, stacker select = 0
+        header[i++] = (u8)(0x80 | (tp->streamId << 4) | 0x05); // Punch record
+        header[i++] = (u8)(0x80 | (0 << 5) | (0 << 4) | 0);    // count units = 1, EBCDIC, stacker select = 0
         break;
 
     default:
@@ -3648,7 +3648,7 @@ static int npuHaspSendRecordStrings(Tcb *tp, u8 *data, int len)
     n = 0;
     while (len > 0x3f)
         {
-        header[0] = (1 << 7) | (1 << 6) | 0x3f; // Non-duplicate string, max length
+        header[0] = (u8)((1 << 7) | (1 << 6) | 0x3f); // Non-duplicate string, max length
         npuNetSend(tp, header, 1);
         npuNetSend(tp, data, 63);
         data += 63;
@@ -3657,7 +3657,7 @@ static int npuHaspSendRecordStrings(Tcb *tp, u8 *data, int len)
         }
     if (len > 0)
         {
-        header[0] = (1 << 7) | (1 << 6) | len; // Non-duplicate string, remaining record length
+        header[0] = (u8)((1 << 7) | (1 << 6) | len); // Non-duplicate string, remaining record length
         npuNetSend(tp, header, 1);
         npuNetSend(tp, data, len);
         n += len + 1;
@@ -3737,7 +3737,7 @@ static void npuHaspSendUplineData(Tcb *tp, u8 *data, int len)
     NpuBuffer *bp;
 
     bp           = npuBipBufGet();
-    bp->numBytes = len;
+    bp->numBytes = (u16)len;
     memcpy(bp->data, data, bp->numBytes);
     npuBipQueueAppend(bp, &tp->scbp->uplineQ);
     npuHaspTransmitQueuedBlocks(tp);
@@ -3772,7 +3772,7 @@ static void npuHaspSendUplineEoiAcctg(Tcb *tp, u8 sfc)
     command[BlkOffSN]    = npuSvmNpuNode;
     command[BlkOffCN]    = tp->cn;
     command[BlkOffSfc]   = sfc;
-    command[BlkOffBTBSN] = BtHTCMD | (tp->uplineBsn++ << BlkShiftBSN);
+    command[BlkOffBTBSN] = (u8)(BtHTCMD | (tp->uplineBsn++ << BlkShiftBSN));
     if (tp->uplineBsn >= 8)
         {
         tp->uplineBsn = 1;
@@ -3818,7 +3818,7 @@ static void npuHaspSendUplineEOS(Tcb *tp)
     commandEOS[BlkOffDN]    = npuSvmCouplerNode;
     commandEOS[BlkOffSN]    = npuSvmNpuNode;
     commandEOS[BlkOffCN]    = tp->cn;
-    commandEOS[BlkOffBTBSN] = BtHTCMD | (tp->uplineBsn++ << BlkShiftBSN);
+    commandEOS[BlkOffBTBSN] = (u8)(BtHTCMD | (tp->uplineBsn++ << BlkShiftBSN));
     if (tp->uplineBsn >= 8)
         {
         tp->uplineBsn = 1;

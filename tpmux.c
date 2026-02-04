@@ -448,21 +448,24 @@ void tpMuxShowStatus()
     char      outBuf[200];
     PortParam *pp;
 
-    for (i = 0, pp = portVector; i < 2; i++, pp++)
+    if (portVector != NULL)
         {
-        if (pp->listenFd != 0)
+        for (i = 0, pp = portVector; i < 2; i++, pp++)
             {
-            sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "2pMux", mux->channel->id, mux->eqNo);
-            opDisplay(outBuf);
-            sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->listenFd), "", "async", "listening");
-            opDisplay(outBuf);
-            }
-        if (pp->active && (pp->connFd > 0))
-            {
-            sprintf(outBuf, "    >   %-8s         P%02o ", "2pMux", pp->id);
-            opDisplay(outBuf);
-            sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), "async", "connected");
-            opDisplay(outBuf);
+            if (pp->listenFd != 0)
+                {
+                sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "2pMux", mux->channel->id, mux->eqNo);
+                opDisplay(outBuf);
+                sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->listenFd), "", "async", "listening");
+                opDisplay(outBuf);
+                }
+            if (pp->active && (pp->connFd > 0))
+                {
+                sprintf(outBuf, "    >   %-8s         P%02o ", "2pMux", pp->id);
+                opDisplay(outBuf);
+                sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), "async", "connected");
+                opDisplay(outBuf);
+                }
             }
         }
     }

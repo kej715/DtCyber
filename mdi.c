@@ -885,7 +885,7 @@ static void mdiHipDisconnect(void)
             ** The last two bytes transmitted by PIP provide the true message length including
             ** the 19-byte MDI header.
             */
-            mbp->numBytes = ((mbp->data[mbp->numBytes - 2] << 8) | mbp->data[mbp->numBytes - 1]) - MdiHdrLen;
+            mbp->numBytes = (u16)(((mbp->data[mbp->numBytes - 2] << 8) | mbp->data[mbp->numBytes - 1]) - MdiHdrLen);
 #if DEBUG
             fprintf(npuLog, "    PDU size=%d\n", mbp->numBytes);
 #endif

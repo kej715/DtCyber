@@ -1701,10 +1701,10 @@ static void cdcnetSendBack(Gcb *gp, NpuBuffer *bp, u8 bsn)
 
     mp = bp->data;
 
-    *mp++ = npuSvmCouplerNode;                   // DN
-    *mp++ = cdcnetNode;                          // SN
-    *mp++ = gp->cn;                              // CN
-    *mp++ = BlkOffBTBSN | (bsn << BlkShiftBSN);  // BT=Back | BSN
+    *mp++ = npuSvmCouplerNode;                        // DN
+    *mp++ = cdcnetNode;                               // SN
+    *mp++ = gp->cn;                                   // CN
+    *mp++ = (u8)(BlkOffBTBSN | (bsn << BlkShiftBSN)); // BT=Back | BSN
 
     bp->numBytes = (u16)(mp - bp->data);
     bp->offset   = 0;
@@ -2007,7 +2007,7 @@ static u16 cdcnetTcpGetPort(u8 *ap)
 
     if (inUse != 0)
         {
-        port = (ap[RelOffTcpPort] << 8) | ap[RelOffTcpPort + 1];
+        port = (u16)((ap[RelOffTcpPort] << 8) | ap[RelOffTcpPort + 1]);
         }
 
     return port;
@@ -2111,7 +2111,7 @@ static void cdcnetTcpRequestUplineTransfer(Gcb *gp, NpuBuffer *bp, u8 blockType,
     bp->data[BlkOffDN]    = npuSvmCouplerNode;
     bp->data[BlkOffSN]    = cdcnetNode;
     bp->data[BlkOffCN]    = gp->cn;
-    bp->data[BlkOffBTBSN] = (gp->bsn++ << BlkShiftBSN) | blockType;
+    bp->data[BlkOffBTBSN] = (u8)((gp->bsn++ << BlkShiftBSN) | blockType);
     if (gp->bsn > 7)
         {
         gp->bsn = 1;
@@ -2686,7 +2686,7 @@ static void cdcnetTcpSendDataIndication(Gcb *gp)
 #if DEBUG
         fprintf(cdcnetLog, "Received %d bytes, CN=%02X\n", n, gp->cn);
 #endif
-        bp->numBytes = BlkOffDbc + n + 1;
+        bp->numBytes = (u16)(BlkOffDbc + n + 1);
         }
     else if (n == 0)
         {
@@ -2825,7 +2825,7 @@ static u16 cdcnetUdpGetPort(u8 *ap)
 
     if (ap[RelOffUdpPortInUse] != 0)
         {
-        port = (ap[RelOffUdpPort + 1] << 8) | ap[RelOffUdpPort + 2];
+        port = (u16)((ap[RelOffUdpPort + 1] << 8) | ap[RelOffUdpPort + 2]);
         }
 
     return port;
@@ -2902,7 +2902,7 @@ static void cdcnetUdpRequestUplineTransfer(Gcb *gp, NpuBuffer *bp, u8 blockType)
     bp->data[BlkOffDN]    = npuSvmCouplerNode;
     bp->data[BlkOffSN]    = cdcnetNode;
     bp->data[BlkOffCN]    = gp->cn;
-    bp->data[BlkOffBTBSN] = (gp->bsn++ << BlkShiftBSN) | blockType;
+    bp->data[BlkOffBTBSN] = (u8)((gp->bsn++ << BlkShiftBSN) | blockType);
     if (gp->bsn > 7)
         {
         gp->bsn = 1;
@@ -3129,7 +3129,7 @@ static void cdcnetUdpSendUplineData(Gcb *gp)
     *dp++ = cdcnetUdpVersion;
     *dp++ = 0;     // unused byte
     cdcnetUdpSetAddress(dp, ipAddress, port);
-    bp->numBytes = n + BlkOffUdpDataIndData;
+    bp->numBytes = (u16)(n + BlkOffUdpDataIndData);
     cdcnetUdpRequestUplineTransfer(gp, bp, BtHTMSG);
     }
 

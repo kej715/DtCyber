@@ -897,7 +897,7 @@ static void mt669SetupGeneralStatus(TapeParam *tp)
             }
         }
 
-    cp->deviceStatus[2] = (tp->blockCrc & Mask9) << 3;
+    cp->deviceStatus[2] = (PpWord)((tp->blockCrc & Mask9) << 3);
     }
 
 /*--------------------------------------------------------------------------
@@ -990,8 +990,8 @@ static void mt669SetupCumulativeStatus(TapeParam *tp)
     **  Report: forward tape motion, speed=100 ips, density=1600 cpi
     **  and configured unit number.
     */
-    cp->deviceStatus[1] = 00600 + activeDevice->selectedUnit;
-    cp->deviceStatus[2] = activeDevice->selectedUnit << 8;
+    cp->deviceStatus[1] = (PpWord)(00600 + activeDevice->selectedUnit);
+    cp->deviceStatus[2] = (PpWord)(activeDevice->selectedUnit << 8);
     cp->deviceStatus[3] = 0;
     cp->deviceStatus[4] = 0;
     cp->deviceStatus[5] = 0;
@@ -2134,7 +2134,7 @@ static void mt669PackAndConvert(u32 recLen)
 
             if ((i & 1) == 0)
                 {
-                *op = (c1 & Mask6) << 6;
+                *op = (PpWord)((c1 & Mask6) << 6);
                 }
             else
                 {

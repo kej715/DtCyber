@@ -331,7 +331,7 @@ bool npuHipUplineBlockImpl(NpuBuffer *bp)
             {
             prus = 1;
             }
-        npuHipWriteNpuStatus(StNpuInputAvailPru | (prus << 10));
+        npuHipWriteNpuStatus((PpWord)(StNpuInputAvailPru | (prus << 10)));
         }
     else if (bp->numBytes <= 256)
         {

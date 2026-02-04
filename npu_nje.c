@@ -1389,7 +1389,7 @@ static int npuNjeAppendRecords(Pcb *pcbp, u8 *bp, int len, u8 blockType)
                     {
                     nBytes = 63;
                     }
-                *dp++ = 0xc0 + nBytes; // SCB
+                *dp++ = (u8)(0xc0 + nBytes); // SCB
                 while (nBytes-- > 0)
                     {
                     *dp++ = *bp++;
@@ -1726,7 +1726,7 @@ static void npuNjeFlushOutput(Pcb *pcbp)
     memset(pcbp->controls.nje.outputBufPtr, 0, TtrLength); // Append end of buffer TTR
     pcbp->controls.nje.outputBufPtr += TtrLength;
     bufLen = (int)(pcbp->controls.nje.outputBufPtr - pcbp->controls.nje.outputBuf);
-    pcbp->controls.nje.outputBuf[TtbOffLength]     = bufLen >> 8;
+    pcbp->controls.nje.outputBuf[TtbOffLength]     = (u8)(bufLen >> 8);
     pcbp->controls.nje.outputBuf[TtbOffLength + 1] = bufLen & 0xff;
     npuNetSend(npuNjeFindTcb(pcbp), pcbp->controls.nje.outputBuf,
                (int)(pcbp->controls.nje.outputBufPtr - pcbp->controls.nje.outputBuf));
@@ -1927,7 +1927,7 @@ static void npuNjeSetTtrLength(Pcb *pcbp)
 
     ttrp   = pcbp->controls.nje.ttrp;
     recLen = (int)(pcbp->controls.nje.outputBufPtr - (ttrp + TtrLength));
-    *(ttrp + TtrOffLength)     = recLen >> 8;
+    *(ttrp + TtrOffLength)     = (u8)(recLen >> 8);
     *(ttrp + TtrOffLength + 1) = recLen & 0xff;
     }
 
@@ -2230,7 +2230,7 @@ static int npuNjeUploadBlock(Pcb *pcbp, u8 *blkp, int size, u8 *rcb, u8 *srcb)
 
                     break;
                     }
-                *obp++ = recLen;
+                *obp++ = (u8)recLen;
                 *obp++ = *rcb;
                 *obp++ = *srcb;
                 while (recLen-- > 0)

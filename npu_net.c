@@ -351,10 +351,10 @@ int npuNetRegisterConnType(int tcpPort, int claPort, int numPorts, int connType,
     **  Register this port.
     */
     ncbp->state    = StConnInit;
-    ncbp->tcpPort  = tcpPort;
-    ncbp->claPort  = claPort;
+    ncbp->tcpPort  = (u16)tcpPort;
+    ncbp->claPort  = (u8)claPort;
     ncbp->numPorts = numPorts;
-    ncbp->connType = connType;
+    ncbp->connType = (u8)connType;
     ncbp->connFd   = 0;
     ncbp->lstnFd   = 0;
     ncbp->hostName = NULL;
@@ -899,7 +899,7 @@ static int npuNetRegisterClaPort(Ncb *ncbp)
         pcbp = &pcbs[i];
         if (pcbp->claPort == 0)
             {
-            pcbp->claPort   = i;
+            pcbp->claPort   = (u8)i;
             pcbp->ncbp      = ncbp;
             pcbp->inputData = (u8 *)malloc(MaxBuffer);
             if (pcbp->inputData == NULL)
