@@ -1314,17 +1314,22 @@ static void ppOpSRD(void)     // 25
 
 static void ppOpEXN(void)     // 26
     {
-    Cpu170Context *cpu;
+    Cpu170Context *cpu170;
+    Cpu180Context *cpu180;
     int           cpuNum;
     bool          doChangeMode;
     bool          isExchangePending;
     u32           exchangeAddress;
 
     cpuNum = (cpuCount > 1) ? (activePpu->opD & 001) : 0;
-    cpu    = cpus170 + cpuNum;
+    cpu170 = cpus170 + cpuNum;
+    if (isCyber180)
+        {
+        cpu180 = cpus180 + cpuNum;
+        }
 
     cpuAcquireExchangeMutex();
-    isExchangePending = cpu->ppRequestingExchange != -1;
+    isExchangePending = cpu170->ppRequestingExchange != -1;
 
     if (((activePpu->opD & 070) == 0) || ((features & HasNoCejMej) != 0))
         {
@@ -1380,7 +1385,7 @@ static void ppOpEXN(void)     // 26
             /*
             **  MAN.
             */
-            exchangeAddress = cpu->regMa & Mask18;
+            exchangeAddress = cpu170->regMa & Mask18;
             }
         else
             {
@@ -1400,12 +1405,22 @@ static void ppOpEXN(void)     // 26
 
             return;
             }
-        if (cpu->isMonitorMode)
+        if (cpu170->isMonitorMode)
             {
             /*
             **  Pass.
             */
             cpuReleaseExchangeMutex();
+            //
+            //  If this is a CYBER 180, and the machine is in 180
+            //  mode, set the CYBER 170 Exchange bit to request
+            //  an exchange back to 170 mode. This should enable the
+            //  PP to exchange the 170 machine as soon as possible.
+            //
+            if (isCyber180 && cpu180->regVmid == 0)
+                {
+                cpu180->regMcr |= 0x0400; // set MCR53
+                }
 
             return;
             }
@@ -1424,13 +1439,13 @@ static void ppOpEXN(void)     // 26
         /*
         **  Request the exchange, and wait for it to complete.
         */
-        cpu->ppRequestingExchange = activePpu->id;
-        cpu->ppExchangeAddress    = exchangeAddress;
-        cpu->doChangeMode         = doChangeMode;
-        activePpu->exchangingCpu  = cpu->id;
+        cpu170->ppExchangeAddress    = exchangeAddress;
+        cpu170->doChangeMode         = doChangeMode;
+        cpu170->ppRequestingExchange = activePpu->id;
+        activePpu->exchangingCpu     = cpu170->id;
         if (isCyber180)
             {
-            cpus180[cpu->id].regMcr |= 0x0400; // set MCR53
+            cpu180->regMcr |= 0x0400; // set MCR53
             }
         cpuReleaseExchangeMutex();
         }
