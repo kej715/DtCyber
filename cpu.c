@@ -841,11 +841,11 @@ void cpuStep(Cpu170Context *activeCpu)
                 ctx180->regMcr &= 0xfbff; // clear MCR53 CYBER 170 state exchange request
                 }
             }
-/*DELETE*/else
-/*DELETE*/    {
-/*DELETE*/    fprintf(stderr, "Can't exchange for PP%d : monitorCpu %d doChangeMode %d opOffset %d stopped %d\n",
-/*DELETE*/        activeCpu->ppRequestingExchange,monitorCpu,activeCpu->doChangeMode,activeCpu->opOffset,activeCpu->isStopped);
-/*DELETE*/    }
+/*DELETE*/ //else
+/*DELETE*/ //    {
+/*DELETE*/ //    fprintf(stderr, "Can't exchange for PP%d : monitorCpu %d doChangeMode %d opOffset %d stopped %d\n",
+/*DELETE*/ //        activeCpu->ppRequestingExchange,monitorCpu,activeCpu->doChangeMode,activeCpu->opOffset,activeCpu->isStopped);
+/*DELETE*/ //    }
         cpuReleaseExchangeMutex();
         }
 
@@ -3896,8 +3896,8 @@ static void cpOp01(Cpu170Context *activeCpu)
         else
             {
             activeCpu->opOffset = 60; // arrange to re-execute XJ
-/*DELETE*/if (activeCpu->ppRequestingExchange == -1)
-/*DELETE*/    fprintf(stderr,"Can't XJ : PP %d monitorCpu %d\n",activeCpu->ppRequestingExchange,monitorCpu);
+/*DELETE*/ //if (activeCpu->ppRequestingExchange == -1)
+/*DELETE*/ //    fprintf(stderr,"Can't XJ : PP %d monitorCpu %d\n",activeCpu->ppRequestingExchange,monitorCpu);
             }
         cpuReleaseExchangeMutex();
         break;
