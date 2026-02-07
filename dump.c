@@ -522,8 +522,8 @@ void dumpDisassemblePpu(u8 pp)
         {
         fprintf(pf, "%04o  ", addr & Mask12);
 
-        cnt = traceDisassembleOpcode(str, pm + addr);
-        fputs(str, pf);
+        cnt = traceDasmActivePp(pm + addr, str);
+        fprintf(pf, "%-13s", str);
 
         if (isCyber180)
             {

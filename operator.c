@@ -131,6 +131,11 @@ static void opHelpCloseConsoleWindow(void);
 static void opCmdDeadstart(bool help, char *cmdParams);
 static void opHelpDeadstart(void);
 
+static void opCmdDisassemble(bool help, char *cmdParams);
+static void opCmdDisassembleCPU(int fwa, int count);
+static void opCmdDisassemblePP(int pp, int fwa, int count);
+static void opHelpDisassemble(void);
+
 static void opCmdDiscRemoteConsole(bool help, char *cmdParams);
 static void opHelpDiscRemoteConsole(void);
 
@@ -231,6 +236,7 @@ static void opHelpUnloadDisk(void);
 static void opCmdUnloadTape(bool help, char *cmdParams);
 static void opHelpUnloadTape(void);
 
+static void opDisplayRma(Cpu180Context *ctx, u64 pva);
 static void opDisplayVersion(void);
 
 /*
@@ -250,7 +256,7 @@ static OpCmd decode[] =
     {
     { "ccw",                   opCmdCloseConsoleWindow    },
     { "d",                     opCmdDumpMemory            },
-    { "deadstart",             opCmdDeadstart             },
+    { "da",                    opCmdDisassemble           },
     { "drc",                   opCmdDiscRemoteConsole     },
     { "dm",                    opCmdDumpMemory            },
     { "e",                     opCmdEnterKeys             },
@@ -280,6 +286,8 @@ static OpCmd decode[] =
     { "ud",                    opCmdUnloadDisk            },
     { "ut",                    opCmdUnloadTape            },
     { "close_console_window",  opCmdCloseConsoleWindow    },
+    { "deadstart",             opCmdDeadstart             },
+    { "disassemble",           opCmdDisassemble           },
     { "disconnect_remote_console", opCmdDiscRemoteConsole },
     { "dump_memory",           opCmdDumpMemory            },
     { "enter_keys",            opCmdEnterKeys             },
@@ -1245,6 +1253,394 @@ static void opHelpDeadstart(void)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Disassemble CPU or PP memory.
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opCmdDisassemble(bool help, char *cmdParams)
+    {
+    int  count;
+    char *cp;
+    int  fwa;
+    char *memType;
+    int  numParam;
+    int  pp;
+
+    /*
+    **  Process help request.
+    */
+    if (help)
+        {
+        opHelpDisassemble();
+
+        return;
+        }
+
+    memType = strtok(cmdParams, ", ");
+    if (memType == NULL)
+        {
+        opDisplay("    > Not enough parameters\n");
+        return;
+        }
+    cp = strtok(NULL, ", ");
+    if (cp == NULL)
+        {
+        opDisplay("    > Not enough parameters\n");
+        return;
+        }
+    if (*cp == '0' && *(cp + 1) == 'x')
+        {
+        numParam = sscanf(cp + 2, "%x", &fwa);
+        }
+    else
+        {
+        numParam = sscanf(cp, "%o", &fwa);
+        }
+    if (numParam != 1)
+        {
+        opDisplay("    > Invalid address\n");
+        return;
+        }
+    cp = strtok(NULL, " ");
+    if (cp == NULL)
+        {
+        count = 1;
+        }
+    else if (sscanf(cp, "%u", &count) != 1)
+        {
+        opDisplay("    > Invalid word count\n");
+        return;
+        }
+    if (strcasecmp(memType, "CPU") == 0 || strcasecmp(memType, "CP") == 0)
+        {
+        opCmdDisassembleCPU(fwa, count);
+        }
+    else if (strncasecmp(memType, "PP", 2) == 0)
+        {
+        numParam = sscanf(memType + 2, "%o", &pp);
+        if (numParam != 1)
+            {
+            opDisplay("    > Missing or invalid PP number\n");
+            }
+        opCmdDisassemblePP(pp, fwa, count);
+        }
+    else
+        {
+        opDisplay("    > Invalid processor identification\n");
+        }
+    }
+
+static u16 opGetParcel(u32 rma)
+    {
+    u8  shift;
+    u64 word;
+
+    word    = cpMem[rma >> 3];
+    shift   = (u8)(48 - ((rma & 6) << 3));
+
+    return (u16)((word >> shift) & 0xffff);
+    }
+
+static void opCmdDisassembleCPU(int fwa, int count)
+    {
+    char   buf[80];
+    char   *cp;
+    u8     format;
+    u8     i;
+    u8     length;
+    char   mnemonic[40];
+    u32    opAddress;
+    u8     opcode;
+    u16    opD;
+    u8     opI;
+    u8     opJ;
+    u8     opK;
+    u8     opOffset;
+    u16    opQ;
+    u32    osBoundary;
+    u16    parcel;
+    u8     spaces;
+    CpWord word;
+
+    if (fwa < 0 || count < 0 || fwa < 0)
+        {
+        opDisplay("    > Invalid CM address or count\n");
+
+        return;
+        }
+    //
+    //  Disassemble CYBER 180 instructions when the machine is a CYBER 180,
+    //  and the address is greater than or equal to the IOU OS boundary.
+    //
+    osBoundary = isCyber180 ? iouOsBoundary : cpuMaxMemory;
+
+    if ((u32)fwa >= osBoundary)
+        {
+        if (((u32)fwa >> 3) >= cpuMaxMemory)
+            {
+            opDisplay("    > Invalid CM address\n");
+            return;
+            }
+        while (count-- > 0)
+            {
+            parcel = opGetParcel(fwa);
+            sprintf(buf, FMT32_08x "  %04x ", fwa, parcel);
+            cp     = buf + strlen(buf);
+            fwa   += 2;
+            opcode = (u8)(parcel >> 8);
+            opJ    = (u8)((parcel >> 4) & Mask4);
+            opK    = (u8)(parcel & Mask4);
+            format = cpu180GetInstructionFormat(opcode);
+            switch (format)
+                {
+            default:
+            case 0: // jk
+                strcpy(cp, "      ");
+                break;
+            case 1: // jkiD
+                if (((u32)fwa >> 3) >= cpuMaxMemory)
+                    {
+                    return;
+                    }
+                parcel = opGetParcel(fwa);
+                opI    = (u8)(parcel >> 12);
+                opD    = (u16)(parcel & Mask12);
+                fwa   += 2;
+                sprintf(cp, "%04x  ", parcel);
+                break;
+            case 2: // jkQ
+                if (((u32)fwa >> 3) >= cpuMaxMemory)
+                    {
+                    return;
+                    }
+                opQ  = opGetParcel(fwa);
+                fwa += 2;
+                sprintf(cp, "%04x  ", parcel);
+                break;
+                }
+            traceDasm180Op(opcode, opI, opJ, opK, opD, opQ, mnemonic);
+            opDisplay(buf);
+            opDisplay(mnemonic);
+            opDisplay("\n");
+            //
+            //  Display descriptors of BDP block instructions
+            //
+            switch (opcode)
+                {
+            default:
+                break;
+            //
+            //  Instructions with 2 descriptors
+            //
+            case 0x70:
+            case 0x71:
+            case 0x72:
+            case 0x73:
+            case 0x74:
+            case 0x75:
+            case 0x76:
+            case 0x77:
+            case 0xe4:
+            case 0xe5:
+            case 0xe9:
+            case 0xeb:
+            case 0xed:
+                if (((u32)fwa >> 3) + 3 >= cpuMaxMemory)
+                    {
+                    return;
+                    }
+                parcel = opGetParcel(fwa);
+                sprintf(buf, FMT32_08x "  %04x ", fwa, parcel);
+                opDisplay(buf);
+                parcel = opGetParcel(fwa + 2);
+                sprintf(buf, FMT32_08x " %04x\n", fwa, parcel);
+                opDisplay(buf);
+                fwa += 4;
+                //  Fall through
+
+            //
+            //  Instructions with 1 descriptor
+            //
+            case 0xf3:
+            case 0xf9:
+            case 0xfa:
+            case 0xfb:
+                if (((u32)fwa >> 3) + 3 >= cpuMaxMemory)
+                    {
+                    return;
+                    }
+                parcel = opGetParcel(fwa);
+                sprintf(buf, FMT32_08x "  %04x ", fwa, parcel);
+                opDisplay(buf);
+                parcel = opGetParcel(fwa + 2);
+                sprintf(buf, FMT32_08x " %04x\n", fwa, parcel);
+                opDisplay(buf);
+                fwa += 4;
+                break;
+                }
+            }
+        }
+    //
+    //  Disassemble CYBER 170 instructions when the machine is a CYBER 170,
+    //  or the address is below the IOU OS boundary.
+    //
+    else
+        {
+        if ((u32)fwa >= cpuMaxMemory)
+            {
+            opDisplay("    > Invalid CM address\n");
+            return;
+            }
+        while (count > 0 && (u32)fwa < osBoundary)
+            {
+            word     = cpMem[fwa];
+            opOffset = 60;
+            spaces   = 0;
+            do
+                {
+                sprintf(buf, "%06o  ", fwa);
+                for (i = 0, cp = buf + 8; i < spaces; i++)
+                    {
+                    *cp++ = ' ';
+                    }
+                *cp = '\0';
+                opDisplay(buf);
+
+                /*
+                **  Decode based on type.
+                */
+                opcode  = (u8)((word >> (opOffset - 6)) & Mask6);
+                opI     = (u8)((word >> (opOffset - 9)) & Mask3);
+                opJ     = (u8)((word >> (opOffset - 12)) & Mask3);
+                length  = cpuGetInstructionLength(opcode, opI);
+                count  -= 1;
+
+                if (length == 15)
+                    {
+                    opK       = (u8)((word >> (opOffset - 15)) & Mask3);
+                    opAddress = 0;
+                    opOffset -= 15;
+                    spaces   += 5;
+                    sprintf(buf, "%02o%o%o%o", opcode, opI, opJ, opK);
+                    }
+                else
+                    {
+                    if (opOffset == 15)
+                        {
+                        /*
+                        **  Invalid packing
+                        */
+                        sprintf(buf, "%05o\n", (u16)(word & Mask15));
+                        opDisplay(buf);
+                        break;
+                        }
+                    opK       = (u8)0;
+                    opAddress = (u32)((word >> (opOffset - 30)) & Mask18);
+                    opOffset -= 30;
+                    spaces   += 10;
+                    sprintf(buf, "%02o%o%o%06o", opcode, opI, opJ, opAddress);
+                    }
+                cp = buf + strlen(buf);
+                for (i = 0; i < (20 - spaces) + 2; i++)
+                    {
+                    *cp++ = ' ';
+                    }
+                *cp = '\0';
+                opDisplay(buf);
+                
+                traceDasm170Op(opcode, opI, opJ, opK, opAddress, mnemonic);
+                opDisplay(mnemonic);
+                opDisplay("\n");
+
+                } while (opOffset > 0 && count > 0);
+
+            fwa += 1;
+            }
+        }
+    }
+
+static void opCmdDisassemblePP(int ppNum, int fwa, int count)
+    {
+    char   buf[80];
+    char   mnemonic[40];
+    int    n;
+    PpWord *pm;
+    PpWord pw1;
+    PpWord pw2;
+
+    if ((ppNum >= 020) && (ppNum <= 031))
+        {
+        ppNum -= 6;
+        }
+    else if ((ppNum < 0) || (ppNum > 011))
+        {
+        opDisplay("    > Invalid PP number\n");
+
+        return;
+        }
+    if (ppNum >= ppuCount)
+        {
+        opDisplay("    > Invalid PP number\n");
+
+        return;
+        }
+    if (fwa < 0 || count < 0 || fwa < 0 || fwa > 4095)
+        {
+        opDisplay("    > Invalid PP address or count\n");
+
+        return;
+        }
+    pm = ppu[ppNum].mem;
+    while (count-- > 0)
+        {
+        sprintf(buf, "%04o  ", fwa);
+        opDisplay(buf);
+        n = traceDasmActivePp(pm + fwa, mnemonic);
+        if (isCyber180)
+            {
+            pw1 = pm[fwa] & Mask16;
+            pw2 = pm[fwa + 1] & Mask16;
+            if (n == 2)
+                {
+                sprintf(buf, "%06o %06o  ", pw1, pw2);
+                }
+            else
+                {
+                sprintf(buf, "%06o         ", pw1);
+                }
+            }
+        else
+            {
+            pw1 = pm[fwa] & Mask12;
+            pw2 = pm[fwa + 1] & Mask12;
+            if (n == 2)
+                {
+                sprintf(buf, "%04o %04o  ", pw1, pw2);
+                }
+            else
+                {
+                sprintf(buf, "%04o       ", pw1);
+                }
+            }
+        opDisplay(buf);
+        opDisplay(mnemonic);
+        opDisplay("\n");
+        fwa = (fwa + n) & Mask12;
+        }
+    }
+
+static void opHelpDisassemble(void)
+    {
+    opDisplay("    > 'disassemble CPU,<fwa>,<count>' disassemble <count> words of central memory starting from octal address <fwa>.\n");
+    opDisplay("    > 'disassemble PP<nn>,<fwa>,<count>' disassemble <count> words of PP nn's memory starting from octal address <fwa>.\n");
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Disconnect Remote Console
 **
 **  Parameters:     Name        Description.
@@ -1329,6 +1725,10 @@ static void opCmdDumpMemory(bool help, char *cmdParams)
     if (*cp == '0' && *(cp + 1) == 'x')
         {
         numParam = sscanf(cp + 2, "%x", &fwa);
+        if (numParam > 0)
+            {
+            fwa >>= 3;
+            }
         }
     else
         {
@@ -1401,7 +1801,7 @@ static void opCmdDumpCM(int fwa, int count)
             {
             strcpy(cp, "    ");
             cp += 4;
-            cp += sprintf(cp, "    %08x " FMT64_016x " ", fwa, word);
+            cp += sprintf(cp, "    " FMT32_08x " " FMT64_016x " ", fwa << 3, word);
             for (shiftCount = 56; shiftCount >= 0; shiftCount -= 8)
                 {
                 c     = (word >> shiftCount) & Mask8;
@@ -1479,7 +1879,7 @@ static void opCmdDumpPP(int ppNum, int fwa, int count)
     pp = &ppu[ppNum];
     for (limit = fwa + count; fwa < limit; fwa++)
         {
-        word  = pp->mem[fwa];
+        word = pp->mem[fwa];
         if (isCyber180)
             {
             n     = sprintf(buf, "%04o %06o .", fwa, word);
@@ -3368,11 +3768,13 @@ static void opCmdShowStateCp180(Cpu180Context *cpu)
 
     sprintf(opOutBuf, "    > P %02x " FMT64_012x, cpu->key, cpu->regP);
     opDisplay(opOutBuf);
+    opDisplayRma(cpu, cpu->regP);
     opDisplay("\n\n");
     for (i = 0; i < 16; i++)
         {
         sprintf(opOutBuf, "    > A%X " FMT64_012x, i, cpu->regA[i]);
         opDisplay(opOutBuf);
+        opDisplayRma(cpu, cpu->regA[i]);
         sprintf(opOutBuf,"   X%X " FMT64_016x "\n", i, cpu->regX[i]);
         opDisplay(opOutBuf);
         }
@@ -3398,8 +3800,10 @@ static void opCmdShowStateCp180(Cpu180Context *cpu)
     sprintf(opOutBuf, "    >  PSM %02x\n", cpu->regPsm);
     opDisplay(opOutBuf);
     opDisplay("\n");
-    sprintf(opOutBuf, "    >  UTP " FMT64_012x "  TP " FMT64_012x "\n", cpu->regUtp, cpu->regTp);
+    sprintf(opOutBuf, "    >  UTP " FMT64_012x "  TP " FMT64_012x, cpu->regUtp, cpu->regTp);
     opDisplay(opOutBuf);
+    opDisplayRma(cpu, cpu->regTp);
+    opDisplay("\n");
     sprintf(opOutBuf, "    >  DLP " FMT64_012x "  DI %02x  DM %02x\n", cpu->regDlp, cpu->regDi, cpu->regDm);
     opDisplay(opOutBuf);
     opDisplay("\n");
@@ -3407,8 +3811,10 @@ static void opCmdShowStateCp180(Cpu180Context *cpu)
     opDisplay(opOutBuf);
     for (i = 1; i < 16; i++)
         {
-        sprintf(opOutBuf, "    >  TOS[%x] " FMT64_012x "\n", i, cpu->regTos[i]);
+        sprintf(opOutBuf, "    >  TOS[%x] " FMT64_012x, i, cpu->regTos[i]);
         opDisplay(opOutBuf);
+        opDisplayRma(cpu, cpu->regTos[i]);
+        opDisplay("\n");
         }
     opDisplay("\n");
     sprintf(opOutBuf, "    >  MDW " FMT64_016x "  \n", cpu->regMdw);
@@ -3567,6 +3973,14 @@ static void opCmdShowStatePP(u32 ppMask)
                 pp->isLoad ? 'L' : '-',
                 pp->isStopped ? 'S' : '-');
             len = (int)strlen(buf);
+            if (pp->exchangingCpu >= 0)
+                {
+                buf[len++] = '0' + (char)pp->exchangingCpu;
+                }
+            else
+                {
+                buf[len++] = '-';
+                }
             while (len < 16) buf[len++] = ' ';
             buf[len] = '\0';
             opDisplay(buf);
@@ -4216,6 +4630,39 @@ static void opHelpStopHelpers(void)
     {
     opDisplay("    > 'stoph'        stop dtCyber helper processes.\n");
     opDisplay("    > 'stop_helpers'\n");
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Translate a CYBER 180 PVA to an RMA without affecting
+**                  condition registers or the UTP register, and display
+**                  the RMA
+**
+**  Parameters:     Name        Description.
+**                  ctx         Pointer to CYBER 180 CPU context
+**                  pva         PVA to translate
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void opDisplayRma(Cpu180Context *ctx, u64 pva)
+    {
+    char             buf[32];
+    MonitorCondition cond;
+    u32              pti;
+    u32              rma;
+    u64              savedUtp;
+
+    savedUtp    = ctx->regUtp;
+    if (cpu180PvaToRma(ctx, pva, AccessModeNone, &rma, &pti, &cond))
+        {
+        sprintf(buf, " [" FMT32_08x "]", rma);
+        opDisplay(buf);
+        }
+    else
+        {
+        opDisplay("           ");
+        }
+    ctx->regUtp = savedUtp;
     }
 
 /*--------------------------------------------------------------------------

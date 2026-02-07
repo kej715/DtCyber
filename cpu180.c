@@ -1227,6 +1227,24 @@ void cpu180CheckConditions(Cpu180Context *ctx)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Return the format type of an instruction.
+**
+**  Parameters:     Name          Description.
+**                  opcode        The opcode of which to get the format type
+**
+**  Returns:        The format type.
+**
+**------------------------------------------------------------------------*/
+u8 cpu180GetInstructionFormat(u8 opcode)
+    {
+    OpDispatch *odp;
+
+    odp = &decodeCpu180Opcode[opcode];
+
+    return (u8)odp->format;
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Initialise CYBER 180 CPU.
 **
 **  Parameters:     Name          Description.
@@ -2303,10 +2321,10 @@ bool cpu180PvaToRma(Cpu180Context *ctx, u64 pva, Cpu180AccessMode access, u32 *r
     **  a hash code that selects the starting point in the system page
     **  table to search for a matching page table entry.
     **/
-    segNum  = SegmentOf(pva);
-    if (segNum > ctx->regStl)
+    segNum = SegmentOf(pva);
+    if (segNum > ctx->regStl || ((features & HasRingZeroTest) != 0 && RingOf(pva) == 0))
         {
-        *cond = MCR60; // Invalid segment
+        *cond = MCR60; // Invalid segment / Ring 0
         ctx->regUtp = pva;
         return FALSE;
         }
@@ -3263,7 +3281,7 @@ static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool doIgnV
     spid    = ((u64)asid << 22) | ((u64)pageNum << ctx->spidShift);
 
 #if CcDebug > 0
-    tracePageInfo(ctx, hash, pageNum, idx, spid);
+    tracePageInfo(ctx, (u16)hash, pageNum, idx, spid);
 #endif
 
     /*

@@ -569,6 +569,29 @@ void cpuAcquireMemoryMutex(void)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Return the number of bits in an instruction.
+**
+**  Parameters:     Name        Description.
+**                  opcode      The opcode of the instruction
+**                  opI         The I field of the instruction
+**
+**  Returns:        The number of bits.
+**
+**------------------------------------------------------------------------*/
+u8 cpuGetInstructionLength(u8 opcode, u8 opI)
+    {
+    u8 length;
+
+    length = decodeCpuOpcode[opcode].length;
+    if (length == 0)
+        {
+        length = cpOp01Length[opI];
+        }
+
+    return length;
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Return CPU P register.
 **
 **  Parameters:     Name        Description.
@@ -818,6 +841,11 @@ void cpuStep(Cpu170Context *activeCpu)
                 ctx180->regMcr &= 0xfbff; // clear MCR53 CYBER 170 state exchange request
                 }
             }
+/*DELETE*/else
+/*DELETE*/    {
+/*DELETE*/    fprintf(stderr, "Can't exchange for PP%d : monitorCpu %d doChangeMode %d opOffset %d stopped %d\n",
+/*DELETE*/        activeCpu->ppRequestingExchange,monitorCpu,activeCpu->doChangeMode,activeCpu->opOffset,activeCpu->isStopped);
+/*DELETE*/    }
         cpuReleaseExchangeMutex();
         }
 
@@ -898,7 +926,7 @@ void cpuStep(Cpu170Context *activeCpu)
         activeCpu->regB[0] = 0;
 
 #if CcDebug == 1
-        traceCpu(activeCpu, activeCpu->oldRegP, activeCpu->opFm, activeCpu->opI, activeCpu->opJ, activeCpu->opK, activeCpu->opAddress);
+        traceCpu170(activeCpu, activeCpu->oldRegP, activeCpu->opFm, activeCpu->opI, activeCpu->opJ, activeCpu->opK, activeCpu->opAddress);
 #endif
 
         if (activeCpu->isStopped)
@@ -1314,6 +1342,12 @@ static void cpuDeadstart(Cpu170Context *activeCpu)
     activeCpu->isMonitorMode        = FALSE;
     activeCpu->isErrorExitPending   = FALSE;
     activeCpu->ppRequestingExchange = -1;
+    cpuAcquireExchangeMutex();
+    if (monitorCpu == activeCpu->id)
+        {
+        monitorCpu = -1;
+        }
+    cpuReleaseExchangeMutex();
     }
 
 /*--------------------------------------------------------------------------
@@ -3862,6 +3896,8 @@ static void cpOp01(Cpu170Context *activeCpu)
         else
             {
             activeCpu->opOffset = 60; // arrange to re-execute XJ
+/*DELETE*/if (activeCpu->ppRequestingExchange == -1)
+/*DELETE*/    fprintf(stderr,"Can't XJ : PP %d monitorCpu %d\n",activeCpu->ppRequestingExchange,monitorCpu);
             }
         cpuReleaseExchangeMutex();
         break;
