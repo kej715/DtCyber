@@ -145,7 +145,7 @@ static PortParam        *portVector;
 
 #if REAL_TIMING
 static bool frameStart;
-static u32  lastFrame;
+static u64  lastFrame;
 #endif
 
 #if DEBUG_PP || DEBUG_NET
@@ -675,7 +675,7 @@ static void niuOutIo(void)
 #if REAL_TIMING
         if (frameStart)
             {
-            if (rtcClock - lastFrame < (u32)16667)
+            if (rtcClock - lastFrame < (u64)16667)
                 {
                 activeChannel->full = TRUE;
 
