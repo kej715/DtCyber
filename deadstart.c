@@ -213,7 +213,7 @@ void deadStart(void)
 **------------------------------------------------------------------------*/
 static FcStatus deadFunc(PpWord funcCode)
     {
-    return (FcDeclined);
+    return FcDeclined;
     }
 
 /*--------------------------------------------------------------------------
@@ -228,7 +228,7 @@ static void deadIo(void)
     {
     if (!activeChannel->full)
         {
-        if (dsSequence == deadstartCount)
+        if (dsSequence >= deadstartCount)
             {
             activeChannel->active = FALSE;
             }

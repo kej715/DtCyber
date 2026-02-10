@@ -2432,13 +2432,14 @@ static void ppOpLPML(void)    // 1024
 static void ppOpINPN(void)    // 1026
     {
 /*DELETE*/if ((activePpu->opD & 1) == 0) {fprintf(stderr,"PP%02o INPN %o\n",activePpu->id < 10 ? activePpu->id : (activePpu->id - 10) + 020,activePpu->opD);fflush(stderr);}
+    cpuAcquireInterruptMutex();
     if ((activePpu->opD & 1) != 0) // memory port 0 selected
         {
-        cpus180[0].regMcr |= 0x0080; // set MCR56
+        cpus180[0].isExternalInterrupt = TRUE;
         }
     if ((activePpu->opD & 4) != 0 && cpuCount > 1) // memory port 2 selected
         {
-        cpus180[1].regMcr |= 0x0080;
+        cpus180[1].isExternalInterrupt = TRUE;
         }
 #if DEBUG
     else
@@ -2447,6 +2448,7 @@ static void ppOpINPN(void)    // 1026
             activePpu->id < 10 ? activePpu->id : (activePpu->id - 10) + 020, activePpu->opD);
         }
 #endif
+    cpuReleaseInterruptMutex();
     }
 
 static void ppOpLDDL(void)    // 1030

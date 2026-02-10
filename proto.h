@@ -113,6 +113,7 @@ void consoleShowStatus(void);
 */
 void cpuAcquireClockMutex(void);
 void cpuAcquireExchangeMutex(void);
+void cpuAcquireInterruptMutex(void);
 void cpuAcquireMemoryMutex(void);
 bool cpuDdpTransfer(u32 ecsAddress, CpWord *data, bool writeToEcs);
 bool cpuEcsFlagRegister(u32 ecsAddress);
@@ -123,6 +124,7 @@ void cpuPpReadMem(u32 address, CpWord *data);
 void cpuPpWriteMem(u32 address, CpWord data);
 void cpuReleaseClockMutex(void);
 void cpuReleaseExchangeMutex(void);
+void cpuReleaseInterruptMutex(void);
 void cpuReleaseMemoryMutex(void);
 void cpuStep(Cpu170Context *activeCpu);
 void cpuTerminate(void);

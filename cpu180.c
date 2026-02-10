@@ -2517,6 +2517,13 @@ void cpu180Step(Cpu180Context *activeCpu)
         **  First, check for interrupt conditions and initiate trap or
         **  exchange operations, or halt the CPU as required.
         */
+        if (activeCpu->isExternalInterrupt)
+            {
+            cpuAcquireInterruptMutex();
+            activeCpu->regMcr             |= 0x0080; // set External Interrupt
+            activeCpu->isExternalInterrupt = FALSE;
+            cpuReleaseInterruptMutex();
+            }
 /*DELETE*/ if ((activeCpu->regMcr & 0x00a0) == 0x00a0)
 /*DELETE*/     {
 /*DELETE*/     fprintf(stderr, "CPU%d MCR %04x MMR %04x P " FMT64_012x " mtr %d\n", activeCpu->id, activeCpu->regMcr, activeCpu->regMmr, activeCpu->regP, activeCpu->isMonitorMode);
@@ -4449,7 +4456,7 @@ static void cp180Op02(Cpu180Context *activeCpu)  // 02  EXCHANGE   MIGDS 2-132
     {
     if (activeCpu->isMonitorMode == FALSE)
         {
-        activeCpu->regMcr |= 0x20; // set System Call status bit
+        activeCpu->regMcr |= mcrDefns[MCR58].bitMask; // set System Call status bit
         }
     cpu180Exchange(activeCpu);
     }
@@ -4473,15 +4480,17 @@ static void cp180Op03(Cpu180Context *activeCpu)  // 03  INTRUPT    MIGDS 2-141
     // local memory port 2. Local memory port 0 is associated with CPU0, and local memory port 2
     // is associated with CPU 1.
     //
+    cpuAcquireInterruptMutex();
     Xk = activeCpu->regX[activeCpu->opK];
     if ((Xk & 1) != 0)
         {
-        cpus180[0].regMcr |= mcrDefns[MCR56].bitMask; // External interrupt
+        cpus180[0].isExternalInterrupt = TRUE;
         }
     if ((Xk & 4) != 0 && cpuCount > 1)
         {
-        cpus180[1].regMcr |= mcrDefns[MCR56].bitMask; // External interrupt
+        cpus180[1].isExternalInterrupt = TRUE;
         }
+    cpuReleaseInterruptMutex();
     }
 
 static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127

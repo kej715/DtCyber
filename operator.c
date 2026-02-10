@@ -1725,7 +1725,7 @@ static void opCmdDumpMemory(bool help, char *cmdParams)
     if (*cp == '0' && *(cp + 1) == 'x')
         {
         numParam = sscanf(cp + 2, "%x", &fwa);
-        if (numParam > 0)
+        if (numParam > 0 && strcasecmp(memType, "CM") == 0)
             {
             fwa >>= 3;
             }

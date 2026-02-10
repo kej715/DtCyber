@@ -234,12 +234,14 @@ static FILE *emLog = NULL;
 static HANDLE clockMutex;
 static HANDLE exchangeMutex;
 static HANDLE flagRegMutex;
+static HANDLE interruptMutex;
 static HANDLE memoryMutex;
 #else
-static pthread_mutex_t clockMutex    = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t exchangeMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t flagRegMutex  = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t memoryMutex   = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t clockMutex     = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t exchangeMutex  = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t flagRegMutex   = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t interruptMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t memoryMutex    = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 /*
@@ -553,6 +555,22 @@ void cpuAcquireExchangeMutex(void)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Acquire lock on interrupt mutex
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpuAcquireInterruptMutex(void)
+    {
+    if (cpuCount > 1)
+        {
+        cpuAcquireMutex(&interruptMutex);
+        }
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Acquire lock on memory mutex
 **
 **  Parameters:     Name        Description.
@@ -638,6 +656,22 @@ void cpuReleaseExchangeMutex(void)
     if (cpuCount > 1)
         {
         cpuReleaseMutex(&exchangeMutex);
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Release lock on interrupt mutex
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpuReleaseInterruptMutex(void)
+    {
+    if (cpuCount > 1)
+        {
+        cpuReleaseMutex(&interruptMutex);
         }
     }
 
@@ -800,6 +834,13 @@ void cpuStep(Cpu170Context *activeCpu)
         if (ctx180->isStopped)
             {
             return;
+            }
+        if (ctx180->isExternalInterrupt)
+            {
+            cpuAcquireInterruptMutex();
+            ctx180->regMcr             |= 0x0080; // set External Interrupt
+            ctx180->isExternalInterrupt = FALSE;
+            cpuReleaseInterruptMutex();
             }
         ctx180->pendingAction = Rni;
         if ((ctx180->regMcr & 0xbbde) != 0 || ctx180->regUcr != 0)
@@ -1366,16 +1407,6 @@ static void cpuExchangeJump(Cpu170Context *activeCpu, u32 address, bool doChange
     {
     volatile CpWord *mem;
     Cpu170Context   tmp;
-
-    /*
-    **  Only perform exchange jump on instruction boundary or when stopped.
-    */
-/*
- *  if ((activeCpu->opOffset != 60) && !activeCpu->isStopped)
- *      {
- *      return;
- *      }
- */
 
 #if CcDebug == 1
     traceExchange170(activeCpu, address, "Outgoing", FALSE);
@@ -2426,12 +2457,13 @@ static void cpuEcsWord(Cpu170Context *activeCpu, bool writeToEcs)
             /*
             **  Exit mode selected.
             */
-            activeCpu->isStopped = TRUE;
             if (isCyber180 && activeCpu->isMonitorMode)
                 {
                 cpuInitiateExitTo180(activeCpu);
                 return;
                 }
+
+            activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
                 {
@@ -3884,7 +3916,6 @@ static void cpOp01(Cpu170Context *activeCpu)
             {
             bool is180xch        = isCyber180 && activeCpu->isMonitorMode && (activeCpu->regX[0] & 040000000000000000000) != 0;
             activeCpu->regP      = (activeCpu->regP + 1) & Mask18;
-            activeCpu->isStopped = TRUE;
             cpuExchangeJump(activeCpu,
                             activeCpu->isMonitorMode ? activeCpu->opAddress + activeCpu->regB[activeCpu->opJ] : activeCpu->regMa,
                             TRUE);
