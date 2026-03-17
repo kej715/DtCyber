@@ -414,7 +414,7 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Show NIU status (operator interface).
+**  Purpose:        Show device status (operator interface).
 **
 **  Parameters:     Name        Description.
 **
