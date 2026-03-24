@@ -341,7 +341,7 @@ static OpNetTypeEntry netTypes[] =
 static void            (*opCmdFunction)(bool help, char *cmdParams);
 static char            opCmdParams[256];
 static OpCmdStackEntry opCmdStack[MaxCmdStkSize];
-static int             opCmdStackPtr = 0;
+static int             opCmdStackPtr = -1;
 #if defined(_WIN32)
 static SOCKET opListenHandle = 0;
 #else
@@ -391,6 +391,10 @@ void opDisplay(char *msg)
     {
     OpCmdStackEntry *ep;
 
+    if (opCmdStackPtr < 0)
+        {
+        return;
+        }
     ep = &opCmdStack[opCmdStackPtr];
     if (ep->netConn == 0)
         {
@@ -550,16 +554,17 @@ static void *opThread(void *param)
     char            *pos;
     char            *sp;
 
-    ep          = &opCmdStack[opCmdStackPtr];
-    ep->in      = fileno(stdin);
-    ep->out     = fileno(stdout);
-    ep->netConn = 0;
+    ep            = &opCmdStack[0];
+    ep->in        = fileno(stdin);
+    ep->out       = fileno(stdout);
+    ep->netConn   = 0;
+    opCmdStackPtr = 0;
 
     opDisplayVersion();
 
     opDisplay("\n\n");
     opDisplay("---------------------------\n");
-    opDisplay("DTCYBER: Operator interface\n");
+    opDisplay("DtCyber: Operator interface\n");
     opDisplay("---------------------------\n\n");
     opDisplay("\nPlease enter 'help' to get a list of commands\n");
 
