@@ -753,7 +753,6 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
         else
             {
             logDtError(LogErrorLocation, "Unrecognized option name %s\n", opt);
-
             exit(1);
             }
         }
@@ -856,6 +855,7 @@ static void dd8xxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSi
         fcb = dd8xxMount(deviceName, dp);
         if (fcb == NULL)
             {
+            logDtError(LogErrorLocation, "Failed to open %s\n", deviceName);
             exit(1);
             }
         ds->fcb[unitNo] = fcb;
