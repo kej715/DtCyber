@@ -876,7 +876,7 @@ static void mux667xCheckIo(MuxParam *mp)
     PortGroup      *gp;
     int            i;
     int            maxFd;
-    int            n;
+    ssize_t        n;
     int            optEnable = 1;
     PortParam      *pp;
     fd_set         readFds;

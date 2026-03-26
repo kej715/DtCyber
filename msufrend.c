@@ -931,7 +931,7 @@ static void writeToOperTerm(u8 ch)
  */
 static int sendToFSock(PortContext *pp, u8 bufout[], int nOutBytes)
     {
-    int bytesSent;
+    ssize_t bytesSent;
 
     if (FPORTCONSOLE == pp->id)
         {
@@ -959,7 +959,7 @@ static int sendToFSock(PortContext *pp, u8 bufout[], int nOutBytes)
                 }
 #endif
 
-            return bytesSent;
+            return (int)bytesSent;
             }
         else
             {
@@ -3257,10 +3257,10 @@ static void msufrendCheckIo()
                 {
                 if (FD_ISSET(pp->fd, &readFds))
                     {
-                    int nbytes = recv(pp->fd, (char *)buf, MIN_FREE_PORT_BUFFERS, 0);
+                    ssize_t nbytes = recv(pp->fd, (char *)buf, MIN_FREE_PORT_BUFFERS, 0);
                     if (nbytes > 0)
                         {
-                        processInboundTelnet(pp, buf, nbytes);
+                        processInboundTelnet(pp, buf, (int)nbytes);
                         }
                     else
                         {

@@ -1696,7 +1696,7 @@ static void mt362xFuncReadBkw(void)
     u32       recLen2;
     i8        unitNo;
     TapeParam *tp;
-    i32       position;
+    long      position;
 
     unitNo = active3000Device->selectedUnit;
     tp     = (TapeParam *)active3000Device->context[unitNo];
@@ -2022,7 +2022,7 @@ static void mt362xFuncBackspace(void)
     u32       recLen2;
     i8        unitNo;
     TapeParam *tp;
-    i32       position;
+    long      position;
 
     unitNo = active3000Device->selectedUnit;
     tp     = (TapeParam *)active3000Device->context[unitNo];

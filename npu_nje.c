@@ -1806,7 +1806,7 @@ static void npuNjePrepareOutput(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 static int npuNjeSend(Pcb *pcbp, u8 *dp, int len)
     {
-    int n;
+    ssize_t n;
 
     n = send(pcbp->connFd, dp, len, 0);
     pcbp->controls.nje.lastXmit = getSeconds();
@@ -1828,7 +1828,7 @@ static int npuNjeSend(Pcb *pcbp, u8 *dp, int len)
         }
 #endif
 
-    return n;
+    return (int)n;
     }
 
 /*--------------------------------------------------------------------------

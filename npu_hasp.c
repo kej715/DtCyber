@@ -4073,7 +4073,7 @@ static int npuHaspAppendRecord(Pcb *pcbp, u8 *data, int len)
 **------------------------------------------------------------------------*/
 static int npuHaspSend(Pcb *pcbp, u8 *data, int len)
     {
-    int n;
+    ssize_t n;
 
     n = send(pcbp->connFd, data, len, 0);
     if (n >= 0)
@@ -4092,7 +4092,7 @@ static int npuHaspSend(Pcb *pcbp, u8 *data, int len)
 #endif
         }
 
-    return n;
+    return (int)n;
     }
 
 #if DEBUG

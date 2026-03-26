@@ -836,7 +836,7 @@ void cdcnetCheckStatus(void)
     int                i;
     u32                localAddr;
     u16                localPort;
-    int                n;
+    ssize_t            n;
     int                optEnable = 1;
     u32                peerAddr;
     u16                peerPort;
@@ -2659,7 +2659,7 @@ static void cdcnetTcpSendDataIndication(Gcb *gp)
     {
     u8          blockType;
     NpuBuffer   *bp;
-    int         n;
+    ssize_t     n;
     int         recvSize;
     TcpGwStatus status;
 
@@ -3011,7 +3011,7 @@ static bool cdcnetUdpSendDownlineData(Gcb *gp, NpuBuffer *bp)
     {
     u32                ipAddress;
     int                len;
-    int                n;
+    ssize_t            n;
     u16                port;
     struct sockaddr_in server;
 
@@ -3080,15 +3080,14 @@ static void cdcnetUdpSendUplineData(Gcb *gp)
     struct sockaddr_in client;
     u8                 *dp;
     u32                ipAddress;
-
 #if defined(_WIN32)
-    int len = 0;
+    int                len = 0;
 #else
-    socklen_t len;
+    socklen_t          len;
 #endif
-    int n;
-    u16 port;
-    int recvSize;
+    ssize_t            n;
+    u16                port;
+    int                recvSize;
 
     bp = npuBipBufGet();
     if (bp == NULL)

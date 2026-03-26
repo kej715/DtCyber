@@ -118,7 +118,6 @@ static void npuAsyncProcessUplineNormal(Tcb *tp);
 #if DEBUG
 static void npuAsyncLogBytes(u8 *bytes, int len);
 static void npuAsyncLogFlush(void);
-static void npuAsyncPrintStackTrace(FILE *fp);
 
 #endif
 
@@ -679,7 +678,7 @@ void npuAsyncTryOutput(Pcb *pcbp)
     {
     NpuBuffer *bp;
     u8        *data;
-    int       result;
+    ssize_t   result;
     Tcb       *tp;
 
     tp = npuAsyncFindTcb(pcbp);

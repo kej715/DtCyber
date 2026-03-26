@@ -778,9 +778,9 @@ static void consoleDisconnect(void)
 **------------------------------------------------------------------------*/
 static void consoleFlushCycleData(int first, int limit)
     {
-    u64 currentTime;
-    int len;
-    int n;
+    u64     currentTime;
+    int     len;
+    ssize_t n;
 
     if (connFd != INVALID_SOCKET)
         {
@@ -807,7 +807,7 @@ static void consoleFlushCycleData(int first, int limit)
                 else // output buffer overflow -- replace contents with latest cycle data
                     {
                     memcpy(outBuf, &cycleDataBuf[first], n);
-                    outBufIn = n;
+                    outBufIn = (int)n;
                     }
                 earliestCycleFlush = currentTime + minRefreshInterval;
                 consoleInitCycleData();
@@ -882,7 +882,7 @@ static void consoleInitCycleData(void)
 static void consoleNetIo(void)
     {
     u8             ch;
-    int            n;
+    ssize_t        n;
     fd_set         readFds;
     struct timeval timeout;
 

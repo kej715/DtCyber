@@ -1071,7 +1071,7 @@ static void csFeiPackPpBuffer(FeiParam *feip, u32 maxWords)
 **------------------------------------------------------------------------*/
 static void csFeiReceiveData(FeiParam *feip)
     {
-    int n;
+    ssize_t n;
 
     n = recv(feip->fd, &feip->inputBuffer.data[feip->inputBuffer.in], sizeof(feip->inputBuffer.data) - feip->inputBuffer.in, 0);
     if (n <= 0)
@@ -1130,8 +1130,8 @@ static void csFeiReset(FeiParam *feip)
 **------------------------------------------------------------------------*/
 static void csFeiSendData(FeiParam *feip)
     {
-    int len;
-    int n;
+    int     len;
+    ssize_t n;
 
     len = feip->outputBuffer.in - feip->outputBuffer.out;
     n   = send(feip->fd, &feip->outputBuffer.data[feip->outputBuffer.out], len, 0);

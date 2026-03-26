@@ -703,7 +703,7 @@ void npuNetCheckStatus(void)
             /*
             **  Receive a block of data.
             */
-            pcbp->inputCount = recv(pcbp->connFd, pcbp->inputData, MaxBuffer, 0);
+            pcbp->inputCount = (int)recv(pcbp->connFd, pcbp->inputData, MaxBuffer, 0);
             if (pcbp->inputCount <= 0)
                 {
                 notifyNetDisconnect[pcbp->ncbp->connType](pcbp);

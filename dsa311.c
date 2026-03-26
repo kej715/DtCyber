@@ -1065,8 +1065,8 @@ static void dsa311InitiateConnection(Dsa311Context *cp)
 **------------------------------------------------------------------------*/
 static void dsa311Receive(Dsa311Context *cp)
     {
-    u8  b;
-    int n;
+    u8      b;
+    ssize_t n;
 
     n = recv(cp->fd, &cp->sktInBuf.data[cp->sktInBuf.in], SktInBufSize - cp->sktInBuf.in, 0);
     if (n <= 0)
@@ -1190,7 +1190,7 @@ static void dsa311Reset(Dsa311Context *cp)
 **------------------------------------------------------------------------*/
 static void dsa311Send(Dsa311Context *cp)
     {
-    int n;
+    ssize_t n;
 
     n = send(cp->fd, &cp->sktOutBuf.data[cp->sktOutBuf.out], cp->sktOutBuf.in - cp->sktOutBuf.out, 0);
     if (n < 0)

@@ -552,7 +552,7 @@ static void initCyber(char *config)
     char *cp;
     long cpus;
     long cpuSN;
-    long defaultSN;
+    int  defaultSN;
     char dummy[256];
     bool dummyBool;
     long dummyInt;
@@ -761,7 +761,7 @@ static void initCyber(char *config)
             exit(1);
             }
         memory = 0;
-        cp = dummy;
+        cp     = dummy;
         while (*cp != '\0')
             {
             if (isdigit(*cp))
@@ -992,7 +992,7 @@ static void initCyber(char *config)
     /*
     **  Initialise CPU.
     */
-    cpuInit(model, serialNumbers, memory, ecsBanks + esmBanks, ecsBanks != 0 ? ECS : ESM);
+    cpuInit(model, serialNumbers, (u32)memory, (u32)(ecsBanks + esmBanks), ecsBanks != 0 ? ECS : ESM);
     if (ecsBanks + esmBanks == 0)
         {
         fprintf(stdout, "(init   ) Successfully configured model %s with %d CPU%s.\n", model, cpuCount, cpuCount > 1 ? "'s" : "");

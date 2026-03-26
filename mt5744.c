@@ -1892,9 +1892,9 @@ static void mt5744ReadBlockIdRequestCallback(TapeParam *tp)
 **------------------------------------------------------------------------*/
 static void mt5744ReceiveTapeServerResponse(TapeParam *tp)
     {
-    char *eor;
-    int  n;
-    int  status;
+    char    *eor;
+    ssize_t n;
+    int     status;
 
     n = recv(tp->fd, &tp->inputBuffer.data[tp->inputBuffer.in], sizeof(tp->inputBuffer.data) - tp->inputBuffer.in, 0);
     if (n <= 0)
@@ -1986,7 +1986,7 @@ static void mt5744ReadRequestCallback(TapeParam *tp)
             {
             return;
             }
-        tp->recordLength = mt5744PackBytes(tp, (u8 *)eor, len);
+        tp->recordLength = mt5744PackBytes(tp, (u8 *)eor, (int)len);
         eor      += len;
         tp->isBOT = FALSE;
         break;
@@ -2223,8 +2223,8 @@ static void mt5744RewindUnloadRequestCallback(TapeParam *tp)
 **------------------------------------------------------------------------*/
 static void mt5744SendTapeServerRequest(TapeParam *tp)
     {
-    int len;
-    int n;
+    int     len;
+    ssize_t n;
 
     len = tp->outputBuffer.in - tp->outputBuffer.out;
     n   = send(tp->fd, &tp->outputBuffer.data[tp->outputBuffer.out], len, 0);

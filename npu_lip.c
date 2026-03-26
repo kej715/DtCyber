@@ -503,9 +503,9 @@ void npuLipProcessDownlineData(NpuBuffer *bp)
 **------------------------------------------------------------------------*/
 static bool npuLipSendConnectRequest(Pcb *pcbp)
     {
-    char request[256];
-    int  len;
-    int  n;
+    char    request[256];
+    int     len;
+    ssize_t n;
 
     len = sprintf(request, "CONNECT %s %u %u\n", npuNetHostID, npuSvmCouplerNode, pcbp->controls.lip.remoteNode);
     n   = send(pcbp->connFd, request, len, 0);
@@ -907,7 +907,7 @@ static void npuLipSendQueuedData(Pcb *pcbp)
     u8        blockLen[2];
     NpuBuffer *bp;
     time_t    currentTime;
-    int       n;
+    ssize_t   n;
     static u8 ping[] = { 0, 0 };
 
 #if !defined(_WIN32)
