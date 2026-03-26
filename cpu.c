@@ -107,7 +107,6 @@ static void cpuReleaseMutex(pthread_mutex_t *mutexp);
 
 static u32  cpuAdd18(u32 op1, u32 op2);
 static u32  cpuAdd24(u32 op1, u32 op2);
-static u32  cpuAddRa(Cpu170Context *activeCpu, u32 op);
 static void cpuCmuCompareCollated(Cpu170Context *activeCpu);
 static void cpuCmuCompareUncollated(Cpu170Context *activeCpu);
 static bool cpuCmuGetByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 *byte);
@@ -882,11 +881,6 @@ void cpuStep(Cpu170Context *activeCpu)
                 ctx180->regMcr &= 0xfbff; // clear MCR53 CYBER 170 state exchange request
                 }
             }
-/*DELETE*/ //else
-/*DELETE*/ //    {
-/*DELETE*/ //    fprintf(stderr, "Can't exchange for PP%d : monitorCpu %d doChangeMode %d opOffset %d stopped %d\n",
-/*DELETE*/ //        activeCpu->ppRequestingExchange,monitorCpu,activeCpu->doChangeMode,activeCpu->opOffset,activeCpu->isStopped);
-/*DELETE*/ //    }
         cpuReleaseExchangeMutex();
         }
 
@@ -933,8 +927,8 @@ void cpuStep(Cpu170Context *activeCpu)
         if (length == 15)
             {
             activeCpu->opK       = (u8)((activeCpu->opWord >> (activeCpu->opOffset - 15)) & Mask3);
-            activeCpu->opAddress = 0;
             activeCpu->opOffset -= 15;
+            activeCpu->opAddress = 0;
             }
         else
             {
@@ -947,8 +941,8 @@ void cpuStep(Cpu170Context *activeCpu)
                 break;
                 }
             activeCpu->opK       = (u8)0;
-            activeCpu->opAddress = (u32)((activeCpu->opWord >> (activeCpu->opOffset - 30)) & Mask18);
             activeCpu->opOffset -= 30;
+            activeCpu->opAddress = (u32)((activeCpu->opWord >> activeCpu->opOffset) & Mask18);
             }
 
         /*
@@ -998,12 +992,9 @@ void cpuStep(Cpu170Context *activeCpu)
         /*
         **  Exit if CPU has switched to CYBER 180 state
         */
-        if (isCyber180)
+        if (isCyber180 && ctx180->regVmid == 0)
             {
-            if (ctx180->regVmid == 0)
-                {
-                return;
-                }
+            return;
             }
         } while (activeCpu->opOffset != 60 && !activeCpu->isStopped);
 
@@ -1398,7 +1389,6 @@ static void cpuDeadstart(Cpu170Context *activeCpu)
 **                  activeCpu    Pointer to CPU context
 **                  address      Exchange address
 **                  doChangeMode TRUE if monitor mode flag should change
-**                  isXJ         TRUE if exchange initiated by XJ instruction
 **
 **  Returns:        Nothing.
 **
@@ -1604,10 +1594,10 @@ static void cpuExchangeTo180(Cpu170Context *activeCpu, bool setSysCall)
         ctx180->regMcr |= 0x20; // set system call status bit
         }
     cpu180Store170Xp(ctx180, ctx180->regJps >> 3);
-    ctx180->isMonitorMode = TRUE;
     cpu180Load180Xp(ctx180, ctx180->regMps >> 3);
-    ctx180->nextKey = ctx180->key;
-    ctx180->nextP   = ctx180->regP;
+    ctx180->isMonitorMode = TRUE;
+    ctx180->nextKey       = ctx180->key;
+    ctx180->nextP         = ctx180->regP;
     }
 
 /*--------------------------------------------------------------------------
@@ -1744,6 +1734,16 @@ static void cpuInitiateExitTo180(Cpu170Context *activeCpu)
         cpMem[activeCpu->regRaCm] = ((CpWord)activeCpu->exitCondition << 48) | ((CpWord)activeCpu->regP << 30);
         }
     cpus180[activeCpu->id].pendingAction = Exch;
+/*DELETE*/if (activeCpu->isMonitorMode)
+/*DELETE*/    {
+/*DELETE*/    fprintf(stderr, "\nCPU%d Error exit in monitor mode, condition %04o RA %08o FL %08o P %06o opWord %020llo offset %d\n",
+/*DELETE*/       activeCpu->id,activeCpu->exitCondition,activeCpu->regRaCm,activeCpu->regFlCm,activeCpu->regP,activeCpu->opWord,activeCpu->opOffset);
+/*DELETE*/    fputs("C170 state:\n",stderr);
+/*DELETE*/    tracePrint170Registers(activeCpu, stderr);
+/*DELETE*/    fputs("\nC180 state:\n",stderr);
+/*DELETE*/    tracePrint180Registers(&cpus180[activeCpu->id], stderr);
+/*DELETE*/    traceStack(stderr);
+/*DELETE*/    }
     }
 
 /*--------------------------------------------------------------------------
@@ -2151,7 +2151,7 @@ static void cpuRegASemantics(Cpu170Context *activeCpu)
 **  Returns:        18 or 21 bit result.
 **
 **------------------------------------------------------------------------*/
-static u32 cpuAddRa(Cpu170Context *activeCpu, u32 op)
+u32 cpuAddRa(Cpu170Context *activeCpu, u32 op)
     {
     u32 acc18;
     u32 acc21;
@@ -3914,21 +3914,29 @@ static void cpOp01(Cpu170Context *activeCpu)
         if ((activeCpu->ppRequestingExchange == -1)
             && ((monitorCpu == -1) || (monitorCpu == activeCpu->id)))
             {
-            bool is180xch        = isCyber180 && activeCpu->isMonitorMode && (activeCpu->regX[0] & 040000000000000000000) != 0;
-            activeCpu->regP      = (activeCpu->regP + 1) & Mask18;
+            bool is180xch   = isCyber180 && activeCpu->isMonitorMode && (activeCpu->regX[0] & 040000000000000000000) != 0;
+            activeCpu->regP = (activeCpu->regP + 1) & Mask18;
             cpuExchangeJump(activeCpu,
                             activeCpu->isMonitorMode ? activeCpu->opAddress + activeCpu->regB[activeCpu->opJ] : activeCpu->regMa,
                             TRUE);
             if (is180xch)
                 {
                 cpuExchangeTo180(activeCpu, TRUE);
+#if 0
+/*DELETE*/if (activeCpu->regRaCm != 0036747)
+/*DELETE*/    {
+/*DELETE*/    fprintf(stderr,"\nCPU%d explicit exchange to 180\n",activeCpu->id);
+/*DELETE*/    fputs("CY170 state\n",stderr);
+/*DELETE*/    tracePrint170Registers(activeCpu,stderr);
+/*DELETE*/    fputs("\nCY180 state\n",stderr);
+/*DELETE*/    tracePrint180Registers(&cpus180[activeCpu->id],stderr);
+/*DELETE*/    }
+#endif
                 }
             }
         else
             {
             activeCpu->opOffset = 60; // arrange to re-execute XJ
-/*DELETE*/ //if (activeCpu->ppRequestingExchange == -1)
-/*DELETE*/ //    fprintf(stderr,"Can't XJ : PP %d monitorCpu %d\n",activeCpu->ppRequestingExchange,monitorCpu);
             }
         cpuReleaseExchangeMutex();
         break;

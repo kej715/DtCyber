@@ -140,6 +140,7 @@
 #define pmk_validate_previous_save_area  1703
 #define pmk_push_task_debug_mode         1708
 #define pmk_set_task_debug_mode          1710
+#define pmk_set_task_debug_on            1711
 #define pmk_establish_debug_cff          1712
 #define pmk_change_job_library_list      1720
 #define pmk_pop_inhibit_termination      1721
@@ -162,7 +163,6 @@
 #define mtk_170_entry_exit               4002
 #define mtk_monitor_mode_trap            4003
 #define mtk_job_mode_trap                4004
-//
 
 //#define TRACE_INST_LIST   { 0x77, 0xe9 }
 #define TRACE_INST_COUNT  10
@@ -185,6 +185,11 @@
     pmk_validate_previous_save_area \
     }
 */
+#define TRACE_KEYPOINT_LIST         \
+    {                               \
+    4050, \
+    0 \
+    }
 #endif
 
 /*
@@ -2030,7 +2035,7 @@ void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
     case 0xc1:
     case 0xc2:
     case 0xc3:
-        ctx->regFlags = (ctx->regFlags & 0xffc0) | (word & Mask2);
+        ctx->regFlags = (ctx->regFlags & 0xfffc) | (word & Mask2);
         break;
     //  Keypoint Enable addresses
     case 0xca:
@@ -2593,7 +2598,7 @@ void cpu180Step(Cpu180Context *activeCpu)
                     }
                 else
                     {
-                    return;
+                    continue;
                     }
                 break;
             case jkQ:
@@ -2604,7 +2609,7 @@ void cpu180Step(Cpu180Context *activeCpu)
                     }
                 else
                     {
-                    return;
+                    continue;
                     }
                 break;
             default:
@@ -2653,6 +2658,10 @@ void cpu180Step(Cpu180Context *activeCpu)
             activeCpu->regP    = activeCpu->nextP;
 
 #if CcDebug > 0
+/*DELETE*/if (activeCpu->opCode == 0xa9 && (activeCpu->regP - oldRegP) != 4)
+/*DELETE*/    {
+/*DELETE*/    fprintf(stderr, "SHFX P %012llx nextP %012llx\n", oldRegP, activeCpu->regP);
+/*DELETE*/    }
             traceCpu180(activeCpu, oldRegP, activeCpu->opCode, activeCpu->opI, activeCpu->opJ, activeCpu->opK, activeCpu->opD, activeCpu->opQ);
 #endif
             }
@@ -3308,8 +3317,6 @@ static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool doIgnV
         if (((flags & 0x8) != 0 || doIgnValidity) && spid == ((pte >> 22) & Mask38))
             {
             found = TRUE;
-/*DELETE*/ //if (doIgnValidity && (flags & 0x8) != 0)
-/*DELETE*/ //  fprintf(stderr, "LPAGE CPU%d SVA %04x%08x page found and valid PTA %08x PTI %08x count %d\n", ctx->id, asid, byteNum, ctx->regPta, idx<<3, n);
             break;
             }
         else if ((flags & 0x4) == 0 || n >= 32)
@@ -3321,16 +3328,12 @@ static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool doIgnV
         idx += 1;
         if (idx >= limit)
             {
-/*DELETE*/if (doIgnValidity)
-/*DELETE*/  fprintf(stderr, "LPAGE CPU%d SVA %04x%08x page table wrap PTA %08x PTI %08x count %d\n", ctx->id, asid, byteNum, ctx->regPta, idx<<3, n);
             idx = ctx->regPta >> 3;
             }
         }
 
     *pti   = idx;
     *count = n;
-/*DELETE*/ //if (doIgnValidity && found == FALSE)
-/*DELETE*/ //  fprintf(stderr, "LPAGE CPU%d SVA %04x%08x page not found PTA %08x PTI %08x count %d\n", ctx->id, asid, byteNum, ctx->regPta, idx<<3, n);
 
     return found;
     }
@@ -3359,7 +3362,7 @@ static void cpu180Get170State(Cpu180Context *ctx)
     ring         = ctx->regP & RingMask;
     ctx->regA[3] = ring | ((u64)ctx170->exitMode << 20) | ctx170->regRaCm;
     ctx->regA[4] = ring | (ctx170->isMonitorMode ? (u64)1 << 32 : 0) | ctx170->regFlCm;
-    ctx->regA[5] = ring | ctx170->regMa;
+    ctx->regA[5] = ring | (ctx170->isStopped ? (u64)1 << 32 : 0) | ctx170->regMa;
     ctx->regA[6] = ring | ctx170->regRaEcs;
     ctx->regA[7] = ring | ctx170->regFlEcs;
     for (i = 0; i < 8; i++)
@@ -4100,10 +4103,34 @@ static void cpu180Set170State(Cpu180Context *ctx, u64 regP)
         {
         ctx170->regX[i] = ctx->regX[i + 8] & Mask60;
         }
-    wordAddr          = (regP & Mask32) >> 3;
-    ctx170->regP      = wordAddr - ctx170->regRaCm;
+    wordAddr          = (regP >> 3) & Mask21;
+    ctx170->regP      = (wordAddr - ctx170->regRaCm) & Mask18;
     ctx170->opOffset  = 60 - (((regP & Mask3) >> 1) * 15);
-    ctx170->opWord    = cpMem[wordAddr];
+/*DELETE*/if (ctx170->opOffset != 60)
+/*DELETE*/    {
+/*DELETE*/    fprintf(stderr,"cpu180Set170State: opOffset %d\n",ctx170->opOffset);
+/*DELETE*/    traceStack(stderr);
+/*DELETE*/    }
+/*DELETE*/if (ctx170->regP >= ctx170->regFlCm)
+/*DELETE*/    {
+/*DELETE*/    u32 rma;
+/*DELETE*/    if (tracePvaToRma(ctx, regP, &rma))
+/*DELETE*/        {
+/*DELETE*/        fprintf(stderr,"cpu180Set170State: P180 %016llx [%08x] P170 %06o RA %07o FL %07o\n",
+/*DELETE*/            regP,rma,ctx170->regP,ctx170->regRaCm,ctx170->regFlCm);
+/*DELETE*/        }
+/*DELETE*/    else
+/*DELETE*/        {
+/*DELETE*/        fprintf(stderr,"cpu180Set170State: P180 %016llx P170 %06o RA %07o FL %07o\n",
+/*DELETE*/            regP,ctx170->regP,ctx170->regRaCm,ctx170->regFlCm);
+/*DELETE*/        }
+/*DELETE*/    fputs("\nC170 state:\n",stderr);
+/*DELETE*/    tracePrint170Registers(ctx170, stderr);
+/*DELETE*/    fputs("\nC180 state:\n",stderr);
+/*DELETE*/    tracePrint180Registers(ctx, stderr);
+/*DELETE*/    traceStack(stderr);
+/*DELETE*/    }
+    ctx170->opWord    = cpMem[cpuAddRa(ctx170, ctx170->regP)];
     ctx170->isStopped = FALSE;
     if ((features & HasInstructionStack) != 0)
         {
@@ -8656,6 +8683,11 @@ static void cpu180ProcessKeypointEntry(Cpu180Context *ctx, u16 kpt)
             traceCpuPrint(&cpus170[ctx->id], buf);
             traceDumpStackFrames(ctx, 8);
             }
+        else
+            {
+            sprintf(buf, "Keypoint entry 0x%04x (%s)", kpt, cpu180KeypointToStr(kpt));
+            traceCpuPrint(&cpus170[ctx->id], buf);
+            }
         }
     }
 
@@ -8696,6 +8728,11 @@ static void cpu180ProcessKeypointExit(Cpu180Context *ctx, u16 kpt)
                 traceInstCount[ctx->id] = TRACE_INST_COUNT;
                 }
             keypointStackPtr[ctx->id] = stkPtr;
+            }
+        else
+            {
+            sprintf(buf, "Keypoint exit 0x%04x (%s)", kpt, cpu180KeypointToStr(kpt));
+            traceCpuPrint(&cpus170[ctx->id], buf);
             }
         }
     }
@@ -8807,6 +8844,7 @@ static char *cpu180KeypointToStr(u16 kpt)
     case pmk_validate_previous_save_area: return "pmp$validate_previous_save_area";
     case pmk_push_task_debug_mode:        return "pmp$push_task_debug_mode";
     case pmk_set_task_debug_mode:         return "pmp$set_task_debug_mode";
+    case pmk_set_task_debug_on:           return "pmp$set_task_debug_on";
     case pmk_establish_debug_cff:         return "pmp$establish_debug_cff";
     case pmk_change_job_library_list:     return "pmp$change_job_library_list";
     case pmk_pop_inhibit_termination:     return "pmp$pop_inhibit_termination";
