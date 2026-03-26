@@ -27,7 +27,7 @@
     end_of_information  in    = (0)
   
 "   CURSOR POSITIONING INFORMATION                                            "
-    cursor_pos_encoding      bias  = (0)   type = ansi_cursor
+    cursor_pos_encoding      bias  = (1)   type = ansi_cursor
     cursor_pos_column_first  value = FALSE
     cursor_pos_column_length value = (0)
     cursor_pos_row_length    value = (0)
