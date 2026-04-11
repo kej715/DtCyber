@@ -36,7 +36,7 @@
 #include "types.h"
 #include "proto.h"
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__GNUC__)
 #include <execinfo.h>
 #endif
 
@@ -3054,7 +3054,7 @@ void traceEnd(void)
 **------------------------------------------------------------------------*/
 void traceStack(FILE *fp)
     {
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__GNUC__)
     void *callstack[128];
     int  i;
     int  frames;

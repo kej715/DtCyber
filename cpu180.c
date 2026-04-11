@@ -1428,11 +1428,9 @@ void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa)
     word           = cpMem[xpa++];
     ctx->regA[4]   = word & Mask48;
     ctx->regUcr    = word >> 48;
-//  ctx->regUcr    = (word >> 48) & ~ctx->regUmr;
     word           = cpMem[xpa++];
     ctx->regA[5]   = word & Mask48;
     ctx->regMcr    = word >> 48;
-//  ctx->regMcr    = (word >> 48) & ~(ctx->regMmr | 0x0021); // clear masked bits and status bits
     word           = cpMem[xpa++];
     ctx->regA[6]   = word & Mask48;
     ctx->regLpid   = (word >> 48) & Mask8;
@@ -1489,6 +1487,14 @@ void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa)
 #if CcDebug > 0
     traceExchange180(ctx, xpab, "Load");
 #endif
+/*DELETE*/if ((ctx->regA[0] >> 32) != (ctx->regA[1] >> 32)
+/*DELETE*/    && (ctx->regA[1] >> 32) != 0xffff)
+/*DELETE*/    {
+/*DELETE*/    fputs("cpu180Load180Xp: inconsistent A0/A1\n", stderr);
+/*DELETE*/    tracePrint180Registers(ctx, stderr);
+/*DELETE*/    traceStack(stderr);
+/*DELETE*/    traceInstCount[ctx->id] = 10;
+/*DELETE*/    }
     }
 
 /*--------------------------------------------------------------------------
@@ -1694,7 +1700,7 @@ void cpu180MacMasterClearCp(Cpu180Context *ctx)
     ctx->isMonitorMode   = TRUE;
     ctx->isStopped       = TRUE;
     ctx->lastCsStartAddr = 0;
-//  cpu180MacSetCpStateRegister(ctx, RegDepEnvControl, 0);
+    cpuReset(&cpus170[ctx->id]);
 #if CcDebug > 0
     traceMasterClearCpu180(ctx);
 #endif
@@ -2102,6 +2108,11 @@ void cpu180MacStartCp(Cpu180Context *ctx)
                 return;
                 }
             cpu180Load180Xp(ctx, ctx->regMps >> 3);
+/*DELETE*/if (ctx->regVmid != 0)
+/*DELETE*/    {
+/*DELETE*/    fprintf(stderr,"cpu180MacStartCp: VMID %d\n",ctx->regVmid);
+/*DELETE*/    traceStack(stderr);
+/*DELETE*/    }
             ctx->nextKey = ctx->key;
             ctx->nextP   = ctx->regP;
             if (cpu180PvaToRma(ctx, ctx->regP, AccessModeNone, &rma, &pti, &cond))
@@ -2522,19 +2533,8 @@ void cpu180Step(Cpu180Context *activeCpu)
         **  First, check for interrupt conditions and initiate trap or
         **  exchange operations, or halt the CPU as required.
         */
-        if (activeCpu->isExternalInterrupt)
-            {
-            cpuAcquireInterruptMutex();
-            activeCpu->regMcr             |= 0x0080; // set External Interrupt
-            activeCpu->isExternalInterrupt = FALSE;
-            cpuReleaseInterruptMutex();
-            }
-/*DELETE*/ if ((activeCpu->regMcr & 0x00a0) == 0x00a0)
-/*DELETE*/     {
-/*DELETE*/     fprintf(stderr, "CPU%d MCR %04x MMR %04x P " FMT64_012x " mtr %d\n", activeCpu->id, activeCpu->regMcr, activeCpu->regMmr, activeCpu->regP, activeCpu->isMonitorMode);
-/*DELETE*/     }
+        cpu180CheckPendingInterrupts(activeCpu);
         cpu180CheckConditions(activeCpu);
-
         if (activeCpu->pendingAction > Stack)
             {
             if (activeCpu->pendingAction == Trap)
@@ -2773,26 +2773,26 @@ void cpu180Trap(Cpu180Context *ctx)
 
     ctx->pendingAction = Rni;
 
-    if (cpu180ValidateAccess(ctx, ctx->regTp, RingOf(ctx->regP), AccessModeRead, &cond) == FALSE
+    if (cpu180ValidateAccess(ctx, ctx->regTp, RingOf(ctx->regTp), AccessModeRead, &cond) == FALSE
         || cpu180PvaToRma(ctx, ctx->regTp, AccessModeRead, &rma, &pti, &cond) == FALSE)
         {
         cpu180SetMonitorCondition(ctx, cond);
-        ctx->regMcr       |= mcrDefns[MCR63].bitMask;
+        ctx->regMcr       |= mcrDefns[MCR63].bitMask; // Trap exception
         ctx->pendingAction = cpu180GetActionForTrapCondition(ctx, cond);
         return;
         }
     cbp = cpMem[rma >> 3];
     if (((cbp >> 56) & Mask4) != 0 || ((cbp >> 55) & 1) == 0) // not VMID 0 or not external flag
         {
-        cpu180SetMonitorCondition(ctx, MCR55); // Environment specification error
-        ctx->regMcr       |= mcrDefns[MCR63].bitMask;
+        cpu180SetMonitorCondition(ctx, MCR55);        // Environment specification error
+        ctx->regMcr       |= mcrDefns[MCR63].bitMask; // Trap exception
         ctx->pendingAction = cpu180GetActionForTrapCondition(ctx, MCR55);
         return;
         }
     if (cpu180CallIndirect(ctx, ctx->regTp, cbp, ctx->regA[4], 0xf, 0x0, 0xf, TRUE, &cond) == FALSE)
         {
         cpu180SetMonitorCondition(ctx, cond);
-        ctx->regMcr       |= mcrDefns[MCR63].bitMask;
+        ctx->regMcr       |= mcrDefns[MCR63].bitMask; // Trap exception
         ctx->pendingAction = cpu180GetActionForTrapCondition(ctx, cond);
         return;
         }
@@ -2801,7 +2801,6 @@ void cpu180Trap(Cpu180Context *ctx)
     ctx->key       = ctx->nextKey;
     ctx->regFlags &= 0xfffd;       // clear trap enable flag
     ctx->regMcr   &= ~ctx->regMmr; // clear masked bits in MCR
-//  ctx->regMcr   &= ~(ctx->regMmr | 0x0021); // clear masked bits and status bits in MCR
     ctx->regUcr   &= ~ctx->regUmr; // clear masked bits in UCR
     }
 
@@ -2817,7 +2816,6 @@ void cpu180Trap(Cpu180Context *ctx)
 void cpu180UpdateIntervalTimers(Cpu180Context *ctx)
     {
     u64 delta;
-    u16 mask;
     u32 oldIt;
 
     delta         = rtcClock - ctx->rtcClock;
@@ -2826,28 +2824,28 @@ void cpu180UpdateIntervalTimers(Cpu180Context *ctx)
         {
         oldIt        = ctx->regSit;
         ctx->regSit -= (u32)delta;
-        mask         = mcrDefns[MCR59].bitMask;
-        if ((ctx->regSit == 0 || (ctx->regSit > oldIt && oldIt > 0)) && (ctx->regMcr & mask) == 0)
+        if (ctx->regSit == 0 || (ctx->regSit > oldIt && oldIt > 0))
             {
-            ctx->regMcr |= mask;
+            cpuAcquireInterruptMutex();
+            ctx->pendingInterrupts |= PINT_SIT;
             //
             //  If the mask bit is set, explicitly set the interval timer to 0 so
             //  that the interrupt handler won't detect a miss. The assumption
             //  is that real hardware would be able to respond to an interrupt
             //  within a microsecond.
             //
-            if ((ctx->regMmr & mask) != 0)
+            if ((ctx->regMmr & mcrDefns[MCR59].bitMask) != 0)
                 {
                 ctx->regSit = 0;
                 }
+            cpuReleaseInterruptMutex();
             }
         oldIt        = ctx->regPit;
         ctx->regPit -= (u32)delta;
-        mask         = ucrDefns[UCR51].bitMask;
-        if ((ctx->regPit == 0 || (ctx->regPit > oldIt && oldIt > 0)) && (ctx->regUcr & mask) == 0)
+        if (ctx->regPit == 0 || (ctx->regPit > oldIt && oldIt > 0))
             {
-            ctx->regUcr |= mask;
-            if ((ctx->regUmr & mask) != 0)
+            ctx->pendingInterrupts |= PINT_PIT;
+            if ((ctx->regUmr & ucrDefns[UCR51].bitMask) != 0)
                 {
                 ctx->regPit = 0;
                 }
@@ -3028,13 +3026,13 @@ static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 
     u8   vmid;
 
     callee = cbp & Mask48;
-    if (RingOf(bsp) > ((cbp >> 48) & Mask4))
+    ringP  = RingOf(ctx->regP);
+    if (ringP > ((cbp >> 48) & Mask4))
         {
         ctx->regUtp = callee;
         *cond       = MCR54; // Access violation
         return FALSE;
         }
-    ringP = RingOf(ctx->regP);
     if (cpu180GetR1(ctx, callee, &r1, cond) == FALSE || cpu180GetR2(ctx, callee, &r2, cond) == FALSE)
         {
         return FALSE;
@@ -3045,7 +3043,7 @@ static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 
         *cond       = MCR61; // Outward call
         return FALSE;
         }
-    if (ringP >= r2) // call to inner ring
+    if (ringP > r2) // call to inner ring
         {
         callee = ((u64)r2 << 44) | (callee & Mask44);
         }
@@ -3084,6 +3082,10 @@ static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 
             }
         bsp = cpMem[rma >> 3] & Mask48;
         }
+    if (cpu180GetLock(ctx, callee, &lock, cond) == FALSE)
+        {
+        return FALSE;
+        }
     if (cpu180PushFrame(ctx, at, xs, xt, doSaveCrs, &sfsa, &frameSize, cond) == FALSE)
         {
         return FALSE;
@@ -3092,10 +3094,6 @@ static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 
     if (ringP > ctx->regLrn)
         {
         ctx->regLrn = ringP;
-        }
-    if (cpu180GetLock(ctx, callee, &lock, cond) == FALSE)
-        {
-        return FALSE;
         }
     ctx->nextKey = lock;
     ctx->nextP   = callee;
@@ -3137,6 +3135,14 @@ static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 
         }
     traceCall(ctx, callee);
 #endif
+/*DELETE*/if ((ctx->regA[0] >> 32) != (ctx->regA[1] >> 32)
+/*DELETE*/    && (ctx->regA[1] >> 32) != 0xffff)
+/*DELETE*/    {
+/*DELETE*/    fputs("cpu180CallIndirect: inconsistent A0/A1\n", stderr);
+/*DELETE*/    tracePrint180Registers(ctx, stderr);
+/*DELETE*/    traceStack(stderr);
+/*DELETE*/    traceInstCount[ctx->id] = 10;
+/*DELETE*/    }
 
     return TRUE;
     }
@@ -3160,7 +3166,7 @@ static void cpu180CheckMonitorConditions(Cpu180Context *ctx)
     u16              mask;
     MonitorCondition mCond;
 
-    cr = ctx->regMcr & ctx->regMmr;
+    cr = (ctx->regMcr & 0xbfde) & ctx->regMmr;
     for (mCond = MCR48; cr != 0 && mCond <= MCR63; mCond++)
         {
         mask = mcrDefns[mCond].bitMask;
@@ -3173,6 +3179,50 @@ static void cpu180CheckMonitorConditions(Cpu180Context *ctx)
                 }
             cr &= ~mask;
             }
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Check for pending interrupt indications
+**
+**                  If any interrupts are pending, the MCR and/or UCR
+**                  registers are updated to reflect them.
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CPU context
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpu180CheckPendingInterrupts(Cpu180Context *ctx)
+    {
+    if (ctx->pendingInterrupts != 0)
+        {
+        cpuAcquireInterruptMutex();
+        if ((ctx->pendingInterrupts & PINT_EXCH_170) != 0)
+            {
+            if (ctx->regVmid == 0)
+                {
+                ctx->regMcr |= mcrDefns[MCR53].bitMask; // set CYBER 170 exchange request
+                }
+            ctx->pendingInterrupts &= ~(u8)PINT_EXCH_170;
+            }
+        if ((ctx->pendingInterrupts & PINT_EXTERNAL) != 0)
+            {
+            ctx->regMcr            |= mcrDefns[MCR56].bitMask; // set External Interrupt
+            ctx->pendingInterrupts &= ~(u8)PINT_EXTERNAL;
+            }
+        if ((ctx->pendingInterrupts & PINT_SIT) != 0)
+            {
+            ctx->regMcr            |= mcrDefns[MCR59].bitMask; // set System Interval Timer Interrupt
+            ctx->pendingInterrupts &= ~(u8)PINT_SIT;
+            }
+        if ((ctx->pendingInterrupts & PINT_PIT) != 0)
+            {
+            ctx->regUcr            |= ucrDefns[UCR51].bitMask; // set Process Interval Timer Interrupt
+            ctx->pendingInterrupts &= ~(u8)PINT_PIT;
+            }
+        cpuReleaseInterruptMutex();
         }
     }
 
@@ -3242,6 +3292,11 @@ static void cpu180Exchange(Cpu180Context *activeCpu)
             cpu180Store180Xp(activeCpu, activeCpu->regJps >> 3);
             activeCpu->isMonitorMode = TRUE;
             cpu180Load180Xp(activeCpu, activeCpu->regMps >> 3);
+/*DELETE*/if (activeCpu->regVmid != 0)
+/*DELETE*/    {
+/*DELETE*/    fprintf(stderr,"cpu180Exchange: VMID %d in monitor XP\n",activeCpu->regVmid);
+/*DELETE*/    traceStack(stderr);
+/*DELETE*/    }
             }
         activeCpu->nextKey = activeCpu->key;
         activeCpu->nextP   = activeCpu->regP;
@@ -3356,6 +3411,7 @@ static void cpu180Get170State(Cpu180Context *ctx)
     u64           word;
 
     ctx170       = &cpus170[ctx->id];
+    ctx->regVmid = 1;
     ctx->regP    = ringSeg170
                    | (((u64)ctx170->regRaCm + (u64)ctx170->regP) << 3)
                    | (u64)(((4 - (ctx170->opOffset / 15)) & Mask2) << 1);
@@ -4074,6 +4130,7 @@ static void cpu180Set170State(Cpu180Context *ctx, u64 regP)
     u8            i;
     u32           wordAddr;
 
+    ctx->regVmid          = 1;
     ctx170                = &cpus170[ctx->id];
     ctx170->regRaCm       = ctx->regA[3] & Mask21;
     ctx170->exitMode      = (ctx->regA[3] >> 20) & 0xfff000;
@@ -4139,6 +4196,21 @@ static void cpu180Set170State(Cpu180Context *ctx, u64 regP)
         //
         cpuVoidIwStack(ctx170, (u32)~0);
         }
+/*DELETE*/if (ctx170->isMonitorMode)
+/*DELETE*/    {
+/*DELETE*/    if (ctx170->regP >= ctx170->regFlCm)
+/*DELETE*/        {
+/*DELETE*/        fprintf(stderr,"\ncpu180Set170State: CPUMTR error exit imminent, P %06o >= FL %06o\n",ctx170->regP,ctx170->regFlCm);
+/*DELETE*/        tracePrint170Registers(ctx170, stderr);
+/*DELETE*/        traceStack(stderr);
+/*DELETE*/        }
+/*DELETE*/    if ((ctx170->opWord & 0777740000000000) == 031140000000000)
+/*DELETE*/        {
+/*DELETE*/        fprintf(stderr,"\ncpu180Set170State: CPUMTR error exit imminent, opWord %020llo\n",ctx170->opWord);
+/*DELETE*/        tracePrint170Registers(ctx170, stderr);
+/*DELETE*/        traceStack(stderr);
+/*DELETE*/        }
+/*DELETE*/    }
     }
 
 /*--------------------------------------------------------------------------
@@ -4201,6 +4273,14 @@ static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa)
 #if CcDebug > 0
     u32 xpab = xpa << 3;
 #endif
+/*DELETE*/if ((ctx->regA[0] >> 32) != (ctx->regA[1] >> 32)
+/*DELETE*/    && (ctx->regA[1] >> 32) != 0xffff)
+/*DELETE*/    {
+/*DELETE*/    fputs("cpu180Store180Xp: inconsistent A0/A1\n", stderr);
+/*DELETE*/    tracePrint180Registers(ctx, stderr);
+/*DELETE*/    traceStack(stderr);
+/*DELETE*/    traceInstCount[ctx->id] = 10;
+/*DELETE*/    }
 
     cpMem[xpa++] = ((u64)ctx->key << 48) | ctx->regP;
     cpMem[xpa++] = ((u64)ctx->regVmid << 56) | ((u64)ctx->regUvmid << 48) | ctx->regA[0];
@@ -4511,11 +4591,11 @@ static void cp180Op03(Cpu180Context *activeCpu)  // 03  INTRUPT    MIGDS 2-141
     Xk = activeCpu->regX[activeCpu->opK];
     if ((Xk & 1) != 0)
         {
-        cpus180[0].isExternalInterrupt = TRUE;
+        cpus180[0].pendingInterrupts |= PINT_EXTERNAL;
         }
     if ((Xk & 4) != 0 && cpuCount > 1)
         {
-        cpus180[1].isExternalInterrupt = TRUE;
+        cpus180[1].pendingInterrupts |= PINT_EXTERNAL;
         }
     cpuReleaseInterruptMutex();
     }
@@ -4667,6 +4747,14 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
         {
         cpu180Set170State(activeCpu, activeCpu->nextP);
         }
+/*DELETE*/if ((activeCpu->regA[0] >> 32) != (activeCpu->regA[1] >> 32)
+/*DELETE*/    && (activeCpu->regA[1] >> 32) != 0xffff)
+/*DELETE*/    {
+/*DELETE*/    fputs("RETURN: inconsistent A0/A1\n", stderr);
+/*DELETE*/    tracePrint180Registers(activeCpu, stderr);
+/*DELETE*/    traceStack(stderr);
+/*DELETE*/    traceInstCount[activeCpu->id] = 10;
+/*DELETE*/    }
     }
 
 static void cp180Op05(Cpu180Context *activeCpu)  // 05  PURGE      MIGDS 2-147
@@ -4716,6 +4804,11 @@ static void cp180Op06(Cpu180Context *activeCpu)  // 06  POP        MIGDS 2-129
         cpu180SetUserCondition(activeCpu, UCR52); // inter-ring pop
         return;
         }
+    if (cpu180GetR1(activeCpu, psap, &r1, &cond) == FALSE)
+        {
+        cpu180SetMonitorCondition(activeCpu, cond);
+        return;
+        }
     if (cpu180TranslatePvaSequence(activeCpu, psap, 4, 8, RingOf(psap), AccessModeRead, rmas, &cond) == FALSE)
         {
         cpu180SetMonitorCondition(activeCpu, cond);
@@ -4733,35 +4826,21 @@ static void cp180Op06(Cpu180Context *activeCpu)  // 06  POP        MIGDS 2-129
         return;
         }
 */
-    // Load A1
-    regA = cpMem[wordAddrs[2]] & Mask48; // A1
-    ring = RingOf(regA);
-    if (cpu180GetR1(activeCpu, psap, &r1, &cond) == FALSE)
+    // Load A0, A1, A2
+    for (i = 1; i < 4; i++)
         {
-        cpu180SetMonitorCondition(activeCpu, cond);
-        return;
+        regA = cpMem[wordAddrs[i]] & Mask48;
+        ring = RingOf(regA);
+        if (ring < ringA2)
+            {
+            ring = ringA2;
+            }
+        if (ring < r1)
+            {
+            ring = r1;
+            }
+        activeCpu->regA[i - 1] = ((u64)ring << 44) | (regA & Mask44);
         }
-    if (ring < ringA2)
-        {
-        ring = ringA2;
-        }
-    if (ring < r1)
-        {
-        ring = r1;
-        }
-    activeCpu->regA[1] = ((u64)ring << 44) | (regA & Mask44);
-    // Load A2
-    regA = cpMem[wordAddrs[3]] & Mask48; // A2
-    ring = RingOf(regA);
-    if (ring < ringA2)
-        {
-        ring = ringA2;
-        }
-    if (ring < r1)
-        {
-        ring = r1;
-        }
-    activeCpu->regA[2]      = ((u64)ring << 44) | (regA & Mask44);
     activeCpu->regFlags     = (activeCpu->regFlags & 0x3fff) | ((cpMem[wordAddrs[2]] >> 48) & 0xc000);
     ring                    = RingOf(activeCpu->regP);
     activeCpu->regTos[ring] = activeCpu->regA[1];
@@ -4773,6 +4852,14 @@ static void cp180Op06(Cpu180Context *activeCpu)  // 06  POP        MIGDS 2-129
 #if CcDebug > 0
     traceCallFrame(activeCpu, psap, "popped");
 #endif
+/*DELETE*/if ((activeCpu->regA[0] >> 32) != (activeCpu->regA[1] >> 32)
+/*DELETE*/    && (activeCpu->regA[1] >> 32) != 0xffff)
+/*DELETE*/    {
+/*DELETE*/    fputs("POP: inconsistent A0/A1\n", stderr);
+/*DELETE*/    tracePrint180Registers(activeCpu, stderr);
+/*DELETE*/    traceStack(stderr);
+/*DELETE*/    traceInstCount[activeCpu->id] = 10;
+/*DELETE*/    }
     }
 
 static void cp180Op07(Cpu180Context *activeCpu)  // 07  PSFSA      MIGDS 2-138
@@ -5962,6 +6049,14 @@ static void cp180Op80(Cpu180Context *activeCpu)  // 80  LMULT      MIGDS 2-16
         traceMemoryBlock(activeCpu, pva, wordCount * 8, buf);
         }
 #endif
+/*DELETE*/if ((activeCpu->regA[0] >> 32) != (activeCpu->regA[1] >> 32)
+/*DELETE*/    && (activeCpu->regA[1] >> 32) != 0xffff && as == 0 && at > 0)
+/*DELETE*/    {
+/*DELETE*/    fputs("LMULT: inconsistent A0/A1\n", stderr);
+/*DELETE*/    tracePrint180Registers(activeCpu, stderr);
+/*DELETE*/    traceStack(stderr);
+/*DELETE*/    traceInstCount[activeCpu->id] = 10;
+/*DELETE*/    }
     }
 
 static void cp180Op81(Cpu180Context *activeCpu)  // 81  SMULT      MIGDS 2-16
@@ -7156,8 +7251,6 @@ static void cp180OpB5(Cpu180Context *activeCpu)  // B5  CALLSEG    MIGDS 2-122
     MonitorCondition cond;
     u32              disp;
     u32              pti;
-    u8               r2;
-    u8               ringBsp;
     u32              rma;
     u8               xs;
     u8               xt;
@@ -7178,19 +7271,7 @@ static void cp180OpB5(Cpu180Context *activeCpu)  // B5  CALLSEG    MIGDS 2-122
         cpu180SetMonitorCondition(activeCpu, MCR54); // access violation
         return;
         }
-    ringBsp = RingOf(bsp);
-    if (cpu180GetR2(activeCpu, Aj, &r2, &cond) == FALSE)
-        {
-        cpu180SetMonitorCondition(activeCpu, cond);
-        return;
-        }
-    if (ringBsp > r2)
-        {
-        activeCpu->regUtp = bsp;
-        cpu180SetMonitorCondition(activeCpu, MCR54); // access violation
-        return;
-        }
-    if (cpu180ValidateAccess(activeCpu, bsp, ringBsp, AccessModeRead, &cond) == FALSE
+    if (cpu180ValidateAccess(activeCpu, bsp, RingOf(bsp), AccessModeRead, &cond) == FALSE
         || cpu180PvaToRma(activeCpu, bsp, AccessModeRead, &rma, &pti, &cond) == FALSE)
         {
         cpu180SetMonitorCondition(activeCpu, cond);

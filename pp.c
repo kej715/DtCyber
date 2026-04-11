@@ -1410,7 +1410,6 @@ static void ppOpEXN(void)     // 26
             /*
             **  Pass.
             */
-            cpuReleaseExchangeMutex();
             //
             //  If this is a CYBER 180, and the machine is in 180
             //  mode, set the CYBER 170 Exchange bit to request
@@ -1419,8 +1418,11 @@ static void ppOpEXN(void)     // 26
             //
             if (isCyber180 && cpu180->regVmid == 0)
                 {
-                cpu180->regMcr |= 0x0400; // set MCR53
+                cpuAcquireInterruptMutex();
+                cpu180->pendingInterrupts |= PINT_EXCH_170;
+                cpuReleaseInterruptMutex();
                 }
+            cpuReleaseExchangeMutex();
 
             return;
             }
@@ -1445,7 +1447,9 @@ static void ppOpEXN(void)     // 26
         activePpu->exchangingCpu     = cpu170->id;
         if (isCyber180)
             {
-            cpu180->regMcr |= 0x0400; // set MCR53
+            cpuAcquireInterruptMutex();
+            cpu180->pendingInterrupts |= PINT_EXCH_170;
+            cpuReleaseInterruptMutex();
             }
         cpuReleaseExchangeMutex();
         }
@@ -2435,11 +2439,11 @@ static void ppOpINPN(void)    // 1026
     cpuAcquireInterruptMutex();
     if ((activePpu->opD & 1) != 0) // memory port 0 selected
         {
-        cpus180[0].isExternalInterrupt = TRUE;
+        cpus180[0].pendingInterrupts |= PINT_EXTERNAL;
         }
     if ((activePpu->opD & 4) != 0 && cpuCount > 1) // memory port 2 selected
         {
-        cpus180[1].isExternalInterrupt = TRUE;
+        cpus180[1].pendingInterrupts |= PINT_EXTERNAL;
         }
 #if DEBUG
     else

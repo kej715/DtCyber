@@ -113,7 +113,6 @@ static bool cpuCmuGetByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 *by
 static void cpuCmuMoveDirect(Cpu170Context *activeCpu);
 static void cpuCmuMoveIndirect(Cpu170Context *activeCpu);
 static bool cpuCmuPutByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 byte);
-static void cpuDeadstart(Cpu170Context *activeCpu);
 static void cpuEcsTransfer(Cpu170Context *activeCpu, bool writeToEcs);
 static void cpuEcsWord(Cpu170Context *activeCpu, bool writeToEcs);
 static void cpuExchangeJump(Cpu170Context *activeCpu, u32 address, bool doChangeMode);
@@ -463,10 +462,8 @@ void cpuInit(char *model, u16 *serialNumbers, u32 memory, u32 emBanks, ExtMemory
         }
     for (cpuNum = 0; cpuNum < cpuCount; cpuNum++)
         {
-        cpus170[cpuNum].id                   = cpuNum;
-        cpus170[cpuNum].isStopped            = TRUE;
-        cpus170[cpuNum].ppRequestingExchange = -1;
-        cpus170[cpuNum].idleCycles           = 0;
+        cpus170[cpuNum].id = cpuNum;
+        cpuReset(&cpus170[cpuNum]);
         }
 
     /*
@@ -488,7 +485,7 @@ void cpuInit(char *model, u16 *serialNumbers, u32 memory, u32 emBanks, ExtMemory
         }
 
     /*
-    **  Start CPU1, if more than one CPU are configured.
+    **  Start thread for CPU1, if more than one CPU are configured.
     */
     if (cpuCount > 1)
         {
@@ -691,6 +688,29 @@ void cpuReleaseMemoryMutex(void)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Reset CPU state (e.g., in preparation for deadstart)
+**
+**  Parameters:     Name         Description.
+**                  activeCpu    Pointer to CPU context
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpuReset(Cpu170Context *activeCpu)
+    {
+    activeCpu->isStopped            = TRUE;
+    activeCpu->isMonitorMode        = FALSE;
+    activeCpu->isErrorExitPending   = FALSE;
+    activeCpu->ppRequestingExchange = -1;
+    cpuAcquireExchangeMutex();
+    if (monitorCpu == activeCpu->id)
+        {
+        monitorCpu = -1;
+        }
+    cpuReleaseExchangeMutex();
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Terminate CPU and optionally persist CM.
 **
 **  Parameters:     Name        Description.
@@ -807,10 +827,13 @@ void cpuStep(Cpu170Context *activeCpu)
             {
             deadStart();
             }
-        cpuDeadstart(activeCpu);
         if (isCyber180)
             {
             cpu180MacMasterClearCp(&cpus180[activeCpu->id]);
+            }
+        else
+            {
+            cpuReset(activeCpu);
             }
         activeCpu->doDeadstart = FALSE;
         return;
@@ -834,33 +857,23 @@ void cpuStep(Cpu170Context *activeCpu)
             {
             return;
             }
-        if (ctx180->isExternalInterrupt)
+        cpu180CheckPendingInterrupts(ctx180);
+        cpu180CheckConditions(ctx180);
+        if (ctx180->pendingAction > Stack)
             {
-            cpuAcquireInterruptMutex();
-            ctx180->regMcr             |= 0x0080; // set External Interrupt
-            ctx180->isExternalInterrupt = FALSE;
-            cpuReleaseInterruptMutex();
-            }
-        ctx180->pendingAction = Rni;
-        if ((ctx180->regMcr & 0xbbde) != 0 || ctx180->regUcr != 0)
-            {
-            cpu180CheckConditions(ctx180);
-            if (ctx180->pendingAction > Stack)
+            if (ctx180->pendingAction == Trap)
                 {
-                if (ctx180->pendingAction == Trap)
-                    {
-                    cpu180Trap(ctx180);
-                    }
-                if (ctx180->pendingAction == Exch)
-                    {
-                    cpuExchangeTo180(activeCpu, FALSE);
-                    }
-                else if (ctx180->pendingAction == Halt)
-                    {
-                    ctx180->isStopped = TRUE;
-                    }
-                return;
+                cpu180Trap(ctx180);
                 }
+            if (ctx180->pendingAction == Exch)
+                {
+                cpuExchangeTo180(activeCpu, FALSE);
+                }
+            else if (ctx180->pendingAction == Halt)
+                {
+                ctx180->isStopped = TRUE;
+                }
+            return;
             }
         }
 
@@ -1357,29 +1370,6 @@ static void *cpuThread(void *param)
 #if !defined(_WIN32)
     return NULL;
 #endif
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Initiate CPU deadstart.
-**
-**  Parameters:     Name         Description.
-**                  activeCpu    Pointer to CPU context
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-static void cpuDeadstart(Cpu170Context *activeCpu)
-    {
-    activeCpu->isStopped            = TRUE;
-    activeCpu->isMonitorMode        = FALSE;
-    activeCpu->isErrorExitPending   = FALSE;
-    activeCpu->ppRequestingExchange = -1;
-    cpuAcquireExchangeMutex();
-    if (monitorCpu == activeCpu->id)
-        {
-        monitorCpu = -1;
-        }
-    cpuReleaseExchangeMutex();
     }
 
 /*--------------------------------------------------------------------------

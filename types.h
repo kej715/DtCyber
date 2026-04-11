@@ -411,7 +411,11 @@ typedef struct
     u8            spidShift;            /* shift count used in calculating SPID's */
     volatile bool isMonitorMode;        /* TRUE if CPU is in monitor mode */
     volatile bool isStopped;            /* TRUE if CPU is stopped */
-    volatile bool isExternalInterrupt;  /* TRUE if external interrupt requested */
+    volatile u8   pendingInterrupts;    /* pending interrupt requests */
+#define PINT_EXTERNAL 0x01              /*   external interrupt request               */
+#define PINT_EXCH_170 0x02              /*   exchange to CYBER 170 state request      */
+#define PINT_SIT      0x04              /*   system  interval timer interrupt request */
+#define PINT_PIT      0x08              /*   process interval timer interrupt request */
     u8            opCode;               /* Opcode field (first 8 bits) */
     u8            opI;                  /* i field of current instruction */
     u8            opJ;                  /* j field of current instruction */

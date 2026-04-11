@@ -127,6 +127,7 @@ void cpuReleaseClockMutex(void);
 void cpuReleaseExchangeMutex(void);
 void cpuReleaseInterruptMutex(void);
 void cpuReleaseMemoryMutex(void);
+void cpuReset(Cpu170Context *activeCpu);
 void cpuStep(Cpu170Context *activeCpu);
 void cpuTerminate(void);
 void cpuVoidIwStack(Cpu170Context *activeCpu, u32 branchAddr);
@@ -135,6 +136,7 @@ void cpuVoidIwStack(Cpu170Context *activeCpu, u32 branchAddr);
 **  cpu180.c
 */
 void cpu180CheckConditions(Cpu180Context *ctx);
+void cpu180CheckPendingInterrupts(Cpu180Context *ctx);
 u8   cpu180GetInstructionFormat(u8 opcode);
 void cpu180Init(char *model, u16 *serialNumbers);
 void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa);
