@@ -1486,7 +1486,6 @@ void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa)
         }
 #if CcDebug > 0
     traceExchange180(ctx, xpab, "Load");
-#endif
 /*DELETE*/if ((ctx->regA[0] >> 32) != (ctx->regA[1] >> 32)
 /*DELETE*/    && (ctx->regA[1] >> 32) != 0xffff)
 /*DELETE*/    {
@@ -1495,6 +1494,7 @@ void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa)
 /*DELETE*/    traceStack(stderr);
 /*DELETE*/    traceInstCount[ctx->id] = 10;
 /*DELETE*/    }
+#endif
     }
 
 /*--------------------------------------------------------------------------
@@ -3134,7 +3134,6 @@ static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 
         traceCallFrame(ctx, sfsa, "pushed");
         }
     traceCall(ctx, callee);
-#endif
 /*DELETE*/if ((ctx->regA[0] >> 32) != (ctx->regA[1] >> 32)
 /*DELETE*/    && (ctx->regA[1] >> 32) != 0xffff)
 /*DELETE*/    {
@@ -3143,6 +3142,7 @@ static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 
 /*DELETE*/    traceStack(stderr);
 /*DELETE*/    traceInstCount[ctx->id] = 10;
 /*DELETE*/    }
+#endif
 
     return TRUE;
     }
@@ -4272,7 +4272,6 @@ static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa)
     int i;
 #if CcDebug > 0
     u32 xpab = xpa << 3;
-#endif
 /*DELETE*/if ((ctx->regA[0] >> 32) != (ctx->regA[1] >> 32)
 /*DELETE*/    && (ctx->regA[1] >> 32) != 0xffff)
 /*DELETE*/    {
@@ -4281,6 +4280,7 @@ static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa)
 /*DELETE*/    traceStack(stderr);
 /*DELETE*/    traceInstCount[ctx->id] = 10;
 /*DELETE*/    }
+#endif
 
     cpMem[xpa++] = ((u64)ctx->key << 48) | ctx->regP;
     cpMem[xpa++] = ((u64)ctx->regVmid << 56) | ((u64)ctx->regUvmid << 48) | ctx->regA[0];
@@ -4747,6 +4747,7 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
         {
         cpu180Set170State(activeCpu, activeCpu->nextP);
         }
+#if CcDebug > 0
 /*DELETE*/if ((activeCpu->regA[0] >> 32) != (activeCpu->regA[1] >> 32)
 /*DELETE*/    && (activeCpu->regA[1] >> 32) != 0xffff)
 /*DELETE*/    {
@@ -4755,6 +4756,7 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
 /*DELETE*/    traceStack(stderr);
 /*DELETE*/    traceInstCount[activeCpu->id] = 10;
 /*DELETE*/    }
+#endif
     }
 
 static void cp180Op05(Cpu180Context *activeCpu)  // 05  PURGE      MIGDS 2-147
@@ -4851,7 +4853,6 @@ static void cp180Op06(Cpu180Context *activeCpu)  // 06  POP        MIGDS 2-129
 
 #if CcDebug > 0
     traceCallFrame(activeCpu, psap, "popped");
-#endif
 /*DELETE*/if ((activeCpu->regA[0] >> 32) != (activeCpu->regA[1] >> 32)
 /*DELETE*/    && (activeCpu->regA[1] >> 32) != 0xffff)
 /*DELETE*/    {
@@ -4860,6 +4861,7 @@ static void cp180Op06(Cpu180Context *activeCpu)  // 06  POP        MIGDS 2-129
 /*DELETE*/    traceStack(stderr);
 /*DELETE*/    traceInstCount[activeCpu->id] = 10;
 /*DELETE*/    }
+#endif
     }
 
 static void cp180Op07(Cpu180Context *activeCpu)  // 07  PSFSA      MIGDS 2-138
@@ -6048,7 +6050,6 @@ static void cp180Op80(Cpu180Context *activeCpu)  // 80  LMULT      MIGDS 2-16
         sprintf(buf, "   A%X..A%X  X%X..X%X", selector >> 12, at, (selector >> 8) & Mask4, xt);
         traceMemoryBlock(activeCpu, pva, wordCount * 8, buf);
         }
-#endif
 /*DELETE*/if ((activeCpu->regA[0] >> 32) != (activeCpu->regA[1] >> 32)
 /*DELETE*/    && (activeCpu->regA[1] >> 32) != 0xffff && as == 0 && at > 0)
 /*DELETE*/    {
@@ -6057,6 +6058,7 @@ static void cp180Op80(Cpu180Context *activeCpu)  // 80  LMULT      MIGDS 2-16
 /*DELETE*/    traceStack(stderr);
 /*DELETE*/    traceInstCount[activeCpu->id] = 10;
 /*DELETE*/    }
+#endif
     }
 
 static void cp180Op81(Cpu180Context *activeCpu)  // 81  SMULT      MIGDS 2-16
