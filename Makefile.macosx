@@ -31,6 +31,7 @@ EXTRACFLAGS = -Wall -Wextra -Wno-implicit-fallthrough -Wno-format-security -Wno-
 
 CFLAGS  = -O3 -std=gnu99 $(INCL) $(shell pkg-config --cflags freetype2) $(EXTRACFLAGS)
 #CFLAGS  = -Og -g -std=gnu99 $(INCL) $(shell pkg-config --cflags freetype2) $(EXTRACFLAGS)
+#CFLAGS  = -O0 -g -std=gnu99 $(INCL) $(shell pkg-config --cflags freetype2) $(EXTRACFLAGS)
 
 HDRS    =   const.h                 \
             cyber_channel_linux.h   \
