@@ -462,7 +462,6 @@ void mt679LoadTape(char *params)
     TapeParam   *tp;
     FILE        *fcb;
     u8          unitMode;
-    char        outBuf[400];
 
     /*
     **  Operator inserted a new tape.
@@ -522,8 +521,7 @@ void mt679LoadTape(char *params)
     tp = (TapeParam *)dp->context[unitNo];
     if (tp == NULL)
         {
-        sprintf(outBuf, "(mt679  ) Unit %d not allocated\n", unitNo);
-        opDisplay(outBuf);
+        opDisplay("(mt679  ) Unit %d not allocated\n", unitNo);
 
         return;
         }
@@ -533,8 +531,7 @@ void mt679LoadTape(char *params)
     */
     if (dp->fcb[unitNo] != NULL)
         {
-        sprintf(outBuf, "(mt679  ) Unit %d not unloaded\n", unitNo);
-        opDisplay(outBuf);
+        opDisplay("(mt679  ) Unit %d not unloaded\n", unitNo);
 
         return;
         }
@@ -562,8 +559,7 @@ void mt679LoadTape(char *params)
     */
     if (fcb == NULL)
         {
-        sprintf(outBuf, "(mt679  ) Failed to open %s\n", str);
-        opDisplay(outBuf);
+        opDisplay("(mt679  ) Failed to open %s\n", str);
 
         return;
         }
@@ -581,8 +577,7 @@ void mt679LoadTape(char *params)
     tp->blockNo   = 0;
     tp->unitReady = TRUE;
 
-    sprintf(outBuf, "(mt679  ) Successfully loaded %s\n", str);
-    opDisplay(outBuf);
+    opDisplay("(mt679  ) Successfully loaded %s\n", str);
     }
 
 /*--------------------------------------------------------------------------
@@ -602,7 +597,6 @@ void mt679UnloadTape(char *params)
     int       equipmentNo;
     int       unitNo;
     TapeParam *tp;
-    char      outBuf[400];
 
     /*
     **  Operator inserted a new tape.
@@ -648,8 +642,7 @@ void mt679UnloadTape(char *params)
     tp = (TapeParam *)dp->context[unitNo];
     if (tp == NULL)
         {
-        sprintf(outBuf, "(mt679  ) Unit %d not allocated\n", unitNo);
-        opDisplay(outBuf);
+        opDisplay("(mt679  ) Unit %d not allocated\n", unitNo);
 
         return;
         }
@@ -659,8 +652,7 @@ void mt679UnloadTape(char *params)
     */
     if (dp->fcb[unitNo] == NULL)
         {
-        sprintf(outBuf, "(mt679  ) Unit %d not loaded\n", unitNo);
-        opDisplay(outBuf);
+        opDisplay("(mt679  ) Unit %d not loaded\n", unitNo);
 
         return;
         }
@@ -687,8 +679,7 @@ void mt679UnloadTape(char *params)
     tp->blockCrc    = 0;
     tp->blockNo     = 0;
 
-    sprintf(outBuf, "(mt679  ) Successfully unloaded MT679 on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
-    opDisplay(outBuf);
+    opDisplay("(mt679  ) Successfully unloaded MT679 on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -703,16 +694,13 @@ void mt679UnloadTape(char *params)
 void mt679ShowTapeStatus()
     {
     TapeParam *tp = firstTape;
-    char      outBuf[MaxFSPath + 128];
 
     while (tp)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", "679", tp->channelNo, tp->eqNo, tp->unitNo);
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s C%02o E%02o U%02o", "679", tp->channelNo, tp->eqNo, tp->unitNo);
         if (tp->unitReady)
             {
-            sprintf(outBuf, " %c %s\n", tp->ringIn ? 'w' : 'r', tp->fileName);
-            opDisplay(outBuf);
+            opDisplay(" %c %s\n", tp->ringIn ? 'w' : 'r', tp->fileName);
             }
         else
             {

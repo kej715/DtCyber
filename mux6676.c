@@ -244,7 +244,6 @@ void mux6676ShowStatus()
     PortGroup *gp;
     MuxParam  *mp;
     char      *mts;
-    char      outBuf[200];
     PortParam *pp;
 
     for (mp = firstMux; mp != NULL; mp = mp->next)
@@ -263,18 +262,14 @@ void mux6676ShowStatus()
             {
             if (gp->listenFd > 0)
                 {
-                sprintf(outBuf, "    >   %-8s C%02o E%02o     ", mts, mp->channelNo, mp->eqNo);
-                opDisplay(outBuf);
-                sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(gp->listenFd), "", cts, "listening");
-                opDisplay(outBuf);
+                opDisplay("    >   %-8s C%02o E%02o     ", mts, mp->channelNo, mp->eqNo);
+                opDisplay(FMTNETSTATUS "\n", netGetLocalTcpAddress(gp->listenFd), "", cts, "listening");
                 for (i = 0, pp = mp->ports + gp->portIndex; i < gp->portCount; i++, pp++)
                     {
                     if (pp->active && (pp->connFd > 0))
                         {
-                        sprintf(outBuf, "    >   %-8s         P%02o ", mts, pp->id);
-                        opDisplay(outBuf);
-                        sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), cts, "connected");
-                        opDisplay(outBuf);
+                        opDisplay("    >   %-8s         P%02o ", mts, pp->id);
+                        opDisplay(FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), cts, "connected");
                         }
                     }
                 }

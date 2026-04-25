@@ -137,7 +137,6 @@ void channelDisplayContext()
     u8      devFCB;
     DevSlot *dp;
     u8      i;
-    char    outBuf[64];
 
     //             >   00 Deadstart Panel                (01)     1           
     opDisplay("    >   Ch First Device Type              (DT) # Devices # Files\n");
@@ -286,12 +285,7 @@ void channelDisplayContext()
                 devTypeName = "Unknown Device";
                 break;
                 }
-            sprintf(outBuf, "    >   %02o %-30s (%02o)",
-                    channel[ch].id,
-                    devTypeName,
-                    dp->devType
-                    );
-            opDisplay(outBuf);
+            opDisplay("    >   %02o %-30s (%02o)", channel[ch].id, devTypeName, dp->devType);
 
             devNum = 0;
             devFCB = 0;
@@ -310,8 +304,7 @@ void channelDisplayContext()
 
             if (devNum > 0)
                 {
-                sprintf(outBuf, " %6d   ", devNum);
-                opDisplay(outBuf);
+                opDisplay(" %6d   ", devNum);
                 }
             else
                 {
@@ -320,8 +313,7 @@ void channelDisplayContext()
 
             if (devFCB > 0)
                 {
-                sprintf(outBuf, " %4d", devFCB);
-                opDisplay(outBuf);
+                opDisplay(" %4d", devFCB);
                 }
             opDisplay("\n");
             }

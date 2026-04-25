@@ -1304,7 +1304,6 @@ void cdcnetShowStatus(void)
     int     i;
     Pccb    *pp;
     Gcb     *gp;
-    char    outBuf[200];
     char    *state;
 
     if (cdcnetGcbCount < 1)
@@ -1334,9 +1333,7 @@ void cdcnetShowStatus(void)
         {
         if (pp->connFd != 0)
             {
-            sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS "\n", "CDCNet", chEqStr, netGetLocalTcpAddress(pp->connFd), "",
-                    "tcp", "listening");
-            opDisplay(outBuf);
+            opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", "CDCNet", chEqStr, netGetLocalTcpAddress(pp->connFd), "", "tcp", "listening");
             chEqStr[0] = '\0';
             }
         }
@@ -1383,9 +1380,8 @@ void cdcnetShowStatus(void)
             state = "unknown";
             break;
             }
-        sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS "\n", "CDCNet", chEqStr, netGetLocalTcpAddress(gp->connFd),
-                netGetPeerTcpAddress(gp->connFd), gp->connType == TypeUdp ? "udp" : "tcp", state);
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", "CDCNet", chEqStr, netGetLocalTcpAddress(gp->connFd),
+            netGetPeerTcpAddress(gp->connFd), gp->connType == TypeUdp ? "udp" : "tcp", state);
         chEqStr[0] = '\0';
         }
     }

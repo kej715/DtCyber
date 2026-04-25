@@ -491,12 +491,10 @@ void mt5744Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 void mt5744ShowTapeStatus()
     {
     TapeParam *tp = firstTape;
-    char      outBuf[400];
 
     while (tp)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", "5744", tp->channelNo, tp->eqNo, tp->unitNo);
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s C%02o E%02o U%02o", "5744", tp->channelNo, tp->eqNo, tp->unitNo);
         switch (tp->state)
             {
         case StAcsDisconnected:
@@ -514,8 +512,7 @@ void mt5744ShowTapeStatus()
         case StAcsReady:
             if (tp->volumeName[0])
                 {
-                sprintf(outBuf, " %s %s\n", tp->isWriteEnabled ? "w" : "r", tp->volumeName);
-                opDisplay(outBuf);
+                opDisplay(" %s %s\n", tp->isWriteEnabled ? "w" : "r", tp->volumeName);
                 }
             else
                 {

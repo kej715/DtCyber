@@ -395,14 +395,12 @@ void csFeiShowStatus()
     {
     FeiParam *feip;
     u32      ipAddr;
-    char     outBuf[200];
     char     peerAddress[24];
     u16      port;
 
     for (feip = firstFei; feip != NULL; feip = feip->next)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "CrayFEI", feip->channelNo, feip->eqNo);
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s C%02o E%02o     ", "CrayFEI", feip->channelNo, feip->eqNo);
 
         ipAddr = ntohl(feip->serverAddr.sin_addr.s_addr);
         port   = ntohs(feip->serverAddr.sin_port);
@@ -416,11 +414,11 @@ void csFeiShowStatus()
         switch (feip->state)
             {
         case StCsFeiDisconnected:
-            sprintf(outBuf, FMTNETSTATUS "\n", ipAddress, peerAddress, "crs", "disconnected");
+            opDisplay(FMTNETSTATUS, ipAddress, peerAddress, "crs", "disconnected");
             break;
 
         case StCsFeiConnecting:
-            sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(feip->fd), peerAddress, "crs", "connecting");
+            opDisplay(FMTNETSTATUS, netGetLocalTcpAddress(feip->fd), peerAddress, "crs", "connecting");
             break;
 
         case StCsFeiSendLCP:
@@ -431,14 +429,13 @@ void csFeiShowStatus()
         case StCsFeiRecvSubsegmentLen:
         case StCsFeiRecvSubsegment1:
         case StCsFeiRecvSubsegment2:
-            sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(feip->fd), netGetPeerTcpAddress(feip->fd), "crs", "connected");
+            opDisplay(FMTNETSTATUS, netGetLocalTcpAddress(feip->fd), netGetPeerTcpAddress(feip->fd), "crs", "connected");
             break;
 
         default:
-            strcpy(outBuf, "\n");
             break;
             }
-        opDisplay(outBuf);
+        opDisplay("\n");
         }
     }
 

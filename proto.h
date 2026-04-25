@@ -440,7 +440,7 @@ void npuNetShowStatus();
 **  operator.c
 */
 void opCmdLoadCards(bool help, char *cmdParams);
-void opDisplay(char *msg);
+void opDisplay(char *fmt, ...);
 void opInit(void);
 bool opIsConsoleInput(void);
 void opRequest(void);

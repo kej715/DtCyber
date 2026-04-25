@@ -30,6 +30,7 @@
 **  Include Files
 **  -------------
 */
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -350,8 +351,7 @@ static int opListenHandle = 0;
 static int opListenPort = 0;
 
 static char opInBuf[256];
-static int  opInIdx = 0;
-static char opOutBuf[MaxFSPath * 2 + 128];
+static int  opInIdx  = 0;
 static int  opOutIdx = 0;
 
 /*
@@ -382,23 +382,28 @@ void opInit(void)
 **  Purpose:        Display a message to the operator interface.
 **
 **  Parameters:     Name        Description.
-**                  msg         the message to display
+**                  fmt         format string (as in printf)
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void opDisplay(char *msg)
+void opDisplay(char *fmt, ...)
     {
+    va_list args;
+    char buf[400];
     OpCmdStackEntry *ep;
 
     if (opCmdStackPtr < 0)
         {
         return;
         }
+    va_start(args, fmt);
+    vsprintf(buf, fmt, args);
+    va_end(args);
     ep = &opCmdStack[opCmdStackPtr];
     if (ep->netConn == 0)
         {
-        write(ep->out, msg, (int)strlen(msg));
+        write(ep->out, buf, (int)strlen(buf));
         }
     else
         {
@@ -406,7 +411,7 @@ void opDisplay(char *msg)
         char *cp;
         char *sp;
 
-        sp = cp = msg;
+        sp = cp = buf;
         while (*sp != '\0')
             {
             while (*cp != '\0' && *cp != '\n')
@@ -429,7 +434,7 @@ void opDisplay(char *msg)
             sp = cp;
             }
 #else
-        send(ep->netConn, msg, strlen(msg), 0);
+        send(ep->netConn, buf, strlen(buf), 0);
 #endif
         }
     }
@@ -641,8 +646,7 @@ static void *opThread(void *param)
 
         if ((ep->netConn == 0) && (ep->in != fileno(stdin)))
             {
-            opDisplay(cmd);
-            opDisplay("\n");
+            opDisplay("%s\n", cmd);
             }
 
         if (opActive)
@@ -695,8 +699,7 @@ static void *opThread(void *param)
                 }
             else
                 {
-                sprintf(opOutBuf, "    > Failed to open %s\n", path);
-                opDisplay(opOutBuf);
+                opDisplay("    > Failed to open %s\n", path);
                 }
             continue;
             }
@@ -730,8 +733,7 @@ static void *opThread(void *param)
             /*
             **  Try to help user.
             */
-            sprintf(opOutBuf, "    > Command not implemented: %s\n\n", name);
-            opDisplay(opOutBuf);
+            opDisplay("    > Command not implemented: %s\n\n", name);
             opDisplay("    > Try 'help' to get a list of commands or 'help <command>'\n");
             opDisplay("    > to get a brief description of a command.\n");
             continue;
@@ -764,7 +766,7 @@ static void opCmdPrompt(void)
         }
 
     GetLocalTime(&dt);
-    sprintf(opOutBuf, "\n%04d-%02d-%02d %02d:%02d:%02d \n[%s] Operator> ", dt.wYear, dt.wMonth, dt.wDay, dt.wHour, dt.wMinute, dt.wSecond, displayName);
+    opDisplay("\n%04d-%02d-%02d %02d:%02d:%02d \n[%s] Operator> ", dt.wYear, dt.wMonth, dt.wDay, dt.wHour, dt.wMinute, dt.wSecond, displayName);
 #else
     time_t    rawtime;
     struct tm *info;
@@ -780,9 +782,8 @@ static void opCmdPrompt(void)
     time(&rawtime);
     info = localtime(&rawtime);
     strftime(buffer, 80, "%Y-%m-%d %H:%M:%S", info);
-    sprintf(opOutBuf, "\n%s \n[%s] Operator> ", buffer, displayName);
+    opDisplay("\n%s \n[%s] Operator> ", buffer, displayName);
 #endif
-    opDisplay(opOutBuf);
     }
 
 /*--------------------------------------------------------------------------
@@ -1460,11 +1461,9 @@ static void opCmdDisassembleCPU(int fwa, int count)
                     return;
                     }
                 parcel = opGetParcel(fwa);
-                sprintf(buf, FMT32_08x "  %04x ", fwa, parcel);
-                opDisplay(buf);
+                opDisplay(FMT32_08x "  %04x ", fwa, parcel);
                 parcel = opGetParcel(fwa + 2);
-                sprintf(buf, FMT32_08x " %04x\n", fwa, parcel);
-                opDisplay(buf);
+                opDisplay(FMT32_08x " %04x\n", fwa, parcel);
                 fwa += 4;
                 //  Fall through
 
@@ -1480,11 +1479,9 @@ static void opCmdDisassembleCPU(int fwa, int count)
                     return;
                     }
                 parcel = opGetParcel(fwa);
-                sprintf(buf, FMT32_08x "  %04x ", fwa, parcel);
-                opDisplay(buf);
+                opDisplay(FMT32_08x "  %04x ", fwa, parcel);
                 parcel = opGetParcel(fwa + 2);
-                sprintf(buf, FMT32_08x " %04x\n", fwa, parcel);
-                opDisplay(buf);
+                opDisplay(FMT32_08x " %04x\n", fwa, parcel);
                 fwa += 4;
                 break;
                 }
@@ -1540,8 +1537,7 @@ static void opCmdDisassembleCPU(int fwa, int count)
                         /*
                         **  Invalid packing
                         */
-                        sprintf(buf, "%05o\n", (u16)(word & Mask15));
-                        opDisplay(buf);
+                        opDisplay("%05o\n", (u16)(word & Mask15));
                         break;
                         }
                     opK       = (u8)0;
@@ -1559,8 +1555,7 @@ static void opCmdDisassembleCPU(int fwa, int count)
                 opDisplay(buf);
                 
                 traceDasm170Op(opcode, opI, opJ, opK, opAddress, mnemonic);
-                opDisplay(mnemonic);
-                opDisplay("\n");
+                opDisplay("%s\n", mnemonic);
 
                 } while (opOffset > 0 && count > 0);
 
@@ -1571,7 +1566,6 @@ static void opCmdDisassembleCPU(int fwa, int count)
 
 static void opCmdDisassemblePP(int ppNum, int fwa, int count)
     {
-    char   buf[80];
     char   mnemonic[40];
     int    n;
     PpWord *pm;
@@ -1603,8 +1597,7 @@ static void opCmdDisassemblePP(int ppNum, int fwa, int count)
     pm = ppu[ppNum].mem;
     while (count-- > 0)
         {
-        sprintf(buf, "%04o  ", fwa);
-        opDisplay(buf);
+        opDisplay("%04o  ", fwa);
         n = traceDasmActivePp(pm + fwa, mnemonic);
         if (isCyber180)
             {
@@ -1612,11 +1605,11 @@ static void opCmdDisassemblePP(int ppNum, int fwa, int count)
             pw2 = pm[fwa + 1] & Mask16;
             if (n == 2)
                 {
-                sprintf(buf, "%06o %06o  ", pw1, pw2);
+                opDisplay("%06o %06o  ", pw1, pw2);
                 }
             else
                 {
-                sprintf(buf, "%06o         ", pw1);
+                opDisplay("%06o         ", pw1);
                 }
             }
         else
@@ -1625,16 +1618,14 @@ static void opCmdDisassemblePP(int ppNum, int fwa, int count)
             pw2 = pm[fwa + 1] & Mask12;
             if (n == 2)
                 {
-                sprintf(buf, "%04o %04o  ", pw1, pw2);
+                opDisplay("%04o %04o  ", pw1, pw2);
                 }
             else
                 {
-                sprintf(buf, "%04o       ", pw1);
+                opDisplay("%04o       ", pw1);
                 }
             }
-        opDisplay(buf);
-        opDisplay(mnemonic);
-        opDisplay("\n");
+        opDisplay("%s\n", mnemonic);
         fwa = (fwa + n) & Mask12;
         }
     }
@@ -1783,7 +1774,6 @@ static void opCmdDumpCM(int fwa, int count)
     char   c;
     char   *cp;
     int    limit;
-    int    n;
     int    shiftCount;
     CpWord word;
 
@@ -1796,26 +1786,25 @@ static void opCmdDumpCM(int fwa, int count)
     for (limit = fwa + count; fwa < limit; fwa++)
         {
         word = cpMem[fwa];
-        n    = sprintf(buf, "    > %08o " FMT60_020o " ", fwa, word & Mask60);
-        cp   = buf + n;
-        for (shiftCount = 54; shiftCount >= 0; shiftCount -= 6)
+        opDisplay("    > %08o " FMT60_020o " ", fwa, word & Mask60);
+        for (shiftCount = 54, cp = buf; shiftCount >= 0; shiftCount -= 6)
             {
             *cp++ = cdcToAscii[(word >> shiftCount) & Mask6];
             }
+        *cp = '\0';
+        opDisplay(buf);
         if (isCyber180)
             {
-            strcpy(cp, "    ");
-            cp += 4;
-            cp += sprintf(cp, "    " FMT32_08x " " FMT64_016x " ", fwa << 3, word);
-            for (shiftCount = 56; shiftCount >= 0; shiftCount -= 8)
+            opDisplay("    " FMT32_08x " " FMT64_016x " ", fwa << 3, word);
+            for (shiftCount = 56, cp = buf; shiftCount >= 0; shiftCount -= 8)
                 {
                 c     = (word >> shiftCount) & Mask8;
                 *cp++ = (c >= ' ' && c < 0x7f) ? c : '.';
                 }
+            *cp = '\0';
+            opDisplay(buf);
             }
-        *cp++ = '\n';
-        *cp   = '\0';
-        opDisplay(buf);
+        opDisplay("\n");
         }
     }
 
@@ -1824,7 +1813,6 @@ static void opCmdDumpEM(int fwa, int count)
     char   buf[42];
     char   *cp;
     int    limit;
-    int    n;
     int    shiftCount;
     CpWord word;
 
@@ -1837,15 +1825,13 @@ static void opCmdDumpEM(int fwa, int count)
     for (limit = fwa + count; fwa < limit; fwa++)
         {
         word = extMem[fwa];
-        n    = sprintf(buf, "%08o " FMT60_020o " ", fwa, word);
-        cp   = buf + n;
-        for (shiftCount = 54; shiftCount >= 0; shiftCount -= 6)
+        opDisplay("%08o " FMT60_020o " ", fwa, word);
+        for (shiftCount = 54, cp = buf; shiftCount >= 0; shiftCount -= 6)
             {
             *cp++ = cdcToAscii[(word >> shiftCount) & 077];
             }
-        *cp++ = '\n';
-        *cp   = '\0';
-        opDisplay(buf);
+        *cp = '\0';
+        opDisplay("%s\n", buf);
         }
     }
 
@@ -1855,7 +1841,6 @@ static void opCmdDumpPP(int ppNum, int fwa, int count)
     char   c;
     char   *cp;
     int    limit;
-    int    n;
     PpSlot *pp;
     PpWord word;
 
@@ -1887,8 +1872,8 @@ static void opCmdDumpPP(int ppNum, int fwa, int count)
         word = pp->mem[fwa];
         if (isCyber180)
             {
-            n     = sprintf(buf, "%04o %06o .", fwa, word);
-            cp    = buf + n;
+            opDisplay("%04o %06o ", fwa, word);
+            cp    = buf;
             *cp++ = cdcToAscii[(word >> 6) & Mask6];
             *cp++ = cdcToAscii[word & Mask6];
             cp   += sprintf(cp, "    %03x %04x ", fwa, word);
@@ -1896,17 +1881,18 @@ static void opCmdDumpPP(int ppNum, int fwa, int count)
             *cp++ = (c >= ' ' && c < 0x7f) ? c : '.';
             c     = word & Mask8;
             *cp++ = (c >= ' ' && c < 0x7f) ? c : '.';
+            *cp   = '\0';
+            opDisplay("%s\n", buf);
             }
         else
             {
-            n     = sprintf(buf, "%04o %04o ", fwa, word);
-            cp    = buf + n;
+            opDisplay("%04o %04o ", fwa, word);
+            cp    = buf;
             *cp++ = cdcToAscii[(word >> 6) & 077];
             *cp++ = cdcToAscii[word & 077];
+            *cp   = '\0';
+            opDisplay("%s\n", buf);
             }
-        *cp++ = '\n';
-        *cp   = '\0';
-        opDisplay(buf);
         }
     }
 
@@ -2010,8 +1996,7 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
                 }
             else
                 {
-                sprintf(opOutBuf, "Unrecognized keyword: %%%s%%\n", kp);
-                opDisplay(opOutBuf);
+                opDisplay("Unrecognized keyword: %%%s%%\n", kp);
 
                 return;
                 }
@@ -2089,20 +2074,20 @@ static void opCmdEnterKeys(bool help, char *cmdParams)
 
 static void opHelpEnterKeys(void)
     {
-    opDisplay("    > 'enter_keys <key-sequence>' supply a sequence of key entries to the system console .\n");
-    opDisplay("    >      Special keys:\n");
-    opDisplay("    >        ! - end sequence without sending <enter> key\n");
-    opDisplay("    >        ; - send <enter> key within a sequence\n");
-    opDisplay("    >        _ - send <blank> key\n");
-    opDisplay("    >        ^ - send <backspace> key\n");
-    opDisplay("    >        % - keyword delimiter for keywords:\n");
-    opDisplay("    >            %year% insert current year\n");
-    opDisplay("    >            %mon%  insert current month\n");
-    opDisplay("    >            %day%  insert current day\n");
-    opDisplay("    >            %hour% insert current hour\n");
-    opDisplay("    >            %min%  insert current minute\n");
-    opDisplay("    >            %sec%  insert current second\n");
-    opDisplay("    >        # - delimiter for milliseconds pause value (e.g., #500#)\n");
+    opDisplay("%s\n", "    > 'enter_keys <key-sequence>' supply a sequence of key entries to the system console");
+    opDisplay("%s\n", "    >      Special keys:");
+    opDisplay("%s\n", "    >        ! - end sequence without sending <enter> key");
+    opDisplay("%s\n", "    >        ; - send <enter> key within a sequence");
+    opDisplay("%s\n", "    >        _ - send <blank> key");
+    opDisplay("%s\n", "    >        ^ - send <backspace> key");
+    opDisplay("%s\n", "    >        % - keyword delimiter for keywords:");
+    opDisplay("%s\n", "    >            %year% insert current year");
+    opDisplay("%s\n", "    >            %mon%  insert current month");
+    opDisplay("%s\n", "    >            %day%  insert current day");
+    opDisplay("%s\n", "    >            %hour% insert current hour");
+    opDisplay("%s\n", "    >            %min%  insert current minute");
+    opDisplay("%s\n", "    >            %sec%  insert current second");
+    opDisplay("%s\n", "    >        # - delimiter for milliseconds pause value (e.g., #500#)");
     }
 
 static void opWaitKeyConsume()
@@ -2151,8 +2136,7 @@ static void opCmdSetKeyInterval(bool help, char *cmdParams)
 static void opHelpSetKeyInterval(void)
     {
     opDisplay("    > 'set_key_interval <millisecs>' set the interval between key entries to the system console.\n");
-    sprintf(opOutBuf, "    > [Current key interval is %u msec.]\n", opKeyInterval);
-    opDisplay(opOutBuf);
+    opDisplay("    > [Current key interval is %u msec.]\n", opKeyInterval);
     }
 
 /*--------------------------------------------------------------------------
@@ -2193,8 +2177,7 @@ static void opCmdSetKeyWaitInterval(bool help, char *cmdParams)
 static void opHelpSetKeyWaitInterval(void)
     {
     opDisplay("    > 'set_keywait_interval <millisecs>' set the interval between keyboard scans of the emulated system console.\n");
-    sprintf(opOutBuf, "    > [Current key wait interval is %u msec.]\n", opKeyWaitInterval);
-    opDisplay(opOutBuf);
+    opDisplay("    > [Current key wait interval is %u msec.]\n", opKeyWaitInterval);
     }
 
 /*--------------------------------------------------------------------------
@@ -2374,8 +2357,7 @@ static void opCmdSetOperatorPort(bool help, char *cmdParams)
         if (opStartListening(port))
             {
             opListenPort = port;
-            sprintf(opOutBuf, "    > Listening for operator connections on port %d\n", port);
-            opDisplay(opOutBuf);
+            opDisplay("    > Listening for operator connections on port %d\n", port);
             }
         }
     }
@@ -2412,8 +2394,7 @@ static int opStartListening(int port)
     if (opListenHandle == -1)
 #endif
         {
-        sprintf(opOutBuf, "    > Failed to listen on port %d\n", port);
-        opDisplay(opOutBuf);
+        opDisplay("    > Failed to listen on port %d\n", port);
         opListenHandle = 0;
 
         return FALSE;
@@ -2557,8 +2538,7 @@ static void opCmdShutdown(bool help, char *cmdParams)
     emulationActive = FALSE;
     opActive        = FALSE;
 
-    sprintf(opOutBuf, "\nThanks for using %s\n", DtCyberVersion);
-    opDisplay(opOutBuf);
+    opDisplay("\nThanks for using %s\n", DtCyberVersion);
     }
 
 static void opHelpShutdown(void)
@@ -2604,8 +2584,7 @@ static void opCmdHelp(bool help, char *cmdParams)
         opDisplay("---------------------------\n\n");
         for (cp = decode; cp->name != NULL; cp++)
             {
-            sprintf(opOutBuf, "    > %s\n", cp->name);
-            opDisplay(opOutBuf);
+            opDisplay("    > %s\n", cp->name);
             }
 
         opDisplay("\n    > Try 'help <command>' to get a brief description of a command.\n");
@@ -2628,8 +2607,7 @@ static void opCmdHelp(bool help, char *cmdParams)
                 }
             }
 
-        sprintf(opOutBuf, "\n    > Command not implemented: %s\n", cmdParams);
-        opDisplay(opOutBuf);
+        opDisplay("\n    > Command not implemented: %s\n", cmdParams);
         }
     }
 
@@ -2668,8 +2646,7 @@ static void opCmdHelpAll(bool help, char *cmdParams)
     */
     for (cp = decode; cp->name != NULL; cp++)
         {
-        sprintf(opOutBuf, "\n    > Command: %s\n", cp->name);
-        opDisplay(opOutBuf);
+        opDisplay("\n    > Command: %s\n", cp->name);
         cp->handler(TRUE, NULL);
         }
     }
@@ -2719,8 +2696,7 @@ void opCmdLoadCards(bool help, char *cmdParams)
     */
     if (numParam < 3)
         {
-        sprintf(opOutBuf, "    > %i parameters supplied. Expected at least 3.\n", numParam);
-        opDisplay(opOutBuf);
+        opDisplay("    > %i parameters supplied. Expected at least 3.\n", numParam);
         opHelpLoadCards();
 
         return;
@@ -2728,16 +2704,14 @@ void opCmdLoadCards(bool help, char *cmdParams)
 
     if ((channelNo < 0) || (channelNo >= MaxChannels))
         {
-        sprintf(opOutBuf, "    > Invalid channel no %02o. (must be 0 to %02o) \n", channelNo, MaxChannels);
-        opDisplay(opOutBuf);
+        opDisplay("    > Invalid channel no %02o. (must be 0 to %02o) \n", channelNo, MaxChannels);
 
         return;
         }
 
     if ((equipmentNo < 0) || (equipmentNo >= MaxEquipment))
         {
-        sprintf(opOutBuf, "    > Invalid equipment no %02o. (must be 0 to %02o) \n", equipmentNo, MaxEquipment);
-        opDisplay(opOutBuf);
+        opDisplay("    > Invalid equipment no %02o. (must be 0 to %02o) \n", equipmentNo, MaxEquipment);
 
         return;
         }
@@ -2786,8 +2760,7 @@ void opCmdLoadCards(bool help, char *cmdParams)
     fcb = fopen(newDeck, "w");
     if (fcb == NULL)
         {
-        sprintf(opOutBuf, "    > Failed to create temporary card deck '%s'\n", newDeck);
-        opDisplay(opOutBuf);
+        opDisplay("    > Failed to create temporary card deck '%s'\n", newDeck);
 
         return;
         }
@@ -2804,23 +2777,20 @@ void opCmdLoadCards(bool help, char *cmdParams)
         return;
         }
 
-    sprintf(opOutBuf, "    > Preprocessing for '%s' into submit file '%s' complete.\n", fname, newDeck);
-    opDisplay(opOutBuf);
+    opDisplay("    > Preprocessing for '%s' into submit file '%s' complete.\n", fname, newDeck);
 
     /*
     **  Do not process any file that results in zero-length submission.
     */
     if (stat(newDeck, &statBuf) != 0)
         {
-        sprintf(opOutBuf, "    > Error learning status of file '%s' (%s)\n", newDeck, strerror(errno));
-        opDisplay(opOutBuf);
+        opDisplay("    > Error learning status of file '%s' (%s)\n", newDeck, strerror(errno));
 
         return;
         }
     if (statBuf.st_size == 0)
         {
-        sprintf(opOutBuf, "    > Skipping empty file '%s', and deleting '%s'\n", fname, newDeck);
-        opDisplay(opOutBuf);
+        opDisplay("    > Skipping empty file '%s', and deleting '%s'\n", fname, newDeck);
         unlink(newDeck);
 
         return;
@@ -3152,8 +3122,7 @@ static int opPrepCards(char *str, FILE *fcb)
     in = fopen(path, "r");
     if (in == NULL)
         {
-        sprintf(opOutBuf, "    > Failed to open %s\n", path);
-        opDisplay(opOutBuf);
+        opDisplay("    > Failed to open %s\n", path);
 
         return -1;
         }
@@ -3216,8 +3185,7 @@ static int opPrepCards(char *str, FILE *fcb)
                 }
             if (*sp == '\0')
                 {
-                sprintf(opOutBuf, "    > File name missing from ~include in %s\n", path);
-                opDisplay(opOutBuf);
+                opDisplay("    > File name missing from ~include in %s\n", path);
                 fclose(in);
 
                 return -1;
@@ -3600,7 +3568,6 @@ static void opCmdShowState(bool help, char *cmdParams)
 
 static void opCmdShowStateCH(u32 mask)
     {
-    char   buf[20];
     u64    chMask;
     int    chNum;
     ChSlot *ch;
@@ -3627,8 +3594,7 @@ static void opCmdShowStateCH(u32 mask)
         opDisplay("    > ");
         while (col < 8)
             {
-            sprintf(opOutBuf, "CH%02o    ", i);
-            opDisplay(opOutBuf);
+            opDisplay("CH%02o    ", i);
             i += 1;
             while ((((u64)1 << i) & chMask) == 0) i += 1;
             if (i >= 32) break;
@@ -3642,8 +3608,7 @@ static void opCmdShowStateCH(u32 mask)
         while (col < 8)
             {
             ch = &channel[i++];
-            sprintf(buf, "%c%c%c%c    ", ch->active ? 'A' : 'D', ch->full ? 'F' : 'E', ch->ioDevice == NULL ? 'I' : 'S', ch->flag ? '*' : ' ');
-            opDisplay(buf);
+            opDisplay("%c%c%c%c    ", ch->active ? 'A' : 'D', ch->full ? 'F' : 'E', ch->ioDevice == NULL ? 'I' : 'S', ch->flag ? '*' : ' ');
             while ((((u64)1 << i) & chMask) == 0) i += 1;
             if (i >= 32) break;
             col += 1;
@@ -3660,32 +3625,29 @@ static void opCmdShowStateCH(u32 mask)
                 {
                 if (ch->full)
                     {
-                    sprintf(buf, "%06o  ", ch->data);
+                    opDisplay("%06o  ", ch->data);
                     }
                 else
                     {
-                    strcpy(buf, "------  ");
+                    opDisplay("------  ");
                     }
                 }
             else
                 {
                 if (ch->full)
                     {
-                    sprintf(buf, "%04o    ", ch->data);
+                    opDisplay("%04o    ", ch->data);
                     }
                 else
                     {
-                    strcpy(buf, "----    ");
+                    opDisplay("----    ");
                     }
                 }
-            opDisplay(buf);
             while ((((u64)1 << i) & chMask) == 0) i += 1;
             if (i >= 32) break;
             col += 1;
             }
-        opDisplay("\n");
-
-        opDisplay("\n");
+        opDisplay("\n\n");
         chNum = i;
         }
     }
@@ -3709,8 +3671,7 @@ static void opCmdShowStateCP(u8 cpMask)
 
         if (cpuCount > 1)
             {
-            sprintf(opOutBuf, "    > ---------------- CPU%o --------------\n", cpNum);
-            opDisplay(opOutBuf);
+            opDisplay("    > ---------------- CPU%o --------------\n", cpNum);
             }
         else
             {
@@ -3733,102 +3694,80 @@ static void opCmdShowStateCp170(Cpu170Context *cpu)
     int i;
 
     i = 0;
-    sprintf(opOutBuf, "    > P       %06o  A%d %06o  B%d %06o\n", cpu->regP, i, cpu->regA[i], i, cpu->regB[i]);
-    opDisplay(opOutBuf);
-    i++;
-    sprintf(opOutBuf, "    > RA    %08o  A%d %06o  B%d %06o\n", cpu->regRaCm, i, cpu->regA[i], i, cpu->regB[i]);
-    opDisplay(opOutBuf);
-    i++;
-    sprintf(opOutBuf, "    > FL    %08o  A%d %06o  B%d %06o\n", cpu->regFlCm, i, cpu->regA[i], i, cpu->regB[i]);
-    opDisplay(opOutBuf);
-    i++;
-    sprintf(opOutBuf, "    > EM    %08o  A%d %06o  B%d %06o\n", cpu->exitMode, i, cpu->regA[i], i, cpu->regB[i]);
-    opDisplay(opOutBuf);
-    i++;
-    sprintf(opOutBuf, "    > RAE   %08o  A%d %06o  B%d %06o\n", cpu->regRaEcs, i, cpu->regA[i], i, cpu->regB[i]);
-    opDisplay(opOutBuf);
-    i++;
-    sprintf(opOutBuf, "    > FLE %010o  A%d %06o  B%d %06o\n", cpu->regFlEcs, i, cpu->regA[i], i, cpu->regB[i]);
-    opDisplay(opOutBuf);
-    i++;
-    sprintf(opOutBuf, "    > MA    %08o  A%d %06o  B%d %06o\n", cpu->regMa, i, cpu->regA[i], i, cpu->regB[i]);
-    opDisplay(opOutBuf);
-    i++;
-    sprintf(opOutBuf, "    > Monitor Mode %d  A%d %06o  B%d %06o\n", cpu->isMonitorMode, i, cpu->regA[i], i, cpu->regB[i]);
-    opDisplay(opOutBuf);
-    sprintf(opOutBuf, "    > Stopped      %d\n\n", cpu->isStopped);
-    opDisplay(opOutBuf);
+    opDisplay("    > P       %06o  A%d %06o  B%d %06o\n", cpu->regP, i, cpu->regA[i], i, cpu->regB[i]);
+    i += 1;
+    opDisplay("    > RA    %08o  A%d %06o  B%d %06o\n", cpu->regRaCm, i, cpu->regA[i], i, cpu->regB[i]);
+    i += 1;
+    opDisplay("    > FL    %08o  A%d %06o  B%d %06o\n", cpu->regFlCm, i, cpu->regA[i], i, cpu->regB[i]);
+    i += 1;
+    opDisplay("    > EM    %08o  A%d %06o  B%d %06o\n", cpu->exitMode, i, cpu->regA[i], i, cpu->regB[i]);
+    i += 1;
+    opDisplay("    > RAE   %08o  A%d %06o  B%d %06o\n", cpu->regRaEcs, i, cpu->regA[i], i, cpu->regB[i]);
+    i += 1;
+    opDisplay("    > FLE %010o  A%d %06o  B%d %06o\n", cpu->regFlEcs, i, cpu->regA[i], i, cpu->regB[i]);
+    i += 1;
+    opDisplay("    > MA    %08o  A%d %06o  B%d %06o\n", cpu->regMa, i, cpu->regA[i], i, cpu->regB[i]);
+    i += 1;
+    opDisplay("    > Monitor Mode %d  A%d %06o  B%d %06o\n", cpu->isMonitorMode, i, cpu->regA[i], i, cpu->regB[i]);
+    opDisplay("    > Stopped      %d\n\n", cpu->isStopped);
 
     for (i = 0; i < 8; i++)
         {
-        sprintf(opOutBuf, "    > X%d  " FMT60_020o "\n", i, cpu->regX[i]);
-        opDisplay(opOutBuf);
+        opDisplay("    > X%d  " FMT60_020o "\n", i, cpu->regX[i]);
         }
     opDisplay("\n");
+    if (isCyber180)
+        {
+        Cpu180Context *ctx180;
+        ctx180 = &cpus180[cpu->id];
+        opDisplay("    > UMR %04x  MMR %04x\n", ctx180->regUmr, ctx180->regMmr);
+        opDisplay("    > UCR %04x  MCR %04x\n\n", ctx180->regUcr, ctx180->regMcr);
+        }
     }
 
 static void opCmdShowStateCp180(Cpu180Context *cpu)
     {
     int i;
 
-    sprintf(opOutBuf, "    > P %02x " FMT64_012x, cpu->key, cpu->regP);
-    opDisplay(opOutBuf);
+    opDisplay("    > P %02x " FMT64_012x, cpu->key, cpu->regP);
     opDisplayRma(cpu, cpu->regP);
     opDisplay("\n\n");
     for (i = 0; i < 16; i++)
         {
-        sprintf(opOutBuf, "    > A%X " FMT64_012x, i, cpu->regA[i]);
-        opDisplay(opOutBuf);
+        opDisplay("    > A%X " FMT64_012x, i, cpu->regA[i]);
         opDisplayRma(cpu, cpu->regA[i]);
-        sprintf(opOutBuf,"   X%X " FMT64_016x "\n", i, cpu->regX[i]);
-        opDisplay(opOutBuf);
+        opDisplay("   X%X " FMT64_016x "\n", i, cpu->regX[i]);
         }
     opDisplay("\n");
-    sprintf(opOutBuf, "    > VMID %04x  VMCL %04x   LPID %02x\n", cpu->regVmid, cpu->regVmcl, cpu->regLpid);
-    opDisplay(opOutBuf);
-    sprintf(opOutBuf, "    >  UMR %04x   MMR %04x  Flags %04x\n", cpu->regUmr, cpu->regMmr, cpu->regFlags);
-    opDisplay(opOutBuf);
-    sprintf(opOutBuf, "    >  UCR %04x   MCR %04x    MDF %04x\n", cpu->regUcr, cpu->regMcr, cpu->regMdf);
-    opDisplay(opOutBuf);
+    opDisplay("    > VMID %04x  VMCL %04x   LPID %02x\n", cpu->regVmid, cpu->regVmcl, cpu->regLpid);
+    opDisplay("    >  UMR %04x   MMR %04x  Flags %04x\n", cpu->regUmr, cpu->regMmr, cpu->regFlags);
+    opDisplay("    >  UCR %04x   MCR %04x    MDF %04x\n", cpu->regUcr, cpu->regMcr, cpu->regMdf);
     opDisplay("\n");
-    sprintf(opOutBuf, "    >  MPS %08x  SIT %08x\n", cpu->regMps, cpu->regSit);
-    opDisplay(opOutBuf);
-    sprintf(opOutBuf, "    >  JPS %08x  PIT %08x\n", cpu->regJps, cpu->regPit);
-    opDisplay(opOutBuf);
-    sprintf(opOutBuf, "    >   BC %08x\n", cpu->regBc);
-    opDisplay(opOutBuf);
+    opDisplay("    >  MPS %08x  SIT %08x\n", cpu->regMps, cpu->regSit);
+    opDisplay("    >  JPS %08x  PIT %08x\n", cpu->regJps, cpu->regPit);
+    opDisplay("    >   BC %08x\n", cpu->regBc);
     opDisplay("\n");
-    sprintf(opOutBuf, "    >  PTA %08x  STA %08x\n", cpu->regPta, cpu->regSta);
-    opDisplay(opOutBuf);
-    sprintf(opOutBuf, "    >  PTL %02x        STL %03x\n", cpu->regPtl, cpu->regStl);
-    opDisplay(opOutBuf);
-    sprintf(opOutBuf, "    >  PSM %02x\n", cpu->regPsm);
-    opDisplay(opOutBuf);
+    opDisplay("    >  PTA %08x  STA %08x\n", cpu->regPta, cpu->regSta);
+    opDisplay("    >  PTL %02x        STL %03x\n", cpu->regPtl, cpu->regStl);
+    opDisplay("    >  PSM %02x\n", cpu->regPsm);
     opDisplay("\n");
-    sprintf(opOutBuf, "    >  UTP " FMT64_012x "  TP " FMT64_012x, cpu->regUtp, cpu->regTp);
-    opDisplay(opOutBuf);
+    opDisplay("    >  UTP " FMT64_012x "  TP " FMT64_012x, cpu->regUtp, cpu->regTp);
     opDisplayRma(cpu, cpu->regTp);
     opDisplay("\n");
-    sprintf(opOutBuf, "    >  DLP " FMT64_012x "  DI %02x  DM %02x\n", cpu->regDlp, cpu->regDi, cpu->regDm);
-    opDisplay(opOutBuf);
+    opDisplay("    >  DLP " FMT64_012x "  DI %02x  DM %02x\n", cpu->regDlp, cpu->regDi, cpu->regDm);
     opDisplay("\n");
-    sprintf(opOutBuf, "    >  LRN %d\n", cpu->regLrn);
-    opDisplay(opOutBuf);
+    opDisplay("    >  LRN %d\n", cpu->regLrn);
     for (i = 1; i < 16; i++)
         {
-        sprintf(opOutBuf, "    >  TOS[%x] " FMT64_012x, i, cpu->regTos[i]);
-        opDisplay(opOutBuf);
+        opDisplay("    >  TOS[%x] " FMT64_012x, i, cpu->regTos[i]);
         opDisplayRma(cpu, cpu->regTos[i]);
         opDisplay("\n");
         }
     opDisplay("\n");
-    sprintf(opOutBuf, "    >  MDW " FMT64_016x "  \n", cpu->regMdw);
-    opDisplay(opOutBuf);
+    opDisplay("    >  MDW " FMT64_016x "  \n", cpu->regMdw);
     opDisplay("\n");
-    sprintf(opOutBuf, "    > Monitor Mode %d\n", cpu->isMonitorMode ? 1 : 0);
-    opDisplay(opOutBuf);
-    sprintf(opOutBuf, "    > Stopped      %d\n", cpu->isStopped ? 1 : 0);
-    opDisplay(opOutBuf);
+    opDisplay("    > Monitor Mode %d\n", cpu->isMonitorMode ? 1 : 0);
+    opDisplay("    > Stopped      %d\n", cpu->isStopped ? 1 : 0);
     opDisplay("\n");
     }
 
@@ -3861,8 +3800,7 @@ static void opCmdShowStatePP(u32 ppMask)
         opDisplay("    > ");
         while (col < 5)
             {
-            sprintf(opOutBuf, "  PP%02o          ", (i < 10) ? i : i + 6);
-            opDisplay(opOutBuf);
+            opDisplay("  PP%02o          ", (i < 10) ? i : i + 6);
             i += 1;
             while (((1 << i) & ppMask) == 0) i += 1;
             if (i >= 20) break;
@@ -4167,8 +4105,7 @@ static void opCmdShowUnitRecord(bool help, char *cmdParams)
     */
     if (strlen(cmdParams) != 0)
         {
-        sprintf(opOutBuf, "    > No parameters expected.\n");
-        opDisplay(opOutBuf);
+        opDisplay("    > No parameters expected.\n");
         opHelpShowUnitRecord();
 
         return;
@@ -4322,8 +4259,7 @@ static void opCmdShowNetwork(bool help, char *cmdParams)
                 }
             else
                 {
-                sprintf(opOutBuf, "    > Unrecognized network type: %s\n", token);
-                opDisplay(opOutBuf);
+                opDisplay("    > Unrecognized network type: %s\n", token);
 
                 return;
                 }
@@ -4359,7 +4295,7 @@ static void opHelpShowNetwork(void)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Show Version of dtCyber
+**  Purpose:        Show Version of DtCyber
 **
 **  Parameters:     Name        Description.
 **                  help        Request only help on this command.
@@ -4396,7 +4332,7 @@ static void opCmdShowVersion(bool help, char *cmdParams)
 
 static void opHelpShowVersion(void)
     {
-    opDisplay("    > 'sv'           show version of dtCyber.\n");
+    opDisplay("    > 'sv'           show version of DtCyber.\n");
     opDisplay("    > 'show_version'\n");
     opDisplay("    > 'version'\n");
     }
@@ -4445,7 +4381,7 @@ static void opCmdShowAll(bool help, char *cmdParams)
 
 static void opHelpShowAll(void)
     {
-    opDisplay("    > 'sa'       show status of all dtCyber Devices.\n");
+    opDisplay("    > 'sa'       show status of all DtCyber Devices.\n");
     opDisplay("    > 'show_all'\n");
     }
 
@@ -4478,27 +4414,21 @@ static void opCmdIdle(bool help, char *cmdParams)
 
     if (strlen(cmdParams) == 0)
         {
-        sprintf(opOutBuf, "    > Idle loop detection: %s\n", idle ? "ON" : "OFF");
-        opDisplay(opOutBuf);
+        opDisplay("    > Idle loop detection: %s\n", idle ? "ON" : "OFF");
         if (idleDetector == &idleDetectorNone)
             {
-            sprintf(opOutBuf, "    > OS handler: None\n");
-            opDisplay(opOutBuf);
+            opDisplay("    > OS handler: None\n");
             }
         else
             {
-            sprintf(opOutBuf, "    > OS handler: %s\n", osType);
-            opDisplay(opOutBuf);
+            opDisplay("    > OS handler: %s\n", osType);
             }
 #ifdef WIN32
-        sprintf(opOutBuf, "    > Sleep every %u cycles for %u milliseconds\n", idleTrigger, idleTime);
-        opDisplay(opOutBuf);
+        opDisplay("    > Sleep every %u cycles for %u milliseconds\n", idleTrigger, idleTime);
 #else
-        sprintf(opOutBuf, "    > Sleep every %u cycles for %u usec\n", idleTrigger, idleTime);
-        opDisplay(opOutBuf);
+        opDisplay("    > Sleep every %u cycles for %u usec\n", idleTrigger, idleTime);
 #endif
-        sprintf(opOutBuf, "    > NPU/MDI is busy when %d or more network buffers active\n", idleNetBufs);
-        opDisplay(opOutBuf);
+        opDisplay("    > NPU/MDI is busy when %d or more network buffers active\n", idleNetBufs);
 
         return;
         }
@@ -4519,14 +4449,12 @@ static void opCmdIdle(bool help, char *cmdParams)
         numParam = sscanf(cmdParams + 1, "%u", &newThreshold);
         if (numParam < 1)
             {
-            sprintf(opOutBuf, "    > Buffer count missing\n");
-            opDisplay(opOutBuf);
+            opDisplay("    > Buffer count missing\n");
 
             return;
             }
         idleNetBufs = newThreshold;
-        sprintf(opOutBuf, "    > NPU/MDI is busy when %d or more network buffers active\n", idleNetBufs);
-        opDisplay(opOutBuf);
+        opDisplay("    > NPU/MDI is busy when %d or more network buffers active\n", idleNetBufs);
         }
     else
         {
@@ -4534,22 +4462,19 @@ static void opCmdIdle(bool help, char *cmdParams)
 
         if (numParam != 2)
             {
-            sprintf(opOutBuf, "    > 2 parameters expected - %u provided\n", numParam);
-            opDisplay(opOutBuf);
+            opDisplay("    > 2 parameters expected - %u provided\n", numParam);
 
             return;
             }
         if ((newTrigger < 1) || (newSleep < 1))
             {
-            sprintf(opOutBuf, "    > No parameters provided (1 or 2 expected)\n");
-            opDisplay(opOutBuf);
+            opDisplay("    > No parameters provided (1 or 2 expected)\n");
 
             return;
             }
         idleTrigger = (u32)newTrigger;
         idleTime    = (u32)newSleep;
-        sprintf(opOutBuf, "    > Sleep will now occur every %u cycles for %u milliseconds.\n", idleTrigger, idleTime);
-        opDisplay(opOutBuf);
+        opDisplay("    > Sleep will now occur every %u cycles for %u milliseconds.\n", idleTrigger, idleTime);
         }
     }
 
@@ -4591,7 +4516,7 @@ static void opCmdStartHelpers(bool help, char *cmdParams)
 
 static void opHelpStartHelpers(void)
     {
-    opDisplay("    > 'starth'       start dtCyber helper processes.\n");
+    opDisplay("    > 'starth'       start DtCyber helper processes.\n");
     opDisplay("    > 'start_helpers'\n");
     }
 
@@ -4633,7 +4558,7 @@ static void opCmdStopHelpers(bool help, char *cmdParams)
 
 static void opHelpStopHelpers(void)
     {
-    opDisplay("    > 'stoph'        stop dtCyber helper processes.\n");
+    opDisplay("    > 'stoph'        stop DtCyber helper processes.\n");
     opDisplay("    > 'stop_helpers'\n");
     }
 
@@ -4651,7 +4576,6 @@ static void opHelpStopHelpers(void)
 **------------------------------------------------------------------------*/
 static void opDisplayRma(Cpu180Context *ctx, u64 pva)
     {
-    char             buf[32];
     MonitorCondition cond;
     u32              pti;
     u32              rma;
@@ -4660,8 +4584,7 @@ static void opDisplayRma(Cpu180Context *ctx, u64 pva)
     savedUtp    = ctx->regUtp;
     if (cpu180PvaToRma(ctx, pva, AccessModeNone, &rma, &pti, &cond))
         {
-        sprintf(buf, " [" FMT32_08x "]", rma);
-        opDisplay(buf);
+        opDisplay(" [" FMT32_08x "]", rma);
         }
     else
         {
@@ -4683,17 +4606,12 @@ static void opDisplayRma(Cpu180Context *ctx, u64 pva)
 static void opDisplayVersion(void)
     {
     opDisplay("\n--------------------------------------------------------------------------------");
-    sprintf(opOutBuf, "\n     %s", DtCyberVersion);
-    opDisplay(opOutBuf);
-    sprintf(opOutBuf, "\n     %s", DtCyberCopyright);
-    opDisplay(opOutBuf);
-    sprintf(opOutBuf, "\n     %s", DtCyberLicense);
-    opDisplay(opOutBuf);
-    sprintf(opOutBuf, "\n     %s", DtCyberLicenseDetails);
-    opDisplay(opOutBuf);
+    opDisplay("\n     %s", DtCyberVersion);
+    opDisplay("\n     %s", DtCyberCopyright);
+    opDisplay("\n     %s", DtCyberLicense);
+    opDisplay("\n     %s", DtCyberLicenseDetails);
     opDisplay("\n--------------------------------------------------------------------------------");
-    sprintf(opOutBuf, "\n     Build date: %s", DtCyberBuildDate);
-    opDisplay(opOutBuf);
+    opDisplay("\n     Build date: %s", DtCyberBuildDate);
     opDisplay("\n--------------------------------------------------------------------------------");
     opDisplay("\n");
     }

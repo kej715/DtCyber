@@ -339,7 +339,6 @@ void cp3446RemoveCards(char *params)
     int       equipmentNo;
     char      fnameNew[MaxFSPath + 64];
     int       numParam;
-    char      outBuf[400];
     int       isuffix;
     bool      renameOK;
     struct tm t;
@@ -379,8 +378,7 @@ void cp3446RemoveCards(char *params)
     dp = dcc6681FindDevice((u8)channelNo, (u8)equipmentNo, DtCp3446);
     if (dp == NULL)
         {
-        sprintf(outBuf, "(cp3446 ) No card punch on channel %o and equipment %o\n", channelNo, equipmentNo);
-        opDisplay(outBuf);
+        opDisplay("(cp3446 ) No card punch on channel %o and equipment %o\n", channelNo, equipmentNo);
 
         return;
         }
@@ -395,10 +393,7 @@ void cp3446RemoveCards(char *params)
     if (dp->fcb[0] == NULL)
         {
         renameOK = TRUE;        //  Since nothing was open - we're not renaming
-        sprintf(outBuf, "(cp3446 ) cp3446RemoveCards: FCB is Null on channel %o equipment %o\n",
-                dp->channel->id,
-                dp->eqNo);
-        opDisplay(outBuf);
+        opDisplay("(cp3446 ) cp3446RemoveCards: FCB is Null on channel %o equipment %o\n", dp->channel->id, dp->eqNo);
         //  proceed to attempt to open a new FCB
         }
     else
@@ -408,8 +403,7 @@ void cp3446RemoveCards(char *params)
 
         if (ftell(dp->fcb[0]) == 0)
             {
-            sprintf(outBuf, "(cp3446 ) No cards have been punched on channel %o and equipment %o\n", channelNo, equipmentNo);
-            opDisplay(outBuf);
+            opDisplay("(cp3446 ) No cards have been punched on channel %o and equipment %o\n", channelNo, equipmentNo);
 
             return;
             }
@@ -447,8 +441,7 @@ void cp3446RemoveCards(char *params)
                 renameOK = TRUE;
                 break;
                 }
-            sprintf(outBuf, "(cp3446 ) Could not rename '%s' to '%s' - %s (retrying)\n", cc->curFileName, fnameNew, strerror(errno));
-            opDisplay(outBuf);
+            opDisplay("(cp3446 ) Could not rename '%s' to '%s' - %s (retrying)\n", cc->curFileName, fnameNew, strerror(errno));
             }
         }
 
@@ -462,14 +455,12 @@ void cp3446RemoveCards(char *params)
     */
     if (dp->fcb[0] == NULL)
         {
-        sprintf(outBuf, "(cp3446 ) Failed to open %s\n", cc->curFileName);
-        opDisplay(outBuf);
+        opDisplay("(cp3446 ) Failed to open %s\n", cc->curFileName);
 
         return;
         }
 
-    sprintf(outBuf, "(cp3446 ) Cards removed and available on '%s'\n", fnameNew);
-    opDisplay(outBuf);
+    opDisplay("(cp3446 ) Cards removed and available on '%s'\n", fnameNew);
     }
 
 /*
@@ -612,15 +603,13 @@ static void cp3446Io(void)
     CpContext *cc;
     char      c;
     PpWord    p;
-    char      outBuf[400];
 
     cc = (CpContext *)active3000Device->context[0];
 
     switch (active3000Device->fcode)
         {
     default:
-        sprintf(outBuf, "(cp3446 ) Unexpected IO for function %04o\n", active3000Device->fcode);
-        opDisplay(outBuf);
+        opDisplay("(cp3446 ) Unexpected IO for function %04o\n", active3000Device->fcode);
         break;
 
     case 0:
@@ -921,15 +910,11 @@ static char *cp3446Func2String(PpWord funcCode)
 void cp3446ShowStatus()
     {
     CpContext *cp;
-    char      outBuf[MaxFSPath + 128];
 
     for (cp = firstUnit; cp != NULL; cp = cp->nextUnit)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", "3446", cp->channelNo, cp->eqNo, cp->unitNo);
-        opDisplay(outBuf);
-        sprintf(outBuf, "   %-20s (", cp->curFileName);
-        opDisplay(outBuf);
-        opDisplay(cp->binary ? "bin" : "char");
+        opDisplay("    >   %-8s C%02o E%02o U%02o", "3446", cp->channelNo, cp->eqNo, cp->unitNo);
+        opDisplay("   %-20s (%s", cp->curFileName, cp->binary ? "bin" : "char");
         if (cp->rawCard)
             {
             opDisplay(", raw");

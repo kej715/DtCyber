@@ -347,7 +347,7 @@ void initStartup(char *config, char *configFile)
     fcb = fopen(overlayFile, "rb");
     if (fcb != NULL)
         {
-        printf("(init   ) Reading Configuration Overlay File '%s'\n\n", overlayFile);
+        printf("(init   ) Reading Configuration Overlay File '%s'\n", overlayFile);
         initReadStartupFile(fcb, overlayFile);
         fclose(fcb);
         }
@@ -355,7 +355,7 @@ void initStartup(char *config, char *configFile)
     /*
     **  Open startup file.
     */
-    printf("(init   ) Reading Configuration File '%s'\n\n", configFile);
+    printf("(init   ) Reading Configuration File '%s'\n", configFile);
     fcb = fopen(configFile, "rb");
     if (fcb == NULL)
         {
@@ -1367,7 +1367,10 @@ static void initConsole(void)
 
     if (!initOpenConsoleSection())
         {
-        logDtError(LogErrorLocation, "Optional 'console' section [%s] not found in %s\n", console, startupFile);
+        if (console[0] != '\0')
+            {
+            logDtError(LogErrorLocation, "Optional 'console' section [%s] not found in %s\n", console, startupFile);
+            }
 
         return;
         }

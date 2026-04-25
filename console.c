@@ -452,20 +452,14 @@ bool consoleIsRemoteActive(void)
 **------------------------------------------------------------------------*/
 void consoleShowStatus(void)
     {
-    char outBuf[200];
-
     if (listenFd != INVALID_SOCKET)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "6612", consoleChannelNo, consoleEqNo);
-        opDisplay(outBuf);
-        sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(listenFd), "", "console", "listening");
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s C%02o E%02o     ", "6612", consoleChannelNo, consoleEqNo);
+        opDisplay(FMTNETSTATUS "\n", netGetLocalTcpAddress(listenFd), "", "console", "listening");
         if (connFd != INVALID_SOCKET)
             {
-            sprintf(outBuf, "    >   %-8s             ", "6612");
-            opDisplay(outBuf);
-            sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(connFd), netGetPeerTcpAddress(connFd), "console", "connected");
-            opDisplay(outBuf);
+            opDisplay("    >   %-8s             ", "6612");
+            opDisplay(FMTNETSTATUS "\n", netGetLocalTcpAddress(connFd), netGetPeerTcpAddress(connFd), "console", "connected");
             }
         }
     }

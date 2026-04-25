@@ -344,23 +344,18 @@ void niuSetOutputHandler(niuProcessOutput *h, int stat)
 void niuShowStatus()
     {
     int       i;
-    char      outBuf[200];
     PortParam *pp;
 
     if (listenFd > 0)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "NIU", in->channel->id, in->eqNo);
-        opDisplay(outBuf);
-        sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(listenFd), "", "plato", "listening");
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s C%02o E%02o     ", "NIU", in->channel->id, in->eqNo);
+        opDisplay(FMTNETSTATUS "\n", netGetLocalTcpAddress(listenFd), "", "plato", "listening");
         for (i = 0, pp = portVector; i < platoConns; i++, pp++)
             {
             if (pp->active && (pp->connFd > 0))
                 {
-                sprintf(outBuf, "    >   %-8s         P%02o ", "NIU", pp->id);
-                opDisplay(outBuf);
-                sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), "plato", "connected");
-                opDisplay(outBuf);
+                opDisplay("    >   %-8s         P%02o ", "NIU", pp->id);
+                opDisplay(FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), "plato", "connected");
                 }
             }
         }

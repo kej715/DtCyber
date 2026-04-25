@@ -596,7 +596,6 @@ static char *dd6603Func2String(PpWord funcCode)
 void dd6603ShowDiskStatus()
     {
     DiskParam *dp = firstDisk;
-    char      outBuf[MaxFSPath + 128];
 
     if (dp == NULL)
         {
@@ -604,16 +603,15 @@ void dd6603ShowDiskStatus()
         }
     while (dp)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o   %-20s (hd %02o sec 0x%06x trk 0x%06o)\n",
-                "6603",
-                dp->channelNo,
-                dp->eqNo,
-                dp->unitNo,
-                dp->fileName,
-                dp->head,
-                dp->sector,
-                dp->track);
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s C%02o E%02o U%02o   %-20s (hd %02o sec 0x%06x trk 0x%06o)\n",
+                  "6603",
+                  dp->channelNo,
+                  dp->eqNo,
+                  dp->unitNo,
+                  dp->fileName,
+                  dp->head,
+                  dp->sector,
+                  dp->track);
         dp = dp->nextDisk;
         }
     }

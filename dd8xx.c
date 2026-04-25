@@ -408,7 +408,6 @@ void dd8xxLoadDisk(char *params)
     int         equipmentNo;
     int         unitNo;
     FILE        *fcb;
-    char        outBuf[400];
 
     /*
     **  Operator mounted a new disk.
@@ -461,8 +460,7 @@ void dd8xxLoadDisk(char *params)
     dp = (DiskParam *)ds->context[unitNo];
     if (dp == NULL)
         {
-        sprintf(outBuf, "(dd8xx  ) Unit %d not allocated\n", unitNo);
-        opDisplay(outBuf);
+        opDisplay("(dd8xx  ) Unit %d not allocated\n", unitNo);
 
         return;
         }
@@ -472,8 +470,7 @@ void dd8xxLoadDisk(char *params)
     */
     if (ds->fcb[unitNo] != NULL)
         {
-        sprintf(outBuf, "(dd8xx  ) Unit %d not unloaded\n", unitNo);
-        opDisplay(outBuf);
+        opDisplay("(dd8xx  ) Unit %d not unloaded\n", unitNo);
 
         return;
         }
@@ -485,8 +482,7 @@ void dd8xxLoadDisk(char *params)
     */
     if (fcb == NULL)
         {
-        sprintf(outBuf, "(dd8xx  ) Failed to open %s\n", str);
-        opDisplay(outBuf);
+        opDisplay("(dd8xx  ) Failed to open %s\n", str);
 
         return;
         }
@@ -498,8 +494,7 @@ void dd8xxLoadDisk(char *params)
     */
     strcpy(dp->fileName, str);
 
-    sprintf(outBuf, "(dd8xx  ) Successfully loaded %s\n", str);
-    opDisplay(outBuf);
+    opDisplay("(dd8xx  ) Successfully loaded %s\n", str);
     }
 
 /*--------------------------------------------------------------------------
@@ -519,7 +514,6 @@ void dd8xxUnloadDisk(char *params)
     int       channelNo;
     int       equipmentNo;
     int       unitNo;
-    char      outBuf[400];
 
     /*
     **  Operator unloaded a disk.
@@ -565,8 +559,7 @@ void dd8xxUnloadDisk(char *params)
     dp = (DiskParam *)ds->context[unitNo];
     if (dp == NULL)
         {
-        sprintf(outBuf, "(dd8xx  ) Unit %d not allocated\n", unitNo);
-        opDisplay(outBuf);
+        opDisplay("(dd8xx  ) Unit %d not allocated\n", unitNo);
 
         return;
         }
@@ -576,8 +569,7 @@ void dd8xxUnloadDisk(char *params)
     */
     if (ds->fcb[unitNo] == NULL)
         {
-        sprintf(outBuf, "(dd8xx  ) Unit %d not loaded\n", unitNo);
-        opDisplay(outBuf);
+        opDisplay("(dd8xx  ) Unit %d not loaded\n", unitNo);
 
         return;
         }
@@ -593,8 +585,7 @@ void dd8xxUnloadDisk(char *params)
     */
     memset(dp->fileName, 0, MaxFSPath);
 
-    sprintf(outBuf, "(dd8xx  ) Successfully unloaded DD8xx disk on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
-    opDisplay(outBuf);
+    opDisplay("(dd8xx  ) Successfully unloaded DD8xx disk on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -610,7 +601,6 @@ void dd8xxShowDiskStatus()
     {
     DiskParam *dp = firstDisk;
     char      dt[16];
-    char      outBuf[MaxFSPath + 128];
 
     if (dp == NULL)
         {
@@ -632,12 +622,10 @@ void dd8xxShowDiskStatus()
             strcpy(dt, "844");
             break;
             }
-        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", dt, dp->channelNo, dp->eqNo, dp->unitNo);
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s C%02o E%02o U%02o", dt, dp->channelNo, dp->eqNo, dp->unitNo);
         if (*dp->fileName != '\0')
             {
-            sprintf(outBuf, "   %-20s (cyl 0x%06x trk 0x%06o)\n", dp->fileName, dp->cylinder, dp->track);
-            opDisplay(outBuf);
+            opDisplay("   %-20s (cyl 0x%06x trk 0x%06o)\n", dp->fileName, dp->cylinder, dp->track);
             }
         else
             {
@@ -878,7 +866,6 @@ static FILE *dd8xxMount(char *deviceName, DiskParam *dp)
     {
     FILE      *fcb;
     char      fname[MaxFSPath];
-    char      msg[MaxFSPath + 30];
     time_t    mTime;
     struct tm *lTime;
     u8        yy, mm, dd;
@@ -920,8 +907,7 @@ static FILE *dd8xxMount(char *deviceName, DiskParam *dp)
         fcb = fopen(fname, "w+b");
         if (fcb == NULL)
             {
-            sprintf(msg, "(dd8xx  ) Failed to open %s\n", fname);
-            opDisplay(msg);
+            opDisplay("(dd8xx  ) Failed to open %s\n", fname);
 
             return NULL;
             }

@@ -443,25 +443,20 @@ void msufrendShowStatus()
     {
     FrendContext *fp;
     int          i;
-    char         outBuf[200];
     PortContext  *pp;
 
     for (fp = firstFrend; fp != NULL; fp = fp->next)
         {
         if (fp->listenFd > 0)
             {
-            sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "MSUFrEnd", fp->channelNo, fp->eqNo);
-            opDisplay(outBuf);
-            sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(fp->listenFd), "", "frend", "listening");
-            opDisplay(outBuf);
+            opDisplay("    >   %-8s C%02o E%02o     ", "MSUFrEnd", fp->channelNo, fp->eqNo);
+            opDisplay(FMTNETSTATUS "\n", netGetLocalTcpAddress(fp->listenFd), "", "frend", "listening");
             for (i = 0, pp = fp->ports; i < fp->portCount; i++, pp++)
                 {
                 if (pp->active && (pp->fd > 0))
                     {
-                    sprintf(outBuf, "(msu    )         P%02o ", pp->id);
-                    opDisplay(outBuf);
-                    sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->fd), netGetPeerTcpAddress(pp->fd), "frend", "connected");
-                    opDisplay(outBuf);
+                    opDisplay("(msu    )         P%02o ", pp->id);
+                    opDisplay(FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->fd), netGetPeerTcpAddress(pp->fd), "frend", "connected");
                     }
                 }
             }
@@ -915,11 +910,7 @@ static u8 getByte(FrendAddr addr)
  */
 static void writeToOperTerm(u8 ch)
     {
-    char buf[2];
-
-    buf[0] = ch;
-    buf[1] = '\0';
-    opDisplay(buf);
+    opDisplay("%c", ch);
     }
 
 /*--- function sendToFSock ----------------------

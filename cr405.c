@@ -515,7 +515,6 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, char *params)
     Cr405Context *cc;
     DevSlot      *dp;
     int          len;
-    char         outBuf[MaxFSPath + 128];
     struct stat  s;
     char         *sp;
 
@@ -545,8 +544,7 @@ void cr405LoadCards(char *fname, int channelNo, int equipmentNo, char *params)
 
     if (stat(fname, &s) != 0)
         {
-        sprintf(outBuf, "(cr405  ) Requested file '%s' not found. (%s).\n", fname, strerror(errno));
-        opDisplay(outBuf);
+        opDisplay("(cr405  ) Requested file '%s' not found. (%s).\n", fname, strerror(errno));
 
         return;
         }
@@ -594,7 +592,6 @@ void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params)
     struct dirent *curDirEntry;
     DevSlot       *dp;
     char          fOldest[MaxFSPath * 2 + 2] = "";
-    char          outBuf[MaxFSPath * 2 + 128];
     struct stat   s;
     char          strWork[MaxFSPath * 2 + 2] = "";
     time_t        tOldest = 0;
@@ -604,8 +601,7 @@ void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params)
 
     if (*fname != '*')
         {
-        sprintf(outBuf, "(cr405  ) GetNextDeck called with improper parameter '%s'.\n", fname);
-        opDisplay(outBuf);
+        opDisplay("(cr405  ) GetNextDeck called with improper parameter '%s'.\n", fname);
 
         return;
         }
@@ -698,8 +694,7 @@ void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params)
 
     if (fOldest[0] != '\0')
         {
-        sprintf(outBuf, "(cr405  ) Dequeueing unprocessed file '%s' from '%s'.\n", fOldest, cc->dirInput);
-        opDisplay(outBuf);
+        opDisplay("(cr405  ) Dequeueing unprocessed file '%s' from '%s'.\n", fOldest, cc->dirInput);
 
         /*
         **  To complement the functionality of the operator.c process,
@@ -718,8 +713,7 @@ void cr405GetNextDeck(char *fname, int channelNo, int equipmentNo, char *params)
         }
     else
         {
-        sprintf(outBuf, "(cr405  ) No files found in '%s'.\n", cc->dirInput);
-        opDisplay(outBuf);
+        opDisplay("(cr405  ) No files found in '%s'.\n", cc->dirInput);
         }
     }
 
@@ -741,7 +735,6 @@ void cr405PostProcess(char *fname, int channelNo, int equipmentNo, char *params)
     {
     Cr405Context *cc;
     DevSlot      *dp;
-    char         outBuf[MaxFSPath * 2 + 128];
 
     /*
     **  Locate the device control block.
@@ -757,8 +750,7 @@ void cr405PostProcess(char *fname, int channelNo, int equipmentNo, char *params)
 
     if (cc->dirInput == NULL)
         {
-        sprintf(outBuf, "(cr405  ) Submitted deck '%s' processing complete.\n", fname);
-        opDisplay(outBuf);
+        opDisplay("(cr405  ) Submitted deck '%s' processing complete.\n", fname);
 
         return;
         }
@@ -768,8 +760,7 @@ void cr405PostProcess(char *fname, int channelNo, int equipmentNo, char *params)
     //  There should be no expectation that the file needs to be preserved
     if (isFromInput)
         {
-        sprintf(outBuf, "(cr405  ) Purging Submitted Deck '%s'.\n", fname);
-        opDisplay(outBuf);
+        opDisplay("(cr405  ) Purging Submitted Deck '%s'.\n", fname);
         unlink(fname);
         }
     }
@@ -788,7 +779,6 @@ void cr405PostProcess(char *fname, int channelNo, int equipmentNo, char *params)
 static void cr405SwapInOut(Cr405Context *cc, char *fName)
     {
     char fnwork[MaxFSPath * 2 + 32] = "";
-    char outBuf[MaxFSPath * 2 + 128];
 
     //  If either directory isn't specified, just ignore the rename.
     if ((cc->dirOutput == NULL) || (cc->dirInput == NULL))
@@ -827,26 +817,18 @@ static void cr405SwapInOut(Cr405Context *cc, char *fName)
 
         if (rename(fName, fnwork) == 0)
             {
-            sprintf(outBuf, "(cr405  ) Deck '%s' moved to '%s'. (Input preserved)\n",
-                    fName + strlen(cc->dirInput) + 1,
-                    fnwork);
-            opDisplay(outBuf);
+            opDisplay("(cr405  ) Deck '%s' moved to '%s'. (Input preserved)\n", fName + strlen(cc->dirInput) + 1, fnwork);
             strcpy(fName, fnwork);
             break;
             }
         else
             {
-            sprintf(outBuf, "(cr3447 ) Rename failure on '%s' - (%s). Retrying (%d)...\n",
-                    fName + strlen(cc->dirInput) + 1,
-                    strerror(errno),
-                    fnindex);
-            opDisplay(outBuf);
+            opDisplay("(cr3447 ) Rename failure on '%s' - (%s). Retrying (%d)...\n", fName + strlen(cc->dirInput) + 1, strerror(errno), fnindex);
             }
         fnindex += 1;
         if (fnindex > 999)
             {
-            sprintf(outBuf, "(cr3447 ) Rename failure on '%s' to '%s' (retries > 999)\n", fName, fnwork);
-            opDisplay(outBuf);
+            opDisplay("(cr3447 ) Rename failure on '%s' to '%s' (retries > 999)\n", fName, fnwork);
             break;
             }
         }
@@ -863,24 +845,17 @@ static void cr405SwapInOut(Cr405Context *cc, char *fName)
 void cr405ShowStatus()
     {
     Cr405Context *cp;
-    char         outBuf[MaxFSPath * 2 + 64];
 
     for (cp = firstCr405; cp != NULL; cp = cp->nextUnit)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", "405", cp->channelNo, cp->eqNo, cp->unitNo);
-        opDisplay(outBuf);
-        sprintf(outBuf, "   %-20s", cp->curFileName != NULL ? cp->curFileName : "");
-        opDisplay(outBuf);
-        sprintf(outBuf, " (seq %d", cp->seqNum);
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s C%02o E%02o U%02o", "405", cp->channelNo, cp->eqNo, cp->unitNo);
+        opDisplay("   %-20s  (seq %d", cp->curFileName != NULL ? cp->curFileName : "", cp->seqNum);
         if (cp->isWatched)
             {
-            sprintf(outBuf, ", in %s/", cp->dirInput);
-            opDisplay(outBuf);
+            opDisplay(", in %s/", cp->dirInput);
             if (cp->dirOutput != NULL)
                 {
-                sprintf(outBuf, ", out %s/", cp->dirOutput);
-                opDisplay(outBuf);
+                opDisplay(", out %s/", cp->dirOutput);
                 }
             }
         opDisplay(")\n");
@@ -1033,7 +1008,6 @@ static void cr405Disconnect(void)
 static bool cr405StartNextDeck(DevSlot *dp, Cr405Context *cc)
     {
     char *fname;
-    char outBuf[MaxFSPath + 128];
 
     while (cc->outDeck != cc->inDeck)
         {
@@ -1043,8 +1017,7 @@ static bool cr405StartNextDeck(DevSlot *dp, Cr405Context *cc)
             {
             cc->curFileName = fname;
             cr405NextCard(dp);
-            sprintf(outBuf, "Cards '%s' loaded on card reader C%o,E%o\n", cc->curFileName, cc->channelNo, cc->eqNo);
-            opDisplay(outBuf);
+            opDisplay("Cards '%s' loaded on card reader C%o,E%o\n", cc->curFileName, cc->channelNo, cc->eqNo);
 
             return TRUE;
             }
@@ -1076,7 +1049,6 @@ static void cr405NextCard(DevSlot *dp)
     char         *cp;
     int          i;
     int          j;
-    char         outBuf[MaxFSPath + 128];
     int          value;
 
     if (dp->fcb[0] == NULL)
@@ -1127,9 +1099,7 @@ static void cr405NextCard(DevSlot *dp)
             }
         else
             {
-            sprintf(outBuf, "(cr405 ) *WARNING* We are not removing file '%s'\n",
-                    cc->curFileName);
-            opDisplay(outBuf);
+            opDisplay("(cr405 ) *WARNING* We are not removing file '%s'\n", cc->curFileName);
             }
 
         free(cc->curFileName);

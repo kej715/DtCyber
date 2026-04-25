@@ -1307,7 +1307,6 @@ static char *dd885_42Func2String(PpWord funcCode)
 void dd885_42ShowDiskStatus()
     {
     DiskParam *dp = firstDisk;
-    char      outBuf[MaxFSPath + 128];
 
     if (dp == NULL)
         {
@@ -1316,15 +1315,14 @@ void dd885_42ShowDiskStatus()
 
     while (dp)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o   %-20s (cyl 0x%06x trk 0x%06o)\n",
-                "885-42",
-                dp->channelNo,
-                dp->eqNo,
-                dp->unitNo,
-                dp->fileName,
-                dp->cylinder,
-                dp->track);
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s C%02o E%02o U%02o   %-20s (cyl 0x%06x trk 0x%06o)\n",
+                  "885-42",
+                  dp->channelNo,
+                  dp->eqNo,
+                  dp->unitNo,
+                  dp->fileName,
+                  dp->cylinder,
+                  dp->track);
         dp = dp->nextDisk;
         }
     }
