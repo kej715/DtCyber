@@ -994,6 +994,11 @@ void cpuStep(Cpu170Context *activeCpu)
             break;
             }
 
+        if (isCyber180 && ((ctx180->regUcr & ctx180->regUmr) != 0 || ctx180->regVmid != 1))
+            {
+            return;
+            }
+
         /*
         **  Fetch next instruction word if necessary.
         */
@@ -1001,13 +1006,6 @@ void cpuStep(Cpu170Context *activeCpu)
             {
             activeCpu->regP = (activeCpu->regP + 1) & Mask18;
             cpuFetchOpWord(activeCpu);
-            }
-        /*
-        **  Exit if CPU has switched to CYBER 180 state
-        */
-        if (isCyber180 && ctx180->regVmid == 0)
-            {
-            return;
             }
         } while (activeCpu->opOffset != 60 && !activeCpu->isStopped);
 
@@ -1466,7 +1464,7 @@ static void cpuExchangeJump(Cpu170Context *activeCpu, u32 address, bool doChange
     activeCpu->regB[5] = (u32)((*mem) & Mask18);
 
     mem += 1;
-    activeCpu->regMa   = (u32)((*mem >> 36) & Mask21);
+    activeCpu->regMa   = (u32)((*mem >> 36) & Mask18);
     activeCpu->regA[6] = (u32)((*mem >> 18) & Mask18);
     activeCpu->regB[6] = (u32)((*mem) & Mask18);
 
@@ -1521,7 +1519,7 @@ static void cpuExchangeJump(Cpu170Context *activeCpu, u32 address, bool doChange
         *mem++ = ((CpWord)(tmp.regFlEcs & Mask24Ecs) << 36) | ((CpWord)(tmp.regA[5] & Mask18) << 18) | ((CpWord)(tmp.regB[5] & Mask18));
         }
 
-    *mem++ = ((CpWord)(tmp.regMa & Mask21) << 36) | ((CpWord)(tmp.regA[6] & Mask18) << 18) | ((CpWord)(tmp.regB[6] & Mask18));
+    *mem++ = ((CpWord)(tmp.regMa & Mask18) << 36) | ((CpWord)(tmp.regA[6] & Mask18) << 18) | ((CpWord)(tmp.regB[6] & Mask18));
     *mem++ = ((CpWord)(tmp.regSpare & Mask24) << 36) | ((CpWord)(tmp.regA[7] & Mask18) << 18) | ((CpWord)(tmp.regB[7] & Mask18));
     *mem++ = tmp.regX[0] & Mask60;
     *mem++ = tmp.regX[1] & Mask60;
@@ -3907,21 +3905,11 @@ static void cpOp01(Cpu170Context *activeCpu)
             bool is180xch   = isCyber180 && activeCpu->isMonitorMode && (activeCpu->regX[0] & 040000000000000000000) != 0;
             activeCpu->regP = (activeCpu->regP + 1) & Mask18;
             cpuExchangeJump(activeCpu,
-                            activeCpu->isMonitorMode ? activeCpu->opAddress + activeCpu->regB[activeCpu->opJ] : activeCpu->regMa,
+                            activeCpu->isMonitorMode ? (activeCpu->opAddress + activeCpu->regB[activeCpu->opJ]) & Mask18 : activeCpu->regMa,
                             TRUE);
             if (is180xch)
                 {
                 cpuExchangeTo180(activeCpu, TRUE);
-#if 0
-/*DELETE*/if (activeCpu->regRaCm != 0036747)
-/*DELETE*/    {
-/*DELETE*/    fprintf(stderr,"\nCPU%d explicit exchange to 180\n",activeCpu->id);
-/*DELETE*/    fputs("CY170 state\n",stderr);
-/*DELETE*/    tracePrint170Registers(activeCpu,stderr);
-/*DELETE*/    fputs("\nCY180 state\n",stderr);
-/*DELETE*/    tracePrint180Registers(&cpus180[activeCpu->id],stderr);
-/*DELETE*/    }
-#endif
                 }
             }
         else
@@ -4005,7 +3993,7 @@ static void cpOp01(Cpu170Context *activeCpu)
             /*
             **  TRAP 180 instruction.
             */
-            activeCpu->opOffset += 30;
+            activeCpu->opOffset = 60;
             cpus180[activeCpu->id].regUcr |= 0x8000; // set privileged instruction fault bit
             }
         else

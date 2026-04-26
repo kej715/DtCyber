@@ -1697,6 +1697,7 @@ void cpu180MacHaltCp(Cpu180Context *ctx)
 **------------------------------------------------------------------------*/
 void cpu180MacMasterClearCp(Cpu180Context *ctx)
     {
+    ctx->regVmid         = 0;
     ctx->isMonitorMode   = TRUE;
     ctx->isStopped       = TRUE;
     ctx->lastCsStartAddr = 0;
@@ -2108,11 +2109,6 @@ void cpu180MacStartCp(Cpu180Context *ctx)
                 return;
                 }
             cpu180Load180Xp(ctx, ctx->regMps >> 3);
-/*DELETE*/if (ctx->regVmid != 0)
-/*DELETE*/    {
-/*DELETE*/    fprintf(stderr,"cpu180MacStartCp: VMID %d\n",ctx->regVmid);
-/*DELETE*/    traceStack(stderr);
-/*DELETE*/    }
             ctx->nextKey = ctx->key;
             ctx->nextP   = ctx->regP;
             if (cpu180PvaToRma(ctx, ctx->regP, AccessModeNone, &rma, &pti, &cond))
@@ -2522,13 +2518,12 @@ void cpu180Step(Cpu180Context *activeCpu)
     u64        oldRegP;
 #endif
 
-    if (activeCpu->isStopped)
-        {
-        return;
-        }
-
     for (i = 0; i < MaxInstructionsPerStep; i++) // Execute more than one instruction before returning
         {
+        if (activeCpu->isStopped || activeCpu->regVmid != 0)
+            {
+            return;
+            }
         /*
         **  First, check for interrupt conditions and initiate trap or
         **  exchange operations, or halt the CPU as required.
@@ -2562,16 +2557,11 @@ void cpu180Step(Cpu180Context *activeCpu)
                     activeCpu->regP, activeCpu->regMcr, activeCpu->regMmr, activeCpu->regUcr, activeCpu->regUmr);
 #endif
                 activeCpu->isStopped = TRUE;
-                break;
+                return;
 
             default:
                 break;
                 }
-            }
-
-        if (activeCpu->isStopped || activeCpu->regVmid != 0)
-            {
-            return;
             }
 
         /*
@@ -2658,10 +2648,6 @@ void cpu180Step(Cpu180Context *activeCpu)
             activeCpu->regP    = activeCpu->nextP;
 
 #if CcDebug > 0
-/*DELETE*/if (activeCpu->opCode == 0xa9 && (activeCpu->regP - oldRegP) != 4)
-/*DELETE*/    {
-/*DELETE*/    fprintf(stderr, "SHFX P %012llx nextP %012llx\n", oldRegP, activeCpu->regP);
-/*DELETE*/    }
             traceCpu180(activeCpu, oldRegP, activeCpu->opCode, activeCpu->opI, activeCpu->opJ, activeCpu->opK, activeCpu->opD, activeCpu->opQ);
 #endif
             }
@@ -3292,11 +3278,6 @@ static void cpu180Exchange(Cpu180Context *activeCpu)
             cpu180Store180Xp(activeCpu, activeCpu->regJps >> 3);
             activeCpu->isMonitorMode = TRUE;
             cpu180Load180Xp(activeCpu, activeCpu->regMps >> 3);
-/*DELETE*/if (activeCpu->regVmid != 0)
-/*DELETE*/    {
-/*DELETE*/    fprintf(stderr,"cpu180Exchange: VMID %d in monitor XP\n",activeCpu->regVmid);
-/*DELETE*/    traceStack(stderr);
-/*DELETE*/    }
             }
         activeCpu->nextKey = activeCpu->key;
         activeCpu->nextP   = activeCpu->regP;
@@ -3824,7 +3805,7 @@ static bool cpu180IsBindingSectionRef(Cpu180Context *ctx, u64 pva)
 static void cpu180Load170Xp(Cpu180Context *ctx, u32 xpa)
     {
     cpu180Load180Xp(ctx, xpa);
-    ringSeg170 = cpMem[xpa] & LeftMask;
+    ringSeg170 = cpMem[xpa] & RingSegMask;
     cpu180Set170State(ctx, ctx->regP);
 
 #if CcDebug > 0
@@ -4136,7 +4117,7 @@ static void cpu180Set170State(Cpu180Context *ctx, u64 regP)
     ctx170->exitMode      = (ctx->regA[3] >> 20) & 0xfff000;
     ctx170->regFlCm       = ctx->regA[4] & Mask21;
     ctx170->isMonitorMode = (ctx->regA[4] >> 32) & 1;
-    ctx170->regMa         = ctx->regA[5] & Mask21;
+    ctx170->regMa         = ctx->regA[5] & Mask18;
     if ((ctx170->exitMode & EmFlagExpandedAddress) != 0)
         {
         ctx170->regRaEcs = ctx->regA[6] & Mask30Ecs;
@@ -4281,6 +4262,7 @@ static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa)
 /*DELETE*/    traceInstCount[ctx->id] = 10;
 /*DELETE*/    }
 #endif
+/*DELETE*/ // if (ctx->regP == 0x100600000cac) {fprintf(stderr, "\ncpu180Store180Xp: CPU%d P %012llx\n",ctx->id,ctx->regP);tracePrint180Registers(ctx,stderr);traceStack(stderr);}
 
     cpMem[xpa++] = ((u64)ctx->key << 48) | ctx->regP;
     cpMem[xpa++] = ((u64)ctx->regVmid << 56) | ((u64)ctx->regUvmid << 48) | ctx->regA[0];
