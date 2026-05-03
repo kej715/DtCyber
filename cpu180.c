@@ -379,7 +379,7 @@ static bool cpu180MulInt32(Cpu180Context *ctx, u32 mltand, u32 mltier, u32 *prod
 static bool cpu180MulInt64(Cpu180Context *ctx, u64 mltand, u64 mltier, u64 *product);
 static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool doSaveCrs, u64 *sfsa, u32 *frameSize, MonitorCondition *cond);
 static bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u8 ring, u64 word, u8 count);
-static void cpu180Set170State(Cpu180Context *ctx, u64 regP);
+static void cpu180Set170State(Cpu180Context *ctx);
 static void cpu180SetRingZeroCondition(Cpu180Context *ctx, u64 pva);
 static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa);
 static bool cpu180SubInt32(Cpu180Context *ctx, u32 minend, u32 subend, u32 *diff);
@@ -615,12 +615,14 @@ static void cp180OpIv(Cpu180Context *activeCpu);
 static void cp180OpLBYTS(Cpu180Context *activeCpu, u8 count);
 static void cp180OpSBYTS(Cpu180Context *activeCpu, u8 count);
 
+/*DELETE*/static bool hasXchdTo170 = FALSE;
+
 /*
 **  ----------------
 **  Public Variables
 **  ----------------
 */
-volatile u64 cpu180FreeRunningCounter = 0;
+volatile u64  cpu180FreeRunningCounter = 0;
 
 Cpu180Context *cpus180;
 
@@ -1676,14 +1678,17 @@ u64 cpu180MacGetCpStateRegister(Cpu180Context *ctx, u8 reg)
 **------------------------------------------------------------------------*/
 void cpu180MacHaltCp(Cpu180Context *ctx)
     {
-    ctx->isStopped = TRUE;
+    if (ctx->isStopped == FALSE)
+        {
+        ctx->isStopped = TRUE;
 
 #if CcDebug > 0
-    traceHaltCpu180(ctx);
+        traceHaltCpu180(ctx);
 #endif
 #if DEBUG
-    fprintf(cpu180Log, "Halt CPU%d\n", ctx->id);
+        fprintf(cpu180Log, "Halt CPU%d at PVA " FMT64_012x "\n", ctx->id, ctx->regP);
 #endif
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -1697,11 +1702,19 @@ void cpu180MacHaltCp(Cpu180Context *ctx)
 **------------------------------------------------------------------------*/
 void cpu180MacMasterClearCp(Cpu180Context *ctx)
     {
-    ctx->regVmid         = 0;
-    ctx->isMonitorMode   = TRUE;
-    ctx->isStopped       = TRUE;
-    ctx->lastCsStartAddr = 0;
+    ctx->regVmid           = 0;
+    ctx->isMonitorMode     = TRUE;
+    ctx->isStopped         = TRUE;
+    ctx->lastCsStartAddr   = 0;
+    ctx->regMcr            = 0;
+    ctx->regUcr            = 0;
+    ctx->pendingRequests   = 0;
     cpuReset(&cpus170[ctx->id]);
+/*DELETE*/if (ctx->id == 0)
+/*DELETE*/    {
+/*DELETE*/    hasXchdTo170 = FALSE;
+/*DELETE*/    fprintf(stderr,"\nMaster clear CPU%d\n",ctx->id);
+/*DELETE*/    }
 #if CcDebug > 0
     traceMasterClearCpu180(ctx);
 #endif
@@ -2073,10 +2086,7 @@ void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
 **------------------------------------------------------------------------*/
 void cpu180MacStartCp(Cpu180Context *ctx)
     {
-    MonitorCondition cond;
     u64              csAddr;
-    u32              pti;
-    u32              rma;
     u32              xpa;
 
     //
@@ -2109,23 +2119,31 @@ void cpu180MacStartCp(Cpu180Context *ctx)
                 return;
                 }
             cpu180Load180Xp(ctx, ctx->regMps >> 3);
-            ctx->nextKey = ctx->key;
-            ctx->nextP   = ctx->regP;
-            if (cpu180PvaToRma(ctx, ctx->regP, AccessModeNone, &rma, &pti, &cond))
-                {
-                ctx->isStopped = FALSE; // Processor started
+            ctx->nextKey   = ctx->key;
+            ctx->nextP     = ctx->regP;
+            ctx->isStopped = FALSE;     // Start the processor
+/*DELETE*/if (ctx->regVmid != 0)
+/*DELETE*/    {
+/*DELETE*/    fprintf(stderr,"cpu180MacStartCp: CPU%d VMID %d P " FMT64_012x "\n",ctx->id, ctx->regVmid, ctx->regP);
+/*DELETE*/    fputs("\nC170 state:\n",stderr);
+/*DELETE*/    tracePrint170Registers(&cpus170[ctx->id], stderr);
+/*DELETE*/    fputs("\nC180 state:\n",stderr);
+/*DELETE*/    tracePrint180Registers(ctx, stderr);
+/*DELETE*/    traceStack(stderr);
+/*DELETE*/    }
 #if CcDebug > 0
-                traceStartCpu180(ctx, rma);
+            traceStartCpu180(ctx, ctx->regP);
 #endif
 #if DEBUG
-                fprintf(cpu180Log, "Start CPU%d at PVA " FMT64_012x " (RMA " FMT32_08x ")\n", ctx->id, ctx->regP, rma);
+            fprintf(cpu180Log, "Start CPU%d at PVA " FMT64_012x "\n", ctx->id, ctx->regP);
 #endif
-                }
-            else
-                {
-                logDtError(LogErrorLocation, "Failed to start CPU%d: failed to translate PVA %012lx to RMA, MCR %04x\n",
-                    ctx->id, ctx->regP, mcrDefns[cond].bitMask);
-                }
+            }
+        else if (ctx->isStopped)
+            {
+            ctx->isStopped = FALSE; // Restart the processor
+#if DEBUG
+            fprintf(cpu180Log, "Restart CPU%d at PVA " FMT64_012x "\n", ctx->id, ctx->regP);
+#endif
             }
         }
     else
@@ -2813,7 +2831,7 @@ void cpu180UpdateIntervalTimers(Cpu180Context *ctx)
         if (ctx->regSit == 0 || (ctx->regSit > oldIt && oldIt > 0))
             {
             cpuAcquireInterruptMutex();
-            ctx->pendingInterrupts |= PINT_SIT;
+            ctx->pendingRequests |= PR_SIT;
             //
             //  If the mask bit is set, explicitly set the interval timer to 0 so
             //  that the interrupt handler won't detect a miss. The assumption
@@ -2830,7 +2848,7 @@ void cpu180UpdateIntervalTimers(Cpu180Context *ctx)
         ctx->regPit -= (u32)delta;
         if (ctx->regPit == 0 || (ctx->regPit > oldIt && oldIt > 0))
             {
-            ctx->pendingInterrupts |= PINT_PIT;
+            ctx->pendingRequests |= PR_PIT;
             if ((ctx->regUmr & ucrDefns[UCR51].bitMask) != 0)
                 {
                 ctx->regPit = 0;
@@ -3107,7 +3125,9 @@ static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 
 
     if (vmid == 1) // call 170 procedure
         {
-        cpu180Set170State(ctx, ctx->nextP);
+        ctx->regP = ctx->nextP;
+        ctx->key  = ctx->nextKey;
+        cpu180Set170State(ctx);
         }
 
 #if CcDebug > 0
@@ -3182,31 +3202,36 @@ static void cpu180CheckMonitorConditions(Cpu180Context *ctx)
 **------------------------------------------------------------------------*/
 void cpu180CheckPendingInterrupts(Cpu180Context *ctx)
     {
-    if (ctx->pendingInterrupts != 0)
+    if (ctx->pendingRequests != 0)
         {
         cpuAcquireInterruptMutex();
-        if ((ctx->pendingInterrupts & PINT_EXCH_170) != 0)
+        if ((ctx->pendingRequests & PR_EXCH_170) != 0)
             {
             if (ctx->regVmid == 0)
                 {
                 ctx->regMcr |= mcrDefns[MCR53].bitMask; // set CYBER 170 exchange request
                 }
-            ctx->pendingInterrupts &= ~(u8)PINT_EXCH_170;
+            ctx->pendingRequests &= ~(u8)PR_EXCH_170;
             }
-        if ((ctx->pendingInterrupts & PINT_EXTERNAL) != 0)
+        if ((ctx->pendingRequests & PR_EXT_INTRPT) != 0)
             {
             ctx->regMcr            |= mcrDefns[MCR56].bitMask; // set External Interrupt
-            ctx->pendingInterrupts &= ~(u8)PINT_EXTERNAL;
+            ctx->pendingRequests &= ~(u8)PR_EXT_INTRPT;
             }
-        if ((ctx->pendingInterrupts & PINT_SIT) != 0)
+        if ((ctx->pendingRequests & PR_SIT) != 0)
             {
             ctx->regMcr            |= mcrDefns[MCR59].bitMask; // set System Interval Timer Interrupt
-            ctx->pendingInterrupts &= ~(u8)PINT_SIT;
+            ctx->pendingRequests &= ~(u8)PR_SIT;
             }
-        if ((ctx->pendingInterrupts & PINT_PIT) != 0)
+        if ((ctx->pendingRequests & PR_PIT) != 0)
             {
             ctx->regUcr            |= ucrDefns[UCR51].bitMask; // set Process Interval Timer Interrupt
-            ctx->pendingInterrupts &= ~(u8)PINT_PIT;
+            ctx->pendingRequests &= ~(u8)PR_PIT;
+            }
+        if ((ctx->pendingRequests & PR_HALT) != 0)
+            {
+            cpu180MacHaltCp(ctx);
+            ctx->pendingRequests &= ~(u8)PR_HALT;
             }
         cpuReleaseInterruptMutex();
         }
@@ -3419,6 +3444,13 @@ static void cpu180Get170State(Cpu180Context *ctx)
             }
         ctx->regX[i + 8] = word;
         }
+/*DELETE*/if ((ctx170->regMa == 0 || ctx170->regMa > 066300) && ctx170->isMonitorMode == FALSE)
+/*DELETE*/    {
+/*DELETE*/    fprintf(stderr, "cpu180Get170State: 170 is in job mode with suspicious MA %06o\n", ctx170->regMa);
+/*DELETE*/    fputs("\nC170 state:\n",stderr);
+/*DELETE*/    tracePrint170Registers(ctx170, stderr);
+/*DELETE*/    traceStack(stderr);
+/*DELETE*/    }
     }
 
 /*--------------------------------------------------------------------------
@@ -3806,7 +3838,7 @@ static void cpu180Load170Xp(Cpu180Context *ctx, u32 xpa)
     {
     cpu180Load180Xp(ctx, xpa);
     ringSeg170 = cpMem[xpa] & RingSegMask;
-    cpu180Set170State(ctx, ctx->regP);
+    cpu180Set170State(ctx);
 
 #if CcDebug > 0
     traceExchange170(&cpus170[ctx->id], xpa << 3, NULL, (traceMask & TRACECPU(ctx, TraceCpu180)) != 0);
@@ -4100,12 +4132,11 @@ static bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u8 ring, u64 word, u8 co
 **
 **  Parameters:     Name        Description.
 **                  ctx         pointer to 180 CPU context
-**                  regP        P register value
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cpu180Set170State(Cpu180Context *ctx, u64 regP)
+static void cpu180Set170State(Cpu180Context *ctx)
     {
     Cpu170Context *ctx170;
     u8            i;
@@ -4141,27 +4172,55 @@ static void cpu180Set170State(Cpu180Context *ctx, u64 regP)
         {
         ctx170->regX[i] = ctx->regX[i + 8] & Mask60;
         }
-    wordAddr          = (regP >> 3) & Mask21;
+    wordAddr          = (ctx->regP >> 3) & Mask21;
     ctx170->regP      = (wordAddr - ctx170->regRaCm) & Mask18;
-    ctx170->opOffset  = 60 - (((regP & Mask3) >> 1) * 15);
+    ctx170->opOffset  = 60 - (((ctx->regP & Mask3) >> 1) * 15);
+/*DELETE*/if (hasXchdTo170 == FALSE && ctx170->id == 0)
+/*DELETE*/    {
+/*DELETE*/    fprintf(stderr, "\ncpu180Set170State: first transition of CPU%d to 170 state\n", ctx170->id);
+/*DELETE*/    fputs("C170 state:\n",stderr);
+/*DELETE*/    tracePrint170Registers(ctx170, stderr);
+/*DELETE*/    fputs("\nC180 state:\n",stderr);
+/*DELETE*/    tracePrint180Registers(ctx, stderr);
+/*DELETE*/    traceStack(stderr);
+/*DELETE*/    hasXchdTo170 = TRUE;
+/*DELETE*/    }
 /*DELETE*/if (ctx170->opOffset != 60)
 /*DELETE*/    {
-/*DELETE*/    fprintf(stderr,"cpu180Set170State: opOffset %d\n",ctx170->opOffset);
+/*DELETE*/    fprintf(stderr,"\ncpu180Set170State: opOffset %d\n",ctx170->opOffset);
 /*DELETE*/    traceStack(stderr);
 /*DELETE*/    }
 /*DELETE*/if (ctx170->regP >= ctx170->regFlCm)
 /*DELETE*/    {
 /*DELETE*/    u32 rma;
-/*DELETE*/    if (tracePvaToRma(ctx, regP, &rma))
+/*DELETE*/    if (tracePvaToRma(ctx, ctx->regP, &rma))
 /*DELETE*/        {
-/*DELETE*/        fprintf(stderr,"cpu180Set170State: P180 %016llx [%08x] P170 %06o RA %07o FL %07o\n",
-/*DELETE*/            regP,rma,ctx170->regP,ctx170->regRaCm,ctx170->regFlCm);
+/*DELETE*/        fprintf(stderr,"\ncpu180Set170State: P180 %016llx [%08x] P170 %06o RA %07o FL %07o\n",
+/*DELETE*/            ctx->regP,rma,ctx170->regP,ctx170->regRaCm,ctx170->regFlCm);
 /*DELETE*/        }
 /*DELETE*/    else
 /*DELETE*/        {
-/*DELETE*/        fprintf(stderr,"cpu180Set170State: P180 %016llx P170 %06o RA %07o FL %07o\n",
-/*DELETE*/            regP,ctx170->regP,ctx170->regRaCm,ctx170->regFlCm);
+/*DELETE*/        fprintf(stderr,"\ncpu180Set170State: P180 %016llx P170 %06o RA %07o FL %07o\n",
+/*DELETE*/            ctx->regP,ctx170->regP,ctx170->regRaCm,ctx170->regFlCm);
 /*DELETE*/        }
+/*DELETE*/    fputs("\nC170 state:\n",stderr);
+/*DELETE*/    tracePrint170Registers(ctx170, stderr);
+/*DELETE*/    fputs("\nC180 state:\n",stderr);
+/*DELETE*/    tracePrint180Registers(ctx, stderr);
+/*DELETE*/    traceStack(stderr);
+/*DELETE*/    }
+/*DELETE*/if (ctx170->regRaCm >= 066300 && ctx170->isMonitorMode)
+/*DELETE*/    {
+/*DELETE*/    fputs("\ncpu180Set170State: monitor mode with job RA\n", stderr);
+/*DELETE*/    fputs("\nC170 state:\n",stderr);
+/*DELETE*/    tracePrint170Registers(ctx170, stderr);
+/*DELETE*/    fputs("\nC180 state:\n",stderr);
+/*DELETE*/    tracePrint180Registers(ctx, stderr);
+/*DELETE*/    traceStack(stderr);
+/*DELETE*/    }
+/*DELETE*/if ((ctx170->regMa == 0 || ctx170->regMa >= 066300) && ctx170->isMonitorMode == FALSE)
+/*DELETE*/    {
+/*DELETE*/    fprintf(stderr,"\ncpu180Set170State: CPU%d in job mode with suspicious MA %06o\n", ctx170->id, ctx170->regMa);
 /*DELETE*/    fputs("\nC170 state:\n",stderr);
 /*DELETE*/    tracePrint170Registers(ctx170, stderr);
 /*DELETE*/    fputs("\nC180 state:\n",stderr);
@@ -4170,6 +4229,16 @@ static void cpu180Set170State(Cpu180Context *ctx, u64 regP)
 /*DELETE*/    }
     ctx170->opWord    = cpMem[cpuAddRa(ctx170, ctx170->regP)];
     ctx170->isStopped = FALSE;
+    if (ctx170->isMonitorMode)
+        {
+        cpuAcquireInterruptMutex();
+        ctx->pendingRequests |= PR_MTR_MODE;
+        cpuReleaseInterruptMutex();
+        }
+    else if (cpuMonitorCpNum == ctx170->id)
+        {
+        cpuMonitorCpNum = -1;
+        }
     if ((features & HasInstructionStack) != 0)
         {
         //
@@ -4177,21 +4246,6 @@ static void cpu180Set170State(Cpu180Context *ctx, u64 regP)
         //
         cpuVoidIwStack(ctx170, (u32)~0);
         }
-/*DELETE*/if (ctx170->isMonitorMode)
-/*DELETE*/    {
-/*DELETE*/    if (ctx170->regP >= ctx170->regFlCm)
-/*DELETE*/        {
-/*DELETE*/        fprintf(stderr,"\ncpu180Set170State: CPUMTR error exit imminent, P %06o >= FL %06o\n",ctx170->regP,ctx170->regFlCm);
-/*DELETE*/        tracePrint170Registers(ctx170, stderr);
-/*DELETE*/        traceStack(stderr);
-/*DELETE*/        }
-/*DELETE*/    if ((ctx170->opWord & 0777740000000000) == 031140000000000)
-/*DELETE*/        {
-/*DELETE*/        fprintf(stderr,"\ncpu180Set170State: CPUMTR error exit imminent, opWord %020llo\n",ctx170->opWord);
-/*DELETE*/        tracePrint170Registers(ctx170, stderr);
-/*DELETE*/        traceStack(stderr);
-/*DELETE*/        }
-/*DELETE*/    }
     }
 
 /*--------------------------------------------------------------------------
@@ -4573,11 +4627,11 @@ static void cp180Op03(Cpu180Context *activeCpu)  // 03  INTRUPT    MIGDS 2-141
     Xk = activeCpu->regX[activeCpu->opK];
     if ((Xk & 1) != 0)
         {
-        cpus180[0].pendingInterrupts |= PINT_EXTERNAL;
+        cpus180[0].pendingRequests |= PR_EXT_INTRPT;
         }
     if ((Xk & 4) != 0 && cpuCount > 1)
         {
-        cpus180[1].pendingInterrupts |= PINT_EXTERNAL;
+        cpus180[1].pendingRequests |= PR_EXT_INTRPT;
         }
     cpuReleaseInterruptMutex();
     }
@@ -4727,7 +4781,9 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
 
     if (vmid == 1)
         {
-        cpu180Set170State(activeCpu, activeCpu->nextP);
+        activeCpu->regP = activeCpu->nextP;
+        activeCpu->key  = activeCpu->nextKey;
+        cpu180Set170State(activeCpu);
         }
 #if CcDebug > 0
 /*DELETE*/if ((activeCpu->regA[0] >> 32) != (activeCpu->regA[1] >> 32)
