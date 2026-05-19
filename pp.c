@@ -945,11 +945,18 @@ void ppStep(void)
             cpuAcquireExchangeMutex();
             if (cpus170[activePpu->exchangingCpu].ppRequestingExchange == activePpu->id)
                 {
+                //
+                //  The PP has initiated an exchange, and it has not completed yet.
+                //
                 cpuReleaseExchangeMutex();
                 continue;
                 }
             else
                 {
+                //
+                //  The PP's exchange request completed or it is ignored because
+                //  another PP's request was processed instead.
+                //
                 activePpu->exchangingCpu = -1;
                 cpuReleaseExchangeMutex();
                 }
@@ -1314,36 +1321,27 @@ static void ppOpSRD(void)     // 25
 
 static void ppOpEXN(void)     // 26
     {
-    Cpu170Context *cpu170;
-    Cpu180Context *cpu180;
+    Cpu170Context *ctx170;
     int           cpuNum;
     bool          doChangeMode;
-    bool          isExchangePending;
     u32           exchangeAddress;
 
     cpuNum = (cpuCount > 1) ? (activePpu->opD & 001) : 0;
-    cpu170 = cpus170 + cpuNum;
-    if (isCyber180)
-        {
-        cpu180 = cpus180 + cpuNum;
-        }
-
+    ctx170 = cpus170 + cpuNum;
     cpuAcquireExchangeMutex();
-    isExchangePending = cpu170->ppRequestingExchange != -1;
+    if (ctx170->ppRequestingExchange != -1)
+        {
+        PpDecrement(activePpu->regP);
+        cpuReleaseExchangeMutex();
+
+        return;
+        }
 
     if (((activePpu->opD & 070) == 0) || ((features & HasNoCejMej) != 0))
         {
         /*
         **  EXN or MXN/MAN with CEJ/MEJ disabled.
         */
-        if (isExchangePending)
-            {
-            // Release mutex and arrange to retry instruction
-            cpuReleaseExchangeMutex();
-            PpDecrement(activePpu->regP);
-
-            return;
-            }
         doChangeMode = FALSE;
         if (((activePpu->regA & Sign18) != 0) && ((features & HasRelocationReg) != 0))
             {
@@ -1385,7 +1383,7 @@ static void ppOpEXN(void)     // 26
             /*
             **  MAN.
             */
-            exchangeAddress = cpu170->regMa & Mask18;
+            exchangeAddress = ctx170->regMa & Mask18;
             }
         else
             {
@@ -1396,40 +1394,9 @@ static void ppOpEXN(void)     // 26
 
             return;
             }
-        if (isExchangePending)
-            {
-            /*
-            **  Pass.
-            */
-            cpuReleaseExchangeMutex();
-
-            return;
-            }
-        if (cpu170->isMonitorMode)
-            {
-            /*
-            **  Pass.
-            */
-            //
-            //  If this is a CYBER 180, and the machine is in 180
-            //  mode, set the CYBER 170 Exchange bit to request
-            //  an exchange back to 170 mode. This should enable the
-            //  PP to exchange the 170 machine as soon as possible.
-            //
-            if (isCyber180 && cpu180->regVmid == 0)
-                {
-                cpuAcquireInterruptMutex();
-                cpu180->pendingInterrupts |= PINT_EXCH_170;
-                cpuReleaseInterruptMutex();
-                }
-            cpuReleaseExchangeMutex();
-
-            return;
-            }
         }
     if (ppCheckOsBounds(exchangeAddress))
         {
-        cpuReleaseExchangeMutex();
         if (activePpu->isStopEnabled)
             {
             activePpu->isStopped = TRUE;
@@ -1441,18 +1408,19 @@ static void ppOpEXN(void)     // 26
         /*
         **  Request the exchange, and wait for it to complete.
         */
-        cpu170->ppExchangeAddress    = exchangeAddress;
-        cpu170->doChangeMode         = doChangeMode;
-        cpu170->ppRequestingExchange = activePpu->id;
-        activePpu->exchangingCpu     = cpu170->id;
+        ctx170->ppExchangeAddress    = exchangeAddress;
+        ctx170->doChangeMode         = doChangeMode;
+        ctx170->ppRequestingExchange = activePpu->id;
+        activePpu->exchangingCpu     = ctx170->id;
         if (isCyber180)
             {
             cpuAcquireInterruptMutex();
-            cpu180->pendingInterrupts |= PINT_EXCH_170;
+            cpus180[cpuNum].pendingRequests |= PR_EXCH_170;
             cpuReleaseInterruptMutex();
             }
-        cpuReleaseExchangeMutex();
         }
+
+    cpuReleaseExchangeMutex();
     }
 
 static void ppOpRPN(void)     // 27
@@ -2435,15 +2403,14 @@ static void ppOpLPML(void)    // 1024
 
 static void ppOpINPN(void)    // 1026
     {
-/*DELETE*/if ((activePpu->opD & 1) == 0) {fprintf(stderr,"PP%02o INPN %o\n",activePpu->id < 10 ? activePpu->id : (activePpu->id - 10) + 020,activePpu->opD);fflush(stderr);}
     cpuAcquireInterruptMutex();
     if ((activePpu->opD & 1) != 0) // memory port 0 selected
         {
-        cpus180[0].pendingInterrupts |= PINT_EXTERNAL;
+        cpus180[0].pendingRequests |= PR_EXT_INTRPT;
         }
     if ((activePpu->opD & 4) != 0 && cpuCount > 1) // memory port 2 selected
         {
-        cpus180[1].pendingInterrupts |= PINT_EXTERNAL;
+        cpus180[1].pendingRequests |= PR_EXT_INTRPT;
         }
 #if DEBUG
     else

@@ -237,45 +237,46 @@ typedef struct
 */
 typedef struct
     {
-    int           id;                   /* CPU ordinal */
-    CpWord        regX[010];            /* data registers (60 bit) */
-    u32           regA[010];            /* address registers (18 bit) */
-    u32           regB[010];            /* index registers (18 bit) */
-    u32           regP;                 /* program address */
-    u32           regRaCm;              /* reference address CM */
-    u32           regFlCm;              /* field length CM */
-    u32           regRaEcs;             /* reference address ECS */
-    u32           regFlEcs;             /* field length ECS */
-    u32           regMa;                /* monitor address */
-    u32           regSpare;             /* reserved */
-    u32           exitMode;             /* CPU exit mode (24 bit) */
-    volatile bool isMonitorMode;        /* TRUE if CPU is in monitor mode */
-    volatile bool isStopped;            /* TRUE if CPU is stopped */
-    volatile int  ppRequestingExchange; /* PP number of PP requesting exchange, -1 if none */
-    u32           ppExchangeAddress;    /* PP-requested exchange address */
-    bool          doChangeMode;         /* TRUE if monitor mode flag should be changed by PP exchange jump */
-    volatile bool isErrorExitPending;   /* TRUE if error exit pending */
-    u8            exitCondition;        /* pending error exit conditions */
-    CpWord        opWord;               /* Current instruction word */
-    u8            opOffset;             /* Bit offset to current instruction */
-    u8            opFm;                 /* Opcode field (first 6 bits) */
-    u8            opI;                  /* I field of current instruction */
-    u8            opJ;                  /* J field of current instruction */
-    u8            opK;                  /* K field (first 3 bits only) */
-    u32           opAddress;            /* K field (18 bits) */
-    u32           oldRegP;              /* used in interrupt/exit mode processing */
-    u8            oldOpOffset;          /* used in interrupt/exit mode processing */
-    bool          floatException;       /* TRUE if CPU detected float exception */
-    bool          doDeadstart;          /* TRUE if deadstart requested */
+    int             id;                   /* CPU ordinal */
+    CpWord          regX[010];            /* data registers (60 bit) */
+    u32             regA[010];            /* address registers (18 bit) */
+    u32             regB[010];            /* index registers (18 bit) */
+    u32             regP;                 /* program address */
+    u32             regRaCm;              /* reference address CM */
+    u32             regFlCm;              /* field length CM */
+    u32             regRaEcs;             /* reference address ECS */
+    u32             regFlEcs;             /* field length ECS */
+    u32             regMa;                /* monitor address */
+    u32             regSpare;             /* reserved */
+    u32             exitMode;             /* CPU exit mode (24 bit) */
+    volatile bool   isMonitorMode;        /* TRUE if CPU is in monitor mode */
+    volatile bool   isMonitorModePending; /* TRUE if CPU is waiting to begin executing in monitor mode */
+    volatile bool   isStopped;            /* TRUE if CPU is stopped */
+    volatile int    ppRequestingExchange; /* PP number of PP requesting exchange, -1 if none */
+    volatile u32    ppExchangeAddress;    /* PP-requested exchange address */
+    volatile bool   doChangeMode;         /* TRUE if monitor mode flag should be changed by PP exchange jump */
+    volatile bool   isErrorExitPending;   /* TRUE if error exit pending */
+    u8              exitCondition;        /* pending error exit conditions */
+    volatile CpWord opWord;               /* Current instruction word */
+    volatile u8     opOffset;             /* Bit offset to current instruction */
+    u8              opFm;                 /* Opcode field (first 6 bits) */
+    u8              opI;                  /* I field of current instruction */
+    u8              opJ;                  /* J field of current instruction */
+    u8              opK;                  /* K field (first 3 bits only) */
+    u32             opAddress;            /* K field (18 bits) */
+    u32             oldRegP;              /* used in interrupt/exit mode processing */
+    u8              oldOpOffset;          /* used in interrupt/exit mode processing */
+    bool            floatException;       /* TRUE if CPU detected float exception */
+    bool            doDeadstart;          /* TRUE if deadstart requested */
+    volatile u32    idleCycles;           /* Counter for how many times we've seen the idle loop */
 
     /*
     **  Instruction word stack.
     */
-    CpWord        iwStack[MaxIwStack];
-    u32           iwAddress[MaxIwStack];
-    bool          iwValid[MaxIwStack];
-    u8            iwRank;
-    volatile u32  idleCycles;           /* Counter for how many times we've seen the idle loop */
+    CpWord          iwStack[MaxIwStack];
+    u32             iwAddress[MaxIwStack];
+    bool            iwValid[MaxIwStack];
+    u8              iwRank;
     } Cpu170Context;
 
 /*
@@ -357,87 +358,87 @@ typedef struct bdpOperand
 // CYBER 180 CPU control block
 typedef struct
     {
-    u8            id;                   /* CPU identifier */
-    u8            key;                  /* program address key */
-    u64           regP;                 /* program address */
-    u64           regX[16];             /* data registers (64 bit) */
-    u64           regA[16];             /* address registers (48 bit) */
-    u8            regVmid;              /* virtual machine ID register */
-    u8            regUvmid;             /* untranslatable virtual machine ID register */
-    u16           regFlags;             /* CP flag register                   */
-                                        /*   Bit         Flag                 */
-                                        /*     0  Critical Frame Flag         */
-                                        /*     1  On Condition Flag           */
-                                        /*     2  Keypoint Enable Flag        */
-                                        /*     3  Process Not Damaged Flag    */
-                                        /*     4  ECS Authorized Flag         */
-                                        /*    14  Trap-enable Flip-flop       */
-                                        /*    15  Trap-enable Delay Flip-flop */
-    u16           regUmr;               /* user mask register */
-    u16           regMmr;               /* monitor mask register */
-    u16           regUcr;               /* user condition register */
-    u16           regMcr;               /* monitor condition register */
-    u8            regLpid;              /* last processor ID register */
-    u16           regKmr;               /* keypoint mask register */
-    u32           regPit;               /* process interval timer register */
-    u32           regBc;                /* base constant register */
-    u16           regMdf;               /* model-dependent flags */
-    u16           regStl;               /* segment table length register */
-    u64           regMdw;               /* model-dependent word */
-    u32           regSta;               /* segment table address register */
-    u64           regUtp;               /* untranslatable pointer register */
-    u64           regTp;                /* trap pointer register */
-    u8            regDm;                /* debug mask register */
-    u8            regDi;                /* debug index register */
-    u64           regDlp;               /* debug list pointer register */
-    u8            regLrn;               /* largest ring number register */
-    u64           regTos[16];           /* top of stack pointer registers */
-    u32           regMps;               /* monitor process state register */
-    u32           regJps;               /* job process state register */
-    u32           regPta;               /* page table address register */
-    u8            regPtl;               /* page table length register */
-    u8            regPsm;               /* page size mask register */
-    u32           regSit;               /* system interval timer register */
-    u16           regVmcl;              /* virtual machine capability list register */
-    u64           regKbp;               /* keypoint buffer pointer register */
-    u32           regEid;               /* CPU element identifier register */
-    u8            regOi;                /* CPU options installed register */
-    u64           regDec;               /* dependent environment control register */
-    u64           regTm;                /* test mode register */
-    u64           rtcClock;             /* CPU-specific snapshot of real-time clock */
-    u32           pageLengthMask;       /* mask used in calculating page table index */
-    u32           pageTableEntries;     /* number of entries in page table */
-    u8            pageNumShift;         /* shift count used in calculating page numbers */
-    u8            spidShift;            /* shift count used in calculating SPID's */
-    volatile bool isMonitorMode;        /* TRUE if CPU is in monitor mode */
-    volatile bool isStopped;            /* TRUE if CPU is stopped */
-    volatile u8   pendingInterrupts;    /* pending interrupt requests */
-#define PINT_EXTERNAL 0x01              /*   external interrupt request               */
-#define PINT_EXCH_170 0x02              /*   exchange to CYBER 170 state request      */
-#define PINT_SIT      0x04              /*   system  interval timer interrupt request */
-#define PINT_PIT      0x08              /*   process interval timer interrupt request */
-    u8            opCode;               /* Opcode field (first 8 bits) */
-    u8            opI;                  /* i field of current instruction */
-    u8            opJ;                  /* j field of current instruction */
-    u8            opK;                  /* k field of current instruction, if applicable */
-    u16           opD;                  /* D field of current instruction, if applicable */
-    u16           opQ;                  /* Q field of current instruction, if applicable */
-    BdpDescriptor srcDesc;              /* source descriptor of BDP instruction */
-    BdpDescriptor dstDesc;              /* destination descriptor of BDP instruction */
-    ConditionAction pendingAction;      /* pending monitor or user condition action */
-    u8            nextKey;              /* next P register key */
-    u64           nextP;                /* next P register value */
-    u8            macRegisterAddr;      /* maintenance access register number */
-    u8            macRegisterBuf[8];    /* maintenance access register contents */
-    u8            macRegisterBufIdx;    /* maintenance access register contents index */
-    u8            *controlStore;        /* control store image */
-    u32           controlStoreIdx;      /* control store image index */
-    u32           lastCsStartAddr;      /* last control store start address */
-    u32           controlStoreBreak;    /* control store break address */
-    u8            *softMemories[7];     /* soft memory images */
-    u32           softMemoryIndices[7]; /* soft memory image indices */
-    u8            *registerFile;        /* internal register file */
-    u32           registerFileIdx;      /* internal register file index */
+    u8              id;                   /* CPU identifier */
+    u8              key;                  /* program address key */
+    u64             regP;                 /* program address */
+    u64             regX[16];             /* data registers (64 bit) */
+    u64             regA[16];             /* address registers (48 bit) */
+    u8              regVmid;              /* virtual machine ID register */
+    u8              regUvmid;             /* untranslatable virtual machine ID register */
+    u16             regFlags;             /* CP flag register                   */
+                                          /*   Bit         Flag                 */
+                                          /*     0  Critical Frame Flag         */
+                                          /*     1  On Condition Flag           */
+                                          /*     2  Keypoint Enable Flag        */
+                                          /*     3  Process Not Damaged Flag    */
+                                          /*     4  ECS Authorized Flag         */
+                                          /*    14  Trap-enable Flip-flop       */
+                                          /*    15  Trap-enable Delay Flip-flop */
+    u16             regUmr;               /* user mask register */
+    u16             regMmr;               /* monitor mask register */
+    u16             regUcr;               /* user condition register */
+    u16             regMcr;               /* monitor condition register */
+    u8              regLpid;              /* last processor ID register */
+    u16             regKmr;               /* keypoint mask register */
+    u32             regPit;               /* process interval timer register */
+    u32             regBc;                /* base constant register */
+    u16             regMdf;               /* model-dependent flags */
+    u16             regStl;               /* segment table length register */
+    u64             regMdw;               /* model-dependent word */
+    u32             regSta;               /* segment table address register */
+    u64             regUtp;               /* untranslatable pointer register */
+    u64             regTp;                /* trap pointer register */
+    u8              regDm;                /* debug mask register */
+    u8              regDi;                /* debug index register */
+    u64             regDlp;               /* debug list pointer register */
+    u8              regLrn;               /* largest ring number register */
+    u64             regTos[16];           /* top of stack pointer registers */
+    u32             regMps;               /* monitor process state register */
+    u32             regJps;               /* job process state register */
+    u32             regPta;               /* page table address register */
+    u8              regPtl;               /* page table length register */
+    u8              regPsm;               /* page size mask register */
+    u32             regSit;               /* system interval timer register */
+    u16             regVmcl;              /* virtual machine capability list register */
+    u64             regKbp;               /* keypoint buffer pointer register */
+    u32             regEid;               /* CPU element identifier register */
+    u8              regOi;                /* CPU options installed register */
+    u64             regDec;               /* dependent environment control register */
+    u64             regTm;                /* test mode register */
+    u64             rtcClock;             /* CPU-specific snapshot of real-time clock */
+    u32             pageLengthMask;       /* mask used in calculating page table index */
+    u32             pageTableEntries;     /* number of entries in page table */
+    u8              pageNumShift;         /* shift count used in calculating page numbers */
+    u8              spidShift;            /* shift count used in calculating SPID's */
+    volatile bool   isMonitorMode;        /* TRUE if CPU is in monitor mode */
+    volatile bool   isStopped;            /* TRUE if CPU is stopped */
+    volatile u8     pendingRequests;      /* pending action requests */
+#define PR_EXT_INTRPT 0x01                /*   external interrupt request               */
+#define PR_EXCH_170   0x02                /*   exchange to CYBER 170 state request      */
+#define PR_SIT        0x04                /*   system  interval timer interrupt request */
+#define PR_PIT        0x08                /*   process interval timer interrupt request */
+#define PR_HALT       0x10                /*   halt request                             */
+    u8              opCode;               /* Opcode field (first 8 bits) */
+    u8              opI;                  /* i field of current instruction */
+    u8              opJ;                  /* j field of current instruction */
+    u8              opK;                  /* k field of current instruction, if applicable */
+    u16             opD;                  /* D field of current instruction, if applicable */
+    u16             opQ;                  /* Q field of current instruction, if applicable */
+    BdpDescriptor   srcDesc;              /* source descriptor of BDP instruction */
+    BdpDescriptor   dstDesc;              /* destination descriptor of BDP instruction */
+    ConditionAction pendingAction;        /* pending monitor or user condition action */
+    u8              nextKey;              /* next P register key */
+    u64             nextP;                /* next P register value */
+    u8              macRegisterAddr;      /* maintenance access register number */
+    u8              macRegisterBuf[8];    /* maintenance access register contents */
+    u8              macRegisterBufIdx;    /* maintenance access register contents index */
+    u8              *controlStore;        /* control store image */
+    u32             controlStoreIdx;      /* control store image index */
+    u32             controlStoreBreak;    /* control store break address */
+    u8              *softMemories[7];     /* soft memory images */
+    u32             softMemoryIndices[7]; /* soft memory image indices */
+    u8              *registerFile;        /* internal register file */
+    u32             registerFileIdx;      /* internal register file index */
     } Cpu180Context;
 
 /*

@@ -547,7 +547,7 @@ void traceRma(Cpu180Context *cpu, u32 rma);
 void traceSde(Cpu180Context *cpu, u16 segNum, u64 sde);
 void traceSequence(void);
 void traceStack(FILE *fp);
-void traceStartCpu180(Cpu180Context *cpu, u32 rma);
+void traceStartCpu180(Cpu180Context *cpu, u64 pva);
 void traceTerminate(void);
 char *traceTranslateAction(ConditionAction action);
 void traceTrap(Cpu180Context *cpu);
@@ -666,7 +666,6 @@ extern u16                 traceMcrMask;
 extern u32                 traceSequenceNo;
 extern u16                 traceUcrMask;
 extern long                widthPX;                         // Console
-
 
 /* Idle Loop throttle */
 extern bool idle;

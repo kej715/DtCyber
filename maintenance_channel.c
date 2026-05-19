@@ -354,7 +354,9 @@ static FcStatus mchFunc(PpWord funcCode)
         connType = mchGetConnType(mchConnCode, &cpId);
         if (connType == MacConnType_CP)
             {
-            cpu180MacHaltCp(&cpus180[cpId]);
+            cpuAcquireInterruptMutex();
+            cpus180[cpId].pendingRequests |= PR_HALT;
+            cpuReleaseInterruptMutex();
             }
         return FcProcessed;
 

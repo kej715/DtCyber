@@ -1988,16 +1988,18 @@ void traceMemoryBlock(Cpu180Context *cpu, u64 pva, u16 length, char *title)
 **
 **  Parameters:     Name        Description.
 **                  cpu         Pointer to CYBER 180 CPU context
-**                  rma         start address
+**                  pva         start address
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void traceStartCpu180(Cpu180Context *cpu, u32 rma)
+void traceStartCpu180(Cpu180Context *cpu, u64 pva)
     {
     if ((traceMask & TRACECPU(cpu, TraceCpu180)) != 0)
         {
-        fprintf(cpuF[cpu->id], "%06d Start CPU%d at %08x\n", traceSequenceNo, cpu->id, rma);
+        fprintf(cpuF[cpu->id], "%06d Start CPU%d at " FMT64_012x, traceSequenceNo, cpu->id, pva);
+        tracePrintRma(cpuF[cpu->id], cpu, pva);
+        fputs("\n", cpuF[cpu->id]);
         }
     }
 

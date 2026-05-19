@@ -621,6 +621,10 @@ void stopHelpers(void)
 **------------------------------------------------------------------------*/
 static void emulate(void)
     {
+    Cpu170Context *activeCpu;
+
+    activeCpu = &cpus170[0];
+
     while (emulationActive)
         {
 #if CcCycleTime
@@ -647,9 +651,27 @@ static void emulate(void)
         rtcTick();
         if (isCyber180)
             {
-            cpu180UpdateIntervalTimers(&cpus180[cpus170->id]);
+            cpu180UpdateIntervalTimers(&cpus180[activeCpu->id]);
             }
         cpuReleaseClockMutex();
+
+        /*
+        **  Check for a deadstart request.
+        */
+        if (activeCpu->doDeadstart)
+            {
+            deadStart(); // Deadstart the PP's
+            if (isCyber180)
+                {
+                cpu180MacHaltCp(&cpus180[activeCpu->id]);
+                cpu180MacMasterClearCp(&cpus180[activeCpu->id]);
+                }
+            else
+                {
+                cpuReset(activeCpu);
+                }
+            activeCpu->doDeadstart = FALSE;
+            }
 
         /*
         **  Execute PP and CPU.

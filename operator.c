@@ -1792,7 +1792,7 @@ static void opCmdDumpCM(int fwa, int count)
             *cp++ = cdcToAscii[(word >> shiftCount) & Mask6];
             }
         *cp = '\0';
-        opDisplay(buf);
+        opDisplay("%s", buf);
         if (isCyber180)
             {
             opDisplay("    " FMT32_08x " " FMT64_016x " ", fwa << 3, word);
@@ -1802,7 +1802,7 @@ static void opCmdDumpCM(int fwa, int count)
                 *cp++ = (c >= ' ' && c < 0x7f) ? c : '.';
                 }
             *cp = '\0';
-            opDisplay(buf);
+            opDisplay("%s", buf);
             }
         opDisplay("\n");
         }
@@ -1828,7 +1828,7 @@ static void opCmdDumpEM(int fwa, int count)
         opDisplay("%08o " FMT60_020o " ", fwa, word);
         for (shiftCount = 54, cp = buf; shiftCount >= 0; shiftCount -= 6)
             {
-            *cp++ = cdcToAscii[(word >> shiftCount) & 077];
+            *cp++ = cdcToAscii[(word >> shiftCount) & Mask6];
             }
         *cp = '\0';
         opDisplay("%s\n", buf);
