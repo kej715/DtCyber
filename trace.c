@@ -757,6 +757,8 @@ static DecCp180Control cp180Decode[0x100] =
     { VCjkiD, "Illegal",  VF, VR                                    }  // FF
     };
 
+static u64 traceSegmentTableSnapshots[2][4096];
+
 /*
  **--------------------------------------------------------------------------
  **
@@ -1612,7 +1614,7 @@ void traceCodebasePointer(Cpu180Context *cpu, u64 bsp, u32 rma, u64 cbp)
     {
     if ((traceMask & TRACECPU(cpu, TraceCallFrame)) != 0)
         {
-        fprintf(cpuF[cpu->id], "%06d Call indirect BSP " FMT64_012x " RMA %08x CBP " FMT64_016x "\n", traceSequenceNo, bsp, rma, cbp);
+        fprintf(cpuF[cpu->id], "%06d Call indirect BSP " FMT64_012x " [%08x] CBP " FMT64_016x "\n", traceSequenceNo, bsp, rma, cbp);
         }
     }
 
@@ -1879,6 +1881,106 @@ void traceExchange180(Cpu180Context *cpu, u32 addr, char *title)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Print the active segment table of a CYBER 180 CPU.
+**
+**  Parameters:     Name        Description.
+**                  cpu         Pointer to CYBER 180 CPU context
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void tracePrintSegmentTable(Cpu180Context *cpu)
+    {
+    u32 addr;
+    u16 s;
+    u64 sde;
+
+    fprintf(cpuF[cpu->id], "%06d Active segment table\n", traceSequenceNo);
+    for (s = 0, addr = cpu->regSta >> 3; s <= cpu->regStl; s++, addr++)
+        {
+        sde = cpMem[addr];
+        if ((sde >> 62) != 0)
+            {
+            fprintf(cpuF[cpu->id], "%06d   %03x VL %x XP %x RP %x WP %x R1 %x R2 %x ASID %04x Lock %02x ASTI %04x\n",
+                        traceSequenceNo,
+                        s,
+                        (u8)((sde >> 62) & Mask2),
+                        (u8)((sde >> 60) & Mask2),
+                        (u8)((sde >> 58) & Mask2),
+                        (u8)((sde >> 56) & Mask2),
+                        (u8)((sde >> 52) & Mask4),
+                        (u8)((sde >> 48) & Mask4),
+                        (u16)((sde >> 32) & Mask16),
+                        (u8)((sde >> 24) & Mask8),
+                        (u16)(sde & Mask16));
+            }
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Print the difference between the active segment table of
+**                  a CYBER 180 CPU and a previously captured snapshot of it.
+**
+**  Parameters:     Name        Description.
+**                  cpu         Pointer to CYBER 180 CPU context
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void tracePrintSegmentTableDiff(Cpu180Context *cpu)
+    {
+    u32 addr;
+    u16 s;
+    u64 sde;
+
+    for (s = 0, addr = cpu->regSta >> 3; s <= cpu->regStl; s++, addr++)
+        {
+        sde = cpMem[addr];
+        if ((traceSegmentTableSnapshots[cpu->id][s] ^ sde) != 0)
+            {
+            fprintf(cpuF[cpu->id], "%06d   %03x VL %x XP %x RP %x WP %x R1 %x R2 %x ASID %04x Lock %02x ASTI %04x\n",
+                    traceSequenceNo,
+                    s,
+                    (u8)((sde >> 62) & Mask2),
+                    (u8)((sde >> 60) & Mask2),
+                    (u8)((sde >> 58) & Mask2),
+                    (u8)((sde >> 56) & Mask2),
+                    (u8)((sde >> 52) & Mask4),
+                    (u8)((sde >> 48) & Mask4),
+                    (u16)((sde >> 32) & Mask16),
+                    (u8)((sde >> 24) & Mask8),
+                    (u16)(sde & Mask16));
+            traceSegmentTableSnapshots[cpu->id][s] = sde;
+            }
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Capture a snapshot of the active segment table of a
+**                  CYBER 180 CPU.
+**
+**  Parameters:     Name        Description.
+**                  cpu         Pointer to CYBER 180 CPU context
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void traceSnapSegmentTable(Cpu180Context *cpu)
+    {
+    u32 addr;
+    u16 s;
+
+    for (s = 0; s <= cpu->regStl; s++)
+        {
+        traceSegmentTableSnapshots[cpu->id][s] = 0;
+        }
+    for (s = 0, addr = cpu->regSta >> 3; s <= cpu->regStl; s++, addr++)
+        {
+        traceSegmentTableSnapshots[cpu->id][s] = cpMem[addr];
+        }
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Trace a CYBER 180 halt request.
 **
 **  Parameters:     Name        Description.
@@ -2031,7 +2133,7 @@ static void traceTrapFrame170(Cpu180Context *cpu, u64 sfsa)
         wordAddrs[i] = rma >> 3;
         sfsa += 8;
         }
-    fprintf(cpuF[cpu->id], " (RMA %08x)\n\n", wordAddrs[0] << 3);
+    fprintf(cpuF[cpu->id], " [%08x]\n\n", wordAddrs[0] << 3);
     i = 0;
     fprintf(cpuF[cpu->id], "P " FMT64_016x "\n", cpMem[wordAddrs[i++]]);
     word = cpMem[wordAddrs[i++]];
@@ -2102,7 +2204,7 @@ void traceTrapFrame(Cpu180Context *cpu, u64 sfsa)
         wordAddrs[i] = rma >> 3;
         sfsa += 8;
         }
-    fprintf(cpuF[cpu->id], " (RMA %08x)\n\n", wordAddrs[0] << 3);
+    fprintf(cpuF[cpu->id], " [%08x]\n\n", wordAddrs[0] << 3);
     i = 0;
     fprintf(cpuF[cpu->id], "P " FMT64_016x "\n", cpMem[wordAddrs[i++]]);
     word = cpMem[wordAddrs[i++]];
@@ -2160,7 +2262,7 @@ void traceTrap(Cpu180Context *cpu)
         {
         return;
         }
-    fprintf(cpuF[cpu->id], " (RMA " FMT32_08x ")", rma);
+    fprintf(cpuF[cpu->id], " [" FMT32_08x "]", rma);
     cbp   = cpMem[rma >> 3];
     vmid  = (cbp >> 56) & Mask4;
     fprintf(cpuF[cpu->id], " VMID %x CBP " FMT64_016x, vmid, cbp);

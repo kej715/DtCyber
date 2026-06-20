@@ -1605,12 +1605,12 @@ static void cpuExchangeTo180(Cpu170Context *activeCpu, bool setSysCall, bool set
         {
         ctx180->regMcr |= 0x0020; // set system call status bit
         }
-    cpu180Store170Xp(ctx180, ctx180->regJps >> 3);
+    cpu180Store170Xp(ctx180, ctx180->regJps);
     if (setExitModeHalt)
         {
         cpMem[(ctx180->regJps >> 3) + 6] |= (u64)1 << 32;
         }
-    cpu180Load180Xp(ctx180, ctx180->regMps >> 3);
+    cpu180Load180Xp(ctx180, ctx180->regMps);
     ctx180->isMonitorMode           = TRUE;
     ctx180->nextKey                 = ctx180->key;
     ctx180->nextP                   = ctx180->regP;

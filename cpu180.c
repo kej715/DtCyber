@@ -75,18 +75,28 @@
 //
 #define amk_close                          55
 #define amk_copy_file                      58
+#define amk_fetch                          61
 #define amk_get_file_attributes            67
 #define amk_get_next                       69
+#define amk_get_segment_pointer            72
 #define amk_open                           75
 #define amk_return                         83
+#define bak_control                       151
 #define bak_connected_file_device         152
 #define bak_open_file                     154
+#define clk_convert_integer_to_rjstring   251
+#define clk_convert_integer_to_string     252
+#define clk_convert_string_to_name        256
 #define clk_create_file_connection        259
 #define clk_declare_variable              260
+#define clk_erase_child_task              263
 #define clk_get_line_from_command_file    266
 #define clk_open_command_file             274
+#define clk_pop_block_stack               275
+#define clk_pop_input_stack               276
 #define clk_process_command               279
 #define clk_read_variable                 284
+#define clk_remove_variable               286
 #define clk_scan_command_file             288
 #define clk_scan_command_line             289
 #define clk_scan_parameter_list           291
@@ -98,21 +108,40 @@
 #define cmk_get_conf_file                 321
 #define cmk_install_conf_file             322
 #define clk_include_line                  351
+#define clk_create_environment_variable   354
 #define ifk_get_terminal_attributes       661
+#define lgk_log_ascii                     850
 #define lok_load_program                  950
 #define lok_load_module_from_library      951
+#define lok_add_program_load_libraries    953
 #define lok_satisfy_externals             955
 #define lok_load_module                   956
+#define mmk_ring1_segment_request        1105
 #define mmk_page_fault                   1106
+#define mmk_exit_task                    1113
 #define mmk_build_lock_rmal              1138
 #define mmk_advise_out                   1152
 #define mmk_write_modified_pages         1157
+#define mmk_close                        1161
+#define mmk_open_file_segment            1162
+#define mmk_create_inherited_sdt         1163
+#define mmk_fetch_seg_attributes         1164
+#define mmk_store_segment_attributes     1167
+#define mmk_verify_access                1168
+#define mmk_delete_segment               1169
+#define mmk_create_segment               1170
+#define mmk_add_sdt_sdtx_entry           1173
+#define mmk_get_segment_length           1182
+#define mmk_set_segment_length           1183
+#define mmk_set_access_selections        1184
 #define ofk_screen_input_fap             1351
 #define osk_generate_message             1400
 #define osk_format_message               1401
+#define osk_get_status_severity          1402
 #define osk_set_status_abnormal          1403
 #define osk_await_activity_completion    1407
 #define osk_allocate                     1447
+#define osk_free                         1448
 #define pfk_attach                       1500
 #define pfk_get_object_information       1539
 #define pfk_restricted_attach            1565
@@ -120,6 +149,7 @@
 #define pmk_task_begin_end               1600
 #define pmk_task_begin                   1601
 #define pmk_pop_all_stack_frames         1602
+#define pmk_ring_crossing_popper         1603
 #define pmk_execute                      1604
 #define pmk_exit                         1606
 #define pmk_abort                        1607
@@ -128,25 +158,35 @@
 #define pmk_disestablish_cond_handler    1623
 #define pmk_cause_condition              1624
 #define pmk_get_time                     1627
+#define pmk_get_task_cp_time             1629
+#define pmk_get_job_names                1634
+#define pmk_get_job_mode                 1635
 #define pmk_log_message                  1641
 #define pmk_log_ascii                    1642
+#define pmk_get_compact_date_time        1644
 #define pmk_log                          1651
 #define pmk_wait                         1655
 #define pmk_long_term_wait               1656
 #define pmk_enable_system_conditions     1676
 #define pmk_establish_ch_in_block        1677
+#define pmk_inhibit_system_conditions    1678
 #define pmk_get_binary_processor_id      1683
+#define pmk_get_mainframe_id             1686
 #define pmk_load_from_library            1689
 #define pmk_validate_previous_save_area  1703
 #define pmk_push_task_debug_mode         1708
+#define pmk_pop_task_debug_mode          1709
 #define pmk_set_task_debug_mode          1710
 #define pmk_set_task_debug_on            1711
 #define pmk_establish_debug_cff          1712
+#define pmk_task_debug_ring              1718
 #define pmk_change_job_library_list      1720
 #define pmk_pop_inhibit_termination      1721
 #define pmk_push_inhibit_termination     1722
-#define pmk_establish_ch_outside_block   1746
+#define pmk_zero_out_table               1744
+#define pmk_establish_ch_outside_block   1745
 #define tmk_switch_task                  1918
+#define tmk_send_signal                  1929
 #define tmk_send_monitor_fault           1930
 #define tmk_process_task_mcr_fault       1934
 #define tmk_set_monitor_flag             1936
@@ -154,7 +194,9 @@
 #define iok_io_completions               2201
 #define iok_allocate_image_request       2203
 #define iok_queue_image_request          2204
+#define nak_internal_connection_mgmt     2492
 #define jmk_get_job_status               2602
+#define jmk_logout                       2611
 #define jmk_idle_system                  2615
 #define jmk_job_exists                   2627
 #define fmk_return_file                  2702
@@ -165,15 +207,14 @@
 #define mtk_job_mode_trap                4004
 
 //#define TRACE_INST_LIST   { 0x77, 0xe9 }
-#define TRACE_INST_COUNT  10
+//#define TRACE_INST_COUNT  10
+#define TRACE_INST_COUNT  100000
 
-//#define TRACE_RANGE_START 0x405200126c00
-//#define TRACE_RANGE_END   0x405200126cff
 //#define TRACE_RANGE_START 0xb0440002f800
 //#define TRACE_RANGE_END   0xb0440002f8ff
 
-//#define TRACE_STORE_START 0x100a0000b758
-//#define TRACE_STORE_END   0x100a0000b758
+#define TRACE_STORE_START 0x100300002ce0
+#define TRACE_STORE_END   0x100300002e78
 /*
 #define TRACE_KEYPOINT_LIST         \
     {                               \
@@ -187,8 +228,8 @@
 */
 #define TRACE_KEYPOINT_LIST         \
     {                               \
-    4050, \
-    0 \
+    4050,                           \
+    mmk_create_segment              \
     }
 #endif
 
@@ -418,6 +459,8 @@ static bool cpu180SearchKeypointList(u16 kpt);
 #endif
 
 #endif
+/*DELETE*/static u64 tosXpPva = 0;
+/*DELETE*/static u32 tosXpRma = 0;
 
 /*
 **                                                  Op  Mnemonic   MIGDS
@@ -1407,11 +1450,11 @@ void cpu180Init(char *model, u16 *serialNumbers)
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Load the 180 state exchange package referenced by a
-**                  specified real memory word address.
+**                  specified real memory byte address.
 **
 **  Parameters:     Name        Description.
 **                  ctx         pointer to CPU context
-**                  xpa         word address of exchange package
+**                  xpa         byte address of exchange package
 **
 **  Returns:        Nothing
 **
@@ -1419,96 +1462,88 @@ void cpu180Init(char *model, u16 *serialNumbers)
 void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa)
     {
     int i;
+    u32 wa;
     u64 word;
-#if CcDebug > 0
-    u32 xpab = xpa << 3;
-#endif
 
-    word           = cpMem[xpa++];
+    xpa           &= 0x7ffffff0;
+    wa             = xpa >> 3;
+    word           = cpMem[wa++];
     ctx->key       = (word >> 48) & Mask6;
     ctx->regP      = word & Mask48;
-    word           = cpMem[xpa++];
+    word           = cpMem[wa++];
     ctx->regA[0]   = word & Mask48;
     ctx->regVmid   = (u8)(word >> 56) & Mask4;
     ctx->regUvmid  = (u8)(word >> 48) & Mask4;
-    word           = cpMem[xpa++];
+    word           = cpMem[wa++];
     ctx->regA[1]   = word & Mask48;
     ctx->regFlags  = word >> 48;
-    word           = cpMem[xpa++];
+    word           = cpMem[wa++];
     ctx->regA[2]   = word & Mask48;
     ctx->regUmr    = (word >> 48) | 0xfe00;
-    word           = cpMem[xpa++];
+    word           = cpMem[wa++];
     ctx->regA[3]   = word & Mask48;
     ctx->regMmr    = word >> 48;
-    word           = cpMem[xpa++];
+    word           = cpMem[wa++];
     ctx->regA[4]   = word & Mask48;
     ctx->regUcr    = word >> 48;
-    word           = cpMem[xpa++];
+    word           = cpMem[wa++];
     ctx->regA[5]   = word & Mask48;
     ctx->regMcr    = word >> 48;
-    word           = cpMem[xpa++];
+    word           = cpMem[wa++];
     ctx->regA[6]   = word & Mask48;
     ctx->regLpid   = (word >> 48) & Mask8;
-    word           = cpMem[xpa++];
+    word           = cpMem[wa++];
     ctx->regA[7]   = word & Mask48;
     ctx->regKmr    = (word >> 48) & Mask8;
-    ctx->regA[8]   = cpMem[xpa++] & Mask48;
-    ctx->regA[9]   = cpMem[xpa++] & Mask48;
-    word           = cpMem[xpa++];
+    ctx->regA[8]   = cpMem[wa++] & Mask48;
+    ctx->regA[9]   = cpMem[wa++] & Mask48;
+    word           = cpMem[wa++];
     ctx->regA[10]  = word & Mask48;
     ctx->regPit    = (word >> 32) & 0xffff0000;
-    word           = cpMem[xpa++];
+    word           = cpMem[wa++];
     ctx->regA[11]  = word & Mask48;
     ctx->regPit   |= word >> 48;
-    word           = cpMem[xpa++];
+    word           = cpMem[wa++];
     ctx->regA[12]  = word & Mask48;
     ctx->regBc     = (word >> 32) & 0xffff0000;
-    word           = cpMem[xpa++];
+    word           = cpMem[wa++];
     ctx->regA[13]  = word & Mask48;
     ctx->regBc    |= word >> 48;
-    word           = cpMem[xpa++];
+    word           = cpMem[wa++];
     ctx->regA[14]  = word & Mask48;
     ctx->regMdf    = word >> 48;
-    word           = cpMem[xpa++];
+    word           = cpMem[wa++];
     ctx->regA[15]  = word & Mask48;
     ctx->regStl    = (word >> 48) & Mask12;
 
     for (i = 0; i < 16; i++)
         {
-        ctx->regX[i] = cpMem[xpa++];
+        ctx->regX[i] = cpMem[wa++];
         }
 
-    ctx->regMdw    = cpMem[xpa++];
+    ctx->regMdw    = cpMem[wa++];
 
-    word           = cpMem[xpa++];
+    word           = cpMem[wa++];
     ctx->regUtp    = word & Mask48;
     ctx->regSta    = (word >> 32) & 0xffff0000;
-    word           = cpMem[xpa++];
+    word           = cpMem[wa++];
     ctx->regTp     = word & Mask48;
     ctx->regSta   |= word >> 48;
 
-    word           = cpMem[xpa++];
+    word           = cpMem[wa++];
     ctx->regDlp    = word & Mask48;
     ctx->regDi     = (word >> 58) & Mask6;
     ctx->regDm     = (word >> 48) & Mask7;
 
-    word           = cpMem[xpa++];
+    word           = cpMem[wa++];
     ctx->regLrn    = (word >> 48) & Mask4;
     ctx->regTos[1] = word & Mask48;
     for (i = 2; i < 16; i++)
         {
-        ctx->regTos[i] = cpMem[xpa++] & Mask48;
+        ctx->regTos[i] = cpMem[wa++] & Mask48;
         }
 #if CcDebug > 0
-    traceExchange180(ctx, xpab, "Load");
-/*DELETE*/if ((ctx->regA[0] >> 32) != (ctx->regA[1] >> 32)
-/*DELETE*/    && (ctx->regA[1] >> 32) != 0xffff)
-/*DELETE*/    {
-/*DELETE*/    fputs("cpu180Load180Xp: inconsistent A0/A1\n", stderr);
-/*DELETE*/    tracePrint180Registers(ctx, stderr);
-/*DELETE*/    traceStack(stderr);
-/*DELETE*/    traceInstCount[ctx->id] = 10;
-/*DELETE*/    }
+    traceExchange180(ctx, xpa, "Load");
 #endif
     }
 
@@ -2119,11 +2154,11 @@ void cpu180MacStartCp(Cpu180Context *ctx)
 
     case CSA_HEIM: // half exchange-in monitor mode
     case CSA_HEIJ: // half exchange-in job mode
-        xpa = ((csAddr == CSA_HEIM) ? ctx->regMps : ctx->regJps) >> 3;
-        if (xpa >= cpuMaxMemory)
+        xpa = (csAddr == CSA_HEIM) ? ctx->regMps : ctx->regJps;
+        if ((xpa >> 3) >= cpuMaxMemory)
             {
             logDtError(LogErrorLocation, "Failed to start CPU%d: %s " FMT32_08x " beyond end of memory, mem size %d Mbytes\n",
-                ctx->id, (csAddr == CSA_HEIM) ? "MPS" : "JPS", xpa << 3, (cpuMaxMemory * 8) / OneMegabyte);
+                ctx->id, (csAddr == CSA_HEIM) ? "MPS" : "JPS", xpa, (cpuMaxMemory << 3) / OneMegabyte);
             return;
             }
         cpu180Load180Xp(ctx, xpa);
@@ -2145,8 +2180,8 @@ void cpu180MacStartCp(Cpu180Context *ctx)
         break;
 
     case CSA_HEOM: // half exchange-out monitor mode
-        xpa = (ctx->isMonitorMode ? ctx->regMps : ctx->regJps) >> 3;
-        if (xpa >= cpuMaxMemory)
+        xpa = ctx->isMonitorMode ? ctx->regMps : ctx->regJps;
+        if ((xpa >> 3) >= cpuMaxMemory)
             {
             logDtError(LogErrorLocation, "Failed to start CPU%d: %s " FMT32_08x " beyond end of memory, mem size %d Mbytes\n",
                 ctx->id, ctx->isMonitorMode ? "MPS" : "JPS", xpa << 3, (cpuMaxMemory * 8) / OneMegabyte);
@@ -2687,11 +2722,11 @@ void cpu180Step(Cpu180Context *activeCpu)
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Store the 170 state exchange package into memory
-**                  referenced by a specified real memory word address.
+**                  referenced by a specified real memory byte address.
 **
 **  Parameters:     Name        Description.
 **                  ctx         pointer to CYBER 180 CPU context
-**                  xpa         word address of exchange package
+**                  xpa         byte address of exchange package
 **
 **  Returns:        Nothing
 **
@@ -2702,7 +2737,7 @@ void cpu180Store170Xp(Cpu180Context *ctx, u32 xpa)
     cpu180Store180Xp(ctx, xpa);
 
 #if CcDebug > 0
-    traceExchange170(&cpus170[ctx->id], xpa << 3, NULL, (traceMask & TRACECPU(ctx, TraceCpu180)) != 0);
+    traceExchange170(&cpus170[ctx->id], xpa, NULL, (traceMask & TRACECPU(ctx, TraceCpu180)) != 0);
 #endif
     }
 
@@ -3153,14 +3188,6 @@ static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 
         traceCallFrame(ctx, sfsa, "pushed");
         }
     traceCall(ctx, callee);
-/*DELETE*/if ((ctx->regA[0] >> 32) != (ctx->regA[1] >> 32)
-/*DELETE*/    && (ctx->regA[1] >> 32) != 0xffff)
-/*DELETE*/    {
-/*DELETE*/    fputs("cpu180CallIndirect: inconsistent A0/A1\n", stderr);
-/*DELETE*/    tracePrint180Registers(ctx, stderr);
-/*DELETE*/    traceStack(stderr);
-/*DELETE*/    traceInstCount[ctx->id] = 10;
-/*DELETE*/    }
 #endif
 
     return TRUE;
@@ -3314,15 +3341,15 @@ static void cpu180Exchange(Cpu180Context *activeCpu)
         activeCpu->regP = activeCpu->nextP;
         if (activeCpu->isMonitorMode)
             {
-            cpu180Store180Xp(activeCpu, activeCpu->regMps >> 3);
+            cpu180Store180Xp(activeCpu, activeCpu->regMps);
             activeCpu->isMonitorMode = FALSE;
-            cpu180Load180Xp(activeCpu, activeCpu->regJps >> 3);
+            cpu180Load180Xp(activeCpu, activeCpu->regJps);
             }
         else
             {
-            cpu180Store180Xp(activeCpu, activeCpu->regJps >> 3);
+            cpu180Store180Xp(activeCpu, activeCpu->regJps);
             activeCpu->isMonitorMode = TRUE;
-            cpu180Load180Xp(activeCpu, activeCpu->regMps >> 3);
+            cpu180Load180Xp(activeCpu, activeCpu->regMps);
             }
         activeCpu->nextKey = activeCpu->key;
         activeCpu->nextP   = activeCpu->regP;
@@ -3330,9 +3357,9 @@ static void cpu180Exchange(Cpu180Context *activeCpu)
     else if (vmid == 1 && activeCpu->isMonitorMode) // 180 -> 170 state exchange
         {
         activeCpu->regP = activeCpu->nextP;
-        cpu180Store180Xp(activeCpu, activeCpu->regMps >> 3);
+        cpu180Store180Xp(activeCpu, activeCpu->regMps);
         activeCpu->isMonitorMode = FALSE;
-        cpu180Load170Xp(activeCpu, activeCpu->regJps >> 3);
+        cpu180Load170Xp(activeCpu, activeCpu->regJps);
         }
     else
         {
@@ -3838,11 +3865,11 @@ static bool cpu180IsBindingSectionRef(Cpu180Context *ctx, u64 pva)
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Load the 170 state exchange package referenced by a
-**                  specified real memory word address.
+**                  specified real memory byte address.
 **
 **  Parameters:     Name        Description.
 **                  ctx         pointer to CYBER 180 CPU context
-**                  xpa         word address of exchange package
+**                  xpa         byte address of exchange package
 **
 **  Returns:        Nothing
 **
@@ -3850,12 +3877,12 @@ static bool cpu180IsBindingSectionRef(Cpu180Context *ctx, u64 pva)
 static void cpu180Load170Xp(Cpu180Context *ctx, u32 xpa)
     {
     cpu180Load180Xp(ctx, xpa);
-    ringSeg170 = cpMem[xpa] & RingSegMask;
+    ringSeg170 = cpMem[(xpa & 0x7ffffff0) >> 3] & RingSegMask;
     cpu180Set170State(ctx);
     ctx->isMonitorMode = FALSE; // C170 state operates in C180 job mode
 
 #if CcDebug > 0
-    traceExchange170(&cpus170[ctx->id], xpa << 3, NULL, (traceMask & TRACECPU(ctx, TraceCpu180)) != 0);
+    traceExchange170(&cpus170[ctx->id], xpa, NULL, (traceMask & TRACECPU(ctx, TraceCpu180)) != 0);
 #endif
     }
 
@@ -4048,7 +4075,7 @@ static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool doSave
         cpMem[wordAddrs[5]] |= (u64)ctx->regUcr << 48;
         cpMem[wordAddrs[6]] |= (u64)ctx->regMcr << 48;
         }
-    ctx->regX[0] = (ctx->regX[0] & Mask32) | (cpMem[wordAddrs[0]] & LeftMask);
+    ctx->regX[0] = ((u64)ctx->key << 48) | (ctx->regP & RingSegMask) | (ctx->regX[0] & Mask32);
     *frameSize   = words << 3;
 
 #if CcDebug > 0 && defined(TRACE_STORE_START)
@@ -4246,11 +4273,11 @@ static void cpu180SetRingZeroCondition(Cpu180Context *ctx, u64 pva)
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Store the 180 state exchange package into memory
-**                  referenced by a specified real memory word address.
+**                  referenced by a specified real memory byte address.
 **
 **  Parameters:     Name        Description.
 **                  ctx         pointer to CPU context
-**                  xpa         word address into which to store exchange package
+**                  xpa         byte address into which to store exchange package
 **
 **  Returns:        Nothing
 **
@@ -4258,53 +4285,51 @@ static void cpu180SetRingZeroCondition(Cpu180Context *ctx, u64 pva)
 static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa)
     {
     int i;
-#if CcDebug > 0
-    u32 xpab = xpa << 3;
-/*DELETE*/if ((ctx->regA[0] >> 32) != (ctx->regA[1] >> 32)
-/*DELETE*/    && (ctx->regA[1] >> 32) != 0xffff)
+    u32 wa;
+/*DELETE*/if (xpa == tosXpRma)
 /*DELETE*/    {
-/*DELETE*/    fputs("cpu180Store180Xp: inconsistent A0/A1\n", stderr);
-/*DELETE*/    tracePrint180Registers(ctx, stderr);
-/*DELETE*/    traceStack(stderr);
-/*DELETE*/    traceInstCount[ctx->id] = 10;
+/*DELETE*/    fprintf(stderr,"Exchange will replace r11Tos %012llx by %012llx -- Mtr %d MCR %04x MMR %04x UCR %04x UMR %04x\n",
+                 cpMem[(tosXpRma>>3)+47],ctx->regTos[11],ctx->isMonitorMode,ctx->regMcr,ctx->regMmr,ctx->regUcr,ctx->regUmr);
+/*DELETE*/    tosXpRma = 0;
 /*DELETE*/    }
-#endif
 
-    cpMem[xpa++] = ((u64)ctx->key << 48) | ctx->regP;
-    cpMem[xpa++] = ((u64)ctx->regVmid << 56) | ((u64)ctx->regUvmid << 48) | ctx->regA[0];
-    cpMem[xpa++] = ((u64)ctx->regFlags << 48) | ctx->regA[1];
-    cpMem[xpa++] = ((u64)(ctx->regUmr | 0xfe00) << 48) | ctx->regA[2];
-    cpMem[xpa++] = ((u64)ctx->regMmr << 48) | ctx->regA[3];
-    cpMem[xpa++] = ((u64)ctx->regUcr << 48) | ctx->regA[4];
-    cpMem[xpa++] = ((u64)ctx->regMcr << 48) | ctx->regA[5];
-    cpMem[xpa++] = ((u64)ctx->id << 48) | ctx->regA[6];
-    cpMem[xpa++] = ((u64)ctx->regKmr << 48) | ctx->regA[7];
-    cpMem[xpa++] = ctx->regA[8];
-    cpMem[xpa++] = ctx->regA[9];
-    cpMem[xpa++] = ((u64)(ctx->regPit & 0xffff0000U) << 32) | ctx->regA[10];
-    cpMem[xpa++] = ((u64)(ctx->regPit & 0x0000ffffU) << 48) | ctx->regA[11];
-    cpMem[xpa++] = ((u64)(ctx->regBc & 0xffff0000U) << 32) | ctx->regA[12];
-    cpMem[xpa++] = ((u64)(ctx->regBc & 0x0000ffffU) << 48) | ctx->regA[13];
-    cpMem[xpa++] = ((u64)ctx->regMdf << 48) | ctx->regA[14];
-    cpMem[xpa++] = ((u64)ctx->regStl << 48) | ctx->regA[15];
+    xpa        &= 0x7ffffff0;
+    wa          = xpa >> 3;
+    cpMem[wa++] = ((u64)ctx->key << 48) | ctx->regP;
+    cpMem[wa++] = ((u64)ctx->regVmid << 56) | ((u64)ctx->regUvmid << 48) | ctx->regA[0];
+    cpMem[wa++] = ((u64)ctx->regFlags << 48) | ctx->regA[1];
+    cpMem[wa++] = ((u64)(ctx->regUmr | 0xfe00) << 48) | ctx->regA[2];
+    cpMem[wa++] = ((u64)ctx->regMmr << 48) | ctx->regA[3];
+    cpMem[wa++] = ((u64)ctx->regUcr << 48) | ctx->regA[4];
+    cpMem[wa++] = ((u64)ctx->regMcr << 48) | ctx->regA[5];
+    cpMem[wa++] = ((u64)ctx->id << 48) | ctx->regA[6];
+    cpMem[wa++] = ((u64)ctx->regKmr << 48) | ctx->regA[7];
+    cpMem[wa++] = ctx->regA[8];
+    cpMem[wa++] = ctx->regA[9];
+    cpMem[wa++] = ((u64)(ctx->regPit & 0xffff0000U) << 32) | ctx->regA[10];
+    cpMem[wa++] = ((u64)(ctx->regPit & 0x0000ffffU) << 48) | ctx->regA[11];
+    cpMem[wa++] = ((u64)(ctx->regBc & 0xffff0000U) << 32) | ctx->regA[12];
+    cpMem[wa++] = ((u64)(ctx->regBc & 0x0000ffffU) << 48) | ctx->regA[13];
+    cpMem[wa++] = ((u64)ctx->regMdf << 48) | ctx->regA[14];
+    cpMem[wa++] = ((u64)ctx->regStl << 48) | ctx->regA[15];
  
     for (i = 0; i < 16; i++)
         {
-        cpMem[xpa++] = ctx->regX[i];
+        cpMem[wa++] = ctx->regX[i];
         }
 
-    cpMem[xpa++] = ctx->regMdw;
-    cpMem[xpa++] = ((u64)(ctx->regSta & 0xffff0000U) << 32) | ctx->regUtp;
-    cpMem[xpa++] = ((u64)(ctx->regSta & 0x0000ffffU) << 48) | ctx->regTp;
-    cpMem[xpa++] = ((u64)ctx->regDi << 58) | ((u64)ctx->regDm << 48) | ctx->regDlp;
-    cpMem[xpa++] = ((u64)ctx->regLrn << 48) | ctx->regTos[1];
+    cpMem[wa++] = ctx->regMdw;
+    cpMem[wa++] = ((u64)(ctx->regSta & 0xffff0000U) << 32) | ctx->regUtp;
+    cpMem[wa++] = ((u64)(ctx->regSta & 0x0000ffffU) << 48) | ctx->regTp;
+    cpMem[wa++] = ((u64)ctx->regDi << 58) | ((u64)ctx->regDm << 48) | ctx->regDlp;
+    cpMem[wa++] = ((u64)ctx->regLrn << 48) | ctx->regTos[1];
 
     for (i = 2; i < 16; i++)
         {
-        cpMem[xpa++] = ctx->regTos[i];
+        cpMem[wa++] = ctx->regTos[i];
         }
 #if CcDebug > 0
-    traceExchange180(ctx, xpab, "Store");
+    traceExchange180(ctx, xpa, "Store");
 #endif
     }
 
@@ -4738,16 +4763,6 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
         cpu180Set170State(activeCpu);
         activeCpu->isMonitorMode = FALSE;
         }
-#if CcDebug > 0
-/*DELETE*/if ((activeCpu->regA[0] >> 32) != (activeCpu->regA[1] >> 32)
-/*DELETE*/    && (activeCpu->regA[1] >> 32) != 0xffff)
-/*DELETE*/    {
-/*DELETE*/    fputs("RETURN: inconsistent A0/A1\n", stderr);
-/*DELETE*/    tracePrint180Registers(activeCpu, stderr);
-/*DELETE*/    traceStack(stderr);
-/*DELETE*/    traceInstCount[activeCpu->id] = 10;
-/*DELETE*/    }
-#endif
     }
 
 static void cp180Op05(Cpu180Context *activeCpu)  // 05  PURGE      MIGDS 2-147
@@ -4844,14 +4859,6 @@ static void cp180Op06(Cpu180Context *activeCpu)  // 06  POP        MIGDS 2-129
 
 #if CcDebug > 0
     traceCallFrame(activeCpu, psap, "popped");
-/*DELETE*/if ((activeCpu->regA[0] >> 32) != (activeCpu->regA[1] >> 32)
-/*DELETE*/    && (activeCpu->regA[1] >> 32) != 0xffff)
-/*DELETE*/    {
-/*DELETE*/    fputs("POP: inconsistent A0/A1\n", stderr);
-/*DELETE*/    tracePrint180Registers(activeCpu, stderr);
-/*DELETE*/    traceStack(stderr);
-/*DELETE*/    traceInstCount[activeCpu->id] = 10;
-/*DELETE*/    }
 #endif
     }
 
@@ -6041,14 +6048,6 @@ static void cp180Op80(Cpu180Context *activeCpu)  // 80  LMULT      MIGDS 2-16
         sprintf(buf, "   A%X..A%X  X%X..X%X", selector >> 12, at, (selector >> 8) & Mask4, xt);
         traceMemoryBlock(activeCpu, pva, wordCount * 8, buf);
         }
-/*DELETE*/if ((activeCpu->regA[0] >> 32) != (activeCpu->regA[1] >> 32)
-/*DELETE*/    && (activeCpu->regA[1] >> 32) != 0xffff && as == 0 && at > 0)
-/*DELETE*/    {
-/*DELETE*/    fputs("LMULT: inconsistent A0/A1\n", stderr);
-/*DELETE*/    tracePrint180Registers(activeCpu, stderr);
-/*DELETE*/    traceStack(stderr);
-/*DELETE*/    traceInstCount[activeCpu->id] = 10;
-/*DELETE*/    }
 #endif
     }
 
@@ -7127,9 +7126,45 @@ static void cp180OpB1(Cpu180Context *activeCpu)  // B1  KEYPOINT   MIGDS 2-133
         {
     case KeypointEntry:
         cpu180ProcessKeypointEntry(activeCpu, activeCpu->opQ);
+/*DELETE*/switch (activeCpu->opQ)
+/*DELETE*/    {
+/*DELETE*/case 4050:
+/*DELETE*/case lok_load_program:
+/*DELETE*/    tracePrintSegmentTable(activeCpu);
+/*DELETE*/    break;
+/*DELETE*/case mmk_create_segment:
+/*DELETE*/case mmk_delete_segment:
+/*DELETE*/case mmk_add_sdt_sdtx_entry:
+/*DELETE*/case mmk_close:
+/*DELETE*/case mmk_store_segment_attributes:
+/*DELETE*/case mmk_fetch_seg_attributes:
+/*DELETE*/case mmk_set_access_selections:
+/*DELETE*/    traceSnapSegmentTable(activeCpu);
+/*DELETE*/    break;
+/*DELETE*/default:
+/*DELETE*/    break;
+/*DELETE*/    }
         return;
     case KeypointExit:
         cpu180ProcessKeypointExit(activeCpu, activeCpu->opQ);
+/*DELETE*/switch (activeCpu->opQ)
+/*DELETE*/    {
+/*DELETE*/case 4050:
+/*DELETE*/case lok_load_program:
+/*DELETE*/    tracePrintSegmentTable(activeCpu);
+/*DELETE*/    break;
+/*DELETE*/case mmk_create_segment:
+/*DELETE*/case mmk_delete_segment:
+/*DELETE*/case mmk_add_sdt_sdtx_entry:
+/*DELETE*/case mmk_close:
+/*DELETE*/case mmk_store_segment_attributes:
+/*DELETE*/case mmk_fetch_seg_attributes:
+/*DELETE*/case mmk_set_access_selections:
+/*DELETE*/    tracePrintSegmentTableDiff(activeCpu);
+/*DELETE*/    break;
+/*DELETE*/default:
+/*DELETE*/    break;
+/*DELETE*/    }
         return;
     case KeypointDebug:
         sprintf(buf, "Keypoint debug 0x%04x (%s)", activeCpu->opQ, cpu180KeypointToStr(activeCpu->opQ));
@@ -8632,6 +8667,25 @@ static void cp180OpSBYTS(Cpu180Context *activeCpu, u8 count)
     cpuAcquireMemoryMutex();
     (void)cpu180PutBytes(activeCpu, pva, RingOf(pva), activeCpu->regX[activeCpu->opK], count);
     cpuReleaseMemoryMutex();
+/*DELETE*/if (count == 6 && activeCpu->regX[0xB] == 0xb04a00000028 && activeCpu->opI == 0xA && activeCpu->regX[0xA] == 0x58 && activeCpu->opJ == 9 && activeCpu->opK == 0xB && activeCpu->opD == 0x122)
+/*DELETE*/    {
+/*DELETE*/    u32 rma;
+/*DELETE*/    if (tracePvaToRma(activeCpu, activeCpu->regA[9], &rma))
+/*DELETE*/        {
+/*DELETE*/        if (rma == activeCpu->regJps)
+/*DELETE*/            {
+                      tosXpPva = activeCpu->regA[9];
+                      tosXpRma = activeCpu->regJps;
+/*DELETE*/            fprintf(stderr,"\nStoring TOS %012llx in -ACTIVE- exchange package at %012llx [%08x] in %s mode\n",activeCpu->regX[0xB],activeCpu->regA[activeCpu->opJ],activeCpu->regJps,
+                              activeCpu->isMonitorMode ? "monitor" : "job");
+/*DELETE*/            }
+/*DELETE*/        else
+/*DELETE*/            {
+/*DELETE*/            fprintf(stderr,"\nStoring TOS %012llx in inactive exchange package at %012llx [%08x] in %s mode\n",activeCpu->regX[0xB],activeCpu->regA[activeCpu->opJ],rma,
+                              activeCpu->isMonitorMode ? "monitor" : "job");
+/*DELETE*/            }
+/*DELETE*/        }
+/*DELETE*/    }
     }
 
 #if CcDebug > 0
@@ -8650,11 +8704,17 @@ static void cp180OpSBYTS(Cpu180Context *activeCpu, u8 count)
 **------------------------------------------------------------------------*/
 static void cpu180CheckTraceStore(Cpu180Context *ctx, u64 pvaStart, u64 pvaEnd)
     {
-    if ((traceMask & TRACECPU(ctx, TraceCpu180)) == 0 && pvaStart >= (TRACE_STORE_START) && pvaEnd <= (TRACE_STORE_END))
+    char buf[100];
+
+//    if ((traceMask & TRACECPU(ctx, TraceCpu180)) == 0 && pvaStart >= (TRACE_STORE_START) && pvaEnd <= (TRACE_STORE_END))
+/*DELETE*/if ((traceMask & TRACECPU(ctx, TraceCpu180)) == 0 && pvaStart >= tosXpPva+0x17a && pvaEnd <= tosXpPva+0x17f)
         {
         if ((traceMask & TRACECPU(ctx, TraceCpu180)) == 0)
             {
+//            sprintf(buf, "Store %llu bytes at " FMT64_012x " between " FMT64_012x " and " FMT64_012x, (pvaEnd - pvaStart) + 1, pvaStart, (u64)TRACE_STORE_START, (u64)TRACE_STORE_END);
+/*DELETE*/  sprintf(buf, "Store %llu bytes at " FMT64_012x " between " FMT64_012x " and " FMT64_012x, (pvaEnd - pvaStart) + 1, pvaStart, tosXpPva+0x17a, tosXpPva+0x17f);
             traceCpuBreak(ctx);
+            traceCpuPrint(&cpus170[ctx->id], buf);
             }
         traceMask              |= TRACECPU(ctx, TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
         traceInstCount[ctx->id] = TRACE_INST_COUNT;
@@ -8853,10 +8913,13 @@ static char *cpu180KeypointToStr(u16 kpt)
         {
     case amk_close:                       return "amp$close";
     case amk_copy_file:                   return "amp$copy_file";
+    case amk_fetch:                       return "amp$fetch";
     case amk_get_file_attributes:         return "amp$get_file_attributes";
     case amk_get_next:                    return "amp$get_next";
+    case amk_get_segment_pointer:         return "amp$get_segment_pointer";
     case amk_open:                        return "amp$open";
     case amk_return:                      return "amp$return";
+    case bak_control:                     return "bap$control";
     case bak_connected_file_device:       return "bap$connected_file_device";
     case bak_open_file:                   return "bap$open_file";
     case cmk_build_interface_tables:      return "cmp$build_interface_tables";
@@ -8865,32 +8928,58 @@ static char *cpu180KeypointToStr(u16 kpt)
     case cmk_pc_get_next_channel:         return "cmp$pc_get_next_channel";
     case cmk_get_conf_file:               return "cmp$get_conf_file";
     case cmk_install_conf_file:           return "cmp$install_conf_file";
+    case clk_convert_integer_to_rjstring: return "clp$convert_integer_to_rjstring";
+    case clk_convert_integer_to_string:   return "clp$convert_integer_to_string";
+    case clk_convert_string_to_name:      return "clp$convert_string_to_name";
     case clk_create_file_connection:      return "clp$create_file_connection";
     case clk_declare_variable:            return "clp$declare_variable";
+    case clk_erase_child_task:            return "clp$erase_child_task";
     case clk_get_line_from_command_file:  return "clp$get_line_from_command_file";
     case clk_open_command_file:           return "clp$open_command_file";
+    case clk_pop_block_stack:             return "clp$pop_block_stack";
+    case clk_pop_input_stack:             return "clp$pop_input_stack";
     case clk_process_command:             return "clp$process_command";
     case clk_read_variable:               return "clp$read_variable";
+    case clk_remove_variable:             return "clp$remove_variable";
     case clk_scan_command_file:           return "clp$scan_command_file";
     case clk_scan_command_line:           return "clp$scan_command_line";
     case clk_scan_parameter_list:         return "clp$scan_parameter_list";
     case clk_include_file:                return "clp$include_file";
     case clk_include_line:                return "clp$include_line";
+    case clk_create_environment_variable: return "clp$create_environment_variable";
     case ifk_get_terminal_attributes:     return "ifp$get_terminal_attributes";
+    case lgk_log_ascii:                   return "lgp$log_ascii";
     case lok_load_program:                return "lop$load_program";
     case lok_load_module_from_library:    return "lop$load_module_from_library";
+    case lok_add_program_load_libraries:  return "lop$add_program_load_libraries";
     case lok_satisfy_externals:           return "lop$satisfy_externals";
     case lok_load_module:                 return "lop$load_module";
+    case mmk_ring1_segment_request:       return "mmp$ring1_segment_request";
     case mmk_page_fault:                  return "mmp$page_fault";
+    case mmk_exit_task:                   return "mmp$exit_task";
     case mmk_build_lock_rmal:             return "mmp$build_lock_rmal";
     case mmk_advise_out:                  return "mmp$advise_out";
     case mmk_write_modified_pages:        return "mmp$write_modified_pages";
+    case mmk_close:                       return "mmp$close_segment";
+    case mmk_open_file_segment:           return "mmp$open_file_segment";
+    case mmk_create_inherited_sdt:        return "mmp$create_inherited_sdt";
+    case mmk_fetch_seg_attributes:        return "mmp$fetch_segment_attributes";
+    case mmk_store_segment_attributes:    return "mmp$store_segment_attributes";
+    case mmk_verify_access:               return "mmp$verify_access";
+    case mmk_delete_segment:              return "mmp$delete_segment";
+    case mmk_create_segment:              return "mmp$create_segment";
+    case mmk_add_sdt_sdtx_entry:          return "mmp$add_sdt_sdtx_entry";
+    case mmk_get_segment_length:          return "mmp$get_segment_length";
+    case mmk_set_segment_length:          return "mmp$set_segment_length";
+    case mmk_set_access_selections:       return "mmp$set_access_selections";
     case ofk_screen_input_fap:            return "ofp$screen_input_fap";
     case osk_generate_message:            return "osp$generate_message";
     case osk_format_message:              return "osp$format_message";
+    case osk_get_status_severity:         return "osp$get_status_severity";
     case osk_set_status_abnormal:         return "osp$set_status_abnormal";
     case osk_await_activity_completion:   return "osp$await_activity_completion";
     case osk_allocate:                    return "osp$allocate";
+    case osk_free:                        return "osp$free";
     case pfk_attach:                      return "pfp$attach";
     case pfk_get_object_information:      return "pfp$get_object_information";
     case pfk_restricted_attach:           return "pfp$restricted_attach";
@@ -8898,7 +8987,8 @@ static char *cpu180KeypointToStr(u16 kpt)
     case pmk_task_begin_end:              return "pmp$task_begin_end";
     case pmk_task_begin:                  return "pmp$task_begin";
     case pmk_pop_all_stack_frames:        return "pmp$pop_all_stack_frames";
-    case pmk_execute:                     return "pmk$execute";
+    case pmk_ring_crossing_popper:        return "pmp$ring_crossing_popper";
+    case pmk_execute:                     return "pmp$execute";
     case pmk_exit:                        return "pmp$exit";
     case pmk_abort:                       return "pmp$abort";
     case pmk_await_task_termination:      return "pmp$await_task_termination";
@@ -8906,25 +8996,35 @@ static char *cpu180KeypointToStr(u16 kpt)
     case pmk_disestablish_cond_handler:   return "pmp$disestablish_cond_handler";
     case pmk_cause_condition:             return "pmp$cause_condition";
     case pmk_get_time:                    return "pmp$get_time";
+    case pmk_get_task_cp_time:            return "pmp$get_task_cp_time";
+    case pmk_get_job_names:               return "pmp$get_job_names";
+    case pmk_get_job_mode:                return "pmp$get_job_mode";
     case pmk_log_message:                 return "pmp$log_message";
     case pmk_log_ascii:                   return "pmp$log_ascii";
+    case pmk_get_compact_date_time:       return "pmp$get_compact_date_time";
     case pmk_log:                         return "pmp$log";
     case pmk_wait:                        return "pmp$wait";
     case pmk_long_term_wait:              return "pmp$long_term_wait";
     case pmk_enable_system_conditions:    return "pmp$enable_system_conditions";
     case pmk_establish_ch_in_block:       return "pmp$establish_ch_in_block";
+    case pmk_inhibit_system_conditions:   return "pmp$inhibit_system_conditions";
     case pmk_get_binary_processor_id:     return "pmp$get_binary_processor_id";
+    case pmk_get_mainframe_id:            return "pmp$get_mainframe_id";
     case pmk_load_from_library:           return "pmp$load_from_library";
     case pmk_validate_previous_save_area: return "pmp$validate_previous_save_area";
     case pmk_push_task_debug_mode:        return "pmp$push_task_debug_mode";
+    case pmk_pop_task_debug_mode:         return "pmp$pop_task_debug_mode";
     case pmk_set_task_debug_mode:         return "pmp$set_task_debug_mode";
     case pmk_set_task_debug_on:           return "pmp$set_task_debug_on";
     case pmk_establish_debug_cff:         return "pmp$establish_debug_cff";
+    case pmk_task_debug_ring:             return "pmp$task_debug_ring";
     case pmk_change_job_library_list:     return "pmp$change_job_library_list";
     case pmk_pop_inhibit_termination:     return "pmp$pop_inhibit_termination";
     case pmk_push_inhibit_termination:    return "pmp$push_inhibit_termination";
+    case pmk_zero_out_table:              return "pmp$zero_out_table";
     case pmk_establish_ch_outside_block:  return "pmp$establish_ch_outside_block";
     case tmk_switch_task:                 return "tmp$switch_task";
+    case tmk_send_signal:                 return "tmp$send_signal";
     case tmk_send_monitor_fault:          return "tmp$send_monitor_fault";
     case tmk_process_task_mcr_fault:      return "tmp$process_task_mcr_fault";
     case tmk_set_monitor_flag:            return "tmp$set_monitor_flag";
@@ -8932,7 +9032,9 @@ static char *cpu180KeypointToStr(u16 kpt)
     case iok_io_completions:              return "iop$process_io_completions";
     case iok_allocate_image_request:      return "iop$allocate_image_request";
     case iok_queue_image_request:         return "iop$queue_image_request";
+    case nak_internal_connection_mgmt:    return "nap$internal_connection_mgmt";
     case jmk_get_job_status:              return "jmp$get_job_status";
+    case jmk_logout:                      return "jmp$logout";
     case jmk_idle_system:                 return "jmp$idle_system";
     case jmk_job_exists:                  return "jmp$job_exists";
     case fmk_return_file:                 return "fmp$return_file";

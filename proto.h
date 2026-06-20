@@ -538,6 +538,8 @@ void tracePageInfo(Cpu180Context *cpu, u16 hash, u32 pageNum, u32 pageTableIdx, 
 void tracePpuPrint(char *str);
 void tracePrint170Registers(Cpu170Context *cpu, FILE *fp);
 void tracePrint180Registers(Cpu180Context *cpu, FILE *fp);
+void tracePrintSegmentTable(Cpu180Context *cpu);
+void tracePrintSegmentTableDiff(Cpu180Context *cpu);
 void tracePte(Cpu180Context *cpu, u64 pte);
 void tracePva(Cpu180Context *cpu, u64 pva);
 bool tracePvaToRma(Cpu180Context *cpu, u64 pva, u32 *rma);
@@ -546,6 +548,7 @@ void traceRingZeroCondition(Cpu180Context *cpu, u64 pva);
 void traceRma(Cpu180Context *cpu, u32 rma);
 void traceSde(Cpu180Context *cpu, u16 segNum, u64 sde);
 void traceSequence(void);
+void traceSnapSegmentTable(Cpu180Context *cpu);
 void traceStack(FILE *fp);
 void traceStartCpu180(Cpu180Context *cpu, u64 pva);
 void traceTerminate(void);
