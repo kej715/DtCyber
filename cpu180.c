@@ -206,9 +206,8 @@
 #define mtk_monitor_mode_trap            4003
 #define mtk_job_mode_trap                4004
 
-//#define TRACE_INST_LIST   { 0x77, 0xe9 }
-//#define TRACE_INST_COUNT  10
-#define TRACE_INST_COUNT  100000
+//#define TRACE_INST_LIST   { 0x70, 0xF9 }
+#define TRACE_INST_COUNT  10
 
 //#define TRACE_RANGE_START 0xb0440002f800
 //#define TRACE_RANGE_END   0xb0440002f8ff
@@ -226,11 +225,6 @@
     pmk_validate_previous_save_area \
     }
 */
-#define TRACE_KEYPOINT_LIST         \
-    {                               \
-    4050,                           \
-    mmk_create_segment              \
-    }
 #endif
 
 /*
@@ -425,6 +419,7 @@ static bool cpu180GetLock(Cpu180Context *ctx, u64 pva, u8 *lock, MonitorConditio
 static bool cpu180GetParcel(Cpu180Context *ctx, u64 pva, u16 *parcel);
 static bool cpu180GetR1(Cpu180Context *ctx, u64 pva, u8 *r1, MonitorCondition *cond);
 static bool cpu180GetR2(Cpu180Context *ctx, u64 pva, u8 *r2, MonitorCondition *cond);
+static u64 cpu180GetTos(Cpu180Context *ctx, u16 ring);
 static bool cpu180IsBindingSectionRef(Cpu180Context *ctx, u64 pva);
 static void cpu180Load170Xp(Cpu180Context *ctx, u32 xpa);
 static bool cpu180MulInt32(Cpu180Context *ctx, u32 mltand, u32 mltier, u32 *product);
@@ -433,6 +428,7 @@ static bool cpu180PushFrame(Cpu180Context *ctx, u8 at, u8 xs, u8 xt, bool doSave
 static bool cpu180PutBytes(Cpu180Context *ctx, u64 pva, u8 ring, u64 word, u8 count);
 static void cpu180Set170State(Cpu180Context *ctx);
 static void cpu180SetRingZeroCondition(Cpu180Context *ctx, u64 pva);
+static void cpu180SetTos(Cpu180Context *ctx, u16 ring, u64 pva);
 static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa);
 static bool cpu180SubInt32(Cpu180Context *ctx, u32 minend, u32 subend, u32 *diff);
 static bool cpu180SubInt64(Cpu180Context *ctx, u64 minend, u64 subend, u64 *diff);
@@ -459,8 +455,6 @@ static bool cpu180SearchKeypointList(u16 kpt);
 #endif
 
 #endif
-/*DELETE*/static u64 tosXpPva = 0;
-/*DELETE*/static u32 tosXpRma = 0;
 
 /*
 **                                                  Op  Mnemonic   MIGDS
@@ -1535,13 +1529,6 @@ void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa)
     ctx->regDi     = (word >> 58) & Mask6;
     ctx->regDm     = (word >> 48) & Mask7;
 
-    word           = cpMem[wa++];
-    ctx->regLrn    = (word >> 48) & Mask4;
-    ctx->regTos[1] = word & Mask48;
-    for (i = 2; i < 16; i++)
-        {
-        ctx->regTos[i] = cpMem[wa++] & Mask48;
-        }
 #if CcDebug > 0
     traceExchange180(ctx, xpa, "Load");
 #endif
@@ -3109,7 +3096,7 @@ static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 
         {
         char buf[128];
         sprintf(buf, "  Callee " FMT64_012x " R1 %x R2 %x Ring P %x TOS[%x] " FMT64_012x, callee, r1, r2, ringP,
-            (u8)RingOf(callee), ctx->regTos[RingOf(callee)]);
+            (u8)RingOf(callee), cpu180GetTos(ctx, RingOf(callee)));
         traceCpuPrint(&cpus170[ctx->id], buf);
         }
 #endif
@@ -3142,11 +3129,7 @@ static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 
         {
         return FALSE;
         }
-    ctx->regTos[ringP] = sfsa + frameSize;
-    if (ringP > ctx->regLrn)
-        {
-        ctx->regLrn = ringP;
-        }
+    cpu180SetTos(ctx, ringP, sfsa + frameSize);
     ctx->nextKey = lock;
     ctx->nextP   = callee;
 
@@ -3161,7 +3144,7 @@ static bool cpu180CallIndirect(Cpu180Context *ctx, u64 bsp, u64 cbp, u64 pp, u8 
             ctx->regA[3] = bsp;
             }
         }
-    ctx->regA[0] = ctx->regTos[RingOf(callee)];
+    ctx->regA[0] = cpu180GetTos(ctx, RingOf(callee));
     ctx->regA[1] = ctx->regA[0];
     ctx->regA[2] = sfsa;
     if (vmid == 0)
@@ -3839,6 +3822,25 @@ static bool cpu180GetR2(Cpu180Context *ctx, u64 pva, u8 *r2, MonitorCondition *c
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Get top-of-stack register from active exchange package
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CPU context
+**                  ring        ring for which to get TOS
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static u64 cpu180GetTos(Cpu180Context *ctx, u16 ring)
+    {
+    volatile u64 *tosPtr;
+
+    tosPtr = &cpMem[((ctx->isMonitorMode ? ctx->regMps : ctx->regJps) >> 3) + 37];
+
+    return *(tosPtr + ring - 1) & Mask48;
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Determine whether a PVA is a binding section reference
 **
 **  Parameters:     Name        Description.
@@ -4272,6 +4274,35 @@ static void cpu180SetRingZeroCondition(Cpu180Context *ctx, u64 pva)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Set top-of-stack register in active exchange package
+**
+**  Parameters:     Name        Description.
+**                  ctx         pointer to CPU context
+**                  ring        ring for which to set TOS
+**                  pva         PVA to set for TOS
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void cpu180SetTos(Cpu180Context *ctx, u16 ring, u64 pva)
+    {
+    u64          lrn;
+    volatile u64 *tosPtr;
+
+    tosPtr               = &cpMem[((ctx->isMonitorMode ? ctx->regMps : ctx->regJps) >> 3) + 37];
+    lrn                  = *tosPtr >> 48;
+    *(tosPtr + ring - 1) = pva;
+    if (ring > lrn)
+        {
+        *tosPtr = ((u64)ring << 48) | (*tosPtr & Mask48);
+        }
+    else if (ring == 1)
+        {
+        *tosPtr = (lrn << 48) | (*tosPtr & Mask48);
+        }
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Store the 180 state exchange package into memory
 **                  referenced by a specified real memory byte address.
 **
@@ -4286,12 +4317,6 @@ static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa)
     {
     int i;
     u32 wa;
-/*DELETE*/if (xpa == tosXpRma)
-/*DELETE*/    {
-/*DELETE*/    fprintf(stderr,"Exchange will replace r11Tos %012llx by %012llx -- Mtr %d MCR %04x MMR %04x UCR %04x UMR %04x\n",
-                 cpMem[(tosXpRma>>3)+47],ctx->regTos[11],ctx->isMonitorMode,ctx->regMcr,ctx->regMmr,ctx->regUcr,ctx->regUmr);
-/*DELETE*/    tosXpRma = 0;
-/*DELETE*/    }
 
     xpa        &= 0x7ffffff0;
     wa          = xpa >> 3;
@@ -4322,19 +4347,14 @@ static void cpu180Store180Xp(Cpu180Context *ctx, u32 xpa)
     cpMem[wa++] = ((u64)(ctx->regSta & 0xffff0000U) << 32) | ctx->regUtp;
     cpMem[wa++] = ((u64)(ctx->regSta & 0x0000ffffU) << 48) | ctx->regTp;
     cpMem[wa++] = ((u64)ctx->regDi << 58) | ((u64)ctx->regDm << 48) | ctx->regDlp;
-    cpMem[wa++] = ((u64)ctx->regLrn << 48) | ctx->regTos[1];
 
-    for (i = 2; i < 16; i++)
-        {
-        cpMem[wa++] = ctx->regTos[i];
-        }
 #if CcDebug > 0
     traceExchange180(ctx, xpa, "Store");
 #endif
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Subtrace two 32-bit integer quantities and detect overflow
+**  Purpose:        Subtract two 32-bit integer quantities and detect overflow
 **
 **  Parameters:     Name        Description.
 **                  ctx         pointer to CPU context
@@ -4744,13 +4764,9 @@ static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
         {
         activeCpu->regX[r] = cpMem[wordAddrs[i++]];
         }
-    activeCpu->regFlags        &= 0x3ffe;        // clear CFF, OCF, trap enable, and delay flip-flop
-    activeCpu->regFlags        |= desc & 0xc000; // set CFF and OCF per descriptor
-    activeCpu->regTos[ringNewP] = activeCpu->regA[1];
-    if (ringNewP > activeCpu->regLrn)
-        {
-        activeCpu->regLrn = ringNewP;
-        }
+    activeCpu->regFlags &= 0x3ffe;        // clear CFF, OCF, trap enable, and delay flip-flop
+    activeCpu->regFlags |= desc & 0xc000; // set CFF and OCF per descriptor
+    cpu180SetTos(activeCpu, ringNewP, activeCpu->regA[1]);
 
 #if CcDebug > 0
     traceCallFrame(activeCpu, psap, "popped");
@@ -4851,11 +4867,7 @@ static void cp180Op06(Cpu180Context *activeCpu)  // 06  POP        MIGDS 2-129
         }
     activeCpu->regFlags     = (activeCpu->regFlags & 0x3fff) | ((cpMem[wordAddrs[2]] >> 48) & 0xc000);
     ring                    = RingOf(activeCpu->regP);
-    activeCpu->regTos[ring] = activeCpu->regA[1];
-    if (ring > activeCpu->regLrn)
-        {
-        activeCpu->regLrn = ring;
-        }
+    cpu180SetTos(activeCpu, ring, activeCpu->regA[1]);
 
 #if CcDebug > 0
     traceCallFrame(activeCpu, psap, "popped");
@@ -7073,7 +7085,8 @@ static void cp180OpB0(Cpu180Context *activeCpu)  // B0  CALLREL    MIGDS 2-125
     traceCallFrame(activeCpu, sfsa, "pushed");
 #endif
 
-    activeCpu->regA[0]   = activeCpu->regTos[RingOf(activeCpu->regP)] = sfsa + frameSize;
+    activeCpu->regA[0]   = sfsa + frameSize;
+    cpu180SetTos(activeCpu, RingOf(activeCpu->regP), activeCpu->regA[0]);
     activeCpu->regA[1]   = activeCpu->regA[0];
     activeCpu->regA[2]   = sfsa;
     activeCpu->regA[3]   = Aj;
@@ -7126,45 +7139,9 @@ static void cp180OpB1(Cpu180Context *activeCpu)  // B1  KEYPOINT   MIGDS 2-133
         {
     case KeypointEntry:
         cpu180ProcessKeypointEntry(activeCpu, activeCpu->opQ);
-/*DELETE*/switch (activeCpu->opQ)
-/*DELETE*/    {
-/*DELETE*/case 4050:
-/*DELETE*/case lok_load_program:
-/*DELETE*/    tracePrintSegmentTable(activeCpu);
-/*DELETE*/    break;
-/*DELETE*/case mmk_create_segment:
-/*DELETE*/case mmk_delete_segment:
-/*DELETE*/case mmk_add_sdt_sdtx_entry:
-/*DELETE*/case mmk_close:
-/*DELETE*/case mmk_store_segment_attributes:
-/*DELETE*/case mmk_fetch_seg_attributes:
-/*DELETE*/case mmk_set_access_selections:
-/*DELETE*/    traceSnapSegmentTable(activeCpu);
-/*DELETE*/    break;
-/*DELETE*/default:
-/*DELETE*/    break;
-/*DELETE*/    }
         return;
     case KeypointExit:
         cpu180ProcessKeypointExit(activeCpu, activeCpu->opQ);
-/*DELETE*/switch (activeCpu->opQ)
-/*DELETE*/    {
-/*DELETE*/case 4050:
-/*DELETE*/case lok_load_program:
-/*DELETE*/    tracePrintSegmentTable(activeCpu);
-/*DELETE*/    break;
-/*DELETE*/case mmk_create_segment:
-/*DELETE*/case mmk_delete_segment:
-/*DELETE*/case mmk_add_sdt_sdtx_entry:
-/*DELETE*/case mmk_close:
-/*DELETE*/case mmk_store_segment_attributes:
-/*DELETE*/case mmk_fetch_seg_attributes:
-/*DELETE*/case mmk_set_access_selections:
-/*DELETE*/    tracePrintSegmentTableDiff(activeCpu);
-/*DELETE*/    break;
-/*DELETE*/default:
-/*DELETE*/    break;
-/*DELETE*/    }
         return;
     case KeypointDebug:
         sprintf(buf, "Keypoint debug 0x%04x (%s)", activeCpu->opQ, cpu180KeypointToStr(activeCpu->opQ));
@@ -7758,7 +7735,7 @@ static void cp180OpED(Cpu180Context *activeCpu)  // ED  EDIT       MIGDS 2-55
         {
         return;
         }
-    if (activeCpu->srcDesc.type > 9 || activeCpu->dstDesc.length > 256 || activeCpu->srcDesc.length > 256)
+    if (activeCpu->dstDesc.length > 256 || activeCpu->srcDesc.length > 256)
         {
         cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
         return;
@@ -7810,7 +7787,7 @@ static void cp180OpED(Cpu180Context *activeCpu)  // ED  EDIT       MIGDS 2-55
         sp = srcBuf;
         sn = srcOperand.rawSign;
         }
-    else // type == 9
+    else if (activeCpu->srcDesc.type == 9)
         {
         if (bdp180CopyToBuf(activeCpu, activeCpu->srcDesc.pva, activeCpu->srcDesc.length, srcBuf) == FALSE)
             {
@@ -7819,6 +7796,24 @@ static void cp180OpED(Cpu180Context *activeCpu)  // ED  EDIT       MIGDS 2-55
         sp   = srcBuf;
         sLim = sp + activeCpu->srcDesc.length;
         sn   = FALSE;
+        }
+    else
+        {
+        switch (activeCpu->srcDesc.type)
+            {
+        case 10:
+        case 11: 
+        case 14:
+        case 15:
+            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
+            return;
+        default:
+            if (activeCpu->srcDesc.length > 0)
+                {
+                cpu180SetUserCondition(activeCpu, UCR63);    // Invalid BDP data
+                }
+            return;
+            }
         }
     maskPva = (RingSegMask & activeCpu->regA[activeCpu->opI]) | ((activeCpu->regA[activeCpu->opI] + activeCpu->opD) & Mask32);
     if (bdp180CopyToBuf(activeCpu, maskPva, 1, maskBuf) == FALSE) // fetch the length byte
@@ -8667,25 +8662,6 @@ static void cp180OpSBYTS(Cpu180Context *activeCpu, u8 count)
     cpuAcquireMemoryMutex();
     (void)cpu180PutBytes(activeCpu, pva, RingOf(pva), activeCpu->regX[activeCpu->opK], count);
     cpuReleaseMemoryMutex();
-/*DELETE*/if (count == 6 && activeCpu->regX[0xB] == 0xb04a00000028 && activeCpu->opI == 0xA && activeCpu->regX[0xA] == 0x58 && activeCpu->opJ == 9 && activeCpu->opK == 0xB && activeCpu->opD == 0x122)
-/*DELETE*/    {
-/*DELETE*/    u32 rma;
-/*DELETE*/    if (tracePvaToRma(activeCpu, activeCpu->regA[9], &rma))
-/*DELETE*/        {
-/*DELETE*/        if (rma == activeCpu->regJps)
-/*DELETE*/            {
-                      tosXpPva = activeCpu->regA[9];
-                      tosXpRma = activeCpu->regJps;
-/*DELETE*/            fprintf(stderr,"\nStoring TOS %012llx in -ACTIVE- exchange package at %012llx [%08x] in %s mode\n",activeCpu->regX[0xB],activeCpu->regA[activeCpu->opJ],activeCpu->regJps,
-                              activeCpu->isMonitorMode ? "monitor" : "job");
-/*DELETE*/            }
-/*DELETE*/        else
-/*DELETE*/            {
-/*DELETE*/            fprintf(stderr,"\nStoring TOS %012llx in inactive exchange package at %012llx [%08x] in %s mode\n",activeCpu->regX[0xB],activeCpu->regA[activeCpu->opJ],rma,
-                              activeCpu->isMonitorMode ? "monitor" : "job");
-/*DELETE*/            }
-/*DELETE*/        }
-/*DELETE*/    }
     }
 
 #if CcDebug > 0
@@ -8706,13 +8682,11 @@ static void cpu180CheckTraceStore(Cpu180Context *ctx, u64 pvaStart, u64 pvaEnd)
     {
     char buf[100];
 
-//    if ((traceMask & TRACECPU(ctx, TraceCpu180)) == 0 && pvaStart >= (TRACE_STORE_START) && pvaEnd <= (TRACE_STORE_END))
-/*DELETE*/if ((traceMask & TRACECPU(ctx, TraceCpu180)) == 0 && pvaStart >= tosXpPva+0x17a && pvaEnd <= tosXpPva+0x17f)
+    if ((traceMask & TRACECPU(ctx, TraceCpu180)) == 0 && pvaStart >= (TRACE_STORE_START) && pvaEnd <= (TRACE_STORE_END))
         {
         if ((traceMask & TRACECPU(ctx, TraceCpu180)) == 0)
             {
-//            sprintf(buf, "Store %llu bytes at " FMT64_012x " between " FMT64_012x " and " FMT64_012x, (pvaEnd - pvaStart) + 1, pvaStart, (u64)TRACE_STORE_START, (u64)TRACE_STORE_END);
-/*DELETE*/  sprintf(buf, "Store %llu bytes at " FMT64_012x " between " FMT64_012x " and " FMT64_012x, (pvaEnd - pvaStart) + 1, pvaStart, tosXpPva+0x17a, tosXpPva+0x17f);
+            sprintf(buf, "Store %llu bytes at " FMT64_012x " between " FMT64_012x " and " FMT64_012x, (pvaEnd - pvaStart) + 1, pvaStart, (u64)TRACE_STORE_START, (u64)TRACE_STORE_END);
             traceCpuBreak(ctx);
             traceCpuPrint(&cpus170[ctx->id], buf);
             }

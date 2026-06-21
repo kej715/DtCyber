@@ -3727,7 +3727,8 @@ static void opCmdShowStateCp170(Cpu170Context *cpu)
 
 static void opCmdShowStateCp180(Cpu180Context *cpu)
     {
-    int i;
+    int          i;
+    volatile u64 *tosPtr;
 
     opDisplay("    > P %02x " FMT64_012x, cpu->key, cpu->regP);
     opDisplayRma(cpu, cpu->regP);
@@ -3756,11 +3757,13 @@ static void opCmdShowStateCp180(Cpu180Context *cpu)
     opDisplay("\n");
     opDisplay("    >  DLP " FMT64_012x "  DI %02x  DM %02x\n", cpu->regDlp, cpu->regDi, cpu->regDm);
     opDisplay("\n");
-    opDisplay("    >  LRN %d\n", cpu->regLrn);
+    tosPtr = &cpMem[((cpu->isMonitorMode ? cpu->regMps : cpu->regJps) >> 3) + 37];
+    opDisplay("    >  LRN %d\n", *tosPtr >> 48);
     for (i = 1; i < 16; i++)
         {
-        opDisplay("    >  TOS[%x] " FMT64_012x, i, cpu->regTos[i]);
-        opDisplayRma(cpu, cpu->regTos[i]);
+        opDisplay("    >  TOS[%x] " FMT64_012x, i, *tosPtr & Mask48);
+        opDisplayRma(cpu, *tosPtr & Mask48);
+        tosPtr += 1;
         opDisplay("\n");
         }
     opDisplay("\n");

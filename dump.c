@@ -202,6 +202,7 @@ void dumpCpu(void)
     u32              pti;
     u32              rma;
     u8               shiftCount;
+    volatile u64     *tosPtr;
 
     for (cp = 0; cp < cpuCount; cp++)
         {
@@ -320,11 +321,13 @@ void dumpCpu(void)
             fprintf(pf, "  DI %02x\n", cpu180->regDi);
             fprintf(pf, "                     DM %02x\n", cpu180->regDm);
             fputs("\n", pf);
-            fprintf(pf, " LRN %d\n", cpu180->regLrn);
+            tosPtr = &cpMem[((cpu180->isMonitorMode ? cpu180->regMps : cpu180->regJps) >> 3) + 37];
+            fprintf(pf, " LRN %d\n", (u16)(*tosPtr >> 48));
             for (i = 1; i < 16; i++)
                 {
                 fprintf(pf, " TOS[%x] ", i);
-                dumpPrintPva(pf, cpu180->regTos[i]);
+                dumpPrintPva(pf, *tosPtr & Mask48);
+                tosPtr += 1;
                 fputs("\n", pf);
                 }
             fputs("\n", pf);

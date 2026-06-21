@@ -1800,8 +1800,9 @@ void traceExchange170(Cpu170Context *cpu, u32 addr, char *title, bool force)
 **------------------------------------------------------------------------*/
 void tracePrint180Registers(Cpu180Context *cpu, FILE *fp)
     {
-    CpWord data;
-    u8     i;
+    CpWord       data;
+    u8           i;
+    volatile u64 *tosPtr;
 
     fprintf(fp, " P %02x ", cpu->key);
     tracePrintPva(fp, cpu->regP);
@@ -1841,11 +1842,13 @@ void tracePrint180Registers(Cpu180Context *cpu, FILE *fp)
     fprintf(fp, "  DI %02x\n", cpu->regDi);
     fprintf(fp, "                     DM %02x\n", cpu->regDm);
     fputs("\n", fp);
-    fprintf(fp, " LRN %x\n", cpu->regLrn);
+    tosPtr = &cpMem[((cpu->isMonitorMode ? cpu->regMps : cpu->regJps) >> 3) + 37];
+    fprintf(fp, " LRN %x\n", (u16)(*tosPtr >> 48));
     for (i = 1; i < 16; i++)
         {
         fprintf(fp, " TOS[%x] ", i);
-        tracePrintPva(fp, cpu->regTos[i]);
+        tracePrintPva(fp, *tosPtr & Mask48);
+        tosPtr += 1;
         fputs("\n", fp);
         }
     fputs("\n", fp);

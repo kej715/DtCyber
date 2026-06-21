@@ -391,8 +391,14 @@ typedef struct
     u8              regDm;                /* debug mask register */
     u8              regDi;                /* debug index register */
     u64             regDlp;               /* debug list pointer register */
+#if 0
+    //
+    //  The top-stop-registers are managed directly in the
+    //  currently active exchange package in central memory
+    //
     u8              regLrn;               /* largest ring number register */
     u64             regTos[16];           /* top of stack pointer registers */
+#endif
     u32             regMps;               /* monitor process state register */
     u32             regJps;               /* job process state register */
     u32             regPta;               /* page table address register */
