@@ -1218,6 +1218,64 @@ static u16 bitSelectors[16] =
     };
 
 /*
+**  Table of BDP decimal type indicators, indexed by BDP type value
+*/
+static bool bdpDecimalTypes[16] =
+    {
+    TRUE,  // Type 0 : Packed Decimal No Sign
+    TRUE,  // Type 1 : Packed Decimal No Sign Leading Slack Digit
+    TRUE,  // Type 2 : Packed Decimal Signed
+    TRUE,  // Type 3 : Packed Decimal Signed Leading Slack Digit
+
+    TRUE,  // Type 4 : Unpacked Decimal Unsigned
+    TRUE,  // Type 5 : Unpacked Decimal Trailing Sign Combined Hollerith
+    TRUE,  // Type 6 : Unpacked Decimal Trailing Sign Separate
+    FALSE, // Type 7 : Unpacked Decimal Leading Sign Combined Hollerith
+    FALSE, // Type 8 : Unpacked Decimal Leading Sign Separate
+
+    FALSE, // Type 9 : Alphanumeric
+
+    FALSE, // Type 10: Binary Unsigned
+    FALSE, // Type 11: Binary Signed
+
+
+    TRUE,  // Type 12: Translated Packed Decimal Signed
+    TRUE,  // Type 13: Translated Packed Decimal Signed Leading Slack Digit
+
+    FALSE, // Type 14: Translated Binary Unsigned
+    FALSE  // Type 15: Translated Binary Signed
+    };
+
+/*
+**  Table of BDP signed type indicators, indexed by BDP type value
+*/
+static bool bdpSignedTypes[16] =
+    {
+    FALSE, // Type 0 : Packed Decimal No Sign
+    FALSE, // Type 1 : Packed Decimal No Sign Leading Slack Digit
+    TRUE,  // Type 2 : Packed Decimal Signed
+    TRUE,  // Type 3 : Packed Decimal Signed Leading Slack Digit
+
+    FALSE, // Type 4 : Unpacked Decimal Unsigned
+    TRUE,  // Type 5 : Unpacked Decimal Trailing Sign Combined Hollerith
+    TRUE,  // Type 6 : Unpacked Decimal Trailing Sign Separate
+    TRUE,  // Type 7 : Unpacked Decimal Leading Sign Combined Hollerith
+    TRUE,  // Type 8 : Unpacked Decimal Leading Sign Separate
+
+    FALSE, // Type 9 : Alphanumeric
+
+    FALSE, // Type 10: Binary Unsigned
+    TRUE,  // Type 11: Binary Signed
+
+
+    TRUE,  // Type 12: Translated Packed Decimal Signed
+    TRUE,  // Type 13: Translated Packed Decimal Signed Leading Slack Digit
+
+    FALSE, // Type 14: Translated Binary Unsigned
+    TRUE   // Type 15: Translated Binary Signed
+    };
+
+/*
 **  The ring and segment assigned to CYBER 170 state
 */
 static u64 ringSeg170 = 0;
@@ -2990,7 +3048,7 @@ static void cpu180ApplyBdpOperator(Cpu180Context *ctx, bool (*operator)(BdpOpera
     if (cpu180GetBdpDescriptor(ctx, ctx->regP + 2, ctx->opJ, 0, &ctx->srcDesc)
         && cpu180GetBdpDescriptor(ctx, ctx->regP + 6, ctx->opK, 1, &ctx->dstDesc))
         {
-        if (ctx->srcDesc.type > 6 || ctx->dstDesc.type > 6)
+        if (bdpDecimalTypes[ctx->srcDesc.type] == FALSE || bdpDecimalTypes[ctx->dstDesc.type] == FALSE)
             {
             cpu180SetMonitorCondition(ctx, MCR51); // Instruction specification error
             return;
@@ -5777,7 +5835,7 @@ static void cp180Op74(Cpu180Context *activeCpu)  // 74  CMPN       MIGDS 2-52
     if (cpu180GetBdpDescriptor(activeCpu, descPva, activeCpu->opJ, 0, &activeCpu->srcDesc)
         && cpu180GetBdpDescriptor(activeCpu, descPva + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
         {
-        if (activeCpu->srcDesc.type > 6 || activeCpu->dstDesc.type > 6)
+        if (bdpDecimalTypes[activeCpu->srcDesc.type] == FALSE || bdpDecimalTypes[activeCpu->dstDesc.type] == FALSE)
             {
             cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
@@ -7432,7 +7490,7 @@ static void cp180OpE4(Cpu180Context *activeCpu)  // E4  SCLN       MIGDS 2-49
     if (cpu180GetBdpDescriptor(activeCpu, descPva, activeCpu->opJ, 0, &activeCpu->srcDesc)
         && cpu180GetBdpDescriptor(activeCpu, descPva + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
         {
-        if (activeCpu->srcDesc.type > 6 || activeCpu->dstDesc.type > 6)
+        if (bdpDecimalTypes[activeCpu->srcDesc.type] == FALSE || bdpDecimalTypes[activeCpu->dstDesc.type] == FALSE)
             {
             cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
@@ -7508,7 +7566,7 @@ static void cp180OpE5(Cpu180Context *activeCpu)  // E5  SCLR       MIGDS 2-49
     if (cpu180GetBdpDescriptor(activeCpu, descPva, activeCpu->opJ, 0, &activeCpu->srcDesc)
         && cpu180GetBdpDescriptor(activeCpu, descPva + 4, activeCpu->opK, 1, &activeCpu->dstDesc))
         {
-        if (activeCpu->srcDesc.type > 6 || activeCpu->dstDesc.type > 6)
+        if (bdpDecimalTypes[activeCpu->srcDesc.type] == FALSE || bdpDecimalTypes[activeCpu->dstDesc.type] == FALSE)
             {
             cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
@@ -7740,7 +7798,7 @@ static void cp180OpED(Cpu180Context *activeCpu)  // ED  EDIT       MIGDS 2-55
         cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
         return;
         }
-    if (activeCpu->srcDesc.type < 9)
+    if (activeCpu->srcDesc.type < 9 || activeCpu->srcDesc.type == 12 || activeCpu->srcDesc.type == 13)
         {
         if (bdp180DecodeOperand(activeCpu, &activeCpu->srcDesc, &srcOperand) == FALSE)
             {
@@ -7754,11 +7812,13 @@ static void cp180OpED(Cpu180Context *activeCpu)  // ED  EDIT       MIGDS 2-55
             case 0: // Packed Decimal No Sign
                 len = activeCpu->srcDesc.length * 2;
                 break;
-            case 1: // Packed Decimal No Sign Leading Slack Digit
-            case 2: // Packed Decimal Signed
+            case 1:  // Packed Decimal No Sign Leading Slack Digit
+            case 2:  // Packed Decimal Signed
+            case 12: // Translated Packed Decimal Signed
                 len = (activeCpu->srcDesc.length * 2) - 1;
                 break;
-            case 3: // Packed Decimal Signed Leading Slack Digit
+            case 3:  // Packed Decimal Signed Leading Slack Digit
+            case 13: // Translated Packed Decimal Signed Leading Slack Digit
                 len = (activeCpu->srcDesc.length * 2) - 2;
                 break;
             case 4: // Unpacked Decimal Unsigned
@@ -7799,21 +7859,8 @@ static void cp180OpED(Cpu180Context *activeCpu)  // ED  EDIT       MIGDS 2-55
         }
     else
         {
-        switch (activeCpu->srcDesc.type)
-            {
-        case 10:
-        case 11: 
-        case 14:
-        case 15:
-            cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
-            return;
-        default:
-            if (activeCpu->srcDesc.length > 0)
-                {
-                cpu180SetUserCondition(activeCpu, UCR63);    // Invalid BDP data
-                }
-            return;
-            }
+        cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
+        return;
         }
     maskPva = (RingSegMask & activeCpu->regA[activeCpu->opI]) | ((activeCpu->regA[activeCpu->opI] + activeCpu->opD) & Mask32);
     if (bdp180CopyToBuf(activeCpu, maskPva, 1, maskBuf) == FALSE) // fetch the length byte
@@ -8293,7 +8340,7 @@ static void cp180OpF9(Cpu180Context *activeCpu)  // F9  MOVI       MIGDS 2-62
         {
     default:
     case 0:
-        if (activeCpu->dstDesc.type != 10 && activeCpu->dstDesc.type != 11)
+        if (activeCpu->dstDesc.type != 10 && activeCpu->dstDesc.type != 11 && activeCpu->dstDesc.type != 14 && activeCpu->dstDesc.type != 15)
             {
             cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
@@ -8302,13 +8349,13 @@ static void cp180OpF9(Cpu180Context *activeCpu)  // F9  MOVI       MIGDS 2-62
             {
             return;
             }
-        if (isTruncated)
+        if (isTruncated || (bdpSignedTypes[activeCpu->dstDesc.type] && byte > 0x7f && activeCpu->dstDesc.length == 1))
             {
             cpu180SetUserCondition(activeCpu, UCR62); // Arithmetic loss of significance
             }
         break;
     case 1:
-        if (activeCpu->dstDesc.type > 6)
+        if (bdpDecimalTypes[activeCpu->dstDesc.type] == FALSE || bdp180HasValidLength(&activeCpu->dstDesc) == FALSE)
             {
             cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
@@ -8386,7 +8433,7 @@ static void cp180OpFA(Cpu180Context *activeCpu)  // FA  CMPI       MIGDS 2-63
         {
     default:
     case 0:
-        if (activeCpu->dstDesc.type != 10 && activeCpu->dstDesc.type != 11)
+        if (activeCpu->dstDesc.type != 10 && activeCpu->dstDesc.type != 11 && activeCpu->dstDesc.type != 14 && activeCpu->dstDesc.type != 15)
             {
             cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
@@ -8398,7 +8445,7 @@ static void cp180OpFA(Cpu180Context *activeCpu)  // FA  CMPI       MIGDS 2-63
         break;
 
     case 1:
-        if (activeCpu->dstDesc.type > 6)
+        if (bdpDecimalTypes[activeCpu->dstDesc.type] == FALSE || bdp180HasValidLength(&activeCpu->dstDesc) == FALSE)
             {
             cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
@@ -8533,22 +8580,23 @@ static void cp180OpFB(Cpu180Context *activeCpu)  // FB  ADDI       MIGDS 2-64
         {
         return;
         }
+    if (bdp180HasValidLength(&activeCpu->dstDesc) == FALSE)
+        {
+        cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
+        return;
+        }
     byte = (u8)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI]) + activeCpu->opD) & Mask8);
     if ((activeCpu->opJ & 1) == 0) // j == 0
         {
-        if (activeCpu->dstDesc.type != 10 && activeCpu->dstDesc.type != 11)
+        if (activeCpu->dstDesc.type != 10 && activeCpu->dstDesc.type != 11 && activeCpu->dstDesc.type != 14 && activeCpu->dstDesc.type != 15)
             {
             cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
-            return;
-            }
-        if (bdp180DecodeOperand(activeCpu, &activeCpu->dstDesc, &dstOperand) == FALSE)
-            {
             return;
             }
         }
     else // j == 1
         {
-        if (activeCpu->dstDesc.type > 6)
+        if (bdpDecimalTypes[activeCpu->dstDesc.type] == FALSE)
             {
             cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
             return;
@@ -8558,11 +8606,11 @@ static void cp180OpFB(Cpu180Context *activeCpu)  // FB  ADDI       MIGDS 2-64
             cpu180SetUserCondition(activeCpu, UCR63); // Invalid BDP data
             return;
             }
-        if (bdp180DecodeOperand(activeCpu, &activeCpu->dstDesc, &dstOperand) == FALSE)
-            {
-            return;
-            }
         byte -= 0x30;
+        }
+    if (bdp180DecodeOperand(activeCpu, &activeCpu->dstDesc, &dstOperand) == FALSE)
+        {
+        return;
         }
 
 #if CcDebug > 0
@@ -8575,7 +8623,7 @@ static void cp180OpFB(Cpu180Context *activeCpu)  // FB  ADDI       MIGDS 2-64
         {
         cpu180SetUserCondition(activeCpu, cond);
         }
-    else if (bdp180EncodeOperand(activeCpu, &activeCpu->dstDesc, &result, TRUE, &isTruncated))
+    else if (bdp180EncodeOperand(activeCpu, &activeCpu->dstDesc, &result, (activeCpu->regUmr & ucrDefns[UCR57].bitMask) != 0 && IsTrapEnabled(activeCpu), &isTruncated))
         {
         if (isTruncated)
             {
