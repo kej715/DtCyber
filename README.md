@@ -28,9 +28,10 @@ operation, and a version of
 by CDC for its Cyber 170 series supercomputers. In addition to supporting interactive
 access and local and remote batch operation, the instance provided here supports a
 very rich collection of programming languages and data communication features. NOS 2.8.7
-also supports dual-state operation with [NOS/VE 1.8.3](https://en.wikipedia.org/wiki/NOS/VE)
-when DtCyber is configured to emulate a CYBER 180 model such as a Cyber 860.
-- [NOS/BE](https://github.com/bug400/NOSBE712) : the NOS/BE operation system was a
+also supports dual-state operation. It can run concurrently with and serve as a frontend for
+[NOS/VE 1.8.3](https://en.wikipedia.org/wiki/NOS/VE) when DtCyber is configured to emulate a
+CYBER 180 model such as a Cyber 860.
+- [NOS/BE](https://github.com/bug400/NOSBE712) : the NOS/BE operating system was a
 descendent of COS and SCOPE. It was designed primarily for batch operation but also
 supported interactive access. Additional documentation about building a NOS/BE system
 can be found [here](https://codex.retro1.org/cdc:nosbe:building_nos_be_level_712_from_scratch)
