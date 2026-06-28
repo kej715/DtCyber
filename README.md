@@ -7,7 +7,7 @@
 series supercomputers. This version of *DtCyber* is a direct derivative of
 *Desktop CYBER 5.5.1* created by Tom Hunter. This version simulates additional
 types of peripheral I/O devices, includes additional networking features, and adds
-support for dual-state operation (concurrent Cyber 170 and Cyber 180 modes).
+support for dual-state operation (concurrent CYBER 170 and CYBER 180 states).
 This repository also provides automation and artifacts intended to make it easy for
 anyone to build the simulator and run historic software on it.
 
@@ -40,7 +40,7 @@ and a ready-to-run NOS/BE package can be found
 [here](https://codex.retro1.org/cdc:nosbe:use_a_ready_to_run_nos_be_l_712_system).
 
 Information about configuring and operating *DtCyber* can be found
-[here](https://codex.retro1.org/cdc:dtcyber:v5.8.sz:start) on the
+[here](https://codex.retro1.org/cdc:dtcyber:v6.0.x:start) on the
 [CDC Community site](https://codex.retro1.org/cdc:start).
 
 Visit the [CDC documentation archives at Bitsavers](http://bitsavers.trailing-edge.com/pdf/cdc/)
