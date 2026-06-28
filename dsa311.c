@@ -1086,7 +1086,7 @@ static void dsa311Receive(Dsa311Context *cp)
     fprintf(dsa311Log, "\n%010lu received data", elapsedTime);
     dsa311LogBytes(&cp->sktInBuf.data[cp->sktInBuf.in], n);
 #endif
-    cp->sktInBuf.in += n;
+    cp->sktInBuf.in += (int)n;
     while (cp->sktInBuf.out < cp->sktInBuf.in
            && cp->ppInBuf.in + 2 < PpInBufSize)
         {
@@ -1203,7 +1203,7 @@ static void dsa311Send(Dsa311Context *cp)
     fprintf(dsa311Log, "\n%010lu sent data", elapsedTime);
     dsa311LogBytes(&cp->sktOutBuf.data[cp->sktOutBuf.out], n);
 #endif
-    cp->sktOutBuf.out += n;
+    cp->sktOutBuf.out += (int)n;
     if (cp->sktOutBuf.out >= cp->sktOutBuf.in)
         {
         cp->sktOutBuf.out = cp->sktOutBuf.in = 0;

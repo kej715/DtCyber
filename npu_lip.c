@@ -1037,7 +1037,7 @@ static void npuLipSendQueuedData(Pcb *pcbp)
             }
 #endif
 
-        bp->offset += n;
+        bp->offset += (u16)n;
 
         if (bp->offset >= bp->numBytes)
             {

@@ -864,7 +864,7 @@ static void niuCheckIo(void)
                             traceSequenceNo, n, pp->id);
                     niuLogBytes(&pp->inBuffer[pp->inInIdx], n);
 #endif
-                    pp->inInIdx += n;
+                    pp->inInIdx += (int)n;
                     }
                 else
                     {
@@ -881,7 +881,7 @@ static void niuCheckIo(void)
                             traceSequenceNo, n, pp->id);
                     niuLogBytes(&pp->outBuffer[pp->outOutIdx], n);
 #endif
-                    pp->outOutIdx += n;
+                    pp->outOutIdx += (int)n;
                     if (pp->outOutIdx >= pp->outInIdx)
                         {
                         pp->outInIdx  = 0;

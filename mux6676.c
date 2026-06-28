@@ -962,7 +962,7 @@ static void mux667xCheckIo(MuxParam *mp)
                         }
 #endif
 #endif
-                    pp->inInIdx += n;
+                    pp->inInIdx += (int)n;
                     }
                 else
                     {
@@ -992,7 +992,7 @@ static void mux667xCheckIo(MuxParam *mp)
                         }
 #endif
 #endif
-                    pp->outOutIdx += n;
+                    pp->outOutIdx += (int)n;
                     if (pp->outOutIdx >= pp->outInIdx)
                         {
                         pp->outInIdx  = 0;

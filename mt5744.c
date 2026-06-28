@@ -1911,7 +1911,7 @@ static void mt5744ReceiveTapeServerResponse(TapeParam *tp)
         mt5744LogBytes(&tp->inputBuffer.data[tp->inputBuffer.in], n);
         mt5744LogFlush();
 #endif
-        tp->inputBuffer.in += n;
+        tp->inputBuffer.in += (u32)n;
         if (tp->inputBuffer.data[0] == '1') // mount/dismount event
             {
             if (tp->inputBuffer.in > 3)
@@ -2233,7 +2233,7 @@ static void mt5744SendTapeServerRequest(TapeParam *tp)
         mt5744LogBytes(&tp->outputBuffer.data[tp->outputBuffer.out], n);
         mt5744LogFlush();
 #endif
-        tp->outputBuffer.out += n;
+        tp->outputBuffer.out += (u32)n;
         if (tp->outputBuffer.out >= tp->outputBuffer.in)
             {
             tp->outputBuffer.out = tp->outputBuffer.in = 0;

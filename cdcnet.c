@@ -1240,7 +1240,7 @@ void cdcnetCheckStatus(void)
 #if DEBUG
                         fprintf(cdcnetLog, "Sent %d bytes to %s:%u, CN=%02X\n", n, gp->dstIpAddress, gp->dstPort, gp->cn);
 #endif
-                        bp->offset += n;
+                        bp->offset += (u16)n;
                         if (bp->offset >= bp->numBytes)
                             {
                             if (bp->blockSeqNo)

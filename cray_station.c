@@ -1089,7 +1089,7 @@ static void csFeiReceiveData(FeiParam *feip)
 #endif
         if (feip->state >= StCsFeiRecvLCPLen)
             {
-            feip->inputBuffer.in += n;
+            feip->inputBuffer.in += (u32)n;
             }
 #if DEBUG
         else
@@ -1140,7 +1140,7 @@ static void csFeiSendData(FeiParam *feip)
         csFeiLogBytes(&feip->outputBuffer.data[feip->outputBuffer.out], n);
         csFeiLogFlush();
 #endif
-        feip->outputBuffer.out += n;
+        feip->outputBuffer.out += (u32)n;
         if (feip->outputBuffer.out >= feip->outputBuffer.in)
             {
             feip->outputBuffer.out = feip->outputBuffer.in = 0;

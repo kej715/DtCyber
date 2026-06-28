@@ -796,7 +796,7 @@ static void consoleFlushCycleData(int first, int limit)
                 if (outBufIn + n <= OutBufSize)
                     {
                     memcpy(&outBuf[outBufIn], &cycleDataBuf[first], n);
-                    outBufIn += n;
+                    outBufIn += (int)n;
                     }
                 else // output buffer overflow -- replace contents with latest cycle data
                     {
@@ -817,7 +817,7 @@ static void consoleFlushCycleData(int first, int limit)
                     {
                     memcpy(outBuf, &outBuf[n], outBufIn - n);
                     }
-                outBufIn -= n;
+                outBufIn -= (int)n;
                 }
             }
         else if (limit > first)
@@ -836,7 +836,7 @@ static void consoleFlushCycleData(int first, int limit)
                     {
                     if (n > 0)
                         {
-                        len -= n;
+                        len -= (int)n;
                         memcpy(outBuf, &cycleDataBuf[first + n], len);
                         outBufIn = len;
                         }
@@ -928,7 +928,7 @@ static void consoleNetIo(void)
             }
         else
             {
-            inBufIn += n;
+            inBufIn += (int)n;
             }
         }
     if (outBufIn > 0)

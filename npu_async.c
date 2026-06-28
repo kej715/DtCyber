@@ -772,8 +772,8 @@ void npuAsyncTryOutput(Pcb *pcbp)
         */
         if (result > 0)
             {
-            bp->offset   += result;
-            bp->numBytes -= result;
+            bp->offset   += (u16)result;
+            bp->numBytes -= (u16)result;
             }
         }
     }
