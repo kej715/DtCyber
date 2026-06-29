@@ -212,8 +212,8 @@
 //#define TRACE_RANGE_START 0xb0440002f800
 //#define TRACE_RANGE_END   0xb0440002f8ff
 
-#define TRACE_STORE_START 0x100300002ce0
-#define TRACE_STORE_END   0x100300002e78
+//#define TRACE_STORE_START 0x100300002ce0
+//#define TRACE_STORE_END   0x100300002e78
 /*
 #define TRACE_KEYPOINT_LIST         \
     {                               \
@@ -8580,9 +8580,8 @@ static void cp180OpFB(Cpu180Context *activeCpu)  // FB  ADDI       MIGDS 2-64
         {
         return;
         }
-    if (bdp180HasValidLength(&activeCpu->dstDesc) == FALSE)
+    if (bdp180DecodeOperand(activeCpu, &activeCpu->dstDesc, &dstOperand) == FALSE)
         {
-        cpu180SetMonitorCondition(activeCpu, MCR51); // Instruction specification error
         return;
         }
     byte = (u8)((((activeCpu->opI == 0) ? 0 : activeCpu->regX[activeCpu->opI]) + activeCpu->opD) & Mask8);
@@ -8607,10 +8606,6 @@ static void cp180OpFB(Cpu180Context *activeCpu)  // FB  ADDI       MIGDS 2-64
             return;
             }
         byte -= 0x30;
-        }
-    if (bdp180DecodeOperand(activeCpu, &activeCpu->dstDesc, &dstOperand) == FALSE)
-        {
-        return;
         }
 
 #if CcDebug > 0

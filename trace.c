@@ -1101,7 +1101,7 @@ void traceCpu170(Cpu170Context *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32
 void traceCpu180(Cpu180Context *cpu, u64 p, u8 opCode, u8 opI, u8 opJ, u8 opK, u16 opD, u16 opQ)
     {
     DecCp180Control *entry;
-    char            str[80];
+    char            str[120];
 
     /*
     **  Bail out if no trace of the CPU is requested.

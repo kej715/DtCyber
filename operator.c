@@ -1385,7 +1385,7 @@ static void opCmdDisassembleCPU(int fwa, int count)
     //
     osBoundary = isCyber180 ? iouOsBoundary : cpuMaxMemory;
 
-    if ((u32)fwa >= osBoundary)
+    if (isCyber180 && (u32)fwa >= osBoundary)
         {
         if (((u32)fwa >> 3) >= cpuMaxMemory)
             {
