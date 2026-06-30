@@ -521,10 +521,10 @@ void traceCpu170(Cpu170Context *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32
 void traceCpu180(Cpu180Context *cpu, u64 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u16 opD, u16 opQ);
 void traceCpuBreak(Cpu180Context *cpu);
 void traceCpuPrint(Cpu170Context *cpu, char *str);
-void traceDasm170Op(u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress, char *str);
-void traceDasm180Op(u8 opCode, u8 opI, u8 opJ, u8 opK, u16 opD, u16 opQ, char *str);
-u8   traceDasmActivePp(PpWord *pm, char *str);
-u8   traceDasmPpOp(PpWord w1, PpWord w2, char *str);
+void traceDasm170Op(char *str, size_t size, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress);
+void traceDasm180Op(char *str, size_t size, u8 opCode, u8 opI, u8 opJ, u8 opK, u16 opD, u16 opQ);
+u8   traceDasmActivePp(char *str, size_t size, PpWord *pm);
+u8   traceDasmPpOp(char *str, size_t size, PpWord w1, PpWord w2);
 void traceDumpStackFrames(Cpu180Context *cpu, u16 maxDepth);
 void traceEnd(void);
 void traceExchange170(Cpu170Context *cpu, u32 addr, char *title, bool force);

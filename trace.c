@@ -878,7 +878,7 @@ void traceTerminate(void)
 void traceCpu170(Cpu170Context *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
     {
     DecCpControl *decode = cpDecode;
-    char         str[80];
+    char         str[120];
 
     /*
     **  Bail out if no trace of the CPU is requested.
@@ -903,7 +903,7 @@ void traceCpu170(Cpu170Context *cpu, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32
     /*
     **  Print opcode mnemonic and operands.
     */
-    traceDasm170Op(opFm, opI, opJ, opK, opAddress, str);
+    traceDasm170Op(str, sizeof(str), opFm, opI, opJ, opK, opAddress);
     fprintf(cpuF[cpu->id], "%-30s", str);
 
     /*
@@ -1144,7 +1144,7 @@ void traceCpu180(Cpu180Context *cpu, u64 p, u8 opCode, u8 opI, u8 opJ, u8 opK, u
         break;
         }
 
-    traceDasm180Op(opCode, opI, opJ, opK, opD, opQ, str);
+    traceDasm180Op(str, sizeof(str), opCode, opI, opJ, opK, opD, opQ);
     fprintf(cpuF[cpu->id], "%-24s", str);
 
     /*
@@ -1286,17 +1286,18 @@ void traceCpu180(Cpu180Context *cpu, u64 p, u8 opCode, u8 opI, u8 opJ, u8 opK, u
 **  Purpose:        Disassemble a CYBER 170 CPU opcode.
 **
 **  Parameters:     Name        Description.
+**                  str         (out) disassembly result
+**                  size        size of str
 **                  opFm        Opcode
 **                  opI         i
 **                  opJ         j
 **                  opK         k
 **                  opAddress   jk
-**                  str         (out) disassembly result
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void traceDasm170Op(u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress, char *str)
+void traceDasm170Op(char *str, size_t size, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
     {
     u8           addrMode;
     bool         link    = TRUE;
@@ -1309,13 +1310,13 @@ void traceDasm170Op(u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress, char *str)
 
     if ((opFm == 066) && (opI == 0))
         {
-        sprintf(str, "CRX%o  X%o", opJ, opK);
+        snprintf(str, size, "CRX%o  X%o", opJ, opK);
         return;
         }
 
     if ((opFm == 067) && (opI == 0))
         {
-        sprintf(str, "CWX%o  X%o", opJ, opK);
+        snprintf(str, size, "CWX%o  X%o", opJ, opK);
         return;
         }
 
@@ -1330,43 +1331,43 @@ void traceDasm170Op(u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress, char *str)
             break;
 
         case CK:
-            sprintf(str, decode[opFm].mnemonic, opAddress);
+            snprintf(str, size, decode[opFm].mnemonic, opAddress);
             break;
 
         case Ci:
-            sprintf(str, decode[opFm].mnemonic, opI);
+            snprintf(str, size, decode[opFm].mnemonic, opI);
             break;
 
         case Cij:
-            sprintf(str, decode[opFm].mnemonic, opI, opJ);
+            snprintf(str, size, decode[opFm].mnemonic, opI, opJ);
             break;
 
         case CjK:
-            sprintf(str, decode[opFm].mnemonic, opJ, opAddress);
+            snprintf(str, size, decode[opFm].mnemonic, opJ, opAddress);
             break;
 
         case Cijk:
-            sprintf(str, decode[opFm].mnemonic, opI, opJ, opK);
+            snprintf(str, size, decode[opFm].mnemonic, opI, opJ, opK);
             break;
 
         case Cik:
-            sprintf(str, decode[opFm].mnemonic, opI, opK);
+            snprintf(str, size, decode[opFm].mnemonic, opI, opK);
             break;
 
         case Cikj:
-            sprintf(str, decode[opFm].mnemonic, opI, opK, opJ);
+            snprintf(str, size, decode[opFm].mnemonic, opI, opK, opJ);
             break;
 
         case CijK:
-            sprintf(str, decode[opFm].mnemonic, opI, opJ, opAddress);
+            snprintf(str, size, decode[opFm].mnemonic, opI, opJ, opAddress);
             break;
 
         case Cjk:
-            sprintf(str, decode[opFm].mnemonic, opJ, opK);
+            snprintf(str, size, decode[opFm].mnemonic, opJ, opK);
             break;
 
         case Cj:
-            sprintf(str, decode[opFm].mnemonic, opJ);
+            snprintf(str, size, decode[opFm].mnemonic, opJ);
             break;
 
         case CLINK:
@@ -1377,7 +1378,7 @@ void traceDasm170Op(u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress, char *str)
             break;
 
         default:
-            sprintf(str, "unsupported mode %02o", opFm);
+            snprintf(str, size, "unsupported mode %02o", opFm);
             break;
             }
         }
@@ -1387,18 +1388,19 @@ void traceDasm170Op(u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress, char *str)
 **  Purpose:        Disassemble a CYBER 180 CPU opcode.
 **
 **  Parameters:     Name        Description.
+**                  str         (out) Disassembled instruction
+**                  size        size of str
 **                  opCode      Opcode
 **                  opI         i
 **                  opJ         j
 **                  opK         k
 **                  opD         D
 **                  opQ         Q
-**                  str         (out) Disassembled instruction
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void traceDasm180Op(u8 opCode, u8 opI, u8 opJ, u8 opK, u16 opD, u16 opQ, char *str)
+void traceDasm180Op(char *str, size_t size, u8 opCode, u8 opI, u8 opJ, u8 opK, u16 opD, u16 opQ)
     {
     DecCp180Control *entry;
     u64             value;
@@ -1411,46 +1413,46 @@ void traceDasm180Op(u8 opCode, u8 opI, u8 opJ, u8 opK, u16 opD, u16 opQ, char *s
         strcpy(str, entry->mnemonic);
         break;
     case VFK:
-        sprintf(str, entry->mnemonic, opK);
+        snprintf(str, size, entry->mnemonic, opK);
         break;
     case VFJK:
-        sprintf(str, entry->mnemonic, opJ, opK);
+        snprintf(str, size, entry->mnemonic, opJ, opK);
         break;
     case VFKJ:
-        sprintf(str, entry->mnemonic, opK, opJ);
+        snprintf(str, size, entry->mnemonic, opK, opJ);
         break;
     case VFKJD:
-        sprintf(str, entry->mnemonic, opK, opJ, opD);
+        snprintf(str, size, entry->mnemonic, opK, opJ, opD);
         break;
     case VFKJID:
-        sprintf(str, entry->mnemonic, opK, opJ, opI, opD);
+        snprintf(str, size, entry->mnemonic, opK, opJ, opI, opD);
         break;
     case VFKID:
-        sprintf(str, entry->mnemonic, opK, opI, opD);
+        snprintf(str, size, entry->mnemonic, opK, opI, opD);
         break;
     case VFKJQ:
-        sprintf(str, entry->mnemonic, opK, opJ, opQ);
+        snprintf(str, size, entry->mnemonic, opK, opJ, opQ);
         break;
     case VFJKQ:
-        sprintf(str, entry->mnemonic, opJ, opK, opQ);
+        snprintf(str, size, entry->mnemonic, opJ, opK, opQ);
         break;
     case VFKQ:
-        sprintf(str, entry->mnemonic, opK, opQ);
+        snprintf(str, size, entry->mnemonic, opK, opQ);
         break;
     case VFKJDJ:
-        sprintf(str, entry->mnemonic, opK, opJ, opD, opJ);
+        snprintf(str, size, entry->mnemonic, opK, opJ, opD, opJ);
         break;
     case VFQJK:
-        sprintf(str, entry->mnemonic, opQ, opJ, opK);
+        snprintf(str, size, entry->mnemonic, opQ, opJ, opK);
         break;
     case VFJKID:
-        sprintf(str, entry->mnemonic, opJ, opK, opI, opD);
+        snprintf(str, size, entry->mnemonic, opJ, opK, opI, opD);
         break;
     case VFIDKJ:
-        sprintf(str, entry->mnemonic, opI, opD, opK, opJ);
+        snprintf(str, size, entry->mnemonic, opI, opD, opK, opJ);
         break;
     case VFJK8:
-        sprintf(str, entry->mnemonic, ((u16)opJ << 4) | (u16)opK);
+        snprintf(str, size, entry->mnemonic, ((u16)opJ << 4) | (u16)opK);
         break;
     case VFJKQ24:
         value = ((u64)opJ << 20) | ((u64)opK << 16) | (u64)opQ;
@@ -1458,7 +1460,7 @@ void traceDasm180Op(u8 opCode, u8 opI, u8 opJ, u8 opK, u16 opD, u16 opQ, char *s
             {
             value |= 0xffffffffff000000;
             }
-        sprintf(str, entry->mnemonic, (i64)value);
+        snprintf(str, size, entry->mnemonic, (i64)value);
         break;
     default:
         break;
@@ -2872,34 +2874,37 @@ void traceOpcode(void)
 **  Purpose:        Disassemble one instruction of an active PP.
 **
 **  Parameters:     Name        Description.
-**                  pm          Pointer to instruction in PP memory
 **                  str         (out) The disassembled instruction
+**                  size        size of str
+**                  pm          Pointer to instruction in PP memory
 **
 **  Returns:        The number of PP words of the instruction.
 **
 **------------------------------------------------------------------------*/
-u8 traceDasmActivePp(PpWord *pm, char *str)
+u8 traceDasmActivePp(char *str, size_t size, PpWord *pm)
     {
-    return traceDasmPpOp(*pm, *(pm + 1), str);
+    return traceDasmPpOp(str, size, *pm, *(pm + 1));
     }
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Disassemble a PP instruction.
 **
 **  Parameters:     Name        Description.
+**                  str         (out) The disassembled instruction
+**                  size        size of str
 **                  w1          First word of instruction
 **                  w2          Second word of instruction (if any)
-**                  str         (out) The disassembled instruction
 **
 **  Returns:        The actual number of PP words in the instruction, based
 **                  upon the decoded opcode
 **
 **------------------------------------------------------------------------*/
-u8 traceDasmPpOp(PpWord w1, PpWord w2, char *str)
+u8 traceDasmPpOp(char *str, size_t size, PpWord w1, PpWord w2)
     {
     u8           addrMode;
     DecPpControl *decodeTable;
     char         *fmt;
+    int          n;
     u8           opD;
     u8           opF;
     u16          opM;
@@ -2922,12 +2927,14 @@ u8 traceDasmPpOp(PpWord w1, PpWord w2, char *str)
 
     if (decodeTable[opF].hasOp2 && ((opD & 040) != 0) && ((features & HasChannelFlag) != 0))
         {
-        str += sprintf(str, fmt, decodeTable[opF].mnemonic2);
+        n = snprintf(str, size, fmt, decodeTable[opF].mnemonic2);
         }
     else
         {
-        str += sprintf(str, fmt, decodeTable[opF].mnemonic);
+        n = snprintf(str, size, fmt, decodeTable[opF].mnemonic);
         }
+    str  += n;
+    size -= (size_t)n;
 
     switch (addrMode)
         {
@@ -2935,27 +2942,27 @@ u8 traceDasmPpOp(PpWord w1, PpWord w2, char *str)
         break;
 
     case Amd:
-        sprintf(str, "%04o,%02o", opM, opD);
+        snprintf(str, size, "%04o,%02o", opM, opD);
         result = 2;
         break;
 
     case Ar:
         if (opD < 040)
             {
-            sprintf(str, "+%02o", opD);
+            snprintf(str, size, "+%02o", opD);
             }
         else
             {
-            sprintf(str, "-%02o", 077 - opD);
+            snprintf(str, size, "-%02o", 077 - opD);
             }
         break;
 
     case Ad:
-        sprintf(str, "%02o", opD);
+        snprintf(str, size, "%02o", opD);
         break;
 
     case Adm:
-        sprintf(str, "%02o%04o", opD, opM);
+        snprintf(str, size, "%02o%04o", opD, opM);
         result = 2;
         break;
         }

@@ -1359,7 +1359,7 @@ static void opCmdDisassembleCPU(int fwa, int count)
     u8     format;
     u8     i;
     u8     length;
-    char   mnemonic[40];
+    char   mnemonic[120];
     u32    opAddress;
     u8     opcode;
     u16    opD;
@@ -1429,7 +1429,7 @@ static void opCmdDisassembleCPU(int fwa, int count)
                 sprintf(cp, "%04x  ", parcel);
                 break;
                 }
-            traceDasm180Op(opcode, opI, opJ, opK, opD, opQ, mnemonic);
+            traceDasm180Op(mnemonic, sizeof(mnemonic), opcode, opI, opJ, opK, opD, opQ);
             opDisplay(buf);
             opDisplay(mnemonic);
             opDisplay("\n");
@@ -1554,7 +1554,7 @@ static void opCmdDisassembleCPU(int fwa, int count)
                 *cp = '\0';
                 opDisplay(buf);
                 
-                traceDasm170Op(opcode, opI, opJ, opK, opAddress, mnemonic);
+                traceDasm170Op(mnemonic, sizeof(mnemonic), opcode, opI, opJ, opK, opAddress);
                 opDisplay("%s\n", mnemonic);
 
                 } while (opOffset > 0 && count > 0);
@@ -1566,7 +1566,7 @@ static void opCmdDisassembleCPU(int fwa, int count)
 
 static void opCmdDisassemblePP(int ppNum, int fwa, int count)
     {
-    char   mnemonic[40];
+    char   mnemonic[120];
     int    n;
     PpWord *pm;
     PpWord pw1;
@@ -1598,7 +1598,7 @@ static void opCmdDisassemblePP(int ppNum, int fwa, int count)
     while (count-- > 0)
         {
         opDisplay("%04o  ", fwa);
-        n = traceDasmActivePp(pm + fwa, mnemonic);
+        n = traceDasmActivePp(mnemonic, sizeof(mnemonic), pm + fwa);
         if (isCyber180)
             {
             pw1 = pm[fwa] & Mask16;

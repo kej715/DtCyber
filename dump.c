@@ -507,7 +507,7 @@ void dumpDisassemblePpu(u8 pp)
     PpWord *pm = ppu[pp].mem;
     char   ppDisName[20];
     PpWord pw0, pw1;
-    char   str[80];
+    char   str[120];
 
     sprintf(ppDisName, "ppu%02o.dis", pp < 10 ? pp : (pp - 10) + 020);
     pf = fopen(ppDisName, "wt");
@@ -525,7 +525,7 @@ void dumpDisassemblePpu(u8 pp)
         {
         fprintf(pf, "%04o  ", addr & Mask12);
 
-        cnt = traceDasmActivePp(pm + addr, str);
+        cnt = traceDasmActivePp(str, sizeof(str), pm + addr);
         fprintf(pf, "%-13s", str);
 
         if (isCyber180)
