@@ -486,6 +486,22 @@ void cpuInit(char *model, u16 *serialNumbers, u32 memory, u32 emBanks, ExtMemory
         ecs16Kx4bitFlagRegisters[i] = 0;
         }
 
+#if defined(_WIN32)
+    /*
+    **  Explicitly create mutexes if the DtCyber host is Windows
+    */
+    clockMutex     = CreateMutex(NULL, FALSE, NULL);
+    exchangeMutex  = CreateMutex(NULL, FALSE, NULL);
+    flagRegMutex   = CreateMutex(NULL, FALSE, NULL);
+    interruptMutex = CreateMutex(NULL, FALSE, NULL);
+    memoryMutex    = CreateMutex(NULL, FALSE, NULL);
+    if (clockMutex == NULL || exchangeMutex == NULL || flagRegMutex == NULL || interruptMutex == NULL || memoryMutex == NULL)
+        {
+        fputs("(cpu     ) Failed to create mutex\n", stderr);
+        exit(1);
+        }
+#endif
+
     /*
     **  Start thread for CPU1, if more than one CPU are configured.
     */
@@ -1245,18 +1261,6 @@ static void cpuCreateThread(int cpuNum)
 #if defined(_WIN32)
     DWORD  dwThreadId;
     HANDLE hThread;
-
-    /*
-    **  Create mutexes
-    */
-    clockMutex    = CreateMutex(NULL, FALSE, NULL);
-    exchangeMutex = CreateMutex(NULL, FALSE, NULL);
-    flagRegMutex  = CreateMutex(NULL, FALSE, NULL);
-    if ((exchangeMutex == NULL) || (flagRegMutex == NULL) || (clockMutex == NULL))
-        {
-        fputs("(cpu     ) Failed to create mutex\n", stderr);
-        exit(1);
-        }
 
     /*
     **  Create operator thread.

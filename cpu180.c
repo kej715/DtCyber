@@ -6161,6 +6161,7 @@ static void cp180Op81(Cpu180Context *activeCpu)  // 81  SMULT      MIGDS 2-16
         return;
         }
     i = 0;
+    cpuAcquireMemoryMutex();
     while (as <= at)
         {
         cpMem[rmas[i++] >> 3] = activeCpu->regA[as++];
@@ -6169,6 +6170,7 @@ static void cp180Op81(Cpu180Context *activeCpu)  // 81  SMULT      MIGDS 2-16
         {
         cpMem[rmas[i++] >> 3] = activeCpu->regX[xs++];
         }
+    cpuReleaseMemoryMutex();
 
 #if CcDebug > 0
 #if defined(TRACE_STORE_START)
@@ -6309,7 +6311,9 @@ static void cp180Op85(Cpu180Context *activeCpu)  // 85  SA         MIGDS 2-15
     Aj   = activeCpu->regA[activeCpu->opJ];
     disp = (activeCpu->opQ <= 0x7fff) ? (u32)activeCpu->opQ : 0xffff0000 | (u32)activeCpu->opQ;
     pva  = (Aj & RingSegMask) | ((Aj + disp) & Mask32);
+    cpuAcquireMemoryMutex();
     (void)cpu180PutBytes(activeCpu, pva, RingOf(pva), activeCpu->regA[activeCpu->opK], 6);
+    cpuReleaseMemoryMutex();
     }
 
 static void cp180Op86(Cpu180Context *activeCpu)  // 86  LBYTP,j    MIGDS 2-13
@@ -6875,7 +6879,9 @@ static void cp180OpA1(Cpu180Context *activeCpu)  // A1  SAI        MIGDS 2-15
         byteNum += (u32)(activeCpu->regX[activeCpu->opI] & Mask32);
         }
     pva = (Aj & RingSegMask) | byteNum;
+    cpuAcquireMemoryMutex();
     (void)cpu180PutBytes(activeCpu, pva, RingOf(pva), activeCpu->regA[activeCpu->opK], 6);
+    cpuReleaseMemoryMutex();
     }
 
 static void cp180OpA2(Cpu180Context *activeCpu)  // A2  LXI        MIGDS 2-12
