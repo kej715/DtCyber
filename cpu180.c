@@ -6161,7 +6161,6 @@ static void cp180Op81(Cpu180Context *activeCpu)  // 81  SMULT      MIGDS 2-16
         return;
         }
     i = 0;
-    cpuAcquireMemoryMutex();
     while (as <= at)
         {
         cpMem[rmas[i++] >> 3] = activeCpu->regA[as++];
@@ -6170,7 +6169,6 @@ static void cp180Op81(Cpu180Context *activeCpu)  // 81  SMULT      MIGDS 2-16
         {
         cpMem[rmas[i++] >> 3] = activeCpu->regX[xs++];
         }
-    cpuReleaseMemoryMutex();
 
 #if CcDebug > 0
 #if defined(TRACE_STORE_START)
