@@ -103,8 +103,6 @@ static void niuClose(PortParam *pp);
 static FcStatus niuInFunc(PpWord funcCode);
 static void niuInIo(void);
 static void niuInit(void);
-static void niuLogBytes(u8 *bytes, int len);
-static void niuLogFlush(void);
 static FcStatus niuOutFunc(PpWord funcCode);
 static void niuOutIo(void);
 static void niuActivate(void);
@@ -116,7 +114,8 @@ static void niuSendstr(int stat, const char *p);
 
 #if DEBUG_PP || DEBUG_NET
 static char *niuFunc2String(PpWord funcCode);
-
+static void niuLogBytes(u8 *bytes, int len);
+static void niuLogFlush(void);
 #endif
 
 /*
@@ -146,7 +145,7 @@ static PortParam        *portVector;
 
 #if REAL_TIMING
 static bool frameStart;
-static u32  lastFrame;
+static u64  lastFrame;
 #endif
 
 #if DEBUG_PP || DEBUG_NET
@@ -200,12 +199,12 @@ void niuInInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     numParam = sscanf(params, "%d,%d", &listenPort, &portCount);
     if (numParam > 1)
         {
-        platoPort  = listenPort;
-        platoConns = portCount;
+        platoPort  = (u16)listenPort;
+        platoConns = (u16)portCount;
         }
     else if (numParam > 0)
         {
-        platoPort = listenPort;
+        platoPort = (u16)listenPort;
         }
     if ((platoPort < 1) || (platoPort > 65535))
         {
@@ -345,23 +344,18 @@ void niuSetOutputHandler(niuProcessOutput *h, int stat)
 void niuShowStatus()
     {
     int       i;
-    char      outBuf[200];
     PortParam *pp;
 
     if (listenFd > 0)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "NIU", in->channel->id, in->eqNo);
-        opDisplay(outBuf);
-        sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(listenFd), "", "plato", "listening");
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s C%02o E%02o     ", "NIU", in->channel->id, in->eqNo);
+        opDisplay(FMTNETSTATUS "\n", netGetLocalTcpAddress(listenFd), "", "plato", "listening");
         for (i = 0, pp = portVector; i < platoConns; i++, pp++)
             {
             if (pp->active && (pp->connFd > 0))
                 {
-                sprintf(outBuf, "    >   %-8s         P%02o ", "NIU", pp->id);
-                opDisplay(outBuf);
-                sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), "plato", "connected");
-                opDisplay(outBuf);
+                opDisplay("    >   %-8s         P%02o ", "NIU", pp->id);
+                opDisplay(FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), "plato", "connected");
                 }
             }
         }
@@ -553,7 +547,7 @@ static void niuInIo(void)
                 if (rp->get != rp->put)
                     {
                     currInPort          = lastInPort = port;
-                    activeChannel->data = 04000 + currInPort;
+                    activeChannel->data = (PpWord)(04000 + currInPort);
                     activeChannel->full = TRUE;
 
                     return;
@@ -594,7 +588,7 @@ static void niuInIo(void)
                         }
                     pp->currInput      |= (in & 0177);
                     currInPort          = lastInPort = port;
-                    activeChannel->data = 04000 + currInPort;
+                    activeChannel->data = (PpWord)(04000 + currInPort);
                     activeChannel->full = TRUE;
 
                     return;
@@ -611,7 +605,7 @@ static void niuInIo(void)
 #endif
                         continue;
                         }
-                    pp->currInput = in << 7;
+                    pp->currInput = (u16)(in << 7);
                     pp->ibytes    = 1;
                     }
                 }
@@ -634,12 +628,12 @@ static void niuInIo(void)
             }
         in                  = rp->buf[rp->get];
         rp->get             = nextget;
-        activeChannel->data = in << 1;
+        activeChannel->data = (PpWord)(in << 1);
         }
     else
         {
         pp = portVector + (currInPort - NiuLocalStations);
-        activeChannel->data = pp->currInput << 1;
+        activeChannel->data = (PpWord)(pp->currInput << 1);
         pp->ibytes          = 0;
         }
     activeChannel->full = TRUE;
@@ -676,7 +670,7 @@ static void niuOutIo(void)
 #if REAL_TIMING
         if (frameStart)
             {
-            if (rtcClock - lastFrame < (u32)16667)
+            if (rtcClock - lastFrame < (u64)16667)
                 {
                 activeChannel->full = TRUE;
 
@@ -793,7 +787,7 @@ static void niuCheckIo(void)
 #endif
     int            i;
     int            maxFd;
-    int            n;
+    ssize_t        n;
     int            optEnable = 1;
     PortParam      *pp;
     fd_set         readFds;
@@ -870,7 +864,7 @@ static void niuCheckIo(void)
                             traceSequenceNo, n, pp->id);
                     niuLogBytes(&pp->inBuffer[pp->inInIdx], n);
 #endif
-                    pp->inInIdx += n;
+                    pp->inInIdx += (int)n;
                     }
                 else
                     {
@@ -887,7 +881,7 @@ static void niuCheckIo(void)
                             traceSequenceNo, n, pp->id);
                     niuLogBytes(&pp->outBuffer[pp->outOutIdx], n);
 #endif
-                    pp->outOutIdx += n;
+                    pp->outOutIdx += (int)n;
                     if (pp->outOutIdx >= pp->outInIdx)
                         {
                         pp->outInIdx  = 0;
@@ -994,7 +988,7 @@ static void niuSendstr(int stat, const char *p)
         {
         if (isupper(c))
             {
-            c = tolower(c);
+            c = (char)tolower(c);
             if (!shift)
                 {
                 w = (w << 6 | 077);
@@ -1032,7 +1026,7 @@ static void niuSendstr(int stat, const char *p)
                 }
             shift = FALSE;
             }
-        w = (w << 6 | asciiToCdc[c]);
+        w = (w << 6 | asciiToCdc[(u8)c]);
         if (++cc == 3)
             {
             cc = 0;
@@ -1082,9 +1076,9 @@ static void niuSend(int stat, int word)
                 {
                 if (pp->outInIdx + 2 < OutBufSize)
                     {
-                    pp->outBuffer[pp->outInIdx++] = word >> 12;
-                    pp->outBuffer[pp->outInIdx++] = ((word >> 6) & 077) | 0200;
-                    pp->outBuffer[pp->outInIdx++] = (word & 077) | 0300;
+                    pp->outBuffer[pp->outInIdx++] = (u8)(word >> 12);
+                    pp->outBuffer[pp->outInIdx++] = (u8)(((word >> 6) & 077) | 0200);
+                    pp->outBuffer[pp->outInIdx++] = (u8)((word & 077) | 0300);
                     }
 #if DEBUG_PP || DEBUG_NET
                 else

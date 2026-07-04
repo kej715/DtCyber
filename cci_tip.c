@@ -181,7 +181,7 @@ void cciTipInit(void)
         {
         tp = &npuTcbs[i];
         memset(tp, 0, sizeof(Tcb));
-        tp->cn    = i;
+        tp->cn    = (u8)i;
         tp->state = StTermIdle;
         cciTipInputReset(tp);
         }
@@ -212,7 +212,7 @@ void cciTipReset(void)
         {
         tp = &npuTcbs[i];
         memset(tp, 0, sizeof(Tcb));
-        tp->cn    = i;
+        tp->cn    = (u8)i;
         tp->state = StTermIdle;
         npuTipInputReset(tp);
         }
@@ -359,7 +359,7 @@ void cciTipProcessBuffer(NpuBuffer *bp, int priority)
 void cciTipSendBlock(Tcb *tp, int len)
 
     {
-    tp->inBuf[BlkOffBTBSN] = BtHTBLK | (tp->uplineBsn << BlkShiftBSN);
+    tp->inBuf[BlkOffBTBSN] = (u8)(BtHTBLK | (tp->uplineBsn << BlkShiftBSN));
     npuBipRequestUplineCanned(tp->inBuf, len);
     tp->uplineBsn += 1;
     if (tp->uplineBsn > 7)
@@ -381,7 +381,7 @@ void cciTipSendBlock(Tcb *tp, int len)
 void cciTipSendMsg(Tcb *tp, int len)
 
     {
-    tp->inBuf[BlkOffBTBSN] = BtHTMSG | (tp->uplineBsn << BlkShiftBSN);
+    tp->inBuf[BlkOffBTBSN] = (u8)(BtHTMSG | (tp->uplineBsn << BlkShiftBSN));
     npuBipRequestUplineCanned(tp->inBuf, len);
     tp->uplineBsn += 1;
     if (tp->uplineBsn > 7)

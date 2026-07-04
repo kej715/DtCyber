@@ -377,14 +377,11 @@ void lp1612Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 void lp1612ShowStatus()
     {
     LpContext *lc;
-    char      outBuf[MaxFSPath + 128];
 
     for (lc = firstLp1612; lc != NULL; lc = lc->nextUnit)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", "1612", lc->channelNo, lc->eqNo, lc->unitNo);
-        opDisplay(outBuf);
-        sprintf(outBuf, "   %-20s (mode ", lc->curFileName);
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s C%02o E%02o U%02o", "1612", lc->channelNo, lc->eqNo, lc->unitNo);
+        opDisplay("   %-20s (mode ", lc->curFileName);
         opDisplay(renderingModes[lc->renderingMode]);
         opDisplay(")\n");
         }
@@ -409,7 +406,6 @@ void lp1612RemovePaper(char *params)
     int       iSuffix;
     LpContext *lc;
     int       numParam;
-    char      outBuf[MaxFSPath * 2 + 300];
     bool      renameOK;
     struct tm t;
 
@@ -470,8 +466,7 @@ void lp1612RemovePaper(char *params)
 
         if (ftell(dp->fcb[0]) == 0)
             {
-            sprintf(outBuf, "(lp1612 ) No output has been written on channel %o and equipment %o\n", channelNo, equipmentNo);
-            opDisplay(outBuf);
+            opDisplay("(lp1612 ) No output has been written on channel %o and equipment %o\n", channelNo, equipmentNo);
 
             return;
             }
@@ -490,8 +485,7 @@ void lp1612RemovePaper(char *params)
                 }
             else
                 {
-                sprintf(outBuf, "(lp1612 ) Rename Failure '%s' to '%s' - (%s).\n", lc->curFileName, fNameNew, strerror(errno));
-                opDisplay(outBuf);
+                opDisplay("(lp1612 ) Rename Failure '%s' to '%s' - (%s).\n", lc->curFileName, fNameNew, strerror(errno));
                 }
             }
         else
@@ -545,8 +539,7 @@ void lp1612RemovePaper(char *params)
 
     if (renameOK)
         {
-        sprintf(outBuf, "(lp1612 ) Paper removed and available on '%s'\n", fNameNew);
-        opDisplay(outBuf);
+        opDisplay("(lp1612 ) Paper removed and available on '%s'\n", fNameNew);
         }
     }
 

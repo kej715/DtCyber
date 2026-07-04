@@ -26,6 +26,8 @@
 **--------------------------------------------------------------------------
 */
 
+#include <stdint.h>
+
 /*
 **  -----------------------
 **  Public Type Definitions
@@ -35,60 +37,69 @@
 /*
 **  Basic types used in emulation.
 */
-#if defined(_WIN32)
+#define i8  int8_t
+#define i16 int16_t
+#define i32 int32_t
+#define i64 int64_t
+#define u8  uint8_t
+#define u16 uint16_t
+#define u32 uint32_t
+#define u64 uint64_t
 
-#define HOST_OS_TYPE       "windows"
+#if defined(_WIN32)
+#include <basetsd.h>
+typedef SSIZE_T ssize_t;
+
+#define HAS_INT128    0
+#define HOST_OS_TYPE  "windows"
 
 /*
 **  MS Win32 systems
 */
-typedef signed char        i8;
-typedef signed short       i16;
-typedef signed long        i32;
-typedef signed __int64     i64;
-typedef unsigned char      u8;
-typedef unsigned short     u16;
-typedef unsigned long      u32;
-typedef unsigned __int64   u64;
+#define FMT32_08x     "%08I32x"
 #define FMT60_020o    "%020I64o"
+#define FMT64_010x    "%010I64x"
+#define FMT64_016x    "%016I64x"
+#define FMT64_022o    "%022I64o"
+#define FMT64_012x    "%012I64x"
 #elif defined (__GNUC__) || defined(__SunOS)
 #if defined(__amd64) || defined(__amd64__) || defined(__alpha__) || defined(__powerpc64__) || defined(__ppc64__) \
-    || (defined(__sparc64__) && defined(__arch64__)) || defined(__aarch64__)
+    || (defined(__sparc64__) && defined(__arch64__)) || defined(__aarch64__) || defined(__x86_64__)
 
 /*
-**  64 bit systems
+**  64-bit systems
 */
-typedef signed char         i8;
-typedef signed short        i16;
-typedef signed int          i32;
-typedef unsigned long int   i64;
-typedef unsigned char       u8;
-typedef unsigned short      u16;
-typedef unsigned int        u32;
-typedef unsigned long int   u64;
-#define FMT60_020o    "%020lo"
+#define HAS_INT128        1
+typedef signed __int128   i128;
+typedef unsigned __int128 u128;
+#define FMT32_08x         "%08x"
+#define FMT60_020o        "%020llo"
+#define FMT64_010x        "%010llx"
+#define FMT64_016x        "%016llx"
+#define FMT64_022o        "%022llo"
+#define FMT64_012x        "%012llx"
 #elif defined(__i386) || defined(__i386__) || defined(__powerpc__) || defined(__ppc__)   \
     || defined(__sparc__) || defined(__hppa__) || defined(__APPLE__) || defined(__arm__) \
     || defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_8__)
 
 /*
-**  32 bit systems
+**  32-bit systems
 */
-typedef signed char              i8;
-typedef signed short             i16;
-typedef signed int               i32;
-typedef unsigned long long int   i64;
-typedef unsigned char            u8;
-typedef unsigned short           u16;
-typedef unsigned int             u32;
-typedef unsigned long long int   u64;
-#define FMT60_020o    "%020llo"
+#define HAS_INT128        0
+#define FMT32_08x         "%08lx"
+#define FMT60_020o        "%020llo"
+#define FMT64_010x        "%010llx"
+#define FMT64_016x        "%016llx"
+#define FMT64_022o        "%022llo"
+#define FMT64_012x        "%012llx"
 #else
 #error "Unable to determine size of basic data types"
 #endif
 #else
 #error "Unable to determine size of basic data types"
 #endif
+
+#define Is32BitNeg(x) (((x) & 0x80000000UL) != 0)
 
 #if (!defined(__cplusplus) && !defined(bool) && !defined(CURSES) && !defined(CURSES_H) && !defined(_CURSES_H))
 typedef int bool;
@@ -200,6 +211,7 @@ typedef struct
     u32    regR;                        /* register R (28 bit) */
     PpWord regP;                        /* program counter (12 bit) */
     PpWord regQ;                        /* register Q (12 bit) */
+    PpWord regK;                        /* register K (16 bit) */
     PpWord mem[PpMemSize];              /* PP memory */
     bool   busy;                        /* instruction execution state */
     int    exchangingCpu;               /* CPU for which exchange initiated */
@@ -207,55 +219,253 @@ typedef struct
     PpWord opF;                         /* current opcode */
     PpWord opD;                         /* current opcode */
     /*
-     *  Cyber 180 PP support
+     *  CYBER 180 PP support
      */
+    bool   isStopped;                   /* TRUE if PP is stopped on error */
+    bool   isIdle;                      /* TRUE if PP is idled */
+    bool   isDump;                      /* TRUE if PP is in dump mode */
+    bool   isLoad;                      /* TRUE if PP is in load mode */
+    bool   osBoundsCheckEnabled;        /* whether OS bounds checking is enabled */
     bool   isBelowOsBound;              /* whether checking is below/above OS bound register */
-    u8     chWordIdx;                   /* index of next channel word in IAPM/OAPM instruction */
-    u64    chWords;                     /* current bits assembled by IAPM/OAPM instruction */
+    bool   isStopEnabled;               /* whether PP stop enabled on OS bounds violation */
+    PpWord ioBuf[4];                    /* used by IAPM/OAPM instructions */
+    u8     ioBufIdx;
     } PpSlot;
 
 /*
-**  CPU control block.
+**  CPU control block for CYBER 170 state.
 */
 typedef struct
     {
-    int           id;                   /* CPU ordinal */
-    CpWord        regX[010];            /* data registers (60 bit) */
-    u32           regA[010];            /* address registers (18 bit) */
-    u32           regB[010];            /* index registers (18 bit) */
-    u32           regP;                 /* program counter */
-    u32           regRaCm;              /* reference address CM */
-    u32           regFlCm;              /* field length CM */
-    u32           regRaEcs;             /* reference address ECS */
-    u32           regFlEcs;             /* field length ECS */
-    u32           regMa;                /* monitor address */
-    u32           regSpare;             /* reserved */
-    u32           exitMode;             /* CPU exit mode (24 bit) */
-    volatile bool isMonitorMode;        /* TRUE if CPU is in monitor mode */
-    volatile bool isStopped;            /* TRUE if CPU is stopped */
-    volatile int  ppRequestingExchange; /* PP number of PP requesting exchange, -1 if none */
-    u32           ppExchangeAddress;    /* PP-requested exchange address */
-    bool          doChangeMode;         /* TRUE if monitor mode flag should be changed by PP exchange jump */
-    volatile bool isErrorExitPending;   /* TRUE if error exit pending */
-    u8            exitCondition;        /* pending error exit conditions */
-    CpWord        opWord;               /* Current instruction word */
-    u8            opOffset;             /* Bit offset to current instruction */
-    u8            opFm;                 /* Opcode field (first 6 bits) */
-    u8            opI;                  /* I field of current instruction */
-    u8            opJ;                  /* J field of current instruction */
-    u8            opK;                  /* K field (first 3 bits only) */
-    u32           opAddress;            /* K field (18 bits) */
-    bool          floatException;       /* TRUE if CPU detected float exception */
+    int             id;                   /* CPU ordinal */
+    CpWord          regX[010];            /* data registers (60 bit) */
+    u32             regA[010];            /* address registers (18 bit) */
+    u32             regB[010];            /* index registers (18 bit) */
+    u32             regP;                 /* program address */
+    u32             regRaCm;              /* reference address CM */
+    u32             regFlCm;              /* field length CM */
+    u32             regRaEcs;             /* reference address ECS */
+    u32             regFlEcs;             /* field length ECS */
+    u32             regMa;                /* monitor address */
+    u32             regSpare;             /* reserved */
+    u32             exitMode;             /* CPU exit mode (24 bit) */
+    volatile bool   isMonitorMode;        /* TRUE if CPU is in monitor mode */
+    volatile bool   isMonitorModePending; /* TRUE if CPU is waiting to begin executing in monitor mode */
+    volatile bool   isStopped;            /* TRUE if CPU is stopped */
+    volatile int    ppRequestingExchange; /* PP number of PP requesting exchange, -1 if none */
+    volatile u32    ppExchangeAddress;    /* PP-requested exchange address */
+    volatile bool   doChangeMode;         /* TRUE if monitor mode flag should be changed by PP exchange jump */
+    volatile bool   isErrorExitPending;   /* TRUE if error exit pending */
+    u8              exitCondition;        /* pending error exit conditions */
+    volatile CpWord opWord;               /* Current instruction word */
+    volatile u8     opOffset;             /* Bit offset to current instruction */
+    u8              opFm;                 /* Opcode field (first 6 bits) */
+    u8              opI;                  /* I field of current instruction */
+    u8              opJ;                  /* J field of current instruction */
+    u8              opK;                  /* K field (first 3 bits only) */
+    u32             opAddress;            /* K field (18 bits) */
+    u32             oldRegP;              /* used in interrupt/exit mode processing */
+    u8              oldOpOffset;          /* used in interrupt/exit mode processing */
+    bool            floatException;       /* TRUE if CPU detected float exception */
+    bool            doDeadstart;          /* TRUE if deadstart requested */
+    volatile u32    idleCycles;           /* Counter for how many times we've seen the idle loop */
 
     /*
     **  Instruction word stack.
     */
-    CpWord        iwStack[MaxIwStack];
-    u32           iwAddress[MaxIwStack];
-    bool          iwValid[MaxIwStack];
-    u8            iwRank;
-    volatile u32  idleCycles;           /* Counter for how many times we've seen the idle loop */
-    } CpuContext;
+    CpWord          iwStack[MaxIwStack];
+    u32             iwAddress[MaxIwStack];
+    bool            iwValid[MaxIwStack];
+    u8              iwRank;
+    } Cpu170Context;
+
+/*
+**  Data types and macros supporting CYBER 180 state
+*/
+#define PageOf(pva, ctx) (((pva) & Mask32) >> (ctx)->pageNumShift)
+#define RingOf(pva) (((pva) >> 44) & 0xf)
+#define SegmentOf(pva) (((pva) >> 32) & 0xfff)
+
+//  Monitor condition register bit ordinals.
+typedef enum
+    {
+    MCR48 = 0,  /* Detected uncorrectable error     */
+    MCR49,      /* Not assigned                     */
+    MCR50,      /* Short warning                    */
+    MCR51,      /* Instruction specification error  */
+    MCR52,      /* Address specification error      */
+    MCR53,      /* CYBER 170 state exchange request */
+    MCR54,      /* Access violation                 */
+    MCR55,      /* Environment specification error  */
+    MCR56,      /* External interrupt               */
+    MCR57,      /* Page table search without find   */
+    MCR58,      /* System call (status bit)         */
+    MCR59,      /* System interval timer            */
+    MCR60,      /* Invalid segment / Ring number 0  */
+    MCR61,      /* Outward call / Inward return     */
+    MCR62,      /* Soft error                       */
+    MCR63       /* Trap exception (status bit)      */
+    } MonitorCondition;
+
+//  User condition register bit ordinals.
+typedef enum
+    {
+    UCR48 = 0,  /* Privileged instruction fault     */
+    UCR49,      /* Unimplemented instruction        */
+    UCR50,      /* Free flag                        */
+    UCR51,      /* Process interval timer           */
+    UCR52,      /* Inter-ring pop                   */
+    UCR53,      /* Critical frame flag              */
+    UCR54,      /* Reserved                         */
+    UCR55,      /* Divide fault                     */
+    UCR56,      /* Debug                            */
+    UCR57,      /* Arithmetic overflow              */
+    UCR58,      /* Exponent overflow                */
+    UCR59,      /* Exponent underflow               */
+    UCR60,      /* FP loss of significance          */
+    UCR61,      /* FP indefinite                    */
+    UCR62,      /* Arithmetic loss of significance  */
+    UCR63       /* Invalid BDP data                 */
+    } UserCondition;
+
+//  Possible actions for monitor and user conditions.
+//  Priority corresponds to ordinal value.
+typedef enum
+    {
+    Rni = 0,
+    Stack,
+    Trap,
+    Exch,
+    Halt
+    } ConditionAction;
+
+//  Source/Destination descriptor used in BDP instructions.
+typedef struct bdpDescriptor {
+    u32 rawDesc;
+    u8  type;
+    u16 length;
+    u64 pva;
+} BdpDescriptor;
+
+// BDP numeric operand
+typedef struct bdpOperand
+    {
+    bool rawSign;  // sign of raw operand
+    bool sign;     // operating sign (e.g., + for 0)
+    u64  value[4];
+    } BdpOperand;
+
+// CYBER 180 CPU control block
+typedef struct
+    {
+    u8              id;                   /* CPU identifier */
+    u8              key;                  /* program address key */
+    u64             regP;                 /* program address */
+    u64             regX[16];             /* data registers (64 bit) */
+    u64             regA[16];             /* address registers (48 bit) */
+    u8              regVmid;              /* virtual machine ID register */
+    u8              regUvmid;             /* untranslatable virtual machine ID register */
+    u16             regFlags;             /* CP flag register                   */
+                                          /*   Bit         Flag                 */
+                                          /*     0  Critical Frame Flag         */
+                                          /*     1  On Condition Flag           */
+                                          /*     2  Keypoint Enable Flag        */
+                                          /*     3  Process Not Damaged Flag    */
+                                          /*     4  ECS Authorized Flag         */
+                                          /*    14  Trap-enable Flip-flop       */
+                                          /*    15  Trap-enable Delay Flip-flop */
+    u16             regUmr;               /* user mask register */
+    u16             regMmr;               /* monitor mask register */
+    u16             regUcr;               /* user condition register */
+    u16             regMcr;               /* monitor condition register */
+    u8              regLpid;              /* last processor ID register */
+    u16             regKmr;               /* keypoint mask register */
+    u32             regPit;               /* process interval timer register */
+    u32             regBc;                /* base constant register */
+    u16             regMdf;               /* model-dependent flags */
+    u16             regStl;               /* segment table length register */
+    u64             regMdw;               /* model-dependent word */
+    u32             regSta;               /* segment table address register */
+    u64             regUtp;               /* untranslatable pointer register */
+    u64             regTp;                /* trap pointer register */
+    u8              regDm;                /* debug mask register */
+    u8              regDi;                /* debug index register */
+    u64             regDlp;               /* debug list pointer register */
+#if 0
+    //
+    //  The top-stop-registers are managed directly in the
+    //  currently active exchange package in central memory
+    //
+    u8              regLrn;               /* largest ring number register */
+    u64             regTos[16];           /* top of stack pointer registers */
+#endif
+    u32             regMps;               /* monitor process state register */
+    u32             regJps;               /* job process state register */
+    u32             regPta;               /* page table address register */
+    u8              regPtl;               /* page table length register */
+    u8              regPsm;               /* page size mask register */
+    u32             regSit;               /* system interval timer register */
+    u16             regVmcl;              /* virtual machine capability list register */
+    u64             regKbp;               /* keypoint buffer pointer register */
+    u32             regEid;               /* CPU element identifier register */
+    u8              regOi;                /* CPU options installed register */
+    u64             regDec;               /* dependent environment control register */
+    u64             regTm;                /* test mode register */
+    u64             rtcClock;             /* CPU-specific snapshot of real-time clock */
+    u32             pageLengthMask;       /* mask used in calculating page table index */
+    u32             pageTableEntries;     /* number of entries in page table */
+    u8              pageNumShift;         /* shift count used in calculating page numbers */
+    u8              spidShift;            /* shift count used in calculating SPID's */
+    volatile bool   isMonitorMode;        /* TRUE if CPU is in monitor mode */
+    volatile bool   isStopped;            /* TRUE if CPU is stopped */
+    volatile u8     pendingRequests;      /* pending action requests */
+#define PR_EXT_INTRPT 0x01                /*   external interrupt request               */
+#define PR_EXCH_170   0x02                /*   exchange to CYBER 170 state request      */
+#define PR_SIT        0x04                /*   system  interval timer interrupt request */
+#define PR_PIT        0x08                /*   process interval timer interrupt request */
+#define PR_HALT       0x10                /*   halt request                             */
+    u8              opCode;               /* Opcode field (first 8 bits) */
+    u8              opI;                  /* i field of current instruction */
+    u8              opJ;                  /* j field of current instruction */
+    u8              opK;                  /* k field of current instruction, if applicable */
+    u16             opD;                  /* D field of current instruction, if applicable */
+    u16             opQ;                  /* Q field of current instruction, if applicable */
+    BdpDescriptor   srcDesc;              /* source descriptor of BDP instruction */
+    BdpDescriptor   dstDesc;              /* destination descriptor of BDP instruction */
+    ConditionAction pendingAction;        /* pending monitor or user condition action */
+    u8              nextKey;              /* next P register key */
+    u64             nextP;                /* next P register value */
+    u8              macRegisterAddr;      /* maintenance access register number */
+    u8              macRegisterBuf[8];    /* maintenance access register contents */
+    u8              macRegisterBufIdx;    /* maintenance access register contents index */
+    u8              *controlStore;        /* control store image */
+    u32             controlStoreIdx;      /* control store image index */
+    u32             controlStoreBreak;    /* control store break address */
+    u8              *softMemories[7];     /* soft memory images */
+    u32             softMemoryIndices[7]; /* soft memory image indices */
+    u8              *registerFile;        /* internal register file */
+    u32             registerFileIdx;      /* internal register file index */
+    } Cpu180Context;
+
+/*
+**  CYBER 180 memory access modes
+*/
+typedef enum
+    {
+    AccessModeNone    = 0,
+    AccessModeExecute = 1,
+    AccessModeRead    = 2,
+    AccessModeWrite   = 4
+    } Cpu180AccessMode;
+
+/*
+**  CYBER 180 double precision floating point value
+*/
+typedef struct
+    {
+    u64 leftPart;
+    u64 rightPart;
+    } Cpu180Double;
 
 /*
 **  Model specific feature set.
@@ -279,6 +489,7 @@ typedef enum
     HasNoCmWrap            = 0x00002000,
     HasNoCejMej            = 0x00004000,
     Has175Float            = 0x00008000,
+    HasRingZeroTest        = 0x00010000,
 
     IsSeries6x00           = 0x01000000,
     IsSeries70             = 0x02000000,

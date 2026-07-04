@@ -135,7 +135,9 @@ static void cp3446Io(void);
 static void cp3446Activate(void);
 static void cp3446Disconnect(void);
 static void cp3446FlushCard(DevSlot *up, CpContext *cc);
+#if DEBUG
 static char *cp3446Func2String(PpWord funcCode);
+#endif
 
 /*
 **  ----------------
@@ -292,7 +294,7 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         hol = charset[i] & Mask12;
         if (hol != 0)
             {
-            cc->convTable[hol] = i;
+            cc->convTable[hol] = (char)i;
             }
         }
 
@@ -332,19 +334,14 @@ void cp3446RemoveCards(char *params)
     {
     CpContext *cc;
     DevSlot   *dp;
+    int       channelNo;
     time_t    currentTime;
-
-    int numParam;
-    int channelNo;
-    int equipmentNo;
-    int isuffix;
-
-    struct tm   t;
-    char        fnameNew[MaxFSPath + 64];
-    static char msgBuf[80] = "";
-    char        outBuf[400];
-
-    bool renameOK;
+    int       equipmentNo;
+    char      fnameNew[MaxFSPath + 64];
+    int       numParam;
+    int       isuffix;
+    bool      renameOK;
+    struct tm t;
 
     /*
     **  Operator wants to remove cards.
@@ -381,8 +378,7 @@ void cp3446RemoveCards(char *params)
     dp = dcc6681FindDevice((u8)channelNo, (u8)equipmentNo, DtCp3446);
     if (dp == NULL)
         {
-        sprintf(outBuf, "(cp3446 ) No card punch on channel %o and equipment %o\n", channelNo, equipmentNo);
-        opDisplay(outBuf);
+        opDisplay("(cp3446 ) No card punch on channel %o and equipment %o\n", channelNo, equipmentNo);
 
         return;
         }
@@ -397,10 +393,7 @@ void cp3446RemoveCards(char *params)
     if (dp->fcb[0] == NULL)
         {
         renameOK = TRUE;        //  Since nothing was open - we're not renaming
-        sprintf(outBuf, "(cp3446 ) cp3446RemoveCards: FCB is Null on channel %o equipment %o\n",
-                dp->channel->id,
-                dp->eqNo);
-        opDisplay(outBuf);
+        opDisplay("(cp3446 ) cp3446RemoveCards: FCB is Null on channel %o equipment %o\n", dp->channel->id, dp->eqNo);
         //  proceed to attempt to open a new FCB
         }
     else
@@ -410,8 +403,7 @@ void cp3446RemoveCards(char *params)
 
         if (ftell(dp->fcb[0]) == 0)
             {
-            sprintf(outBuf, "(cp3446 ) No cards have been punched on channel %o and equipment %o\n", channelNo, equipmentNo);
-            opDisplay(outBuf);
+            opDisplay("(cp3446 ) No cards have been punched on channel %o and equipment %o\n", channelNo, equipmentNo);
 
             return;
             }
@@ -449,8 +441,7 @@ void cp3446RemoveCards(char *params)
                 renameOK = TRUE;
                 break;
                 }
-            sprintf(outBuf, "(cp3446 ) Could not rename '%s' to '%s' - %s (retrying)\n", cc->curFileName, fnameNew, strerror(errno));
-            opDisplay(outBuf);
+            opDisplay("(cp3446 ) Could not rename '%s' to '%s' - %s (retrying)\n", cc->curFileName, fnameNew, strerror(errno));
             }
         }
 
@@ -464,14 +455,12 @@ void cp3446RemoveCards(char *params)
     */
     if (dp->fcb[0] == NULL)
         {
-        sprintf(outBuf, "(cp3446 ) Failed to open %s\n", cc->curFileName);
-        opDisplay(outBuf);
+        opDisplay("(cp3446 ) Failed to open %s\n", cc->curFileName);
 
         return;
         }
 
-    sprintf(outBuf, "(cp3446 ) Cards removed and available on '%s'\n", fnameNew);
-    opDisplay(outBuf);
+    opDisplay("(cp3446 ) Cards removed and available on '%s'\n", fnameNew);
     }
 
 /*
@@ -525,8 +514,7 @@ static FcStatus cp3446Func(PpWord funcCode)
         deviceid  = (int)active3000Device->eqNo;
         sprintf(cpdevid, "%o,%o", channelid, deviceid);
         cp3446RemoveCards(cpdevid);
-    //  fall through to "FcProcessed" response
-
+        //  fall through to "FcProcessed" response
     case FcCp3446SelectOffset:
     case Fc6681MasterClear:
         st = FcProcessed;
@@ -615,15 +603,13 @@ static void cp3446Io(void)
     CpContext *cc;
     char      c;
     PpWord    p;
-    char      outBuf[400];
 
     cc = (CpContext *)active3000Device->context[0];
 
     switch (active3000Device->fcode)
         {
     default:
-        sprintf(outBuf, "(cp3446 ) Unexpected IO for function %04o\n", active3000Device->fcode);
-        opDisplay(outBuf);
+        opDisplay("(cp3446 ) Unexpected IO for function %04o\n", active3000Device->fcode);
         break;
 
     case 0:
@@ -632,7 +618,7 @@ static void cp3446Io(void)
     case Fc6681DevStatusReq:
         if (!activeChannel->full)
             {
-            activeChannel->data = (cc->status & (cc->intMask | StCp3446NonIntStatus));
+            activeChannel->data = (PpWord)((cc->status & (cc->intMask | StCp3446NonIntStatus)));
             activeChannel->full = TRUE;
 #if DEBUG
             fprintf(cp3446Log, " %04o", activeChannel->data);
@@ -829,6 +815,7 @@ static void cp3446FlushCard(DevSlot *up, CpContext *cc)
     cc->lastNonBlankCol = -1;
     }
 
+#if DEBUG
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert function code to string.
 **
@@ -842,7 +829,6 @@ static char *cp3446Func2String(PpWord funcCode)
     {
     static char buf[40];
 
-#if DEBUG
     switch (funcCode)
         {
     case FcCp3446Deselect:
@@ -905,11 +891,13 @@ static char *cp3446Func2String(PpWord funcCode)
 
         return "6681MasterClear";
         }
-#endif
+
     sprintf(buf, "(cp3446 ) Unknown Function: %04o", funcCode);
 
     return (buf);
     }
+
+#endif
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Show card reader status (operator interface).
@@ -922,15 +910,11 @@ static char *cp3446Func2String(PpWord funcCode)
 void cp3446ShowStatus()
     {
     CpContext *cp;
-    char      outBuf[MaxFSPath + 128];
 
     for (cp = firstUnit; cp != NULL; cp = cp->nextUnit)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", "3446", cp->channelNo, cp->eqNo, cp->unitNo);
-        opDisplay(outBuf);
-        sprintf(outBuf, "   %-20s (", cp->curFileName);
-        opDisplay(outBuf);
-        opDisplay(cp->binary ? "bin" : "char");
+        opDisplay("    >   %-8s C%02o E%02o U%02o", "3446", cp->channelNo, cp->eqNo, cp->unitNo);
+        opDisplay("   %-20s (%s", cp->curFileName, cp->binary ? "bin" : "char");
         if (cp->rawCard)
             {
             opDisplay(", raw");

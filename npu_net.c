@@ -1,6 +1,7 @@
 /*--------------------------------------------------------------------------
 **
 **  Copyright (c) 2003-2011, Tom Hunter
+**                2019-2025, Kevin Jordan
 **
 **  Name: npu_net.c
 **
@@ -350,10 +351,10 @@ int npuNetRegisterConnType(int tcpPort, int claPort, int numPorts, int connType,
     **  Register this port.
     */
     ncbp->state    = StConnInit;
-    ncbp->tcpPort  = tcpPort;
-    ncbp->claPort  = claPort;
+    ncbp->tcpPort  = (u16)tcpPort;
+    ncbp->claPort  = (u8)claPort;
     ncbp->numPorts = numPorts;
-    ncbp->connType = connType;
+    ncbp->connType = (u8)connType;
     ncbp->connFd   = 0;
     ncbp->lstnFd   = 0;
     ncbp->hostName = NULL;
@@ -702,7 +703,7 @@ void npuNetCheckStatus(void)
             /*
             **  Receive a block of data.
             */
-            pcbp->inputCount = recv(pcbp->connFd, pcbp->inputData, MaxBuffer, 0);
+            pcbp->inputCount = (int)recv(pcbp->connFd, pcbp->inputData, MaxBuffer, 0);
             if (pcbp->inputCount <= 0)
                 {
                 notifyNetDisconnect[pcbp->ncbp->connType](pcbp);
@@ -755,7 +756,6 @@ void npuNetShowStatus()
     Pcb     *pcbp;
     char    peerAddress[24];
     u16     port;
-    char    outBuf[200];
 
     dp = NULL;
     for (channelNo = 0; channelNo < MaxChannels; channelNo++)
@@ -799,9 +799,8 @@ void npuNetShowStatus()
         case ConnTypeTrunk:
             if (ncbp->lstnFd > 0)
                 {
-                sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS "\n", dts, chEqStr, netGetLocalTcpAddress(ncbp->lstnFd), "",
-                        connTypes[ncbp->connType], "listening");
-                opDisplay(outBuf);
+                opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", dts, chEqStr, netGetLocalTcpAddress(ncbp->lstnFd), "",
+                          connTypes[ncbp->connType], "listening");
                 chEqStr[0] = '\0';
                 }
             break;
@@ -817,16 +816,14 @@ void npuNetShowStatus()
                     port);
             if (ncbp->state == StConnConnecting)
                 {
-                sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS "\n", dts, chEqStr, netGetLocalTcpAddress(ncbp->connFd),
-                        peerAddress, connTypes[ncbp->connType], "connecting");
-                opDisplay(outBuf);
+                opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", dts, chEqStr, netGetLocalTcpAddress(ncbp->connFd),
+                          peerAddress, connTypes[ncbp->connType], "connecting");
                 chEqStr[0] = '\0';
                 }
             else if (ncbp->state != StConnConnected)
                 {
-                sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS "\n", dts, chEqStr, ipAddress, peerAddress,
-                        connTypes[ncbp->connType], "disconnected");
-                opDisplay(outBuf);
+                opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", dts, chEqStr, ipAddress, peerAddress,
+                          connTypes[ncbp->connType], "disconnected");
                 chEqStr[0] = '\0';
                 }
             break;
@@ -840,9 +837,8 @@ void npuNetShowStatus()
         pcbp = &pcbs[i];
         if ((pcbp->ncbp != NULL) && (pcbp->connFd > 0))
             {
-            sprintf(outBuf, "    >   %-8s %-7s P%02x "FMTNETSTATUS "\n", dts, chEqStr, pcbp->claPort, netGetLocalTcpAddress(pcbp->connFd),
-                    netGetPeerTcpAddress(pcbp->connFd), connTypes[pcbp->ncbp->connType], connStates[pcbp->ncbp->state]),
-            opDisplay(outBuf);
+            opDisplay("    >   %-8s %-7s P%02x "FMTNETSTATUS "\n", dts, chEqStr, pcbp->claPort, netGetLocalTcpAddress(pcbp->connFd),
+                      netGetPeerTcpAddress(pcbp->connFd), connTypes[pcbp->ncbp->connType], connStates[pcbp->ncbp->state]),
             chEqStr[0] = '\0';
             }
         }
@@ -898,7 +894,7 @@ static int npuNetRegisterClaPort(Ncb *ncbp)
         pcbp = &pcbs[i];
         if (pcbp->claPort == 0)
             {
-            pcbp->claPort   = i;
+            pcbp->claPort   = (u8)i;
             pcbp->ncbp      = ncbp;
             pcbp->inputData = (u8 *)malloc(MaxBuffer);
             if (pcbp->inputData == NULL)
@@ -1091,8 +1087,7 @@ static int npuNetCreateConnections(void)
                 {
                 continue;                               // listen-only
                 }
-
-        // fall through
+            // else fall through
         case ConnTypeRevHasp:
             switch (ncbp->state)
                 {
@@ -1337,8 +1332,7 @@ static void *npuNetThread(void *param)
                 {
                 continue;        // already listening on this port
                 }
-
-        // else fall through
+            // else fall through
         case ConnTypeRaw:
         case ConnTypePterm:
         case ConnTypeRs232:

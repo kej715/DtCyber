@@ -126,11 +126,6 @@
 #define Fp0D1                      0xEC98  // fingerprint of the 0D1 macro image
 
 /*
-**  Misc constants.
-*/
-#define CyclesOneSecond            100000
-
-/*
 **  -----------------------
 **  Private Macro Functions
 **  -----------------------
@@ -378,7 +373,7 @@ bool cciHipUplineBlockImpl(NpuBuffer *bp)
             {
             prus = 1;
             }
-        cciHipWriteNpuStatus(StNpuInputAvailPru | (prus << 10));
+        cciHipWriteNpuStatus((PpWord)(StNpuInputAvailPru | (prus << 10)));
         }
     else if (bp->numBytes <= 256)
         {
@@ -744,8 +739,10 @@ static FcStatus cciHipFunc(PpWord funcCode)
 **------------------------------------------------------------------------*/
 static void cciHipIo(void)
     {
-    PpWord orderLength;
     u8     orderCode;
+#if DEBUG > 0
+    PpWord orderLength;
+#endif
 
     switch (activeDevice->fcode)
         {
@@ -890,8 +887,8 @@ static void cciHipIo(void)
             cci->regOrder       = activeChannel->data;
             activeChannel->full = FALSE;
             orderCode           = cci->regOrder >> 9;
-            orderLength         = cci->regOrder & 0x1FF;
 #if (DEBUG > 0)
+            orderLength         = cci->regOrder & 0x1FF;
             fprintf(cciLog, "(cci-hip) Order Word Code %x Length %x\n", orderCode, orderLength);
 #endif
 
@@ -945,7 +942,7 @@ static void cciHipIo(void)
     case FcNpuOutMemAddr1:
         if (activeChannel->full)
             {
-            cci->memoryAddress  = (cci->tempMemAddr0 << 8) | activeChannel->data;
+            cci->memoryAddress  = (u16)((cci->tempMemAddr0 << 8) | activeChannel->data);
             activeChannel->full = FALSE;
 #if (DEBUG > 1)
             fprintf(cciLog, "  %05X", cci->memoryAddress);
@@ -962,8 +959,7 @@ static void cciHipIo(void)
 #if (DEBUG > 1)
                 fprintf(cciLog, "writing mem address %x\n", cci->memoryAddress);
 #endif
-                cci->memory[cci->memoryAddress] = (cci->tempWord << 8) |
-                                                  activeChannel->data;
+                cci->memory[cci->memoryAddress] = (u16)((cci->tempWord << 8) | activeChannel->data);
 
                 cci->halfWordTransferred = FALSE;
                 cci->memoryAddress++;

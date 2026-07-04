@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------
 **
-**  Copyright (c) 2003-2019, Kevin Jordan, Tom Hunter
+**  Copyright (c) 2019-2025, Kevin Jordan
 **
 **  Name: npu_lip.c
 **
@@ -61,10 +61,6 @@
 #include <errno.h>
 #include <sys/uio.h>
 #include <strings.h>
-#endif
-
-#if defined(__APPLE__)
-#include <execinfo.h>
 #endif
 
 /*
@@ -314,8 +310,7 @@ void npuLipProcessUplineData(Pcb *pcbp)
 
         case StTrunkRcvBlockLengthLo:
             pcbp->controls.lip.state       = StTrunkRcvBlockContent;
-            pcbp->controls.lip.blockLength = (*pcbp->controls.lip.stagingBuf << 8)
-                                             | pcbp->inputData[pcbp->controls.lip.inputIndex++];
+            pcbp->controls.lip.blockLength = (u16)((*pcbp->controls.lip.stagingBuf << 8) | pcbp->inputData[pcbp->controls.lip.inputIndex++]);
             if (pcbp->controls.lip.blockLength > MaxBuffer)
                 {
                 logDtError(LogErrorLocation, "Invalid block length %d received from %s\n",
@@ -508,9 +503,9 @@ void npuLipProcessDownlineData(NpuBuffer *bp)
 **------------------------------------------------------------------------*/
 static bool npuLipSendConnectRequest(Pcb *pcbp)
     {
-    char request[256];
-    int  len;
-    int  n;
+    char    request[256];
+    int     len;
+    ssize_t n;
 
     len = sprintf(request, "CONNECT %s %u %u\n", npuNetHostID, npuSvmCouplerNode, pcbp->controls.lip.remoteNode);
     n   = send(pcbp->connFd, request, len, 0);
@@ -581,7 +576,7 @@ static bool npuLipProcessConnectRequest(Pcb *pcbp)
     */
     token = strtok(NULL, " \r\n");
     len   = (int)strlen(token);
-    if ((token == NULL) || (len >= sizeof(hostID)))
+    if ((token == NULL) || (len >= (int)sizeof(hostID)))
         {
         return FALSE;
         }
@@ -845,7 +840,7 @@ static bool npuLipActivateTrunk(Pcb *pcbp)
     *mp++ = 0x01;                           // SFC: Logical link
     *mp++ = 0x0f;                           // NS=1, CS=1, Regulation level=3
 
-    bp->numBytes = (int)(mp - bp->data);
+    bp->numBytes = (u16)(mp - bp->data);
 
     npuBipRequestUplineTransfer(bp);
 
@@ -887,7 +882,7 @@ static bool npuLipDeactivateTrunk(Pcb *pcbp)
     *mp++ = 0x01;                           // SFC: Logical link
     *mp++ = 0x0c;                           // NS=1, CS=1, Regulation level=0
 
-    bp->numBytes = (int)(mp - bp->data);
+    bp->numBytes = (u16)(mp - bp->data);
 
     npuBipRequestUplineTransfer(bp);
 
@@ -912,7 +907,7 @@ static void npuLipSendQueuedData(Pcb *pcbp)
     u8        blockLen[2];
     NpuBuffer *bp;
     time_t    currentTime;
-    int       n;
+    ssize_t   n;
     static u8 ping[] = { 0, 0 };
 
 #if !defined(_WIN32)
@@ -1042,7 +1037,7 @@ static void npuLipSendQueuedData(Pcb *pcbp)
             }
 #endif
 
-        bp->offset += n;
+        bp->offset += (u16)n;
 
         if (bp->offset >= bp->numBytes)
             {
@@ -1116,32 +1111,6 @@ static void npuLipLogBytes(u8 *bytes, int len)
             hexCol = HexColumn(npuLipLogBytesCol);
             }
         }
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Log a stack trace
-**
-**  Parameters:     none
-**
-**  Returns:        nothing
-**
-**------------------------------------------------------------------------*/
-static void npuLipPrintStackTrace(FILE *fp)
-    {
-#if defined(__APPLE__)
-    void *callstack[128];
-    int  i;
-    int  frames;
-    char **strs;
-
-    frames = backtrace(callstack, 128);
-    strs   = backtrace_symbols(callstack, frames);
-    for (i = 1; i < frames; ++i)
-        {
-        fprintf(fp, "%s\n", strs[i]);
-        }
-    free(strs);
-#endif
     }
 
 #endif // DEBUG

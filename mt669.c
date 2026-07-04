@@ -294,7 +294,9 @@ static void mt669FuncRead(void);
 static void mt669FuncForespace(void);
 static void mt669FuncBackspace(void);
 static void mt669FuncReadBkw(void);
+#if DEBUG
 static char *mt669Func2String(PpWord funcCode);
+#endif
 
 /*
 **  ----------------
@@ -530,7 +532,6 @@ void mt669LoadTape(char *params)
     TapeParam   *tp;
     FILE        *fcb;
     u8          unitMode;
-    char        outBuf[400];
 
     /*
     **  Operator inserted a new tape.
@@ -590,8 +591,7 @@ void mt669LoadTape(char *params)
     tp = (TapeParam *)dp->context[unitNo];
     if (tp == NULL)
         {
-        sprintf(outBuf, "(mt669  ) Unit %d not allocated\n", unitNo);
-        opDisplay(outBuf);
+        opDisplay("(mt669  ) Unit %d not allocated\n", unitNo);
 
         return;
         }
@@ -601,8 +601,7 @@ void mt669LoadTape(char *params)
     */
     if (dp->fcb[unitNo] != NULL)
         {
-        sprintf(outBuf, "(mt669  ) Unit %d not unloaded\n", unitNo);
-        opDisplay(outBuf);
+        opDisplay("(mt669  ) Unit %d not unloaded\n", unitNo);
 
         return;
         }
@@ -630,8 +629,7 @@ void mt669LoadTape(char *params)
     */
     if (fcb == NULL)
         {
-        sprintf(outBuf, "(mt669  ) Failed to open %s\n", str);
-        opDisplay(outBuf);
+        opDisplay("(mt669  ) Failed to open %s\n", str);
 
         return;
         }
@@ -649,8 +647,7 @@ void mt669LoadTape(char *params)
     tp->blockNo   = 0;
     tp->unitReady = TRUE;
 
-    sprintf(outBuf, "(mt669  ) Successfully loaded %s\n", str);
-    opDisplay(outBuf);
+    opDisplay("(mt669  ) Successfully loaded %s\n", str);
     }
 
 /*--------------------------------------------------------------------------
@@ -670,7 +667,6 @@ void mt669UnloadTape(char *params)
     int       equipmentNo;
     int       unitNo;
     TapeParam *tp;
-    char      outBuf[100];
 
     /*
     **  Operator inserted a new tape.
@@ -716,8 +712,7 @@ void mt669UnloadTape(char *params)
     tp = (TapeParam *)dp->context[unitNo];
     if (tp == NULL)
         {
-        sprintf(outBuf, "(mt669  ) Unit %d not allocated\n", unitNo);
-        opDisplay(outBuf);
+        opDisplay("(mt669  ) Unit %d not allocated\n", unitNo);
 
         return;
         }
@@ -727,8 +722,7 @@ void mt669UnloadTape(char *params)
     */
     if (dp->fcb[unitNo] == NULL)
         {
-        sprintf(outBuf, "(mt669  ) Unit %d not loaded\n", unitNo);
-        opDisplay(outBuf);
+        opDisplay("(mt669  ) Unit %d not loaded\n", unitNo);
 
         return;
         }
@@ -755,8 +749,7 @@ void mt669UnloadTape(char *params)
     tp->blockCrc    = 0;
     tp->blockNo     = 0;
 
-    sprintf(outBuf, "(mt669  ) Successfully unloaded MT669 on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
-    opDisplay(outBuf);
+    opDisplay("(mt669  ) Successfully unloaded MT669 on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -771,16 +764,13 @@ void mt669UnloadTape(char *params)
 void mt669ShowTapeStatus()
     {
     TapeParam *tp = firstTape;
-    char      outBuf[MaxFSPath + 128];
 
     while (tp)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", "669", tp->channelNo, tp->eqNo, tp->unitNo);
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s C%02o E%02o U%02o", "669", tp->channelNo, tp->eqNo, tp->unitNo);
         if (tp->unitReady)
             {
-            sprintf(outBuf, " %c %s\n", tp->ringIn ? 'w' : 'r', tp->fileName);
-            opDisplay(outBuf);
+            opDisplay(" %c %s\n", tp->ringIn ? 'w' : 'r', tp->fileName);
             }
         else
             {
@@ -895,7 +885,7 @@ static void mt669SetupGeneralStatus(TapeParam *tp)
             }
         }
 
-    cp->deviceStatus[2] = (tp->blockCrc & Mask9) << 3;
+    cp->deviceStatus[2] = (PpWord)((tp->blockCrc & Mask9) << 3);
     }
 
 /*--------------------------------------------------------------------------
@@ -988,8 +978,8 @@ static void mt669SetupCumulativeStatus(TapeParam *tp)
     **  Report: forward tape motion, speed=100 ips, density=1600 cpi
     **  and configured unit number.
     */
-    cp->deviceStatus[1] = 00600 + activeDevice->selectedUnit;
-    cp->deviceStatus[2] = activeDevice->selectedUnit << 8;
+    cp->deviceStatus[1] = (PpWord)(00600 + activeDevice->selectedUnit);
+    cp->deviceStatus[2] = (PpWord)(activeDevice->selectedUnit << 8);
     cp->deviceStatus[3] = 0;
     cp->deviceStatus[4] = 0;
     cp->deviceStatus[5] = 0;
@@ -1055,7 +1045,6 @@ static FcStatus mt669Func(PpWord funcCode)
     i8        unitNo;
     TapeParam *tp;
     CtrlParam *cp = activeDevice->controllerContext;
-    i32       position;
 
     unitNo = activeDevice->selectedUnit;
     if (unitNo != -1)
@@ -1261,7 +1250,6 @@ static FcStatus mt669Func(PpWord funcCode)
             {
             mt669ResetStatus(tp);
             tp->bp       = tp->ioBuffer;
-            position     = ftell(activeDevice->fcb[unitNo]);
             tp->blockNo += 1;
 
             /*
@@ -1334,8 +1322,7 @@ static FcStatus mt669Func(PpWord funcCode)
     */
     case Fc669WriteOdd12:
         funcCode = Fc669WriteOdd;
-
-    /* fall through */
+        // fall through
     case Fc669Write:
     case Fc669WriteOdd:
         if ((unitNo != -1) && tp->unitReady && tp->ringIn)
@@ -2135,7 +2122,7 @@ static void mt669PackAndConvert(u32 recLen)
 
             if ((i & 1) == 0)
                 {
-                *op = (c1 & Mask6) << 6;
+                *op = (PpWord)((c1 & Mask6) << 6);
                 }
             else
                 {
@@ -2169,7 +2156,7 @@ static void mt669FuncRead(void)
     u32       recLen2;
     i8        unitNo;
     TapeParam *tp;
-    i32       position;
+    long      position;
 
     unitNo = activeDevice->selectedUnit;
     tp     = (TapeParam *)activeDevice->context[unitNo];
@@ -2335,7 +2322,7 @@ static void mt669FuncReadBkw(void)
     u32       recLen2;
     i8        unitNo;
     TapeParam *tp;
-    i32       position;
+    long      position;
 
     unitNo = activeDevice->selectedUnit;
     tp     = (TapeParam *)activeDevice->context[unitNo];
@@ -2516,7 +2503,7 @@ static void mt669FuncForespace(void)
     u32       recLen2;
     i8        unitNo;
     TapeParam *tp;
-    i32       position;
+    long      position;
 
     unitNo = activeDevice->selectedUnit;
     tp     = (TapeParam *)activeDevice->context[unitNo];
@@ -2662,7 +2649,7 @@ static void mt669FuncBackspace(void)
     u32       recLen2;
     i8        unitNo;
     TapeParam *tp;
-    i32       position;
+    long      position;
 
     unitNo = activeDevice->selectedUnit;
     tp     = (TapeParam *)activeDevice->context[unitNo];
@@ -2792,6 +2779,7 @@ static void mt669FuncBackspace(void)
         }
     }
 
+#if DEBUG
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert function code to string.
 **
@@ -2805,7 +2793,6 @@ static char *mt669Func2String(PpWord funcCode)
     {
     static char buf[40];
 
-#if DEBUG
     switch (funcCode)
         {
     case Fc669FormatUnit:
@@ -3045,10 +3032,12 @@ static char *mt669Func2String(PpWord funcCode)
     case Fc669ClearUnit:
         return "Fc669ClearUnit";
         }
-#endif
+
     sprintf(buf, "(mt669  ) Unknown Function: %04o", funcCode);
 
     return (buf);
     }
+
+#endif
 
 /*---------------------------  End Of File  ------------------------------*/

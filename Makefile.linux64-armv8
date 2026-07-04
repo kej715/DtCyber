@@ -22,11 +22,18 @@
 #
 #--------------------------------------------------------------------------
 
-LIBS    = -lm -lX11 -lpthread -lrt
+# Detect Xft include and lib flags via pkg-config, fallback to defaults if not found
+PKG_XFT_CFLAGS := $(shell pkg-config --cflags xft 2>/dev/null)
+PKG_XFT_LIBS   := $(shell pkg-config --libs xft 2>/dev/null)
+
+XFT_CFLAGS ?= $(if $(PKG_XFT_CFLAGS),$(PKG_XFT_CFLAGS),-I/usr/include/freetype2)
+XFT_LIBS   ?= $(if $(PKG_XFT_LIBS),$(PKG_XFT_LIBS),-lXft -lfontconfig -lfreetype)
+
+CFLAGS  = -O2 -I. $(INCL) -std=gnu99 -mcpu=cortex-a53 -mfpu=neon-fp-armv8 $(XFT_CFLAGS)
+#CFLAGS  = -Og -g -rdynamic -I. $(INCL) -std=gnu99 -mcpu=cortex-a53 -mfpu=neon-fp-armv8 $(XFT_CFLAGS)
+LIBS    = -lm -lX11 -lpthread -lrt $(XFT_LIBS)
 LDFLAGS = -s -L/usr/lib/arm-linux-gnueabihf
 INCL    = -I/usr/include/X11
-
-CFLAGS  = -O2 -I. $(INCL) -std=gnu99 -mcpu=cortex-a53 -mfpu=neon-fp-armv8
 
 HDRS    =   const.h                 \
             cyber_channel_linux.h   \
@@ -35,12 +42,14 @@ HDRS    =   const.h                 \
             proto.h                 \
             types.h
 
-OBJS    =   cdcnet.o                \
+OBJS    =   bdp180.o                \
+            cdcnet.o                \
             channel.o               \
             charset.o               \
             console.o               \
             cp3446.o                \
             cpu.o                   \
+            cpu180.o                \
             cr3447.o                \
             cr405.o                 \
             cray_station.o          \
@@ -54,6 +63,7 @@ OBJS    =   cdcnet.o                \
             dsa311.o                \
             dump.o                  \
             float.o                 \
+            float180.o              \
             fsmon.o                 \
             init.o                  \
             interlock_channel.o     \

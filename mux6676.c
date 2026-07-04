@@ -1,6 +1,7 @@
 /*--------------------------------------------------------------------------
 **
 **  Copyright (c) 2003-2011, Tom Hunter
+**                2022-2025, Kevin Jordan
 **
 **  Name: mux6676.c
 **
@@ -142,10 +143,9 @@ typedef struct muxParam
 static FcStatus mux667xFunc(PpWord funcCode);
 static void mux667xActivate(void);
 static void mux667xCheckIo(MuxParam *mp);
-static void mux667xCreateThread(DevSlot *dp);
 static void mux667xClose(PortParam *pp);
 static void mux667xDisconnect(void);
-static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params);
+static void mux667xInit(u8 eqNo, u8 channelNo, u8 muxType, char *params);
 static void mux667xIo(void);
 static bool mux667xInputRequired(MuxParam *mp);
 
@@ -244,7 +244,6 @@ void mux6676ShowStatus()
     PortGroup *gp;
     MuxParam  *mp;
     char      *mts;
-    char      outBuf[200];
     PortParam *pp;
 
     for (mp = firstMux; mp != NULL; mp = mp->next)
@@ -263,18 +262,14 @@ void mux6676ShowStatus()
             {
             if (gp->listenFd > 0)
                 {
-                sprintf(outBuf, "    >   %-8s C%02o E%02o     ", mts, mp->channelNo, mp->eqNo);
-                opDisplay(outBuf);
-                sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(gp->listenFd), "", cts, "listening");
-                opDisplay(outBuf);
+                opDisplay("    >   %-8s C%02o E%02o     ", mts, mp->channelNo, mp->eqNo);
+                opDisplay(FMTNETSTATUS "\n", netGetLocalTcpAddress(gp->listenFd), "", cts, "listening");
                 for (i = 0, pp = mp->ports + gp->portIndex; i < gp->portCount; i++, pp++)
                     {
                     if (pp->active && (pp->connFd > 0))
                         {
-                        sprintf(outBuf, "    >   %-8s         P%02o ", mts, pp->id);
-                        opDisplay(outBuf);
-                        sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), cts, "connected");
-                        opDisplay(outBuf);
+                        opDisplay("    >   %-8s         P%02o ", mts, pp->id);
+                        opDisplay(FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), cts, "connected");
                         }
                     }
                 }
@@ -307,7 +302,7 @@ void mux6676ShowStatus()
 **  consecutive multiplexor ports associated with the TCP port.
 **
 **------------------------------------------------------------------------*/
-static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
+static void mux667xInit(u8 eqNo, u8 channelNo, u8 muxType, char *params)
     {
     char               *cp;
     DevSlot            *dp;
@@ -538,9 +533,9 @@ static void mux667xInit(u8 eqNo, u8 channelNo, int muxType, char *params)
 static FcStatus mux667xFunc(PpWord funcCode)
     {
     u8       eqNo;
-    MuxParam *mp = (MuxParam *)activeDevice->context[0];
 
 #if DEBUG_PPIO
+    MuxParam *mp = (MuxParam *)activeDevice->context[0];
 #if DEBUG_6671
     if ((mp->type == DtMux6671) && (DEBUG_PPIO_VERBOSE != 0))
         {
@@ -678,8 +673,7 @@ static void mux667xIo(void)
                             {
                             break;
                             }
-
-                    // fall through if 6671
+                        // fall through if 6671
                     case 4:
                         if (mp->type == DtMux6676)
                             {
@@ -877,7 +871,7 @@ static void mux667xCheckIo(MuxParam *mp)
     PortGroup      *gp;
     int            i;
     int            maxFd;
-    int            n;
+    ssize_t        n;
     int            optEnable = 1;
     PortParam      *pp;
     fd_set         readFds;
@@ -968,7 +962,7 @@ static void mux667xCheckIo(MuxParam *mp)
                         }
 #endif
 #endif
-                    pp->inInIdx += n;
+                    pp->inInIdx += (int)n;
                     }
                 else
                     {
@@ -998,7 +992,7 @@ static void mux667xCheckIo(MuxParam *mp)
                         }
 #endif
 #endif
-                    pp->outOutIdx += n;
+                    pp->outOutIdx += (int)n;
                     if (pp->outOutIdx >= pp->outInIdx)
                         {
                         pp->outInIdx  = 0;

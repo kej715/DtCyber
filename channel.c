@@ -137,7 +137,6 @@ void channelDisplayContext()
     u8      devFCB;
     DevSlot *dp;
     u8      i;
-    char    outBuf[64];
 
     //             >   00 Deadstart Panel                (01)     1           
     opDisplay("    >   Ch First Device Type              (DT) # Devices # Files\n");
@@ -286,12 +285,7 @@ void channelDisplayContext()
                 devTypeName = "Unknown Device";
                 break;
                 }
-            sprintf(outBuf, "    >   %02o %-30s (%02o)",
-                    channel[ch].id,
-                    devTypeName,
-                    dp->devType
-                    );
-            opDisplay(outBuf);
+            opDisplay("    >   %02o %-30s (%02o)", channel[ch].id, devTypeName, dp->devType);
 
             devNum = 0;
             devFCB = 0;
@@ -310,8 +304,7 @@ void channelDisplayContext()
 
             if (devNum > 0)
                 {
-                sprintf(outBuf, " %6d   ", devNum);
-                opDisplay(outBuf);
+                opDisplay(" %6d   ", devNum);
                 }
             else
                 {
@@ -320,8 +313,7 @@ void channelDisplayContext()
 
             if (devFCB > 0)
                 {
-                sprintf(outBuf, " %4d", devFCB);
-                opDisplay(outBuf);
+                opDisplay(" %4d", devFCB);
                 }
             opDisplay("\n");
             }
@@ -338,11 +330,8 @@ void channelDisplayContext()
 **------------------------------------------------------------------------*/
 void channelTerminate(void)
     {
-#pragma warning(push)
-#pragma warning(disable: 6001)
     DevSlot *dp;
     DevSlot *fp;
-#pragma warning(pop)
     u8 i;
 
     /*
@@ -597,11 +586,17 @@ void channelIo(void)
     /*
     **  Perform request.
     */
-    if ((activeChannel->active || (activeChannel->id == ChClock))
-        && (activeChannel->ioDevice != NULL))
+    if (activeChannel->active || (activeChannel->id == ChClock))
         {
-        activeDevice = activeChannel->ioDevice;
-        activeDevice->io();
+        if (activeChannel->ioDevice != NULL)
+            {
+            activeDevice = activeChannel->ioDevice;
+            activeDevice->io();
+            }
+        else if ((activeChannel->id == ChMaintenance) && ((features & HasMaintenanceChannel) != 0))
+            {
+            mchCheckTimeout();
+            }
         }
     }
 
@@ -663,10 +658,11 @@ void channelOut(void)
         if (activeDevice->devType == DtPciChannel)
             {
             activeDevice->out(activeChannel->data);
-
-            return;
             }
         }
+#if CcDebug == 1
+    traceChannelIo(activeChannel->id);
+#endif
     }
 
 /*--------------------------------------------------------------------------
@@ -685,10 +681,11 @@ void channelIn(void)
         if (activeDevice->devType == DtPciChannel)
             {
             activeChannel->data = activeDevice->in();
-
-            return;
             }
         }
+#if CcDebug == 1
+    traceChannelIo(activeChannel->id);
+#endif
     }
 
 /*--------------------------------------------------------------------------

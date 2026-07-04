@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------
 **
-**  Copyright (c) 2003-2019, Kevin Jordan, Tom Hunter
+**  Copyright (c) 2003-2019, Kevin Jordan
 **
 **  Name: mdi.c
 **
@@ -53,10 +53,6 @@
 #include "types.h"
 #include "proto.h"
 #include "npu.h"
-
-#if defined(__APPLE__)
-#include <execinfo.h>
-#endif
 
 /*
 **  -----------------
@@ -202,20 +198,15 @@ static void mdiHipDisconnect(void);
 static PpWord mdiHipReadMdiStatus(void);
 static bool mdiHipDownlineBlockImpl(NpuBuffer *bp);
 static bool mdiHipUplineBlockImpl(NpuBuffer *bp);
-static char *mdiHipFunc2String(PpWord funcCode);
 
 #if DEBUG
+static char *mdiHipFunc2String(PpWord funcCode);
 static void mdiLogBuffer(u8 *dp);
 static void mdiLogBytes(int b);
 static void mdiLogFlush(void);
 static void mdiLogPpWord(int b);
 static char *mdiPfc2String(u8 pfc);
 static char *mdiSfc2String(u8 sfc);
-
-#endif
-#if defined(__APPLE__)
-static void mdiPrintStackTrace(FILE *fp);
-
 #endif
 
 /*
@@ -432,7 +423,7 @@ bool mdiHipUplineBlockImpl(NpuBuffer *bp)
             {
             logDtError(LogErrorLocation, "MDI upline block rejected, CN=%02X, BT=%02X, PDU size=%d\n", bp->data[BlkOffCN],
                        bp->data[BlkOffBTBSN] & BlkMaskBT, bp->numBytes);
-            mdiPrintStackTrace(stderr);
+            traceStack(stderr);
             }
 #endif
 
@@ -894,7 +885,7 @@ static void mdiHipDisconnect(void)
             ** The last two bytes transmitted by PIP provide the true message length including
             ** the 19-byte MDI header.
             */
-            mbp->numBytes = ((mbp->data[mbp->numBytes - 2] << 8) | mbp->data[mbp->numBytes - 1]) - MdiHdrLen;
+            mbp->numBytes = (u16)(((mbp->data[mbp->numBytes - 2] << 8) | mbp->data[mbp->numBytes - 1]) - MdiHdrLen);
 #if DEBUG
             fprintf(npuLog, "    PDU size=%d\n", mbp->numBytes);
 #endif
@@ -1010,6 +1001,7 @@ static PpWord mdiHipReadMdiStatus(void)
     return (mdiStatus);
     }
 
+#if DEBUG
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert function code to string.
 **
@@ -1023,7 +1015,6 @@ static char *mdiHipFunc2String(PpWord funcCode)
     {
     static char buf[30];
 
-#if DEBUG
     switch (funcCode)
         {
     case FcMdiMasterClear:
@@ -1074,7 +1065,6 @@ static char *mdiHipFunc2String(PpWord funcCode)
     case FcMdiReqProtoVersion:
         return "FcMdiReqProtoVersion";
         }
-#endif
     if ((funcCode >= FcMdiReqProtoVersion) && (funcCode <= FcMdiReqProtoVersion + 0177))
         {
         return "FcMdiReqProtoVersion";
@@ -1086,8 +1076,6 @@ static char *mdiHipFunc2String(PpWord funcCode)
         return (buf);
         }
     }
-
-#if DEBUG
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert primary function code to string.
@@ -1446,31 +1434,5 @@ static void mdiLogBytes(int parcel)
     }
 
 #endif
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Log a stack trace
-**
-**  Parameters:     none
-**
-**  Returns:        nothing
-**
-**------------------------------------------------------------------------*/
-static void mdiPrintStackTrace(FILE *fp)
-    {
-#if defined(__APPLE__)
-    void *callstack[128];
-    int  i;
-    int  frames;
-    char **strs;
-
-    frames = backtrace(callstack, 128);
-    strs   = backtrace_symbols(callstack, frames);
-    for (i = 1; i < frames; ++i)
-        {
-        fprintf(fp, "%s\n", strs[i]);
-        }
-    free(strs);
-#endif
-    }
 
 /*---------------------------  End Of File  ------------------------------*/

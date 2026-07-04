@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------
 **
-**  Copyright (c) 2003-2011, Tom Hunter
+**  Copyright (c) 2003-2025, Tom Hunter, Kevin Jordan
 **
 **  Name: cpu.c
 **
@@ -82,7 +82,7 @@
 */
 typedef struct opDispatch
     {
-    void (*execute)(CpuContext *activeCpu);
+    void (*execute)(Cpu170Context *activeCpu);
     u8 length;
     } OpDispatch;
 
@@ -107,105 +107,109 @@ static void cpuReleaseMutex(pthread_mutex_t *mutexp);
 
 static u32  cpuAdd18(u32 op1, u32 op2);
 static u32  cpuAdd24(u32 op1, u32 op2);
-static u32  cpuAddRa(CpuContext *activeCpu, u32 op);
-static void cpuCmuCompareCollated(CpuContext *activeCpu);
-static void cpuCmuCompareUncollated(CpuContext *activeCpu);
-static bool cpuCmuGetByte(CpuContext *activeCpu, u32 address, u32 pos, u8 *byte);
-static void cpuCmuMoveDirect(CpuContext *activeCpu);
-static void cpuCmuMoveIndirect(CpuContext *activeCpu);
-static bool cpuCmuPutByte(CpuContext *activeCpu, u32 address, u32 pos, u8 byte);
-static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs);
-static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs);
-static void cpuExchangeJump(CpuContext *activeCpu, u32 address, bool doChangeMode);
-static void cpuFetchOpWord(CpuContext *activeCpu);
-static void cpuFloatCheck(CpuContext *activeCpu, CpWord value);
-static void cpuFloatExceptionHandler(CpuContext *activeCpu);
-static void cpuOpIllegal(CpuContext *activeCpu);
-static bool cpuReadMem(CpuContext *activeCpu, u32 address, CpWord *data);
-static void cpuRegASemantics(CpuContext *activeCpu);
+static void cpuCmuCompareCollated(Cpu170Context *activeCpu);
+static void cpuCmuCompareUncollated(Cpu170Context *activeCpu);
+static bool cpuCmuGetByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 *byte);
+static void cpuCmuMoveDirect(Cpu170Context *activeCpu);
+static void cpuCmuMoveIndirect(Cpu170Context *activeCpu);
+static bool cpuCmuPutByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 byte);
+static void cpuEcsTransfer(Cpu170Context *activeCpu, bool writeToEcs);
+static void cpuEcsWord(Cpu170Context *activeCpu, bool writeToEcs);
+static void cpuExchangeJump(Cpu170Context *activeCpu, u32 address, bool doChangeMode);
+static void cpuExchangeTo180(Cpu170Context *activeCpu, bool setSysCall, bool setExitModeHalt);
+static void cpuFetchOpWord(Cpu170Context *activeCpu);
+static void cpuFloatCheck(Cpu170Context *activeCpu, CpWord value);
+static void cpuFloatExceptionHandler(Cpu170Context *activeCpu);
+static void cpuInitiateExitTo180(Cpu170Context *activeCpu);
+static void cpuOpIllegal(Cpu170Context *activeCpu);
+static bool cpuReadMem(Cpu170Context *activeCpu, u32 address, CpWord *data);
+static void cpuRegASemantics(Cpu170Context *activeCpu);
+static void cpuSetErrorExitPending(Cpu170Context *activeCpu);
 static u32  cpuSubtract18(u32 op1, u32 op2);
-static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem);
-static void cpuUemWord(CpuContext *activeCpu, bool writeToUem);
-static void cpuVoidIwStack(CpuContext *activeCpu, u32 branchAddr);
-static bool cpuWriteMem(CpuContext *activeCpu, u32 address, CpWord *data);
+static void cpuTrapTo180(Cpu170Context *activeCpu);
+static void cpuUemTransfer(Cpu170Context *activeCpu, bool writeToUem);
+static void cpuUemWord(Cpu170Context *activeCpu, bool writeToUem);
+static bool cpuWriteMem(Cpu170Context *activeCpu, u32 address, CpWord *data);
 
-static void cpOp00(CpuContext *activeCpu);
-static void cpOp01(CpuContext *activeCpu);
-static void cpOp02(CpuContext *activeCpu);
-static void cpOp03(CpuContext *activeCpu);
-static void cpOp04(CpuContext *activeCpu);
-static void cpOp05(CpuContext *activeCpu);
-static void cpOp06(CpuContext *activeCpu);
-static void cpOp07(CpuContext *activeCpu);
-static void cpOp10(CpuContext *activeCpu);
-static void cpOp11(CpuContext *activeCpu);
-static void cpOp12(CpuContext *activeCpu);
-static void cpOp13(CpuContext *activeCpu);
-static void cpOp14(CpuContext *activeCpu);
-static void cpOp15(CpuContext *activeCpu);
-static void cpOp16(CpuContext *activeCpu);
-static void cpOp17(CpuContext *activeCpu);
-static void cpOp20(CpuContext *activeCpu);
-static void cpOp21(CpuContext *activeCpu);
-static void cpOp22(CpuContext *activeCpu);
-static void cpOp23(CpuContext *activeCpu);
-static void cpOp24(CpuContext *activeCpu);
-static void cpOp25(CpuContext *activeCpu);
-static void cpOp26(CpuContext *activeCpu);
-static void cpOp27(CpuContext *activeCpu);
-static void cpOp30(CpuContext *activeCpu);
-static void cpOp31(CpuContext *activeCpu);
-static void cpOp32(CpuContext *activeCpu);
-static void cpOp33(CpuContext *activeCpu);
-static void cpOp34(CpuContext *activeCpu);
-static void cpOp35(CpuContext *activeCpu);
-static void cpOp36(CpuContext *activeCpu);
-static void cpOp37(CpuContext *activeCpu);
-static void cpOp40(CpuContext *activeCpu);
-static void cpOp41(CpuContext *activeCpu);
-static void cpOp42(CpuContext *activeCpu);
-static void cpOp43(CpuContext *activeCpu);
-static void cpOp44(CpuContext *activeCpu);
-static void cpOp45(CpuContext *activeCpu);
-static void cpOp46(CpuContext *activeCpu);
-static void cpOp47(CpuContext *activeCpu);
-static void cpOp50(CpuContext *activeCpu);
-static void cpOp51(CpuContext *activeCpu);
-static void cpOp52(CpuContext *activeCpu);
-static void cpOp53(CpuContext *activeCpu);
-static void cpOp54(CpuContext *activeCpu);
-static void cpOp55(CpuContext *activeCpu);
-static void cpOp56(CpuContext *activeCpu);
-static void cpOp57(CpuContext *activeCpu);
-static void cpOp60(CpuContext *activeCpu);
-static void cpOp61(CpuContext *activeCpu);
-static void cpOp62(CpuContext *activeCpu);
-static void cpOp63(CpuContext *activeCpu);
-static void cpOp64(CpuContext *activeCpu);
-static void cpOp65(CpuContext *activeCpu);
-static void cpOp66(CpuContext *activeCpu);
-static void cpOp67(CpuContext *activeCpu);
-static void cpOp70(CpuContext *activeCpu);
-static void cpOp71(CpuContext *activeCpu);
-static void cpOp72(CpuContext *activeCpu);
-static void cpOp73(CpuContext *activeCpu);
-static void cpOp74(CpuContext *activeCpu);
-static void cpOp75(CpuContext *activeCpu);
-static void cpOp76(CpuContext *activeCpu);
-static void cpOp77(CpuContext *activeCpu);
+static void cpOp00(Cpu170Context *activeCpu);
+static void cpOp01(Cpu170Context *activeCpu);
+static void cpOp02(Cpu170Context *activeCpu);
+static void cpOp03(Cpu170Context *activeCpu);
+static void cpOp04(Cpu170Context *activeCpu);
+static void cpOp05(Cpu170Context *activeCpu);
+static void cpOp06(Cpu170Context *activeCpu);
+static void cpOp07(Cpu170Context *activeCpu);
+static void cpOp10(Cpu170Context *activeCpu);
+static void cpOp11(Cpu170Context *activeCpu);
+static void cpOp12(Cpu170Context *activeCpu);
+static void cpOp13(Cpu170Context *activeCpu);
+static void cpOp14(Cpu170Context *activeCpu);
+static void cpOp15(Cpu170Context *activeCpu);
+static void cpOp16(Cpu170Context *activeCpu);
+static void cpOp17(Cpu170Context *activeCpu);
+static void cpOp20(Cpu170Context *activeCpu);
+static void cpOp21(Cpu170Context *activeCpu);
+static void cpOp22(Cpu170Context *activeCpu);
+static void cpOp23(Cpu170Context *activeCpu);
+static void cpOp24(Cpu170Context *activeCpu);
+static void cpOp25(Cpu170Context *activeCpu);
+static void cpOp26(Cpu170Context *activeCpu);
+static void cpOp27(Cpu170Context *activeCpu);
+static void cpOp30(Cpu170Context *activeCpu);
+static void cpOp31(Cpu170Context *activeCpu);
+static void cpOp32(Cpu170Context *activeCpu);
+static void cpOp33(Cpu170Context *activeCpu);
+static void cpOp34(Cpu170Context *activeCpu);
+static void cpOp35(Cpu170Context *activeCpu);
+static void cpOp36(Cpu170Context *activeCpu);
+static void cpOp37(Cpu170Context *activeCpu);
+static void cpOp40(Cpu170Context *activeCpu);
+static void cpOp41(Cpu170Context *activeCpu);
+static void cpOp42(Cpu170Context *activeCpu);
+static void cpOp43(Cpu170Context *activeCpu);
+static void cpOp44(Cpu170Context *activeCpu);
+static void cpOp45(Cpu170Context *activeCpu);
+static void cpOp46(Cpu170Context *activeCpu);
+static void cpOp47(Cpu170Context *activeCpu);
+static void cpOp50(Cpu170Context *activeCpu);
+static void cpOp51(Cpu170Context *activeCpu);
+static void cpOp52(Cpu170Context *activeCpu);
+static void cpOp53(Cpu170Context *activeCpu);
+static void cpOp54(Cpu170Context *activeCpu);
+static void cpOp55(Cpu170Context *activeCpu);
+static void cpOp56(Cpu170Context *activeCpu);
+static void cpOp57(Cpu170Context *activeCpu);
+static void cpOp60(Cpu170Context *activeCpu);
+static void cpOp61(Cpu170Context *activeCpu);
+static void cpOp62(Cpu170Context *activeCpu);
+static void cpOp63(Cpu170Context *activeCpu);
+static void cpOp64(Cpu170Context *activeCpu);
+static void cpOp65(Cpu170Context *activeCpu);
+static void cpOp66(Cpu170Context *activeCpu);
+static void cpOp67(Cpu170Context *activeCpu);
+static void cpOp70(Cpu170Context *activeCpu);
+static void cpOp71(Cpu170Context *activeCpu);
+static void cpOp72(Cpu170Context *activeCpu);
+static void cpOp73(Cpu170Context *activeCpu);
+static void cpOp74(Cpu170Context *activeCpu);
+static void cpOp75(Cpu170Context *activeCpu);
+static void cpOp76(Cpu170Context *activeCpu);
+static void cpOp77(Cpu170Context *activeCpu);
 
 /*
 **  ----------------
 **  Public Variables
 **  ----------------
 */
-u32        cpuMaxMemory;
-CpWord     *cpMem;
-int        cpuCount = 1;
-CpuContext *cpus;
-u32        extMaxMemory;
-CpWord     *extMem;
-ExtMemory  extMemType = ECS;
+volatile CpWord *cpMem;
+u32             extMaxMemory;
+volatile CpWord *extMem;
+ExtMemory       extMemType = ECS;
+
+u32             cpuMaxMemory;
+int             cpuCount = 1;
+
+Cpu170Context   *cpus170;
 
 /*
 **  -----------------
@@ -218,8 +222,6 @@ static FILE *ecsHandle;
 static volatile u32 ecsFlagRegister = 0;
 static volatile u8  ecs16Kx4bitFlagRegisters[16384];
 
-static volatile int monitorCpu = -1;
-
 #if CcSMM_EJT
 static int skipStep = 0;
 #endif
@@ -229,13 +231,17 @@ static FILE *emLog = NULL;
 #endif
 
 #if defined(_WIN32)
+static HANDLE clockMutex;
 static HANDLE exchangeMutex;
 static HANDLE flagRegMutex;
+static HANDLE interruptMutex;
 static HANDLE memoryMutex;
 #else
-static pthread_mutex_t exchangeMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t flagRegMutex  = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t memoryMutex   = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t clockMutex     = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t exchangeMutex  = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t flagRegMutex   = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t interruptMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t memoryMutex    = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 /*
@@ -243,73 +249,73 @@ static pthread_mutex_t memoryMutex   = PTHREAD_MUTEX_INITIALIZER;
 */
 static OpDispatch decodeCpuOpcode[] =
     {
-    cpOp00, 15,
-    cpOp01,  0,
-    cpOp02, 30,
-    cpOp03, 30,
-    cpOp04, 30,
-    cpOp05, 30,
-    cpOp06, 30,
-    cpOp07, 30,
-    cpOp10, 15,
-    cpOp11, 15,
-    cpOp12, 15,
-    cpOp13, 15,
-    cpOp14, 15,
-    cpOp15, 15,
-    cpOp16, 15,
-    cpOp17, 15,
-    cpOp20, 15,
-    cpOp21, 15,
-    cpOp22, 15,
-    cpOp23, 15,
-    cpOp24, 15,
-    cpOp25, 15,
-    cpOp26, 15,
-    cpOp27, 15,
-    cpOp30, 15,
-    cpOp31, 15,
-    cpOp32, 15,
-    cpOp33, 15,
-    cpOp34, 15,
-    cpOp35, 15,
-    cpOp36, 15,
-    cpOp37, 15,
-    cpOp40, 15,
-    cpOp41, 15,
-    cpOp42, 15,
-    cpOp43, 15,
-    cpOp44, 15,
-    cpOp45, 15,
-    cpOp46, 15,
-    cpOp47, 15,
-    cpOp50, 30,
-    cpOp51, 30,
-    cpOp52, 30,
-    cpOp53, 15,
-    cpOp54, 15,
-    cpOp55, 15,
-    cpOp56, 15,
-    cpOp57, 15,
-    cpOp60, 30,
-    cpOp61, 30,
-    cpOp62, 30,
-    cpOp63, 15,
-    cpOp64, 15,
-    cpOp65, 15,
-    cpOp66, 15,
-    cpOp67, 15,
-    cpOp70, 30,
-    cpOp71, 30,
-    cpOp72, 30,
-    cpOp73, 15,
-    cpOp74, 15,
-    cpOp75, 15,
-    cpOp76, 15,
-    cpOp77, 15
+    { cpOp00, 15 },
+    { cpOp01,  0 },
+    { cpOp02, 30 },
+    { cpOp03, 30 },
+    { cpOp04, 30 },
+    { cpOp05, 30 },
+    { cpOp06, 30 },
+    { cpOp07, 30 },
+    { cpOp10, 15 },
+    { cpOp11, 15 },
+    { cpOp12, 15 },
+    { cpOp13, 15 },
+    { cpOp14, 15 },
+    { cpOp15, 15 },
+    { cpOp16, 15 },
+    { cpOp17, 15 },
+    { cpOp20, 15 },
+    { cpOp21, 15 },
+    { cpOp22, 15 },
+    { cpOp23, 15 },
+    { cpOp24, 15 },
+    { cpOp25, 15 },
+    { cpOp26, 15 },
+    { cpOp27, 15 },
+    { cpOp30, 15 },
+    { cpOp31, 15 },
+    { cpOp32, 15 },
+    { cpOp33, 15 },
+    { cpOp34, 15 },
+    { cpOp35, 15 },
+    { cpOp36, 15 },
+    { cpOp37, 15 },
+    { cpOp40, 15 },
+    { cpOp41, 15 },
+    { cpOp42, 15 },
+    { cpOp43, 15 },
+    { cpOp44, 15 },
+    { cpOp45, 15 },
+    { cpOp46, 15 },
+    { cpOp47, 15 },
+    { cpOp50, 30 },
+    { cpOp51, 30 },
+    { cpOp52, 30 },
+    { cpOp53, 15 },
+    { cpOp54, 15 },
+    { cpOp55, 15 },
+    { cpOp56, 15 },
+    { cpOp57, 15 },
+    { cpOp60, 30 },
+    { cpOp61, 30 },
+    { cpOp62, 30 },
+    { cpOp63, 15 },
+    { cpOp64, 15 },
+    { cpOp65, 15 },
+    { cpOp66, 15 },
+    { cpOp67, 15 },
+    { cpOp70, 30 },
+    { cpOp71, 30 },
+    { cpOp72, 30 },
+    { cpOp73, 15 },
+    { cpOp74, 15 },
+    { cpOp75, 15 },
+    { cpOp76, 15 },
+    { cpOp77, 15 }
     };
 
-static u8 cpOp01Length[8] = { 30, 30, 30, 30, 15, 15, 15, 15 };
+static u8 cpOp01Length[8] = { 30, 30, 30, 30, 15, 15, 15, 30 };
 
 /*
  **--------------------------------------------------------------------------
@@ -325,13 +331,15 @@ static u8 cpOp01Length[8] = { 30, 30, 30, 30, 15, 15, 15, 15 };
 **
 **  Parameters:     Name        Description.
 **                  model       CPU model string
+**                  serialNumbers CPU serial number(s)
 **                  memory      configured central memory
 **                  emBanks     configured number of extended memory banks
+**                  emType      type of extended memory (ECS or ESM)
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
+void cpuInit(char *model, u16 *serialNumbers, u32 memory, u32 emBanks, ExtMemory emType)
     {
     int cpuNum;
     u32 extBanksSize = 0;
@@ -340,7 +348,7 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
     /*
     **  Allocate configured central memory.
     */
-    if ((features & IsCyber180) != 0)
+    if (isCyber180)
         {
         memory /= 8;
         }
@@ -395,10 +403,10 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
             /*
             **  Read CM contents.
             */
-            if (fread(cpMem, sizeof(CpWord), cpuMaxMemory, cmHandle) != cpuMaxMemory)
+            if (fread((void *)cpMem, sizeof(CpWord), cpuMaxMemory, cmHandle) != cpuMaxMemory)
                 {
                 printf("(cpu    ) Unexpected length of CM backing file, clearing CM\n");
-                memset(cpMem, 0, cpuMaxMemory);
+                memset((void *)cpMem, 0, cpuMaxMemory);
                 }
             }
         else
@@ -425,10 +433,10 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
             /*
             **  Read ECS contents.
             */
-            if (fread(extMem, sizeof(CpWord), extMaxMemory, ecsHandle) != extMaxMemory)
+            if (fread((void *)extMem, sizeof(CpWord), extMaxMemory, ecsHandle) != extMaxMemory)
                 {
                 printf("(cpu    ) Unexpected length of ECS backing file, clearing ECS\n");
-                memset(extMem, 0, extMaxMemory);
+                memset((void *)extMem, 0, extMaxMemory);
                 }
             }
         else
@@ -446,24 +454,26 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
         }
 
     /*
-    **  Initialize CPU(s)
+    **  Initialize CYBER 170 CPU(s)
     */
-    cpus = (CpuContext *)calloc(cpuCount, sizeof(CpuContext));
-    if (cpus == NULL)
+    cpus170 = (Cpu170Context *)calloc(cpuCount, sizeof(Cpu170Context));
+    if (cpus170 == NULL)
         {
-        fputs("(cpu    ) Failed to allocate memory for CPU contexts\n", stderr);
+        fputs("(cpu    ) Failed to allocate memory for CYBER 170 CPU contexts\n", stderr);
         exit(1);
         }
     for (cpuNum = 0; cpuNum < cpuCount; cpuNum++)
         {
-        cpus[cpuNum].id                   = cpuNum;
-        cpus[cpuNum].isStopped            = TRUE;
-        cpus[cpuNum].ppRequestingExchange = -1;
-        cpus[cpuNum].idleCycles           = 0;
-        if (cpuNum > 0)
-            {
-            cpuCreateThread(cpuNum);
-            }
+        cpus170[cpuNum].id = cpuNum;
+        cpuReset(&cpus170[cpuNum]);
+        }
+
+    /*
+    **  Initialize CYBER 180 CPU(s)
+    */
+    if (isCyber180)
+        {
+        cpu180Init(model, serialNumbers);
         }
 
     /*
@@ -471,23 +481,52 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
     **  have this feature.
     */
 
-    for (i = 0; i < sizeof(ecs16Kx4bitFlagRegisters); i++)
+    for (i = 0; i < (int)sizeof(ecs16Kx4bitFlagRegisters); i++)
         {
         ecs16Kx4bitFlagRegisters[i] = 0;
+        }
+
+#if defined(_WIN32)
+    /*
+    **  Explicitly create mutexes if the DtCyber host is Windows
+    */
+    clockMutex     = CreateMutex(NULL, FALSE, NULL);
+    exchangeMutex  = CreateMutex(NULL, FALSE, NULL);
+    flagRegMutex   = CreateMutex(NULL, FALSE, NULL);
+    interruptMutex = CreateMutex(NULL, FALSE, NULL);
+    memoryMutex    = CreateMutex(NULL, FALSE, NULL);
+    if (clockMutex == NULL || exchangeMutex == NULL || flagRegMutex == NULL || interruptMutex == NULL || memoryMutex == NULL)
+        {
+        fputs("(cpu     ) Failed to create mutex\n", stderr);
+        exit(1);
+        }
+#endif
+
+    /*
+    **  Start thread for CPU1, if more than one CPU are configured.
+    */
+    if (cpuCount > 1)
+        {
+        cpuCreateThread(1);
         }
 
     /*
     **  Print a friendly message.
     */
-    if ((features & IsCyber180) == 0)
+    if (isCyber180)
         {
-        printf("(cpu    ) CPU model %s initialised (%d CPU%s, CM: %o words, ECS: %o words)\n",
-               model, cpuCount, cpuCount > 1 ? "'s" : "", cpuMaxMemory, extMaxMemory);
+        printf("(cpu    ) CPU model %s initialised (%d CPU%s, ", model, cpuCount, cpuCount > 1 ? "'s" : "");
+        printf("S/N %04x, ", cpus180[0].regEid & Mask16);
+        if (cpuCount > 1)
+            {
+            printf("S/N %04x, ", cpus180[1].regEid & Mask16);
+            }
+        printf("%dM bytes CM)\n", (8 * cpuMaxMemory) / OneMegabyte);
         }
     else
         {
-        printf("(cpu    ) CPU model %s initialised (%d CPU%s, CM: %dM bytes)\n",
-               model, cpuCount, cpuCount > 1 ? "'s" : "", (8 * cpuMaxMemory) / OneMegabyte);
+        printf("(cpu    ) CPU model %s initialised (%d CPU%s, %o words CM, %o words %s)\n",
+               model, cpuCount, cpuCount > 1 ? "'s" : "", cpuMaxMemory, extMaxMemory, (emType == ESM) ? "ESM" : "ECS");
         }
 #if DEBUG_ECS || DEBUG_UEM || DEBUG_DDP
     if (emLog == NULL)
@@ -495,6 +534,22 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
         emLog = fopen("emlog.txt", "wt");
         }
 #endif
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Acquire lock on clock mutex
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpuAcquireClockMutex(void)
+    {
+    if (cpuCount > 1)
+        {
+        cpuAcquireMutex(&clockMutex);
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -507,7 +562,26 @@ void cpuInit(char *model, u32 memory, u32 emBanks, ExtMemory emType)
 **------------------------------------------------------------------------*/
 void cpuAcquireExchangeMutex(void)
     {
-    cpuAcquireMutex(&exchangeMutex);
+    if (cpuCount > 1)
+        {
+        cpuAcquireMutex(&exchangeMutex);
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Acquire lock on interrupt mutex
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpuAcquireInterruptMutex(void)
+    {
+    if (cpuCount > 1)
+        {
+        cpuAcquireMutex(&interruptMutex);
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -520,7 +594,33 @@ void cpuAcquireExchangeMutex(void)
 **------------------------------------------------------------------------*/
 void cpuAcquireMemoryMutex(void)
     {
-    cpuAcquireMutex(&memoryMutex);
+    if (cpuCount > 1)
+        {
+        cpuAcquireMutex(&memoryMutex);
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Return the number of bits in an instruction.
+**
+**  Parameters:     Name        Description.
+**                  opcode      The opcode of the instruction
+**                  opI         The I field of the instruction
+**
+**  Returns:        The number of bits.
+**
+**------------------------------------------------------------------------*/
+u8 cpuGetInstructionLength(u8 opcode, u8 opI)
+    {
+    u8 length;
+
+    length = decodeCpuOpcode[opcode].length;
+    if (length == 0)
+        {
+        length = cpOp01Length[opI];
+        }
+
+    return length;
     }
 
 /*--------------------------------------------------------------------------
@@ -538,7 +638,23 @@ u32 cpuGetP(u8 cpuNum)
         cpuNum = 0;
         }
 
-    return ((cpus[cpuNum].regP) & Mask18);
+    return ((cpus170[cpuNum].regP) & Mask18);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Release lock on clock mutex
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpuReleaseClockMutex(void)
+    {
+    if (cpuCount > 1)
+        {
+        cpuReleaseMutex(&clockMutex);
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -551,7 +667,26 @@ u32 cpuGetP(u8 cpuNum)
 **------------------------------------------------------------------------*/
 void cpuReleaseExchangeMutex(void)
     {
-    cpuReleaseMutex(&exchangeMutex);
+    if (cpuCount > 1)
+        {
+        cpuReleaseMutex(&exchangeMutex);
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Release lock on interrupt mutex
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpuReleaseInterruptMutex(void)
+    {
+    if (cpuCount > 1)
+        {
+        cpuReleaseMutex(&interruptMutex);
+        }
     }
 
 /*--------------------------------------------------------------------------
@@ -564,7 +699,31 @@ void cpuReleaseExchangeMutex(void)
 **------------------------------------------------------------------------*/
 void cpuReleaseMemoryMutex(void)
     {
-    cpuReleaseMutex(&memoryMutex);
+    if (cpuCount > 1)
+        {
+        cpuReleaseMutex(&memoryMutex);
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Reset CPU state (e.g., in preparation for deadstart)
+**
+**  Parameters:     Name         Description.
+**                  activeCpu    Pointer to CPU context
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpuReset(Cpu170Context *activeCpu)
+    {
+    cpuAcquireExchangeMutex();
+    activeCpu->isStopped            = TRUE;
+    activeCpu->isMonitorMode        = FALSE;
+    activeCpu->isMonitorModePending = FALSE;
+    activeCpu->isErrorExitPending   = FALSE;
+    activeCpu->doChangeMode         = FALSE;
+    activeCpu->ppRequestingExchange = -1;
+    cpuReleaseExchangeMutex();
     }
 
 /*--------------------------------------------------------------------------
@@ -583,7 +742,7 @@ void cpuTerminate(void)
     if (cmHandle != NULL)
         {
         fseek(cmHandle, 0, SEEK_SET);
-        if (fwrite(cpMem, sizeof(CpWord), cpuMaxMemory, cmHandle) != cpuMaxMemory)
+        if (fwrite((void *)cpMem, sizeof(CpWord), cpuMaxMemory, cmHandle) != cpuMaxMemory)
             {
             logDtError(LogErrorLocation, "Error writing CM backing file\n");
             }
@@ -597,7 +756,7 @@ void cpuTerminate(void)
     if (ecsHandle != NULL)
         {
         fseek(ecsHandle, 0, SEEK_SET);
-        if (fwrite(extMem, sizeof(CpWord), extMaxMemory, ecsHandle) != extMaxMemory)
+        if (fwrite((void *)extMem, sizeof(CpWord), extMaxMemory, ecsHandle) != extMaxMemory)
             {
             logDtError(LogErrorLocation, "Error writing ECS backing file\n");
             }
@@ -607,12 +766,12 @@ void cpuTerminate(void)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Read CPU memory from PP and verify that address is
+**  Purpose:        Read 60-bit CPU memory from PP and verify that address is
 **                  within limits.
 **
 **  Parameters:     Name        Description.
 **                  address     Absolute CM address to read.
-**                  data        Pointer to 60 bit word which gets the data.
+**                  data        Pointer to 60-bit word which gets the data.
 **
 **  Returns:        Nothing
 **
@@ -638,12 +797,12 @@ void cpuPpReadMem(u32 address, CpWord *data)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Write CPU memory from PP and verify that address is
+**  Purpose:        Write 60-bit CPU memory from PP and verify that address is
 **                  within limits.
 **
 **  Parameters:     Name        Description.
 **                  address     Absolute CM address
-**                  data        60 bit word which holds the data to be written.
+**                  data        60-bit word which holds the data to be written.
 **
 **  Returns:        Nothing
 **
@@ -673,29 +832,102 @@ void cpuPpWriteMem(u32 address, CpWord data)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void cpuStep(CpuContext *activeCpu)
+void cpuStep(Cpu170Context *activeCpu)
     {
-    u32 length;
-    u32 oldRegP;
+    Cpu180Context *ctx180;
+    u32           length;
+    int           otherCpuId;
+
+    if (cpuCount > 1)
+        {
+        otherCpuId = activeCpu->id ^ 1;
+        }
 
     /*
-    **  If this CPU needs to be exchanged, do that first.
+    **  If the machine is a CYBER 180, and this CPU is currently in 180 state,
+    **  give control to the 180 state step processor. Otherwise, check for
+    **  pending requests and pass control to the 180 state step processor if
+    **  indicated.
+    */
+    if (isCyber180)
+        {
+        ctx180 = &cpus180[activeCpu->id];
+        if (ctx180->regVmid == 0) // CPU is in CYBER 180 state
+            {
+            cpu180Step(ctx180);
+            return;
+            }
+        if (ctx180->isStopped)
+            {
+            return;
+            }
+        //
+        //  Check for pending requests such as asynchronous interrupts.
+        //
+        cpu180CheckPendingInterrupts(ctx180);
+        cpu180CheckConditions(ctx180);
+        if (ctx180->pendingAction > Stack)
+            {
+            if (ctx180->pendingAction == Trap)
+                {
+                cpuTrapTo180(activeCpu);
+                }
+            if (ctx180->pendingAction == Exch)
+                {
+                cpuExchangeTo180(activeCpu, FALSE, FALSE);
+                }
+            else if (ctx180->pendingAction == Halt)
+                {
+                ctx180->isStopped = TRUE;
+                }
+            return;
+            }
+        }
+
+    /*
+    **  If the CPU is waiting to begin executing in monitor mode, check whether
+    **  the other CPU has exited monitor mode.
+    **/
+    if (activeCpu->isMonitorModePending)
+        {
+        cpuAcquireExchangeMutex();
+        if (cpuCount < 2 || cpus170[otherCpuId].isMonitorMode == FALSE)
+            {
+            activeCpu->isMonitorMode        = TRUE;
+            activeCpu->isMonitorModePending = FALSE;
+            cpuReleaseExchangeMutex();
+            }
+        else
+            {
+            if (activeCpu->ppRequestingExchange != -1 && activeCpu->doChangeMode)
+                {
+                // CPU will eventually continue in monitor mode
+                activeCpu->ppRequestingExchange = -1;
+                }
+            cpuReleaseExchangeMutex();
+            return;
+            }
+        }
+
+    /*
+    **  If a PP is requesting this CPU to be exchanged, do that first.
     **  This check must come BEFORE the "stopped" check.
     */
     if (activeCpu->ppRequestingExchange != -1)
         {
         cpuAcquireExchangeMutex();
-        if (((monitorCpu == -1) || (activeCpu->doChangeMode == FALSE))
-            && ((activeCpu->opOffset == 60) || activeCpu->isStopped))
+        if ((activeCpu->doChangeMode == FALSE || activeCpu->isMonitorMode == FALSE)
+            && (activeCpu->opOffset == 60 || activeCpu->isStopped))
             {
             cpuExchangeJump(activeCpu, activeCpu->ppExchangeAddress, activeCpu->doChangeMode);
-            activeCpu->ppRequestingExchange = -1;
-            cpuReleaseExchangeMutex();
+            if (isCyber180)
+                {
+                ctx180->regMcr &= 0xfbff; // clear MCR53 CYBER 170 state exchange request
+                }
+            activeCpu->isMonitorModePending = cpuCount > 1 && activeCpu->isMonitorMode && cpus170[otherCpuId].isMonitorMode && cpus170[otherCpuId].isMonitorModePending == FALSE;
             }
-        else
-            {
-            cpuReleaseExchangeMutex();
-            }
+        activeCpu->ppRequestingExchange = -1;
+        cpuReleaseExchangeMutex();
         }
 
     if (activeCpu->isStopped)
@@ -719,6 +951,13 @@ void cpuStep(CpuContext *activeCpu)
     do
         {
         /*
+        **  Save initial P register value and instruction parcel offset in case
+        **  they're needed for interrupt or exit mode processing.
+        */
+        activeCpu->oldOpOffset = activeCpu->opOffset;
+        activeCpu->oldRegP     = activeCpu->regP;
+
+        /*
         **  Decode based on type.
         */
         activeCpu->opFm = (u8)((activeCpu->opWord >> (activeCpu->opOffset - 6)) & Mask6);
@@ -734,8 +973,8 @@ void cpuStep(CpuContext *activeCpu)
         if (length == 15)
             {
             activeCpu->opK       = (u8)((activeCpu->opWord >> (activeCpu->opOffset - 15)) & Mask3);
-            activeCpu->opAddress = 0;
             activeCpu->opOffset -= 15;
+            activeCpu->opAddress = 0;
             }
         else
             {
@@ -748,16 +987,14 @@ void cpuStep(CpuContext *activeCpu)
                 break;
                 }
             activeCpu->opK       = (u8)0;
-            activeCpu->opAddress = (u32)((activeCpu->opWord >> (activeCpu->opOffset - 30)) & Mask18);
             activeCpu->opOffset -= 30;
+            activeCpu->opAddress = (u32)((activeCpu->opWord >> activeCpu->opOffset) & Mask18);
             }
-
-        oldRegP = activeCpu->regP;
 
         /*
         **  Force B0 to 0.
         */
-        activeCpu->regB[0] = (u32)0;
+        activeCpu->regB[0] = 0;
 
         /*
         **  Execute instruction.
@@ -770,7 +1007,7 @@ void cpuStep(CpuContext *activeCpu)
         activeCpu->regB[0] = 0;
 
 #if CcDebug == 1
-        traceCpu(activeCpu, oldRegP, activeCpu->opFm, activeCpu->opI, activeCpu->opJ, activeCpu->opK, activeCpu->opAddress);
+        traceCpu170(activeCpu, activeCpu->oldRegP, activeCpu->opFm, activeCpu->opI, activeCpu->opJ, activeCpu->opK, activeCpu->opAddress);
 #endif
 
         if (activeCpu->isStopped)
@@ -780,9 +1017,13 @@ void cpuStep(CpuContext *activeCpu)
                 activeCpu->regP = (activeCpu->regP + 1) & Mask18;
                 }
 #if CcDebug == 1
-            traceCpuPrint(activeCpu, "Stopped\n");
+            traceCpuPrint(activeCpu, "Stopped");
 #endif
-
+            if (isCyber180 && ctx180->pendingAction == Exch) // error exit to 180 state
+                {
+                cpuExchangeTo180(activeCpu, FALSE, TRUE);
+                return;
+                }
             break;
             }
 
@@ -800,6 +1041,7 @@ void cpuStep(CpuContext *activeCpu)
         {
         cpuAcquireExchangeMutex();
         cpuExchangeJump(activeCpu, activeCpu->regMa, TRUE);
+        activeCpu->isMonitorModePending = cpuCount > 1 && activeCpu->isMonitorMode && cpus170[otherCpuId].isMonitorMode && cpus170[otherCpuId].isMonitorModePending == FALSE;
         cpuReleaseExchangeMutex();
         }
     }
@@ -845,7 +1087,7 @@ bool cpuEcsFlagRegister(u32 ecsAddress)
 #endif
             if (ecs16Kx4bitFlagRegisters[flagRegisterAddress] == 0)
                 {
-                ecs16Kx4bitFlagRegisters[flagRegisterAddress] = (volatile u8)flagWord;
+                ecs16Kx4bitFlagRegisters[flagRegisterAddress] = (u8)flagWord;
                 }
             else
                 {
@@ -1021,24 +1263,13 @@ static void cpuCreateThread(int cpuNum)
     HANDLE hThread;
 
     /*
-    **  Create mutexes
-    */
-    exchangeMutex = CreateMutex(NULL, FALSE, NULL);
-    flagRegMutex  = CreateMutex(NULL, FALSE, NULL);
-    if ((exchangeMutex == NULL) || (flagRegMutex == NULL))
-        {
-        fputs("(cpu     ) Failed to create mutex\n", stderr);
-        exit(1);
-        }
-
-    /*
     **  Create operator thread.
     */
     hThread = CreateThread(
         NULL,                                       // no security attribute
         0,                                          // default stack size
         (LPTHREAD_START_ROUTINE)cpuThread,
-        (CpuContext *)cpus + cpuNum,                // thread parameter
+        (Cpu170Context *)cpus170 + cpuNum,          // thread parameter
         0,                                          // not suspended
         &dwThreadId);                               // returns thread ID
 
@@ -1056,7 +1287,7 @@ static void cpuCreateThread(int cpuNum)
     **  Create POSIX thread with default attributes.
     */
     pthread_attr_init(&attr);
-    rc = pthread_create(&thread, &attr, cpuThread, cpus + cpuNum);
+    rc = pthread_create(&thread, &attr, cpuThread, cpus170 + cpuNum);
     if (rc < 0)
         {
         logDtError(LogErrorLocation, "Failed to create thread for CPU %d\n", cpuNum);
@@ -1126,7 +1357,7 @@ static void cpuThread(void *param)
 static void *cpuThread(void *param)
 #endif
     {
-    CpuContext *activeCpu = (CpuContext *)param;
+    Cpu170Context *activeCpu = (Cpu170Context *)param;
 
     printf("(cpu    ) CPU%o started\n", activeCpu->id);
 
@@ -1137,11 +1368,43 @@ static void *cpuThread(void *param)
             /* wait for operator thread to clear the flag */
             sleepMsec(500);
             }
+        if (isCyber180)
+            {
+            cpuAcquireClockMutex();
+            cpu180UpdateIntervalTimers(&cpus180[activeCpu->id]);
+            cpuReleaseClockMutex();
+            }
+
+        /*
+        **  Check for a deadstart request.
+        */
+        if (activeCpu->doDeadstart)
+            {
+            if (isCyber180)
+                {
+                cpu180MacHaltCp(&cpus180[activeCpu->id]);
+                cpu180MacMasterClearCp(&cpus180[activeCpu->id]);
+                }
+            else
+                {
+                cpuReset(activeCpu);
+                }
+            activeCpu->doDeadstart = FALSE;
+            }
+
+        /*
+        **  Execute CPU instructions.
+        */
         cpuStep(activeCpu);
+        cpuStep(activeCpu);
+        cpuStep(activeCpu);
+        cpuStep(activeCpu);
+
         idleThrottle(activeCpu);
         }
+
 #if !defined(_WIN32)
-    return (NULL);
+    return NULL;
 #endif
     }
 
@@ -1156,23 +1419,13 @@ static void *cpuThread(void *param)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cpuExchangeJump(CpuContext *activeCpu, u32 address, bool doChangeMode)
+static void cpuExchangeJump(Cpu170Context *activeCpu, u32 address, bool doChangeMode)
     {
-    CpWord     *mem;
-    CpuContext tmp;
-
-    /*
-    **  Only perform exchange jump on instruction boundary or when stopped.
-    */
-/*
- *  if ((activeCpu->opOffset != 60) && !activeCpu->isStopped)
- *      {
- *      return;
- *      }
- */
+    volatile CpWord *mem;
+    Cpu170Context   tmp;
 
 #if CcDebug == 1
-    traceExchange(activeCpu, address, "Old");
+    traceExchange170(activeCpu, address, "Outgoing", FALSE);
 #endif
 
     /*
@@ -1206,12 +1459,12 @@ static void cpuExchangeJump(CpuContext *activeCpu, u32 address, bool doChangeMod
     activeCpu->regB[0] = 0;
 
     mem += 1;
-    activeCpu->regRaCm = (u32)((*mem >> 36) & Mask24);
+    activeCpu->regRaCm = (u32)((*mem >> 36) & Mask21);
     activeCpu->regA[1] = (u32)((*mem >> 18) & Mask18);
     activeCpu->regB[1] = (u32)((*mem) & Mask18);
 
     mem += 1;
-    activeCpu->regFlCm = (u32)((*mem >> 36) & Mask24);
+    activeCpu->regFlCm = (u32)((*mem >> 36) & Mask21);
     activeCpu->regA[2] = (u32)((*mem >> 18) & Mask18);
     activeCpu->regB[2] = (u32)((*mem) & Mask18);
 
@@ -1228,7 +1481,7 @@ static void cpuExchangeJump(CpuContext *activeCpu, u32 address, bool doChangeMod
         }
     else
         {
-        activeCpu->regRaEcs = (u32)((*mem >> 36) & Mask24Ecs);
+        activeCpu->regRaEcs = (u32)((*mem >> 36) & Mask21Ecs);
         }
 
     activeCpu->regA[4] = (u32)((*mem >> 18) & Mask18);
@@ -1249,7 +1502,7 @@ static void cpuExchangeJump(CpuContext *activeCpu, u32 address, bool doChangeMod
     activeCpu->regB[5] = (u32)((*mem) & Mask18);
 
     mem += 1;
-    activeCpu->regMa   = (u32)((*mem >> 36) & Mask24);
+    activeCpu->regMa   = (u32)((*mem >> 36) & Mask18);
     activeCpu->regA[6] = (u32)((*mem >> 18) & Mask18);
     activeCpu->regB[6] = (u32)((*mem) & Mask18);
 
@@ -1271,7 +1524,7 @@ static void cpuExchangeJump(CpuContext *activeCpu, u32 address, bool doChangeMod
     activeCpu->exitCondition = EcNone;
 
 #if CcDebug == 1
-    traceExchange(activeCpu, address, "New");
+    traceExchange170(activeCpu, address, "Incoming", FALSE);
 #endif
 
     /*
@@ -1280,8 +1533,8 @@ static void cpuExchangeJump(CpuContext *activeCpu, u32 address, bool doChangeMod
     mem = cpMem + address;
 
     *mem++ = ((CpWord)(tmp.regP & Mask18) << 36) | ((CpWord)(tmp.regA[0] & Mask18) << 18);
-    *mem++ = ((CpWord)(tmp.regRaCm & Mask24) << 36) | ((CpWord)(tmp.regA[1] & Mask18) << 18) | ((CpWord)(tmp.regB[1] & Mask18));
-    *mem++ = ((CpWord)(tmp.regFlCm & Mask24) << 36) | ((CpWord)(tmp.regA[2] & Mask18) << 18) | ((CpWord)(tmp.regB[2] & Mask18));
+    *mem++ = ((CpWord)(tmp.regRaCm & Mask21) << 36) | ((CpWord)(tmp.regA[1] & Mask18) << 18) | ((CpWord)(tmp.regB[1] & Mask18));
+    *mem++ = ((CpWord)(tmp.regFlCm & Mask21) << 36) | ((CpWord)(tmp.regA[2] & Mask18) << 18) | ((CpWord)(tmp.regB[2] & Mask18));
     *mem++ = ((CpWord)(tmp.exitMode & Mask24) << 36) | ((CpWord)(tmp.regA[3] & Mask18) << 18) | ((CpWord)(tmp.regB[3] & Mask18));
 
     if (((features & IsSeries800) != 0)
@@ -1304,7 +1557,7 @@ static void cpuExchangeJump(CpuContext *activeCpu, u32 address, bool doChangeMod
         *mem++ = ((CpWord)(tmp.regFlEcs & Mask24Ecs) << 36) | ((CpWord)(tmp.regA[5] & Mask18) << 18) | ((CpWord)(tmp.regB[5] & Mask18));
         }
 
-    *mem++ = ((CpWord)(tmp.regMa & Mask24) << 36) | ((CpWord)(tmp.regA[6] & Mask18) << 18) | ((CpWord)(tmp.regB[6] & Mask18));
+    *mem++ = ((CpWord)(tmp.regMa & Mask18) << 36) | ((CpWord)(tmp.regA[6] & Mask18) << 18) | ((CpWord)(tmp.regB[6] & Mask18));
     *mem++ = ((CpWord)(tmp.regSpare & Mask24) << 36) | ((CpWord)(tmp.regA[7] & Mask18) << 18) | ((CpWord)(tmp.regB[7] & Mask18));
     *mem++ = tmp.regX[0] & Mask60;
     *mem++ = tmp.regX[1] & Mask60;
@@ -1320,7 +1573,7 @@ static void cpuExchangeJump(CpuContext *activeCpu, u32 address, bool doChangeMod
         /*
         **  Void the instruction stack.
         */
-        cpuVoidIwStack(activeCpu, ~0);
+        cpuVoidIwStack(activeCpu, (u32)~0);
         }
 
     /*
@@ -1332,19 +1585,57 @@ static void cpuExchangeJump(CpuContext *activeCpu, u32 address, bool doChangeMod
         {
         activeCpu->isMonitorMode = !activeCpu->isMonitorMode;
         }
-    if (activeCpu->isMonitorMode)
-        {
-        if (monitorCpu == -1)
-            {
-            monitorCpu = activeCpu->id;
-            }
-        }
-    else if (monitorCpu == activeCpu->id)
-        {
-        monitorCpu = -1;
-        }
 
     cpuFetchOpWord(activeCpu);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Exchange from CYBER 170 state to CYBER 180 monitor mode
+**
+**  Parameters:     Name            Description.
+**                  activeCpu       pointer to CYBER 170 CPU context
+**                  setSysCall      TRUE if system call status to be set
+**                  setExitModeHalt TRUE if exit mode halt flag to be set
+**
+**  Returns:        Nothing
+**
+**------------------------------------------------------------------------*/
+static void cpuExchangeTo180(Cpu170Context *activeCpu, bool setSysCall, bool setExitModeHalt)
+    {
+    Cpu180Context *ctx180;
+
+    ctx180 = &cpus180[activeCpu->id];
+    if (setSysCall)
+        {
+        ctx180->regMcr |= 0x0020; // set system call status bit
+        }
+    cpu180Store170Xp(ctx180, ctx180->regJps);
+    if (setExitModeHalt)
+        {
+        cpMem[(ctx180->regJps >> 3) + 6] |= (u64)1 << 32;
+        }
+    cpu180Load180Xp(ctx180, ctx180->regMps);
+    ctx180->isMonitorMode           = TRUE;
+    ctx180->nextKey                 = ctx180->key;
+    ctx180->nextP                   = ctx180->regP;
+    activeCpu->isMonitorMode        = FALSE;
+    activeCpu->isMonitorModePending = FALSE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Iniitate a trap from CYBER 170 state to CYBER 180 state
+**
+**  Parameters:     Name        Description.
+**                  activeCpu   pointer to CYBER 170 CPU context
+**
+**  Returns:        Nothing
+**
+**------------------------------------------------------------------------*/
+static void cpuTrapTo180(Cpu170Context *activeCpu)
+    {
+    cpu180Trap(&cpus180[activeCpu->id]);
+    activeCpu->isMonitorMode        = FALSE;
+    activeCpu->isMonitorModePending = FALSE;
     }
 
 /*--------------------------------------------------------------------------
@@ -1359,7 +1650,7 @@ static void cpuExchangeJump(CpuContext *activeCpu, u32 address, bool doChangeMod
 #if DEBUG_ECS || DEBUG_UEM
 static char cmRegAstr[24];
 
-static char *readCmRegA(CpuContext *activeCpu, int regNum)
+static char *readCmRegA(Cpu170Context *activeCpu, int regNum)
     {
     int    addr;
     CpWord word;
@@ -1383,7 +1674,7 @@ static char *readCmRegA(CpuContext *activeCpu, int regNum)
         }
     }
 
-static void dumpXP(CpuContext *activeCpu, int before, int after)
+static void dumpXP(Cpu170Context *activeCpu, int before, int after)
     {
     u32    abs;
     int    i;
@@ -1442,20 +1733,40 @@ static void dumpXP(CpuContext *activeCpu, int before, int after)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-static void cpuOpIllegal(CpuContext *activeCpu)
+static void cpuOpIllegal(Cpu170Context *activeCpu)
     {
+    if (isCyber180 && activeCpu->isMonitorMode)
+        {
+        cpuInitiateExitTo180(activeCpu);
+        return;
+        }
     activeCpu->isStopped = TRUE;
     if (activeCpu->regRaCm < cpuMaxMemory)
         {
         cpMem[activeCpu->regRaCm] = ((CpWord)activeCpu->exitCondition << 48) | ((CpWord)(activeCpu->regP + 1) << 30);
         }
-
     activeCpu->regP = 0;
+    cpuSetErrorExitPending(activeCpu);
+    }
 
-    if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
+/*--------------------------------------------------------------------------
+**  Purpose:        Initiate error exit to CYBER 180 state
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing
+**
+**------------------------------------------------------------------------*/
+static void cpuInitiateExitTo180(Cpu170Context *activeCpu)
+    {
+    activeCpu->isStopped = TRUE;
+    activeCpu->regP      = activeCpu->oldRegP;
+    activeCpu->opOffset  = activeCpu->oldOpOffset;
+    if (activeCpu->regRaCm < cpuMaxMemory)
         {
-        activeCpu->isErrorExitPending = TRUE;
+        cpMem[activeCpu->regRaCm] = ((CpWord)activeCpu->exitCondition << 48) | ((CpWord)activeCpu->regP << 30);
         }
+    cpus180[activeCpu->id].pendingAction = Exch;
     }
 
 /*--------------------------------------------------------------------------
@@ -1469,7 +1780,7 @@ static void cpuOpIllegal(CpuContext *activeCpu)
 **  Returns:        TRUE if validation failed, FALSE otherwise;
 **
 **------------------------------------------------------------------------*/
-static bool cpuCheckOpAddress(CpuContext *activeCpu, u32 address, u32 *location)
+static bool cpuCheckOpAddress(Cpu170Context *activeCpu, u32 address, u32 *location)
     {
     /*
     **  Calculate absolute address.
@@ -1481,8 +1792,13 @@ static bool cpuCheckOpAddress(CpuContext *activeCpu, u32 address, u32 *location)
         /*
         **  Exit mode is always selected for RNI or branch.
         */
-        activeCpu->isStopped      = TRUE;
         activeCpu->exitCondition |= EcAddressOutOfRange;
+        if (isCyber180 && activeCpu->isMonitorMode)
+            {
+            cpuInitiateExitTo180(activeCpu);
+            return TRUE;
+            }
+        activeCpu->isStopped = TRUE;
         if (activeCpu->regRaCm < cpuMaxMemory)
             {
             // not need for RNI or branch - how about other uses?
@@ -1491,15 +1807,10 @@ static bool cpuCheckOpAddress(CpuContext *activeCpu, u32 address, u32 *location)
                 cpMem[activeCpu->regRaCm] = ((CpWord)activeCpu->exitCondition << 48) | ((CpWord)(activeCpu->regP) << 30);
                 }
             }
-
         activeCpu->regP = 0;
+        cpuSetErrorExitPending(activeCpu);
 
-        if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
-            {
-            activeCpu->isErrorExitPending = TRUE;
-            }
-
-        return (TRUE);
+        return TRUE;
         }
 
     /*
@@ -1507,7 +1818,7 @@ static bool cpuCheckOpAddress(CpuContext *activeCpu, u32 address, u32 *location)
     */
     *location %= cpuMaxMemory;
 
-    return (FALSE);
+    return FALSE;
     }
 
 /*--------------------------------------------------------------------------
@@ -1520,7 +1831,7 @@ static bool cpuCheckOpAddress(CpuContext *activeCpu, u32 address, u32 *location)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cpuFetchOpWord(CpuContext *activeCpu)
+static void cpuFetchOpWord(Cpu170Context *activeCpu)
     {
     u32 location;
 
@@ -1605,6 +1916,23 @@ static void cpuFetchOpWord(CpuContext *activeCpu)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Set error exit pending indication, if supported
+**
+**  Parameters:     Name        Description.
+**                  activeCpu   Pointer to CPU context
+**
+**  Returns:        Nothing
+**
+**------------------------------------------------------------------------*/
+static void cpuSetErrorExitPending(Cpu170Context *activeCpu)
+    {
+    if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
+        {
+        activeCpu->isErrorExitPending = TRUE;
+        }
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Void the instruction stack unless branch target is
 **                  within stack (or unconditionally if address is ~0).
 **
@@ -1616,12 +1944,12 @@ static void cpuFetchOpWord(CpuContext *activeCpu)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cpuVoidIwStack(CpuContext *activeCpu, u32 branchAddr)
+void cpuVoidIwStack(Cpu170Context *activeCpu, u32 branchAddr)
     {
     u32 location;
     int i;
 
-    if (branchAddr != ~0)
+    if (branchAddr != (u32)~0)
         {
         location = cpuAddRa(activeCpu, branchAddr);
 
@@ -1659,7 +1987,7 @@ static void cpuVoidIwStack(CpuContext *activeCpu, u32 branchAddr)
 **  Returns:        TRUE if access failed, FALSE otherwise;
 **
 **------------------------------------------------------------------------*/
-static bool cpuReadMem(CpuContext *activeCpu, u32 address, CpWord *data)
+static bool cpuReadMem(Cpu170Context *activeCpu, u32 address, CpWord *data)
     {
     u32 location;
 
@@ -1677,6 +2005,12 @@ static bool cpuReadMem(CpuContext *activeCpu, u32 address, CpWord *data)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return TRUE;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -1685,24 +2019,12 @@ static bool cpuReadMem(CpuContext *activeCpu, u32 address, CpWord *data)
                 }
 
             activeCpu->regP = 0;
+            cpuSetErrorExitPending(activeCpu);
 
-            if ((features & IsSeries170) == 0)
-                {
-                /*
-                **  All except series 170 clear the data.
-                */
-                *data = 0;
-                }
-
-            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
-                {
-                activeCpu->isErrorExitPending = TRUE;
-                }
-
-            return (TRUE);
+            return TRUE;
             }
 
-        return (FALSE);
+        return FALSE;
         }
 
     /*
@@ -1719,7 +2041,7 @@ static bool cpuReadMem(CpuContext *activeCpu, u32 address, CpWord *data)
             {
             *data = (~((CpWord)0)) & Mask60;
 
-            return (FALSE);
+            return FALSE;
             }
 
         location %= cpuMaxMemory;
@@ -1730,7 +2052,7 @@ static bool cpuReadMem(CpuContext *activeCpu, u32 address, CpWord *data)
     */
     *data = cpMem[location] & Mask60;
 
-    return (FALSE);
+    return FALSE;
     }
 
 /*--------------------------------------------------------------------------
@@ -1744,7 +2066,7 @@ static bool cpuReadMem(CpuContext *activeCpu, u32 address, CpWord *data)
 **  Returns:        TRUE if access failed, FALSE otherwise;
 **
 **------------------------------------------------------------------------*/
-static bool cpuWriteMem(CpuContext *activeCpu, u32 address, CpWord *data)
+static bool cpuWriteMem(Cpu170Context *activeCpu, u32 address, CpWord *data)
     {
     u32 location;
 
@@ -1757,6 +2079,12 @@ static bool cpuWriteMem(CpuContext *activeCpu, u32 address, CpWord *data)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return TRUE;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -1765,16 +2093,12 @@ static bool cpuWriteMem(CpuContext *activeCpu, u32 address, CpWord *data)
                 }
 
             activeCpu->regP = 0;
+            cpuSetErrorExitPending(activeCpu);
 
-            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
-                {
-                activeCpu->isErrorExitPending = TRUE;
-                }
-
-            return (TRUE);
+            return TRUE;
             }
 
-        return (FALSE);
+        return FALSE;
         }
 
     /*
@@ -1789,7 +2113,7 @@ static bool cpuWriteMem(CpuContext *activeCpu, u32 address, CpWord *data)
         {
         if ((features & HasNoCmWrap) != 0)
             {
-            return (FALSE);
+            return FALSE;
             }
 
         location %= cpuMaxMemory;
@@ -1800,7 +2124,7 @@ static bool cpuWriteMem(CpuContext *activeCpu, u32 address, CpWord *data)
     */
     cpMem[location] = *data & Mask60;
 
-    return (FALSE);
+    return FALSE;
     }
 
 /*--------------------------------------------------------------------------
@@ -1811,7 +2135,7 @@ static bool cpuWriteMem(CpuContext *activeCpu, u32 address, CpWord *data)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cpuRegASemantics(CpuContext *activeCpu)
+static void cpuRegASemantics(Cpu170Context *activeCpu)
     {
     if (activeCpu->opI == 0)
         {
@@ -1836,7 +2160,7 @@ static void cpuRegASemantics(CpuContext *activeCpu)
             **  Instruction stack purge flag is set - do an
             **  unconditional void.
             */
-            cpuVoidIwStack(activeCpu, ~0);
+            cpuVoidIwStack(activeCpu, (u32)~0);
             }
 
         cpuWriteMem(activeCpu, activeCpu->regA[activeCpu->opI], activeCpu->regX + activeCpu->opI);
@@ -1854,7 +2178,7 @@ static void cpuRegASemantics(CpuContext *activeCpu)
 **  Returns:        18 or 21 bit result.
 **
 **------------------------------------------------------------------------*/
-static u32 cpuAddRa(CpuContext *activeCpu, u32 op)
+u32 cpuAddRa(Cpu170Context *activeCpu, u32 op)
     {
     u32 acc18;
     u32 acc21;
@@ -1959,7 +2283,7 @@ static u32 cpuSubtract18(u32 op1, u32 op2)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-static void cpuUemWord(CpuContext *activeCpu, bool writeToUem)
+static void cpuUemWord(Cpu170Context *activeCpu, bool writeToUem)
     {
     u32  absUemAddr;
     u32  flEcs;
@@ -2009,6 +2333,12 @@ static void cpuUemWord(CpuContext *activeCpu, bool writeToUem)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -2017,11 +2347,7 @@ static void cpuUemWord(CpuContext *activeCpu, bool writeToUem)
                 }
 
             activeCpu->regP = 0;
-
-            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
-                {
-                activeCpu->isErrorExitPending = TRUE;
-                }
+            cpuSetErrorExitPending(activeCpu);
             }
 
         return;
@@ -2069,14 +2395,13 @@ static void cpuUemWord(CpuContext *activeCpu, bool writeToUem)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
+static void cpuEcsWord(Cpu170Context *activeCpu, bool writeToEcs)
     {
     u32  absEcsAddr;
     u32  ecsAddress;
     u32  flEcs;
     bool isExpandedAddress;
     bool isFlagRegister = FALSE;
-    bool isMaintenance  = FALSE;
     bool isZeroFill     = FALSE;
     u32  raEcs;
 
@@ -2101,16 +2426,12 @@ static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
         absEcsAddr     = ecsAddress + raEcs;
         isFlagRegister = (ecsAddress & (1 << 29)) != 0
                          && (activeCpu->regFlEcs & (1 << 29)) != 0;
-        if ((isFlagRegister == FALSE) && (modelType == ModelCyber865))
+        if ((isFlagRegister == FALSE) && ((features & IsSeries800) != 0))
             {
             if (((absEcsAddr & (5 << 22)) == (4 << 22))
                 || ((absEcsAddr & (3 << 28)) == (1 << 28)))
                 {
                 isZeroFill = TRUE;
-                }
-            else if ((absEcsAddr & (5 << 22)) == (5 << 22))
-                {
-                isMaintenance = TRUE;
                 }
             }
         }
@@ -2121,15 +2442,11 @@ static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
         absEcsAddr     = ecsAddress + raEcs;
         isFlagRegister = (ecsAddress & (1 << 23)) != 0
                          && (activeCpu->regFlEcs & (1 << 23)) != 0;
-        if ((isFlagRegister == FALSE) && (modelType == ModelCyber865))
+        if ((isFlagRegister == FALSE) && ((features & IsSeries800) != 0))
             {
             if ((absEcsAddr & (7 << 21)) == (1 << 21))
                 {
                 isZeroFill = TRUE;
-                }
-            else if ((absEcsAddr & (3 << 22)) == (1 << 22))
-                {
-                isMaintenance = TRUE;
                 }
             }
         }
@@ -2163,6 +2480,12 @@ static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -2171,11 +2494,7 @@ static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
                 }
 
             activeCpu->regP = 0;
-
-            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
-                {
-                activeCpu->isErrorExitPending = TRUE;
-                }
+            cpuSetErrorExitPending(activeCpu);
             }
 
         return;
@@ -2242,7 +2561,7 @@ static void cpuEcsWord(CpuContext *activeCpu, bool writeToEcs)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
+static void cpuUemTransfer(Cpu170Context *activeCpu, bool writeToUem)
     {
     u32  absUemAddr;
     u32  cmAddress;
@@ -2277,7 +2596,7 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
         raEcs      = (u32)(activeCpu->regRaEcs & Mask24);
         flEcs      = (u32)(activeCpu->regFlEcs & Mask30);
         absUemAddr = uemAddress + raEcs;
-        isZeroFill = modelType == ModelCyber865
+        isZeroFill = (features & IsSeries800) != 0
                      && ((absUemAddr & (3 << 28)) == (1 << 28));
         }
     else
@@ -2285,7 +2604,7 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
         raEcs      = (u32)(activeCpu->regRaEcs & Mask21);
         flEcs      = (u32)(activeCpu->regFlEcs & Mask24);
         absUemAddr = uemAddress + raEcs;
-        isZeroFill = modelType == ModelCyber865
+        isZeroFill = (features & IsSeries800) != 0
                      && (((absUemAddr & (5 << 21)) == (1 << 21))
                          || ((absUemAddr & (3 << 22)) == (1 << 22)));
         }
@@ -2339,6 +2658,12 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -2347,11 +2672,7 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
                 }
 
             activeCpu->regP = 0;
-
-            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
-                {
-                activeCpu->isErrorExitPending = TRUE;
-                }
+            cpuSetErrorExitPending(activeCpu);
             }
         else
             {
@@ -2454,7 +2775,7 @@ static void cpuUemTransfer(CpuContext *activeCpu, bool writeToUem)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
+static void cpuEcsTransfer(Cpu170Context *activeCpu, bool writeToEcs)
     {
     u32  absEcsAddr;
     u32  wordCount;
@@ -2481,9 +2802,8 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
 
     isExpandedAddress = ((features & IsSeries800) != 0)
                         && ((activeCpu->exitMode & EmFlagExpandedAddress) != 0);
-    isFlagRegister = FALSE;
-    isMaintenance  = FALSE;    // for Cyber 865/875
-    isZeroFill     = FALSE;    // for Cyber 865/875
+    isMaintenance  = FALSE;    // for Series 800
+    isZeroFill     = FALSE;    // for Series 800
 
     /*
     **  Calculate word count, source and destination addresses.
@@ -2496,7 +2816,7 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
         flEcs          = (u32)(activeCpu->regFlEcs & Mask30);
         absEcsAddr     = ecsAddress + raEcs;
         isFlagRegister = (ecsAddress & (1 << 29)) != 0 && (flEcs & (1 << 29)) != 0;
-        if ((isFlagRegister == FALSE) && (modelType == ModelCyber865))
+        if ((isFlagRegister == FALSE) && ((features & IsSeries800) != 0))
             {
             if (((absEcsAddr & (5 << 22)) == (4 << 22))
                 || ((absEcsAddr & (3 << 28)) == (1 << 28)))
@@ -2515,7 +2835,7 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
         flEcs          = (u32)(activeCpu->regFlEcs & Mask24);
         absEcsAddr     = ecsAddress + raEcs;
         isFlagRegister = (ecsAddress & (1 << 23)) != 0 && (flEcs & (1 << 23)) != 0;
-        if ((isFlagRegister == FALSE) && (modelType == ModelCyber865))
+        if ((isFlagRegister == FALSE) && ((features & IsSeries800) != 0))
             {
             if ((absEcsAddr & (7 << 21)) == (1 << 21))
                 {
@@ -2623,6 +2943,12 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -2631,11 +2957,7 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
                 }
 
             activeCpu->regP = 0;
-
-            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
-                {
-                activeCpu->isErrorExitPending = TRUE;
-                }
+            cpuSetErrorExitPending(activeCpu);
             }
         else
             {
@@ -2746,7 +3068,7 @@ static void cpuEcsTransfer(CpuContext *activeCpu, bool writeToEcs)
 **  Returns:        TRUE if access failed, FALSE otherwise.
 **
 **------------------------------------------------------------------------*/
-static bool cpuCmuGetByte(CpuContext *activeCpu, u32 address, u32 pos, u8 *byte)
+static bool cpuCmuGetByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 *byte)
     {
     u32    location;
     CpWord data;
@@ -2762,6 +3084,12 @@ static bool cpuCmuGetByte(CpuContext *activeCpu, u32 address, u32 pos, u8 *byte)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return TRUE;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -2770,14 +3098,10 @@ static bool cpuCmuGetByte(CpuContext *activeCpu, u32 address, u32 pos, u8 *byte)
                 }
 
             activeCpu->regP = 0;
-
-            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
-                {
-                activeCpu->isErrorExitPending = TRUE;
-                }
+            cpuSetErrorExitPending(activeCpu);
             }
 
-        return (TRUE);
+        return TRUE;
         }
 
     /*
@@ -2796,7 +3120,7 @@ static bool cpuCmuGetByte(CpuContext *activeCpu, u32 address, u32 pos, u8 *byte)
     */
     *byte = (u8)((data >> ((9 - pos) * 6)) & Mask6);
 
-    return (FALSE);
+    return FALSE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2811,7 +3135,7 @@ static bool cpuCmuGetByte(CpuContext *activeCpu, u32 address, u32 pos, u8 *byte)
 **  Returns:        TRUE if access failed, FALSE otherwise.
 **
 **------------------------------------------------------------------------*/
-static bool cpuCmuPutByte(CpuContext *activeCpu, u32 address, u32 pos, u8 byte)
+static bool cpuCmuPutByte(Cpu170Context *activeCpu, u32 address, u32 pos, u8 byte)
     {
     u32    location;
     CpWord data;
@@ -2827,6 +3151,12 @@ static bool cpuCmuPutByte(CpuContext *activeCpu, u32 address, u32 pos, u8 byte)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return TRUE;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -2835,14 +3165,10 @@ static bool cpuCmuPutByte(CpuContext *activeCpu, u32 address, u32 pos, u8 byte)
                 }
 
             activeCpu->regP = 0;
-
-            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
-                {
-                activeCpu->isErrorExitPending = TRUE;
-                }
+            cpuSetErrorExitPending(activeCpu);
             }
 
-        return (TRUE);
+        return TRUE;
         }
 
     /*
@@ -2871,7 +3197,7 @@ static bool cpuCmuPutByte(CpuContext *activeCpu, u32 address, u32 pos, u8 byte)
     */
     cpMem[location] = data & Mask60;
 
-    return (FALSE);
+    return FALSE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2883,7 +3209,7 @@ static bool cpuCmuPutByte(CpuContext *activeCpu, u32 address, u32 pos, u8 byte)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-static void cpuCmuMoveIndirect(CpuContext *activeCpu)
+static void cpuCmuMoveIndirect(Cpu170Context *activeCpu)
     {
     CpWord descWord;
     u32    k1, k2;
@@ -2925,6 +3251,12 @@ static void cpuCmuMoveIndirect(CpuContext *activeCpu)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -2933,11 +3265,7 @@ static void cpuCmuMoveIndirect(CpuContext *activeCpu)
                 }
 
             activeCpu->regP = 0;
-
-            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
-                {
-                activeCpu->isErrorExitPending = TRUE;
-                }
+            cpuSetErrorExitPending(activeCpu);
 
             return;
             }
@@ -3007,7 +3335,7 @@ static void cpuCmuMoveIndirect(CpuContext *activeCpu)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-static void cpuCmuMoveDirect(CpuContext *activeCpu)
+static void cpuCmuMoveDirect(Cpu170Context *activeCpu)
     {
     u32 k1, k2;
     u32 c1, c2;
@@ -3036,6 +3364,12 @@ static void cpuCmuMoveDirect(CpuContext *activeCpu)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -3044,11 +3378,7 @@ static void cpuCmuMoveDirect(CpuContext *activeCpu)
                 }
 
             activeCpu->regP = 0;
-
-            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
-                {
-                activeCpu->isErrorExitPending = TRUE;
-                }
+            cpuSetErrorExitPending(activeCpu);
 
             return;
             }
@@ -3118,7 +3448,7 @@ static void cpuCmuMoveDirect(CpuContext *activeCpu)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-static void cpuCmuCompareCollated(CpuContext *activeCpu)
+static void cpuCmuCompareCollated(Cpu170Context *activeCpu)
     {
     CpWord result = 0;
     u32    k1, k2;
@@ -3152,6 +3482,12 @@ static void cpuCmuCompareCollated(CpuContext *activeCpu)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -3160,11 +3496,7 @@ static void cpuCmuCompareCollated(CpuContext *activeCpu)
                 }
 
             activeCpu->regP = 0;
-
-            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
-                {
-                activeCpu->isErrorExitPending = TRUE;
-                }
+            cpuSetErrorExitPending(activeCpu);
 
             return;
             }
@@ -3269,7 +3601,7 @@ static void cpuCmuCompareCollated(CpuContext *activeCpu)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-static void cpuCmuCompareUncollated(CpuContext *activeCpu)
+static void cpuCmuCompareUncollated(Cpu170Context *activeCpu)
     {
     CpWord result = 0;
     u32    k1, k2;
@@ -3297,6 +3629,12 @@ static void cpuCmuCompareUncollated(CpuContext *activeCpu)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -3305,11 +3643,7 @@ static void cpuCmuCompareUncollated(CpuContext *activeCpu)
                 }
 
             activeCpu->regP = 0;
-
-            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
-                {
-                activeCpu->isErrorExitPending = TRUE;
-                }
+            cpuSetErrorExitPending(activeCpu);
 
             return;
             }
@@ -3396,7 +3730,7 @@ static void cpuCmuCompareUncollated(CpuContext *activeCpu)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cpuFloatCheck(CpuContext *activeCpu, CpWord value)
+static void cpuFloatCheck(Cpu170Context *activeCpu, CpWord value)
     {
     int exponent = ((int)(value >> 48)) & Mask12;
 
@@ -3420,7 +3754,7 @@ static void cpuFloatCheck(CpuContext *activeCpu, CpWord value)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cpuFloatExceptionHandler(CpuContext *activeCpu)
+static void cpuFloatExceptionHandler(Cpu170Context *activeCpu)
     {
     if (activeCpu->floatException)
         {
@@ -3431,6 +3765,12 @@ static void cpuFloatExceptionHandler(CpuContext *activeCpu)
             /*
             **  Exit mode selected.
             */
+            if (isCyber180 && activeCpu->isMonitorMode)
+                {
+                cpuInitiateExitTo180(activeCpu);
+                return;
+                }
+
             activeCpu->isStopped = TRUE;
 
             if (activeCpu->regRaCm < cpuMaxMemory)
@@ -3439,11 +3779,7 @@ static void cpuFloatExceptionHandler(CpuContext *activeCpu)
                 }
 
             activeCpu->regP = 0;
-
-            if (((features & (HasNoCejMej | IsSeries6x00)) == 0) && !activeCpu->isMonitorMode)
-                {
-                activeCpu->isErrorExitPending = TRUE;
-                }
+            cpuSetErrorExitPending(activeCpu);
             }
         }
     }
@@ -3456,7 +3792,7 @@ static void cpuFloatExceptionHandler(CpuContext *activeCpu)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cpOp00(CpuContext *activeCpu)
+static void cpOp00(Cpu170Context *activeCpu)
     {
     /*
     **  PS or Error Exit to MA.
@@ -3464,6 +3800,10 @@ static void cpOp00(CpuContext *activeCpu)
     if (((features & (HasNoCejMej | IsSeries6x00)) != 0) || activeCpu->isMonitorMode)
         {
         activeCpu->isStopped = TRUE;
+        if (isCyber180)
+            {
+            cpuOpIllegal(activeCpu);
+            }
         }
     else
         {
@@ -3471,9 +3811,10 @@ static void cpOp00(CpuContext *activeCpu)
         }
     }
 
-static void cpOp01(CpuContext *activeCpu)
+static void cpOp01(Cpu170Context *activeCpu)
     {
     CpWord acc60;
+    bool   is180xch;
 
     switch (activeCpu->opI)
         {
@@ -3495,7 +3836,7 @@ static void cpOp01(CpuContext *activeCpu)
             /*
             **  Void the instruction stack.
             */
-            cpuVoidIwStack(activeCpu, ~0);
+            cpuVoidIwStack(activeCpu, (u32)~0);
             }
 
         break;
@@ -3518,7 +3859,7 @@ static void cpOp01(CpuContext *activeCpu)
             /*
             **  Void the instruction stack.
             */
-            cpuVoidIwStack(activeCpu, ~0);
+            cpuVoidIwStack(activeCpu, (u32)~0);
             }
 
         break;
@@ -3552,26 +3893,22 @@ static void cpOp01(CpuContext *activeCpu)
 
             return;
             }
-
         cpuAcquireExchangeMutex();
-        if ((activeCpu->ppRequestingExchange == -1)
-            && ((monitorCpu == -1) || (monitorCpu == activeCpu->id)))
+        is180xch   = isCyber180 && activeCpu->isMonitorMode && (activeCpu->regX[0] & 040000000000000000000) != 0;
+        activeCpu->regP = (activeCpu->regP + 1) & Mask18;
+        cpuExchangeJump(activeCpu,
+                        activeCpu->isMonitorMode ? (activeCpu->opAddress + activeCpu->regB[activeCpu->opJ]) & Mask18 : activeCpu->regMa,
+                        TRUE);
+        activeCpu->isMonitorModePending = cpuCount > 1 && activeCpu->isMonitorMode && cpus170[activeCpu->id ^ 1].isMonitorMode && cpus170[activeCpu->id ^ 1].isMonitorModePending == FALSE;
+        if (is180xch)
             {
-            activeCpu->regP      = (activeCpu->regP + 1) & Mask18;
-            activeCpu->isStopped = TRUE;
-            cpuExchangeJump(activeCpu,
-                            activeCpu->isMonitorMode ? activeCpu->opAddress + activeCpu->regB[activeCpu->opJ] : activeCpu->regMa,
-                            TRUE);
-            }
-        else
-            {
-            activeCpu->opOffset = 60; // arrange to re-execute XJ
+            cpuExchangeTo180(activeCpu, TRUE, FALSE);
             }
         cpuReleaseExchangeMutex();
         break;
 
     case 4:
-        if (modelType != ModelCyber865)
+        if ((features & IsSeries800) == 0)
             {
             cpuOpIllegal(activeCpu);
 
@@ -3593,7 +3930,7 @@ static void cpOp01(CpuContext *activeCpu)
         break;
 
     case 5:
-        if (modelType != ModelCyber865)
+        if ((features & IsSeries800) == 0)
             {
             cpuOpIllegal(activeCpu);
 
@@ -3620,8 +3957,16 @@ static void cpOp01(CpuContext *activeCpu)
             /*
             **  RC  Xj
             */
-            //rtcReadUsCounter();
-            activeCpu->regX[activeCpu->opJ] = rtcClock;
+            cpuAcquireClockMutex();
+            if (isCyber180)
+                {
+                activeCpu->regX[activeCpu->opJ] = cpu180FreeRunningCounter & Mask48;
+                }
+            else
+                {
+                activeCpu->regX[activeCpu->opJ] = rtcClock;
+                }
+            cpuReleaseClockMutex();
             }
         else
             {
@@ -3631,15 +3976,26 @@ static void cpOp01(CpuContext *activeCpu)
         break;
 
     case 7:
-        /*
-        **  7600 instruction (invalid in our context).
-        */
-        cpuOpIllegal(activeCpu);
+        if (isCyber180 && activeCpu->opOffset == 30)
+            {
+            /*
+            **  RT  Xj,Xk,K  (TRAP 180 instruction)
+            */
+            activeCpu->opOffset            = 60;
+            cpus180[activeCpu->id].regUcr |= 0x8000; // set privileged instruction fault bit
+            }
+        else
+            {
+            /*
+            **  7600 instruction (invalid in our context).
+            */
+            cpuOpIllegal(activeCpu);
+            }
         break;
         }
     }
 
-static void cpOp02(CpuContext *activeCpu)
+static void cpOp02(Cpu170Context *activeCpu)
     {
     /*
     **  JP  Bi+K
@@ -3651,13 +4007,13 @@ static void cpOp02(CpuContext *activeCpu)
         /*
         **  Void the instruction stack.
         */
-        cpuVoidIwStack(activeCpu, ~0);
+        cpuVoidIwStack(activeCpu, (u32)~0);
         }
 
     cpuFetchOpWord(activeCpu);
     }
 
-static void cpOp03(CpuContext *activeCpu)
+static void cpOp03(Cpu170Context *activeCpu)
     {
     CpWord acc60;
 
@@ -3739,7 +4095,7 @@ static void cpOp03(CpuContext *activeCpu)
                 **  Instruction stack purge flag is set - do an
                 **  unconditional void.
                 */
-                cpuVoidIwStack(activeCpu, ~0);
+                cpuVoidIwStack(activeCpu, (u32)~0);
                 }
             else
                 {
@@ -3755,7 +4111,7 @@ static void cpOp03(CpuContext *activeCpu)
         }
     }
 
-static void cpOp04(CpuContext *activeCpu)
+static void cpOp04(Cpu170Context *activeCpu)
     {
     /*
     **  EQ  Bi Bj K
@@ -3775,7 +4131,7 @@ static void cpOp04(CpuContext *activeCpu)
         }
     }
 
-static void cpOp05(CpuContext *activeCpu)
+static void cpOp05(Cpu170Context *activeCpu)
     {
     /*
     **  NE  Bi Bj K
@@ -3795,7 +4151,7 @@ static void cpOp05(CpuContext *activeCpu)
         }
     }
 
-static void cpOp06(CpuContext *activeCpu)
+static void cpOp06(Cpu170Context *activeCpu)
     {
     u32 acc18;
 
@@ -3835,7 +4191,7 @@ static void cpOp06(CpuContext *activeCpu)
     cpuFetchOpWord(activeCpu);
     }
 
-static void cpOp07(CpuContext *activeCpu)
+static void cpOp07(Cpu170Context *activeCpu)
     {
     u32 acc18;
 
@@ -3875,7 +4231,7 @@ static void cpOp07(CpuContext *activeCpu)
     cpuFetchOpWord(activeCpu);
     }
 
-static void cpOp10(CpuContext *activeCpu)
+static void cpOp10(Cpu170Context *activeCpu)
     {
     /*
     **  BXi Xj
@@ -3883,7 +4239,7 @@ static void cpOp10(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = activeCpu->regX[activeCpu->opJ] & Mask60;
     }
 
-static void cpOp11(CpuContext *activeCpu)
+static void cpOp11(Cpu170Context *activeCpu)
     {
     /*
     **  BXi Xj*Xk
@@ -3891,7 +4247,7 @@ static void cpOp11(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = (activeCpu->regX[activeCpu->opJ] & activeCpu->regX[activeCpu->opK]) & Mask60;
     }
 
-static void cpOp12(CpuContext *activeCpu)
+static void cpOp12(Cpu170Context *activeCpu)
     {
     /*
     **  BXi Xj+Xk
@@ -3899,7 +4255,7 @@ static void cpOp12(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = (activeCpu->regX[activeCpu->opJ] | activeCpu->regX[activeCpu->opK]) & Mask60;
     }
 
-static void cpOp13(CpuContext *activeCpu)
+static void cpOp13(Cpu170Context *activeCpu)
     {
     /*
     **  BXi Xj-Xk
@@ -3907,7 +4263,7 @@ static void cpOp13(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = (activeCpu->regX[activeCpu->opJ] ^ activeCpu->regX[activeCpu->opK]) & Mask60;
     }
 
-static void cpOp14(CpuContext *activeCpu)
+static void cpOp14(Cpu170Context *activeCpu)
     {
     /*
     **  BXi -Xj
@@ -3915,7 +4271,7 @@ static void cpOp14(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = ~activeCpu->regX[activeCpu->opK] & Mask60;
     }
 
-static void cpOp15(CpuContext *activeCpu)
+static void cpOp15(Cpu170Context *activeCpu)
     {
     /*
     **  BXi -Xk*Xj
@@ -3923,7 +4279,7 @@ static void cpOp15(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = (activeCpu->regX[activeCpu->opJ] & ~activeCpu->regX[activeCpu->opK]) & Mask60;
     }
 
-static void cpOp16(CpuContext *activeCpu)
+static void cpOp16(Cpu170Context *activeCpu)
     {
     /*
     **  BXi -Xk+Xj
@@ -3931,7 +4287,7 @@ static void cpOp16(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = (activeCpu->regX[activeCpu->opJ] | ~activeCpu->regX[activeCpu->opK]) & Mask60;
     }
 
-static void cpOp17(CpuContext *activeCpu)
+static void cpOp17(Cpu170Context *activeCpu)
     {
     /*
     **  BXi -Xk-Xj
@@ -3939,7 +4295,7 @@ static void cpOp17(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = (activeCpu->regX[activeCpu->opJ] ^ ~activeCpu->regX[activeCpu->opK]) & Mask60;
     }
 
-static void cpOp20(CpuContext *activeCpu)
+static void cpOp20(Cpu170Context *activeCpu)
     {
     /*
     **  LXi jk
@@ -3950,7 +4306,7 @@ static void cpOp20(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = shiftLeftCircular(activeCpu->regX[activeCpu->opI] & Mask60, jk);
     }
 
-static void cpOp21(CpuContext *activeCpu)
+static void cpOp21(Cpu170Context *activeCpu)
     {
     /*
     **  AXi jk
@@ -3961,7 +4317,7 @@ static void cpOp21(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = shiftRightArithmetic(activeCpu->regX[activeCpu->opI] & Mask60, jk);
     }
 
-static void cpOp22(CpuContext *activeCpu)
+static void cpOp22(Cpu170Context *activeCpu)
     {
     CpWord acc60;
 
@@ -3993,7 +4349,7 @@ static void cpOp22(CpuContext *activeCpu)
         }
     }
 
-static void cpOp23(CpuContext *activeCpu)
+static void cpOp23(Cpu170Context *activeCpu)
     {
     CpWord acc60;
 
@@ -4025,7 +4381,7 @@ static void cpOp23(CpuContext *activeCpu)
         }
     }
 
-static void cpOp24(CpuContext *activeCpu)
+static void cpOp24(Cpu170Context *activeCpu)
     {
     /*
     **  NXi Bj Xk
@@ -4035,7 +4391,7 @@ static void cpOp24(CpuContext *activeCpu)
     cpuFloatExceptionHandler(activeCpu);
     }
 
-static void cpOp25(CpuContext *activeCpu)
+static void cpOp25(Cpu170Context *activeCpu)
     {
     /*
     **  ZXi Bj Xk
@@ -4045,7 +4401,7 @@ static void cpOp25(CpuContext *activeCpu)
     cpuFloatExceptionHandler(activeCpu);
     }
 
-static void cpOp26(CpuContext *activeCpu)
+static void cpOp26(Cpu170Context *activeCpu)
     {
     /*
     **  UXi Bj Xk
@@ -4060,7 +4416,7 @@ static void cpOp26(CpuContext *activeCpu)
         }
     }
 
-static void cpOp27(CpuContext *activeCpu)
+static void cpOp27(Cpu170Context *activeCpu)
     {
     /*
     **  PXi Bj Xk
@@ -4075,7 +4431,7 @@ static void cpOp27(CpuContext *activeCpu)
         }
     }
 
-static void cpOp30(CpuContext *activeCpu)
+static void cpOp30(Cpu170Context *activeCpu)
     {
     /*
     **  FXi Xj+Xk
@@ -4087,7 +4443,7 @@ static void cpOp30(CpuContext *activeCpu)
     cpuFloatExceptionHandler(activeCpu);
     }
 
-static void cpOp31(CpuContext *activeCpu)
+static void cpOp31(Cpu170Context *activeCpu)
     {
     /*
     **  FXi Xj-Xk
@@ -4099,7 +4455,7 @@ static void cpOp31(CpuContext *activeCpu)
     cpuFloatExceptionHandler(activeCpu);
     }
 
-static void cpOp32(CpuContext *activeCpu)
+static void cpOp32(Cpu170Context *activeCpu)
     {
     /*
     **  DXi Xj+Xk
@@ -4111,7 +4467,7 @@ static void cpOp32(CpuContext *activeCpu)
     cpuFloatExceptionHandler(activeCpu);
     }
 
-static void cpOp33(CpuContext *activeCpu)
+static void cpOp33(Cpu170Context *activeCpu)
     {
     /*
     **  DXi Xj-Xk
@@ -4123,7 +4479,7 @@ static void cpOp33(CpuContext *activeCpu)
     cpuFloatExceptionHandler(activeCpu);
     }
 
-static void cpOp34(CpuContext *activeCpu)
+static void cpOp34(Cpu170Context *activeCpu)
     {
     /*
     **  RXi Xj+Xk
@@ -4135,7 +4491,7 @@ static void cpOp34(CpuContext *activeCpu)
     cpuFloatExceptionHandler(activeCpu);
     }
 
-static void cpOp35(CpuContext *activeCpu)
+static void cpOp35(Cpu170Context *activeCpu)
     {
     /*
     **  RXi Xj-Xk
@@ -4147,7 +4503,7 @@ static void cpOp35(CpuContext *activeCpu)
     cpuFloatExceptionHandler(activeCpu);
     }
 
-static void cpOp36(CpuContext *activeCpu)
+static void cpOp36(Cpu170Context *activeCpu)
     {
     CpWord acc60;
 
@@ -4163,7 +4519,7 @@ static void cpOp36(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = acc60 & Mask60;
     }
 
-static void cpOp37(CpuContext *activeCpu)
+static void cpOp37(Cpu170Context *activeCpu)
     {
     CpWord acc60;
 
@@ -4179,7 +4535,7 @@ static void cpOp37(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = acc60 & Mask60;
     }
 
-static void cpOp40(CpuContext *activeCpu)
+static void cpOp40(Cpu170Context *activeCpu)
     {
     /*
     **  FXi Xj*Xk
@@ -4191,7 +4547,7 @@ static void cpOp40(CpuContext *activeCpu)
     cpuFloatExceptionHandler(activeCpu);
     }
 
-static void cpOp41(CpuContext *activeCpu)
+static void cpOp41(Cpu170Context *activeCpu)
     {
     /*
     **  RXi Xj*Xk
@@ -4203,7 +4559,7 @@ static void cpOp41(CpuContext *activeCpu)
     cpuFloatExceptionHandler(activeCpu);
     }
 
-static void cpOp42(CpuContext *activeCpu)
+static void cpOp42(Cpu170Context *activeCpu)
     {
     /*
     **  DXi Xj*Xk
@@ -4215,7 +4571,7 @@ static void cpOp42(CpuContext *activeCpu)
     cpuFloatExceptionHandler(activeCpu);
     }
 
-static void cpOp43(CpuContext *activeCpu)
+static void cpOp43(Cpu170Context *activeCpu)
     {
     /*
     **  MXi jk
@@ -4226,7 +4582,7 @@ static void cpOp43(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = shiftMask(jk);
     }
 
-static void cpOp44(CpuContext *activeCpu)
+static void cpOp44(Cpu170Context *activeCpu)
     {
     /*
     **  FXi Xj/Xk
@@ -4241,7 +4597,7 @@ static void cpOp44(CpuContext *activeCpu)
 #endif
     }
 
-static void cpOp45(CpuContext *activeCpu)
+static void cpOp45(Cpu170Context *activeCpu)
     {
     /*
     **  RXi Xj/Xk
@@ -4253,7 +4609,7 @@ static void cpOp45(CpuContext *activeCpu)
     cpuFloatExceptionHandler(activeCpu);
     }
 
-static void cpOp46(CpuContext *activeCpu)
+static void cpOp46(Cpu170Context *activeCpu)
     {
     switch (activeCpu->opI)
         {
@@ -4323,7 +4679,7 @@ static void cpOp46(CpuContext *activeCpu)
         }
     }
 
-static void cpOp47(CpuContext *activeCpu)
+static void cpOp47(Cpu170Context *activeCpu)
     {
     CpWord acc60;
 
@@ -4340,7 +4696,7 @@ static void cpOp47(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = acc60 & Mask60;
     }
 
-static void cpOp50(CpuContext *activeCpu)
+static void cpOp50(Cpu170Context *activeCpu)
     {
     /*
     **  SAi Aj+K
@@ -4350,7 +4706,7 @@ static void cpOp50(CpuContext *activeCpu)
     cpuRegASemantics(activeCpu);
     }
 
-static void cpOp51(CpuContext *activeCpu)
+static void cpOp51(Cpu170Context *activeCpu)
     {
     /*
     **  SAi Bj+K
@@ -4360,7 +4716,7 @@ static void cpOp51(CpuContext *activeCpu)
     cpuRegASemantics(activeCpu);
     }
 
-static void cpOp52(CpuContext *activeCpu)
+static void cpOp52(Cpu170Context *activeCpu)
     {
     /*
     **  SAi Xj+K
@@ -4370,7 +4726,7 @@ static void cpOp52(CpuContext *activeCpu)
     cpuRegASemantics(activeCpu);
     }
 
-static void cpOp53(CpuContext *activeCpu)
+static void cpOp53(Cpu170Context *activeCpu)
     {
     /*
     **  SAi Xj+Bk
@@ -4380,7 +4736,7 @@ static void cpOp53(CpuContext *activeCpu)
     cpuRegASemantics(activeCpu);
     }
 
-static void cpOp54(CpuContext *activeCpu)
+static void cpOp54(Cpu170Context *activeCpu)
     {
     /*
     **  SAi Aj+Bk
@@ -4390,7 +4746,7 @@ static void cpOp54(CpuContext *activeCpu)
     cpuRegASemantics(activeCpu);
     }
 
-static void cpOp55(CpuContext *activeCpu)
+static void cpOp55(Cpu170Context *activeCpu)
     {
     /*
     **  SAi Aj-Bk
@@ -4400,7 +4756,7 @@ static void cpOp55(CpuContext *activeCpu)
     cpuRegASemantics(activeCpu);
     }
 
-static void cpOp56(CpuContext *activeCpu)
+static void cpOp56(Cpu170Context *activeCpu)
     {
     /*
     **  SAi Bj+Bk
@@ -4410,7 +4766,7 @@ static void cpOp56(CpuContext *activeCpu)
     cpuRegASemantics(activeCpu);
     }
 
-static void cpOp57(CpuContext *activeCpu)
+static void cpOp57(Cpu170Context *activeCpu)
     {
     /*
     **  SAi Bj-Bk
@@ -4420,7 +4776,7 @@ static void cpOp57(CpuContext *activeCpu)
     cpuRegASemantics(activeCpu);
     }
 
-static void cpOp60(CpuContext *activeCpu)
+static void cpOp60(Cpu170Context *activeCpu)
     {
     /*
     **  SBi Aj+K
@@ -4428,7 +4784,7 @@ static void cpOp60(CpuContext *activeCpu)
     activeCpu->regB[activeCpu->opI] = cpuAdd18(activeCpu->regA[activeCpu->opJ], activeCpu->opAddress);
     }
 
-static void cpOp61(CpuContext *activeCpu)
+static void cpOp61(Cpu170Context *activeCpu)
     {
     /*
     **  SBi Bj+K
@@ -4436,7 +4792,7 @@ static void cpOp61(CpuContext *activeCpu)
     activeCpu->regB[activeCpu->opI] = cpuAdd18(activeCpu->regB[activeCpu->opJ], activeCpu->opAddress);
     }
 
-static void cpOp62(CpuContext *activeCpu)
+static void cpOp62(Cpu170Context *activeCpu)
     {
     /*
     **  SBi Xj+K
@@ -4444,7 +4800,7 @@ static void cpOp62(CpuContext *activeCpu)
     activeCpu->regB[activeCpu->opI] = cpuAdd18((u32)activeCpu->regX[activeCpu->opJ], activeCpu->opAddress);
     }
 
-static void cpOp63(CpuContext *activeCpu)
+static void cpOp63(Cpu170Context *activeCpu)
     {
     /*
     **  SBi Xj+Bk
@@ -4452,7 +4808,7 @@ static void cpOp63(CpuContext *activeCpu)
     activeCpu->regB[activeCpu->opI] = cpuAdd18((u32)activeCpu->regX[activeCpu->opJ], activeCpu->regB[activeCpu->opK]);
     }
 
-static void cpOp64(CpuContext *activeCpu)
+static void cpOp64(Cpu170Context *activeCpu)
     {
     /*
     **  SBi Aj+Bk
@@ -4460,7 +4816,7 @@ static void cpOp64(CpuContext *activeCpu)
     activeCpu->regB[activeCpu->opI] = cpuAdd18(activeCpu->regA[activeCpu->opJ], activeCpu->regB[activeCpu->opK]);
     }
 
-static void cpOp65(CpuContext *activeCpu)
+static void cpOp65(Cpu170Context *activeCpu)
     {
     /*
     **  SBi Aj-Bk
@@ -4468,7 +4824,7 @@ static void cpOp65(CpuContext *activeCpu)
     activeCpu->regB[activeCpu->opI] = cpuSubtract18(activeCpu->regA[activeCpu->opJ], activeCpu->regB[activeCpu->opK]);
     }
 
-static void cpOp66(CpuContext *activeCpu)
+static void cpOp66(Cpu170Context *activeCpu)
     {
     if ((activeCpu->opI == 0) && ((features & IsSeries800) != 0))
         {
@@ -4486,7 +4842,7 @@ static void cpOp66(CpuContext *activeCpu)
     activeCpu->regB[activeCpu->opI] = cpuAdd18(activeCpu->regB[activeCpu->opJ], activeCpu->regB[activeCpu->opK]);
     }
 
-static void cpOp67(CpuContext *activeCpu)
+static void cpOp67(Cpu170Context *activeCpu)
     {
     if ((activeCpu->opI == 0) && ((features & IsSeries800) != 0))
         {
@@ -4504,7 +4860,7 @@ static void cpOp67(CpuContext *activeCpu)
     activeCpu->regB[activeCpu->opI] = cpuSubtract18(activeCpu->regB[activeCpu->opJ], activeCpu->regB[activeCpu->opK]);
     }
 
-static void cpOp70(CpuContext *activeCpu)
+static void cpOp70(Cpu170Context *activeCpu)
     {
     CpWord acc60;
 
@@ -4521,7 +4877,7 @@ static void cpOp70(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = acc60 & Mask60;
     }
 
-static void cpOp71(CpuContext *activeCpu)
+static void cpOp71(Cpu170Context *activeCpu)
     {
     CpWord acc60;
 
@@ -4538,7 +4894,7 @@ static void cpOp71(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = acc60 & Mask60;
     }
 
-static void cpOp72(CpuContext *activeCpu)
+static void cpOp72(Cpu170Context *activeCpu)
     {
     CpWord acc60;
 
@@ -4555,7 +4911,7 @@ static void cpOp72(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = acc60 & Mask60;
     }
 
-static void cpOp73(CpuContext *activeCpu)
+static void cpOp73(Cpu170Context *activeCpu)
     {
     CpWord acc60;
 
@@ -4572,7 +4928,7 @@ static void cpOp73(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = acc60 & Mask60;
     }
 
-static void cpOp74(CpuContext *activeCpu)
+static void cpOp74(Cpu170Context *activeCpu)
     {
     CpWord acc60;
 
@@ -4589,7 +4945,7 @@ static void cpOp74(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = acc60 & Mask60;
     }
 
-static void cpOp75(CpuContext *activeCpu)
+static void cpOp75(Cpu170Context *activeCpu)
     {
     CpWord acc60;
 
@@ -4607,7 +4963,7 @@ static void cpOp75(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = acc60 & Mask60;
     }
 
-static void cpOp76(CpuContext *activeCpu)
+static void cpOp76(Cpu170Context *activeCpu)
     {
     CpWord acc60;
 
@@ -4624,7 +4980,7 @@ static void cpOp76(CpuContext *activeCpu)
     activeCpu->regX[activeCpu->opI] = acc60 & Mask60;
     }
 
-static void cpOp77(CpuContext *activeCpu)
+static void cpOp77(Cpu170Context *activeCpu)
     {
     CpWord acc60;
 

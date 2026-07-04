@@ -4,6 +4,7 @@
 /*--------------------------------------------------------------------------
 **
 **  Copyright (c) 2003-2011, Tom Hunter
+**                2021-2026, Kevin Jordan
 **
 **  Name: const.h
 **
@@ -32,19 +33,21 @@
 **  ----------------
 */
 #ifdef _DEBUG
-#define DtCyberVersion      "Desktop CYBER 5.7.60 (Debug)   "
+#define DtCyberVersion      "Desktop CYBER 6.0.30 (Debug)   "
 #else
-#define DtCyberVersion      "Desktop CYBER 5.7.60 (Release) "
+#define DtCyberVersion      "Desktop CYBER 6.0.30 (Release) "
 #endif
 
 #define DtCyberBuildDate    __DATE__ " " __TIME__
 #define DtCyberCopyright    "Copyright (c) 2011-2017 Tom Hunter \n \
     Portions Copyright:\n \
-        (c) 2018-2025 Kevin Jordan\n \
+        (c) 2017-2026 Kevin Jordan\n \
+        (c) 2003-2025 Gerard J van der Grinten\n \
+        (c) 2025      Daiyu Hurst\n \
         (c) 2011-2022 Paul Koning\n \
-        (c) 2017-2025 Steven Zoppi\n \
         (c) 2006-2022 Mark Rustad\n \
-        (c) 2005      Mark Riordan"
+        (c) 2005      Mark Riordan\n \
+        (c) 2017-2025 Steven Zoppi\n"
 #define DtCyberLicense      "Licensed under the terms of the GNU General Public License version 3"
 #define DtCyberLicenseDetails                                             \
     "For details see included text file 'license-gpl-3.0.txt' or visit\n" \
@@ -73,7 +76,7 @@
 #define CcLargeWin32Screen         1
 
 /*
-**  Debug support
+**  Debug and tracing support
 */
 #define CcDebug                    0
 
@@ -81,6 +84,7 @@
 **  Measure cycle time
 */
 #define CcCycleTime                0
+#define CyclesOneSecond            100000
 
 /*
 **  Device types.
@@ -199,17 +203,23 @@
 #define Mask12                     07777
 #define Mask14                     037777
 #define Mask15                     077777
-#define Mask16                     0177777
+#define Mask16                     0177777U
 #define Mask17                     0377777
 #define Mask18                     0777777
+#define Mask20                     03777777
 #define Mask21                     07777777
 #define Mask21Ecs                  07777700
+#define Mask22                     017777777
 #define Mask23                     037777777
 #define Mask24                     077777777
 #define Mask24Ecs                  077777700
+#define Mask28                     01777777777
 #define Mask29                     03777777777
 #define Mask30                     07777777777
 #define Mask30Ecs                  07777777700
+#define Mask32                     037777777777U
+#define Mask38                     03777777777777
+#define Mask44                     000000377777777777777
 #define Mask48                     000007777777777777777
 #define Mask50                     000037777777777777777
 #define Mask60                     077777777777777777777
@@ -218,10 +228,18 @@
 #define MaskNormalize              000004000000000000000
 
 /*
-**  Trace masks.
+**  Trace masks and macros
 */
-#define TraceCpu                   (1 << 30)
-#define TraceExchange              (1 << 29)
+#define TRACECPU(ctx, mask)        ((u64)(mask) << (((ctx)->id << 4) + 32))
+#define TraceCpu180                0x8000U
+#define TraceCpu170                0x4000U
+#define TraceExchange              0x2000U
+#define TraceBlockOp               0x1000U
+#define TraceCallFrame             0x0800U
+#define TracePva                   0x0400U
+#define TraceValidateStack         0x0200U
+#define TraceConditions            0x0100U
+#define TraceCpu                   (TraceCpu180 | TraceCpu170)
 
 /*
 **  Sign extension and overflow.

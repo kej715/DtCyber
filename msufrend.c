@@ -403,7 +403,7 @@ void msufrendInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
         fwaListSock = fwaThisSock + W_SKOTCL;
         /* Initialize the circular list, which is actually part of the socket entry. */
         initCircList(fwaListSock, L_SKOCL);
-        setHalfWord(fwaThisSock + H_SKNUM, pp->id);
+        setHalfWord(fwaThisSock + H_SKNUM, (HalfWord)pp->id);
         }
 
     initPortBufs();
@@ -443,25 +443,20 @@ void msufrendShowStatus()
     {
     FrendContext *fp;
     int          i;
-    char         outBuf[200];
     PortContext  *pp;
 
     for (fp = firstFrend; fp != NULL; fp = fp->next)
         {
         if (fp->listenFd > 0)
             {
-            sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "MSUFrEnd", fp->channelNo, fp->eqNo);
-            opDisplay(outBuf);
-            sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(fp->listenFd), "", "frend", "listening");
-            opDisplay(outBuf);
+            opDisplay("    >   %-8s C%02o E%02o     ", "MSUFrEnd", fp->channelNo, fp->eqNo);
+            opDisplay(FMTNETSTATUS "\n", netGetLocalTcpAddress(fp->listenFd), "", "frend", "listening");
             for (i = 0, pp = fp->ports; i < fp->portCount; i++, pp++)
                 {
                 if (pp->active && (pp->fd > 0))
                     {
-                    sprintf(outBuf, "(msu    )         P%02o ", pp->id);
-                    opDisplay(outBuf);
-                    sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->fd), netGetPeerTcpAddress(pp->fd), "frend", "connected");
-                    opDisplay(outBuf);
+                    opDisplay("(msu    )         P%02o ", pp->id);
+                    opDisplay(FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->fd), netGetPeerTcpAddress(pp->fd), "frend", "connected");
                     }
                 }
             }
@@ -797,7 +792,6 @@ static void msufrendDisconnect(void)
  */
 
 static char *frendVersion = "63.01";
-static char *author       = "Mark Riordan  4513 Gregg Rd  Madison, WI  53705";
 
 /*=====  Function prototypes  =============================== */
 static void taskSENDCP(HalfWord portNum, u8 MsgCode);
@@ -897,7 +891,7 @@ static void setHalfWord(FrendAddr addr, HalfWord half)
 
 static HalfWord getHalfWord(FrendAddr addr)
     {
-    return (activeFrend->mem[addr] << 8) | (activeFrend->mem[1 + addr]);
+    return (HalfWord)((activeFrend->mem[addr] << 8) | (activeFrend->mem[1 + addr]));
     }
 
 static void setByte(FrendAddr addr, u8 byte)
@@ -916,11 +910,7 @@ static u8 getByte(FrendAddr addr)
  */
 static void writeToOperTerm(u8 ch)
     {
-    char buf[2];
-
-    buf[0] = ch;
-    buf[1] = '\0';
-    opDisplay(buf);
+    opDisplay("%c", ch);
     }
 
 /*--- function sendToFSock ----------------------
@@ -932,7 +922,7 @@ static void writeToOperTerm(u8 ch)
  */
 static int sendToFSock(PortContext *pp, u8 bufout[], int nOutBytes)
     {
-    int bytesSent;
+    ssize_t bytesSent;
 
     if (FPORTCONSOLE == pp->id)
         {
@@ -960,7 +950,7 @@ static int sendToFSock(PortContext *pp, u8 bufout[], int nOutBytes)
                 }
 #endif
 
-            return bytesSent;
+            return (int)bytesSent;
             }
         else
             {
@@ -1030,7 +1020,6 @@ static HalfWord findEntryInList(FrendAddr fwaList, FullWord myword)
     FullWord thisWord;
     HalfWord nSlotsTot = getHalfWord(fwaList + H_CIRCLIST_N_SLOTS_TOT);
     HalfWord curTop    = getHalfWord(fwaList + H_CIRCLIST_CUR_TOP);
-    HalfWord nextBot   = getHalfWord(fwaList + H_CIRCLIST_NEXT_BOT);
     HalfWord nUsed     = getHalfWord(fwaList + H_CIRCLIST_N_USED);
 
     for (islot = curTop, slots_so_far = 0; slots_so_far < nUsed; slots_so_far++)
@@ -1381,7 +1370,7 @@ static void initLmbi()
     activeFrend->fwaSOCK = curTableFwa;
     setFullWord(curLmbiTableEntry + W_PWFWA, curTableFwa);
     setHalfWord(curLmbiTableEntry + H_PWLE, LE_SOCK);
-    setHalfWord(curLmbiTableEntry + H_PWNE, activeFrend->portCount);
+    setHalfWord(curLmbiTableEntry + H_PWNE, (HalfWord)activeFrend->portCount);
 #if DEBUG
     fprintf(msufrendLog, "\nEntry for SOCK  = 0x%x; table FWA=%x", PW_SOCK, curTableFwa);
 #endif
@@ -1488,7 +1477,6 @@ static void initLmbi()
 static void returnBuffersInReleaseList()
     {
     FrendAddr bufaddr;
-    int       nFreed = 0;
 
     while (0 != (bufaddr = removeFromBottomOfList(activeFrend->fwaBFREL)))
         {
@@ -1500,7 +1488,6 @@ static void returnBuffersInReleaseList()
             {
             addToTopOfList(activeFrend->fwaBF240, bufaddr);
             }
-        nFreed++;
         }
     }
 
@@ -1637,10 +1624,8 @@ static void ADDPORT(PortContext *pp, FrendAddr fwaMsg)
  */
 static void SENDPT(PortContext *pp, FrendAddr fwaMySocket, FrendAddr fwaMsg)
     {
-    FrendAddr fwaMyPort = portNumToFwa(pp->id);
-
     ADDPORT(pp, fwaMsg);
-    taskSENDCP(pp->id, FP_INBS);
+    taskSENDCP((HalfWord)pp->id, FP_INBS);
     }
 
 /*--- function GETINBF ----------------------
@@ -1671,7 +1656,6 @@ static FrendAddr GETINBF(FrendAddr fwaMySock)
  */
 static FrendAddr getFrendVersionMsg(PortContext *pp)
     {
-    FullWord  len;
     char      dateTime[24], versionMsg[80];
     time_t    mytime = time(NULL);
     struct tm *ptm   = localtime(&mytime);
@@ -1683,7 +1667,7 @@ static FrendAddr getFrendVersionMsg(PortContext *pp)
      * This apparently does not match 100% with the text in ISUG p 1.3.
      */
     strftime(dateTime, sizeof(dateTime), "%m/%d/%y %H:%M:%S", ptm);
-    len = sprintf(versionMsg, "  %s  MSU-Frend3  %s   Socket=%3d", dateTime, frendVersion, pp->id);
+    sprintf(versionMsg, "  %s  MSU-Frend3  %s   Socket=%3d", dateTime, frendVersion, pp->id);
 
     return getBufferForC(versionMsg);
     }
@@ -2080,10 +2064,10 @@ static void LINKSOC(PortContext *pp)
     FrendAddr fwaMyPort   = portNumToFwa(pp->id);
     FrendAddr fwaMySocket = sockNumToFwa(pp->id);
 
-    setHalfWord(fwaMySocket + H_SKCN1, pp->id);
+    setHalfWord(fwaMySocket + H_SKCN1, (HalfWord)pp->id);
     setByte(fwaMySocket + C_SKCT1, CT_PORT);
 
-    setHalfWord(fwaMyPort + H_PTCN1, pp->id);
+    setHalfWord(fwaMyPort + H_PTCN1, (HalfWord)pp->id);
     setByte(fwaMyPort + C_PTCT1, CT_SOCK);
     CLEARHFLAG(fwaMySocket, SKSUPE); /* Clear suppress echo */
     }
@@ -2256,12 +2240,12 @@ static void taskINESC(PortContext *pp)
  */
 static void taskOPENSP(PortContext *pp)
     {
-    SETPORT(pp->id, PTN_MAN);
+    SETPORT((HalfWord)pp->id, PTN_MAN);
     LINKSOC(pp);
 
     /* Create message to send to 1FP */
         {
-        FrendAddr fwaMsg = FMTOPEN(PTN_MAN, pp->id, pp->id);
+        FrendAddr fwaMsg = FMTOPEN(PTN_MAN, (HalfWord)pp->id, (HalfWord)pp->id);
         taskMSGCP(activeFrend->ports + (PTN_MAN - 1), fwaMsg);
         }
     }
@@ -2302,7 +2286,7 @@ static void taskSKOPEN(PortContext *pp)
 
     setByte(fwaMySocket + C_SKISTA, IN_IO); /* set input state */
 
-    taskSKINIT(pp->id);
+    taskSKINIT((HalfWord)pp->id);
 
     /* This code is from task SKWTNQ */
     taskOPENSP(pp);
@@ -2318,7 +2302,7 @@ static void taskSKCARR(PortContext *pp)
     FrendAddr fwaMySocket = sockNumToFwa(pp->id);
 
     /* //! for the time being, we are setting socketID = socket num */
-    setHalfWord(fwaMySocket + H_SKID, pp->id);
+    setHalfWord(fwaMySocket + H_SKID, (HalfWord)pp->id);
     taskSKOPEN(pp);
     }
 
@@ -2489,9 +2473,10 @@ static void taskCLOFPT(HalfWord portNum, u8 CloseType)
 static void PTMSG(PortContext *pp)
     {
     char      msg[64];
-    int       len     = sprintf(msg, "[Port%4d]", pp->id);
-    FrendAddr bufaddr = getBufferForC(msg);
+    FrendAddr bufaddr;
 
+    sprintf(msg, "[Port%4d]", pp->id);
+    bufaddr = getBufferForC(msg);
     taskSOCMSG(pp, bufaddr);
     }
 
@@ -2855,7 +2840,6 @@ static void cmdHereIs(HalfWord portNum, int offsetForBufType)
     FrendAddr fwaMyPort = portNumToFwa(portNum);
     FrendAddr fwaList   = getFullWord(fwaMyPort + W_PTOTCL);
     FrendAddr bufaddr   = addr1FPToFrend(getFullWord(activeFrend->fwaFPCOM + offsetForBufType));
-    HalfWord  portRec   = getByte(bufaddr + C_FPPT);
     u8        recType   = getByte(bufaddr + C_DHTYPE);
 
 #if DEBUG
@@ -3091,14 +3075,14 @@ static void processIncomingConnection()
         if (activeFrend->doesTelnet)
             {
             /* Issue initial Telnet negotiations */
-            int n = send(fd, telnetIntro, sizeof(telnetIntro), 0);
+            send(fd, telnetIntro, sizeof(telnetIntro), 0);
             }
         taskSKCARR(pp);
         }
     else
         {
         char *sorry = "\r\nSorry, all sockets are in use. Please try again later.";
-        int  n      = send(fd, (unsigned char *)sorry, (int)strlen(sorry), 0);
+        send(fd, (unsigned char *)sorry, (int)strlen(sorry), 0);
         netCloseConnection(fd);
         }
     }
@@ -3225,7 +3209,6 @@ static void msufrendCheckIo()
             HalfWord  portNum     = getHalfWord(fwaMySocket + H_SKCN1);
             FrendAddr fwaMyPort   = portNumToFwa(portNum);
             FrendAddr fwaList     = getFullWord(fwaMyPort + W_PTINCL);
-            HalfWord  nFree       = getListFreeEntries(fwaList);
             if (getListFreeEntries(fwaList) > MIN_FREE_PORT_BUFFERS)
                 {
                 FD_SET(pp->fd, &readFds);
@@ -3265,15 +3248,15 @@ static void msufrendCheckIo()
                 {
                 if (FD_ISSET(pp->fd, &readFds))
                     {
-                    int nbytes = recv(pp->fd, (char *)buf, MIN_FREE_PORT_BUFFERS, 0);
+                    ssize_t nbytes = recv(pp->fd, (char *)buf, MIN_FREE_PORT_BUFFERS, 0);
                     if (nbytes > 0)
                         {
-                        processInboundTelnet(pp, buf, nbytes);
+                        processInboundTelnet(pp, buf, (int)nbytes);
                         }
                     else
                         {
                         FrendAddr fwaMySocket = sockNumToFwa(pp->id);
-                        taskCLOFSK(pp->id, fwaMySocket);
+                        taskCLOFSK((HalfWord)pp->id, fwaMySocket);
                         }
                     }
                 if (FD_ISSET(pp->fd, &writeFds))

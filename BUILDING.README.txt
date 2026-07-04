@@ -13,13 +13,18 @@ and log off/on again to ensure that the X11 fonts server is refreshed.
 Depending on Linux version you may also find the step-by-step install onto a Raspberry Pi below helpful.
 
 ============================
-BUILDING dtCYBER on MAC/OSX.
+BUILDING dtCYBER on macOS.
 ============================
 
-For recent versions of OSX (e.g. OSX 10.8 or later):
+For recent versions of macOS (e.g. macOS 10.8 or later):
 
-    Before making dtCyber on any recent OSX you need to install the XQuartz X11 server from
+    Before making dtCyber on any recent version of macOS, you need to install the XQuartz X11 server from
     https://www.xquartz.org else the build will fail with missing X11 header files.
+
+    You must also install FreeType to obtain support for TrueType fonts. Perhaps the easiest to do this
+    is to use the homebrew package manager, as in:
+
+        brew install freetype
 
 Running 'node start' may require sudo
 
@@ -64,6 +69,9 @@ Install Node 16.x:
 Install X11 development and required fonts, and critically reboot to load fonts
 	sudo apt-get install libx11-dev x11-utils xfonts-base xfonts-75dpi xfonts-100dpi xfonts-utils
 	sudo reboot
+
+Install FreeType to obtain support for TrueType fonts
+        sudo apt install libfreetype6-dev
 
 Continue with normal setup ... E.g. Git clone repo and switch to dtcyber directory and build
     git clone <dtCyber repo of your choice>

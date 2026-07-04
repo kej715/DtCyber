@@ -69,8 +69,9 @@
 #define DefaultFontLarge       24
 #define DefaultFontMedium      14
 #define DefaultFontSmall       10
+#define DefaultFontTtfMedium   12
+#define DefaultFontTtfSmall    8
 #endif
-
 
 #define DefaultHeightLarge     30
 #define DefaultHeightMedium    20
@@ -146,13 +147,16 @@ static int initParseEquipmentDefn(char *defn, char *file, char *section, int lin
                                   u8 *eqNo, u8 *unitNo, u8 *channelNo, char **deviceParams);
 static int initParseTerminalDefn(char *defn, char *file, char *section, int lineNo,
                                  u16 *tcpPort, u8 *claPort, u8 *claPortCount, char **remainder);
-static bool initGetHex(char *entry, int defValue, long *value);
 static bool initGetInteger(char *entry, int defValue, long *value);
 static bool initGetOctal(char *entry, int defValue, long *value);
 static bool initGetString(char *entry, char *defString, char *str, int strLen);
+static bool initGetU64(char *entry, u64 defValue, u64 *value);
 static bool initParseIpAddress(char *ipStr, u32 *ip, u16 *port);
 static void initReadStartupFile(FILE *fcb, char *fileName);
 static void initToUpperCase(char *str);
+#ifdef WIN32
+static bool initGetHex(char *entry, int defValue, long *value);
+#endif
 
 /*
 **  ----------------
@@ -162,11 +166,12 @@ static void initToUpperCase(char *str);
 bool          bigEndian;
 extern u16    deadstartPanel[];
 extern u8     deadstartCount;
-ModelFeatures features;
-ModelType     modelType;
-char          persistDir[256];
 char          displayName[32];
+ModelFeatures features;
+bool          isCyber180;
+ModelType     modelType;
 NpuSoftware   npuSw = SwUndefined;
+char          persistDir[256];
 
 /*
 **  -----------------
@@ -197,7 +202,7 @@ static ModelFeatures featuresCyber175 =
     (IsSeries170 | HasStatusAndControlReg | HasInstructionStack | HasIStackPrefetch | Has175Float);
 static ModelFeatures featuresCyber860 =
     (IsSeries800 | IsCyber180 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasMaintenanceChannel | HasCMU
-     | HasChannelFlag | HasErrorFlag | HasRelocationRegLong | HasMicrosecondClock | HasInstructionStack | HasIStackPrefetch);
+     | HasChannelFlag | HasErrorFlag | HasRelocationRegLong | HasMicrosecondClock | HasRingZeroTest);
 static ModelFeatures featuresCyber865 =
     (IsSeries800 | HasNoCmWrap | HasFullRTC | HasTwoPortMux | HasStatusAndControlReg
      | HasRelocationRegShort | HasMicrosecondClock | HasInstructionStack | HasIStackPrefetch | Has175Float);
@@ -208,15 +213,15 @@ static ModelFeatures featuresCyber875 =
 
 static InitConnType connTypes[] =
     {
-    "telnet", ConnTypeTelnet,
-    "raw",    ConnTypeRaw,
-    "pterm",  ConnTypePterm,
-    "hasp",   ConnTypeHasp,
-    "rhasp",  ConnTypeRevHasp,
-    "nje",    ConnTypeNje,
-    "trunk",  ConnTypeTrunk,
-    "rs232",  ConnTypeRs232,
-    NULL, -1
+    { "telnet", ConnTypeTelnet  },
+    { "raw",    ConnTypeRaw     },
+    { "pterm",  ConnTypePterm   },
+    { "hasp",   ConnTypeHasp    },
+    { "rhasp",  ConnTypeRevHasp },
+    { "nje",    ConnTypeNje     },
+    { "trunk",  ConnTypeTrunk   },
+    { "rs232",  ConnTypeRs232   },
+    { NULL, -1                  }
     };
 
 static char *connTypeNames[] = // indexed by ordinal
@@ -233,65 +238,68 @@ static char *connTypeNames[] = // indexed by ordinal
 
 static InitVal sectVals[] =
     {
-    "CEJ/MEJ",                       "cyber",   "Valid",
-    "channels",                      "cyber",   "Deprecated",
-    "clock",                         "cyber",   "Valid",
-    "cmFile",                        "cyber",   "Deprecated",
-    "console",                       "cyber",   "Valid",
-    "cpus",                          "cyber",   "Valid",
-    "deadstart",                     "cyber",   "Valid",
-    "displayName",                   "cyber",   "Valid",
-    "ecsBanks",                      "cyber",   "Valid",
-    "ecsFile",                       "cyber",   "Deprecated",
-    "equipment",                     "cyber",   "Valid",
-    "esmBanks",                      "cyber",   "Valid",
-    "helpers",                       "cyber",   "Valid",
-    "idle",                          "cyber",   "Valid",
-    "idleCycles",                    "cyber",   "Valid",
-    "idleTime",                      "cyber",   "Valid",
-    "ipAddress",                     "cyber",   "Valid",
-    "memory",                        "cyber",   "Valid",
-    "model",                         "cyber",   "Valid",
-    "networkInterface",              "cyber",   "Valid",
-    "npuConnections",                "cyber",   "Valid",
-    "operator",                      "cyber",   "Valid",
-    "osType",                        "cyber",   "Valid",
-    "persistDir",                    "cyber",   "Valid",
-    "platoConns",                    "cyber",   "Deprecated",
-    "platoPort",                     "cyber",   "Deprecated",
-    "pps",                           "cyber",   "Valid",
-    "setMhz",                        "cyber",   "Valid",
-    "telnetConns",                   "cyber",   "Deprecated",
-    "telnetPort",                    "cyber",   "Deprecated",
-    "trace",                         "cyber",   "Valid",
+    { "CEJ/MEJ",                       "cyber",   "Valid"      },
+    { "channels",                      "cyber",   "Deprecated" },
+    { "clock",                         "cyber",   "Valid"      },
+    { "cmFile",                        "cyber",   "Deprecated" },
+    { "console",                       "cyber",   "Valid"      },
+    { "cpus",                          "cyber",   "Valid"      },
+    { "cpu0sn",                        "cyber",   "Valid"      },
+    { "cpu1sn",                        "cyber",   "Valid"      },
+    { "deadstart",                     "cyber",   "Valid"      },
+    { "displayName",                   "cyber",   "Valid"      },
+    { "ecsBanks",                      "cyber",   "Valid"      },
+    { "ecsFile",                       "cyber",   "Deprecated" },
+    { "equipment",                     "cyber",   "Valid"      },
+    { "esmBanks",                      "cyber",   "Valid"      },
+    { "helpers",                       "cyber",   "Valid"      },
+    { "idle",                          "cyber",   "Valid"      },
+    { "idleCycles",                    "cyber",   "Valid"      },
+    { "idleTime",                      "cyber",   "Valid"      },
+    { "ipAddress",                     "cyber",   "Valid"      },
+    { "memory",                        "cyber",   "Valid"      },
+    { "model",                         "cyber",   "Valid"      },
+    { "networkInterface",              "cyber",   "Valid"      },
+    { "npuConnections",                "cyber",   "Valid"      },
+    { "operator",                      "cyber",   "Valid"      },
+    { "osType",                        "cyber",   "Valid"      },
+    { "persistDir",                    "cyber",   "Valid"      },
+    { "platoConns",                    "cyber",   "Deprecated" },
+    { "platoPort",                     "cyber",   "Deprecated" },
+    { "pps",                           "cyber",   "Valid"      },
+    { "setMhz",                        "cyber",   "Valid"      },
+    { "telnetConns",                   "cyber",   "Deprecated" },
+    { "telnetPort",                    "cyber",   "Deprecated" },
+    { "trace",                         "cyber",   "Valid"      },
 
-    "cdcnetNode",                    "npu",     "Valid",
-    "cdcnetPrivilegedTcpPortOffset", "npu",     "Valid",
-    "cdcnetPrivilegedUdpPortOffset", "npu",     "Valid",
-    "couplerNode",                   "npu",     "Valid",
-    "hostID",                        "npu",     "Valid",
-    "hostIP",                        "npu",     "Deprecated",
-    "idleNetBufs",                   "npu",     "Valid",
-    "npuNode",                       "npu",     "Valid",
-    "terminals",                     "npu",     "Valid",
+    { "cdcnetNode",                    "npu",     "Valid"      },
+    { "cdcnetPrivilegedTcpPortOffset", "npu",     "Valid"      },
+    { "cdcnetPrivilegedUdpPortOffset", "npu",     "Valid"      },
+    { "couplerNode",                   "npu",     "Valid"      },
+    { "hostID",                        "npu",     "Valid"      },
+    { "hostIP",                        "npu",     "Deprecated" },
+    { "idleNetBufs",                   "npu",     "Valid"      },
+    { "npuNode",                       "npu",     "Valid"      },
+    { "terminals",                     "npu",     "Valid"      },
 
-    "colorBG",                       "console", "Valid",
-    "colorFG",                       "console", "Valid",
-    "fontLarge",                     "console", "Valid",
-    "fontLargeHeight",               "console", "Valid",
-    "fontMedium",                    "console", "Valid",
-    "fontMediumHeight",              "console", "Valid",
-    "fontName",                      "console", "Valid",
-    "fontSmall",                     "console", "Valid",
-    "fontSmallHeight",               "console", "Valid",
-    "heightPX",                      "console", "Valid",
-    "scaleX",                        "console", "Valid",
-    "scaleY",                        "console", "Valid",
-    "timerRate",                     "console", "Valid",
-    "widthPX",                       "console", "Valid",
+    { "colorBG",                       "console", "Valid"      },
+    { "colorFG",                       "console", "Valid"      },
+    { "fontLarge",                     "console", "Valid"      },
+    { "fontLargeHeight",               "console", "Valid"      },
+    { "fontMedium",                    "console", "Valid"      },
+    { "fontMediumHeight",              "console", "Valid"      },
+    { "fontName",                      "console", "Valid"      },
+    { "fontSmall",                     "console", "Valid"      },
+    { "fontSmallHeight",               "console", "Valid"      },
+    { "fontType",                      "console", "Valid"      },
+    { "heightPX",                      "console", "Valid"      },
+    { "scaleX",                        "console", "Valid"      },
+    { "scaleY",                        "console", "Valid"      },
+    { "timerRate",                     "console", "Valid"      },
+    { "widthPX",                       "console", "Valid"      },
 
 
-    NULL,                            NULL,      NULL
+    { NULL,                            NULL,      NULL         }
     };
 
 /*
@@ -339,7 +347,7 @@ void initStartup(char *config, char *configFile)
     fcb = fopen(overlayFile, "rb");
     if (fcb != NULL)
         {
-        printf("(init   ) Reading Configuration Overlay File '%s'\n\n", overlayFile);
+        printf("(init   ) Reading Configuration Overlay File '%s'\n", overlayFile);
         initReadStartupFile(fcb, overlayFile);
         fclose(fcb);
         }
@@ -347,7 +355,7 @@ void initStartup(char *config, char *configFile)
     /*
     **  Open startup file.
     */
-    printf("(init   ) Reading Configuration File '%s'\n\n", configFile);
+    printf("(init   ) Reading Configuration File '%s'\n", configFile);
     fcb = fopen(configFile, "rb");
     if (fcb == NULL)
         {
@@ -543,18 +551,22 @@ static void initCyber(char *config)
     long conns;
     char *cp;
     long cpus;
+    long cpuSN;
+    int  defaultSN;
     char dummy[256];
+    bool dummyBool;
     long dummyInt;
     long ecsBanks;
     long enableCejMej;
     long esmBanks;
+    int  i;
     bool isOk;
-    long mask;
     long memory;
     char model[40];
     long port;
     long pps;
     int  rc;
+    u16  serialNumbers[MaxCpus];
     long setMHz;
 
     /*-------------------START OF PRECHECK-------------------*/
@@ -696,6 +708,7 @@ static void initCyber(char *config)
                    config, startupFile, model);
         exit(1);
         }
+    isCyber180 = (features & IsCyber180) != 0;
 
     (void)initGetInteger("CEJ/MEJ", 1, &enableCejMej);
     if (enableCejMej == 0)
@@ -748,7 +761,7 @@ static void initCyber(char *config)
             exit(1);
             }
         memory = 0;
-        cp = dummy;
+        cp     = dummy;
         while (*cp != '\0')
             {
             if (isdigit(*cp))
@@ -812,7 +825,7 @@ static void initCyber(char *config)
             features = featuresCyber865;
             }
         }
-    else if ((features & IsCyber180) != 0)
+    else if (isCyber180)
         {
         isOk = (memory % OneMegabyte) == 0;
         switch (memory / OneMegabyte)
@@ -862,7 +875,7 @@ static void initCyber(char *config)
     (void)initGetInteger("ecsbanks", 0, &ecsBanks);
     (void)initGetInteger("esmbanks", 0, &esmBanks);
 
-    if (((features & IsCyber180) != 0) && ((ecsBanks != 0) || (esmBanks != 0)))
+    if (isCyber180 && ((ecsBanks != 0) || (esmBanks != 0)))
         {
         logDtError(LogErrorLocation, "file '%s' section [%s]: 'ecsbanks' and 'esmbanks' are invalid for Cyber 180\n", startupFile, config);
         exit(1);
@@ -934,6 +947,22 @@ static void initCyber(char *config)
     cpuCount = (int)cpus;
 
     /*
+    **  Obtain CPU serial numbers, if specified
+    */
+    defaultSN = 1234;
+    for (i = 0; i < cpuCount; i++)
+        {
+        sprintf(dummy, "cpu%dsn", i);
+        initGetInteger(dummy, defaultSN++, &cpuSN);
+        if (cpuSN < 1 || cpuSN > 9999)
+            {
+            logDtError(LogErrorLocation, "file '%s' section [%s]: Entry '%s' invalid - correct values are 1 .. 9999\n", startupFile, config, dummy);
+            exit(1);
+            }
+        serialNumbers[i] = (u16)cpuSN;
+        }
+
+    /*
     **  Determine where to persist data between emulator invocations
     **  and check if directory exists.
     */
@@ -963,19 +992,19 @@ static void initCyber(char *config)
     /*
     **  Initialise CPU.
     */
-    cpuInit(model, memory, ecsBanks + esmBanks, ecsBanks != 0 ? ECS : ESM);
+    cpuInit(model, serialNumbers, (u32)memory, (u32)(ecsBanks + esmBanks), ecsBanks != 0 ? ECS : ESM);
     if (ecsBanks + esmBanks == 0)
         {
-        fprintf(stdout, "(init   ) Successfully configured model %s with %d CPUs.\n", model, cpuCount);
+        fprintf(stdout, "(init   ) Successfully configured model %s with %d CPU%s.\n", model, cpuCount, cpuCount > 1 ? "'s" : "");
         }
     else
         {
-        fprintf(stdout, "(init   ) Successfully configured model %s with %d CPUs and %ld banks of %s.\n", model, cpuCount, ecsBanks + esmBanks, ecsBanks != 0 ? "ESM" : "ECS");
+        fprintf(stdout, "(init   ) Successfully configured model %s with %d CPU%s and %ld banks of %s.\n", model, cpuCount, cpuCount > 1 ? "'s" : "",
+            ecsBanks + esmBanks, ecsBanks != 0 ? "ESM" : "ECS");
         }
 
-
     /*
-    **  Determine number of PPs and initialise PP subsystem.
+    **  Determine number of PP's and initialize the IOU
     */
     (void)initGetOctal("pps", 012, &pps);
     if ((pps != 012) && (pps != 024))
@@ -983,11 +1012,10 @@ static void initCyber(char *config)
         logDtError(LogErrorLocation, "file '%s' section [%s]: Entry 'pps' invalid - supported values are 012 or 024\n", startupFile, config);
         exit(1);
         }
-
     ppInit((u8)pps);
 
     /*
-    **  Calculate number of channels and initialise channel subsystem.
+    **  Calculate number of channels and initialize them
     */
     if (pps == 012)
         {
@@ -998,6 +1026,9 @@ static void initCyber(char *config)
         chCount = 040;
         }
 
+    /*
+    **  Initialize PP's and channels
+    */
     channelInit((u8)chCount);
 
     /*
@@ -1018,10 +1049,33 @@ static void initCyber(char *config)
     /*
     **  Get clock increment value and initialise clock.
     */
-    (void)initGetInteger("clock", 0, &clockIncrement);
-
-    rtcInit((u8)clockIncrement, setMHz);
-    fprintf(stdout, "(init   ) %ld Clock increment set.\n", clockIncrement);
+    initGetString("clock", "0", dummy, sizeof(dummy));
+    if (strcasecmp(dummy, "virtual") == 0)
+        {
+        clockIncrement = 0;
+        dummyBool = TRUE;
+        }
+    else if (strcasecmp(dummy, "real") == 0)
+        {
+        clockIncrement = 0;
+        dummyBool = FALSE;
+        }
+    else if (sscanf(dummy, "%ld", &clockIncrement) == 1)
+        {
+        dummyBool = isCyber180;
+        }
+    else
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s] Invalid 'clock' value %s\n", startupFile, config, dummy);
+        exit(1);
+        }
+    rtcInit((u8)clockIncrement, dummyBool);
+    fprintf(stdout, "(init   ) Clock initialized, mode %s", dummyBool ? "virtual" : "real");
+    if (clockIncrement != 0)
+        {
+        fprintf(stdout, ", increment %ld", clockIncrement);
+        }
+    fputs("\n", stdout);
 
     /*
     **  Initialise optional Interlock Register on channel 15.
@@ -1082,11 +1136,8 @@ static void initCyber(char *config)
     /*
     **  Get optional trace mask. If not specified, use compile time value.
     */
-    if (initGetOctal("trace", 0, &mask))
-        {
-        traceMask = (u32)mask;
-        }
-    fprintf(stdout, "(init   ) 0x%08x Tracing mask set.\n", traceMask);
+    initGetU64("trace", 0, &traceMask);
+    fprintf(stdout, "(init   ) " FMT64_016x " Tracing mask set.\n", traceMask);
 
     /*
     **  Get optional IP address of DtCyber. If not specified, use "0.0.0.0".
@@ -1272,6 +1323,15 @@ static void initCyber(char *config)
 **------------------------------------------------------------------------*/
 static void initConsole(void)
     {
+    InitVal *curVal;
+    char    fontType[16];
+    bool    goodToken = TRUE;
+    int     lineNo    = 0;
+    char    *line;
+    int     numErrors = 0;
+    int     ratio     = 0;
+    char    *token;
+
     /* Set Defaults */
 #ifdef WIN32
     colorBG = DefaultBG;
@@ -1281,14 +1341,14 @@ static void initConsole(void)
     strcpy(colorFG, DefaultFG);
 #endif
     strcpy(fontName, FontName);
+    fontIsTrueType   = FALSE;
 
+    fontLarge        = DefaultFontLarge;
     fontHeightLarge  = DefaultHeightLarge;
+    fontMedium       = DefaultFontMedium;
     fontHeightMedium = DefaultHeightMedium;
+    fontSmall        = DefaultFontSmall;
     fontHeightSmall  = DefaultHeightSmall;
-
-    fontLarge  = DefaultFontLarge;
-    fontMedium = DefaultFontMedium;
-    fontSmall  = DefaultFontSmall;
 
     heightPX = DefaultHeightPX;
     widthPX  = DefaultWidthPX;
@@ -1307,20 +1367,15 @@ static void initConsole(void)
 
     if (!initOpenConsoleSection())
         {
-        logDtError(LogErrorLocation, "Optional 'console' section [%s] not found in %s\n", console, startupFile);
+        if (console[0] != '\0')
+            {
+            logDtError(LogErrorLocation, "Optional 'console' section [%s] not found in %s\n", console, startupFile);
+            }
 
         return;
         }
 
     printf("(init   ) Loading console section [%s] from %s\n", console, startupFile);
-
-    int     lineNo = 0;
-    char    *line;
-    char    *token;
-    InitVal *curVal;
-    bool    goodToken = TRUE;
-    int     numErrors = 0;
-    int     ratio     = 0;
 
     while ((line = initGetNextLine(&lineNo)) != NULL)
         {
@@ -1366,7 +1421,20 @@ static void initConsole(void)
 
     if (initGetString("fontName", FontName, fontName, MaxFontNameSize))
         {
-        logDtError(LogErrorLocation, "Font Name '%s' will be loaded\n", fontName);
+        logDtError(LogErrorLocation, "Font name '%s' will be loaded\n", fontName);
+        }
+    if (initGetString("fontType", "standard", fontType, sizeof(fontType) - 1))
+        {
+        if (strcasecmp(fontType, "TrueType") == 0 || strcasecmp(fontType, "TTF") == 0)
+            {
+            logDtError(LogErrorLocation, "Font '%s' is TrueType\n", fontName);
+            fontIsTrueType = TRUE;
+            }
+        else if (strcasecmp(fontType, "standard") != 0)
+            {
+            logDtError(LogErrorLocation, "Unknown font type: '%s'\n", fontType);
+            exit(1);
+            }
         }
 #ifdef WIN32
     (void)initGetHex("colorBG", DefaultBG, &colorBG);
@@ -1388,22 +1456,26 @@ static void initConsole(void)
         }
     printf("(init   )         [colorBG]=%06lx\n", colorBG);
     printf("(init   )         [colorFG]=%06lx\n", colorFG);
-#else
-    (void)initGetString("colorBG", DefaultBG, colorBG, sizeof(colorBG));
-    (void)initGetString("colorFG", DefaultFG, colorFG, sizeof(colorFG));
-    if (strcasecmp(colorBG, colorFG)==0)
-    {
-        strcpy(colorBG, DefaultBG);
-        strcpy(colorFG, DefaultFG);
-    }
-    printf("(init   )         [colorBG]=%s\n", colorBG);
-    printf("(init   )         [colorFG]=%s\n", colorFG);
-#endif
-
 
     (void)initGetInteger("fontSmall", DefaultFontSmall, &fontSmall);
     (void)initGetInteger("fontMedium", DefaultFontMedium, &fontMedium);
     (void)initGetInteger("fontLarge", DefaultFontLarge, &fontLarge);
+#else
+    (void)initGetString("colorBG", DefaultBG, colorBG, sizeof(colorBG));
+    (void)initGetString("colorFG", DefaultFG, colorFG, sizeof(colorFG));
+    if (strcasecmp(colorBG, colorFG) == 0)
+        {
+        strcpy(colorBG, DefaultBG);
+        strcpy(colorFG, DefaultFG);
+        }
+    printf("(init   )         [colorBG]=%s\n", colorBG);
+    printf("(init   )         [colorFG]=%s\n", colorFG);
+
+    (void)initGetInteger("fontSmall", fontIsTrueType ? DefaultFontTtfSmall : DefaultFontSmall, &fontSmall);
+    (void)initGetInteger("fontMedium", fontIsTrueType ? DefaultFontTtfMedium : DefaultFontMedium, &fontMedium);
+    (void)initGetInteger("fontLarge", DefaultFontLarge, &fontLarge);
+#endif
+
     if (fontSmall < 8)
         {
         logDtError(LogErrorLocation, "file '%s' section [%s]: 'fontSmall' must be greater than or equal to 8.\n", startupFile, console);
@@ -2189,7 +2261,7 @@ static int initParseEquipmentDefn(char *defn, char *file, char *section, int lin
                                   u8 *eqNo, u8 *unitNo, u8 *channelNo, char **deviceParams)
     {
     char *token;
-    u8   deviceIndex;
+    int  deviceIndex;
 
     /*
     **  Parse device type and lookup device index.
@@ -2397,8 +2469,7 @@ static int initParseTerminalDefn(char *defn, char *file, char *section, int line
 static void initDeadstart(void)
     {
     char *dp;
-    int  dspi;
-    bool is180;
+    u8   dspi;
     bool isOk;
     char *line;
     int  lineNo;
@@ -2418,7 +2489,6 @@ static void initDeadstart(void)
     */
     dspi   = 0;
     lineNo = 0;
-    is180  = (features & IsCyber180) != 0;
     while ((line = initGetNextLine(&lineNo)) != NULL && dspi < MaxDeadStart)
         {
         /*
@@ -2433,7 +2503,7 @@ static void initDeadstart(void)
         if (isOk)
             {
             word = strtol(token, NULL, 8);
-            isOk = (word < 010000) || (is180 && (word <= 0107777));
+            isOk = (word < 010000) || (isCyber180 && (word >= 0100000 && word <= 0107777));
             }
         if (isOk)
             {
@@ -2450,7 +2520,7 @@ static void initDeadstart(void)
          * Print the value so we know what we captured
          */
         printf("          Row %02d", dspi - 1);
-        if (is180)
+        if (isCyber180)
             {
             printf(" (%06lo)", word);
             }
@@ -2460,7 +2530,7 @@ static void initDeadstart(void)
             }
         fputs(":[", stdout);
 
-        for (int c = is180 ? 15 : 11; c >= 0; c--)
+        for (int c = isCyber180 ? 15 : 11; c >= 0; c--)
             {
             fputc('0' + ((deadstartPanel[dspi - 1] >> c) & 1), stdout);
             if ((c > 0) && (c % 3 == 0))
@@ -2557,10 +2627,51 @@ static bool initOpenSection(char *name)
 static bool initGetOctal(char *entry, int defValue, long *value)
     {
     char buffer[40];
+    char *end;
 
-    if (!initGetString(entry, "", buffer, sizeof(buffer))
-        || (buffer[0] < '0')
-        || (buffer[0] > '7'))
+    if (!initGetString(entry, "", buffer, sizeof(buffer)))
+        {
+        /*
+        **  Return default value.
+        */
+        *value = defValue;
+
+        return FALSE;
+        }
+
+    /*
+    **  Convert octal string to value.
+    */
+    *value = strtol(buffer, &end, 8);
+
+    if (*end == '\0')
+        {
+        return TRUE;
+        }
+    
+    *value = defValue;
+
+    return FALSE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Locate unsigned 64-bit entry within section and return value.
+**
+**  Parameters:     Name        Description.
+**                  entry       entry name
+**                  defValue    default value
+**                  value       pointer to return value
+**
+**  Returns:        TRUE if entry was found, FALSE otherwise.
+**
+**------------------------------------------------------------------------*/
+static bool initGetU64(char *entry, u64 defValue, u64 *value)
+    {
+    char buffer[40];
+    char *end;
+
+    //  Get the next entry
+    if (!initGetString(entry, "", buffer, sizeof(buffer)))
         {
         /*
         **  Return default value.
@@ -2570,14 +2681,22 @@ static bool initGetOctal(char *entry, int defValue, long *value)
         return (FALSE);
         }
 
-    /*
-    **  Convert octal string to value.
-    */
-    *value = strtol(buffer, NULL, 8);
+    *value = strtoll(buffer, &end, 0);
 
-    return (TRUE);
+    if (*end == '\0')
+        {
+        return TRUE;
+        }
+
+    /*
+    **  Return default value.
+    */
+    *value = defValue;
+
+    return FALSE;
     }
 
+#ifdef WIN32
 /*--------------------------------------------------------------------------
 **  Purpose:        Locate hexadecimal entry within section and return value.
 **
@@ -2592,6 +2711,7 @@ static bool initGetOctal(char *entry, int defValue, long *value)
 static bool initGetHex(char *entry, int defValue, long *value)
     {
     char buffer[40];
+    char *end;
 
     //  Get the next entry
     if (!initGetString(entry, "", buffer, sizeof(buffer)))
@@ -2601,17 +2721,16 @@ static bool initGetHex(char *entry, int defValue, long *value)
         */
         *value = defValue;
 
-        return (FALSE);
+        return FALSE;
         }
-    //  It must be valid Hexadecimal
-    if (buffer[strspn(buffer, "0123456789abcdefABCDEF")] == 0)
-        {
-        /*
-        **  Convert octal string to value.
-        */
-        *value = strtol(buffer, NULL, 16);
+    /*
+    **  Convert hexadecial string to value.
+    */
+    *value = strtol(buffer, &end, 16);
 
-        return (TRUE);
+    if (*end == '\0')
+        {
+        return TRUE;
         }
 
     /*
@@ -2619,8 +2738,9 @@ static bool initGetHex(char *entry, int defValue, long *value)
     */
     *value = defValue;
 
-    return (FALSE);
+    return FALSE;
     }
+#endif
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Locate integer entry within section and return value.
@@ -2955,10 +3075,8 @@ static void initAddLine(InitSection *section, char *fileName, int lineNo, char *
     char     c;
     u8       claPort1, claPort2;
     u8       claPortCount;
-    int      connType;
     char     *cp;
     InitLine *cursor;
-    int      deviceIndex;
     char     *params1, *params2;
     u8       eqNo1, eqNo2;
     InitLine *line;
@@ -2975,8 +3093,8 @@ static void initAddLine(InitSection *section, char *fileName, int lineNo, char *
         {
         *cp = c;
         strcpy(lineBuffer, text);
-        connType = initParseTerminalDefn(lineBuffer, fileName, section->name, lineNo,
-                                         &tcpPort, &claPort1, &claPortCount, &params1);
+        initParseTerminalDefn(lineBuffer, fileName, section->name, lineNo,
+            &tcpPort, &claPort1, &claPortCount, &params1);
         //
         //  If a terminal definition specifying the same CLA port already exists,
         //  ignore this definition and allow the previous one to prevail.
@@ -2989,8 +3107,8 @@ static void initAddLine(InitSection *section, char *fileName, int lineNo, char *
                 continue;
                 }
             strcpy(lineBuffer, line->text);
-            connType = initParseTerminalDefn(lineBuffer, line->sourceFile, section->name, line->lineNo,
-                                             &tcpPort, &claPort2, &claPortCount, &params2);
+            initParseTerminalDefn(lineBuffer, line->sourceFile, section->name, line->lineNo,
+                &tcpPort, &claPort2, &claPortCount, &params2);
             if (claPort1 == claPort2)
                 {
                 return;
@@ -3001,8 +3119,7 @@ static void initAddLine(InitSection *section, char *fileName, int lineNo, char *
         {
         *cp = c;
         strcpy(lineBuffer, text);
-        deviceIndex = initParseEquipmentDefn(lineBuffer, fileName, section->name, lineNo,
-                                             &eqNo1, &unitNo1, &chNo1, &params1);
+        initParseEquipmentDefn(lineBuffer, fileName, section->name, lineNo, &eqNo1, &unitNo1, &chNo1, &params1);
         //
         //  If an equipment definition specifying the same equipment, unit, and channel
         //  number already exists, ignore this definition and allow the previous one to prevail.
@@ -3014,8 +3131,7 @@ static void initAddLine(InitSection *section, char *fileName, int lineNo, char *
                 continue;
                 }
             strcpy(lineBuffer, line->text);
-            deviceIndex = initParseEquipmentDefn(lineBuffer, line->sourceFile, section->name, line->lineNo,
-                                                 &eqNo2, &unitNo2, &chNo2, &params2);
+            initParseEquipmentDefn(lineBuffer, line->sourceFile, section->name, line->lineNo, &eqNo2, &unitNo2, &chNo2, &params2);
             if ((chNo1 == chNo2) && (eqNo1 == eqNo2) && (unitNo1 == unitNo2))
                 {
                 return;

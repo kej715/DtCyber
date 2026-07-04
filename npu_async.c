@@ -1,6 +1,7 @@
 /*--------------------------------------------------------------------------
 **
 **  Copyright (c) 2003-2011, Tom Hunter, Paul Koning
+**                2019-2025, Kevin Jordan
 **
 **  Name: npu_async.c
 **
@@ -40,9 +41,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#endif
-#if defined(__APPLE__)
-#include <execinfo.h>
 #endif
 
 #include "const.h"
@@ -120,7 +118,6 @@ static void npuAsyncProcessUplineNormal(Tcb *tp);
 #if DEBUG
 static void npuAsyncLogBytes(u8 *bytes, int len);
 static void npuAsyncLogFlush(void);
-static void npuAsyncPrintStackTrace(FILE *fp);
 
 #endif
 
@@ -681,7 +678,7 @@ void npuAsyncTryOutput(Pcb *pcbp)
     {
     NpuBuffer *bp;
     u8        *data;
-    int       result;
+    ssize_t   result;
     Tcb       *tp;
 
     tp = npuAsyncFindTcb(pcbp);
@@ -775,8 +772,8 @@ void npuAsyncTryOutput(Pcb *pcbp)
         */
         if (result > 0)
             {
-            bp->offset   += result;
-            bp->numBytes -= result;
+            bp->offset   += (u16)result;
+            bp->numBytes -= (u16)result;
             }
         }
     }
@@ -1538,7 +1535,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
             /*
             **  Send long lines.
             */
-            tp->inBuf[BlkOffBTBSN] = BtHTBLK | (tp->uplineBsn << BlkShiftBSN);
+            tp->inBuf[BlkOffBTBSN] = (u8)(BtHTBLK | (tp->uplineBsn << BlkShiftBSN));
             npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline long ASCII data for %.7s, size %ld\n",
@@ -1783,7 +1780,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
             /*
             **  Send long lines.
             */
-            tp->inBuf[BlkOffBTBSN] = BtHTBLK | (tp->uplineBsn << BlkShiftBSN);
+            tp->inBuf[BlkOffBTBSN] = (u8)(BtHTBLK | (tp->uplineBsn << BlkShiftBSN));
             npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
             npuTipInputReset(tp);
 #if DEBUG
@@ -2042,7 +2039,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
             /*
             **  Send long lines.
             */
-            tp->inBuf[BlkOffBTBSN] = BtHTBLK | (tp->uplineBsn << BlkShiftBSN);
+            tp->inBuf[BlkOffBTBSN] = (u8)(BtHTBLK | (tp->uplineBsn << BlkShiftBSN));
             npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline long normal data for %.7s, size %ld\n",
@@ -2119,32 +2116,6 @@ static void npuAsyncLogBytes(u8 *bytes, int len)
             hexCol = HexColumn(npuAsyncLogBytesCol);
             }
         }
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Log a stack trace
-**
-**  Parameters:     none
-**
-**  Returns:        nothing
-**
-**------------------------------------------------------------------------*/
-static void npuAsyncPrintStackTrace(FILE *fp)
-    {
-#if defined(__APPLE__)
-    void *callstack[128];
-    int  i;
-    int  frames;
-    char **strs;
-
-    frames = backtrace(callstack, 128);
-    strs   = backtrace_symbols(callstack, frames);
-    for (i = 1; i < frames; ++i)
-        {
-        fprintf(fp, "%s\n", strs[i]);
-        }
-    free(strs);
-#endif
     }
 
 #endif // DEBUG

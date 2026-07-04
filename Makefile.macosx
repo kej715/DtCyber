@@ -23,13 +23,15 @@
 #--------------------------------------------------------------------------
 
 SDKDIR	= /Developer/SDKs/MacOSX10.4u.sdk
-LIBS    = -lX11 
+LIBS    = -lX11 -lXft
 LDFLAGS = -L/opt/X11/lib
 INCL    = -I/opt/X11/include
-EXTRACFLAGS = -Wno-switch -Wno-format-security
+#EXTRACFLAGS = -Wno-switch -Wno-format-security
+EXTRACFLAGS = -Wall -Wextra -Wno-implicit-fallthrough -Wno-format-security -Wno-unused-parameter -Wimplicit-int-conversion
 
-CFLAGS  = -O3 -std=gnu99 $(INCL) $(EXTRACFLAGS)
-#CFLAGS  = -O0 -g -std=gnu99 $(INCL) $(EXTRACFLAGS)
+CFLAGS  = -O3 -std=gnu99 $(INCL) $(shell pkg-config --cflags freetype2) $(EXTRACFLAGS)
+#CFLAGS  = -Og -g -std=gnu99 $(INCL) $(shell pkg-config --cflags freetype2) $(EXTRACFLAGS)
+#CFLAGS  = -O0 -g -std=gnu99 $(INCL) $(shell pkg-config --cflags freetype2) $(EXTRACFLAGS)
 
 HDRS    =   const.h                 \
             cyber_channel_linux.h   \
@@ -38,12 +40,14 @@ HDRS    =   const.h                 \
             proto.h                 \
             types.h
 
-OBJS    =   cdcnet.o                \
+OBJS    =   bdp180.o                \
+            cdcnet.o                \
             channel.o               \
             charset.o               \
             console.o               \
             cp3446.o                \
             cpu.o                   \
+            cpu180.o                \
             cr3447.o                \
             cr405.o                 \
             cray_station.o          \
@@ -57,6 +61,7 @@ OBJS    =   cdcnet.o                \
             dsa311.o                \
             dump.o                  \
             float.o                 \
+            float180.o              \
             fsmon.o                 \
             init.o                  \
             interlock_channel.o     \
@@ -102,6 +107,9 @@ dtcyber: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $+ $(LIBS)
 
 all: dtcyber stk/node_modules automation/node_modules webterm/node_modules webterm/www/js/node_modules rje-station/node_modules
+
+test_float180: float180.o test_float180.o
+	$(CC) $(LDFLAGS) -o $@ $+ $(LIBS)
 
 automation/node_modules:
 	$(MAKE) -C automation

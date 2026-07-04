@@ -101,22 +101,18 @@ void deadStart(void)
     u8      pp;
     u8      ch;
 
-    dp = channelAttach(0, 0, DtDeadStartPanel);
-
-    dp->activate     = deadActivate;
-    dp->disconnect   = deadDisconnect;
-    dp->func         = deadFunc;
-    dp->io           = deadIo;
-    dp->selectedUnit = 0;
-
     /*
     **  Set all normal channels to active and empty.
     */
     for (ch = 0; ch < channelCount; ch++)
         {
-        if ((ch <= 013) || ((ch >= 020) && (ch <= 033)))
+        channel[ch].active       = (ch <= 013) || ((ch >= 020) && (ch <= 033));
+        channel[ch].full         = FALSE;
+        channel[ch].flag         = FALSE;
+        channel[ch].inputPending = FALSE;
+        if (!channel[ch].hardwired)
             {
-            channel[ch].active = TRUE;
+            channel[ch].ioDevice = NULL;
             }
         }
 
@@ -125,6 +121,22 @@ void deadStart(void)
     */
     channel[ChInterlock].active   = (features & HasInterlockReg) != 0;
     channel[ChMaintenance].active = FALSE;
+    if ((features & HasStatusAndControlReg) != 0)
+        {
+        channel[ChStatusAndControl].active = TRUE;
+        if (ppuCount > 10)
+            {
+            channel[ChStatusAndControl + 020].active = TRUE;
+            }
+        }
+
+    dp = channelAttach(0, 0, DtDeadStartPanel);
+
+    dp->activate     = deadActivate;
+    dp->disconnect   = deadDisconnect;
+    dp->func         = deadFunc;
+    dp->io           = deadIo;
+    dp->selectedUnit = 0;
 
     /*
     **  Reset deadstart sequencer.
@@ -143,8 +155,8 @@ void deadStart(void)
             }
         else
             {
-            ppu[pp].opD = pp - 012 + 020;
-            channel[pp - 012 + 020].active = TRUE;
+            ppu[pp].opD = (pp - 012) + 020;
+            channel[(pp - 012) + 020].active = TRUE;
             }
 
         /*
@@ -152,6 +164,7 @@ void deadStart(void)
         */
         ppu[pp].opF  = 071;
         ppu[pp].busy = TRUE;
+        ppu[pp].regK = (PpWord)((ppu[pp].opF << 6) | ppu[pp].opD);
 
         /*
         **  Clear P registers and location zero of each PP.
@@ -163,6 +176,21 @@ void deadStart(void)
         **  Set all A registers to an input word count of 10000.
         */
         ppu[pp].regA = 010000;
+
+        /*
+        **  Miscellaneous parameters that should be reset to default
+        **  values at deadstart.
+        */
+        ppu[pp].id                   = pp;
+        ppu[pp].regR                 = 0;
+        ppu[pp].regQ                 = 0;
+        ppu[pp].exchangingCpu        = -1;
+        ppu[pp].osBoundsCheckEnabled = FALSE;
+        ppu[pp].isBelowOsBound       = FALSE;
+        ppu[pp].isStopEnabled        = FALSE;
+        ppu[pp].isIdle               = FALSE;
+        ppu[pp].isDump               = FALSE;
+        ppu[pp].isLoad               = FALSE;
         }
 
     /*
@@ -185,9 +213,7 @@ void deadStart(void)
 **------------------------------------------------------------------------*/
 static FcStatus deadFunc(PpWord funcCode)
     {
-    (void)funcCode;
-
-    return (FcDeclined);
+    return FcDeclined;
     }
 
 /*--------------------------------------------------------------------------
@@ -202,7 +228,7 @@ static void deadIo(void)
     {
     if (!activeChannel->full)
         {
-        if (dsSequence == deadstartCount)
+        if (dsSequence >= deadstartCount)
             {
             activeChannel->active = FALSE;
             }

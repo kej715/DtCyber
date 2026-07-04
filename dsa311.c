@@ -1,8 +1,10 @@
 /*--------------------------------------------------------------------------
 **
-**  Copyright (c) 2022, Tom Hunter, Kevin Jordan
+**  Copyright (c) 2022, Kevin Jordan
 **
 **  Name: dsa311.c
+**
+**  Author: Kevin Jordan
 **
 **  Description:
 **      Perform emulation of CDC 3000 series 3266 mux with 311 digital
@@ -412,7 +414,7 @@ void dsa311Init(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Show NIU status (operator interface).
+**  Purpose:        Show device status (operator interface).
 **
 **  Parameters:     Name        Description.
 **
@@ -423,14 +425,12 @@ void dsa311ShowStatus()
     {
     Dsa311Context *cp;
     u32           ipAddr;
-    char          outBuf[200];
     char          peerAddress[24];
     u16           port;
 
     for (cp = firstMux; cp != NULL; cp = cp->next)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o ", "3266/311", cp->channelNo, cp->eqNo, cp->unitNo);
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s C%02o E%02o U%02o ", "3266/311", cp->channelNo, cp->eqNo, cp->unitNo);
 
         ipAddr = ntohl(cp->serverAddr.sin_addr.s_addr);
         port   = ntohs(cp->serverAddr.sin_port);
@@ -444,22 +444,21 @@ void dsa311ShowStatus()
         switch (cp->majorState)
             {
         case StDsa311MajDisconnected:
-            sprintf(outBuf, FMTNETSTATUS "\n", ipAddress, peerAddress, "rhasp", "disconnected");
+            opDisplay(FMTNETSTATUS, ipAddress, peerAddress, "rhasp", "disconnected");
             break;
 
         case StDsa311MajConnecting:
-            sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(cp->fd), peerAddress, "rhasp", "connecting");
+            opDisplay(FMTNETSTATUS, netGetLocalTcpAddress(cp->fd), peerAddress, "rhasp", "connecting");
             break;
 
         case StDsa311MajConnected:
-            sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(cp->fd), netGetPeerTcpAddress(cp->fd), "rhasp", "connected");
+            opDisplay(FMTNETSTATUS, netGetLocalTcpAddress(cp->fd), netGetPeerTcpAddress(cp->fd), "rhasp", "connected");
             break;
 
         default:
-            strcpy(outBuf, "\n");
             break;
             }
-        opDisplay(outBuf);
+        opDisplay("\n");
         }
     }
 
@@ -747,12 +746,11 @@ static void dsa311Io(void)
 
                         case ETB:
                             cp->outputState = StDsa311OutCRC1;
-
+                            // fall through
                         case STX:
                         case DLE:
                             cp->sktOutBuf.data[cp->sktOutBuf.in++] = DLE;
-
-                        // fall through
+                            // fall through
                         default:
                             cp->sktOutBuf.data[cp->sktOutBuf.in++] = ch;
                             break;
@@ -1064,8 +1062,8 @@ static void dsa311InitiateConnection(Dsa311Context *cp)
 **------------------------------------------------------------------------*/
 static void dsa311Receive(Dsa311Context *cp)
     {
-    u8  b;
-    int n;
+    u8      b;
+    ssize_t n;
 
     n = recv(cp->fd, &cp->sktInBuf.data[cp->sktInBuf.in], SktInBufSize - cp->sktInBuf.in, 0);
     if (n <= 0)
@@ -1088,7 +1086,7 @@ static void dsa311Receive(Dsa311Context *cp)
     fprintf(dsa311Log, "\n%010lu received data", elapsedTime);
     dsa311LogBytes(&cp->sktInBuf.data[cp->sktInBuf.in], n);
 #endif
-    cp->sktInBuf.in += n;
+    cp->sktInBuf.in += (int)n;
     while (cp->sktInBuf.out < cp->sktInBuf.in
            && cp->ppInBuf.in + 2 < PpInBufSize)
         {
@@ -1189,7 +1187,7 @@ static void dsa311Reset(Dsa311Context *cp)
 **------------------------------------------------------------------------*/
 static void dsa311Send(Dsa311Context *cp)
     {
-    int n;
+    ssize_t n;
 
     n = send(cp->fd, &cp->sktOutBuf.data[cp->sktOutBuf.out], cp->sktOutBuf.in - cp->sktOutBuf.out, 0);
     if (n < 0)
@@ -1205,7 +1203,7 @@ static void dsa311Send(Dsa311Context *cp)
     fprintf(dsa311Log, "\n%010lu sent data", elapsedTime);
     dsa311LogBytes(&cp->sktOutBuf.data[cp->sktOutBuf.out], n);
 #endif
-    cp->sktOutBuf.out += n;
+    cp->sktOutBuf.out += (int)n;
     if (cp->sktOutBuf.out >= cp->sktOutBuf.in)
         {
         cp->sktOutBuf.out = cp->sktOutBuf.in = 0;

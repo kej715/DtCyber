@@ -81,7 +81,12 @@ class Machine {
     });
 
     this.client.on('data', (data) => {
-      this.handleData(data);
+      if (typeof(this.END_CHARACTER) !== "undefined") {
+        this.handleBlockedData(data);
+      }
+      else {
+        this.handleStreamedData(data);
+      }
     });
 
     this.client.on('close', () => {
@@ -176,7 +181,11 @@ class Machine {
     }
   }
 
-  handleData(data) {
+  setStreamingMode() {
+    this.END_CHARACTER = undefined;
+  }
+
+  handleBlockedData(data) {
     if (this.debug) {
       console.log('Receive raw data length: ', data.length);
     }
@@ -192,6 +201,15 @@ class Machine {
       }
       this.buffer = this.buffer.slice(endIndex + 1);
       endIndex = this.buffer.indexOf(this.END_CHARACTER);
+    }
+  }
+
+  handleStreamedData(data) {
+    if (this.debug) {
+      console.log('Receive raw data length: ', data.length);
+    }
+    if (this.receivedDataHandler) {
+      this.receivedDataHandler(data);
     }
   }
 }

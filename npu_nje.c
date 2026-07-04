@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------
 **
-**  Copyright (c) 2019, Kevin Jordan, Tom Hunter
+**  Copyright (c) 2019-2025, Kevin Jordan
 **
 **  Name: npu_nje.c
 **
@@ -72,11 +72,6 @@
 #include "types.h"
 #include "proto.h"
 #include "npu.h"
-
-#if defined(__APPLE__)
-#include <execinfo.h>
-#endif
-
 
 /*
 **  -----------------
@@ -329,13 +324,6 @@ static u8 SOH_ENQ[] =
     SOH,  ENQ,                                      // data
     0x00, 0x00, 0x00, 0x00                          // TTREOB
     };
-static u8 SYN_NAK[] =
-    {
-    0x00, 0x00, 0x00, 0x12, 0x00, 0x00, 0x00, 0x00, // TTB
-    0x00, 0x00, 0x00, 0x02,                         // TTR
-    SYN,  NAK,                                      // data
-    0x00, 0x00, 0x00, 0x00                          // TTREOB
-    };
 
 /*
 **  Special non-transparent NAM messages
@@ -378,6 +366,9 @@ void npuNjeTryOutput(Pcb *pcbp)
 
     switch (pcbp->controls.nje.state)
         {
+    default:
+        break;
+
     case StNjeRcvOpen:
     case StNjeRcvSOH_ENQ:
     case StNjeRcvAck:
@@ -1398,7 +1389,7 @@ static int npuNjeAppendRecords(Pcb *pcbp, u8 *bp, int len, u8 blockType)
                     {
                     nBytes = 63;
                     }
-                *dp++ = 0xc0 + nBytes; // SCB
+                *dp++ = (u8)(0xc0 + nBytes); // SCB
                 while (nBytes-- > 0)
                     {
                     *dp++ = *bp++;
@@ -1735,7 +1726,7 @@ static void npuNjeFlushOutput(Pcb *pcbp)
     memset(pcbp->controls.nje.outputBufPtr, 0, TtrLength); // Append end of buffer TTR
     pcbp->controls.nje.outputBufPtr += TtrLength;
     bufLen = (int)(pcbp->controls.nje.outputBufPtr - pcbp->controls.nje.outputBuf);
-    pcbp->controls.nje.outputBuf[TtbOffLength]     = bufLen >> 8;
+    pcbp->controls.nje.outputBuf[TtbOffLength]     = (u8)(bufLen >> 8);
     pcbp->controls.nje.outputBuf[TtbOffLength + 1] = bufLen & 0xff;
     npuNetSend(npuNjeFindTcb(pcbp), pcbp->controls.nje.outputBuf,
                (int)(pcbp->controls.nje.outputBufPtr - pcbp->controls.nje.outputBuf));
@@ -1815,7 +1806,7 @@ static void npuNjePrepareOutput(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 static int npuNjeSend(Pcb *pcbp, u8 *dp, int len)
     {
-    int n;
+    ssize_t n;
 
     n = send(pcbp->connFd, dp, len, 0);
     pcbp->controls.nje.lastXmit = getSeconds();
@@ -1837,7 +1828,7 @@ static int npuNjeSend(Pcb *pcbp, u8 *dp, int len)
         }
 #endif
 
-    return n;
+    return (int)n;
     }
 
 /*--------------------------------------------------------------------------
@@ -1936,7 +1927,7 @@ static void npuNjeSetTtrLength(Pcb *pcbp)
 
     ttrp   = pcbp->controls.nje.ttrp;
     recLen = (int)(pcbp->controls.nje.outputBufPtr - (ttrp + TtrLength));
-    *(ttrp + TtrOffLength)     = recLen >> 8;
+    *(ttrp + TtrOffLength)     = (u8)(recLen >> 8);
     *(ttrp + TtrOffLength + 1) = recLen & 0xff;
     }
 
@@ -2239,7 +2230,7 @@ static int npuNjeUploadBlock(Pcb *pcbp, u8 *blkp, int size, u8 *rcb, u8 *srcb)
 
                     break;
                     }
-                *obp++ = recLen;
+                *obp++ = (u8)recLen;
                 *obp++ = *rcb;
                 *obp++ = *srcb;
                 while (recLen-- > 0)
@@ -2287,8 +2278,7 @@ static int npuNjeUploadBlock(Pcb *pcbp, u8 *blkp, int size, u8 *rcb, u8 *srcb)
                     {
                     blockType = BtHTBLK;
                     }
-
-            // fall through
+                // fall through
             case 0x90:                  // request to initiate stream
             case 0xa0:                  // permission to initiate stream
             case 0xc0:                  // acknowledge transmission complete
@@ -2576,32 +2566,6 @@ static void npuNjeLogBytes(u8 *bytes, int len, CharEncoding encoding)
             hexCol = HexColumn(npuNjeLogBytesCol);
             }
         }
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Log a stack trace
-**
-**  Parameters:     none
-**
-**  Returns:        nothing
-**
-**------------------------------------------------------------------------*/
-static void npuNjePrintStackTrace(FILE *fp)
-    {
-#if defined(__APPLE__)
-    void *callstack[128];
-    int  i;
-    int  frames;
-    char **strs;
-
-    frames = backtrace(callstack, 128);
-    strs   = backtrace_symbols(callstack, frames);
-    for (i = 1; i < frames; ++i)
-        {
-        fprintf(fp, "%s\n", strs[i]);
-        }
-    free(strs);
-#endif
     }
 
 #endif // DEBUG

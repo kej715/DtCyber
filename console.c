@@ -96,7 +96,6 @@
 #if defined(_WIN32)
 #include <winsock.h>
 #else
-#include <pthread.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -210,26 +209,27 @@ static void consoleLogFlush(void);
 **  ----------------
 */
 
-bool cc545Enabled                      = FALSE;
+bool cc545Enabled     = FALSE;
 #ifdef WIN32
-long colorBG;                         // Console
-long colorFG;                         // Console
+long colorBG;
+long colorFG;
 #else
-char colorBG[32];                     // Console
-char colorFG[32];                     // Console
+char colorBG[32];
+char colorFG[32];
 #endif
-long fontHeightLarge;                 // Console
-long fontHeightMedium;                // Console
-long fontHeightSmall;                 // Console
-long fontLarge;                       // Console
-long fontMedium;                      // Console
-long fontSmall;                       // Console
-char fontName[MaxFontNameSize + 1];   // Console
-long heightPX;                        // Console
-long scaleX;                          // Console
-long scaleY;                          // Console
-long timerRate;                       // Console
-long widthPX;                         // Console
+long fontHeightLarge;
+long fontHeightMedium;
+long fontHeightSmall;
+bool fontIsTrueType;
+long fontLarge;
+long fontMedium;
+long fontSmall;
+char fontName[MaxFontNameSize + 1];
+long heightPX;
+long scaleX;
+long scaleY;
+long timerRate;
+long widthPX;
 
 /*
 **  -----------------
@@ -452,20 +452,14 @@ bool consoleIsRemoteActive(void)
 **------------------------------------------------------------------------*/
 void consoleShowStatus(void)
     {
-    char outBuf[200];
-
     if (listenFd != INVALID_SOCKET)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "6612", consoleChannelNo, consoleEqNo);
-        opDisplay(outBuf);
-        sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(listenFd), "", "console", "listening");
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s C%02o E%02o     ", "6612", consoleChannelNo, consoleEqNo);
+        opDisplay(FMTNETSTATUS "\n", netGetLocalTcpAddress(listenFd), "", "console", "listening");
         if (connFd != INVALID_SOCKET)
             {
-            sprintf(outBuf, "    >   %-8s             ", "6612");
-            opDisplay(outBuf);
-            sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(connFd), netGetPeerTcpAddress(connFd), "console", "connected");
-            opDisplay(outBuf);
+            opDisplay("    >   %-8s             ", "6612");
+            opDisplay(FMTNETSTATUS "\n", netGetLocalTcpAddress(connFd), netGetPeerTcpAddress(connFd), "console", "connected");
             }
         }
     }
@@ -642,12 +636,12 @@ static void consoleIo(void)
         activeDevice->fcode   = 0;
         if (ppKeyIn != 0)
             {
-            activeChannel->data = asciiToConsole[ppKeyIn];
+            activeChannel->data = asciiToConsole[(u8)ppKeyIn];
             ppKeyIn             = 0;
             }
         else if (opKeyIn != 0)
             {
-            activeChannel->data = asciiToConsole[opKeyIn];
+            activeChannel->data = asciiToConsole[(u8)opKeyIn];
             opKeyIn             = 0;
             }
         break;
@@ -778,9 +772,9 @@ static void consoleDisconnect(void)
 **------------------------------------------------------------------------*/
 static void consoleFlushCycleData(int first, int limit)
     {
-    u64 currentTime;
-    int len;
-    int n;
+    u64     currentTime;
+    int     len;
+    ssize_t n;
 
     if (connFd != INVALID_SOCKET)
         {
@@ -802,12 +796,12 @@ static void consoleFlushCycleData(int first, int limit)
                 if (outBufIn + n <= OutBufSize)
                     {
                     memcpy(&outBuf[outBufIn], &cycleDataBuf[first], n);
-                    outBufIn += n;
+                    outBufIn += (int)n;
                     }
                 else // output buffer overflow -- replace contents with latest cycle data
                     {
                     memcpy(outBuf, &cycleDataBuf[first], n);
-                    outBufIn = n;
+                    outBufIn = (int)n;
                     }
                 earliestCycleFlush = currentTime + minRefreshInterval;
                 consoleInitCycleData();
@@ -823,7 +817,7 @@ static void consoleFlushCycleData(int first, int limit)
                     {
                     memcpy(outBuf, &outBuf[n], outBufIn - n);
                     }
-                outBufIn -= n;
+                outBufIn -= (int)n;
                 }
             }
         else if (limit > first)
@@ -842,7 +836,7 @@ static void consoleFlushCycleData(int first, int limit)
                     {
                     if (n > 0)
                         {
-                        len -= n;
+                        len -= (int)n;
                         memcpy(outBuf, &cycleDataBuf[first + n], len);
                         outBufIn = len;
                         }
@@ -882,7 +876,7 @@ static void consoleInitCycleData(void)
 static void consoleNetIo(void)
     {
     u8             ch;
-    int            n;
+    ssize_t        n;
     fd_set         readFds;
     struct timeval timeout;
 
@@ -934,7 +928,7 @@ static void consoleNetIo(void)
             }
         else
             {
-            inBufIn += n;
+            inBufIn += (int)n;
             }
         }
     if (outBufIn > 0)

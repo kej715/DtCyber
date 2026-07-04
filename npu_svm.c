@@ -1,6 +1,7 @@
 /*--------------------------------------------------------------------------
 **
 **  Copyright (c) 2003-2011, Tom Hunter
+**                2019-2025, Kevin Jordan
 **
 **  Name: npu_svm.c
 **
@@ -830,7 +831,7 @@ void npuSvmSendDiscRequest(Tcb *tp)
     case StTermHostRequestDisconnect:  // disconnection has been requested by host
         logDtError(LogErrorLocation, "Warning - disconnect request ignored for %.7s in state %s\n",
                    tp->termName, npuSvmTermStates[tp->state]);
-
+        // fallthrough
     case StTermNpuRequestDisconnect:   // disconnection has been requested by NPU/MDI
         break;
 
@@ -980,9 +981,6 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
     u8  cn;
     u8  *mp = bp->data;
     int len = bp->numBytes;
-    u8  port;
-    u8  subPort;
-    u8  address1;
     u8  address2;
     u8  deviceType;
     Pcb *pcbp;
@@ -991,7 +989,6 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
     u8  termClass;
     Tcb *tp;
     u8  status;
-    u8  lastResp;
     u8  codeSet;
 
 #if DEBUG
@@ -1031,9 +1028,9 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
     **  Extract configuration.
     */
     mp        += BlkOffP3;
-    port       = *mp++;  // should be same as claPort
-    subPort    = *mp++;
-    address1   = *mp++;
+    mp        += 1;     // port
+    mp        += 1;     // subport
+    mp        += 1;     // address1
     address2   = *mp++;
     deviceType = *mp++;
     subTip     = *mp++;
@@ -1043,7 +1040,7 @@ static Tcb *npuSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp)
 
     termClass = *mp++;
     status    = *mp++;
-    lastResp  = *mp++;
+    mp       += 1;     // lastResp
     codeSet   = *mp++;
 
     /*

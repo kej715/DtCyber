@@ -241,6 +241,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="bdp180.c" />
     <ClCompile Include="cci_async.c" />
     <ClCompile Include="cci_hip.c" />
     <ClCompile Include="cci_svm.c" />
@@ -251,6 +252,7 @@
     <ClCompile Include="console.c" />
     <ClCompile Include="cp3446.c" />
     <ClCompile Include="cpu.c" />
+    <ClCompile Include="cpu180.c" />
     <ClCompile Include="cr3447.c" />
     <ClCompile Include="cr405.c" />
     <ClCompile Include="cray_station.c" />
@@ -265,6 +267,7 @@
     <ClCompile Include="dsa311.c" />
     <ClCompile Include="dump.c" />
     <ClCompile Include="float.c" />
+    <ClCompile Include="float180.c" />
     <ClCompile Include="fsmon.c" />
     <ClCompile Include="init.c" />
     <ClCompile Include="interlock_channel.c" />

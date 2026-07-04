@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------
 **
-**  Copyright (c) 2003-2019, Kevin Jordan, Tom Hunter
+**  Copyright (c) 2003-2019, Kevin Jordan
 **
 **  Name: cdcnet_gw.c
 **
@@ -55,10 +55,6 @@
 #include "types.h"
 #include "proto.h"
 #include "npu.h"
-
-#if defined(__APPLE__)
-#include <execinfo.h>
-#endif
 
 /*
 **  -----------------
@@ -395,14 +391,6 @@ typedef struct tcpGwCommand
 static Pccb *cdcnetAddPccb();
 static Gcb *cdcnetAddGcb();
 static void cdcnetCloseConnection(Gcb *gp);
-
-#if defined(_WIN32)
-static SOCKET cdcnetCreateTcpSocket();
-
-#else
-static int cdcnetCreateTcpSocket();
-
-#endif
 static Pccb *cdcnetFindPccb(u16 port);
 static Gcb *cdcnetFindGcb(u8 cn);
 static u32 cdcnetGetIdFromMessage(u8 *ip);
@@ -848,7 +836,7 @@ void cdcnetCheckStatus(void)
     int                i;
     u32                localAddr;
     u16                localPort;
-    int                n;
+    ssize_t            n;
     int                optEnable = 1;
     u32                peerAddr;
     u16                peerPort;
@@ -904,6 +892,9 @@ void cdcnetCheckStatus(void)
         {
         switch (gp->gwState)
             {
+        default:
+            break;
+
         case StGwStartingInit:
             if (cdcnetSendInitializeConnectionRequest(gp))
                 {
@@ -1249,7 +1240,7 @@ void cdcnetCheckStatus(void)
 #if DEBUG
                         fprintf(cdcnetLog, "Sent %d bytes to %s:%u, CN=%02X\n", n, gp->dstIpAddress, gp->dstPort, gp->cn);
 #endif
-                        bp->offset += n;
+                        bp->offset += (u16)n;
                         if (bp->offset >= bp->numBytes)
                             {
                             if (bp->blockSeqNo)
@@ -1313,7 +1304,6 @@ void cdcnetShowStatus(void)
     int     i;
     Pccb    *pp;
     Gcb     *gp;
-    char    outBuf[200];
     char    *state;
 
     if (cdcnetGcbCount < 1)
@@ -1343,9 +1333,7 @@ void cdcnetShowStatus(void)
         {
         if (pp->connFd != 0)
             {
-            sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS "\n", "CDCNet", chEqStr, netGetLocalTcpAddress(pp->connFd), "",
-                    "tcp", "listening");
-            opDisplay(outBuf);
+            opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", "CDCNet", chEqStr, netGetLocalTcpAddress(pp->connFd), "", "tcp", "listening");
             chEqStr[0] = '\0';
             }
         }
@@ -1392,9 +1380,8 @@ void cdcnetShowStatus(void)
             state = "unknown";
             break;
             }
-        sprintf(outBuf, "    >   %-8s %-7s     "FMTNETSTATUS "\n", "CDCNet", chEqStr, netGetLocalTcpAddress(gp->connFd),
-                netGetPeerTcpAddress(gp->connFd), gp->connType == TypeUdp ? "udp" : "tcp", state);
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", "CDCNet", chEqStr, netGetLocalTcpAddress(gp->connFd),
+            netGetPeerTcpAddress(gp->connFd), gp->connType == TypeUdp ? "udp" : "tcp", state);
         chEqStr[0] = '\0';
         }
     }
@@ -1423,7 +1410,7 @@ static Gcb *cdcnetAddGcb()
     gp = (Gcb *)realloc(cdcnetGcbs, (cdcnetGcbCount + 1) * sizeof(Gcb));
     if (gp == (Gcb *)NULL)
         {
-        return ((Gcb *)NULL);
+        return (Gcb *)NULL;
         }
 
     cdcnetGcbs              = gp;
@@ -1443,7 +1430,7 @@ static Gcb *cdcnetAddGcb()
     gp->outputQueue.first   = NULL;
     gp->outputQueue.last    = NULL;
 
-    return (gp);
+    return gp;
     }
 
 /*--------------------------------------------------------------------------
@@ -1464,7 +1451,7 @@ static Gcb *cdcnetGetGcb()
         {
         if (gp->gwState == StGwIdle)
             {
-            return (gp);
+            return gp;
             }
         }
 
@@ -1490,7 +1477,7 @@ static Gcb *cdcnetFindGcb(u8 cn)
         {
         if ((gp->gwState != StGwIdle) && (cn == gp->cn))
             {
-            return (gp);
+            return gp;
             }
         }
 
@@ -1513,7 +1500,7 @@ static Pccb *cdcnetAddPccb()
     pp = (Pccb *)realloc(cdcnetPccbs, (cdcnetPccbCount + 1) * sizeof(Pccb));
     if (pp == (Pccb *)NULL)
         {
-        return ((Pccb *)NULL);
+        return (Pccb *)NULL;
         }
 
     cdcnetPccbs       = pp;
@@ -1525,7 +1512,7 @@ static Pccb *cdcnetAddPccb()
     pp->tcpGcbOrdinal = 0;
     pp->deadline      = (time_t)0;
 
-    return (pp);
+    return pp;
     }
 
 /*--------------------------------------------------------------------------
@@ -1546,7 +1533,7 @@ static Pccb *cdcnetGetPccb()
         {
         if (pp->dstPort == 0)
             {
-            return (pp);
+            return pp;
             }
         }
 
@@ -1572,7 +1559,7 @@ static Pccb *cdcnetFindPccb(u16 port)
         {
         if (port == pp->dstPort)
             {
-            return (pp);
+            return pp;
             }
         }
 
@@ -1618,7 +1605,7 @@ static bool cdcnetGetEndpoints(int sd, u32 *localAddr, u16 *localPort,
         {
         logDtError(LogErrorLocation, "CDCNet: Failed to get local socket name: %s\n", strerror(errno));
 
-        return (FALSE);
+        return FALSE;
         }
 
     addrLen = sizeof(hostAddr);
@@ -1632,10 +1619,10 @@ static bool cdcnetGetEndpoints(int sd, u32 *localAddr, u16 *localPort,
         {
         logDtError(LogErrorLocation, "CDCNet: Failed to get peer socket name: %s\n", strerror(errno));
 
-        return (FALSE);
+        return FALSE;
         }
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -1710,10 +1697,10 @@ static void cdcnetSendBack(Gcb *gp, NpuBuffer *bp, u8 bsn)
 
     mp = bp->data;
 
-    *mp++ = npuSvmCouplerNode;                   // DN
-    *mp++ = cdcnetNode;                          // SN
-    *mp++ = gp->cn;                              // CN
-    *mp++ = BlkOffBTBSN | (bsn << BlkShiftBSN);  // BT=Back | BSN
+    *mp++ = npuSvmCouplerNode;                        // DN
+    *mp++ = cdcnetNode;                               // SN
+    *mp++ = gp->cn;                                   // CN
+    *mp++ = (u8)(BlkOffBTBSN | (bsn << BlkShiftBSN)); // BT=Back | BSN
 
     bp->numBytes = (u16)(mp - bp->data);
     bp->offset   = 0;
@@ -1771,7 +1758,7 @@ static bool cdcnetSendInitializeConnectionRequest(Gcb *gp)
     bp = npuBipBufGet();
     if (bp == NULL)
         {
-        return (FALSE);
+        return FALSE;
         }
 
     mp = bp->data;
@@ -1785,7 +1772,7 @@ static bool cdcnetSendInitializeConnectionRequest(Gcb *gp)
 
     npuBipRequestUplineTransfer(bp);
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -1948,7 +1935,7 @@ static u32 cdcnetTcpGetIpAddress(u8 *ap)
                   | ap[RelOffTcpIpAddressHost + 2];
         }
 
-    return (ipAddr);
+    return ipAddr;
     }
 
 /*--------------------------------------------------------------------------
@@ -2016,10 +2003,10 @@ static u16 cdcnetTcpGetPort(u8 *ap)
 
     if (inUse != 0)
         {
-        port = (ap[RelOffTcpPort] << 8) | ap[RelOffTcpPort + 1];
+        port = (u16)((ap[RelOffTcpPort] << 8) | ap[RelOffTcpPort + 1]);
         }
 
-    return (port);
+    return port;
     }
 
 /*--------------------------------------------------------------------------
@@ -2050,7 +2037,7 @@ static void cdcnetTcpSetPort(u8 *ap, u16 port)
 **------------------------------------------------------------------------*/
 static u32 cdcnetGetIdFromMessage(u8 *ip)
     {
-    return ((*ip << 24) | (*(ip + 1) << 16) | (*(ip + 2) << 8) | *(ip + 3));
+    return (*ip << 24) | (*(ip + 1) << 16) | (*(ip + 2) << 8) | *(ip + 3);
     }
 
 /*--------------------------------------------------------------------------
@@ -2120,7 +2107,7 @@ static void cdcnetTcpRequestUplineTransfer(Gcb *gp, NpuBuffer *bp, u8 blockType,
     bp->data[BlkOffDN]    = npuSvmCouplerNode;
     bp->data[BlkOffSN]    = cdcnetNode;
     bp->data[BlkOffCN]    = gp->cn;
-    bp->data[BlkOffBTBSN] = (gp->bsn++ << BlkShiftBSN) | blockType;
+    bp->data[BlkOffBTBSN] = (u8)((gp->bsn++ << BlkShiftBSN) | blockType);
     if (gp->bsn > 7)
         {
         gp->bsn = 1;
@@ -2163,7 +2150,7 @@ static bool cdcnetTcpOpenSAPHandler(Gcb *gp, NpuBuffer *bp)
     cdcnetPutIdToMessage(gp->tcpSapId, bp->data + BlkOffTcpOSTcpSapId);
     cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_successful);
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2199,7 +2186,7 @@ static bool cdcnetTcpCloseSAPHandler(Gcb *gp, NpuBuffer *bp)
 
     cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_successful);
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2227,7 +2214,7 @@ static bool cdcnetTcpAbortCurrentConnectionHandler(Gcb *gp, NpuBuffer *bp)
     gp->tcpUdpState = StTcpUdpIdle;
     cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_successful);
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2301,7 +2288,7 @@ static bool cdcnetTcpActiveConnectHandler(Gcb *gp, NpuBuffer *bp)
 
     cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, status);
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2320,7 +2307,6 @@ static bool cdcnetTcpPassiveConnectHandler(Gcb *gp, NpuBuffer *bp)
     u8          *dp;
     u32         dstAddr;
     u16         dstPort;
-    int         optEnable = 1;
     Pccb        *pp;
     u32         srcAddr;
     TcpGwStatus status;
@@ -2391,7 +2377,7 @@ static bool cdcnetTcpPassiveConnectHandler(Gcb *gp, NpuBuffer *bp)
                 }
             cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, status);
 
-            return (TRUE);
+            return TRUE;
             }
 
         pp = cdcnetGetPccb();
@@ -2403,7 +2389,7 @@ static bool cdcnetTcpPassiveConnectHandler(Gcb *gp, NpuBuffer *bp)
 #endif
             cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_no_resources);
 
-            return (TRUE);
+            return TRUE;
             }
 
         pp->srcPort       = gp->srcPort;
@@ -2444,7 +2430,7 @@ static bool cdcnetTcpPassiveConnectHandler(Gcb *gp, NpuBuffer *bp)
                 pp->connFd = 0;
                 cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_internal_error);
 
-                return (TRUE);
+                return TRUE;
                 }
             }
         gp->dstPort = pp->dstPort;
@@ -2465,7 +2451,7 @@ static bool cdcnetTcpPassiveConnectHandler(Gcb *gp, NpuBuffer *bp)
 
     cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, status);
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2488,7 +2474,7 @@ static bool cdcnetTcpAllocateHandler(Gcb *gp, NpuBuffer *bp)
 #endif
     cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTResponse, tcp_successful);
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2552,7 +2538,7 @@ static bool cdcnetTcpDisconnectHandler(Gcb *gp, NpuBuffer *bp)
 
     gp->tcpUdpState = StTcpUdpIdle;
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2572,7 +2558,7 @@ static bool cdcnetTcpSendConnectionIndication(Gcb *gp)
     bp = npuBipBufGet();
     if (bp == NULL)
         {
-        return (FALSE);
+        return FALSE;
         }
     memset(bp->data, 0, cdcnetTcpCILength + BlkOffTcpCmdName);
 
@@ -2617,7 +2603,7 @@ static bool cdcnetTcpSendConnectionIndication(Gcb *gp)
     bp->numBytes = cdcnetTcpCILength + BlkOffTcpCmdName;
     cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTIndication, tcp_successful);
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2638,7 +2624,7 @@ static bool cdcnetTcpSendErrorIndication(Gcb *gp)
     bp = npuBipBufGet();
     if (bp == NULL)
         {
-        return (FALSE);
+        return FALSE;
         }
     memset(bp->data, 0, cdcnetTcpEILength + BlkOffTcpCmdName);
 
@@ -2653,7 +2639,7 @@ static bool cdcnetTcpSendErrorIndication(Gcb *gp)
     cdcnetTcpRequestUplineTransfer(gp, bp, BtHTQMSG, cdcnetTcpHTIndication, gp->reasonCode);
     gp->reasonCode = 0;
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -2669,7 +2655,7 @@ static void cdcnetTcpSendDataIndication(Gcb *gp)
     {
     u8          blockType;
     NpuBuffer   *bp;
-    int         n;
+    ssize_t     n;
     int         recvSize;
     TcpGwStatus status;
 
@@ -2696,7 +2682,7 @@ static void cdcnetTcpSendDataIndication(Gcb *gp)
 #if DEBUG
         fprintf(cdcnetLog, "Received %d bytes, CN=%02X\n", n, gp->cn);
 #endif
-        bp->numBytes = BlkOffDbc + n + 1;
+        bp->numBytes = (u16)(BlkOffDbc + n + 1);
         }
     else if (n == 0)
         {
@@ -2766,7 +2752,7 @@ static int cdcnetCreateUdpSocket()
     fcntl(fd, F_SETFL, O_NONBLOCK);
 #endif
 
-    return (fd);
+    return fd;
     }
 
 /*--------------------------------------------------------------------------
@@ -2815,7 +2801,7 @@ static u32 cdcnetUdpGetIpAddress(u8 *ap)
                   | ap[RelOffUdpIpAddressHost + 3];
         }
 
-    return (ipAddr);
+    return ipAddr;
     }
 
 /*--------------------------------------------------------------------------
@@ -2835,10 +2821,10 @@ static u16 cdcnetUdpGetPort(u8 *ap)
 
     if (ap[RelOffUdpPortInUse] != 0)
         {
-        port = (ap[RelOffUdpPort + 1] << 8) | ap[RelOffUdpPort + 2];
+        port = (u16)((ap[RelOffUdpPort + 1] << 8) | ap[RelOffUdpPort + 2]);
         }
 
-    return (port);
+    return port;
     }
 
 /*--------------------------------------------------------------------------
@@ -2912,7 +2898,7 @@ static void cdcnetUdpRequestUplineTransfer(Gcb *gp, NpuBuffer *bp, u8 blockType)
     bp->data[BlkOffDN]    = npuSvmCouplerNode;
     bp->data[BlkOffSN]    = cdcnetNode;
     bp->data[BlkOffCN]    = gp->cn;
-    bp->data[BlkOffBTBSN] = (gp->bsn++ << BlkShiftBSN) | blockType;
+    bp->data[BlkOffBTBSN] = (u8)((gp->bsn++ << BlkShiftBSN) | blockType);
     if (gp->bsn > 7)
         {
         gp->bsn = 1;
@@ -3021,7 +3007,7 @@ static bool cdcnetUdpSendDownlineData(Gcb *gp, NpuBuffer *bp)
     {
     u32                ipAddress;
     int                len;
-    int                n;
+    ssize_t            n;
     u16                port;
     struct sockaddr_in server;
 
@@ -3090,15 +3076,14 @@ static void cdcnetUdpSendUplineData(Gcb *gp)
     struct sockaddr_in client;
     u8                 *dp;
     u32                ipAddress;
-
 #if defined(_WIN32)
-    int len = 0;
+    int                len = 0;
 #else
-    socklen_t len;
+    socklen_t          len;
 #endif
-    int n;
-    u16 port;
-    int recvSize;
+    ssize_t            n;
+    u16                port;
+    int                recvSize;
 
     bp = npuBipBufGet();
     if (bp == NULL)
@@ -3139,7 +3124,7 @@ static void cdcnetUdpSendUplineData(Gcb *gp)
     *dp++ = cdcnetUdpVersion;
     *dp++ = 0;     // unused byte
     cdcnetUdpSetAddress(dp, ipAddress, port);
-    bp->numBytes = n + BlkOffUdpDataIndData;
+    bp->numBytes = (u16)(n + BlkOffUdpDataIndData);
     cdcnetUdpRequestUplineTransfer(gp, bp, BtHTMSG);
     }
 
@@ -3207,32 +3192,6 @@ static void cdcnetLogBytes(u8 *bytes, int len)
             hexCol = HexColumn(cdcnetLogBytesCol);
             }
         }
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Log a stack trace
-**
-**  Parameters:     none
-**
-**  Returns:        nothing
-**
-**------------------------------------------------------------------------*/
-static void cdcnetPrintStackTrace(FILE *fp)
-    {
-#if defined(__APPLE__)
-    void *callstack[128];
-    int  i;
-    int  frames;
-    char **strs;
-
-    frames = backtrace(callstack, 128);
-    strs   = backtrace_symbols(callstack, frames);
-    for (i = 1; i < frames; ++i)
-        {
-        fprintf(fp, "%s\n", strs[i]);
-        }
-    free(strs);
-#endif
     }
 
 #endif // DEBUG

@@ -196,7 +196,9 @@ static void mt362xFuncForespace(void);
 static void mt362xFuncBackspace(void);
 static void mt362xPackAndConvert(u32 recLen);
 static void mt362xUnload(TapeParam *tp);
+#if DEBUG
 static char *mt362xFunc2String(PpWord funcCode);
+#endif
 
 /*
 **  ----------------
@@ -435,7 +437,6 @@ void mt362xLoadTape(char *params)
     int         equipmentNo;
     FILE        *fcb;
     int         numParam;
-    char        outBuf[400];
     static char str[200];
     TapeParam   *tp;
     u8          unitMode;
@@ -499,8 +500,7 @@ void mt362xLoadTape(char *params)
     tp = (TapeParam *)dp->context[unitNo];
     if (tp == NULL)
         {
-        sprintf(outBuf, "(mt362x ) Unit %d not allocated\n", unitNo);
-        opDisplay(outBuf);
+        opDisplay("(mt362x ) Unit %d not allocated\n", unitNo);
 
         return;
         }
@@ -510,8 +510,7 @@ void mt362xLoadTape(char *params)
     */
     if (dp->fcb[unitNo] != NULL)
         {
-        sprintf(outBuf, "(mt362x ) Unit %d not unloaded\n", unitNo);
-        opDisplay(outBuf);
+        opDisplay("(mt362x ) Unit %d not unloaded\n", unitNo);
 
         return;
         }
@@ -539,8 +538,7 @@ void mt362xLoadTape(char *params)
     */
     if (fcb == NULL)
         {
-        sprintf(outBuf, "(mt362x ) Failed to open %s\n", str);
-        opDisplay(outBuf);
+        opDisplay("(mt362x ) Failed to open %s\n", str);
 
         return;
         }
@@ -557,8 +555,7 @@ void mt362xLoadTape(char *params)
     tp->unitReady = TRUE;
     tp->ringIn    = unitMode == 'w';
 
-    sprintf(outBuf, "(mt362x ) Successfully loaded %s\n", str);
-    opDisplay(outBuf);
+    opDisplay("(mt362x ) Successfully loaded %s\n", str);
     }
 
 /*--------------------------------------------------------------------------
@@ -578,7 +575,6 @@ void mt362xUnloadTape(char *params)
     int       equipmentNo;
     int       unitNo;
     TapeParam *tp;
-    char      outBuf[100];
 
     /*
     **  Operator inserted a new tape.
@@ -624,8 +620,7 @@ void mt362xUnloadTape(char *params)
     tp = (TapeParam *)dp->context[unitNo];
     if (tp == NULL)
         {
-        sprintf(outBuf, "(mt362x ) Unit %d not allocated\n", unitNo);
-        opDisplay(outBuf);
+        opDisplay("(mt362x ) Unit %d not allocated\n", unitNo);
 
         return;
         }
@@ -635,8 +630,7 @@ void mt362xUnloadTape(char *params)
     */
     if (dp->fcb[unitNo] == NULL)
         {
-        sprintf(outBuf, "(mt362x ) Unit %d not loaded\n", unitNo);
-        opDisplay(outBuf);
+        opDisplay("(mt362x ) Unit %d not loaded\n", unitNo);
 
         return;
         }
@@ -657,8 +651,7 @@ void mt362xUnloadTape(char *params)
     */
     mt362xInitStatus(tp);
 
-    sprintf(outBuf, "(mt362x ) Successfully unloaded MT362x on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
-    opDisplay(outBuf);
+    opDisplay("(mt362x ) Successfully unloaded MT362x on channel %o equipment %o unit %o\n", channelNo, equipmentNo, unitNo);
     }
 
 /*--------------------------------------------------------------------------
@@ -673,18 +666,15 @@ void mt362xUnloadTape(char *params)
 void mt362xShowTapeStatus()
     {
     TapeParam *tp = firstTape;
-    char      outBuf[MaxFSPath + 128];
     char      type[10];
 
     while (tp)
         {
         sprintf(type, "362x-%d", tp->tracks);
-        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", type, tp->channelNo, tp->eqNo, tp->unitNo);
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s C%02o E%02o U%02o", type, tp->channelNo, tp->eqNo, tp->unitNo);
         if (tp->unitReady)
             {
-            sprintf(outBuf, " %c %s\n", tp->ringIn ? 'w' : 'r', tp->fileName);
-            opDisplay(outBuf);
+            opDisplay(" %c %s\n", tp->ringIn ? 'w' : 'r', tp->fileName);
             }
         else
             {
@@ -1534,18 +1524,12 @@ static void mt362xFuncRead(void)
     u32       recLen2;
     i8        unitNo;
     TapeParam *tp;
-    i32       position;
 
     unitNo = active3000Device->selectedUnit;
     tp     = (TapeParam *)active3000Device->context[unitNo];
 
     active3000Device->recordLength = 0;
     tp->recordLength = 0;
-
-    /*
-    **  Determine if the tape is at the load point.
-    */
-    position = ftell(active3000Device->fcb[unitNo]);
 
     /*
     **  Read and verify TAP record length header.
@@ -1700,7 +1684,7 @@ static void mt362xFuncReadBkw(void)
     u32       recLen2;
     i8        unitNo;
     TapeParam *tp;
-    i32       position;
+    long      position;
 
     unitNo = active3000Device->selectedUnit;
     tp     = (TapeParam *)active3000Device->context[unitNo];
@@ -1887,15 +1871,9 @@ static void mt362xFuncForespace(void)
     u32       recLen2;
     i8        unitNo;
     TapeParam *tp;
-    i32       position;
 
     unitNo = active3000Device->selectedUnit;
     tp     = (TapeParam *)active3000Device->context[unitNo];
-
-    /*
-    **  Determine if the tape is at the load point.
-    */
-    position = ftell(active3000Device->fcb[unitNo]);
 
     /*
     **  Read and verify TAP record length header.
@@ -2032,7 +2010,7 @@ static void mt362xFuncBackspace(void)
     u32       recLen2;
     i8        unitNo;
     TapeParam *tp;
-    i32       position;
+    long      position;
 
     unitNo = active3000Device->selectedUnit;
     tp     = (TapeParam *)active3000Device->context[unitNo];
@@ -2203,7 +2181,7 @@ static void mt362xPackAndConvert(u32 recLen)
 
         for (i = 0; i < recLen; i += 2)
             {
-            *op++ = ((PpWord)asciiToBcd[rp[0]] << 6) | ((PpWord)asciiToBcd[rp[1]] << 0);
+            *op++ = (PpWord)(((PpWord)asciiToBcd[rp[0]] << 6) | ((PpWord)asciiToBcd[rp[1]] << 0));
             rp   += 2;
             }
 
@@ -2250,7 +2228,7 @@ static void mt362xPackAndConvert(u32 recLen)
 
             for (i = 0; i < recLen; i += 2)
                 {
-                *op++ = ((PpWord)(rp[0] & Mask6) << 6) | ((PpWord)(rp[1] & Mask6) << 0);
+                *op++ = (PpWord)(((PpWord)(rp[0] & Mask6) << 6) | ((PpWord)(rp[1] & Mask6) << 0));
                 rp   += 2;
                 }
 
@@ -2282,6 +2260,7 @@ static void mt362xUnload(TapeParam *tp)
     active3000Device->fcb[unitNo] = NULL;
     }
 
+#if DEBUG
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert function code to string.
 **
@@ -2295,7 +2274,6 @@ static char *mt362xFunc2String(PpWord funcCode)
     {
     static char buf[40];
 
-#if DEBUG
     switch (funcCode)
         {
     case Fc362xRelease:
@@ -2379,10 +2357,12 @@ static char *mt362xFunc2String(PpWord funcCode)
     case Fc6681Output:
         return "Fc6681Output";
         }
-#endif
+
     sprintf(buf, "(mt362x ) Unknown Function: %04o", funcCode);
 
     return (buf);
     }
+
+#endif
 
 /*---------------------------  End Of File  ------------------------------*/

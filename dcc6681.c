@@ -70,7 +70,6 @@ typedef struct dccControl
 */
 static FcStatus dcc6681Func(PpWord funcCode);
 static void dcc6681Io(void);
-static void dcc6681Load(DevSlot *, int, char *);
 static void dcc6681Activate(void);
 static void dcc6681Disconnect(void);
 
@@ -416,7 +415,7 @@ static FcStatus dcc6681Func(PpWord funcCode)
         active3000Device = mp->device3000[e];
         funcCode        &= Fc6681ConnectFuncMask;
         mp->status       = StFc6681Ready;
-        rc = (active3000Device->func)(funcCode);
+        rc               = (PpWord)((active3000Device->func)(funcCode));
         if (rc == FcDeclined)
             {
             mp->status = StFc6681Reject;
@@ -518,7 +517,7 @@ static void dcc6681Io(void)
     case Fc6681DccStatusReq:
         if (!activeChannel->full)
             {
-            stat = mp->status;
+            stat = (PpWord)mp->status;
 
             /*
             **  Assemble interrupt status.

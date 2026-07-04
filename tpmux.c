@@ -1,6 +1,7 @@
 /*--------------------------------------------------------------------------
 **
-**  Copyright (c) 2003-2011, Gerard J van der Grinten, Tom Hunter
+**  Copyright (c) 2003-2026, Gerard J van der Grinten, Tom Hunter,
+**                           Kevin Jordan
 **
 **  Name: tpmux.c
 **
@@ -199,7 +200,7 @@
 /*
 **  Function codes.
 */
-#define FcTpmStatusSumary     00000
+#define FcTpmStatusSummary    00000
 #define FcTpmReadChar         00100
 #define FcTpmWriteChar        00200
 #define FcTpmSetTerminal      00300
@@ -207,6 +208,7 @@
 #define FcTpmFlipRTS          00500
 #define FcTpmNotUsed          00600
 #define FcTpmMasterClear      00700
+#define FcTpmClockDialout     01000
 #define FcTpmDeSelect         06000
 #define FcTpmConPort          07000
 
@@ -224,10 +226,10 @@
 #define TpmSystemConsole      00000
 #define TpmMaintConsole       00001
 
+#define DefaultListenPort     6602
 #define IoTurnsPerPoll        4
 #define InBufSize             256
 #define OutBufSize            32
-#define MaxPorts              2
 
 /*
 **  -----------------------
@@ -245,6 +247,8 @@ typedef struct portParam
     u8     id;
     bool   active;
     int    connFd;
+    int    listenFd;
+    int    listenPort;
     PpWord status;
     int    inInIdx;
     int    inOutIdx;
@@ -261,6 +265,7 @@ typedef struct portParam
 */
 static void     tpMuxCheckIo(void);
 static FcStatus tpMuxFunc(PpWord funcCode);
+static void     tpMuxGetTimestamp(void);
 static void     tpMuxIo(void);
 static void     tpMuxActivate(void);
 static void     tpMuxDisconnect(void);
@@ -278,13 +283,16 @@ bool tpMuxEnabled = FALSE;
 **  -----------------
 */
 static int       ioTurns     = IoTurnsPerPoll - 1;
-static int       listenFd    = 0;
 static DevSlot   *mux        = NULL;
+static u8        outBuf[540];
 static PortParam *portVector = NULL;
-static u16       telnetPort  = 6602;
 
-static char connectingMsg[] = "\r\nConnecting to host - please wait ...";
-static char noPortsMsg[]    = "\r\nNo free ports available - please try again later.\r\n";
+static char connectingMsg[]  = "\r\nConnecting to host - please wait ...";
+static char noPortsMsg[]     = "\r\nNo free ports available - please try again later.\r\n";
+
+#if DEBUG
+FILE *tpMuxLog = NULL;
+#endif
 
 /*
  **--------------------------------------------------------------------------
@@ -310,8 +318,15 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     {
     DevSlot   *dp;
     u8        i;
-    long      port;
+    int       n;
     PortParam *pp;
+
+#if DEBUG
+    if (tpMuxLog == NULL)
+        {
+        tpMuxLog = fopen("tpmlog.txt", "wt");
+        }
+#endif
 
     if (mux != NULL)
         {
@@ -320,7 +335,7 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
         }
     if (channelNo != ChTwoPortMux)
         {
-        logDtError(LogErrorLocation, "TPM must be defined on channel %03o\n", ChTwoPortMux);
+        logDtError(LogErrorLocation, "TPM must be defined on channel %02o\n", ChTwoPortMux);
         exit(1);
         }
 
@@ -331,22 +346,10 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     dp->io           = tpMuxIo;
     dp->selectedUnit = -1;
 
-    if (params != NULL)
-        {
-        //  Parse the TCP Port Number
-        port = strtol(params, NULL, 10);
-        if ((port < 1) || (port > 65535))
-            {
-            logDtError(LogErrorLocation, "Invalid TCP port number in TPM definition: %ld\n", port);
-            exit(1);
-            }
-        telnetPort = (u16)port;
-        }
-
-    portVector = calloc(MaxPorts, sizeof(PortParam));
+    portVector = calloc(2, sizeof(PortParam));
     if (portVector == NULL)
         {
-        logDtError(LogErrorLocation, "Failed to allocate two port mux context block\n");
+        logDtError(LogErrorLocation, "Failed to allocate TPM context block\n");
         exit(1);
         }
 
@@ -355,26 +358,66 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     /*
     **  Initialise port control blocks.
     */
-    for (i = 0, pp = portVector; i < MaxPorts; i++, pp++)
+    for (i = 0, pp = portVector; i < 2; i++, pp++)
         {
-        pp->status = 00026;
-        pp->active = FALSE;
-        pp->connFd = 0;
         pp->id     = i;
+        pp->status = 00026;
+        }
+
+    if (params != NULL)
+        {
+        //  Parse the TCP port number(s)
+        n = sscanf(params, "%d,%d", &portVector[0].listenPort, &portVector[1].listenPort);
+        if (n < 1)
+            {
+            portVector[0].listenPort = DefaultListenPort;
+            }
+        if (n < 2)
+            {
+            portVector[1].listenPort = DefaultListenPort;
+            }
+        if (portVector[0].listenPort < 1 || portVector[0].listenPort > 65535)
+            {
+            logDtError(LogErrorLocation, "Invalid TCP port number in TPM definition: %d\n", portVector[0].listenPort);
+            exit(1);
+            }
+        if (portVector[1].listenPort < 1 || portVector[1].listenPort > 65535)
+            {
+            logDtError(LogErrorLocation, "Invalid TCP port number in TPM definition: %d\n", portVector[1].listenPort);
+            exit(1);
+            }
+        }
+    else
+        {
+        portVector[0].listenPort = DefaultListenPort;
+        portVector[1].listenPort = DefaultListenPort;
         }
 
     /*
-    **  Create the listening socket
+    **  Create the listening socket(s)
     */
-    listenFd = (int)netCreateListener(telnetPort);
+    portVector[0].listenFd = (int)netCreateListener(portVector[0].listenPort);
 #if defined(_WIN32)
-    if (listenFd == INVALID_SOCKET)
+    if (portVector[0].listenFd == INVALID_SOCKET)
 #else
-    if (listenFd == -1)
+    if (portVector[0].listenFd == -1)
 #endif
         {
-        logDtError(LogErrorLocation, "Can't listen on port %d\n", telnetPort);
+        logDtError(LogErrorLocation, "Can't listen on port %d\n", portVector[0].listenPort);
         exit(1);
+        }
+    if (portVector[0].listenPort != portVector[1].listenPort)
+        {
+        portVector[1].listenFd = (int)netCreateListener(portVector[1].listenPort);
+#if defined(_WIN32)
+        if (portVector[1].listenFd == INVALID_SOCKET)
+#else
+        if (portVector[1].listenFd == -1)
+#endif
+            {
+            logDtError(LogErrorLocation, "Can't listen on port %d\n", portVector[1].listenPort);
+            exit(1);
+            }
         }
 
     tpMuxEnabled = TRUE;
@@ -382,7 +425,12 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
     /*
     **  Print a friendly message.
     */
-    printf("(tpmux  ) Two port MUX initialised on channel %o, telnet port %d.\n", channelNo, telnetPort);
+    printf("(tpmux  ) Two port MUX initialised on channel %o, TCP port %d", channelNo, portVector[0].listenPort);
+    if (portVector[0].listenPort != portVector[1].listenPort)
+        {
+        printf(" and %d", portVector[1].listenPort);
+        }
+    fputs("\n", stdout);
     }
 
 /*--------------------------------------------------------------------------
@@ -397,27 +445,22 @@ void tpMuxInit(u8 eqNo, u8 unitNo, u8 channelNo, char *params)
 void tpMuxShowStatus()
     {
     int       i;
-    char      outBuf[200];
     PortParam *pp;
 
-    if (listenFd <= 0)
+    if (portVector != NULL)
         {
-        return;
-        }
-
-    sprintf(outBuf, "    >   %-8s C%02o E%02o     ", "2pMux", mux->channel->id, mux->eqNo);
-    opDisplay(outBuf);
-    sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(listenFd), "", "async", "listening");
-    opDisplay(outBuf);
-
-    for (i = 0, pp = portVector; i < MaxPorts; i++, pp++)
-        {
-        if (pp->active && (pp->connFd > 0))
+        for (i = 0, pp = portVector; i < 2; i++, pp++)
             {
-            sprintf(outBuf, "    >   %-8s         P%02o ", "2pMux", pp->id);
-            opDisplay(outBuf);
-            sprintf(outBuf, FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), "async", "connected");
-            opDisplay(outBuf);
+            if (pp->listenFd != 0)
+                {
+                opDisplay("    >   %-8s C%02o E%02o     ", "2pMux", mux->channel->id, mux->eqNo);
+                opDisplay(FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->listenFd), "", "async", "listening");
+                }
+            if (pp->active && (pp->connFd > 0))
+                {
+                opDisplay("    >   %-8s         P%02o ", "2pMux", pp->id);
+                opDisplay(FMTNETSTATUS "\n", netGetLocalTcpAddress(pp->connFd), netGetPeerTcpAddress(pp->connFd), "async", "connected");
+                }
             }
         }
     }
@@ -454,7 +497,7 @@ static void tpMuxCheckIo(void)
     int            fd;
     int            i;
     int            maxFd;
-    int            n;
+    ssize_t        n;
     int            optEnable = 1;
     PortParam      *pp;
     fd_set         readFds;
@@ -471,8 +514,16 @@ static void tpMuxCheckIo(void)
     FD_ZERO(&writeFds);
     maxFd = 0;
 
-    for (i = 0, pp = portVector; i < MaxPorts; i++, pp++)
+    for (i = 0, pp = portVector; i < 2; i++, pp++)
         {
+        if (pp->listenFd != 0)
+            {
+            FD_SET(pp->listenFd, &readFds);
+            if (pp->listenFd > maxFd)
+                {
+                maxFd = pp->listenFd;
+                }
+            }
         if (pp->active)
             {
             if (pp->inInIdx < InBufSize)
@@ -493,14 +544,6 @@ static void tpMuxCheckIo(void)
                 }
             }
         }
-    if (listenFd >= 0)
-        {
-        FD_SET(listenFd, &readFds);
-        if (listenFd > maxFd)
-            {
-            maxFd = listenFd;
-            }
-        }
 
     if (maxFd < 1)
         {
@@ -515,7 +558,7 @@ static void tpMuxCheckIo(void)
         return;
         }
 
-    for (i = 0, pp = portVector; i < MaxPorts; i++, pp++)
+    for (i = 0, pp = portVector; i < 2; i++, pp++)
         {
         if (pp->active)
             {
@@ -524,7 +567,7 @@ static void tpMuxCheckIo(void)
                 n = recv(pp->connFd, &pp->inBuffer[pp->inInIdx], InBufSize - pp->inInIdx, 0);
                 if (n > 0)
                     {
-                    pp->inInIdx += n;
+                    pp->inInIdx += (int)n;
                     }
                 else
                     {
@@ -537,7 +580,7 @@ static void tpMuxCheckIo(void)
                 n = send(pp->connFd, &pp->outBuffer[pp->outOutIdx], pp->outInIdx - pp->outOutIdx, 0);
                 if (n >= 0)
                     {
-                    pp->outOutIdx += n;
+                    pp->outOutIdx += (int)n;
                     if (pp->outOutIdx >= pp->outInIdx)
                         {
                         pp->outInIdx  = 0;
@@ -546,59 +589,69 @@ static void tpMuxCheckIo(void)
                     }
                 }
             }
-        }
-    if ((listenFd >= 0) && FD_ISSET(listenFd, &readFds))
-        {
-        fromLen = sizeof(from);
-        fd      = (int)accept(listenFd, (struct sockaddr *)&from, &fromLen);
-        if (fd < 0)
+        if ((pp->listenFd != 0) && FD_ISSET(pp->listenFd, &readFds))
             {
-            return;
-            }
-        availablePort = NULL;
-        for (i = 0, pp = portVector; i < MaxPorts; i++, pp++)
-            {
-            if (pp->active == FALSE)
+            fromLen = sizeof(from);
+            fd      = (int)accept(pp->listenFd, (struct sockaddr *)&from, &fromLen);
+            if (fd < 0)
                 {
-                availablePort = pp;
-                break;
+                continue;
                 }
-            }
-        if (availablePort != NULL)
-            {
-            availablePort->active    = TRUE;
-            availablePort->connFd    = fd;
-            availablePort->inInIdx   = 0;
-            availablePort->inOutIdx  = 0;
-            availablePort->outInIdx  = 0;
-            availablePort->outOutIdx = 0;
+            availablePort = NULL;
+            if (portVector[1].listenFd != 0)
+                {
+                if (pp->active == FALSE)
+                    {
+                    availablePort = pp;
+                    }
+                }
+            else
+                {
+                for (i = 0, pp = portVector; i < 2; i++, pp++)
+                    {
+                    if (pp->active == FALSE)
+                        {
+                        availablePort = pp;
+                        break;
+                        }
+                    }
+                }
+            if (availablePort != NULL)
+                {
+                availablePort->active    = TRUE;
+                availablePort->connFd    = fd;
+                availablePort->inInIdx   = 0;
+                availablePort->inOutIdx  = 0;
+                availablePort->outInIdx  = 0;
+                availablePort->outOutIdx = 0;
 #if DEBUG
-            printf("(tpmux  ) Connection accepted on port %d\n", availablePort->id);
+                fprintf(tpMuxLog, "Connection accepted on port %d\n", availablePort->id);
 #endif
 
-            /*
-            **  Set Keepalive option so that we can eventually discover if
-            **  a client has been rebooted.
-            */
-            setsockopt(availablePort->connFd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
+                /*
+                **  Set Keepalive option so that we can eventually discover if
+                **  a client has been rebooted.
+                */
+                setsockopt(availablePort->connFd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optEnable, sizeof(optEnable));
 
-            /*
-            **  Make socket non-blocking.
-            */
+                /*
+                **  Make socket non-blocking.
+                */
 #if defined(_WIN32)
-            ioctlsocket(availablePort->connFd, FIONBIO, &blockEnable);
+                ioctlsocket(availablePort->connFd, FIONBIO, &blockEnable);
 #else
-            fcntl(availablePort->connFd, F_SETFL, O_NONBLOCK);
+                fcntl(availablePort->connFd, F_SETFL, O_NONBLOCK);
 #endif
-            send(fd, connectingMsg, (int)strlen(connectingMsg), 0);
-            }
-        else
-            {
-            send(fd, noPortsMsg, (int)strlen(noPortsMsg), 0);
-            netCloseConnection(fd);
+                send(fd, connectingMsg, (int)strlen(connectingMsg), 0);
+                }
+            else
+                {
+                send(fd, noPortsMsg, (int)strlen(noPortsMsg), 0);
+                netCloseConnection(fd);
 #if DEBUG
-            puts("(tpmux  ) No free ports available");
+                fputs("No free ports available\n", tpMuxLog);
 #endif
+                }
             }
         }
     }
@@ -616,60 +669,129 @@ static FcStatus tpMuxFunc(PpWord funcCode)
     {
     int funcParam;
 
+#if DEBUG
+    fprintf(tpMuxLog, "Function %04o\n", funcCode);
+#endif
+
     funcParam = funcCode & 077;
     switch (funcCode & 07700)
         {
     default:
 #if DEBUG
-        printf("(tpmux  ) Function on tpm %04o declined\n", funcCode);
+        fputs("Unrecognized, declined\n", tpMuxLog);
 #endif
+        return FcDeclined;
 
-        return (FcDeclined);
-
-    case FcTpmStatusSumary:
-        break;
-
+    case FcTpmStatusSummary:
     case FcTpmReadChar:
-        break;
-
     case FcTpmWriteChar:
-        break;
-
     case FcTpmSetTerminal:
-#if DEBUG
-        printf("(tpmux  ) Set Terminal mode %03o (unit %d)\n", funcParam, activeDevice->selectedUnit);
-#endif
-        break;
-
     case FcTpmFlipDTR:
-#if DEBUG
-        printf("(tpmux  ) %s DTR (unit %d)\n", funcParam == 0 ? "Clear" : "Set", activeDevice->selectedUnit);
-#endif
-        break;
-
     case FcTpmFlipRTS:
-#if DEBUG
-        printf("(tpmux  ) %s RTS (unit %d)\n", funcParam == 0 ? "Clear" : "Set", activeDevice->selectedUnit);
-#endif
         break;
 
     case FcTpmMasterClear:
-        return (FcProcessed);
+        return FcProcessed;
 
     case FcTpmDeSelect:
         activeDevice->selectedUnit = -1;
 
-        return (FcProcessed);
+        return FcProcessed;
 
     case FcTpmConPort:
-        activeDevice->selectedUnit = 1 - (funcParam & 1);
+        activeDevice->selectedUnit = funcParam & 1;
 
-        return (FcProcessed);
+        return FcProcessed;
+
+    case FcTpmClockDialout:
+        switch (funcParam)
+            {
+        default:
+            // ignore unrecognized parameter
+            break;
+        case 002: // Read deadstart port/terminal type
+            outBuf[0] = 0;
+            activeDevice->recordLength = 1;
+            break;
+        case 003: // Set baud rate
+            activeDevice->recordLength = 1;
+            break;
+        case 004: // Read calendar clock
+            tpMuxGetTimestamp();
+            activeDevice->recordLength = 8;
+            break;
+        case 005: // Write calendar clock
+            activeDevice->recordLength = 6;
+            break;
+        case 006: // Write auto-dialout data
+            break;
+        case 007: // Read auto-dialout status
+            outBuf[0] = 0;
+            activeDevice->recordLength = 1;
+            break;
+        case 010: // Abandon call
+            return FcProcessed;
+        case 020: // Read pre-deadstart copies of P,Q,K,A registers, NIO barrel 0
+        case 021: // Read pre-deadstart copies of P,Q,K,A registers, NIO barrel 1
+        case 022: // Read pre-deadstart copies of P,Q,K,A registers, NIO barrel 2
+        case 023: // Read pre-deadstart copies of P,Q,K,A registers, NIO barrel 3
+        case 024: // Read pre-deadstart copies of P,Q,K,A registers, CIO barrel 0
+        case 025: // Read pre-deadstart copies of P,Q,K,A registers, CIO barrel 1
+        case 026: // Read pre-deadstart copies of P,Q,K,A registers, all barrels
+            memset(outBuf, 0, sizeof(outBuf));
+            activeDevice->recordLength = funcParam == 026 ? 540 : 90;
+            break;
+        case 027: // Read pre-deadstart copies of channel status
+            memset(outBuf, 0, sizeof(outBuf));
+            activeDevice->recordLength = 38;
+            break;
+            }
+        break;
         }
 
     activeDevice->fcode = funcCode;
 
-    return (FcAccepted);
+    return FcAccepted;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Get the current date and time.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void tpMuxGetTimestamp(void)
+    {
+#if defined(_WIN32)
+    SYSTEMTIME dt;
+
+    GetLocalTime(&dt);
+    outBuf[0] = 0;
+    outBuf[1] = (((dt.wYear % 100) / 10) << 4) | (dt.wYear % 10);
+    outBuf[2] = ((dt.wMonth / 10) << 4) | (dt.wMonth % 10);
+    outBuf[3] = ((dt.wDay / 10) << 4) | (dt.wDay % 10);
+    outBuf[4] = ((dt.wHour / 10) << 4) | (dt.wHour % 10);
+    outBuf[5] = ((dt.wMinute / 10) << 4) | (dt.wMinute % 10);
+    outBuf[6] = ((dt.wSecond / 10) << 4) | (dt.wSecond % 10);
+    outBuf[7] = 0;
+#else
+    time_t    rawtime;
+    struct tm *info;
+
+    time(&rawtime);
+    info = localtime(&rawtime);
+    
+    outBuf[0] = 0;
+    outBuf[1] = (u8)((((info->tm_year - 100) / 10) << 4) | (info->tm_year % 10));
+    outBuf[2] = (u8)((((info->tm_mon + 1) / 10) << 4) | ((info->tm_mon + 1) % 10));
+    outBuf[3] = (u8)(((info->tm_mday / 10) << 4) | (info->tm_mday % 10));
+    outBuf[4] = (u8)(((info->tm_hour / 10) << 4) | (info->tm_hour % 10));
+    outBuf[5] = (u8)(((info->tm_min / 10) << 4) | (info->tm_min % 10));
+    outBuf[6] = (u8)(((info->tm_sec / 10) << 4) | (info->tm_sec % 10));
+    outBuf[7] = 0;
+#endif
     }
 
 /*--------------------------------------------------------------------------
@@ -691,11 +813,14 @@ static void tpMuxIo(void)
         return;
         }
 
-    pp = (PortParam *)activeDevice->context[0] + activeDevice->selectedUnit;
+    pp = &portVector[activeDevice->selectedUnit];
 
-    switch (activeDevice->fcode & 00700)
+    switch (activeDevice->fcode & 07700)
         {
-    case FcTpmStatusSumary:
+    default:
+        break;
+
+    case FcTpmStatusSummary:
         if (!activeChannel->full)
             {
             if (pp->active && (pp->inOutIdx < pp->inInIdx))
@@ -724,7 +849,7 @@ static void tpMuxIo(void)
                 pp->inInIdx  = 0;
                 }
 #if DEBUG
-            printf("(tpmux  ) read port %d -  %04o\n", pp->id, activeChannel->data);
+            fprintf(tpMuxLog, " <  port %d : %04o\n", pp->id, activeChannel->data);
 #endif
             }
         break;
@@ -741,9 +866,63 @@ static void tpMuxIo(void)
                 {
                 pp->outBuffer[pp->outInIdx++] = (u8)activeChannel->data & 0177;
 #if DEBUG
-                printf("(tpmux  ) write port %d - %04o\n", pp->id, activeChannel->data);
+                fprintf(tpMuxLog, " > port %d : %04o\n", pp->id, activeChannel->data);
 #endif
                 }
+            }
+        break;
+
+    case FcTpmClockDialout:
+        switch (activeDevice->fcode & 077)
+            {
+        default:
+            // ignore unrecognized parameter
+            break;
+        case 002: // Read deadstart port/terminal type
+        case 004: // Read calendar clock
+        case 007: // Read auto-dialout status
+        case 020: // Read pre-deadstart copies of P,Q,K,A registers, NIO barrel 0
+        case 021: // Read pre-deadstart copies of P,Q,K,A registers, NIO barrel 1
+        case 022: // Read pre-deadstart copies of P,Q,K,A registers, NIO barrel 2
+        case 023: // Read pre-deadstart copies of P,Q,K,A registers, NIO barrel 3
+        case 024: // Read pre-deadstart copies of P,Q,K,A registers, CIO barrel 0
+        case 025: // Read pre-deadstart copies of P,Q,K,A registers, CIO barrel 1
+        case 026: // Read pre-deadstart copies of P,Q,K,A registers, all barrels
+        case 027: // Read pre-deadstart copies of channel status
+            if (!activeChannel->full)
+                {
+                activeChannel->data         = outBuf[8 - activeDevice->recordLength];
+                activeChannel->full         = TRUE;
+                activeDevice->recordLength -= 1;
+                if (activeDevice->recordLength < 1)
+                    {
+                    activeChannel->discAfterInput = TRUE;
+                    }
+#if DEBUG
+                fprintf(tpMuxLog, " < %02x\n", activeChannel->data);
+#endif
+                }
+            break;
+        case 003: // Set baud rate
+        case 005: // Write calendar clock
+            if (activeChannel->full)
+                {
+                activeDevice->recordLength -= 1;
+                activeChannel->full         = FALSE;
+#if DEBUG
+                fprintf(tpMuxLog, " > %02x\n", activeChannel->data);
+#endif
+                }
+            break;
+        case 006: // Write auto-dialout data
+            if (activeChannel->full)
+                {
+                activeChannel->full = FALSE;
+#if DEBUG
+                fprintf(tpMuxLog, " > %02x\n", activeChannel->data);
+#endif
+                }
+            break;
             }
         break;
         }

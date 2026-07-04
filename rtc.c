@@ -1,6 +1,7 @@
 /*--------------------------------------------------------------------------
 **
 **  Copyright (c) 2003-2011, Tom Hunter, Paul Koning
+**                     2025, Kevin Jordan
 **
 **  Name: rtc.c
 **
@@ -70,7 +71,7 @@ static FcStatus rtcFunc(PpWord funcCode);
 static void rtcIo(void);
 static void rtcActivate(void);
 static void rtcDisconnect(void);
-static bool rtcInitTick(void);
+static bool rtcInitTick(bool doVirtual);
 static u64 rtcGetTick(void);
 
 /*
@@ -78,23 +79,31 @@ static u64 rtcGetTick(void);
 **  Public Variables
 **  ----------------
 */
-u32  rtcClock          = 0;
+volatile u64 rtcClock  = 0;
 bool rtcClockIsCurrent = TRUE;
-
 
 /*
 **  -----------------
 **  Private Variables
 **  -----------------
 */
-static u8     rtcIncrement;
+static double Hz;
 static bool   rtcFull;
-static u64    Hz;
-static double MHz;
+static u8     rtcIncrement;
+
+#if defined(_WIN32)
+static bool          rtcDoVirtual;
+static double        rtcTicksPerUs;
+static u64           rtcMicroseconds = 0;
+static u64           rtcTickReference;
+#else
+static clockid_t     rtcClockId;
+static u64           rtcUsCounter = 0;
+#endif
+
 #if CcCycleTime
 static u64 startTime;
 #endif
-
 
 /*
  **--------------------------------------------------------------------------
@@ -109,12 +118,12 @@ static u64 startTime;
 **
 **  Parameters:     Name        Description.
 **                  increment   clock increment per iteration.
-**                  setMHz      cycle counter frequency in MHz.
+**                  doVirtual   whether to use virtual or real time
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void rtcInit(u8 increment, u32 setMHz)
+void rtcInit(u8 increment, bool doVirtual)
     {
     DevSlot *dp;
 
@@ -131,13 +140,12 @@ void rtcInit(u8 increment, u32 setMHz)
 
     if (increment == 0)
         {
-        if (!rtcInitTick())
+        if (!rtcInitTick(doVirtual))
             {
             printf("(rtc    ) Invalid clock increment 0, defaulting to 1\n");
             increment = 1;
             }
         }
-
     rtcIncrement = increment;
 
     /*
@@ -157,15 +165,46 @@ void rtcInit(u8 increment, u32 setMHz)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
+#define MaxMicroseconds    1000
+
 void rtcTick(void)
     {
-    if (rtcIncrement == 0)
+    u32         delta;
+    static bool first = TRUE;
+    static u64  old   = 0;
+    u64         new;
+
+    if (first)
         {
-        rtcReadUsCounter();
+        first = FALSE;
+        old   = rtcGetTick();
+        }
+
+    new = rtcGetTick();
+
+    if (new > old)
+        {
+        delta = (u32)(new - old);
+        if (delta > MaxMicroseconds)
+            {
+            delta             = MaxMicroseconds;
+            rtcClockIsCurrent = FALSE;
+            }
+        else
+            {
+            rtcClockIsCurrent = TRUE;
+            }
+        old += delta;
+
+        rtcClock += delta;
+        if (isCyber180)
+            {
+            cpu180FreeRunningCounter += delta;
+            }
         }
     else
         {
-        rtcClock += rtcIncrement;
+        rtcClockIsCurrent = TRUE;
         }
     }
 
@@ -205,129 +244,12 @@ double rtcStopTimer(void)
         {
         endTime = rtcGetTick();
 
-        return ((double)(int)(endTime - startTime) / ((double)(i64)Hz / 1000000.0L));
+        return ((double)(endTime - startTime) / (Hz / 1000000.0));
         }
     else
         {
-        return (0.0);
+        return 0.0;
         }
-    }
-
-#endif
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Read current 32-bit microsecond counter and store in
-**                  global variable rtcClock.
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        Nothing
-**
-**------------------------------------------------------------------------*/
-
-#if defined(_WIN32)
-
-#define MaxMicroseconds    400.0L
-
-void rtcReadUsCounter(void)
-    {
-    static bool   first               = TRUE;
-    static u64    old                 = 0;
-    static double fraction            = 0.0L;
-    static double delayedMicroseconds = 0.0L;
-    u64           new;
-    u64           difference;
-    double        microseconds;
-    double        result;
-
-    if (rtcIncrement != 0)
-        {
-        return;
-        }
-
-    if (first)
-        {
-        first = FALSE;
-        old   = rtcGetTick();
-        }
-
-    new = rtcGetTick();
-
-    if ((i64)new < (i64)old)
-        {
-        /* Ignore ticks if they go backward */
-        old = new;
-
-        return;
-        }
-
-    difference = new - old;
-    old        = new;
-
-    microseconds        = (double)(i64)difference / MHz;
-    microseconds       += fraction + delayedMicroseconds;
-    delayedMicroseconds = 0.0;
-
-    if (microseconds > MaxMicroseconds)
-        {
-        delayedMicroseconds = microseconds - MaxMicroseconds;
-        microseconds        = MaxMicroseconds;
-        rtcClockIsCurrent   = FALSE;
-        }
-    else
-        {
-        rtcClockIsCurrent   = TRUE;
-        }
-
-    result   = floor(microseconds);
-    fraction = microseconds - result;
-
-    rtcClock += (u32)result;
-    }
-
-#else
-
-#define MaxMicroseconds    1000
-
-void rtcReadUsCounter(void)
-    {
-    static bool first = TRUE;
-    static u64  old   = 0;
-    u64         new;
-    u64         difference;
-
-    if (rtcIncrement != 0)
-        {
-        return;
-        }
-
-    if (first)
-        {
-        first = FALSE;
-        old   = rtcGetTick();
-        }
-
-    new = rtcGetTick();
-
-    if (new < old)
-        {
-        /* Ignore ticks if they go backward */
-        return;
-        }
-
-    difference = new - old;
-    if (difference > MaxMicroseconds)
-        {
-        difference        = MaxMicroseconds;
-        rtcClockIsCurrent = FALSE;
-        }
-    else
-        {
-        rtcClockIsCurrent = TRUE;
-        }
-
-    old      += difference;
-    rtcClock += (u32)difference;
     }
 
 #endif
@@ -366,7 +288,6 @@ static FcStatus rtcFunc(PpWord funcCode)
 **------------------------------------------------------------------------*/
 static void rtcIo(void)
     {
-    rtcReadUsCounter();
     activeChannel->full = rtcFull;
     activeChannel->data = (PpWord)rtcClock & Mask12;
     }
@@ -405,34 +326,58 @@ static void rtcDisconnect(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static bool rtcInitTick(void)
+static bool rtcInitTick(bool doVirtual)
     {
-    LARGE_INTEGER lhz;
+    LARGE_INTEGER ctr;
+    LARGE_INTEGER freq;
 
-    if (!QueryPerformanceFrequency(&lhz))
+    rtcDoVirtual = doVirtual;
+    if (doVirtual)
         {
-        printf("(rtc    ) No high resolution hardware clock, using emulation cycle counter\n");
+        if (!QueryPerformanceFrequency(&freq))
+            {
+            printf("(rtc    ) Failed to query performance frequency, using emulation cycle counter\n");
 
-        return (FALSE);
+            return FALSE;
+            }
+        QueryPerformanceCounter(&ctr);
+        rtcTicksPerUs    = (double)freq.QuadPart / 1000000.0;
+        Hz               = (double)freq.QuadPart;
+        rtcTickReference = (u64)ctr.QuadPart;
+
+        printf("(rtc    ) Using QueryPerformanceCounter() clock at %f MHz\n", Hz / 1000000.0);
+        }
+    else
+        {
+        Hz = 1000000.0;
+        fputs("(rtc    ) Using GetSystemTimePreciseAsFileTime() clock\n", stdout);
         }
 
-    Hz  = lhz.QuadPart;
-    MHz = (double)(i64)Hz / 1000000.0;
-    printf("(rtc    ) Using QueryPerformanceCounter() clock at %f MHz\n", MHz);
-
-    return (TRUE);
+    return TRUE;
     }
 
 static u64 rtcGetTick(void)
     {
     LARGE_INTEGER ctr;
+    FILETIME fileTime;
 
-    QueryPerformanceCounter(&ctr);
+    if (rtcDoVirtual)
+        {
+        QueryPerformanceCounter(&ctr);
+        rtcMicroseconds += (u64)round((double)((u64)ctr.QuadPart - rtcTickReference) / rtcTicksPerUs);
+        rtcTickReference = (u64)ctr.QuadPart;
+        }
+    else
+        {
+        GetSystemTimePreciseAsFileTime(&fileTime);
+        rtcMicroseconds = (((u64)fileTime.dwHighDateTime << 32) | (u64)fileTime.dwLowDateTime) / 10;
+        }
 
-    return (ctr.QuadPart);
+    return rtcMicroseconds;
     }
 
-#elif defined(__GNUC__) && (defined(__linux__) || defined(__SunOS) || defined (__FreeBSD__) || defined (__APPLE__))
+#else
+#if defined(__GNUC__) && (defined(__linux__) || defined (__FreeBSD__) || defined (__APPLE__))
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Low-level microsecond tick functions.
@@ -442,31 +387,54 @@ static u64 rtcGetTick(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static bool rtcInitTick(void)
+static bool rtcInitTick(bool doVirtual)
     {
-    Hz  = 1000000;
-    MHz = 1.0;
-    printf("(rtc    ) Using gettimeofday() clock at %f MHz\n", MHz);
+    struct timespec ts;
 
-    return (TRUE);
-    }
+    Hz         = 1000000.0;
+    rtcClockId = doVirtual ? CLOCK_THREAD_CPUTIME_ID : CLOCK_MONOTONIC_RAW;
+    if (clock_gettime(rtcClockId, &ts) != -1)
+        {
+        fprintf(stdout, "(rtc    ) Using %s time with clock_gettime()\n", doVirtual ? "process CPU" : "monotonic raw");
 
-static u64 rtcGetTick(void)
-    {
-    struct timeval tv;
+        return TRUE;
+        }
+    else
+        {
+        fputs("(rtc    ) No high resolution hardware clock, using emulation cycle counter\n", stdout);
 
-    gettimeofday(&tv, NULL);
-
-    return ((u64)tv.tv_sec * (u64)1000000 + (u64)tv.tv_usec);
+        return FALSE;
+        }
     }
 
 #else
 
-static bool rtcInitTick(void)
+static bool rtcInitTick(bool doVirtual)
     {
-    printf("(rtc    ) No high resolution hardware clock, using emulation cycle counter\n");
+    Hz = 1000000.0;
+    fputs("(rtc    ) No high resolution hardware clock, using emulation cycle counter\n", stdout);
 
-    return (FALSE);
+    return FALSE;
+    }
+
+#endif
+
+static u64 rtcGetTick(void)
+    {
+    struct timespec ts;
+
+    if (rtcIncrement == 0)
+        {
+        clock_gettime(rtcClockId, &ts);
+
+        return ((u64)ts.tv_sec * (u64)1000000) + ((u64)ts.tv_nsec / (u64)1000);
+        }
+    else
+        {
+        rtcUsCounter += rtcIncrement;
+
+        return rtcUsCounter;
+        }
     }
 
 #endif

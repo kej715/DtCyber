@@ -131,7 +131,9 @@ static FcStatus mt607Func(PpWord funcCode);
 static void mt607Io(void);
 static void mt607Activate(void);
 static void mt607Disconnect(void);
+#if DEBUG
 static char *mt607Func2String(PpWord funcCode);
+#endif
 
 /*
 **  ----------------
@@ -500,6 +502,7 @@ static void mt607Disconnect(void)
     activeChannel->discAfterInput = FALSE;
     }
 
+#if DEBUG
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert function code to string.
 **
@@ -513,7 +516,6 @@ static char *mt607Func2String(PpWord funcCode)
     {
     static char buf[40];
 
-#if DEBUG
     switch (funcCode)
         {
     case Fc607SelUnitCode:
@@ -546,10 +548,12 @@ static char *mt607Func2String(PpWord funcCode)
     case Fc607WrFileMark:
         return "Fc607WrFileMark";
         }
-#endif
+
     sprintf(buf, "(mt607   ) Unknown Function: %04o", funcCode);
 
     return (buf);
     }
+
+#endif
 
 /*---------------------------  End Of File  ------------------------------*/

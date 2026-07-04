@@ -2,11 +2,12 @@
 *DtCyber* is a high fidelity simulator of
 [Control Data](https://en.wikipedia.org/wiki/Control_Data_Corporation)
 [6000](https://en.wikipedia.org/wiki/CDC_6000_series),
-[70, 170, and 700](https://en.wikipedia.org/wiki/CDC_Cyber#Cyber_70_and_170_series),
+[70, 170](https://en.wikipedia.org/wiki/CDC_Cyber#Cyber_70_and_170_series), and
+[180](https://en.wikipedia.org/wiki/CDC_Cyber#Cyber_180_series)
 series supercomputers. This version of *DtCyber* is a direct derivative of
 *Desktop CYBER 5.5.1* created by Tom Hunter. This version simulates additional
-types of peripheral I/O devices, includes additional networking features, and
-supports the [Nostalgic Computing Center](http://www.nostalgiccomputing.org).
+types of peripheral I/O devices, includes additional networking features, and adds
+support for dual-state operation (concurrent CYBER 170 and CYBER 180 states).
 This repository also provides automation and artifacts intended to make it easy for
 anyone to build the simulator and run historic software on it.
 
@@ -26,8 +27,11 @@ operation, and a version of
 - [NOS2.8.7](NOS2.8.7) : NOS 2.8.7 was the last operating system formally released
 by CDC for its Cyber 170 series supercomputers. In addition to supporting interactive
 access and local and remote batch operation, the instance provided here supports a
-very rich collection of programming languages and data communication features.
-- [NOS/BE](https://github.com/bug400/NOSBE712) : the NOS/BE operation system was a
+very rich collection of programming languages and data communication features. NOS 2.8.7
+also supports dual-state operation. It can run concurrently with and serve as a frontend for
+[NOS/VE 1.8.3](https://en.wikipedia.org/wiki/NOS/VE) when DtCyber is configured to emulate a
+CYBER 180 model such as a Cyber 860.
+- [NOS/BE](https://github.com/bug400/NOSBE712) : the NOS/BE operating system was a
 descendent of COS and SCOPE. It was designed primarily for batch operation but also
 supported interactive access. Additional documentation about building a NOS/BE system
 can be found [here](https://codex.retro1.org/cdc:nosbe:building_nos_be_level_712_from_scratch)
@@ -36,7 +40,7 @@ and a ready-to-run NOS/BE package can be found
 [here](https://codex.retro1.org/cdc:nosbe:use_a_ready_to_run_nos_be_l_712_system).
 
 Information about configuring and operating *DtCyber* can be found
-[here](https://codex.retro1.org/cdc:dtcyber:v5.8.sz:start) on the
+[here](https://codex.retro1.org/cdc:dtcyber:v6.0.x:start) on the
 [CDC Community site](https://codex.retro1.org/cdc:start).
 
 Visit the [CDC documentation archives at Bitsavers](http://bitsavers.trailing-edge.com/pdf/cdc/)
@@ -82,7 +86,7 @@ following commands:
 To build *dtcyber* on Windows, open the solution file (*DtCyber.sln*) in Visual
 Studio and build the project defined by it.
 
-Additional per platform build information (Linux, OSX, Raspberry Pi) is 
+Additional per platform build information (Linux, MacOS, Raspberry Pi) is found 
 in [BUILDING.README.txt](BUILDING.README.txt).
 
 ## Contributing

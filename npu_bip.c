@@ -1,6 +1,7 @@
 /*--------------------------------------------------------------------------
 **
 **  Copyright (c) 2003-2011, Tom Hunter
+**                2019-2025, Kevin Jordan
 **
 **  Name: npu_bip.c
 **
@@ -552,6 +553,9 @@ void npuBipNotifyDownlineReceived(void)
         */
         switch (bipState)
             {
+        default:
+            break;
+
         case BipDownSvm:
             svmProcessBuffer[npuSw](bp);
             break;
@@ -657,7 +661,7 @@ void npuBipRequestUplineCanned(u8 *msg, int msgSize)
     {
     NpuBuffer *bp = npuBipBufGet();
 
-    bp->numBytes = msgSize;
+    bp->numBytes = (u16)msgSize;
     memcpy(bp->data, msg, bp->numBytes);
     npuBipRequestUplineTransfer(bp);
     }

@@ -223,19 +223,11 @@ static void *fsWatchThread(void * parms)
     **
     **  So we ensure that it does.
     */
-    fswContext *lparms = (fswContext *)parms;
-
-    DevSlot *dp = NULL;
-
-    int  dwChangeHandles[2] = { 0, 0 };
-    u32  waitStatus         = 0;
-    char *retPath;
-
-    int  retval           = 0;
-    char lpDir[MaxFSPath] = { "" };
-    //      Just need to be large enough to hold the unit spec.
-    char crDevId[16] = "";
-
+    fswContext    *lparms = (fswContext *)parms;
+    DevSlot       *dp = NULL;
+    char          *retPath;
+    char          lpDir[MaxFSPath] = { "" };
+    char          crDevId[16] = ""; // Just needs to be large enough to hold the unit spec
     struct dirent *curDirEntry;
     DIR           *curDir;
 

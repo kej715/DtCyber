@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------
 **
-**  Copyright (c) 2003-2021, Kevin Jordan, Tom Hunter
+**  Copyright (c) 2003-2021, Kevin Jordan
 **
 **  Name: mt5744.c
 **
@@ -265,12 +265,7 @@ static void mt5744CalculateGeneralStatus(TapeParam *tp);
 static void mt5744CheckTapeServer(void);
 static void mt5744CloseTapeServerConnection(TapeParam *tp);
 static void mt5744ConnectCallback(TapeParam *tp);
-static void mt5744DismountRequestCallback(TapeParam *tp);
 static FcStatus mt5744Func(PpWord funcCode);
-static void mt5744FuncBackspace(void);
-static void mt5744FuncForespace(void);
-static void mt5744FuncReadBkw(void);
-static void mt5744FuncReadFwd(void);
 static void mt5744Disconnect(void);
 static void mt5744FlushWrite(void);
 static void mt5744Io(void);
@@ -496,12 +491,10 @@ void mt5744Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 void mt5744ShowTapeStatus()
     {
     TapeParam *tp = firstTape;
-    char      outBuf[400];
 
     while (tp)
         {
-        sprintf(outBuf, "    >   %-8s C%02o E%02o U%02o", "5744", tp->channelNo, tp->eqNo, tp->unitNo);
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s C%02o E%02o U%02o", "5744", tp->channelNo, tp->eqNo, tp->unitNo);
         switch (tp->state)
             {
         case StAcsDisconnected:
@@ -519,8 +512,7 @@ void mt5744ShowTapeStatus()
         case StAcsReady:
             if (tp->volumeName[0])
                 {
-                sprintf(outBuf, " %s %s\n", tp->isWriteEnabled ? "w" : "r", tp->volumeName);
-                opDisplay(outBuf);
+                opDisplay(" %s %s\n", tp->isWriteEnabled ? "w" : "r", tp->volumeName);
                 }
             else
                 {
@@ -875,39 +867,6 @@ static void mt5744Disconnect(void)
     */
     activeChannel->delayDisconnect = 0;
     activeChannel->discAfterInput  = FALSE;
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Process a response from the StorageTek simulator to a
-**                  DISMOUNT request.
-**
-**  Parameters:     Name        Description.
-**                  tp          pointer to tape unit parameters
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-static void mt5744DismountRequestCallback(TapeParam *tp)
-    {
-    char *eor;
-    int  status;
-
-    eor = mt5744ParseTapeServerResponse(tp, &status);
-    if (eor == NULL)
-        {
-        return;
-        }
-    tp->isBusy = FALSE;
-    if (status == 200)
-        {
-        tp->isReady = FALSE;
-        }
-    else
-        {
-        logDtError(LogErrorLocation, "Unexpected status %d received from StorageTek simulator for DISMOUNT request\n", status);
-        mt5744CloseTapeServerConnection(tp);
-        }
-    mt5744ResetInputBuffer(tp, (u8 *)eor);
     }
 
 /*--------------------------------------------------------------------------
@@ -1886,7 +1845,6 @@ static void mt5744ReadBlockIdRequestCallback(TapeParam *tp)
     char *ep;
     int  i;
     long id1;
-    long id2;
     char *sp;
     int  status;
 
@@ -1900,9 +1858,7 @@ static void mt5744ReadBlockIdRequestCallback(TapeParam *tp)
         {
         sp  = (char *)&tp->inputBuffer.data[4];
         id1 = strtol(sp, &ep, 10);
-        id2 = strtol(ep, NULL, 10);
         i   = 0;
-        //tp->ioBuffer[i++] = (id1 >> 20) & 0xf0;
         tp->ioBuffer[i++] = 0020;
         tp->ioBuffer[i++] = (id1 >> 12) & 0xff;
         tp->ioBuffer[i++] = id1 & 0xfff;
@@ -1933,9 +1889,9 @@ static void mt5744ReadBlockIdRequestCallback(TapeParam *tp)
 **------------------------------------------------------------------------*/
 static void mt5744ReceiveTapeServerResponse(TapeParam *tp)
     {
-    char *eor;
-    int  n;
-    int  status;
+    char    *eor;
+    ssize_t n;
+    int     status;
 
     n = recv(tp->fd, &tp->inputBuffer.data[tp->inputBuffer.in], sizeof(tp->inputBuffer.data) - tp->inputBuffer.in, 0);
     if (n <= 0)
@@ -1955,7 +1911,7 @@ static void mt5744ReceiveTapeServerResponse(TapeParam *tp)
         mt5744LogBytes(&tp->inputBuffer.data[tp->inputBuffer.in], n);
         mt5744LogFlush();
 #endif
-        tp->inputBuffer.in += n;
+        tp->inputBuffer.in += (u32)n;
         if (tp->inputBuffer.data[0] == '1') // mount/dismount event
             {
             if (tp->inputBuffer.in > 3)
@@ -2027,7 +1983,7 @@ static void mt5744ReadRequestCallback(TapeParam *tp)
             {
             return;
             }
-        tp->recordLength = mt5744PackBytes(tp, (u8 *)eor, len);
+        tp->recordLength = mt5744PackBytes(tp, (u8 *)eor, (int)len);
         eor      += len;
         tp->isBOT = FALSE;
         break;
@@ -2264,8 +2220,8 @@ static void mt5744RewindUnloadRequestCallback(TapeParam *tp)
 **------------------------------------------------------------------------*/
 static void mt5744SendTapeServerRequest(TapeParam *tp)
     {
-    int len;
-    int n;
+    int     len;
+    ssize_t n;
 
     len = tp->outputBuffer.in - tp->outputBuffer.out;
     n   = send(tp->fd, &tp->outputBuffer.data[tp->outputBuffer.out], len, 0);
@@ -2277,7 +2233,7 @@ static void mt5744SendTapeServerRequest(TapeParam *tp)
         mt5744LogBytes(&tp->outputBuffer.data[tp->outputBuffer.out], n);
         mt5744LogFlush();
 #endif
-        tp->outputBuffer.out += n;
+        tp->outputBuffer.out += (u32)n;
         if (tp->outputBuffer.out >= tp->outputBuffer.in)
             {
             tp->outputBuffer.out = tp->outputBuffer.in = 0;

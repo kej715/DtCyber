@@ -372,7 +372,7 @@ void cciSvmSendDiscRequest(Tcb *tp)
     case StTermHostRequestDisconnect:  // disconnection has been requested by host
         logDtError(LogErrorLocation, "Warning - disconnect request ignored for %.7s in state %s\n",
                    tp->termName, npuSvmTermStates[tp->state]);
-
+        // fall through
     case StTermNpuRequestDisconnect:   // disconnection has been requested by NPU/MDI
         break;
 
@@ -423,7 +423,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
     u8        tcbCn;
     NpuBuffer *respBuf;
 
-    fCode = (block[BlkOffPfc] << 8) | block[BlkOffSfc];
+    fCode = (u16)((block[BlkOffPfc] << 8) | block[BlkOffSfc]);
 
     /*
     ** precheck
@@ -663,7 +663,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
             lp->configState     = cciLnConfInoperativeWaiting;
             pcbp->cciIsDisabled = FALSE;
             lp->lineState       = cciLnStatNoRing;
-            rc = lp->lineState;
+            rc                  = (u8)lp->lineState;
             }
 #if DEBUG
         fprintf(cciLog, "\n(cci_svm) line enable P %d CNF %d RC %d\n", port, lp->configState, rc);
@@ -689,7 +689,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
             lp->configState     = cciLnConfConfigured;
             lp->lineState       = cciLnStatInoperative;
             pcbp->cciIsDisabled = TRUE;
-            rc = lp->lineState;
+            rc                  = (u8)lp->lineState;
             }
 #if DEBUG
         fprintf(cciLog, "\n(cci_svm) line disable P %d CNF %d RC %d\n", port, lp->configState, rc);
@@ -739,7 +739,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
             lp->configState     = cciLnConfInoperativeWaiting;
             lp->lineState       = cciLnStatNoRing;
             pcbp->cciIsDisabled = FALSE;
-            rc = lp->lineState;
+            rc                  = (u8)lp->lineState;
             }
 
         else
@@ -947,7 +947,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
             break;
             }
         *rp++ = lp->lineType;
-        *rp++ = lp->configState;
+        *rp++ = (u8)lp->configState;
         *rp++ = 0;
         break;
 
@@ -970,7 +970,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
             *(rpHead + BlkOffSfc) = 0x40;
             *rp++ = rc;
             *rp++ = lp->lineType;
-            *rp++ = lp->configState;
+            *rp++ = (u8)lp->configState;
             *rp++ = lp->numTerminals;
             }
         break;
@@ -986,7 +986,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
             }
         *rp++ = 0;
         *rp++ = lp->lineType;
-        *rp++ = lp->configState;
+        *rp++ = (u8)lp->configState;
         *rp++ = lp->numTerminals;
         break;
 

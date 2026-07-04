@@ -1,11 +1,14 @@
 /*--------------------------------------------------------------------------
 **
-**  Copyright (c) 2019, Kevin Jordan, Tom Hunter,and Gerard van der Grinten
+**  Copyright (c) 2019, Kevin Jordan
 **
 **  Name: dd885_42.c
 **
 **  Description:
 **      Perform emulation of the CDC 885-42 disk drive and 7155-401 controller.
+**
+**  This module is a derivative of module dd8xx.c, implemented by Tom Hunter
+**  and Gerard van der Grinten.
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License version 3 as
@@ -331,26 +334,26 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Initialize detailed status.
     */
-    dp->detailedStatus[0]  = 0;                   // strobe offset & address error status
-    dp->detailedStatus[1]  = 0371;                // checkword error status, 885 sequence latches, motor at speed
-    dp->detailedStatus[2]  = 0;                   // current function & error bits
-    dp->detailedStatus[3]  = 07700 | unitNo;      // 7155 controlware, revision #, drive unit number
-    dp->detailedStatus[4]  = 0;                   // track flaw, factory flaw map flaw, cylinder # bits 9-4
-    dp->detailedStatus[5]  = 0;                   // cylinder # bits 3-0, track # bits 7-0
-    dp->detailedStatus[6]  = 010;                 // logical sector number bits 7-0, ready&safe, system maint mode, drive # bits 7-6
-    dp->detailedStatus[7]  = (unitNo << 6) | 037; // drive # bits 5-0, write enable, online, air switch, start switch, motor at speed
-    dp->detailedStatus[8]  = 01640;               // DSU status
-    dp->detailedStatus[9]  = 07201;               // DSU status
-    dp->detailedStatus[10] = 0;                   // DSU status
-    dp->detailedStatus[11] = 0;                   // DSU status
-    dp->detailedStatus[12] = 0;                   // command causing error or word address of correctable read data
-    dp->detailedStatus[13] = 0;                   // first word of correction vector
-    dp->detailedStatus[14] = 0;                   // second word of correction vector
-    dp->detailedStatus[15] = 0;                   // DSC operating status word
-    dp->detailedStatus[16] = 0;                   // coupler buffer status
-    dp->detailedStatus[17] = 0400;                // access A is connected & last function
-    dp->detailedStatus[18] = 0;                   // 2nd and 3rd to last functions
-    dp->detailedStatus[19] = 0;                   // 3rd to last function
+    dp->detailedStatus[0]  = 0;                             // strobe offset & address error status
+    dp->detailedStatus[1]  = 0371;                          // checkword error status, 885 sequence latches, motor at speed
+    dp->detailedStatus[2]  = 0;                             // current function & error bits
+    dp->detailedStatus[3]  = 07700 | unitNo;                // 7155 controlware, revision #, drive unit number
+    dp->detailedStatus[4]  = 0;                             // track flaw, factory flaw map flaw, cylinder # bits 9-4
+    dp->detailedStatus[5]  = 0;                             // cylinder # bits 3-0, track # bits 7-0
+    dp->detailedStatus[6]  = 010;                           // logical sector number bits 7-0, ready&safe, system maint mode, drive # bits 7-6
+    dp->detailedStatus[7]  = (PpWord)((unitNo << 6) | 037); // drive # bits 5-0, write enable, online, air switch, start switch, motor at speed
+    dp->detailedStatus[8]  = 01640;                         // DSU status
+    dp->detailedStatus[9]  = 07201;                         // DSU status
+    dp->detailedStatus[10] = 0;                             // DSU status
+    dp->detailedStatus[11] = 0;                             // DSU status
+    dp->detailedStatus[12] = 0;                             // command causing error or word address of correctable read data
+    dp->detailedStatus[13] = 0;                             // first word of correction vector
+    dp->detailedStatus[14] = 0;                             // second word of correction vector
+    dp->detailedStatus[15] = 0;                             // DSC operating status word
+    dp->detailedStatus[16] = 0;                             // coupler buffer status
+    dp->detailedStatus[17] = 0400;                          // access A is connected & last function
+    dp->detailedStatus[18] = 0;                             // 2nd and 3rd to last functions
+    dp->detailedStatus[19] = 0;                             // 3rd to last function
 
     /*
     **  Link device parameters.
@@ -443,9 +446,9 @@ void dd885_42Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
         mTime = getSeconds();
         lTime = localtime(&mTime);
-        yy    = lTime->tm_year % 100;
-        mm    = lTime->tm_mon + 1;
-        dd    = lTime->tm_mday;
+        yy    = (u8)(lTime->tm_year % 100);
+        mm    = (u8)(lTime->tm_mon + 1);
+        dd    = (u8)(lTime->tm_mday);
 
         dp->buffer.data[0] |= ((dd / 10) << 8 | (dd % 10) << 4 | mm / 10) << 24;
         dp->buffer.data[0] |= ((mm % 10) << 8 | (yy / 10) << 4 | yy % 10) << 12;
@@ -502,7 +505,6 @@ static FcStatus dd885_42Func(PpWord funcCode)
     {
     i8        unitNo;
     FILE      *fcb;
-    int       ignore;
     DiskParam *dp;
 
     unitNo = activeDevice->selectedUnit;
@@ -654,7 +656,7 @@ static FcStatus dd885_42Func(PpWord funcCode)
     case Fc885_42ReadFactoryData:
     case Fc885_42ReadUtilityMap:
     case Fc885_42ReadProtectedSector:
-        ignore = (int)fread(&dp->buffer, sizeof dp->buffer, 1, fcb);
+        fread(&dp->buffer, sizeof dp->buffer, 1, fcb);
         activeDevice->recordLength = ShortSectorSize * 5 + 2;
         break;
         }
@@ -1130,12 +1132,11 @@ static bool dd885_42Read(DiskParam *dp, FILE *fcb)
     CpWord *data;
     u32    emAddress;
     int    i;
-    int    ignore;
 
     activeDevice->status  = 0;
     dp->detailedStatus[2] = Fc885_42Read << 4;
 
-    ignore = (int)fread(&dp->buffer, sizeof dp->buffer, 1, fcb);
+    fread(&dp->buffer, sizeof dp->buffer, 1, fcb);
     activeDevice->status = 0;
     dp->generalStatus[3] = dp->buffer.control[0];
     dp->generalStatus[4] = dp->buffer.control[1];
@@ -1306,7 +1307,6 @@ static char *dd885_42Func2String(PpWord funcCode)
 void dd885_42ShowDiskStatus()
     {
     DiskParam *dp = firstDisk;
-    char      outBuf[MaxFSPath + 128];
 
     if (dp == NULL)
         {
@@ -1315,15 +1315,14 @@ void dd885_42ShowDiskStatus()
 
     while (dp)
         {
-        sprintf(outBuf, "    >   %-7s C%02o E%02o U%02o   %-20s (cyl 0x%06x trk 0x%06o)\n",
-                "885-42",
-                dp->channelNo,
-                dp->eqNo,
-                dp->unitNo,
-                dp->fileName,
-                dp->cylinder,
-                dp->track);
-        opDisplay(outBuf);
+        opDisplay("    >   %-8s C%02o E%02o U%02o   %-20s (cyl 0x%06x trk 0x%06o)\n",
+                  "885-42",
+                  dp->channelNo,
+                  dp->eqNo,
+                  dp->unitNo,
+                  dp->fileName,
+                  dp->cylinder,
+                  dp->track);
         dp = dp->nextDisk;
         }
     }
