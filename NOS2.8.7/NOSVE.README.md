@@ -9,13 +9,9 @@ First, build DtCyber with the instructions in BUILDING.README.
 NOS/VE support is included in the NOS 2.8.7 image.  Download and install NOS/VE with:
 ```
 cd NOS2.8.7
-​node install rtr dual-state-860
+sudo ​node install rtr dual-state-860
 ```
-This script will immediately deadstart (CDC's word for booting) NOS and NOS/VE after the install.  To subsequently deadstart the machine without repeating the install:
-```
-node start
-```
-***"node start" may have to be done under sudo on some systems.***
+This script will immediately deadstart (CDC's word for booting) NOS and NOS/VE after the install.  
 
 README.md in the NOS2.8.7 directory describes the NOS installation in detail.
 
@@ -80,9 +76,7 @@ It's prudent to gracefully shut down both NOS/VE and NOS before exiting DtCyber 
 ```
 ​terminate_system
 ```
-Then on the DtCyber operator console:
-```
-​shutdown
+Then follow the instructions in the Shutdown section of NOS2.8.7/README.md to cleanly shut down NOS.
 ```
 # Manuals Covering NOS/VE
 
