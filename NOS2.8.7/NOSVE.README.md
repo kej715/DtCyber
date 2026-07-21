@@ -1,10 +1,12 @@
 [NOS/VE](https://en.wikipedia.org/wiki/NOS/VE) is the operating system and related software products for [CDC's Cyber 180 architecture](https://en.wikipedia.org/wiki/CDC_Cyber#Cyber_180_series).  DtCyber supports running NOS/VE in dual-state mode, in which NOS and NOS/VE share the same machine, mediated by a hypervisor.
 
+This release for DtCyber contains NOS/VE v1.8.3AA.  It was built from deadstart and product release tapes, including a BCU tape that included corrections for Y2K, so it was probably release in the late 1990's.  The emulated machine is the Cyber 870 (because hardware-specific tape for it survived).
+
 # Installing and Deadstarting
 
 First, build DtCyber with the instructions in BUILDING.README.
 
-NOS/VE 1.8.3  is included in the NOS 2.8.7 image.  Download and install it with:
+NOS/VE support is included in the NOS 2.8.7 image.  Download and install NOS/VE with:
 ```
 cd NOS2.8.7
 ​node install rtr dual-state-860
