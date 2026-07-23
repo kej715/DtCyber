@@ -1,6 +1,6 @@
 [NOS/VE](https://en.wikipedia.org/wiki/NOS/VE) is the operating system and related software products for [CDC's Cyber 180 architecture](https://en.wikipedia.org/wiki/CDC_Cyber#Cyber_180_series).  DtCyber supports running NOS/VE in dual-state mode, in which NOS and NOS/VE share the same machine, mediated by a hypervisor.
 
-This release for DtCyber contains NOS/VE v1.8.3AA.  It was built from deadstart and product release tapes, including a BCU tape that included corrections for Y2K, so it was probably release in the late 1990's.  The emulated machine is the Cyber 870 (because hardware-specific tape for it survived).
+This release for DtCyber contains NOS/VE v1.8.3AA.  It was built from deadstart and product release tapes, including a BCU tape that included corrections for Y2K, so it was probably released in the late 1990's.  The emulated machine is the Cyber 870 (because hardware-specific tape for it survived).
 
 # Installing and Deadstarting
 
@@ -77,7 +77,6 @@ It's prudent to gracefully shut down both NOS/VE and NOS before exiting DtCyber 
 ​terminate_system
 ```
 Then follow the instructions in the Shutdown section of NOS2.8.7/README.md to cleanly shut down NOS.
-```
 # Manuals Covering NOS/VE
 
 (This list was compiled by William Schaub.)
