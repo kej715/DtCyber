@@ -1095,7 +1095,7 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
             }
         if (operand->sign)
             {
-            *isTruncated = (type == 11 && (buffer[i] & 0x80) == 0)
+            *isTruncated = (type == 11 && desc->length > 0 && (buffer[i] & 0x80) == 0)
                         || operand->value[3] != 0xffffffffffffffff
                         || operand->value[2] != 0xffffffffffffffff
                         || operand->value[1] != 0xffffffffffffffff
@@ -1103,7 +1103,7 @@ bool bdp180EncodeOperand(Cpu180Context *ctx, BdpDescriptor *desc, BdpOperand *op
             }
         else
             {
-            *isTruncated = (type == 11 && (buffer[i] & 0x80) != 0)
+            *isTruncated = (type == 11 && desc->length > 0 && (buffer[i] & 0x80) != 0)
                         || operand->value[3] != 0 || operand->value[2] != 0 || operand->value[1] != 0 || operand->value[0] != 0;
             }
         break;
