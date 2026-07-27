@@ -430,6 +430,8 @@ typedef struct
     u8              opK;                  /* k field of current instruction, if applicable */
     u16             opD;                  /* D field of current instruction, if applicable */
     u16             opQ;                  /* Q field of current instruction, if applicable */
+    u8              opDm;                 /* debug mask of current instruction */
+    bool            opDebug;              /* TRUE if debugging is enabled on current instruction */
     BdpDescriptor   srcDesc;              /* source descriptor of BDP instruction */
     BdpDescriptor   dstDesc;              /* destination descriptor of BDP instruction */
     ConditionAction pendingAction;        /* pending monitor or user condition action */
