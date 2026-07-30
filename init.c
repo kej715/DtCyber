@@ -841,15 +841,26 @@ static void initCyber(char *config)
         case 10:
         case 12:
         case 14:
+            if (modelType == ModelCyber860)
+                {
+                logDtError(LogErrorLocation, "file '%s' section [%s]: Cyber 860 memory size must be 16M .. 128M\n", startupFile, config);
+                exit(1);
+                }
         case 16:
         case 32:
         case 64:
         case 128:
+            // valid memory size, do nothing
+            break;
         case 256:
         case 512:
         case 1024:
         case 2048:
-            // valid memory size, do nothing
+            if (modelType == ModelCyber860)
+                {
+                logDtError(LogErrorLocation, "file '%s' section [%s]: Cyber 860 memory size must be 16M .. 128M\n", startupFile, config);
+                exit(1);
+                }
             break;
         default:
             isOk = FALSE;

@@ -3758,7 +3758,7 @@ static void opCmdShowStateCp180(Cpu180Context *cpu)
     opDisplay("    >  DLP " FMT64_012x "  DI %02x  DM %02x\n", cpu->regDlp, cpu->regDi, cpu->regDm);
     opDisplay("\n");
     tosPtr = &cpMem[((cpu->isMonitorMode ? cpu->regMps : cpu->regJps) >> 3) + 37];
-    opDisplay("    >  LRN %d\n", *tosPtr >> 48);
+    opDisplay("    >  LRN %d\n", (*tosPtr >> 48) & Mask4);
     for (i = 1; i < 16; i++)
         {
         opDisplay("    >  TOS[%x] " FMT64_012x, i, *tosPtr & Mask48);
