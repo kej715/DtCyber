@@ -1,2 +1,0 @@
-This file documents the major changes in each release of DTCYBER.
-
