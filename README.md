@@ -54,21 +54,27 @@ This root directory contains the source code for the simulator and *makefiles* f
 many types of machines and operating systems that can host it. Some of the most
 commonly used ones are:
 
-- **Makefile.linux32** A *makefile* for 32-bit Linux systems that produces a 32-bit
+- **Makefile.linux32** A generic *makefile* for 32-bit Linux systems that produces a 32-bit
     *DtCyber* executable.
-- **Makefile.linux64** A *makefile* for Linux systems that produces a 64-bit
+- **Makefile.linux64** A generic *makefile* for Linux systems that produces a 64-bit
     *DtCyber* executable.
 - **Makefile.linux64-armv8** A *makefile* for ARM-based Linux systems (e.g.,
-    Raspberry Pi running 32-bit OS) that produces a 64-bit executable.
+    Raspberry Pi running 32-bit OS) that produces a 64-bit executable optimized for the
+    ARMv8 architecture.
 - **Makefile.linux64-armv8-a** A *makefile* for ARM-based Linux systems
     running a 64-bit OS (e.g., Raspberry Pi4 running 64-bit Linux) that produces
-    a 64-bit executable.
-- **Makefile.macosx** A *makefile* for 64-bit, Intel-based MacOS systems.
+    a 64-bit executable optimized for the ARMv8-A architecture (e.g. RPi 4 and RPi 5).
+- **Makefile.macosx** A *makefile* for 64-bit macOS systems.
 
 Project (*DtCyber.vcxproj*) and solution definition (*DtCyber.sln*) files are
 provided for Microsoft Visual Studio too.
 
-For example, to build the simulator on MacOS, execute the following command:
+You should also install [Node.js](https://nodejs.org/) on your build system. This enables
+various automation tools and helper applications supporting DtCyber. See
+[BUILDING.README.md](BUILDING.README.md) for platform-specific information about
+installation and usage of Node.js.
+
+For example, to build the simulator on macOS, execute the following command:
 
 >`make -f Makefile.macosx all`
 
@@ -86,8 +92,8 @@ following commands:
 To build *dtcyber* on Windows, open the solution file (*DtCyber.sln*) in Visual
 Studio and build the project defined by it.
 
-Additional per platform build information (Linux, MacOS, Raspberry Pi) is found 
-in [BUILDING.README.txt](BUILDING.README.txt).
+Additional per platform build information (Linux, macOS, Raspberry Pi) is found 
+in [BUILDING.README.md](BUILDING.README.md).
 
 ## Contributing
 See [CONTRIBUTING.md](CONTRIBUTING.md) for information about contributing new
