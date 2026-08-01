@@ -697,6 +697,11 @@ static void initCyber(char *config)
         modelType = ModelCyber865;
         features  = featuresCyber865;
         }
+    else if (stricmp(model, "CYBER870") == 0 || stricmp(model, "870") == 0)
+        {
+        modelType = ModelCyber860;
+        features  = featuresCyber860;
+        }
     else if (stricmp(model, "CYBER875") == 0 || stricmp(model, "875") == 0)
         {
         modelType = ModelCyber865;
@@ -954,6 +959,12 @@ static void initCyber(char *config)
         {
         logDtError(LogErrorLocation, "file '%s' section [%s]: Entry 'cpus' invalid - correct values are 1 or 2\n", startupFile, config);
         exit(1);
+        }
+    else if (modelType == ModelCyber860 && cpus < 2 && (stricmp(model, "CYBER870") == 0 || stricmp(model, "870") == 0))
+        {
+        logDtError(LogErrorLocation, "WARNING - file '%s' section [%s]: Entry 'cpus' invalid for Cyber 870 - CPU count changed from %d to 2 for Cyber 870\n",
+                   startupFile, config, cpus);
+        cpus = 2;
         }
     cpuCount = (int)cpus;
 
