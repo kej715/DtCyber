@@ -71,7 +71,7 @@ provided for Microsoft Visual Studio too.
 
 You should also install [Node.js](https://nodejs.org/) on your build system. This enables
 various automation tools and helper applications supporting DtCyber. See
-[BUILDING.README.md](BUILDING.README.md) for platform-specific information about
+[BUILDING_README.md](BUILDING_README.md) for platform-specific information about
 installation and usage of Node.js.
 
 For example, to build the simulator on macOS, execute the following command:
