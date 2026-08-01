@@ -3537,7 +3537,6 @@ static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool doIgnV
     bool found;
     u32  hash;
     u32  idx;
-    u32  limit;
     u8   n;
     u32  pageNum;
     u64  pte;
@@ -3549,7 +3548,6 @@ static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool doIgnV
     pageNum = byteNum >> ctx->pageNumShift;
     hash    = (u32)asid ^ (pageNum & Mask16);
     idx     = ((ctx->regPta & 0xfffff000) | ((hash << 4) & ctx->pageLengthMask)) >> 3;
-    limit   = idx + ctx->pageTableEntries;
     spid    = ((u64)asid << 22) | ((u64)pageNum << ctx->spidShift);
 
 #if CcDebug > 0
@@ -3582,7 +3580,7 @@ static bool cpu180FindPte(Cpu180Context *ctx, u16 asid, u32 byteNum, bool doIgnV
 
         n   += 1;
         idx += 1;
-        if (idx >= limit)
+        if (idx >= ctx->pageTableLimit)
             {
             idx = ctx->regPta >> 3;
             }
@@ -4775,8 +4773,9 @@ static bool cpu180SubInt64(Cpu180Context *ctx, u64 minend, u64 subend, u64 *diff
 **------------------------------------------------------------------------*/
 static void cpu180UpdatePageSize(Cpu180Context *ctx)
     {
-    u8 i;
-    u8 mask;
+    u32 entries;
+    u8  i;
+    u8  mask;
 
     mask              = ctx->regPsm;
     ctx->pageNumShift = 9;
@@ -4785,23 +4784,24 @@ static void cpu180UpdatePageSize(Cpu180Context *ctx)
         ctx->pageNumShift += 1;
         mask             >>= 1;
         }
-    ctx->pageLengthMask   = ((u32)ctx->regPtl << 12) | 0xfffU;
-    ctx->spidShift        = ctx->pageNumShift - 9;
-    ctx->pageTableEntries = 512;
+    ctx->pageLengthMask = ((u32)ctx->regPtl << 12) | 0xfffU;
+    ctx->spidShift      = ctx->pageNumShift - 9;
+    entries             = 512;
     for (i = 0; i < 8; i++)
         {
         if (((ctx->regPtl >> i) & 1) != 0)
             {
-            ctx->pageTableEntries <<= 1;
+            entries <<= 1;
             }
         }
+    ctx->pageTableLimit = (ctx->regPta >> 3) + entries;
 
 #if CcDebug > 0
     traceVmRegisters(ctx);
 #endif
 #if DEBUG
-    fprintf(cpu180Log, "Update page size: CPU%d PSM %02x PTL %02x pageTableEntries %u pageLengthMask " FMT32_08x " pageNumShift %d spidShift %d\n",
-        ctx->id, ctx->regPsm, ctx->regPtl, ctx->pageTableEntries, ctx->pageLengthMask, ctx->pageNumShift, ctx->spidShift);
+    fprintf(cpu180Log, "Update page size: CPU%d PSM %02x PTL %02x PTA " FMT32_08x " pageTableLimit " FMT32_08x " pageLengthMask " FMT32_08x " pageNumShift %d spidShift %d\n",
+        ctx->id, ctx->regPsm, ctx->regPtl, ctx->regPta, ctx->pageTableLimit << 3, ctx->pageLengthMask, ctx->pageNumShift, ctx->spidShift);
 #endif
     }
 

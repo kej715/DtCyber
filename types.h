@@ -413,7 +413,7 @@ typedef struct
     u64             regTm;                /* test mode register */
     u64             rtcClock;             /* CPU-specific snapshot of real-time clock */
     u32             pageLengthMask;       /* mask used in calculating page table index */
-    u32             pageTableEntries;     /* number of entries in page table */
+    u32             pageTableLimit;       /* address+1 of last entry in page table */
     u8              pageNumShift;         /* shift count used in calculating page numbers */
     u8              spidShift;            /* shift count used in calculating SPID's */
     volatile bool   isMonitorMode;        /* TRUE if CPU is in monitor mode */
