@@ -93,7 +93,7 @@ To build *dtcyber* on Windows, open the solution file (*DtCyber.sln*) in Visual
 Studio and build the project defined by it.
 
 Additional per platform build information (Linux, macOS, Raspberry Pi) is found 
-in [BUILDING.README.md](BUILDING.README.md).
+in [BUILDING_README.md](BUILDING_README.md).
 
 ## Contributing
 See [CONTRIBUTING.md](CONTRIBUTING.md) for information about contributing new
