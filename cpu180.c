@@ -2242,6 +2242,9 @@ void cpu180MacStartCp(Cpu180Context *ctx)
     switch (csAddr)
         {
     default:
+        logDtError(LogErrorLocation, "Unrecognized control store start address: %04x\n", (u16)csAddr);
+    case 0x0000:
+    case 0x0004:
     case CSA_IDLE: // idle
         ctx->isStopped = TRUE;
         break;
