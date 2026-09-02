@@ -3,11 +3,36 @@
 const cmdExtensions = require("./cmd-extensions");
 const DtCyber       = require("../automation/DtCyber");
 const fs            = require("fs");
-const Terminal      = require("../automation/Terminal");
 const utilities     = require("./opt/utilities");
 
+const usage = () => {
+  process.stderr.write("Usage: node upgrade-to-870 [-nve] [-auto]\n");
+  process.stderr.write("  -nve   do NOT install NOS/VE\n");
+  process.stderr.write("  -auto  do NOT update IPR deck to start NOS/VE automatically\n");
+  process.exit(1);
+};
+
+let installNVE = true;
+let autoNVE    = true;
+
+for (const i = 2; i < process.argv.length; i++) {
+  if (process.argv[i] === "-nve") {
+    installNVE = false;
+  }
+  else if (process.argv[i] === "-auto") {
+    autoNVE = false;
+  }
+  else if (process.argv[i] === "-h" || process.argv[i] === "-help" || process.argv[i] === "--help") {
+    usage();
+    process.exit(0);
+  }
+  else {
+    usage();
+    process.exit(1);
+  }
+}
+
 const dtc  = new DtCyber();
-const term = new Terminal.AnsiTerminal();
 
 const media = [
   {name: "CIP870L847.tap",        dir: "tapes",     url: "https://www.dropbox.com/scl/fi/5gdf3nqu0knwe89ieh78h/CIP870L847.tap?rlkey=bonu7ta49l5u39aigjqfotpom&dl=1"},
@@ -52,8 +77,12 @@ const updateIniFile = (nosDsTape) => {
   for (const sectionKey of ["cyber", "manual", "tape"]) {
     utilities.putPropertyValue(props, sectionKey, "model",    "CYBER870");
     utilities.putPropertyValue(props, sectionKey, "cpus",     "2");
+    utilities.putPropertyValue(props, sectionKey, "pps",      "24");
     utilities.putPropertyValue(props, sectionKey, "memory",   "128M");
     utilities.putPropertyValue(props, sectionKey, "esmbanks", "0");
+    utilities.putPropertyValue(props, sectionKey, "osType",   "NOS");
+    utilities.putPropertyValue(props, sectionKey, "clock",    "0");
+    utilities.putPropertyValue(props, sectionKey, "idle",     "off");
     utilities.putPropertyValue(props, sectionKey, "helpers",  "helpers.dual-state");
   }
   utilities.putPropertyValue(props, "cyber",  "deadstart", "deadstart.dual-state.disk");
@@ -68,7 +97,10 @@ const updateIniFile = (nosDsTape) => {
   let eqDefns = [];
   eqDefns.push(`MT679,0,0,13,${nosDsTape}`);
   for (const defn of props["equipment.nos287"]) {
-    if (!defn.startsWith("DD885-LS")
+    if (defn.startsWith("DD885-42")) {
+      eqDefns.push(`DD885${defn.substring(8)}`);
+    }
+    else if (!defn.startsWith("DD885-LS")
         && !defn.startsWith("TPM")
         && !defn.startsWith("MT679,0,0,13")
         && !defn.startsWith("MT679,0,0,21")
@@ -139,9 +171,9 @@ const updateIniFile = (nosDsTape) => {
   utilities.writePropertyFile("cyber.ovl", props);
 };
 
-/*
- *  Download dual-state media
- */
+//
+//  Download dual-state media
+//
 let progressMaxLen = 0;
 let promise = dtc.say("Download dual-state media ...");
 for (const m of media) {
@@ -201,7 +233,8 @@ promise = promise
   eqpdProps.push(`XM=${utilities.getMachineId(dtc)},0,1000.`); // XM=<mid>,0,1000.  512K words of user EM
   eqpd01 = utilities.editEqpdProps(eqpd01, eqpdProps);
   //
-  //  Remove equipment definitions related to ECS/ESM and two-port mux
+  //  Remove equipment definitions related to ECS/ESM and two-port mux, and change
+  //  any definitions for disk equipment type DB to DQ.
   //
   let dpEqn = -1;
   let lines = [];
@@ -211,6 +244,14 @@ promise = promise
       let ei = line.indexOf("=");
       dpEqn = parseInt(line.substring(2, ei), 8);
       continue;
+    }
+    if (/^EQ[0-7]+=DB/.test(line)) {
+      let ei = line.indexOf("=");
+      let eqn = parseInt(line.substring(2, ei), 8);
+      if (eqn >= 0o010 && eqn <= 0o013) {
+        lines.push(`${line.substring(0, ei + 1)}DQ${line.substring(ei + 3)}`);
+        continue;
+      }
     }
     if (line.startsWith("ASR") || line.startsWith("MSAL,S=")) {
       let ei = line.indexOf("=");
@@ -371,6 +412,7 @@ promise = promise
   "#1000#GO."
 ]))
 .then(() => dtc.expect([{ re: /QUEUE FILE UTILITY COMPLETE/ }], "printer"))
+.then(() => dtc.sleep(5000))
 .then(() => dtc.say("Install deadstart file on disk ..."))
 .then(() => dtc.dis([
   "COMMON,SYSTEM.",
@@ -395,14 +437,37 @@ promise = promise
 .then(() => dtc.console("idle off"))
 .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
 .then(() => dtc.expect([{ re: /QUEUE FILE UTILITY COMPLETE/ }], "printer"))
+.then(() => dtc.sleep(5000))
 .then(() => dtc.say("Deadstart complete"))
-.then(() => dtc.say("Create NOS/VE start-up procedures ..."))
-.then(() => dtc.dsd(`X.SETVE(,NVE,${utilities.getPropertyValue(utilities.getCustomProperties(dtc), "PASSWORDS", "NVE", "NVEX")},,F,,0)`))
-.then(() => dtc.sleep(2))
-.then(() => dtc.dsd(`X.SETVE(WAIT,NVE,${utilities.getPropertyValue(utilities.getCustomProperties(dtc), "PASSWORDS", "NVE", "NVEX")},,T,,0)`))
+.then(() => {
+  const props = utilities.getCustomProperties(dtc);
+  return dtc.say("Create NOS/VE start-up procedures ...")
+  .then(() => dtc.dsd(`X.SETVE(,NVE,${utilities.getPropertyValue(props, "PASSWORDS", "NVE", "NVEX")},,F,,0)`))
+  .then(() => dtc.sleep(5000))
+  .then(() => dtc.dsd(`X.SETVE(WAIT,NVE,${utilities.getPropertyValue(props, "PASSWORDS", "NVE", "NVEX")},,T,,0)`))
+  .then(() => dtc.sleep(10000));
+})
 .then(() => dtc.say(""))
 .then(() => dtc.say("--- Upgrade to Cyber 870 complete ---"))
 .then(() => dtc.say(""))
+.then(() => {
+  if (installNVE) {
+    let promise = dtc.say("Install NOS/VE ...")
+    .then(() => dtc.disconnect());
+    if (autoNVE) {
+      promise = promise.then(() => dtc.exec("node", ["install-nve"]));
+    }
+    else {
+      promise = promise.then(() => dtc.exec("node", ["install-nve", "-auto"]));
+    }
+    return promise
+    .then(() => dtc.connect())
+    .then(() => dtc.expect([ {re:/Operator> $/} ]));
+  }
+  else {
+    return Promise.resolve();
+  }
+})
 .then(() => dtc.say("Enter 'exit' command to exit and terminate system gracefully"))
 .then(() => dtc.engageOperator(cmdExtensions))
 .then(() => dtc.shutdown())

@@ -703,7 +703,6 @@ dtc.connect()
   const stepName = "create dcfile";
   if (isDone(stepName)) return Promise.resolve();
   return term.say("Create $SYSTEM.SITE_OS_MAINTENANCE.DEADSTART_COMMANDS.DCFILE ...")
-  .then(() => term.say("Create $SYSTEM.SITE_OS_MAINTENANCE.DEADSTART_COMMANDS.DCFILE"))
   .then(() => {
     let promise = term.send("colt $system.site_os_maintenance.deadstart_commands.dcfile\r");
     for (const line of dcfile) {
@@ -881,18 +880,30 @@ dtc.connect()
 })
 .then(() => {
   //
-  //  Terminate NOS/VE and re-deadstart using new tape
+  //  Terminate NOS/VE and wait for NVE to drop
   //
-  const stepName = "deadstart from new tape";
+  const stepName = "terminate nos/ve";
   if (isDone(stepName)) return Promise.resolve();
-  return term.say("Terminate NOS/VE and re-deadstart using new tape ...")
-  .then(() => term.say("Mount new deadstart tape ..."))
-  .then(() => dtc.mount(21, 0, 0, "tapes/nve857ds.new.tap"))
-  .then(() => term.say("Terminate NOS/VE ..."))
+  return term.say("Terminate NOS/VE and wait for NVE subsystem to drop ...")
   .then(() => term.send("terminate_system\r"))
   .then(() => term.expect([{ re: /System TERMINATED via OPERATOR COMMAND/ }]))
-  .then(() => term.say("Wait for NVE subsystem to drop, then re-deadstart NOS/VE using NVEWAIT ..."))
   .then(() => term.sleep(30000))
+  .then(() => saveStep(stepName))
+  .then(() => term.say("NOS/VE terminated and NVE dropped"));
+})
+.then(() => {
+  //
+  //  Deadstart NOS/VE using new deadstart tape
+  //
+  const stepName = "deadstart nos/ve from new tape";
+  if (isDone(stepName)) return Promise.resolve();
+  return term.say("Deadstart NOS/VE using new tape ...")
+  .then(() => term.say("Unmount current NOS/VE deadstart tape ..."))
+  .then(() => dtc.unmount(21, 0, 0))
+  .then(() => term.sleep(2000))
+  .then(() => term.say("Mount new deadstart tape ..."))
+  .then(() => dtc.mount(21, 0, 0, "tapes/nve857ds.new.tap"))
+  .then(() => term.say("Initiate NOS/VE deadstart using NVEWAIT ..."))
   .then(() => dtc.dsd("NVWAIT."))
   .then(() => term.expect([{ re: /Press NEXT to accept parameters/ }])) .then(() => term.sleep(1000))
   .then(() => term.send("\r"))

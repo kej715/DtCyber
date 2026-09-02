@@ -20,7 +20,8 @@ const imageMap = {
   "nos287-full-875":       "https://www.dropbox.com/scl/fi/0z0wxoxd2j30ko4evlvii/nos287rtr-full-875.zip?rlkey=bgxojr3ulhkj47ctrs2lp1rrk&dl=1",
   "nos287-full-875-beast": "https://www.dropbox.com/scl/fi/15wl0zf55y2azt6tpbtkv/nos287rtr-full-875-beast.zip?rlkey=jmfckxm8mt8jxpxsn0vocwr9x&dl=1",
   "nos287-most-175":       "https://www.dropbox.com/scl/fi/0y0yycmilzytrjp0febyy/nos287rtr-most-175.zip?rlkey=zbagqkdzvst9p7t1m94oa5pp8&dl=1",
-  "dual-state-860":        "https://www.dropbox.com/scl/fi/2kdymipewhp74lciqlpog/dual-state-860.zip?rlkey=nmct84xuji0sk7l43clhnj7jf&st=sxdm9euq&dl=1"
+  "dual-state-860":        "https://www.dropbox.com/scl/fi/2kdymipewhp74lciqlpog/dual-state-860.zip?rlkey=nmct84xuji0sk7l43clhnj7jf&st=sxdm9euq&dl=1",
+  "dual-state-870":        "https://www.dropbox.com/scl/fi/bb4lal92mu69wfyd7cc1y/dual-state-870.zip?rlkey=52b6wa4rs7o8wxg5rra0bt38f&st=w41m6aee&dl=1"
 };
 
 //
