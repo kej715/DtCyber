@@ -2304,6 +2304,11 @@ static void mt5744SpaceRequestCallback(TapeParam *tp)
 void mt5744UnloadTape(TapeParam *tp)
     {
     mt5744ResetUnit(tp);
+    if (opDoEventNotification)
+        {
+        opDisplay("CH%02o,EQ%02o,UN%02o tape unloaded\n", tp->channelNo, tp->eqNo, tp->unitNo);
+        }
+
 #if DEBUG
     fprintf(mt5744Log, "\n%010u Dismount CH:%02o u%d", traceSequenceNo, tp->channelNo, tp->unitNo);
 #endif

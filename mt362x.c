@@ -955,6 +955,10 @@ static FcStatus mt362xFunc(PpWord funcCode)
             active3000Device->fcb[unitNo] = NULL;
             tp->endOfOperation            = TRUE;
             tp->intStatus |= Int362xEndOfOp;
+            if (opDoEventNotification)
+                {
+                opDisplay("CH%02o,EQ%02o,UN%02o tape unloaded\n", tp->channelNo, tp->eqNo, tp->unitNo);
+                }
             }
 
         st = FcProcessed;

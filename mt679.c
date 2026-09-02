@@ -1188,6 +1188,10 @@ static FcStatus mt679Func(PpWord funcCode)
             tp->ringIn    = FALSE;
             fclose(activeDevice->fcb[unitNo]);
             activeDevice->fcb[unitNo] = NULL;
+            if (opDoEventNotification)
+                {
+                opDisplay("CH%02o,EQ%02o,UN%02o tape unloaded\n", tp->channelNo, tp->eqNo, tp->unitNo);
+                }
             }
 
         return (FcProcessed);

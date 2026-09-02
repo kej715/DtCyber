@@ -4,6 +4,7 @@
 /*--------------------------------------------------------------------------
 **
 **  Copyright (c) 2003-2011, Tom Hunter
+**                2019-2026  Kevin Jordan
 **
 **  Name: func.h
 **
@@ -648,6 +649,7 @@ extern NpuSoftware         npuSw;
 extern u8                  npuSvmNpuNode;
 extern char                *npuSvmTermStates[];
 extern volatile bool       opActive;
+extern bool                opDoEventNotification;
 extern char                opKeyIn;
 extern u32                 opKeyInterval;
 extern volatile bool       opPaused;

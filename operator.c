@@ -150,6 +150,8 @@ static void opCmdEnterKeys(bool help, char *cmdParams);
 static void opHelpEnterKeys(void);
 static void opWaitKeyConsume();
 
+static void opCmdEventNotification(bool help, char *cmdParams);
+
 static void opCmdHelp(bool help, char *cmdParams);
 static void opHelpHelp(void);
 
@@ -262,6 +264,7 @@ static OpCmd decode[] =
     { "dm",                    opCmdDumpMemory            },
     { "e",                     opCmdEnterKeys             },
     { "ek",                    opCmdEnterKeys             },
+    { "en",                    opCmdEventNotification     },
     { "lc",                    opCmdLoadCards             },
     { "ld",                    opCmdLoadDisk              },
     { "lt",                    opCmdLoadTape              },
@@ -292,6 +295,7 @@ static OpCmd decode[] =
     { "disconnect_remote_console", opCmdDiscRemoteConsole },
     { "dump_memory",           opCmdDumpMemory            },
     { "enter_keys",            opCmdEnterKeys             },
+    { "event_notification",    opCmdEventNotification     },
     { "load_cards",            opCmdLoadCards             },
     { "load_disk",             opCmdLoadDisk              },
     { "load_tape",             opCmdLoadTape              },
@@ -1914,7 +1918,7 @@ static void opHelpDumpMemory(void)
 **
 **------------------------------------------------------------------------*/
 char opKeyIn           = 0;
-u32  opKeyInterval     = 150;
+u32  opKeyInterval     = 250;
 u32  opKeyWaitInterval = 100;
 
 static void opCmdEnterKeys(bool help, char *cmdParams)
@@ -2097,18 +2101,22 @@ static void opHelpEnterKeys(void)
 static void opWaitKeyConsume()
     {
     u64 currentTime;
-    u64 nextTime;
+    u64 nextKeyTime;
 
-    while (opKeyIn != 0)
+    if (opKeyIn != 0)
         {
-        sleepMsec(opKeyWaitInterval);
-        }
-    currentTime = getMilliseconds();
-    nextTime    = currentTime + opKeyInterval;
-    while (currentTime < nextTime)
-        {
-        sleepMsec((u32)(nextTime - currentTime));
         currentTime = getMilliseconds();
+        nextKeyTime = currentTime + opKeyInterval;
+        while (opKeyIn != 0)
+            {
+            sleepMsec(opKeyWaitInterval);
+            }
+        currentTime = getMilliseconds();
+        while (currentTime < nextKeyTime)
+            {
+            sleepMsec((u32)(nextKeyTime - currentTime));
+            currentTime = getMilliseconds();
+            }
         }
     }
 
@@ -2192,6 +2200,49 @@ static void opHelpSetKeyWaitInterval(void)
     {
     opDisplay("    > 'set_keywait_interval <millisecs>' set the interval between keyboard scans of the emulated system console.\n");
     opDisplay("    > [Current key wait interval is %u msec.]\n", opKeyWaitInterval);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Enable/Disable event notification.
+**
+**  Parameters:     Name        Description.
+**                  help        Request only help on this command.
+**                  cmdParams   Command parameters
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+
+bool opDoEventNotification = FALSE;
+
+static void opCmdEventNotification(bool help, char *cmdParams)
+    {
+    if (help)
+        {
+        opDisplay("    > Enable/disable event notification\n");
+        opDisplay("    > event_notification <on|off>     turn event notification on/off\n");
+
+        return;
+        }
+
+    if (strlen(cmdParams) == 0)
+        {
+        opDisplay("    > Event notification: %s\n", opDoEventNotification ? "ON" : "OFF");
+
+        return;
+        }
+    if (strcasecmp("on", cmdParams) == 0)
+        {
+        opDoEventNotification = TRUE;
+        }
+    else if (strcasecmp("off", cmdParams) == 0)
+        {
+        opDoEventNotification = FALSE;
+        }
+    else
+        {
+        opDisplay("    > Invalid parameter\n");
+        }
     }
 
 /*--------------------------------------------------------------------------
