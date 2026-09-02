@@ -121,6 +121,7 @@ class DtCyber {
   constructor() {
     this.streamMgrs     = {};
     this.iniMainSection = "cyber";
+    this.cacheDuration  = 5 * 24 * 60 * 60 * 1000; // 5 days default cache duration
     this.jobSeqNo       = 0;
   }
 
@@ -1404,6 +1405,18 @@ class DtCyber {
   }
 
   /*
+   * setCacheDuration
+   *
+   * Sets the duration of cached files, in hours.
+   *
+   * Arguments:
+   *   hours - the number of hours for which cached files remain viable
+   */
+  setCacheDuration(hours) {
+    this.cacheDuration = hours * 60 * 60 * 1000;
+  }
+
+  /*
    * setExitOnClose
    *
    * Sets the indicator that determines whether the caller will exit automatically
@@ -1658,8 +1671,8 @@ class DtCyber {
    * wget
    *
    * Get a file from the web and store it in a specified directory. If the file
-   * already exists in the directory, and it is less than 24 hours old, avoid
-   * getting it from the web.
+   * already exists in the directory, and its age is less than the cache duration,
+   * avoid getting it from the web.
    *
    * Arguments:
    *   url      - URL of the file to get
@@ -1686,7 +1699,7 @@ class DtCyber {
     const cachePath = `${cacheDir}/${filename}`;
     if (fs.existsSync(cachePath)) {
       const stat = fs.statSync(cachePath);
-      if (Date.now() - stat.ctimeMs < (24 * 60 * 60 * 1000)) {
+      if (Date.now() - stat.ctimeMs < me.cacheDuration) {
         if (typeof progress === "function") {
           progress(stat.size, stat.size);
         }
