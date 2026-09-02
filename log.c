@@ -104,16 +104,15 @@ static char *LogFN = "dtcyberlog.txt";
 **------------------------------------------------------------------------*/
 void logInit(void)
     {
-    //  Don't do anything if it's already open
-    if (logF != NULL)
-        {
-        return;
-        }
-    logF = fopen(LogFN, "wt");
     if (logF == NULL)
         {
-        perror("Error Opening logF/logInit()");
-        fprintf(stderr, "(log    ) can't open log file %s", LogFN);
+        logF = fopen(LogFN, "wt");
+        if (logF == NULL)
+            {
+            perror(LogFN);
+            fprintf(stderr, "(log    ) can't open log file %s\n", LogFN);
+            exit(1);
+            }
         }
     }
 
@@ -131,18 +130,18 @@ void logInit(void)
 **------------------------------------------------------------------------*/
 void logError(char *file, int line, char *fmt, ...)
     {
+    va_list param;
+
     if (logF == NULL)
         {
         logInit();
         }
 
-    va_list param;
-
     va_start(param, fmt);
     fprintf(logF, "[%s:%d] ", file, line);
     vfprintf(logF, fmt, param);
     va_end(param);
-    fprintf(logF, "\n");
+    fputs("\n", logF);
     fflush(logF);
     }
 
@@ -196,19 +195,12 @@ void logDtError(char *file, int line, char *fmt, ...)
     char dtOutBuf[buflen];
     char dtFnBuf[128];
 
-    dtNow(dtOutBuf, sizeof(dtOutBuf));
-
     if (logF == NULL)
         {
         logInit();
         }
 
-    fprintf(stderr, "%s ", dtOutBuf);
-    if (logF == 0)
-    {
-        fprintf(stderr,"logF is ZERO");
-    }
-    fprintf(logF, "%s ", dtOutBuf);
+    dtNow(dtOutBuf, sizeof(dtOutBuf));
 
     ixpos = strrchr(file, '\\');
     if (ixpos == NULL)
@@ -225,35 +217,28 @@ void logDtError(char *file, int line, char *fmt, ...)
         }
 
     strcpy(dtFnBuf, ixpos);
+
     ixpos = strrchr(dtFnBuf, '.');
-    if (ixpos == NULL)
+    if (ixpos != NULL)
         {
-        ixpos = dtFnBuf;
-        }
-    else
-        {
-        ixpos[0] = '\0';
+        *ixpos = '\0';
         }
 
-    //  Print the origin of the message
-    fprintf(stderr, "(%s:%d) ", dtFnBuf, line);
-    fprintf(logF, "(%s:%d) ", dtFnBuf, line);
-
+    fprintf(stderr, "%s (%s:%d) ", dtOutBuf, dtFnBuf, line);
     va_start(param, fmt);
     vfprintf(stderr, fmt, param);
     va_end(param);
-    //  Unix is quirky with va_* so we re-issue va_start
+
+    fprintf(logF, "%s (%s:%d) ", dtOutBuf, dtFnBuf, line);
     va_start(param, fmt);
     vfprintf(logF, fmt, param);
     va_end(param);
 
-    ixpos = strrchr(fmt, '\n');
-    if (ixpos == NULL)
+    if (strrchr(fmt, '\n') == NULL)
         {
         fputs("\n", stderr);
         fputs("\n", logF);
         }
-
     fflush(stderr);
     fflush(logF);
     }
