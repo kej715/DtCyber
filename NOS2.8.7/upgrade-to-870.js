@@ -15,7 +15,7 @@ const usage = () => {
 let installNVE = true;
 let autoNVE    = true;
 
-for (const i = 2; i < process.argv.length; i++) {
+for (let i = 2; i < process.argv.length; i++) {
   if (process.argv[i] === "-nve") {
     installNVE = false;
   }
