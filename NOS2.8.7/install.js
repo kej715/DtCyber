@@ -21,6 +21,7 @@ const imageMap = {
   "nos287-full-875-beast": "https://www.dropbox.com/scl/fi/15wl0zf55y2azt6tpbtkv/nos287rtr-full-875-beast.zip?rlkey=jmfckxm8mt8jxpxsn0vocwr9x&dl=1",
   "nos287-most-175":       "https://www.dropbox.com/scl/fi/0y0yycmilzytrjp0febyy/nos287rtr-most-175.zip?rlkey=zbagqkdzvst9p7t1m94oa5pp8&dl=1",
   "dual-state-860":        "https://www.dropbox.com/scl/fi/2kdymipewhp74lciqlpog/dual-state-860.zip?rlkey=nmct84xuji0sk7l43clhnj7jf&st=sxdm9euq&dl=1",
+  "nos287-full-870":       "https://www.dropbox.com/scl/fi/6cgdmzjfayuw4m6e5kw2q/nos287rtr-full-870.zip?rlkey=hy902ja2i7dbdl75b27wxf1r4&st=9d5x6dwi&dl=1",
   "dual-state-870":        "https://www.dropbox.com/scl/fi/bb4lal92mu69wfyd7cc1y/dual-state-870.zip?rlkey=52b6wa4rs7o8wxg5rra0bt38f&st=w41m6aee&dl=1"
 };
 
@@ -62,12 +63,13 @@ const usage = () => {
   process.stderr.write("  full       : install a full system with all optional products\n");
   process.stderr.write("  readytorun : (alias rtr) install a ready-to-run system image\n");
   process.stderr.write("               <image name> is one of:\n");
-  process.stderr.write("                 nos287-full-865       : full NOS 2.8.7 system running on a Cyber 170/865 (default)\n");
-  process.stderr.write("                 nos287-full-875       : full NOS 2.8.7 system running on a Cyber 170/875\n");
-  process.stderr.write("                 nos287-full-875-beast : full NOS 2.8.7 system running on a Cyber 170/875\n");
+  process.stderr.write("                 nos287-full-865       : full NOS 2.8.7 system running on a CYBER 170/865 (default)\n");
+  process.stderr.write("                 nos287-full-870       : full NOS 2.8.7 system running on a CYBER 180/870\n");
+  process.stderr.write("                 nos287-full-875       : full NOS 2.8.7 system running on a CYBER 170/875\n");
+  process.stderr.write("                 nos287-full-875-beast : full NOS 2.8.7 system running on a CYBER 170/875\n");
   process.stderr.write("                                         with 16M ESM and 885-42 disks\n");
   process.stderr.write("                 nos287-most-175       : full NOS 2.8.7 system (except CYBIS) running\n");
-  process.stderr.write("                                         on a Cyber 175 with 885-42 disks\n");
+  process.stderr.write("                                         on a CYBER 175 with 885-42 disks\n");
   process.stderr.write("                 dual-state-860        : dual-state NOS 2.8.7 and NOS/VE 1.8.3 system running on\n");
   process.stderr.write("                                         a CYBER 180/860\n");
   process.stderr.write("  continue   : (alias cont) continue basic or full installation from last point of interruption\n");
