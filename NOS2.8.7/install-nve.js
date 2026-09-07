@@ -26,7 +26,11 @@ const media = {
   "1J006C": {name: "NVEL826COF7.tap",       url: "https://www.dropbox.com/scl/fi/ry7tb0yvt2l4hkhy5rigp/NVEL826COF7.tap?rlkey=bgn273yj4phwbmmwk8p5w718s&dl=1"},
   "1J006D": {name: "NVEL826DOF7.tap",       url: "https://www.dropbox.com/scl/fi/mo4kxq8rabozq81of31vi/NVEL826DOF7.tap?rlkey=9l84z1jn3uqmg0iwtvq3i7du3&dl=1"},
   "1J006E": {name: "NVEL826EOF7.tap",       url: "https://www.dropbox.com/scl/fi/r6qfzqrql56ywg9orjlwf/NVEL826EOF7.tap?rlkey=cb83cdi4wtffza8j6b6g999ab&dl=1"},
-  "1J006F": {name: "NVEL826FOF7.tap",       url: "https://www.dropbox.com/scl/fi/usuuttk97q0ujxemix9pg/NVEL826FOF7.tap?rlkey=in3u94v25arhj29uky2a9unju&dl=1"}
+  "1J006F": {name: "NVEL826FOF7.tap",       url: "https://www.dropbox.com/scl/fi/usuuttk97q0ujxemix9pg/NVEL826FOF7.tap?rlkey=in3u94v25arhj29uky2a9unju&dl=1"},
+  "CG019A": {name: "L847_CG019A.tap",       url: "https://www.dropbox.com/scl/fi/muwqbnxi65edns1soggbw/L847_CG019A.tap?rlkey=nd7mi09yh950yc6d21m0rjwf0&st=u8q986o6&dl=1"},
+  "CG019B": {name: "L847_CG019B.tap",       url: "https://www.dropbox.com/scl/fi/31as0l57nu6y0cme97xuc/L847_CG019B.tap?rlkey=k2igo7632ll3amknouvuxquer&st=xhqyfacw&dl=1"},
+  "CG019C": {name: "L847_CG019C.tap",       url: "https://www.dropbox.com/scl/fi/javrevwnsz2k1xfb6k171/L847_CG019C.tap?rlkey=s83iluzuh6lh2xcnz8anzy3gr&st=qirpr80x&dl=1"},
+  "CG019D": {name: "L847_CG019D.tap",       url: "https://www.dropbox.com/scl/fi/wgsi5hzy70flhw8qqx79u/L847_CG019D.tap?rlkey=c3b3xud9x43nyxab1oum5tfpe&st=57313lcg&dl=1"}
 };
 
 const coreCommands = [
@@ -76,7 +80,7 @@ const productList = [
   {name: "BUILD_UTILITY",              packingList: "packing_list_857"},
   {name: "CML",                        packingList: "packing_list_857"},
   {name: "COBOL",                      packingList: "packing_list_857"},
-  {name: "CYBIL",                      packingList: "packing_list_826"},
+  {name: "CYBIL",                      packingList: "packing_list_847"},
   {name: "DEBUG",                      packingList: "packing_list_857"},
   {name: "DESKTOP_VE",                 packingList: "packing_list_857"},
   {name: "DVS",                        packingList: "packing_list_857"},
@@ -604,7 +608,26 @@ dtc.connect()
 })
 .then(() => {
   //
-  //  Load packing list for NOS/VE 1.8.1 L826
+  //  Load packing list for NOS/VE L847
+  //
+  const stepName = "load L847 packing list";
+  if (isDone(stepName)) return Promise.resolve();
+  return term.say("Load packing list for NOS/VE L847 ...")
+  .then(() => mountVsn(dtc, "CG019A"))
+  .then(() => term.send("inss\r"))
+  .then(() => term.expect([{ re: /INSS\// }])) .then(() => term.sleep(1000))
+  .then(() => term.send("loapl packing_list_847 'CG019A',,mt9$6250\r"))
+  .then(() => dtc.expect([ {re:/CH21,EQ00,UN01 tape unloaded/ }]))
+  .then(() => term.send("\r"))
+  .then(() => term.expect([{ re: /INSS\// }])) .then(() => term.sleep(1000))
+  .then(() => term.send("quit\r"))
+  .then(() => term.expect([{ re: /sou\// }])) .then(() => term.sleep(1000))
+  .then(() => saveStep(stepName))
+  .then(() => term.say("NOS/VE L847 packing list loaded"));
+})
+.then(() => {
+  //
+  //  Load packing list for NOS/VE L826
   //
   const stepName = "load L826 packing list";
   if (isDone(stepName)) return Promise.resolve();
@@ -619,11 +642,11 @@ dtc.connect()
   .then(() => term.send("quit\r"))
   .then(() => term.expect([{ re: /sou\// }])) .then(() => term.sleep(1000))
   .then(() => saveStep(stepName))
-  .then(() => term.say("NOS/VE 1.8.1 L826 packing list loaded"));
+  .then(() => term.say("NOS/VE L826 packing list loaded"));
 })
 .then(() => {
   //
-  //  Install software products from NOS/VE 1.8.3 and 1.8.1
+  //  Install software products from NOS/VE L857, L847, and L826
   //
   const stepName = "install software products";
   if (isDone(stepName)) return Promise.resolve();
