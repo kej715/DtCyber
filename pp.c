@@ -99,6 +99,8 @@
     location &= Mask12;                                                   \
     PpIncrement(activePpu->regP);
 
+#define PpNumberForId(id) ((id) < 10 ? (id) : ((id) - 10) + 020)
+
 /*
 **  -----------------------------------------
 **  Private Typedef and Structure Definitions
@@ -584,6 +586,11 @@ u64 ppMacGetIouRegister(u8 reg)
             regVal = ppu[ppIdx].regQ;
             break;
             }
+#if DEBUG
+        fputs("Read IOU Status register\n", ppLog);
+        fprintf(ppLog, "  IOU status: %02x\n", (u8)(iouStatus & Mask8));
+        fprintf(ppLog, "        PP%02o: register %c is %06o\n", PpNumberForId(ppIdx), "APKQ"[regSelect], regVal);
+#endif
         return (iouStatus & Mask8) | (regVal << 8);
     case RegTestMode:
         return iouTestMode;
@@ -714,7 +721,6 @@ void ppMacSetIouRegister(u8 reg, u64 word)
         pp                       = &ppu[ppIdx];
         pp->osBoundsCheckEnabled = (word & 0x08) != 0;
         pp->isStopEnabled        = (word & 0x01) != 0;
-        pp->isStopped            = FALSE;
 
         if ((word & 0x0020) != 0) // load/dump/idle PP
             {
@@ -745,6 +751,11 @@ void ppMacSetIouRegister(u8 reg, u64 word)
                 **  Set A register to an input word count of 10000.
                 */
                 pp->regA = 010000;
+
+                /*
+                **  Enable instruction execution
+                */
+                pp->isStopped = FALSE;
                 }
             if ((word & 0x0800) != 0) // dump PP
                 {
@@ -768,43 +779,46 @@ void ppMacSetIouRegister(u8 reg, u64 word)
                 **  Set A register to an output word count of 10000.
                 */
                 pp->regA = 010000;
+
+                /*
+                **  Enable instruction execution
+                */
+                pp->isStopped = FALSE;
                 }
             if ((word & 0x0400) != 0) // idle PP
                 {
                 pp->isIdle = TRUE;
+
+                /*
+                **  Enable instruction execution
+                */
+                pp->isStopped = FALSE;
                 }
-            }
-        else
-            {
-            if ((pp->isLoad || pp->isDump) && pp->busy)
-                {
-                pp->busy = FALSE;
-                pp->regP = pp->mem[0];
-                PpIncrement(pp->regP);
-                }
-            pp->isIdle = FALSE;
-            pp->isLoad = FALSE;
-            pp->isDump = FALSE;
             }
 #if DEBUG
         fputs("Write IOU EC register\n", ppLog);
-        fprintf(ppLog, "  PP%02o\n", ppIdx < 10 ? ppIdx : (ppIdx - 10) + 020);
+        fprintf(ppLog, "  PP%02o\n", PpNumberForId(ppIdx));
         fprintf(ppLog, "          Auto mode: %s\n", (word & 0x20000000) != 0 ? "enabled" : "disabled");
         fprintf(ppLog, "    Register select: %c\n", "APKQ"[(word >> 8) & Mask2]);
         fprintf(ppLog, "    OS bounds check: %s\n", pp->osBoundsCheckEnabled ? "enabled" : "disabled");
         fprintf(ppLog, "      Stop on error: %s\n", pp->isStopEnabled ? "enabled" : "disabled");
-        fputs(         "     Load/Dump/Idle: ", ppLog);
+        fprintf(ppLog, "            Stopped: %s\n", pp->isStopped ? "yes" : "no");
         if ((word & 0x0020) != 0)
             {
-            fputs("enabled\n", ppLog);
-            fprintf(ppLog, "            Channel: %02o\n", chIdx);
-            fprintf(ppLog, "               Load: %s\n", pp->isLoad ? "yes" : "no");
-            fprintf(ppLog, "               Dump: %s\n", pp->isDump ? "yes" : "no");
-            fprintf(ppLog, "               Idle: %s\n", pp->isIdle ? "yes" : "no");
-            }
-        else
-            {
-            fputs("disabled\n", ppLog);
+            fputs("     Load/Dump/Idle: selected", ppLog);
+            if (pp->isLoad)
+                {
+                fputs(", Load", ppLog);
+                }
+            if (pp->isDump)
+                {
+                fputs(", Dump", ppLog);
+                }
+            if (pp->isIdle)
+                {
+                fputs(", Idle", ppLog);
+                }
+            fprintf(ppLog, ", channel %02o\n", chIdx);
             }
 #endif
         break;
@@ -834,17 +848,10 @@ void ppMacSetIouRegister(u8 reg, u64 word)
             }
 #if DEBUG
         fputs("Write IOU OS bound register\n", ppLog);
-        fprintf(ppLog, "  OS boundary: %010o\n", iouOsBoundary);
-        for (int i = 0; i < 10; i++)
+        fprintf(ppLog, "  OS boundary: " FMT32_011o " [0x" FMT32_08x "]\n", iouOsBoundary, iouOsBoundary);
+        for (int i = 0; i < ppuCount; i++)
             {
-            fprintf(ppLog, "  PP%02o: %s\n", i, ppu[i].isBelowOsBound ? "below" : "above");
-            }
-        if (ppuCount > 10)
-            {
-            for (int i = 10; i < 20; i++)
-                {
-                fprintf(ppLog, "  PP%02o: %s\n", (i - 10) + 020, ppu[i].isBelowOsBound ? "below" : "above");
-                }
+            fprintf(ppLog, "  PP%02o: %s\n", PpNumberForId(i), ppu[i].isBelowOsBound ? "below" : "above");
             }
 #endif
         break;
@@ -1096,11 +1103,8 @@ static bool ppCheckOsBounds(u32 address)
             word = ppMacGetIouRegister(RegFaultStatus1);
             ppMacSetIouRegister(RegFaultStatus1, word | (iouPpMasks[activePpu->id] << 32) | 0x040000);
 #if DEBUG
-            fprintf(ppLog, "PP:%02o OS bounds fault, reference to %o is %s boundary %o",
-                activePpu->id,
-                address,
-                activePpu->isBelowOsBound ? "above" : "below",
-                iouOsBoundary);
+            fprintf(ppLog, "PP%02o OS bounds fault, reference to " FMT32_011o " is %s boundary " FMT32_011o " [0x" FMT32_08x "], stop on error %s\n",
+                activePpu->id, address, activePpu->isBelowOsBound ? "above" : "below", iouOsBoundary, iouOsBoundary, activePpu->isStopEnabled ? "enabled" : "disabled");
             fflush(ppLog);
 #endif
             return TRUE;
@@ -1401,6 +1405,9 @@ static void ppOpEXN(void)     // 26
             {
             activePpu->isStopped = TRUE;
             PpDecrement(activePpu->regP);
+#if DEBUG
+            fprintf(ppLog, "PP%02o stopped\n", PpNumberForId(activePpu->id));
+#endif
             }
         }
     else
@@ -1683,6 +1690,9 @@ static void ppOpCWD(void)     // 62
             {
             activePpu->isStopped = TRUE;
             PpDecrement(activePpu->regP);
+#if DEBUG
+            fprintf(ppLog, "PP%02o stopped\n", PpNumberForId(activePpu->id));
+#endif
             }
         }
     else
@@ -1748,6 +1758,9 @@ static void ppOpCWM(void)     // 63
             PpDecrement(activePpu->regP);
             PpDecrement(activePpu->regP);
             PpDecrement(activePpu->regP);
+#if DEBUG
+            fprintf(ppLog, "PP%02o stopped\n", PpNumberForId(activePpu->id));
+#endif
             return;
             }
         }
@@ -2318,6 +2331,9 @@ static void ppOpRDSL(void)    // 1000
             {
             activePpu->isStopped = TRUE;
             PpDecrement(activePpu->regP);
+#if DEBUG
+            fprintf(ppLog, "PP%02o stopped\n", PpNumberForId(activePpu->id));
+#endif
             }
         }
     else
@@ -2361,6 +2377,9 @@ static void ppOpRDCL(void)    // 1001
             {
             activePpu->isStopped = TRUE;
             PpDecrement(activePpu->regP);
+#if DEBUG
+            fprintf(ppLog, "PP%02o stopped\n", PpNumberForId(activePpu->id));
+#endif
             }
         }
     else
@@ -2403,23 +2422,7 @@ static void ppOpLPML(void)    // 1024
 
 static void ppOpINPN(void)    // 1026
     {
-    cpuAcquireInterruptMutex();
-    if ((activePpu->opD & 1) != 0) // memory port 0 selected
-        {
-        cpus180[0].pendingRequests |= PR_EXT_INTRPT;
-        }
-    if ((activePpu->opD & 4) != 0 && cpuCount > 1) // memory port 2 selected
-        {
-        cpus180[1].pendingRequests |= PR_EXT_INTRPT;
-        }
-#if DEBUG
-    else
-        {
-        fprintf(ppLog, "  PP%02o Unexpected memory port specified: INPN %o\n",
-            activePpu->id < 10 ? activePpu->id : (activePpu->id - 10) + 020, activePpu->opD);
-        }
-#endif
-    cpuReleaseInterruptMutex();
+    cpu180ExternalInterrupt(XI_SOURCE_PP, activePpu->id, (u8)(activePpu->opD & Mask4));
     }
 
 static void ppOpLDDL(void)    // 1030
@@ -2659,6 +2662,9 @@ static void ppOpCWDL(void)    // 1062
             {
             activePpu->isStopped = TRUE;
             PpDecrement(activePpu->regP);
+#if DEBUG
+            fprintf(ppLog, "PP%02o stopped\n", PpNumberForId(activePpu->id));
+#endif
             }
         }
     else
@@ -2716,6 +2722,9 @@ static void ppOpCWML(void)    // 1063
             PpDecrement(activePpu->regP);
             PpDecrement(activePpu->regP);
             PpDecrement(activePpu->regP);
+#if DEBUG
+            fprintf(ppLog, "PP%02o stopped\n", PpNumberForId(activePpu->id));
+#endif
             return;
             }
         }

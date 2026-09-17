@@ -139,6 +139,7 @@ void cpuVoidIwStack(Cpu170Context *activeCpu, u32 branchAddr);
 */
 void cpu180CheckConditions(Cpu180Context *ctx);
 void cpu180CheckPendingInterrupts(Cpu180Context *ctx);
+void cpu180ExternalInterrupt(ExternalInterruptSource type, u8 id, u8 mask);
 u8   cpu180GetInstructionFormat(u8 opcode);
 void cpu180Init(char *model, u16 *serialNumbers);
 void cpu180Load180Xp(Cpu180Context *ctx, u32 xpa);
@@ -635,6 +636,10 @@ extern char                fontName[];                      // Console
 extern long                heightPX;                        // Console
 extern u32                 iouOsBoundary;
 extern bool                isCyber180;
+extern volatile u64        memoryBounds;
+extern volatile u32        memoryEid;
+extern volatile u64        memoryEnvControl;
+extern volatile u64        memoryOptions;
 extern ModelType           modelType;
 extern u16                 mux6676TelnetConns;
 extern u16                 mux6676TelnetPort;

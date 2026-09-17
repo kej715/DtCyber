@@ -1701,6 +1701,11 @@ void tracePrint170Registers(Cpu170Context *cpu, FILE *fp)
     CpWord data;
     u8     i;
 
+    if (fp == NULL)
+        {
+        fp = cpuF[cpu->id];
+        }
+
     fprintf(fp, "P       %06o  ", cpu->regP);
     fprintf(fp, "A%d %06o  ", 0, cpu->regA[0]);
     fprintf(fp, "B%d %06o", 0, cpu->regB[0]);
@@ -1805,6 +1810,11 @@ void tracePrint180Registers(Cpu180Context *cpu, FILE *fp)
     CpWord       data;
     u8           i;
     volatile u64 *tosPtr;
+
+    if (fp == NULL)
+        {
+        fp = cpuF[cpu->id];
+        }
 
     fprintf(fp, " P %02x ", cpu->key);
     tracePrintPva(fp, cpu->regP);

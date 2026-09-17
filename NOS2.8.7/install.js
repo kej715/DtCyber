@@ -70,8 +70,8 @@ const usage = () => {
   process.stderr.write("                                         with 16M ESM and 885-42 disks\n");
   process.stderr.write("                 nos287-most-175       : full NOS 2.8.7 system (except CYBIS) running\n");
   process.stderr.write("                                         on a CYBER 175 with 885-42 disks\n");
-  process.stderr.write("                 dual-state-860        : dual-state NOS 2.8.7 and NOS/VE 1.8.3 system running on\n");
-  process.stderr.write("                                         a CYBER 180/860\n");
+  process.stderr.write("                 dual-state-870        : dual-state NOS 2.8.7 and NOS/VE 1.8.3 system running on\n");
+  process.stderr.write("                                         a CYBER 180/870\n");
   process.stderr.write("  continue   : (alias cont) continue basic or full installation from last point of interruption\n");
   process.exit(1);
 };

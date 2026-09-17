@@ -57,6 +57,7 @@ typedef SSIZE_T ssize_t;
 **  MS Win32 systems
 */
 #define FMT32_08x     "%08I32x"
+#define FMT32_011o    "%011I32o"
 #define FMT60_020o    "%020I64o"
 #define FMT64_010x    "%010I64x"
 #define FMT64_016x    "%016I64x"
@@ -73,6 +74,7 @@ typedef SSIZE_T ssize_t;
 typedef signed __int128   i128;
 typedef unsigned __int128 u128;
 #define FMT32_08x         "%08x"
+#define FMT32_011o        "%011o"
 #define FMT60_020o        "%020llo"
 #define FMT64_010x        "%010llx"
 #define FMT64_016x        "%016llx"
@@ -87,6 +89,7 @@ typedef unsigned __int128 u128;
 */
 #define HAS_INT128        0
 #define FMT32_08x         "%08lx"
+#define FMT32_011o        "%011o"
 #define FMT60_020o        "%020llo"
 #define FMT64_010x        "%010llx"
 #define FMT64_016x        "%016llx"
@@ -285,6 +288,13 @@ typedef struct
 #define PageOf(pva, ctx) (((pva) & Mask32) >> (ctx)->pageNumShift)
 #define RingOf(pva) (((pva) >> 44) & 0xf)
 #define SegmentOf(pva) (((pva) >> 32) & 0xfff)
+
+//  External interrupt source types
+typedef enum
+    {
+    XI_SOURCE_CPU = 0,
+    XI_SOURCE_PP
+    } ExternalInterruptSource;
 
 //  Monitor condition register bit ordinals.
 typedef enum

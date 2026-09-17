@@ -61,7 +61,9 @@
 //
 //  Define TRACE_STORE_START and TRACE_STORE_END to trigger tracing when an
 //  instruction stores data within the specified range of addresses. TRACE_INST_COUNT
-//  defines how many instructions to trace thereafter.
+//  defines how many instructions to trace thereafter. Define TRACE_STORE_START and
+//  TRACE_STORE_END as 0, and define TRACE_STORE_RMA_START and TRACE_STORE_RMA_END
+//  as non-0 to trigger tracing by RMA instead of PVA.
 //
 //  Define TRACE_KEYPOINT_LIST as an array initializer specifying a list of system
 //  keypoints. When the KEYPOINT instruction detects entry into an element in the list,
@@ -207,13 +209,19 @@
 #define mtk_job_mode_trap                4004
 
 //#define TRACE_INST_LIST   { 0x70, 0xF9 }
-#define TRACE_INST_COUNT  10
+//#define TRACE_INST_COUNT  10
+#define TRACE_INST_COUNT  100
 
 //#define TRACE_RANGE_START 0xb0440002f800
 //#define TRACE_RANGE_END   0xb0440002f8ff
 
-//#define TRACE_STORE_START 0x100300002ce0
-//#define TRACE_STORE_END   0x100300002e78
+//#define TRACE_STORE_START     0
+//#define TRACE_STORE_END       0
+#define TRACE_STORE_RMA_START   0
+#define TRACE_STORE_RMA_END     0
+//#define TRACE_STORE_RMA_START 0x07fbe200
+//#define TRACE_STORE_RMA_END   0x07fbe3a0
+
 /*
 #define TRACE_KEYPOINT_LIST         \
     {                               \
@@ -721,6 +729,10 @@ static void cp180OpSBYTS(Cpu180Context *activeCpu, u8 count);
 **  ----------------
 */
 volatile u64  cpu180FreeRunningCounter = 0;
+volatile u64 memoryBounds;
+volatile u32 memoryEid;
+volatile u64 memoryEnvControl;
+volatile u64 memoryOptions;
 
 Cpu180Context *cpus180;
 
@@ -1331,10 +1343,6 @@ static u64 ringSeg170 = 0;
 /*
 **  Maintenance access information for central memory
 */
-static u64 memoryBounds;
-static u32 memoryEid;
-static u64 memoryEnvControl;
-static u64 memoryOptions;
 static u16 memoryRegisterAddr;
 static u8  memoryRegisterBuf[8];
 static u8  memoryRegisterBufIdx;
@@ -1348,12 +1356,12 @@ static FILE *cpu180Log = NULL;
 static int traceInstCount[2] = { 0, 0 };
 
 #if defined(TRACE_STORE_START)
-static u32 traceRmaEnd       = 0;
-static u32 traceRmaStart     = 0;
+static u32 traceRmaEnd   = TRACE_STORE_RMA_END;
+static u32 traceRmaStart = TRACE_STORE_RMA_START;
 #endif
 
 #if defined(TRACE_INST_LIST)
-static u8  traceInstList[]   = TRACE_INST_LIST;
+static u8  traceInstList[] = TRACE_INST_LIST;
 #endif
 
 #if defined(TRACE_KEYPOINT_LIST)
@@ -1387,6 +1395,49 @@ void cpu180CheckConditions(Cpu180Context *ctx)
     ctx->pendingAction = Rni;
     cpu180CheckMonitorConditions(ctx);
     cpu180CheckUserConditions(ctx);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Process external interrupt request
+**
+**  Parameters:     Name        Description.
+**                  type        external interrupt source type
+**                  id          source identifier
+**                  mask        mask identifying port(s) on which to interrupt
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void cpu180ExternalInterrupt(ExternalInterruptSource type, u8 id, u8 mask)
+    {
+    cpuAcquireInterruptMutex();
+    if ((mask & 1) != 0) // memory port 0 selected
+        {
+        if ((memoryEnvControl & (1 << 31)) == 0)
+            {
+            cpus180[0].pendingRequests |= PR_EXT_INTRPT;
+            }
+        }
+    if ((mask & 4) != 0 && cpuCount > 1) // memory port 2 selected
+        {
+        if ((memoryEnvControl & (1 << 30)) == 0)
+            {
+            cpus180[1].pendingRequests |= PR_EXT_INTRPT;
+            }
+        }
+    cpuReleaseInterruptMutex();
+#if DEBUG
+    if (type == XI_SOURCE_CPU)
+        {
+        fprintf(cpu180Log, "CPU%d external interrupt request on port mask 0x%s%x", id, (mask < 0x10) ? "0" : "", mask);
+        }
+    else
+        {
+        fprintf(cpu180Log, "PP%02o external interrupt request on port mask 0x%s%x", (id < 10) ? id : (id - 10) + 020, (mask < 0x10) ? "0" : "", mask);
+        }
+    mask = (u8)((memoryEnvControl >> 28) & 0x0f);
+    fprintf(cpu180Log, " (CM EC port disables 0x%s%x)\n", (mask < 0x10) ? "0" : "", mask);
+#endif
     }
 
 /*--------------------------------------------------------------------------
@@ -2004,12 +2055,18 @@ void cpu180MacSetCmRegister(u8 reg, u64 word)
         break;
     case MemBounds:
         memoryBounds = word;
+#if DEBUG
+        fprintf(cpu180Log, "Set CM B  " FMT64_016x "\n", word);
+#endif
         break;
     case MemElementId:
         memoryEid = (u32)word;
         break;
     case MemEnvControl:
         memoryEnvControl = word;
+#if DEBUG
+        fprintf(cpu180Log, "Set CM EC " FMT64_016x "\n", word);
+#endif
         break;
     case MemFreeRunningCounter:
         cpuAcquireClockMutex();
@@ -2018,6 +2075,9 @@ void cpu180MacSetCmRegister(u8 reg, u64 word)
         break;
     case MemOptionsInstalled:
         memoryOptions = word;
+#if DEBUG
+        fprintf(cpu180Log, "Set CM OI " FMT64_016x "\n", word);
+#endif
         break;
         }
     }
@@ -2085,6 +2145,9 @@ void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
         break;
     case RegJobProcessState:
         ctx->regJps = (u32)(word & Mask32);
+#if DEBUG && !DEBUG_SET_STATE_REG
+        fprintf(cpu180Log, "Set JPS CPU%d " FMT32_08x "\n", ctx->id, ctx->regJps);
+#endif
         break;
     case RegKeypointBuffer:
         ctx->regKbp = word & Mask48;
@@ -2112,6 +2175,9 @@ void cpu180MacSetCpStateRegister(Cpu180Context *ctx, u8 reg, u64 word)
         break;
     case RegMonitorProcState:
         ctx->regMps = (u32)(word & Mask32);
+#if DEBUG && !DEBUG_SET_STATE_REG
+        fprintf(cpu180Log, "Set MPS CPU%d " FMT32_08x "\n", ctx->id, ctx->regMps);
+#endif
         break;
     case RegPageSizeMask:
         ctx->regPsm = word & Mask7;
@@ -2236,7 +2302,8 @@ void cpu180MacStartCp(Cpu180Context *ctx)
     csAddr = cpu180MacGetCpStateRegister(ctx, RegCtrlStoreAddr);
 
 #if DEBUG
-    fprintf(cpu180Log, "\nStart CPU%d at CSA %04llx (%s)\n", ctx->id, csAddr, cpu180CsaToStr(csAddr));
+    fprintf(cpu180Log, "\nStart CPU%d at CSA %04llx (%s) MPS " FMT32_08x " JPS " FMT32_08x " Monitor Mode %d\n",
+        ctx->id, csAddr, cpu180CsaToStr(csAddr), ctx->regMps, ctx->regJps, ctx->isMonitorMode);
 #endif
 
     switch (csAddr)
@@ -2253,7 +2320,7 @@ void cpu180MacStartCp(Cpu180Context *ctx)
         //  When the CP is started at control store address 0x700 (long init),
         //  CIP expects the CP to halt at address 0x705 when initialization
         //  completes.
-        cpu180MacSetCpStateRegister(ctx, RegCtrlStoreAddr, 0x705);
+        cpu180MacSetCpStateRegister(ctx, RegCtrlStoreAddr, CSA_INIT + 5);
         ctx->isStopped = TRUE;
         break;
 
@@ -2266,19 +2333,25 @@ void cpu180MacStartCp(Cpu180Context *ctx)
                 ctx->id, (csAddr == CSA_HEIM) ? "MPS" : "JPS", xpa, (cpuMaxMemory << 3) / OneMegabyte);
             return;
             }
+#if CcDebug > 0
+        if ((traceMask & TRACECPU(ctx, TraceCpu180 | TraceExchange)) == TRACECPU(ctx, TraceCpu180 | TraceExchange))
+            {
+            traceCpuPrint(&cpus170[ctx->id], "Half Exchange-in");
+            }
+#endif
+        ctx->isMonitorMode = csAddr == CSA_HEIM;
         cpu180Load180Xp(ctx, xpa);
         if (ctx->regVmid == 1)
             {
             cpu180Set170State(ctx);
-            ctx->isMonitorMode = FALSE;
+            if (ctx->isMonitorMode)
+                {
+                fprintf(stderr, "\nCPU%d Half Exchange-in to 170 state with monitor mode set\n", ctx->id);
+                }
             }
-        ctx->nextKey       = ctx->key;
-        ctx->nextP         = ctx->regP;
-        ctx->isMonitorMode = csAddr == CSA_HEIM;
-        ctx->isStopped     = FALSE;
-#if CcDebug > 0
-        traceStartCpu180(ctx, ctx->regP);
-#endif
+        ctx->nextKey   = ctx->key;
+        ctx->nextP     = ctx->regP;
+        ctx->isStopped = FALSE;
 #if DEBUG
         tracePrint180Registers(ctx, cpu180Log);
 #endif
@@ -2289,13 +2362,19 @@ void cpu180MacStartCp(Cpu180Context *ctx)
         if ((xpa >> 3) >= cpuMaxMemory)
             {
             logDtError(LogErrorLocation, "Failed to start CPU%d: %s " FMT32_08x " beyond end of memory, mem size %d Mbytes\n",
-                ctx->id, ctx->isMonitorMode ? "MPS" : "JPS", xpa << 3, (cpuMaxMemory * 8) / OneMegabyte);
+                ctx->id, (ctx->isMonitorMode) ? "MPS" : "JPS", xpa, (cpuMaxMemory << 3) / OneMegabyte);
             return;
             }
         if (ctx->regVmid == 1)
             {
             cpu180Get170State(ctx);
             }
+#if CcDebug > 0
+        if ((traceMask & TRACECPU(ctx, TraceCpu180 | TraceExchange)) == TRACECPU(ctx, TraceCpu180 | TraceExchange))
+            {
+            traceCpuPrint(&cpus170[ctx->id], "Half Exchange-out");
+            }
+#endif
         cpu180Store180Xp(ctx, xpa);
         ctx->isStopped = TRUE;
 #if DEBUG
@@ -3423,16 +3502,25 @@ void cpu180CheckPendingInterrupts(Cpu180Context *ctx)
             {
             ctx->pendingRequests &= ~(u8)PR_EXT_INTRPT;
             ctx->regMcr          |= mcrDefns[MCR56].bitMask; // set External Interrupt
+#if DEBUG && DEBUG_INTERRUPT
+            fprintf(cpu180Log, "Set pending monitor condition MCR56, CPU%d MCR %04x MMR %04x\n", ctx->id, ctx->regMcr, ctx->regMmr);
+#endif
             }
         if ((ctx->pendingRequests & PR_SIT) != 0)
             {
             ctx->pendingRequests &= ~(u8)PR_SIT;
             ctx->regMcr          |= mcrDefns[MCR59].bitMask; // set System Interval Timer Interrupt
+#if DEBUG && DEBUG_INTERRUPT
+            fprintf(cpu180Log, "Set pending monitor condition MCR59, CPU%d MCR %04x MMR %04x\n", ctx->id, ctx->regMcr, ctx->regMmr);
+#endif
             }
         if ((ctx->pendingRequests & PR_PIT) != 0)
             {
             ctx->pendingRequests &= ~(u8)PR_PIT;
             ctx->regUcr          |= ucrDefns[UCR51].bitMask; // set Process Interval Timer Interrupt
+#if DEBUG && DEBUG_INTERRUPT
+            fprintf(cpu180Log, "Set pending user condition UCR51, CPU%d UCR %04x UMR %04x\n", ctx->id, ctx->regUcr, ctx->regUmr);
+#endif
             }
         if ((ctx->pendingRequests & PR_EXCH_170) != 0)
             {
@@ -3440,6 +3528,9 @@ void cpu180CheckPendingInterrupts(Cpu180Context *ctx)
             if (ctx->regVmid == 0 || (ctx->regMcr & ctx->regMmr) != 0)
                 {
                 ctx->regMcr |= mcrDefns[MCR53].bitMask; // set CYBER 170 exchange request
+#if DEBUG && DEBUG_INTERRUPT
+                fprintf(cpu180Log, "Set pending monitor condition MCR53, CPU%d MCR %04x MMR %04x\n", ctx->id, ctx->regMcr, ctx->regMmr);
+#endif
                 }
             }
         if ((ctx->pendingRequests & PR_HALT) != 0)
@@ -4281,10 +4372,10 @@ static bool cpu180IsDebugTrapMutex(Cpu180Context *ctx, u8 dm, u64 pva)
 **------------------------------------------------------------------------*/
 static void cpu180Load170Xp(Cpu180Context *ctx, u32 xpa)
     {
-    cpu180Load180Xp(ctx, xpa);
-    ringSeg170 = cpMem[(xpa & 0x7ffffff0) >> 3] & RingSegMask;
-    cpu180Set170State(ctx);
+    ringSeg170         = cpMem[(xpa & 0x7ffffff0) >> 3] & RingSegMask;
     ctx->isMonitorMode = FALSE; // C170 state operates in C180 job mode
+    cpu180Load180Xp(ctx, xpa);
+    cpu180Set170State(ctx);
 
 #if CcDebug > 0
     traceExchange170(&cpus170[ctx->id], xpa, NULL, (traceMask & TRACECPU(ctx, TraceCpu180)) != 0);
@@ -5025,17 +5116,8 @@ static void cp180Op03(Cpu180Context *activeCpu)  // 03  INTRUPT    MIGDS 2-141
     // local memory port 2. Local memory port 0 is associated with CPU0, and local memory port 2
     // is associated with CPU 1.
     //
-    cpuAcquireInterruptMutex();
     Xk = activeCpu->regX[activeCpu->opK];
-    if ((Xk & 1) != 0)
-        {
-        cpus180[0].pendingRequests |= PR_EXT_INTRPT;
-        }
-    if ((Xk & 4) != 0 && cpuCount > 1)
-        {
-        cpus180[1].pendingRequests |= PR_EXT_INTRPT;
-        }
-    cpuReleaseInterruptMutex();
+    cpu180ExternalInterrupt(XI_SOURCE_CPU, activeCpu->id, (u8)(Xk & Mask4));
     }
 
 static void cp180Op04(Cpu180Context *activeCpu)  // 04  RETURN     MIGDS 2-127
@@ -9353,16 +9435,31 @@ static void cpu180CheckTraceStore(Cpu180Context *ctx, u64 pvaStart, u64 pvaEnd)
     {
     char buf[100];
 
-    if ((traceMask & TRACECPU(ctx, TraceCpu180)) == 0 && pvaStart >= (TRACE_STORE_START) && pvaEnd <= (TRACE_STORE_END))
+    if ((traceMask & TRACECPU(ctx, TraceCpu180)) == 0)
         {
-        if ((traceMask & TRACECPU(ctx, TraceCpu180)) == 0)
+        if (pvaStart >= (TRACE_STORE_START) && pvaEnd <= (TRACE_STORE_END))
             {
             sprintf(buf, "Store %llu bytes at " FMT64_012x " between " FMT64_012x " and " FMT64_012x, (pvaEnd - pvaStart) + 1, pvaStart, (u64)TRACE_STORE_START, (u64)TRACE_STORE_END);
             traceCpuBreak(ctx);
             traceCpuPrint(&cpus170[ctx->id], buf);
+            traceMask              |= TRACECPU(ctx, TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
+            traceInstCount[ctx->id] = TRACE_INST_COUNT;
             }
-        traceMask              |= TRACECPU(ctx, TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
-        traceInstCount[ctx->id] = TRACE_INST_COUNT;
+        else if (traceRmaStart != 0)
+            {
+            u32 rmaEnd;
+            u32 rmaStart;
+
+            if (tracePvaToRma(ctx, pvaStart, &rmaStart) && tracePvaToRma(ctx, pvaEnd, &rmaEnd)
+                && traceRmaStart <= rmaStart && traceRmaEnd >= rmaEnd)
+                {
+                sprintf(buf, "Store %llu bytes at " FMT32_08x " between RMA " FMT32_08x " and RMA " FMT32_08x, pvaEnd - pvaStart + 1, rmaStart, traceRmaStart, traceRmaEnd);
+                traceCpuBreak(ctx);
+                traceCpuPrint(&cpus170[ctx->id], buf);
+                traceMask              |= TRACECPU(ctx, TraceCpu180 | TraceExchange | TraceCallFrame | TraceBlockOp);
+                traceInstCount[ctx->id] = TRACE_INST_COUNT;
+                }
+            }
         }
     }
 
