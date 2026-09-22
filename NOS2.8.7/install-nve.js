@@ -33,6 +33,11 @@ const media = {
   "CG019D": {name: "L847_CG019D.tap",       url: "https://www.dropbox.com/scl/fi/wgsi5hzy70flhw8qqx79u/L847_CG019D.tap?rlkey=c3b3xud9x43nyxab1oum5tfpe&st=57313lcg&dl=1"}
 };
 
+const backupTapes = [
+  {name: "Assembler", vsn: "ASM001", file: "NOSVE_Assembler.tap", url: "https://www.dropbox.com/scl/fi/odre4729pbmru52m9hu8l/NOSVE_Assembler.tap?rlkey=b000khv547byc2rz0clgy671r&dl=1"},
+  {name: "C/V2", vsn: "CV2000", file: "NOSVE_CV2.tap", url: "https://www.dropbox.com/scl/fi/2ijwcetrwd0pp28v4j4pq/NOSVE_CV2.tap?rlkey=9vw4pav4hzepywgi2gnphpjsf&dl=1"}
+];
+
 const coreCommands = [
   "setsa network_activation 0",
   "setsa unload_deadstart_tape 0",
@@ -685,39 +690,38 @@ dtc.connect()
 })
 .then(() => {
   //
-  //  Install NOS/VE assembler from backup image
+  //  Install software from backup tapes
   //
-  const stepName = "install assembler";
+  const stepName = "restore backup tapes";
   if (isDone(stepName)) return Promise.resolve();
-  return term.say("Install NOS/VE Assembler ...")
-  .then(() => downloadFile(dtc, "NOSVE_Assembler.tap", "https://www.dropbox.com/scl/fi/odre4729pbmru52m9hu8l/NOSVE_Assembler.tap?rlkey=b000khv547byc2rz0clgy671r&dl=1", "opt/tapes"))
-  .then(() => dtc.dsd([
-    "[UNLOAD,51.",
-    "[!"
-  ]))
-  .then(() => dtc.mount(13, 0, 1, "opt/tapes/NOSVE_Assembler.tap"))
-  .then(() => dtc.sleep(5000))
-  .then(() => dtc.say("Copy NOS/VE Assembler installation image to NOS ..."))
-  .then(() => dtc.dis([
-    "PURGE,NVEASM/NA.",
-    "ASSIGN,51,TAPE,LB=KL,F=I,PO=R.",
-    "DEFINE,NVEASM.",
-    "COPYBR,TAPE,NVEASM."
-  ], "NVEASM", 1))
-  .then(() => term.say("Copy NOS/VE Assembler installation image from NOS to NOS/VE ..."))
-  .then(() => term.send(`change_link_attributes f=cyber u=install pw=${utilities.getPropertyValue(customProps, "PASSWORDS", "INSTALL", "INSTALL")}\r`))
-  .then(() => term.expect([{ re: /sou\// }])) .then(() => term.sleep(1000))
-  .then(() => term.send("get_file nveasm dc=b56\r"))
-  .then(() => term.expect([{ re: /sou\// }])) .then(() => term.sleep(1000))
-  .then(() => term.say("Install NOS/VE Assembler ..."))
-  .then(() => term.send("restore_permanent_files\r"))
-  .then(() => term.expect([{ re: /PUR\// }])) .then(() => term.sleep(1000))
-  .then(() => term.send("restore_all_files bf=nveasm\r"))
-  .then(() => term.expect([{ re: /PUR\// }])) .then(() => term.sleep(1000))
-  .then(() => term.send("quit\r"))
-  .then(() => term.expect([{ re: /sou\// }])) .then(() => term.sleep(1000))
+  return term.say("Install software from backup tapes ...")
+  .then(() => {
+    let promise = Promise.resolve();
+    for (const product of backupTapes) {
+      const substepName = `install ${product.name}`;
+      if (isDone(substepName)) continue;
+      promise = promise
+      .then(() => term.say(`--- ${product.name} ---`))
+      .then(() => downloadFile(dtc, product.file, product.url, "opt/tapes"))
+      .then(() => dtc.say(`Mount VSN ${product.vsn} on tape unit ...`))
+      .then(() => dtc.mount(21, 0, 1, `opt/tapes/${product.file}`))
+      .then(() => term.send(`request_magnetic_tape f=$local.backup_file rvsn='${product.vsn}'\r`))
+      .then(() => term.expect([{ re: /sou\// }])) .then(() => term.sleep(1000))
+      .then(() => term.send("restore_permanent_files\r"))
+      .then(() => term.expect([{ re: /PUR\// }])) .then(() => term.sleep(1000))
+      .then(() => term.send("restore_all_files bf=$local.backup_file\r"))
+      .then(() => term.expect([{ re: /PUR\// }])) .then(() => term.sleep(1000))
+      .then(() => term.send("quit\r"))
+      .then(() => term.expect([{ re: /sou\// }])) .then(() => term.sleep(1000))
+      .then(() => term.send("delf $local.backup_file\r"))
+      .then(() => term.expect([{ re: /sou\// }])) .then(() => term.sleep(1000))
+      .then(() => saveStep(substepName))
+      .then(() => dtc.sleep(4000));
+    }
+    return promise;
+  })
   .then(() => saveStep(stepName))
-  .then(() => term.say("NOS/VE Assembler insalled"));
+  .then(() => term.say("Software products insalled from backup tapes"));
 })
 .then(() => {
   //
@@ -758,6 +762,8 @@ dtc.connect()
     return dtc.putFile("WBTRMVE/IA", text, options);
   })
   .then(() => term.say("Copy WEBTERM source to NOS/VE ..."))
+  .then(() => term.send(`change_link_attributes f=cyber u=install pw=${utilities.getPropertyValue(customProps, "PASSWORDS", "INSTALL", "INSTALL")}\r`))
+  .then(() => term.expect([{ re: /sou\// }])) .then(() => term.sleep(1000))
   .then(() => term.send("get_file webterm_tdu wbtrmve\r"))
   .then(() => term.expect([{ re: /sou\// }])) .then(() => term.sleep(1000))
   .then(() => term.say("Compile WEBTERM source ..."))
