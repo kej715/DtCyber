@@ -436,7 +436,7 @@ void cp3446RemoveCards(char *params)
                     t.tm_min,
                     t.tm_sec,
                     isuffix);
-            if (rename(cc->curFileName, fnameNew) != 0)
+            if (rename(cc->curFileName, fnameNew) == 0)
                 {
                 renameOK = TRUE;
                 break;
