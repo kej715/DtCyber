@@ -35,11 +35,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-
-#if defined(__FreeBSD__)
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+#if !defined(_WIN32)
+#include <pthread.h>
+#include <unistd.h>
+#include <errno.h>
 #endif
 
 #include "const.h"
@@ -136,42 +135,45 @@
 **  Private Typedef and Structure Definitions
 **  -----------------------------------------
 */
-typedef struct cciParam
-    {
-    PpWord    regCouplerStatus;
-    PpWord    regNpuStatus;
-    PpWord    regOrder;
-    NpuBuffer *buffer;
-    u8        *cciData;
-    u8        halfWordTransferred;
-    u8        tempMemAddr0;
-    u16       memoryAddress;
-    u16       memory[0xFFFF];
-    u16       tempWord;
-    u32       lastCommandTime;
-    u8        runState;
-    } CciParam;
-
 typedef enum
     {
-    StHipIdle,
+    StHipIdle = 0,
     StHipUpline,
-    StHipDownline,
+    StHipDownline
     } CciHipState;
 
 typedef enum
     {
-    StHcpNotInitialized,
+    StHcpNotInitialized = 0,
     StHcpRunning,
-    StHcpReset,
+    StHcpReset
     } CciHcpState;
+
+typedef struct cciParam
+    {
+    CciHipState hipState;
+    CciHcpState hcpState;
+    PpWord      regCouplerStatus;
+    PpWord      regNpuStatus;
+    PpWord      regOrder;
+    NpuBuffer   *buffer;
+    u8          *cciData;
+    u8          halfWordTransferred;
+    u8          tempMemAddr0;
+    u16         memoryAddress;
+    u16         memory[0xFFFF];
+    u16         tempWord;
+    u32         lastCommandTime;
+    u8          runState;
+    bool        doReset;
+    } CciParam;
 
 /*
 **  ---------------------------
 **  Private Function Prototypes
 **  ---------------------------
 */
-static void cciReset(void);
+static void cciHipCreateThread(void);
 static FcStatus cciHipFunc(PpWord funcCode);
 static void cciHipIo(void);
 static void cciHipActivate(void);
@@ -180,6 +182,13 @@ static void cciHipWriteNpuStatus(PpWord status);
 static PpWord cciHipReadNpuStatus(void);
 static bool cciHipDownlineBlockImpl(NpuBuffer *bp);
 static bool cciHipUplineBlockImpl(NpuBuffer *bp);
+static void cciReset(void);
+
+#if defined(_WIN32)
+static void npuThread(void *param);
+#else
+static void *npuThread(void *param);
+#endif
 
 #if (DEBUG > 1)
 static char *cciHipFunc2String(PpWord funcCode);
@@ -205,10 +214,6 @@ FILE *cciLog = NULL;
 */
 static CciParam *cci;
 
-static CciHipState cciHipState = StHipIdle;
-
-static CciHcpState cciHcpState = StHcpNotInitialized;
-
 /*
  **--------------------------------------------------------------------------
  **
@@ -232,8 +237,12 @@ void cciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
     DevSlot *dp;
 
-    (void)unitNo;
-    (void)deviceName;
+#if (DEBUG > 0)
+    if (cciLog == NULL)
+        {
+        cciLog = fopen("ccilog.txt", "wt");
+        }
+#endif
 
     /*
     ** set HCP software type, exit if npuSw is not SwUndefined
@@ -285,23 +294,17 @@ void cciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 
     dp->controllerContext    = cci;
     cci->regCouplerStatus    = 0;
-    cciHipState              = StHipIdle;
+    cci->hipState            = StHipIdle;
     cciHipDownlineBlockFunc  = cciHipDownlineBlockImpl;
     cciHipResetFunc          = cciReset;
     cciHipUplineBlockFunc    = cciHipUplineBlockImpl;
     cci->halfWordTransferred = FALSE;
     memset(cci->memory, 0, sizeof(cci->memory));
 
-    npuBipInit();
-    cciSvmInit();
-    cciTipInit();
-
-#if (DEBUG > 0)
-    if (cciLog == NULL)
-        {
-        cciLog = fopen("ccilog.txt", "wt");
-        }
-#endif
+    /*
+    **  Create NPU emulation thread
+    */
+    cciHipCreateThread();
 
     /*
     **  Print a friendly message.
@@ -349,7 +352,7 @@ bool cciHipUplineBlockImpl(NpuBuffer *bp)
     int prus;
     int words;
 
-    if (cciHipState != StHipIdle)
+    if (cci->hipState != StHipIdle)
         {
         return (FALSE);
         }
@@ -384,8 +387,8 @@ bool cciHipUplineBlockImpl(NpuBuffer *bp)
         cciHipWriteNpuStatus(StNpuInputAvailGt256);
         }
 
-    cci->buffer = bp;
-    cciHipState = StHipUpline;
+    cci->buffer   = bp;
+    cci->hipState = StHipUpline;
 
     return (TRUE);
     }
@@ -406,7 +409,7 @@ bool cciHipDownlineBlock(NpuBuffer *bp)
 
 bool cciHipDownlineBlockImpl(NpuBuffer *bp)
     {
-    if (cciHipState != StHipIdle)
+    if (cci->hipState != StHipIdle)
         {
         return (FALSE);
         }
@@ -419,8 +422,8 @@ bool cciHipDownlineBlockImpl(NpuBuffer *bp)
         }
 
     cciHipWriteNpuStatus(StNpuReadyOutput);
-    cci->buffer = bp;
-    cciHipState = StHipDownline;
+    cci->buffer   = bp;
+    cci->hipState = StHipDownline;
 
     return (TRUE);
     }
@@ -435,7 +438,7 @@ bool cciHipDownlineBlockImpl(NpuBuffer *bp)
 **------------------------------------------------------------------------*/
 bool cciHipIsReady(void)
     {
-    return (cciHcpState == StHcpRunning);
+    return cci->hcpState == StHcpRunning;
     }
 
 /*
@@ -447,7 +450,104 @@ bool cciHipIsReady(void)
  */
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Reset NPU.
+**  Purpose:        Create thread which will emulate an NPU.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void cciHipCreateThread(void)
+    {
+#if defined(_WIN32)
+    DWORD  dwThreadId;
+    HANDLE hThread;
+
+    /*
+    **  Create TCP thread.
+    */
+    hThread = CreateThread(
+        NULL,                                       // no security attribute
+        0,                                          // default stack size
+        (LPTHREAD_START_ROUTINE)npuThread,
+        (LPVOID)NULL,                               // thread parameter
+        0,                                          // not suspended
+        &dwThreadId);                               // returns thread ID
+
+    if (hThread == NULL)
+        {
+        logDtError(LogErrorLocation, "Failed to create NPU thread\n");
+        exit(1);
+        }
+#else
+    int            rc;
+    pthread_t      thread;
+    pthread_attr_t attr;
+
+    /*
+    **  Create POSIX thread with default attributes.
+    */
+    pthread_attr_init(&attr);
+    rc = pthread_create(&thread, &attr, npuThread, NULL);
+    if (rc < 0)
+        {
+        logDtError(LogErrorLocation, "Failed to create NPU thread\n");
+        exit(1);
+        }
+#endif
+    puts("(cci_hip) NPU thread created");
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        NPU emulation thread.
+**
+**  Parameters:     Name        Description.
+**                  param       unused
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+#if defined(_WIN32)
+static void npuThread(void *param)
+#else
+static void *npuThread(void *param)
+#endif
+    {
+    /*
+    **  Initialise BIP, SVC, and TIP.
+    */
+    npuBipInit();
+    npuSvmInit();
+    npuTipInit();
+    npuNetInit();
+
+    for (;;)
+        {
+        if (cci->doReset)
+            {
+            /*
+            **  Reset all subsystems - order matters
+            */
+            npuNetReset();
+            cciTipReset();
+            cciSvmReset();
+            npuBipReset();
+            cci->doReset = FALSE;
+            }
+        /*
+        **  Poll network status.
+        */
+        npuNetCheckConnections();
+        npuNetCheckStatus();
+        }
+
+#if !defined(_WIN32)
+    return NULL;
+#endif
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Set NPU reset request indication.
 **
 **  Parameters:     Name        Description.
 **
@@ -456,28 +556,7 @@ bool cciHipIsReady(void)
 **------------------------------------------------------------------------*/
 static void cciReset(void)
     {
-    if (cciHcpState == StHcpRunning)
-        {
-        /*
-        **  Reset all subsystems - order matters!
-        */
-        npuNetReset();
-        cciTipReset();
-        cciSvmReset();
-        npuBipReset();
-        cciHcpState = StHcpReset;
-        }
-
-    /*
-    **  Reset HIP state.
-    */
-    cci->regCouplerStatus    = 0;     // All flags cleared by Master Clear.
-    cci->halfWordTransferred = FALSE;
-    cciHipState = StHipIdle;
-#if (DEBUG > 0)
-    fprintf(cciLog, "(cci_hip) NPU reset\n");
-    logDtError(LogErrorLocation, "NPU reset\n");
-#endif
+    cci->doReset = TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -520,18 +599,13 @@ static FcStatus cciHipFunc(PpWord funcCode)
 
     case FcNpuInCouplerStatus:
 
-        switch (cciHipState)
+        switch (cci->hipState)
             {
         case StHipIdle:
             /*
-            **  Poll network status.
-            */
-            npuNetCheckStatus();
-
-            /*
             **  If no upline data pending.
             */
-            if ((cciHipState == StHipIdle) && (cciHcpState == StHcpRunning))
+            if ((cci->hipState == StHipIdle) && (cci->hcpState == StHcpRunning))
                 {
                 /*
                 **  Announce idle state to PIP at intervals of less then one second,
@@ -557,8 +631,8 @@ static FcStatus cciHipFunc(PpWord funcCode)
             /*
             **  Unexpected input request by host.
             */
-            cciHipState  = StHipIdle;
-            cci->cciData = NULL;
+            cci->hipState              = StHipIdle;
+            cci->cciData               = NULL;
             activeDevice->recordLength = 0;
             activeDevice->fcode        = FcNpuNothing;
 #if (DEBUG > 0)
@@ -579,8 +653,8 @@ static FcStatus cciHipFunc(PpWord funcCode)
             /*
             **  Unexpected output request by host.
             */
-            cciHipState  = StHipIdle;
-            cci->cciData = NULL;
+            cci->hipState              = StHipIdle;
+            cci->cciData               = NULL;
             activeDevice->recordLength = 0;
             activeDevice->fcode        = FcNpuNothing;
 #if (DEBUG > 0)
@@ -601,21 +675,32 @@ static FcStatus cciHipFunc(PpWord funcCode)
         break;
 
     case FcNpuOutNpuOrder:
-        cciHipState = StHipIdle;
+        cci->hipState = StHipIdle;
         cciHipWriteNpuStatus(StNpuIdle);
         break;
 
     case FcNpuClearNpu:
-        cciReset();
+        /*
+        **  Reset HIP state.
+        */
+        cci->regCouplerStatus    = 0;     // All flags cleared by Master Clear.
+        cci->halfWordTransferred = FALSE;
+        cci->hipState            = StHipIdle;
+        cci->hcpState            = StHcpReset;
+        cci->doReset             = TRUE;
+#if (DEBUG > 0)
+        fprintf(cciLog, "(cci_hip) NPU reset\n");
+        logDtError(LogErrorLocation, "NPU reset\n");
+#endif
         break;
 
     case FcNpuOutMemAddr0:
     case FcNpuOutMemAddr1:
-        cciHipState = StHipIdle;
+        cci->hipState = StHipIdle;
         break;
 
     case FcNpuOutProgram:
-        cciHipState = StHipIdle;
+        cci->hipState = StHipIdle;
         break;
 
     case FcNpuInProgram:
@@ -646,11 +731,11 @@ static FcStatus cciHipFunc(PpWord funcCode)
             fprintf(cciLog, "(cci_hip) NPU start micro program\n");
             logDtError(LogErrorLocation, "NPU start micro program\n");
 #endif
-            cciHipState = StHipIdle;
-            oldHcpState = cciHcpState;
-            cciHcpState = StHcpRunning;
+            cci->hipState = StHipIdle;
+            oldHcpState   = cci->hcpState;
+            cci->hcpState = StHcpRunning;
             cciHipWriteNpuStatus(StNpuIdle);
-            cciHcpState = oldHcpState;
+            cci->hcpState = oldHcpState;
             break;
 
         /*
@@ -661,7 +746,7 @@ static FcStatus cciHipFunc(PpWord funcCode)
             fprintf(cciLog, "(cci_hip) NPU start dump program\n");
             logDtError(LogErrorLocation, "NPU start dump program\n");
 #endif
-            cciHipState        = StHipIdle;
+            cci->hipState      = StHipIdle;
             cci->memory[0x1FF] = 1024;
             cciHipWriteNpuStatus(StNpuDumpOk);
             break;
@@ -672,7 +757,7 @@ static FcStatus cciHipFunc(PpWord funcCode)
         case Fp0DB:     // fingerprint of the 0DB image
         case Fp0D1:     // fingerprint of the 0D1 image
 
-            switch (cciHcpState)
+            switch (cci->hcpState)
                 {
             case StHcpNotInitialized:
 
@@ -683,23 +768,26 @@ static FcStatus cciHipFunc(PpWord funcCode)
                 fprintf(cciLog, "(cci_hip) NPU start macro program\n");
                 logDtError(LogErrorLocation, "NPU start macro program\n");
 #endif
-                cciHipState = StHipIdle;
-                cciHcpState = StHcpRunning;
+                cci->hipState = StHipIdle;
+                cci->hcpState = StHcpRunning;
                 cciSvmNpuInitResponse();
                 break;
 
             case StHcpReset:
-
-                /*
-                ** This is a restart: reset already done in cciHipReset
-                */
+                if (cci->doReset == FALSE)
+                    {
+                    /*
+                    ** This is a restart: when doReset is FALSE, reset has been completed
+                    ** by cciHipReset
+                    */
 #if (DEBUG > 0)
-                fprintf(cciLog, "(cci_hip) NPU restart macro program\n");
-                logDtError(LogErrorLocation, "NPU restart macro program\n");
+                    fprintf(cciLog, "(cci_hip) NPU restart macro program\n");
+                    logDtError(LogErrorLocation, "NPU restart macro program\n");
 #endif
-                cciHipState = StHipIdle;
-                cciHcpState = StHcpRunning;
-                cciSvmNpuInitResponse();
+                    cci->hipState = StHipIdle;
+                    cci->hcpState = StHcpRunning;
+                    cciSvmNpuInitResponse();
+                    }
                 break;
 
             case StHcpRunning:
@@ -822,7 +910,7 @@ static void cciHipIo(void)
                 activeChannel->data          |= 04000;
                 activeChannel->discAfterInput = TRUE;
                 activeDevice->fcode           = FcNpuNothing;
-                cciHipState = StHipIdle;
+                cci->hipState                 = StHipIdle;
 #if (DEBUG > 0)
                 fprintf(cciLog, "(cci-hip) in: ");
                 for (int i = 0; i < cci->buffer->numBytes; i++)
@@ -852,7 +940,7 @@ static void cciHipIo(void)
                     */
                     cci->buffer->numBytes = activeDevice->recordLength;
                     activeDevice->fcode   = FcNpuNothing;
-                    cciHipState           = StHipIdle;
+                    cci->hipState         = StHipIdle;
 #if (DEBUG > 0)
                     fprintf(cciLog, "(cci-hip) out: ");
                     for (int i = 0; i < cci->buffer->numBytes; i++)
@@ -873,7 +961,7 @@ static void cciHipIo(void)
 #if (DEBUG > 0)
                     fprintf(cciLog, "(cci-hip) run out of buffer space before end of the message\n");
 #endif
-                    cciHipState = StHipIdle;
+                    cci->hipState = StHipIdle;
                     npuBipAbortDownlineReceived();
                     }
                 }
@@ -1021,7 +1109,7 @@ static void cciHipDisconnect(void)
 static void cciHipWriteNpuStatus(PpWord status)
     {
     cci->lastCommandTime = cycles;
-    if (cciHcpState != StHcpRunning)
+    if (cci->hcpState != StHcpRunning)
         {
 #if DEBUG > 0
         fprintf(cciLog, "writing NPU status while software not running\n");

@@ -246,7 +246,7 @@ static enum
     {
     StIdle = 0,
     StWaitSupervision,
-    StReady,
+    StReady
     }
 svmState = StIdle;
 
@@ -393,11 +393,14 @@ void npuSvmNotifyTermDisconnect(Tcb *tp)
 void npuSvmNotifyHostRegulation(u8 regLevel)
     {
 #if DEBUG
-    fprintf(npuSvmLog, "Regulation level %02x, SVM state is %d\n", regLevel, svmState);
+    fprintf(npuSvmLog, "Notify host regulation level %02x, SVM state is %s\n", regLevel, svmStates[svmState]);
 #endif
 
     if ((svmState == StIdle) || (regLevel != oldRegLevel))
         {
+#if DEBUG
+        fprintf(npuSvmLog, "Request change from regulation level %02x\n", oldRegLevel);
+#endif
         oldRegLevel = regLevel;
         linkRegulation[BlkOffP3] = regLevel;
         npuBipRequestUplineCanned(linkRegulation, sizeof(linkRegulation));
@@ -405,8 +408,7 @@ void npuSvmNotifyHostRegulation(u8 regLevel)
 
     if ((svmState == StIdle) && ((regLevel & RegLvlCsAvailable) != 0))
         {
-        npuBipRequestUplineCanned(requestSupervision, sizeof(requestSupervision));
-        svmState = StWaitSupervision;
+        npuSvmRequestSupervision();
         }
     }
 
@@ -505,6 +507,9 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
     */
     switch (block[BlkOffPfc])
         {
+    default:
+        break;
+
     case PfcICN:
     case PfcTCN:
         if (bp->numBytes < BlkOffP3 + 1)
@@ -776,6 +781,23 @@ void npuSvmProcessTermBlock(Tcb *tp)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Send a request for supervision to host.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing
+**
+**------------------------------------------------------------------------*/
+void npuSvmRequestSupervision(void)
+    {
+    npuBipRequestUplineCanned(requestSupervision, sizeof(requestSupervision));
+    svmState = StWaitSupervision;
+#if DEBUG
+    fprintf(npuSvmLog, "Request supervision, SVM state is %s\n", svmStates[svmState]);
+#endif
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Send a TCN/TA/N to host.
 **
 **  Parameters:     Name        Description.
@@ -853,7 +875,7 @@ void npuSvmSendDiscRequest(Tcb *tp)
 **------------------------------------------------------------------------*/
 bool npuSvmIsReady(void)
     {
-    return (svmState == StReady);
+    return svmState == StReady;
     }
 
 /*--------------------------------------------------------------------------

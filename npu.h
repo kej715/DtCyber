@@ -831,30 +831,32 @@ void cdcnetReset();
 /*
 **  npu_hip.c
 */
-bool npuHipUplineBlock(NpuBuffer *bp);
 bool npuHipDownlineBlock(NpuBuffer *bp);
+void npuHipInit(void);
+bool npuHipUplineBlock(NpuBuffer *bp);
 void npuLogMessage(char *format, ...);
 
 /*
 **  npu_bip.c
 */
-void npuBipInit(void);
-void npuBipReset(void);
+void npuBipAbortDownlineReceived(void);
 NpuBuffer *npuBipBufGet(void);
 void npuBipBufRelease(NpuBuffer *bp);
+void npuBipInit(void);
+void npuBipNotifyData(int priority);
+void npuBipNotifyDownlineReceived(void);
+void npuBipNotifyServiceMessage(void);
+void npuBipNotifyUplineSent(void);
 void npuBipQueueAppend(NpuBuffer *bp, NpuQueue *queue);
-void npuBipQueuePrepend(NpuBuffer *bp, NpuQueue *queue);
 NpuBuffer *npuBipQueueExtract(NpuQueue *queue);
 NpuBuffer *npuBipQueueGetLast(NpuQueue *queue);
 bool npuBipQueueNotEmpty(NpuQueue *queue);
-void npuBipNotifyServiceMessage(void);
-void npuBipNotifyData(int priority);
-void npuBipRetryInput(void);
-void npuBipNotifyDownlineReceived(void);
-void npuBipAbortDownlineReceived(void);
+void npuBipQueuePrepend(NpuBuffer *bp, NpuQueue *queue);
 void npuBipRequestUplineTransfer(NpuBuffer *bp);
 void npuBipRequestUplineCanned(u8 *msg, int msgSize);
-void npuBipNotifyUplineSent(void);
+void npuBipReset(void);
+void npuBipRetryInput(void);
+void npuBipTryUplineBlock(void);
 
 /*
 **  npu_svm.c
@@ -867,6 +869,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp);
 void npuSvmProcessTermBlock(Tcb *tp);
 bool npuSvmConnectTerminal(Pcb *pp);
 bool npuSvmIsReady(void);
+void npuSvmRequestSupervision(void);
 void npuSvmSendDiscReply(Tcb *tp);
 void npuSvmSendDiscRequest(Tcb *tp);
 void npuSvmSendTermBlock(Tcb *tp);
@@ -889,9 +892,11 @@ void npuTipSendUserBreak(Tcb *tp, u8 bt);
 /*
 **  npu_net.c
 */
+void npuNetCheckConnections(void);
+void npuNetCheckStatus(void);
 void npuNetCloseConnection(Pcb *pcbp);
 Pcb *npuNetFindPcb(int portNumber);
-void npuNetInit(bool startup);
+void npuNetInit();
 void npuNetPreset(void);
 void npuNetReset(void);
 void npuNetConnected(Tcb *tp);
@@ -901,7 +906,6 @@ void npuNetSend(Tcb *tp, u8 *data, int len);
 void npuNetSetMaxCN(u8 cn);
 void npuNetQueueAck(Tcb *tp, u8 blockSeqNo);
 void npuNetQueueOutput(Tcb *tp, u8 *data, int len);
-void npuNetCheckStatus(void);
 
 /*
 **  npu_async.c

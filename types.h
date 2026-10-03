@@ -104,14 +104,6 @@ typedef unsigned __int128 u128;
 
 #define Is32BitNeg(x) (((x) & 0x80000000UL) != 0)
 
-#if (!defined(__cplusplus) && !defined(bool) && !defined(CURSES) && !defined(CURSES_H) && !defined(_CURSES_H))
-typedef int bool;
-#endif
-
-#if defined(__APPLE__)
-#include <stdbool.h>
-#endif
-
 typedef u16 PpWord;                     /* 12/16-bit PP word */
 typedef u64 CpWord;                     /* 60/64-bit CPU word */
 

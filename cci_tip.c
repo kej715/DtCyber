@@ -185,11 +185,6 @@ void cciTipInit(void)
         tp->state = StTermIdle;
         cciTipInputReset(tp);
         }
-
-    /*
-    **  Initialise network.
-    */
-    npuNetInit(TRUE);
     }
 
 /*--------------------------------------------------------------------------
@@ -216,11 +211,6 @@ void cciTipReset(void)
         tp->state = StTermIdle;
         npuTipInputReset(tp);
         }
-
-    /*
-    **  Re-initialise network.
-    */
-    npuNetInit(FALSE);
     }
 
 /*--------------------------------------------------------------------------

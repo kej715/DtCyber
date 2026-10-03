@@ -25,7 +25,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG    0
+#define DEBUG 0
 
 /*
 **  -------------
@@ -36,12 +36,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-
-#if defined(__FreeBSD__)
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#endif 
+#if !defined(_WIN32)
+#include <pthread.h>
+#include <unistd.h>
+#include <errno.h>
+#endif
 
 #include "const.h"
 #include "types.h"
@@ -137,11 +136,21 @@
 **  Private Typedef and Structure Definitions
 **  -----------------------------------------
 */
+typedef enum
+    {
+    StHipInit = 0,
+    StHipIdle,
+    StHipUpline,
+    StHipDownline,
+    } NpuState;
+
 typedef struct npuParam
     {
+    NpuState  state;
     PpWord    regCouplerStatus;
     PpWord    regNpuStatus;
     PpWord    regOrder;
+    bool      doReset;
     NpuBuffer *buffer;
     u8        *npuData;
     u32       lastCommandTime;
@@ -152,7 +161,7 @@ typedef struct npuParam
 **  Private Function Prototypes
 **  ---------------------------
 */
-static void npuReset(void);
+static void npuHipCreateThread(void);
 static FcStatus npuHipFunc(PpWord funcCode);
 static void npuHipIo(void);
 static void npuHipActivate(void);
@@ -161,6 +170,13 @@ static void npuHipWriteNpuStatus(PpWord status);
 static PpWord npuHipReadNpuStatus(void);
 static bool npuHipDownlineBlockImpl(NpuBuffer *bp);
 static bool npuHipUplineBlockImpl(NpuBuffer *bp);
+static void npuReset(void);
+
+#if defined(_WIN32)
+static void npuThread(void *param);
+#else
+static void *npuThread(void *param);
+#endif
 
 #if DEBUG
 static char *npuHipFunc2String(PpWord funcCode);
@@ -178,7 +194,7 @@ void (*npuHipResetFunc)(void);
 bool (*npuHipUplineBlockFunc)(NpuBuffer *bp);
 
 #if DEBUG
-FILE *npuLog = NULL;
+static FILE *npuLog = NULL;
 #endif
 
 /*
@@ -186,17 +202,8 @@ FILE *npuLog = NULL;
 **  Private Variables
 **  -----------------
 */
-static int      initCount = ReportInitCount;
+static int      initCount  = ReportInitCount;
 static NpuParam *npu;
-
-static enum
-    {
-    StHipInit,
-    StHipIdle,
-    StHipUpline,
-    StHipDownline,
-    }
-hipState = StHipInit;
 
 #if DEBUG
 static char npuLogBuf[LogLineLength + 1];
@@ -210,6 +217,7 @@ static int  npuLogCol = 0;
  **
  **--------------------------------------------------------------------------
  */
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Initialise NPU.
 **
@@ -225,13 +233,6 @@ static int  npuLogCol = 0;
 void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
     DevSlot *dp;
-
-#if DEBUG
-    if (npuLog == NULL)
-        {
-        npuLog = fopen("npulog.txt", "wt");
-        }
-#endif
 
     /*
     ** set HCP software type, exit if npuSw is not SwUndefined
@@ -264,19 +265,22 @@ void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         exit(1);
         }
 
-    dp->controllerContext = npu;
-    npu->regCouplerStatus = 0;
-    hipState = StHipInit;
+    dp->controllerContext   = npu;
+    npu->state              = StHipInit;
+    npu->regCouplerStatus   = 0;
     npuHipDownlineBlockFunc = npuHipDownlineBlockImpl;
     npuHipResetFunc         = npuReset;
     npuHipUplineBlockFunc   = npuHipUplineBlockImpl;
 
     /*
-    **  Initialise BIP, SVC and TIP.
+    **  Initialize HIP
     */
-    npuBipInit();
-    npuSvmInit();
-    npuTipInit();
+    npuHipInit();
+
+    /*
+    **  Create NPU emulation thread
+    */
+    npuHipCreateThread();
 
     /*
     **  Print a friendly message.
@@ -285,6 +289,24 @@ void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     printf("                 Host ID: %s\n", npuNetHostID);
     printf("            Coupler node: %u\n", npuSvmCouplerNode);
     printf("                NPU node: %u\n", npuSvmNpuNode);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Initialise HIP.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void npuHipInit(void)
+    {
+#if DEBUG
+    if (npuLog == NULL)
+        {
+        npuLog = fopen("npulog.txt", "wt");
+        }
+#endif
     }
 
 /*--------------------------------------------------------------------------
@@ -307,7 +329,7 @@ bool npuHipUplineBlockImpl(NpuBuffer *bp)
     int prus;
     int words;
 
-    if (hipState != StHipIdle)
+    if (npu->state != StHipIdle)
         {
         return (FALSE);
         }
@@ -343,7 +365,7 @@ bool npuHipUplineBlockImpl(NpuBuffer *bp)
         }
 
     npu->buffer = bp;
-    hipState    = StHipUpline;
+    npu->state  = StHipUpline;
 
     return (TRUE);
     }
@@ -364,7 +386,7 @@ bool npuHipDownlineBlock(NpuBuffer *bp)
 
 bool npuHipDownlineBlockImpl(NpuBuffer *bp)
     {
-    if (hipState != StHipIdle)
+    if (npu->state != StHipIdle)
         {
         return (FALSE);
         }
@@ -378,7 +400,7 @@ bool npuHipDownlineBlockImpl(NpuBuffer *bp)
 
     npuHipWriteNpuStatus(StNpuReadyOutput);
     npu->buffer = bp;
-    hipState    = StHipDownline;
+    npu->state  = StHipDownline;
 
     return (TRUE);
     }
@@ -416,7 +438,104 @@ void npuLogMessage(char *format, ...)
  */
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Reset NPU.
+**  Purpose:        Create thread which will emulate an NPU.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void npuHipCreateThread(void)
+    {
+#if defined(_WIN32)
+    DWORD  dwThreadId;
+    HANDLE hThread;
+
+    /*
+    **  Create TCP thread.
+    */
+    hThread = CreateThread(
+        NULL,                                       // no security attribute
+        0,                                          // default stack size
+        (LPTHREAD_START_ROUTINE)npuThread,
+        (LPVOID)NULL,                               // thread parameter
+        0,                                          // not suspended
+        &dwThreadId);                               // returns thread ID
+
+    if (hThread == NULL)
+        {
+        logDtError(LogErrorLocation, "Failed to create NPU thread\n");
+        exit(1);
+        }
+#else
+    int            rc;
+    pthread_t      thread;
+    pthread_attr_t attr;
+
+    /*
+    **  Create POSIX thread with default attributes.
+    */
+    pthread_attr_init(&attr);
+    rc = pthread_create(&thread, &attr, npuThread, NULL);
+    if (rc < 0)
+        {
+        logDtError(LogErrorLocation, "Failed to create NPU thread\n");
+        exit(1);
+        }
+#endif
+    puts("(npu_hip) NPU thread created");
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        NPU emulation thread.
+**
+**  Parameters:     Name        Description.
+**                  param       unused
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+#if defined(_WIN32)
+static void npuThread(void *param)
+#else
+static void *npuThread(void *param)
+#endif
+    {
+    /*
+    **  Initialise BIP, SVC, and TIP.
+    */
+    npuBipInit();
+    npuSvmInit();
+    npuTipInit();
+    npuNetInit();
+
+    for (;;)
+        {
+        if (npu->doReset)
+            {
+            /*
+            **  Reset all subsystems - order matters
+            */
+            npuNetReset();
+            npuTipReset();
+            npuSvmReset();
+            npuBipReset();
+            npu->doReset = FALSE;
+            }
+        /*
+        **  Poll network status.
+        */
+        npuNetCheckConnections();
+        npuNetCheckStatus();
+        }
+
+#if !defined(_WIN32)
+    return NULL;
+#endif
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Set NPU reset request indication.
 **
 **  Parameters:     Name        Description.
 **
@@ -425,20 +544,7 @@ void npuLogMessage(char *format, ...)
 **------------------------------------------------------------------------*/
 static void npuReset(void)
     {
-    /*
-    **  Reset all subsystems - order matters!
-    */
-    npuNetReset();
-    npuTipReset();
-    npuSvmReset();
-    npuBipReset();
-
-    /*
-    **  Reset HIP state.
-    */
-    memset(npu, 0, sizeof(NpuParam));
-    initCount = ReportInitCount;
-    hipState  = StHipInit;
+    npu->doReset = TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -479,7 +585,7 @@ static FcStatus npuHipFunc(PpWord funcCode)
         return (FcDeclined);
 
     case FcNpuInCouplerStatus:
-        switch (hipState)
+        switch (npu->state)
             {
         case StHipInit:
             if (initCount > 0)
@@ -492,7 +598,7 @@ static FcStatus npuHipFunc(PpWord funcCode)
                 }
             else
                 {
-                hipState = StHipIdle;
+                npu->state = StHipIdle;
                 npuHipWriteNpuStatus(StNpuIdle);
                 }
 
@@ -500,23 +606,12 @@ static FcStatus npuHipFunc(PpWord funcCode)
 
         case StHipIdle:
             /*
-            **  Poll network status.
+            **  Announce idle state to PIP at intervals of less then one second,
+            **  otherwise PIP will assume that the NPU is dead.
             */
-            npuNetCheckStatus();
-
-            /*
-            **  If no upline data pending.
-            */
-            if (hipState == StHipIdle)
+            if (cycles - npu->lastCommandTime > CyclesOneSecond)
                 {
-                /*
-                **  Announce idle state to PIP at intervals of less then one second,
-                **  otherwise PIP will assume that the NPU is dead.
-                */
-                if (cycles - npu->lastCommandTime > CyclesOneSecond)
-                    {
-                    npuHipWriteNpuStatus(StNpuIdle);
-                    }
+                npuHipWriteNpuStatus(StNpuIdle);
                 }
             break;
 
@@ -533,7 +628,7 @@ static FcStatus npuHipFunc(PpWord funcCode)
             /*
             **  Unexpected input request by host.
             */
-            hipState     = StHipIdle;
+            npu->state   = StHipIdle;
             npu->npuData = NULL;
             activeDevice->recordLength = 0;
             activeDevice->fcode        = 0;
@@ -552,7 +647,7 @@ static FcStatus npuHipFunc(PpWord funcCode)
             /*
             **  Unexpected output request by host.
             */
-            hipState     = StHipIdle;
+            npu->state   = StHipIdle;
             npu->npuData = NULL;
             activeDevice->recordLength = 0;
             activeDevice->fcode        = 0;
@@ -569,12 +664,18 @@ static FcStatus npuHipFunc(PpWord funcCode)
         break;
 
     case FcNpuOutNpuOrder:
-        hipState = StHipIdle;
+        npu->state = StHipIdle;
         npuHipWriteNpuStatus(StNpuIdle);
         break;
 
     case FcNpuClearNpu:
-        npuReset();
+        /*
+        **  Reset HIP state.
+        */
+        memset(npu, 0, sizeof(NpuParam));
+        initCount    = ReportInitCount;
+        npu->state   = StHipInit;
+        npu->doReset = TRUE;
         break;
 
     /*
@@ -668,7 +769,7 @@ static void npuHipIo(void)
                 activeChannel->data          |= 04000;
                 activeChannel->discAfterInput = TRUE;
                 activeDevice->fcode           = 0;
-                hipState = StHipIdle;
+                npu->state                    = StHipIdle;
                 npuBipNotifyUplineSent();
                 }
 #if DEBUG
@@ -696,7 +797,7 @@ static void npuHipIo(void)
                     */
                     npu->buffer->numBytes = activeDevice->recordLength;
                     activeDevice->fcode   = 0;
-                    hipState = StHipIdle;
+                    npu->state            = StHipIdle;
                     npuBipNotifyDownlineReceived();
                     }
                 else if (activeDevice->recordLength >= MaxBuffer)
@@ -705,7 +806,7 @@ static void npuHipIo(void)
                     **  We run out of buffer space before the end of the message.
                     */
                     activeDevice->fcode = 0;
-                    hipState            = StHipIdle;
+                    npu->state          = StHipIdle;
                     npuBipAbortDownlineReceived();
                     }
                 }
@@ -970,7 +1071,7 @@ static void npuLogByte(int b)
         b = '.';
         }
 
-    npuLogBuf[col] = b;
+    npuLogBuf[col] = (u8)b;
     if (++npuLogCol == 16)
         {
         npuLogFlush();

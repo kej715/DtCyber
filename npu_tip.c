@@ -381,11 +381,6 @@ void npuTipInit(void)
         npuTipInputReset(tp);
         }
 
-    /*
-    **  Initialise network.
-    */
-    npuNetInit(TRUE);
-
 #if DEBUG
     npuTipLog = fopen("tiplog.txt", "wt");
     if (npuTipLog == NULL)
@@ -420,11 +415,6 @@ void npuTipReset(void)
         tp->state = StTermIdle;
         npuTipInputReset(tp);
         }
-
-    /*
-    **  Re-initialise network.
-    */
-    npuNetInit(FALSE);
     }
 
 /*--------------------------------------------------------------------------

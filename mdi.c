@@ -25,10 +25,7 @@
 **--------------------------------------------------------------------------
 */
 
-/*
-**  If this is set to 1, the DEBUG flag in npu_hip.c must also be set to 1.
-*/
-#define DEBUG    0
+#define DEBUG 0
 
 /*
 **  -------------
@@ -40,14 +37,11 @@
 #include <string.h>
 #include <stdarg.h>
 #include <time.h>
-
-
-#if defined(__FreeBSD__)
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+#if !defined(_WIN32)
+#include <pthread.h>
+#include <unistd.h>
+#include <errno.h>
 #endif
-
 
 #include "const.h"
 #include "types.h"
@@ -102,7 +96,7 @@
 */
 #define MdiStateMdiReset          000
 #define MdiStateDiagnostics       010
-#define MdiStateStarting          030
+#define MdiStateStarting          020
 #define MdiStateInputAvailable    030
 #define MdiStateLoading           040
 #define MdiStateMciReset          050
@@ -143,7 +137,7 @@
 #define MdiHdrLen                 19
 
 /*
-** MDI I/O word state
+**  MDI I/O word state
 */
 #define MdiIoStateEvenWord        0
 #define MdiIoStateOddWord         1
@@ -154,9 +148,9 @@
 **  -----------------------
 */
 #if DEBUG
-#define HexColumn(x)      (4 * (x) + 1 + 4)
-#define AsciiColumn(x)    (HexColumn(16) + 2 + (x))
-#define LogLineLength    (AsciiColumn(24))
+#define HexColumn(x)   (4 * (x) + 1 + 4)
+#define AsciiColumn(x) (HexColumn(16) + 2 + (x))
+#define LogLineLength  (AsciiColumn(24))
 #endif
 
 /*
@@ -164,25 +158,40 @@
 **  Private Typedef and Structure Definitions
 **  -----------------------------------------
 */
-#define MdiMaxBuffer    3000
+#define MdiMaxBuffer 3000
 
-typedef struct mdiBuffer
+typedef enum
     {
-    u16 offset;
-    u16 numBytes;
-    u8  blockSeqNo;
-    u8  data[MdiMaxBuffer];
-    } MdiBuffer;
+    StMdiStarting = 0,
+    StMdiSendRegLevel,
+    StMdiOperational
+    } MdiState;
+
+typedef struct chIoBuffer
+    {
+    bool       isReady;
+    u16        offset;
+    u16        numBytes;
+    u8         blockSeqNo;
+    u8         data[MdiMaxBuffer];
+    } ChIoBuffer;
 
 typedef struct mdiParam
     {
-    u8        wordState;
-    u8        headerIndex;
-    u8        header[MdiHdrLen];
-    u32       parcel;
-    time_t    svDeadline;
-    NpuBuffer *uplineData;
-    MdiBuffer downlineData;
+    MdiState   state;
+    u8         hipRequest;
+#define          HipReqNone           0
+#define          HipReqNotifyUpline   1
+#define          HipReqRegLevel       2
+#define          HipReqSupervision    3
+    bool       doReset;
+    u8         wordState;
+    u8         headerIndex;
+    u8         header[MdiHdrLen];
+    u32        parcel;
+    time_t     svDeadline;
+    ChIoBuffer uplineData;
+    ChIoBuffer downlineData;
     } MdiParam;
 
 /*
@@ -190,6 +199,7 @@ typedef struct mdiParam
 **  Private Function Prototypes
 **  ---------------------------
 */
+static void mdiCreateThread(void);
 static void mdiReset(void);
 static FcStatus mdiHipFunc(PpWord funcCode);
 static void mdiHipIo(void);
@@ -199,12 +209,19 @@ static PpWord mdiHipReadMdiStatus(void);
 static bool mdiHipDownlineBlockImpl(NpuBuffer *bp);
 static bool mdiHipUplineBlockImpl(NpuBuffer *bp);
 
+#if defined(_WIN32)
+static void mdiThread(void *param);
+#else
+static void *mdiThread(void *param);
+#endif
+
 #if DEBUG
 static char *mdiHipFunc2String(PpWord funcCode);
 static void mdiLogBuffer(u8 *dp);
-static void mdiLogBytes(int b);
+static void mdiLogChIoBuffer(ChIoBuffer *bp);
+static void mdiLogParcel(u32 parcel);
 static void mdiLogFlush(void);
-static void mdiLogPpWord(int b);
+static void mdiLogPpWord(PpWord word);
 static char *mdiPfc2String(u8 pfc);
 static char *mdiSfc2String(u8 sfc);
 #endif
@@ -220,7 +237,7 @@ extern void (*npuHipResetFunc)(void);
 extern bool (*npuHipUplineBlockFunc)(NpuBuffer *bp);
 
 #if DEBUG
-extern FILE *npuLog;
+static FILE *mdiLog;
 #endif
 
 /*
@@ -228,14 +245,6 @@ extern FILE *npuLog;
 **  Private Variables
 **  -----------------
 */
-static enum
-    {
-    StMdiStarting,
-    StMdiSendRegLevel,
-    StMdiOperational
-    }
-mdiState = StMdiStarting;
-
 static MdiParam *mdi;
 
 static u8 detailedStartingResponse[] =
@@ -286,32 +295,10 @@ static u8 mdiRegLevelIndication[] =
     0x00                           // unused, padding
     };
 
-static u8 mdiSupervisionRequest[] =
-    {
-    0x00,             // DN
-    0x00,             // SN
-    0x00,             // CN
-    0x84,             // high prio service message
-    0x0E,             // PFC (supervise)
-    0x0A,             // SFC (initiate supervision)
-    0x00,             // PS
-    0x00,             // PL
-    0x00,             // RI
-    0x00, 0x00, 0x00, // not used
-    0x03,             // CCP version
-    0x01,             // ...
-    0x00,             // CCP level
-    0x00,             // ...
-    0x00,             // CCP cycle or variant
-    0x00,             // ...
-    0x00,             // not used
-    0x00, 0x00        // NCF version in NDL file (ignored)
-    };
-
 #if DEBUG
 static char mdiLogBuf[LogLineLength + 1];
-static int  mdiLogBytesCol = 0;
-static int  mdiLogWordCol  = 0;
+static int  mdiLogParcelCol = 0;
+static int  mdiLogWordCol   = 0;
 #endif
 
 /*
@@ -338,9 +325,9 @@ void mdiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     DevSlot *dp;
 
 #if DEBUG
-    if (npuLog == NULL)
+    if (mdiLog == NULL)
         {
-        npuLog = fopen("mdilog.txt", "wt");
+        mdiLog = fopen("mdilog.txt", "wt");
         }
 #endif
 
@@ -374,26 +361,22 @@ void mdiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         logDtError(LogErrorLocation, "Failed to allocate mdi context block\n");
         exit(1);
         }
-
     dp->controllerContext   = mdi;
     npuHipDownlineBlockFunc = mdiHipDownlineBlockImpl;
     npuHipResetFunc         = mdiReset;
     npuHipUplineBlockFunc   = mdiHipUplineBlockImpl;
 
-    /*
-    **  Initialize node numbers in upline canned messages
-    */
-    mdiSupervisionRequest[BlkOffDN] = npuSvmCouplerNode;
-    mdiSupervisionRequest[BlkOffSN] = npuSvmNpuNode;
+    mdi->state              = StMdiStarting;
 
     /*
-    **  Initialise BIP, SVC, TIP, and LIP.
+    **  Initialize HIP
     */
-    npuBipInit();
-    npuSvmInit();
-    npuTipInit();
+    npuHipInit();
 
-    mdiState = StMdiStarting;
+    /*
+    **  Create MDI emulation thread
+    */
+    mdiCreateThread();
 
     /*
     **  Print a friendly message.
@@ -402,37 +385,6 @@ void mdiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     printf("          Host ID: %s\n", npuNetHostID);
     printf("(mdi    ) Coupler node: %u\n", npuSvmCouplerNode);
     printf("          MDI node: %u\n", npuSvmNpuNode);
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Request sending of upline block.
-**
-**  Parameters:     Name        Description.
-**                  bp          pointer to first upline buffer.
-**
-**  Returns:        TRUE if buffer can be accepted, FALSE otherwise.
-**
-**------------------------------------------------------------------------*/
-bool mdiHipUplineBlockImpl(NpuBuffer *bp)
-    {
-    if (mdi->uplineData != NULL)
-        {
-#if DEBUG
-        if ((bp != mdi->uplineData)
-            || (bp->data[BlkOffCN] != mdi->uplineData->data[BlkOffCN]))
-            {
-            logDtError(LogErrorLocation, "MDI upline block rejected, CN=%02X, BT=%02X, PDU size=%d\n", bp->data[BlkOffCN],
-                       bp->data[BlkOffBTBSN] & BlkMaskBT, bp->numBytes);
-            traceStack(stderr);
-            }
-#endif
-
-        return (FALSE);
-        }
-
-    mdi->uplineData = bp;
-
-    return (TRUE);
     }
 
 /*--------------------------------------------------------------------------
@@ -446,17 +398,63 @@ bool mdiHipUplineBlockImpl(NpuBuffer *bp)
 **------------------------------------------------------------------------*/
 bool mdiHipDownlineBlockImpl(NpuBuffer *bp)
     {
-    if ((bp == NULL) || (mdi->downlineData.numBytes < 1))
+    if (bp == NULL || mdi->downlineData.isReady == FALSE || mdi->downlineData.numBytes < 1)
         {
-        return (FALSE);
+#if DEBUG
+        fprintf(mdiLog, "\n    Downline block rejected, CN=%02X, BT=%02X, PDU size=%d, downline ready %s\n", bp->data[BlkOffCN],
+                   bp->data[BlkOffBTBSN] & BlkMaskBT, bp->numBytes, mdi->downlineData.isReady ? "TRUE" : "FALSE");
+        traceStack(mdiLog);
+#endif
+        return FALSE;
         }
 
     bp->offset     = 0;
     bp->numBytes   = mdi->downlineData.numBytes;
     bp->blockSeqNo = mdi->downlineData.blockSeqNo;
     memcpy(bp->data, mdi->downlineData.data, mdi->downlineData.numBytes);
+#if DEBUG
+    fputs("\n    Copy downline block from channel buffer", mdiLog);
+    mdiLogChIoBuffer(&mdi->downlineData);
+#endif
+    mdi->downlineData.offset     = 0;
+    mdi->downlineData.numBytes   = 0;
+    mdi->downlineData.isReady    = FALSE;
 
-    return (TRUE);
+    return TRUE;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Request sending of upline block.
+**
+**  Parameters:     Name        Description.
+**                  bp          pointer to first upline buffer.
+**
+**  Returns:        TRUE if buffer can be accepted, FALSE otherwise.
+**
+**------------------------------------------------------------------------*/
+bool mdiHipUplineBlockImpl(NpuBuffer *bp)
+    {
+    if (mdi->uplineData.isReady)
+        {
+#if DEBUG
+        fprintf(mdiLog, "\n .   Upline block rejected, CN=%02X, BT=%02X, PDU size=%d, upline ready %s\n", bp->data[BlkOffCN],
+                   bp->data[BlkOffBTBSN] & BlkMaskBT, bp->numBytes, mdi->uplineData.isReady ? "TRUE" : "FALSE");
+        traceStack(mdiLog);
+#endif
+        return FALSE;
+        }
+
+    memcpy(mdi->uplineData.data, bp->data, bp->numBytes);
+    mdi->uplineData.offset     = 0;
+    mdi->uplineData.numBytes   = bp->numBytes;
+    mdi->uplineData.blockSeqNo = bp->blockSeqNo;
+#if DEBUG
+    fputs("\n    Copy upline block to channel buffer", mdiLog);
+    mdiLogChIoBuffer(&mdi->uplineData);
+#endif
+    mdi->uplineData.isReady    = TRUE;
+
+    return TRUE;
     }
 
 /*
@@ -468,7 +466,200 @@ bool mdiHipDownlineBlockImpl(NpuBuffer *bp)
  */
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Reset MDI.
+**  Purpose:        Create thread which will emulate an MDI.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void mdiCreateThread(void)
+    {
+#if defined(_WIN32)
+    DWORD  dwThreadId;
+    HANDLE hThread;
+
+    /*
+    **  Create TCP thread.
+    */
+    hThread = CreateThread(
+        NULL,                                       // no security attribute
+        0,                                          // default stack size
+        (LPTHREAD_START_ROUTINE)mdiThread,
+        (LPVOID)NULL,                               // thread parameter
+        0,                                          // not suspended
+        &dwThreadId);                               // returns thread ID
+
+    if (hThread == NULL)
+        {
+        logDtError(LogErrorLocation, "Failed to create MDI thread\n");
+        exit(1);
+        }
+#else
+    int            rc;
+    pthread_t      thread;
+    pthread_attr_t attr;
+
+    /*
+    **  Create POSIX thread with default attributes.
+    */
+    pthread_attr_init(&attr);
+    rc = pthread_create(&thread, &attr, mdiThread, NULL);
+    if (rc < 0)
+        {
+        logDtError(LogErrorLocation, "Failed to create MDI thread\n");
+        exit(1);
+        }
+#endif
+    puts("(mdi    ) MDI thread created");
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        MDI emulation thread.
+**
+**  Parameters:     Name        Description.
+**                  param       unused
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+#if defined(_WIN32)
+static void mdiThread(void *param)
+#else
+static void *mdiThread(void *param)
+#endif
+    {
+    u8         blockType;
+    ChIoBuffer *bp;
+    u8         byte;
+    u8         prio;
+
+    /*
+    **  Initialise BIP, SVC, TIP, and network I/O.
+    */
+    npuBipInit();
+    npuSvmInit();
+    npuTipInit();
+    npuNetInit();
+
+    for (;;)
+        {
+        if (mdi->doReset)
+            {
+            /*
+            **  Reset all subsystems - order matters
+            */
+            cdcnetReset();
+            npuNetReset();
+            npuTipReset();
+            npuSvmReset();
+            npuBipReset();
+            mdi->doReset = FALSE;
+            }
+        /*
+        ** .Process upline actions, if any
+        */
+        if (mdi->hipRequest != HipReqNone)
+            {
+#if DEBUG
+            mdiLogFlush();
+            fputs("\n    ", mdiLog);
+#endif
+            switch (mdi->hipRequest)
+                {
+            case HipReqNotifyUpline:
+#if DEBUG
+                fputs("Notify upline block sent", mdiLog);
+#endif
+                npuBipNotifyUplineSent();
+                break;
+
+            case HipReqRegLevel:
+#if DEBUG
+                fputs("Notify upline regulation", mdiLog);
+#endif
+                npuBipRequestUplineCanned(mdiRegLevelIndication, sizeof(mdiRegLevelIndication));
+                break;
+
+            case HipReqSupervision:
+#if DEBUG
+                fputs("Request supervision", mdiLog);
+#endif
+                npuSvmRequestSupervision();
+                break;
+
+            default:
+                break;
+                }
+
+            mdi->hipRequest = HipReqNone;
+            }
+
+        /*
+        **  Process upline block, if any and channel buffer idle
+        */
+        if (mdi->uplineData.isReady == FALSE)
+            {
+            npuBipTryUplineBlock();
+            }
+
+        /*
+        **  Process downline block, if any
+        */
+        if (mdi->downlineData.isReady)
+            {
+#if DEBUG
+            fputs("\n    ", mdiLog);
+#endif
+            bp             = &mdi->downlineData;
+            byte           = bp->data[BlkOffBTBSN];
+            blockType      = byte & BlkMaskBT;
+            prio           = (byte >> BlkShiftPRIO) & BlkMaskPRIO;
+            bp->blockSeqNo = (byte >> BlkShiftBSN) & BlkMaskBSN;
+            if ((blockType == BtHTCMD) && (bp->data[BlkOffCN] == 0))
+                {
+                if (bp->data[BlkOffPfc] == 0x01) // Link regulation
+                    {
+#if DEBUG
+                    fputs("Notify downline host regulation", mdiLog);
+#endif
+                    npuSvmNotifyHostRegulation(3 | 0x04); // reg level 3 | CS
+                    mdi->downlineData.isReady = FALSE;
+                    }
+                else
+                    {
+#if DEBUG
+                    fputs("Notify downline service message", mdiLog);
+#endif
+                    npuBipNotifyServiceMessage();
+                    npuBipNotifyDownlineReceived();
+                    }
+                }
+            else
+                {
+#if DEBUG
+                fputs("Notify downline data", mdiLog);
+#endif
+                npuBipNotifyData(prio);
+                npuBipNotifyDownlineReceived();
+                }
+            }
+
+        /*
+        **  Poll network status.
+        */
+        npuNetCheckConnections();
+        npuNetCheckStatus();
+        cdcnetCheckStatus();
+        }
+
+#if !defined(_WIN32)
+    return NULL;
+#endif
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Set MDI reset request indication.
 **
 **  Parameters:     Name        Description.
 **
@@ -477,21 +668,7 @@ bool mdiHipDownlineBlockImpl(NpuBuffer *bp)
 **------------------------------------------------------------------------*/
 static void mdiReset(void)
     {
-    /*
-    **  Reset all subsystems - order matters!
-    */
-    cdcnetReset();
-    npuNetReset();
-    npuTipReset();
-    npuSvmReset();
-    npuBipReset();
-
-    /*
-    **  Reset HIP state.
-    */
-    memset(mdi, 0, sizeof(MdiParam));
-
-    mdiState = StMdiStarting;
+    mdi->doReset = TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -505,17 +682,15 @@ static void mdiReset(void)
 **------------------------------------------------------------------------*/
 static FcStatus mdiHipFunc(PpWord funcCode)
     {
-    time_t    currentTime;
-    MdiBuffer *mbp;
-    NpuBuffer *nbp;
-    u16       numBytes;
+    ChIoBuffer *bp;
+    time_t     currentTime;
+    u16        numBytes;
 
     funcCode &= ~FcMdiEqMask;
 
 #if DEBUG
     mdiLogFlush();
-    fprintf(npuLog, "\n%06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
-            traceSequenceNo,
+    fprintf(mdiLog, "\nPP:%02o CH:%02o f:%04o T:%-25s  >   ",
             activePpu->id,
             activeChannel->id,
             funcCode,
@@ -527,40 +702,37 @@ static FcStatus mdiHipFunc(PpWord funcCode)
     default:
         if ((funcCode >= FcMdiReqProtoVersion) && (funcCode <= FcMdiReqProtoVersion + 0177))
             {
-            mdiState = StMdiSendRegLevel;
+            mdi->state = StMdiSendRegLevel;
             }
         else
             {
 #if DEBUG
-            fprintf(npuLog, " FUNC not implemented & declined!");
+            fprintf(mdiLog, " FUNC not implemented & declined!");
 #endif
 
-            return (FcDeclined);
+            return FcDeclined;
             }
         break;
 
     case FcMdiReqGeneralStatus:
         currentTime = getSeconds();
-        if (mdiState == StMdiSendRegLevel)
+        if (mdi->state == StMdiSendRegLevel)
             {
-            npuBipRequestUplineCanned(mdiRegLevelIndication, sizeof(mdiRegLevelIndication));
+            mdi->state      = StMdiOperational;
+            mdi->hipRequest = HipReqRegLevel;
             mdi->svDeadline = currentTime + (time_t)10; // allow 10 seconds for supervision
-            mdiState        = StMdiOperational;
             }
         else
             {
-            if ((mdiState == StMdiOperational) && !npuSvmIsReady() && (currentTime >= mdi->svDeadline))
+            if ((mdi->state == StMdiOperational) && !npuSvmIsReady() && (currentTime >= mdi->svDeadline))
                 {
+#if DEBUG
+                fputs("\n    Supervision timeout", mdiLog);
+#endif
                 npuLogMessage("Supervision timeout");
-                npuBipRequestUplineCanned(mdiSupervisionRequest, sizeof(mdiSupervisionRequest));
+                mdi->hipRequest = HipReqSupervision;
                 mdi->svDeadline = currentTime + (time_t)5;
                 }
-
-            /*
-            **  Poll network status.
-            */
-            npuNetCheckStatus();
-            cdcnetCheckStatus();
             }
         break;
 
@@ -572,8 +744,7 @@ static FcStatus mdiHipFunc(PpWord funcCode)
         break;
 
     case FcMdiReadData:
-        nbp = mdi->uplineData;
-        if (nbp == NULL)
+        if (mdi->uplineData.isReady == FALSE)
             {
             /*
             **  Unexpected input request by host.
@@ -581,21 +752,21 @@ static FcStatus mdiHipFunc(PpWord funcCode)
             activeDevice->recordLength = 0;
             activeDevice->fcode        = 0;
 
-            return (FcDeclined);
+            return FcDeclined;
             }
-
-        numBytes         = nbp->numBytes + (MdiHdrLen - MdiHdrOffDstSAP);
-        nbp->offset      = 0;
-        mdi->headerIndex = 0;
+        bp                                 = &mdi->uplineData;
+        numBytes                           = bp->numBytes + (MdiHdrLen - MdiHdrOffDstSAP);
+        bp->offset                         = 0;
+        mdi->headerIndex                   = 0;
         mdi->header[MdiHdrOffBlockLen]     = numBytes >> 8;
         mdi->header[MdiHdrOffBlockLen + 1] = numBytes & 0xff;
-        mdi->wordState             = MdiIoStateEvenWord;
-        mdi->parcel                = 0;
-        activeDevice->recordLength = MdiHdrLen + nbp->numBytes;
+        mdi->wordState                     = MdiIoStateEvenWord;
+        mdi->parcel                        = 0;
+        activeDevice->recordLength         = MdiHdrLen + bp->numBytes;
         break;
 
     case FcMdiWriteData:
-        if (mdi->downlineData.numBytes > 0)
+        if (mdi->downlineData.isReady)
             {
             /*
             **  Unexpected output request by host.
@@ -603,22 +774,27 @@ static FcStatus mdiHipFunc(PpWord funcCode)
             activeDevice->recordLength = 0;
             activeDevice->fcode        = 0;
 
-            return (FcDeclined);
+            return FcDeclined;
             }
-
         mdi->downlineData.offset           = 0;
         mdi->headerIndex                   = 0;
         mdi->header[MdiHdrOffBlockLen]     = 0;
         mdi->header[MdiHdrOffBlockLen + 1] = 0;
-        mdi->wordState             = MdiIoStateEvenWord;
-        mdi->parcel                = 0;
-        mbp                        = &mdi->downlineData;
-        mbp->offset                = mbp->numBytes = 0;
-        activeDevice->recordLength = 0;
+        mdi->wordState                     = MdiIoStateEvenWord;
+        mdi->parcel                        = 0;
+        bp                                 = &mdi->downlineData;
+        bp->offset                         = 0;
+        bp->numBytes                       = 0;
+        activeDevice->recordLength         = 0;
         break;
 
     case FcMdiMasterClear:
-        mdiReset();
+        /*
+        **  Reset MDI state.
+        */
+        memset(mdi, 0, sizeof(MdiParam));
+        mdi->state   = StMdiStarting;
+        mdi->doReset = TRUE;
         break;
 
     /*
@@ -638,12 +814,12 @@ static FcStatus mdiHipFunc(PpWord funcCode)
     case FcMdiNormalFlowCtrlOn:
     case FcMdiNormalFlowCtrlOff:
     case FcMdiReqProtoVersion:
-        return (FcProcessed);
+        return FcProcessed;
         }
 
     activeDevice->fcode = funcCode;
 
-    return (FcAccepted);
+    return FcAccepted;
     }
 
 /*--------------------------------------------------------------------------
@@ -656,11 +832,10 @@ static FcStatus mdiHipFunc(PpWord funcCode)
 **------------------------------------------------------------------------*/
 static void mdiHipIo(void)
     {
-    int       i;
-    MdiBuffer *mbp;
-    NpuBuffer *nbp;
-    int       shift;
-    u8        *u8p;
+    ChIoBuffer *bp;
+    int        i;
+    int        shift;
+    u8         *u8p;
 
     switch (activeDevice->fcode)
         {
@@ -668,10 +843,12 @@ static void mdiHipIo(void)
         break;
 
     case FcMdiReqGeneralStatus:
-        activeChannel->data = mdiHipReadMdiStatus();
-        activeChannel->full = TRUE;
+        activeChannel->data           = mdiHipReadMdiStatus();
+        activeChannel->full           = TRUE;
+        activeChannel->discAfterInput = TRUE;
+        activeDevice->fcode           = 0;
 #if DEBUG
-        fprintf(npuLog, " %03X", activeChannel->data);
+        fprintf(mdiLog, " %03X", activeChannel->data);
 #endif
         break;
 
@@ -684,7 +861,7 @@ static void mdiHipIo(void)
         if (mdi->wordState == MdiIoStateEvenWord)
             {
             mdi->parcel = 0;
-            u8p         = (mdiState == StMdiStarting) ? detailedStartingResponse : detailedOperationalResponse;
+            u8p = (mdi->state == StMdiStarting) ? detailedStartingResponse : detailedOperationalResponse;
             for (i = 0; i < 3; i++)
                 {
                 mdi->parcel <<= 8;
@@ -706,7 +883,7 @@ static void mdiHipIo(void)
         mdiLogPpWord(activeChannel->data);
         if (mdi->wordState == MdiIoStateEvenWord)
             {
-            mdiLogBytes(mdi->parcel);
+            mdiLogParcel(mdi->parcel);
             }
 #endif
 
@@ -717,19 +894,15 @@ static void mdiHipIo(void)
             */
             activeChannel->discAfterInput = TRUE;
             activeDevice->fcode           = 0;
-            mdi->uplineData = NULL;
-            npuBipNotifyUplineSent();
             }
-
         break;
 
     case FcMdiReadData:
-        nbp = mdi->uplineData;
-        if (activeChannel->full || (nbp == NULL) || (activeDevice->recordLength < 1))
+        if (activeChannel->full || (mdi->uplineData.isReady == FALSE) || (activeDevice->recordLength < 1))
             {
             break;
             }
-
+        bp = &mdi->uplineData;
         if (mdi->wordState == MdiIoStateEvenWord)
             {
             mdi->parcel = 0;
@@ -740,9 +913,9 @@ static void mdiHipIo(void)
                     {
                     mdi->parcel |= mdi->header[mdi->headerIndex++];
                     }
-                else if (nbp->offset < nbp->numBytes)
+                else if (bp->offset < bp->numBytes)
                     {
-                    mdi->parcel |= nbp->data[nbp->offset++];
+                    mdi->parcel |= bp->data[bp->offset++];
                     }
                 }
             activeChannel->data = (PpWord)(mdi->parcel >> 12);
@@ -761,7 +934,7 @@ static void mdiHipIo(void)
         mdiLogPpWord(activeChannel->data);
         if (mdi->wordState == MdiIoStateEvenWord)
             {
-            mdiLogBytes(mdi->parcel);
+            mdiLogParcel(mdi->parcel);
             }
 #endif
 
@@ -772,15 +945,14 @@ static void mdiHipIo(void)
             */
 #if DEBUG
             mdiLogFlush();
-            mdiLogBuffer(mdi->uplineData->data);
-            fprintf(npuLog, "    PDU size=%d\n", mdi->uplineData->numBytes);
+            mdiLogBuffer(mdi->uplineData.data);
+            fprintf(mdiLog, "    PDU size=%d", mdi->uplineData.numBytes);
 #endif
             activeChannel->discAfterInput = TRUE;
             activeDevice->fcode           = 0;
-            mdi->uplineData = NULL;
-            npuBipNotifyUplineSent();
+            mdi->uplineData.isReady       = FALSE;
+            mdi->hipRequest               = HipReqNotifyUpline;
             }
-
         break;
 
     case FcMdiWriteData:
@@ -796,8 +968,7 @@ static void mdiHipIo(void)
                 {
                 mdi->parcel   |= activeChannel->data;
                 mdi->wordState = MdiIoStateEvenWord;
-
-                mbp = &mdi->downlineData;
+                bp             = &mdi->downlineData;
                 for (i = 0, shift = 16; i < 3; shift -= 8, i++)
                     {
                     if (mdi->headerIndex < MdiHdrLen)
@@ -805,9 +976,9 @@ static void mdiHipIo(void)
                         mdi->headerIndex           += 1;
                         activeDevice->recordLength += 1;
                         }
-                    else if (mbp->numBytes < MdiMaxBuffer)
+                    else if (bp->numBytes < MdiMaxBuffer)
                         {
-                        mbp->data[mbp->numBytes++]  = (mdi->parcel >> shift) & 0xff;
+                        bp->data[bp->numBytes++]    = (mdi->parcel >> shift) & 0xff;
                         activeDevice->recordLength += 1;
                         }
                     }
@@ -816,7 +987,7 @@ static void mdiHipIo(void)
             mdiLogPpWord(activeChannel->data);
             if (mdi->wordState == MdiIoStateEvenWord)
                 {
-                mdiLogBytes(mdi->parcel);
+                mdiLogParcel(mdi->parcel);
                 }
 #endif
             }
@@ -846,17 +1017,22 @@ static void mdiHipActivate(void)
 **------------------------------------------------------------------------*/
 static void mdiHipDisconnect(void)
     {
-    u8        blockType;
-    u8        byte;
-    int       i;
-    MdiBuffer *mbp;
-    u8        prio;
-    int       shift;
+    ChIoBuffer *bp;
+    int        i;
+    int        shift;
 
-    // on output, marks end of block
+#if DEBUG
+    mdiLogFlush();
+    fprintf(mdiLog, "\nPP:%02o CH:%02o Disconnect",
+            activePpu->id,
+            activeChannel->id);
+#endif
+    //
+    //  On write, disconnect indicates end of block
+    //
     if (activeDevice->fcode == FcMdiWriteData)
         {
-        mbp = &mdi->downlineData;
+        bp = &mdi->downlineData;
         if (mdi->wordState == MdiIoStateOddWord)
             {
             for (i = 0, shift = 16; i < 2; shift -= 8, i++)
@@ -865,57 +1041,33 @@ static void mdiHipDisconnect(void)
                     {
                     mdi->headerIndex += 1;
                     }
-                else if (mbp->numBytes < MdiMaxBuffer)
+                else if (bp->numBytes < MdiMaxBuffer)
                     {
-                    mbp->data[mbp->numBytes++]  = (mdi->parcel >> shift) & 0xff;
+                    bp->data[bp->numBytes++]  = (mdi->parcel >> shift) & 0xff;
                     activeDevice->recordLength += 1;
                     }
                 }
 #if DEBUG
-            mdiLogBytes(mdi->parcel);
+            mdiLogParcel(mdi->parcel);
 #endif
             }
 #if DEBUG
         mdiLogFlush();
-        mdiLogBuffer(mbp->data);
+        mdiLogBuffer(bp->data);
 #endif
-        if (mbp->numBytes >= 2)
+        if (bp->numBytes >= 2)
             {
             /*
             ** The last two bytes transmitted by PIP provide the true message length including
             ** the 19-byte MDI header.
             */
-            mbp->numBytes = (u16)(((mbp->data[mbp->numBytes - 2] << 8) | mbp->data[mbp->numBytes - 1]) - MdiHdrLen);
+            bp->numBytes = (u16)(((bp->data[bp->numBytes - 2] << 8) | bp->data[bp->numBytes - 1]) - MdiHdrLen);
 #if DEBUG
-            fprintf(npuLog, "    PDU size=%d\n", mbp->numBytes);
+            fprintf(mdiLog, "    PDU size=%d", bp->numBytes);
 #endif
             }
-
         activeDevice->fcode = 0;
-        byte            = mbp->data[BlkOffBTBSN];
-        blockType       = byte & BlkMaskBT;
-        prio            = (byte >> BlkShiftPRIO) & BlkMaskPRIO;
-        mbp->blockSeqNo = (byte >> BlkShiftBSN) & BlkMaskBSN;
-
-        if ((blockType == BtHTCMD) && (mbp->data[BlkOffCN] == 0))
-            {
-            if (mbp->data[BlkOffPfc] == 0x01) // Link regulation
-                {
-                npuSvmNotifyHostRegulation(3 | 0x04);
-                }
-            else
-                {
-                npuBipNotifyServiceMessage();
-                npuBipNotifyDownlineReceived();
-                }
-            }
-        else
-            {
-            npuBipNotifyData(prio);
-            npuBipNotifyDownlineReceived();
-            }
-
-        mbp->offset = mbp->numBytes = 0;
+        bp->isReady         = TRUE;
         }
     }
 
@@ -929,28 +1081,28 @@ static void mdiHipDisconnect(void)
 **------------------------------------------------------------------------*/
 static PpWord mdiHipReadMdiStatus(void)
     {
-    int       bits;
-    NpuBuffer *bp;
-    PpWord    mdiStatus;
-    int       prus;
-    int       words;
+    int        bits;
+    ChIoBuffer *bp;
+    PpWord     mdiStatus;
+    int        prus;
+    int        words;
 
-    if (mdiState == StMdiStarting)
+    if (mdi->state == StMdiStarting)
         {
-        return (MdiStateStarting);
+        return MdiStateInputAvailable;
         }
 
     mdiStatus = MdiStatusOperational;
 
-    if (mdi->downlineData.numBytes < 1)
+    if (mdi->downlineData.isReady == FALSE)
         {
         mdiStatus |= MdiStatusAcceptingData;
         }
 
-    if (mdi->uplineData != NULL)
+    if (mdi->uplineData.isReady && mdi->hipRequest == HipReqNone)
         {
         mdiStatus |= MdiStatusDataAvailable;
-        bp         = mdi->uplineData;
+        bp         = &mdi->uplineData;
 
         if ((bp->numBytes > BlkOffDbc)
             && ((bp->data[BlkOffBTBSN] & BlkMaskBT) == BtHTMSG)
@@ -993,12 +1145,8 @@ static PpWord mdiHipReadMdiStatus(void)
             mdiStatus |= MdiIvtInputGt256;
             }
         }
-    else if (mdiStatus == MdiStatusOperational)
-        {
-        mdiStatus |= MdiStatusBusy;
-        }
 
-    return (mdiStatus);
+    return mdiStatus;
     }
 
 #if DEBUG
@@ -1013,7 +1161,7 @@ static PpWord mdiHipReadMdiStatus(void)
 **------------------------------------------------------------------------*/
 static char *mdiHipFunc2String(PpWord funcCode)
     {
-    static char buf[30];
+    static char buf[40];
 
     switch (funcCode)
         {
@@ -1062,18 +1210,19 @@ static char *mdiHipFunc2String(PpWord funcCode)
     case FcMdiNormalFlowCtrlOff:
         return "FcMdiNormalFlowCtrlOff";
 
-    case FcMdiReqProtoVersion:
-        return "FcMdiReqProtoVersion";
-        }
-    if ((funcCode >= FcMdiReqProtoVersion) && (funcCode <= FcMdiReqProtoVersion + 0177))
-        {
-        return "FcMdiReqProtoVersion";
-        }
-    else
-        {
-        sprintf(buf, "(mdi     ) UNKNOWN: %04o", funcCode);
+    default:
+        if ((funcCode >= FcMdiReqProtoVersion) && (funcCode <= FcMdiReqProtoVersion + 0177))
+            {
+            sprintf(buf, "FcMdiReqProtoVersion (%04o)", funcCode);
 
-        return (buf);
+            return buf;
+            }
+        else
+            {
+            sprintf(buf, "UNKNOWN: %04o", funcCode);
+
+            return buf;
+            }
         }
     }
 
@@ -1164,10 +1313,25 @@ static char *mdiPfc2String(u8 pfc)
     case 0x20:
         return "Online Diagnostics";
 
+    case 0xC1:
+        return "Terminal Characteristics";
+
+    case 0xC2:
+        return "Batch Device Characteristics";
+
+    case 0xC3:
+        return "Batch File Characteristics";
+
+    case 0xC5:
+        return "Start Input";
+
+    case 0xC9:
+        return "Accounting Datq";
+
     default:
         sprintf(buf, "<%02X>", pfc);
 
-        return (buf);
+        return buf;
         }
     }
 
@@ -1254,7 +1418,7 @@ static char *mdiSfc2String(u8 sfc)
     default:
         sprintf(buf, "<%02X>", sfc);
 
-        return (buf);
+        return buf;
         }
     }
 
@@ -1270,11 +1434,11 @@ static void mdiLogFlush(void)
     {
     if (mdiLogWordCol > 0)
         {
-        fputs(mdiLogBuf, npuLog);
+        fputs(mdiLogBuf, mdiLog);
         }
 
-    mdiLogWordCol  = 0;
-    mdiLogBytesCol = 0;
+    mdiLogWordCol   = 0;
+    mdiLogParcelCol = 0;
     memset(mdiLogBuf, ' ', LogLineLength);
     mdiLogBuf[0]             = '\n';
     mdiLogBuf[LogLineLength] = '\0';
@@ -1298,7 +1462,7 @@ static void mdiLogBuffer(u8 *dp)
     byte      = dp[BlkOffBTBSN];
     blockType = byte & BlkMaskBT;
 
-    fprintf(npuLog, "\n    DN=%02X SN=%02X CN=%02X Pri=%d BSN=%d BT=",
+    fprintf(mdiLog, "\n    DN=%02X SN=%02X CN=%02X Pri=%d BSN=%d BT=",
             dp[BlkOffDN], dp[BlkOffSN], dp[BlkOffCN],
             (byte >> BlkShiftPRIO) & BlkMaskPRIO,
             (byte >> BlkShiftBSN) & BlkMaskBSN);
@@ -1306,77 +1470,103 @@ static void mdiLogBuffer(u8 *dp)
     switch (blockType)
         {
     case BtHTBLK:
-        fputs("Block\n", npuLog);
+        fputs("Block\n", mdiLog);
         break;
 
     case BtHTMSG:
-        fputs("Message\n", npuLog);
+        fputs("Message\n", mdiLog);
         break;
 
     case BtHTBACK:
-        fputs("Back\n", npuLog);
+        fputs("Back\n", mdiLog);
         break;
 
     case BtHTCMD:
-        fputs("Command\n", npuLog);
-        fprintf(npuLog, "    PFC=%s\n    SFC=", mdiPfc2String(dp[BlkOffPfc]));
+        fputs("Command\n", mdiLog);
+        fprintf(mdiLog, "    PFC=%s\n    SFC=", mdiPfc2String(dp[BlkOffPfc]));
         sfc = dp[BlkOffSfc];
         if ((sfc & SfcResp) != 0)
             {
-            fprintf(npuLog, "Normal Response, %s\n", mdiSfc2String(sfc));
+            fprintf(mdiLog, "Normal Response, %s\n", mdiSfc2String(sfc));
             }
         else if ((sfc & SfcErr) != 0)
             {
-            fprintf(npuLog, "Abnormal Response, %s\n", mdiSfc2String(sfc));
+            fprintf(mdiLog, "Abnormal Response, %s\n", mdiSfc2String(sfc));
             }
         else
             {
-            fprintf(npuLog, "Request, %s\n", mdiSfc2String(sfc));
+            fprintf(mdiLog, "Request, %s\n", mdiSfc2String(sfc));
             }
         break;
 
     case BtHTBREAK:
-        fputs("Break\n", npuLog);
+        fputs("Break\n", mdiLog);
         break;
 
     case BtHTQBLK:
-        fputs("Qualified Block\n", npuLog);
+        fputs("Qualified Block\n", mdiLog);
         break;
 
     case BtHTQMSG:
-        fputs("Qualified Message\n", npuLog);
+        fputs("Qualified Message\n", mdiLog);
         break;
 
     case BtHTRESET:
-        fputs("Reset\n", npuLog);
+        fputs("Reset\n", mdiLog);
         break;
 
     case BtHTRINIT:
-        fputs("Initialize Request\n", npuLog);
+        fputs("Initialize Request\n", mdiLog);
         break;
 
     case BtHTNINIT:
-        fputs("Initialize Response\n", npuLog);
+        fputs("Initialize Response\n", mdiLog);
         break;
 
     case BtHTTERM:
-        fputs("Terminate\n", npuLog);
+        fputs("Terminate\n", mdiLog);
         break;
 
     case BtHTICMD:
-        fputs("Interrupt Command\n", npuLog);
+        fputs("Interrupt Command\n", mdiLog);
         break;
 
     case BtHTICMR:
-        fputs("Interrupt Command Response\n", npuLog);
+        fputs("Interrupt Command Response\n", mdiLog);
         break;
 
     default:
-        fprintf(npuLog, "<%02X>\n", blockType);
+        fprintf(mdiLog, "<%02X>\n", blockType);
         break;
         }
 
-    fflush(npuLog);
+    fflush(mdiLog);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Log the contents of a channel I/O buffer
+**
+**  Parameters:     Name        Description.
+**                  bp          pointer to channel I/O buffer
+**
+**  Returns:        nothing
+**
+**------------------------------------------------------------------------*/
+static void mdiLogChIoBuffer(ChIoBuffer *bp)
+    {
+    u8  *dp;
+    u16 i;
+
+    fprintf(mdiLog, "\n    Ready %s SeqNo %d Bytes %d", bp->isReady ? "TRUE" : "FALSE", bp->blockSeqNo, bp->numBytes);
+    for (i = 0, dp = bp->data; i < bp->numBytes; i++)
+         {
+         if ((i & 0x0f) == 0)
+             {
+             fputs("\n   ", mdiLog);
+             }
+         fprintf(mdiLog, " %02x", *dp++);
+         }
+    mdiLogBuffer(bp->data);
     }
 
 /*--------------------------------------------------------------------------
@@ -1388,7 +1578,7 @@ static void mdiLogBuffer(u8 *dp)
 **  Returns:        nothing
 **
 **------------------------------------------------------------------------*/
-static void mdiLogPpWord(int word)
+static void mdiLogPpWord(PpWord word)
     {
     char hex[5];
     int  col;
@@ -1407,18 +1597,18 @@ static void mdiLogPpWord(int word)
 **  Returns:        nothing
 **
 **------------------------------------------------------------------------*/
-static void mdiLogBytes(int parcel)
+static void mdiLogParcel(u32 parcel)
     {
-    int b;
+    u8  b;
     int col;
     int i;
     int shift;
 
-    col = AsciiColumn(mdiLogBytesCol);
+    col = AsciiColumn(mdiLogParcelCol);
 
     for (i = 0, shift = 16; i < 3; shift -= 8, i++)
         {
-        b = (parcel >> shift) & 0x7f;
+        b = (u8)((parcel >> shift) & 0x7f);
         if ((b < 0x20) || (b >= 0x7f))
             {
             b = '.';
@@ -1426,8 +1616,8 @@ static void mdiLogBytes(int parcel)
 
         mdiLogBuf[col++] = b;
         }
-    mdiLogBytesCol += 3;
-    if (mdiLogBytesCol >= 24)
+    mdiLogParcelCol += 3;
+    if (mdiLogParcelCol >= 24)
         {
         mdiLogFlush();
         }

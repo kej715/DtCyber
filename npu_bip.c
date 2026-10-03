@@ -25,7 +25,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG    0
+#define DEBUG 0
 
 /*
 **  -------------
@@ -233,7 +233,7 @@ void npuBipReset(void)
 **------------------------------------------------------------------------*/
 int npuBipBufCount(void)
     {
-    return (bufCount);
+    return bufCount;
     }
 
 /*--------------------------------------------------------------------------
@@ -419,8 +419,9 @@ void npuBipQueuePrepend(NpuBuffer *bp, NpuQueue *queue)
 **------------------------------------------------------------------------*/
 NpuBuffer *npuBipQueueExtract(NpuQueue *queue)
     {
-    NpuBuffer *bp = queue->first;
+    NpuBuffer *bp;
 
+    bp  = queue->first;
     if (bp != NULL)
         {
         queue->first = bp->next;
@@ -430,7 +431,7 @@ NpuBuffer *npuBipQueueExtract(NpuQueue *queue)
             }
         }
 
-    return (bp);
+    return bp;
     }
 
 /*--------------------------------------------------------------------------
@@ -509,6 +510,25 @@ void npuBipNotifyData(int priority)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Iniitiate sending upline block, if one is available.
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void npuBipTryUplineBlock(void)
+    {
+    /*
+    **  Check if any more upline buffer is pending and send if necessary.
+    */
+    if (bipUplineBuffer != NULL)
+        {
+        hipUplineBlock[npuSw](bipUplineBuffer);
+        }
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Respond to input retry order word.
 **
 **  Parameters:     Name        Description.
@@ -521,10 +541,7 @@ void npuBipRetryInput(void)
     /*
     **  Check if any more upline buffer is pending and send if necessary.
     */
-    if (bipUplineBuffer != NULL)
-        {
-        hipUplineBlock[npuSw](bipUplineBuffer);
-        }
+    npuBipTryUplineBlock();
     }
 
 /*--------------------------------------------------------------------------
@@ -537,14 +554,15 @@ void npuBipRetryInput(void)
 **------------------------------------------------------------------------*/
 void npuBipNotifyDownlineReceived(void)
     {
-    NpuBuffer *bp = bipDownlineBuffer;
+    NpuBuffer *bp;
     u8        dn;
 
     /*
     **  BIP loses ownership of the downline buffer.
     */
+    bp                = bipDownlineBuffer;
     bipDownlineBuffer = NULL;
-    dn = bp->data[BlkOffDN];
+    dn                = bp->data[BlkOffDN];
 
     if (dn == npuSvmNpuNode)
         {
@@ -579,14 +597,6 @@ void npuBipNotifyDownlineReceived(void)
         }
 
     bipState = BipIdle;
-
-    /*
-    **  Check if any more upline buffer is pending and send if necessary.
-    */
-    if (bipUplineBuffer != NULL)
-        {
-        hipUplineBlock[npuSw](bipUplineBuffer);
-        }
     }
 
 /*--------------------------------------------------------------------------
@@ -605,14 +615,6 @@ void npuBipAbortDownlineReceived(void)
     npuBipBufRelease(bipDownlineBuffer);
     bipDownlineBuffer = NULL;
     bipState          = BipIdle;
-
-    /*
-    **  Check if any more upline buffer is pending and send if necessary.
-    */
-    if (bipUplineBuffer != NULL)
-        {
-        hipUplineBlock[npuSw](bipUplineBuffer);
-        }
     }
 
 /*--------------------------------------------------------------------------
@@ -640,10 +642,9 @@ void npuBipRequestUplineTransfer(NpuBuffer *bp)
     **  Send this block now.
     */
     bipUplineBuffer = bp;
-
     if (bipState == BipIdle)
         {
-        hipUplineBlock[npuSw](bipUplineBuffer);
+        npuBipTryUplineBlock();
         }
     }
 
@@ -685,10 +686,7 @@ void npuBipNotifyUplineSent(void)
     **  Check if any more upline queued and send if necessary.
     */
     bipUplineBuffer = npuBipQueueExtract(bipUplineQueue);
-    if (bipUplineBuffer != NULL)
-        {
-        hipUplineBlock[npuSw](bipUplineBuffer);
-        }
+    npuBipTryUplineBlock();
     }
 
 /*

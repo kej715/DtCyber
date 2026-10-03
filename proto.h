@@ -437,7 +437,7 @@ void niuShowStatus();
 void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 int npuBipBufCount(void);
 bool npuBipIsBusy(void);
-void npuNetShowStatus();
+void npuNetShowStatus(void);
 
 /*
 **  operator.c
