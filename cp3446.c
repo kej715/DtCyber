@@ -184,9 +184,17 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
     CpContext    *cc;
     const PpWord *charset;
+    char         *devicePath;
+    char         *deviceType;
     PpWord       hol;
     DevSlot      *up;
 
+#if DEBUG
+    if (cp3446Log == NULL)
+        {
+        cp3446Log = fopen("cp3446log.txt", "wt");
+        }
+#endif
 
     /*
     **  When we are called, "deviceParams" is a space terminated string
@@ -201,15 +209,17 @@ void cp3446Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     **      <deviceType> ("026"|"029")
     **
     */
-    char *devicePath = strtok(deviceName, ", ");           //  Get the directory name
-    char *deviceType = strtok(NULL, ", ");                 //  Device Type "026" | "029"
-
-#if DEBUG
-    if (cp3446Log == NULL)
+  
+    if (deviceName != NULL && strlen(deviceName) > 0)
         {
-        cp3446Log = fopen("cp3446log.txt", "wt");
+        devicePath = strtok(deviceName, ", ");           //  Get the directory name
+        deviceType = strtok(NULL, ", ");                 //  Device Type "026" | "029"
         }
-#endif
+    else
+        {
+        devicePath = NULL;
+        deviceType = NULL;
+        }
 
     up = dcc6681Attach(channelNo, eqNo, 0, DtCp3446);
 

@@ -290,9 +290,9 @@ static void npuNjePrintStackTrace(FILE *fp);
 */
 
 #if DEBUG
-static FILE *npuNjeLog = NULL;
-static char npuNjeLogBuf[LogLineLength + 1];
-static int  npuNjeLogBytesCol = 0;
+static thread_local FILE *npuNjeLog = NULL;
+static thread_local char npuNjeLogBuf[LogLineLength + 1];
+static thread_local int  npuNjeLogBytesCol = 0;
 #endif
 
 /*
@@ -1132,13 +1132,15 @@ void npuNjePresetPcb(Pcb *pcbp)
 #if DEBUG
     if (npuNjeLog == NULL)
         {
-        npuNjeLog = fopen("njelog.txt", "wt");
+        char fName[32];
+        sprintf(fName, "%snjelog.txt", netDevice->name);
+        npuNjeLog = fopen(fName, "wt");
         if (npuNjeLog == NULL)
             {
-            logDtError(LogErrorLocation, "njelog.txt - aborting\n");
+            logDtError(LogErrorLocation, "%s - aborting\n", fName);
             exit(1);
             }
-        npuNjeLogFlush();    // initialize log buffer
+        npuNjeLogFlush(); // initialize log buffer
         }
 #endif
     pcbp->controls.nje.maxRecordSize = 1024; // renegotiated during signon
@@ -1657,7 +1659,7 @@ static Pcb *npuNjeFindPcbForCr(char *rhost, u32 rip, char *ohost, u32 oip)
     /*
     **  Find matching NJE definition in Pcb table
     */
-    for (claPort = 0; claPort <= npuNetMaxClaPort; claPort++)
+    for (claPort = 0; claPort <= netDevice->maxClaPort; claPort++)
         {
         pcbp = npuNetFindPcb(claPort);
         if ((pcbp->ncbp != NULL)
@@ -1697,7 +1699,7 @@ static Tcb *npuNjeFindTcb(Pcb *pcbp)
 
     for (i = 1; i < MaxTcbs; i++)
         {
-        tcbp = &npuTcbs[i];
+        tcbp = &netDevice->tcbs[i];
         if ((tcbp->state != StTermIdle) && (tcbp->pcbp == pcbp))
             {
             pcbp->controls.nje.tp = tcbp;
@@ -1951,8 +1953,8 @@ static void npuNjeTransmitQueuedBlocks(Pcb *pcbp)
         while (tcbp->uplineBlockLimit > 0
                && (bp = npuBipQueueExtract(&pcbp->controls.nje.uplineQ)) != NULL)
             {
-            bp->data[BlkOffDN]     = npuSvmCouplerNode;
-            bp->data[BlkOffSN]     = npuSvmNpuNode;
+            bp->data[BlkOffDN]     = netDevice->couplerNode;
+            bp->data[BlkOffSN]     = netDevice->npuNode;
             bp->data[BlkOffCN]     = tcbp->cn;
             bp->data[BlkOffBTBSN] |= tcbp->uplineBsn++ << BlkShiftBSN;
             if (tcbp->uplineBsn >= 8)

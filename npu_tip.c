@@ -209,7 +209,6 @@ static void npuTipLogFnFv(Tcb *tp, u8 fn, u8 fv);
 **  Public Variables
 **  ----------------
 */
-Tcb npuTcbs[MaxTcbs];
 
 /*
 **  -----------------
@@ -240,6 +239,7 @@ static u8 requestInitBt[] =
     (0 << BlkShiftBSN) | BtHTRINIT, // BT/BSN/PRIO
     };
 
+/* DELETE
 static u8 blockAck[] =
     {
     0,                  // DN
@@ -276,6 +276,7 @@ static u8 rccRspA[] =
     SfcRCC | SfcErr,
     0
     };
+*/
 
 static TipParams defaultTc2;
 static TipParams defaultTc3;
@@ -313,7 +314,7 @@ static void (*notifyAck[])(Tcb *tp, u8 bsn) =
     };
 
 #if DEBUG
-static FILE *npuTipLog = NULL;
+static thread_local FILE *npuTipLog = NULL;
 #endif
 
 /*
@@ -337,27 +338,6 @@ void npuTipInit(void)
     int i;
     Tcb *tp;
 
-    ackInitBt[BlkOffDN] = npuSvmCouplerNode;
-    ackInitBt[BlkOffSN] = npuSvmNpuNode;
-
-    respondToInitBt[BlkOffDN] = npuSvmCouplerNode;
-    respondToInitBt[BlkOffSN] = npuSvmNpuNode;
-
-    requestInitBt[BlkOffDN] = npuSvmCouplerNode;
-    requestInitBt[BlkOffSN] = npuSvmNpuNode;
-
-    blockAck[BlkOffDN] = npuSvmCouplerNode;
-    blockAck[BlkOffSN] = npuSvmNpuNode;
-
-    intrRsp[BlkOffDN] = npuSvmCouplerNode;
-    intrRsp[BlkOffSN] = npuSvmNpuNode;
-
-    rccRsp[BlkOffDN] = npuSvmCouplerNode;
-    rccRsp[BlkOffSN] = npuSvmNpuNode;
-
-    rccRspA[BlkOffDN] = npuSvmCouplerNode;
-    rccRspA[BlkOffSN] = npuSvmNpuNode;
-
     /*
     **  Initialize default terminal class parameters.
     */
@@ -374,7 +354,7 @@ void npuTipInit(void)
     */
     for (i = 0; i < MaxTcbs; i++)
         {
-        tp = &npuTcbs[i];
+        tp = &netDevice->tcbs[i];
         memset(tp, 0, sizeof(Tcb));
         tp->cn    = (u8)i;
         tp->state = StTermIdle;
@@ -382,11 +362,16 @@ void npuTipInit(void)
         }
 
 #if DEBUG
-    npuTipLog = fopen("tiplog.txt", "wt");
     if (npuTipLog == NULL)
         {
-        logDtError(LogErrorLocation, "tiplog.txt - aborting\n");
-        exit(1);
+        char fName[32];
+        sprintf(fName, "%stiplog.txt", netDevice->name);
+        npuTipLog = fopen(fName, "wt");
+        if (npuTipLog == NULL)
+            {
+            logDtError(LogErrorLocation, "%s - aborting\n", fName);
+            exit(1);
+            }
         }
 #endif
     }
@@ -409,7 +394,7 @@ void npuTipReset(void)
     */
     for (i = 0; i < MaxTcbs; i++)
         {
-        tp = &npuTcbs[i];
+        tp = &netDevice->tcbs[i];
         memset(tp, 0, sizeof(Tcb));
         tp->cn    = (u8)i;
         tp->state = StTermIdle;
@@ -431,9 +416,9 @@ Tcb *npuTipFindFreeTcb(void)
 
     for (i = 1; i < MaxTcbs; i++)
         {
-        if (npuTcbs[i].state == StTermIdle)
+        if (netDevice->tcbs[i].state == StTermIdle)
             {
-            return &npuTcbs[i];
+            return &netDevice->tcbs[i];
             }
         }
 
@@ -451,7 +436,7 @@ Tcb *npuTipFindFreeTcb(void)
 **------------------------------------------------------------------------*/
 Tcb *npuTipFindTcbForCN(u8 cn)
     {
-    return &npuTcbs[cn];
+    return &netDevice->tcbs[cn];
     }
 
 /*--------------------------------------------------------------------------
@@ -466,10 +451,13 @@ Tcb *npuTipFindTcbForCN(u8 cn)
 **------------------------------------------------------------------------*/
 void npuTipProcessBuffer(NpuBuffer *bp, int priority)
     {
-    u8         *block = bp->data;
+    u8         *block;
+    u8         buf[4];
     Tcb        *tp;
     u8         cn;
     bool       last;
+
+    block = bp->data;
 
     /*
     **  Find associated terminal control block.
@@ -501,14 +489,9 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
     switch (block[BlkOffBTBSN] & BlkMaskBT)
         {
     case BtHTRINIT:
-        ackInitBt[BlkOffCN] = block[BlkOffCN];
-        npuBipRequestUplineCanned(ackInitBt, sizeof(ackInitBt));
-
-        respondToInitBt[BlkOffCN] = block[BlkOffCN];
-        npuBipRequestUplineCanned(respondToInitBt, sizeof(respondToInitBt));
-
-        requestInitBt[BlkOffCN] = block[BlkOffCN];
-        npuBipRequestUplineCanned(requestInitBt, sizeof(requestInitBt));
+        npuBipRequestUplineStatic(ackInitBt, sizeof(ackInitBt), BlkOffCN, block[BlkOffCN]);
+        npuBipRequestUplineStatic(respondToInitBt, sizeof(respondToInitBt), BlkOffCN, block[BlkOffCN]);
+        npuBipRequestUplineStatic(requestInitBt, sizeof(requestInitBt), BlkOffCN, block[BlkOffCN]);
         break;
 
     case BtHTNINIT:
@@ -617,10 +600,8 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
         /*
         **  Acknowledge any command (although most are ignored).
         */
-        blockAck[BlkOffCN]     = block[BlkOffCN];
-        blockAck[BlkOffBTBSN] &= BlkMaskBT;
-        blockAck[BlkOffBTBSN] |= block[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN);
-        npuBipRequestUplineCanned(blockAck, sizeof(blockAck));
+        buf[BlkOffBTBSN] = BtHTBACK | (block[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN));
+        npuBipRequestUplineStatic(buf, sizeof(buf), BlkOffCN, block[BlkOffCN]);
         break;
 
     case BtHTBLK:
@@ -646,10 +627,8 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
             default:
                 logDtError(LogErrorLocation, "Downline data for unrecognized TIP type %u on connection %u\n",
                            tp->tipType, tp->cn);
-                blockAck[BlkOffCN]     = block[BlkOffCN];
-                blockAck[BlkOffBTBSN] &= BlkMaskBT;
-                blockAck[BlkOffBTBSN] |= block[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN);
-                npuBipRequestUplineCanned(blockAck, sizeof(blockAck));
+                buf[BlkOffBTBSN] = BtHTBACK | (block[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN));
+                npuBipRequestUplineStatic(buf, sizeof(buf), BlkOffCN, block[BlkOffCN]);
                 break;
                 }
             }
@@ -659,10 +638,8 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
             **  Handle possible race condition while not fully connected. Acknowledge any
             **  packets arriving during this time, but discard the contents.
             */
-            blockAck[BlkOffCN]     = block[BlkOffCN];
-            blockAck[BlkOffBTBSN] &= BlkMaskBT;
-            blockAck[BlkOffBTBSN] |= block[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN);
-            npuBipRequestUplineCanned(blockAck, sizeof(blockAck));
+            buf[BlkOffBTBSN] = BtHTBACK | (block[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN));
+            npuBipRequestUplineStatic(buf, sizeof(buf), BlkOffCN, block[BlkOffCN]);
             }
         break;
 
@@ -685,10 +662,8 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
         */
         tp->xoff = FALSE;
         npuTipDiscardOutputQ(tp);
-        intrRsp[BlkOffCN]     = block[BlkOffCN];
-        intrRsp[BlkOffBTBSN] &= BlkMaskBT;
-        intrRsp[BlkOffBTBSN] |= block[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN);
-        npuBipRequestUplineCanned(intrRsp, sizeof(intrRsp));
+        buf[BlkOffBTBSN] = BtHTICMR | (block[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN));
+        npuBipRequestUplineStatic(buf, sizeof(buf), BlkOffCN, block[BlkOffCN]);
         break;
 
     case BtHTICMR:
@@ -1112,8 +1087,8 @@ void npuTipInputReset(Tcb *tp)
     /*
     **  Build upline data header.
     */
-    *mp++ = npuSvmCouplerNode;                              // DN
-    *mp++ = npuSvmNpuNode;                                  // SN
+    *mp++ = netDevice->couplerNode;                         // DN
+    *mp++ = netDevice->npuNode;                             // SN
     *mp++ = tp->cn;                                         // CN
     *mp++ = (u8)(BtHTMSG | (tp->uplineBsn << BlkShiftBSN)); // BT=MSG
     *mp++ = 0;                                              // DBC
@@ -1153,8 +1128,8 @@ void npuTipSendUserBreak(Tcb *tp, u8 bt)
     **  Build upline ICMD.
     */
     mp    = tp->inBuf;
-    *mp++ = npuSvmCouplerNode;                               // DN
-    *mp++ = npuSvmNpuNode;                                   // SN
+    *mp++ = netDevice->couplerNode;                          // DN
+    *mp++ = netDevice->npuNode;                              // SN
     *mp++ = tp->cn;                                          // CN
     *mp++ = (u8)(BtHTICMD | (tp->uplineBsn << BlkShiftBSN)); // BT=BRK
     *mp++ = (u8)((1 << (bt - 1)) + 2);
@@ -1177,8 +1152,8 @@ void npuTipSendUserBreak(Tcb *tp, u8 bt)
     **  Build upline BI/MARK.
     */
     mp    = tp->inBuf;
-    *mp++ = npuSvmCouplerNode;                              // DN
-    *mp++ = npuSvmNpuNode;                                  // SN
+    *mp++ = netDevice->couplerNode;                         // DN
+    *mp++ = netDevice->npuNode;                             // SN
     *mp++ = tp->cn;                                         // CN
     *mp++ = (u8)(BtHTCMD | (tp->uplineBsn << BlkShiftBSN)); // BT=BRK
     *mp++ = PfcBI;
@@ -1212,16 +1187,15 @@ void npuTipSendUserBreak(Tcb *tp, u8 bt)
 **------------------------------------------------------------------------*/
 void npuTipDiscardOutputQ(Tcb *tp)
     {
+    u8        buf[4];
     NpuBuffer *bp;
 
     while ((bp = npuBipQueueExtract(&tp->outputQ)) != NULL)
         {
         if (bp->blockSeqNo != 0)
             {
-            blockAck[BlkOffCN]     = tp->cn;
-            blockAck[BlkOffBTBSN] &= BlkMaskBT;
-            blockAck[BlkOffBTBSN] |= bp->blockSeqNo;
-            npuBipRequestUplineCanned(blockAck, sizeof(blockAck));
+            buf[BlkOffBTBSN] = BtHTBACK | bp->blockSeqNo;
+            npuBipRequestUplineStatic(buf, sizeof(buf), BlkOffCN, tp->cn);
             }
 
         npuBipBufRelease(bp);
@@ -1240,10 +1214,10 @@ void npuTipDiscardOutputQ(Tcb *tp)
 **------------------------------------------------------------------------*/
 void npuTipNotifySent(Tcb *tp, u8 blockSeqNo)
     {
-    blockAck[BlkOffCN]     = tp->cn;
-    blockAck[BlkOffBTBSN] &= BlkMaskBT;
-    blockAck[BlkOffBTBSN] |= blockSeqNo & (BlkMaskBSN << BlkShiftBSN);
-    npuBipRequestUplineCanned(blockAck, sizeof(blockAck));
+    u8 buf[4];
+
+    buf[BlkOffBTBSN] = BtHTBACK | (blockSeqNo & (BlkMaskBSN << BlkShiftBSN));
+    npuBipRequestUplineStatic(buf, sizeof(buf), BlkOffCN, tp->cn);
     }
 
 /*
@@ -1522,6 +1496,7 @@ static void npuTipParseAnAvList(u8 *mp, int len, Tcb *tp)
 static void npuTipSendAnAvList(u8 *mp, int len, Tcb *tp)
     {
     u8 an;
+    u8 buf[1024];
     u8 ch;
     u8 *dp;
     u8 sz;
@@ -1531,8 +1506,7 @@ static void npuTipSendAnAvList(u8 *mp, int len, Tcb *tp)
         mp  = defaultANList;
         len = sizeof(defaultANList);
         }
-    rccRsp[BlkOffCN] = tp->cn;
-    dp                 = rccRsp + BlkOffP3;
+    dp = &buf[BlkOffP3];
     while (len-- > 0)
         {
         an    = *mp++;
@@ -1732,13 +1706,18 @@ static void npuTipSendAnAvList(u8 *mp, int len, Tcb *tp)
             *dp++ = tp->params.fvXTimeout;
             break;
         default:
-            rccRspA[BlkOffCN] = tp->cn;
-            rccRspA[BlkOffP3] = an;
-            npuBipRequestUplineCanned(rccRspA, sizeof(rccRspA));
+            buf[BlkOffBTBSN] = BtHTCMD;
+            buf[BlkOffPfc]   = PfcCTRL;
+            buf[BlkOffSfc]   = SfcRCC | SfcErr;
+            buf[BlkOffP3]    = an;
+            npuBipRequestUplineStatic(buf, BlkOffP3 + 1, BlkOffCN, tp->cn);
             return;
             }
         }
-    npuBipRequestUplineCanned(rccRsp, (int)(dp - rccRsp));
+    buf[BlkOffBTBSN] = BtHTCMD;
+    buf[BlkOffPfc]   = PfcCTRL;
+    buf[BlkOffSfc]   = SfcCCD;
+    npuBipRequestUplineStatic(buf, (int)(dp - buf), BlkOffCN, tp->cn);
     }
 
 /*--------------------------------------------------------------------------
@@ -1796,7 +1775,7 @@ static void npuTipSetupDefaultTc2(void)
     defaultTc2.fvSolicitInput   = FALSE;
     defaultTc2.fvCIDelay        = 0;
     defaultTc2.fvLIDelay        = 0;
-    defaultTc2.fvHostNode       = npuSvmCouplerNode;
+    defaultTc2.fvHostNode       = netDevice->couplerNode;
     defaultTc2.fvAutoConnect    = FALSE;
     defaultTc2.fvPriority       = 1;
     defaultTc2.fvUBL            = 7;
@@ -1878,7 +1857,7 @@ static void npuTipSetupDefaultTc3(void)
     defaultTc3.fvSolicitInput   = FALSE;
     defaultTc3.fvCIDelay        = 0;
     defaultTc3.fvLIDelay        = 0;
-    defaultTc3.fvHostNode       = npuSvmCouplerNode;
+    defaultTc3.fvHostNode       = netDevice->couplerNode;
     defaultTc3.fvAutoConnect    = FALSE;
     defaultTc3.fvPriority       = 1;
     defaultTc3.fvUBL            = 7;
@@ -1960,7 +1939,7 @@ static void npuTipSetupDefaultTc7(void)
     defaultTc7.fvSolicitInput   = FALSE;
     defaultTc7.fvCIDelay        = 0;
     defaultTc7.fvLIDelay        = 0;
-    defaultTc7.fvHostNode       = npuSvmCouplerNode;
+    defaultTc7.fvHostNode       = netDevice->couplerNode;
     defaultTc7.fvAutoConnect    = FALSE;
     defaultTc7.fvPriority       = 1;
     defaultTc7.fvUBL            = 7;
@@ -2042,7 +2021,7 @@ static void npuTipSetupDefaultTc9(void)
     defaultTc9.fvSolicitInput   = FALSE;
     defaultTc9.fvCIDelay        = 0;
     defaultTc9.fvLIDelay        = 0;
-    defaultTc9.fvHostNode       = npuSvmCouplerNode;
+    defaultTc9.fvHostNode       = netDevice->couplerNode;
     defaultTc9.fvAutoConnect    = FALSE;
     defaultTc9.fvPriority       = 1;
     defaultTc9.fvUBL            = 7;
@@ -2110,7 +2089,7 @@ static void npuTipSetupDefaultTc14(void)
     defaultTc14.fvSolicitInput   = FALSE;
     defaultTc14.fvCIDelay        = 0;
     defaultTc14.fvLIDelay        = 0;
-    defaultTc14.fvHostNode       = npuSvmCouplerNode;
+    defaultTc14.fvHostNode       = netDevice->couplerNode;
     defaultTc14.fvAutoConnect    = FALSE;
     defaultTc14.fvPriority       = 1;
     defaultTc14.fvUBL            = 7;
@@ -2178,7 +2157,7 @@ static void npuTipSetupDefaultTc28(void)
     defaultTc28.fvSolicitInput   = FALSE;
     defaultTc28.fvCIDelay        = 0;
     defaultTc28.fvLIDelay        = 0;
-    defaultTc28.fvHostNode       = npuSvmCouplerNode;
+    defaultTc28.fvHostNode       = netDevice->couplerNode;
     defaultTc28.fvAutoConnect    = FALSE;
     defaultTc28.fvPriority       = 1;
     defaultTc28.fvUBL            = 7;
@@ -2244,7 +2223,7 @@ static void npuTipSetupDefaultTc29(void)
     defaultTc29.fvSolicitInput   = FALSE;
     defaultTc29.fvCIDelay        = 0;
     defaultTc29.fvLIDelay        = 0;
-    defaultTc29.fvHostNode       = npuSvmCouplerNode;
+    defaultTc29.fvHostNode       = netDevice->couplerNode;
     defaultTc29.fvAutoConnect    = FALSE;
     defaultTc29.fvPriority       = 1;
     defaultTc29.fvUBL            = 7;

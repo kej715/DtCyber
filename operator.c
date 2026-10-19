@@ -120,6 +120,7 @@ static void *opThread(void *param);
 #endif
 
 static void opAcceptConnection(void);
+static void opCopyCommandList(void);
 static char *opGetString(char *inStr, char *outStr, int outSize);
 static bool opHasInput();
 static bool opIsAbsolutePath(char *path);
@@ -350,9 +351,12 @@ static int             opCmdStackPtr = -1;
 #if defined(_WIN32)
 static SOCKET opListenHandle = 0;
 #else
-static int opListenHandle = 0;
+static int opListenHandle    = 0;
 #endif
-static int opListenPort = 0;
+static int opListenPort      = 0;
+
+static char **opCommandList  = NULL;
+static char **opCommandNext  = NULL;
 
 static char opInBuf[256];
 static int  opInIdx  = 0;
@@ -569,6 +573,8 @@ static void *opThread(void *param)
     ep->netConn   = 0;
     opCmdStackPtr = 0;
 
+    initAcquireMutex();
+
     opDisplayVersion();
 
     opDisplay("\n\n");
@@ -595,7 +601,9 @@ static void *opThread(void *param)
         ep->out        = opCmdStack[opCmdStackPtr - 1].out;
         ep->netConn    = 0;
         strcpy(ep->cwd, opCmdStack[opCmdStackPtr - 1].cwd);
+        opCopyCommandList();
         }
+    initReleaseMutex();
 
     while (emulationActive)
         {
@@ -809,7 +817,6 @@ static int opReadLine(char *buf, int size)
     OpCmdStackEntry *ep;
     char            *limit;
     char            *line;
-    int             lineNo;
     ssize_t         n;
 
     while (opActive)
@@ -843,12 +850,13 @@ static int opReadLine(char *buf, int size)
                 {
                 n = recv(ep->netConn, opInBuf, sizeof(opInBuf), 0);
                 }
-            else if (ep->in == -1)
+            else if (ep->in == -1 && opCommandNext != NULL)
                 {
-                line = initGetNextLine(&lineNo);
+                line = *opCommandNext++;
                 if (line == NULL)
                     {
-                    n = 0;
+                    n             = 0;
+                    opCommandNext = NULL;
                     }
                 else
                     {
@@ -1083,6 +1091,64 @@ static void opAcceptConnection(void)
         strcpy(opCmdStack[opCmdStackPtr].cwd, opCmdStack[opCmdStackPtr - 1].cwd);
         opCmdPrompt();
         }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Copy command list from operator section of configuration
+**                  file
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing
+**
+**------------------------------------------------------------------------*/
+static void opCopyCommandList(void)
+    {
+    char *line;
+    int  lineNo;
+    char **listp;
+    int  n;
+
+    if (initOpenOperatorSection() != 1)
+        {
+        return;
+        }
+
+    //
+    //  Count lines in operator section
+    //
+    n = 0;
+    for (;;)
+        {
+        line = initGetNextLine(&lineNo);
+        if (line == NULL) break;
+        n += 1;
+        }
+    if (n < 1 || initOpenOperatorSection() != 1)
+        {
+        return;
+        }
+    opCommandList = (char **)calloc(n + 1, sizeof(char *));
+    if (opCommandList == NULL)
+        {
+        fputs("(operator) Failed to allocate storage for operator command list\n", stderr);
+        exit(1);
+        }
+    listp = opCommandList;
+    for (;;)
+        {
+        line = initGetNextLine(&lineNo);
+        if (line == NULL) break;
+        *listp = (char *)malloc(strlen(line) + 1);
+        if (*listp == NULL)
+            {
+            fputs("(operator) Failed to allocate storage for operator command list\n", stderr);
+            exit(1);
+            }
+        strcpy(*listp, line);
+        listp += 1;
+        }
+    opCommandNext = opCommandList;
     }
 
 /*--------------------------------------------------------------------------

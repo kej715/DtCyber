@@ -23,7 +23,7 @@
 **
 **--------------------------------------------------------------------------
 */
-#define DEBUG    0
+#define DEBUG 0
 
 /*
 **  -------------
@@ -35,12 +35,6 @@
 #include <stdarg.h>
 #include <string.h>
 #include <assert.h>
-
-#if defined(__FreeBSD__)
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#endif
 
 #include "const.h"
 #include "types.h"
@@ -142,6 +136,38 @@
 **  Private Typedef and Structure Definitions
 **  -----------------------------------------
 */
+typedef enum
+    {
+    cciLnConfNotConfigured=0,
+    cciLnConfConfigured,
+    cciLnConfEnableRequested,
+    cciLnConfOperationalNoTcbs,
+    cciLnConfOperationalTcbsConfigured,
+    cciLnConfDisableRequested,
+    cciLnConfInoperativeNoTcbs,
+    cciLnConfInoperativeTcbsConfigured,
+    cciLnConfDisconnectRequested,
+    cciLnConfInoperativeWaiting
+    } CciLnConfState;
+
+typedef enum
+    {
+    cciLnStatOperational=0,
+    cciLnStatInoperative=4,
+    cciLnStatNoRing,
+    cciLnStatStop
+    } CciLnState;
+
+typedef struct cciLcb
+    {
+    u8             port;
+    CciLnConfState configState;
+    CciLnState     lineState;
+    u8             lineType;
+    u8             terminalType;
+    u8             speedIndex;
+    u8             numTerminals;
+    } CciLcb;
 
 /*
 **  ---------------------------
@@ -149,27 +175,28 @@
 **  ---------------------------
 */
 
-void cciSvmParseLnFnFv(u8 *block, int start, int end, cciLcb *lp);
-void cciSvmParseTFnFv(u8 *block, int start, int end, Tcb *tp);
-static Tcb *cciSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp, cciLcb *lp);
+static void cciSvmParseLnFnFv(u8 *block, int start, int end, CciLcb *lp);
+static void cciSvmParseTFnFv(u8 *block, int start, int end, Tcb *tp);
+static Tcb *cciSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp, CciLcb *lp);
 static Tcb *cciSvmFindOwningConsole(Tcb *tp);
-void cciSvmNotifyTermDisconnect(Tcb *tp);
-Pcb *cciFindPcb(int port);
-u8 cciGetPortFromPcb(Pcb *pcbp);
-cciLcb *cciSvmGetLcbForPort(u8 port);
+static void cciSvmNotifyTermDisconnect(Tcb *tp);
+static Pcb *cciFindPcb(int port);
+static u8 cciGetPortFromPcb(Pcb *pcbp);
+static CciLcb *cciSvmGetLcbForPort(u8 port);
 
 /*
 **  ----------------
 **  Public Variables
 **  ----------------
 */
-cciLcb cciLcbs[MaxLineDefs];
 
 /*
 **  -----------------
 **  Private Variables
 **  -----------------
 */
+static thread_local CciLcb cciLcbs[MaxLineDefs];
+
 static u8 cciInitMsg[] =
     {
     0,             // DN
@@ -180,9 +207,8 @@ static u8 cciInitMsg[] =
     2,             // SFC
     3,             // CCP version
     1,             // CCP cycle
-    1,             // CCP level
+    1              // CCP level
     };
-
 
 static u8 cciUnsoliLineStatusResponse[] =
     {
@@ -197,15 +223,15 @@ static u8 cciUnsoliLineStatusResponse[] =
     0,             // RC
     0,             // LT
     0,             // CFS
-    0,             // NT
+    0              // NT
     };
 
 static char disconnectMsg[] = "\r\nHost requests disconnect\r\n";
 
-static u8 numLines;
+static thread_local u8 numLines;
 
 #if DEBUG
-extern FILE *cciLog;
+static thread_local FILE *cciLog = NULL;
 #endif
 
 /*
@@ -227,13 +253,7 @@ extern FILE *cciLog;
 void cciSvmInit(void)
     {
     int    i;
-    cciLcb *lp;
-
-    cciInitMsg[BlkOffDN] = npuSvmCouplerNode;
-    cciInitMsg[BlkOffSN] = npuSvmNpuNode;
-
-    cciUnsoliLineStatusResponse[BlkOffDN] = npuSvmCouplerNode;
-    cciUnsoliLineStatusResponse[BlkOffSN] = npuSvmNpuNode;
+    CciLcb *lp;
 
     /*
     ** Initialize LCBs.
@@ -241,7 +261,7 @@ void cciSvmInit(void)
     for (i = 0; i < MaxLineDefs; i++)
         {
         lp = &cciLcbs[i];
-        memset(lp, 0, sizeof(cciLcb));
+        memset(lp, 0, sizeof(CciLcb));
         lp->configState = cciLnConfNotConfigured;
         }
 
@@ -249,7 +269,9 @@ void cciSvmInit(void)
 #if DEBUG
     if (cciLog == NULL)
         {
-        cciLog = fopen("ccilog.txt", "wt");
+        char fName[32];
+        sprintf(fName, "%ssvmlog.txt", netDevice->name);
+        cciLog = fopen(fName, "wt");
         }
 #endif
     }
@@ -265,7 +287,7 @@ void cciSvmInit(void)
 void cciSvmReset(void)
     {
     int    i;
-    cciLcb *lp;
+    CciLcb *lp;
 
     /*
     ** Initialize LCBs.
@@ -273,7 +295,7 @@ void cciSvmReset(void)
     for (i = 0; i < MaxLineDefs; i++)
         {
         lp = &cciLcbs[i];
-        memset(lp, 0, sizeof(cciLcb));
+        memset(lp, 0, sizeof(CciLcb));
         lp->configState = cciLnConfNotConfigured;
         }
 
@@ -291,13 +313,11 @@ void cciSvmReset(void)
 **------------------------------------------------------------------------*/
 bool cciSvmConnectTerminal(Pcb *pcbp)
     {
+    u8     buf[16];
     u8     port;
-    cciLcb *lp;
+    CciLcb *lp;
 
     port = cciGetPortFromPcb(pcbp);
-#if DEBUG
-    fprintf(cciLog, "Connect terminal on CLA port %02x activate line %02x\n", port, port);
-#endif
 
     /*
     ** Build unsolicited line status response, line enabled
@@ -307,18 +327,27 @@ bool cciSvmConnectTerminal(Pcb *pcbp)
         {
         lp->configState = cciLnConfOperationalNoTcbs;
         lp->lineState   = cciLnStatOperational;
-        cciUnsoliLineStatusResponse[6]  = port;
-        cciUnsoliLineStatusResponse[7]  = 0;
-        cciUnsoliLineStatusResponse[8]  = cciLnStatOperational;
-        cciUnsoliLineStatusResponse[9]  = lp->lineType;
-        cciUnsoliLineStatusResponse[10] = cciLnConfOperationalNoTcbs;
-        cciUnsoliLineStatusResponse[11] = 0; // no terminals
-        npuBipRequestUplineCanned(cciUnsoliLineStatusResponse, sizeof(cciUnsoliLineStatusResponse));
+        memcpy(buf, cciUnsoliLineStatusResponse, sizeof(cciUnsoliLineStatusResponse));
+        buf[6]  = port;
+        buf[7]  = 0;
+        buf[8]  = cciLnStatOperational;
+        buf[9]  = lp->lineType;
+        buf[10] = cciLnConfOperationalNoTcbs;
+        buf[11] = 0; // no terminals
+        npuBipRequestUplineStatic(buf, sizeof(cciUnsoliLineStatusResponse), 0, 0);
 
-        return (TRUE);
+#if DEBUG
+        fprintf(cciLog, "Connect terminal on CLA port %02x activate line %02x\n", port, port);
+#endif
+
+        return TRUE;
         }
 
-    return (FALSE);
+#if DEBUG
+        fprintf(cciLog, "Failed to connect terminal on CLA port %02x\n", port);
+#endif
+
+    return FALSE;
     }
 
 /*--------------------------------------------------------------------------
@@ -332,7 +361,8 @@ bool cciSvmConnectTerminal(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 void cciSvmSendDiscRequest(Tcb *tp)
     {
-    cciLcb *lp;
+    u8     buf[16];
+    CciLcb *lp;
 
 #if DEBUG
     fprintf(cciLog, "Send TCN/TA/R for %.7s in state %u\n", tp->termName, tp->state);
@@ -356,14 +386,14 @@ void cciSvmSendDiscRequest(Tcb *tp)
             {
             lp->configState = cciLnConfInoperativeTcbsConfigured;
             lp->lineState   = cciLnStatInoperative;
-            cciUnsoliLineStatusResponse[6]  = tp->cciPort;
-            cciUnsoliLineStatusResponse[7]  = 0;
-            cciUnsoliLineStatusResponse[8]  = cciLnStatInoperative;
-            cciUnsoliLineStatusResponse[9]  = lp->lineType;
-            cciUnsoliLineStatusResponse[10] = cciLnConfInoperativeTcbsConfigured;
-            cciUnsoliLineStatusResponse[11] = lp->numTerminals;
-
-            npuBipRequestUplineCanned(cciUnsoliLineStatusResponse, sizeof(cciUnsoliLineStatusResponse));
+            memcpy(buf, cciUnsoliLineStatusResponse, sizeof(cciUnsoliLineStatusResponse));
+            buf[6]  = tp->cciPort;
+            buf[7]  = 0;
+            buf[8]  = cciLnStatInoperative;
+            buf[9]  = lp->lineType;
+            buf[10] = cciLnConfInoperativeTcbsConfigured;
+            buf[11] = lp->numTerminals;
+            npuBipRequestUplineStatic(buf, sizeof(cciUnsoliLineStatusResponse), 0, 0);
             tp->state = StTermNpuRequestDisconnect;
             }
         break;
@@ -394,7 +424,7 @@ void cciSvmSendDiscRequest(Tcb *tp)
 **------------------------------------------------------------------------*/
 bool cciSvmIsReady(void)
     {
-    return (cciHipIsReady());
+    return cciHipIsReady();
     }
 
 /*--------------------------------------------------------------------------
@@ -416,7 +446,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
     u8        rc;
     bool      err;
     u16       fCode;
-    cciLcb    *lp = (cciLcb *)NULL;
+    CciLcb    *lp = (CciLcb *)NULL;
     Tcb       *tp;
     Pcb       *pcbp = (Pcb *)NULL;
     u8        i;
@@ -556,7 +586,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
         /*
         ** No NPU buffer available for response
         */
-        logDtError(LogErrorLocation, "No response buffer availabel for SVM messages %02X/%02X\n",
+        logDtError(LogErrorLocation, "No response buffer available for SVM messages %02X/%02X\n",
                    block[BlkOffPfc], block[BlkOffSfc]);
 
         /*
@@ -569,8 +599,8 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
 
     rp     = respBuf->data;
     rpHead = rp;
-    *rp++  = npuSvmCouplerNode;
-    *rp++  = npuSvmNpuNode;
+    *rp++  = netDevice->couplerNode;
+    *rp++  = netDevice->npuNode;
     *rp++  = cn;
     *rp++  = BtHTCMD;
 
@@ -635,7 +665,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
         numLines++;
 
 #if DEBUG
-        fprintf(cciLog, "\n(cci_svm) line config P: %d  LT %d TT: %d RC: %d\n", port, block[BlkOffLt],
+        fprintf(cciLog, "Line config P: %d  LT %d TT: %d RC: %d\n", port, block[BlkOffLt],
                 block[BlkOffTt], rc);
 #endif
         break;
@@ -666,7 +696,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
             rc                  = (u8)lp->lineState;
             }
 #if DEBUG
-        fprintf(cciLog, "\n(cci_svm) line enable P %d CNF %d RC %d\n", port, lp->configState, rc);
+        fprintf(cciLog, "Line enable P %d CNF %d RC %d\n", port, lp->configState, rc);
 #endif
         break;
 
@@ -692,7 +722,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
             rc                  = (u8)lp->lineState;
             }
 #if DEBUG
-        fprintf(cciLog, "\n(cci_svm) line disable P %d CNF %d RC %d\n", port, lp->configState, rc);
+        fprintf(cciLog, "Line disable P %d CNF %d RC %d\n", port, lp->configState, rc);
 #endif
         break;
 
@@ -755,7 +785,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
             break;
             }
 #if DEBUG
-        fprintf(cciLog, "(cci_svm) line disconnect P %d CFS %d RC %d\n", port, lp->configState, rc);
+        fprintf(cciLog, "Line disconnect P %d CFS %d RC %d\n", port, lp->configState, rc);
 #endif
         break;
 
@@ -795,7 +825,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
         pcbp->cciWaitForTcb = FALSE;
 
 #if DEBUG
-        fprintf(cciLog, "\n(cci_svm) configure terminal P %d CN %d RC %d\n", port, tp->cn, rc);
+        fprintf(cciLog, "Configure terminal P %d CN %d RC %d\n", port, tp->cn, rc);
 #endif
         break;
 
@@ -828,7 +858,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
         ** we have to check what to do here
         */
 #if DEBUG
-        fprintf(cciLog, "\n(cci_svm) reconfigure terminal P %d CN %d RC %d\n", port, tp->cn, rc);
+        fprintf(cciLog, "Reconfigure terminal P %d CN %d RC %d\n", port, tp->cn, rc);
 #endif
         break;
 
@@ -892,14 +922,15 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
             }
 
 #if DEBUG
-        fprintf(cciLog, "\n(cci_svm) delete terminal P %d CN: %d rc %d\n", port, cn, rc);
+        fprintf(cciLog, "Delete terminal P %d CN: %d rc %d\n", port, cn, rc);
 #endif
         break;
 
-#if DEBUG
     default:
-        fprintf(cciLog, "\n(cci_svm) Unhandled service message request %x\n", fCode);
+#if DEBUG
+        fprintf(cciLog, "Unhandled service message request %x\n", fCode);
 #endif
+        break;
         }
 
     /*
@@ -918,7 +949,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
     /*
     ** add port and subport, in this case lp points to the line control block
     */
-    if (lp != (cciLcb *)NULL)
+    if (lp != (CciLcb *)NULL)
         {
         *rp++ = port;
         *rp++ = 0;
@@ -1019,7 +1050,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
 #endif
 
     /*
-    ** send response and relase buffer
+    ** send response and release buffer
     */
     respBuf->numBytes = (u16)(rp - rpHead);
     npuBipRequestUplineTransfer(respBuf);
@@ -1039,7 +1070,7 @@ void cciSvmProcessBuffer(NpuBuffer *bp)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void cciSvmParseLnFnFv(u8 *block, int start, int end, cciLcb *lp)
+void cciSvmParseLnFnFv(u8 *block, int start, int end, CciLcb *lp)
     {
     int i;
 
@@ -1080,7 +1111,7 @@ void cciSvmParseTFnFv(u8 *block, int start, int end, Tcb *tp)
 
     block += start;
 #if DEBUG
-    fprintf(cciLog, "(cci_svm) terminal params: ");
+    fprintf(cciLog, "Terminal params: ");
 #endif
     for (i = start; i < end ; i += 2)
         {
@@ -1157,7 +1188,7 @@ void cciSvmParseTFnFv(u8 *block, int start, int end, Tcb *tp)
 **------------------------------------------------------------------------*/
 void cciSvmNpuInitResponse(void)
     {
-    npuBipRequestUplineCanned(cciInitMsg, sizeof(cciInitMsg));
+    npuBipRequestUplineStatic(cciInitMsg, sizeof(cciInitMsg), 0, 0);
     }
 
 /*--------------------------------------------------------------------------
@@ -1170,7 +1201,7 @@ void cciSvmNpuInitResponse(void)
 **  Returns:        pointer to TCB if successful, NULL otherwise.
 **
 **------------------------------------------------------------------------*/
-static Tcb *cciSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp, cciLcb *lp)
+static Tcb *cciSvmProcessTerminalConfig(u8 claPort, NpuBuffer *bp, CciLcb *lp)
     {
     u8   cn;
     Pcb  *pcbp;
@@ -1336,9 +1367,9 @@ static Tcb *cciSvmFindOwningConsole(Tcb *tp)
         }
 
     claPort = tp->pcbp->claPort;
-    for (i = 1; i <= npuNetMaxCN; i++)
+    for (i = 1; i <= netDevice->maxCN; i++)
         {
-        tp2 = &npuTcbs[i];
+        tp2 = &netDevice->tcbs[i];
         if ((tp2->state != StTermIdle) && (tp2->pcbp->claPort == claPort) && (tp2->deviceType == DtCONSOLE))
             {
             return tp2;
@@ -1409,7 +1440,7 @@ u8 cciGetPortFromPcb(Pcb *pcbp)
 **  Returns:        CCI port number
 **
 **------------------------------------------------------------------------*/
-cciLcb * cciSvmGetLcbForPort(u8 port)
+CciLcb * cciSvmGetLcbForPort(u8 port)
     {
     return (&cciLcbs[port]);
     }

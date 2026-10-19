@@ -318,7 +318,10 @@
 #define DefaultUplineBlockLimit    5
 #define HostIdSize                 9
 #define MaxBuffer                  2048
+#define MaxClaPorts                255
 #define MaxHaspStreams             7
+#define MaxNetDevices              8
+#define MaxNetDevNameSize          8
 #define MaxTcbs                    256
 #define MaxTermDefs                255
 #define MinNjeBlockSize            1024
@@ -816,10 +819,77 @@ typedef struct tcb
     } Tcb;
 
 /*
+**  Channel I/O buffer definition
+**/
+typedef struct chIoBuffer
+    {
+    bool       isReady;
+    u16        offset;
+    u16        numBytes;
+    u8         blockSeqNo;
+    u8         data[MaxBuffer];
+    } ChIoBuffer;
+
+/*
+**  Network device types
+**/
+typedef enum
+    {
+    NPU_CCP = 0,   // NPU software running CCP and supporting NOS
+    NPU_CCI,       // NPU software running CCI and supporting NOS/BE
+    MDI_NOS        // CDCNet MDI supporting NOS
+    } NetDevType;
+
+/*
+**  Network device configuration parameters
+*/
+typedef struct netDevParam
+    {
+    u8         id;
+    NetDevType type;
+    char       name[MaxNetDevNameSize];
+    char       *sectionName;
+    u8         channelNo;
+    u8         eqNo;
+    u8         unitNo;
+    void       *devDependent;
+    u8         npuNode;
+    u8         couplerNode;
+    u8         cdcnetNode;
+    int        numNcbs;
+    Ncb        ncbs[MaxTermDefs];
+    Pcb        pcbs[MaxClaPorts];
+    Tcb        tcbs[MaxTcbs];
+    bool       doReset;
+    bool       isPcbsPreset;
+    u8         maxClaPort;
+    u8         maxCN;
+    u8         trunkCount;
+    u16        privilegedTcpPortOffset;
+    u16        privilegedUdpPortOffset;
+    int        bufCount;
+    ChIoBuffer uplineData;
+    ChIoBuffer downlineData;
+    NpuBuffer  *buffers;
+    NpuBuffer  *bufPool;
+    NpuBuffer  *downlineBuffer;
+    NpuBuffer  *uplineBuffer;
+    NpuQueue   *uplineQueue;
+    FILE       *log;
+    } NetDevParam;
+
+/*
 **  -------------------------------
 **  NPU and MDI Function Prototypes
 **  -------------------------------
 */
+
+/*
+**  cci_hip.c
+*/
+void cciHipNotifyDownlineCopied(void);
+bool cciHipStartDownlineTransfer(NpuBuffer *bp);
+bool cciHipStartUplineTransfer(NpuBuffer *bp);
 
 /*
 **  cdcnet.c
@@ -829,11 +899,18 @@ void cdcnetProcessDownlineData(NpuBuffer *bp);
 void cdcnetReset();
 
 /*
+**  mdi.c
+*/
+void mdiHipNotifyDownlineCopied(void);
+bool mdiHipStartDownlineTransfer(NpuBuffer *bp);
+bool mdiHipStartUplineTransfer(NpuBuffer *bp);
+
+/*
 **  npu_hip.c
 */
-bool npuHipDownlineBlock(NpuBuffer *bp);
-void npuHipInit(void);
-bool npuHipUplineBlock(NpuBuffer *bp);
+void npuHipNotifyDownlineCopied(void);
+bool npuHipStartDownlineTransfer(NpuBuffer *bp);
+bool npuHipStartUplineTransfer(NpuBuffer *bp);
 void npuLogMessage(char *format, ...);
 
 /*
@@ -852,10 +929,10 @@ NpuBuffer *npuBipQueueExtract(NpuQueue *queue);
 NpuBuffer *npuBipQueueGetLast(NpuQueue *queue);
 bool npuBipQueueNotEmpty(NpuQueue *queue);
 void npuBipQueuePrepend(NpuBuffer *bp, NpuQueue *queue);
-void npuBipRequestUplineTransfer(NpuBuffer *bp);
 void npuBipRequestUplineCanned(u8 *msg, int msgSize);
+void npuBipRequestUplineStatic(u8 *msg, int msgSize, int idx, u8 value);
+void npuBipRequestUplineTransfer(NpuBuffer *bp);
 void npuBipReset(void);
-void npuBipRetryInput(void);
 void npuBipTryUplineBlock(void);
 
 /*
@@ -901,7 +978,7 @@ void npuNetPreset(void);
 void npuNetReset(void);
 void npuNetConnected(Tcb *tp);
 void npuNetDisconnected(Tcb *tp);
-int npuNetRegisterConnType(int tcpPort, int claPort, int numPorts, int connType, Ncb **ncbpp);
+int  npuNetRegisterConnType(int tcpPort, int claPort, int numPorts, int connType, Ncb **ncbpp);
 void npuNetSend(Tcb *tp, u8 *data, int len);
 void npuNetSetMaxCN(u8 cn);
 void npuNetQueueAck(Tcb *tp, u8 blockSeqNo);
@@ -971,17 +1048,14 @@ void npuLipResetPcb(Pcb *pcbp);
 void npuLipTryOutput(Pcb *pcbp);
 
 /*
-**  ----------------------------
-**  Global NPU and MDI variables
-**  ----------------------------
+**  -------------------------------
+**  Global network device variables
+**  -------------------------------
 */
-extern u8  cdcnetNode;
-extern u16 cdcnetPrivilegedTcpPortOffset;
-extern u16 cdcnetPrivilegedUdpPortOffset;
-extern u8  npuLipTrunkCount;
-extern u8  npuNetMaxClaPort;
-extern u8  npuNetMaxCN;
-extern Tcb npuTcbs[];
+extern u8                       netDevCount;
+extern thread_local NetDevParam *netDevice;
+extern NetDevParam              netDevices[];
+extern char                     npuConnections[];
 
 #endif /* NPU_H */
 /*---------------------------  End Of File  ------------------------------*/

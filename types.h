@@ -519,13 +519,5 @@ typedef enum
     ESM
     } ExtMemory;
 
-typedef enum
-    {
-    SwCCP = 0,
-    SwCCI,
-    SwUndefined
-    } NpuSoftware;
-
-
 #endif /* TYPES_H */
 /*---------------------------  End Of File  ------------------------------*/

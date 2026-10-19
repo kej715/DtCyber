@@ -118,7 +118,6 @@ static void npuAsyncProcessUplineNormal(Tcb *tp);
 #if DEBUG
 static void npuAsyncLogBytes(u8 *bytes, int len);
 static void npuAsyncLogFlush(void);
-
 #endif
 
 /*
@@ -127,7 +126,7 @@ static void npuAsyncLogFlush(void);
 **  ----------------
 */
 #if DEBUG
-FILE *npuAsyncLog = NULL;
+static thread_local FILE *npuAsyncLog = NULL;
 #endif
 
 /*
@@ -135,8 +134,6 @@ FILE *npuAsyncLog = NULL;
 **  Private Variables
 **  -----------------
 */
-static Tcb *npuTp;
-
 static u8 fcSingleSpace[]   = "\r\n";
 static u8 fcDoubleSpace[]   = "\r\n\n";
 static u8 fcTripleSpace[]   = "\r\n\n\n";
@@ -149,9 +146,6 @@ static u8  netBEL[]  = { ChrBEL };
 static u8  netLF[]   = { ChrLF };
 static u8  netCR[]   = { ChrCR };
 static u8  netCRLF[] = { ChrCR, ChrLF };
-static u8  echoBuffer[1000];
-static u8  *echoPtr;
-static int echoLen;
 
 static u8 telnetDo[3]      = { TELNET_IAC, TELNET_DO, 0 };
 static u8 telnetDont[3]    = { TELNET_IAC, TELNET_DONT, 0 };
@@ -167,36 +161,45 @@ static u8 blockResetConnection[] =
     BtHTRESET,          // BT/BSN/PRIO
     };
 
+static thread_local Tcb *npuTp;
+static thread_local u8  echoBuffer[1000];
+static thread_local u8  *echoPtr;
+
 #if DEBUG
-static char npuAsyncLogBuf[LogLineLength + 1];
-static int  npuAsyncLogBytesCol = 0;
+static thread_local char npuAsyncLogBuf[LogLineLength + 1];
+static thread_local int  npuAsyncLogBytesCol = 0;
 #endif
 
 /*
-** Function tables to interface to either CCP or CCI functions
+**  Function tables to interface to either CCP or CCI functions.
+**  Indexed by NetDevType
 */
 static bool (*svmConnectTerminal[])(Pcb *bp) =
     {
     npuSvmConnectTerminal,
-    cciSvmConnectTerminal
+    cciSvmConnectTerminal,
+    npuSvmConnectTerminal
     };
 
 static void (*svmSendDiscRequest[])(Tcb *tp) =
     {
     npuSvmSendDiscRequest,
-    cciSvmSendDiscRequest
+    cciSvmSendDiscRequest,
+    npuSvmSendDiscRequest
     };
 
 static void (*tipNotifySent[])(Tcb *tp, u8 blockSeqNo) =
     {
     npuTipNotifySent,
-    cciTipNotifySent
+    cciTipNotifySent,
+    npuTipNotifySent
     };
 
 static void (*asyncProcessUplineNormal[])(Tcb *tp) =
     {
     npuAsyncProcessUplineNormal,
     cciAsyncProcessUplineNormal,
+    npuAsyncProcessUplineNormal
     };
 
 /*
@@ -225,13 +228,15 @@ void npuAsyncPresetPcb(Pcb *pcbp)
 #if DEBUG
     if (npuAsyncLog == NULL)
         {
-        npuAsyncLog = fopen("asynclog.txt", "wt");
+        char fName[32];
+        sprintf(fName, "%sasynclog.txt", netDevice->name);
+        npuAsyncLog = fopen(fName, "wt");
         if (npuAsyncLog == NULL)
             {
-            logDtError(LogErrorLocation, "asynclog.txt - aborting\n");
+            perror(fName);
             exit(1);
             }
-        npuAsyncLogFlush();    // initialize log buffer
+        npuAsyncLogFlush(); // initialize log buffer
         }
 #endif
     }
@@ -248,10 +253,7 @@ void npuAsyncPresetPcb(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 void npuAsyncProcessBreakIndication(Tcb *tp)
     {
-    blockResetConnection[BlkOffDN] = npuSvmCouplerNode;
-    blockResetConnection[BlkOffSN] = npuSvmNpuNode;
-    blockResetConnection[BlkOffCN] = tp->cn;
-    npuBipRequestUplineCanned(blockResetConnection, sizeof(blockResetConnection));
+    npuBipRequestUplineStatic(blockResetConnection, sizeof(blockResetConnection), BlkOffCN, tp->cn);
 #if DEBUG
     fprintf(npuAsyncLog, "Port %02x: break indication for %.7s\n", tp->pcbp->claPort, tp->termName);
 #endif
@@ -741,7 +743,7 @@ void npuAsyncTryOutput(Pcb *pcbp)
             */
             if (bp->blockSeqNo != 0)
                 {
-                tipNotifySent[npuSw](tp, bp->blockSeqNo);
+                tipNotifySent[netDevice->type](tp, bp->blockSeqNo);
                 }
 
             npuBipBufRelease(bp);
@@ -903,6 +905,7 @@ void npuAsyncProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
 **------------------------------------------------------------------------*/
 void npuAsyncProcessUplineData(Pcb *pcbp)
     {
+    int echoLen;
     Tcb *tp;
 
     tp = npuAsyncFindTcb(pcbp);
@@ -933,7 +936,7 @@ void npuAsyncProcessUplineData(Pcb *pcbp)
         }
     else
         {
-        asyncProcessUplineNormal[npuSw](tp);
+        asyncProcessUplineNormal[netDevice->type](tp);
         }
 
     /*
@@ -1010,7 +1013,7 @@ bool npuAsyncNotifyNetConnect(Pcb *pcbp, bool isPassive)
     fprintf(npuAsyncLog, "Port %02x: request terminal connection\n", pcbp->claPort);
 #endif
 
-    return svmConnectTerminal[npuSw](pcbp);
+    return svmConnectTerminal[netDevice->type](pcbp);
     }
 
 /*--------------------------------------------------------------------------
@@ -1032,7 +1035,7 @@ void npuAsyncNotifyNetDisconnect(Pcb *pcbp)
 #if DEBUG
         fprintf(npuAsyncLog, "Port %02x: terminal %.7s disconnected\n", pcbp->claPort, tp->termName);
 #endif
-        svmSendDiscRequest[npuSw](tp);
+        svmSendDiscRequest[netDevice->type](tp);
         }
     else
         {
@@ -1233,7 +1236,7 @@ static Tcb *npuAsyncFindTcb(Pcb *pcbp)
 
     for (i = 1; i < MaxTcbs; i++)
         {
-        tp = &npuTcbs[i];
+        tp = &netDevice->tcbs[i];
         if ((tp->state != StTermIdle) && (tp->pcbp == pcbp))
             {
             pcbp->controls.async.tp = tp;
@@ -1391,6 +1394,7 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
 static void npuAsyncProcessUplineAscii(Tcb *tp)
     {
     u8  *dp;
+    int echoLen;
     int len;
     u8  ch;
     Pcb *pcbp;
@@ -1558,6 +1562,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
 static void npuAsyncProcessUplineSpecial(Tcb *tp)
     {
     u8  *dp;
+    int echoLen;
     int len;
     u8  ch;
     int i;
@@ -1803,6 +1808,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
 static void npuAsyncProcessUplineNormal(Tcb *tp)
     {
     u8  *dp;
+    int echoLen;
     int len;
     u8  ch;
     int i;

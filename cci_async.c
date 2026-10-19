@@ -24,10 +24,7 @@
 **--------------------------------------------------------------------------
 */
 
-/*
-** Note: if DEBUG is enabled here, it must also be activated in npu_async.c
-*/
-#define DEBUG    0
+#define DEBUG 0
 
 /*
 **  -------------
@@ -38,12 +35,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-
-#if defined(__FreeBSD__)
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#endif
 
 #include "const.h"
 #include "types.h"
@@ -77,21 +68,21 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
+#if DEBUG
+static void cciAsyncInitLog(void);
+#endif
 
 /*
 **  ----------------
 **  Public Variables
 **  ----------------
 */
-extern FILE *npuAsyncLog;
 
 /*
 **  -----------------
 **  Private Variables
 **  -----------------
 */
-static Tcb *npuTp;
-
 static u8 fcSingleSpace[] = "\r\n";
 static u8 fcTripleSpace[] = "\r\n\n\n";
 static u8 fcBol[]         = "\r";
@@ -101,9 +92,10 @@ static u8  netLF[]   = { ChrLF };
 static u8  netCR[]   = { ChrCR };
 static u8  netCRLF[] = { ChrCR, ChrLF };
 static u8  netBS[]   = { ChrBS, ChrBlank, ChrBS };
-static u8  echoBuffer[1000];
-static u8  *echoPtr = echoBuffer;
-static int echoLen;
+
+#if DEBUG
+static thread_local FILE *cciLog;
+#endif
 
 /*
  **--------------------------------------------------------------------------
@@ -112,6 +104,7 @@ static int echoLen;
  **
  **--------------------------------------------------------------------------
  */
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Process downline data from host for CCI
 **
@@ -130,13 +123,14 @@ void cciAsyncProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
     u8  dbc;
     u8  i;
 
-    npuTp = tp;
+#if DEBUG
+    cciAsyncInitLog();
+#endif
 
     /*
     **  Extract Data Block Clarifier settings.
     */
-    dbc = *blk++;
-
+    dbc  = *blk++;
     len -= 1;
 
     /*
@@ -153,15 +147,15 @@ void cciAsyncProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
     case 0:
     case 2:
     case 3:
-        npuNetSend(npuTp, fcSingleSpace, sizeof(fcSingleSpace) - 1);
+        npuNetSend(tp, fcSingleSpace, sizeof(fcSingleSpace) - 1);
         break;
 
     case 1:
-        npuNetSend(npuTp, fcTripleSpace, sizeof(fcTripleSpace) - 1);
+        npuNetSend(tp, fcTripleSpace, sizeof(fcTripleSpace) - 1);
         break;
 
     case 4:
-        npuNetSend(npuTp, fcBol, sizeof(fcBol) - 1);
+        npuNetSend(tp, fcBol, sizeof(fcBol) - 1);
         break;
 
     default:
@@ -184,18 +178,18 @@ void cciAsyncProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
         len--;
         }
 #if DEBUG
-    fprintf(npuAsyncLog, "Send to terminal : ");
+    fprintf(cciLog, "Send to terminal : ");
     for (int i = 0; i < len ; i++)
         {
-        fprintf(npuAsyncLog, "%c", blk[i]);
+        fprintf(cciLog, "%c", blk[i]);
         }
-    fprintf(npuAsyncLog, "\n");
+    fprintf(cciLog, "\n");
 #endif
 
     /*
     **  Process data.
     */
-    npuNetSend(npuTp, blk, len);
+    npuNetSend(tp, blk, len);
     }
 
 /*--------------------------------------------------------------------------
@@ -209,14 +203,22 @@ void cciAsyncProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
 **------------------------------------------------------------------------*/
 void cciAsyncProcessUplineNormal(Tcb *tp)
     {
-    u8  *dp;
-    int len;
     u8  ch;
+    u8  *dp;
+    u8  echoBuffer[1000];
+    int echoLen;
+    u8  *echoPtr;
+    int len;
     Pcb *pcbp;
 
-    pcbp = tp->pcbp;
-    dp   = pcbp->inputData;
-    len  = pcbp->inputCount;
+#if DEBUG
+    cciAsyncInitLog();
+#endif
+
+    pcbp    = tp->pcbp;
+    dp      = pcbp->inputData;
+    len     = pcbp->inputCount;
+    echoPtr = echoBuffer;
 
     /*
     **  Process input for CCI
@@ -277,7 +279,7 @@ void cciAsyncProcessUplineNormal(Tcb *tp)
             */
             cciTipSendMsg(tp, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
-            fprintf(npuAsyncLog, "Port %02x: send upline normal data for %.7s, size %ld\n",
+            fprintf(cciLog, "Port %02x: send upline normal data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
 #endif
             cciTipInputReset(tp);
@@ -351,10 +353,36 @@ void cciAsyncProcessUplineNormal(Tcb *tp)
             */
             cciTipSendMsg(tp, (int)(tp->inBufPtr - tp->inBuf));
 #if DEBUG
-            fprintf(npuAsyncLog, "Port %02x: send upline long normal data for %.7s, size %ld\n",
+            fprintf(cciLog, "Port %02x: send upline long normal data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
 #endif
             cciTipInputReset(tp);
             }
         }
     }
+
+#if DEBUG
+/*--------------------------------------------------------------------------
+**  Purpose:        Initialize the debug log
+**
+**  Parameters:     Name        Description.
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void cciAsyncInitLog(void)
+    {
+    if (cciLog == NULL)
+        {
+        char fName[32];
+        sprintf(fName, "%sasynclog.txt", netDevice->name);
+        cciLog = fopen(fName, "wt");
+        if (cciLog == NULL)
+            {
+            perror(fName);
+            exit(1);
+            }
+        }
+    }
+#endif
+

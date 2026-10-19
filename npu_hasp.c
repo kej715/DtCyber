@@ -226,9 +226,9 @@ static u8 dcEoi        [] = { 050, 047, 005, 017, 011 }; //  /*EOI
 static u8 dcEor        [] = { 050, 047, 005, 017, 022 }; //  /*EOR
 
 #if DEBUG
-static FILE *npuHaspLog = NULL;
-static char npuHaspLogBuf[LogLineLength + 1];
-static int  npuHaspLogBytesCol = 0;
+static thread_local FILE *npuHaspLog = NULL;
+static thread_local char npuHaspLogBuf[LogLineLength + 1];
+static thread_local int  npuHaspLogBytesCol = 0;
 #endif
 
 /*
@@ -2346,13 +2346,15 @@ void npuHaspPresetPcb(Pcb *pcbp)
 #if DEBUG
     if (npuHaspLog == NULL)
         {
-        npuHaspLog = fopen("hasplog.txt", "wt");
+        char fName[32];
+        sprintf(fName, "%shasplog.txt", netDevice->name);
+        npuHaspLog = fopen(fName, "wt");
         if (npuHaspLog == NULL)
             {
-            logDtError(LogErrorLocation, "hasplog.txt - aborting\n");
+            logDtError(LogErrorLocation, "%s - aborting\n", fName);
             exit(1);
             }
-        npuHaspLogFlush();    // initialize log buffer
+        npuHaspLogFlush(); // initialize log buffer
         }
 #endif
 
@@ -3755,24 +3757,15 @@ static void npuHaspSendUplineData(Tcb *tp, u8 *data, int len)
 **------------------------------------------------------------------------*/
 static void npuHaspSendUplineEoiAcctg(Tcb *tp, u8 sfc)
     {
+    u8  command[BlkOffP5 + 1];
     Scb *scbp;
 
-    static u8 command[] =
-        {
-        0,                            // DN
-        0,                            // SN
-        0,                            // CN
-        (0 << BlkShiftBSN) | BtHTCMD, // BT/BSN/PRIO
-        PfcAD,
-        SfcEOI,
-        0, 0, 0
-        };
-
-    command[BlkOffDN]    = npuSvmCouplerNode;
-    command[BlkOffSN]    = npuSvmNpuNode;
+    command[BlkOffDN]    = netDevice->couplerNode;
+    command[BlkOffSN]    = netDevice->npuNode;
     command[BlkOffCN]    = tp->cn;
-    command[BlkOffSfc]   = sfc;
     command[BlkOffBTBSN] = (u8)(BtHTCMD | (tp->uplineBsn++ << BlkShiftBSN));
+    command[BlkOffPfc]   = PfcAD;
+    command[BlkOffSfc]   = sfc;
     if (tp->uplineBsn >= 8)
         {
         tp->uplineBsn = 1;
@@ -3805,29 +3798,23 @@ static void npuHaspSendUplineEoiAcctg(Tcb *tp, u8 sfc)
 **------------------------------------------------------------------------*/
 static void npuHaspSendUplineEOS(Tcb *tp)
     {
-    static u8 commandEOS[] =
-        {
-        0,                            // DN
-        0,                            // SN
-        0,                            // CN
-        (0 << BlkShiftBSN) | BtHTCMD, // BT/BSN/PRIO
-        PfcIS,
-        SfcES
-        };
+    u8 command[BlkOffSfc + 1];
 
-    commandEOS[BlkOffDN]    = npuSvmCouplerNode;
-    commandEOS[BlkOffSN]    = npuSvmNpuNode;
-    commandEOS[BlkOffCN]    = tp->cn;
-    commandEOS[BlkOffBTBSN] = (u8)(BtHTCMD | (tp->uplineBsn++ << BlkShiftBSN));
+    command[BlkOffDN]    = netDevice->couplerNode;
+    command[BlkOffSN]    = netDevice->npuNode;
+    command[BlkOffCN]    = tp->cn;
+    command[BlkOffBTBSN] = (u8)(BtHTCMD | (tp->uplineBsn++ << BlkShiftBSN));
+    command[BlkOffPfc]   = PfcIS;
+    command[BlkOffSfc]   = SfcES;
     if (tp->uplineBsn >= 8)
         {
         tp->uplineBsn = 1;
         }
-    npuHaspSendUplineData(tp, commandEOS, sizeof(commandEOS));
+    npuHaspSendUplineData(tp, command, sizeof(command));
 #if DEBUG
     fprintf(npuHaspLog, "Port %02x: send end of stream command to host for stream %u (%.7s)\n",
             tp->pcbp->claPort, tp->streamId, tp->termName);
-    npuHaspLogBytes(commandEOS, sizeof(commandEOS), ASCII);
+    npuHaspLogBytes(command, sizeof(command), ASCII);
     npuHaspLogFlush();
 #endif
     }

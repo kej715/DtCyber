@@ -536,24 +536,24 @@ void startHelpers(void)
     int  lineNo = 0;
     int  rc;
 
-    if (initOpenHelpersSection() != 1)
+    initAcquireMutex();
+    if (initOpenHelpersSection())
         {
-        return;
-        }
-
-    while ((line = initGetNextLine(&lineNo)) != NULL)
-        {
-        sprintf(command, "%s start", line);
-        rc = runHelper(command);
-        if (rc == 0)
+        while ((line = initGetNextLine(&lineNo)) != NULL)
             {
-            printf("(main   ) Started helper: %s\n", line);
-            }
-        else
-            {
-            printf("(main   ) Failed to start helper \"%s\", rc = %d\n", line, rc);
+            sprintf(command, "%s start", line);
+            rc = runHelper(command);
+            if (rc == 0)
+                {
+                printf("(main   ) Started helper: %s\n", line);
+                }
+            else
+                {
+                printf("(main   ) Failed to start helper \"%s\", rc = %d\n", line, rc);
+                }
             }
         }
+    initReleaseMutex();
     }
 
 /*--------------------------------------------------------------------------

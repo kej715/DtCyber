@@ -56,6 +56,8 @@
 /*
 **  Function codes.
 */
+#define FcNpuInMemAddr0            00000 // from INTERCOM 688 sources
+#define FcNpuInMemAddr1            00001 // from INTERCOM 688 sources
 #define FcNpuInData                00003
 #define FcNpuInNpuStatus           00004
 #define FcNpuInCouplerStatus       00005
@@ -74,6 +76,7 @@
 #define FcNpuClearCoupler          00400
 
 #define FcNpuEqMask                07000
+#define FcNpuNothing               07777
 
 /*
 **  Coupler status bits (read by PP).
@@ -120,9 +123,9 @@
 #define ReportInitCount            4
 
 #if DEBUG
-#define HexColumn(x)      (4 * (x) + 1 + 4)
-#define AsciiColumn(x)    (HexColumn(16) + 2 + (x))
-#define LogLineLength    (AsciiColumn(16))
+#define HexColumn(x)   (4 * (x) + 1 + 4)
+#define AsciiColumn(x) (HexColumn(16) + 2 + (x))
+#define LogLineLength  (AsciiColumn(16))
 #endif
 
 /*
@@ -141,19 +144,26 @@ typedef enum
     StHipInit = 0,
     StHipIdle,
     StHipUpline,
-    StHipDownline,
+    StHipDownline
     } NpuState;
 
 typedef struct npuParam
     {
+    u8        id;
     NpuState  state;
     PpWord    regCouplerStatus;
     PpWord    regNpuStatus;
     PpWord    regOrder;
-    bool      doReset;
-    NpuBuffer *buffer;
-    u8        *npuData;
+    bool      isOrderReady;
+    u8        initCount;
     u32       lastCommandTime;
+    u8        hipRequest;
+#define          HipReqNone           0
+#define          HipReqNotifyUpline   1
+#if DEBUG
+    char      logBuf[LogLineLength + 1];
+    int       logCol;
+#endif
     } NpuParam;
 
 /*
@@ -161,16 +171,14 @@ typedef struct npuParam
 **  Private Function Prototypes
 **  ---------------------------
 */
-static void npuHipCreateThread(void);
+static void npuHipCreateThread(NetDevParam *param);
 static FcStatus npuHipFunc(PpWord funcCode);
 static void npuHipIo(void);
 static void npuHipActivate(void);
 static void npuHipDisconnect(void);
-static void npuHipWriteNpuStatus(PpWord status);
-static PpWord npuHipReadNpuStatus(void);
-static bool npuHipDownlineBlockImpl(NpuBuffer *bp);
-static bool npuHipUplineBlockImpl(NpuBuffer *bp);
-static void npuReset(void);
+static void npuHipIndicateUplineBlock(u8 *block, u16 numBytes);
+static PpWord npuHipReadNpuStatus(NpuParam *npu);
+static void npuHipSetNpuStatus(NpuParam *npu, PpWord status);
 
 #if defined(_WIN32)
 static void npuThread(void *param);
@@ -180,8 +188,8 @@ static void *npuThread(void *param);
 
 #if DEBUG
 static char *npuHipFunc2String(PpWord funcCode);
-static void npuLogFlush(void);
-static void npuLogByte(int b);
+static void npuLogFlush(FILE *log, NpuParam *npu);
+static void npuLogByte(FILE *log, NpuParam *npu, int b);
 #endif
 
 /*
@@ -189,26 +197,16 @@ static void npuLogByte(int b);
 **  Public Variables
 **  ----------------
 */
-bool (*npuHipDownlineBlockFunc)(NpuBuffer *bp);
-void (*npuHipResetFunc)(void);
-bool (*npuHipUplineBlockFunc)(NpuBuffer *bp);
-
-#if DEBUG
-static FILE *npuLog = NULL;
-#endif
+u8                       netDevCount = 0;
+thread_local NetDevParam *netDevice = NULL;
+NetDevParam              netDevices[MaxNetDevices];
 
 /*
 **  -----------------
 **  Private Variables
 **  -----------------
 */
-static int      initCount  = ReportInitCount;
-static NpuParam *npu;
-
-#if DEBUG
-static char npuLogBuf[LogLineLength + 1];
-static int  npuLogCol = 0;
-#endif
+static u8 npuCount = 0;
 
 /*
  **--------------------------------------------------------------------------
@@ -232,17 +230,15 @@ static int  npuLogCol = 0;
 **------------------------------------------------------------------------*/
 void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
-    DevSlot *dp;
+    DevSlot     *dp;
+    NetDevParam *netDevice;
+    NpuParam    *npu;
 
-    /*
-    ** set HCP software type, exit if npuSw is not SwUndefined
-    */
-    if (npuSw != SwUndefined)
+    if (netDevCount >= MaxNetDevices)
         {
-        logDtError(LogErrorLocation, "CCP and CCI devices are mutually exclusive\n");
+        logDtError(LogErrorLocation, "Maximum number of network device definitions (%d) exceeded\n", MaxNetDevices);
         exit(1);
         }
-    npuSw = SwCCP;
 
     /*
     **  Attach device to channel and initialise device control block.
@@ -256,7 +252,7 @@ void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     activeDevice     = dp;
 
     /*
-    **  Allocate and initialise NPU parameters.
+    **  Allocate and initialise NPU specific parameters.
     */
     npu = calloc(1, sizeof(NpuParam));
     if (npu == NULL)
@@ -265,144 +261,134 @@ void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         exit(1);
         }
 
-    dp->controllerContext   = npu;
-    npu->state              = StHipInit;
-    npu->regCouplerStatus   = 0;
-    npuHipDownlineBlockFunc = npuHipDownlineBlockImpl;
-    npuHipResetFunc         = npuReset;
-    npuHipUplineBlockFunc   = npuHipUplineBlockImpl;
+    npu->id        = npuCount++;
+    npu->state     = StHipInit;
+    npu->initCount = ReportInitCount;
 
     /*
-    **  Initialize HIP
+    **  Allocate and initialise general network device parameters.
     */
-    npuHipInit();
+    netDevice = &netDevices[netDevCount++];
+    memset(netDevice, 0, sizeof(NetDevParam));
+    netDevice->id        = npu->id;
+    netDevice->type      = NPU_CCP;
+    netDevice->channelNo = channelNo;
+    netDevice->eqNo      = eqNo;
+    netDevice->unitNo    = unitNo;
+    sprintf(netDevice->name, "npu%d", npu->id);
+    if (deviceName != NULL && strlen(deviceName) > 0)
+        {
+        netDevice->sectionName = (char *)malloc(strlen(deviceName) + 1);
+        if (netDevice->sectionName == NULL)
+            {
+            logDtError(LogErrorLocation, "Failed to allocate npu context block\n");
+            exit(1);
+            }
+        strcpy(netDevice->sectionName, deviceName);
+        }
+    netDevice->devDependent = npu;
+    dp->controllerContext   = netDevice;
+
+#if DEBUG
+    {
+    char fName[16];
+    sprintf(fName, "%slog.txt", netDevice->name);
+    netDevice->log = fopen(fName, "wt");
+    if (netDevice->log == NULL)
+        {
+        perror(fName);
+        exit(1);
+        }
+    fprintf(netDevice->log, "NPU%d initialised on channel %o equipment %o\n", npu->id, channelNo, eqNo);
+    }
+#endif
+    /*
+    **  Print a friendly message.
+    */
+    printf("(npu_hip) NPU%d initialised on channel %o equipment %o\n", npu->id, channelNo, eqNo);
 
     /*
     **  Create NPU emulation thread
     */
-    npuHipCreateThread();
-
-    /*
-    **  Print a friendly message.
-    */
-    printf("(npu_hip) NPU initialised on channel %o equipment %o\n", channelNo, eqNo);
-    printf("                 Host ID: %s\n", npuNetHostID);
-    printf("            Coupler node: %u\n", npuSvmCouplerNode);
-    printf("                NPU node: %u\n", npuSvmNpuNode);
+    npuHipCreateThread(netDevice);
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Initialise HIP.
+**  Purpose:        Process completion of downline block transfer.
 **
 **  Parameters:     Name        Description.
 **
-**  Returns:        Nothing.
+**  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-void npuHipInit(void)
+void npuHipNotifyDownlineCopied(void)
     {
+    NpuParam *npu;
+
+    npu = (NpuParam *)netDevice->devDependent;
+    npuHipSetNpuStatus(npu, StNpuReadyOutput);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Initiate trasnfer of downline block.
+**
+**  Parameters:     Name        Description.
+**                  bp          pointer to NPU buffer.
+**
+**  Returns:        TRUE if block can be accepted, FALSE otherwise.
+**
+**------------------------------------------------------------------------*/
+bool npuHipStartDownlineTransfer(NpuBuffer *bp)
+    {
+    NpuParam *npu;
+
+    npu = (NpuParam *)netDevice->devDependent;
+    if (netDevice->downlineData.isReady == FALSE || netDevice->downlineData.numBytes < 1 || bp == NULL || npu->state != StHipIdle)
+        {
 #if DEBUG
-    if (npuLog == NULL)
-        {
-        npuLog = fopen("npulog.txt", "wt");
-        }
+        if (bp != NULL)
+            {
+            fprintf(netDevice->log, "\nDownline block rejected, CN=%02X, BT=%02X, PDU size=%d, NPU state %d, downline ready %s\n", netDevice->downlineData.data[BlkOffCN],
+                netDevice->downlineData.data[BlkOffBTBSN] & BlkMaskBT, netDevice->downlineData.numBytes, npu->state, netDevice->downlineData.isReady ? "TRUE" : "FALSE");
+            traceStack(netDevice->log);
+            }
 #endif
+        return FALSE;
+        }
+
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Request sending of upline block.
+**  Purpose:        Initiate transfer of upline block.
 **
 **  Parameters:     Name        Description.
-**                  bp          pointer to first upline buffer.
+**                  bp          pointer to NPU buffer.
 **
-**  Returns:        TRUE if buffer can be accepted, FALSE otherwise.
-**
-**------------------------------------------------------------------------*/
-bool npuHipUplineBlock(NpuBuffer *bp)
-    {
-    return (*npuHipUplineBlockFunc)(bp);
-    }
-
-bool npuHipUplineBlockImpl(NpuBuffer *bp)
-    {
-    int bits;
-    int prus;
-    int words;
-
-    if (npu->state != StHipIdle)
-        {
-        return (FALSE);
-        }
-
-    if ((bp->numBytes > BlkOffDbc)
-        && ((bp->data[BlkOffBTBSN] & BlkMaskBT) == BtHTMSG)
-        && ((bp->data[BlkOffDbc] & DbcPRU) == DbcPRU))
-        {
-        bits  = (bp->numBytes - (BlkOffDbc + 1)) * (((bp->data[BlkOffDbc] & Dbc8Bit) != 0) ? 8 : 6);
-        words = (bits / 60);
-        if (bits % 60)
-            {
-            words++;
-            }
-        prus = words / 64;
-        if (words % 64)
-            {
-            prus++;
-            }
-        if (prus < 1)
-            {
-            prus = 1;
-            }
-        npuHipWriteNpuStatus((PpWord)(StNpuInputAvailPru | (prus << 10)));
-        }
-    else if (bp->numBytes <= 256)
-        {
-        npuHipWriteNpuStatus(StNpuInputAvailLe256);
-        }
-    else
-        {
-        npuHipWriteNpuStatus(StNpuInputAvailGt256);
-        }
-
-    npu->buffer = bp;
-    npu->state  = StHipUpline;
-
-    return (TRUE);
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Request reception of downline block.
-**
-**  Parameters:     Name        Description.
-**                  bp          pointer to first downline buffer.
-**
-**  Returns:        TRUE if buffer can be accepted, FALSE otherwise.
+**  Returns:        TRUE if block can be accepted, FALSE otherwise.
 **
 **------------------------------------------------------------------------*/
-bool npuHipDownlineBlock(NpuBuffer *bp)
+bool npuHipStartUplineTransfer(NpuBuffer *bp)
     {
-    return (*npuHipDownlineBlockFunc)(bp);
-    }
+    NpuParam *npu;
 
-bool npuHipDownlineBlockImpl(NpuBuffer *bp)
-    {
-    if (npu->state != StHipIdle)
+    npu = (NpuParam *)netDevice->devDependent;
+    if (netDevice->uplineData.isReady || bp == NULL || npu->state != StHipIdle)
         {
-        return (FALSE);
+#if DEBUG
+        if (bp != NULL)
+            {
+            fprintf(netDevice->log, "\nUpline block rejected, CN=%02X, BT=%02X, PDU size=%d, NPU state %d, upline ready %s\n", bp->data[BlkOffCN],
+                bp->data[BlkOffBTBSN] & BlkMaskBT, bp->numBytes, npu->state, netDevice->uplineData.isReady ? "TRUE" : "FALSE");
+            traceStack(netDevice->log);
+            }
+#endif
+        return FALSE;
         }
 
-    if (bp == NULL)
-        {
-        npuHipWriteNpuStatus(StNpuNotReadyOutput);
+    npuHipIndicateUplineBlock(bp->data, bp->numBytes);
 
-        return (FALSE);
-        }
-
-    npuHipWriteNpuStatus(StNpuReadyOutput);
-    npu->buffer = bp;
-    npu->state  = StHipDownline;
-
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
@@ -420,12 +406,14 @@ void npuLogMessage(char *format, ...)
 #if DEBUG
     va_list args;
 
-    npuLogFlush();
-    fprintf(npuLog, "\n\n");
-    va_start(args, format);
-    vfprintf(npuLog, format, args);
-    va_end(args);
-    fprintf(npuLog, "\n");
+    if (netDevice != NULL && netDevice->log != NULL)
+        {
+        fprintf(netDevice->log, "\n\n");
+        va_start(args, format);
+        vfprintf(netDevice->log, format, args);
+        va_end(args);
+        fprintf(netDevice->log, "\n");
+        }
 #endif
     }
 
@@ -445,7 +433,7 @@ void npuLogMessage(char *format, ...)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void npuHipCreateThread(void)
+static void npuHipCreateThread(NetDevParam *param)
     {
 #if defined(_WIN32)
     DWORD  dwThreadId;
@@ -458,7 +446,7 @@ static void npuHipCreateThread(void)
         NULL,                                       // no security attribute
         0,                                          // default stack size
         (LPTHREAD_START_ROUTINE)npuThread,
-        (LPVOID)NULL,                               // thread parameter
+        (LPVOID)param,                              // thread parameter
         0,                                          // not suspended
         &dwThreadId);                               // returns thread ID
 
@@ -476,7 +464,7 @@ static void npuHipCreateThread(void)
     **  Create POSIX thread with default attributes.
     */
     pthread_attr_init(&attr);
-    rc = pthread_create(&thread, &attr, npuThread, NULL);
+    rc = pthread_create(&thread, &attr, npuThread, param);
     if (rc < 0)
         {
         logDtError(LogErrorLocation, "Failed to create NPU thread\n");
@@ -490,7 +478,7 @@ static void npuHipCreateThread(void)
 **  Purpose:        NPU emulation thread.
 **
 **  Parameters:     Name        Description.
-**                  param       unused
+**                  param       Pointer to network device parameters
 **
 **  Returns:        Nothing.
 **
@@ -501,6 +489,39 @@ static void npuThread(void *param)
 static void *npuThread(void *param)
 #endif
     {
+    NpuParam *npu;
+    PpWord   orderType;
+    u8       orderValue;
+    char     *sectionName;
+
+    /*
+    **  Parse data communication configuration
+    */
+    netDevice   = (NetDevParam *)param;
+    npu         = (NpuParam *)netDevice->devDependent;
+    sectionName = netDevice->sectionName;
+    if (sectionName == NULL)
+        {
+        sectionName = npuConnections;
+        if (strlen(sectionName) == 0)
+            {
+            sectionName = NULL;
+            }
+        }
+    initNpuConnections(sectionName);
+
+    /*
+    **  Print a friendly message.
+    */
+    printf("(npu_hip) NPU%d host ID:      %s\n", npu->id, npuNetHostID);
+    printf("(npu_hip) NPU%d coupler node: %u\n", npu->id, netDevice->couplerNode);
+    printf("(npu_hip) NPU%d NPU node:     %u\n", npu->id, netDevice->npuNode);
+#if DEBUG
+    fprintf(netDevice->log, "NPU%d host ID:      %s\n", npu->id, npuNetHostID);
+    fprintf(netDevice->log, "NPU%d coupler node: %u\n", npu->id, netDevice->couplerNode);
+    fprintf(netDevice->log, "NPU%d NPU node:     %u\n", npu->id, netDevice->npuNode);
+#endif
+
     /*
     **  Initialise BIP, SVC, and TIP.
     */
@@ -511,7 +532,7 @@ static void *npuThread(void *param)
 
     for (;;)
         {
-        if (npu->doReset)
+        if (netDevice->doReset)
             {
             /*
             **  Reset all subsystems - order matters
@@ -520,8 +541,124 @@ static void *npuThread(void *param)
             npuTipReset();
             npuSvmReset();
             npuBipReset();
-            npu->doReset = FALSE;
+            netDevice->doReset = FALSE;
             }
+
+        /*
+        **  Process downline order, if any
+        */
+        if (npu->isOrderReady)
+            {
+#if DEBUG
+            npuLogFlush(netDevice->log, npu);
+            fprintf(netDevice->log, "\n    Order %04o", npu->regOrder);
+#endif
+            npu->isOrderReady = FALSE;
+            orderType         = npu->regOrder & OrdMaskType;
+            orderValue        = (u8)(npu->regOrder & OrdMaskValue);
+
+            switch (orderType)
+                {
+            default:
+                break;
+
+            case OrdNotReadyForInput:
+#if DEBUG
+                fputs(" (not ready for input)", netDevice->log);
+#endif
+                npuBipTryUplineBlock();
+                break;
+
+            case OrdRegulationLvlChange:
+#if DEBUG
+                fprintf(netDevice->log, " (regulation change : %o)", orderValue);
+#endif
+                npuSvmNotifyHostRegulation(orderValue);
+                break;
+
+            case OrdInitRequestAck:
+                /*
+                **  Ignore because we don't support loading, but send
+                **  any pending upline blocks.
+                */
+#if DEBUG
+                fputs(" (init request ack)", netDevice->log);
+#endif
+                npuBipTryUplineBlock();
+                break;
+                }
+            }
+
+        /*
+        **  Process downline block, if any
+        */
+        if (netDevice->downlineData.isReady)
+            {
+            orderType = npu->regOrder & OrdMaskType;
+            switch (orderType)
+                {
+            default:
+                break;
+
+            case OrdOutServiceMsg:
+                npuBipNotifyServiceMessage();
+                npuBipNotifyDownlineReceived();
+                break;
+
+            case OrdOutPriorHigh:
+                npuBipNotifyData(1);
+                npuBipNotifyDownlineReceived();
+                break;
+
+            case OrdOutPriorLow:
+                npuBipNotifyData(0);
+                npuBipNotifyDownlineReceived();
+                break;
+                }
+            }
+        else if (npu->regNpuStatus == StNpuIdle)
+            {
+            npuHipSetNpuStatus(npu, StNpuReadyOutput);
+            }
+
+        /*
+        ** .Process upline actions, if any
+        */
+        if (npu->hipRequest != HipReqNone)
+            {
+#if DEBUG
+            npuLogFlush(netDevice->log, npu);
+            fputs("\n    ", netDevice->log);
+#endif
+            switch (npu->hipRequest)
+                {
+            case HipReqNotifyUpline:
+#if DEBUG
+                fputs("Notify upline block sent", netDevice->log);
+#endif
+                npuBipNotifyUplineSent();
+                netDevice->uplineData.isReady = FALSE;
+                break;
+
+            default:
+                break;
+                }
+
+            npu->hipRequest = HipReqNone;
+            }
+
+        /*
+        **  Process upline block, if any
+        */
+        if (netDevice->uplineData.isReady == FALSE)
+            {
+            npuBipTryUplineBlock();
+            }
+        else if (npu->state == StHipIdle && netDevice->uplineData.offset == 0)
+            {
+            npuHipIndicateUplineBlock(netDevice->uplineData.data, netDevice->uplineData.numBytes);
+            }
+
         /*
         **  Poll network status.
         */
@@ -535,19 +672,6 @@ static void *npuThread(void *param)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Set NPU reset request indication.
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-static void npuReset(void)
-    {
-    npu->doReset = TRUE;
-    }
-
-/*--------------------------------------------------------------------------
 **  Purpose:        Execute function code on NPU.
 **
 **  Parameters:     Name        Description.
@@ -558,16 +682,20 @@ static void npuReset(void)
 **------------------------------------------------------------------------*/
 static FcStatus npuHipFunc(PpWord funcCode)
     {
-    NpuBuffer *bp;
+    ChIoBuffer  *bp;
+    u8          id;
+    NetDevParam *netDevice;
+    NpuParam    *npu;
 
     funcCode &= ~FcNpuEqMask;
+    netDevice = (NetDevParam *)activeDevice->controllerContext;
+    npu       = (NpuParam *)netDevice->devDependent;
 
 #if DEBUG
-    npuLogFlush();
+    npuLogFlush(netDevice->log, npu);
     if (funcCode != FcNpuInCouplerStatus)
         {
-        fprintf(npuLog, "\n(npu_hip) %06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
-                traceSequenceNo,
+        fprintf(netDevice->log, "\nPP:%02o CH:%02o f:%04o T:%-25s  >   ",
                 activePpu->id,
                 activeChannel->id,
                 funcCode,
@@ -579,27 +707,27 @@ static FcStatus npuHipFunc(PpWord funcCode)
         {
     default:
 #if DEBUG
-        fprintf(npuLog, " FUNC not implemented & declined!");
+        fputs(" FUNC not implemented & declined!", netDevice->log);
 #endif
 
-        return (FcDeclined);
+        return FcDeclined;
 
     case FcNpuInCouplerStatus:
         switch (npu->state)
             {
         case StHipInit:
-            if (initCount > 0)
+            if (npu->initCount > 0)
                 {
                 /*
                 **  Tell PIP a few times that the NPU has initialized.
                 */
-                initCount -= 1;
-                npuHipWriteNpuStatus(StNpuInitCompleted);
+                npu->initCount -= 1;
+                npuHipSetNpuStatus(npu, StNpuInitCompleted);
                 }
             else
                 {
                 npu->state = StHipIdle;
-                npuHipWriteNpuStatus(StNpuIdle);
+                npuHipSetNpuStatus(npu, StNpuIdle);
                 }
 
             break;
@@ -611,7 +739,7 @@ static FcStatus npuHipFunc(PpWord funcCode)
             */
             if (cycles - npu->lastCommandTime > CyclesOneSecond)
                 {
-                npuHipWriteNpuStatus(StNpuIdle);
+                npuHipSetNpuStatus(npu, StNpuIdle);
                 }
             break;
 
@@ -622,41 +750,39 @@ static FcStatus npuHipFunc(PpWord funcCode)
         break;
 
     case FcNpuInData:
-        bp = npu->buffer;
-        if (bp == NULL)
+        if (netDevice->uplineData.isReady == FALSE)
             {
             /*
             **  Unexpected input request by host.
             */
-            npu->state   = StHipIdle;
-            npu->npuData = NULL;
+            npu->state                 = StHipIdle;
             activeDevice->recordLength = 0;
-            activeDevice->fcode        = 0;
+            activeDevice->fcode        = FcNpuNothing;
 
-            return (FcDeclined);
+            return FcDeclined;
             }
-
-        npu->npuData = bp->data;
+        bp                         = &netDevice->uplineData;
+        bp->offset                 = 0;
         activeDevice->recordLength = bp->numBytes;
         break;
 
     case FcNpuOutData:
-        bp = npu->buffer;
-        if (bp == NULL)
+        if (netDevice->downlineData.isReady)
             {
             /*
             **  Unexpected output request by host.
             */
-            npu->state   = StHipIdle;
-            npu->npuData = NULL;
+            npu->state                 = StHipIdle;
             activeDevice->recordLength = 0;
-            activeDevice->fcode        = 0;
+            activeDevice->fcode        = FcNpuNothing;
 
-            return (FcDeclined);
+            return FcDeclined;
             }
-
-        npu->npuData = bp->data;
+        bp                         = &netDevice->downlineData;
+        bp->offset                 = 0;
+        bp->numBytes               = 0;
         activeDevice->recordLength = 0;
+        npu->state                 = StHipDownline;
         break;
 
     case FcNpuInNpuStatus:
@@ -665,17 +791,19 @@ static FcStatus npuHipFunc(PpWord funcCode)
 
     case FcNpuOutNpuOrder:
         npu->state = StHipIdle;
-        npuHipWriteNpuStatus(StNpuIdle);
+        npuHipSetNpuStatus(npu, StNpuIdle);
         break;
 
     case FcNpuClearNpu:
         /*
         **  Reset HIP state.
         */
+        id = npu->id;
         memset(npu, 0, sizeof(NpuParam));
-        initCount    = ReportInitCount;
-        npu->state   = StHipInit;
-        npu->doReset = TRUE;
+        npu->id            = id;
+        npu->initCount     = ReportInitCount;
+        npu->state         = StHipInit;
+        netDevice->doReset = TRUE;
         break;
 
     /*
@@ -690,12 +818,12 @@ static FcStatus npuHipFunc(PpWord funcCode)
     case FcNpuStartNpu:
     case FcNpuHaltNpu:
     case FcNpuClearCoupler:
-        return (FcProcessed);
+        return FcProcessed;
         }
 
     activeDevice->fcode = funcCode;
 
-    return (FcAccepted);
+    return FcAccepted;
     }
 
 /*--------------------------------------------------------------------------
@@ -708,8 +836,12 @@ static FcStatus npuHipFunc(PpWord funcCode)
 **------------------------------------------------------------------------*/
 static void npuHipIo(void)
     {
-    PpWord orderType;
-    u8     orderValue;
+    ChIoBuffer  *bp;
+    NetDevParam *netDevice;
+    NpuParam    *npu;
+
+    netDevice = (NetDevParam *)activeDevice->controllerContext;
+    npu       = (NpuParam *)netDevice->devDependent;
 
     switch (activeDevice->fcode)
         {
@@ -717,21 +849,21 @@ static void npuHipIo(void)
         break;
 
     case FcNpuInNpuStatus:
-        activeChannel->data = npuHipReadNpuStatus();
+        activeChannel->data = npuHipReadNpuStatus(npu);
         activeChannel->full = TRUE;
 #if DEBUG
-        fprintf(npuLog, " %03X", activeChannel->data);
+        fprintf(netDevice->log, " %03X", activeChannel->data);
 #endif
         break;
 
     case FcNpuInCouplerStatus:
-        activeChannel->data = npu->regCouplerStatus;
-        activeChannel->full = TRUE;
+        activeChannel->data    = npu->regCouplerStatus;
+        activeChannel->full    = TRUE;
+        npu->regCouplerStatus |= StCplrNpuStatusRead;
 #if DEBUG
         if (npu->regCouplerStatus != 0)
             {
-            fprintf(npuLog, "\n(npu_hip) %06d PP:%02o CH:%02o f:%04o T:%-25s  >    %03X",
-                    traceSequenceNo,
+            fprintf(netDevice->log, "\nPP:%02o CH:%02o f:%04o T:%-25s  >    %03X",
                     activePpu->id,
                     activeChannel->id,
                     FcNpuInCouplerStatus,
@@ -745,21 +877,20 @@ static void npuHipIo(void)
         activeChannel->data = npu->regOrder;
         activeChannel->full = TRUE;
 #if DEBUG
-        fprintf(npuLog, " %03X", activeChannel->data);
+        fprintf(netDevice->log, " %03X", activeChannel->data);
 #endif
         break;
 
     case FcNpuInData:
-        if (activeChannel->full)
+        if (activeChannel->full || (netDevice->uplineData.isReady == FALSE) || (activeDevice->recordLength < 1))
             {
             break;
             }
-
         if (activeDevice->recordLength > 0)
             {
-            activeChannel->data = *npu->npuData++;
-            activeChannel->full = TRUE;
-
+            bp                          = &netDevice->uplineData;
+            activeChannel->data         = bp->data[bp->offset++];
+            activeChannel->full         = TRUE;
             activeDevice->recordLength -= 1;
             if (activeDevice->recordLength == 0)
                 {
@@ -768,50 +899,39 @@ static void npuHipIo(void)
                 */
                 activeChannel->data          |= 04000;
                 activeChannel->discAfterInput = TRUE;
-                activeDevice->fcode           = 0;
+                activeDevice->fcode           = FcNpuNothing;
                 npu->state                    = StHipIdle;
-                npuBipNotifyUplineSent();
+                npu->hipRequest               = HipReqNotifyUpline;
                 }
 #if DEBUG
-            npuLogByte(activeChannel->data);
+            npuLogByte(netDevice->log, npu, activeChannel->data);
 #endif
             }
-
         break;
 
     case FcNpuOutData:
         if (activeChannel->full)
             {
 #if DEBUG
-            npuLogByte(activeChannel->data);
+            npuLogByte(netDevice->log, npu, activeChannel->data);
 #endif
             activeChannel->full = FALSE;
-            if (activeDevice->recordLength < MaxBuffer)
+            bp                  = &netDevice->downlineData;
+            if (bp->numBytes < MaxBuffer)
                 {
-                *npu->npuData++             = activeChannel->data & Mask8;
-                activeDevice->recordLength += 1;
-                if ((activeChannel->data & 04000) != 0)
-                    {
-                    /*
-                    **  Top bit set - process message.
-                    */
-                    npu->buffer->numBytes = activeDevice->recordLength;
-                    activeDevice->fcode   = 0;
-                    npu->state            = StHipIdle;
-                    npuBipNotifyDownlineReceived();
-                    }
-                else if (activeDevice->recordLength >= MaxBuffer)
-                    {
-                    /*
-                    **  We run out of buffer space before the end of the message.
-                    */
-                    activeDevice->fcode = 0;
-                    npu->state          = StHipIdle;
-                    npuBipAbortDownlineReceived();
-                    }
+                bp->data[bp->numBytes++] = activeChannel->data & Mask8;
+                }
+            activeDevice->recordLength += 1;
+            if ((activeChannel->data & 04000) != 0)
+                {
+                /*
+                **  Top bit set - process message.
+                */
+                activeDevice->fcode = FcNpuNothing;
+                npu->state          = StHipIdle;
+                bp->isReady         = TRUE;
                 }
             }
-
         break;
 
     case FcNpuOutNpuOrder:
@@ -830,51 +950,13 @@ static void npuHipIo(void)
                 ""
                 };
 
-            fprintf(npuLog, " Order word %03X - function %02X : %s",
+            fprintf(netDevice->log, " Order word %03X - function %02X : %s",
                     activeChannel->data, activeChannel->data >> 8, orderCode[(activeChannel->data >> 8) & 7]);
 #endif
             npu->regOrder       = activeChannel->data;
-            orderType           = activeChannel->data & OrdMaskType;
-            orderValue          = (u8)(activeChannel->data & OrdMaskValue);
+            npu->isOrderReady   = TRUE;
             activeChannel->full = FALSE;
-
-            switch (orderType)
-                {
-            case OrdOutServiceMsg:
-                npuBipNotifyServiceMessage();
-                break;
-
-            case OrdOutPriorHigh:
-                npuBipNotifyData(1);
-                break;
-
-            case OrdOutPriorLow:
-                npuBipNotifyData(0);
-                break;
-
-            case OrdNotReadyForInput:
-                npuBipRetryInput();
-                break;
-
-            case OrdRegulationLvlChange:
-                npuSvmNotifyHostRegulation(orderValue);
-
-                /*
-                **  Send any pending upline blocks.
-                */
-                npuBipRetryInput();
-                break;
-
-            case OrdInitRequestAck:
-                /*
-                **  Ignore because we don't support loading, but send
-                **  any pending upline blocks.
-                */
-                npuBipRetryInput();
-                break;
-                }
             }
-
         break;
 
     case FcNpuInProgram:
@@ -930,15 +1012,68 @@ static void npuHipDisconnect(void)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        NPU writes NPU status register.
+**  Purpose:        Indicate upline block available
 **
 **  Parameters:     Name        Description.
+**                  block       pointer to block
+**                  numBytes    number of bytes in block
+**
+**  Returns:        Nothing
+**
+**------------------------------------------------------------------------*/
+static void npuHipIndicateUplineBlock(u8 *block, u16 numBytes)
+    {
+    int      bits;
+    NpuParam *npu;
+    int      prus;
+    PpWord   status;
+    int      words;
+
+    if ((numBytes > BlkOffDbc)
+        && ((block[BlkOffBTBSN] & BlkMaskBT) == BtHTMSG)
+        && ((block[BlkOffDbc] & DbcPRU) == DbcPRU))
+        {
+        bits  = (numBytes - (BlkOffDbc + 1)) * (((block[BlkOffDbc] & Dbc8Bit) != 0) ? 8 : 6);
+        words = (bits / 60);
+        if (bits % 60)
+            {
+            words++;
+            }
+        prus = words / 64;
+        if (words % 64)
+            {
+            prus++;
+            }
+        if (prus < 1)
+            {
+            prus = 1;
+            }
+        status = (PpWord)(StNpuInputAvailPru | (prus << 10));
+        }
+    else if (numBytes <= 256)
+        {
+        status = StNpuInputAvailLe256;
+        }
+    else
+        {
+        status = StNpuInputAvailGt256;
+        }
+    npu = (NpuParam *)netDevice->devDependent;
+    npuHipSetNpuStatus(npu, status);
+    npu->state = StHipUpline;
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        NPU sets NPU status register.
+**
+**  Parameters:     Name        Description.
+**                  npu         pointer to NPU parameters
 **                  status      new status register value.
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void npuHipWriteNpuStatus(PpWord status)
+static void npuHipSetNpuStatus(NpuParam *npu, PpWord status)
     {
     npu->lastCommandTime   = cycles;
     npu->regNpuStatus      = status;
@@ -953,14 +1088,15 @@ static void npuHipWriteNpuStatus(PpWord status)
 **  Returns:        NPU status register value.
 **
 **------------------------------------------------------------------------*/
-static PpWord npuHipReadNpuStatus(void)
+static PpWord npuHipReadNpuStatus(NpuParam *npu)
     {
-    PpWord value = npu->regNpuStatus;
+    PpWord value;
 
+    value                  = npu->regNpuStatus;
     npu->regCouplerStatus &= ~StCplrStatusLoaded;
     npu->regNpuStatus      = StNpuIgnore;
 
-    return (value);
+    return value;
     }
 
 #if DEBUG
@@ -975,7 +1111,7 @@ static PpWord npuHipReadNpuStatus(void)
 **------------------------------------------------------------------------*/
 static char *npuHipFunc2String(PpWord funcCode)
     {
-    static char buf[40];
+    static thread_local char buf[40];
 
     switch (funcCode)
         {
@@ -1021,9 +1157,9 @@ static char *npuHipFunc2String(PpWord funcCode)
     case FcNpuClearCoupler:
         return "FcNpuClearCoupler";
         }
-    sprintf(buf, "(npu_hip) Unknown Function: %04o", funcCode);
+    sprintf(buf, "Unknown Function: %04o", funcCode);
 
-    return (buf);
+    return buf;
     }
 
 /*--------------------------------------------------------------------------
@@ -1034,17 +1170,16 @@ static char *npuHipFunc2String(PpWord funcCode)
 **  Returns:        nothing
 **
 **------------------------------------------------------------------------*/
-static void npuLogFlush(void)
+static void npuLogFlush(FILE *log, NpuParam *npu)
     {
-    if (npuLogCol != 0)
+    if (npu->logCol != 0)
         {
-        fputs(npuLogBuf, npuLog);
+        fputs(npu->logBuf, log);
         }
-
-    npuLogCol = 0;
-    memset(npuLogBuf, ' ', LogLineLength);
-    npuLogBuf[0]             = '\n';
-    npuLogBuf[LogLineLength] = '\0';
+    npu->logCol = 0;
+    memset(npu->logBuf, ' ', LogLineLength);
+    npu->logBuf[0]             = '\n';
+    npu->logBuf[LogLineLength] = '\0';
     }
 
 /*--------------------------------------------------------------------------
@@ -1055,26 +1190,26 @@ static void npuLogFlush(void)
 **  Returns:        nothing
 **
 **------------------------------------------------------------------------*/
-static void npuLogByte(int b)
+static void npuLogByte(FILE *log, NpuParam *npu, int b)
     {
     char hex[5];
     int  col;
 
-    col = HexColumn(npuLogCol);
+    col = HexColumn(npu->logCol);
     sprintf(hex, "%03X ", b);
-    memcpy(npuLogBuf + col, hex, 4);
+    memcpy(npu->logBuf + col, hex, 4);
 
-    col = AsciiColumn(npuLogCol);
+    col = AsciiColumn(npu->logCol);
     b  &= 0x7f;
     if ((b < 0x20) || (b >= 0x7f))
         {
         b = '.';
         }
 
-    npuLogBuf[col] = (u8)b;
-    if (++npuLogCol == 16)
+    npu->logBuf[col] = (u8)b;
+    if (++npu->logCol == 16)
         {
-        npuLogFlush();
+        npuLogFlush(log, npu);
         }
     }
 
