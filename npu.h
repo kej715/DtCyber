@@ -318,6 +318,7 @@
 #define DefaultUplineBlockLimit    5
 #define HostIdSize                 9
 #define MaxBuffer                  2048
+#define MaxChIoBuffer              3000
 #define MaxClaPorts                255
 #define MaxHaspStreams             7
 #define MaxNetDevices              8
@@ -827,7 +828,7 @@ typedef struct chIoBuffer
     u16        offset;
     u16        numBytes;
     u8         blockSeqNo;
-    u8         data[MaxBuffer];
+    u8         data[MaxChIoBuffer];
     } ChIoBuffer;
 
 /*

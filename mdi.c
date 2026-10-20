@@ -299,7 +299,7 @@ void mdiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
     DevSlot     *dp;
     MdiParam    *mdi;
-    NetDevParam *netDevicce;
+    NetDevParam *netDevice;
 
     if (netDevCount >= MaxNetDevices)
         {
@@ -333,38 +333,38 @@ void mdiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Allocate and initialise general network device parameters.
     */
-    netDevicce = &netDevices[netDevCount++];
-    memset(netDevicce, 0, sizeof(NetDevParam));
-    netDevicce->id        = mdi->id;
-    netDevicce->type      = MDI_NOS;
-    netDevicce->channelNo = channelNo;
-    netDevicce->eqNo      = eqNo;
-    netDevicce->unitNo    = unitNo;
-    sprintf(netDevicce->name, "mdi%d", mdi->id);
+    netDevice = &netDevices[netDevCount++];
+    memset(netDevice, 0, sizeof(NetDevParam));
+    netDevice->id        = mdi->id;
+    netDevice->type      = MDI_NOS;
+    netDevice->channelNo = channelNo;
+    netDevice->eqNo      = eqNo;
+    netDevice->unitNo    = unitNo;
+    sprintf(netDevice->name, "mdi%d", mdi->id);
     if (deviceName != NULL && strlen(deviceName) > 0)
         {
-        netDevicce->sectionName = (char *)malloc(strlen(deviceName) + 1);
-        if (netDevicce->sectionName == NULL)
+        netDevice->sectionName = (char *)malloc(strlen(deviceName) + 1);
+        if (netDevice->sectionName == NULL)
             {
             logDtError(LogErrorLocation, "Failed to allocate mdi context block\n");
             exit(1);
             }
-        strcpy(netDevicce->sectionName, deviceName);
+        strcpy(netDevice->sectionName, deviceName);
         }
-    netDevicce->devDependent = mdi;
-    dp->controllerContext    = netDevicce;
+    netDevice->devDependent = mdi;
+    dp->controllerContext   = netDevice;
 
 #if DEBUG
     {
     char fName[16];
-    sprintf(fName, "%slog.txt", netDevicce->name);
+    sprintf(fName, "%slog.txt", netDevice->name);
     netDevice->log = fopen(fName, "wt");
     if (netDevice->log == NULL)
         {
         perror(fName);
         exit(1);
         }
-    printf(netDevice->log, "MDI%d initialised on channel %o equipment %o\n", mdi->id, channelNo, eqNo);
+    fprintf(netDevice->log, "MDI%d initialised on channel %o equipment %o\n", mdi->id, channelNo, eqNo);
     }
 #endif
     /*
@@ -375,7 +375,7 @@ void mdiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     /*
     **  Create MDI emulation thread
     */
-    mdiCreateThread(netDevicce);
+    mdiCreateThread(netDevice);
     }
 
 /*--------------------------------------------------------------------------
@@ -772,7 +772,7 @@ static FcStatus mdiHipFunc(PpWord funcCode)
         bp->offset                         = 0;
         mdi->headerIndex                   = 0;
         mdi->header[MdiHdrOffBlockLen]     = numBytes >> 8;
-        mdi->header[MdiHdrOffBlockLen + 1] = numBytes & 0xff;
+        mdi->header[MdiHdrOffBlockLen + 1] = numBytes & Mask8;
         mdi->wordState                     = MdiIoStateEvenWord;
         mdi->parcel                        = 0;
         activeDevice->recordLength         = MdiHdrLen + bp->numBytes;
@@ -892,7 +892,7 @@ static void mdiHipIo(void)
             }
         else
             {
-            activeChannel->data        = mdi->parcel & 0xfff;
+            activeChannel->data        = mdi->parcel & Mask12;
             mdi->wordState             = MdiIoStateEvenWord;
             activeDevice->recordLength = (activeDevice->recordLength > 2) ? activeDevice->recordLength - 3 : 0;
             }
@@ -943,7 +943,7 @@ static void mdiHipIo(void)
             }
         else
             {
-            activeChannel->data        = mdi->parcel & 0xfff;
+            activeChannel->data        = mdi->parcel & Mask12;
             mdi->wordState             = MdiIoStateEvenWord;
             activeDevice->recordLength = (activeDevice->recordLength > 2) ? activeDevice->recordLength - 3 : 0;
             }
@@ -965,7 +965,7 @@ static void mdiHipIo(void)
             */
 #if DEBUG
             mdiLogFlush(netDevice->log, mdi);
-            mdiLogBuffer(netDevice->log, mdi, netDevice->uplineData.data);
+            mdiLogBuffer(netDevice->log, netDevice->uplineData.data);
             fprintf(netDevice->log, "    PDU size=%d", netDevice->uplineData.numBytes);
 #endif
             activeChannel->discAfterInput = TRUE;
@@ -995,9 +995,9 @@ static void mdiHipIo(void)
                         mdi->headerIndex           += 1;
                         activeDevice->recordLength += 1;
                         }
-                    else if (bp->numBytes < MaxBuffer)
+                    else if (bp->numBytes < MaxChIoBuffer)
                         {
-                        bp->data[bp->numBytes++]    = (mdi->parcel >> shift) & 0xff;
+                        bp->data[bp->numBytes++]    = (mdi->parcel >> shift) & Mask8;
                         activeDevice->recordLength += 1;
                         }
                     }
@@ -1066,9 +1066,9 @@ static void mdiHipDisconnect(void)
                     {
                     mdi->headerIndex += 1;
                     }
-                else if (bp->numBytes < MaxBuffer)
+                else if (bp->numBytes < MaxChIoBuffer)
                     {
-                    bp->data[bp->numBytes++]  = (mdi->parcel >> shift) & 0xff;
+                    bp->data[bp->numBytes++]    = (mdi->parcel >> shift) & Mask8;
                     activeDevice->recordLength += 1;
                     }
                 }
@@ -1078,7 +1078,7 @@ static void mdiHipDisconnect(void)
             }
 #if DEBUG
         mdiLogFlush(netDevice->log, mdi);
-        mdiLogBuffer(netDevice->log, mdi, bp->data);
+        mdiLogBuffer(netDevice->log, bp->data);
 #endif
         if (bp->numBytes >= 2)
             {
@@ -1086,7 +1086,7 @@ static void mdiHipDisconnect(void)
             ** The last two bytes transmitted by PIP provide the true message length including
             ** the 19-byte MDI header.
             */
-            bp->numBytes = (u16)(((bp->data[bp->numBytes - 2] << 8) | bp->data[bp->numBytes - 1]) - MdiHdrLen);
+            bp->numBytes = (u16)((((u16)bp->data[bp->numBytes - 2] << 8) | (u16)bp->data[bp->numBytes - 1]) - MdiHdrLen);
 #if DEBUG
             fprintf(netDevice->log, "    PDU size=%d", bp->numBytes);
 #endif
@@ -1459,9 +1459,9 @@ static char *mdiSfc2String(u8 sfc)
 **------------------------------------------------------------------------*/
 static void mdiLogFlush(FILE *log, MdiParam *mdi)
     {
-    if (mdi->wordCol > 0)
+    if (mdi->logWordCol > 0)
         {
-        fputs(log, log);
+        fputs(mdi->logBuf, log);
         }
 
     mdi->logWordCol   = 0;
@@ -1584,7 +1584,7 @@ static void mdiLogPpWord(MdiParam *mdi, PpWord word)
     char hex[5];
     int  col;
 
-    col = HexColumn(mdiLogWordCol++);
+    col = HexColumn(mdi->logWordCol++);
     sprintf(hex, "%03X ", word);
     memcpy(mdi->logBuf + col, hex, 4);
     }
@@ -1618,7 +1618,7 @@ static void mdiLogParcel(FILE *log, MdiParam *mdi, u32 parcel)
         mdi->logBuf[col++] = b;
         }
     mdi->logParcelCol += 3;
-    if (mdi->ogParcelCol >= 24)
+    if (mdi->logParcelCol >= 24)
         {
         mdiLogFlush(log, mdi);
         }
