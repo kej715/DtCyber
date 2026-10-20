@@ -113,6 +113,8 @@
 #define OrdOutPriorLow             0x3
 #define OrdNotReadyForInput        0x5
 
+#define OrdShiftType               9
+
 /*
 **  Below are the sum of the first 16 bytes of CCI images, which we need to determine
 **  which program was loaded if a StartNpu command was issued.
@@ -157,7 +159,6 @@ typedef struct cciParam
     PpWord      regCouplerStatus;
     PpWord      regNpuStatus;
     PpWord      regOrder;
-    bool        isOrderReady;
     u8          halfWordTransferred;
     u8          tempMemAddr0;
     u16         memoryAddress;
@@ -482,9 +483,6 @@ static void *cciThread(void *param)
     CciParam *cci;
     char     *sectionName;
     u8       orderCode;
-#if DEBUG
-    PpWord   orderLength;
-#endif
 
     /*
     **  Parse data communication configuration
@@ -547,34 +545,6 @@ static void *cciThread(void *param)
             }
 
         /*
-        **  Process downline order, if any
-        */
-        if (cci->isOrderReady)
-            {
-            cci->isOrderReady = FALSE;
-            orderCode         = cci->regOrder >> 9;
-#if DEBUG
-            orderLength       = cci->regOrder & 0x1FF;
-            fprintf(netDevice->log, "\n  Order word code %x length %d", orderCode, orderLength);
-#endif
-            switch (orderCode)
-                {
-            default:
-                break;
-
-            case OrdOutServiceMsg:
-            case OrdOutPriorHigh:
-            case OrdOutPriorLow:
-                cciHipSetNpuStatus(cci, StNpuReadyOutput);
-                break;
-
-            case OrdNotReadyForInput:
-                npuBipTryUplineBlock();
-                break;
-                }
-            }
-
-        /*
         **  Process downline block, if any
         */
         if (netDevice->downlineData.isReady)
@@ -607,21 +577,18 @@ static void *cciThread(void *param)
         */
         if (cci->hipRequest != HipReqNone)
             {
-#if DEBUG
-            fputs("\n  ", netDevice->log);
-#endif
             switch (cci->hipRequest)
                 {
             case HipReqInitResponse:
 #if DEBUG
-                fputs("Send initialization response", netDevice->log);
+                fputs("\n  Send initialization response", netDevice->log);
 #endif
                 cciSvmNpuInitResponse();
                 break;
 
             case HipReqNotifyUpline:
 #if DEBUG
-                fputs("Notify upline sent", netDevice->log);
+                fputs("\n  Notify upline sent", netDevice->log);
 #endif
                 npuBipNotifyUplineSent();
                 netDevice->uplineData.isReady = FALSE;
@@ -641,7 +608,7 @@ static void *cciThread(void *param)
             {
             npuBipTryUplineBlock();
             }
-        else if (cci->hipState == StHipIdle && netDevice->uplineData.offset == 0)
+        else if (cci->hipState == StHipIdle && (cci->regCouplerStatus & StCplrStatusLoaded) == 0 && netDevice->uplineData.offset == 0)
             {
             cciHipIndicateUplineBlock(netDevice->uplineData.data, netDevice->uplineData.numBytes);
             }
@@ -769,6 +736,7 @@ static FcStatus cciHipFunc(PpWord funcCode)
     case FcNpuInNpuOrder:
     case FcNpuInMemAddr0:
     case FcNpuInMemAddr1:
+    case FcNpuInProgram:
         break;
 
     case FcNpuOutNpuOrder:
@@ -810,9 +778,6 @@ static FcStatus cciHipFunc(PpWord funcCode)
 #if DEBUG
         fprintf(netDevice->log, "\n  hipState -> %s", cciHipState2String(cci->hipState));
 #endif
-        break;
-
-    case FcNpuInProgram:
         break;
 
     case FcNpuClearCoupler:
@@ -1102,11 +1067,21 @@ static void cciHipIo(void)
                 };
 
             fprintf(netDevice->log, " Order word %03X - function %d : %s",
-                activeChannel->data, activeChannel->data >> 9, orderCode[(activeChannel->data >> 9) & 7]);
+                activeChannel->data, activeChannel->data >> OrdShiftType, orderCode[(activeChannel->data >> OrdShiftType) & 7]);
 #endif
             cci->regOrder       = activeChannel->data;
-            cci->isOrderReady   = TRUE;
             activeChannel->full = FALSE;
+            switch ((cci->regOrder >> OrdShiftType) & Mask3)
+                {
+            default:
+                break;
+
+            case OrdOutServiceMsg:
+            case OrdOutPriorHigh:
+            case OrdOutPriorLow:
+                cciHipSetNpuStatus(cci, StNpuReadyOutput);
+                break;
+                }
             }
         break;
 
@@ -1126,7 +1101,7 @@ static void cciHipIo(void)
             cci->halfWordTransferred = TRUE;
             activeChannel->data      = (PpWord)cci->memory[cci->memoryAddress] >> 8;
             }
-        activeChannel->full    = TRUE;
+        activeChannel->full = TRUE;
 
         break;
 
@@ -1313,13 +1288,13 @@ static void cciHipSetNpuStatus(CciParam *cci, PpWord status)
 **------------------------------------------------------------------------*/
 static PpWord cciHipReadNpuStatus(CciParam *cci)
     {
-    PpWord   value;
+    PpWord value;
 
     value                  = cci->regNpuStatus;
     cci->regCouplerStatus &= ~StCplrStatusLoaded;
     cci->regNpuStatus      = StNpuIgnore;
 
-    return (value);
+    return value;
     }
 
 #if DEBUG

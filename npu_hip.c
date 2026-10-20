@@ -107,14 +107,14 @@
 **  StCplrOrderLoaded being set). The LSB contains the
 **  block length or the new regulation level.
 */
-#define OrdOutServiceMsg           0x100
-#define OrdOutPriorHigh            0x200
-#define OrdOutPriorLow             0x300
-#define OrdNotReadyForInput        0x400
-#define OrdRegulationLvlChange     0x500
-#define OrdInitRequestAck          0x600
+#define OrdOutServiceMsg           1
+#define OrdOutPriorHigh            2
+#define OrdOutPriorLow             3
+#define OrdNotReadyForInput        4
+#define OrdRegulationLvlChange     5
+#define OrdInitRequestAck          6
 
-#define OrdMaskType                0xF00
+#define OrdShiftType               8
 #define OrdMaskValue               0x0FF
 
 /*
@@ -190,6 +190,7 @@ static void *npuThread(void *param);
 static char *npuHipFunc2String(PpWord funcCode);
 static void npuLogFlush(FILE *log, NpuParam *npu);
 static void npuLogByte(FILE *log, NpuParam *npu, int b);
+static char *npuHipOrder2String(PpWord orderCode);
 #endif
 
 /*
@@ -551,40 +552,22 @@ static void *npuThread(void *param)
             {
 #if DEBUG
             npuLogFlush(netDevice->log, npu);
-            fprintf(netDevice->log, "\n    Order %04o", npu->regOrder);
+            fprintf(netDevice->log, "\n    Order %04o %s", npu->regOrder, npuHipOrder2String(npu->regOrder));
 #endif
-            npu->isOrderReady = FALSE;
-            orderType         = npu->regOrder & OrdMaskType;
+            orderType         = (npu->regOrder >> OrdShiftType) & Mask3;
             orderValue        = (u8)(npu->regOrder & OrdMaskValue);
+            npu->isOrderReady = FALSE;
 
             switch (orderType)
                 {
             default:
                 break;
 
-            case OrdNotReadyForInput:
-#if DEBUG
-                fputs(" (not ready for input)", netDevice->log);
-#endif
-                npuBipTryUplineBlock();
-                break;
-
             case OrdRegulationLvlChange:
 #if DEBUG
-                fprintf(netDevice->log, " (regulation change : %o)", orderValue);
+                fprintf(netDevice->log, " : %o", orderValue);
 #endif
                 npuSvmNotifyHostRegulation(orderValue);
-                break;
-
-            case OrdInitRequestAck:
-                /*
-                **  Ignore because we don't support loading, but send
-                **  any pending upline blocks.
-                */
-#if DEBUG
-                fputs(" (init request ack)", netDevice->log);
-#endif
-                npuBipTryUplineBlock();
                 break;
                 }
             }
@@ -594,7 +577,7 @@ static void *npuThread(void *param)
         */
         if (netDevice->downlineData.isReady)
             {
-            orderType = npu->regOrder & OrdMaskType;
+            orderType = (npu->regOrder >> OrdShiftType) & Mask3;
             switch (orderType)
                 {
             default:
@@ -615,10 +598,6 @@ static void *npuThread(void *param)
                 npuBipNotifyDownlineReceived();
                 break;
                 }
-            }
-        else if (npu->regNpuStatus == StNpuIdle)
-            {
-            npuHipSetNpuStatus(npu, StNpuReadyOutput);
             }
 
         /*
@@ -654,7 +633,7 @@ static void *npuThread(void *param)
             {
             npuBipTryUplineBlock();
             }
-        else if (npu->state == StHipIdle && netDevice->uplineData.offset == 0)
+        else if (npu->state == StHipIdle && (npu->regCouplerStatus & StCplrStatusLoaded) == 0 && netDevice->uplineData.offset == 0)
             {
             npuHipIndicateUplineBlock(netDevice->uplineData.data, netDevice->uplineData.numBytes);
             }
@@ -937,28 +916,29 @@ static void npuHipIo(void)
     case FcNpuOutNpuOrder:
         if (activeChannel->full)
             {
-#if DEBUG
-            static char *orderCode[] =
+            npu->regOrder = activeChannel->data;
+            switch ((npu->regOrder >> OrdShiftType) & Mask3)
                 {
-                "",
-                "output level one - service messages",
-                "output level two - high priority",
-                "output level three - low priority",
-                "driver not ready for input",
-                "regulation level change",
-                "initialization request acknowledgment",
-                ""
-                };
+            default:
+                break;
 
-            fprintf(netDevice->log, " Order word %03X - function %02X : %s",
-                    activeChannel->data, activeChannel->data >> 8, orderCode[(activeChannel->data >> 8) & 7]);
-#endif
-            npu->regOrder       = activeChannel->data;
+            case OrdOutServiceMsg:
+            case OrdOutPriorHigh:
+            case OrdOutPriorLow:
+                npuHipSetNpuStatus(npu, StNpuReadyOutput);
+                break;
+                }
             npu->isOrderReady   = TRUE;
             activeChannel->full = FALSE;
+#if DEBUG
+            fprintf(netDevice->log, " Order word %03X - function %02X : %s",
+                activeChannel->data, activeChannel->data >> 8, npuHipOrder2String(activeChannel->data));
+#endif
             }
         break;
 
+    case FcNpuInMemAddr0:
+    case FcNpuInMemAddr1:
     case FcNpuInProgram:
         /*
         **  Dummy data because we don't support dumping.
@@ -1211,6 +1191,32 @@ static void npuLogByte(FILE *log, NpuParam *npu, int b)
         {
         npuLogFlush(log, npu);
         }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Convert order code to string.
+**
+**  Parameters:     Name        Description.
+**                  orderCode   order code
+**
+**  Returns:        String equivalent of order code.
+**
+**------------------------------------------------------------------------*/
+static char *npuHipOrder2String(PpWord orderCode)
+    {
+    static char *orderStr[] =
+        {
+        "",
+        "output level one - service message",
+        "output level two - high priority",
+        "output level three - low priority",
+        "driver not ready for input",
+        "regulation level change",
+        "initialization request acknowledgment",
+        ""
+        };
+
+    return orderStr[(orderCode >> OrdShiftType) & Mask3];
     }
 
 #endif
