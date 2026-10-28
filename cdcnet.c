@@ -1334,13 +1334,14 @@ void cdcnetShowStatus(void)
         */
         for (i = 0, gp = cdcnetGcbs; i < cdcnetGcbCount; i++, gp++)
             {
-            if (gp->gwState == StGwIdle || gp->connType == TypeTcpPassive)
+            if (gp->gwState == StGwIdle)
                 {
                 continue;
                 }
             switch (gp->tcpUdpState)
                 {
             case StTcpUdpIdle:
+            case StTcpListening:
                 continue;
 
             case StTcpConnecting:
@@ -1349,10 +1350,6 @@ void cdcnetShowStatus(void)
 
             case StTcpIndicatingConnection:
                 state = "indicating connection";
-                break;
-
-            case StTcpListening:
-                state = "listening";
                 break;
 
             case StTcpConnected:
