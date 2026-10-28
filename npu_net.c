@@ -25,6 +25,7 @@
 **--------------------------------------------------------------------------
 */
 
+#define DEBUG 0
 
 /*
 **  -------------
@@ -54,8 +55,6 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #endif
-
-#define DEBUG             0
 
 /*
 **  -----------------
@@ -251,7 +250,7 @@ static void (*tryOutput[])(Pcb *pcbp) =
 **  Function tables to interface to either CCP or CCI functions.
 **  Indexed by NetDevType.
 */
-static bool (*svmIsReady[])() =
+static bool (*svmIsReady[])(NetDevParam *netDevice) =
     {
     npuSvmIsReady,
     cciSvmIsReady,
@@ -1092,7 +1091,7 @@ static int npuNetCreateConnections(void)
     /*
     **  Attempt to create connections only when NAM is ready.
     */
-    if (!svmIsReady[netDevice->type]())
+    if (!svmIsReady[netDevice->type](netDevice))
         {
         return 0;
         }
@@ -1146,8 +1145,9 @@ static int npuNetCreateConnections(void)
                 else // connection in progress
                     {
                     npuLogMessage("(npu_net) Initiated connection to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
-                    ncbp->connFd = fd;
-                    ncbp->state  = StConnConnecting;
+                    ncbp->connFd             = fd;
+                    ncbp->state              = StConnConnecting;
+                    ncbp->connectionDeadline = currentTime + (time_t)ConnectionWaitTime;
                     }
                 break;
 
@@ -1159,7 +1159,7 @@ static int npuNetCreateConnections(void)
                 rc = select((int)(ncbp->connFd + 1), NULL, &selectFds, NULL, &timeout);
                 if (rc < 0)
                     {
-                    logDtError(LogErrorLocation, "NET: select returned unexpected %d\n", rc);
+                    logDtError(LogErrorLocation, "select returned unexpected %d\n", rc);
                     sleepMsec(1000);
                     }
                 else if (rc > 0)
@@ -1292,7 +1292,7 @@ static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive)
     /*
     **  Check if the host is ready to accept connections.
     */
-    if (!svmIsReady[netDevice->type]())
+    if (!svmIsReady[netDevice->type](netDevice))
         {
         /*
         **  Tell the user.

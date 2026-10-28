@@ -417,14 +417,15 @@ void cciSvmSendDiscRequest(Tcb *tp)
 **  Purpose:        Determine if host is ready for connection request
 **
 **  Parameters:     Name        Description.
+**                  netDevice   pointer to network device parameters
 **
 **  Returns:        TRUE if host is ready to accept connections, FALSE
 **                  otherwise.
 **
 **------------------------------------------------------------------------*/
-bool cciSvmIsReady(void)
+bool cciSvmIsReady(NetDevParam *netDevice)
     {
-    return cciHipIsReady();
+    return cciHipIsReady(netDevice);
     }
 
 /*--------------------------------------------------------------------------

@@ -394,12 +394,12 @@ bool cciHipStartUplineTransfer(NpuBuffer *bp)
 /*--------------------------------------------------------------------------
 **  Purpose:        Indicate whether the macro program is running
 **
-**  Parameters:     none
+**  Parameters:     netDevice   pointer to network device parameters
 **
 **  Returns:        TRUE if running, FALSE otherwise.
 **
 **------------------------------------------------------------------------*/
-bool cciHipIsReady(void)
+bool cciHipIsReady(NetDevParam *netDevice)
     {
     CciParam *cci;
 

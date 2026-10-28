@@ -71,7 +71,7 @@ typedef enum
 /*
 **  cci_hip.c
 */
-bool cciHipIsReady(void);
+bool cciHipIsReady(NetDevParam *netDevice);
 
 /*
 ** cci_svm.c
@@ -82,7 +82,7 @@ void cciSvmNpuInitResponse(void);
 void cciSvmProcessBuffer(NpuBuffer *bp);
 bool cciSvmConnectTerminal(Pcb *pp);
 void cciSvmSendDiscRequest(Tcb *tp);
-bool cciSvmIsReady();
+bool cciSvmIsReady(NetDevParam *netDevice);
 
 /*
 ** cci_tip.c

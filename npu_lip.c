@@ -641,7 +641,7 @@ static bool npuLipProcessConnectRequest(Pcb *pcbp)
             len    = sprintf(response, "%d %s %u %u already connected\n",
                              status, npuNetHostID, netDevice->couplerNode, peerNode);
             }
-        else if (!npuSvmIsReady())
+        else if (!npuSvmIsReady(netDevice))
             {
             status = 302;
             len    = sprintf(response, "%d %s %u %u not ready\n",

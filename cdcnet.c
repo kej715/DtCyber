@@ -440,7 +440,6 @@ static void cdcnetUdpSetAddress(u8 *dp, u32 ipAddress, u16 port);
 #if DEBUG
 static void cdcnetLogBytes(u8 *bytes, int len);
 static void cdcnetLogFlush(void);
-
 #endif
 
 /*
@@ -1298,8 +1297,9 @@ void cdcnetCheckStatus(void)
 void cdcnetShowStatus(void)
     {
     char        chEqStr[8];
+    int         d;
     int         i;
-    NetDevParam *netDev;
+    NetDevParam *netDevice;
     Pccb        *pp;
     Gcb         *gp;
     char        *state;
@@ -1308,11 +1308,14 @@ void cdcnetShowStatus(void)
         {
         return;
         }
-    for (i = 0; i < netDevCount; i++)
+    for (d = 0; d < netDevCount; d++)
         {
-        netDev = &netDevices[i];
-        if (netDev->type != MDI_NOS || netDev->cdcnetNode == 0) continue;
-        sprintf(chEqStr, "C%02o E%02o", netDev->channelNo, netDev->eqNo);
+        netDevice = &netDevices[d];
+        if (netDevice->type != MDI_NOS || netDevice->cdcnetNode == 0)
+            {
+            continue;
+            }
+        sprintf(chEqStr, "C%02o E%02o", netDevice->channelNo, netDevice->eqNo);
 
         /*
         **  Iterate through all Pccbs.
@@ -1331,7 +1334,7 @@ void cdcnetShowStatus(void)
         */
         for (i = 0, gp = cdcnetGcbs; i < cdcnetGcbCount; i++, gp++)
             {
-            if ((gp->gwState == StGwIdle) || (gp->connType == TypeTcpPassive))
+            if (gp->gwState == StGwIdle || gp->connType == TypeTcpPassive)
                 {
                 continue;
                 }
@@ -1368,7 +1371,7 @@ void cdcnetShowStatus(void)
                 state = "unknown";
                 break;
                 }
-            opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", "CDCNet", chEqStr, netGetLocalTcpAddress(gp->connFd),
+            opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", "TCPIPGW", chEqStr, netGetLocalTcpAddress(gp->connFd),
                 netGetPeerTcpAddress(gp->connFd), gp->connType == TypeUdp ? "udp" : "tcp", state);
             chEqStr[0] = '\0';
             }

@@ -738,7 +738,7 @@ static FcStatus mdiHipFunc(PpWord funcCode)
             }
         else
             {
-            if ((mdi->state == StMdiOperational) && !npuSvmIsReady() && (currentTime >= mdi->svDeadline))
+            if ((mdi->state == StMdiOperational) && !npuSvmIsReady(netDevice) && (currentTime >= mdi->svDeadline))
                 {
 #if DEBUG
                 fputs("\n  Supervision timeout", netDevice->log);

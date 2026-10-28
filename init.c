@@ -1807,48 +1807,59 @@ void initNpuConnections(char *sectionName)
     /*
     **  Get optional CDCNet node number. If not specified, use default value of 255.
     */
-    initGetInteger("cdcnetNode", (netDevice->id == 0) ? 255 : 0, &val);
-    if ((val < 1) || (val > 255))
+    initGetInteger("cdcnetNode", (netDevice->type == MDI_NOS && netDevice->id == 0) ? 255 : 0, &val);
+    if (val != 0)
         {
-        logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'cdcnetNode' value %ld - correct values are 1..255\n",
-                   startupFile, sectionName, val);
-        exit(1);
-        }
-    for (i = 0; i < netDevCount; i++)
-        {
-        if (netDevices[i].cdcnetNode != 0)
+        if (netDevice->type == MDI_NOS)
             {
-            logDtError(LogErrorLocation, "file '%s' section [%s]: 'cdcnetNode' already defined for %s\n",
-                       startupFile, sectionName, netDevices[i].name);
+            if (val < 1 || val > 255)
+                {
+                logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'cdcnetNode' value %ld - correct values are 1..255\n",
+                           startupFile, sectionName, val);
+                exit(1);
+                }
+            for (i = 0; i < netDevCount; i++)
+                {
+                if (netDevices[i].cdcnetNode != 0)
+                    {
+                    logDtError(LogErrorLocation, "file '%s' section [%s]: 'cdcnetNode' already defined for %s\n",
+                               startupFile, sectionName, netDevices[i].name);
+                    exit(1);
+                    }
+                }
+            netDevice->cdcnetNode = (u8)val;
+            logDtError(LogErrorLocation, "CDCNet node value is %d\n", netDevice->cdcnetNode);
+            /*
+            **  Get optional privileged TCP and UDP port offsets for CDCNet TCP/IP passive connections. If not specified,
+            **  use default value of 6600.
+            */
+            initGetInteger("cdcnetPrivilegedTcpPortOffset", 6600, &val);
+            if ((val < 0) || (val > 64000))
+                {
+                logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'cdcnetPrivilegedTcpPortOffset' value %ld - correct values are 0..64000\n",
+                           startupFile, sectionName, val);
+                exit(1);
+                }
+            netDevice->privilegedTcpPortOffset = (u16)val;
+            logDtError(LogErrorLocation, "TCP privileged port offset is %d\n", netDevice->privilegedTcpPortOffset);
+
+            initGetInteger("cdcnetPrivilegedUdpPortOffset", 6600, &val);
+            if ((val < 0) || (val > 64000))
+                {
+                logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'cdcnetPrivilegedUdpPortOffset' value %ld - correct values are 0..64000\n",
+                           startupFile, sectionName, val);
+                exit(1);
+                }
+            netDevice->privilegedUdpPortOffset = (u16)val;
+            logDtError(LogErrorLocation, "UDP privileged port offset is %d\n", netDevice->privilegedUdpPortOffset);
+            }
+        else
+            {
+            logDtError(LogErrorLocation, "file '%s' section [%s]: 'cdcnetNode' is allowed for MDI devices only\n",
+                       startupFile, sectionName);
             exit(1);
             }
         }
-    netDevice->cdcnetNode = (u8)val;
-    logDtError(LogErrorLocation, "CDCNet node value is %d\n", netDevice->cdcnetNode);
-
-    /*
-    **  Get optional privileged TCP and UDP port offsets for CDCNet TCP/IP passive connections. If not specified,
-    **  use default value of 6600.
-    */
-    initGetInteger("cdcnetPrivilegedTcpPortOffset", 6600, &val);
-    if ((val < 0) || (val > 64000))
-        {
-        logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'cdcnetPrivilegedTcpPortOffset' value %ld - correct values are 0..64000\n",
-                   startupFile, sectionName, val);
-        exit(1);
-        }
-    netDevice->privilegedTcpPortOffset = (u16)val;
-    logDtError(LogErrorLocation, "TCP privileged port offset is %d\n", netDevice->privilegedTcpPortOffset);
-
-    initGetInteger("cdcnetPrivilegedUdpPortOffset", 6600, &val);
-    if ((val < 0) || (val > 64000))
-        {
-        logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'cdcnetPrivilegedUdpPortOffset' value %ld - correct values are 0..64000\n",
-                   startupFile, sectionName, val);
-        exit(1);
-        }
-    netDevice->privilegedUdpPortOffset = (u16)val;
-    logDtError(LogErrorLocation, "UDP privileged port offset is %d\n", netDevice->privilegedUdpPortOffset);
 
     /*
     **  Get optional threshold value of network buffer backlog indicating that the NPU/MDI

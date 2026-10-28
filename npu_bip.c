@@ -87,14 +87,6 @@ static bool npuBipCopyUplineBlock(NpuBuffer *bp);
 **  Private Variables
 **  -----------------
 */
-static enum
-    {
-    BipIdle,
-    BipDownSvm,
-    BipDownDataLow,
-    BipDownDataHigh,
-    }
-bipState = BipIdle;
 
 /*
 **  Function tables to interface to either CCP, CCI, or MDI functions,
@@ -224,7 +216,7 @@ void npuBipReset(void)
         netDevice->downlineBuffer = NULL;
         }
 
-    bipState = BipIdle;
+    netDevice->bipState = StBipIdle;
     }
 
 /*--------------------------------------------------------------------------
@@ -490,7 +482,7 @@ void npuBipNotifyServiceMessage(void)
     netDevice->downlineBuffer = npuBipBufGet();
     if (npuBipCopyDownlineBlock(netDevice->downlineBuffer))
         {
-        bipState = BipDownSvm;
+        netDevice->bipState = StBipDownSvm;
         }
     else
         {
@@ -513,7 +505,7 @@ void npuBipNotifyData(int priority)
     netDevice->downlineBuffer = npuBipBufGet();
     if (npuBipCopyDownlineBlock(netDevice->downlineBuffer))
         {
-        bipState = BipDownDataLow + priority;
+        netDevice->bipState = StBipDownDataLow + priority;
         }
     else
         {
@@ -557,43 +549,44 @@ void npuBipNotifyDownlineReceived(void)
     /*
     **  BIP loses ownership of the downline buffer.
     */
-    bp                        = netDevice->downlineBuffer;
-    netDevice->downlineBuffer = NULL;
-    dn                        = bp->data[BlkOffDN];
-
-    if (dn == netDevice->npuNode)
+    bp = netDevice->downlineBuffer;
+    if (bp != NULL)
         {
-        /*
-        **  Hand over the buffer to SVM or TIP.
-        */
-        switch (bipState)
+        netDevice->downlineBuffer = NULL;
+        dn                        = bp->data[BlkOffDN];
+        if (dn == netDevice->npuNode)
             {
-        default:
-            break;
+            /*
+            **  Hand over the buffer to SVM or TIP.
+            */
+            switch (netDevice->bipState)
+                {
+            default:
+                break;
 
-        case BipDownSvm:
-            svmProcessBuffer[netDevice->type](bp);
-            break;
+            case StBipDownSvm:
+                svmProcessBuffer[netDevice->type](bp);
+                break;
 
-        case BipDownDataLow:
-            tipProcessBuffer[netDevice->type](bp, 0);
-            break;
+            case StBipDownDataLow:
+                tipProcessBuffer[netDevice->type](bp, 0);
+                break;
 
-        case BipDownDataHigh:
-            tipProcessBuffer[netDevice->type](bp, 1);
-            break;
+            case StBipDownDataHigh:
+                tipProcessBuffer[netDevice->type](bp, 1);
+                break;
+                }
+            }
+        else if (dn == netDevice->cdcnetNode)
+            {
+            cdcnetProcessDownlineData(bp);
+            }
+        else
+            {
+            npuLipProcessDownlineData(bp);
             }
         }
-    else if (dn == netDevice->cdcnetNode)
-        {
-        cdcnetProcessDownlineData(bp);
-        }
-    else
-        {
-        npuLipProcessDownlineData(bp);
-        }
-
-    bipState = BipIdle;
+    netDevice->bipState = StBipIdle;
     }
 
 /*--------------------------------------------------------------------------
@@ -611,7 +604,7 @@ void npuBipAbortDownlineReceived(void)
     */
     npuBipBufRelease(netDevice->downlineBuffer);
     netDevice->downlineBuffer = NULL;
-    bipState                  = BipIdle;
+    netDevice->bipState       = StBipIdle;
     }
 
 /*--------------------------------------------------------------------------
@@ -639,7 +632,7 @@ void npuBipRequestUplineTransfer(NpuBuffer *bp)
     **  Send this block now.
     */
     netDevice->uplineBuffer = bp;
-    if (bipState == BipIdle)
+    if (netDevice->bipState == StBipIdle)
         {
         npuBipTryUplineBlock();
         }

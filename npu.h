@@ -311,6 +311,7 @@
 **  Miscellaneous constants.
 */
 #define ConnectionRetryInterval    30
+#define ConnectionWaitTime         10
 #define DefaultHaspBlockSize       640
 #define DefaultNjeBlockSize        8192
 #define DefaultNjePingInterval     600
@@ -842,6 +843,27 @@ typedef enum
     } NetDevType;
 
 /*
+**  Block interface protocol states
+**/
+typedef enum
+    {
+    StBipIdle = 0,
+    StBipDownSvm,
+    StBipDownDataLow,
+    StBipDownDataHigh
+    } BipState;
+
+/*
+**  Service message manager states
+**/
+typedef enum
+    {
+    StSvmIdle = 0,
+    StSvmWaitSupervision,
+    StSvmReady
+    } SvmState;
+
+/*
 **  Network device configuration parameters
 */
 typedef struct netDevParam
@@ -857,6 +879,9 @@ typedef struct netDevParam
     u8         npuNode;
     u8         couplerNode;
     u8         cdcnetNode;
+    BipState   bipState;
+    SvmState   svmState;
+    u8         regLevel;
     int        numNcbs;
     Ncb        ncbs[MaxTermDefs];
     Pcb        pcbs[MaxClaPorts];
@@ -946,7 +971,7 @@ void npuSvmNotifyTermDisconnect(Tcb *tp);
 void npuSvmProcessBuffer(NpuBuffer *bp);
 void npuSvmProcessTermBlock(Tcb *tp);
 bool npuSvmConnectTerminal(Pcb *pp);
-bool npuSvmIsReady(void);
+bool npuSvmIsReady(NetDevParam *netDevice);
 void npuSvmRequestSupervision(void);
 void npuSvmSendDiscReply(Tcb *tp);
 void npuSvmSendDiscRequest(Tcb *tp);
