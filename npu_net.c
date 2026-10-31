@@ -751,7 +751,7 @@ void npuNetCheckStatus(void)
         FD_SET(pcbp->connFd, &writeFds);
         if (pcbp->connFd > maxFd)
             {
-            maxFd = pcbp->connFd;
+            maxFd = (int)pcbp->connFd;
             }
         }
     timeout.tv_sec  = 0;
