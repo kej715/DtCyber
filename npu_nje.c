@@ -81,6 +81,7 @@
 
 #define MaxRetries                   8
 #define MaxUplineBlockSize           640
+//#define MaxUplineBlockSize           256
 #define MaxWaitTime                  15
 
 /*
@@ -273,8 +274,6 @@ static int npuNjeUploadBlock(Pcb *pcbp, u8 *blkp, int size, u8 *rcb, u8 *srcb);
 #if DEBUG
 static void npuNjeLogBytes(u8 *bytes, int len, CharEncoding encoding);
 static void npuNjeLogFlush(void);
-static void npuNjePrintStackTrace(FILE *fp);
-
 #endif
 
 /*
@@ -513,7 +512,7 @@ void npuNjeProcessDownlineData(Tcb *tcbp, NpuBuffer *bp, bool last)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Process upline data from terminal.
+**  Purpose:        Process upline data from network.
 **
 **  Parameters:     Name        Description.
 **                  pcbp        PCB pointer
@@ -544,13 +543,17 @@ void npuNjeProcessUplineData(Pcb *pcbp)
 #if DEBUG
     if (pcbp->controls.nje.state > StNjeRcvOpen)
         {
-        fprintf(npuNjeLog, "Port %02x: TCP data received from %s, state %s\n",
-                pcbp->claPort, pcbp->ncbp->hostName, NjeConnStates[pcbp->controls.nje.state]);
+        fprintf(npuNjeLog, "Port %02x: TCP data received from %s, bytes %d, state %s\n",
+                pcbp->claPort, pcbp->ncbp->hostName, pcbp->inputCount, NjeConnStates[pcbp->controls.nje.state]);
         }
     else
         {
-        fprintf(npuNjeLog, "Port %02x: TCP data received, state %s\n",
-                pcbp->claPort, NjeConnStates[pcbp->controls.nje.state]);
+        fprintf(npuNjeLog, "Port %02x: TCP data received, bytes %d, state %s\n",
+                pcbp->claPort, pcbp->inputCount, NjeConnStates[pcbp->controls.nje.state]);
+        }
+    if (pcbp->controls.nje.inputBufPtr > pcbp->controls.nje.inputBuf)
+        {
+        fprintf(npuNjeLog, "    Residual bytes in input buffer %d\n", (int)(pcbp->controls.nje.inputBufPtr - pcbp->controls.nje.inputBuf));
         }
     npuNjeLogBytes(pcbp->inputData, pcbp->inputCount, EBCDIC);
     npuNjeLogFlush();
@@ -565,11 +568,8 @@ void npuNjeProcessUplineData(Pcb *pcbp)
 
         return;
         }
-    while (pcbp->inputCount-- > 0)
-        {
-        *dp++ = *sp++;
-        }
-    pcbp->controls.nje.inputBufPtr = limit = dp;
+    memcpy(dp, sp, pcbp->inputCount);
+    pcbp->controls.nje.inputBufPtr = limit = dp + pcbp->inputCount;
     dp   = pcbp->controls.nje.inputBuf;
     done = FALSE;
 
@@ -981,6 +981,9 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                 *dp++ = *sp++;
                 }
             pcbp->controls.nje.inputBufPtr = dp;
+#if DEBUG
+            fprintf(npuNjeLog, "Port %02x: %d residual bytes buffered\n", pcbp->claPort, (int)(dp - pcbp->controls.nje.inputBuf));
+#endif
             }
         }
     else
@@ -1509,31 +1512,23 @@ static u8 *npuNjeCloseDownlineBlock(Pcb *pcbp, u8 *dp)
 **------------------------------------------------------------------------*/
 static u8 *npuNjeCollectBlock(Pcb *pcbp, u8 *start, u8 *limit, bool *isComplete, int *size, int *status)
     {
-    int currentBlockSize;
     u8  *dp;
-    u8  *ibLimit;
-    u8  *ibp;
+    int inputSize;
     int njeBlockSize;
     int recLen;
+    u8  *sLimit;
     u8  *sp;
 
-    *isComplete      = FALSE;
-    *size            = 0;
-    *status          = 0;
-    currentBlockSize = 0;
+    *isComplete = FALSE;
+    *size       = 0;
+    *status     = 0;
+    inputSize   = (int)(limit - start);
 
     /*
     **  First, ensure that the TTB has been collected because it contains
     **  the length of the block.
     */
-    sp = start;
-    dp = pcbp->controls.nje.inputBuf;
-    while (sp < limit && currentBlockSize < TtbLength)
-        {
-        *dp++             = *sp++;
-        currentBlockSize += 1;
-        }
-    if (currentBlockSize < TtbLength)
+    if (inputSize < TtbLength)
         {
         return start;
         }
@@ -1542,8 +1537,8 @@ static u8 *npuNjeCollectBlock(Pcb *pcbp, u8 *start, u8 *limit, bool *isComplete,
     **  Validate that the provided block length does not exceed the maximum block
     **  size configured for the peer.
     */
-    njeBlockSize = (*(pcbp->controls.nje.inputBuf + TtbOffLength) << 8)
-                   | *(pcbp->controls.nje.inputBuf + TtbOffLength + 1);
+    njeBlockSize = (*(start + TtbOffLength) << 8)
+                   | *(start + TtbOffLength + 1);
     if (njeBlockSize > pcbp->controls.nje.blockSize)
         {
 #if DEBUG
@@ -1557,39 +1552,49 @@ static u8 *npuNjeCollectBlock(Pcb *pcbp, u8 *start, u8 *limit, bool *isComplete,
         }
 
     /*
-    **  Collect all of the bytes due
+    **  Verify that the input buffer has at least as many bytes as the indicated
+    **  NJE block size.
     */
-    while (sp < limit && currentBlockSize < njeBlockSize)
+#if DEBUG
+    fprintf(npuNjeLog, "Port %02x: input size %d, block size received in TTB %d\n",
+            pcbp->claPort, inputSize, njeBlockSize);
+#endif
+    if (inputSize < njeBlockSize)
         {
-        *dp++             = *sp++;
-        currentBlockSize += 1;
+        return start;
         }
 
     /*
-    **  When all of the bytes have been collected, compress out the TTB
-    **  and TTR's before making the result available to the caller.
+    **  Collect all of the bytes due, squeezing out the TTB and TTRs
     */
-    if (currentBlockSize >= njeBlockSize)
+    sp     = start + TtbLength;
+    sLimit = start + njeBlockSize;
+    dp     = pcbp->controls.nje.inputBuf;
+    while (sp + TtrLength <= sLimit)
         {
-        ibp     = pcbp->controls.nje.inputBuf;
-        ibLimit = ibp + njeBlockSize;
-        dp      = ibp + TtbLength;
-        while (dp + TtrLength < ibLimit)
+        recLen = (*(sp + TtrOffLength) << 8) | *(sp + TtrOffLength + 1);
+        sp    += TtrLength;
+#if DEBUG
+        fprintf(npuNjeLog, "    Record length %d\n", recLen);
+        npuNjeLogBytes(sp, recLen, EBCDIC);
+        npuNjeLogFlush();
+#endif
+        while (sp < sLimit && recLen-- > 0)
             {
-            recLen = (*(dp + TtrOffLength) << 8) | *(dp + TtrOffLength + 1);
-            dp    += TtrLength;
-            while (dp < ibLimit && recLen-- > 0)
-                {
-                *ibp++ = *dp++;
-                }
+            *dp++ = *sp++;
             }
-        *size       = (int)(ibp - pcbp->controls.nje.inputBuf);
-        *isComplete = TRUE;
-
-        return sp;
         }
+    *size       = (int)(dp - pcbp->controls.nje.inputBuf);
+    *isComplete = TRUE;
 
-    return start;
+#if DEBUG
+    if (sp != sLimit)
+        {
+        fprintf(npuNjeLog, "    %d orphaned bytes at end of block\n", (int)(sLimit - sp));
+        }
+#endif
+
+    return sp;
     }
 
 /*--------------------------------------------------------------------------
@@ -1816,8 +1821,8 @@ static int npuNjeSend(Pcb *pcbp, u8 *dp, int len)
 #if DEBUG
     if (n > 0)
         {
-        fprintf(npuNjeLog, "Port %02x: TCP data sent to %s (%d/%d bytes)\n", pcbp->claPort, pcbp->ncbp->hostName, n, len);
-        npuNjeLogBytes(dp, n, EBCDIC);
+        fprintf(npuNjeLog, "Port %02x: TCP data sent to %s (%d/%d bytes)\n", pcbp->claPort, pcbp->ncbp->hostName, (int)n, len);
+        npuNjeLogBytes(dp, (int)n, EBCDIC);
         npuNjeLogFlush();
         }
     else if (n == 0)
