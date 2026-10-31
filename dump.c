@@ -349,7 +349,7 @@ void dumpCpu(void)
             {
             if (!duplicateLine)
                 {
-                fprintf(pf, "     DUPLICATED LINES.\n");
+                fputs("     DUPLICATED LINES.\n", pf);
                 duplicateLine = TRUE;
                 }
             }
@@ -398,7 +398,7 @@ void dumpCpu(void)
 
         if (!duplicateLine)
             {
-            fprintf(pf, "\n");
+            fputs("\n", pf);
             }
         }
 
@@ -465,7 +465,7 @@ void dumpPpu(u8 pp, PpWord first, PpWord limit)
             fprintf(pf, "PP busy: %02o%02o\n", ppu[pp].opF, ppu[pp].opD);
             }
         }
-    fprintf(pf, "\n");
+    fputs("\n", pf);
 
     for (addr = first; addr < limit; addr += 8)
         {
@@ -486,7 +486,7 @@ void dumpPpu(u8 pp, PpWord first, PpWord limit)
             fprintf(pf, "%c%c", cdcToAscii[(pw >> 6) & Mask6], cdcToAscii[pw & Mask6]);
             }
 
-        fprintf(pf, "\n");
+        fputs("\n", pf);
         }
     }
 
@@ -539,7 +539,7 @@ void dumpDisassemblePpu(u8 pp)
                 }
             else
                 {
-                fprintf(pf, "        ");
+                fputs("        ", pf);
                 }
             }
         else
@@ -553,7 +553,7 @@ void dumpDisassemblePpu(u8 pp)
                 }
             else
                 {
-                fprintf(pf, "      ");
+                fputs("      ", pf);
                 }
             }
 
@@ -564,7 +564,7 @@ void dumpDisassemblePpu(u8 pp)
             fprintf(pf, "%c%c", cdcToAscii[(pw1 >> 6) & Mask6], cdcToAscii[pw1 & Mask6]);
             }
 
-        fprintf(pf, "\n");
+        fputs("\n", pf);
         }
     }
 

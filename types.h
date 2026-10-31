@@ -29,7 +29,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#if defined(__linux__) && !defined(__APPLE__)
+#if (defined(__linux__) || defined(_WIN32)) && !defined(__APPLE__)
 #include <threads.h>
 #endif
 

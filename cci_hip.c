@@ -46,7 +46,6 @@
 #include "const.h"
 #include "types.h"
 #include "proto.h"
-#include "npu.h"
 #include "cci.h"
 
 /*

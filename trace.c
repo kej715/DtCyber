@@ -2791,7 +2791,7 @@ void traceRegisters(bool isPost)
         {
         fprintf(ppuF[activePpu->id], "  R:%o", activePpu->regR);
         }
-    fprintf(ppuF[activePpu->id], "    ");
+    fputs("    ", ppuF[activePpu->id]);
     }
 
 /*--------------------------------------------------------------------------
@@ -2850,7 +2850,7 @@ void traceOpcode(void)
     switch (addrMode)
         {
     case AN:
-        fprintf(ppuF[activePpu->id], "        ");
+        fputs("        ", ppuF[activePpu->id]);
         break;
 
     case Amd:
@@ -2877,7 +2877,7 @@ void traceOpcode(void)
         break;
         }
 
-    fprintf(ppuF[activePpu->id], "    ");
+    fputs("    ", ppuF[activePpu->id]);
     }
 
 /*--------------------------------------------------------------------------
@@ -3165,7 +3165,7 @@ void traceEnd(void)
     /*
     **  Print newline.
     */
-    fprintf(ppuF[activePpu->id], "\n");
+    fputs("\n", ppuF[activePpu->id]);
     }
 
 /*--------------------------------------------------------------------------
