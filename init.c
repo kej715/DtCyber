@@ -178,7 +178,7 @@ char          persistDir[256];
 **  -----------------
 */
 static long        chCount = 040; // will be adjusted if PP count specified as 012
-static InitSection *curSection;
+static thread_local InitSection *curSection;
 static char        deadstart[80];
 static union
     {
@@ -479,7 +479,7 @@ u32 initConvertEndian(u32 value)
 **------------------------------------------------------------------------*/
 char *initGetNextLine(int *lineNo)
     {
-    static char lineBuffer[MaxLine];
+    static thread_local char lineBuffer[MaxLine];
 
     if ((curSection == NULL) || (curSection->curLine == NULL))
         {
