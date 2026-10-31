@@ -341,14 +341,14 @@ void npuHipNotifyDownlineCopied(void)
 **------------------------------------------------------------------------*/
 bool npuHipStartDownlineTransfer(NpuBuffer *bp)
     {
-    NpuParam *npu;
-
-    npu = (NpuParam *)netDevice->devDependent;
-    if (netDevice->downlineData.isReady == FALSE || netDevice->downlineData.numBytes < 1 || bp == NULL || npu->state != StHipIdle)
+    if (netDevice->downlineData.isReady == FALSE || netDevice->downlineData.numBytes < 1 || bp == NULL)
         {
 #if DEBUG
         if (bp != NULL)
             {
+            NpuParam *npu;
+
+            npu = (NpuParam *)netDevice->devDependent;
             fprintf(netDevice->log, "\nDownline block rejected, CN=%02X, BT=%02X, PDU size=%d, NPU state %d, downline ready %s\n", netDevice->downlineData.data[BlkOffCN],
                 netDevice->downlineData.data[BlkOffBTBSN] & BlkMaskBT, netDevice->downlineData.numBytes, npu->state, netDevice->downlineData.isReady ? "TRUE" : "FALSE");
             traceStack(netDevice->log);
@@ -371,14 +371,14 @@ bool npuHipStartDownlineTransfer(NpuBuffer *bp)
 **------------------------------------------------------------------------*/
 bool npuHipStartUplineTransfer(NpuBuffer *bp)
     {
-    NpuParam *npu;
-
-    npu = (NpuParam *)netDevice->devDependent;
-    if (netDevice->uplineData.isReady || bp == NULL || npu->state != StHipIdle)
+    if (netDevice->uplineData.isReady || bp == NULL)
         {
 #if DEBUG
         if (bp != NULL)
             {
+            NpuParam *npu;
+
+            npu = (NpuParam *)netDevice->devDependent;
             fprintf(netDevice->log, "\nUpline block rejected, CN=%02X, BT=%02X, PDU size=%d, NPU state %d, upline ready %s\n", bp->data[BlkOffCN],
                 bp->data[BlkOffBTBSN] & BlkMaskBT, bp->numBytes, npu->state, netDevice->uplineData.isReady ? "TRUE" : "FALSE");
             traceStack(netDevice->log);
@@ -490,10 +490,14 @@ static void npuThread(void *param)
 static void *npuThread(void *param)
 #endif
     {
-    NpuParam *npu;
-    PpWord   orderType;
-    u8       orderValue;
-    char     *sectionName;
+    u8          blockType;
+    ChIoBuffer  *bp;
+    u8          byte;
+    NpuParam    *npu;
+    PpWord      orderType;
+    u8          orderValue;
+    u8          prio;
+    char        *sectionName;
 
     /*
     **  Parse data communication configuration
@@ -550,10 +554,6 @@ static void *npuThread(void *param)
         */
         if (npu->isOrderReady)
             {
-#if DEBUG
-            npuLogFlush(netDevice->log, npu);
-            fprintf(netDevice->log, "\n    Order %04o %s", npu->regOrder, npuHipOrder2String(npu->regOrder));
-#endif
             orderType         = (npu->regOrder >> OrdShiftType) & Mask3;
             orderValue        = (u8)(npu->regOrder & OrdMaskValue);
             npu->isOrderReady = FALSE;
@@ -564,9 +564,6 @@ static void *npuThread(void *param)
                 break;
 
             case OrdRegulationLvlChange:
-#if DEBUG
-                fprintf(netDevice->log, " : %o", orderValue);
-#endif
                 npuSvmNotifyHostRegulation(orderValue);
                 break;
                 }
@@ -577,26 +574,40 @@ static void *npuThread(void *param)
         */
         if (netDevice->downlineData.isReady)
             {
-            orderType = (npu->regOrder >> OrdShiftType) & Mask3;
-            switch (orderType)
+#if DEBUG
+            fputs("\n    ", netDevice->log);
+#endif
+            bp             = &netDevice->downlineData;
+            byte           = bp->data[BlkOffBTBSN];
+            blockType      = byte & BlkMaskBT;
+            prio           = (byte >> BlkShiftPRIO) & BlkMaskPRIO;
+            bp->blockSeqNo = (byte >> BlkShiftBSN) & BlkMaskBSN;
+            if ((blockType == BtHTCMD) && (bp->data[BlkOffCN] == 0))
                 {
-            default:
-                break;
-
-            case OrdOutServiceMsg:
-                npuBipNotifyServiceMessage();
+                if (bp->data[BlkOffPfc] == 0x01) // Link regulation
+                    {
+#if DEBUG
+                    fputs("Notify downline host regulation", netDevice->log);
+#endif
+                    npuSvmNotifyHostRegulation(3 | 0x04); // reg level 3 | CS
+                    netDevice->downlineData.isReady = FALSE;
+                    }
+                else
+                    {
+#if DEBUG
+                    fputs("Notify downline service message", netDevice->log);
+#endif
+                    npuBipNotifyServiceMessage();
+                    npuBipNotifyDownlineReceived();
+                    }
+                }
+            else
+                {
+#if DEBUG
+                fputs("Notify downline data", netDevice->log);
+#endif
+                npuBipNotifyData(prio);
                 npuBipNotifyDownlineReceived();
-                break;
-
-            case OrdOutPriorHigh:
-                npuBipNotifyData(1);
-                npuBipNotifyDownlineReceived();
-                break;
-
-            case OrdOutPriorLow:
-                npuBipNotifyData(0);
-                npuBipNotifyDownlineReceived();
-                break;
                 }
             }
 
@@ -686,7 +697,7 @@ static FcStatus npuHipFunc(PpWord funcCode)
         {
     default:
 #if DEBUG
-        fputs(" FUNC not implemented & declined!", netDevice->log);
+        fputs(" FUNC not implemented & declined", netDevice->log);
 #endif
 
         return FcDeclined;
@@ -737,7 +748,9 @@ static FcStatus npuHipFunc(PpWord funcCode)
             npu->state                 = StHipIdle;
             activeDevice->recordLength = 0;
             activeDevice->fcode        = FcNpuNothing;
-
+#if DEBUG
+            fputs(" unexpected input request", netDevice->log);
+#endif
             return FcDeclined;
             }
         bp                         = &netDevice->uplineData;
@@ -754,7 +767,9 @@ static FcStatus npuHipFunc(PpWord funcCode)
             npu->state                 = StHipIdle;
             activeDevice->recordLength = 0;
             activeDevice->fcode        = FcNpuNothing;
-
+#if DEBUG
+            fputs(" unexpected output request", netDevice->log);
+#endif
             return FcDeclined;
             }
         bp                         = &netDevice->downlineData;
@@ -922,16 +937,30 @@ static void npuHipIo(void)
             default:
                 break;
 
+            case OrdNotReadyForInput:
+                if (netDevice->downlineData.isReady == FALSE)
+                    {
+                    npuHipSetNpuStatus(npu, StNpuReadyOutput);
+                    }
+                break;
+
             case OrdOutServiceMsg:
             case OrdOutPriorHigh:
             case OrdOutPriorLow:
-                npuHipSetNpuStatus(npu, StNpuReadyOutput);
+                if (netDevice->downlineData.isReady)
+                    {
+                    npuHipSetNpuStatus(npu, StNpuNotReadyOutput);
+                    }
+                else
+                    {
+                    npuHipSetNpuStatus(npu, StNpuReadyOutput);
+                    }
                 break;
                 }
             npu->isOrderReady   = TRUE;
             activeChannel->full = FALSE;
 #if DEBUG
-            fprintf(netDevice->log, " Order word %03X - function %02X : %s",
+            fprintf(netDevice->log, " %03X - function %02X : %s",
                 activeChannel->data, activeChannel->data >> 8, npuHipOrder2String(activeChannel->data));
 #endif
             }

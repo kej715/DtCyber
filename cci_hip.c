@@ -1079,7 +1079,14 @@ static void cciHipIo(void)
             case OrdOutServiceMsg:
             case OrdOutPriorHigh:
             case OrdOutPriorLow:
-                cciHipSetNpuStatus(cci, StNpuReadyOutput);
+                if (netDevice->downlineData.isReady)
+                    {
+                    cciHipSetNpuStatus(cci, StNpuNotReadyOutput);
+                    }
+                else
+                    {
+                    cciHipSetNpuStatus(cci, StNpuReadyOutput);
+                    }
                 break;
                 }
             }
