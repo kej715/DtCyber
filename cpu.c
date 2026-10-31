@@ -35,16 +35,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "const.h"
+#include "types.h"
+
+#include "proto.h"
 #if defined(_WIN32)
 #include <windows.h>
 #else
 #include <pthread.h>
 #include <unistd.h>
 #endif
-
-#include "const.h"
-#include "types.h"
-#include "proto.h"
 
 /*
 **  -----------------

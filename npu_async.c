@@ -25,7 +25,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG 0
+#define DEBUG    0
 
 /*
 **  -------------
@@ -118,6 +118,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp);
 #if DEBUG
 static void npuAsyncLogBytes(u8 *bytes, int len);
 static void npuAsyncLogFlush(void);
+
 #endif
 
 /*
@@ -126,7 +127,7 @@ static void npuAsyncLogFlush(void);
 **  ----------------
 */
 #if DEBUG
-static thread_local FILE *npuAsyncLog = NULL;
+FILE *npuAsyncLog = NULL;
 #endif
 
 /*
@@ -134,6 +135,8 @@ static thread_local FILE *npuAsyncLog = NULL;
 **  Private Variables
 **  -----------------
 */
+static Tcb *npuTp;
+
 static u8 fcSingleSpace[]   = "\r\n";
 static u8 fcDoubleSpace[]   = "\r\n\n";
 static u8 fcTripleSpace[]   = "\r\n\n\n";
@@ -146,6 +149,9 @@ static u8  netBEL[]  = { ChrBEL };
 static u8  netLF[]   = { ChrLF };
 static u8  netCR[]   = { ChrCR };
 static u8  netCRLF[] = { ChrCR, ChrLF };
+static u8  echoBuffer[1000];
+static u8  *echoPtr;
+static int echoLen;
 
 static u8 telnetDo[3]      = { TELNET_IAC, TELNET_DO, 0 };
 static u8 telnetDont[3]    = { TELNET_IAC, TELNET_DONT, 0 };
@@ -161,45 +167,36 @@ static u8 blockResetConnection[] =
     BtHTRESET,          // BT/BSN/PRIO
     };
 
-static thread_local Tcb *npuTp;
-static thread_local u8  echoBuffer[1000];
-static thread_local u8  *echoPtr;
-
 #if DEBUG
-static thread_local char npuAsyncLogBuf[LogLineLength + 1];
-static thread_local int  npuAsyncLogBytesCol = 0;
+static char npuAsyncLogBuf[LogLineLength + 1];
+static int  npuAsyncLogBytesCol = 0;
 #endif
 
 /*
-**  Function tables to interface to either CCP or CCI functions.
-**  Indexed by NetDevType
+** Function tables to interface to either CCP or CCI functions
 */
 static bool (*svmConnectTerminal[])(Pcb *bp) =
     {
     npuSvmConnectTerminal,
-    cciSvmConnectTerminal,
-    npuSvmConnectTerminal
+    cciSvmConnectTerminal
     };
 
 static void (*svmSendDiscRequest[])(Tcb *tp) =
     {
     npuSvmSendDiscRequest,
-    cciSvmSendDiscRequest,
-    npuSvmSendDiscRequest
+    cciSvmSendDiscRequest
     };
 
 static void (*tipNotifySent[])(Tcb *tp, u8 blockSeqNo) =
     {
     npuTipNotifySent,
-    cciTipNotifySent,
-    npuTipNotifySent
+    cciTipNotifySent
     };
 
 static void (*asyncProcessUplineNormal[])(Tcb *tp) =
     {
     npuAsyncProcessUplineNormal,
     cciAsyncProcessUplineNormal,
-    npuAsyncProcessUplineNormal
     };
 
 /*
@@ -228,15 +225,13 @@ void npuAsyncPresetPcb(Pcb *pcbp)
 #if DEBUG
     if (npuAsyncLog == NULL)
         {
-        char fName[32];
-        sprintf(fName, "%sasynclog.txt", netDevice->name);
-        npuAsyncLog = fopen(fName, "wt");
+        npuAsyncLog = fopen("asynclog.txt", "wt");
         if (npuAsyncLog == NULL)
             {
-            perror(fName);
+            logDtError(LogErrorLocation, "asynclog.txt - aborting\n");
             exit(1);
             }
-        npuAsyncLogFlush(); // initialize log buffer
+        npuAsyncLogFlush();    // initialize log buffer
         }
 #endif
     }
@@ -253,7 +248,10 @@ void npuAsyncPresetPcb(Pcb *pcbp)
 **------------------------------------------------------------------------*/
 void npuAsyncProcessBreakIndication(Tcb *tp)
     {
-    npuBipRequestUplineStatic(blockResetConnection, sizeof(blockResetConnection), BlkOffCN, tp->cn);
+    blockResetConnection[BlkOffDN] = npuSvmCouplerNode;
+    blockResetConnection[BlkOffSN] = npuSvmNpuNode;
+    blockResetConnection[BlkOffCN] = tp->cn;
+    npuBipRequestUplineCanned(blockResetConnection, sizeof(blockResetConnection));
 #if DEBUG
     fprintf(npuAsyncLog, "Port %02x: break indication for %.7s\n", tp->pcbp->claPort, tp->termName);
 #endif
@@ -507,7 +505,7 @@ void npuAsyncProcessTelnetData(Pcb *pcbp)
             fprintf(npuAsyncLog, "Port %02x: Telnet options sent, size %ld\n", pcbp->claPort,
                     tnOutPtr - tnOutBuf);
             }
-        npuAsyncLogBytes(tnOutBuf, (int)(tnOutPtr - tnOutBuf));
+        npuAsyncLogBytes(tnOutBuf, tnOutPtr - tnOutBuf);
         npuAsyncLogFlush();
 #endif
         }
@@ -724,8 +722,8 @@ void npuAsyncTryOutput(Pcb *pcbp)
 #if DEBUG
             if (result > 0)
                 {
-                fprintf(npuAsyncLog, "Port %02x: %d bytes sent to %.7s\n", tp->pcbp->claPort, (int)result, tp->termName);
-                npuAsyncLogBytes(data, (int)result);
+                fprintf(npuAsyncLog, "Port %02x: %d bytes sent to %.7s\n", tp->pcbp->claPort, result, tp->termName);
+                npuAsyncLogBytes(data, result);
                 npuAsyncLogFlush();
                 }
 #endif
@@ -743,7 +741,7 @@ void npuAsyncTryOutput(Pcb *pcbp)
             */
             if (bp->blockSeqNo != 0)
                 {
-                tipNotifySent[netDevice->type](tp, bp->blockSeqNo);
+                tipNotifySent[npuSw](tp, bp->blockSeqNo);
                 }
 
             npuBipBufRelease(bp);
@@ -905,7 +903,6 @@ void npuAsyncProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last)
 **------------------------------------------------------------------------*/
 void npuAsyncProcessUplineData(Pcb *pcbp)
     {
-    int echoLen;
     Tcb *tp;
 
     tp = npuAsyncFindTcb(pcbp);
@@ -936,7 +933,7 @@ void npuAsyncProcessUplineData(Pcb *pcbp)
         }
     else
         {
-        asyncProcessUplineNormal[netDevice->type](tp);
+        asyncProcessUplineNormal[npuSw](tp);
         }
 
     /*
@@ -971,12 +968,14 @@ void npuAsyncFlushUplineTransparent(Tcb *tp)
         tp->params.fvXInput = FALSE;
 #if DEBUG
         fprintf(npuAsyncLog, "Port %02x: terminate upline transparent mode on %.7s\n", tp->pcbp->claPort, tp->termName);
+#endif
         }
+#if DEBUG
     else
         {
         fprintf(npuAsyncLog, "Port %02x: continue upline transparent mode on %.7s\n", tp->pcbp->claPort, tp->termName);
-#endif
         }
+#endif
 
     /*
     **  Send the upline data.
@@ -986,7 +985,7 @@ void npuAsyncFlushUplineTransparent(Tcb *tp)
 #if DEBUG
     fprintf(npuAsyncLog, "Port %02x: send upline transparent data for %.7s, size %ld\n",
             tp->pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
-    npuAsyncLogBytes(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+    npuAsyncLogBytes(tp->inBuf, tp->inBufPtr - tp->inBuf);
     npuAsyncLogFlush();
     fprintf(npuAsyncLog, "Port %02x: cancel transparent input timer for %.7s\n", tp->pcbp->claPort, tp->termName);
 #endif
@@ -1013,7 +1012,7 @@ bool npuAsyncNotifyNetConnect(Pcb *pcbp, bool isPassive)
     fprintf(npuAsyncLog, "Port %02x: request terminal connection\n", pcbp->claPort);
 #endif
 
-    return svmConnectTerminal[netDevice->type](pcbp);
+    return svmConnectTerminal[npuSw](pcbp);
     }
 
 /*--------------------------------------------------------------------------
@@ -1035,7 +1034,7 @@ void npuAsyncNotifyNetDisconnect(Pcb *pcbp)
 #if DEBUG
         fprintf(npuAsyncLog, "Port %02x: terminal %.7s disconnected\n", pcbp->claPort, tp->termName);
 #endif
-        svmSendDiscRequest[netDevice->type](tp);
+        svmSendDiscRequest[npuSw](tp);
         }
     else
         {
@@ -1236,7 +1235,7 @@ static Tcb *npuAsyncFindTcb(Pcb *pcbp)
 
     for (i = 1; i < MaxTcbs; i++)
         {
-        tp = &netDevice->tcbs[i];
+        tp = &npuTcbs[i];
         if ((tp->state != StTermIdle) && (tp->pcbp == pcbp))
             {
             pcbp->controls.async.tp = tp;
@@ -1312,7 +1311,7 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
             fprintf(npuAsyncLog, "Port %02x: transparent mode termination character (%02x) detected on %.7s\n", pcbp->claPort, ch, tp->termName);
             fprintf(npuAsyncLog, "Port %02x: send upline transparent data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
-            npuAsyncLogBytes(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+            npuAsyncLogBytes(tp->inBuf, tp->inBufPtr - tp->inBuf);
             npuAsyncLogFlush();
             fprintf(npuAsyncLog, "Port %02x: %s upline transparent mode on %.7s\n", pcbp->claPort,
                     tp->params.fvXInput ? "continue" : "terminate", tp->termName);
@@ -1328,7 +1327,7 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
             fprintf(npuAsyncLog, "Port %02x: User Break2 (%02x) detected on %.7s\n", pcbp->claPort, ch, tp->termName);
             fprintf(npuAsyncLog, "Port %02x: send upline transparent data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
-            npuAsyncLogBytes(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+            npuAsyncLogBytes(tp->inBuf, tp->inBufPtr - tp->inBuf);
             npuAsyncLogFlush();
 #endif
             npuTipInputReset(tp);
@@ -1359,7 +1358,7 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
                     }
                 fprintf(npuAsyncLog, "Port %02x: send upline transparent data for %.7s, size %ld\n",
                         pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
-                npuAsyncLogBytes(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+                npuAsyncLogBytes(tp->inBuf, tp->inBufPtr - tp->inBuf);
                 npuAsyncLogFlush();
                 fprintf(npuAsyncLog, "Port %02x: %s upline transparent mode on %.7s\n", pcbp->claPort,
                         tp->params.fvXInput ? "continue" : "terminate", tp->termName);
@@ -1394,7 +1393,6 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
 static void npuAsyncProcessUplineAscii(Tcb *tp)
     {
     u8  *dp;
-    int echoLen;
     int len;
     u8  ch;
     Pcb *pcbp;
@@ -1461,7 +1459,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline ASCII data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
-            npuAsyncLogBytes(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+            npuAsyncLogBytes(tp->inBuf, tp->inBufPtr - tp->inBuf);
             npuAsyncLogFlush();
 #endif
             npuTipInputReset(tp);
@@ -1542,7 +1540,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline long ASCII data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
-            npuAsyncLogBytes(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+            npuAsyncLogBytes(tp->inBuf, tp->inBufPtr - tp->inBuf);
             npuAsyncLogFlush();
 #endif
             npuTipInputReset(tp);
@@ -1562,7 +1560,6 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
 static void npuAsyncProcessUplineSpecial(Tcb *tp)
     {
     u8  *dp;
-    int echoLen;
     int len;
     u8  ch;
     int i;
@@ -1669,7 +1666,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline special data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
-            npuAsyncLogBytes(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+            npuAsyncLogBytes(tp->inBuf, tp->inBufPtr - tp->inBuf);
             npuAsyncLogFlush();
 #endif
 
@@ -1713,7 +1710,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline special data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
-            npuAsyncLogBytes(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+            npuAsyncLogBytes(tp->inBuf, tp->inBufPtr - tp->inBuf);
             npuAsyncLogFlush();
 #endif
             npuTipInputReset(tp);
@@ -1789,7 +1786,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline long special data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
-            npuAsyncLogBytes(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+            npuAsyncLogBytes(tp->inBuf, tp->inBufPtr - tp->inBuf);
             npuAsyncLogFlush();
 #endif
             }
@@ -1808,7 +1805,6 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
 static void npuAsyncProcessUplineNormal(Tcb *tp)
     {
     u8  *dp;
-    int echoLen;
     int len;
     u8  ch;
     int i;
@@ -1906,7 +1902,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline normal data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
-            npuAsyncLogBytes(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+            npuAsyncLogBytes(tp->inBuf, tp->inBufPtr - tp->inBuf);
             npuAsyncLogFlush();
 #endif
 
@@ -1950,7 +1946,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline normal data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
-            npuAsyncLogBytes(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+            npuAsyncLogBytes(tp->inBuf, tp->inBufPtr - tp->inBuf);
             npuAsyncLogFlush();
 #endif
             npuTipInputReset(tp);
@@ -2048,7 +2044,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
 #if DEBUG
             fprintf(npuAsyncLog, "Port %02x: send upline long normal data for %.7s, size %ld\n",
                     pcbp->claPort, tp->termName, tp->inBufPtr - tp->inBuf);
-            npuAsyncLogBytes(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+            npuAsyncLogBytes(tp->inBuf, tp->inBufPtr - tp->inBuf);
             npuAsyncLogFlush();
 #endif
             npuTipInputReset(tp);

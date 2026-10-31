@@ -26,12 +26,7 @@
 **--------------------------------------------------------------------------
 */
 
-#include <stdbool.h>
 #include <stdint.h>
-
-#if defined(__linux__) && !defined(__APPLE__)
-#include <threads.h>
-#endif
 
 /*
 **  -----------------------
@@ -68,7 +63,7 @@ typedef SSIZE_T ssize_t;
 #define FMT64_016x    "%016I64x"
 #define FMT64_022o    "%022I64o"
 #define FMT64_012x    "%012I64x"
-#elif defined (__GNUC__)
+#elif defined (__GNUC__) || defined(__SunOS)
 #if defined(__amd64) || defined(__amd64__) || defined(__alpha__) || defined(__powerpc64__) || defined(__ppc64__) \
     || (defined(__sparc64__) && defined(__arch64__)) || defined(__aarch64__) || defined(__x86_64__)
 
@@ -108,6 +103,14 @@ typedef unsigned __int128 u128;
 #endif
 
 #define Is32BitNeg(x) (((x) & 0x80000000UL) != 0)
+
+#if (!defined(__cplusplus) && !defined(bool) && !defined(CURSES) && !defined(CURSES_H) && !defined(_CURSES_H))
+typedef int bool;
+#endif
+
+#if defined(__APPLE__)
+#include <stdbool.h>
+#endif
 
 typedef u16 PpWord;                     /* 12/16-bit PP word */
 typedef u64 CpWord;                     /* 60/64-bit CPU word */
@@ -523,6 +526,14 @@ typedef enum
     ECS,
     ESM
     } ExtMemory;
+
+typedef enum
+    {
+    SwCCP = 0,
+    SwCCI,
+    SwUndefined
+    } NpuSoftware;
+
 
 #endif /* TYPES_H */
 /*---------------------------  End Of File  ------------------------------*/

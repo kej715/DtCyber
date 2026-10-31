@@ -143,6 +143,8 @@ static bool npuSvmRequestTerminalConnection(Tcb *tp);
 **  Public Variables
 **  ----------------
 */
+u8 npuSvmCouplerNode = 1;
+u8 npuSvmNpuNode     = 2;
 
 /*
 **  Table of terminal connection state names, indexed by terminal
@@ -157,6 +159,8 @@ char *npuSvmTermStates[] =
     "NPU Request Disconnect",
     "Host Request Disconnect"
     };
+
+extern void (*npuHipResetFunc)(void);
 
 /*
 **  -----------------
@@ -238,12 +242,22 @@ static u8 blockTerminateConnection[] =
     BtHTTERM,           // BT/BSN/PRIO
     };
 
+static enum
+    {
+    StIdle = 0,
+    StWaitSupervision,
+    StReady,
+    }
+svmState = StIdle;
+
 static char *svmStates[] =
     {
-    "StSvmIdle",
-    "StSvmWaitSupervision",
-    "StSvmReady"
+    "StIdle",
+    "StWaitSupervision",
+    "StReady"
     };
+
+static u8 oldRegLevel = 0;
 
 /*
 **  Table of functions that notify TIPs of terminal connection,
@@ -278,7 +292,7 @@ static void (*notifyTermDisconnect[])(Tcb *tp) =
     };
 
 #if DEBUG
-static thread_local FILE *npuSvmLog = NULL;
+static FILE *npuSvmLog = NULL;
 #endif
 
 /*
@@ -302,15 +316,31 @@ void npuSvmInit(void)
     /*
     **  Set initial state.
     */
-    netDevice->svmState = StSvmIdle;
+    svmState = StIdle;
+
+    linkRegulation[BlkOffDN] = npuSvmCouplerNode;
+    linkRegulation[BlkOffSN] = npuSvmNpuNode;
+
+    requestSupervision[BlkOffDN] = npuSvmCouplerNode;
+    requestSupervision[BlkOffSN] = npuSvmNpuNode;
+
+    responseNpuStatus[BlkOffDN] = npuSvmCouplerNode;
+    responseNpuStatus[BlkOffSN] = npuSvmNpuNode;
+
+    responseTerminateConnection[BlkOffDN] = npuSvmCouplerNode;
+    responseTerminateConnection[BlkOffSN] = npuSvmNpuNode;
+
+    requestTerminateConnection[BlkOffDN] = npuSvmCouplerNode;
+    requestTerminateConnection[BlkOffSN] = npuSvmNpuNode;
+
+    blockTerminateConnection[BlkOffDN] = npuSvmCouplerNode;
+    blockTerminateConnection[BlkOffSN] = npuSvmNpuNode;
 
 #if DEBUG
-    char fName[32];
-    sprintf(fName, "%ssvmlog.txt", netDevice->name);
-    npuSvmLog = fopen(fName, "wt");
+    npuSvmLog = fopen("svmlog.txt", "wt");
     if (npuSvmLog == NULL)
         {
-        logDtError(LogErrorLocation, "%s - aborting\n", fName);
+        logDtError(LogErrorLocation, "svmlog.txt - aborting\n");
         exit(1);
         }
 #endif
@@ -329,8 +359,8 @@ void npuSvmReset(void)
     /*
     **  Set initial state.
     */
-    netDevice->svmState = StSvmIdle;
-    netDevice->regLevel = 0;
+    svmState    = StIdle;
+    oldRegLevel = 0;
     }
 
 /*--------------------------------------------------------------------------
@@ -363,21 +393,20 @@ void npuSvmNotifyTermDisconnect(Tcb *tp)
 void npuSvmNotifyHostRegulation(u8 regLevel)
     {
 #if DEBUG
-    fprintf(npuSvmLog, "Notify host regulation level %02x, SVM state is %s\n", regLevel, svmStates[netDevice->svmState]);
+    fprintf(npuSvmLog, "Regulation level %02x, SVM state is %d\n", regLevel, svmState);
 #endif
 
-    if ((netDevice->svmState == StSvmIdle) || (regLevel != netDevice->regLevel))
+    if ((svmState == StIdle) || (regLevel != oldRegLevel))
         {
-#if DEBUG
-        fprintf(npuSvmLog, "Request change from regulation level %02x\n", netDevice->regLevel);
-#endif
-        netDevice->regLevel = regLevel;
-        npuBipRequestUplineStatic(linkRegulation, sizeof(linkRegulation), BlkOffP3, regLevel);
+        oldRegLevel = regLevel;
+        linkRegulation[BlkOffP3] = regLevel;
+        npuBipRequestUplineCanned(linkRegulation, sizeof(linkRegulation));
         }
 
-    if ((netDevice->svmState == StSvmIdle) && ((regLevel & RegLvlCsAvailable) != 0))
+    if ((svmState == StIdle) && ((regLevel & RegLvlCsAvailable) != 0))
         {
-        npuSvmRequestSupervision();
+        npuBipRequestUplineCanned(requestSupervision, sizeof(requestSupervision));
+        svmState = StWaitSupervision;
         }
     }
 
@@ -441,7 +470,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
         /*
         **  Service message must be at least DN/SN/0/BSN/PFC/SFC.
         */
-        npuLogMessage("(npu_svm) Short message in state %s", svmStates[netDevice->svmState]);
+        npuLogMessage("(npu_svm) Short message in state %s", svmStates[svmState]);
 
         /*
         **  Release downline buffer and return.
@@ -476,9 +505,6 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
     */
     switch (block[BlkOffPfc])
         {
-    default:
-        break;
-
     case PfcICN:
     case PfcTCN:
         if (bp->numBytes < BlkOffP3 + 1)
@@ -519,9 +545,9 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
     case PfcSUP:
         if (block[BlkOffSfc] == (SfcIN | SfcResp))
             {
-            if (netDevice->svmState != StSvmWaitSupervision)
+            if (svmState != StWaitSupervision)
                 {
-                npuLogMessage("(npu_svm) Unexpected Supervision Reply in state %s", svmStates[netDevice->svmState]);
+                npuLogMessage("(npu_svm) Unexpected Supervision Reply in state %s", svmStates[svmState]);
                 break;
                 }
 
@@ -529,25 +555,22 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
             **  Host (CS) has agreed to supervise us, we are now ready to handle network
             **  connection attempts.
             */
-            netDevice->svmState = StSvmReady;
-#if DEBUG
-            fprintf(npuSvmLog, "%s has gained supervision and is ready for communication\n", netDevice->name);
-#endif
+            svmState = StReady;
             }
         else
             {
-            npuLogMessage("(npu_svm) Unexpected message %02X/%02X in state %s", block[BlkOffPfc], block[BlkOffSfc], svmStates[netDevice->svmState]);
+            npuLogMessage("(npu_svm) Unexpected message %02X/%02X in state %s", block[BlkOffPfc], block[BlkOffSfc], svmStates[svmState]);
             }
         break;
 
     case PfcNPS:
         if (block[BlkOffSfc] == SfcNP)
             {
-            npuBipRequestUplineStatic(responseNpuStatus, sizeof(responseNpuStatus), 0, 0);
+            npuBipRequestUplineCanned(responseNpuStatus, sizeof(responseNpuStatus));
             }
         else
             {
-            npuLogMessage("(npu_svm) Unexpected message %02X/%02X in state %s", block[BlkOffPfc], block[BlkOffSfc], svmStates[netDevice->svmState]);
+            npuLogMessage("(npu_svm) Unexpected message %02X/%02X in state %s", block[BlkOffPfc], block[BlkOffSfc], svmStates[svmState]);
             }
         break;
 
@@ -693,7 +716,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
     case PfcNPI:
         npuLogMessage("(npu_svm) NPU reload request, SFC %02X", block[BlkOffSfc]);
         logDtError(LogErrorLocation, "NPU reload request, SFC %02X\n", block[BlkOffSfc]);
-        netDevice->doReset = TRUE;
+        (*npuHipResetFunc)();
         break;
 
     default:
@@ -753,23 +776,6 @@ void npuSvmProcessTermBlock(Tcb *tp)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Send a request for supervision to host.
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        Nothing
-**
-**------------------------------------------------------------------------*/
-void npuSvmRequestSupervision(void)
-    {
-    npuBipRequestUplineStatic(requestSupervision, sizeof(requestSupervision), 0, 0);
-    netDevice->svmState = StSvmWaitSupervision;
-#if DEBUG
-    fprintf(npuSvmLog, "Request supervision, SVM state is %s\n", svmStates[netDevice->svmState]);
-#endif
-    }
-
-/*--------------------------------------------------------------------------
 **  Purpose:        Send a TCN/TA/N to host.
 **
 **  Parameters:     Name        Description.
@@ -784,7 +790,8 @@ void npuSvmSendDiscReply(Tcb *tp)
     fprintf(npuSvmLog, "Send TCN/TA/N for %.7s in state %s\n", tp->termName, npuSvmTermStates[tp->state]);
 #endif
 
-    npuBipRequestUplineStatic(responseTerminateConnection, sizeof(responseTerminateConnection), BlkOffP3, tp->cn);
+    responseTerminateConnection[BlkOffP3] = tp->cn;
+    npuBipRequestUplineCanned(responseTerminateConnection, sizeof(responseTerminateConnection));
     }
 
 /*--------------------------------------------------------------------------
@@ -814,7 +821,8 @@ void npuSvmSendDiscRequest(Tcb *tp)
         /*
         **  Send TCN/TA/R message to request termination of connection.
         */
-        npuBipRequestUplineStatic(requestTerminateConnection, sizeof(requestTerminateConnection), BlkOffP3, tp->cn);
+        requestTerminateConnection[BlkOffP3] = tp->cn;
+        npuBipRequestUplineCanned(requestTerminateConnection, sizeof(requestTerminateConnection));
         tp->state = StTermNpuRequestDisconnect;
         break;
 
@@ -838,15 +846,14 @@ void npuSvmSendDiscRequest(Tcb *tp)
 **  Purpose:        Determine if host is ready for connection request
 **
 **  Parameters:     Name        Description.
-**                  netDevice   pointer to network device parameters
 **
 **  Returns:        TRUE if host is ready to accept connections, FALSE
 **                  otherwise.
 **
 **------------------------------------------------------------------------*/
-bool npuSvmIsReady(NetDevParam *netDevice)
+bool npuSvmIsReady(void)
     {
-    return netDevice->svmState == StSvmReady;
+    return (svmState == StReady);
     }
 
 /*--------------------------------------------------------------------------
@@ -864,7 +871,8 @@ void npuSvmSendTermBlock(Tcb *tp)
     fprintf(npuSvmLog, "Send TERM block for %.7s in state %s\n", tp->termName, npuSvmTermStates[tp->state]);
 #endif
 
-    npuBipRequestUplineStatic(blockTerminateConnection, sizeof(blockTerminateConnection), BlkOffCN, tp->cn);
+    blockTerminateConnection[BlkOffCN] = tp->cn;
+    npuBipRequestUplineCanned(blockTerminateConnection, sizeof(blockTerminateConnection));
     }
 
 /*
@@ -904,14 +912,14 @@ static bool npuSvmRequestTerminalConfig(Pcb *pcbp)
     */
     mp = bp->data;
 
-    *mp++ = netDevice->couplerNode;  // DN
-    *mp++ = netDevice->npuNode;      // SN
-    *mp++ = 0;                       // CN
-    *mp++ = 4;                       // BT=CMD
-    *mp++ = PfcCNF;                  // PFC
-    *mp++ = SfcTE;                   // SFC
-    *mp++ = pcbp->claPort;           // non-zero port number from "PORT=" parameter in NDL source
-    *mp++ = 0;                       // sub-port number (always 0 for async ports)
+    *mp++ = npuSvmCouplerNode;  // DN
+    *mp++ = npuSvmNpuNode;      // SN
+    *mp++ = 0;                  // CN
+    *mp++ = 4;                  // BT=CMD
+    *mp++ = PfcCNF;             // PFC
+    *mp++ = SfcTE;              // SFC
+    *mp++ = pcbp->claPort;      // non-zero port number from "PORT=" parameter in NDL source
+    *mp++ = 0;                  // sub-port number (always 0 for async ports)
     switch (pcbp->ncbp->connType)
         {
     case ConnTypeRaw:
@@ -1174,9 +1182,9 @@ static Tcb *npuSvmFindOwningConsole(Tcb *tp)
         }
 
     claPort = tp->pcbp->claPort;
-    for (i = 1; i <= netDevice->maxCN; i++)
+    for (i = 1; i <= npuNetMaxCN; i++)
         {
-        tp2 = &netDevice->tcbs[i];
+        tp2 = &npuTcbs[i];
         if ((tp2->state != StTermIdle) && (tp2->pcbp->claPort == claPort) && (tp2->deviceType == DtCONSOLE))
             {
             return tp2;
@@ -1216,8 +1224,8 @@ static bool npuSvmRequestTerminalConnection(Tcb *tp)
     */
     mp = bp->data;
 
-    *mp++ = netDevice->couplerNode;             // DN
-    *mp++ = netDevice->npuNode;                 // SN
+    *mp++ = npuSvmCouplerNode;                  // DN
+    *mp++ = npuSvmNpuNode;                      // SN
     *mp++ = 0;                                  // CN
     *mp++ = 4;                                  // BT=CMD
     *mp++ = PfcICN;                             // PFC

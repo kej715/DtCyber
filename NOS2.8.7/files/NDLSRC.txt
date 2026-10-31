@@ -57,7 +57,7 @@ TASX364: DEFINE,   TC=X364, PRI, PG=NO, PL=0, PW=0, OP=DI, OC=YES,
 *                                                              *
 *   NP02 IS ATTACHED TO MAINFRAME M01 VIA COUPLER CP01M01.     *
 *   COUPLER CP01M01 IS THE SOURCE NODE FOR A LOGICAL LINK TO   *
-*   NPU NP02.                                                  *
+*   NPU NP02,                                                  *
 *                                                              *
 ****************************************************************
   

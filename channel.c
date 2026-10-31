@@ -278,7 +278,7 @@ void channelDisplayContext()
                 break;
 
             case DtHcp:
-                devTypeName = "Host Communication Processor";
+                devTypeName = "CCI HCP Unit";
                 break;
 
             default:
@@ -355,6 +355,10 @@ void channelTerminate(void)
             if (dp->devType == DtMt679)
                 {
                 mt679Terminate(dp);
+                }
+            if (dp->devType == DtHcp)
+                {
+                cciHipTerminate(dp);
                 }
 
             /*

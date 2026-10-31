@@ -29,6 +29,17 @@
 
 /*
 **  -------------
+**  Include Files
+**  -------------
+*/
+#if defined(_WIN32)
+#include <winsock.h>
+#else
+#include <netdb.h>
+#endif
+
+/*
+**  -------------
 **  CCI Constants
 **  -------------
 */
@@ -36,6 +47,7 @@
 #define BlkOffSP                7
 #define BlkOffLt                8
 #define BlkOffTt                9
+
 
 #define CciWaitForTcbTimeout    5
 
@@ -52,7 +64,7 @@
 */
 
 /*
-** CCI TIP types
+** CCI Line Control Block
 */
 typedef enum
     {
@@ -60,7 +72,42 @@ typedef enum
     cciMODE4,
     cciHASP,
     cciBSC
-    } CciTipType;
+    } cciTipType;
+
+typedef enum
+    {
+    cciLnConfNotConfigured=0,
+    cciLnConfConfigured,
+    cciLnConfEnableRequested,
+    cciLnConfOperationalNoTcbs,
+    cciLnConfOperationalTcbsConfigured,
+    cciLnConfDisableRequested,
+    cciLnConfInoperativeNoTcbs,
+    cciLnConfInoperativeTcbsConfigured,
+    cciLnConfDisconnectRequested,
+    cciLnConfInoperativeWaiting
+    } cciLnConfState;
+
+typedef enum
+    {
+    cciLnStatOperational=0,
+    cciLnStatInoperative=4,
+    cciLnStatNoRing,
+    cciLnStatStop
+    } cciLnState;
+
+typedef struct ccilcb
+    {
+    u8             port;
+    cciLnConfState configState;
+    cciLnState     lineState;
+    u8             lineType;
+    u8             terminalType;
+    u8             speedIndex;
+    u8             numTerminals;
+    } cciLcb;
+
+
 
 /*
 **  -------------------------------
@@ -71,7 +118,9 @@ typedef enum
 /*
 **  cci_hip.c
 */
-bool cciHipIsReady(NetDevParam *netDevice);
+bool cciHipUplineBlock(NpuBuffer *bp);
+bool cciHipDownlineBlock(NpuBuffer *bp);
+bool cciHipIsReady(void);
 
 /*
 ** cci_svm.c
@@ -82,7 +131,7 @@ void cciSvmNpuInitResponse(void);
 void cciSvmProcessBuffer(NpuBuffer *bp);
 bool cciSvmConnectTerminal(Pcb *pp);
 void cciSvmSendDiscRequest(Tcb *tp);
-bool cciSvmIsReady(NetDevParam *netDevice);
+bool cciSvmIsReady();
 
 /*
 ** cci_tip.c
@@ -105,4 +154,7 @@ void cciTipSendMsg(Tcb *tp, int len);
 void cciAsyncProcessDownlineData(Tcb *tp, NpuBuffer *bp, bool last);
 void cciAsyncProcessUplineNormal(Tcb *tp);
 
+
+
 #endif /* CCI_H */
+/*---------------------------  End Of File  ------------------------------*/

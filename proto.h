@@ -76,11 +76,6 @@ void bdp180Mul10(BdpOperand *operand);
 bool bdp180Sub(BdpOperand *minend, BdpOperand *subend, BdpOperand *result, UserCondition *cond);
 
 /*
-** cci_hip.c
-*/
-void cciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-
-/*
 **  channel.c
 */
 void channelInit(u8 count);
@@ -291,14 +286,11 @@ bool fsCreateThread(fswContext *parms);
 /*
 **  init.c
 */
-void  initAcquireMutex(void);
 void  initStartup(char *config, char *configFile);
 u32   initConvertEndian(u32 value);
 char *initGetNextLine(int *lineNo);
-void  initNpuConnections(char *sectionName);
 int   initOpenHelpersSection(void);
 int   initOpenOperatorSection(void);
-void  initReleaseMutex(void);
 
 /*
 **  interlock_channel.c
@@ -400,6 +392,12 @@ void mux6676Init(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void mux6676ShowStatus();
 
 /*
+** cci_hip.c
+*/
+void cciHipTerminate(DevSlot *dp);
+void cciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
+
+/*
 **  net_util.c
 */
 #if defined(_WIN32)
@@ -437,9 +435,9 @@ void niuShowStatus();
 **  npu.c
 */
 void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-int  npuBipBufCount(void);
+int npuBipBufCount(void);
 bool npuBipIsBusy(void);
-void npuNetShowStatus(void);
+void npuNetShowStatus();
 
 /*
 **  operator.c
@@ -651,6 +649,9 @@ extern char                npuNetHostID[];
 extern u32                 npuNetHostIP;
 extern u16                 npuNetTcpConns;
 extern u16                 npuNetTelnetPort;
+extern u8                  npuSvmCouplerNode;
+extern NpuSoftware         npuSw;
+extern u8                  npuSvmNpuNode;
 extern char                *npuSvmTermStates[];
 extern volatile bool       opActive;
 extern bool                opDoEventNotification;

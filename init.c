@@ -34,11 +34,11 @@
 #include <string.h>
 #include <ctype.h>
 #include <sys/stat.h>
-#if defined(_WIN32)
-#include <windows.h>
-#else
-#include <pthread.h>
-#include <unistd.h>
+
+#if defined(__FreeBSD__)
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #endif
 
 #include "const.h"
@@ -136,26 +136,27 @@ static void initConsole(void);
 static void initCyber(char *config);
 static InitSection *initFindSection(char *name);
 static void initHelpers(void);
+static void initNpuConnections(void);
 static void initOperator(void);
 static void initEquipment(void);
 static void initDeadstart(void);
-#ifdef WIN32
-static bool initGetHex(char *entry, int defValue, long *value);
-#endif
+static int initLookupConnType(char *connType);
+static int initLookupDeviceType(char *deviceType);
+static bool initOpenSection(char *name);
+static int initParseEquipmentDefn(char *defn, char *file, char *section, int lineNo,
+                                  u8 *eqNo, u8 *unitNo, u8 *channelNo, char **deviceParams);
+static int initParseTerminalDefn(char *defn, char *file, char *section, int lineNo,
+                                 u16 *tcpPort, u8 *claPort, u8 *claPortCount, char **remainder);
 static bool initGetInteger(char *entry, int defValue, long *value);
 static bool initGetOctal(char *entry, int defValue, long *value);
 static bool initGetString(char *entry, char *defString, char *str, int strLen);
 static bool initGetU64(char *entry, u64 defValue, u64 *value);
-static int  initLookupConnType(char *connType);
-static int  initLookupDeviceType(char *deviceType);
-static bool initOpenSection(char *name);
-static int  initParseEquipmentDefn(char *defn, char *file, char *section, int lineNo,
-                                   u8 *eqNo, u8 *unitNo, u8 *channelNo, char **deviceParams);
-static int  initParseTerminalDefn(char *defn, char *file, char *section, int lineNo,
-                                  u16 *tcpPort, u8 *claPort, u8 *claPortCount, char **remainder);
 static bool initParseIpAddress(char *ipStr, u32 *ip, u16 *port);
 static void initReadStartupFile(FILE *fcb, char *fileName);
 static void initToUpperCase(char *str);
+#ifdef WIN32
+static bool initGetHex(char *entry, int defValue, long *value);
+#endif
 
 /*
 **  ----------------
@@ -169,7 +170,7 @@ char          displayName[32];
 ModelFeatures features;
 bool          isCyber180;
 ModelType     modelType;
-char          npuConnections[80];
+NpuSoftware   npuSw = SwUndefined;
 char          persistDir[256];
 
 /*
@@ -188,6 +189,7 @@ static union
 static char        console[80];
 static char        equipment[80];
 static char        helpers[80];
+static char        npuConnections[80];
 static char        operator[80];
 static InitSection *sections    = NULL;
 static char        *startupFile = "cyber.ini";
@@ -300,12 +302,6 @@ static InitVal sectVals[] =
     { NULL,                            NULL,      NULL         }
     };
 
-#if defined(_WIN32)
-static HANDLE initMutex;
-#else
-static pthread_mutex_t initMutex = PTHREAD_MUTEX_INITIALIZER;
-#endif
-
 /*
  **--------------------------------------------------------------------------
  **
@@ -313,46 +309,6 @@ static pthread_mutex_t initMutex = PTHREAD_MUTEX_INITIALIZER;
  **
  **--------------------------------------------------------------------------
  */
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Acquires a lock on the configuration mutex
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-#if defined(_WIN32)
-void initAcquireMutex(void)
-    {
-    WaitForSingleObject(initMutex, INFINITE);
-    }
-#else
-void initAcquireMutex(void)
-    {
-    pthread_mutex_lock(&initMutex);
-    }
-#endif
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Releases a lock on the configuration mutex
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-#if defined(_WIN32)
-void initReleaseMutex(void)
-    {
-    ReleaseMutex(initMutex);
-    }
-#else
-void initReleaseMutex(void)
-    {
-    pthread_mutex_unlock(&initMutex);
-    }
-#endif
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Read and process startup file.
@@ -434,18 +390,18 @@ void initStartup(char *config, char *configFile)
 
     curSection = NULL;
 
-    initAcquireMutex();
     initCyber(config);
     initConsole();
     initDeadstart();
+    initNpuConnections();
     initEquipment();
     initOperator();
     initHelpers();
+
     if ((features & HasMaintenanceChannel) != 0)
         {
         mchInit(0, 0, ChMaintenance, NULL);
         }
-    initReleaseMutex();
     }
 
 /*--------------------------------------------------------------------------
@@ -591,33 +547,27 @@ int initOpenConsoleSection(void)
 static void initCyber(char *config)
     {
     int  base;
-    long    clockIncrement;
-    long    conns;
-    char    *cp;
-    long    cpus;
-    long    cpuSN;
-    InitVal *curVal;
-    int     defaultSN;
-    char    dummy[256];
-    bool    dummyBool;
-    long    dummyInt;
-    long    ecsBanks;
-    long    enableCejMej;
-    long    esmBanks;
-    bool    goodToken;
-    int     i;
-    bool    isOk;
-    char    *line;
-    int     lineNo;
-    long    memory;
-    char    model[40];
-    int     numErrors;
-    long    port;
-    long    pps;
-    int     rc;
-    u16     serialNumbers[MaxCpus];
-    long    setMHz;
-    char    *token;
+    long clockIncrement;
+    long conns;
+    char *cp;
+    long cpus;
+    long cpuSN;
+    int  defaultSN;
+    char dummy[256];
+    bool dummyBool;
+    long dummyInt;
+    long ecsBanks;
+    long enableCejMej;
+    long esmBanks;
+    int  i;
+    bool isOk;
+    long memory;
+    char model[40];
+    long port;
+    long pps;
+    int  rc;
+    u16  serialNumbers[MaxCpus];
+    long setMHz;
 
     /*-------------------START OF PRECHECK-------------------*/
 
@@ -632,9 +582,12 @@ static void initCyber(char *config)
 
     printf("(init   ) Loading root section [%s] from %s\n", config, startupFile);
 
-    lineNo    = 0;
-    goodToken = TRUE;
-    numErrors = 0;
+    int     lineNo = 0;
+    char    *line;
+    char    *token;
+    InitVal *curVal;
+    bool    goodToken = TRUE;
+    int     numErrors = 0;
 
     while ((line = initGetNextLine(&lineNo)) != NULL)
         {
@@ -1184,7 +1137,7 @@ static void initCyber(char *config)
     initGetString("helpers", "", helpers, sizeof(helpers));
 
     /*
-    **  Get optional NPU configuration section name.
+    **  Get optional NPU port definition section name.
     */
     initGetString("npuConnections", "", npuConnections, sizeof(npuConnections));
 
@@ -1657,47 +1610,42 @@ static void initConsole(void)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Read and process NPU configuration definitions.
+**  Purpose:        Read and process NPU definitions.
 **
-**  Parameters:     Name         Description.
-**                  sectionName  Name of a section providing NPU configuration information
+**  Parameters:     Name        Description.
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void initNpuConnections(char *sectionName)
+static void initNpuConnections(void)
     {
     int          blockSize;
     u8           claPort;
-    int          connType;
     char         *cp;
-    InitVal      *curVal;
+    char         *line;
+    char         *token;
+    u16          tcpPort;
+    u8           numConns;
+    int          connType;
+    int          len;
+    int          lineNo;
+    Ncb          *ncbp;
+    int          rc;
     char         *destHostAddr;
     u32          destHostIP;
-    char         *destHostName;
     u16          destHostPort;
+    char         *destHostName;
     u8           destNode;
-    bool         goodToken;
-    int          i;
-    int          len;
-    char         *line;
-    int          lineNo;
     u32          localHostIP;
-    Ncb          *ncbp;
-    u8           numConns;
-    int          numErrors;
     Pcb          *pcbp;
     long         pingInterval;
-    int          rc;
     TermRecoType recoType;
     char         *remainder;
-    u16          tcpPort;
-    char         *token;
     long         val;
 
     npuNetPreset();
 
-    if (sectionName == NULL)
+    if (strlen(npuConnections) == 0)
         {
         /*
         **  Default is the classic port 6610, 10 connections starting at CLA port 01 and raw TCP connection.
@@ -1709,23 +1657,22 @@ void initNpuConnections(char *sectionName)
 
     /*-------------------START OF PRECHECK-------------------*/
 
-    initAcquireMutex();
-
     /*
      *  Pre-Check all of the parameters of this section
      */
-    if (!initOpenSection(sectionName))
+    if (!initOpenSection(npuConnections))
         {
-        logDtError(LogErrorLocation, "Required section [%s] not found in '%s'\n", sectionName, startupFile);
+        logDtError(LogErrorLocation, "Required section [%s] not found in '%s'\n", npuConnections, startupFile);
         exit(1);
         }
 
-    printf("(init   ) Loading NPU section [%s] from %s\n", sectionName, startupFile);
+    printf("(init   ) Loading NPU section [%s] from %s\n", npuConnections, startupFile);
 
-    goodToken = TRUE;
-    numErrors = 0;
-    lineNo    = 0;
+    InitVal *curVal;
+    bool    goodToken = TRUE;
+    int     numErrors = 0;
 
+    lineNo = 0;
     while ((line = initGetNextLine(&lineNo)) != NULL)
         {
         token = strtok(line, "=");
@@ -1740,7 +1687,7 @@ void initNpuConnections(char *sectionName)
                         {
                         goodToken = TRUE;
                         logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: %-12s %s\n",
-                                   startupFile, sectionName, lineNo, token == NULL ? "NULL" : token, curVal->valStatus);
+                                   startupFile, npuConnections, lineNo, token == NULL ? "NULL" : token, curVal->valStatus);
                         break;
                         }
                     }
@@ -1748,7 +1695,7 @@ void initNpuConnections(char *sectionName)
             if (!goodToken)
                 {
                 logDtError(LogErrorLocation, "file '%s' section [%s] line %2d: invalid or deprecated configuration keyword %-12s %s\n",
-                           startupFile, sectionName, lineNo, token == NULL ? "NULL" : token,
+                           startupFile, npuConnections, lineNo, token == NULL ? "NULL" : token,
                            curVal->valStatus == NULL ? "Invalid" : curVal->valStatus);
                 numErrors++;
                 }
@@ -1758,16 +1705,16 @@ void initNpuConnections(char *sectionName)
     if (numErrors > 0)
         {
         logDtError(LogErrorLocation, "Correct the %d error(s) in section '[%s]' of '%s' and restart.\n",
-                   numErrors, sectionName, startupFile);
+                   numErrors, npuConnections, startupFile);
         exit(1);
         }
 
     /*-------------------END OF PRECHECK-------------------*/
 
 
-    if (!initOpenSection(sectionName))
+    if (!initOpenSection(npuConnections))
         {
-        logDtError(LogErrorLocation, "Section [%s] not found in '%s'\n", sectionName, startupFile);
+        logDtError(LogErrorLocation, "Section [%s] not found in '%s'\n", npuConnections, startupFile);
         exit(1);
         }
 
@@ -1785,11 +1732,11 @@ void initNpuConnections(char *sectionName)
     if ((val < 0) || (val > 255))
         {
         logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'couplerNode' value %ld - correct values are 1..255\n",
-                   startupFile, sectionName, val);
+                   startupFile, npuConnections, val);
         exit(1);
         }
-    netDevice->couplerNode = (u8)val;
-    logDtError(LogErrorLocation, "Host coupler node value is %d\n", netDevice->couplerNode);
+    npuSvmCouplerNode = (u8)val;
+    logDtError(LogErrorLocation, "Host coupler node value is %d\n", npuSvmCouplerNode);
 
     /*
     **  Get optional NPU node number. If not specified, use default value of 2.
@@ -1798,68 +1745,48 @@ void initNpuConnections(char *sectionName)
     if ((val < 1) || (val > 255))
         {
         logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'npuNode' value %ld - correct values are 1..255\n",
-                   startupFile, sectionName, val);
+                   startupFile, npuConnections, val);
         exit(1);
         }
-    netDevice->npuNode = (u8)val;
-    logDtError(LogErrorLocation, "NPU node value is %d\n", netDevice->npuNode);
+    npuSvmNpuNode = (u8)val;
+    logDtError(LogErrorLocation, "NPU node value is %d\n", npuSvmNpuNode);
 
     /*
     **  Get optional CDCNet node number. If not specified, use default value of 255.
     */
-    initGetInteger("cdcnetNode", (netDevice->type == MDI_NOS && netDevice->id == 0) ? 255 : 0, &val);
-    if (val != 0)
+    initGetInteger("cdcnetNode", 255, &val);
+    if ((val < 1) || (val > 255))
         {
-        if (netDevice->type == MDI_NOS)
-            {
-            if (val < 1 || val > 255)
-                {
-                logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'cdcnetNode' value %ld - correct values are 1..255\n",
-                           startupFile, sectionName, val);
-                exit(1);
-                }
-            for (i = 0; i < netDevCount; i++)
-                {
-                if (netDevices[i].cdcnetNode != 0)
-                    {
-                    logDtError(LogErrorLocation, "file '%s' section [%s]: 'cdcnetNode' already defined for %s\n",
-                               startupFile, sectionName, netDevices[i].name);
-                    exit(1);
-                    }
-                }
-            netDevice->cdcnetNode = (u8)val;
-            logDtError(LogErrorLocation, "CDCNet node value is %d\n", netDevice->cdcnetNode);
-            /*
-            **  Get optional privileged TCP and UDP port offsets for CDCNet TCP/IP passive connections. If not specified,
-            **  use default value of 6600.
-            */
-            initGetInteger("cdcnetPrivilegedTcpPortOffset", 6600, &val);
-            if ((val < 0) || (val > 64000))
-                {
-                logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'cdcnetPrivilegedTcpPortOffset' value %ld - correct values are 0..64000\n",
-                           startupFile, sectionName, val);
-                exit(1);
-                }
-            netDevice->privilegedTcpPortOffset = (u16)val;
-            logDtError(LogErrorLocation, "TCP privileged port offset is %d\n", netDevice->privilegedTcpPortOffset);
-
-            initGetInteger("cdcnetPrivilegedUdpPortOffset", 6600, &val);
-            if ((val < 0) || (val > 64000))
-                {
-                logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'cdcnetPrivilegedUdpPortOffset' value %ld - correct values are 0..64000\n",
-                           startupFile, sectionName, val);
-                exit(1);
-                }
-            netDevice->privilegedUdpPortOffset = (u16)val;
-            logDtError(LogErrorLocation, "UDP privileged port offset is %d\n", netDevice->privilegedUdpPortOffset);
-            }
-        else
-            {
-            logDtError(LogErrorLocation, "file '%s' section [%s]: 'cdcnetNode' is allowed for MDI devices only\n",
-                       startupFile, sectionName);
-            exit(1);
-            }
+        logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'cdcnetNode' value %ld - correct values are 1..255\n",
+                   startupFile, npuConnections, val);
+        exit(1);
         }
+    cdcnetNode = (u8)val;
+    logDtError(LogErrorLocation, "CDCNet node value is %d\n", cdcnetNode);
+
+    /*
+    **  Get optional privileged TCP and UDP port offsets for CDCNet TCP/IP passive connections. If not specified,
+    **  use default value of 6600.
+    */
+    initGetInteger("cdcnetPrivilegedTcpPortOffset", 6600, &val);
+    if ((val < 0) || (val > 64000))
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'cdcnetPrivilegedTcpPortOffset' value %ld - correct values are 0..64000\n",
+                   startupFile, npuConnections, val);
+        exit(1);
+        }
+    cdcnetPrivilegedTcpPortOffset = (u16)val;
+    logDtError(LogErrorLocation, "TCP privileged port offset is %d\n", cdcnetPrivilegedTcpPortOffset);
+
+    initGetInteger("cdcnetPrivilegedUdpPortOffset", 6600, &val);
+    if ((val < 0) || (val > 64000))
+        {
+        logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'cdcnetPrivilegedUdpPortOffset' value %ld - correct values are 0..64000\n",
+                   startupFile, npuConnections, val);
+        exit(1);
+        }
+    cdcnetPrivilegedUdpPortOffset = (u16)val;
+    logDtError(LogErrorLocation, "UDP privileged port offset is %d\n", cdcnetPrivilegedUdpPortOffset);
 
     /*
     **  Get optional threshold value of network buffer backlog indicating that the NPU/MDI
@@ -1872,9 +1799,9 @@ void initNpuConnections(char *sectionName)
     /*
     **  Process all equipment entries.
     */
-    if (!initOpenSection(sectionName))
+    if (!initOpenSection(npuConnections))
         {
-        logDtError(LogErrorLocation, "Section [%s] not found in '%s'\n", sectionName, startupFile);
+        logDtError(LogErrorLocation, "Section [%s] not found in '%s'\n", npuConnections, startupFile);
         exit(1);
         }
 
@@ -1932,10 +1859,10 @@ void initNpuConnections(char *sectionName)
             **     <remote-name>   Name of node to which to connect for LIP and NJE
             **     <remote-port>   TCP port number to which Reverse HASP, NJE, or LIP will connect
             */
-            connType = initParseTerminalDefn(line, startupFile, sectionName, lineNo,
+            connType = initParseTerminalDefn(line, startupFile, npuConnections, lineNo,
                                              &tcpPort, &claPort, &numConns, &remainder);
             logDtError(LogErrorLocation, "[%s] line %2d: %6s TCP port %5d CLA port 0x%02x port count %3d\n",
-                       sectionName, lineNo, connTypeNames[connType], tcpPort, claPort, numConns);
+                       npuConnections, lineNo, connTypeNames[connType], tcpPort, claPort, numConns);
             rc = npuNetRegisterConnType(tcpPort, claPort, numConns, connType, &ncbp);
             switch (rc)
                 {
@@ -2241,8 +2168,6 @@ void initNpuConnections(char *sectionName)
                 }
             }
         }
-
-        initReleaseMutex();
     }
 
 /*--------------------------------------------------------------------------
