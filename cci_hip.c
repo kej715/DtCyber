@@ -24,7 +24,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG    0
+#define DEBUG 0
 
 /*
 **  -------------
@@ -35,11 +35,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-
-#if defined(__FreeBSD__)
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+#if defined(_WIN32)
+#include <winsock.h>
+#else
+#include <pthread.h>
+#include <unistd.h>
+#include <errno.h>
 #endif
 
 #include "const.h"
@@ -76,7 +77,6 @@
 #define FcNpuClearCoupler          00400
 
 #define FcNpuEqMask                07000
-
 #define FcNpuNothing               07777
 
 /*
@@ -98,21 +98,22 @@
 #define StNpuReadyOutput           00004
 #define StNpuNotReadyOutput        00007
 #define StNpuReadyForDump          00010
+#define StNpuDumpOk                00010
 #define StNpuInputAvailPru         00014
 #define StNpuInputAvailLe256       00015
 #define StNpuInputAvailGt256       00016
-#define StNpuDumpOk                00010
 
 /*
-**  NPU order word codes (written by PP which results in
-**  StCplrOrderLoaded being set). The LSB contains the
-**  block length or the new regulation level.
-**  We do not care about StCplrOrderLoaded because we read the Order word immediately.
+**  NPU order word codes (written by PP which results in StCplrOrderLoaded being set).
+**  The LSB contains the block length or the new regulation level. We do not care about
+**  StCplrOrderLoaded because we read the Order word immediately.
 */
 #define OrdOutServiceMsg           0x1
 #define OrdOutPriorHigh            0x2
 #define OrdOutPriorLow             0x3
 #define OrdNotReadyForInput        0x5
+
+#define OrdShiftType               9
 
 /*
 **  Below are the sum of the first 16 bytes of CCI images, which we need to determine
@@ -136,54 +137,64 @@
 **  Private Typedef and Structure Definitions
 **  -----------------------------------------
 */
-typedef struct cciParam
-    {
-    PpWord    regCouplerStatus;
-    PpWord    regNpuStatus;
-    PpWord    regOrder;
-    NpuBuffer *buffer;
-    u8        *cciData;
-    u8        halfWordTransferred;
-    u8        tempMemAddr0;
-    u16       memoryAddress;
-    u16       memory[0xFFFF];
-    u16       tempWord;
-    u32       lastCommandTime;
-    u8        runState;
-    } CciParam;
-
 typedef enum
     {
-    StHipIdle,
+    StHipIdle = 0,
     StHipUpline,
-    StHipDownline,
+    StHipDownline
     } CciHipState;
 
 typedef enum
     {
-    StHcpNotInitialized,
+    StHcpNotInitialized = 0,
     StHcpRunning,
-    StHcpReset,
+    StHcpReset
     } CciHcpState;
+
+typedef struct cciParam
+    {
+    u8          id;
+    CciHipState hipState;
+    CciHcpState hcpState;
+    PpWord      regCouplerStatus;
+    PpWord      regNpuStatus;
+    PpWord      regOrder;
+    u8          halfWordTransferred;
+    u8          tempMemAddr0;
+    u16         memoryAddress;
+    u16         memory[64*1024];
+    u16         tempWord;
+    u32         lastCommandTime;
+    u8          hipRequest;
+#define           HipReqNone           0
+#define           HipReqInitResponse   1
+#define           HipReqNotifyUpline   2
+    } CciParam;
 
 /*
 **  ---------------------------
 **  Private Function Prototypes
 **  ---------------------------
 */
-static void cciReset(void);
+static void cciHipCreateThread(NetDevParam *netDevice);
 static FcStatus cciHipFunc(PpWord funcCode);
 static void cciHipIo(void);
 static void cciHipActivate(void);
 static void cciHipDisconnect(void);
-static void cciHipWriteNpuStatus(PpWord status);
-static PpWord cciHipReadNpuStatus(void);
-static bool cciHipDownlineBlockImpl(NpuBuffer *bp);
-static bool cciHipUplineBlockImpl(NpuBuffer *bp);
+static void cciHipIndicateUplineBlock(u8 *block, u16 numBytes);
+static PpWord cciHipReadNpuStatus(CciParam *cci);
+static void cciHipSetNpuStatus(CciParam *cci, PpWord status);
 
-#if (DEBUG > 1)
+#if defined(_WIN32)
+static void cciThread(void *param);
+#else
+static void *cciThread(void *param);
+#endif
+
+#if DEBUG
+static char *cciHcpState2String(CciHcpState state);
+static char *cciHipState2String(CciHipState state);
 static char *cciHipFunc2String(PpWord funcCode);
-
 #endif
 
 /*
@@ -191,23 +202,13 @@ static char *cciHipFunc2String(PpWord funcCode);
 **  Public Variables
 **  ----------------
 */
-bool (*cciHipDownlineBlockFunc)(NpuBuffer *bp);
-void (*cciHipResetFunc)(void);
-bool (*cciHipUplineBlockFunc)(NpuBuffer *bp);
-
-FILE *cciLog = NULL;
-
 
 /*
 **  -----------------
 **  Private Variables
 **  -----------------
 */
-static CciParam *cci;
-
-static CciHipState cciHipState = StHipIdle;
-
-static CciHcpState cciHcpState = StHcpNotInitialized;
+static u8 cciCount = 0;;
 
 /*
  **--------------------------------------------------------------------------
@@ -230,48 +231,26 @@ static CciHcpState cciHcpState = StHcpNotInitialized;
 **------------------------------------------------------------------------*/
 void cciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     {
-    DevSlot *dp;
+    CciParam    *cci;
+    DevSlot     *dp;
+    NetDevParam *netDevice;
 
-    (void)unitNo;
-    (void)deviceName;
-
-    /*
-    ** set HCP software type, exit if npuSw is not SwUndefined
-    */
-    if (npuSw != SwUndefined)
+    if (netDevCount >= MaxNetDevices)
         {
-        logDtError(LogErrorLocation, "CCI and CCP devices are mutually exclusive\n");
+        logDtError(LogErrorLocation, "Maximum number of network device definitions (%d) exceeded\n", MaxNetDevices);
         exit(1);
-        }
-    npuSw = SwCCI;
-
-    /*
-    ** adjust coupler and npu node address
-    */
-
-    if (npuSvmCouplerNode != 0)
-        {
-        npuSvmCouplerNode = 0;
-        logDtError(LogErrorLocation, "set coupler node to 0\n");
-        }
-
-    if (npuSvmNpuNode != 2)
-        {
-        npuSvmNpuNode = 2;
-        logDtError(LogErrorLocation, "set npu node to 2\n");
         }
 
     /*
     **  Attach device to channel and initialise device control block.
     */
-    dp               = channelAttach(channelNo, eqNo, DtNpu);
+    dp               = channelAttach(channelNo, eqNo, DtHcp);
     dp->activate     = cciHipActivate;
     dp->disconnect   = cciHipDisconnect;
     dp->func         = cciHipFunc;
     dp->io           = cciHipIo;
     dp->selectedUnit = unitNo;
     activeDevice     = dp;
-
 
     /*
     **  Allocate and initialise NPU parameters.
@@ -283,159 +262,150 @@ void cciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
         exit(1);
         }
 
-    dp->controllerContext    = cci;
-    cci->regCouplerStatus    = 0;
-    cciHipState              = StHipIdle;
-    cciHipDownlineBlockFunc  = cciHipDownlineBlockImpl;
-    cciHipResetFunc          = cciReset;
-    cciHipUplineBlockFunc    = cciHipUplineBlockImpl;
-    cci->halfWordTransferred = FALSE;
-    memset(cci->memory, 0, sizeof(cci->memory));
+    cci->id       = cciCount++;
+    cci->hipState = StHipIdle;
 
-    npuBipInit();
-    cciSvmInit();
-    cciTipInit();
-
-#if (DEBUG > 0)
-    if (cciLog == NULL)
+    /*
+    **  Allocate and initialise general network device parameters.
+    */
+    netDevice = &netDevices[netDevCount++];
+    memset(netDevice, 0, sizeof(NetDevParam));
+    netDevice->id        = cci->id;
+    netDevice->type      = NPU_CCI;
+    netDevice->channelNo = channelNo;
+    netDevice->eqNo      = eqNo;
+    netDevice->unitNo    = unitNo;
+    sprintf(netDevice->name, "hcp%d", cci->id);
+    if (deviceName != NULL && strlen(deviceName) > 0)
         {
-        cciLog = fopen("ccilog.txt", "wt");
+        netDevice->sectionName = (char *)malloc(strlen(deviceName) + 1);
+        if (netDevice->sectionName == NULL)
+            {
+            logDtError(LogErrorLocation, "Failed to allocate cci context block\n");
+            exit(1);
+            }
+        strcpy(netDevice->sectionName, deviceName);
         }
-#endif
+    netDevice->devDependent = cci;
+    dp->controllerContext   = netDevice;
 
+#if DEBUG
+    {
+    char fName[16];
+    sprintf(fName, "%slog.txt", netDevice->name);
+    netDevice->log = fopen(fName, "wt");
+    if (netDevice->log == NULL)
+        {
+        perror(fName);
+        exit(1);
+        }
+    fprintf(netDevice->log, "HCP%d initialised on channel %o equipment %o\n", cci->id, channelNo, eqNo);
+    }
+#endif
     /*
     **  Print a friendly message.
     */
-    printf("(cci_hip) NPU initialised on channel %o equipment %o\n", channelNo, eqNo);
-    printf("            Coupler node: %u\n", npuSvmCouplerNode);
-    printf("                NPU node: %u\n", npuSvmNpuNode);
+    printf("(cci_hip) HCP%d initialised on channel %o equipment %o\n", cci->id, channelNo, eqNo);
+
+    /*
+    **  Create NPU emulation thread
+    */
+    cciHipCreateThread(netDevice);
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Terminate CCI, close log file
+**  Purpose:        Process completion of downline block transfer.
 **
 **  Parameters:     Name        Description.
 **
-**  Returns:        nothing
+**  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-void cciHipTerminate(DevSlot *dp)
+void cciHipNotifyDownlineCopied(void)
     {
-#if (DEBUG > 0)
-    if (cciLog != NULL)
+    CciParam *cci;
+
+    cci = (CciParam *)netDevice->devDependent;
+    cciHipSetNpuStatus(cci, StNpuReadyOutput);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Initiate trasnfer of downline block.
+**
+**  Parameters:     Name        Description.
+**                  bp          pointer to NPU buffer.
+**
+**  Returns:        TRUE if block can be accepted, FALSE otherwise.
+**
+**------------------------------------------------------------------------*/
+bool cciHipStartDownlineTransfer(NpuBuffer *bp)
+    {
+    CciParam *cci;
+
+    cci = (CciParam *)netDevice->devDependent;
+    if (netDevice->downlineData.isReady == FALSE || netDevice->downlineData.numBytes < 1 || bp == NULL || cci->hipState != StHipIdle)
         {
-        fclose(cciLog);
-        }
+#if DEBUG
+        if (bp != NULL)
+            {
+            fprintf(netDevice->log, "\n  Downline block rejected, CN=%02X, BT=%02X, PDU size=%d, HCP state %d, downline ready %s\n", netDevice->downlineData.data[BlkOffCN],
+                netDevice->downlineData.data[BlkOffBTBSN] & BlkMaskBT, netDevice->downlineData.numBytes, cci->hipState, netDevice->downlineData.isReady ? "TRUE" : "FALSE");
+            traceStack(netDevice->log);
+            }
 #endif
+        return FALSE;
+        }
+
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Request sending of upline block.
+**  Purpose:        Initiate transfer of upline block.
 **
 **  Parameters:     Name        Description.
-**                  bp          pointer to first upline buffer.
+**                  bp          pointer to NPU buffer.
 **
-**  Returns:        TRUE if buffer can be accepted, FALSE otherwise.
+**  Returns:        TRUE if block can be accepted, FALSE otherwise.
 **
 **------------------------------------------------------------------------*/
-bool cciHipUplineBlock(NpuBuffer *bp)
+bool cciHipStartUplineTransfer(NpuBuffer *bp)
     {
-    return (*cciHipUplineBlockFunc)(bp);
-    }
+    CciParam *cci;
 
-bool cciHipUplineBlockImpl(NpuBuffer *bp)
-    {
-    int bits;
-    int prus;
-    int words;
-
-    if (cciHipState != StHipIdle)
+    cci = (CciParam *)netDevice->devDependent;
+    if (netDevice->uplineData.isReady || bp == NULL || cci->hipState != StHipIdle)
         {
-        return (FALSE);
-        }
-
-    if ((bp->numBytes > BlkOffDbc)
-        && ((bp->data[BlkOffBTBSN] & BlkMaskBT) == BtHTMSG)
-        && ((bp->data[BlkOffDbc] & DbcPRU) == DbcPRU))
-        {
-        bits  = (bp->numBytes - (BlkOffDbc + 1)) * (((bp->data[BlkOffDbc] & Dbc8Bit) != 0) ? 8 : 6);
-        words = (bits / 60);
-        if (bits % 60)
+#if DEBUG
+        if (bp != NULL)
             {
-            words++;
+            fprintf(netDevice->log, "\n  Upline block rejected, CN=%02X, BT=%02X, PDU size=%d, HCP state %d, upline ready %s\n", bp->data[BlkOffCN],
+                bp->data[BlkOffBTBSN] & BlkMaskBT, bp->numBytes, cci->hipState, netDevice->uplineData.isReady ? "TRUE" : "FALSE");
+            traceStack(netDevice->log);
             }
-        prus = words / 64;
-        if (words % 64)
-            {
-            prus++;
-            }
-        if (prus < 1)
-            {
-            prus = 1;
-            }
-        cciHipWriteNpuStatus((PpWord)(StNpuInputAvailPru | (prus << 10)));
-        }
-    else if (bp->numBytes <= 256)
-        {
-        cciHipWriteNpuStatus(StNpuInputAvailLe256);
-        }
-    else
-        {
-        cciHipWriteNpuStatus(StNpuInputAvailGt256);
+#endif
+        return FALSE;
         }
 
-    cci->buffer = bp;
-    cciHipState = StHipUpline;
+    cciHipIndicateUplineBlock(bp->data, bp->numBytes);
 
-    return (TRUE);
+    return TRUE;
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Request reception of downline block.
+**  Purpose:        Indicate whether the macro program is running
 **
-**  Parameters:     Name        Description.
-**                  bp          pointer to first downline buffer.
-**
-**  Returns:        TRUE if buffer can be accepted, FALSE otherwise.
-**
-**------------------------------------------------------------------------*/
-bool cciHipDownlineBlock(NpuBuffer *bp)
-    {
-    return (*cciHipDownlineBlockFunc)(bp);
-    }
-
-bool cciHipDownlineBlockImpl(NpuBuffer *bp)
-    {
-    if (cciHipState != StHipIdle)
-        {
-        return (FALSE);
-        }
-
-    if (bp == NULL)
-        {
-        cciHipWriteNpuStatus(StNpuNotReadyOutput);
-
-        return (FALSE);
-        }
-
-    cciHipWriteNpuStatus(StNpuReadyOutput);
-    cci->buffer = bp;
-    cciHipState = StHipDownline;
-
-    return (TRUE);
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        Tell, if the macro program is running
-**
-**  Parameters:     none
+**  Parameters:     netDevice   pointer to network device parameters
 **
 **  Returns:        TRUE if running, FALSE otherwise.
 **
 **------------------------------------------------------------------------*/
-bool cciHipIsReady(void)
+bool cciHipIsReady(NetDevParam *netDevice)
     {
-    return (cciHcpState == StHcpRunning);
+    CciParam *cci;
+
+    cci = (CciParam *)netDevice->devDependent;
+
+    return cci->hcpState == StHcpRunning;
     }
 
 /*
@@ -447,36 +417,211 @@ bool cciHipIsReady(void)
  */
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Reset NPU.
+**  Purpose:        Create thread which will emulate an NPU.
 **
 **  Parameters:     Name        Description.
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cciReset(void)
+static void cciHipCreateThread(NetDevParam *param)
     {
-    if (cciHcpState == StHcpRunning)
+#if defined(_WIN32)
+    DWORD  dwThreadId;
+    HANDLE hThread;
+
+    /*
+    **  Create TCP thread.
+    */
+    hThread = CreateThread(
+        NULL,                                       // no security attribute
+        0,                                          // default stack size
+        (LPTHREAD_START_ROUTINE)cciThread,
+        (LPVOID)param,                              // thread parameter
+        0,                                          // not suspended
+        &dwThreadId);                               // returns thread ID
+
+    if (hThread == NULL)
         {
-        /*
-        **  Reset all subsystems - order matters!
-        */
-        npuNetReset();
-        cciTipReset();
-        cciSvmReset();
-        npuBipReset();
-        cciHcpState = StHcpReset;
+        logDtError(LogErrorLocation, "Failed to create HCP thread\n");
+        exit(1);
+        }
+#else
+    int            rc;
+    pthread_t      thread;
+    pthread_attr_t attr;
+
+    /*
+    **  Create POSIX thread with default attributes.
+    */
+    pthread_attr_init(&attr);
+    rc = pthread_create(&thread, &attr, cciThread, param);
+    if (rc < 0)
+        {
+        logDtError(LogErrorLocation, "Failed to create HCP thread\n");
+        exit(1);
+        }
+#endif
+    puts("(cci_hip) HCP thread created");
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        NPU emulation thread.
+**
+**  Parameters:     Name        Description.
+**                  param       unused
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+#if defined(_WIN32)
+static void cciThread(void *param)
+#else
+static void *cciThread(void *param)
+#endif
+    {
+    CciParam *cci;
+    char     *sectionName;
+    u8       orderCode;
+
+    /*
+    **  Parse data communication configuration
+    */
+    netDevice   = (NetDevParam *)param;
+    cci         = (CciParam *)netDevice->devDependent;
+    sectionName = netDevice->sectionName;
+    if (sectionName == NULL)
+        {
+        sectionName = npuConnections;
+        if (strlen(sectionName) == 0)
+            {
+            sectionName = NULL;
+            }
+        }
+    initNpuConnections(sectionName);
+
+    /*
+    ** Adjust coupler and npu node address
+    */
+    if (netDevice->couplerNode != 0)
+        {
+        netDevice->couplerNode = 0;
+        logDtError(LogErrorLocation, "set coupler node to 0\n");
+        }
+
+    if (netDevice->npuNode != 2)
+        {
+        netDevice->npuNode = 2;
+        logDtError(LogErrorLocation, "set npu node to 2\n");
         }
 
     /*
-    **  Reset HIP state.
+    **  Print a friendly message.
     */
-    cci->regCouplerStatus    = 0;     // All flags cleared by Master Clear.
-    cci->halfWordTransferred = FALSE;
-    cciHipState = StHipIdle;
-#if (DEBUG > 0)
-    fprintf(cciLog, "(cci_hip) NPU reset\n");
-    logDtError(LogErrorLocation, "NPU reset\n");
+    printf("(cci_hip) HCP%d host ID:      %s\n", cci->id, npuNetHostID);
+    printf("(cci_hip) HCP%d coupler node: %u\n", cci->id, netDevice->couplerNode);
+    printf("(cci_hip) HCP%d NPU node:     %u\n", cci->id, netDevice->npuNode);
+
+    /*
+    **  Initialise BIP, SVC, and TIP.
+    */
+    npuBipInit();
+    cciSvmInit();
+    cciTipInit();
+    npuNetInit();
+
+    for (;;)
+        {
+        if (netDevice->doReset)
+            {
+            /*
+            **  Reset all subsystems - order matters
+            */
+            npuNetReset();
+            cciTipReset();
+            cciSvmReset();
+            npuBipReset();
+            netDevice->doReset = FALSE;
+            }
+
+        /*
+        **  Process downline block, if any
+        */
+        if (netDevice->downlineData.isReady)
+            {
+            orderCode = cci->regOrder >> 9;
+            switch (orderCode)
+                {
+            default:
+                break;
+
+            case OrdOutServiceMsg:
+                npuBipNotifyServiceMessage();
+                npuBipNotifyDownlineReceived();
+                break;
+
+            case OrdOutPriorHigh:
+                npuBipNotifyData(1);
+                npuBipNotifyDownlineReceived();
+                break;
+
+            case OrdOutPriorLow:
+                npuBipNotifyData(0);
+                npuBipNotifyDownlineReceived();
+                break;
+                }
+            }
+
+        /*
+        ** .Process upline actions, if any
+        */
+        if (cci->hipRequest != HipReqNone)
+            {
+            switch (cci->hipRequest)
+                {
+            case HipReqInitResponse:
+#if DEBUG
+                fputs("\n  Send initialization response", netDevice->log);
+#endif
+                cciSvmNpuInitResponse();
+                break;
+
+            case HipReqNotifyUpline:
+#if DEBUG
+                fputs("\n  Notify upline sent", netDevice->log);
+#endif
+                npuBipNotifyUplineSent();
+                netDevice->uplineData.isReady = FALSE;
+                break;
+
+            default:
+                break;
+                }
+
+            cci->hipRequest = HipReqNone;
+            }
+
+        /*
+        **  Process upline block, if any
+        */
+        if (netDevice->uplineData.isReady == FALSE)
+            {
+            npuBipTryUplineBlock();
+            }
+        else if (cci->hipState == StHipIdle && (cci->regCouplerStatus & StCplrStatusLoaded) == 0 && netDevice->uplineData.offset == 0)
+            {
+            cciHipIndicateUplineBlock(netDevice->uplineData.data, netDevice->uplineData.numBytes);
+            }
+
+        /*
+        **  Poll network status.
+        */
+        npuNetCheckConnections();
+        npuNetCheckStatus();
+        }
+
+#if !defined(_WIN32)
+    return NULL;
 #endif
     }
 
@@ -491,17 +636,20 @@ static void cciReset(void)
 **------------------------------------------------------------------------*/
 static FcStatus cciHipFunc(PpWord funcCode)
     {
-    NpuBuffer   *bp;
+    ChIoBuffer  *bp;
+    CciParam    *cci;
+    NetDevParam *netDevice;
     CciHcpState oldHcpState;
+    u16         sum;
 
     funcCode &= ~FcNpuEqMask;
-    u16 sum;
+    netDevice = (NetDevParam *)activeDevice->controllerContext;
+    cci       = (CciParam *)netDevice->devDependent;
 
-#if (DEBUG > 1)
+#if DEBUG
     if (funcCode != FcNpuInCouplerStatus)
         {
-        fprintf(cciLog, "\n(cci_hip) %06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
-                traceSequenceNo,
+        fprintf(netDevice->log, "\nPP:%02o CH:%02o f:%04o T:%-25s  >   ",
                 activePpu->id,
                 activeChannel->id,
                 funcCode,
@@ -509,29 +657,23 @@ static FcStatus cciHipFunc(PpWord funcCode)
         }
 #endif
 
+    activeDevice->fcode = funcCode;
+
     switch (funcCode)
         {
     default:
-#if (DEBUG > 0)
-        fprintf(cciLog, "(cci_hip) FUNC not implemented & declined!");
+#if DEBUG
+        fputs("FUNC not implemented & declined", netDevice->log);
 #endif
-
-        return (FcDeclined);
+        return FcDeclined;
 
     case FcNpuInCouplerStatus:
-
-        switch (cciHipState)
+        if (cci->hipState == StHipIdle)
             {
-        case StHipIdle:
-            /*
-            **  Poll network status.
-            */
-            npuNetCheckStatus();
-
             /*
             **  If no upline data pending.
             */
-            if ((cciHipState == StHipIdle) && (cciHcpState == StHcpRunning))
+            if (cci->hcpState == StHcpRunning && cci->hipState == StHipIdle)
                 {
                 /*
                 **  Announce idle state to PIP at intervals of less then one second,
@@ -539,86 +681,103 @@ static FcStatus cciHipFunc(PpWord funcCode)
                 */
                 if (cycles - cci->lastCommandTime > CyclesOneSecond)
                     {
-                    cciHipWriteNpuStatus(StNpuIdle);
+                    cciHipSetNpuStatus(cci, StNpuIdle);
                     }
                 }
-            break;
-
-        default:
-            break;
             }
-
         break;
 
     case FcNpuInData:
-        bp = cci->buffer;
-        if (bp == NULL)
+        if (netDevice->uplineData.isReady == FALSE)
             {
             /*
             **  Unexpected input request by host.
             */
-            cciHipState  = StHipIdle;
-            cci->cciData = NULL;
+            cci->hipState              = StHipIdle;
             activeDevice->recordLength = 0;
             activeDevice->fcode        = FcNpuNothing;
-#if (DEBUG > 0)
-            fprintf(cciLog, "(cci-hip) unexpected input reqeust by host\n");
+#if DEBUG
+            fputs("\n  Unexpected input reqeust by host\n", netDevice->log);
 #endif
 
-            return (FcDeclined);
+            return FcDeclined;
             }
-
-        cci->cciData = bp->data;
+        bp                         = &netDevice->uplineData;
+        bp->offset                 = 0;
         activeDevice->recordLength = bp->numBytes;
         break;
 
     case FcNpuOutData:
-        bp = cci->buffer;
-        if (bp == NULL)
+        if (netDevice->downlineData.isReady)
             {
             /*
             **  Unexpected output request by host.
             */
-            cciHipState  = StHipIdle;
-            cci->cciData = NULL;
+            cci->hipState              = StHipIdle;
             activeDevice->recordLength = 0;
             activeDevice->fcode        = FcNpuNothing;
-#if (DEBUG > 0)
-            fprintf(cciLog, "(cci_hip) unexpected input reqeust by host\n");
+#if DEBUG
+            fputs("\n  Unexpected output reqeust by host\n", netDevice->log);
 #endif
 
-            return (FcDeclined);
+            return FcDeclined;
             }
-
-        cci->cciData = bp->data;
+        bp                         = &netDevice->downlineData;
+        bp->offset                 = 0;
+        bp->numBytes               = 0;
         activeDevice->recordLength = 0;
+        cci->hipState              = StHipDownline;
+#if DEBUG
+        fprintf(netDevice->log, "\n  hipState -> %s", cciHipState2String(cci->hipState));
+#endif
         break;
 
     case FcNpuInNpuStatus:
     case FcNpuInNpuOrder:
     case FcNpuInMemAddr0:
     case FcNpuInMemAddr1:
+    case FcNpuInProgram:
         break;
 
     case FcNpuOutNpuOrder:
-        cciHipState = StHipIdle;
-        cciHipWriteNpuStatus(StNpuIdle);
+        cci->hipState = StHipIdle;
+        cciHipSetNpuStatus(cci, StNpuIdle);
+#if DEBUG
+        fprintf(netDevice->log, "\n  hipState -> %s", cciHipState2String(cci->hipState));
+#endif
         break;
 
     case FcNpuClearNpu:
-        cciReset();
+        /*
+        **  Reset HIP state.
+        */
+        cci->hipState            = StHipIdle;
+        cci->regCouplerStatus    = 0;     // All flags cleared by Master Clear.
+        cci->halfWordTransferred = FALSE;
+        cci->hipRequest          = HipReqNone;
+#if DEBUG
+        fprintf(netDevice->log, "\n  hipState -> %s", cciHipState2String(cci->hipState));
+#endif
+        if (cci->hcpState == StHcpRunning)
+            {
+            cci->hcpState      = StHcpReset;
+            netDevice->doReset = TRUE;
+#if DEBUG
+            fprintf(netDevice->log, "\n  hcpState -> %s", cciHcpState2String(cci->hcpState));
+#endif
+            }
         break;
 
     case FcNpuOutMemAddr0:
     case FcNpuOutMemAddr1:
-        cciHipState = StHipIdle;
+        cci->hipState = StHipIdle;
         break;
 
     case FcNpuOutProgram:
-        cciHipState = StHipIdle;
-        break;
-
-    case FcNpuInProgram:
+        cci->hipState = StHipIdle;
+#if DEBUG
+        fprintf(netDevice->log, "\n  hipState -> %s", cciHipState2String(cci->hipState));
+#endif
         break;
 
     case FcNpuClearCoupler:
@@ -642,28 +801,37 @@ static FcStatus cciHipFunc(PpWord funcCode)
         ** micro program started, respond with NPU idle state
         */
         case Fp0D0:      // fingerprint of the micro image
-#if (DEBUG > 0)
-            fprintf(cciLog, "(cci_hip) NPU start micro program\n");
-            logDtError(LogErrorLocation, "NPU start micro program\n");
+#if DEBUG
+            fputs("\n  Start micro program", netDevice->log);
+            logDtError(LogErrorLocation, "HCP%d start micro program\n", cci->id);
 #endif
-            cciHipState = StHipIdle;
-            oldHcpState = cciHcpState;
-            cciHcpState = StHcpRunning;
-            cciHipWriteNpuStatus(StNpuIdle);
-            cciHcpState = oldHcpState;
+            cci->hipState = StHipIdle;
+            oldHcpState   = cci->hcpState;
+            cci->hcpState = StHcpRunning;
+            cciHipSetNpuStatus(cci, StNpuIdle);
+            cci->hcpState = oldHcpState;
+#if DEBUG
+            fprintf(netDevice->log, "\n  hipState -> %s", cciHipState2String(cci->hipState));
+#endif
             break;
 
         /*
         ** dump program started, respond with dump ok
         */
         case Fp0DZ:     // fingerprint of the dump program
-#if (DEBUG > 0)
-            fprintf(cciLog, "(cci_hip) NPU start dump program\n");
-            logDtError(LogErrorLocation, "NPU start dump program\n");
+#if DEBUG
+            fputs("\n  Start dump program", netDevice->log);
+            logDtError(LogErrorLocation, "HCP%d start dump program\n", cci->id);
 #endif
-            cciHipState        = StHipIdle;
+            cci->hipState      = StHipIdle;
             cci->memory[0x1FF] = 1024;
-            cciHipWriteNpuStatus(StNpuDumpOk);
+            oldHcpState   = cci->hcpState;
+            cci->hcpState = StHcpRunning;
+            cciHipSetNpuStatus(cci, StNpuDumpOk);
+            cci->hcpState = oldHcpState;
+#if DEBUG
+            fprintf(netDevice->log, "\n  hipState -> %s", cciHipState2String(cci->hipState));
+#endif
             break;
 
         /*
@@ -672,61 +840,83 @@ static FcStatus cciHipFunc(PpWord funcCode)
         case Fp0DB:     // fingerprint of the 0DB image
         case Fp0D1:     // fingerprint of the 0D1 image
 
-            switch (cciHcpState)
+            switch (cci->hcpState)
                 {
             case StHcpNotInitialized:
 
                 /*
                 **  Initialise BIP, SVC and TIP because the CCI software is started for the first time
                 */
-#if (DEBUG > 0)
-                fprintf(cciLog, "(cci_hip) NPU start macro program\n");
-                logDtError(LogErrorLocation, "NPU start macro program\n");
+#if DEBUG
+                fputs("\n  Start macro program", netDevice->log);
+                logDtError(LogErrorLocation, "HCP%d start macro program\n", cci->id);
 #endif
-                cciHipState = StHipIdle;
-                cciHcpState = StHcpRunning;
-                cciSvmNpuInitResponse();
+                cci->hipState   = StHipIdle;
+                cci->hcpState   = StHcpRunning;
+                cci->hipRequest = HipReqInitResponse;
+#if DEBUG
+                fprintf(netDevice->log, "\n  hipState -> %s", cciHipState2String(cci->hipState));
+                fprintf(netDevice->log, "\n  hcpState -> %s", cciHcpState2String(cci->hcpState));
+#endif
                 break;
 
             case StHcpReset:
-
-                /*
-                ** This is a restart: reset already done in cciHipReset
-                */
-#if (DEBUG > 0)
-                fprintf(cciLog, "(cci_hip) NPU restart macro program\n");
-                logDtError(LogErrorLocation, "NPU restart macro program\n");
+                if (netDevice->doReset == FALSE)
+                    {
+                    /*
+                    ** This is a restart: when doReset is FALSE, reset has been completed
+                    */
+#if DEBUG
+                    fputs("\n  Restart macro program", netDevice->log);
+                    logDtError(LogErrorLocation, "HCP%d restart macro program\n", cci->id);
 #endif
-                cciHipState = StHipIdle;
-                cciHcpState = StHcpRunning;
-                cciSvmNpuInitResponse();
+                    cci->hipState   = StHipIdle;
+                    cci->hcpState   = StHcpRunning;
+                    cci->hipRequest = HipReqInitResponse;
+#if DEBUG
+                    fprintf(netDevice->log, "\n  hipState -> %s", cciHipState2String(cci->hipState));
+                    fprintf(netDevice->log, "\n  hcpState -> %s", cciHcpState2String(cci->hcpState));
+#endif
+                    }
                 break;
 
             case StHcpRunning:
-
                 /*
                 ** Error: start NPU while macro program is running
                 */
-                logDtError(LogErrorLocation, "Fatal: StartNpu called while macro program is running\n");
+                logDtError(LogErrorLocation, "HCP%d Fatal: StartNpu called while macro program is running\n", cci->id);
+#if DEBUG
+                fputs("  StartNpu called while macro program is running", netDevice->log);
+#endif
                 break;
 
             default:
-
                 /*
-                ** Error: unknown image loaded
+                ** Error: unknown HCP state
                 */
-                logDtError(LogErrorLocation, "Fatal: StartNpu called for unknown image\n");
+                logDtError(LogErrorLocation, "HCP%d Fatal: StartNpu called for macro program in unknown state %d\n", cci->hcpState);
+#if DEBUG
+                fprintf(netDevice->log, "\n  StartNpu called for macro program in unknown state %d", cci->hcpState);
+#endif
                 break;
                 }
             break;
+
+        default:
+            /*
+            ** Error: unknown image loaded
+            */
+            logDtError(LogErrorLocation, "HCP%d Fatal: StartNpu called for unknown image with sum %04X\n", sum);
+#if DEBUG
+            fprintf(netDevice->log, "\n  StartNpu called for unknown image with sum %04X", sum);
+#endif
+            break;
             }
 
-        return (FcProcessed);
-        }                  // case funCode
+        return FcProcessed;
+        }
 
-    activeDevice->fcode = funcCode;
-
-    return (FcAccepted);
+    return FcAccepted;
     }
 
 /*--------------------------------------------------------------------------
@@ -739,10 +929,12 @@ static FcStatus cciHipFunc(PpWord funcCode)
 **------------------------------------------------------------------------*/
 static void cciHipIo(void)
     {
-    u8     orderCode;
-#if DEBUG > 0
-    PpWord orderLength;
-#endif
+    ChIoBuffer  *bp;
+    CciParam    *cci;
+    NetDevParam *netDevice;
+
+    netDevice = (NetDevParam *)activeDevice->controllerContext;
+    cci       = (CciParam *)netDevice->devDependent;
 
     switch (activeDevice->fcode)
         {
@@ -750,23 +942,21 @@ static void cciHipIo(void)
         break;
 
     case FcNpuInNpuStatus:
-        activeChannel->data = cciHipReadNpuStatus();
-        activeChannel->full = TRUE;
-#if (DEBUG > 1)
-        fprintf(cciLog, " %03X", activeChannel->data);
+        activeChannel->data    = cciHipReadNpuStatus(cci);
+        activeChannel->full    = TRUE;
+#if DEBUG
+        fprintf(netDevice->log, " %03X", activeChannel->data);
 #endif
-        cci->regCouplerStatus &= 0xFFFB;  // clear NPU status word loaded bit
         break;
 
     case FcNpuInCouplerStatus:
         activeChannel->data    = cci->regCouplerStatus;
         activeChannel->full    = TRUE;
         cci->regCouplerStatus |= StCplrNpuStatusRead;
-#if (DEBUG > 1)
+#if DEBUG
         if (cci->regCouplerStatus != 0)
             {
-            fprintf(cciLog, "\n(cci_hip) %06d PP:%02o CH:%02o f:%04o T:%-25s  >    %03X",
-                    traceSequenceNo,
+            fprintf(netDevice->log, "\nPP:%02o CH:%02o f:%04o T:%-25s  >    %03X",
                     activePpu->id,
                     activeChannel->id,
                     FcNpuInCouplerStatus,
@@ -779,8 +969,8 @@ static void cciHipIo(void)
     case FcNpuInNpuOrder:
         activeChannel->data = cci->regOrder;
         activeChannel->full = TRUE;
-#if (DEBUG > 1)
-        fprintf(cciLog, " %03X", activeChannel->data);
+#if DEBUG
+        fprintf(netDevice->log, " %03X", activeChannel->data);
 #endif
         break;
 
@@ -788,7 +978,7 @@ static void cciHipIo(void)
         activeChannel->data = cci->memoryAddress >> 8;
         activeChannel->full = TRUE;
 #if (DEBUG > 1)
-        fprintf(cciLog, " %05X", activeChannel->data);
+        fprintf(netDevice->log, " %02X", (u8)activeChannel->data);
 #endif
         break;
 
@@ -797,22 +987,23 @@ static void cciHipIo(void)
         activeChannel->full    = TRUE;
         cci->regCouplerStatus |= StCplrAddrLoaded;
 #if (DEBUG > 1)
-        fprintf(cciLog, " %05X", activeChannel->data);
+        fprintf(netDevice->log, " %02X", (u8)activeChannel->data);
 #endif
         break;
 
-
     case FcNpuInData:
-        if (activeChannel->full)
+        if (activeChannel->full || (netDevice->uplineData.isReady == FALSE) || (activeDevice->recordLength < 1))
             {
             break;
             }
-
         if (activeDevice->recordLength > 0)
             {
-            activeChannel->data = *cci->cciData++;
-            activeChannel->full = TRUE;
-
+            bp                          = &netDevice->uplineData;
+            activeChannel->data         = bp->data[bp->offset++];
+            activeChannel->full         = TRUE;
+#if (DEBUG > 1)
+            fprintf(netDevice->log, "%03X ", activeChannel->data);
+#endif
             activeDevice->recordLength -= 1;
             if (activeDevice->recordLength == 0)
                 {
@@ -822,96 +1013,83 @@ static void cciHipIo(void)
                 activeChannel->data          |= 04000;
                 activeChannel->discAfterInput = TRUE;
                 activeDevice->fcode           = FcNpuNothing;
-                cciHipState = StHipIdle;
-#if (DEBUG > 0)
-                fprintf(cciLog, "(cci-hip) in: ");
-                for (int i = 0; i < cci->buffer->numBytes; i++)
-                    {
-                    fprintf(cciLog, "%x ", cci->buffer->data[i]);
-                    }
-                fprintf(cciLog, "\n");
+                cci->hipState                 = StHipIdle;
+                cci->hipRequest               = HipReqNotifyUpline;
+#if DEBUG
+                fprintf(netDevice->log, "\n  hipState -> %s", cciHipState2String(cci->hipState));
 #endif
-                npuBipNotifyUplineSent();
                 }
             }
-
         break;
 
     case FcNpuOutData:
         if (activeChannel->full)
             {
             activeChannel->full = FALSE;
-            if (activeDevice->recordLength < MaxBuffer)
+            bp                  = &netDevice->downlineData;
+            if (bp->numBytes < MaxBuffer)
                 {
-                *cci->cciData++             = activeChannel->data & Mask8;
-                activeDevice->recordLength += 1;
-                if ((activeChannel->data & 04000) != 0)
-                    {
-                    /*
-                    **  Top bit set - process message.
-                    */
-                    cci->buffer->numBytes = activeDevice->recordLength;
-                    activeDevice->fcode   = FcNpuNothing;
-                    cciHipState           = StHipIdle;
-#if (DEBUG > 0)
-                    fprintf(cciLog, "(cci-hip) out: ");
-                    for (int i = 0; i < cci->buffer->numBytes; i++)
-                        {
-                        fprintf(cciLog, "%x ", cci->buffer->data[i]);
-                        }
-                    fprintf(cciLog, "\n");
+                bp->data[bp->numBytes++] = activeChannel->data & Mask8;
+                }
+#if (DEBUG > 1)
+            fprintf(netDevice->log, "%03X ", activeChannel->data);
 #endif
-
-                    npuBipNotifyDownlineReceived();
-                    }
-                else if (activeDevice->recordLength >= MaxBuffer)
-                    {
-                    /*
-                    **  We run out of buffer space before the end of the message.
-                    */
-                    activeDevice->fcode = FcNpuNothing;
-#if (DEBUG > 0)
-                    fprintf(cciLog, "(cci-hip) run out of buffer space before end of the message\n");
+            activeDevice->recordLength += 1;
+            if ((activeChannel->data & 04000) != 0)
+                {
+                /*
+                **  Top bit set - process message.
+                */
+                activeDevice->fcode = FcNpuNothing;
+                cci->hipState       = StHipIdle;
+                bp->isReady         = TRUE;
+#if DEBUG
+                fprintf(netDevice->log, "\n  hipState -> %s", cciHipState2String(cci->hipState));
 #endif
-                    cciHipState = StHipIdle;
-                    npuBipAbortDownlineReceived();
-                    }
                 }
             }
-
         break;
 
     case FcNpuOutNpuOrder:
         if (activeChannel->full)
             {
+#if DEBUG
+            static char *orderCode[] =
+                {
+                "",
+                "output level one - service messages",
+                "output level two - high priority",
+                "output level three - low priority",
+                "driver not ready for input",
+                "regulation level change",
+                "initialization request acknowledgment",
+                ""
+                };
+
+            fprintf(netDevice->log, " Order word %03X - function %d : %s",
+                activeChannel->data, activeChannel->data >> OrdShiftType, orderCode[(activeChannel->data >> OrdShiftType) & 7]);
+#endif
             cci->regOrder       = activeChannel->data;
             activeChannel->full = FALSE;
-            orderCode           = cci->regOrder >> 9;
-#if (DEBUG > 0)
-            orderLength         = cci->regOrder & 0x1FF;
-            fprintf(cciLog, "(cci-hip) Order Word Code %x Length %x\n", orderCode, orderLength);
-#endif
-
-            switch (orderCode)
+            switch ((cci->regOrder >> OrdShiftType) & Mask3)
                 {
+            default:
+                break;
+
             case OrdOutServiceMsg:
-                npuBipNotifyServiceMessage();
-                break;
-
             case OrdOutPriorHigh:
-                npuBipNotifyData(1);
-                break;
-
             case OrdOutPriorLow:
-                npuBipNotifyData(0);
-                break;
-
-            case OrdNotReadyForInput:
-                npuBipRetryInput();
+                if (netDevice->downlineData.isReady)
+                    {
+                    cciHipSetNpuStatus(cci, StNpuNotReadyOutput);
+                    }
+                else
+                    {
+                    cciHipSetNpuStatus(cci, StNpuReadyOutput);
+                    }
                 break;
                 }
             }
-
         break;
 
     case FcNpuInProgram:
@@ -919,6 +1097,10 @@ static void cciHipIo(void)
             {
             cci->halfWordTransferred = FALSE;
             activeChannel->data      = (PpWord)cci->memory[cci->memoryAddress] & 0xFF;
+            cci->regCouplerStatus   |= StCplrTransferCompleted;
+#if (DEBUG > 1)
+            fprintf(netDevice->log, "\n  mem[%04X] : %04X", cci->memoryAddress, cci->memory[cci->memoryAddress]);
+#endif
             cci->memoryAddress++;
             }
         else
@@ -926,26 +1108,28 @@ static void cciHipIo(void)
             cci->halfWordTransferred = TRUE;
             activeChannel->data      = (PpWord)cci->memory[cci->memoryAddress] >> 8;
             }
-        activeChannel->full    = TRUE;
-        cci->regCouplerStatus |= StCplrTransferCompleted;
+        activeChannel->full = TRUE;
 
         break;
 
     case FcNpuOutMemAddr0:
         if (activeChannel->full)
             {
-            cci->tempMemAddr0   = (u8)activeChannel->data;
+            cci->tempMemAddr0   = (u8)(activeChannel->data & 0xFF);
             activeChannel->full = FALSE;
+#if (DEBUG > 1)
+            fprintf(netDevice->log, " %02X", activeChannel->data & 0xFF);
+#endif
             }
         break;
 
     case FcNpuOutMemAddr1:
         if (activeChannel->full)
             {
-            cci->memoryAddress  = (u16)((cci->tempMemAddr0 << 8) | activeChannel->data);
+            cci->memoryAddress  = (u16)((cci->tempMemAddr0 << 8) | (activeChannel->data & 0xFF));
             activeChannel->full = FALSE;
 #if (DEBUG > 1)
-            fprintf(cciLog, "  %05X", cci->memoryAddress);
+            fprintf(netDevice->log, " %02X", activeChannel->data & 0xFF);
 #endif
             }
         cci->regCouplerStatus |= StCplrAddrLoaded;
@@ -956,19 +1140,18 @@ static void cciHipIo(void)
             {
             if (cci->halfWordTransferred)
                 {
+                cci->memory[cci->memoryAddress] = (u16)((cci->tempWord << 8) | (activeChannel->data & 0xFF));
+                cci->halfWordTransferred        = FALSE;
+                cci->regCouplerStatus          |= StCplrTransferCompleted;
 #if (DEBUG > 1)
-                fprintf(cciLog, "writing mem address %x\n", cci->memoryAddress);
+                fprintf(netDevice->log, "\n  mem[%04X] : %04X", cci->memoryAddress, cci->memory[cci->memoryAddress]);
 #endif
-                cci->memory[cci->memoryAddress] = (u16)((cci->tempWord << 8) | activeChannel->data);
-
-                cci->halfWordTransferred = FALSE;
                 cci->memoryAddress++;
-                cci->regCouplerStatus |= StCplrTransferCompleted;
                 }
             else
                 {
                 cci->halfWordTransferred = TRUE;
-                cci->tempWord            = activeChannel->data;
+                cci->tempWord            = activeChannel->data & 0xFF;
                 }
             activeChannel->full = FALSE;
             }
@@ -1010,6 +1193,62 @@ static void cciHipDisconnect(void)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Indicate upline block available
+**
+**  Parameters:     Name        Description.
+**                  block       pointer to block
+**                  numBytes    number of bytes in block
+**
+**  Returns:        Nothing
+**
+**------------------------------------------------------------------------*/
+static void cciHipIndicateUplineBlock(u8 *block, u16 numBytes)
+    {
+    int      bits;
+    CciParam *cci;
+    int      prus;
+    PpWord   status;
+    int      words;
+
+    if ((numBytes > BlkOffDbc)
+        && ((block[BlkOffBTBSN] & BlkMaskBT) == BtHTMSG)
+        && ((block[BlkOffDbc] & DbcPRU) == DbcPRU))
+        {
+        bits  = (numBytes - (BlkOffDbc + 1)) * (((block[BlkOffDbc] & Dbc8Bit) != 0) ? 8 : 6);
+        words = (bits / 60);
+        if (bits % 60)
+            {
+            words++;
+            }
+        prus = words / 64;
+        if (words % 64)
+            {
+            prus++;
+            }
+        if (prus < 1)
+            {
+            prus = 1;
+            }
+        status = (PpWord)(StNpuInputAvailPru | (prus << 10));
+        }
+    else if (numBytes <= 256)
+        {
+        status = StNpuInputAvailLe256;
+        }
+    else
+        {
+        status = StNpuInputAvailGt256;
+        }
+    cci = (CciParam *)netDevice->devDependent;
+    cciHipSetNpuStatus(cci, status);
+    cci->hipState = StHipUpline;
+
+#if DEBUG
+    fprintf(netDevice->log, "\n  hipState -> %s", cciHipState2String(cci->hipState));
+#endif
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        NPU writes NPU status register.
 **
 **  Parameters:     Name        Description.
@@ -1018,17 +1257,32 @@ static void cciHipDisconnect(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cciHipWriteNpuStatus(PpWord status)
+static void cciHipSetNpuStatus(CciParam *cci, PpWord status)
     {
-    cci->lastCommandTime = cycles;
-    if (cciHcpState != StHcpRunning)
+#if DEBUG
+    FILE *log;
+
+    if (netDevice == NULL)
         {
-#if DEBUG > 0
-        fprintf(cciLog, "writing NPU status while software not running\n");
-#endif
+        log = ((NetDevParam *)activeDevice->controllerContext)->log;
         }
+    else
+        {
+        log = netDevice->log;
+        }
+    if (cci->hcpState != StHcpRunning)
+        {
+        fputs("\n  WARNING: Setting NPU status while software not running", log);
+        }
+#endif
+
+    cci->lastCommandTime   = cycles;
     cci->regNpuStatus      = status;
     cci->regCouplerStatus |= StCplrStatusLoaded;
+
+#if DEBUG
+    fprintf(log, "\n  Set NPU status %04o", status);
+#endif
     }
 
 /*--------------------------------------------------------------------------
@@ -1039,17 +1293,18 @@ static void cciHipWriteNpuStatus(PpWord status)
 **  Returns:        NPU status register value.
 **
 **------------------------------------------------------------------------*/
-static PpWord cciHipReadNpuStatus(void)
+static PpWord cciHipReadNpuStatus(CciParam *cci)
     {
-    PpWord value = cci->regNpuStatus;
+    PpWord value;
 
+    value                  = cci->regNpuStatus;
     cci->regCouplerStatus &= ~StCplrStatusLoaded;
     cci->regNpuStatus      = StNpuIgnore;
 
-    return (value);
+    return value;
     }
 
-#if (DEBUG > 1)
+#if DEBUG
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Convert function code to string.
@@ -1062,7 +1317,7 @@ static PpWord cciHipReadNpuStatus(void)
 **------------------------------------------------------------------------*/
 static char *cciHipFunc2String(PpWord funcCode)
     {
-    static char buf[40];
+    static thread_local char buf[40];
 
     switch (funcCode)
         {
@@ -1110,10 +1365,71 @@ static char *cciHipFunc2String(PpWord funcCode)
 
     case FcNpuInMemAddr1:
         return "FcNpuInMemAddr1";
-        }
-    sprintf(buf, "(cci_hip) Unknown Function: %04o", funcCode);
 
-    return (buf);
+    default:
+        sprintf(buf, "Unknown Function: %04o", funcCode);
+        return buf;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Convert HIP state value to string.
+**
+**  Parameters:     Name        Description.
+**                  state       state value
+**
+**  Returns:        String equivalent of state value.
+**
+**------------------------------------------------------------------------*/
+static char *cciHipState2String(CciHipState state)
+    {
+    static thread_local char buf[40];
+
+    switch (state)
+        {
+    case StHipIdle:
+        return "StHipIdle";
+
+    case StHipUpline:
+        return "StHipUpline";
+
+    case StHipDownline:
+        return "StHipDownline";
+
+    default:
+        sprintf(buf, "Unknown state: %d", state);
+        return buf;
+        }
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Convert HCP state value to string.
+**
+**  Parameters:     Name        Description.
+**                  state       state value
+**
+**  Returns:        String equivalent of state value.
+**
+**------------------------------------------------------------------------*/
+static char *cciHcpState2String(CciHcpState state)
+    {
+    static thread_local char buf[40];
+
+    switch (state)
+        {
+    case StHcpNotInitialized:
+        return "StHcpNotInitialized";
+
+    case StHcpRunning:
+        return "StHcpRunning";
+
+    case StHcpReset:
+        return "StHcpReset";
+
+    default:
+        sprintf(buf, "Unknown state: %d", state);
+        return buf;
+        }
     }
 
 #endif

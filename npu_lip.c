@@ -112,7 +112,6 @@ static void npuLipPrintStackTrace(FILE *fp);
 **  Public Variables
 **  ----------------
 */
-u8 npuLipTrunkCount = 0;
 
 /*
 **  -----------------
@@ -120,9 +119,9 @@ u8 npuLipTrunkCount = 0;
 **  -----------------
 */
 #if DEBUG
-static FILE *npuLipLog = NULL;
-static char npuLipLogBuf[LogLineLength + 1];
-static int  npuLipLogBytesCol = 0;
+static thread_local FILE *npuLipLog = NULL;
+static thread_local char npuLipLogBuf[LogLineLength + 1];
+static thread_local int  npuLipLogBytesCol = 0;
 #endif
 
 /*
@@ -201,10 +200,12 @@ void npuLipPresetPcb(Pcb *pcbp)
 #if DEBUG
     if (npuLipLog == NULL)
         {
-        npuLipLog = fopen("liplog.txt", "wt");
+        char fName[32];
+        sprintf(fName, "%sliplog.txt", netDevice->name);
+        npuLipLog = fopen(fName, "wt");
         if (npuLipLog == NULL)
             {
-            logDtError(LogErrorLocation, "liplog.txt - aborting\n");
+            logDtError(LogErrorLocation, "%s - aborting\n", fName);
             exit(1);
             }
         npuLipLogFlush(); // initialize log buffer
@@ -450,13 +451,13 @@ void npuLipProcessDownlineData(NpuBuffer *bp)
 
     dn = bp->data[BlkOffDN];
 
-    if (dn == npuSvmCouplerNode)
+    if (dn == netDevice->couplerNode)
         {
         npuBipRequestUplineTransfer(bp);
         }
     else
         {
-        for (claPort = 0; claPort <= npuNetMaxClaPort; claPort++)
+        for (claPort = 0; claPort <= netDevice->maxClaPort; claPort++)
             {
             pcbp = npuNetFindPcb(claPort);
             if (pcbp->ncbp && (pcbp->ncbp->connType == ConnTypeTrunk)
@@ -507,7 +508,7 @@ static bool npuLipSendConnectRequest(Pcb *pcbp)
     int     len;
     ssize_t n;
 
-    len = sprintf(request, "CONNECT %s %u %u\n", npuNetHostID, npuSvmCouplerNode, pcbp->controls.lip.remoteNode);
+    len = sprintf(request, "CONNECT %s %u %u\n", npuNetHostID, netDevice->couplerNode, pcbp->controls.lip.remoteNode);
     n   = send(pcbp->connFd, request, len, 0);
     if (n == len)
         {
@@ -615,7 +616,7 @@ static bool npuLipProcessConnectRequest(Pcb *pcbp)
     /*
     **  Find matching trunk definition in Pcb table
     */
-    for (claPort = 0; claPort <= npuNetMaxClaPort; claPort++)
+    for (claPort = 0; claPort <= netDevice->maxClaPort; claPort++)
         {
         trunkPcbp = npuNetFindPcb(claPort);
         if ((trunkPcbp->ncbp != NULL) && (trunkPcbp->ncbp->connType == ConnTypeTrunk)
@@ -626,9 +627,9 @@ static bool npuLipProcessConnectRequest(Pcb *pcbp)
             }
         }
 
-    if (claPort <= npuNetMaxClaPort)
+    if (claPort <= netDevice->maxClaPort)
         {
-        if (npuSvmCouplerNode != localNode)
+        if (netDevice->couplerNode != localNode)
             {
             status = 402;
             len    = sprintf(response, "%d %s %u %u unrecognized trunk\n",
@@ -638,25 +639,25 @@ static bool npuLipProcessConnectRequest(Pcb *pcbp)
             {
             status = 301;
             len    = sprintf(response, "%d %s %u %u already connected\n",
-                             status, npuNetHostID, npuSvmCouplerNode, peerNode);
+                             status, npuNetHostID, netDevice->couplerNode, peerNode);
             }
-        else if (!npuSvmIsReady())
+        else if (!npuSvmIsReady(netDevice))
             {
             status = 302;
             len    = sprintf(response, "%d %s %u %u not ready\n",
-                             status, npuNetHostID, npuSvmCouplerNode, peerNode);
+                             status, npuNetHostID, netDevice->couplerNode, peerNode);
             }
         else if (!npuLipActivateTrunk(trunkPcbp))
             {
             status = 501;
             len    = sprintf(response, "%d %s %u %u resources unavailable\n",
-                             status, npuNetHostID, npuSvmCouplerNode, peerNode);
+                             status, npuNetHostID, netDevice->couplerNode, peerNode);
             }
         else
             {
             status = 200;
             len    = sprintf(response, "%d %s %u %u connected\n",
-                             status, npuNetHostID, npuSvmCouplerNode, peerNode);
+                             status, npuNetHostID, netDevice->couplerNode, peerNode);
             }
         }
     else
@@ -786,11 +787,11 @@ static bool npuLipProcessConnectResponse(Pcb *pcbp)
         }
 
     value = strtol(token, NULL, 10);
-    if (value != npuSvmCouplerNode)
+    if (value != netDevice->couplerNode)
         {
 #if DEBUG
         fprintf(npuLipLog, "Port %02x: received incorrect local node number %ld from %s, expected %d\n", pcbp->claPort,
-                value, pcbp->ncbp->hostName, npuSvmCouplerNode);
+                value, pcbp->ncbp->hostName, netDevice->couplerNode);
 #endif
 
         return FALSE;
@@ -832,7 +833,7 @@ static bool npuLipActivateTrunk(Pcb *pcbp)
 
     mp = bp->data;
 
-    *mp++ = npuSvmCouplerNode;              // DN
+    *mp++ = netDevice->couplerNode;         // DN
     *mp++ = pcbp->controls.lip.remoteNode;  // SN
     *mp++ = 0;                              // CN
     *mp++ = 4;                              // BT=CMD
@@ -874,7 +875,7 @@ static bool npuLipDeactivateTrunk(Pcb *pcbp)
 
     mp = bp->data;
 
-    *mp++ = npuSvmCouplerNode;              // DN
+    *mp++ = netDevice->couplerNode;         // DN
     *mp++ = pcbp->controls.lip.remoteNode;  // SN
     *mp++ = 0;                              // CN
     *mp++ = 4;                              // BT=CMD

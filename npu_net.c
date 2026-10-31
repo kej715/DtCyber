@@ -25,6 +25,7 @@
 **--------------------------------------------------------------------------
 */
 
+#define DEBUG 0
 
 /*
 **  -------------
@@ -33,13 +34,6 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
-
-#if defined(__FreeBSD__)
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#endif
-
 
 #include "const.h"
 #include "types.h"
@@ -62,14 +56,11 @@
 #include <netdb.h>
 #endif
 
-#define DEBUG             0
-
 /*
 **  -----------------
 **  Private Constants
 **  -----------------
 */
-#define MaxClaPorts       255
 #define NamStartupTime    30
 
 /*
@@ -92,19 +83,10 @@
 static int npuNetAcceptConnections(fd_set *selectFds, int maxFd);
 static int npuNetCreateConnections(void);
 static bool npuNetCreateListeningSocket(Ncb *ncbp);
-static void npuNetCreateThread(void);
 static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive);
 static int npuNetRegisterClaPort(Ncb *ncbp);
 static void npuNetSendConsoleMsg(int connFd, int connType, char *msg);
 static void npuNetTryOutput(Pcb *pcbp);
-
-#if defined(_WIN32)
-static void npuNetThread(void *param);
-
-#else
-static void *npuNetThread(void *param);
-
-#endif
 
 /*
 **  ----------------
@@ -112,9 +94,7 @@ static void *npuNetThread(void *param);
 **  ----------------
 */
 char npuNetHostID[HostIdSize];
-u32  npuNetHostIP     = 0;
-u8   npuNetMaxClaPort = 0;
-u8   npuNetMaxCN      = 0;
+u32  npuNetHostIP = 0;
 
 /*
 **  -----------------
@@ -153,13 +133,12 @@ static char notReadyMsg[]         = "\r\nHost not ready to accept connections - 
 static char noPortsAvailMsg[]     = "\r\nNo free ports available - please try again later.\r\n";
 static char tcbNotConfiguredMsg[] = "\r\nCould not configure tcb - please try again later.\r\n";
 
-static Pcb  pcbs[MaxClaPorts];
-static bool isPcbsPreset = FALSE;
-
-static Ncb ncbs[MaxTermDefs];
-static int numNcbs = 0;
-
-static int pollIndex = 0;
+static thread_local fd_set listenFds;
+#if defined(_WIN32)
+static thread_local SOCKET maxListenFd = 0;
+#else
+static thread_local int maxListenFd = 0;
+#endif
 
 /*
 **  Table of functions that queue data for sending to the network,
@@ -268,14 +247,15 @@ static void (*tryOutput[])(Pcb *pcbp) =
     };
 
 /*
-** Function tables to interface to either CCP or CCI functions
+**  Function tables to interface to either CCP or CCI functions.
+**  Indexed by NetDevType.
 */
-static bool (*svmIsReady[])() =
+static bool (*svmIsReady[])(NetDevParam *netDevice) =
     {
     npuSvmIsReady,
-    cciSvmIsReady
+    cciSvmIsReady,
+    npuSvmIsReady
     };
-
 
 /*
  **--------------------------------------------------------------------------
@@ -310,7 +290,7 @@ int npuNetRegisterConnType(int tcpPort, int claPort, int numPorts, int connType,
     /*
     ** Check for too many registrations.
     */
-    if (numNcbs >= MaxTermDefs)
+    if (netDevice->numNcbs >= MaxTermDefs)
         {
         return NpuNetRegOvfl;
         }
@@ -320,9 +300,9 @@ int npuNetRegisterConnType(int tcpPort, int claPort, int numPorts, int connType,
     */
     if (tcpPort != 0)
         {
-        for (i = 0; i < numNcbs; i++)
+        for (i = 0; i < netDevice->numNcbs; i++)
             {
-            ncbp = &ncbs[i];
+            ncbp = &netDevice->ncbs[i];
             if (ncbp->tcpPort == tcpPort)
                 {
                 /*
@@ -340,7 +320,7 @@ int npuNetRegisterConnType(int tcpPort, int claPort, int numPorts, int connType,
             }
         }
 
-    ncbp = &ncbs[numNcbs];
+    ncbp = &netDevice->ncbs[netDevice->numNcbs];
 
     if (ncbpp != NULL)
         {
@@ -369,7 +349,7 @@ int npuNetRegisterConnType(int tcpPort, int claPort, int numPorts, int connType,
         return status;
         }
 
-    numNcbs += 1;
+    netDevice->numNcbs += 1;
 
     return NpuNetRegOk;
     }
@@ -420,7 +400,7 @@ Pcb *npuNetFindPcb(int claPort)
     {
     if ((claPort >= 0) && (claPort < MaxClaPorts))
         {
-        return &pcbs[claPort];
+        return &netDevice->pcbs[claPort];
         }
 
     return NULL;
@@ -440,22 +420,22 @@ void npuNetSetMaxCN(u8 cn)
     {
     Tcb *tp;
 
-    tp = &npuTcbs[cn];
-    if ((tp->state == StTermIdle) && (cn >= npuNetMaxCN))
+    tp = &netDevice->tcbs[cn];
+    if ((tp->state == StTermIdle) && (cn >= netDevice->maxCN))
         {
         while (cn > 0)
             {
-            if (npuTcbs[cn].state != StTermIdle)
+            if (netDevice->tcbs[cn].state != StTermIdle)
                 {
-                npuNetMaxCN = cn;
+                netDevice->maxCN = cn;
                 break;
                 }
             cn--;
             }
         }
-    else if (cn > npuNetMaxCN)
+    else if (cn > netDevice->maxCN)
         {
-        npuNetMaxCN = cn;
+        netDevice->maxCN = cn;
         }
     }
 
@@ -463,28 +443,88 @@ void npuNetSetMaxCN(u8 cn)
 **  Purpose:        Initialise network connection handler.
 **
 **  Parameters:     Name        Description.
-**                  startup     FALSE when restarting (NAM restart),
-**                              TRUE on first call during initialisation.
 **
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuNetInit(bool startup)
+void npuNetInit()
     {
-    /*
-    **  Setup for input data processing.
-    */
-    pollIndex = 0;
+    int    i;
+    int    j;
+    Ncb    *ncbp;
+
+    FD_ZERO(&listenFds);
+
+#if DEBUG >= 2
+    logDtError(LogErrorLocation, "npuNetInit: Number of Ncbs to check: %d\n", netDevice->numNcbs);
+    for (i = 0; i < netDevice->numNcbs; i++)
+        {
+        ncbp = &netDevice->ncbs[i];
+        logDtError(LogErrorLocation, "npuNetInit: [%d], type %d, port %d\n", i, ncbp->connType, ncbp->tcpPort);
+        }
+#endif
 
     /*
-    **  Only do the following when the emulator starts up.
+    **  Create a listening socket for every configured connection type that listens
+    **  for connections.
     */
-    if (startup)
+    for (i = 0; i < netDevice->numNcbs; i++)
         {
-        /*
-        **  Create the thread which will deal with TCP connections.
-        */
-        npuNetCreateThread();
+        ncbp = &netDevice->ncbs[i];
+#if DEBUG >= 2
+        logDtError(LogErrorLocation, "npuNetInit: Checking Ncb %d, type %d, port %d\n", i, ncbp->connType, ncbp->tcpPort);
+#endif
+        switch (ncbp->connType)
+            {
+        case ConnTypeTrunk:
+        case ConnTypeNje:
+            if (ncbp->tcpPort == 0)
+                {
+                continue;
+                }
+            j = 0;
+            while (j < i)
+                {
+                if (netDevice->ncbs[j].tcpPort == ncbp->tcpPort)
+                    {
+                    break;
+                    }
+                j += 1;
+                }
+            if (j < i)
+                {
+                continue;        // already listening on this port
+                }
+            // else fall through
+        case ConnTypeRaw:
+        case ConnTypePterm:
+        case ConnTypeRs232:
+        case ConnTypeTelnet:
+        case ConnTypeHasp:
+            if (npuNetCreateListeningSocket(ncbp) == TRUE)
+                {
+                /*
+                **  Add to set of listening FDs to be polled
+                */
+                FD_SET(ncbp->lstnFd, &listenFds);
+
+                /*
+                **  Determine highest FD for later select
+                */
+                if (maxListenFd < ncbp->lstnFd)
+                    {
+                    maxListenFd = ncbp->lstnFd;
+                    }
+                }
+            break;
+
+        case ConnTypeRevHasp:
+            break;
+
+        default:
+            logDtError(LogErrorLocation, "(npu_net) Invalid connection type: %u\n", ncbp->connType);
+            break;
+            }
         }
     }
 
@@ -503,8 +543,8 @@ void npuNetPreset(void)
 
     for (i = 0; i < MaxClaPorts; i++)
         {
-        memset(&pcbs[i], 0, sizeof(Pcb));
-        pcbs[i].claPort = (u8)i;
+        memset(&netDevice->pcbs[i], 0, sizeof(Pcb));
+        netDevice->pcbs[i].claPort = (u8)i;
         }
     }
 
@@ -527,9 +567,9 @@ void npuNetReset(void)
     /*
     **  Iterate through all TCBs.
     */
-    for (i = npuNetMaxCN; i > 0; i--)
+    for (i = netDevice->maxCN; i > 0; i--)
         {
-        tp   = &npuTcbs[i];
+        tp   = &netDevice->tcbs[i];
         pcbp = tp->pcbp;
         if ((tp->state != StTermIdle) && (pcbp != NULL) && (pcbp->connFd > 0))
             {
@@ -551,9 +591,9 @@ void npuNetReset(void)
     /*
     **  Iterate over PCBs and close any remaining open non-listening connections.
     */
-    for (i = 0; i <= npuNetMaxClaPort; i++)
+    for (i = 0; i <= netDevice->maxClaPort; i++)
         {
-        npuNetCloseConnection(&pcbs[i]);
+        npuNetCloseConnection(&netDevice->pcbs[i]);
         }
     }
 
@@ -653,6 +693,21 @@ void npuNetQueueAck(Tcb *tp, u8 blockSeqNo)
     }
 
 /*--------------------------------------------------------------------------
+**  Purpose:        Check for new network connections.
+**
+**  Parameters:     Name        Description.
+**                  param       unused
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+void npuNetCheckConnections(void)
+    {
+    npuNetAcceptConnections(&listenFds, (int)maxListenFd);
+    npuNetCreateConnections();
+    }
+
+/*--------------------------------------------------------------------------
 **  Purpose:        Check for network status.
 **
 **  Parameters:     Name        Description.
@@ -662,18 +717,21 @@ void npuNetQueueAck(Tcb *tp, u8 blockSeqNo)
 **------------------------------------------------------------------------*/
 void npuNetCheckStatus(void)
     {
+    int            i;
+    int            maxFd;
     Pcb            *pcbp;
     fd_set         readFds;
-    int            readySockets = 0;
+    int            readySockets;
     struct timeval timeout;
     fd_set         writeFds;
 
-    timeout.tv_sec  = 0;
-    timeout.tv_usec = 0;
+    FD_ZERO(&readFds);
+    FD_ZERO(&writeFds);
+    maxFd = -1;
 
-    while (pollIndex <= npuNetMaxClaPort)
+    for (i = 0; i <= netDevice->maxClaPort; i++)
         {
-        pcbp = &pcbs[pollIndex++];
+        pcbp = &netDevice->pcbs[i];
         if (pcbp->connFd <= 0)
             {
             continue;
@@ -689,51 +747,37 @@ void npuNetCheckStatus(void)
                 }
             continue;
             }
-
-        /*
-        **  Handle network traffic.
-        */
-        FD_ZERO(&readFds);
-        FD_ZERO(&writeFds);
         FD_SET(pcbp->connFd, &readFds);
-        readySockets = select((int)(pcbp->connFd + 1), &readFds, NULL, NULL, &timeout);
-
-        if ((readySockets > 0) && FD_ISSET(pcbp->connFd, &readFds))
+        FD_SET(pcbp->connFd, &writeFds);
+        if (pcbp->connFd > maxFd)
             {
-            /*
-            **  Receive a block of data.
-            */
-            pcbp->inputCount = (int)recv(pcbp->connFd, pcbp->inputData, MaxBuffer, 0);
-            if (pcbp->inputCount <= 0)
-                {
-                notifyNetDisconnect[pcbp->ncbp->connType](pcbp);
-                continue;
-                }
-            processUplineData[pcbp->ncbp->connType](pcbp);
+            maxFd = pcbp->connFd;
             }
-
-        if (pcbp->connFd > 0)
+        }
+    timeout.tv_sec  = 0;
+    timeout.tv_usec = 0;
+    readySockets = select(maxFd + 1, &readFds, &writeFds, NULL, &timeout);
+    if (readySockets > 0)
+        {
+        for (i = 0; i <= netDevice->maxClaPort; i++)
             {
-            FD_ZERO(&writeFds);
-            FD_SET(pcbp->connFd, &writeFds);
-            readySockets = select((int)(pcbp->connFd + 1), NULL, &writeFds, NULL, &timeout);
-            if ((readySockets > 0) && FD_ISSET(pcbp->connFd, &writeFds))
+            pcbp = &netDevice->pcbs[i];
+            if (pcbp->connFd > 0 && FD_ISSET(pcbp->connFd, &readFds) && !pcbp->cciWaitForTcb)
                 {
-                /*
-                **  Try sending data if any is pending.
-                */
+                pcbp->inputCount = (int)recv(pcbp->connFd, pcbp->inputData, MaxBuffer, 0);
+                if (pcbp->inputCount <= 0)
+                    {
+                    notifyNetDisconnect[pcbp->ncbp->connType](pcbp);
+                    continue;
+                    }
+                processUplineData[pcbp->ncbp->connType](pcbp);
+                }
+            if (pcbp->connFd > 0 && FD_ISSET(pcbp->connFd, &writeFds) && !pcbp->cciWaitForTcb)
+                {
                 npuNetTryOutput(pcbp);
                 }
             }
-
-        /*
-        **  The following return ensures that we resume with polling the next
-        **  connection in sequence otherwise low-numbered connections would get
-        **  preferential treatment.
-        */
-        return;
         }
-    pollIndex = 0;
     }
 
 /*--------------------------------------------------------------------------
@@ -746,100 +790,92 @@ void npuNetCheckStatus(void)
 **------------------------------------------------------------------------*/
 void npuNetShowStatus()
     {
-    u8      channelNo;
-    char    chEqStr[10];
-    DevSlot *dp;
-    char    *dts;
-    int     i;
-    u32     ipAddr;
-    Ncb     *ncbp;
-    Pcb     *pcbp;
-    char    peerAddress[24];
-    u16     port;
+    char        chEqStr[10];
+    char        *dts;
+    int         i;
+    u32         ipAddr;
+    int         j;
+    Ncb         *ncbp;
+    NetDevParam *netDev;
+    Pcb         *pcbp;
+    char        peerAddress[24];
+    u16         port;
 
-    dp = NULL;
-    for (channelNo = 0; channelNo < MaxChannels; channelNo++)
+    for (i = 0; i < netDevCount; i++)
         {
-        dp = channelFindDevice(channelNo, DtMdi);
-        if (dp != NULL)
+        netDev = &netDevices[i];
+        switch (netDev->type)
             {
-            dts = "MDI    ";
+        case NPU_CCP:
+            dts = "NPU    ";
             break;
-            }
-        dp = channelFindDevice(channelNo, DtNpu);
-        if (dp != NULL)
-            {
-            dts = "2550   ";
-            break;
-            }
-        dp = channelFindDevice(channelNo, DtHcp);
-        if (dp != NULL)
-            {
+        case NPU_CCI:
             dts = "HCP    ";
             break;
-            }
-        }
-    if (dp == NULL)
-        {
-        return;
-        }
-
-    sprintf(chEqStr, "C%02o E%02o", dp->channel->id, dp->eqNo);
-    for (i = 0; i < numNcbs; i++)
-        {
-        ncbp = &ncbs[i];
-        switch (ncbp->connType)
-            {
-        case ConnTypeRaw:
-        case ConnTypePterm:
-        case ConnTypeRs232:
-        case ConnTypeTelnet:
-        case ConnTypeHasp:
-        case ConnTypeNje:
-        case ConnTypeTrunk:
-            if (ncbp->lstnFd > 0)
-                {
-                opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", dts, chEqStr, netGetLocalTcpAddress(ncbp->lstnFd), "",
-                          connTypes[ncbp->connType], "listening");
-                chEqStr[0] = '\0';
-                }
+        case MDI_NOS:
+            dts = "MDI    ";
             break;
-
-        case ConnTypeRevHasp:
-            ipAddr = ntohl(ncbp->hostAddr.sin_addr.s_addr);
-            port   = ntohs(ncbp->hostAddr.sin_port);
-            sprintf(peerAddress, "%d.%d.%d.%d:%d",
-                    (ipAddr >> 24) & 0xff,
-                    (ipAddr >> 16) & 0xff,
-                    (ipAddr >> 8) & 0xff,
-                    ipAddr & 0xff,
-                    port);
-            if (ncbp->state == StConnConnecting)
-                {
-                opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", dts, chEqStr, netGetLocalTcpAddress(ncbp->connFd),
-                          peerAddress, connTypes[ncbp->connType], "connecting");
-                chEqStr[0] = '\0';
-                }
-            else if (ncbp->state != StConnConnected)
-                {
-                opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", dts, chEqStr, ipAddress, peerAddress,
-                          connTypes[ncbp->connType], "disconnected");
-                chEqStr[0] = '\0';
-                }
-            break;
-
         default:
+            dts = "***    ";
             break;
             }
-        }
-    for (i = 0; i < MaxClaPorts; i++)
-        {
-        pcbp = &pcbs[i];
-        if ((pcbp->ncbp != NULL) && (pcbp->connFd > 0))
+        sprintf(chEqStr, "C%02o E%02o", netDev->channelNo, netDev->eqNo);
+        for (j = 0; j < netDev->numNcbs; j++)
             {
-            opDisplay("    >   %-8s %-7s P%02x "FMTNETSTATUS "\n", dts, chEqStr, pcbp->claPort, netGetLocalTcpAddress(pcbp->connFd),
-                      netGetPeerTcpAddress(pcbp->connFd), connTypes[pcbp->ncbp->connType], connStates[pcbp->ncbp->state]),
-            chEqStr[0] = '\0';
+            ncbp = &netDev->ncbs[j];
+            switch (ncbp->connType)
+                {
+            case ConnTypeRaw:
+            case ConnTypePterm:
+            case ConnTypeRs232:
+            case ConnTypeTelnet:
+            case ConnTypeHasp:
+            case ConnTypeNje:
+            case ConnTypeTrunk:
+                if (ncbp->lstnFd > 0)
+                    {
+                    opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", dts, chEqStr, netGetLocalTcpAddress(ncbp->lstnFd), "",
+                              connTypes[ncbp->connType], "listening");
+                    chEqStr[0] = '\0';
+                    }
+                break;
+
+            case ConnTypeRevHasp:
+                ipAddr = ntohl(ncbp->hostAddr.sin_addr.s_addr);
+                port   = ntohs(ncbp->hostAddr.sin_port);
+                sprintf(peerAddress, "%d.%d.%d.%d:%d",
+                        (ipAddr >> 24) & 0xff,
+                        (ipAddr >> 16) & 0xff,
+                        (ipAddr >> 8) & 0xff,
+                        ipAddr & 0xff,
+                        port);
+                if (ncbp->state == StConnConnecting)
+                    {
+                    opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", dts, chEqStr, netGetLocalTcpAddress(ncbp->connFd),
+                              peerAddress, connTypes[ncbp->connType], "connecting");
+                    chEqStr[0] = '\0';
+                    }
+                else if (ncbp->state != StConnConnected)
+                    {
+                    opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", dts, chEqStr, ipAddress, peerAddress,
+                              connTypes[ncbp->connType], "disconnected");
+                    chEqStr[0] = '\0';
+                    }
+                break;
+
+            default:
+                break;
+                }
+            }
+        for (j = 0; j < MaxClaPorts; j++)
+            {
+            pcbp = &netDev->pcbs[j];
+            if ((pcbp->ncbp != NULL) && (pcbp->connFd > 0))
+                {
+                opDisplay("    >   %-8s %-7s P%02x "FMTNETSTATUS "\n", dts, chEqStr, pcbp->claPort, netGetLocalTcpAddress(pcbp->connFd),
+                          netGetPeerTcpAddress(pcbp->connFd), connTypes[pcbp->ncbp->connType], connStates[pcbp->ncbp->state]),
+                chEqStr[0] = '\0';
+                }
             }
         }
     }
@@ -873,13 +909,13 @@ static int npuNetRegisterClaPort(Ncb *ncbp)
     int limit;
     Pcb *pcbp;
 
-    if (isPcbsPreset == FALSE)
+    if (netDevice->isPcbsPreset == FALSE)
         {
         for (i = 0; i < MaxClaPorts; i++)
             {
-            memset(&pcbs[i], 0, sizeof(Pcb));
+            memset(&netDevice->pcbs[i], 0, sizeof(Pcb));
             }
-        isPcbsPreset = TRUE;
+        netDevice->isPcbsPreset = TRUE;
         }
 
     limit = ncbp->claPort + ncbp->numPorts;
@@ -891,7 +927,7 @@ static int npuNetRegisterClaPort(Ncb *ncbp)
 
     for (i = ncbp->claPort; i < limit; i++)
         {
-        pcbp = &pcbs[i];
+        pcbp = &netDevice->pcbs[i];
         if (pcbp->claPort == 0)
             {
             pcbp->claPort   = (u8)i;
@@ -908,9 +944,9 @@ static int npuNetRegisterClaPort(Ncb *ncbp)
             return NpuNetRegDupCla;
             }
         }
-    if (limit > npuNetMaxClaPort)
+    if (limit > netDevice->maxClaPort)
         {
-        npuNetMaxClaPort = (u8)(limit - 1);
+        netDevice->maxClaPort = (u8)(limit - 1);
         }
 
     return NpuNetRegOk;
@@ -971,11 +1007,10 @@ static int npuNetAcceptConnections(fd_set *selectFds, int maxFd)
     int            rc;
     struct timeval timeout;
 
-    timeout.tv_sec  = 1;
-    timeout.tv_usec = 0;
-
     memcpy(&acceptFds, selectFds, sizeof(fd_set));
 
+    timeout.tv_sec  = 0;
+    timeout.tv_usec = 0;
     rc = select(maxFd + 1, &acceptFds, NULL, NULL, &timeout);
     if (rc < 0)
         {
@@ -991,9 +1026,9 @@ static int npuNetAcceptConnections(fd_set *selectFds, int maxFd)
     **  Find the listening socket(s) with pending connections and accept them.
     */
     n = 0;
-    for (i = 0; i < numNcbs; i++)
+    for (i = 0; i < netDevice->numNcbs; i++)
         {
-        ncbp = &ncbs[i];
+        ncbp = &netDevice->ncbs[i];
         switch (ncbp->connType)
             {
         case ConnTypeRaw:
@@ -1056,7 +1091,7 @@ static int npuNetCreateConnections(void)
     /*
     **  Attempt to create connections only when NAM is ready.
     */
-    if (!svmIsReady[npuSw]())
+    if (!svmIsReady[netDevice->type](netDevice))
         {
         return 0;
         }
@@ -1069,9 +1104,9 @@ static int npuNetCreateConnections(void)
     currentTime = getSeconds();
     n           = 0;
 
-    for (i = 0; i < numNcbs; i++)
+    for (i = 0; i < netDevice->numNcbs; i++)
         {
-        ncbp = &ncbs[i];
+        ncbp = &netDevice->ncbs[i];
         switch (ncbp->connType)
             {
         case ConnTypeRaw:
@@ -1110,8 +1145,9 @@ static int npuNetCreateConnections(void)
                 else // connection in progress
                     {
                     npuLogMessage("(npu_net) Initiated connection to host: %s:%u", ncbp->hostName, ncbp->tcpPort);
-                    ncbp->connFd = fd;
-                    ncbp->state  = StConnConnecting;
+                    ncbp->connFd             = fd;
+                    ncbp->state              = StConnConnecting;
+                    ncbp->connectionDeadline = currentTime + (time_t)ConnectionWaitTime;
                     }
                 break;
 
@@ -1123,7 +1159,7 @@ static int npuNetCreateConnections(void)
                 rc = select((int)(ncbp->connFd + 1), NULL, &selectFds, NULL, &timeout);
                 if (rc < 0)
                     {
-                    logDtError(LogErrorLocation, "NET: select returned unexpected %d\n", rc);
+                    logDtError(LogErrorLocation, "select returned unexpected %d\n", rc);
                     sleepMsec(1000);
                     }
                 else if (rc > 0)
@@ -1216,166 +1252,6 @@ static bool npuNetCreateListeningSocket(Ncb *ncbp)
     }
 
 /*--------------------------------------------------------------------------
-**  Purpose:        Create thread which will deal with all TCP
-**                  connections.
-**
-**  Parameters:     Name        Description.
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-static void npuNetCreateThread(void)
-    {
-#if defined(_WIN32)
-    DWORD  dwThreadId;
-    HANDLE hThread;
-
-    /*
-    **  Create TCP thread.
-    */
-    hThread = CreateThread(
-        NULL,                                       // no security attribute
-        0,                                          // default stack size
-        (LPTHREAD_START_ROUTINE)npuNetThread,
-        (LPVOID)NULL,                               // thread parameter
-        0,                                          // not suspended
-        &dwThreadId);                               // returns thread ID
-
-    if (hThread == NULL)
-        {
-        logDtError(LogErrorLocation, "Failed to create npuNet thread\n");
-        exit(1);
-        }
-#else
-    int            rc;
-    pthread_t      thread;
-    pthread_attr_t attr;
-
-    /*
-    **  Create POSIX thread with default attributes.
-    */
-    pthread_attr_init(&attr);
-    rc = pthread_create(&thread, &attr, npuNetThread, NULL);
-    if (rc < 0)
-        {
-        logDtError(LogErrorLocation, "Failed to create npuNet thread\n");
-        exit(1);
-        }
-#endif
-    }
-
-/*--------------------------------------------------------------------------
-**  Purpose:        TCP network connection thread.
-**
-**  Parameters:     Name        Description.
-**                  param       unused
-**
-**  Returns:        Nothing.
-**
-**------------------------------------------------------------------------*/
-#if defined(_WIN32)
-static void npuNetThread(void *param)
-#else
-static void *npuNetThread(void *param)
-#endif
-    {
-    fd_set listenFds;
-    int    i;
-    int    j;
-    Ncb    *ncbp;
-
-#if defined(_WIN32)
-    SOCKET maxFd = 0;
-#else
-    int maxFd = 0;
-#endif
-
-    FD_ZERO(&listenFds);
-
-#if DEBUG >= 2
-    logDtError(LogErrorLocation, "npuNetThread has %d Ncbs to check\n", numNcbs);
-    for (i = 0; i < numNcbs; i++)
-        {
-        ncbp = &ncbs[i];
-        logDtError(LogErrorLocation, "npuNetThread .. (%d), type %d, port %d\n", i, ncbp->connType, ncbp->tcpPort);
-        }
-#endif
-
-    /*
-    **  Create a listening socket for every configured connection type that listens
-    **  for connections.
-    */
-    for (i = 0; i < numNcbs; i++)
-        {
-        ncbp = &ncbs[i];
-#if DEBUG >= 2
-        logDtError(LogErrorLocation, "npuNetThread checking Ncb %d, type %d, port %d\n", i, ncbp->connType, ncbp->tcpPort);
-#endif
-        switch (ncbp->connType)
-            {
-        case ConnTypeTrunk:
-        case ConnTypeNje:
-            if (ncbp->tcpPort == 0)
-                {
-                continue;
-                }
-            j = 0;
-            while (j < i)
-                {
-                if (ncbs[j].tcpPort == ncbp->tcpPort)
-                    {
-                    break;
-                    }
-                j += 1;
-                }
-            if (j < i)
-                {
-                continue;        // already listening on this port
-                }
-            // else fall through
-        case ConnTypeRaw:
-        case ConnTypePterm:
-        case ConnTypeRs232:
-        case ConnTypeTelnet:
-        case ConnTypeHasp:
-            if (npuNetCreateListeningSocket(ncbp) == TRUE)
-                {
-                /*
-                **  Add to set of listening FDs to be polled
-                */
-                FD_SET(ncbp->lstnFd, &listenFds);
-
-                /*
-                **  Determine highest FD for later select
-                */
-                if (maxFd < ncbp->lstnFd)
-                    {
-                    maxFd = ncbp->lstnFd;
-                    }
-                }
-            break;
-
-        case ConnTypeRevHasp:
-            break;
-
-        default:
-            logDtError(LogErrorLocation, "(npu_net) Invalid connection type: %u\n", ncbp->connType);
-            break;
-            }
-        }
-
-    for ( ; ;)
-        {
-        npuNetAcceptConnections(&listenFds, (int)maxFd);
-        npuNetCreateConnections();
-        }
-
-#if !defined(_WIN32)
-    return NULL;
-#endif
-    }
-
-/*--------------------------------------------------------------------------
 **  Purpose:        Process new TCP connection
 **
 **  Parameters:     Name        Description.
@@ -1416,7 +1292,7 @@ static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive)
     /*
     **  Check if the host is ready to accept connections.
     */
-    if (!svmIsReady[npuSw]())
+    if (!svmIsReady[netDevice->type](netDevice))
         {
         /*
         **  Tell the user.
@@ -1439,9 +1315,9 @@ static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive)
     limit = ncbp->claPort + ncbp->numPorts;
     for (i = ncbp->claPort; i < limit; i++)
         {
-        if ((pcbs[i].connFd < 1) && (!pcbs[i].cciIsDisabled))
+        if ((netDevice->pcbs[i].connFd < 1) && (!netDevice->pcbs[i].cciIsDisabled))
             {
-            pcbp = &pcbs[i];
+            pcbp = &netDevice->pcbs[i];
             break;
             }
         }
@@ -1454,9 +1330,9 @@ static bool npuNetProcessNewConnection(int connFd, Ncb *ncbp, bool isPassive)
     if ((pcbp == NULL) && isPassive
         && ((ncbp->connType == ConnTypeTrunk) || (ncbp->connType == ConnTypeNje)))
         {
-        for (i = 0; i <= npuNetMaxClaPort; i++)
+        for (i = 0; i <= netDevice->maxClaPort; i++)
             {
-            pcbp2 = &pcbs[i];
+            pcbp2 = &netDevice->pcbs[i];
             if ((pcbp2->connFd < 1)
                 && (pcbp2->ncbp != NULL) && (pcbp2->ncbp->connType == ncbp->connType)
                 && (pcbp2->ncbp->tcpPort == ncbp->tcpPort))

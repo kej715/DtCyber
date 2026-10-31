@@ -26,7 +26,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG    0
+#define DEBUG 0
 
 /*
 **  -------------
@@ -440,8 +440,6 @@ static void cdcnetUdpSetAddress(u8 *dp, u32 ipAddress, u16 port);
 #if DEBUG
 static void cdcnetLogBytes(u8 *bytes, int len);
 static void cdcnetLogFlush(void);
-static void cdcnetPrintStackTrace(FILE *fp);
-
 #endif
 
 /*
@@ -449,9 +447,6 @@ static void cdcnetPrintStackTrace(FILE *fp);
 **  Public Variables
 **  ----------------
 */
-u8  cdcnetNode = 255;
-u16 cdcnetPrivilegedTcpPortOffset = 6600;
-u16 cdcnetPrivilegedUdpPortOffset = 6600;
 
 /*
 **  -----------------
@@ -652,6 +647,9 @@ void cdcnetProcessDownlineData(NpuBuffer *bp)
                     }
                 else
                     {
+#if DEBUG
+                    fprintf(cdcnetLog, "Initiate A-A connection to '%.*s'\n", nameLen, appName);
+#endif
                     gp->cn                 = cn;
                     gp->unackedBlocks      = 0;
                     gp->maxUplineBlockSize = *(bp->data + BlkOffUplBlkSize) * 100;
@@ -1298,91 +1296,82 @@ void cdcnetCheckStatus(void)
 **------------------------------------------------------------------------*/
 void cdcnetShowStatus(void)
     {
-    u8      channelNo;
-    char    chEqStr[8];
-    DevSlot *dp;
-    int     i;
-    Pccb    *pp;
-    Gcb     *gp;
-    char    *state;
+    char        chEqStr[8];
+    int         d;
+    int         i;
+    NetDevParam *netDevice;
+    Pccb        *pp;
+    Gcb         *gp;
+    char        *state;
 
     if (cdcnetGcbCount < 1)
         {
         return;
         }
-    dp = NULL;
-    for (channelNo = 0; channelNo < MaxChannels; channelNo++)
+    for (d = 0; d < netDevCount; d++)
         {
-        dp = channelFindDevice(channelNo, DtMdi);
-        if (dp != NULL)
+        netDevice = &netDevices[d];
+        if (netDevice->type != MDI_NOS || netDevice->cdcnetNode == 0)
             {
-            break;
+            continue;
             }
-        }
-    if (dp == NULL)
-        {
-        return;
-        }
+        sprintf(chEqStr, "C%02o E%02o", netDevice->channelNo, netDevice->eqNo);
 
-    sprintf(chEqStr, "C%02o E%02o", dp->channel->id, dp->eqNo);
-
-    /*
-    **  Iterate through all Pccbs.
-    */
-    for (i = 0, pp = cdcnetPccbs; i < cdcnetPccbCount; i++, pp++)
-        {
-        if (pp->connFd != 0)
+        /*
+        **  Iterate through all Pccbs.
+        */
+        for (i = 0, pp = cdcnetPccbs; i < cdcnetPccbCount; i++, pp++)
             {
-            opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", "CDCNet", chEqStr, netGetLocalTcpAddress(pp->connFd), "", "tcp", "listening");
+            if (pp->connFd != 0)
+                {
+                opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", "TCPIPGW", chEqStr, netGetLocalTcpAddress(pp->connFd), "", "tcp", "listening");
+                chEqStr[0] = '\0';
+                }
+            }
+
+        /*
+        **  Iterate through all Gcbs.
+        */
+        for (i = 0, gp = cdcnetGcbs; i < cdcnetGcbCount; i++, gp++)
+            {
+            if (gp->gwState == StGwIdle)
+                {
+                continue;
+                }
+            switch (gp->tcpUdpState)
+                {
+            case StTcpUdpIdle:
+            case StTcpListening:
+                continue;
+
+            case StTcpConnecting:
+                state = "connecting";
+                break;
+
+            case StTcpIndicatingConnection:
+                state = "indicating connection";
+                break;
+
+            case StTcpConnected:
+                state = "connected";
+                break;
+
+            case StTcpDisconnecting:
+                state = "disconnecting";
+                break;
+
+            case StUdpBound:
+                state = "bound";
+                break;
+
+            default:
+                state = "unknown";
+                break;
+                }
+            opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", "TCPIPGW", chEqStr, netGetLocalTcpAddress(gp->connFd),
+                netGetPeerTcpAddress(gp->connFd), gp->connType == TypeUdp ? "udp" : "tcp", state);
             chEqStr[0] = '\0';
             }
-        }
-
-    /*
-    **  Iterate through all Gcbs.
-    */
-    for (i = 0, gp = cdcnetGcbs; i < cdcnetGcbCount; i++, gp++)
-        {
-        if ((gp->gwState == StGwIdle) || (gp->connType == TypeTcpPassive))
-            {
-            continue;
-            }
-        switch (gp->tcpUdpState)
-            {
-        case StTcpUdpIdle:
-            continue;
-
-        case StTcpConnecting:
-            state = "connecting";
-            break;
-
-        case StTcpIndicatingConnection:
-            state = "indicating connection";
-            break;
-
-        case StTcpListening:
-            state = "listening";
-            break;
-
-        case StTcpConnected:
-            state = "connected";
-            break;
-
-        case StTcpDisconnecting:
-            state = "disconnecting";
-            break;
-
-        case StUdpBound:
-            state = "bound";
-            break;
-
-        default:
-            state = "unknown";
-            break;
-            }
-        opDisplay("    >   %-8s %-7s     "FMTNETSTATUS "\n", "CDCNet", chEqStr, netGetLocalTcpAddress(gp->connFd),
-            netGetPeerTcpAddress(gp->connFd), gp->connType == TypeUdp ? "udp" : "tcp", state);
-        chEqStr[0] = '\0';
         }
     }
 
@@ -1695,10 +1684,9 @@ static void cdcnetSendBack(Gcb *gp, NpuBuffer *bp, u8 bsn)
     {
     u8 *mp;
 
-    mp = bp->data;
-
-    *mp++ = npuSvmCouplerNode;                        // DN
-    *mp++ = cdcnetNode;                               // SN
+    mp    = bp->data;
+    *mp++ = netDevice->couplerNode;                   // DN
+    *mp++ = netDevice->cdcnetNode;                    // SN
     *mp++ = gp->cn;                                   // CN
     *mp++ = (u8)(BlkOffBTBSN | (bsn << BlkShiftBSN)); // BT=Back | BSN
 
@@ -1723,10 +1711,9 @@ static void cdcnetSendInitiateConnectionResponse(NpuBuffer *bp, u8 cn, u8 rc)
     {
     u8 *mp;
 
-    mp = bp->data;
-
-    *mp++ = npuSvmCouplerNode;                   // DN
-    *mp++ = cdcnetNode;                          // SN
+    mp    = bp->data;
+    *mp++ = netDevice->couplerNode;              // DN
+    *mp++ = netDevice->cdcnetNode;               // SN
     *mp++ = 0;                                   // CN
     *mp++ = BtHTCMD;                             // BT=CMD
     *mp++ = 0x02;                                // PFC: Initiate connection
@@ -1761,10 +1748,9 @@ static bool cdcnetSendInitializeConnectionRequest(Gcb *gp)
         return FALSE;
         }
 
-    mp = bp->data;
-
-    *mp++ = npuSvmCouplerNode;              // DN
-    *mp++ = cdcnetNode;                     // SN
+    mp    = bp->data;
+    *mp++ = netDevice->couplerNode;         // DN
+    *mp++ = netDevice->cdcnetNode;          // SN
     *mp++ = gp->cn;                         // CN
     *mp++ = BtHTRINIT;                      // Initialize request
 
@@ -1789,10 +1775,9 @@ static void cdcnetSendInitializeConnectionResponse(NpuBuffer *bp, Gcb *gp)
     {
     u8 *mp;
 
-    mp = bp->data;
-
-    *mp++ = npuSvmCouplerNode;              // DN
-    *mp++ = cdcnetNode;                     // SN
+    mp    = bp->data;
+    *mp++ = netDevice->couplerNode;         // DN
+    *mp++ = netDevice->cdcnetNode;          // SN
     *mp++ = gp->cn;                         // CN
     *mp++ = BtHTNINIT;                      // Initialize response
 
@@ -1818,10 +1803,10 @@ static void cdcnetSendTerminateConnectionBlock(NpuBuffer *bp, u8 cn)
 
     mp = bp->data;
 
-    *mp++ = npuSvmCouplerNode; // DN
-    *mp++ = cdcnetNode;        // SN
-    *mp++ = cn;                // CN
-    *mp++ = BtHTTERM;          // BT=TERM
+    *mp++ = netDevice->couplerNode; // DN
+    *mp++ = netDevice->cdcnetNode;  // SN
+    *mp++ = cn;                     // CN
+    *mp++ = BtHTTERM;               // BT=TERM
 
     bp->numBytes = (u16)(mp - bp->data);
     bp->offset   = 0;
@@ -1845,12 +1830,12 @@ static void cdcnetSendTerminateConnectionRequest(NpuBuffer *bp, u8 cn)
 
     mp = bp->data;
 
-    *mp++ = npuSvmCouplerNode; // DN
-    *mp++ = cdcnetNode;        // SN
-    *mp++ = 0;                 // CN
-    *mp++ = BtHTCMD;           // BT=CMD
-    *mp++ = 0x03;              // PFC: Terminate connection
-    *mp++ = 0x08;              // SFC: Terminate connection
+    *mp++ = netDevice->couplerNode; // DN
+    *mp++ = netDevice->cdcnetNode;  // SN
+    *mp++ = 0;                      // CN
+    *mp++ = BtHTCMD;                // BT=CMD
+    *mp++ = 0x03;                   // PFC: Terminate connection
+    *mp++ = 0x08;                   // SFC: Terminate connection
     *mp++ = cn;
 
     bp->numBytes = (u16)(mp - bp->data);
@@ -1875,12 +1860,12 @@ static void cdcnetSendTerminateConnectionResponse(NpuBuffer *bp, u8 cn)
 
     mp = bp->data;
 
-    *mp++ = npuSvmCouplerNode; // DN
-    *mp++ = cdcnetNode;        // SN
-    *mp++ = 0;                 // CN
-    *mp++ = BtHTCMD;           // BT=CMD
-    *mp++ = 0x03;              // PFC: Terminate connection
-    *mp++ = SfcResp | 0x08;    // SFC: Terminate connection
+    *mp++ = netDevice->couplerNode; // DN
+    *mp++ = netDevice->cdcnetNode;  // SN
+    *mp++ = 0;                      // CN
+    *mp++ = BtHTCMD;                // BT=CMD
+    *mp++ = 0x03;                   // PFC: Terminate connection
+    *mp++ = SfcResp | 0x08;         // SFC: Terminate connection
     *mp++ = cn;
 
     bp->numBytes = (u16)(mp - bp->data);
@@ -2104,8 +2089,8 @@ static void cdcnetPutU32ToMessage(u32 value, u8 *mp)
 **------------------------------------------------------------------------*/
 static void cdcnetTcpRequestUplineTransfer(Gcb *gp, NpuBuffer *bp, u8 blockType, u8 headerType, TcpGwStatus status)
     {
-    bp->data[BlkOffDN]    = npuSvmCouplerNode;
-    bp->data[BlkOffSN]    = cdcnetNode;
+    bp->data[BlkOffDN]    = netDevice->couplerNode;
+    bp->data[BlkOffSN]    = netDevice->cdcnetNode;
     bp->data[BlkOffCN]    = gp->cn;
     bp->data[BlkOffBTBSN] = (u8)((gp->bsn++ << BlkShiftBSN) | blockType);
     if (gp->bsn > 7)
@@ -2331,7 +2316,7 @@ static bool cdcnetTcpPassiveConnectHandler(Gcb *gp, NpuBuffer *bp)
         }
     else if (dstPort < 1024) // add offset to privileged port number
         {
-        gp->dstPort = dstPort + cdcnetPrivilegedTcpPortOffset;
+        gp->dstPort = dstPort + netDevice->privilegedTcpPortOffset;
         }
     else
         {
@@ -2585,10 +2570,10 @@ static bool cdcnetTcpSendConnectionIndication(Gcb *gp)
         gp->srcPort = gp->peerPort;
         cdcnetTcpSetPort(gp->tcpSrcAddress, gp->peerPort);
         cdcnetTcpSetIpAddress(gp->tcpDstAddress, gp->localAddr);
-        if ((gp->localPort >= cdcnetPrivilegedTcpPortOffset)
-            && (gp->localPort < cdcnetPrivilegedTcpPortOffset + 1024))
+        if ((gp->localPort >= netDevice->privilegedTcpPortOffset)
+            && (gp->localPort < netDevice->privilegedTcpPortOffset + 1024))
             {
-            cdcnetTcpSetPort(gp->tcpDstAddress, gp->localPort - cdcnetPrivilegedTcpPortOffset);
+            cdcnetTcpSetPort(gp->tcpDstAddress, gp->localPort - netDevice->privilegedTcpPortOffset);
             }
         else
             {
@@ -2895,8 +2880,8 @@ static void cdcnetUdpSetAddress(u8 *dp, u32 ipAddress, u16 port)
 **------------------------------------------------------------------------*/
 static void cdcnetUdpRequestUplineTransfer(Gcb *gp, NpuBuffer *bp, u8 blockType)
     {
-    bp->data[BlkOffDN]    = npuSvmCouplerNode;
-    bp->data[BlkOffSN]    = cdcnetNode;
+    bp->data[BlkOffDN]    = netDevice->couplerNode;
+    bp->data[BlkOffSN]    = netDevice->cdcnetNode;
     bp->data[BlkOffCN]    = gp->cn;
     bp->data[BlkOffBTBSN] = (u8)((gp->bsn++ << BlkShiftBSN) | blockType);
     if (gp->bsn > 7)
@@ -2953,7 +2938,7 @@ static bool cdcnetUdpBindAddress(Gcb *gp, NpuBuffer *bp)
     server.sin_addr.s_addr = htonl(ipAddress);
     if ((port > 0) && (port < 1024))
         {
-        port += cdcnetPrivilegedUdpPortOffset;
+        port += netDevice->privilegedUdpPortOffset;
         }
     if (bind(gp->connFd, (struct sockaddr *)&server, sizeof(server)) == -1)
         {
@@ -2978,9 +2963,9 @@ static bool cdcnetUdpBindAddress(Gcb *gp, NpuBuffer *bp)
         }
     ipAddress = ntohl(server.sin_addr.s_addr);
     port      = ntohs(server.sin_port);
-    if ((port >= cdcnetPrivilegedUdpPortOffset) && (port < cdcnetPrivilegedUdpPortOffset + 1024))
+    if ((port >= netDevice->privilegedUdpPortOffset) && (port < netDevice->privilegedUdpPortOffset + 1024))
         {
-        port -= cdcnetPrivilegedUdpPortOffset;
+        port -= netDevice->privilegedUdpPortOffset;
         }
     cdcnetUdpSetAddress(bp->data + BlkOffUdpOpenSapSrcAddr, ipAddress, port);
     gp->srcPort     = port;

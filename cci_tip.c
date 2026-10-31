@@ -23,7 +23,7 @@
 **
 **--------------------------------------------------------------------------
 */
-#define DEBUG    0
+#define DEBUG 0
 
 /*
 **  -------------
@@ -34,12 +34,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-
-#if defined(__FreeBSD__)
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#endif
 
 #include "const.h"
 #include "types.h"
@@ -75,7 +69,7 @@
 **  ---------------------------
 */
 static void cciTipSetupDefaultTc0(void);
-void cciTipSendAck(Tcb *tp);
+static void cciTipSendAck(Tcb *tp);
 
 /*
 **  ----------------
@@ -89,47 +83,10 @@ void cciTipSendAck(Tcb *tp);
 **  -----------------
 */
 
-static u8 resBack[] =
-    {
-    0,                // DN
-    0,                // SN
-    0,                // CN
-    0,                // BSN/BT
-    };
-
-static u8 blockAck[] =
-    {
-    0,                  // DN
-    0,                  // SN
-    0,                  // CN
-    BtHTBACK,           // BT/BSN/PRIO
-    };
-
-static u8 resTermOperational[] =
-    {
-    0,                  // DN
-    0,                  // SN
-    0,                  // Service Channel
-    4,                  // BT
-    6,                  // PFC
-    3,                  // SFC
-    0,                  // P
-    0,                  // SP
-    0,                  // CA
-    0,                  // TA
-    0,                  // DT
-    0,                  // RC
-    0,                  // DN
-    0,                  // SN
-    0,                  // CN
-    1                   // TOT
-    };
-
 static TipParams defaultTc0;
 
-
 #if DEBUG
-extern FILE *cciLog;
+static thread_local FILE *cciLog;
 #endif
 
 /*
@@ -153,19 +110,12 @@ void cciTipInit(void)
     int i;
     Tcb *tp;
 
-    resBack[BlkOffDN] = npuSvmCouplerNode;
-    resBack[BlkOffSN] = npuSvmNpuNode;
-
-    blockAck[BlkOffDN] = npuSvmCouplerNode;
-    blockAck[BlkOffSN] = npuSvmNpuNode;
-
-    resTermOperational[BlkOffDN] = npuSvmCouplerNode;
-    resTermOperational[BlkOffSN] = npuSvmNpuNode;
-
 #if DEBUG
     if (cciLog == NULL)
         {
-        cciLog = fopen("ccilog.txt", "wt");
+        char fName[32];
+        sprintf(fName, "%stiplog.txt", netDevice->name);
+        cciLog = fopen(fName, "wt");
         }
 #endif
 
@@ -179,17 +129,12 @@ void cciTipInit(void)
     */
     for (i = 0; i < MaxTcbs; i++)
         {
-        tp = &npuTcbs[i];
+        tp = &netDevice->tcbs[i];
         memset(tp, 0, sizeof(Tcb));
         tp->cn    = (u8)i;
         tp->state = StTermIdle;
         cciTipInputReset(tp);
         }
-
-    /*
-    **  Initialise network.
-    */
-    npuNetInit(TRUE);
     }
 
 /*--------------------------------------------------------------------------
@@ -210,17 +155,12 @@ void cciTipReset(void)
     */
     for (i = 0; i < MaxTcbs; i++)
         {
-        tp = &npuTcbs[i];
+        tp = &netDevice->tcbs[i];
         memset(tp, 0, sizeof(Tcb));
         tp->cn    = (u8)i;
         tp->state = StTermIdle;
         npuTipInputReset(tp);
         }
-
-    /*
-    **  Re-initialise network.
-    */
-    npuNetInit(FALSE);
     }
 
 /*--------------------------------------------------------------------------
@@ -235,10 +175,12 @@ void cciTipReset(void)
 **------------------------------------------------------------------------*/
 void cciTipProcessBuffer(NpuBuffer *bp, int priority)
     {
-    u8   *block = bp->data;
+    u8   *block;
     Tcb  *tp;
     u8   cn;
     bool last;
+
+    block = bp->data;
 
     /*
     **  Find associated terminal control block.
@@ -401,10 +343,10 @@ void cciTipSendMsg(Tcb *tp, int len)
 **------------------------------------------------------------------------*/
 void cciTipSendAck(Tcb *tp)
     {
-    blockAck[BlkOffCN]     = tp->cn;
-    blockAck[BlkOffBTBSN] &= BlkMaskBT;
-    blockAck[BlkOffBTBSN] |= (tp->uplineBsn << BlkShiftBSN);
-    npuBipRequestUplineCanned(blockAck, sizeof(blockAck));
+    u8 buf[4];
+
+    buf[BlkOffBTBSN] = BtHTBACK | (u8)(tp->uplineBsn << BlkShiftBSN);
+    npuBipRequestUplineStatic(buf, sizeof(buf), BlkOffCN, tp->cn);
     tp->uplineBsn += 1;
     if (tp->uplineBsn > 7)
         {
@@ -424,10 +366,10 @@ void cciTipSendAck(Tcb *tp)
 **------------------------------------------------------------------------*/
 void cciTipNotifySent(Tcb *tp, u8 blockSeqNo)
     {
-    blockAck[BlkOffCN]     = tp->cn;
-    blockAck[BlkOffBTBSN] &= BlkMaskBT;
-    blockAck[BlkOffBTBSN] |= (blockSeqNo << BlkShiftBSN);
-    npuBipRequestUplineCanned(blockAck, sizeof(blockAck));
+    u8 buf[4];
+
+    buf[BlkOffBTBSN] = BtHTBACK | (u8)(blockSeqNo << BlkShiftBSN);
+    npuBipRequestUplineStatic(buf, sizeof(buf), BlkOffCN, tp->cn);
     }
 
 /*--------------------------------------------------------------------------
@@ -446,8 +388,8 @@ void cciTipInputReset(Tcb *tp)
     /*
     **  Build upline data header.
     */
-    *mp++ = npuSvmCouplerNode;                        // DN
-    *mp++ = npuSvmNpuNode;                            // SN
+    *mp++ = netDevice->couplerNode;                   // DN
+    *mp++ = netDevice->npuNode;                       // SN
     *mp++ = tp->cn;                                   // CN
     *mp++ = 0;                                        // BT
     *mp++ = 5;                                        // DBC
@@ -557,7 +499,7 @@ void cciTipConfigureTerminal(Tcb *tp)
 **------------------------------------------------------------------------*/
 Tcb *cciTipFindTcbForCN(u8 cn)
     {
-    return &npuTcbs[cn];
+    return &netDevice->tcbs[cn];
     }
 
 /*
@@ -623,7 +565,7 @@ static void cciTipSetupDefaultTc0(void)
     defaultTc0.fvSolicitInput   = FALSE;
     defaultTc0.fvCIDelay        = 0;
     defaultTc0.fvLIDelay        = 0;
-    defaultTc0.fvHostNode       = npuSvmCouplerNode;
+    defaultTc0.fvHostNode       = netDevice->couplerNode;
     defaultTc0.fvAutoConnect    = FALSE;
     defaultTc0.fvPriority       = 1;
     defaultTc0.fvUBL            = 7;
