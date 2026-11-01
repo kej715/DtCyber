@@ -883,6 +883,12 @@ typedef struct netDevParam
     SvmState   svmState;
     u8         regLevel;
     int        numNcbs;
+    fd_set     listenFds;
+#if defined(_WIN32)
+    SOCKET     maxListenFd;
+#else
+    int        maxListenFd;
+#endif
     Ncb        ncbs[MaxTermDefs];
     Pcb        pcbs[MaxClaPorts];
     Tcb        tcbs[MaxTcbs];

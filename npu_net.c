@@ -133,13 +133,6 @@ static char notReadyMsg[]         = "\r\nHost not ready to accept connections - 
 static char noPortsAvailMsg[]     = "\r\nNo free ports available - please try again later.\r\n";
 static char tcbNotConfiguredMsg[] = "\r\nCould not configure tcb - please try again later.\r\n";
 
-static thread_local fd_set listenFds;
-#if defined(_WIN32)
-static thread_local SOCKET maxListenFd = 0;
-#else
-static thread_local int maxListenFd = 0;
-#endif
-
 /*
 **  Table of functions that queue data for sending to the network,
 **  indexed by connection type
@@ -453,7 +446,7 @@ void npuNetInit()
     int    j;
     Ncb    *ncbp;
 
-    FD_ZERO(&listenFds);
+    FD_ZERO(&netDevice->listenFds);
 
 #if DEBUG >= 2
     logDtError(LogErrorLocation, "npuNetInit: Number of Ncbs to check: %d\n", netDevice->numNcbs);
@@ -506,14 +499,14 @@ void npuNetInit()
                 /*
                 **  Add to set of listening FDs to be polled
                 */
-                FD_SET(ncbp->lstnFd, &listenFds);
+                FD_SET(ncbp->lstnFd, &netDevice->listenFds);
 
                 /*
                 **  Determine highest FD for later select
                 */
-                if (maxListenFd < ncbp->lstnFd)
+                if (netDevice->maxListenFd < ncbp->lstnFd)
                     {
-                    maxListenFd = ncbp->lstnFd;
+                    netDevice->maxListenFd = ncbp->lstnFd;
                     }
                 }
             break;
@@ -703,7 +696,7 @@ void npuNetQueueAck(Tcb *tp, u8 blockSeqNo)
 **------------------------------------------------------------------------*/
 void npuNetCheckConnections(void)
     {
-    npuNetAcceptConnections(&listenFds, (int)maxListenFd);
+    npuNetAcceptConnections(&netDevice->listenFds, (int)netDevice->maxListenFd);
     npuNetCreateConnections();
     }
 
@@ -772,10 +765,19 @@ void npuNetCheckStatus(void)
                     }
                 else if (pcbp->inputCount < 0)
                     {
+#if defined(_WIN32)
+                    int err;
+                    err = WSAGetLastError();
+                    if (err != WSAEWOULDBLOCK)
+                        {
+                        notifyNetDisconnect[pcbp->ncbp->connType](pcbp);
+                        }
+#else
                     if (errno != EAGAIN && errno != EWOULDBLOCK)
                         {
                         notifyNetDisconnect[pcbp->ncbp->connType](pcbp);
                         }
+#endif
                     continue;
                     }
                 processUplineData[pcbp->ncbp->connType](pcbp);
@@ -1004,9 +1006,9 @@ static void npuNetSendConsoleMsg(int connFd, int connType, char *msg)
 static int npuNetAcceptConnections(fd_set *selectFds, int maxFd)
     {
 #if defined(_WIN32)
-    SOCKET acceptFd;
+    SOCKET         acceptFd;
 #else
-    int acceptFd;
+    int            acceptFd;
 #endif
     fd_set         acceptFds;
     int            i;
