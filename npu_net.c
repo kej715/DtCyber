@@ -765,9 +765,17 @@ void npuNetCheckStatus(void)
             if (pcbp->connFd > 0 && FD_ISSET(pcbp->connFd, &readFds) && !pcbp->cciWaitForTcb)
                 {
                 pcbp->inputCount = (int)recv(pcbp->connFd, pcbp->inputData, MaxBuffer, 0);
-                if (pcbp->inputCount <= 0)
+                if (pcbp->inputCount == 0)
                     {
                     notifyNetDisconnect[pcbp->ncbp->connType](pcbp);
+                    continue;
+                    }
+                else if (pcbp->inputCount < 0)
+                    {
+                    if (errno != EAGAIN && errno != EWOULDBLOCK)
+                        {
+                        notifyNetDisconnect[pcbp->ncbp->connType](pcbp);
+                        }
                     continue;
                     }
                 processUplineData[pcbp->ncbp->connType](pcbp);

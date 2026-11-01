@@ -81,7 +81,6 @@
 
 #define MaxRetries                   8
 #define MaxUplineBlockSize           640
-//#define MaxUplineBlockSize           256
 #define MaxWaitTime                  15
 
 /*
@@ -693,6 +692,9 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                             }
                         else
                             {
+#if DEBUG
+                            fprintf(npuNjeLog, "Port %02x: failed to send DLE ACK0\n", pcbp->claPort);
+#endif
                             npuNjeCloseConnection(pcbp);
                             dp = limit;
                             }
@@ -800,6 +802,9 @@ void npuNjeProcessUplineData(Pcb *pcbp)
                     }
                 else
                     {
+#if DEBUG
+                    fprintf(npuNjeLog, "Port %02x: failed to send SOH ENQ\n", pcbp->claPort);
+#endif
                     npuNjeCloseConnection(pcbp);
                     dp = limit;
                     }
