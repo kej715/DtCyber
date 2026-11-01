@@ -1017,6 +1017,11 @@ static int npuNetAcceptConnections(fd_set *selectFds, int maxFd)
     int            rc;
     struct timeval timeout;
 
+    if (maxFd < 1)
+        {
+        return 0;
+        }
+
     memcpy(&acceptFds, selectFds, sizeof(fd_set));
 
     timeout.tv_sec  = 0;
