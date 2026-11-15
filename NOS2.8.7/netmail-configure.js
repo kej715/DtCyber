@@ -10,6 +10,11 @@ const utilities   = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
+if (!utilities.isInstalled("netmail")) {
+  process.stdout.write("NETMAIL is not installed\n");
+  process.exit(0);
+}
+
 const customProps = utilities.getCustomProperties(dtc);
 const hostId      = utilities.getHostId(dtc);
 const mid         = utilities.getMachineId(dtc);

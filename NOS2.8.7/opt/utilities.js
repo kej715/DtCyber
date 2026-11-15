@@ -37,6 +37,66 @@ const utilities = {
     .then(() => dtc.runJob(12, 4, "decks/compile-ndlopl.job", [mid]));
   },
 
+  defaultNhpConfiguration: {
+    isDefault: true,
+    hostId: "NCCM01",
+    MDI0: {
+      id: "MDI0",
+      channelNo: 5,
+      eqNo: 7,
+      pipNo: 1,
+      couplerNode: 1,
+      npuNode: 2,
+      cdcnetNode: 255,
+      cdcnetPrivilegedTcpPortOffset: 0,
+      cdcnetPrivilegedUdpPortOffset: 0,
+      terminals: {
+        telnet: [
+          {
+          firstClaPort: 0x04,
+          claPortCount: 16,
+          tcpPort: 23,
+          user: "IAFUSER"
+          }
+        ],
+        pterm: [
+          {
+          firstClaPort: 0x14,
+          claPortCount: 16,
+          tcpPort: 8005,
+          user: "CYBUSER"
+          }
+        ],
+        hasp: [
+          {
+          firstClaPort: 0x24,
+          claPortCount: 1,
+          tcpPort: 2553,
+          termClass: "HPRE", // default
+          blockSize: 400,    // default
+          user: "RBFUSER,MUSER=RJE1"
+          },
+          {
+          firstClaPort: 0x25,
+          claPortCount: 1,
+          tcpPort: 2554,
+          termClass: "HPRE", // default
+          blockSize: 400,    // default
+          user: "RBFUSER,MUSER=RJE2"
+          }
+        ],
+        printers: [
+          {
+          firstClaPort: 0x03,
+          claPortCount: 1,
+          tcpPort: 2552,
+          user: "MFAM=CYBER,MUSER=PRINT05,MAPPL=PSU"
+          }
+        ]
+      }
+    }
+  },
+
   deleteNDLmod: (dtc, modname) => {
     const job = [
       "$GET,NDLMODS/NA.",
@@ -228,10 +288,9 @@ const utilities = {
     return utilities.adjacentNjeNodes;
   },
 
-  getCouplerNode: dtc => {
-    const hostId      = utilities.getHostId(dtc);
-    const rhpTopology = utilities.getRhpTopology(dtc);
-    return rhpTopology[hostId].couplerNode;
+  getCouplerNode: (dtc, devId) => {
+    const nhpConfig = utilities.getNhpConfiguration(dtc);
+    return rhpConfig[devId].couplerNode;
   },
 
   getCustomProperties: dtc => {
@@ -251,8 +310,8 @@ const utilities = {
     if (typeof utilities.defaultNjeRoute === "undefined") {
       utilities.defaultNjeRoute = utilities.getPropertyValue(utilities.getCustomProperties(dtc), "NETWORK", "defaultRoute", null);
       if (utilities.defaultNjeRoute === null) {
-        const hostID = utilities.getHostId(dtc);
-        let localNode = utilities.njeTopology[hostID];
+        const hostID    = utilities.getHostId(dtc);
+        const localNode = utilities.njeTopology[hostID];
         if (typeof localNode.link !== "undefined") {
           utilities.defaultNjeRoute = localNode.link;
         }
@@ -279,83 +338,6 @@ const utilities = {
     return dtc.createJobWithOutput(12, 4, job, options);
   },
 
-  getHaspTerminals: dtc => {
-
-    if (typeof utilities.haspTerminals !== "undefined") return utilities.haspTerminals;
-
-    const customProps = utilities.getCustomProperties(dtc);
-    let   nextPort    = 0x26;
-    let   portCount   = 2;
-    let   terminals   = [];
-
-    if (typeof customProps["NETWORK"] !== "undefined") {
-      for (let line of customProps["NETWORK"]) {
-        line = line.toUpperCase();
-        let ei = line.indexOf("=");
-        if (ei < 0) continue;
-        let key   = line.substring(0, ei).trim();
-        let value = line.substring(ei + 1).trim();
-        if (key === "HASPTERMINAL") {
-          //
-          //  haspTerminal=<name>,<tcp-port>,[,B<block-size>][,T<terminal-class>]
-          //
-          //    <terminal-class> : usually one of HASP or HPRE
-          //
-          let items = value.split(",");
-          if (items.length >= 2) {
-            let terminal = {
-              id:        items.shift(),
-              tcpPort:   parseInt(items.shift()),
-              termClass: "HPRE",
-              blockSize: 400
-            };
-            while (items.length > 0) {
-              let item = items.shift();
-              if (item.startsWith("B")) {
-                terminal.blockSize = parseInt(item.substring(1));
-              }
-              else if (item.startsWith("T")) {
-                terminal.termClass = item.substring(1).toUpperCase();
-              }
-            }
-            terminals.push(terminal);
-          }
-        }
-        else if (key === "HASPPORTS") {
-          let items = value.split(",");
-          if (items.length > 0) nextPort  = parseInt(items.shift());
-          if (items.length > 0) portCount = parseInt(items.shift());
-        }
-      }
-    }
-    terminals.sort((t1, t2) => {
-      let p1 = t1.tcpPort;
-      let p2 = t2.tcpPort;
-      if (p1 < p2) {
-        return -1;
-      }
-      else if (p1 > p2) {
-        return 1;
-      }
-      else if (t1.id.toUpperCase() < t2.id.toUpperCase()) {
-        return -1;
-      }
-      else if (t1.id.toUpperCase() > t2.id.toUpperCase()) {
-        return 1;
-      }
-      else {
-        return 0;
-      }
-    });
-    for (const terminal of terminals) {
-      if (portCount < 1) throw new Error("Insufficient number of HASP ports defined");
-      terminal.claPort = nextPort++;
-      portCount -= 1;
-    }
-    utilities.haspTerminals = terminals;
-    return utilities.haspTerminals;
-  },
-
   getHostDomainName: dtc => {
     return utilities.getHostRecord(dtc)
     .then(record => {
@@ -375,10 +357,8 @@ const utilities = {
 
   getHostId: dtc => {
     if (typeof utilities.hostId !== "undefined") return utilities.hostId;
-    const iniProps = dtc.getIniProperties(dtc);
-    let hostId = utilities.getPropertyValue(iniProps, "npu.nos287", "hostID", null);
-    hostId = utilities.getPropertyValue(utilities.getCustomProperties(dtc), "NETWORK", "hostID", hostId);
-    utilities.hostId = hostId !== null ? hostId.toUpperCase() : `M${utilities.getMachineId(dtc)}`;
+    const config = utilities.getNhpConfiguration(dtc);
+    utilities.hostId = (typeof config.hostId !== "undefined" && config.hostId !== null) ? config.hostId : `M${utilities.getMachineId(dtc)}`;
     return utilities.hostId;
   },
 
@@ -435,6 +415,318 @@ const utilities = {
     return utilities.machineId;
   },
 
+  getNhpConfiguration: dtc => {
+    if (typeof utilities.nhpConfiguration !== "undefined") return utilities.nhpConfiguration;
+    //
+    //  Initialize with default NOS 2.8.7 configuration from ready-to-run packages
+    //
+    let config = utilities.defaultNhpConfiguration;
+    const customProps = utilities.getCustomProperties(dtc);
+    if (typeof customProps["NETWORK"] === "undefined") return config;
+    //
+    //  First, scan the NETWORK section. If an MDI/NPU declaration is discovered before any MDI/NPU
+    //  parameter definitions, discard the default configuration, and start from scratch. Otherwise,
+    //  MDI/NPU parameter definitions will be added/updated in the default MDI0 configuration.
+    //
+    let mdiNo     = 0;
+    let npuNo     = 0;
+    let netDevice = config["MDI0"];
+    for (let line of customProps["NETWORK"]) {
+      let ei = line.indexOf("=");
+      if (ei < 0) continue;
+      let key = line.substring(0, ei).trim().toUpperCase();
+      if (key === "MDI" || key === "NPU") {
+        config = {
+          isDefault: false,
+          hostId: utilities.defaultNhpConfiguration.hostId
+        };
+        netDevice = {};
+        break;
+      }
+      else if (key === "CRAYSTATION"
+            || key === "DEFAULTROUTE"
+            || key === "HOSTID"
+            || key === "RHPNODE"
+            || key === "SAFNODE"
+            || key === "STKDRIVEPATH") {
+        continue;
+      }
+      else {
+        config.isDefault = false;
+        mdiNo += 1;
+        break;
+      }
+    }
+    //
+    //  Next, parse the whole NETWORK section and create/update the configuration
+    //  from it.
+    //
+    let nextHaspClaPort = 0;
+    let haspPortCount   = 0;
+    let nextNjeClaPort  = 0;
+    let njePortCount    = 0;
+    let nextTlfClaPort  = 0;
+    let tlfPortCount    = 0;
+    let node            = {};
+    for (let line of customProps["NETWORK"]) {
+      line   = line.toUpperCase();
+      let ei = line.indexOf("=");
+      if (ei < 0) continue;
+      let key    = line.substring(0, ei).trim();
+      let params = line.substring(ei + 1).trim().split(",");
+      if (params.length < 1) {
+        throw new Error(`${key} definition in NETWORK section of site.cfg has too few parameters`);
+      }
+      switch (key) {
+
+      default:
+        // ignore and do nothing
+        break;
+
+      case "ASYNCPORTS": // asyncPorts=<claPort>,<portCount>,<tcpPort>[,<lcfUser>]
+        if (params.length < 3) {
+          throw new Error(`${key} definition in NETWORK section of site.cfg has too few parameters`);
+        }
+        if (typeof netDevice.telnet === "undefined") netDevice.telnet = [];
+        netDevice.telnet.push(
+          {
+          firstClaPort: parseInt(params[0]),
+          claPortCount: parseInt(params[1]),
+          tcpPort: parseInt(params[2]),
+          user: params.length > 3 ? params.slice(3).join(",") : "IAFUSER"
+          }
+        );
+        break;
+
+      case "CDCNETNODE":
+        netDevice.cdcnetNode = parseInt(params[0]);
+        break;
+
+      case "CDCNETPRIVILEGEDTCPPORTOFFSET":
+        netDevice.cdcnetPrivilegedTcpPortOffset = parseInt(params[0]);
+        break;
+
+      case "CDCNETPRIVILEGEDUDPPORTOFFSET":
+        netDevice.cdcnetPrivilegedUdpPortOffset = parseInt(params[0]);
+        break;
+
+      case "COUPLERNODE":
+        netDevice.couplerNode = parseInt(params[0]);
+        break;
+
+      case "CYBISPORTS": // cybisPorts=<claPort>,<portCount>,<tcpPort>[,<lcfUser>]
+        if (params.length < 3) {
+          throw new Error(`${key} definition in NETWORK section of site.cfg has too few parameters`);
+        }
+        if (typeof netDevice.pterm === "undefined") netDevice.pterm = [];
+        netDevice.pterm.push(
+          {
+          firstClaPort: parseInt(params[0]),
+          claPortCount: parseInt(params[1]),
+          tcpPort: parseInt(params[2]),
+          user: params.length > 3 ? params.slice(3).join(",") : "CYBUSER"
+          }
+        );
+        break;
+
+      case "HASPPORTS": // haspPorts=<claPort>,<portCount>
+        if (params.length < 2) {
+          throw new Error(`${key} definition in NETWORK section of site.cfg has too few parameters`);
+        }
+        if (typeof netDevice.hasp === "undefined") netDevice.hasp = [];
+        nextHaspClaPort = parseInt(params[0]);
+        haspPortCount   = parseInt(params[1]);
+        break;
+
+      case "HASPTERMINAL": // haspTerminal=<name>,<tcpPort>,[,B<blockSize>][,T<terminalClass>]
+        if (params.length < 2) {
+          throw new Error(`${key} definition in NETWORK section of site.cfg has too few parameters`);
+        }
+        if (haspPortCount < 1) {
+          throw new Error(`No ports available for ${key} definition in NETWORK section of site.cfg`);
+        }
+        let blockSize = 400;
+        let termClass = "HPRE";
+        for (let i = 2; i < params.length; i++) {
+          if (params[i].startsWith("B")) {
+            blockSize = parseInt(params[i].substring(1));
+          }
+          else if (params[i].startsWith("T")) {
+            termclass = params[i].substring(1); 
+          }
+        }
+        netDevice.hasp.push(
+          {
+          firstClaPort: nextHaspClaPort++,
+          claPortCount: 1,
+          tcpPort: parseInt(params[1]),
+          termClass: termClass,
+          blockSize: blockSize,
+          user: `RBFUSER,MUSER=${params[0]}`
+          }
+        );
+        haspPortCount -= 1;
+        break;
+
+      case "HOSTID":
+        config.hostId = params[0];
+        break;
+
+      case "MDI": // MDI=<couplerNode>,<npuNode>,<channelNo>[,E<eqNo>][,P<pipNo>]
+      case "NPU": // NPU=<couplerNode>,<npuNode>,<channelNo>[,E<eqNo>][,P<pipNo>]
+        if (params.length < 3) {
+          throw new Error(`${key} definition in NETWORK section of site.cfg has too few parameters`);
+        }
+        let devName = `${key}${key === "MDI" ? mdiNo++ : npuNo++}`;
+        if (typeof config[devName] === "undefined") config[devName] = {};
+        netDevice             = config[devName];
+        netDevice.id          = devName;
+        netDevice.couplerNode = parseInt(params[0]);
+        netDevice.npuNode     = parseInt(params[1]);
+        netDevice.channelNo   = parseInt(params[2], 8);
+        netDevice.eqNo        = 7;
+        netDevice.pipNo       = Math.floor((mdiNo + npuNo - 1) / 2) + 1;
+        for (const param of params.slice(3)) {
+          if (param.startsWith("E")) {
+            netDevice.eqNo = parseInt(param.substring(1), 8);
+          }
+          else if (param.startsWith("P")) {
+            netDevice.pipNo = parseInt(param.substring(1));
+          }
+        }
+        if (devName === "MDI0") {
+          netDevice.cdcnetNode = 255;
+        }
+        nextHaspClaPort = 0;
+        haspPortCount   = 0;
+        nextNjeClaPort  = 0;
+        njePortCount    = 0;
+        nextTlfClaPort  = 0;
+        tlfPortCount    = 0;
+        break;
+
+      case "NJENODE": // njeNode=<nodename>,<software>,<lid>,<public-addr>,<link>
+                      //     [,<local-address>][,B<block-size>][,P<ping-interval>][,<mailer-address>]
+        if (params.length < 5) {
+          throw new Error(`${key} definition in NETWORK section of site.cfg has too few parameters`);
+        }
+        if (njePortCount < 1) {
+          throw new Error(`No ports available for ${key} definition in NETWORK section of site.cfg`);
+        }
+        node = {
+          id: params[0],
+          netDevice: netDevice,
+          firstClaPort: nextNjeClaPort++,
+          claPortCount: 1,
+          type: "NJE",
+          software: params[1],
+          lid: params[2],
+          publicAddress: params[3],
+          link: params[4],
+          user: "NJFUSER"
+        };
+        if (params.length > 5) {
+          node.localAddress = params[5];
+        }
+        for (let i = 6; i < params.length; i++) {
+          if (params[i].startsWith("B")) {
+            node.blockSize = parseInt(params[i].substring(1));
+          }
+          else if (params[i].startsWith("P")) {
+            node.pingInterval = parseInt(params[i].substring(1));
+          }
+          else if (params[i].indexOf("@") > 0) {
+            node.mailer = params[i];
+          }
+        }
+        netDevice.nje.push(node);
+        njePortCount -= 1;
+        break;
+
+      case "NJEPORTS": // njePorts=<claPort>,<portCount>
+        if (params.length < 2) {
+          throw new Error(`${key} definition in NETWORK section of site.cfg has too few parameters`);
+        }
+        if (typeof netDevice.nje === "undefined") netDevice.nje = [];
+        nextNjeClaPort = params[0];
+        njePortCount   = params[1];
+        break;
+
+      case "NPUNODE":
+        netDevice.npuNode = parseInt(params[0]);
+        break;
+
+      case "PRINTERPORTS": // printerPorts=<claPort>,<portCount>,<tcpPort>[,<lcfUser>]
+        if (params.length < 3) {
+          throw new Error(`${key} definition in NETWORK section of site.cfg has too few parameters`);
+        }
+        if (typeof netDevice.raw === "undefined") netDevice.raw = [];
+        netDevice.raw.push(
+          {
+          firstClaPort: parseInt(params[0]),
+          claPortCount: parseInt(params[1]),
+          tcpPort: parseInt(params[2]),
+          user: params.length > 3 ? params.slice(3).join(",") : "MFAM=CYBER,MUSER=PRINT05,MAPPL=PSU"
+          }
+        );
+        break;
+
+      case "TLFNODE": // tlfNode=<name>,<lid>,<spooler>,<addr>
+          //    [,R<remote-id>][,P<password>][,B<block-size>]
+        if (params.length < 4) {
+          throw new Error(`${key} definition in NETWORK section of site.cfg has too few parameters`);
+        }
+        if (tlfPortCount < 1) {
+          throw new Error(`No ports available for ${key} definition in NETWORK section of site.cfg`);
+        }
+        node = {
+          id: params[0],
+          netDevice: netDevice,
+          firstClaPort: nextTlfClaPort++,
+          claPortCount: 1,
+          type: "TLF",
+          lid: params[1],
+          spooler: params[2],
+          addr: params[3],
+          remoteId: "",
+          password: "",
+          blockSize: 400,
+          user: "TLFUSER"
+        };
+        if (typeof utilities.tlfSpoolerTypes[node.spooler] === "undefined") {
+          throw new Error(`Unrecognized TLF spooler type: ${node.spooler}`);
+        }
+        const spoolerInfo = utilities.tlfSpoolerTypes[node.spooler];
+        for (const key of Object.keys(spoolerInfo)) node[key] = spoolerInfo[key];
+        for (let i = 4; i < params.length; i++) {
+          if (params[i].startsWith("B")) {
+            node.blockSize = parseInt(params[i].substring(1));
+          }
+          else if (params[i].startsWith("P")) {
+            node.password = params[i].substring(1);
+          }
+          else if (params[i].startsWith("R")) {
+            node.remoteId = params[i].substring(1);
+          }
+        }
+        netDevice.tlf.push(node);
+        tlfPortCount -= 1;
+        break;
+
+      case "TLFPORTS": // tlfPorts=<claPort>,<portCount>
+        if (params.length < 2) {
+          throw new Error(`${key} definition in NETWORK section of site.cfg has too few parameters`);
+        }
+        if (typeof netDevice.tlf === "undefined") netDevice.tlf = [];
+        nextTlfClaPort = params[0];
+        tlfPortCount   = params[1];
+        break;
+      }
+    }
+    utilities.nhpConfiguration = config;
+    return config;
+  },
+
   getNjeTopology: dtc => {
     if (typeof utilities.njeTopology === "undefined") {
       if (fs.existsSync("files/nje-topology.json")) {
@@ -451,88 +743,49 @@ const utilities = {
         node.id   = name;
         node.type = "NJE";
       }
-      utilities.adjacentNjeNodes               = {};
-      utilities.nonadjacentNjeNodesWithLids    = {};
-      utilities.nonadjacentNjeNodesWithoutLids = {};
  
-      const hostID    = utilities.getHostId(dtc);
-      const mid       = utilities.getMachineId(dtc);
-      let   topology  = utilities.njeTopology;
-      let   nextPort  = 0x30;
-      let   portCount = 16;
+      let njeTopology = utilities.njeTopology;
 
-      const customProps = utilities.getCustomProperties(dtc);
-      if (typeof customProps["NETWORK"] !== "undefined") {
-        for (let line of customProps["NETWORK"]) {
-          line = line.toUpperCase();
-          let ei = line.indexOf("=");
-          if (ei < 0) continue;
-          let key   = line.substring(0, ei).trim();
-          let value = line.substring(ei + 1).trim();
-          if (key === "DEFAULTROUTE") {
-            utilities.defaultNjeRoute = value;
-          }
-          else if (key === "NJEPORTS") {
-            let items = value.split(",");
-            if (items.length > 0) nextPort  = parseInt(items.shift());
-            if (items.length > 0) portCount = parseInt(items.shift());
-          }
-          else if (key === "NJENODE") {
-            //
-            //  njeNode=<nodename>,<software>,<lid>,<public-addr>,<link>
-            //     [,<local-address>][,B<block-size>][,P<ping-interval>][,<mailer-address>]
-            let items = value.split(",");
-            if (items.length >= 5) {
-              let nodeName = items.shift();
-              let node = {
-                id: nodeName,
-                type: "NJE",
-                software: items.shift(),
-                lid: items.shift(),
-                publicAddress: items.shift(),
-                link: items.shift()
-              };
-              if (items.length > 0) {
-                node.localAddress = items.shift();
-              }
-              while (items.length > 0) {
-                let item = items.shift();
-                if (item.startsWith("B")) {
-                  node.blockSize = parseInt(item.substring(1));
-                }
-                else if (item.startsWith("P")) {
-                  node.pingInterval = parseInt(item.substring(1));
-                }
-                else if (item.indexOf("@") > 0) {
-                  node.mailer = item;
-                }
-              }
-              topology[nodeName] = node;
-            }
+      const nhpConfig = utilities.getNhpConfiguration(dtc);
+      for (const devName of Object.keys(nhpConfig)) {
+        if (typeof nhpConfig[devName].nje !== "undefined") {
+          for (const node of nhpConfig[devName].nje) {
+            njeTopology[node.id] = node;
           }
         }
       }
-      if (typeof topology[hostID] === "undefined") {
-        topology[hostID] = {
+
+      const hostID = utilities.getHostId(dtc);
+      const mid    = utilities.getMachineId(dtc);
+
+      utilities.adjacentNjeNodes               = {};
+      utilities.nonadjacentNjeNodesWithLids    = {};
+      utilities.nonadjacentNjeNodesWithoutLids = {};
+
+      if (typeof utilities.defaultNjeRoute === "undefined") {
+        utilities.defaultNjeRoute = utilities.getPropertyValue(utilities.getCustomProperties(dtc), "NETWORK", "defaultRoute", null);
+      }
+      if (typeof njeTopology[hostID] === "undefined") {
+        njeTopology[hostID] = {
           id: hostID,
           type: "NJE",
           software: "NJEF",
           lid: `M${mid}`
         };
-        if (utilities.defaultNjeRoute !== null) topology[hostID].link = utilities.defaultNjeRoute;
+        if (utilities.defaultNjeRoute !== null) njeTopology[hostID].link = utilities.defaultNjeRoute;
       }
-      if (typeof topology[hostID].link !== "undefined") {
-        let routingNode = topology[topology[hostID].link];
-        utilities.adjacentNjeNodes[topology[hostID].link] = routingNode;
+      if (typeof njeTopology[hostID].link !== "undefined") {
+        let routingNode = njeTopology[njeTopology[hostID].link];
+        utilities.adjacentNjeNodes[njeTopology[hostID].link] = routingNode;
       }
-      for (const key of Object.keys(topology).sort()) {
-        let node = topology[key];
+      for (const key of Object.keys(njeTopology).sort()) {
+        let node = njeTopology[key];
         if (node.link === hostID) {
           utilities.adjacentNjeNodes[key] = node;
         }
       }
-      for (const key of Object.keys(topology)) {
-        let node = topology[key];
+      for (const key of Object.keys(njeTopology)) {
+        let node = njeTopology[key];
         if (key !== hostID && typeof utilities.adjacentNjeNodes[key] === "undefined") {
           const route = utilities.calculateNjeRoute(dtc, node);
           if (route === null) node.route = utilities.getDefaultNjeRoute(dtc);
@@ -543,20 +796,6 @@ const utilities = {
             utilities.nonadjacentNjeNodesWithoutLids[key] = node;
           }
         }
-      }
-      const toHex = value => {
-        return value < 16 ? `0${value.toString(16)}` : value.toString(16);
-      };
-      let   lineNumber = 1;
-      const npuNode    = utilities.getNpuNode(dtc);
-      for (const key of Object.keys(utilities.adjacentNjeNodes).sort()) {
-        if (portCount < 1) throw new Error("Insufficient number of NJE ports defined");
-        let node          = topology[key];
-        let portNum       = toHex(nextPort++);
-        node.terminalName = `TE${toHex(npuNode)}P${portNum}`;
-        node.claPort      = portNum;
-        node.lineNumber   = lineNumber++;
-        portCount -= 1;
       }
     }
     return utilities.njeTopology;
@@ -576,10 +815,9 @@ const utilities = {
     return utilities.nonadjacentNjeNodesWithoutLids;
   },
 
-  getNpuNode: dtc => {
-    const hostId      = utilities.getHostId(dtc);
-    const rhpTopology = utilities.getRhpTopology(dtc);
-    return rhpTopology[hostId].npuNode;
+  getNpuNode: (dtc, devId) => {
+    const config = utilities.getNhpConfiguration(dtc);
+    return config[devId].npuNode;
   },
 
   getPropertyValue: (propertyObject, sectionName, propertyName, defaultValue) => {
@@ -601,23 +839,7 @@ const utilities = {
 
   getRhpTopology: dtc => {
     if (typeof utilities.rhpTopology !== "undefined") return utilities.rhpTopology;
-    utilities.rhpTopology = {};
-    const hostId    = utilities.getHostId(dtc);
-    const mid       = utilities.getMachineId(dtc);
-    const iniProps  = dtc.getIniProperties(dtc);
-    let couplerNode = parseInt(utilities.getPropertyValue(iniProps, "npu.nos287", "couplerNode", "1"));
-    let npuNode     = parseInt(utilities.getPropertyValue(iniProps, "npu.nos287", "npuNode",     "2"));
-    let localNode = {
-      id: hostId,
-      type: "RHP",
-      software: "NOS",
-      lid: `M${mid}`,
-      addr: `${dtc.getHostIpAddress()}:2550`,
-      couplerNode: couplerNode,
-      npuNode: npuNode,
-      links: {}
-    };
-    utilities.rhpTopology[hostId] = localNode;
+    utilities.rhpTopology = [];
     const customProps = utilities.getCustomProperties(dtc);
     if (typeof customProps["NETWORK"] !== "undefined") {
       for (let line of customProps["NETWORK"]) {
@@ -628,29 +850,35 @@ const utilities = {
         let value = line.substring(ei + 1).trim();
         if (key === "RHPNODE") {
           //
-          //  rhpNode=<host-id>,<lid>,<addr>,<coupler-node>,<npu-node>,<remote-host-id>,<cla-port>[,<remote-host-id>,<cla-port>...]
+          //  rhpNode=<host-id>,<lid>,<addr>,<coupler-node>,<npu-node>,<remote-host-id>,<npu-node>,<local-cla-port>
+          //    [,<remote-host-id>,<npu-node>,<local-cla-port>...]
           //
           let items = value.split(",");
-          if (items.length >= 7) {
-            let node = {
-              id: items.shift(),
-              lid: items.shift(),
-              addr: items.shift(),
-              couplerNode: parseInt(items.shift()),
-              npuNode: parseInt(items.shift()),
-              type: "RHP",
-              software: "NOS",
-              links: {}
-            };
-            while (items.length >= 2) {
-              let linkName = items.shift();
-              node.links[linkName] = parseInt(items.shift());
-            };
-            if (items.length > 0) {
-              throw new Error(`Invalid rhpNode definition: CLA port missing for link ${items.shift()}`);
-            }
-            utilities.rhpTopology[node.id] = node;
+          if (items.length < 9) {
+            throw new Error("Invalid rhpNode definition: at least 9 parameters required");
           }
+          let node = {
+            id: items.shift(),
+            lid: items.shift(),
+            addr: items.shift(),
+            couplerNode: parseInt(items.shift()),
+            npuNode: parseInt(items.shift()),
+            type: "RHP",
+            software: "NOS",
+            links: {}
+          };
+          while (items.length >= 3) {
+            let linkName         = items.shift();
+            let link             = {};
+            link.id              = linkName;
+            link.npuNode         = parseInt(items.shift());
+            link.localClaPort    = parseInt(items.shift());
+            node.links[linkName] = link;
+          };
+          if (items.length > 0) {
+            throw new Error(`Invalid rhpNode definition: NPU node number, local CLA port, and/or remote CLA port missing for link ${items.shift()}`);
+          }
+          utilities.rhpTopology.push(node);
         }
       }
     }
@@ -723,88 +951,19 @@ const utilities = {
   },
 
   getTlfTopology: dtc => {
-
-    if (typeof utilities.tlfTopology !== "undefined") return utilities.tlfTopology;
-
-    const spoolerTypes = {
-      JES2: {
-        mfType: "MVS",
-        skipCount: 2
-      },
-      NOS: {
-        mfType: "NOS2",
-        skipCount: 2
-      },
-      PRIME: {
-        mfType: "PRIME",
-        skipCount: 0
-      },
-      RSCS: {
-        mfType: "VM/CMS",
-        skipCount: 2
-      }
-    };
-
-    const customProps     = utilities.getCustomProperties(dtc);
-    let   nextPort        = 0x28;
-    let   portCount       = 8;
-    utilities.tlfTopology = {};
-
-    if (typeof customProps["NETWORK"] !== "undefined") {
-      for (let line of customProps["NETWORK"]) {
-        line = line.toUpperCase();
-        let ei = line.indexOf("=");
-        if (ei < 0) continue;
-        let key   = line.substring(0, ei).trim();
-        let value = line.substring(ei + 1).trim();
-        if (key === "TLFNODE") {
-          //
-          //  tlfNode=<name>,<lid>,<spooler>,<addr>
-          //    [,R<remote-id>][,P<password>][,B<block-size>]
-          let items = value.split(",");
-          if (items.length >= 4) {
-            let node = {
-              id: items.shift(),
-              type: "TLF",
-              lid: items.shift(),
-              spooler: items.shift(),
-              addr: items.shift(),
-              remoteId: "",
-              password: "",
-              blockSize: 400
-            };
-            if (typeof spoolerTypes[node.spooler] === "undefined") {
-              throw new Error(`Unrecognized TLF spooler type: ${node.spooler}`);
+    if (typeof utilities.tlfTopology === "undefined") {
+      const config = utilities.getNhpConfiguration(dtc);
+      utilities.tlfTopology = {};
+      for (const key of Object.keys(config)) {
+        if (key.startsWith("MDI") || key.startsWith("NPU")) {
+          let netDevice = config[key];
+          if (typeof netDevice.tlf !== "undefined") {
+            for (const node of netDevice.tlf) {
+              utilities.tlfTopology[node.id] = node;
             }
-            const spoolerInfo = spoolerTypes[node.spooler];
-            for (const key of Object.keys(spoolerInfo)) node[key] = spoolerInfo[key];
-            while (items.length > 0) {
-              let item = items.shift();
-              if (item.startsWith("B")) {
-                node.blockSize = parseInt(item.substring(1));
-              }
-              else if (item.startsWith("P")) {
-                node.password = item.substring(1);
-              }
-              else if (item.startsWith("R")) {
-                node.remoteId = item.substring(1);
-              }
-            }
-            utilities.tlfTopology[node.id] = node;
           }
         }
-        else if (key === "TLFPORTS") {
-          let items = value.split(",");
-          if (items.length > 0) nextPort  = parseInt(items.shift());
-          if (items.length > 0) portCount = parseInt(items.shift());
-        }
       }
-    }
-    const nodeNames = Object.keys(utilities.tlfTopology).sort();
-    for (const name of nodeNames) {
-      if (portCount < 1) throw new Error("Insufficient number of TLF ports defined");
-      utilities.tlfTopology[name].claPort = nextPort++;
-      portCount -= 1;
     }
     return utilities.tlfTopology;
   },
@@ -883,19 +1042,31 @@ const utilities = {
     return (progress.length > maxProgressLen) ? progress.length : maxProgressLen;
   },
 
+  tlfSpoolerTypes: {
+    JES2: {
+      mfType: "MVS",
+      skipCount: 2
+    },
+    NOS: {
+      mfType: "NOS2",
+      skipCount: 2
+    },
+    PRIME: {
+      mfType: "PRIME",
+      skipCount: 0
+    },
+    RSCS: {
+      mfType: "VM/CMS",
+      skipCount: 2
+    }
+  },
+
   updateNDL: (dtc, modset) => {
     if (Array.isArray(modset)) {
       modset = `${modset.join("\n")}\n`;
     }
     const job = [
-      "$GET,NDLMODS/NA.",
-      "$IF,FILE(NDLMODS,AS),EDIT.",
-      "$  COPY,INPUT,MOD.",
-      "$  REWIND,MOD.",
-      "$  LIBEDIT,P=NDLMODS,B=MOD,I=0,C.",
-      "$ELSE,EDIT.",
-      "$  COPY,INPUT,NDLMODS.",
-      "$ENDIF,EDIT.",
+      "$COPY,INPUT,NDLMODS.",
       "$REPLACE,NDLMODS."
     ];
     const options = {
@@ -904,7 +1075,8 @@ const utilities = {
       password: utilities.getPropertyValue(utilities.getCustomProperties(dtc), "PASSWORDS", "NETADMN", "NETADMN"),
       data:     modset
     };
-    return dtc.createJobWithOutput(12, 4, job, options)
+    return dtc.say("Update NDL ...")
+    .then(() => dtc.createJobWithOutput(12, 4, job, options))
     .then(() => dtc.say("NDL updated"));
   },
 

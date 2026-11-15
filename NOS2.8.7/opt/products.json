@@ -60,8 +60,6 @@
       {
         "name": "cybis-base",
         "pre": [
-          "cybis-update-ndl.js",
-          "../compile-ndl.js",
           "cybis-eqp-ipr.job",
           "cybis-start.job",
           "cybis-start.pre",

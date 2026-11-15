@@ -15,7 +15,12 @@ const hostID      = utilities.getHostId(dtc);
 const njeTopology = utilities.getNjeTopology(dtc);
 const rhpTopology = utilities.getRhpTopology(dtc);
 
+const toHex = value => {
+  return (value < 16 ? `0${value.toString(16)}` : value.toString(16)).toUpperCase();
+};
+
 let hcfSource  = [];
+let lineNumber = 1;
 let nodeNumber = 1;
 
 //  1. Generate local system's node definition
@@ -34,6 +39,10 @@ hcfSource = hcfSource.concat([
   "*  ADJACENT NJE NODES",
   "*"
 ]);
+let rhpLidMap = {};
+for (const node of rhpTopology) {
+  rhpLidMap[node.id] = node.lid;
+}
 let names = Object.keys(utilities.getAdjacentNjeNodes(dtc)).sort();
 for (const name of names) {
   let node = njeTopology[name];
@@ -41,7 +50,7 @@ for (const name of names) {
     throw new Error(`Adjcent node ${node.id} does not have a LID`);
   }
   let lid = node.lid;
-  if (typeof rhpTopology[name] !== "undefined" && rhpTopology[name].lid === lid) {
+  if (typeof rhpLidMap[name] !== "undefined" && rhpLidMap[name] === lid) {
     lid = `N${lid.substring(1)}`;
   }
   node.nodeNumber = nodeNumber++;
@@ -62,7 +71,7 @@ if (names.length > 0) {
     let node = njeTopology[name];
     node.nodeNumber = nodeNumber++;
     let lid = node.lid;
-    if (typeof rhpTopology[name] !== "undefined" && rhpTopology[name].lid === lid) {
+    if (typeof rhpLidMap[name] !== "undefined" && rhpLidMap[name] === lid) {
       lid = `N${lid.substring(1)}`;
     }
     hcfSource.push(
@@ -92,9 +101,12 @@ hcfSource = hcfSource.concat([
 names = Object.keys(utilities.getAdjacentNjeNodes(dtc)).sort();
 for (const name of names) {
   let node = njeTopology[name];
-  hcfSource.push(
-    `LNE,${node.lineNumber},${node.terminalName},1000.`
-  );
+  if (typeof node.netDevice !== "undefined") {
+    node.lineNumber = lineNumber++;
+    hcfSource.push(
+      `LNE,${node.lineNumber},TE${toHex(node.netDevice.npuNode)}P${toHex(node.firstClaPort)},1000.`
+    );
+  }
 }
 
 //  5. Generate auto-start line definitions
@@ -105,9 +117,11 @@ hcfSource = hcfSource.concat([
 ]);
 for (const name of names) {
   let node = njeTopology[name];
-  hcfSource.push(
-    `ASLNE,${node.lineNumber},ST1,SR1${node.software === "NJEF" ? ",JT1,JR1" : ""}.`
-  );
+  if (typeof node.netDevice !== "undefined") {
+    hcfSource.push(
+      `ASLNE,${node.lineNumber},ST1,SR1${node.software === "NJEF" ? ",JT1,JR1" : ""}.`
+    );
+  }
 }
 
 //  6. Generate FAMILY statements for routing to non-adjacent nodes without LIDs.
@@ -124,7 +138,7 @@ if (names.length > 0) {
   for (const name of names) {
     let node = njeTopology[name];
     let lid = njeTopology[node.route].lid;
-    if (typeof rhpTopology[node.route] !== "undefined" && rhpTopology[node.route].lid === lid) {
+    if (typeof rhpLidMap[node.route] !== "undefined" && rhpLidMap[node.route] === lid) {
       lid = `N${lid.substring(1)}`;
     }
     hcfSource.push(

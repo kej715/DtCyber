@@ -10,6 +10,11 @@ const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
+if (!utilities.isInstalled("mailer")) {
+  process.stdout.write("MAILER is not installed\n");
+  process.exit(0);
+}
+
 const hostId   = utilities.getHostId(dtc);
 const timeZone = utilities.getTimeZone();
 

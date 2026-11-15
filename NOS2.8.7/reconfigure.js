@@ -161,9 +161,18 @@ const processEqpdProps = () => {
  *  A promise that is resolved when all NETWORK properties have been processed.
  */
 const processNetworkProps = () => {
-  oldHostID = utilities.getPropertyValue(iniProps,    "npu.nos287", "hostID", oldHostID);
-  newHostID = utilities.getPropertyValue(customProps, "NETWORK",    "hostID", newHostID);
-  let value = utilities.getPropertyValue(iniProps,    "sysinfo",    "CRS",    null);
+  oldHostID = utilities.getPropertyValue(iniProps, "npu.nos287", "hostID", oldHostID);
+  for (const defn of iniProps["equipment.nos287"]) {
+    if (defn.startsWith("MDI") || defn.startsWith("NPU")) {
+      let tokens = defn.split(",");
+      if (tokens.length > 4) {
+        oldHostID = utilities.getPropertyValue(iniProps, tokens[4], "hostID", oldHostID);
+        break;
+      }
+    }
+  }
+  newHostID = utilities.getHostId(dtc);
+  let value = utilities.getPropertyValue(iniProps, "sysinfo", "CRS", null);
   if (value !== null) {
     let items = value.split(",");
     oldCrsInfo.lid       = items[0];
@@ -461,33 +470,14 @@ dtc.connect()
 .then(() => updateLIDCMxx())
 .then(() => updateTcpResolver())
 .then(() => dtc.disconnect())
-.then(() => dtc.exec("node", ["opt/rhp-update-ndl"]))
-.then(() => {
-  return utilities.isInstalled("cybis-base") ? dtc.exec("node", ["opt/cybis-update-ndl"]) : Promise.resolve();
-})
-.then(() => {
-  return utilities.isInstalled("njf") ? dtc.exec("node", ["opt/njf-update-ndl"]) : Promise.resolve();
-})
-.then(() => {
-  return utilities.isInstalled("rbf5") ? dtc.exec("node", ["opt/rbf5-update-ndl"]) : Promise.resolve();
-})
-.then(() => {
-  return utilities.isInstalled("tlf") ? dtc.exec("node", ["opt/tlf-update-ndl"]) : Promise.resolve();
-})
+.then(() => dtc.exec("node", ["update-nhp-ndl"]))
 .then(() => dtc.exec("node", ["compile-ndl"]))
-.then(() => dtc.exec("node", ["rhp-configure", "-ndl"]))
-.then(() => {
-  return utilities.isInstalled("njf") ? dtc.exec("node", ["njf-configure", "-ndl"]) : Promise.resolve();
-})
-.then(() => {
-  return utilities.isInstalled("rbf5") ? dtc.exec("node", ["rbf-configure", "-ndl"]) : Promise.resolve();
-})
-.then(() => {
-  return utilities.isInstalled("tlf") ? dtc.exec("node", ["tlf-configure", "-ndl"]) : Promise.resolve();
-})
-.then(() => {
-  return utilities.isInstalled("mailer") ? dtc.exec("node", ["mailer-configure"]) : Promise.resolve();
-})
+.then(() => dtc.exec("node", ["update-nhp-ovl"]))
+.then(() => dtc.exec("node", ["update-nhp-eqpd"]))
+.then(() => dtc.exec("node", ["rbf-configure"]))
+.then(() => dtc.exec("node", ["tlf-configure"]))
+.then(() => dtc.exec("node", ["njf-configure"]))
+.then(() => dtc.exec("node", ["mailer-configure"]))
 .then(() => {
   if (utilities.isInstalled("netmail")) {
     return dtc.exec("node", ["netmail-configure"])
@@ -515,7 +505,7 @@ dtc.connect()
       return dtc.say("Rebuild CRS ...")
       .then(() => dtc.exec("node", ["install-product","-f","crs"]));
     }
-    else if (oldCrsInfo.channel !== newCrsInfo.channel) {
+    else {
       return dtc.say("Update CRS ...")
       .then(() => dtc.exec("node", ["opt/crs.post"]));
     }

@@ -22,29 +22,15 @@ const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
-const topology = utilities.getTlfTopology(dtc);
+if (!utilities.isInstalled("tlf")) {
+  process.stdout.write("TLF is not installed\n");
+  process.exit(0);
+}
 
 dtc.say("Start TLF configuration ...")
-.then(() => {
-  if (process.argv.indexOf("-ndl") === -1) {
-    return dtc.exec("node", ["opt/tlf-update-ndl"])
-    .then(() => dtc.exec("node", ["compile-ndl"]));
-  }
-  else {
-    return Promise.resolve();
-  }
-})
 .then(() => dtc.exec("node", ["opt/tlf-generate-tcf"]))
-.then(() => {
-  if (Object.keys(topology).length > 0) {
-    return dtc.exec("node", ["opt/tlf-compile-tcf"])
-    .then(() => dtc.exec("node", ["opt/tlf-update-ovl"]))
-    .then(() => dtc.exec("node", ["lid-configure"]));
-  }
-  else {
-    return Promise.resolve();
-  }
-})
+.then(() => dtc.exec("node", ["opt/tlf-compile-tcf"]))
+.then(() => dtc.exec("node", ["lid-configure"]))
 .then(() => dtc.say("TLF configuration completed successfully"))
 .then(() => {
   process.exit(0);

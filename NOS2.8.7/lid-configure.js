@@ -97,13 +97,12 @@ if (isNjfInstalled) {
   }
 }
 if (isRhpInstalled) {
-  for (const name of Object.keys(rhpTopology)) {
-    if (name === hostID) continue;
-    let node = rhpTopology[name];
-    if (typeof topology[name] !== "undefined" && topology[name].type === "NJE" && node.lid === topology[name].lid) {
+  for (const node of rhpTopology) {
+    if (node.id === hostID) continue;
+    if (typeof topology[node.id] !== "undefined" && topology[node.id].type === "NJE" && node.lid === topology[node.id].lid) {
       node.njeLid = `N${node.lid.substring(1)}`;
     }
-    topology[name] = node;
+    topology[node.id] = node;
   }
 }
 //

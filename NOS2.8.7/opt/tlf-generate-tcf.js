@@ -9,15 +9,15 @@ const utilities = require("./utilities");
 
 const dtc = new DtCyber();
 
-const customProps = utilities.getCustomProperties(dtc);
-const mid         = utilities.getMachineId(dtc);
-const npuNode     = utilities.getNpuNode(dtc);
-const topology    = utilities.getTlfTopology(dtc);
-const nodeNames   = Object.keys(topology).sort();
-
 const toHex = value => {
   return value < 16 ? `0${value.toString(16)}` : value.toString(16);
 };
+
+const customProps = utilities.getCustomProperties(dtc);
+const mid         = utilities.getMachineId(dtc);
+const topology    = utilities.getTlfTopology(dtc);
+
+const nodeNames = Object.keys(topology).sort();
 
 //
 // Generate the source for the TLF configuration file.
@@ -44,7 +44,7 @@ tcfSource = tcfSource.concat([
 for (const name of nodeNames) {
   let node = topology[name];
   tcfSource = tcfSource.concat([
-    `CO${toHex(npuNode)}P${toHex(node.claPort)}=${node.spooler},${node.remoteId},${node.password},,,,${node.lid}.`
+    `CO${toHex(node.netDevice.npuNode)}P${toHex(node.firstClaPort)}=${node.spooler},${node.remoteId},${node.password},,,,${node.lid}.`
   ]);
 }
 
