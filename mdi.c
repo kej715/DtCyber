@@ -341,7 +341,16 @@ void mdiInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     netDevice->eqNo      = eqNo;
     netDevice->unitNo    = unitNo;
     sprintf(netDevice->name, "mdi%d", mdi->id);
-    if (deviceName != NULL && strlen(deviceName) > 0)
+    if (deviceName == NULL || strlen(deviceName) == 0)
+        {
+        if (netDevCount > 1)
+            {
+            logDtError(LogErrorLocation, "MDI equipment definition for %s requires reference to configuration section\n", netDevice->name);
+            exit(1);
+            }
+        deviceName = (strlen(npuConnections) > 0) ? npuConnections : NULL;
+        }
+    if (deviceName != NULL)
         {
         netDevice->sectionName = (char *)malloc(strlen(deviceName) + 1);
         if (netDevice->sectionName == NULL)
@@ -521,23 +530,13 @@ static void *mdiThread(void *param)
     u8          byte;
     MdiParam    *mdi;
     u8          prio;
-    char        *sectionName;
 
     /*
     **  Parse data communication configuration
     */
     netDevice   = (NetDevParam *)param;
     mdi         = (MdiParam *)netDevice->devDependent;
-    sectionName = netDevice->sectionName;
-    if (sectionName == NULL)
-        {
-        sectionName = npuConnections;
-        if (strlen(sectionName) == 0)
-            {
-            sectionName = NULL;
-            }
-        }
-    initNpuConnections(sectionName);
+    initNpuConnections(netDevice->sectionName);
 
     /*
     **  Print a friendly message.

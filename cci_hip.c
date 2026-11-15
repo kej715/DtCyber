@@ -275,7 +275,16 @@ void cciInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     netDevice->eqNo      = eqNo;
     netDevice->unitNo    = unitNo;
     sprintf(netDevice->name, "hcp%d", cci->id);
-    if (deviceName != NULL && strlen(deviceName) > 0)
+    if (deviceName == NULL || strlen(deviceName) == 0)
+        {
+        if (netDevCount > 1)
+            {
+            logDtError(LogErrorLocation, "HCP equipment definition for %s requires reference to configuration section\n", netDevice->name);
+            exit(1);
+            }
+        deviceName = (strlen(npuConnections) > 0) ? npuConnections : NULL;
+        }
+    if (deviceName != NULL)
         {
         netDevice->sectionName = (char *)malloc(strlen(deviceName) + 1);
         if (netDevice->sectionName == NULL)
@@ -480,7 +489,6 @@ static void *cciThread(void *param)
 #endif
     {
     CciParam *cci;
-    char     *sectionName;
     u8       orderCode;
 
     /*
@@ -488,16 +496,7 @@ static void *cciThread(void *param)
     */
     netDevice   = (NetDevParam *)param;
     cci         = (CciParam *)netDevice->devDependent;
-    sectionName = netDevice->sectionName;
-    if (sectionName == NULL)
-        {
-        sectionName = npuConnections;
-        if (strlen(sectionName) == 0)
-            {
-            sectionName = NULL;
-            }
-        }
-    initNpuConnections(sectionName);
+    initNpuConnections(netDevice->sectionName);
 
     /*
     ** Adjust coupler and npu node address

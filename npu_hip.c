@@ -277,7 +277,16 @@ void npuInit(u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
     netDevice->eqNo      = eqNo;
     netDevice->unitNo    = unitNo;
     sprintf(netDevice->name, "npu%d", npu->id);
-    if (deviceName != NULL && strlen(deviceName) > 0)
+    if (deviceName == NULL || strlen(deviceName) == 0)
+        {
+        if (netDevCount > 1)
+            {
+            logDtError(LogErrorLocation, "NPU equipment definition for %s requires reference to configuration section\n", netDevice->name);
+            exit(1);
+            }
+        deviceName = (strlen(npuConnections) > 0) ? npuConnections : NULL;
+        }
+    if (deviceName != NULL)
         {
         netDevice->sectionName = (char *)malloc(strlen(deviceName) + 1);
         if (netDevice->sectionName == NULL)
@@ -497,23 +506,13 @@ static void *npuThread(void *param)
     PpWord      orderType;
     u8          orderValue;
     u8          prio;
-    char        *sectionName;
 
     /*
     **  Parse data communication configuration
     */
     netDevice   = (NetDevParam *)param;
     npu         = (NpuParam *)netDevice->devDependent;
-    sectionName = netDevice->sectionName;
-    if (sectionName == NULL)
-        {
-        sectionName = npuConnections;
-        if (strlen(sectionName) == 0)
-            {
-            sectionName = NULL;
-            }
-        }
-    initNpuConnections(sectionName);
+    initNpuConnections(netDevice->sectionName);
 
     /*
     **  Print a friendly message.

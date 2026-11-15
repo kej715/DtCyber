@@ -1697,7 +1697,7 @@ void initNpuConnections(char *sectionName)
 
     npuNetPreset();
 
-    if (sectionName == NULL)
+    if (sectionName == NULL || strlen(sectionName) == 0)
         {
         /*
         **  Default is the classic port 6610, 10 connections starting at CLA port 01 and raw TCP connection.
