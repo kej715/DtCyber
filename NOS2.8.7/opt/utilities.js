@@ -763,7 +763,7 @@ const utilities = {
       utilities.nonadjacentNjeNodesWithoutLids = {};
 
       if (typeof utilities.defaultNjeRoute === "undefined") {
-        utilities.defaultNjeRoute = utilities.getPropertyValue(utilities.getCustomProperties(dtc), "NETWORK", "defaultRoute", null);
+        utilities.defaultNjeRoute = utilities.getDefaultNjeRoute(dtc);
       }
       if (typeof njeTopology[hostID] === "undefined") {
         njeTopology[hostID] = {

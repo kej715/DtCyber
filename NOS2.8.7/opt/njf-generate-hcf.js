@@ -137,12 +137,14 @@ if (names.length > 0) {
   let n = 1;
   for (const name of names) {
     let node = njeTopology[name];
-    let lid = njeTopology[node.route].lid;
-    if (typeof rhpLidMap[node.route] !== "undefined" && rhpLidMap[node.route] === lid) {
+    let route = (typeof node.route !== "undefined" && node.route !== null) ? node.route : utilities.getDefaultNjeRoute(dtc);
+    let lid = njeTopology[route].lid;
+    if (typeof rhpLidMap[route] !== "undefined" && rhpLidMap[route] === lid) {
       lid = `N${lid.substring(1)}`;
     }
+process.stdout.write(`FAMILY,${node.id},NET${n++},${lid},${route}.\n`);
     hcfSource.push(
-      `FAMILY,${node.id},NET${n++},${lid},${node.route}.`
+      `FAMILY,${node.id},NET${n++},${lid},${route}.`
     );
   }
 }
