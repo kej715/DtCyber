@@ -50,50 +50,48 @@ const utilities = {
       cdcnetNode: 255,
       cdcnetPrivilegedTcpPortOffset: 0,
       cdcnetPrivilegedUdpPortOffset: 0,
-      terminals: {
-        telnet: [
-          {
-          firstClaPort: 0x04,
-          claPortCount: 16,
-          tcpPort: 23,
-          user: "IAFUSER"
-          }
-        ],
-        pterm: [
-          {
-          firstClaPort: 0x14,
-          claPortCount: 16,
-          tcpPort: 8005,
-          user: "CYBUSER"
-          }
-        ],
-        hasp: [
-          {
-          firstClaPort: 0x24,
-          claPortCount: 1,
-          tcpPort: 2553,
-          termClass: "HPRE", // default
-          blockSize: 400,    // default
-          user: "RBFUSER,MUSER=RJE1"
-          },
-          {
-          firstClaPort: 0x25,
-          claPortCount: 1,
-          tcpPort: 2554,
-          termClass: "HPRE", // default
-          blockSize: 400,    // default
-          user: "RBFUSER,MUSER=RJE2"
-          }
-        ],
-        printers: [
-          {
-          firstClaPort: 0x03,
-          claPortCount: 1,
-          tcpPort: 2552,
-          user: "MFAM=CYBER,MUSER=PRINT05,MAPPL=PSU"
-          }
-        ]
-      }
+      telnet: [
+        {
+        firstClaPort: 0x04,
+        claPortCount: 16,
+        tcpPort: 23,
+        user: "IAFUSER"
+        }
+      ],
+      pterm: [
+        {
+        firstClaPort: 0x14,
+        claPortCount: 16,
+        tcpPort: 8005,
+        user: "CYBUSER"
+        }
+      ],
+      hasp: [
+        {
+        firstClaPort: 0x24,
+        claPortCount: 1,
+        tcpPort: 2553,
+        termClass: "HPRE", // default
+        blockSize: 400,    // default
+        user: "RBFUSER,MUSER=RJE1"
+        },
+        {
+        firstClaPort: 0x25,
+        claPortCount: 1,
+        tcpPort: 2554,
+        termClass: "HPRE", // default
+        blockSize: 400,    // default
+        user: "RBFUSER,MUSER=RJE2"
+        }
+      ],
+      printers: [
+        {
+        firstClaPort: 0x03,
+        claPortCount: 1,
+        tcpPort: 2552,
+        user: "MFAM=CYBER,MUSER=PRINT05,MAPPL=PSU"
+        }
+      ]
     }
   },
 
@@ -445,11 +443,13 @@ const utilities = {
       }
       else if (key === "CRAYSTATION"
             || key === "DEFAULTROUTE"
-            || key === "HOSTID"
             || key === "RHPNODE"
             || key === "SAFNODE"
             || key === "STKDRIVEPATH") {
         continue;
+      }
+      else if (key === "HOSTID") {
+        config.isDefault = false;
       }
       else {
         config.isDefault = false;

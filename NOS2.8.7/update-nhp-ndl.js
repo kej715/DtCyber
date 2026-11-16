@@ -465,7 +465,7 @@ ndlModset = ndlModset.concat(
   "*/ END Of MODSET"
 );
 
-for (const line of ndlModset) process.stdout.write(`${line}\n`);
+//for (const line of ndlModset) process.stdout.write(`${line}\n`);
 
 dtc.connect()
 .then(() => dtc.expect([ {re:/Operator> $/} ]))
