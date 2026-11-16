@@ -142,7 +142,6 @@ if (names.length > 0) {
     if (typeof rhpLidMap[route] !== "undefined" && rhpLidMap[route] === lid) {
       lid = `N${lid.substring(1)}`;
     }
-process.stdout.write(`FAMILY,${node.id},NET${n++},${lid},${route}.\n`);
     hcfSource.push(
       `FAMILY,${node.id},NET${n++},${lid},${route}.`
     );
