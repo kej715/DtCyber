@@ -84,7 +84,7 @@ const utilities = {
         user: "RBFUSER,MUSER=RJE2"
         }
       ],
-      printers: [
+      raw: [
         {
         firstClaPort: 0x03,
         claPortCount: 1,
