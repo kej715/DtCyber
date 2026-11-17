@@ -151,7 +151,7 @@ for (const key of configKeys) {
         if (termDef.claPortCount > 1) {
           ndlModset = ndlModset.concat(
           `LI${toHex(netDevice.npuNode)}P:   GROUP,    PORT=${toHex(termDef.firstClaPort)},L9600,NI=${termDef.claPortCount}.`,
-          `         PR${toHex(netDevice.npuNode)}P:    TERMDEV,TASX364,AUTOCON,HN=${toHex(netDevice.couplerNode)},LK=YES,OC=YES,`,
+          `         PR${toHex(netDevice.npuNode)}P:    TERMDEV,TASX364,AUTOCON,HN=${netDevice.couplerNode},LK=YES,OC=YES,`,
           "                   EP=NO,PA=N,PW=0,PL=0,ABL=3,DBL=2."
           );
         }
@@ -180,7 +180,7 @@ for (const key of configKeys) {
       for (const termDef of netDevice.telnet) {
         ndlModset = ndlModset.concat(
         `LI${toHex(netDevice.npuNode)}P:   GROUP,    PORT=${toHex(termDef.firstClaPort)},L9600,NI=${termDef.claPortCount}.`,
-        `         TE${toHex(netDevice.npuNode)}P:    TERMDEV, TASX364,HN=${toHex(netDevice.couplerNode)}.`
+        `         TE${toHex(netDevice.npuNode)}P:    TERMDEV, TASX364,HN=${netDevice.couplerNode}.`
         );
       }
     }
@@ -200,7 +200,7 @@ for (const key of configKeys) {
       for (const termDef of netDevice.pterm) {
         ndlModset = ndlModset.concat(
         `LI${toHex(netDevice.npuNode)}P:   GROUP,    PORT=${toHex(termDef.firstClaPort)},L9600,NI=${termDef.claPortCount}.`,
-        `         TE${toHex(netDevice.npuNode)}P:    TERMDEV, TASX364,AUTOCON,HN=${toHex(netDevice.couplerNode)},ABL=7.`
+        `         TE${toHex(netDevice.npuNode)}P:    TERMDEV, TASX364,AUTOCON,HN=${netDevice.couplerNode},ABL=7.`
         );
       }
     }
