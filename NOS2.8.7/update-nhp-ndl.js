@@ -248,11 +248,11 @@ for (const key of configKeys) {
         `*  ${termDef.id}`,
         `LI${toHex(netDevice.npuNode)}P${port}: LINE      PORT=${port},LTYPE=S2,TIPTYPE=TT12.`,
         "         TERMINAL  TC=TC28,STIP=USER.",
-        `         CO04P${port}:  DEVICE,REVHASP,HN=${netDevice.couplerNode},DT=CON,ABL=2,DBZ=120,PW=120.`,
-        `         CR04P${port}:  DEVICE,REVHASP,HN=${netDevice.couplerNode},DT=CR,DO=1,TA=1,ABL=3,DBZ=810,`,
+        `         CO${toHex(netDevice.npuNode)}P${port}:  DEVICE,REVHASP,HN=${netDevice.couplerNode},DT=CON,ABL=2,DBZ=120,PW=120.`,
+        `         CR${toHex(netDevice.npuNode)}P${port}:  DEVICE,REVHASP,HN=${netDevice.couplerNode},DT=CR,DO=1,TA=1,ABL=3,DBZ=810,`,
         "                          PW=137.",
-        `         LP04P${port}:  DEVICE,REVHASP,HN=${netDevice.couplerNode},DT=LP,DO=1,TA=1,ABL=0,DBZ=0.`,
-        `         PL04P${port}:  DEVICE,REVHASP,HN=${netDevice.couplerNode},DT=PL,DO=1,TA=1,ABL=0,DBZ=0.`
+        `         LP${toHex(netDevice.npuNode)}P${port}:  DEVICE,REVHASP,HN=${netDevice.couplerNode},DT=LP,DO=1,TA=1,ABL=0,DBZ=0.`,
+        `         PL${toHex(netDevice.npuNode)}P${port}:  DEVICE,REVHASP,HN=${netDevice.couplerNode},DT=PL,DO=1,TA=1,ABL=0,DBZ=0.`
         );
       }
     }
