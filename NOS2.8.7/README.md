@@ -49,14 +49,24 @@ real Control Data computer systems back in the 1980's and 90's.
 - &nbsp;&nbsp;&nbsp;&nbsp;[[EQPDECK]](#eqpdeck)
 - &nbsp;&nbsp;&nbsp;&nbsp;[[HOSTS]](#hosts)
 - &nbsp;&nbsp;&nbsp;&nbsp;[[NETWORK]](#network)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[asyncPorts](#asyncPorts)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[cdcnetNode](#cdcnetNode)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[cdcnetPrivilegedTcpPortOffset](#cdcnetPrivilegedTcpPortOffset)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[cdcnetPrivilegedUdpPortOffset](#cdcnetPrivilegedUdpPortOffset)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[couplerNode](#couplerNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[crayStation](#crayStation)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[cybisPorts](#cybisPorts)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[defaultRoute](#defaultRoute)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[haspPorts](#haspPorts)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[haspTerminal](#haspTerminal)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[hostID](#hostID)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[MDI](#MDI)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[networkInterface](#networkInterface)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[njeNode](#njeNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[njePorts](#njePorts)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[NPU](#NPU)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[npuNode](#npuNode)
+- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[printerPorts](#printerPorts)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[rhpNode](#rhpNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[safNode](#safNode)
 - &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[smtpDomain](#smtpDomain)
@@ -865,8 +875,8 @@ MID=11.
 NAME=MAINFRAME ELEVEN
 [NETWORK]
 hostID=NCCM11
-rhpNode=NCCM11,M11,192.168.0.17:2550,1,2,NCCM12,1
-rhpNode=NCCM12,M12,192.168.0.19:2550,3,4,NCCM11,1
+rhpNode=NCCM11,M11,192.168.0.17:2550,1,2,NCCM12,4,1
+rhpNode=NCCM12,M12,192.168.0.19:2550,3,4,NCCM11,2,1
 ```
 The parameter values specified in the first `rhpNode` definition are:
 
@@ -875,14 +885,15 @@ The parameter values specified in the first `rhpNode` definition are:
 | NCCM11 | Identifier of the host being described |
 | M11    | 3-character NOS LID (Logical Identifier) assigned to the host. Ordinarily, this is the same as the host's PID (Physical Identifier) which is the letter `M` followed by the host's 2-character machine identifier, as defined by the MID value in the [CMRDECK] section. |
 | 192.168.0.17:2550 | The TCP address on which the host listens for RHP connections |
-| 1 | The node number assigned to the mainframe (i.e., the host coupler node number) |
-| 2 | The node number assigned to the mainframe's NPU |
+| 1 | The node number assigned to the mainframe (i.e., the host coupler node number assigned to NCCM11) |
+| 2 | The node number assigned to NCCM11's NPU |
 | NCCM12 | The identifier of a host to which host NCCM11 is linked |
-| 1 | The NPU port number on NCCM11's NPU used for creating the trunk to NCCM12's NPU |
+| 4 | The node number assigned to NCCM12's NPU where NCCM12's end of the link is connected
+| 1 | The CLA (Communication Line Adapter) port number on NCCM11's NPU where NCCM11's end of the link is connected |
 
 The second `rhpNode` definition specifies information about host NCCM12. 
 
-The site.cfg file associated with NCCM02's instance of DtCyber would look like the
+The site.cfg file associated with NCCM12's instance of DtCyber would look like the
 following. Note that the `rhpNode` definitions are identical to the ones in NCCM11's
 site.cfg file because they describe the same network.
 
@@ -892,12 +903,12 @@ MID=12.
 NAME=MAINFRAME TWELVE
 [NETWORK]
 hostID=NCCM12
-rhpNode=NCCM11,M11,192.168.0.17:2550,1,2,NCCM12,1
-rhpNode=NCCM12,M12,192.168.0.19:2550,3,4,NCCM11,1
+rhpNode=NCCM11,M11,192.168.0.17:2550,1,2,NCCM12,4,1
+rhpNode=NCCM12,M12,192.168.0.19:2550,3,4,NCCM11,2,1
 ```
-Note that the rightmost elements of an `rhpNode` definition are pairs of host
-identifiers and NPU port numbers, and more than one such pair can occur in a
-definition. This enables describing the topologies of networks having more than
+Note that the rightmost elements of an `rhpNode` definition are triplets of host
+identifiers, NPU node numbers, and NPU port numbers, and more than one such triplet can
+occur in a definition. This enables describing the topologies of networks having more than
 two hosts. For example, the following definitions describe an RHP network of three NOS
 hosts where each host is directly connected to the other two hosts:
 
@@ -907,9 +918,9 @@ MID=11.
 NAME=MAINFRAME ELEVEN
 [NETWORK]
 hostID=NCCM11
-rhpNode=NCCM11,M11,192.168.0.29:2550,1,2,NCCM12,1,NCCM13,2
-rhpNode=NCCM12,M12,192.168.0.17:2550,3,4,NCCM11,1,NCCM13,2
-rhpNode=NCCM13,M13,192.168.0.19:2550,5,6,NCCM11,1,NCCM12,2
+rhpNode=NCCM11,M11,192.168.0.29:2550,1,2,NCCM12,4,1,NCCM13,6,2
+rhpNode=NCCM12,M12,192.168.0.17:2550,3,4,NCCM11,2,1,NCCM13,6,2
+rhpNode=NCCM13,M13,192.168.0.19:2550,5,6,NCCM11,2,1,NCCM12,4,2
 
 ```
 ### <a id="usingrhp"></a>Using RHP
@@ -1536,9 +1547,9 @@ Defines site-specific routing information and parameters related to data communi
 and networking. The configuration and operation of various NOS 2.8.7 data communication
 subsystems derives from this section. This includes:
 
+- **ASYNC**. Information about asynchronous terminals and printers.
 - **CRS**. Configuration information for the `Cray Station` interface.
-- **HASP**. Information about mainframes to which NOS 2.8.7 can connect using
-IBM's `HASP` data communication protocol.
+- **HASP**. Information about RJE (Remote Job Entry) terminals that connect to NOS 2.8.7 using IBM's `HASP` data communication protocol.
 - **Host ID**. The identifier of the local NOS 2.8.7 host.
 - **Network Interface**. Declaration of a network interface used by the host computer
 to support *DtCyber's* data communication.
@@ -1550,24 +1561,68 @@ communication protocols.
 - **SMTP**. Information about e-mail destinations that can be reached using the
 TCP/IP `Simple Mail Transfer Protocol`.
 - **STK**. Information about the StorageTek 4400 cartridge tape server.
+- **TLF**. Information about mainframes to which NOS 2.8.7 can connect using IBM's `HASP` data communication protocol.
 
 Example:
 
 ```
 [NETWORK]
 hostID=MARS
-rhpNode=MARS,MAR,localhost:2551,1,2,VENUS,1
-rhpNode=VENUS,MVE,192.168.0.17:2551,3,4,MARS,1
+rhpNode=MARS,MAR,localhost:2551,1,2,VENUS,4,1
+rhpNode=VENUS,MVE,192.168.0.17:2551,3,4,MARS,6,1
 crayStation=CRAYXMP,XMP,24,192.168.0.28:9001
 tlfNode=JES2,JES,JES2,192.168.0.17:37803,R001
 ```
 
 The entries that may occur in the `[NETWORK]` section include:
 
+- <a id="asyncPorts"></a>**asyncPorts** : Specifies the range of CLA ports that will be
+used in defining ordinary asynchronous terminals for use by interactive applications
+(e.g., IAF, CONFER, VEIAF) in the NOS NDL. The general syntax of this entry is:
+
+    asyncPorts=*cla-port-number*,*port-count*,*tcp-port*[,*user-defn*]
+    
+    | Parameter       | Description |
+    |-----------------|-------------|
+    | cla-port-number | The number of the first CLA port to be used. |
+    | port-count      | The maximum number of CLA ports to be used. |
+    | tcp-port.       | The TCP port number on which to listen for connections. |
+    | user-defn.      | Optional. Defines hat is specified in the **USER** definition for each associated terminal in the LCF section of the NOS NDL. The default is **IAFUSER**. |
+    
+	Examples:
+	
+	`asyncPorts=0x40,16,8023`
+
+	`asyncPorts=0x40,16,8823,PAPPL=VEIAF`
+
+- <a id="cdcnetNode"></a>**cdcnetNode** : Defines the node number assigned to the CDCNet TCP/IP gateway. The syntax of this entry is:
+
+    cdcnetNode=*node-number*
+
+    This configuration element is meaningful only when the local mainframe has at least one MDI device. It does not pertain to NPU devices. The default CDCNet node number is 255.
+
+- <a id="cdcnetPrivilegedTcpPortOffset"></a>**cdcnetPrivilegedTcpPortOffset** : Defines a value that will be added automatically to TCP port numbers in the range 0 .. 1023 that are used in listening for connections. The syntax of this entry is:
+
+    cdcnetPrivilegedTcpPortOffset=*offset*
+
+    This configuration element is meaningful only when the local mainframe has at least one MDI device. It does not pertain to NPU devices. The default offset value is 0.
+
+- <a id="cdcnetPrivilegedUdpPortOffset"></a>**cdcnetPrivilegedUdpPortOffset** : Defines a value that will be added automatically to UDP port numbers in the range 0 .. 1023 that are used in listening for bindings. The syntax of this entry is:
+
+    cdcnetPrivilegedUdpPortOffset=*offset*
+
+    This configuration element is meaningful only when the local mainframe has at least one MDI device. It does not pertain to NPU devices. The default offset value is 0.
+
+- <a id="couplerNode"></a>**couplerNode** : Defines the unique node number assigned to the mainframe end of the channel linking the MDI/NPU currently begin defined. Ordinarily, it is needed only when no **MDI**/**NPU** definition is explicitly provided, so it specifies the coupler node number of the default **MDI** definition.The syntax of this entry is:
+
+    couplerNode=*node-number*
+
+    The node number is an integer in the range 1 .. 255.
+
 - <a id="crayStation"></a>**crayStation** : Activates the Cray Station interface and
 defines parameters associated with it. The general syntax of this entry is:
 
-    crayStation=*name*,*lid*,*channel*,*addr*,[,S*station-id*][,C*cray-id*]
+    crayStation=*name*,*lid*,*channel*,*addr*[,S*station-id*][,C*cray-id*]
     
     | Parameter     | Description |
     |---------------|-------------|
@@ -1582,6 +1637,22 @@ defines parameters associated with it. The general syntax of this entry is:
 	
 	`crayStation=NCCXMP,XMP,24,192.168.0.28:9000`
 
+- <a id="cybisPorts"></a>**cybisPorts** : Specifies the range of CLA ports that will be
+used in defining asynchronous terminals for use by CYBIS in the NOS NDL. The general syntax of this entry is:
+
+    cybisPorts=*cla-port-number*,*port-count*,*tcp-port*[,*user-defn*]
+    
+    | Parameter       | Description |
+    |-----------------|-------------|
+    | cla-port-number | The number of the first CLA port to be used. |
+    | port-count      | The maximum number of CLA ports to be used. |
+    | tcp-port.       | The TCP port number on which to listen for connections. |
+    | user-defn.      | Optional. Defines hat is specified in the **USER** definition for each associated terminal in the LCF section of the NOS NDL. The default is **CYBUSER**. |
+    
+	Example:
+	
+	`cybisPorts=0x40,16,18005`
+
 - <a id="defaultRoute"></a>**defaultRoute** : Specifies the name of the NJE node to
 which jobs and files should be routed by default. Typically, this is the name of the
 adjacent node serving as the local system's primary link to the public NJE network.
@@ -1595,20 +1666,16 @@ Example:
 	automatically using the [topology file](files/nje-topology.json).
     
 - <a id="haspPorts"></a>**haspPorts** : Specifies the range of CLA ports that will be
-used in defining additional HASP terminals for use by RBF in the NOS NDL. The general
+used in defining HASP terminals for use by RBF in the NOS NDL. The general
 syntax of this entry is:
 
     haspPorts=*cla-port-number*,*port-count*
     
     Where *cla-port-number* is the number of the first CLA port to be used, and
-    *port-count* defines the maximum number of ports to be used. The default is
-    equivalent to:
-    
-    `haspPorts=0x26,2`
+    *port-count* defines the maximum number of ports to be used.
     
 - <a id="haspTerminal"></a>**haspTerminal** : Defines the name and connection information
-for a HASP terminal. Two generic HASP terminals are defined in the base system, and this
-entry allows you to define additional ones. The general syntax of this entry is:
+for a HASP terminal. The general syntax of this entry is:
 
     haspTerminal=*username*,*tcp-port*[,B*block-size*][,T*terminal-class*]
     
@@ -1629,6 +1696,34 @@ entry allows you to define additional ones. The general syntax of this entry is:
 host. Example:
 
     `hostID=MARS`
+
+- <a id="MDI"></a>**MDI** : Defines a CDCNet MDI (Mainframe Device Interface).
+- <a id="NPU"></a>**NPU** : Defines a 2550 frontend NPU.
+
+    The general syntax of these entries is:
+
+    MDI=*username*,*coupler-node*,*npu-node*,*channel-number*[,E*eq-number*][,P*pip-number*]
+
+    NPU=*username*,*coupler-node*,*npu-node*,*channel-number*[,E*eq-number*][,P*pip-number*]
+    
+    | Parameter  | Description |
+    |------------|-------------|
+    | coupler-node   | The unique coupler node number associated with this MDI or NPU. The coupler node number uniquely identifies the mainframe endpoint of the channel that links the MDI/NPU to the mainframe. It is an integer in the range 1 .. 255.|
+    | npu-node       | The unique node number assigned to the MDI or NPU. The MDI/NPU node number uniquely identifies the MDI/NPU endpoint of the channel that links the MDI/NPU to the mainframe. It is an integer in the range 1 .. 255. |
+    | channel-number | The channel number of the channel used by the mainframe to communicate with the MDI/NPU. |
+    | eq-number      | Optional. The equipment number of the MDI/NPU. The default is 7. |
+    | pip-number     | Optional. The ordinal of the PIP instance that communicates with theh MDI/NPU. PIP is the name of the PP driver that NAM uses to communcate with network frontend devices. NAM can start as many as four instances of PIP, each responsible for communicating with one or more MDIs/NPUs. This optional parameter allows you to specify explicitly the instance of PIP associated with an MDI/NPU. The default is calculated such that a separate instance of PIP is associated with every two MDIs/NPUs. |
+
+    Subsequent definitions of MDI/NPU parameters are associated with this MDI/NPU, until the next **MDI**/**NPU** definition. If the [NETWORK] section does not contain any
+**MDI** or **NPU** definitions, a default MDI is assumed to be defined, and its default
+parameters include 16 asynchronous terminals, 16 CYBIS terminals, 1 printer, and 2 HASP
+terminals.
+
+    Examples:
+    
+    `MDI=1,2,5`
+    
+    `NPU=3,4,6,P2`
     
 - <a id="networkInterface"></a>**networkInterface** : Defines the name of the network
 interface used by the host computer to support *DtCyber's* data communication and,
@@ -1685,13 +1780,36 @@ syntax of this entry is:
     equivalent to:
     
     `njePorts=0x30,16`
+
+- <a id="npuNode"></a>**npuNode** : Defines the unique node number assigned to the MDI/NPU currently begin defined. Ordinarily, it is needed only when no **MDI**/**NPU** definition is explicitly provided, so it specifies the npu node number of the default **MDI**
+definition. The syntax of this entry is:
+
+    npuNode=*node-number*
+
+    The node number is an integer in the range 1 .. 255.
+
+- <a id="printerPorts"></a>**printerPorts** : Specifies the range of CLA ports that will be
+used in defining asynchronous printers driven by PSU (the Printer Support Utility). The general syntax of this entry is:
+
+    printerPorts=*cla-port-number*,*port-count*,*tcp-port*[,*user-defn*]
+    
+    | Parameter       | Description |
+    |-----------------|-------------|
+    | cla-port-number | The number of the first CLA port to be used. |
+    | port-count      | The maximum number of CLA ports to be used. |
+    | tcp-port.       | The TCP port number on which to listen for connections. |
+    | user-defn.      | Optional. Defines hat is specified in the **USER** definition for each associated terminal in the LCF section of the NOS NDL. The default is **MFAM=CYBER,MUSER=PRINT05,MAPPL=PSU**. |
+    
+	Example:
+	
+	`printerPorts=0x01,2,2551`
     
 - <a id="rhpNode"></a>**rhpNode** : Defines the name and linkage information for a node
 in a Control Data `Remote Host Products` network. RHP provides the QTF (Queued file
 Transfer Facility) and PTF (Permanent file Transfer Facility) applications that enable
 NOS 2.8.7 systems to exchange jobs and files. The general syntax of this entry is:
 
-    rhpNode=*nodename*,*lid*,*addr*,*coupler-node*,*npu-node*,*peername*,*cla-port*[,*peername*,*cla-port*...]
+    rhpNode=*nodename*,*lid*,*addr*,*coupler-node*,*npu-node*,*peername*,*peer-npu-node*,*cla-port*[,*peername*,*peer-npu-node*,*cla-port*...]
     
     | Parameter     | Description |
     |---------------|-------------|
@@ -1699,8 +1817,9 @@ NOS 2.8.7 systems to exchange jobs and files. The general syntax of this entry i
     | lid           | The unique, 3-character logical identifier assigned to the node. |
     | addr          | The IP address and TCP port number on which the node listens for RHP connections. The format is `ipaddress:portnumber`, e.g., 192.168.0.17:2551. |
     | coupler-node  | The node number of the channel coupler that links the node's NPU to its mainframe. Essentially, this is the RHP node number of the mainframe |
-    | npu-node      | The node number of the node's NPU itself. |
+    | npu-node      | The node number of the node's NPU supporting the node's end of the link. |
     | peername      | The name of a peer to which the mainframe is directly linked. This must match the *nodename* parameter of another *rhpNode* definition |
+    | peer-npu-node | The node number of the peer's NPU supporting the peer's end of the link. |
     | cla-port      | The number of the CLA port on the mainframe's NPU that is used for communicating with the peer. |
     
 	Note that multiple *peername*/*cla-port* pairs may be defined to indicate that a node
