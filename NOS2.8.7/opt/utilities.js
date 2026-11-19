@@ -443,8 +443,10 @@ const utilities = {
       }
       else if (key === "CRAYSTATION"
             || key === "DEFAULTROUTE"
+            || key === "NETWORKINTERFACE"
             || key === "RHPNODE"
             || key === "SAFNODE"
+            || key === "SMTPDOMAIN"
             || key === "STKDRIVEPATH") {
         continue;
       }
@@ -596,6 +598,8 @@ const utilities = {
         }
         if (devName === "MDI0") {
           netDevice.cdcnetNode = 255;
+          netDevice.cdcnetPrivilegedTcpPortOffset = 0;
+          netDevice.cdcnetPrivilegedUdpPortOffset = 0;
         }
         nextHaspClaPort = 0;
         haspPortCount   = 0;
