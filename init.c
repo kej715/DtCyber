@@ -1212,7 +1212,7 @@ static void initCyber(char *config)
     **  Get optional IP address of DtCyber. If not specified, use "0.0.0.0".
     */
     initGetString("ipaddress", "0.0.0.0", ipAddress, 16);
-    if (initParseIpAddress((strcmp(ipAddress, "0.0.0.0") == 0)? "127.0.0.1" : ipAddress, &npuNetHostIP, NULL) == FALSE)
+    if (initParseIpAddress((strcmp(ipAddress, "0.0.0.0") == 0) ? "127.0.0.1" : ipAddress, &npuNetHostIP, NULL) == FALSE)
         {
         logDtError(LogErrorLocation, "file '%s' section [%s]: Invalid 'ipAddress' value %s - correct values are IPv4 addresses\n",
                    startupFile, config, ipAddress);
