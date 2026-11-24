@@ -532,6 +532,7 @@ int runHelper(char *command)
 void startHelpers(void)
     {
     char command[200];
+    char *ip;
     char *line;
     int  lineNo = 0;
     int  rc;
@@ -539,6 +540,12 @@ void startHelpers(void)
     initAcquireMutex();
     if (initOpenHelpersSection())
         {
+        ip = (strcmp(ipAddress, "0.0.0.0") == 0) ? "127.0.0.1" : ipAddress;
+#if defined(_WIN32)
+        _putenv_s("DTCYBER_IP_ADDR", ip);
+#else
+        setenv("DTCYBER_IP_ADDR", ip, 1);
+#endif
         while ((line = initGetNextLine(&lineNo)) != NULL)
             {
             sprintf(command, "%s start", line);
