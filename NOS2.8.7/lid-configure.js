@@ -142,7 +142,7 @@ if (typeof customProps["NETWORK"] !== "undefined") {
     let value = line.substring(ei + 1).trim();
     if (key === "SAFNODE") {
       //
-      //  safNode=<host-id>,<relay-host-id>,<lid>
+      //  safNode=<host-id>,<relay-host-id>,<lid>[,<mftype>]
       //
       let items = value.split(",");
       if (items.length >= 3) {
@@ -151,6 +151,9 @@ if (typeof customProps["NETWORK"] !== "undefined") {
           relayHost: items.shift(),
           lid: items.shift()
         };
+        if (items.length > 0) {
+          node.mfType = items.shift();
+        }
         safNodes[node.id] = node;
       }
     }
@@ -161,7 +164,7 @@ if (typeof customProps["NETWORK"] !== "undefined") {
 // Build tables of adjacent and non-adjacent nodes with LIDs
 //
 if (typeof localNode.link !== "undefined"
-    && typeof topology[localNode.link] != "undefined"
+    && typeof topology[localNode.link] !== "undefined"
     && localNode.link !== hostID) {
   let linkNode = topology[localNode.link];
   linkNode.mfType = getMfType(linkNode);
@@ -232,14 +235,62 @@ dtc.connect()
         adjacentPid.lids[node.njeLid] = `NLID,LID=${node.njeLid}.`;
       }
     }
-    localPid.lids[lid]    = `NLID,LID=${lid},AT=STOREF.`;
+    localPid.lids[lid] = `NLID,LID=${lid},AT=STOREF.`;
+  }
+  let nveLids = [];
+  if (dtc.isCyber180()) {
+    //
+    // If this machine is a Cyber 180 and a NOS/VE store-and-forward node
+    // has not been configured explicitly, define one implicitly. Additionally,
+    // arrange to create the LIDVExx file and store it in the SYSTEMX catalog.
+    //
+    let nveNode = null;
+    for (const node of Object.values(safNodes)) {
+      if (node.relayHost === localNode.id && node.mfType === "NOSVE") {
+        nveNode = node;
+        nveLids.push(node.lid);
+      }
+    }
+    if (nveNode === null) {
+      nveNode = {
+        lid: "NVE",
+        relayHost: localNode.id,
+        mfType: "NOSVE",
+        lids: {
+          NVE: "NLID,LID=NVE."
+        }
+      };
+      safNodes["-nve-"] = nveNode;
+      nveLids.push(nveNode.lid);
+    }
   }
   for (const node of Object.values(safNodes)) {
+    let lid = node.lid;
     if (typeof adjacentNodes[node.relayHost] !== "undefined") {
-      let lid = node.lid;
       let adjacentPid = lidConf[adjacentNodes[node.relayHost].lid];
       adjacentPid.lids[lid] = `NLID,LID=${lid}.`;
       localPid.lids[lid]    = `NLID,LID=${lid},AT=STOREF.`;
+    }
+    else if (node.relayHost === localNode.id) {
+      if (typeof node.mfType === "undefined" || node.mfType !== "NOSVE" || !dtc.isCyber180()) {
+        localPid.lids[lid] = `NLID,LID=${lid},AT=STOREF.`;
+      }
+      if (typeof lidConf[lid] === "undefined") {
+        let mfType = "UNKNOWN";
+        if (typeof node.mfType !== "undefined") {
+          mfType = node.mfType;
+        }
+        else if (dtc.isCyber180() && node.lid === "NVE") {
+          mfType = "NOSVE";
+        }
+        let defn = {
+          mfType: mfType,
+          comments: ["*", `* ${mfType} NODE`, "*"],
+          lids: {}
+        };
+        defn.lids[lid] = `NLID,LID=${lid}.`;
+        lidConf[lid] = defn;
+      }
     }
   }
   //
@@ -252,7 +303,7 @@ dtc.connect()
   const pids = Object.keys(lidConf).sort();
   for (const pid of pids) {
     let pidDefn = lidConf[pid];
-    if (pid === "NVE" && pidDefn.mfType === "NOSVE") continue; // remove superfluous NVE definition
+    if (!dtc.isCyber180() && pid === "NVE" && pidDefn.mfType === "NOSVE") continue; // remove superfluous NVE definition for non-180 host
     if (typeof pidDefn.comments !== "undefined" && pidDefn.comments.length > 0) {
       lidText = lidText.concat(pidDefn.comments);
     }
@@ -280,7 +331,7 @@ dtc.connect()
     password: utilities.getPropertyValue(customProps, "PASSWORDS", "INSTALL", "INSTALL"),
     data: lidText
   };
-  return promise
+  promise = promise
   .then(() => dtc.createJobWithOutput(12, 4, job, options))
   .then(() => dtc.say(`Move LIDCM${mid} to SYSTEMX ...`))
   .then(() => dtc.dis([
@@ -294,7 +345,45 @@ dtc.connect()
     fs.writeFileSync(fileName, lidText);
     return Promise.resolve();
   })
-  .then(() => dtc.say(`LIDCM${mid} updated successfully`))
+  .then(() => dtc.say(`LIDCM${mid} updated successfully`));
+  if (nveLids.length > 0) {
+    let lidText = nveLids.join("\n") + "\n";
+    let job     = [
+    `$COPY,INPUT,LIDVE${mid}.`,
+      `$REPLACE,LIDVE${mid}.`
+    ];
+    let options = {
+      jobname: "REPLIDV",
+      username: "INSTALL",
+      password: utilities.getPropertyValue(customProps, "PASSWORDS", "INSTALL", "INSTALL"),
+      data: lidText
+    };
+    promise = promise
+    .then(() => dtc.say(`Create/update LIDVE${mid} ...`))
+    .then(() => {
+      let promise = Promise.resolve();
+      for (const lid of nveLids) {
+        promise = promise
+        .then(() => dtc.say(`  ${lid}`));
+      }
+      return promise;
+    })
+    .then(() => dtc.createJobWithOutput(12, 4, job, options))
+    .then(() => dtc.say(`Move LIDVE${mid} to SYSTEMX ...`))
+    .then(() => dtc.dis([
+      `GET,LIDVE${mid}.`,
+      `PURGE,LIDVE${mid}.`,
+      "SUI,377777.",
+      `REPLACE,LIDVE${mid}.`,
+      `PERMIT,LIDVE${mid},INSTALL=W.`
+    ], "MOVELVE", 1))
+    .then(() => {
+      fs.writeFileSync(fileName, lidText);
+      return Promise.resolve();
+    })
+    .then(() => dtc.say(`LIDVE${mid} updated successfully`));
+  }
+  return promise;
 })
 .then(() => {
   process.exit(0);
@@ -302,5 +391,6 @@ dtc.connect()
 .catch(err => {
   console.log(err);
   if (fs.existsSync(`LIDCM${mid}.txt`)) fs.unlinkSync(`LIDCM${mid}.txt`);
+  if (fs.existsSync(`LIDVE${mid}.txt`)) fs.unlinkSync(`LIDVE${mid}.txt`);
   process.exit(1);
 });

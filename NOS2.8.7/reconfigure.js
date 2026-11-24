@@ -838,6 +838,7 @@ dtc.connect()
 .then(() => dtc.say("Deadstart complete"))
 .then(() => dtc.say("Reconfiguration complete"))
 .then(() => dtc.console("idle on"))
+.then(() => dtc.disconnect())
 .then(() => {
   process.exit(0);
 })
