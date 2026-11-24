@@ -196,7 +196,7 @@ int netCreateListener(int port)
 #endif
         {
 #if DEBUG
-        logDtError(LogErrorLocation, "netCreateSocket could not create socket\n");
+        logDtError(LogErrorLocation, "netCreateListener could not create socket\n");
 #endif
 
         return sd;
@@ -208,7 +208,7 @@ int netCreateListener(int port)
     if (listen(sd, MaxListenBacklog) == -1)
         {
 #if DEBUG
-        sprintf(debug_buffer, "(net_util) netCreateSocket listen on port %d failed", port);
+        sprintf(debug_buffer, "(net_util) netCreateListener listen on port %d failed", port);
         perror(debug_buffer);
 #endif
 #if defined(_WIN32)
@@ -223,7 +223,7 @@ int netCreateListener(int port)
         }
 
 #if DEBUG >= 2
-    logDtError(LogErrorLocation, "netCreateSocket listen on port %d succeeded\n", port);
+    logDtError(LogErrorLocation, "netCreateListener listen on port %d succeeded\n", port);
 #endif
 
     return sd;
@@ -464,10 +464,6 @@ int    netInitiateConnection(struct sockaddr *sap)
     SOCKET    sd;
 #else
     int       sd;
-#endif
-
-#if DEBUG
-    char debug_buffer[80];
 #endif
 
     sd = netCreateSocket(0, FALSE);
