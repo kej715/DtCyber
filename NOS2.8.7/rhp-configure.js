@@ -21,17 +21,24 @@ const dtc = new DtCyber();
 
 dtc.say("Start RHP configuration ...")
 .then(() => {
-  if (process.argv.indexOf("-ndl") === -1) {
-    return dtc.exec("node", ["opt/rhp-update-ndl"])
+  if (process.argv.indexOf("-ndl") < 0) {
+    return dtc.exec("node", ["update-nhp-ndl"])
     .then(() => dtc.exec("node", ["compile-ndl"]));
   }
   else {
     return Promise.resolve();
   }
 })
-.then(() => dtc.exec("node", ["opt/rhp-update-eqpd"]))
-.then(() => dtc.exec("node", ["opt/rhp-update-ovl"]))
-.then(() => dtc.exec("node", ["lid-configure"]))
+.then(() => dtc.exec("node", ["update-nhp-ovl"]))
+.then(() => dtc.exec("node", ["update-nhp-eqpd"]))
+.then(() => {
+  if (process.argv.indexOf("-l") < 0) {
+    return dtc.exec("node", ["lid-configure"]);
+  }
+  else {
+    return Promise.resolve();
+  }
+})
 .then(() => dtc.say("RHP configuration completed successfully"))
 .then(() => {
   process.exit(0);

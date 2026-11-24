@@ -25,7 +25,14 @@ if (!utilities.isInstalled("njf")) {
 dtc.say("Start NJF configuration ...")
 .then(() => dtc.exec("node", ["opt/njf-generate-hcf"]))
 .then(() => dtc.exec("node", ["opt/njf-compile-hcf"]))
-.then(() => dtc.exec("node", ["lid-configure"]))
+.then(() => {
+  if (process.argv.indexOf("-l") < 0) {
+    return dtc.exec("node", ["lid-configure"]);
+  }
+  else {
+    return Promise.resolve();
+  }
+})
 .then(() => dtc.say("NJF configuration completed successfully"))
 .then(() => {
   process.exit(0);

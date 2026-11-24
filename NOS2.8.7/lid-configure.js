@@ -270,20 +270,6 @@ dtc.connect()
   lidText.push("");
   lidText = lidText.join("\n");
   const fileName = `LIDCM${mid}.txt`;
-  //
-  // If a previously created LIDCMxx file exists, and it is less than an hour old,
-  // and its contents are identical to the newly generated text, then assume that
-  // it does not need to be saved on the host again. For example, this can happen
-  // when reconfigure.js is run and more than one of NJF, RHP, or TLF are installed.
-  //
-  if (fs.existsSync(fileName)) {
-    const stat = fs.statSync(fileName);
-    if (Date.now() - stat.ctimeMs < (60 * 60 * 1000)
-        && fs.readFileSync(fileName, "utf8") === lidText) {
-      return promise
-      .then(() => dtc.say(`LIDCM${mid} is already up to date`));
-    }
-  }
   let job = [
     `$COPY,INPUT,LIDCM${mid}.`,
     `$REPLACE,LIDCM${mid}.`

@@ -190,7 +190,14 @@ dtc.connect()
 .then(() => dtc.say("Enable CRS subsystem ..."))
 .then(() => utilities.enableSubsystem(dtc, "CRS", -8))
 .then(() => dtc.disconnect())
-.then(() => dtc.exec("node", ["lid-configure"]))
+.then(() => {
+  if (process.argv.indexOf("-l") < 0) {
+    return dtc.exec("node", ["lid-configure"]);
+  }
+  else {
+    return Promise.resolve();
+  }
+})
 .then(() => {
   process.exit(0);
 })

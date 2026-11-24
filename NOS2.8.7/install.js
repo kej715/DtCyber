@@ -16,14 +16,14 @@ let imageName           = "nos287-full-865";
 //  URL map of ready-to-run images
 //
 const imageMap = {
-  "nos287-full-865":       "https://www.dropbox.com/s/4tey61kc0sa7swu/nos287rtr-full-865.zip?dl=1",
-  "nos287-full-875":       "https://www.dropbox.com/scl/fi/0z0wxoxd2j30ko4evlvii/nos287rtr-full-875.zip?rlkey=bgxojr3ulhkj47ctrs2lp1rrk&dl=1",
-  "nos287-full-875-beast": "https://www.dropbox.com/scl/fi/15wl0zf55y2azt6tpbtkv/nos287rtr-full-875-beast.zip?rlkey=jmfckxm8mt8jxpxsn0vocwr9x&dl=1",
-  "nos287-most-175":       "https://www.dropbox.com/scl/fi/0y0yycmilzytrjp0febyy/nos287rtr-most-175.zip?rlkey=zbagqkdzvst9p7t1m94oa5pp8&dl=1",
-  "nos287-mltnet-175":     "https://www.dropbox.com/scl/fi/292m94ubufe3tbh8lcmwi/nos287rtr-mltnet-175.zip?rlkey=ophj0q4nwxev6fdpmb6i9rijd&dl=1",
-  "dual-state-860":        "https://www.dropbox.com/scl/fi/2kdymipewhp74lciqlpog/dual-state-860.zip?rlkey=nmct84xuji0sk7l43clhnj7jf&st=sxdm9euq&dl=1",
-  "nos287-full-870":       "https://www.dropbox.com/scl/fi/6cgdmzjfayuw4m6e5kw2q/nos287rtr-full-870.zip?rlkey=hy902ja2i7dbdl75b27wxf1r4&st=9d5x6dwi&dl=1",
-  "dual-state-870":        "https://www.dropbox.com/scl/fi/bb4lal92mu69wfyd7cc1y/dual-state-870.zip?rlkey=52b6wa4rs7o8wxg5rra0bt38f&st=w41m6aee&dl=1"
+  "nos287-full-865":       {hasDiskDs: false, url:"https://www.dropbox.com/s/4tey61kc0sa7swu/nos287rtr-full-865.zip?dl=1"},
+  "nos287-full-875":       {hasDiskDs: false, url:"https://www.dropbox.com/scl/fi/0z0wxoxd2j30ko4evlvii/nos287rtr-full-875.zip?rlkey=bgxojr3ulhkj47ctrs2lp1rrk&dl=1"},
+  "nos287-full-875-beast": {hasDiskDs: false, url:"https://www.dropbox.com/scl/fi/15wl0zf55y2azt6tpbtkv/nos287rtr-full-875-beast.zip?rlkey=jmfckxm8mt8jxpxsn0vocwr9x&dl=1"},
+  "nos287-most-175":       {hasDiskDs: false, url:"https://www.dropbox.com/scl/fi/0y0yycmilzytrjp0febyy/nos287rtr-most-175.zip?rlkey=zbagqkdzvst9p7t1m94oa5pp8&dl=1"},
+  "nos287-mltnet-175":     {hasDiskDs: false, url:"https://www.dropbox.com/scl/fi/292m94ubufe3tbh8lcmwi/nos287rtr-mltnet-175.zip?rlkey=ophj0q4nwxev6fdpmb6i9rijd&dl=1"},
+  "dual-state-860":        {hasDiskDs: true,  url:"https://www.dropbox.com/scl/fi/2kdymipewhp74lciqlpog/dual-state-860.zip?rlkey=nmct84xuji0sk7l43clhnj7jf&st=sxdm9euq&dl=1"},
+  "nos287-full-870":       {hasDiskDs: true,  url:"https://www.dropbox.com/scl/fi/6cgdmzjfayuw4m6e5kw2q/nos287rtr-full-870.zip?rlkey=hy902ja2i7dbdl75b27wxf1r4&st=9d5x6dwi&dl=1"},
+  "dual-state-870":        {hasDiskDs: true,  url:"https://www.dropbox.com/scl/fi/bb4lal92mu69wfyd7cc1y/dual-state-870.zip?rlkey=52b6wa4rs7o8wxg5rra0bt38f&st=w41m6aee&dl=1"}
 };
 
 //
@@ -137,7 +137,7 @@ if (isReadyToRunInstall) {
     fs.unlinkSync(imagePath);
   }
   dtc.say(`Download ${imageType} ready-to-run package (${imageName}) ...`)
-  .then(() => dtc.wget(imageMap[imageName], ".", imageFile, (byteCount, contentLength) => {
+  .then(() => dtc.wget(imageMap[imageName].url, ".", imageFile, (byteCount, contentLength) => {
     maxProgressLen = utilities.reportProgress(byteCount, contentLength, maxProgressLen);
   }))
   .then(() => utilities.clearProgress(maxProgressLen))
@@ -160,8 +160,10 @@ if (isReadyToRunInstall) {
     //  apply configuration customizations to the installed system.
     //
     if (fs.existsSync("site.cfg")) {
+      let args = ["reconfigure"];
+      if (imageMap[imageName].hasDiskDs) args.push("-d");
       return dtc.disconnect()
-      .then(() => dtc.exec("node", ["reconfigure"]))
+      .then(() => dtc.exec("node", args))
       .then(() => dtc.flushCache())
       .then(() => dtc.connect())
       .then(() => dtc.expect([{ re: /Operator> $/ }]))

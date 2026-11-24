@@ -207,6 +207,7 @@ class BaseTerminal {
 
   constructor(emulator) {
     this.minimumKeyInterval = 0;
+    this.isConnected = false;
     this.isDebug = false;
     this.keyQueue = [];
     this.emulator = emulator;
@@ -243,6 +244,8 @@ class BaseTerminal {
    *   A promise that is resolved when the connection has been established
    */
   connect(port) {
+
+    if (this.isConnected) return Promise.resolve();
 
     const me = this;
 

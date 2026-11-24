@@ -30,7 +30,14 @@ if (!utilities.isInstalled("tlf")) {
 dtc.say("Start TLF configuration ...")
 .then(() => dtc.exec("node", ["opt/tlf-generate-tcf"]))
 .then(() => dtc.exec("node", ["opt/tlf-compile-tcf"]))
-.then(() => dtc.exec("node", ["lid-configure"]))
+.then(() => {
+  if (process.argv.indexOf("-l") < 0) {
+    return dtc.exec("node", ["lid-configure"]);
+  }
+  else {
+    return Promise.resolve();
+  }
+})
 .then(() => dtc.say("TLF configuration completed successfully"))
 .then(() => {
   process.exit(0);

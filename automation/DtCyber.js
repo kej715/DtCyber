@@ -7,6 +7,7 @@ const http          = require("http");
 const https         = require("https");
 const net           = require("net");
 const os            = require("os");
+const Terminal      = require("./Terminal");
 
 /*
  * DtCyberStreamMgr
@@ -889,7 +890,7 @@ class DtCyber {
    * specified actions when matches occur.
    *
    * Arguments:
-   *   patterns - a array of objects representing patterns and associated
+   *   patterns - an array of objects representing patterns and associated
    *              actions to be taken when matches occur. Each object has
    *              these fields:
    *                re: regular expression representing a pattern to
@@ -979,8 +980,10 @@ class DtCyber {
    * Flush all cached data to force re-reading/re-calculating.
    */
   flushCache() {
-    this.operatorPort = undefined;
+    this.hostIpAddress = undefined;
     this.iniProperties = undefined;
+    this.model         = undefined;
+    this.operatorPort  = undefined;
   }
 
   /*
@@ -992,26 +995,32 @@ class DtCyber {
    *   Current IP address.
    */
   getHostIpAddress() {
-    const props = this.getIniProperties();
-    let ipAddress = "127.0.0.1";
-    if (typeof props[this.iniMainSection] !== "undefined") {
-      for (const line of props[this.iniMainSection]) {
-        let ei = line.indexOf("=");
-        if (ei === -1) continue;
-        let key = line.substring(0, ei).trim().toUpperCase();
-        if (key === "IPADDRESS") {
-          ipAddress = line.substring(ei + 1).trim();
+    if (typeof this.hostIpAddress === "undefined") {
+      this.hostIpAddress = "127.0.0.1";
+      const props = this.getIniProperties();
+      if (typeof props[this.iniMainSection] !== "undefined") {
+        for (const line of props[this.iniMainSection]) {
+          let ei = line.indexOf("=");
+          if (ei === -1) continue;
+          let key = line.substring(0, ei).trim().toUpperCase();
+          if (key === "IPADDRESS") {
+            this.hostIpAddress = line.substring(ei + 1).trim();
+            break;
+          }
         }
       }
     }
-    return ipAddress;
+    return this.hostIpAddress;
   }
 
   /*
    * getIniProperties
    *
    * Open and read the cyber.ini and cyber.ovl files and return
-   * an object reflecting the merged set of properties.
+   * an object reflecting the merged set of properties. The .ovl
+   * file is read first so that a linear search of the merged
+   * results will endable entries in the .ovl file to take
+   * precedence over entries in the .ini file.
    *
    * Returns:
    *   The merged properties.
@@ -1019,23 +1028,65 @@ class DtCyber {
   getIniProperties() {
     if (typeof this.iniProperties === "undefined") {
       this.iniProperties = {};
-      let path = null;
+      let iniPath = null;
       for (const p of ["./cyber.ini", "../cyber.ini"]) {
         if (fs.existsSync(p)) {
-          path = p;
+          iniPath = p;
           break;
         }
       }
-      if (path === null) {
+      if (iniPath === null) {
         throw new Error("cyber.ini not found");
       }
-      this.readPropertyFile(path, this.iniProperties);
-      path = path.substring(0, path.lastIndexOf(".")) + ".ovl";
-      if (fs.existsSync(path)) {
-        this.readPropertyFile(path, this.iniProperties);
+      let ovlPath = iniPath.substring(0, iniPath.lastIndexOf(".")) + ".ovl";
+      if (fs.existsSync(ovlPath)) {
+        this.readPropertyFile(ovlPath, this.iniProperties);
       }
+      this.readPropertyFile(iniPath, this.iniProperties);
     }
     return this.iniProperties;
+  }
+
+  /*
+   * getModel
+   *
+   * Return the machine's model name.
+   *
+   * Returns:
+   *   Model name.
+   */
+  getModel() {
+    if (typeof this.model === "undefined") {
+      this.model = "UNKNOWN";
+      const props = this.getIniProperties();
+      if (typeof props[this.iniMainSection] !== "undefined") {
+        for (const line of props[this.iniMainSection]) {
+          let ei = line.indexOf("=");
+          if (ei === -1) continue;
+          let key = line.substring(0, ei).trim().toUpperCase();
+          if (key === "MODEL") {
+            this.model = line.substring(ei + 1).trim();
+            break;
+          }
+        }
+      }
+    }
+    return this.model;
+  }
+
+  /*
+   * getNveConsole
+   *
+   * Return a terminal instance for interacting with the NOS/VE console.
+   *
+   * Returns:
+   *   A terminal instance.
+   */
+  getNveConsole() {
+    if (typeof this.nveConsole === "undefined") {
+      this.nveConsole = new Terminal.AnsiTerminal();
+    }
+    return this.nveConsole;
   }
 
   /*
@@ -1053,6 +1104,18 @@ class DtCyber {
   getStreamMgr(strmId) {
     if (typeof strmId === "undefined") strmId = "dtCyber";
     return this.streamMgrs[strmId];
+  }
+
+  /*
+   * isCyber180
+   *
+   * Determines whether the machine is a Cyber 180.
+   *
+   * Returns:
+   *  true if the machine is a Cyber 180
+   */
+  isCyber180() {
+    return ["860", "870", "CYBER860", "CYBER870"].indexOf(this.getModel()) >= 0;
   }
 
   /*
@@ -1459,7 +1522,18 @@ class DtCyber {
     if (typeof isExitAfterShutdown === "undefined") {
       isExitAfterShutdown = true;
     }
-    return me.say("Starting shutdown sequence ...")
+    let promise = me.say("Starting shutdown sequence ...");
+    if (me.isCyber180()) {
+      const nveConsole = me.getNveConsole();
+      promise = promise
+      .then(() => me.say("  terminate NOS/VE ..."))
+      .then(() => nveConsole.connect(`${me.getHostIpAddress()}:6604`))
+      .then(() => nveConsole.send("terminate_system\r"))
+      .then(() => nveConsole.sleep(15000))
+      .then(() => nveConsole.disconnect())
+      .then(() => me.say("  terminate NOS ..."));
+    }
+    return promise
     .then(() => me.dsd("[UNLOCK."))
     .then(() => me.dsd("CHECK#2000#"))
     .then(() => me.sleep(20000))

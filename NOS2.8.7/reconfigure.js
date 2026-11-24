@@ -3,20 +3,29 @@
 const DtCyber   = require("../automation/DtCyber");
 const fs        = require("fs");
 const os        = require("os");
+const Terminal  = require("../automation/Terminal");
 const utilities = require("./opt/utilities");
 
 const dtc = new DtCyber();
 
-let doRcfgPasswords = true;
+let doRcfgPasswords  = true;
+let hasDiskDeadstart = false;
 
 for (let arg of process.argv.slice(2)) {
   arg = arg.toLowerCase();
-  if (arg === "-pw") {
+  if (arg === "-d") {
+    hasDiskDeadstart = true;
+  }
+  else if (arg === "-pw") {
     doRcfgPasswords = false;
   }
   else {
-    process.stderr.write(`Unrecognized argument: ${arg}\n`);
-    process.stderr.write("Usage: node reconfigure [-pw]\n");
+    if (arg !== "-h" && arg !== "--help") {
+      process.stderr.write(`Unrecognized argument: ${arg}\n`);
+    }
+    process.stderr.write("Usage: node reconfigure [-d][-pw]\n");
+    process.stderr.write("  -d   reconfigure system having disk deadstart\n");
+    process.stderr.write("  -pw  do not reconfigure passwords\n");
     process.exit(1);
   }
 }
@@ -31,6 +40,7 @@ let updatedPasswords = [];          // list of passwords that have been updated
 
 const customProps    = utilities.getCustomProperties(dtc);
 const iniProps       = dtc.getIniProperties();
+const isCyber180     = dtc.isCyber180();
 let   ovlProps       = {};
 let   newIpAddress   = "127.0.0.1";
 let   passwordMap    = {};
@@ -475,8 +485,9 @@ dtc.connect()
 .then(() => dtc.exec("node", ["update-nhp-ovl"]))
 .then(() => dtc.exec("node", ["update-nhp-eqpd"]))
 .then(() => dtc.exec("node", ["rbf-configure"]))
-.then(() => dtc.exec("node", ["tlf-configure"]))
-.then(() => dtc.exec("node", ["njf-configure"]))
+.then(() => dtc.exec("node", ["tlf-configure", "-l"]))
+.then(() => dtc.exec("node", ["njf-configure", "-l"]))
+.then(() => dtc.exec("node", ["lid-configure"]))
 .then(() => dtc.exec("node", ["mailer-configure"]))
 .then(() => {
   if (utilities.isInstalled("netmail")) {
@@ -503,11 +514,11 @@ dtc.connect()
         || oldCrsInfo.crayId    !== newCrsInfo.crayId
         || updatedPasswords.indexOf("BCSCRAY") >= 0) {
       return dtc.say("Rebuild CRS ...")
-      .then(() => dtc.exec("node", ["install-product","-f","crs"]));
+      .then(() => dtc.exec("node", ["install-product", "-f", "crs"]));
     }
     else {
       return dtc.say("Update CRS ...")
-      .then(() => dtc.exec("node", ["opt/crs.post"]));
+      .then(() => dtc.exec("node", ["opt/crs.post", "-l"]));
     }
   }
   return Promise.resolve();
@@ -735,6 +746,7 @@ dtc.connect()
     }
     lines.push("");
     fs.writeFileSync("cyber.ovl", lines.join("\n"));
+    dtc.flushCache();
     return dtc.say("Create/update cyber.ovl ...");
   }
   else {
@@ -742,39 +754,77 @@ dtc.connect()
   }
 })
 .then(() => dtc.say("Deadstart using the new tape ..."))
+.then(() => dtc.start(["manual"], {
+  detached: true,
+  stdio:    [0, "ignore", 2],
+  unref:    false
+}))
+.then(() => dtc.sleep(5000))
+.then(() => dtc.connect(newIpAddress))
+.then(() => dtc.expect([{ re: /Operator> $/ }]))
+.then(() => dtc.attachPrinter("LP5xx_C12_E5"))
+.then(() => dtc.console("idle off"))
 .then(() => {
-  if (oldMID !== newMID && newMID !== null) {
-    return dtc.start(["manual"], {
-      detached: true,
-      stdio:    [0, "ignore", 2],
-      unref:    false
-    })
-    .then(() => dtc.sleep(5000))
-    .then(() => dtc.connect(newIpAddress))
-    .then(() => dtc.expect([{ re: /Operator> $/ }]))
-    .then(() => dtc.attachPrinter("LP5xx_C12_E5"))
-    .then(() => dtc.console("idle off"))
-    .then(() => dtc.dsd([
-      "O!",
+  let dsdEntries = [
+    "O!"
+  ];
+  if (!isCyber180) {
+    dsdEntries = dsdEntries.concat(
       "#1000#P!",
-      "#1000#D=YES",
-      "#1000#",
+      "#1000#D=YES"
+    );
+    if (hasDiskDeadstart) {
+      dsdEntries.push("^!");
+    }
+    else {
+      dsdEntries.push("#1000#");
+    }
+  }
+  if (hasDiskDeadstart) {
+    dsdEntries = dsdEntries.concat(
+      "#1000#S!",
+      "#1000#T!",
+      "#1000#2",
+      "#1000#13",
+      "#1000#0",
+      "#1000#00"
+    );
+  }
+  if (!isCyber180) {
+    dsdEntries = dsdEntries.concat(
       "#5000#NEXT.",
       "#1000#]!",
       "#1000#INITIALIZE,AL,6.",
       "#1000#GO.",
       "#7500#%year%%mon%%day%",
       "#3000#%hour%%min%%sec%"
-    ]))
-    .then(() => dtc.expect([{ re: /QUEUE FILE UTILITY COMPLETE/ }], "printer"))
-    .then(() => dtc.say("Shutdown the system and deadstart again with helpers activated ..."))
-    .then(() => dtc.shutdown(false))
-    .then(() => dtc.sleep(5000));
+    );
+  }
+  if (hasDiskDeadstart) {
+    return dtc.mount(13, 0, 0, "tapes/ds.tap")
+    .then(() => dtc.sleep(5000))
+    .then(() => dtc.dsd(dsdEntries));
+  }
+  else {
+    return dtc.dsd(dsdEntries);
+  }
+})
+.then(() => dtc.expect([{ re: /QUEUE FILE UTILITY COMPLETE/ }], "printer"))
+.then(() => {
+  if (hasDiskDeadstart) {
+    return dtc.say("Install deadstart file on disk ...")
+    .then(() => dtc.dis([
+      "COMMON,SYSTEM.",
+      "INSTALL,SYSTEM,EQ10."
+    ], "INSTALL"));
   }
   else {
     return Promise.resolve();
   }
 })
+.then(() => dtc.say("Shutdown the system and deadstart again with helpers activated ..."))
+.then(() => dtc.shutdown(false))
+.then(() => dtc.sleep(5000))
 .then(() => dtc.start({
   detached: true,
   stdio:    [0, "ignore", 2],
