@@ -1833,17 +1833,20 @@ is a TLF node or a Cray station directly connected to the relay node.
 
 	The general syntax of this entry is:
 
-    safNode=*nodename*,*relay-node*,*lid*
+    safNode=*nodename*,*relay-node*,*lid*[,*mf-type*]
 
     | Parameter     | Description |
     |---------------|-------------|
     | nodename      | The name assigned to the store-and-forward node. |
     | relay-node    | The name assigned to the intermediate relay node through which the sotre-and-forward node is reached. |
     | lid           | The unique, 3-character logical identifier assigned to the store-and-forward node. |
+    | mf-type       | Optional. The mainframe type of the node, e.g., NOS2, NOSVE, COS, CMS, MVS, etc. |
 
-    Example:
+    Examples:
     
     `safNode=NCCCMS,NCCMIN,CMS`
+
+    `safNode=NCCNVE,NCCMIN,NVE,NOSVE`
     
 - <a id="smtpDomain"></a>**smtpDomain** : Identifies an internet domain name or suffix
 to which e-mail will be routed using the TCP/IP SMTP protocol. Examples:
