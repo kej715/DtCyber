@@ -272,9 +272,7 @@ dtc.connect()
       localPid.lids[lid]    = `NLID,LID=${lid},AT=STOREF.`;
     }
     else if (node.relayHost === localNode.id) {
-      if (typeof node.mfType === "undefined" || node.mfType !== "NOSVE" || !dtc.isCyber180()) {
-        localPid.lids[lid] = `NLID,LID=${lid},AT=STOREF.`;
-      }
+      localPid.lids[lid] = `NLID,LID=${lid},AT=STOREF.`;
       if (typeof lidConf[lid] === "undefined") {
         let mfType = "UNKNOWN";
         if (typeof node.mfType !== "undefined") {
