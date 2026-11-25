@@ -52,6 +52,7 @@
 **  Private Constants
 **  -----------------
 */
+#define MaxNpuIdleTime             750000 // 0.75 seconds
 
 /*
 **  Function codes.
@@ -156,7 +157,7 @@ typedef struct npuParam
     PpWord    regOrder;
     bool      isOrderReady;
     u8        initCount;
-    u32       lastCommandTime;
+    u64       lastCommandTime;
     u8        hipRequest;
 #define          HipReqNone           0
 #define          HipReqNotifyUpline   1
@@ -726,7 +727,7 @@ static FcStatus npuHipFunc(PpWord funcCode)
             **  Announce idle state to PIP at intervals of less then one second,
             **  otherwise PIP will assume that the NPU is dead.
             */
-            if (cycles - npu->lastCommandTime > CyclesOneSecond)
+            if (rtcClock - npu->lastCommandTime > MaxNpuIdleTime)
                 {
                 npuHipSetNpuStatus(npu, StNpuIdle);
                 }
@@ -1083,7 +1084,7 @@ static void npuHipIndicateUplineBlock(u8 *block, u16 numBytes)
 **------------------------------------------------------------------------*/
 static void npuHipSetNpuStatus(NpuParam *npu, PpWord status)
     {
-    npu->lastCommandTime   = cycles;
+    npu->lastCommandTime   = rtcClock;
     npu->regNpuStatus      = status;
     npu->regCouplerStatus |= StCplrStatusLoaded;
     }

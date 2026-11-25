@@ -53,6 +53,7 @@
 **  Private Constants
 **  -----------------
 */
+#define MaxHcpIdleTime             750000 // 0.75 seconds
 
 /*
 **  Function codes.
@@ -163,7 +164,7 @@ typedef struct cciParam
     u16         memoryAddress;
     u16         memory[64*1024];
     u16         tempWord;
-    u32         lastCommandTime;
+    u64         lastCommandTime;
     u8          hipRequest;
 #define           HipReqNone           0
 #define           HipReqInitResponse   1
@@ -677,7 +678,7 @@ static FcStatus cciHipFunc(PpWord funcCode)
                 **  Announce idle state to PIP at intervals of less then one second,
                 **  otherwise PIP will assume that the NPU is dead.
                 */
-                if (cycles - cci->lastCommandTime > CyclesOneSecond)
+                if (rtcClock - cci->lastCommandTime > MaxHcpIdleTime)
                     {
                     cciHipSetNpuStatus(cci, StNpuIdle);
                     }
@@ -1274,7 +1275,7 @@ static void cciHipSetNpuStatus(CciParam *cci, PpWord status)
         }
 #endif
 
-    cci->lastCommandTime   = cycles;
+    cci->lastCommandTime   = rtcClock;
     cci->regNpuStatus      = status;
     cci->regCouplerStatus |= StCplrStatusLoaded;
 
