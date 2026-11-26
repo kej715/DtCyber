@@ -147,10 +147,10 @@ static u8  netLF[]   = { ChrLF };
 static u8  netCR[]   = { ChrCR };
 static u8  netCRLF[] = { ChrCR, ChrLF };
 
-static u8 telnetDo[3]      = { TELNET_IAC, TELNET_DO, 0 };
-static u8 telnetDont[3]    = { TELNET_IAC, TELNET_DONT, 0 };
-static u8 telnetWill[6]    = { TELNET_IAC, TELNET_WILL, 0, TELNET_IAC, TELNET_WILL, 0 };
-static u8 telnetWont[3]    = { TELNET_IAC, TELNET_WONT, 0 };
+static thread_local u8 telnetDo[3]   = { TELNET_IAC, TELNET_DO, 0 };
+static thread_local u8 telnetDont[3] = { TELNET_IAC, TELNET_DONT, 0 };
+static thread_local u8 telnetWill[6] = { TELNET_IAC, TELNET_WILL, 0, TELNET_IAC, TELNET_WILL, 0 };
+static thread_local u8 telnetWont[3] = { TELNET_IAC, TELNET_WONT, 0 };
 static u8 iAmHereMessage[] = "\r\nYes, I am here.\r\n\r\n";
 
 static u8 blockResetConnection[] =
