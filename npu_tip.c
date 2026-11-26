@@ -25,7 +25,7 @@
 **--------------------------------------------------------------------------
 */
 
-#define DEBUG    0
+#define DEBUG 0
 
 /*
 **  -------------
@@ -191,6 +191,7 @@
 static void npuTipNotifyAck(Tcb *tp, u8 bsn);
 static void npuTipParseAnAvList(u8 *mp, int len, Tcb *tp);
 static void npuTipSendAnAvList(u8 *mp, int len, Tcb *tp);
+static void npuTipSendFnFvList(u8 *mp, int len, Tcb *tp);
 static void npuTipSetupDefaultTc2(void);
 static void npuTipSetupDefaultTc3(void);
 static void npuTipSetupDefaultTc7(void);
@@ -512,6 +513,10 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
                 npuTipParseAnAvList(block + BlkOffP3, bp->numBytes - BlkOffP3, tp);
                 break;
 
+            case SfcRTC:   // Request CCP terminal characteristics
+                npuTipSendFnFvList(block + BlkOffP3, bp->numBytes - BlkOffP3, tp);
+                break;
+
             case SfcRCC:   // Request CDCNet terminal characteristics
                 npuTipSendAnAvList(block + BlkOffP3, bp->numBytes - BlkOffP3, tp);
                 break;
@@ -520,6 +525,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 #if DEBUG
                 fprintf(npuTipLog, "Unrecognized SFC for PfcCTRL: %02x\n", block[BlkOffSfc]);
 #endif
+                fprintf(stderr, "\n(npu_tip) Unrecognized SFC for PfcCTRL: %02x\n", block[BlkOffSfc]);
                 break;
                 }
             break;
@@ -1047,7 +1053,7 @@ bool npuTipParseFnFv(u8 *mp, int len, Tcb *tp)
 
         default:
 #if DEBUG
-            fprintf(npuTipLog, "Unknown FN/FV (%d/%d)[%02x/%02x]\n", mp[0], mp[1], mp[0], mp[1]);
+            fprintf(npuTipLog, "Unknown FN/FV (%d/%d)[0x%02x/0x%02x]\n", mp[0], mp[1], mp[0], mp[1]);
 #endif
             break;
             }
@@ -1717,6 +1723,288 @@ static void npuTipSendAnAvList(u8 *mp, int len, Tcb *tp)
     buf[BlkOffBTBSN] = BtHTCMD;
     buf[BlkOffPfc]   = PfcCTRL;
     buf[BlkOffSfc]   = SfcCCD;
+    npuBipRequestUplineStatic(buf, (int)(dp - buf), BlkOffCN, tp->cn);
+    }
+
+/*--------------------------------------------------------------------------
+**  Purpose:        Respond to a request for CCP terminal characteristics
+**
+**  Parameters:     Name        Description.
+**                  mp          Pointer to field number/field value sequence
+**                  len         Length of the FN/FV sequence
+**                  tp          Pointer to TCB
+**
+**  Returns:        Nothing.
+**
+**------------------------------------------------------------------------*/
+static void npuTipSendFnFvList(u8 *mp, int len, Tcb *tp)
+    {
+    u8 buf[1024];
+    u8 *dp;
+    TipParams *pp;
+
+    dp = &buf[BlkOffP3];
+    pp = &tp->params;
+
+    while (len > 0)
+        {
+        *dp++ = *mp;
+        switch (*mp)
+            {
+        case FnTdAbortBlock:     // Abort block character
+            *dp = pp->fvAbortBlock;
+            break;
+
+        case FnTdBlockFactor:    // Blocking factor; multiple of 100 chars (upline block)
+            *dp = pp->fvBlockFactor;
+            break;
+
+        case FnTdBreakAsUser:    // Break as user break 1; yes (1), no (0)
+            *dp = pp->fvBreakAsUser;
+            break;
+
+        case FnTdBS:             // Backspace character
+            *dp = pp->fvBS;
+            break;
+
+        case FnTdUserBreak1:     // User break 1 character
+            *dp = pp->fvUserBreak1;
+            break;
+
+        case FnTdUserBreak2:     // User break 2 character
+            *dp = pp->fvUserBreak2;
+            break;
+
+        case FnTdEnaXUserBreak:  // Enable transparent user break commands; yes (1), no (0)
+            *dp = pp->fvEnaXUserBreak;
+            break;
+
+        case FnTdCI:             // Carriage return idle count
+            *dp = pp->fvCI;
+            break;
+
+        case FnTdCIAuto:         // Carriage return idle count - TIP calculates suitable number
+            *dp = pp->fvCIAuto;
+            break;
+
+        case FnTdCN:             // Cancel character
+            *dp = pp->fvCN;
+            break;
+
+        case FnTdCursorPos:      // Cursor positioning; yes (1), no (0)
+            *dp = pp->fvCursorPos;
+            break;
+
+        case FnTdCT:             // Network control character
+            *dp = pp->fvCT;
+            break;
+
+        case FnTdXCharFlag:      // Transparent input delimiter character specified flag; yes (1), no (0)
+            *dp = pp->fvXCharFlag;
+            break;
+
+        case FnTdXCntMSB:        // Transparent input delimiter count MSB
+            *dp = (u8)(pp->fvXCnt >> 8);
+            break;
+
+        case FnTdXCntLSB:        // Transparent input delimiter count LSB
+            *dp = (u8)(pp->fvXCnt & Mask8);
+            break;
+
+        case FnTdXChar:          // Transparent input delimiter character
+            *dp = pp->fvXChar;
+            break;
+
+        case FnTdXTimeout:       // Transparent input delimiter timeout; yes (1), no (0)
+            *dp = pp->fvXTimeout;
+            break;
+
+        case FnTdXModeMultiple:  // Transparent input mode; multiple (1), single (0)
+            *dp = pp->fvXModeMultiple;
+            break;
+
+        case FnTdEOB:            // End of block character
+            *dp = pp->fvEOB;
+            break;
+
+        case FnTdEOBterm:        // End of block terminator; EOL (1), EOB (2)
+            *dp = pp->fvEOBterm;
+            break;
+
+        case FnTdEOBCursorPos:   // EOB cursor pos; no (0), CR (1), LF (2), CR & LF (3)
+            *dp = pp->fvEOBCursorPos;
+            break;
+
+        case FnTdEOL:            // End of line character
+            *dp = pp->fvEOL;
+            break;
+
+        case FnTdEOLTerm:        // End of line terminator; EOL (1), EOB (2)
+            *dp = pp->fvEOLTerm;
+            break;
+
+        case FnTdEOLCursorPos:   // EOL cursor pos; no (0), CR (1), LF (2), CR & LF (3)
+            *dp = pp->fvEOLCursorPos;
+            break;
+
+        case FnTdEchoplex:       // Echoplex mode
+            *dp = pp->fvEchoplex;
+            break;
+
+        case FnTdFullASCII:      // Full ASCII input; yes (1), no (0)
+            *dp = pp->fvFullASCII;
+            break;
+
+        case FnTdInFlowControl:  // Input flow control; yes (1), no (0)
+            *dp = pp->fvInFlowControl;
+            break;
+
+        case FnTdXInput:         // Transparent input; yes (1), no (0)
+            *dp = pp->fvXInput;
+            break;
+
+        case FnTdInputDevice:    // Keyboard (0), paper tape (1), block mode (2)
+            *dp = pp->fvInputDevice;
+            break;
+
+        case FnTdLI:             // Line feed idle count
+            *dp = pp->fvLI;
+            break;
+
+        case FnTdLIAuto:         // Line feed idle count - TIP calculates suitable number; yes (1), no (0)
+            *dp = pp->fvLIAuto;
+            break;
+
+        case FnTdLockKeyboard:   // Lockout unsolicited input from keyboard; yes (1), no (0)
+            *dp = pp->fvLockKeyboard;
+            break;
+
+        case FnTdOutFlowControl: // Output flow control; yes (1), no (0)
+            *dp = pp->fvOutFlowControl;
+            break;
+
+        case FnTdOutputDevice:   // Printer (0), display (1), paper tape (2)
+            *dp = pp->fvOutputDevice;
+            break;
+
+        case FnTdParity:         // Zero (0), odd (1), even (2), none (3), ignore (4)
+            *dp = pp->fvParity;
+            break;
+
+        case FnTdPG:             // Page waiting; yes (1), no (0)
+            *dp = pp->fvPG;
+            break;
+
+        case FnTdPL:             // Page length in lines; 0, 8 - FF
+            *dp = pp->fvPL;
+            break;
+
+        case FnTdPW:             // Page width in columns; 0, 20 - FF
+            *dp = pp->fvPW;
+            break;
+
+        case FnTdSpecialEdit:    // Special editing mode; yes (1), no (0)
+            *dp = pp->fvSpecialEdit;
+            break;
+
+        case FnTdTC:             // Terminal class
+            *dp = pp->fvTC;
+            break;
+
+        case FnTdXStickyTimeout: // Sticky transparent input forward on timeout; yes (1), no (0)
+            *dp = pp->fvXStickyTimeout;
+            break;
+
+        case FnTdXModeDelimiter: // Transparent input mode delimiter character
+            *dp = pp->fvXModeDelimiter;
+            break;
+
+        case FnTdDuplex:         // full (1), half (0)
+            *dp = pp->fvDuplex;
+            break;
+
+        case FnTdUBZMSB:         // Terminal transmission block size MSB
+            *dp = (u8)(pp->fvUBZ >> 8);
+            break;
+
+        case FnTdUBZLSB:         // Terminal transmission block size LSB
+            *dp = (u8)(pp->fvUBZ & Mask8);
+            break;
+
+        case FnTdSolicitInput:   // yes (1), no (0)
+            *dp = pp->fvSolicitInput;
+            break;
+
+        case FnTdCIDelay:        // Carriage return idle delay in 4 ms increments
+            *dp = pp->fvCIDelay;
+            break;
+
+        case FnTdLIDelay:        // Line feed idle delay in 4 ms increments
+            *dp = pp->fvLIDelay;
+            break;
+
+        case FnTdHostNode:       // Selected host node
+            *dp = pp->fvHostNode;
+            break;
+
+        case FnTdAutoConnect:    // yes (1), no (0)
+            *dp = pp->fvAutoConnect;
+            break;
+
+        case FnTdPriority:       // Terminal priority
+            *dp = pp->fvPriority;
+            break;
+
+        case FnTdUBL:            // Upline block count limit
+            *dp = pp->fvUBL;
+            break;
+
+        case FnTdABL:            // Application block count limit
+            *dp = pp->fvABL;
+            break;
+
+        case FnTdDBL:            // Downline block count limit
+            *dp = pp->fvDBL;
+            break;
+
+        case FnTdDBZMSB:         // Downline block size MSB
+            *dp = (u8)(pp->fvDBZ >> 8);
+            break;
+
+        case FnTdDBZLSB:         // Downline block size LSB
+            *dp = (u8)(pp->fvDBZ & Mask8);
+            break;
+
+        case FnTdRIC:            // Restricted interactive console (RBF)
+            *dp = pp->fvRIC;
+            break;
+
+        case FnSDT:              // Subdevice type
+            *dp = pp->fvSDT;
+            break;
+
+        case FnDO1:              // Device ordinal
+            *dp = pp->fvDO;
+            break;
+
+        default:
+#if DEBUG
+            fprintf(npuTipLog, "Unknown FN (%d)[0x%02x]\n", *mp, *mp);
+#endif
+            break;
+            }
+
+        /*
+        **  Advance to next FN/FV pair.
+        */
+        mp  += 2;
+        dp  += 1;
+        len -= 2;
+        }
+
+    buf[BlkOffBTBSN] = BtHTCMD;
+    buf[BlkOffPfc]   = PfcCTRL;
+    buf[BlkOffSfc]   = SfcTCD;
     npuBipRequestUplineStatic(buf, (int)(dp - buf), BlkOffCN, tp->cn);
     }
 
