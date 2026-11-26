@@ -673,6 +673,7 @@ static void *npuThread(void *param)
 static FcStatus npuHipFunc(PpWord funcCode)
     {
     ChIoBuffer  *bp;
+    u64         clockDelta;
     u8          id;
     NetDevParam *netDevice;
     NpuParam    *npu;
@@ -727,9 +728,14 @@ static FcStatus npuHipFunc(PpWord funcCode)
             **  Announce idle state to PIP at intervals of less then one second,
             **  otherwise PIP will assume that the NPU is dead.
             */
-            if (rtcClock - npu->lastCommandTime > MaxNpuIdleTime)
+            clockDelta = rtcClock - npu->lastCommandTime;
+            if (clockDelta > MaxNpuIdleTime)
                 {
                 npuHipSetNpuStatus(npu, StNpuIdle);
+                if (clockDelta > 1000000)
+                    {
+                    logDtError(LogErrorLocation, "WARNING: maximum NPU idle threshold exceeded: %lu\n", clockDelta);
+                    }
                 }
             break;
 
